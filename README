@@ -1,0 +1,3 @@
+Currently, there are no releases or stable commits. Please checkout the development branch by running:
+
+git checkout -t origin/develop
