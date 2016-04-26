@@ -1,0 +1,71 @@
+cmake_minimum_required(VERSION 3.0)
+Include(ExternalProject)
+
+ExternalProject_Add(
+     Fleur
+     PREFIX Fleur
+     GIT_REPOSITORY jfleur@ifflinux.iff.kfa-juelich.de:repos/fleur
+     GIT_TAG WS2014
+     STEP_TARGETS configure build
+)
+
+
+if (DEFINED Fleur_custom_toolchain) 
+message("**************Prepared Fleur Build system*******************")
+message("* calling make will now download the FLEUR source code     *")
+message("* Configuration choosen from custom toolchain file         *")
+message("************************************************************")
+else()
+message("**************Prepared Fleur Build system*******************")
+message("* calling make will now download the FLEUR source code     *")
+message("* from the git repository                                  *")
+message("* For some systems (those in FZJ) the system configuration *")
+message("* is determined automatically. For other systems:          *")
+message("* a) adjust the toochain.cmake file                        *")
+message("* b) 'rm -r CMakeFiles CMakeCache.txt'                     *")
+message("* c) 'cmake -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake .       *")
+message("************************************************************")
+
+
+#Now write an example toolchain file
+file(WRITE toolchain.cmake "#Example toolchain file for FLEUR
+# Please define the compiler below (it might be a good idea to give the full path)
+set(CMAKE_Fortran_COMPILER ifort)
+#Please give the Flags used to compile (You need at least something to switch on real*8
+set(Fortran_Flags \"-r8 -O3\")
+#The linker flags should contain everything needed for LAPACK
+set(Linker_Flags \"\")
+
+#switch of this key if you do not want serial versions of FLEUR
+set(Fleur_uses_serial TRUE)
+#you can try to force a parallel build
+#(ususally this is determined by checking the compiler name to be mpi...)
+#set(Fleur_uses_MPI TRUE)
+
+#Below you can switch on additional features of FLEUR
+
+#HDF5 IO
+set(Fleur_uses_HDF5 FALSE)
+set(Fortran_Flags Fortran_Flags \"-I$ENV{HDF5_ROOT}/include\")
+set(Linker_Flags Linker_Flags \"-L$ENV{HDF5_ROOT}/lib -lhdf5_fortran -lhdf5 -lz\")
+
+#Parallel diagonalizer (choose only one at most please)
+set(Fleur_uses_SCALAPACK FALSE)
+set(Fortran_Flags Fortran_Flags \"\")
+set(Linker_Flags Linker_Flags \"-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64\")
+
+set(Fleur_uses_ELPA FALSE)
+set(Fortran_Flags Fortran_Flags \"-I$ENV{ELPA_ROOT}/include\")
+set(Linker_Flags Linker_Flags \"-L$ENV{ELPA_ROOT}/lib -lelpa -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lstdc++\")
+
+set(Fleur_uses_ELEMENTAL FALSE)
+set(Linker_Flags Linker_Flags \"-L$ENV{ELEMENTAL_ROOT}/lib -lEL -lpmrrr -llapack-addons -lstdc++\")
+
+#additional Preprocessor flags
+set(CPP_Flags \"-DCPP_DOUBLE\")
+
+#we used a custom toolchain
+set(Fleur_custom_toolchain TRUE)
+"
+)
+endif()

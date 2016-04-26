@@ -1,0 +1,30 @@
+set(fleur_F77 ${fleur_F77}
+global/constants.f
+global/differ.f
+global/fitchk.f
+global/hybridmix.f
+global/icorrkeys.f
+global/nmat_rot.f
+global/od_cylbes.f
+global/od_phasy.f
+global/radsra.f
+global/radsrd.F
+global/radsrdn.f
+global/soc_sym.f
+global/sort.f
+global/ss_sym.f
+global/starf.f
+global/triang.f
+global/vacudz.f
+global/vacuz.f
+)
+set(fleur_F90 ${fleur_F90}
+global/checkdop.F90
+global/chkmt.f90
+global/convn.f90
+global/enpara.f90
+global/phasy1.f90
+global/qfix.f90
+global/radflo.F90
+global/types.F90
+)
