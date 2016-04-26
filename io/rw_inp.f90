@@ -84,13 +84,13 @@
       IF (PRESENT(dtild_opt)) dtild=dtild_opt
       IF (PRESENT(name_opt)) name=name_opt
 
+!     Initialize variables
+      l_hyb = .false.
+
 !---------------------------------------------------------------------
       IF (ch_rw.eq.'r') THEN
 !--------------------------------------------------------------------
       OPEN (5,file='inp',form='formatted',status='old')
-
-!     Initialize variables
-      l_hyb = .false.
 
 !
       a1(:) = 0

@@ -115,7 +115,8 @@
       obsolete%lpr = 0 ; input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
       input%spinf = 2.0 ;   obsolete%lepr = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0 ; obsolete%nwd = 1 ; vacuum%nstars = 0 ; vacuum%nstm = 0 
-      input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6  
+      input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
+      ALLOCATE(vacuum%izlay(vacuum%layerd,2))
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0 
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
@@ -250,6 +251,7 @@
       selct2(2,:) = 0
       selct2(3,:) = 4
       selct2(4,:) = 2
+      ALLOCATE(hybrid%lcutm2(atoms%ntypd),hybrid%lcutwf(atoms%ntypd))
       hybrid%lcutm2      = 4
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
@@ -350,6 +352,8 @@
 9999    FORMAT ( 'nkpt=',i5,',nx=',i2,',ny=',i2,',nz=',i2,',gamma=',l1)
         CLOSE (iofile)
       END IF ! l_hyb
+
+      DEALLOCATE(hybrid%lcutm2,hybrid%lcutwf)
 !HF
       END SUBROUTINE set_inp
       END MODULE m_setinp
