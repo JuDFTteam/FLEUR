@@ -1,16 +1,14 @@
 MODULE m_Ekwritesl
   use m_juDFT
 CONTAINS
-  SUBROUTINE Ek_write_sl(&
-       &                       dimension,kpts,atoms,vacuum,nsld,&
-       &                       input,jspin,&
-       &                       sym,cell,&
-       &                       nsl,nslat)
+  SUBROUTINE Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,nsld,&
+       input,jspin, sym,cell, nsl,nslat)
     !-----------------------------------------------------------------
     !-- now write E(k) for all kpts if on T3E
     !-- now read data from tmp_dos and write of E(k) in  ek_orbcomp
     !-----------------------------------------------------------------
     USE m_types
+    USE m_eig66_io
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN)   :: dimension
     TYPE(t_input),INTENT(IN)       :: input
@@ -21,7 +19,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)       :: atoms
     !	..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nsld
+    INTEGER, INTENT (IN) :: nsld,eig_id
     INTEGER, INTENT (IN) :: nsl ,jspin 
     !     ..
     !     .. Array Arguments ..
@@ -36,19 +34,22 @@ CONTAINS
     INTEGER  norb(23),iqsl(nsld),iqvacpc(2)
     REAL     bkpt(3),qvact(2)
     REAL, ALLOCATABLE :: eig(:),qvac(:,:,:,:),orbcomp(:,:,:,:,:)
+    REAL, ALLOCATABLE :: qal(:,:,:),qis(:),qvlay(:,:,:)
+    COMPLEX,ALLOCATABLE::qstars(:,:,:,:)
+    INTEGER,ALLOCATABLE::ksym(:),jsym(:)
     REAL, ALLOCATABLE :: qintsl(:,:,:,:),qmtsl(:,:,:,:),qmtp(:,:,:,:)
     CHARACTER (len=2) :: chntype
     CHARACTER (len=99) :: chform
     !     ..
-    !     .. Intrinsic Functions
-    INTRINSIC  nint 
-    !
     IF (nsl.GT.nsld)  THEN
        CALL juDFT_error("nsl.GT.nsld",calledby="Ek_write_sl")
     ENDIF
     ALLOCATE(eig(dimension%neigd),orbcomp(dimension%neigd,23,atoms%natd,kpts%nkptd,dimension%jspd))
     ALLOCATE(qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd),qintsl(nsld,dimension%neigd,kpts%nkptd,dimension%jspd))
     ALLOCATE(qmtsl(nsld,dimension%neigd,kpts%nkptd,dimension%jspd),qmtp(dimension%neigd,atoms%natd,kpts%nkptd,dimension%jspd))
+    ALLOCATE(qal(4,atoms%ntype,dimension%neigd),qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
+    ALLOCATE(qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
+    ALLOCATE(ksym(dimension%neigd),jsym(dimension%neigd))
     !
     !  --->     open files for a bandstucture with an orbital composition
     !  --->     in the case of the film geometry
@@ -83,10 +84,9 @@ CONTAINS
        !==============================================================
        DO ikpt=1,kpts%nkpt
           !                
-          READ (129,rec=kpts%nkpt*(kspin-1)+ikpt)  bkpt,wk,nbands,eig,&
-               &            qvac(:,:,ikpt,kspin),qintsl(:,:,ikpt,kspin),&
-               &            qmtsl(:,:,ikpt,kspin),&
-               &            orbcomp(:,:,:,ikpt,kspin),qmtp(:,:,ikpt,kspin)
+          call read_eig(eig_id,ikpt,kspin,bk=bkpt,neig=nbands,eig=eig)
+          call read_dos(eig_id,ikpt,kspin,qal,qvac(:,:,ikpt,kspin),qis,qvlay,qstars,ksym,jsym,&
+               qintsl=qintsl(:,:,ikpt,kspin),qmtsl= qmtsl(:,:,ikpt,kspin),qmtp=qmtp(:,:,ikpt,kspin),orbcomp=orbcomp(:,:,:,ikpt,kspin))
           !            write(*,*) kspin,nkpt,qmtp(1,:,ikpt,kspin)
           !
           WRITE (130,FMT=8000) (bkpt(i),i=1,3)

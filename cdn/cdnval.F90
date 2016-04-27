@@ -44,6 +44,7 @@ CONTAINS
     !                and bands
     !***********************************************************************
     !
+    USE m_eig66_io,ONLY: write_dos
     USE m_radfun
     USE m_radflo
     USE m_rhomt
@@ -158,8 +159,8 @@ CONTAINS
     INTEGER, ALLOCATABLE :: nmtsl(:,:),nslat(:,:)
     REAL,    ALLOCATABLE :: zsl(:,:),volsl(:)
     REAL,    ALLOCATABLE :: volintsl(:)
-    REAL,    ALLOCATABLE :: qintsl(:,:,:,:),qmtsl(:,:,:,:)
-    REAL,    ALLOCATABLE :: orbcomp(:,:,:,:,:),qmtp(:,:,:,:)
+    REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:)
+    REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
     !-new_sl
     !-dw
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
@@ -429,10 +430,10 @@ CONTAINS
                   atoms,cell,nsld,&
                   nsl,zsl,nmtsl,nslat,volsl,volintsl)
              !
-             ALLOCATE ( qintsl(nsld,dimension%neigd,kpts%nkptd,dimension%jspd))
-             ALLOCATE ( qmtsl(nsld,dimension%neigd,kpts%nkptd,jsp_start:jsp_end))
-             ALLOCATE ( orbcomp(dimension%neigd,23,atoms%natd,kpts%nkptd,jsp_start:jsp_end) )
-             ALLOCATE ( qmtp(dimension%neigd,atoms%natd,kpts%nkptd,jsp_start:jsp_end) )
+             ALLOCATE ( qintsl(nsld,dimension%neigd))
+             ALLOCATE ( qmtsl(nsld,dimension%neigd))
+             ALLOCATE ( orbcomp(dimension%neigd,23,atoms%natd) )
+             ALLOCATE ( qmtp(dimension%neigd,atoms%natd) )
              IF (.not.input%film) qvac(:,:,:,jspin) = 0.0
           ENDIF
           !-q_sl
@@ -626,7 +627,7 @@ CONTAINS
                            cell,&
                            z,noccbd,lapw,&
                            nsl,zsl,nmtsl,oneD,&
-                           qintsl(:,:,ikpt,jspin))
+                           qintsl(:,:))
                                !
                    ENDIF
                 ENDIF
@@ -727,7 +728,7 @@ CONTAINS
                    IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
                       CALL q_mt_sl(ispin, atoms,noccbd,nsld, ikpt,noccbd,ccof(-atoms%llod,1,1,1,ispin),&
                            skip_t,noccbd, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
-                           nmtsl,nsl, qmtsl(:,:,ikpt,ispin))
+                           nmtsl,nsl, qmtsl(:,:))
                       !
                       
                       INQUIRE (file='orbcomprot',exist=l_orbcomprot)
@@ -738,7 +739,7 @@ CONTAINS
                       ENDIF
 
                       CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,acof(1:,0:,1:,ispin),bcof(1:,0:,1:,ispin),&
-                           ccof(-atoms%llod:,1:,1:,1:,ispin), orbcomp(:,:,:,ikpt,ispin), qmtp(:,:,ikpt,ispin))
+                           ccof(-atoms%llod:,1:,1:,1:,ispin), orbcomp, qmtp)
                                !
                    ENDIF
                    !-new
@@ -829,56 +830,10 @@ CONTAINS
                    !
                    !--dw   now write k-point data to tmp_dos
                    !
-                   CALL judft_error("IO in cdnval not implemented")
-                   IF (mpi%irank==0) THEN
-                      IF ( .not.l_mcd ) THEN
-                         DO ispin = jsp_start,jsp_end
-                            WRITE (84,rec=kpts%nkpt*(ispin-1)+ikpt) bkpt,wk,nbands,eig,&
-                                 &                            qal(:,:,:,ispin),qvac(:,:,ikpt,ispin),&
-                                 &                        qis(:,ikpt,ispin),qvlay(:,:,:,ikpt,ispin),&
-                                 &                                                  qstars,ksym,jsym
-                         ENDDO
-                      ELSE
-                         WRITE (84,rec=kpts%nkpt*(jspin-1)+ikpt) bkpt,wk,nbands,eig,&
-                              &                          qal(:,:,:,jspin),qvac(:,:,ikpt,jspin),&
-                              &                      qis(:,ikpt,jspin),qvlay(:,:,:,ikpt,jspin),&
-                              &                              qstars,ksym,jsym,mcd(:,1:ncored,:)
-                      ENDIF ! not.l_mcd
-                      !+new_sl
-                      IF (banddos%ndir.EQ.-3) THEN
-                         IF ( .not.l_mcd ) THEN
-                            DO ispin = jsp_start,jsp_end
-                               WRITE (129,rec=kpts%nkpt*(ispin-1)+ikpt) bkpt,wk,&
-                                    nbands,eig,qvac(:,:,ikpt,ispin),&
-                                    qintsl(:,:,ikpt,ispin),&
-                                    qmtsl(:,:,ikpt,ispin),&
-                                    orbcomp(:,:,:,ikpt,ispin),&
-                                    qmtp(:,:,ikpt,ispin)
-                            ENDDO
-                         ELSE
-                            WRITE (6,FMT=500)
-                            WRITE (16,FMT=500)
-500                         FORMAT('A calculation of an orbital composition&
-                                 &of input%film states  (s,px,py,pz,....)&
-                                 &                   for the l_mcd  case is not implemented.')
-                         ENDIF ! not.l_mcd
-                      ENDIF ! banddos%ndir == -3
-                   ENDIF ! mpi%irank==0
-#ifdef CPP_MPI
-                   DO ispin = jsp_start,jsp_end
-                      CALL mpi_col_dos(&
-                           mpi,l_evp,noccbd,noccbd_l,&
-                           dimension,atoms,atoms,&
-                           nsld,ncored,&
-                           vacuum,vacuum,l_mcd,banddos,kpts,ispin,ikpt,&
-                           bkpt,wk,nbands,eig,qal(0,1,1,ispin),&
-                           qvac(1,1,ikpt,ispin),qis(1,nkpt,ispin),&
-                           qvlay(:,:,:,ikpt,ispin),qstars,ksym,&
-                           jsym,m_mcd,qintsl(:,:,ikpt,ispin),&
-                           qmtsl(:,:,ikpt,ispin),qmtp(:,:,ikpt,ispin),&
-                           orbcomp(:,:,:,ikpt,ispin))
-                   ENDDO
-#endif
+                   call write_dos(eig_id,ikpt,ispin,qal(:,:,:,ispin),qvac(:,:,ikpt,ispin),qis(:,ikpt,ispin),&
+                        qvlay(:,:,:,ikpt,ispin),qstars,ksym,jsym,mcd,qintsl,&
+                        qmtsl(:,:),qmtp(:,:),orbcomp)
+                
                    CALL timestop("cdnval: write_info")
                    !-new_sl
                 ENDIF
@@ -917,7 +872,7 @@ enddo
                 call timestart("cdnval: dos")
                 IF (mpi%irank==0) THEN
                    CALL doswrite(&
-                        dimension,kpts,atoms,vacuum,&
+                        eig_id,dimension,kpts,atoms,vacuum,&
                         input,banddos,&
                         sliceplot,noco,sym,&
                         cell,&
@@ -925,7 +880,7 @@ enddo
                         results%ef,nsld,oneD)
                    IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
                       CALL Ek_write_sl(&
-                           dimension,kpts,atoms,vacuum,&
+                           eig_id,dimension,kpts,atoms,vacuum,&
                            nsld,input,jspin,&
                            sym,cell,&
                            nsl,nslat)
