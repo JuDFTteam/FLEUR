@@ -585,6 +585,8 @@
      end type
      TYPE t_banddos
        LOGICAL :: dos
+       LOGICAL :: l_mcd
+       LOGICAL :: l_orb
        LOGICAL :: vacdos
        INTEGER :: ndir
        REAL    :: e1_dos

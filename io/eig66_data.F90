@@ -87,7 +87,7 @@ module m_eig66_data
     subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_dos,l_mcd,l_orb)
     CLASS(t_data)::d
     INTEGER,INTENT(IN)::jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
-    LOGICAL,INTENT(IN)::l_dos,l_mcd,l_orb
+    LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     d%jspins=jspins
     d%nkpts=nkpts
     d%nmat=nmat
@@ -96,9 +96,15 @@ module m_eig66_data
     d%nlotot=nlotot
     d%nlo=nlo
     d%ntype=ntype
-    d%l_dos=l_dos
-    d%l_mcd=l_mcd
-    d%l_orb=l_orb
+    if (present(l_dos)) THEN
+       d%l_dos=l_dos
+       d%l_mcd=l_mcd
+       d%l_orb=l_orb
+    else
+       d%l_dos=.false.
+       d%l_mcd=.false.
+       d%l_orb=.false.
+    endif
     END SUBROUTINE
 
     subroutine eig66_find_data(d,id,io_mode)
