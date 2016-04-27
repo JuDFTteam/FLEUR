@@ -496,7 +496,7 @@
                                   ! WRITE(6,fmt='(A)') 'Starting 1st variation ...'
                                   CALL timestart("eigen")
                                   CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-                                       sym,kpts,dimension,vacuum,input,cell,enpara,noco,jij,oneD,hybrid,&
+                                       sym,kpts,dimension,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
                                        it,eig_id, results)
                                   CALL timestop("eigen")
                                   !

@@ -1,6 +1,6 @@
       MODULE m_evaldos
       CONTAINS
-      SUBROUTINE evaldos(input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
+      SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
            dimension,efermiarg, l_mcd,ncored,ncore,e_mcd,nsld)
 !----------------------------------------------------------------------
 !
@@ -19,6 +19,7 @@
 !     ntb=max(nevk)
 !
 !----------------------------------------------------------------------
+      USE m_eig66_io,ONLY:read_dos
       USE m_triang
       USE m_maketetra
       USE m_tetrados
@@ -27,7 +28,7 @@
       USE m_smooth
       USE m_types
       IMPLICIT NONE
-
+      INTEGER,INTENT(IN)             :: eig_id
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_banddos),INTENT(IN)     :: banddos
@@ -62,7 +63,7 @@
       REAL     vk(3,kpts%nkptd),wt(kpts%nkptd),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
       REAL     ev(dimension%neigd,kpts%nkptd),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntypd),ferwe(dimension%neigd,kpts%nkptd)
-      REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
+      REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:),qal_tmp(:,:,:),qis(:),qvlay(:,:,:)
       REAL,    ALLOCATABLE :: mcd(:,:,:),orbcomp(:,:,:),qmtp(:,:)
       REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:),qvac(:,:)
       COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
@@ -155,44 +156,35 @@
                ENDDO
             ENDDO
 !
-!     read data from dos_tmp file!
+!     read data from file!
 !
-            IF (( .not.l_mcd ).AND.(banddos%ndir.NE.-3)) THEN
-            READ(84,rec=kpts%nkpt*(jspin-1)+k) vk(:,k),wt(k),nevk(k),ev(:,k),&
-                 qal(1:lmax*atoms%ntype,:,k), &         ! atoms 1...atoms%ntype&
-                 qal(lmax*atoms%ntype+2,:,k), &         ! vacuum 1&
-                 qal(lmax*atoms%ntype+3,:,k), &         ! vacuum 2&
-                 qal(lmax*atoms%ntype+1,:,k), &         ! interstitial&
-                 qlay,qstars
-            ELSEIF (banddos%ndir.NE.-3) THEN
             ALLOCATE( ksym(dimension%neigd),jsym(dimension%neigd) )
-            READ(84,rec=kpts%nkpt*(jspin-1)+k) vk(:,k),wt(k),nevk(k),ev(:,k),&
-                 qal(1:lmax*atoms%ntype,:,k), &         ! atoms 1...atoms%ntype&
-                 qal(lmax*atoms%ntype+2,:,k), &         ! vacuum 1&
-                 qal(lmax*atoms%ntype+3,:,k), &         ! vacuum 2&
-                 qal(lmax*atoms%ntype+1,:,k), &         ! interstitial&
-                 qlay,qstars,ksym,jsym,&
-                 mcd(:,:,k)
+            ALLOCATE( qal_tmp(1:lmax,atoms%ntype,dimension%neigd))
+            ALLOCATE( orbcomp(dimension%neigd,23,atoms%natd),qintsl(nsld,dimension%neigd))
+            ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%natd),qvac(dimension%neigd,2))
+            ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
+            CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+            qal(1:lmax*atoms%ntype,:,k)=reshape(qal_tmp,(/lmax*atoms%ntype,size(qal_tmp,3)/))
+            qal(lmax*atoms%ntype+2,:,k)=qvac(:,1)         ! vacuum 1
+            qal(lmax*atoms%ntype+3,:,k)=qvac(:,2)         ! vacuum 2
+            qal(lmax*atoms%ntype+1,:,k)=qis              ! interstitial
             DEALLOCATE( ksym,jsym )
-            ELSE  
-             ALLOCATE( orbcomp(dimension%neigd,23,atoms%natd),qintsl(nsld,dimension%neigd))
-             ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%natd),qvac(dimension%neigd,2))
-             READ (129,rec=kpts%nkpt*(jspin-1)+k) vk(:,k),wt(k),nevk(k),ev(:,k),qvac,qintsl,qmtsl,orbcomp,qmtp
-             IF (n_orb == 0) THEN
-               qal(1:nsld,:,k)        = qintsl(:,:)
-               qal(nsld+1:2*nsld,:,k) = qmtsl(:,:)
-             ELSE 
-               DO i = 1, 23
-                 DO l = 1, nevk(k)
-                   qal(i,l,k) = orbcomp(l,i,n_orb)*qmtp(l,n_orb)/10000.
-                 ENDDO
-                 DO l = nevk(k)+1, dimension%neigd
-                  qal(i,l,k) = 0.0
-                 ENDDO 
-               ENDDO
-             ENDIF
-             DEALLOCATE( orbcomp,qintsl,qmtsl,qmtp,qvac)
-            ENDIF 
+            IF (l_orbcomp)THEN
+               IF (n_orb == 0) THEN
+                  qal(1:nsld,:,k)        = qintsl(:,:)
+                  qal(nsld+1:2*nsld,:,k) = qmtsl(:,:)
+               ELSE 
+                  DO i = 1, 23
+                     DO l = 1, nevk(k)
+                        qal(i,l,k) = orbcomp(l,i,n_orb)*qmtp(l,n_orb)/10000.
+                     ENDDO
+                     DO l = nevk(k)+1, dimension%neigd
+                        qal(i,l,k) = 0.0
+                     ENDDO
+                  ENDDO
+               ENDIF
+            ENDIF
+            DEALLOCATE( orbcomp,qintsl,qmtsl,qmtp,qvac,qis,qal_tmp,qvlay)
             ntb = max(ntb,nevk(k))
 !
 !     set vacuum partial charge zero, if bulk calculation

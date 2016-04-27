@@ -2,7 +2,7 @@ MODULE m_eigen
   use m_juDFT
 CONTAINS
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-       sym,kpts,dimension, vacuum, input, cell, enpara_in, noco,jij, oneD,hybrid,&
+       sym,kpts,dimension, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
        it,eig_id,results)
     !*********************************************************************
     !     sets up and solves the eigenvalue problem for a basis of lapws.
@@ -56,6 +56,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_jij),INTENT(IN)       :: jij
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_stars),INTENT(IN)     :: stars

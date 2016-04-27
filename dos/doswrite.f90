@@ -6,17 +6,18 @@ MODULE m_doswrite
   !
 CONTAINS
   SUBROUTINE doswrite(&
-       &                   DIMENSION,kpts,atoms,vacuum,&
+       &                   eig_id,DIMENSION,kpts,atoms,vacuum,&
        &                   input,banddos,&
        &                   sliceplot,noco,sym,&
        &                   cell,&
        &                   l_mcd,ncored,ncore,e_mcd,&
        &                   efermi,nsld,oneD)
-
+    USE m_eig66_io,ONLY:read_dos
     USE m_evaldos
     USE m_cdninf
     USE m_types
     IMPLICIT NONE
+  
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_banddos),INTENT(IN)   :: banddos
@@ -31,7 +32,7 @@ CONTAINS
 
     !     .. Scalar Arguments ..
     INTEGER,PARAMETER :: n2max=13 
-    INTEGER, INTENT (IN) :: nsld 
+    INTEGER, INTENT (IN) :: nsld,eig_id 
     INTEGER, INTENT (IN) :: ncored
     REAL,    INTENT (IN) :: efermi
     LOGICAL, INTENT (IN) :: l_mcd
@@ -98,10 +99,10 @@ CONTAINS
           ENDIF
 
           DO ikpt=1,kpts%nkpt
-             READ (84,rec=kpts%nkpt*(kspin-1)+ikpt) bkpt,wk,ne,eig,&
+             call read_dos(eig_id,ikpt,kspin,&
                   &              qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
                   &              qis(:,ikpt,kspin),&
-                  &              qvlay(:,:,:),qstars,ksym,jsym
+                  &              qvlay(:,:,:),qstars,ksym,jsym)
 
              CALL cdninf(&
                   &              input,sym,noco,kspin,atoms,&
@@ -127,7 +128,7 @@ CONTAINS
     !     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(&
-            &                input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
+            &                eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
             &                DIMENSION,efermi,&
             &                l_mcd,ncored,ncore,e_mcd,nsld)
     ENDIF
