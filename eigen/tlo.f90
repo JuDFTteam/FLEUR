@@ -40,7 +40,7 @@ MODULE m_tlo
           !     ..
           !     .. Local Scalars ..
           COMPLEX ci,cil
-          INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx
+          INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
           !     ..
           !     .. Local Arrays ..
           REAL x(atoms%jmtd),ulovulo(atoms%nlod*(atoms%nlod+1)/2,lh0:sphhar%nlhd)
@@ -104,6 +104,7 @@ MODULE m_tlo
           !---> |l - l''| <= l' <= l + l'' (triangular condition)
           !---> m' = m + m'' and l + l' + l'' even
           !---> loop over the local orbitals
+          mlo=sum(atoms%nlo(:ntyp-1))
           DO lo = 1,atoms%nlo(ntyp)
              l = atoms%llo(lo,ntyp)
              DO m = -l,l
@@ -127,8 +128,10 @@ MODULE m_tlo
                       DO lp = lpmin,lpmax,2
                          lmp = lp* (lp+1) + mp
                          cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(atoms%nat)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                         tlmplm%tuulo(lmp,m,lo,jsp) = tlmplm%tuulo(lmp,m,lo,jsp) + cil*uvulo(lo,lp,lh)
-                         tlmplm%tdulo(lmp,m,lo,jsp) = tlmplm%tdulo(lmp,m,lo,jsp) + cil*dvulo(lo,lp,lh)
+                         tlmplm%tuulo(lmp,m,lo+mlo,jsp) = &
+                              tlmplm%tuulo(lmp,m,lo+mlo,jsp) + cil*uvulo(lo,lp,lh)
+                         tlmplm%tdulo(lmp,m,lo+mlo,jsp) = &
+                              tlmplm%tdulo(lmp,m,lo+mlo,jsp) + cil*dvulo(lo,lp,lh)
                       END DO
                    END DO
                 END DO
@@ -136,7 +139,7 @@ MODULE m_tlo
           END DO
           !---> generate the t-matrix including two local orbitals for lo' >= lo
           !---> loop over lo'
-          loplo = 0
+          mlolo=dot_product(atoms%nlo(:ntyp-1),atoms%nlo(:ntyp-1)+1)/2
           DO lop = 1,atoms%nlo(ntyp)
              lp = atoms%llo(lop,ntyp)
              DO mp = -lp,lp
@@ -153,7 +156,7 @@ MODULE m_tlo
                          IF ((ABS(l-lpp).LE.lp) .AND. (lp.LE. (l+lpp)) .AND.&
                               (MOD(l+lp+lpp,2).EQ.0) .AND. (ABS(m).LE.l)) THEN
                             cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(atoms%nat)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                            tlmplm%tuloulo(mp,m,loplo,jsp) = tlmplm%tuloulo(mp,m,loplo,jsp) + cil*ulovulo(loplo,lh)
+                            tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) + cil*ulovulo(loplo,lh)
                          END IF
                       END DO
                    END DO
@@ -169,18 +172,18 @@ MODULE m_tlo
                 l = atoms%llo(lo,ntyp)
                 DO m = -l,l
                    lm = l* (l+1) + m
-                   tlmplm%tuulo(lm,m,lo,jsp) = tlmplm%tuulo(lm,m,lo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jsp) *&
+                   tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jsp) *&
                         ( enpara%el0(l,ntyp,jsp)+enpara%ello0(lo,ntyp,jsp) )
-                   tlmplm%tdulo(lm,m,lo,jsp) = tlmplm%tdulo(lm,m,lo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jsp) *&
+                   tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jsp) *&
                         ( enpara%el0(l,ntyp,jsp)+enpara%ello0(lo,ntyp,jsp) ) + 0.5 * usdus%uulon(lo,ntyp,jsp)
                    IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
-                      tlmplm%tuulo(lm,m,lo,jsp) = tlmplm%tuulo(lm,m,lo,jsp) + 0.5 * uuilon(lo,ntyp)
-                      tlmplm%tdulo(lm,m,lo,jsp) = tlmplm%tdulo(lm,m,lo,jsp) + 0.5 * duilon(lo,ntyp)
+                      tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * uuilon(lo,ntyp)
+                      tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * duilon(lo,ntyp)
                    ENDIF
                    !+apw_lo
                    IF (atoms%l_dulo(lo,ntyp)) THEN         
-                      tlmplm%tuulo(lm,m,lo,jsp) = tlmplm%tuulo(lm,m,lo,jsp) + 0.5
-                      tlmplm%tdulo(lm,m,lo,jsp) = 0.0
+                      tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5
+                      tlmplm%tdulo(lm,m,lo+mlo,jsp) = 0.0
                    ENDIF
                    !+apw_lo
                  END DO
@@ -190,7 +193,7 @@ MODULE m_tlo
                 DO lo = atoms%lo1l(lp,ntyp),lop
                    loplo = ((lop-1)*lop)/2 + lo
                    DO m = -lp,lp
-                      tlmplm%tuloulo(m,m,loplo,jsp) = tlmplm%tuloulo(m,m,loplo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jsp)+&
+                      tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jsp)+&
                            enpara%ello0(lo,ntyp,jsp))* usdus%uloulopn(lop,lo,ntyp,jsp) + 0.5* (ulouilopn(lop,lo,ntyp) +&
                            ulouilopn(lo,lop,ntyp))
                    END DO
