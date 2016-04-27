@@ -30,7 +30,7 @@ CONTAINS
   SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,create,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
     LOGICAL, INTENT(IN) :: create
-    LOGICAL,INTENT(IN) ::  l_dos,l_mcd,l_orb
+    LOGICAL,INTENT(IN),OPTIONAL ::  l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
     !locals
@@ -62,7 +62,7 @@ CONTAINS
 
     d%recl_vec=recl_eig+recl_z
 
-    IF (l_dos) THEN
+    IF (d%l_dos) THEN
        IF (.NOT.(PRESENT(layers).AND.PRESENT(nstars).AND.PRESENT(ncored).AND.PRESENT(nsld).AND.PRESENT(nat))) &
             CALL judft_error("BUG:Could not open file for DOS-data",calledby="eig66_da")
        INQUIRE(IOLENGTH=i1) i1

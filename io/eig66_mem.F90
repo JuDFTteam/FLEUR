@@ -27,7 +27,8 @@ CONTAINS
 
   SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
-    LOGICAL, INTENT(IN) :: l_noco,l_create,l_dos,l_mcd,l_orb
+    LOGICAL, INTENT(IN) :: l_noco,l_create
+    LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
     !locals
@@ -72,7 +73,7 @@ CONTAINS
     ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
 #endif
     length=length*nkpts
-    IF (l_dos) THEN
+    IF (d%l_dos) THEN
        ALLOCATE(d%qal(0:3,ntype,neig,length))
        ALLOCATE(d%qvac(neig,2,length))
        ALLOCATE(d%qis(neig,length))
@@ -102,7 +103,7 @@ CONTAINS
       COMPLEX :: z(nmat,neig)
 #endif
       tmp_id=eig66_data_newid(DA_mode)
-      IF (l_dos) CPP_error("Can not read DOS-data")
+      IF (d%l_dos) CPP_error("Can not read DOS-data")
       CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,.FALSE.,.FALSE.,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts

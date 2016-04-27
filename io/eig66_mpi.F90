@@ -34,7 +34,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: id,mpi_comm,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
     LOGICAL, INTENT(IN) :: l_noco,create
     INTEGER,INTENT(IN),OPTIONAL:: n_size_opt
-    LOGICAL,INTENT(IN) ::l_dos,l_mcd,l_orb
+    LOGICAL,INTENT(IN),OPTIONAL ::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 #ifdef CPP_MPI
@@ -112,7 +112,7 @@ CONTAINS
     CALL priv_create_memory(slot_size,local_slots,d%zc_data,d%zc_handle)
 #endif
     !Data for DOS etc
-    IF (l_dos) THEN
+    IF (d%l_dos) THEN
        local_slots=COUNT(d%pe_basis==d%irank)
        CALL priv_create_memory(4*ntype*neig,local_slots,d%qal_data,d%qal_handle)
        CALL priv_create_memory(neig*2,local_slots,d%qvac_data,d%qvac_handle)
@@ -179,7 +179,7 @@ CONTAINS
       !only do this with PE=0
       IF (d%irank==0) THEN
          tmp_id=eig66_data_newid(DA_mode)
-         IF (l_dos) CPP_error("Could not read DOS data")
+         IF (d%l_dos) CPP_error("Could not read DOS data")
          CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,.FALSE.,.FALSE.,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts

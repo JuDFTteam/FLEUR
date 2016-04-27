@@ -59,7 +59,8 @@ CONTAINS
 
     INTEGER, INTENT(IN) :: id,mpi_comm
     INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins,nlo,ntype,lmax
-    LOGICAL, INTENT(IN) :: create,readonly,l_dos,l_mcd,l_orb
+    LOGICAL, INTENT(IN) :: create,readonly
+    LOGICAL, INTENT(IN),OPTIONAL ::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 
@@ -150,7 +151,7 @@ CONTAINS
        CALL h5dcreate_f(d%fid, "k", H5T_NATIVE_INTEGER, spaceid, d%ksetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !stuff for dos etc
-       IF (l_dos) THEN
+       IF (d%l_dos) THEN
           dims(:5)=(/4,ntype,neig,nkpts,jspins/)
           CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
           CALL h5dcreate_f(d%fid, "qal", H5T_NATIVE_DOUBLE, spaceid, d%qalsetid, hdferr)
@@ -218,7 +219,7 @@ CONTAINS
        CALL h5dopen_f(d%fid, 'ev', d%evsetid, hdferr)
        CALL h5dopen_f(d%fid, 'nv', d%nvsetid, hdferr)
        CALL h5dopen_f(d%fid, 'nmat', d%nmatsetid, hdferr)
-       IF (l_dos) THEN
+       IF (d%l_dos) THEN
           CALL h5dopen_f(d%fid, 'qal', d%qalsetid, hdferr)
           CALL h5dopen_f(d%fid, 'qvac', d%qvacsetid, hdferr)
           CALL h5dopen_f(d%fid, 'qis', d%qissetid, hdferr)
@@ -269,7 +270,7 @@ CONTAINS
        CALL h5dclose_f(d%evsetid,hdferr)
        CALL h5dclose_f(d%nvsetid,hdferr)
        CALL h5dclose_f(d%nmatsetid,hdferr)
-       IF (l_dos) THEN
+       IF (d%l_dos) THEN
           CALL h5dclose_f(d%qalsetid, hdferr)
           CALL h5dclose_f(d%qvacsetid, hdferr)
           CALL h5dclose_f(d%qissetid, hdferr)
