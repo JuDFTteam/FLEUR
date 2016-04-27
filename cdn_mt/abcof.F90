@@ -121,7 +121,7 @@ CONTAINS
                 !$OMP& DEFAULT(none)&
                 !$OMP& PRIVATE(k,i,work,ccchi,kspin,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
                 !$OMP& inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm,&
-                !$OMP& acof_loc,bcof_loc)&
+                !$OMP& acof_loc,bcof_loc,acof_inv,bcof_inv)&
                 !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,z,usdus,n,ci,iintsp,&
                 !$OMP& jspin,bkpt,qss1,qss2,qss3,&
                 !$OMP& apw,const,natom,&
@@ -265,9 +265,9 @@ CONTAINS
                             CALL CPP_BLAS_caxpy(ne,c_2,work,1,&
                                  &                                   bcof(1,lmp,jatom),1)
                             !$                   endif
-                            !$                   CALL CPP_BLAS_caxpy(ne,c_1,work,1,
+                            !$                   CALL CPP_BLAS_caxpy(ne,c_1,work,1,&
                             !$                                       acof_inv(1,lmp),1)
-                            !$                   CALL CPP_BLAS_caxpy(ne,c_2,work,1,
+                            !$                   CALL CPP_BLAS_caxpy(ne,c_2,work,1,&
                             !$                                       bcof_inv(1,lmp),1)
                          ENDIF
 #endif
