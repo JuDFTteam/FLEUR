@@ -38,7 +38,7 @@ CONTAINS
     USE m_hsefunctional
     USE m_hybridmix    , ONLY: amix_pbe0,amix_hf
     USE m_util
-    USE icorrkeys     
+    USE icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
 #ifdef CPP_MPI
     USE m_mpimakegroups
@@ -69,7 +69,7 @@ CONTAINS
 #endif
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN) :: it   
+    INTEGER,INTENT(IN) :: it
     INTEGER,INTENT(INOUT):: eig_id
     !     ..
     !-odim
@@ -88,9 +88,9 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER, PARAMETER :: lmaxb=3
     INTEGER, ALLOCATABLE :: matind(:,:),kveclo(:)
-    INTEGER, ALLOCATABLE :: nv2(:) 
+    INTEGER, ALLOCATABLE :: nv2(:)
     REAL,    ALLOCATABLE :: bkpt(:)
-    REAL,    ALLOCATABLE :: eig(:) 
+    REAL,    ALLOCATABLE :: eig(:)
 #ifdef CPP_INVERSION
     REAL,    ALLOCATABLE :: z(:,:),a(:),b(:)
 #else
@@ -98,7 +98,7 @@ CONTAINS
 #endif
     COMPLEX, ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
     COMPLEX, ALLOCATABLE :: vpwtot(:,:)
-    REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:) 
+    REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
     REAL,    ALLOCATABLE :: vrtot(:,:,:,:)
 
     COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
@@ -117,11 +117,11 @@ CONTAINS
     !      - scalar -
 #ifdef CPP_NEVER
     INTEGER, INTENT(IN)     ::  maxlcutm,maxindxm,maxbasm
-    INTEGER, INTENT(IN)     ::  maxindxp  
-    INTEGER, INTENT(IN)     ::  bands 
+    INTEGER, INTENT(IN)     ::  maxindxp
+    INTEGER, INTENT(IN)     ::  bands
     !     - arrays -
     INTEGER, INTENT(IN)     ::  nindxm(0:maxlcutm,atoms%ntypd)
-    INTEGER, INTENT(IN)     ::  lcutm(atoms%ntypd) 
+    INTEGER, INTENT(IN)     ::  lcutm(atoms%ntypd)
     REAL   , INTENT(IN)     ::  basm(atoms%jmtd,maxindxm,0:maxlcutm,atoms%ntypd)
 #endif
     !     - local scalar -
@@ -137,9 +137,9 @@ CONTAINS
 #ifdef CPP_NEVER
     INTEGER                 ::  nobd(kpts%nkptf)
     INTEGER                 ::  lmaxc(atoms%ntypd)
-    INTEGER                 ::  g(3) 
+    INTEGER                 ::  g(3)
     INTEGER                 ::  nindxp(0:maxlcutm,atoms%ntypd)
-    INTEGER , ALLOCATABLE   ::  nkpt_EIBZ(:) 
+    INTEGER , ALLOCATABLE   ::  nkpt_EIBZ(:)
     INTEGER , ALLOCATABLE   ::  nindxc(:,:)
     INTEGER , ALLOCATABLE   ::  kveclo_eig(:,:)
     INTEGER , ALLOCATABLE   ::  nbasm(:)
@@ -164,7 +164,7 @@ CONTAINS
 #endif
     !
     !
-    ! --> Allocate 
+    ! --> Allocate
     !
     ALLOCATE ( ud%uloulopn(atoms%nlod,atoms%nlod,atoms%ntypd,dimension%jspd),nv2(dimension%jspd) )
     ALLOCATE ( ud%ddn(0:atoms%lmaxd,atoms%ntypd,dimension%jspd),eig(dimension%neigd),bkpt(3) )
@@ -675,6 +675,8 @@ CONTAINS
        results%te_hfex%valence = 2*results%te_hfex%valence
        results%te_hfex%core    = 2*results%te_hfex%core
     END IF
-    enpara_in=enpara
+    enpara_in%epara_min = minval(enpara%el0)
+    enpara_in%epara_min = min(minval(enpara%ello0),enpara_in%epara_min)
+!    enpara_in=enpara
   END SUBROUTINE eigen
 END MODULE m_eigen

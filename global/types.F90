@@ -1,7 +1,7 @@
-       MODULE m_types 
-!*************************************************************          
-!     This module contains definitions for all kind of types            
-!*************************************************************          
+       MODULE m_types
+!*************************************************************
+!     This module contains definitions for all kind of types
+!*************************************************************
 !
 ! Types for orbital moment calculation:
 !
@@ -44,39 +44,39 @@
       INTEGER,ALLOCATABLE:: k1(:,:)
       INTEGER,ALLOCATABLE:: k2(:,:)
       INTEGER,ALLOCATABLE:: k3(:,:)
-      INTEGER,ALLOCATABLE:: kp(:,:) 
+      INTEGER,ALLOCATABLE:: kp(:,:)
       REAL,ALLOCATABLE::rk(:,:)
-   end type 
+   end type
 
    TYPE t_tlmplm
       COMPLEX,ALLOCATABLE :: tdd(:,:,:)
-      COMPLEX,ALLOCATABLE :: tdu(:,:,:) 
+      COMPLEX,ALLOCATABLE :: tdu(:,:,:)
                                 !(0:lmplmd,ntypd,tspin)
       COMPLEX,ALLOCATABLE :: tud(:,:,:)
-      COMPLEX,ALLOCATABLE :: tuu(:,:,:) 
+      COMPLEX,ALLOCATABLE :: tuu(:,:,:)
                                 !(0:lmplmd,ntypd,tspin)
-      INTEGER,ALLOCATABLE :: ind(:,:,:,:)          
+      INTEGER,ALLOCATABLE :: ind(:,:,:,:)
                                 !(0:lmd,0:lmd,ntypd,tspin)
-      COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:)        
+      COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:)
                                 !(0:lmd,-llod:llod,mlotot,tspin)
-      COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:)        
+      COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:)
                                 !(0:lmd,-llod:llod,mlotot,tspin)
-      COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:)      
+      COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:)
                                 !(-llod:llod,-llod:llod,mlolotot,tspin)
-   END TYPE 
+   END TYPE
 
    TYPE t_usdus
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: us
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: dus
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: uds
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: duds !(0:lmaxd,ntype,jspd)
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: ddn  !(0:lmaxd,ntype,jspd)
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: ulos
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: dulos
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: uulon
-      REAL,ALLOCATABLE,DIMENSION(:,:,:) :: dulon !(nlod,ntype,jspd)
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: us
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dus
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: uds
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: duds !(0:lmaxd,ntype,jspd)
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: ddn  !(0:lmaxd,ntype,jspd)
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: ulos
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulos
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: uulon
+      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulon !(nlod,ntype,jspd)
       REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: uloulopn!  (nlod,nlod,ntypd,jspd)
-   END TYPE 
+   END TYPE
 
 
 
@@ -88,18 +88,18 @@
           LOGICAL :: invs,zrfs
           INTEGER :: n2d,nq2,nn2d
           INTEGER :: kimax2
-          INTEGER :: nop,nat      
+          INTEGER :: nop,nat
         END TYPE od_dim
 
         TYPE od_inp
           LOGICAL :: d1
           INTEGER :: mb,M,k3,m_cyl
           INTEGER :: chi,rot
-          LOGICAL :: invs,zrfs 
+          LOGICAL :: invs,zrfs
           INTEGER :: n2d,nq2,nn2d
           INTEGER :: kimax2
           INTEGER, POINTER :: ig(:,:)  !(-k3:k3,-M:M)
-          INTEGER, POINTER :: kv(:,:)        !(2,n2d) 
+          INTEGER, POINTER :: kv(:,:)        !(2,n2d)
           INTEGER, POINTER :: nst2(:)        !(n2d)
         END TYPE od_inp
 
@@ -110,7 +110,7 @@
           REAL   , POINTER :: tau(:,:)     !(3,nop)
           INTEGER, POINTER :: invtab(:)    !(nop)
           INTEGER, POINTER :: multab(:,:)  !(nop,nop)
-        END TYPE od_sym 
+        END TYPE od_sym
 
         TYPE od_lda
           INTEGER :: nn2d
@@ -127,7 +127,7 @@
           REAL, POINTER    :: pgfxy(:)
         END TYPE od_gga
 
-                      
+
 !
 ! Type for LDA+U:
 !
@@ -165,130 +165,130 @@
         LOGICAL :: l_dirichlet_coeff = .false. ! For MPI, true if C1/C2 set
       END TYPE t_efield
 
-                                                  
-      TYPE t_atoms 
-       !<no of types                     
+
+      TYPE t_atoms
+       !<no of types
        INTEGER :: ntype
-       INTEGER :: ntypd 
-       !<total-no of atoms               
-       INTEGER :: nat 
-       INTEGER :: natd 
-       !<dimensions of LO's              
+       INTEGER :: ntypd
+       !<total-no of atoms
+       INTEGER :: nat
+       INTEGER :: natd
+       !<dimensions of LO's
        INTEGER ::nlod
        INTEGER ::llod
        INTEGER ::nlotot
        !lmaxd=maxval(lmax)
-       INTEGER:: lmaxd 
+       INTEGER:: lmaxd
        ! no of lda+us
-       INTEGER ::n_u 
+       INTEGER ::n_u
        ! dimensions
-       INTEGER :: jmtd 
-       !No of element                   
-       INTEGER,ALLOCATABLE ::nz(:) 
-       !atoms per type                  
-       INTEGER,ALLOCATABLE::neq(:) 
-       !radial grid points              
-       INTEGER,ALLOCATABLE::jri(:) 
-       !core states                     
-       INTEGER,ALLOCATABLE::ncst(:) 
-       !lmax                            
-       INTEGER,ALLOCATABLE::lmax(:) 
-       !lmax non-spherical              
-       INTEGER,ALLOCATABLE::lnonsph(:) 
-       !expansion of pseudo-charge      
-       INTEGER,ALLOCATABLE::ncv(:) 
-       !no of LO                        
-       INTEGER,ALLOCATABLE::nlo(:) 
-       !l of LO (nlo,ntype)             
-       INTEGER,ALLOCATABLE::llo(:,:) 
-       !lmax for lapw (ntype)           
-       INTEGER,ALLOCATABLE::lapw_l(:) 
+       INTEGER :: jmtd
+       !No of element
+       INTEGER,ALLOCATABLE ::nz(:)
+       !atoms per type
+       INTEGER,ALLOCATABLE::neq(:)
+       !radial grid points
+       INTEGER,ALLOCATABLE::jri(:)
+       !core states
+       INTEGER,ALLOCATABLE::ncst(:)
+       !lmax
+       INTEGER,ALLOCATABLE::lmax(:)
+       !lmax non-spherical
+       INTEGER,ALLOCATABLE::lnonsph(:)
+       !expansion of pseudo-charge
+       INTEGER,ALLOCATABLE::ncv(:)
+       !no of LO
+       INTEGER,ALLOCATABLE::nlo(:)
+       !l of LO (nlo,ntype)
+       INTEGER,ALLOCATABLE::llo(:,:)
+       !lmax for lapw (ntype)
+       INTEGER,ALLOCATABLE::lapw_l(:)
        !first LO with a given l (max(nlo
-       INTEGER,ALLOCATABLE::lo1l(:,:) 
-       !??                              
-       INTEGER,ALLOCATABLE::ulo_der(:,:) 
+       INTEGER,ALLOCATABLE::lo1l(:,:)
+       !??
+       INTEGER,ALLOCATABLE::ulo_der(:,:)
        !no of LOs per l (max(nlo1),ntype
-       INTEGER,ALLOCATABLE::nlol(:,:) 
+       INTEGER,ALLOCATABLE::nlol(:,:)
        !true if LO is formed by \dot u (
-       LOGICAL,ALLOCATABLE::l_dulo(:,:) 
-       !no of op that maps atom into    
-       INTEGER,ALLOCATABLE::ngopr(:)                 
-       !symetry of atom (nat)        
-       INTEGER,ALLOCATABLE::ntypsy(:) 
+       LOGICAL,ALLOCATABLE::l_dulo(:,:)
+       !no of op that maps atom into
+       INTEGER,ALLOCATABLE::ngopr(:)
+       !symetry of atom (nat)
+       INTEGER,ALLOCATABLE::ntypsy(:)
        !no of sphhar for atom type(ntype
-       INTEGER,ALLOCATABLE ::nlhtyp(:) 
+       INTEGER,ALLOCATABLE ::nlhtyp(:)
        !atom mapped to by inversion (nat
-       INTEGER,ALLOCATABLE ::invsat(:) 
+       INTEGER,ALLOCATABLE ::invsat(:)
        !Claculate forces for this atom?
        LOGICAL,ALLOCATABLE :: l_geo(:)
-       !MT-Radius (ntype)               
-       REAL,ALLOCATABLE::rmt(:) 
-       !log increment(ntype)            
-       REAL,ALLOCATABLE::dx(:) 
-       !vol of MT(ntype)                
-       REAL,ALLOCATABLE::volmts(:) 
+       !MT-Radius (ntype)
+       REAL,ALLOCATABLE::rmt(:)
+       !log increment(ntype)
+       REAL,ALLOCATABLE::dx(:)
+       !vol of MT(ntype)
+       REAL,ALLOCATABLE::volmts(:)
        !radial grid points(max(jri),ntyp
-       REAL,ALLOCATABLE::rmsh(:,:) 
-       !charge of nucleus(ntype)        
-       REAL,ALLOCATABLE::zatom(:) 
-       !initial mag moment(ntype)       
-       REAL,ALLOCATABLE::bmu(:) 
-       !pos of atom (absol) (3,nat)     
-       REAL,ALLOCATABLE::pos(:,:) 
-       !pos of atom (relat)(3,nat)      
-       REAL,ALLOCATABLE::taual(:,:) 
-       !lda_u information(ntype)        
-       TYPE(t_utype),ALLOCATABLE::lda_u(:) 
+       REAL,ALLOCATABLE::rmsh(:,:)
+       !charge of nucleus(ntype)
+       REAL,ALLOCATABLE::zatom(:)
+       !initial mag moment(ntype)
+       REAL,ALLOCATABLE::bmu(:)
+       !pos of atom (absol) (3,nat)
+       REAL,ALLOCATABLE::pos(:,:)
+       !pos of atom (relat)(3,nat)
+       REAL,ALLOCATABLE::taual(:,:)
+       !lda_u information(ntype)
+       TYPE(t_utype),ALLOCATABLE::lda_u(:)
        INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
-       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom      
+       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
        REAL,ALLOCATABLE:: vr0(:) !< Average Coulomb potential for atoms
-      END TYPE 
+      END TYPE
 
-      TYPE t_kpts 
-       !no                                   
-       INTEGER ::nkpts 
+      TYPE t_kpts
+       !no
+       INTEGER ::nkpts
        INTEGER ::nkpt
        INTEGER ::nkptd
        INTEGER :: nmop(3) !<number of k-points in 3 directions
-       !(3,nkpts) k-vectors internal units   
-       REAL,ALLOCATABLE ::bk(:,:) 
-       !(nkpts) weights                      
-       REAL,ALLOCATABLE ::weight(:) 
-       REAL,ALLOCATABLE ::wtkpt(:) 
+       !(3,nkpts) k-vectors internal units
+       REAL,ALLOCATABLE ::bk(:,:)
+       !(nkpts) weights
+       REAL,ALLOCATABLE ::weight(:)
+       REAL,ALLOCATABLE ::wtkpt(:)
        INTEGER, ALLOCATABLE :: pntgptd(:)
        INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:,:)
        INTEGER               ::  nkptf !<k-vectors in full BZ
        INTEGER               ::  nkpt3(3)
        REAL   ,ALLOCATABLE   ::  bkf(:,:)
-       INTEGER,ALLOCATABLE   ::  bkp(:)  
+       INTEGER,ALLOCATABLE   ::  bkp(:)
        INTEGER,ALLOCATABLE   ::  bksym(:)
-      ENDTYPE 
-      
+      ENDTYPE
 
-      TYPE t_cell 
-       !name of 2D-lattice type                      
-       CHARACTER*3::latnam 
-       !vol of dtilde box                            
-       REAL::omtil 
-       !2D area                                      
-       REAL::area 
-       !bravais matrix                               
-       REAL::amat(3,3) 
-       !rez. bravais matrx                           
-       REAL::bmat(3,3) 
-       !square of bbmat                              
-       REAL::bbmat(3,3) 
-       !d-value                                      
-       REAL::z1 
-       !volume of cell                               
-       REAL::vol 
-       !volume of interstitial                       
-       REAL::volint 
+
+      TYPE t_cell
+       !name of 2D-lattice type
+       CHARACTER*3::latnam
+       !vol of dtilde box
+       REAL::omtil
+       !2D area
+       REAL::area
+       !bravais matrix
+       REAL::amat(3,3)
+       !rez. bravais matrx
+       REAL::bmat(3,3)
+       !square of bbmat
+       REAL::bbmat(3,3)
+       !d-value
+       REAL::z1
+       !volume of cell
+       REAL::vol
+       !volume of interstitial
+       REAL::volint
        REAL:: c
-      END TYPE 
-                                                                        
-      !The stars                            
-      TYPE t_stars 
+      END TYPE
+
+      !The stars
+      TYPE t_stars
         !dimensions should be deleted later
         integer :: n3d
         integer :: n2d
@@ -306,22 +306,22 @@
         INTEGER :: nk2
         INTEGER :: nk3
 
-        !max-length of star              
-        REAL :: gmax 
-        !no of 3d-stars                  
+        !max-length of star
+        REAL :: gmax
+        !no of 3d-stars
         !INTEGER :: nq3
-        INTEGER :: ng3 
-        !no of 2d-stars                  
+        INTEGER :: ng3
+        !no of 2d-stars
         !INTEGER ::nq2
-        INTEGER :: ng2 
-        !No of elements in FFT           
-        INTEGER ::kimax 
-        !No of elements in 2D-FFT        
-        INTEGER ::kimax2 
-        !dim of box                      
+        INTEGER :: ng2
+        !No of elements in FFT
+        INTEGER ::kimax
+        !No of elements in 2D-FFT
+        INTEGER ::kimax2
+        !dim of box
         INTEGER ::mx1
         INTEGER ::mx2
-        INTEGER ::mx3 
+        INTEGER ::mx3
         !fft boxex
         integer :: kxc1_fft
         integer :: kxc2_fft
@@ -341,44 +341,44 @@
         INTEGER :: nxc3_fft !< number of stars in the  charge density  fft-box
 
 
-        !No of elements in z-direction   
+        !No of elements in z-direction
         INTEGER ::ngz
         INTEGER ::izmin
-        INTEGER ::izmax 
-        !rep. g-vector of star           
-        INTEGER,ALLOCATABLE ::kv3(:,:) 
-        !length of star                  
-        REAL,ALLOCATABLE    ::sk3(:) 
-        !mapping of g-vectors to stars   
-        INTEGER,ALLOCATABLE ::ig(:,:,:) 
-        !No of g-vectors in star         
-        INTEGER,ALLOCATABLE ::nstr(:) 
-        !rep. g-vector of 2D-star        
-        INTEGER,ALLOCATABLE ::kv2(:,:) 
-        !length of 2D-star               
-        REAL,ALLOCATABLE    ::sk2(:) 
-        !No of g-vecs in 2D-star         
-        INTEGER,ALLOCATABLE ::nstr2(:) 
-        !mapping of                      
-        INTEGER,ALLOCATABLE ::ig2(:) 
+        INTEGER ::izmax
+        !rep. g-vector of star
+        INTEGER,ALLOCATABLE ::kv3(:,:)
+        !length of star
+        REAL,ALLOCATABLE    ::sk3(:)
+        !mapping of g-vectors to stars
+        INTEGER,ALLOCATABLE ::ig(:,:,:)
+        !No of g-vectors in star
+        INTEGER,ALLOCATABLE ::nstr(:)
+        !rep. g-vector of 2D-star
+        INTEGER,ALLOCATABLE ::kv2(:,:)
+        !length of 2D-star
+        REAL,ALLOCATABLE    ::sk2(:)
+        !No of g-vecs in 2D-star
+        INTEGER,ALLOCATABLE ::nstr2(:)
+        !mapping of
+        INTEGER,ALLOCATABLE ::ig2(:)
         !
-        REAL,ALLOCATABLE:: phi2(:) !<(n2d)                                
-        INTEGER,ALLOCATABLE ::igz(:) 
-        !phase phactor of g-vector       
-        COMPLEX,ALLOCATABLE    ::rgphs(:,:,:) 
-        !mapping of stars to FFT-box     
-        INTEGER, ALLOCATABLE :: igfft(:,:) 
-        !same for 2D                     
-        INTEGER, ALLOCATABLE :: igfft2(:,:) 
-        !phasefactors for mapping        
-        COMPLEX,ALLOCATABLE  :: pgfft(:) 
-        !same of 2D                      
-        COMPLEX,ALLOCATABLE  :: pgfft2(:) 
+        REAL,ALLOCATABLE:: phi2(:) !<(n2d)
+        INTEGER,ALLOCATABLE ::igz(:)
+        !phase phactor of g-vector
+        COMPLEX,ALLOCATABLE    ::rgphs(:,:,:)
+        !mapping of stars to FFT-box
+        INTEGER, ALLOCATABLE :: igfft(:,:)
+        !same for 2D
+        INTEGER, ALLOCATABLE :: igfft2(:,:)
+        !phasefactors for mapping
+        COMPLEX,ALLOCATABLE  :: pgfft(:)
+        !same of 2D
+        COMPLEX,ALLOCATABLE  :: pgfft2(:)
         !
-        REAL,ALLOCATABLE :: ft2_gfx(:),ft2_gfy(:)                                
-        !REAL,   ALLOCATABLE  :: pgft2xy(:) 
+        REAL,ALLOCATABLE :: ft2_gfx(:),ft2_gfy(:)
+        !REAL,   ALLOCATABLE  :: pgft2xy(:)
         !REAL,   ALLOCATABLE  :: pgft2x(:)
-        !REAL,   ALLOCATABLE  :: pgft2y(:) 
+        !REAL,   ALLOCATABLE  :: pgft2y(:)
         !REAL,   ALLOCATABLE  :: pgft2xx(:)
         !REAL,   ALLOCATABLE  :: pgft2yy(:)
       COMPLEX, ALLOCATABLE :: ustep(:)
@@ -386,7 +386,7 @@
 
 
      END TYPE
-     
+
      TYPE t_oneD
         TYPE (od_dim) :: odd
         TYPE (od_inp) :: odi
@@ -509,14 +509,14 @@
         LOGICAL:: l_constr
         REAL:: qss(3)
         REAL:: mix_b
-        LOGICAL, ALLOCATABLE :: l_relax(:) 
-        REAL, ALLOCATABLE :: alph(:) 
-        REAL, ALLOCATABLE :: beta(:) 
-        REAL, ALLOCATABLE :: b_con(:,:) 
+        LOGICAL, ALLOCATABLE :: l_relax(:)
+        REAL, ALLOCATABLE :: alph(:)
+        REAL, ALLOCATABLE :: beta(:)
+        REAL, ALLOCATABLE :: b_con(:,:)
         LOGICAL              :: l_soc
         LOGICAL, ALLOCATABLE :: soc_opt(:)
         REAL                 :: theta
-        REAL                 :: phi 
+        REAL                 :: phi
      END TYPE
 
      TYPE t_xcpot
@@ -524,7 +524,7 @@
         INTEGER :: igrd
         REAL    :: gmaxxc
      END TYPE
-   
+
 
      TYPE t_input
         LOGICAL :: strho
@@ -553,7 +553,7 @@
         LOGICAL :: l_bmt
         !INTEGER:: scale
         INTEGER:: jspins
-        INTEGER:: kcrel  
+        INTEGER:: kcrel
         LOGICAL:: frcor
         LOGICAL:: lflip
         LOGICAL:: score
@@ -573,15 +573,15 @@
         REAL :: zelec
         TYPE(t_efield)::efield
      END TYPE
- 
+
      type t_sliceplot
         logical :: iplot
         logical :: slice
         logical :: plpot
         integer :: kk
-        integer :: nnne   
+        integer :: nnne
         real    :: e1s
-        real    :: e2s  
+        real    :: e2s
      end type
      TYPE t_banddos
        LOGICAL :: dos
@@ -609,16 +609,17 @@
         LOGICAL :: pot8
      END TYPE
 
-   
+
      TYPE t_enpara
       REAL, ALLOCATABLE :: el0(:,:,:)
       REAL, ALLOCATABLE :: evac0(:,:)
       REAL, ALLOCATABLE :: ello0(:,:,:)
-      REAL, ALLOCATABLE :: enmix(:) 
+      REAL, ALLOCATABLE :: enmix(:)
       INTEGER, ALLOCATABLE :: skiplo(:,:)
-      LOGICAL, ALLOCATABLE :: lchange(:,:,:) 
+      LOGICAL, ALLOCATABLE :: lchange(:,:,:)
       LOGICAL, ALLOCATABLE :: lchg_v(:,:)
-      LOGICAL, ALLOCATABLE :: llochg(:,:,:) 
+      LOGICAL, ALLOCATABLE :: llochg(:,:,:)
+      REAL                 :: epara_min
      end type
 
      TYPE t_vacuum
@@ -629,7 +630,7 @@
         INTEGER ::nmzxyd
         INTEGER :: layerd
         INTEGER :: layers
-        INTEGER :: nvac 
+        INTEGER :: nvac
         INTEGER :: nvacd
         REAL :: delz
         REAL :: dvac
@@ -640,65 +641,65 @@
         REAL :: locy(2)
         LOGICAL ::starcoeff
         INTEGER, ALLOCATABLE :: izlay(:,:)
-      END TYPE 
-                                                                        
-                                                                        
-                          !Data for the spherical harmonics             
-      TYPE t_sphhar 
-        !No of symmetry types (must    
-        !equal maxval(atoms%ntypsy)    
-        INTEGER ::ntypsd 
-        !Max no of members of sphhar   
-        INTEGER ::memd 
-        !max of nlh                    
-        INTEGER ::nlhd 
-        !No of sphhar (ntypsd)         
-        INTEGER,ALLOCATABLE ::nlh(:) 
-        !l's of sphhar (0:nlhd,ntypsd) 
-        INTEGER,ALLOCATABLE ::llh(:,:) 
+      END TYPE
+
+
+                          !Data for the spherical harmonics
+      TYPE t_sphhar
+        !No of symmetry types (must
+        !equal maxval(atoms%ntypsy)
+        INTEGER ::ntypsd
+        !Max no of members of sphhar
+        INTEGER ::memd
+        !max of nlh
+        INTEGER ::nlhd
+        !No of sphhar (ntypsd)
+        INTEGER,ALLOCATABLE ::nlh(:)
+        !l's of sphhar (0:nlhd,ntypsd)
+        INTEGER,ALLOCATABLE ::llh(:,:)
         !No of members in sphhar (0:nlh
-        INTEGER,ALLOCATABLE ::nmem(:,:) 
+        INTEGER,ALLOCATABLE ::nmem(:,:)
         !lm's of of members (max(nmem),
-        INTEGER,ALLOCATABLE ::mlh(:,:,:) 
+        INTEGER,ALLOCATABLE ::mlh(:,:,:)
         !phasefactors (max(nmem),0:nlhd
-        COMPLEX,ALLOCATABLE ::clnu(:,:,:) 
-      END TYPE 
-                                                                        
-      !symmetry information                               
-      TYPE t_sym 
-       !Symophic group                 
+        COMPLEX,ALLOCATABLE ::clnu(:,:,:)
+      END TYPE
+
+      !symmetry information
+      TYPE t_sym
+       !Symophic group
        LOGICAL ::symor
        INTEGER ::nsymt
        INTEGER               ::  nsym
- 
+
        COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
-       !2D-inv-sym                     
-       LOGICAL ::invs2 
-       !Inversion-sym                  
-       LOGICAL ::invs 
-       !Z-refls. sym                   
-       LOGICAL ::zrfs 
+       !2D-inv-sym
+       LOGICAL ::invs2
+       !Inversion-sym
+       LOGICAL ::invs
+       !Z-refls. sym
+       LOGICAL ::zrfs
        LOGICAL :: l_zref
-       !No of sym ops                  
-       INTEGER ::nop 
-       !No of 2D-sym ops               
-       INTEGER ::nop2 
-       !Rot-matrices (3,3,nop)        
-       INTEGER,ALLOCATABLE::mrot(:,:,:) 
-       !inverse operation (nop)       
-       INTEGER,ALLOCATABLE::invtab(:) 
-       !translation vectors (3,nop)   
-       REAL,ALLOCATABLE::tau(:,:) 
-       !Name of lattice type           
-       CHARACTER*3   :: latnam 
-       !Name of sym                    
-       CHARACTER*4   :: namgrp 
+       !No of sym ops
+       INTEGER ::nop
+       !No of 2D-sym ops
+       INTEGER ::nop2
+       !Rot-matrices (3,3,nop)
+       INTEGER,ALLOCATABLE::mrot(:,:,:)
+       !inverse operation (nop)
+       INTEGER,ALLOCATABLE::invtab(:)
+       !translation vectors (3,nop)
+       REAL,ALLOCATABLE::tau(:,:)
+       !Name of lattice type
+       CHARACTER*3   :: latnam
+       !Name of sym
+       CHARACTER*4   :: namgrp
       INTEGER, ALLOCATABLE :: multab(:,:)
       INTEGER, ALLOCATABLE :: invsatnr(:)
       INTEGER, ALLOCATABLE :: invarop(:,:)
       INTEGER, ALLOCATABLE :: invarind(:)
 
-      END TYPE 
+      END TYPE
 
       TYPE t_results
         REAL, ALLOCATABLE :: force(:,:,:)   !< Forces calculated on all atoms (for each spin)
@@ -724,8 +725,8 @@
        INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
        INTEGER :: irank    !< rank of task in mpi_comm
        INTEGER :: isize    !< no of tasks in mpi_comm
-      END TYPE 
+      END TYPE
 
 
 
-      END                                           
+      END

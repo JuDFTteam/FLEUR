@@ -23,9 +23,9 @@
           !     core tails & start     --- r.abt         1998
           !     spin orbit coupling    --- a.shick,x.nie 1998
           !     non-colinear magnet.   --- p.kurz        1999
-          !     one-dimensional        --- y.mokrousov   2002 
-          !     exchange parameters    --- m.lezaic      2004 
-          !     
+          !     one-dimensional        --- y.mokrousov   2002
+          !     exchange parameters    --- m.lezaic      2004
+          !
           !                       g.bihlmayer, s.bluegel 1999
           !     ***************************************************************
           !----------------------------------------
@@ -49,7 +49,7 @@
           !        +-+
           !----------------------------------------
           !
-          ! I/O file list 
+          ! I/O file list
           !        2... time.info ...
           !        5... inp       ...
           !        6... out       ...
@@ -66,7 +66,7 @@
           !       22... dirofmag  ...
           !       24... nocoinf   ...
           !       25... potmat    ...
-          !       26... rhomat_inp & rhomat_out 
+          !       26... rhomat_inp & rhomat_out
           !       28... tmat      ...
           !       29... tlst      ...
           !       38... tmas      ...
@@ -97,7 +97,7 @@
           !      116... qptsinfo  ...
           !      117... shells    ...
           !      118... MCinp     ...
-          !      300... matelsso  (for ss+soc) 
+          !      300... matelsso  (for ss+soc)
           !      301+XXX matelXXX (for ss+soc)
           !
           !----------------------------------------
@@ -105,7 +105,7 @@
           USE m_fleur_init
           USE m_pldngen
           USE m_optional
-          USE m_vgen 
+          USE m_vgen
           USE m_rhodirgen
           USE m_writexcstuff
           USE m_vmatgen
@@ -162,7 +162,7 @@
           TYPE(t_vacuum)   :: vacuum
           TYPE(t_sliceplot):: sliceplot
           TYPE(t_banddos)  :: banddos
-          TYPE(t_obsolete) :: obsolete 
+          TYPE(t_obsolete) :: obsolete
           TYPE(t_enpara)   :: enpara
           TYPE(t_xcpot)    :: xcpot
           TYPE(t_results)  :: results
@@ -175,13 +175,13 @@
 
           !     .. Local Scalars ..
           INTEGER:: eig_id
-          INTEGER:: i,it,ithf,jspin,n           
+          INTEGER:: i,it,ithf,jspin,n
           LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
           CHARACTER(len=9) ivers
           CHARACTER(len=12) fname(3)
           !--- J<
-          INTEGER             :: phn  
-          REAL, PARAMETER     :: tol = 1.e-8 
+          INTEGER             :: phn
+          REAL, PARAMETER     :: tol = 1.e-8
           INTEGER             :: qcount ,imt,i_J,j_J
           !--- J>
 
@@ -199,7 +199,7 @@
          CALL fleur_init(ivers,mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
                  oneD,l_opti)
- 
+
          IF (l_opti) THEN
              IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
                 IF (noco%l_noco) THEN
@@ -232,9 +232,9 @@
                   &                      sym,cell,oneD,noco)
           ENDIF
 #endif
-        
+
           l_restart = .TRUE.
-    
+
           it     = 0
           ithf   = 0
           l_cont = ( it < input%itmax )
@@ -602,7 +602,7 @@
                                CALL timestart("determination of fermi energy")
                                ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkptd,dimension%jspd) )
                                CALL fermie(eig_id, mpi,kpts,obsolete,input,&
-                                    &        noco,minval(enpara%el0),jij,cell,results)
+                                    &        noco,enpara%epara_min,jij,cell,results)
                                DEALLOCATE ( results%w_iks )
                                CALL timestop("determination of fermi energy")
                             ENDIF
@@ -617,7 +617,7 @@
                                      input%zelec = input%zelec*2
                                   ENDDO
                                   CALL fermie(eig_id,mpi,kpts,obsolete,&
-                                       input,noco,minval(enpara%el0),jij,cell,results)
+                                       input,noco,enpara%epara_min,jij,cell,results)
                                   results%seigscv = results%seigscv/2
                                   results%ts = results%ts/2
                                   DO n=1,obsolete%nwd
@@ -625,7 +625,7 @@
                                   ENDDO
                                ELSE
                                   CALL fermie(eig_id,mpi,kpts,obsolete,&
-                                       input,noco,minval(enpara%el0),jij,cell,results)
+                                       input,noco,enpara%epara_min,jij,cell,results)
                                ENDIF
                                CALL timestop("determination of fermi energy")
 
@@ -731,11 +731,11 @@
 #ifdef CPP_MPI
                 CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
                 CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                &                               
+                &
                      CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                &                               
+                &
                      IF (noco%l_noco) THEN
-                DO n= 1,atoms%ntype 
+                DO n= 1,atoms%ntype
                    IF (noco%l_relax(n)) THEN
                       CALL MPI_BCAST(noco%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
                       CALL MPI_BCAST(noco%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
