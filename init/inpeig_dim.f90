@@ -17,7 +17,7 @@
       TYPE(t_obsolete),INTENT(INOUT)  :: obsolete
       TYPE(t_cell),INTENT(INOUT)      :: cell
       TYPE(t_noco),INTENT(INOUT)      :: noco
-      TYPE(t_stars),INTENT(INOUT)     :: stars 
+      TYPE(t_stars),INTENT(INOUT)     :: stars
       TYPE(t_dimension),INTENT(INOUT) :: dimension
       TYPE(t_kpts),INTENT(INOUT)      :: kpts
       TYPE(t_oneD),INTENT(INOUT)      :: oneD
@@ -32,7 +32,7 @@
       stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
       obsolete%nwd = obsolete%nwdd
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
-      cell%bbmat=matmul(transpose(cell%bmat),cell%bmat)
+      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
       jij%nqpt=1
       IF (jij%l_J) THEN
@@ -107,6 +107,7 @@
              stars%kq1d = max(kq1,stars%kq1d)
              stars%kq2d = max(kq2,stars%kq2d)
              stars%kq3d = max(kq3,stars%kq3d)
+             
              dimension%nvd = max(dimension%nvd,nv)
              dimension%nv2d = max(dimension%nv2d,nv2)
 
@@ -117,7 +118,7 @@
            ENDIF
          ENDDO   ! q-pts
       ENDDO      ! windows
-      
+
       IF (jij%l_J) THEN
        CLOSE(113)
       ENDIF
