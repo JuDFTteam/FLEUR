@@ -79,13 +79,13 @@
       DATA llr(0)/'absolute'/,llr(1)/'floating'/
       DATA pmod(0)/'not printed'/,pmod(1)/'printed    '/
 !
-      
+
       a1(:) = 0
       a2(:) = 0
       a3(:) = 0
 
       na = 0
-    
+
        CALL rw_inp(&
      &            'r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &             cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
@@ -94,7 +94,7 @@
 !---> pk non-collinear
 !---> read the angle information from nocoinf
       noco%qss(:) = 0.0
-      IF (noco%l_noco) THEN 
+      IF (noco%l_noco) THEN
          CALL inpnoco(&
      &    atoms,input,vacuum,jij,noco)
       ELSE
@@ -139,7 +139,7 @@
       vacuum%dvac = scale*vacuum%dvac
       dtild = scale*dtild
 !+odim
-      IF (.NOT.oneD%odd%d1) THEN 
+      IF (.NOT.oneD%odd%d1) THEN
          IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
              write(6,'(2(a7,f10.5))') 'dtild:',dtild,' dvac:',vacuum%dvac
               CALL juDFT_error("dtild < dvac",calledby="inped")
@@ -180,8 +180,7 @@
       cell%amat(:,3) = a3(:)
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
-      cell%bbmat=matmul(transpose(cell%bmat),cell%bmat)
-
+      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
       cell%omtil = abs(cell%omtil)
 
       IF (input%film .AND. .NOT.oneD%odd%d1) THEN
@@ -204,7 +203,7 @@
          ENDIF
       ENDIF
 
- 
+
       WRITE (6,FMT=8080)
  8080 FORMAT (/,/,1x,'bravais matrices of real and reciprocal lattices',&
      &       /)
@@ -258,8 +257,8 @@
       xcpot%igrd = 0
       IF (xcpot%icorr.GE.6) xcpot%igrd = 1
       input%krla = 0
-      IF (relcor.EQ.'relativistic') THEN 
-         input%krla = 1    
+      IF (relcor.EQ.'relativistic') THEN
+         input%krla = 1
          IF (xcpot%igrd.EQ.1) THEN
            WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
            WRITE(6,*) 'only without relativistic corrections !'
@@ -279,7 +278,7 @@
 
 
          obsolete%ndvgrd = max(obsolete%ndvgrd,3)
-         IF ((xcpot%igrd.NE.0).AND.(xcpot%igrd.NE.1)) THEN 
+         IF ((xcpot%igrd.NE.0).AND.(xcpot%igrd.NE.1)) THEN
            WRITE (6,*) 'selecting l91 or pw91 as XC-Potental you should'
            WRITE (6,*) ' have 2 lines like this in your inp-file:'
            WRITE (6,*) 'igrd=1,lwb=F,ndvgrd=4,idsprs=0,chng= 1.000E-16'
@@ -342,7 +341,7 @@
             IF (ntst == n) THEN
               atoms%zatom(n) = atoms%zatom(n) + zp
             ENDIF
-           ENDDO 
+           ENDDO
            CLOSE (17)
          ENDIF
 !
@@ -351,7 +350,7 @@
          DO i = 1,atoms%jri(n)
             atoms%rmsh(i,n) = r
             r = r*dr
-         ENDDO  
+         ENDDO
          atoms%volmts(n) = fpi_const/3.*atoms%rmt(n)**3
          cell%volint = cell%volint - atoms%volmts(n)*atoms%neq(n)
 
@@ -423,10 +422,10 @@
 !--->    lpr=0,form66=f,l_f=f,eonly=f   is an example.
          if (all(obsolete%lpr.ne.(/0,1/))) call judft_error("Wrong choice of lpr",calledby="inped")
 
-!   
+!
 !--->    lnonsph(n): max. l for H -setup in each atom type;
 !
-      
+
 #ifdef CPP_APW
       DO n = 1,atoms%ntype
 !+APW
@@ -436,8 +435,8 @@
          IF (atoms%lnonsph(n).EQ.0) atoms%lnonsph(n) = atoms%lmax(n)
          atoms%lnonsph(n) = min(atoms%lnonsph(n),atoms%lmax(n))
       ENDDO
-#endif       
-       
+#endif
+
 !--->    nwd = number of energy windows; lepr = 0 (1) for energy
 !--->    parameters given on absolute (floating) scale
       WRITE (16,FMT=*) 'nwd=',obsolete%nwd,'lepr=',obsolete%lepr
@@ -559,7 +558,7 @@
           IF (input%isec1<input%itmax)  CALL juDFT_error("LO + Wu not implemented"&
      &         ,calledby ="inped")
           IF (atoms%nlo(n).GT.atoms%nlod) THEN
-            WRITE (6,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod 
+            WRITE (6,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod
             CALL juDFT_error("nlo(n)>nlod",calledby ="inped")
           ENDIF
           DO j=1,atoms%nlo(n)
@@ -582,7 +581,7 @@
 #endif
         ENDIF
       ENDDO
-! 
+!
 ! Check for LDA+U:
 !
       atoms%n_u = 0
@@ -596,7 +595,7 @@
      &               'LO and LDA+U for same l not implemented'
                ENDDO
             ENDIF
-         ENDIF 
+         ENDIF
       ENDDO
       IF (atoms%n_u.GT.0) THEN
          IF (input%secvar)          CALL juDFT_error&
@@ -644,7 +643,7 @@
             IF (vacuum%izlay(i,1).lt.1) THEN
                CALL juDFT_error("STOP DOS: all layers must be at z>0"&
      &              ,calledby ="inped")
-                
+
             ENDIF
          ENDDO
       ENDIF
