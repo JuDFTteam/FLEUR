@@ -11,9 +11,10 @@
 !***********************************************************************
       SUBROUTINE atom_input(
      >                      infh,ntype,zatom,xl_buffer,buffer,nlod,
-     >                      jspins,film,neq,idlist,
+     >                      jspins,film,neq,idlist,xmlCoreRefOccs,
      X                      nline,jri,lmax,lnonsph,ncst,rmt,dx,bmu,
-     <                      nlo,llo,nel )
+     X                     xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,
+     <                      nlo,llo,nel,el0,ello0,evac0 )
 
       USE m_readrecord
       USE m_setatomcore, ONLY : setatom_bystr, setcore_bystr
@@ -30,6 +31,7 @@
       LOGICAL, INTENT (IN)     :: film
       INTEGER, INTENT (IN)     :: neq(ntype)
       REAL   , INTENT (IN)     :: zatom(ntype),idlist(ntype)
+      REAL   , INTENT (IN)     :: xmlCoreRefOccs(29)
       INTEGER, INTENT (INOUT)  :: jri(ntype)      ! mt radial mesh points
       INTEGER, INTENT (INOUT)  :: lmax(ntype)     ! max. l to include for density, overlap etc.
       INTEGER, INTENT (INOUT)  :: lnonsph(ntype)  ! max. l for nonspherical MT-contributions
@@ -39,6 +41,10 @@
       REAL, INTENT (INOUT)     :: rmt(ntype)      ! muffin-tin radius 
       REAL, INTENT (INOUT)     :: dx(ntype)       ! log. spacing
       REAL, INTENT (INOUT)     :: bmu(ntype)      ! magnetic moment
+      REAL, INTENT (INOUT)     :: xmlCoreOccs(2,29,ntype)
+      LOGICAL, INTENT (INOUT)  :: xmlCoreStates(29,ntype)
+      LOGICAL, INTENT (INOUT)  :: xmlPrintCoreStates(29,ntype)
+      REAL, INTENT (OUT)    :: el0(0:3,ntype),ello0(nlod,ntype),evac0(2)
       CHARACTER(len=xl_buffer) :: buffer
 
 !===> data
@@ -51,6 +57,7 @@
       INTEGER :: lmax0_def,lnonsph0_def,jri0_def,ncst0_def
       INTEGER :: lmax0,lnonsph0,jri0,ncst0,nlod0,llod
       INTEGER :: natomst,ncorest,nvalst,z,nlo0
+      INTEGER :: xmlCoreStateNumber
       REAL    :: rmt0_def,dx0_def,bmu0_def
       REAL    :: rmt0,dx0,bmu0,zat0,id
       LOGICAL :: fatalerror, h_atom, h_allatoms
@@ -58,7 +65,6 @@
       INTEGER :: lonqn(nlod,ntype),skiplo(ntype),z_int(ntype)
       INTEGER :: coreqn(2,nstd,ntype),lval(nstd,ntype),llo0(nlod)
       REAL    :: nelec(0:nwdd),coreocc(nstd,ntype)
-      REAL    :: el0(0:3,ntype),ello0(nlod,ntype),evac0(2)
       LOGICAL :: lchange(0:3,ntype),llochg(2,ntype)
 
 
@@ -68,6 +74,7 @@
       CHARACTER(len=13) :: fname
 
       CHARACTER(len=1) :: lotype(0:3)
+
       DATA lotype /'s','p','d','f'/
 
 !---> initialize some variables
@@ -333,6 +340,7 @@
       coreocc(1:nstd,1:ntype) = -1.0
 
       nel = 0;  el0 = -9999.9
+      ello0 = -9999.9; evac0 = -9999.9
       atoms: DO n = 1, ntype
 
         CALL setcore_bystr(
@@ -365,18 +373,72 @@
               j = - coreocc(i,n)
             ENDIF
             write(27,'(4i3)') coreqn(1,i,n),coreqn(2,i,n),j,j
+            xmlCoreStateNumber = 0
+            SELECT CASE(coreqn(1,i,n))
+               CASE (1)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 1   !(1s1/2)
+               CASE (2)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 2   !(2s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 3    !(2p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 4   !(2p3/2)
+               CASE (3)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 5   !(3s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 6    !(3p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 7   !(3p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 9    !(3d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 10  !(3d5/2)
+               CASE (4)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 8   !(4s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 11   !(4p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 12  !(4p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 14   !(4d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 15  !(4d5/2)
+                  IF(coreqn(2,i,n).EQ.3) xmlCoreStateNumber = 19   !(4f5/2)
+                  IF(coreqn(2,i,n).EQ.-4) xmlCoreStateNumber = 20  !(4f7/2)
+               CASE (5)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 13  !(5s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 16   !(5p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 17  !(5p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 21   !(5d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 22  !(5d5/2)
+                  IF(coreqn(2,i,n).EQ.3) xmlCoreStateNumber = 26   !(5f5/2)
+                  IF(coreqn(2,i,n).EQ.-4) xmlCoreStateNumber = 27  !(5f7/2)
+               CASE (6)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 18  !(6s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 23   !(6p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 24  !(6p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 28   !(6d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 29  !(6d5/2)
+               CASE (7)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 25  !(7s1/2)
+            END SELECT
+            IF(xmlCoreStateNumber.EQ.0) STOP 'Invalid core state!'
+            xmlCoreStates(xmlCoreStateNumber,n) = .TRUE.
+            xmlPrintCoreStates(xmlCoreStateNumber,n) = 
+     +         coreocc(i,n).NE.xmlCoreRefOccs(xmlCoreStateNumber)
+            SELECT CASE(xmlCoreStateNumber)
+               CASE (9:10,14:15,19:22,26:29)
+                  up = MIN((xmlCoreRefOccs(xmlCoreStateNumber)/2),
+     +                          coreocc(i,n))
+                  dn = MAX(0.0,coreocc(i,n)-up)
+               CASE DEFAULT
+                  up = CEILING(coreocc(i,n)/2)
+                  dn = FLOOR(coreocc(i,n)/2)
+            END SELECT
+            xmlCoreOccs(1,xmlCoreStateNumber,n) = up
+            xmlCoreOccs(2,xmlCoreStateNumber,n) = dn
           ENDDO
           DO i = ncorest+1, natomst
             WRITE(6,'("  valence :",2i3,f6.1,i4,a1)') 
      &             coreqn(1,i,n),coreqn(2,i,n),coreocc(i,n),
      &                      coreqn(1,i,n),lotype(lval(i,n))
             nel = nel + coreocc(i,n) *neq(n)
-c
+
 c           In d and f shells a magnetic alignment of the spins
 c           is preferred in the valence bands
 c           Hence the up and down occupation is chosen such that
 c           the total spin is maximized
-c
+
             IF ( abs(coreqn(2,i,n)+0.5) > 2.499 )
      +      THEN
               IF ( coreocc(i,n) > abs(coreqn(2,i,n)) ) THEN
@@ -386,9 +448,9 @@ c
                 up = coreocc(i,n)
                 dn = 0
               END IF
-c
+
 c           in s and p states equal occupation of up and down states
-c
+
             ELSE
               j = INT(coreocc(i,n) / 2)
               IF (coreocc(i,n) > 2*j) THEN
@@ -452,7 +514,7 @@ c
           DO i = 1, nlo(n)
             ello0(i,n) = REAL(lonqn(i,n))
             IF ( lonqn(i,n) == NINT(el0(llo(i,n),n)) ) THEN  ! increase qn
-              el0(llo(i,n),n) = el0(llo(i,n),n) + 1          ! in LAPW's by 1  
+              el0(llo(i,n),n) = el0(llo(i,n),n) + 1          ! in LAPW's by 1
             ENDIF
           ENDDO
         ENDIF
@@ -462,6 +524,52 @@ c
         ENDDO
 
       ENDDO atoms
+
+      DO n = 1, ntype
+         z = NINT(zatom(n))
+         IF (all(el0(:,n)>-9999.)) cycle !enpara was set already
+         IF ( z < 3 ) THEN
+            el0(:,n) = real( (/1,2,3,4/) )
+         ELSEIF ( z < 11 ) THEN
+            el0(:,n) = real( (/2,2,3,4/) )
+         ELSEIF ( z < 19 ) THEN
+            el0(:,n) = real( (/3,3,3,4/) )
+         ELSEIF ( z < 31 ) THEN
+            el0(:,n) = real( (/4,4,3,4/) )
+         ELSEIF ( z < 37 ) THEN
+            el0(:,n) = real( (/4,4,4,4/) )
+         ELSEIF ( z < 49 ) THEN
+            el0(:,n) = real( (/5,5,4,4/) )
+         ELSEIF ( z < 55 ) THEN
+            el0(:,n) = real( (/5,5,5,4/) )
+         ELSEIF ( z < 72 ) THEN
+            el0(:,n) = real( (/6,6,5,4/) )
+         ELSEIF ( z < 81 ) THEN
+            el0(:,n) = real( (/6,6,5,5/) )
+         ELSEIF ( z < 87 ) THEN
+            el0(:,n) = real( (/6,6,6,5/) )
+         ELSE
+            el0(:,n) = real( (/7,7,6,5/) )
+         ENDIF
+! correct valence charge
+         DO i = 1,nlo(n)
+            IF (llo(i,n).GT.3) THEN
+               nel = nel - 2*(2*llo(i,n)+1)*neq(n)   
+               IF (llo(i,n) == 0) ncst(n) = ncst(n) + 1
+               IF (llo(i,n) >  0) ncst(n) = ncst(n) + 2
+            ELSE IF (ello0(i,n).GE.el0(llo(i,n),n)) THEN
+               nel = nel - 2*(2*llo(i,n)+1)*neq(n)   
+               IF (llo(i,n) == 0) ncst(n) = ncst(n) + 1
+               IF (llo(i,n) >  0) ncst(n) = ncst(n) + 2
+            END IF
+         ENDDO
+
+         DO i = 1, nlo(n)
+            IF (ello0(i,n).EQ.0.0) THEN
+               ello0(i,n) = el0(llo(i,n),n) - 1
+            END IF
+         ENDDO
+      ENDDO
 
       WRITE (6,'("Valence Electrons =",i5)') nel
 

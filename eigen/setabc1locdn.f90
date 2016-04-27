@@ -2,7 +2,7 @@ MODULE m_setabc1locdn
       use m_juDFT
 !***********************************************************************
 ! calculates the (lower case) a, b and c coefficients for the local
-! orbitals. The radial function of the local orbital is a linear 
+! orbitals. The radial function of the local orbital is a linear
 ! combination of the apw radial function and its derivative and the
 ! extra radial funtion (a*u + b*udot + c*ulo). This function is zero
 ! and has zero derivative at the muffin tin boundary.
@@ -31,12 +31,12 @@ MODULE m_setabc1locdn
       TYPE(t_lapw),INTENT(IN)   :: lapw
 !     ..
 !     .. Scalar Arguments ..
-      INTEGER, INTENT (IN) :: ne,iintsp,jspin 
+      INTEGER, INTENT (IN) :: ne,iintsp,jspin
 !     ..
 !     .. Array Arguments ..
       INTEGER, INTENT (IN)  :: kveclo(atoms%nlotot)
       INTEGER, INTENT (OUT) :: nbasf0(atoms%nlod,atoms%natd),nkvec(atoms%nlod,atoms%natd)
-      INTEGER, INTENT (OUT) :: kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%ntypd  )
+      INTEGER, INTENT (OUT) :: kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%natd )
       REAL,    INTENT (OUT) :: alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd)
       REAL,    INTENT (OUT) :: clo1(atoms%nlod,atoms%ntypd)
       COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%natd)

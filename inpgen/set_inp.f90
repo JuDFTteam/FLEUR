@@ -37,7 +37,7 @@
       INTEGER nel,i,j
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0
       LOGICAL l_test,l_gga,l_exists
-      REAL     dx0(atoms%ntype)
+      REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       INTEGER  div(3)
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
       CHARACTER(len=1) :: ch_rw
@@ -48,7 +48,8 @@
       INTEGER  nu,iofile      
       INTEGER  iggachk
       INTEGER  n  ,iostat
-      REAL    scale,scpos ,zc 
+      REAL    scale,scpos ,zc
+      REAL    el0(0:3,atoms%ntype),ello0(atoms%nlod,atoms%ntype),evac0(2)
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
@@ -73,6 +74,16 @@
       LOGICAL  ::  l_gamma
       INTEGER  :: nkpt3(3)
 !HF
+
+      LOGICAL :: xmlCoreStates(29,atoms%ntype)
+      LOGICAL :: xmlPrintCoreStates(29,atoms%ntype)
+      REAL    :: xmlCoreOccs(2,29,atoms%ntype)
+      REAL    :: xmlCoreRefOccs(29)
+      DATA xmlCoreRefOccs /2,2,2,4,2,2,4,2,4,6,2,4,2,4,6,2,4,2,6,8,4,&
+     &                     6,2,4,2,6,8,4,6/
+      xmlCoreStates = .FALSE.
+      xmlPrintCoreStates = .FALSE.
+      xmlCoreOccs = 0.0
 
       l_test = .false.
       l_gga  = .true.
@@ -115,7 +126,8 @@
       obsolete%lpr = 0 ; input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
       input%spinf = 2.0 ;   obsolete%lepr = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0 ; obsolete%nwd = 1 ; vacuum%nstars = 0 ; vacuum%nstm = 0 
-      input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6  
+      input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
+      ALLOCATE(vacuum%izlay(vacuum%layerd,2))
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0 
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
@@ -167,19 +179,25 @@
 
 ! --> read in (possibly) atomic info
 
+      stars%gmax = 3.0 * kmax ; xcpot%gmaxxc = 2.5 * kmax ; input%rkmax = kmax
+      atoms%lnonsph(:) = min( max( (atoms%lmax(:)-2),3 ), 8 )
+
       CALL atom_input(&
      &                infh,atoms%ntype,atoms%zatom,xl_buffer,buffer,atoms%nlod,&
-     &                input%jspins,input%film,atoms%neq,idlist,&
+     &                input%jspins,input%film,atoms%neq,idlist,xmlCoreRefOccs,&
      &                nline,atoms%jri,atoms%lmax,atoms%lnonsph,atoms%ncst,atoms%rmt,atoms%dx,atoms%bmu,&
-     &                atoms%nlo,atoms%llo,nel)
+     &                xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                atoms%nlo,atoms%llo,nel,el0,ello0,evac0)
+
+      input%zelec = nel
 
 ! --> check once more
-
+      rmtTemp = 999.0
       l_test = .true.
       CALL chkmt(&
      &           atoms,input,vacuum,cell,oneD,&
      &           l_gga,noel,l_test,&
-     &           kmax0,dtild0,dvac0,lmax0,jri0,atoms%rmt,dx0)
+     &           kmax0,dtild0,dvac0,lmax0,jri0,rmtTemp,dx0)
 
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
         input%ellow = -1.8
@@ -190,10 +208,7 @@
          input%elup = 0.5
       ELSE
          input%elup = 1.0
-      ENDIF
-      stars%gmax = 3.0 * kmax ; xcpot%gmaxxc = 2.5 * kmax ; input%rkmax = kmax
-      atoms%lnonsph(:) = min( max( (atoms%lmax(:)-2),3 ), 8 ) 
-      input%zelec = nel
+      ENDIF 
 
       IF (.not.input%film) THEN
          vacuum%dvac = a3(3) ; dtild = vacuum%dvac
@@ -250,6 +265,7 @@
       selct2(2,:) = 0
       selct2(3,:) = 4
       selct2(4,:) = 2
+      ALLOCATE(hybrid%lcutm2(atoms%ntypd),hybrid%lcutwf(atoms%ntypd))
       hybrid%lcutm2      = 4
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
@@ -257,11 +273,12 @@
       bands       = max( nint(input%zelec)*10, 60 )
       hybrid%bands2      = max( nint(input%zelec)*10, 60 )
       nkpt3       = (/ 4, 4, 4 /)
-      l_gamma     = .true.
+      l_gamma     = .false.
       IF ( l_hyb ) THEN
         input%ellow = input%ellow -  2.0
         input%elup  = input%elup  + 10.0
         input%gw_neigd = bands
+        l_gamma = .true.
       ELSE
         input%gw_neigd = 0
       END IF
@@ -350,6 +367,8 @@
 9999    FORMAT ( 'nkpt=',i5,',nx=',i2,',ny=',i2,',nz=',i2,',gamma=',l1)
         CLOSE (iofile)
       END IF ! l_hyb
+
+      DEALLOCATE(hybrid%lcutm2,hybrid%lcutwf)
 !HF
       END SUBROUTINE set_inp
       END MODULE m_setinp
