@@ -71,7 +71,7 @@ CONTAINS
     USE m_int21lo     ! -"- for u_lo
     USE m_rhomt21     ! calculate (spin) off-diagonal MT-density coeff's
     USE m_rhonmt21    ! -"-                       non-MT-density coeff's
-    USE m_cdnmt       ! calculate the density and orbital moments etc. 
+    USE m_cdnmt       ! calculate the density and orbital moments etc.
     USE m_orbmom      ! coeffd for orbital moments
     USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
     USE m_qintsl      ! (slabs) and intergate the DOS in these vacuum%layers
@@ -84,7 +84,7 @@ CONTAINS
     USE m_cylpts
     USE m_cdnread, ONLY : cdn_read0, cdn_read
 #ifdef CPP_MPI
-    USE m_mpi_col_den ! collect density data from parallel nodes 
+    USE m_mpi_col_den ! collect density data from parallel nodes
     USE m_mpi_col_dos ! collect DOS data from parallel nodes
 #endif
     USE m_types
@@ -152,7 +152,7 @@ CONTAINS
     REAL    ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
 
     INTEGER, PARAMETER :: n2max_nstm3=13
-    
+
     INTEGER nsld,nsl
     !
     INTEGER, ALLOCATABLE :: nmtsl(:,:),nslat(:,:)
@@ -232,7 +232,7 @@ CONTAINS
        ALLOCATE ( uloulopn21(1,1,1),uloulop21(1,1,1),qmat(1,1,1,1) )
     ENDIF
     !
-    !---> if l_mperp = F, these variables are only needed for one spin 
+    !---> if l_mperp = F, these variables are only needed for one spin
     !---> at a time, otherwise for both spins:
     !
     ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )      ! Deallocation before mpi_col_den
@@ -249,7 +249,7 @@ CONTAINS
     ALLOCATE ( usdus%dulos(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( usdus%uulon(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( usdus%dulon(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( uloulopn(atoms%nlod,atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%uloulopn(atoms%nlod,atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( uu(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( dd(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( du(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
@@ -270,8 +270,8 @@ CONTAINS
     !
     uu(:,:,:) = 0.0 ; dd(:,:,:) = 0.0 ; du(:,:,:) = 0.0
     IF (noco%l_mperp) THEN
-       mt21(:,:)%uu = czero ; mt21(:,:)%ud = czero 
-       mt21(:,:)%du = czero ; mt21(:,:)%dd = czero 
+       mt21(:,:)%uu = czero ; mt21(:,:)%ud = czero
+       mt21(:,:)%du = czero ; mt21(:,:)%dd = czero
        lo21(:,:)%uulo = czero ; lo21(:,:)%ulou = czero
        lo21(:,:)%dulo = czero ; lo21(:,:)%ulod = czero
        uloulop21(:,:,:) = czero
@@ -324,7 +324,7 @@ CONTAINS
     ELSE
        ALLOCATE ( m_mcd(1,1,1,1),mcd(1,1,1) )
     ENDIF
-    
+
     ALLOCATE ( kveclo(atoms%nlotot) )
 
     IF (mpi%irank==0) WRITE (6,FMT=8000) jspin
@@ -338,7 +338,7 @@ CONTAINS
          ello,evac,epar,bkpt,wk,n_bands,n_size)!keep
 
     !+lo
-    !---> if local orbitals are used, the eigenvector has a higher 
+    !---> if local orbitals are used, the eigenvector has a higher
     !---> dimension then nvd
     ALLOCATE ( aclo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end), &
          ! Deallocated at end of subroutine&
@@ -416,7 +416,7 @@ CONTAINS
 8002      FORMAT (i3,f10.5,2 (5x,1p,2e16.7,i5),1p,2e16.7)
 
           IF (input%film) vz0(:) = vz(vacuum%nmz,:)
-          
+
           !+q_sl
           IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
              IF (oneD%odi%d1)  CALL juDFT_error&
@@ -472,7 +472,7 @@ CONTAINS
                 enddo
                 ! uncomment this so that cdinf plots works for all states
                 ! noccbd = neigd
-                
+
                 !
                 ! -> Gu test: distribute ev's among the processors...
                 !
@@ -600,7 +600,7 @@ CONTAINS
 
                 !---> pk non-collinear
                 !--->    valence density in the interstitial and vacuum region
-                !--->    has to be called only once (if jspin=1) in the non-collinear 
+                !--->    has to be called only once (if jspin=1) in the non-collinear
                 !--->    case
                 !     ----> valence density in the interstitial region
                 IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
@@ -656,7 +656,7 @@ CONTAINS
                       ENDDO
                    ENDDO
                 END IF
-                
+
                 !--->    valence density in the atomic spheres
                 !--->    construct a(tilta) and b(tilta)
                 IF (noco%l_mperp) THEN
@@ -686,16 +686,16 @@ CONTAINS
                            kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                            e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof)
                       call timestop("cdnval: to_pulay")
-                      
+
                    ELSE
                       call timestart("cdnval: abcof")
-                      
+
                       CALL abcof(atoms,noccbd,sym, cell, bkpt,lapw,noccbd,z, usdus, noco,ispin,kveclo,oneD,&
                            acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin))
                       call timestop("cdnval: abcof")
-                      
+
                    ENDIF
-                   
+
                    IF ( atoms%n_u.GT.0 ) THEN
                       CALL n_mat(atoms,sym,noccbd,usdus,ispin,we, acof(:,0:,:,ispin),bcof(:,0:,:,isp),&
                            ccof(-atoms%llod:,:,:,:,ispin), n_mmp)
@@ -729,7 +729,7 @@ CONTAINS
                            skip_t,noccbd, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
                            nmtsl,nsl, qmtsl(:,:,ikpt,ispin))
                       !
-                      
+
                       INQUIRE (file='orbcomprot',exist=l_orbcomprot)
                       IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
                          CALL abcrot2(atoms, noccbd,&
@@ -747,7 +747,7 @@ CONTAINS
                    CALL rhomt(atoms,we,noccbd, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                         uu(0:,:,ispin),dd(0:,:,ispin),du(0:,:,ispin))
                    CALL timestop("cdnval: rhomt")
-                   !+soc            
+                   !+soc
                    IF (noco%l_soc) THEN
                       CALL orbmom(atoms,noccbd, we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                            ccof(-atoms%llod:,:,:,:,ispin), orb(0:,-atoms%lmaxd:,:,ispin),orbl(:,-atoms%llod:,:,ispin),&
@@ -759,9 +759,9 @@ CONTAINS
                    CALL rhonmt(atoms,sphhar, we,noccbd,sym, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                         uunmt(0:,:,:,ispin),ddnmt(0:,:,:,ispin), udnmt(0:,:,:,ispin),dunmt(0:,:,:,ispin))
                    CALL timestop("cdnval: rhonmt")
-                   
-                   !--->          set up coefficients of the local orbitals and the 
-                   !--->          flapw - lo cross terms for the spherical and 
+
+                   !--->          set up coefficients of the local orbitals and the
+                   !--->          flapw - lo cross terms for the spherical and
                    !--->          non-spherical mt density
                    CALL timestart("cdnval: rho(n)mtlo")
                    CALL rhomtlo(atoms,&
@@ -772,14 +772,14 @@ CONTAINS
                    CALL rhonmtlo(&
                         atoms,sphhar,&
                         noccbd,we,acof(:,0:,:,ispin),&
-                        bcof(:,0:,:,ispin),ccof(-1:,:,:,:,ispin),&
+                        bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),&
                         acnmt(0:,:,:,:,ispin),bcnmt(0:,:,:,:,ispin),&
                         ccnmt(:,:,:,:,ispin))
                    CALL timestop("cdnval: rho(n)mtlo")
                    !
                    IF (input%l_f) THEN
                    CALL timestart("cdnval: force_a12/21")
-                 
+
 #ifndef CPP_APW
                       CALL force_a12(atoms,noccbd,sym, dimension,cell,oneD,&
                            we,ispin,noccbd,usdus,acof(:,0:,:,ispin),&
@@ -789,7 +789,7 @@ CONTAINS
                            oneD,cell,we,ispin,epar(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
                            bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin), aveccof,bveccof,cveccof,&
                            results,f_a21,f_b4)
-                      
+
                       DEALLOCATE (e1cof,e2cof,aveccof,bveccof)
                       DEALLOCATE (acoflo,bcoflo,cveccof)
                    CALL timestop("cdnval: force_a12/21")
@@ -805,7 +805,7 @@ CONTAINS
                            uunmt21,ddnmt21,udnmt21,dunmt21)
                    ENDIF
                 ENDIF
-                
+
                 DEALLOCATE (acof,bcof,ccof)
                          !
 199             CONTINUE
@@ -816,7 +816,7 @@ CONTAINS
                    !--->    and write the information to the files dosinp and vacdos
                    !--->    for dos and bandstructure plots
                    !
-                   
+
                    !--dw    parallel writing of vacdos,dosinp....
                    !        write data to direct access file first, write to formated file later by PE 0 only!
                    !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
@@ -911,8 +911,8 @@ enddo
                      uunmt21,ddnmt21,udnmt21,dunmt21,&
                      cdom,cdomvz,cdomvxy,n_mmp)
              ENDDO
-             CALL timestop("cdnval: mpi_col_den")                          
-#endif 
+             CALL timestop("cdnval: mpi_col_den")
+#endif
              IF (((jspin.eq.input%jspins).OR.noco%l_mperp) .AND. (banddos%dos.or.banddos%vacdos.or.input%cdinf) ) THEN
                 call timestart("cdnval: dos")
                 IF (mpi%irank==0) THEN
@@ -933,18 +933,18 @@ enddo
                 ENDIF
                 call timestop("cdnval: dos")
              ENDIF
-             
+
              IF (mpi%irank==0) THEN
                 CALL cdnmt(&
                              dimension%jspd,atoms,sphhar,llpd,&
                              noco,l_fmpl,jsp_start,jsp_end,&
                              epar,ello,vr(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
-                             usdus,uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
+                             usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
                              orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
                              uunmt21,ddnmt21,udnmt21,dunmt21,&
                              chmom,clmom,&
                              qa21,rho)
-                
+
                 DO ispin = jsp_start,jsp_end
                    WRITE (6,*) 'Energy Parameters for spin:',ispin
                    IF (.not.sliceplot%slice) THEN
@@ -960,7 +960,7 @@ enddo
                                               atoms,jspin,input%film,&
                                               enpara,16)
                    ENDIF
-                   
+
                    !--->      check continuity of charge density
                    IF (input%cdinf) THEN
                       call timestart("cdnval: cdninf-stuff")
@@ -1005,7 +1005,7 @@ enddo
                          nat = nat + atoms%neq(n)
                       ENDDO
                       call timestop("cdnval: cdninf-stuff")
-     
+
                    ENDIF
                    !+for
                    !--->      forces of equ. A8 of Yu et al.
@@ -1023,7 +1023,7 @@ enddo
 
              IF ((jsp_end.EQ.input%jspins)) THEN
                 IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK")
-                
+
                 IF (vacuum%nstm.EQ.3)  CALL juDFT_end("VACWAVE OK")
              ENDIF
            END SUBROUTINE cdnval
