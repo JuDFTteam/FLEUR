@@ -90,6 +90,7 @@
           ALLOCATE ( enpara%skiplo(atoms%ntypd,input%jspins))
           ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntypd,input%jspins))
           ALLOCATE ( enpara%enmix(input%jspins))
+          ALLOCATE ( enpara%evac0(2,dimension%jspd))
           ALLOCATE ( rht(vacuum%nmzd,2,DIMENSION%jspd),vbar(2,atoms%ntypd),sigm(vacuum%nmzd) )
           ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
           enpara%enmix=1.0
@@ -430,6 +431,8 @@
              ENDIF
              DEALLOCATE ( qpw,rhtxy,rht,xp,rat,eig,rh,rh1 )
              DEALLOCATE ( rhoss,vacpar,vbar,sigm )
+             DEALLOCATE ( enpara%ello0,enpara%el0,enpara%lchange)
+             DEALLOCATE ( enpara%skiplo,enpara%llochg,enpara%enmix,enpara%evac0)
           ENDIF ! mpi%irank == 0
           DEALLOCATE ( rho )
           !
