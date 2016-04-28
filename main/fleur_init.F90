@@ -96,6 +96,7 @@
              oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
           ENDIF
           !-odim
+          atoms%nat = atoms%natd ! This is preliminary. The value of nat changes later.
           ALLOCATE ( atoms%nz(atoms%ntypd),atoms%relax(3,atoms%ntypd),atoms%nlhtyp(atoms%ntype))
           ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%n3d) )
           ALLOCATE ( stars%ig(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d),stars%ig2(stars%n3d),stars%igz(stars%n3d) )

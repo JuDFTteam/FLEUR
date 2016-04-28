@@ -25,9 +25,9 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)  :: atoms
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd    
-    INTEGER, INTENT (IN) :: ne      
-    INTEGER, INTENT (IN) :: jspin 
+    INTEGER, INTENT (IN) :: nobd
+    INTEGER, INTENT (IN) :: ne
+    INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
@@ -140,7 +140,7 @@ CONTAINS
                 !$    acof_inv(:,:) = cmplx(0.0,0.0)
                 !$    bcof_inv(:,:) = cmplx(0.0,0.0)
                 !$ ENDIF
-#endif 
+#endif
 
 
 !!!!
@@ -186,7 +186,7 @@ CONTAINS
                       fk(2) = bkpt(2) + lapw%k2(k,jspin) + qss2
                       fk(3) = bkpt(3) + lapw%k3(k,jspin) + qss3
                    ENDIF ! (noco%l_ss)
-                   s=dot_product(fk,matmul(fk,cell%bbmat))
+                   s=  dot_product(fk,matmul(cell%bbmat,fk))
                    s = sqrt(s)
                    r1 = atoms%rmt(n)*s
                    CALL sphbes(atoms%lmax(n),r1,fj)
@@ -223,7 +223,7 @@ CONTAINS
                          END IF
                       ENDDO
                    ENDDO
-                   fkp=matmul(cell%bmat,fkr)
+                   fkp=matmul(fkr,cell%bmat)
                    !     ----> generate spherical harmonics
                    CALL ylm4(atoms%lmax(n),fkp,ylm)
                    !     ----> loop over l
@@ -288,12 +288,12 @@ CONTAINS
                 !$        acof(:,:,jatom) = acof(:,:,jatom) + acof_inv(:,:)
                 !$        bcof(:,:,jatom) = bcof(:,:,jatom) + bcof_inv(:,:)
                 !$      ENDIF
-#endif 
+#endif
                 !$OMP END CRITICAL
                 !$    DEALLOCATE(acof_loc,bcof_loc)
 #if ( defined(CPP_SOC) && defined(CPP_INVERSION) )
                 !$    DEALLOCATE(acof_inv,bcof_inv)
-#endif 
+#endif
                 DEALLOCATE(work)
                 !$OMP END PARALLEL
              ENDIF  ! invsatom == ( 0 v 1 )
@@ -305,14 +305,14 @@ CONTAINS
     !
     !                           -p,n       (l+m)   p,n  *
     ! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-    !                           l,m                l,-m  
+    !                           l,m                l,-m
     ! of two atoms related by inversion symmetry and the coefficients are considered to
     ! be in the local frame of the representative atom. This is possible, if z is real.
     ! After SOC, however, the eigenvectors z are complex and this is no longer possible
     ! so the z has to enter, not z*. This is done within the k-loop.
     !                                    -p,n       m   p,n  *
     ! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-    !                                     l,m           l,-m                    l 
+    !                                     l,m           l,-m                    l
     ! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
     !                                                  lm  lm
 #else
