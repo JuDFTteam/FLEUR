@@ -1,5 +1,7 @@
 include_directories(include)
 
+set(c_files io/xml/inputSchema.h io/xml/dropInputSchema.c)
+
 set(fleur_F90 main/fleur.F90)
 set(fleur_F77 "")
 include(eigen/CMakeLists.txt)
@@ -37,12 +39,14 @@ inpgen/atom_sym.f inpgen/generator.f inpgen/read_record.f inpgen/soc_or_ssdw.f i
 inpgen/bravais_symm.f  inpgen/set_atom_core.f inpgen/spg_gen.f global/triang.f
 inpgen/closure.f inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
 global/hybridmix.f  io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
-global/sort.f
+global/sort.f init/kptgen_hybrid.f init/od_kptsgen.f init/bravais.f init/divi.f init/brzone.f
+init/kptmop.f init/kpttet.f init/bandstr1.F init/ordstar.f init/fulstar.f init/kprep.f
+init/tetcon.f init/kvecon.f
 )
 
 set(inpgen_F90  io/xsf_io.f90
 global/types.F90 global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 io/rw_inp.f90 juDFT/juDFT.F90
-juDFT/stop.F90 juDFT/time.F90 juDFT/init.F90)
+juDFT/stop.F90 juDFT/time.F90 juDFT/init.F90 io/w_inpXML.f90 init/julia.f90)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 
@@ -57,12 +61,12 @@ add_executable(fleur ${fleur_SRC} ${c_files})
 target_link_libraries(fleur ${HDF5_LIBS} ${LAPACK_LIBS})
 set_target_properties(fleur PROPERTIES Fortran_MODULE_DIRECTORY fleur_modules COMPILE_OPTIONS -Ifleur_modules)
 
-add_executable(fleur_INVS ${fleur_SRC})
+add_executable(fleur_INVS ${fleur_SRC} ${c_files})
 target_link_libraries(fleur_INVS ${HDF5_LIBS} ${LAPACK_LIBS})
 target_compile_definitions(fleur_INVS PUBLIC -DCPP_INVERSION)
 set_target_properties(fleur_INVS PROPERTIES Fortran_MODULE_DIRECTORY fleur_INVS_modules COMPILE_OPTIONS -Ifleur_INVS_modules)
 
-add_executable(fleur_SOC ${fleur_SRC})
+add_executable(fleur_SOC ${fleur_SRC} ${c_files})
 target_link_libraries(fleur_SOC ${HDF5_LIBS} ${LAPACK_LIBS})
 target_compile_definitions(fleur_SOC PUBLIC -DCPP_SOC)
 set_target_properties(fleur_SOC PROPERTIES Fortran_MODULE_DIRECTORY fleur_SOC_modules COMPILE_OPTIONS -Ifleur_SOC_modules)
@@ -83,21 +87,21 @@ if(${Fleur_uses_MPI})
   set(MPI_DEFINITIONS -DCPP_MPI ${MPI_DEFINITIONS})
 
   #fleur_MPI
-  add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC}
+  add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_files}
 ${fleur_SRC_MPI})
   target_compile_definitions(fleur_MPI PUBLIC ${MPI_DEFINITIONS})
   target_link_libraries(fleur_MPI ${HDF5_LIBS} ${LAPACK_LIBS})
   set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_MPI_modules COMPILE_OPTIONS -Ifleur_MPI_modules)
 
   #fleur_INVS_MPI
-  add_executable(fleur_INVS_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC}
+  add_executable(fleur_INVS_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_files}
 ${fleur_SRC_MPI})
   target_link_libraries(fleur_INVS_MPI ${HDF5_LIBS} ${LAPACK_LIBS})
   target_compile_definitions(fleur_INVS_MPI PUBLIC ${MPI_DEFINITIONS} -DCPP_INVERSION)
   set_target_properties(fleur_INVS_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_INVS_MPI_modules COMPILE_OPTIONS -Ifleur_INVS_MPI_modules)
 
   #fleur_SOC_MPI
-  add_executable(fleur_SOC_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC}
+  add_executable(fleur_SOC_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_files}
 ${fleur_SRC_MPI})
   target_link_libraries(fleur_SOC_MPI ${HDF5_LIBS} ${LAPACK_LIBS})
   target_compile_definitions(fleur_SOC_MPI PUBLIC ${MPI_DEFINITIONS} -DCPP_SOC)
@@ -106,7 +110,7 @@ ${fleur_SRC_MPI})
 endif ()
 
 #inpgen executable
-add_executable(inpgen ${inpgen_F77} ${inpgen_F90} ${juDFT_SRC_F90})
+add_executable(inpgen ${inpgen_F77} ${inpgen_F90} ${juDFT_SRC_F90} ${c_files})
 set_target_properties(inpgen PROPERTIES Fortran_MODULE_DIRECTORY inpgen_modules COMPILE_OPTIONS -Iinpgen_modules)
 
 

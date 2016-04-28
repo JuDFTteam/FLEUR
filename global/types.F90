@@ -246,9 +246,10 @@
 
       TYPE t_kpts
        !no
-       INTEGER ::nkpts
-       INTEGER ::nkpt
-       INTEGER ::nkptd
+       INTEGER :: nkpts
+       INTEGER :: nkpt
+       INTEGER :: nkptd
+       LOGICAL :: l_gamma
        INTEGER :: nmop(3) !<number of k-points in 3 directions
        !(3,nkpts) k-vectors internal units
        REAL,ALLOCATABLE ::bk(:,:)
