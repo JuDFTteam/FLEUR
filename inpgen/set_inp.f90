@@ -13,6 +13,7 @@
      &                   atomTypeSpecies,speciesRepAtomType,&
      &                   a1,a2,a3)
 
+      USE iso_c_binding
       USE m_chkmt
       USE m_constants
       USE m_atominput
@@ -58,7 +59,7 @@
       CHARACTER(len=3) :: latnamTemp
       INTEGER  nu,iofile      
       INTEGER  iggachk
-      INTEGER  n  ,iostat
+      INTEGER  n ,iostat, errorStatus
       REAL    scale,scpos ,zc
       REAL    el0(0:3,atoms%ntype),ello0(atoms%nlod,atoms%ntype),evac0(2)
 
@@ -90,6 +91,14 @@
       LOGICAL :: xmlPrintCoreStates(29,atoms%ntype)
       REAL    :: xmlCoreOccs(2,29,atoms%ntype)
       REAL    :: xmlCoreRefOccs(29)
+
+      interface
+         function dropInputSchema() bind(C, name="dropInputSchema")
+            use iso_c_binding
+            INTEGER(c_int) dropInputSchema
+         end function dropInputSchema
+      end interface
+
       DATA xmlCoreRefOccs /2,2,2,4,2,2,4,2,4,6,2,4,2,4,6,2,4,2,6,8,4,&
      &                     6,2,4,2,6,8,4,6/
       xmlCoreStates = .FALSE.
@@ -384,6 +393,12 @@
 
             !set latnam to any
             cell%latnam = 'any'
+         END IF
+
+         errorStatus = 0
+         errorStatus = dropInputSchema()
+         IF(errorStatus.NE.0) THEN
+            STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
 
          CALL w_inpXML(&
