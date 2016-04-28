@@ -91,7 +91,7 @@ CONTAINS
        !
        ! temporarily update the diagonal elements
        !
-       DO l = 0,atoms%lmax(ntyp)
+       DO l = 0,atoms%lnonsph(ntyp)
           DO  m = -l,l
              lm = l* (l+1) + m
              lmplm = (lm* (lm+3))/2
@@ -119,7 +119,7 @@ CONTAINS
                 bx(kp) = cmplx(0.0,0.0)
                 cx(kp) = cmplx(0.0,0.0)
              END DO
-             DO lp = 0,atoms%lmax(ntyp)
+             DO lp = 0,atoms%lnonsph(ntyp)
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
                    in = tlmplm%ind(lmp,lm,ntyp,tsp)
@@ -370,7 +370,7 @@ CONTAINS
        !
        ! remove the temporary update of the diagonal elements
        !
-       DO l = 0,atoms%lmax(ntyp)
+       DO l = 0,atoms%lnonsph(ntyp)
           DO  m = -l,l
              lm = l* (l+1) + m
              lmplm = (lm* (lm+3))/2
