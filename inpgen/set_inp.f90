@@ -10,14 +10,22 @@
      &                   infh,nline,xl_buffer,buffer,l_hyb,&
      &                   atoms,sym,cell,title,idlist,&
      &                   input,vacuum,noco,&
+     &                   atomTypeSpecies,speciesRepAtomType,&
      &                   a1,a2,a3)
 
       USE m_chkmt
-      USE m_constants, ONLY : namat_const
+      USE m_constants
       USE m_atominput
       USE m_lapwinput
       USE m_rwinp
+      USE m_winpXML
       USE m_types
+      USE m_juDFT_init
+      USE m_julia
+      USE m_kptgen_hybrid
+      USE m_od_kptsgen
+      USE m_inv3
+
       IMPLICIT NONE
       TYPE(t_input),INTENT(INOUT)    :: input
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
@@ -28,14 +36,16 @@
 
       INTEGER, INTENT (IN) :: infh,xl_buffer
       INTEGER, INTENT (INOUT) :: nline
+      INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
+      INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
       CHARACTER(len=xl_buffer) :: buffer
       LOGICAL, INTENT (IN) :: l_hyb  
       REAL,    INTENT (IN) :: idlist(:)
       REAL,    INTENT (INOUT) :: a1(3),a2(3),a3(3) 
       CHARACTER(len=80), INTENT (IN) :: title
  
-      INTEGER nel,i,j
-      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0
+      INTEGER nel,i,j, nkptOld
+      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       LOGICAL l_test,l_gga,l_exists
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       INTEGER  div(3)
@@ -45,6 +55,7 @@
       CHARACTER(len=8) :: name(10)
       CHARACTER(len=3) :: noel(atoms%ntype)
       CHARACTER(len=12) :: relcor
+      CHARACTER(len=3) :: latnamTemp
       INTEGER  nu,iofile      
       INTEGER  iggachk
       INTEGER  n  ,iostat
@@ -316,21 +327,85 @@
       
       nu = 8 
       input%gw = 0
-      CALL rw_inp(&
-     &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,name)
-      iofile = 6
-      OPEN (iofile,file='inp',form='formatted',status='old',position='append')
-      
+
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
           cell%area = cell%omtil / vacuum%dvac
           kpts%nkpt = nint((3600/cell%area)/sym%nop2)
         ELSE
-          kpts%nkpt = nint((216000/cell%omtil)/sym%nop) 
+          kpts%nkpt = nint((216000/cell%omtil)/sym%nop)
         ENDIF
       ENDIF
+
+      IF(.NOT.juDFT_was_argument("-noXML")) THEN
+         nkptOld = kpts%nkpt
+         latnamTemp = cell%latnam
+
+         IF(juDFT_was_argument("-explicit")) THEN
+            ! kpts generation
+            CALL inv3(cell%amat,cell%bmat,cell%omtil)
+            cell%bmat=tpi_const*cell%bmat
+            kpts%nmop(:) = div(:)
+            kpts%l_gamma = l_gamma
+            IF (.NOT.oneD%odd%d1) THEN
+               IF (jij%l_J) THEN
+                  n1=sym%nop
+                  n2=sym%nop2
+                  sym%nop=1
+                  sym%nop2=1
+                  CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
+                  sym%nop=n1
+                  sym%nop2=n2
+               ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
+                  STOP 'Error: No kpoint set generation for gamma=T yet!'
+                  CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
+                                     kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
+                                     sym%mrot,sym%tau)
+               ELSE
+                  CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
+               END IF
+            ELSE
+               STOP 'Error: No kpoint set generation for 1D systems yet!'
+               CALL od_kptsgen (kpts%nkpt)
+            END IF
+            kpts%nkpts = kpts%nkpt
+            ALLOCATE(kpts%wtkpt(kpts%nkpt))
+            sumWeight = 0.0
+            WRITE(*,*) 'nkpt: ', kpts%nkpt
+            DO i = 1, kpts%nkpt
+               sumWeight = sumWeight + kpts%weight(i)
+            END DO
+
+            DO i = 1, kpts%nkpt
+               kpts%weight(i) = kpts%weight(i) / sumWeight
+               kpts%wtkpt(i) = kpts%weight(i)
+            END DO
+            kpts%nkptd = kpts%nkpt
+
+            !set latnam to any
+            cell%latnam = 'any'
+         END IF
+
+         CALL w_inpXML(&
+     &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
+     &                 noel,namex,relcor,a1,a2,a3,scale,dtild,name,&
+     &                 xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                 atomTypeSpecies,speciesRepAtomType,&
+     &                 el0,ello0,evac0)
+
+         kpts%nkpt = nkptOld
+         cell%latnam = latnamTemp
+      END IF !xml output
+
+      CALL rw_inp(&
+     &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,name)
+
+      iofile = 6
+      OPEN (iofile,file='inp',form='formatted',status='old',position='append')
+      
       IF( l_hyb ) THEN
         WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma 
       ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN 

@@ -3,7 +3,7 @@
       CONTAINS
       SUBROUTINE julia(&
      &                 sym,cell,input,noco,banddos,&
-     &                 kpts,l_q)
+     &                 kpts,l_q,l_fillArrays)
 !----------------------------------------------------------------------+
 ! Generate a k-point file with approx. nkpt k-pts or a Monkhorst-Pack  |
 ! set with nmod(i) divisions in i=x,y,z direction. Interface to kptmop |
@@ -27,7 +27,7 @@
       TYPE(t_banddos),INTENT(IN)  :: banddos
       TYPE(t_kpts),INTENT(INOUT)  :: kpts
 
-      LOGICAL, INTENT (IN) :: l_q
+      LOGICAL, INTENT (IN) :: l_q, l_fillArrays
    
       INTEGER, PARAMETER :: nop48  = 48
       INTEGER, PARAMETER :: mface  = 51
@@ -103,6 +103,7 @@
 !   oblique              = p-monoclinic ( 1+2 axis )      6/1
 !
 !------------------------------------------------------------
+
       IF(l_q) THEN
        trias=input%tria
        input%tria=.false.
@@ -246,6 +247,7 @@
         ndiv3 = 6*(mkpt+1)
         ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
         ALLOCATE ( voltet(ndiv3),vktet(3,mkpt),ntetra(4,ndiv3) )
+        vkxyz = 0.0
         CALL kpttet(&
      &              iofile,ibfile,iokpt,&
      &              kpri,ktest,kmidtet,mkpt,ndiv3,&
@@ -269,6 +271,7 @@
      &              kpts%nkpt,cell%bmat,input%film,sym%nop,sym%nop2,&
      &              kpts%nmop)
         ENDIF
+
 !
 !       Now calculate Monkhorst-Pack k-points:
 !
@@ -282,6 +285,7 @@
            IF (.not.input%film) mkpt = mkpt*kpts%nmop(3)
         ENDIF
         ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
+        vkxyz = 0.0
 
         CALL kptmop(&
      &              iofile,iokpt,kpri,ktest,&
@@ -292,6 +296,7 @@
      &              kpts%nkpt,divis,vkxyz,nkstar,wghtkp)
 
       ENDIF
+
 !
       idivis(1) = int(divis(1)) 
       idivis(2) = int(divis(2)) 
@@ -332,29 +337,47 @@
  8050 FORMAT (2(f14.10,1x),f14.10)
 
 !
-! write k-points file
+! write k-points file or write data into arrays
 !
-      OPEN (41,file='kpts',form='formatted',status='new')
-      IF (input%film) THEN
-        WRITE (41,FMT=8110) kpts%nkpt,real(idiv),.false.
-        DO j=kpts%nkpt,1,-1
-           WRITE (41,FMT=8040) (vkxyz(i,j),i=1,2),wghtkp(j)
-        ENDDO
+
+      IF (l_fillArrays) THEN
+         IF (ALLOCATED(kpts%bk)) THEN
+            DEALLOCATE(kpts%bk)
+         END IF
+         IF (ALLOCATED(kpts%weight)) THEN
+            DEALLOCATE(kpts%weight)
+         END IF
+         ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%weight(kpts%nkpt))
+         DO j = 1, kpts%nkpt
+            kpts%bk(1,j) = vkxyz(1,j) / real(idiv)
+            kpts%bk(2,j) = vkxyz(2,j) / real(idiv)
+            kpts%bk(3,j) = vkxyz(3,j) / real(idiv)
+            kpts%weight(j) = wghtkp(j)
+         END DO
       ELSE
-        WRITE (41,FMT=8100) kpts%nkpt,real(idiv)
-        DO j = 1, kpts%nkpt
-           WRITE (41,FMT=8040) (vkxyz(i,j),i=1,3),wghtkp(j)
-        ENDDO
-        IF (input%tria.AND.random) THEN
-          WRITE (41,'(i5)') ntet
-          WRITE (41,'(4(4i6,4x))') ((ntetra(i,j),i=1,4),j=1,ntet)
-          WRITE (41,'(4f20.13)') (ABS(voltet(j)),j=1,ntet)
-        ENDIF
+         OPEN (41,file='kpts',form='formatted',status='new')
+         IF (input%film) THEN
+            WRITE (41,FMT=8110) kpts%nkpt,real(idiv),.false.
+            DO j=kpts%nkpt,1,-1
+               WRITE (41,FMT=8040) (vkxyz(i,j),i=1,2),wghtkp(j)
+            END DO
+         ELSE
+            WRITE (41,FMT=8100) kpts%nkpt,real(idiv)
+            DO j = 1, kpts%nkpt
+               WRITE (41,FMT=8040) (vkxyz(i,j),i=1,3),wghtkp(j)
+            END DO
+            IF (input%tria.AND.random) THEN
+               WRITE (41,'(i5)') ntet
+               WRITE (41,'(4(4i6,4x))') ((ntetra(i,j),i=1,4),j=1,ntet)
+               WRITE (41,'(4f20.13)') (ABS(voltet(j)),j=1,ntet)
+            END IF
+         END IF
+ 8100    FORMAT (i5,f20.10)
+ 8110    FORMAT (i5,f20.10,3x,l1)
+ 8040    FORMAT (4f10.5)
+         CLOSE (41)
+
       END IF
- 8100 FORMAT (i5,f20.10)
- 8110 FORMAT (i5,f20.10,3x,l1)
- 8040 FORMAT (4f10.5)
-      CLOSE (41)
 
       DEALLOCATE ( vkxyz,wghtkp )
       IF (input%tria.AND..not.input%film)  DEALLOCATE ( voltet,vktet,ntetra )
