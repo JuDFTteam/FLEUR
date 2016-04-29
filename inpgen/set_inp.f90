@@ -61,7 +61,7 @@
       INTEGER  iggachk
       INTEGER  n ,iostat, errorStatus
       REAL    scale,scpos ,zc
-      REAL    el0(0:3,atoms%ntype),ello0(atoms%nlod,atoms%ntype),evac0(2)
+      REAL    ello0(atoms%nlod,atoms%ntype),evac0(2)
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
@@ -72,6 +72,7 @@
       TYPE(t_hybrid)::hybrid
       TYPE(t_xcpot)::xcpot
       TYPE(t_kpts)::kpts
+      TYPE(t_enpara)::enpara
 
     !-odim
 !+odim
@@ -202,12 +203,21 @@
       stars%gmax = 3.0 * kmax ; xcpot%gmaxxc = 2.5 * kmax ; input%rkmax = kmax
       atoms%lnonsph(:) = min( max( (atoms%lmax(:)-2),3 ), 8 )
 
+      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%evac0(2,input%jspins))
+      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%lchg_v(2,input%jspins))
+      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
+      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%enmix(input%jspins))
+
       CALL atom_input(&
-     &                infh,atoms%ntype,atoms%zatom,xl_buffer,buffer,atoms%nlod,&
-     &                input%jspins,input%film,atoms%neq,idlist,xmlCoreRefOccs,&
-     &                nline,atoms%jri,atoms%lmax,atoms%lnonsph,atoms%ncst,atoms%rmt,atoms%dx,atoms%bmu,&
+     &                infh,xl_buffer,buffer,&
+     &                input%jspins,input%film,idlist,xmlCoreRefOccs,&
+     &                nline,&
      &                xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                atoms%nlo,atoms%llo,nel,el0,ello0,evac0)
+     &                nel,atoms,enpara)
 
       input%zelec = nel
 
@@ -407,11 +417,14 @@
      &                 noel,namex,relcor,a1,a2,a3,scale,dtild,name,&
      &                 xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,&
-     &                 el0,ello0,evac0)
+     &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
 
          kpts%nkpt = nkptOld
          cell%latnam = latnamTemp
       END IF !xml output
+
+      DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
+      DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
 
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&

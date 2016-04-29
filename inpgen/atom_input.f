@@ -10,41 +10,36 @@
 !     file. Part of inp-generator
 !***********************************************************************
       SUBROUTINE atom_input(
-     >                      infh,ntype,zatom,xl_buffer,buffer,nlod,
-     >                      jspins,film,neq,idlist,xmlCoreRefOccs,
-     X                      nline,jri,lmax,lnonsph,ncst,rmt,dx,bmu,
-     X                     xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,
-     <                      nlo,llo,nel,el0,ello0,evac0 )
+     >                      infh,xl_buffer,buffer,
+     >                      jspins,film,idlist,xmlCoreRefOccs,
+     X                      nline,xmlCoreStates,
+     X                      xmlPrintCoreStates,xmlCoreOccs,
+     <                      nel,atoms,enpara )
 
+      USE m_types
+      USE m_juDFT_init
       USE m_readrecord
       USE m_setatomcore, ONLY : setatom_bystr, setcore_bystr
       USE m_constants,   ONLY : namat_const
+      USE m_enpara,      ONLY : w_enpara,default_enpara
 
       IMPLICIT NONE
+
+      TYPE(t_enpara),INTENT(INOUT)     :: enpara
+      TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
 ! ... Arguments ...
       INTEGER, INTENT (IN)    :: infh  ! file number of input-file
       INTEGER, INTENT (INOUT) :: nline ! current line in this file
       INTEGER, INTENT (INOUT) :: nel   ! number of valence electrons
 
-      INTEGER, INTENT (IN)     :: ntype,xl_buffer,nlod,jspins
+      INTEGER, INTENT (IN)     :: xl_buffer,jspins
       LOGICAL, INTENT (IN)     :: film
-      INTEGER, INTENT (IN)     :: neq(ntype)
-      REAL   , INTENT (IN)     :: zatom(ntype),idlist(ntype)
+      REAL   , INTENT (IN)     :: idlist(atoms%ntype)
       REAL   , INTENT (IN)     :: xmlCoreRefOccs(29)
-      INTEGER, INTENT (INOUT)  :: jri(ntype)      ! mt radial mesh points
-      INTEGER, INTENT (INOUT)  :: lmax(ntype)     ! max. l to include for density, overlap etc.
-      INTEGER, INTENT (INOUT)  :: lnonsph(ntype)  ! max. l for nonspherical MT-contributions
-      INTEGER, INTENT (INOUT)  :: ncst(ntype)     ! # of core levels
-      INTEGER, INTENT (INOUT)  :: nlo(ntype)      ! # of local orbitals
-      INTEGER, INTENT (INOUT)  :: llo(nlod,ntype) ! l-values of the LO's
-      REAL, INTENT (INOUT)     :: rmt(ntype)      ! muffin-tin radius 
-      REAL, INTENT (INOUT)     :: dx(ntype)       ! log. spacing
-      REAL, INTENT (INOUT)     :: bmu(ntype)      ! magnetic moment
-      REAL, INTENT (INOUT)     :: xmlCoreOccs(2,29,ntype)
-      LOGICAL, INTENT (INOUT)  :: xmlCoreStates(29,ntype)
-      LOGICAL, INTENT (INOUT)  :: xmlPrintCoreStates(29,ntype)
-      REAL, INTENT (OUT)    :: el0(0:3,ntype),ello0(nlod,ntype),evac0(2)
+      REAL, INTENT (INOUT)     :: xmlCoreOccs(2,29,atoms%ntype)
+      LOGICAL, INTENT (INOUT)  :: xmlCoreStates(29,atoms%ntype)
+      LOGICAL, INTENT (INOUT)  :: xmlPrintCoreStates(29,atoms%ntype)
       CHARACTER(len=xl_buffer) :: buffer
 
 !===> data
@@ -57,20 +52,20 @@
       INTEGER :: lmax0_def,lnonsph0_def,jri0_def,ncst0_def
       INTEGER :: lmax0,lnonsph0,jri0,ncst0,nlod0,llod
       INTEGER :: natomst,ncorest,nvalst,z,nlo0
-      INTEGER :: xmlCoreStateNumber
+      INTEGER :: xmlCoreStateNumber, lmaxdTemp
       REAL    :: rmt0_def,dx0_def,bmu0_def
       REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom
       LOGICAL :: fatalerror, h_atom, h_allatoms
-      LOGICAL :: idone(ntype) 
-      INTEGER :: lonqn(nlod,ntype),skiplo(ntype),z_int(ntype)
-      INTEGER :: coreqn(2,nstd,ntype),lval(nstd,ntype),llo0(nlod)
-      REAL    :: nelec(0:nwdd),coreocc(nstd,ntype)
-      LOGICAL :: lchange(0:3,ntype),llochg(2,ntype)
+      LOGICAL :: idone(atoms%ntype) 
+      INTEGER :: lonqn(atoms%nlod,atoms%ntype),z_int(atoms%ntype)
+      INTEGER :: coreqn(2,nstd,atoms%ntype),lval(nstd,atoms%ntype)
+      INTEGER :: llo0(atoms%nlod)
+      REAL    :: nelec(0:nwdd),coreocc(nstd,atoms%ntype)
 
 
       CHARACTER(len= l_buffer) :: econfig0_def,econfig0
-      CHARACTER(len= l_buffer) :: econfig(ntype) ! verbose electronic config
-      CHARACTER(len=80) :: lo(ntype), lo0
+      CHARACTER(len= l_buffer) :: econfig(atoms%ntype) ! verbose electronic config
+      CHARACTER(len=80) :: lo(atoms%ntype), lo0
       CHARACTER(len=13) :: fname
 
       CHARACTER(len=1) :: lotype(0:3)
@@ -82,10 +77,10 @@
       fatalerror = .false.
       h_atom=.false.;h_allatoms=.false.
 
-      idone(1:ntype) = .false.
-      z_int(1:ntype) = NINT(zatom(1:ntype))
-      lo = ' ' ; nlod0 = 0 ; nlo = 0 ; llod = 0 ; lonqn = 0
-      ncst = 0 ; econfig(1:ntype) = ' '
+      idone(1:atoms%ntype) = .false.
+      z_int(1:atoms%ntype) = NINT(atoms%zatom(1:atoms%ntype))
+      lo = ' ' ; nlod0 = 0 ; atoms%nlo = 0 ; llod = 0 ; lonqn = 0
+      atoms%ncst = 0 ; econfig(1:atoms%ntype) = ' '
 !
       lmax0_def    = -9999  
       lnonsph0_def = -9999
@@ -156,29 +151,29 @@
 
           IF (ios.NE.0) GOTO 912
           IF (rmt0_def > -9999.8) THEN
-            rmt     = rmt0_def
+            atoms%rmt     = rmt0_def
             WRITE (6,'(a25,f12.6)') 'globally changed rmt to',rmt0_def
           ENDIF
           IF (dx0_def  > -9999.8)   THEN
-            dx      = dx0_def
+            atoms%dx      = dx0_def
             WRITE (6,'(a25,f12.6)') 'globally changed dx  to',dx0_def
           ENDIF
           IF (jri0_def > -9998  )   THEN
-            jri     = jri0_def
+            atoms%jri     = jri0_def
             WRITE (6,'(a25,i12)') 'globally changed jri to',jri0_def
           ENDIF
           IF (lmax0_def > -9998 )   THEN
-            lmax    = lmax0_def
+            atoms%lmax    = lmax0_def
             WRITE (6,'(a26,i12)') 'globally changed lmax to',
      &                                                       lmax0_def
           ENDIF
           IF (lnonsph0_def > -9998) THEN
-            lnonsph = lnonsph0_def
+            atoms%lnonsph = lnonsph0_def
             WRITE (6,'(a28,i12)') 'globally changed lnonsph to ',
      &                                                    lnonsph0_def
           ENDIF
           IF (ncst0_def > -9998 )   THEN
-            ncst    = ncst0_def
+            atoms%ncst    = ncst0_def
             WRITE (6,'(a26,i12)') 'globally changed ncst to',
      &                                                       ncst0_def
           ENDIF
@@ -188,7 +183,7 @@
      &                                                    econfig0_def
           ENDIF
           IF (bmu0_def > -9999.8)   THEN
-            bmu     = bmu0_def
+            atoms%bmu     = bmu0_def
             WRITE (6,'(a25,f12.6)') 'globally changed bmu to',bmu0_def
           ENDIF
         ENDIF
@@ -217,7 +212,7 @@
           CALL err(3)
         ELSE
 !--->     put the data into the correct place
-          DO n = 1, ntype
+          DO n = 1, atoms%ntype
             IF (abs( id - idlist(n) ) > 0.001) CYCLE
             IF (idone(n)) then
               WRITE (errfh,*) 'atom_input: ERROR. did that one already'
@@ -225,37 +220,37 @@
               EXIT
             ELSE
               IF (rmt0 > -9999.8) THEN
-                rmt(n)  = rmt0
+                atoms%rmt(n)  = rmt0
                 WRITE (6,'(a9,i4,2a2,a16,f12.6)') 'for atom ',n,
      &                ' (',namat_const(z_int(n)),') changed rmt to',rmt0
               ENDIF
               IF (dx0 > -9999.8) THEN
-                dx(n)  = dx0
+                atoms%dx(n)  = dx0
                 WRITE (6,'(a9,i4,2a2,a16,f12.6)') 'for atom ',n,
      &                ' (',namat_const(z_int(n)),') changed dx  to', dx0
               ENDIF
               IF (jri0 > -9998  ) THEN
-                jri(n)  = jri0
+                atoms%jri(n)  = jri0
                 WRITE (6,'(a9,i4,2a2,a16,i12)') 'for atom ',n,
      &                ' (',namat_const(z_int(n)),') changed jri to',jri0
               ENDIF
               IF (lmax0 > -9998  ) THEN
-                lmax(n)  = lmax0
+                atoms%lmax(n)  = lmax0
                 WRITE (6,'(a9,i4,2a2,a17,i12)') 'for atom ',n,
      &              ' (',namat_const(z_int(n)),') changed lmax to',lmax0
               ENDIF
               IF (lnonsph0 > -9998  ) THEN
-                lnonsph(n)  = lnonsph0
+                atoms%lnonsph(n)  = lnonsph0
                 WRITE (6,'(a9,i4,2a2,a20,i12)') 'for atom ',n,
      &        ' (',namat_const(z_int(n)),') changed lnonsph to',lnonsph0
               ENDIF
               IF (bmu0 > -9999.8  ) THEN
-                bmu(n)  = bmu0
+                atoms%bmu(n)  = bmu0
                 WRITE (6,'(a9,i4,2a2,a16,f12.6)') 'for atom ',n,
      &              ' (',namat_const(z_int(n)),  ') changed bmu to',bmu0
               ENDIF
               IF (ncst0 > -9998  ) THEN
-                ncst(n)  = ncst0
+                atoms%ncst(n)  = ncst0
                 WRITE (6,'(a9,i4,2a2,a17,i12)') 'for atom ',n,
      &             ' (',namat_const(z_int(n)), ') changed ncst to',ncst0
               ENDIF
@@ -276,7 +271,8 @@
                  WRITE (6,'("   valence st.=",i3," with",f6.1,
      &                                 " electrons")')   nvalst,nelec(2)
                  ENDIF
-                 IF (nelec(0)+nelec(1)+nelec(2)-zatom(n) > 0.01) THEN
+                 IF (nelec(0)+nelec(1)+nelec(2)-
+     &               atoms%zatom(n)>0.01) THEN
                     CALL juDFT_error
      +                   ("econfig does not fit to this atom type!"
      +                   ,calledby ="atom_input")
@@ -284,13 +280,14 @@
                  IF (ncst0 > -9998  ) THEN
                    IF (ncorest /= ncst0) THEN
                      WRITE (6,'("  ==> core-states (ncst):",i3,
-     &                              " =/= (econfig):",i3)') ncst,ncorest
+     &                              " =/= (econfig):",i3)') 
+     &                        atoms%ncst,ncorest
                      CALL juDFT_error
      +                    ("econfig does not fit to the specified ncst"
      +                    ,calledby ="atom_input")
                    ENDIF
                  ELSE
-                   ncst(n) = ncorest
+                   atoms%ncst(n) = ncorest
                  ENDIF
               ENDIF
 ! ===> local orbitals
@@ -298,23 +295,25 @@
                 WRITE (6,'(6a,i3,7a,i3,3a,a80)')
      &                     "nlod =",nlod0," llod =",llod," : ",lo0
                 lo(n)      = lo0
-                IF (nlod0 > nlod)  CALL juDFT_error("atom_input: too "
+                IF (nlod0 > atoms%nlod)  
+     &             CALL juDFT_error("atom_input: too "
      &                              //"many lo",calledby="atom_input")
 
-                nlo(n) = len_trim(lo(n))/2
-                DO i = 1, nlo(n)
+                atoms%nlo(n) = len_trim(lo(n))/2
+                DO i = 1, atoms%nlo(n)
                   j = 2*i
                   DO l = 0, 3
                     IF (lo(n)(j:j) == lotype(l)) THEN
-                      llo(i,n) = l
+                      atoms%llo(i,n) = l
                     ENDIF
                   ENDDO
                   j = j - 1
                   READ (lo(n)(j:j),*) lonqn(i,n)
                 ENDDO
                 WRITE (6,'("   nlo(",i3,") = ",i2," llo = ",8i2)') n,
-     &                                 nlo(n),(llo(i,n),i=1,nlo(n))
-                WRITE (6,'("   lonqn = ",8i2)') (lonqn(i,n),i=1,nlo(n))
+     &                    atoms%nlo(n),(atoms%llo(i,n),i=1,atoms%nlo(n))
+                WRITE (6,'("   lonqn = ",8i2)') 
+     &                    (lonqn(i,n),i=1,atoms%nlo(n))
               ENDIF
               idone(n)   = .true.
             ENDIF
@@ -336,15 +335,17 @@
 
 !----------- adjust the core-levels, lo's and the energy parameters ----
 
-      coreqn(1:2,1:nstd,1:ntype) = 0
-      coreocc(1:nstd,1:ntype) = -1.0
+      coreqn(1:2,1:nstd,1:atoms%ntype) = 0
+      coreocc(1:nstd,1:atoms%ntype) = -1.0
 
-      nel = 0;  el0 = -9999.9
-      ello0 = -9999.9; evac0 = -9999.9
-      atoms: DO n = 1, ntype
+      nel = 0
+      enpara%el0 = -9999.9
+      enpara%ello0 = -9999.9
+      enpara%evac0 = -0.1
+      DO n = 1, atoms%ntype
 
         CALL setcore_bystr(
-     >                      n,nstd,ntype,l_buffer,
+     >                      n,nstd,atoms%ntype,l_buffer,
      X                      econfig,natomst,ncorest,
      <                      coreqn,coreocc)
 
@@ -357,8 +358,8 @@
             ENDIF
           ENDDO 
 
-           d1  = mod(nint(zatom(n)),10)
-           d10 = int( (nint(zatom(n)) + 0.5)/10 )
+           d1  = mod(nint(atoms%zatom(n)),10)
+           d10 = int( (nint(atoms%zatom(n)) + 0.5)/10 )
           aoff = iachar('1')-1
           fname = 'corelevels.'//achar(d10+aoff)//achar(d1+aoff)
           OPEN (27,file=fname,form='formatted')
@@ -434,7 +435,7 @@
             WRITE(6,'("  valence :",2i3,f6.1,i4,a1)') 
      &             coreqn(1,i,n),coreqn(2,i,n),coreocc(i,n),
      &                      coreqn(1,i,n),lotype(lval(i,n))
-            nel = nel + coreocc(i,n) *neq(n)
+            nel = nel + coreocc(i,n) * atoms%neq(n)
             electronsOnAtom = electronsOnAtom + coreocc(i,n)
 
 c           In d and f shells a magnetic alignment of the spins
@@ -468,123 +469,115 @@ c           in s and p states equal occupation of up and down states
           WRITE (6,*) '----------'
 
 5392  FORMAT (' atom type: ',i5,' protons: ',f0.8,' electrons: ',f0.8)
-          IF (ABS(electronsOnAtom-zatom(n)).GT.1e-13) THEN
+          IF (ABS(electronsOnAtom-atoms%zatom(n)).GT.1e-13) THEN
              WRITE(*,*) 'Note: atom is charged. Is this Intended?'
-             WRITE(*,5392) n, zatom(n), electronsOnAtom
+             WRITE(*,5392) n, atoms%zatom(n), electronsOnAtom
              WRITE(6,*) 'Note: atom is charged. Is this Intended?'
-             WRITE(6,5392) n, zatom(n), electronsOnAtom
+             WRITE(6,5392) n, atoms%zatom(n), electronsOnAtom
           END IF
 
           CLOSE(27)
 
           DO i = natomst,1,-1                    ! determine valence states
-            IF (el0(lval(i,n),n) < -9999.8) THEN ! not processed already
-              el0(lval(i,n),n) = REAL(coreqn(1,i,n))
+            IF (enpara%el0(lval(i,n),n,1) < -9999.8) THEN ! not processed already
+              enpara%el0(lval(i,n),n,:) = REAL(coreqn(1,i,n))
               IF (i <= ncorest) THEN
-                el0(lval(i,n),n) = coreqn(1,i,n) + 1.0 ! was already in the core
+                enpara%el0(lval(i,n),n,:) = coreqn(1,i,n) + 1.0 ! was already in the core
               ENDIF
             ENDIF
           ENDDO
           DO j = 0,3
-            IF (el0(j,n) < -9999.8) THEN
-              el0(j,n) = REAL(j+1)
+            IF (enpara%el0(j,n,1) < -9999.8) THEN
+              enpara%el0(j,n,:) = REAL(j+1)
             ENDIF
           ENDDO
 
         ELSE  ! determine defauts  as usual
 
-          z = NINT(zatom(n))
-          nlo0 = nlo(n)
-          llo0 = llo(:,n)
+          z = NINT(atoms%zatom(n))
+          nlo0 = atoms%nlo(n)
+          llo0 = atoms%llo(:,n)
           CALL atom_defaults(
-     >                       n,ntype,nlod,z,neq,
-     X                       ncst0,nel,nlo,llo)
+     >                       n,atoms%ntype,atoms%nlod,z,atoms%neq,
+     X                       ncst0,nel,atoms%nlo,atoms%llo)
 
-          IF (ncst(n) == 0) ncst(n) = ncst0
+          IF (atoms%ncst(n) == 0) atoms%ncst(n) = ncst0
           IF (lonqn(1,n) /= 0) THEN ! already set before
-            DO i = 1,nlo(n)                       ! subtract lo-charge
-              nel = nel - 2*(2*llo(i,n)+1)*neq(n)
-              IF (llo(i,n) == 0) ncst(n) = ncst(n) + 1
-              IF (llo(i,n) >  0) ncst(n) = ncst(n) + 2
+            DO i = 1,atoms%nlo(n)                       ! subtract lo-charge
+              nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)
+              IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n) + 1
+              IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n) + 2
             ENDDO
-            nlo(n) = nlo0                         ! set old values
-            llo(:,n) = llo0 
-            DO i = 1,nlo(n)                       ! add old lo-charge
-              nel = nel + 2*(2*llo(i,n)+1)*neq(n)   
-              IF (llo(i,n) == 0) ncst(n) = ncst(n) - 1
-              IF (llo(i,n) >  0) ncst(n) = ncst(n) - 2
+            atoms%nlo(n) = nlo0                         ! set old values
+            atoms%llo(:,n) = llo0 
+            DO i = 1,atoms%nlo(n)                       ! add old lo-charge
+              nel = nel + 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
+              IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n) - 1
+              IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n) - 2
             ENDDO
           ELSE
-             lonqn(1:nlo(n),n) = 0 !LO check below should not be needed
-                                   !for default setting of enparas
+             lonqn(1:atoms%nlo(n),n) = 0 !LO check below should not be needed
+                                         !for default setting of enparas
           ENDIF
 
 
         ENDIF
 
-        IF (nlo(n) /= 0) THEN                    ! check for local orbitals
-          DO i = 1, nlo(n)
-            ello0(i,n) = REAL(lonqn(i,n))
-            IF ( lonqn(i,n) == NINT(el0(llo(i,n),n)) ) THEN  ! increase qn
-              el0(llo(i,n),n) = el0(llo(i,n),n) + 1          ! in LAPW's by 1
+        IF (atoms%nlo(n) /= 0) THEN                    ! check for local orbitals
+          DO i = 1, atoms%nlo(n)
+            enpara%ello0(i,n,:) = REAL(lonqn(i,n))
+            IF (lonqn(i,n) == NINT(enpara%el0(atoms%llo(i,n),n,1))) THEN  ! increase qn
+              enpara%el0(atoms%llo(i,n),n,:) = 
+     &           enpara%el0(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
             ENDIF
           ENDDO
         ENDIF
-        skiplo(n) = 0
-        DO i = 1, nlo(n)
-          skiplo(n) = skiplo(n) + (2*llo(i,n) + 1)
+        enpara%skiplo(n,:) = 0
+        DO i = 1, atoms%nlo(n)
+          enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
         ENDDO
 
-      ENDDO atoms
+      ENDDO
 
-      DO n = 1, ntype
-         z = NINT(zatom(n))
-         IF (all(el0(:,n)>-9999.)) cycle !enpara was set already
-         IF ( z < 3 ) THEN
-            el0(:,n) = real( (/1,2,3,4/) )
-         ELSEIF ( z < 11 ) THEN
-            el0(:,n) = real( (/2,2,3,4/) )
-         ELSEIF ( z < 19 ) THEN
-            el0(:,n) = real( (/3,3,3,4/) )
-         ELSEIF ( z < 31 ) THEN
-            el0(:,n) = real( (/4,4,3,4/) )
-         ELSEIF ( z < 37 ) THEN
-            el0(:,n) = real( (/4,4,4,4/) )
-         ELSEIF ( z < 49 ) THEN
-            el0(:,n) = real( (/5,5,4,4/) )
-         ELSEIF ( z < 55 ) THEN
-            el0(:,n) = real( (/5,5,5,4/) )
-         ELSEIF ( z < 72 ) THEN
-            el0(:,n) = real( (/6,6,5,4/) )
-         ELSEIF ( z < 81 ) THEN
-            el0(:,n) = real( (/6,6,5,5/) )
-         ELSEIF ( z < 87 ) THEN
-            el0(:,n) = real( (/6,6,6,5/) )
-         ELSE
-            el0(:,n) = real( (/7,7,6,5/) )
-         ENDIF
+      DO j = 1, jspins
+         CALL default_enpara(j,atoms,enpara)
+      END DO
+
+      DO n = 1, atoms%ntype
 ! correct valence charge
-         DO i = 1,nlo(n)
-            IF (llo(i,n).GT.3) THEN
-               nel = nel - 2*(2*llo(i,n)+1)*neq(n)   
-               IF (llo(i,n) == 0) ncst(n) = ncst(n) + 1
-               IF (llo(i,n) >  0) ncst(n) = ncst(n) + 2
-            ELSE IF (ello0(i,n).GE.el0(llo(i,n),n)) THEN
-               nel = nel - 2*(2*llo(i,n)+1)*neq(n)   
-               IF (llo(i,n) == 0) ncst(n) = ncst(n) + 1
-               IF (llo(i,n) >  0) ncst(n) = ncst(n) + 2
-            END IF
-         ENDDO
-
-         DO i = 1, nlo(n)
-            IF (ello0(i,n).EQ.0.0) THEN
-               ello0(i,n) = el0(llo(i,n),n) - 1
+         DO i = 1,atoms%nlo(n)
+            IF (atoms%llo(i,n).GT.3) THEN
+               nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
+               IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
+               IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
+            ELSE IF (enpara%ello0(i,n,1).GE.
+     &               enpara%el0(atoms%llo(i,n),n,1)) THEN
+               nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
+               IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
+               IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
             END IF
          ENDDO
       ENDDO
 
       WRITE (6,'("Valence Electrons =",i5)') nel
 
+
+      enpara%llochg = .FALSE.
+      enpara%lchange = .FALSE.
+      enpara%enmix = 1.0
+      enpara%lchg_v = .TRUE.
+      IF(juDFT_was_argument("-genEnpara")) THEN
+         lmaxdTemp = atoms%lmaxd
+         atoms%lmaxd = 3
+         OPEN (40,file='enpara',form='formatted',status='unknown') ! write out an enpara-file
+         DO j = 1, jspins
+            OPEN (42)
+            CALL w_enpara(atoms,j,film,enpara,42)
+            CLOSE (42,status='delete')
+         ENDDO
+         CLOSE (40)
+         atoms%lmaxd = lmaxdTemp
+      END IF
 
       RETURN
 
