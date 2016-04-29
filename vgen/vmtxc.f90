@@ -1,10 +1,6 @@
 MODULE m_vmtxc
 CONTAINS
-  SUBROUTINE vmtxc(&
-       &                 DIMENSION,sphhar,atoms,&
-       &                 rho,xcpot,input,sym,&
-       &                 vr,&
-       &                 excr,vxr)
+  SUBROUTINE vmtxc( DIMENSION,sphhar,atoms, rho,xcpot,input,sym, vr, excr,vxr)
     !     ********************************************************************
     !     fit spherical-harmonics expansion of exchange-correlation potential*
     !     inside muffint-tin spheres and add it to coulomb potential         *
@@ -67,18 +63,15 @@ CONTAINS
     !
     !     generates the lattice harmonics on the angular mesh 
     !     
-    CALL lhglpts(&
-         &             sphhar,atoms,&
-         &             rx,nsp,&
-         &             sym,&
-         &             ylh)
+    CALL lhglpts( sphhar,atoms, rx,nsp, sym, ylh)
     !
     !
     !     loop over topologically non-equivalent atoms
     !
-    !$OMP PARALLEL DO DEFAULT(SHARED)&
-    !$OMP& PRIVATE(elh,rr2,r2rho,vlh,jr,js,k,lh,n,nd,i,nat)&
-    !$OMP& PRIVATE(vx,vxc,pos0,rhoxc,exc)
+    !$OMP PARALLEL DO DEFAULT(NONE)&
+    !$OMP SHARED(atoms,input,sphhar,xcpot,rho,ylh,nsp,wt,vr,vxr,excr)&
+    !$OMP PRIVATE(elh,rr2,r2rho,vlh,jr,js,k,lh,n,nd,i,nat)&
+    !$OMP PRIVATE(vx,vxc,pos0,rhoxc,exc)
     DO n = 1,atoms%ntype
        nat=SUM(atoms%neq(:n-1))+1
        nd = atoms%ntypsy(nat)
@@ -95,17 +88,13 @@ CONTAINS
                 !     generate the densities on an angular mesh
                 !
                 DO  k = 1,nsp
-                   rhoxc(k,js) = rhoxc(k,js) +&
-                        &                                ylh(k,lh,nd)*r2rho
+                   rhoxc(k,js) = rhoxc(k,js) + ylh(k,lh,nd)*r2rho
                 ENDDO
              ENDDO
           ENDDO
           !     calculate the ex.-cor. potential
           !
-          CALL vxcall&
-               &                 (6,xcpot%icorr,input%krla,input%jspins,&
-               &                  nsp,nsp,rhoxc,&
-               &                  vx,vxc) 
+          CALL vxcall (6,xcpot%icorr,input%krla,input%jspins, nsp,nsp,rhoxc, vx,vxc) 
           !     ----> now determine the corresponding potential number 
           DO js = 1,input%jspins
              !
@@ -142,10 +131,7 @@ CONTAINS
              !
              !     calculate the ex.-cor energy density
              !
-             CALL excall&
-                  &                      (6,xcpot%icorr,input%krla,input%jspins,&
-                  &                       nsp,nsp,rhoxc,&
-                  &                       exc) 
+             CALL excall(6,xcpot%icorr,input%krla,input%jspins, nsp,nsp,rhoxc, exc) 
           END IF
           !     ----> now determine the corresponding energy density number 
           !
