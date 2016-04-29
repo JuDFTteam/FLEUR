@@ -16,7 +16,7 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)  :: enpara
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_usdus),INTENT(OUT)   :: usdus
+    TYPE(t_usdus),INTENT(INOUT)   :: usdus
     !
     !     .. Scalar Arguments ..
     !     ..

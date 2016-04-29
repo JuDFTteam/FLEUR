@@ -134,13 +134,8 @@ CONTAINS
          soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2) )
 
     soangl(:,:,:,:,:,:) = CMPLX(0.0,0.0)
-    CALL spnorb(&
-         atoms,noco,input,mpi,&
-         enpara,vr,&
-         input%sso_opt(atoms%ntype+2), &
-         rsopp,rsoppd,rsopdp,rsopdpd,usdus,&
-         rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
-         soangl)
+    CALL spnorb( atoms,noco,input,mpi, enpara,vr, rsopp,rsoppd,rsopdp,rsopdpd,usdus,&
+         rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop, soangl)
     !
     l_all = .FALSE.
     INQUIRE (file='allbut',exist=l_all)
@@ -271,6 +266,7 @@ CONTAINS
        ELSE
 
           DO jspin = 1,wannierspin
+             CALL timestart("eigenso: write_eig")  
              CALL write_eig(eig_id,&
                   nk,jspin,neig=nsz,neig_total=nsz,nmat=SIZE(zso,1),&
                   eig=eig_so(:nsz),z=zso(:,:nsz,jspin))

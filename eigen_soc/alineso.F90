@@ -98,17 +98,17 @@ CONTAINS
     z(:,:,:)= 0.  
     zso(:,:,:)= CMPLX(0.,0.)
 
-    ALLOCATE(lapw%k1(DIMENSION%nvd,1))
-    ALLOCATE(lapw%k2(DIMENSION%nvd,1))
-    ALLOCATE(lapw%k3(DIMENSION%nvd,1))
-    ALLOCATE(lapw%rk(DIMENSION%nvd,1))
+    ALLOCATE(lapw%k1(DIMENSION%nvd,input%jspins))
+    ALLOCATE(lapw%k2(DIMENSION%nvd,input%jspins))
+    ALLOCATE(lapw%k3(DIMENSION%nvd,input%jspins))
+    ALLOCATE(lapw%rk(DIMENSION%nvd,input%jspins))
 
     DO jsp = 1,input%jspins
        CALL read_eig(&
             eig_id,nk,jsp,&
             bk=bkdu,el=epar,ello=ello(:,:,jsp),&
             evac=evac,neig=ne,eig=eig(:,jsp),&
-            nmat=lapw%nmat,nv=lapw%nv(1),k1=lapw%k1(:,1),k2=lapw%k2(:,1),k3=lapw%k3(:,1),kveclo=kveclo)
+            nmat=lapw%nmat,nv=lapw%nv(jsp),k1=lapw%k1(:,jsp),k2=lapw%k2(:,jsp),k3=lapw%k3(:,jsp),kveclo=kveclo)
        CALL read_eig(&
             eig_id,nk,jsp,&
             n_start=1,n_end=ne,&
@@ -163,7 +163,7 @@ CONTAINS
     ! set up hamilton matrix
     !
 
-    CALL timestop("alineso SOC: -ham") 
+    CALL timestart("alineso SOC: -ham") 
     ALLOCATE ( hsomtx(2,2,DIMENSION%neigd,DIMENSION%neigd) )
     CALL hsoham(&
          &            atoms,noco,input,nsz,chelp,&

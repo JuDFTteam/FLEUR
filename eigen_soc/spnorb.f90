@@ -6,7 +6,7 @@ MODULE m_spnorb
   !     using the functions anglso and sgml.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr,spav, rsopp,rsoppd,rsopdp,rsopdpd,&
+  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, rsopp,rsoppd,rsopdp,rsopdpd,&
        usdus, rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop, soangl)
 
     USE m_anglso
@@ -21,10 +21,8 @@ CONTAINS
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_usdus),INTENT(OUT)   :: usdus
+    TYPE(t_usdus),INTENT(INOUT)   :: usdus
     !     ..
-    !     .. Scalar Arguments ..
-    LOGICAL, INTENT (IN) :: spav ! if T, spin-averaged pot is used
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
@@ -49,8 +47,9 @@ CONTAINS
     !     ..
     DATA ispjsp/1,-1/
 
-    CALL soinit(atoms,input,enpara, vr,spav, rsopp,rsoppd,rsopdp,rsopdpd,&
-         usdus, rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop)
+    CALL soinit(atoms,input,enpara, vr,noco%soc_opt(atoms%ntype+2), &
+         rsopp,rsoppd,rsopdp,rsopdpd, usdus,rsoplop,rsoplopd,rsopdplo,&
+         rsopplo,rsoploplop)
     !
     IF (mpi%irank.EQ.0) THEN
        DO n = 1,atoms%ntype

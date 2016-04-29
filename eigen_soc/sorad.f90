@@ -20,7 +20,7 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_usdus),INTENT(OUT)   :: usdus
+    TYPE(t_usdus),INTENT(INOUT)   :: usdus
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ntyp
@@ -113,10 +113,10 @@ CONTAINS
        IF (l.GT.0) THEN ! there is no spin-orbit for s-states
           DO i = 1, 2
              DO j = 1, 2
-                rsopp(ntyp,l,i,j) = radso( p(:,i), p(:,j),vso(:,i),atoms%rmsh(1,ntyp),atoms%dx(ntyp))
-                rsopdp(ntyp,l,i,j) = radso(pd(:,i), p(:,j),vso(:,i),atoms%rmsh(1,ntyp),atoms%dx(ntyp))
-                rsoppd(ntyp,l,i,j) = radso( p(:,i),pd(:,j),vso(:,i),atoms%rmsh(1,ntyp),atoms%dx(ntyp))
-                rsopdpd(ntyp,l,i,j) = radso(pd(:,i),pd(:,j),vso(:,i),atoms%rmsh(1,ntyp),atoms%dx(ntyp))
+                rsopp(ntyp,l,i,j) = radso( p(:,i), p(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsopdp(ntyp,l,i,j) = radso(pd(:,i), p(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsoppd(ntyp,l,i,j) = radso( p(:,i),pd(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsopdpd(ntyp,l,i,j) = radso(pd(:,i),pd(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
              ENDDO
           ENDDO
        ENDIF ! l>0
