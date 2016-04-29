@@ -76,7 +76,7 @@ CONTAINS
     REAL,PARAMETER:: del=1.e-6
     REAL :: efermi,emax,emin,entropy,fermikn,gap,&
               wfermi,wvals,w_below_emin,w_near_ef,tkb
-    INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i
+    INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i,nspins
 
     !     .. Local Arrays ..      
     REAL :: qc(3)
@@ -108,6 +108,8 @@ CONTAINS
     !                  and n-th state
     !**********************************************************************
     !     ..
+    nspins=input%jspins
+    if (noco%l_noco) nspins=1
     tkb=input%tkb !might be modified if we have an insulator
     IF ( mpi%irank == 0 ) THEN
        WRITE (6,FMT='(/)')
@@ -225,7 +227,7 @@ CONTAINS
     !
 
     wvals = 0.0
-    DO  js = 1,input%jspins
+    DO  js = 1,nspins
        DO  k = 1,kpts%nkpt
           wvals = wvals + SUM(results%w_iks(:ne(k,js),k,js))
        ENDDO
@@ -248,7 +250,7 @@ CONTAINS
     !        here we have   w(n,kpt,js)= spindg*wghtkp(kpt)*f(e(kpt,n))
     !
     entropy = 0.0
-    DO js = 1,input%jspins
+    DO js = 1,nspins
        DO kpt = 1 , kpts%nkpt
           DO nocc=1,ne(kpt,js) 
              fermikn = results%w_iks(nocc,kpt,js)/kpts%wtkpt(kpt)

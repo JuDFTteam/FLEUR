@@ -698,7 +698,7 @@ CONTAINS
                    ENDIF
 
                    IF ( atoms%n_u.GT.0 ) THEN
-                      CALL n_mat(atoms,sym,noccbd,usdus,ispin,we, acof(:,0:,:,ispin),bcof(:,0:,:,isp),&
+                      CALL n_mat(atoms,sym,noccbd,usdus,ispin,we, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                            ccof(-atoms%llod:,:,:,:,ispin), n_mmp)
                    ENDIF
                    !

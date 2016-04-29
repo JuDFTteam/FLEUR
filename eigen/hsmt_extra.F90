@@ -268,7 +268,7 @@ CONTAINS
                 ENDIF
              END IF
 
-             IF (atoms%lda_u(n)%l.GE.0.AND.gwc.EQ.1) THEN
+             IF (atoms%n_u>0.and.atoms%lda_u(n)%l.GE.0.AND.gwc.EQ.1) THEN
                 IF ( noco%l_noco .AND. (.NOT.noco%l_ss) ) THEN
 #ifndef CPP_INVERSION
                    CALL u_ham(&

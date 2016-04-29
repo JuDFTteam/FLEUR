@@ -77,7 +77,7 @@ CONTAINS
     !+odim
     !     ..
     !     .. Local Scalars ..
-    INTEGER jsp,nk,nred,ne_all
+    INTEGER jsp,nk,nred,ne_all,n_u_in
     INTEGER iter,ne,matsize  ,nrec,lh0
     INTEGER nspins,isp,l,i,j,err,gwc
     INTEGER mlotot,mlolotot,mlot_d,mlolot_d,nlot_d
@@ -360,6 +360,7 @@ CONTAINS
     !  ..
     !  LDA+U
     IF ((atoms%n_u.GT.0)) THEN
+       n_u_in=atoms%n_u
        ALLOCATE( vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins) )
        CALL u_setup(atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),vr,mpi, vs_mmp,results)
     ELSE
@@ -669,7 +670,7 @@ CONTAINS
     CALL MPI_BARRIER(MPI_COMM,ierr)
 #endif
     if (l_hybrid.or.hybrid%l_calhf) CALL close_eig(eig_id_hf)
-
+    atoms%n_u=n_u_in
 
 
     IF( input%jspins .EQ. 1 .AND. l_hybrid ) THEN
