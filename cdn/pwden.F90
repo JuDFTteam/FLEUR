@@ -561,9 +561,9 @@ CONTAINS
        isn = -1
 #if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
        CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
-            nw1,nw2,nw3,wsave,psir(ifftq3d), rhon(-ifftq2))
+            stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,psir(ifftq3d), rhon(-ifftq2))
        IF (input%l_f) CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
-            nw1,nw2,nw3,wsave,kpsir(ifftq3d), ekin(-ifftq2))
+            stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,kpsir(ifftq3d), ekin(-ifftq2))
 #else
        CALL cfft(rhon,psir,ifftq3,stars%kq1_fft,ifftq1,isn)
        CALL cfft(rhon,psir,ifftq3,stars%kq2_fft,ifftq2,isn)
