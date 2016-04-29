@@ -59,7 +59,7 @@
       INTEGER :: natomst,ncorest,nvalst,z,nlo0
       INTEGER :: xmlCoreStateNumber
       REAL    :: rmt0_def,dx0_def,bmu0_def
-      REAL    :: rmt0,dx0,bmu0,zat0,id
+      REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom
       LOGICAL :: fatalerror, h_atom, h_allatoms
       LOGICAL :: idone(ntype) 
       INTEGER :: lonqn(nlod,ntype),skiplo(ntype),z_int(ntype)
@@ -365,6 +365,7 @@
           write(27,'(i3)') natomst
 
           WRITE (6,*) '----------'
+          electronsOnAtom = 0
           DO i = 1, ncorest
             WRITE(6,'("     core :",2i3,f6.1)') 
      &             coreqn(1,i,n),coreqn(2,i,n),coreocc(i,n)
@@ -427,12 +428,14 @@
             END SELECT
             xmlCoreOccs(1,xmlCoreStateNumber,n) = up
             xmlCoreOccs(2,xmlCoreStateNumber,n) = dn
+            electronsOnAtom = electronsOnAtom + up + dn
           ENDDO
           DO i = ncorest+1, natomst
             WRITE(6,'("  valence :",2i3,f6.1,i4,a1)') 
      &             coreqn(1,i,n),coreqn(2,i,n),coreocc(i,n),
      &                      coreqn(1,i,n),lotype(lval(i,n))
             nel = nel + coreocc(i,n) *neq(n)
+            electronsOnAtom = electronsOnAtom + coreocc(i,n)
 
 c           In d and f shells a magnetic alignment of the spins
 c           is preferred in the valence bands
@@ -463,6 +466,15 @@ c           in s and p states equal occupation of up and down states
      &                      coreqn(1,i,n),lotype(lval(i,n))
           ENDDO
           WRITE (6,*) '----------'
+
+5392  FORMAT (' atom type: ',i5,' protons: ',f0.8,' electrons: ',f0.8)
+          IF (ABS(electronsOnAtom-zatom(n)).GT.1e-13) THEN
+             WRITE(*,*) 'Note: atom is charged. Is this Intended?'
+             WRITE(*,5392) n, zatom(n), electronsOnAtom
+             WRITE(6,*) 'Note: atom is charged. Is this Intended?'
+             WRITE(6,5392) n, zatom(n), electronsOnAtom
+          END IF
+
           CLOSE(27)
 
           DO i = natomst,1,-1                    ! determine valence states

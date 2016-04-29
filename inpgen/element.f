@@ -19,7 +19,7 @@
      &     ele(1:1) = achar( iachar(ele(1:1))-adiff )
 
       z_namat = -1
-      DO n = 0, size(namat_const)
+      DO n = 0, size(namat_const)-1
         IF ( ele == namat_const(n) ) THEN
           z_namat = n
           EXIT

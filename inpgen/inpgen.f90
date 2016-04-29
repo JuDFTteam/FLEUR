@@ -20,11 +20,11 @@ PROGRAM inpgen
       IMPLICIT NONE
     
       INTEGER natmax,nop48,nline,natin,ngen,i,j
-      INTEGER nops,no3,no2,na
+      INTEGER nops,no3,no2,na,numSpecies
       INTEGER infh,errfh,bfh,warnfh,symfh,dbgfh,outfh,dispfh
-      LOGICAL cal_symm,checkinp    
+      LOGICAL cal_symm,checkinp,newSpecies
       LOGICAL cartesian,oldfleur,l_hyb  ,inistop
-      REAL    aa    
+      REAL    aa
  
       REAL a1(3),a2(3),a3(3),scale(3),factor(3)
       INTEGER, ALLOCATABLE :: mmrot(:,:,:)
@@ -32,6 +32,7 @@ PROGRAM inpgen
       REAL,    ALLOCATABLE :: idlist(:)
       INTEGER, ALLOCATABLE ::  ntyrep(:)              ! these variables are allocated with
       INTEGER, ALLOCATABLE :: natype(:),natrep(:),natmap(:)  ! or  'nat'
+      INTEGER, ALLOCATABLE :: speciesRepAtomType(:),atomTypeSpecies(:)
      
       INTEGER, PARAMETER :: xl_buffer=16384              ! maximum length of read record
       CHARACTER(len=xl_buffer) :: buffer
@@ -48,7 +49,7 @@ PROGRAM inpgen
           TYPE(t_vacuum)   :: vacuum
        
       nop48 = 48
-      natmax = 5999
+      natmax = 9999
       ngen = 0
       infh = 5
       errfh = 6 ; warnfh = 6 ; dbgfh = 6 ; outfh = 6
@@ -146,7 +147,7 @@ PROGRAM inpgen
       DO i=1,atoms%nat
         atoms%pos(:,i) = matmul( cell%amat , atoms%taual(:,i) )
       ENDDO
-      DEALLOCATE ( ntyrep, natype, natrep, atomid )
+
 !
 ! --> write a file 'sym.out' with accepted symmetry operations
 !
@@ -157,15 +158,42 @@ PROGRAM inpgen
      &                'W',symfh,symfn,nops,cell%bmat,&
      &                 sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
 
+      ALLOCATE (atomTypeSpecies(atoms%ntype))
+      ALLOCATE (speciesRepAtomType(atoms%nat))
+      numSpecies = 0
+      speciesRepAtomType = -1
+      atomTypeSpecies = -1
+      DO i = 1, atoms%nat
+         newSpecies = .TRUE.
+         DO j = 1, i-1
+            IF(atomid(i).EQ.atomid(j)) THEN
+               newSpecies = .FALSE.
+               atomTypeSpecies(natype(i)) = atomTypeSpecies(natype(j))
+               EXIT
+            END IF
+         END DO
+         IF(newSpecies) THEN
+            numSpecies = numSpecies + 1
+            speciesRepAtomType(numSpecies) = natype(i)
+            atomTypeSpecies(natype(i)) = numSpecies
+         END IF
+      END DO
+
 !
 ! --> set defaults for FLEUR inp-file
 !
       ALLOCATE ( atoms%rmt(atoms%ntype) )
+      atoms%nlod=9  ! This fixed dimensioning might have to be made more dynamical!
       CALL set_inp(&
      &             infh,nline,xl_buffer,buffer,l_hyb,&
      &             atoms,sym,cell,title,idlist,&
      &             input,vacuum,noco,&
+     &             atomTypeSpecies,speciesRepAtomType,&
      &             a1,a2,a3)
+
+      DEALLOCATE (atomTypeSpecies,speciesRepAtomType)
+      DEALLOCATE ( ntyrep, natype, natrep, atomid )
+
 !
 ! --> Structure in povray or xsf-format
 !

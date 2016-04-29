@@ -331,7 +331,7 @@
          sym%nop2=1
          CALL julia(&
      &              sym,cell,input,noco,banddos,&
-     &              kpts,.false.)
+     &              kpts,.false.,.FALSE.)
          sym%nop=n1
          sym%nop2=n2
          ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
@@ -341,7 +341,7 @@
          ELSE
          CALL julia(&
      &              sym,cell,input,noco,banddos,&
-     &              kpts,.false.)
+     &              kpts,.false.,.FALSE.)
          ENDIF
        ELSE
         CALL od_kptsgen (kpts%nkpt)
@@ -381,7 +381,7 @@
         noco%l_soc=.false.
         CALL julia(&
      &             sym,cell,input,noco,banddos,&
-     &             kpts,.true.)
+     &             kpts,.true.,.FALSE.)
         noco%l_ss=l_tmp(1); noco%l_soc=l_tmp(2)
       ENDIF
 
