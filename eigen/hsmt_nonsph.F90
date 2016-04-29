@@ -94,6 +94,8 @@ CONTAINS
           CALL hsmt_spinor(isp,n, noco,input, chi, chi11, chi21, chi22)
        ENDIF
        DO nn = 1,atoms%neq(n)
+	  a=0.0
+	  b=0.0
           na = SUM(atoms%neq(:n-1))+nn
           IF (atoms%lnonsph(n)<0) CYCLE ntyploop
           IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN

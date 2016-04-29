@@ -392,7 +392,7 @@ CONTAINS
           !
           IF ( atoms%nlo(n) > 0 ) THEN
              DO ispin = jsp_start,jsp_end
-                CALL radflo(atoms,n,ispin, ello(1,1,ispin),vr(:,0,:,:), f(1,1,0,ispin),&
+                CALL radflo(atoms,n,ispin, ello(1,1,ispin),vr(:,0,n,ispin), f(1,1,0,ispin),&
                      g(1,1,0,ispin),mpi, usdus, uuilon,duilon,ulouilopn, flo(:,:,:,ispin))
              ENDDO
           END IF
