@@ -389,16 +389,10 @@
             END IF
             kpts%nkpts = kpts%nkpt
             ALLOCATE(kpts%wtkpt(kpts%nkpt))
-            sumWeight = 0.0
-            WRITE(*,*) 'nkpt: ', kpts%nkpt
             DO i = 1, kpts%nkpt
-               sumWeight = sumWeight + kpts%weight(i)
-            END DO
-
-            DO i = 1, kpts%nkpt
-               kpts%weight(i) = kpts%weight(i) / sumWeight
                kpts%wtkpt(i) = kpts%weight(i)
             END DO
+
             kpts%nkptd = kpts%nkpt
 
             !set latnam to any
@@ -418,6 +412,18 @@
      &                 xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,&
      &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
+
+         IF(juDFT_was_argument("-explicit")) THEN
+            sumWeight = 0.0
+            WRITE(*,*) 'nkpt: ', kpts%nkpt
+            DO i = 1, kpts%nkpt
+               sumWeight = sumWeight + kpts%weight(i)
+            END DO
+            DO i = 1, kpts%nkpt
+               kpts%weight(i) = kpts%weight(i) / sumWeight
+               kpts%wtkpt(i) = kpts%weight(i)
+            END DO
+         END IF
 
          kpts%nkpt = nkptOld
          cell%latnam = latnamTemp

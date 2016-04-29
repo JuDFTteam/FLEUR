@@ -348,10 +348,11 @@
             DEALLOCATE(kpts%weight)
          END IF
          ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%weight(kpts%nkpt))
+         kpts%posScale = REAL(idiv)
          DO j = 1, kpts%nkpt
-            kpts%bk(1,j) = vkxyz(1,j) / real(idiv)
-            kpts%bk(2,j) = vkxyz(2,j) / real(idiv)
-            kpts%bk(3,j) = vkxyz(3,j) / real(idiv)
+            kpts%bk(1,j) = vkxyz(1,j)
+            kpts%bk(2,j) = vkxyz(2,j)
+            kpts%bk(3,j) = vkxyz(3,j)
             kpts%weight(j) = wghtkp(j)
          END DO
       ELSE

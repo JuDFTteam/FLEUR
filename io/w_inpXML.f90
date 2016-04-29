@@ -218,10 +218,14 @@ SUBROUTINE w_inpXML(&
    WRITE (5,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
    IF(juDFT_was_argument("-explicit")) THEN
-      205 FORMAT('         <kPointList posScale="',f0.8,'" count="',i0,'">')
-      WRITE (5,205) 1.0, kpts%nkpt
+      sumWeight = 0.0
       DO i = 1, kpts%nkpt
-         206 FORMAT('            <kPoint weight="',f0.15,'">',f0.15,' ',f0.15,' ',f0.15,'</kPoint>')
+         sumWeight = sumWeight + kpts%weight(i)
+      END DO
+      205 FORMAT('         <kPointList posScale="',f0.8,'" weightScale="',f0.8,'" count="',i0,'">')
+      WRITE (5,205) kpts%posScale, sumWeight, kpts%nkpt
+      DO i = 1, kpts%nkpt
+         206 FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
          WRITE (5,206) kpts%weight(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
       END DO
       WRITE (5,'(a)')('         </kPointList>')
