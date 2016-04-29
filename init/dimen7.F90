@@ -60,7 +60,7 @@
       REAL   :: thetad,xa,epsdisp,epsforce ,rmtmax,arltv1,arltv2,arltv3   
       REAL   :: s,r,d ,idsprs,scale
       INTEGER :: ok,ilo,n,nstate,i,j,na,n1,n2,jrc,nopd,symfh
-      INTEGER :: nmop(3) ,nmopq(3)
+      INTEGER :: nmopq(3)
       
       CHARACTER(len=1) :: rw
       CHARACTER(len=4) :: namex 
@@ -95,7 +95,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%natd,obsolete%nwdd,atoms%nlod,vacuum%layerd,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,nmop,jij%nqpt,nmopq)
+                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nmop,jij%nqpt,nmopq)
       atoms%ntypd=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
