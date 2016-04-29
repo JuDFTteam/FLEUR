@@ -78,7 +78,7 @@ CONTAINS
        READ (57) mit,alphan,(fm1(i),i=1,nmap),(sm1(i),i=1,nmap)
        IF ( ABS(input%alpha-alphan) > 0.0001 ) THEN
           WRITE (6,*) 'mixing parameter has been changed; reset'
-          WRITE (6,*) 'broyden algorithm or set input%alpha to',alphan
+          WRITE (6,*) 'broyden algorithm or set alpha to',alphan
           CALL juDFT_error("mixing parameter (input) changed", calledby&
                &          ="broyden")
        ENDIF

@@ -219,10 +219,10 @@ CONTAINS
     !
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
-         &       10x,'first approx. to results%ef    (T=0)  :',f10.6,' htr',&
+         &       10x,'first approx. to ef    (T=0)  :',f10.6,' htr',&
          &       '   (energy of the highest occ. eigenvalue)',/,&
          &       10x,'number of occ. states  (T=0)  :',i10,/,&
-         &       10x,'first approx. to results%seigv (T=0)  :',f10.6,' htr',/,&
+         &       10x,'first approx. to seigv (T=0)  :',f10.6,' htr',/,&
          &       10x,'sum of weights of occ. states :',f10.6,/,&
          &       10x,'sum of semicore eigenvalues   :',f10.6,' htr',/,&
          &       10x,'sum of semicore charge        :',f10.6,' e',/)

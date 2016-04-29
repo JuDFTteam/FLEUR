@@ -28,14 +28,10 @@
       INQUIRE(unit=40,OPENED=l_opened)
       if (.not.l_opened) return
 
-      WRITE (6,FMT=8030) 1
-      WRITE (id,FMT=8035) 1
 
-      WRITE (40,FMT=8035) 1,jspin,enpara%enmix(jspin)
+      WRITE (40,FMT=8035) jspin,enpara%enmix(jspin)
       WRITE (40,FMT=8036)
- 8030 FORMAT (/,5x,'energy parameters for window',i2,/,t6,'atom',t15,&
-     &       's',t24,'p',t33,'d',t42,'f')
- 8035 FORMAT (5x,'energy parameters for window',i2,' spin ',i1,' mix=',f10.6)
+ 8035 FORMAT (5x,'energy parameters for spin ',i1,' mix=',f10.6)
  8036 FORMAT (t6,'atom',t15,'s',t24,'p',t33,'d',t42,'f')
       DO n = 1,atoms%ntype
          WRITE (6,FMT=8040)  n, (enpara%el0(l,n,jspin),l=0,3),&
@@ -91,7 +87,7 @@
 !-->  first line contains mixing parameter!
 
       enpara%enmix(jsp) = 0.0
-      READ (40,FMT ='(48x,f10.6)',iostat=io_err) enpara%enmix(jsp)
+      READ (40,FMT ='(39x,f10.6)',iostat=io_err) enpara%enmix(jsp)
       IF (io_err /= 0) THEN
          !use defaults
          enpara%lchange(:,:,jsp)=.false.
@@ -171,7 +167,7 @@
  8140 FORMAT (' -->',i3,1x,4f9.5,' change: ',4l1,' skiplo: ',i3)
  8150 FORMAT ('  vacuum parameter=',f9.5,' change: ',l1,&
      &           ' second vacuum=',f9.5)
- 8001 FORMAT ('READING enpara for spin: ',i1,' window:',i2)
+ 8001 FORMAT ('READING enpara for spin: ',i1)
  8000 FORMAT (/,' energy parameters:',/,t10,'s',t20,&
      &        'p',t30,'d',t37,'higher l - - -')
  8090 FORMAT ('Spin: ',i1,' -- ',i3,'eigenvalues')

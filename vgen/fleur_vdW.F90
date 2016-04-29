@@ -79,7 +79,7 @@ CONTAINS
     CALL priv_fleur_vdW(cell,stars, &
          n_grid,e_vdW,v_grid,.TRUE.)
 
-    WRITE(6,*) "------  vdW-Potential code by jij%M. Callsen included-------"
+    WRITE(6,*) "------  vdW-Potential code by M. Callsen included-------"
     WRITE(6,*) "vdW-Energy contribution:",e_vdW
 
 
