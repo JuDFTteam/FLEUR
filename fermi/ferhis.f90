@@ -157,8 +157,8 @@ CONTAINS
           ENDDO ink_loop
           IF (ink>n) THEN
              IF ( mpi%irank == 0 ) THEN
-                WRITE (6,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below results%ef + 8kt.'
-                WRITE (16,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below results%ef + 8kt.'
+                WRITE (6,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
+                WRITE (16,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
              END IF
           ENDIF
 
@@ -297,8 +297,8 @@ CONTAINS
          &       ' reverts to the t=0 k method.')
 8030 FORMAT (/,5x,'-->  new fermi energy            :',f11.6,' htr',&
          &       /,10x,'valence charge              :',f11.6,' e ',/,10x,&
-         &       'actual charge blw results%ef-8kt    :',f11.6,' e ',/,10x,&
-         &       'actual charge blw results%ef+8kt    :',f11.6,' e ')
+         &       'actual charge blw ef-8kt    :',f11.6,' e ',/,10x,&
+         &       'actual charge blw ef+8kt    :',f11.6,' e ')
 8040 FORMAT (/,10x,'sum of val. single particle energies: ',f20.10,&
          &       ' htr',/)
 8050 FORMAT (/,10x,'bandgap                     :',f11.6,' htr')

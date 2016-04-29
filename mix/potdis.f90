@@ -221,7 +221,7 @@ CONTAINS
     WRITE (16,FMT=8000) iter,dis(1)
 8000 FORMAT (/,'----> distance of  the potential for it=',i3,':',f11.6, ' mhtr/bohr**3')
     WRITE(6,*) "Details of potential differences for each atom type"
-    WRITE(6,*) "Atom :input%total difference: difference of first sphhar"
+    WRITE(6,*) "Atom: total difference: difference of first sphhar"
     DO n=1,atoms%ntype
        WRITE(6,"(i5,' : ',f10.6,' : ',4f10.6)") n,pdis(4,n,1),pdis(0:3,n,1)
     ENDDO
@@ -231,7 +231,7 @@ CONTAINS
        WRITE (16,FMT=8010) iter,dis(2)
 8010   FORMAT (/,'----> distance of spin potential for it=',i3,':', f11.6,' mhtr/bohr**3')
        WRITE(6,*) "Details of potential differences for each atom type"
-       WRITE(6,*) "Atom :input%total difference: difference of first sphhar"
+       WRITE(6,*) "Atom: total difference: difference of first sphhar"
        DO n=1,atoms%ntype
           WRITE(6,"(i5,' : ',f10.6,' : ',4f10.6)") n,pdis(4,n,2),pdis(0:3,n,2)
        ENDDO

@@ -7,10 +7,8 @@ MODULE m_brysh1
   !      spin up and spin down densities
   !******************************************************
 CONTAINS
-  SUBROUTINE brysh1(&
-       &                  input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-       &                  intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp,&
-       &                  nmap,nmaph,mapmt,mapvac,mapvac2,sout) 
+  SUBROUTINE brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
+       intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp, nmap,nmaph,mapmt,mapvac,mapvac2,sout) 
 
     USE m_types
     IMPLICIT NONE
@@ -145,8 +143,7 @@ CONTAINS
              WRITE (6,*)'inconsitent:'
              WRITE (6,8000) mapvac2,nvaccoeff2
 8000         FORMAT ('mapvac2= ',i12,'nvaccoeff2= ',i12)
-             CALL juDFT_error("brysh1:# of vacuum coeff. inconsistent"&
-                  &              ,calledby ="brysh1")
+             CALL juDFT_error("brysh1:# of vacuum coeff. inconsistent" ,calledby ="brysh1")
           ENDIF
        END IF
     ENDIF ! noco
@@ -173,8 +170,7 @@ CONTAINS
           WRITE(6,*)'inconsitent:'
           WRITE (6,8010) mapvac,nvaccoeff
 8010      FORMAT ('mapvac= ',i12,'nvaccoeff= ',i12)
-          CALL juDFT_error("brysh1: # of vacuum coeff. inconsistent"&
-               &           ,calledby ="brysh1")
+          CALL juDFT_error("brysh1: # of vacuum coeff. inconsistent" ,calledby ="brysh1")
        ENDIF
     ENDIF
 
@@ -184,30 +180,26 @@ CONTAINS
        WRITE(6,*)'dimensions:'
        WRITE (6,8040) mapmt,mapmtd
 8040   FORMAT ('mapmt= ',i12,' > mapmtd= ',i12)
-       CALL juDFT_error("brysh1: mapmt > mapmtd (dimensions)",calledby&
-            &        ="brysh1")
+       CALL juDFT_error("brysh1: mapmt > mapmtd (dimensions)",calledby ="brysh1")
     ENDIF
 
     nmap = j
     nall = (intfac*stars%ng3 + mapmt + mapvac + 49*2*atoms%n_u )*input%jspins
     IF (noco%l_noco) nall = nall + 2*stars%ng3 + mapvac2
     IF (nall.NE.nmap) THEN
-       WRITE(6,*)'The input%total number of charge density coefficients is'
+       WRITE(6,*)'The total number of charge density coefficients is'
        WRITE(6,*)'inconsitent:'
        WRITE (6,8020) nall,nmap
 8020   FORMAT ('nall= ',i12,'not equal nmap= ',i12)
        WRITE (6,'(a,i5,a,i5)') 'nall = ',nall,' nmap = ',nmap
-       CALL juDFT_error&
-            &        ("brysh1: input # of charge density coeff. inconsistent"&
-            &        ,calledby ="brysh1")
+       CALL juDFT_error ("brysh1: input # of charge density coeff. inconsistent" ,calledby ="brysh1")
     ENDIF
     IF (nmap.GT.SIZE(sout)) THEN 
-       WRITE(6,*)'The input%total number of charge density coefficients is'
+       WRITE(6,*)'The total number of charge density coefficients is'
        WRITE(6,*)'larger than the dimensions:'
        WRITE (6,8030) nmap,SIZE(sout)
 8030   FORMAT ('nmap= ',i12,' > size(sout)= ',i12)
-       CALL juDFT_error("brysh1: nmap > mmap (dimensions)",calledby&
-            &        ="brysh1")
+       CALL juDFT_error("brysh1: nmap > mmap (dimensions)",calledby ="brysh1")
     ENDIF
 
   END SUBROUTINE brysh1
