@@ -91,6 +91,7 @@
           ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntypd,input%jspins))
           ALLOCATE ( enpara%enmix(input%jspins))
           ALLOCATE ( enpara%evac0(2,dimension%jspd))
+          ALLOCATE ( enpara%lchg_v(2,dimension%jspd))
           ALLOCATE ( rht(vacuum%nmzd,2,DIMENSION%jspd),vbar(2,atoms%ntypd),sigm(vacuum%nmzd) )
           ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
           enpara%enmix=1.0
