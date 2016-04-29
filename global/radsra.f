@@ -32,7 +32,7 @@ C     .. Local Scalars ..
       INTEGER i,it
 C     ..
 C     .. Local Arrays ..
-      REAL pp(size(vr)),qp(size(vr))
+      REAL pp(jri),qp(jri)
 C     ..
 C     .. Data statements ..
       REAL,PARAMETER  :: eps=1.e-06
@@ -40,13 +40,9 @@ C     ..
       cin = 1.0/c
       cin2 = cin*cin
 
-      IF (jri>size(vr))  CALL juDFT_error
-     +     ("BUG: data dimension in radsra too small",calledby
-     +     ="radsra")
-
-      IF (size(p)<size(vr).or.size(p)<size(vr))  CALL juDFT_error
-     +     ("BUG: data dimension in radsra differ",calledby
-     +     ="radsra")
+      IF (jri>SIZE(vr).OR.jri>SIZE(p))  CALL juDFT_error
+     +    ("BUG: data dimension in radsra too small",calledby ="radsra")
+   
 
 c--->    set up initial conditions
       fl1 = l* (l+1)
