@@ -359,8 +359,8 @@ CONTAINS
     ENDIF
     !  ..
     !  LDA+U
+    n_u_in=atoms%n_u
     IF ((atoms%n_u.GT.0)) THEN
-       n_u_in=atoms%n_u
        ALLOCATE( vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins) )
        CALL u_setup(atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),vr,mpi, vs_mmp,results)
     ELSE
