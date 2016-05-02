@@ -244,7 +244,7 @@ MODULE m_tlmplm
        !--->   set up the t-matrices for the local orbitals,
        !--->   if there are any
        IF (atoms%nlo(n).GE.1) THEN
-          CALL tlo(atoms,sphhar,jspin,n,enpara,lh0,input,vr(1,0,n),&
+          CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,lh0,input,vr(1,0,n),&
                flo,f,g,ud, uuilon,duilon,ulouilopn, td)
 
        ENDIF

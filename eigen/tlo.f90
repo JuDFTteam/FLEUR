@@ -7,7 +7,7 @@ MODULE m_tlo
 !     p.kurz jul. 1996
 !***********************************************************************
       CONTAINS
-        SUBROUTINE tlo(atoms,sphhar, jsp,ntyp,enpara,lh0,input,vr,&
+        SUBROUTINE tlo(atoms,sphhar,jspin,jsp,ntyp,enpara,lh0,input,vr,&
              flo,f,g,usdus,uuilon,duilon,ulouilopn, tlmplm )
           !
           !*************** ABBREVIATIONS *****************************************
@@ -29,7 +29,7 @@ MODULE m_tlo
           TYPE(t_enpara),INTENT(IN)   :: enpara
           !     ..
           !     .. Scalar Arguments ..
-          INTEGER, INTENT (IN) :: jsp,ntyp ,lh0
+          INTEGER, INTENT (IN) :: jspin,jsp,ntyp ,lh0
           !     ..
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd)
@@ -173,9 +173,9 @@ MODULE m_tlo
                 DO m = -l,l
                    lm = l* (l+1) + m
                    tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jsp) *&
-                        ( enpara%el0(l,ntyp,jsp)+enpara%ello0(lo,ntyp,jsp) )
+                        ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) )
                    tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jsp) *&
-                        ( enpara%el0(l,ntyp,jsp)+enpara%ello0(lo,ntyp,jsp) ) + 0.5 * usdus%uulon(lo,ntyp,jsp)
+                        ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) ) + 0.5 * usdus%uulon(lo,ntyp,jsp)
                    IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                       tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * uuilon(lo,ntyp)
                       tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * duilon(lo,ntyp)
@@ -193,8 +193,8 @@ MODULE m_tlo
                 DO lo = atoms%lo1l(lp,ntyp),lop
                    loplo = ((lop-1)*lop)/2 + lo
                    DO m = -lp,lp
-                      tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jsp)+&
-                           enpara%ello0(lo,ntyp,jsp))* usdus%uloulopn(lop,lo,ntyp,jsp) + 0.5* (ulouilopn(lop,lo,ntyp) +&
+                      tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jspin)+&
+                           enpara%ello0(lo,ntyp,jspin))* usdus%uloulopn(lop,lo,ntyp,jsp) + 0.5* (ulouilopn(lop,lo,ntyp) +&
                            ulouilopn(lo,lop,ntyp))
                    END DO
                 END DO
