@@ -50,7 +50,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER i,j,nk,jspin ,iter ,n ,l
-    INTEGER n_loc,n_plus,i_plus,n_end,nsz
+    INTEGER n_loc,n_plus,i_plus,n_end,nsz,nmat
     LOGICAL l_all,l_file,l_socvec
     INTEGER wannierspin
     TYPE(t_enpara) :: enpara
@@ -247,7 +247,7 @@ CONTAINS
             rsopp,rsoppd,rsopdp,rsopdpd,nk,&
             rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
             usdus,soangl,&
-            kveclo,enpara%ello0,nsz,&
+            kveclo,enpara%ello0,nsz,nmat,&
             eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
@@ -268,7 +268,7 @@ CONTAINS
           DO jspin = 1,wannierspin
              CALL timestart("eigenso: write_eig")  
              CALL write_eig(eig_id,&
-                  nk,jspin,neig=nsz,neig_total=nsz,nmat=SIZE(zso,1),&
+                  nk,jspin,neig=nsz,neig_total=nsz,nmat=nmat,&
                   eig=eig_so(:nsz),z=zso(:,:nsz,jspin))
 
              CALL timestop("eigenso: write_eig")  

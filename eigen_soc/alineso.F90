@@ -12,7 +12,7 @@ CONTAINS
        rsopp,rsoppd,rsopdp,rsopdpd,nk,&
        rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
        usdus,soangl,&
-       kveclo,ello,nsize,&
+       kveclo,ello,nsize,nmat,&
        eig_so,zso)
 
 #include"cpp_double.h"
@@ -34,7 +34,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
     INTEGER, INTENT (IN) :: nk 
-    INTEGER, INTENT (OUT):: nsize
+    INTEGER, INTENT (OUT):: nsize,nmat
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
@@ -348,6 +348,7 @@ CONTAINS
 
     DEALLOCATE ( hso,z )
     !
+    nmat=lapw%nmat
     RETURN
 
   END SUBROUTINE alineso

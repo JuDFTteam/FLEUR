@@ -41,7 +41,7 @@ CONTAINS
     END DO
     !---> potential derivative (on logarithmic mesh) : v0 := r*v
 
-    CALL diff3(vr(:,1),atoms%dx(ntyp),dv)
+    CALL diff3(vr(:atoms%jri(ntyp),1),atoms%dx(ntyp),dv)
     !
     r = atoms%rmsh(1,ntyp)
     DO i = 1,atoms%jri(ntyp)
@@ -51,7 +51,7 @@ CONTAINS
     END DO
 
     IF (input%jspins.EQ.2) THEN
-       CALL diff3(vr(:,input%jspins),atoms%dx(ntyp), dv)
+       CALL diff3(vr(:atoms%jri(ntyp),input%jspins),atoms%dx(ntyp), dv)
        !
        r = atoms%rmsh(1,ntyp)
        DO i = 1,atoms%jri(ntyp)
