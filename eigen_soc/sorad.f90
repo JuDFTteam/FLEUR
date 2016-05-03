@@ -113,10 +113,10 @@ CONTAINS
        IF (l.GT.0) THEN ! there is no spin-orbit for s-states
           DO i = 1, 2
              DO j = 1, 2
-                rsopp(ntyp,l,i,j) = radso( p(:,i), p(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsopdp(ntyp,l,i,j) = radso(pd(:,i), p(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsoppd(ntyp,l,i,j) = radso( p(:,i),pd(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsopdpd(ntyp,l,i,j) = radso(pd(:,i),pd(:,j),vso(:,i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsopp(ntyp,l,i,j) = radso( p(:atoms%jri(ntyp),i), p(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsopdp(ntyp,l,i,j) = radso(pd(:atoms%jri(ntyp),i), p(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsoppd(ntyp,l,i,j) = radso( p(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsopdpd(ntyp,l,i,j) = radso(pd(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
              ENDDO
           ENDDO
        ENDIF ! l>0
