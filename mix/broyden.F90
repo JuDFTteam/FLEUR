@@ -68,6 +68,15 @@ CONTAINS
 
     ALLOCATE (fm1(mmap),sm1(mmap),ui(mmap),um(mmap),vi(mmap),vm(mmap))
     ALLOCATE ( am(input%maxiter+1) )
+
+    fm1 = 0.0
+    sm1 = 0.0
+    ui  = 0.0
+    um  = 0.0
+    vi  = 0.0
+    vm  = 0.0
+    am  = 0.0
+
     !
     IF (mit.NE.1) THEN
        !
@@ -86,8 +95,8 @@ CONTAINS
        !     loop to generate F_m   - F_(m-1)  ... sm1
        !                  and rho_m - rho_(m-1) .. fm1
        !
-       sm1=sm-sm1
-       fm1=fm-fm1
+       sm1(1:nmap)=sm(1:nmap)-sm1(1:nmap)
+       fm1(1:nmap)=fm(1:nmap)-fm1(1:nmap)
     END IF
     !
     !     save F_m and rho_m for next iteration
