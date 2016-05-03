@@ -30,6 +30,7 @@
           USE m_types
           USE m_cylpts
           USE m_points
+          USE m_juDFT_init
           IMPLICIT NONE
           !     ..
           TYPE(t_mpi),INTENT(IN)      :: mpi
@@ -300,7 +301,7 @@
              !
              ! set up parameters for enpara-file
              !
-             IF (.NOT.l_enpara) THEN
+             IF (juDFT_was_argument("-genEnpara").AND..NOT.l_enpara) THEN
                 OPEN (40,file='enpara',form='formatted',status='unknown')
                 enpara%lchange = .TRUE.
                 enpara%llochg = .TRUE.
