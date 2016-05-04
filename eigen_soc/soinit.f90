@@ -41,6 +41,15 @@ CONTAINS
     !     .. Local Arrays ..
     REAL  vr0(atoms%jmtd,size(vr,4))
     !     ..
+    rsopp  =0.0
+    rsoppd =0.0
+    rsopdp =0.0
+    rsopdpd=0.0
+    rsoplop =0.0
+    rsoplopd=0.0
+    rsopdplo=0.0
+    rsopplo=0.0
+    rsoploplop=0.0
     DO n = 1,atoms%ntype
        vr0=0.0
        vr0(:atoms%jri(n),:) = vr(:atoms%jri(n),0,n,:)

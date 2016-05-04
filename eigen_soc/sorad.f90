@@ -28,15 +28,15 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(:,:)!(atoms%jmtd,dimension%jspd),
-    REAL,    INTENT (OUT) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsoppd (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsopdp (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsopdpd(atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsoplop (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsoplopd(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsopdplo(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsopplo (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsoppd (atoms%ntypd,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsopdp (atoms%ntypd,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsopdpd(atoms%ntypd,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsoplop (atoms%ntypd,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsoplopd(atoms%ntypd,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsopdplo(atoms%ntypd,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsopplo (atoms%ntypd,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2)
     !     ..
     !     .. Local Scalars ..
     REAL ddn1,e ,ulops,dulops,duds1
@@ -48,7 +48,7 @@ CONTAINS
     REAL, ALLOCATABLE :: filo(:,:)
     REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:)
     !     ..
-
+    
     IF (atoms%jri(ntyp)>atoms%jmtd)  CALL juDFT_error("atoms%jri(ntyp).GT.atoms%jmtd",calledby ="sorad")
     ALLOCATE ( p(atoms%jmtd,2),pd(atoms%jmtd,2),q(atoms%jmtd,2),plo(atoms%jmtd,2),fint(atoms%jmtd),&
          &   qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2) )
