@@ -34,6 +34,12 @@
           !     .. Intrinsic Functions ..
           INTRINSIC REAL
           !     ..
+          !Defaults, as the character arrays are no longer used, we should
+          !write some defaults for old fleur-versions
+          name    ='        '
+          name(10)='ordered*'
+          dop     ='in/out  '
+          iop     ='char/pot'
           WRITE (nu) name
           !          WRITE (6,FMT=8000) name
 8000      FORMAT (' wrtdop title:',10a8)
