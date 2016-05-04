@@ -172,10 +172,10 @@ MODULE m_tlo
                 l = atoms%llo(lo,ntyp)
                 DO m = -l,l
                    lm = l* (l+1) + m
-                   tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jsp) *&
+                   tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jspin) *&
                         ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) )
-                   tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jsp) *&
-                        ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) ) + 0.5 * usdus%uulon(lo,ntyp,jsp)
+                   tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jspin) *&
+                        ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) ) + 0.5 * usdus%uulon(lo,ntyp,jspin)
                    IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                       tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * uuilon(lo,ntyp)
                       tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * duilon(lo,ntyp)
@@ -194,7 +194,7 @@ MODULE m_tlo
                    loplo = ((lop-1)*lop)/2 + lo
                    DO m = -lp,lp
                       tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jspin)+&
-                           enpara%ello0(lo,ntyp,jspin))* usdus%uloulopn(lop,lo,ntyp,jsp) + 0.5* (ulouilopn(lop,lo,ntyp) +&
+                           enpara%ello0(lo,ntyp,jspin))* usdus%uloulopn(lop,lo,ntyp,jspin) + 0.5* (ulouilopn(lop,lo,ntyp) +&
                            ulouilopn(lo,lop,ntyp))
                    END DO
                 END DO
