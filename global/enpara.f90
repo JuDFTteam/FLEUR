@@ -31,7 +31,7 @@
 
       WRITE (40,FMT=8035) jspin,enpara%enmix(jspin)
       WRITE (40,FMT=8036)
- 8035 FORMAT (5x,'energy parameters for spin ',i1,' mix=',f10.6)
+ 8035 FORMAT (5x,'energy parameters          for spin ',i1,' mix=',f10.6)
  8036 FORMAT (t6,'atom',t15,'s',t24,'p',t33,'d',t42,'f')
       DO n = 1,atoms%ntype
          WRITE (6,FMT=8040)  n, (enpara%el0(l,n,jspin),l=0,3),&
@@ -87,7 +87,7 @@
 !-->  first line contains mixing parameter!
 
       enpara%enmix(jsp) = 0.0
-      READ (40,FMT ='(39x,f10.6)',iostat=io_err) enpara%enmix(jsp)
+      READ (40,FMT ='(48x,f10.6)',iostat=io_err) enpara%enmix(jsp)
       IF (io_err /= 0) THEN
          !use defaults
          enpara%lchange(:,:,jsp)=.false.
