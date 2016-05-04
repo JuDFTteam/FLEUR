@@ -120,7 +120,7 @@
                    WRITE (16,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
                 ENDIF
              ENDDO
-             CALL fitchk(v1,v2,av,rms,dms)
+             CALL fitchk(v1(:np),v2(:np),av,rms,dms)
              WRITE (6,FMT=8030) av,rms,dms
              WRITE (16,FMT=8030) av,rms,dms
              RETURN
