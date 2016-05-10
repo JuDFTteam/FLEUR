@@ -8,7 +8,7 @@
      >                   dbgfh,errfh,outfh,dispfh,dispfn,
      >                   cal_symm,cartesian,symor,oldfleur,
      >                   natin,natmax,nop48,
-     >                   atomid,atompos,a1,a2,a3,aa,scale,
+     >                   atomid,atompos,a1,a2,a3,aa,scale,noangles,
      <                   invs,zrfs,invs2,nop,nop2,
      <                   ngen,mmrot,ttr,ntype,nat,nops,
      <                   neq,ntyrep,zatom,natype,natrep,natmap,
@@ -25,7 +25,7 @@
       IMPLICIT NONE
 
 !===> Arguments
-      LOGICAL, INTENT(IN)    :: cal_symm,cartesian,oldfleur
+      LOGICAL, INTENT(IN)    :: cal_symm,cartesian,oldfleur,noangles
       INTEGER, INTENT(IN)    :: ngen,natmax,nop48
       INTEGER, INTENT(IN)    :: dbgfh,errfh,outfh,dispfh ! file handles, mainly 6
       REAL,    INTENT(IN)    :: aa
@@ -98,9 +98,8 @@
 !
 !--->    generate lattice matrices (everything in mod_lattice)
 !
-      write(*,*) aa,scale
       CALL setab(
-     >           a1,a2,a3,aa,scale,
+     >           a1,a2,a3,aa,scale,noangles,
      <           amat,bmat,aamat,bbmat,amatinv,omtil)
 
 

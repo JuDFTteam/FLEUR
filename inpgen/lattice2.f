@@ -8,7 +8,7 @@
       CONTAINS
       SUBROUTINE lattice2( 
      >                    buffer,xl_buffer,errfh,bfh,nline,
-     <                    a1,a2,a3,aa,scale,ios )
+     <                    a1,a2,a3,aa,scale,noangles,ios )
 
       USE m_constants
       IMPLICIT NONE
@@ -21,18 +21,17 @@
       REAL,    INTENT (OUT) :: aa
       REAL,    INTENT (OUT) :: scale(3)
       INTEGER, INTENT (OUT) :: ios
+      LOGICAL, INTENT (OUT) :: noangles
 
 !==> Local Variables
       CHARACTER(len=40) :: latsys
       REAL    :: a0
       REAL    :: a,b,c
       REAL    :: alpha,beta,gamma
-      REAL    :: e1,e2,e3
       REAL    :: c1(3),c2(3),c3(3)
-      REAL    :: ar,br,cr,b1,b2,am(3,3),rmat(3,3)
+      REAL    :: ar,br,cr,b1,b2,am(3,3)
       REAL    :: ca,cb,at
       INTEGER :: i,j,err,i1,i2
-      LOGICAL :: noangles
 
       REAL, PARAMETER :: eps = 1.0e-7
       REAL, PARAMETER :: h = 0.5, o = 0.0 ,
@@ -71,12 +70,11 @@
 !===> 13: monoclinic-P     (mS)  (mA)  (mB)  (mC) 
 
 !===> namelists
-      NAMELIST /lattice/ latsys,a0,a,b,c,alpha,beta,gamma,e1,e2,e3
+      NAMELIST /lattice/ latsys,a0,a,b,c,alpha,beta,gamma
 
       noangles = .false.
       latsys = ' ' ; a0 = 0.0   
       a = 0.0      ; b = 0.0    ; c = 0.0 
-      e1 = 0.0     ; e2 = 0.0   ; e3 = 0.0   
       alpha = 0.0  ; beta = 0.0 ; gamma = 0.0   
 
       READ (bfh,lattice,err=911,end=911,iostat=ios)
@@ -98,10 +96,6 @@
         br = beta
         cr = gamma
       ENDIF
-
-      e1 = e1 * pi_const / 180.0 ! for rhomboedral lattices only
-      e2 = e2 * pi_const / 180.0 
-      e3 = e3 * pi_const / 180.0 
 
       latsys = ADJUSTL(latsys)
 
@@ -178,56 +172,23 @@
 
         noangles=.false.
         i = 5
-        a1 = lmat(:,1,i) ! /sqrt(3.0)
-        a2 = lmat(:,2,i) ! /sqrt(3.0)
-        a3 = lmat(:,3,i) ! /sqrt(3.0)
+        a1 = lmat(:,1,i)
+        a2 = lmat(:,2,i)
+        a3 = lmat(:,3,i)
 
         IF ( a.NE.b ) err = 51
         IF ( alpha.EQ.0.0  .OR. 
      &       alpha.NE.beta .OR. alpha.NE.gamma ) err = 52
 
-!        at = a
-!        a  = 2.0 * at * sin(ar/2.0)
-!        b  = a
-!        c  = at * sqrt( 4.0 / 3.0 * ( 1 + 2.0 * cos(ar) ) ) 
-      
-         at = sqrt( 2.0 / 3.0 * ( 1 - cos(ar) ) )
-         a = at 
-         b = at
-         c = cos( asin(at) ) 
-!dbg+
+        at = sqrt( 2.0 / 3.0 * ( 1 - cos(ar) ) )
         am(:,1) = a1 ; am(:,2) = a2 ; am(:,3) = a3
-        am(1,:) = a0*a*am(1,:)
-        am(2,:) = a0*b*am(2,:)
-        am(3,:) = a0*c*am(3,:)
-        a1 = am(:,1)/a0 ; a2 = am(:,2)/a0 ; a3 = am(:,3)/a0
-        a = 1.0 ; b = 1.0 ; c = 1.0
-        CALL angles( am )
-!dbg-
-!        rmat = 0.0
-!        rmat(1,1) =  cos(e1)
-!        rmat(2,2) =  cos(e1)
-!        rmat(1,2) = -sin(e1)
-!        rmat(2,1) =  sin(e1)
-!        rmat(3,3) =  1.0
-!
-!        c1(:) = 0.0 ; c2(:) = 0.0 ; c3(:) = 0.0
-!        DO i = 1, 3
-!          DO j = 1, 3
-!            c1(i) = c1(i) + rmat(i,j)*a1(j)
-!            c2(i) = c2(i) + rmat(i,j)*a2(j)
-!            c3(i) = c3(i) + rmat(i,j)*a3(j)
-!          ENDDO
-!        ENDDO
-!        a1 = c1 ; a2 = c2 ; a3 = c3
-!!dbg+
-!        am(:,1) = a1 ; am(:,2) = a2 ; am(:,3) = a3
-!        am(1,:) = a0*a*am(1,:)
-!        am(2,:) = a0*b*am(2,:)
-!        am(3,:) = a0*c*am(3,:)
-!        call angles( am )
-!!dbg-
+        am(1,:) = at * am(1,:)
+        am(2,:) = at * am(2,:)
+        am(3,:) = cos(asin(at)) * am(3,:)
+        a1 = am(:,1) ; a2 = am(:,2) ; a3 = am(:,3)
 
+        CALL angles( am )
+ 
 !===>  5.2: hexagonal-R      (hR) trigonal,( rhombohedral )
 
       ELSEIF (latsys =='hexagonal-R2'.OR.latsys =='hR2'.OR.latsys =='r2'
@@ -537,9 +498,9 @@
       c1 = (ca - cg*cb ) / sg
       c2 = sqrt( 1 - cb**2 - c1**2 ) 
 
-      am(1,1) = 1.0 ; am(2,1) = 0.0 ; am(3,1) = 0.0 
+      am(1,1) = 1.0 ; am(2,1) = 0.0 ; am(3,1) = 0.0
       am(1,2) = cg  ; am(2,2) = sg  ; am(3,2) = 0.0
-      am(1,3) = cb  ; am(2,3) = c1  ; am(3,3) = c2 
+      am(1,3) = cb  ; am(2,3) = c1  ; am(3,3) = c2
 
       END SUBROUTINE brvmat
 

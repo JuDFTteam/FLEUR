@@ -22,7 +22,7 @@ PROGRAM inpgen
       INTEGER natmax,nop48,nline,natin,ngen,i,j
       INTEGER nops,no3,no2,na,numSpecies
       INTEGER infh,errfh,bfh,warnfh,symfh,dbgfh,outfh,dispfh
-      LOGICAL cal_symm,checkinp,newSpecies
+      LOGICAL cal_symm,checkinp,newSpecies,noangles
       LOGICAL cartesian,oldfleur,l_hyb  ,inistop
       REAL    aa
  
@@ -71,7 +71,7 @@ PROGRAM inpgen
      &                  natmax,nop48,&
      &                  nline,xl_buffer,buffer,&
      &                  title,input%film,cal_symm,checkinp,sym%symor,&
-     &                  cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,&
+     &                  cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,noangles,&
      &                 factor,natin,atomid,atompos,ngen,mmrot,ttr,&
      &                  l_hyb,noco%l_soc,noco%l_ss,noco%theta,noco%phi,noco%qss,inistop)!keep
 
@@ -111,7 +111,7 @@ PROGRAM inpgen
      &             dbgfh,errfh,outfh,dispfh,dispfn,&
      &             cal_symm,cartesian,sym%symor,input%film,&
      &             natin,natmax,nop48,&
-     &             atomid,atompos,a1,a2,a3,aa,scale,&
+     &             atomid,atompos,a1,a2,a3,aa,scale,noangles,&
      &             sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2,&
      &             ngen,mmrot,ttr,atoms%ntype,atoms%nat,nops,&
      &             atoms%neq,ntyrep,atoms%zatom,natype,natrep,natmap,&

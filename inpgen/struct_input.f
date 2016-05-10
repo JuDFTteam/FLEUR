@@ -9,7 +9,7 @@
      >                        natmax,nop48,
      X                        nline,xl_buffer,buffer,
      <                        title,film,cal_symm,checkinp,symor,
-     <                        cartesian,oldfleur,a1,a2,a3,dvac,aa,scale,
+     <               cartesian,oldfleur,a1,a2,a3,dvac,aa,scale,noangles,
      <                       factor,natin,atomid,atompos,ngen,mmrot,ttr,
      <                        l_hyb,l_soc,l_ss,theta,phi,qss,inistop)
 
@@ -26,7 +26,7 @@
       CHARACTER(len=xl_buffer) :: buffer
       LOGICAL                 :: cal_symm, checkinp, symor, film
       LOGICAL                 :: cartesian,oldfleur,inistop
-      LOGICAL, INTENT (OUT)   :: l_hyb,l_soc,l_ss
+      LOGICAL, INTENT (OUT)   :: l_hyb,l_soc,l_ss,noangles
       INTEGER, INTENT (OUT)   :: natin
       INTEGER, INTENT (OUT)   :: ngen
       REAL,    INTENT (OUT)   :: aa,theta,phi
@@ -140,7 +140,7 @@
         IF ( buffer(1:8)=='&lattice' ) THEN
           CALL lattice2( 
      >                  buffer,xl_buffer,errfh,bfh,nline,
-     <                  a1,a2,a3,aa,scale,ios )
+     <                  a1,a2,a3,aa,scale,noangles,ios )
           dvac = 0.00
           IF ( ios.NE.0 ) THEN
             WRITE (errfh,*)
