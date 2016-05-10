@@ -140,9 +140,6 @@ CONTAINS
     COMPLEX,parameter:: czero=(0.0,0.0)
     LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
     !     ...Local Arrays ..
-    REAL :: qis(dimension%neigd,kpts%nkptd,dimension%jspd)
-    REAL :: qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd)
-    REAL :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkptd,dimension%jspd)
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntypd)
     REAL    cartk(3),bkpt(3),xp(3,dimension%nspd),e_mcd(atoms%ntypd,input%jspins,dimension%nstd)
     REAL    ello(atoms%nlod,atoms%ntypd,dimension%jspd),evac(2,dimension%jspd)
@@ -161,6 +158,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: volintsl(:)
     REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:)
     REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
+    REAL,    ALLOCATABLE :: qis(:,:,:),qvac(:,:,:,:),qvlay(:,:,:,:,:)
     !-new_sl
     !-dw
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
@@ -243,7 +241,7 @@ CONTAINS
     ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
     ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( lapw%k1(dimension%nvd,dimension%jspd),lapw%k2(dimension%nvd,dimension%jspd),lapw%k3(dimension%nvd,dimension%jspd) )   ! Deallocation at end of subroutine
+    ALLOCATE ( lapw%k1(dimension%nvd,dimension%jspd),lapw%k2(dimension%nvd,dimension%jspd),lapw%k3(dimension%nvd,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
     ALLOCATE (  usdus%ulos(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
@@ -288,7 +286,7 @@ CONTAINS
     sqal(:,:,:) = 0.0 ; ener(:,:,:) = 0.0
     !+soc
     IF (noco%l_soc) THEN
-       ALLOCATE ( orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )   ! Deallocation at end of subroutine
+       ALLOCATE ( orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
        ALLOCATE ( orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd,jsp_start:jsp_end)     )
        ALLOCATE ( orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd,jsp_start:jsp_end))
        orb(:,:,:,:)%uu = 0.0 ; orb(:,:,:,:)%dd = 0.0
@@ -306,7 +304,7 @@ CONTAINS
     ENDIF
     !+for
     IF (input%l_f) THEN
-       ALLOCATE ( f_a12(3,atoms%ntypd),f_a21(3,atoms%ntypd) )           ! Deallocation at end of subroutine
+       ALLOCATE ( f_a12(3,atoms%ntypd),f_a21(3,atoms%ntypd) )
        ALLOCATE ( f_b4(3,atoms%ntypd),f_b8(3,atoms%ntypd) )
        f_b4(:,:) = czero  ; f_a12(:,:) = czero
        f_b8(:,:) = czero  ; f_a21(:,:) = czero
@@ -319,7 +317,7 @@ CONTAINS
        OPEN (23,file='mcd_inp',STATUS='old',FORM='formatted')
        READ (23,*) emcd_lo,emcd_up
        CLOSE (23)
-       ALLOCATE ( m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntypd,2) )           ! Deallocation at end of subroutine
+       ALLOCATE ( m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntypd,2) )
        ALLOCATE ( mcd(3*atoms%ntypd,dimension%nstd,dimension%neigd) )
        IF (.not.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
     ELSE
@@ -342,7 +340,6 @@ CONTAINS
     !---> if local orbitals are used, the eigenvector has a higher
     !---> dimension then nvd
     ALLOCATE ( aclo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end), &
-         ! Deallocated at end of subroutine&
          bclo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end),&
          cclo(atoms%nlod,atoms%nlod,atoms%ntypd,jsp_start:jsp_end),&
          acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end), &
@@ -350,6 +347,11 @@ CONTAINS
          ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end) )
     aclo(:,:,:) = 0.0 ; bclo(:,:,:) = 0.0 ; ccnmt(:,:,:,:,:) = 0.0
     acnmt(:,:,:,:,:)=0.0 ; bcnmt(:,:,:,:,:)=0.0 ; cclo(:,:,:,:)=0.0
+
+    ALLOCATE ( qis(dimension%neigd,kpts%nkptd,dimension%jspd), &
+               qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd), &
+               qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkptd,dimension%jspd) )
+    qvac(:,:,:,:)=0.0 ;  qvlay(:,:,:,:,:)=0.0
 
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
