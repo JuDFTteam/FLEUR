@@ -328,7 +328,6 @@
 
       INTEGER             :: n,i
 
- 
       DO n = 1,atoms%ntype
          IF (all(enpara%el0(:,n,jsp)>-9999.)) cycle !enpara was set already
          IF ( atoms%nz(n) < 3 ) THEN

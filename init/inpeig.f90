@@ -32,7 +32,7 @@
 !     ..
 !     .. Local Scalars ..
       REAL      :: wt,scale
-      INTEGER   :: i,j,nk,jsp
+      INTEGER   :: i,j,nk,jsp,n
       LOGICAL   :: xyu,l_enpara
 !     ..
 !
@@ -53,6 +53,12 @@
       ELSE
          WRITE(6,*) "No enpara file found, using default values"
          enpara%el0(0,:,1)=-999999.0
+         DO n = 1, atoms%ntype
+            enpara%skiplo(n,:) = 0
+            DO i = 1, atoms%nlo(n)
+               enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
+            END DO
+         END DO
          CALL default_enpara(1,atoms,enpara)
          IF (input%jspins>1) THEN
            enpara%el0(:,:,2)=enpara%el0(:,:,1)
