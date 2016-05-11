@@ -20,7 +20,7 @@
 
       z_namat = -1
       DO n = 0, size(namat_const)-1
-        IF ( ele == namat_const(n) ) THEN
+        IF (TRIM(ADJUSTL(ele)) == TRIM(ADJUSTL(namat_const(n)))) THEN
           z_namat = n
           EXIT
         ENDIF
