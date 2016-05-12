@@ -72,7 +72,7 @@
 !---->Automatic arrays
       INTEGER nneq(natmax),icount(nop48*natmax),imap(natmax)
       INTEGER ity(nop48*natmax),index_op(nop48)
-      REAL    tpos(3,nop48*natmax)
+      REAL    tpos(3,nop48*natmax),atomid2(natmax)
       REAL    tr(3),tt(3),disp(3,natmax)
 
       INTEGER mp(3,3),mtmp(3,3)
@@ -140,6 +140,14 @@
       IF ( mmrot(1,1,1)==0 ) THEN  ! &gen was used
 
 !--->   save generators
+        IF (cartesian) THEN    ! convert to lattice coords. if necessary
+          DO ng = 2, ngen+1
+            mmrot2(:,:,1) = matmul( bs, mmrot(:,:,ng) )
+            mmrot(:,:,ng) = matmul( mmrot2(:,:,1), as )
+            ttr2(:,1) = matmul( bs, ttr(:,ng) )
+            ttr(:,ng) = ttr2(:,1)
+          ENDDO
+        ENDIF
         mmrot2(:,:,1:ngen) = mmrot(:,:,2:ngen+1) 
         ttr2(:,1:ngen)     = ttr(:,2:ngen+1) 
 
@@ -334,10 +342,11 @@
             natrep(na+nn) = na + 1
             natmap(na+nn) = na + nn
             pos(:,na+nn)  = tpos(:,na+nn)
-!            atomid(na+nn) = atomid(n)            ! gu?
+            atomid2(na+nn) = atomid(n)
          ENDDO
          na = na + neq(n)
       ENDDO
+      atomid = atomid2
 
 
 !---> check, that we have  

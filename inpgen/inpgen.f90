@@ -80,7 +80,7 @@ PROGRAM inpgen
       IF (.not.input%film) vacuum%dvac=a3(3)
       WRITE (6,*)
       WRITE (6,*) title
-      WRITE (6,*) 'film=',input%film,'cal_symm=',cal_symm
+      WRITE (6,*) 'film=',input%film,'cartesian=',cartesian
       WRITE (6,*) 'checkinp=',checkinp,'symor=',sym%symor
       WRITE (6,*)
       WRITE (6,'(a5,3f10.5)') 'a1 = ',a1(:)

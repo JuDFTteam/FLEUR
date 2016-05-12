@@ -292,7 +292,7 @@
               ENDIF
 ! ===> local orbitals
               IF (lo0 /= ' ') THEN
-                WRITE (6,'(6a,i3,7a,i3,3a,a80)')
+                WRITE (6,'(a6,i3,a7,i3,a3,a80)')
      &                     "nlod =",nlod0," llod =",llod," : ",lo0
                 lo(n)      = lo0
                 IF (nlod0 > atoms%nlod)  

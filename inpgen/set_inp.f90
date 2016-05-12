@@ -315,16 +315,16 @@
 !HF
 
 ! rounding
-      atoms%rmt(:) = real(INT( atoms%rmt(:) * 100 ) / 100.)
-      atoms%dx(:)   = real(INT( atoms%dx(:)   * 1000) / 1000.)
-      stars%gmax    = real(INT( stars%gmax    * 10  ) / 10.)
-      input%rkmax  = real(INT( input%rkmax  * 10  ) / 10.)
-      xcpot%gmaxxc  = real(INT( xcpot%gmaxxc  * 10  ) / 10.)
+      atoms%rmt(:) = real(NINT( atoms%rmt(:) * 100 ) / 100.)
+      atoms%dx(:)   = real(NINT( atoms%dx(:)   * 1000) / 1000.)
+      stars%gmax    = real(NINT( stars%gmax    * 10  ) / 10.)
+      input%rkmax  = real(NINT( input%rkmax  * 10  ) / 10.)
+      xcpot%gmaxxc  = real(NINT( xcpot%gmaxxc  * 10  ) / 10.)
       gcutm   = real(INT( gcutm   * 10  ) / 10.)
-      hybrid%gcutm2  = real(INT( hybrid%gcutm2  * 10  ) / 10.)
+      hybrid%gcutm2  = real(NINT( hybrid%gcutm2  * 10  ) / 10.)
       IF (input%film) THEN
-       vacuum%dvac = real(INT(vacuum%dvac*100+1)/100.)
-       dtild = real(INT(dtild*100+1)/100.)
+       vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
+       dtild = real(NINT(dtild*100)/100.)
       ENDIF
 !
 ! read some lapw input

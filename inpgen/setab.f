@@ -112,7 +112,7 @@
       ENDIF
 
       aamat=matmul(transpose(amat),amat)
-      bbmat=matmul(transpose(bmat),bmat)
+      bbmat=matmul(bmat,transpose(bmat))
 
       END SUBROUTINE setab
       END MODULE m_setab
