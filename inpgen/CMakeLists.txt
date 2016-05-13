@@ -19,6 +19,5 @@ inpgen/symproperties.f
 inpgen/write_struct.f
 )
 set(fleur_F90 ${fleur_F90}
-inpgen/inpgen.f90
 inpgen/set_inp.f90
 )

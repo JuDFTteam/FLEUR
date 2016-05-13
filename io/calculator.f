@@ -7,8 +7,9 @@
       IMPLICIT NONE
 
       PRIVATE
-      PUBLIC :: evaluate,ASSIGN_var,delete_vars,evaluatefirst
-     $     ,makenumberstring,show
+      PUBLIC :: evaluate,ASSIGN_var,delete_vars,evaluatefirst,
+     $          makenumberstring,show,evaluateFirstOnly,
+     $          evaluateFirstIntOnly,evaluateFirstBoolOnly
 
       CHARACTER(len = 10),SAVE,ALLOCATABLE :: var_names(:)
       REAL,ALLOCATABLE,SAVE                :: var_values(:)
@@ -730,5 +731,86 @@
       ENDIF
       END FUNCTION
       !> 
+
+
+      FUNCTION evaluateFirstOnly(s)result(number)
+
+      IMPLICIT NONE
+
+      CHARACTER(len =*), INTENT(IN)    :: s
+      REAL                             :: number
+
+      !<-- Locals
+      CHARACTER(len=LEN(s)) :: tempS
+      INTEGER               :: pos
+      !>
+
+      tempS = ADJUSTL(s)
+      IF (len_TRIM(tempS) == 0) THEN
+         number = 0
+         RETURN
+      ENDIF
+      pos = INDEX(tempS," ")
+      IF (pos == 0) pos = LEN(tempS)
+      number  = evaluate(tempS(:pos))
+
+      END FUNCTION
+
+
+      FUNCTION evaluateFirstIntOnly(s)result(number)
+
+      IMPLICIT NONE
+
+      CHARACTER(len =*), INTENT(in) :: s
+      INTEGER                          :: number
+
+      !<-- Locals
+      INTEGER               :: pos
+      CHARACTER(len=LEN(s)) :: tempS
+      !>
+
+      tempS = ADJUSTL(s)
+      IF (len_TRIM(tempS) == 0) THEN
+         number = 0
+         RETURN
+      END IF
+      pos = INDEX(tempS," ")
+      IF (pos == 0) pos = LEN(tempS)
+      number = NINT(evaluate(tempS(:pos)))
+
+      END FUNCTION
+
+      FUNCTION evaluateFirstBoolOnly(s)result(bool)
+
+      IMPLICIT NONE
+
+      CHARACTER(len =*), INTENT(in)    :: s
+      LOGICAL                          :: bool
+
+      !<-- Locals
+      INTEGER               :: pos
+      CHARACTER(len=LEN(s)) :: tempS
+      !>
+
+      tempS = ADJUSTL(s)
+      IF (len_TRIM(tempS) == 0) THEN
+         CALL juDFT_error("String is empty.",
+     +                    calledby ="calculator")
+         RETURN
+      END IF
+
+      pos = INDEX(tempS," ")
+      IF (pos == 0) pos = LEN(tempS)
+      SELECT CASE (tempS(:pos))
+         CASE ('F','f','false','FALSE')
+            bool = .FALSE.
+         CASE ('T','t','true','TRUE')
+            bool = .TRUE.
+         CASE DEFAULT
+            CALL juDFT_error('No valid bool at start of: ' // tempS,
+     +                       calledby ="calculator")
+      END SELECT
+
+      END FUNCTION
 
       END MODULE m_calculator

@@ -298,6 +298,7 @@
              ENDIF
              l_enpara = .FALSE.
              INQUIRE (file='enpara',exist=l_enpara)
+             l_enpara = l_enpara.OR.input%l_inpXML
              !
              ! set up parameters for enpara-file
              !

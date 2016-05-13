@@ -191,6 +191,14 @@
        INTEGER,ALLOCATABLE::jri(:)
        !core states
        INTEGER,ALLOCATABLE::ncst(:)
+       !Are core states explicitely provided?
+       LOGICAL,ALLOCATABLE::coreStatesProvided(:)
+       !core state occupations
+       REAL,ALLOCATABLE::coreStateOccs(:,:,:)
+       !core state nprnc
+       INTEGER,ALLOCATABLE::coreStateNprnc(:,:)
+       !core state kappa
+       INTEGER,ALLOCATABLE::coreStateKappa(:,:)
        !lmax
        INTEGER,ALLOCATABLE::lmax(:)
        !lmax non-spherical
@@ -264,6 +272,9 @@
        REAL   ,ALLOCATABLE   ::  bkf(:,:)
        INTEGER,ALLOCATABLE   ::  bkp(:)
        INTEGER,ALLOCATABLE   ::  bksym(:)
+       INTEGER                       :: numSpecialPoints
+       CHARACTER(LEN=50),ALLOCATABLE :: specialPointNames(:)
+       REAL   ,ALLOCATABLE           :: specialPoints(:,:)
       ENDTYPE
 
 
@@ -488,6 +499,7 @@
          INTEGER ::phnd
          INTEGER ::nsh
          INTEGER ::mtypes
+         INTEGER :: nmopq(3)
          REAL    :: thetaJ
          REAL    :: qn
          INTEGER :: nmagn
@@ -541,6 +553,7 @@
         INTEGER :: imix
         INTEGER :: gw
         INTEGER :: gw_neigd
+        INTEGER :: qfix
         REAL    :: xa !< mixing parameter for geometry optimzer
         REAL    :: thetad !< Debey temperature for first step of geometry optimzer
         REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
@@ -569,6 +582,7 @@
         LOGICAL:: eigvar(3)
         LOGICAL:: sso_opt(2)
         LOGICAL:: total
+        LOGICAL:: l_inpXML
         REAL :: ellow
         REAL :: elup
         REAL :: rkmax
@@ -587,6 +601,7 @@
      end type
      TYPE t_banddos
        LOGICAL :: dos
+       LOGICAL :: band
        LOGICAL :: l_mcd
        LOGICAL :: l_orb
        LOGICAL :: vacdos

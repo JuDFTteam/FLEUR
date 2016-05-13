@@ -15,6 +15,9 @@ io/inpnoco.F90
 io/loddop.f90
 io/rw_inp.f90
 io/rw_noco.f90
+io/r_inpXML.F90
 io/wrtdop.f90
+io/w_inpXML.f90
 io/xsf_io.f90
+io/xmlIntWrapFort.f90
 )

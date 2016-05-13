@@ -6,7 +6,9 @@
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
                  oneD,l_opti)
           USE m_judft
+          USE m_juDFT_init
           USE m_types
+          USE m_rinpXML
           USE m_dimens
           USE m_inped
           USE m_setup
@@ -45,7 +47,7 @@
          
 
           !     .. Local Scalars ..
-          INTEGER    :: i,n,l,m1,m2,isym,iisym           
+          INTEGER    :: i,n,l,m1,m2,isym,iisym
           COMPLEX    :: cdum
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -76,6 +78,26 @@
 #endif
              OPEN (16,file='inf',form='formatted',status='unknown')
           ENDIF
+
+          input%l_inpXML = .FALSE.
+          kpts%numSpecialPoints = 0
+          INQUIRE (file='inp.xml',exist=input%l_inpXML)
+          IF(.NOT.juDFT_was_argument("-xmlInput")) THEN
+             input%l_inpXML = .FALSE.
+          END IF
+          IF (input%l_inpXML) THEN
+             IF (mpi%irank.EQ.0) THEN
+                CALL r_inpXML(&
+                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
+                              cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti)
+
+                ALLOCATE (results%force(3,atoms%ntype,dimension%jspd))
+                ALLOCATE (results%force_old(3,atoms%ntype))
+                results%force(:,:,:) = 0.0
+
+                WRITE(*,*) 'TODO: Distribute parameters and arrays to other parallel processes!'
+             END IF
+          ELSE ! else branch of "IF (input%l_inpXML) THEN"
 
           CALL dimens(&
                &            mpi,ivers,input,&
@@ -136,6 +158,7 @@
           ALLOCATE ( enpara%enmix(dimension%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
           ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntypd) )
           ALLOCATE ( noco%soc_opt(atoms%ntypd+2) )
+          ALLOCATE ( atoms%coreStatesProvided(atoms%ntypd))
           !+odim
           ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
           ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )
@@ -153,7 +176,7 @@
           hybrid%ddist     = 1.
           !
 
-
+          atoms%coreStatesProvided(:) = .FALSE.
 
           atoms%vr0(:)         = 0.0
           jij%M(:)             = 0.0
@@ -221,6 +244,9 @@
              !+t3e
           ENDIF ! mpi%irank.eq.0
           CALL timestop("preparation:stars,lattice harmonics,+etc")
+
+          END IF ! end of else branch of "IF (input%l_inpXML) THEN"
+
           !
           !-odim
           oneD%odd%nq2 = oneD%odd%n2d
