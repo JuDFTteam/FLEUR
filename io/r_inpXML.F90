@@ -124,7 +124,7 @@ SUBROUTINE r_inpXML(&
    REAL               :: a1(3),a2(3),a3(3), bk(3)
    LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
    LOGICAL            :: l_vca, coreConfigPresent
-   REAL               :: magMom, radius, logIncrement, qsc(3), posScale, latticeScale, dr
+   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
    REAL               :: aTemp, scale, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
    REAL               :: weightScale
    LOGICAL            :: l_amf
@@ -418,7 +418,7 @@ SUBROUTINE r_inpXML(&
       kpts%bk = 0.0
       kpts%weight = 0.0
 
-      posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
+      kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
       weightScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@weightScale'))
 
       DO i = 1, kpts%nkpt
@@ -426,9 +426,9 @@ SUBROUTINE r_inpXML(&
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
          kpts%weight(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
-         kpts%bk(1,i) = kpts%bk(1,i) / posScale
-         kpts%bk(2,i) = kpts%bk(2,i) / posScale
-         kpts%bk(3,i) = kpts%bk(3,i) / posScale
+!         kpts%bk(1,i) = kpts%bk(1,i) / kpts%posScale
+!         kpts%bk(2,i) = kpts%bk(2,i) / kpts%posScale
+!         kpts%bk(3,i) = kpts%bk(3,i) / kpts%posScale
          kpts%weight(i) = kpts%weight(i) / weightScale
       END DO
    END IF
