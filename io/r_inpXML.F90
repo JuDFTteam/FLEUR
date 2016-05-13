@@ -41,6 +41,7 @@ SUBROUTINE r_inpXML(&
    USE m_writegw
    USE m_apwsdim
    USE m_setlomap
+   USE m_enpara,    ONLY : r_enpara
 
    IMPLICIT NONE
 
@@ -123,7 +124,7 @@ SUBROUTINE r_inpXML(&
    REAL               :: tauTemp(3,48)
    REAL               :: a1(3),a2(3),a3(3), bk(3)
    LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
-   LOGICAL            :: l_vca, coreConfigPresent
+   LOGICAL            :: l_vca, coreConfigPresent, l_enpara
    REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
    REAL               :: aTemp, scale, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
    REAL               :: weightScale
@@ -426,9 +427,6 @@ SUBROUTINE r_inpXML(&
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
          kpts%weight(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
-!         kpts%bk(1,i) = kpts%bk(1,i) / kpts%posScale
-!         kpts%bk(2,i) = kpts%bk(2,i) / kpts%posScale
-!         kpts%bk(3,i) = kpts%bk(3,i) / kpts%posScale
          kpts%weight(i) = kpts%weight(i) / weightScale
       END DO
    END IF
@@ -685,7 +683,7 @@ SUBROUTINE r_inpXML(&
       IF(input%film) THEN
          cell%z1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dVac'))
          dtild = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dTilda'))
-         vacuum%dvac = dtild
+         vacuum%dvac = cell%z1
          a3(3) = dtild
          WRITE(*,*) 'Ignoring vacuum energy parameters in inp.xml for the moment!'
       END IF
@@ -1812,6 +1810,18 @@ SUBROUTINE r_inpXML(&
       atoms%volmts(iType) = (fpi_const/3.0)*atoms%rmt(iType)**3
       cell%volint = cell%volint - atoms%volmts(iType)*atoms%neq(iType)
    END DO
+
+   ! Read in enpara file iff available
+
+   l_enpara = .FALSE.
+   INQUIRE (file ='enpara',exist= l_enpara)
+   IF (l_enpara) THEN
+      OPEN (40,file ='enpara',form='formatted',status='old')
+      DO jsp = 1,input%jspins
+         CALL r_enpara(atoms,input,jsp,enpara)
+      END DO !dimension%jspd
+      CLOSE (40)
+   END IF
 
    ! Dimensioning of lattice harmonics
 

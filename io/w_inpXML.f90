@@ -512,7 +512,7 @@ SUBROUTINE w_inpXML(&
          ENDDO
          IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos
          IF (input%film) THEN
-            tempTaual(3,na) = a3(3)*tempTaual(3,na)/scale
+            tempTaual(3,na) = dtild*tempTaual(3,na)/scale
          END IF
 !+odim in 1D case all the coordinates are given in cartesian YM
          IF (oneD%odd%d1) THEN
