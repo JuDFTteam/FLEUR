@@ -61,7 +61,7 @@
       REAL slmom,slxmom,slymom,sum,thetai,phii
       INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
       INTEGER  ityp,ilayer,urec,itype,iatom
-      LOGICAL l_relax_any,exst,n_exist
+      LOGICAL l_relax_any,exst,n_exist,l_st
       TYPE(t_noco)::noco_new
 !     ..
 !     .. Local Arrays ..
@@ -81,6 +81,7 @@
 !---> pk non-collinear
 
       LOGICAL   l_enpara
+      PARAMETER (l_st=.false.)
    
       IF (mpi%irank.EQ.0) WRITE (2,8005)
  8005 FORMAT ('CHARGE DENSITY PART (cdngen):')
@@ -235,7 +236,7 @@ enddo
 !---> pk non-collinear
               ELSEIF (input%ctail) THEN
                 CALL cdnovlp(mpi,&
-                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD, jspin,rh, qpw,rhtxy,rho,rht)
+                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh, qpw,rhtxy,rho,rht)
               ELSEIF (mpi%irank.EQ.0) THEN
                   DO ityp = 1,atoms%ntype
                      qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
@@ -295,7 +296,7 @@ enddo
                   IF (input%ctail) THEN
 !+gu hope this works as well
                      CALL cdnovlp(mpi, sphhar,stars,atoms,sym,&
-                          dimension,vacuum, cell, input,oneD, jspin,rh(1,1,jspin), qpw,rhtxy,rho,rht)
+                          dimension,vacuum, cell, input,oneD,l_st, jspin,rh(1,1,jspin), qpw,rhtxy,rho,rht)
                   ELSEIF (mpi%irank.EQ.0) THEN
                      DO ityp = 1,atoms%ntype
                         qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint

@@ -66,8 +66,8 @@
           REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
           REAL,    ALLOCATABLE :: vacpar(:)
           INTEGER lnum(DIMENSION%nstd,atoms%ntypd),nst(atoms%ntypd) 
-          INTEGER dummy(atoms%ntypd),jrc(atoms%ntypd)
-          LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara
+          INTEGER jrc(atoms%ntypd)
+          LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
           CHARACTER*8 name_l(10)
           !     ..
           !     .. Intrinsic Functions ..
@@ -75,7 +75,7 @@
           !     ..
           !     .. Data statements ..
           DATA del/1.e-6/
-          PARAMETER (czero=(0.0,0.0))
+          PARAMETER (czero=(0.0,0.0),l_st=.true.)
           !     ..
           !
           IF (input%jspins > DIMENSION%jspd)  CALL juDFT_error("input%jspins > dimension%jspd",calledby&
@@ -127,7 +127,6 @@
                    rat(jrc(n),n) = r
                    r = r*d
                 ENDDO
-                dummy(n) = 1
              ENDDO
              !
              ! Generate the atomic charge densities
@@ -223,7 +222,7 @@
                   &               sphhar,stars,atoms,sym,&
                   &               DIMENSION,vacuum,&
                   &               cell,&
-                  &               input,oneD,&
+                  &               input,oneD,l_st,&
                   &               ispin,rh1(:,:,ispin),&
                   &               qpw,rhtxy,rho,rht)
              !roa-
