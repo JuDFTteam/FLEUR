@@ -219,6 +219,18 @@
      &                xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                nel,atoms,enpara)
 
+      DO n = 1, atoms%ntype
+         IF (atoms%lnonsph(n).GT.atoms%lmax(n)) THEN
+            WRITE(*,'(a20,i5,a25,i3,a4,i3,a1)')& 
+               'NOTE: For atom type ', n,' lnonsph is reduced from ',& 
+               atoms%lnonsph(n),' to ', atoms%lmax(n), '.'
+            WRITE(6,'(a20,i5,a25,i3,a4,i3,a1)')&
+               'NOTE: For atom type ', n, ' lnonsph is reduced from ',& 
+               atoms%lnonsph(n),' to ', atoms%lmax(n), '.'
+            atoms%lnonsph(n) = atoms%lmax(n)
+         END IF
+      END DO
+
       input%zelec = nel
 
 ! --> check once more
