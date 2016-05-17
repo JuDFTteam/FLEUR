@@ -298,6 +298,9 @@
      &              enpara%enmix(jsp)*(pvac(1)/svac(1) - vbar)
             IF (vacuum%nvac.EQ.2) THEN
                IF (obsolete%lepr.eq.1) vbar = vz(1,vacuum%nvac)
+               write(6,FMT=777) enpara%evac0(2,jsp),(pvac(2)/svac(2) - vbar),&
+     &              abs(enpara%evac0(2,jsp)-(pvac(2)/svac(2) - vbar))
+               maxdist=max(maxdist,abs(enpara%evac0(2,jsp)-(pvac(2)/svac(2) - vbar)))
                enpara%evac0(2,jsp) = (1.0-enpara%enmix(jsp))*enpara%evac0(2,jsp)+&
      &              enpara%enmix(jsp)*(pvac(2)/svac(2) - vbar)
             ELSE
@@ -328,6 +331,7 @@
 
       INTEGER             :: n,i
 
+ 
       DO n = 1,atoms%ntype
          IF (all(enpara%el0(:,n,jsp)>-9999.)) cycle !enpara was set already
          IF ( atoms%nz(n) < 3 ) THEN
