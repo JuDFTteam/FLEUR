@@ -171,10 +171,10 @@ CONTAINS
 
              DO i = 1, 2
                 DO j = 1, 2
-                   rsoplop (ntyp,ilo,i,j) = radso(plo(:,i),p (:,j),vso(:,i), atoms%rmsh(1,ntyp),atoms%dx(ntyp))
-                   rsoplopd(ntyp,ilo,i,j) = radso(plo(:,i),pd(:,j),vso(:,i), atoms%rmsh(1,ntyp),atoms%dx(ntyp))
-                   rsopplo (ntyp,ilo,i,j) = radso(p (:,i),plo(:,j),vso(:,i), atoms%rmsh(1,ntyp),atoms%dx(ntyp))
-                   rsopdplo(ntyp,ilo,i,j) = radso(pd(:,i),plo(:,j),vso(:,i), atoms%rmsh(1,ntyp),atoms%dx(ntyp))
+                   rsoplop (ntyp,ilo,i,j) = radso(plo(:atoms%jri(ntyp),i),p (:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                   rsoplopd(ntyp,ilo,i,j) = radso(plo(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsopplo (ntyp,ilo,i,j) = radso(p (:atoms%jri(ntyp),i),plo(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsopdplo(ntyp,ilo,i,j) = radso(pd(:atoms%jri(ntyp),i),plo(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
                 ENDDO
              ENDDO
 
@@ -228,7 +228,7 @@ CONTAINS
                    DO i = 1, 2
                       DO j = 1, 2
                          rsoploplop(ntyp,ilo,ilop,i,j) =&
-                              radso(plo(:,i),plop(:,j),vso(:,i),atoms%rmsh(1,ntyp),atoms%dx(ntyp))
+                              radso(plo(:atoms%jri(ntyp),i),plop(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
                       ENDDO
                    ENDDO
 
