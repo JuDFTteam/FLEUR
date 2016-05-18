@@ -754,7 +754,7 @@ CONTAINS
                    IF (noco%l_soc) THEN
                       CALL orbmom(atoms,noccbd, we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                            ccof(-atoms%llod:,:,:,:,ispin), orb(0:,-atoms%lmaxd:,:,ispin),orbl(:,-atoms%llod:,:,ispin),&
-                           orblo(:,:,-atoms%llod,:,ispin) )
+                           orblo(:,:,-atoms%llod:,:,ispin) )
                    ENDIF
                    !     -soc
                    !--->          non-spherical m.t. density
