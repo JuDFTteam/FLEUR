@@ -42,13 +42,13 @@ CONTAINS
 
     ! ... Local Variables ..
 
-    INTEGER iind,ind1,ind2,info,lwork,liwork,lrwork,err
+    INTEGER iind,ind1,ind2,info,lwork,liwork,lrwork,err,i
     INTEGER sizez,iu 
     REAL :: lb,ub
     ! 'sizez' is needed, as some compilers sometimes produce errors,
     ! if the size command is used directly as a lapack argument.  
 
-    REAL toler
+    REAL toler, eigTemp(nsize)
 
     REAL,    ALLOCATABLE :: work(:)
     INTEGER, ALLOCATABLE :: iwork(:),isuppz(:)
@@ -128,14 +128,15 @@ CONTAINS
     iu   = min(nsize,neigd)
 #ifndef CPP_F90
     IF (l_J) THEN
-       CALL CPP_LAPACK_ssyevr('N','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eig,z,&
+       CALL CPP_LAPACK_ssyevr('N','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
             sizez,isuppz,work,lwork,iwork,liwork,info)
     ELSE
-       CALL CPP_LAPACK_ssyevr('V','I','U',nsize,largea,nsize,lb,ub,1,iu,toler,ne,eig,z,&
+       CALL CPP_LAPACK_ssyevr('V','I','U',nsize,largea,nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
             sizez,isuppz,work,lwork,iwork,liwork,info)
     ENDIF
 #else
     eig = 0.0
+    eigTemp = 0.0
 #endif
     IF (info /= 0)  CALL juDFT_error("error in ssyevr",calledby ="geneigprobl")
     DEALLOCATE (isuppz,work,iwork)
@@ -181,20 +182,21 @@ CONTAINS
     iu   = min(nsize,neigd)
 #ifndef CPP_F90
     IF (l_J) THEN
-       CALL CPP_LAPACK_cheevr('N','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eig,z,&
+       CALL CPP_LAPACK_cheevr('N','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
             sizez,isuppz,cwork,lwork,work,lrwork,iwork,liwork,info)
     ELSE
 #if (1==1)
-       CALL CPP_LAPACK_cheevr('V','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eig,z,&
+       CALL CPP_LAPACK_cheevr('V','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
             sizez,isuppz,cwork,lwork,work,lrwork,iwork,liwork,info)
 #else
 
-       CALL CPP_LAPACK_cheevx('V','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eig,z,&
+       CALL CPP_LAPACK_cheevx('V','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
             sizez,cwork,lwork,work,iwork,isuppz,info)
 #endif
     ENDIF
 #else
     eig = 0.0
+    eigTemp = 0.0
 #endif
     IF (info /= 0)  CALL juDFT_error("error in cheevr",calledby ="geneigprobl")
     DEALLOCATE ( isuppz )
@@ -206,6 +208,10 @@ CONTAINS
     IF (info /= 0)  CALL juDFT_error("error in ctrtrs",calledby ="geneigprobl")
 #endif
     DEALLOCATE ( largea,largeb )
+
+    DO i = 1, neigd
+       eig(i) = eigTemp(i)
+    END DO
 
   END SUBROUTINE geneigprobl
 END MODULE m_geneigprobl
