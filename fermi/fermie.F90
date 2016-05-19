@@ -29,7 +29,7 @@ CONTAINS
 
 
     USE m_eig66_io, ONLY : read_eig
-#ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
     USE m_mpi_col_eigJ
 #endif
     USE m_sort
@@ -102,10 +102,10 @@ CONTAINS
     e = 0
     !
     IF (jij%l_J) THEN
-#ifdef CPP_MPI
-       CALL mpi_col_eigJ(mpi%mpi_comm,mpi%irank,mpi%isize,kpts%nkptd,SIZE(results%w_iks,1),kpts%nkpt(1),&
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
+       CALL mpi_col_eigJ(mpi%mpi_comm,mpi%irank,mpi%isize,kpts%nkptd,SIZE(results%w_iks,1),kpts%nkpt,&
             &                       jij%nkpt_l,jij%eig_l,&
-            &                    kpts%bk,kpts%wtkpt,ne(1,1),eig)!keep
+            &                    kpts%bk,kpts%wtkpt,ne(1,1),eig)
        IF (mpi%irank.NE.0) THEN
           DEALLOCATE( idxeig,idxjsp,idxkpt,index,e,eig,we )
           RETURN

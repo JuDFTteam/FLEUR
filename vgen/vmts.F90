@@ -117,10 +117,9 @@ CALL od_phasy(&
 #ifdef CPP_MPI
     n1 = (sphhar%nlhd+1)*atoms%ntypd
     ALLOCATE(c_b(n1))
-    CALL MPI_REDUCE(vtl,c_b,n1,CPP_MPI_COMPLEX,MPI_SUM,0,&
-         &                                   mpi%mpi_comm,ierr)
+    CALL MPI_REDUCE(vtl,c_b,n1,CPP_MPI_COMPLEX,MPI_SUM,0, mpi%mpi_comm,ierr)
     IF (mpi%irank.EQ.0) THEN
-       vtl=c_b
+       vtl=reshape(c_b,(/sphhar%nlhd+1,atoms%ntypd/))
     ENDIF
     DEALLOCATE (c_b)
 #endif

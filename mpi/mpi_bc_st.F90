@@ -27,7 +27,7 @@ CONTAINS
     !
     ! -> Broadcast the arrays:
 
-    CALL MPI_BCAST(qpwc,stars%n3d,mpi%TYP_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(qpwc,stars%n3d,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 
   END SUBROUTINE mpi_bc_st
   !*********************************************************************
@@ -52,7 +52,7 @@ CONTAINS
 
     n = atoms%jmtd*(sphhar%nlhd+1)*atoms%ntypd
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(rho,r_b,n,MPI%Typ_real,MPI_SUM,0,&
+    CALL MPI_REDUCE(rho,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,&
          &                                       mpi%mpi_comm,ierr)
     IF (mpi%irank == 0) rho=reshape(r_b,(/atoms%jmtd,1+sphhar%nlhd,atoms%ntypd/))
 

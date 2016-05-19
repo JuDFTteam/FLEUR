@@ -86,7 +86,6 @@ CONTAINS
     USE m_cdnread, ONLY : cdn_read0, cdn_read
 #ifdef CPP_MPI
     USE m_mpi_col_den ! collect density data from parallel nodes
-    USE m_mpi_col_dos ! collect DOS data from parallel nodes
 #endif
     USE m_types
     IMPLICIT NONE
@@ -850,23 +849,18 @@ enddo
 #ifdef CPP_MPI
              CALL timestart("cdnval: mpi_col_den")
              DO ispin = jsp_start,jsp_end
-                CALL mpi_col_den(&!TODO
-                     mpi,sphhar,atoms,oneD,&
-                     stars,vacuum,vacuum,&
-                     input,&
-                     noco,noco,l_fmpl,ispin,llpd,&
-                     rhtxy(1,1,1,ispin),rht(1,1,ispin),qpw(1,ispin),&
-                     ener(0,1,ispin),sqal(0,1,ispin),results(1,1,ispin),&
-                     svac(1,ispin),pvac(1,ispin),uu(0,1,ispin),dd(0,1,ispin),&
-                     du(0,1,ispin),uunmt(0,1,1,ispin),ddnmt(0,1,1,ispin),&
+                CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
+                     input,noco,l_fmpl,ispin,llpd, rhtxy(1,1,1,ispin),&
+                     rht(1,1,ispin),qpw(1,ispin), ener(0,1,ispin),sqal(0,1,ispin),&
+                     results,svac(1,ispin),pvac(1,ispin),uu(0,1,ispin),&
+                     dd(0,1,ispin),du(0,1,ispin),uunmt(0,1,1,ispin),ddnmt(0,1,1,ispin),&
                      udnmt(0,1,1,ispin),dunmt(0,1,1,ispin),sqlo(1,1,ispin),&
                      aclo(1,1,ispin),bclo(1,1,ispin),cclo(1,1,1,ispin),&
                      acnmt(0,1,1,1,ispin),bcnmt(0,1,1,1,ispin),&
                      ccnmt(1,1,1,1,ispin),enerlo(1,1,ispin),&
-                     orb(0,-lmaxd,1,ispin),orbl(1,-llod,1,ispin),&
-                     orblo(1,1,-llod,1,ispin),mt21,lo21,uloulop21,&
-                     uunmt21,ddnmt21,udnmt21,dunmt21,&
-                     cdom,cdomvz,cdomvxy,n_mmp)
+                     orb(0,-atoms%lmaxd,1,ispin),orbl(1,-atoms%llod,1,ispin),&
+                     orblo(1,1,-atoms%llod,1,ispin),mt21,lo21,uloulop21,&
+                     uunmt21,ddnmt21,udnmt21,dunmt21,cdom,cdomvz,cdomvxy,n_mmp)
              ENDDO
              CALL timestop("cdnval: mpi_col_den")
 #endif

@@ -2,7 +2,7 @@
 subroutine subredist2(achi,n,m,asca,lda,SUB_COMM,nprow,npcol,&
                        iam,ierr,nb)
 #include"./cpp_double.h"
-#include"cpp_arch.h"
+!#include"cpp_arch.h"
 use m_juDFT
 IMPLICIT NONE
 INCLUDE 'mpif.h'

@@ -190,7 +190,7 @@
 
 
 #ifdef CPP_MPI
-          CALL MPI_BARRIER(Mpi_comm,ierr)
+          CALL MPI_BARRIER(mpi%Mpi_comm,ierr)
 #endif
 
 201       IF (mpi%irank == 0) THEN
@@ -211,7 +211,7 @@
           i_vec = (/sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d,stars%kq1d,stars%kq2d,stars%kq3d,stars%kxc1d,stars%kxc2d,stars%kxc3d&
                &     ,atoms%ntypd,atoms%natd,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,dimension%jspd,vacuum%nvacd,dimension%nvd,dimension%nv2d&
                &     ,obsolete%nwdd,kpts%nkptd,dimension%nstd,dimension%neigd,dimension%msh,dimension%ncvd,vacuum%layerd,atoms%nlod,atoms%llod,input%itmax/)
-          CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,Mpi_comm,ierr)
+          CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
           sym%nop=i_vec(1);stars%k1d=i_vec(2);stars%k2d=i_vec(3);stars%k3d=i_vec(4);stars%n3d=i_vec(5)
           stars%n2d = i_vec(6);stars%kq1d=i_vec(7);stars%kq2d=i_vec(8);stars%kq3d=i_vec(9)
           stars%kxc1d = i_vec(10);stars%kxc2d = i_vec(11);stars%kxc3d = i_vec(12)
@@ -221,11 +221,11 @@
           kpts%nkptd = i_vec(25); dimension%nstd=i_vec(26);dimension%neigd=i_vec(27);dimension%msh=i_vec(28)
           dimension%ncvd=i_vec(29);vacuum%layerd=i_vec(30);atoms%nlod=i_vec(31);atoms%llod=i_vec(32)
           input%itmax=i_vec(33)
-          CALL MPI_BCAST(oneD%odd%d1,1,MPI_LOGICAL,0,Mpi_comm,ierr)
+          CALL MPI_BCAST(oneD%odd%d1,1,MPI_LOGICAL,0,mpi%Mpi_comm,ierr)
           !      IF (odd%d1) THEN
           i_vec(:7) = (/oneD%odd%mb,oneD%odd%M,oneD%odd%m_cyl,oneD%odd%chi,oneD%odd%rot,oneD%odd%nop&
                &        ,oneD%odd%n2d/)
-          CALL MPI_BCAST(i_vec,7,MPI_INTEGER,0,Mpi_comm,ierr)
+          CALL MPI_BCAST(i_vec,7,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
           oneD%odd%mb = i_vec(1);oneD%odd%M = i_vec(2);oneD%odd%m_cyl=i_vec(3)
           oneD%odd%chi = i_vec(4);oneD%odd%rot = i_vec(5);oneD%odd%nop=i_vec(6)
           oneD%odd%n2d= i_vec(7)

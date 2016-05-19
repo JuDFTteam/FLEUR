@@ -147,9 +147,9 @@ CONTAINS
 
 !      write (*,*) irank,n_groups,n_start,i_mygroup
 
-      CALL MPI_COMM_GROUP (MPI_COMM,WORLD_GROUP,ierr)
+      CALL MPI_COMM_GROUP (mpi%MPI_COMM,WORLD_GROUP,ierr)
       CALL MPI_GROUP_INCL (WORLD_GROUP,n_size,i_mygroup, SUB_GROUP,ierr)
-      CALL MPI_COMM_CREATE (MPI_COMM,SUB_GROUP,SUB_COMM,ierr)
+      CALL MPI_COMM_CREATE (mpi%MPI_COMM,SUB_GROUP,SUB_COMM,ierr)
 
       CALL MPI_COMM_RANK (SUB_COMM,n_rank,ierr)
 !
@@ -185,6 +185,7 @@ CONTAINS
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_noco),INTENT(IN)        :: noco
 
       INTEGER, INTENT (IN)  :: mlotot,mlolotot    
       INTEGER, INTENT (OUT) :: n_size

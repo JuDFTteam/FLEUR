@@ -78,10 +78,9 @@ CONTAINS
          &           qlm)
 #ifdef CPP_MPI
     psq(:) = CMPLX(0.0,0.0)
-    CALL MPI_BCAST(qpw,stars*DIMENSION%jspd,CPP_MPI_COMPLEX,0,&
-         &                          mpi,ierr)
+    CALL MPI_BCAST(qpw,size(qpw),CPP_MPI_COMPLEX,0,mpi,ierr)
     nd = (2*atoms%lmaxd+1)*(atoms%lmaxd+1)*atoms%ntypd
-    CALL MPI_BCAST(qlm,nd,CPP_MPI_COMPLEX,0,MPI_COMM,ierr)
+    CALL MPI_BCAST(qlm,nd,CPP_MPI_COMPLEX,0,mpi%MPI_COMM,ierr)
 #endif
     !
     ! pn(l,n) = (2l + 2nc(n) + 3)!! / (2l + 1)!! R^l  ;   ncv(n)=n+l in paper
@@ -156,8 +155,7 @@ CONTAINS
     !$OMP END PARALLEL DO
 #ifdef CPP_MPI
     ALLOCATE(c_b(stars%n3d))
-    CALL MPI_REDUCE(psq,c_b,stars%n3d,CPP_MPI_COMPLEX,MPI_SUM,0,&
-         &                                    MPI_COMM,ierr)
+    CALL MPI_REDUCE(psq,c_b,stars%n3d,CPP_MPI_COMPLEX,MPI_SUM,0,mpi%MPI_COMM,ierr)
     IF (mpi%irank.EQ.0) THEN
        psq(:stars%n3d)=c_b(:stars%n3d)
     ENDIF

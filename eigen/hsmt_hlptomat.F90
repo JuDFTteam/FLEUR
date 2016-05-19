@@ -58,9 +58,9 @@ module m_hsmt_hlptomat
             ENDIF
 #if (defined(CPP_MPI)&&!defined(CPP_INVERSION))
             CALL mingeselle(SUB_COMM,n_size,n_rank,nv,&
-                size(aahlp),size(aa),aahlp,aa)
+                aahlp,aa)
             IF (present(bb).and.nlotot>1) CALL mingeselle(SUB_COMM,n_size,n_rank,nv,&
-                size(aahlp),size(aa),bbhlp,bb)
+                bbhlp,bb)
 #endif
         ENDIF
 

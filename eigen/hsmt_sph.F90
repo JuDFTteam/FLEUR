@@ -561,8 +561,8 @@ CONTAINS
 
        ELSE
 #ifdef CPP_MPI
-          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw, aahlp, aa)
-          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw, bbhlp, bb)
+          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, aahlp, aa)
+          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, bb)
 #endif
        ENDIF
     ENDIF

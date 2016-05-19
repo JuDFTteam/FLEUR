@@ -620,14 +620,7 @@
           ENDIF ! mpi%irank ==0
 
 #ifdef CPP_MPI
-          IF ( mpi%isize > 1 ) THEN
-             CALL mpi_bc_st(&
-                  &               mpi%mpi_comm,mpi%irank,sphhar%memd,sphhar%nlhd,sphhar%ntypsd,atoms%jmtd,atoms%ntypd,stars%n3d,&
-                  &               jspin,l_cutoff,stars%ng3,atoms%ntype,sym%nop,atoms%natd,sym%symor,&
-                  &               sphhar%clnu,qpwc,atoms%lmax,atoms%ntypsy,atoms%jri,sphhar%nmem,sphhar%nlh,sphhar%mlh,stars%nstr,&
-                  &               atoms%neq,stars%kv3,sym%mrot,sym%invtab,sphhar%llh,cell%bmat,sym%tau,atoms%taual,atoms%dx,&
-                  &               atoms%rmsh,stars%sk3)
-          ENDIF
+          IF ( mpi%isize > 1 ) CALL mpi_bc_st(mpi,stars,qpwc)
 #endif
 
           CALL qpw_to_nmt(&
@@ -637,11 +630,7 @@
                &                rho)
 
 #ifdef CPP_MPI
-          IF ( mpi%isize > 1 ) THEN
-             CALL mpi_col_st(                        ! Collect rho()&
-             &                 mpi,atoms,sphhar,&
-                  &                 rho(1,0,1,jspin))
-          ENDIF
+          IF ( mpi%isize > 1) CALL mpi_col_st(mpi,atoms,sphhar,rho(1,0,1,jspin))
 #endif
 
           DEALLOCATE (qpwc,qf)

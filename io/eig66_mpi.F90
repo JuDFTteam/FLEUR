@@ -10,7 +10,7 @@ MODULE m_eig66_mpi
 
 
 
-  PUBLIC open_eig,read_eig,write_eig,close_eig
+  PUBLIC open_eig,read_eig,write_eig,close_eig,write_dos,read_dos
 CONTAINS
 
   SUBROUTINE priv_find_data(id,d)
@@ -39,6 +39,7 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 #ifdef CPP_MPI
     INTEGER:: isize,e,slot_size,local_slots
+    INTEGER,PARAMETER::mcored=27 !there should not be more that 27 core states
     TYPE(t_data_MPI),POINTER :: d
 
     CALL priv_find_data(id,d)
@@ -82,51 +83,51 @@ CONTAINS
 
     !Window for neig
     slot_size=1
-    CALL priv_create_memory(1,local_slots,d%neig_data,d%neig_handle)
+    CALL priv_create_memory(1,local_slots,d%neig_handle,d%neig_data)
     d%neig_data=0
 
     !The integer values
     d%size_k=nmat
     slot_size=(5+3*d%size_k+1+nlotot)
-    CALL priv_create_memory(slot_size,local_slots,d%int_data,d%int_handle)
+    CALL priv_create_memory(slot_size,local_slots,d%int_handle,d%int_data)
     d%int_data=9999999
 
     !The real values
     d%size_el=(1+lmax)*ntype
     d%size_ello=nlo*ntype
     slot_size=(6+d%size_el+d%size_ello)
-    CALL priv_create_memory(slot_size,local_slots,d%real_data,d%real_handle)
+    CALL priv_create_memory(slot_size,local_slots,d%real_handle,real_data_ptr=d%real_data)
     d%real_data=1E99
 
     !The eigenvalues
     d%size_eig=neig
-    CALL priv_create_memory(d%size_eig,local_slots,d%eig_data,d%eig_handle)
+    CALL priv_create_memory(d%size_eig,local_slots,d%eig_handle,real_data_ptr=d%eig_data)
     d%eig_data=1E99
     !The eigenvectors
     local_slots=COUNT(d%pe_ev==d%irank)
     slot_size=nmat
 
 #if !defined(CPP_INVERSION)||defined(CPP_SOC)
-    CALL priv_create_memory(slot_size,local_slots,d%zr_data,d%zr_handle)
+    CALL priv_create_memory(slot_size,local_slots,d%zr_handle,real_data_ptr=d%zr_data)
 #else
-    CALL priv_create_memory(slot_size,local_slots,d%zc_data,d%zc_handle)
+    CALL priv_create_memory(slot_size,local_slots,d%zc_handle,cmplx_data_ptr=d%zc_data)
 #endif
     !Data for DOS etc
     IF (d%l_dos) THEN
        local_slots=COUNT(d%pe_basis==d%irank)
-       CALL priv_create_memory(4*ntype*neig,local_slots,d%qal_data,d%qal_handle)
-       CALL priv_create_memory(neig*2,local_slots,d%qvac_data,d%qvac_handle)
-       CALL priv_create_memory(neig,local_slots,d%qis_data,d%qis_handle)
-       CALL priv_create_memory(neig*layers*2,local_slots,d%qvlay_data,d%qvlay_handle)
-       CALL priv_create_memory(nstars,neigd*layers*2,local_slots,d%qstars_data,d%qstars_handle)
-       CALL priv_create_memory(neig,local_slots,d%jsym_data,d%jsym_handle)
-       CALL priv_create_memory(neig,local_slots,d%ksym_data,d%ksym_handle)
-       IF (l_mcd) CALL priv_create_memory(3*ntype*mcored,neig,local_slots,d%mcd_data,d%mcd_handle)
+       CALL priv_create_memory(4*ntype*neig,local_slots,d%qal_handle,real_data_ptr=d%qal_data)
+       CALL priv_create_memory(neig*2,local_slots,d%qvac_handle,real_data_ptr=d%qvac_data)
+       CALL priv_create_memory(neig,local_slots,d%qis_handle,real_data_ptr=d%qis_data)
+       CALL priv_create_memory(neig*layers*2,local_slots,d%qvlay_handle,real_data_ptr=d%qvlay_data)
+       CALL priv_create_memory(nstars*neig*layers*2,local_slots,d%qstars_handle,cmplx_data_ptr=d%qstars_data)
+       CALL priv_create_memory(neig,local_slots,d%jsym_handle,d%jsym_data)
+       CALL priv_create_memory(neig,local_slots,d%ksym_handle,d%ksym_data)
+       IF (l_mcd) CALL priv_create_memory(3*ntype*mcored*neig,local_slots,d%mcd_handle,real_data_ptr=d%mcd_data)
        IF (l_orb) THEN
-          CALL priv_create_memory(nsld*neig,local_slots,d%qintsl_data,d%qintsl_handle)
-          CALL priv_create_memory(nsld*neig,local_slots,d%qmtsl_data,d%qmtsl_handle)
-          CALL priv_create_memory(nat*neig,local_slots,d%qmtp_data,d%qmtp_handle)
-          CALL priv_create_memory(23*nat*neig,local_slots,d%orbcomp_data,d%orbcomp_handle)
+          CALL priv_create_memory(nsld*neig,local_slots,d%qintsl_handle,real_data_ptr=d%qintsl_data)
+          CALL priv_create_memory(nsld*neig,local_slots,d%qmtsl_handle,real_data_ptr=d%qmtsl_data)
+          CALL priv_create_memory(nat*neig,local_slots,d%qmtp_handle,real_data_ptr=d%qmtp_data)
+          CALL priv_create_memory(23*nat*neig,local_slots,d%orbcomp_handle,real_data_ptr=d%orbcomp_data)
        ENDIF
     ELSE
        ALLOCATE(d%qal_data(1),d%qvac_data(1),d%qis_data(1),d%qvlay_data(1),d%qstars_data(1),&
@@ -136,35 +137,53 @@ CONTAINS
     IF (PRESENT(filename).AND..NOT.create) CALL priv_readfromfile()
     CALL timestop("create data spaces in ei66_mpi")
   CONTAINS
-    SUBROUTINE priv_create_memory(slot_size,local_slots,data_ptr,handle)
+    SUBROUTINE priv_create_memory(slot_size,local_slots,handle,int_data_ptr,real_data_ptr,cmplx_data_ptr)
       IMPLICIT NONE
       INTEGER,INTENT(IN)           :: slot_size,local_slots
-      CLASS(*),POINTER,INTENT(OUT) :: data_ptr
+      INTEGER,POINTER,INTENT(OUT),OPTIONAL  :: int_data_ptr(:)
+      REAL   ,POINTER,INTENT(OUT),OPTIONAL  :: real_data_ptr(:)
+      COMPLEX,POINTER,INTENT(OUT),OPTIONAL  :: cmplx_data_ptr(:)
       INTEGER,INTENT(OUT)          :: handle
 
       TYPE(c_ptr)::ptr
       INTEGER:: e
       INTEGER(MPI_ADDRESS_KIND) :: length
-      INTEGER                   :: type_size,slot_size
+      INTEGER                   :: type_size
 
+      length=0   
+      IF (present(real_data_ptr)) THEN
+          length=length+1
+          CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,type_size,e)
+      ENDIF
+      IF (present(cmplx_data_ptr)) THEN
+          length=length+1
+          CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,type_size,e)
+      ENDIF
+      IF (present(int_data_ptr)) THEN 
+          length=length+1
+          CALL MPI_TYPE_SIZE(MPI_INTEGER,type_size,e)
+      ENDIF
+      if (length.ne.1) call judft_error("Bug in eig66_mpi:create_memory") 
       length=slot_size*local_slots
-
-      SELECT TYPE(data_ptr)
-      TYPE IS (REAL)
-         CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,type_size,e)
-      TYPE IS (COMPLEX)
-         CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,type_size,e)
-      TYPE IS (INTEGER)
-         CALL MPI_TYPE_SIZE(MPI_INTEGER,type_size,e)
-      END SELECT
+ 
       length=length*type_size
 
       CALL MPI_ALLOC_MEM(length,MPI_INFO_NULL,ptr,e)
       IF (e.NE.0) CPP_error("Could not allocated MPI-Data in eig66_mpi")
-
-      CALL C_F_POINTER(ptr,data_ptr,(/length/type_size/))
-      CALL MPI_WIN_CREATE(data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+	
+      IF (present(real_data_ptr)) THEN	
+      	CALL C_F_POINTER(ptr,real_data_ptr,(/length/type_size/))
+      	CALL MPI_WIN_CREATE(real_data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      ELSEIF(present(int_data_ptr)) THEN
+      	CALL C_F_POINTER(ptr,int_data_ptr,(/length/type_size/))
+      	CALL MPI_WIN_CREATE(int_data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      ELSE
+      	CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
+      	CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      ENDIF
     END SUBROUTINE priv_create_memory
+
+
     SUBROUTINE priv_readfromfile()
       USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,read_eig_DA=>read_eig,close_eig_da=>close_eig
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id

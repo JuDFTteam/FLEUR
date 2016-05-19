@@ -47,7 +47,7 @@ CONTAINS
 #ifdef CPP_MPI
     INTEGER              :: n_inner,n_bound
     REAL,    ALLOCATABLE :: rk_help(:)
-    INTEGER, ALLOCATABLE :: k_help(: :) 
+    INTEGER, ALLOCATABLE :: k_help(:,:) ,pos(:)
 #endif
     !     ..
     !     ..
@@ -173,7 +173,7 @@ CONTAINS
              !
              !--->     order K's in sequence K_1,...K_n | K_0,... | K_-1,....K_-n
              !
-             ALLOCATE (atoms%pos(lapw%nv(ispin)))
+             ALLOCATE (pos(lapw%nv(ispin)))
              n_inner = lapw%nv(ispin) - nred
              IF (mod(nred,n_size).EQ.0) THEN
                 n_bound = nred
@@ -190,11 +190,11 @@ CONTAINS
              j = 1
              DO n = 1, nred 
                 IF (matind(n,1).EQ.matind(n,2)) THEN
-                   atoms%pos(matind(n,1)) = n_inner + i
+                   pos(matind(n,1)) = n_inner + i
                    i = i + 1
                 ELSE
-                   atoms%pos(matind(n,1)) = j
-                   atoms%pos(matind(n,2)) = j + n_bound
+                   pos(matind(n,1)) = j
+                   pos(matind(n,2)) = j + n_bound
                    j = j + 1
                 ENDIF
              ENDDO
@@ -207,10 +207,10 @@ CONTAINS
                 k_help(3,n) = lapw%k3(n,ispin)
              ENDDO
              DO n = lapw%nv(ispin), 1, -1
-                lapw%rk(atoms%pos(n),ispin) = rk_help(n)
-                lapw%k1(atoms%pos(n),ispin) = k_help(1,n)
-                lapw%k2(atoms%pos(n),ispin) = k_help(2,n)
-                lapw%k3(atoms%pos(n),ispin) = k_help(3,n)
+                lapw%rk(pos(n),ispin) = rk_help(n)
+                lapw%k1(pos(n),ispin) = k_help(1,n)
+                lapw%k2(pos(n),ispin) = k_help(2,n)
+                lapw%k3(pos(n),ispin) = k_help(3,n)
              ENDDO
              DO n = nred + 1, n_bound
                 lapw%rk(n,ispin) = lapw%rk(lapw%nv(ispin),ispin)
@@ -219,7 +219,7 @@ CONTAINS
                 lapw%k3(n,ispin) = lapw%k3(lapw%nv(ispin),ispin)
              ENDDO
              DEALLOCATE (rk_help,k_help)
-             DEALLOCATE (atoms%pos)
+             DEALLOCATE (pos)
              lapw%nv(ispin) = lapw%nv(ispin) - nred + n_bound
           ENDIF
 #endif

@@ -58,7 +58,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_jij),INTENT(IN)       :: jij
-    TYPE(t_sym),INTENT(IN)       :: sym
+    TYPE(t_sym),INTENT(INOUT)    :: sym  !l_zref will be modified in EVP
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
@@ -411,20 +411,20 @@ CONTAINS
        ENDIF
        !
 
-#           ifdef CPP_MPI
+#ifdef CPP_MPI
        ! check that all sending operations are completed
        IF ( hybrid%l_calhf ) CALL MPI_WAITALL(sndreqd,sndreq,MPI_STATUSES_IGNORE,ierr)
-#           endif
+#endif
 
        k_loop:DO nk = n_start,kpts%nkpt,n_stride
-#             ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
           IF ( hybrid%l_calhf ) THEN
              ! jump to next k-point if this process is not present in communicator
              IF ( comm(nk) == MPI_COMM_NULL ) CYCLE
              ! allocate buffer for communication of the results
              IF ( irank2(nk) /= 0 ) CALL work_dist_reserve_buffer( nbands(nk) )
           END IF
-#             endif
+#endif
 
           nrec =  kpts%nkpt*(jsp-1) + nk
           nrec = n_size*(nrec-1) + n_rank + 1
@@ -554,7 +554,7 @@ CONTAINS
                   atoms%nlotot,kveclo)
           ENDIF
 
-#             ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
           IF ( hybrid%l_calhf ) THEN
              IF ( isize2(nk) == 1 ) THEN
                 WRITE(*,'(a,i6,a,i6,a)') 'HF: kpt ', nk, ' was done by rank ', mpi%irank, '.'
@@ -591,9 +591,9 @@ CONTAINS
        DEALLOCATE( nindxc,core1,core2,nbasm,eig_c )
     END IF
 #endif
-#        ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
     IF ( hybrid%l_calhf ) DEALLOCATE (nkpt_EIBZ)
-#        endif
+#endif
 
     IF ( input%gw.eq.2.AND.(gwc==1) )  THEN        ! go for another round
        OPEN (nu,file='potcoul',form='unformatted',status='old')
@@ -667,7 +667,7 @@ CONTAINS
     DEALLOCATE ( vpw,vzxy,vz,vr,vr0 )
 
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(MPI_COMM,ierr)
+    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
     if (l_hybrid.or.hybrid%l_calhf) CALL close_eig(eig_id_hf)
     atoms%n_u=n_u_in
