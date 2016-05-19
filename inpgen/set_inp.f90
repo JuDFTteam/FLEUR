@@ -88,7 +88,7 @@
       INTEGER  :: nkpt3(3)
 !HF
 
-      LOGICAL :: xmlCoreStates(29,atoms%ntype)
+      INTEGER :: xmlElectronStates(29,atoms%ntype)
       LOGICAL :: xmlPrintCoreStates(29,atoms%ntype)
       REAL    :: xmlCoreOccs(2,29,atoms%ntype)
       REAL    :: xmlCoreRefOccs(29)
@@ -102,7 +102,7 @@
 
       DATA xmlCoreRefOccs /2,2,2,4,2,2,4,2,4,6,2,4,2,4,6,2,4,2,6,8,4,&
      &                     6,2,4,2,6,8,4,6/
-      xmlCoreStates = .FALSE.
+      xmlElectronStates = noState_const
       xmlPrintCoreStates = .FALSE.
       xmlCoreOccs = 0.0
 
@@ -216,7 +216,7 @@
      &                infh,xl_buffer,buffer,&
      &                input%jspins,input%film,idlist,xmlCoreRefOccs,&
      &                nline,&
-     &                xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                nel,atoms,enpara)
 
       DO n = 1, atoms%ntype
@@ -421,7 +421,7 @@
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1,a2,a3,scale,dtild,name,&
-     &                 xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,&
      &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
 

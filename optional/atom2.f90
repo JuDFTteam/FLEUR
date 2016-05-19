@@ -73,7 +73,7 @@
       enddo
       rn = rad(n)
       bmu_l = atoms%bmu(ntyp)
-      CALL setcor(ntyp,input%jspins,atoms,bmu_l, nst,kappa,nprnc,occ)
+      CALL setcor(ntyp,input%jspins,atoms,input,bmu_l, nst,kappa,nprnc,occ)
 
 !
 !--->   for electric field case (sigma.ne.0), add the extra charge

@@ -12,7 +12,7 @@
       SUBROUTINE atom_input(
      >                      infh,xl_buffer,buffer,
      >                      jspins,film,idlist,xmlCoreRefOccs,
-     X                      nline,xmlCoreStates,
+     X                      nline,xmlElectronStates,
      X                      xmlPrintCoreStates,xmlCoreOccs,
      <                      nel,atoms,enpara )
 
@@ -20,7 +20,7 @@
       USE m_juDFT_init
       USE m_readrecord
       USE m_setatomcore, ONLY : setatom_bystr, setcore_bystr
-      USE m_constants,   ONLY : namat_const
+      USE m_constants
       USE m_enpara,      ONLY : w_enpara,default_enpara
 
       IMPLICIT NONE
@@ -38,7 +38,7 @@
       REAL   , INTENT (IN)     :: idlist(atoms%ntype)
       REAL   , INTENT (IN)     :: xmlCoreRefOccs(29)
       REAL, INTENT (INOUT)     :: xmlCoreOccs(2,29,atoms%ntype)
-      LOGICAL, INTENT (INOUT)  :: xmlCoreStates(29,atoms%ntype)
+      INTEGER, INTENT (INOUT)  :: xmlElectronStates(29,atoms%ntype)
       LOGICAL, INTENT (INOUT)  :: xmlPrintCoreStates(29,atoms%ntype)
       CHARACTER(len=xl_buffer) :: buffer
 
@@ -415,7 +415,7 @@
                   IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 25  !(7s1/2)
             END SELECT
             IF(xmlCoreStateNumber.EQ.0) STOP 'Invalid core state!'
-            xmlCoreStates(xmlCoreStateNumber,n) = .TRUE.
+            xmlElectronStates(xmlCoreStateNumber,n) = coreState_const
             xmlPrintCoreStates(xmlCoreStateNumber,n) = 
      +         coreocc(i,n).NE.xmlCoreRefOccs(xmlCoreStateNumber)
             SELECT CASE(xmlCoreStateNumber)
@@ -465,6 +465,60 @@ c           in s and p states equal occupation of up and down states
             END IF
             WRITE(27,'(4i3,i4,a1)') coreqn(1,i,n),coreqn(2,i,n),up,dn,
      &                      coreqn(1,i,n),lotype(lval(i,n))
+            xmlCoreStateNumber = 0
+            SELECT CASE(coreqn(1,i,n))
+               CASE (1)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 1   !(1s1/2)
+               CASE (2)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 2   !(2s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 3    !(2p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 4   !(2p3/2)
+               CASE (3)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 5   !(3s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 6    !(3p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 7   !(3p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 9    !(3d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 10  !(3d5/2)
+               CASE (4)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 8   !(4s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 11   !(4p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 12  !(4p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 14   !(4d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 15  !(4d5/2)
+                  IF(coreqn(2,i,n).EQ.3) xmlCoreStateNumber = 19   !(4f5/2)
+                  IF(coreqn(2,i,n).EQ.-4) xmlCoreStateNumber = 20  !(4f7/2)
+               CASE (5)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 13  !(5s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 16   !(5p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 17  !(5p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 21   !(5d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 22  !(5d5/2)
+                  IF(coreqn(2,i,n).EQ.3) xmlCoreStateNumber = 26   !(5f5/2)
+                  IF(coreqn(2,i,n).EQ.-4) xmlCoreStateNumber = 27  !(5f7/2)
+               CASE (6)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 18  !(6s1/2)
+                  IF(coreqn(2,i,n).EQ.1) xmlCoreStateNumber = 23   !(6p1/2)
+                  IF(coreqn(2,i,n).EQ.-2) xmlCoreStateNumber = 24  !(6p3/2)
+                  IF(coreqn(2,i,n).EQ.2) xmlCoreStateNumber = 28   !(6d3/2)
+                  IF(coreqn(2,i,n).EQ.-3) xmlCoreStateNumber = 29  !(6d5/2)
+               CASE (7)
+                  IF(coreqn(2,i,n).EQ.-1) xmlCoreStateNumber = 25  !(7s1/2)
+            END SELECT
+            IF(xmlCoreStateNumber.EQ.0) STOP 'Invalid valence state!'
+            xmlElectronStates(xmlCoreStateNumber,n) = valenceState_const
+            xmlPrintCoreStates(xmlCoreStateNumber,n) = 
+     +         coreocc(i,n).NE.xmlCoreRefOccs(xmlCoreStateNumber)
+!            SELECT CASE(xmlCoreStateNumber)
+!               CASE (9:10,14:15,19:22,26:29)
+!                  up = MIN((xmlCoreRefOccs(xmlCoreStateNumber)/2),
+!     +                          coreocc(i,n))
+!                  dn = MAX(0.0,coreocc(i,n)-up)
+!               CASE DEFAULT
+!                  up = CEILING(coreocc(i,n)/2)
+!                  dn = FLOOR(coreocc(i,n)/2)
+!            END SELECT
+            xmlCoreOccs(1,xmlCoreStateNumber,n) = up
+            xmlCoreOccs(2,xmlCoreStateNumber,n) = dn
           ENDDO
           WRITE (6,*) '----------'
 

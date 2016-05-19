@@ -60,6 +60,8 @@ PROGRAM inpgen
       dispfn='disp'
       nline = 0
 
+      input%l_inpXML = .FALSE.
+
       ALLOCATE ( mmrot(3,3,nop48), ttr(3,nop48) )
       ALLOCATE ( atompos(3,natmax),atomid(natmax) )
 

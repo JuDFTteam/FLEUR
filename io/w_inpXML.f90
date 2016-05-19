@@ -14,12 +14,13 @@ SUBROUTINE w_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
 &                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
 &                   noel,namex,relcor,a1,a2,a3,scale,dtild_opt,name_opt,&
-&                   xmlCoreStates,xmlPrintCoreStates,xmlCoreOccs,&
+&                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,&
 &                   el0,ello0,evac0)
 
    USE m_types
    USE m_juDFT_init
+   USE m_constants
 
    IMPLICIT NONE
 
@@ -47,7 +48,7 @@ SUBROUTINE w_inpXML(&
    REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3),scale
    REAL,    INTENT (IN)        :: el0(0:3,atoms%ntype),ello0(atoms%nlod,atoms%ntype),evac0(2)
    REAL, INTENT (IN)     :: xmlCoreOccs(2,29,atoms%ntype)
-   LOGICAL, INTENT (IN)  :: xmlCoreStates(29,atoms%ntype)
+   INTEGER, INTENT (IN)  :: xmlElectronStates(29,atoms%ntype)
    LOGICAL, INTENT (IN)  :: xmlPrintCoreStates(29,atoms%ntype)
    CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntypd)
    CHARACTER(len=4),INTENT(IN) :: namex 
@@ -102,7 +103,7 @@ SUBROUTINE w_inpXML(&
    LOGICAL :: kptGamma, l_relcor
    INTEGER :: iAtomType, startCoreStates, endCoreStates
    CHARACTER(len=100) :: xPosString, yPosString, zPosString
-   CHARACTER(len=200) :: coreStatesString
+   CHARACTER(len=200) :: coreStatesString, valenceStatesString
    REAL :: tempTaual(3,atoms%nat)
    REAL :: a1Temp(3),a2Temp(3),a3Temp(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
@@ -406,63 +407,73 @@ SUBROUTINE w_inpXML(&
 
       IF (ALL((el0(0:3,iAtomType)-INT(el0(0:3,iAtomType))).LE.0.00000001)) THEN
 !         <energyParameters s="3" p="3" d="3" f="4"/>
-         322 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
-         WRITE (5,322) INT(el0(0,iAtomType)),INT(el0(1,iAtomType)),INT(el0(2,iAtomType)),INT(el0(3,iAtomType))
+         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
+         WRITE (5,321) INT(el0(0,iAtomType)),INT(el0(1,iAtomType)),INT(el0(2,iAtomType)),INT(el0(3,iAtomType))
       END IF
 
-      IF(ANY(xmlCoreStates(:,iAtomType))) THEN
+      IF(ANY(xmlElectronStates(:,iAtomType).NE.noState_const)) THEN
          endCoreStates = 1
          startCoreStates = 1
          coreStatesString = ''
+         valenceStatesString = ''
          DO i = 1, 29
-            IF (xmlCoreStates(i,iAtomType)) endCoreStates = i
+            IF (xmlElectronStates(i,iAtomType).EQ.coreState_const) endCoreStates = i
          END DO
          IF ((endCoreStates.GE.24).AND.&
 &            (ALL(xmlPrintCoreStates(1:24,iAtomType).EQ..FALSE.)).AND.&
-&            (ALL(xmlCoreStates(1:24,iAtomType))) ) THEN
+&            (ALL(xmlElectronStates(1:24,iAtomType).EQ.coreState_const)) ) THEN
             coreStatesString = nobleGasConfigList(6)
             startCoreStates = 25
          ELSE IF ((endCoreStates.GE.17).AND.&
 &                 (ALL(xmlPrintCoreStates(1:17,iAtomType).EQ..FALSE.)).AND.&
-&                 (ALL(xmlCoreStates(1:17,iAtomType)))) THEN
+&                 (ALL(xmlElectronStates(1:17,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(5)
             startCoreStates = 18
          ELSE IF ((endCoreStates.GE.12).AND.&
 &                 (ALL(xmlPrintCoreStates(1:12,iAtomType).EQ..FALSE.)).AND.&
-&                 (ALL(xmlCoreStates(1:12,iAtomType)))) THEN
+&                 (ALL(xmlElectronStates(1:12,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(4)
             startCoreStates = 13
          ELSE IF ((endCoreStates.GE.7).AND.&
 &                 (ALL(xmlPrintCoreStates(1:7,iAtomType).EQ..FALSE.)).AND.&
-&                 (ALL(xmlCoreStates(1:7,iAtomType)))) THEN
+&                 (ALL(xmlElectronStates(1:7,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(3)
             startCoreStates = 8
          ELSE IF ((endCoreStates.GE.4).AND.&
 &                 (ALL(xmlPrintCoreStates(1:4,iAtomType).EQ..FALSE.)).AND.&
-&                 (ALL(xmlCoreStates(1:4,iAtomType)))) THEN
+&                 (ALL(xmlElectronStates(1:4,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(2)
             startCoreStates = 5
          ELSE IF ((endCoreStates.GE.1).AND.&
 &                 (ALL(xmlPrintCoreStates(1:1,iAtomType).EQ..FALSE.)).AND.&
-&                 (ALL(xmlCoreStates(1:1,iAtomType)))) THEN
+&                 (ALL(xmlElectronStates(1:1,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(1)
             startCoreStates = 2
          END IF
          DO i = startCoreStates, endCoreStates
-            IF(xmlCoreStates(i,iAtomType)) THEN
+            IF(xmlElectronStates(i,iAtomType).EQ.coreState_const) THEN
                coreStatesString = TRIM(ADJUSTL(coreStatesString)) // ' ' // coreStateList(i)
             END IF
          END DO
+         DO i = 1, 29
+            IF(xmlElectronStates(i,iAtomType).EQ.valenceState_const) THEN
+               valenceStatesString = TRIM(ADJUSTL(valenceStatesString)) // ' ' // coreStateList(i)
+            END IF
+         END DO
+         WRITE (5,'(a)') '         <electronConfig>'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
-         323 FORMAT('         <coreConfig>',a,'</coreConfig>')
-         WRITE(5,323) TRIM(ADJUSTL(coreStatesString))
-         DO i = startCoreStates, endCoreStates
-            IF ((xmlCoreStates(i,iAtomType)).AND.(xmlPrintCoreStates(i,iAtomType))) THEN
+         322 FORMAT('            <coreConfig>',a,'</coreConfig>')
+         WRITE(5,322) TRIM(ADJUSTL(coreStatesString))
+         323 FORMAT('            <valenceConfig>',a,'</valenceConfig>')
+         WRITE(5,323) TRIM(ADJUSTL(valenceStatesString))
+         DO i = startCoreStates, 29
+            IF ((xmlElectronStates(i,iAtomType).NE.noState_const).AND.(xmlPrintCoreStates(i,iAtomType))) THEN
 !         <coreStateOccupation state="(2s1/2)" spinUp="1.0" spinDown="1.0"/>
-               325 FORMAT('         <coreStateOccupation state="',a,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
+               325 FORMAT('            <stateOccupation state="',a,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
                WRITE(5,325) coreStateList(i), xmlCoreOccs(1,i,iAtomType), xmlCoreOccs(2,i,iAtomType)
             END IF
          END DO
+         WRITE (5,'(a)') '         </electronConfig>'
       END IF
 
       DO ilo = 1, atoms%nlo(iAtomType)

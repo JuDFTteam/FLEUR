@@ -158,7 +158,7 @@
           ALLOCATE ( enpara%enmix(dimension%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
           ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntypd) )
           ALLOCATE ( noco%soc_opt(atoms%ntypd+2) )
-          ALLOCATE ( atoms%coreStatesProvided(atoms%ntypd))
+          ALLOCATE ( atoms%numStatesProvided(atoms%ntypd))
           !+odim
           ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
           ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )
@@ -176,7 +176,7 @@
           hybrid%ddist     = 1.
           !
 
-          atoms%coreStatesProvided(:) = .FALSE.
+          atoms%numStatesProvided(:) = 0
 
           atoms%vr0(:)         = 0.0
           jij%M(:)             = 0.0

@@ -7,7 +7,7 @@ MODULE m_etabinit
   !     ntab & ltab transport this info to core.F        gb`02
   !------------------------------------------------------------
 CONTAINS
-  SUBROUTINE etabinit(atoms,DIMENSION, vr,&
+  SUBROUTINE etabinit(atoms,DIMENSION,input, vr,&
        etab,ntab,ltab,nkmust)
 
     USE m_constants, ONLY : c_light
@@ -17,6 +17,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_input),INTENT(IN)       :: input
     !
     !     .. Scalar Arguments ..
     !     ..
@@ -47,7 +48,7 @@ CONTAINS
        rn = atoms%rmt(jatom)
        dxx = atoms%dx(jatom)
        bmu = 0.0
-       CALL setcor(jatom,1,atoms,bmu,nst,kappa,nprnc,occ)
+       CALL setcor(jatom,1,atoms,input,bmu,nst,kappa,nprnc,occ)
        rnot = atoms%rmsh(1,jatom)
        d = EXP(atoms%dx(jatom))
        rn = rnot* (d** (ncmsh-1))

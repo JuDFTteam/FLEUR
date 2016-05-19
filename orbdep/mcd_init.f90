@@ -57,7 +57,7 @@ CONTAINS
 
     ncore(itype) = 0
     bmu = 0.0
-    CALL setcor(itype,1,atoms,bmu, nst,kappa,nprnc,occ)
+    CALL setcor(itype,1,atoms,input,bmu, nst,kappa,nprnc,occ)
 
     DO ispin = jspin, jspin
 

@@ -1,7 +1,7 @@
 MODULE m_setcor
   USE m_juDFT
 CONTAINS
-  SUBROUTINE setcor(itype,jspins,atoms,bmu,nst,kappa,nprnc,occ)
+  SUBROUTINE setcor(itype,jspins,atoms,input,bmu,nst,kappa,nprnc,occ)
     !
     !     *****************************************************
     !     sets the values of kappa and occupation numbers of
@@ -10,10 +10,9 @@ CONTAINS
     !     *****************************************************
 
     USE m_types
-    USE m_types
-    USE m_types
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_input),INTENT(IN)   :: input
     !
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: itype,jspins
@@ -24,9 +23,9 @@ CONTAINS
     REAL,INTENT (OUT)    :: occ(:,:)
     !     ..
     !     .. Local Scalars ..
-    INTEGER iz,jz,jz0,k,n,jspin
+    INTEGER iz,jz,jz0,k,n,m,i,jspin,tempInt
     INTEGER k_h(2),n_h(2)
-    REAL fj,l,bmu_l,o_h(2), fac(2)
+    REAL fj,l,bmu_l,o_h(2), fac(2),tempReal
     LOGICAL l_clf
     CHARACTER(len=13) :: fname
     !     ..
@@ -35,7 +34,7 @@ CONTAINS
     WRITE(fname,"('corelevels.',i2.2)") NINT(atoms%zatom(itype))
     INQUIRE (file=fname, exist=l_clf)
 
-    IF (l_clf) THEN
+    IF (l_clf.AND..NOT.input%l_inpXML) THEN
        OPEN (61,file=fname,form='formatted')
        READ (61,'(i3)') nst
        IF (bmu.LT.0.001) bmu = 999.
@@ -211,6 +210,34 @@ CONTAINS
           occ(19,jspins) = o_h(2) 
        ENDIF
     ENDIF
+
+    ! modify default electron configuration according to explicitely provided setting in inp.xml
+    IF(input%l_inpXML) THEN
+       nst = max(nst,atoms%numStatesProvided(itype))
+       DO n = 1, atoms%numStatesProvided(itype)
+          IF((nprnc(n).NE.atoms%coreStateNprnc(n,itype)).OR.(kappa(n).NE.atoms%coreStateKappa(n,itype))) THEN
+             m = 0
+             DO m = n, nst
+                IF((nprnc(m).EQ.atoms%coreStateNprnc(n,itype)).AND.(kappa(m).EQ.atoms%coreStateKappa(n,itype))) THEN
+                   EXIT
+                END IF
+             END DO
+             DO i = m-1, n, -1
+                nprnc(i+1) = nprnc(i)
+                kappa(i+1) = kappa(i)
+                occ(i+1,:) = occ(i,:)
+             END DO
+          END IF
+          nprnc(n) = atoms%coreStateNprnc(n,itype)
+          kappa(n) = atoms%coreStateKappa(n,itype)
+          IF (jspins.EQ.1) THEN
+             occ(n,1) = atoms%coreStateOccs(n,1,itype) + atoms%coreStateOccs(n,2,itype)
+          ELSE
+             occ(n,1) = atoms%coreStateOccs(n,1,itype)
+             occ(n,2) = atoms%coreStateOccs(n,2,itype)
+          END IF
+       END DO
+    END IF
 
   END SUBROUTINE setcor
       END MODULE m_setcor
