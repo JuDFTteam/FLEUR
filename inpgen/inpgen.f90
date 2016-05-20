@@ -20,7 +20,7 @@ PROGRAM inpgen
       IMPLICIT NONE
     
       INTEGER natmax,nop48,nline,natin,ngen,i,j
-      INTEGER nops,no3,no2,na,numSpecies
+      INTEGER nops,no3,no2,na,numSpecies,i_c
       INTEGER infh,errfh,bfh,warnfh,symfh,dbgfh,outfh,dispfh
       LOGICAL cal_symm,checkinp,newSpecies,noangles
       LOGICAL cartesian,oldfleur,l_hyb  ,inistop
@@ -60,6 +60,8 @@ PROGRAM inpgen
       dispfn='disp'
       nline = 0
 
+      input%l_inpXML = .FALSE. 
+
       ALLOCATE ( mmrot(3,3,nop48), ttr(3,nop48) )
       ALLOCATE ( atompos(3,natmax),atomid(natmax) )
 
@@ -71,7 +73,7 @@ PROGRAM inpgen
      &                  natmax,nop48,&
      &                  nline,xl_buffer,buffer,&
      &                  title,input%film,cal_symm,checkinp,sym%symor,&
-     &                  cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,noangles,&
+     &                  cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,noangles,i_c,&
      &                 factor,natin,atomid,atompos,ngen,mmrot,ttr,&
      &                  l_hyb,noco%l_soc,noco%l_ss,noco%theta,noco%phi,noco%qss,inistop)!keep
 
@@ -111,7 +113,7 @@ PROGRAM inpgen
      &             dbgfh,errfh,outfh,dispfh,dispfn,&
      &             cal_symm,cartesian,sym%symor,input%film,&
      &             natin,natmax,nop48,&
-     &             atomid,atompos,a1,a2,a3,aa,scale,noangles,&
+     &             atomid,atompos,a1,a2,a3,aa,scale,noangles,i_c,&
      &             sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2,&
      &             ngen,mmrot,ttr,atoms%ntype,atoms%nat,nops,&
      &             atoms%neq,ntyrep,atoms%zatom,natype,natrep,natmap,&

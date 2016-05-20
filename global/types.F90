@@ -191,8 +191,8 @@
        INTEGER,ALLOCATABLE::jri(:)
        !core states
        INTEGER,ALLOCATABLE::ncst(:)
-       !Are core states explicitely provided?
-       LOGICAL,ALLOCATABLE::coreStatesProvided(:)
+       !How many states are explicitely provided?
+       INTEGER,ALLOCATABLE::numStatesProvided(:)
        !core state occupations
        REAL,ALLOCATABLE::coreStateOccs(:,:,:)
        !core state nprnc

@@ -95,7 +95,7 @@ CONTAINS
        !         rn = rmt(jatom)
        dxx = atoms%dx(jatom)
        bmu = 0.0
-       CALL setcor(jatom,DIMENSION%jspd,atoms,bmu,nst,kappa,nprnc,occ_h)
+       CALL setcor(jatom,DIMENSION%jspd,atoms,input,bmu,nst,kappa,nprnc,occ_h)
        IF ((bmu > 99.)) THEN
           occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
        ELSE

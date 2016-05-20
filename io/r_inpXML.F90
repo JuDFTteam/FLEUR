@@ -116,7 +116,7 @@ SUBROUTINE r_inpXML(&
    INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
    INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
    INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType
-   INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates
+   INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
    INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
    INTEGER            :: ldau_l
    INTEGER            :: speciesEParams(0:3)
@@ -158,7 +158,7 @@ SUBROUTINE r_inpXML(&
    docFilename = "inp.xml"//C_NULL_CHAR
 
    DATA coreStateList / '(1s1/2)','(2s1/2)','(2p1/2)','(2p3/2)','(3s1/2)',&
-&                       '(3p1/2)','(3p3/2)','(4s1/2)','(3d3/2)','(3d5/2)',&
+&                       '(3p1/2)','(3p3/2)','(3d3/2)','(3d5/2)','(4s1/2)',&
 &                       '(4p1/2)','(4p3/2)','(5s1/2)','(4d3/2)','(4d5/2)',&
 &                       '(5p1/2)','(5p3/2)','(6s1/2)','(4f5/2)','(4f7/2)',&
 &                       '(5d3/2)','(5d5/2)','(6p1/2)','(6p3/2)','(7s1/2)',&
@@ -166,11 +166,11 @@ SUBROUTINE r_inpXML(&
 
    DATA nobleGasConfigList / '[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]' /
    DATA nobleGasNumStatesList / 1, 4, 7, 12, 17, 24 /
-   DATA coreStateNumElecsList / 1, 1, 1, 2, 1, 1, 2, 1, 2, 3, 1, 2, 1, 2,&
+   DATA coreStateNumElecsList / 1, 1, 1, 2, 1, 1, 2, 2, 3, 1, 1, 2, 1, 2,&
 &                               3, 1, 2, 1, 3, 4, 2, 3, 1, 2, 1, 3, 4, 2, 3 /
-   DATA coreStateNprncList    / 1, 2, 2, 2, 3, 3, 3, 4, 3, 3, 4, 4, 5, 4, 4,&
+   DATA coreStateNprncList    / 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 4, 4,&
 &                               5, 5, 6, 4, 4, 5, 5, 6, 6, 7, 5, 5, 6, 6 /
-   DATA coreStateKappaList    /-1,-1, 1,-2,-1, 1,-2,-1, 2,-3, 1,-2,-1, 2,-3,&
+   DATA coreStateKappaList    /-1,-1, 1,-2,-1, 1,-2, 2,-3,-1, 1,-2,-1, 2,-3,&
 &                               1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3 /
 
    WRITE(*,*) 'Start reading of inp.xml file'
@@ -227,7 +227,7 @@ SUBROUTINE r_inpXML(&
    ALLOCATE(atoms%taual(3,atoms%nat))
    ALLOCATE(atoms%pos(3,atoms%nat))
    ALLOCATE(atoms%rmt(atoms%ntype))
-   ALLOCATE(atoms%coreStatesProvided(atoms%ntype))
+   ALLOCATE(atoms%numStatesProvided(atoms%ntype))
 
    ALLOCATE(atoms%ncv(atoms%ntype)) ! For what is this?
    ALLOCATE(atoms%ngopr(atoms%nat)) ! For what is this?
@@ -1128,7 +1128,7 @@ SUBROUTINE r_inpXML(&
 
    ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
 
-   atoms%coreStatesProvided = .FALSE.
+   atoms%numStatesProvided = 0
 
    DO iSpecies = 1, numSpecies
       ! Attributes of species
@@ -1242,8 +1242,7 @@ SUBROUTINE r_inpXML(&
    ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
 
    enpara%lchange = .FALSE.
-   dimension%nstd  = maxval(atoms%ncst(:))
-   dimension%nstd = max(dimension%nstd,30)
+   dimension%nstd = 29
 
    ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
    ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
@@ -1265,12 +1264,13 @@ SUBROUTINE r_inpXML(&
 
       coreConfigPresent = .FALSE.
       providedCoreStates = 0
+      providedStates = 0
       coreStateOccs = 0.0
-      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/coreConfig'
+      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/electronConfig'
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF (numberNodes.EQ.1) THEN
          coreConfigPresent = .TRUE.
-         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))
+         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/coreConfig')
          token = popFirstStringToken(valueString)
          DO WHILE (token.NE.' ')
             WRITE(*,*) TRIM(ADJUSTL(token))
@@ -1303,11 +1303,31 @@ SUBROUTINE r_inpXML(&
             END IF
             token = popFirstStringToken(valueString)
          END DO
+         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/valenceConfig')
+         providedStates = providedCoreStates
+         IF(numberNodes.EQ.1) THEN
+            valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/valenceConfig')
+            token = popFirstStringToken(valueString)
+            DO WHILE (token.NE.' ')
+               DO i = 1, 29
+                  IF (TRIM(ADJUSTL(token)).EQ.coreStateList(i)) THEN
+                     providedStates = providedStates + 1
+                     IF (providedStates.GT.29) THEN
+                        STOP 'Error: Too many valence states provided in xml input file!'
+                     END IF
+                     coreStateOccs(providedStates,:) = coreStateNumElecsList(i)
+                     coreStateNprnc(providedStates) = coreStateNprncList(i)
+                     coreStateKappa(providedStates) = coreStateKappaList(i)
+                  END IF
+               END DO
+               token = popFirstStringToken(valueString)
+            END DO
+         END IF
       END IF
 
       ! Explicitely provided core occupations
 
-      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/coreStateOccupation'
+      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/electronConfig/stateOccupation'
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF (numberNodes.GE.1) THEN
          IF (.NOT.coreConfigPresent) THEN
@@ -1325,7 +1345,7 @@ SUBROUTINE r_inpXML(&
                   kappaTemp = coreStateKappaList(j)
                END IF
             END DO
-            DO j = 1, providedCoreStates
+            DO j = 1, providedStates
                IF ((nprncTemp.EQ.coreStateNprnc(j)).AND.(kappaTemp.EQ.coreStateKappa(j))) THEN
                   coreStateOccs(j,1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
                   coreStateOccs(j,2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
@@ -1372,15 +1392,15 @@ SUBROUTINE r_inpXML(&
          WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
-            atoms%coreStatesProvided(iType) = coreConfigPresent
+            atoms%numStatesProvided(iType) = providedStates
             IF (coreConfigPresent) THEN
-               IF (providedCoreStates.LT.atoms%ncst(iType)) THEN
+               IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
                   WRITE(*,*) 'species', TRIM(ADJUSTL(speciesNames(iSpecies)))
                   WRITE(*,*) 'providedCoreStates: ', providedCoreStates
                   WRITE(*,*) 'ncst: ', atoms%ncst(iType)
-                  STOP 'Not enough core states provided!'
+                  STOP 'Wrong number of core states provided!'
                END IF
-               DO k = 1, atoms%ncst(iType)
+               DO k = 1, providedStates !atoms%ncst(iType)
                   atoms%coreStateOccs(k,1,iType) = coreStateOccs(k,1)
                   atoms%coreStateOccs(k,2,iType) = coreStateOccs(k,2)
                   atoms%coreStateNprnc(k,iType) = coreStateNprnc(k)
@@ -1396,8 +1416,7 @@ SUBROUTINE r_inpXML(&
                   enpara%ello0(iLLO,iType,jsp) = speciesLOeParams(iLLO)
                END DO
             END DO
-         END IF
-         ! Energy parameters
+            ! Energy parameters
             DO jsp = 1, input%jspins
                DO l = 0, 3
                   enpara%el0(l,iType,jsp) = speciesEParams(l)
@@ -1406,6 +1425,7 @@ SUBROUTINE r_inpXML(&
                   enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)
                END DO
             END DO
+         END IF
       END DO
       DEALLOCATE(speciesLLO,speciesLOeParams,speciesLOEDeriv)
    END DO
@@ -1658,7 +1678,36 @@ SUBROUTINE r_inpXML(&
                CALL juDFT_error("llo(j,n)>llod",calledby ="inped")
             END IF
          END DO
-         CALL setlomap(iType,atoms)
+
+         ! Replace call to setlomap with the following 3 loops (preliminary).
+         ! atoms%nlol and atoms%lo1l arrays are strange. This should be solved differently.
+         DO l = 0,atoms%llod
+            atoms%nlol(l,iType) = 0
+            atoms%lo1l(l,iType) = 0
+         END DO
+
+         DO ilo = 1,atoms%nlod
+            atoms%l_dulo(ilo,iType) = .FALSE.
+         END DO
+
+         DO ilo = 1,atoms%nlo(iType)
+#ifdef CPP_APW
+            IF (atoms%ulo_der(ilo,iType).EQ.1) THEN
+               atoms%l_dulo(ilo,iType) = .TRUE.
+            END IF
+#endif
+            WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,iType),'. derivative of l =',atoms%llo(ilo,iType)
+            IF (atoms%llo(ilo,iType)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="r_inpXML")
+            l = atoms%llo(ilo,iType)
+            IF (ilo.EQ.1) THEN
+               atoms%lo1l(l,iType) = ilo
+            ELSE
+               IF (l.NE.atoms%llo(ilo-1,iType)) THEN
+                  atoms%lo1l(l,iType) = ilo
+               END IF
+            END IF
+            atoms%nlol(l,iType) = atoms%nlol(l,iType) + 1
+         END DO
 #ifdef CPP_APW
          WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(iType)
 #endif

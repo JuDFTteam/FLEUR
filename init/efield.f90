@@ -58,7 +58,7 @@
       DO n = 1,atoms%ntype
          IF (atoms%zatom(n).GE.1.0) THEN
             bmu = 0.0
-            CALL setcor(n,1,atoms,bmu, nst,kappa,nprnc,occ)
+            CALL setcor(n,1,atoms,input,bmu, nst,kappa,nprnc,occ)
             DO nc=1,atoms%ncst(n)
               qe=qe+atoms%neq(n)*occ(nc,1)
             ENDDO

@@ -8,7 +8,7 @@
       CONTAINS
       SUBROUTINE lattice2( 
      >                    buffer,xl_buffer,errfh,bfh,nline,
-     <                    a1,a2,a3,aa,scale,noangles,ios )
+     <                    a1,a2,a3,aa,scale,noangles,i_c,ios )
 
       USE m_constants
       IMPLICIT NONE
@@ -20,7 +20,7 @@
       REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
       REAL,    INTENT (OUT) :: aa
       REAL,    INTENT (OUT) :: scale(3)
-      INTEGER, INTENT (OUT) :: ios
+      INTEGER, INTENT (OUT) :: i_c,ios
       LOGICAL, INTENT (OUT) :: noangles
 
 !==> Local Variables
@@ -63,8 +63,8 @@
      &              0.0,  1.0,  0.0,
      &              0.5,  0.0,  0.5,
      +              1.0,  0.0,  0.0,      ! 8: base-centered: A
-     &              0.0,  0.5, -0.5,
-     &              0.0,  0.5,  0.5/
+     &              0.0,  0.5,  0.5,
+     &              0.0, -0.5,  0.5/
 
 !===> 12: monoclinic-P     (mP) 
 !===> 13: monoclinic-P     (mS)  (mA)  (mB)  (mC) 
@@ -76,7 +76,8 @@
       latsys = ' ' ; a0 = 0.0   
       a = 0.0      ; b = 0.0    ; c = 0.0 
       alpha = 0.0  ; beta = 0.0 ; gamma = 0.0   
-
+      scale = 0.0
+ 
       READ (bfh,lattice,err=911,end=911,iostat=ios)
       
       IF ( abs(a0) < eps ) a0 = 1.0
@@ -105,10 +106,10 @@
      &     latsys =='simple-cubic' ) THEN
 
         noangles=.true.
-        i = 1
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 1
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
         IF ( a.NE.b .OR. a.NE.c ) err = 11
         IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0) ) err = 12
@@ -119,10 +120,10 @@
      &         latsys =='face-centered-cubic' ) THEN
 
         noangles=.true.
-        i = 2
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 2
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
         IF ( a.NE.b .OR. a.NE.c ) err = 21
 
@@ -132,10 +133,10 @@
      &         latsys =='body-centered-cubic' ) THEN
 
         noangles=.true.
-        i = 3
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 3
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
         IF ( a.NE.b .OR. a.NE.c ) err = 31
 
@@ -145,10 +146,10 @@
      &                               .OR.latsys =='hexagonal' ) THEN
 
         noangles=.true.
-        i = 4
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 4
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
         IF ( a.NE.b ) err = 41
 
@@ -157,10 +158,11 @@
       ELSEIF ( latsys =='hdp' ) THEN
 
         noangles=.true.
-        i = 4
-        a1 =  lmat((/2,1,3/),1,i)
-        a2 = -lmat((/2,1,3/),2,i)
-        a3 = lmat(:,3,i)
+        i_c = 4
+        a1 =  lmat((/2,1,3/),1,i_c)
+        a2 = -lmat((/2,1,3/),2,i_c)
+        a3 = lmat(:,3,i_c)
+        i_c = 9
 
         IF ( a.NE.b ) err = 41
 
@@ -171,10 +173,10 @@
      &         latsys =='rho'.OR.latsys =='trigonal' ) THEN
 
         noangles=.false.
-        i = 5
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 5
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
         IF ( a.NE.b ) err = 51
         IF ( alpha.EQ.0.0  .OR. 
@@ -196,6 +198,7 @@
      &        latsys =='trigonal2' ) THEN
 
         noangles=.false.
+        i_c = 5
 
         IF ( a.NE.b .OR. a.NE.c ) err = 53
         IF ( alpha.NE.beta .OR. alpha.NE.gamma ) err = 54
@@ -223,10 +226,10 @@
      &     .OR.latsys =='simple-tetragonal' ) THEN
 
         noangles=.true.
-        i = 1
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 1
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
           
         IF ( a.NE.b ) err = 61
         IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0)  ) err= 62
@@ -237,10 +240,10 @@
      &    .OR.latsys =='body-centered-tetragonal' ) THEN
 
         noangles=.true.
-        i = 3
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 3
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
           
         IF ( a.NE.b ) err = 61
 
@@ -250,10 +253,10 @@
      &         latsys =='simple-orthorhombic' ) THEN
 
         noangles=.true.
-        i = 1
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 1
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
           
 !===>  9: orthorhombic-F   (oF) 
 
@@ -262,10 +265,10 @@
      &         latsys =='face-centered-orthorhombic' ) THEN
 
         noangles=.true.
-        i = 2
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 2
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
           
 !===> 10: orthorhombic-I   (oI) 
 
@@ -274,10 +277,10 @@
      &         latsys =='body-centered-orthorhombic' ) THEN
 
         noangles=.true.
-        i = 3
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 3
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
           
 !===> 11: orthorhombic-S   (oS) (oC) 
 
@@ -286,10 +289,10 @@
      &         latsys =='base-centered-orthorhombic' ) THEN
 
         noangles=.true.
-        i = 6
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 6
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
           
 !===> 11a: orthorhombic-A   (oA)
 
@@ -298,10 +301,10 @@
      &         latsys =='base-centered-orthorhombic2' ) THEN
 
         noangles=.true.
-        i = 8
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 8
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
 !===> 11b: orthorhombic-B   (oB)
 
@@ -310,10 +313,10 @@
      &         latsys =='base-centered-orthorhombic3' ) THEN
 
         noangles=.true.
-        i = 7
-        a1 = lmat(:,1,i)
-        a2 = lmat(:,2,i)
-        a3 = lmat(:,3,i)
+        i_c = 7
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
 !===> 12: monoclinic-P     (mP) 
       ELSEIF ( latsys =='monoclinic-P'.OR.latsys =='mP'.OR
@@ -321,6 +324,8 @@
      &         latsys =='simple-monoclinic' ) THEN
 
         noangles=.false.
+        i_c = 1
+
         IF ( (abs(alpha-90.0)<eps).AND.(abs(beta-90.0)<eps) ) THEN
            IF ( ABS(gamma - 90.0) <eps )  CALL juDFT_error
      +          ("no monoclinic angle!",calledby ="lattice2")
@@ -359,12 +364,16 @@
      +          ,calledby ="lattice2")
         ENDIF
         CALL brvmat ( alpha, beta, gamma, am )
-        i = 8
-        am = matmul ( am, lmat(:,:,i) )
+        am(:,1) = a * am(:,1)
+        am(:,2) = b * am(:,2)
+        am(:,3) = c * am(:,3)
+        i_c = 8
+        am = matmul ( am, lmat(:,:,i_c) )
         a1 = am(:,1)
         a2 = am(:,2)
         a3 = am(:,3)
         CALL angles( am )
+        scale = 1.0 
 
 !===> 13b monoclinic-B (mB)
       ELSEIF ( latsys =='monoclinic-B'.OR.latsys =='mB'.OR
@@ -380,12 +389,40 @@
      +          ,calledby ="lattice2")
         ENDIF
         CALL brvmat ( alpha, beta, gamma, am )
-        i = 7
-        am = matmul ( am, lmat(:,:,i) )
+        am(:,1) = a * am(:,1)
+        am(:,2) = b * am(:,2)
+        am(:,3) = c * am(:,3)
+        i_c = 7
+        am = matmul ( am, lmat(:,:,i_c) )
         a1 = am(:,1)
         a2 = am(:,2)
         a3 = am(:,3)
         CALL angles( am )
+        scale = 1.0 
+
+!===> 13c monoclinic-I (mI)
+      ELSEIF ( latsys =='monoclinic-I'.OR.latsys =='mI'.OR
+     &        .latsys =='moI' ) THEN
+
+        noangles=.false.
+        IF ( (abs(alpha-90.0)<eps).AND.(abs(beta-90.0)<eps) ) THEN
+           IF ( ABS(gamma - 90.0) <eps )  CALL juDFT_error
+     +          ("no monoclinic angle!",calledby ="lattice2")
+        ELSE
+           CALL juDFT_error("Please take gamma as monoclinic angle!"
+     +          ,calledby ="lattice2")
+        ENDIF
+        CALL brvmat ( alpha, beta, gamma, am )
+        am(:,1) = a * am(:,1)
+        am(:,2) = b * am(:,2)
+        am(:,3) = c * am(:,3)
+        i_c = 3
+        am = matmul ( am, lmat(:,:,i_c) )
+        a1 = am(:,1)
+        a2 = am(:,2)
+        a3 = am(:,3)
+        CALL angles( am )
+        scale = 1.0 
 
 !===> 14: triclinic        (aP) 
 
@@ -393,6 +430,7 @@
      &         latsys =='tcl' )  THEN
 
         noangles=.false.
+        i_c = 1
         CALL brvmat ( alpha, beta, gamma, am )
         a1 = am(:,1)
         a2 = am(:,2)
@@ -421,9 +459,11 @@
         WRITE (errfh,*)
       ENDIF
 
-      scale(1) = a
-      scale(2) = b
-      scale(3) = c
+      IF (abs(scale(1)) < eps) THEN
+        scale(1) = a
+        scale(2) = b
+        scale(3) = c
+      ENDIF
       aa = a0
 
  911  CONTINUE

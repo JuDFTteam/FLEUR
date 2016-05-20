@@ -8,7 +8,7 @@
      >                   dbgfh,errfh,outfh,dispfh,dispfn,
      >                   cal_symm,cartesian,symor,oldfleur,
      >                   natin,natmax,nop48,
-     >                   atomid,atompos,a1,a2,a3,aa,scale,noangles,
+     >                   atomid,atompos,a1,a2,a3,aa,scale,noangles,i_c,
      <                   invs,zrfs,invs2,nop,nop2,
      <                   ngen,mmrot,ttr,ntype,nat,nops,
      <                   neq,ntyrep,zatom,natype,natrep,natmap,
@@ -26,7 +26,7 @@
 
 !===> Arguments
       LOGICAL, INTENT(IN)    :: cal_symm,cartesian,oldfleur,noangles
-      INTEGER, INTENT(IN)    :: ngen,natmax,nop48
+      INTEGER, INTENT(IN)    :: ngen,natmax,nop48,i_c
       INTEGER, INTENT(IN)    :: dbgfh,errfh,outfh,dispfh ! file handles, mainly 6
       REAL,    INTENT(IN)    :: aa
       LOGICAL, INTENT(INOUT) :: symor                    ! on input: if true, reduce symmetry if oldfleur
@@ -154,7 +154,7 @@
      >                 dispfh,outfh,errfh,dispfn,natmax,
      X                 natin,atomid,atompos,
      X                 ngen,mmrot,ttr,
-     >                 cartesian,symor,as,bs,nop48,
+     >                 cartesian,i_c,symor,as,bs,nop48,
      <                 ntype,nat,nops,mrot,tau,
      <                 neq,ntyrep,zatom,natype,natrep,natmap,pos)
 

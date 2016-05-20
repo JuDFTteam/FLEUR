@@ -73,7 +73,7 @@ CONTAINS
        END DO
     ELSE
        OPEN (58,file='core.dat',form='formatted',status='new')
-       CALL etabinit(atoms,DIMENSION, vr, etab,ntab,ltab,nkmust)
+       CALL etabinit(atoms,DIMENSION,input, vr, etab,ntab,ltab,nkmust)
     END IF
     !
     ncmsh = DIMENSION%msh
