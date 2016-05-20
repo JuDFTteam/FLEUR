@@ -158,7 +158,7 @@ SUBROUTINE r_inpXML(&
    docFilename = "inp.xml"//C_NULL_CHAR
 
    DATA coreStateList / '(1s1/2)','(2s1/2)','(2p1/2)','(2p3/2)','(3s1/2)',&
-&                       '(3p1/2)','(3p3/2)','(4s1/2)','(3d3/2)','(3d5/2)',&
+&                       '(3p1/2)','(3p3/2)','(3d3/2)','(3d5/2)','(4s1/2)',&
 &                       '(4p1/2)','(4p3/2)','(5s1/2)','(4d3/2)','(4d5/2)',&
 &                       '(5p1/2)','(5p3/2)','(6s1/2)','(4f5/2)','(4f7/2)',&
 &                       '(5d3/2)','(5d5/2)','(6p1/2)','(6p3/2)','(7s1/2)',&
@@ -166,11 +166,11 @@ SUBROUTINE r_inpXML(&
 
    DATA nobleGasConfigList / '[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]' /
    DATA nobleGasNumStatesList / 1, 4, 7, 12, 17, 24 /
-   DATA coreStateNumElecsList / 1, 1, 1, 2, 1, 1, 2, 1, 2, 3, 1, 2, 1, 2,&
+   DATA coreStateNumElecsList / 1, 1, 1, 2, 1, 1, 2, 2, 3, 1, 1, 2, 1, 2,&
 &                               3, 1, 2, 1, 3, 4, 2, 3, 1, 2, 1, 3, 4, 2, 3 /
-   DATA coreStateNprncList    / 1, 2, 2, 2, 3, 3, 3, 4, 3, 3, 4, 4, 5, 4, 4,&
+   DATA coreStateNprncList    / 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 4, 4,&
 &                               5, 5, 6, 4, 4, 5, 5, 6, 6, 7, 5, 5, 6, 6 /
-   DATA coreStateKappaList    /-1,-1, 1,-2,-1, 1,-2,-1, 2,-3, 1,-2,-1, 2,-3,&
+   DATA coreStateKappaList    /-1,-1, 1,-2,-1, 1,-2, 2,-3,-1, 1,-2,-1, 2,-3,&
 &                               1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3 /
 
    WRITE(*,*) 'Start reading of inp.xml file'
@@ -1416,8 +1416,7 @@ SUBROUTINE r_inpXML(&
                   enpara%ello0(iLLO,iType,jsp) = speciesLOeParams(iLLO)
                END DO
             END DO
-         END IF
-         ! Energy parameters
+            ! Energy parameters
             DO jsp = 1, input%jspins
                DO l = 0, 3
                   enpara%el0(l,iType,jsp) = speciesEParams(l)
@@ -1426,6 +1425,7 @@ SUBROUTINE r_inpXML(&
                   enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)
                END DO
             END DO
+         END IF
       END DO
       DEALLOCATE(speciesLLO,speciesLOeParams,speciesLOEDeriv)
    END DO
