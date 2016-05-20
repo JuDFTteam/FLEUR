@@ -40,7 +40,6 @@ SUBROUTINE r_inpXML(&
    USE m_efield
    USE m_writegw
    USE m_apwsdim
-   USE m_setlomap
    USE m_enpara,    ONLY : r_enpara
 
    IMPLICIT NONE
@@ -115,7 +114,7 @@ SUBROUTINE r_inpXML(&
    INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l
    INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
    INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
-   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType
+   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
    INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
    INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
    INTEGER            :: ldau_l
@@ -153,6 +152,19 @@ SUBROUTINE r_inpXML(&
    LOGICAL,         ALLOCATABLE :: xmlPrintCoreStates(:,:)
 
    EXTERNAL prp_xcfft_box
+
+   interface
+      function dropInputSchema() bind(C, name="dropInputSchema")
+         use iso_c_binding
+         INTEGER(c_int) dropInputSchema
+      end function dropInputSchema
+   end interface
+
+   errorStatus = 0
+   errorStatus = dropInputSchema()
+   IF(errorStatus.NE.0) THEN
+      STOP 'Error: Cannot print out FleurInputSchema.xsd'
+   END IF
 
    schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
    docFilename = "inp.xml"//C_NULL_CHAR
