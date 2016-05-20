@@ -1678,7 +1678,36 @@ SUBROUTINE r_inpXML(&
                CALL juDFT_error("llo(j,n)>llod",calledby ="inped")
             END IF
          END DO
-         CALL setlomap(iType,atoms)
+
+         ! Replace call to setlomap with the following 3 loops (preliminary).
+         ! atoms%nlol and atoms%lo1l arrays are strange. This should be solved differently.
+         DO l = 0,atoms%llod
+            atoms%nlol(l,iType) = 0
+            atoms%lo1l(l,iType) = 0
+         END DO
+
+         DO ilo = 1,atoms%nlod
+            atoms%l_dulo(ilo,iType) = .FALSE.
+         END DO
+
+         DO ilo = 1,atoms%nlo(iType)
+#ifdef CPP_APW
+            IF (atoms%ulo_der(ilo,iType).EQ.1) THEN
+               atoms%l_dulo(ilo,iType) = .TRUE.
+            END IF
+#endif
+            WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,iType),'. derivative of l =',atoms%llo(ilo,iType)
+            IF (atoms%llo(ilo,iType)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="r_inpXML")
+            l = atoms%llo(ilo,iType)
+            IF (ilo.EQ.1) THEN
+               atoms%lo1l(l,iType) = ilo
+            ELSE
+               IF (l.NE.atoms%llo(ilo-1,iType)) THEN
+                  atoms%lo1l(l,iType) = ilo
+               END IF
+            END IF
+            atoms%nlol(l,iType) = atoms%nlol(l,iType) + 1
+         END DO
 #ifdef CPP_APW
          WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(iType)
 #endif
