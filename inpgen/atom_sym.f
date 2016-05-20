@@ -5,7 +5,7 @@
      >                    dispfh,outfh,errfh,dispfn,natmax,
      X                    natin,atomid,atompos,
      X                    ngen,mmrot,ttr,
-     >                    cartesian,symor,as,bs,nop48,
+     >                    cartesian,i_c,symor,as,bs,nop48,
      <                    ntype,nat,nops,mrot,tau,
      <                    neq,ntyrep,zatom,natype,natrep,natmap,pos)
 
@@ -53,6 +53,7 @@
       LOGICAL, INTENT (IN)    :: symor             ! whether to reduce to symmorphic subgroup
       INTEGER, INTENT (INOUT) :: natin             ! formerly 'ntype0'
       INTEGER, INTENT (IN)    :: ngen              ! Number of generators
+      INTEGER, INTENT (IN)    :: i_c               ! centering of lattice
       INTEGER, INTENT (IN)    :: nop48, natmax     ! dimensioning
       INTEGER, INTENT (INOUT) :: mmrot(3,3,nop48)
       REAL,    INTENT (INOUT) :: ttr(3,nop48)
@@ -76,7 +77,7 @@
       REAL    tr(3),tt(3),disp(3,natmax)
 
       INTEGER mp(3,3),mtmp(3,3)
-      REAL    ttau(3),orth(3,3)
+      REAL    ttau(3),orth(3,3),tc(3,3),td(3,3)
 
       INTEGER mmrot2(3,3,ngen)
       REAL    ttr2(3,ngen)
@@ -84,20 +85,49 @@
       LOGICAL l_exist,lclose,l_inipos
       INTEGER n,na,ng,ncyl,nc,no,nop0,nn,nt,i,j,mops
       INTEGER ios,istep0
-      REAL    eps7
       CHARACTER(len=30) :: filen
       REAL,    ALLOCATABLE :: inipos(:,:)
 
-      eps7= 1.0e-7 ; istep0 = 0
+      REAL, PARAMETER :: eps = 1.0e-7, isqrt3 = 1.0/sqrt(3.0), 
+     &                   thrd = 1.0/3.0, mtthrd = -2.0/3.0
+
+      REAL :: lmat(3,3,8)
+      DATA  lmat /  1.0,  0.0,  0.0,      ! 1: primitive     : P
+     &              0.0,  1.0,  0.0,
+     &              0.0,  0.0,  1.0,
+     +             -1.0,  1.0,  1.0,      ! 2: Inverse (F) 
+     &              1.0, -1.0,  1.0,
+     &              1.0,  1.0, -1.0,
+     +              0.0,  1.0,  1.0,      ! 3: Inverse (I)
+     &              1.0,  0.0,  1.0,
+     &              1.0,  1.0,  0.0,
+     +              1.0,  1.0,  0.0,      ! 4: Inverse (hP)
+     &         -isqrt3, isqrt3, 0.0,
+     &              0.0,  0.0,  1.0,
+     +         0.0, isqrt3, -isqrt3,      ! 5: Inverse (hR)
+     &           mtthrd, thrd, thrd,
+     &             thrd, thrd, thrd,
+     +              1.0,  1.0,  0.0,      ! 6: Inverse ( S (C) )
+     &             -1.0,  1.0,  0.0,
+     &              0.0,  0.0,  1.0,
+     +              1.0,  0.0,  1.0,      ! 7: Inverse (B)
+     &              0.0,  1.0,  0.0,
+     &             -1.0,  0.0,  1.0, 
+     +              1.0,  0.0,  0.0,      ! 8: Inverse (A)
+     &              0.0,  1.0, -1.0,
+     &              0.0,  1.0,  1.0/
+
+       istep0 = 0
 !
 !---> take atomic positions and shift to (-1/2,1/2] in lattice coords.
 !
       natin = abs(natin)
       DO n=1,natin
          IF (cartesian) THEN  ! convert to lattice coords. if necessary
-            atompos(:,n) = matmul( bs, atompos(:,n) )
+!            atompos(:,n) = matmul( bs, atompos(:,n) )
+            atompos(:,n) = matmul( lmat(:,:,i_c), atompos(:,n) )
          ENDIF
-         atompos(:,n) = atompos(:,n) - anint( atompos(:,n) - eps7 )
+         atompos(:,n) = atompos(:,n) - anint( atompos(:,n) - eps )
       ENDDO
 
 !--->  store the positions (in lattice coord.s) given in the input file
@@ -124,7 +154,7 @@
             tr = matmul( bs, tr )
           ENDIF
           atompos(:,n) = atompos(:,n) + tr(:)
-          atompos(:,n) = atompos(:,n) - anint( atompos(:,n)- eps7 )
+          atompos(:,n) = atompos(:,n) - anint( atompos(:,n)- eps )
         ENDDO
         CLOSE (dispfh)
         IF ( ios==0 ) THEN
@@ -142,10 +172,16 @@
 !--->   save generators
         IF (cartesian) THEN    ! convert to lattice coords. if necessary
           DO ng = 2, ngen+1
-            mmrot2(:,:,1) = matmul( bs, mmrot(:,:,ng) )
-            mmrot(:,:,ng) = matmul( mmrot2(:,:,1), as )
-            ttr2(:,1) = matmul( bs, ttr(:,ng) )
+!            mmrot2(:,:,1) = matmul( bs, mmrot(:,:,ng) )
+!            mmrot(:,:,ng) = matmul( mmrot2(:,:,1), as )
+            tc = mmrot(:,:,ng)
+            td = matmul( bs, tc ) 
+            tc = matmul( td, as ) 
+            mmrot(:,:,ng) = NINT(tc)
+            write(*,*) i_c, ttr(:,ng)
+            ttr2(:,1) = matmul( lmat(:,:,i_c), ttr(:,ng) )
             ttr(:,ng) = ttr2(:,1)
+            write(*,*) mmrot(:,:,ng),ttr(:,ng)
           ENDDO
         ENDIF
         mmrot2(:,:,1:ngen) = mmrot(:,:,2:ngen+1) 
@@ -214,7 +250,7 @@
       ENDIF
 
 !---> rewrite all the non-primitive translations so in (-1/2,1/2]
-      ttr(:,1:nops) = ttr(:,1:nops) - anint( ttr(:,1:nops)- eps7 )
+      ttr(:,1:nops) = ttr(:,1:nops) - anint( ttr(:,1:nops)- eps )
 
 !--->  allocate arrays for space group information (mod_spgsym)
 !      if( nopd < nops )then
@@ -226,6 +262,7 @@
          mrot(:,:,n) = mmrot(:,:,n)
          tau(:,n) = ttr(:,n)
          index_op(n) = n
+         write(*,*) n,mrot(:,:,n),tau(:,n)
       ENDDO
 
 !--->    check that the group is closed, etc.
@@ -245,7 +282,7 @@
 !--->   reduce symmetry to the largest symmorphic subgroup
         j = 1
         DO i = 1, nops
-          IF ( all ( abs( tau(:,i) ) < eps7 ) ) THEN
+          IF ( all ( abs( tau(:,i) ) < eps ) ) THEN
             IF ( j<i ) then
               mrot(:,:,j) = mrot(:,:,i)
             ENDIF
@@ -276,10 +313,10 @@
          DO n = 1, nat
             tt = ( atompos(:,nt) - tpos(:,n) )
      &           - anint( atompos(:,nt) - tpos(:,n) )
-            IF ( all( abs(tt) < eps7 ) ) THEN
+            IF ( all( abs(tt) < eps ) ) THEN
                icount(n) = icount(n) + 1
                imap(nt) = n
-               IF ( abs( atomid(nt)-atomid(ity(n)) ) < eps7 )
+               IF ( abs( atomid(nt)-atomid(ity(n)) ) < eps )
      &             CYCLE repres_atoms
                CALL juDFT_error("ERROR! mismatch between atoms."
      +              ,calledby ="atom_sym")
@@ -297,14 +334,14 @@
 !--->    loop over operations
          opts: DO no = 2, nops
             tr = matmul( mrot(:,:,no) , atompos(:,nt) ) + tau(:,no)
-            tr = tr - anint( tr - eps7 )
+            tr = tr - anint( tr - eps )
 !--->       check whether this is a new atom
             DO n = 1, nneq(ntype)
                tt = ( tr-tpos(:,nat+n) ) - anint( tr-tpos(:,nat+n) )
-               IF ( all( abs(tt) < eps7 ) ) THEN
+               IF ( all( abs(tt) < eps ) ) THEN
 
                   nn = ity(nat+n)
-                  IF ( abs( atomid(nt)-atomid(nn) ) < eps7 ) CYCLE opts
+                  IF ( abs( atomid(nt)-atomid(nn) ) < eps ) CYCLE opts
                   WRITE (6,'(" Mismatch between atoms and",
      &                       " symmetry input")')
                   CALL juDFT_error("atom_sym: mismatch rotated",calledby
