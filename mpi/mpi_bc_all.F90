@@ -42,7 +42,6 @@ CONTAINS
     EXTERNAL MPI_BCAST
 
 
-
     IF (mpi%irank.EQ.0) THEN
        i(1)=1 ; i(2)=obsolete%lpr ; i(3)=atoms%ntype ; i(5)=obsolete%nwd ; i(6)=input%isec1
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
@@ -122,7 +121,7 @@ CONTAINS
        CALL MPI_BCAST (input%efield%C1,n,MPI_REAL,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST (input%efield%C2,n,MPI_REAL,0,mpi%mpi_comm,ierr)
     END IF
-
+   
     CALL MPI_BCAST(stars%ustep,stars%n3d,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     n = sphhar%memd*(sphhar%nlhd+1)*sphhar%ntypsd
     CALL MPI_BCAST(sphhar%clnu,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
@@ -144,7 +143,7 @@ CONTAINS
     CALL MPI_BCAST(stars%ig2,stars%n3d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     n = (2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1)
     CALL MPI_BCAST(stars%ig,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%rgphs,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%rgphs,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%ellow,obsolete%nwdd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%elup,obsolete%nwdd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%rkmax,obsolete%nwdd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -169,6 +168,7 @@ CONTAINS
     CALL MPI_BCAST(kpts%bk,3*kpts%nkptd*obsolete%nwdd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%wtkpt,kpts%nkptd*obsolete%nwdd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     !
+
     n = atoms%natd*sym%nop
     CALL MPI_BCAST(sym%invarop,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%multab,sym%nop**2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -213,9 +213,9 @@ CONTAINS
     CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%ntypd,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%ntypd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%ntypd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%l_amf,MPI_LOGICAL,0,&
-         &                                           mpi,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%ntypd,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lapw_l,atoms%ntypd,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+ 
     n = 7*7*3*sym%nop
     CALL MPI_BCAST(sym%d_wgn,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(oneD%nstr1,oneD%odd%n2d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -255,7 +255,7 @@ CONTAINS
     !--- HF>
     !
     !
-
+ 
     RETURN
   END SUBROUTINE mpi_bc_all
 END MODULE m_mpi_bc_all

@@ -210,7 +210,7 @@ CONTAINS
                       !DO kii =  n_rank, nv_tot-1, n_size
                       ki = MOD(kii,lapw%nv(iintsp)) + 1
                       bsize=MIN(SIZE(aa_block,1),lapw%nv(iintsp)/n_size-ki*n_size+1) !Either use maximal blocksize or number of rows left to calculate
-                      IF (bsize==0) EXIT !nothing more to do here
+                      IF (bsize<1) EXIT !nothing more to do here
                       bsize2=bsize*n_size
                       !aa_block(:bsize,:ki+bsize2-1)=matmul(a(ki:ki+bsize-1:n_size,0:lmp,iintsp),conjg(transpose(ax(:ki+bsize2-1,0:lmp))))+ &
                       !                              matmul(b(ki:ki+bsize-1:n_size,0:lmp,iintsp),conjg(transpose(bx(:ki+bsize2-1,0:lmp))))

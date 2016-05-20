@@ -277,8 +277,7 @@ CONTAINS
             input, vr,vz, enpara_in, enpara)
     ENDIF
     !
-
-
+   
 
 
     !---> set up and solve the eigenvalue problem
@@ -446,6 +445,7 @@ CONTAINS
           !
           call timestart("Interstitial Hamiltonian&Overlap")
           CALL hsint(noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms, a,b)
+
           call timestop("Interstitial Hamiltonian&Overlap")
           !
           !--->         update with sphere terms
@@ -523,9 +523,11 @@ CONTAINS
              CLOSE(88)
           endif
 
+       
           CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,&
                nred,sub_comm, sym,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
                oneD,td,ud, eig,a,b,z)
+          
           !
           !--->         output results
           !

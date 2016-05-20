@@ -123,6 +123,7 @@
           ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%n3d) )
           ALLOCATE ( stars%ig(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d),stars%ig2(stars%n3d),stars%igz(stars%n3d) )
           ALLOCATE ( atoms%jri(atoms%ntypd),stars%kv2(2,stars%n2d),stars%kv3(3,stars%n3d),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
+          ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
           ALLOCATE ( atoms%lmax(atoms%ntypd),sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))!,sym%mrot(3,3,sym%nop) )
           ALLOCATE ( atoms%ncv(atoms%ntypd),atoms%neq(atoms%ntypd),atoms%ngopr(atoms%natd) )
           ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )

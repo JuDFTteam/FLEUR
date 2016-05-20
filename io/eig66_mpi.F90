@@ -1,15 +1,11 @@
 MODULE m_eig66_mpi
 #include "juDFT_env.h"
   USE m_eig66_data
-  IMPLICIT NONE
 #ifdef CPP_MPI
-  INCLUDE 'mpif.h'
-  PRIVATE
-
+  use mpi
 #endif
-
-
-
+  IMPLICIT NONE
+  PRIVATE
   PUBLIC open_eig,read_eig,write_eig,close_eig,write_dos,read_dos
 CONTAINS
 
@@ -107,7 +103,7 @@ CONTAINS
     local_slots=COUNT(d%pe_ev==d%irank)
     slot_size=nmat
 
-#if !defined(CPP_INVERSION)||defined(CPP_SOC)
+#if defined(CPP_INVERSION)&&!defined(CPP_SOC)
     CALL priv_create_memory(slot_size,local_slots,d%zr_handle,real_data_ptr=d%zr_data)
 #else
     CALL priv_create_memory(slot_size,local_slots,d%zc_handle,cmplx_data_ptr=d%zc_data)
@@ -173,13 +169,13 @@ CONTAINS
 	
       IF (present(real_data_ptr)) THEN	
       	CALL C_F_POINTER(ptr,real_data_ptr,(/length/type_size/))
-      	CALL MPI_WIN_CREATE(real_data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      	CALL MPI_WIN_CREATE(real_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
       ELSEIF(present(int_data_ptr)) THEN
       	CALL C_F_POINTER(ptr,int_data_ptr,(/length/type_size/))
-      	CALL MPI_WIN_CREATE(int_data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      	CALL MPI_WIN_CREATE(int_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
       ELSE
       	CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
-      	CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      	CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
       ENDIF
     END SUBROUTINE priv_create_memory
 

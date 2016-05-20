@@ -402,7 +402,7 @@
      &               kpts,oneD)
 
 !
-      DEALLOCATE( &
+      DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
      & vacuum%izlay,atoms%ncst,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%soc_opt,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,jij%l_magn,jij%M,noco%b_con,sphhar%clnu,sphhar%nlh,&

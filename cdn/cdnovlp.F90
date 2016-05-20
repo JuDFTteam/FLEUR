@@ -613,12 +613,8 @@
              !           contribution) to the m.t. density, include full nonspherical 
              !           components
              !
-             l_cutoff = 0
-             DO n = 1,atoms%ntype
-                l_cutoff = MAX( l_cutoff, atoms%lmax(n) )
-             END DO
           ENDIF ! mpi%irank ==0
-
+          l_cutoff=maxval(atoms%lmax(:atoms%ntype))
 #ifdef CPP_MPI
           IF ( mpi%isize > 1 ) CALL mpi_bc_st(mpi,stars,qpwc)
 #endif
