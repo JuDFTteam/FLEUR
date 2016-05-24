@@ -40,6 +40,7 @@ SUBROUTINE r_inpXML(&
    USE m_efield
    USE m_writegw
    USE m_apwsdim
+   USE m_sort
    USE m_enpara,    ONLY : r_enpara
 
    IMPLICIT NONE
@@ -141,12 +142,13 @@ SUBROUTINE r_inpXML(&
    CHARACTER(len=12)  :: relcor
    
    INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
+   INTEGER, ALLOCATABLE :: loOrderList(:)
    CHARACTER(LEN=50), ALLOCATABLE :: speciesNames(:)
    INTEGER, ALLOCATABLE :: speciesNLO(:)
    INTEGER, ALLOCATABLE :: multtab(:,:), invOps(:), optype(:)
    INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
    INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
-   REAL,    ALLOCATABLE :: speciesLOeParams(:)
+   REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
    REAL,            ALLOCATABLE :: xmlCoreOccs(:,:,:)
    LOGICAL,         ALLOCATABLE :: xmlCoreStates(:,:)
    LOGICAL,         ALLOCATABLE :: xmlPrintCoreStates(:,:)
@@ -1398,6 +1400,15 @@ SUBROUTINE r_inpXML(&
          DEALLOCATE (lNumbers, nNumbers)
       END DO
 
+      ! sort LOs according to l quantum number
+
+      ALLOCATE (loOrderList(speciesNLO(iSpecies)),speciesLLOReal(speciesNLO(iSpecies)))
+      DO iLLO = 1, speciesNLO(iSpecies)
+         speciesLLOReal(iLLO) = speciesLLO(iLLO)
+      END DO
+      CALL sort(speciesNLO(iSpecies),speciesLLOReal,loOrderList)
+      DEALLOCATE(speciesLLOReal)
+
       ! apply species parameters to atom groups
 
       DO iType = 1, atoms%ntype
@@ -1421,11 +1432,11 @@ SUBROUTINE r_inpXML(&
                WRITE(*,*) 'setcor still has to be adapted!!!'
             END IF
             DO iLLO = 1, speciesNLO(iSpecies)
-               atoms%llo(iLLO,iType) = speciesLLO(iLLO)
-               atoms%ulo_der(iLLO,iType) = speciesLOEDeriv(iLLO)
+               atoms%llo(iLLO,iType) = speciesLLO(loOrderList(iLLO))
+               atoms%ulo_der(iLLO,iType) = speciesLOEDeriv(loOrderList(iLLO))
                atoms%llod = max(abs(atoms%llo(iLLO,iType)),atoms%llod)
                DO jsp = 1, input%jspins
-                  enpara%ello0(iLLO,iType,jsp) = speciesLOeParams(iLLO)
+                  enpara%ello0(iLLO,iType,jsp) = speciesLOeParams(loOrderList(iLLO))
                END DO
             END DO
             ! Energy parameters
@@ -1439,6 +1450,7 @@ SUBROUTINE r_inpXML(&
             END DO
          END IF
       END DO
+      DEALLOCATE(loOrderList)
       DEALLOCATE(speciesLLO,speciesLOeParams,speciesLOEDeriv)
    END DO
 
@@ -1669,14 +1681,14 @@ SUBROUTINE r_inpXML(&
          END IF
 #endif
          IF (input%secvar) THEN
-            CALL juDFT_error("LO + sevcar not implemented",calledby ="inped")
+            CALL juDFT_error("LO + sevcar not implemented",calledby ="r_inpXML")
          END IF
          IF (input%isec1<input%itmax) THEN
-            CALL juDFT_error("LO + Wu not implemented",calledby ="inped")
+            CALL juDFT_error("LO + Wu not implemented",calledby ="r_inpXML")
          END IF
          IF (atoms%nlo(iType).GT.atoms%nlod) THEN
             WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
-            CALL juDFT_error("nlo(n)>nlod",calledby ="inped")
+            CALL juDFT_error("nlo(n)>nlod",calledby ="r_inpXML")
          END IF
          DO j=1,atoms%nlo(iType)
 #ifndef CPP_APW
@@ -1687,7 +1699,7 @@ SUBROUTINE r_inpXML(&
 #endif
             IF ( (atoms%llo(j,iType).GT.atoms%llod).OR.(mod(-atoms%llod,10)-1).GT.atoms%llod ) THEN
                WRITE (6,*) 'llo(j,n) =',atoms%llo(j,iType),' > llod =',atoms%llod
-               CALL juDFT_error("llo(j,n)>llod",calledby ="inped")
+               CALL juDFT_error("llo(j,n)>llod",calledby ="r_inpXML")
             END IF
          END DO
 
