@@ -23,7 +23,7 @@
       LOGICAL,          INTENT (INOUT) :: symor
 
 !===> Variables
-      INTEGER i,j,n,ios,no2,no3,gen1
+      INTEGER i,j,n,ios,no2,no3,gen1,isrt(nop)
       REAL    t,d
       LOGICAL ex,op
       CHARACTER(len=3) :: type
@@ -37,11 +37,28 @@
 
         OPEN (symfh, file=sym2fn, status='unknown', err=911, iostat=ios)
         WRITE (symfh,*) nop,nop2,symor,'    ! nop,nop2,symor '
+        
+        IF (nop == 2*nop2) THEN  ! film-calculation
+          i = 1 ; j = nop2 + 1
+          DO n = 1, nop
+            IF (mrot(3,3,n) == 1) THEN
+              isrt(n) = i ; i = i + 1
+            ELSE
+              isrt(n) = j ; j = j + 1
+            ENDIF
+          ENDDO
+        ELSE
+          DO n = 1, nop
+            isrt(n) = n
+          ENDDO
+        ENDIF
+
         DO n = 1, nop
            WRITE (symfh,'(a1,i3)') '!', n
-           WRITE (symfh,'(3i5,5x,f10.5)') 
-     &           ((mrot(i,j,n),j=1,3),tau(i,n),i=1,3)
+           WRITE (symfh,'(3i5,5x,f10.5)')
+     &           ((mrot(i,j,isrt(n)),j=1,3),tau(i,isrt(n)),i=1,3)
         ENDDO
+
 !        WRITE (symfh,*) '! reciprocal lattice vectors'
 !        WRITE (symfh,'(3f25.15)') ((bmat(i,j),j=1,3),i=1,3)
 
@@ -98,12 +115,7 @@
 !
 ! Determine the kind of symmetry operation we have here
 !
-          d = mrot(1,1,n)*mrot(2,2,n)*mrot(3,3,n) +
-     +        mrot(1,2,n)*mrot(2,3,n)*mrot(3,1,n) +
-     +        mrot(2,1,n)*mrot(3,2,n)*mrot(1,3,n) -
-     +        mrot(1,3,n)*mrot(2,2,n)*mrot(3,1,n) -
-     +        mrot(2,3,n)*mrot(3,2,n)*mrot(1,1,n) -
-     +        mrot(2,1,n)*mrot(1,2,n)*mrot(3,3,n)
+          d = det(mrot(:,:,n))
           t =  mrot(1,1,n) + mrot(2,2,n) + mrot(3,3,n)
 
           IF (d.EQ.-1) THEN
@@ -142,4 +154,15 @@
        CALL juDFT_error("i/o ERROR",calledby="rw_symfile")
 
       END SUBROUTINE rw_symfile
+
+!--------------------------------------------------------------------
+      INTEGER FUNCTION det(m)
+        INTEGER m(3,3)
+        det = m(1,1)*m(2,2)*m(3,3) + m(1,2)*m(2,3)*m(3,1) +
+     +        m(2,1)*m(3,2)*m(1,3) - m(1,3)*m(2,2)*m(3,1) -
+     +        m(2,3)*m(3,2)*m(1,1) - m(2,1)*m(1,2)*m(3,3)
+      END FUNCTION det
+!--------------------------------------------------------------------
+
+
       END MODULE m_rwsymfile

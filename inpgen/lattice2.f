@@ -8,7 +8,7 @@
       CONTAINS
       SUBROUTINE lattice2( 
      >                    buffer,xl_buffer,errfh,bfh,nline,
-     <                    a1,a2,a3,aa,scale,noangles,i_c,ios )
+     <                    a1,a2,a3,aa,scale,mat,i_c,ios )
 
       USE m_constants
       IMPLICIT NONE
@@ -18,23 +18,22 @@
       INTEGER, INTENT (IN)                 :: xl_buffer
       CHARACTER(len=xl_buffer), INTENT(IN) :: buffer
       REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
-      REAL,    INTENT (OUT) :: aa
-      REAL,    INTENT (OUT) :: scale(3)
+      REAL,    INTENT (OUT) :: aa                ! overall scaling constant
+      REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
       INTEGER, INTENT (OUT) :: i_c,ios
-      LOGICAL, INTENT (OUT) :: noangles
 
 !==> Local Variables
       CHARACTER(len=40) :: latsys
-      REAL    :: a0
+      REAL    :: a0,a_rho
       REAL    :: a,b,c
       REAL    :: alpha,beta,gamma
       REAL    :: c1(3),c2(3),c3(3)
       REAL    :: ar,br,cr,b1,b2,am(3,3)
       REAL    :: ca,cb,at
       INTEGER :: i,j,err,i1,i2
+      LOGICAL :: noangles
 
-      REAL, PARAMETER :: eps = 1.0e-7
-      REAL, PARAMETER :: h = 0.5, o = 0.0 ,
+      REAL, PARAMETER :: eps = 1.0e-7,
      &              sqrt2  =  1.4142135623730950,
      &              sqrt3  =  1.7320508075688773,
      &              sqrt32 =  0.86602540378444,
@@ -50,9 +49,9 @@
      +             -0.5,  0.5,  0.5,      ! 3: body-centered : I
      &              0.5, -0.5,  0.5,
      &              0.5,  0.5, -0.5,
-     +              h, msqrt32,   o,      ! 4: hexagonal-P   : hP, hcp
-     &              h,  sqrt32,   o,
-     &              o,       o, 1.0,   
+     +            0.5, msqrt32, 0.0,      ! 4: hexagonal-P   : hP, hcp
+     &            0.5,  sqrt32, 0.0,
+     &            0.0,     0.0, 1.0,   
      +              0.0, -1.0,  1.0,      ! 5: hexagonal-R   : hR, trigonal
      &           sqrt32,  0.5,  1.0,
      &          msqrt32,  0.5,  1.0, 
@@ -66,9 +65,6 @@
      &              0.0,  0.5,  0.5,
      &              0.0, -0.5,  0.5/
 
-!===> 12: monoclinic-P     (mP) 
-!===> 13: monoclinic-P     (mS)  (mA)  (mB)  (mC) 
-
 !===> namelists
       NAMELIST /lattice/ latsys,a0,a,b,c,alpha,beta,gamma
 
@@ -76,7 +72,7 @@
       latsys = ' ' ; a0 = 0.0   
       a = 0.0      ; b = 0.0    ; c = 0.0 
       alpha = 0.0  ; beta = 0.0 ; gamma = 0.0   
-      scale = 0.0
+      scale = 0.0  ; mat = 0.0
  
       READ (bfh,lattice,err=911,end=911,iostat=ios)
       
@@ -179,6 +175,7 @@
         a3 = lmat(:,3,i_c)
 
         IF ( a.NE.b ) err = 51
+        IF ( b.NE.c ) err = 51
         IF ( alpha.EQ.0.0  .OR. 
      &       alpha.NE.beta .OR. alpha.NE.gamma ) err = 52
 
@@ -187,7 +184,8 @@
         am(1,:) = at * am(1,:)
         am(2,:) = at * am(2,:)
         am(3,:) = cos(asin(at)) * am(3,:)
-        a1 = am(:,1) ; a2 = am(:,2) ; a3 = am(:,3)
+        a1 = am(:,1)*a ; a2 = am(:,2)*b ; a3 = am(:,3)*c
+        scale = 1.0
 
         CALL angles( am )
  
@@ -199,26 +197,35 @@
 
         noangles=.false.
         i_c = 5
+        a1 = lmat(:,1,i_c)
+        a2 = lmat(:,2,i_c)
+        a3 = lmat(:,3,i_c)
 
-        IF ( a.NE.b .OR. a.NE.c ) err = 53
-        IF ( alpha.NE.beta .OR. alpha.NE.gamma ) err = 54
+        IF ( a.NE.b ) err = 53
+        IF ( alpha.NE.90 ) err = 54
+        IF ( alpha.NE.beta .OR. gamma.NE.120 ) err = 54
 
-        b1=(1.0 -sqrt(cos(ar)-cos(2.0*ar)))/cos(ar)
-        b2= 1.0 /sqrt( 2.0  + b1*b1 )
-        am = b2
-        DO i=1,3
-          am(i,i) = b1*b2
-        ENDDO
-        a1 = am(:,1)
-        a2 = am(:,2)
-        a3 = am(:,3)
+        mat(:,1) = a*lmat(:,1,4) ! to transfer atom
+        mat(:,2) = a*lmat(:,2,4) ! positions hex -> trig
+        mat(:,3) = c*lmat(:,3,4) ! in struct_inp.f
 
-        ca = a1(1)*a2(1)+a1(2)*a2(2)+a1(3)*a2(3)
-        ca = ca/sqrt(a1(1)*a1(1)+a1(2)*a1(2)+a1(3)*a1(3))
-        ca = ca/sqrt(a2(1)*a2(1)+a2(2)*a2(2)+a2(3)*a2(3))
-        ca = acos(ca)*180/pi_const
+! transform hex -> rho
+        a_rho = sqrt( 3*a*a + c*c)/3.0
+        ar = acos( 1. - 9./(6.+2*(c/a)**2) )
+        at = sqrt( 2.0 / 3.0 * ( 1 - cos(ar) ) )
 
-        WRITE (6,*) 'dbg:trigonal angle =',ca
+        a = a_rho * at
+        b = a_rho * at
+        c = a_rho * cos( asin(at) )
+
+        am(:,1) = a1 ; am(:,2) = a2 ; am(:,3) = a3
+        am(1,:) = a*am(1,:)
+        am(2,:) = b*am(2,:)
+        am(3,:) = c*am(3,:)
+        a1 = am(:,1) ; a2 = am(:,2) ; a3 = am(:,3)
+        scale = 1.0
+
+        CALL angles( am )
 
 !===>  6: tetragonal-P     (tP) st
 
@@ -335,9 +342,11 @@
      +          ,calledby ="lattice2")
         ENDIF  
         CALL brvmat ( alpha, beta, gamma, am )
-        a1 = am(:,1)
-        a2 = am(:,2)
-        a3 = am(:,3) 
+        a1 = a*am(:,1)
+        a2 = b*am(:,2)
+        a3 = c*am(:,3) 
+        scale = 1.0
+
         CALL angles( am )
 
 !===> 13: monoclinic-C (mC) 
@@ -432,10 +441,11 @@
         noangles=.false.
         i_c = 1
         CALL brvmat ( alpha, beta, gamma, am )
-        a1 = am(:,1)
-        a2 = am(:,2)
-        a3 = am(:,3)
+        a1 = a*am(:,1)
+        a2 = b*am(:,2)
+        a3 = c*am(:,3)
         CALL angles( am )
+        scale = 1.0
           
       ELSE
           WRITE (errfh,*)

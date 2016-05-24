@@ -136,21 +136,26 @@ c
       IF (.not.l_kpts) THEN
         WRITE (6,*) 'No kpts-file exists, trying to generate it'
         DO line = 1,6
-          READ (5,*,END=98,ERR=98)
+          READ (5,*,END=95,ERR=95)
         ENDDO
         READ (5,'(5x,i5,3(4x,i2),7x,l1)',END=97,ERR=97) 
      +                   nkpt,nmop(1),nmop(2),nmop(3),l_gamma
         GOTO 96
  97     BACKSPACE (5)
-        READ (5,'(5x,i5,3(4x,i2))',END=98,ERR=98) nkpt
-        nmop(1) = 0 ; nmop(2) = 0 ; nmop(3) = 0
+        READ (5,'(5x,i5,3(4x,i2))',END=98,ERR=98)
+     +                       nkpt,nmop(1),nmop(2),nmop(3)
+        l_gamma=.false.
+        GOTO 96
+ 98     BACKSPACE (5)
+        READ (5,'(5x,i5)',END=95,ERR=95) nkpt
+        nmop(1) = 0 ; nmop(2) = 0 ; nmop(3) = 0 ; l_gamma=.false.
         GOTO 96
 
- 98     WRITE (6,*) 'Since you did not provide a kpts-file, you'
+ 95     WRITE (6,*) 'Since you did not provide a kpts-file, you'
         WRITE (6,*) 'should give k-mesh information at the end of'
         WRITE (6,*) 'the inp-file, at least how many k-points, e.g.'
         WRITE (6,*) 'nkpt=  100  -- or give the divisions n in xyz:'
-        WRITE (6,*) 'nkpt=   36,nx= 6,ny= 6,nz= 8'
+        WRITE (6,*) 'nkpt=   36,nx= 6,ny= 6,nz= 8,gamma=F'
         CLOSE (6)
         STOP
       ENDIF

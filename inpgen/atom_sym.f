@@ -178,10 +178,8 @@
             td = matmul( bs, tc ) 
             tc = matmul( td, as ) 
             mmrot(:,:,ng) = NINT(tc)
-            write(*,*) i_c, ttr(:,ng)
             ttr2(:,1) = matmul( lmat(:,:,i_c), ttr(:,ng) )
             ttr(:,ng) = ttr2(:,1)
-            write(*,*) mmrot(:,:,ng),ttr(:,ng)
           ENDDO
         ENDIF
         mmrot2(:,:,1:ngen) = mmrot(:,:,2:ngen+1) 
@@ -262,7 +260,6 @@
          mrot(:,:,n) = mmrot(:,:,n)
          tau(:,n) = ttr(:,n)
          index_op(n) = n
-         write(*,*) n,mrot(:,:,n),tau(:,n)
       ENDDO
 
 !--->    check that the group is closed, etc.

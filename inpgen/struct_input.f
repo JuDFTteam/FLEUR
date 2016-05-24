@@ -9,7 +9,7 @@
      >                        natmax,nop48,
      X                        nline,xl_buffer,buffer,
      <                        title,film,cal_symm,checkinp,symor,
-     <           cartesian,oldfleur,a1,a2,a3,dvac,aa,scale,noangles,i_c,
+     <                    cartesian,oldfleur,a1,a2,a3,dvac,aa,scale,i_c,
      <                       factor,natin,atomid,atompos,ngen,mmrot,ttr,
      <                        l_hyb,l_soc,l_ss,theta,phi,qss,inistop)
 
@@ -26,7 +26,7 @@
       CHARACTER(len=xl_buffer) :: buffer
       LOGICAL                 :: cal_symm, checkinp, symor, film
       LOGICAL                 :: cartesian,oldfleur,inistop
-      LOGICAL, INTENT (OUT)   :: l_hyb,l_soc,l_ss,noangles
+      LOGICAL, INTENT (OUT)   :: l_hyb,l_soc,l_ss
       INTEGER, INTENT (OUT)   :: natin,i_c
       INTEGER, INTENT (OUT)   :: ngen
       REAL,    INTENT (OUT)   :: aa,theta,phi
@@ -46,7 +46,7 @@
 
 !===> Local Variables
       INTEGER :: n, ng, op, nbuffer, ios,nop2
-      REAL    :: shift(3),rdummy(3,3),z_max,z_min
+      REAL    :: shift(3),rdummy(3,3),z_max,z_min,mat(3,3),x(3)
       LOGICAL :: oldfleurset,l_symfile,l_gen,hybrid
       CHARACTER(len=10)        :: chtmp
       CHARACTER(len=3)         :: ch_test
@@ -140,7 +140,7 @@
         IF ( buffer(1:8)=='&lattice' ) THEN
           CALL lattice2( 
      >                  buffer,xl_buffer,errfh,bfh,nline,
-     <                  a1,a2,a3,aa,scale,noangles,i_c,ios )
+     <                  a1,a2,a3,aa,scale,mat,i_c,ios )
           dvac = 0.00
           IF ( ios.NE.0 ) THEN
             WRITE (errfh,*)
@@ -307,6 +307,20 @@
         WRITE (warnfh,*)
       ENDIF
 
+      IF (abs(mat(1,1)).GT.0.0000001) THEN ! transform hex->trig
+        CALL recip(a1,a2,a3,rdummy)
+        DO n = 1, abs(natin)
+!          CALL cotra0(atompos(1,n),x,mat)
+          x = matmul(mat,atompos(:,n))
+          write(*,'(3f10.5)') x(1:3)
+          write(*,'(3f10.5)') rdummy
+!          CALL cotra1(x,atompos(1,n),rdummy)
+          atompos(:,n) = matmul(rdummy,x)
+          write(*,'(3f10.5)') atompos(1:3,n)
+        ENDDO
+        i_c = 1
+      ENDIF
+
       IF (film) THEN
 
         z_max = MAXVAL( atompos(3,1:abs(natin)) )  ! check the outmost atomic position
@@ -422,4 +436,32 @@
        CALL juDFT_error("ERROR reading input",calledby="struct_input")
 
       END SUBROUTINE struct_input
+!-------------------------------------
+      SUBROUTINE recip(a1,a2,a3,b)
+
+      USE m_constants, ONLY : pimach
+      IMPLICIT NONE
+      REAL, INTENT (IN) :: a1(3),a2(3),a3(3)
+      REAL, INTENT (OUT):: b(3,3)
+      REAL volume
+
+!  volume (without scaling factor aa^3)
+      volume  = a1(1)*a2(2)*a3(3) + a2(1)*a3(2)*a1(3) +
+     &          a3(1)*a1(2)*a2(3) - a1(3)*a2(2)*a3(1) -
+     &          a2(3)*a3(2)*a1(1) - a3(3)*a1(2)*a2(1)
+
+!  reciprocal lattice vectors in scaled Cartesian units
+      b(1,1) = (a2(2)*a3(3) - a2(3)*a3(2))
+      b(1,2) = (a2(3)*a3(1) - a2(1)*a3(3))
+      b(1,3) = (a2(1)*a3(2) - a2(2)*a3(1))
+      b(2,1) = (a3(2)*a1(3) - a3(3)*a1(2))
+      b(2,2) = (a3(3)*a1(1) - a3(1)*a1(3))
+      b(2,3) = (a3(1)*a1(2) - a3(2)*a1(1))
+      b(3,1) = (a1(2)*a2(3) - a1(3)*a2(2))
+      b(3,2) = (a1(3)*a2(1) - a1(1)*a2(3))
+      b(3,3) = (a1(1)*a2(2) - a1(2)*a2(1))
+!      b = 2.0*pimach()*b/volume
+      b = b/volume
+      END SUBROUTINE recip
+
       END MODULE m_structinput
