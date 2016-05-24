@@ -1,21 +1,27 @@
 MODULE m_eigen_diag
   USE m_juDFT
-  IMPLICIT NONE
 ! the parameters are set to negative values to indicate that a particular solver is not compiled
+#ifdef CPP_ELEMENTAL
+    USE m_elemental
+#endif
+#ifdef CPP_SCALAPACK
+    USE m_chani
+#endif
 #ifdef CPP_ELPA
     USE m_elpa
+#endif
+    IMPLICIT NONE
+#ifdef CPP_ELPA
   INTEGER,PARAMETER:: diag_elpa=1
 #else
   INTEGER,PARAMETER:: diag_elpa=-1
 #endif
 #ifdef CPP_ELEMENTAL
-    USE m_elemental
   INTEGER,PARAMETER:: diag_elemental=2
 #else
   INTEGER,PARAMETER:: diag_elemental=-2
 #endif
 #ifdef CPP_SCALAPACK
-    USE m_chani
   INTEGER,PARAMETER:: diag_scalapack=3
 #else
   INTEGER,PARAMETER:: diag_scalapack=-3
@@ -24,7 +30,7 @@ MODULE m_eigen_diag
   INTEGER,PARAMETER:: diag_lapack2=5
 CONTAINS
   SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
-       sym,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,a,b,z)
+       sym,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,a,b,z,ne_found)
     USE m_zsymsecloc
     USE m_aline
     USE m_alinemuff
@@ -45,7 +51,8 @@ CONTAINS
     INTEGER, INTENT(IN) :: jsp,eig_id,it,matsize 
     INTEGER, INTENT(IN) :: n_rank,n_size  ,nk   ,nred,sub_comm
     INTEGER, INTENT(IN) :: matind(dimension%nbasfcn,2),kveclo(atoms%nlotot)
-    INTEGER,INTENT(INOUT):: ne 
+    INTEGER,INTENT(IN)  :: ne
+    INTEGER,INTENT(OUT) :: ne_found
     REAL,INTENT(IN)     :: el(:,:,:)
     LOGICAL, INTENT(IN) :: l_wu   
     REAL,INTENT(INOUT)  :: bkpt(3)
@@ -90,33 +97,33 @@ CONTAINS
        CALL timestart("Diagonalization")
        !Select the solver
        parallel=(n_size>1)
+       ne_found=ne
        SELECT CASE (priv_select_solver(parallel))
 #ifdef CPP_ELPA
        CASE (diag_elpa)
-          CALL elpa(lapw%nmat,n,SUB_COMM,a,b,z,eig,ne)
+          CALL elpa(lapw%nmat,n,SUB_COMM,a,b,z,eig,ne_found)
 #endif
 #ifdef CPP_ELEMENTAL
        CASE (diag_elemental)
           IF (it==1) THEN !switch between direct solver and iterative solver
-             CALL elemental(lapw%nmat,n,SUB_COMM,a,b,z,eig,ne,1)
+             CALL elemental(lapw%nmat,dimension%nbasfcn/n_size,SUB_COMM,a,b,z,eig,ne_found,1)
           ELSE
-             CALL elemental(lapw%nmat,n,SUB_COMM,a,b,z,eig,ne,0)
+             CALL elemental(lapw%nmat,,dimension%nbasfcn/n_size,SUB_COMM,a,b,z,eig,ne_found,0)
           ENDIF
 
 #endif
 #ifdef CPP_SCALAPACK
        CASE (diag_scalapack)
-          CALL chani(lapw%nmat,n,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm, a,b,z,eig,ne)
+          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm, a,b,z,eig,ne_found)
 #endif
        CASE (diag_lapack2)
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
           if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
-
           CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
-                jij,matind,nred, a,b, z,eig,ne)
+                jij,matind,nred, a,b, z,eig,ne_found)
        CASE (diag_lapack)
           CALL franza(dimension%nbasfcn,ndim, lapw%nmat,&
-               (sym%l_zref.AND.(atoms%nlotot.EQ.0)), jij%l_j,matind,nred, a,b,input%gw, z,eig,ne)
+               (sym%l_zref.AND.(atoms%nlotot.EQ.0)), jij%l_j,matind,nred, a,b,input%gw, z,eig,ne_found)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
           print*, "You selected a diagonalization scheme without compiling for it"
@@ -127,7 +134,7 @@ CONTAINS
     ELSE
        call timestart("aline")
        CALL aline(eig_id,nk,atoms,dimension,sym,cell,input,jsp,el,&
-            ud,a,b,lapw,td,noco,oneD,bkpt,z,eig,ne)
+            ud,a,b,lapw,td,noco,oneD,bkpt,z,eig,ne_found)
        call timestop("aline")
     ENDIF
     !--->         SECOND VARIATION STEP
@@ -136,7 +143,7 @@ CONTAINS
        !--->           hamiltonian
        call timestart("second variation diagonalization")
 
-       CALL aline_muff(atoms,dimension,sym, cell, jsp,ne, ud,td, bkpt,lapw, z,eig)
+       CALL aline_muff(atoms,dimension,sym, cell, jsp,ne_found, ud,td, bkpt,lapw, z,eig)
        call timestop("second variation diagonalization")
     END IF
   END SUBROUTINE eigen_diag
@@ -175,6 +182,7 @@ CONTAINS
     IMPLICIT NONE
     INTEGER,INTENT(IN):: diag_solver
     LOGICAL,INTENT(IN)::parallel
+    print *,diag_solver,parallel
     SELECT CASE(diag_solver)
     CASE (diag_elpa)
        IF (parallel) THEN

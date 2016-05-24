@@ -78,15 +78,15 @@ endif()
 if(${Fleur_uses_MPI})
   #Preprocessor switches
   if (${Fleur_uses_ELEMENTAL})
-    set(MPI_DEFINITIONS -DCPP_EVP -DCPP_ELEMENTAL)
+    set(MPI_DEFINITIONS ${MPI_DEFINITION} -DCPP_ELEMENTAL)
   endif()
   if (${Fleur_uses_SCALAPACK})
-    set(MPI_DEFINITIONS -DCPP_EVP)
+    set(MPI_DEFINITIONS ${MPI_DEFINITION} -DCPP_SCALAPACK )
   endif()
   if (${Fleur_uses_ELPA})
-    set(MPI_DEFINITIONS -DCPP_ELPA -DCPP_ELPA2 -DCPP_EVP)
+    set(MPI_DEFINITIONS ${MPI_DEFINITION} -DCPP_ELPA -DCPP_ELPA2 )
   endif()
-  set(MPI_DEFINITIONS -DCPP_MPI ${MPI_DEFINITIONS})
+  set(MPI_DEFINITIONS -DCPP_MPI -DCPP_EVP  ${MPI_DEFINITIONS})
 
   #fleur_MPI
   add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur}

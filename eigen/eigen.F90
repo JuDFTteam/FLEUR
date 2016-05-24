@@ -77,7 +77,7 @@ CONTAINS
     !+odim
     !     ..
     !     .. Local Scalars ..
-    INTEGER jsp,nk,nred,ne_all,n_u_in
+    INTEGER jsp,nk,nred,ne_all,n_u_in,ne_found
     INTEGER iter,ne,matsize  ,nrec,lh0
     INTEGER nspins,isp,l,i,j,err,gwc
     INTEGER mlotot,mlolotot,mlot_d,mlolot_d,nlot_d
@@ -526,33 +526,33 @@ CONTAINS
        
           CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,&
                nred,sub_comm, sym,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
-               oneD,td,ud, eig,a,b,z)
+               oneD,td,ud, eig,a,b,z,ne_found)
           
           !
           !--->         output results
           !
           CALL timestart("EV output")
-          ne_all=ne
+          ne_all=ne_found
 #if defined(CPP_MPI)
           !Collect number of all eigenvalues
-          CALL MPI_ALLREDUCE(ne,ne_all,1,MPI_INTEGER,MPI_SUM, sub_comm,ierr)
+          CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, sub_comm,ierr)
 #endif
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
 #if ( !defined( CPP_INVERSION) )
           IF (.not.jij%l_J) THEN
-             z(:lapw%nmat,:ne) = conjg(z(:lapw%nmat,:ne))
+             z(:lapw%nmat,:ne_found) = conjg(z(:lapw%nmat,:ne_found))
           ELSE
-             z(:lapw%nmat,:ne) = cmplx(0.0,0.0)
+             z(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
           ENDIF
 #endif
-          CALL write_eig(eig_id, nk,jsp,ne,ne_all,lapw%nv(jsp),lapw%nmat,&
+          CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
-               bkpt, kpts%wtkpt(nk),eig(:ne),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-               atoms%nlotot,kveclo,n_size,n_rank,z=z(:,:ne))
+               bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
+               atoms%nlotot,kveclo,n_size,n_rank,z=z(:,:ne_found))
           IF (noco%l_noco) THEN
-             CALL write_eig(eig_id, nk,2,ne,ne_all,lapw%nv(2),lapw%nmat,&
+             CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
                   lapw%k1(:lapw%nv(2),2),lapw%k2 (:lapw%nv(2),2),lapw%k3(:lapw%nv(2),2),&
-                  bkpt, kpts%wtkpt(nk),eig(:ne),enpara%el0(0:,:,2), enpara%ello0(:,:,2),enpara%evac0(:,2),&
+                  bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,2), enpara%ello0(:,:,2),enpara%evac0(:,2),&
                   atoms%nlotot,kveclo)
           ENDIF
 
