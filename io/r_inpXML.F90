@@ -1765,6 +1765,41 @@ SUBROUTINE r_inpXML(&
       IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="r_inpXML")
    END IF
 
+   ! Check DOS related stuff (from inped)
+
+   IF ((banddos%ndir.LT.0).AND..NOT.banddos%dos) THEN
+      CALL juDFT_error('STOP banddos: the inbuild dos-program  <0'//&
+                       ' can only be used if dos = true',calledby ="r_inpXML")
+   END IF
+
+   IF ((banddos%ndir.LT.0).AND.banddos%dos) THEN
+      IF (banddos%e1_dos-banddos%e2_dos.LT.1e-3) THEN
+         CALL juDFT_error("STOP banddos: no valid energy window for "//&
+                          "internal dos-program",calledby ="r_inpXML")
+      END IF
+      IF (banddos%sig_dos.LT.0) THEN
+         CALL juDFT_error("STOP DOS: no valid broadening (sig_dos) for "//&
+                         "internal dos-PROGRAM",calledby ="r_inpXML")
+      END IF
+   END IF
+
+   IF (banddos%vacdos) THEN
+      IF (.NOT.banddos%dos) THEN
+         CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="r_inpXML")
+      END IF
+      IF (.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1))THEN
+         CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="r_inpXML")
+      END IF
+      IF (vacuum%layers.LT.1) THEN
+         CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="r_inpXML")
+      END IF
+      DO i=1,vacuum%layers
+         IF (vacuum%izlay(i,1).LT.1) THEN
+            CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="r_inpXML")
+         END IF
+      END DO
+   END IF
+
    ! Calculate missing kpts parameters
 
    WRITE(*,*) 'Post processing of input: k-points'
