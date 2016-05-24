@@ -1743,6 +1743,28 @@ SUBROUTINE r_inpXML(&
       END DO
    END DO
 
+   ! Check lda+u stuff (from inped)
+
+   atoms%n_u = 0
+   DO iType = 1,atoms%ntype
+      IF (atoms%lda_u(iType)%l.GE.0)  THEN
+         atoms%n_u = atoms%n_u + 1
+         IF (atoms%nlo(iType).GE.1) THEN
+            DO iLLO = 1, atoms%nlo(iType)
+               IF ((abs(atoms%llo(iLLO,iType)).EQ.atoms%lda_u(iType)%l).AND.&
+                   .NOT.atoms%l_dulo(iLLO,iType)) THEN
+                  WRITE (*,*) 'LO and LDA+U for same l not implemented'
+               END IF
+            END DO
+         END IF
+      END IF
+   END DO
+   IF (atoms%n_u.GT.0) THEN
+      IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="r_inpXML")
+      IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="r_inpXML")
+      IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="r_inpXML")
+   END IF
+
    ! Calculate missing kpts parameters
 
    WRITE(*,*) 'Post processing of input: k-points'
