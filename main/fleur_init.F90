@@ -17,6 +17,7 @@
           USE m_gen_bz
           USE icorrkeys
           USE m_ylm
+          USE m_InitParallelProcesses
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -80,7 +81,7 @@
           ENDIF
 
           input%l_inpXML = .FALSE.
-          kpts%numSpecialPoints = 0
+          kpts%numSpecialPoints = 1
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
           IF(.NOT.juDFT_was_argument("-xmlInput")) THEN
              input%l_inpXML = .FALSE.
@@ -97,6 +98,13 @@
 
                 WRITE(*,*) 'TODO: Distribute parameters and arrays to other parallel processes!'
              END IF
+
+#ifdef CPP_MPI
+             CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
+                                        dimension,cell,sym,xcpot,noco,jij,oneD,hybrid,&
+                                        kpts,enpara,sphhar,mpi,results,obsolete)
+#endif
+
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
 
           CALL dimens(&

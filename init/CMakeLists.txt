@@ -49,4 +49,5 @@ init/setlomap.F90
 init/setup.f90
 init/stepf.F90
 init/strgn.f90
+init/initParallelProcesses.f90
 )

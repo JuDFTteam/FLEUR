@@ -266,6 +266,8 @@ SUBROUTINE r_inpXML(&
       WRITE(*,*) 'constant: ', TRIM(ADJUSTL(valueSTring)), tempReal
    END DO
 
+   obsolete%nwdd = 1
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of calculationSetup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -419,6 +421,9 @@ SUBROUTINE r_inpXML(&
             kpts%specialPointNames(i) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')
          END DO
       END IF
+   ELSE
+      ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
+      ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
    END IF
 
    ! Option kPointList
