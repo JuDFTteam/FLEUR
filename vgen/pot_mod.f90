@@ -163,7 +163,7 @@ CONTAINS
              ENDDO
           ENDIF
           CLOSE(201)
-          CALL juDFT_end("B_xc is written to 'bxc'")
+          CALL juDFT_end("B_xc is written to 'bxc'",1) ! The 1 is temporarily. Should be mpi%irank.
 
        ENDIF
 

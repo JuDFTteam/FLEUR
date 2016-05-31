@@ -114,7 +114,7 @@ c-----if wannierize, then calculate polarization later (after wannierize)
          wann%l_stopopt=.true.
       endif
 
-      IF(wann%l_stopopt)  CALL juDFT_end("wann_optional done")
+      IF(wann%l_stopopt)  CALL juDFT_end("wann_optional done",1) ! The 1 is temporarily. Should be mpi%irank.
 
       end subroutine wann_optional
       end module m_wann_optional

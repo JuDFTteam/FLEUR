@@ -213,6 +213,6 @@ PROGRAM inpgen
       DEALLOCATE (vacuum%izlay)
       DEALLOCATE ( atoms%taual,sym%mrot,sym%tau,atoms%neq,atoms%zatom,atoms%rmt,natmap,atoms%pos,idlist )
 
-      IF (inistop)  CALL juDFT_end("Symmetry done")
+      IF (inistop)  CALL juDFT_end("Symmetry done",1)
 
       END 

@@ -218,13 +218,13 @@
                   &    xcpot,noco,oneD)
           ENDIF
           !
-          IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.")
-          IF (input%strho)          CALL juDFT_end("starting density generated")
-          IF (input%swsp)           CALL juDFT_end("spin polarised density generated")
-          IF (input%lflip)          CALL juDFT_end("magnetic moments flipped")
-          IF (obsolete%l_f2u)       CALL juDFT_end("conversion to unformatted")
-          IF (obsolete%l_u2f)       CALL juDFT_end("conversion to formatted")
-          IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written')
+          IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
+          IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
+          IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
+          IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
+          IF (obsolete%l_f2u)       CALL juDFT_end("conversion to unformatted",mpi%irank)
+          IF (obsolete%l_u2f)       CALL juDFT_end("conversion to formatted",mpi%irank)
+          IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
 
 
 #ifdef CPP_WANN
@@ -565,7 +565,7 @@
                                   IF(l_endit) CLOSE(1014)
                                   INQUIRE(667,opened=l_endit)
                                   IF(l_endit) CLOSE(667)
-                                  CALL juDFT_end("GW+SOC finished")
+                                  CALL juDFT_end("GW+SOC finished",mpi%irank)
                                ENDIF
                             ENDIF
                             CALL timestop("generation of hamiltonian and diagonalization (total)")
@@ -751,7 +751,7 @@
                 !-t3e
 
                 IF (banddos%ndir.GT.0) THEN
-                   CALL juDFT_end("NDIR")
+                   CALL juDFT_end("NDIR",mpi%irank)
                 END IF
                 !          ----> output potential and potential difference
                 IF (obsolete%disp) THEN
@@ -845,7 +845,7 @@
        !+fo
        INQUIRE (file='inp_new',exist=l_endit)
        IF (l_endit) THEN
-          CALL juDFT_end(" GEO new inp created ! ")
+          CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
        END IF
        !-fo
        IF ( hybrid%l_calhf ) ithf = ithf + 1
@@ -859,7 +859,7 @@
        END IF
 80     CONTINUE
 
-       CALL juDFT_end("all done")
+       CALL juDFT_end("all done",mpi%irank)
 
      END SUBROUTINE
       END MODULE

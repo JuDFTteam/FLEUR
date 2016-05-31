@@ -20,4 +20,5 @@ io/wrtdop.f90
 io/w_inpXML.f90
 io/xsf_io.f90
 io/xmlIntWrapFort.f90
+io/xmlOutput.f90
 )

@@ -18,6 +18,7 @@
           USE icorrkeys
           USE m_ylm
           USE m_InitParallelProcesses
+          USE m_xmlOutput
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -73,6 +74,7 @@
           input%gw_neigd          =  0
           !-t3e
           IF (mpi%irank.EQ.0) THEN
+             CALL startXMLOutput()
 #ifndef  __TOS_BGQ__
              !Do not open out-file on BlueGene
              OPEN (6,file='out',form='formatted',status='unknown')
