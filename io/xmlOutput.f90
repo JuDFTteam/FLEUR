@@ -12,10 +12,14 @@ MODULE m_xmlOutput
 
    IMPLICIT NONE
 
+   PRIVATE
    INTEGER, SAVE :: currentElementIndex
    INTEGER, SAVE :: maxNumElements
    INTEGER, SAVE :: xmlOutputUnit
    CHARACTER(LEN= 40), ALLOCATABLE :: elementList(:)
+
+   PUBLIC startXMLOutput, endXMLOutput, writeXMLElementPoly, writeXMLElement
+   PUBLIC openXMLElementPoly, openXMLElementNoAttributes, openXMLElement, closeXMLElement
 
    CONTAINS
 
@@ -46,7 +50,7 @@ MODULE m_xmlOutput
 
       IMPLICIT NONE
 
-      CHARACTER(LEN= 40)             :: elementName
+      CHARACTER(LEN=*)             :: elementName
       CHARACTER(LEN= 40), INTENT(IN) :: attributeNames(:)
       CLASS(*),           INTENT(IN) :: attributeValues(:)
       CLASS(*),           INTENT(IN) :: contentList(:)
@@ -97,7 +101,7 @@ MODULE m_xmlOutput
       IMPLICIT NONE
 
       !! Overloading for different types of attributes, data elements?
-      CHARACTER(LEN= 40)             :: elementName
+      CHARACTER(LEN=*)             :: elementName
       CHARACTER(LEN= 40), INTENT(IN) :: attributeNames(:)
       CHARACTER(LEN= 30), INTENT(IN) :: attributeValues(:)
       CHARACTER(LEN= 30), INTENT(IN) :: contentList(:)
@@ -130,14 +134,14 @@ MODULE m_xmlOutput
       ELSE
          outputString = TRIM(ADJUSTL(outputString))//'>'
       END IF
-      WRITE(format,*) "'(a",3*(currentElementIndex+1),",a)'"
+      WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
       WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
       IF(SIZE(contentLineList).GT.1) THEN
-         WRITE(format,*) "'(a",3*(currentElementIndex+2),",a)'"
+         WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+2),",a)"
          DO i = 1, SIZE(contentLineList)
             WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(contentLineList(i)))
          END DO
-         WRITE(format,*) "'(a",3*(currentElementIndex+1),",a)'"
+         WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
          outputString = '</'//TRIM(ADJUSTL(elementName))//'>'
          WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
       END IF
@@ -167,9 +171,9 @@ MODULE m_xmlOutput
 
       IMPLICIT NONE
 
-      CHARACTER(LEN= 40)             :: elementName
-      CHARACTER(LEN= 40), INTENT(IN) :: attributeNames(:)
-      CLASS(*),           INTENT(IN) :: attributeValues(:)
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      CLASS(*),         INTENT(IN) :: attributeValues(:)
 
       CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
       INTEGER                         :: i
@@ -197,13 +201,34 @@ MODULE m_xmlOutput
 
    END SUBROUTINE openXMLElementPoly
 
+   SUBROUTINE openXMLElementNoAttributes(elementName)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+
+      INTEGER :: i
+      CHARACTER(LEN=70)  :: format
+      CHARACTER(LEN=200) :: openingString
+
+      IF(currentElementIndex.EQ.maxNumElements) THEN
+         WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
+         STOP 'ERROR: xml hierarchy too deep!'
+      END IF
+      currentElementIndex = currentElementIndex + 1
+      elementList(currentElementIndex) = TRIM(ADJUSTL(elementName))
+      openingString = '<'//TRIM(ADJUSTL(elementName))//'>'
+      WRITE(format,'(a,i0,a)') "(a",3*currentElementIndex,",a)"
+      WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(openingString))
+   END SUBROUTINE openXMLElementNoAttributes
+
    SUBROUTINE openXMLElement(elementName,attributeNames,attributeValues)
 
       IMPLICIT NONE
 
-      CHARACTER(LEN= 40)             :: elementName
-      CHARACTER(LEN= 40), INTENT(IN) :: attributeNames(:)
-      CHARACTER(LEN= 30), INTENT(IN) :: attributeValues(:)
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      CHARACTER(LEN=*), INTENT(IN) :: attributeValues(:)
 
       INTEGER :: i
       CHARACTER(LEN=70)  :: format
@@ -222,12 +247,13 @@ MODULE m_xmlOutput
          STOP 'ERROR: xml hierarchy too deep!'
       END IF
       currentElementIndex = currentElementIndex + 1
+      elementList(currentElementIndex) = TRIM(ADJUSTL(elementName))
       openingString = '<'//TRIM(ADJUSTL(elementName))
       DO i = 1, SIZE(attributeNames)
          openingString = TRIM(ADJUSTL(openingString))//' '//TRIM(ADJUSTL(attributeNames(i)))//'="'//TRIM(ADJUSTL(attributeValues(i)))//'"'
       END DO
       openingString = TRIM(ADJUSTL(openingString))//'>'
-      WRITE(format,*) "'(a",3*currentElementIndex,",a)'"
+      WRITE(format,'(a,i0,a)') "(a",3*currentElementIndex,",a)"
       WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(openingString))
    END SUBROUTINE openXMLElement
 
@@ -245,8 +271,8 @@ MODULE m_xmlOutput
          WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
          STOP 'ERROR: Closing xml element inconsistency!'
       END IF
-      closingString = '</'//elementName//'>'
-      WRITE(format,*) "'(a",3*currentElementIndex,",a)'"
+      closingString = '</'//TRIM(ADJUSTL(elementName))//'>'
+      WRITE(format,'(a,i0,a)') "(a",3*currentElementIndex,",a)"
       WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(closingString))
       currentElementIndex = currentElementIndex - 1
    END SUBROUTINE closeXMLElement

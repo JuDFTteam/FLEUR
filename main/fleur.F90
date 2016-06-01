@@ -118,6 +118,7 @@
           USE m_totale
           USE m_potdis
           USE m_mix
+          USE m_xmlOutput
 !          USE m_jcoff
 !          USE m_jcoff2
 !          USE m_ssomat
@@ -242,8 +243,10 @@
           it     = 0
           ithf   = 0
           l_cont = ( it < input%itmax )
+          IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
           DO 80 WHILE ( l_cont )
              it = it + 1
+             IF (mpi%irank.EQ.0) CALL openXMLElementPoly('iteration',(/'number'/),(/it/))
              !+t3e
              IF (input%alpha.LT.10.0) THEN
                 !
@@ -665,6 +668,7 @@
                 ENDIF
              ENDDO !qcount
              IF (stop80) THEN
+                IF (mpi%irank.EQ.0) CALL closeXMLElement('iteration')
                 EXIT ! it
              ENDIF
 
@@ -857,8 +861,9 @@
        ELSE
           l_cont = ( it < input%itmax )
        END IF
+       IF (mpi%irank.EQ.0) CALL closeXMLElement('iteration')
 80     CONTINUE
-
+       IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
        CALL juDFT_end("all done",mpi%irank)
 
      END SUBROUTINE
