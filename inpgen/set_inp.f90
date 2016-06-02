@@ -59,7 +59,7 @@
       CHARACTER(len=3) :: latnamTemp
       INTEGER  nu,iofile      
       INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus
+      INTEGER  n ,iostat, errorStatus, numSpecies
       REAL    scale,scpos ,zc
       REAL    ello0(atoms%nlod,atoms%ntype),evac0(2)
 
@@ -416,13 +416,13 @@
          IF(errorStatus.NE.0) THEN
             STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
-
+         numSpecies = atoms%nat
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1,a2,a3,scale,dtild,name,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                 atomTypeSpecies,speciesRepAtomType,&
+     &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,numSpecies,&
      &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
 
          IF(juDFT_was_argument("-explicit")) THEN

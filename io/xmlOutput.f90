@@ -20,8 +20,15 @@ MODULE m_xmlOutput
 
    PUBLIC startXMLOutput, endXMLOutput, writeXMLElementPoly, writeXMLElement
    PUBLIC openXMLElementPoly, openXMLElementNoAttributes, openXMLElement, closeXMLElement
+   PUBLIC getXMLOutputUnitNumber
 
    CONTAINS
+
+   FUNCTION getXMLOutputUnitNumber()
+      IMPLICIT NONE
+      INTEGER getXMLOutputUnitNumber
+      getXMLOutputUnitNumber = xmlOutputUnit
+   END FUNCTION getXMLOutputUnitNumber
 
    SUBROUTINE startXMLOutput()
       IMPLICIT NONE

@@ -3,7 +3,9 @@ MODULE m_rinpXML
 CONTAINS
 SUBROUTINE r_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-&                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,sphhar,l_opti)
+&                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
+&                   noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+&                   xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
 
    USE iso_c_binding
    USE m_juDFT
@@ -64,6 +66,16 @@ SUBROUTINE r_inpXML(&
    TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
    TYPE(t_sphhar)   ,INTENT(OUT)  :: sphhar
    LOGICAL, INTENT(OUT)           :: l_opti
+   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
+   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
+   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: speciesRepAtomType(:)
+   REAL,             ALLOCATABLE, INTENT(INOUT) :: xmlCoreOccs(:,:,:)
+   LOGICAL,          ALLOCATABLE, INTENT(INOUT) :: xmlPrintCoreStates(:,:)
+   CHARACTER(len=3), ALLOCATABLE, INTENT(INOUT) :: noel(:)
+   CHARACTER(len=4), INTENT(OUT)  :: namex
+   CHARACTER(len=12), INTENT(OUT) :: relcor
+   REAL, INTENT(OUT)              :: a1(3),a2(3),a3(3)
+   REAL, INTENT(OUT)              :: scale, dtild
 
    CHARACTER(len=8) :: name(10)
 
@@ -76,7 +88,7 @@ SUBROUTINE r_inpXML(&
 !-odim
 ! ..
 ! ..  Local Variables
-   REAL     ::dtild ,scpos  ,zc   
+   REAL     :: scpos  ,zc   
    INTEGER  ::nw
    INTEGER ieq,i,k,na,n,ii
    REAL s3,ah,a,hs2,rest
@@ -122,11 +134,11 @@ SUBROUTINE r_inpXML(&
    INTEGER            :: speciesEParams(0:3)
    INTEGER            :: mrotTemp(3,3,48)
    REAL               :: tauTemp(3,48)
-   REAL               :: a1(3),a2(3),a3(3), bk(3)
+   REAL               :: bk(3)
    LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
    LOGICAL            :: l_vca, coreConfigPresent, l_enpara
    REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-   REAL               :: aTemp, scale, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
+   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
    REAL               :: weightScale
    LOGICAL            :: l_amf
    REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
@@ -138,8 +150,6 @@ SUBROUTINE r_inpXML(&
    CHARACTER(LEN=255) :: valueString, lString, nString, token
    CHARACTER(LEN=255) :: xPathA, xPathB, xPathC, xPathD, xPathE
    CHARACTER(LEN=11)  :: latticeType
-   CHARACTER(len=4)   :: namex
-   CHARACTER(len=12)  :: relcor
    
    INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
    INTEGER, ALLOCATABLE :: loOrderList(:)
@@ -149,9 +159,6 @@ SUBROUTINE r_inpXML(&
    INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
    INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
    REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
-   REAL,            ALLOCATABLE :: xmlCoreOccs(:,:,:)
-   LOGICAL,         ALLOCATABLE :: xmlCoreStates(:,:)
-   LOGICAL,         ALLOCATABLE :: xmlPrintCoreStates(:,:)
 
    EXTERNAL prp_xcfft_box
 
@@ -251,9 +258,25 @@ SUBROUTINE r_inpXML(&
    ALLOCATE(noco%soc_opt(atoms%ntype+2),noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
    ALLOCATE(noco%alph(atoms%ntype),noco%beta(atoms%ntype))
 
-   ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype) )
-   ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype) )
-         
+   ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
+   ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
+
+   DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
+   ALLOCATE(atomTypeSpecies(atoms%ntype))
+   ALLOCATE(speciesRepAtomType(numSpecies))
+   atomTypeSpecies = -1
+   speciesRepAtomType = -1
+
+   DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
+   ALLOCATE(xmlElectronStates(29,atoms%ntype))
+   ALLOCATE(xmlPrintCoreStates(29,atoms%ntype))
+   ALLOCATE(xmlCoreOccs(2,29,atoms%ntype))
+   xmlElectronStates = noState_const
+   xmlPrintCoreStates = .FALSE.
+   xmlCoreOccs = 0.0
+
+   WRITE(*,*) 'Note: core states output (from input) into out.xml file has to be implemented!'
+
    ! Read in constants
 
    xPathA = '/fleurInput/constants/constant'
@@ -1237,6 +1260,8 @@ SUBROUTINE r_inpXML(&
             atoms%lda_u(iType)%u = ldau_u
             atoms%lda_u(iType)%j = ldau_j
             atoms%lda_u(iType)%l_amf = l_amf
+            atomTypeSpecies(iType) = iSpecies
+            IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
          END IF
       END DO
 
@@ -1908,6 +1933,9 @@ SUBROUTINE r_inpXML(&
    ALLOCATE(atoms%volmts(atoms%ntype))
    ALLOCATE(atoms%vr0(atoms%ntype))  ! This should actually not be in the atoms type!
    atoms%vr0(:) = 0.0
+   na = 0
+   DEALLOCATE(noel)
+   ALLOCATE(noel(atoms%ntypd))
    DO iType = 1, atoms%ntype
       l_vca = .FALSE.
       INQUIRE (file="vca.in", exist=l_vca)
@@ -1944,6 +1972,8 @@ SUBROUTINE r_inpXML(&
 
       atoms%volmts(iType) = (fpi_const/3.0)*atoms%rmt(iType)**3
       cell%volint = cell%volint - atoms%volmts(iType)*atoms%neq(iType)
+
+      noel(iType) = namat_const(atoms%nz(iType))
    END DO
 
    ! Read in enpara file iff available
