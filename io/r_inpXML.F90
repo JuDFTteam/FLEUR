@@ -1886,6 +1886,8 @@ SUBROUTINE r_inpXML(&
    dimension%nvd = 0 ; dimension%nv2d = 0
    stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
    obsolete%nwd = obsolete%nwdd
+   obsolete%l_u2f = .FALSE.
+   obsolete%l_f2u = .FALSE.
    !cell%aamat=matmul(transpose(cell%amat),cell%amat)
    cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
    jij%nqpt=1
