@@ -36,9 +36,9 @@ CONTAINS
 #endif
     !     ..
     !     .. Local Scalars ..
-    REAL phase,phasep,q1,zsl1,zsl2,qi,volsli,volintsli
+    REAL q1,zsl1,zsl2,qi,volsli,volintsli
     INTEGER i ,indp,ix1,iy1,iz1,j,n,ns,ind
-    COMPLEX x
+    COMPLEX x,phase,phasep
     !     ..
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: stfunint(:,:),z_z(:)
@@ -102,11 +102,11 @@ CONTAINS
              phase = stars%rgphs(ix1,iy1,iz1)/ (stars%nstr(ind)*cell%omtil)
              phasep = stars%rgphs(-ix1,-iy1,-iz1)/ (stars%nstr(indp)*cell%omtil)
 #if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     z_z(ind)  = z_z(ind)  + z(j,n)*z(i,n)*phase
-             z_z(indp) = z_z(indp) + z(i,n)*z(j,n)*phasep
+             z_z(ind)  = z_z(ind)  + z(j,n)*z(i,n)*REAL(phase)
+             z_z(indp) = z_z(indp) + z(i,n)*z(j,n)*REAL(phasep)
 #else
-             z_z(ind) = z_z(ind) +z(j,n)*CONJG(z(i,n))*CMPLX(phase,0.0)     
-             z_z(indp)= z_z(indp)+z(i,n)*CONJG(z(j,n))*CMPLX(phasep,0.0)
+             z_z(ind) = z_z(ind) +z(j,n)*CONJG(z(i,n))*phase     
+             z_z(indp)= z_z(indp)+z(i,n)*CONJG(z(j,n))*phasep
 #endif
           ENDDO
        ENDDO

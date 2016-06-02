@@ -103,7 +103,7 @@
              ENDIF
              IF (ABS(tau(i,n)) > 0.00001) THEN
              IF (ABS(ABS(tau(i,n))-0.5) > 0.00001) THEN
-                CALL juDFT_error("complex :: phases not implemented!"
+                CALL juDFT_error("complex :: phases not fully tested!"
      +               ,calledby ="rw_symfile")
              ENDIF
              ENDIF

@@ -29,6 +29,7 @@
 
       INTEGER i,ifftd
       REAL scale
+      COMPLEX ctmp
 
       ifftd=27*stars%k1d*stars%k2d*stars%k3d
      
@@ -39,10 +40,9 @@
         afft=0.0
         bfft=0.0
         DO i=0,stars%kimax
-          afft(stars%igfft(i,2))=real(fg3(stars%igfft(i,1))*&
-     &                                   stars%pgfft(i))
-          bfft(stars%igfft(i,2))=aimag(fg3(stars%igfft(i,1))*&
-     &                                   stars%pgfft(i))
+          ctmp = fg3(stars%igfft(i,1))*stars%pgfft(i)
+          afft(stars%igfft(i,2))=real(ctmp)
+          bfft(stars%igfft(i,2))=aimag(ctmp)
         ENDDO
       ENDIF
 
@@ -60,8 +60,8 @@
           fg3(i) = cmplx(0.0,0.0)
         ENDDO
         DO i=0,stars%kimax
-          fg3(stars%igfft(i,1))=fg3(stars%igfft(i,1))+  stars%pgfft(i)*&
-     &                cmplx(afft(stars%igfft(i,2)),bfft(stars%igfft(i,2)))
+          fg3(stars%igfft(i,1)) = fg3(stars%igfft(i,1)) + CONJG( stars%pgfft(i) ) * &
+     &                CMPLX(afft(stars%igfft(i,2)),bfft(stars%igfft(i,2)))
         ENDDO
         scale=1.0/ifftd
         IF (PRESENT(scaled)) THEN

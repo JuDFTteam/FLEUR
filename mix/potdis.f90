@@ -22,7 +22,8 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     .. Local Scalars ..
-    REAL fact,facv,phase,rhs,sumis,sumz
+    REAL fact,facv,rhs,sumis,sumz
+    COMPLEX phase
     INTEGER i,i1,i2,i3,id2,id3,io,ip,iter,ivac,j,k1,k2,k3,lh,n,&
                  nk12,npz,nt,num,na
     LOGICAL tail
@@ -111,8 +112,10 @@ CONTAINS
                    af3(i,1) = 0.
                    bf3(i,1) = 0.
                 ELSE
-                   af3(i,1) = REAL(rhpw(id3,num,1))*phase
-                   bf3(i,1) = AIMAG(rhpw(id3,num,1))*phase
+                   af3(i,1) =  REAL(rhpw(id3,num,1))*REAL(phase) &
+                           - AIMAG(rhpw(id3,num,1))*AIMAG(phase)
+                   bf3(i,1) = AIMAG(rhpw(id3,num,1))*REAL(phase) &
+                           +  REAL(rhpw(id3,num,1))*AIMAG(phase)
                 END IF
              ENDDO
           ENDDO

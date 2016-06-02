@@ -381,9 +381,10 @@
                             sf = czero
                             DO  j = 1,sym%nop
                                x = -tpi_const* ( kr(1,j) * atoms%taual(1,nat)&
-                                    &                           + kr(2,j) * atoms%taual(2,nat)&
-                                    &                           + kr(3,j) * atoms%taual(3,nat))
-                               sf = sf + CMPLX(COS(x),SIN(x))*phas(j)
+                                    &          + kr(2,j) * atoms%taual(2,nat)&
+                                    &          + kr(3,j) * atoms%taual(3,nat))
+                         !gb      sf = sf + CMPLX(COS(x),SIN(x))*phas(j)
+                               sf = sf + CMPLX(COS(x),SIN(x))*conjg(phas(j))
                             ENDDO
                             sf = sf / REAL( sym%nop )
                             qpw(k,jspin) = qpw(k,jspin) + sf * qf(k)
@@ -398,8 +399,8 @@
                             sf = czero
                             DO  j = 1,oneD%ods%nop
                                x = -tpi_const* ( kro(1,j)*atoms%taual(1,nat)&
-                                    &                          + kro(2,j)*atoms%taual(2,nat)&
-                                    &                          + kro(3,j)*atoms%taual(3,nat))
+                                    &          + kro(2,j)*atoms%taual(2,nat)&
+                                    &          + kro(3,j)*atoms%taual(3,nat))
                                sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
                             ENDDO
                             sf = sf / REAL( oneD%ods%nop )

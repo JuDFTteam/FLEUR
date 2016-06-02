@@ -60,7 +60,7 @@
                pylm(lm,n) = cmplx(0.,0.)
          ENDDO
          DO j = 1,sym%nop
-            x = tpi_const* dot_product(kr(:,j),atoms%taual(:,na))
+            x = tpi_const* dot_product(real(kr(:,j)),atoms%taual(:,na))
             sf = cmplx(cos(x),sin(x))*phas(j)
             DO l = 0,atoms%lmax(n)
                ll1 = l*(l+1) + 1

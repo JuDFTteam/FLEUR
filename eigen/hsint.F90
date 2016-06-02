@@ -49,12 +49,12 @@ CONTAINS
 #endif
     !     ..
     !     .. Local Scalars ..
-    COMPLEX th 
-    REAL phase,b1(3),b2(3),r2
+    COMPLEX th,ts,phase
+    REAL b1(3),b2(3),r2
     INTEGER i,i1,i2,i3,ii,in,j,ig3,ispin,l
     INTEGER istart,nc
 
-    COMPLEX ust1,vp1,ts
+    COMPLEX ust1,vp1
     COMPLEX, ALLOCATABLE :: vpw1(:)  ! for J constants
     !     ..
     !     ..

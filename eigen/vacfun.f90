@@ -44,7 +44,8 @@ CONTAINS
     REAL,    INTENT (OUT):: ddnv(dimension%nv2d,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL ev,phase,scale,xv,yv,vzero
+    REAL ev,scale,xv,yv,vzero
+    COMPLEX phase
     INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin,jsp1,jsp2
     LOGICAL tail
     !     ..
