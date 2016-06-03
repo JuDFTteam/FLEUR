@@ -32,8 +32,8 @@
       ELSE
          DO n = 1,nop
             ni = invtab(n)
-            phas(n) = exp(cmplx(0,1)*tpi_const* 
-     +                         dot_product(kr(:,n),tau(:,ni)))
+            phas(n) = exp(cmplx(0.0,-1.0)*tpi_const* 
+     +                   dot_product(real(kr(:,n)),tau(:,ni)))
 ! note that, in general phas(n) could be complex!
          ENDDO
       END IF

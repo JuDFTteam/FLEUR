@@ -74,7 +74,7 @@ CONTAINS
        ENDDO
        scale=1.0/ifftd2
        DO i=0,stars%kimax2
-          fg2(stars%igfft2(i,1))=fg2(stars%igfft2(i,1))+stars%pgfft2(i)*&
+          fg2(stars%igfft2(i,1))=fg2(stars%igfft2(i,1))+ CONJG( stars%pgfft2(i) ) * &
                &                 CMPLX(afft2(stars%igfft2(i,2)),bfft2(stars%igfft2(i,2)))
        ENDDO
        fg=scale*REAL(fg2(1))/stars%nstr2(1)

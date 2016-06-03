@@ -973,9 +973,9 @@ enddo
              !Note: no deallocation anymore, we rely on Fortran08 :-)
 
              IF ((jsp_end.EQ.input%jspins)) THEN
-                IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK")
+                IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK",mpi%irank)
 
-                IF (vacuum%nstm.EQ.3)  CALL juDFT_end("VACWAVE OK")
+                IF (vacuum%nstm.EQ.3)  CALL juDFT_end("VACWAVE OK",mpi%irank)
              ENDIF
            END SUBROUTINE cdnval
          END MODULE m_cdnval

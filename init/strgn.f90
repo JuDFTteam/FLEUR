@@ -221,7 +221,7 @@ CONTAINS
        DO k2 = -stars%k2d,stars%k2d
           DO k1 = -stars%k1d,stars%k1d
              stars%ig(k1,k2,k3) = 0
-             stars%rgphs(k1,k2,k3) = 0.0
+             stars%rgphs(k1,k2,k3) = cmplx(0.0,0.0)
           ENDDO
        ENDDO
     ENDDO
@@ -347,7 +347,7 @@ CONTAINS
     kidx=0
     kidx2=0
     !-gu
-    stars%rgphs(:,:,:) = 0.0
+    stars%rgphs(:,:,:) = cmplx(0.0,0.0)
     DO  k = 1,stars%ng3
 
        CALL spgrot(&
@@ -498,7 +498,7 @@ CONTAINS
     ! normalize phases:
     !
     IF (sym%symor) THEN
-       stars%rgphs(:,:,:) = 1.0
+       stars%rgphs(:,:,:) = cmplx(1.0,0.0)
     ELSE
        pon = 1.0 / sym%nop
        pon2 = 1.0 / sym%nop2
@@ -831,7 +831,7 @@ CONTAINS
     !
     ! sum over phases
     !
-    stars%rgphs(:,:,:) = 0.0
+    stars%rgphs(:,:,:) = cmplx(0.0,0.0)
     starloop: DO k = 1,stars%ng3
 
        CALL spgrot(&
@@ -906,7 +906,7 @@ CONTAINS
     ! normalize phases:
     !
     IF (sym%symor) THEN
-       stars%rgphs(:,:,:) = 1.0
+       stars%rgphs(:,:,:) = cmplx(1.0,0.0)
     ELSE
        pon = 1.0 / sym%nop
        DO k3 = -mxx3,mxx3

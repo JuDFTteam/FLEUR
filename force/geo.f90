@@ -88,7 +88,7 @@ CONTAINS
          &          lconv)
     IF (lconv) THEN
        WRITE (6,'(a)') "Des woars!"
-       CALL juDFT_end(" GEO Des woars ")
+       CALL juDFT_end(" GEO Des woars ", 1) ! The 1 is temporarily. Should be mpi%irank.
     ELSE
 
        atoms_new=atoms

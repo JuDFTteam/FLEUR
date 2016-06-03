@@ -17,6 +17,9 @@
           USE m_gen_bz
           USE icorrkeys
           USE m_ylm
+          USE m_InitParallelProcesses
+          USE m_xmlOutput
+          USE m_winpXML
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -46,9 +49,20 @@
           LOGICAL,          INTENT(OUT):: l_opti
          
 
+          INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
+          INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
+          INTEGER, ALLOCATABLE          :: speciesRepAtomType(:)
+          REAL, ALLOCATABLE             :: xmlCoreOccs(:,:,:)
+          LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:,:)
+          CHARACTER(len=3), ALLOCATABLE :: noel(:)
           !     .. Local Scalars ..
-          INTEGER    :: i,n,l,m1,m2,isym,iisym
+          INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies
           COMPLEX    :: cdum
+          CHARACTER(len=4)              :: namex
+          CHARACTER(len=12)             :: relcor
+          CHARACTER(len=8)              :: comment(10)
+          REAL                          :: a1(3),a2(3),a3(3)
+          REAL                          :: scale, dtild
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr(3)
@@ -72,6 +86,7 @@
           input%gw_neigd          =  0
           !-t3e
           IF (mpi%irank.EQ.0) THEN
+             CALL startXMLOutput()
 #ifndef  __TOS_BGQ__
              !Do not open out-file on BlueGene
              OPEN (6,file='out',form='formatted',status='unknown')
@@ -80,23 +95,51 @@
           ENDIF
 
           input%l_inpXML = .FALSE.
-          kpts%numSpecialPoints = 0
+          kpts%numSpecialPoints = 1
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
           IF(.NOT.juDFT_was_argument("-xmlInput")) THEN
              input%l_inpXML = .FALSE.
           END IF
           IF (input%l_inpXML) THEN
              IF (mpi%irank.EQ.0) THEN
+                ALLOCATE(noel(1),atomTypeSpecies(1),speciesRepAtomType(1))
+                ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
+                ALLOCATE(xmlCoreOccs(1,1,1))
+                namex = '    '
+                relcor = '            '
+                comment = '          '
+                a1 = 0.0
+                a2 = 0.0
+                a3 = 0.0
+                scale = 1.0
                 CALL r_inpXML(&
                               atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-                              cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti)
+                              cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
+                              noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+                              xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
 
                 ALLOCATE (results%force(3,atoms%ntype,dimension%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
                 results%force(:,:,:) = 0.0
 
-                WRITE(*,*) 'TODO: Distribute parameters and arrays to other parallel processes!'
+                numSpecies = SIZE(speciesRepAtomType)
+                CALL w_inpXML(&
+     &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,comment,&!comment is 'name'. Still has to be read in!
+     &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,numSpecies,&
+     &                        enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
+                DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
+                DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
+
+#ifdef CPP_MPI
+             CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
+                                        dimension,cell,sym,xcpot,noco,jij,oneD,hybrid,&
+                                        kpts,enpara,sphhar,mpi,results,obsolete)
+#endif
+
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
 
           CALL dimens(&

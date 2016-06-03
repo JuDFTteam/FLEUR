@@ -335,7 +335,7 @@ c      endif
      >      volint,symor,pos,ef,0,l_soc, !irecl=0
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
      >      theta,phi,soc_opt)
-         CALL juDFT_end("updown done")
+         CALL juDFT_end("updown done",irank)
       endif
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
@@ -1649,7 +1649,7 @@ c#endif
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,ierr)
 #endif
-      if(.not.wann%l_ldauwan)  CALL juDFT_end("wannier good")
+      if(.not.wann%l_ldauwan)  CALL juDFT_end("wannier good",irank)
 
       END SUBROUTINE wannier
       END MODULE m_wannier

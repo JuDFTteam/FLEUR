@@ -30,6 +30,7 @@
 
       INTEGER i,ifftd
       REAL scale,zero
+      COMPLEX ctmp
 
       ifftd=k1d*k2d*k3d
       zero=0.0
@@ -41,8 +42,9 @@ c
         afft=0.0
         bfft=0.0
         DO i=0,kimax-1
-          afft(igfft2(i))=real(fg3(igfft1(i))  * pgfft(i))
-          bfft(igfft2(i))=aimag(fg3(igfft1(i)) * pgfft(i))
+          ctmp = fg3(igfft1(i))  * pgfft(i)
+          afft(igfft2(i))=real(ctmp)
+          bfft(igfft2(i))=aimag(ctmp)
         ENDDO
       ENDIF
 
@@ -61,7 +63,7 @@ c
         ENDDO
         scale=1.0/ifftd
         DO i=0,kimax-1
-          fg3(igfft1(i))=fg3(igfft1(i))+pgfft(i)*
+          fg3(igfft1(i))=fg3(igfft1(i))+CONJG(pgfft(i))*
      +                cmplx(afft(igfft2(i)),bfft(igfft2(i)))
         ENDDO
         DO i=1,ng3

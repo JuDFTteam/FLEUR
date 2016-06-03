@@ -649,7 +649,7 @@ CONTAINS
           IF(l_file) CLOSE(1014)
           INQUIRE(667,opened=l_file)
           IF(l_file) CLOSE(667)
-          CALL juDFT_end("GW finished")
+          CALL juDFT_end("GW finished",mpi%irank)
        ENDIF
     ENDIF
 

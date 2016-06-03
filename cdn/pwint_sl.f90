@@ -66,7 +66,7 @@ CONTAINS
        CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab, kv, kr,ph)
        sfs = (0.0,0.0)
        DO  nn = 1,sym%nop
-          arg = tpi_const* dot_product(kr(:,nn),atoms%taual(:,nat))
+          arg = tpi_const* dot_product(real(kr(:,nn)),atoms%taual(:,nat))
           sfs = sfs + CMPLX(COS(arg),SIN(arg))*ph(nn)
        ENDDO
        sfs = sfs/sym%nop

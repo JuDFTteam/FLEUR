@@ -478,7 +478,7 @@ CONTAINS
              CALL cfft(psi2r,psi2i,ifftq3,stars%kq3_fft,ifftq3,isn)
              cwk=0.0
              DO ik = 0 , stars%kmxq_fft - 1
-                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
                      CMPLX(psi1r(igq_fft(ik)),psi1i(igq_fft(ik)))
              ENDDO
              DO istr = 1,stars%ng3_fft
@@ -491,7 +491,7 @@ CONTAINS
 
              cwk=0.0
              DO ik = 0 , stars%kmxq_fft - 1
-                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
                      CMPLX(psi2r(igq_fft(ik)),psi2i(igq_fft(ik)))
              ENDDO
              DO istr = 1,stars%ng3_fft
@@ -582,16 +582,16 @@ CONTAINS
     ecwk=0.0
     IF (noco%l_noco) THEN
        DO ik = 0 , stars%kmxq_fft - 1
-          cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+          cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
                CMPLX(rhomat(igq_fft(ik),idens),psi1r(igq_fft(ik)))
        ENDDO
     ELSE
        DO ik = 0 , stars%kmxq_fft - 1
 #if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+     cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
      CMPLX(rhon(igq_fft(ik)),zero)
 #else
-          cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+          cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
                CMPLX(rhon(igq_fft(ik)),psir(igq_fft(ik)))
 #endif
        ENDDO
@@ -599,10 +599,10 @@ CONTAINS
        IF (input%l_f) THEN 
           DO ik = 0 , stars%kmxq_fft - 1
 #if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+     ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
      CMPLX(ekin(igq_fft(ik)),zero)
 #else
-             ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+stars%pgfft(ik)*&
+             ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
                   CMPLX(ekin(igq_fft(ik)),psii(igq_fft(ik)))
 #endif
           ENDDO

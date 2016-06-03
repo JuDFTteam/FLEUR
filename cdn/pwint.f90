@@ -86,11 +86,8 @@
             srmt = s*atoms%rmt(n)
             sfs = (0.0,0.0)
             DO  nn = 1,sym%nop
-             !arg = tpi* (kr(1,nn)*taual(1,na)+kr(2,nn)*taual(2,na)+
-             !+              kr(3,nn)*taual(3,na))
-               arg =tpi_const*dot_product(kr(:,nn),atoms%taual(:,na))
-               !sfs = sfs + exp(cmplx(0.0,arg))*ph(nn)
-               sfs=sfs+cmplx(cos(arg),sin(arg))*ph(nn)
+               arg = tpi_const * dot_product(real(kr(:,nn)),atoms%taual(:,na))
+               sfs = sfs + cmplx(cos(arg),sin(arg))*ph(nn)
             ENDDO
             sfs = sfs/sym%nop
 !     -----3*ji(gr)/gr term
@@ -108,12 +105,10 @@
      &              stars%kv3,&
      &              kr,ph)
                sfs = (0.0,0.0)
-               DO 11 nn = 1,sym%nop
-                  arg = tpi_const* (kr(1,nn)*atoms%taual(1,na)+&
-     &                 kr(2,nn)*atoms%taual(2,na)+&
-     &                 kr(3,nn)*atoms%taual(3,na))
-                  sfs = sfs + exp(cmplx(0.0,arg))*ph(nn)
- 11            CONTINUE
+               DO nn = 1,sym%nop
+                 arg = tpi_const * dot_product(real(kr(:,nn)),atoms%taual(:,na))
+                 sfs = sfs + cmplx(cos(arg),sin(arg))*ph(nn)
+               ENDDO
                sfs = sfs/sym%nop
 !     -----3*ji(gr)/gr term
                s1 = 3.* (sin(srmt)/srmt-cos(srmt))/ (srmt*srmt)
