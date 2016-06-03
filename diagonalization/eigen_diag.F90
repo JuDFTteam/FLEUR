@@ -36,8 +36,11 @@ CONTAINS
     USE m_alinemuff
     USE m_types
     USE m_franza
+   
     IMPLICIT NONE
-
+#ifdef CPP_MPI    
+    include 'mpif.h'
+#endif
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_dimension),INTENT(IN) :: dimension
     TYPE(t_oneD),INTENT(IN)      :: oneD
@@ -74,8 +77,31 @@ CONTAINS
     !Locals
     REAL :: time1
     REAL :: time2
-    INTEGER :: ndim,err
+    INTEGER :: ndim,err,n,nn,i
     LOGICAL :: parallel
+    CHARACTER(len=20)::f
+
+#if 1==2
+    !This is only needed for debugging
+    print *,n_rank,lapw%nmat
+    write(f,'(a,i0)') "a.",n_rank
+    open(99,file=f)
+    write(f,'(a,i0)') "b.",n_rank
+    open(98,file=f)
+    i=0
+    DO n=n_rank+1,lapw%nmat,n_size
+       DO nn=1,n
+          i=i+1
+          write(99,'(2(i10,1x),4(f15.4,1x))') n,nn,a(i)
+          write(98,'(2(i10,1x),4(f15.4,1x))') n,nn,b(i)
+       ENDDO
+    ENDDO
+    CALL MPI_BARRIER(MPI_COMM_WORLD,err)
+    close(99)
+     close(98)
+    STOP 'DEBUG'
+#endif
+    
     !
     !  The array z will contain the eigenvectors and is allocated now
     !
