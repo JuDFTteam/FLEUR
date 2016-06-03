@@ -73,6 +73,8 @@ CONTAINS
     INTEGER :: n_threads,thread,blocksize,maxloop
     INTEGER,ALLOCATABLE :: start_thread(:),stop_thread(:)
 
+
+    
     lnonsphd=MAXVAL(atoms%lnonsph)*(MAXVAL(atoms%lnonsph)+2)
     ALLOCATE(dtd(0:lnonsphd,0:lnonsphd),utd(0:lnonsphd,0:lnonsphd),dtu(0:lnonsphd,0:lnonsphd),utu(0:lnonsphd,0:lnonsphd))
     !Decide how to distribute the work
@@ -209,13 +211,14 @@ CONTAINS
                    DO WHILE(kii<lapw%nv_tot)
                       !DO kii =  n_rank, nv_tot-1, n_size
                       ki = MOD(kii,lapw%nv(iintsp)) + 1
-                      bsize=MIN(SIZE(aa_block,1),lapw%nv(iintsp)/n_size-ki*n_size+1) !Either use maximal blocksize or number of rows left to calculate
+                      bsize=MIN(SIZE(aa_block,1),(lapw%nv(iintsp)-ki)/n_size+1) !Either use maximal blocksize or number of rows left to calculate
                       IF (bsize<1) EXIT !nothing more to do here
                       bsize2=bsize*n_size
-                      !aa_block(:bsize,:ki+bsize2-1)=matmul(a(ki:ki+bsize-1:n_size,0:lmp,iintsp),conjg(transpose(ax(:ki+bsize2-1,0:lmp))))+ &
-                      !                              matmul(b(ki:ki+bsize-1:n_size,0:lmp,iintsp),conjg(transpose(bx(:ki+bsize2-1,0:lmp))))
-                      CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,a(ki,0,iintsp),SIZE(a,1)*n_size,ax(1,0),SIZE(ax,1),zero,aa_block,SIZE(aa_block,1))
-                      CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki,0,iintsp),SIZE(a,1)*n_size,bx(1,0),SIZE(ax,1),one,aa_block,SIZE(aa_block,1))
+                      bsize2=min(bsize2,lapw%nv(iintsp)-ki+1)
+                      aa_block(:bsize,:ki+bsize2-1)=matmul(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),conjg(transpose(ax(:ki+bsize2-1,0:lmp))))+ &
+                                                    matmul(b(ki:ki+bsize2-1:n_size,0:lmp,iintsp),conjg(transpose(bx(:ki+bsize2-1,0:lmp))))
+                      !CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,a(ki,0,iintsp),SIZE(a,1)*n_size,ax(1,0),SIZE(ax,1),zero,aa_block,SIZE(aa_block,1))
+                      !CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki,0,iintsp),SIZE(a,1)*n_size,bx(1,0),SIZE(ax,1),one,aa_block,SIZE(aa_block,1))
                       DO kb=1,bsize
                          IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
                             nc = 1+kii/n_size
