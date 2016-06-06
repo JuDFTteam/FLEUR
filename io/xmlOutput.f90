@@ -84,9 +84,11 @@ MODULE m_xmlOutput
             TYPE IS(INTEGER)
                WRITE(charAttributeValues(i),'(i0)'), attributeValues(i)
             TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f20.10)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(f19.10)'), attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)'), attributeValues(i)
+            TYPE IS(CHARACTER(LEN=*))
+               WRITE(charAttributeValues(i),'(a)'), TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
          END SELECT
@@ -98,9 +100,11 @@ MODULE m_xmlOutput
                TYPE IS(INTEGER)
                   WRITE(charContentList(i),'(i0)'), contentList(i)
                TYPE IS(REAL)
-                  WRITE(charContentList(i),'(f20.10)'), contentList(i)
+                  WRITE(charContentList(i),'(f19.10)'), contentList(i)
                TYPE IS(LOGICAL)
                   WRITE(charContentList(i),'(l1)'), contentList(i)
+               TYPE IS(CHARACTER(LEN=*))
+                  WRITE(charContentList(i),'(a)'), TRIM(ADJUSTL(contentList(i)))
                CLASS DEFAULT
                   STOP 'Type of contentList not allowed'
             END SELECT
@@ -152,7 +156,7 @@ MODULE m_xmlOutput
       INTEGER :: i, j, contentLineLength, contentLineListSize
       CHARACTER(LEN=70)               :: format
       CHARACTER(LEN=200)              :: outputString
-      INTEGER                         :: contentListSize, overallListSize
+      INTEGER                         :: contentListSize, overallListSize, numContentLineChars
       INTEGER                         :: lengthsShape(2)
 
       IF(SIZE(attributeNames).NE.SIZE(attributeValues)) THEN
@@ -201,8 +205,14 @@ MODULE m_xmlOutput
          END IF
          WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
          IF(SIZE(contentLineList).GT.1) THEN
-            WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+2),",a)"
             DO i = 1, SIZE(contentLineList)
+               IF (i.EQ.SIZE(contentLineList)) THEN
+                  numContentLineChars = 20*MOD(SIZE(contentList),contentLineLength)
+                  IF(numContentLineChars.EQ.0) numContentLineChars = 20 * contentLineLength
+                  WRITE(format,'(a,i0,a,i0,a)') "(a",3*(currentElementIndex+2),",a",numContentLineChars,")"
+               ELSE
+                  WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+2),",a100)"
+               END IF
                WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(contentLineList(i)))
             END DO
             WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
@@ -256,7 +266,7 @@ MODULE m_xmlOutput
             IF((i-1)*contentLineLength+j.GT.SIZE(contentList)) THEN
                RETURN
             END IF
-            contentLineList(i) = TRIM(ADJUSTL(contentLineList(i)))//' '//TRIM(ADJUSTL(contentList((i-1)*contentLineLength+j)))
+            WRITE(contentLineList(i),'(a,a20)') TRIM(ADJUSTL(contentLineList(i))), TRIM(ADJUSTL(contentList((i-1)*contentLineLength+j)))
          END DO
       END DO
    END SUBROUTINE fillContentLineList
@@ -299,9 +309,11 @@ MODULE m_xmlOutput
             TYPE IS(INTEGER)
                WRITE(charAttributeValues(i),'(i0)'), attributeValues(i)
             TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f20.10)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(f19.10)'), attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)'), attributeValues(i)
+            TYPE IS(CHARACTER(LEN=*))
+               WRITE(charAttributeValues(i),'(a)'), TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
          END SELECT

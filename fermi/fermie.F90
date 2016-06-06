@@ -37,6 +37,7 @@ CONTAINS
     USE m_ferhis
     USE m_fergwt
     USE m_types
+    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)   :: mpi
@@ -64,6 +65,7 @@ CONTAINS
     INTEGER, ALLOCATABLE :: idxeig(:),idxjsp(:),idxkpt(:),INDEX(:)
     REAL,    ALLOCATABLE :: e(:),eig(:,:,:),we(:)
     INTEGER ne(kpts%nkptd,SIZE(results%w_iks,3))
+    CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
     !--- J constants
@@ -133,15 +135,23 @@ CONTAINS
     ENDIF
     !---> pk non-collinear
     !
-    DO  jsp = 1,nspins
+    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('eigenvalues')
+    DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
           CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
           IF ( mpi%irank == 0 ) THEN
              WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
              WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
              WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
+             attributes = ''
+             WRITE(attributes(1),'(i0)'), jsp
+             WRITE(attributes(2),'(i0)'), k
+             WRITE(attributes(3),'(f15.8)'), kpts%bk(1,k)
+             WRITE(attributes(4),'(f15.8)'), kpts%bk(2,k)
+             WRITE(attributes(5),'(f15.8)'), kpts%bk(3,k)
+             CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x','k_y','k_z'/),attributes,eig(1:ne(k,jsp),k,jsp))
           END IF
-          nv= -1 
+          nv= -1
           !
           !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE 
           !--->          CONECTION TO THE ORIGINAL ARRAYS
@@ -152,11 +162,13 @@ CONTAINS
              idxeig(n+j) = j+n_help
              idxkpt(n+j) = k
              idxjsp(n+j) = jsp
- 	  ENDDO
+ 	       END DO
           !--->          COUNT THE NUMBER OF EIGENVALUES
           n = n + ne(k,jsp)
-       ENDDO
-    ENDDO
+       END DO
+    END DO
+    IF (mpi%irank == 0) CALL closeXMLElement('eigenvalues')
+
     CALL sort(n,e,index)
 
     !     Check if no deep eigenvalue is found
