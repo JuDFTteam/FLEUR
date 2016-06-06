@@ -64,11 +64,12 @@ CONTAINS
     INTEGER,INTENT (IN) :: it      
     !     ..
     !     .. Local Scalars ..
-    REAL rhs,totz,vmd,zintn_r
+    REAL rhs,totz, eigSum
     INTEGER n,j,nt,iter,i
     CHARACTER(LEN=20) totalEnergyString
 
     !     .. Local Arrays ..
+    REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
     REAL dpj(atoms%jmtd)
     !.....density
     REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
@@ -82,23 +83,14 @@ CONTAINS
          vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),vz(vacuum%nmzd,2,input%jspins),&
          vpw(stars%n3d,input%jspins),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins) )
     !
-    WRITE(totalEnergyString,'(f20.10)'), results%tote
-    IF (hybrid%l_calhf) THEN
-       CALL openXMLElement('totalEnergy',(/'value','units','comment'/),(/totalEnergyString,'Htr','HF'/))
-    ELSE
-       CALL openXMLElement('totalEnergy',(/'value','units'/),(/totalEnergyString,'Htr'/))
-    END IF
     WRITE (6,FMT=8000)
     WRITE (16,FMT=8000)
 8000 FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
     !
     !      ---> sum of eigenvalues (core, semicore and valence states)
-    ! 
-    results%tote = results%seigscv + results%seigc
-    CALL openXMLElementPoly('sumOfEigenvalues',(/'value'/),(/results%tote/))
-    CALL writeXMLElementFormPoly('coreElectrons',(/'value'/),(/results%seigc/),reshape((/17,20/),(/1,2/)))
-    CALL writeXMLElementFormPoly('valenceElectrons',(/'value'/),(/results%seigscv/),reshape((/14,20/),(/1,2/)))
-    CALL closeXMLElement('sumOfEigenvalues')
+    !
+    eigSum = results%seigscv + results%seigc
+    results%tote = eigSum
     WRITE (6,FMT=8010) results%tote
     WRITE (16,FMT=8010) results%tote
 8010 FORMAT (/,10x,'sum of eigenvalues =',t40,f20.10)
@@ -106,7 +98,6 @@ CONTAINS
     !      ---> add contribution of coulomb potential
     !
     results%tote = results%tote + 0.5e0*results%te_vcoul
-    CALL writeXMLElementPoly('densityCoulombPotentialIntegral',(/'value'/),(/results%te_vcoul/))
     WRITE (6,FMT=8020) results%te_vcoul
     WRITE (16,FMT=8020) results%te_vcoul
 8020 FORMAT (/,10x,'density-coulomb potential integral =',t40,f20.10)
@@ -114,7 +105,6 @@ CONTAINS
     !      ---> add contribution of effective potential
     !
     results%tote = results%tote - results%te_veff
-    CALL writeXMLElementPoly('densityEffectivePotentialIntegral',(/'value'/),(/results%te_veff/))
     WRITE (6,FMT=8030) results%te_veff
     WRITE (16,FMT=8030) results%te_veff
 8030 FORMAT (/,10x,'density-effective potential integral =',t40,f20.10)
@@ -122,7 +112,6 @@ CONTAINS
     !      ---> add contribution of exchange-correlation energy
     !
     results%tote = results%tote + results%te_exc
-    CALL writeXMLElementPoly('chargeDenXCDenIntegral',(/'value'/),(/results%te_exc/))
     WRITE (6,FMT=8040) results%te_exc
     WRITE (16,FMT=8040) results%te_exc
 8040 FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,f20.10)
@@ -135,8 +124,6 @@ CONTAINS
     ELSE IF ( xcpot%icorr .EQ. icorr_exx ) THEN
        results%tote = results%tote + 0.5e0*results%te_hfex%valence
     END IF
-    CALL writeXMLElementPoly('FockExchangeEnergyValence',(/'value'/),(/0.5e0*results%te_hfex%valence/))
-    CALL writeXMLElementPoly('FockExchangeEnergyCore',(/'value'/),(/0.5e0*results%te_hfex%core/))
     WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
     WRITE (16,FMT=8100) 0.5e0*results%te_hfex%valence
     WRITE (6,FMT=8101)  0.5e0*results%te_hfex%core
@@ -199,7 +186,6 @@ CONTAINS
     ! ----> coulomb interaction between electrons and nuclei of different m.t.s
     !
     DO  n = 1,atoms%ntype
-       CALL openXMLElementPoly('atomTypeDependentContributions',(/'atomType'/),(/n/))
        DO  j = 1,atoms%jri(n)
           dpj(j) = rho(j,0,n,1)/atoms%rmsh(j,n)
        ENDDO
@@ -207,21 +193,17 @@ CONTAINS
        !
        results%tote = results%tote - atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
        !
-       zintn_r = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
-       CALL writeXMLElementPoly('electronNucleiInteractionDifferentMTs',(/'value'/),(/zintn_r/))
-       WRITE (6,FMT=8045) zintn_r
-       WRITE (16,FMT=8045) zintn_r
+       zintn_r(n) = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
+       WRITE (6,FMT=8045) zintn_r(n)
+       WRITE (16,FMT=8045) zintn_r(n)
        CALL intgr3(rho(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
-       vmd = atoms%rmt(n)*atoms%vr0(n)/sfp_const + atoms%zatom(n) - totz*sfp_const
-       vmd = -atoms%neq(n)*atoms%zatom(n)*vmd/ (2.*atoms%rmt(n))
-       CALL writeXMLElementPoly('MadelungTerm',(/'value'/),(/vmd/))
-       WRITE (6,FMT=8050) n,vmd
-       WRITE (16,FMT=8050) n,vmd
-       results%tote = results%tote + vmd
-       CALL closeXMLElement('atomTypeDependentContributions')
+       vmd(n) = atoms%rmt(n)*atoms%vr0(n)/sfp_const + atoms%zatom(n) - totz*sfp_const
+       vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
+       WRITE (6,FMT=8050) n,vmd(n)
+       WRITE (16,FMT=8050) n,vmd(n)
+       results%tote = results%tote + vmd(n)
     ENDDO
     IF (atoms%n_u.GT.0) THEN
-       CALL writeXMLElementPoly('dft+uCorrection',(/'value'/),(/results%e_ldau/))
        WRITE ( 6,FMT=8090) results%e_ldau
        WRITE (16,FMT=8090) results%e_ldau
        results%tote = results%tote - results%e_ldau             ! gu test
@@ -256,9 +238,34 @@ CONTAINS
        WRITE ( 6,FMT=8081) results%tote-0.5e0*results%ts
        WRITE (16,FMT=8081) results%tote-0.5e0*results%ts
     END IF
-    CALL writeXMLElementPoly('tkbTimesEntropy',(/'value'/),(/results%ts/))
-    CALL writeXMLElementPoly('freeEnergy',(/'value'/),(/results%tote-results%ts/))
-    CALL writeXMLElementPoly('extrapolationTo0K',(/'value'/),(/results%tote-0.5e0*results%ts/))
+
+    WRITE(totalEnergyString,'(f20.10)'), results%tote
+    IF (hybrid%l_calhf) THEN
+       CALL openXMLElementForm('totalEnergy',(/'value','units','comment'/),(/totalEnergyString,'Htr','HF'/),reshape((/40,20/),(/1,2/)))
+    ELSE
+       CALL openXMLElementForm('totalEnergy',(/'value','units'/),(/totalEnergyString,'Htr'/),reshape((/40,20/),(/1,2/)))
+    END IF
+    CALL openXMLElementFormPoly('sumOfEigenvalues',(/'value'/),(/eigSum/),reshape((/32,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('coreElectrons',(/'value'/),(/results%seigc/),reshape((/32,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('valenceElectrons',(/'value'/),(/results%seigscv/),reshape((/29,20/),(/1,2/)))
+    CALL closeXMLElement('sumOfEigenvalues')
+    CALL writeXMLElementFormPoly('densityCoulombPotentialIntegral',(/'value'/),(/results%te_vcoul/),reshape((/17,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('densityEffectivePotentialIntegral',(/'value'/),(/results%te_veff/),reshape((/15,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('chargeDenXCDenIntegral',(/'value'/),(/results%te_exc/),reshape((/26,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('FockExchangeEnergyValence',(/'value'/),(/0.5e0*results%te_hfex%valence/),reshape((/23,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('FockExchangeEnergyCore',(/'value'/),(/0.5e0*results%te_hfex%core/),reshape((/26,20/),(/1,2/)))
+    DO  n = 1,atoms%ntype
+       CALL openXMLElementPoly('atomTypeDependentContributions',(/'atomType'/),(/n/))
+       CALL writeXMLElementFormPoly('electronNucleiInteractionDifferentMTs',(/'value'/),(/zintn_r(n)/),reshape((/8,20/),(/1,2/)))
+       CALL writeXMLElementFormPoly('MadelungTerm',(/'value'/),(/vmd(n)/),reshape((/33,20/),(/1,2/)))
+       CALL closeXMLElement('atomTypeDependentContributions')
+    END DO
+    IF (atoms%n_u.GT.0) THEN
+       CALL writeXMLElementFormPoly('dft+uCorrection',(/'value'/),(/results%e_ldau/),reshape((/32,20/),(/1,2/)))
+    END IF
+    CALL writeXMLElementFormPoly('tkbTimesEntropy',(/'value'/),(/results%ts/),reshape((/33,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('freeEnergy',(/'value'/),(/results%tote-results%ts/),reshape((/38,20/),(/1,2/)))
+    CALL writeXMLElementFormPoly('extrapolationTo0K',(/'value'/),(/results%tote-0.5e0*results%ts/),reshape((/31,20/),(/1,2/)))
     CALL closeXMLElement('totalEnergy')
 8060 FORMAT (/,/,' ---->    input%total energy=',t40,f20.10,' htr')
 8061 FORMAT (/,/,' ----> HF input%total energy=',t40,f20.10,' htr')

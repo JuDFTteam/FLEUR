@@ -21,7 +21,9 @@ MODULE m_xmlOutput
    PUBLIC startXMLOutput, endXMLOutput
    PUBLIC writeXMLElementFormPoly, writeXMLElementPoly
    PUBLIC writeXMLElementForm, writeXMLElement
-   PUBLIC openXMLElementPoly, openXMLElementNoAttributes, openXMLElement, closeXMLElement
+   PUBLIC openXMLElementFormPoly, openXMLElementPoly
+   PUBLIC openXMLElementForm, openXMLElement
+   PUBLIC openXMLElementNoAttributes, closeXMLElement
    PUBLIC getXMLOutputUnitNumber
 
    CONTAINS
@@ -132,6 +134,7 @@ MODULE m_xmlOutput
       lengths = 0
       CALL writeXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths,contentList)
       DEALLOCATE(lengths)
+
    END SUBROUTINE writeXMLElementPoly
 
    SUBROUTINE writeXMLElementForm(elementName,attributeNames,attributeValues,lengths,contentList)
@@ -179,10 +182,8 @@ MODULE m_xmlOutput
          WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a,a"
          IF (bigLengths(i,2).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,2)
          WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a)"
-         WRITE(*,*) TRIM(ADJUSTL(format))
          WRITE(outputString,format) TRIM(ADJUSTL(outputString)), ' ', TRIM(ADJUSTL(attributeNames(i))),&
                                     '="', TRIM(ADJUSTL(attributeValues(i))), '"'
-!         outputString = TRIM(ADJUSTL(outputString))//' '//TRIM(ADJUSTL(attributeNames(i)))//'="'//TRIM(ADJUSTL(attributeValues(i)))//'"'
       END DO
       WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
       IF (PRESENT(contentList)) THEN
@@ -213,6 +214,7 @@ MODULE m_xmlOutput
          WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
       END IF
       DEALLOCATE (bigLengths)
+
    END SUBROUTINE writeXMLElementForm
 
    SUBROUTINE writeXMLElement(elementName,attributeNames,attributeValues,contentList)
@@ -236,8 +238,8 @@ MODULE m_xmlOutput
       lengths = 0
       CALL writeXMLElementForm(elementName,attributeNames,attributeValues,lengths,contentList)
       DEALLOCATE(lengths)
+
    END SUBROUTINE writeXMLElement
-   
 
    SUBROUTINE fillContentLineList(contentList,contentLineList,contentLineLength)
 
@@ -267,6 +269,24 @@ MODULE m_xmlOutput
       CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
       CLASS(*),         INTENT(IN) :: attributeValues(:)
 
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+
+      ALLOCATE(lengths(SIZE(attributeNames),2))
+      lengths = 0
+      CALL openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE openXMLElementPoly
+
+   SUBROUTINE openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      CLASS(*),         INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: lengths(:,:)
+
       CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
       INTEGER                         :: i
 
@@ -287,11 +307,10 @@ MODULE m_xmlOutput
          END SELECT
       END DO
 
-      CALL openXMLElement(elementName,attributeNames,charAttributeValues)
-
+      CALL openXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
       DEALLOCATE(charAttributeValues)
 
-   END SUBROUTINE openXMLElementPoly
+   END SUBROUTINE openXMLElementFormPoly
 
    SUBROUTINE openXMLElementNoAttributes(elementName)
 
@@ -312,19 +331,42 @@ MODULE m_xmlOutput
       openingString = '<'//TRIM(ADJUSTL(elementName))//'>'
       WRITE(format,'(a,i0,a)') "(a",3*currentElementIndex,",a)"
       WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(openingString))
+
    END SUBROUTINE openXMLElementNoAttributes
 
    SUBROUTINE openXMLElement(elementName,attributeNames,attributeValues)
 
       IMPLICIT NONE
 
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeValues(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+
+      ALLOCATE(lengths(SIZE(attributeNames),2))
+      lengths = 0
+      CALL openXMLElementForm(elementName,attributeNames,attributeValues,lengths)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE
+
+   SUBROUTINE openXMLElementForm(elementName,attributeNames,attributeValues,lengths)
+
+      IMPLICIT NONE
+
       CHARACTER(LEN=*)             :: elementName
       CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
       CHARACTER(LEN=*), INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: lengths(:,:)
 
-      INTEGER :: i
       CHARACTER(LEN=70)  :: format
       CHARACTER(LEN=200) :: openingString
+
+      INTEGER, ALLOCATABLE            :: bigLengths(:,:)
+      INTEGER                         :: i, j
+      INTEGER                         :: overallListSize
+      INTEGER                         :: lengthsShape(2)
 
       IF(SIZE(attributeNames).NE.SIZE(attributeValues)) THEN
          WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
@@ -338,16 +380,36 @@ MODULE m_xmlOutput
          WRITE(*,*) 'attributeValues', attributeValues
          STOP 'ERROR: xml hierarchy too deep!'
       END IF
-      currentElementIndex = currentElementIndex + 1
-      elementList(currentElementIndex) = TRIM(ADJUSTL(elementName))
+
+      lengthsShape = SHAPE(lengths)
+      overallListSize = SIZE(attributeNames)
+      ALLOCATE(bigLengths(overallListSize,2))
+      bigLengths = 0
+      DO j = 1, 2
+         DO i = 1, MIN(overallListSize,lengthsShape(1))
+            bigLengths(i,j) = lengths(i,j)
+         END DO
+      END DO
+
       openingString = '<'//TRIM(ADJUSTL(elementName))
       DO i = 1, SIZE(attributeNames)
-         openingString = TRIM(ADJUSTL(openingString))//' '//TRIM(ADJUSTL(attributeNames(i)))//'="'//TRIM(ADJUSTL(attributeValues(i)))//'"'
+         WRITE(format,'(a)') "(a,a,a"
+         IF (bigLengths(i,1).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,1)
+         WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a,a"
+         IF (bigLengths(i,2).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,2)
+         WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a)"
+         WRITE(openingString,format) TRIM(ADJUSTL(openingString)), ' ', TRIM(ADJUSTL(attributeNames(i))),&
+                                    '="', TRIM(ADJUSTL(attributeValues(i))), '"'
       END DO
       openingString = TRIM(ADJUSTL(openingString))//'>'
+
+      currentElementIndex = currentElementIndex + 1
+      elementList(currentElementIndex) = TRIM(ADJUSTL(elementName))
       WRITE(format,'(a,i0,a)') "(a",3*currentElementIndex,",a)"
       WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(openingString))
-   END SUBROUTINE openXMLElement
+      DEALLOCATE (bigLengths)
+
+   END SUBROUTINE openXMLElementForm
 
    SUBROUTINE closeXMLElement(elementName)
 
@@ -367,6 +429,7 @@ MODULE m_xmlOutput
       WRITE(format,'(a,i0,a)') "(a",3*currentElementIndex,",a)"
       WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(closingString))
       currentElementIndex = currentElementIndex - 1
+
    END SUBROUTINE closeXMLElement
 
 END MODULE m_xmlOutput
