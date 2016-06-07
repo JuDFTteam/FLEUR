@@ -114,8 +114,8 @@ CONTAINS
        CALL priv_create_memory(4*ntype*neig,local_slots,d%qal_handle,real_data_ptr=d%qal_data)
        CALL priv_create_memory(neig*2,local_slots,d%qvac_handle,real_data_ptr=d%qvac_data)
        CALL priv_create_memory(neig,local_slots,d%qis_handle,real_data_ptr=d%qis_data)
-       CALL priv_create_memory(neig*layers*2,local_slots,d%qvlay_handle,real_data_ptr=d%qvlay_data)
-       CALL priv_create_memory(nstars*neig*layers*2,local_slots,d%qstars_handle,cmplx_data_ptr=d%qstars_data)
+       CALL priv_create_memory(neig*max(1,layers)*2,local_slots,d%qvlay_handle,real_data_ptr=d%qvlay_data)
+       CALL priv_create_memory(max(1,nstars)*neig*max(1,layers)*2,local_slots,d%qstars_handle,cmplx_data_ptr=d%qstars_data)
        CALL priv_create_memory(neig,local_slots,d%jsym_handle,d%jsym_data)
        CALL priv_create_memory(neig,local_slots,d%ksym_handle,d%ksym_data)
        IF (l_mcd) CALL priv_create_memory(3*ntype*mcored*neig,local_slots,d%mcd_handle,real_data_ptr=d%mcd_data)
@@ -504,27 +504,29 @@ CONTAINS
        ALLOCATE(int_tmp(len))
        int_tmp=DATA
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,handle,e)
-       CALL MPI_PUT(int_tmp,len,MPI_INTEGER,pe,slot,len,MPI_INTEGER,handle,e)
+       CALL MPI_PUT(int_tmp,len,MPI_INTEGER,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_INTEGER,handle,e)
        CALL MPI_WIN_UNLOCK(pe,handle,e)
     TYPE is (REAL)
        ALLOCATE(real_tmp(len))
        real_tmp=DATA
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,handle,e)
-       CALL MPI_PUT(real_tmp,len,MPI_DOUBLE_PRECISION,pe,slot,len,MPI_DOUBLE_PRECISION,handle,e)
+       CALL MPI_PUT(real_tmp,len,MPI_DOUBLE_PRECISION,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_PRECISION,handle,e)
        CALL MPI_WIN_UNLOCK(pe,handle,e)
     TYPE is (COMPLEX)
        ALLOCATE(cmplx_tmp(len))
        cmplx_tmp=DATA
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,handle,e)
-       CALL MPI_PUT(cmplx_tmp,len,MPI_DOUBLE_COMPLEX,pe,slot,len,MPI_DOUBLE_COMPLEX,handle,e)
+       CALL MPI_PUT(cmplx_tmp,len,MPI_DOUBLE_COMPLEX,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_COMPLEX,handle,e)
        CALL MPI_WIN_UNLOCK(pe,handle,e)
     END SELECT
   END SUBROUTINE priv_put_data
 
-  SUBROUTINE priv_get_data(pe,slot,DATA,len,handle)
+  SUBROUTINE priv_get_data(pe,slot,len,handle,idata,rdata,cdata)
     IMPLICIT NONE
     INTEGER,INTENT(IN)  :: pe,slot,len
-    CLASS(*),INTENT(OUT) :: DATA(len)
+    INTEGER,INTENT(OUT),optional :: iDATA(len)
+    REAL,INTENT(OUT),optional    :: rDATA(len)
+    COMPLEX,INTENT(OUT),optional :: cDATA(len)
     INTEGER,INTENT(IN)  :: handle
 
     INTEGER             :: e
@@ -533,26 +535,28 @@ CONTAINS
     COMPLEX,ALLOCATABLE:: cmplx_tmp(:)
     INCLUDE 'mpif.h'
 
-    SELECT TYPE(DATA)
-    TYPE IS (INTEGER)
+    IF (present(idata)) THEN
        ALLOCATE(int_tmp(len))
        CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,handle,e)
-       CALL MPI_GET(int_tmp,len,MPI_INTEGER,pe,slot,len,MPI_INTEGER,handle,e)
+       CALL MPI_GET(int_tmp,len,MPI_INTEGER,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_INTEGER,handle,e)
        CALL MPI_WIN_UNLOCK(pe,handle,e)
-       DATA=int_tmp
-    TYPE is (REAL)
+       iDATA=int_tmp
+    ELSE IF (PRESENT(rdata)) THEN
        ALLOCATE(real_tmp(len))
        CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,handle,e)
-       CALL MPI_GET(real_tmp,len,MPI_DOUBLE_PRECISION,pe,slot,len,MPI_DOUBLE_PRECISION,handle,e)
+       CALL MPI_GET(real_tmp,len,MPI_DOUBLE_PRECISION,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_PRECISION,handle,e)
        CALL MPI_WIN_UNLOCK(pe,handle,e)
-       DATA=real_tmp
-    TYPE is (COMPLEX)
+       rDATA=real_tmp
+    ELSE IF (PRESENT(cdata)) THEN
        ALLOCATE(cmplx_tmp(len))
        CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,handle,e)
-       CALL MPI_GET(cmplx_tmp,len,MPI_DOUBLE_COMPLEX,pe,slot,len,MPI_DOUBLE_COMPLEX,handle,e)
+       CALL MPI_GET(cmplx_tmp,len,MPI_DOUBLE_COMPLEX,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_COMPLEX,handle,e)
        CALL MPI_WIN_UNLOCK(pe,handle,e)
-       DATA=cmplx_tmp
-    END SELECT
+       cDATA=cmplx_tmp
+    ELSE
+       call judft_error("BUG in priv_get_data")
+    ENDIF
+
   END SUBROUTINE priv_get_data
 
 
@@ -604,19 +608,19 @@ CONTAINS
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
 
-    CALL priv_get_data(pe,slot,qal,SIZE(qal),d%qal_handle)
-    CALL priv_get_data(pe,slot,qvac,SIZE(qvac),d%qvac_handle)
-    CALL priv_get_data(pe,slot,qis,SIZE(qis),d%qis_handle)
-    CALL priv_get_data(pe,slot,qvlay,SIZE(qvlay),d%qvlay_handle)
-    CALL priv_get_data(pe,slot,qstars,SIZE(qstars),d%qstars_handle)
-    CALL priv_get_data(pe,slot,ksym,SIZE(ksym),d%ksym_handle)
-    CALL priv_get_data(pe,slot,jsym,SIZE(jsym),d%jsym_handle)
-    IF (d%l_mcd.AND.PRESENT(mcd))  CALL priv_get_data(pe,slot,mcd,SIZE(mcd),d%mcd_handle)
+    CALL priv_get_data(pe,slot,SIZE(qal),d%qal_handle,rdata=qal)
+    CALL priv_get_data(pe,slot,SIZE(qvac),d%qvac_handle,rdata=qvac)
+    CALL priv_get_data(pe,slot,SIZE(qis),d%qis_handle,rdata=qis)
+    CALL priv_get_data(pe,slot,SIZE(qvlay),d%qvlay_handle,rdata=qvlay)
+    CALL priv_get_data(pe,slot,SIZE(qstars),d%qstars_handle,cdata=qstars)
+    CALL priv_get_data(pe,slot,SIZE(ksym),d%ksym_handle,idata=ksym)
+    CALL priv_get_data(pe,slot,SIZE(jsym),d%jsym_handle,idata=jsym)
+    IF (d%l_mcd.AND.PRESENT(mcd))  CALL priv_get_data(pe,slot,SIZE(mcd),d%mcd_handle,rdata=mcd)
     IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-       CALL priv_get_data(pe,slot,qintsl,SIZE(qintsl),d%qintsl_handle)
-       CALL priv_get_data(pe,slot,qmtsl,SIZE(qmtsl),d%qmtsl_handle)
-       CALL priv_get_data(pe,slot,qmtp,SIZE(qmtp),d%qmtp_handle)
-       CALL priv_get_data(pe,slot,orbcomp,SIZE(orbcomp),d%orbcomp_handle)
+       CALL priv_get_data(pe,slot,SIZE(qintsl),d%qintsl_handle,rdata=qintsl)
+       CALL priv_get_data(pe,slot,SIZE(qmtsl),d%qmtsl_handle,rdata=qmtsl)
+       CALL priv_get_data(pe,slot,SIZE(qmtp),d%qmtp_handle,rdata=qmtp)
+       CALL priv_get_data(pe,slot,SIZE(orbcomp),d%orbcomp_handle,rdata=orbcomp)
     ENDIF
   END SUBROUTINE read_dos
 

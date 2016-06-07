@@ -831,8 +831,8 @@ CONTAINS
                    !
                    !--dw   now write k-point data to tmp_dos
                    !
-                   call write_dos(eig_id,ikpt,ispin,qal(:,:,:,ispin),qvac(:,:,ikpt,ispin),qis(:,ikpt,ispin),&
-                        qvlay(:,:,:,ikpt,ispin),qstars,ksym,jsym,mcd,qintsl,&
+                   call write_dos(eig_id,ikpt,jspin,qal(:,:,:,jspin),qvac(:,:,ikpt,jspin),qis(:,ikpt,jspin),&
+                        qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd,qintsl,&
                         qmtsl(:,:),qmtp(:,:),orbcomp)
                 
                    CALL timestop("cdnval: write_info")
@@ -882,6 +882,9 @@ enddo
                            nsl,nslat)
                    ENDIF
                 ENDIF
+#ifdef CPP_MPI                
+                CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
                 call timestop("cdnval: dos")
              ENDIF
 
