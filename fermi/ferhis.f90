@@ -46,6 +46,8 @@ CONTAINS
     !***********************************************************************
     USE m_efnewton
     USE m_types
+    USE m_xmlOutput
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)          :: mpi
@@ -80,6 +82,7 @@ CONTAINS
 
     !     .. Local Arrays ..      
     REAL :: qc(3)
+    CHARACTER(LEN=20)    :: attributes(2)
 
     !     ..
     !***********************************************************************
@@ -119,7 +122,13 @@ CONTAINS
     efermi = results%ef
     IF (nstef.LT.n) THEN
        gap = e(INDEX(nstef+1)) - results%ef
-       IF ( mpi%irank == 0 ) WRITE (6,FMT=8050) gap
+       IF ( mpi%irank == 0 ) THEN
+          attributes = ''
+          WRITE(attributes(1),'(f20.10)'), gap*hartree_to_ev_const
+          WRITE(attributes(2),'(a)'), 'eV'
+          CALL writeXMLElement('bandgap',(/'value','units'/),attributes)
+          WRITE (6,FMT=8050) gap
+       END IF
     END IF
     IF ( mpi%irank == 0 ) THEN
        WRITE ( 6,FMT=8010) spindg* (ws-weight)

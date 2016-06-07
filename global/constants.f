@@ -8,7 +8,7 @@
       REAL,PARAMETER:: tpi_const=2.*3.1415926535897932
       REAL,PARAMETER:: fpi_const=4.*3.1415926535897932
       REAL,PARAMETER:: sfp_const=sqrt(4.*3.1415926535897932)
-      REAL,PARAMETER:: hartree_to_ev_const=27.21138505
+      REAL,PARAMETER:: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
       CHARACTER(2),DIMENSION(0:103),PARAMETER:: namat_const=(/
      &      'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',         
      &     'Na','Mg','Al','Si',' P',' S','Cl','Ar',' K','Ca','Sc','Ti',
