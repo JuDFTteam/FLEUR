@@ -11,6 +11,7 @@ CONTAINS
     USE m_radsra
     USE m_differ
     USE m_types
+    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_enpara),INTENT(IN)   :: enpara
@@ -42,11 +43,13 @@ CONTAINS
     LOGICAL l_done(0:atoms%lmaxd,atoms%ntypd,input%jspins)
     LOGICAL lo_done(atoms%nlod,atoms%ntypd,input%jspins)
     CHARACTER(len=1) :: ch(0:9)
+    CHARACTER(LEN=20)    :: attributes(6)
     !     ..
   
     el(:,:,:) = 0.0 ; evac(:,:) = 0.0 ; ello(:,:,:) = 0.0
     l_done = .FALSE.
     c=c_light(1.0)
+    CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
     IF ( obsolete%lepr == 0 ) THEN ! not for floating energy parameters
        e=1.0
        ch(0:9) = (/'s','p','d','f','g','h','i','j','k','l'/)
@@ -136,6 +139,15 @@ CONTAINS
                         rn,d,msh,vrd, e, f(:,1),f(:,2),ierr)
                    el(l,n,jsp) = e
                    IF (mpi%irank  == 0) THEN
+                      attributes = ''
+                      WRITE(attributes(1),'(i0)'), n
+                      WRITE(attributes(2),'(i0)'), jsp
+                      WRITE(attributes(3),'(i0,a1)'), nqn(l), ch(l)
+                      WRITE(attributes(4),'(f16.10)'), e_lo
+                      WRITE(attributes(5),'(f16.10)'), e_up
+                      WRITE(attributes(6),'(f16.10)'), e
+                      CALL writeXMLElementForm('atomicEP',(/'atomType','spin','branch','branchLowest','branchHighest','value'/),&
+                                               attributes,reshape((/10,4,6,12,13,5,6,1,3,16,16,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn(l),ch(l),' branch from',e_lo, ' to',e_up,' htr. ; e_l =',e
                    ENDIF
                    IF( l .EQ. 3 ) THEN
@@ -291,6 +303,15 @@ CONTAINS
                    ello(ilo,n,jsp) = e
 
                    IF (mpi%irank == 0) THEN
+                      attributes = ''
+                      WRITE(attributes(1),'(i0)'), n
+                      WRITE(attributes(2),'(i0)'), jsp
+                      WRITE(attributes(3),'(i0,a1)'), nqn_lo(ilo), ch(l)
+                      WRITE(attributes(4),'(f16.10)'), e_lo
+                      WRITE(attributes(5),'(f16.10)'), e_up
+                      WRITE(attributes(6),'(f16.10)'), e
+                      CALL writeXMLElementForm('loAtomicEP',(/'atomType','spin','branch','branchLowest','branchHighest','value'/),&
+                                               attributes,reshape((/8,4,6,12,13,5,6,1,3,16,16,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn_lo(ilo),ch(l),' branch from', e_lo,' to',e_up,' htr. ; e_l =',e
                    ENDIF
 
@@ -467,7 +488,7 @@ CONTAINS
     enpara_new%el0=el
     enpara_new%ello0=ello
     enpara_new%evac0=evac
-    
+    CALL closeXMLElement('energyParameters')
     
   END SUBROUTINE lodpot
 END MODULE m_lodpot
