@@ -69,14 +69,14 @@ CONTAINS
        recl_dos=i1*2*neig !ksym&jsym
        INQUIRE(IOLENGTH=i1) r1
        recl_dos=recl_dos+i1*3*neig !qvac&qis
-       recl_dos=recl_dos+i1*4*ntype !qal
-       recl_dos=recl_dos+i1*neig*2*layers !qvlay
+       recl_dos=recl_dos+i1*4*ntype*neig !qal
+       recl_dos=recl_dos+i1*neig*2*max(1,layers) !qvlay
        IF (l_orb) THEN
           recl_dos=recl_dos+i1*2*nsld*neig !qintsl,qmtsl
           recl_dos=recl_dos+i1*24*neig*nat !qmtp,orbcomp
        ENDIF
        INQUIRE(IOLENGTH=i1) c1
-       recl_dos=recl_dos+i1*nstars*neig*layers*2 !qstars
+       recl_dos=recl_dos+i1*nstars*neig*max(1,layers)*2 !qstars
        IF (l_mcd) recl_dos=recl_dos+i1*3*ntype*ncored*neig !mcd
     ELSE
        recl_dos=-1

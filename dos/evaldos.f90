@@ -19,7 +19,7 @@
 !     ntb=max(nevk)
 !
 !----------------------------------------------------------------------
-      USE m_eig66_io,ONLY:read_dos
+      USE m_eig66_io,ONLY:read_dos,read_eig
       USE m_triang
       USE m_maketetra
       USE m_tetrados
@@ -94,8 +94,8 @@
 !
 ! scale energies
       sigma = banddos%sig_dos*factor
-      emin = banddos%e1_dos*factor
-      emax = banddos%e2_dos*factor
+      emin =min(banddos%e1_dos*factor,banddos%e2_dos*factor)
+      emax =max(banddos%e1_dos*factor,banddos%e2_dos*factor)
       efermi = efermiarg*factor
  
       WRITE (6,'(a)') 'DOS-Output is generated!'
@@ -163,6 +163,7 @@
             ALLOCATE( orbcomp(dimension%neigd,23,atoms%natd),qintsl(nsld,dimension%neigd))
             ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%natd),qvac(dimension%neigd,2))
             ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
+            CALL read_eig(eig_id,k,jspin,bk=vk(:,k),wk=wt(k),neig=nevk(k),eig=ev(:,k))
             CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
             qal(1:lmax*atoms%ntype,:,k)=reshape(qal_tmp,(/lmax*atoms%ntype,size(qal_tmp,3)/))
             qal(lmax*atoms%ntype+2,:,k)=qvac(:,1)         ! vacuum 1
@@ -500,7 +501,7 @@
 
       DEALLOCATE(qal,qval,qlay,qstars)
       IF (l_mcd) DEALLOCATE( mcd )
-99001 FORMAT (f10.5,110(1x,d10.3))
+99001 FORMAT (f10.5,110(1x,e10.3))
 
       END SUBROUTINE evaldos
       END MODULE m_evaldos 
