@@ -35,24 +35,47 @@ MODULE m_xmlOutput
    END FUNCTION getXMLOutputUnitNumber
 
    SUBROUTINE startXMLOutput()
+
       IMPLICIT NONE
+
+      CHARACTER(LEN=8)  :: date
+      CHARACTER(LEN=10) :: time
+      CHARACTER(LEN=5)  :: zone
+      CHARACTER(LEN=10) :: dateString
+      CHARACTER(LEN=8)  :: timeString
+
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
       elementList = ''
       currentElementIndex = 0
       xmlOutputUnit = 53
+      CALL DATE_AND_TIME(date,time,zone)
+      WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
+      WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)
       OPEN (xmlOutputUnit,file='out.xml',form='formatted',status='unknown')
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
-      ! TODO: Write out standard stuff
+      CALL writeXMLElement('startDateAndTime',(/'date','time','zone'/),(/dateString,timeString,zone/))
    END SUBROUTINE startXMLOutput
 
    SUBROUTINE endXMLOutput()
+
       IMPLICIT NONE
+
+      CHARACTER(LEN=8)  :: date
+      CHARACTER(LEN=10) :: time
+      CHARACTER(LEN=5)  :: zone
+      CHARACTER(LEN=10) :: dateString
+      CHARACTER(LEN=8)  :: timeString
+
       DO WHILE (currentElementIndex.NE.0)
          CALL closeXMLElement(elementList(currentElementIndex))
       END DO
       DEALLOCATE(elementList)
+      CALL DATE_AND_TIME(date,time,zone)
+      WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
+      WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)
+      CALL writeXMLElement('endDateAndTime',(/'date','time','zone'/),(/dateString,timeString,zone/))
       WRITE (xmlOutputUnit,'(a)') '</fleurOutput>'
       CLOSE(xmlOutputUnit)
    END SUBROUTINE endXMLOutput
