@@ -22,6 +22,7 @@ CONTAINS
     USE m_qfix
     USE icorrkeys
     USE m_types
+    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_hybrid),INTENT(INOUT):: hybrid !ddist is modified here
@@ -59,6 +60,7 @@ CONTAINS
     !---> off-diagonal part of the density matrix
     COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
     COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:,:)
+    CHARACTER(LEN=20)    :: attributes(2)
     !     ..
     !     .. Intrinsic Functions ..
     INTRINSIC char,sqrt
@@ -301,11 +303,20 @@ CONTAINS
     !
     !     calculate the charge density distance for each spin
     !
-    DO  js = 1,input%jspins
+    IF(hybrid%l_calhf) THEN
+       CALL openXMLElement('densityConvergence',(/'units','comment'/),(/'me/bohr^3','HF'/))
+    ELSE
+       CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
+    END IF
+    DO js = 1,input%jspins
        dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, sm(nmaph*(js-1)+1),1)
 
        hybrid%ddist(js) = 1000*SQRT(ABS(dist(js)/cell%vol))
 
+       attributes = ''
+       WRITE(attributes(1),'(i0)'), js
+       WRITE(attributes(2),'(f20.10)'), 1000*SQRT(ABS(dist(js)/cell%vol))
+       CALL writeXMLElementForm('chargeDensity',(/'spin','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
        IF( hybrid%l_calhf ) THEN
           WRITE (16,FMT=7901) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
           WRITE ( 6,FMT=7901) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
@@ -325,6 +336,8 @@ CONTAINS
        dist(3) = CPP_BLAS_sdot(nmaph,fsm,1,sm(nmaph+1),1)
        dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
        dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
+       CALL writeXMLElementFormPoly('overallChargeDensity',(/'distance'/),(/1000*SQRT(ABS(dist(4)/cell%vol))/),reshape((/10,20/),(/1,2/)))
+       CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),(/1000*SQRT(ABS(dist(5)/cell%vol))/),reshape((/19,20/),(/1,2/)))
        IF( hybrid%l_calhf ) THEN
           WRITE (16,FMT=8001) iter,1000*SQRT(ABS(dist(4)/cell%vol))
           WRITE (16,FMT=8011) iter,1000*SQRT(ABS(dist(5)/cell%vol))
@@ -341,6 +354,7 @@ CONTAINS
        ! (e.g. when calculating non-magnetic systems with jspins=2).
     END IF
     DEALLOCATE (sm,fsm)
+    CALL closeXMLElement('densityConvergence')
     !
     !----> output of mixed densities
     !
