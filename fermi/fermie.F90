@@ -228,7 +228,12 @@ CONTAINS
     results%seigscv = results%seigsc + results%seigv
     !
     DEALLOCATE ( idxeig,idxjsp,idxkpt,index,e,eig,we )
-    !
+
+    attributes = ''
+    WRITE(attributes(1),'(f20.10)'), results%ef
+    WRITE(attributes(2),'(a)'), 'htr'
+    IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
          &       10x,'first approx. to ef    (T=0)  :',f10.6,' htr',&
