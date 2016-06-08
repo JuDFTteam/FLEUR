@@ -28,6 +28,7 @@ include(ldau/CMakeLists.txt)
 include(mix/CMakeLists.txt)
 include(vgen/CMakeLists.txt)
 include(inpgen/CMakeLists.txt)
+include(docs/CMakeLists.txt)
 
 if (${Fleur_uses_MPI})
   include(mpi/CMakeLists.txt)
