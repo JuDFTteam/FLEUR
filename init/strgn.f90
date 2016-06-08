@@ -50,9 +50,6 @@ CONTAINS
     INTEGER index2(stars%n2d)
     !     ..
     !     ..
-    !     .. Intrinsic Functions ..
-    INTRINSIC iabs,int,min0,sqrt
-    !     ..
     !
     !
     nfftx = 3*stars%k1d
@@ -634,10 +631,6 @@ CONTAINS
     COMPLEX phas(sym%nop)
     INTEGER kr(3,sym%nop),kv(3)
     INTEGER index2(stars%n2d)
-    !     ..
-    !     ..
-    !     .. Intrinsic Functions ..
-    INTRINSIC iabs,int,min0,sqrt
     !     ..
     !
     nfftx = 3*stars%k1d

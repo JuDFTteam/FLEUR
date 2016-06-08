@@ -325,9 +325,6 @@
       REAL, ALLOCATABLE :: cdn(:,:)
       CHARACTER(len=10), ALLOCATABLE :: plotname(:)
 !     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC abs,sqrt
-!     ..
       sfp = 2.0 * sqrt( pi_const )
       a3(3) = cell%amat(3,3)
 !     ..
