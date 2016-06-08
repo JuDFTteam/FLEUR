@@ -14,6 +14,7 @@ CONTAINS
     USE m_radfun
     USE m_orbmom2
     USE m_types
+    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus !in fact only the lo part is intent(in)
     TYPE(t_noco),INTENT(IN)    :: noco
@@ -66,6 +67,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL qmtl(0:atoms%lmaxd),qmtllo(0:atoms%lmaxd)
+    CHARACTER(LEN=20) :: attributes(6)
 
     !     ..
     !     .. Allocatable Arrays ..
@@ -96,6 +98,7 @@ CONTAINS
          &     t33,'d',t42,'f',t51,'total')
     CALL timestart("cdnmt")
 
+    CALL openXMLElementNoAttributes('mtCharges')
     na = 1
     DO itype = 1,atoms%ntype
        !--->    spherical component
@@ -140,6 +143,15 @@ CONTAINS
           WRITE (6,FMT=8100) itype, (qmtl(l),l=0,3),qmtt
           WRITE (16,FMT=8100) itype, (qmtl(l),l=0,3),qmtt
 8100      FORMAT (' -->',i2,2x,4f9.5,2x,f9.5)
+
+          attributes = ''
+          WRITE(attributes(1),'(i0)') itype
+          WRITE(attributes(2),'(f15.10)') qmtt
+          WRITE(attributes(3),'(f15.10)') qmtl(0)
+          WRITE(attributes(4),'(f15.10)') qmtl(1)
+          WRITE(attributes(5),'(f15.10)') qmtl(2)
+          WRITE(attributes(6),'(f15.10)') qmtl(3)
+          CALL writeXMLElementForm('mtCharge',(/'atomType','total','s','p','d','f'/),attributes,reshape((/8,5,1,1,1,1,6,15,15,15,15,15/),(/6,2/)))
 
           !+soc
           !--->       spherical angular component
@@ -238,6 +250,7 @@ CONTAINS
 
        na = na + atoms%neq(itype)
     ENDDO ! end of loop over atom types
+    CALL closeXMLElement('mtCharges')
     CALL timestop("cdnmt")
     !---> for testing: to plot the offdiag. part of the density matrix it
     !---> is written to the file rhomt21. This file can read in pldngen.
