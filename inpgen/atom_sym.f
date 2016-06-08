@@ -91,8 +91,8 @@
       REAL, PARAMETER :: eps = 1.0e-7, isqrt3 = 1.0/sqrt(3.0), 
      &                   thrd = 1.0/3.0, mtthrd = -2.0/3.0
 
-      REAL :: lmat(3,3,8)
-      DATA  lmat /  1.0,  0.0,  0.0,      ! 1: primitive     : P
+      REAL,PARAMETER :: lmat(3,3,8)=reshape((/
+     &              1.0,  0.0,  0.0,      ! 1: primitive     : P
      &              0.0,  1.0,  0.0,
      &              0.0,  0.0,  1.0,
      +             -1.0,  1.0,  1.0,      ! 2: Inverse (F) 
@@ -115,7 +115,7 @@
      &             -1.0,  0.0,  1.0, 
      +              1.0,  0.0,  0.0,      ! 8: Inverse (A)
      &              0.0,  1.0, -1.0,
-     &              0.0,  1.0,  1.0/
+     &              0.0,  1.0,  1.0/),(/3,3,8/))
 
        istep0 = 0
 !
