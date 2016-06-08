@@ -222,7 +222,8 @@ MODULE m_xmlOutput
          ALLOCATE(contentLineList(contentLineListSize))
          CALL fillContentLineList(contentList,contentLineList,contentLineLength)
          IF(SIZE(contentLineList).LE.1) THEN
-            outputString = TRIM(ADJUSTL(outputString))//'>'//contentLineList(1)//'</'//TRIM(ADJUSTL(elementName))//'>'
+            outputString = TRIM(ADJUSTL(outputString))//'>'//contentLineList(1)//'</'//&
+                 TRIM(ADJUSTL(elementName))//'>'
          ELSE
             outputString = TRIM(ADJUSTL(outputString))//'>'
          END IF
@@ -289,7 +290,8 @@ MODULE m_xmlOutput
             IF((i-1)*contentLineLength+j.GT.SIZE(contentList)) THEN
                RETURN
             END IF
-            WRITE(contentLineList(i),'(a,a20)') TRIM(ADJUSTL(contentLineList(i))), TRIM(ADJUSTL(contentList((i-1)*contentLineLength+j)))
+            WRITE(contentLineList(i),'(a,a20)') TRIM(ADJUSTL(contentLineList(i))),&
+                        TRIM(ADJUSTL(contentList((i-1)*contentLineLength+j)))
          END DO
       END DO
    END SUBROUTINE fillContentLineList

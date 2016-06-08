@@ -280,7 +280,8 @@
       write(fn,"('Total execution time: ',i0,'sec')") int(globaltimer%time)
       CALL priv_writetimes_longest(globaltimer,fid=fn)
 
-      WRITE(fn,"('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") int(globaltimer%time),int(min_time*globaltimer%time)
+      WRITE(fn,"('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
+                  int(globaltimer%time),int(min_time*globaltimer%time)
 #ifdef CPP_MPI
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
       WRITE(fn,*) "Program used ",isize," PE"
