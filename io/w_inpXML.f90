@@ -456,7 +456,8 @@ SUBROUTINE w_inpXML(&
             startCoreStates = 5
          ELSE IF ((endCoreStates.GE.1).AND.&
 &                 (ALL(xmlPrintCoreStates(1:1,iAtomType).EQV..FALSE.)).AND.&
-&                 (ALL(xmlElectronStates(1:1,iAtomType).EQ.coreState_const))) THEN            coreStatesString = nobleGasConfigList(1)
+&                 (ALL(xmlElectronStates(1:1,iAtomType).EQ.coreState_const))) THEN
+            coreStatesString = nobleGasConfigList(1)
             startCoreStates = 2
          END IF
          DO i = startCoreStates, endCoreStates
