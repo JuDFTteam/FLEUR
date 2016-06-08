@@ -403,7 +403,7 @@ SUBROUTINE w_inpXML(&
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
       tempNumberString = ''
-      WRITE(tempNumberString,'(i)') iSpecies
+      WRITE(tempNumberString,'(i0)') iSpecies
       speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
       WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
@@ -430,34 +430,33 @@ SUBROUTINE w_inpXML(&
             IF (xmlElectronStates(i,iAtomType).EQ.coreState_const) endCoreStates = i
          END DO
          IF ((endCoreStates.GE.24).AND.&
-&            (ALL(xmlPrintCoreStates(1:24,iAtomType).EQ..FALSE.)).AND.&
+&            (ALL(xmlPrintCoreStates(1:24,iAtomType).EQV..FALSE.)).AND.&
 &            (ALL(xmlElectronStates(1:24,iAtomType).EQ.coreState_const)) ) THEN
             coreStatesString = nobleGasConfigList(6)
             startCoreStates = 25
          ELSE IF ((endCoreStates.GE.17).AND.&
-&                 (ALL(xmlPrintCoreStates(1:17,iAtomType).EQ..FALSE.)).AND.&
+&                 (ALL(xmlPrintCoreStates(1:17,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:17,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(5)
             startCoreStates = 18
          ELSE IF ((endCoreStates.GE.12).AND.&
-&                 (ALL(xmlPrintCoreStates(1:12,iAtomType).EQ..FALSE.)).AND.&
+&                 (ALL(xmlPrintCoreStates(1:12,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:12,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(4)
             startCoreStates = 13
          ELSE IF ((endCoreStates.GE.7).AND.&
-&                 (ALL(xmlPrintCoreStates(1:7,iAtomType).EQ..FALSE.)).AND.&
+&                 (ALL(xmlPrintCoreStates(1:7,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:7,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(3)
             startCoreStates = 8
          ELSE IF ((endCoreStates.GE.4).AND.&
-&                 (ALL(xmlPrintCoreStates(1:4,iAtomType).EQ..FALSE.)).AND.&
+&                 (ALL(xmlPrintCoreStates(1:4,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:4,iAtomType).EQ.coreState_const))) THEN
             coreStatesString = nobleGasConfigList(2)
             startCoreStates = 5
          ELSE IF ((endCoreStates.GE.1).AND.&
-&                 (ALL(xmlPrintCoreStates(1:1,iAtomType).EQ..FALSE.)).AND.&
-&                 (ALL(xmlElectronStates(1:1,iAtomType).EQ.coreState_const))) THEN
-            coreStatesString = nobleGasConfigList(1)
+&                 (ALL(xmlPrintCoreStates(1:1,iAtomType).EQV..FALSE.)).AND.&
+&                 (ALL(xmlElectronStates(1:1,iAtomType).EQ.coreState_const))) THEN            coreStatesString = nobleGasConfigList(1)
             startCoreStates = 2
          END IF
          DO i = startCoreStates, endCoreStates
@@ -510,7 +509,7 @@ SUBROUTINE w_inpXML(&
 !      <atomGroup species="Si-1">
       330 FORMAT('      <atomGroup species="',a,'">')
       tempNumberString = ''
-      WRITE(tempNumberString,'(i)') iSpecies
+      WRITE(tempNumberString,'(i0)') iSpecies
       speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
       WRITE (fileNum,330) TRIM(ADJUSTL(speciesName))
 

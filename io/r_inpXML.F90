@@ -1254,7 +1254,11 @@ SUBROUTINE r_inpXML(&
             atoms%ncst(iType) = coreStates
             atoms%lnonsph(iType) = lnonsphr
             atoms%lapw_l(iType) = lmaxAPW
-            atoms%nflip(iType) = flipSpin
+            IF (flipSpin) THEN 
+               atoms%nflip(iType) = 1
+            ELSE
+               atoms%nflip(iType) = 0
+            ENDIF
             atoms%bmu(iType) = magMom
             atoms%lda_u(iType)%l = ldau_l
             atoms%lda_u(iType)%u = ldau_u
@@ -1868,7 +1872,7 @@ SUBROUTINE r_inpXML(&
    DO i = 1, kpts%nkpt
       kpts%weight(i) = kpts%weight(i) / sumWeight
       kpts%wtkpt(i) = kpts%weight(i)
-      WRITE(*,'(i,4f12.6)') i, kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i), kpts%weight(i)
+      WRITE(*,'(i0,4f12.6)') i, kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i), kpts%weight(i)
    END DO
 
    ! Generate missing general parameters
