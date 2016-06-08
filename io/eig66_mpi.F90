@@ -140,7 +140,7 @@ CONTAINS
       REAL   ,POINTER,INTENT(OUT),OPTIONAL  :: real_data_ptr(:)
       COMPLEX,POINTER,INTENT(OUT),OPTIONAL  :: cmplx_data_ptr(:)
       INTEGER,INTENT(OUT)          :: handle
-
+#ifdef CPP_MPI
       TYPE(c_ptr)::ptr
       INTEGER:: e
       INTEGER(MPI_ADDRESS_KIND) :: length
@@ -177,6 +177,7 @@ CONTAINS
       	CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
       	CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
       ENDIF
+#endif
     END SUBROUTINE priv_create_memory
 
 
@@ -486,7 +487,7 @@ CONTAINS
 #endif
   END SUBROUTINE write_eig
 
-
+#ifdef CPP_MPI
   SUBROUTINE priv_put_data(pe,slot,DATA,handle)
     IMPLICIT NONE
     INTEGER,INTENT(IN)  :: pe,slot
@@ -558,7 +559,7 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE priv_get_data
-
+#endif
 
   SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
@@ -568,7 +569,7 @@ CONTAINS
     INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
     REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-
+#ifdef CPP_MPI
     TYPE(t_data_MPI),POINTER :: d
     INTEGER:: pe,slot
 
@@ -590,6 +591,7 @@ CONTAINS
        CALL priv_put_data(pe,slot,RESHAPE(qmtp,(/SIZE(qmtp)/)),d%qmtp_handle)
        CALL priv_put_data(pe,slot,RESHAPE(orbcomp,(/SIZE(orbcomp)/)),d%orbcomp_handle)
     ENDIF
+#endif
   END SUBROUTINE write_dos
 
   SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
@@ -600,7 +602,7 @@ CONTAINS
     INTEGER,INTENT(out)           :: ksym(:),jsym(:)
     REAL,INTENT(out),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(out),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-
+#ifdef CPP_MPI
     TYPE(t_data_MPI),POINTER :: d
     INTEGER:: pe,slot
 
@@ -622,6 +624,7 @@ CONTAINS
        CALL priv_get_data(pe,slot,SIZE(qmtp),d%qmtp_handle,rdata=qmtp)
        CALL priv_get_data(pe,slot,SIZE(orbcomp),d%orbcomp_handle,rdata=orbcomp)
     ENDIF
+#endif
   END SUBROUTINE read_dos
 
 

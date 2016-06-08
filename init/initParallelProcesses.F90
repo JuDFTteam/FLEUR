@@ -10,8 +10,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
    IMPLICIT NONE
 
-   INCLUDE 'mpif.h'
-
    TYPE(t_mpi),      INTENT(INOUT) :: mpi
    TYPE(t_input),    INTENT(INOUT) :: input
    TYPE(t_sym),      INTENT(INOUT) :: sym
@@ -32,6 +30,8 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_sphhar),   INTENT(INOUT) :: sphhar
    TYPE(t_results),  INTENT(INOUT) :: results
    TYPE(t_obsolete), INTENT(INOUT) :: obsolete
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
 
    INTEGER ierr(3)
 
@@ -183,7 +183,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0
    END IF
-
+#endif
 END SUBROUTINE initParallelProcesses
 
 END MODULE m_InitParallelProcesses
