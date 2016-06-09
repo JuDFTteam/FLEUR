@@ -325,7 +325,7 @@ CONTAINS
     endif
     eig_id=open_eig(&
          mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,&
-         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
     ALLOCATE ( a(matsize), stat = err )
     IF (err.NE.0) THEN
        WRITE (*,*) 'eigen: an error occured during allocation of'

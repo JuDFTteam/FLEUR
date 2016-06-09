@@ -1,7 +1,5 @@
 List of BUGS/ things not tested or implemented:
 -omp bug in vmtxc oder xcall
--MPI version not compiling
--DOS IO needs testing
 -Wannier part
 -Hybrid functionals
 -vdW
