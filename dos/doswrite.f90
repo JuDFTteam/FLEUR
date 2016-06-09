@@ -140,7 +140,7 @@ CONTAINS
     !
     IF (vacuum%nstm.EQ.3) THEN
        call juDFT_error("nstm=3 not implemented in doswrite")
-       OPEN (89,file='tmp_vacwave',status='old',access='direct')!, recl=reclength_vw)
+       !OPEN (89,file='tmp_vacwave',status='old',access='direct')!, recl=reclength_vw)
        ALLOCATE ( ac(n2max,DIMENSION%neigd),bc(n2max,DIMENSION%neigd) )
        DO ikpt = 1,kpts%nkpt
           WRITE(*,*) 'Read rec',ikpt,'from vacwave'
