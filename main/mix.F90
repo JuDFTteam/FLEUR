@@ -314,9 +314,9 @@ CONTAINS
        hybrid%ddist(js) = 1000*SQRT(ABS(dist(js)/cell%vol))
 
        attributes = ''
-       WRITE(attributes(1),'(i0)'), js
-       WRITE(attributes(2),'(f20.10)'), 1000*SQRT(ABS(dist(js)/cell%vol))
-       CALL writeXMLElementForm('chargeDensity',(/'spin','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
+       WRITE(attributes(1),'(i0)') js
+       WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/cell%vol))
+       CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
        IF( hybrid%l_calhf ) THEN
           WRITE (16,FMT=7901) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
           WRITE ( 6,FMT=7901) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))

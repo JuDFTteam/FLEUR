@@ -40,9 +40,9 @@ MODULE m_xmlOutput
 
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
-      CHARACTER(LEN=5)  :: zone
+      CHARACTER(LEN=10)  :: zone
       CHARACTER(LEN=10) :: dateString
-      CHARACTER(LEN=8)  :: timeString
+      CHARACTER(LEN=10)  :: timeString
 
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
@@ -64,9 +64,9 @@ MODULE m_xmlOutput
 
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
-      CHARACTER(LEN=5)  :: zone
+      CHARACTER(LEN=10)  :: zone
       CHARACTER(LEN=10) :: dateString
-      CHARACTER(LEN=8)  :: timeString
+      CHARACTER(LEN=10)  :: timeString
 
       DO WHILE (currentElementIndex.NE.0)
          CALL closeXMLElement(elementList(currentElementIndex))
@@ -105,13 +105,13 @@ MODULE m_xmlOutput
       DO i = 1, SIZE(attributeValues)
          SELECT TYPE (attributeValues)
             TYPE IS(INTEGER)
-               WRITE(charAttributeValues(i),'(i0)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
             TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f19.10)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
-               WRITE(charAttributeValues(i),'(l1)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
             TYPE IS(CHARACTER(LEN=*))
-               WRITE(charAttributeValues(i),'(a)'), TRIM(ADJUSTL(attributeValues(i)))
+               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
          END SELECT
@@ -121,13 +121,13 @@ MODULE m_xmlOutput
          DO i = 1, SIZE(contentList)
             SELECT TYPE(contentList)
                TYPE IS(INTEGER)
-                  WRITE(charContentList(i),'(i0)'), contentList(i)
+                  WRITE(charContentList(i),'(i0)') contentList(i)
                TYPE IS(REAL)
-                  WRITE(charContentList(i),'(f19.10)'), contentList(i)
+                  WRITE(charContentList(i),'(f19.10)') contentList(i)
                TYPE IS(LOGICAL)
-                  WRITE(charContentList(i),'(l1)'), contentList(i)
+                  WRITE(charContentList(i),'(l1)') contentList(i)
                TYPE IS(CHARACTER(LEN=*))
-                  WRITE(charContentList(i),'(a)'), TRIM(ADJUSTL(contentList(i)))
+                  WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
                CLASS DEFAULT
                   STOP 'Type of contentList not allowed'
             END SELECT
@@ -332,13 +332,13 @@ MODULE m_xmlOutput
       DO i = 1, SIZE(attributeValues)
          SELECT TYPE (attributeValues)
             TYPE IS(INTEGER)
-               WRITE(charAttributeValues(i),'(i0)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
             TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f19.10)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
-               WRITE(charAttributeValues(i),'(l1)'), attributeValues(i)
+               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
             TYPE IS(CHARACTER(LEN=*))
-               WRITE(charAttributeValues(i),'(a)'), TRIM(ADJUSTL(attributeValues(i)))
+               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
          END SELECT
