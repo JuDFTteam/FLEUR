@@ -583,9 +583,8 @@ CONTAINS
        ELSE
           ! White-Bird-trick
 
-          WRITE(6,'('' W+B trick cancelled out. visxcwb uses at'',&
-               '' present common block cpgft3. visxcwb needs'',/,&
-               '' to be reprogrammed according to visxcg.f'')')
+          WRITE(6,'(a)') "W+B trick cancelled out. visxcwb uses at present common block cpgft3.",&
+             "visxcwb needs to be reprogrammed according to visxcg.f"
           CALL juDFT_error("visxcwb",calledby ="vgen")
           !sb       CALL visxcwb(
           !sb  >                 qpw,kimax,igfft,pgfft,ufft,
