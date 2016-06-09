@@ -17,6 +17,7 @@ CONTAINS
     USE m_setcor
     USE m_differ
     USE m_types
+    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
     TYPE(t_input),INTENT(IN)       :: input
@@ -42,6 +43,8 @@ CONTAINS
     REAL occ(DIMENSION%nstd),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
     REAL occ_h(DIMENSION%nstd,2)
     INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd)
+    CHARACTER(LEN=20) :: attributes(6)
+    REAL stateEnergies(29)
     !     ..
     c = c_light(1.0)
     seig = 0.
@@ -143,6 +146,7 @@ CONTAINS
        IF (input%gw.EQ.1 .OR. input%gw.EQ.3)&
             &                      WRITE(15) nst,atoms%rmsh(1:atoms%jri(jatom),jatom)
 
+       stateEnergies = 0.0
        DO  korb = 1,nst
           !#ifndef CPP_CORE
           IF (occ(korb).EQ.0) CYCLE
@@ -154,6 +158,7 @@ CONTAINS
           fl = fj + (.5e0)*isign(1,kappa(korb))
           e = -2* (z/ (fn+fl))**2
           CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, e, a,b,ierr)
+          stateEnergies(korb) = e
           WRITE (6,FMT=8010) fn,fl,fj,e,weight
           WRITE (16,FMT=8010) fn,fl,fj,e,weight
           IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
@@ -208,7 +213,31 @@ CONTAINS
        WRITE (16,FMT=8020) q/input%jspins
        !-sb
        qint(jatom,jspin) = q*atoms%neq(jatom)
-
+       attributes = ''
+       WRITE(attributes(1),'(i0)') jatom
+       WRITE(attributes(2),'(i0)') NINT(z)
+       WRITE(attributes(3),'(i0)') jspin
+       WRITE(attributes(4),'(f20.10)') tec
+       WRITE(attributes(5),'(f20.10)') sume
+       WRITE(attributes(6),'(f14.10)') q/input%jspins
+       CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
+                                              'eigenvalueSum','lostElectrons'/),&
+                               attributes,reshape((/8,12,4,9,13,13,6,3,1,20,20,14/),(/6,2/)))
+       DO korb = 1, atoms%ncst(jatom)
+          fj = iabs(kappa(korb)) - .5e0
+          weight = 2*fj + 1.e0
+          IF (bmu > 99.) weight = occ(korb)
+          fl = fj + (.5e0)*isign(1,kappa(korb))
+          attributes = ''
+          WRITE(attributes(1),'(i0)') nprnc(korb)
+          WRITE(attributes(2),'(i0)') fl
+          WRITE(attributes(3),'(f4.1)') fj
+          WRITE(attributes(4),'(f20.10)') stateEnergies(korb)
+          WRITE(attributes(5),'(f15.10)') weight
+          CALL writeXMLElementForm('state',(/'n     ','l     ','j     ','energy','weight'/),&
+                                   attributes(1:5),reshape((/1,1,1,6,9,2,2,4,20,15/),(/5,2/)))
+       END DO
+       CALL closeXMLElement('coreStates')
     ENDDO
 
 #ifdef CPP_CORE
