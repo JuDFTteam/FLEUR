@@ -124,8 +124,8 @@ CONTAINS
        gap = e(INDEX(nstef+1)) - results%ef
        IF ( mpi%irank == 0 ) THEN
           attributes = ''
-          WRITE(attributes(1),'(f20.10)'), gap*hartree_to_ev_const
-          WRITE(attributes(2),'(a)'), 'eV'
+          WRITE(attributes(1),'(f20.10)') gap*hartree_to_ev_const
+          WRITE(attributes(2),'(a)') 'eV'
           CALL writeXMLElement('bandgap',(/'value','units'/),attributes)
           WRITE (6,FMT=8050) gap
        END IF
