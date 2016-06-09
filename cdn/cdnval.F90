@@ -88,6 +88,7 @@ CONTAINS
     USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
     USE m_types
+    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)   :: mpi
@@ -325,8 +326,11 @@ CONTAINS
 
     ALLOCATE ( kveclo(atoms%nlotot) )
 
-    IF (mpi%irank==0) WRITE (6,FMT=8000) jspin
-    IF (mpi%irank==0) WRITE (16,FMT=8000) jspin
+    IF (mpi%irank==0) THEN
+       WRITE (6,FMT=8000) jspin
+       WRITE (16,FMT=8000) jspin
+       CALL openXMLElementPoly('valenceDensity',(/'spin'/),(/jspin/))
+    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
     CALL cdn_read0(&
@@ -971,6 +975,7 @@ enddo
                    ENDIF
                             !-for
                 ENDDO ! end of loop ispin = jsp_start,jsp_end
+       CALL closeXMLElement('valenceDensity')
              ENDIF ! end of (mpi%irank==0)
              !+t3e
              !Note: no deallocation anymore, we rely on Fortran08 :-)

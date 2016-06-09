@@ -32,6 +32,7 @@
       use m_coredr
       use m_m_perp
       USE m_types
+      USE m_xmlOutput
       IMPLICIT NONE
       TYPE(t_results),INTENT(INOUT):: results
       TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -74,6 +75,7 @@
       COMPLEX,ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
       COMPLEX,ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
       COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
+      CHARACTER(LEN=20)   :: attributes(4)
 !---> pk non-collinear
       REAL    rhoint,momint,alphdiff(atoms%ntypd)
       INTEGER igq2_fft(0:stars%kq1d*stars%kq2d-1)
@@ -351,17 +353,27 @@ enddo
             WRITE (6,FMT=8020)
             WRITE (16,FMT=8020)
             noco_new=noco
+            CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
             DO  n = 1,atoms%ntype
                smom = chmom(n,1) - chmom(n,input%jspins)
                WRITE (6,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
                WRITE (16,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
+               attributes = ''
+               WRITE(attributes(1),'(i0)'), n
+               WRITE(attributes(2),'(f15.10)'), smom
+               WRITE(attributes(3),'(f15.10)'), chmom(n,1)
+               WRITE(attributes(4),'(f15.10)'), chmom(n,2)
+               CALL writeXMLElementFormPoly('magneticMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
+                                                               'spinDownCharge'/),&
+                                            attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
                IF (noco%l_mperp) THEN
 !--->             calculate the perpendicular part of the local moment
 !--->             and relax the angle of the local moment or calculate
 !--->             the constraint B-field.
                   CALL m_perp(atoms,n,noco_new,vr(:,0,:,:),chmom,qa21,alphdiff)
                ENDIF
-            enddo
+            ENDDO
+            CALL closeXMLElement('magneticMomentsInMTSpheres')
 
 !--->       save the new nocoinp file if the dierctions of the local
 !--->       moments are relaxed or a constraint B-field is calculated.

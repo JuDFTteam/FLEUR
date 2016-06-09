@@ -230,12 +230,12 @@ CONTAINS
           fl = fj + (.5e0)*isign(1,kappa(korb))
           attributes = ''
           WRITE(attributes(1),'(i0)') nprnc(korb)
-          WRITE(attributes(2),'(i0)') fl
+          WRITE(attributes(2),'(i0)') NINT(fl)
           WRITE(attributes(3),'(f4.1)') fj
           WRITE(attributes(4),'(f20.10)') stateEnergies(korb)
           WRITE(attributes(5),'(f15.10)') weight
           CALL writeXMLElementForm('state',(/'n     ','l     ','j     ','energy','weight'/),&
-                                   attributes(1:5),reshape((/1,1,1,6,9,2,2,4,20,15/),(/5,2/)))
+                                   attributes(1:5),reshape((/1,1,1,6,6,2,2,4,20,15/),(/5,2/)))
        END DO
        CALL closeXMLElement('coreStates')
     ENDDO
