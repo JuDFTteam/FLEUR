@@ -144,12 +144,12 @@ CONTAINS
              WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
              WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
              attributes = ''
-             WRITE(attributes(1),'(i0)'), jsp
-             WRITE(attributes(2),'(i0)'), k
-             WRITE(attributes(3),'(f15.8)'), kpts%bk(1,k)
-             WRITE(attributes(4),'(f15.8)'), kpts%bk(2,k)
-             WRITE(attributes(5),'(f15.8)'), kpts%bk(3,k)
-             CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x','k_y','k_z'/),attributes,eig(1:ne(k,jsp),k,jsp))
+             WRITE(attributes(1),'(i0)') jsp
+             WRITE(attributes(2),'(i0)') k
+             WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
+             WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
+             WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
+             CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
           END IF
           nv= -1
           !
@@ -230,8 +230,8 @@ CONTAINS
     DEALLOCATE ( idxeig,idxjsp,idxkpt,index,e,eig,we )
 
     attributes = ''
-    WRITE(attributes(1),'(f20.10)'), results%ef
-    WRITE(attributes(2),'(a)'), 'htr'
+    WRITE(attributes(1),'(f20.10)') results%ef
+    WRITE(attributes(2),'(a)') 'htr'
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
 
     RETURN

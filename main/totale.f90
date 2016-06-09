@@ -66,11 +66,11 @@ CONTAINS
     !     .. Local Scalars ..
     REAL rhs,totz, eigSum
     INTEGER n,j,nt,iter,i
-    CHARACTER(LEN=20) totalEnergyString
 
     !     .. Local Arrays ..
     REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
     REAL dpj(atoms%jmtd)
+    CHARACTER(LEN=20) :: attributes(3)
     !.....density
     REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
     COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
@@ -239,11 +239,13 @@ CONTAINS
        WRITE (16,FMT=8081) results%tote-0.5e0*results%ts
     END IF
 
-    WRITE(totalEnergyString,'(f20.10)'), results%tote
+    WRITE(attributes(1),'(f20.10)') results%tote
+    WRITE(attributes(2),'(a)') 'Htr'
+    WRITE(attributes(3),'(a)') 'HF'
     IF (hybrid%l_calhf) THEN
-       CALL openXMLElementForm('totalEnergy',(/'value','units','comment'/),(/totalEnergyString,'Htr','HF'/),reshape((/40,20/),(/1,2/)))
+       CALL openXMLElementForm('totalEnergy',(/'value  ','units  ','comment'/),attributes,reshape((/40,20/),(/1,2/)))
     ELSE
-       CALL openXMLElementForm('totalEnergy',(/'value','units'/),(/totalEnergyString,'Htr'/),reshape((/40,20/),(/1,2/)))
+       CALL openXMLElementForm('totalEnergy',(/'value','units'/),attributes(1:2),reshape((/40,20/),(/1,2/)))
     END IF
     CALL openXMLElementFormPoly('sumOfEigenvalues',(/'value'/),(/eigSum/),reshape((/32,20/),(/1,2/)))
     CALL writeXMLElementFormPoly('coreElectrons',(/'value'/),(/results%seigc/),reshape((/32,20/),(/1,2/)))
