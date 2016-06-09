@@ -304,7 +304,7 @@ CONTAINS
     !     calculate the charge density distance for each spin
     !
     IF(hybrid%l_calhf) THEN
-       CALL openXMLElement('densityConvergence',(/'units','comment'/),(/'me/bohr^3','HF'/))
+       CALL openXMLElement('densityConvergence',(/'units  ','comment'/),(/'me/bohr^3','HF       '/))
     ELSE
        CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
     END IF
