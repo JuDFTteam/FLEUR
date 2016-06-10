@@ -329,7 +329,7 @@ CONTAINS
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
        WRITE (16,FMT=8000) jspin
-       CALL openXMLElementPoly('valenceDensity',(/'spin'/),(/jspin/))
+       CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
     END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
@@ -964,7 +964,7 @@ CONTAINS
           END IF
                             !-for
        END DO ! end of loop ispin = jsp_start,jsp_end
-       CALL closeXMLElement('valenceDensity')
+       CALL closeXMLElement('mtCharges')
     END IF ! end of (mpi%irank==0)
     !+t3e
     !Note: no deallocation anymore, we rely on Fortran08 :-)

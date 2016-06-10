@@ -158,6 +158,8 @@
 !        called once and both spin directions are calculated in a single
 !        go.
 !
+         IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
+
          jspmax = input%jspins
          IF (noco%l_mperp) jspmax = 1
          DO jspin = 1,jspmax
@@ -179,9 +181,8 @@
 !-t3e
          IF (l_enpara) CLOSE (40)
 
-         CALL openXMLElementNoAttributes('valenceCharges')
          CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, qpw,rho,rht, qtot,dummy)
-         CALL closeXMLElement('valenceCharges')
+         CALL closeXMLElement('valenceDensity')
 !
 !---> changes
 !
