@@ -160,18 +160,16 @@
 !
          jspmax = input%jspins
          IF (noco%l_mperp) jspmax = 1
-         DO  jspin = 1,jspmax
-           CALL timestart("cdngen: cdnval")
+         DO jspin = 1,jspmax
+            CALL timestart("cdngen: cdnval")
 
-        CALL cdnval(eig_id,&
-             mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
-             sphhar, sym,obsolete, igq_fft, vr,vz(:,:,jspin), oneD,&
-             n_mmp(-3:,-3:,:,jspin),results, qpw,rhtxy,rho,rht,cdom,cdomvz,cdomvxy,qa21, chmom,clmom)
-        CALL timestop("cdngen: cdnval")
-        
-
+            CALL cdnval(eig_id,&
+                        mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
+                        sphhar, sym,obsolete, igq_fft, vr,vz(:,:,jspin), oneD,&
+                        n_mmp(-3:,-3:,:,jspin),results, qpw,rhtxy,rho,rht,cdom,cdomvz,cdomvxy,qa21, chmom,clmom)
+            CALL timestop("cdngen: cdnval")
 !-fo
-      enddo
+         END DO
 !-lda+U
       IF ( (atoms%n_u.GT.0).and. (mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,n_mmp)
       DEALLOCATE (  n_mmp )
@@ -179,9 +177,11 @@
 !+t3e
       IF (mpi%irank.EQ.0) THEN
 !-t3e
-      IF (l_enpara) CLOSE (40)
+         IF (l_enpara) CLOSE (40)
 
-      CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, qpw,rho,rht, qtot,dummy)
+         CALL openXMLElementNoAttributes('valenceCharges')
+         CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, qpw,rho,rht, qtot,dummy)
+         CALL closeXMLElement('valenceCharges')
 !
 !---> changes
 !
@@ -313,7 +313,9 @@ enddo
       IF (mpi%irank.EQ.0) THEN
 !     block 2 unnecessary for slicing: begin
       IF (.NOT.sliceplot%slice) THEN
+         CALL openXMLElement('allElectronCharges',(/'comment'/),(/'inQFix'/))
          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht, fix)
+         CALL closeXMLElement('allElectronCharges')
 !---> pk non-collinear
          IF (noco%l_noco) THEN
             !--->    fix also the off-diagonal part of the density matrix
