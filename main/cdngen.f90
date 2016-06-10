@@ -359,10 +359,10 @@ enddo
                WRITE (6,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
                WRITE (16,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
                attributes = ''
-               WRITE(attributes(1),'(i0)'), n
-               WRITE(attributes(2),'(f15.10)'), smom
-               WRITE(attributes(3),'(f15.10)'), chmom(n,1)
-               WRITE(attributes(4),'(f15.10)'), chmom(n,2)
+               WRITE(attributes(1),'(i0)') n
+               WRITE(attributes(2),'(f15.10)') smom
+               WRITE(attributes(3),'(f15.10)') chmom(n,1)
+               WRITE(attributes(4),'(f15.10)') chmom(n,2)
                CALL writeXMLElementFormPoly('magneticMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
                                                                'spinDownCharge'/),&
                                             attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
