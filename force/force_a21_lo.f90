@@ -56,12 +56,12 @@ CONTAINS
                    !--->             check whether the t-matrixelement is 0
                    !--->             (indmat.EQ.-9999)
                    !
-                   in = tlmplm%ind(lmp,lm,itype,isp)
+                   in = tlmplm%ind(lmp,lm,itype,1)
                    IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
-                      utulo = tlmplm%tuulo(lmp,m,lo,isp)
-                      dtulo = tlmplm%tdulo(lmp,m,lo,isp)
-                      cutulo = conjg(tlmplm%tuulo(lmp,m,lo,isp))
-                      cdtulo = conjg(tlmplm%tdulo(lmp,m,lo,isp))
+                      utulo = tlmplm%tuulo(lmp,m,lo,1)
+                      dtulo = tlmplm%tdulo(lmp,m,lo,1)
+                      cutulo = conjg(tlmplm%tuulo(lmp,m,lo,1))
+                      cdtulo = conjg(tlmplm%tdulo(lmp,m,lo,1))
                       DO ie = 1,ne
                          DO i = 1,3
                             a21(i,iatom)=a21(i,iatom)+2.0*aimag(&
@@ -86,14 +86,14 @@ CONTAINS
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
                 DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
-                   in = tlmplm%ind(lmp,lm,itype,isp)
+                   in = tlmplm%ind(lmp,lm,itype,1)
                    IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
                       IF (lo.GE.lop) THEN
                          lolop = (lo-1)*lo/2 + lop
-                         ulotulo = tlmplm%tuloulo(m,mp,lolop,isp)
+                         ulotulo = tlmplm%tuloulo(m,mp,lolop,1)
                       ELSE
                          loplo = (lop-1)*lop/2 + lo
-                         ulotulo = conjg(tlmplm%tuloulo(mp,m,loplo,isp))
+                         ulotulo = conjg(tlmplm%tuloulo(mp,m,loplo,1))
                       ENDIF
                       DO ie = 1,ne
                          DO i = 1,3
