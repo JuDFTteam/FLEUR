@@ -1,7 +1,8 @@
 MODULE m_forcea21lo
 CONTAINS
-  SUBROUTINE force_a21_lo(nobd,atoms, loplod,isp,itype,we,eig,ne,&
-       acof,bcof,ccof,aveccof,bveccof,cveccof, tlmplm,usdus, a21)
+  SUBROUTINE force_a21_lo(nobd,atoms,isp,itype,we,eig,ne,&
+                          acof,bcof,ccof,aveccof,bveccof,&
+                          cveccof,tlmplm,usdus, a21)
     !
     !***********************************************************************
     ! This subroutine calculates the local orbital contribution to A21,
@@ -18,7 +19,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd     
-    INTEGER, INTENT (IN) :: loplod,itype,ne,isp
+    INTEGER, INTENT (IN) :: itype,ne,isp
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(nobd),eig(:)!(dimension%neigd)

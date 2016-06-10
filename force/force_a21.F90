@@ -1,7 +1,7 @@
 MODULE m_forcea21
 CONTAINS
   SUBROUTINE force_a21(&
-       atoms,dimension,nobd,sym, loplod,oneD,cell,&
+       atoms,dimension,nobd,sym,oneD,cell,&
        we,jsp,epar,ne,eig,usdus,&
        acof,bcof,ccof,aveccof,bveccof,cveccof, results,f_a21,f_b4)
 
@@ -38,8 +38,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)     :: usdus
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd  
-    INTEGER, INTENT (IN) :: loplod 
+    INTEGER, INTENT (IN) :: nobd
     INTEGER, INTENT (IN) :: ne,jsp
     !     ..
     !     .. Array Arguments ..
@@ -56,7 +55,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER, PARAMETER :: lmaxb=3
     COMPLEX dtd,dtu,utd,utu
-    INTEGER lo 
+    INTEGER lo, mlotot, mlolotot, mlot_d, mlolot_d
     INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom
     INTEGER natrun,is,isinv,j,irinv,it
     REAL   ,PARAMETER:: zero=0.0
@@ -73,11 +72,18 @@ CONTAINS
     !     ..
     !     ..
     !dimension%lmplmd = (dimension%lmd* (dimension%lmd+3))/2
+    mlotot = 0 ; mlolotot = 0
+    DO n = 1, atoms%ntype
+       mlotot = mlotot + atoms%nlo(n)
+       mlolotot = mlolotot + atoms%nlo(n)*(atoms%nlo(n)+1)/2
+    ENDDO
+    mlot_d = max(mlotot,1)
+    mlolot_d = max(mlolotot,1)
     ALLOCATE ( tlmplm%tdd(0:dimension%lmplmd,atoms%ntype,1),tlmplm%tuu(0:dimension%lmplmd,atoms%ntype,1),&
          tlmplm%tdu(0:dimension%lmplmd,atoms%ntype,1),tlmplm%tud(0:dimension%lmplmd,atoms%ntype,1),&
-         tlmplm%tuulo(0:dimension%lmd,-atoms%llod:atoms%llod,atoms%nlod,1),&
-         tlmplm%tdulo(0:dimension%lmd,-atoms%llod:atoms%llod,atoms%nlod,1),&
-         tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,loplod,1),&
+         tlmplm%tuulo(0:dimension%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
+         tlmplm%tdulo(0:dimension%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
+         tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
          v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb),&
          a21(3,atoms%natd),b4(3,atoms%natd),tlmplm%ind(0:dimension%lmd,0:dimension%lmd,atoms%ntype,1) )
     !
@@ -179,11 +185,13 @@ CONTAINS
           !
           !--->    add the local orbital and U contribution to a21
           !
-          CALL force_a21_lo(nobd,atoms, loplod,jsp,n,we,eig,ne,&
-               acof,bcof,ccof,aveccof,bveccof,cveccof, tlmplm,usdus, a21)
+          CALL force_a21_lo(nobd,atoms,jsp,n,we,eig,ne,&
+                            acof,bcof,ccof,aveccof,bveccof,&
+                            cveccof, tlmplm,usdus, a21)
 
-          CALL force_a21_U(nobd,atoms,lmaxb,n,jsp,we,ne, usdus,v_mmp,&
-               acof,bcof,ccof,aveccof,bveccof,cveccof, a21)
+          CALL force_a21_U(nobd,atoms,lmaxb,n,jsp,we,ne,&
+                           usdus,v_mmp,acof,bcof,ccof,&
+                           aveccof,bveccof,cveccof, a21)
 
 #ifdef CPP_APW
           ! -> B4 force
