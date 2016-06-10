@@ -51,7 +51,7 @@ CONTAINS
           DO lp = 0,atoms%lmax(itype)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                DO iatom = sum(atoms%neq(:itype-1)),sum(atoms%neq(:itype))
+                DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                    !
                    !--->             check whether the t-matrixelement is 0
                    !--->             (indmat.EQ.-9999)
@@ -85,7 +85,7 @@ CONTAINS
              lp = atoms%llo(lop,itype)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                DO iatom = sum(atoms%neq(:itype-1)),sum(atoms%neq(:itype))
+                DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                    in = tlmplm%ind(lmp,lm,itype,isp)
                    IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
                       IF (lo.GE.lop) THEN
@@ -107,7 +107,7 @@ CONTAINS
                 ENDDO
              ENDDO
           ENDDO
-          DO iatom = sum(atoms%neq(:itype-1)),sum(atoms%neq(:itype))
+          DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
              DO ie = 1,ne
                 DO i = 1,3
                    a21(i,iatom)=a21(i,iatom)&
@@ -122,7 +122,7 @@ CONTAINS
           ENDDO
           !--->       consider only the lop with l_lop = l_lo
           DO lop = atoms%lo1l(l,itype),(atoms%lo1l(l,itype)+atoms%nlol(l,itype)-1)
-             DO iatom = sum(atoms%neq(:itype-1)),sum(atoms%neq(:itype))
+             DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                 DO ie = 1,ne
                    DO i = 1,3
                       a21(i,iatom)=a21(i,iatom)-2.0*aimag(&
