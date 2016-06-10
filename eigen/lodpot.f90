@@ -146,9 +146,9 @@ CONTAINS
                       WRITE(attributes(4),'(f16.10)') e_lo
                       WRITE(attributes(5),'(f16.10)') e_up
                       WRITE(attributes(6),'(f16.10)') e
-                      CALL writeXMLElementForm('atomicEP',(/'atomType     ','spin         ','branch       ',&
-                                                            'branchLowest ','branchHeighes','value        '/),&
-                                               attributes,reshape((/10,4,6,12,13,5,6,1,3,16,16,16/),(/6,2/)))
+                      CALL writeXMLElementForm('atomicEP',(/'atomType      ','spin          ','branch        ',&
+                                                            'branchLowest  ','branchHeighest','value         '/),&
+                                               attributes,reshape((/10,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn(l),ch(l),' branch from',e_lo, ' to',e_up,' htr. ; e_l =',e
                    ENDIF
                    IF( l .EQ. 3 ) THEN
@@ -311,9 +311,9 @@ CONTAINS
                       WRITE(attributes(4),'(f16.10)') e_lo
                       WRITE(attributes(5),'(f16.10)') e_up
                       WRITE(attributes(6),'(f16.10)') e
-                      CALL writeXMLElementForm('loAtomicEP',(/'atomType     ','spin         ','branch       ',&
-                                                            'branchLowest ','branchHeighes','value        '/),&
-                                               attributes,reshape((/8,4,6,12,13,5,6,1,3,16,16,16/),(/6,2/)))
+                      CALL writeXMLElementForm('loAtomicEP',(/'atomType      ','spin          ','branch        ',&
+                                                              'branchLowest  ','branchHeighest','value         '/),&
+                                               attributes,reshape((/8,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn_lo(ilo),ch(l),' branch from', e_lo,' to',e_up,' htr. ; e_l =',e
                    ENDIF
 

@@ -178,7 +178,6 @@
           INTEGER:: eig_id
           INTEGER:: i,it,ithf,jspin,n
           LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
-          CHARACTER(len=9) ivers
           CHARACTER(len=12) fname(3)
           !--- J<
           INTEGER             :: phn
@@ -199,9 +198,8 @@
           include 'mpif.h'
           integer:: ierr(2)
 #endif
-          ivers    = 'fleur 27'
           mpi%mpi_comm=mpi_comm
-         CALL fleur_init(ivers,mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+         CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
                  oneD,l_opti)
 

@@ -4,15 +4,15 @@
       public :: dimens
       CONTAINS
         SUBROUTINE dimens(&
-             &                  mpi,ivers,input,sym,stars,&
+             &                  mpi,input,sym,stars,&
              &                  atoms,sphhar,dimension,vacuum,&
              &                  obsolete,kpts,oneD,hybrid,jij)
 
           USE m_types
           USE m_dimen7
           USE m_firstglance
+          USE m_constants
           IMPLICIT NONE
-          CHARACTER(len=9), INTENT (IN)  :: ivers
           TYPE(t_mpi),INTENT(INOUT) :: mpi
           TYPE(t_input),INTENT(INOUT) :: input
           TYPE(t_sym),INTENT(INOUT) :: sym
@@ -41,7 +41,7 @@
           oneD%odd%d1=.TRUE.
           l_kpts=.TRUE.
 
-          IF (mpi%irank.EQ.0) call priv_hello(ivers)
+          IF (mpi%irank.EQ.0) call priv_hello(version_const)
 
           WRITE (6,*) 'Your parameters: '
 

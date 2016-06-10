@@ -1,7 +1,7 @@
       MODULE m_fleur_init
       IMPLICIT NONE
       CONTAINS
-        SUBROUTINE fleur_init(ivers,mpi,&
+        SUBROUTINE fleur_init(mpi,&
                  input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
                  oneD,l_opti)
@@ -25,7 +25,6 @@
 #endif
           IMPLICIT NONE
           !     Types, these variables contain a lot of data!
-          CHARACTER(len=9),INTENT(IN)  :: ivers
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
           TYPE(t_input)    ,INTENT(OUT):: input
           TYPE(t_dimension),INTENT(OUT):: dimension
@@ -143,7 +142,7 @@
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
 
           CALL dimens(&
-               &            mpi,ivers,input,&
+               &            mpi,input,&
                &            sym,stars,&
                &            atoms,sphhar,&
                &            dimension,vacuum,&
