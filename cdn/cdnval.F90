@@ -782,7 +782,7 @@ CONTAINS
                                we,ispin,noccbd,usdus,acof(:,0:,:,ispin),&
                                bcof(:,0:,:,ispin),e1cof,e2cof, acoflo,bcoflo, results,f_a12)
 #endif
-                CALL force_a21(atoms,dimension,noccbd,sym,atoms%nlod*(atoms%nlod+1)/2,&
+                CALL force_a21(atoms,dimension,noccbd,sym,&
                                oneD,cell,we,ispin,epar(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
                                bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin), aveccof,bveccof,cveccof,&
                                results,f_a21,f_b4)
