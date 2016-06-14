@@ -44,7 +44,15 @@ CONTAINS
 #ifdef CPP_MAGMA
     USE m_magma
 #endif
-   
+#ifdef CPP_ELPA
+    USE m_elpa
+#endif
+#ifdef CPP_SCALAPACK
+    USE m_chani
+#endif
+#ifdef CPP_elemental
+    USE m_elemental
+#endif
     IMPLICIT NONE
 #ifdef CPP_MPI    
     include 'mpif.h'
