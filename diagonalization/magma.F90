@@ -7,7 +7,9 @@ MODULE m_magma
   !**********************************************************
 CONTAINS
   SUBROUTINE magma_diag(nsize,a,b,z,eig,ne)
+#ifdef CPP_MAGMA
     use magma
+#endif    
 #include"cpp_double.h"
     IMPLICIT NONE
 
@@ -25,6 +27,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT (INOUT) :: z(:,:)
 #endif
 
+#ifdef CPP_MAGMA
 
     ! ... Local Variables ..
     INTEGER iind,ind1,ind2,info,lwork,liwork,lrwork,err,i,mout(1)
@@ -100,7 +103,7 @@ CONTAINS
     DO i = 1, ne
        eig(i) = eigTemp(i)
     END DO
-
+#endif
   END SUBROUTINE magma_diag
 END MODULE m_magma
 
