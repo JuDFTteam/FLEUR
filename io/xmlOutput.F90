@@ -122,7 +122,7 @@ MODULE m_xmlOutput
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
 #ifndef __PGI
-            TYPE IS(CHARACTER(LEN=30))
+            TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
@@ -140,7 +140,7 @@ MODULE m_xmlOutput
                TYPE IS(LOGICAL)
                   WRITE(charContentList(i),'(l1)') contentList(i)
 #ifndef __PGI
-               TYPE IS(CHARACTER(LEN=30))
+               TYPE IS(CHARACTER(LEN=*))
                   WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
                CLASS DEFAULT
                   STOP 'Type of contentList not allowed'
@@ -353,7 +353,7 @@ MODULE m_xmlOutput
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
 #ifndef __PGI
-            TYPE IS(CHARACTER(LEN=30))
+            TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
