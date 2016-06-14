@@ -122,10 +122,10 @@ CONTAINS
     ! The only reason having them is that the Scalapack counterpart
     ! PDPOTRF very often fails on higher processor numbers for unknown reasons!
 #ifdef CPP_ELPA_NEW
-    CALL CPP_cholesky (m,bsca,SIZE(bsca,1),nb, mpi_comm_rows,mpi_comm_cols,ok)
+    CALL CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb, mpi_comm_rows,mpi_comm_cols,ok)
     CALL CPP_invert_trm(m, bsca, SIZE(bsca,1), nb, mpi_comm_rows, mpi_comm_cols,ok)
 #else
-    CALL CPP_cholesky(m,bsca,SIZE(bsca,1),nb, mpi_comm_rows,mpi_comm_cols)
+    CALL CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb, mpi_comm_rows,mpi_comm_cols)
     CALL CPP_invert_trm(m, bsca, SIZE(bsca,1), nb, mpi_comm_rows, mpi_comm_cols)
 #endif
 

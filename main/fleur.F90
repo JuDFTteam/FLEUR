@@ -119,6 +119,7 @@
           USE m_potdis
           USE m_mix
           USE m_xmlOutput
+          USE m_juDFT_time
 !          USE m_jcoff
 !          USE m_jcoff2
 !          USE m_ssomat
@@ -858,6 +859,7 @@
        ELSE
           l_cont = ( it < input%itmax )
        END IF
+       CALL writeTimesXML()
        IF (mpi%irank.EQ.0) CALL closeXMLElement('iteration')
 80     CONTINUE
        IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')

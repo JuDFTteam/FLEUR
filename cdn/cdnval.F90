@@ -329,7 +329,7 @@ CONTAINS
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
        WRITE (16,FMT=8000) jspin
-       CALL openXMLElementPoly('valenceDensity',(/'spin'/),(/jspin/))
+       CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
     END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
@@ -782,7 +782,7 @@ CONTAINS
                                we,ispin,noccbd,usdus,acof(:,0:,:,ispin),&
                                bcof(:,0:,:,ispin),e1cof,e2cof, acoflo,bcoflo, results,f_a12)
 #endif
-                CALL force_a21(atoms,dimension,noccbd,sym,atoms%nlod*(atoms%nlod+1)/2,&
+                CALL force_a21(atoms,dimension,noccbd,sym,&
                                oneD,cell,we,ispin,epar(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
                                bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin), aveccof,bveccof,cveccof,&
                                results,f_a21,f_b4)
@@ -964,7 +964,7 @@ CONTAINS
           END IF
                             !-for
        END DO ! end of loop ispin = jsp_start,jsp_end
-       CALL closeXMLElement('valenceDensity')
+       CALL closeXMLElement('mtCharges')
     END IF ! end of (mpi%irank==0)
     !+t3e
     !Note: no deallocation anymore, we rely on Fortran08 :-)

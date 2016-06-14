@@ -98,7 +98,6 @@ CONTAINS
          &     t33,'d',t42,'f',t51,'total')
     CALL timestart("cdnmt")
 
-    CALL openXMLElementNoAttributes('mtCharges')
     na = 1
     DO itype = 1,atoms%ntype
        !--->    spherical component
@@ -251,7 +250,6 @@ CONTAINS
 
        na = na + atoms%neq(itype)
     ENDDO ! end of loop over atom types
-    CALL closeXMLElement('mtCharges')
     CALL timestop("cdnmt")
     !---> for testing: to plot the offdiag. part of the density matrix it
     !---> is written to the file rhomt21. This file can read in pldngen.

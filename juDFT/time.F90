@@ -6,6 +6,7 @@
 !     called with suitable names for timers
 !     Daniel Wortmann, Fri Sep  6 11:53:08 2002
 !*****************************************************************
+      USE m_xmlOutput
       IMPLICIT NONE
 !     List of different timers
       PRIVATE
@@ -29,7 +30,7 @@
       CHARACTER(LEN=256),SAVE   :: lastfile=""
       INTEGER           ,SAVE   :: lastline=0
 
-      PUBLIC timestart,timestop,writetimes,writelocation
+      PUBLIC timestart,timestop,writetimes,writelocation,writeTimesXML
       PUBLIC juDFT_time_lastlocation !should not be used
 
       CONTAINS
@@ -300,6 +301,79 @@
       IF (.NOT.l_out) CLOSE(2)
 
       END SUBROUTINE writetimes
+
+      ! writes all times to out.xml file
+      SUBROUTINE writeTimesXML()
+
+         IMPLICIT NONE
+
+         INTEGER                :: fn,irank=0
+         LOGICAL                :: l_out
+         TYPE(t_timer), POINTER :: timer
+#ifdef CPP_MPI
+         include "mpif.h"
+         INTEGER::err,isize
+
+         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+#endif
+         IF (irank.NE.0) RETURN
+         IF (.NOT.associated(globaltimer)) RETURN !write nothing if no timing recorded
+
+         timer => globaltimer
+         DO WHILE (TRIM(ADJUSTL(timer%name)).NE.'Iteration')
+            IF(timer%n_subtimers.EQ.0) RETURN
+            timer => timer%subtimer(1)%p
+         END DO
+
+         CALL openXMLElement('timing',(/'units'/),(/'sec'/))
+         CALL privWriteTimesXML(timer,1)
+         CALL closeXMLElement('timing')
+
+      END SUBROUTINE writeTimesXML
+
+      RECURSIVE SUBROUTINE privWriteTimesXML(timer,level)
+
+         IMPLICIT NONE
+
+         TYPE(t_timer),INTENT(IN)    :: timer
+         INTEGER,INTENT(IN)          :: level
+
+         INTEGER            :: n, timerNameLength
+         REAL               :: time
+         CHARACTER(LEN=30)  :: timername
+         CHARACTER(LEN=40)  :: attributes(2)
+
+         IF (timer%starttime>0) THEN
+            time=timer%time+cputime()-timer%starttime
+         ELSE
+            time=timer%time
+         END IF
+         timername=TRIM(ADJUSTL(timer%name))
+         timerNameLength = LEN(TRIM(ADJUSTL(timername)))
+
+         DO n = 1, timerNameLength
+            IF (timername(n:n).EQ.' ') THEN
+               timername(n:n) = '_'
+            END IF
+            IF (timername(n:n).EQ.'&') THEN
+               timername(n:n) = '+'
+            END IF
+         END DO
+
+         WRITE(attributes(1),'(a)') TRIM(ADJUSTL(timername))
+         WRITE(attributes(2),'(f12.3)') time
+         IF(timer%n_subtimers.EQ.0) THEN
+            CALL writeXMLElementForm('timer',(/'name ','value'/),attributes,&
+                                         reshape((/14+20-3*level,5,40,12/),(/2,2/)))
+         ELSE
+            CALL openXMLElementForm('compositeTimer',(/'name ','value'/),attributes,&
+                                        reshape((/5+20-3*level,5,40,12/),(/2,2/)))
+            DO n = 1, timer%n_subtimers
+               CALL privWriteTimesXML(timer%subtimer(n)%p,level+1)
+            END DO
+            CALL closeXMLElement('compositeTimer')
+         END IF
+      END SUBROUTINE privWriteTimesXML
 
       !>
       !<-- private function timestring

@@ -8,6 +8,7 @@
       USE m_geo
       USE m_relax
       USE m_types
+      USE m_xmlOutput
       IMPLICIT NONE
 
       TYPE(t_results),INTENT(IN)   :: results
@@ -26,6 +27,7 @@
 !     ..
 !     .. Local Arrays ..
       REAL forcetot(3,atoms%ntypd)
+      CHARACTER(LEN=20) :: attributes(7)
 !
 !     write spin-dependent forces
 !
@@ -52,30 +54,43 @@
       WRITE  (6,8005)
       WRITE (16,8005)
  8005 FORMAT (/,' ***** TOTAL FORCES ON ATOMS ***** ',/)
+      IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
       nat1 = 1
       DO n = 1,atoms%ntype
          IF (atoms%l_geo(n)) THEN
-!
-         DO i = 1,3
-            forcetot(i,n) = zero
-         END DO
-         DO jsp = 1,input%jspins
             DO i = 1,3
-               forcetot(i,n) = forcetot(i,n) + results%force(i,n,jsp)
+               forcetot(i,n) = zero
             END DO
-         END DO
-!
-         WRITE (6,FMT=8010) n, (atoms%pos(i,nat1),i=1,3),&
-     &     (forcetot(i,n),i=1,3)
-         WRITE (16,FMT=8010) n, (atoms%pos(i,nat1),i=1,3),&
-     &     (forcetot(i,n),i=1,3)
- 8010    FORMAT (' TOTAL FORCE FOR ATOM TYPE=',i3,2x,'X=',f7.3,3x,'Y=',&
-     &          f7.3,3x,'Z=',f7.3,/,22x,' FX_TOT=',f9.6,&
-     &          ' FY_TOT=',f9.6,' FZ_TOT=',f9.6)
-!
-         ENDIF
+            DO jsp = 1,input%jspins
+               DO i = 1,3
+                  forcetot(i,n) = forcetot(i,n) + results%force(i,n,jsp)
+               END DO
+            END DO
+
+            WRITE (6,FMT=8010) n, (atoms%pos(i,nat1),i=1,3),&
+     &        (forcetot(i,n),i=1,3)
+            WRITE (16,FMT=8010) n, (atoms%pos(i,nat1),i=1,3),&
+     &        (forcetot(i,n),i=1,3)
+ 8010       FORMAT (' TOTAL FORCE FOR ATOM TYPE=',i3,2x,'X=',f7.3,3x,'Y=',&
+     &              f7.3,3x,'Z=',f7.3,/,22x,' FX_TOT=',f9.6,&
+     &              ' FY_TOT=',f9.6,' FZ_TOT=',f9.6)
+
+            WRITE(attributes(1),'(i0)') n
+            WRITE(attributes(2),'(f12.6)') atoms%pos(1,nat1)
+            WRITE(attributes(3),'(f12.6)') atoms%pos(2,nat1)
+            WRITE(attributes(4),'(f12.6)') atoms%pos(3,nat1)
+            WRITE(attributes(5),'(f12.8)') forcetot(1,n)
+            WRITE(attributes(6),'(f12.8)') forcetot(2,n)
+            WRITE(attributes(7),'(f12.8)') forcetot(3,n)
+            IF (input%l_f) THEN
+               CALL writeXMLElementFormPoly('forceTotal',(/'atomType','x       ','y       ','z       ',&
+                                                           'F_x     ','F_y     ','F_z     '/),attributes,&
+                                            reshape((/8,1,1,1,3,3,3,6,12,12,12,12,12,12/),(/7,2/)))
+            END IF
+         END IF
          nat1 = nat1 + atoms%neq(n)
       END DO
+      IF (input%l_f) CALL closeXMLElement('totalForcesOnRepresentativeAtoms')
 
       sum=0.0
       DO n = 1,atoms%ntype
