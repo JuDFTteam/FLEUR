@@ -40,6 +40,10 @@ MODULE m_xmlOutput
 
       IMPLICIT NONE
 
+#ifdef CPP_MPI
+      include "mpif.h"
+      INTEGER::err,isize
+#endif
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
       CHARACTER(LEN=10)  :: zone
@@ -58,6 +62,10 @@ MODULE m_xmlOutput
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL writeXMLElement('programVersion',(/'version'/),(/version_const/))
+#ifdef CPP_MPI
+      CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
+      CALL writeXMLElementPoly('parallelizationParameters',(/'mpiPEs'/),(/isize/))
+#endif
       CALL writeXMLElement('startDateAndTime',(/'date','time','zone'/),(/dateString,timeString,zone/))
    END SUBROUTINE startXMLOutput
 
