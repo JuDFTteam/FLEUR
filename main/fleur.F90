@@ -860,6 +860,7 @@
           l_cont = ( it < input%itmax )
        END IF
        CALL writeTimesXML()
+       CALL resetIterationDependentTimers()
        IF (mpi%irank.EQ.0) CALL closeXMLElement('iteration')
 80     CONTINUE
        IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')

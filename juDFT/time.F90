@@ -31,6 +31,7 @@
       INTEGER           ,SAVE   :: lastline=0
 
       PUBLIC timestart,timestop,writetimes,writelocation,writeTimesXML
+      PUBLIC resetIterationDependentTimers
       PUBLIC juDFT_time_lastlocation !should not be used
 
       CONTAINS
@@ -340,21 +341,25 @@
 
          INTEGER            :: n, timerNameLength
          REAL               :: time
-         CHARACTER(LEN=30)  :: timername
-         CHARACTER(LEN=40)  :: attributes(2)
+         CHARACTER(LEN=50)  :: timername
+         CHARACTER(LEN=50)  :: attributes(2)
 
          IF (timer%starttime>0) THEN
             time=timer%time+cputime()-timer%starttime
          ELSE
             time=timer%time
          END IF
-         timername=TRIM(ADJUSTL(timer%name))
+         timername=''
+         DO n = 1, level-2
+            timername = timername(1:3*(n-1))//'|  '
+         END DO
+         IF (level.GE.2) THEN
+            timername = timername(1:3*(level-2))//'+--'
+         END IF
+         timername=TRIM(ADJUSTL(timername))//TRIM(ADJUSTL(timer%name))
          timerNameLength = LEN(TRIM(ADJUSTL(timername)))
 
          DO n = 1, timerNameLength
-            IF (timername(n:n).EQ.' ') THEN
-               timername(n:n) = '_'
-            END IF
             IF (timername(n:n).EQ.'&') THEN
                timername(n:n) = '+'
             END IF
@@ -364,16 +369,60 @@
          WRITE(attributes(2),'(f12.3)') time
          IF(timer%n_subtimers.EQ.0) THEN
             CALL writeXMLElementForm('timer',(/'name ','value'/),attributes,&
-                                         reshape((/14+20-3*level,5,40,12/),(/2,2/)))
+                                         reshape((/14+20-3*level,55-timerNameLength,timerNameLength,12/),(/2,2/)))
          ELSE
             CALL openXMLElementForm('compositeTimer',(/'name ','value'/),attributes,&
-                                        reshape((/5+20-3*level,5,40,12/),(/2,2/)))
+                                        reshape((/5+20-3*level,55-timerNameLength,timerNameLength,12/),(/2,2/)))
             DO n = 1, timer%n_subtimers
                CALL privWriteTimesXML(timer%subtimer(n)%p,level+1)
             END DO
             CALL closeXMLElement('compositeTimer')
          END IF
       END SUBROUTINE privWriteTimesXML
+
+      SUBROUTINE resetIterationDependentTimers()
+
+         IMPLICIT NONE
+
+         INTEGER                :: fn,irank=0
+         LOGICAL                :: l_out
+         TYPE(t_timer), POINTER :: timer, parenttimer
+#ifdef CPP_MPI
+         include "mpif.h"
+         INTEGER::err,isize
+
+         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+#endif
+         IF (irank.NE.0) RETURN
+         IF (.NOT.associated(globaltimer)) RETURN !write nothing if no timing recorded
+
+         timer => globaltimer
+         DO WHILE (TRIM(ADJUSTL(timer%name)).NE.'Iteration')
+            IF(timer%n_subtimers.EQ.0) RETURN
+            timer => timer%subtimer(1)%p
+         END DO
+
+         parenttimer => timer%parenttimer
+         CALL resetSubtimers(timer%parenttimer)
+         ALLOCATE(parenttimer%subtimer(5))
+         
+      END SUBROUTINE resetIterationDependentTimers
+
+      RECURSIVE SUBROUTINE resetSubtimers (timer)
+
+         IMPLICIT NONE
+
+         TYPE(t_timer),INTENT(INOUT)    :: timer
+
+         INTEGER :: n
+
+         DO n = 1, timer%n_subtimers
+            CALL resetSubtimers (timer%subtimer(n)%p)
+            DEALLOCATE(timer%subtimer(n)%p)
+         END DO
+         DEALLOCATE(timer%subtimer)
+         timer%n_subtimers = 0
+      END SUBROUTINE resetSubtimers
 
       !>
       !<-- private function timestring
