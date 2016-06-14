@@ -196,7 +196,7 @@ CONTAINS
 
        IF (.NOT.l_xyav) THEN
           CALL timestart("Qfix")
-          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht, fix)
+          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.FALSE., fix)
           CALL timestop("Qfix")
        ENDIF
        IF (input%total.OR.reap) REWIND nt

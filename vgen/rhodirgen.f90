@@ -141,7 +141,7 @@ CONTAINS
     CALL qfix(&
          &          stars,atoms,sym,vacuum,&
          &          sphhar,input,cell,oneD,&
-         &          qpw,rhtxy,rho,rht,&
+         &          qpw,rhtxy,rho,rht,.FALSE.,&
          &          fix)
 
     !---> fouriertransform the diagonal part of the density matrix

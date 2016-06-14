@@ -360,7 +360,7 @@ CONTAINS
     !
     !     ---> fix the new density
     CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
-                   qpw,rhtxy,rho,rht, fix)
+                   qpw,rhtxy,rho,rht,.FALSE., fix)
 
     iter = iter + 1
     IF (noco%l_noco) THEN

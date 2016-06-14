@@ -7,7 +7,7 @@
       SUBROUTINE cdntot(&
      &                  stars,atoms,sym,&
      &                  vacuum,input,cell,oneD,&
-     &                  qpw,rho,rht,&
+     &                  qpw,rho,rht,l_printData,&
      &                  qtot,qistot)
 
       USE m_intgr, ONLY : intgr3
@@ -27,6 +27,7 @@
       TYPE(t_input),INTENT(IN) :: input
       TYPE(t_oneD),INTENT(IN)  :: oneD
       TYPE(t_cell),INTENT(IN)  :: cell
+      LOGICAL,INTENT(IN)       :: l_printData
       REAL,    INTENT (OUT):: qtot,qistot
 !     ..
 !     .. Array Arguments ..
@@ -117,24 +118,28 @@
          names(2) = 'total'        ; WRITE(attributes(2),'(f17.10)') q                       ; lengths(2,1)=5  ; lengths(2,2)=17
          names(3) = 'interstitial' ; WRITE(attributes(3),'(f17.10)') qis                     ; lengths(3,1)=12 ; lengths(3,2)=17
          names(4) = 'mtSpheres'    ; WRITE(attributes(4),'(f17.10)') SUM(qmt(1:atoms%ntype)) ; lengths(4,1)=9  ; lengths(4,2)=17
-         IF(input%film) THEN
-            DO i = 1, vacuum%nvac
-               WRITE(names(4+i),'(a6,i0)') 'vacuum', i
-               WRITE(attributes(4+i),'(f17.10)') qvac(i)
-               lengths(4+i,1)=7
-               lengths(4+i,2)=17
-            END DO
-            CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4+vacuum%nvac),&
-                                         attributes(1:4+vacuum%nvac),lengths)
-         ELSE
-            CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4),attributes(1:4),lengths)
+         IF(l_printData) THEN
+            IF(input%film) THEN
+               DO i = 1, vacuum%nvac
+                  WRITE(names(4+i),'(a6,i0)') 'vacuum', i
+                  WRITE(attributes(4+i),'(f17.10)') qvac(i)
+                  lengths(4+i,1)=7
+                  lengths(4+i,2)=17
+               END DO
+               CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4+vacuum%nvac),&
+                                            attributes(1:4+vacuum%nvac),lengths)
+            ELSE
+               CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4),attributes(1:4),lengths)
+            END IF
          END IF
          qtot = qtot + q
       END DO ! loop over spins
       DEALLOCATE (lengths)
       WRITE (6,FMT=8020) qtot
       WRITE (16,FMT=8020) qtot
-      CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
+      IF(l_printData) THEN
+         CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
+      END IF
  8000 FORMAT (/,10x,'total charge for spin',i3,'=',f12.6,/,10x,&
      &       'interst. charge =   ',f12.6,/,&
      &       (10x,'mt charge=          ',4f12.6,/))

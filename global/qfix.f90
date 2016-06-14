@@ -7,7 +7,7 @@
       SUBROUTINE qfix(&
      &                stars,atoms,sym,vacuum,&
      &                sphhar,input,cell,oneD,&
-     &                qpw,rhtxy,rho,rht,&
+     &                qpw,rhtxy,rho,rht,l_printData,&
      &                fix)
 
       USE m_types
@@ -23,6 +23,7 @@
       TYPE(t_input),INTENT(IN) :: input
       TYPE(t_oneD),INTENT(IN)  :: oneD
       TYPE(t_cell),INTENT(IN)  :: cell
+      LOGICAL,INTENT(IN)       :: l_printData
       REAL,    INTENT (OUT) :: fix
 !-odim
 !+odim
@@ -41,7 +42,7 @@
       CALL cdntot(&
      &            stars,atoms,sym,&
      &            vacuum,input,cell,oneD,&
-     &            qpw,rho,rht,&
+     &            qpw,rho,rht,.FALSE.,&
      &            qtot,qis)
       zc = 0.
       DO 10 n = 1,atoms%ntype
@@ -99,7 +100,7 @@
          CALL cdntot(&
      &               stars,atoms,sym,&
      &               vacuum,input,cell,oneD,&
-     &               qpw,rho,rht,&
+     &               qpw,rho,rht,l_printData,&
      &               qtot,qis)
 !+roa 
       ELSE
@@ -113,7 +114,7 @@
          CALL cdntot(&
      &               stars,atoms,sym,&
      &               vacuum,input,cell,oneD,&
-     &               qpw,rho,rht,&
+     &               qpw,rho,rht,l_printData,&
      &               qtot,qis)
 
       ENDIF

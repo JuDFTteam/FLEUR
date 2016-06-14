@@ -181,7 +181,7 @@
 !-t3e
          IF (l_enpara) CLOSE (40)
 
-         CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, qpw,rho,rht, qtot,dummy)
+         CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, qpw,rho,rht,.TRUE., qtot,dummy)
          CALL closeXMLElement('valenceDensity')
 !
 !---> changes
@@ -314,8 +314,8 @@ enddo
       IF (mpi%irank.EQ.0) THEN
 !     block 2 unnecessary for slicing: begin
       IF (.NOT.sliceplot%slice) THEN
-         CALL openXMLElement('allElectronCharges',(/'comment'/),(/'inQFix'/))
-         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht, fix)
+         CALL openXMLElementNoAttributes('allElectronCharges')
+         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.TRUE., fix)
          CALL closeXMLElement('allElectronCharges')
 !---> pk non-collinear
          IF (noco%l_noco) THEN
