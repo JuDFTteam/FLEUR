@@ -6,7 +6,8 @@ diagonalization/franza.F90
 diagonalization/geneigbrobl.F90
 diagonalization/locrectify.F90
 diagonalization/mod_loccoeff.f90
-diagonalization/zsymsecloc.F90)
+diagonalization/zsymsecloc.F90
+diagonalization/magma.F90 )
 
 if (${Fleur_uses_MPI})
    set(fleur_F90 ${fleur_F90}

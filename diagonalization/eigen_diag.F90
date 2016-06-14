@@ -26,6 +26,11 @@ MODULE m_eigen_diag
 #else
   INTEGER,PARAMETER:: diag_scalapack=-3
 #endif
+#ifdef CPP_MAGMA
+  INTEGER,PARAMETER:: diag_magma=6
+#else
+  INTEGER,PARAMETER:: diag_magma=-6
+#endif
   INTEGER,PARAMETER:: diag_lapack=4
   INTEGER,PARAMETER:: diag_lapack2=5
 CONTAINS
@@ -36,6 +41,9 @@ CONTAINS
     USE m_alinemuff
     USE m_types
     USE m_franza
+#ifdef CPP_MAGMA
+    USE m_magma
+#endif
    
     IMPLICIT NONE
 #ifdef CPP_MPI    
@@ -142,6 +150,10 @@ CONTAINS
        CASE (diag_scalapack)
           CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm, a,b,z,eig,ne_found)
 #endif
+#ifdef CPP_MAGMA
+       CASE (diag_magma)
+          CALL magma_diag(lapw%nmat,a,b,z,eig,ne_found)
+#endif
        CASE (diag_lapack2)
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
           if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
@@ -187,7 +199,11 @@ CONTAINS
        diag_solver=diag_scalapack
 #endif
     ELSE
+#ifdef CPP_MAGMA
+       diag_solver=diag_magma
+#else
        diag_solver=diag_lapack
+#endif
     ENDIF
 
     !check if a special solver was requested
@@ -196,7 +212,7 @@ CONTAINS
     IF (juDFT_was_argument("-elemental")) diag_solver=diag_elemental
     IF (juDFT_was_argument("-lapack")) diag_solver=diag_lapack
     IF (juDFT_was_argument("-lapack2")) diag_solver=diag_lapack2
-
+    IF (juDFT_was_argument("-magma")) diag_solver=diag_magma
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)
     if (any((/diag_lapack,diag_lapack2/)==diag_solver).and.parallel) call priv_solver_error(diag_solver,parallel)
@@ -236,6 +252,8 @@ CONTAINS
        IF (parallel) THEN
           CALL juDFT_error("The LAPACK2 solver can not be used in parallel")
        ENDIF  
+    CASE (diag_magma)
+       CALL juDFT_error("You have not compiled with MAGMA support")
     CASE DEFAULT
        CALL judft_error("You have selected an unkown eigensolver")
     END SELECT
