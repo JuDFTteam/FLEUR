@@ -2,7 +2,7 @@
 ! within a FLAPW framework
 ! Author: M. Schlipf 2009
 MODULE m_hsefunctional
-
+  USE m_judft
   IMPLICIT NONE
 #ifdef __PGI
     REAL,EXTERNAL ::erfc
@@ -1082,10 +1082,10 @@ CONTAINS
     IF (ngptm < noGpts) STOP 'hsefunctional: error calculating Fourier coefficients, noGpts too large'
 
     gPts(:,:) = gptm(:,pgptm(1:noGPts))
+#ifndef __PGI 
 
     gpoints: FORALL ( cg=1:noGPts )
       ntypesA: FORALL ( cn=1:ntype )
-
         ! Calculate the phase factor exp(-iGR) for all atoms
         FORALL ( ci=1:neq(cn) )
           expIGR(cg,cn,ci)        = EXP( -r2Pi * img * DOT_PRODUCT(taual(:,natdPtr(cn)+ci),gPts(:,cg)) )
@@ -1199,7 +1199,9 @@ CONTAINS
     endwhere
 
     DEALLOCATE( gridf )
-
+#else
+    call judft_error("hsefunctional not implemented for PGI")
+#endif
   CONTAINS
 
     ! Calculates the inter-atom parts and the summation over all atoms:

@@ -107,16 +107,18 @@ MODULE m_xmlOutput
 
       DO i = 1, SIZE(attributeValues)
          SELECT TYPE (attributeValues)
-            TYPE IS(INTEGER)
+           TYPE IS(INTEGER)
                WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
             TYPE IS(REAL)
                WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-            TYPE IS(CHARACTER(LEN=*))
+#ifndef __PGI
+            TYPE IS(CHARACTER(LEN=30))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
+#endif
          END SELECT
       END DO
 
@@ -129,10 +131,12 @@ MODULE m_xmlOutput
                   WRITE(charContentList(i),'(f19.10)') contentList(i)
                TYPE IS(LOGICAL)
                   WRITE(charContentList(i),'(l1)') contentList(i)
-               TYPE IS(CHARACTER(LEN=*))
+#ifndef __PGI
+               TYPE IS(CHARACTER(LEN=30))
                   WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
                CLASS DEFAULT
                   STOP 'Type of contentList not allowed'
+#endif
             END SELECT
          END DO
          CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths,charContentList)
@@ -340,10 +344,12 @@ MODULE m_xmlOutput
                WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-            TYPE IS(CHARACTER(LEN=*))
+#ifndef __PGI
+            TYPE IS(CHARACTER(LEN=30))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed'
+#endif
          END SELECT
       END DO
 
