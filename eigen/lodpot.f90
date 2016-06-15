@@ -148,8 +148,9 @@ CONTAINS
                       WRITE(attributes(6),'(f16.10)') e
                       CALL writeXMLElementForm('atomicEP',(/'atomType      ','spin          ','branch        ',&
                                                             'branchLowest  ','branchHeighest','value         '/),&
-                                               attributes,reshape((/10,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
-                      WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn(l),ch(l),' branch from',e_lo, ' to',e_up,' htr. ; e_l =',e
+                                               attributes,reshape((/12,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
+                      WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn(l),ch(l),' branch from',&
+                                                                         e_lo, ' to',e_up,' htr. ; e_l =',e
                    ENDIF
                    IF( l .EQ. 3 ) THEN
                       el(4:atoms%lmax(n),n,jsp) = el(3,n,jsp)
@@ -240,7 +241,17 @@ CONTAINS
                    END DO
 
                    IF (mpi%irank == 0) THEN
-                      WRITE (6,'(a7,i3,i2,a1,a12,f7.2,a4,f7.2,a5)') "  Atom ",n,nqn(l),ch(l)," branch, D = ",ldmt, " at ",e," htr."
+                      attributes = ''
+                      WRITE(attributes(1),'(i0)') n
+                      WRITE(attributes(2),'(i0)') jsp
+                      WRITE(attributes(3),'(i0,a1)') ABS(nqn(l)), ch(l)
+                      WRITE(attributes(4),'(f16.10)') ldmt
+                      WRITE(attributes(5),'(f16.10)') e
+                      CALL writeXMLElementForm('heAtomicEP',(/'atomType      ','spin          ','branch        ',&
+                                                              'logDerivMT    ','value         '/),&
+                                               attributes(1:5),reshape((/10,4,6,12,5+34,6,1,3,16,16/),(/5,2/)))
+                      WRITE (6,'(a7,i3,i2,a1,a12,f7.2,a4,f7.2,a5)') "  Atom ",n,nqn(l),ch(l)," branch, D = ",&
+                                                                    ldmt, " at ",e," htr."
                    ENDIF
 
                    el(l,n,jsp) = e
@@ -313,8 +324,9 @@ CONTAINS
                       WRITE(attributes(6),'(f16.10)') e
                       CALL writeXMLElementForm('loAtomicEP',(/'atomType      ','spin          ','branch        ',&
                                                               'branchLowest  ','branchHeighest','value         '/),&
-                                               attributes,reshape((/8,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
-                      WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn_lo(ilo),ch(l),' branch from', e_lo,' to',e_up,' htr. ; e_l =',e
+                                               attributes,reshape((/10,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
+                      WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn_lo(ilo),ch(l),' branch from',&
+                                                                         e_lo,' to',e_up,' htr. ; e_l =',e
                    ENDIF
 
 
@@ -400,7 +412,17 @@ CONTAINS
 
 
                    IF (mpi%irank == 0) THEN
-                      WRITE (6,'(a6,i3,i2,a1,a12,f6.2,a4,f6.2,a5)') '  Atom',n,ABS(nqn_lo(ilo)),ch(l), ' branch, D = ',ldmt,' at ',e,' htr.'
+                      attributes = ''
+                      WRITE(attributes(1),'(i0)') n
+                      WRITE(attributes(2),'(i0)') jsp
+                      WRITE(attributes(3),'(i0,a1)') ABS(nqn_lo(ilo)), ch(l)
+                      WRITE(attributes(4),'(f16.10)') ldmt
+                      WRITE(attributes(5),'(f16.10)') e
+                      CALL writeXMLElementForm('heloAtomicEP',(/'atomType      ','spin          ','branch        ',&
+                                                              'logDerivMT    ','value         '/),&
+                                               attributes(1:5),reshape((/8,4,6,12,5+34,6,1,3,16,16/),(/5,2/)))
+                      WRITE (6,'(a6,i3,i2,a1,a12,f6.2,a4,f6.2,a5)') '  Atom',n,ABS(nqn_lo(ilo)),ch(l),&
+                                                                    ' branch, D = ',ldmt,' at ',e,' htr.'
                    ENDIF
 
                    ello(ilo,n,jsp) = e                
