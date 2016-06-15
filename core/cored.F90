@@ -217,12 +217,12 @@ CONTAINS
        WRITE(attributes(1),'(i0)') jatom
        WRITE(attributes(2),'(i0)') NINT(z)
        WRITE(attributes(3),'(i0)') jspin
-       WRITE(attributes(4),'(f20.10)') tec
-       WRITE(attributes(5),'(f20.10)') sume
-       WRITE(attributes(6),'(f14.10)') q/input%jspins
+       WRITE(attributes(4),'(f18.10)') tec
+       WRITE(attributes(5),'(f18.10)') sume
+       WRITE(attributes(6),'(f9.6)') q/input%jspins
        CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
-                                              'eigenvalueSum','lostElectrons'/),&
-                               attributes,reshape((/8,12,4,9,13,13,6,3,1,20,20,14/),(/6,2/)))
+                                              'eigValSum    ','lostElectrons'/),&
+                               attributes,reshape((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))
        DO korb = 1, atoms%ncst(jatom)
           fj = iabs(kappa(korb)) - .5e0
           weight = 2*fj + 1.e0
