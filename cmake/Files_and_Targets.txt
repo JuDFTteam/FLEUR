@@ -29,7 +29,7 @@ include(mix/CMakeLists.txt)
 include(vgen/CMakeLists.txt)
 include(inpgen/CMakeLists.txt)
 include(docs/CMakeLists.txt)
-
+include(tests/CMakeLists.txt)
 if (${Fleur_uses_MPI})
   include(mpi/CMakeLists.txt)
 endif()
