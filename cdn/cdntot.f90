@@ -40,7 +40,7 @@
 !     .. Local Scalars ..
     ! COMPLEX x
       COMPLEX x(stars%ng3)
-      REAL q,qis,w
+      REAL q,qis,w,mtCharge
       INTEGER i,ivac,j,jspin,n,nz
 !     ..
 !     .. Local Arrays ..
@@ -114,17 +114,18 @@
          IF (input%film) WRITE (6,FMT=8010) (i,qvac(i),i=1,vacuum%nvac)
          WRITE (16,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype)
          IF (input%film) WRITE (16,FMT=8010) (i,qvac(i),i=1,vacuum%nvac)
-         names(1) = 'spin'         ; WRITE(attributes(1),'(i0)') jspin                       ; lengths(1,1)=4  ; lengths(1,2)=1
-         names(2) = 'total'        ; WRITE(attributes(2),'(f17.10)') q                       ; lengths(2,1)=5  ; lengths(2,2)=17
-         names(3) = 'interstitial' ; WRITE(attributes(3),'(f17.10)') qis                     ; lengths(3,1)=12 ; lengths(3,2)=17
-         names(4) = 'mtSpheres'    ; WRITE(attributes(4),'(f17.10)') SUM(qmt(1:atoms%ntype)) ; lengths(4,1)=9  ; lengths(4,2)=17
+         mtCharge = SUM(qmt(1:atoms%ntype) * atoms%neq(1:atoms%ntype))
+         names(1) = 'spin'         ; WRITE(attributes(1),'(i0)') jspin       ; lengths(1,1)=4  ; lengths(1,2)=1
+         names(2) = 'total'        ; WRITE(attributes(2),'(f14.7)') q        ; lengths(2,1)=5  ; lengths(2,2)=14
+         names(3) = 'interstitial' ; WRITE(attributes(3),'(f14.7)') qis      ; lengths(3,1)=12 ; lengths(3,2)=14
+         names(4) = 'mtSpheres'    ; WRITE(attributes(4),'(f14.7)') mtCharge ; lengths(4,1)=9  ; lengths(4,2)=14
          IF(l_printData) THEN
             IF(input%film) THEN
                DO i = 1, vacuum%nvac
                   WRITE(names(4+i),'(a6,i0)') 'vacuum', i
-                  WRITE(attributes(4+i),'(f17.10)') qvac(i)
+                  WRITE(attributes(4+i),'(f14.7)') qvac(i)
                   lengths(4+i,1)=7
-                  lengths(4+i,2)=17
+                  lengths(4+i,2)=14
                END DO
                CALL writeXMLElementFormPoly('spinDependentCharge',names(1:4+vacuum%nvac),&
                                             attributes(1:4+vacuum%nvac),lengths)

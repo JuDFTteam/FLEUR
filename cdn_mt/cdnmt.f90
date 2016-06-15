@@ -145,13 +145,13 @@ CONTAINS
 
           attributes = ''
           WRITE(attributes(1),'(i0)') itype
-          WRITE(attributes(2),'(f15.10)') qmtt
-          WRITE(attributes(3),'(f15.10)') qmtl(0)
-          WRITE(attributes(4),'(f15.10)') qmtl(1)
-          WRITE(attributes(5),'(f15.10)') qmtl(2)
-          WRITE(attributes(6),'(f15.10)') qmtl(3)
+          WRITE(attributes(2),'(f12.7)') qmtt
+          WRITE(attributes(3),'(f12.7)') qmtl(0)
+          WRITE(attributes(4),'(f12.7)') qmtl(1)
+          WRITE(attributes(5),'(f12.7)') qmtl(2)
+          WRITE(attributes(6),'(f12.7)') qmtl(3)
           CALL writeXMLElementForm('mtCharge',(/'atomType','total   ','s       ','p       ','d       ','f       '/),attributes,&
-                                   reshape((/8,5,1,1,1,1,6,15,15,15,15,15/),(/6,2/)))
+                                   reshape((/8,5,1,1,1,1,6,12,12,12,12,12/),(/6,2/)))
 
           !+soc
           !--->       spherical angular component
