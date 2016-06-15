@@ -43,6 +43,7 @@ CONTAINS
 #ifdef CPP_MPI
     USE m_mpimakegroups
 #endif
+    USE m_xmlOutput
 
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
@@ -242,6 +243,8 @@ CONTAINS
 999 CONTINUE
     CALL loddop(stars,vacuum,atoms,sphhar, input,sym, nu, iter,vr,vpw,vz,vzxy)
     CLOSE(nu)
+    IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,iter/),&
+                                                    reshape((/19,13,5,5/),(/2,2/)))
 
     !
     ! some modifications for gw-calculations

@@ -245,7 +245,6 @@
           IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
           DO 80 WHILE ( l_cont )
              it = it + 1
-             IF (mpi%irank.EQ.0) CALL openXMLElementPoly('iteration',(/'number'/),(/it/))
              !+t3e
              IF (input%alpha.LT.10.0) THEN
                 !
@@ -667,7 +666,9 @@
                 ENDIF
              ENDDO !qcount
              IF (stop80) THEN
-                IF (mpi%irank.EQ.0) CALL closeXMLElement('iteration')
+                IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
+                   CALL closeXMLElement('iteration')
+                END IF
                 EXIT ! it
              ENDIF
 
@@ -861,7 +862,9 @@
        END IF
        CALL writeTimesXML()
        CALL resetIterationDependentTimers()
-       IF (mpi%irank.EQ.0) CALL closeXMLElement('iteration')
+       IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
+          CALL closeXMLElement('iteration')
+       END IF
 80     CONTINUE
        IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
        CALL juDFT_end("all done",mpi%irank)

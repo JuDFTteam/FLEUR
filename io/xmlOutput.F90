@@ -24,7 +24,7 @@ MODULE m_xmlOutput
    PUBLIC openXMLElementFormPoly, openXMLElementPoly
    PUBLIC openXMLElementForm, openXMLElement
    PUBLIC openXMLElementNoAttributes, closeXMLElement
-   PUBLIC getXMLOutputUnitNumber
+   PUBLIC getXMLOutputUnitNumber, isCurrentXMLElement
 
    CONTAINS
 
@@ -485,5 +485,15 @@ MODULE m_xmlOutput
       currentElementIndex = currentElementIndex - 1
 
    END SUBROUTINE closeXMLElement
+
+   LOGICAL FUNCTION isCurrentXMLElement(elementName)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN) :: elementName
+
+      isCurrentXMLElement = (TRIM(ADJUSTL(elementList(currentElementIndex))).EQ.TRIM(ADJUSTL(elementName)))
+
+   END FUNCTION isCurrentXMLElement
 
 END MODULE m_xmlOutput
