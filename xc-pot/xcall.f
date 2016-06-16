@@ -42,7 +42,7 @@
       USE m_xcbh,  ONLY : vxcbh
       USE m_xcvwn, ONLY : vxcvwn
       USE m_xcpz,  ONLY : vxcpz
-      USE icorrkeys
+      USE m_icorrkeys
 !
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: iofile              ! file number for read and write
@@ -136,7 +136,7 @@
       USE m_xcbh,  ONLY : excbh
       USE m_xcvwn, ONLY : excvwn
       USE m_xcpz,  ONLY : excpz
-      USE icorrkeys
+      USE m_icorrkeys
 !
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: iofile              ! file number for read and write

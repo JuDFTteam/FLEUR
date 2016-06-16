@@ -56,7 +56,7 @@ c
       USE m_vxcwb91
       USE m_vxcpw91
       USE m_vxcepbe
-      USE icorrkeys
+      USE m_icorrkeys
 
       IMPLICIT NONE
 c
@@ -175,7 +175,7 @@ c
       USE m_excwb91
       USE m_excpw91
       USE m_excepbe
-      USE icorrkeys
+      USE m_icorrkeys
 
       IMPLICIT NONE
 c

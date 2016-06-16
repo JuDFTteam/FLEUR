@@ -18,7 +18,7 @@ SUBROUTINE r_inpXML(&
    USE m_closure, ONLY : check_close
    USE m_symproperties
    USE m_calculator
-   USE icorrkeys
+   USE m_icorrkeys
    USE m_constants
    USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
    USE m_julia

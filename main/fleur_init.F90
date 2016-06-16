@@ -15,7 +15,7 @@
           USE m_gen_map
           USE m_dwigner
           USE m_gen_bz
-          USE icorrkeys
+          USE m_icorrkeys
           USE m_ylm
           USE m_InitParallelProcesses
           USE m_xmlOutput

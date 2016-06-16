@@ -508,7 +508,7 @@ CONTAINS
              WRITE(attributes(3),'(f16.10)') vz(1,ivac,jsp)
              WRITE(attributes(4),'(f16.10)') vz(vacuum%nmz,ivac,jsp)
              WRITE(attributes(5),'(f16.10)') evac(ivac,jsp)
-             CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf   ','value '/),&
+             CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
                                       attributes(1:5),reshape((/6+4,4,4,5,5+30,8,1,16,16,16/),(/5,2/)))
           ENDDO
           IF (vacuum%nvac.EQ.1) THEN

@@ -37,7 +37,7 @@
       USE m_constants
       USE m_types
       USE m_inv3
-      USE icorrkeys
+      USE m_icorrkeys
       USE m_setlomap
       IMPLICIT NONE
 !     ..

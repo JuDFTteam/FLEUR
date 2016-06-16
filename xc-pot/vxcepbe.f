@@ -11,7 +11,7 @@ c.....------------------------------------------------------------------
      <                   vx,vxc)
       
       Use m_easypbe
-      USE icorrkeys
+      USE m_icorrkeys
 
       IMPLICIT NONE
 

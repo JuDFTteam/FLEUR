@@ -20,7 +20,7 @@ CONTAINS
     USE m_brysh2
     USE m_metric
     USE m_qfix
-    USE icorrkeys
+    USE m_icorrkeys
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE

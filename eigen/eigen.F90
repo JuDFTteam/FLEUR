@@ -38,7 +38,7 @@ CONTAINS
     USE m_hsefunctional
     USE m_hybridmix    , ONLY: amix_pbe0,amix_hf
     USE m_util
-    USE icorrkeys
+    USE m_icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
 #ifdef CPP_MPI
     USE m_mpimakegroups

@@ -47,7 +47,7 @@ CONTAINS
     USE m_potmod
     USE m_intgr,         ONLY : intgr3
     USE m_hybridmix
-    USE icorrkeys
+    USE m_icorrkeys
     USE m_cfft
     USE m_sphpts
     USE m_points

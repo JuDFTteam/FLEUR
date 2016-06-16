@@ -22,7 +22,7 @@ c----------------------------------------------------------------------
       USE m_hybridmix
 #endif
       USE m_constants,     ONLY: pi_const
-      USE icorrkeys
+      USE m_icorrkeys
 
       IMPLICIT NONE
 

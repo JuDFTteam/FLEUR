@@ -42,7 +42,7 @@ CONTAINS
     USE m_force_a3
     USE m_forcew
     USE m_loddop
-    USE icorrkeys
+    USE m_icorrkeys
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
