@@ -414,6 +414,7 @@ enddo
               phii   = noco%phi
               WRITE (6,FMT=9020)
               WRITE (16,FMT=9020)
+              CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
               DO n = 1,atoms%ntype
                  IF (noco%l_noco) THEN
                    thetai = noco%beta(n)
@@ -435,9 +436,18 @@ enddo
                       (cos(phii)*clmom(1,n,2) + sin(phii)*clmom(2,n,2))
                  WRITE (6,FMT=8030) n,slmom,(clmom(3,n,j),j=1,2)
                  WRITE (16,FMT=8030) n,slmom,(clmom(3,n,j),j=1,2)
+                 attributes = ''
+                 WRITE(attributes(1),'(i0)') n
+                 WRITE(attributes(2),'(f15.10)') slmom
+                 WRITE(attributes(3),'(f15.10)') clmom(3,n,1)
+                 WRITE(attributes(4),'(f15.10)') clmom(3,n,2)
+                 CALL writeXMLElementFormPoly('orbMagMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
+                                                               'spinDownCharge'/),&
+                                              attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
 !                WRITE (16,FMT=8030) n,slxmom,(clmom(1,n,j),j=1,2)
 !                WRITE (16,FMT=8030) n,slymom,(clmom(2,n,j),j=1,2)
               END DO
+              CALL closeXMLElement('orbitalMagneticMomentsInMTSpheres')
             END IF
          END IF
 !     block 2 unnecessary for slicing: end

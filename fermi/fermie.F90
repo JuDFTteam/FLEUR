@@ -231,7 +231,7 @@ CONTAINS
 
     attributes = ''
     WRITE(attributes(1),'(f20.10)') results%ef
-    WRITE(attributes(2),'(a)') 'htr'
+    WRITE(attributes(2),'(a)') 'Htr'
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
 
     RETURN
