@@ -280,7 +280,13 @@ CONTAINS
     !
 
     results%seigv = spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8040) results%seigv
+    IF (mpi%irank == 0) THEN
+       attributes = ''
+       WRITE(attributes(1),'(f20.10)') results%seigv
+       WRITE(attributes(2),'(a)') 'Htr'
+       CALL writeXMLElement('sumValenceSingleParticleEnergies',(/'value','units'/),attributes)
+       WRITE (6,FMT=8040) results%seigv
+    END IF
 
     !--- J constants
     IF (PRESENT(jij)) THEN
