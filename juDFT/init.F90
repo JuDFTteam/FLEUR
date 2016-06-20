@@ -17,6 +17,11 @@
          CALL get_command_argument(i,str)
          IF(adjustl(str)==adjustl(arg)) ok=.true.
       ENDDO
+      IF (ok) return
+      !Test for environment variable as well
+      CALL get_environment_variable("juDFT",str,status=i)
+      IF (i==0) ok=index(str,adjustl(arg))>0
+ 
       END FUNCTION
 
       SUBROUTINE juDFT_init()
