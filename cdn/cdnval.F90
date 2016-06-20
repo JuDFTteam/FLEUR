@@ -439,6 +439,9 @@ CONTAINS
        ALLOCATE ( orbcomp(dimension%neigd,23,atoms%natd) )
        ALLOCATE ( qmtp(dimension%neigd,atoms%natd) )
        IF (.NOT.input%film) qvac(:,:,:,jspin) = 0.0
+    ELSE
+       ALLOCATE(nmtsl(1,1),nslat(1,1),zsl(1,1),volsl(1),volintsl(1))
+       ALLOCATE(qintsl(1,1),qmtsl(1,1),orbcomp(1,1,1),qmtp(1,1))
     END IF
     !-q_sl
     !

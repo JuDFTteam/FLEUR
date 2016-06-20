@@ -203,9 +203,7 @@ SUBROUTINE r_inpXML(&
 
    ! Check version of inp.xml
    valueString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-   WRITE(*,*) 'version number string: ', TRIM(ADJUSTL(valueString))
    IF(TRIM(ADJUSTL(valueString)).NE.'0.27') THEN
-      WRITE(*,*) 'version number string: ', TRIM(ADJUSTL(valueString))
       STOP 'version number of inp.xml file is not compatible with this fleur version'
    END IF
 
@@ -214,22 +212,16 @@ SUBROUTINE r_inpXML(&
    numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/relPos')
    numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/absPos')
    numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/filmPos')
-   WRITE(*,*) 'number of atoms: ', numberNodes
 
    atoms%nat = numberNodes
    atoms%natd = numberNodes
 
    numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-   WRITE(*,*) 'number of atoms types: ', numberNodes
 
    atoms%ntype = numberNodes
    atoms%ntypd = numberNodes
 
-   WRITE(*,*) 'ntype, ntypd: ', atoms%ntype, atoms%ntypd
-
    numSpecies = xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
-   WRITE(*,*) 'number of atoms species: ', numSpecies
-
 
    ALLOCATE(atoms%nz(atoms%ntype))     !nz and zatom have the same content!
    ALLOCATE(atoms%zatom(atoms%ntype))  !nz and zatom have the same content!
@@ -286,7 +278,6 @@ SUBROUTINE r_inpXML(&
       tempReal = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@value'))
       valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@name')
       CALL ASSIGN_var(valueString,tempReal)
-      WRITE(*,*) 'constant: ', TRIM(ADJUSTL(valueSTring)), tempReal
    END DO
 
    obsolete%nwdd = 1
@@ -304,7 +295,6 @@ SUBROUTINE r_inpXML(&
    numberNodes = xmlGetNumberOfNodes(xPathA)
    xcpot%gmaxxc = stars%gmax
    IF(numberNodes.EQ.1) THEN
-      WRITE(*,*) 'gmaxxc node is present!'
       xcpot%gmaxxc = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
    END IF
 
@@ -312,7 +302,6 @@ SUBROUTINE r_inpXML(&
    numberNodes = xmlGetNumberOfNodes(xPathA)
    dimension%neigd = 0
    IF(numberNodes.EQ.1) THEN
-      WRITE(*,*) 'numbands node is present!'
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
       IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
          STOP 'Feature to calculate all eigenfunctions not yet implemented.'
@@ -477,7 +466,6 @@ SUBROUTINE r_inpXML(&
    
    xPathA = '/fleurInput/calculationSetup/soc'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    noco%l_soc = .FALSE.
    noco%theta = 0.0
@@ -499,7 +487,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/nocoParams'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    noco%l_ss = .FALSE.
    noco%l_mperp = .FALSE.
@@ -536,7 +523,6 @@ SUBROUTINE r_inpXML(&
 
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sso_opt')))
       READ(valueString,'(2l1)') input%sso_opt(1),input%sso_opt(2)
-      WRITE(*,*) 'Note: Last Entry of sso_opt is ignored!'
 
       noco%mix_b = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
       Jij%thetaJ = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@thetaJ'))
@@ -563,7 +549,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/oneDParams'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    oneD%odd%d1 = .FALSE.
 
@@ -582,7 +567,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/expertModes'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    input%gw = 0
    obsolete%pot8 = .FALSE.
@@ -604,7 +588,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/geometryOptimization'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    input%l_f = .FALSE.
    input%qfix = 0
@@ -630,7 +613,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/spinSpiralQPointMesh'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF ((noco%l_ss).AND.(numberNodes.EQ.0)) THEN
       STOP 'Error: l_ss is true but no q point mesh set in xml input file!'
@@ -646,7 +628,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/eField'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF (numberNodes.EQ.1) THEN
       input%efield%zsigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
@@ -671,7 +652,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/calculationSetup/energyParameterLimits'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF (numberNodes.EQ.1) THEN
       input%ellow = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ellow'))
@@ -714,7 +694,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/cell/'//latticeType
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF (numberNodes.EQ.1) THEN
       latticeScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@scale'))
@@ -785,7 +764,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/cell/symmetry'
    numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/symmetry')
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF (numberNodes.EQ.1) THEN
       symmetryDef = 1
@@ -854,7 +832,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/cell/symmetryFile'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF (numberNodes.EQ.1) THEN
       symmetryDef = 2
@@ -862,8 +839,6 @@ SUBROUTINE r_inpXML(&
 
       CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
 &                     mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
-
-      WRITE(*,*) 'sym%nop2 (1): ', sym%nop2
 
       IF (ALLOCATED(sym%mrot)) THEN
          DEALLOCATE(sym%mrot)
@@ -886,7 +861,6 @@ SUBROUTINE r_inpXML(&
 
    xPathA = '/fleurInput/cell/symmetryOperations'
    numberNodes = xmlGetNumberOfNodes(xPathA)
-   WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
    IF (numberNodes.EQ.1) THEN
       symmetryDef = 3
@@ -1028,8 +1002,6 @@ SUBROUTINE r_inpXML(&
    END IF
    sym%invs2 = sym%invs.AND.sym%zrfs
 
-      WRITE(*,*) 'sym%nop2 (2): ', sym%nop2
-
    ALLOCATE (sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat))
    ALLOCATE (sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop))
    ALLOCATE (sym%invsatnr(atoms%nat),sym%d_wgn(-3:3,-3:3,3,sym%nop))
@@ -1059,7 +1031,6 @@ SUBROUTINE r_inpXML(&
 
    ! Read in xc functional parameters
 
-   WRITE(*,*) 'Processing xc functionals'
    namex = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
    l_relcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
 
@@ -1175,7 +1146,6 @@ SUBROUTINE r_inpXML(&
    DO iSpecies = 1, numSpecies
       ! Attributes of species
       WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
-      WRITE(*,*) 'Processing (1) '//TRIM(ADJUSTL(xPathA))
       speciesNames(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
       atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
       coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
@@ -1217,22 +1187,17 @@ SUBROUTINE r_inpXML(&
       speciesNLO(iSpecies) = 0
       WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
-      WRITE(*,*) 'species', iSpecies, 'los', numberNodes
       DO iLO = 1, numberNodes
          WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'[',iLO,']/@l'
          WRITE(xPathC,*) TRIM(ADJUSTL(xPathA)),'[',iLO,']/@n'
          lString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
          nString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathC)))
-         WRITE(*,*) 'iLO=', iLO, ' lString= ', TRIM(ADJUSTL(lString))
-         WRITE(*,*) 'iLO=', iLO, ' nString= ', TRIM(ADJUSTL(nString))
          CALL getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
          CALL getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
          IF(lNumCount.NE.nNumCount) THEN
             STOP 'Error in LO input: l quantum number count does not equal n quantum number count'
          END IF
          speciesNLO(iSpecies) = speciesNLO(iSpecies) + lNumCount
-         WRITE(*,*) 'lNumbers', lNumbers
-         WRITE(*,*) 'nNumbers', nNumbers
          DEALLOCATE (lNumbers, nNumbers)
       END DO
 
@@ -1321,7 +1286,6 @@ SUBROUTINE r_inpXML(&
          valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/coreConfig')
          token = popFirstStringToken(valueString)
          DO WHILE (token.NE.' ')
-            WRITE(*,*) TRIM(ADJUSTL(token))
             IF (token(1:1).EQ.'[') THEN
                DO i = 1, 6
                   IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList(i)) THEN
@@ -1405,7 +1369,6 @@ SUBROUTINE r_inpXML(&
       ! local orbitals
 
       WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
-      WRITE(*,*) 'Processing (2) '//TRIM(ADJUSTL(xPathA))
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       iLLO = 1
       DO iLO = 1, numberNodes
@@ -1452,9 +1415,6 @@ SUBROUTINE r_inpXML(&
             atoms%numStatesProvided(iType) = providedStates
             IF (coreConfigPresent) THEN
                IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
-                  WRITE(*,*) 'species', TRIM(ADJUSTL(speciesNames(iSpecies)))
-                  WRITE(*,*) 'providedCoreStates: ', providedCoreStates
-                  WRITE(*,*) 'ncst: ', atoms%ncst(iType)
                   STOP 'Wrong number of core states provided!'
                END IF
                DO k = 1, providedStates !atoms%ncst(iType)
@@ -1502,12 +1462,10 @@ SUBROUTINE r_inpXML(&
    firstAtomOfType = 1
    DO iType = 1, atoms%ntype
       WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']'
-      WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathA))
 
       ! Read in force parameters
       xPathB = TRIM(ADJUSTL(xPathA))//'/force'
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB)))
-      WRITE(*,*) 'Processing '//TRIM(ADJUSTL(xPathB))
       IF (numberNodes.GE.1) THEN
          atoms%l_geo(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@calculate'))
          valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@relaxXYZ')
@@ -1537,8 +1495,6 @@ SUBROUTINE r_inpXML(&
          atoms%taual(2,na) = evaluatefirst(valueString)
          atoms%taual(3,na) = evaluatefirst(valueString)
          atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
-         WRITE(*,*) 'atom: ', na
-         WRITE(*,*) 'relPos: ', atoms%taual(1,na), atoms%taual(2,na), atoms%taual(3,na)
       END DO
 
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
@@ -1637,12 +1593,15 @@ SUBROUTINE r_inpXML(&
          CALL juDFT_error("dos is true but densityOfStates parameters are not set!", calledby = "r_inpXML")
       END IF
 
+      WRITE(*,*) 'Test start'
       IF (numberNodes.EQ.1) THEN
          banddos%ndir = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ndir'))
          banddos%e2_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEnergy'))
          banddos%e1_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEnergy'))
          banddos%sig_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+         WRITE(*,*) 'banddos%ndir: ', banddos%ndir
       END IF
+      WRITE(*,*) 'Test end'
 
       ! Read in optional vacuumDOS parameters
 
@@ -1837,7 +1796,6 @@ SUBROUTINE r_inpXML(&
    ! Calculate missing kpts parameters
 
    WRITE(*,*) 'Post processing of input: k-points'
-   WRITE(*,*) 'l_kpts: ', l_kpts
    IF (.not.l_kpts) THEN
       IF (.NOT.oneD%odd%d1) THEN
          IF (jij%l_J) THEN
@@ -1864,7 +1822,6 @@ SUBROUTINE r_inpXML(&
    kpts%nkpts = kpts%nkpt
    ALLOCATE(kpts%wtkpt(kpts%nkpt))
    sumWeight = 0.0
-   WRITE(*,*) 'nkpt: ', kpts%nkpt
    DO i = 1, kpts%nkpt
       sumWeight = sumWeight + kpts%weight(i)
       kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
@@ -2179,11 +2136,9 @@ SUBROUTINE r_inpXML(&
    ! Other small stuff
 
    WRITE(*,*) 'Post processing of input: Small stuff at the end'
-   WRITE(*,*) 'Post processing step 1'
 
    input%strho = .FALSE.
    IF (.NOT.(input%strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
-      WRITE(*,*) 'processing code path b'
       IF (noco%l_noco) THEN
          INQUIRE (file='rhomat_inp',exist=input%strho) ! if no density (rhoma
       ELSE
@@ -2192,12 +2147,10 @@ SUBROUTINE r_inpXML(&
       input%strho = .NOT.input%strho                ! create a starting density
    END IF
 
-   WRITE(*,*) 'Post processing step 2'
    l_opti = .FALSE.
    IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
        (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
 
-   WRITE(*,*) 'Post processing step 3'
    obsolete%form76 = .FALSE.
    IF (noco%l_soc.AND.obsolete%form66) THEN
       IF (.NOT.input%eonly)  CALL juDFT_error("form66 = T only with eonly = T !",calledby="r_inpXML")
@@ -2205,18 +2158,13 @@ SUBROUTINE r_inpXML(&
       obsolete%form76 = .TRUE.
    END IF
 
-   WRITE(*,*) 'Post processing step 4'
    IF (.NOT.l_opti) THEN
-      WRITE(*,*) 'SHAPE(enpara%lchange): ', SHAPE(enpara%lchange)
 !      The following call to inpeig should not be required.
 !      CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara)
    END IF
 
-   WRITE(*,*) 'Post processing step 5'
-
    CALL prp_qfft(stars,cell,noco,input)
 
-   WRITE(*,*) 'Post processing step 6'
    IF (input%gw.GE.1) THEN
       CALL write_gw(atoms%ntype,sym%nop,obsolete%nwd,input%jspins,atoms%natd,&
                     atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
@@ -2224,20 +2172,13 @@ SUBROUTINE r_inpXML(&
                     atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
    END IF
 
-   WRITE(*,*) 'Post processing step 7'
    CALL  prp_xcfft(stars,input,cell,xcpot)
 
-   WRITE(*,*) 'Post processing step 8'
    IF (.NOT.sliceplot%iplot) THEN
       CALL stepf(stars,atoms,oneD,input,cell,vacuum)
       CALL convn(DIMENSION,atoms,stars)
       CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
    END IF
-
-   WRITE(*,*) 'kpts%nkpt: ', kpts%nkpt
-   WRITE(*,*) 'sym%nop: ', sym%nop
-   WRITE(*,*) 'sym%nop2: ', sym%nop2
-   WRITE(*,*) 'sym%nsym: ', sym%nsym
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of input postprocessing (calculate missing parameters)
