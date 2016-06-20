@@ -1593,15 +1593,12 @@ SUBROUTINE r_inpXML(&
          CALL juDFT_error("dos is true but densityOfStates parameters are not set!", calledby = "r_inpXML")
       END IF
 
-      WRITE(*,*) 'Test start'
       IF (numberNodes.EQ.1) THEN
          banddos%ndir = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ndir'))
          banddos%e2_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEnergy'))
          banddos%e1_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEnergy'))
          banddos%sig_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
-         WRITE(*,*) 'banddos%ndir: ', banddos%ndir
       END IF
-      WRITE(*,*) 'Test end'
 
       ! Read in optional vacuumDOS parameters
 
