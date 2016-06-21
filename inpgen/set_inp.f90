@@ -146,7 +146,7 @@
       noco%l_noco = noco%l_ss ; jij%l_J = .false. ; noco%soc_opt(:) = .false. ; input%jspins = 1
       obsolete%lpr = 0 ; input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
       input%spinf = 2.0 ;   obsolete%lepr = 0
-      sliceplot%kk = 0 ; sliceplot%nnne = 0 ; obsolete%nwd = 1 ; vacuum%nstars = 0 ; vacuum%nstm = 0 
+      sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0 

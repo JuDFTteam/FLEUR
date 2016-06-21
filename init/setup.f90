@@ -186,7 +186,7 @@
                &                  input)
 
           IF (input%gw.GE.1) CALL write_gw(&
-               &                        atoms%ntype,sym%nop,obsolete%nwd,input%jspins,atoms%natd,&
+               &                        atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
                &                        atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
                &                        atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
                &                        atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)

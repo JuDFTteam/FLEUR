@@ -619,16 +619,12 @@
                                CALL timestart("determination of fermi energy")
 
                                IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) THEN
-                                  DO n=1,obsolete%nwd
-                                     input%zelec = input%zelec*2
-                                  ENDDO
+                                  input%zelec = input%zelec*2
                                   CALL fermie(eig_id,mpi,kpts,obsolete,&
                                        input,noco,enpara%epara_min,jij,cell,results)
                                   results%seigscv = results%seigscv/2
                                   results%ts = results%ts/2
-                                  DO n=1,obsolete%nwd
-                                     input%zelec = input%zelec/2
-                                  ENDDO
+                                  input%zelec = input%zelec/2
                                ELSE
                                   CALL fermie(eig_id,mpi,kpts,obsolete,&
                                        input,noco,enpara%epara_min,jij,cell,results)

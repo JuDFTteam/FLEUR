@@ -89,7 +89,6 @@ SUBROUTINE r_inpXML(&
 ! ..
 ! ..  Local Variables
    REAL     :: scpos  ,zc   
-   INTEGER  ::nw
    INTEGER ieq,i,k,na,n,ii
    REAL s3,ah,a,hs2,rest
    LOGICAL l_hyb,l_sym,ldum
@@ -280,8 +279,7 @@ SUBROUTINE r_inpXML(&
       CALL ASSIGN_var(valueString,tempReal)
    END DO
 
-   obsolete%nwdd = 1
-
+  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of calculationSetup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1843,7 +1841,6 @@ SUBROUTINE r_inpXML(&
    kpts%nkptd = kpts%nkpt
    dimension%nvd = 0 ; dimension%nv2d = 0
    stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
-   obsolete%nwd = obsolete%nwdd
    obsolete%l_u2f = .FALSE.
    obsolete%l_f2u = .FALSE.
    !cell%aamat=matmul(transpose(cell%amat),cell%amat)
@@ -2163,7 +2160,7 @@ SUBROUTINE r_inpXML(&
    CALL prp_qfft(stars,cell,noco,input)
 
    IF (input%gw.GE.1) THEN
-      CALL write_gw(atoms%ntype,sym%nop,obsolete%nwd,input%jspins,atoms%natd,&
+      CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
                     atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
                     atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
                     atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)

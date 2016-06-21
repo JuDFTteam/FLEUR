@@ -488,8 +488,6 @@
              END DO
           ELSE
              IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
-                IF ( obsolete%nwd /= 1 )&
-                     &     STOP 'orbital decomposed DOS only implemented for 1 window!'
                 CALL gen_bz(kpts,sym)
              END IF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))

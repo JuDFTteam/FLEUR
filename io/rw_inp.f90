@@ -503,25 +503,22 @@
       WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
  6010 FORMAT (25i3)
 !
-      READ (UNIT=5,FMT=6010,END=99,ERR=99) obsolete%nwd,obsolete%lepr
-      WRITE (6,9140) obsolete%nwd,obsolete%lepr
+      READ (UNIT=5,FMT=6010,END=99,ERR=99) nw,obsolete%lepr
+      IF (nw.ne.1) CALL juDFT_error("Multiple window calculations not supported")
+      WRITE (6,9140) nw,obsolete%lepr
 !
       zc=0.0
-      DO nw=1,obsolete%nwd
-         READ (UNIT=5,FMT=*,END=99,ERR=99)
-         WRITE (6,'(a8,i2)') 'Window #',nw
+      READ (UNIT=5,FMT=*,END=99,ERR=99)
+         !WRITE (6,'(a8,i2)') 'Window #',nw
 !
-         if (nw>1) call judft_error("Only single window calculations are supported")
-         READ (UNIT=5,FMT=6040,END=99,ERR=99)&
-     &                   input%ellow,input%elup,input%zelec
-         WRITE (6,9150) input%ellow,input%elup,input%zelec
- 6040    FORMAT (4f10.5)
-         zc = zc + input%zelec
+      READ (UNIT=5,FMT=6040,END=99,ERR=99) input%ellow,input%elup,input%zelec
+      WRITE (6,9150) input%ellow,input%elup,input%zelec
+6040  FORMAT (4f10.5)
+      zc = zc + input%zelec
 !
-         READ (UNIT=5,FMT='(f10.5)',END=99,ERR=99) input%rkmax
-         WRITE (6,FMT='(f10.5,1x,A)') input%rkmax, '=kmax'
-      ENDDO
-!
+      READ (UNIT=5,FMT='(f10.5)',END=99,ERR=99) input%rkmax
+      WRITE (6,FMT='(f10.5,1x,A)') input%rkmax, '=kmax'
+     
       READ (UNIT=5,FMT=8010,END=99,ERR=99) input%gauss,input%delgau,input%tria
       WRITE (6,9160) input%gauss,input%delgau,input%tria
  8010 FORMAT (6x,l1,f10.5,5x,l1)
@@ -904,19 +901,16 @@
         WRITE (5,FMT=chform) &
      &        (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
       ELSE
-        WRITE (chntype,'(i3)') atoms%ntype
-        chform = '('//chntype//'i3 )'
-        WRITE (5,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)
+         WRITE (chntype,'(i3)') atoms%ntype
+         chform = '('//chntype//'i3 )'
+         WRITE (5,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)
       END IF
  9140 FORMAT (25i3)
-      WRITE (5,9140) obsolete%nwd,obsolete%lepr
-      DO nw=1,obsolete%nwd
-         WRITE (5,'(a8,i2)') 'Window #',nw
-         if (nw>1) CALL judft_error("Only single window calculations are supported")
-         WRITE (5,9150) input%ellow,input%elup,input%zelec
- 9150    FORMAT (4f10.5)
-         WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
-      ENDDO
+      WRITE (5,9140) 1,obsolete%lepr
+      
+      WRITE (5,9150) input%ellow,input%elup,input%zelec
+9150  FORMAT (4f10.5)
+      WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
       WRITE (5,9160) input%gauss,input%delgau,input%tria
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
       IF (noco%soc_opt(atoms%ntype+1)) THEN
