@@ -64,7 +64,6 @@
           COMPLEX    :: cdum
           CHARACTER(len=4)              :: namex
           CHARACTER(len=12)             :: relcor
-          CHARACTER(len=8)              :: comment(10)
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
 #ifdef CPP_MPI
@@ -129,7 +128,7 @@
                 CALL w_inpXML(&
      &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
-     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&!comment is 'name'. Still has to be read in!
+     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,numSpecies,&
      &                        enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
