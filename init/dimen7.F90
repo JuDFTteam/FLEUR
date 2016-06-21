@@ -88,13 +88,12 @@
 !
       INQUIRE (file='inp',exist=l_inpexist)
       IF (.not.l_inpexist) THEN
-         CALL juDFT_error("no inp- or input-file found!",calledby&
-     &        ="dimen7")
+         CALL juDFT_error("no inp- or input-file found!",calledby ="dimen7")
       ENDIF
 !
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
-      CALL first_glance(atoms%ntype,sym%nop,atoms%natd,obsolete%nwdd,atoms%nlod,vacuum%layerd,&
+      CALL first_glance(atoms%ntype,sym%nop,atoms%natd,atoms%nlod,vacuum%layerd,&
                         input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nmop,jij%nqpt,nmopq)
       atoms%ntypd=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)

@@ -5,14 +5,14 @@ c reads the part of the input file that is necessary to call rw_inp
 c
       CONTAINS
       SUBROUTINE first_glance(
-     <                        ntype,nop,nat,nwdd,nlod,layerd,itmax,
+     <                        ntype,nop,nat,nlod,layerd,itmax,
      <                        l_kpts,l_qpts,l_gamma,nkpt,nmop,nqpt,
      <                        nmopq)
 
       USE m_symdata , ONLY : nammap,ord2,l_c2
       IMPLICIT NONE
 
-      INTEGER,INTENT (OUT) :: ntype,nop,nat,nwdd,nlod,layerd,itmax
+      INTEGER,INTENT (OUT) :: ntype,nop,nat,nlod,layerd,itmax
       INTEGER,INTENT (OUT) :: nkpt,nmop(3),nqpt,nmopq(3)
       LOGICAL,INTENT (OUT) :: l_kpts,l_qpts,l_gamma
 
@@ -98,9 +98,9 @@ c
       line = line + 1
       READ (5,*)
       line = line + 1
-      READ (5,'(i3)',END=99,ERR=99) nwdd
+      READ (5,*)
       line = line + 1
-      DO n = 1,nwdd
+      DO n = 1,1!nwdd
          READ (5,*)
          line = line + 1
          READ (5,*)

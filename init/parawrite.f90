@@ -65,10 +65,9 @@
 
 !+gu
       WRITE (6,'(6x,''3 & 2D planewaves, windows, k-points'')')
-      WRITE (6,8180) dimension%nvd,dimension%nv2d,obsolete%nwdd,kpts%nkptd
+      WRITE (6,8180) dimension%nvd,dimension%nv2d,kpts%nkptd
 
- 8180 FORMAT (6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=',&
-     &       i1,',nkptd=',i5,')')
+ 8180 FORMAT (6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=1', ',nkptd=',i5,')')
 
       WRITE (6,'(6x,''Number of (occupied) bands'')')
       WRITE (6,8190) dimension%neigd,dimension%neigd

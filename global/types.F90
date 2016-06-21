@@ -612,8 +612,6 @@
      END TYPE
 
      TYPE t_obsolete
-        INTEGER:: nwdd
-        INTEGER:: nwd
         INTEGER:: lpr
         INTEGER:: lepr
         LOGICAL:: form66
