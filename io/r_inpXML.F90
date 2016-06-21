@@ -1,5 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_rinpXML
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!
+!!! The routine r_inpXML reads in the inp.xml file
+!!!
+!!!                               GM'16
+!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE r_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
@@ -1607,10 +1620,9 @@ SUBROUTINE r_inpXML(&
          CALL juDFT_error("vacdos is true but vacDOS parameters are not set!", calledby = "r_inpXML")
       END IF
 
-      vacuum%layerd = 1
-      IF (numberNodes.EQ.1) THEN
+      vacuum%layers = 1
+      IF ((banddos%vacdos).AND.(numberNodes.EQ.1)) THEN
          vacuum%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
-         vacuum%layerd = vacuum%layers
          input%integ = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
          vacuum%starcoeff = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
          vacuum%nstars = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
@@ -1621,6 +1633,7 @@ SUBROUTINE r_inpXML(&
          vacuum%nstm = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
          vacuum%tworkf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
       END IF
+      vacuum%layerd = vacuum%layers
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
 
       ! Read in optional chargeDensitySlicing parameters
