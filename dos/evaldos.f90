@@ -256,6 +256,7 @@
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
            ELSE
+             IF (input%l_inpXML) GOTO 66
              OPEN (41,file='kpts',FORM='formatted',STATUS='old')
              DO i = 1, kpts%nkpt+1
                 READ (41,*,END=66,ERR=66)
