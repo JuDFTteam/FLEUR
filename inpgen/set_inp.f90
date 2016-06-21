@@ -53,7 +53,6 @@
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
       CHARACTER(len=1) :: ch_rw
       CHARACTER(len=4) :: namex
-      CHARACTER(len=8) :: name(10)
       CHARACTER(len=3) :: noel(atoms%ntype)
       CHARACTER(len=12) :: relcor
       CHARACTER(len=3) :: latnamTemp
@@ -187,7 +186,7 @@
       input%delgau = input%tkb ; atoms%ntypd = atoms%ntype ; atoms%natd = atoms%nat
       DO i = 1, 10
         j = (i-1) * 8 + 1
-        name(i) = title(j:j+7)
+        input%comment(i) = title(j:j+7)
       ENDDO 
       IF (noco%l_noco) input%jspins = 2
        
@@ -420,7 +419,7 @@
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
-     &                 noel,namex,relcor,a1,a2,a3,scale,dtild,name,&
+     &                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,numSpecies,&
      &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
@@ -447,7 +446,7 @@
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,name)
+     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
 
       iofile = 6
       OPEN (iofile,file='inp',form='formatted',status='old',position='append')
@@ -481,7 +480,7 @@
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,name)
+     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
 
         IF ( ALL(div /= 0) ) nkpt3 = div
         WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma

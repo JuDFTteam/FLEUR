@@ -292,7 +292,22 @@ SUBROUTINE r_inpXML(&
       CALL ASSIGN_var(valueString,tempReal)
    END DO
 
-  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Comment section
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   input%comment = '        '
+   xPathA = '/fleurInput/comment'
+   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+   DO i = 1, LEN(TRIM(ADJUSTL(valueString)))
+      IF (valueString(i:i).EQ.achar(10)) valueString(i:i) = ' ' !remove line breaks
+   END DO
+   valueString = TRIM(ADJUSTL(valueString))
+   DO i = 1, 10
+      j = (i-1) * 8 + 1
+      input%comment(i) = valueString(j:j+7)
+   END DO
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of calculationSetup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

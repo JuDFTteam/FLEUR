@@ -587,6 +587,7 @@
         REAL :: elup
         REAL :: rkmax
         REAL :: zelec
+        CHARACTER(LEN=8) :: comment(10)
         TYPE(t_efield)::efield
      END TYPE
 

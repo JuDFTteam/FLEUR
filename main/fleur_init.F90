@@ -111,7 +111,6 @@
                 ALLOCATE(xmlCoreOccs(1,1,1))
                 namex = '    '
                 relcor = '            '
-                comment = '          '
                 a1 = 0.0
                 a2 = 0.0
                 a3 = 0.0
@@ -130,7 +129,7 @@
                 CALL w_inpXML(&
      &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
-     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,comment,&!comment is 'name'. Still has to be read in!
+     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&!comment is 'name'. Still has to be read in!
      &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,numSpecies,&
      &                        enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
