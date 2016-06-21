@@ -1,11 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(atoms,sphhar,stars,vacuum, &
        sym,input,noco,cell,oneD, xcpot,hybrid, it,results)
     !
     !     ***************************************************
-    !     subroutine calculates the total energy of the slab
-    !                                  c.l.fu
+    !     subroutine calculates the total energy 
     !     ***************************************************
     !     single particle energies
     !     SEIGC  sum of the eigenvalues of the core states

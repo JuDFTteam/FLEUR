@@ -1,13 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vgen
   USE m_juDFT
 CONTAINS
   SUBROUTINE vgen(reap,input,xcpot,dimension, atoms,sphhar,stars,&
        vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco)
     !     ***********************************************************
-    !     FLAPW7 film potential generator                           *
-    !     composed July 1986, revised and tested May 1987           *
-    !     spin-polarized added may 1987                             *
-    !                         c.l.fu,  R. Podloucky                 *
+    !     FLAPW potential generator                           *
     !     ***********************************************************
     !     calculates the density-potential integrals needed for the
     !     total energy
@@ -15,10 +17,6 @@ CONTAINS
     !     TE_VEFF:   charge density-effective potential integral
     !     TE_EXC :   charge density-ex-corr.energy density integral
     !     ***********************************************************
-    !     VR0     average coulomb potential contributes to the Madelung term
-    !     R.Pentcheva 09.05.96
-    !     ***********************************************************
-    !
 #include"cpp_double.h"
     USE m_constants
     USE m_vmts

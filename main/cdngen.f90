@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_cdngen
       use m_juDFT
       CONTAINS
@@ -6,16 +11,9 @@
            enpara, cell, noco,jij, results, oneD)
 !
 !     *****************************************************
-!     flapw7 charge density generator
-!                                c.l.fu
-!     correction for nwd>1: semic must be set false for nw=nwd
-!     furthermore ch.d. arrays initialized to zero INSIDE nw
-!     loop; only last window stored; shift do 10
-!     aug 90; r.p.
-!     modifications for slicing by r.p. and h.e. (1/91)
-!     error in reading 66 for spin-polarized case:
-!     read(66) nkpt was read for jspin>1 also
-!     Corrected mai 93 r.p.
+!     Charge density generator
+!         calls cdnval to generate the valence charge and the
+!         core routines for the core contribution
 !     *****************************************************
 !
       USE m_constants, ONLY : pi_const,sfp_const
