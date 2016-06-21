@@ -1836,10 +1836,10 @@ SUBROUTINE r_inpXML(&
       sumWeight = sumWeight + kpts%weight(i)
       kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
    END DO
+   kpts%posScale = 1.0
    DO i = 1, kpts%nkpt
       kpts%weight(i) = kpts%weight(i) / sumWeight
       kpts%wtkpt(i) = kpts%weight(i)
-      WRITE(*,'(i0,4f12.6)') i, kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i), kpts%weight(i)
    END DO
 
    ! Generate missing general parameters
