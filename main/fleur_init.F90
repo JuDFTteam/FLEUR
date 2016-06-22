@@ -131,7 +131,7 @@
      &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,numSpecies,&
-     &                        enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
+     &                        enpara)
                 DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF

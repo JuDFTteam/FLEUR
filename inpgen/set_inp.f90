@@ -121,6 +121,7 @@
       ALLOCATE(atoms%lda_u(atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
+      ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       ALLOCATE(noco%soc_opt(atoms%ntype+2))
 
       atoms%nz(:) = NINT(atoms%zatom(:))
@@ -129,6 +130,7 @@
       ENDDO
       atoms%rmt(:) = 999.9
       atoms%pos(:,:) = matmul( cell%amat , atoms%taual(:,:) )
+      atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
       banddos%dos   = .false. ; input%secvar = .false.
@@ -422,7 +424,7 @@
      &                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,numSpecies,&
-     &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
+     &                 enpara)
 
          IF(juDFT_was_argument("-explicit")) THEN
             sumWeight = 0.0
@@ -442,6 +444,7 @@
 
       DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
+      DEALLOCATE (atoms%ulo_der)
 
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
