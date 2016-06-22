@@ -146,6 +146,7 @@ SUBROUTINE w_inpXML(&
    fileNum = -1
    IF(l_outFile) THEN
       fileNum = getXMLOutputUnitNumber()
+      CALL openXMLElementNoAttributes('inputData')
    ELSE
       fileNum = 5
       OPEN (fileNum,file='inp.xml',form='formatted',status='unknown')
@@ -612,7 +613,9 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,420) obsolete%form66,input%eonly,input%l_bmt
 
    WRITE (fileNum,'(a)') '   </output>'
-   IF(.NOT.l_outFile) THEN
+   IF(l_outFile) THEN
+      CALL closeXMLElement('inputData')
+   ELSE
       WRITE (fileNum,'(a)') '</fleurInput>'
       CLOSE (fileNum)
    END IF
