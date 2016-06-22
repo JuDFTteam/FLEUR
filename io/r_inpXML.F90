@@ -1,5 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_rinpXML
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!
+!!! The routine r_inpXML reads in the inp.xml file
+!!!
+!!!                               GM'16
+!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE r_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
@@ -89,7 +102,6 @@ SUBROUTINE r_inpXML(&
 ! ..
 ! ..  Local Variables
    REAL     :: scpos  ,zc   
-   INTEGER  ::nw
    INTEGER ieq,i,k,na,n,ii
    REAL s3,ah,a,hs2,rest
    LOGICAL l_hyb,l_sym,ldum
@@ -280,7 +292,21 @@ SUBROUTINE r_inpXML(&
       CALL ASSIGN_var(valueString,tempReal)
    END DO
 
-   obsolete%nwdd = 1
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Comment section
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   input%comment = '        '
+   xPathA = '/fleurInput/comment'
+   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+   DO i = 1, LEN(TRIM(ADJUSTL(valueString)))
+      IF (valueString(i:i).EQ.achar(10)) valueString(i:i) = ' ' !remove line breaks
+   END DO
+   valueString = TRIM(ADJUSTL(valueString))
+   DO i = 1, 10
+      j = (i-1) * 8 + 1
+      input%comment(i) = valueString(j:j+7)
+   END DO
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of calculationSetup section
@@ -1609,10 +1635,9 @@ SUBROUTINE r_inpXML(&
          CALL juDFT_error("vacdos is true but vacDOS parameters are not set!", calledby = "r_inpXML")
       END IF
 
-      vacuum%layerd = 1
-      IF (numberNodes.EQ.1) THEN
+      vacuum%layers = 1
+      IF ((banddos%vacdos).AND.(numberNodes.EQ.1)) THEN
          vacuum%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
-         vacuum%layerd = vacuum%layers
          input%integ = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
          vacuum%starcoeff = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
          vacuum%nstars = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
@@ -1623,6 +1648,7 @@ SUBROUTINE r_inpXML(&
          vacuum%nstm = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
          vacuum%tworkf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
       END IF
+      vacuum%layerd = vacuum%layers
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
 
       ! Read in optional chargeDensitySlicing parameters
@@ -1823,10 +1849,10 @@ SUBROUTINE r_inpXML(&
       sumWeight = sumWeight + kpts%weight(i)
       kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
    END DO
+   kpts%posScale = 1.0
    DO i = 1, kpts%nkpt
       kpts%weight(i) = kpts%weight(i) / sumWeight
       kpts%wtkpt(i) = kpts%weight(i)
-      WRITE(*,'(i0,4f12.6)') i, kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i), kpts%weight(i)
    END DO
 
    ! Generate missing general parameters
@@ -1843,7 +1869,6 @@ SUBROUTINE r_inpXML(&
    kpts%nkptd = kpts%nkpt
    dimension%nvd = 0 ; dimension%nv2d = 0
    stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
-   obsolete%nwd = obsolete%nwdd
    obsolete%l_u2f = .FALSE.
    obsolete%l_f2u = .FALSE.
    !cell%aamat=matmul(transpose(cell%amat),cell%amat)
@@ -2163,7 +2188,7 @@ SUBROUTINE r_inpXML(&
    CALL prp_qfft(stars,cell,noco,input)
 
    IF (input%gw.GE.1) THEN
-      CALL write_gw(atoms%ntype,sym%nop,obsolete%nwd,input%jspins,atoms%natd,&
+      CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
                     atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
                     atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
                     atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)

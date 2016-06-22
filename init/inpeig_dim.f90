@@ -5,9 +5,7 @@
 !                  m. weinert   jan. 1987
 !*********************************************************************
       CONTAINS
-      SUBROUTINE inpeig_dim(&
-     &         input,obsolete,cell,noco,&
-     &         oneD,jij,kpts,dimension,stars)
+      SUBROUTINE inpeig_dim(input,obsolete,cell,noco, oneD,jij,kpts,dimension,stars)
 
       USE m_constants, ONLY : pi_const,tpi_const
       USE m_types
@@ -24,13 +22,12 @@
       TYPE(t_Jij),INTENT(INOUT)       :: Jij
 !-odim
 !-odim
-      INTEGER nw ,nk,nq,i,nv,nv2,j,kq1,kq2,kq3
+      INTEGER nk,nq,i,nv,nv2,j,kq1,kq2,kq3
       REAL  s1,s2,scale,bk(3)
       LOGICAL xyu
    !     ..
       kpts%nkptd = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
       stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
-      obsolete%nwd = obsolete%nwdd
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
@@ -40,7 +37,6 @@
         READ (113,*) jij%nqpt
       ENDIF
       OPEN (41,file='kpts',form='formatted',status='old')
-      DO nw = 1,obsolete%nwd
 
 !--->    k-mesh: given in units of the reciprocal lattice basis vectors
 !--->    scale is a factor to make input easier (default=1.0). k-pt
@@ -112,12 +108,9 @@
              dimension%nv2d = max(dimension%nv2d,nv2)
 
            ENDDO ! k=pts
-           IF (nw == obsolete%nwd) THEN
-             REWIND(41)
-             READ (41,*)
-           ENDIF
-         ENDDO   ! q-pts
-      ENDDO      ! windows
+           REWIND(41)
+           READ (41,*)
+        ENDDO   ! q-pts
 
       IF (jij%l_J) THEN
        CLOSE(113)

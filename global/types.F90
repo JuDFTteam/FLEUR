@@ -587,6 +587,7 @@
         REAL :: elup
         REAL :: rkmax
         REAL :: zelec
+        CHARACTER(LEN=8) :: comment(10)
         TYPE(t_efield)::efield
      END TYPE
 
@@ -612,8 +613,6 @@
      END TYPE
 
      TYPE t_obsolete
-        INTEGER:: nwdd
-        INTEGER:: nwd
         INTEGER:: lpr
         INTEGER:: lepr
         LOGICAL:: form66

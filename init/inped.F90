@@ -60,7 +60,7 @@
 
 !     .. Local Scalars ..
       REAL dr,dtild,r,kmax1,dvac1,zp,scale
-      INTEGER i,iz,j,n,n1,na,nw ,ntst,nn,ios
+      INTEGER i,iz,j,n,n1,na,ntst,nn,ios
       LOGICAL l_gga,l_test,l_vca
       CHARACTER(len=2)  :: str_up,str_do
       CHARACTER(len=4)  :: namex
@@ -439,11 +439,10 @@
 
 !--->    nwd = number of energy windows; lepr = 0 (1) for energy
 !--->    parameters given on absolute (floating) scale
-      WRITE (16,FMT=*) 'nwd=',obsolete%nwd,'lepr=',obsolete%lepr
-      IF (obsolete%nwd>1)  CALL juDFT_error("Multiple windows no longer supported",calledby ="inped")
+      WRITE (16,FMT=*) 'nwd=',1,'lepr=',obsolete%lepr
       if (all(obsolete%lepr .ne. (/0,1/))) call judft_error("Wrong choice of lepr",calledby="inped")
-      WRITE (6,FMT=8320) pmod(obsolete%lpr),obsolete%form66,input%l_f,input%eonly,obsolete%nwd,llr(obsolete%lepr)
-      WRITE (16,FMT=8320) pmod(obsolete%lpr),obsolete%form66,input%l_f,input%eonly,obsolete%nwd,llr(obsolete%lepr)
+      WRITE (6,FMT=8320) pmod(obsolete%lpr),obsolete%form66,input%l_f,input%eonly,1,llr(obsolete%lepr)
+      WRITE (16,FMT=8320) pmod(obsolete%lpr),obsolete%form66,input%l_f,input%eonly,1,llr(obsolete%lepr)
       WRITE (6,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
       WRITE (16,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
  8320 FORMAT (1x,/,/,/,' input of parameters for eigenvalues:',/,t5,&

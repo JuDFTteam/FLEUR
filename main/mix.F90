@@ -1,12 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_mix
   USE m_juDFT
   !*************************************************************************
-  !****  mixing of charge densities:                                    ****
-  !****    IMIX= 0 : linear mixing                                     ****
-  !****    IMIX = 3 : BROYDEN'S FIRST METHOD                            ****
-  !****    IMIX = 5 : BROYDEN'S SECOND METHOD                           ****
-  !****    IMIX = 7 : GENERALIZED ANDERSEN METHOD                       ****
-  !****  implementation to flapw7 ..... R.Pentcheva, D.Vogtenhuber      ****
+  !  mixing of charge densities or potentials:
+  !    IMIX= 0 : linear mixing                                     
+  !    IMIX = 3 : BROYDEN'S FIRST METHOD                            
+  !    IMIX = 5 : BROYDEN'S SECOND METHOD                           
+  !    IMIX = 7 : GENERALIZED ANDERSEN METHOD                       
   !************************************************************************
 CONTAINS
   SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym, cell, it, noco, oneD,hybrid)

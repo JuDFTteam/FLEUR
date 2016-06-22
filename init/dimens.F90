@@ -98,11 +98,10 @@
 1006      FORMAT(6x,'parameter (vacuum%nmzd=',i3,',vacuum%nmzxyd=',i3,')')
 
           READ (1,*,ERR=200,END=200)     
-          READ (1,909,ERR=200,END=200) dimension%nvd,dimension%nv2d,obsolete%nwdd,kpts%nkptd
-          IF (mpi%irank.EQ.0) WRITE (6,1009) dimension%nvd,dimension%nv2d,obsolete%nwdd,kpts%nkptd
+          READ (1,909,ERR=200,END=200) dimension%nvd,dimension%nv2d,kpts%nkptd
+          IF (mpi%irank.EQ.0) WRITE (6,1009) dimension%nvd,dimension%nv2d,1,kpts%nkptd
 909       FORMAT (21x,i5,6x,i4,6x,i1,7x,i5,6x,i4)
-1009      FORMAT(6x,'parameter (dimension%nvd=',i5,',dimension%nv2d=',i4,',obsolete%nwdd=',&
-               &  i1,',kpts%nkptd=',i5,')')
+1009      FORMAT(6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=1',',nkptd=',i5,')')
 
           READ (1,*,ERR=200,END=200)     
           READ (1,911,ERR=200,END=200) dimension%neigd,dimension%neigd
@@ -162,23 +161,16 @@
 
              WRITE (6,*)
              CALL first_glance(&
-                  &                    n1,n2,n3,n4,n5,n6,input%itmax,&
+                  &                    n1,n2,n3,n5,n6,input%itmax,&
                   &                    l_kpts,l_qpts,ldum,n7,n8,n9,n10)
              !
-             IF (n1>atoms%ntypd)   CALL juDFT_error("atoms%ntypd  too small in fl7para"&
-                  &       ,calledby ="dimens")
+             IF (n1>atoms%ntypd)   CALL juDFT_error("atoms%ntypd  too small in fl7para" ,calledby ="dimens")
              IF (n2.LT.24) THEN
-                IF (n2>sym%nop )    CALL juDFT_error("sym%nop   too small in fl7para"&
-                     &          ,calledby ="dimens")
+                IF (n2>sym%nop )    CALL juDFT_error("sym%nop   too small in fl7para" ,calledby ="dimens")
              ENDIF
-             IF (n3>atoms%natd )   CALL juDFT_error("atoms%natd   too small in fl7para"&
-                  &       ,calledby ="dimens")
-             IF (n4>obsolete%nwdd )   CALL juDFT_error("obsolete%nwdd   too small in fl7para"&
-                  &       ,calledby ="dimens")
-             IF (n5>atoms%nlod )   CALL juDFT_error("atoms%nlod   too small in fl7para"&
-                  &       ,calledby ="dimens")
-             IF (n6>vacuum%layerd)  CALL juDFT_error("vacuum%layerd too small in fl7para"&
-                  &       ,calledby ="dimens")
+             IF (n3>atoms%natd )   CALL juDFT_error("atoms%natd   too small in fl7para" ,calledby ="dimens")
+             IF (n5>atoms%nlod )   CALL juDFT_error("atoms%nlod   too small in fl7para" ,calledby ="dimens")
+             IF (n6>vacuum%layerd)  CALL juDFT_error("vacuum%layerd too small in fl7para" ,calledby ="dimens")
              IF ((.not.l_kpts).OR.(.not.l_qpts))  GOTO 201
           ENDIF
 
@@ -198,7 +190,7 @@
              WRITE (6,*) ' invoking dimen7... '
              !call first_glance to generate k-points
              CALL first_glance(&
-                  &                    n1,n2,n3,n4,n5,n6,input%itmax,&
+                  &                    n1,n2,n3,n5,n6,input%itmax,&
                   &                    l_kpts,l_qpts,ldum,n7,n8,n9,n10)
              CALL dimen7(&
                   &              input,sym,stars,atoms,sphhar,&
@@ -210,14 +202,14 @@
 #ifdef CPP_MPI
           i_vec = (/sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d,stars%kq1d,stars%kq2d,stars%kq3d,stars%kxc1d,stars%kxc2d,stars%kxc3d&
                &     ,atoms%ntypd,atoms%natd,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,dimension%jspd,vacuum%nvacd,dimension%nvd,dimension%nv2d&
-               &     ,obsolete%nwdd,kpts%nkptd,dimension%nstd,dimension%neigd,dimension%msh,dimension%ncvd,vacuum%layerd,atoms%nlod,atoms%llod,input%itmax/)
+               &     ,1,kpts%nkptd,dimension%nstd,dimension%neigd,dimension%msh,dimension%ncvd,vacuum%layerd,atoms%nlod,atoms%llod,input%itmax/)
           CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
           sym%nop=i_vec(1);stars%k1d=i_vec(2);stars%k2d=i_vec(3);stars%k3d=i_vec(4);stars%n3d=i_vec(5)
           stars%n2d = i_vec(6);stars%kq1d=i_vec(7);stars%kq2d=i_vec(8);stars%kq3d=i_vec(9)
           stars%kxc1d = i_vec(10);stars%kxc2d = i_vec(11);stars%kxc3d = i_vec(12)
           atoms%ntypd = i_vec(13);atoms%natd =i_vec(14);atoms%jmtd=i_vec(15);sphhar%ntypsd=i_vec(16)
           sphhar%nlhd = i_vec(17);sphhar%memd=i_vec(18);atoms%lmaxd=i_vec(19);dimension%jspd=i_vec(20)
-          vacuum%nvacd=i_vec(21);dimension%nvd=i_vec(22);dimension%nv2d=i_vec(23);obsolete%nwdd=i_vec(24)
+          vacuum%nvacd=i_vec(21);dimension%nvd=i_vec(22);dimension%nv2d=i_vec(23)
           kpts%nkptd = i_vec(25); dimension%nstd=i_vec(26);dimension%neigd=i_vec(27);dimension%msh=i_vec(28)
           dimension%ncvd=i_vec(29);vacuum%layerd=i_vec(30);atoms%nlod=i_vec(31);atoms%llod=i_vec(32)
           input%itmax=i_vec(33)
