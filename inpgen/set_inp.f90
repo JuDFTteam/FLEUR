@@ -368,7 +368,7 @@
         ENDIF
       ENDIF
 
-      ! set vacuum%nvac and vacuum energy parameters
+      ! set vacuum%nvac
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1

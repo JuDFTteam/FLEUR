@@ -145,7 +145,7 @@ SUBROUTINE r_inpXML(&
    INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
    INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
    INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
-   INTEGER            :: ldau_l
+   INTEGER            :: ldau_l, numVac
    INTEGER            :: speciesEParams(0:3)
    INTEGER            :: mrotTemp(3,3,48)
    REAL               :: tauTemp(3,48)
@@ -154,7 +154,7 @@ SUBROUTINE r_inpXML(&
    LOGICAL            :: l_vca, coreConfigPresent, l_enpara
    REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
    REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
-   REAL               :: weightScale
+   REAL               :: weightScale, eParamUp, eParamDown
    LOGICAL            :: l_amf
    REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
    REAL, PARAMETER    :: htr_eV   = 27.21138386 ! eV
@@ -735,7 +735,27 @@ SUBROUTINE r_inpXML(&
          dtild = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dTilda'))
          vacuum%dvac = cell%z1
          a3(3) = dtild
-         WRITE(*,*) 'Ignoring vacuum energy parameters in inp.xml for the moment!'
+         enpara%evac0 = eVac0Default_const
+         xPathB = TRIM(ADJUSTL(xPathA))//'vacuumEnergyParameters'
+         numberNodes = xmlGetNumberOfNodes(xPathB)
+         IF(numberNodes.GE.1) THEN
+            DO i = 1, numberNodes
+               xPathC = ''
+               WRITE(xPathC,'(a,i0,a)') TRIM(ADJUSTL(xPathB))//'[',i,']'
+               numVac = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@vacuum'))
+               eParamUp = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@spinUp'))
+               eParamDown = eParamUp
+               IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@spinDown').GE.1) THEN
+                  eParamDown = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@spinDown'))
+               END IF
+               enpara%evac0(numVac,1) = eParamUp
+               IF(input%jspins.GT.1) enpara%evac0(numVac,2) = eParamDown
+               IF(i.EQ.1) THEN
+                  enpara%evac0(3-numVac,1) = eParamUp
+                  IF(input%jspins.GT.1) enpara%evac0(3-numVac,2) = eParamDown
+               END IF
+            END DO
+         END IF
       END IF
 
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a1')

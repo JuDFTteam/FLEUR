@@ -341,7 +341,7 @@
       nel = 0
       enpara%el0 = -9999.9
       enpara%ello0 = -9999.9
-      enpara%evac0 = -0.1
+      enpara%evac0 = eVac0Default_const
       DO n = 1, atoms%ntype
 
         CALL setcore_bystr(

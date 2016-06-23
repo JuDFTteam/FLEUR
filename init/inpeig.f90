@@ -64,7 +64,7 @@
            enpara%el0(:,:,2)=enpara%el0(:,:,1)
            enpara%ello0(:,:,2)=enpara%ello0(:,:,1)
          ENDIF
-         IF (input%film) enpara%evac0=-0.25
+         IF (input%film) enpara%evac0 = eVac0Default_const
       END IF
 !
 !---> read k-points from file 41='kpts'
