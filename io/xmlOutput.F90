@@ -108,6 +108,8 @@ MODULE m_xmlOutput
       ALLOCATE(charAttributeValues(SIZE(attributeValues)))
       IF (PRESENT(contentList)) THEN
          ALLOCATE(charContentList(SIZE(contentList)))
+      ELSE
+         ALLOCATE(charContentList(1))
       END IF
 
       charAttributeValues = ''
