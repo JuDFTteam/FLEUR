@@ -331,7 +331,7 @@ SUBROUTINE w_inpXML(&
          END IF
       END IF
 
-      268 FORMAT('      <vacuumEnergyParameters vacuum="',i0,'" spinUp="',f0.8,'" spinDown="',f0.8,'">')
+      268 FORMAT('         <vacuumEnergyParameters vacuum="',i0,'" spinUp="',f0.8,'" spinDown="',f0.8,'">')
       DO i = 1, vacuum%nvac
          WRITE(fileNum,268) i, enpara%evac0(i,1), enpara%evac0(i,input%jspins)
       END DO

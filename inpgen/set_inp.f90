@@ -60,7 +60,6 @@
       INTEGER  iggachk
       INTEGER  n ,iostat, errorStatus, numSpecies
       REAL    scale,scpos ,zc
-      REAL    ello0(atoms%nlod,atoms%ntype),evac0(2)
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
@@ -368,6 +367,12 @@
           kpts%nkpt = nint((216000/cell%omtil)/sym%nop)
         ENDIF
       ENDIF
+
+      ! set vacuum%nvac and vacuum energy parameters
+      vacuum%nvac = 2
+      IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
+      IF (oneD%odd%d1) vacuum%nvac = 1
+      
 
       IF(.NOT.juDFT_was_argument("-noXML")) THEN
          nkptOld = kpts%nkpt
