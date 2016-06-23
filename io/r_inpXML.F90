@@ -135,6 +135,9 @@ SUBROUTINE r_inpXML(&
    INTEGER          :: coreStateKappaList(29)
    REAL             :: coreStateOccs(29,2)
    INTEGER          :: coreStateNprnc(29), coreStateKappa(29)
+   INTEGER          :: speciesXMLElectronStates(29)
+   REAL             :: speciesXMLCoreOccs(2,29)
+   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
    INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l
    INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
@@ -1305,6 +1308,9 @@ SUBROUTINE r_inpXML(&
       providedCoreStates = 0
       providedStates = 0
       coreStateOccs = 0.0
+      speciesXMLElectronStates = noState_const
+      speciesXMLCoreOccs = -1.0
+      speciesXMLPrintCoreStates = .FALSE.
       WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/electronConfig'
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF (numberNodes.EQ.1) THEN
@@ -1322,6 +1328,7 @@ SUBROUTINE r_inpXML(&
                         coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList(j)
                         coreStateNprnc(j-providedCoreStates) = coreStateNprncList(j)
                         coreStateKappa(j-providedCoreStates) = coreStateKappaList(j)
+                        speciesXMLElectronStates(j) = coreState_const
                      END DO
                      providedCoreStates = providedCoreStates + nobleGasNumStatesList(i)
                   END IF
@@ -1336,6 +1343,7 @@ SUBROUTINE r_inpXML(&
                      coreStateOccs(providedCoreStates,:) = coreStateNumElecsList(i)
                      coreStateNprnc(providedCoreStates) = coreStateNprncList(i)
                      coreStateKappa(providedCoreStates) = coreStateKappaList(i)
+                     speciesXMLElectronStates(i) = coreState_const
                   END IF
                END DO
             END IF
@@ -1356,6 +1364,7 @@ SUBROUTINE r_inpXML(&
                      coreStateOccs(providedStates,:) = coreStateNumElecsList(i)
                      coreStateNprnc(providedStates) = coreStateNprncList(i)
                      coreStateKappa(providedStates) = coreStateKappaList(i)
+                     speciesXMLElectronStates(i) = valenceState_const
                   END IF
                END DO
                token = popFirstStringToken(valueString)
@@ -1381,6 +1390,9 @@ SUBROUTINE r_inpXML(&
                IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList(j)) THEN
                   nprncTemp = coreStateNprncList(j)
                   kappaTemp = coreStateKappaList(j)
+                  speciesXMLPrintCoreStates(j) = .TRUE.
+                  speciesXMLCoreOccs(1,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
+                  speciesXMLCoreOccs(2,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
                END IF
             END DO
             DO j = 1, providedStates
@@ -1448,6 +1460,10 @@ SUBROUTINE r_inpXML(&
                   atoms%coreStateOccs(k,2,iType) = coreStateOccs(k,2)
                   atoms%coreStateNprnc(k,iType) = coreStateNprnc(k)
                   atoms%coreStateKappa(k,iType) = coreStateKappa(k)
+                  xmlElectronStates(k,iType) = speciesXMLElectronStates(k)
+                  xmlPrintCoreStates(k,iType) = speciesXMLPrintCoreStates(k)
+                  xmlCoreOccs (1,k,iType) = speciesXMLCoreOccs(1,k)
+                  xmlCoreOccs (2,k,iType) = speciesXMLCoreOccs(2,k)
                END DO
                WRITE(*,*) 'setcor still has to be adapted!!!'
             END IF
