@@ -50,7 +50,7 @@
      &                    atoms,input,jsp,enpara)
            ENDDO !dimension%jspd
          CLOSE (40)
-      ELSE
+      ELSE IF (.NOT.input%l_inpXML) THEN
          WRITE(6,*) "No enpara file found, using default values"
          enpara%el0(0,:,1)=-999999.0
          DO n = 1, atoms%ntype

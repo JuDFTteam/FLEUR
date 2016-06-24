@@ -736,7 +736,7 @@ SUBROUTINE r_inpXML(&
          vacuum%dvac = cell%z1
          a3(3) = dtild
          enpara%evac0 = eVac0Default_const
-         xPathB = TRIM(ADJUSTL(xPathA))//'vacuumEnergyParameters'
+         xPathB = TRIM(ADJUSTL(xPathA))//'/vacuumEnergyParameters'
          numberNodes = xmlGetNumberOfNodes(xPathB)
          IF(numberNodes.GE.1) THEN
             DO i = 1, numberNodes

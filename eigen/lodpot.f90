@@ -502,6 +502,9 @@ CONTAINS
                 ENDIF
              ENDIF
              evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
+             IF (input%l_inpXML) THEN
+                evac(ivac,jsp) = vz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
+             END IF
              attributes = ''
              WRITE(attributes(1),'(i0)') ivac
              WRITE(attributes(2),'(i0)') jsp
