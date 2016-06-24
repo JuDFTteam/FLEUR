@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_xmlOutput
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -37,18 +43,23 @@ MODULE m_xmlOutput
    SUBROUTINE startXMLOutput()
 
       USE m_constants
+      USE m_utility
 
       IMPLICIT NONE
 
 #ifdef CPP_MPI
       include "mpif.h"
-      INTEGER::err,isize
+      INTEGER           :: err, isize
 #endif
+      INTEGER           :: numFlags
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
-      CHARACTER(LEN=10)  :: zone
+      CHARACTER(LEN=10) :: zone
       CHARACTER(LEN=10) :: dateString
-      CHARACTER(LEN=10)  :: timeString
+      CHARACTER(LEN=10) :: timeString
+      CHARACTER(LEN=6)  :: precisionString
+      CHARACTER(LEN=9)  :: flags(11)
+      CHARACTER(LEN=20) :: structureSpecifiers(11)
 
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
@@ -61,7 +72,25 @@ MODULE m_xmlOutput
       OPEN (xmlOutputUnit,file='out.xml',form='formatted',status='unknown')
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
-      CALL writeXMLElement('programVersion',(/'version'/),(/version_const/))
+      CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
+      CALL getComputerArchitectures(flags, numFlags)
+      IF (numFlags.EQ.0) THEN
+         numFlags = 1
+         flags(numFlags) = 'GEN'
+      END IF
+      CALL writeXMLElementNoAttributes('targetComputerArchitectures',flags(1:numFlags))
+      IF (numFlags.GT.1) THEN 
+         STOP "ERROR: Define only one system architecture! (called by xmlOutput)"
+      END IF
+      CALL getPrecision(precisionString)
+      CALL writeXMLElement('precision',(/'type'/),(/precisionString/))
+      CALL getTargetStructureProperties(structureSpecifiers, numFlags)
+      CALL writeXMLElementNoAttributes('targetStructureClass',structureSpecifiers(1:numFlags))
+      CALL getAdditionalCompilationFlags(flags, numFlags)
+      IF (numFlags.GE.1) THEN
+         CALL writeXMLElementNoAttributes('additionalCompilerFlags',flags(1:numFlags))
+      END IF
+      CALL closeXMLElement('programVersion')
 #ifdef CPP_MPI
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
       CALL writeXMLElementPoly('parallelizationParameters',(/'mpiPEs'/),(/isize/))
@@ -239,7 +268,7 @@ MODULE m_xmlOutput
          ALLOCATE(contentLineList(contentLineListSize))
          CALL fillContentLineList(contentList,contentLineList,contentLineLength)
          IF(SIZE(contentLineList).LE.1) THEN
-            outputString = TRIM(ADJUSTL(outputString))//'>'//contentLineList(1)//'</'//&
+            outputString = TRIM(ADJUSTL(outputString))//'>'//TRIM(ADJUSTL(contentLineList(1)))//'</'//&
                  TRIM(ADJUSTL(elementName))//'>'
          ELSE
             outputString = TRIM(ADJUSTL(outputString))//'>'
@@ -291,6 +320,55 @@ MODULE m_xmlOutput
       DEALLOCATE(lengths)
 
    END SUBROUTINE writeXMLElement
+
+   SUBROUTINE writeXMLElementNoAttributes(elementName,contentList)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: contentList(:)
+
+      CHARACTER(LEN=200), ALLOCATABLE :: contentLineList(:)
+      INTEGER :: i, j, contentLineLength, contentLineListSize
+      CHARACTER(LEN=70)               :: format
+      CHARACTER(LEN=200)              :: outputString
+      INTEGER                         :: contentListSize, overallListSize, numContentLineChars
+
+      outputString = '<'//TRIM(ADJUSTL(elementName))
+
+      WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
+
+      contentLineLength = 5 ! At most 5 data elements per line
+      contentLineListSize = SIZE(contentList) / contentLineLength
+      IF(contentLineListSize*contentLineLength.NE.SIZE(contentList)) THEN
+         contentLineListSize = contentLineListSize + 1
+      END IF
+      ALLOCATE(contentLineList(contentLineListSize))
+      CALL fillContentLineList(contentList,contentLineList,contentLineLength)
+      IF(contentLineListSize.LE.1) THEN
+         outputString = TRIM(ADJUSTL(outputString))//'>'//TRIM(ADJUSTL(contentLineList(1)))//'</'//&
+              TRIM(ADJUSTL(elementName))//'>'
+      ELSE
+         outputString = TRIM(ADJUSTL(outputString))//'>'
+      END IF
+      WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
+      IF(contentLineListSize.GT.1) THEN
+         DO i = 1, SIZE(contentLineList)
+            IF (i.EQ.SIZE(contentLineList)) THEN
+               numContentLineChars = 20*MOD(SIZE(contentList),contentLineLength)
+               IF(numContentLineChars.EQ.0) numContentLineChars = 20 * contentLineLength
+               WRITE(format,'(a,i0,a,i0,a)') "(a",3*(currentElementIndex+2),",a",numContentLineChars,")"
+            ELSE
+               WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+2),",a100)"
+            END IF
+            WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(contentLineList(i)))
+         END DO
+         WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
+         outputString = '</'//TRIM(ADJUSTL(elementName))//'>'
+         WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
+      END IF
+
+   END SUBROUTINE writeXMLElementNoAttributes
 
    SUBROUTINE fillContentLineList(contentList,contentLineList,contentLineLength)
 
