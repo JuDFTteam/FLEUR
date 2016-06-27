@@ -446,6 +446,13 @@ SUBROUTINE r_inpXML(&
       l_kpts = .FALSE.
       kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
       kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
+      kpts%nkpts = kpts%nkpt
+
+      ALLOCATE(kpts%bk(3,kpts%nkpts))
+      ALLOCATE(kpts%weight(kpts%nkpts))
+      kpts%bk = 0.0
+      kpts%weight = 0.0
+      kpts%posScale = 1.0
 
       numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint')
       IF(numberNodes.EQ.1) THEN

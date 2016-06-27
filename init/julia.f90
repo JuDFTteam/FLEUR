@@ -146,9 +146,8 @@
 !-------------------- Want to make a Bandstructure ? --------
 !
       IF (banddos%ndir == -4) THEN
-        CALL bandstr1(&
-     &                idsyst,idtype,cell%bmat,kpts%nkpt,input%jspins,input%film)
-        RETURN
+         CALL bandstr1(idsyst,idtype,cell%bmat,kpts,input,l_fillArrays)
+         RETURN
       ENDIF
 !
 !-------------------- Some variables we do not use ----------
@@ -348,7 +347,7 @@
             DEALLOCATE(kpts%weight)
          END IF
          ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%weight(kpts%nkpt))
-         kpts%posScale = REAL(idiv)
+         IF (idiv.NE.0) kpts%posScale = REAL(idiv)
          DO j = 1, kpts%nkpt
             kpts%bk(1,j) = vkxyz(1,j)
             kpts%bk(2,j) = vkxyz(2,j)

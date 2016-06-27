@@ -4,18 +4,23 @@
 !----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE bandstr1(
-     >                    idsyst,idtype,bmat,nkpt,jspins,film)
+     >                    idsyst,idtype,bmat,kpts,input,l_fillArrays)
+
+      USE m_types
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)  :: idsyst,idtype,nkpt,jspins
+      TYPE(t_input),INTENT(INOUT) :: input
+      TYPE(t_kpts),INTENT(INOUT)  :: kpts
+
+      INTEGER, INTENT (IN)  :: idsyst,idtype
       REAL,    INTENT (IN)  :: bmat(3,3)
-      LOGICAL, INTENT (IN)  :: film
-      REAL,    POINTER              :: kpts(:,:)      
+      LOGICAL, INTENT (IN)  :: l_fillArrays
 
       REAL, POINTER             :: syp(:,:) 
       CHARACTER(len=1), POINTER :: ssy(:)
       REAL,    ALLOCATABLE      :: rsyp(:,:),del(:),d(:)
+      REAL,    ALLOCATABLE      :: bkTemp(:,:)
       INTEGER, ALLOCATABLE      :: nk(:)
       INTEGER nosyp,i,j,n,ntot
       REAL dk(3),syp1(3),rsyp1(3)
@@ -49,10 +54,12 @@
 !
       ntot = nosyp
       DO i = 2,nosyp
-        nk(i) = NINT ( (nkpt-nosyp)*( del(i) / d(nosyp) ) )
+        nk(i) = NINT ( (kpts%nkpt-nosyp)*( del(i) / d(nosyp) ) )
         ntot = ntot + nk(i)
-      ENDDO 
-      ALLOCATE ( kpts(3,ntot) )
+      ENDDO
+      kpts%nkpt = ntot
+
+      ALLOCATE (bkTemp(3,kpts%nkpt))
 !
 ! --> generate k-points mesh 
 !
@@ -61,33 +68,47 @@
          dk(1) = ( syp(1,i) - syp(1,i-1) ) / (nk(i)+1)
          dk(2) = ( syp(2,i) - syp(2,i-1) ) / (nk(i)+1)
          dk(3) = ( syp(3,i) - syp(3,i-1) ) / (nk(i)+1)
-         kpts(:,n) = syp(:,i-1)
+         bkTemp(:,n) = syp(:,i-1)
          n = n + 1
          DO j = 1, nk(i)
-            kpts(:,n) = kpts(:,n-1) + dk(:)
+            bkTemp(:,n) = bkTemp(:,n-1) + dk(:)
             n = n + 1
          ENDDO
       ENDDO
-      kpts(:,n) = syp(:,nosyp)
+      bkTemp(:,n) = syp(:,nosyp)
+      kpts%nkpts = kpts%nkpt
+      kpts%posScale = 1.0
 
-      OPEN (41,file='kpts',form='formatted',status='new')
-      IF (.NOT.film) THEN
-        WRITE(41,'(i5,f20.10)') ntot,1.0
-        DO n = 1,ntot
-           WRITE (41,'(4f10.5)') kpts(:,n),1.0
-        ENDDO
+      IF(l_fillArrays) THEN
+         IF(ALLOCATED(kpts%bk)) THEN
+            DEALLOCATE(kpts%bk)
+         END IF
+         IF(ALLOCATED(kpts%weight)) THEN
+            DEALLOCATE(kpts%weight)
+         END IF
+         ALLOCATE (kpts%bk(3,kpts%nkpt), kpts%weight(kpts%nkpt))
+         kpts%bk(:,:) = bkTemp(:,:)
+         kpts%weight = 1.0
       ELSE
-        WRITE(41,'(i5,f20.10,3x,l1)') ntot,1.0,.false.
-        DO n = 1,ntot
-           WRITE (41,'(3f10.5)') kpts(1:2,n),1.0
-        ENDDO
+         OPEN (41,file='kpts',form='formatted',status='new')
+         IF (.NOT.input%film) THEN
+            WRITE(41,'(i5,f20.10)') kpts%nkpt,kpts%posScale
+            DO n = 1, kpts%nkpt
+               WRITE (41,'(4f10.5)') bkTemp(:,n),1.0
+            ENDDO
+         ELSE
+           WRITE(41,'(i5,f20.10,3x,l1)') kpts%nkpt,kpts%posScale,.false.
+           DO n = 1, kpts%nkpt
+              WRITE (41,'(3f10.5)') bkTemp(1:2,n),1.0
+           ENDDO
+         END IF
+         CLOSE (41)
       END IF
-      CLOSE (41)
 
       CALL write_gnu(
-     >               nosyp,d,ssy,jspins)
+     >               nosyp,d,ssy,input%jspins)
 
-      DEALLOCATE ( rsyp,syp,del,nk,ssy,d )
+      DEALLOCATE ( rsyp,syp,del,nk,ssy,d,bkTemp )
 
       END SUBROUTINE bandstr1
 !----------------------------------------------------------------------
