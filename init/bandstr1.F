@@ -1,16 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       MODULE m_bandstr1
       use m_juDFT
+      USE m_types
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE bandstr1(
      >                    idsyst,idtype,bmat,kpts,input,l_fillArrays)
 
-      USE m_types
-
       IMPLICIT NONE
 
-      TYPE(t_input),INTENT(INOUT) :: input
+      TYPE(t_input),INTENT(IN) :: input
       TYPE(t_kpts),INTENT(INOUT)  :: kpts
 
       INTEGER, INTENT (IN)  :: idsyst,idtype
@@ -26,7 +31,7 @@
       REAL dk(3),syp1(3),rsyp1(3)
       
       CALL get_points(
-     >                idsyst,idtype,bmat,
+     >                idsyst,idtype,bmat,kpts,
      <                nosyp,syp,ssy)
 !
 ! --> transform to cartesian units
@@ -208,14 +213,16 @@
 ! and their names (lowercase = greek)
 !----------------------------------------------------------------------
       SUBROUTINE get_points(
-     >                      idsyst,idtype,bmat,
+     >                      idsyst,idtype,bmat,kpts,
      <                      nosyp,syp,ssy)
 
       IMPLICIT NONE
-      INTEGER, INTENT (IN)  :: idsyst,idtype
-      REAL,    INTENT (IN)  :: bmat(3,3)
-      INTEGER, INTENT (OUT) :: nosyp
-      REAL, POINTER         :: syp(:,:)  ! actually intent out
+
+      TYPE(t_kpts),INTENT(IN)   :: kpts
+      INTEGER,     INTENT (IN)  :: idsyst,idtype
+      REAL,        INTENT (IN)  :: bmat(3,3)
+      INTEGER,     INTENT (OUT) :: nosyp
+      REAL,             POINTER :: syp(:,:)  ! actually intent out
       CHARACTER(len=1), POINTER :: ssy(:)
 
       LOGICAL         :: band_inp_file
@@ -244,6 +251,16 @@
  110     WRITE(*,*) "Error reading band_inp file"
           CALL juDFT_error("Bandstr1",calledby="bandstr1")
       ENDIF
+
+      IF(kpts%numSpecialPoints.GE.2) THEN
+         nosyp = kpts%numSpecialPoints
+         ALLOCATE(syp(3,nosyp),ssy(nosyp) )
+         DO n = 1, nosyp
+            ssy(n) = TRIM(ADJUSTL(kpts%specialPointNames(n)))
+            syp(:,n) = kpts%specialPoints(:,n)
+         END DO
+         RETURN
+      END IF
 
       !No band_inp file -> determine default lines for bandstructure
       write(*,*) idsyst,idtype
