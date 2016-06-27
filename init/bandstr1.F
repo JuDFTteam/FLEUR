@@ -111,7 +111,7 @@
       END IF
 
       CALL write_gnu(
-     >               nosyp,d,ssy,input%jspins)
+     >               nosyp,d,ssy,input)
 
       DEALLOCATE ( rsyp,syp,del,nk,ssy,d,bkTemp )
 
@@ -121,14 +121,17 @@
 ! gnuplot < band.gnu > band.ps
 !----------------------------------------------------------------------
       SUBROUTINE write_gnu(
-     >                     nosyp,d,ssy,jspins)
+     >                     nosyp,d,ssy,input)
 !
       IMPLICIT NONE
-      INTEGER, INTENT (IN) :: nosyp,jspins
+
+      TYPE(t_input),INTENT(IN) :: input
+      INTEGER, INTENT (IN) :: nosyp
       REAL,    INTENT (IN) :: d(nosyp)
       CHARACTER(len=1), INTENT (IN) :: ssy(nosyp)
       
       INTEGER n,aoff,adel
+      CHARACTER(LEN=200) tempTitle
       aoff = iachar('a')-1
       adel = iachar('a')-iachar('A')
       write(*,*) aoff,adel 
@@ -138,7 +141,11 @@
       WRITE (27,901)
       WRITE (27,902)
       WRITE (27,903)
-      WRITE (27,904) "Fleur Bandstructure"
+      WRITE(tempTitle,'(10a)') input%comment
+      IF(TRIM(ADJUSTL(tempTitle)).EQ.'') THEN
+         tempTitle = "Fleur Bandstructure"
+      END IF
+      WRITE (27,904) TRIM(ADJUSTL(tempTitle))
       DO n = 1, nosyp
         WRITE (27,905) d(n),d(n)
       ENDDO
@@ -176,7 +183,7 @@
 !
       WRITE (27,910) 
       WRITE (27,911) d(nosyp)+0.00001
-      IF (jspins == 2) WRITE (27,912)
+      IF (input%jspins == 2) WRITE (27,912)
       WRITE (27,913)
       CLOSE (27)
 
@@ -184,7 +191,7 @@
  901  FORMAT ('set xlabel ""')
  902  FORMAT ('set ylabel "E - E_F (eV)"')
  903  FORMAT ('set nokey')
- 904  FORMAT ('set title "',10a8,'"')
+ 904  FORMAT ('set title "',a,'"')
  905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
  906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
 #ifdef CPP_AIX
