@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_setabc1locdn1
   !***********************************************************************
   ! calculates the (lower case) a, b and c coefficients for the local
