@@ -124,7 +124,7 @@ CONTAINS
 #if 1==2
     REAL, ALLOCATABLE    :: fj_test(:,:,:,:),gj_test(:,:,:,:)
     COMPLEX,ALLOCATABLE  :: bb_test(:)
- #endif
+#endif
 
     !
     CALL timestart("hsmt init")
