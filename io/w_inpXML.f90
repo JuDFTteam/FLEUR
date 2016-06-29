@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_winpXML
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -16,7 +22,7 @@ SUBROUTINE w_inpXML(&
 &                   noel,namex,relcor,a1,a2,a3,scale,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,l_outFile,numSpecies,&
-&                   el0,ello0,evac0)
+&                   enpara)
 
    USE m_types
    USE m_juDFT_init
@@ -42,13 +48,13 @@ SUBROUTINE w_inpXML(&
    TYPE(t_sliceplot),INTENT(IN):: sliceplot
    TYPE(t_xcpot),INTENT(IN)    :: xcpot
    TYPE(t_noco),INTENT(IN)     :: noco
+   TYPE(t_enpara),INTENT(IN)   :: enpara
    INTEGER, INTENT (IN)        :: numSpecies
    INTEGER, INTENT (IN)        :: div(3)
    INTEGER, INTENT (IN)        :: atomTypeSpecies(atoms%ntype)
    INTEGER, INTENT (IN)        :: speciesRepAtomType(numSpecies)
    LOGICAL, INTENT (IN)        :: l_gamma, l_outFile
    REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3),scale
-   REAL,    INTENT (IN)        :: el0(0:3,atoms%ntype),ello0(atoms%nlod,atoms%ntype),evac0(2)
    REAL, INTENT (IN)     :: xmlCoreOccs(2,29,atoms%ntype)
    INTEGER, INTENT (IN)  :: xmlElectronStates(29,atoms%ntype)
    LOGICAL, INTENT (IN)  :: xmlPrintCoreStates(29,atoms%ntype)
@@ -146,6 +152,7 @@ SUBROUTINE w_inpXML(&
    fileNum = -1
    IF(l_outFile) THEN
       fileNum = getXMLOutputUnitNumber()
+      CALL openXMLElementNoAttributes('inputData')
    ELSE
       fileNum = 5
       OPEN (fileNum,file='inp.xml',form='formatted',status='unknown')
@@ -330,6 +337,11 @@ SUBROUTINE w_inpXML(&
          END IF
       END IF
 
+      268 FORMAT('         <vacuumEnergyParameters vacuum="',i0,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
+      DO i = 1, vacuum%nvac
+         WRITE(fileNum,268) i, enpara%evac0(i,1), enpara%evac0(i,input%jspins)
+      END DO
+
       WRITE (fileNum,'(a)') '      </filmLattice>'
    ELSE
 
@@ -415,10 +427,11 @@ SUBROUTINE w_inpXML(&
       320 FORMAT('         <atomicCutoffs lmax="',i0,'" lnonsphr="',i0,'"/>')
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
-      IF (ALL((el0(0:3,iAtomType)-INT(el0(0:3,iAtomType))).LE.0.00000001)) THEN
+      IF (ALL((enpara%el0(0:3,iAtomType,1)-INT(enpara%el0(0:3,iAtomType,1))).LE.0.00000001)) THEN
 !         <energyParameters s="3" p="3" d="3" f="4"/>
          321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
-         WRITE (fileNum,321) INT(el0(0,iAtomType)),INT(el0(1,iAtomType)),INT(el0(2,iAtomType)),INT(el0(3,iAtomType))
+         WRITE (fileNum,321) INT(enpara%el0(0,iAtomType,1)),INT(enpara%el0(1,iAtomType,1)),&
+                             INT(enpara%el0(2,iAtomType,1)),INT(enpara%el0(3,iAtomType,1))
       END IF
 
       IF(ANY(xmlElectronStates(:,iAtomType).NE.noState_const)) THEN
@@ -489,15 +502,14 @@ SUBROUTINE w_inpXML(&
       DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
          l = atoms%llo(ilo,iAtomType)
-         n = INT(ello0(ilo,iAtomType))
-         loType = 'HELO'
-         IF(l.LE.3) THEN
-            IF(n.LE.el0(l,iAtomType)) THEN
-               loType = 'SCLO'
-            END IF
+         n = INT(enpara%ello0(ilo,iAtomType,1))
+         loType = 'SCLO'
+         IF(n.LT.0) THEN
+            loType = 'HELO'
          END IF
-         324 FORMAT('         <lo type="',a,'" l="',i0,'" n="',i0,'" eDeriv="0"/>')
-         WRITE (fileNum,324) TRIM(ADJUSTL(loType)), l, n
+         n = ABS(n)
+         324 FORMAT('         <lo type="',a,'" l="',i0,'" n="',i0,'" eDeriv="',i0,'"/>')
+         WRITE (fileNum,324) TRIM(ADJUSTL(loType)), l, n, atoms%ulo_der(ilo,iAtomType)
       END DO
 
       WRITE (fileNum,'(a)') '      </species>'
@@ -612,7 +624,9 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,420) obsolete%form66,input%eonly,input%l_bmt
 
    WRITE (fileNum,'(a)') '   </output>'
-   IF(.NOT.l_outFile) THEN
+   IF(l_outFile) THEN
+      CALL closeXMLElement('inputData')
+   ELSE
       WRITE (fileNum,'(a)') '</fleurInput>'
       CLOSE (fileNum)
    END IF

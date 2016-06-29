@@ -50,7 +50,7 @@
      &                    atoms,input,jsp,enpara)
            ENDDO !dimension%jspd
          CLOSE (40)
-      ELSE
+      ELSE IF (.NOT.input%l_inpXML) THEN
          WRITE(6,*) "No enpara file found, using default values"
          enpara%el0(0,:,1)=-999999.0
          DO n = 1, atoms%ntype
@@ -64,7 +64,7 @@
            enpara%el0(:,:,2)=enpara%el0(:,:,1)
            enpara%ello0(:,:,2)=enpara%ello0(:,:,1)
          ENDIF
-         IF (input%film) enpara%evac0=-0.25
+         IF (input%film) enpara%evac0 = eVac0Default_const
       END IF
 !
 !---> read k-points from file 41='kpts'

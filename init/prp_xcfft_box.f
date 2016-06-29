@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       SUBROUTINE prp_xcfft_box(gmaxxc,bmat,kxc1d,kxc2d,kxc3d)
 c*********************************************************************
 c     Determine the dimensions kxc1d, kxc2d, kxc3d

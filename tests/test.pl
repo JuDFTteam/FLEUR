@@ -15,6 +15,10 @@ use judft_tests;
 my $testdir=shift;
 my $executable=shift;
 my $mpi=shift;
+if (!$mpi){
+    $mpi=$ENV{"juDFT_MPI"};
+}
+print "MPI:$mpi\n";
 my $workdir="$ENV{PWD}/Testing/work"; 
 chdir($dir);
 

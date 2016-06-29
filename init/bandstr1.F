@@ -1,27 +1,37 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       MODULE m_bandstr1
       use m_juDFT
+      USE m_types
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE bandstr1(
-     >                    idsyst,idtype,bmat,nkpt,jspins,film)
+     >                    idsyst,idtype,bmat,kpts,input,l_fillArrays)
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)  :: idsyst,idtype,nkpt,jspins
+      TYPE(t_input),INTENT(IN) :: input
+      TYPE(t_kpts),INTENT(INOUT)  :: kpts
+
+      INTEGER, INTENT (IN)  :: idsyst,idtype
       REAL,    INTENT (IN)  :: bmat(3,3)
-      LOGICAL, INTENT (IN)  :: film
-      REAL,    POINTER              :: kpts(:,:)      
+      LOGICAL, INTENT (IN)  :: l_fillArrays
 
       REAL, POINTER             :: syp(:,:) 
       CHARACTER(len=1), POINTER :: ssy(:)
       REAL,    ALLOCATABLE      :: rsyp(:,:),del(:),d(:)
+      REAL,    ALLOCATABLE      :: bkTemp(:,:)
       INTEGER, ALLOCATABLE      :: nk(:)
       INTEGER nosyp,i,j,n,ntot
       REAL dk(3),syp1(3),rsyp1(3)
       
       CALL get_points(
-     >                idsyst,idtype,bmat,
+     >                idsyst,idtype,bmat,kpts,
      <                nosyp,syp,ssy)
 !
 ! --> transform to cartesian units
@@ -49,10 +59,12 @@
 !
       ntot = nosyp
       DO i = 2,nosyp
-        nk(i) = NINT ( (nkpt-nosyp)*( del(i) / d(nosyp) ) )
+        nk(i) = NINT ( (kpts%nkpt-nosyp)*( del(i) / d(nosyp) ) )
         ntot = ntot + nk(i)
-      ENDDO 
-      ALLOCATE ( kpts(3,ntot) )
+      ENDDO
+      kpts%nkpt = ntot
+
+      ALLOCATE (bkTemp(3,kpts%nkpt))
 !
 ! --> generate k-points mesh 
 !
@@ -61,33 +73,47 @@
          dk(1) = ( syp(1,i) - syp(1,i-1) ) / (nk(i)+1)
          dk(2) = ( syp(2,i) - syp(2,i-1) ) / (nk(i)+1)
          dk(3) = ( syp(3,i) - syp(3,i-1) ) / (nk(i)+1)
-         kpts(:,n) = syp(:,i-1)
+         bkTemp(:,n) = syp(:,i-1)
          n = n + 1
          DO j = 1, nk(i)
-            kpts(:,n) = kpts(:,n-1) + dk(:)
+            bkTemp(:,n) = bkTemp(:,n-1) + dk(:)
             n = n + 1
          ENDDO
       ENDDO
-      kpts(:,n) = syp(:,nosyp)
+      bkTemp(:,n) = syp(:,nosyp)
+      kpts%nkpts = kpts%nkpt
+      kpts%posScale = 1.0
 
-      OPEN (41,file='kpts',form='formatted',status='new')
-      IF (.NOT.film) THEN
-        WRITE(41,'(i5,f20.10)') ntot,1.0
-        DO n = 1,ntot
-           WRITE (41,'(4f10.5)') kpts(:,n),1.0
-        ENDDO
+      IF(l_fillArrays) THEN
+         IF(ALLOCATED(kpts%bk)) THEN
+            DEALLOCATE(kpts%bk)
+         END IF
+         IF(ALLOCATED(kpts%weight)) THEN
+            DEALLOCATE(kpts%weight)
+         END IF
+         ALLOCATE (kpts%bk(3,kpts%nkpt), kpts%weight(kpts%nkpt))
+         kpts%bk(:,:) = bkTemp(:,:)
+         kpts%weight = 1.0
       ELSE
-        WRITE(41,'(i5,f20.10,3x,l1)') ntot,1.0,.false.
-        DO n = 1,ntot
-           WRITE (41,'(3f10.5)') kpts(1:2,n),1.0
-        ENDDO
+         OPEN (41,file='kpts',form='formatted',status='new')
+         IF (.NOT.input%film) THEN
+            WRITE(41,'(i5,f20.10)') kpts%nkpt,kpts%posScale
+            DO n = 1, kpts%nkpt
+               WRITE (41,'(4f10.5)') bkTemp(:,n),1.0
+            ENDDO
+         ELSE
+           WRITE(41,'(i5,f20.10,3x,l1)') kpts%nkpt,kpts%posScale,.false.
+           DO n = 1, kpts%nkpt
+              WRITE (41,'(3f10.5)') bkTemp(1:2,n),1.0
+           ENDDO
+         END IF
+         CLOSE (41)
       END IF
-      CLOSE (41)
 
       CALL write_gnu(
-     >               nosyp,d,ssy,jspins)
+     >               nosyp,d,ssy,input)
 
-      DEALLOCATE ( rsyp,syp,del,nk,ssy,d )
+      DEALLOCATE ( rsyp,syp,del,nk,ssy,d,bkTemp )
 
       END SUBROUTINE bandstr1
 !----------------------------------------------------------------------
@@ -95,14 +121,17 @@
 ! gnuplot < band.gnu > band.ps
 !----------------------------------------------------------------------
       SUBROUTINE write_gnu(
-     >                     nosyp,d,ssy,jspins)
+     >                     nosyp,d,ssy,input)
 !
       IMPLICIT NONE
-      INTEGER, INTENT (IN) :: nosyp,jspins
+
+      TYPE(t_input),INTENT(IN) :: input
+      INTEGER, INTENT (IN) :: nosyp
       REAL,    INTENT (IN) :: d(nosyp)
       CHARACTER(len=1), INTENT (IN) :: ssy(nosyp)
       
       INTEGER n,aoff,adel
+      CHARACTER(LEN=200) tempTitle
       aoff = iachar('a')-1
       adel = iachar('a')-iachar('A')
       write(*,*) aoff,adel 
@@ -112,7 +141,11 @@
       WRITE (27,901)
       WRITE (27,902)
       WRITE (27,903)
-      WRITE (27,904) "Fleur Bandstructure"
+      WRITE(tempTitle,'(10a)') input%comment
+      IF(TRIM(ADJUSTL(tempTitle)).EQ.'') THEN
+         tempTitle = "Fleur Bandstructure"
+      END IF
+      WRITE (27,904) TRIM(ADJUSTL(tempTitle))
       DO n = 1, nosyp
         WRITE (27,905) d(n),d(n)
       ENDDO
@@ -150,7 +183,7 @@
 !
       WRITE (27,910) 
       WRITE (27,911) d(nosyp)+0.00001
-      IF (jspins == 2) WRITE (27,912)
+      IF (input%jspins == 2) WRITE (27,912)
       WRITE (27,913)
       CLOSE (27)
 
@@ -158,7 +191,7 @@
  901  FORMAT ('set xlabel ""')
  902  FORMAT ('set ylabel "E - E_F (eV)"')
  903  FORMAT ('set nokey')
- 904  FORMAT ('set title "',10a8,'"')
+ 904  FORMAT ('set title "',a,'"')
  905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
  906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
 #ifdef CPP_AIX
@@ -187,14 +220,16 @@
 ! and their names (lowercase = greek)
 !----------------------------------------------------------------------
       SUBROUTINE get_points(
-     >                      idsyst,idtype,bmat,
+     >                      idsyst,idtype,bmat,kpts,
      <                      nosyp,syp,ssy)
 
       IMPLICIT NONE
-      INTEGER, INTENT (IN)  :: idsyst,idtype
-      REAL,    INTENT (IN)  :: bmat(3,3)
-      INTEGER, INTENT (OUT) :: nosyp
-      REAL, POINTER         :: syp(:,:)  ! actually intent out
+
+      TYPE(t_kpts),INTENT(IN)   :: kpts
+      INTEGER,     INTENT (IN)  :: idsyst,idtype
+      REAL,        INTENT (IN)  :: bmat(3,3)
+      INTEGER,     INTENT (OUT) :: nosyp
+      REAL,             POINTER :: syp(:,:)  ! actually intent out
       CHARACTER(len=1), POINTER :: ssy(:)
 
       LOGICAL         :: band_inp_file
@@ -223,6 +258,16 @@
  110     WRITE(*,*) "Error reading band_inp file"
           CALL juDFT_error("Bandstr1",calledby="bandstr1")
       ENDIF
+
+      IF(kpts%numSpecialPoints.GE.2) THEN
+         nosyp = kpts%numSpecialPoints
+         ALLOCATE(syp(3,nosyp),ssy(nosyp) )
+         DO n = 1, nosyp
+            ssy(n) = TRIM(ADJUSTL(kpts%specialPointNames(n)))
+            syp(:,n) = kpts%specialPoints(:,n)
+         END DO
+         RETURN
+      END IF
 
       !No band_inp file -> determine default lines for bandstructure
       write(*,*) idsyst,idtype

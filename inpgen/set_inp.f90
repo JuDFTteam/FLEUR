@@ -53,7 +53,6 @@
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
       CHARACTER(len=1) :: ch_rw
       CHARACTER(len=4) :: namex
-      CHARACTER(len=8) :: name(10)
       CHARACTER(len=3) :: noel(atoms%ntype)
       CHARACTER(len=12) :: relcor
       CHARACTER(len=3) :: latnamTemp
@@ -61,7 +60,6 @@
       INTEGER  iggachk
       INTEGER  n ,iostat, errorStatus, numSpecies
       REAL    scale,scpos ,zc
-      REAL    ello0(atoms%nlod,atoms%ntype),evac0(2)
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
@@ -122,6 +120,7 @@
       ALLOCATE(atoms%lda_u(atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
+      ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       ALLOCATE(noco%soc_opt(atoms%ntype+2))
 
       atoms%nz(:) = NINT(atoms%zatom(:))
@@ -130,6 +129,7 @@
       ENDDO
       atoms%rmt(:) = 999.9
       atoms%pos(:,:) = matmul( cell%amat , atoms%taual(:,:) )
+      atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
       banddos%dos   = .false. ; input%secvar = .false.
@@ -187,7 +187,7 @@
       input%delgau = input%tkb ; atoms%ntypd = atoms%ntype ; atoms%natd = atoms%nat
       DO i = 1, 10
         j = (i-1) * 8 + 1
-        name(i) = title(j:j+7)
+        input%comment(i) = title(j:j+7)
       ENDDO 
       IF (noco%l_noco) input%jspins = 2
        
@@ -368,6 +368,12 @@
         ENDIF
       ENDIF
 
+      ! set vacuum%nvac
+      vacuum%nvac = 2
+      IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
+      IF (oneD%odd%d1) vacuum%nvac = 1
+      
+
       IF(.NOT.juDFT_was_argument("-noXML")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
@@ -420,10 +426,10 @@
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
-     &                 noel,namex,relcor,a1,a2,a3,scale,dtild,name,&
+     &                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,numSpecies,&
-     &                 enpara%el0(:,:,1),enpara%ello0(:,:,1),enpara%evac0(:,1))
+     &                 enpara)
 
          IF(juDFT_was_argument("-explicit")) THEN
             sumWeight = 0.0
@@ -443,11 +449,12 @@
 
       DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
+      DEALLOCATE (atoms%ulo_der)
 
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,name)
+     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
 
       iofile = 6
       OPEN (iofile,file='inp',form='formatted',status='old',position='append')
@@ -481,7 +488,7 @@
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,name)
+     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
 
         IF ( ALL(div /= 0) ) nkpt3 = div
         WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma

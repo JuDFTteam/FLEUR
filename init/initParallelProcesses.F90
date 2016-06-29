@@ -1,7 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_InitParallelProcesses
 
 CONTAINS
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! This subroutine distributes input data from inp.xml to all parallel
+! processes
+!
+!                                GM'16
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                                  dimension,cell,sym,xcpot,noco,jij,oneD,hybrid,&
                                  kpts,enpara,sphhar,mpi,results,obsolete)

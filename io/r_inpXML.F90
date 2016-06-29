@@ -135,6 +135,9 @@ SUBROUTINE r_inpXML(&
    INTEGER          :: coreStateKappaList(29)
    REAL             :: coreStateOccs(29,2)
    INTEGER          :: coreStateNprnc(29), coreStateKappa(29)
+   INTEGER          :: speciesXMLElectronStates(29)
+   REAL             :: speciesXMLCoreOccs(2,29)
+   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
    INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l
    INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
@@ -142,7 +145,7 @@ SUBROUTINE r_inpXML(&
    INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
    INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
    INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
-   INTEGER            :: ldau_l
+   INTEGER            :: ldau_l, numVac
    INTEGER            :: speciesEParams(0:3)
    INTEGER            :: mrotTemp(3,3,48)
    REAL               :: tauTemp(3,48)
@@ -151,7 +154,7 @@ SUBROUTINE r_inpXML(&
    LOGICAL            :: l_vca, coreConfigPresent, l_enpara
    REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
    REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
-   REAL               :: weightScale
+   REAL               :: weightScale, eParamUp, eParamDown
    LOGICAL            :: l_amf
    REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
    REAL, PARAMETER    :: htr_eV   = 27.21138386 ! eV
@@ -292,7 +295,22 @@ SUBROUTINE r_inpXML(&
       CALL ASSIGN_var(valueString,tempReal)
    END DO
 
-  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Comment section
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   input%comment = '        '
+   xPathA = '/fleurInput/comment'
+   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+   DO i = 1, LEN(TRIM(ADJUSTL(valueString)))
+      IF (valueString(i:i).EQ.achar(10)) valueString(i:i) = ' ' !remove line breaks
+   END DO
+   valueString = TRIM(ADJUSTL(valueString))
+   DO i = 1, 10
+      j = (i-1) * 8 + 1
+      input%comment(i) = valueString(j:j+7)
+   END DO
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of calculationSetup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -428,6 +446,13 @@ SUBROUTINE r_inpXML(&
       l_kpts = .FALSE.
       kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
       kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
+      kpts%nkpts = kpts%nkpt
+
+      ALLOCATE(kpts%bk(3,kpts%nkpts))
+      ALLOCATE(kpts%weight(kpts%nkpts))
+      kpts%bk = 0.0
+      kpts%weight = 0.0
+      kpts%posScale = 1.0
 
       numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint')
       IF(numberNodes.EQ.1) THEN
@@ -717,7 +742,27 @@ SUBROUTINE r_inpXML(&
          dtild = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dTilda'))
          vacuum%dvac = cell%z1
          a3(3) = dtild
-         WRITE(*,*) 'Ignoring vacuum energy parameters in inp.xml for the moment!'
+         enpara%evac0 = eVac0Default_const
+         xPathB = TRIM(ADJUSTL(xPathA))//'/vacuumEnergyParameters'
+         numberNodes = xmlGetNumberOfNodes(xPathB)
+         IF(numberNodes.GE.1) THEN
+            DO i = 1, numberNodes
+               xPathC = ''
+               WRITE(xPathC,'(a,i0,a)') TRIM(ADJUSTL(xPathB))//'[',i,']'
+               numVac = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@vacuum'))
+               eParamUp = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@spinUp'))
+               eParamDown = eParamUp
+               IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@spinDown').GE.1) THEN
+                  eParamDown = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@spinDown'))
+               END IF
+               enpara%evac0(numVac,1) = eParamUp
+               IF(input%jspins.GT.1) enpara%evac0(numVac,2) = eParamDown
+               IF(i.EQ.1) THEN
+                  enpara%evac0(3-numVac,1) = eParamUp
+                  IF(input%jspins.GT.1) enpara%evac0(3-numVac,2) = eParamDown
+               END IF
+            END DO
+         END IF
       END IF
 
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a1')
@@ -1290,6 +1335,9 @@ SUBROUTINE r_inpXML(&
       providedCoreStates = 0
       providedStates = 0
       coreStateOccs = 0.0
+      speciesXMLElectronStates = noState_const
+      speciesXMLCoreOccs = -1.0
+      speciesXMLPrintCoreStates = .FALSE.
       WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/electronConfig'
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
       IF (numberNodes.EQ.1) THEN
@@ -1307,6 +1355,7 @@ SUBROUTINE r_inpXML(&
                         coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList(j)
                         coreStateNprnc(j-providedCoreStates) = coreStateNprncList(j)
                         coreStateKappa(j-providedCoreStates) = coreStateKappaList(j)
+                        speciesXMLElectronStates(j) = coreState_const
                      END DO
                      providedCoreStates = providedCoreStates + nobleGasNumStatesList(i)
                   END IF
@@ -1321,6 +1370,7 @@ SUBROUTINE r_inpXML(&
                      coreStateOccs(providedCoreStates,:) = coreStateNumElecsList(i)
                      coreStateNprnc(providedCoreStates) = coreStateNprncList(i)
                      coreStateKappa(providedCoreStates) = coreStateKappaList(i)
+                     speciesXMLElectronStates(i) = coreState_const
                   END IF
                END DO
             END IF
@@ -1341,6 +1391,7 @@ SUBROUTINE r_inpXML(&
                      coreStateOccs(providedStates,:) = coreStateNumElecsList(i)
                      coreStateNprnc(providedStates) = coreStateNprncList(i)
                      coreStateKappa(providedStates) = coreStateKappaList(i)
+                     speciesXMLElectronStates(i) = valenceState_const
                   END IF
                END DO
                token = popFirstStringToken(valueString)
@@ -1366,6 +1417,9 @@ SUBROUTINE r_inpXML(&
                IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList(j)) THEN
                   nprncTemp = coreStateNprncList(j)
                   kappaTemp = coreStateKappaList(j)
+                  speciesXMLPrintCoreStates(j) = .TRUE.
+                  speciesXMLCoreOccs(1,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
+                  speciesXMLCoreOccs(2,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
                END IF
             END DO
             DO j = 1, providedStates
@@ -1433,6 +1487,10 @@ SUBROUTINE r_inpXML(&
                   atoms%coreStateOccs(k,2,iType) = coreStateOccs(k,2)
                   atoms%coreStateNprnc(k,iType) = coreStateNprnc(k)
                   atoms%coreStateKappa(k,iType) = coreStateKappa(k)
+                  xmlElectronStates(k,iType) = speciesXMLElectronStates(k)
+                  xmlPrintCoreStates(k,iType) = speciesXMLPrintCoreStates(k)
+                  xmlCoreOccs (1,k,iType) = speciesXMLCoreOccs(1,k)
+                  xmlCoreOccs (2,k,iType) = speciesXMLCoreOccs(2,k)
                END DO
                WRITE(*,*) 'setcor still has to be adapted!!!'
             END IF
@@ -1834,10 +1892,10 @@ SUBROUTINE r_inpXML(&
       sumWeight = sumWeight + kpts%weight(i)
       kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
    END DO
+   kpts%posScale = 1.0
    DO i = 1, kpts%nkpt
       kpts%weight(i) = kpts%weight(i) / sumWeight
       kpts%wtkpt(i) = kpts%weight(i)
-      WRITE(*,'(i0,4f12.6)') i, kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i), kpts%weight(i)
    END DO
 
    ! Generate missing general parameters

@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_lodpot
 CONTAINS
   SUBROUTINE lodpot(mpi,atoms,sphhar,obsolete,vacuum,&
@@ -143,12 +149,12 @@ CONTAINS
                       WRITE(attributes(1),'(i0)') n
                       WRITE(attributes(2),'(i0)') jsp
                       WRITE(attributes(3),'(i0,a1)') nqn(l), ch(l)
-                      WRITE(attributes(4),'(f16.10)') e_lo
-                      WRITE(attributes(5),'(f16.10)') e_up
+                      WRITE(attributes(4),'(f8.2)') e_lo
+                      WRITE(attributes(5),'(f8.2)') e_up
                       WRITE(attributes(6),'(f16.10)') e
-                      CALL writeXMLElementForm('atomicEP',(/'atomType      ','spin          ','branch        ',&
-                                                            'branchLowest  ','branchHeighest','value         '/),&
-                                               attributes,reshape((/12,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
+                      CALL writeXMLElementForm('atomicEP',(/'atomType     ','spin         ','branch       ',&
+                                                            'branchLowest ','branchHighest','value        '/),&
+                                               attributes,reshape((/12,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn(l),ch(l),' branch from',&
                                                                          e_lo, ' to',e_up,' htr. ; e_l =',e
                    ENDIF
@@ -249,7 +255,7 @@ CONTAINS
                       WRITE(attributes(5),'(f16.10)') e
                       CALL writeXMLElementForm('heAtomicEP',(/'atomType      ','spin          ','branch        ',&
                                                               'logDerivMT    ','value         '/),&
-                                               attributes(1:5),reshape((/10,4,6,12,5+34,6,1,3,16,16/),(/5,2/)))
+                                               attributes(1:5),reshape((/10,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
                       WRITE (6,'(a7,i3,i2,a1,a12,f7.2,a4,f7.2,a5)') "  Atom ",n,nqn(l),ch(l)," branch, D = ",&
                                                                     ldmt, " at ",e," htr."
                    ENDIF
@@ -319,12 +325,12 @@ CONTAINS
                       WRITE(attributes(1),'(i0)') n
                       WRITE(attributes(2),'(i0)') jsp
                       WRITE(attributes(3),'(i0,a1)') nqn_lo(ilo), ch(l)
-                      WRITE(attributes(4),'(f16.10)') e_lo
-                      WRITE(attributes(5),'(f16.10)') e_up
+                      WRITE(attributes(4),'(f8.2)') e_lo
+                      WRITE(attributes(5),'(f8.2)') e_up
                       WRITE(attributes(6),'(f16.10)') e
-                      CALL writeXMLElementForm('loAtomicEP',(/'atomType      ','spin          ','branch        ',&
-                                                              'branchLowest  ','branchHeighest','value         '/),&
-                                               attributes,reshape((/10,4,6,12,14,5,6,1,3,16,16,16/),(/6,2/)))
+                      CALL writeXMLElementForm('loAtomicEP',(/'atomType     ','spin         ','branch       ',&
+                                                              'branchLowest ','branchHighest','value        '/),&
+                                               attributes,reshape((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn_lo(ilo),ch(l),' branch from',&
                                                                          e_lo,' to',e_up,' htr. ; e_l =',e
                    ENDIF
@@ -420,7 +426,7 @@ CONTAINS
                       WRITE(attributes(5),'(f16.10)') e
                       CALL writeXMLElementForm('heloAtomicEP',(/'atomType      ','spin          ','branch        ',&
                                                               'logDerivMT    ','value         '/),&
-                                               attributes(1:5),reshape((/8,4,6,12,5+34,6,1,3,16,16/),(/5,2/)))
+                                               attributes(1:5),reshape((/8,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
                       WRITE (6,'(a6,i3,i2,a1,a12,f6.2,a4,f6.2,a5)') '  Atom',n,ABS(nqn_lo(ilo)),ch(l),&
                                                                     ' branch, D = ',ldmt,' at ',e,' htr.'
                    ENDIF
@@ -502,6 +508,9 @@ CONTAINS
                 ENDIF
              ENDIF
              evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
+             IF (input%l_inpXML) THEN
+                evac(ivac,jsp) = vz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
+             END IF
              attributes = ''
              WRITE(attributes(1),'(i0)') ivac
              WRITE(attributes(2),'(i0)') jsp
@@ -509,7 +518,7 @@ CONTAINS
              WRITE(attributes(4),'(f16.10)') vz(vacuum%nmz,ivac,jsp)
              WRITE(attributes(5),'(f16.10)') evac(ivac,jsp)
              CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
-                                      attributes(1:5),reshape((/6+4,4,4,5,5+30,8,1,16,16,16/),(/5,2/)))
+                                      attributes(1:5),reshape((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
           ENDDO
           IF (vacuum%nvac.EQ.1) THEN
              evac(2,jsp) = evac(1,jsp)

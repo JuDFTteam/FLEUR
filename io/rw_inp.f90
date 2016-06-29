@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       MODULE m_rwinp
       use m_juDFT
       CONTAINS
@@ -130,6 +136,7 @@
 
 !
       READ (UNIT=5,FMT=7000,END=99,ERR=99) name
+      input%comment = name
       WRITE (6,9010) name
  7000 FORMAT (10a8)
 !

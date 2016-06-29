@@ -25,7 +25,6 @@
 !                 Daniel Wortmann (2010)
 !-----------------------------------------------
       USE m_judft_time
-      USE m_xmlOutput
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_error,juDFT_warn,juDFT_end
@@ -119,6 +118,7 @@
       END SUBROUTINE juDFT_warn
 
       SUBROUTINE juDFT_END(message, irank)
+      USE m_xmlOutput
       IMPLICIT NONE
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
