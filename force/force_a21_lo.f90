@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_forcea21lo
 CONTAINS
   SUBROUTINE force_a21_lo(nobd,atoms,isp,itype,we,eig,ne,&
