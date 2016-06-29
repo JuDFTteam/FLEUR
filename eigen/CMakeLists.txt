@@ -7,6 +7,8 @@ eigen/hlomat.F90
 eigen/hsint.F90
 eigen/hsmt.F90
 eigen/hsmt_extra.F90
+eigen/hsmt_fjgj.F90
+eigen/hsmt_overlap.F90
 eigen/hsmt_hlptomat.F90
 eigen/hsmt_nonsph.F90
 eigen/hsmt_soc_init.F90

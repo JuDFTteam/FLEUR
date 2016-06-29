@@ -134,8 +134,8 @@
       WRITE(0,*) "Stop message:"
       WRITE(0,*) "  ",message
       WRITE(0,*) "*****************************************"
-      !CALL writetimes()
-      !CALL priv_memory_info()
+      CALL writetimes()
+      CALL priv_memory_info()
 #ifdef CPP_MPI
       CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
       CALL MPI_FINALIZE(ierr)
