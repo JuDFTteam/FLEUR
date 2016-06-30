@@ -294,7 +294,8 @@ CONTAINS
 
        ELSE
 #ifdef CPP_MPI
-          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, bb)
+ !         CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, bb)
+!
 #endif
        ENDIF
     ENDIF
