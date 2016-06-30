@@ -64,6 +64,7 @@
           COMPLEX    :: cdum
           CHARACTER(len=4)              :: namex
           CHARACTER(len=12)             :: relcor
+          CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
 #ifdef CPP_MPI
@@ -124,14 +125,15 @@
                 ALLOCATE (results%force_old(3,atoms%ntype))
                 results%force(:,:,:) = 0.0
 
+                filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
      &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
      &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,numSpecies,&
-     &                        enpara)
+     &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
+     &                        numSpecies,enpara)
                 DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
