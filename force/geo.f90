@@ -103,31 +103,24 @@ CONTAINS
     input=input_in
     atoms_new=atoms
 
-!    na = 1
-!    DO i = 1,atoms_new%ntype
-!       IF (input%film) atoms_new%taual(3,na) = atoms_new%taual(3,na)/cell%amat(3,3)
-!       DO j = 1,3
-!          tau0_i(j,i) = atoms_new%taual(j,na)
-!       END DO
-!       tau0(:,i)=MATMUL(cell%amat,tau0_i(:,i))
-!!       CALL cotra0(tau0_i(1,i),tau0(1,i),cell%amat)
-!       na = na + atoms_new%neq(i)
-!    END DO
+    na = 1
+    DO i = 1,atoms_new%ntype
+       IF (input%film) atoms_new%taual(3,na) = atoms_new%taual(3,na)/cell%amat(3,3)
+       tau0_i(:,i) = atoms_new%taual(:,na)
+       tau0(:,i)=MATMUL(cell%amat,tau0_i(:,i))
+       na = na + atoms_new%neq(i)
+    END DO
 
-    CALL bfgs0(&
-         &           atoms%ntype,&
-         &           istep0,xold,y,h)
+    CALL bfgs0(atoms%ntype, istep0,xold,y,h)
 
     DO itype=1,atoms%ntype
        IF (atoms%l_geo(itype)) THEN
-          WRITE (6,'(6f10.5)') (tau0(j,itype),j=1,3),&
-               &                         (forcetot(i,itype),i=1,3)
+          WRITE (6,'(6f10.5)') (tau0(j,itype),j=1,3), (forcetot(i,itype),i=1,3)
           DO i = 1,3
              forcetot(i,itype)=forcetot(i,itype)*REAL(atoms%relax(i,itype))
           ENDDO
           WRITE (6,'(6f10.5,a,3i2)') (tau0(j,itype),j=1,3),&
-               &             (forcetot(i,itype),i=1,3),' atoms%relax: ',&
-               &             (atoms%relax(i,itype),i=1,3)
+               &     (forcetot(i,itype),i=1,3),' atoms%relax: ', (atoms%relax(i,itype),i=1,3)
        ELSE
           DO i = 1,3
              forcetot(i,itype)=0.0
@@ -136,11 +129,9 @@ CONTAINS
     ENDDO
 
     istep = 1
-    CALL bfgs(&
-         &          atoms%ntype,istep,istep0,forcetot,&
+    CALL bfgs(atoms%ntype,istep,istep0,forcetot,&
          &          zat,input%xa,input%thetad,input%epsdisp,input%epsforce,tote,&
-         &          xold,y,h,tau0,&
-         &          lconv)
+         &          xold,y,h,tau0, lconv)
     IF (lconv) THEN
        WRITE (6,'(a)') "Des woars!"
        CALL juDFT_end(" GEO Des woars ", 1) ! The 1 is temporarily. Should be mpi%irank.
@@ -156,16 +147,13 @@ CONTAINS
                 atoms_new%taual(i,na) = 0.0
                 DO j = 1,3
                    IF (.NOT.oneD%odi%d1) THEN
-                      atoms_new%taual(i,na) = atoms_new%taual(i,na) +&
-                           &                   sym%mrot(i,j,jop) * tau0_i(j,itype)
+                      atoms_new%taual(i,na) = atoms_new%taual(i,na) + sym%mrot(i,j,jop) * tau0_i(j,itype)
                    ELSE
-                      atoms_new%taual(i,na) = atoms_new%taual(i,na) +&
-                           &                   oneD%ods%mrot(i,j,jop) * tau0_i(j,itype)
+                      atoms_new%taual(i,na) = atoms_new%taual(i,na) + oneD%ods%mrot(i,j,jop) * tau0_i(j,itype)
                    END IF
                 ENDDO
                 IF (oneD%odi%d1) THEN
-                   atoms_new%taual(i,na) = atoms_new%taual(i,na) +&
-                        &              oneD%ods%tau(i,jop)/cell%amat(3,3)
+                   atoms_new%taual(i,na) = atoms_new%taual(i,na) + oneD%ods%tau(i,jop)/cell%amat(3,3)
                 ELSE
                    atoms_new%taual(i,na) = atoms_new%taual(i,na) + sym%tau(i,jop)
                 END IF
@@ -193,11 +181,11 @@ CONTAINS
           input_temp%l_f = input%l_f
           div(:) = MIN(kpts_temp%nmop(:),1)
           CALL w_inpXML(&
-     &                  atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+                        atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nmop,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
                         scale_temp,dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,numSpecies,enpara_temp)
+                        atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,numSpecies,enpara_temp)
           DEALLOCATE(noel_temp,atomTypeSpecies,speciesRepAtomType)
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
        END IF
