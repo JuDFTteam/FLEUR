@@ -914,6 +914,8 @@
       END IF
  9140 FORMAT (25i3)
       WRITE (5,9140) 1,obsolete%lepr
+
+      WRITE (5,'(a)') 'ellow, elup, valence electrons:'
       
       WRITE (5,9150) input%ellow,input%elup,input%zelec
 9150  FORMAT (4f10.5)
