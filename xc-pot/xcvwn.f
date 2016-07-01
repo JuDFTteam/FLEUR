@@ -177,7 +177,7 @@ C***********************************************************************
       REAL, INTENT (OUT) :: exc(mgrid)            ! xc energy
 !
 !     .. Local Scalars ..
-      REAL  ex
+      REAL  c_1,ex
       REAL :: rho, rh1, rh2     ! total, spin up & spin down  charge density
       REAL :: x, y1, y2, s, thfpi, rs, beta, bs41, alc
       REAL :: xpx, xfx, xlx, xpx0, xfx0, xlx0, ecp, ecf, fs, ec
