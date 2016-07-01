@@ -108,8 +108,10 @@ CONTAINS
        IF (input%film) atoms_new%taual(3,na) = atoms_new%taual(3,na)/cell%amat(3,3)
        tau0_i(:,i) = atoms_new%taual(:,na)
        tau0(:,i)=MATMUL(cell%amat,tau0_i(:,i))
+       tau0(:,i)=atoms%pos(:,na)
        na = na + atoms_new%neq(i)
     END DO
+
 
     CALL bfgs0(atoms%ntype, istep0,xold,y,h)
 
