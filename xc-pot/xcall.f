@@ -26,7 +26,6 @@
 !
 !***********************************************************************
       IMPLICIT NONE
-      INTEGER, PRIVATE :: ir
       REAL, PARAMETER, PRIVATE :: hrtr_half = 0.5
 
       CONTAINS
@@ -56,6 +55,8 @@
 !
 !--> Determine exchange correlation energy density
 !
+      INTEGER :: ir
+
       IF (icorr.EQ.0)  THEN   ! X-alpha method
          CALL vxcxal(
      >               krla,jspins,
@@ -146,6 +147,8 @@
 !     .. Array Arguments ..
       REAL, INTENT (IN)  :: rh(mgrid,jspins)      ! charge density
       REAL, INTENT (OUT) :: exc(mgrid)            ! xc energy  density
+
+      INTEGER:: ir
 !
 !--> Determine exchange correlation energy density
 !

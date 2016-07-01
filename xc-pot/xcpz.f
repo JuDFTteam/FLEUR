@@ -35,10 +35,6 @@
       REAL, PARAMETER, PRIVATE :: b1p =  1.0529 , b1f =  1.3981
       REAL, PARAMETER, PRIVATE :: b2p =  0.3334 , b2f =  0.2611
 
-      REAL, PRIVATE :: rho, rh1, rh2 ! total, spin up & spin down  charge density
-      REAL, PRIVATE :: fothrd, thfpi, c_1, y1, y2, s, fs, rs
-      REAL, PRIVATE :: ecp, ecf
-      INTEGER, PRIVATE :: ir
 
       CONTAINS
 !************************************************************************
@@ -66,6 +62,10 @@
 !
 !-----s Intrinsic Functions
       INTRINSIC max
+      REAL :: rho, rh1, rh2 ! total, spin up & spin down  charge density
+      REAL :: fothrd, thfpi, c_1, y1, y2, s, fs, rs
+      REAL :: ecp, ecf
+      INTEGER :: ir
 
       fothrd = c43
       thfpi  = three / ( four * pi_const )
@@ -167,6 +167,11 @@ C***********************************************************************
 !-----> Intrinsic Functions
       INTRINSIC max
 !
+      REAL :: rho, rh1, rh2 ! total, spin up & spin down  charge density
+      REAL :: fothrd, thfpi, c_1, y1, y2, s, fs, rs
+      REAL :: ecp, ecf
+      INTEGER :: ir
+
       fothrd = c43
       thfpi  = three / ( four * pi_const )
       cex = cvx / c43
