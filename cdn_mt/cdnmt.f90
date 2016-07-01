@@ -147,7 +147,7 @@ CONTAINS
           chmom(itype,ispin) = qmtt
           WRITE (6,FMT=8100) itype, (qmtl(l),l=0,3),qmtt
           WRITE (16,FMT=8100) itype, (qmtl(l),l=0,3),qmtt
-8100      FORMAT (' -->',i2,2x,4f9.5,2x,f9.5)
+8100      FORMAT (' -->',i3,2x,4f9.5,2x,f9.5)
 
           attributes = ''
           WRITE(attributes(1),'(i0)') itype

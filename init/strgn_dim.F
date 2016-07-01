@@ -164,7 +164,7 @@ c-odim    modifications due to one-dimensionality, YM
 c+odim
 c     listing
       WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
- 8000 FORMAT (' gmax=',f10.6/' n3d=  ',i5/' n2d=  ',i5/' k1d=  ',
+ 8000 FORMAT (' gmax=',f10.6/' n3d=  ',i10/' n2d=  ',i5/' k1d=  ',
      +       i5/' k2d=  ',i5/' k3d=  ',i5/)
 
       DEALLOCATE (kv2)
@@ -274,8 +274,8 @@ c
 c
 c     listing
       WRITE (6,8000) gmax,n3d,n2d,k1d,k2d,k3d
- 8000 FORMAT (' gmax=',f10.6/' n3d=  ',i5/' n2d=  ',i5/' k1d=  ',
-     +       i5/' k2d=  ',i5/' k3d=  ',i5/)
+ 8000 FORMAT (' gmax=',f10.6/' n3d=  ',i7/' n2d=  ',i7/' k1d=  ',
+     +       i7/' k2d=  ',i7/' k3d=  ',i7/)
 
       DEALLOCATE (kv3,ig)
       END SUBROUTINE strgn2_dim

@@ -54,6 +54,7 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
@@ -186,6 +187,24 @@
       <xsd:attribute name="j" type="xsd:double" use="required"/>
       <xsd:attribute name="energy" type="xsd:double" use="required"/>
       <xsd:attribute name="weight" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="OutTotalForcesType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="forceTotal" type="ForceTotalType"/>
+      </xsd:sequence>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="ForceTotalType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="x" type="xsd:double" use="required"/>
+      <xsd:attribute name="y" type="xsd:double" use="required"/>
+      <xsd:attribute name="z" type="xsd:double" use="required"/>
+      <xsd:attribute name="F_x" type="xsd:double" use="required"/>
+      <xsd:attribute name="F_y" type="xsd:double" use="required"/>
+      <xsd:attribute name="F_z" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="TotalEnergyType">

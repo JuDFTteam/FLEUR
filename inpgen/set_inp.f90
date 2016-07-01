@@ -57,12 +57,13 @@
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       INTEGER  div(3)
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
-      CHARACTER(len=1) :: ch_rw
-      CHARACTER(len=4) :: namex
-      CHARACTER(len=3) :: noel(atoms%ntype)
+      CHARACTER(len=1)  :: ch_rw
+      CHARACTER(len=4)  :: namex
+      CHARACTER(len=3)  :: noel(atoms%ntype)
       CHARACTER(len=12) :: relcor
-      CHARACTER(len=3) :: latnamTemp
-      INTEGER  nu,iofile      
+      CHARACTER(len=3)  :: latnamTemp
+      CHARACTER(LEN=20) :: filename
+      INTEGER  nu,iofile
       INTEGER  iggachk
       INTEGER  n ,iostat, errorStatus, numSpecies
       REAL    scale,scpos ,zc
@@ -428,14 +429,15 @@
          IF(errorStatus.NE.0) THEN
             STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
+         filename = 'inp.xml'
          numSpecies = atoms%nat
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,numSpecies,&
-     &                 enpara)
+     &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
+     &                 numSpecies,enpara)
 
          IF(juDFT_was_argument("-explicit")) THEN
             sumWeight = 0.0

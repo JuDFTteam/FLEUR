@@ -39,6 +39,8 @@ CONTAINS
     USE m_bfgs
     USE m_bfgs0
     USE m_types
+    USE m_rinpXML
+    USE m_winpXML
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -63,7 +65,54 @@ CONTAINS
 
     TYPE(t_input):: input
 
+    ! temporary variables for XML IO
+    TYPE(t_input)                 :: input_temp
+    TYPE(t_dimension)             :: dimension_temp
+    TYPE(t_atoms)                 :: atoms_temp
+    TYPE(t_sphhar)                :: sphhar_temp
+    TYPE(t_cell)                  :: cell_temp
+    TYPE(t_stars)                 :: stars_temp
+    TYPE(t_sym)                   :: sym_temp
+    TYPE(t_noco)                  :: noco_temp
+    TYPE(t_vacuum)                :: vacuum_temp
+    TYPE(t_sliceplot)             :: sliceplot_temp
+    TYPE(t_banddos)               :: banddos_temp
+    TYPE(t_obsolete)              :: obsolete_temp
+    TYPE(t_enpara)                :: enpara_temp
+    TYPE(t_xcpot)                 :: xcpot_temp
+    TYPE(t_results)               :: results_temp
+    TYPE(t_jij)                   :: jij_temp
+    TYPE(t_kpts)                  :: kpts_temp
+    TYPE(t_hybrid)                :: hybrid_temp
+    TYPE(t_oneD)                  :: oneD_temp
+    LOGICAL                       :: l_opti_temp
+    INTEGER                       :: numSpecies
+    INTEGER                       :: div(3)
+    INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
+    INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
+    INTEGER, ALLOCATABLE          :: speciesRepAtomType(:)
+    REAL, ALLOCATABLE             :: xmlCoreOccs(:,:,:)
+    LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:,:)
+    CHARACTER(len=3), ALLOCATABLE :: noel_temp(:)
+    CHARACTER(len=4)              :: namex_temp
+    CHARACTER(len=12)             :: relcor_temp
+    CHARACTER(LEN=20)             :: filename
+    REAL                          :: a1_temp(3),a2_temp(3),a3_temp(3)
+    REAL                          :: scale_temp, dtild_temp
+
     input=input_in
+    atoms_new=atoms
+
+!    na = 1
+!    DO i = 1,atoms_new%ntype
+!       IF (input%film) atoms_new%taual(3,na) = atoms_new%taual(3,na)/cell%amat(3,3)
+!       DO j = 1,3
+!          tau0_i(j,i) = atoms_new%taual(j,na)
+!       END DO
+!       tau0(:,i)=MATMUL(cell%amat,tau0_i(:,i))
+!!       CALL cotra0(tau0_i(1,i),tau0(1,i),cell%amat)
+!       na = na + atoms_new%neq(i)
+!    END DO
 
     CALL bfgs0(&
          &           atoms%ntype,&
@@ -96,8 +145,6 @@ CONTAINS
        WRITE (6,'(a)') "Des woars!"
        CALL juDFT_end(" GEO Des woars ", 1) ! The 1 is temporarily. Should be mpi%irank.
     ELSE
-
-       atoms_new=atoms
        na = 0
        DO itype=1,atoms%ntype
           tau0_i(:,itype)=MATMUL(cell%bmat,tau0(:,itype))
@@ -126,13 +173,34 @@ CONTAINS
           ENDDO
        ENDDO
 
-       CALL judft_error("Writing on new input file not implemented in geo")
-       !        input%l_f = .false.
-       !        CALL rw_inp(&
-       !     &            'W',atoms_new,obsolete,vacuum,input,stars,sliceplot,banddos,&
-       !     &            cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-       !     &            noel,namex,relcor,a1,a2,a3,scale,dtild,name)
-
+!       CALL judft_error("Writing on new input file not implemented in geo")
+       input%l_f = .false.
+!       CALL rw_inp('W',atoms_new,obsolete,vacuum,input,stars,sliceplot,banddos,&
+!                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+!                   noel,namex,relcor,a1,a2,a3,scale,dtild,name)
+       IF(input%l_inpXML) THEN
+          ALLOCATE(noel_temp(1),atomTypeSpecies(1),speciesRepAtomType(1))
+          ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
+          ALLOCATE(xmlCoreOccs(1,1,1))
+          CALL r_inpXML(&
+                        atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+                        banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
+                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,sphhar_temp,l_opti_temp,noel_temp,&
+                        namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,xmlElectronStates,&
+                        xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
+          numSpecies = SIZE(speciesRepAtomType)
+          filename = 'inp_new.xml'
+          input_temp%l_f = input%l_f
+          div(:) = MIN(kpts_temp%nmop(:),1)
+          CALL w_inpXML(&
+     &                  atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+                        banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
+                        kpts_temp,kpts_temp%nmop,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
+                        scale_temp,dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,numSpecies,enpara_temp)
+          DEALLOCATE(noel_temp,atomTypeSpecies,speciesRepAtomType)
+          DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
+       END IF
     ENDIF
 
     RETURN

@@ -21,8 +21,8 @@ SUBROUTINE w_inpXML(&
 &                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
 &                   noel,namex,relcor,a1,a2,a3,scale,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-&                   atomTypeSpecies,speciesRepAtomType,l_outFile,numSpecies,&
-&                   enpara)
+&                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
+&                   numSpecies,enpara)
 
    USE m_types
    USE m_juDFT_init
@@ -61,6 +61,7 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntypd)
    CHARACTER(len=4),INTENT(IN) :: namex
    CHARACTER(len=12),INTENT(IN):: relcor
+   CHARACTER(LEN=*),INTENT(IN) :: filename
    REAL,INTENT(IN),OPTIONAL    :: dtild_opt
    CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
@@ -155,7 +156,7 @@ SUBROUTINE w_inpXML(&
       CALL openXMLElementNoAttributes('inputData')
    ELSE
       fileNum = 5
-      OPEN (fileNum,file='inp.xml',form='formatted',status='unknown')
+      OPEN (fileNum,file=TRIM(ADJUSTL(filename)),form='formatted',status='unknown')
       REWIND (fileNum)
 
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'

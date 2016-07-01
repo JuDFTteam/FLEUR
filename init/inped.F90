@@ -401,7 +401,7 @@
 !--->    evaluate cartesian coordinates of positions
       WRITE (6,FMT=8190) atoms%ntype,atoms%nat
  8190 FORMAT (/,/,' number of atom types=',i3,/,&
-     &       ' total number of atoms=',i2,/,/,t3,'no.',t10,'type',&
+     &       ' total number of atoms=',i4,/,/,t3,'no.',t10,'type',&
      &       t21,'int.-coord.',t49,'cart.coord.',t76,'rmt',t84,&
      &       'jri',t92,'dx',t98,'lmax',/)
       na = 0

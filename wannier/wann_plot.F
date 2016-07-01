@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       MODULE m_wann_plot
       use m_juDFT
 c    last update: 27.10.06 by FF

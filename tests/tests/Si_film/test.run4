@@ -1,0 +1,17 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::movefile("$workdir/inp_new","$workdir/inp");
+jt::deletefile("$workdir/broyd");
+jt::deletefile("$workdir/broyd.7");
+	
+jt::testrun($executable,$workdir);
+
+
+
+#now test output
+$result=jt::test_grepexists("$workdir/out","it=.*is completed");
+$result+=jt::test_grepnumber("$workdir/out","new fermi energy",".*: *([^ ]*)",-0.189,0.001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-1740.335,0.001);
+
+jt::stageresult($workdir,$result,"4");

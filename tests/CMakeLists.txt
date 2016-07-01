@@ -1,12 +1,40 @@
 enable_testing()
 
-# all the following lines should have the following structure:
-#add_test(TESTNAME ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl TESTDIR "${CMAKE_BINARY_DIR}/BINDIR MPIEXEC)
-#where:
-#    TESTNAME is the name of the test (your choice)
-#    TESTDIR is the subdirectory of tests/tests in the source directory in which the test is defined
-#    BINDIR is the name of the executable to test (i.e. fleur or fleur_INVS or fleur_SOC or ...)
-#    MPIEXEC (optional) is the additional stuff you have to add to start an MPI programm
+set(Testdirs CuBulk Fe_1l Fe-Atom CuBand CuDOS Fe_bct_LO Fe_bct NiO_ldau PTO Fe_fcc)
+set(Testdirs_INVS CuBulk Fe_1l Fe-Atom CuBand CuDOS)
+set(Testdirs_SOC Bi2Te3 Fe_1l_SOC PTO-SOC Fe_bct_SOC)
+
+#The serial tests
+if (${Fleur_uses_serial})
+   #tests of fleur
+   foreach(test ${Testdirs})
+    add_test(${test} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
+   endforeach(test)
+   #test of fleur_INVS
+   foreach(test ${Testdirs_INVS})
+    add_test("I:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_INVS")
+   endforeach(test)
+   #test of fleur_SOC
+   foreach(test ${Testdirs_SOC})
+    add_test("S:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_SOC")
+   endforeach(test)
+endif()
+
+#The parallel tests
+if (${Fleur_uses_MPI})
+   #tests of fleur
+   foreach(test ${Testdirs})
+    add_test("MPI-${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI")
+   endforeach(test)
+   #test of fleur_INVS
+   foreach(test ${Testdirs_INVS})
+    add_test("MPI-I:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_INVS_MPI")
+   endforeach(test)
+   #test of fleur_SOC
+   foreach(test ${Testdirs_SOC})
+    add_test("MPI-S:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_SOC_MPI")
+   endforeach(test)
+endif()
 
 
-add_test(CuBulk ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl CuBulk "${CMAKE_BINARY_DIR}/fleur")
+
