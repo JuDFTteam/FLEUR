@@ -34,9 +34,6 @@
       REAL, PARAMETER, PRIVATE :: thrd = one/three , d_15 = 1.e-15 
       REAL, PARAMETER, PRIVATE :: cvx = 1.221774115422  ! 2 * ( 3/(2*pi) )^(2/3)
 
-      REAL, PRIVATE ::  rs, rho, thfpi
-      INTEGER, PRIVATE :: ir
-
       CONTAINS
 !************************************************************************
       SUBROUTINE vxcxal(
@@ -57,6 +54,11 @@
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: psi(:)       ! relativistic exchange potential corr.
+
+      REAL ::  rs, rho, thfpi
+      INTEGER :: ir
+
+
 !
 !-----s Intrinsic Functions
       INTRINSIC alog,max
@@ -113,6 +115,9 @@ C***********************************************************************
 !
 !     .. Local Scalars ..
       REAL cex
+      REAL ::  rs, rho, thfpi
+      INTEGER :: ir
+
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: phi(:)       ! relativistic exchange energy correct.

@@ -30,8 +30,6 @@
       REAL, PARAMETER, PRIVATE :: thrd = one/three , d_15 = 1.e-15
       REAL, PARAMETER, PRIVATE :: cex = 0.91633058742  ! 3/2 * ( 3/(2*pi) )^(2/3)
 
-      REAL, PRIVATE ::  rs, rho, thfpi, exp, ecp
-      INTEGER, PRIVATE :: ir
 
       CONTAINS
 !************************************************************************
@@ -53,6 +51,8 @@
 !
 !     .. Local Scalars ..
       REAL fothrd,vxp,vcp
+      REAL ::  rs, rho, thfpi, exp, ecp
+      INTEGER :: ir
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: psi(:)       ! relativistic exchange potential corr.
@@ -118,9 +118,9 @@ C***********************************************************************
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: phi(:)       ! relativistic exchange energy correct.
-!
-!-----> Intrinsic Functions
-      INTRINSIC alog,max
+
+      REAL ::  rs, rho, thfpi, exp, ecp
+      INTEGER :: ir
 !
       thfpi  = three / ( four * pi_const )
 

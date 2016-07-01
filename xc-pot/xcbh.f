@@ -41,9 +41,6 @@
       REAL, PARAMETER, PRIVATE :: thrhalf = three * half
       REAL, PARAMETER, PRIVATE :: fothrd = four * thrd , two = 2.0
 
-      REAL, PRIVATE :: rho, rh1, rh2 ! total, spin up & spin down charge density
-      REAL, PRIVATE :: x, y, cp, cf, rp, rf, rs, ecprs, ecfrs
-      INTEGER, PRIVATE :: ir
 
       CONTAINS
 !************************************************************************
@@ -66,6 +63,9 @@
 !
 !     .. Local Scalars ..
       REAL txthrd,tythrd,muxp,mucp,mucf,ecfmp,tauc,mucnm
+      REAL :: rho, rh1, rh2 ! total, spin up & spin down charge density
+      REAL :: x, y, cp, cf, rp, rf, rs, ecprs, ecfrs
+      INTEGER :: ir
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: psi(:)       ! relativistic exchange potential corr.
@@ -170,6 +170,9 @@ C***********************************************************************
 !
 !     .. Local Scalars ..
       REAL thfpi,thrquart,exprs,exfrs,excprs,excfrs
+      REAL :: rho, rh1, rh2 ! total, spin up & spin down charge density
+      REAL :: x, y, cp, cf, rp, rf, rs, ecprs, ecfrs
+      INTEGER :: ir
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: phi(:)       ! relativistic exchange energy correct.

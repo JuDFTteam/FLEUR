@@ -47,10 +47,6 @@
       REAL, PARAMETER, PRIVATE :: qp = 6.1519908 , fdd0 = 1.70992093
       REAL, PARAMETER, PRIVATE :: qf = 4.7309269 , ql = 7.123109
 
-      REAL, PRIVATE :: rho, rh1, rh2 ! total, spin up & spin down  charge density
-      REAL, PRIVATE :: x, y1, y2, s, thfpi, c_1, rs, beta, bs41, alc
-      REAL, PRIVATE :: xpx, xfx, xlx, xpx0, xfx0, xlx0, ecp, ecf, fs, ec
-      INTEGER, PRIVATE :: ir
 
       CONTAINS
 !************************************************************************
@@ -74,12 +70,13 @@
 !     .. Local Scalars ..
       REAL s3, s4, c_2, cbrt1, cbrt2, dfds, decdrp, decdrf
       REAL dacdr, dbdr, dec1, dec2, cvx, mucp
+      REAL :: rho, rh1, rh2 ! total, spin up & spin down  charge density
+      REAL :: x, y1, y2, s, thfpi, c_1, rs, beta, bs41, alc
+      REAL :: xpx, xfx, xlx, xpx0, xfx0, xlx0, ecp, ecf, fs, ec
+      INTEGER :: ir
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: psi(:)       ! relativistic exchange potential corr.
-!
-!-----s Intrinsic Functions
-      INTRINSIC sqrt,max
 
       thfpi  = three / ( four * pi_const )
 !
@@ -181,13 +178,15 @@ C***********************************************************************
 !
 !     .. Local Scalars ..
       REAL c_1, ex
+      REAL :: rho, rh1, rh2     ! total, spin up & spin down  charge density
+      REAL :: x, y1, y2, s, thfpi, c_1, rs, beta, bs41, alc
+      REAL :: xpx, xfx, xlx, xpx0, xfx0, xlx0, ecp, ecf, fs, ec
+      INTEGER :: ir
 !
 !     .. Local Arrays ..
       REAL, ALLOCATABLE :: phi(:)       ! relativistic exchange energy correct.
 !
-!-----> Intrinsic Functions
-      INTRINSIC sqrt,max
-!
+  
       thfpi  = three / ( four * pi_const )
 
       ALLOCATE ( phi(ngrid) )
