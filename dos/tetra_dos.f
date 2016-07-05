@@ -53,6 +53,7 @@ C     .. Local Arrays ..
          ev(nevk(nk)+1:neigd,nk) = 1.0e10 
       ENDDO
       wpar(:,:,:,:) = 0.0
+      wparint=0.0
 
       DO neig = 1,neigd
          ecmax(neig) = -1.0e25
