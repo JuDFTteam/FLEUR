@@ -72,12 +72,12 @@
       DATA spin12/'.1' , '.2'/
       DATA ch_mcd/'.+' , '.-' , '.0'/
 !
+      l_orbcomp = .false.
       IF  (banddos%ndir.NE.-3) THEN
         qdim = lmax*atoms%ntype+3
       ELSE
         qdim = 2*nsld 
         n_orb = 0
-        l_orbcomp = .false.
         INQUIRE(file='orbcomp',exist=l_orbcomp)
         IF (l_orbcomp) THEN
           OPEN (1,file='orbcomp',form='formatted')
