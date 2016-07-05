@@ -39,6 +39,7 @@ CONTAINS
     USE m_bfgs
     USE m_bfgs0
     USE m_types
+    USE m_constants
     USE m_rinpXML
     USE m_winpXML
     IMPLICIT NONE
@@ -140,7 +141,7 @@ CONTAINS
     ELSE
        na = 0
        DO itype=1,atoms%ntype
-          tau0_i(:,itype)=MATMUL(cell%bmat,tau0(:,itype))
+          tau0_i(:,itype)=MATMUL(cell%bmat,tau0(:,itype))/tpi_const
           DO ieq = 1,atoms%neq(itype)
              na = na + 1
              jop = sym%invtab(atoms%ngopr(na))

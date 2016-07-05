@@ -10,6 +10,7 @@ CONTAINS
        we,jsp,ne,usdus,acof,bcof,e1cof,e2cof,&
        acoflo,bcoflo, results,f_a12)
     USE m_types
+    USE m_constants
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -166,7 +167,7 @@ CONTAINS
 
              vec(:) = REAL(gv(:)) /atoms%neq(n)
 
-             gvint=MATMUL(cell%bmat,vec)
+             gvint=MATMUL(cell%bmat,vec)/tpi_const
              !
 
              vecsum(:) = zero

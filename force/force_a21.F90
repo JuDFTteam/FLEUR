@@ -27,6 +27,7 @@ CONTAINS
     USE m_forcea21U
     USE m_tlmplm_store
     USE m_types
+    USE m_constants
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -270,8 +271,8 @@ CONTAINS
              vec(:) = a21(:,natrun)
              vec2(:) = b4(:,natrun)
 
-             gvint=matmul(cell%bmat,vec)
-             gvint2=matmul(cell%bmat,vec2)
+             gvint=matmul(cell%bmat,vec)/tpi_const
+             gvint2=matmul(cell%bmat,vec2)/tpi_const
              vecsum(:) = zero
              vecsum2(:) = zero
 
