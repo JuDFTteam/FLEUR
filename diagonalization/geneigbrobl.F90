@@ -73,6 +73,7 @@ CONTAINS
     ALLOCATE ( largea(nsize,nsize), stat=err )
     IF (err/=0)  CALL juDFT_error("error allocating largea",calledby&
          &     ="geneigprobl")
+    largea=0.0
     iind = 0
     DO ind1 = 1, nsize
        DO ind2 = 1, ind1
@@ -88,6 +89,7 @@ CONTAINS
     ALLOCATE ( largeb(nsize,nsize), stat=err )
     IF (err/=0)  CALL juDFT_error("error allocating largeb",calledby ="geneigprobl")
     iind=0
+    largeb=0.0
     DO ind1 = 1, nsize
        DO ind2 = 1, ind1
           iind = iind+1

@@ -139,7 +139,8 @@ CONTAINS
        WRITE (*,*) 'eigenvecs',err,'  size: ',dimension%nbasfcn*ndim
        CALL juDFT_error("eigen: Error during allocation of the eigenvecs",calledby ="eigen")
     ENDIF
-
+    z=0.0
+   
     !l_wu selects a full diagonalization step or a direct call of aline with a subspace diagonalization only
     IF (.NOT.l_wu) THEN
        CALL timestart("Diagonalization")

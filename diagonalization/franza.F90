@@ -54,10 +54,10 @@ CONTAINS
     REAL,    INTENT (OUT) :: eig(neigd)
 #ifdef CPP_INVERSION
     REAL,    INTENT (INOUT):: a(:),b(:)!(matsize)
-    REAL,    INTENT (OUT) :: z(nbasfcn,neigd)
+    REAL,    INTENT (INOUT) :: z(nbasfcn,neigd)
 #else
     COMPLEX, INTENT (INOUT):: a(:),b(:)
-    COMPLEX, INTENT (OUT) :: z(nbasfcn,neigd)
+    COMPLEX, INTENT (INOUT) :: z(nbasfcn,neigd)
 #endif
     !     ..
     !     .. Local Scalars ..
@@ -193,6 +193,7 @@ CONTAINS
        ALLOCATE ( etemp(nbasfcn) )
        addstate = gw.NE.0.AND.iu.LT.nsize ! add one state, 
        IF(addstate) iu = iu + 1           ! see below (CF)
+       zz=0.0
 #ifdef CPP_INVERSION
        IF(l_J)THEN
           CALL CPP_LAPACK_sspevx('N','I','U',nsize,a,lb,ub,1,iu,toler,ne, etemp,zz,nbasfcn,work,iwork,ifail,info)
