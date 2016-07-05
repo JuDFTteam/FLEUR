@@ -19,6 +19,7 @@ CONTAINS
     !* stars%pgfft2(i)   contains the phases of the G-vectors of sph.  *
     !*                                                           *
     !*************************************************************
+#include"cpp_double.h"
     USE m_cfft
     USE m_types
     IMPLICIT NONE
@@ -43,8 +44,8 @@ CONTAINS
        !  ---> put stars onto the fft-grid 
        !
        fg2(1) = CMPLX(fg,fgi)
-       !CALL CPP_BLAS_ccopy(stars%ng2-1,fgxy,stride,fg2(2),1)
-       fg2(2:)=fgxy(1,:)
+       CALL CPP_BLAS_ccopy(stars%ng2-1,fgxy,stride,fg2(2),1)
+       !fg2(2:)=fgxy(1,:)
        afft2=0.0
        bfft2=0.0
        IF (PRESENT(gfxy)) THEN

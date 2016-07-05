@@ -85,6 +85,7 @@
       factor(:) = 1.0
       theta = 0.0 ; phi = 0.0
       qss(:) = (/0.0,0.0,0.0/)
+      mat = 0.0
 !initialize the calculator
       DO
          READ (UNIT = infh,FMT = "(a3)",iostat=ios) ch_test
@@ -205,11 +206,11 @@
          a3(2)=evaluatefirst(buffer)
          a3(3)=evaluatefirst(buffer)
          dvac=evaluatefirst(buffer)
-         film =.true.
-         IF ( dvac <= 0.00 ) THEN
-           film = .false.
-           dvac = a3(3)
-         ENDIF
+         IF (film.AND.(dvac <= 0.00)) THEN
+            WRITE(*,*)'Film calculation but no reasonable dVac provided'
+            WRITE(*,*)'Setting default for dVac'
+            dvac = ABS(a3(3)) ! This is later set to the real default by the chkmt result
+         END IF
  811     CONTINUE              ! obviously no film calculation
          !READ(buffer,*) a3
 

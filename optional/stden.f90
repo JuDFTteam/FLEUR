@@ -302,7 +302,7 @@
              !
              ! set up parameters for enpara-file
              !
-             IF ((juDFT_was_argument("-genEnpara").OR.input%film).AND..NOT.l_enpara) THEN
+             IF ((juDFT_was_argument("-genEnpara")).AND..NOT.l_enpara) THEN
                 OPEN (40,file='enpara',form='formatted',status='unknown')
                 enpara%lchange = .TRUE.
                 enpara%llochg = .TRUE.

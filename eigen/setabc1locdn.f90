@@ -94,6 +94,10 @@ MODULE m_setabc1locdn
 !---> set up enough, nbasf0 and initialize nkvec
       natom = 0
       nbasf = lapw%nv(jspin)
+      !--->          initialize ccof
+      IF (iintsp.NE.2) THEN
+         ccof(:,:,:,:)=cmplx(0.,0.)
+      ENDIF
       if (noco%l_ss) nbasf=lapw%nv(iintsp)
       DO ntyp = 1,atoms%ntype
          DO nn = 1,atoms%neq(ntyp)
@@ -111,10 +115,6 @@ MODULE m_setabc1locdn
                   nbasf0(lo,sym%invsatnr(natom)) = nbasf
                   nbasf = nbasf + 2* (2*l+1)
                END IF
-!--->          initialize ccof
-               IF (iintsp.NE.2) THEN
-                  ccof(:,:,lo,natom)=cmplx(0.,0.)
-               ENDIF
             END DO
          END DO
       END DO

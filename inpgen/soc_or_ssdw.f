@@ -116,6 +116,9 @@
 !      if( ntypd < ntype )then
 !        ntypd = ntype
 !      endif
+      IF (ALLOCATED(neq)) DEALLOCATE(neq)
+      IF (ALLOCATED(ntyrep)) DEALLOCATE(ntyrep)
+      IF (ALLOCATED(zatom)) DEALLOCATE(zatom)
       ALLOCATE( neq(ntype),ntyrep(ntype),zatom(ntype) )
 
       neq(1:ntype) = 0

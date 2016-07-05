@@ -473,7 +473,7 @@ CONTAINS
           OPEN (11,file='potcoul',form='unformatted',status='unknown')
           DO js = 1,input%jspins
              ! to enable a GW calculation,
-             vpw_w(:,js)=vpw_w(:,js)/stars%nstr(:)     ! the PW-coulomb part is not
+             vpw_w(1:stars%ng3,js)=vpw_w(1:stars%ng3,js)/stars%nstr(1:stars%ng3)     ! the PW-coulomb part is not
              ! used otherwise anyway.
           ENDDO
           CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
