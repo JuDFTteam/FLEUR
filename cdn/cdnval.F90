@@ -422,7 +422,7 @@ CONTAINS
 8002 FORMAT (i3,f10.5,2 (5x,1p,2e16.7,i5),1p,2e16.7)
 
     IF (input%film) vz0(:) = vz(vacuum%nmz,:)
-
+    nsld=1
     !+q_sl
     IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
        IF (oneD%odi%d1)  CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
