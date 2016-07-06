@@ -45,8 +45,8 @@ CONTAINS
         ENDIF
 
         td_stored%tuu(:,:,jspin) = td%tuu(:,:,ispin)
-        td_stored%tud(:,:,jspin) = td%tdu(:,:,ispin)
-        td_stored%tdu(:,:,jspin) = td%tud(:,:,ispin)
+        td_stored%tud(:,:,jspin) = td%tud(:,:,ispin)
+        td_stored%tdu(:,:,jspin) = td%tdu(:,:,ispin)
         td_stored%tdd(:,:,jspin) = td%tdd(:,:,ispin)
 
         td_stored%tdulo(:,:,:,jspin)   = td%tdulo(:,:,:,ispin)
