@@ -56,7 +56,7 @@ CONTAINS
 
     !d%eig_real
     length=3+1+2 !bk,wk,evac
-    length=length+lmax*ntype !el
+    length=length+(lmax+1)*ntype !el
     length=length+nlo*ntype  !ello
     ALLOCATE(d%eig_real(length,jspins*nkpts))
     !d%eig_eig
