@@ -275,7 +275,6 @@ CONTAINS
     !data from d%eig_vec
 
     IF (PRESENT(z)) THEN
-       WRITE(*,*) "R-Z:",nrec,SHAPE(z)
        SELECT TYPE(z)
        TYPE is (REAL)
           IF (.NOT.ALLOCATED(d%eig_vecr)) CALL juDFT_error("BUG: can not read real vectors from memory")
@@ -338,8 +337,7 @@ CONTAINS
     ENDIF
     !data from d%eig_vec
     IF (PRESENT(z)) THEN
-       WRITE(*,*) "W-Z:",nrec,SHAPE(z)
-
+      
        SELECT TYPE(z)
        TYPE IS (REAL)
           IF (.NOT.ALLOCATED(d%eig_vecr)) CALL juDFT_error("BUG: can not write real vectors to memory")
