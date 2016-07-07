@@ -55,7 +55,7 @@ CONTAINS
     el(:,:,:) = 0.0 ; evac(:,:) = 0.0 ; ello(:,:,:) = 0.0
     l_done = .FALSE.
     c=c_light(1.0)
-    CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
+    IF (mpi%irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
     IF ( obsolete%lepr == 0 ) THEN ! not for floating energy parameters
        e=1.0
        ch(0:9) = (/'s','p','d','f','g','h','i','j','k','l'/)
@@ -511,14 +511,16 @@ CONTAINS
              IF (input%l_inpXML) THEN
                 evac(ivac,jsp) = vz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
              END IF
-             attributes = ''
-             WRITE(attributes(1),'(i0)') ivac
-             WRITE(attributes(2),'(i0)') jsp
-             WRITE(attributes(3),'(f16.10)') vz(1,ivac,jsp)
-             WRITE(attributes(4),'(f16.10)') vz(vacuum%nmz,ivac,jsp)
-             WRITE(attributes(5),'(f16.10)') evac(ivac,jsp)
-             CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
-                                      attributes(1:5),reshape((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
+             IF (mpi%irank.EQ.0) THEN
+                attributes = ''
+                WRITE(attributes(1),'(i0)') ivac
+                WRITE(attributes(2),'(i0)') jsp
+                WRITE(attributes(3),'(f16.10)') vz(1,ivac,jsp)
+                WRITE(attributes(4),'(f16.10)') vz(vacuum%nmz,ivac,jsp)
+                WRITE(attributes(5),'(f16.10)') evac(ivac,jsp)
+                CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
+                                         attributes(1:5),reshape((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
+             END IF
           ENDDO
           IF (vacuum%nvac.EQ.1) THEN
              evac(2,jsp) = evac(1,jsp)
@@ -529,7 +531,7 @@ CONTAINS
     enpara_new%el0=el
     enpara_new%ello0=ello
     enpara_new%evac0=evac
-    CALL closeXMLElement('energyParameters')
+    IF (mpi%irank  == 0) CALL closeXMLElement('energyParameters')
     
   END SUBROUTINE lodpot
 END MODULE m_lodpot
