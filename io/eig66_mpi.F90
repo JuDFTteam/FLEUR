@@ -447,7 +447,11 @@ CONTAINS
        n2=SIZE(eig)*n3+n1-1
        tmp_real(n1:n2:n3)=eig
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
-       CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)
+       IF (n3.ne.1) THEN
+          CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)
+       ELSE
+          CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
+       ENDIF
        CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
        DEALLOCATE(tmp_real)
     ENDIF
