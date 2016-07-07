@@ -104,8 +104,14 @@ CONTAINS
     input=input_in
     atoms_new=atoms
 
+    istep0 = 0
+    xold = 0.0
+    y = 0.0
+    h= 0.0
+
     na = 1
     DO i = 1,atoms_new%ntype
+       zat(i)=real(atoms%nz(i))
        IF (input%film) atoms_new%taual(3,na) = atoms_new%taual(3,na)/cell%amat(3,3)
        tau0_i(:,i) = atoms_new%taual(:,na)
        tau0(:,i)=MATMUL(cell%amat,tau0_i(:,i))
@@ -135,6 +141,7 @@ CONTAINS
     CALL bfgs(atoms%ntype,istep,istep0,forcetot,&
          &          zat,input%xa,input%thetad,input%epsdisp,input%epsforce,tote,&
          &          xold,y,h,tau0, lconv)
+
     IF (lconv) THEN
        WRITE (6,'(a)') "Des woars!"
        CALL juDFT_end(" GEO Des woars ", 1) ! The 1 is temporarily. Should be mpi%irank.
