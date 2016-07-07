@@ -457,7 +457,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=200) :: openingString
 
       IF(currentElementIndex.EQ.maxNumElements) THEN
-         WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
+         WRITE(*,*) 'elementName ', TRIM(ADJUSTL(elementName))
          STOP 'ERROR: xml hierarchy too deep!'
       END IF
       currentElementIndex = currentElementIndex + 1
@@ -503,15 +503,16 @@ MODULE m_xmlOutput
       INTEGER                         :: lengthsShape(2)
 
       IF(SIZE(attributeNames).NE.SIZE(attributeValues)) THEN
-         WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
-         WRITE(*,*) 'attributeNames', attributeNames
-         WRITE(*,*) 'attributeValues', attributeValues
+         WRITE(*,*) 'elementName ', TRIM(ADJUSTL(elementName))
+         WRITE(*,*) 'attributeNames ', attributeNames
+         WRITE(*,*) 'attributeValues ', attributeValues
          STOP 'ERROR: SIZE(attributeNames).NE.SIZE(attributeValues)'
       END IF
       IF(currentElementIndex.EQ.maxNumElements) THEN
-         WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
-         WRITE(*,*) 'attributeNames', attributeNames
-         WRITE(*,*) 'attributeValues', attributeValues
+         WRITE(*,*) 'elementName ', TRIM(ADJUSTL(elementName))
+         WRITE(*,*) 'attributeNames ', attributeNames
+         WRITE(*,*) 'attributeValues ', attributeValues
+         WRITE(*,*) 'elementList ', elementList
          STOP 'ERROR: xml hierarchy too deep!'
       END IF
 
@@ -555,8 +556,8 @@ MODULE m_xmlOutput
       CHARACTER(LEN=70) :: closingString
 
       IF(TRIM(ADJUSTL(elementList(currentElementIndex))).NE.TRIM(ADJUSTL(elementName))) THEN
-         WRITE(*,*) 'elementList(currentElementIndex):', TRIM(ADJUSTL(elementList(currentElementIndex)))
-         WRITE(*,*) 'elementName', TRIM(ADJUSTL(elementName))
+         WRITE(*,*) 'elementList(currentElementIndex): ', TRIM(ADJUSTL(elementList(currentElementIndex)))
+         WRITE(*,*) 'elementName ', TRIM(ADJUSTL(elementName))
          STOP 'ERROR: Closing xml element inconsistency!'
       END IF
       closingString = '</'//TRIM(ADJUSTL(elementName))//'>'
