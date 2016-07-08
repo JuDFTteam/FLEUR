@@ -201,17 +201,9 @@ CONTAINS
     ENDIF
 
     IF (.NOT.(PRESENT(eig).OR.PRESENT(neig).OR.PRESENT(z))) RETURN
-
-    IF (.NOT.(PRESENT(eig).OR.PRESENT(z))) THEN
-       READ(d%file_io_id_vec,REC=nrec) neig
-       RETURN
-    ENDIF
-    IF (PRESENT(eig)) THEN
-       ALLOCATE(eig_s(SIZE(eig)))
-    ENDIF
-    IF (PRESENT(z).AND..NOT.PRESENT(eig)) THEN
-       ALLOCATE(eig_s(SIZE(z,2)))
-    ENDIF
+    READ(d%file_io_id_vec,REC=nrec) neig_s
+    IF (.NOT.(PRESENT(eig).OR.PRESENT(z))) RETURN
+    ALLOCATE(eig_s(neig_s))
     IF (PRESENT(z)) THEN
        SELECT TYPE(z)
        TYPE IS (REAL)
@@ -231,7 +223,7 @@ CONTAINS
        READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s
     ENDIF
     IF (PRESENT(neig)) neig=neig_s
-    IF (PRESENT(eig)) eig=eig_s
+    IF (PRESENT(eig)) eig(:min(size(eig),neig_s))=eig_s(:min(size(eig),neig_s))
 
   END SUBROUTINE read_eig
 
@@ -305,9 +297,9 @@ CONTAINS
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
           WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(z)
        TYPE IS (COMPLEX)
-          INQUIRE(IOLENGTH=r_len) neig,eig,CMPLX(z)
+          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(z)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,CMPLX(z)
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(z)
        END SELECT
     ELSE
        INQUIRE(IOLENGTH=r_len) neig,eig
