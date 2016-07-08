@@ -572,7 +572,10 @@ MODULE m_xmlOutput
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN) :: elementName
-      if (currentElementIndex>UBOUND(elementList)) return .false.
+      if (currentElementIndex>SIZE(elementList)) THEN
+                  isCurrentXMLElement=.false.
+                  return
+      endif
       isCurrentXMLElement = (TRIM(ADJUSTL(elementList(currentElementIndex))).EQ.TRIM(ADJUSTL(elementName)))
 
    END FUNCTION isCurrentXMLElement
