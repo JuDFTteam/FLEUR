@@ -572,7 +572,7 @@ MODULE m_xmlOutput
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN) :: elementName
-      if (currentElementIndex>SIZE(elementList)) THEN
+      if (currentElementIndex==0.or.currentElementIndex>SIZE(elementList)) THEN
                   isCurrentXMLElement=.false.
                   return
       endif
