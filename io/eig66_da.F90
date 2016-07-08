@@ -202,6 +202,7 @@ CONTAINS
 
     IF (.NOT.(PRESENT(eig).OR.PRESENT(neig).OR.PRESENT(z))) RETURN
     READ(d%file_io_id_vec,REC=nrec) neig_s
+    IF (PRESENT(neig)) neig=neig_s
     IF (.NOT.(PRESENT(eig).OR.PRESENT(z))) RETURN
     ALLOCATE(eig_s(neig_s))
     IF (PRESENT(z)) THEN
@@ -222,7 +223,6 @@ CONTAINS
        IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
        READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s
     ENDIF
-    IF (PRESENT(neig)) neig=neig_s
     IF (PRESENT(eig)) eig(:min(size(eig),neig_s))=eig_s(:min(size(eig),neig_s))
 
   END SUBROUTINE read_eig
