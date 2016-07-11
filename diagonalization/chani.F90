@@ -285,7 +285,7 @@ CONTAINS
     CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
          0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
          desceigv,work2,-1,iwork,-1,ifail,iclustr, gap,ierr)
-    IF ( work2(1). GT .lwork2) THEN
+    IF ( work2(1).GT.lwork2) THEN
        lwork2 = work2(1)
        DEALLOCATE (work2)
        ALLOCATE ( work2(lwork2+20*m), stat=err ) ! Allocate even more in case of clusters
