@@ -25,7 +25,7 @@ SUBROUTINE w_inpXML(&
 &                   numSpecies,enpara)
 
    USE m_types
-   USE m_juDFT_init
+   USE m_juDFT
    USE m_constants
    USE m_xmlOutput
 

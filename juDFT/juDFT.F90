@@ -8,5 +8,6 @@
       USE m_juDFT_stop
       USE m_juDFT_time
       USE m_juDFT_init
+      USE m_judft_args
 
       END MODULE m_juDFT
