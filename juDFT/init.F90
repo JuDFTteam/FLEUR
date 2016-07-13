@@ -8,28 +8,9 @@
       USE m_judft_time
       IMPLICIT NONE
       PRIVATE
-      PUBLIC juDFT_init,juDFT_was_argument
+      PUBLIC juDFT_init
       CONTAINS
-
-      FUNCTION juDFT_was_argument(arg) RESULT(OK)
-      IMPLICIT NONE
-      CHARACTER(len=*),INTENT(IN)::arg
-      LOGICAL ok
-
-      INTEGER:: i
-      CHARACTER(LEN=30)::str
-      ok=.false.
-      DO i=1,command_argument_count()
-         CALL get_command_argument(i,str)
-         IF(adjustl(str)==adjustl(arg)) ok=.true.
-      ENDDO
-      IF (ok) return
-      !Test for environment variable as well
-      CALL get_environment_variable("juDFT",str,status=i)
-      IF (i==0) ok=index(str,adjustl(arg))>0
- 
-      END FUNCTION
-
+     
       SUBROUTINE juDFT_init()
       CALL signal_handler()
       END SUBROUTINE juDFT_init
