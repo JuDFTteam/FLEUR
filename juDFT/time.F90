@@ -115,7 +115,7 @@
 #ifdef CPP_MPI
            CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 #endif
-           WRITE(*,"(i3,3a,i10)") irank," started: ",current_timer%name," at:",cputime()
+           WRITE(*,"(i3,3a,i10)") irank," started: ",current_timer%name
 #endif
            RETURN
         ENDIF
