@@ -128,8 +128,8 @@ CONTAINS
     ! The only reason having them is that the Scalapack counterpart
     ! PDPOTRF very often fails on higher processor numbers for unknown reasons!
 #ifdef CPP_ELPA_NEW
-    CALL CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb, mpi_comm_rows,mpi_comm_cols,ok)
-    CALL CPP_invert_trm(m, bsca, SIZE(bsca,1), nb, mpi_comm_rows, mpi_comm_cols,ok)
+    CALL CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.,ok)
+    CALL CPP_invert_trm(m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.,ok)
 #else
     CALL CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb, mpi_comm_rows,mpi_comm_cols)
     CALL CPP_invert_trm(m, bsca, SIZE(bsca,1), nb, mpi_comm_rows, mpi_comm_cols)
@@ -179,7 +179,7 @@ CONTAINS
 #ifdef CPP_ELPA_NEW
 #ifdef CPP_ELPA2
     err=CPP_solve_evp_2stage(m,num2,asca,SIZE(asca,1),&
-         eig2,eigvec,SIZE(asca,1), nb, mpi_comm_rows, mpi_comm_cols,sub_comm)
+         eig2,eigvec,SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
 #else
     err=CPP_solve_evp(m, num2,asca,SIZE(asca,1),&
          eig2,eigvec, SIZE(asca,1), nb,mpi_comm_rows, mpi_comm_cols)
@@ -339,7 +339,11 @@ CONTAINS
 
     !Create communicators for ELPA
     !print *,"creating ELPA comms"
+#ifdef CPP_ELPA_NEW
+    ierr=get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
+#else
     CALL get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
+#endif
     !print *,"creating ELPA comms  --  done"
 
     !Create the descriptors
