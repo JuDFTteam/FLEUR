@@ -95,6 +95,10 @@ c
 ! Local variables ...
 !
       INTEGER :: iv,j,isp
+#ifdef CPP_MPI
+      INCLUDE 'mpif.h'
+      INTEGER mpiierr
+#endif
 
 !
 ! For Spin-Spirals
@@ -147,11 +151,17 @@ c
      >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
      <                  bk=bkpt,wk=wk,
      <                 neig=nbands,eig=eig,
-     <                   nv=nv(jspin),k1=k1(:,jspin),
      <                   k2=k2(:,jspin),k3=k3(:,jspin),kveclo=kveclo,
      <                  z=z(:,:noccbd))
 
       ENDIF
+#ifdef CPP_MPI
+!     The barrier here is not algorithmically required.
+!     Nevertheless it improves the performance, presumably because it
+!     synchronizes the processes and prevent the latency accumulating.
+!     U.Alekseeva 2015
+      call MPI_BARRIER(MPI_COMM_WORLD,mpiierr) 
+#endif
       CALL timestop("cdn_read")
       
 !      IF (nbands>neigd)   CALL juDFT_error("nbands.GT.neigd",calledby
