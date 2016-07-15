@@ -151,6 +151,7 @@ c
      >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
      <                  bk=bkpt,wk=wk,
      <                 neig=nbands,eig=eig,
+     <                   nv=nv(jspin),k1=k1(:,jspin),
      <                   k2=k2(:,jspin),k3=k3(:,jspin),kveclo=kveclo,
      <                  z=z(:,:noccbd))
 
