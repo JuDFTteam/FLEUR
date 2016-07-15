@@ -212,11 +212,18 @@ CONTAINS
        print *,"fj diff",maxval(abs(fj-fj_test))
        print *,"gj diff",maxval(abs(gj-gj_test))
        deallocate(fj_test,gj_test)
+       bb=0.0
+       bb_test=0.0
        CALL timestart("hsmt_overlap")
-        CALL  hsmt_overlap(input,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
+       CALL  hsmt_overlap(input,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
        noco,cell,nintsp, lapw,usdus,gk,fj,gj,bb_test)
        CALL timestop("hsmt_overlap")
+       CALL timestart("hsmt_overlap_zherk")
+       CALL  hsmt_overlap_zherk(input,sym,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
+       noco,cell,nintsp, lapw,usdus,gk,vk,fj,gj,bb)
+       CALL timestop("hsmt_overlap_zherk")
        print *,"bb_diff",maxval(abs(bb-bb_test))
+       
        deallocate(bb_test)
 #endif
        IF (.NOT.input%secvar) THEN
