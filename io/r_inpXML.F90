@@ -2203,14 +2203,6 @@ SUBROUTINE r_inpXML(&
    WRITE(*,*) 'Post processing of input: Small stuff at the end'
 
    input%strho = .FALSE.
-   IF (.NOT.(input%strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
-      IF (noco%l_noco) THEN
-         INQUIRE (file='rhomat_inp',exist=input%strho) ! if no density (rhoma
-      ELSE
-         INQUIRE (file='cdn1',exist=input%strho)       ! if no density (cdn1)
-      END IF
-      input%strho = .NOT.input%strho                ! create a starting density
-   END IF
 
    l_opti = .FALSE.
    IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&

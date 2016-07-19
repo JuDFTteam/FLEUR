@@ -85,6 +85,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER :: it
     CHARACTER*10 :: cdnfname
+    LOGICAL :: strho
     !     ..
     it = 1
 
@@ -132,7 +133,17 @@ CONTAINS
     !
     !     --->generate starting charge density
     !
-    IF (input%strho) THEN
+    strho=input%strho
+    IF (.NOT.(strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
+       IF (noco%l_noco) THEN
+          INQUIRE (file='rhomat_inp',exist=strho) ! if no density (rhoma
+       ELSE
+          INQUIRE (file='cdn1',exist=strho)       ! if no density (cdn1)
+       ENDIF
+       strho = .NOT.strho                ! create a starting density
+    ENDIF
+
+    IF (strho) THEN
        input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
