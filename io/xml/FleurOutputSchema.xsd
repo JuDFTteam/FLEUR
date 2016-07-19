@@ -6,6 +6,7 @@
    <xsd:complexType name="FleurOutputType">
       <xsd:all>
          <xsd:element maxOccurs="1" minOccurs="0" name="programVersion" type="ProgramVersionType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="parallelizationParameters" type="ParallelizationParametersType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="startDateAndTime" type="DateAndTimeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="inputData" type="InputDataType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="scfLoop" type="OutSCFLoopType"/>
@@ -19,6 +20,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="targetComputerArchitectures" type="xsd:string"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="precision" type="PrecisionType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="targetStructureClass" type="TargetStructureClassType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="additionalCompilerFlags" type="AdditionalCompilerFlagsType"/>
       </xsd:all>
       <xsd:attribute name="version" type="xsd:string" use="required"/>
    </xsd:complexType>
@@ -30,6 +32,14 @@
    <xsd:simpleType name="TargetStructureClassType">
       <xsd:list itemType="xsd:string"/>
    </xsd:simpleType>
+
+   <xsd:simpleType name="AdditionalCompilerFlagType">
+      <xsd:list itemType="xsd:string"/>
+   </xsd:simpleType>
+
+   <xsd:complexType name="ParallelizationParametersType">
+      <xsd:attribute name="mpiPEs" type="xsd:integer" use="required"/>
+   </xsd:complexType>
 
    <xsd:complexType name="DateAndTimeType">
       <xsd:attribute name="date" type="xsd:string" use="required"/>
@@ -54,6 +64,7 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMagneticMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
@@ -170,6 +181,13 @@
    <xsd:complexType name="MTMagneticMomentsType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="magneticMoment" type="MagneticMomentType"/>
+      </xsd:sequence>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MTOrbMagneticMomentsType">
+      <xsd:sequence maxOccurs="unbounded">
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="orbMagMoment" type="MagneticMomentType"/>
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
