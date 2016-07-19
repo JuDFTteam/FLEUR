@@ -144,6 +144,7 @@ CONTAINS
     ENDIF
 
     IF (strho) THEN
+       strho=input%total 
        input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
@@ -156,6 +157,7 @@ CONTAINS
             &              obsolete,&
             &              oneD)
        !
+       input%total=strho
        CALL timestart("generation of start-density")
     END IF
     IF (mpi%irank == 0) THEN

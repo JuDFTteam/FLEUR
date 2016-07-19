@@ -263,7 +263,9 @@
              oneD%odd%nq2 = oneD%odd%n2d
              !-odim
              !+t3e
-             l_opti = .FALSE.
+             INQUIRE(file="cdn1",exist=l_opti)
+             if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
+             l_opti=.not.l_opti
              IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
                   &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
 

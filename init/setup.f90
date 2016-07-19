@@ -173,10 +173,10 @@
                   &             )
           ENDIF
           !
-          IF (.NOT.l_opti) THEN
+          !IF (.NOT.l_opti) THEN
              CALL inpeig(&
                   &              atoms,cell,input,oneD%odd%d1,kpts,enpara)
-          ENDIF
+          !ENDIF
           !
           !-----> prepare dimensions for charge density fft-box in pwden.f
           !
