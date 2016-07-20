@@ -238,6 +238,7 @@ CONTAINS
           input_temp%l_f = input%l_f
           input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nmop(:),1)
+          stars_temp%gmax = stars_temp%gmaxInit
           CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nmop,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
