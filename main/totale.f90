@@ -221,7 +221,7 @@ CONTAINS
        WRITE (16,FMT=8061) results%tote
     END IF
 
-    CALL force_w(input,atoms,sym,results,cell,oneD)
+    CALL force_w(input,atoms,sym,results,cell,oneD,vacuum)
     !
     !     ---> calculate the free energy and the ground state energy,
     !          extrapolated for T->0

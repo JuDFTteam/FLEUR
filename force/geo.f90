@@ -7,9 +7,8 @@
 MODULE m_geo
   USE m_juDFT
 CONTAINS
-  SUBROUTINE geo(&
-       &               atoms,sym,cell,oneD,input_in,tote,&
-       &               forcetot)
+  SUBROUTINE geo(atoms,sym,cell,oneD,vacuum,input_in,tote,&
+                 forcetot)
 
     !    *********************************************************************
     !    * calculates the NEW atomic positions after the results%force calculation   *
@@ -47,7 +46,8 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_input),INTENT(IN):: input_in
+    TYPE(t_vacuum),INTENT(IN) :: vacuum
+    TYPE(t_input),INTENT(IN)  :: input_in
     ! ..
     ! ..  Scalar Arguments ..
     REAL,    INTENT (IN) :: tote
@@ -172,16 +172,62 @@ CONTAINS
        ENDDO
 
 !       CALL judft_error("Writing on new input file not implemented in geo")
-       input%l_f = .false.
+       input%l_f = .FALSE.
 !       CALL rw_inp('W',atoms_new,obsolete,vacuum,input,stars,sliceplot,banddos,&
 !                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
 !                   noel,namex,relcor,a1,a2,a3,scale,dtild,name)
-       IF(input%l_inpXML) THEN
+       IF(.NOT.input%l_inpXML) THEN
+
+          ALLOCATE(atoms_temp%nz(atoms%ntype))
+          ALLOCATE(atoms_temp%zatom(atoms%ntype))
+          ALLOCATE(atoms_temp%jri(atoms%ntype))
+          ALLOCATE(atoms_temp%dx(atoms%ntype))
+          ALLOCATE(atoms_temp%lmax(atoms%ntype))
+          ALLOCATE(atoms_temp%nlo(atoms%ntype))
+          ALLOCATE(atoms_temp%ncst(atoms%ntype))
+          ALLOCATE(atoms_temp%lnonsph(atoms%ntype))
+          ALLOCATE(atoms_temp%nflip(atoms%ntype))
+          ALLOCATE(atoms_temp%l_geo(atoms%ntype))
+          ALLOCATE(atoms_temp%lda_u(atoms%ntype))
+          ALLOCATE(atoms_temp%bmu(atoms%ntype))
+          ALLOCATE(atoms_temp%relax(3,atoms%ntype))
+          ALLOCATE(atoms_temp%neq(atoms%ntype))
+          ALLOCATE(atoms_temp%taual(3,atoms%nat))
+          ALLOCATE(atoms_temp%pos(3,atoms%nat))
+          ALLOCATE(atoms_temp%rmt(atoms%ntype))
+
+          ALLOCATE(atoms_temp%ncv(atoms%ntype))
+          ALLOCATE(atoms_temp%ngopr(atoms%nat))
+          ALLOCATE(atoms_temp%lapw_l(atoms%ntype))
+          ALLOCATE(atoms_temp%invsat(atoms%nat))
+
+          ALLOCATE(noco_temp%soc_opt(atoms%ntype+2),noco_temp%l_relax(atoms%ntype),noco_temp%b_con(2,atoms%ntype))
+          ALLOCATE(noco_temp%alph(atoms%ntype),noco_temp%beta(atoms%ntype))
+
+          ALLOCATE (Jij_temp%alph1(atoms%ntype),Jij_temp%l_magn(atoms%ntype),Jij_temp%M(atoms%ntype))
+          ALLOCATE (Jij_temp%magtype(atoms%ntype),Jij_temp%nmagtype(atoms%ntype))
+
+          ALLOCATE(atoms_temp%llo(atoms%nlod,atoms%ntype))
+          ALLOCATE(atoms_temp%ulo_der(atoms%nlod,atoms%ntype))
+          ALLOCATE(atoms_temp%l_dulo(atoms%nlod,atoms%ntype))
+
+          ALLOCATE(vacuum_temp%izlay(vacuum%layerd,2))
+          atoms_temp%ntypd = atoms%ntypd
+          atoms_temp%ntype = atoms%ntype
+          ALLOCATE(noel_temp(atoms%ntypd))
+
+          ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
+          ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))
+          ALLOCATE (hybrid_temp%select2(4,atoms%ntype),hybrid_temp%lcutm2(atoms%ntype),hybrid_temp%lcutwf(atoms%ntype))
+
+          CALL rw_inp('r',atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+                      banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
+                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp)
+       ELSE
           ALLOCATE(noel_temp(1),atomTypeSpecies(1),speciesRepAtomType(1))
           ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
           ALLOCATE(xmlCoreOccs(1,1,1))
-          CALL r_inpXML(&
-                        atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+          CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,sphhar_temp,l_opti_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,xmlElectronStates,&
@@ -190,16 +236,23 @@ CONTAINS
           filename = 'inp_new.xml'
           input_temp%l_f = input%l_f
           div(:) = MIN(kpts_temp%nmop(:),1)
-          CALL w_inpXML(&
-                        atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+          CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nmop,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
                         scale_temp,dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                         atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,numSpecies,enpara_temp)
-          DEALLOCATE(noel_temp,atomTypeSpecies,speciesRepAtomType)
+          DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
        END IF
-    ENDIF
+
+       input_temp%l_f = input%l_f
+       input_temp%tkb = input%tkb
+       input_temp%delgau = input%tkb
+       CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+                   banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
+                   kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,&
+                   input_temp%comment)
+    END IF
 
     RETURN
   END SUBROUTINE geo
