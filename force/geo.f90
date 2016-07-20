@@ -236,6 +236,7 @@ CONTAINS
           numSpecies = SIZE(speciesRepAtomType)
           filename = 'inp_new.xml'
           input_temp%l_f = input%l_f
+          input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nmop(:),1)
           CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
