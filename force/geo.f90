@@ -112,13 +112,9 @@ CONTAINS
     na = 1
     DO i = 1,atoms_new%ntype
        zat(i)=real(atoms%nz(i))
-       IF (input%film) atoms_new%taual(3,na) = atoms_new%taual(3,na)/cell%amat(3,3)
-       tau0_i(:,i) = atoms_new%taual(:,na)
-       tau0(:,i)=MATMUL(cell%amat,tau0_i(:,i))
        tau0(:,i)=atoms%pos(:,na)
        na = na + atoms_new%neq(i)
     END DO
-
 
     CALL bfgs0(atoms%ntype, istep0,xold,y,h)
 
@@ -171,13 +167,9 @@ CONTAINS
           ENDDO
        ENDDO
 
-!       CALL judft_error("Writing on new input file not implemented in geo")
        input%l_f = .FALSE.
-!       CALL rw_inp('W',atoms_new,obsolete,vacuum,input,stars,sliceplot,banddos,&
-!                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-!                   noel,namex,relcor,a1,a2,a3,scale,dtild,name)
-       IF(.NOT.input%l_inpXML) THEN
 
+       IF(.NOT.input%l_inpXML) THEN
           ALLOCATE(atoms_temp%nz(atoms%ntype))
           ALLOCATE(atoms_temp%zatom(atoms%ntype))
           ALLOCATE(atoms_temp%jri(atoms%ntype))
