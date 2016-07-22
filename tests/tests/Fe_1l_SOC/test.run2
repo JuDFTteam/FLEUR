@@ -1,7 +1,7 @@
 #juDFT Testscript
 #The following arguments are passed: executable, working directory
 
-jt::copyfile("files/inp",$workdir);
+jt::copyfile("files/inp2","$workdir/inp");
 jt::copyfile("files/kpts",$workdir);
 jt::copyfile("files/sym.out",$workdir);
 	

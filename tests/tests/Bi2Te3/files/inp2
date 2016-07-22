@@ -1,4 +1,4 @@
-strho=T,film=F,dos=F,isec1= 99,ndir= 0,secvar=F
+strho=F,film=F,dos=F,isec1= 99,ndir= 0,secvar=F
 FLEUR input generated with ASE                                                  
 hx3 p3  ,invs=F,zrfs=F,invs2=F,jspins=2,l_noco=F,l_J=F
      8.28833805
