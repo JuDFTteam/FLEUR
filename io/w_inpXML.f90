@@ -379,7 +379,7 @@ SUBROUTINE w_inpXML(&
          END IF
 
          272 FORMAT('         <c>',f0.12,'</c>')
-         WRITE (fileNum,272) dtild
+         WRITE (fileNum,272) a3Temp(3)
       END IF
 
       IF (cell%latnam.EQ.'obl') THEN
@@ -390,7 +390,7 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,264) a2Temp(1), a2Temp(2)
 
          274 FORMAT('         <c>',f0.12,'</c>')
-         WRITE (fileNum,274) dtild
+         WRITE (fileNum,274) a3Temp(3)
       END IF
 
       WRITE (fileNum,'(a)') '      </bulkLattice>'
