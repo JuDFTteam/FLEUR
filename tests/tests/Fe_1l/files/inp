@@ -1,4 +1,4 @@
-strho=F,film=T,dos=F,isec1=99,ndir= 0,secvar=F
+strho=F,film=T,dos=F,isec1= 99,ndir= 0,secvar=F
 Fe Monolayer Ag lattice constant                                                
 squ any ,invs=T,zrfs=T,invs2=T,jspins=2,l_noco=F,l_J=F
      5.45886450
@@ -24,7 +24,7 @@ Window # 1
 gauss=F   0.00100tria=F
   0.100000  0.000000,l_soc=f,spav=F,off=F
 frcor=F,slice=F,ctail=T,disp=F,kcrel=0,u2f=F,f2u=F,bmt=F
-itmax= 1,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
+itmax=  1,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
 swsp=F  2.20
 lflip=F  1
 vacdos=F,layers= 0,integ=F,star=F,nstars= 0     0.00     0.00     0.00     0.00,nstm=0,tworkf=  0.000000
