@@ -1,4 +1,4 @@
-strho=F,film=F,dos=F,isec1=99,ndir= 0,secvar=F
+strho=T,film=F,dos=F,isec1= 99,ndir= 0,secvar=F
 Fe fcc                                                                          
 any any ,invs=T,zrfs=F,invs2=F,jspins=2,l_noco=T,l_J=F
      0.00000000     3.41000000     3.41000000
@@ -25,7 +25,7 @@ Window # 1
 gauss=F   0.00100tria=F
   0.000000  0.000000,l_soc=F,spav=F,off=F
 frcor=F,slice=F,ctail=f,disp=F,kcrel=0,u2f=F,f2u=F,bmt=F
-itmax=20,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
+itmax= 20,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
 swsp=F  2.20
 lflip=F  1
 vacdos=F,layers= 0,integ=F,star=F,nstars= 0     0.00     0.00     0.00     0.00,nstm=0,tworkf=  0.000000

@@ -1,4 +1,4 @@
-strho=F,film=F,dos=F,isec1=99,ndir= 0,secvar=F
+strho=F,film=F,dos=F,isec1= 99,ndir= 0,secvar=F
 FLEUR input generated with ASE                                                  
 squ any ,invs=F,zrfs=F,invs2=T,jspins=1,l_noco=F,l_J=F
      7.47856168
@@ -40,7 +40,7 @@ Window # 1
 gauss=F   0.00331tria=F
   0.000000  0.000000,l_soc=F,spav=F,off=F
 frcor=F,slice=F,ctail=T,disp=F,kcrel=0,u2f=F,f2u=F,bmt=F
-itmax= 1,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
+itmax=  1,maxiter= 99,imix= 7,alpha=  0.05,spinf=  2.00
 swsp=F  0.00  0.00  0.00  0.00
 lflip=F  1  1  1  1
 vacdos=F,layers= 0,integ=F,star=F,nstars= 0     0.00     0.00     0.00     0.00,nstm=0,tworkf=  0.000000
