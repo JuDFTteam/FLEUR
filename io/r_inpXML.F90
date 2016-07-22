@@ -1013,6 +1013,7 @@ SUBROUTINE r_inpXML(&
    END SELECT
 
    IF (latticeScale.EQ.0.0) latticeScale = 1.0
+   IF (.NOT.input%film) vacuum%dvac = a3(3)
    vacuum%dvac = latticeScale*vacuum%dvac
    dtild = latticeScale*dtild
 
