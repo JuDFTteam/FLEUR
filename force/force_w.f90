@@ -4,7 +4,7 @@
 ! ************************************************************
       CONTAINS
       SUBROUTINE force_w(&
-     &                   input,atoms,sym,results,cell,oneD)
+     &                   input,atoms,sym,results,cell,oneD,vacuum)
       USE m_geo
       USE m_relax
       USE m_types
@@ -17,6 +17,7 @@
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
 !     ..
 !     .. Local Scalars ..
       REAL,PARAMETER:: zero=0.0
@@ -121,7 +122,7 @@
          IF ((sum<eps_force).AND.input%l_f) THEN
             CALL geo(&
      &           atoms,sym,cell,&
-     &           oneD,input,results%tote,forcetot)
+     &           oneD,vacuum,input,results%tote,forcetot)
          END IF
       ENDIF
 

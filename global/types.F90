@@ -327,6 +327,7 @@
 
         !max-length of star
         REAL :: gmax
+        REAL :: gmaxInit
         !no of 3d-stars
         !INTEGER :: nq3
         INTEGER :: ng3

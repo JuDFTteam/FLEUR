@@ -326,6 +326,7 @@ SUBROUTINE r_inpXML(&
    IF(numberNodes.EQ.1) THEN
       xcpot%gmaxxc = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
    END IF
+   stars%gmaxInit = stars%gmax
 
    xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
    numberNodes = xmlGetNumberOfNodes(xPathA)
