@@ -1,4 +1,4 @@
-strho=f,film=f,dos=F,isec1=99,ndir= 0,secvar=F
+strho=F,film=f,dos=F,isec1=99,ndir= 0,secvar=F
 FLEUR input generated with ASE                                                  
 squ p4m ,invs=t,zrfs=t,invs2=T,jspins=1,l_noco=F,l_J=F
      4.815397  
