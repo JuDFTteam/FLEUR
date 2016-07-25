@@ -1,7 +1,7 @@
 enable_testing()
 
-set(Testdirs CuBulk Fe_1l Fe-Atom CuBand CuDOS Fe_bct_LO Fe_bct NiO_ldau PTO Fe_fcc)
-set(Testdirs_INVS CuBulk Fe_1l Fe-Atom CuBand CuDOS)
+set(Testdirs CuBulk CuBulkXML Fe_1l Fe-Atom CuBand CuDOS Fe_bct_LO Fe_bct NiO_ldau PTO Fe_fcc)
+set(Testdirs_INVS CuBulk CuBulkXML Fe_1l Fe-Atom CuBand CuDOS)
 set(Testdirs_SOC Bi2Te3 Fe_1l_SOC PTO-SOC Fe_bct_SOC)
 
 #The serial tests
