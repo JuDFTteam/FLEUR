@@ -5,7 +5,7 @@
 !
       CONTAINS
       SUBROUTINE fertri(
-     >                  irank,
+     >                  input,kpts,irank,
      >                  ne,nkpt,jspins,zc,eig,bk,sfac,
      X                  ef,
      <                  seigv,w)
@@ -16,9 +16,13 @@
       USE m_dosef
       USE m_dosint
       USE m_doswt
+      USE m_types
 !     USE m_bzints
 
       IMPLICIT NONE
+
+      TYPE(t_input),INTENT(IN):: input
+      TYPE(t_kpts), INTENT(IN):: kpts
 !     ..
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN)    :: nkpt,jspins,irank
@@ -81,30 +85,38 @@ c
 !      sfac = 2.0/real(jspins)
 c
 c--->   write results of triang
-c
+
       IF (.not.film) THEN
-         IF ( irank == 0 ) THEN
-           WRITE (6,*)  'reading tetrahedrons from file kpts'
-           WRITE (16,*) 'reading tetrahedrons from file kpts'
-         END IF
-         OPEN (41,file='kpts',FORM='formatted',STATUS='old')
-         DO i = 1, nkpt+1
-           READ (41,*)
-         ENDDO
-         READ (41,'(i5)',ERR=66,END=66) ntetra
-         IF (ntetra>6*nkpt)  CALL juDFT_error("ntetra > 6 nkpt"
-     +        ,calledby ="fertri")
-         READ (41,'(4(4i6,4x))') ((itetra(i,j),i=1,4),j=1,ntetra)
-         READ (41,'(4f20.13)') (voltet(j),j=1,ntetra)
-         voltet(1:ntetra) = voltet(1:ntetra) / ntetra
-         GOTO 67
- 66      CONTINUE                       ! no tetrahedron-information of file
-         CALL make_tetra(
-     >                   nkpt,bk,ntria,itria,atr,
-     <                   ntetra,itetra,voltet)!keep
+         IF(input%l_inpXML) THEN
+            ntetra = kpts%ntet
+            DO j = 1, ntetra
+               itetra(1:4,j) = kpts%ntetra(1:4,j)
+               voltet(j) = kpts%voltet(j) / ntetra
+            END DO
+         ELSE
+            IF ( irank == 0 ) THEN
+              WRITE (6,*)  'reading tetrahedrons from file kpts'
+              WRITE (16,*) 'reading tetrahedrons from file kpts'
+            END IF
+            OPEN (41,file='kpts',FORM='formatted',STATUS='old')
+            DO i = 1, nkpt+1
+              READ (41,*)
+            ENDDO
+            READ (41,'(i5)',ERR=66,END=66) ntetra
+            IF (ntetra>6*nkpt)  CALL juDFT_error("ntetra > 6 nkpt"
+     +           ,calledby ="fertri")
+            READ (41,'(4(4i6,4x))') ((itetra(i,j),i=1,4),j=1,ntetra)
+            READ (41,'(4f20.13)') (voltet(j),j=1,ntetra)
+            voltet(1:ntetra) = voltet(1:ntetra) / ntetra
+            GOTO 67
+ 66         CONTINUE                       ! no tetrahedron-information of file
+            CALL make_tetra(
+     >                      nkpt,bk,ntria,itria,atr,
+     <                      ntetra,itetra,voltet)!keep
  
- 67      CONTINUE                       ! tetrahedron-information read or created
-         CLOSE(41)
+ 67         CONTINUE                       ! tetrahedron-information read or created
+            CLOSE(41)
+         END IF
          lb = MINVAL(eig(:,:,:)) - 0.01
          ub = ef + 0.2
          CALL tetra_ef(

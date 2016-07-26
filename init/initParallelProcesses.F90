@@ -84,6 +84,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(kpts%nkpts,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(kpts%ntet,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%layerd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%nmzxyd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -131,6 +132,8 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(kpts%bk(3,kpts%nkpts))
       ALLOCATE(kpts%weight(kpts%nkpts))
       ALLOCATE(kpts%wtkpt(kpts%nkpt))
+      ALLOCATE(kpts%ntetra(4,kpts%ntet))
+      ALLOCATE(kpts%voltet(kpts%ntet))
 
       ALLOCATE(enpara%evac0(2,input%jspins))
       ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntypd,input%jspins))

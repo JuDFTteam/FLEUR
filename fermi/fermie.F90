@@ -215,7 +215,7 @@ CONTAINS
     IF (input%gauss) THEN
        CALL fergwt(kpts,input,mpi,ne, eig,results)
     ELSE IF (input%tria) THEN
-       CALL fertri(mpi%irank, ne,kpts%nkpt,nspins,zc,eig,kpts%bk,spindg,&
+       CALL fertri(input,kpts,mpi%irank, ne,kpts%nkpt,nspins,zc,eig,kpts%bk,spindg,&
             results%ef,results%seigv,results%w_iks)
     ELSE
        nspins = input%jspins

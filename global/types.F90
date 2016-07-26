@@ -263,6 +263,7 @@
        INTEGER :: nkpts
        INTEGER :: nkpt
        INTEGER :: nkptd
+       INTEGER :: ntet
        REAL    :: posScale
        LOGICAL :: l_gamma
        INTEGER :: nmop(3) !<number of k-points in 3 directions
@@ -281,6 +282,8 @@
        INTEGER                       :: numSpecialPoints
        CHARACTER(LEN=50),ALLOCATABLE :: specialPointNames(:)
        REAL   ,ALLOCATABLE           :: specialPoints(:,:)
+       INTEGER,ALLOCATABLE           :: ntetra(:,:)
+       REAL   ,ALLOCATABLE           :: voltet(:)
       ENDTYPE
 
 

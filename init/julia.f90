@@ -360,6 +360,23 @@
             kpts%bk(3,j) = vkxyz(3,j)
             kpts%weight(j) = wghtkp(j)
          END DO
+         IF (input%tria.AND.random) THEN
+            kpts%ntet = ntet
+            IF (ALLOCATED(kpts%ntetra)) THEN
+               DEALLOCATE(kpts%ntetra)
+            END IF
+            IF (ALLOCATED(kpts%voltet)) THEN
+               DEALLOCATE(kpts%voltet)
+            END IF
+            ALLOCATE(kpts%ntetra(4,kpts%ntet))
+            ALLOCATE(kpts%voltet(kpts%ntet))
+            DO j = 1, ntet
+               DO i = 1, 4
+                  kpts%ntetra(i,j) = ntetra(i,j)
+               END DO
+               kpts%voltet(j) = ABS(voltet(j))
+            END DO
+         END IF
       ELSE
          OPEN (41,file='kpts',form='formatted',status='new')
          IF (input%film) THEN

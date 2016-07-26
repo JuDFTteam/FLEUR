@@ -172,6 +172,8 @@ CONTAINS
     CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%bk,3*kpts%nkptd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%wtkpt,kpts%nkptd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(kpts%ntetra,kpts%ntet,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(kpts%voltet,kpts%ntet,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     !
 
     n = atoms%natd*sym%nop

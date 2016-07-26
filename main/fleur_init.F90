@@ -100,6 +100,7 @@
 
           input%l_inpXML = .FALSE.
           kpts%numSpecialPoints = 1
+          kpts%ntet = 1
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
           IF(.NOT.juDFT_was_argument("-xmlInput")) THEN
              input%l_inpXML = .FALSE.
@@ -207,6 +208,7 @@
           ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntypd) )
           ALLOCATE ( noco%soc_opt(atoms%ntypd+2) )
           ALLOCATE ( atoms%numStatesProvided(atoms%ntypd))
+          ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
           !+odim
           ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
           ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )

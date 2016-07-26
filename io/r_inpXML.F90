@@ -282,6 +282,8 @@ SUBROUTINE r_inpXML(&
    xmlPrintCoreStates = .FALSE.
    xmlCoreOccs = 0.0
 
+   ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
+
    WRITE(*,*) 'Note: core states output (from input) into out.xml file has to be implemented!'
 
    ! Read in constants
