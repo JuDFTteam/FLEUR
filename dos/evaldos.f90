@@ -256,7 +256,19 @@
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
            ELSE
-             IF (input%l_inpXML) GOTO 66
+             IF (input%l_inpXML) THEN
+                IF (input%tria) THEN
+                   ntetra = kpts%ntet
+                   DO i = 1, ntetra
+                      itetra(1:4,i) = kpts%ntetra(1:4,i)
+                      voltet(i) = kpts%voltet(i) / ntetra
+                   END DO
+                   l_tria = input%tria
+                   GOTO 67
+                ELSE
+                   GOTO 66
+                END IF
+             END IF
              OPEN (41,file='kpts',FORM='formatted',STATUS='old')
              DO i = 1, kpts%nkpt+1
                 READ (41,*,END=66,ERR=66)
