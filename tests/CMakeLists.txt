@@ -8,15 +8,15 @@ set(Testdirs_SOC Bi2Te3 Fe_1l_SOC PTO-SOC Fe_bct_SOC)
 if (${Fleur_uses_serial})
    #tests of fleur
    foreach(test ${Testdirs})
-    add_test(${test} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
+    add_test("FLEUR:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
    endforeach(test)
    #test of fleur_INVS
    foreach(test ${Testdirs_INVS})
-    add_test("I:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_INVS")
+    add_test("FLEUR_INVS:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_INVS")
    endforeach(test)
    #test of fleur_SOC
    foreach(test ${Testdirs_SOC})
-    add_test("S:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_SOC")
+    add_test("FLEUR_SOC:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_SOC")
    endforeach(test)
 endif()
 
@@ -24,15 +24,15 @@ endif()
 if (${Fleur_uses_MPI})
    #tests of fleur
    foreach(test ${Testdirs})
-    add_test("MPI-${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI")
+    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI")
    endforeach(test)
    #test of fleur_INVS
    foreach(test ${Testdirs_INVS})
-    add_test("MPI-I:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_INVS_MPI")
+    add_test("FLEUR_INVS_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_INVS_MPI")
    endforeach(test)
    #test of fleur_SOC
    foreach(test ${Testdirs_SOC})
-    add_test("MPI-S:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_SOC_MPI")
+    add_test("FLEUR_SOC_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_SOC_MPI")
    endforeach(test)
 endif()
 
