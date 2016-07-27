@@ -470,7 +470,7 @@
       IF( l_hyb ) THEN
         WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma 
       ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN 
-        WRITE (iofile,'(a5,i5)') 'kpts%nkpt=',kpts%nkpt
+        WRITE (iofile,'(a5,i5)') 'nkpt=',kpts%nkpt
       ELSE
         WRITE (iofile,'(a5,i5,3(a4,i2))') 'nkpt=',kpts%nkpt,',nx=',div(1),&
      &                                   ',ny=',div(2),',nz=',div(3)
