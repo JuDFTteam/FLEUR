@@ -1,0 +1,9 @@
+bcc Fe
+
+&input film=f /
+
+&lattice latsys=cI a0=1.8897269 a=2.83351 /
+
+1
+26     0.0 0.0 0.0
+

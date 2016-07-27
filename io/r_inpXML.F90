@@ -56,6 +56,7 @@ SUBROUTINE r_inpXML(&
    USE m_writegw
    USE m_apwsdim
    USE m_sort
+   USE m_nocoInputCheck
    USE m_enpara,    ONLY : r_enpara
 
    IMPLICIT NONE
@@ -1586,6 +1587,19 @@ SUBROUTINE r_inpXML(&
          atoms%taual(3,na) = evaluatefirst(valueString) / cell%amat(3,3)
          atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
       END DO
+
+      !Read in atom group specific noco parameters
+      xPathB = TRIM(ADJUSTL(xPathA))//'/nocoParams'
+      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB)))
+      IF (numberNodes.GE.1) THEN
+         noco%l_relax(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relax'))
+         Jij%l_magn(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_magn'))
+         Jij%M(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@M'))
+         noco%alph(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+         noco%beta(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
+         noco%b_con(1,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_x'))
+         noco%b_con(2,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
+      END IF
    END DO
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1861,6 +1875,28 @@ SUBROUTINE r_inpXML(&
             CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="r_inpXML")
          END IF
       END DO
+   END IF
+
+   ! Check noco stuff and calculate missing noco parameters
+
+   IF (noco%l_noco) THEN
+      CALL nocoInputCheck(atoms,input,vacuum,jij,noco)
+
+      IF (.not.jij%l_j.and.noco%l_ss) THEN
+
+!--->    the angle beta is relative to the spiral in a spin-spiral
+!--->    calculation, i.e. if beta = 0 for all atoms in the unit cell
+!--->    that means that the moments are "in line" with the spin-spiral
+!--->    (beta = qss * taual). note: this means that only atoms within
+!--->    a plane perpendicular to qss can be equivalent!
+
+         na = 1
+         DO iType = 1,atoms%ntype
+            noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,na))
+            noco%alph(iType) = noco%alph(iType) + noco%phi
+            na = na + atoms%neq(iType)
+         END DO
+      END IF
    END IF
 
    ! Calculate missing kpts parameters

@@ -11,6 +11,7 @@ io/eig66_hdf.F90
 io/eig66_io.F90
 io/eig66_mem.F90
 io/eig66_mpi.F90
+io/nocoInputCheck.F90
 io/inpnoco.F90
 io/loddop.f90
 io/rw_inp.f90
