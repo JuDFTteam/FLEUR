@@ -1,11 +1,11 @@
 #juDFT Testscript
 #The following arguments are passed: executable, working directory
 
-jt::copyfile("files/inp",$workdir);
-jt::copyfile("files/kpts",$workdir);
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/enpara",$workdir);
 jt::copyfile("files/sym.out",$workdir);
 	
-jt::testrun($executable,$workdir);
+jt::testrun("$executable -xmlInput",$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it= *1 *is completed");
