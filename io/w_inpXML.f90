@@ -97,6 +97,7 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=  4) :: chntype
    CHARACTER(len= 41) :: chform
    CHARACTER(len=100) :: line
+   CHARACTER(len=3)   :: sso_optString
 
 !     added for HF and hybrid functionals
    REAL                  ::  aMix,omega
@@ -130,6 +131,8 @@ SUBROUTINE w_inpXML(&
 
    IF (PRESENT(dtild_opt)) dtild=dtild_opt
    IF (PRESENT(name_opt)) name=name_opt
+
+   l_explicit = juDFT_was_argument("-explicit").OR.l_outFile
 
    symFilename = 'sym.out'
    kptGamma = l_gamma
@@ -203,9 +206,16 @@ SUBROUTINE w_inpXML(&
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'" soc66="',l1,'"/>')
    WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1),obsolete%eig66(2)
 
-   IF (noco%l_noco) THEN
-      160 FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,'" sso_opt="',a3,'" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'"/>')
-      STOP 'Output of Noco input not yet implemented!'
+   IF (noco%l_noco.OR.l_explicit) THEN
+      160 FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,'" sso_opt="',a3,&
+                 '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
+      sso_optString='FFF'
+      IF(input%sso_opt(1)) sso_optString(1:1) = 'T'
+      IF(input%sso_opt(2)) sso_optString(2:2) = 'T'
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, Jij%l_disp, sso_optString, noco%mix_b, Jij%thetaJ, Jij%nsh
+      162 FORMAT('         <qss>',f0.15,' ',f0.15,' ',f0.15,'</qss>')
+      WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
+      WRITE (fileNum,'(a)') '      </nocoParams>'
    END IF
 
    IF (oneD%odd%d1) THEN
@@ -235,7 +245,6 @@ SUBROUTINE w_inpXML(&
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
-   l_explicit = juDFT_was_argument("-explicit").OR.l_outFile
    IF(l_explicit) THEN
       sumWeight = 0.0
       DO i = 1, kpts%nkpt
@@ -592,6 +601,14 @@ SUBROUTINE w_inpXML(&
 !         <force calculate="F" relaxX="T" relaxY="T" relaxZ="T"/>
       360 FORMAT('         <force calculate="',l1,'" relaxXYZ="',3l1,'"/>')
       WRITE (fileNum,360) atoms%l_geo(iAtomType),atoms%relax(1,iAtomType),atoms%relax(2,iAtomType),atoms%relax(3,iAtomType)
+
+      IF(noco%l_noco.OR.l_explicit) THEN
+         362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.10,'" alpha="',f0.10,'" beta="',&
+                    f0.10,'" b_cons_x="',f0.10,'" b_cons_y="',f0.10,'"/>')
+         WRITE(fileNum,362) noco%l_relax(iAtomType), Jij%l_magn(iAtomType), Jij%M(iAtomType), noco%alphInit(iAtomType),&
+                            noco%beta(iAtomType),noco%b_con(1,iAtomType),noco%b_con(2,iAtomType)
+      END IF
+
 
       WRITE (fileNum,'(a)') '      </atomGroup>'
    END DO

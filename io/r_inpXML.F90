@@ -264,7 +264,7 @@ SUBROUTINE r_inpXML(&
    ALLOCATE(atoms%invsat(atoms%nat)) ! Where do I put this?
 
    ALLOCATE(noco%soc_opt(atoms%ntype+2),noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
-   ALLOCATE(noco%alph(atoms%ntype),noco%beta(atoms%ntype))
+   ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
 
    ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
    ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
@@ -540,6 +540,7 @@ SUBROUTINE r_inpXML(&
    noco%qss = 0.0
 
    noco%l_relax(:) = .FALSE.
+   noco%alphInit(:) = 0.0
    noco%alph(:) = 0.0
    noco%beta(:) = 0.0
    noco%b_con(:,:) = 0.0
@@ -1595,7 +1596,8 @@ SUBROUTINE r_inpXML(&
          noco%l_relax(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relax'))
          Jij%l_magn(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_magn'))
          Jij%M(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@M'))
-         noco%alph(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+         noco%alphInit(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+         noco%alph(iType) = noco%alphInit(iType)
          noco%beta(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
          noco%b_con(1,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_x'))
          noco%b_con(2,iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@b_cons_y'))
@@ -1893,7 +1895,7 @@ SUBROUTINE r_inpXML(&
          na = 1
          DO iType = 1,atoms%ntype
             noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,na))
-            noco%alph(iType) = noco%alph(iType) + noco%phi
+            noco%alph(iType) = noco%alphInit(iType) + noco%phi
             na = na + atoms%neq(iType)
          END DO
       END IF

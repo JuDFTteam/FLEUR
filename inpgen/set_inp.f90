@@ -380,6 +380,36 @@
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
       
+      ! Set defaults for noco and Jij types
+      ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
+      ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
+      ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
+      ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
+
+      noco%l_ss = .FALSE.
+      noco%l_mperp = .FALSE.
+      noco%l_constr = .FALSE.
+      Jij%l_disp = .FALSE.
+      input%sso_opt = .FALSE.
+      noco%mix_b = 0.0
+      Jij%thetaJ = 0.0
+      Jij%nmagn=1
+      Jij%nsh = 0
+      noco%qss = 0.0
+
+      noco%l_relax(:) = .FALSE.
+      noco%alphInit(:) = 0.0
+      noco%alph(:) = 0.0
+      noco%beta(:) = 0.0
+      noco%b_con(:,:) = 0.0
+
+      Jij%M(:) = 0.0
+      Jij%l_magn(:) = .FALSE.
+      Jij%l_wr=.TRUE.
+      Jij%nqptd=1
+      Jij%mtypes=1
+      Jij%phnd=1
+
 
       IF(.NOT.juDFT_was_argument("-noXML")) THEN
          nkptOld = kpts%nkpt
@@ -455,6 +485,8 @@
          cell%latnam = latnamTemp
       END IF !xml output
 
+      DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
+      DEALLOCATE (Jij%alph1,Jij%l_magn,Jij%M,Jij%magtype,Jij%nmagtype)
       DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)

@@ -210,6 +210,7 @@ CONTAINS
     CALL MPI_BCAST(atoms%nlol,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     n = dimension%jspd*atoms%ntypd
     CALL MPI_BCAST(enpara%skiplo,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(noco%alphInit,atoms%ntypd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%alph,atoms%ntypd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%beta,atoms%ntypd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%b_con,atoms%ntypd*2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

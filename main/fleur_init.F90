@@ -200,7 +200,7 @@
           ALLOCATE ( atoms%nlo(atoms%ntypd),atoms%llo(atoms%nlod,atoms%ntypd),enpara%skiplo(atoms%ntypd,dimension%jspd) )
           ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntypd,dimension%jspd),enpara%llochg(atoms%nlod,atoms%ntypd,dimension%jspd) )
           ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntypd),atoms%nlol(0:atoms%llod,atoms%ntypd),atoms%lapw_l(atoms%ntypd) )
-          ALLOCATE ( noco%alph(atoms%ntypd),noco%beta(atoms%ntypd),noco%l_relax(atoms%ntypd) )
+          ALLOCATE ( noco%alphInit(atoms%ntypd),noco%alph(atoms%ntypd),noco%beta(atoms%ntypd),noco%l_relax(atoms%ntypd) )
           ALLOCATE ( jij%alph1(atoms%ntypd),jij%l_magn(atoms%ntypd),jij%M(atoms%ntypd) )
           ALLOCATE ( jij%magtype(atoms%ntypd),jij%nmagtype(atoms%ntypd) )
           ALLOCATE ( noco%b_con(2,atoms%ntypd),atoms%lda_u(atoms%ntypd),atoms%l_dulo(atoms%nlod,atoms%ntypd) )

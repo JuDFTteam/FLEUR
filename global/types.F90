@@ -534,6 +534,7 @@
         REAL:: qss(3)
         REAL:: mix_b
         LOGICAL, ALLOCATABLE :: l_relax(:)
+        REAL, ALLOCATABLE :: alphInit(:)
         REAL, ALLOCATABLE :: alph(:)
         REAL, ALLOCATABLE :: beta(:)
         REAL, ALLOCATABLE :: b_con(:,:)
