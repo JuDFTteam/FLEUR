@@ -464,6 +464,7 @@ SUBROUTINE r_inpXML(&
       END IF
       kpts%numSpecialPoints = numberNodes
       IF(kpts%numSpecialPoints.GE.2) THEN
+         DEALLOCATE(kpts%specialPoints)
          ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
          ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
          DO i = 1, kpts%numSpecialPoints

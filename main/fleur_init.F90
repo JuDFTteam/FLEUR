@@ -99,14 +99,15 @@
           ENDIF
 
           input%l_inpXML = .FALSE.
-          kpts%numSpecialPoints = 1
           kpts%ntet = 1
+          kpts%numSpecialPoints = 1
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
           IF(.NOT.juDFT_was_argument("-xmlInput")) THEN
              input%l_inpXML = .FALSE.
           END IF
           IF (input%l_inpXML) THEN
              IF (mpi%irank.EQ.0) THEN
+                ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
                 ALLOCATE(noel(1),atomTypeSpecies(1),speciesRepAtomType(1))
                 ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
                 ALLOCATE(xmlCoreOccs(1,1,1))
