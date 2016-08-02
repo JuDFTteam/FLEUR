@@ -1317,6 +1317,8 @@ SUBROUTINE r_inpXML(&
    ALLOCATE(enpara%lchange(0:atoms%lmaxd,atoms%ntype,input%jspins))
    ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
 
+   enpara%el0 = 0.0
+   enpara%ello0 = 0.0
    enpara%lchange = .FALSE.
    dimension%nstd = 29
 

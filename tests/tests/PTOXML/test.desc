@@ -1,4 +1,4 @@
-$test_name="PTO one iteration with LOs";
+$test_name="PTO one iteration with LOs (XML codepath)";
 $test_code="Fleur";
 %test_requirements=("SOC",0,"complex",1);
 $test_stages=1;

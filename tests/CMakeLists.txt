@@ -1,6 +1,6 @@
 enable_testing()
 
-set(Testdirs CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML Fe_bct_LO Fe_bct_LOXML Fe_bct Fe_bctXML NiO_ldau NiO_ldauXML PTO Fe_fcc)
+set(Testdirs CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML Fe_bct_LO Fe_bct_LOXML Fe_bct Fe_bctXML NiO_ldau NiO_ldauXML PTO PTOXML Fe_fcc)
 set(Testdirs_INVS CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML)
 set(Testdirs_SOC Bi2Te3 Fe_1l_SOC PTO-SOC Fe_bct_SOC)
 
