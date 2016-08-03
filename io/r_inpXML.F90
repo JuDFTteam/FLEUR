@@ -475,6 +475,7 @@ SUBROUTINE r_inpXML(&
          END DO
       END IF
    ELSE
+      DEALLOCATE(kpts%specialPoints)
       ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
       ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
    END IF
@@ -656,10 +657,11 @@ SUBROUTINE r_inpXML(&
    xPathA = '/fleurInput/calculationSetup/spinSpiralQPointMesh'
    numberNodes = xmlGetNumberOfNodes(xPathA)
 
-   IF ((noco%l_ss).AND.(numberNodes.EQ.0)) THEN
-      STOP 'Error: l_ss is true but no q point mesh set in xml input file!'
-   END IF
+!   IF ((noco%l_ss).AND.(numberNodes.EQ.0)) THEN
+!      STOP 'Error: l_ss is true but no q point mesh set in xml input file!'
+!   END IF
 
+   Jij%nmopq = 0
    IF (numberNodes.EQ.1) THEN
       Jij%nmopq(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qx'))
       Jij%nmopq(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qy'))
