@@ -1,0 +1,10 @@
+$test_name="Bi2Te3 with magnetisation (XML codepath)";
+$test_code="Fleur";
+%test_requirements=("SOC",1,"complex",1);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur with one step:
+1.Generate a starting density and run a single iteration and test for ef, total energy and orbital moment
+Uses: SOC,LOs
+EOF
+;
