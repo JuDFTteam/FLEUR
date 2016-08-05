@@ -2,7 +2,7 @@ enable_testing()
 
 set(Testdirs CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML Fe_bct_LO Fe_bct_LOXML Fe_bct Fe_bctXML NiO_ldau NiO_ldauXML PTO PTOXML Fe_fcc Fe_fccXML)
 set(Testdirs_INVS CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML)
-set(Testdirs_SOC Bi2Te3 Bi2Te3XML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC Fe_bct_SOC)
+set(Testdirs_SOC Bi2Te3 Bi2Te3XML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC)
 
 #The serial tests
 if (${Fleur_uses_serial})
