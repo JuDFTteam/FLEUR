@@ -266,7 +266,7 @@ CONTAINS
                               ab_dim,iintsp,jintsp,chi11,chi22,chi21,&
                               iilos,locols,nkvecprevats,bb)
                          CALL hlomat(atoms,isp,jd,n_size,n_rank,&
-                              n,na,lapw,ar(:,0:,1),br(:,0:,1),ai(:,0:,1),bi(:,0:,1),&
+                              n,na,lapw,ar(:,0:,jintsp),br(:,0:,jintsp),ai(:,0:,jintsp),bi(:,0:,jintsp),&
                               el(:,n,isp),alo,blo,clo,usdus, noco,iintsp,jintsp,chi11,chi22,chi21,&
                               iiloh,locolh,nkvecprevath,tlmplm,aa)
                       ENDDO
