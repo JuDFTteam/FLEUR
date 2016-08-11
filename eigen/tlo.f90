@@ -14,7 +14,7 @@ MODULE m_tlo
 !***********************************************************************
       CONTAINS
         SUBROUTINE tlo(atoms,sphhar,jspin,jsp,ntyp,enpara,lh0,input,vr,&
-             flo,f,g,usdus,uuilon,duilon,ulouilopn, tlmplm )
+                       na,flo,f,g,usdus,uuilon,duilon,ulouilopn, tlmplm )
           !
           !*************** ABBREVIATIONS *****************************************
           ! tuulo      : t-matrix element of the lo and the apw radial fuction
@@ -35,7 +35,7 @@ MODULE m_tlo
           TYPE(t_enpara),INTENT(IN)   :: enpara
           !     ..
           !     .. Scalar Arguments ..
-          INTEGER, INTENT (IN) :: jspin,jsp,ntyp ,lh0
+          INTEGER, INTENT (IN) :: jspin,jsp,ntyp ,lh0,na
           !     ..
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd)
@@ -60,8 +60,8 @@ MODULE m_tlo
                 lmin = ABS(lp-l)
                 !               lmin = lp - l
                 lmx = lp + l
-                DO lh = lh0,sphhar%nlh(atoms%ntypsy(atoms%nat))
-                   lpp = sphhar%llh(lh,atoms%ntypsy(atoms%nat))
+                DO lh = lh0,sphhar%nlh(atoms%ntypsy(na))
+                   lpp = sphhar%llh(lh,atoms%ntypsy(na))
                    IF ((MOD(l+lp+lpp,2).EQ.1) .OR. (lpp.LT.lmin) .OR.&
                         (lpp.GT.lmx)) THEN
                       uvulo(lo,lp,lh) = 0.0
@@ -86,8 +86,8 @@ MODULE m_tlo
                 l = atoms%llo(lo,ntyp)
                 loplo = loplo + 1
                 IF (loplo>size(ulovulo,1))  CALL juDFT_error("loplo too large!!!" ,calledby ="tlo")
-                DO lh = lh0,sphhar%nlh(atoms%ntypsy(atoms%nat))
-                   lpp = sphhar%llh(lh,atoms%ntypsy(atoms%nat))
+                DO lh = lh0,sphhar%nlh(atoms%ntypsy(na))
+                   lpp = sphhar%llh(lh,atoms%ntypsy(na))
                    lmin = ABS(lp - l)
                    lmx = lp + l
                    IF ((MOD(l+lp+lpp,2).EQ.1).OR.(lpp.LT.lmin).OR.(lpp.GT.lmx)) THEN
@@ -115,8 +115,8 @@ MODULE m_tlo
              l = atoms%llo(lo,ntyp)
              DO m = -l,l
                 !--->       loop over the lattice harmonics
-                DO lh = lh0,sphhar%nlh(atoms%ntypsy(atoms%nat))
-                   lpp = sphhar%llh(lh,atoms%ntypsy(atoms%nat))
+                DO lh = lh0,sphhar%nlh(atoms%ntypsy(na))
+                   lpp = sphhar%llh(lh,atoms%ntypsy(na))
                    lpmin0 = ABS(l-lpp)
                    lpmax0 = l + lpp
                    !--->          check that lpmax is smaller than the max l of the
@@ -124,8 +124,8 @@ MODULE m_tlo
                    lpmax = MIN(lpmax0,atoms%lmax(ntyp))
                    !--->          make sure that l + l'' + lpmax is even
                    lpmax = lpmax - MOD(l+lpp+lpmax,2)
-                   DO mem = 1,sphhar%nmem(lh,atoms%ntypsy(atoms%nat))
-                      mpp = sphhar%mlh(mem,lh,atoms%ntypsy(atoms%nat))
+                   DO mem = 1,sphhar%nmem(lh,atoms%ntypsy(na))
+                      mpp = sphhar%mlh(mem,lh,atoms%ntypsy(na))
                       mp = m + mpp
                       lpmin = MAX(lpmin0,ABS(mp))
                       !--->             make sure that l + l'' + lpmin is even
@@ -133,7 +133,7 @@ MODULE m_tlo
                       !--->             loop over l'
                       DO lp = lpmin,lpmax,2
                          lmp = lp* (lp+1) + mp
-                         cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(atoms%nat)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
+                         cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
                          tlmplm%tuulo(lmp,m,lo+mlo,jsp) = &
                               tlmplm%tuulo(lmp,m,lo+mlo,jsp) + cil*uvulo(lo,lp,lh)
                          tlmplm%tdulo(lmp,m,lo+mlo,jsp) = &
@@ -150,10 +150,10 @@ MODULE m_tlo
              lp = atoms%llo(lop,ntyp)
              DO mp = -lp,lp
                 !--->       loop over the lattice harmonics
-                DO lh = lh0,sphhar%nlh(atoms%ntypsy(atoms%nat))
-                   lpp = sphhar%llh(lh,atoms%ntypsy(atoms%nat))
-                   DO mem = 1,sphhar%nmem(lh,atoms%ntypsy(atoms%nat))
-                      mpp = sphhar%mlh(mem,lh,atoms%ntypsy(atoms%nat))
+                DO lh = lh0,sphhar%nlh(atoms%ntypsy(na))
+                   lpp = sphhar%llh(lh,atoms%ntypsy(na))
+                   DO mem = 1,sphhar%nmem(lh,atoms%ntypsy(na))
+                      mpp = sphhar%mlh(mem,lh,atoms%ntypsy(na))
                       m = mp - mpp
                       !--->             loop over lo
                       DO lo = 1,lop
@@ -161,7 +161,7 @@ MODULE m_tlo
                          loplo = ((lop-1)*lop)/2 + lo
                          IF ((ABS(l-lpp).LE.lp) .AND. (lp.LE. (l+lpp)) .AND.&
                               (MOD(l+lp+lpp,2).EQ.0) .AND. (ABS(m).LE.l)) THEN
-                            cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(atoms%nat)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
+                            cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
                             tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) + cil*ulovulo(loplo,lh)
                          END IF
                       END DO

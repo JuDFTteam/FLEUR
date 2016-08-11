@@ -245,7 +245,7 @@ MODULE m_tlmplm
        !--->   if there are any
        IF (atoms%nlo(n).GE.1) THEN
           CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,lh0,input,vr(1,0,n),&
-               flo,f,g,ud, uuilon,duilon,ulouilopn, td)
+                   na,flo,f,g,ud, uuilon,duilon,ulouilopn, td)
 
        ENDIF
 
