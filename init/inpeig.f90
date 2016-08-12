@@ -33,7 +33,8 @@
 !     .. Local Scalars ..
       REAL      :: wt,scale
       INTEGER   :: i,j,nk,jsp,n
-      LOGICAL   :: xyu,l_enpara
+      LOGICAL   :: xyu,l_enpara,l_clf
+      CHARACTER(len=13) :: fname
 !     ..
 !
      
@@ -55,6 +56,18 @@
          enpara%el0(:,:,1)=0.0
          enpara%el0(0,:,1)=-999999.0
          DO n = 1, atoms%ntype
+            l_clf = .FALSE.  
+            WRITE(fname,"('corelevels.',i2.2)") NINT(atoms%zatom(n))
+            INQUIRE (file=fname, exist=l_clf)
+            IF(l_clf) THEN
+               WRITE(6,*) "corelevels file found: ", fname
+               WRITE(6,*) "This is incompatible to a missing enpara file."
+               WRITE(6,*) "Please generate an adequate enpara file by starting"
+               WRITE(6,*) "inpgen with the -genEnpara command line switch or"
+               WRITE(6,*) "use the XML input by starting FLEUR with -xmlInput."
+               CALL juDFT_error('corelevels file is incompatible with missing enpara file',calledby='inpeig')
+            END IF
+
             enpara%skiplo(n,:) = 0
             DO i = 1, atoms%nlo(n)
                enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
