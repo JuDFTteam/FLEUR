@@ -217,6 +217,8 @@ CONTAINS
                       kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,&
                       input_temp%comment)
        ELSE
+          kpts_temp%numSpecialPoints = 1
+          ALLOCATE(kpts_temp%specialPoints(3,kpts_temp%numSpecialPoints))
           ALLOCATE(noel_temp(1),atomTypeSpecies(1),speciesRepAtomType(1))
           ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
           ALLOCATE(xmlCoreOccs(1,1,1))
