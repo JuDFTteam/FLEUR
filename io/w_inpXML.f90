@@ -22,7 +22,7 @@ SUBROUTINE w_inpXML(&
 &                   noel,namex,relcor,a1,a2,a3,scale,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
-&                   numSpecies,enpara)
+&                   l_explicitIn,numSpecies,enpara)
 
    USE m_types
    USE m_juDFT
@@ -53,7 +53,7 @@ SUBROUTINE w_inpXML(&
    INTEGER, INTENT (IN)        :: div(3)
    INTEGER, INTENT (IN)        :: atomTypeSpecies(atoms%ntype)
    INTEGER, INTENT (IN)        :: speciesRepAtomType(numSpecies)
-   LOGICAL, INTENT (IN)        :: l_gamma, l_outFile
+   LOGICAL, INTENT (IN)        :: l_gamma, l_outFile, l_explicitIn
    REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3),scale
    REAL, INTENT (IN)     :: xmlCoreOccs(2,29,atoms%ntype)
    INTEGER, INTENT (IN)  :: xmlElectronStates(29,atoms%ntype)
@@ -132,7 +132,7 @@ SUBROUTINE w_inpXML(&
    IF (PRESENT(dtild_opt)) dtild=dtild_opt
    IF (PRESENT(name_opt)) name=name_opt
 
-   l_explicit = juDFT_was_argument("-explicit").OR.l_outFile
+   l_explicit = l_explicitIn.OR.l_outFile
 
    symFilename = 'sym.out'
    kptGamma = l_gamma

@@ -57,7 +57,7 @@ CONTAINS
     ! ..
     ! ..  Local Scalars ..
     INTEGER i,j,na ,istep0,istep,itype,jop,ieq
-    LOGICAL lconv       
+    LOGICAL lconv
     TYPE(t_atoms)  :: atoms_new
     ! ..
     ! ..  Local Arrays ..
@@ -237,7 +237,7 @@ CONTAINS
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nmop,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
                         scale_temp,dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-                        atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,numSpecies,enpara_temp)
+                        atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,.TRUE.,numSpecies,enpara_temp)
           DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
        END IF

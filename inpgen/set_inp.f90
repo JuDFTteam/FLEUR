@@ -53,7 +53,7 @@
  
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
-      LOGICAL l_test,l_gga,l_exists
+      LOGICAL l_test,l_gga,l_exists, l_explicit
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       INTEGER  div(3)
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
@@ -415,7 +415,9 @@
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
 
-         IF(juDFT_was_argument("-explicit")) THEN
+         l_explicit = juDFT_was_argument("-explicit")
+
+         IF(l_explicit) THEN
             ! kpts generation
             CALL inv3(cell%amat,cell%bmat,cell%omtil)
             cell%bmat=tpi_const*cell%bmat
@@ -467,7 +469,7 @@
      &                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
-     &                 numSpecies,enpara)
+     &                 l_explicit,numSpecies,enpara)
 
          IF(juDFT_was_argument("-explicit")) THEN
             sumWeight = 0.0
