@@ -6,6 +6,9 @@
 
       MODULE m_cdnovlp
       USE m_juDFT
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: cdnovlp 
       CONTAINS
         SUBROUTINE cdnovlp(mpi,&
              &                   sphhar,stars,atoms,sym,&
@@ -74,21 +77,16 @@
           !     tested                 RObert Abt    , IFF Dez. 1997
           !*****************************************************************
           !
-          USE m_intgr, ONLY : intgr3,intgz0
           USE m_constants
-          USE m_spgrot
           USE m_qpwtonmt
           USE m_cylbes
           USE m_dcylbs
-          USE m_rcerf
           USE m_od_cylbes
-          USE m_od_chirot
           USE m_diflgr
           USE m_types
 #ifdef CPP_MPI
           USE m_mpi_bc_st
 #endif
-          IMPLICIT NONE
           !
           !     .. Parameters ..
           TYPE(t_mpi),INTENT(IN)     :: mpi
@@ -118,24 +116,20 @@
           REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntypd)
           !     ..
           !     .. Local Scalars ..
-          COMPLEX czero,sf,carg,VALUE,slope,ci
-          REAL    ai,ar,a4,dif,dxx,f11,f12,g,gr,gz,qfin,qfout,dtildh,&
-               &        rkappa,sign,signz,tol_14,x,z,zero,zvac,alpha3,&
+          COMPLEX czero,carg,VALUE,slope,ci
+          REAL    dif,dxx,g,gz,dtildh,&
+               &        rkappa,sign,signz,tol_14,z,zero,zvac,&
                &        g2,phi,gamma,qq
-          INTEGER ig3,imz,ir,ivac,j,j1,k,kz,k1,k2,l_cutoff,m0,&
-               &        n,nz,nrz,nat1,nat2,nzvac,n_out_p,nat,&
+          INTEGER ig3,imz,ivac,j,j1,k,kz,k1,k2,l_cutoff,m0,&
+               &        n,nz,nrz,nzvac,&
                &        irec2,irec3,irec1,m,gzi
-          LOGICAL tail
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpwc(:)
-          REAL,    ALLOCATABLE :: qf(:)
           REAL    acoff(atoms%ntypd),alpha(atoms%ntypd),rho_out(2)
-          COMPLEX phas(sym%nop)
-          REAL    rhohelp(DIMENSION%msh),rat(DIMENSION%msh,atoms%ntypd)
-          INTEGER kr(3,sym%nop),mshc(atoms%ntypd)
-          REAL    kro(3,oneD%ods%nop),fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
-          COMPLEX phaso(oneD%ods%nop)
+          REAL    rat(DIMENSION%msh,atoms%ntypd)
+          INTEGER mshc(atoms%ntypd)
+          REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           !     ..
           DATA  czero /(0.0,0.0)/, zero /0.0/, tol_14 /1.0e-10/!-14
           !
@@ -163,7 +157,7 @@
           !
           ci = CMPLX(0.0,1.0)
 
-          ALLOCATE (qpwc(stars%n3d),qf(stars%n3d))
+          ALLOCATE (qpwc(stars%n3d))
 
           IF (mpi%irank ==0) THEN
              !
@@ -238,186 +232,12 @@
 8010         FORMAT (/,10x,'alpha=',f10.5,5x,'acoff=',f10.5)
              !
              !=====> calculate the fourier transform of the core-pseudocharge
-             !
-             !     qpw(\vec{G}) = Sum_{n} [ F(G,n) * Sum_{atm{n}} S(\vec{G},atm) ]
-             !                  n = atom_type
-             !                  F = Formfactor = F_in_sphere + F_outsphere
-             !                  S = Structure factor
-             !
-             tail = .FALSE.
-             !
-             !*****> start loop over the atom type
-             !
-             nat1 = 1
-             DO  n = 1,atoms%ntype
-                IF ( ( mshc(n) .GT. atoms%jri(n) ).AND.&
-                     &        ( alpha(n) .GT. tol_14 ) )    THEN
-                   !
-                   n_out_p = mshc(n)-atoms%jri(n)+1
-                   !
-                   ! (1) Form factor for each atom type
-                   !
-                   f11 = tpi_const * atoms%rmt(n) * rh(atoms%jri(n),n) / alpha(n)
-                   f12 = acoff(n) * ( pi_const/alpha(n) ) *SQRT(pi_const/alpha(n))
-                   ar  = SQRT( alpha(n) ) * atoms%rmt(n) 
-                   !
-                   DO  k = 1,stars%ng3
-                      g = stars%sk3(k)
-                      !    first G=0
-                      IF ( k.EQ.1 ) THEN
-                         ai = zero
-                         !
-                         ! ---->     calculate form factor inside the mt-sphere
-                         !           (use analytic integration of gaussian)
-                         !
-                         qfin = - f11 + f12 * rcerf(ar,ai)
-                         !
-                         ! ---->     calculate form factor outside the mt-sphere
-                         !           (do numerical integration of tails)
-                         !
-                         IF ( method2 .EQ. 1) THEN
 
-                            DO ir = 1 , n_out_p
-                               j  = atoms%jri(n)+ir-1
-                               rhohelp(mshc(n)+1-j) =  rat(j,n) * rat(j,n) &
-                                    &                                     * rat(j,n) *  rh(j,n)
-                            END DO
-                            CALL intgz0(rhohelp,atoms%dx(n),n_out_p,qfout,tail)
+             CALL ft_of_CorePseudocharge(DIMENSION,atoms,mshc,alpha,tol_14,rh, &
+                          acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
-                         ELSE
-
-                            DO ir = 1 , n_out_p
-                               j  = atoms%jri(n)+ir-1
-                               rhohelp(ir) = rat(j,n) * rat(j,n) * rh(j,n)
-                            END DO
-                            CALL intgr3(rhohelp,rat(atoms%jri(n),n),atoms%dx(n),&
-                                 &                        n_out_p,qfout)
-                            !--->             have to remove the small r-correction from intgr3
-                            qfout=qfout-atoms%rmt(n)*rhohelp(1)
-
-                         END IF
-
-                         qfout = fpi_const * qfout
-                         !
-                      ELSE 
-                         !    then  G>0
-                         ai = 0.5*g/SQRT(alpha(n))
-                         gr = g*atoms%rmt(n)
-                         a4 = 0.25/alpha(n)
-                         !
-                         ! ---->     calculate form factor inside the mt-sphere
-                         !           (use analytic integration of gaussian)
-                         !
-                         qfin = - f11 * SIN(gr)/gr &
-                              &                + f12 * rcerf(ar,ai) * EXP(-a4*g*g) 
-                         !
-                         ! ---->     calculate form factor outside the mt-sphere
-                         !           (do numerical integration of tails)
-
-                         IF ( method2 .EQ. 1) THEN
-
-                            DO ir = 1 , n_out_p 
-                               j  = atoms%jri(n)+ir-1
-                               rhohelp(mshc(n)-atoms%jri(n)+2-ir) =  rat(j,n)*rat(j,n) &
-                                    &                                     * rh(j,n) * SIN( g*rat(j,n) )
-                            END DO
-                            !
-                            !--->       note we use here the integration routine for vacuum. Because 
-                            !           the vacuum integration is made for an inwards integration 
-                            !           from outside to inside. Outside the starting value will be 
-                            !           nearly zero since the core density is small. if the tail 
-                            !           correction (tail=.true.) is included for the integrals, the 
-                            !           integrand is from infinity inward. This might not be 
-                            !           necessary. Further the integration routine is made for 
-                            !           equidistant meshpoints, therefore the term r(i) of
-                            !           dr/di = dx*r(i) is included in rhohelp
-
-
-                            CALL intgz0(rhohelp,atoms%dx(n),n_out_p,qfout,tail)
-
-                         ELSE
-
-                            DO ir = 1 , n_out_p
-                               j  = atoms%jri(n)+ir-1
-                               rhohelp(ir) = rat(j,n) * rh(j,n) * SIN(g*rat(j,n))
-                            END DO
-                            CALL intgr3(rhohelp,rat(atoms%jri(n),n),atoms%dx(n),&
-                                 &                        n_out_p,qfout)
-                            !--->             have to remove the small r-correction from intgr3
-                            !roa...correction.from.intgr3.......................
-                            IF (rhohelp(1)*rhohelp(2).GT.zero) THEN
-                               alpha3 = 1.0 + LOG(rhohelp(2)/rhohelp(1))/atoms%dx(n)
-                               IF (alpha3.GT.zero)&
-                                    &                 qfout = qfout - rat(atoms%jri(n),n)*rhohelp(1)/alpha3
-                            ENDIF
-                            !roa...end.correction...............................
-
-
-                         END IF
-
-                         qfout = fpi_const * qfout / g
-                         !
-                      END IF
-                      !
-                      qf(k)    = (qfin + qfout)/cell%omtil
-                   ENDDO
-                   !
-                   ! (2) structure constant for each atom of atom type
-                   !
-                   !
-                   !    first G=0
-                   !
-                   k=1
-                   qpw(k,jspin) = qpw(k,jspin) + atoms%neq(n) * qf(k)
-                   qpwc(k)      = qpwc(k)      + atoms%neq(n) * qf(k)
-                   !
-                   !    then  G>0
-                   !
-                   DO  k = 2,stars%ng3
-                      IF (.NOT.oneD%odi%d1) THEN
-                         CALL spgrot(&
-                              &                       sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-                              &                       stars%kv3(:,k),&
-                              &                       kr,phas)
-                         !
-                         ! ----> start loop over equivalent atoms
-                         !
-                         nat2 = nat1 + atoms%neq(n) - 1
-                         DO  nat = nat1,nat2
-                            sf = czero
-                            DO  j = 1,sym%nop
-                               x = -tpi_const* ( kr(1,j) * atoms%taual(1,nat)&
-                                    &          + kr(2,j) * atoms%taual(2,nat)&
-                                    &          + kr(3,j) * atoms%taual(3,nat))
-                         !gb      sf = sf + CMPLX(COS(x),SIN(x))*phas(j)
-                               sf = sf + CMPLX(COS(x),SIN(x))*conjg(phas(j))
-                            ENDDO
-                            sf = sf / REAL( sym%nop )
-                            qpw(k,jspin) = qpw(k,jspin) + sf * qf(k)
-                            qpwc(k)      = qpwc(k)      + sf * qf(k)
-                         ENDDO
-                      ELSE
-                         !-odim
-                         CALL od_chirot(oneD%odi,oneD%ods,cell%bmat,stars%kv3(:,k),kro,phaso)
-                         nat2 = nat1 + atoms%neq(n) - 1
-                         DO  nat = nat1,nat2
-                            !                  sf = cmplx(1.,0.)
-                            sf = czero
-                            DO  j = 1,oneD%ods%nop
-                               x = -tpi_const* ( kro(1,j)*atoms%taual(1,nat)&
-                                    &          + kro(2,j)*atoms%taual(2,nat)&
-                                    &          + kro(3,j)*atoms%taual(3,nat))
-                               sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
-                            ENDDO
-                            sf = sf / REAL( oneD%ods%nop )
-                            qpw(k,jspin) = qpw(k,jspin) + sf * qf(k)
-                            qpwc(k)      = qpwc(k)      + sf * qf(k)
-                         ENDDO
-                         !+odim
-                      END IF
-                   ENDDO
-                END IF
-                nat1 = nat1 + atoms%neq(n)
+             DO k = 1 , stars%ng3    
+                qpw(k,jspin) = qpw(k,jspin) + qpwc(k) 
              ENDDO
              !
              !=====> calculate core-tails to the vacuum region                
@@ -615,7 +435,7 @@
                    ENDDO
                 ENDIF
              ENDDO
-             !
+!
              ! ----> (2) add the plane wave contribution of (core tails + on-site 
              !           contribution) to the m.t. density, include full nonspherical 
              !           components
@@ -636,7 +456,331 @@
           IF ( mpi%isize > 1) CALL mpi_col_st(mpi,atoms,sphhar,rho(1,0,1,jspin))
 #endif
 
-          DEALLOCATE (qpwc,qf)
+          DEALLOCATE (qpwc)
 
         END SUBROUTINE cdnovlp
+
+!***********************************************************************
+!     INTERNAL SUBROUTINES
+!***********************************************************************
+
+      subroutine ft_of_CorePseudocharge(DIMENSION,atoms,mshc,alpha,&
+            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc)
+
+      !=====> calculate the fourier transform of the core-pseudocharge
+      !
+      !     qpw(\vec{G}) = Sum_{n} [ F(G,n) * Sum_{atm{n}} S(\vec{G},atm) ]
+      !                  n = atom_type
+      !                  F = Formfactor = F_in_sphere + F_outsphere
+      !                  S = Structure factor
+
+      USE m_types
+
+      type(t_dimension),intent(in) :: DIMENSION
+      type(t_atoms)    ,intent(in) :: atoms
+      integer          ,intent(in) :: mshc(atoms%ntypd)
+      real             ,intent(in) :: alpha(atoms%ntypd), tol_14
+      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntypd)
+      real             ,intent(in) :: acoff(atoms%ntypd)
+      type(t_stars)    ,intent(in) :: stars
+      integer          ,intent(in) :: method2
+      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntypd)
+      type(t_cell)     ,intent(in) :: cell
+      type(t_oneD)     ,intent(in) :: oneD
+      type(t_sym)      ,intent(in) :: sym
+      complex         ,intent(out) :: qpwc(stars%n3d)
+
+!     ..Local variables
+      integer nat1, n, n_out_p, k
+      complex czero
+
+!     ..Local arrays
+      real, allocatable :: qf(:)
+      complex qpwc_at(stars%n3d)
+
+      czero = (0.0,0.0)
+      DO k = 1 , stars%n3d    
+          qpwc(k) = czero
+      ENDDO
+      ALLOCATE (qf(stars%n3d))
+
+      !
+      !*****> start loop over the atom type
+      !
+      nat1 = 1
+      DO  n = 1,atoms%ntype
+          IF ( ( mshc(n) .GT. atoms%jri(n) ).AND.&
+              &        ( alpha(n) .GT. tol_14 ) )    THEN
+                   
+              n_out_p = mshc(n)-atoms%jri(n)+1
+              
+              ! (1) Form factor for each atom type
+             
+              CALL FormFactor_forAtomType(DIMENSION,method2,n_out_p,&
+                                 atoms%rmt(n),atoms%jri(n),atoms%dx(n),mshc(n),rat(:,n), &
+                                 rh(:,n),alpha(n),stars,cell,acoff(n),qf)
+
+              ! (2) structure constant for each atom of atom type
+                   
+              CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                                 atoms%neq(n),atoms%natd,atoms%taual,&
+                                 cell,qf,qpwc_at)
+              DO k = 1 , stars%n3d    
+                 qpwc(k) = qpwc(k) + qpwc_at(k)
+              ENDDO
+
+          END IF
+          nat1 = nat1 + atoms%neq(n)
+       ENDDO
+
+       DEALLOCATE (qf)
+
+      end subroutine ft_of_CorePseudocharge
+
+
+!----------------------------------------------------------------------
+      subroutine StructureConst_forAtom(nat1,stars,oneD,sym,&
+                          neq,natd,taual,cell,qf,qpwc_at)
+!       calculates structure constant for each atom of atom type
+
+      USE m_types
+      USE m_spgrot
+      USE m_constants
+      USE m_od_chirot
+
+       integer          ,intent(in) :: nat1
+       type(t_stars)    ,intent(in) :: stars
+       type(t_oneD)     ,intent(in) :: oneD
+       type(t_sym)      ,intent(in) :: sym
+       integer          ,intent(in) :: neq,natd
+       real             ,intent(in) :: taual(3,natd)
+       type(t_cell)     ,intent(in) :: cell
+       real             ,intent(in) :: qf(stars%n3d)
+       complex         ,intent(out) :: qpwc_at(stars%n3d)
+
+!      ..Local variables
+      integer k, nat2, nat, j
+      real x
+      complex sf, czero
+
+!      ..Local arrays
+       integer kr(3,sym%nop)
+       real    kro(3,oneD%ods%nop)
+       complex phas(sym%nop)
+       complex phaso(oneD%ods%nop)
+
+      czero = (0.0,0.0)
+      DO k = 1 , stars%n3d    
+          qpwc_at(k) = czero
+      ENDDO
+
+      !
+      !    first G=0
+      !
+      k=1
+      qpwc_at(k)      = qpwc_at(k)      + neq * qf(k)
+
+      !
+      !    then  G>0
+      !
+!$OMP PARALLEL DO DEFAULT(none) &
+!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at) &
+!$OMP FIRSTPRIVATE(czero) &
+!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso)
+      DO  k = 2,stars%ng3
+          IF (.NOT.oneD%odi%d1) THEN
+              CALL spgrot(&
+                   &                       sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
+                   &                       stars%kv3(:,k),&
+                   &                       kr,phas)
+              !
+              ! ----> start loop over equivalent atoms
+              !
+               nat2 = nat1 + neq - 1
+               DO  nat = nat1,nat2
+                   sf = czero
+                   DO  j = 1,sym%nop
+                       x = -tpi_const* ( kr(1,j) * taual(1,nat)&
+                           &          + kr(2,j) * taual(2,nat)&
+                           &          + kr(3,j) * taual(3,nat))
+                       !gb      sf = sf + CMPLX(COS(x),SIN(x))*phas(j)
+                       sf = sf + CMPLX(COS(x),SIN(x))*conjg(phas(j))
+                   ENDDO
+                   sf = sf / REAL( sym%nop )
+                   qpwc_at(k)      = qpwc_at(k)      + sf * qf(k)
+               ENDDO
+          ELSE
+               !-odim
+               CALL od_chirot(oneD%odi,oneD%ods,cell%bmat,stars%kv3(:,k),kro,phaso)
+               nat2 = nat1 + neq - 1
+               DO  nat = nat1,nat2
+                   !                  sf = cmplx(1.,0.)
+                   sf = czero
+                   DO  j = 1,oneD%ods%nop
+                       x = -tpi_const* ( kro(1,j)*taual(1,nat)&
+                           &          + kro(2,j)*taual(2,nat)&
+                           &          + kro(3,j)*taual(3,nat))
+                       sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
+                   ENDDO
+                   sf = sf / REAL( oneD%ods%nop )
+                   qpwc_at(k)      = qpwc_at(k)      + sf * qf(k)
+               ENDDO
+               !+odim
+          END IF
+      ENDDO
+!$OMP END PARALLEL DO
+      end subroutine StructureConst_forAtom
+
+!----------------------------------------------------------------------
+      subroutine FormFactor_forAtomType(DIMENSION,method2,n_out_p,&
+                       rmt,jri,dx,mshc,rat,&
+                       rh,alpha,stars,cell,acoff,qf)
+
+      USE m_types
+      USE m_constants
+      USE m_rcerf
+      USE m_intgr, ONLY : intgr3,intgz0
+
+      type(t_dimension),intent(in) :: DIMENSION
+      integer          ,intent(in) :: method2, n_out_p
+      real             ,intent(in) :: rmt
+      integer          ,intent(in) :: jri
+      real             ,intent(in) :: dx
+      integer          ,intent(in) :: mshc
+      real             ,intent(in) :: rat(DIMENSION%msh)
+      real             ,intent(in) :: rh(DIMENSION%msh)
+      real             ,intent(in) :: alpha
+      type(t_stars)    ,intent(in) :: stars
+      type(t_cell)     ,intent(in) :: cell
+      real             ,intent(in) :: acoff
+      real            ,intent(out) :: qf(stars%n3d)
+
+
+!     ..Local variables
+      real f11, f12, ar, g, ai, qfin, qfout, gr, a4, alpha3, zero
+      integer k, ir, j
+      logical tail
+
+!     ..Local arrays
+      real rhohelp(DIMENSION%msh)
+
+      zero = 0.0
+      DO k = 1,stars%n3d
+        qf(k) = 0.0
+      END DO
+
+      tail = .FALSE.
+      f11 = tpi_const * rmt * rh(jri) / alpha
+      f12 = acoff * ( pi_const/alpha ) *SQRT(pi_const/alpha)
+      ar  = SQRT( alpha ) * rmt 
+
+!$OMP PARALLEL DO DEFAULT(none) & 
+!$OMP SHARED(stars,f11,f12,ar,method2,n_out_p,jri,rat,rh,dx,tail) &
+!$OMP SHARED(alpha,cell,mshc,rmt,qf) &
+!$OMP FIRSTPRIVATE(zero) &
+!$OMP PRIVATE(k,g,ai,qfin,ir,j,rhohelp,qfout,gr,a4,alpha3)
+      DO  k = 1,stars%ng3
+          g = stars%sk3(k)
+          !    first G=0
+          IF ( k.EQ.1 ) THEN
+              ai = zero
+              !
+              ! ---->     calculate form factor inside the mt-sphere
+              !           (use analytic integration of gaussian)
+              !
+              qfin = - f11 + f12 * rcerf(ar,ai)
+              !
+              ! ---->     calculate form factor outside the mt-sphere
+              !           (do numerical integration of tails)
+              !
+              IF ( method2 .EQ. 1) THEN
+ 
+                  DO ir = 1 , n_out_p
+                     j  = jri+ir-1
+                     rhohelp(mshc+1-j) =  rat(j) * rat(j) &
+                           &                       * rat(j) *  rh(j)
+                  END DO
+                  CALL intgz0(rhohelp,dx,n_out_p,qfout,tail)
+ 
+              ELSE
+ 
+                  DO ir = 1 , n_out_p
+                     j  = jri+ir-1
+                     rhohelp(ir) = rat(j) * rat(j) * rh(j)
+                  END DO
+                  CALL intgr3(rhohelp,rat(jri),dx,&
+                           &                        n_out_p,qfout)
+                  !--->             have to remove the small r-correction from intgr3
+                  qfout=qfout-rmt*rhohelp(1)
+ 
+              END IF
+ 
+              qfout = fpi_const * qfout
+              !
+          ELSE 
+              !    then  G>0
+              ai = 0.5*g/SQRT(alpha)
+              gr = g*rmt
+              a4 = 0.25/alpha
+              !
+              ! ---->     calculate form factor inside the mt-sphere
+              !           (use analytic integration of gaussian)
+              !
+              qfin = - f11 * SIN(gr)/gr &
+                           &                + f12 * rcerf(ar,ai) * EXP(-a4*g*g) 
+              !
+              ! ---->     calculate form factor outside the mt-sphere
+              !           (do numerical integration of tails)
+
+              IF ( method2 .EQ. 1) THEN
+
+                  DO ir = 1 , n_out_p 
+                      j  = jri+ir-1
+                      rhohelp(mshc-jri+2-ir) =  rat(j)*rat(j) &
+                                    &                                     * rh(j) * SIN( g*rat(j) )
+                  END DO
+                  !
+                  !--->       note we use here the integration routine for vacuum. Because 
+                  !           the vacuum integration is made for an inwards integration 
+                  !           from outside to inside. Outside the starting value will be 
+                  !           nearly zero since the core density is small. if the tail 
+                  !           correction (tail=.true.) is included for the integrals, the 
+                  !           integrand is from infinity inward. This might not be 
+                  !           necessary. Further the integration routine is made for 
+                  !           equidistant meshpoints, therefore the term r(i) of
+                  !           dr/di = dx*r(i) is included in rhohelp
+
+
+                  CALL intgz0(rhohelp,dx,n_out_p,qfout,tail)
+
+              ELSE
+
+                  DO ir = 1 , n_out_p
+                      j  = jri+ir-1
+                      rhohelp(ir) = rat(j) * rh(j) * SIN(g*rat(j))
+                  END DO
+                  CALL intgr3(rhohelp,rat(jri),dx,&
+                              &                        n_out_p,qfout)
+                  !--->             have to remove the small r-correction from intgr3
+                  !roa...correction.from.intgr3.......................
+                  IF (rhohelp(1)*rhohelp(2).GT.zero) THEN
+                      alpha3 = 1.0 + LOG(rhohelp(2)/rhohelp(1))/dx
+                      IF (alpha3.GT.zero)&
+                              &                 qfout = qfout - rat(jri)*rhohelp(1)/alpha3
+                      ENDIF
+                  !roa...end.correction...............................
+
+
+                  END IF
+
+                  qfout = fpi_const * qfout / g
+                  !
+          END IF
+          !
+          qf(k)    = (qfin + qfout)/cell%omtil
+      ENDDO
+!$OMP END PARALLEL DO
+      end subroutine FormFactor_forAtomType
+
       END MODULE m_cdnovlp
+
