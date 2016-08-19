@@ -73,13 +73,15 @@ CONTAINS
         tdd=td_stored%tdd(:size(tuu,1),n,jspin)
         ind=td_stored%ind(:size(ind,1),:size(ind,2),n,jspin)
 
-
         IF (nlo(n)>0) THEN
             mlo=sum(nlo(:n-1))+1
             mlolo=dot_product(nlo(:n-1),nlo(:n-1)+2)/2+1
-            tuulo=td_stored%tuulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
-            tdulo=td_stored%tdulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
-            tuloulo=td_stored%tuloulo(:size(tuloulo,1),:size(tuloulo,2),mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1,jspin)
+            tuulo(:,:,mlo:(mlo+nlo(n)-1))=&
+               td_stored%tuulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
+            tdulo(:,:,mlo:(mlo+nlo(n)-1))=&
+               td_stored%tdulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
+            tuloulo(:,:,mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1)=&
+               td_stored%tuloulo(:size(tuloulo,1),:size(tuloulo,2),mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1,jspin)
         ENDIF
         IF(ldau(n)) THEN
             nn=count(ldau(:n-1))+1
