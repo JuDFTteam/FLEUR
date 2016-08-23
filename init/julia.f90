@@ -193,6 +193,7 @@
         ENDDO
       ENDDO
 
+      ccr = 0.0
       DO i = 1,sym%nsym
         DO j = 1,3
           talfa(j,i) = 0.0
