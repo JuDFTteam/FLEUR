@@ -132,6 +132,12 @@
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           !     ..
           DATA  czero /(0.0,0.0)/, zero /0.0/, tol_14 /1.0e-10/!-14
+#ifdef CPP_MPI
+      EXTERNAL MPI_BCAST
+      INTEGER ierr
+#include "cpp_double.h"
+      INCLUDE "mpif.h"
+#endif
           !
           !----> Abbreviation
           !
@@ -158,20 +164,20 @@
           ci = CMPLX(0.0,1.0)
 
           ALLOCATE (qpwc(stars%n3d))
+          !
+          !----> prepare local array to store pw-expansion of pseudo core charge
+          !
+          DO k = 1 , stars%ng3    
+             qpwc(k) = czero
+          ENDDO
+          ! 
+          !----> (1) set up radial mesh beyond muffin-tin radius
+          !      (2) cut_off core tails from noise 
+          !
+          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntypd,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
 
-          IF (mpi%irank ==0) THEN
-             !
-             !----> prepare local array to store pw-expansion of pseudo core charge
-             !
-             DO k = 1 , stars%ng3    
-                qpwc(k) = czero
-             ENDDO
-             ! 
-             !----> (1) set up radial mesh beyond muffin-tin radius
-             !      (2) cut_off core tails from noise 
-             !
-             nloop: DO  n = 1 , atoms%ntype
-                IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
+          nloop: DO  n = 1 , atoms%ntype
+              IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
                    DO  j = 1 , atoms%jri(n)
                       rat(j,n) = atoms%rmsh(j,n)
                    ENDDO
@@ -189,17 +195,17 @@
                       END IF
                    ENDDO
                    mshc(n) = atoms%jri(n)
-                ENDIF
-             ENDDO nloop
-             !
-             !-----> the core density inside the spheres is replaced by a
-             !       gaussian-like pseudo density : n(r) = acoff*exp(-alpha*r*r)
-             !       acoff and alpha determined to obtain a continous and 
-             !       differentiable density at the sphere boundary.
-             !       IF mshc = jri  either core tail too small or no core (i.e. H)
-             !
-             DO  n = 1,atoms%ntype
-                IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%ncst(n).GT.0).OR.l_st)) THEN
+              ENDIF
+          ENDDO nloop
+          !
+          !-----> the core density inside the spheres is replaced by a
+          !       gaussian-like pseudo density : n(r) = acoff*exp(-alpha*r*r)
+          !       acoff and alpha determined to obtain a continous and 
+          !       differentiable density at the sphere boundary.
+          !       IF mshc = jri  either core tail too small or no core (i.e. H)
+          !
+          DO  n = 1,atoms%ntype
+              IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%ncst(n).GT.0).OR.l_st)) THEN
 
                    j1 = atoms%jri(n) - 1
                    IF ( method1 .EQ. 1) THEN
@@ -223,22 +229,26 @@
 
                 ELSE
                    alpha(n) = 0.0
-                ENDIF
-             ENDDO
-             !
+              ENDIF
+          ENDDO
+          !
+          IF (mpi%irank ==0) THEN
 8000         FORMAT (/,10x,'core density and its first derivative ',&
                   &                 'at sph. bound. for atom type',&
                   &             i2,' is',3x,2e15.7)
 8010         FORMAT (/,10x,'alpha=',f10.5,5x,'acoff=',f10.5)
-             !
-             !=====> calculate the fourier transform of the core-pseudocharge
+          END IF          
+          !
+          !=====> calculate the fourier transform of the core-pseudocharge
 
-             CALL ft_of_CorePseudocharge(DIMENSION,atoms,mshc,alpha,tol_14,rh, &
+          CALL ft_of_CorePseudocharge(mpi,DIMENSION,atoms,mshc,alpha,tol_14,rh, &
                           acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
-             DO k = 1 , stars%ng3    
-                qpw(k,jspin) = qpw(k,jspin) + qpwc(k) 
-             ENDDO
+          DO k = 1 , stars%ng3    
+              qpw(k,jspin) = qpw(k,jspin) + qpwc(k) 
+          ENDDO
+
+          IF (mpi%irank ==0) THEN
              !
              !=====> calculate core-tails to the vacuum region                
              !       Coretails expanded in exponentially decaying functions.
@@ -456,6 +466,7 @@
           IF ( mpi%isize > 1) CALL mpi_col_st(mpi,atoms,sphhar,rho(1,0,1,jspin))
 #endif
 
+         print *,"cdnovlp end", mpi%irank 
           DEALLOCATE (qpwc)
 
         END SUBROUTINE cdnovlp
@@ -464,7 +475,7 @@
 !     INTERNAL SUBROUTINES
 !***********************************************************************
 
-      subroutine ft_of_CorePseudocharge(DIMENSION,atoms,mshc,alpha,&
+      subroutine ft_of_CorePseudocharge(mpi,DIMENSION,atoms,mshc,alpha,&
             tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
@@ -476,6 +487,7 @@
 
       USE m_types
 
+      type(t_mpi)      ,intent(in) :: mpi
       type(t_dimension),intent(in) :: DIMENSION
       type(t_atoms)    ,intent(in) :: atoms
       integer          ,intent(in) :: mshc(atoms%ntypd)
@@ -495,20 +507,30 @@
       complex czero
 
 !     ..Local arrays
-      real, allocatable :: qf(:)
+      real :: qf(stars%n3d)
       complex qpwc_at(stars%n3d)
+#ifdef CPP_MPI
+      external mpi_bcast
+      complex :: qpwc_loc(stars%n3d)
+      integer :: ierr
+#include "cpp_double.h"
+      include "mpif.h"
+#endif
 
       czero = (0.0,0.0)
+#ifdef CPP_MPI
+      DO k = 1 , stars%n3d
+         qpwc_loc(k) = czero
+      ENDDO
+#endif
       DO k = 1 , stars%n3d    
           qpwc(k) = czero
       ENDDO
-      ALLOCATE (qf(stars%n3d))
 
       !
       !*****> start loop over the atom type
       !
-      nat1 = 1
-      DO  n = 1,atoms%ntype
+      DO  n = 1 + mpi%irank, atoms%ntype, mpi%isize
           IF ( ( mshc(n) .GT. atoms%jri(n) ).AND.&
               &        ( alpha(n) .GT. tol_14 ) )    THEN
                    
@@ -521,19 +543,32 @@
                                  rh(:,n),alpha(n),stars,cell,acoff(n),qf)
 
               ! (2) structure constant for each atom of atom type
-                   
+            
+              nat1 = 1
+              IF (n>1) THEN
+                 DO k = 1, n-1
+                    nat1 = nat1 + atoms%neq(k)
+                 END DO
+              END IF       
               CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
                                  atoms%neq(n),atoms%natd,atoms%taual,&
                                  cell,qf,qpwc_at)
+#ifdef CPP_MPI
+              DO k = 1, stars%n3d
+                 qpwc_loc(k) = qpwc_loc(k)  + qpwc_at(k)
+              END DO
+#else
               DO k = 1 , stars%n3d    
                  qpwc(k) = qpwc(k) + qpwc_at(k)
-              ENDDO
+              END DO
+#endif
 
           END IF
-          nat1 = nat1 + atoms%neq(n)
        ENDDO
-
-       DEALLOCATE (qf)
+#ifdef CPP_MPI
+       CALL mpi_allreduce(qpwc_loc,qpwc,stars%n3d,CPP_MPI_COMPLEX,mpi_sum, &
+               mpi%mpi_comm,ierr)
+#endif
 
       end subroutine ft_of_CorePseudocharge
 
