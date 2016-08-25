@@ -466,7 +466,6 @@
           IF ( mpi%isize > 1) CALL mpi_col_st(mpi,atoms,sphhar,rho(1,0,1,jspin))
 #endif
 
-         print *,"cdnovlp end", mpi%irank 
           DEALLOCATE (qpwc)
 
         END SUBROUTINE cdnovlp
