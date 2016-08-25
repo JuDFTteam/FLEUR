@@ -174,8 +174,9 @@
           !----> (1) set up radial mesh beyond muffin-tin radius
           !      (2) cut_off core tails from noise 
           !
+#ifdef CPP_MPI
           CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntypd,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-
+#endif
           nloop: DO  n = 1 , atoms%ntype
               IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
                    DO  j = 1 , atoms%jri(n)
