@@ -61,13 +61,10 @@ CONTAINS
        ch(0:9) = (/'s','p','d','f','g','h','i','j','k','l'/)
        DO jsp = 1,input%jspins
           IF( input%jspins .GT. 1 ) WRITE(6,'(A,i3)') ' Spin: ',jsp
-          ! Somehow this seems to be broken DW
-!!$OMP PARALLEL DO DEFAULT(PRIVATE) !FIRSTPRIVATE(l_done)
-!!$OMP& SHARED(c,ch,jsp,ntype,irank,jspd,lmaxd,jmtd,nlhd,
-!!$OMP&      jspins,film,nvac,nmz,lepr,ntypd,nmzd,
-!!$OMP&      jri,dx,rmt,rmsh,lmax,vr,vz,llo,zatom,
-!!$OMP&      el0,evac0,ello0,nlo,nlod,l_dulo,ellow,elup,
-!!$OMP&      el,evac,ello,l_done,lo_donevi )
+!$OMP PARALLEL DO DEFAULT(none) &
+!$OMP SHARED(atoms,enpara,jsp,l_done,mpi,vr,c,el,ch,lo_done,ello) &
+!$OMP PRIVATE(n,nqn,nqn_lo,d,rn,msh,f,vrd,j,t1,t2,rr,l,node,nodeu,e,start,us,dus,e_lo,e_up) &
+!$OMP PRIVATE(fl,fn,fj,ierr,attributes,large_e_step,e_up_temp,e_lo_temp,ldmt,lnd,ilo)
           DO n = 1, atoms%ntype
              ! check what to do ( for 'normal' energy parameters )
              nqn(0:3) = NINT( enpara%el0(0:3,n,jsp) )
@@ -107,7 +104,7 @@ CONTAINS
                    l_done(l,n,jsp) = .TRUE.
                    ! search for branches
                    node = nqn(l) - (l+1)
-                   e = 0.0 
+                                   e = 0.0 
                    ! determine upper edge
                    nodeu = -1 ; start = .TRUE.
                    DO WHILE ( nodeu <= node ) 
@@ -439,7 +436,7 @@ CONTAINS
 
              DEALLOCATE ( f,vrd )
           ENDDO ! n
-!!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO
        ENDDO   ! jsp
     ELSE
        l_done  = .FALSE.
