@@ -1,9 +1,9 @@
-/*--------------------------------------------------------------------------------
- * Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
- * This file is part of FLEUR and available as free software under the conditions
- * of the MIT license as expressed in the LICENSE file in more detail.
- *--------------------------------------------------------------------------------
- */
+!--------------------------------------------------------------------------------
+!  Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+!  This file is part of FLEUR and available as free software under the conditions
+!  of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
        !The default is to call timestart only if requested
 #define CPP_juDFT_timestart(name) call timestart(name,__FILE__,__LINE__)
 #define CPP_juDFT_timestart_info(name)
