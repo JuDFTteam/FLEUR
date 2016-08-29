@@ -79,7 +79,7 @@
       REAL    kzero(3)           ! shifting vector to bring one k-point to or 
                                  ! away from (0,0,0) (for even/odd nmop)
 
-      INTEGER i,j,k,l,idiv,mkpt
+      INTEGER i,j,k,l,idiv,mkpt,addSym
       INTEGER iofile,iokpt,kpri,ktest,kmidtet
       INTEGER idivis(3)
       LOGICAL random,trias
@@ -229,9 +229,20 @@
 
         IF ( (input%film.AND.(.not.sym%invs2)).OR.&
      &     ((.not.input%film).AND.(.not.sym%invs)) ) THEN
-           ccr(:,:,sym%nsym+1:2*sym%nsym )    = -ccr(:,:,1:sym%nsym)
-           rlsymr(:,:,sym%nsym+1:2*sym%nsym ) = -rlsymr(:,:,1:sym%nsym)
-           sym%nsym = 2 * sym%nsym
+           addSym = 0
+           ! Note: We have to add the negative of each symmetry operation
+           !       to exploit time reversal symmetry. However, if the new
+           !       symmetry operation is the identity matrix it is excluded.
+           !       This is the case iff it is (-Id) + a translation vector.
+           DO i = 1, sym%nsym
+              ! This test assumes that ccr(:,:,1) is the identity matrix.
+              IF(.NOT.ALL(ABS(ccr(:,:,1)+ccr(:,:,i)).LT.10e-10) ) THEN
+                 ccr(:,:,sym%nsym+addSym+1 ) = -ccr(:,:,i)
+                 rlsymr(:,:,sym%nsym+addSym+1 ) = -rlsymr(:,:,i)
+                 addSym = addSym + 1
+              END IF
+           END DO
+           sym%nsym = sym%nsym + addSym
         ENDIF
 
       ENDIF
