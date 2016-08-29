@@ -285,8 +285,6 @@ SUBROUTINE r_inpXML(&
 
    ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
 
-   WRITE(*,*) 'Note: core states output (from input) into out.xml file has to be implemented!'
-
    ! Read in constants
 
    xPathA = '/fleurInput/constants/constant'
@@ -1172,29 +1170,29 @@ SUBROUTINE r_inpXML(&
          WRITE (6,*) 'iggachk=1,idsprs0=1,idsprsl=1,idsprsi=1,idsprsv=1'
            CALL juDFT_error("igrd =/= 0 or 1",calledby ="inped")
       END IF
-    END IF
+   END IF
 
-    WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
-    IF (namex.EQ.'vhse') THEN
-       ! overwrite if sane input
-       IF (aMix > 0 .and. aMix <= 1) THEN
-          aMix = aMix_VHSE( aMix )
-       ELSE
-          aMix = aMix_VHSE()
-       END IF
-       ! overwrite if sane input
-       IF (omega > 0) THEN
-          omega = omega_VHSE(omega)
-       ELSE
-          omega = omega_VHSE()
-       END IF
+   WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
+   IF (namex.EQ.'vhse') THEN
+      ! overwrite if sane input
+      IF (aMix > 0 .and. aMix <= 1) THEN
+         aMix = aMix_VHSE( aMix )
+      ELSE
+         aMix = aMix_VHSE()
+      END IF
+      ! overwrite if sane input
+      IF (omega > 0) THEN
+         omega = omega_VHSE(omega)
+      ELSE
+         omega = omega_VHSE()
+      END IF
 !       WRITE (6,9041) namex,relcor,aMix,omega
-    ELSE
+   ELSE
 !       WRITE (6,9040) namex,relcor
-    END IF
+   END IF
 
-    l_gga = .FALSE.
-    IF (xcpot%icorr.GE.6) l_gga = .TRUE.
+   l_gga = .FALSE.
+   IF (xcpot%icorr.GE.6) l_gga = .TRUE.
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of XC functional section
@@ -1298,10 +1296,6 @@ SUBROUTINE r_inpXML(&
             IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
          END IF
       END DO
-
-      WRITE(*,*) 'Not every parameter in species is set yet!'
-      WRITE(*,*) 'nocoParams, ldaU, force'
-
    END DO
 
    atoms%lmaxd = maxval(atoms%lmax(:))
@@ -1503,7 +1497,6 @@ SUBROUTINE r_inpXML(&
                   xmlCoreOccs (1,k,iType) = speciesXMLCoreOccs(1,k)
                   xmlCoreOccs (2,k,iType) = speciesXMLCoreOccs(2,k)
                END DO
-               WRITE(*,*) 'setcor still has to be adapted!!!'
             END IF
             DO iLLO = 1, speciesNLO(iSpecies)
                atoms%llo(iLLO,iType) = speciesLLO(loOrderList(iLLO))
@@ -1908,7 +1901,6 @@ SUBROUTINE r_inpXML(&
 
    ! Calculate missing kpts parameters
 
-   WRITE(*,*) 'Post processing of input: k-points'
    IF (.not.l_kpts) THEN
       IF (.NOT.oneD%odd%d1) THEN
          IF (jij%l_J) THEN
@@ -1995,7 +1987,6 @@ SUBROUTINE r_inpXML(&
 
    ! Generate missing parameters for atoms and calculate volume of the different regions
 
-   WRITE(*,*) 'Post processing of input: atoms and region volumes'
    cell%volint = cell%vol
    atoms%jmtd = maxval(atoms%jri(:))
    CALL ylmnorm_init(atoms%lmaxd)
@@ -2065,7 +2056,6 @@ SUBROUTINE r_inpXML(&
 
    ! Dimensioning of lattice harmonics
 
-   WRITE(*,*) 'Post processing of input: dimensioning of lattice harmonics'
    ALLOCATE(atoms%nlhtyp(atoms%ntype),atoms%ntypsy(atoms%nat))
    ALLOCATE(sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1))
    sphhar%ntypsd = 0
@@ -2108,7 +2098,6 @@ SUBROUTINE r_inpXML(&
 
    ! Dimensioning of stars
 
-   WRITE(*,*) 'Post processing of input: dimensioning of stars'
    IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
       CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                       sym%tau,sym%nop,sym%nop2,stars%k1d,stars%k2d,stars%k3d,&
@@ -2152,7 +2141,6 @@ SUBROUTINE r_inpXML(&
 
    ! Initialize missing 1D code arrays
 
-   WRITE(*,*) 'Post processing of input: initializing 1D code arrays'
    ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
    ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
    ALLOCATE (oneD%ngopr1(atoms%natd),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
@@ -2161,7 +2149,6 @@ SUBROUTINE r_inpXML(&
 
    ! Initialize missing hybrid functionals arrays
 
-   WRITE(*,*) 'Post processing of input: hybrid functionals arrays'
    ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
    ALLOCATE (hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
    ALLOCATE (hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
@@ -2170,7 +2157,6 @@ SUBROUTINE r_inpXML(&
 
    ! Generate lattice harmonics
 
-   WRITE(*,*) 'Post processing of input: generation of lattice harmonics'
    IF (.NOT.oneD%odd%d1) THEN
       CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
                      atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
@@ -2235,7 +2221,6 @@ SUBROUTINE r_inpXML(&
 
    ! Generate stars
 
-   WRITE(*,*) 'Post processing of input: generation of stars'
    IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
       CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
       IF (oneD%odd%d1) THEN
@@ -2246,8 +2231,6 @@ SUBROUTINE r_inpXML(&
    END IF
 
    ! Other small stuff
-
-   WRITE(*,*) 'Post processing of input: Small stuff at the end'
 
    input%strho = .FALSE.
 

@@ -43,7 +43,7 @@ int initializeXMLInterface()
 int parseXMLSchema(const char* schemaFilename)
 {
    schemaDoc = xmlReadFile(schemaFilename, NULL, 0);
-   printf("Parsing XML Schema file: %s\n", schemaFilename);
+   //printf("Parsing XML Schema file: %s\n", schemaFilename);
    if (schemaDoc == NULL) 
    {
       fprintf(stderr, "Failed to parse xml schema file %s\n", schemaFilename);
@@ -68,10 +68,10 @@ int parseXMLSchema(const char* schemaFilename)
       return -1;
    }
    xmlSchemaSetValidOptions(schemaValidCtxt,XML_SCHEMA_VAL_VC_I_CREATE);
-   printf("parseXMLSchema: schemaDoc: %p\n",schemaDoc);
-   printf("parseXMLSchema: schemaParserCtxt: %p\n",schemaParserCtxt);
-   printf("parseXMLSchema: schema: %p\n",schema);
-   printf("parseXMLSchema: schemaValidCtxt: %p\n",schemaValidCtxt);
+   //printf("parseXMLSchema: schemaDoc: %p\n",schemaDoc);
+   //printf("parseXMLSchema: schemaParserCtxt: %p\n",schemaParserCtxt);
+   //printf("parseXMLSchema: schema: %p\n",schema);
+   //printf("parseXMLSchema: schemaValidCtxt: %p\n",schemaValidCtxt);
 
    return 0;
 }
@@ -84,14 +84,14 @@ int parseXMLDocument(const char* docFilename)
       fprintf(stderr, "Failed to parse xml file %s\n", docFilename);
       return -1;
    }
-   printf("parseXMLDocument: xmlDocument: %p\n",xmlDocument);
+   //printf("parseXMLDocument: xmlDocument: %p\n",xmlDocument);
    return 0;
 }
 
 int validateXMLDocument()
 {
 
-   printf("validateXMLDocument: xmlDocument: %p\n",xmlDocument);
+   //printf("validateXMLDocument: xmlDocument: %p\n",xmlDocument);
 
    if (schemaValidCtxt == NULL)
    {

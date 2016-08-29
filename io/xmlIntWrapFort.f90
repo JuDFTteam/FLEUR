@@ -31,7 +31,6 @@ SUBROUTINE xmlInitInterface()
    end interface
 
    errorStatus = 0
-   WRITE(*,*) 'Initializing xml interface'
    errorStatus = initializeXMLInterface()
    IF(errorStatus.NE.0) STOP 'Error!'
 
@@ -57,9 +56,11 @@ SUBROUTINE xmlParseSchema(schemaFilename)
    end interface
 
    errorStatus = 0
-   WRITE(*,*) 'Parsing xml schema file ', TRIM(ADJUSTL(schemaFilename))
    errorStatus = parseXMLSchema(schemaFilename)
-   IF(errorStatus.NE.0) STOP 'Error!'
+   IF(errorStatus.NE.0) THEN
+      WRITE(*,*) 'Parsing xml schema file ', TRIM(ADJUSTL(schemaFilename))
+      STOP 'Error: xml Schema file not parsable!'
+   END IF
 
 END SUBROUTINE xmlParseSchema
 
@@ -83,9 +84,11 @@ SUBROUTINE xmlParseDoc(docFilename)
    end interface
 
    errorStatus = 0
-   WRITE(*,*) 'Parsing xml document file ', TRIM(ADJUSTL(docFilename))
    errorStatus = parseXMLDocument(docFilename)
-   IF(errorStatus.NE.0) STOP 'Error!'
+   IF(errorStatus.NE.0) THEN
+      WRITE(*,*) 'Parsing xml document file ', TRIM(ADJUSTL(docFilename))
+      STOP 'Error: xml document file not parsable!'
+   END IF
 
 END SUBROUTINE xmlParseDoc
 
@@ -106,9 +109,10 @@ SUBROUTINE xmlValidateDoc()
    end interface
 
    errorStatus = 0
-   WRITE(*,*) 'Validating xml document file'
    errorStatus = validateXMLDocument()
-   IF(errorStatus.NE.0) STOP 'Error!'
+   IF(errorStatus.NE.0) THEN
+      STOP 'Error: xml document does not validate!'
+   END IF
 
 END SUBROUTINE xmlValidateDoc
 
@@ -129,7 +133,6 @@ SUBROUTINE xmlInitXPath()
    end interface
 
    errorStatus = 0
-   WRITE(*,*) 'Initializing xPath'
    errorStatus = initializeXPath()
    IF(errorStatus.NE.0) STOP 'Error!'
 
@@ -181,8 +184,6 @@ FUNCTION xmlGetAttributeValue(xPath)
       end function getXMLAttributeValue
    end interface
 
-!   WRITE(*,*) 'Obtaining xml attribute value ', TRIM(ADJUSTL(xPath))
-
    c_string = getXMLAttributeValue(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
    CALL C_F_POINTER(c_string, valueFromC, [ 255 ])
@@ -193,8 +194,6 @@ FUNCTION xmlGetAttributeValue(xPath)
      value(i:i) = valueFromC(i)
    END DO
    length = LEN_TRIM(value(1:INDEX(value, CHAR(0))))
-
-!   WRITE(*,*) 'Attribute value is ', value(1:length-1)
 
    xmlGetAttributeValue = value(1:length-1)
 
@@ -217,7 +216,6 @@ SUBROUTINE xmlFreeResources()
    end interface
 
    errorStatus = 0
-   WRITE(*,*) 'Releasing xml resources'
    errorStatus = freeXMLResources()
    IF(errorStatus.NE.0) STOP 'Error!'
 
