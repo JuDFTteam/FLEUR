@@ -113,6 +113,8 @@ CONTAINS
             eig_id,nk,jsp,&
             n_start=1,n_end=ne,&
             z=z(:,:ne,jsp))
+       write(6,*) "jspin=",jsp,",nk=",nk
+       write(6,"(5f12.4)") eig(:ne,jsp)	       
 
        ! write(*,*) 'process',irank,' reads ',nk
 

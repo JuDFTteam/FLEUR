@@ -10,6 +10,7 @@ MODULE m_utility
 
    CONTAINS
 
+     
    SUBROUTINE getComputerArchitectures(architectures, numArchitectures)
       IMPLICIT NONE
       INTEGER         , INTENT(OUT) :: numArchitectures

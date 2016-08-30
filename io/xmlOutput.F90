@@ -44,7 +44,8 @@ MODULE m_xmlOutput
 
       USE m_constants
       USE m_utility
-
+      USE m_compile_descr
+      
       IMPLICIT NONE
 
 #ifdef CPP_MPI
@@ -60,7 +61,8 @@ MODULE m_xmlOutput
       CHARACTER(LEN=6)  :: precisionString
       CHARACTER(LEN=9)  :: flags(11)
       CHARACTER(LEN=20) :: structureSpecifiers(11)
-
+      CHARACTER(LEN=50) :: gitdesc,githash,compile_date,compile_user,compile_host
+      
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
       elementList = ''
@@ -73,6 +75,9 @@ MODULE m_xmlOutput
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
+      CALL get_compile_desc(gitdesc,githash,compile_date,compile_user,compile_host)
+      CALL writeXMLElement('Compiled',(/'date','user','host'/),(/compile_date,compile_user,compile_host/))
+      CALL writeXMLElement('Git',(/'version','hash   '/),(/gitdesc,githash/))
       CALL getComputerArchitectures(flags, numFlags)
       IF (numFlags.EQ.0) THEN
          numFlags = 1

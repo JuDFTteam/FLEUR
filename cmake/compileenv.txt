@@ -1,0 +1,29 @@
+#this file sets some preprocessor variables that are used in
+#init/compile_descr.F90 to determine the programm version and
+#some compilation environment description
+
+set(compile_host $ENV{HOSTNAME})
+set(compile_user $ENV{USER})
+string(TIMESTAMP compile_time)
+set(git_hash unkown)
+
+if (EXISTS ${CMAKE_SOURCE_DIR}/.git)
+  execute_process(COMMAND git -C ${CMAKE_SOURCE_DIR} describe --tags OUTPUT_VARIABLE git_describe)
+  if (${git_describe})
+	message("GIT DESCRIBE:${git_describe}")
+  else()
+     set(git_describe unkown)
+  endif()
+  execute_process(COMMAND git -C ${CMAKE_SOURCE_DIR} rev-parse  HEAD OUTPUT_VARIABLE git_hash)
+elseif (EXISTS ${CMAKE_SOURCE_DIR}/version)
+  file(READ ${CMAKE_SOURCE_DIR}/version git_describe)
+else()
+  set(git_describe unknown)
+endif()
+
+#normalize the strings
+string(STRIP  ${git_hash} git_hash)
+string(STRIP ${git_describe} git_describe)
+
+
+file(GENERATE OUTPUT ${CMAKE_SOURCE_DIR}/init/compileinfo.h CONTENT "gitdesc=\"${git_describe}\"\ncompile_date=\"${compile_time}\"\ncompile_user=\"${compile_user}\"\ncompile_host=\"${compile_host}\"\ngithash=\"${git_hash}\"\n")
