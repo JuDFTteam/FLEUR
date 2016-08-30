@@ -213,7 +213,7 @@ SUBROUTINE w_inpXML(&
       IF(input%sso_opt(1)) sso_optString(1:1) = 'T'
       IF(input%sso_opt(2)) sso_optString(2:2) = 'T'
       WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, Jij%l_disp, sso_optString, noco%mix_b, Jij%thetaJ, Jij%nsh
-      162 FORMAT('         <qss>',f0.15,' ',f0.15,' ',f0.15,'</qss>')
+      162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'
    END IF
@@ -279,11 +279,11 @@ SUBROUTINE w_inpXML(&
       WRITE(fileNum,'(a)') '      <symmetryOperations>'
       DO i = 1, sym%nop
       WRITE(fileNum,'(a)') '         <symOp>'
-      224 FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.15,'</row-1>')
+      224 FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
       WRITE(fileNum,224) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
-      225 FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.15,'</row-2>')
+      225 FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
       WRITE(fileNum,225) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
-      226 FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.15,'</row-3>')
+      226 FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
       WRITE(fileNum,226) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
       WRITE(fileNum,'(a)') '         </symOp>'
       END DO
@@ -320,29 +320,29 @@ SUBROUTINE w_inpXML(&
       WRITE(fileNum,241) scale, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
       IF (cell%latnam.EQ.'any') THEN
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
-         255 FORMAT('            <row-1>',f0.12,' ',f0.12,' ',f0.12,'</row-1>')
+         255 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
          WRITE (fileNum,255) a1Temp(1),a1Temp(2),a1Temp(3)
-         265 FORMAT('            <row-2>',f0.12,' ',f0.12,' ',f0.12,'</row-2>')
+         265 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
          WRITE (fileNum,265) a2Temp(1),a2Temp(2),a2Temp(3)
-         275 FORMAT('            <row-3>',f0.12,' ',f0.12,' ',f0.12,'</row-3>')
+         275 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
          WRITE (fileNum,275) a3Temp(1),a3Temp(2),a3Temp(3)
          WRITE (fileNum,'(a)') '         </bravaisMatrix>'
       ELSE
          IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
      &       (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
      &       (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            256 FORMAT('         <a1>',f0.12,'</a1>')
+            256 FORMAT('         <a1>',f0.10,'</a1>')
             WRITE (fileNum,256) a1Temp(1)
          END IF
          IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            266 FORMAT('         <a2>',f0.12,'</a2>')
+            266 FORMAT('         <a2>',f0.10,'</a2>')
             WRITE (fileNum,266) a2Temp(2)
          END IF
 
          IF (cell%latnam.EQ.'obl') THEN
-            257 FORMAT('         <row-1>',f0.12,' ',f0.12,'</row-1>')
+            257 FORMAT('         <row-1>',f0.10,' ',f0.10,'</row-1>')
             WRITE (fileNum,257) a1Temp(1), a1Temp(2)
-            267 FORMAT('         <row-2>',f0.12,' ',f0.12,'</row-2>')
+            267 FORMAT('         <row-2>',f0.10,' ',f0.10,'</row-2>')
             WRITE (fileNum,267) a2Temp(1), a2Temp(2)
          END IF
       END IF
@@ -355,7 +355,7 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,'(a)') '      </filmLattice>'
    ELSE
 
-      242 FORMAT('      <bulkLattice scale="',f0.12,'" latnam="',a,'">')
+      242 FORMAT('      <bulkLattice scale="',f0.10,'" latnam="',a,'">')
       WRITE (fileNum,242) scale, TRIM(ADJUSTL(cell%latnam))
 
       IF (cell%latnam.EQ.'any') THEN
@@ -364,13 +364,13 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
 
 !            <row-1>0.00000 5.13000 5.13000</row-1>
-         250 FORMAT('            <row-1>',f0.12,' ',f0.12,' ',f0.12,'</row-1>')
+         250 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
          WRITE (fileNum,250) a1Temp(1),a1Temp(2),a1Temp(3)
 !            <row-2>5.13000 0.00000 5.13000</row-2>
-         260 FORMAT('            <row-2>',f0.12,' ',f0.12,' ',f0.12,'</row-2>')
+         260 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
          WRITE (fileNum,260) a2Temp(1),a2Temp(2),a2Temp(3)
 !            <row-3>5.13000 5.13000 0.00000</row-3>
-         270 FORMAT('            <row-3>',f0.12,' ',f0.12,' ',f0.12,'</row-3>')
+         270 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
          WRITE (fileNum,270) a3Temp(1),a3Temp(2),a3Temp(3)
 
          WRITE (fileNum,'(a)') '         </bravaisMatrix>'
@@ -379,26 +379,26 @@ SUBROUTINE w_inpXML(&
       IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
      &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
      &    (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-         252 FORMAT('         <a1>',f0.12,'</a1>')
+         252 FORMAT('         <a1>',f0.10,'</a1>')
          WRITE (fileNum,252) a1Temp(1)
 
          IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            262 FORMAT('         <a2>',f0.12,'</a2>')
+            262 FORMAT('         <a2>',f0.10,'</a2>')
             WRITE (fileNum,262) a2Temp(2)
          END IF
 
-         272 FORMAT('         <c>',f0.12,'</c>')
+         272 FORMAT('         <c>',f0.10,'</c>')
          WRITE (fileNum,272) a3Temp(3)
       END IF
 
       IF (cell%latnam.EQ.'obl') THEN
-         254 FORMAT('         <row-1>',f0.12,' ',f0.12,'</row-1>')
+         254 FORMAT('         <row-1>',f0.10,' ',f0.10,'</row-1>')
          WRITE (fileNum,254) a1Temp(1), a1Temp(2)
 
-         264 FORMAT('         <row-2>',f0.12,' ',f0.12,'</row-2>')
+         264 FORMAT('         <row-2>',f0.10,' ',f0.10,'</row-2>')
          WRITE (fileNum,264) a2Temp(1), a2Temp(2)
 
-         274 FORMAT('         <c>',f0.12,'</c>')
+         274 FORMAT('         <c>',f0.10,'</c>')
          WRITE (fileNum,274) a3Temp(3)
       END IF
 
@@ -572,13 +572,13 @@ SUBROUTINE w_inpXML(&
             yPosString = ''
             zPosString = ''
             IF((scpos.NE.1.0).AND.((tempTaual(1,na).NE.0.0).OR.(tempTaual(2,na).NE.0.0).OR.(tempTaual(3,na).NE.0.0))) THEN
-               WRITE(xPosString,'(f0.12,a1,f0.12)') tempTaual(1,na), '/', scpos
-               WRITE(yPosString,'(f0.12,a1,f0.12)') tempTaual(2,na), '/', scpos
+               WRITE(xPosString,'(f0.10,a1,f0.10)') tempTaual(1,na), '/', scpos
+               WRITE(yPosString,'(f0.10,a1,f0.10)') tempTaual(2,na), '/', scpos
             ELSE
-               WRITE(xPosString,'(f0.12)') tempTaual(1,na)
-               WRITE(yPosString,'(f0.12)') tempTaual(2,na)
+               WRITE(xPosString,'(f0.10)') tempTaual(1,na)
+               WRITE(yPosString,'(f0.10)') tempTaual(2,na)
             END IF
-            WRITE(zPosString,'(f0.12)') tempTaual(3,na)
+            WRITE(zPosString,'(f0.10)') tempTaual(3,na)
             WRITE (fileNum,340) TRIM(ADJUSTL(xPosString)),TRIM(ADJUSTL(yPosString)),TRIM(ADJUSTL(zPosString))
          ELSE
 !         <relPos> x/myConstant  y/myConstant  z/myConstant</relPos>
@@ -587,13 +587,13 @@ SUBROUTINE w_inpXML(&
             yPosString = ''
             zPosString = ''
             IF((scpos.NE.1.0).AND.((tempTaual(1,na).NE.0.0).OR.(tempTaual(2,na).NE.0.0).OR.(tempTaual(3,na).NE.0.0))) THEN
-               WRITE(xPosString,'(f0.12,a1,f0.12)') tempTaual(1,na), '/', scpos
-               WRITE(yPosString,'(f0.12,a1,f0.12)') tempTaual(2,na), '/', scpos
-               WRITE(zPosString,'(f0.12,a1,f0.12)') tempTaual(3,na), '/', scpos
+               WRITE(xPosString,'(f0.10,a1,f0.10)') tempTaual(1,na), '/', scpos
+               WRITE(yPosString,'(f0.10,a1,f0.10)') tempTaual(2,na), '/', scpos
+               WRITE(zPosString,'(f0.10,a1,f0.10)') tempTaual(3,na), '/', scpos
             ELSE
-               WRITE(xPosString,'(f0.12)') tempTaual(1,na)
-               WRITE(yPosString,'(f0.12)') tempTaual(2,na)
-               WRITE(zPosString,'(f0.12)') tempTaual(3,na)
+               WRITE(xPosString,'(f0.10)') tempTaual(1,na)
+               WRITE(yPosString,'(f0.10)') tempTaual(2,na)
+               WRITE(zPosString,'(f0.10)') tempTaual(3,na)
             END IF
             WRITE (fileNum,350) TRIM(ADJUSTL(xPosString)),TRIM(ADJUSTL(yPosString)),TRIM(ADJUSTL(zPosString))
          END IF
