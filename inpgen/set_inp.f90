@@ -48,13 +48,14 @@
       CHARACTER(len=xl_buffer) :: buffer
       LOGICAL, INTENT (IN) :: l_hyb  
       REAL,    INTENT (IN) :: idlist(:)
-      REAL,    INTENT (INOUT) :: a1(3),a2(3),a3(3) 
+      REAL,    INTENT (INOUT) :: a1(3),a2(3),a3(3)
       CHARACTER(len=80), INTENT (IN) :: title
  
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       LOGICAL l_test,l_gga,l_exists, l_explicit
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
+      REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
       CHARACTER(len=1)  :: ch_rw
@@ -417,6 +418,9 @@
 
          l_explicit = juDFT_was_argument("-explicit")
 
+         a1Temp(:) = a1(:)
+         a2Temp(:) = a2(:)
+         a3Temp(:) = a3(:)
          IF(l_explicit) THEN
             ! kpts generation
             CALL inv3(cell%amat,cell%bmat,cell%omtil)
@@ -454,6 +458,10 @@
 
             !set latnam to any
             cell%latnam = 'any'
+
+            a1Temp(:) = cell%amat(:,1)
+            a2Temp(:) = cell%amat(:,2)
+            a3Temp(:) = cell%amat(:,3)
          END IF
 
          errorStatus = 0
@@ -463,10 +471,11 @@
          END IF
          filename = 'inp.xml'
          numSpecies = atoms%nat
+
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
-     &                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
+     &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,scale,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
      &                 l_explicit,numSpecies,enpara)
