@@ -76,8 +76,8 @@ MODULE m_xmlOutput
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
       CALL get_compile_desc(gitdesc,githash,compile_date,compile_user,compile_host)
-      CALL writeXMLElement('Compiled',(/'date','user','host'/),(/compile_date,compile_user,compile_host/))
-      CALL writeXMLElement('Git',(/'version','hash   '/),(/gitdesc,githash/))
+      CALL writeXMLElement('compilationInfo',(/'date','user','host'/),(/compile_date,compile_user,compile_host/))
+      CALL writeXMLElement('gitInfo',(/'version       ','lastCommitHash'/),(/gitdesc,githash/))
       CALL getComputerArchitectures(flags, numFlags)
       IF (numFlags.EQ.0) THEN
          numFlags = 1

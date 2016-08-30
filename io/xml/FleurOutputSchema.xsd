@@ -17,12 +17,25 @@
 
    <xsd:complexType name="ProgramVersionType">
       <xsd:all>
+         <xsd:element maxOccurs="1" minOccurs="0" name="compilationInfo" type="CompilationInfoType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="gitInfo" type="GitInfoType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="targetComputerArchitectures" type="xsd:string"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="precision" type="PrecisionType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="targetStructureClass" type="TargetStructureClassType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="additionalCompilerFlags" type="AdditionalCompilerFlagsType"/>
       </xsd:all>
       <xsd:attribute name="version" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="CompilationInfoType">
+      <xsd:attribute name="date" type="xsd:string" use="required"/>
+      <xsd:attribute name="user" type="xsd:string" use="required"/>
+      <xsd:attribute name="host" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="GitInfoType">
+      <xsd:attribute name="version" type="xsd:string" use="required"/>
+      <xsd:attribute name="lastCommitHash" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="PrecisionType">
@@ -33,7 +46,7 @@
       <xsd:list itemType="xsd:string"/>
    </xsd:simpleType>
 
-   <xsd:simpleType name="AdditionalCompilerFlagType">
+   <xsd:simpleType name="AdditionalCompilerFlagsType">
       <xsd:list itemType="xsd:string"/>
    </xsd:simpleType>
 
