@@ -805,15 +805,23 @@ SUBROUTINE r_inpXML(&
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix/row-1')))
          a1(1) = evaluateFirst(valueString)
          a1(2) = evaluateFirst(valueString)
-         a1(3) = evaluateFirst(valueString)
+         IF(.NOT.input%film) THEN
+            a1(3) = evaluateFirst(valueString)
+         END IF
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix/row-2')))
          a2(1) = evaluateFirst(valueString)
          a2(2) = evaluateFirst(valueString)
-         a2(3) = evaluateFirst(valueString)
+         IF(.NOT.input%film) THEN
+            a2(3) = evaluateFirst(valueString)
+         END IF
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix/row-3')))
-         a3(1) = evaluateFirst(valueString)
-         a3(2) = evaluateFirst(valueString)
-         a3(3) = evaluateFirst(valueString)
+         IF(.NOT.input%film) THEN
+            a3(1) = evaluateFirst(valueString)
+            a3(2) = evaluateFirst(valueString)
+            a3(3) = evaluateFirst(valueString)
+         ELSE
+            WRITE(*,*) 'Note: For film calculations only the upper left 2x2 part of the Bravais matrix is considered.'
+         END IF
       END IF
    END IF ! Note: Further ways to define lattices might be added later. (1D lattice,...)
 
