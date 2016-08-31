@@ -1,0 +1,13 @@
+This directory and its subdirectories contain the automatic tests for FLEUR.
+
+They can be executed after compiling by running "ctest".
+
+The following changes have to me made to create a new test:
+
+A) Create the test scripts. Follow for example the files in tests/tests/CuBulk
+1. create a sub-directory under tests/tests/TESTNAME containing your testcase
+2. in TESTNAME create a test.desc file describing the test
+3. in TESTNAME directory create one or more test.run1, test.run2... etc files that will be executed
+4. in TESTNAME/file put files you need 
+ 
+B) Add the test to tests/CMakeLists.txt again copying an existing example.

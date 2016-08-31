@@ -1,0 +1,12 @@
+$test_name="Fleur Si film";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=4;
+$test_desc=<<EOF
+Test of Fleur with four steps:
+1.Generate a starting density
+2.Run 20 iteration and compare fermi-energy & total energy
+3.Calculate forces and new positions
+4.Run another 20 iterations and compare fermi-energy & total energy
+EOF
+;

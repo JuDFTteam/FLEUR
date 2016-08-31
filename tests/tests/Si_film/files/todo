@@ -1,0 +1,6 @@
+rm -f cdn0* br* st* wk* po* ei* tm*
+mkdir $1
+mv inf out ti* inp $1
+cp cdn1 kpts enpara sy*  $1
+mv inp_new inp
+cp -f qfixx qfix

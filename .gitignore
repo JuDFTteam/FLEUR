@@ -1,0 +1,9 @@
+init/compileinfo.h
+*~
+#*
+build
+*.o
+*.mod
+*.x
+*.swp
+

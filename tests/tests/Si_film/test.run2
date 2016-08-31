@@ -1,0 +1,12 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+	
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_grepexists("$workdir/out","it= 20  is completed");
+$result+=jt::test_grepnumber("$workdir/out","new fermi energy",".*: *([^ ]*)",-0.1787,0.001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-1740.1259,0.001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densities",".*: *([^ ]*)",0.0000,0.0001);
+
+jt::stageresult($workdir,$result,"2");

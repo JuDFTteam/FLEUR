@@ -1,3 +1,95 @@
-Currently, there are no releases or stable commits. Please checkout the development branch by running:
+Welcome to the source code of FLEUR
 
+Outline:
+1. Short Overview of the code
+2. Installation
+
+----------------------------------------------
+1. Overview of the code
+----------------------------------------------
+
+The source of FLEUR is organized in several 
+subdirectories. Some of them collect code 
+specific for particular features, others code
+relevant for crutial steps in the code or simply
+code that is usually executed together.
+Here a short description of the directories:
+
+main: contains the main-program and several core subroutines
+init: stuff for the initialization (called from fleur_init in main)
+vgen: potential generation (called from vgen in main)
+eigen: setup of the eigenproblem
+diagonalization: various methods to diagonalize the Hamiltonian
+cdn: general code for the generation of charge
+cdn_mt: charge generation in MT-spheres
+force: code related to the evaluation of forces
+mix: charge/potential mixing routines
+ldau: routines needed in case of LDA+U calculations
+inpgen: code for the input generator (seperate executable inpgen)
+fermi: determination of the fermi-level
+eigen_secvar: second variational solution of the Hamiltonian
+eigen_soc: Spin-orbit related code
+core: Core states
+dos: Code for Density of states, bandstructures
+orbdep: Code for quantities depending on orbitals
+optional: code that is used in special cases like inital charge generation
+wannier: wannier related code
+xc-pot: various exchange-correlation potential routines
+mpi: code for parallel execution
+
+io: subroutines doing IO
+juDFT: timing, error handling, etc
+math: code providing math functionality
+include: c-type include files
+
+global: code used everywhere (here you find types.F90 with the data-types)
+
+cmake: definitions used by cmake (see Installation)
+
+If you modify FLEUR please do so in the develop branch by running
 git checkout -t origin/develop
+after cloning the git repository.
+
+----------------------------------------------
+2. Installation
+----------------------------------------------
+
+For the compilation of FLEUR you will need:
+
+- Fortran compiler (should support Fortran2008)
+- Compatible C compiler for the XML-IO
+- cmake for controlling the make-process
+- Libraries:
+  * LAPACK/BLAS
+  * MPI for parallelization
+  * SCALAPACK or ELPA or ELEMENTAL if you want to use parallel diagonalization
+    	      (without you can only exploit k-point parallelism)
+  * HDF5 for parallel IO (if you have lots of memory, you might not need to do IO :-)
+
+You should probably create a directory structure like this:
+
+somewhere/src -this is where the source code lives, i.e. the location of this README
+somewhere/build -here you can build the code
+
+change to the build directory and type:
+
+cmake ../src
+make 
+
+This might generate the FLEUR executables. It most probable will only work on systems we know as
+only for those there will be specific configurations in the cmake directory.
+
+If you get errors, you have to configure your build system yourself.
+There are two options to do that.
+- Either set the environment variable FC to either ifort,pgfortran or gfortran.
+Then the configuration in the cmake directory will be used from cmake.[ifort|gfortran|pgfortran].config will be used that can again work for your system or can be adjusted.
+- Or you run cmake with the option -DFleur_custom_toolchain and you adjust cmake.config to your needs.
+You might find inspiration in the cmake.???.config files provided for several systems.
+
+If your build environment is recognized correctly you can obtain the following executables:
+inpgen      - the input generator of FLEUR
+fleur       - general version of FLEUR
+fleur_INVS  - version of FLEUR suitable for systems with inversion symmetry leading to real matrices
+fleur_SOC   - version of FLEUR with spin-orbit coupling
+
+All codes might also have a _MPI attached to indicate parallel versions.

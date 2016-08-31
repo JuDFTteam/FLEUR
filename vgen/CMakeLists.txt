@@ -1,0 +1,52 @@
+set(fleur_F77 ${fleur_F77}
+vgen/dylm3.f
+vgen/fft3dxc.f
+vgen/grdrsvac.f
+vgen/mkgxyz3.f
+vgen/mkgylm.f
+vgen/mkgz.f
+vgen/modcyli.f
+vgen/modcylk.f
+vgen/od_mkgxyz3.f
+vgen/od_mkgz.f
+vgen/pol_angle.f
+vgen/vacp5_0.f
+vgen/vacp5_z.f
+vgen/visp5_0.f
+vgen/visp5_z.f
+)
+set(fleur_F90 ${fleur_F90}
+vgen/convol.f90
+vgen/grdrsis.f90
+vgen/int_nv.F90
+vgen/lhglptg.f90
+vgen/lhglpts.f90
+vgen/mpmom.F90
+vgen/od_vvac.f90
+vgen/od_vvacis.f90
+vgen/pot_mod.f90
+vgen/prp_xcfft_map.f90
+vgen/psqpw.F90
+vgen/rhodirgen.f90
+vgen/vintcz.f90
+vgen/visxc.f90
+vgen/visxcg.f90
+vgen/vmatgen.f90
+vgen/vmts.F90
+vgen/vmtxc.f90
+vgen/vmtxcg.F90
+vgen/vvac.f90
+vgen/vvacis.f90
+vgen/vvacxc.f90
+vgen/vvacxcg.f90
+vgen/vvacxy.f90
+vgen/write_xcstuff.f90
+vgen/xy_av_den.f90
+)
+
+if (${Fleur_uses_VdW})
+   set(fleur_F90 ${fleur_F90}
+      vgen/fleur_vdW.F90
+      vgen/vdW.F90
+    )
+endif()
