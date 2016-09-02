@@ -135,16 +135,12 @@ CONTAINS
                 !$    bcof_loc(:,:) = cmplx(0.0,0.0)
 
 #if ( defined(CPP_SOC) && defined(CPP_INVERSION) )
-                !$ IF (invsat(natom).EQ.1) THEN
-                !$    ALLOCATE(acof_inv(nobd,0:lmd),bcof_inv(nobd,0:size(acof,2)-1))
+                !$ IF (atoms%invsat(natom).EQ.1) THEN
+                !$    ALLOCATE(acof_inv(nobd,0:size(acof,2)-1),bcof_inv(nobd,0:size(acof,2)-1))
                 !$    acof_inv(:,:) = cmplx(0.0,0.0)
                 !$    bcof_inv(:,:) = cmplx(0.0,0.0)
                 !$ ENDIF
 #endif
-
-
-!!!!
-
                 !$OMP  DO
                 DO k = 1,nvmax
                    IF (.NOT.noco%l_noco) THEN
@@ -236,22 +232,20 @@ CONTAINS
                          c_1 = c_0 *  fj(l)
                          c_2 = c_0 * dfj(l)
                          !     ----> loop over bands
-                         !$                 if (.false.) THEN
+                         !$ if (.false.) THEN
                          DO i = 1,ne
-                            acof(i,lm,natom) = acof(i,lm,natom) + &
-                                 &                                  c_1 * work(i)
+                            acof(i,lm,natom) = acof(i,lm,natom) +  c_1 * work(i)
                          ENDDO
                          DO i = 1,ne
-                            bcof(i,lm,natom) = bcof(i,lm,natom) +&
-                                 &                                  c_2 * work(i)
+                            bcof(i,lm,natom) = bcof(i,lm,natom) +  c_2 * work(i)
                          ENDDO
-                         !$                 endif
-                         !$                 DO i = 1,ne
-                         !$                   acof_loc(i,lm) = acof_loc(i,lm) + c_1 * work(i)
-                         !$                 ENDDO
-                         !$                 DO i = 1,ne
-                         !$                   bcof_loc(i,lm) = bcof_loc(i,lm) + c_2 * work(i)
-                         !$                 ENDDO
+                         !$ endif
+                         !$   DO i = 1,ne
+                         !$      acof_loc(i,lm) = acof_loc(i,lm) + c_1 * work(i)
+                         !$   ENDDO
+                         !$   DO i = 1,ne
+                         !$      bcof_loc(i,lm) = bcof_loc(i,lm) + c_2 * work(i)
+                         !$   ENDDO
 #if ( defined(CPP_SOC) && defined(CPP_INVERSION) )
                          IF (atoms%invsat(natom).EQ.1) THEN
                             jatom = sym%invsatnr(natom)
@@ -259,16 +253,12 @@ CONTAINS
                             inv_f = (-1)**(l-m)
                             c_1 =  conjg(c_1) * inv_f
                             c_2 =  conjg(c_2) * inv_f
-                            !$                   if (.false.) THEN
-                            CALL CPP_BLAS_caxpy(ne,c_1,work,1,&
-                                 &                                   acof(1,lmp,jatom),1)
-                            CALL CPP_BLAS_caxpy(ne,c_2,work,1,&
-                                 &                                   bcof(1,lmp,jatom),1)
-                            !$                   endif
-                            !$                   CALL CPP_BLAS_caxpy(ne,c_1,work,1,&
-                            !$                                       acof_inv(1,lmp),1)
-                            !$                   CALL CPP_BLAS_caxpy(ne,c_2,work,1,&
-                            !$                                       bcof_inv(1,lmp),1)
+                            !$ if (.false.) THEN
+                            CALL CPP_BLAS_caxpy(ne,c_1,work,1, acof(1,lmp,jatom),1)
+                            CALL CPP_BLAS_caxpy(ne,c_2,work,1, bcof(1,lmp,jatom),1)
+                            !$ endif
+                            !$  CALL CPP_BLAS_caxpy(ne,c_1,work,1,acof_inv(1,lmp),1)
+                            !$  CALL CPP_BLAS_caxpy(ne,c_2,work,1,bcof_inv(1,lmp),1)
                          ENDIF
 #endif
                       ENDDO ! loop over m
@@ -283,8 +273,8 @@ CONTAINS
                 !$      acof(:,:,natom) = acof(:,:,natom) + acof_loc(:,:)
                 !$      bcof(:,:,natom) = bcof(:,:,natom) + bcof_loc(:,:)
 #if ( defined(CPP_SOC) && defined(CPP_INVERSION) )
-                !$      IF (invsat(natom).EQ.1) THEN
-                !$        jatom = invsatnr(natom)
+                !$      IF (atoms%invsat(natom).EQ.1) THEN
+                !$        jatom = sym%invsatnr(natom)
                 !$        acof(:,:,jatom) = acof(:,:,jatom) + acof_inv(:,:)
                 !$        bcof(:,:,jatom) = bcof(:,:,jatom) + bcof_inv(:,:)
                 !$      ENDIF
@@ -292,7 +282,7 @@ CONTAINS
                 !$OMP END CRITICAL
                 !$    DEALLOCATE(acof_loc,bcof_loc)
 #if ( defined(CPP_SOC) && defined(CPP_INVERSION) )
-                !$    DEALLOCATE(acof_inv,bcof_inv)
+                !$    IF (atoms%invsat(natom).EQ.1) DEALLOCATE(acof_inv,bcof_inv)
 #endif
                 DEALLOCATE(work)
                 !$OMP END PARALLEL

@@ -86,16 +86,9 @@ CONTAINS
     DO ispin = 1, input%jspins
 #if ( defined(CPP_INVERSION) && defined(CPP_SOC) )
        zso(:,1:DIMENSION%neigd,ispin) = CMPLX(z(:,1:DIMENSION%neigd,ispin),0.0)
-       CALL abcof(&
-            atoms_local,neigd,sym,&
-            cell,&
-            bkpt,g1,g2,g3,nv1,lapw%nmat,nsz(ispin),zso(1,1,ispin),&
-            usdus%us(0,1,ispin),usdus%dus(0,1,ispin),usdus%uds(0,1,ispin),&
-            usdus%duds(0,1,ispin),usdus%ddn(0,1,ispin),&
-            usdus%ulos(1,1,ispin),usdus%uulon(1,1,ispin),usdus%dulon(1,1,ispin),&
-            usdus%dulos(1,1,ispin),&
-            noco_local,ispin,kveclo,oneD,&
-            acof,bcof,chelp(-llod,1,1,1,ispin))
+       CALL abcof(atoms_local,dimension%neigd,sym,cell, bkpt,lapw,nsz(ispin),zso(:,:,ispin),&
+            usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin))
+       !
        !
        ! transfer (a,b)cofs to (a,b)helps used in hsoham
        !

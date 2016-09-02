@@ -77,9 +77,9 @@ set_target_properties(fleur_SOC PROPERTIES Fortran_MODULE_DIRECTORY fleur_SOC_mo
 
 
 add_executable(fleur_INVS_SOC ${fleur_SRC} ${c_filesFleur})
-target_link_libraries(fleur_SOC ${HDF5_LIBS} ${LAPACK_LIBS})
-target_compile_definitions(fleur_SOC PUBLIC -DCPP_SOC -DCPP_INVERSION)
-set_target_properties(fleur_SOC PROPERTIES Fortran_MODULE_DIRECTORY fleur_INVS_SOC_modules COMPILE_OPTIONS -Ifleur_INVS_SOC_modules)
+target_link_libraries(fleur_INVS_SOC ${HDF5_LIBS} ${LAPACK_LIBS})
+target_compile_definitions(fleur_INVS_SOC PUBLIC -DCPP_SOC -DCPP_INVERSION)
+set_target_properties(fleur_INVS_SOC PROPERTIES Fortran_MODULE_DIRECTORY fleur_INVS_SOC_modules COMPILE_OPTIONS -Ifleur_INVS_SOC_modules)
 
 endif()
 #parallel executables
@@ -120,9 +120,9 @@ ${fleur_SRC_MPI})
   #fleur_INVS_SOC_MPI
   add_executable(fleur_INVS_SOC_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur}
 ${fleur_SRC_MPI})
-  target_link_libraries(fleur_SOC_MPI ${HDF5_LIBS} ${LAPACK_LIBS})
-  target_compile_definitions(fleur_SOC_MPI PUBLIC ${MPI_DEFINITIONS} -DCPP_SOC -DCPP_INVERSION)
-  set_target_properties(fleur_SOC_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_INVS_SOC_MPI_modules COMPILE_OPTIONS -Ifleur_INVS_SOC_MPI_modules)
+  target_link_libraries(fleur_INVS_SOC_MPI ${HDF5_LIBS} ${LAPACK_LIBS})
+  target_compile_definitions(fleur_INVS_SOC_MPI PUBLIC ${MPI_DEFINITIONS} -DCPP_SOC -DCPP_INVERSION)
+  set_target_properties(fleur_INVS_SOC_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_INVS_SOC_MPI_modules COMPILE_OPTIONS -Ifleur_INVS_SOC_MPI_modules)
 endif ()
 
 #inpgen executable
