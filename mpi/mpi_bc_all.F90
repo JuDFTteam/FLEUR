@@ -261,15 +261,16 @@ CONTAINS
     CALL MPI_BCAST(hybrid%select2,4*atoms%ntypd,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(hybrid%lcutm2,atoms%ntypd,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     !--- HF>
+
     IF(input%l_inpXML) THEN
        n = dimension%nstd*atoms%ntype
        CALL MPI_BCAST(atoms%numStatesProvided,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(atoms%coreStateOccs,2*n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(atoms%coreStateNprnc,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(atoms%coreStateKappa,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(atoms%coreStateNprnc,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(atoms%coreStateKappa,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
        CALL MPI_BCAST(kpts%posScale,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(kpts%specialPoints,3*kpts%numSpecialPoints,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     END IF
  
