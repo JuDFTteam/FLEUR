@@ -963,6 +963,20 @@ SUBROUTINE r_inpXML(&
          IF ((sym%tau(1,i)**2 + sym%tau(2,i)**2 + sym%tau(3,i)**2).GT.1.e-8) THEN
             sym%symor = .FALSE.
          END IF
+         DO j = 1,3
+            IF (ABS(sym%tau(j,i)-0.33333) < 0.00001) THEN
+               sym%tau(j,i) = 1./3.
+            ENDIF
+            IF (ABS(sym%tau(j,i)+0.33333) < 0.00001) THEN
+               sym%tau(j,i) = -1./3.
+            ENDIF
+            IF (ABS(sym%tau(j,i)-0.66667) < 0.00001) THEN
+               sym%tau(j,i) = 2./3.
+            ENDIF
+            IF (ABS(sym%tau(j,i)+0.66667) < 0.00001) THEN
+               sym%tau(j,i) = -2./3.
+            ENDIF
+         ENDDO
       END DO
    END IF
 
@@ -1070,6 +1084,15 @@ SUBROUTINE r_inpXML(&
 &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
       DEALLOCATE(invOps,multtab,optype)
       IF (.not.input%film) sym%nop2=sym%nop
+      IF (input%film) THEN
+         DO n = 1, sym%nop
+            DO i = 1, 3
+               IF (ABS(sym%tau(i,n)) > 0.00001) THEN
+                  CALL juDFT_error("nonsymmorphic symmetries not yet implemented for films!",calledby ="r_inpXML")
+               ENDIF
+            END DO
+         END DO
+      END IF
    END IF
    sym%invs2 = sym%invs.AND.sym%zrfs
 
