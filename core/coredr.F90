@@ -86,31 +86,31 @@ CONTAINS
           brd(j) = br(j,jatom)
        END DO
 
-#ifdef CPP_CORE
-       !--->    linear extension of the potential with slope t1 / a.u.
-       rr = atoms%rmt(jatom)
-       d = EXP(atoms%dx(jatom))
-       t1=0.125
-       !         t2  = vrd(jri(jatom))/rr - rr*t1
-       !         t2b = brd(jri(jatom))/rr - rr*t1
-       t2  = vrs(atoms%jri(jatom),jatom,1)     /rr - rr*t1
-       t2b = vrs(atoms%jri(jatom),jatom,input%jspins)/rr - rr*t1
-#else
-       t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-ncmsh)
-       t2b = brd(atoms%jri(jatom))/ (atoms%jri(jatom)-ncmsh)
-#endif
+       IF (input%l_core_confpot) THEN
+          !--->    linear extension of the potential with slope t1 / a.u.
+          rr = atoms%rmt(jatom)
+          d = EXP(atoms%dx(jatom))
+          t1=0.125
+          !         t2  = vrd(jri(jatom))/rr - rr*t1
+          !         t2b = brd(jri(jatom))/rr - rr*t1
+          t2  = vrs(atoms%jri(jatom),jatom,1)     /rr - rr*t1
+          t2b = vrs(atoms%jri(jatom),jatom,input%jspins)/rr - rr*t1
+       ELSE
+          t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-ncmsh)
+          t2b = brd(atoms%jri(jatom))/ (atoms%jri(jatom)-ncmsh)
+       ENDIF
        IF (atoms%jri(jatom).LT.ncmsh) THEN
           DO i = atoms%jri(jatom) + 1,ncmsh
-#ifdef CPP_CORE
-             rr = d*rr
-             v1 = rr*( t2  + rr*t1 )
-             v2 = rr*( t2b + rr*t1 )
-             vrd(i) = 0.5*(v2 + v1)
-             brd(i) = 0.5*(v2 - v1)
-#else
-             vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
-             brd(i) = brd(atoms%jri(jatom)) + t2b* (i-atoms%jri(jatom))
-#endif
+             IF (input%l_core_confpot) THEN
+                rr = d*rr
+                v1 = rr*( t2  + rr*t1 )
+                v2 = rr*( t2b + rr*t1 )
+                vrd(i) = 0.5*(v2 + v1)
+                brd(i) = 0.5*(v2 - v1)
+             ELSE
+                vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
+                brd(i) = brd(atoms%jri(jatom)) + t2b* (i-atoms%jri(jatom))
+             ENDIF
           END DO
        END IF
 

@@ -91,6 +91,7 @@
      &             cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,scale)
 
+       input%l_core_confpot=.true. !this is the former CPP_CORE switch!
 !---> pk non-collinear
 !---> read the angle information from nocoinf
       noco%qss(:) = 0.0

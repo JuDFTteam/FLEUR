@@ -63,23 +63,24 @@ CONTAINS
        DO j = 1,atoms%jri(jatom)
           vrd(j) = vr(j,jatom)
        ENDDO
-#ifdef CPP_CORE
-       !--->    linear extension of the potential with slope t1 / a.u.
-       t1=0.125
-       t2  = vrd(atoms%jri(jatom))/atoms%rmt(jatom)-atoms%rmt(jatom)*t1
-       rr = atoms%rmt(jatom)
-       d = EXP(atoms%dx(jatom))
-#else
-       t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-DIMENSION%msh)
-#endif
+       IF (input%l_core_confpot) THEN
+          !--->    linear extension of the potential with slope t1 / a.u.
+          t1=0.125
+          t2  = vrd(atoms%jri(jatom))/atoms%rmt(jatom)-atoms%rmt(jatom)*t1
+          rr = atoms%rmt(jatom)
+          d = EXP(atoms%dx(jatom))
+       ELSE
+          t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-DIMENSION%msh)
+       ENDIF
        IF (atoms%jri(jatom).LT.DIMENSION%msh) THEN
           DO i = atoms%jri(jatom) + 1,DIMENSION%msh
-#ifdef CPP_CORE
-             rr = d*rr
-             vrd(i) = rr*( t2 + rr*t1 )
-#else
-             vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
-#endif
+             if (input%l_core_confpot) THEN
+                rr = d*rr
+                vrd(i) = rr*( t2 + rr*t1 )
+             ELSE
+                
+                vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
+             ENDIF
           ENDDO
        END IF
 
