@@ -415,7 +415,7 @@ C
               gamma = gamma - dvec(i,l)*c2(i)
             ENDDO
             gamma = gamma/sum
-            IF ( .NOT.((gamma.LT.1.0e-10).OR.(gamma.GT.cmin)) ) THEN
+            IF ( .NOT.((gamma.LT.1.0e-9).OR.(gamma.GT.cmin)) ) THEN
               cmin = gamma
               lmin = l
             ENDIF
