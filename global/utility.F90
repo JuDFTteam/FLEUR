@@ -98,10 +98,6 @@ MODULE m_utility
       numFlags = numFlags + 1
       flags(numFlags) = 'CPP_HDF'
 #endif
-#ifdef CPP_F90
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_F90'
-#endif
 #ifdef CPP_WANN
       numFlags = numFlags + 1
       flags(numFlags) = 'CPP_WANN'
