@@ -86,7 +86,7 @@ CONTAINS
     DO ispin = 1, input%jspins
 #if ( defined(CPP_INVERSION) && defined(CPP_SOC) )
        zso(:,1:DIMENSION%neigd,ispin) = CMPLX(z(:,1:DIMENSION%neigd,ispin),0.0)
-       CALL abcof(atoms_local,dimension%neigd,sym,cell, bkpt,lapw,nsz(ispin),zso(:,:,ispin),&
+       CALL abcof(input,atoms_local,dimension%neigd,sym,cell, bkpt,lapw,nsz(ispin),zso(:,:,ispin),&
             usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin))
        !
        !
@@ -106,7 +106,7 @@ CONTAINS
        ENDDO
        chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
 #else
-       CALL abcof(atoms_local,dimension%neigd,sym,cell, bkpt,lapw,nsz(ispin),z(:,:,ispin),&
+       CALL abcof(input,atoms_local,dimension%neigd,sym,cell, bkpt,lapw,nsz(ispin),z(:,:,ispin),&
             usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin))
        !
        ! transfer (a,b)cofs to (a,b)helps used in hsoham

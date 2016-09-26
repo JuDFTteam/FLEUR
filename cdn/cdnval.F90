@@ -133,8 +133,8 @@ CONTAINS
     INTEGER :: llpd
     REAL wk,wronk,sign,emcd_lo,emcd_up
     INTEGER i,ie,iv,ivac,j,k,l,l1,lh ,n,ilo,isp,nat,&
-                 nbands,noded,nodeu,noccbd,nslibd,na,&
-                 ikpt,npd ,jsp_start,jsp_end,ispin
+         nbands,noded,nodeu,noccbd,nslibd,na,&
+         ikpt,npd ,jsp_start,jsp_end,ispin
     INTEGER  skip_t,skip_tt
     INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l
     COMPLEX,parameter:: czero=(0.0,0.0)
@@ -352,8 +352,8 @@ CONTAINS
     acnmt(:,:,:,:,:)=0.0 ; bcnmt(:,:,:,:,:)=0.0 ; cclo(:,:,:,:)=0.0
 
     ALLOCATE ( qis(dimension%neigd,kpts%nkptd,dimension%jspd), &
-               qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd), &
-               qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkptd,dimension%jspd) )
+         qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd), &
+         qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkptd,dimension%jspd) )
     qvac(:,:,:,:)=0.0 ;  qvlay(:,:,:,:,:)=0.0
 
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
@@ -398,16 +398,16 @@ CONTAINS
        IF ( atoms%nlo(n) > 0 ) THEN
           DO ispin = jsp_start,jsp_end
              CALL radflo(atoms,n,ispin, ello(1,1,ispin),vr(:,0,n,ispin), f(1,1,0,ispin),&
-                         g(1,1,0,ispin),mpi, usdus, uuilon,duilon,ulouilopn, flo(:,:,:,ispin))
+                  g(1,1,0,ispin),mpi, usdus, uuilon,duilon,ulouilopn, flo(:,:,:,ispin))
           END DO
        END IF
 
        DO ilo = 1, atoms%nlo(n)
           IF (noco%l_mperp) THEN
              CALL int_21lo(f,g,atoms,n, flo,ilo,&
-                           lo21(ilo,n)%uulon,lo21(ilo,n)%dulon,&
-                           lo21(ilo,n)%uloun,lo21(ilo,n)%ulodn,&
-                           uloulopn21(1,1,n))
+                  lo21(ilo,n)%uulon,lo21(ilo,n)%dulon,&
+                  lo21(ilo,n)%uloun,lo21(ilo,n)%ulodn,&
+                  uloulopn21(1,1,n))
           END IF
        END DO
 
@@ -415,10 +415,10 @@ CONTAINS
     END DO
     DEALLOCATE (flo)
 8001 FORMAT (1x,/,/,' wavefunction parameters for atom type',i3,':',/,&
-             t32,'radial function',t79,'energy derivative',/,t3,'l',t8,&
-             'energy',t26,'value',t39,'derivative',t53,'nodes',t68,&
-             'value',t81,'derivative',t95,'nodes',t107,'norm',t119,&
-             'wronskian')
+         t32,'radial function',t79,'energy derivative',/,t3,'l',t8,&
+         'energy',t26,'value',t39,'derivative',t53,'nodes',t68,&
+         'value',t81,'derivative',t95,'nodes',t107,'norm',t119,&
+         'wronskian')
 8002 FORMAT (i3,f10.5,2 (5x,1p,2e16.7,i5),1p,2e16.7)
 
     IF (input%film) vz0(:) = vz(vacuum%nmz,:)
@@ -431,8 +431,8 @@ CONTAINS
        ALLOCATE ( zsl(2,nsld),volsl(nsld) )
        ALLOCATE ( volintsl(nsld) )
        CALL slabgeom(&
-                     atoms,cell,nsld,&
-                     nsl,zsl,nmtsl,nslat,volsl,volintsl)
+            atoms,cell,nsld,&
+            nsl,zsl,nmtsl,nslat,volsl,volintsl)
 
        ALLOCATE ( qintsl(nsld,dimension%neigd))
        ALLOCATE ( qmtsl(nsld,dimension%neigd))
@@ -524,22 +524,22 @@ CONTAINS
           IF (.NOT.ALLOCATED(z)) ALLOCATE (z(dimension%nbasfcn,dimension%neigd))
           z = 0
           CALL cdn_read(&
-                        eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-                        ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
-                        noccbd,n_start,n_end,&
-                        lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-                        lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,z)
+               eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
+               ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
+               noccbd,n_start,n_end,&
+               lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
+               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,z)
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
           !ENDIF
           !
           IF (vacuum%nstm.EQ.3.AND.input%film) THEN
              CALL nstm3(&
-                        sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),&
-                        input,jspin,kpts,&
-                        cell,wk,lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                        evac(1,jspin),vz,vz0,&
-                        gvac1d,gvac2d)
+                  sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),&
+                  input,jspin,kpts,&
+                  cell,wk,lapw%k1(:,jspin),lapw%k2(:,jspin),&
+                  evac(1,jspin),vz,vz0,&
+                  gvac1d,gvac2d)
           END IF
 
           IF (noccbd.EQ.0) GO TO 199
@@ -572,7 +572,7 @@ CONTAINS
                 IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
                 IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
                    IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
-                                               sliceplot%nnne,eig(sliceplot%nnne)
+                        sliceplot%nnne,eig(sliceplot%nnne)
                    nslibd = nslibd + 1
                    eig(nslibd) = eig(sliceplot%nnne)
                    we(nslibd) = we(sliceplot%nnne)
@@ -609,12 +609,12 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(&
-                        stars,kpts,banddos,oneD,&
-                        input,mpi,noco,cell,atoms,sym,ikpt,&
-                        jspin,lapw,noccbd,&
-                        igq_fft,we,z,&
-                        eig,bkpt,&
-                        qpw,cdom,qis,results%force,f_b8)
+                  stars,kpts,banddos,oneD,&
+                  input,mpi,noco,cell,atoms,sym,ikpt,&
+                  jspin,lapw,noccbd,&
+                  igq_fft,we,z,&
+                  eig,bkpt,&
+                  qpw,cdom,qis,results%force,f_b8)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -624,13 +624,13 @@ CONTAINS
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL q_int_sl(&
-                              jspin,stars,atoms,sym,&
-                              volsl,volintsl,&
-                              cell,&
-                              z,noccbd,lapw,&
-                              nsl,zsl,nmtsl,oneD,&
-                              qintsl(:,:))
-                               !
+                     jspin,stars,atoms,sym,&
+                     volsl,volintsl,&
+                     cell,&
+                     z,noccbd,lapw,&
+                     nsl,zsl,nmtsl,oneD,&
+                     qintsl(:,:))
+                !
              END IF
           END IF
           !-new c
@@ -639,15 +639,15 @@ CONTAINS
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
                 CALL vacden(&
-                            vacuum,dimension,stars,oneD,&
-                            kpts,input,&
-                            cell,atoms,noco,banddos,&
-                            gvac1d,gvac2d,&
-                            we,ikpt,jspin,vz,vz0,&
-                            noccbd,z,bkpt,lapw,&
-                            evac,eig,&
-                            rhtxy,rht,qvac,qvlay,&
-                            qstars,cdomvz,cdomvxy)
+                     vacuum,dimension,stars,oneD,&
+                     kpts,input,&
+                     cell,atoms,noco,banddos,&
+                     gvac1d,gvac2d,&
+                     we,ikpt,jspin,vz,vz0,&
+                     noccbd,z,bkpt,lapw,&
+                     evac,eig,&
+                     rhtxy,rht,qvac,qvlay,&
+                     qstars,cdomvz,cdomvxy)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -664,43 +664,43 @@ CONTAINS
           !--->    construct a(tilta) and b(tilta)
           IF (noco%l_mperp) THEN
              ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%natd,dimension%jspd),&
-                        ! Deallocated before call to sympsi
-                        bcof(noccbd,0:dimension%lmd,atoms%natd,dimension%jspd),                &
-                        ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,dimension%jspd) )
+                                ! Deallocated before call to sympsi
+                  bcof(noccbd,0:dimension%lmd,atoms%natd,dimension%jspd),                &
+                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,dimension%jspd) )
           ELSE
              ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%natd,jspin:jspin),&
-                        bcof(noccbd,0:dimension%lmd,atoms%natd,jspin:jspin),&
-                        ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,jspin:jspin) )
+                  bcof(noccbd,0:dimension%lmd,atoms%natd,jspin:jspin),&
+                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,jspin:jspin) )
           END IF
 
           DO ispin = jsp_start,jsp_end
              IF (input%l_f) THEN
                 CALL timestart("cdnval: to_pulay")
                 ALLOCATE (e1cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                          ! Deallocated after call to force_a21
-                          e2cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                          acoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd),&
-                          bcoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd),&
-                          aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                          bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                          cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd) )
+                                ! Deallocated after call to force_a21
+                     e2cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
+                     acoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd),&
+                     bcoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd),&
+                     aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
+                     bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
+                     cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd) )
 
-                CALL to_pulay(atoms,noccbd,sym, lapw, noco,cell,bkpt, z,noccbd,eig,usdus,&
-                              kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                              e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof)
+                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt, z,noccbd,eig,usdus,&
+                     kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                     e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
-                CALL abcof(atoms,noccbd,sym, cell, bkpt,lapw,noccbd,z, usdus, noco,ispin,kveclo,oneD,&
-                           acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin))
+                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,z, usdus, noco,ispin,kveclo,oneD,&
+                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin))
                 CALL timestop("cdnval: abcof")
 
              END IF
 
              IF (atoms%n_u.GT.0) THEN
                 CALL n_mat(atoms,sym,noccbd,usdus,ispin,we, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                           ccof(-atoms%llod:,:,:,:,ispin), n_mmp)
+                     ccof(-atoms%llod:,:,:,:,ispin), n_mmp)
              END IF
              !
              !--->       perform Brillouin zone integration and summation over the
@@ -709,16 +709,16 @@ CONTAINS
              !
              IF (.not.sliceplot%slice) THEN
                 CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,ccof,&
-                            skip_t,l_evp,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
-                            ncore,l_mcd,m_mcd,&
-                            enerlo(1,1,ispin),sqlo(1,1,ispin),&
-                            ener(0,1,ispin),sqal(0,1,ispin),&
-                            qal(0:,:,:,ispin),mcd)
+                     skip_t,l_evp,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
+                     ncore,l_mcd,m_mcd,&
+                     enerlo(1,1,ispin),sqlo(1,1,ispin),&
+                     ener(0,1,ispin),sqal(0,1,ispin),&
+                     qal(0:,:,:,ispin),mcd)
 
                 IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
                    CALL qal_21(atoms, input,noccbd,we,ccof,&
-                               noco,acof,bcof,mt21,lo21,uloulopn21,&
-                               qal,qmat)
+                        noco,acof,bcof,mt21,lo21,uloulopn21,&
+                        qal,qmat)
                 END IF
              END IF
              !
@@ -728,14 +728,14 @@ CONTAINS
              !
              IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
                 CALL q_mt_sl(ispin, atoms,noccbd,nsld, ikpt,noccbd,ccof(-atoms%llod,1,1,1,ispin),&
-                             skip_t,noccbd, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
-                             nmtsl,nsl, qmtsl(:,:))
+                     skip_t,noccbd, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
+                     nmtsl,nsl, qmtsl(:,:))
 
                 INQUIRE (file='orbcomprot',exist=l_orbcomprot)
                 IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
                    CALL abcrot2(atoms, noccbd,&
-                                acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                                ccof(-atoms%llod:,:,:,:,ispin))
+                        acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                        ccof(-atoms%llod:,:,:,:,ispin))
                 END IF
 
                 CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,acof(1:,0:,1:,ispin),bcof(1:,0:,1:,ispin),&
@@ -745,19 +745,19 @@ CONTAINS
              !--->          set up coefficients for the spherical and
              CALL timestart("cdnval: rhomt")
              CALL rhomt(atoms,we,noccbd, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                        uu(0:,:,ispin),dd(0:,:,ispin),du(0:,:,ispin))
+                  uu(0:,:,ispin),dd(0:,:,ispin),du(0:,:,ispin))
              CALL timestop("cdnval: rhomt")
              !+soc
              IF (noco%l_soc) THEN
                 CALL orbmom(atoms,noccbd, we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                            ccof(-atoms%llod:,:,:,:,ispin), orb(0:,-atoms%lmaxd:,:,ispin),orbl(:,-atoms%llod:,:,ispin),&
-                            orblo(:,:,-atoms%llod:,:,ispin) )
+                     ccof(-atoms%llod:,:,:,:,ispin), orb(0:,-atoms%lmaxd:,:,ispin),orbl(:,-atoms%llod:,:,ispin),&
+                     orblo(:,:,-atoms%llod:,:,ispin) )
              END IF
              !     -soc
              !--->          non-spherical m.t. density
              CALL timestart("cdnval: rhonmt")
              CALL rhonmt(atoms,sphhar, we,noccbd,sym, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                         uunmt(0:,:,:,ispin),ddnmt(0:,:,:,ispin), udnmt(0:,:,:,ispin),dunmt(0:,:,:,ispin))
+                  uunmt(0:,:,:,ispin),ddnmt(0:,:,:,ispin), udnmt(0:,:,:,ispin),dunmt(0:,:,:,ispin))
              CALL timestop("cdnval: rhonmt")
 
              !--->          set up coefficients of the local orbitals and the
@@ -765,30 +765,29 @@ CONTAINS
              !--->          non-spherical mt density
              CALL timestart("cdnval: rho(n)mtlo")
              CALL rhomtlo(atoms,&
-                          noccbd,we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                          ccof(-atoms%llod:,:,:,:,ispin),&
-                          aclo(:,:,ispin),bclo(:,:,ispin),cclo(:,:,:,ispin))
-                            !
+                  noccbd,we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                  ccof(-atoms%llod:,:,:,:,ispin),&
+                  aclo(:,:,ispin),bclo(:,:,ispin),cclo(:,:,:,ispin))
+             !
              CALL rhonmtlo(&
-                           atoms,sphhar,&
-                           noccbd,we,acof(:,0:,:,ispin),&
-                           bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),&
-                           acnmt(0:,:,:,:,ispin),bcnmt(0:,:,:,:,ispin),&
-                           ccnmt(:,:,:,:,ispin))
+                  atoms,sphhar,&
+                  noccbd,we,acof(:,0:,:,ispin),&
+                  bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),&
+                  acnmt(0:,:,:,:,ispin),bcnmt(0:,:,:,:,ispin),&
+                  ccnmt(:,:,:,:,ispin))
              CALL timestop("cdnval: rho(n)mtlo")
 
              IF (input%l_f) THEN
                 CALL timestart("cdnval: force_a12/21")
-
-#ifndef CPP_APW
-                CALL force_a12(atoms,noccbd,sym, dimension,cell,oneD,&
-                               we,ispin,noccbd,usdus,acof(:,0:,:,ispin),&
-                               bcof(:,0:,:,ispin),e1cof,e2cof, acoflo,bcoflo, results,f_a12)
-#endif
-                CALL force_a21(atoms,dimension,noccbd,sym,&
-                               oneD,cell,we,ispin,epar(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
-                               bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin), aveccof,bveccof,cveccof,&
-                               results,f_a21,f_b4)
+                IF (.not.input%l_useapw) THEN
+                   CALL force_a12(atoms,noccbd,sym, dimension,cell,oneD,&
+                        we,ispin,noccbd,usdus,acof(:,0:,:,ispin),&
+                        bcof(:,0:,:,ispin),e1cof,e2cof, acoflo,bcoflo, results,f_a12)
+                ENDIF
+                CALL force_a21(input,atoms,dimension,noccbd,sym,&
+                     oneD,cell,we,ispin,epar(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
+                     bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin), aveccof,bveccof,cveccof,&
+                     results,f_a21,f_b4)
 
                 DEALLOCATE (e1cof,e2cof,aveccof,bveccof)
                 DEALLOCATE (acoflo,bcoflo,cveccof)
@@ -798,15 +797,15 @@ CONTAINS
 
           IF (noco%l_mperp) THEN
              CALL rhomt21(atoms, we,noccbd,acof,bcof, ccof,&
-                          mt21,lo21,uloulop21)
+                  mt21,lo21,uloulop21)
              IF (l_fmpl) THEN
                 CALL rhonmt21(atoms,llpd,sphhar, we,noccbd,sym, acof,bcof,&
-                              uunmt21,ddnmt21,udnmt21,dunmt21)
+                     uunmt21,ddnmt21,udnmt21,dunmt21)
              END IF
           END IF
 
           DEALLOCATE (acof,bcof,ccof)
-                         !
+          !
 199       CONTINUE
           IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
              CALL timestart("cdnval: write_info")
@@ -823,15 +822,15 @@ CONTAINS
              cartk=matmul(bkpt,cell%bmat)
              IF (banddos%ndir.GT.0) THEN
                 CALL sympsi(bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                            lapw%k3(:,jspin),sym,dimension,nbands,cell, z,eig,noco, ksym,jsym)
+                     lapw%k3(:,jspin),sym,dimension,nbands,cell, z,eig,noco, ksym,jsym)
              END IF
              !
              !--dw   now write k-point data to tmp_dos
              !
              CALL write_dos(eig_id,ikpt,jspin,qal(:,:,:,jspin),qvac(:,:,ikpt,jspin),qis(:,ikpt,jspin),&
-                            qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd,qintsl,&
-                            qmtsl(:,:),qmtp(:,:),orbcomp)
-                
+                  qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd,qintsl,&
+                  qmtsl(:,:),qmtp(:,:),orbcomp)
+
              CALL timestop("cdnval: write_info")
              !-new_sl
           END IF
@@ -846,17 +845,17 @@ CONTAINS
     CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
        CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-                        input,noco,l_fmpl,ispin,llpd, rhtxy(1,1,1,ispin),&
-                        rht(1,1,ispin),qpw(1,ispin), ener(0,1,ispin),sqal(0,1,ispin),&
-                        results,svac(1,ispin),pvac(1,ispin),uu(0,1,ispin),&
-                        dd(0,1,ispin),du(0,1,ispin),uunmt(0,1,1,ispin),ddnmt(0,1,1,ispin),&
-                        udnmt(0,1,1,ispin),dunmt(0,1,1,ispin),sqlo(1,1,ispin),&
-                        aclo(1,1,ispin),bclo(1,1,ispin),cclo(1,1,1,ispin),&
-                        acnmt(0,1,1,1,ispin),bcnmt(0,1,1,1,ispin),&
-                        ccnmt(1,1,1,1,ispin),enerlo(1,1,ispin),&
-                        orb(0,-atoms%lmaxd,1,ispin),orbl(1,-atoms%llod,1,ispin),&
-                        orblo(1,1,-atoms%llod,1,ispin),mt21,lo21,uloulop21,&
-                        uunmt21,ddnmt21,udnmt21,dunmt21,cdom,cdomvz,cdomvxy,n_mmp)
+            input,noco,l_fmpl,ispin,llpd, rhtxy(1,1,1,ispin),&
+            rht(1,1,ispin),qpw(1,ispin), ener(0,1,ispin),sqal(0,1,ispin),&
+            results,svac(1,ispin),pvac(1,ispin),uu(0,1,ispin),&
+            dd(0,1,ispin),du(0,1,ispin),uunmt(0,1,1,ispin),ddnmt(0,1,1,ispin),&
+            udnmt(0,1,1,ispin),dunmt(0,1,1,ispin),sqlo(1,1,ispin),&
+            aclo(1,1,ispin),bclo(1,1,ispin),cclo(1,1,1,ispin),&
+            acnmt(0,1,1,1,ispin),bcnmt(0,1,1,1,ispin),&
+            ccnmt(1,1,1,1,ispin),enerlo(1,1,ispin),&
+            orb(0,-atoms%lmaxd,1,ispin),orbl(1,-atoms%llod,1,ispin),&
+            orblo(1,1,-atoms%llod,1,ispin),mt21,lo21,uloulop21,&
+            uunmt21,ddnmt21,udnmt21,dunmt21,cdom,cdomvz,cdomvxy,n_mmp)
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
@@ -864,18 +863,18 @@ CONTAINS
        CALL timestart("cdnval: dos")
        IF (mpi%irank==0) THEN
           CALL doswrite(&
-                        eig_id,dimension,kpts,atoms,vacuum,&
-                        input,banddos,&
-                        sliceplot,noco,sym,&
-                        cell,&
-                        l_mcd,ncored,ncore,e_mcd,&
-                        results%ef,nsld,oneD)
+               eig_id,dimension,kpts,atoms,vacuum,&
+               input,banddos,&
+               sliceplot,noco,sym,&
+               cell,&
+               l_mcd,ncored,ncore,e_mcd,&
+               results%ef,nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              CALL Ek_write_sl(&
-                              eig_id,dimension,kpts,atoms,vacuum,&
-                              nsld,input,jspin,&
-                              sym,cell,&
-                              nsl,nslat)
+                  eig_id,dimension,kpts,atoms,vacuum,&
+                  nsld,input,jspin,&
+                  sym,cell,&
+                  nsl,nslat)
           END IF
        END IF
 #ifdef CPP_MPI                
@@ -886,29 +885,29 @@ CONTAINS
 
     IF (mpi%irank==0) THEN
        CALL cdnmt(&
-                  dimension%jspd,atoms,sphhar,llpd,&
-                  noco,l_fmpl,jsp_start,jsp_end,&
-                  epar,ello,vr(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
-                  usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
-                  orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
-                  uunmt21,ddnmt21,udnmt21,dunmt21,&
-                  chmom,clmom,&
-                  qa21,rho)
+            dimension%jspd,atoms,sphhar,llpd,&
+            noco,l_fmpl,jsp_start,jsp_end,&
+            epar,ello,vr(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
+            usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
+            orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
+            uunmt21,ddnmt21,udnmt21,dunmt21,&
+            chmom,clmom,&
+            qa21,rho)
 
        DO ispin = jsp_start,jsp_end
           WRITE (6,*) 'Energy Parameters for spin:',ispin
           IF (.not.sliceplot%slice) THEN
              CALL mix_enpara(&
-                             ispin,atoms,vacuum,obsolete,input,&
-                             enpara,&
-                             vr(:,0,:,:),vz,pvac(1,ispin),&
-                             svac(1,ispin),&
-                             ener(0,1,ispin),sqal(0,1,ispin),&
-                             enerlo(1,1,ispin),&
-                             sqlo(1,1,ispin))
+                  ispin,atoms,vacuum,obsolete,input,&
+                  enpara,&
+                  vr(:,0,:,:),vz,pvac(1,ispin),&
+                  svac(1,ispin),&
+                  ener(0,1,ispin),sqal(0,1,ispin),&
+                  enerlo(1,1,ispin),&
+                  sqlo(1,1,ispin))
              CALL w_enpara(&
-                           atoms,jspin,input%film,&
-                           enpara,16)
+                  atoms,jspin,input%film,&
+                  enpara,16)
           END IF
 
           !--->      check continuity of charge density
@@ -927,20 +926,20 @@ CONTAINS
                       xp(3,j) = sign*cell%z1/cell%amat(3,3)
                    END DO
                    CALL checkdop(&
-                                 xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
-                                 sphhar,stars,sym,&
-                                 vacuum,cell,oneD,&
-                                 qpw,rho,rhtxy,rht)
+                        xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
+                        sphhar,stars,sym,&
+                        vacuum,cell,oneD,&
+                        qpw,rho,rhtxy,rht)
                 END DO
              ELSE IF (oneD%odi%d1) THEN
                 !-odim
                 npd = min(dimension%nspd,25)
                 CALL cylpts(xp,npd,cell%z1)
                 CALL checkdop(&
-                              xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
-                              sphhar,stars,sym,&
-                              vacuum,cell,oneD,&
-                              qpw,rho,rhtxy,rht)
+                     xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
+                     sphhar,stars,sym,&
+                     vacuum,cell,oneD,&
+                     qpw,rho,rhtxy,rht)
                 !+odim
              END IF
              !--->          m.t. boundaries
@@ -948,10 +947,10 @@ CONTAINS
              DO n = 1, atoms%ntype
                 CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,atoms%nat))
                 CALL checkdop(&
-                              xp,dimension%nspd,n,nat,0,-1,ispin,.true.,&
-                              dimension,atoms,sphhar,stars,sym,&
-                              vacuum,cell,oneD,&
-                              qpw,rho,rhtxy,rht)
+                     xp,dimension%nspd,n,nat,0,-1,ispin,.true.,&
+                     dimension,atoms,sphhar,stars,sym,&
+                     vacuum,cell,oneD,&
+                     qpw,rho,rhtxy,rht)
                 nat = nat + atoms%neq(n)
              END DO
              CALL timestop("cdnval: cdninf-stuff")
@@ -961,11 +960,11 @@ CONTAINS
           !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) THEN
              CALL timestart("cdnval: force_a8")
-             CALL force_a8(atoms,sphhar, ispin, vr,rho,&
-                           f_a12,f_a21,f_b4,f_b8,results%force)
+             CALL force_a8(input,atoms,sphhar, ispin, vr,rho,&
+                  f_a12,f_a21,f_b4,f_b8,results%force)
              CALL timestop("cdnval: force_a8")
           END IF
-                            !-for
+          !-for
        END DO ! end of loop ispin = jsp_start,jsp_end
        CALL closeXMLElement('mtCharges')
     END IF ! end of (mpi%irank==0)

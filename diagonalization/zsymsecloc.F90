@@ -50,17 +50,6 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN)  :: matind(dimension%nbasfcn,2)
     REAL,    INTENT (OUT) :: eig(dimension%neigd)
-#ifdef CPP_F90
-
-#ifdef CPP_INVERSION
-    REAL,  INTENT (INOUT) :: a(:),b(:)
-    REAL,  INTENT (INOUT) :: z(:,:)
-#else
-    COMPLEX, INTENT (INOUT)::a(:),b(:)
-    COMPLEX, INTENT (INOUT) :: z(:,:)
-#endif
-
-#else
 
 #ifdef CPP_INVERSION
     REAL, ALLOCATABLE, INTENT (INOUT) :: a(:),b(:)
@@ -70,7 +59,6 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT (INOUT) :: z(:,:)
 #endif
 
-#endif
 
 #ifdef CPP_INVERSION
     real locrec(atoms%nlotot,atoms%nlotot)
@@ -105,9 +93,7 @@ CONTAINS
 
 
     !      print*,"in zsymsecloc"
-#ifndef CPP_F90
     deallocate(z)
-#endif
 
     !******************************************
     ! l_zref=.false. => simply call eigensolver
@@ -115,10 +101,8 @@ CONTAINS
     if(.not.sym%l_zref)then
        call geneigprobl(dimension%nbasfcn, nsize,dimension%neigd,jij%l_j,a,b, z,eig,ne)
 
-#ifndef CPP_F90
        allocate(a(dimension%nbasfcn*(dimension%nbasfcn+1)/2))
        allocate(b(dimension%nbasfcn*(dimension%nbasfcn+1)/2))
-#endif
        return
        !******************************************
        ! l_zref=.true. => blockdiagonalize
@@ -461,9 +445,7 @@ CONTAINS
        !  z1 holds eigenvectors of even block.
        !  z2 holds eigenvectors of odd block.
        !********************************************************************
-#ifndef CPP_F90
        allocate(z(dimension%nbasfcn,dimension%neigd))
-#endif
        allocate(evensort(ne))
        etemp1(ne1+1)=99.9e9
        etemp2(ne2+1)=99.9e9
@@ -529,10 +511,8 @@ CONTAINS
           endif !evensort
        enddo !ii
 
-#ifndef CPP_F90
        allocate(a(dimension%nbasfcn*(dimension%nbasfcn+1)/2))
        allocate(b(dimension%nbasfcn*(dimension%nbasfcn+1)/2))
-#endif
     endif !sym%l_zref
 
     deallocate ( z1,z2,etemp1,etemp2,evensort )

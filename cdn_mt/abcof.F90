@@ -1,6 +1,6 @@
 MODULE m_abcof
 CONTAINS
-  SUBROUTINE abcof(atoms,nobd,sym, cell, bkpt,lapw,ne,z,usdus,&
+  SUBROUTINE abcof(input,atoms,nobd,sym, cell, bkpt,lapw,ne,z,usdus,&
        noco,jspin,kveclo,oneD, acof,bcof,ccof)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
@@ -16,7 +16,8 @@ CONTAINS
     USE m_ylm
     USE m_types
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)   :: usdus
+    TYPE(t_input),INTENT(IN)  :: input
+    TYPE(t_usdus),INTENT(IN)  :: usdus
     TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_noco),INTENT(IN)   :: noco
@@ -79,9 +80,7 @@ CONTAINS
           DO lo = 1,atoms%nlo(n)
              IF (atoms%l_dulo(lo,n)) apw(l,n) = .true.
           ENDDO
-#ifdef CPP_APW
-          IF (atoms%lapw_l(n).GE.l) apw(l,n) = .false.
-#endif
+          IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l,n) = .false.
        ENDDO
        DO lo = 1,atoms%nlo(n)
           IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n),n) = .true.

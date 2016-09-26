@@ -601,6 +601,7 @@
         CHARACTER(LEN=8) :: comment(10)
         TYPE(t_efield)::efield
         LOGICAL :: l_core_confpot
+        LOGICAL :: l_useapw
      END TYPE
 
      type t_sliceplot

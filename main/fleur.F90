@@ -461,16 +461,12 @@
                                !
                                ! eig66(2)=eig66(1)=T <=> in first run of program
                                !                         only 1st variation is done
-#if (defined(CPP_HDF)||defined(CPP_IO))
 #ifndef CPP_HDF
                                !TODO: LOGIC HAS to be fixed
                                !call judft_error("HDF needed for J_ij")
                                INQUIRE(file='eig.bas',exist=input%eigvar(3))
 #endif
                                INQUIRE(file='eig.hdf',exist=input%eigvar(3))
-#else
-                               INQUIRE(file='eig.bas',exist=input%eigvar(3))
-#endif
                                input%eigvar(3)=.TRUE.
                                input%eigvar(1)= .NOT.input%eigvar(3)
                                input%eigvar(2)= obsolete%eig66(2) .EQV. input%eigvar(3)

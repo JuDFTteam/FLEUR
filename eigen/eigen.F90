@@ -453,7 +453,7 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           call timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms, a,b)
+          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms, a,b)
 
           call timestop("Interstitial Hamiltonian&Overlap")
           !

@@ -17,10 +17,8 @@ c----------------------------------------------------------------------
       SUBROUTINE exchpbe(
      >                   icorr,rho,s,u,v,lgga,lpot,
      <                   ex,vx,vx_sr)
-#ifndef CPP_GF
       USE m_hsefunctional, ONLY: calculateEnhancementFactor
       USE m_hybridmix
-#endif
       USE m_constants,     ONLY: pi_const
       USE m_icorrkeys
 
@@ -116,7 +114,6 @@ c-gu
         ! Calculate the enhancement factor fxhse and its derivatives 
         ! as integral over the exchange hole (cf. [d])
         kF = (3.0 * pi_const**2 * rho)**thrd
-#ifndef CPP_GF
         CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
      &                                  dFx_dkF, d2Fx_dsdkF)
         IF ( icorr == icorr_vhse ) THEN
@@ -124,7 +121,6 @@ c-gu
         ELSE
           ex = exunif * (fxpbe - aMix_HSE * fxhse )
         END IF
-#endif
       ELSE
         ex = exunif*fxpbe
       END IF

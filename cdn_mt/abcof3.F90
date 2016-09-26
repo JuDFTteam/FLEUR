@@ -1,6 +1,6 @@
 MODULE m_abcof3
 CONTAINS
-  SUBROUTINE abcof3(atoms,sym,jspin, cell, bkpt,lapw,&
+  SUBROUTINE abcof3(input,atoms,sym,jspin, cell, bkpt,lapw,&
        usdus, kveclo,oneD,a,b,bascof_lo)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
@@ -16,6 +16,7 @@ CONTAINS
     USE m_ylm
     USE m_types
     IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_usdus),INTENT(IN)   :: usdus
     TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_oneD),INTENT(IN)   :: oneD
@@ -61,9 +62,8 @@ CONTAINS
           DO lo = 1,atoms%nlo(n)
              IF (atoms%l_dulo(lo,n)) apw(l,n) = .true.
           ENDDO
-#ifdef CPP_APW
-          IF (atoms%lapw_l(n).GE.l) apw(l,n) = .false.
-#endif
+          IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l,n) = .false.
+
        ENDDO
        DO lo = 1,atoms%nlo(n)
           IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n),n) = .true.

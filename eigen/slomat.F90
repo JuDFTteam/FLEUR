@@ -12,7 +12,7 @@ MODULE m_slomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE slomat(&
-       atoms, ntyp,na,lapw,con1,n_size,n_rank,&
+       input,atoms, ntyp,na,lapw,con1,n_size,n_rank,&
        gk,rph,cph,f,g,kvec,usp,ud, alo1,blo1,clo1,noco,&
        ab_dim,iintsp,jintsp,chi11,chi22,chi21, iilo,locol,nkvecprevat,bb)
     !***********************************************************************
@@ -32,6 +32,7 @@ CONTAINS
     USE m_constants,ONLY: fpi_const
     USE m_types
     IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_lapw),INTENT(IN)   :: lapw
@@ -89,7 +90,7 @@ CONTAINS
           ENDDO
           k = ic*(lapw%nv(jintsp)+nkvecprevat) + (ic+1)*ic/2
           ALLOCATE ( bhelp(k) )       ! initialize help-array 
-          bhelp=cmplx(0.,0.)
+          bhelp=CMPLX(0.,0.)
           iilo = 0
        ENDIF
        !-noco
@@ -99,25 +100,25 @@ CONTAINS
           l = atoms%llo(lo,ntyp)
           l2p1 = 2*l + 1
           fl2p1 = l2p1/fpi_const
-#ifdef CPP_APW
-          fact1 = (con**2)* fl2p1 * (&
-               alo1(lo)* (  alo1(lo) + &
-               2*clo1(lo)*   ud%uulon(lo,ntyp,usp) ) +&
-               blo1(lo)* (  blo1(lo)*     ud%ddn(l,ntyp,usp) +&
-               2*clo1(lo)*   ud%dulon(lo,ntyp,usp) ) +&
-               clo1(lo)*    clo1(lo)*ud%uloulopn(lo,lo,ntyp,usp) )
-#else
-          fact1 = (con**2)* fl2p1 * (&
-               alo1(lo)* (  alo1(lo) + &
-               2*clo1(lo) * ud%uulon(lo,ntyp,usp) ) +&
-               blo1(lo)* (  blo1(lo) * ud%ddn(l, ntyp,usp) +&
-               2*clo1(lo) * ud%dulon(lo,ntyp,usp) ) +&
-               clo1(lo)*    clo1(lo) )
-#endif
+          IF (input%l_useapw) THEN
+             fact1 = (con**2)* fl2p1 * (&
+                  alo1(lo)* (  alo1(lo) + &
+                  2*clo1(lo)*   ud%uulon(lo,ntyp,usp) ) +&
+                  blo1(lo)* (  blo1(lo)*     ud%ddn(l,ntyp,usp) +&
+                  2*clo1(lo)*   ud%dulon(lo,ntyp,usp) ) +&
+                  clo1(lo)*    clo1(lo)*ud%uloulopn(lo,lo,ntyp,usp) )
+          ELSE
+             fact1 = (con**2)* fl2p1 * (&
+                  alo1(lo)* (  alo1(lo) + &
+                  2*clo1(lo) * ud%uulon(lo,ntyp,usp) ) +&
+                  blo1(lo)* (  blo1(lo) * ud%ddn(l, ntyp,usp) +&
+                  2*clo1(lo) * ud%dulon(lo,ntyp,usp) ) +&
+                  clo1(lo)*    clo1(lo) )
+          ENDIF
           DO nkvec = 1,invsfct* (2*l+1)
              !+t3e
              locol = locol + 1
-             IF (mod(locol-1,n_size).EQ.n_rank) THEN
+             IF (MOD(locol-1,n_size).EQ.n_rank) THEN
                 !-t3e
                 k = kvec(nkvec,lo)
                 !--->          calculate the overlap matrix elements with the regular
@@ -137,15 +138,15 @@ CONTAINS
                         ( rph(k,iintsp)*rph(kp,jintsp) +&
                         cph(k,iintsp)*cph(kp,jintsp) )
 #else
-                   IF (.not.noco%l_ss) THEN
+                   IF (.NOT.noco%l_ss) THEN
                       bb(iilo) = bb(iilo) + invsfct*fact2 * legpol(l,dotp) *&
-                           cmplx( ( rph(k,iintsp)*rph(kp,jintsp) +&
+                           CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
                            cph(k,iintsp)*cph(kp,jintsp) ) ,&
                            ( cph(k,iintsp)*rph(kp,jintsp) -&
                            rph(k,iintsp)*cph(kp,jintsp) ) )
                    ELSE 
                       bhelp(iilo) = invsfct*fact2*legpol(l,dotp) *&
-                           cmplx( ( rph(k,iintsp)*rph(kp,jintsp) +&
+                           CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
                            cph(k,iintsp)*cph(kp,jintsp) ) ,&
                            ( cph(k,iintsp)*rph(kp,jintsp) -&
                            rph(k,iintsp)*cph(kp,jintsp) ) )
@@ -177,15 +178,15 @@ CONTAINS
                               ( rph(k,iintsp)*rph(kp,jintsp) +&
                               cph(k,iintsp)*cph(kp,jintsp) )
 #else
-                         IF (.not.noco%l_ss) THEN
+                         IF (.NOT.noco%l_ss) THEN
                             bb(iilo) =bb(iilo)+invsfct*fact3*legpol(l,dotp)*&
-                                 cmplx( ( rph(k,iintsp)*rph(kp,jintsp) +&
+                                 CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
                                  cph(k,iintsp)*cph(kp,jintsp) ) ,&
                                  ( cph(k,iintsp)*rph(kp,jintsp) -&
                                  rph(k,iintsp)*cph(kp,jintsp) ) )
                          ELSE 
                             bhelp(iilo) = invsfct*fact3*legpol(l,dotp)*&
-                                 cmplx( ( rph(k,iintsp)*rph(kp,jintsp) +&
+                                 CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
                                  cph(k,iintsp)*cph(kp,jintsp) ) ,&
                                  ( cph(k,iintsp)*rph(kp,jintsp) -&
                                  rph(k,iintsp)*cph(kp,jintsp) ) )
@@ -209,15 +210,15 @@ CONTAINS
                         ( rph(k,iintsp)*rph(kp,jintsp) +&
                         cph(k,iintsp)*cph(kp,jintsp) )
 #else
-                   IF (.not.noco%l_ss) THEN
+                   IF (.NOT.noco%l_ss) THEN
                       bb(iilo) = bb(iilo) + invsfct*fact1*legpol(l,dotp)*&
-                           cmplx( ( rph(k,iintsp)*rph(kp,jintsp) +&
+                           CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
                            cph(k,iintsp)*cph(kp,jintsp) ) ,&
                            ( cph(k,iintsp)*rph(kp,jintsp) -&
                            rph(k,iintsp)*cph(kp,jintsp) ) )
                    ELSE 
                       bhelp(iilo) = invsfct*fact1*legpol(l,dotp)*&
-                           cmplx( ( rph(k,iintsp)*rph(kp,jintsp) +&
+                           CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
                            cph(k,iintsp)*cph(kp,jintsp) ) ,&
                            ( cph(k,iintsp)*rph(kp,jintsp) -&
                            rph(k,iintsp)*cph(kp,jintsp) ) )
@@ -250,13 +251,13 @@ CONTAINS
           DO lo = 1,atoms%nlo(ntyp)
              ic = ic + invsfct* (2*atoms%llo(lo,ntyp)+1)
           ENDDO
-          IF (.not.( iintsp.EQ.1 .AND. jintsp.EQ.2 )) THEN
+          IF (.NOT.( iintsp.EQ.1 .AND. jintsp.EQ.2 )) THEN
              ii = 0
              DO k = 1, ic
                 n = k + lapw%nv(jintsp) + nkvecprevat_s
 #ifndef CPP_INVERSION
                 bb(ij+1:ij+n-1)=bb(ij+1:ij+n-1)+chihlp*bhelp(ii+1:ii+n-1)
-                IF (.not.(iintsp.EQ.2 .AND. jintsp.EQ.1 )) THEN
+                IF (.NOT.(iintsp.EQ.2 .AND. jintsp.EQ.1 )) THEN
                    bb(ij+n)=bb(ij+n)+chihlp*bhelp(ii+n)
                 ENDIF
 #endif
@@ -270,7 +271,7 @@ CONTAINS
                 ij = (n+1)*n/2 + lapw%nv(1) + k + nkvecprevat_s
                 DO kp = 1, k + lapw%nv(jintsp) + nkvecprevat_s
                    ii = ii + 1
-                   bb(ij) = bb(ij) +  chihlp *conjg( bhelp(ii) )
+                   bb(ij) = bb(ij) +  chihlp *CONJG( bhelp(ii) )
                    ij = ij + lapw%nv(1) + kp + atoms%nlotot
                 ENDDO
              ENDDO
@@ -282,7 +283,7 @@ CONTAINS
           !           write(4,'(8f15.8)') bhelp(n),bhelp(n1+n),bhelp(n2+n),bhelp(n3+n)
           !          enddo
           DEALLOCATE ( bhelp )
-          IF (.not.( iintsp.EQ.2 .AND. jintsp.EQ.2 )) THEN
+          IF (.NOT.( iintsp.EQ.2 .AND. jintsp.EQ.2 )) THEN
              iilo = iilo_s
              locol = locol_s             ! restore for other loops
              nkvecprevat = nkvecprevat_s

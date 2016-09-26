@@ -38,11 +38,7 @@ c     ..
       DATA thrdm,thrd2/-0.333333333333e0,0.666666666667e0/
 c.....-----------------------------------------------------------------
 c     expsm: argument of exponential-smallest.
-#ifdef CPP_DEC
-      expsm=-300.
-#else
-      expsm=-500.
-#endif
+      expsm=minexponent(expsm)/1.5
       argmx = 174.0
       bet = xnu*cc0
       delt = 2.e0*alf/bet

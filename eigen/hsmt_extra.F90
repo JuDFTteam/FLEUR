@@ -248,11 +248,11 @@ CONTAINS
                    IF(l_socfirst) fjstart = isp
 #ifndef CPP_INVERSION
                    CALL slomat(&
-                        atoms, n,na,lapw,con1,n_size,n_rank, gk,rph,cph,&
+                        input,atoms, n,na,lapw,con1,n_size,n_rank, gk,rph,cph,&
                         fj(:,0:,:,fjstart:), gj(:,0:,:,fjstart:),&
                         kvec,isp,usdus,alo1,blo1,clo1,noco, ab_dim,1,1,chi11,chi22,chi21,&
                         iilos,locols,nkvecprevats,bbhlp)
-                   CALL hlomat(atoms,isp,isp,n_size,n_rank,&
+                   CALL hlomat(input,atoms,isp,isp,n_size,n_rank,&
                         n,na,lapw,ar(:,0:,1),br(:,0:,1),ai(:,0:,1),bi(:,0:,1),&
                         el(:,n,isp),alo,blo,clo,usdus, noco,1,1,chi11,chi22,chi21,&
                         iiloh,locolh,nkvecprevath,tlmplm,aahlp)
@@ -261,11 +261,11 @@ CONTAINS
                    jd = 1 ; IF (noco%l_noco) jd = isp
                    DO iintsp = 1,nintsp
                       DO jintsp = 1,nintsp
-                         CALL slomat(atoms,n,na,lapw,con1,n_size,n_rank,&
+                         CALL slomat(input,atoms,n,na,lapw,con1,n_size,n_rank,&
                               gk,rph,cph,fj,gj, kvec,isp,usdus,alo1,blo1,clo1,noco,&
                               ab_dim,iintsp,jintsp,chi11,chi22,chi21,&
                               iilos,locols,nkvecprevats,bb)
-                         CALL hlomat(atoms,isp,jd,n_size,n_rank,&
+                         CALL hlomat(input,atoms,isp,jd,n_size,n_rank,&
                               n,na,lapw,ar(:,0:,jintsp),br(:,0:,jintsp),ai(:,0:,jintsp),bi(:,0:,jintsp),&
                               el(:,n,isp),alo,blo,clo,usdus, noco,iintsp,jintsp,chi11,chi22,chi21,&
                               iiloh,locolh,nkvecprevath,tlmplm,aa)

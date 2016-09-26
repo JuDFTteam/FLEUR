@@ -852,7 +852,8 @@ c           in s and p states equal occupation of up and down states
 ! electrons associated with a given number of core-levels
 !
       nce=-1;
-      nce(0) = 0  ; nce(1) = 2  ; nce(2)= 4   ; nce(4) = 10  ; nce(5) = 12 ; nce(7) =18 ;nce(8)=20; 
+      nce(0) = 0  ; nce(1) = 2  ; nce(2)= 4   ; nce(4) = 10  
+      nce(5) = 12 ; nce(7) =18 ;nce(8)=20; 
       nce(9) = 28 ; nce(12) = 36; nce(14) = 46; nce(17) = 54
       nce(19) = 68; nce(21) = 78; nce(24) = 86
 
@@ -880,7 +881,7 @@ c           in s and p states equal occupation of up and down states
      +    1119,1119,319,319,219,219,219,219,619,421,421,421,421,421,421,  ! Hf - Rn
      + 324,324,224,224,224,24,24,24,24,24,24,24, 24,24,24,24,24/)   ! Fr - Lw
 
-      if (judft_was_argument("-fast_defaults")) &
+      if (judft_was_argument("-fast_defaults")) 
      + ncst1 =(/0,0,                                                0,  ! Va,H,He
      +     01, 01,                                  1, 1, 1, 1, 1, 1,  ! Li - Ne
      +     04, 04,                                  4, 4, 4, 4, 4, 4,  ! Na - Ar
@@ -904,25 +905,25 @@ c           in s and p states equal occupation of up and down states
          locore=locore+2
          ncst2=ncst2-1
          nlo(n)=nlo(n)+1
-         nlo(nlo(n),n)=0
+         llo(nlo(n),n)=0
       ENDIF
       IF (btest(lo,1)) THEN !p-lo
          locore=locore+6
          ncst2=ncst2-2
          nlo(n)=nlo(n)+1
-         nlo(nlo(n),n)=1
+         llo(nlo(n),n)=1
       ENDIF
       IF (btest(lo,2)) THEN !d-lo
          locore=locore+10
          ncst2=ncst2-2
          nlo(n)=nlo(n)+1
-         nlo(nlo(n),n)=2
+         llo(nlo(n),n)=2
       ENDIF
       IF (btest(lo,3)) THEN !f-lo
          locore=locore+14
          ncst2=ncst2-2
          nlo(n)=nlo(n)+1
-         nlo(nlo(n),n)=3
+         llo(nlo(n),n)=3
       ENDIF
       
       nel = nel +  locore  * neq(n)

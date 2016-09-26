@@ -1,4 +1,6 @@
+#ifndef CPP_ESSL
 #define CPP_Singleton
+#endif
 !You might want to undefine CPP_singleton to use essl FFT
       MODULE m_cfft
       IMPLICIT NONE

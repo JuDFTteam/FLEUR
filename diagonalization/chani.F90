@@ -302,17 +302,11 @@ CONTAINS
        WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed'
        CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
     ENDIF
-#ifdef CPP_T90
-    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
-         0.0,1.0,1,m,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
-         desceigv,work2,-1,rwork,-1,iwork,-1,ifail,iclustr,&
-         gap,ierr)
-#else
+
     CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
          0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
          desceigv,work2,-1,rwork,-1,iwork,-1,ifail,iclustr,&
          gap,ierr)
-#endif
     IF (ABS(work2(1)).GT.lwork2) THEN
        lwork2=work2(1)
        DEALLOCATE (work2)

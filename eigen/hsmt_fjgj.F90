@@ -7,7 +7,7 @@ MODULE m_hsmt_fjgj
   use m_juDFT
   implicit none
 CONTAINS
-  SUBROUTINE hsmt_fjgj(atoms,isp,noco,l_socfirst,cell,nintsp, lapw,usdus,fj,gj)
+  SUBROUTINE hsmt_fjgj(input,atoms,isp,noco,l_socfirst,cell,nintsp, lapw,usdus,fj,gj)
 !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
 !radial functions at the MT boundary as contained in usdus
     USE m_constants, ONLY : fpi_const
@@ -15,6 +15,7 @@ CONTAINS
     USE m_dsphbs
     USE m_types
     IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -43,9 +44,8 @@ CONTAINS
        DO n = 1,atoms%ntype
           DO l = 0,atoms%lmax(n)
              apw(l)=any(atoms%l_dulo(:atoms%nlo(n),n))
-#ifdef CPP_APW
-             IF (atoms%lapw_l(n).GE.l) apw(l) = .false.
-#endif
+             IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l) = .false.
+
           ENDDO
           DO lo = 1,atoms%nlo(n)
              IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .true.

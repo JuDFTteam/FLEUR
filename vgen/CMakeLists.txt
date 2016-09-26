@@ -43,10 +43,8 @@ vgen/vvacxy.f90
 vgen/write_xcstuff.f90
 vgen/xy_av_den.f90
 )
-
-if (${Fleur_uses_VdW})
-   set(fleur_F90 ${fleur_F90}
+#vdW Stuff
+set(fleur_F90 ${fleur_F90}
       vgen/fleur_vdW.F90
       vgen/vdW.F90
     )
-endif()

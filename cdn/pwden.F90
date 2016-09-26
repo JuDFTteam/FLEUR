@@ -371,7 +371,7 @@ CONTAINS
           isn = 1
 #if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
      CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
-          nw1,nw2,nw3,wsave,psir(ifftq3d), psir(-ifftq2))
+     nw1,nw2,nw3,wsave,psir(ifftq3d), psir(-ifftq2))
 
      ! GM forces part
           IF (input%l_f) THEN
@@ -566,8 +566,8 @@ CONTAINS
 
        isn = -1
 #if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-       CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
-            stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,psir(ifftq3d), rhon(-ifftq2))
+     CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
+     stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,psir(ifftq3d), rhon(-ifftq2))
        IF (input%l_f) CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
             stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,kpsir(ifftq3d), ekin(-ifftq2))
 #else
@@ -620,18 +620,19 @@ CONTAINS
     DO istr = 1 , stars%ng3_fft
        cwk(istr) = scale * cwk(istr) / REAL( stars%nstr(istr) )
     ENDDO
-#ifdef CPP_APW
-    IF (input%l_f) THEN
-       DO istr = 1 , stars%ng3_fft
-          ecwk(istr) = scale * ecwk(istr) / REAL( stars%nstr(istr) )
-       ENDDO
-       CALL forces_b8(&
-            atoms,ecwk,stars,&
-            sym,cell,&
-            jspin,&
-            forces,f_b8)
+    IF (input%l_useapw) THEN
+
+       IF (input%l_f) THEN
+          DO istr = 1 , stars%ng3_fft
+             ecwk(istr) = scale * ecwk(istr) / REAL( stars%nstr(istr) )
+          ENDDO
+          CALL force_b8(&
+               atoms,ecwk,stars,&
+               sym,cell,&
+               jspin,&
+               forces,f_b8)
+       ENDIF
     ENDIF
-#endif
     !
     !---> check charge neutralilty
     !

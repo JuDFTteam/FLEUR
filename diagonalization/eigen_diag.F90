@@ -56,7 +56,7 @@ CONTAINS
 #ifdef CPP_SCALAPACK
     USE m_chani
 #endif
-#ifdef CPP_elemental
+#ifdef CPP_ELEMENTAL
     USE m_elemental
 #endif
     IMPLICIT NONE

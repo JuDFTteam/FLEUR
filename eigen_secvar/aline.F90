@@ -150,7 +150,7 @@ CONTAINS
 #ifdef CPP_SOC
     CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 #else
-    CALL abcof(atoms,dimension%neigd,sym,cell, bkpt,lapw,ne,z,&
+    CALL abcof(input,atoms,dimension%neigd,sym,cell, bkpt,lapw,ne,z,&
          usdus,noco,1,kveclo,oneD,acof,bcof,ccof)  ! ispin = 1&
          
 #endif

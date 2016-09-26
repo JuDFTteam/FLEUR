@@ -5,7 +5,7 @@ MODULE m_topulay
 !     ************************************************************
 CONTAINS
   SUBROUTINE to_pulay(&
-       atoms,nobd,sym,lapw,noco,cell,bkpt,z,ne,eig,&
+       input,atoms,nobd,sym,lapw,noco,cell,bkpt,z,ne,eig,&
        usdus,kveclo,jspin,oneD,&
        acof,bcof,e1cof,e2cof,aveccof,bveccof,&
        ccof,acoflo,bcoflo,cveccof)
@@ -18,12 +18,13 @@ CONTAINS
     USE m_ylm
     USE m_types
     IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_sym),INTENT(IN)   :: sym
+    TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_usdus),INTENT(IN)   :: usdus
+    TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_usdus),INTENT(IN)  :: usdus
     TYPE(t_lapw),INTENT(IN)   :: lapw
 !     ..
 !     .. Scalar Arguments ..
@@ -95,9 +96,8 @@ CONTAINS
            DO lo = 1,atoms%nlo(n)
              IF (atoms%l_dulo(lo,n)) apw(l,n) = .true.
            ENDDO
-#ifdef CPP_APW
-           IF (atoms%lapw_l(n).GE.l) apw(l,n) = .false.
-#endif
+           IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l,n) = .false.
+
          ENDDO
          DO lo = 1,atoms%nlo(n)
            IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n),n) = .true.

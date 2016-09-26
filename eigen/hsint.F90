@@ -6,7 +6,7 @@
 
 MODULE m_hsint
 CONTAINS
-  SUBROUTINE hsint(noco,jij,stars, vpw,lapw,jspin,&
+  SUBROUTINE hsint(input,noco,jij,stars, vpw,lapw,jspin,&
        n_size,n_rank,bkpt,cell,atoms,aa,bb)
     !*********************************************************************
     !     initializes and sets up the hamiltonian and overlap matrices
@@ -35,6 +35,7 @@ CONTAINS
     !*********************************************************************
     USE m_types
     IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_jij),INTENT(IN)    :: jij
     TYPE(t_stars),INTENT(IN)  :: stars
@@ -114,16 +115,16 @@ CONTAINS
           IF (in.EQ.0) CYCLE
           phase = stars%rgphs(i1,i2,i3)
           !+APW_LO
-#ifdef CPP_APW
-          b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
-          b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
-          b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
-          r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
+          IF (input%l_useapw) THEN
+             b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
+             b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
+             b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
+             r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
 
-          th = phase*(0.5*r2*stars%ustep(in)+vpw(in))
-#else
-          th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
-#endif
+             th = phase*(0.5*r2*stars%ustep(in)+vpw(in))
+          ELSE
+             th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
+          ENDIF
           !-APW_LO
           !--->    determine matrix element and store
           ts = phase*stars%ustep(in)
@@ -182,16 +183,16 @@ CONTAINS
              ELSE
                 phase = stars%rgphs(i1,i2,i3)
                 !+APW_LO
-#ifdef CPP_APW
-                b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
-                b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
-                b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
-                r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
+                IF (input%l_useapw) THEN
+                   b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
+                   b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
+                   b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
+                   r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
 
-                th = phase*( 0.5*r2*stars%ustep(in) + vpw(in) )
-#else
-                th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
-#endif
+                   th = phase*( 0.5*r2*stars%ustep(in) + vpw(in) )
+                ELSE
+                   th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
+                ENDIF
                 !-APW_LO
                 ts = phase*stars%ustep(in)
                 aa(ii) = th
