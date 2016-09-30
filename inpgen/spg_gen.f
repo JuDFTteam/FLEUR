@@ -263,7 +263,7 @@
      &                     -binDim(3)-1:binDim(3)+1))
          binSizes = 0
          DO iTr = 1, maxTrVecs
-            iBin(:) = ANINT(binDim(:) * trVecs(:,iTr) / 0.501)
+            iBin(:) = NINT(binDim(:) * trVecs(:,iTr) / 0.501)
             DO i = -1, 1
                DO j = -1, 1
                   DO k = -1, 1
@@ -293,7 +293,7 @@
 
          binSizes = 0
          DO iTr = 1, maxTrVecs
-            iBin(:) = ANINT(binDim(:) * trVecs(:,iTr) / 0.501)
+            iBin(:) = NINT(binDim(:) * trVecs(:,iTr) / 0.501)
             DO i = -1, 1
                DO j = -1, 1
                   DO k = -1, 1
@@ -310,14 +310,21 @@
 
 !!       3. Check for every other atom which of its translation vectors
 !!          are compatible to those of the first atom.
+
+!Note: The following loop takes most of the runtime in this routine.
+!$OMP parallel do default(private)
+!$OMP& SHARED(nat,ity,pos,posr,eps7)
+!$OMP& SHARED(binDim,binSizes,trIndexBins,trVecs)
+!$OMP& SHARED(numTrVecs)
          DO j = 2, nat
             DO i = 1, nat
                IF (ity(i).NE.ity(j)) CYCLE
                tr(1:3) = pos(1:3,j) - posr(1:3,i)
+               !Within this loop the rounding in NINT and ANINT takes most of the time.
                tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
 
-               iBin(:) = ANINT(binDim(:) * tr(:) / 0.501)
-
+               iBin(:) = NINT(binDim(:) * tr(:) / 0.501) 
+               
                DO k = 1, binSizes(iBin(1),iBin(2),iBin(3))
                   iTr = trIndexBins(k,iBin(1),iBin(2),iBin(3))
                   IF(ALL(ABS(tr(:)-trVecs(:,iTr)).LE.eps7)) THEN
@@ -327,6 +334,7 @@
                END DO
             END DO
          END DO
+!$OMP end parallel do
 
 !        Check which translation vectors are consistent with the cyclic
 !        part of the group
