@@ -46,20 +46,20 @@
       INTEGER i,j,k,n,mop,nc,new,ns,nt,ntypm,ind(1),iTr,maxTrVecs
       INTEGER ity(natin),npaint,ipaint(natin)
       INTEGER ios,istep0, binSize, maxBinSize
-      INTEGER numTrVecs(natin), locBinDim(3), secondAtom(natin)
+      INTEGER locBinDim(3), secondAtom(natin)
       INTEGER binDim(3), iBin(3)
       CHARACTER(len=30) :: filen
 
       REAL    posr(3,natin),rtau(3),tr(3),disp(3,natin)
       REAL    ttau(3,nop48),trs(3,natin)
       REAL    eps7
-      REAL    trVecs(3,natin)
+      REAL    trVecs(3,natin), trIndices(natin)
 
-      LOGICAL lnew,lclose
+      LOGICAL lnew,lclose, foundOne
       LOGICAL l_exist
 
       INTEGER, ALLOCATABLE :: mtable(:,:), binSizes(:,:,:)
-      INTEGER, ALLOCATABLE :: trIndexBins(:,:,:,:)
+      INTEGER, ALLOCATABLE :: atomIndexBins(:,:,:,:)
       REAL,    ALLOCATABLE :: inipos(:,:)
 
       eps7= 1.0e-7 ; istep0 = 0
@@ -226,6 +226,7 @@
 !--->    rotate all atoms:
          DO n=1,nat
             posr(:,n) = matmul( mmrot(:,:,mop) , pos(:,n) )
+            posr(:,n) = posr(:,n) - anint(posr(:,n) - eps7)
          ENDDO
 
 !        Start code section A (replacing the commented part following the section)
@@ -234,12 +235,12 @@
 !        to work for all atoms.
 
          trVecs = 0.0
-         numTrVecs = 0
          maxTrVecs = 0
          secondAtom = 0
 
 !!       1. Determine all possible translation vectors for the first atom
 
+         trIndices = -1
          j = 1
          DO i = 1, nat
             IF (ity(i).NE.ity(j)) CYCLE
@@ -247,12 +248,12 @@
             tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
             maxTrVecs = maxTrVecs + 1
             trVecs(:,maxTrVecs) = tr(:)
-            numTrVecs(maxTrVecs) = 1
+            trIndices(maxTrVecs) = maxTrVecs
             secondAtom(maxTrVecs) = i
          END DO
 
-!!       2. Sort possible translation vectors into "location bins"
-!!          (translation vectors are in the region -0.5 to 0.5)
+!!       2. Sort rotated atoms into "location bins"
+!!          (position vectors are in the region -0.5 to 0.5)
 
          binDim(:) = CEILING(natin**(1.0/3.0)*0.5)
          !TODO: The dimension binDim should better be adjusted to the unit cell shape.
@@ -262,12 +263,12 @@
      &                     -binDim(2)-1:binDim(2)+1,
      &                     -binDim(3)-1:binDim(3)+1))
          binSizes = 0
-         DO iTr = 1, maxTrVecs
-            iBin(:) = NINT(binDim(:) * trVecs(:,iTr) / 0.501)
+         DO n = 1, nat
+            iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
             DO i = -1, 1
                DO j = -1, 1
                   DO k = -1, 1
-                     ! Put the vector into several bins to avoid numerical problems at the boundaries.
+                     ! Put the atom into several bins to avoid numerical problems at the boundaries.
                      binSize = binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k)
                      binSize = binSize + 1
                      binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k) = binSize
@@ -287,63 +288,63 @@
             END DO
          END DO
 
-         ALLOCATE(trIndexBins(maxBinSize,-binDim(1)-1:binDim(1)+1,
-     &                                   -binDim(2)-1:binDim(2)+1,
-     &                                   -binDim(3)-1:binDim(3)+1))
+         ALLOCATE(atomIndexBins(maxBinSize,-binDim(1)-1:binDim(1)+1,
+     &                                     -binDim(2)-1:binDim(2)+1,
+     &                                     -binDim(3)-1:binDim(3)+1))
 
          binSizes = 0
-         DO iTr = 1, maxTrVecs
-            iBin(:) = NINT(binDim(:) * trVecs(:,iTr) / 0.501)
+         DO n = 1, nat
+            iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
             DO i = -1, 1
                DO j = -1, 1
                   DO k = -1, 1
-                     ! Put the vector into several bins to avoid numerical problems at the boundaries.
+                     ! Put the atom into several bins to avoid numerical problems at the boundaries.
                      binSize = binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k)
                      binSize = binSize + 1
                      binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k) = binSize
-                     trIndexBins(binSize,iBin(1)+i,
-     &                           iBin(2)+j,iBin(3)+k) = iTr
+                     atomIndexBins(binSize,iBin(1)+i,
+     &                             iBin(2)+j,iBin(3)+k) = n
                   END DO
                END DO
             END DO
          END DO
 
-!!       3. Check for every other atom which of its translation vectors
-!!          are compatible to those of the first atom.
+!!       3. Check for every other atom which of the first atom's translation
+!!          vectors are applicable.
 
-!Note: The following loop takes most of the runtime in this routine.
-!$OMP parallel do default(private)
-!$OMP& SHARED(nat,ity,pos,posr,eps7)
-!$OMP& SHARED(binDim,binSizes,trIndexBins,trVecs)
-!$OMP& SHARED(numTrVecs)
          DO j = 2, nat
-            DO i = 1, nat
-               IF (ity(i).NE.ity(j)) CYCLE
-               tr(1:3) = pos(1:3,j) - posr(1:3,i)
-               !Within this loop the rounding in NINT and ANINT takes most of the time.
+            iTr = 1
+            DO WHILE (iTr.LE.maxTrVecs)
+               tr(1:3) = pos(1:3,j) + trVecs(1:3,trIndices(iTr))
                tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
 
-               iBin(:) = NINT(binDim(:) * tr(:) / 0.501) 
-               
+               iBin(:) = NINT(binDim(:) * tr(:) / 0.501)
+
+               foundOne = .FALSE.
                DO k = 1, binSizes(iBin(1),iBin(2),iBin(3))
-                  iTr = trIndexBins(k,iBin(1),iBin(2),iBin(3))
-                  IF(ALL(ABS(tr(:)-trVecs(:,iTr)).LE.eps7)) THEN
-                     numTrVecs(iTr) = numTrVecs(iTr) + 1
+                  i = atomIndexBins(k,iBin(1),iBin(2),iBin(3))
+                  IF(ALL(ABS(tr(:)-posr(:,i)).LE.eps7)) THEN
+                     IF (ity(i).NE.ity(j)) EXIT
+                     foundOne = .TRUE.
                      EXIT
                   END IF
                END DO
+               IF (foundOne) THEN
+                  iTr = iTr + 1
+               ELSE
+                  trIndices(iTr) = trIndices(maxTrVecs)
+                  maxTrVecs = maxTrVecs - 1
+               END IF
             END DO
          END DO
-!$OMP end parallel do
 
 !        Check which translation vectors are consistent with the cyclic
 !        part of the group
 
          DO iTr = 1, maxTrVecs
-            IF (numTrVecs(iTr).NE.nat) CYCLE
             j = 1
-            i = secondAtom(iTr)
-            tr(:) = trVecs(:,iTr)
+            i = secondAtom(trIndices(iTr))
+            tr(:) = trVecs(:,trIndices(iTr))
             rtau(1:3) = tr(1:3)
 
 !--->       check that this is consistent with cyclic part of the group
@@ -358,7 +359,7 @@
             EXIT                  ! have one, go to next operation
          END DO
 
-         DEALLOCATE(trIndexBins,binSizes)
+         DEALLOCATE(atomIndexBins,binSizes)
 
 !        End code section A (replacing the commented part following the section)
 
