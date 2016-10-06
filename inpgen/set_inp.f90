@@ -370,9 +370,9 @@
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
           cell%area = cell%omtil / vacuum%dvac
-          kpts%nkpt = nint((3600/cell%area)/sym%nop2)
+          kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
-          kpts%nkpt = nint((216000/cell%omtil)/sym%nop)
+          kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
       ENDIF
 
