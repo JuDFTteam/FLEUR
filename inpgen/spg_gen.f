@@ -43,6 +43,7 @@
       INTEGER index_op(nop48),num_tr(nop48)
 
       INTEGER mtmp(3,3),mp(3,3)
+      INTEGER u,v,w
       INTEGER i,j,k,n,mop,nc,new,ns,nt,ntypm,ind(1),iTr,maxTrVecs
       INTEGER ity(natin),npaint,ipaint(natin)
       INTEGER ios,istep0, binSize, maxBinSize
@@ -55,7 +56,7 @@
       REAL    eps7
       REAL    trVecs(3,natin), trIndices(natin)
 
-      LOGICAL lnew,lclose, foundOne
+      LOGICAL lnew,lclose, foundOne, boundary(3)
       LOGICAL l_exist
 
       INTEGER, ALLOCATABLE :: mtable(:,:), binSizes(:,:,:)
@@ -265,16 +266,21 @@
          binSizes = 0
          DO n = 1, nat
             iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
-            DO i = -1, 1
-               DO j = -1, 1
-                  DO k = -1, 1
-                     ! Put the atom into several bins to avoid numerical problems at the boundaries.
-                     binSize = binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k)
+
+            boundary(:) = (ABS(posr(:,n))-0.5).LE.eps7
+            DO i = -1, 1, 2
+               IF((i.EQ.-1).AND.(.NOT.boundary(1))) CYCLE
+               DO j = -1, 1, 2
+                  IF((j.EQ.-1).AND.(.NOT.boundary(2))) CYCLE
+                  DO k = -1, 1, 2
+                     IF((k.EQ.-1).AND.(.NOT.boundary(3))) CYCLE
+                     binSize = binSizes(i*iBin(1),j*iBin(2),k*iBin(3))
                      binSize = binSize + 1
-                     binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k) = binSize
+                     binSizes(i*iBin(1),j*iBin(2),k*iBin(3)) = binSize
                   END DO
                END DO
             END DO
+
          END DO
 
          maxBinSize = 0
@@ -295,15 +301,19 @@
          binSizes = 0
          DO n = 1, nat
             iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
-            DO i = -1, 1
-               DO j = -1, 1
-                  DO k = -1, 1
-                     ! Put the atom into several bins to avoid numerical problems at the boundaries.
-                     binSize = binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k)
+
+            boundary(:) = (ABS(posr(:,n))-0.5).LE.eps7
+            DO i = -1, 1, 2
+               IF((i.EQ.-1).AND.(.NOT.boundary(1))) CYCLE
+               DO j = -1, 1, 2
+                  IF((j.EQ.-1).AND.(.NOT.boundary(2))) CYCLE
+                  DO k = -1, 1, 2
+                     IF((k.EQ.-1).AND.(.NOT.boundary(3))) CYCLE
+                     binSize = binSizes(i*iBin(1),j*iBin(2),k*iBin(3))
                      binSize = binSize + 1
-                     binSizes(iBin(1)+i,iBin(2)+j,iBin(3)+k) = binSize
-                     atomIndexBins(binSize,iBin(1)+i,
-     &                             iBin(2)+j,iBin(3)+k) = n
+                     binSizes(i*iBin(1),j*iBin(2),k*iBin(3)) = binSize
+                     atomIndexBins(binSize,i*iBin(1),j*iBin(2),
+     &                                     k*iBin(3)) = n
                   END DO
                END DO
             END DO
@@ -321,14 +331,41 @@
                iBin(:) = NINT(binDim(:) * tr(:) / 0.501)
 
                foundOne = .FALSE.
-               DO k = 1, binSizes(iBin(1),iBin(2),iBin(3))
+
+               !Search for atoms in the nearest bin
+               DO k = 1,binSizes(iBin(1),iBin(2),iBin(3))
                   i = atomIndexBins(k,iBin(1),iBin(2),iBin(3))
-                  IF(ALL(ABS(tr(:)-posr(:,i)).LE.eps7)) THEN
+                  rtau(:) = tr(:)-posr(:,i)
+                  rtau(:) = rtau(:) - anint(rtau(:) - eps7)
+                  IF(ALL(ABS(rtau(:)).LE.eps7)) THEN
                      IF (ity(i).NE.ity(j)) EXIT
                      foundOne = .TRUE.
                      EXIT
                   END IF
                END DO
+
+               IF(.NOT.foundOne) THEN
+               !Search for atoms in the surrounding bins
+      binLoop: DO u = -1, 1
+                  DO v = -1, 1
+                     DO w = -1, 1
+                        IF((u.EQ.0).AND.(v.EQ.0).AND.(w.EQ.0)) CYCLE
+                        DO k = 1,binSizes(iBin(1)+u,iBin(2)+v,iBin(3)+w)
+                           i = atomIndexBins(k,iBin(1)+u,iBin(2)+v,
+     &                                         iBin(3)+w)
+                           rtau(:) = tr(:)-posr(:,i)
+                           rtau(:) = rtau(:) - anint(rtau(:) - eps7)
+                           IF(ALL(ABS(rtau(:)).LE.eps7)) THEN
+                              IF (ity(i).NE.ity(j)) EXIT binLoop
+                              foundOne = .TRUE.
+                              EXIT binLoop
+                           END IF
+                        END DO
+                     END DO
+                  END DO
+               END DO binLoop
+               END IF
+
                IF (foundOne) THEN
                   iTr = iTr + 1
                ELSE
