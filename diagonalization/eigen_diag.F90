@@ -192,7 +192,13 @@ CONTAINS
                jij,matind,nred,eig,ne_found,a_c,b_c,z_c)
        endif
        CASE (diag_lapack)
-          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)), jij%l_j,matind,nred,input%gw,eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
+          IF (l_real) THEN
+             CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
+                         jij%l_j,matind,nred,input%gw,eig,ne_found,a_r=a_r,b_r=b_r,z_r=z_r)
+          ELSE
+             CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
+                         jij%l_j,matind,nred,input%gw,eig,ne_found,a_c=a_c,b_c=b_c,z_c=z_c)
+          END IF
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
           print*, "You selected a diagonalization scheme without compiling for it"
