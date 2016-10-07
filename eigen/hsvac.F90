@@ -3,7 +3,7 @@ MODULE m_hsvac
 CONTAINS
   SUBROUTINE hsvac(&
        vacuum,stars,DIMENSION, atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw,sym, noco,jij, n_size,n_rank, aa,bb, nv2)
+       bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,aa_r,bb_r,aa_c,bb_c)
     !*********************************************************************
     !     adds in the vacuum contributions to the the hamiltonian and
     !     overlap matrices. as written, each k-point calculates the
@@ -37,11 +37,10 @@ CONTAINS
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     REAL,    INTENT (IN) :: bkpt(3)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:),bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:),bb(:)
-#endif
+
+    LOGICAL,INTENT(IN)    :: l_real
+    REAL,    INTENT (INOUT) :: aa_r(:),bb_r(:)!(matsize)
+    COMPLEX, INTENT (INOUT) :: aa_c(:),bb_c(:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,c_1
@@ -223,27 +222,28 @@ CONTAINS
                               +      (a(j,jspin)*  uz(ik,jspin1) + b(j,jspin)* udz(ik,jspin1) ) &
                               * CONJG(a(i,jspin)* duz(ik,jspin1) + b(i,jspin)*dudz(ik,jspin1) )
                          !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
-#ifdef CPP_INVERSION
-                         aa(ii) = aa(ii) + 0.25 * REAL(apw_lo) 
-#else 
-                         aa(ii) = aa(ii) + 0.25 * apw_lo
-#endif
+                         IF (l_real) THEN
+                            aa_r(ii) = aa_r(ii) + 0.25 * REAL(apw_lo) 
+                         ELSE 
+                            aa_c(ii) = aa_c(ii) + 0.25 * apw_lo
+                         ENDIF
                       ENDIF
                       !+APW_LO
-#ifdef CPP_INVERSION
-                      bb(ii) = bb(ii) + REAL(sij)
-#else 
-                      bb(ii) = bb(ii) + sij
-#endif
+                      IF (l_real) THEN
+                         bb_r(ii) = bb_r(ii) + REAL(sij)
+                      ELSE 
+                         bb_c(ii) = bb_c(ii) + sij
+                      ENDIF
                    END IF
                 ENDDO
                 ii = ii0 + i
                 sij = CONJG(a(i,jspin))*a(i,jspin) + CONJG(b(i,jspin))*b(i,jspin)*ddnv(ik,jspin1)
-#ifdef CPP_INVERSION
-                bb(ii) = bb(ii) + REAL(sij)
-#else
-                bb(ii) = bb(ii) + sij
-#endif
+                IF (l_real) THEN
+
+                   bb_r(ii) = bb_r(ii) + REAL(sij)
+                ELSE
+                   bb_c(ii) = bb_c(ii) + sij
+                ENDIF
              ENDDO
           ENDIF
 
@@ -282,11 +282,12 @@ CONTAINS
                 jk = map2(j,jspin2)
                 hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
                      + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
-#ifdef CPP_INVERSION
-                aa(ii) = aa(ii) + REAL(hij)
-#else
-                aa(ii) = aa(ii) + hij
-#endif
+                IF (l_real) THEN
+
+                   aa_r(ii) = aa_r(ii) + REAL(hij)
+                ELSE
+                   aa_c(ii) = aa_c(ii) + hij
+                ENDIF
              ENDDO
           ENDDO
 

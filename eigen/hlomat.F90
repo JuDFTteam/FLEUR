@@ -13,7 +13,7 @@ MODULE m_hlomat
 CONTAINS
   SUBROUTINE hlomat(input,atoms,usp,tsp,&
        n_size,n_rank, ntyp,na,lapw,ar,br,ai,bi, el,alo,blo,clo,ud,&
-       noco,iintsp,jintsp,chi11,chi22,chi21, iilo,locol,nkvecprevat,tlmplm,aa)
+       noco,iintsp,jintsp,chi11,chi22,chi21, iilo,locol,nkvecprevat,tlmplm,l_real,aa_r,aa_c)
 #include"cpp_double.h"
     !
     USE m_types
@@ -40,11 +40,10 @@ CONTAINS
     REAL,    INTENT (IN) :: el(0:)!(0:atoms%lmax)
     TYPE(t_usdus),INTENT(IN)     ::ud
     TYPE(t_tlmplm),INTENT(INOUT) :: tlmplm
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:)
-#endif
+
+    LOGICAL,INTENT(IN)      :: l_real
+    REAL,    OPTIONAL,INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: aa_c(:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX axx,bxx,cxx,dtd,dtu,dtulo,ulotd,ulotu,ulotulo,utd,utu, utulo,chihlp
@@ -168,62 +167,65 @@ CONTAINS
                 locol = locol + 1
                 IF (MOD(locol-1,n_size).EQ.n_rank) THEN
                    !-t3e
-                   DO kp = 1,lapw%nv(jintsp)
-                      iilo = iilo + 1
-#ifdef CPP_INVERSION
-                      aa(iilo) = aa(iilo) + invsfct * (&
-                           REAL(alo(m,nkvec,lo,iintsp))* REAL(ax(kp)) +&
-                           AIMAG(alo(m,nkvec,lo,iintsp))*AIMAG(ax(kp)) +&
-                           REAL(blo(m,nkvec,lo,iintsp))* REAL(bx(kp)) +&
-                           AIMAG(blo(m,nkvec,lo,iintsp))*AIMAG(bx(kp)) +&
-                           REAL(clo(m,nkvec,lo,iintsp))* REAL(cx(kp)) +&
-                           AIMAG(clo(m,nkvec,lo,iintsp))*AIMAG(cx(kp)) )
-                      IF (input%l_useapw) THEN
-                         !---> APWlo
-                         aa(iilo) = aa(iilo) + 0.25 * atoms%rmt(ntyp)**2 * invsfct * (&
-                              (ar(kp,lm)*ud%us(l,ntyp,usp)+&
-                              br(kp,lm)*ud%uds(l,ntyp,usp))*&
-                              REAL( alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp) +&
-                              blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp)  +&
-                              clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ) +&
-                              (ai(kp,lm)*ud%us(l,ntyp,usp)+bi(kp,lm)*ud%uds(l,ntyp,usp))*&
-                              AIMAG( alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp) +&
-                              blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp) +&
-                              clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ) )
-                      ENDIF
-#else
-                      IF (.NOT.noco%l_ss) THEN
-                         aa(iilo) = aa(iilo) + invsfct * (&
-                              alo(m,nkvec,lo,iintsp) * CONJG( ax(kp) ) +&
-                              blo(m,nkvec,lo,iintsp) * CONJG( bx(kp) ) +&
-                              clo(m,nkvec,lo,iintsp) * CONJG( cx(kp) ) )
+                   IF (l_real) THEN
+                      DO kp = 1,lapw%nv(jintsp)
+                         iilo = iilo + 1
+                         aa_r(iilo) = aa_r(iilo) + invsfct * (&
+                              REAL(alo(m,nkvec,lo,iintsp))* REAL(ax(kp)) +&
+                              AIMAG(alo(m,nkvec,lo,iintsp))*AIMAG(ax(kp)) +&
+                              REAL(blo(m,nkvec,lo,iintsp))* REAL(bx(kp)) +&
+                              AIMAG(blo(m,nkvec,lo,iintsp))*AIMAG(bx(kp)) +&
+                              REAL(clo(m,nkvec,lo,iintsp))* REAL(cx(kp)) +&
+                              AIMAG(clo(m,nkvec,lo,iintsp))*AIMAG(cx(kp)) )
                          IF (input%l_useapw) THEN
                             !---> APWlo
-                            aa(iilo)=aa(iilo) + 0.25 * atoms%rmt(ntyp)**2 * invsfct*(&
-                                 (CMPLX(ar(kp,lm),-ai(kp,lm))* ud%us(l,ntyp,usp)+&
-                                 CMPLX(br(kp,lm),-bi(kp,lm))*ud%uds(l,ntyp,usp))*&
-                                 (alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp)&
-                                 +blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp)&
-                                 +clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ))
+                            aa_r(iilo) = aa_r(iilo) + 0.25 * atoms%rmt(ntyp)**2 * invsfct * (&
+                                 (ar(kp,lm)*ud%us(l,ntyp,usp)+&
+                                 br(kp,lm)*ud%uds(l,ntyp,usp))*&
+                                 REAL( alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp) +&
+                                 blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp)  +&
+                                 clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ) +&
+                                 (ai(kp,lm)*ud%us(l,ntyp,usp)+bi(kp,lm)*ud%uds(l,ntyp,usp))*&
+                                 AIMAG( alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp) +&
+                                 blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp) +&
+                                 clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ) )
                          ENDIF
-                      ELSE
-                         ahelp(iilo) = ahelp(iilo) + invsfct * (&
-                              alo(m,nkvec,lo,iintsp) * CONJG( ax(kp) ) +&
-                              blo(m,nkvec,lo,iintsp) * CONJG( bx(kp) ) +&
-                              clo(m,nkvec,lo,iintsp) * CONJG( cx(kp) ) )
-                         IF (input%l_useapw) THEN
+                      ENDDO
+                   ELSE
+                      DO kp = 1,lapw%nv(jintsp)
+                         iilo = iilo + 1
+                         IF (.NOT.noco%l_ss) THEN
+                            aa_c(iilo) = aa_c(iilo) + invsfct * (&
+                                 alo(m,nkvec,lo,iintsp) * CONJG( ax(kp) ) +&
+                                 blo(m,nkvec,lo,iintsp) * CONJG( bx(kp) ) +&
+                                 clo(m,nkvec,lo,iintsp) * CONJG( cx(kp) ) )
+                            IF (input%l_useapw) THEN
+                               !---> APWlo
+                               aa_c(iilo)=aa_c(iilo) + 0.25 * atoms%rmt(ntyp)**2 * invsfct*(&
+                                    (CMPLX(ar(kp,lm),-ai(kp,lm))* ud%us(l,ntyp,usp)+&
+                                    CMPLX(br(kp,lm),-bi(kp,lm))*ud%uds(l,ntyp,usp))*&
+                                    (alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp)&
+                                    +blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp)&
+                                    +clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ))
+                            ENDIF
+                         ELSE
+                            ahelp(iilo) = ahelp(iilo) + invsfct * (&
+                                 alo(m,nkvec,lo,iintsp) * CONJG( ax(kp) ) +&
+                                 blo(m,nkvec,lo,iintsp) * CONJG( bx(kp) ) +&
+                                 clo(m,nkvec,lo,iintsp) * CONJG( cx(kp) ) )
+                            IF (input%l_useapw) THEN
 
-                            !---> APWlo
-                            ahelp(iilo)=ahelp(iilo) + 0.25 * atoms%rmt(ntyp)**2 * invsfct*(&
-                                 (CMPLX(ar(kp,lm),-ai(kp,lm))* ud%us(l,ntyp,usp)+&
-                                 CMPLX(br(kp,lm),-bi(kp,lm))*ud%uds(l,ntyp,usp))*&
-                                 (alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp)&
-                                 +blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp)&
-                                 +clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ))
+                               !---> APWlo
+                               ahelp(iilo)=ahelp(iilo) + 0.25 * atoms%rmt(ntyp)**2 * invsfct*(&
+                                    (CMPLX(ar(kp,lm),-ai(kp,lm))* ud%us(l,ntyp,usp)+&
+                                    CMPLX(br(kp,lm),-bi(kp,lm))*ud%uds(l,ntyp,usp))*&
+                                    (alo(m,nkvec,lo,iintsp)*  ud%dus(l,ntyp,usp)&
+                                    +blo(m,nkvec,lo,iintsp)* ud%duds(l,ntyp,usp)&
+                                    +clo(m,nkvec,lo,iintsp)*ud%dulos(lo,ntyp,usp) ))
+                            ENDIF
                          ENDIF
-                      ENDIF
-#endif
-                   END DO
+                      ENDDO
+                   ENDIF
                    !--->             jump to the last matrixelement of the current row
                    iilo = iilo + nkvecprevat + nkvecprevlo + nkvec
                 ENDIF
@@ -282,27 +284,27 @@ CONTAINS
                                     CONJG(alo(m,nkvec,lo,iintsp))*ulotu +&
                                     CONJG(blo(m,nkvec,lo,iintsp))*ulotd +&
                                     CONJG(clo(m,nkvec,lo,iintsp))*ulotulo
-#ifdef CPP_INVERSION
-                               aa(iilo) = aa(iilo) + invsfct * (&
-                                    REAL(alo(mp,nkvecp,lop,jintsp))* REAL(axx) -&
-                                    AIMAG(alo(mp,nkvecp,lop,jintsp))*AIMAG(axx) +&
-                                    REAL(blo(mp,nkvecp,lop,jintsp))* REAL(bxx) -&
-                                    AIMAG(blo(mp,nkvecp,lop,jintsp))*AIMAG(bxx) +&
-                                    REAL(clo(mp,nkvecp,lop,jintsp))* REAL(cxx) -&
-                                    AIMAG(clo(mp,nkvecp,lop,jintsp))*AIMAG(cxx) )
-#else
-                               IF (.NOT.noco%l_ss) THEN
-                                  aa(iilo) = aa(iilo) + invsfct * CONJG(&
-                                       alo(mp,nkvecp,lop,jintsp) * axx +&
-                                       blo(mp,nkvecp,lop,jintsp) * bxx +&
-                                       clo(mp,nkvecp,lop,jintsp) * cxx )
+                               IF (l_real) THEN
+                                  aa_r(iilo) = aa_r(iilo) + invsfct * (&
+                                       REAL(alo(mp,nkvecp,lop,jintsp))* REAL(axx) -&
+                                       AIMAG(alo(mp,nkvecp,lop,jintsp))*AIMAG(axx) +&
+                                       REAL(blo(mp,nkvecp,lop,jintsp))* REAL(bxx) -&
+                                       AIMAG(blo(mp,nkvecp,lop,jintsp))*AIMAG(bxx) +&
+                                       REAL(clo(mp,nkvecp,lop,jintsp))* REAL(cxx) -&
+                                       AIMAG(clo(mp,nkvecp,lop,jintsp))*AIMAG(cxx) )
                                ELSE
-                                  ahelp(iilo)=ahelp(iilo)+invsfct*CONJG(&
-                                       alo(mp,nkvecp,lop,jintsp) * axx +&
-                                       blo(mp,nkvecp,lop,jintsp) * bxx +&
-                                       clo(mp,nkvecp,lop,jintsp) * cxx )
+                                  IF (.NOT.noco%l_ss) THEN
+                                     aa_c(iilo) = aa_c(iilo) + invsfct * CONJG(&
+                                          alo(mp,nkvecp,lop,jintsp) * axx +&
+                                          blo(mp,nkvecp,lop,jintsp) * bxx +&
+                                          clo(mp,nkvecp,lop,jintsp) * cxx )
+                                  ELSE
+                                     ahelp(iilo)=ahelp(iilo)+invsfct*CONJG(&
+                                          alo(mp,nkvecp,lop,jintsp) * axx +&
+                                          blo(mp,nkvecp,lop,jintsp) * bxx +&
+                                          clo(mp,nkvecp,lop,jintsp) * cxx )
+                                  ENDIF
                                ENDIF
-#endif
                             END IF
                          END DO
                       END DO
@@ -345,27 +347,27 @@ CONTAINS
                             cxx = CONJG(alo(m,nkvec,lo,iintsp))*ulotu +&
                                  CONJG(blo(m,nkvec,lo,iintsp))*ulotd +&
                                  CONJG(clo(m,nkvec,lo,iintsp))*ulotulo
-#ifdef CPP_INVERSION
-                            aa(iilo) = aa(iilo) + invsfct* (&
-                                 REAL(alo(mp,nkvecp,lo,jintsp))* REAL(axx) -&
-                                 AIMAG(alo(mp,nkvecp,lo,jintsp))*AIMAG(axx) +&
-                                 REAL(blo(mp,nkvecp,lo,jintsp))* REAL(bxx) -&
-                                 AIMAG(blo(mp,nkvecp,lo,jintsp))*AIMAG(bxx) +&
-                                 REAL(clo(mp,nkvecp,lo,jintsp))* REAL(cxx) -&
-                                 AIMAG(clo(mp,nkvecp,lo,jintsp))*AIMAG(cxx) )
-#else
-                            IF (.NOT.noco%l_ss) THEN
-                               aa(iilo) = aa(iilo) + invsfct* CONJG(&
-                                    alo(mp,nkvecp,lo,jintsp)*axx +&
-                                    blo(mp,nkvecp,lo,jintsp)*bxx +&
-                                    clo(mp,nkvecp,lo,jintsp)*cxx )
+                            IF (l_real) THEN
+                               aa_r(iilo) = aa_r(iilo) + invsfct* (&
+                                    REAL(alo(mp,nkvecp,lo,jintsp))* REAL(axx) -&
+                                    AIMAG(alo(mp,nkvecp,lo,jintsp))*AIMAG(axx) +&
+                                    REAL(blo(mp,nkvecp,lo,jintsp))* REAL(bxx) -&
+                                    AIMAG(blo(mp,nkvecp,lo,jintsp))*AIMAG(bxx) +&
+                                    REAL(clo(mp,nkvecp,lo,jintsp))* REAL(cxx) -&
+                                    AIMAG(clo(mp,nkvecp,lo,jintsp))*AIMAG(cxx) )
                             ELSE
-                               ahelp(iilo) = ahelp(iilo) + invsfct* CONJG(&
-                                    alo(mp,nkvecp,lo,jintsp)*axx +&
-                                    blo(mp,nkvecp,lo,jintsp)*bxx +&
-                                    clo(mp,nkvecp,lo,jintsp)*cxx )
+                               IF (.NOT.noco%l_ss) THEN
+                                  aa_c(iilo) = aa_c(iilo) + invsfct* CONJG(&
+                                       alo(mp,nkvecp,lo,jintsp)*axx +&
+                                       blo(mp,nkvecp,lo,jintsp)*bxx +&
+                                       clo(mp,nkvecp,lo,jintsp)*cxx )
+                               ELSE
+                                  ahelp(iilo) = ahelp(iilo) + invsfct* CONJG(&
+                                       alo(mp,nkvecp,lo,jintsp)*axx +&
+                                       blo(mp,nkvecp,lo,jintsp)*bxx +&
+                                       clo(mp,nkvecp,lo,jintsp)*cxx )
+                               ENDIF
                             ENDIF
-#endif
                          END IF
                       END DO
                    END DO
@@ -415,13 +417,13 @@ CONTAINS
              ii = 0
              DO k = 1, ic
                 n = k + lapw%nv(jintsp) + nkvecprevat_s
-#ifndef CPP_INVERSION
-                IF (iintsp.EQ.2 .AND. jintsp.EQ.1 ) THEN
-                   CALL CPP_BLAS_caxpy(n-1,chihlp,ahelp(ii+1),1,aa(ij+1),1)
-                ELSE
-                   CALL CPP_BLAS_caxpy(n,chihlp,ahelp(ii+1),1,aa(ij+1),1)
+                IF (.NOT.l_real) THEN
+                   IF (iintsp.EQ.2 .AND. jintsp.EQ.1 ) THEN
+                      CALL CPP_BLAS_caxpy(n-1,chihlp,ahelp(ii+1),1,aa_c(ij+1),1)
+                   ELSE
+                      CALL CPP_BLAS_caxpy(n,chihlp,ahelp(ii+1),1,aa_c(ij+1),1)
+                   ENDIF
                 ENDIF
-#endif
                 ii = ii + n
                 ij = ij + n + (lapw%nv(3-jintsp)+atoms%nlotot)*(iintsp-1)
              ENDDO
@@ -432,7 +434,7 @@ CONTAINS
                 ij = (n+1)*n/2 + lapw%nv(1) + k + nkvecprevat_s
                 DO kp = 1, k + lapw%nv(jintsp) + nkvecprevat_s
                    ii = ii + 1
-                   aa(ij) = aa(ij) + chihlp * CONJG( ahelp(ii) )
+                   aa_c(ij) = aa_c(ij) + chihlp * CONJG( ahelp(ii) )
                    ij = ij + lapw%nv(1) + kp + atoms%nlotot
                 ENDDO
              ENDDO

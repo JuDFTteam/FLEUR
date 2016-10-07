@@ -15,14 +15,14 @@ MODULE m_eig66_io
   PUBLIC read_dos,write_dos
 CONTAINS
 
-  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,l_noco,l_create,l_readonly,n_size,mode_in,filename,layers,nstars,ncored,nsld,nat,l_dos,l_mcd,l_orb)RESULT(id)
+  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,l_noco,l_create,l_real,l_soc,l_readonly,n_size,mode_in,filename,layers,nstars,ncored,nsld,nat,l_dos,l_mcd,l_orb)RESULT(id)
     USE m_eig66_hdf,ONLY:open_eig_hdf=>open_eig
     USE m_eig66_DA ,ONLY:open_eig_DA=>open_eig
     USE m_eig66_mem,ONLY:open_eig_mem=>open_eig
     USE m_eig66_MPI,ONLY:open_eig_mpi=>open_eig
     IMPLICIT NONE
     INTEGER,INTENT(IN)          :: nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,mpi_comm
-    LOGICAL,INTENT(IN)          :: l_noco,l_readonly,l_create
+    LOGICAL,INTENT(IN)          :: l_noco,l_readonly,l_create,l_real,l_soc
     INTEGER,INTENT(IN),OPTIONAL :: n_size,mode_in
     LOGICAL,INTENT(IN),OPTIONAL :: l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
@@ -30,11 +30,11 @@ CONTAINS
     INTEGER:: id,mode
 
     INTEGER:: neig_local,isize,err
-#ifdef CPP_SOC
-    neig_local=2*neig
-#else
-    neig_local=neig
-#endif
+    if (l_soc) THEN
+       neig_local=2*neig
+    else
+       neig_local=neig
+    endif
     mode=-1
     IF (PRESENT(mode_in)) mode=mode_in
 
@@ -70,13 +70,13 @@ CONTAINS
     CALL timestart("Open file/memory for IO of eig66")
     SELECT CASE (eig66_data_mode(id))
     CASE (DA_mode)
-       CALL open_eig_DA(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,nlotot,l_create,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_DA(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,nlotot,l_create,l_real,l_soc,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     CASE (hdf_mode)
-       CALL open_eig_HDF(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_HDF(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,l_readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     CASE (mem_mode)
-       CALL open_eig_MEM(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_MEM(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     CASE (mpi_mode)
-       CALL open_eig_MPI(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,nlotot,l_noco,n_size,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_MPI(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,n_size,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     CASE DEFAULT
        CALL juDFT_error("Invalid IO-mode in eig66_io")
     END SELECT

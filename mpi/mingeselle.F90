@@ -1,10 +1,7 @@
 MODULE m_mingeselle
   USE m_juDFT
 CONTAINS
-  SUBROUTINE mingeselle(&
-       &                      SUB_COMM,n_size,n_rank,nv,&
-       &                      ahelp,&
-       &                      aa)
+  SUBROUTINE mingeselle(SUB_COMM,n_size,n_rank,nv, ahelp,l_real,aa_r,aa_c)
     !------------------------------------------------------------------+
     !                                                                  |
     ! Transfers the spin-down/spin-up part , upper triangle of the     |
@@ -29,13 +26,11 @@ CONTAINS
     INTEGER, INTENT (IN) :: n_size,n_rank,SUB_COMM
     ! ..
     ! .. Array Arguments
-    INTEGER, INTENT (IN) :: nv(2)
+    INTEGER, INTENT (IN)    :: nv(2)
     COMPLEX, INTENT (INOUT) :: ahelp(:)!(m_ahelp)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:)
-#endif
+    LOGICAL, INTENT (IN)    :: l_real
+    REAL,   OPTIONAL, INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX,OPTIONAL, INTENT (INOUT) :: aa_c(:)
     ! ..
     ! .. Local Scalars
     INTEGER ki,kj,ns_tot,nr_tot,n_p,n2_start,n_help
@@ -219,13 +214,17 @@ CONTAINS
           !
           ! now update the matrix aa()
           !
-          DO ki=1,n_recv(np_r)
-             aa(in_pos(ki,np_r)) = aa(in_pos(ki,np_r)) + cr_el(ki)
-          ENDDO
+          IF (l_real) THEN
+             aa_r(in_pos(:n_recv(np_r),np_r)) = aa_r(in_pos(:n_recv(np_r),np_r)) + cr_el(:n_recv(np_r))
+          ELSE
+             aa_c(in_pos(:n_recv(np_r),np_r)) = aa_c(in_pos(:n_recv(np_r),np_r)) + cr_el(:n_recv(np_r))
+          ENDIF
        ELSE
-          DO ki=1,n_recv(np_r)
-             aa(in_pos(ki,np_r)) = aa(in_pos(ki,np_r)) + cs_el(ki,np_s)
-          ENDDO
+          IF (l_real) THEN
+             aa_r(in_pos(:n_recv(np_r),np_r)) = aa_r(in_pos(:n_recv(np_r),np_r)) + cs_el(:n_recv(np_r),np_s)
+          ELSE
+             aa_c(in_pos(:n_recv(np_r),np_r)) = aa_c(in_pos(:n_recv(np_r),np_r)) + cs_el(:n_recv(np_r),np_s)
+          ENDIF
        ENDIF
        !         CALL MPI_BARRIER(SUB_COMM,ierr)
     ENDDO

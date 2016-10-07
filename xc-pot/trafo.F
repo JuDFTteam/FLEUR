@@ -9,12 +9,12 @@
       CONTAINS
 
       SUBROUTINE waveftrafo_symm( 
-     &                      cmt_out,z_out,cmt,z,bandi,ndb,
-     &                      nk,iop,ntype,neq,
-     &                      lmax,lmaxd,nindx,nkpt,nkpt3,maxlmindx,
-     &                      natd,nw,nwd,bk,nop,nsym,mrot,tau,invtab,
-     &                      taual,jsp,jspd,nbasfcn,neigd,map,tvec,d_wgn,
-     &                      bmat,nvd,gpt,nv )
+     &     cmt_out,z_out,cmt,l_real,z_r,z_c,bandi,ndb,
+     &     nk,iop,ntype,neq,
+     &     lmax,lmaxd,nindx,nkpt,nkpt3,maxlmindx,
+     &     natd,nw,nwd,bk,nop,nsym,mrot,tau,invtab,
+     &     taual,jsp,jspd,nbasfcn,neigd,map,tvec,d_wgn,
+     &     bmat,nvd,gpt,nv )
 
       USE m_constants     
       USE m_util          ,ONLY:  modulo1 
@@ -25,13 +25,13 @@
 c     - scalars -
       INTEGER,INTENT(IN)      ::  ntype,nkpt,maxlmindx
       INTEGER,INTENT(IN)      ::  natd,nk,nw,nwd,jsp,jspd,
-     &                            neigd,nbasfcn,ndb
+     &     neigd,nbasfcn,ndb
       INTEGER,INTENT(IN)      ::  lmaxd,nvd,nop,nsym
       INTEGER,INTENT(IN)      ::  bandi,iop
 
 c     - arrays -
       INTEGER,INTENT(IN)      ::  neq(ntype),lmax(ntype),
-     &                            nindx(0:lmaxd,ntype),nv(jspd)
+     &     nindx(0:lmaxd,ntype),nv(jspd)
       INTEGER,INTENT(IN)      ::  mrot(3,3,nop)
       INTEGER,INTENT(IN)      ::  invtab(nop)
       INTEGER,INTENT(IN)      ::  gpt(3,nv(jsp))
@@ -41,21 +41,19 @@ c     - arrays -
       REAL,INTENT(IN)         ::  taual(3,natd),bk(3,nkpt),tau(3,nop)
       REAL,INTENT(IN)         ::  bmat(3,3)
       COMPLEX,INTENT(IN)      ::  d_wgn(-lmaxd:lmaxd,-lmaxd:lmaxd,
-     +                                       0:lmaxd,nsym)
+     +     0:lmaxd,nsym)
       COMPLEX,INTENT(IN)      ::  cmt(neigd,maxlmindx,natd)
-#if ( defined(CPP_INVERSION) )
-      REAL,INTENT(IN)         ::  z(nbasfcn,neigd)
-#else
-      COMPLEX,INTENT(IN)      ::  z(nbasfcn,neigd)
-#endif
+      LOGICAL,INTENT(IN)      :: l_real
+      REAL,INTENT(IN)         ::  z_r(nbasfcn,neigd)
+      COMPLEX,INTENT(IN)      ::  z_c(nbasfcn,neigd)
       COMPLEX,INTENT(OUT)     ::  cmt_out(maxlmindx,natd,ndb)
       COMPLEX,INTENT(OUT)     ::  z_out(nv(jsp),ndb)
 
-c           - local -
+c     - local -
 
 c     - scalars -
       INTEGER                 ::  iatom,iatom1,iiatom,itype,igpt,igpt1,
-     +                            ieq,ieq1,iiop
+     +     ieq,ieq1,iiop
       INTEGER                 ::  i,l,n,nn,lm0,lm1,lm2,m1,m2
       COMPLEX                 ::  cdum,tpiimg
       COMPLEX,PARAMETER       ::  img=(0d0,1d0)
@@ -64,30 +62,30 @@ c     - arrays -
       INTEGER                 ::  rrot(3,3),invrrot(3,3)
       INTEGER                 ::  g(3),g1(3)
       REAL                    ::  tau1(3),rtaual(3),rkpt(3),rkpthlp(3),
-     +                            trans(3)
+     +     trans(3)
       COMPLEX                 ::  cmthlp(2*lmaxd+1)
       LOGICAL                 ::  trs
 
       tpiimg  = -tpi_const*img
 
-#ifdef CPP_INVERSION
-      rrot    = transpose( mrot(:,:,invtab(iop)) )
-      invrrot = transpose( mrot(:,:,iop) )
-      trans   = tau(:,iop)
-#else
-      IF( iop .le. nop ) THEN
-        trs     = .false.
-        rrot    = transpose( mrot(:,:,invtab(iop)) )
-        invrrot = transpose( mrot(:,:,iop) )
-        trans   = tau(:,iop)       
-      ELSE
-        trs    = .true.
-        iiop   = iop - nop
-        rrot   = -transpose( mrot(:,:,invtab(iiop)) )
-        invrrot= -transpose( mrot(:,:,iiop) )
-        trans  = tau(:,iiop)
-      END IF
-#endif
+      if (l_real) THEN
+         rrot    = transpose( mrot(:,:,invtab(iop)) )
+         invrrot = transpose( mrot(:,:,iop) )
+         trans   = tau(:,iop)
+      else
+         IF( iop .le. nop ) THEN
+            trs     = .false.
+            rrot    = transpose( mrot(:,:,invtab(iop)) )
+            invrrot = transpose( mrot(:,:,iop) )
+            trans   = tau(:,iop)       
+         ELSE
+            trs    = .true.
+            iiop   = iop - nop
+            rrot   = -transpose( mrot(:,:,invtab(iiop)) )
+            invrrot= -transpose( mrot(:,:,iiop) )
+            trans  = tau(:,iiop)
+         END IF
+      endif
 
 
       rkpt    = matmul(rrot,bk(:,nk))
@@ -96,75 +94,75 @@ c     - arrays -
       g1      = nint(rkpt - rkpthlp)
 
 
-      ! MT coefficients
+! MT coefficients
       cmt_out = 0
       iatom   = 0
       iiatom  = 0
 
       DO itype = 1,ntype
-        DO ieq = 1,neq(itype)
-          iatom  = iatom + 1
+         DO ieq = 1,neq(itype)
+            iatom  = iatom + 1
 
-          iatom1 = map(iatom,iop)
-          tau1   = tvec(:,iatom,iop)
+            iatom1 = map(iatom,iop)
+            tau1   = tvec(:,iatom,iop)
 
-          cdum   = exp( tpiimg * dotprod(rkpt,tau1) ) 
+            cdum   = exp( tpiimg * dotprod(rkpt,tau1) ) 
 
-          lm0 = 0
-          DO l = 0,lmax(itype)
-            nn = nindx(l,itype)
-            DO n = 1,nn
-              lm1 = lm0 + n
-              lm2 = lm0 + n + 2*l*nn
-              DO i = 1,ndb
-#ifdef CPP_INVERSION
-                cmt_out(lm1:lm2:nn,iatom1,i) = cdum * 
-     &                  matmul(cmt(bandi+i-1,lm1:lm2:nn,iatom),
-     &                         d_wgn(-l:l,-l:l,l,iop)          )
-#else
-                IF( trs ) THEN
-                  cmthlp(:2*l+1) = CONJG ( 
-     +                                 cmt(bandi+i-1,lm1:lm2:nn,iatom) )
-                ELSE
-                  cmthlp(:2*l+1) =     cmt(bandi+i-1,lm1:lm2:nn,iatom)
-                ENDIF
-                cmt_out(lm1:lm2:nn,iatom1,i) = 
-     +              cdum * matmul(cmthlp(:2*l+1),d_wgn(-l:l,-l:l,l,iop))
-#endif
-              END DO
+            lm0 = 0
+            DO l = 0,lmax(itype)
+               nn = nindx(l,itype)
+               DO n = 1,nn
+                  lm1 = lm0 + n
+                  lm2 = lm0 + n + 2*l*nn
+                  DO i = 1,ndb
+                     if (l_real) THEN
+                        cmt_out(lm1:lm2:nn,iatom1,i) = cdum * 
+     &                       matmul(cmt(bandi+i-1,lm1:lm2:nn,iatom),
+     &                       d_wgn(-l:l,-l:l,l,iop)          )
+                     else
+                        IF( trs ) THEN
+                           cmthlp(:2*l+1) = CONJG ( 
+     +                          cmt(bandi+i-1,lm1:lm2:nn,iatom) )
+                        ELSE
+                        cmthlp(:2*l+1) = cmt(bandi+i-1,lm1:lm2:nn,iatom)
+                        ENDIF
+                        cmt_out(lm1:lm2:nn,iatom1,i) = 
+     +                cdum*matmul(cmthlp(:2*l+1),d_wgn(-l:l,-l:l,l,iop))
+                     endif
+                  END DO
+               END DO
+               lm0 = lm2
             END DO
-            lm0 = lm2
-          END DO
-        END DO
-        iiatom = iiatom + neq(itype)
+         END DO
+         iiatom = iiatom + neq(itype)
       END DO
 
-      ! PW coefficients
+! PW coefficients
       z_out = 0
 
       DO igpt = 1,nv(jsp)
-        g    = matmul( invrrot,gpt(:,igpt)+g1 )
-        !determine number of g
-        igpt1 = 0
-        DO i = 1,nv(jsp)
-          IF ( maxval( abs( g - gpt(:,i) ) ) .le. 1E-06  ) THEN
-            igpt1 = i
-            EXIT
-          END IF
-        END DO 
-        IF ( igpt1 .eq. 0 ) THEN 
-          STOP 'wavetrafo_symm: rotated G vector not found'
-        END IF
-        cdum =  exp( tpiimg*dotprod(rkpt+gpt(:,igpt),trans(:)) )
-#ifdef CPP_INVERSION
-        z_out(igpt,1:ndb) = cdum * z(igpt1,bandi:bandi+ndb-1)
-#else
-        IF(trs) THEN
-          z_out(igpt,1:ndb) = cdum * CONJG( z(igpt1,bandi:bandi+ndb-1) )
-        ELSE
-          z_out(igpt,1:ndb) = cdum * z(igpt1,bandi:bandi+ndb-1)
-        END IF
-#endif
+         g    = matmul( invrrot,gpt(:,igpt)+g1 )
+!determine number of g
+         igpt1 = 0
+         DO i = 1,nv(jsp)
+            IF ( maxval( abs( g - gpt(:,i) ) ) .le. 1E-06  ) THEN
+               igpt1 = i
+               EXIT
+            END IF
+         END DO 
+         IF ( igpt1 .eq. 0 ) THEN 
+            STOP 'wavetrafo_symm: rotated G vector not found'
+         END IF
+         cdum =  exp( tpiimg*dotprod(rkpt+gpt(:,igpt),trans(:)) )
+         if (l_real) THEN
+            z_out(igpt,1:ndb) = cdum * z_r(igpt1,bandi:bandi+ndb-1)
+         else
+            IF(trs) THEN
+              z_out(igpt,1:ndb)=cdum*CONJG(z_c(igpt1,bandi:bandi+ndb-1))
+            ELSE
+               z_out(igpt,1:ndb) = cdum * z_c(igpt1,bandi:bandi+ndb-1)
+            END IF
+         endif
       END DO
 
 
@@ -173,7 +171,7 @@ c     - arrays -
 
 
       SUBROUTINE waveftrafo_genwavf( 
-     &                 cmt_out,z_out,cmt,z,nk,iop,ntype,neq,
+     &       cmt_out,z_rout,z_cout,cmt,l_real,z_r,z_c,nk,iop,ntype,neq,
      &                 lmax,lmaxd,nindx,nkpt,nkpt3,maxlmindx,
      &                 natd,nw,nwd,bk,nop,nsym,mrot,tau,invtab,map,tvec,
      &                 taual,jsp,jspd,nbasfcn,neigd,nbands,d_wgn,
@@ -207,13 +205,11 @@ c     - arrays -
      +                                       0:lmaxd,nsym)
 
       COMPLEX,INTENT(IN)      ::  cmt(neigd,maxlmindx,natd)
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-      REAL,INTENT(IN)         ::  z(nbasfcn,neigd)
-      REAL,INTENT(OUT)        ::  z_out(nbasfcn,neigd)
-#else
-      COMPLEX,INTENT(IN)      ::  z(nbasfcn,neigd)
-      COMPLEX,INTENT(OUT)     ::  z_out(nbasfcn,neigd)
-#endif
+      LOGICAL,INTENT(IN)      :: l_real
+      REAL,INTENT(IN)         ::  z_r(nbasfcn,neigd)
+      REAL,INTENT(OUT)        ::  z_rout(nbasfcn,neigd)
+      COMPLEX,INTENT(IN)      ::  z_c(nbasfcn,neigd)
+      COMPLEX,INTENT(OUT)     ::  z_cout(nbasfcn,neigd)
 
       COMPLEX, INTENT(OUT)    ::  cmt_out(neigd,maxlmindx,natd)
 c        - local - 
@@ -234,27 +230,27 @@ c     - arrays -
       COMPLEX                 ::  cmthlp(2*lmaxd+1)
 
       tpiimg = -tpi_const*img
-#ifdef CPP_INVERSION
-      rrot   = transpose( mrot(:,:,invtab(iop)) )
-      invrrot= transpose( mrot(:,:,iop) )
-      trans  = tau(:,iop)
-#else
-      IF( iop .le. nop ) THEN
-        trs    = .false.
-        rrot   = transpose( mrot(:,:,invtab(iop)) )
-        invrrot= transpose( mrot(:,:,iop) )
-        trans  = tau(:,iop)
-      ELSE
-        ! in the case of SOC (l_soc=.true.) 
-        ! time reversal symmetry is not valid anymore;
-        ! nsym should thus equal nop
-        trs    = .true.
-        iiop   = iop - nop
-        rrot   = -transpose( mrot(:,:,invtab(iiop)) )
-        invrrot= -transpose( mrot(:,:,iiop) )
-        trans  = tau(:,iiop)
-      END IF
-#endif
+      if (l_real) THEN
+         rrot   = transpose( mrot(:,:,invtab(iop)) )
+         invrrot= transpose( mrot(:,:,iop) )
+         trans  = tau(:,iop)
+      else
+         IF( iop .le. nop ) THEN
+            trs    = .false.
+            rrot   = transpose( mrot(:,:,invtab(iop)) )
+            invrrot= transpose( mrot(:,:,iop) )
+            trans  = tau(:,iop)
+         ELSE
+! in the case of SOC (l_soc=.true.) 
+! time reversal symmetry is not valid anymore;
+! nsym should thus equal nop
+            trs    = .true.
+            iiop   = iop - nop
+            rrot   = -transpose( mrot(:,:,invtab(iiop)) )
+            invrrot= -transpose( mrot(:,:,iiop) )
+            trans  = tau(:,iiop)
+         END IF
+      endif
 
       rkpt    = matmul(rrot,bk(:,nk))
       rkpthlp = rkpt
@@ -283,11 +279,11 @@ c     - arrays -
               lm2 = lm0 + n + 2*l*nn
 
               DO i = 1,nbands
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
+                 if (l_real) THEN
                 cmt_out(i,lm1:lm2:nn,iatom1) = cdum * 
      &                     matmul( cmt(i,lm1:lm2:nn,iatom),
      &                             d_wgn(-l:l,-l:l,l,iop)   )
-#else
+             else
                 IF( trs ) THEN
                   cmthlp(:2*l+1) = conjg ( cmt(i,lm1:lm2:nn,iatom) )
                 ELSE
@@ -295,7 +291,7 @@ c     - arrays -
                 END IF
                 cmt_out(i,lm1:lm2:nn,iatom1) = cdum * 
      +                     matmul(cmthlp(:2*l+1),d_wgn(-l:l,-l:l,l,iop))
-#endif
+             endif
 
 
               END DO
@@ -321,15 +317,15 @@ c     - arrays -
         END DO 
         IF ( igpt1 .eq. 0 ) CYCLE
         cdum = exp(tpiimg*dotprod(rkpt+gpt_rkpt(:,igpt),trans ) )
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-        zhlp(igpt,:nbands)   =  cdum*z(igpt1,:nbands)
-#else
-        IF(trs) THEN
-          zhlp(igpt,:nbands) =  cdum*conjg( z(igpt1,:nbands) )
-        ELSE
-          zhlp(igpt,:nbands) =  cdum*z(igpt1,:nbands)
-        END IF
-#endif
+        if (l_real) THEN
+           zhlp(igpt,:nbands)   =  cdum*z_r(igpt1,:nbands)
+        else
+           IF(trs) THEN
+              zhlp(igpt,:nbands) =  cdum*conjg( z_c(igpt1,:nbands) )
+           ELSE
+              zhlp(igpt,:nbands) =  cdum*z_c(igpt1,:nbands)
+           END IF
+        endif
       END DO
 
       ! If phase and inversion-sym. is true, 
@@ -337,23 +333,26 @@ c     - arrays -
 
       IF( phase ) THEN
         DO i=1,nbands
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
+           if (l_real) THEN
+              CALL commonphase(cdum,zhlp(:,i),nbasfcn)
 
-          CALL commonphase(cdum,zhlp(:,i),nbasfcn)
-
-          IF(any(abs(aimag(zhlp(:,i)/cdum)).gt.1d-8)) THEN
-            WRITE(*,*) maxval(abs(aimag(zhlp(:,i)/cdum)))
-            WRITE(*,*) zhlp
-            STOP 'waveftrafo1: Residual imaginary part.'
-          END IF
-          z_out(:,i)   = zhlp(:,i)   / cdum
-          cmt_out(i,:,:) = cmt_out(i,:,:) / cdum
-#else
-          z_out(:,i) = zhlp(:,i)
-#endif
+              IF(any(abs(aimag(zhlp(:,i)/cdum)).gt.1d-8)) THEN
+                 WRITE(*,*) maxval(abs(aimag(zhlp(:,i)/cdum)))
+                 WRITE(*,*) zhlp
+                 STOP 'waveftrafo1: Residual imaginary part.'
+              END IF
+              z_rout(:,i)   = zhlp(:,i)   / cdum
+              cmt_out(i,:,:) = cmt_out(i,:,:) / cdum
+           else
+              z_cout(:,i) = zhlp(:,i)
+           endif
         END DO
       ELSE
-        z_out = zhlp
+         if (l_real) THEN
+            z_rout = zhlp
+         else
+            z_cout = zhlp
+         endif
       END IF
 
 
@@ -373,8 +372,8 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       ! (Array mat is overwritten! )
 
       SUBROUTINE symmetrize( mat,dim1,dim2,imode,lreal,
-     &                       ntypd,ntype,neq,lcutm,maxlcutm,
-     &                       nindxm,natd,invsat,invsatnr)
+     &     ntypd,ntype,neq,lcutm,maxlcutm,
+     &     nindxm,natd,invsat,invsatnr)
 
       IMPLICIT NONE
 
@@ -391,7 +390,7 @@ c     - arrays -
 
 c     -local scalars -
       INTEGER               ::  i,j,itype,ieq,ic,ic1,i1,i2,l,m,n,nn,
-     +                          ifac,ishift
+     +     ifac,ishift
       REAL                  ::  rfac,rdum,rmax
       COMPLEX               ::  img = (0d0,1d0)
 
@@ -404,86 +403,86 @@ c     - local arrays -
       i    = 0
 
       DO itype = 1,ntype
-        nn  = sum( (/ ((2*l+1)*nindxm(l,itype),l=0,lcutm(itype)) /) )
-        DO ieq = 1,neq(itype)
-          ic  = ic + 1
-          IF( invsat(ic) .eq. 0) THEN
-            ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
-            ! invsat(atom) = 0, invsatnr(atom) = 0
-            ! but we need invsatnr(atom) = natom
-            ic1 = ic
-          ELSE 
-            ic1 = invsatnr(ic)
-          END IF
-          !ic1 = invsatnr(ic)
-          IF( ic1 .lt. ic ) THEN
-            i = i + nn
-            CYCLE
-          END IF
-!           IF( ic1 .lt. ic ) cycle
-          DO l = 0,lcutm(itype)
-            ifac = -1
-            DO m = -l,l
-              ifac   =  -ifac
-              ishift = (ic1-ic)*nn - 2*m*nindxm(l,itype)
-              DO n = 1,nindxm(l,itype)
-                i = i + 1
-                j = i + ishift
-                IF( ic1 .ne. ic .or. m .lt. 0 ) THEN
-                  IF( iand(imode,1).ne.0 ) THEN
-                    carr(:dim2) = mat(i,:)
-                    mat(i,:)    = 
-     +                       ( carr(:dim2) + ifac * mat(j,:) ) * rfac
-                    mat(j,:)    = 
+         nn  = sum( (/ ((2*l+1)*nindxm(l,itype),l=0,lcutm(itype)) /) )
+         DO ieq = 1,neq(itype)
+            ic  = ic + 1
+            IF( invsat(ic) .eq. 0) THEN
+! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
+! invsat(atom) = 0, invsatnr(atom) = 0
+! but we need invsatnr(atom) = natom
+               ic1 = ic
+            ELSE 
+               ic1 = invsatnr(ic)
+            END IF
+!ic1 = invsatnr(ic)
+            IF( ic1 .lt. ic ) THEN
+               i = i + nn
+               CYCLE
+            END IF
+!     IF( ic1 .lt. ic ) cycle
+            DO l = 0,lcutm(itype)
+               ifac = -1
+               DO m = -l,l
+                  ifac   =  -ifac
+                  ishift = (ic1-ic)*nn - 2*m*nindxm(l,itype)
+                  DO n = 1,nindxm(l,itype)
+                     i = i + 1
+                     j = i + ishift
+                     IF( ic1 .ne. ic .or. m .lt. 0 ) THEN
+                        IF( iand(imode,1).ne.0 ) THEN
+                           carr(:dim2) = mat(i,:)
+                           mat(i,:)    = 
+     +                          ( carr(:dim2) + ifac * mat(j,:) ) * rfac
+                           mat(j,:)    = 
      +                       ( carr(:dim2) - ifac * mat(j,:) ) * (-cfac)
-                  END IF
-                  IF( iand(imode,2).ne.0) THEN
-                    carr(:dim1) = mat(:,i)
-                    mat(:,i)    = 
-     +                       ( carr(:dim1) + ifac * mat(:,j) ) * rfac
-                    mat(:,j)    = 
-     +                       ( carr(:dim1) - ifac * mat(:,j) ) * cfac
-                  END IF
-                ELSE IF( m .eq. 0 .and. ifac .eq. -1) THEN
-                  IF( iand(imode,1) .ne. 0) THEN
-                    mat(i,:) = -img * mat(i,:)
-                  END IF
-                  IF( iand(imode,2) .ne. 0) THEN
-                    mat(:,i) =  img * mat(:,i)
-                  END IF
-                END IF
-              END DO
+                        END IF
+                        IF( iand(imode,2).ne.0) THEN
+                           carr(:dim1) = mat(:,i)
+                           mat(:,i)    = 
+     +                          ( carr(:dim1) + ifac * mat(:,j) ) * rfac
+                           mat(:,j)    = 
+     +                          ( carr(:dim1) - ifac * mat(:,j) ) * cfac
+                        END IF
+                     ELSE IF( m .eq. 0 .and. ifac .eq. -1) THEN
+                        IF( iand(imode,1) .ne. 0) THEN
+                           mat(i,:) = -img * mat(i,:)
+                        END IF
+                        IF( iand(imode,2) .ne. 0) THEN
+                           mat(:,i) =  img * mat(:,i)
+                        END IF
+                     END IF
+                  END DO
+               END DO
             END DO
-          END DO
-        END DO
+         END DO
       END DO
 
       IF(lreal) THEN
-!         ! Determine common phase factor and devide by it to make the output matrix real.
-!         rmax = 0
-!         DO i = 1,dim1
-!           DO j = 1,dim2 
-!             rdum = abs(real(mat(i,j)))+abs(aimag(mat(i,j)))
-!             IF(rdum.gt.1d-6) THEN
-!               cfac = mat(i,j)/abs(mat(i,j))
-!               GOTO 1
-!             ELSE IF(rdum.gt.rmax) THEN
-!               cfac = mat(i,j)/abs(mat(i,j))
-!               rmax = rdum
-!             END IF
-!           END DO
-!         END DO
-!         IF(1-abs(cfac)   .gt.1d-8) THEN ; mat = 0 ; RETURN ; END IF
-!  1      IF(abs(1-cfac**2).gt.1d-8) mat = mat/cfac
-!
-!       IF(any(abs(aimag(mat)).gt.1d-8)) THEN
-!         WRITE(*,*) maxval(aimag(mat))
-!         STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
+!     ! Determine common phase factor and devide by it to make the output matrix real.
+!     rmax = 0
+!     DO i = 1,dim1
+!     DO j = 1,dim2 
+!     rdum = abs(real(mat(i,j)))+abs(aimag(mat(i,j)))
+!     IF(rdum.gt.1d-6) THEN
+!     cfac = mat(i,j)/abs(mat(i,j))
+!     GOTO 1
+!     ELSE IF(rdum.gt.rmax) THEN
+!     cfac = mat(i,j)/abs(mat(i,j))
+!     rmax = rdum
+!     END IF
+!     END DO
+!     END DO
+!     IF(1-abs(cfac)   .gt.1d-8) THEN ; mat = 0 ; RETURN ; END IF
+!     1      IF(abs(1-cfac**2).gt.1d-8) mat = mat/cfac
+!     
+!     IF(any(abs(aimag(mat)).gt.1d-8)) THEN
+!     WRITE(*,*) maxval(aimag(mat))
+!     STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
 
-        ! Determine common phase factor and divide by it to make the output matrix real.
-        CALL commonphase(cfac,mat,dim1*dim2)
-        mat = mat / cfac
-        IF(any(abs(aimag(mat)).gt.1d-8)) 
+! Determine common phase factor and divide by it to make the output matrix real.
+         CALL commonphase(cfac,mat,dim1*dim2)
+         mat = mat / cfac
+         IF(any(abs(aimag(mat)).gt.1d-8)) 
      +STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
       END IF
 
@@ -583,7 +582,8 @@ c     - local arrays -
 
 
       SUBROUTINE bra_trafo2 (
-     &          vecout,vecin,dim,nobd,nbands,ikpt0,ikpt1,iop,nop,nsym,
+     &          l_real,vecout_r,vecin_r,vecout_c,vecin_c,
+     &          dim,nobd,nbands,ikpt0,ikpt1,iop,nop,nsym,
      &          mrot,invtab,map,nkpt,nkpt3,bk,tau,bmat,maxlcutm,ntype,
      &          neq,lcutm,natd,taual,nindxm,maxindxm,nw,nwd,lmaxd,d_wgn,
      &          ngptmall,gptm,ngptm,pgptm,nbasp,invsat,
@@ -615,13 +615,13 @@ c     - arrays -
       INTEGER,INTENT(IN)      ::  map(natd,nsym)
       REAL,INTENT(IN)         ::  bk(3,nkpt),tau(3,nop),bmat(3,3),
      &                            taual(3,natd)
-#if ( defined(CPP_INVERSION) )
-      REAL,INTENT(IN)         ::  vecin(dim,nobd,nbands)
-      REAL,INTENT(OUT)        ::  vecout(dim,nobd,nbands)
-#else
-      COMPLEX,INTENT(IN)      ::  vecin(dim,nobd,nbands)
-      COMPLEX,INTENT(OUT)     ::  vecout(dim,nobd,nbands)
-#endif
+      
+      LOGICAL,INTENT(IN)      :: l_real
+
+      REAL,INTENT(IN)         ::  vecin_r(dim,nobd,nbands)
+      REAL,INTENT(OUT)        ::  vecout_r(dim,nobd,nbands)
+      COMPLEX,INTENT(IN)      ::  vecin_c(dim,nobd,nbands)
+      COMPLEX,INTENT(OUT)     ::  vecout_c(dim,nobd,nbands)
       COMPLEX,INTENT(IN)      ::  d_wgn(-lmaxd:lmaxd,-lmaxd:lmaxd,
      +                                       0:lmaxd,nsym)
       COMPLEX,INTENT(OUT)     ::  phase(nobd,nbands)
@@ -656,16 +656,18 @@ c     - arrays -
       IF( maxlcutm .gt. lmaxd ) STOP 'bra_trafo2: maxlcutm > lmaxd'   ! very improbable case
 
 c     transform back to unsymmetrized product basis in case of inversion symmetry
-      vecin1 = vecin
-#if ( defined(CPP_INVERSION) )
-      DO i=1,nbands
-        DO j=1,nobd
-          CALL desymmetrize(vecin1(:nbasp,j,i),nbasp,1,1,
-     &                      ntype,ntype,neq,lcutm,maxlcutm,
-     &                      nindxm,natd,invsat,invsatnr)
-        END DO
-      END DO
-#endif
+      if (l_real) THEN
+         vecin1 = vecin_r
+         DO i=1,nbands
+            DO j=1,nobd
+               CALL desymmetrize(vecin1(:nbasp,j,i),nbasp,1,1,
+     &              ntype,ntype,neq,lcutm,maxlcutm,
+     &              nindxm,natd,invsat,invsatnr)
+            END DO
+         END DO
+      else
+         vecin1=vecin_c
+      endif
 
     
       IF( iop .le. nop ) THEN
@@ -787,29 +789,32 @@ c     Multiplication
 
       DEALLOCATE ( vecin1 )
 
-#if ( defined(CPP_INVERSION) )
-      DO i=1,nbands
-        DO j=1,nobd
+      if (l_real) THEN
+         DO i=1,nbands
+            DO j=1,nobd
 
-          CALL symmetrize(vecout1(:,j,i),dim,1,1,.false.,
-     &                    ntype,ntype,neq,lcutm,maxlcutm,
-     &                    nindxm,natd,invsat,invsatnr)
+               CALL symmetrize(vecout1(:,j,i),dim,1,1,.false.,
+     &              ntype,ntype,neq,lcutm,maxlcutm,
+     &              nindxm,natd,invsat,invsatnr)
 
-          CALL commonphase(phase(j,i),vecout1(:,j,i),dim)
-          vecout1(:,j,i) = vecout1(:,j,i) / phase(j,i)
-          IF(any(abs(aimag(vecout1(:,j,i))).gt.1d-8)) THEN
-            WRITE(*,*) vecout1(:,j,i)
-            STOP 'bra_trafo2: Residual imaginary part.'
-          END IF
+               CALL commonphase(phase(j,i),vecout1(:,j,i),dim)
+               vecout1(:,j,i) = vecout1(:,j,i) / phase(j,i)
+               IF(any(abs(aimag(vecout1(:,j,i))).gt.1d-8)) THEN
+                  WRITE(*,*) vecout1(:,j,i)
+                  STOP 'bra_trafo2: Residual imaginary part.'
+               END IF
+               
+            END DO
+         END DO 
+      else
+         phase = (1d0,0d0)
+      endif
 
-        END DO
-      END DO 
-#else
-      phase = (1d0,0d0)
-#endif
-
-      vecout = vecout1
-
+      if (l_real) THEN
+         vecout_r = vecout1
+      else
+         vecout_c = vecout1
+      endif
       DEALLOCATE ( vecout1 )
 
       END SUBROUTINE bra_trafo2
@@ -888,13 +893,11 @@ c     This routine is not very fast at the moment.
    
 c     Transform back to unsymmetrized product basis in case of inversion symmetry.
       matin1 = matin      
-# ifdef CPP_INVERSION
       IF(lsymmetrize) THEN
         CALL desymmetrize(matin1,nbasm(ikpt0),nbasm(ikpt0),3,
      +                    ntype,ntype,neq,lcutm,maxlcutm,
      +                    nindxm,natd,invsat,invsatnr)
       END IF
-# endif
 
       IF( isym .le. nop ) THEN
         iisym   = isym
@@ -1197,13 +1200,11 @@ c        matout1(nbasp+igptm,:) = cdum * matin1(nbasp+igptm2,:)
       
 c     Transform back to unsymmetrized product basis in case of inversion symmetry.
       matin1 = matin
-# ifdef CPP_INVERSION
       IF(lsymmetrize) THEN
         CALL desymmetrize(matin1,nbasm(ikpt0),nbasm(ikpt0),3,
      &                    ntype,ntype,neq,lcutm,maxlcutm,
      &                    nindxm,natd,invsat,invsatnr)
       END IF
-# endif
 
       IF( isym .le. nop ) THEN
         iisym   = isym
@@ -1368,13 +1369,11 @@ c     Left-multiplication
 
 
       ! If inversion symmetry is applicable, symmetrize to make the values real.
-# ifdef CPP_INVERSION
       IF(lsymmetrize) THEN
         CALL symmetrize(matout1,nbasm(ikpt0),nbasm(ikpt0),3,.false.,
      &                  ntype,ntype,neq,lcutm,maxlcutm,
      &                  nindxm,natd,invsat,invsatnr)
       END IF
-# endif
 
       IF( isym .le. nop ) THEN
         matout = matout1
@@ -1454,13 +1453,11 @@ c     Left-multiplication
   
 c     Transform back to unsymmetrized product basis in case of inversion symmetry.
       vecin1 = vecin!(:nbasp)
-# ifdef CPP_INVERSION
       IF(lsymmetrize) THEN
         CALL desymmetrize(vecin1(:nbasp),1,nbasp,2,
      &                    ntype,ntype,neq,lcutm,maxlcutm,
      &                    nindxm,natd,invsat,invsatnr)
       END IF
-# endif
 
       IF( isym .le. nop ) THEN
         iisym   = isym
@@ -1598,11 +1595,9 @@ c     Multiplication
       END DO
 
       ! If inversion symmetry is applicable, define the phase of vecout and symmetrize to make the values real.
-#ifdef CPP_INVERSION
        IF(lsymmetrize) CALL symmetrize(vecout1,1,nbasm(ikpt1),2,lreal,
      &                                 ntype,ntype,neq,lcutm,maxlcutm,
      &                                 nindxm,natd,invsat,invsatnr)
-#endif
       vecout = vecout1
 
       END SUBROUTINE ket_trafo
@@ -1678,11 +1673,9 @@ c     Multiplication
   
 c     Transform back to unsymmetrized product basis in case of inversion symmetry.
       vecin1 = vecin!(:nbasp)
-# ifdef CPP_INVERSION
       IF(lsymmetrize) CALL desymmetrize(vecin1(:nbasp),1,nbasp,2,
      &                                  ntype,ntype,neq,lcutm,maxlcutm,
      &                                  nindxm,natd,invsat,invsatnr)
-# endif
 
       IF( isym .le. nop ) THEN
         iisym   = isym
@@ -1781,11 +1774,9 @@ c     Multiplication
       END DO 
 
       ! If inversion symmetry is applicable, define the phase of vecout and symmetrize to make the values real.
-#ifdef CPP_INVERSION
        IF(lsymmetrize) CALL symmetrize(vecout1,1,nbasm(ikpt1),2,lreal,
      &                                 ntype,ntype,neq,lcutm,maxlcutm,
      &                                 nindxm,natd,invsat,invsatnr)
-#endif
       IF( isym .le. nop ) THEN
         vecout = vecout1      
       ELSE
@@ -1826,7 +1817,7 @@ c     Multiplication
 
       SUBROUTINE bramat_trafo(
      <      vecout,igptm_out,
-     >      vecin,igptm_in,ikpt0,iop,writevec,pointer,invtab,
+     >      l_invs,vecin,igptm_in,ikpt0,iop,writevec,pointer,invtab,
      >      nop,nsym,rrot,invrrot,map,nkptd,nkptf,nkpt3,bk,tau,maxlcutm,
      >      ntype,neq,lcutm,natd,taual,nindxm,maxindxm,nw,nwd,lmaxd,
      >      dwgn,ngptmall,gptm,ngptm,pgptm,nbasp,nbasm,invsat,invsatnr)
@@ -1841,7 +1832,7 @@ c     - scalars
       INTEGER,INTENT(IN)      ::  nkptd,nkptf,maxlcutm,ntype,natd
       INTEGER,INTENT(IN)      ::  nw,nwd,nbasp,nsym,lmaxd
       INTEGER,INTENT(IN)      ::  ngptmall
-      LOGICAL,INTENT(IN)      ::  writevec
+      LOGICAL,INTENT(IN)      ::  writevec,l_invs
       INTEGER,INTENT(OUT)     ::  igptm_out
 c     - arrays -
       INTEGER,INTENT(IN)      ::  rrot(3,3),invrrot(3,3),invtab(nop)
@@ -1925,11 +1916,10 @@ c     - private arrays -
 
 c     Transform back to unsymmetrized product basis in case of inversion symmetry.
       vecout = vecin
-# ifdef CPP_INVERSION
-      CALL desymmetrize(vecout,nbasp,1,1,
+      if (l_invs) 
+     & CALL desymmetrize(vecout,nbasp,1,1,
      &                  ntype,ntype,neq,lcutm,maxlcutm,
      &                  nindxm,natd,invsat,invsatnr)
-# endif
 
 c     Right-multiplication
       ! PW
@@ -1993,11 +1983,10 @@ c     Left-multiplication
       END DO
 
       ! If inversion symmetry is applicable, symmetrize to make the values real.
-# ifdef CPP_INVERSION
-      CALL symmetrize(vecout,nbasp,1,1,.false.,
+      if(l_invs)
+     & CALL symmetrize(vecout,nbasp,1,1,.false.,
      &                ntype,ntype,neq,lcutm,maxlcutm,
      &                nindxm,natd,invsat,invsatnr)
-# endif
 
       END SUBROUTINE bramat_trafo
 

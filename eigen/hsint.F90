@@ -7,7 +7,7 @@
 MODULE m_hsint
 CONTAINS
   SUBROUTINE hsint(input,noco,jij,stars, vpw,lapw,jspin,&
-       n_size,n_rank,bkpt,cell,atoms,aa,bb)
+       n_size,n_rank,bkpt,cell,atoms,l_real,aa_r,bb_r,aa_c,bb_c)
     !*********************************************************************
     !     initializes and sets up the hamiltonian and overlap matrices
     !     for the interstitial. only the lower triangle of the hermitian
@@ -49,11 +49,9 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: vpw(stars%n3d)
     REAL,    INTENT (IN)    :: bkpt(3) 
-#ifdef CPP_INVERSION
-    REAL,    INTENT (OUT):: aa(:),bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (OUT):: aa(:),bb(:)
-#endif
+    LOGICAL,INTENT(IN)      :: l_real
+    REAL,    INTENT (OUT):: aa_r(:),bb_r(:)!(matsize)
+    COMPLEX, INTENT (OUT):: aa_c(:),bb_c(:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX th,ts,phase
@@ -64,10 +62,14 @@ CONTAINS
     COMPLEX ust1,vp1
     COMPLEX, ALLOCATABLE :: vpw1(:)  ! for J constants
     !     ..
-    !     ..
-    aa=0.0
-    bb=0.0
-
+    ! ..
+    if (l_real) THEN
+       aa_r=0.0
+       bb_r=0.0
+    ELSE
+       aa_c=0.0
+       bb_c=0.0
+    ENDIF
     ust1 = stars%ustep(1)
     ispin = jspin
     lapw%nmat = lapw%nv(ispin)
@@ -128,23 +130,23 @@ CONTAINS
           !-APW_LO
           !--->    determine matrix element and store
           ts = phase*stars%ustep(in)
-#ifdef CPP_INVERSION
-          aa(ii) = REAL(th)
-          bb(ii) = REAL(ts)
-#else
-          aa(ii) = th
-          bb(ii) = ts
-#endif
+          if (l_real) THEN
+          aa_r(ii) = REAL(th)
+          bb_r(ii) = REAL(ts)
+else
+          aa_c(ii) = th
+          bb_c(ii) = ts
+endif
        ENDDO
        !--->    diagonal term (g-g'=0 always first star)
        ii = ii + 1
-#ifdef CPP_INVERSION
-       aa(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
-       bb(ii) = REAL(ust1)
-#else
-       aa(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
-       bb(ii) = ust1
-#endif
+       if (l_real) THEN
+       aa_r(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
+       bb_r(ii) = REAL(ust1)
+else
+       aa_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
+       bb_c(ii) = ust1
+endif
     ENDDO
 
     !---> pk non-collinear
@@ -195,15 +197,15 @@ CONTAINS
                 ENDIF
                 !-APW_LO
                 ts = phase*stars%ustep(in)
-                aa(ii) = th
-                bb(ii) = ts
+                aa_c(ii) = th
+                bb_c(ii) = ts
              ENDIF
           ENDDO
           !--->    diagonal term (g-g'=0 always first star)
           !-gb99   ii = (nv(1)+i)*(nv(1)+i+1)/2
           ii = ii + 1
-          aa(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
-          bb(ii) = ust1
+          aa_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
+          bb_c(ii) = ust1
        ENDDO
 
        !---> determine spin-down spin-up part of Hamiltonian- and ovlp-matrix
@@ -227,10 +229,10 @@ CONTAINS
              IF (in.EQ.0) THEN
                 WRITE (*,*) 'HSINT: G-G'' not in star i,j= ',i,j
              ELSE
-                aa(ii) = stars%rgphs(i1,i2,i3)*vpw(in) 
+                aa_c(ii) = stars%rgphs(i1,i2,i3)*vpw(in) 
                 !--- J constants 
                 IF(jij%l_J) THEN
-                   aa(ii) = 0
+                   aa_c(ii) = 0
                 ENDIF
                 !--- J constants
 

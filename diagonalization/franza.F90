@@ -7,7 +7,7 @@
 MODULE m_franza
 CONTAINS
   SUBROUTINE franza(nbasfcn,neigd, nsize,&
-       l_zref,l_J,matind,nred, a,b,gw, z,eig,ne)
+       l_zref,l_J,matind,nred,gw,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
     !***********************************************************************
     !
     !     solves the secular equation a*z=eig*b*z
@@ -52,13 +52,10 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN)  :: matind(nbasfcn,2)
     REAL,    INTENT (OUT) :: eig(neigd)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT):: a(:),b(:)!(matsize)
-    REAL,    INTENT (INOUT) :: z(nbasfcn,neigd)
-#else
-    COMPLEX, INTENT (INOUT):: a(:),b(:)
-    COMPLEX, INTENT (INOUT) :: z(nbasfcn,neigd)
-#endif
+    REAL,OPTIONAL,INTENT (INOUT):: a_r(:),b_r(:)!(matsize)
+    REAL,OPTIONAL,INTENT (INOUT) :: z_r(nbasfcn,neigd)
+    COMPLEX,OPTIONAL,INTENT (INOUT):: a_c(:),b_c(:)!(matsize)
+    COMPLEX,OPTIONAL,INTENT (INOUT) :: z_c(nbasfcn,neigd)
     !     ..
     !     .. Local Scalars ..
     REAL toler,sq2i
@@ -67,34 +64,37 @@ CONTAINS
     LOGICAL addstate
     !     ..
     !     .. Local Arrays
-#ifdef CPP_INVERSION
-    REAL,    ALLOCATABLE :: aa(:), bb(:)
-    REAL                 :: zz(nbasfcn,neigd+1)
-#else
-    COMPLEX, ALLOCATABLE :: aa(:), bb(:), cwork(:)
-    COMPLEX              :: zz(nbasfcn,neigd+1)
-#endif
+    REAL,    ALLOCATABLE :: aa_r(:), bb_r(:)
+    REAL,    ALLOCATABLE :: zz_r(:,:)
+    COMPLEX, ALLOCATABLE :: aa_c(:), bb_c(:), cwork(:)
+    COMPLEX, ALLOCATABLE :: zz_c(:,:)
+
     REAL,    ALLOCATABLE ::  work(:), etemp(:)
     INTEGER, ALLOCATABLE ::  iwork(:),ifail(:)
     LOGICAL sort(nbasfcn)
     REAL:: lb,ub
 
-    !     ..
-    !     ..
-    !     .. External Subroutines ..
-#ifdef CPP_INVERSION
-    EXTERNAL CPP_LAPACK_spptrf,CPP_LAPACK_sspgst,CPP_LAPACK_sspevx, CPP_LAPACK_stptrs,CPP_BLAS_scopy
-#else
-    EXTERNAL CPP_LAPACK_cpptrf,CPP_LAPACK_chpgst,CPP_LAPACK_chpevx, CPP_LAPACK_ctptrs,CPP_BLAS_ccopy
-#endif
-    !     ..
+    !to select real/complex data
+    LOGICAL:: l_real
+
+    l_real=PRESENT(a_r)
+    IF (l_real.AND.PRESENT(a_c)) CALL juDFT_error("BUG in franza, call either with real OR complex data")
+    IF (l_real) THEN
+       ALLOCATE(zz_r(nbasfcn,neigd+1))
+    ELSE
+       ALLOCATE(zz_c(nbasfcn,neigd+1))
+    ENDIF
     nsym=1
     IF (l_zref) THEN
        !
-       ALLOCATE (aa(nred*(nred+1)/2),bb(nred*(nred+1)/2))
-       !
        ! separate H and S matrix in symmetric (aa,bb) and antisymmetric (a,b) part
        !
+       IF (l_real) THEN
+          ALLOCATE (aa_r(nred*(nred+1)/2),bb_r(nred*(nred+1)/2))
+       ELSE
+          ALLOCATE (aa_c(nred*(nred+1)/2),bb_c(nred*(nred+1)/2))
+       END IF
+
        nsym=2
        i2=0
        j2=0
@@ -103,12 +103,22 @@ CONTAINS
              i1=(matind(i,1)-1)*matind(i,1)/2+matind(j,1)
              j1=(matind(i,1)-1)*matind(i,1)/2+matind(j,2)
              i2=i2+1
-             aa(i2)=a(i1)+a(j1)
-             bb(i2)=b(i1)+b(j1)
+             IF (l_real) THEN 
+                aa_r(i2)=a_r(i1)+a_r(j1)
+                bb_r(i2)=b_r(i1)+b_r(j1)
+             ELSE
+                aa_c(i2)=a_c(i1)+a_c(j1)
+                bb_c(i2)=b_c(i1)+b_c(j1)
+             END IF
              IF ((matind(i,1).NE.matind(i,2)).AND.(matind(j,1).NE.matind(j,2))) THEN
                 j2=j2+1
-                a(j2)=a(i1)-a(j1)
-                b(j2)=b(i1)-b(j1)
+                IF (l_real) THEN 
+                   aa_r(j2)=a_r(i1)-a_r(j1)
+                   bb_r(j2)=b_r(i1)-b_r(j1)
+                ELSE
+                   aa_c(j2)=a_c(i1)-a_c(j1)
+                   bb_c(j2)=b_c(i1)-b_c(j1)
+                END IF
              ENDIF
           ENDDO
        ENDDO
@@ -121,27 +131,34 @@ CONTAINS
           ! second time calculate symmetric part and store the antisym. EV's and EW's
           !
           matsz=(nred+1)*nred/2
-#ifdef CPP_INVERSION
-          CALL CPP_BLAS_scopy(matsz,aa,1,a,1)
-          CALL CPP_BLAS_scopy(matsz,bb,1,b,1)
-#else
-          CALL CPP_BLAS_ccopy(matsz,aa,1,a,1)
-          CALL CPP_BLAS_ccopy(matsz,bb,1,b,1)
-#endif
+          IF (l_real) THEN
+             CALL CPP_BLAS_scopy(matsz,aa_r,1,a_r,1)
+             CALL CPP_BLAS_scopy(matsz,bb_r,1,b_r,1)
+          ELSE
+             CALL CPP_BLAS_ccopy(matsz,aa_c,1,a_c,1)
+             CALL CPP_BLAS_ccopy(matsz,bb_c,1,b_c,1)
+          ENDIF
 
           ne_a=ne
           k=1
           nsize_a=nsize
           DO i=1,ne
-#ifdef CPP_INVERSION
-             aa(i)=eig(i)
-#else
-             aa(i)=CMPLX(eig(i),0.0)
-#endif
-             DO j=1,nsize
-                bb(k)=z(j,i)
-                k=k+1
-             ENDDO
+             IF (l_real) THEN
+                aa_r(i)=eig(i)
+             ELSE
+                aa_c(i)=CMPLX(eig(i),0.0)
+             ENDIF
+             IF (l_real) THEN
+                DO j=1,nsize
+                   bb_r(k)=z_r(j,i)
+                   k=k+1
+                ENDDO
+             ELSE
+                DO j=1,nsize
+                   bb_c(k)=z_c(j,i)
+                   k=k+1
+                ENDDO
+             ENDIF
           ENDDO
           nsize=nred
 
@@ -150,36 +167,28 @@ CONTAINS
        ! --> start with Cholesky factorization of b ( so that b = l * l^t)
        ! --> b is overwritten by l
        !
-#ifdef CPP_INVERSION
-       CALL CPP_LAPACK_spptrf('U',nsize,b,info)
-#else
-       CALL CPP_LAPACK_cpptrf('U',nsize,b,info)
-#endif
+       IF (l_real) THEN
+          CALL CPP_LAPACK_spptrf('U',nsize,b_r,info)
+       ELSE
+          CALL CPP_LAPACK_cpptrf('U',nsize,b_c,info)
+       ENDIF
        !
        IF (info.NE.0) THEN
-#ifdef CPP_INVERSION
-          WRITE (*,*) 'Error in spptrf: info =',info
-#else
-          WRITE (*,*) 'Error in cpptrf: info =',info
-#endif
+          WRITE (*,*) 'Error in cpptrf/spptrf: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="franza")
        ENDIF
        !
        ! --> now reduce a * z = eig * b * z to the standard form a' * z' = eig * z' 
        ! --> where a' = (l)^-1 * a * (l^t)^-1 and z' = l^t * z
        !
-#ifdef CPP_INVERSION
-       CALL CPP_LAPACK_sspgst(1,'U',nsize,a,b,info)
-#else
-       CALL CPP_LAPACK_chpgst(1,'U',nsize,a,b,info)
-#endif
+       IF (l_real) THEN
+          CALL CPP_LAPACK_sspgst(1,'U',nsize,a_r,b_r,info)
+       ELSE
+          CALL CPP_LAPACK_chpgst(1,'U',nsize,a_c,b_c,info)
+       ENDIF
        !
        IF (info.NE.0) THEN
-#ifdef CPP_INVERSION
-          WRITE (6,*) 'Error in sspgst: info =',info
-#else
-          WRITE (6,*) 'Error in chpgst: info =',info
-#endif
+          WRITE (6,*) 'Error in chpgst/sspgst: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="franza")
        ENDIF
        !
@@ -193,22 +202,24 @@ CONTAINS
        ALLOCATE ( etemp(nbasfcn) )
        addstate = gw.NE.0.AND.iu.LT.nsize ! add one state, 
        IF(addstate) iu = iu + 1           ! see below (CF)
-       zz=0.0
-#ifdef CPP_INVERSION
-       IF(l_J)THEN
-          CALL CPP_LAPACK_sspevx('N','I','U',nsize,a,lb,ub,1,iu,toler,ne, etemp,zz,nbasfcn,work,iwork,ifail,info)
+
+       IF (l_real) THEN
+          zz_r=0.0
+          IF(l_J)THEN
+             CALL CPP_LAPACK_sspevx('N','I','U',nsize,a_r,lb,ub,1,iu,toler,ne, etemp,zz_r,nbasfcn,work,iwork,ifail,info)
+          ELSE
+             CALL CPP_LAPACK_sspevx('V','I','U',nsize,a_r,lb,ub,1,iu,toler,ne, etemp,zz_r,nbasfcn,work,iwork,ifail,info)
+          ENDIF
        ELSE
-          CALL CPP_LAPACK_sspevx('V','I','U',nsize,a,lb,ub,1,iu,toler,ne, etemp,zz,nbasfcn,work,iwork,ifail,info)
+          zz_c=0.0
+          ALLOCATE ( cwork(2*nbasfcn) )
+          IF(l_J)THEN
+             CALL CPP_LAPACK_chpevx('N','I','U',nsize,a_c,lb,ub,1,iu,toler,ne, etemp,zz_c,nbasfcn,cwork,work,iwork,ifail,info)
+          ELSE
+             CALL CPP_LAPACK_chpevx('V','I','U',nsize,a_c,lb,ub,1,iu,toler,ne, etemp,zz_c,nbasfcn,cwork,work,iwork,ifail,info)
+          ENDIF
+          DEALLOCATE ( cwork )
        ENDIF
-#else
-       ALLOCATE ( cwork(2*nbasfcn) )
-       IF(l_J)THEN
-          CALL CPP_LAPACK_chpevx('N','I','U',nsize,a,lb,ub,1,iu,toler,ne, etemp,zz,nbasfcn,cwork,work,iwork,ifail,info)
-       ELSE
-          CALL CPP_LAPACK_chpevx('V','I','U',nsize,a,lb,ub,1,iu,toler,ne, etemp,zz,nbasfcn,cwork,work,iwork,ifail,info)
-       ENDIF
-       DEALLOCATE ( cwork )
-#endif
        IF(addstate) THEN ! cut topmost subspace of degenerate states to avoid symmetry breaking (CF)
           iu = ne
           ne = ne - 1
@@ -216,7 +227,11 @@ CONTAINS
              ne = ne - 1
           ENDDO
        ENDIF
-       z = zz(:,:ne) 
+       IF (l_real) THEN
+          z_r = zz_r(:,:ne)
+       ELSE
+          z_c = zz_c(:,:ne)
+       END IF
        !
        IF (ne.GT.neigd) THEN
           WRITE(6,*) 'ne=',ne,' > neigd'
@@ -228,11 +243,7 @@ CONTAINS
           DEALLOCATE ( work,iwork,ifail,etemp )
        ELSE
           IF (info.NE.0) THEN
-#ifdef CPP_INVERSION
-             WRITE (6,*) 'Error in sspevx: info =',info
-#else
-             WRITE (6,*) 'Error in chpevx: info =',info
-#endif
+             WRITE (6,*) 'Error in chpexvx/sspevx: info =',info
              WRITE (6,*) 'The following eigenvectors did not converge:'
              WRITE (6,'(30i5)') (ifail(i),i=1,ne)
              CALL juDFT_error("Diagonalization failed",calledby="franza")
@@ -241,18 +252,14 @@ CONTAINS
           !
           ! --> recover the generalized eigenvectors z by solving z' = l^t * z
           !
-#ifdef CPP_INVERSION
-          CALL CPP_LAPACK_stptrs('U','N','N',nsize,ne,b,z,nbasfcn,info)
-#else
-          CALL CPP_LAPACK_ctptrs('U','N','N',nsize,ne,b,z,nbasfcn,info)
-#endif
+          IF (l_real) THEN
+             CALL CPP_LAPACK_stptrs('U','N','N',nsize,ne,b_r,z_r,nbasfcn,info)
+          ELSE
+             CALL CPP_LAPACK_ctptrs('U','N','N',nsize,ne,b_c,z_c,nbasfcn,info)
+          ENDIF
           !
           IF (info.NE.0) THEN
-#ifdef CPP_INVERSION
-             WRITE (6,*) 'Error in stptrs: info =',info
-#else
-             WRITE (6,*) 'Error in ctptrs: info =',info
-#endif
+             WRITE (6,*) 'Error in c/stptrs: info =',info
              CALL juDFT_error("Diagonalization failed",calledby="franza")
           ENDIF
        ENDIF !l_J
@@ -262,13 +269,19 @@ CONTAINS
     ! now collect symmetric and antisym. EW's and EV's and sort
     !     
     IF (l_zref) THEN
-
        k=1
        DO i=1,ne
-          DO j=1,nsize
-             b(k)=z(j,i)
-             k=k+1
-          ENDDO
+          IF (l_real) THEN
+             DO j=1,nsize
+                b_r(k)=z_r(j,i)
+                k=k+1
+             ENDDO
+          ELSE
+             DO j=1,nsize
+                b_c(k)=z_c(j,i)
+                k=k+1
+             ENDDO
+          END IF
        ENDDO
        !
        ! prepare sort-array: even=.true., odd=.false.
@@ -276,18 +289,28 @@ CONTAINS
        i=1
        j=1
        eig(ne+1)    = 99.9e9
-#ifdef CPP_INVERSION
-       aa(ne_a+1) = 99.9e9
-#else
-       aa(ne_a+1) = CMPLX(99.9e9,0.0)
-#endif
+       IF (l_real) THEN
+          aa_r(ne_a+1) = 99.9e9
+       ELSE
+          aa_c(ne_a+1) = CMPLX(99.9e9,0.0)
+       ENDIF
        DO k=1,ne+ne_a
-          IF (eig(i).LT.REAL(aa(j))) THEN
-             sort(k)=.TRUE.
-             i=i+1
+          IF (l_real) THEN
+             IF (eig(i).LT.REAL(aa_r(j))) THEN
+                sort(k)=.TRUE.
+                i=i+1
+             ELSE
+                sort(k)=.FALSE.
+                j=j+1
+             ENDIF
           ELSE
-             sort(k)=.FALSE.
-             j=j+1
+             IF (eig(i).LT.REAL(aa_c(j))) THEN
+                sort(k)=.TRUE.
+                i=i+1
+             ELSE
+                sort(k)=.FALSE.
+                j=j+1
+             ENDIF
           ENDIF
        ENDDO
        !
@@ -300,55 +323,54 @@ CONTAINS
        sq2i=1.0/SQRT(2.0)
        DO k=ne,1,-1
           DO n=1,nsize
-#ifdef CPP_INVERSION
-             z(n,k)=0.0
-#else
-             z(n,k)=CMPLX(0.0,0.0)
-#endif
+             IF (l_real) THEN
+                z_r(n,k)=0.0
+             ELSE
+                z_c(n,k)=CMPLX(0.0,0.0)
+             ENDIF
           ENDDO
           IF (sort(k)) THEN
              eig(k)=eig(i)
              i1=nred * (i-1)
              DO n=1,nred
                 i1=i1+1
-#ifdef CPP_INVERSION
-                z(matind(n,1),k) = z(matind(n,1),k)+b(i1)*sq2i
-                z(matind(n,2),k) = z(matind(n,2),k)+b(i1)*sq2i
-#else
-                z(matind(n,1),k) = z(matind(n,1),k)+b(i1)*CMPLX(sq2i,0.0)
-                z(matind(n,2),k) = z(matind(n,2),k)+b(i1)*CMPLX(sq2i,0.0)
-#endif
+                IF (l_real) THEN
+                   z_r(matind(n,1),k) = z_r(matind(n,1),k)+b_r(i1)*sq2i
+                   z_r(matind(n,2),k) = z_r(matind(n,2),k)+b_r(i1)*sq2i
+                ELSE
+                   z_c(matind(n,1),k) = z_c(matind(n,1),k)+b_c(i1)*CMPLX(sq2i,0.0)
+                   z_c(matind(n,2),k) = z_c(matind(n,2),k)+b_c(i1)*CMPLX(sq2i,0.0)
+                ENDIF
              ENDDO
              i=i-1
           ELSE
-#ifdef CPP_INVERSION
-             eig(k)=aa(j)
-#else
-             eig(k)=REAL(aa(j))
-#endif
+             IF (l_real) THEN
+                eig(k)=aa_r(j)
+             ELSE
+                eig(k)=REAL(aa_c(j))
+             ENDIF
              j1=nsize_a * (j-1)
              DO n=1,nred
                 IF (matind(n,1).NE.matind(n,2)) THEN
                    j1=j1+1
-#ifdef CPP_INVERSION
-                   z(matind(n,1),k) = z(matind(n,1),k)+bb(j1)*sq2i
-                   z(matind(n,2),k) = z(matind(n,2),k)-bb(j1)*sq2i
-#else
-                   z(matind(n,1),k) = z(matind(n,1),k)+bb(j1) *CMPLX(sq2i,0.0)
-                   z(matind(n,2),k) = z(matind(n,2),k)-bb(j1) *CMPLX(sq2i,0.0)
-#endif
+                   IF (l_real) THEN
+                      z_r(matind(n,1),k) = z_r(matind(n,1),k)+bb_r(j1)*sq2i
+                      z_r(matind(n,2),k) = z_r(matind(n,2),k)-bb_r(j1)*sq2i
+                   ELSE
+                      z_c(matind(n,1),k) = z_c(matind(n,1),k)+bb_c(j1) *CMPLX(sq2i,0.0)
+                      z_c(matind(n,2),k) = z_c(matind(n,2),k)-bb_c(j1) *CMPLX(sq2i,0.0)
+                   ENDIF
                 ELSE
-#ifdef CPP_INVERSION
-                   z(matind(n,1),k) = 0.0
-#else
-                   z(matind(n,1),k) = CMPLX(0.0,0.0)
-#endif
+                   IF (l_real) THEN
+                      z_r(matind(n,1),k) = 0.0
+                   ELSE
+                      z_c(matind(n,1),k) = CMPLX(0.0,0.0)
+                   ENDIF
                 ENDIF
              ENDDO
              j=j-1
           ENDIF
        ENDDO
-       DEALLOCATE ( aa,bb )
 
     ENDIF
     !-gu

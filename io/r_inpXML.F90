@@ -1787,11 +1787,6 @@ SUBROUTINE r_inpXML(&
 
   DO iType = 1, atoms%ntype
      IF (atoms%nlo(iType).GE.1) THEN
-#ifdef CPP_INVERSION
-        IF (noco%l_soc.AND.(atoms%neq(iType).GT.1)) THEN
-           !            CALL juDFT_error("for LO + SOC use complex version in this case!",calledby="inped")
-        END IF
-#endif
         IF (input%secvar) THEN
            CALL juDFT_error("LO + sevcar not implemented",calledby ="r_inpXML")
         END IF
@@ -2298,7 +2293,7 @@ SUBROUTINE r_inpXML(&
   CALL  prp_xcfft(stars,input,cell,xcpot)
 
   IF (.NOT.sliceplot%iplot) THEN
-     CALL stepf(stars,atoms,oneD,input,cell,vacuum)
+     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum)
      CALL convn(DIMENSION,atoms,stars)
      CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
   END IF

@@ -22,7 +22,7 @@ MODULE m_alinemuff
   !*                                                                      *
   !************************************************************************
 CONTAINS
-  SUBROUTINE aline_muff(atoms,DIMENSION,sym, cell, jsp,ne, usdus,td, bkpt,lapw, z,eig)
+  SUBROUTINE aline_muff(atoms,DIMENSION,sym, cell, jsp,ne, usdus,td, bkpt,lapw, eig,z_r,z_c,realdata)
 
 #include"cpp_double.h"
 
@@ -43,11 +43,10 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)   
     REAL,    INTENT (INOUT) :: eig(DIMENSION%neigd)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: z(DIMENSION%nbasfcn,ne)
-#else
-    COMPLEX, INTENT (INOUT) :: z(DIMENSION%nbasfcn,ne)
-#endif
+
+    REAL,    OPTIONAL,INTENT (INOUT) :: z_r(DIMENSION%nbasfcn,ne)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: z_c(DIMENSION%nbasfcn,ne)
+    LOGICAL,OPTIONAL,INTENT(IN):: realdata
     !     ..
     !     .. Local Scalars ..
     INTEGER i,info,j,ii
@@ -61,47 +60,47 @@ CONTAINS
     !     ..
     !     .. External Subroutines ..
     EXTERNAL CPP_LAPACK_ssygv
+    LOGICAL l_real
+
+    l_real=present(z_r)
+    if (present(realdata)) l_real=realdata
+
     !     ..
     !---> initialize the hamiltonian and overlap matrix
-    h = 0.0
-
-    !---> add the diagonal (muffin-tin) terms
-    DO i = 1,ne
-       ii = (i-1)*i/2 + i
-       h(ii) = eig(i)
-    END DO
-
+       h = 0.0
+       !---> add the diagonal (muffin-tin) terms
+       DO i = 1,ne
+          ii = (i-1)*i/2 + i
+          h(ii) = eig(i)
+       END DO
+   
     !---> add the off-diagonal (non-muffin-tin) terms
-    CALL h_nonmuff(atoms,DIMENSION,sym, cell, jsp,z,ne, usdus,td, bkpt,lapw, h)
+    CALL h_nonmuff(atoms,DIMENSION,sym, cell, jsp,ne, usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
 
     !---> DIAGONALIZE THE HAMILTONIAN USING LIBRARY-ROUTINES
-
 #ifdef CPP_ESSL
     !---> ESSL call, IBM AIX
-    CALL CPP_LAPACK_sspev (21,&
-         &                       h,&
-         &                       eig,z1,&
-         &                       ne,ne,help,3*ne)
+    CALL CPP_LAPACK_sspev (21, h, eig,z1, ne,ne,help,3*ne)
 #else
     !---> LAPACK call
-    CALL CPP_LAPACK_sspev ('V','U',ne,&
-         &                       h,&
-         &                       eig,z1,&
-         &                       ne,help,&
-         &                       info)
+    CALL CPP_LAPACK_sspev ('V','U',ne, h, eig,z1, ne,help, info)
     WRITE (6,FMT=8000) info
 8000 FORMAT (' AFTER CPP_LAPACK_sspev: info=',i4)
 #endif
 
-
     !---> store eigenvectors on array z
     DO i = 1,lapw%nv(jsp)
-       DO j = 1,ne
-          help(j) = z(i,j)
-       END DO
-       DO j = 1,ne
-          z(i,j) = CPP_BLAS_sdot(ne,help,1,z1(1,j),1)
-       END DO
+       if (l_real) THEN
+          help(:ne)=z_r(i,:ne)
+          DO j = 1,ne
+             z_r(i,j) = CPP_BLAS_sdot(ne,help,1,z1(1,j),1)
+          END DO
+       else
+          help(:ne)=z_c(i,:ne)
+          DO j = 1,ne
+             z_c(i,j) = CPP_BLAS_sdot(ne,help,1,z1(1,j),1)
+          END DO
+       endif
     END DO
 
   END SUBROUTINE aline_muff

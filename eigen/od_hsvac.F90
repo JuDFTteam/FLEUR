@@ -5,11 +5,11 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_od_hsvac
-  use m_juDFT
+  USE m_juDFT
 CONTAINS
   SUBROUTINE od_hsvac(&
-       vacuum,stars,dimension, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,jij, aa,bb, nv2)
+       vacuum,stars,DIMENSION, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
+       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,jij,nv2,l_real,aa_r,bb_r,aa_c,bb_c)
 
     !     subroutine for calculating the hamiltonian and overlap matrices in
     !     the vacuum in the case of 1-dimensional calculations
@@ -20,7 +20,7 @@ CONTAINS
     USE m_od_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: dimension
+    TYPE(t_dimension),INTENT(IN):: DIMENSION
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
@@ -40,16 +40,14 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,n2d_1-1,2)
-    INTEGER, INTENT (OUT):: nv2(dimension%jspd)
+    INTEGER, INTENT (OUT):: nv2(DIMENSION%jspd)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
-    REAL,    INTENT (IN) :: evac(2,dimension%jspd)
+    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     REAL,    INTENT (IN) :: bkpt(3)
 
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:),bb(:)!(matsize)
-#else 
-    COMPLEX, INTENT (INOUT) :: aa(:),bb(:)!(matsize)
-#endif
+    LOGICAL, INTENT(IN)  :: l_real
+    REAL,    INTENT (INOUT) :: aa_r(:),bb_r(:)!(matsize)
+    COMPLEX, INTENT (INOUT) :: aa_c(:),bb_c(:)!(matsize)
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,exp1,exp2,exp3,am,bm,ic
@@ -75,24 +73,24 @@ CONTAINS
     ! l_J auxiliary potential array
     COMPLEX, ALLOCATABLE :: vxy1(:,:,:)
     !     ..
-    ic  = cmplx(0.,1.)
-    d2 = sqrt(cell%omtil/cell%area)
+    ic  = CMPLX(0.,1.)
+    d2 = SQRT(cell%omtil/cell%area)
 
     IF (jij%l_J) ALLOCATE (vxy1(vacuum%nmzxyd,n2d_1-1,2))
 
     ALLOCATE (&
-         ai(-vM:vM,dimension%nv2d,dimension%nvd),bi(-vM:vM,dimension%nv2d,dimension%nvd),&
-         nvp(dimension%nv2d,dimension%jspd),ind(stars%n2d,dimension%nv2d,dimension%jspd),&
-         kvac3(dimension%nv2d,dimension%jspd),map1(dimension%nvd,dimension%jspd),&
-         tddv(-vM:vM,-vM:vM,dimension%nv2d,dimension%nv2d),&
-         tduv(-vM:vM,-vM:vM,dimension%nv2d,dimension%nv2d),&
-         tudv(-vM:vM,-vM:vM,dimension%nv2d,dimension%nv2d),&
-         tuuv(-vM:vM,-vM:vM,dimension%nv2d,dimension%nv2d),&
-         a(-vM:vM,dimension%nvd,dimension%jspd),b(-vM:vM,dimension%nvd,dimension%jspd),&
+         ai(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),bi(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),&
+         nvp(DIMENSION%nv2d,DIMENSION%jspd),ind(stars%n2d,DIMENSION%nv2d,DIMENSION%jspd),&
+         kvac3(DIMENSION%nv2d,DIMENSION%jspd),map1(DIMENSION%nvd,DIMENSION%jspd),&
+         tddv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
+         tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
+         tudv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
+         tuuv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
+         a(-vM:vM,DIMENSION%nvd,DIMENSION%jspd),b(-vM:vM,DIMENSION%nvd,DIMENSION%jspd),&
          bess(-vM:vM),dbss(-vM:vM),bess1(-vM:vM),&
-         ddnv(-vM:vM,dimension%nv2d,dimension%jspd),dudz(-vM:vM,dimension%nv2d,dimension%jspd),&
-         duz(-vM:vM,dimension%nv2d,dimension%jspd),&
-         udz(-vM:vM,dimension%nv2d,dimension%jspd),uz(-vM:vM,dimension%nv2d,dimension%jspd) )
+         ddnv(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),dudz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),&
+         duz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),&
+         udz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),uz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd) )
 
     !--->     set up mapping function from 3d-->1d lapws
     !--->            creating arrays ind and nvp
@@ -106,14 +104,14 @@ CONTAINS
                 map1(k,jspin) = j
                 CYCLE k_loop
              END IF
-          enddo
+          ENDDO
           nv2(jspin) = nv2(jspin) + 1
-          IF (nv2(jspin)>dimension%nv2d)  CALL juDFT_error("dimension%nv2d",calledby ="od_hsvac")
+          IF (nv2(jspin)>DIMENSION%nv2d)  CALL juDFT_error("dimension%nv2d",calledby ="od_hsvac")
           kvac3(nv2(jspin),jspin) = lapw%k3(k,jspin)
           map1(k,jspin) = nv2(jspin)
-       end DO k_loop
+       END DO k_loop
 
-       DO ik = 1,dimension%nv2d
+       DO ik = 1,DIMENSION%nv2d
           nvp(ik,jspin) = 0
           DO i = 1,stars%n2d
              ind(i,ik,jspin) = 0
@@ -162,14 +160,14 @@ CONTAINS
              READ (25)((vxy(imz,k,ivac), imz=1,vacuum%nmzxy),k=1,n2d_1-1)
           END IF
 
-          IF (jij%l_J .AND. ipot.EQ.3) vxy(:,:,ivac)=cmplx(0.,0.)
+          IF (jij%l_J .AND. ipot.EQ.3) vxy(:,:,ivac)=CMPLX(0.,0.)
 
        ENDIF ! loco
 
        !     get the wavefunctions and set up the tuuv, etc matrices
 
        CALL od_vacfun(&
-            m_cyl,cell,vacuum,dimension,stars,&
+            m_cyl,cell,vacuum,DIMENSION,stars,&
             jsp,input,noco,ipot,oneD,n2d_1, ivac,evac(1,1),bkpt,MM,vM,&
             vxy(1,1,ivac),vz,kvac3,nv2, tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv)
 
@@ -189,10 +187,10 @@ CONTAINS
                    CALL dcylbs(vM,qq,bess,dbss)
                    DO m = -vM,vM
                       wronk = uz(m,i2,jspin)*dudz(m,i2,jspin) - udz(m,i2,jspin)*duz(m,i2,jspin)
-                      a(m,k,jspin)=exp(-cmplx(0.0,m*gphi))*(ic**m)*&
-                           cmplx(dudz(m,i2,jspin)*bess(m)- udz(m,i2,jspin)*gr*dbss(m),0.0) /(d2*wronk)
-                      b(m,k,jspin)=exp(-cmplx(0.0,m*gphi))*(ic**m)*&
-                           cmplx(-duz(m,i2,jspin)*bess(m)+ uz(m,i2,jspin)*gr*dbss(m),0.0) /(d2*wronk)
+                      a(m,k,jspin)=EXP(-CMPLX(0.0,m*gphi))*(ic**m)*&
+                           CMPLX(dudz(m,i2,jspin)*bess(m)- udz(m,i2,jspin)*gr*dbss(m),0.0) /(d2*wronk)
+                      b(m,k,jspin)=EXP(-CMPLX(0.0,m*gphi))*(ic**m)*&
+                           CMPLX(-duz(m,i2,jspin)*bess(m)+ uz(m,i2,jspin)*gr*dbss(m),0.0) /(d2*wronk)
                    END DO
                 END IF
              ENDDO
@@ -213,11 +211,11 @@ CONTAINS
                 CALL dcylbs(vM,qq,bess,dbss)
                 DO m = -vM,vM
                    wronk = uz(m,i2,jsp)*dudz(m,i2,jsp) - udz(m,i2,jsp)*duz(m,i2,jsp) 
-                   a(m,k,1)=exp(-cmplx(0.0,m*gphi))*(ic**m)*&
-                        cmplx(dudz(m,i2,jsp)*bess(m)- udz(m,i2,jsp)*gr*dbss(m),0.0) /(d2*wronk)
+                   a(m,k,1)=EXP(-CMPLX(0.0,m*gphi))*(ic**m)*&
+                        CMPLX(dudz(m,i2,jsp)*bess(m)- udz(m,i2,jsp)*gr*dbss(m),0.0) /(d2*wronk)
 
-                   b(m,k,1)=exp(-cmplx(0.0,m*gphi))*(ic**m)*&
-                        cmplx(-duz(m,i2,jsp)*bess(m)+ uz(m,i2,jsp)*gr*dbss(m),0.0) /(d2*wronk)
+                   b(m,k,1)=EXP(-CMPLX(0.0,m*gphi))*(ic**m)*&
+                        CMPLX(-duz(m,i2,jsp)*bess(m)+ uz(m,i2,jsp)*gr*dbss(m),0.0) /(d2*wronk)
 
                 END DO
              END IF
@@ -235,7 +233,7 @@ CONTAINS
           ELSE
              nc = nc + atoms%nlotot
              nc_0 = nc
-             i_start = mod(mod(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size)
+             i_start = MOD(MOD(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size)
           ENDIF
 
           DO  i = i_start+1,lapw%nv(jspin),n_size
@@ -257,30 +255,29 @@ CONTAINS
                 IF (map1(j,jspin).EQ.ik) THEN
                    sij = (0.0,0.0)
                    DO m = -vM,vM
-                      sij = sij + conjg(a(m,i,jspin))*a(m,j,jspin) &
-                           +conjg(b(m,i,jspin))*b(m,j,jspin) *ddnv(m,ik,jspin1)
+                      sij = sij + CONJG(a(m,i,jspin))*a(m,j,jspin) &
+                           +CONJG(b(m,i,jspin))*b(m,j,jspin) *ddnv(m,ik,jspin1)
                    END DO
-
-#ifdef CPP_INVERSION
-                   bb(ii) = bb(ii) + real(sij)
-#else 
-                   bb(ii) = bb(ii) + sij
-#endif
+                   IF (l_real) THEN 
+                      bb_r(ii) = bb_r(ii) + REAL(sij)
+                   ELSE
+                      bb_c(ii) = bb_c(ii) + sij
+                   ENDIF
                 END IF
              ENDDO
              ii = ii0 + i
              sij = (0.0,0.0)
              DO m = -vM,vM
-                sij = sij + conjg(a(m,i,jspin))*a(m,i,jspin)+ &
-                     conjg(b(m,i,jspin))*b(m,i,jspin)*ddnv(m,ik,jspin1)
+                sij = sij + CONJG(a(m,i,jspin))*a(m,i,jspin)+ &
+                     CONJG(b(m,i,jspin))*b(m,i,jspin)*ddnv(m,ik,jspin1)
              END DO
 
-#ifdef CPP_INVERSION
-             bb(ii) = bb(ii) + real(sij)
-#else 
-             bb(ii) = bb(ii) + sij
-#endif
-          enddo
+             IF (l_real) THEN
+                bb_r(ii) = bb_r(ii) + REAL(sij)
+             ELSE 
+                bb_c(ii) = bb_c(ii) + sij
+             ENDIF
+          ENDDO
        ENDIF ! ipot.eq.1.or.2
        !   hamiltonian update 
        !   for the noncylindr. contributions we use the cutoff of m_cyl        
@@ -293,16 +290,16 @@ CONTAINS
           jspin1 = 2
           jspin2 = 2
           nc = nc_0
-          i_start = mod(mod(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size)
+          i_start = MOD(MOD(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size)
        ELSEIF (ipot.EQ.3) THEN
           jspin1 = 2
           jspin2 = 1
           nc = nc_0
-          i_start = mod(mod(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size)
+          i_start = MOD(MOD(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size)
        ENDIF
 
-       ai(:,:,:) = cmplx(0.,0.)
-       bi(:,:,:) = cmplx(0.,0.)
+       ai(:,:,:) = CMPLX(0.,0.)
+       bi(:,:,:) = CMPLX(0.,0.)
 
        DO ik = 1,nv2(jspin1)
           DO jk = 1,nv2(jspin2)
@@ -315,9 +312,9 @@ CONTAINS
                          DO gi = 1,nvp(ik,jspin1)
                             i = ind(gi,ik,jspin1)
                             ai(l,jk,i) = ai(l,jk,i) +&
-                                 conjg(a(m,i,jspin1))*tuuv(m,l,ik,jk) + conjg(b(m,i,jspin1))*tduv(m,l,ik,jk)
+                                 CONJG(a(m,i,jspin1))*tuuv(m,l,ik,jk) + CONJG(b(m,i,jspin1))*tduv(m,l,ik,jk)
                             bi(l,jk,i) = bi(l,jk,i) +&
-                                 conjg(a(m,i,jspin1))*tudv(m,l,ik,jk) + conjg(b(m,i,jspin1))*tddv(m,l,ik,jk)
+                                 CONJG(a(m,i,jspin1))*tudv(m,l,ik,jk) + CONJG(b(m,i,jspin1))*tddv(m,l,ik,jk)
 
                          END DO
                       END IF
@@ -343,15 +340,16 @@ CONTAINS
           DO j = 1,jmax
              ii = ii0 + j
              jk = map1(j,jspin2)
-             hij = cmplx(0.,0.)
+             hij = CMPLX(0.,0.)
              DO l = -vM,vM
                 hij = hij + ai(l,jk,i)*a(l,j,jspin2) + bi(l,jk,i)*b(l,j,jspin2)
              END DO
-#ifdef CPP_INVERSION
-             aa(ii) = aa(ii) + real(hij)
-#else 
-             aa(ii) = aa(ii) + hij
-#endif
+             IF (l_real) THEN
+
+                aa_r(ii) = aa_r(ii) + REAL(hij)
+             ELSE 
+                aa_c(ii) = aa_c(ii) + hij
+             ENDIF
           END DO
        END DO
 

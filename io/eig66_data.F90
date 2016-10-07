@@ -14,7 +14,7 @@ module m_eig66_data
     TYPE :: t_data
        INTEGER:: io_mode
        INTEGER:: jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
-       LOGICAL:: l_dos,l_mcd,l_orb
+       LOGICAL:: l_dos,l_mcd,l_orb,l_real,l_soc
     END TYPE
 
     TYPE,EXTENDS(t_data):: t_data_DA
@@ -90,9 +90,10 @@ module m_eig66_data
 
     contains
     
-    subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_dos,l_mcd,l_orb)
+    subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
     CLASS(t_data)::d
     INTEGER,INTENT(IN)::jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
+    LOGICAL,INTENT(IN):: l_real,l_soc
     LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     d%jspins=jspins
     d%nkpts=nkpts
@@ -102,6 +103,8 @@ module m_eig66_data
     d%nlotot=nlotot
     d%nlo=nlo
     d%ntype=ntype
+    d%l_real=l_real
+    d%l_soc=l_soc
     if (present(l_dos)) THEN
        d%l_dos=l_dos
        d%l_mcd=l_mcd

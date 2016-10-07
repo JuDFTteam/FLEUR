@@ -33,9 +33,9 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,create,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,create,l_real,l_soc,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
-    LOGICAL, INTENT(IN) :: create
+    LOGICAL, INTENT(IN) :: create,l_real,l_soc
     LOGICAL,INTENT(IN),OPTIONAL ::  l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
@@ -49,7 +49,7 @@ CONTAINS
     CALL priv_find_data(id,d)
 
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
 
     !Allocate the storage for the DATA always read/write
     ALLOCATE(d%el_s(0:lmax,ntype),d%ello_s(nlo,ntype),d%evac_s(2))
@@ -59,11 +59,11 @@ CONTAINS
     d%recl_bas=recl_eig
     INQUIRE(IOLENGTH=recl_eig) r1
     recl_eig=recl_eig*(neig+2) ! add a 2 for integer 'neig'
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     INQUIRE(IOLENGTH=recl_z) r1
-#else
-    INQUIRE(IOLENGTH=recl_z) c1
-#endif
+    if (l_real.and..not.l_soc ) THEN
+       INQUIRE(IOLENGTH=recl_z) r1
+    else
+       INQUIRE(IOLENGTH=recl_z) c1
+    endif
     recl_z=recl_z*nmat*neig
 
     d%recl_vec=recl_eig+recl_z

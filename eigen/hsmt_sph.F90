@@ -8,8 +8,8 @@ MODULE m_hsmt_sph
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_sph(DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
-       input,hlpmsize,noco,l_socfirst,cell,nintsp, lapw,el,usdus,vr,gk,rsoc,isigma, aa,bb,fj,gj)
+  SUBROUTINE hsmt_sph(sym,DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
+       input,hlpmsize,noco,l_socfirst,cell,nintsp, lapw,el,usdus,vr,gk,rsoc,isigma,fj,gj,l_real, aa_r,bb_r,aa_c,bb_c)
 
 #include"cpp_double.h"
     USE m_constants, ONLY : fpi_const,tpi_const
@@ -24,6 +24,7 @@ CONTAINS
 #endif
     USE m_types
     IMPLICIT NONE
+    TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_dimension),INTENT(IN):: DIMENSION
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -47,11 +48,10 @@ CONTAINS
     TYPE(t_rsoc),INTENT(IN) :: rsoc
 
 
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:),bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:),bb(:)
-#endif
+    LOGICAL, INTENT(IN) :: l_real
+    REAL,    INTENT (INOUT) :: aa_r(:),bb_r(:)!(matsize)
+    COMPLEX, INTENT (INOUT) :: aa_c(:),bb_c(:)
+
     REAL,INTENT(OUT) :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     ..
     !     .. Local Scalars ..
@@ -115,7 +115,7 @@ CONTAINS
              DO lo = 1,atoms%nlo(n)
                 IF (atoms%l_dulo(lo,n)) apw(l) = .TRUE.
              ENDDO
-             IF ((input%l_useapw).and.(atoms%lapw_l(n).GE.l)) apw(l) = .FALSE.
+             IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l) = .FALSE.
 
           ENDDO
           DO lo = 1,atoms%nlo(n)
@@ -224,19 +224,15 @@ CONTAINS
              DO kj = 1,kjmax
                 plegend(kj,1) = DOT_PRODUCT(gk(kj,:,jintsp),gk(ki,:,iintsp))
                 IF (l_socfirst) THEN
-                   !#ifdef CPP_SOCFIRST
-                   cross_k(kj,1)=gk(ki,2,jintsp)*gk(kj,3,iintsp)- gk(ki,3,jintsp)*gk(kj,2,iintsp)
+                    cross_k(kj,1)=gk(ki,2,jintsp)*gk(kj,3,iintsp)- gk(ki,3,jintsp)*gk(kj,2,iintsp)
                    cross_k(kj,2)=gk(ki,3,jintsp)*gk(kj,1,iintsp)- gk(ki,1,jintsp)*gk(kj,3,iintsp)
                    cross_k(kj,3)=gk(ki,1,jintsp)*gk(kj,2,iintsp)- gk(ki,2,jintsp)*gk(kj,1,iintsp)
                 ENDIF
-                !#endif
              END DO
              DO l = 1,MAXVAL(atoms%lmax) - 1
                 plegend(:,l+1) = fleg1(l)*plegend(:,1)*plegend(:,l) - fleg2(l)*plegend(:,l-1)
                 IF (l_socfirst) THEN
-                   !#ifdef CPP_SOCFIRST
                    dplegend(:,l+1)=REAL(l+1)*plegend(:,l)+ plegend(:,1)*dplegend(:,l)
-                   !#endif
                 ENDIF
              END DO
              !--->       loop over equivalent atoms
@@ -262,12 +258,12 @@ CONTAINS
                       rph(kj,1) = rph(kj,1) +&
                            COS(DOT_PRODUCT(ski-(/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj,tnn))
 
-#ifndef CPP_INVERSION
-                      !--->                if the system does not posses inversion symmetry
-                      !--->                the complex part of the exponential is needed.
-                      cph(kj,1) = cph(kj,1) +&
-                           SIN(DOT_PRODUCT((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
-#endif
+                      IF (.NOT.sym%invs) THEN
+                         !--->                if the system does not posses inversion symmetry
+                         !--->                the complex part of the exponential is needed.
+                         cph(kj,1) = cph(kj,1) +&
+                              SIN(DOT_PRODUCT((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
+                      ENDIF
                    END DO
                 END DO
 
@@ -293,7 +289,6 @@ CONTAINS
 
                    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
                       !--->             pk non-collinear
-#ifndef CPP_INVERSION
                       IF (noco%l_constr.OR.l_socfirst) THEN
                          DO kj = 1,ki
                             fct  = plegend(kj,l)*fl2p1(l)*&
@@ -328,8 +323,8 @@ CONTAINS
                       !+||
                       IF ( kii+1.LE.lapw%nv(1) ) THEN
                          !--->                spin-up spin-up part
-                         CALL CPP_BLAS_caxpy(ki,chi11,bbwa,1,bb(iii+1),1)
-                         CALL CPP_BLAS_caxpy(ki,chi11,aawa,1,aa(iii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi11,bbwa,1,bb_c(iii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi11,aawa,1,aa_c(iii+1),1)
                          !--->                spin-down spin-up part, upper triangle.
                          !--->                the help array is used to allow vectorization on
                          !--->                Cray PVP systems. it is mapped onto the hamiltonian
@@ -347,12 +342,12 @@ CONTAINS
                             ii = iii
                          ENDIF
                          !--->                spin-down spin-up part, lower triangle
-                         CALL CPP_BLAS_caxpy(ki,chi21,bbwa,1,bb(ii+1),1)
-                         CALL CPP_BLAS_caxpy(ki,chi21,aawa,1,aa(ii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi21,bbwa,1,bb_c(ii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi21,aawa,1,aa_c(ii+1),1)
                          !--->                spin-down spin-down part
                          ii = ii + lapw%nv(1)+atoms%nlotot
-                         CALL CPP_BLAS_caxpy(ki,chi22,bbwa,1,bb(ii+1),1)
-                         CALL CPP_BLAS_caxpy(ki,chi22,aawa,1,aa(ii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi22,bbwa,1,bb_c(ii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi22,aawa,1,aa_c(ii+1),1)
                       ENDIF
                       !-||
                       !--->                when fj and gj are available for both local spins
@@ -384,18 +379,18 @@ CONTAINS
                             !--->                  spin-up spin-up part
                             ii = (ki-1)*(ki)/2
                             DO kj = 1,ki
-                               aa(ii+kj) = aa(ii+kj) + aawa(kj)*chj(nsp,1,1,n)
+                               aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chj(nsp,1,1,n)
                             ENDDO
                             !--->                  spin-down spin-down part
                             ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 + &
                                  lapw%nv(1)+atoms%nlotot
                             DO kj = 1,ki
-                               aa(ii+kj) = aa(ii+kj) + aawa(kj)*chj(nsp,2,2,n)
+                               aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chj(nsp,2,2,n)
                             ENDDO
                             !--->                  spin-down spin-up part
                             ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
                             DO kj = 1,lapw%nv(1)
-                               aa(ii+kj) = aa(ii+kj) + aawa(kj)*chj(nsp,2,1,n)
+                               aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chj(nsp,2,1,n)
                             ENDDO
                          ENDDO
                       ENDIF
@@ -419,25 +414,25 @@ CONTAINS
                                      !--->                  spin-up spin-up part
                                      ii = (ki-1)*(ki)/2
                                      DO kj = 1,ki
-                                        aa(ii+kj) = aa(ii+kj) + aawa(kj)*chi11so(j1,j2)
+                                        aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chi11so(j1,j2)
                                      ENDDO
                                      !--->                  spin-down spin-down part
                                      ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 +&
                                           lapw%nv(1)+atoms%nlotot
                                      DO kj = 1,ki
-                                        aa(ii+kj) = aa(ii+kj) + aawa(kj)*chi22so(j1,j2)
+                                        aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chi22so(j1,j2)
                                      ENDDO
                                      !--->                  spin-down spin-up part
                                      ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
                                      DO kj = 1,lapw%nv(1)
-                                        aa(ii+kj) = aa(ii+kj) + aawa(kj)*chi21so(j1,j2)
+                                        aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chi21so(j1,j2)
                                      ENDDO
 
                                   ELSE  ! eigenvalue parallelization
 
                                      IF ( kii+1.LE.lapw%nv(1) ) THEN
                                         !--->                    spin-up spin-up part
-                                        CALL CPP_BLAS_caxpy(ki,chi11so(j1,j2),aawa,1, aa(iii+1),1)
+                                        CALL CPP_BLAS_caxpy(ki,chi11so(j1,j2),aawa,1, aa_c(iii+1),1)
 
                                         !--->                    spin-down spin-up part, upper triangle.
                                         DO kj = 1,ki - 1
@@ -448,10 +443,10 @@ CONTAINS
                                      IF  (kii+1.GT.lapw%nv(1)) THEN
                                         ii = iii
                                         !--->                    spin-down spin-up part, lower triangle
-                                        CALL CPP_BLAS_caxpy(ki,chi21so(j1,j2),aawa,1, aa(ii+1),1)
+                                        CALL CPP_BLAS_caxpy(ki,chi21so(j1,j2),aawa,1, aa_c(ii+1),1)
                                         !--->                    spin-down spin-down part
                                         ii = ii + lapw%nv(1)+atoms%nlotot
-                                        CALL CPP_BLAS_caxpy(ki,chi22so(j1,j2),aawa,1, aa(ii+1),1)
+                                        CALL CPP_BLAS_caxpy(ki,chi22so(j1,j2),aawa,1, aa_c(ii+1),1)
                                      ENDIF
 
                                   ENDIF ! eigenvalue par.
@@ -461,7 +456,6 @@ CONTAINS
                          ENDIF       ! ( l > 0 ) & socfirst
                       ENDIF          ! (isp = 2)
                       !               End spin-orbit
-                      !#endif
                    ELSEIF ( noco%l_noco .AND. noco%l_ss ) THEN
                       IF ( iintsp.EQ.2 .AND. jintsp.EQ.1 ) THEN
                          kjmax = lapw%nv(1)
@@ -481,56 +475,61 @@ CONTAINS
                          !--->                   spin-up spin-up part
                          ii = (ki-1)*(ki)/2
                          DO kj = 1,ki
-                            bb(ii+kj) = bb(ii+kj) + bbwa(kj)*chi11
-                            aa(ii+kj) = aa(ii+kj) + aawa(kj)*chi11
+                            bb_c(ii+kj) = bb_c(ii+kj) + bbwa(kj)*chi11
+                            aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chi11
                          ENDDO
                       ELSEIF ( iintsp.EQ.2 .AND. jintsp.EQ.2 ) THEN
                          !--->                   spin-down spin-down part
                          ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 +&
                               lapw%nv(1)+atoms%nlotot
                          DO kj = 1,ki
-                            bb(ii+kj) = bb(ii+kj) + bbwa(kj)*chi22
-                            aa(ii+kj) = aa(ii+kj) + aawa(kj)*chi22
+                            bb_c(ii+kj) = bb_c(ii+kj) + bbwa(kj)*chi22
+                            aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chi22
                          ENDDO
                       ELSE
                          !--->                   spin-down spin-up part
                          ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
                          DO kj = 1,lapw%nv(1)
-                            bb(ii+kj) = bb(ii+kj) + bbwa(kj)*chi21
-                            aa(ii+kj) = aa(ii+kj) + aawa(kj)*chi21
+                            bb_c(ii+kj) = bb_c(ii+kj) + bbwa(kj)*chi21
+                            aa_c(ii+kj) = aa_c(ii+kj) + aawa(kj)*chi21
                          ENDDO
                       ENDIF
-#endif
                       !--->             pk non-collinear
                    ELSE
-                      DO kj = 1,ki
-                         fct  = plegend(kj,l)*fl2p1(l)*&
-                              ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp)*ddnln )
+                      IF (l_real) THEN
+                         DO kj = 1,ki
+                            fct  = plegend(kj,l)*fl2p1(l)*&
+                                 ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp)*ddnln )
 
-                         ij = iii + kj
-#ifdef CPP_INVERSION
-                         bb(ij) = bb(ij) + rph(kj,1) * fct
-                         aa(ij) = aa(ij) + rph(kj,1) * ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
-                              ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
-                         !+APW
-                         IF (input%l_useapw) THEN
-                            apw1 = rph(kj,1) * plegend(kj,l)  * &
-                                 ( apw_lo1 * fj(kj,l,n,iintsp) + apw_lo2 * gj(kj,l,n,iintsp) )
-                            aa(ij) = aa(ij) + apw1
-                         ENDIF
-                         !-APW
-#else
-                         bb(ij) = bb(ij) + CMPLX(rph(kj,1),cph(kj,1))*fct
-                         aa(ij) = aa(ij) + CMPLX(rph(kj,1),cph(kj,1)) * (fct*elall + plegend(kj,l)*fl2p1bt(l) *&
-                              ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
-                         IF (input%l_useapw) THEN
+                            ij = iii + kj
+                            bb_r(ij) = bb_r(ij) + rph(kj,1) * fct
+                            aa_r(ij) = aa_r(ij) + rph(kj,1) * ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
+                                 ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+                            !+APW
+                            IF (input%l_useapw) THEN
+                               apw1 = rph(kj,1) * plegend(kj,l)  * &
+                                    ( apw_lo1 * fj(kj,l,n,iintsp) + apw_lo2 * gj(kj,l,n,iintsp) )
+                               aa_r(ij) = aa_r(ij) + apw1
+                            ENDIF
+                            !-APW
+                         ENDDO
+                      ELSE
+                         DO kj = 1,ki
+                            fct  = plegend(kj,l)*fl2p1(l)*&
+                                 ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp)*ddnln )
 
-                            capw1 = CMPLX(rph(kj,1),cph(kj,1))*plegend(kj,l)&
-                                 * ( apw_lo1 * fj(kj,l,n,iintsp) + apw_lo2 * gj(kj,l,n,iintsp) )
-                            aa(ij) = aa(ij) + capw1
-                         ENDIF
-#endif
-                      END DO
+                            ij = iii + kj
+                            bb_c(ij) = bb_c(ij) + CMPLX(rph(kj,1),cph(kj,1))*fct
+                            aa_c(ij) = aa_c(ij) + CMPLX(rph(kj,1),cph(kj,1)) * (fct*elall + plegend(kj,l)*fl2p1bt(l) *&
+                                 ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+                            IF (input%l_useapw) THEN
+
+                               capw1 = CMPLX(rph(kj,1),cph(kj,1))*plegend(kj,l)&
+                                    * ( apw_lo1 * fj(kj,l,n,iintsp) + apw_lo2 * gj(kj,l,n,iintsp) )
+                               aa_c(ij) = aa_c(ij) + capw1
+                            ENDIF
+                         END DO
+                      ENDIF
                    ENDIF
 
                    !--->          end loop over l
@@ -560,16 +559,14 @@ CONTAINS
              ii = (ki-1)*(ki)/2
              DO kj = 1,ki-1
                 ij = (lapw%nv(1)+atoms%nlotot+kj-1)*(lapw%nv(1)+atoms%nlotot+kj)/2 + ki
-                aa(ij) = aa(ij) + aahlp(ii+kj)
-                bb(ij) = bb(ij) + bbhlp(ii+kj)
+                aa_c(ij) = aa_c(ij) + aahlp(ii+kj)
+                bb_c(ij) = bb_c(ij) + bbhlp(ii+kj)
              ENDDO
           ENDDO
 
        ELSE
-#ifdef CPP_MPI
-          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, aahlp, aa)
-          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, bb)
-#endif
+          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, aahlp, .FALSE.,aa_c=aa_c)
+          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, .FALSE.,aa_c=bb_c)
        ENDIF
     ENDIF
 

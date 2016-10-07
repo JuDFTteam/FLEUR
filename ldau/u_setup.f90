@@ -15,14 +15,14 @@ MODULE m_usetup
   !                                                  G.B. Oct. 2000   |
   !-------------------------------------------------------------------+
 CONTAINS
-  SUBROUTINE u_setup(atoms,lmaxb,sphhar, input,el,vr,mpi, vs_mmp,results,number)
+  SUBROUTINE u_setup(sym,atoms,lmaxb,sphhar, input,el,vr,mpi, vs_mmp,results,number)
     USE m_umtx
     USE m_uj2f
     USE m_nmat_rot
     USE m_vmmp
     USE m_types
     IMPLICIT NONE
-
+    TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_input),INTENT(IN)        :: input
@@ -113,7 +113,7 @@ CONTAINS
        ! calculate potential matrix and total energy correction
        !
        CALL v_mmp(&
-            atoms,input%jspins,lmaxb,ns_mmp,u,f0,f2,&
+            sym,atoms,input%jspins,lmaxb,ns_mmp,u,f0,f2,&
             vs_mmp,results)
        IF (mpi%irank.EQ.0) THEN
           DO jspin = 1,input%jspins

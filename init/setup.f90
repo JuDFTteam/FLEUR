@@ -1,11 +1,8 @@
       MODULE m_setup
       USE m_juDFT
       CONTAINS
-        SUBROUTINE setup(&
-             &     atoms,kpts,DIMENSION,sphhar,&
-             &     obsolete,sym,stars,oneD,&
-             &     input,noco,vacuum,cell,xcpot,&
-             &     sliceplot,enpara,l_opti)
+        SUBROUTINE setup(atoms,kpts,DIMENSION,sphhar,&
+                  obsolete,sym,stars,oneD, input,noco,vacuum,cell,xcpot, sliceplot,enpara,l_opti)
           !
           !----------------------------------------
           ! this routine is called by: fleur.F
@@ -80,22 +77,18 @@
           INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
           !
           IF (sym%namgrp.EQ.'any ') THEN
-             CALL rw_symfile(&
-                  'R',94,'sym.out',sym%nop,cell%bmat, &
-                  sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
+             CALL rw_symfile('R',94,'sym.out',sym%nop,cell%bmat, sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
           ELSE
-             CALL spg2set(&
-                  &               sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,&
-                  &               sym%mrot,sym%tau,sym%nop2,sym%symor)
+             CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
           ENDIF
           IF (input%film.AND..NOT.sym%symor) CALL juDFT_warn("Films&Symor",hint&
                &     ="Films should be symmorphic",calledby ='setup')
           IF (.NOT.oneD%odd%d1) THEN
              CALL local_sym(&
-                  &        atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-                  &        atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
-                  &        sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-                  &        atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
+                  atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
+                  atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
+                  sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
+                  atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
              sym%nsymt = sphhar%ntypsd
 
              oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
@@ -113,10 +106,10 @@
                 END DO
              END DO
              CALL local_sym(&
-                  &        atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-                  &        atoms%natd,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
-                  &        sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-                  &        nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
+                  atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
+                  atoms%natd,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
+                  sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
+                  nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
 
              sym%nsymt = sphhar%ntypsd
              ii = 1
@@ -128,93 +121,62 @@
           END IF
           !+odim
           IF (atoms%n_u.GT.0) THEN
-             CALL d_wigner(&
-                  &                sym%nop,sym%mrot,cell%bmat,3,&
-                  &                sym%d_wgn)
+             CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3, sym%d_wgn)
           ENDIF
           !
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
-             CALL mapatom(&
-                  &             sym,atoms,&
-                  &             cell,input,&
-                  &             noco)
+             CALL mapatom(sym,atoms, cell,input, noco)
              oneD%ngopr1(1:atoms%natd) = atoms%ngopr(1:atoms%natd)
              !        DEALLOCATE ( nq1 )
           ELSE
              !-odim
              CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
-             CALL mapatom(&
-                  &        sym,atoms,&
-                  &        cell,input,&
-                  &        noco)
-             CALL od_mapatom(&
-                  &          oneD,atoms,sym,cell)
+             CALL mapatom(sym,atoms, cell,input, noco)
+             CALL od_mapatom(oneD,atoms,sym,cell)
           END IF
 
           !+odim
           IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
-             CALL strgn1(&
-                  &            stars,sym,atoms,&
-                  &            vacuum,sphhar,&
-                  &            input,cell,xcpot)
+             CALL strgn1(stars,sym,atoms, vacuum,sphhar, input,cell,xcpot)
              !-odim
              IF (oneD%odd%d1) THEN
-                CALL od_strgn1(&
-                     &     xcpot,cell,sym,oneD&
-                     &      )
+                CALL od_strgn1(xcpot,cell,sym,oneD)
              END IF
              !+odim
           ELSE
-             CALL strgn2(&
-                  &            stars,sym,atoms,&
-                  &            vacuum,sphhar,&
-                  &            input,cell,xcpot&
-                  &             )
+             CALL strgn2(stars,sym,atoms, vacuum,sphhar, input,cell,xcpot)
           ENDIF
           !
           !IF (.NOT.l_opti) THEN
-             CALL inpeig(&
-                  &              atoms,cell,input,oneD%odd%d1,kpts,enpara)
+             CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara)
           !ENDIF
           !
           !-----> prepare dimensions for charge density fft-box in pwden.f
           !
-          CALL  prp_qfft(&
-               &                  stars,&
-               &                  cell,noco,&
-               &                  input)
+          CALL  prp_qfft(stars, cell,noco, input)
 
           IF (input%gw.GE.1) CALL write_gw(&
-               &                        atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
-               &                        atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-               &                        atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-               &                        atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
+               atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
+               atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
+               atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
+               atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
           !
           !-----> prepare dimensions for xc fft-box in visxc(g).f
           !
           
          
-          CALL  prp_xcfft(&
-               &                stars,input,&
-               &                cell,&
-               &                xcpot)
+          CALL  prp_xcfft(stars,input, cell, xcpot)
           !
           IF (.NOT.sliceplot%iplot) THEN
              !
-             CALL stepf(&
-                  &           stars,atoms,oneD,&
-                  &           input,cell,&
-                  &           vacuum)
+             CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum)
              !
-             CALL convn(&
-                  &           DIMENSION,atoms,stars)
+             CALL convn(DIMENSION,atoms,stars)
              !
              !--->    set up electric field parameters (if needed) 
              !
-             CALL efield(&
-                  &             atoms, DIMENSION, stars, sym,&
-                  &              vacuum, cell, input)
+             CALL efield(atoms, DIMENSION, stars, sym, vacuum, cell, input)
 
           ENDIF
 

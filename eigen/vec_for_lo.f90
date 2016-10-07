@@ -132,7 +132,7 @@ CONTAINS
                             cwork(m,nkvec(lo,iintsp),lo,iintsp) = term1*ylm(lm)
                          END DO
                          CALL orthoglo(&
-                              atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                              sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
                             kvec(nkvec(lo,iintsp),lo) = k
                          ELSE
@@ -155,7 +155,7 @@ CONTAINS
                                cwork(mind,nkvec(lo,iintsp),lo,iintsp) = ((-1)** (l+m))*CONJG(term1*ylm(lmp))
                             END DO
                             CALL orthoglo(&
-                                 atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                                 sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
                                kvec(nkvec(lo,iintsp),lo) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '

@@ -7,7 +7,7 @@
 MODULE m_chani
 CONTAINS
   SUBROUTINE chani(M,N,Neigd, Myid,Np,Sub_comm,mpi_comm, &
-       A,B,Z,Eig,Num)
+       Eig,Num,A_r,B_r,Z_r,A_c,B_c,Z_c)
     !
     !----------------------------------------------------
     !- Parallel eigensystem solver - driver routine; gb99
@@ -40,13 +40,11 @@ CONTAINS
     INTEGER, INTENT (IN) :: SUB_COMM,np,myid,mpi_comm
     INTEGER, INTENT (INOUT) :: num
     REAL,    INTENT   (OUT) :: eig(neigd)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: a(m,n),b(m,n)
-    REAL,    INTENT   (OUT) :: z(m,neigd)
-#else
-    COMPLEX, INTENT (INOUT) :: a(m,n),b(m,n)
-    COMPLEX, INTENT   (OUT) :: z(m,neigd)
-#endif
+    REAL,OPTIONAL,    INTENT (INOUT) :: a_r(m,n),b_r(m,n)
+    REAL,OPTIONAL,    INTENT   (OUT) :: z_r(m,neigd)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: a_c(m,n),b_c(m,n)
+    COMPLEX, OPTIONAL,INTENT   (OUT) :: z_c(m,neigd)
+
     !...  Local variables
     !
     INTEGER nc,ic,ir,n_sym,jsym,num_j,icm,n_bound
@@ -58,13 +56,11 @@ CONTAINS
     INTEGER, ALLOCATABLE :: iwork(:),iusermap(:,:)
     INTEGER, ALLOCATABLE :: iblacsnums(:),ihelp(:)
     REAL,    ALLOCATABLE :: dwork(:)
-#ifdef CPP_INVERSION
-    REAL,    ALLOCATABLE :: eigvec(:,:)
-#else
-    COMPLEX, ALLOCATABLE :: eigvec(:,:)
+    REAL,    ALLOCATABLE :: eigvec_r(:,:)
+    COMPLEX, ALLOCATABLE :: eigvec_c(:,:)
     REAL,    ALLOCATABLE :: rwork(:)
     INTEGER              :: lrwork
-#endif
+
     !
     !  ScaLAPACK things
     CHARACTER (len=1)    :: uplo
@@ -75,17 +71,16 @@ CONTAINS
     INTEGER, ALLOCATABLE :: ifail(:), iclustr(:)
     REAL                 :: abstol,orfac=1.E-4,CPP_LAPACK_slamch
     REAL,ALLOCATABLE     :: eig2(:), gap(:)
-#ifdef CPP_INVERSION
-    REAL,    ALLOCATABLE :: asca(:,:), bsca(:,:),work2(:)
-    EXTERNAL CPP_LAPACK_pdsygvx
-#else
-    COMPLEX, ALLOCATABLE :: asca(:,:), bsca(:,:),work2(:)
-    EXTERNAL CPP_LAPACK_pzhegvx
-#endif
+    REAL,    ALLOCATABLE :: asca_r(:,:), bsca_r(:,:),work2_r(:)
+    COMPLEX, ALLOCATABLE :: asca_c(:,:), bsca_c(:,:),work2_c(:)
+
     EXTERNAL subredist1, subredist2, iceil, numroc
     EXTERNAL CPP_LAPACK_slamch, descinit
     EXTERNAL blacs_pinfo, blacs_gridinit
     EXTERNAL MPI_COMM_DUP
+    
+    LOGICAL :: l_real
+    l_real=present(a_r)
     !
     ! determine actual number of columns of input matrices A and B
     ! nc is number of columns the local processor will get, must be <=n
@@ -112,14 +107,13 @@ CONTAINS
     ! compute processor grid, as square as possible
     ! If not square with more rows than columns
     nsq = INT(SQRT(REAL(np)))
-    DO j=nsq,1,-1
+    gridloop:DO j=nsq,1,-1
        IF ( (np/j) * j == np) THEN
           npcol = np/j
           nprow = j
-          GOTO 100
+          EXIT gridloop
        ENDIF
-    ENDDO
-100 CONTINUE
+    ENDDO gridloop
     !
     !   An nprow*npcol processor grid will be created
     !   Row and column index myrow, mycol of this processor in the grid
@@ -138,22 +132,37 @@ CONTAINS
     mycolssca=(m-1)/(nb*npcol)*nb+ &
          MIN(MAX(m-(m-1)/(nb*npcol)*nb*npcol-nb*mycol,0),nb)
     !     Number of columns the local process gets in ScaLAPACK distribution
-    ALLOCATE ( asca(myrowssca,mycolssca), stat=err )
+    if (l_real) THEN
+       ALLOCATE ( asca_r(myrowssca,mycolssca), stat=err )
+    else
+       ALLOCATE ( asca_c(myrowssca,mycolssca), stat=err )
+    end
     IF (err.NE.0) THEN
        WRITE (*,*) 'In chani an error occured during the allocation of'
        WRITE (*,*) 'asca: ',err,' size: ',myrowssca*mycolssca
        CALL juDFT_error("allocte in chani",calledby ="chani")
     ENDIF
-    asca=0.0
-    ALLOCATE ( bsca(myrowssca,mycolssca), stat=err  )
+    if (l_real) THEN
+       asca_r=0.0
+       ALLOCATE ( bsca_r(myrowssca,mycolssca), stat=err  )
+    else
+       asca_c=0.0
+       ALLOCATE ( bsca_c(myrowssca,mycolssca), stat=err  )
+    endif
     IF (err.NE.0) THEN
        WRITE (*,*) 'In chani an error occured during the allocation of'
        WRITE (*,*) 'bsca :',err
        CALL juDFT_error("allocate in chani",calledby ="chani")
     ENDIF
-    bsca=0.0
-    CALL subredist1(a,m,asca,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb )
-    CALL subredist1(b,m,bsca,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb )
+    if (l_real) THEN
+       bsca_r=0.0
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,a_r,asca_r)
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,b_r,bsca_r)
+    else
+       bsca_c=0.0
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,a_c,asca_c)
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,b_c,bsca_c)
+    end if
     CALL BLACS_PINFO(iamblacs,npblacs)  ! iamblacs = local process rank (e.g. myid)
     ! npblacs  = number of available processes
     IF (npblacs /= np) THEN
@@ -234,7 +243,11 @@ CONTAINS
        CALL juDFT_error('Failed to allocated "eig2"', calledby ='chani')
     ENDIF
     !      write(*,*) 'c :',myrowssca,mycolssca,desceigv
-    ALLOCATE ( eigvec(myrowssca,mycolssca), stat=err ) ! Eigenvectors for ScaLAPACK
+    if (l_real) THEN
+       ALLOCATE ( eigvec_r(myrowssca,mycolssca), stat=err ) ! Eigenvectors for ScaLAPACK
+    else
+       ALLOCATE ( eigvec_c(myrowssca,mycolssca), stat=err ) ! Eigenvectors for ScaLAPACK
+    end if
     IF (err.NE.0) THEN
        WRITE (*,*) 'In chani an error occured during the allocation of'
        WRITE (*,*) 'eigvec :',err
@@ -244,13 +257,13 @@ CONTAINS
     nn=MAX(MAX(m,nb),2)
     np0=numroc(nn,nb,0,0,nprow)
     mq0=numroc(MAX(MAX(neigd,nb),2),nb,0,0,npcol)
-#ifdef CPP_INVERSION
-    lwork2=5*m+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(neigd,nprow*npcol)*nn
-    ALLOCATE ( work2(lwork2+10*m), stat=err ) ! Allocate more in case of clusters
-#else
-    lwork2=m+MAX(nb*(np0+1),3)
-    ALLOCATE ( work2(lwork2), stat=err )
-#endif
+    if (l_real) THEN
+       lwork2=5*m+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(neigd,nprow*npcol)*nn
+       ALLOCATE ( work2_r(lwork2+10*m), stat=err ) ! Allocate more in case of clusters
+    else
+       lwork2=m+MAX(nb*(np0+1),3)
+       ALLOCATE ( work2_c(lwork2), stat=err )
+    endif
     IF (err.NE.0) THEN 
        WRITE (*,*) 'work2  :',err,lwork2
        CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
@@ -280,21 +293,21 @@ CONTAINS
     !
     !     Compute size of workspace
     !
-#ifdef CPP_INVERSION
+    if (l_real) THEN
     uplo='U'
-    CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
-         0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
-         desceigv,work2,-1,iwork,-1,ifail,iclustr, gap,ierr)
-    IF ( work2(1).GT.lwork2) THEN
-       lwork2 = work2(1)
-       DEALLOCATE (work2)
-       ALLOCATE ( work2(lwork2+20*m), stat=err ) ! Allocate even more in case of clusters
+    CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
+         0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
+         desceigv,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
+    IF ( work2_r(1).GT.lwork2) THEN
+       lwork2 = work2_r(1)
+       DEALLOCATE (work2_r)
+       ALLOCATE ( work2_r(lwork2+20*m), stat=err ) ! Allocate even more in case of clusters
        IF (err.NE.0) THEN
           WRITE (*,*) 'work2  :',err,lwork2
           CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
        ENDIF
     ENDIF
-#else
+else
     lrwork=4*m+MAX(5*nn,np0*mq0)+ iceil(neigd,nprow*npcol)*nn
     ! Allocate more in case of clusters
     ALLOCATE(rwork(lrwork+10*m), stat=ierr)
@@ -303,14 +316,14 @@ CONTAINS
        CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
     ENDIF
 
-    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
-         0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
-         desceigv,work2,-1,rwork,-1,iwork,-1,ifail,iclustr,&
+    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca_c,1,1,desca,bsca_c,1,1, desca,&
+         0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
+         desceigv,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
          gap,ierr)
-    IF (ABS(work2(1)).GT.lwork2) THEN
-       lwork2=work2(1)
-       DEALLOCATE (work2)
-       ALLOCATE (work2(lwork2), stat=err)
+    IF (ABS(work2_c(1)).GT.lwork2) THEN
+       lwork2=work2_c(1)
+       DEALLOCATE (work2_c)
+       ALLOCATE (work2_c(lwork2), stat=err)
        IF (err /= 0) THEN
           WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed:',lwork2
           CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
@@ -326,7 +339,7 @@ CONTAINS
           CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
        ENDIF
     ENDIF
-#endif
+endif
     IF (iwork(1) .GT. liwork) THEN
        liwork = iwork(1)
        DEALLOCATE (iwork)
@@ -339,24 +352,20 @@ CONTAINS
     !
     !     Now solve generalized eigenvalue problem
     !
-#ifdef CPP_INVERSION
-    CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
-         1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
-         desceigv,work2,lwork2,iwork,liwork,ifail,iclustr,&
+if (l_real) THEN
+    CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
+         1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
+         desceigv,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
          gap,ierr)
-#else
-    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca,1,1,desca,bsca,1,1, desca,&
-         1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec,1,1,&
-         desceigv,work2,lwork2,rwork,lrwork,iwork,liwork,&
+else
+    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca_c,1,1,desca,bsca_c,1,1, desca,&
+         1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
+         desceigv,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
          ifail,iclustr,gap,ierr)
     DEALLOCATE(rwork)
-#endif
+endif
     IF (ierr .NE. 0) THEN
-#ifdef CPP_INVERSION
-       IF (ierr /= 2) WRITE (6,*) myid,' error in pdsygvx, ierr=',ierr
-#else
-       IF (ierr /= 2) WRITE (6,*) myid,' error in pzhegvx, ierr=',ierr
-#endif
+       IF (ierr /= 2) WRITE (6,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
        IF (ierr <= 0) WRITE (6,*) myid,' illegal input argument'
        IF (MOD(ierr,2) /= 0) THEN
           WRITE (6,*) myid,'some eigenvectors failed to converge'
@@ -395,7 +404,6 @@ CONTAINS
     IF (ierr /= 0 ) THEN
        WRITE (6,*) 'blacs_gridexit failed, ierr=',ierr
     ENDIF
-    DEALLOCATE(work2)
     DEALLOCATE(iwork)
     DEALLOCATE(ifail)
     DEALLOCATE(iclustr)
@@ -417,9 +425,13 @@ CONTAINS
     !     Redistribute eigvec from ScaLAPACK distribution to each process
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
-    CALL subredist2(z,m,num2,eigvec,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb)
+    if (l_real) THEN
+       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,z_r,eigvec_r)
+       ELSE
+       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,z_c,eigvec_c)
+    end if
     !
-    DEALLOCATE ( eigvec)
+    !DEALLOCATE ( eigvec)
     DEALLOCATE ( asca )
     DEALLOCATE ( bsca )
     DEALLOCATE ( iblacsnums )

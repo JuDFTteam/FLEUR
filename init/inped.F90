@@ -475,19 +475,6 @@
              CALL juDFT_error ("second variation not implemented in complex version" ,calledby ="inped")
           ENDIF
 
-#ifdef CPP_INVERSION
-          IF (.NOT.sym%invs .AND. .NOT.oneD%odd%d1) CALL juDFT_error("recompile without -D CPP_INVERSION", calledby="inped")
-#endif
-#ifndef CPP_INVERSION
-          IF (input%secvar)  CALL juDFT_error ("Second variation only with  -D CPP_INVERSION",calledby ="inped")
-#endif
-#ifndef CPP_SOC
-          IF (noco%l_soc .AND. (.NOT. noco%l_noco))  CALL juDFT_error ("recompile with -D CPP_SOC",calledby ="inped")
-#else
-#ifdef CPP_INVERSION
-          IF (.NOT.noco%l_soc)  CALL juDFT_error("recompile without -D CPP_SOC" ,calledby ="inped")
-#endif
-#endif
           IF ( (input%jspins.EQ.1).AND.(input%kcrel.EQ.1) )  THEN
              WRITE (6,*) 'WARNING : in a non-spinpolarized calculation the'
              WRITE (6,*) 'coupled-channel relativistic coreprogram (kcrel=1)'
@@ -509,11 +496,6 @@
           !
           DO n=1,atoms%ntype
              IF (atoms%nlo(n).GE.1) THEN
-#ifdef CPP_INVERSION
-                IF (noco%l_soc.AND.(atoms%neq(n).GT.1)) THEN
-                   !            CALL juDFT_error("for LO + SOC use complex version in this case!",calledby="inped")
-                ENDIF
-#endif
                 IF (input%secvar)          CALL juDFT_error ("LO + sevcar not implemented",calledby ="inped")
                 IF (input%isec1<input%itmax)  CALL juDFT_error("LO + Wu not implemented" ,calledby ="inped")
                 IF (atoms%nlo(n).GT.atoms%nlod) THEN

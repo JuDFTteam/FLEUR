@@ -88,10 +88,11 @@ CONTAINS
     INTEGER iter,ne,matsize  ,nrec,lh0
     INTEGER nspins,isp,l,i,j,err,gwc
     INTEGER mlotot,mlolotot,mlot_d,mlolot_d,nlot_d
-    LOGICAL l_wu,lcal_qsgw,l_file
+    LOGICAL l_wu,lcal_qsgw,l_file,l_real
     REAL evac_sv(dimension%jspd)
     INTEGER ::eig_id_hf=-1
     INTEGER :: nu=8
+    
     !     ..
     !     .. Local Arrays ..
     INTEGER, PARAMETER :: lmaxb=3
@@ -99,11 +100,10 @@ CONTAINS
     INTEGER, ALLOCATABLE :: nv2(:)
     REAL,    ALLOCATABLE :: bkpt(:)
     REAL,    ALLOCATABLE :: eig(:)
-#ifdef CPP_INVERSION
-    REAL,    ALLOCATABLE :: z(:,:),a(:),b(:)
-#else
-    COMPLEX, ALLOCATABLE :: z(:,:),a(:),b(:)
-#endif
+
+    REAL,    ALLOCATABLE :: z_r(:,:),a_r(:),b_r(:)
+    COMPLEX, ALLOCATABLE :: z_c(:,:),a_c(:),b_c(:)
+
     COMPLEX, ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
     COMPLEX, ALLOCATABLE :: vpwtot(:,:)
     REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
@@ -204,11 +204,11 @@ CONTAINS
          xcpot%icorr == icorr_vhse .OR.&
          xcpot%icorr == icorr_hf   .OR.&
          xcpot%icorr == icorr_exx)
-#if (defined(CPP_SOC) && defined(CPP_INVERSION) )
-    IF ( l_hybrid ) THEN
-       CALL juDFT_error('hybrid functional + SOC + inv.symmetry is not tested', calledby='eigen', hint='recompile without CPP_INVERSION')
+    l_real=sym%invs.and..not.noco%l_noco
+    if (noco%l_soc.and.l_real.and.l_hybrid ) THEN
+       CALL juDFT_error('hybrid functional + SOC + inv.symmetry is not tested', calledby='eigen')
     END IF
-#endif
+
 
     !
     !  if gw = 1 or 2, we are in the first or second run of a GW  calculation
@@ -334,14 +334,24 @@ CONTAINS
     endif
     eig_id=open_eig(&
          mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,&
-         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
-    ALLOCATE ( a(matsize), stat = err )
+         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,l_real,noco%l_soc,.true.,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+
+    IF (l_real) THEN
+       ALLOCATE ( a_r(matsize), stat = err )
+    ELSE
+       ALLOCATE ( a_c(matsize), stat = err )
+    endif
     IF (err.NE.0) THEN
        WRITE (*,*) 'eigen: an error occured during allocation of'
        WRITE (*,*) 'the Hamilton Matrix: ',err,'  size: ',matsize
        CALL juDFT_error("eigen: Error during allocation of Hamilton" //"matrix",calledby ="eigen")
     ENDIF
-    ALLOCATE ( b(matsize), stat = err )
+    if (l_real) THEN
+       ALLOCATE ( b_r(matsize), stat = err )
+    else
+       ALLOCATE ( b_c(matsize), stat = err )
+    endif
+
     IF (err.NE.0) THEN
        WRITE (*,*) 'eigen: an error occured during allocation of'
        WRITE (*,*) 'the overlap Matrix: ',err,'  size: ',matsize
@@ -370,7 +380,7 @@ CONTAINS
     n_u_in=atoms%n_u
     IF ((atoms%n_u.GT.0)) THEN
        ALLOCATE( vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins) )
-       CALL u_setup(atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),vr,mpi, vs_mmp,results)
+       CALL u_setup(sym,atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),vr,mpi, vs_mmp,results)
     ELSE
        ALLOCATE( vs_mmp(-lmaxb:-lmaxb,-lmaxb:-lmaxb,1,2) )
     ENDIF
@@ -453,7 +463,7 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           call timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms, a,b)
+          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms,l_real,a_r,b_r,a_c,b_c)
 
           call timestop("Interstitial Hamiltonian&Overlap")
           !
@@ -461,8 +471,8 @@ CONTAINS
           !
           IF (.not.l_wu) THEN
              call timestart("MT Hamiltonian&Overlap")
-             CALL hsmt(dimension,atoms,sphhar,sym,enpara, SUB_COMM,n_size,n_rank,jsp,input, matsize,mpi,&
-                  lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,a,b,td)
+             CALL hsmt(dimension,atoms,sphhar,sym,enpara, SUB_COMM,n_size,n_rank,jsp,input,mpi,&
+                  lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,a_r,b_r,a_c,b_c)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
           !
@@ -491,11 +501,11 @@ CONTAINS
           call timestart("Vacuum Hamiltonian&Overlap")
           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
              CALL hsvac(vacuum,stars,dimension, atoms, jsp,input,vzxy(1,1,1,jsp),vz,enpara%evac0,cell, &
-                  bkpt,lapw,sym, noco,jij, n_size,n_rank, a,b, nv2)
+                  bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,a_r,b_r,a_c,b_c)
           ELSEIF (oneD%odi%d1) THEN
              CALL od_hsvac(vacuum,stars,dimension, oneD,atoms, jsp,input,vzxy(1,1,1,jsp),vz, &
                   enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
-                  n_size,n_rank,sym,noco,jij, a,b, nv2)
+                  n_size,n_rank,sym,noco,jij,nv2,l_real,a_r,b_r,a_c,b_c)
           END IF
           call timestop("Vacuum Hamiltonian&Overlap")
 
@@ -522,20 +532,21 @@ CONTAINS
           !write overlap matrix b to direct access file olap
           inquire(file='olap',exist=l_file)
           if (l_file) THEN
-#ifdef CPP_INVERSION
-             OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*8)
-#else
-             OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*16)
-#endif
-             print *,"Olap write:",nrec
-             WRITE(88,rec=nrec) b
-             CLOSE(88)
+             if (l_real) THEN
+                OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*8)
+                WRITE(88,rec=nrec) b_r
+                CLOSE(88)
+             else
+                OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*16)
+                WRITE(88,rec=nrec) b_c
+                CLOSE(88)
+             endif
           endif
 
        
           CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,&
                nred,sub_comm, sym,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
-               oneD,td,ud, eig,a,b,z,ne_found)
+               oneD,td,ud, eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
           
           !
           !--->         output results
@@ -547,17 +558,24 @@ CONTAINS
           CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, sub_comm,ierr)
 #endif
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
-#if ( !defined( CPP_INVERSION) )
-          IF (.not.jij%l_J) THEN
-             z(:lapw%nmat,:ne_found) = conjg(z(:lapw%nmat,:ne_found))
-          ELSE
-             z(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
-          ENDIF
-#endif
-          CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
-               lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
-               bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-               atoms%nlotot,kveclo,n_size,n_rank,z=z(:,:ne_found))
+          if (.not.l_real) THEN
+             IF (.not.jij%l_J) THEN
+                z_c(:lapw%nmat,:ne_found) = conjg(z_c(:lapw%nmat,:ne_found))
+             ELSE
+                z_c(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
+             ENDIF
+          endif
+          if (l_real) THEN
+             CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
+                  lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
+                  bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
+                  atoms%nlotot,kveclo,n_size,n_rank,z=z_r(:,:ne_found))
+          else
+             CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
+                  lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
+                  bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
+                  atoms%nlotot,kveclo,n_size,n_rank,z=z_c(:,:ne_found))
+          endif
           IF (noco%l_noco) THEN
              CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
                   lapw%k1(:lapw%nv(2),2),lapw%k2 (:lapw%nv(2),2),lapw%k3(:lapw%nv(2),2),&
@@ -581,7 +599,11 @@ CONTAINS
 #             endif
           CALL timestop("EV output")
           !#ifdef CPP_MPI
-          DEALLOCATE ( z )
+          if (l_real) THEN
+             DEALLOCATE ( z_r )
+          else
+             DEALLOCATE ( z_c )
+endif
           !
        END DO  k_loop
 
@@ -595,7 +617,12 @@ CONTAINS
 #endif
     END DO ! spin loop ends
     DEALLOCATE( vs_mmp )
-    DEALLOCATE (a,b,matind)
+    DEALLOCATE (matind)
+    if (l_real) THEN
+       deallocate(a_r,b_r)
+    else
+       deallocate(a_c,b_c)
+    endif
 #ifdef CPP_NEVER
     IF( hybrid%l_calhf ) THEN
        DEALLOCATE( fac,sfac,gauntarr )

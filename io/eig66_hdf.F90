@@ -56,7 +56,7 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
   !----------------------------------------------------------------------
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
 
     !*****************************************************************
     !     opens hdf-file for eigenvectors+values
@@ -65,7 +65,7 @@ CONTAINS
 
     INTEGER, INTENT(IN) :: id,mpi_comm
     INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins,nlo,ntype,lmax
-    LOGICAL, INTENT(IN) :: create,readonly
+    LOGICAL, INTENT(IN) :: create,readonly,l_real,l_soc
     LOGICAL, INTENT(IN),OPTIONAL ::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
@@ -96,7 +96,7 @@ CONTAINS
 #endif 
     CALL priv_find_data(id,d)
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
     !set access_flags according
     IF (readonly) THEN
        access_mode=H5F_ACC_RDONLY_F
@@ -143,11 +143,11 @@ CONTAINS
        CALL h5dcreate_f(d%fid, "ello", H5T_NATIVE_DOUBLE, spaceid, d%ellosetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !     ev
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     dims(:5)=(/one,nmat,neig,nkpts,jspins/)
-#else
-       dims(:5)=(/two,nmat,neig,nkpts,jspins/)
-#endif
+       if ( l_real .and..not.l_soc ) THEN
+          dims(:5)=(/one,nmat,neig,nkpts,jspins/)
+       else
+          dims(:5)=(/two,nmat,neig,nkpts,jspins/)
+       endif
        CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "ev", H5T_NATIVE_DOUBLE, spaceid, d%evsetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)

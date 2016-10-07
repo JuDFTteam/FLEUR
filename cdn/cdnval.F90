@@ -164,11 +164,8 @@ CONTAINS
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-    COMPLEX, ALLOCATABLE :: z(:,:)
-#else
-    REAL,    ALLOCATABLE :: z(:,:)
-#endif
+    COMPLEX, ALLOCATABLE :: z_c(:,:)
+    REAL,    ALLOCATABLE :: z_r(:,:)
     REAL,    ALLOCATABLE :: aclo(:,:,:),acnmt(:,:,:,:,:)
     REAL,    ALLOCATABLE :: bclo(:,:,:),bcnmt(:,:,:,:,:)
     REAL,    ALLOCATABLE :: cclo(:,:,:,:),ccnmt(:,:,:,:,:),we(:)
@@ -196,6 +193,9 @@ CONTAINS
     TYPE (t_mt21), ALLOCATABLE :: mt21(:,:)
     TYPE (t_lo21), ALLOCATABLE :: lo21(:,:)
     TYPE (t_usdus):: usdus
+
+    LOGICAL :: l_real
+    l_real=sym%invs.or.noco%l_soc
     !     ..
     !     ..
     llpd=(atoms%lmaxd*(atoms%lmaxd+3))/2
@@ -521,14 +521,25 @@ CONTAINS
                 n_end    = noccbd
              END IF
           END IF
-          IF (.NOT.ALLOCATED(z)) ALLOCATE (z(dimension%nbasfcn,dimension%neigd))
-          z = 0
-          CALL cdn_read(&
+          IF (l_real) THEN
+             IF (.NOT.ALLOCATED(z_r)) ALLOCATE (z_r(dimension%nbasfcn,dimension%neigd))
+             z_r = 0
+             CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,z)
+               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,z_r)
+          ELSE
+             IF (.NOT.ALLOCATED(z_c)) ALLOCATE (z_c(dimension%nbasfcn,dimension%neigd))
+             z_c = 0
+             CALL cdn_read(&
+               eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
+               ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
+               noccbd,n_start,n_end,&
+               lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
+               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,z_c)
+          endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
           !ENDIF
@@ -564,7 +575,11 @@ CONTAINS
                       nslibd = nslibd + 1
                       eig(nslibd) = eig(i)
                       we(nslibd) = we(i)
-                      z(:,nslibd) = z(:,i)
+                      if (l_real) THEN
+                         z_r(:,nslibd) = z_r(:,i)
+                      else
+                         z_c(:,nslibd) = z_c(:,i)
+                      endif
                    END IF
                 END DO
                 IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:',nslibd
@@ -576,14 +591,22 @@ CONTAINS
                    nslibd = nslibd + 1
                    eig(nslibd) = eig(sliceplot%nnne)
                    we(nslibd) = we(sliceplot%nnne)
-                   z(:,nslibd) = z(:,sliceplot%nnne)
+                   if (l_real) Then
+                      z_r(:,nslibd) = z_r(:,sliceplot%nnne)
+                   else
+                      z_c(:,nslibd) = z_c(:,sliceplot%nnne)
+                   endif
                 ELSE
                    DO i = 1,nbands
                       IF (eig(i).GE.sliceplot%e1s .AND. eig(i).LE.sliceplot%e2s) THEN
                          nslibd = nslibd + 1
                          eig(nslibd) = eig(i)
                          we(nslibd) = we(i)
-                         z(:,nslibd) = z(:,i)
+                         if (l_real) THEN
+                            z_r(:,nslibd) = z_r(:,i)
+                         else
+                            z_c(:,nslibd) = z_c(:,i)
+                         endif
                       END IF
                    END DO
                    IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
@@ -608,13 +631,8 @@ CONTAINS
           !     ----> valence density in the interstitial region
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
-             CALL pwden(&
-                  stars,kpts,banddos,oneD,&
-                  input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,&
-                  igq_fft,we,z,&
-                  eig,bkpt,&
-                  qpw,cdom,qis,results%force,f_b8)
+             CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
+                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,z_r,z_c,l_real)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -623,14 +641,10 @@ CONTAINS
           !
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-                CALL q_int_sl(&
-                     jspin,stars,atoms,sym,&
-                     volsl,volintsl,&
-                     cell,&
-                     z,noccbd,lapw,&
-                     nsl,zsl,nmtsl,oneD,&
-                     qintsl(:,:))
-                !
+                CALL q_int_sl(jspin,stars,atoms,sym, volsl,volintsl,&
+                     cell,noccbd,lapw, nsl,zsl,nmtsl,oneD, qintsl(:,:),z_r,z_c,l_real)
+               
+      !
              END IF
           END IF
           !-new c
@@ -638,16 +652,9 @@ CONTAINS
           IF (input%film) THEN
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
-                CALL vacden(&
-                     vacuum,dimension,stars,oneD,&
-                     kpts,input,&
-                     cell,atoms,noco,banddos,&
-                     gvac1d,gvac2d,&
-                     we,ikpt,jspin,vz,vz0,&
-                     noccbd,z,bkpt,lapw,&
-                     evac,eig,&
-                     rhtxy,rht,qvac,qvlay,&
-                     qstars,cdomvz,cdomvxy)
+                CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
+                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,bkpt,lapw, evac,eig,&
+                        rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,z_r,z_c,l_real)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -684,16 +691,15 @@ CONTAINS
                      aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
                      bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
                      cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd) )
-
-                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt, z,noccbd,eig,usdus,&
-                     kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                     e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof)
+                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt,noccbd,eig,usdus,&
+                        kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,z_r,z_c,l_real)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
-                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,z, usdus, noco,ispin,kveclo,oneD,&
-                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin))
+                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,kveclo,oneD,&
+                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),z_r,z_c,l_real)
                 CALL timestop("cdnval: abcof")
 
              END IF
@@ -822,7 +828,7 @@ CONTAINS
              cartk=matmul(bkpt,cell%bmat)
              IF (banddos%ndir.GT.0) THEN
                 CALL sympsi(bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                     lapw%k3(:,jspin),sym,dimension,nbands,cell, z,eig,noco, ksym,jsym)
+                     lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,z_r,z_c,l_real)
              END IF
              !
              !--dw   now write k-point data to tmp_dos
@@ -836,7 +842,11 @@ CONTAINS
           END IF
 
           !--->  end of loop over PE's
-          DEALLOCATE (z)
+          IF (l_real) THEN
+             DEALLOCATE (z_r)
+else
+ DEALLOCATE (z_c)
+endif
        END IF ! --> end "IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN"
     END DO !---> end of k-point loop
     DEALLOCATE (we,f,g,usdus%us,usdus%dus,usdus%duds,usdus%uds,usdus%ddn)

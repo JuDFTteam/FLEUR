@@ -40,18 +40,6 @@ MODULE m_utility
       CHARACTER(LEN=*), INTENT(OUT) :: specifiers(11)
       numSpecifiers = 0
       specifiers = ''
-      numSpecifiers = numSpecifiers + 1
-#ifdef CPP_INVERSION
-      specifiers(numSpecifiers) = "InversionSymmetry"
-#else
-      specifiers(numSpecifiers) = "noInversionSymmetry"
-#endif
-      numSpecifiers = numSpecifiers + 1
-#ifdef CPP_SOC
-      specifiers(numSpecifiers) = "SpinOrbitCoupling"
-#else
-      specifiers(numSpecifiers) = "noSpinOrbitCoupling"
-#endif
    END SUBROUTINE getTargetStructureProperties
 
    SUBROUTINE getAdditionalCompilationFlags(flags, numFlags)
