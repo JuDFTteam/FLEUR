@@ -2,7 +2,7 @@ MODULE m_qintsl
   USE m_juDFT
 CONTAINS
   SUBROUTINE q_int_sl(isp,stars,atoms,sym, volsl,volintsl, cell,&
-       ne,lapw, nsl,zsl,nmtsl,oneD, qintslk,z_r,z_c,realdata)          
+       ne,lapw, nsl,zsl,nmtsl,oneD, qintslk,zMat,realdata)          
     !     *******************************************************
     !     calculate the charge of the En(k) state 
     !     in the interstitial region of each leyer
@@ -20,6 +20,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_zMat),INTENT(IN)   :: zMat
     !
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ne,isp  ,nsl
@@ -29,8 +30,6 @@ CONTAINS
     REAL,    INTENT (IN) :: volintsl(atoms%natd)  
     REAL,    INTENT (IN) :: zsl(2,atoms%natd) ,volsl(atoms%natd) 
     REAL,    INTENT (OUT):: qintslk(:,:)!(nsl,dimension%neigd)
-    REAL,   OPTIONAL, INTENT (IN) :: z_r(:,:)!(dimension%nbasfcn,dimension%neigd)
-    COMPLEX,OPTIONAL, INTENT (IN) :: z_c(:,:)
     LOGICAL,OPTIONAL, INTENT (IN) :: realdata
     !     ..
     !     .. Local Scalars ..
@@ -45,7 +44,7 @@ CONTAINS
     IF (PRESENT(realdata)) THEN
        l_real=realdata
     ELSE
-       l_real=PRESENT(z_r)
+       l_real=zMat%l_real
     ENDIF
     !     ..
     IF (oneD%odi%d1) CALL juDFT_error("well, does not work with 1D. Not clear how to define a layer.",calledby ="q_int_sl")
@@ -79,11 +78,11 @@ CONTAINS
        q1 = 0.0
        IF (l_real) THEN
           DO  i = 1,lapw%nv(isp)
-             q1 = q1 + z_r(i,n)*z_r(i,n)
+             q1 = q1 + zMat%z_r(i,n)*zMat%z_r(i,n)
           ENDDO
        ELSE
           DO  i = 1,lapw%nv(isp)
-             q1 = q1 + REAL(z_c(i,n)*CONJG(z_c(i,n)))
+             q1 = q1 + REAL(zMat%z_c(i,n)*CONJG(zMat%z_c(i,n)))
           ENDDO
        ENDIF
        z_z(1) = q1/cell%omtil
@@ -104,11 +103,11 @@ CONTAINS
              phase = stars%rgphs(ix1,iy1,iz1)/ (stars%nstr(ind)*cell%omtil)
              phasep = stars%rgphs(-ix1,-iy1,-iz1)/ (stars%nstr(indp)*cell%omtil)
              IF (l_real) THEN
-                z_z(ind)  = z_z(ind)  + z_r(j,n)*z_r(i,n)*REAL(phase)
-                z_z(indp) = z_z(indp) + z_r(i,n)*z_r(j,n)*REAL(phasep)
+                z_z(ind)  = z_z(ind)  + zMat%z_r(j,n)*zMat%z_r(i,n)*REAL(phase)
+                z_z(indp) = z_z(indp) + zMat%z_r(i,n)*zMat%z_r(j,n)*REAL(phasep)
              ELSE
-                z_z(ind) = z_z(ind) +z_c(j,n)*CONJG(z_c(i,n))*phase     
-                z_z(indp)= z_z(indp)+z_c(i,n)*CONJG(z_c(j,n))*phasep
+                z_z(ind) = z_z(ind) +zMat%z_c(j,n)*CONJG(zMat%z_c(i,n))*phase
+                z_z(indp)= z_z(indp)+zMat%z_c(i,n)*CONJG(zMat%z_c(j,n))*phasep
              ENDIF
           ENDDO
        ENDDO

@@ -13,7 +13,7 @@ CONTAINS
        &                          con1,phase,ylm,ntyp,na,k,fgp,&
        &                          s,nv,ne,nbasf0,alo1,blo1,clo1,&
        &                          kvec,nkvec,enough,acof,bcof,ccof,&
-       &                          acoflo,bcoflo,aveccof,bveccof,cveccof,z_r,z_c,realdata)
+       &                          acoflo,bcoflo,aveccof,bveccof,cveccof,zMat,realdata)
     !
     !*********************************************************************
     ! for details see abclocdn; calles by to_pulay
@@ -24,6 +24,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_zMat),INTENT(IN)   :: zMat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: iintsp
@@ -48,8 +49,6 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: cveccof(:,-atoms%llod:,:,:,:)!(3,-atoms%llod:llod,nobd,atoms%nlod,atoms%natd)
     LOGICAL, INTENT (OUT) :: enough(atoms%natd)
     INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
-    REAL,    OPTIONAL,INTENT (IN) :: z_r(:,:)!(dimension%nbasfcn,dimension%neigd)
-    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(:,:)!(dimension%nbasfcn,dimension%neigd)
     LOGICAL,OPTIONAL,INTENT(IN) ::realdata
     !     ..
     !     .. Local Scalars ..
@@ -62,7 +61,7 @@ CONTAINS
     COMPLEX clotmp(-atoms%llod:atoms%llod)
     !     ..
     LOGICAL:: l_real
-    l_real=PRESENT(z_r)
+    l_real=zMat%l_real
     IF (PRESENT(realdata)) l_real=realdata
     enough(na) = .TRUE.
     term1 = con1* ((atoms%rmt(ntyp)**2)/2)*phase
@@ -92,15 +91,15 @@ CONTAINS
                          lm = ll1 + m
                          IF (noco%l_noco) THEN
                             IF (noco%l_ss) THEN
-                               ctmp = clotmp(m)* ccchi(iintsp)*z_c(kspin+nbasf,ie)
+                               ctmp = clotmp(m)* ccchi(iintsp)*zMat%z_c(kspin+nbasf,ie)
                             ELSE
-                               ctmp = clotmp(m)*( ccchi(1)*z_c(nbasf,ie)+ccchi(2)*z_c(kspin+nbasf,ie) )
+                               ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,ie)+ccchi(2)*zMat%z_c(kspin+nbasf,ie) )
                             ENDIF
                          ELSE
                             IF (l_real) THEN
-                               ctmp = z_r(nbasf,ie)*clotmp(m)
+                               ctmp = zMat%z_r(nbasf,ie)*clotmp(m)
                             ELSE
-                               ctmp = z_c(nbasf,ie)*clotmp(m)
+                               ctmp = zMat%z_c(nbasf,ie)*clotmp(m)
                             ENDIF
                          ENDIF
                          acof(ie,lm,na)     = acof(ie,lm,na) +ctmp*alo1(lo,ntyp)
@@ -140,15 +139,15 @@ CONTAINS
                          lm = ll1 + m
                          IF (noco%l_noco) THEN
                             IF (noco%l_ss) THEN
-                               ctmp = clotmp(m)*ccchi(iintsp)*z_c(kspin+nbasf,ie)
+                               ctmp = clotmp(m)*ccchi(iintsp)*zMat%z_c(kspin+nbasf,ie)
                             ELSE
-                               ctmp = clotmp(m)*( ccchi(1)*z_c(nbasf,ie)+ccchi(2)*z_c(kspin+nbasf,ie) )
+                               ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,ie)+ccchi(2)*zMat%z_c(kspin+nbasf,ie) )
                             ENDIF
                          ELSE
                             IF (l_real) THEN
-                               ctmp = z_r(nbasf,ie)*clotmp(m)
+                               ctmp = zMat%z_r(nbasf,ie)*clotmp(m)
                             ELSE
-                               ctmp = z_c(nbasf,ie)*clotmp(m)
+                               ctmp = zMat%z_c(nbasf,ie)*clotmp(m)
                             END IF
                          ENDIF
                          acof(ie,lm,na) = acof(ie,lm,na) +ctmp*alo1(lo,ntyp)
@@ -162,7 +161,7 @@ CONTAINS
                             cveccof(i,m,ie,lo,na)=cveccof(i,m,ie,lo,na)+fgp(i)*ctmp*clo1(lo,ntyp)
                          ENDDO
                          IF (noco%l_soc.AND.sym%invs) THEN
-                            ctmp = z_c(nbasf,ie) * CONJG(clotmp(m))*(-1)**(l-m)
+                            ctmp = zMat%z_c(nbasf,ie) * CONJG(clotmp(m))*(-1)**(l-m)
                             na2 = sym%invsatnr(na)
                             lmp = ll1 - m
                             acof(ie,lmp,na2) = acof(ie,lmp,na2) +ctmp*alo1(lo,ntyp)

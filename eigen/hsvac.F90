@@ -3,7 +3,7 @@ MODULE m_hsvac
 CONTAINS
   SUBROUTINE hsvac(&
        vacuum,stars,DIMENSION, atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,aa_r,bb_r,aa_c,bb_c)
+       bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,hamOvlp)
     !*********************************************************************
     !     adds in the vacuum contributions to the the hamiltonian and
     !     overlap matrices. as written, each k-point calculates the
@@ -17,16 +17,17 @@ CONTAINS
     USE m_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_jij),INTENT(IN)      :: jij
-    TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_stars),INTENT(IN)    :: stars
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_vacuum),INTENT(IN)     :: vacuum
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_jij),INTENT(IN)        :: jij
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp   ,n_size,n_rank
@@ -39,8 +40,6 @@ CONTAINS
     REAL,    INTENT (IN) :: bkpt(3)
 
     LOGICAL,INTENT(IN)    :: l_real
-    REAL,    INTENT (INOUT) :: aa_r(:),bb_r(:)!(matsize)
-    COMPLEX, INTENT (INOUT) :: aa_c(:),bb_c(:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,c_1
@@ -223,16 +222,16 @@ CONTAINS
                               * CONJG(a(i,jspin)* duz(ik,jspin1) + b(i,jspin)*dudz(ik,jspin1) )
                          !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
                          IF (l_real) THEN
-                            aa_r(ii) = aa_r(ii) + 0.25 * REAL(apw_lo) 
+                            hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + 0.25 * REAL(apw_lo) 
                          ELSE 
-                            aa_c(ii) = aa_c(ii) + 0.25 * apw_lo
+                            hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + 0.25 * apw_lo
                          ENDIF
                       ENDIF
                       !+APW_LO
                       IF (l_real) THEN
-                         bb_r(ii) = bb_r(ii) + REAL(sij)
+                         hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
                       ELSE 
-                         bb_c(ii) = bb_c(ii) + sij
+                         hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
                       ENDIF
                    END IF
                 ENDDO
@@ -240,9 +239,9 @@ CONTAINS
                 sij = CONJG(a(i,jspin))*a(i,jspin) + CONJG(b(i,jspin))*b(i,jspin)*ddnv(ik,jspin1)
                 IF (l_real) THEN
 
-                   bb_r(ii) = bb_r(ii) + REAL(sij)
+                   hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
                 ELSE
-                   bb_c(ii) = bb_c(ii) + sij
+                   hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
                 ENDIF
              ENDDO
           ENDIF
@@ -284,9 +283,9 @@ CONTAINS
                      + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
                 IF (l_real) THEN
 
-                   aa_r(ii) = aa_r(ii) + REAL(hij)
+                   hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + REAL(hij)
                 ELSE
-                   aa_c(ii) = aa_c(ii) + hij
+                   hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + hij
                 ENDIF
              ENDDO
           ENDDO

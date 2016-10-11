@@ -41,7 +41,7 @@ MODULE m_eigen_diag
   INTEGER,PARAMETER:: diag_lapack2=5
 CONTAINS
   SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
-       sym,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c,realdata)
+       sym,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
     USE m_zsymsecloc
     USE m_aline
     USE m_alinemuff
@@ -63,16 +63,18 @@ CONTAINS
 #ifdef CPP_MPI    
     include 'mpif.h'
 #endif
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_dimension),INTENT(IN) :: dimension
-    TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_jij),INTENT(IN)       :: jij
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_lapw),INTENT(INOUT)   :: lapw !might be modified in aline
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_dimension),INTENT(IN)  :: dimension
+    TYPE(t_oneD),INTENT(IN)       :: oneD
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_jij),INTENT(IN)        :: jij
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(INOUT)    :: lapw !might be modified in aline
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
+    TYPE(t_zMat),INTENT(INOUT)    :: zMat
     INTEGER, INTENT(IN) :: jsp,eig_id,it,matsize 
     INTEGER, INTENT(IN) :: n_rank,n_size  ,nk   ,nred,sub_comm
     INTEGER, INTENT(IN) :: matind(dimension%nbasfcn,2),kveclo(atoms%nlotot)
@@ -86,13 +88,6 @@ CONTAINS
 
     REAL,INTENT(OUT) :: eig(:)
 
-    
-    REAL,OPTIONAL, ALLOCATABLE,INTENT(INOUT)      :: a_r(:)
-    REAL,OPTIONAL, ALLOCATABLE,INTENT(INOUT)      :: b_r(:)
-    REAL,OPTIONAL, ALLOCATABLE,INTENT(OUT)        :: z_r(:,:)
-    COMPLEX,OPTIONAL, ALLOCATABLE,INTENT(INOUT)   :: a_c(:)
-    COMPLEX,OPTIONAL, ALLOCATABLE,INTENT(INOUT)   :: b_c(:)
-    COMPLEX,OPTIONAL, ALLOCATABLE,INTENT(OUT)     :: z_c(:,:)
     LOGICAL,OPTIONAL,INTENT(IN) :: realdata
 
     !Locals
@@ -102,7 +97,8 @@ CONTAINS
     LOGICAL :: parallel
     CHARACTER(len=20)::f
     LOGICAL :: l_real
-    l_real=present(a_r)
+
+    l_real=hamOvlp%l_real
     if (present(realdata)) l_real=realdata
 
 #if 1==2
@@ -137,10 +133,14 @@ CONTAINS
        ndim1=dimension%nbasfcn   
     ENDIF
     if (l_real) THEN
-       ALLOCATE ( z_r(ndim1,ndim), STAT = err )
+       ALLOCATE ( zMat%z_r(ndim1,ndim), STAT = err )
     ELSE
-       ALLOCATE ( z_c(ndim1,ndim), STAT = err )
+       ALLOCATE ( zMat%z_c(ndim1,ndim), STAT = err )
     END if
+
+    zMat%nbasfcn = ndim1
+    zMat%nbands = ndim
+    zMat%l_real = l_real
     
     IF (err.NE.0) THEN
        WRITE (*,*) 'eigen: error during allocation of the'
@@ -148,9 +148,9 @@ CONTAINS
        CALL juDFT_error("eigen: Error during allocation of the eigenvecs",calledby ="eigen")
     ENDIF
     if (l_real) THEN
-       z_r=0.0
+       zMat%z_r=0.0
     else
-       z_c=0.0
+       zMat%z_c=0.0
     endif
    
     !l_wu selects a full diagonalization step or a direct call of aline with a subspace diagonalization only
@@ -162,43 +162,38 @@ CONTAINS
        SELECT CASE (priv_select_solver(parallel))
 #ifdef CPP_ELPA
        CASE (diag_elpa)
-          CALL elpa(lapw%nmat,n,SUB_COMM,eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
+          CALL elpa(lapw%nmat,n,SUB_COMM,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
 #endif
 #ifdef CPP_ELEMENTAL
        CASE (diag_elemental)
           IF (it==1) THEN !switch between direct solver and iterative solver
-             CALL elemental(lapw%nmat,dimension%nbasfcn/n_size,SUB_COMM,eig,ne_found,1,a_r,b_r,z_r,a_c,b_c,z_c)
+             CALL elemental(lapw%nmat,dimension%nbasfcn/n_size,SUB_COMM,eig,ne_found,1,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
           ELSE
-             CALL elemental(lapw%nmat,,dimension%nbasfcn/n_size,SUB_COMM,eig,ne_found,0,a_r,b_r,z_r,a_c,b_c,z_c)
+             CALL elemental(lapw%nmat,,dimension%nbasfcn/n_size,SUB_COMM,eig,ne_found,0,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
           ENDIF
 
 #endif
 #ifdef CPP_SCALAPACK
        CASE (diag_scalapack)
-          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
+          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
 #endif
 #ifdef CPP_MAGMA
        CASE (diag_magma)
-          CALL magma_diag(lapw%nmat,eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
+          CALL magma_diag(lapw%nmat,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
 #endif
        CASE (diag_lapack2)
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
           if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
           IF (l_real) THEN
           CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
-                jij,matind,nred,eig,ne_found,a_r,b_r,z_r)
+                jij,matind,nred,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r)
        else
           CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
-               jij,matind,nred,eig,ne_found,a_c,b_c,z_c)
+               jij,matind,nred,eig,ne_found,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
        endif
        CASE (diag_lapack)
-          IF (l_real) THEN
-             CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
-                         jij%l_j,matind,nred,input%gw,eig,ne_found,a_r=a_r,b_r=b_r,z_r=z_r)
-          ELSE
-             CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
-                         jij%l_j,matind,nred,input%gw,eig,ne_found,a_c=a_c,b_c=b_c,z_c=z_c)
-          END IF
+          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
+                      jij%l_j,matind,nred,input%gw,eig,ne_found,hamOvlp,zMat)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
           print*, "You selected a diagonalization scheme without compiling for it"
@@ -209,7 +204,7 @@ CONTAINS
     ELSE
        call timestart("aline")
        CALL aline(eig_id,nk,atoms,dimension,sym,cell,input,jsp,el,&
-            ud,lapw,td,noco,oneD,bkpt,eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
+            ud,lapw,td,noco,oneD,bkpt,eig,ne_found,zMat,hamOvlp%a_r,hamOvlp%b_r,hamOvlp%a_c,hamOvlp%b_c)
        call timestop("aline")
     ENDIF
     !--->         SECOND VARIATION STEP
@@ -218,7 +213,7 @@ CONTAINS
        !--->           hamiltonian
        call timestart("second variation diagonalization")
 
-       CALL aline_muff(atoms,dimension,sym, cell, jsp,ne_found, ud,td, bkpt,lapw,eig,z_r,z_c,realdata)
+       CALL aline_muff(atoms,dimension,sym, cell, jsp,ne_found, ud,td, bkpt,lapw,eig,zMat%z_r,zMat%z_c,realdata)
        call timestop("second variation diagonalization")
     END IF
   END SUBROUTINE eigen_diag

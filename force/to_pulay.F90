@@ -8,7 +8,7 @@ CONTAINS
        input,atoms,nobd,sym,lapw,noco,cell,bkpt,ne,eig,&
        usdus,kveclo,jspin,oneD,&
        acof,bcof,e1cof,e2cof,aveccof,bveccof,&
-       ccof,acoflo,bcoflo,cveccof,z_r,z_c,realdata)
+       ccof,acoflo,bcoflo,cveccof,zMat,realdata)
     !
     USE m_constants, ONLY : tpi_const
     USE m_setabc1locdn
@@ -26,6 +26,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_usdus),INTENT(IN)  :: usdus
     TYPE(t_lapw),INTENT(IN)   :: lapw
+    TYPE(t_zMat),INTENT(IN)   :: zMat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd   
@@ -36,8 +37,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: eig(:)!(dimension%neigd)
-    REAL,    OPTIONAL,INTENT (IN) :: z_r(:,:)!(dimension%nbasfcn,dimension%neigd)
-    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(:,:)!(dimension%nbasfcn,dimension%neigd)
     COMPLEX, INTENT (OUT)::      acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
     COMPLEX, INTENT (OUT)::      bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
     COMPLEX, INTENT (OUT)::      ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
@@ -75,7 +74,7 @@ CONTAINS
     COMPLEX,PARAMETER:: czero=CMPLX(.0,0.0)
     COMPLEX,PARAMETER:: ci = CMPLX(0.0,1.0)
 
-    l_real=PRESENT(z_r)
+    l_real=zMat%l_real
     IF (PRESENT(realdata)) l_real=realdata
     !     ..
     ALLOCATE ( aaux(nobd),baux(nobd),work(nobd) )
@@ -132,9 +131,9 @@ CONTAINS
        DO  k = 1,nvmax
           IF (.NOT.noco%l_noco) THEN
              IF (l_real) THEN
-                work(:ne)=z_r(k,:ne)
+                work(:ne)=zMat%z_r(k,:ne)
              ELSE
-                work(:ne)=z_c(k,:ne)
+                work(:ne)=zMat%z_c(k,:ne)
              ENDIF
 
           ENDIF
@@ -168,7 +167,7 @@ CONTAINS
                    !--->             stored in the second half of the eigenvector
                    kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
                    DO i = 1,ne
-                      work(i) = ccchi(iintsp,jspin)*z_c(kspin+k,i)
+                      work(i) = ccchi(iintsp,jspin)*zMat%z_c(kspin+k,i)
                    ENDDO
                 ELSE
                    !--->             perform sum over the two interstitial spin directions
@@ -176,8 +175,8 @@ CONTAINS
                    !--->             (jspin counts the local spin directions inside each MT)
                    kspin = lapw%nv(1)+atoms%nlotot
                    DO ie = 1,ne
-                      work(ie) = ccchi(1,jspin)*z_c(k,ie)&
-                           &                        + ccchi(2,jspin)*z_c(kspin+k,ie)
+                      work(ie) = ccchi(1,jspin)*zMat%z_c(k,ie)&
+                           &                        + ccchi(2,jspin)*zMat%z_c(kspin+k,ie)
                    ENDDO
                 ENDIF
              ENDIF
@@ -328,7 +327,7 @@ CONTAINS
                    IF (.NOT.enough(natom)) THEN
                       CALL abclocdn_pulay(atoms, sym, noco,ccchi(1,jspin),kspin, iintsp,const,phase,ylm,n,natom,&
                            k,fgp,s,nvmax,ne,nbasf0, alo1,blo1,clo1,kvec(1,1,natom), nkvec,&
-                           enough,acof,bcof,ccof, acoflo,bcoflo,aveccof,bveccof,cveccof,z_r,z_c,realdata)
+                           enough,acof,bcof,ccof, acoflo,bcoflo,aveccof,bveccof,cveccof,zMat,realdata)
                    END IF
                    !-inv
                 END IF

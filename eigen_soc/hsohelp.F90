@@ -50,7 +50,8 @@ CONTAINS
     !     ..
     !     .. Locals ..
     TYPE(t_atoms)   :: atoms_local
-    TYPE(t_noco)   :: noco_local
+    TYPE(t_noco)    :: noco_local
+    TYPE(t_zMat)    :: zMat_local
     INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(DIMENSION%jspd),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:)
@@ -78,8 +79,14 @@ CONTAINS
     DO ispin = 1, input%jspins
        IF (l_real.AND.noco%l_soc) THEN
           zso(:,1:DIMENSION%neigd,ispin) = CMPLX(z_r(:,1:DIMENSION%neigd,ispin),0.0)
+          zMat_local%l_real = .FALSE.
+          zMat_local%nbasfcn = DIMENSION%nbasfcn
+          zMat_local%nbands = DIMENSION%neigd
+          ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
+          zMat_local%z_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
           CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),z_r(:,:,ispin),zso(:,:,ispin),.false.)
+               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,.false.)
+          DEALLOCATE(zMat_local%z_c)
           !
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
@@ -98,8 +105,14 @@ CONTAINS
           ENDDO
           chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
        ELSE
+          zMat_local%l_real = l_real
+          zMat_local%nbasfcn = DIMENSION%nbasfcn
+          zMat_local%nbands = DIMENSION%neigd
+          ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
+          zMat_local%z_c(:,:) = z_c(:,:,ispin)
           CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),z_r(:,:,ispin),z_c(:,:,ispin),.false.)
+               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,.false.)
+          DEALLOCATE(zMat_local%z_c)
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
           !

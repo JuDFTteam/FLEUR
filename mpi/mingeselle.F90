@@ -29,8 +29,8 @@ CONTAINS
     INTEGER, INTENT (IN)    :: nv(2)
     COMPLEX, INTENT (INOUT) :: ahelp(:)!(m_ahelp)
     LOGICAL, INTENT (IN)    :: l_real
-    REAL,   OPTIONAL, INTENT (INOUT) :: aa_r(:)!(matsize)
-    COMPLEX,OPTIONAL, INTENT (INOUT) :: aa_c(:)
+    REAL,    INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX, INTENT (INOUT) :: aa_c(:)
     ! ..
     ! .. Local Scalars
     INTEGER ki,kj,ns_tot,nr_tot,n_p,n2_start,n_help

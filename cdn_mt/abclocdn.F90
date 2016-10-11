@@ -21,13 +21,14 @@ MODULE m_abclocdn
   !*********************************************************************
 CONTAINS
   SUBROUTINE abclocdn(atoms, sym, noco,ccchi,kspin,iintsp,con1,phase,ylm,&
-       ntyp,na,k,s,nv,ne,nbasf0,alo1,blo1,clo1,kvec,nkvec,enough,acof,bcof,ccof,z_r,z_c)
+       ntyp,na,k,s,nv,ne,nbasf0,alo1,blo1,clo1,kvec,nkvec,enough,acof,bcof,ccof,zMat)
     !
     USE m_types
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_zMat),INTENT(IN)   :: zMat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: kspin,iintsp
@@ -47,8 +48,6 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
     COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
     INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
-    COMPLEX,OPTIONAL, INTENT (IN) :: z_c(:,:)!(dimension%nbasfcn,dimension%neigd)
-    REAL,OPTIONAL,    INTENT (IN) :: z_r(:,:)!(dimension%nbasfcn,dimension%neigd)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
@@ -59,7 +58,7 @@ CONTAINS
     COMPLEX clotmp(-atoms%llod:atoms%llod)
     !     ..
     LOGICAL :: l_real
-    l_real=PRESENT(z_r)
+    l_real=zMat%l_real
     !     ..
     enough(na) = .TRUE.
     term1 = con1 * ((atoms%rmt(ntyp)**2)/2) * phase
@@ -89,15 +88,15 @@ CONTAINS
                          !+gu_con
                          IF (noco%l_noco) THEN
                             IF (noco%l_ss) THEN
-                               ctmp = clotmp(m)*ccchi(iintsp)*z_c(kspin+nbasf,i)
+                               ctmp = clotmp(m)*ccchi(iintsp)*zMat%z_c(kspin+nbasf,i)
                             ELSE
-                               ctmp = clotmp(m)*( ccchi(1)*z_c(nbasf,i)+ccchi(2)*z_c(kspin+nbasf,i) )
+                               ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,i)+ccchi(2)*zMat%z_c(kspin+nbasf,i) )
                             ENDIF
                          ELSE
                             IF (l_real) THEN
-                               ctmp = z_r(nbasf,i)*clotmp(m)
+                               ctmp = zMat%z_r(nbasf,i)*clotmp(m)
                             ELSE
-                               ctmp = z_c(nbasf,i)*clotmp(m)
+                               ctmp = zMat%z_c(nbasf,i)*clotmp(m)
                             ENDIF
                          ENDIF
                          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo,ntyp)
@@ -136,22 +135,22 @@ CONTAINS
                          !+gu_con
                          IF (noco%l_noco) THEN
                             IF (noco%l_ss) THEN
-                               ctmp = clotmp(m)*ccchi(iintsp)*z_c(kspin+nbasf,i)
+                               ctmp = clotmp(m)*ccchi(iintsp)*zMat%z_c(kspin+nbasf,i)
                             ELSE
-                               ctmp = clotmp(m)*( ccchi(1)*z_c(nbasf,i)+ ccchi(2)*z_c(kspin+nbasf,i) )
+                               ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,i)+ ccchi(2)*zMat%z_c(kspin+nbasf,i) )
                             ENDIF
                          ELSE
                             IF (l_real) THEN
-                               ctmp = z_r(nbasf,i)*clotmp(m)
+                               ctmp = zMat%z_r(nbasf,i)*clotmp(m)
                             ELSE
-                               ctmp = z_c(nbasf,i)*clotmp(m)
+                               ctmp = zMat%z_c(nbasf,i)*clotmp(m)
                             ENDIF
                          ENDIF
                          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo,ntyp)
                          bcof(i,lm,na) = bcof(i,lm,na) +ctmp*blo1(lo,ntyp)
                          ccof(m,i,lo,na) = ccof(m,i,lo,na) +ctmp*clo1(lo,ntyp)
                          IF (noco%l_soc.AND.sym%invs) THEN
-                            ctmp = z_c(nbasf,i)*CONJG(clotmp(m))*(-1)**(l-m)
+                            ctmp = zMat%z_c(nbasf,i)*CONJG(clotmp(m))*(-1)**(l-m)
                             na2 = sym%invsatnr(na)
                             lmp = ll1 - m
                             acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo,ntyp)
