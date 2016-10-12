@@ -12,7 +12,7 @@ CONTAINS
        we,ikpt,jspin,vz,vz0,&
        ne,bkpt,lapw,&
        evac,eig,rhtxy,rht,qvac,qvlay,&
-       stcoeff,cdomvz,cdomvxy,z_r,z_c,realdata)
+       stcoeff,cdomvz,cdomvxy,zMat,realdata)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -64,6 +64,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_zMat),INTENT(IN)       :: zMat
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin      
     INTEGER, INTENT (IN) :: ne    
@@ -73,8 +74,6 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
-    COMPLEX,OPTIONAL, INTENT (IN):: z_c(DIMENSION%nbasfcn,DIMENSION%neigd)
-    REAL,  OPTIONAL,  INTENT (IN):: z_r(DIMENSION%nbasfcn,DIMENSION%neigd)
     COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
     REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
     REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkptd,DIMENSION%jspd)
@@ -127,7 +126,7 @@ CONTAINS
     IF (PRESENT(realdata)) THEN
        l_real=realdata
     ELSE
-       l_real=PRESENT(z_r)
+       l_real=zMat%l_real
     ENDIF
     !     ..
 
@@ -339,11 +338,11 @@ CONTAINS
                               t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                               ((wronk_1)*SQRT(cell%omtil))
                          IF (l_real) THEN
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) +z_r(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) +z_r(kspin,:ne)*bv_1
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*bv_1
                          ELSE
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) +z_c(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) +z_c(kspin,:ne)*bv_1
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*bv_1
                          END IF
                       END DO      ! -mb:mb
                    END IF
@@ -382,11 +381,11 @@ CONTAINS
                    bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                    !     -----> loop over basis functions
                    IF (l_real) THEN
-                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + z_r(kspin,:ne)*av
-                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + z_r(kspin,:ne)*bv
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_r(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_r(kspin,:ne)*bv
                    ELSE
-                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + z_c(kspin,:ne)*av
-                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + z_c(kspin,:ne)*bv
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_c(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_c(kspin,:ne)*bv
                    ENDIF
                 ENDDO
                 !--->       end of spin loop
@@ -439,11 +438,11 @@ CONTAINS
                            t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                            ((wronk_1)*SQRT(cell%omtil))
                       IF (l_real) THEN
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) +z_r(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) +z_r(k,:ne)*bv_1
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*bv_1
                       ELSE
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) +z_r(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) +z_r(k,:ne)*bv_1
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*bv_1
                       ENDIF
                    END DO      ! -mb:mb
                 END IF
@@ -477,11 +476,11 @@ CONTAINS
                 bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                 !     -----> loop over basis functions
                 IF (l_real) THEN
-                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + z_r(k,:ne)*av
-                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + z_r(k,:ne)*bv
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_r(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_r(k,:ne)*bv
                 ELSE
-                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + z_c(k,:ne)*av
-                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + z_c(k,:ne)*bv
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_c(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_c(k,:ne)*bv
                 ENDIF
              ENDDO
           END IF ! D1

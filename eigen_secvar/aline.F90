@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,DIMENSION,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD, bkpt,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD, bkpt,eig,ne,zMat,a_r,b_r,a_c,b_c)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -44,6 +44,8 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)       :: usdus
     TYPE(t_tlmplm),INTENT(IN)      :: tlmplm
     TYPE(t_lapw),INTENT(INOUT)     :: lapw
+    TYPE(t_zMat),INTENT(INOUT)     :: zMat
+
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
@@ -54,9 +56,7 @@ CONTAINS
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
     REAL,OPTIONAL,    INTENT (IN)  :: a_r(:),b_r(:)!(matsize)
-    REAL,OPTIONAL,    INTENT (OUT) :: z_r(DIMENSION%nbasfcn,DIMENSION%neigd)
     COMPLEX,OPTIONAL, INTENT (IN)  :: a_c(:),b_c(:)!(matsize)
-    COMPLEX,OPTIONAL, INTENT (OUT) :: z_c(DIMENSION%nbasfcn,DIMENSION%neigd)
 
     !     ..
     !     .. Local Scalars ..
@@ -78,21 +78,21 @@ CONTAINS
     REAL,    ALLOCATABLE :: rwork(:)
 
     LOGICAL:: l_real
-    l_real=PRESENT(a_r)
+    l_real=zMat%l_real
 
 
     lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
     IF (l_real) THEN
-       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=z_r)
+       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_r)
        ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
        h_r = 0.0 ; s_r=0.0
        ALLOCATE ( help_r(lhelp) )
     ELSE
-       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=z_c)
+       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_c)
 
        !     in outeig z is complex conjugated to make it usable for abcof. Here we 
        !                       first have to undo this  complex conjugation for the 
-       z_c = CONJG(z_c)    ! multiplication with a and b matrices.
+       zMat%z_c = CONJG(zMat%z_c)    ! multiplication with a and b matrices.
        ALLOCATE ( h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd) )
        h_c = 0.0 ; s_c=0.0
        ALLOCATE ( help_r(lhelp) )
@@ -100,30 +100,30 @@ CONTAINS
     !
     DO i = 1,ne
        IF (l_real) THEN
-          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,a_r,z_r(1,i),1,0.0,help_r,1)
+          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,a_r,zMat%z_r(1,i),1,0.0,help_r,1)
        ELSE
-          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,a_c,z_c(1,i),1,zro_c,help_c,1)
+          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,a_c,zMat%z_c(1,i),1,zro_c,help_c,1)
        ENDIF
        DO j = i,ne
           IF (l_real) THEN
-             h_r(j,i) = CPP_BLAS_sdot(lapw%nmat,z_r(1,j),1,help_r,1)
+             h_r(j,i) = CPP_BLAS_sdot(lapw%nmat,zMat%z_r(1,j),1,help_r,1)
           ELSE
-             h_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,z_c(1,j),1,help_c,1)
+             h_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,zMat%z_c(1,j),1,help_c,1)
           ENDIF
        END DO
     END DO
 
     DO i = 1,ne
        IF (l_real) THEN
-          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,b_r,z_r(1,i),1,0.0,help_r,1)
+          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,b_r,zMat%z_r(1,i),1,0.0,help_r,1)
        ELSE
-          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,b_c,z_c(1,i),1,zro_c,help_c,1)
+          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,b_c,zMat%z_c(1,i),1,zro_c,help_c,1)
        ENDIF
        DO j = i,ne
           IF (l_real) THEN
-             s_r(j,i) = CPP_BLAS_sdot(lapw%nmat,z_r(1,j),1,help_r,1)
+             s_r(j,i) = CPP_BLAS_sdot(lapw%nmat,zMat%z_r(1,j),1,help_r,1)
           ELSE
-             s_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,z_c(1,j),1,help_c,1)
+             s_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,zMat%z_c(1,j),1,help_c,1)
           ENDIF
        END DO
     END DO
@@ -132,11 +132,11 @@ CONTAINS
     ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%natd) ) 
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
-    IF (.NOT.l_real) z_c = CONJG(z_c)
+    IF (.NOT.l_real) zMat%z_c = CONJG(zMat%z_c)
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,DIMENSION%neigd,sym,cell, bkpt,lapw,ne,&
-         usdus,noco,1,kveclo,oneD,acof,bcof,ccof,z_r,z_c)  ! ispin = 1&
+         usdus,noco,1,kveclo,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 
     !
@@ -178,16 +178,16 @@ CONTAINS
 
     DO i = 1,lapw%nmat
        IF (l_real) THEN
-          help_r(:ne)=z_r(i,:ne)
+          help_r(:ne)=zMat%z_r(i,:ne)
        ELSE
-          help_c(:ne)=z_c(i,:ne)
+          help_c(:ne)=zMat%z_c(i,:ne)
        END IF
        DO j = 1,ne
           IF (l_real) THEN
              !--->       for LAPACK call
-             z_r(i,j) = CPP_BLAS_sdot(ne,help_r,1,h_r(1,j),1)
+             zMat%z_r(i,j) = CPP_BLAS_sdot(ne,help_r,1,h_r(1,j),1)
           ELSE
-             z_c(i,j) = CPP_BLAS_cdotc(ne,help_c,1,h_c(1,j),1)
+             zMat%z_c(i,j) = CPP_BLAS_cdotc(ne,help_c,1,h_c(1,j),1)
           ENDIF
        END DO
     END DO

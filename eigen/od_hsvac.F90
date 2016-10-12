@@ -9,7 +9,7 @@ MODULE m_od_hsvac
 CONTAINS
   SUBROUTINE od_hsvac(&
        vacuum,stars,DIMENSION, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,jij,nv2,l_real,aa_r,bb_r,aa_c,bb_c)
+       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
 
     !     subroutine for calculating the hamiltonian and overlap matrices in
     !     the vacuum in the case of 1-dimensional calculations
@@ -20,17 +20,18 @@ CONTAINS
     USE m_od_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
-    TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_jij),INTENT(IN)      :: jij
-    TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_stars),INTENT(IN)    :: stars
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    TYPE(t_oneD),INTENT(IN)       :: oneD
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_vacuum),INTENT(IN)     :: vacuum
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_jij),INTENT(IN)        :: jij
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: vM
@@ -46,8 +47,7 @@ CONTAINS
     REAL,    INTENT (IN) :: bkpt(3)
 
     LOGICAL, INTENT(IN)  :: l_real
-    REAL,    INTENT (INOUT) :: aa_r(:),bb_r(:)!(matsize)
-    COMPLEX, INTENT (INOUT) :: aa_c(:),bb_c(:)!(matsize)
+
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,exp1,exp2,exp3,am,bm,ic
@@ -259,9 +259,9 @@ CONTAINS
                            +CONJG(b(m,i,jspin))*b(m,j,jspin) *ddnv(m,ik,jspin1)
                    END DO
                    IF (l_real) THEN 
-                      bb_r(ii) = bb_r(ii) + REAL(sij)
+                      hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
                    ELSE
-                      bb_c(ii) = bb_c(ii) + sij
+                      hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
                    ENDIF
                 END IF
              ENDDO
@@ -273,9 +273,9 @@ CONTAINS
              END DO
 
              IF (l_real) THEN
-                bb_r(ii) = bb_r(ii) + REAL(sij)
+                hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
              ELSE 
-                bb_c(ii) = bb_c(ii) + sij
+                hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
              ENDIF
           ENDDO
        ENDIF ! ipot.eq.1.or.2
@@ -345,10 +345,9 @@ CONTAINS
                 hij = hij + ai(l,jk,i)*a(l,j,jspin2) + bi(l,jk,i)*b(l,j,jspin2)
              END DO
              IF (l_real) THEN
-
-                aa_r(ii) = aa_r(ii) + REAL(hij)
+                hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + REAL(hij)
              ELSE 
-                aa_c(ii) = aa_c(ii) + hij
+                hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + hij
              ENDIF
           END DO
        END DO

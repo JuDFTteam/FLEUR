@@ -1,7 +1,7 @@
 MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,nobd,sym, cell, bkpt,lapw,ne,usdus,&
-       noco,jspin,kveclo,oneD, acof,bcof,ccof,z_r,z_c,realdata)
+       noco,jspin,kveclo,oneD, acof,bcof,ccof,zMat,realdata)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -24,6 +24,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_zMat),INTENT(IN)   :: zMat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd
@@ -34,8 +35,6 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)
-    COMPLEX,OPTIONAL, INTENT (IN) :: z_c(:,:)!(dimension%nbasfcn,dimension%neigd)
-    REAL,OPTIONAL,    INTENT (IN) :: z_r(:,:)!(dimension%nbasfcn,dimension%neigd)
     COMPLEX, INTENT (OUT):: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
     COMPLEX, INTENT (OUT):: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
     COMPLEX, INTENT (OUT):: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%natd)
@@ -63,7 +62,7 @@ CONTAINS
     IF (PRESENT(realdata)) THEN
        l_real=realdata
     ELSE
-       l_real=PRESENT(z_r)
+       l_real=zMat%l_real
     ENDIF
 
     IF (l_real) THEN
@@ -126,7 +125,7 @@ CONTAINS
                 !$OMP& PRIVATE(k,i,work_r,work_c,ccchi,kspin,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
                 !$OMP& inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm,&
                 !$OMP& acof_loc,bcof_loc,acof_inv,bcof_inv)&
-                !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,z_r,z_c,usdus,n,ci,iintsp,&
+                !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,n,ci,iintsp,&
                 !$OMP& jspin,bkpt,qss1,qss2,qss3,&
                 !$OMP& apw,const,natom,l_real,&
                 !$OMP& nobd,&
@@ -151,9 +150,9 @@ CONTAINS
                 DO k = 1,nvmax
                    IF (.NOT.noco%l_noco) THEN
                       IF (l_real) THEN
-                         work_r(:ne)=z_r(k,:ne)
+                         work_r(:ne)=zMat%z_r(k,:ne)
                       ELSE
-                         work_c(:ne)=z_c(k,:ne)
+                         work_c(:ne)=zMat%z_c(k,:ne)
                       END IF
                    ENDIF
 
@@ -168,7 +167,7 @@ CONTAINS
                          !--->              stored in the second half of the eigenvector
                          kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
                          DO i = 1,ne
-                            work_c(i) = ccchi(iintsp,jspin)*z_c(kspin+k,i)
+                            work_c(i) = ccchi(iintsp,jspin)*zMat%z_c(kspin+k,i)
                          ENDDO
                       ELSE
                          !--->              perform sum over the two interstitial spin directions
@@ -176,8 +175,8 @@ CONTAINS
                          !--->              (jspin counts the local spin directions inside each MT)
                          kspin = lapw%nv(1)+atoms%nlotot
                          DO i = 1,ne
-                            work_c(i) = ccchi(1,jspin)*z_c(k,i)&
-                                 &                        + ccchi(2,jspin)*z_c(kspin+k,i)
+                            work_c(i) = ccchi(1,jspin)*zMat%z_c(k,i)&
+                                 &                        + ccchi(2,jspin)*zMat%z_c(kspin+k,i)
                          ENDDO
                       ENDIF
                    ENDIF ! (noco%l_noco)
@@ -276,7 +275,7 @@ CONTAINS
                    ENDDO ! loop over l
                    IF (.NOT.enough(natom)) THEN
                       CALL abclocdn(atoms,sym, noco,ccchi(1,jspin),kspin,iintsp,const,phase,ylm,n,natom,k,&
-                           s,nvmax,ne,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),nkvec,enough,acof,bcof,ccof,z_r,z_c)
+                           s,nvmax,ne,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),nkvec,enough,acof,bcof,ccof,zMat)
                    ENDIF
                 ENDDO ! loop over LAPWs
                 !$OMP END DO

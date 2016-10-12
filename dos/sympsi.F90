@@ -18,7 +18,7 @@ MODULE m_sympsi
   ! Jussi Enkovaara, Juelich 2004
 
 CONTAINS
-  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,z_r,z_c,l_real)
+  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat,l_real)
 
     USE m_grp_k
     USE m_inv3
@@ -29,6 +29,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
+    TYPE(t_zMat),INTENT(IN)        :: zMat
     !
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nv,ne
@@ -36,8 +37,7 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kx(:),ky(:),kz(:)!(nvd) 
     REAL,    INTENT (IN) :: bkpt(3),eig(DIMENSION%neigd)
-    REAL,    INTENT (IN) :: z_r(DIMENSION%nbasfcn,DIMENSION%neigd)
-    COMPLEX, INTENT (IN) :: z_c(DIMENSION%nbasfcn,DIMENSION%neigd)
+
     INTEGER, INTENT (OUT):: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
     LOGICAL,INTENT(IN)   :: l_real
     !     ..
@@ -126,16 +126,16 @@ CONTAINS
        norm(i)=0.0
        IF (soc) THEN
           DO k=1,nv*2
-             norm(i)=norm(i)+ABS(z_c(k,i))**2
+             norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
           ENDDO
        ELSE
           IF (l_real) THEN
              DO k=1,nv
-                norm(i)=norm(i)+ABS(z_r(k,i))**2
+                norm(i)=norm(i)+ABS(zMat%z_r(k,i))**2
              ENDDO
           ELSE
              DO k=1,nv
-                norm(i)=norm(i)+ABS(z_c(k,i))**2
+                norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
              ENDDO
           ENDIF
        ENDIF
@@ -163,22 +163,22 @@ CONTAINS
              DO n2=1,ndeg
                 IF (l_real) THEN
                    DO k=1,nv
-                      csum(n1,n2,c)=csum(n1,n2,c)+z_r(k,deg(n1))*&
-                           z_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                      csum(n1,n2,c)=csum(n1,n2,c)+zMat%z_r(k,deg(n1))*&
+                           zMat%z_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                    END DO
                 ELSE
                    IF (soc) THEN  
                       DO k=1,nv
 
-                         csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(z_c(k,deg(n1)))*&
-                              (su(1,1,c)*z_c(gmap(k,c),deg(n2))+ su(1,2,c)*z_c(gmap(k,c)+nv,deg(n2)))+&
-                              CONJG(z_c(k+nv,deg(n1)))* (su(2,1,c)*z_c(gmap(k,c),deg(n2))+&
-                              su(2,2,c)*z_c(gmap(k,c)+nv,deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
+                         csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(zMat%z_c(k,deg(n1)))*&
+                              (su(1,1,c)*zMat%z_c(gmap(k,c),deg(n2))+ su(1,2,c)*zMat%z_c(gmap(k,c)+nv,deg(n2)))+&
+                              CONJG(zMat%z_c(k+nv,deg(n1)))* (su(2,1,c)*zMat%z_c(gmap(k,c),deg(n2))+&
+                              su(2,2,c)*zMat%z_c(gmap(k,c)+nv,deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
                       END DO
                    ELSE
                       DO k=1,nv
-                         csum(n1,n2,c)=csum(n1,n2,c)+CONJG(z_c(k,deg(n1)))*&
-                              z_c(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                         csum(n1,n2,c)=csum(n1,n2,c)+CONJG(zMat%z_c(k,deg(n1)))*&
+                              zMat%z_c(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                       END DO
                    ENDIF
                 ENDIF

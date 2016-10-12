@@ -7,7 +7,7 @@
 MODULE m_franza
 CONTAINS
   SUBROUTINE franza(nbasfcn,neigd, nsize,&
-       l_zref,l_J,matind,nred,gw,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
+       l_zref,l_J,matind,nred,gw,eig,ne,hamOvlp,zMat)
     !***********************************************************************
     !
     !     solves the secular equation a*z=eig*b*z
@@ -39,6 +39,7 @@ CONTAINS
     ! to see what's going on .... 
     !***********************************************************************
     USE m_juDFT
+    USE m_types
 #include"cpp_double.h"
     IMPLICIT NONE
     !     ..
@@ -52,10 +53,9 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN)  :: matind(nbasfcn,2)
     REAL,    INTENT (OUT) :: eig(neigd)
-    REAL,OPTIONAL,INTENT (INOUT):: a_r(:),b_r(:)!(matsize)
-    REAL,OPTIONAL,INTENT (INOUT) :: z_r(nbasfcn,neigd)
-    COMPLEX,OPTIONAL,INTENT (INOUT):: a_c(:),b_c(:)!(matsize)
-    COMPLEX,OPTIONAL,INTENT (INOUT) :: z_c(nbasfcn,neigd)
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
+    TYPE(t_zMat),INTENT(INOUT)    :: zMat
+
     !     ..
     !     .. Local Scalars ..
     REAL toler,sq2i
@@ -77,8 +77,8 @@ CONTAINS
     !to select real/complex data
     LOGICAL:: l_real
 
-    l_real=PRESENT(a_r)
-    IF (l_real.AND.PRESENT(a_c)) CALL juDFT_error("BUG in franza, call either with real OR complex data")
+    l_real=zMat%l_real
+!    IF (l_real.AND.PRESENT(a_c)) CALL juDFT_error("BUG in franza, call either with real OR complex data")
     IF (l_real) THEN
        ALLOCATE(zz_r(nbasfcn,neigd+1))
     ELSE
@@ -104,20 +104,20 @@ CONTAINS
              j1=(matind(i,1)-1)*matind(i,1)/2+matind(j,2)
              i2=i2+1
              IF (l_real) THEN 
-                aa_r(i2)=a_r(i1)+a_r(j1)
-                bb_r(i2)=b_r(i1)+b_r(j1)
+                aa_r(i2)=hamOvlp%a_r(i1)+hamOvlp%a_r(j1)
+                bb_r(i2)=hamOvlp%b_r(i1)+hamOvlp%b_r(j1)
              ELSE
-                aa_c(i2)=a_c(i1)+a_c(j1)
-                bb_c(i2)=b_c(i1)+b_c(j1)
+                aa_c(i2)=hamOvlp%a_c(i1)+hamOvlp%a_c(j1)
+                bb_c(i2)=hamOvlp%b_c(i1)+hamOvlp%b_c(j1)
              END IF
              IF ((matind(i,1).NE.matind(i,2)).AND.(matind(j,1).NE.matind(j,2))) THEN
                 j2=j2+1
                 IF (l_real) THEN 
-                   aa_r(j2)=a_r(i1)-a_r(j1)
-                   bb_r(j2)=b_r(i1)-b_r(j1)
+                   aa_r(j2)=hamOvlp%a_r(i1)-hamOvlp%a_r(j1)
+                   bb_r(j2)=hamOvlp%b_r(i1)-hamOvlp%b_r(j1)
                 ELSE
-                   aa_c(j2)=a_c(i1)-a_c(j1)
-                   bb_c(j2)=b_c(i1)-b_c(j1)
+                   aa_c(j2)=hamOvlp%a_c(i1)-hamOvlp%a_c(j1)
+                   bb_c(j2)=hamOvlp%b_c(i1)-hamOvlp%b_c(j1)
                 END IF
              ENDIF
           ENDDO
@@ -132,11 +132,11 @@ CONTAINS
           !
           matsz=(nred+1)*nred/2
           IF (l_real) THEN
-             CALL CPP_BLAS_scopy(matsz,aa_r,1,a_r,1)
-             CALL CPP_BLAS_scopy(matsz,bb_r,1,b_r,1)
+             CALL CPP_BLAS_scopy(matsz,aa_r,1,hamOvlp%a_r,1)
+             CALL CPP_BLAS_scopy(matsz,bb_r,1,hamOvlp%b_r,1)
           ELSE
-             CALL CPP_BLAS_ccopy(matsz,aa_c,1,a_c,1)
-             CALL CPP_BLAS_ccopy(matsz,bb_c,1,b_c,1)
+             CALL CPP_BLAS_ccopy(matsz,aa_c,1,hamOvlp%a_c,1)
+             CALL CPP_BLAS_ccopy(matsz,bb_c,1,hamOvlp%b_c,1)
           ENDIF
 
           ne_a=ne
@@ -150,12 +150,12 @@ CONTAINS
              ENDIF
              IF (l_real) THEN
                 DO j=1,nsize
-                   bb_r(k)=z_r(j,i)
+                   bb_r(k)=zMat%z_r(j,i)
                    k=k+1
                 ENDDO
              ELSE
                 DO j=1,nsize
-                   bb_c(k)=z_c(j,i)
+                   bb_c(k)=zMat%z_c(j,i)
                    k=k+1
                 ENDDO
              ENDIF
@@ -168,9 +168,9 @@ CONTAINS
        ! --> b is overwritten by l
        !
        IF (l_real) THEN
-          CALL CPP_LAPACK_spptrf('U',nsize,b_r,info)
+          CALL CPP_LAPACK_spptrf('U',nsize,hamOvlp%b_r,info)
        ELSE
-          CALL CPP_LAPACK_cpptrf('U',nsize,b_c,info)
+          CALL CPP_LAPACK_cpptrf('U',nsize,hamOvlp%b_c,info)
        ENDIF
        !
        IF (info.NE.0) THEN
@@ -182,9 +182,9 @@ CONTAINS
        ! --> where a' = (l)^-1 * a * (l^t)^-1 and z' = l^t * z
        !
        IF (l_real) THEN
-          CALL CPP_LAPACK_sspgst(1,'U',nsize,a_r,b_r,info)
+          CALL CPP_LAPACK_sspgst(1,'U',nsize,hamOvlp%a_r,hamOvlp%b_r,info)
        ELSE
-          CALL CPP_LAPACK_chpgst(1,'U',nsize,a_c,b_c,info)
+          CALL CPP_LAPACK_chpgst(1,'U',nsize,hamOvlp%a_c,hamOvlp%b_c,info)
        ENDIF
        !
        IF (info.NE.0) THEN
@@ -206,17 +206,17 @@ CONTAINS
        IF (l_real) THEN
           zz_r=0.0
           IF(l_J)THEN
-             CALL CPP_LAPACK_sspevx('N','I','U',nsize,a_r,lb,ub,1,iu,toler,ne, etemp,zz_r,nbasfcn,work,iwork,ifail,info)
+             CALL CPP_LAPACK_sspevx('N','I','U',nsize,hamOvlp%a_r,lb,ub,1,iu,toler,ne, etemp,zz_r,nbasfcn,work,iwork,ifail,info)
           ELSE
-             CALL CPP_LAPACK_sspevx('V','I','U',nsize,a_r,lb,ub,1,iu,toler,ne, etemp,zz_r,nbasfcn,work,iwork,ifail,info)
+             CALL CPP_LAPACK_sspevx('V','I','U',nsize,hamOvlp%a_r,lb,ub,1,iu,toler,ne, etemp,zz_r,nbasfcn,work,iwork,ifail,info)
           ENDIF
        ELSE
           zz_c=0.0
           ALLOCATE ( cwork(2*nbasfcn) )
           IF(l_J)THEN
-             CALL CPP_LAPACK_chpevx('N','I','U',nsize,a_c,lb,ub,1,iu,toler,ne, etemp,zz_c,nbasfcn,cwork,work,iwork,ifail,info)
+             CALL CPP_LAPACK_chpevx('N','I','U',nsize,hamOvlp%a_c,lb,ub,1,iu,toler,ne, etemp,zz_c,nbasfcn,cwork,work,iwork,ifail,info)
           ELSE
-             CALL CPP_LAPACK_chpevx('V','I','U',nsize,a_c,lb,ub,1,iu,toler,ne, etemp,zz_c,nbasfcn,cwork,work,iwork,ifail,info)
+             CALL CPP_LAPACK_chpevx('V','I','U',nsize,hamOvlp%a_c,lb,ub,1,iu,toler,ne, etemp,zz_c,nbasfcn,cwork,work,iwork,ifail,info)
           ENDIF
           DEALLOCATE ( cwork )
        ENDIF
@@ -228,9 +228,9 @@ CONTAINS
           ENDDO
        ENDIF
        IF (l_real) THEN
-          z_r = zz_r(:,:ne)
+          zMat%z_r = zz_r(:,:ne)
        ELSE
-          z_c = zz_c(:,:ne)
+          zMat%z_c = zz_c(:,:ne)
        END IF
        !
        IF (ne.GT.neigd) THEN
@@ -253,9 +253,9 @@ CONTAINS
           ! --> recover the generalized eigenvectors z by solving z' = l^t * z
           !
           IF (l_real) THEN
-             CALL CPP_LAPACK_stptrs('U','N','N',nsize,ne,b_r,z_r,nbasfcn,info)
+             CALL CPP_LAPACK_stptrs('U','N','N',nsize,ne,hamOvlp%b_r,zMat%z_r,nbasfcn,info)
           ELSE
-             CALL CPP_LAPACK_ctptrs('U','N','N',nsize,ne,b_c,z_c,nbasfcn,info)
+             CALL CPP_LAPACK_ctptrs('U','N','N',nsize,ne,hamOvlp%b_c,zMat%z_c,nbasfcn,info)
           ENDIF
           !
           IF (info.NE.0) THEN
@@ -273,12 +273,12 @@ CONTAINS
        DO i=1,ne
           IF (l_real) THEN
              DO j=1,nsize
-                b_r(k)=z_r(j,i)
+                hamOvlp%b_r(k)=zMat%z_r(j,i)
                 k=k+1
              ENDDO
           ELSE
              DO j=1,nsize
-                b_c(k)=z_c(j,i)
+                hamOvlp%b_c(k)=zMat%z_c(j,i)
                 k=k+1
              ENDDO
           END IF
@@ -324,9 +324,9 @@ CONTAINS
        DO k=ne,1,-1
           DO n=1,nsize
              IF (l_real) THEN
-                z_r(n,k)=0.0
+                zMat%z_r(n,k)=0.0
              ELSE
-                z_c(n,k)=CMPLX(0.0,0.0)
+                zMat%z_c(n,k)=CMPLX(0.0,0.0)
              ENDIF
           ENDDO
           IF (sort(k)) THEN
@@ -335,11 +335,11 @@ CONTAINS
              DO n=1,nred
                 i1=i1+1
                 IF (l_real) THEN
-                   z_r(matind(n,1),k) = z_r(matind(n,1),k)+b_r(i1)*sq2i
-                   z_r(matind(n,2),k) = z_r(matind(n,2),k)+b_r(i1)*sq2i
+                   zMat%z_r(matind(n,1),k) = zMat%z_r(matind(n,1),k)+hamOvlp%b_r(i1)*sq2i
+                   zMat%z_r(matind(n,2),k) = zMat%z_r(matind(n,2),k)+hamOvlp%b_r(i1)*sq2i
                 ELSE
-                   z_c(matind(n,1),k) = z_c(matind(n,1),k)+b_c(i1)*CMPLX(sq2i,0.0)
-                   z_c(matind(n,2),k) = z_c(matind(n,2),k)+b_c(i1)*CMPLX(sq2i,0.0)
+                   zMat%z_c(matind(n,1),k) = zMat%z_c(matind(n,1),k)+hamOvlp%b_c(i1)*CMPLX(sq2i,0.0)
+                   zMat%z_c(matind(n,2),k) = zMat%z_c(matind(n,2),k)+hamOvlp%b_c(i1)*CMPLX(sq2i,0.0)
                 ENDIF
              ENDDO
              i=i-1
@@ -354,17 +354,17 @@ CONTAINS
                 IF (matind(n,1).NE.matind(n,2)) THEN
                    j1=j1+1
                    IF (l_real) THEN
-                      z_r(matind(n,1),k) = z_r(matind(n,1),k)+bb_r(j1)*sq2i
-                      z_r(matind(n,2),k) = z_r(matind(n,2),k)-bb_r(j1)*sq2i
+                      zMat%z_r(matind(n,1),k) = zMat%z_r(matind(n,1),k)+bb_r(j1)*sq2i
+                      zMat%z_r(matind(n,2),k) = zMat%z_r(matind(n,2),k)-bb_r(j1)*sq2i
                    ELSE
-                      z_c(matind(n,1),k) = z_c(matind(n,1),k)+bb_c(j1) *CMPLX(sq2i,0.0)
-                      z_c(matind(n,2),k) = z_c(matind(n,2),k)-bb_c(j1) *CMPLX(sq2i,0.0)
+                      zMat%z_c(matind(n,1),k) = zMat%z_c(matind(n,1),k)+bb_c(j1) *CMPLX(sq2i,0.0)
+                      zMat%z_c(matind(n,2),k) = zMat%z_c(matind(n,2),k)-bb_c(j1) *CMPLX(sq2i,0.0)
                    ENDIF
                 ELSE
                    IF (l_real) THEN
-                      z_r(matind(n,1),k) = 0.0
+                      zMat%z_r(matind(n,1),k) = 0.0
                    ELSE
-                      z_c(matind(n,1),k) = CMPLX(0.0,0.0)
+                      zMat%z_c(matind(n,1),k) = CMPLX(0.0,0.0)
                    ENDIF
                 ENDIF
              ENDDO

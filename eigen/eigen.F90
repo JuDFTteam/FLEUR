@@ -101,19 +101,18 @@ CONTAINS
     REAL,    ALLOCATABLE :: bkpt(:)
     REAL,    ALLOCATABLE :: eig(:)
 
-    REAL,    ALLOCATABLE :: z_r(:,:),a_r(:),b_r(:)
-    COMPLEX, ALLOCATABLE :: z_c(:,:),a_c(:),b_c(:)
-
     COMPLEX, ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
     COMPLEX, ALLOCATABLE :: vpwtot(:,:)
     REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
     REAL,    ALLOCATABLE :: vrtot(:,:,:,:)
 
     COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
-    TYPE(t_tlmplm) :: td
-    TYPE(t_usdus)  :: ud
-    TYPE(t_lapw)   :: lapw
-    Type(t_enpara) :: enpara
+    TYPE(t_tlmplm)  :: td
+    TYPE(t_usdus)   :: ud
+    TYPE(t_lapw)    :: lapw
+    Type(t_enpara)  :: enpara
+    TYPE(t_zMat)    :: zMat
+    TYPE(t_hamOvlp) :: hamOvlp
     !
     INTEGER n_start,n_groups,n_rank,n_size,n,n_stride
     INTEGER SUB_COMM,fh
@@ -337,9 +336,9 @@ CONTAINS
          atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,l_real,noco%l_soc,.true.,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
     IF (l_real) THEN
-       ALLOCATE ( a_r(matsize), stat = err )
+       ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
     ELSE
-       ALLOCATE ( a_c(matsize), stat = err )
+       ALLOCATE ( hamOvlp%a_c(matsize), stat = err )
     endif
     IF (err.NE.0) THEN
        WRITE (*,*) 'eigen: an error occured during allocation of'
@@ -347,9 +346,9 @@ CONTAINS
        CALL juDFT_error("eigen: Error during allocation of Hamilton" //"matrix",calledby ="eigen")
     ENDIF
     if (l_real) THEN
-       ALLOCATE ( b_r(matsize), stat = err )
+       ALLOCATE ( hamOvlp%b_r(matsize), stat = err )
     else
-       ALLOCATE ( b_c(matsize), stat = err )
+       ALLOCATE ( hamOvlp%b_c(matsize), stat = err )
     endif
 
     IF (err.NE.0) THEN
@@ -357,6 +356,10 @@ CONTAINS
        WRITE (*,*) 'the overlap Matrix: ',err,'  size: ',matsize
        CALL juDFT_error("eigen: Error during allocation of overlap " //"matrix",calledby ="eigen")
     ENDIF
+
+    hamOvlp%l_real = l_real
+    hamOvlp%matsize = matsize
+
     ALLOCATE (  matind(dimension%nbasfcn,2) )
     !
     !--->    loop over spins
@@ -463,7 +466,7 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           call timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms,l_real,a_r,b_r,a_c,b_c)
+          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
 
           call timestop("Interstitial Hamiltonian&Overlap")
           !
@@ -472,7 +475,7 @@ CONTAINS
           IF (.not.l_wu) THEN
              call timestart("MT Hamiltonian&Overlap")
              CALL hsmt(dimension,atoms,sphhar,sym,enpara, SUB_COMM,n_size,n_rank,jsp,input,mpi,&
-                  lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,a_r,b_r,a_c,b_c)
+                  lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
           !
@@ -501,11 +504,11 @@ CONTAINS
           call timestart("Vacuum Hamiltonian&Overlap")
           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
              CALL hsvac(vacuum,stars,dimension, atoms, jsp,input,vzxy(1,1,1,jsp),vz,enpara%evac0,cell, &
-                  bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,a_r,b_r,a_c,b_c)
+                  bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,hamOvlp)
           ELSEIF (oneD%odi%d1) THEN
              CALL od_hsvac(vacuum,stars,dimension, oneD,atoms, jsp,input,vzxy(1,1,1,jsp),vz, &
                   enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
-                  n_size,n_rank,sym,noco,jij,nv2,l_real,a_r,b_r,a_c,b_c)
+                  n_size,n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
           END IF
           call timestop("Vacuum Hamiltonian&Overlap")
 
@@ -534,11 +537,11 @@ CONTAINS
           if (l_file) THEN
              if (l_real) THEN
                 OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*8)
-                WRITE(88,rec=nrec) b_r
+                WRITE(88,rec=nrec) hamOvlp%b_r
                 CLOSE(88)
              else
                 OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*16)
-                WRITE(88,rec=nrec) b_c
+                WRITE(88,rec=nrec) hamOvlp%b_c
                 CLOSE(88)
              endif
           endif
@@ -546,7 +549,7 @@ CONTAINS
        
           CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,&
                nred,sub_comm, sym,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
-               oneD,td,ud, eig,ne_found,a_r,b_r,z_r,a_c,b_c,z_c)
+               oneD,td,ud, eig,ne_found,hamOvlp,zMat)
           
           !
           !--->         output results
@@ -560,21 +563,21 @@ CONTAINS
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           if (.not.l_real) THEN
              IF (.not.jij%l_J) THEN
-                z_c(:lapw%nmat,:ne_found) = conjg(z_c(:lapw%nmat,:ne_found))
+                zMat%z_c(:lapw%nmat,:ne_found) = conjg(zMat%z_c(:lapw%nmat,:ne_found))
              ELSE
-                z_c(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
+                zMat%z_c(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
              ENDIF
           endif
           if (l_real) THEN
              CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,n_size,n_rank,z=z_r(:,:ne_found))
+                  atoms%nlotot,kveclo,n_size,n_rank,z=zMat%z_r(:,:ne_found))
           else
              CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,n_size,n_rank,z=z_c(:,:ne_found))
+                  atoms%nlotot,kveclo,n_size,n_rank,z=zMat%z_c(:,:ne_found))
           endif
           IF (noco%l_noco) THEN
              CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
@@ -600,9 +603,9 @@ CONTAINS
           CALL timestop("EV output")
           !#ifdef CPP_MPI
           if (l_real) THEN
-             DEALLOCATE ( z_r )
+             DEALLOCATE ( zMat%z_r )
           else
-             DEALLOCATE ( z_c )
+             DEALLOCATE ( zMat%z_c )
 endif
           !
        END DO  k_loop
@@ -619,9 +622,9 @@ endif
     DEALLOCATE( vs_mmp )
     DEALLOCATE (matind)
     if (l_real) THEN
-       deallocate(a_r,b_r)
+       deallocate(hamOvlp%a_r,hamOvlp%b_r)
     else
-       deallocate(a_c,b_c)
+       deallocate(hamOvlp%a_c,hamOvlp%b_c)
     endif
 #ifdef CPP_NEVER
     IF( hybrid%l_calhf ) THEN
