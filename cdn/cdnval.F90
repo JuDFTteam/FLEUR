@@ -194,7 +194,7 @@ CONTAINS
     TYPE (t_zMat)              :: zMat
 
     LOGICAL :: l_real
-    l_real=sym%invs.or.noco%l_soc
+    l_real=sym%invs.AND..NOT.noco%l_soc
     !     ..
     !     ..
     llpd=(atoms%lmaxd*(atoms%lmaxd+3))/2

@@ -565,7 +565,6 @@ CONTAINS
 
        ELSE
 #ifdef CPP_MPI
-=======
           CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, aahlp, .FALSE.,aa_rDummy,hamOvlp%a_c)
           CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, .FALSE.,aa_rDummy,hamOvlp%b_c)
 #endif
