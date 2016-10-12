@@ -565,8 +565,10 @@ CONTAINS
           ENDDO
 
        ELSE
+#ifdef CPP_MPI
           CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, aahlp, .FALSE.,aa_c=aa_c)
           CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, .FALSE.,aa_c=bb_c)
+#endif
        ENDIF
     ENDIF
 

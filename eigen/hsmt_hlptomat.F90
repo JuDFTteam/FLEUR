@@ -57,10 +57,12 @@ module m_hsmt_hlptomat
               bb(:size(aahlp)) = bb(:size(aahlp))+bbhlp*chi11
               bbhlp = conjg(bbhlp)*chi21
             ENDIF
+#ifdef CPP_MPI
             CALL mingeselle(SUB_COMM,n_size,n_rank,nv,&
                 aahlp,.false.,aa_r,aa)
             IF (present(bb).and.nlotot>1) CALL mingeselle(SUB_COMM,n_size,n_rank,nv,&
                 bbhlp,.false.,bb_r,bb)
+#endif
         ENDIF
 
     end subroutine
