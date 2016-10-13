@@ -208,7 +208,6 @@ CONTAINS
        CALL juDFT_error('hybrid functional + SOC + inv.symmetry is not tested', calledby='eigen')
     END IF
 
-
     !
     !  if gw = 1 or 2, we are in the first or second run of a GW  calculation
     !  if gw = 1 we just proceed as normal (one round),
@@ -333,7 +332,7 @@ CONTAINS
     endif
     eig_id=open_eig(&
          mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,&
-         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,l_real,noco%l_soc,.true.,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,l_real,noco%l_soc,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
     IF (l_real) THEN
        ALLOCATE ( hamOvlp%a_r(matsize), stat = err )

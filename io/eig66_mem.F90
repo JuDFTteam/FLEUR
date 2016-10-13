@@ -65,9 +65,11 @@ CONTAINS
     ALLOCATE(d%eig_eig(neig,jspins*nkpts))
     !d%eig_vec
     if (l_real) THEN
+       print *, "Allocate real in eig66_mem"
        ALLOCATE(d%eig_vecr(nmat*neig,length*nkpts))
        if (l_soc)  CALL judft_error("SOC+INVERSION can not be used with eigenvalues stored in memory")
     else
+       print *, "Allocate complex in eig66_mem"
        ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
     endif
     length=length*nkpts
