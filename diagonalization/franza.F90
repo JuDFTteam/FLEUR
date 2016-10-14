@@ -113,11 +113,11 @@ CONTAINS
              IF ((matind(i,1).NE.matind(i,2)).AND.(matind(j,1).NE.matind(j,2))) THEN
                 j2=j2+1
                 IF (l_real) THEN 
-                   aa_r(j2)=hamOvlp%a_r(i1)-hamOvlp%a_r(j1)
-                   bb_r(j2)=hamOvlp%b_r(i1)-hamOvlp%b_r(j1)
+                   hamOvlp%a_r(j2)=hamOvlp%a_r(i1)-hamOvlp%a_r(j1)
+                   hamOvlp%b_r(j2)=hamOvlp%b_r(i1)-hamOvlp%b_r(j1)
                 ELSE
-                   aa_c(j2)=hamOvlp%a_c(i1)-hamOvlp%a_c(j1)
-                   bb_c(j2)=hamOvlp%b_c(i1)-hamOvlp%b_c(j1)
+                   hamOvlp%a_c(j2)=hamOvlp%a_c(i1)-hamOvlp%a_c(j1)
+                   hamOvlp%b_c(j2)=hamOvlp%b_c(i1)-hamOvlp%b_c(j1)
                 END IF
              ENDIF
           ENDDO
