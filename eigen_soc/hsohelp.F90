@@ -43,8 +43,8 @@ CONTAINS
     COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%natd, DIMENSION%jspd)
-    REAL,INTENT(IN)  ::    z_r(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX,INTENT(IN):: z_c(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
+    REAL,INTENT(IN)      :: z_r(:,:,:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
+    COMPLEX,INTENT(IN)   :: z_c(:,:,:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
     !-odim
     !+odim
     !     ..

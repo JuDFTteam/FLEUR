@@ -95,9 +95,11 @@ CONTAINS
     INQUIRE (file='fleur.qsgw',exist=l_qsgw)
     if (l_real) THEN
        ALLOCATE ( z_r(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd) )
+       ALLOCATE (z_c(1,1,1))
        z_r(:,:,:)= 0.  
     else
        ALLOCATE ( z_c(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd) )
+       ALLOCATE (z_r(1,1,1))
        z_c(:,:,:)= 0.  
     endif
     zso(:,:,:)= CMPLX(0.,0.)
@@ -359,7 +361,7 @@ endif
        DEALLOCATE ( zhelp2 )
     ENDIF ! (.NOT.input%eonly)
 
-    DEALLOCATE ( hso )
+    DEALLOCATE (z_r,z_c, hso )
     !
     nmat=lapw%nmat
     RETURN
