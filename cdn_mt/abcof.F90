@@ -55,8 +55,8 @@ CONTAINS
     !$    COMPLEX, ALLOCATABLE :: acof_loc(:,:), bcof_loc(:,:)
     !$    COMPLEX, ALLOCATABLE :: acof_inv(:,:), bcof_inv(:,:)
     LOGICAL enough(atoms%natd),apw(0:atoms%lmaxd,atoms%ntypd)
-    COMPLEX, ALLOCATABLE :: work_r(:)
-    REAL,    ALLOCATABLE :: work_c(:)
+    REAL,    ALLOCATABLE :: work_r(:)
+    COMPLEX, ALLOCATABLE :: work_c(:)
 
     LOGICAL :: l_real
     IF (PRESENT(realdata)) THEN

@@ -91,6 +91,7 @@
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
+          atoms%lapw_l(:) = -1
           !---> pk non-collinear
           !---> read the angle information from nocoinf
           noco%qss(:) = 0.0
