@@ -64,10 +64,10 @@ CONTAINS
        call packed_to_full(nsize,b_r,largeb_r)
        DEALLOCATE (b_r)
     ELSE
-       call packed_to_full(nsize,a_r,largea_r)
-       DEALLOCATE (a_r)
-       call packed_to_full(nsize,b_r,largeb_r)
-       DEALLOCATE (b_r)
+       call packed_to_full(nsize,a_c,largea_c)
+       DEALLOCATE (a_c)
+       call packed_to_full(nsize,b_c,largeb_c)
+       DEALLOCATE (b_c)
     ENDIF
 
 
