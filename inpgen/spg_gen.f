@@ -245,7 +245,7 @@
          j = 1
          DO i = 1, nat
             IF (ity(i).NE.ity(j)) CYCLE
-            tr(1:3) = pos(1:3,j) - posr(1:3,i)
+            tr(1:3) = posr(1:3,i) - pos(1:3,j)
             tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
             maxTrVecs = maxTrVecs + 1
             trVecs(:,maxTrVecs) = tr(:)
