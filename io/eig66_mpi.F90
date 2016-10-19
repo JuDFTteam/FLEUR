@@ -360,7 +360,7 @@ CONTAINS
                 z(:,n)=tmp_real
              endif
           TYPE IS (COMPLEX)
-             if (.not.d%l_real) call judft_error("Could not real complex data, only real data is stored",calledby="eig66_mpi%read_eig")
+             if (d%l_real) call judft_error("Could not read complex data, only real data is stored",calledby="eig66_mpi%read_eig")
              CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zc_handle,e)
              CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
              CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
