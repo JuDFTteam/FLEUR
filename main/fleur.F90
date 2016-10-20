@@ -859,6 +859,7 @@
        END IF
        CALL writeTimesXML()
        CALL resetIterationDependentTimers()
+       CALL check_time_for_next_iteration(it,l_cont)
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
        END IF

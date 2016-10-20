@@ -12,7 +12,7 @@ CONTAINS
     USE m_juDFT
     IMPLICIT NONE
     CHARACTER(LEN=50):: gitdesc,githash,compile_date,compile_user,compile_host
-    
+
     PRINT *,"     Welcome to FLEUR        (www.flapw.de)   "
     PRINT *,"     MaX-Release 1         (www.max-centre.eu)"
 
@@ -40,6 +40,8 @@ CONTAINS
     WRITE(*,*)"-genEnpara        : write enpara file"
     WRITE(*,*)""
     WRITE(*,*)"-xmlInput         : use inp.xml instead of inp"
+    WRITE(*,*)""
+    WRITE(*,*)"-wtime XXXXX      : run for XXXX minutes (used to estimate if another iteration is started"
     WRITE(*,*)""
     WRITE(*,*)"-j #:DIR          : run subjob in directory DIR using # PEs"
     WRITE(*,*)"-f FILENAME       : obtain info on subjobs from file FILENAME"

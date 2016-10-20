@@ -38,7 +38,7 @@ MODULE m_juDFT_time
   INTEGER           ,SAVE   :: lastline=0
 
   PUBLIC timestart,timestop,writetimes,writelocation,writeTimesXML
-  PUBLIC resetIterationDependentTimers
+  PUBLIC resetIterationDependentTimers,check_time_for_next_iteration
   PUBLIC juDFT_time_lastlocation !should not be used
 
 CONTAINS
@@ -393,19 +393,58 @@ CONTAINS
     END IF
   END SUBROUTINE privWriteTimesXML
 
+  SUBROUTINE check_time_for_next_iteration(it,l_cont)
+    USE m_judft_args
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)     :: it
+    LOGICAL,INTENT(INOUT)  :: l_cont
+    CHARACTER(len=20)::wtime_string
+    INTEGER          :: wtime,time_used,time_per_iter
+    INTEGER:: irank=0
+#ifdef CPP_MPI
+    INCLUDE "mpif.h"
+    INTEGER::err,isize
+    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+#endif
+
+    IF (.NOT.l_cont) RETURN !stop anyway
+    IF (.NOT.ASSOCIATED(globaltimer)) RETURN !do nothing if no timing recorded
+    IF (judft_was_argument("-wtime")) THEN
+       wtime_string=judft_string_for_argument("-wtime")
+       READ(wtime_string,*) wtime
+       time_used=FLOOR((cputime()-globaltimer%starttime)/60.0)+1
+       time_per_iter=FLOOR((cputime()-globaltimer%starttime)/60.0/it)+1
+       IF (irank==0) THEN
+          WRITE(*,*) "Test for time of next iteration:"
+          WRITE(*,*) "Time provided (min):",wtime
+          WRITE(*,*) "Time used     (min):",time_used
+          WRITE(*,*) "Time per iter (min):",time_per_iter
+       ENDIF
+       IF (time_used+time_per_iter>wtime) THEN
+          l_cont=.FALSE.
+          IF (irank==0) WRITE(*,*) "No further iterations"
+       ENDIF
+    END IF
+  END SUBROUTINE check_time_for_next_iteration
+
+
   SUBROUTINE resetIterationDependentTimers()
 
     IMPLICIT NONE
-
+   
     INTEGER                :: fn,irank=0
     LOGICAL                :: l_out
     TYPE(t_timer), POINTER :: timer, parenttimer
 #ifdef CPP_MPI
     INCLUDE "mpif.h"
     INTEGER::err,isize
+  
 
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
 #endif
+    !Check if not enough time for another iteration is left
+    
+       
     IF (irank.NE.0) RETURN
     IF (.NOT.ASSOCIATED(globaltimer)) RETURN !write nothing if no timing recorded
 
