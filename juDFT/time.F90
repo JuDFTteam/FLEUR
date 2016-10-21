@@ -330,14 +330,13 @@ CONTAINS
 
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
 #endif
+
     IF (irank.NE.0) RETURN
     IF (.NOT.ASSOCIATED(globaltimer)) RETURN !write nothing if no timing recorded
 
-    timer => globaltimer
-    DO WHILE (TRIM(ADJUSTL(timer%name)).NE.'Iteration')
-       IF(timer%n_subtimers.EQ.0) RETURN
-       timer => timer%subtimer(1)%p
-    END DO
+    timer => NULL()
+    CALL findIterationTimer(globaltimer,timer)
+    IF(.NOT.ASSOCIATED(timer)) RETURN
 
     CALL openXMLElement('timing',(/'units'/),(/'sec'/))
     CALL privWriteTimesXML(timer,1)
@@ -448,7 +447,10 @@ CONTAINS
     IF (irank.NE.0) RETURN
     IF (.NOT.ASSOCIATED(globaltimer)) RETURN !write nothing if no timing recorded
 
-    timer => globaltimer
+    timer => NULL()
+    CALL findIterationTimer(globaltimer,timer)
+    IF(.NOT.ASSOCIATED(timer)) RETURN
+
     DO WHILE (TRIM(ADJUSTL(timer%name)).NE.'Iteration')
        IF(timer%n_subtimers.EQ.0) RETURN
        timer => timer%subtimer(1)%p
@@ -459,6 +461,27 @@ CONTAINS
     ALLOCATE(parenttimer%subtimer(5))
 
   END SUBROUTINE resetIterationDependentTimers
+
+  RECURSIVE SUBROUTINE findIterationTimer (parent, result)
+
+    IMPLICIT NONE
+
+    TYPE(t_timer),POINTER,INTENT(IN)    :: parent
+    TYPE(t_timer),POINTER,INTENT(OUT)   :: result
+
+    INTEGER numSubtimers, i
+
+    IF(TRIM(ADJUSTL(parent%name)).EQ.'Iteration') THEN
+       result => parent
+    ELSE
+       numSubtimers = parent%n_subtimers
+       DO i = 1, numSubtimers
+          CALL findIterationTimer(parent%subtimer(i)%p,result)
+          IF (ASSOCIATED(result)) RETURN
+       END DO
+    END IF
+
+  END SUBROUTINE findIterationTimer
 
   RECURSIVE SUBROUTINE resetSubtimers (timer)
 
