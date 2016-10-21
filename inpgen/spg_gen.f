@@ -43,7 +43,7 @@
       INTEGER index_op(nop48),num_tr(nop48)
 
       INTEGER mtmp(3,3),mp(3,3)
-      INTEGER u,v,w
+      INTEGER u,v,w, inversionOp
       INTEGER i,j,k,n,mop,nc,new,ns,nt,ntypm,ind(1),iTr,maxTrVecs
       INTEGER ity(natin),npaint,ipaint(natin)
       INTEGER ios,istep0, binSize, maxBinSize
@@ -70,6 +70,22 @@
      >                  as,bs,scale,nop48,neig12,
      <                  mops,mmrot)
 
+!---> read in atomic positions and shift to (-1/2,1/2] in lattice
+!---> coords. also read in identification (atomic) number (atomid)
+!---> to distinguish different atom types (need not be atomic number)
+      DO n=1,natin
+         IF (cartesian) THEN  ! convert to lattice coords. if necessary
+            atompos(:,n) = matmul( bs, atompos(:,n) )
+         ENDIF
+      END DO
+
+  200 CONTINUE !The routine jumps back to this point with shifted atom positions
+               !an inversion center is found that is not the origin
+
+      DO n=1,natin
+         pos(:,n) = atompos(:,n) - anint( atompos(:,n) - eps7 )
+      END DO
+
       ALLOCATE ( mtable(mops,mops) )
       CALL close_pt(                        ! check closure and get
      >              mops,mmrot,             ! multiplication table
@@ -81,16 +97,6 @@
                EXIT
             ENDIF
          ENDDO
-      ENDDO
-
-!---> read in atomic positions and shift to (-1/2,1/2] in lattice
-!---> coords. also read in identification (atomic) number (atomid)
-!---> to distinguish different atom types (need not be atomic number)
-      DO n=1,natin
-         IF (cartesian) THEN  ! convert to lattice coords. if necessary
-            atompos(:,n) = matmul( bs, atompos(:,n) )
-         ENDIF
-         pos(:,n) = atompos(:,n) - anint( atompos(:,n) - eps7 )
       ENDDO
 
 !---> store the positions (in lattice coord.s) given in the input file
@@ -508,6 +514,8 @@
 !      if( nopd < nops )then
 !        nopd = nops
 !      endif
+      IF (ALLOCATED(mrot)) DEALLOCATE(mrot)
+      IF (ALLOCATED(tau)) DEALLOCATE(tau)
       ALLOCATE ( mrot(3,3,nops),tau(3,nops) )
 
       DO n=1,nops
@@ -564,9 +572,42 @@
          ENDDO
       ENDDO
 
+      ! Check whether there is an inversion center that is not the origin
+      ! and shift the crystal if there is one. Then calculate symmetries again.
+      inversionOp = -1
+      symOpLoop: DO k = 1, nops
+         DO i = 1, 3
+            DO j = 1, 3
+               IF (i.EQ.j) THEN
+                  IF (mrot(i,j,k).NE.-1) CYCLE symOpLoop
+               ELSE
+                  IF (mrot(i,j,k).NE.0) CYCLE symOpLoop
+               END IF
+               IF ((i.EQ.3).AND.(j.EQ.3)) THEN
+                  inversionOp = k
+                  EXIT symOpLoop
+               END IF
+            END DO
+         END DO
+      END DO symOpLoop
+      IF (inversionOp.GT.0) THEN
+         IF(ANY(ABS(tau(:,inversionOp)).GT.eps7)) THEN
+            WRITE(*,*) 'Found inversion center at finite position.'
+            WRITE(*,*) 'Shifting crystal by:'
+            WRITE(*,'(3f15.10)') 0.5*tau(:,inversionOp)
+            WRITE(*,*) ''
+            DO k = 1, ABS(natin)
+               atompos(:,k) = atompos(:,k) + 0.5*tau(:,inversionOp)
+            END DO
+            GO TO 200
+         END IF
+      END IF
+
+
 !      if( ntypd < ntype )then
 !        ntypd = ntype
 !      endif
+
       ALLOCATE( neq(ntype),ntyrep(ntype),zatom(ntype) )
 
       neq(1:ntype) = 0
