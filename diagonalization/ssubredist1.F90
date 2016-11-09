@@ -3,7 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+MODULE m_subredist1
 
+CONTAINS
 !DEC$ FREEFORM
 SUBROUTINE subredist1(n,lda,SUB_COMM,nprow,npcol,iam,ierr,nb,achi_r,asca_r,achi_c,asca_c)
   USE m_juDFT
@@ -666,3 +668,4 @@ SUBROUTINE subredist1(n,lda,SUB_COMM,nprow,npcol,iam,ierr,nb,achi_r,asca_r,achi_
   DEALLOCATE(icommcol)
   RETURN
 END SUBROUTINE subredist1
+END 

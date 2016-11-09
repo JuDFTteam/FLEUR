@@ -7,7 +7,7 @@
 MODULE m_chani
 CONTAINS
   SUBROUTINE chani(M,N,Neigd, Myid,Np,Sub_comm,mpi_comm, &
-       Eig,Num,A_r,B_r,Z_r,A_c,B_c,Z_c)
+       Eig,Num,hamOvlp,zMat)
     !
     !----------------------------------------------------
     !- Parallel eigensystem solver - driver routine; gb99
@@ -33,6 +33,8 @@ CONTAINS
 !#include"cpp_arch.h"
 #include"cpp_double.h"
     USE m_juDFT
+    USE m_types
+    USE m_subredist1
     IMPLICIT NONE
     INCLUDE 'mpif.h'
 
@@ -40,11 +42,9 @@ CONTAINS
     INTEGER, INTENT (IN) :: SUB_COMM,np,myid,mpi_comm
     INTEGER, INTENT (INOUT) :: num
     REAL,    INTENT   (OUT) :: eig(neigd)
-    REAL,OPTIONAL,    INTENT (INOUT) :: a_r(m,n),b_r(m,n)
-    REAL,OPTIONAL,    INTENT   (OUT) :: z_r(m,neigd)
-    COMPLEX, OPTIONAL,INTENT (INOUT) :: a_c(m,n),b_c(m,n)
-    COMPLEX, OPTIONAL,INTENT   (OUT) :: z_c(m,neigd)
-
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
+    TYPE(t_zMat),INTENT(INOUT)    :: zMat
+ 
     !...  Local variables
     !
     INTEGER nc,ic,ir,n_sym,jsym,num_j,icm,n_bound
@@ -74,13 +74,11 @@ CONTAINS
     REAL,    ALLOCATABLE :: asca_r(:,:), bsca_r(:,:),work2_r(:)
     COMPLEX, ALLOCATABLE :: asca_c(:,:), bsca_c(:,:),work2_c(:)
 
-    EXTERNAL subredist1, subredist2, iceil, numroc
+    EXTERNAL subredist2, iceil, numroc
     EXTERNAL CPP_LAPACK_slamch, descinit
     EXTERNAL blacs_pinfo, blacs_gridinit
     EXTERNAL MPI_COMM_DUP
     
-    LOGICAL :: l_real
-    l_real=present(a_r)
     !
     ! determine actual number of columns of input matrices A and B
     ! nc is number of columns the local processor will get, must be <=n
@@ -132,17 +130,17 @@ CONTAINS
     mycolssca=(m-1)/(nb*npcol)*nb+ &
          MIN(MAX(m-(m-1)/(nb*npcol)*nb*npcol-nb*mycol,0),nb)
     !     Number of columns the local process gets in ScaLAPACK distribution
-    if (l_real) THEN
+    if (hamOvlp%l_real) THEN
        ALLOCATE ( asca_r(myrowssca,mycolssca), stat=err )
     else
        ALLOCATE ( asca_c(myrowssca,mycolssca), stat=err )
-    end
+    endif
     IF (err.NE.0) THEN
        WRITE (*,*) 'In chani an error occured during the allocation of'
        WRITE (*,*) 'asca: ',err,' size: ',myrowssca*mycolssca
        CALL juDFT_error("allocte in chani",calledby ="chani")
     ENDIF
-    if (l_real) THEN
+    if (hamOvlp%l_real) THEN
        asca_r=0.0
        ALLOCATE ( bsca_r(myrowssca,mycolssca), stat=err  )
     else
@@ -154,14 +152,14 @@ CONTAINS
        WRITE (*,*) 'bsca :',err
        CALL juDFT_error("allocate in chani",calledby ="chani")
     ENDIF
-    if (l_real) THEN
+    if (hamOvlp%l_real) THEN
        bsca_r=0.0
-       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,a_r,asca_r)
-       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,b_r,bsca_r)
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,achi_r=hamovlp%a_r,asca_r=asca_r)
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,achi_r=hamovlp%b_r,asca_r=bsca_r)
     else
        bsca_c=0.0
-       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,a_c,asca_c)
-       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,b_c,bsca_c)
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,achi_c=hamovlp%a_c,asca_c=asca_c)
+       CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb ,achi_c=hamovlp%b_c,asca_c=bsca_c)
     end if
     CALL BLACS_PINFO(iamblacs,npblacs)  ! iamblacs = local process rank (e.g. myid)
     ! npblacs  = number of available processes
@@ -243,7 +241,7 @@ CONTAINS
        CALL juDFT_error('Failed to allocated "eig2"', calledby ='chani')
     ENDIF
     !      write(*,*) 'c :',myrowssca,mycolssca,desceigv
-    if (l_real) THEN
+    if (hamovlp%l_real) THEN
        ALLOCATE ( eigvec_r(myrowssca,mycolssca), stat=err ) ! Eigenvectors for ScaLAPACK
     else
        ALLOCATE ( eigvec_c(myrowssca,mycolssca), stat=err ) ! Eigenvectors for ScaLAPACK
@@ -257,7 +255,7 @@ CONTAINS
     nn=MAX(MAX(m,nb),2)
     np0=numroc(nn,nb,0,0,nprow)
     mq0=numroc(MAX(MAX(neigd,nb),2),nb,0,0,npcol)
-    if (l_real) THEN
+    if (hamovlp%l_real) THEN
        lwork2=5*m+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(neigd,nprow*npcol)*nn
        ALLOCATE ( work2_r(lwork2+10*m), stat=err ) ! Allocate more in case of clusters
     else
@@ -293,7 +291,7 @@ CONTAINS
     !
     !     Compute size of workspace
     !
-    if (l_real) THEN
+    if (hamovlp%l_real) THEN
     uplo='U'
     CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
          0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
@@ -352,7 +350,7 @@ endif
     !
     !     Now solve generalized eigenvalue problem
     !
-if (l_real) THEN
+if (hamovlp%l_real) THEN
     CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
          1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
          desceigv,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
@@ -425,15 +423,13 @@ endif
     !     Redistribute eigvec from ScaLAPACK distribution to each process
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
-    if (l_real) THEN
-       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,z_r,eigvec_r)
+    if (hamovlp%l_real) THEN
+       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,zmat%z_r,eigvec_r)
        ELSE
-       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,z_c,eigvec_c)
+       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,zmat%z_c,eigvec_c)
     end if
     !
     !DEALLOCATE ( eigvec)
-    DEALLOCATE ( asca )
-    DEALLOCATE ( bsca )
     DEALLOCATE ( iblacsnums )
     DEALLOCATE ( ihelp )
     DEALLOCATE ( iusermap )

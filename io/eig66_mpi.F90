@@ -39,7 +39,7 @@ CONTAINS
     TYPE(t_data_MPI),POINTER :: d
 
     CALL priv_find_data(id,d)
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real.and..not.l_soc,l_soc,l_dos,l_mcd,l_orb)
 
     IF (PRESENT(n_size_opt)) d%n_size=n_size_opt
     IF (ALLOCATED(d%pe_ev)) THEN
@@ -48,7 +48,7 @@ CONTAINS
           d%eig_data=1E99
           d%int_data=9999999
           d%real_data=1E99
-          if (l_real.and..not.l_soc) THEN
+          if (d%l_real.and..not.l_soc) THEN
              d%zr_data=0.0
           else
              d%zc_data=0.0
@@ -193,10 +193,10 @@ CONTAINS
       IF (d%irank==0) THEN
          tmp_id=eig66_data_newid(DA_mode)
          IF (d%l_dos) CPP_error("Could not read DOS data")
-         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
+         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,d%l_real,l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
-               if (l_real) THEN
+               if (d%l_real) THEN
                   CALL read_eig_DA(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_r)
                   CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_r)
                ELSE

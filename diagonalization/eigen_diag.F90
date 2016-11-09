@@ -175,7 +175,7 @@ CONTAINS
 #endif
 #ifdef CPP_SCALAPACK
        CASE (diag_scalapack)
-          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp,zMat)
 #endif
 #ifdef CPP_MAGMA
        CASE (diag_magma)
