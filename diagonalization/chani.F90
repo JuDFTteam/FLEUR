@@ -35,6 +35,7 @@ CONTAINS
     USE m_juDFT
     USE m_types
     USE m_subredist1
+    USE m_subredist2
     IMPLICIT NONE
     INCLUDE 'mpif.h'
 
@@ -74,7 +75,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: asca_r(:,:), bsca_r(:,:),work2_r(:)
     COMPLEX, ALLOCATABLE :: asca_c(:,:), bsca_c(:,:),work2_c(:)
 
-    EXTERNAL subredist2, iceil, numroc
+    EXTERNAL iceil, numroc
     EXTERNAL CPP_LAPACK_slamch, descinit
     EXTERNAL blacs_pinfo, blacs_gridinit
     EXTERNAL MPI_COMM_DUP
@@ -426,7 +427,7 @@ endif
     if (hamovlp%l_real) THEN
        CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,zmat%z_r,eigvec_r)
        ELSE
-       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,zmat%z_c,eigvec_c)
+       CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,achi_c=zmat%z_c,asca_c=eigvec_c)
     end if
     !
     !DEALLOCATE ( eigvec)

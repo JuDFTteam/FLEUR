@@ -31,9 +31,9 @@ SUBROUTINE subredist1(n,lda,SUB_COMM,nprow,npcol,iam,ierr,nb,achi_r,asca_r,achi_
   !
   ! Parameters, I/O channel numbers
   REAL,OPTIONAL     :: achi_r(:) ! Input, matrix in chani-distribution
-  REAL,OPTIONAL     :: asca_r(lda,*) ! Output, matrix in ScaLAPACK distribution
-  COMPLEX,OPTIONAL  :: achi_c(*) ! Input, matrix in chani-distribution
-  COMPLEX,OPTIONAL  :: asca_c(lda,*) ! Output, matrix in ScaLAPACK distribution
+  REAL,OPTIONAL     :: asca_r(:,:)!(lda,*) ! Output, matrix in ScaLAPACK distribution
+  COMPLEX,OPTIONAL  :: achi_c(:) ! Input, matrix in chani-distribution
+  COMPLEX,OPTIONAL  :: asca_c(:,:)!(lda,*) ! Output, matrix in ScaLAPACK distribution
   ! Matrix might be real or complex 
 
   INTEGER  :: n,lda   ! Global matrix size, local leading dimension of asca

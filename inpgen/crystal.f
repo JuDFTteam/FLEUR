@@ -60,8 +60,8 @@
       INTEGER, PARAMETER  :: neig12=12
 
 !===> Local Variables
-      LOGICAL lerr,err_setup,invsym,inversionOp
-      INTEGER i,j,k,n,m,na,nt,mdet,mtr,nop0,fh
+      LOGICAL lerr,err_setup,invsym
+      INTEGER i,j,k,n,m,na,nt,mdet,mtr,nop0,fh,inversionOp
       REAL    t,volume,eps7,eps12
 
       INTEGER optype(nop48)

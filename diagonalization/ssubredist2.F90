@@ -1,3 +1,5 @@
+MODULE m_subredist2
+CONTAINS
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -516,3 +518,4 @@ SUBROUTINE subredist2(n,m,lda,SUB_COMM,nprow,npcol,&
   DEALLOCATE(icommcol)
   RETURN
 END SUBROUTINE subredist2
+END
