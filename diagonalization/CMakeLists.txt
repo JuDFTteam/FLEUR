@@ -10,17 +10,17 @@ diagonalization/zsymsecloc.F90
 diagonalization/packed_to_full.f90
 diagonalization/magma.F90 )
 
-if (${Fleur_uses_MPI})
+if (${FLEUR_USE_MPI})
    set(fleur_F90 ${fleur_F90}
       diagonalization/ssubredist1.F90
       diagonalization/ssubredist2.F90)
-   if(${Fleur_uses_ELPA}) 
+   if(${FLEUR_USE_ELPA}) 
        set(fleur_F90 ${fleur_F90} diagonalization/elpa.F90)
    endif()
-   if(${Fleur_uses_SCALAPACK}) 
+   if(${FLEUR_USE_SCALAPACK}) 
        set(fleur_F90 ${fleur_F90} diagonalization/chani.F90)
    endif()
-   if(${Fleur_uses_ELEMENTAL}) 
+   if(${FLEUR_USE_ELEMENTAL}) 
        set(fleur_F90 ${fleur_F90} diagonalization/elemental.F90)
    endif()
 endif()

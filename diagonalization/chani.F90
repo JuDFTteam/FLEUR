@@ -136,7 +136,7 @@ CONTAINS
        ALLOCATE ( asca_r(myrowssca,mycolssca), stat=err )
     else
        ALLOCATE ( asca_c(myrowssca,mycolssca), stat=err )
-    end
+    end if
     IF (err.NE.0) THEN
        WRITE (*,*) 'In chani an error occured during the allocation of'
        WRITE (*,*) 'asca: ',err,' size: ',myrowssca*mycolssca
@@ -432,8 +432,6 @@ endif
     end if
     !
     !DEALLOCATE ( eigvec)
-    DEALLOCATE ( asca )
-    DEALLOCATE ( bsca )
     DEALLOCATE ( iblacsnums )
     DEALLOCATE ( ihelp )
     DEALLOCATE ( iusermap )
