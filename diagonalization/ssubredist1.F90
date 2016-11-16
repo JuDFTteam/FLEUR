@@ -3,7 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+MODULE m_subredist1
 
+CONTAINS
 !DEC$ FREEFORM
 SUBROUTINE subredist1(n,lda,SUB_COMM,nprow,npcol,iam,ierr,nb,achi_r,asca_r,achi_c,asca_c)
   USE m_juDFT
@@ -29,9 +31,9 @@ SUBROUTINE subredist1(n,lda,SUB_COMM,nprow,npcol,iam,ierr,nb,achi_r,asca_r,achi_
   !
   ! Parameters, I/O channel numbers
   REAL,OPTIONAL     :: achi_r(:) ! Input, matrix in chani-distribution
-  REAL,OPTIONAL     :: asca_r(lda,*) ! Output, matrix in ScaLAPACK distribution
-  COMPLEX,OPTIONAL  :: achi_c(*) ! Input, matrix in chani-distribution
-  COMPLEX,OPTIONAL  :: asca_c(lda,*) ! Output, matrix in ScaLAPACK distribution
+  REAL,OPTIONAL     :: asca_r(:,:)!(lda,*) ! Output, matrix in ScaLAPACK distribution
+  COMPLEX,OPTIONAL  :: achi_c(:) ! Input, matrix in chani-distribution
+  COMPLEX,OPTIONAL  :: asca_c(:,:)!(lda,*) ! Output, matrix in ScaLAPACK distribution
   ! Matrix might be real or complex 
 
   INTEGER  :: n,lda   ! Global matrix size, local leading dimension of asca
@@ -666,3 +668,4 @@ SUBROUTINE subredist1(n,lda,SUB_COMM,nprow,npcol,iam,ierr,nb,achi_r,asca_r,achi_
   DEALLOCATE(icommcol)
   RETURN
 END SUBROUTINE subredist1
+END 

@@ -5,6 +5,8 @@
 !--------------------------------------------------------------------------------
     USE m_juDFT
     USE elpa1
+    USE m_subredist1
+    USE m_subredist2
 #ifdef CPP_ELPA2
     USE elpa2
 #endif
@@ -19,9 +21,6 @@
     CPP_REALCOMPLEX, INTENT   (OUT)               :: z(:,:)
     !
 
-#include "elpa_cpp.F90"
-
-  END SUBROUTINE elpa_r
     !...  Local variables
     !
     INTEGER           :: sc_desc(9) !SCALAPACK DESCRIPTOR
@@ -56,9 +55,13 @@
     ! block-size nb
     !
     !print *,"Before subredist"
-    CALL subredist1(a,m,asca,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb )
-    CALL subredist1(b,m,bsca,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb )
-
+#ifdef CPP_REAL
+    CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb, achi_r=a, asca_r=asca )
+    CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb, achi_r=b, asca_r=bsca)
+#else
+    CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb, achi_c=a, asca_c=asca )
+    CALL subredist1(m,myrowssca,SUB_COMM, nprow, npcol, myid, ierr, nb, achi_c=b, asca_c=bsca)
+#endif
     ! for saving memory one might deallocate(a,b)
     !print *,"Before Allocate"
     ALLOCATE ( eig2(m), stat=err ) ! The eigenvalue array for ScaLAPACK
@@ -181,7 +184,11 @@
     !     Redistribute eigvec from ScaLAPACK distribution to each process
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
-    CALL subredist2(z,m,num2,asca,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb)
+#ifdef CPP_REAL
+    CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,z,asca)
+#else
+    CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,achi_c=z,asca_c=asca)
+#endif
     !
 
     DEALLOCATE ( asca )

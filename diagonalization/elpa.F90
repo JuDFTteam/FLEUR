@@ -26,6 +26,7 @@ CONTAINS
 #define CPP_ONE 1.0
 #define CPP_ZERO 0.0
 #define CPP_mult mult_at_b_real
+#define CPP_REAL
   SUBROUTINE elpa_r(m,n, SUB_COMM, a,b, z,eig,num)
     ! 
     !----------------------------------------------------
@@ -61,7 +62,7 @@ CONTAINS
 #define CPP_ONE cmplx(1.,0.)
 #define CPP_ZERO cmplx(0.,0.)
 #define CPP_mult mult_ah_b_complex
-
+#undef CPP_REAL
  SUBROUTINE elpa_c(m,n, SUB_COMM, a,b, z,eig,num)
     ! 
     !----------------------------------------------------
