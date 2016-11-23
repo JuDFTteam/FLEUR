@@ -50,7 +50,6 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    REAL                  :: dvec(3,1000), ddist(1000), corners(3,5000)
    REAL                  :: planesMatrix(3,3), solutions(3,1)
    REAL                  :: edgeDirec(3), edgeDistVec(3), distVec(3)
-   REAL                  :: maxVecDist
 
    INTEGER, ALLOCATABLE  :: cornerPlaneList(:,:)
 
@@ -288,11 +287,8 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    ! 2.2. Select those points that are on the correct side of all of the
    !      possible boundary planes.
 
-            maxVecDist = -10000.0
-
             DO n4 = 1, nPlanes
                vecDist = dvec(1,n4)*solutions(1,1)+dvec(2,n4)*solutions(2,1)+dvec(3,n4)*solutions(3,1) - ddist(n4)
-               IF(vecDist.GT.maxVecDist) maxVecDist = vecDist
                IF(vecDist.GT.eps11) THEN
                   CYCLE innerPlaneLoop
                END IF
