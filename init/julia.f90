@@ -21,6 +21,7 @@
       USE m_bravais
       USE m_divi
       USE m_brzone
+      USE m_brzone2
       USE m_kptmop
       USE m_kpttet
       USE m_bandstr1
@@ -247,14 +248,25 @@
 
       ENDIF
 
-!
-! This subroutine finds the corner-points, the edges, and the
+! brzone and brzone2 find the corner-points, the edges, and the
 ! faces of the irreducible wedge of the brillouin zone (IBZ).
-!
-      CALL brzone(&
+! In these subroutines many special cases can occur. Due to this the very 
+! sophisticated old routine brzone had a few bugs. The new routine
+! brzone2 was written with a different algorithm that is slightly slower
+! but should be more stable. To make comparisons possible the old
+! routine is only commented out. Both routines are directly 
+! interchangable. GM, 2016.
+
+!      CALL brzone(&
+!     &            rltv,sym%nsym,ccr,mface,nbsz,nv48,&
+!     &            cpoint,&
+!     &            xvec,ncorn,nedge,nface,fnorm,fdist)
+
+      CALL brzone2(&
      &            rltv,sym%nsym,ccr,mface,nbsz,nv48,&
      &            cpoint,&
      &            xvec,ncorn,nedge,nface,fnorm,fdist)
+
 
       IF ( input%tria.AND.random ) THEN
 !

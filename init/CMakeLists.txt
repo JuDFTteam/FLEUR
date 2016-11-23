@@ -50,5 +50,6 @@ init/setlomap.F90
 init/setup.f90
 init/stepf.F90
 init/strgn.f90
+init/brzone2.f90
 init/initParallelProcesses.F90
 )
