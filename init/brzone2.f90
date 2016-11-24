@@ -37,6 +37,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    INTEGER               :: info, n1, n2, n3, n4, i, j, k, iPlane, iSym
    INTEGER               :: nPlanes, nOuterPlanes, nCorners, numIBZPlanes
    INTEGER               :: maxNumPlanes, nUniqueCorners, duplicateNum
+   INTEGER               :: nbszLocal
    INTEGER               :: ipiv(3), krecip(3)
    INTEGER               :: cornerPlanes(3,5000), nPlaneCorners(1000)
    INTEGER               :: numCornerPlanes(5000)
@@ -49,6 +50,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    REAL                  :: testVec(3), sk(3), vecA(3), vecB(3), vecC(3)
    REAL                  :: dvec(3,1000), ddist(1000), corners(3,5000)
    REAL                  :: planesMatrix(3,3), solutions(3,1)
+   REAL                  :: equationSystem(3,3)
    REAL                  :: edgeDirec(3), edgeDistVec(3), distVec(3)
 
    INTEGER, ALLOCATABLE  :: cornerPlaneList(:,:)
@@ -85,7 +87,32 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
          END DO
       END DO
    END DO
-   maxRecDist = 1.01 * 0.5* maxRecDist
+   maxRecDist = 1.01 * maxRecDist
+
+   ! We ignore the nbsz (the number of neighboring cells to consider) passed to the routine
+   ! and calculate an own nbszLocal on the basis of maxRecDist.
+
+   nbszLocal = 1
+   DO i = -1, 1, 2
+      DO j = -1, 1, 2
+         DO k = -1, 1, 2
+            solutions(1,1) = i * maxRecDist
+            solutions(2,1) = j * maxRecDist
+            solutions(3,1) = k * maxRecDist
+            equationSystem(:,:) = rcmt(:,:)
+            ipiv = 0
+            info = 0
+            CALL DGETRF(3,3, equationSystem,3,ipiv,info)
+            CALL DGETRS('N',3,1,equationSystem,3,ipiv,solutions,3,info)
+            ! I assume that info == 0: The reciprocal lattice vectors should be linearly independent.
+            if(nbszLocal.LT.ABS(solutions(1,1))) nbszLocal = CEILING(ABS(solutions(1,1)))
+            if(nbszLocal.LT.ABS(solutions(2,1))) nbszLocal = CEILING(ABS(solutions(2,1)))
+            if(nbszLocal.LT.ABS(solutions(3,1))) nbszLocal = CEILING(ABS(solutions(3,1)))
+         END DO
+      END DO
+   END DO
+
+   maxRecDist = 0.5 * maxRecDist
 
    ! 1. Construct all possible boundary planes. Remove duplicate planes.
    ! 1.1. Construct boundary planes according to bisections of the lines
@@ -108,16 +135,14 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    xvec(3) = recScale/pi
 
    ! loops over all neighboring lattice vectors. The size of the 
-   ! neigborhood is defined by nbsz.
-   ! TODO: Determine nbsz based on rcmt. The default value (3) passed to this
-   !       subroutine might not be enough for some strange unit cells.
+   ! neigborhood is defined by nbszLocal.
 
    nPlanes = 0
-   DO n1 = -nbsz,nbsz
+   DO n1 = -nbszLocal, nbszLocal
       krecip(1) = n1
-      DO n2 = -nbsz,nbsz
+      DO n2 = -nbszLocal, nbszLocal
          krecip(2) = n2
-         DO n3 = -nbsz,nbsz
+         DO n3 = -nbszLocal, nbszLocal
             IF ( .NOT.(n1.EQ.0.AND.n2.EQ.0.AND.n3.EQ.0) ) THEN
                krecip(3) = n3
                nPlanes = nPlanes + 1

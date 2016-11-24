@@ -2,8 +2,8 @@ init/compileinfo.h
 *~
 #*
 build
+build.*
 *.o
 *.mod
 *.x
 *.swp
-
