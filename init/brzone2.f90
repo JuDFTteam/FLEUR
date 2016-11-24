@@ -44,7 +44,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    LOGICAL               :: isIBZPlane(1000), isIBZCorner(5000)
    REAL, PARAMETER       :: eps11 = 1.0e-11
    REAL                  :: pi, maxRecDist, vecDist, recScale, scalarProduct
-   REAL                  :: norm, maxPlaneDist, normalScalarProduct
+   REAL                  :: norm, normalScalarProduct
    REAL                  :: denominator, vec1Fac, vec2Fac, edgeDist
    REAL                  :: testVec(3), sk(3), vecA(3), vecB(3), vecC(3)
    REAL                  :: dvec(3,1000), ddist(1000), corners(3,5000)
@@ -85,6 +85,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
          END DO
       END DO
    END DO
+   maxRecDist = 1.01 * maxRecDist
 
    ! 1. Construct all possible boundary planes. Remove duplicate planes.
    ! 1.1. Construct boundary planes according to bisections of the lines
@@ -112,7 +113,6 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    !       subroutine might not be enough for some strange unit cells.
 
    nPlanes = 0
-   maxPlaneDist = 0.0
    DO n1 = -nbsz,nbsz
       krecip(1) = n1
       DO n2 = -nbsz,nbsz
@@ -141,7 +141,10 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
                ! Deterime the distance for the intersection
                ddist(nPlanes) = 0.5*norm
 
-               IF (ddist(nPlanes).GT.maxPlaneDist) maxPlaneDist = ddist(nPlanes)
+               IF(ddist(nPlanes).GT.maxRecDist) THEN
+                  nPlanes = nPlanes - 1
+                  CYCLE
+               END IF
 
                ! Normalize distance vector. Note that this is now the
                ! normal to the intersecting plane. The intersecting plane 
