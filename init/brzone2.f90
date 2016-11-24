@@ -85,7 +85,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
          END DO
       END DO
    END DO
-   maxRecDist = 1.01 * maxRecDist
+   maxRecDist = 1.01 * 0.5* maxRecDist
 
    ! 1. Construct all possible boundary planes. Remove duplicate planes.
    ! 1.1. Construct boundary planes according to bisections of the lines
