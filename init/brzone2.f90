@@ -153,12 +153,14 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
                dvec(:,nPlanes) = dvec(:,nPlanes) / norm
 
                ! Remove plane again if it is a duplicate of another plane
+               ! or only use the plane nearer to the origin if it is parallel 
+               ! to another plane and has the same direction of the normal.
                foundDuplicate = .FALSE.
                DO iPlane = 1, nPlanes-1
-                  IF (ABS(ddist(iPlane)-ddist(nPlanes)).GT.eps11) CYCLE
                   IF (ABS(dvec(1,iPlane)-dvec(1,nPlanes)).GT.eps11) CYCLE
                   IF (ABS(dvec(2,iPlane)-dvec(2,nPlanes)).GT.eps11) CYCLE
                   IF (ABS(dvec(3,iPlane)-dvec(3,nPlanes)).GT.eps11) CYCLE
+                  IF (ddist(nPlanes).LT.ddist(iPlane)) ddist(iPlane) = ddist(nPlanes)
                   foundDuplicate = .TRUE.
                   EXIT
                END DO
