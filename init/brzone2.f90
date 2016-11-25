@@ -347,7 +347,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    ! Corners might be present multiple times (for different triples of planes). 
    ! Remove duplicates. Collect planes intersecting at the respective point.
    maxNumPlanes = MAX(nPlanes-nOuterPlanes,3*nCorners) ! Just a save guess for the array dimension in the next line
-   ALLOCATE(cornerPlaneList(maxNumPlanes,nCorners))
+   ALLOCATE(cornerPlaneList(maxNumPlanes,nCorners+1)) ! The +1 is because of the origin that is added later.
    cornerPlaneList = 0
    numCornerPlanes = 0
 
