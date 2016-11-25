@@ -102,7 +102,7 @@
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
-          IF(.NOT.juDFT_was_argument("-xmlInput")) THEN
+          IF(.NOT.(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml"))) THEN
              input%l_inpXML = .FALSE.
           END IF
           IF (input%l_inpXML) THEN
