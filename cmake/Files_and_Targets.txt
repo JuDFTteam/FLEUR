@@ -76,7 +76,7 @@ if(${FLEUR_USE_MPI})
   #fleur_MPI
   add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur} ${fleur_SRC_MPI})
   target_compile_definitions(fleur_MPI PUBLIC ${FLEUR_MPI_DEFINITIONS})
-  target_link_libraries(fleur_MPI ${FLEUR_MPI_LIBRARIES})
+  target_link_libraries(fleur_MPI ${FLEUR_LIBRARIES})
   set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_MPI_modules COMPILE_OPTIONS -Ifleur_MPI_modules)
 endif ()
 

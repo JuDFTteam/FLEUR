@@ -30,8 +30,8 @@ function configure_machine(){
 	    module load HDF5
 	    export CC=mpicc
 	    export FC=mpif90
-	    export CMAKE_Fortran_FLAGS="$CMAKE_Fortran_FLAGS -I$EBROOTELPA/include/elpa_openmp-2015.11.001/modules -I$EBROOTHDF5/include -mkl"
-	    export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-L$EBROOTELPA/lib;-lelpa_openmp;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L$EBROOTHDF5/lib;-lhdf5;-lhdf5_fortran"
+	    export CMAKE_Fortran_FLAGS="$CMAKE_Fortran_FLAGS -I$ELPA_MODULES -I$EBROOTHDF5/include -mkl"
+	    export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-L$ELPA_LIB;-lelpa_openmp;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L$EBROOTHDF5/lib;-lhdf5;-lhdf5_fortran"
 	elif module list 2>&1 |grep -q PGI
 	then
 	    echo "PGI toolchain used"
@@ -39,7 +39,7 @@ function configure_machine(){
 	    exit
 	else
 	    echo "You have to load the correct modules for compiling"
-	    echo " a) intel-para, python/1.7.12"
+	    echo " a) intel-para, Python/2.7.12"
 	    echo " or"
 	    echo " b) PGI"
 	    exit
@@ -59,6 +59,7 @@ function configure_machine(){
     elif [ "$machine" = "IFF" ]
     then
 	echo "IFF cluster configuration used"
+        export CC=mpiicc
 	export FC=mpiifort
 	export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
     #RWTH cluster

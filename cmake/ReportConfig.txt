@@ -1,5 +1,6 @@
 message("************Summary***************")
 message("Compiler: ${CMAKE_Fortran_COMPILER}")
+message("Compiler ID:${CMAKE_Fortran_COMPILER_ID}")
 message("Flags:    ${CMAKE_Fortran_FLAGS}")
 message("Libraries:${FLEUR_LIBRARIES}")
 message("\nThese Libraries are required:")

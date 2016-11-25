@@ -4,7 +4,7 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 #check if -h or  --help was given as argument
 if [ "$1" = "" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]
 then
-   echo "USAGE: configure.sh MACHINE"
+   echo "USAGE: configure.sh MACHINE [debug]"
    echo "
   To help the script finding a proper configuration you should
   provide the name of a specific machine to compile on.
@@ -24,6 +24,8 @@ then
         CC                  -- name of C compiler
         FLEUR_LIBRARIES     -- list of linker arguments i.e. '-L/lib;-lbla'
         CMAKE_Fortran_FLAGS -- list of compiler options i.e. '-r8'"
+echo "
+   By specifying 'debug' in addition to your machine configuration you will build a debugging version"
 fi
 #Check if we are using the git version and ask if we want to update
 if test -d .git
@@ -57,5 +59,16 @@ fi
 mkdir build
 cd build
 #run cmake
-cmake ..
+if test "debug" == "$2"
+then
+   echo "Debug version will be build"
+   BUILD=Debug
+else
+   BUILD=Release
+fi
+cmake -DCMAKE_BUILD_TYPE=$BUILD ..
 
+
+echo "Configuration finished"
+echo "If no errors occured you should change into directory 'build' "
+echo "run 'make' or 'make -j4'"
