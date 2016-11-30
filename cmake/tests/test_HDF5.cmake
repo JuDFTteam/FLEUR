@@ -47,7 +47,7 @@ try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/t
 endif()       
 
 message("HDF5 Library found:${FLEUR_USE_HDF5}")
-if (FLEUR_USE_HDF)
+if (FLEUR_USE_HDF5)
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_HDF") 
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_HDF")
 endif()

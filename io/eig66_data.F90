@@ -51,7 +51,7 @@ module m_eig66_data
          INTEGER(HID_T) :: energysetid,evsetid
          INTEGER(HID_T) :: qalsetid,qvacsetid,qissetid,qvlaysetid
          INTEGER(HID_T) :: qstarssetid,ksymsetid,jsymsetid,mcdsetid
-         INTEGER(HID_T) :: qintslsetid,qmtslsetid,qmtpstid,orbcompsetid
+         INTEGER(HID_T) :: qintslsetid,qmtslsetid,qmtpsetid,orbcompsetid
          CHARACTER(LEN=20) :: fname="eig"
 #endif
       END TYPE

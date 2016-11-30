@@ -66,30 +66,20 @@ For the compilation of FLEUR you will need:
     	      (without you can only exploit k-point parallelism)
   * HDF5 for parallel IO (if you have lots of memory, you might not need to do IO :-)
 
-You should probably create a directory structure like this:
+FLEUR now comes with a configuration script. This skript will
+create a build sub-directory in the main FLEUR directory (where this file resides) and
+then use cmake to generate a makefile. You should use it like 
 
-somewhere/src -this is where the source code lives, i.e. the location of this README
-somewhere/build -here you can build the code
+./configure.sh CONFIGURATION
 
-change to the build directory and type:
+where CONFIGURATION refers to a predefined maschine setup. Call ./configure.sh without any
+argument for more information.
 
-cmake ../src
+After the configure.sh script finishes, you should do
+
+cd build
 make 
 
 This might generate the FLEUR executables. It most probable will only work on systems we know as
-only for those there will be specific configurations in the cmake directory.
+only for those there will be specific configurations available.
 
-If you get errors, you have to configure your build system yourself.
-There are two options to do that.
-- Either set the environment variable FC to either ifort,pgfortran or gfortran.
-Then the configuration in the cmake directory will be used from cmake.[ifort|gfortran|pgfortran].config will be used that can again work for your system or can be adjusted.
-- Or you run cmake with the option -DFleur_custom_toolchain and you adjust cmake.config to your needs.
-You might find inspiration in the cmake.???.config files provided for several systems.
-
-If your build environment is recognized correctly you can obtain the following executables:
-inpgen      - the input generator of FLEUR
-fleur       - general version of FLEUR
-fleur_INVS  - version of FLEUR suitable for systems with inversion symmetry leading to real matrices
-fleur_SOC   - version of FLEUR with spin-orbit coupling
-
-All codes might also have a _MPI attached to indicate parallel versions.
