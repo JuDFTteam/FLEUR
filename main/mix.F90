@@ -237,7 +237,7 @@ CONTAINS
     !      spin up and spin down densities
 
     CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-         intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp, nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
+         intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp(-3,-3,1,1,1), nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
     !     load output charge density
     !
     IF (noco%l_noco) THEN
@@ -265,7 +265,7 @@ CONTAINS
     !--->  put output charge density into arrays fsm 
     !
     CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD, intfac,vacfac,qpw,rho,rht,rhtxy,cdom,&
-         cdomvz,cdomvxy,n_mmp, nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
+         cdomvz,cdomvxy,n_mmp(-3,-3,1,1,2), nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
     !
     ! --> store fsm - sm the difference on fsm
     !
