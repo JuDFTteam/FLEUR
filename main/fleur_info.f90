@@ -39,7 +39,7 @@ CONTAINS
     WRITE(*,*)""
     WRITE(*,*)"-genEnpara        : write enpara file"
     WRITE(*,*)""
-    WRITE(*,*)"-xmlInput         : use inp.xml instead of inp"
+    WRITE(*,*)"-xmlInput or -xml : use inp.xml instead of inp"
     WRITE(*,*)""
     WRITE(*,*)"-wtime XXXXX      : run for XXXX minutes (used to estimate if another iteration is started"
     WRITE(*,*)""
