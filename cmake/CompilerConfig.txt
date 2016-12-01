@@ -10,3 +10,5 @@ if (FLEUR_USE_MPI)
 include("cmake/tests/test_SCALAPACK.cmake")
 include("cmake/tests/test_ELPA.cmake")
 endif()
+
+include("cmake/compileenv.txt")
