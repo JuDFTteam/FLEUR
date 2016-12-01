@@ -403,22 +403,18 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       filterOut = .FALSE.
       IF(numCornerPlanes(i).GE.3) THEN
          filterOut = .TRUE.
-         cornerPlaneLoop: DO n1 = 1, numCornerPlanes(i)
-            vecA(:) = dvec(:,cornerPlaneList(n1,i))
-            DO n2 = n1+1, numCornerPlanes(i)
-               vecB(:) = dvec(:,cornerPlaneList(n2,i))
-               DO n3 = n2+1, numCornerPlanes(i)
-                  vecC(:) = dvec(:,cornerPlaneList(n3,i))
-                  testVec(1) = vecA(2)*vecB(3)-vecA(3)*vecB(2)
-                  testVec(2) = vecA(3)*vecB(1)-vecA(1)*vecB(3)
-                  testVec(3) = vecA(1)*vecB(2)-vecA(2)*vecB(1)
-                  scalarProduct = testVec(1)*vecC(1) + testVec(2)*vecC(2) + testVec(3)*vecC(3)
-                  IF (ABS(scalarProduct).GT.eps09) THEN
-                     filterOut = .FALSE.
-                     EXIT cornerPlaneLoop
-                  END IF
-               END DO
-            END DO
+         vecA(:) = dvec(:,cornerPlaneList(1,i))
+         vecB(:) = dvec(:,cornerPlaneList(2,i))
+         cornerPlaneLoop: DO n3 = 3, numCornerPlanes(i)
+            vecC(:) = dvec(:,cornerPlaneList(n3,i))
+            testVec(1) = vecA(2)*vecB(3)-vecA(3)*vecB(2)
+            testVec(2) = vecA(3)*vecB(1)-vecA(1)*vecB(3)
+            testVec(3) = vecA(1)*vecB(2)-vecA(2)*vecB(1)
+            scalarProduct = testVec(1)*vecC(1) + testVec(2)*vecC(2) + testVec(3)*vecC(3)
+            IF (ABS(scalarProduct).GT.eps09) THEN
+               filterOut = .FALSE.
+               EXIT cornerPlaneLoop
+            END IF
          END DO cornerPlaneLoop
       END IF
       IF(filterOut) THEN
