@@ -43,7 +43,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    INTEGER               :: numCornerPlanes(5000)
    LOGICAL               :: foundDuplicate, filterOut
    LOGICAL               :: isIBZPlane(1000), isIBZCorner(5000)
-   REAL, PARAMETER       :: eps11 = 1.0e-11
+   REAL, PARAMETER       :: eps09 = 1.0e-9
    REAL                  :: pi, maxRecDist, vecDist, recScale, scalarProduct
    REAL                  :: norm, normalScalarProduct
    REAL                  :: denominator, vec1Fac, vec2Fac, edgeDist
@@ -182,9 +182,9 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
                ! to another plane and has the same direction of the normal.
                foundDuplicate = .FALSE.
                DO iPlane = 1, nPlanes-1
-                  IF (ABS(dvec(1,iPlane)-dvec(1,nPlanes)).GT.eps11) CYCLE
-                  IF (ABS(dvec(2,iPlane)-dvec(2,nPlanes)).GT.eps11) CYCLE
-                  IF (ABS(dvec(3,iPlane)-dvec(3,nPlanes)).GT.eps11) CYCLE
+                  IF (ABS(dvec(1,iPlane)-dvec(1,nPlanes)).GT.eps09) CYCLE
+                  IF (ABS(dvec(2,iPlane)-dvec(2,nPlanes)).GT.eps09) CYCLE
+                  IF (ABS(dvec(3,iPlane)-dvec(3,nPlanes)).GT.eps09) CYCLE
                   IF (ddist(nPlanes).LT.ddist(iPlane)) ddist(iPlane) = ddist(nPlanes)
                   foundDuplicate = .TRUE.
                   EXIT
@@ -234,10 +234,10 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       ! Remove plane again if it is a duplicate of another plane
       foundDuplicate = .FALSE.
       DO iPlane = nOuterPlanes+1, nPlanes-1
-         IF (ABS(ddist(iPlane)-ddist(nPlanes)).GT.eps11) CYCLE
-         IF (ABS(dvec(1,iPlane)-dvec(1,nPlanes)).GT.eps11) CYCLE
-         IF (ABS(dvec(2,iPlane)-dvec(2,nPlanes)).GT.eps11) CYCLE
-         IF (ABS(dvec(3,iPlane)-dvec(3,nPlanes)).GT.eps11) CYCLE
+         IF (ABS(ddist(iPlane)-ddist(nPlanes)).GT.eps09) CYCLE
+         IF (ABS(dvec(1,iPlane)-dvec(1,nPlanes)).GT.eps09) CYCLE
+         IF (ABS(dvec(2,iPlane)-dvec(2,nPlanes)).GT.eps09) CYCLE
+         IF (ABS(dvec(3,iPlane)-dvec(3,nPlanes)).GT.eps09) CYCLE
          foundDuplicate = .TRUE.
          EXIT
       END DO
@@ -267,9 +267,9 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
          edgeDirec(3) = dvec(1,n1)*dvec(2,n2) - dvec(2,n1)*dvec(1,n2)
 
          ! Ignore parallel planes
-         IF ((ABS(edgeDirec(1)).LT.eps11).AND.&
-             (ABS(edgeDirec(2)).LT.eps11).AND.&
-             (ABS(edgeDirec(3)).LT.eps11)) CYCLE
+         IF ((ABS(edgeDirec(1)).LT.eps09).AND.&
+             (ABS(edgeDirec(2)).LT.eps09).AND.&
+             (ABS(edgeDirec(3)).LT.eps09)) CYCLE
 
          ! The distance vector of the intersection edge to the origin is given
          ! by (since dvec is normalized):
@@ -319,7 +319,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
 
             DO n4 = 1, nPlanes
                vecDist = dvec(1,n4)*solutions(1,1)+dvec(2,n4)*solutions(2,1)+dvec(3,n4)*solutions(3,1) - ddist(n4)
-               IF(vecDist.GT.eps11) THEN
+               IF(vecDist.GT.eps09) THEN
                   CYCLE innerPlaneLoop
                END IF
             END DO
@@ -357,7 +357,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       compareLoop: DO j = 1, i-1
          distVec(:) = corners(:,i) - corners(:,j)
          vecDist = SQRT(distVec(1)**2+distVec(2)**2+distVec(3)**2)
-         IF (vecDist.LT.eps11) THEN
+         IF (vecDist.LT.eps09) THEN
             duplicateNum = j
             EXIT compareLoop
          END IF 
@@ -402,25 +402,35 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    DO i = 1, nCorners
       filterOut = .FALSE.
       IF(numCornerPlanes(i).GE.3) THEN
-         vecA(:) = dvec(:,cornerPlaneList(1,i))
-         vecB(:) = dvec(:,cornerPlaneList(2,i))
          filterOut = .TRUE.
-         DO j = 3, numCornerPlanes(i)
-            vecC(:) = dvec(:,cornerPlaneList(j,i))
-            testVec(1) = vecA(2)*vecB(3)-vecA(3)*vecB(2)
-            testVec(2) = vecA(3)*vecB(1)-vecA(1)*vecB(3)
-            testVec(3) = vecA(1)*vecB(2)-vecA(2)*vecB(1)
-            scalarProduct = testVec(1)*vecC(1) + testVec(2)*vecC(2) + testVec(3)*vecC(3)
-            IF (ABS(scalarProduct).GT.eps11) filterOut = .FALSE.
-         END DO
+         cornerPlaneLoop: DO n1 = 1, numCornerPlanes(i)
+            vecA(:) = dvec(:,cornerPlaneList(n1,i))
+            DO n2 = n1+1, numCornerPlanes(i)
+               vecB(:) = dvec(:,cornerPlaneList(n2,i))
+               DO n3 = n2+1, numCornerPlanes(i)
+                  vecC(:) = dvec(:,cornerPlaneList(n3,i))
+                  testVec(1) = vecA(2)*vecB(3)-vecA(3)*vecB(2)
+                  testVec(2) = vecA(3)*vecB(1)-vecA(1)*vecB(3)
+                  testVec(3) = vecA(1)*vecB(2)-vecA(2)*vecB(1)
+                  scalarProduct = testVec(1)*vecC(1) + testVec(2)*vecC(2) + testVec(3)*vecC(3)
+                  IF (ABS(scalarProduct).GT.eps09) THEN
+                     filterOut = .FALSE.
+                     EXIT cornerPlaneLoop
+                  END IF
+               END DO
+            END DO
+         END DO cornerPlaneLoop
       END IF
-      IF(filterOut) CYCLE
+      IF(filterOut) THEN
+         CYCLE
+      END IF
       nUniqueCorners = nUniqueCorners + 1
       IF(nUniqueCorners.NE.i) THEN
          numCornerPlanes(nUniqueCorners) = numCornerPlanes(i)
          DO j = 1, numCornerPlanes(i)
             cornerPlaneList(j,nUniqueCorners) = cornerPlaneList(j,i)
          END DO
+         corners(:,nUniqueCorners) = corners(:,i)
       END IF
    END DO
    nCorners = nUniqueCorners
@@ -502,6 +512,18 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       fdist(j) = ddist(i)
       fnorm(:,j) = dvec(:,i)
    END DO
+
+!   WRITE(*,*) 'ncorn', ncorn
+!   WRITE(*,*) 'nedge', nedge
+!   WRITE(*,*) 'nface', nface
+!   WRITE(*,*) 'faces:'
+!   DO i  =1,nface
+!      WRITE(*,'(4f20.13)') fnorm(:,i), fdist(i)
+!   END DO
+!   WRITE(*,*) 'coners:'
+!   DO i = 1,ncorn
+!      WRITE(*,'(3f20.13)') cpoint(:,i)
+!   END DO
 
    ! 5.1. Check Euler characteristic
 

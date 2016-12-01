@@ -537,6 +537,19 @@ c
         ENDDO
       ENDDO
 c
+
+!      WRITE(*,*) 'ncorn', ncorn
+!      WRITE(*,*) 'nedge', nedge
+!      WRITE(*,*) 'nface', nface
+!      WRITE(*,*) 'faces:'
+!      DO ip  =1,nface
+!         WRITE(*,'(4f20.13)') fnorm(:,ip), fdist(ip)
+!      END DO
+!      WRITE(*,*) 'coners:'
+!      DO ip = 1,ncorn
+!         WRITE(*,'(3f20.13)') cpoint(:,ip)
+!      END DO
+
       WRITE (6,7100) ncorn,nedge,nface
       WRITE (ibfile,7100) ncorn,nedge,nface
  7100 FORMAT (///,'  the irreducible wedge of the first brillouin'
