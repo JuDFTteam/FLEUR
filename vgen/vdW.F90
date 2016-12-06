@@ -89,20 +89,20 @@
 !     transform. At the moment it is designed to use fftw3.
 
       SUBROUTINE inplfft( fftin, idir )
-
+      USE m_juDFT
       USE param,        ONLY: jnlout
       USE nonlocal_data,ONLY: nx,ny,nz,n_grid
 
       implicit none
 
-      include 'fftw3.f'  ! some definitions for fftw3
 
       complex, intent(inout) :: fftin(n_grid)
 
       integer                    :: idir
 
       integer*8                  :: plan
-
+#ifdef CPP_FFTW
+      include 'fftw3.f'  ! some definitions for fftw3
 
       if ( idir == -1 ) then
 
@@ -125,6 +125,9 @@
         STOP 'Error in FFT'
 
       endif
+#else
+	CALL judft_error("VdW functionals only available if compiled with CPP_FFTW")
+#endif
       END SUBROUTINE inplfft
 !
       END MODULE driver_fft
@@ -203,30 +206,30 @@
 
 !     we also need LDA correlation per particle so I repeat here the formulas from calc_q0
 
-         sqrt_r_s = dsqrt(r_s)
+         sqrt_r_s = sqrt(r_s)
 
          LDA_dummy_1 = (8.0*pi/3.0)*A*(1.0+ alpha_1*r_s)
          LDA_dummy_2 =  2.0*A*(beta_1*sqrt_r_s     + beta_2*r_s + &
                                   beta_3*sqrt_r_s*r_s + beta_4*r_s*r_s)
 
-         eLDA_c = (-3.0/(4.0*pi))*LDA_dummy_1*dlog(1.0+1.0/LDA_dummy_2)
+         eLDA_c = (-3.0/(4.0*pi))*LDA_dummy_1*log(1.0+1.0/LDA_dummy_2)
 
 !     now start calculation of PBE correlation. first check wether density is very small (approx
 !     zero) or negative which is also not correct
 !
          k_F = (3.0*pi*pi*n(i1))**(1.0/3.0)
 
-         k_s = dsqrt( 4.0 * k_F / pi)
+         k_s = sqrt( 4.0 * k_F / pi)
 
          grad_n_squ = grad_n(i1,1)**2 + grad_n(i1,2)**2 + grad_n(i1,3)**2
 
-         t = dsqrt(grad_n_squ)/(2.0*phi_zeta*k_s*n(i1))
+         t = sqrt(grad_n_squ)/(2.0*phi_zeta*k_s*n(i1))
 
          AA = (beta_H/gamma_H)* &
-              (1.0/(dexp(-1.0*eLDA_c/(gamma_H*phi_zeta**3))- 1.0 ))
+              (1.0/(exp(-1.0*eLDA_c/(gamma_H*phi_zeta**3))- 1.0 ))
 
          H = gamma_H*phi_zeta**3 *         &
-             dlog(1.0+                  &
+             log(1.0+                  &
                   (beta_H/gamma_H)*(t**2)* &
                   (1.0+AA*t**2)/(1.0+AA*t**2+AA**2 * t**4))
 !
@@ -289,7 +292,7 @@
 !
         k_F = (3.0*pi*pi*n(i1))**(1.0/3.0)
 !
-        sqrt_grad_n = dsqrt(grad_n(i1,1)**2 + grad_n(i1,2)**2 + grad_n(i1,3)**2)
+        sqrt_grad_n = sqrt(grad_n(i1,1)**2 + grad_n(i1,2)**2 + grad_n(i1,3)**2)
 !
         ss=sqrt_grad_n/(2.0*k_F*n(i1))
 !
@@ -1034,7 +1037,7 @@
                                   beta_3*sqrt_r_s*r_s + beta_4*r_s*r_s)
 
          eLDA_x = (-3.0/(4.0*pi))*k_F
-         eLDA_c = (-3.0/(4.0*pi))*LDA_dummy_1*dlog(1.0+1.0/LDA_dummy_2)
+         eLDA_c = (-3.0/(4.0*pi))*LDA_dummy_1*log(1.0+1.0/LDA_dummy_2)
 !
 !     LDA correlation energy density is epsilon_c[n(r)]*n(r)
 !
@@ -1053,7 +1056,7 @@
 
          enddo
 
-         q_0(i) = q_cut*(1.0 - dexp(-sum_m))
+         q_0(i) = q_cut*(1.0 - exp(-sum_m))
 
       enddo
 
@@ -1131,7 +1134,7 @@
 
           ind = G_ind(i)
 
-          k = dsqrt(dble( G(i,1)**2 + G(i,2)**2 + G(i,3)**2))
+          k = sqrt(dble( G(i,1)**2 + G(i,2)**2 + G(i,3)**2))
 
           call interpolate_kernel(k, phi_k)
 
@@ -1472,7 +1475,7 @@
                                   beta_3*sqrt_r_s*r_s + beta_4*r_s*r_s)
 
          eLDA_x = (-3.0/(4.0*pi))*k_F
-         eLDA_c = (-3.0/(4.0*pi))*LDA_dummy_1*dlog(1.0+1.0/LDA_dummy_2)
+         eLDA_c = (-3.0/(4.0*pi))*LDA_dummy_1*log(1.0+1.0/LDA_dummy_2)
 
          q = (1.0 + ( eLDA_c / eLDA_x) - (Zab/9.0)*grad_n_squ &
                      /(4.0*(n(i)**2.0)*(k_F**2.0)))*k_F
@@ -1490,7 +1493,7 @@
 
          enddo
 
-         dq0_dq = dq0_dq * dexp(-sum_m)
+         dq0_dq = dq0_dq * exp(-sum_m)
 
 !     here we calculate the derivatives needed for the potential later. i.e. we calculate
 !     n*dq0/dn and n*dq0/dgrad_n so that we do not have to divide by n which might be very
@@ -1499,13 +1502,13 @@
          dq0_dn(i) = dq0_dq * ( k_F/3.0 &
                      + k_F*7.0/3.0*(Zab/9.0)*grad_n_squ &
                      /(4.0*(n(i)**2.0)*(k_F**2.0)) &
-                     - (8.0*pi/9.0)*A*alpha_1*r_s*dlog(1.0+1.0/LDA_dummy_2) &
+                     - (8.0*pi/9.0)*A*alpha_1*r_s*log(1.0+1.0/LDA_dummy_2) &
                      + LDA_dummy_1/(LDA_dummy_2*(1.0 + LDA_dummy_2)) &
                      * (2.0*A*(beta_1/6.0*sqrt_r_s + beta_2/3.0*r_s &
                      + beta_3/2.0*r_s*sqrt_r_s + 2.0*beta_4/3.0*r_s**2)))
 
          dq0_dgrad_n(i) = dq0_dq * 2.0 * (-1.0*Zab/9.0) &
-                          * dsqrt(grad_n_squ) / (4.0*n(i)*k_F)
+                          * sqrt(grad_n_squ) / (4.0*n(i)*k_F)
 
       enddo
 
@@ -1618,7 +1621,7 @@
 !     the following sum we need for h_j which will be fourier transformed later. The IF
 !     condition excludes the contributions of high q values.
 
-            grad_n_abs = dsqrt(grad_n(i,1)**2.0 + grad_n(i,2)**2.0 + grad_n(i,3)**2.0)
+            grad_n_abs = sqrt(grad_n(i,1)**2.0 + grad_n(i,2)**2.0 + grad_n(i,3)**2.0)
 
             if ( q_0(i) .ne. q_cut ) then
 

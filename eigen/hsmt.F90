@@ -3,8 +3,8 @@ MODULE m_hsmt
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt(DIMENSION,atoms,sphhar,sym,enpara,SUB_COMM,n_size,n_rank,&
-       jsp,input,matsize,mpi,lmaxb,gwc,noco,cell,&
-       lapw, bkpt, vr,vs_mmp, oneD,usdus, kveclo,aa,bb,tlmplm)
+       jsp,input,mpi,lmaxb,gwc,noco,cell,&
+       lapw, bkpt, vr,vs_mmp, oneD,usdus, kveclo,tlmplm,l_real,hamOvlp)
     !=====================================================================
     !     redesign of old hssphn into hsmt
     !           splitted into several parts:
@@ -72,21 +72,22 @@ CONTAINS
     USE m_hsmt_fjgj
     USE m_hsmt_overlap
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
-    TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_enpara),INTENT(IN)    :: enpara
-    TYPE(t_lapw),INTENT(INOUT)   :: lapw !nlotot,nv_tot&nmat can be updated
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    TYPE(t_oneD),INTENT(IN)       :: oneD
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_sphhar),INTENT(IN)     :: sphhar
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_enpara),INTENT(IN)     :: enpara
+    TYPE(t_lapw),INTENT(INOUT)    :: lapw !nlotot,nv_tot&nmat can be updated
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: SUB_COMM,n_size,n_rank 
-    INTEGER, INTENT (IN) :: jsp  ,matsize 
+    INTEGER, INTENT (IN) :: jsp  
     INTEGER, INTENT (IN) :: lmaxb
     INTEGER, INTENT (IN) :: gwc
 
@@ -98,11 +99,8 @@ CONTAINS
     TYPE(t_usdus),INTENT(INOUT)  :: usdus
 
     INTEGER, INTENT (OUT) :: kveclo(atoms%nlotot)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(matsize),bb(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(matsize),bb(matsize)
-#endif
+
+    LOGICAL,INTENT(IN)    :: l_real
 
     TYPE(t_tlmplm),INTENT(INOUT) :: tlmplm
 
@@ -197,9 +195,9 @@ CONTAINS
        gj=0.0
 #endif
        CALL timestart("hsmt spherical")
-       CALL hsmt_sph(DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
+       CALL hsmt_sph(sym,DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
             input,hlpmsize,noco,l_socfirst,cell,nintsp,lapw,enpara%el0,usdus,&
-            vr,gk,rsoc,isigma, aa,bb,fj,gj)
+            vr,gk,rsoc,isigma,fj,gj,l_real,hamOvlp)
        CALL timestop("hsmt spherical")
 #if 1==2
        ALLOCATE(fj_test(size(fj,1),0:size(fj,2)-1,size(fj,3),size(fj,4)))
@@ -232,11 +230,11 @@ CONTAINS
                CALL hsmt_extra(DIMENSION,atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
                hlpmsize,lmaxb,gwc,noco,l_socfirst,lapw,cell,enpara%el0,&
                fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
-               kveclo,aa,bb) !out/in
+               kveclo,l_real,hamOvlp%a_r,hamOvlp%b_r,hamOvlp%a_c,hamOvlp%b_c) !out/in
           CALL timestop("hsmt extra")
           CALL timestart("hsmt non-spherical")
           CALL hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM,n_size,n_rank,input,isp,nintsp,&
-               hlpmsize,noco,l_socfirst,lapw,cell,tlmplm,fj,gj,gk,vk,oneD,aa)
+               hlpmsize,noco,l_socfirst,lapw,cell,tlmplm,fj,gj,gk,vk,oneD,l_real,hamOvlp%a_r,hamOvlp%a_c)
 
           CALL timestop("hsmt non-spherical")
        ENDIF

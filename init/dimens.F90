@@ -277,21 +277,6 @@ CONTAINS
     !
     !       check for double precision etc.
     !
-    CALL getPrecision(cppflag(2))
-    WRITE (6,'(16a,4a,5a,7a,11a)') 'You compiled for ',&
-         &        trim(cppflag(1)),' with ',trim(cppflag(2)),' precision,'
-#ifdef CPP_INVERSION
-    cppflag(1) = 'with'
-#else
-    cppflag(1) = 'without'
-#endif
-#ifdef CPP_SOC
-    cppflag(2) = 'with'
-#else
-    cppflag(2) = 'without'
-#endif
-    WRITE (6,'(12a,7a,15a,7a,5a)') 'for systems ',&
-         &  trim(cppflag(1)),' INVERSION and ',trim(cppflag(2)),' SOC.'
 
     CALL getAdditionalCompilationFlags(cppflag,i)
     IF (i.GT.0) THEN

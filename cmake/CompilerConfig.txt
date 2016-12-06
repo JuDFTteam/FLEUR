@@ -1,0 +1,14 @@
+set(FLEUR_DEFINITIONS "CPP_DOUBLE")
+set(FLEUR_MPI_DEFINITIONS "CPP_DOUBLE")
+
+include("cmake/compilerflags.cmake")
+include("cmake/tests/test_XML.cmake")
+include("cmake/tests/test_LAPACK.cmake")
+include("cmake/tests/test_HDF5.cmake")
+include("cmake/tests/test_MPI.cmake")
+if (FLEUR_USE_MPI)
+include("cmake/tests/test_SCALAPACK.cmake")
+include("cmake/tests/test_ELPA.cmake")
+endif()
+
+include("cmake/compileenv.txt")

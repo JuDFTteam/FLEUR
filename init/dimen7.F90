@@ -147,9 +147,6 @@
 !+apw
           IF (atoms%llo(ilo,n).LT.0) THEN
              atoms%llo(ilo,n) = -atoms%llo(ilo,n) - 1
-#ifndef CPP_APW
-             atoms%llo(ilo,n) = mod(atoms%llo(ilo,n),10)
-#endif
           ELSE
              dimension%neigd = dimension%neigd + atoms%neq(n)*(2*abs(atoms%llo(ilo,n)) +1)
           ENDIF

@@ -350,7 +350,9 @@ MODULE m_xmlOutput
       END IF
       ALLOCATE(contentLineList(contentLineListSize))
       CALL fillContentLineList(contentList,contentLineList,contentLineLength)
-      IF(contentLineListSize.LE.1) THEN
+      IF(contentLineListSize.EQ.0) THEN
+         outputString = TRIM(ADJUSTL(outputString))//'> </'//TRIM(ADJUSTL(elementName))//'>'
+      ELSE IF(contentLineListSize.EQ.1) THEN
          outputString = TRIM(ADJUSTL(outputString))//'>'//TRIM(ADJUSTL(contentLineList(1)))//'</'//&
               TRIM(ADJUSTL(elementName))//'>'
       ELSE

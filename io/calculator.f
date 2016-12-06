@@ -591,6 +591,8 @@
       REAL                :: nextnumber
       !>
 
+      number = 0
+
       CALL priv_peeknextatom(string, nextnumber, nextcommand)
 
       IF (TRIM(nextcommand) == 'end') CALL priv_error

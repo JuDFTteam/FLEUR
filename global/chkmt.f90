@@ -23,6 +23,7 @@
       USE m_types
       USE m_sort
       USE m_inv3
+      USE m_juDFT
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
@@ -108,7 +109,7 @@
       t_rmt(0:103) = 2.3 ! default value
       t_rmt(1) = 1.0 ; t_rmt(5:9) = 1.3 ; t_rmt(16:17) = 1.8
       cubeLength = 2*rmtMax+rmtDelta
-      maxCubeAtoms = (FLOOR(cubeLength / (0.8*2.0*rmtMin)) + 1)**3
+      maxCubeAtoms = (FLOOR(cubeLength / (0.7*2.0*rmtMin)) + 1)**3
       error  = .FALSE.
 
 !     1. For the 1st version the auxiliary unit cell is just a copy of the original unit cell with
@@ -270,7 +271,7 @@
          END DO
          IF (identicalAtoms.GT.1) THEN
             WRITE(*,*) 'Position: ', refPos(:,n)
-            STOP 'Error: Too many atoms at same position.'
+            CALL juDFT_error("Too many atoms at same position.",calledby ="chkmt")
          END IF
          numNearestNeighbors(n) = MIN(maxCubeAtoms,iNeighborAtom)
          CALL sort(iNeighborAtom,sqrDistances,distIndexList)
@@ -300,6 +301,13 @@
          typeB = nearestAtoms(typeA)
          IF(typeB.LT.0) CYCLE
          dist = nearestAtomDists(typeA)
+         IF (dist.LT.0.5) THEN
+            WRITE (*,*) "Distance between atoms too small!"
+            WRITE (*,*) "atom type A: ", typeA
+            WRITE (*,*) "atom type B: ", typeB
+            WRITE (*,*) "distance: ", dist
+            CALL juDFT_error("Distance between atoms too small!",calledby ="chkmt")
+         END IF
          sum_r = 1.0 / ( t_rmt(atoms%nz(typeA)) + t_rmt(atoms%nz(typeB)) )
          facA = t_rmt(atoms%nz(typeA)) * sum_r
          facB = t_rmt(atoms%nz(typeB)) * sum_r

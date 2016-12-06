@@ -13,496 +13,433 @@
 !*************************************************************
 #include"cpp_double.h"
 MODULE m_locrectify
-  use m_juDFT
+  USE m_juDFT
   CONTAINS
-  SUBROUTINE locrectify(jsp,input,lapw,bkpt,atoms, kveclo, sym,cell,&
-       locrec,kindlocrec,evenlocs,oddlocs,evenlocindex, oddlocindex)
+    SUBROUTINE locrectify(jsp,input,lapw,bkpt,atoms, kveclo, sym,cell,&
+         kindlocrec,evenlocs,oddlocs,evenlocindex, oddlocindex,locrec_r,locrec_c)
 
-    USE m_ylm
-    USE m_constants,only:tpi_const
-    USE m_loccoeff
-    USE m_types
-    IMPLICIT NONE
-    INTEGER,INTENT(IN)         :: jsp
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_cell),INTENT(IN)    :: cell
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_lapw),INTENT(IN)    :: lapw
-    real,intent(in)::bkpt(3)
-    integer,intent(in)::kveclo(atoms%nlotot)
-  
-#ifdef CPP_INVERSION
-    real,intent(out)::locrec(atoms%nlotot,atoms%nlotot)
-#else
-    complex,intent(out)::locrec(atoms%nlotot,atoms%nlotot)
-#endif
-    logical,intent(out)::kindlocrec(atoms%nlotot)
-    integer,intent(out)::evenlocs
-    integer,intent(out)::oddlocs
-    integer,intent(out)::evenlocindex(atoms%nlotot)
-    integer,intent(out)::oddlocindex(atoms%nlotot)
+      USE m_ylm
+      USE m_constants,ONLY:tpi_const
+      USE m_loccoeff
+      USE m_types
+      IMPLICIT NONE
+      INTEGER,INTENT(IN)         :: jsp
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_sym),INTENT(IN)     :: sym
+      TYPE(t_cell),INTENT(IN)    :: cell
+      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_lapw),INTENT(IN)    :: lapw
+      REAL,INTENT(in)::bkpt(3)
+      INTEGER,INTENT(in)::kveclo(atoms%nlotot)
 
-    integer numorec
-    integer invatom,zrefatom
-    logical l_planetwo,l_spacetwo,l_spacefour,l_spacetwoinv
-    logical l_crosstwo
-    integer pos,loc,nn,angmom,bas,locm,loopi,j,i
-    integer lm,locmm,lmm
-    integer  ind,vec,natom,nap,inap,locnum,ll1
-    integer ipiv(28),info
-    complex loccoffs(28,28),reccoffs(28)
-    complex ylm(16),phase
-    real fk(3),tmk,fkp(3)
-    !      complex coeffi(1:28,1:28,0:13)     transferred to mod_loccoeff.f
-    !      logical coffkind(1:28,0:13)        import with USE m_loccoeff
-    integer jump(atoms%natd)
-    integer mqnum,nalo,naup,basindex(atoms%natd,atoms%nlod)
-    integer zrefnap,zrefinap,coffindex
-    logical l_verbose,l_veryverbose,l_invsatswap
+      REAL,OPTIONAL,INTENT(out)::locrec_r(atoms%nlotot,atoms%nlotot)
+      COMPLEX,OPTIONAL,INTENT(out)::locrec_c(atoms%nlotot,atoms%nlotot)
 
-    !      ci=cmplx(0.0,1.0) transferred to mod_loccoeff.f
+      LOGICAL,INTENT(out)::kindlocrec(atoms%nlotot)
+      INTEGER,INTENT(out)::evenlocs
+      INTEGER,INTENT(out)::oddlocs
+      INTEGER,INTENT(out)::evenlocindex(atoms%nlotot)
+      INTEGER,INTENT(out)::oddlocindex(atoms%nlotot)
 
+      INTEGER numorec
+      INTEGER invatom,zrefatom
+      LOGICAL l_planetwo,l_spacetwo,l_spacefour,l_spacetwoinv
+      LOGICAL l_crosstwo
+      INTEGER pos,loc,nn,angmom,bas,locm,loopi,j,i
+      INTEGER lm,locmm,lmm
+      INTEGER  ind,vec,natom,nap,inap,locnum,ll1
+      INTEGER ipiv(28),info
+      COMPLEX loccoffs(28,28),reccoffs(28)
+      COMPLEX ylm(16),phase
+      REAL fk(3),tmk,fkp(3)
+      !      complex coeffi(1:28,1:28,0:13)     transferred to mod_loccoeff.f
+      !      logical coffkind(1:28,0:13)        import with USE m_loccoeff
+      INTEGER jump(atoms%natd)
+      INTEGER mqnum,nalo,naup,basindex(atoms%natd,atoms%nlod)
+      INTEGER zrefnap,zrefinap,coffindex
+      LOGICAL l_real,l_invsatswap
 
-    !diagnostic tools
-    inquire(file='verbose',exist=l_verbose)
-    inquire(file='veryverbose',exist=l_veryverbose)
-    if(l_veryverbose)l_verbose=.true.
+      !      ci=cmplx(0.0,1.0) transferred to mod_loccoeff.f
 
-    jump(1:atoms%natd)=0
-    locrec=0.0
-    numorec=0
+      l_real=PRESENT(locrec_r)
 
-    !***********************************************
-    !   basindex holds first index of subset of locs
-    !***********************************************
-    bas=1
-    nalo=1
-    do ind=1,atoms%ntype
-       naup=nalo+atoms%neq(ind)-1
-       do natom=nalo,naup
-          if(atoms%invsat(natom).eq.2)cycle
-          do loc=1,atoms%nlo(ind)
-             basindex(natom,loc)=bas
-             locnum=(atoms%invsat(natom)+1)*(2*atoms%llo(loc,ind)+1)
-             bas=bas+locnum
-          enddo !loc
-       enddo !natom
-       nalo=naup+1
-    enddo !ind
+      jump(1:atoms%natd)=0
+      IF (l_real) THEN
+         locrec_r=0.0
+      ELSE
+         locrec_c=0.0
+      ENDIF
+      numorec=0
 
-    bas=0
-    nalo=1
-    do ind=1,atoms%ntype
-       naup=nalo+atoms%neq(ind)-1
-       do natom=nalo,naup
-          if(l_verbose)then
-             print*,"atoms%invsat=",atoms%invsat(natom)
-             print*,"atoms%taual=",atoms%taual(:,natom)
-          endif
-          if(atoms%invsat(natom).eq.2)cycle
-          if(jump(natom).ne.0)then
-             bas=bas+jump(natom)
-             cycle
-          endif
+      !***********************************************
+      !   basindex holds first index of subset of locs
+      !***********************************************
+      bas=1
+      nalo=1
+      DO ind=1,atoms%ntype
+         naup=nalo+atoms%neq(ind)-1
+         DO natom=nalo,naup
+            IF(atoms%invsat(natom).EQ.2)CYCLE
+            DO loc=1,atoms%nlo(ind)
+               basindex(natom,loc)=bas
+               locnum=(atoms%invsat(natom)+1)*(2*atoms%llo(loc,ind)+1)
+               bas=bas+locnum
+            ENDDO !loc
+         ENDDO !natom
+         nalo=naup+1
+      ENDDO !ind
 
-          !*******************************************************
-          !       find out by what kind of symmetry the atoms
-          !       are interrelated
-          !*******************************************************
-          !two atoms related by inversion symmetry are in xy-plane
-          l_planetwo=.false.    
-          !two atoms are related by z-reflection, but not by inversion
-          l_spacetwo=.false.
-          !two atoms are related by z-reflection and by inversion
-          l_spacetwoinv=.false.
-          !four atoms are entangled, by both inversion and z-reflection
-          l_spacefour=.false.
-          !two atoms are related by inversion, but not by z-reflection
-          l_crosstwo=.false.
-          !order of locs corresponds to setup of coeffi-array => l_invsatswap=.false.
-          !order of locs is reversed with respect to coeffi-array => l_invsatswap=.true.
-          l_invsatswap=.false.
-          if((abs(abs(atoms%taual(3,natom))-0.5).lt.1e-6).and..not.input%film)then !atom on face
-             if(atoms%invsat(natom).eq.1)then ! two atoms
-                invatom=sym%invsatnr(natom)
-                l_planetwo=.true.
-             endif
-          elseif(abs(atoms%taual(3,natom)).gt.1e-6) then !atom not in xy-plane
-             do zrefatom=nalo,naup !find z-reflection image
-                if(all(abs(atoms%taual(1:2,natom)-atoms%taual(1:2,zrefatom))-&
-                     nint(abs(atoms%taual(1:2,natom)-atoms%taual(1:2,zrefatom))).lt.1e-6)) then
-                   if(abs(atoms%taual(3,natom)+atoms%taual(3,zrefatom)).lt.1e-6) goto 543
-                endif
-             enddo !zrefatom
-#ifdef CPP_INVERSION
-             !if there is no z-reflected counterpart there must be an inversion 
-             !counterpart instead
-             if(atoms%invsat(natom).eq.1)then
-                zrefatom=0 !this switches on l_crosstwo later on
-             else
-                CALL juDFT_error("nozref-invsat",calledby ="locrectify")
-             endif
-#else
-             !in the complex version there must be a z-reflected counterpart
-             CALL juDFT_error("zrefatom not found",calledby ="locrectify")
-#endif
-543          continue
+      bas=0
+      nalo=1
+      DO ind=1,atoms%ntype
+         naup=nalo+atoms%neq(ind)-1
+         DO natom=nalo,naup
+            IF(atoms%invsat(natom).EQ.2)CYCLE
+            IF(jump(natom).NE.0)THEN
+               bas=bas+jump(natom)
+               CYCLE
+            ENDIF
 
-             if(atoms%invsat(natom).eq.0) then !no inversion-image
-                l_spacetwo=.true.
-#ifdef CPP_INVERSION
-                CALL juDFT_error("spacetwo & INVERSION",calledby ="locrectify")
-#endif
-             else                        !inversion-image
-                invatom=sym%invsatnr(natom)
-                if(zrefatom.eq.0)then
-                   l_crosstwo=.true.
-                elseif(invatom.eq.zrefatom)then    !inversion = z-reflection
-                   l_spacetwoinv=.true.
-                else                           !inversion /= z-reflection
-#ifdef CPP_INVERSION
-                   l_spacefour=.true. !four entangled locs
-#else
-                   CALL juDFT_error("spacefour & no INVERSION",calledby ="locrectify")
-#endif
-                   if(atoms%invsat(zrefatom).eq.1)then
-                      if(l_verbose)then
-                         print*,"spacefour-atoms:"
-                         print*,"natom=",natom
-                         print*,"invatom=",invatom
-                         print*,"zrefatom=",zrefatom
-                         print*,"zrefinvatom=",sym%invsatnr(zrefatom)
-                      endif
-                   elseif(atoms%invsat(zrefatom).eq.2)then
-                      l_invsatswap=.true.
-                      do info=1,atoms%natd
-                         if(sym%invsatnr(info).eq.zrefatom)goto 723
-                      enddo
-                      CALL juDFT_error("no atoms for zref",calledby ="locrectify")
-723                   continue
-                      zrefatom=info
-                      IF(atoms%invsat(zrefatom)/=1) CALL juDFT_error("atoms%invsat" ,calledby ="locrectify")
-                      if(.not.all(abs(atoms%taual(1:2,invatom)- atoms%taual(1:2,zrefatom))<1e-6)) &
-                           CALL juDFT_error ("invsat-zref2",calledby ="locrectify")
-                      if(.not.abs(atoms%taual(3,invatom)+atoms%taual(3,zrefatom)) <1e-6)  &
-                           CALL juDFT_error("invsat-zref3", calledby="locrectify")
-                      if(l_verbose)then
-                         print*,"spacefour-atoms:"
-                         print*,"natom=",natom
-                         print*,"invatom=",atoms%invsat(natom)
-                         print*,"SWAPPED:"
-                         print*,"zrefatom mapped on invatom by zref"
-                         print*,"zrefatom=",zrefatom
-                         print*,"zrefinvatom=",atoms%invsat(zrefatom)
-                      endif
-                   elseif(atoms%invsat(zrefatom).eq.0)then
-                      CALL juDFT_error("spacefour: atoms-zref",calledby ="locrectify")
-                   endif
-                endif
-             endif
-          else !atom lies in the xy-plane
-             if(atoms%invsat(natom).eq.1)then ! two atoms
-                invatom=sym%invsatnr(natom)
-                l_planetwo=.true.
-             endif
-          endif !symmetry partners
+            !*******************************************************
+            !       find out by what kind of symmetry the atoms
+            !       are interrelated
+            !*******************************************************
+            !two atoms related by inversion symmetry are in xy-plane
+            l_planetwo=.FALSE.    
+            !two atoms are related by z-reflection, but not by inversion
+            l_spacetwo=.FALSE.
+            !two atoms are related by z-reflection and by inversion
+            l_spacetwoinv=.FALSE.
+            !four atoms are entangled, by both inversion and z-reflection
+            l_spacefour=.FALSE.
+            !two atoms are related by inversion, but not by z-reflection
+            l_crosstwo=.FALSE.
+            !order of locs corresponds to setup of coeffi-array => l_invsatswap=.false.
+            !order of locs is reversed with respect to coeffi-array => l_invsatswap=.true.
+            l_invsatswap=.FALSE.
+            IF((ABS(ABS(atoms%taual(3,natom))-0.5).LT.1e-6).AND..NOT.input%film)THEN !atom on face
+               IF(atoms%invsat(natom).EQ.1)THEN ! two atoms
+                  invatom=sym%invsatnr(natom)
+                  l_planetwo=.TRUE.
+               ENDIF
+            ELSEIF(ABS(atoms%taual(3,natom)).GT.1e-6) THEN !atom not in xy-plane
+               DO zrefatom=nalo,naup !find z-reflection image
+                  IF(ALL(ABS(atoms%taual(1:2,natom)-atoms%taual(1:2,zrefatom))-&
+                       NINT(ABS(atoms%taual(1:2,natom)-atoms%taual(1:2,zrefatom))).LT.1e-6)) THEN
+                     IF(ABS(atoms%taual(3,natom)+atoms%taual(3,zrefatom)).LT.1e-6) GOTO 543
+                  ENDIF
+               ENDDO !zrefatom
+               if (l_real) THEN
+                  !if there is no z-reflected counterpart there must be an inversion 
+                  !counterpart instead
+                  IF(atoms%invsat(natom).EQ.1)THEN
+                     zrefatom=0 !this switches on l_crosstwo later on
+                  ELSE
+                     CALL juDFT_error("nozref-invsat",calledby ="locrectify")
+                  ENDIF
+               else
+                  !in the complex version there must be a z-reflected counterpart
+                  CALL juDFT_error("zrefatom not found",calledby ="locrectify")
+               endif
+543            CONTINUE
 
-          do loc=1,atoms%nlo(ind)
-             angmom=atoms%llo(loc,ind)
-             if(l_verbose)then
-                print*,"angmom=",angmom
-                print*,"bas=",bas
-                print*,"numorec=",numorec
-                if(l_planetwo)then
-                   print*,"planetwo"
-                elseif(l_crosstwo)then
-                   print*,"crosstwo"
-                elseif(l_spacetwoinv)then
-                   print*,"spacetwoinv"
-                elseif(l_spacetwo)then
-                   print*,"spacetwo"
-                elseif(l_spacefour)then
-                   print*,"spacefour"
-                else
-                   print*,"single atom"
-                endif
-             endif !verbose
-             if(angmom.eq.0)then
-                if(l_planetwo)then
-                   kindlocrec(numorec+1)=.true.
-                   kindlocrec(numorec+2)=.true.
-                   locrec(bas+1,numorec+1)=1.0
-                   locrec(bas+2,numorec+2)=1.0
-                   bas=bas+2
-                   numorec=numorec+2
-                   cycle
-                elseif(l_spacetwoinv.or.l_crosstwo)then
-                   coffindex=0
-                   locnum=2
-                elseif(l_spacetwo) then
-                   locnum=1
-                   coffindex=0
-                elseif(l_spacefour)then
-                   locnum=2
-                   coffindex=6
-                else
-                   kindlocrec(numorec+1)=.true.
-                   locrec(bas+1,numorec+1)=1.0
-                   bas=bas+1
-                   numorec=numorec+1
-                   cycle
-                endif !l_planetwo,l_crosstwo,....
-             else
-                if(l_planetwo)then
-                   locnum=2*(2*angmom+1)
-                   if(angmom.eq.1)then
-                      coffindex=3
-                   elseif(angmom.eq.2)then
-                      coffindex=9
-                   elseif(angmom.eq.3)then
-                      coffindex=12
-                   else
-                      CALL juDFT_error("angmom1",calledby ="locrectify")
-                   endif
-                elseif(l_spacetwoinv.or.l_crosstwo)then
-                   locnum=2*(2*angmom+1)
-                   if(angmom.eq.1)then
-                      coffindex=4
-                   elseif(angmom.eq.2)then
-                      coffindex=8
-                   elseif(angmom.eq.3)then
-                      coffindex=11
-                   else
-                      CALL juDFT_error("angmom5",calledby ="locrectify")
-                   endif
-                elseif(l_spacetwo) then
-                   locnum=2*angmom+1
-                   if(angmom.eq.1)then
-                      coffindex=4
-                   elseif(angmom.eq.2)then
-                      coffindex=8
-                   elseif(angmom.eq.3)then
-                      coffindex=11
-                   else
-                      CALL juDFT_error("angmom2",calledby="locrectify")
-                   endif
-                elseif(l_spacefour) then
-                   locnum=2*(2*angmom+1)
-                   if(angmom.eq.1)then
-                      coffindex=7
-                   elseif(angmom.eq.2)then
-                      coffindex=10
-                   elseif(angmom.eq.3)then
-                      coffindex=13
-                   else
-                      CALL juDFT_error("angmom3",calledby ="locrectify")
-                   endif
-                else
-                   locnum=2*angmom+1
-                   if(angmom.eq.1)then
-                      coffindex=1
-                   elseif(angmom.eq.2)then
-                      coffindex=2
-                   elseif(angmom.eq.3)then
-                      coffindex=5
-                   else
-                      CALL juDFT_error("angmom",calledby ="locrectify")
-                   endif
-                endif! l_planetwo
-             endif !angmom
+               IF(atoms%invsat(natom).EQ.0) THEN !no inversion-image
+                  l_spacetwo=.TRUE.
+                  if (l_real)   CALL juDFT_error("spacetwo & INVERSION",calledby ="locrectify")
+               ELSE                        !inversion-image
+                  invatom=sym%invsatnr(natom)
+                  IF(zrefatom.EQ.0)THEN
+                     l_crosstwo=.TRUE.
+                  ELSEIF(invatom.EQ.zrefatom)THEN    !inversion = z-reflection
+                     l_spacetwoinv=.TRUE.
+                  ELSE                           !inversion /= z-reflection
+                     if (l_real) THEN
+                        l_spacefour=.TRUE. !four entangled locs
+                     else
+                        CALL juDFT_error("spacefour & no INVERSION",calledby ="locrectify")
+                     endif
+                     IF(atoms%invsat(zrefatom).EQ.1)THEN
 
-             mqnum=2*angmom+1
-             ll1=angmom*angmom-1
-             loccoffs(:,:)=cmplx(0.0,0.0)
-             !**************************************************
-             !        Write the expansion of the locs
-             !        in terms of spherical harmonics into the
-             !        loccoffs-array.
-             !        First index of loccoffs: m-quantum-number.
-             !        Second index of loccoffs: index of loc.
-             !**************************************************
-             if(l_verbose)print*,"locnum=",locnum
-             do locm=1,locnum
-                pos=bas+locm
-                vec=kveclo(pos)
-                !The vector of the planewave onto which the loc is matched.
-                fk(:)=bkpt(:)+(/lapw%k1(vec,jsp),lapw%k2(vec,jsp),lapw%k3(vec,jsp)/)
+                     ELSEIF(atoms%invsat(zrefatom).EQ.2)THEN
+                        l_invsatswap=.TRUE.
+                        DO info=1,atoms%natd
+                           IF(sym%invsatnr(info).EQ.zrefatom)GOTO 723
+                        ENDDO
+                        CALL juDFT_error("no atoms for zref",calledby ="locrectify")
+723                     CONTINUE
+                        zrefatom=info
+                        IF(atoms%invsat(zrefatom)/=1) CALL juDFT_error("atoms%invsat" ,calledby ="locrectify")
+                        IF(.NOT.ALL(ABS(atoms%taual(1:2,invatom)- atoms%taual(1:2,zrefatom))<1e-6)) &
+                             CALL juDFT_error ("invsat-zref2",calledby ="locrectify")
+                        IF(.NOT.ABS(atoms%taual(3,invatom)+atoms%taual(3,zrefatom)) <1e-6)  &
+                             CALL juDFT_error("invsat-zref3", calledby="locrectify")
 
-                tmk=tpi_const*dot_product(lapw%k1(:,jsp),atoms%taual(:,natom))
-                phase = cmplx(cos(tmk),sin(tmk))
-                fkp=matmul(fk,cell%bmat)
-                CALL ylm4(3,fkp,ylm)
-                do locmm=1,mqnum
-                   lmm=ll1+locmm
-                   loccoffs(locmm,locm)=ci**angmom*phase*conjg(ylm(lmm+1))
-                enddo
-             enddo !locm
-             !*************************************************************
-             !        If locs are entangled by symmetry, the number of locs
-             !        that have to be treated at the same time is larger.
-             !        => l_spacetwo: two locs, which are NOT in the
-             !        xy-plane and which are not related by inversion, are
-             !        entangled by z-reflexion.
-             !        => l_spacefour: two pairs the partners of which are
-             !        connected by inversion are interrelated by z-reflection.
-             !*************************************************************
-             if(l_spacetwo.or.l_spacefour)then
-                do locm=1,locnum
-                   pos=basindex(zrefatom,loc)-1+locm
-                   vec=kveclo(pos)
-                   fk(:)=bkpt(:)+(/lapw%k1(vec,jsp),lapw%k2(vec,jsp),lapw%k3(vec,jsp)/)
+                     ELSEIF(atoms%invsat(zrefatom).EQ.0)THEN
+                        CALL juDFT_error("spacefour: atoms-zref",calledby ="locrectify")
+                     ENDIF
+                  ENDIF
+               ENDIF
+            ELSE !atom lies in the xy-plane
+               IF(atoms%invsat(natom).EQ.1)THEN ! two atoms
+                  invatom=sym%invsatnr(natom)
+                  l_planetwo=.TRUE.
+               ENDIF
+            ENDIF !symmetry partners
 
-                   tmk=tpi_const*dot_product(lapw%k1(:,jsp),atoms%taual(:,zrefatom))
-                   phase = cmplx(cos(tmk),sin(tmk))
-                   fkp=matmul(fk,cell%bmat)
-                   CALL ylm4(3,fkp,ylm)
-                   do locmm=1,mqnum
-                      lmm=ll1+locmm
-                      loccoffs(locnum+locmm,locnum+locm)= ci**angmom*phase*conjg(ylm(lmm+1))
-                   enddo
-                enddo !locm
-                jump(zrefatom)=jump(zrefatom)+locnum
-                if(l_spacetwo)locnum=locnum*2
-             endif !l_spacetwo
-             !*************************************************************
-             !        If locs are entangled by symmetry, loccoffs has a larger
-             !        number of components for a given loc.
-             !        l_planetwo => two locs in xy-plane are entangled
-             !        by inversion symmetry.
-             !        l_spacetwoinv => two z-reflexion-symmetric atoms
-             !        are entangled also by inversion.
-             !        l_crosstwo => two inversion-symmetric atoms
-             !        are not directly connected by z-reflexion.
-             !        l_spacefour =>  two pairs the partners of which are
-             !        connected by inversion are interrelated by z-reflection.
-             !*************************************************************
-             if(l_planetwo.or.l_crosstwo.or.l_spacetwoinv .or.l_spacefour) then
-                do locm=1,locnum
-                   do locmm=1,mqnum
-                      loccoffs(mqnum+locmm,locm)=(-1)**(locmm-1)* conjg(loccoffs(mqnum+1-locmm,locm))
-                   enddo! locmm
-                enddo ! locm
-             endif ! l_planetwo
+            DO loc=1,atoms%nlo(ind)
+               angmom=atoms%llo(loc,ind)
+               IF(angmom.EQ.0)THEN
+                  IF(l_planetwo)THEN
+                     kindlocrec(numorec+1)=.TRUE.
+                     kindlocrec(numorec+2)=.TRUE.
+                     IF (l_real) THEN
+                        locrec_r(bas+1,numorec+1)=1.0
+                        locrec_r(bas+2,numorec+2)=1.0
+                     ELSE
+                        locrec_c(bas+1,numorec+1)=1.0
+                        locrec_c(bas+2,numorec+2)=1.0
+                     ENDIF
+                     bas=bas+2
+                     numorec=numorec+2
+                     CYCLE
+                  ELSEIF(l_spacetwoinv.OR.l_crosstwo)THEN
+                     coffindex=0
+                     locnum=2
+                  ELSEIF(l_spacetwo) THEN
+                     locnum=1
+                     coffindex=0
+                  ELSEIF(l_spacefour)THEN
+                     locnum=2
+                     coffindex=6
+                  ELSE
+                     kindlocrec(numorec+1)=.TRUE.
+                     IF (l_real) THEN
+                        locrec_r(bas+1,numorec+1)=1.0
+                     ELSE
+                        locrec_c(bas+1,numorec+1)=1.0
+                     END IF
+                     bas=bas+1
+                     numorec=numorec+1
+                     CYCLE
+                  ENDIF !l_planetwo,l_crosstwo,....
+               ELSE
+                  IF(l_planetwo)THEN
+                     locnum=2*(2*angmom+1)
+                     IF(angmom.EQ.1)THEN
+                        coffindex=3
+                     ELSEIF(angmom.EQ.2)THEN
+                        coffindex=9
+                     ELSEIF(angmom.EQ.3)THEN
+                        coffindex=12
+                     ELSE
+                        CALL juDFT_error("angmom1",calledby ="locrectify")
+                     ENDIF
+                  ELSEIF(l_spacetwoinv.OR.l_crosstwo)THEN
+                     locnum=2*(2*angmom+1)
+                     IF(angmom.EQ.1)THEN
+                        coffindex=4
+                     ELSEIF(angmom.EQ.2)THEN
+                        coffindex=8
+                     ELSEIF(angmom.EQ.3)THEN
+                        coffindex=11
+                     ELSE
+                        CALL juDFT_error("angmom5",calledby ="locrectify")
+                     ENDIF
+                  ELSEIF(l_spacetwo) THEN
+                     locnum=2*angmom+1
+                     IF(angmom.EQ.1)THEN
+                        coffindex=4
+                     ELSEIF(angmom.EQ.2)THEN
+                        coffindex=8
+                     ELSEIF(angmom.EQ.3)THEN
+                        coffindex=11
+                     ELSE
+                        CALL juDFT_error("angmom2",calledby="locrectify")
+                     ENDIF
+                  ELSEIF(l_spacefour) THEN
+                     locnum=2*(2*angmom+1)
+                     IF(angmom.EQ.1)THEN
+                        coffindex=7
+                     ELSEIF(angmom.EQ.2)THEN
+                        coffindex=10
+                     ELSEIF(angmom.EQ.3)THEN
+                        coffindex=13
+                     ELSE
+                        CALL juDFT_error("angmom3",calledby ="locrectify")
+                     ENDIF
+                  ELSE
+                     locnum=2*angmom+1
+                     IF(angmom.EQ.1)THEN
+                        coffindex=1
+                     ELSEIF(angmom.EQ.2)THEN
+                        coffindex=2
+                     ELSEIF(angmom.EQ.3)THEN
+                        coffindex=5
+                     ELSE
+                        CALL juDFT_error("angmom",calledby ="locrectify")
+                     ENDIF
+                  ENDIF! l_planetwo
+               ENDIF !angmom
 
-             !******************************************************************
-             !        If four atoms are entangled, something remains to be added
-             !        here:
-             !******************************************************************
-             if(l_spacefour)then
-                do locm=1,locnum
-                   do locmm=1,mqnum
-                      loccoffs(locnum+mqnum+locmm,locnum+locm)=(-1)**(locmm-1)*&
-                           conjg(loccoffs(locnum+mqnum+1-locmm,locnum+locm))
-                   enddo! locmm
-                enddo ! locm
-                locnum=locnum*2
-             endif
-             !******************************************************************
-             !        Find linear combinations of locs that are eigenfunctions
-             !        of the z-reflection operation by solving linear system
-             !        of equations. Write the transformation into locrec-matrix.
-             !******************************************************************
-             call CPP_LAPACK_cgetrf(locnum,locnum,loccoffs,28,ipiv,info)
-             IF(info /= 0)  CALL juDFT_error("cgetrf",calledby ="locrectify")
-             do loopi=1,locnum
-                numorec=numorec+1
-                kindlocrec(numorec)=coffkind(loopi,coffindex)
-                if(l_verbose)print*,"coffkind=",coffkind(loopi,coffindex)
-                if(l_invsatswap)then
-                   if(l_verbose)print*,"invsatswap" 
-                   reccoffs(1:locnum/2)=coeffi(1:locnum/2,loopi,coffindex)
-                   reccoffs(locnum/2+1:locnum/4*3)= coeffi(locnum/4*3+1:locnum,loopi,coffindex)
-                   reccoffs(locnum/4*3+1:locnum)= coeffi(locnum/2+1:locnum/4*3,loopi,coffindex)
-                else
-                   reccoffs(1:locnum)=coeffi(1:locnum,loopi,coffindex)
-                endif
-                call CPP_LAPACK_cgetrs('N',locnum,1,loccoffs,28,ipiv, reccoffs,28,info)
-                IF(info /= 0)  CALL juDFT_error("cgetrs", calledby="locrectify")
-#ifdef CPP_INVERSION
-                if(any(abs(aimag(reccoffs(1:locnum))).gt.1e-6)) then
-                   !In the real version of the code, the hamiltonian and overlap
-                   !matrices are real. Hence the transformation matrices that make
-                   !the locs become eigenfunctions of the z-reflection operation
-                   !have to be real also. Check this here. 
-                   print*,"Sorry!"
-                   print*,"The transformation is not purely real."
-                   print*,"=> Something is wrong here."
-                   CALL juDFT_error("unfortunately complex",calledby ="locrectify")
-                endif
-                if(l_spacefour)then
-                   if(l_verbose)print*,"spacefour => shifts in bas"
-                   do locmm=1,locnum/2
-                      locrec(bas+locmm,numorec)=real(reccoffs(locmm))
-                   enddo
-                   if(l_verbose)print*,"basindex=",basindex(zrefatom,loc)
-                   do locmm=1,locnum/2
-                      if(l_verbose)print*,basindex(zrefatom,loc)-1+locmm
-                      locrec(basindex(zrefatom,loc)-1+locmm,numorec)= real(reccoffs(locmm+locnum/2))
-                   enddo
-                else
-                   do locmm=1,locnum
-                      locrec(bas+locmm,numorec)=real(reccoffs(locmm))
-                   enddo
-                endif
-#else
-                if(l_spacetwo)then
-                   if(l_verbose)then
-                      print*,"spacetwo => shifts in bas"
-                      print*,"bas=",bas
-                      print*,"locnum=",locnum
-                      print*,"basindex=",basindex(zrefatom,loc)
-                   endif
-                   locrec(bas+1:bas+locnum/2,numorec)=reccoffs(1:locnum/2)
-                   locrec(basindex(zrefatom,loc):basindex(zrefatom,loc)+locnum/2-1,numorec)=&
-                                           reccoffs(1+locnum/2:locnum)
-                else
-                   locrec(bas+1:bas+locnum,numorec)=reccoffs(1:locnum)
-                endif
-#endif
-             enddo !loopi
-             if(l_spacetwo) locnum=locnum/2
-             if(l_spacefour) locnum=locnum/2
-             bas=bas+locnum
-          enddo !loc
-       enddo !natom
-       nalo=naup+1
-    enddo !ind
+               mqnum=2*angmom+1
+               ll1=angmom*angmom-1
+               loccoffs(:,:)=CMPLX(0.0,0.0)
+               !**************************************************
+               !        Write the expansion of the locs
+               !        in terms of spherical harmonics into the
+               !        loccoffs-array.
+               !        First index of loccoffs: m-quantum-number.
+               !        Second index of loccoffs: index of loc.
+               !**************************************************
+               DO locm=1,locnum
+                  pos=bas+locm
+                  vec=kveclo(pos)
+                  !The vector of the planewave onto which the loc is matched.
+                  fk(:)=bkpt(:)+(/lapw%k1(vec,jsp),lapw%k2(vec,jsp),lapw%k3(vec,jsp)/)
+
+                  tmk=tpi_const*DOT_PRODUCT(lapw%k1(:,jsp),atoms%taual(:,natom))
+                  phase = CMPLX(COS(tmk),SIN(tmk))
+                  fkp=MATMUL(fk,cell%bmat)
+                  CALL ylm4(3,fkp,ylm)
+                  DO locmm=1,mqnum
+                     lmm=ll1+locmm
+                     loccoffs(locmm,locm)=ci**angmom*phase*CONJG(ylm(lmm+1))
+                  ENDDO
+               ENDDO !locm
+               !*************************************************************
+               !        If locs are entangled by symmetry, the number of locs
+               !        that have to be treated at the same time is larger.
+               !        => l_spacetwo: two locs, which are NOT in the
+               !        xy-plane and which are not related by inversion, are
+               !        entangled by z-reflexion.
+               !        => l_spacefour: two pairs the partners of which are
+               !        connected by inversion are interrelated by z-reflection.
+               !*************************************************************
+               IF(l_spacetwo.OR.l_spacefour)THEN
+                  DO locm=1,locnum
+                     pos=basindex(zrefatom,loc)-1+locm
+                     vec=kveclo(pos)
+                     fk(:)=bkpt(:)+(/lapw%k1(vec,jsp),lapw%k2(vec,jsp),lapw%k3(vec,jsp)/)
+
+                     tmk=tpi_const*DOT_PRODUCT(lapw%k1(:,jsp),atoms%taual(:,zrefatom))
+                     phase = CMPLX(COS(tmk),SIN(tmk))
+                     fkp=MATMUL(fk,cell%bmat)
+                     CALL ylm4(3,fkp,ylm)
+                     DO locmm=1,mqnum
+                        lmm=ll1+locmm
+                        loccoffs(locnum+locmm,locnum+locm)= ci**angmom*phase*CONJG(ylm(lmm+1))
+                     ENDDO
+                  ENDDO !locm
+                  jump(zrefatom)=jump(zrefatom)+locnum
+                  IF(l_spacetwo)locnum=locnum*2
+               ENDIF !l_spacetwo
+               !*************************************************************
+               !        If locs are entangled by symmetry, loccoffs has a larger
+               !        number of components for a given loc.
+               !        l_planetwo => two locs in xy-plane are entangled
+               !        by inversion symmetry.
+               !        l_spacetwoinv => two z-reflexion-symmetric atoms
+               !        are entangled also by inversion.
+               !        l_crosstwo => two inversion-symmetric atoms
+               !        are not directly connected by z-reflexion.
+               !        l_spacefour =>  two pairs the partners of which are
+               !        connected by inversion are interrelated by z-reflection.
+               !*************************************************************
+               IF(l_planetwo.OR.l_crosstwo.OR.l_spacetwoinv .OR.l_spacefour) THEN
+                  DO locm=1,locnum
+                     DO locmm=1,mqnum
+                        loccoffs(mqnum+locmm,locm)=(-1)**(locmm-1)* CONJG(loccoffs(mqnum+1-locmm,locm))
+                     ENDDO! locmm
+                  ENDDO ! locm
+               ENDIF ! l_planetwo
+
+               !******************************************************************
+               !        If four atoms are entangled, something remains to be added
+               !        here:
+               !******************************************************************
+               IF(l_spacefour)THEN
+                  DO locm=1,locnum
+                     DO locmm=1,mqnum
+                        loccoffs(locnum+mqnum+locmm,locnum+locm)=(-1)**(locmm-1)*&
+                             CONJG(loccoffs(locnum+mqnum+1-locmm,locnum+locm))
+                     ENDDO! locmm
+                  ENDDO ! locm
+                  locnum=locnum*2
+               ENDIF
+               !******************************************************************
+               !        Find linear combinations of locs that are eigenfunctions
+               !        of the z-reflection operation by solving linear system
+               !        of equations. Write the transformation into locrec-matrix.
+               !******************************************************************
+               CALL CPP_LAPACK_cgetrf(locnum,locnum,loccoffs,28,ipiv,info)
+               IF(info /= 0)  CALL juDFT_error("cgetrf",calledby ="locrectify")
+               DO loopi=1,locnum
+                  numorec=numorec+1
+                  kindlocrec(numorec)=coffkind(loopi,coffindex)
+                  IF(l_invsatswap)THEN
+                     reccoffs(1:locnum/2)=coeffi(1:locnum/2,loopi,coffindex)
+                     reccoffs(locnum/2+1:locnum/4*3)= coeffi(locnum/4*3+1:locnum,loopi,coffindex)
+                     reccoffs(locnum/4*3+1:locnum)= coeffi(locnum/2+1:locnum/4*3,loopi,coffindex)
+                  ELSE
+                     reccoffs(1:locnum)=coeffi(1:locnum,loopi,coffindex)
+                  ENDIF
+                  CALL CPP_LAPACK_cgetrs('N',locnum,1,loccoffs,28,ipiv, reccoffs,28,info)
+                  IF(info /= 0)  CALL juDFT_error("cgetrs", calledby="locrectify")
+                  IF (l_real) THEN
+                     IF(ANY(ABS(AIMAG(reccoffs(1:locnum))).GT.1e-6)) THEN
+                        !In the real version of the code, the hamiltonian and overlap
+                        !matrices are real. Hence the transformation matrices that make
+                        !the locs become eigenfunctions of the z-reflection operation
+                        !have to be real also. Check this here. 
+                        PRINT*,"Sorry!"
+                        PRINT*,"The transformation is not purely real."
+                        PRINT*,"=> Something is wrong here."
+                        CALL juDFT_error("unfortunately complex",calledby ="locrectify")
+                     ENDIF
+                     IF(l_spacefour)THEN
+                        locrec_r(bas+1:bas+locnum/2,numorec)=REAL(reccoffs(:locnum/2))
+                        DO locmm=1,locnum/2
+                           locrec_r(basindex(zrefatom,loc)-1+locmm,numorec)= REAL(reccoffs(locmm+locnum/2))
+                        ENDDO
+
+                     ELSE
+                        locrec_r(bas+1:bas+locnum,numorec)=REAL(reccoffs(:locnum))
+
+                     ENDIF
+                  ELSE
+                     IF(l_spacetwo)THEN
+                        locrec_c(bas+1:bas+locnum/2,numorec)=reccoffs(1:locnum/2)
+                        locrec_c(basindex(zrefatom,loc):basindex(zrefatom,loc)+locnum/2-1,numorec)=&
+                             reccoffs(1+locnum/2:locnum)
+                     ELSE
+                        locrec_c(bas+1:bas+locnum,numorec)=reccoffs(1:locnum)
+                     ENDIF
+                  ENDIF
+               ENDDO !loopi
+               IF(l_spacetwo) locnum=locnum/2
+               IF(l_spacefour) locnum=locnum/2
+               bas=bas+locnum
+            ENDDO !loc
+         ENDDO !natom
+         nalo=naup+1
+      ENDDO !ind
 
 
-    !*********************************************************
-    !     Determine number of even and odd locs.
-    !     Prepare sort-arrays.
-    !*********************************************************
-    evenlocs=0
-    oddlocs=0
-    do loopi=1,atoms%nlotot
-       if(kindlocrec(loopi)) then
-          evenlocs=evenlocs+1
-          evenlocindex(evenlocs)=loopi
-       else
-          oddlocs=oddlocs+1
-          oddlocindex(oddlocs)=loopi
-       endif
-    enddo
-    if(l_verbose)then
-       print*,"evenlocs=",evenlocs
-       print*,"oddlocs=",oddlocs
-       print*,"evenlocindex"
-       print*,evenlocindex(1:evenlocs)
-       print*,"oddlocindex"
-       print*,oddlocindex(1:oddlocs)
-    endif
-    if(l_veryverbose)then
-       do info=1,atoms%nlotot 
-          if(kindlocrec(info))then
-             print*,"even orbital"
-          else
-             print*,"odd orbital"
-          endif
-          print*,locrec(1:atoms%nlotot,info)
-       enddo
-    endif
-  end subroutine locrectify
-end module m_locrectify
+      !*********************************************************
+      !     Determine number of even and odd locs.
+      !     Prepare sort-arrays.
+      !*********************************************************
+      evenlocs=0
+      oddlocs=0
+      DO loopi=1,atoms%nlotot
+         IF(kindlocrec(loopi)) THEN
+            evenlocs=evenlocs+1
+            evenlocindex(evenlocs)=loopi
+         ELSE
+            oddlocs=oddlocs+1
+            oddlocindex(oddlocs)=loopi
+         ENDIF
+      ENDDO
+    END SUBROUTINE locrectify
+END MODULE m_locrectify
 

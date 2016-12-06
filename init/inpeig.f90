@@ -64,7 +64,7 @@
                WRITE(6,*) "This is incompatible to a missing enpara file."
                WRITE(6,*) "Please generate an adequate enpara file by starting"
                WRITE(6,*) "inpgen with the -genEnpara command line switch or"
-               WRITE(6,*) "use the XML input by starting FLEUR with -xmlInput."
+               WRITE(6,*) "use the XML input by starting FLEUR with -xmlInput or -xml."
                CALL juDFT_error('corelevels file is incompatible with missing enpara file',calledby='inpeig')
             END IF
 

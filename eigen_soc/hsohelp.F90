@@ -16,14 +16,8 @@ MODULE m_hsohelp
   !*********************************************************************
   !
 CONTAINS
-  SUBROUTINE hsohelp(&
-       DIMENSION,atoms,sym,&
-       input,lapw,nsz,&
-       cell,bkpt,&
-       z,usdus,&
-       zso,noco,oneD,&
-       kveclo,&
-       ahelp,bhelp,chelp)
+  SUBROUTINE hsohelp(DIMENSION,atoms,sym,input,lapw,nsz, cell,bkpt,&
+       l_real,z_r,z_c,usdus, zso,noco,oneD, kveclo, ahelp,bhelp,chelp)
     !
     USE m_abcof
     USE m_types
@@ -39,6 +33,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)        :: lapw
     !     ..
     !     .. Scalar Arguments ..
+    LOGICAL,INTENT(IN) :: l_real
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(DIMENSION%jspd)  
@@ -48,17 +43,15 @@ CONTAINS
     COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%natd, DIMENSION%jspd)
-#ifdef CPP_INVERSION
-    REAL    z(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
-#else
-    COMPLEX z(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
-#endif
+    REAL,INTENT(IN)      :: z_r(:,:,:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
+    COMPLEX,INTENT(IN)   :: z_c(:,:,:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
     !-odim
     !+odim
     !     ..
     !     .. Locals ..
     TYPE(t_atoms)   :: atoms_local
-    TYPE(t_noco)   :: noco_local
+    TYPE(t_noco)    :: noco_local
+    TYPE(t_zMat)    :: zMat_local
     INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(DIMENSION%jspd),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:)
@@ -84,53 +77,58 @@ CONTAINS
 
     ALLOCATE ( acof(DIMENSION%neigd,0:lmd,atoms%natd),bcof(DIMENSION%neigd,0:lmd,atoms%natd) )
     DO ispin = 1, input%jspins
-#if ( defined(CPP_INVERSION) && defined(CPP_SOC) )
-       zso(:,1:DIMENSION%neigd,ispin) = CMPLX(z(:,1:DIMENSION%neigd,ispin),0.0)
-       CALL abcof(&
-            atoms_local,neigd,sym,&
-            cell,&
-            bkpt,g1,g2,g3,nv1,lapw%nmat,nsz(ispin),zso(1,1,ispin),&
-            usdus%us(0,1,ispin),usdus%dus(0,1,ispin),usdus%uds(0,1,ispin),&
-            usdus%duds(0,1,ispin),usdus%ddn(0,1,ispin),&
-            usdus%ulos(1,1,ispin),usdus%uulon(1,1,ispin),usdus%dulon(1,1,ispin),&
-            usdus%dulos(1,1,ispin),&
-            noco_local,ispin,kveclo,oneD,&
-            acof,bcof,chelp(-llod,1,1,1,ispin))
-       !
-       ! transfer (a,b)cofs to (a,b)helps used in hsoham
-       !
-       DO ie = 1, DIMENSION%neigd
-          DO na = 1, atoms%natd
-             DO l = 1, atoms%lmaxd
-                ll1 = l*(l+1)
-                DO m = -l,l
-                   lm = ll1 + m
-                   ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na))
-                   bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na))
+       IF (l_real.AND.noco%l_soc) THEN
+          zso(:,1:DIMENSION%neigd,ispin) = CMPLX(z_r(:,1:DIMENSION%neigd,ispin),0.0)
+          zMat_local%l_real = .FALSE.
+          zMat_local%nbasfcn = DIMENSION%nbasfcn
+          zMat_local%nbands = DIMENSION%neigd
+          ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
+          zMat_local%z_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
+          CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
+               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,.false.)
+          DEALLOCATE(zMat_local%z_c)
+          !
+          !
+          ! transfer (a,b)cofs to (a,b)helps used in hsoham
+          !
+          DO ie = 1, DIMENSION%neigd
+             DO na = 1, atoms%natd
+                DO l = 1, atoms%lmaxd
+                   ll1 = l*(l+1)
+                   DO m = -l,l
+                      lm = ll1 + m
+                      ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na))
+                      bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na))
+                   ENDDO
                 ENDDO
              ENDDO
           ENDDO
-       ENDDO
-       chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
-#else
-       CALL abcof(atoms_local,dimension%neigd,sym,cell, bkpt,lapw,nsz(ispin),z(:,:,ispin),&
-            usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin))
-       !
-       ! transfer (a,b)cofs to (a,b)helps used in hsoham
-       !
-       DO ie = 1, DIMENSION%neigd
-          DO na = 1, atoms%natd
-             DO l = 1, atoms%lmaxd
-                ll1 = l*(l+1)
-                DO m = -l,l
-                   lm = ll1 + m
-                   ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na))
-                   bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na))
+          chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
+       ELSE
+          zMat_local%l_real = l_real
+          zMat_local%nbasfcn = DIMENSION%nbasfcn
+          zMat_local%nbands = DIMENSION%neigd
+          ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
+          zMat_local%z_c(:,:) = z_c(:,:,ispin)
+          CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
+               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,.false.)
+          DEALLOCATE(zMat_local%z_c)
+          !
+          ! transfer (a,b)cofs to (a,b)helps used in hsoham
+          !
+          DO ie = 1, DIMENSION%neigd
+             DO na = 1, atoms%natd
+                DO l = 1, atoms%lmaxd
+                   ll1 = l*(l+1)
+                   DO m = -l,l
+                      lm = ll1 + m
+                      ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na))
+                      bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na))
+                   ENDDO
                 ENDDO
              ENDDO
           ENDDO
-       ENDDO
-#endif
+       ENDIF
        !      write(54,'(6f15.8)')(((chelp(m,ie,1,na,1),m=-1,1),ie=1,5),na=1,2)
        !      write(54,'(8f15.8)')(((acof(ie,l,na),l=0,3),ie=1,5),na=1,2)
     ENDDO    ! end of spin loop (ispin)

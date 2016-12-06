@@ -86,11 +86,6 @@ CONTAINS
        RETURN
     END IF
 
-    !#ifdef CPP_CORE
-    !      IF (jspin.EQ.1) THEN
-    !        OPEN (45,file='slaterf',form='formatted',status='unknown')
-    !      ENDIF
-    !#endif
     !     ---> set up densities
     DO  jatom = 1,atoms%ntype
        sume = 0.
@@ -116,41 +111,38 @@ CONTAINS
           vrd(j) = vr(j,jatom)
        ENDDO
        !
-#ifdef CPP_CORE
-       !--->    linear extension of the potential with slope t1 / a.u.
-       t1=0.125
-       t1 = MAX( (vrd(atoms%jri(jatom)) - vrd(atoms%jri(jatom)-1)*d)*&
-            d / (atoms%rmt(jatom)**2 * (d-1) ) , t1)
-       t2=vrd(atoms%jri(jatom))/atoms%rmt(jatom)-atoms%rmt(jatom)*t1
-       rr = atoms%rmt(jatom)
-#else
-       t2 = vrd(atoms%jri(jatom)) / ( atoms%jri(jatom) - ncmsh )
-#endif
+       IF (input%l_core_confpot) THEN
+          !--->    linear extension of the potential with slope t1 / a.u.
+          t1=0.125
+          t1 = MAX( (vrd(atoms%jri(jatom)) - vrd(atoms%jri(jatom)-1)*d)*&
+               d / (atoms%rmt(jatom)**2 * (d-1) ) , t1)
+          t2=vrd(atoms%jri(jatom))/atoms%rmt(jatom)-atoms%rmt(jatom)*t1
+          rr = atoms%rmt(jatom)
+       ELSE
+          t2 = vrd(atoms%jri(jatom)) / ( atoms%jri(jatom) - ncmsh )
+       ENDIF
        IF ( atoms%jri(jatom) .LT. ncmsh) THEN
           DO  i = atoms%jri(jatom) + 1,ncmsh
              rhoss(i) = 0.
-#ifdef CPP_CORE
-             rr = d*rr
-             vrd(i) = rr*( t2 + rr*t1 )
-             !               vrd(i) = 2*vrd(jri(jatom)) - rr*( t2 + rr*t1 )
-#else
-             vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
-#endif
+             IF (input%l_core_confpot) THEN
+                rr = d*rr
+                vrd(i) = rr*( t2 + rr*t1 )
+                !               vrd(i) = 2*vrd(jri(jatom)) - rr*( t2 + rr*t1 )
+             ELSE
+                vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
+             ENDIF
              !
           ENDDO
        END IF
 
-       !#ifndef CPP_CORE
        nst = atoms%ncst(jatom)        ! for lda+U
-       !#endif
+
        IF (input%gw.EQ.1 .OR. input%gw.EQ.3)&
             &                      WRITE(15) nst,atoms%rmsh(1:atoms%jri(jatom),jatom)
 
        stateEnergies = 0.0
        DO  korb = 1,nst
-          !#ifndef CPP_CORE
           IF (occ(korb).EQ.0) CYCLE
-          !#endif
           fn = nprnc(korb)
           fj = iabs(kappa(korb)) - .5e0
           weight = 2*fj + 1.e0
@@ -170,9 +162,6 @@ CONTAINS
              rhcs(j) = weight* (a(j)**2+b(j)**2)
              rhoss(j) = rhoss(j) + rhcs(j)
           ENDDO
-          !#ifdef CPP_CORE
-          !            ENDIF
-          !#endif
        ENDDO
 
        !     ---->update spherical charge density rho with the core density.
@@ -221,8 +210,8 @@ CONTAINS
        WRITE(attributes(5),'(f18.10)') sume
        WRITE(attributes(6),'(f9.6)') q/input%jspins
        CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
-                                              'eigValSum    ','lostElectrons'/),&
-                               attributes,reshape((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))
+            'eigValSum    ','lostElectrons'/),&
+            attributes,RESHAPE((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))
        DO korb = 1, atoms%ncst(jatom)
           fj = iabs(kappa(korb)) - .5e0
           weight = 2*fj + 1.e0
@@ -235,16 +224,11 @@ CONTAINS
           WRITE(attributes(4),'(f20.10)') stateEnergies(korb)
           WRITE(attributes(5),'(f15.10)') weight
           CALL writeXMLElementForm('state',(/'n     ','l     ','j     ','energy','weight'/),&
-                                   attributes(1:5),reshape((/1,1,1,6,6,2,2,4,20,15/),(/5,2/)))
+               attributes(1:5),RESHAPE((/1,1,1,6,6,2,2,4,20,15/),(/5,2/)))
        END DO
        CALL closeXMLElement('coreStates')
     ENDDO
 
-#ifdef CPP_CORE
-    IF (jspin.EQ.input%jspins) THEN
-       CLOSE (45)
-    ENDIF
-#endif
 
     !      qint=0.
     WRITE (17) (qint(n,jspin),n=1,atoms%ntype)
@@ -260,6 +244,6 @@ CONTAINS
 8030 FORMAT (10x,'atom type',i3,'  (spin',i2,') ',/,10x,&
          &       'kinetic energy=',e20.12,5x,'sum of the eigenvalues=',&
          &       e20.12)
-  END subroutine cored
+  END SUBROUTINE cored
 END MODULE m_cored
 

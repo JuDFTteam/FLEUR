@@ -10,16 +10,13 @@ MODULE m_hsmt_nonsph
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
-       hlpmsize,noco,l_socfirst, lapw, cell,tlmplm, fj,gj,gk,vk,oneD,aa)
+       hlpmsize,noco,l_socfirst, lapw, cell,tlmplm, fj,gj,gk,vk,oneD,l_real,aa_r,aa_c)
 
 #include"cpp_double.h"
     USE m_constants, ONLY : tpi_const
     USE m_ylm
     USE m_hsmt_spinor
-
-#ifndef CPP_INVERSION
     USE m_hsmt_hlptomat
-#endif
     USE m_types
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN):: DIMENSION
@@ -44,11 +41,9 @@ CONTAINS
     REAL,INTENT(IN)      :: gk(:,:,:),vk(:,:,:)
     !-odim
     !+odim
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:)
-#endif
+    LOGICAL, INTENT(IN)     :: l_real
+    REAL,    INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX, INTENT (INOUT) :: aa_c(:)
     COMPLEX,PARAMETER :: one=CMPLX(1.0,0.0),zero=CMPLX(0.0,0.0)
 
     !     ..
@@ -234,10 +229,10 @@ CONTAINS
                                aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:DIMENSION%lmd)),b(ki,:lmp,iintsp))
                                !--->                   spin-down spin-down part
                                ij = ii + lapw%nv(1)
-                               aa(ij+1:ij+ki)=aa(ij+1:ij+ki)+chi22*aa_tmphlp(:ki)
+                               aa_c(ij+1:ij+ki)=aa_c(ij+1:ij+ki)+chi22*aa_tmphlp(:ki)
                                !--->                   spin-down spin-up part, lower triangle
                                ij =  ii
-                               aa(ij+1:ij+ki)=aa(ij+1:ij+ki)+chi21*aa_tmphlp(:ki)
+                               aa_c(ij+1:ij+ki)=aa_c(ij+1:ij+ki)+chi21*aa_tmphlp(:ki)
                             ENDIF
                             !-||
                          ELSEIF ( noco%l_noco .AND. noco%l_ss ) THEN
@@ -258,13 +253,16 @@ CONTAINS
                                chihlp = chi21
                                ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
                             ENDIF
-                            aa(ii+1:ii+kjmax) = aa(ii+1:ii+kjmax) + chihlp*&
+                            aa_c(ii+1:ii+kjmax) = aa_c(ii+1:ii+kjmax) + chihlp*&
                                  (MATMUL(CONJG(ax(:kjmax,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:kjmax,:lmp)),b(ki,:lmp,iintsp)))
                          ELSE
                             nc = 1+kii/n_size
                             ii = nc*(nc-1)/2*n_size- (nc-1)*(n_size-n_rank-1)
-                            aa(ii+1:ii+ki) = aa(ii+1:ii+ki) + aa_block(kb,:ki)
-
+                            if (l_real) THEN
+                               aa_r(ii+1:ii+ki) = aa_r(ii+1:ii+ki) + aa_block(kb,:ki)
+                            ELSE
+                               aa_c(ii+1:ii+ki) = aa_c(ii+1:ii+ki) + aa_block(kb,:ki)
+                            endif
                             !print*,ii,ki,kb
                             !                           IF (.not.apw(l)) THEN
                             !aa(ii+1:ii+ki) = aa(ii+1:ii+ki) + b(ki,lmp,iintsp)*bx(:ki)
@@ -281,9 +279,7 @@ CONTAINS
           ENDIF              ! atoms%invsat(na) = 0 or 1
           !--->    end loop over equivalent atoms
        END DO
-#ifndef CPP_INVERSION
-       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa)
-#endif            
+       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa_c)
        !---> end loop over atom types (ntype)
     ENDDO ntyploop
 

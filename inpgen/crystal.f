@@ -61,7 +61,7 @@
 
 !===> Local Variables
       LOGICAL lerr,err_setup,invsym
-      INTEGER i,j,n,m,na,nt,mdet,mtr,nop0,fh
+      INTEGER i,j,k,n,m,na,nt,mdet,mtr,nop0,fh,inversionOp
       REAL    t,volume,eps7,eps12
 
       INTEGER optype(nop48)
@@ -170,6 +170,44 @@
      >                atomid,atompos,natin,nop48,neig12,
      <                ntype,nat,nops,mrot,tau,
      <                neq,ntyrep,zatom,natype,natrep,natmap,pos)
+         ! Check whether there is an inversion center that is not at the
+         ! origin and if one is found shift the crystal such that the
+         ! inversion is with respect to the origin. Then recalculate
+         ! symmetry operations.
+         inversionOp = -1
+         symOpLoop: DO k = 1, nops
+            DO i = 1, 3
+               DO j = 1, 3
+                  IF (i.EQ.j) THEN
+                     IF (mrot(i,j,k).NE.-1) CYCLE symOpLoop
+                  ELSE
+                     IF (mrot(i,j,k).NE.0) CYCLE symOpLoop
+                  END IF
+                  IF ((i.EQ.3).AND.(j.EQ.3)) THEN
+                     inversionOp = k
+                     EXIT symOpLoop
+                  END IF
+               END DO
+            END DO
+         END DO symOpLoop
+         IF (inversionOp.GT.0) THEN
+            IF(ANY(ABS(tau(:,inversionOp)).GT.eps7)) THEN
+               WRITE(*,*) 'Found inversion center at finite position.'
+               WRITE(*,*) 'Shifting crystal by:'
+               WRITE(*,'(3f15.10)') 0.5*tau(:,inversionOp)
+               WRITE(*,*) ''
+               DO k = 1, ABS(natin)
+                  atompos(:,k) = atompos(:,k) + 0.5*tau(:,inversionOp)
+               END DO
+               DEALLOCATE(neq,ntyrep,zatom,mrot,tau)
+               CALL spg_gen(
+     >                      dispfh,outfh,errfh,dispfn,
+     >                      .FALSE.,symor,as,bs,scale,
+     >                      atomid,atompos,natin,nop48,neig12,
+     <                      ntype,nat,nops,mrot,tau,
+     <                      neq,ntyrep,zatom,natype,natrep,natmap,pos)
+            END IF
+         END IF
       ENDIF
 
       WHERE ( abs( tau ) < eps7 ) tau = 0.00

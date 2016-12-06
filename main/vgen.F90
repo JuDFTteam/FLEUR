@@ -49,9 +49,7 @@ CONTAINS
     USE m_cfft
     USE m_sphpts
     USE m_points
-#ifdef CPP_VDW
     USE m_fleur_vdw
-#endif
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_xcpot),INTENT(IN)        :: xcpot
@@ -238,12 +236,6 @@ CONTAINS
          qpw,rho,rht,l_xyav, psq)
     CALL timestop("psqpw")
     IF (mpi%irank == 0) THEN
-#ifdef CPP_GF
-       OPEN (12,file='gf_pseudo',form='unformatted')
-       WRITE (12) stars%n3d
-       WRITE (12) psq
-       CLOSE (12)
-#endif
 
        IF (l_xyav) THEN        ! write out xy-averaged density & stop
           CALL xy_av_den(stars,vacuum, cell,psq,rht)
@@ -336,12 +328,6 @@ CONTAINS
           vpw(2:stars%ng3,1)=fpi_const*psq(2:stars%ng3)/(stars%sk3(2:stars%ng3)*stars%sk3(2:stars%ng3))       
        END IF
 
-#ifdef CPP_GF
-       OPEN  (12,file='gf_coulpot',form='unformatted')
-       WRITE (12) stars%n3d
-       WRITE (12) vpw
-       CLOSE (12)
-#endif
        CALL timestop("p int")
 
     ENDIF ! mpi%irank == 0
@@ -434,18 +420,16 @@ CONTAINS
 
           CALL timestop("int_nv")
 
-#ifdef CPP_VDW
           INQUIRE(file='vdW_kernel_table',exist=l_vdw)
           IF (l_vdw) THEN
 
              CALL timestart("fleur_vdW")
              ! calculate vdW contribution to potential
              CALL fleur_vdW(mpi,atoms,sphhar,stars, input,dimension,&
-                  cell,sym,oneD,vacuum, qpw(:,1),rho(:,:,:,1), vpw_w(:,1),vr(:,:,:,1))
+                  cell,sym,oneD,vacuum, qpw(:,1),rho(:,:,:,1), vpw_w(:,1),vr(:,:,:,:))
              CALL timestop("fleur_vdW")
 
           ENDIF
-#endif
 
        END IF
        !ENDIF !irank==0
@@ -884,12 +868,6 @@ CONTAINS
 
           ENDDO     ! js =1,input%jspins
 
-#ifdef CPP_GF
-          OPEN(12,file='gf_intpot',form='unformatted',status='replace')
-          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-               12, iter,vr,vpw,vz,vxy)
-          CLOSE(12)
-#endif
 
           IF ((.NOT.reap).OR.(noco%l_noco)) THEN
              IF (input%total) THEN

@@ -140,7 +140,7 @@ CONTAINS
 
     IF (lconv) THEN
        WRITE (6,'(a)') "Des woars!"
-       CALL juDFT_end(" GEO Des woars ", 1) ! The 1 is temporarily. Should be mpi%irank.
+       CALL juDFT_end(" GEO Des woars ", 0) ! The 0 is temporarily. Should be mpi%irank.
     ELSE
        na = 0
        DO itype=1,atoms%ntype

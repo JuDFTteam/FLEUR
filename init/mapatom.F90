@@ -5,8 +5,7 @@
 !     atom into its equivalent atoms     c.l.fu
 !*******************************************************************
       CONTAINS
-      SUBROUTINE mapatom(&
-     &                   sym,atoms,cell,input,noco)
+      SUBROUTINE mapatom(sym,atoms,cell,input,noco)
 !
 !     if (l_f) setup multab,invtab,invarop,invarind for force_a12 & 21
 !***********************************************************************
@@ -214,9 +213,7 @@
          atoms%invsat(na) = 0
          sym%invsatnr(na) = 0
       END DO
-!#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) ) ! soc moved to main gb`02
-                                                     ! before call eigenso 
-#if ( defined(CPP_INVERSION) )                                                                         
+
       IF (sym%invs) THEN
          WRITE (6,FMT=*)
          nat1 = 1
@@ -251,11 +248,10 @@
             END DO
             nat1 = nat1 + atoms%neq(n)
          END DO
-      END IF
       WRITE (6,FMT=*) atoms%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3,&
      &       ' via 3d inversion')
-#endif
-
+      END IF
+ 
       END  SUBROUTINE mapatom
       END  MODULE m_mapatom

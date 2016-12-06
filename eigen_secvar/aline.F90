@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,DIMENSION,sym,&
-       cell,input, jsp,el,usdus, a,b,lapw,tlmplm, noco, oneD, bkpt,z,eig,ne)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD, bkpt,eig,ne,zMat,a_r,b_r,a_c,b_c)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -44,6 +44,8 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)       :: usdus
     TYPE(t_tlmplm),INTENT(IN)      :: tlmplm
     TYPE(t_lapw),INTENT(INOUT)     :: lapw
+    TYPE(t_zMat),INTENT(INOUT)     :: zMat
+
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
@@ -53,13 +55,9 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (IN)  :: a(:),b(:)!(matsize)
-    REAL,    INTENT (OUT) :: z(DIMENSION%nbasfcn,DIMENSION%neigd)
-#else
-    COMPLEX, INTENT (IN)  :: a(:),b(:)!(matsize)
-    COMPLEX, INTENT (OUT) :: z(DIMENSION%nbasfcn,DIMENSION%neigd)
-#endif
+    REAL,OPTIONAL,    INTENT (IN)  :: a_r(:),b_r(:)!(matsize)
+    COMPLEX,OPTIONAL, INTENT (IN)  :: a_c(:),b_c(:)!(matsize)
+
     !     ..
     !     .. Local Scalars ..
     INTEGER lhelp
@@ -68,110 +66,102 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER kveclo(atoms%nlotot)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
-#ifdef CPP_INVERSION
-    REAL,      PARAMETER :: one=1.0, zro=0.0
-    REAL,    ALLOCATABLE :: help(:),h(:,:),s(:,:) 
+
+    REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:) 
     REAL     CPP_BLAS_sdot
     EXTERNAL CPP_BLAS_sdot,CPP_BLAS_sspmv
-#else
-    COMPLEX,   PARAMETER :: one=(1.0,0.0), zro=(0.0,0.0)
-    COMPLEX, ALLOCATABLE :: help(:),h(:,:),s(:,:) 
+
+    COMPLEX,   PARAMETER :: one_c=(1.0,0.0), zro_c=(0.0,0.0)
+    COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:) 
     COMPLEX  CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc,CPP_BLAS_chpmv
     REAL,    ALLOCATABLE :: rwork(:)
-#endif
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     REAL     zhlp(DIMENSION%nbasfcn,DIMENSION%neigd)
-#else
-    COMPLEX  zhlp(DIMENSION%nbasfcn,DIMENSION%neigd)
-#endif
 
-    !     ..
-    !     .. External Subroutines ..
-    EXTERNAL CPP_LAPACK_ssygv
-    !     ..
-    !
+    LOGICAL:: l_real
+    l_real=zMat%l_real
 
-    CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat,&
-         &      eig=eig,kveclo=kveclo,z=z)
-#ifndef CPP_INVERSION
-    !     in outeig z is complex conjugated to make it usable for abcof. Here we 
-    !                       first have to undo this  complex conjugation for the 
-    z = CONJG(z)    ! multiplication with a and b matrices.
-#endif
 
-    !
-    ALLOCATE ( h(DIMENSION%neigd,DIMENSION%neigd),s(DIMENSION%neigd,DIMENSION%neigd) )
-    h = zro ; s=zro
-    IF (lapw%nmat.GT.(DIMENSION%neigd+2)*DIMENSION%neigd) THEN
-       ALLOCATE ( help(lapw%nmat) )
+    lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
+    IF (l_real) THEN
+       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_r)
+       ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
+       h_r = 0.0 ; s_r=0.0
+       ALLOCATE ( help_r(lhelp) )
     ELSE
-       ALLOCATE ( help((DIMENSION%neigd+2)*DIMENSION%neigd) )
-    ENDIF
-    lhelp= (DIMENSION%neigd+2)*DIMENSION%neigd
+       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_c)
 
+       !     in outeig z is complex conjugated to make it usable for abcof. Here we 
+       !                       first have to undo this  complex conjugation for the 
+       zMat%z_c = CONJG(zMat%z_c)    ! multiplication with a and b matrices.
+       ALLOCATE ( h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd) )
+       h_c = 0.0 ; s_c=0.0
+       ALLOCATE ( help_r(lhelp) )
+    ENDIF
     !
     DO i = 1,ne
-#ifdef CPP_INVERSION
-       CALL CPP_BLAS_sspmv('U',lapw%nmat,one,a,z(1,i),1,zro,help,1)
-#else
-       CALL CPP_BLAS_chpmv('U',lapw%nmat,one,a,z(1,i),1,zro,help,1)
-#endif
+       IF (l_real) THEN
+          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,a_r,zMat%z_r(1,i),1,0.0,help_r,1)
+       ELSE
+          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,a_c,zMat%z_c(1,i),1,zro_c,help_c,1)
+       ENDIF
        DO j = i,ne
-#ifdef CPP_INVERSION
-          h(j,i) = CPP_BLAS_sdot(lapw%nmat,z(1,j),1,help,1)
-#else
-          h(j,i) = CPP_BLAS_cdotc(lapw%nmat,z(1,j),1,help,1)
-#endif
+          IF (l_real) THEN
+             h_r(j,i) = CPP_BLAS_sdot(lapw%nmat,zMat%z_r(1,j),1,help_r,1)
+          ELSE
+             h_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,zMat%z_c(1,j),1,help_c,1)
+          ENDIF
        END DO
     END DO
 
     DO i = 1,ne
-#ifdef CPP_INVERSION
-       CALL CPP_BLAS_sspmv('U',lapw%nmat,one,b,z(1,i),1,zro,help,1)
-#else
-       CALL CPP_BLAS_chpmv('U',lapw%nmat,one,b,z(1,i),1,zro,help,1)
-#endif
+       IF (l_real) THEN
+          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,b_r,zMat%z_r(1,i),1,0.0,help_r,1)
+       ELSE
+          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,b_c,zMat%z_c(1,i),1,zro_c,help_c,1)
+       ENDIF
        DO j = i,ne
-#ifdef CPP_INVERSION
-          s(j,i) = CPP_BLAS_sdot(lapw%nmat,z(1,j),1,help,1)
-#else
-          s(j,i) = CPP_BLAS_cdotc(lapw%nmat,z(1,j),1,help,1)
-#endif
+          IF (l_real) THEN
+             s_r(j,i) = CPP_BLAS_sdot(lapw%nmat,zMat%z_r(1,j),1,help_r,1)
+          ELSE
+             s_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,zMat%z_c(1,j),1,help_c,1)
+          ENDIF
        END DO
     END DO
 
     ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd) )
     ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%natd) ) 
-#ifndef CPP_INVERSION
+
     !     conjugate again for use with abcof; finally use cdotc to revert again
-    z = CONJG(z)
-#endif
-#ifdef CPP_SOC
-    CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
-#else
-    CALL abcof(atoms,dimension%neigd,sym,cell, bkpt,lapw,ne,z,&
-         usdus,noco,1,kveclo,oneD,acof,bcof,ccof)  ! ispin = 1&
-         
-#endif
+    IF (.NOT.l_real) zMat%z_c = CONJG(zMat%z_c)
+    if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
+
+    CALL abcof(input,atoms,DIMENSION%neigd,sym,cell, bkpt,lapw,ne,&
+         usdus,noco,1,kveclo,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
+
+
     !
     CALL timestart("aline: hssr_wu")
-    CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
-         tlmplm, acof,bcof,ccof, h,s)
+    IF (l_real) THEN
+       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
+            tlmplm, acof,bcof,ccof, h_r,s_r)
+    ELSE
+       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
+            tlmplm, acof,bcof,ccof, h_c=h_c,s_c=s_c)
+    ENDIF
 
     DEALLOCATE ( ccof, bcof, acof )
     CALL timestop("aline: hssr_wu")
     CALL timestart("aline: seclr4")
 
     !
-#ifdef CPP_INVERSION
-    !---> LAPACK call
-    CALL CPP_LAPACK_ssygv(1,'V','L',ne,h,DIMENSION%neigd,s,DIMENSION%neigd,eig,help,lhelp,info)
-#else
-    ALLOCATE ( rwork(MAX(1,3*ne-2)) )
-    CALL CPP_LAPACK_chegv(1,'V','L',ne,h,DIMENSION%neigd,s,DIMENSION%neigd,eig,help,lhelp,rwork,info)
-    DEALLOCATE ( rwork )
-#endif
+    IF (l_real) THEN
+       !---> LAPACK call
+       CALL CPP_LAPACK_ssygv(1,'V','L',ne,h_r,DIMENSION%neigd,s_r,DIMENSION%neigd,eig,help_r,lhelp,info)
+    ELSE
+       ALLOCATE ( rwork(MAX(1,3*ne-2)) )
+       CALL CPP_LAPACK_chegv(1,'V','L',ne,h_c,DIMENSION%neigd,s_c,DIMENSION%neigd,eig,help_c,lhelp,rwork,info)
+       DEALLOCATE ( rwork )
+    ENDIF
     IF (info /= 0) THEN
        WRITE (6,FMT=8000) info
        IF (i < 0) THEN
@@ -187,19 +177,20 @@ CONTAINS
     CALL timestop("aline: seclr4")
 
     DO i = 1,lapw%nmat
+       IF (l_real) THEN
+          help_r(:ne)=zMat%z_r(i,:ne)
+       ELSE
+          help_c(:ne)=zMat%z_c(i,:ne)
+       END IF
        DO j = 1,ne
-          help(j) = z(i,j)
-       END DO
-       DO j = 1,ne
-#ifdef CPP_INVERSION
-          !--->       for LAPACK call
-          z(i,j) = CPP_BLAS_sdot(ne,help,1,h(1,j),1)
-#else
-          z(i,j) = CPP_BLAS_cdotc(ne,help,1,h(1,j),1)
-#endif
+          IF (l_real) THEN
+             !--->       for LAPACK call
+             zMat%z_r(i,j) = CPP_BLAS_sdot(ne,help_r,1,h_r(1,j),1)
+          ELSE
+             zMat%z_c(i,j) = CPP_BLAS_cdotc(ne,help_c,1,h_c(1,j),1)
+          ENDIF
        END DO
     END DO
-    DEALLOCATE ( help,h,s )
 
   END SUBROUTINE aline
 END MODULE m_aline

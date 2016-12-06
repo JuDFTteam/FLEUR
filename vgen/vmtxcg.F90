@@ -276,24 +276,10 @@ CONTAINS
                &            '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
                &            nsp,lwbc,((ch(k,js),k=1,nsp),js=1,input%jspins)
 
-#ifdef CPP_600
-#endif
           CALL vxcallg(&
                &                 xcpot%icorr,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
                &                 vx,vxc)!keep
-#ifdef CPP_600
-          IF (atoms%jri(n) < 600) THEN
-          ELSE
-             CALL vxcallg(&
-                  &                 -1,lwbc,input%jspins,nsp,ch,agr,agru,agrd,&
-                  &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-                  &                 vxl,vxcl)!keep
-             divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
-             vxc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
-                  &                  vxc(:,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
-          ENDIF
-#endif
 
           IF (mod(jr,1000).eq.0)&
                &              WRITE (6,'(/'' 999vxc''/(10d15.7))')&
@@ -349,25 +335,10 @@ CONTAINS
                   &               '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
                   &               nsp,((ch(k,js),k=1,nsp),js=1,input%jspins)
 
-#ifdef CPP_600
-#endif
              CALL excallg(xcpot%icorr,lwbc,input%jspins,nsp,&
                   &                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
                   &                   gggr,gggru,gggrd,gzgr,&
                   &                   exc)!keep
-#ifdef CPP_600
-             IF (atoms%jri(n) < 600) THEN
-             ELSE
-                CALL excallg(-1,lwbc,input%jspins,nsp,&
-                     &                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
-                     &                   gggr,gggru,gggrd,gzgr,&
-                     &                   excl)!keep
-
-                divi = 1.0 / ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
-                exc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
-                     &                exc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
-             ENDIF
-#endif
 
 
              IF (mod(jr,10000).EQ.0)&

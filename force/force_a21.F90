@@ -1,7 +1,7 @@
 MODULE m_forcea21
 CONTAINS
   SUBROUTINE force_a21(&
-       atoms,dimension,nobd,sym,oneD,cell,&
+       input,atoms,DIMENSION,nobd,sym,oneD,cell,&
        we,jsp,epar,ne,eig,usdus,&
        acof,bcof,ccof,aveccof,bveccof,cveccof, results,f_a21,f_b4)
 
@@ -29,9 +29,9 @@ CONTAINS
     USE m_types
     USE m_constants
     IMPLICIT NONE
-
+    TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_results),INTENT(INOUT):: results
-    TYPE(t_dimension),INTENT(IN) :: dimension
+    TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_cell),INTENT(IN)      :: cell
@@ -44,7 +44,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(nobd),epar(0:atoms%lmaxd,atoms%ntypd)
-    REAL,    INTENT (IN) :: eig(dimension%neigd)  
+    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
     COMPLEX, INTENT (INOUT) :: f_a21(3,atoms%ntypd),f_b4(3,atoms%ntypd)
     COMPLEX, INTENT (IN) :: acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2) ,atoms%natd)
     COMPLEX, INTENT (IN) :: bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
@@ -57,10 +57,10 @@ CONTAINS
     INTEGER, PARAMETER :: lmaxb=3
     COMPLEX dtd,dtu,utd,utu
     INTEGER lo, mlotot, mlolotot, mlot_d, mlolot_d
-    INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom
+    INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m
     INTEGER natrun,is,isinv,j,irinv,it
     REAL   ,PARAMETER:: zero=0.0
-    COMPLEX,PARAMETER:: czero=cmplx(0.,0.)
+    COMPLEX,PARAMETER:: czero=CMPLX(0.,0.)
     !     ..
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: v_mmp(:,:)
@@ -78,15 +78,15 @@ CONTAINS
        mlotot = mlotot + atoms%nlo(n)
        mlolotot = mlolotot + atoms%nlo(n)*(atoms%nlo(n)+1)/2
     ENDDO
-    mlot_d = max(mlotot,1)
-    mlolot_d = max(mlolotot,1)
-    ALLOCATE ( tlmplm%tdd(0:dimension%lmplmd,atoms%ntype,1),tlmplm%tuu(0:dimension%lmplmd,atoms%ntype,1),&
-         tlmplm%tdu(0:dimension%lmplmd,atoms%ntype,1),tlmplm%tud(0:dimension%lmplmd,atoms%ntype,1),&
-         tlmplm%tuulo(0:dimension%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
-         tlmplm%tdulo(0:dimension%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
+    mlot_d = MAX(mlotot,1)
+    mlolot_d = MAX(mlolotot,1)
+    ALLOCATE ( tlmplm%tdd(0:DIMENSION%lmplmd,atoms%ntype,1),tlmplm%tuu(0:DIMENSION%lmplmd,atoms%ntype,1),&
+         tlmplm%tdu(0:DIMENSION%lmplmd,atoms%ntype,1),tlmplm%tud(0:DIMENSION%lmplmd,atoms%ntype,1),&
+         tlmplm%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
+         tlmplm%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
          tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
          v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb),&
-         a21(3,atoms%natd),b4(3,atoms%natd),tlmplm%ind(0:dimension%lmd,0:dimension%lmd,atoms%ntype,1) )
+         a21(3,atoms%natd),b4(3,atoms%natd),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
     !
     natom = 1
     DO  n = 1,atoms%ntype
@@ -95,7 +95,7 @@ CONTAINS
           forc_b4(:) = czero
 
 
-          call read_tlmplm(n,jsp,atoms%nlo,atoms%lda_u%l.ge.0,&
+          CALL read_tlmplm(n,jsp,atoms%nlo,atoms%lda_u%l.GE.0,&
                tlmplm%tuu(:,n,1),tlmplm%tud(:,n,1),tlmplm%tdu(:,n,1),tlmplm%tdd(:,n,1),&
                tlmplm%ind(:,:,n,1),tlmplm%tuulo(:,:,:,1),tlmplm%tuloulo(:,:,:,1),tlmplm%tdulo(:,:,:,1),v_mmp)
 
@@ -138,17 +138,17 @@ CONTAINS
                                   dtd = tlmplm%tdd(in,n,1)
                                ELSE
                                   im = -in
-                                  utu = conjg(tlmplm%tuu(im,n,1))
-                                  dtd = conjg(tlmplm%tdd(im,n,1))
-                                  utd = conjg(tlmplm%tdu(im,n,1))
-                                  dtu = conjg(tlmplm%tud(im,n,1))
+                                  utu = CONJG(tlmplm%tuu(im,n,1))
+                                  dtd = CONJG(tlmplm%tdd(im,n,1))
+                                  utd = CONJG(tlmplm%tdu(im,n,1))
+                                  dtu = CONJG(tlmplm%tud(im,n,1))
                                END IF
                                DO i = 1,3
                                   a21(i,natrun) = a21(i,natrun) + 2.0*&
-                                       aimag( conjg(acof(ie,lm1,natrun)) *utu*aveccof(i,ie,lm2,natrun)&
-                                       +conjg(acof(ie,lm1,natrun)) *utd*bveccof(i,ie,lm2,natrun)&
-                                       +conjg(bcof(ie,lm1,natrun)) *dtu*aveccof(i,ie,lm2,natrun)&
-                                       +conjg(bcof(ie,lm1,natrun)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
+                                       AIMAG( CONJG(acof(ie,lm1,natrun)) *utu*aveccof(i,ie,lm2,natrun)&
+                                       +CONJG(acof(ie,lm1,natrun)) *utd*bveccof(i,ie,lm2,natrun)&
+                                       +CONJG(bcof(ie,lm1,natrun)) *dtu*aveccof(i,ie,lm2,natrun)&
+                                       +CONJG(bcof(ie,lm1,natrun)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
                                   !   END i loop
                                END DO
                             END IF
@@ -167,10 +167,10 @@ CONTAINS
                    DO i = 1,3
                       DO natrun = natom,natom + atoms%neq(n) - 1
                          a21(i,natrun) = a21(i,natrun) + 2.0*&
-                              aimag(conjg(acof(ie,lm1,natrun)) *utu*aveccof(i,ie,lm1,natrun)&
-                              +conjg(acof(ie,lm1,natrun)) *utd*bveccof(i,ie,lm1,natrun)&
-                              +conjg(bcof(ie,lm1,natrun)) *dtu*aveccof(i,ie,lm1,natrun)&
-                              +conjg(bcof(ie,lm1,natrun)) *dtd*bveccof(i,ie,lm1,natrun)&
+                              AIMAG(CONJG(acof(ie,lm1,natrun)) *utu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(acof(ie,lm1,natrun)) *utd*bveccof(i,ie,lm1,natrun)&
+                              +CONJG(bcof(ie,lm1,natrun)) *dtu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(bcof(ie,lm1,natrun)) *dtd*bveccof(i,ie,lm1,natrun)&
                               )*we(ie) /atoms%neq(n)
                       END DO
                       !
@@ -187,64 +187,63 @@ CONTAINS
           !--->    add the local orbital and U contribution to a21
           !
           CALL force_a21_lo(nobd,atoms,jsp,n,we,eig,ne,&
-                            acof,bcof,ccof,aveccof,bveccof,&
-                            cveccof, tlmplm,usdus, a21)
+               acof,bcof,ccof,aveccof,bveccof,&
+               cveccof, tlmplm,usdus, a21)
 
           CALL force_a21_U(nobd,atoms,lmaxb,n,jsp,we,ne,&
-                           usdus,v_mmp,acof,bcof,ccof,&
-                           aveccof,bveccof,cveccof, a21)
-
-#ifdef CPP_APW
-          ! -> B4 force
-          DO ie = 1,ne
-             DO l1 = 0,atoms%lmax(n)
-                ll1 = l1* (l1+1)
-                DO m1 = -l1,l1
-                   lm1 = ll1 + m1
-                   DO i = 1,3
-                      DO natrun = natom,natom + atoms%neq(n) - 1
-                         b4(i,natrun) = b4(i,natrun) + 0.5 *&
-                              we(ie)/atoms%neq(n)*atoms%rmt(n)**2*aimag(&
-                              conjg(acof(ie,lm1,natrun)*usdus%us(l1,n,jsp)&
-                              +bcof(ie,lm1,natrun)*usdus%uds(l1,n,jsp))*&
-                              (aveccof(i,ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
-                              +bveccof(i,ie,lm1,natrun)*usdus%duds(l1,n,jsp) )&
-                              -conjg(aveccof(i,ie,lm1,natrun)*usdus%us(l1,n,jsp)&
-                              +bveccof(i,ie,lm1,natrun)*usdus%uds(l1,n,jsp) )*&
-                              (acof(ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
-                              +bcof(ie,lm1,natrun)*usdus%duds(l1,n,jsp)) )
+               usdus,v_mmp,acof,bcof,ccof,&
+               aveccof,bveccof,cveccof, a21)
+          IF (input%l_useapw) THEN
+             ! -> B4 force
+             DO ie = 1,ne
+                DO l1 = 0,atoms%lmax(n)
+                   ll1 = l1* (l1+1)
+                   DO m1 = -l1,l1
+                      lm1 = ll1 + m1
+                      DO i = 1,3
+                         DO natrun = natom,natom + atoms%neq(n) - 1
+                            b4(i,natrun) = b4(i,natrun) + 0.5 *&
+                                 we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
+                                 CONJG(acof(ie,lm1,natrun)*usdus%us(l1,n,jsp)&
+                                 +bcof(ie,lm1,natrun)*usdus%uds(l1,n,jsp))*&
+                                 (aveccof(i,ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
+                                 +bveccof(i,ie,lm1,natrun)*usdus%duds(l1,n,jsp) )&
+                                 -CONJG(aveccof(i,ie,lm1,natrun)*usdus%us(l1,n,jsp)&
+                                 +bveccof(i,ie,lm1,natrun)*usdus%uds(l1,n,jsp) )*&
+                                 (acof(ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
+                                 +bcof(ie,lm1,natrun)*usdus%duds(l1,n,jsp)) )
+                         END DO
                       END DO
                    END DO
                 END DO
-             END DO
-             DO lo = 1,atoms%nlo(n)
-                l1 = atoms%llo(lo,n)
-                DO m = -l1,l1
-                   lm1 = l1* (l1+1) + m
-                   do i=1,3
-                      DO natrun = natom,natom + atoms%neq(n) - 1
-                         b4(i,natrun) = b4(i,natrun) + 0.5 *&
-                              we(ie)/atoms%neq(n)*atoms%rmt(n)**2*aimag(&
-                              conjg( acof(ie,lm1,natrun)* usdus%us(l1,n,jsp)&
-                              + bcof(ie,lm1,natrun)* usdus%uds(l1,n,jsp) ) *&
-                              cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp)&
-                              + conjg(ccof(m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
-                              ( aveccof(i,ie,lm1,natrun)* usdus%dus(l1,n,jsp)&
-                              + bveccof(i,ie,lm1,natrun)* usdus%duds(l1,n,jsp)&
-                              + cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) )  &
-                              - (conjg( aveccof(i,ie,lm1,natrun) *usdus%us(l1,n,jsp)&
-                              + bveccof(i,ie,lm1,natrun) *usdus%uds(l1,n,jsp) ) *&
-                              ccof(m,ie,lo,natrun)  *usdus%dulos(lo,n,jsp)&
-                              + conjg(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
-                              ( acof(ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
-                              + bcof(ie,lm1,natrun)*usdus%duds(l1,n,jsp)&
-                              + ccof(m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) ) ) )  
-                      END DO
+                DO lo = 1,atoms%nlo(n)
+                   l1 = atoms%llo(lo,n)
+                   DO m = -l1,l1
+                      lm1 = l1* (l1+1) + m
+                      DO i=1,3
+                         DO natrun = natom,natom + atoms%neq(n) - 1
+                            b4(i,natrun) = b4(i,natrun) + 0.5 *&
+                                 we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
+                                 CONJG( acof(ie,lm1,natrun)* usdus%us(l1,n,jsp)&
+                                 + bcof(ie,lm1,natrun)* usdus%uds(l1,n,jsp) ) *&
+                                 cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp)&
+                                 + CONJG(ccof(m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
+                                 ( aveccof(i,ie,lm1,natrun)* usdus%dus(l1,n,jsp)&
+                                 + bveccof(i,ie,lm1,natrun)* usdus%duds(l1,n,jsp)&
+                                 + cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) )  &
+                                 - (CONJG( aveccof(i,ie,lm1,natrun) *usdus%us(l1,n,jsp)&
+                                 + bveccof(i,ie,lm1,natrun) *usdus%uds(l1,n,jsp) ) *&
+                                 ccof(m,ie,lo,natrun)  *usdus%dulos(lo,n,jsp)&
+                                 + CONJG(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
+                                 ( acof(ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
+                                 + bcof(ie,lm1,natrun)*usdus%duds(l1,n,jsp)&
+                                 + ccof(m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) ) ) )  
+                         END DO
+                      ENDDO
                    ENDDO
                 ENDDO
-             ENDDO
-          END DO
-#endif   
+             END DO
+          ENDIF
           !
           DO natrun = natom,natom + atoms%neq(n) - 1
              !
@@ -271,8 +270,8 @@ CONTAINS
              vec(:) = a21(:,natrun)
              vec2(:) = b4(:,natrun)
 
-             gvint=matmul(cell%bmat,vec)/tpi_const
-             gvint2=matmul(cell%bmat,vec2)/tpi_const
+             gvint=MATMUL(cell%bmat,vec)/tpi_const
+             gvint2=MATMUL(cell%bmat,vec2)/tpi_const
              vecsum(:) = zero
              vecsum2(:) = zero
 
@@ -317,8 +316,8 @@ CONTAINS
              END DO
              !
              !   transform from internal to cart. coordinates
-             starsum=matmul(cell%amat,vecsum)
-             starsum2=matmul(cell%amat,vecsum2)
+             starsum=MATMUL(cell%amat,vecsum)
+             starsum2=MATMUL(cell%amat,vecsum2)
              DO i = 1,3
                 forc_a21(i) = forc_a21(i) + starsum(i)/sym%invarind(natrun)
                 forc_b4(i) = forc_b4(i) + starsum2(i)/sym%invarind(natrun)
@@ -341,7 +340,7 @@ CONTAINS
           !  BECAUSE TIME REVERSAL SYMMETRY MEANS THAT conjg(PSI)
           !  IS ALSO A SOLUTION OF SCHR. EQU. IF PSI IS ONE.
           DO i = 1,3
-             results%force(i,n,jsp) = results%force(i,n,jsp) + real(forc_a21(i) + forc_b4(i))
+             results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
              f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
              f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
           END DO
@@ -351,7 +350,7 @@ CONTAINS
           !         write(*,*) a21(:,n) 
        ENDIF                                            !  IF (atoms%l_geo(n)) ...
        natom = natom + atoms%neq(n)
-    enddo
+    ENDDO
     !
     DEALLOCATE (tlmplm%tdd,tlmplm%tuu,tlmplm%tdu,tlmplm%tud,tlmplm%tuulo,tlmplm%tdulo,tlmplm%tuloulo,v_mmp,tlmplm%ind,a21,b4)
 

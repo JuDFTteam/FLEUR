@@ -21,13 +21,14 @@ MODULE m_abclocdn
   !*********************************************************************
 CONTAINS
   SUBROUTINE abclocdn(atoms, sym, noco,ccchi,kspin,iintsp,con1,phase,ylm,&
-       ntyp,na,k,s,nv,ne,z,nbasf0,alo1,blo1,clo1,kvec,nkvec,enough,acof,bcof,ccof)
+       ntyp,na,k,s,nv,ne,nbasf0,alo1,blo1,clo1,kvec,nkvec,enough,acof,bcof,ccof,zMat)
     !
     USE m_types
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_zMat),INTENT(IN)   :: zMat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: kspin,iintsp
@@ -47,11 +48,6 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
     COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
     INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-    COMPLEX, INTENT (IN) :: z(:,:)!(dimension%nbasfcn,dimension%neigd)
-#else
-    REAL,    INTENT (IN) :: z(:,:)!(dimension%nbasfcn,dimension%neigd)
-#endif
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
@@ -61,7 +57,8 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX clotmp(-atoms%llod:atoms%llod)
     !     ..
-
+    LOGICAL :: l_real
+    l_real=zMat%l_real
     !     ..
     enough(na) = .TRUE.
     term1 = con1 * ((atoms%rmt(ntyp)**2)/2) * phase
@@ -91,12 +88,16 @@ CONTAINS
                          !+gu_con
                          IF (noco%l_noco) THEN
                             IF (noco%l_ss) THEN
-                               ctmp = clotmp(m)*ccchi(iintsp)*z(kspin+nbasf,i)
+                               ctmp = clotmp(m)*ccchi(iintsp)*zMat%z_c(kspin+nbasf,i)
                             ELSE
-                               ctmp = clotmp(m)*( ccchi(1)*z(nbasf,i)+ccchi(2)*z(kspin+nbasf,i) )
+                               ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,i)+ccchi(2)*zMat%z_c(kspin+nbasf,i) )
                             ENDIF
                          ELSE
-                            ctmp = z(nbasf,i)*clotmp(m)
+                            IF (l_real) THEN
+                               ctmp = zMat%z_r(nbasf,i)*clotmp(m)
+                            ELSE
+                               ctmp = zMat%z_c(nbasf,i)*clotmp(m)
+                            ENDIF
                          ENDIF
                          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo,ntyp)
                          bcof(i,lm,na) = bcof(i,lm,na) +ctmp*blo1(lo,ntyp)
@@ -134,24 +135,28 @@ CONTAINS
                          !+gu_con
                          IF (noco%l_noco) THEN
                             IF (noco%l_ss) THEN
-                               ctmp = clotmp(m)*ccchi(iintsp)*z(kspin+nbasf,i)
+                               ctmp = clotmp(m)*ccchi(iintsp)*zMat%z_c(kspin+nbasf,i)
                             ELSE
-                               ctmp = clotmp(m)*( ccchi(1)*z(nbasf,i)+ ccchi(2)*z(kspin+nbasf,i) )
+                               ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,i)+ ccchi(2)*zMat%z_c(kspin+nbasf,i) )
                             ENDIF
                          ELSE
-                            ctmp = z(nbasf,i)*clotmp(m)
+                            IF (l_real) THEN
+                               ctmp = zMat%z_r(nbasf,i)*clotmp(m)
+                            ELSE
+                               ctmp = zMat%z_c(nbasf,i)*clotmp(m)
+                            ENDIF
                          ENDIF
                          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo,ntyp)
                          bcof(i,lm,na) = bcof(i,lm,na) +ctmp*blo1(lo,ntyp)
                          ccof(m,i,lo,na) = ccof(m,i,lo,na) +ctmp*clo1(lo,ntyp)
-#if ( defined(CPP_SOC) && defined(CPP_INVERSION) )
-                         ctmp = z(nbasf,i)*CONJG(clotmp(m))*(-1)**(l-m)
-                         na2 = sym%invsatnr(na)
-                         lmp = ll1 - m
-                         acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo,ntyp)
-                         bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo,ntyp)
-                         ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo,ntyp)
-#endif
+                         IF (noco%l_soc.AND.sym%invs) THEN
+                            ctmp = zMat%z_c(nbasf,i)*CONJG(clotmp(m))*(-1)**(l-m)
+                            na2 = sym%invsatnr(na)
+                            lmp = ll1 - m
+                            acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo,ntyp)
+                            bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo,ntyp)
+                            ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo,ntyp)
+                         ENDIF
                       ENDDO  ! m
                    ENDDO     ! i = 1,ne
                 ELSE       
@@ -166,12 +171,9 @@ CONTAINS
        ENDIF  ! s > eps  & l >= 1
     END DO
     IF ((k.EQ.nv) .AND. (.NOT.enough(na))) THEN
-       WRITE (6,FMT=*)&
-            &     'abclocdn did not find enough linearly independent'
-       WRITE (6,FMT=*)&
-            &     'ccof coefficient-vectors.'
-       CALL juDFT_error("did not find enough lin. ind. ccof-vectors"&
-            &        ,calledby ="abclocdn")
+       WRITE (6,FMT=*) 'abclocdn did not find enough linearly independent'
+       WRITE (6,FMT=*) 'ccof coefficient-vectors.'
+       CALL juDFT_error("did not find enough lin. ind. ccof-vectors" ,calledby ="abclocdn")
     END IF
 
   END SUBROUTINE abclocdn

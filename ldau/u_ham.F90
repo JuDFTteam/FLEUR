@@ -23,7 +23,7 @@ MODULE m_uham
 CONTAINS
   SUBROUTINE u_ham(atoms, input,lapw,jsp,n,invsfct,&
        ar,ai,br,bi,vs_mmp,lmaxb, alo,blo,clo, n_size,n_rank,usp,ud,&
-       noco,iintsp,jintsp,chi11,chi22,chi21, nkvecprevat,iilo,locol,aa)
+       noco,iintsp,jintsp,chi11,chi22,chi21, nkvecprevat,iilo,locol,l_real,aa_r,aa_c)
 
     USE m_types
     IMPLICIT NONE
@@ -49,11 +49,11 @@ CONTAINS
     COMPLEX, INTENT (IN) :: blo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
     COMPLEX, INTENT (IN) :: clo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
     COMPLEX,INTENT(IN):: vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:)!(matsize)
-#endif
+
+    LOGICAL, INTENT(IN)     :: l_real
+    REAL,    OPTIONAL,INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: aa_c(:)!(matsize)
+
     !     ..
     !     .. Local Scalars ..
     INTEGER  m,mp,ispin,itype,l ,igp,ll,llm,nvv,ii,n_l,lp,lop,ig
@@ -169,19 +169,21 @@ CONTAINS
        DO m = -l,l
           llm = ll + m
 
-          DO igp = 1, igp_m
-#ifdef CPP_INVERSION
-             aa(ii+igp) = aa(ii+igp) + &
-                  ar_help(igp,m) * ar(ig,llm,iintsp) + br_help(igp,m) * br(ig,llm,iintsp) -&
-                  ai_help(igp,m) * ai(ig,llm,iintsp) - bi_help(igp,m) * bi(ig,llm,iintsp) 
-#else
-             aa(ii+igp) = aa(ii+igp) + chihlp * CMPLX(&
-                  ar_help(igp,m) * ar(ig,llm,iintsp) + br_help(igp,m) * br(ig,llm,iintsp) -&
-                  ai_help(igp,m) * ai(ig,llm,iintsp) - bi_help(igp,m) * bi(ig,llm,iintsp) ,&
-                  ar_help(igp,m) * ai(ig,llm,iintsp) + br_help(igp,m) * bi(ig,llm,iintsp) +&
-                  ai_help(igp,m) * ar(ig,llm,iintsp) + bi_help(igp,m) * br(ig,llm,iintsp) )
-#endif
-          ENDDO ! igp 
+          if (l_real) THEN
+             DO igp = 1, igp_m
+                aa_r(ii+igp) = aa_r(ii+igp) + &
+                     ar_help(igp,m) * ar(ig,llm,iintsp) + br_help(igp,m) * br(ig,llm,iintsp) -&
+                     ai_help(igp,m) * ai(ig,llm,iintsp) - bi_help(igp,m) * bi(ig,llm,iintsp) 
+             ENDDO ! igp 
+          ELSE
+             DO igp = 1, igp_m
+                aa_c(ii+igp) = aa_c(ii+igp) + chihlp * CMPLX(&
+                     ar_help(igp,m) * ar(ig,llm,iintsp) + br_help(igp,m) * br(ig,llm,iintsp) -&
+                     ai_help(igp,m) * ai(ig,llm,iintsp) - bi_help(igp,m) * bi(ig,llm,iintsp) ,&
+                     ar_help(igp,m) * ai(ig,llm,iintsp) + br_help(igp,m) * bi(ig,llm,iintsp) +&
+                     ai_help(igp,m) * ar(ig,llm,iintsp) + bi_help(igp,m) * br(ig,llm,iintsp) )
+             enddo
+          ENDIF
        ENDDO   ! m
     ENDDO     ! ig = 1, nvv
     !--------------------------------------------------------------------------
@@ -243,23 +245,26 @@ CONTAINS
                 locol = locol + 1
                 IF (MOD(locol-1,n_size).EQ.n_rank) THEN
                    !-t3e
-                   DO ig = 1,nvv
-                      iilo = iilo + 1
-#ifdef CPP_INVERSION
-                      aa(iilo) = aa(iilo) + &
-                           ar_help(ig,m) * REAL(alo(m,nkvec,lo,iintsp)) + br_help(ig,m) * REAL(blo(m,nkvec,lo,iintsp)) +&
-                           cr_help(ig,m) * REAL(clo(m,nkvec,lo,iintsp)) - ai_help(ig,m) *AIMAG(alo(m,nkvec,lo,iintsp)) -&
-                           bi_help(ig,m) *AIMAG(blo(m,nkvec,lo,iintsp)) - ci_help(ig,m) *AIMAG(clo(m,nkvec,lo,iintsp))
-#else
-                      aa(iilo) = aa(iilo) + CMPLX(&
-                           ar_help(ig,m) * REAL(alo(m,nkvec,lo,iintsp)) + br_help(ig,m) * REAL(blo(m,nkvec,lo,iintsp)) +&
-                           cr_help(ig,m) * REAL(clo(m,nkvec,lo,iintsp)) - ai_help(ig,m) *AIMAG(alo(m,nkvec,lo,iintsp)) -&
-                           bi_help(ig,m) *AIMAG(blo(m,nkvec,lo,iintsp)) - ci_help(ig,m) *AIMAG(clo(m,nkvec,lo,iintsp)) ,&
-                           ai_help(ig,m) * REAL(alo(m,nkvec,lo,iintsp)) + bi_help(ig,m) * REAL(blo(m,nkvec,lo,iintsp)) +&
-                           ci_help(ig,m) * REAL(clo(m,nkvec,lo,iintsp)) + ar_help(ig,m) *AIMAG(alo(m,nkvec,lo,iintsp)) +&
-                           br_help(ig,m) *AIMAG(blo(m,nkvec,lo,iintsp)) + cr_help(ig,m) *AIMAG(clo(m,nkvec,lo,iintsp)) )
-#endif
-                   ENDDO                     ! jump to end of row:
+                   IF (l_real) THEN
+                      DO ig = 1,nvv
+                         iilo = iilo + 1
+                         aa_r(iilo) = aa_r(iilo) + &
+                              ar_help(ig,m) * REAL(alo(m,nkvec,lo,iintsp)) + br_help(ig,m) * REAL(blo(m,nkvec,lo,iintsp)) +&
+                              cr_help(ig,m) * REAL(clo(m,nkvec,lo,iintsp)) - ai_help(ig,m) *AIMAG(alo(m,nkvec,lo,iintsp)) -&
+                              bi_help(ig,m) *AIMAG(blo(m,nkvec,lo,iintsp)) - ci_help(ig,m) *AIMAG(clo(m,nkvec,lo,iintsp))
+                      ENDDO                     ! jump to end of row:
+                   ELSE
+                      DO ig = 1,nvv
+                         iilo = iilo + 1
+                         aa_c(iilo) = aa_c(iilo) + CMPLX(&
+                              ar_help(ig,m) * REAL(alo(m,nkvec,lo,iintsp)) + br_help(ig,m) * REAL(blo(m,nkvec,lo,iintsp)) +&
+                              cr_help(ig,m) * REAL(clo(m,nkvec,lo,iintsp)) - ai_help(ig,m) *AIMAG(alo(m,nkvec,lo,iintsp)) -&
+                              bi_help(ig,m) *AIMAG(blo(m,nkvec,lo,iintsp)) - ci_help(ig,m) *AIMAG(clo(m,nkvec,lo,iintsp)) ,&
+                              ai_help(ig,m) * REAL(alo(m,nkvec,lo,iintsp)) + bi_help(ig,m) * REAL(blo(m,nkvec,lo,iintsp)) +&
+                              ci_help(ig,m) * REAL(clo(m,nkvec,lo,iintsp)) + ar_help(ig,m) *AIMAG(alo(m,nkvec,lo,iintsp)) +&
+                              br_help(ig,m) *AIMAG(blo(m,nkvec,lo,iintsp)) + cr_help(ig,m) *AIMAG(clo(m,nkvec,lo,iintsp)) )
+                      ENDDO                     ! jump to end of row:
+                   ENDIF
                    iilo = iilo + nkvecprevat + nkvecprevlo + nkvec 
                 ENDIF
              ENDDO
@@ -318,20 +323,22 @@ CONTAINS
                       !
                       DO nkvecp = 1,nkend  
                          iilo = iilo + 1
+                         IF (l_real) THEN
                          DO m = -l,l
-#ifdef CPP_INVERSION
-                            aa(iilo) = aa(iilo) + &
+                            aa_r(iilo) = aa_r(iilo) + &
                                  REAL(alo(m,nkvec,lo,iintsp))* REAL(ax(m,nkvecp)) +&
                                  REAL(blo(m,nkvec,lo,iintsp))* REAL(bx(m,nkvecp)) +&
                                  REAL(clo(m,nkvec,lo,iintsp))* REAL(cx(m,nkvecp)) -&
                                  AIMAG(alo(m,nkvec,lo,iintsp))*AIMAG(ax(m,nkvecp)) -&
                                  AIMAG(blo(m,nkvec,lo,iintsp))*AIMAG(bx(m,nkvecp)) -&
                                  AIMAG(clo(m,nkvec,lo,iintsp))*AIMAG(cx(m,nkvecp)) 
-#else
-                            aa(iilo) = aa(iilo) + alo(m,nkvec,lo,iintsp) * ax(m,nkvecp) +&
-                                 blo(m,nkvec,lo,iintsp) * bx(m,nkvecp) + clo(m,nkvec,lo,iintsp) * cx(m,nkvecp) 
-#endif
                          ENDDO
+                      ELSE
+                         DO m = -l,l
+                            aa_c(iilo) = aa_c(iilo) + alo(m,nkvec,lo,iintsp) * ax(m,nkvecp) +&
+                                 blo(m,nkvec,lo,iintsp) * bx(m,nkvecp) + clo(m,nkvec,lo,iintsp) * cx(m,nkvecp) 
+                         ENDDO
+                      ENDIF
                       ENDDO
                    ELSE
                       iilo = iilo + i_invsf * (2*lp+1) ! = nkvecprevlo

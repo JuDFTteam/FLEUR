@@ -1,9 +1,6 @@
 #ifdef CPP_DOUBLE
 # define CPP_LAPACK_DOUBLE
 # define CPP_BLAS_DOUBLE
-# ifdef CPP_DEC
-#  define CPP_ALPHA_DOUBLE
-# endif
 #endif
 
 #ifdef CPP_LAPACK_DOUBLE
@@ -136,14 +133,6 @@
 # define CPP_BLAS_chpmv  chpmv
 # define CPP_BLAS_cscal	 cscal
 # define CPP_BLAS_csscal csscal
-#endif
-
-#ifdef CPP_ALPHA_DOUBLE
-# define CPP_ALPHA_erf  derf
-# define CPP_ALPHA_erfc derfc
-#else
-# define CPP_ALPHA_erf  erf
-# define CPP_ALPHA_erfc erfc
 #endif
 
 #ifdef CPP_DOUBLE

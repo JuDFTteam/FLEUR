@@ -370,9 +370,9 @@
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
           cell%area = cell%omtil / vacuum%dvac
-          kpts%nkpt = nint((3600/cell%area)/sym%nop2)
+          kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
-          kpts%nkpt = nint((216000/cell%omtil)/sym%nop)
+          kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
       ENDIF
 
@@ -502,24 +502,31 @@
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)
 
-      CALL rw_inp(&
-     &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
-
-      iofile = 6
-      OPEN (iofile,file='inp',form='formatted',status='old',position='append')
-      
-      IF( l_hyb ) THEN
-        WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma 
-      ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN 
-        WRITE (iofile,'(a5,i5)') 'nkpt=',kpts%nkpt
+      IF (atoms%ntype.GT.999) THEN
+         WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
+         WRITE(*,*) 'Use inp.xml file instead!'
       ELSE
-        WRITE (iofile,'(a5,i5,3(a4,i2))') 'nkpt=',kpts%nkpt,',nx=',div(1),&
-     &                                   ',ny=',div(2),',nz=',div(3)
-      ENDIF
+         CALL rw_inp(&
+     &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+     &               noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
 
-      CLOSE (iofile)
+
+         iofile = 6
+         OPEN (iofile,file='inp',form='formatted',status='old',position='append')
+      
+         IF( l_hyb ) THEN
+            WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma 
+         ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN 
+            WRITE (iofile,'(a5,i5)') 'nkpt=',kpts%nkpt
+         ELSE
+            WRITE (iofile,'(a5,i5,3(a4,i2))') 'nkpt=',kpts%nkpt,',nx=',div(1),',ny=',div(2),',nz=',div(3)
+         ENDIF
+
+         CLOSE (iofile)
+
+      END IF
+      iofile = 6
 
 !HF   create hybrid functional input file
       IF ( l_hyb ) THEN

@@ -25,9 +25,9 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
     INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
-    LOGICAL, INTENT(IN) :: l_noco,l_create
+    LOGICAL, INTENT(IN) :: l_noco,l_create,l_real,l_soc
     LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
@@ -45,7 +45,7 @@ CONTAINS
 
     ENDIF
 
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
 
     !d%eig_int
     length=3 !nv+nmat+ne
@@ -64,14 +64,14 @@ CONTAINS
     IF (l_noco) length=1
     ALLOCATE(d%eig_eig(neig,jspins*nkpts))
     !d%eig_vec
-#ifdef CPP_INVERSION
-    ALLOCATE(d%eig_vecr(nmat*neig,length*nkpts))
-#ifdef CPP_SOC
-    CALL judft_error("SOC+INVERSION can not be used with eigenvalues stored in memory")
-#endif
-#else
-    ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
-#endif
+    if (l_real) THEN
+       print *, "Allocate real in eig66_mem"
+       ALLOCATE(d%eig_vecr(nmat*neig,length*nkpts))
+       if (l_soc)  CALL judft_error("SOC+INVERSION can not be used with eigenvalues stored in memory")
+    else
+       print *, "Allocate complex in eig66_mem"
+       ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
+    endif
     length=length*nkpts
     IF (d%l_dos) THEN
        ALLOCATE(d%qal(0:3,ntype,neig,length))
@@ -97,18 +97,20 @@ CONTAINS
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(nmat),k2(nmat),k3(nmat),kveclo(nlotot)
       REAL    :: eig(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
-#ifdef CPP_INVERSION
-      REAL    :: z(nmat,neig)
-#else
-      COMPLEX :: z(nmat,neig)
-#endif
+      REAL    :: z_r(nmat,neig)
+      COMPLEX :: z_c(nmat,neig)
       tmp_id=eig66_data_newid(DA_mode)
       IF (d%l_dos) CPP_error("Can not read DOS-data")
-      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,.FALSE.,.FALSE.,filename)
+      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
-            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z)
-            CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z)
+            if (l_real) THEN
+               CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_r)
+               CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_r)
+            else
+               CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_c)
+               CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_c)
+            end if
          ENDDO
       ENDDO
       CALL close_eig_IO(tmp_id)
@@ -143,18 +145,20 @@ CONTAINS
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(d%nmat),k2(d%nmat),k3(d%nmat),kveclo(SIZE(d%eig_int,1)-3-3*d%nmat)
       REAL    :: eig(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
-#ifdef CPP_INVERSION
-      REAL    :: z(d%nmat,SIZE(d%eig_eig,1))
-#else
-      COMPLEX :: z(d%nmat,SIZE(d%eig_eig,1))
-#endif
+      REAL    :: z_r(d%nmat,SIZE(d%eig_eig,1))
+      COMPLEX :: z_c(d%nmat,SIZE(d%eig_eig,1))
       tmp_id=eig66_data_newid(DA_mode)
       IF (d%l_dos) CPP_error("Could not write DOS data")
-      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,.FALSE.,.FALSE.,filename)
+      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
-            CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z)
-            CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z)
+            IF (d%l_real) THEN
+               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_r)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_r)
+            else
+               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_c)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_c)
+            end IF
          ENDDO
       ENDDO
       CALL close_eig_DA(tmp_id)

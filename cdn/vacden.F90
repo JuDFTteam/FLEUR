@@ -10,9 +10,9 @@ CONTAINS
        kpts,input,cell,atoms,noco,banddos,&
        gvac1,gvac2,&
        we,ikpt,jspin,vz,vz0,&
-       ne,z,bkpt,lapw,&
+       ne,bkpt,lapw,&
        evac,eig,rhtxy,rht,qvac,qvlay,&
-       stcoeff,cdomvz,cdomvxy)
+       stcoeff,cdomvz,cdomvxy,zMat,realdata)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -64,6 +64,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_zMat),INTENT(IN)       :: zMat
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin      
     INTEGER, INTENT (IN) :: ne    
@@ -73,23 +74,20 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-    COMPLEX, INTENT (IN):: z(DIMENSION%nbasfcn,DIMENSION%neigd)
-#else
-    REAL,    INTENT (IN):: z(DIMENSION%nbasfcn,DIMENSION%neigd)
-#endif
     COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
     REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
     REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkptd,DIMENSION%jspd)
-    REAL qvac(DIMENSION%neigd,2,kpts%nkptd,DIMENSION%jspd),we(dimension%neigd),vz(vacuum%nmzd,2),vz0(2)
+    REAL qvac(DIMENSION%neigd,2,kpts%nkptd,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
     COMPLEX, INTENT (INOUT):: cdomvz(vacuum%nmzd,2)
     COMPLEX, INTENT (INOUT):: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     !
     !     STM-Arguments
     REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(dimension%nv2d)
+    INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
     !
+    LOGICAL,OPTIONAL,INTENT(IN)::realdata
+
     !     local STM variables
     INTEGER nv2(DIMENSION%jspd)
     INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd),map2(DIMENSION%nvd,DIMENSION%jspd)
@@ -124,7 +122,12 @@ CONTAINS
     REAL,    ALLOCATABLE :: u_1(:,:,:,:),ue_1(:,:,:,:)
     !+odim
     !     ..
-
+    LOGICAL ::l_real
+    IF (PRESENT(realdata)) THEN
+       l_real=realdata
+    ELSE
+       l_real=zMat%l_real
+    ENDIF
     !     ..
 
     !     *******************************************************************************
@@ -334,12 +337,13 @@ CONTAINS
                               CMPLX(-dt_1(l,m)*bess(m) +&
                               t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                               ((wronk_1)*SQRT(cell%omtil))
-                         DO n = 1,ne
-                            ac_1(l,m,n,ispin) = ac_1(l,m,n,ispin) +z(kspin,n)*av_1
-                            !     +                         conjg(z(k,n))*av_1
-                            bc_1(l,m,n,ispin) = bc_1(l,m,n,ispin) +z(kspin,n)*bv_1
-                            !     +                         conjg(z(k,n))*bv_1
-                         END DO
+                         IF (l_real) THEN
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*bv_1
+                         ELSE
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*bv_1
+                         END IF
                       END DO      ! -mb:mb
                    END IF
                 END DO
@@ -376,10 +380,13 @@ CONTAINS
                    av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
                    bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                    !     -----> loop over basis functions
-                   DO n = 1,ne
-                      ac(l,n,ispin) = ac(l,n,ispin) + z(kspin,n)*av
-                      bc(l,n,ispin) = bc(l,n,ispin) + z(kspin,n)*bv
-                   ENDDO
+                   IF (l_real) THEN
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_r(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_r(kspin,:ne)*bv
+                   ELSE
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_c(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_c(kspin,:ne)*bv
+                   ENDIF
                 ENDDO
                 !--->       end of spin loop
              ENDIF
@@ -430,12 +437,13 @@ CONTAINS
                            CMPLX(-dt_1(l,m)*bess(m) +&
                            t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                            ((wronk_1)*SQRT(cell%omtil))
-                      DO n = 1,ne
-                         ac_1(l,m,n,jspin) = ac_1(l,m,n,jspin) +z(k,n)*av_1
-                         !     +                         conjg(z(k,n))*av_1
-                         bc_1(l,m,n,jspin) = bc_1(l,m,n,jspin) +z(k,n)*bv_1
-                         !     +                         conjg(z(k,n))*bv_1
-                      END DO
+                      IF (l_real) THEN
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*bv_1
+                      ELSE
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*bv_1
+                      ENDIF
                    END DO      ! -mb:mb
                 END IF
              END DO         ! k = 1,lapw%nv
@@ -467,10 +475,13 @@ CONTAINS
                 av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
                 bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                 !     -----> loop over basis functions
-                DO n = 1,ne
-                   ac(l,n,jspin) = ac(l,n,jspin) + z(k,n)*av
-                   bc(l,n,jspin) = bc(l,n,jspin) + z(k,n)*bv
-                ENDDO
+                IF (l_real) THEN
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_r(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_r(k,:ne)*bv
+                ELSE
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_c(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_c(k,:ne)*bv
+                ENDIF
              ENDDO
           END IF ! D1
        ENDIF
@@ -510,7 +521,7 @@ CONTAINS
        !
        IF (vacuum%nstm.EQ.3) THEN
 #ifdef CPP_MPI
-          call judft_error("nstm==3 does not work in parallel",calledby="vacden")
+          CALL judft_error("nstm==3 does not work in parallel",calledby="vacden")
 #else
           i=0
           DO n = 1, ne

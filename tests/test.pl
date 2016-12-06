@@ -19,7 +19,8 @@ if (!$mpi){
     $mpi=$ENV{"juDFT_MPI"};
 }
 print "MPI:$mpi\n";
-my $workdir="$ENV{PWD}/Testing/work"; 
+my $workdir="$ENV{PWD}/Testing/work";
+system("rm $workdir/*");
 chdir($dir);
 
 judft_tests::execute_test($testdir,$executable,$mpi,$workdir);

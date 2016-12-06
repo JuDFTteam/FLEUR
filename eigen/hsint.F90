@@ -6,8 +6,8 @@
 
 MODULE m_hsint
 CONTAINS
-  SUBROUTINE hsint(noco,jij,stars, vpw,lapw,jspin,&
-       n_size,n_rank,bkpt,cell,atoms,aa,bb)
+  SUBROUTINE hsint(input,noco,jij,stars, vpw,lapw,jspin,&
+       n_size,n_rank,bkpt,cell,atoms,l_real,hamOvlp)
     !*********************************************************************
     !     initializes and sets up the hamiltonian and overlap matrices
     !     for the interstitial. only the lower triangle of the hermitian
@@ -35,12 +35,14 @@ CONTAINS
     !*********************************************************************
     USE m_types
     IMPLICIT NONE
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_jij),INTENT(IN)    :: jij
-    TYPE(t_stars),INTENT(IN)  :: stars
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_lapw),INTENT(INOUT):: lapw
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_jij),INTENT(IN)        :: jij
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(INOUT)    :: lapw
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: n_size,n_rank,jspin
@@ -48,11 +50,7 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: vpw(stars%n3d)
     REAL,    INTENT (IN)    :: bkpt(3) 
-#ifdef CPP_INVERSION
-    REAL,    INTENT (OUT):: aa(:),bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (OUT):: aa(:),bb(:)
-#endif
+    LOGICAL,INTENT(IN)      :: l_real
     !     ..
     !     .. Local Scalars ..
     COMPLEX th,ts,phase
@@ -63,10 +61,14 @@ CONTAINS
     COMPLEX ust1,vp1
     COMPLEX, ALLOCATABLE :: vpw1(:)  ! for J constants
     !     ..
-    !     ..
-    aa=0.0
-    bb=0.0
-
+    ! ..
+    if (l_real) THEN
+       hamOvlp%a_r=0.0
+       hamOvlp%b_r=0.0
+    ELSE
+       hamOvlp%a_c=0.0
+       hamOvlp%b_c=0.0
+    ENDIF
     ust1 = stars%ustep(1)
     ispin = jspin
     lapw%nmat = lapw%nv(ispin)
@@ -114,36 +116,36 @@ CONTAINS
           IF (in.EQ.0) CYCLE
           phase = stars%rgphs(i1,i2,i3)
           !+APW_LO
-#ifdef CPP_APW
-          b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
-          b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
-          b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
-          r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
+          IF (input%l_useapw) THEN
+             b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
+             b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
+             b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
+             r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
 
-          th = phase*(0.5*r2*stars%ustep(in)+vpw(in))
-#else
-          th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
-#endif
+             th = phase*(0.5*r2*stars%ustep(in)+vpw(in))
+          ELSE
+             th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
+          ENDIF
           !-APW_LO
           !--->    determine matrix element and store
           ts = phase*stars%ustep(in)
-#ifdef CPP_INVERSION
-          aa(ii) = REAL(th)
-          bb(ii) = REAL(ts)
-#else
-          aa(ii) = th
-          bb(ii) = ts
-#endif
+          if (l_real) THEN
+          hamOvlp%a_r(ii) = REAL(th)
+          hamOvlp%b_r(ii) = REAL(ts)
+else
+          hamOvlp%a_c(ii) = th
+          hamOvlp%b_c(ii) = ts
+endif
        ENDDO
        !--->    diagonal term (g-g'=0 always first star)
        ii = ii + 1
-#ifdef CPP_INVERSION
-       aa(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
-       bb(ii) = REAL(ust1)
-#else
-       aa(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
-       bb(ii) = ust1
-#endif
+       if (l_real) THEN
+       hamOvlp%a_r(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
+       hamOvlp%b_r(ii) = REAL(ust1)
+else
+       hamOvlp%a_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
+       hamOvlp%b_c(ii) = ust1
+endif
     ENDDO
 
     !---> pk non-collinear
@@ -182,27 +184,27 @@ CONTAINS
              ELSE
                 phase = stars%rgphs(i1,i2,i3)
                 !+APW_LO
-#ifdef CPP_APW
-                b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
-                b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
-                b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
-                r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
+                IF (input%l_useapw) THEN
+                   b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,ispin)
+                   b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,ispin)
+                   b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,ispin)
+                   r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
 
-                th = phase*( 0.5*r2*stars%ustep(in) + vpw(in) )
-#else
-                th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
-#endif
+                   th = phase*( 0.5*r2*stars%ustep(in) + vpw(in) )
+                ELSE
+                   th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,ispin)**2)*stars%ustep(in) + vpw(in))
+                ENDIF
                 !-APW_LO
                 ts = phase*stars%ustep(in)
-                aa(ii) = th
-                bb(ii) = ts
+                hamOvlp%a_c(ii) = th
+                hamOvlp%b_c(ii) = ts
              ENDIF
           ENDDO
           !--->    diagonal term (g-g'=0 always first star)
           !-gb99   ii = (nv(1)+i)*(nv(1)+i+1)/2
           ii = ii + 1
-          aa(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
-          bb(ii) = ust1
+          hamOvlp%a_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
+          hamOvlp%b_c(ii) = ust1
        ENDDO
 
        !---> determine spin-down spin-up part of Hamiltonian- and ovlp-matrix
@@ -226,10 +228,10 @@ CONTAINS
              IF (in.EQ.0) THEN
                 WRITE (*,*) 'HSINT: G-G'' not in star i,j= ',i,j
              ELSE
-                aa(ii) = stars%rgphs(i1,i2,i3)*vpw(in) 
+                hamOvlp%a_c(ii) = stars%rgphs(i1,i2,i3)*vpw(in) 
                 !--- J constants 
                 IF(jij%l_J) THEN
-                   aa(ii) = 0
+                   hamOvlp%a_c(ii) = 0
                 ENDIF
                 !--- J constants
 

@@ -158,7 +158,7 @@ CONTAINS
             &              oneD)
        !
        input%total=strho
-       CALL timestart("generation of start-density")
+       CALL timestop("generation of start-density")
     END IF
     IF (mpi%irank == 0) THEN
        !

@@ -17,25 +17,9 @@ MODULE m_utility
       CHARACTER(LEN=*), INTENT(OUT) :: architectures(11)
       numArchitectures = 0
       architectures = ''
-#ifdef CPP_APC
-      numArchitectures = numArchitectures + 1
-      architectures(numArchitectures) = 'APC'
-#endif
-#ifdef CPP_DEC
-      numArchitectures = numArchitectures + 1
-      architectures(numArchitectures) = 'DEC'
-#endif
 #ifdef CPP_AIX
       numArchitectures = numArchitectures + 1
       architectures(numArchitectures) = 'AIX'
-#endif
-#ifdef CPP_T90
-      numArchitectures = numArchitectures + 1
-#ifdef CPP_MPI
-      architectures(numArchitectures) = 'T3E'
-#else
-      architectures(numArchitectures) = 'T90'
-#endif
 #endif
    END SUBROUTINE getComputerArchitectures
 
@@ -46,9 +30,7 @@ MODULE m_utility
       precisionString = 'DOUBLE'        
 #else
       precisionString = 'SINGLE'
-#ifndef CPP_T90
-      CALL juDFT_error(" define CPP_DOUBLE on non-Cray architectures!",calledby ="dimens")
-#endif
+      CALL juDFT_warn("You compiled with single precision, this is most probably wrong!",calledby ="dimens")
 #endif
    END SUBROUTINE getPrecision
 
@@ -58,18 +40,6 @@ MODULE m_utility
       CHARACTER(LEN=*), INTENT(OUT) :: specifiers(11)
       numSpecifiers = 0
       specifiers = ''
-      numSpecifiers = numSpecifiers + 1
-#ifdef CPP_INVERSION
-      specifiers(numSpecifiers) = "InversionSymmetry"
-#else
-      specifiers(numSpecifiers) = "noInversionSymmetry"
-#endif
-      numSpecifiers = numSpecifiers + 1
-#ifdef CPP_SOC
-      specifiers(numSpecifiers) = "SpinOrbitCoupling"
-#else
-      specifiers(numSpecifiers) = "noSpinOrbitCoupling"
-#endif
    END SUBROUTINE getTargetStructureProperties
 
    SUBROUTINE getAdditionalCompilationFlags(flags, numFlags)
@@ -82,37 +52,13 @@ MODULE m_utility
       numFlags = numFlags + 1
       flags(numFlags) = 'CPP_MPI'
 #endif
-#ifdef CPP_APW
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_APW'
-#endif
-#ifdef CPP_CORE
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_CORE'
-#endif
-#ifdef CPP_HTML
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_HTML'
-#endif
 #ifdef CPP_HDF
       numFlags = numFlags + 1
       flags(numFlags) = 'CPP_HDF'
 #endif
-#ifdef CPP_F90
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_F90'
-#endif
 #ifdef CPP_WANN
       numFlags = numFlags + 1
       flags(numFlags) = 'CPP_WANN'
-#endif
-#ifdef CPP_600
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_600'
-#endif
-#ifdef CPP_GF
-      numFlags = numFlags + 1
-      flags(numFlags) = 'CPP_GF'
 #endif
 #ifdef CPP_NOSPMVEC
       numFlags = numFlags + 1

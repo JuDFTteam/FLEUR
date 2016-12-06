@@ -62,7 +62,7 @@ MODULE m_tlmplm
     REAL uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
     REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
 
-#if (defined(CPP_MPI) && !defined(CPP_T90))
+#ifdef CPP_MPI
      INCLUDE 'mpif.h'
     INTEGER ierr(3)
 #endif

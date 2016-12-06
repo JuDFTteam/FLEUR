@@ -9,7 +9,7 @@ MODULE m_hssrwu
   !*********************************************************************
 CONTAINS
   SUBROUTINE hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
-       tlmplm,acof,bcof,ccof, h,s)
+       tlmplm,acof,bcof,ccof, h_r,s_r,h_c,s_c)
     !
     USE m_types
     IMPLICIT NONE
@@ -29,17 +29,16 @@ CONTAINS
     COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd)
     COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%natd)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: h(DIMENSION%neigd,DIMENSION%neigd),s(DIMENSION%neigd,DIMENSION%neigd)
-#else
-    COMPLEX, INTENT (INOUT) :: h(DIMENSION%neigd,DIMENSION%neigd),s(DIMENSION%neigd,DIMENSION%neigd)
-#endif  
+
+    REAL,    OPTIONAL,INTENT (INOUT) :: h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd)
 
     !     ..
     !     .. Local Scalars ..
     COMPLEX dtd,dtu,hij,sij,utd,utu
     REAL invsfct
     INTEGER i,im,in,j,k,ke,l,l1,ll1,lm,lmp,lwn ,m1,n,na,nn,lmplm,m
+    LOGICAL :: l_real
     !     ..
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: a(:,:),b(:,:),ax(:),bx(:)
@@ -47,6 +46,8 @@ CONTAINS
     !     .. Intrinsic Functions ..
     INTRINSIC cmplx,conjg,exp,REAL,sqrt
     !     ..
+
+    l_real=PRESENT(h_r)
 
     ALLOCATE ( a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd) )
     ALLOCATE ( b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd) )
@@ -77,13 +78,13 @@ CONTAINS
                          hij = sij * el(l,n,jsp) +&
                               0.5 * ( a(i,lmp)*CONJG(b(j,lmp)) +&
                               b(i,lmp)*CONJG(a(j,lmp)) )
-#ifdef CPP_INVERSION
-                         s(i,j) = s(i,j) + REAL(sij)
-                         h(i,j) = h(i,j) + REAL(hij)
-#else
-                         s(i,j) = s(i,j) + sij
-                         h(i,j) = h(i,j) + hij
-#endif
+                         IF (l_real) THEN
+                            s_r(i,j) = s_r(i,j) + REAL(sij)
+                            h_r(i,j) = h_r(i,j) + REAL(hij)
+                         ELSE
+                            s_c(i,j) = s_c(i,j) + sij
+                            h_c(i,j) = h_c(i,j) + hij
+                         ENDIF
                       ENDDO
                    ENDDO
                    DO i = 1,ne
@@ -92,13 +93,13 @@ CONTAINS
                       hij = sij * el(l,n,jsp) +&
                            0.5 * ( a(i,lmp)*CONJG(b(i,lmp)) +&
                            b(i,lmp)*CONJG(a(i,lmp)) )
-#ifdef CPP_INVERSION
-                      s(i,i) = s(i,i) + REAL(sij)
-                      h(i,i) = h(i,i) + REAL(hij)
-#else
-                      s(i,i) = s(i,i) + sij
-                      h(i,i) = h(i,i) + hij
-#endif
+                      IF (l_real) THEN
+                         s_r(i,i) = s_r(i,i) + REAL(sij)
+                         h_r(i,i) = h_r(i,i) + REAL(hij)
+                      ELSE
+                         s_c(i,i) = s_c(i,i) + sij
+                         h_c(i,i) = h_c(i,i) + hij
+                      ENDIF
                    ENDDO
                 ENDDO        ! m
              ENDDO           ! l
@@ -145,25 +146,31 @@ CONTAINS
                       !
                       !
                       !--->    update hamiltonian
-                      DO i = 1,ne
-                         DO j = 1,i - 1
-                            hij = a(i,lmp)*ax(j) + b(i,lmp)*bx(j)
-#ifdef CPP_INVERSION
-                            h(i,j) = h(i,j) + REAL(hij)
-#else
-                            h(i,j) = h(i,j) + hij
-#endif
+                      IF (l_real) THEN
+                         DO i = 1,ne
+                            DO j = 1,i - 1
+                               hij = a(i,lmp)*ax(j) + b(i,lmp)*bx(j)
+                               h_r(i,j) = h_r(i,j) + REAL(hij)
+                            ENDDO
                          ENDDO
-                      ENDDO
-                      DO i = 1,ne
-#ifdef CPP_INVERSION
-                         h(i,i) = h(i,i) + REAL(a(i,lmp)*ax(i)+&
-                              &                                      b(i,lmp)*bx(i))
-#else
-                         h(i,i) = h(i,i) + a(i,lmp)*ax(i)+&
-                              &                                 b(i,lmp)*bx(i)
-#endif
-                      ENDDO
+                      ELSE
+                         DO i = 1,ne
+                            DO j = 1,i - 1
+                               hij = a(i,lmp)*ax(j) + b(i,lmp)*bx(j)
+                               h_c(i,j) = h_c(i,j) + hij
+                            ENDDO
+                         ENDDO
+                      ENDIF
+
+                      IF (l_real) THEN
+                         DO i = 1,ne
+                            h_r(i,i) = h_r(i,i) + REAL(a(i,lmp)*ax(i)+ b(i,lmp)*bx(i))
+                         ENDDO
+                      ELSE
+                         DO i = 1,ne
+                            h_c(i,i) = h_c(i,i) + a(i,lmp)*ax(i)+ b(i,lmp)*bx(i)
+                         ENDDO
+                      ENDIF
 
                    ENDDO ! m
                 ENDDO   ! l

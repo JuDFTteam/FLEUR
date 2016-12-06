@@ -53,9 +53,9 @@ CONTAINS
     !     ..
     !     .. Data statements ..
     REAL, PARAMETER :: eps = 1.0E-30
-    REAL, PARAMETER :: linindq = 1.0e-7
+    REAL, PARAMETER :: linindq = 1.0e-4
 
-    con1=fpi_const/cell%omtil
+    con1=fpi_const/SQRT(cell%omtil)
     ntyp = n
     DO iintsp = 1,nintsp
        IF (iintsp.EQ.1) THEN
@@ -66,7 +66,7 @@ CONTAINS
 
        !--->    set up phase factors
        DO k = 1,lapw%nv(iintsp)
-          th= tpi_const*DOT_PRODUCT((/lapw%k1(k,iintsp),lapw%k1(k,iintsp),lapw%k1(k,iintsp)/)+qssbti,atoms%taual(:,na))
+          th= tpi_const*DOT_PRODUCT((/lapw%k1(k,iintsp),lapw%k2(k,iintsp),lapw%k3(k,iintsp)/)+qssbti,atoms%taual(:,na))
           rph(k,iintsp) = COS(th)
           cph(k,iintsp) = -SIN(th)
        END DO
@@ -132,7 +132,7 @@ CONTAINS
                             cwork(m,nkvec(lo,iintsp),lo,iintsp) = term1*ylm(lm)
                          END DO
                          CALL orthoglo(&
-                              atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                              sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
                             kvec(nkvec(lo,iintsp),lo) = k
                          ELSE
@@ -155,7 +155,7 @@ CONTAINS
                                cwork(mind,nkvec(lo,iintsp),lo,iintsp) = ((-1)** (l+m))*CONJG(term1*ylm(lmp))
                             END DO
                             CALL orthoglo(&
-                                 atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                                 sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
                                kvec(nkvec(lo,iintsp),lo) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '

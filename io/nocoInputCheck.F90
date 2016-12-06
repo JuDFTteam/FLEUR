@@ -24,13 +24,7 @@ MODULE m_nocoInputCheck
       INTEGER itype
       LOGICAL l_relax_any
 
-!---> make sure that the complex program has been compiled
-#ifdef CPP_INVERSION
-      WRITE (6,*) 'Non-collinear calculations can only be done with'
-      WRITE (6,*) 'the complex program. Please compile without the'
-      WRITE (6,*) 'option "CPP_INVERSION".'
-      CALL juDFT_error("for l_noco = T: recompile without CPP_INVERSION!",calledby ="nocoInputCheck")
-#endif
+
 
 !---> make sure Wu-diagonalization is switched off
       IF (input%isec1 .LE. input%itmax) THEN

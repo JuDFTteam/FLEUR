@@ -10,7 +10,7 @@ MODULE m_hsmt_extra
 CONTAINS
   SUBROUTINE hsmt_extra(DIMENSION,atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
        hlpmsize,lmaxb,gwc,noco,l_socfirst, lapw,cell,el, fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
-       kveclo,aa,bb) !out/inout
+       kveclo,l_real,aa_r,bb_r,aa_c,bb_c) !out/inout
     USE m_constants, ONLY : tpi_const,fpi_const
     USE m_uham
     USE m_ylm
@@ -20,9 +20,7 @@ CONTAINS
     USE m_vecforlo
     USE m_setabc1lo
     USE m_hsmt_spinor
-#ifndef CPP_INVERSION
     USE m_hsmt_hlptomat
-#endif
     USE m_types
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN):: DIMENSION
@@ -56,12 +54,10 @@ CONTAINS
     INTEGER, INTENT (OUT)    :: kveclo(atoms%nlotot)
     TYPE(t_tlmplm),INTENT(INOUT)::tlmplm
 
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:),bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:),bb(:)!(matsize)
 
-#endif
+    REAL,    OPTIONAL,ALLOCATABLE,INTENT (INOUT) :: aa_r(:),bb_r(:)!(matsize)
+    COMPLEX, OPTIONAL,ALLOCATABLE,INTENT (INOUT) :: aa_c(:),bb_c(:)!(matsize)
+    LOGICAL,INTENT(IN)      :: l_real
     !     ..
     !     .. Local Scalars ..
     REAL con1,termi,termr,th,invsfct
@@ -246,29 +242,27 @@ CONTAINS
                 IF ( noco%l_noco .AND. (.NOT.noco%l_ss) ) THEN
                    fjstart = 1
                    IF(l_socfirst) fjstart = isp
-#ifndef CPP_INVERSION
                    CALL slomat(&
-                        atoms, n,na,lapw,con1,n_size,n_rank, gk,rph,cph,&
+                        input,atoms, n,na,lapw,con1,n_size,n_rank, gk,rph,cph,&
                         fj(:,0:,:,fjstart:), gj(:,0:,:,fjstart:),&
                         kvec,isp,usdus,alo1,blo1,clo1,noco, ab_dim,1,1,chi11,chi22,chi21,&
-                        iilos,locols,nkvecprevats,bbhlp)
-                   CALL hlomat(atoms,isp,isp,n_size,n_rank,&
+                        iilos,locols,nkvecprevats,.false.,bb_c=bbhlp)
+                   CALL hlomat(input,atoms,isp,isp,n_size,n_rank,&
                         n,na,lapw,ar(:,0:,1),br(:,0:,1),ai(:,0:,1),bi(:,0:,1),&
                         el(:,n,isp),alo,blo,clo,usdus, noco,1,1,chi11,chi22,chi21,&
-                        iiloh,locolh,nkvecprevath,tlmplm,aahlp)
-#endif
+                        iiloh,locolh,nkvecprevath,tlmplm,.false.,aa_c=aahlp)
                 ELSE
                    jd = 1 ; IF (noco%l_noco) jd = isp
                    DO iintsp = 1,nintsp
                       DO jintsp = 1,nintsp
-                         CALL slomat(atoms,n,na,lapw,con1,n_size,n_rank,&
+                         CALL slomat(input,atoms,n,na,lapw,con1,n_size,n_rank,&
                               gk,rph,cph,fj,gj, kvec,isp,usdus,alo1,blo1,clo1,noco,&
                               ab_dim,iintsp,jintsp,chi11,chi22,chi21,&
-                              iilos,locols,nkvecprevats,bb)
-                         CALL hlomat(atoms,isp,jd,n_size,n_rank,&
+                              iilos,locols,nkvecprevats,l_real,bb_r,bb_c)
+                         CALL hlomat(input,atoms,isp,jd,n_size,n_rank,&
                               n,na,lapw,ar(:,0:,jintsp),br(:,0:,jintsp),ai(:,0:,jintsp),bi(:,0:,jintsp),&
                               el(:,n,isp),alo,blo,clo,usdus, noco,iintsp,jintsp,chi11,chi22,chi21,&
-                              iiloh,locolh,nkvecprevath,tlmplm,aa)
+                              iiloh,locolh,nkvecprevath,tlmplm,l_real,aa_r,aa_c)
                       ENDDO
                    ENDDO
                 ENDIF
@@ -276,15 +270,13 @@ CONTAINS
 
              IF (atoms%n_u>0.and.atoms%lda_u(n)%l.GE.0.AND.gwc.EQ.1) THEN
                 IF ( noco%l_noco .AND. (.NOT.noco%l_ss) ) THEN
-#ifndef CPP_INVERSION
                    CALL u_ham(&
                         atoms,input,lapw,isp,n,invsfct,&
                         ar,ai,br,bi,vs_mmp,lmaxb,&
                         alo,blo,clo,&
                         n_size,n_rank,isp,usdus,noco,&
                         1,1,chi11,chi22,chi21,&
-                        nkvecprevatu,iilou,locolu,aahlp)
-#endif
+                        nkvecprevatu,iilou,locolu,.false.,aa_c=aahlp)
                 ELSE
                    DO iintsp = 1,nintsp
                       DO jintsp = 1,iintsp
@@ -294,7 +286,7 @@ CONTAINS
                               alo,blo,clo,&
                               n_size,n_rank,isp,usdus,noco,&
                               iintsp,jintsp,chi11,chi22,chi21,&
-                              nkvecprevatu,iilou,locolu,aa)
+                              nkvecprevatu,iilou,locolu,l_real,aa_r,aa_c)
                       ENDDO
                    ENDDO
                 ENDIF
@@ -303,9 +295,7 @@ CONTAINS
           ENDIF                                ! atoms%invsat(na) = 0 or 1
           !--->    end loop over equivalent atoms
        END DO
-#ifndef CPP_INVERSION
-       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa,bbhlp,bb)
-#endif
+       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa_c,bbhlp,bb_c)
        !---> end loop over atom types (ntype)
     ENDDO ntype_loop
     lapw%nmat = lapw%nmat + nkvecprevats

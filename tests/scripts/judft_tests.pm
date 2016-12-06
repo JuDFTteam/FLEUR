@@ -53,14 +53,15 @@ sub test_applicable($$){
     #	return (0,"");
     #}
     #test requirements
-    if ($exec=~/_SOC/){
-	return (0,"") if ($test_requirements{"SOC"}==0);
-    }else{
-	return (0,"") if ($test_requirements{"SOC"}==1);
-    }
-    if ($exec=~/_INVS/){
-	return (0,"") if ($test_requirements{"complex"}==1);
-    }
+
+#    if ($exec=~/_SOC/){
+#	return (0,"") if ($test_requirements{"SOC"}==0);
+#    }else{
+#	return (0,"") if ($test_requirements{"SOC"}==1);
+#    }
+#    if ($exec=~/_INVS/){
+#	return (0,"") if ($test_requirements{"complex"}==1);
+#    }
     if (!($exec=~/_MPI/)){
 	return (0,"") if ($test_requirements{"MPI"}==1);
     }

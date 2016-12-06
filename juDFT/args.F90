@@ -34,4 +34,21 @@ CONTAINS
     IF (i==0) ok=INDEX(str,ADJUSTL(arg))>0
 
   END FUNCTION juDFT_was_argument
+
+FUNCTION juDFT_string_for_argument(arg) RESULT(argstring)
+    IMPLICIT NONE
+    CHARACTER(len=*),INTENT(IN)::arg
+    CHARACTER(len=20)::argstring
+
+    INTEGER:: i
+    CHARACTER(LEN=30)::str
+    argstring=""
+    DO i=1,COMMAND_ARGUMENT_COUNT()
+       CALL GET_COMMAND_ARGUMENT(i,str)
+       IF(ADJUSTL(str)==ADJUSTL(arg)) THEN
+          if (i<=COMMAND_ARGUMENT_COUNT()) CALL GET_COMMAND_ARGUMENT(i+1,argstring)
+       endif
+    ENDDO
+ 
+  END FUNCTION juDFT_string_for_argument
 END MODULE m_juDFT_args

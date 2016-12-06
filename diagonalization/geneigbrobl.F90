@@ -5,14 +5,15 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_geneigprobl
-  use m_juDFT
+  USE m_juDFT
   !**********************************************************
   !     Solve the generalized eigenvalue problem
   !     Frank Freimuth, November 2006
   !**********************************************************
 CONTAINS
-  SUBROUTINE geneigprobl(nbasfcn, nsize,neigd,l_J,a,b,z,eig,ne)
+  SUBROUTINE geneigprobl(nbasfcn, nsize,neigd,l_J,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
 #include"cpp_double.h"
+    USE m_packed_to_full
     IMPLICIT NONE
 
     ! ... Arguments ...
@@ -24,27 +25,12 @@ CONTAINS
 
     REAL,    INTENT(OUT) :: eig(:)
     INTEGER, INTENT(OUT) :: ne
-#ifdef CPP_F90
 
-#ifdef CPP_INVERSION
-    REAL,  INTENT (INOUT) :: a(:),b(:)
-    REAL,  INTENT (INOUT) :: z(:,:)
-#else
-    COMPLEX, INTENT (INOUT)::a(:),b(:)
-    COMPLEX, INTENT (INOUT) :: z(:,:)
-#endif
+    REAL,OPTIONAL, ALLOCATABLE, INTENT (INOUT) :: a_r(:),b_r(:)
+    REAL,OPTIONAL, ALLOCATABLE, INTENT (INOUT) :: z_r(:,:)
+    COMPLEX,OPTIONAL, ALLOCATABLE, INTENT (INOUT) :: a_c(:),b_c(:)
+    COMPLEX,OPTIONAL, ALLOCATABLE, INTENT (INOUT) :: z_c(:,:)
 
-#else
-
-#ifdef CPP_INVERSION
-    REAL, ALLOCATABLE, INTENT (INOUT) :: a(:),b(:)
-    REAL, ALLOCATABLE, INTENT (INOUT) :: z(:,:)
-#else
-    COMPLEX, ALLOCATABLE, INTENT (INOUT) :: a(:),b(:)
-    COMPLEX, ALLOCATABLE, INTENT (INOUT) :: z(:,:)
-#endif
-
-#endif
 
     ! ... Local Variables ..
 
@@ -58,59 +44,42 @@ CONTAINS
 
     REAL,    ALLOCATABLE :: work(:)
     INTEGER, ALLOCATABLE :: iwork(:),isuppz(:)
-#ifdef CPP_INVERSION
-    REAL, ALLOCATABLE :: largea(:,:),largeb(:,:)
-#else
-    COMPLEX, ALLOCATABLE :: largea(:,:),largeb(:,:)
+    REAL, ALLOCATABLE :: largea_r(:,:),largeb_r(:,:)
+    COMPLEX, ALLOCATABLE :: largea_c(:,:),largeb_c(:,:)
     COMPLEX,ALLOCATABLE :: cwork(:)
-#endif
+
+    LOGICAL :: l_real
+
+    l_real=PRESENT(a_r)
+
 
     !**********************************
     !expand from packed to full storage: full storage lapack-routines
     !are faster than the packed lapack-routines.
     !**********************************
     !hamiltonian
-    ALLOCATE ( largea(nsize,nsize), stat=err )
-    IF (err/=0)  CALL juDFT_error("error allocating largea",calledby&
-         &     ="geneigprobl")
-    largea=0.0
-    iind = 0
-    DO ind1 = 1, nsize
-       DO ind2 = 1, ind1
-          iind = iind+1
-          largea(ind2,ind1) = a(iind)
-       ENDDO
-    ENDDO
-    !save some storage by deallocation of unused array
-#ifndef CPP_F90
-    DEALLOCATE (a)
-#endif
-    !metric
-    ALLOCATE ( largeb(nsize,nsize), stat=err )
-    IF (err/=0)  CALL juDFT_error("error allocating largeb",calledby ="geneigprobl")
-    iind=0
-    largeb=0.0
-    DO ind1 = 1, nsize
-       DO ind2 = 1, ind1
-          iind = iind+1
-          largeb(ind2,ind1) = b(iind)
-       ENDDO
-    ENDDO
-    !save some storage by deallocation of unused array
-#ifndef CPP_F90
-    DEALLOCATE (b)
-#endif
+    IF (l_real) THEN
+       call packed_to_full(nsize,a_r,largea_r)
+       DEALLOCATE (a_r)
+       call packed_to_full(nsize,b_r,largeb_r)
+       DEALLOCATE (b_r)
+    ELSE
+       call packed_to_full(nsize,a_c,largea_c)
+       DEALLOCATE (a_c)
+       call packed_to_full(nsize,b_c,largeb_c)
+       DEALLOCATE (b_c)
+    ENDIF
 
 
 
-#ifdef CPP_INVERSION
-    CALL CPP_LAPACK_spotrf('U',nsize,largeb,nsize,info)
+    IF (l_real) then
+    CALL CPP_LAPACK_spotrf('U',nsize,largeb_r,nsize,info)
     IF (info /= 0)  CALL juDFT_error("error in spotrf",calledby ="geneigprobl")
 
-    CALL CPP_LAPACK_ssygst(1,'U',nsize,largea,nsize,largeb,nsize,info)
+    CALL CPP_LAPACK_ssygst(1,'U',nsize,largea_r,nsize,largeb_r,nsize,info)
     IF (info /= 0)  CALL juDFT_error("error in ssygst",calledby ="geneigprobl")
 
-    toler = 2.0*tiny(toler)
+    toler = 2.0*TINY(toler)
     liwork = 10*nsize
     ALLOCATE ( iwork(liwork), stat=err )
     IF (err/=0)  CALL juDFT_error("error allocating iwork",calledby ="geneigprobl")
@@ -120,47 +89,39 @@ CONTAINS
     IF (err/=0)  CALL juDFT_error(" error allocating work",calledby ="geneigprobl")
     ALLOCATE ( isuppz(2*nsize), stat=err )
     IF (err /= 0)  CALL juDFT_error("error allocating isuppz",calledby ="geneigprobl")
-#ifndef CPP_F90
-    IF (allocated(z)) THEN
-       IF (.not.(size(z,1)==nbasfcn.and.size(z,2)==neigd)) deallocate(z)
+    IF (ALLOCATED(z_r)) THEN
+       IF (.NOT.(SIZE(z_r,1)==nbasfcn.AND.SIZE(z_r,2)==neigd)) DEALLOCATE(z_r)
     ENDIF
-    IF (.not.allocated(z)) THEN
-       ALLOCATE ( z(nbasfcn,neigd), stat=err )
+    IF (.NOT.ALLOCATED(z_r)) THEN
+       ALLOCATE ( z_r(nbasfcn,neigd), stat=err )
        IF (err/=0) THEN
-          write(*,*) nbasfcn,neigd,err
+          WRITE(*,*) nbasfcn,neigd,err
           CALL juDFT_error("error allocating z",calledby ="geneigprobl")
        ENDIF
     ENDIF
-#endif
-    sizez= size(z,1) 
-    iu   = min(nsize,neigd)
-#ifndef CPP_F90
+    sizez= SIZE(z_r,1) 
+    iu   = MIN(nsize,neigd)
     IF (l_J) THEN
-       CALL CPP_LAPACK_ssyevr('N','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
+       CALL CPP_LAPACK_ssyevr('N','I','U',nsize,largea_r, nsize,lb,ub,1,iu,toler,ne,eigTemp,z_r,&
             sizez,isuppz,work,lwork,iwork,liwork,info)
     ELSE
-       CALL CPP_LAPACK_ssyevr('V','I','U',nsize,largea,nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
+       CALL CPP_LAPACK_ssyevr('V','I','U',nsize,largea_r,nsize,lb,ub,1,iu,toler,ne,eigTemp,z_r,&
             sizez,isuppz,work,lwork,iwork,liwork,info)
     ENDIF
-#else
-    eig = 0.0
-    eigTemp = 0.0
-#endif
     IF (info /= 0)  CALL juDFT_error("error in ssyevr",calledby ="geneigprobl")
     DEALLOCATE (isuppz,work,iwork)
 
-    CALL CPP_LAPACK_strtrs('U','N','N',nsize,ne,largeb, nsize,z,sizez,info)
-    IF (info /= 0)  CALL juDFT_error("error in strtrs",calledby&
-         &     ="geneigprobl")
-#else
+    CALL CPP_LAPACK_strtrs('U','N','N',nsize,ne,largeb_r, nsize,z_r,sizez,info)
+    IF (info /= 0)  CALL juDFT_error("error in strtrs",calledby ="geneigprobl")
+ ELSE
 
-    CALL CPP_LAPACK_cpotrf('U',nsize,largeb,nsize,info)
+    CALL CPP_LAPACK_cpotrf('U',nsize,largeb_c,nsize,info)
     IF (info /= 0)  CALL juDFT_error("error in cpotrf",calledby ="geneigprobl")
 
-    CALL CPP_LAPACK_chegst(1,'U',nsize,largea,nsize,largeb,nsize,info)
+    CALL CPP_LAPACK_chegst(1,'U',nsize,largea_c,nsize,largeb_c,nsize,info)
     IF (info /= 0)  CALL juDFT_error(" error in chegst",calledby ="geneigprobl")
 
-    toler = 2.0*tiny(toler)
+    toler = 2.0*TINY(toler)
     liwork = 50*nsize
     ALLOCATE ( iwork(liwork), stat=err )
     IF (err/=0)  CALL juDFT_error("error allocating iwork",calledby ="geneigprobl")
@@ -174,53 +135,39 @@ CONTAINS
     lrwork = 84*nsize
     ALLOCATE (work(lrwork), stat=err )
     IF (err/=0)  CALL juDFT_error(" error allocating work",calledby ="geneigprobl")
-#ifndef CPP_F90
-    IF (allocated(z)) THEN
-       IF (.not.(size(z,1)==nbasfcn.and.size(z,2)==neigd)) deallocate(z)
+    IF (ALLOCATED(z_c)) THEN
+       IF (.NOT.(SIZE(z_c,1)==nbasfcn.AND.SIZE(z_c,2)==neigd)) DEALLOCATE(z_c)
     ENDIF
-    IF (.not.allocated(z)) THEN
-       ALLOCATE ( z(nbasfcn,neigd), stat=err )
+    IF (.NOT.ALLOCATED(z_c)) THEN
+       ALLOCATE ( z_c(nbasfcn,neigd), stat=err )
        IF (err/=0) THEN
-          write(*,*) nbasfcn,neigd,err
+          WRITE(*,*) nbasfcn,neigd,err
           CALL juDFT_error("error allocating z",calledby ="geneigprobl")
        ENDIF
     ENDIF
-#endif
-    sizez= size(z,1) 
-    iu   = min(nsize,neigd)
-#ifndef CPP_F90
+    sizez= SIZE(z_c,1) 
+    iu   = MIN(nsize,neigd)
     IF (l_J) THEN
-       CALL CPP_LAPACK_cheevr('N','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
+       CALL CPP_LAPACK_cheevr('N','I','U',nsize,largea_c, nsize,lb,ub,1,iu,toler,ne,eigTemp,z_c,&
             sizez,isuppz,cwork,lwork,work,lrwork,iwork,liwork,info)
     ELSE
-#if (1==1)
-       CALL CPP_LAPACK_cheevr('V','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
+       CALL CPP_LAPACK_cheevr('V','I','U',nsize,largea_c, nsize,lb,ub,1,iu,toler,ne,eigTemp,z_c,&
             sizez,isuppz,cwork,lwork,work,lrwork,iwork,liwork,info)
-#else
-
-       CALL CPP_LAPACK_cheevx('V','I','U',nsize,largea, nsize,lb,ub,1,iu,toler,ne,eigTemp,z,&
-            sizez,cwork,lwork,work,iwork,isuppz,info)
-#endif
     ENDIF
-#else
-    eig = 0.0
-    eigTemp = 0.0
-#endif
     IF (info /= 0)  CALL juDFT_error("error in cheevr",calledby ="geneigprobl")
     DEALLOCATE ( isuppz )
-    deallocate ( work   )
-    deallocate ( iwork  )
-    deallocate ( cwork  )
+    DEALLOCATE ( work   )
+    DEALLOCATE ( iwork  )
+    DEALLOCATE ( cwork  )
 
-    CALL CPP_LAPACK_ctrtrs('U','N','N',nsize,ne,largeb, nsize,z,sizez,info)
+    CALL CPP_LAPACK_ctrtrs('U','N','N',nsize,ne,largeb_c, nsize,z_c,sizez,info)
     IF (info /= 0)  CALL juDFT_error("error in ctrtrs",calledby ="geneigprobl")
-#endif
-    DEALLOCATE ( largea,largeb )
+ ENDIF
 
-    DO i = 1, neigd
-       eig(i) = eigTemp(i)
-    END DO
+ DO i = 1, neigd
+    eig(i) = eigTemp(i)
+ END DO
 
-  END SUBROUTINE geneigprobl
+END SUBROUTINE geneigprobl
 END MODULE m_geneigprobl
 

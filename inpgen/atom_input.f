@@ -836,7 +836,7 @@ c           in s and p states equal occupation of up and down states
       SUBROUTINE atom_defaults(
      >                         n,ntype,nlod,z,neq,
      X                         ncst2,nel,nlo,llo)
-
+      USE m_juDFT
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)    :: n,ntype,nlod,z
@@ -845,57 +845,89 @@ c           in s and p states equal occupation of up and down states
       INTEGER, INTENT (INOUT) :: nlo(ntype),llo(nlod,ntype)
       
 
-      INTEGER locore,i
-      INTEGER ncst1(0:103),nce(0:24),nval(0:3)
-!
-! number of core levels for each element; the INT(ncst1/100) number
-! provides information about possible local orbitals: 1...(s,p)-LO
-! 2...p-LO and 3...d-LO
-!
-      ncst1 =(/0,0,                                                0,  ! Va,H,He
-     +     01, 01,                                  1, 1, 1, 1, 1, 1,  ! Li - Ne
-     +     04, 04,                                  4, 4, 4, 4, 4, 4,  ! Na - Ar
-     +    107,107,207,207, 7, 7, 7, 7, 7, 7, 7, 7,309, 9, 9, 9, 9, 9,  ! K - Kr
-     +    112,112,212,212,12,12,12,12,12,12,12,12,314,14,14,14,14,14,  ! Rb - Xe
-     +    117,117,217,217,17,17,17,17,17,17,17,17, 17,17,17,17,17,     ! Cs - Lu
-     +                219,19,19,19,19,19,19,19,19,321,21,21,21,21,21,  ! Hf - Rn
-     +    124,124,224,224,224,24,24,24,24,24,24,24, 24,24,24,24,24/)   ! Fr - Lw
+      INTEGER locore,lo
+      INTEGER ncst1(0:103),nce(0:24)
+
 !
 ! electrons associated with a given number of core-levels
 !
-      nce(0) = 0   ; nce(1) = 2   ; nce(4) = 10  ; nce(7) = 18
-      nce(9) = 28  ; nce(12) = 36 ; nce(14) = 46 ; nce(17) = 54
-      nce(19) = 68 ; nce(21) = 78 ; nce(24) = 86
+      nce=-1;
+      nce(0) = 0  ; nce(1) = 2  ; nce(2)= 4   ; nce(4) = 10  
+      nce(5) = 12 ; nce(7) =18 ;nce(8)=20; 
+      nce(9) = 28 ; nce(12) = 36; nce(14) = 46; nce(17) = 54
+      nce(19) = 68; nce(21) = 78; nce(24) = 86
+
+
+!
+! number of core levels for each element; the INT(ncst1/100) number
+! provides information about possible local orbitals: 
+!    0  no LO
+!    1  s-LO
+!    2  p-LO
+!    4  d-LO
+!    8  f-LO
+! Sums are allowed, i.e. 3 (s,p)-LO
+!
+
+!Defaults
+      ncst1 =(/0,0,                                            0,        ! Va,H,He
+     + 01, 01,                                  1, 1, 1, 1, 1, 1,        ! Li - Ne
+     + 304,304,                                  4, 4, 4, 4, 4, 4,       ! Na - Ar
+     + 307,307,307,307,307,307,307,307,207,207, 7,409,409,409,409,409,
+     +                                                          409, 9,  ! K - Kr
+     + 312,312,312,312,312,312,312,212,212,212,312,414,414,414,414,414,
+     +                                                         414,414,  ! Rb - Xe
+     + 317,317,217,217,217,217,217,217,217,217,217,17, 17,17,17,17,17,    ! Cs - Lu
+     +    1119,1119,319,319,219,219,219,219,619,421,421,421,421,421,421,  ! Hf - Rn
+     + 324,324,224,224,224,24,24,24,24,24,24,24, 24,24,24,24,24/)   ! Fr - Lw
+
+      if (judft_was_argument("-fast_defaults")) 
+     + ncst1 =(/0,0,                                                0,  ! Va,H,He
+     +     01, 01,                                  1, 1, 1, 1, 1, 1,  ! Li - Ne
+     +     04, 04,                                  4, 4, 4, 4, 4, 4,  ! Na - Ar
+     +    307,307,207,207, 7, 7, 7, 7, 7, 7, 7, 7,409, 9, 9, 9, 9, 9,  ! K - Kr
+     +    312,312,212,212,12,12,12,12,12,12,12,12,414,14,14,14,14,14,  ! Rb - Xe
+     +    317,317,217,217,17,17,17,17,17,17,17,17, 17,17,17,17,17,     ! Cs - Lu
+     +                219,19,19,19,19,19,19,19,19,421,21,21,21,21,21,  ! Hf - Rn
+     +    324,324,224,224,224,24,24,24,24,24,24,24, 24,24,24,24,24/)   ! Fr - Lw
+
 
 !
 !--> determine core levels
 !
-      ncst2 = ncst1( z )
-      IF (ncst2.GT.300) THEN     ! should add d-LO
-        ncst2 = ncst2 - 300 ; locore = 10
-        nlo(n) = 1 ; llo(1,n) = 2
-      ELSEIF (ncst2.GT.200) THEN ! should add p-LO
-        ncst2 = ncst2 - 200 ; locore = 6
-        nlo(n) = 1 ; llo(1,n) = 1
-      ELSEIF (ncst2.GT.100) THEN ! should add (s,p)-LO
-        ncst2 = ncst2 - 100 ; locore = 8
-        nlo(n) = 2 ; llo(1,n) = 0 ; llo(2,n) = 1
-      ELSE
-        nlo(n) = 0 ; locore = 0
+      ncst2 = mod(ncst1( z ),100)
+      lo=int(ncst1(z)/100)
+      
+      nel=nel+(z - nce(ncst2))*neq(n)
+      nlo(n) = 0 ; locore = 0
+
+      IF (btest(lo,0)) THEN !s-lo
+         locore=locore+2
+         ncst2=ncst2-1
+         nlo(n)=nlo(n)+1
+         llo(nlo(n),n)=0
       ENDIF
-      nel = nel + ( z - nce(ncst2) + locore ) * neq(n)
-      IF ((locore == 6).OR.(locore == 10)) ncst2 = ncst2 - 2
-      IF (locore == 8) ncst2 = ncst2 - 3
-
-!     WRITE (6,9070) z,ncst2
-!9070 FORMAT (i3,3i5)
-!     WRITE (6,9090) neq(n),.false.,nlo(n),(llo(i,n),i=1,nlo(n))
-!9090 FORMAT (i2,',force =',l1,',nlo=',i2,',llo=',20i2)
-!
-!--> determine valence states
-!
-
-
+      IF (btest(lo,1)) THEN !p-lo
+         locore=locore+6
+         ncst2=ncst2-2
+         nlo(n)=nlo(n)+1
+         llo(nlo(n),n)=1
+      ENDIF
+      IF (btest(lo,2)) THEN !d-lo
+         locore=locore+10
+         ncst2=ncst2-2
+         nlo(n)=nlo(n)+1
+         llo(nlo(n),n)=2
+      ENDIF
+      IF (btest(lo,3)) THEN !f-lo
+         locore=locore+14
+         ncst2=ncst2-2
+         nlo(n)=nlo(n)+1
+         llo(nlo(n),n)=3
+      ENDIF
+      
+      nel = nel +  locore  * neq(n)
+      
       END SUBROUTINE atom_defaults
 
       END MODULE m_atominput

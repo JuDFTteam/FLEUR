@@ -3,6 +3,7 @@
 !********************************************************************
 !     calculates the space group operations given the lattice vectors
 !     and the atomic positions.                              mw 12-99
+!     Modified by GM (2016)
 !********************************************************************
       CONTAINS
       SUBROUTINE spg_gen(
@@ -42,19 +43,24 @@
       INTEGER index_op(nop48),num_tr(nop48)
 
       INTEGER mtmp(3,3),mp(3,3)
-      INTEGER i,j,k,n,mop,nc,new,ns,nt,ntypm,ind(1)
+      INTEGER u,v,w
+      INTEGER i,j,k,n,mop,nc,new,ns,nt,ntypm,ind(1),iTr,maxTrVecs
       INTEGER ity(natin),npaint,ipaint(natin)
-      INTEGER ios,istep0
+      INTEGER ios,istep0, binSize, maxBinSize
+      INTEGER locBinDim(3), secondAtom(natin)
+      INTEGER binDim(3), iBin(3)
       CHARACTER(len=30) :: filen
 
       REAL    posr(3,natin),rtau(3),tr(3),disp(3,natin)
       REAL    ttau(3,nop48),trs(3,natin)
       REAL    eps7
+      REAL    trVecs(3,natin), trIndices(natin)
 
-      LOGICAL lnew,lclose
+      LOGICAL lnew,lclose, foundOne, boundary(3)
       LOGICAL l_exist
 
-      INTEGER, ALLOCATABLE :: mtable(:,:)
+      INTEGER, ALLOCATABLE :: mtable(:,:), binSizes(:,:,:)
+      INTEGER, ALLOCATABLE :: atomIndexBins(:,:,:,:)
       REAL,    ALLOCATABLE :: inipos(:,:)
 
       eps7= 1.0e-7 ; istep0 = 0
@@ -221,34 +227,206 @@
 !--->    rotate all atoms:
          DO n=1,nat
             posr(:,n) = matmul( mmrot(:,:,mop) , pos(:,n) )
+            posr(:,n) = posr(:,n) - anint(posr(:,n) - eps7)
          ENDDO
+
+!        Start code section A (replacing the commented part following the section)
+
+!        Determine possible translation vectors. Each translation vector has
+!        to work for all atoms.
+
+         trVecs = 0.0
+         maxTrVecs = 0
+         secondAtom = 0
+
+!!       1. Determine all possible translation vectors for the first atom
+
+         trIndices = -1
+         j = 1
+         DO i = 1, nat
+            IF (ity(i).NE.ity(j)) CYCLE
+            tr(1:3) = posr(1:3,i) - pos(1:3,j)
+            tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
+            maxTrVecs = maxTrVecs + 1
+            trVecs(:,maxTrVecs) = tr(:)
+            trIndices(maxTrVecs) = maxTrVecs
+            secondAtom(maxTrVecs) = i
+         END DO
+
+!!       2. Sort rotated atoms into "location bins"
+!!          (position vectors are in the region -0.5 to 0.5)
+
+         binDim(:) = CEILING(natin**(1.0/3.0)*0.5)
+         !TODO: The dimension binDim should better be adjusted to the unit cell shape.
+         !      This simple setting might be bad for very elongated unit cells.
+
+         ALLOCATE(binSizes(-binDim(1)-1:binDim(1)+1,
+     &                     -binDim(2)-1:binDim(2)+1,
+     &                     -binDim(3)-1:binDim(3)+1))
+         binSizes = 0
+         DO n = 1, nat
+            iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
+
+            boundary(:) = (ABS(posr(:,n))-0.5).LE.eps7
+            DO i = -1, 1, 2
+               IF((i.EQ.-1).AND.(.NOT.boundary(1))) CYCLE
+               DO j = -1, 1, 2
+                  IF((j.EQ.-1).AND.(.NOT.boundary(2))) CYCLE
+                  DO k = -1, 1, 2
+                     IF((k.EQ.-1).AND.(.NOT.boundary(3))) CYCLE
+                     binSize = binSizes(i*iBin(1),j*iBin(2),k*iBin(3))
+                     binSize = binSize + 1
+                     binSizes(i*iBin(1),j*iBin(2),k*iBin(3)) = binSize
+                  END DO
+               END DO
+            END DO
+
+         END DO
+
+         maxBinSize = 0
+         DO i = -binDim(1)-1, binDim(1)+1
+            DO j = -binDim(2)-1, binDim(2)+1
+               DO k = -binDim(3)-1, binDim(3)+1
+                  IF (binSizes(i,j,k).GT.maxBinSize) THEN
+                     maxBinSize = binSizes(i,j,k)
+                  END IF
+               END DO
+            END DO
+         END DO
+
+         ALLOCATE(atomIndexBins(maxBinSize,-binDim(1)-1:binDim(1)+1,
+     &                                     -binDim(2)-1:binDim(2)+1,
+     &                                     -binDim(3)-1:binDim(3)+1))
+
+         binSizes = 0
+         DO n = 1, nat
+            iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
+
+            boundary(:) = (ABS(posr(:,n))-0.5).LE.eps7
+            DO i = -1, 1, 2
+               IF((i.EQ.-1).AND.(.NOT.boundary(1))) CYCLE
+               DO j = -1, 1, 2
+                  IF((j.EQ.-1).AND.(.NOT.boundary(2))) CYCLE
+                  DO k = -1, 1, 2
+                     IF((k.EQ.-1).AND.(.NOT.boundary(3))) CYCLE
+                     binSize = binSizes(i*iBin(1),j*iBin(2),k*iBin(3))
+                     binSize = binSize + 1
+                     binSizes(i*iBin(1),j*iBin(2),k*iBin(3)) = binSize
+                     atomIndexBins(binSize,i*iBin(1),j*iBin(2),
+     &                                     k*iBin(3)) = n
+                  END DO
+               END DO
+            END DO
+         END DO
+
+!!       3. Check for every other atom which of the first atom's translation
+!!          vectors are applicable.
+
+         DO j = 2, nat
+            iTr = 1
+            DO WHILE (iTr.LE.maxTrVecs)
+               tr(1:3) = pos(1:3,j) + trVecs(1:3,trIndices(iTr))
+               tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
+
+               iBin(:) = NINT(binDim(:) * tr(:) / 0.501)
+
+               foundOne = .FALSE.
+
+               !Search for atoms in the nearest bin
+               DO k = 1,binSizes(iBin(1),iBin(2),iBin(3))
+                  i = atomIndexBins(k,iBin(1),iBin(2),iBin(3))
+                  rtau(:) = tr(:)-posr(:,i)
+                  rtau(:) = rtau(:) - anint(rtau(:) - eps7)
+                  IF(ALL(ABS(rtau(:)).LE.eps7)) THEN
+                     IF (ity(i).NE.ity(j)) EXIT
+                     foundOne = .TRUE.
+                     EXIT
+                  END IF
+               END DO
+
+               IF(.NOT.foundOne) THEN
+               !Search for atoms in the surrounding bins
+      binLoop: DO u = -1, 1
+                  DO v = -1, 1
+                     DO w = -1, 1
+                        IF((u.EQ.0).AND.(v.EQ.0).AND.(w.EQ.0)) CYCLE
+                        DO k = 1,binSizes(iBin(1)+u,iBin(2)+v,iBin(3)+w)
+                           i = atomIndexBins(k,iBin(1)+u,iBin(2)+v,
+     &                                         iBin(3)+w)
+                           rtau(:) = tr(:)-posr(:,i)
+                           rtau(:) = rtau(:) - anint(rtau(:) - eps7)
+                           IF(ALL(ABS(rtau(:)).LE.eps7)) THEN
+                              IF (ity(i).NE.ity(j)) EXIT binLoop
+                              foundOne = .TRUE.
+                              EXIT binLoop
+                           END IF
+                        END DO
+                     END DO
+                  END DO
+               END DO binLoop
+               END IF
+
+               IF (foundOne) THEN
+                  iTr = iTr + 1
+               ELSE
+                  trIndices(iTr) = trIndices(maxTrVecs)
+                  maxTrVecs = maxTrVecs - 1
+               END IF
+            END DO
+         END DO
+
+!        Check which translation vectors are consistent with the cyclic
+!        part of the group
+
+         DO iTr = 1, maxTrVecs
+            j = 1
+            i = secondAtom(trIndices(iTr))
+            tr(:) = trVecs(:,trIndices(iTr))
+            rtau(1:3) = tr(1:3)
+
+!--->       check that this is consistent with cyclic part of the group
+            DO nc = 1,ncyl(mop)-1
+               rtau(:) = matmul( mmrot(:,:,mop) , rtau(:) ) + tr(:)
+            END DO
+            rtau(1:3) = rtau(1:3) - anint( rtau(1:3) - eps7 )
+            IF ( any( abs(rtau(:)) > eps7 ) ) CYCLE  ! skip if not 0
+
+            num_tr(mop) = num_tr(mop) + 1
+            ttau(1:3,mop) = tr(1:3)
+            EXIT                  ! have one, go to next operation
+         END DO
+
+         DEALLOCATE(atomIndexBins,binSizes)
+
+!        End code section A (replacing the commented part following the section)
 
 !--->    generate possible non-symmorphic pieces
-         DO j=1,nat
-            DO i=1,nat
-               IF ( ity(i) .ne. ity(j) ) CYCLE
-
-               tr(1:3) = pos(1:3,j) - posr(1:3,i)
-               tr(1:3) = tr(1:3) - anint( tr(1:3) - eps7 )
-               rtau(1:3) = tr(1:3)
+ !        DO j=1,nat
+ !           DO i=1,nat
+ !              IF ( ity(i) .ne. ity(j) ) CYCLE
+ !
+ !              tr(1:3) = pos(1:3,j) - posr(1:3,i)
+ !              tr(1:3) = tr(1:3) - anint( tr(1:3) - eps7 )
+ !              rtau(1:3) = tr(1:3)
 
 !--->          check that this is consistent with cyclic part of the group
-               DO nc = 1,ncyl(mop)-1
-                  rtau(:) = matmul( mmrot(:,:,mop) , rtau(:) ) + tr(:)
-               ENDDO
-               rtau(1:3) = rtau(1:3) - anint( rtau(1:3) - eps7 )
-               IF ( any( abs(rtau(:)) > eps7 ) ) CYCLE  ! skip if not 0
+ !              DO nc = 1,ncyl(mop)-1
+ !                 rtau(:) = matmul( mmrot(:,:,mop) , rtau(:) ) + tr(:)
+ !              ENDDO
+ !              rtau(1:3) = rtau(1:3) - anint( rtau(1:3) - eps7 )
+ !              IF ( any( abs(rtau(:)) > eps7 ) ) CYCLE  ! skip if not 0
 
 !--->          test if this vector brings the system into registry
-               IF ( l_rotmatch(tr) ) THEN   ! new translation
-                  num_tr(mop) = num_tr(mop) + 1
-                  ttau(1:3,mop) = tr(1:3)
-                  EXIT                  ! have one, go to next operation
-               ENDIF
+ !              IF ( l_rotmatch(tr) ) THEN   ! new translation
+ !                 num_tr(mop) = num_tr(mop) + 1
+ !                 ttau(1:3,mop) = tr(1:3)
+ !                 EXIT                  ! have one, go to next operation
+ !              ENDIF
+ !
+ !           ENDDO
+ !           IF ( num_tr(mop) > 0 ) EXIT  ! have one, go to next operation
+ !        ENDDO
 
-            ENDDO
-            IF ( num_tr(mop) > 0 ) EXIT  ! have one, go to next operation
-         ENDDO
          IF ( num_tr(mop) < 1 ) num_tr(m_inv(mop)) = -1 ! remove inverse also
        ENDIF
       ENDDO

@@ -11,7 +11,7 @@ MODULE m_hnonmuff
   !                r. p  1995
   !*********************************************************************
 CONTAINS
-  SUBROUTINE h_nonmuff(atoms,DIMENSION,sym,cell, jsp,z,ne,usdus,td, bkpt,lapw, h)
+  SUBROUTINE h_nonmuff(atoms,DIMENSION,sym,cell, jsp,ne,usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
 
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -28,17 +28,16 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)        :: lapw
     !     ..
     !     .. Scalar Arguments ..
+    LOGICAL,INTENT(IN)   :: l_real
     INTEGER, INTENT (IN) :: jsp,ne     
     !     ..
     TYPE(t_tlmplm),INTENT(IN)::td
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)   
     REAL,    INTENT (INOUT) :: h(ne*(ne+1)/2)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (IN) :: z(DIMENSION%nbasfcn,ne)
-#else
-    COMPLEX, INTENT (IN) :: z(DIMENSION%nbasfcn,ne)
-#endif
+
+    REAL,    OPTIONAL,INTENT (IN) :: z_r(DIMENSION%nbasfcn,ne)
+    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(DIMENSION%nbasfcn,ne)
     !     ..
     !     .. Local Scalars ..
     COMPLEX dtd,dtu,hij,phase,sij,utd,utu
@@ -52,6 +51,7 @@ CONTAINS
     REAL vmult(3),vsmult(3),f(0:atoms%lmaxd,SIZE(lapw%k1,1)),g(0:atoms%lmaxd,SIZE(lapw%k1,1))
     !     ..
     !     ..
+
     con1 = fpi_const/SQRT(cell%omtil)
     !--->    loop over each atom type
     na = 0
@@ -94,16 +94,30 @@ CONTAINS
                 vmult=MATMUL(vsmult,cell%bmat)
                 CALL ylm4(lwn,vmult, ylm)
                 !-->     synthesize the complex conjugates of a and b
-                DO l = 0,lwn
-                   ll1 = l* (l+1)
-                   DO m = -l,l
-                      lm = ll1 + m
-                      hij = f(l,k) * ( phase * ylm(lm+1) )
-                      sij = g(l,k) * ( phase * ylm(lm+1) )
-                      a(:ne,lm) = a(:ne,lm) + hij*z(k,:ne)
-                      b(:ne,lm) = b(:ne,lm) + sij*z(k,:ne)
+                if (l_real) THEN
+                   DO l = 0,lwn
+                      ll1 = l* (l+1)
+                      DO m = -l,l
+                         lm = ll1 + m
+                         hij = f(l,k) * ( phase * ylm(lm+1) )
+                         sij = g(l,k) * ( phase * ylm(lm+1) )
+                         a(:ne,lm) = a(:ne,lm) + hij*z_r(k,:ne)
+                         b(:ne,lm) = b(:ne,lm) + sij*z_r(k,:ne)
+                      END DO
                    END DO
-                END DO
+
+                else
+                   DO l = 0,lwn
+                      ll1 = l* (l+1)
+                      DO m = -l,l
+                         lm = ll1 + m
+                         hij = f(l,k) * ( phase * ylm(lm+1) )
+                         sij = g(l,k) * ( phase * ylm(lm+1) )
+                         a(:ne,lm) = a(:ne,lm) + hij*z_c(k,:ne)
+                         b(:ne,lm) = b(:ne,lm) + sij*z_c(k,:ne)
+                      END DO
+                   END DO
+                endif
              ENDDO
              DO  l = 0,lwn
                 DO  m = -l,l

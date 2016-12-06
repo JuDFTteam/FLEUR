@@ -1,9 +1,9 @@
 MODULE m_hsvac
-  use m_juDFT
+  USE m_juDFT
 CONTAINS
   SUBROUTINE hsvac(&
-       vacuum,stars,dimension, atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw,sym, noco,jij, n_size,n_rank, aa,bb, nv2)
+       vacuum,stars,DIMENSION, atoms, jsp,input,vxy,vz,evac,cell,&
+       bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,hamOvlp)
     !*********************************************************************
     !     adds in the vacuum contributions to the the hamiltonian and
     !     overlap matrices. as written, each k-point calculates the
@@ -17,31 +17,29 @@ CONTAINS
     USE m_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: dimension
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_jij),INTENT(IN)      :: jij
-    TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_stars),INTENT(IN)    :: stars
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_vacuum),INTENT(IN)     :: vacuum
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_jij),INTENT(IN)        :: jij
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp   ,n_size,n_rank
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%n2d-1,2)
-    INTEGER, INTENT (OUT):: nv2(dimension%jspd)
+    INTEGER, INTENT (OUT):: nv2(DIMENSION%jspd)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
-    REAL,    INTENT (IN) :: evac(2,dimension%jspd)
+    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     REAL,    INTENT (IN) :: bkpt(3)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: aa(:),bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: aa(:),bb(:)
-#endif
+
+    LOGICAL,INTENT(IN)    :: l_real
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,c_1
@@ -52,20 +50,20 @@ CONTAINS
     INTEGER i_start,nc,nc_0
     !     ..
     !     .. Local Arrays ..
-    INTEGER kvac1(dimension%nv2d,dimension%jspd),kvac2(dimension%nv2d,dimension%jspd)
-    INTEGER map2(dimension%nvd,dimension%jspd)
-    COMPLEX tddv(dimension%nv2d,dimension%nv2d),tduv(dimension%nv2d,dimension%nv2d)
-    COMPLEX tudv(dimension%nv2d,dimension%nv2d),tuuv(dimension%nv2d,dimension%nv2d)
+    INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd)
+    INTEGER map2(DIMENSION%nvd,DIMENSION%jspd)
+    COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
+    COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX vxy_help(stars%n2d-1)
-    COMPLEX a(dimension%nvd,dimension%jspd),b(dimension%nvd,dimension%jspd)
-    REAL ddnv(dimension%nv2d,dimension%jspd),dudz(dimension%nv2d,dimension%jspd)
-    REAL duz(dimension%nv2d,dimension%jspd), udz(dimension%nv2d,dimension%jspd)
-    REAL uz(dimension%nv2d,dimension%jspd)
+    COMPLEX a(DIMENSION%nvd,DIMENSION%jspd),b(DIMENSION%nvd,DIMENSION%jspd)
+    REAL ddnv(DIMENSION%nv2d,DIMENSION%jspd),dudz(DIMENSION%nv2d,DIMENSION%jspd)
+    REAL duz(DIMENSION%nv2d,DIMENSION%jspd), udz(DIMENSION%nv2d,DIMENSION%jspd)
+    REAL uz(DIMENSION%nv2d,DIMENSION%jspd)
     ! l_J auxiliary potential array
     COMPLEX, ALLOCATABLE :: vxy1(:,:,:)
     !     ..
 
-    d2 = sqrt(cell%omtil/cell%area)
+    d2 = SQRT(cell%omtil/cell%area)
 
     IF (jij%l_J) ALLOCATE (vxy1(vacuum%nmzxyd,stars%n2d-1,2))
 
@@ -80,13 +78,13 @@ CONTAINS
                 map2(k,jspin) = j
                 CYCLE k_loop
              END IF
-          enddo
+          ENDDO
           nv2(jspin) = nv2(jspin) + 1
-          IF (nv2(jspin)>dimension%nv2d)  CALL juDFT_error("hsvac:dimension%nv2d",calledby ="hsvac")
+          IF (nv2(jspin)>DIMENSION%nv2d)  CALL juDFT_error("hsvac:dimension%nv2d",calledby ="hsvac")
           kvac1(nv2(jspin),jspin) = lapw%k1(k,jspin)
           kvac2(nv2(jspin),jspin) = lapw%k2(k,jspin)
           map2(k,jspin) = nv2(jspin)
-       enddo k_loop
+       ENDDO k_loop
     ENDDO
     !--->    loop over the two vacuua (1: upper; 2: lower)
     DO ivac = 1,2
@@ -153,10 +151,10 @@ CONTAINS
                 END IF ! jij%l_J
              ENDIF ! ivac-vacuum%nvac
              ! l_J we want the off-diagonal potential matrix elements to be zero
-             IF (jij%l_J .AND. ipot.EQ.3) vxy(:,:,ivac)=cmplx(0.,0.)
+             IF (jij%l_J .AND. ipot.EQ.3) vxy(:,:,ivac)=CMPLX(0.,0.)
           ENDIF
           CALL vacfun(&
-               vacuum,dimension,stars,&
+               vacuum,DIMENSION,stars,&
                jsp,input,noco,ipot,&
                sym, cell,ivac,evac(1,1),bkpt,vxy(1,1,ivac),vz,kvac1,kvac2,nv2,&
                tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
@@ -170,9 +168,9 @@ CONTAINS
                    gz = sign*cell%bmat(3,3)*lapw%k3(k,jspin)
                    i2 = map2(k,jspin)
                    th = gz*cell%z1
-                   c_1 = fac1 * cmplx( cos(th), sin(th) )
-                   a(k,jspin) = - c_1 * cmplx(dudz(i2,jspin), gz*udz(i2,jspin) )
-                   b(k,jspin) =   c_1 * cmplx(duz(i2,jspin), gz* uz(i2,jspin) )
+                   c_1 = fac1 * CMPLX( COS(th), SIN(th) )
+                   a(k,jspin) = - c_1 * CMPLX(dudz(i2,jspin), gz*udz(i2,jspin) )
+                   b(k,jspin) =   c_1 * CMPLX(duz(i2,jspin), gz* uz(i2,jspin) )
                 ENDDO
              ENDDO
           ELSE
@@ -180,9 +178,9 @@ CONTAINS
                 gz = sign*cell%bmat(3,3)*lapw%k3(k,jsp)
                 i2 = map2(k,jsp)
                 th = gz*cell%z1
-                c_1 = fac1 * cmplx( cos(th), sin(th) )
-                a(k,1) = - c_1 * cmplx(dudz(i2,jsp), gz*udz(i2,jsp) )
-                b(k,1) =   c_1 * cmplx(duz(i2,jsp), gz* uz(i2,jsp) )
+                c_1 = fac1 * CMPLX( COS(th), SIN(th) )
+                a(k,1) = - c_1 * CMPLX(dudz(i2,jsp), gz*udz(i2,jsp) )
+                b(k,1) =   c_1 * CMPLX(duz(i2,jsp), gz* uz(i2,jsp) )
              ENDDO
           ENDIF
           !--->       update hamiltonian and overlap matrices
@@ -195,7 +193,7 @@ CONTAINS
              ELSE
                 nc = nc + atoms%nlotot
                 nc_0 = nc
-                i_start = mod(mod(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size) 
+                i_start = MOD(MOD(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size) 
              ENDIF
              !-gb||
              DO  i = i_start+1, lapw%nv(jspin), n_size
@@ -214,37 +212,38 @@ CONTAINS
                    ii = ii0 + j
                    !--->             overlap: only  (g-g') parallel=0       '
                    IF (map2(j,jspin).EQ.ik) THEN
-                      sij = conjg(a(i,jspin))*a(j,jspin) + &
-                           conjg(b(i,jspin))*b(j,jspin)*ddnv(ik,jspin1)
+                      sij = CONJG(a(i,jspin))*a(j,jspin) + &
+                           CONJG(b(i,jspin))*b(j,jspin)*ddnv(ik,jspin1)
                       !+APW_LO
-#ifdef CPP_APW
-                      apw_lo = conjg(a(i,jspin)*  uz(ik,jspin1) + b(i,jspin)* udz(ik,jspin1) ) &
-                           * (a(j,jspin)* duz(ik,jspin1) + b(j,jspin)*dudz(ik,jspin1) )&
-                           +      (a(j,jspin)*  uz(ik,jspin1) + b(j,jspin)* udz(ik,jspin1) ) &
-                           * conjg(a(i,jspin)* duz(ik,jspin1) + b(i,jspin)*dudz(ik,jspin1) )
-                      !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
-#ifdef CPP_INVERSION
-                      aa(ii) = aa(ii) + 0.25 * real(apw_lo) 
-#else 
-                      aa(ii) = aa(ii) + 0.25 * apw_lo
-#endif
-#endif
+                      IF (input%l_useapw) THEN
+                         apw_lo = CONJG(a(i,jspin)*  uz(ik,jspin1) + b(i,jspin)* udz(ik,jspin1) ) &
+                              * (a(j,jspin)* duz(ik,jspin1) + b(j,jspin)*dudz(ik,jspin1) )&
+                              +      (a(j,jspin)*  uz(ik,jspin1) + b(j,jspin)* udz(ik,jspin1) ) &
+                              * CONJG(a(i,jspin)* duz(ik,jspin1) + b(i,jspin)*dudz(ik,jspin1) )
+                         !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
+                         IF (l_real) THEN
+                            hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + 0.25 * REAL(apw_lo) 
+                         ELSE 
+                            hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + 0.25 * apw_lo
+                         ENDIF
+                      ENDIF
                       !+APW_LO
-#ifdef CPP_INVERSION
-                      bb(ii) = bb(ii) + real(sij)
-#else 
-                      bb(ii) = bb(ii) + sij
-#endif
+                      IF (l_real) THEN
+                         hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
+                      ELSE 
+                         hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
+                      ENDIF
                    END IF
                 ENDDO
                 ii = ii0 + i
-                sij = conjg(a(i,jspin))*a(i,jspin) + conjg(b(i,jspin))*b(i,jspin)*ddnv(ik,jspin1)
-#ifdef CPP_INVERSION
-                bb(ii) = bb(ii) + real(sij)
-#else
-                bb(ii) = bb(ii) + sij
-#endif
-             enddo
+                sij = CONJG(a(i,jspin))*a(i,jspin) + CONJG(b(i,jspin))*b(i,jspin)*ddnv(ik,jspin1)
+                IF (l_real) THEN
+
+                   hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(sij)
+                ELSE
+                   hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + sij
+                ENDIF
+             ENDDO
           ENDIF
 
           !--->    hamiltonian update
@@ -257,12 +256,12 @@ CONTAINS
              jspin1 = 2
              jspin2 = 2
              nc = nc_0
-             i_start = mod(mod(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size) 
+             i_start = MOD(MOD(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size) 
           ELSEIF (ipot.EQ.3) THEN
              jspin1 = 2
              jspin2 = 1
              nc = nc_0
-             i_start = mod(mod(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size) 
+             i_start = MOD(MOD(n_rank - (lapw%nv(1)+atoms%nlotot),n_size) + n_size,n_size) 
           ENDIF
           DO i = i_start+1, lapw%nv(jspin1), n_size
              ik = map2(i,jspin1)
@@ -280,13 +279,14 @@ CONTAINS
              DO j = 1,jmax
                 ii = ii0 + j
                 jk = map2(j,jspin2)
-                hij = conjg(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
-                     + conjg(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
-#ifdef CPP_INVERSION
-                aa(ii) = aa(ii) + real(hij)
-#else
-                aa(ii) = aa(ii) + hij
-#endif
+                hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
+                     + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
+                IF (l_real) THEN
+
+                   hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + REAL(hij)
+                ELSE
+                   hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + hij
+                ENDIF
              ENDDO
           ENDDO
 

@@ -329,8 +329,10 @@
         z_max = 2 * (MAX(z_max,-z_min) + 3.0)      ! how much space do we need in z-dir.
         a3(3) = MAX( a3(3), z_max/(aa*scale(3)) )  ! adjust a3(3) so that it fits
 
-        atompos(3,1:abs(natin)) =                  ! rescale to internal coordinates
-     +  atompos(3,1:abs(natin))/(a3(3)*aa*scale(3))
+        IF(.NOT.cartesian) THEN
+           atompos(3,1:abs(natin)) =                  ! rescale to internal coordinates
+     +     atompos(3,1:abs(natin))/(a3(3)*aa*scale(3))
+        END IF
 
       ENDIF
 

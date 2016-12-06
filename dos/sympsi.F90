@@ -18,7 +18,7 @@ MODULE m_sympsi
   ! Jussi Enkovaara, Juelich 2004
 
 CONTAINS
-  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,z,eig,noco, ksym,jsym)
+  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat,l_real)
 
     USE m_grp_k
     USE m_inv3
@@ -29,19 +29,17 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
+    TYPE(t_zMat),INTENT(IN)        :: zMat
     !
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nv,ne
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kx(:),ky(:),kz(:)!(nvd) 
-    REAL,    INTENT (IN) :: bkpt(3),eig(DIMENSION%neigd) 
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-     REAL,    INTENT (IN) :: z(DIMENSION%nbasfcn,DIMENSION%neigd)
-#else
-    COMPLEX, INTENT (IN) :: z(DIMENSION%nbasfcn,DIMENSION%neigd)
-#endif
+    REAL,    INTENT (IN) :: bkpt(3),eig(DIMENSION%neigd)
+
     INTEGER, INTENT (OUT):: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
+    LOGICAL,INTENT(IN)   :: l_real
     !     ..
     !     .. Local Scalars ..
     REAL degthre
@@ -59,13 +57,8 @@ CONTAINS
     REAL :: norm(ne)
     LOGICAL :: symdone(ne)
 
-#ifdef CPP_INVERSION
-    REAL, ALLOCATABLE :: csum(:,:,:),overlap(:,:),chars(:,:)
-    REAL, SAVE,ALLOCATABLE :: char_table(:,:)
-#else
     COMPLEX, ALLOCATABLE :: csum(:,:,:),chars(:,:)
     COMPLEX, SAVE, ALLOCATABLE :: char_table(:,:)
-#endif
     CHARACTER(LEN=7) :: grpname
     CHARACTER(LEN=5) :: irrname(2*sym%nop)
     COMPLEX          :: c_table(2*sym%nop,2*sym%nop)
@@ -80,11 +73,9 @@ CONTAINS
 
     IF (soc) THEN
        ALLOCATE(su(2,2,2*sym%nop))
-       CALL grp_k(sym,mrot_k,cell,bkpt,nclass,nirr,c_table,&
-            &     grpname,irrname,su)
+       CALL grp_k(sym,mrot_k,cell,bkpt,nclass,nirr,c_table, grpname,irrname,su)
     ELSE
-       CALL grp_k(sym,mrot_k,cell,bkpt,nclass,nirr,c_table,&
-            &        grpname,irrname)
+       CALL grp_k(sym,mrot_k,cell,bkpt,nclass,nirr,c_table, grpname,irrname)
     ENDIF
     ALLOCATE(csum(ne,ne,nclass))
     ALLOCATE(chars(ne,nclass))
@@ -120,14 +111,12 @@ CONTAINS
              kv(3)=kz(i)
              kv=kv+bkpt
              IF (ABS(kvtest(1)-kv(1)).LT.small.AND.&
-                  &           ABS(kvtest(2)-kv(2)).LT.small.AND.&
-                  &           ABS(kvtest(3)-kv(3)).LT.small) THEN
+                  ABS(kvtest(2)-kv(2)).LT.small.AND. ABS(kvtest(3)-kv(3)).LT.small) THEN
                 gmap(k,c)=i
                 CYCLE kloop
              ENDIF
           ENDDO
-          WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for'&
-               &          , k,kx(k),ky(k),kz(k)
+          WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for', k,kx(k),ky(k),kz(k)
           RETURN
        ENDDO kloop
     ENDDO
@@ -137,12 +126,18 @@ CONTAINS
        norm(i)=0.0
        IF (soc) THEN
           DO k=1,nv*2
-             norm(i)=norm(i)+ABS(z(k,i))**2
+             norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
           ENDDO
        ELSE
-          DO k=1,nv
-             norm(i)=norm(i)+ABS(z(k,i))**2
-          ENDDO
+          IF (l_real) THEN
+             DO k=1,nv
+                norm(i)=norm(i)+ABS(zMat%z_r(k,i))**2
+             ENDDO
+          ELSE
+             DO k=1,nv
+                norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
+             ENDDO
+          ENDIF
        ENDIF
        norm(i)=SQRT(norm(i))
     ENDDO
@@ -166,26 +161,30 @@ CONTAINS
        DO c=1,nclass
           DO n1=1,ndeg
              DO n2=1,ndeg
-                DO k=1,nv
-#ifdef CPP_INVERSION
-                   csum(n1,n2,c)=csum(n1,n2,c)+z(k,deg(n1))*&
-                        z(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
-#else
-                   IF (soc) THEN
-                      csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(z(k,deg(n1)))*&
-                           (su(1,1,c)*z(gmap(k,c),deg(n2))+ su(1,2,c)*z(gmap(k,c)+nv,deg(n2)))+&
-                           CONJG(z(k+nv,deg(n1)))* (su(2,1,c)*z(gmap(k,c),deg(n2))+&
-                           su(2,2,c)*z(gmap(k,c)+nv,deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
+                IF (l_real) THEN
+                   DO k=1,nv
+                      csum(n1,n2,c)=csum(n1,n2,c)+zMat%z_r(k,deg(n1))*&
+                           zMat%z_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                   END DO
+                ELSE
+                   IF (soc) THEN  
+                      DO k=1,nv
+
+                         csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(zMat%z_c(k,deg(n1)))*&
+                              (su(1,1,c)*zMat%z_c(gmap(k,c),deg(n2))+ su(1,2,c)*zMat%z_c(gmap(k,c)+nv,deg(n2)))+&
+                              CONJG(zMat%z_c(k+nv,deg(n1)))* (su(2,1,c)*zMat%z_c(gmap(k,c),deg(n2))+&
+                              su(2,2,c)*zMat%z_c(gmap(k,c)+nv,deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
+                      END DO
                    ELSE
-                      csum(n1,n2,c)=csum(n1,n2,c)+CONJG(z(k,deg(n1)))*&
-                           z(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                      DO k=1,nv
+                         csum(n1,n2,c)=csum(n1,n2,c)+CONJG(zMat%z_c(k,deg(n1)))*&
+                              zMat%z_c(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                      END DO
                    ENDIF
-#endif
-                ENDDO
+                ENDIF
              ENDDO
           ENDDO
        ENDDO
-
        ! We might have taken degenerate states which are not degenerate due to symmetry
        ! so look for irreducible reps
        DO n1=1,ndeg
@@ -222,24 +221,28 @@ CONTAINS
        WRITE(444,124) bkpt
        WRITE(444,*) 'Group is ' ,grpname
        DO c=1,nirr
-#ifdef CPP_INVERSION
-          IF (ANY((char_table).GT.0.001)) THEN
-#else
-          IF (ANY(AIMAG(char_table).GT.0.001)) THEN
-#endif
-             WRITE(444,123) c,irrname(c),(char_table(c,n),n=1,nclass)
+          IF (l_real)THEN
+             IF (ANY(ABS(char_table).GT.0.001)) THEN
+                WRITE(444,123) c,irrname(c),(char_table(c,n),n=1,nclass)
+             ELSE
+                WRITE(444,123) c,irrname(c),(REAL(char_table(c,n)),n=1,nclass)
+             ENDIF
           ELSE
-             WRITE(444,123) c,irrname(c),(REAL(char_table(c,n)),n=1,nclass)
+             IF (ANY(AIMAG(char_table).GT.0.001)) THEN
+                WRITE(444,123) c,irrname(c),(char_table(c,n),n=1,nclass)
+             ELSE
+                WRITE(444,123) c,irrname(c),(REAL(char_table(c,n)),n=1,nclass)
+             ENDIF
           ENDIF
        ENDDO
        char_written=.TRUE.
     ENDIF
-123    FORMAT(i3,1x,a5,1x,20f7.3)
-124    FORMAT('Character table for k: ',3f8.4)
+123 FORMAT(i3,1x,a5,1x,20f7.3)
+124 FORMAT('Character table for k: ',3f8.4)
 
     DEALLOCATE(csum)
     DEALLOCATE(chars)
 
-  END SUBROUTINE
+  END SUBROUTINE sympsi
 
 END  MODULE m_sympsi

@@ -10,4 +10,4 @@ A) Create the test scripts. Follow for example the files in tests/tests/CuBulk
 3. in TESTNAME directory create one or more test.run1, test.run2... etc files that will be executed
 4. in TESTNAME/file put files you need 
  
-B) Add the test to tests/CMakeLists.txt again copying an existing example.
+B) Add the test to tests/CMakeLists.txt by including the testdirectory into the list of tests.

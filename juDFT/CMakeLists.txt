@@ -1,6 +1,6 @@
 set(fleur_F77 ${fleur_F77}
 )
-if (${Fleur_uses_HDF5})
+if (${FLEUR_USE_HDF5})
 set(fleur_F90 ${fleur_F90}
 juDFT/hdf_accessprp.F90
 juDFT/hdf_tools.F90

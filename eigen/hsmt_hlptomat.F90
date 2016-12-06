@@ -19,6 +19,7 @@ module m_hsmt_hlptomat
 
         integer :: ii,ij,ki,kj,n_rank,n_size
 
+        REAL :: aa_r(1),bb_r(1) !dummy arguments for mingeselle
 #ifdef CPP_MPI
 #include "mpif.h"
         CALL MPI_COMM_RANK(sub_comm,n_rank,ki)
@@ -56,11 +57,11 @@ module m_hsmt_hlptomat
               bb(:size(aahlp)) = bb(:size(aahlp))+bbhlp*chi11
               bbhlp = conjg(bbhlp)*chi21
             ENDIF
-#if (defined(CPP_MPI)&&!defined(CPP_INVERSION))
+#ifdef CPP_MPI
             CALL mingeselle(SUB_COMM,n_size,n_rank,nv,&
-                aahlp,aa)
+                aahlp,.false.,aa_r,aa)
             IF (present(bb).and.nlotot>1) CALL mingeselle(SUB_COMM,n_size,n_rank,nv,&
-                bbhlp,bb)
+                bbhlp,.false.,bb_r,bb)
 #endif
         ENDIF
 

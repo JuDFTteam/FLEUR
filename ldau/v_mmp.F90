@@ -17,11 +17,11 @@ MODULE m_vmmp
   !     Part of the LDA+U package                   G.B., Oct. 2000
   !     ************************************************************
 CONTAINS
-  SUBROUTINE v_mmp(atoms,jspins,lmaxb,ns_mmp,u,f0,f2, vs_mmp,results)
+  SUBROUTINE v_mmp(sym,atoms,jspins,lmaxb,ns_mmp,u,f0,f2, vs_mmp,results)
 
     USE m_types
     IMPLICIT NONE
-
+    TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_atoms),INTENT(IN)        :: atoms
     !
@@ -90,16 +90,16 @@ CONTAINS
           !--------------------------------------------------------------------------------------------+     
           ! initialise vs_mmp
           !
-#ifdef CPP_INVERSION
-          vs_mmp(:,:,n,:) = ns_mmp(:,:,n,:)
-          DO ispin = 1,jspins
-             DO m = -l,l
-                DO mp = -l,l
-                   ns_mmp(m,mp,n,ispin) = vs_mmp(-m,-mp,n,ispin)
+          IF (sym%invs) THEN
+             vs_mmp(:,:,n,:) = ns_mmp(:,:,n,:)
+             DO ispin = 1,jspins
+                DO m = -l,l
+                   DO mp = -l,l
+                      ns_mmp(m,mp,n,ispin) = vs_mmp(-m,-mp,n,ispin)
+                   ENDDO
                 ENDDO
              ENDDO
-          ENDDO
-#endif
+          ENDIF
           vs_mmp(:,:,n,:) = CMPLX(0.0,0.0)
           !
           ! outer spin loop - set up v_mmp

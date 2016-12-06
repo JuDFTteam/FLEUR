@@ -13,6 +13,8 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_xmlIntWrapFort
 
+USE m_juDFT
+
 CONTAINS
 SUBROUTINE xmlInitInterface()
 
@@ -32,7 +34,9 @@ SUBROUTINE xmlInitInterface()
 
    errorStatus = 0
    errorStatus = initializeXMLInterface()
-   IF(errorStatus.NE.0) STOP 'Error!'
+   IF(errorStatus.NE.0) THEN
+      CALL juDFT_error("Could not initialize XML interface.",calledby="xmlInitInterface")
+   END IF
 
 END SUBROUTINE xmlInitInterface
 
@@ -58,8 +62,7 @@ SUBROUTINE xmlParseSchema(schemaFilename)
    errorStatus = 0
    errorStatus = parseXMLSchema(schemaFilename)
    IF(errorStatus.NE.0) THEN
-      WRITE(*,*) 'Parsing xml schema file ', TRIM(ADJUSTL(schemaFilename))
-      STOP 'Error: xml Schema file not parsable!'
+      CALL juDFT_error("XML Schema file not parsable: "//TRIM(ADJUSTL(schemaFilename)),calledby="xmlParseSchema")
    END IF
 
 END SUBROUTINE xmlParseSchema
@@ -86,8 +89,7 @@ SUBROUTINE xmlParseDoc(docFilename)
    errorStatus = 0
    errorStatus = parseXMLDocument(docFilename)
    IF(errorStatus.NE.0) THEN
-      WRITE(*,*) 'Parsing xml document file ', TRIM(ADJUSTL(docFilename))
-      STOP 'Error: xml document file not parsable!'
+      CALL juDFT_error("XML document file not parsable: "//TRIM(ADJUSTL(docFilename)),calledby="xmlParseDoc")
    END IF
 
 END SUBROUTINE xmlParseDoc
@@ -111,7 +113,7 @@ SUBROUTINE xmlValidateDoc()
    errorStatus = 0
    errorStatus = validateXMLDocument()
    IF(errorStatus.NE.0) THEN
-      STOP 'Error: xml document does not validate!'
+      CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xmlValidateDoc")
    END IF
 
 END SUBROUTINE xmlValidateDoc
@@ -134,7 +136,9 @@ SUBROUTINE xmlInitXPath()
 
    errorStatus = 0
    errorStatus = initializeXPath()
-   IF(errorStatus.NE.0) STOP 'Error!'
+   IF(errorStatus.NE.0) THEN
+      CALL juDFT_error("Could not initialize XPath.",calledby="xmlInitXPath")
+   END IF
 
 END SUBROUTINE xmlInitXPath
 
@@ -188,7 +192,9 @@ FUNCTION xmlGetAttributeValue(xPath)
 
    CALL C_F_POINTER(c_string, valueFromC, [ 255 ])
    IF (.NOT.c_associated(c_string)) THEN
-      STOP 'null returned!'
+      WRITE(*,*) 'Error in trying to obtain attribute value from XPath:'
+      WRITE(*,*) TRIM(ADJUSTL(xPath))
+      CALL juDFT_error("Attribute value could not be obtained.",calledby="xmlGetAttributeValue")
    END IF
    DO i=1, 255
      value(i:i) = valueFromC(i)
@@ -217,7 +223,10 @@ SUBROUTINE xmlFreeResources()
 
    errorStatus = 0
    errorStatus = freeXMLResources()
-   IF(errorStatus.NE.0) STOP 'Error!'
+   IF(errorStatus.NE.0) THEN
+      CALL juDFT_error("Could not free XML resources.",calledby="xmlFreeResources")
+      STOP 'Error!'
+   END IF
 
 END SUBROUTINE xmlFreeResources
 

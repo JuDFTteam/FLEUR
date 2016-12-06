@@ -1,4 +1,6 @@
+#ifndef CPP_ESSL
 #define CPP_Singleton
+#endif
 !You might want to undefine CPP_singleton to use essl FFT
       MODULE m_cfft
       IMPLICIT NONE
@@ -44,7 +46,7 @@ c     are used for temporary storage. if the available storage
 c     is insufficient, the program is terminated by a stop.
 c     maxf must be .ge. the maximum prime factor of n.
 c     maxp must be .gt. the number of prime factors of n.
-c     in addition, if the square-free portion k cf n has two or
+c     in addition, if the square-free portion k of n has two or
 c     more prime factors, then maxp must be .ge. k-1.
 c     array storage in nfac for a maximum of 11 factors of n.
 c     if n has more than one square-free factor, the product of the
@@ -74,16 +76,16 @@ C     .. Local Arrays ..
       INTEGER, ALLOCATABLE :: nfac(:),np(:)
 C     ..
 C     .. Intrinsic Functions ..
-      INTRINSIC cos,real,mod,sin
+      INTRINSIC cos,real,mod,sin,sqrt
 C     ..
 C     .. Equivalences ..
       EQUIVALENCE (i,ii)
 C     ..
       IF (n.LT.2) RETURN
 
-      maxf = 299
-      maxp = 503
-      maxnf = 17
+      maxf = MAX(299,n)
+      maxp = MAX(503,n-1)
+      maxnf = MAX(17,CEILING(sqrt(1.0*n)))
       ALLOCATE ( at(maxf),bt(maxf),ck(maxf),sk(maxf) ) 
       ALLOCATE ( nfac(maxnf),np(maxp) ) 
 

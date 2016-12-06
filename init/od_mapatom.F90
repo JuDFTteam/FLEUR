@@ -83,7 +83,6 @@
          atoms%invsat(na) = 0
          sym%invsatnr(na) = 0
       END DO
-#if ( defined(CPP_INVERSION) )
 
       IF (oneD%odd%invs) THEN
          WRITE (6,FMT=*)
@@ -120,7 +119,6 @@
             nat1 = nat1 + atoms%neq(n)
          END DO
       END IF
-#endif
       WRITE (6,FMT=*) atoms%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3, ' via 3d inversion')
 

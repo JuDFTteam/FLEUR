@@ -59,7 +59,7 @@ CONTAINS
     INTEGER   i,i1 ,j,jsp,jsp1,k,ne,nn,nn1,nrec,info
     INTEGER   idim_c,idim_r,jsp2,nbas,j1
     CHARACTER vectors 
-    LOGICAL   l_file,l_socvec,l_qsgw,l_open
+    LOGICAL   l_file,l_socvec,l_qsgw,l_open,l_real
     INTEGER   irec,irecl_qsgw
     COMPLEX   cdum
     !     ..
@@ -73,11 +73,10 @@ CONTAINS
     COMPLEX,ALLOCATABLE :: zhelp1(:,:),zhelp2(:,:)
     COMPLEX,ALLOCATABLE :: hso(:,:),hsomtx(:,:,:,:)
     COMPLEX,ALLOCATABLE :: sigma_xc_apw(:,:),sigma_xc(:,:)
-#ifdef CPP_INVERSION
-    REAL,   ALLOCATABLE :: z(:,:,:)
-#else
-    COMPLEX,ALLOCATABLE :: z(:,:,:)
-#endif
+
+    
+    REAL,   ALLOCATABLE :: z_r(:,:,:)
+    COMPLEX,ALLOCATABLE :: z_c(:,:,:)
     !     ..
     !     .. External Subroutines ..
     EXTERNAL CPP_LAPACK_cheev
@@ -90,12 +89,19 @@ CONTAINS
     !     read from eigenvalue and -vector file
     !
 
+    l_real=sym%invs.and..not.noco%l_noco
+
     INQUIRE (4649,opened=l_socvec)
     INQUIRE (file='fleur.qsgw',exist=l_qsgw)
-
-    ALLOCATE ( z(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd) )
-
-    z(:,:,:)= 0.  
+    if (l_real) THEN
+       ALLOCATE ( z_r(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd) )
+       ALLOCATE (z_c(1,1,1))
+       z_r(:,:,:)= 0.  
+    else
+       ALLOCATE ( z_c(DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd) )
+       ALLOCATE (z_r(1,1,1))
+       z_c(:,:,:)= 0.  
+    endif
     zso(:,:,:)= CMPLX(0.,0.)
 
     ALLOCATE(lapw%k1(DIMENSION%nvd,input%jspins))
@@ -109,10 +115,17 @@ CONTAINS
             bk=bkdu,el=epar,ello=ello(:,:,jsp),&
             evac=evac,neig=ne,eig=eig(:,jsp),&
             nmat=lapw%nmat,nv=lapw%nv(jsp),k1=lapw%k1(:,jsp),k2=lapw%k2(:,jsp),k3=lapw%k3(:,jsp),kveclo=kveclo)
-       CALL read_eig(&
-            eig_id,nk,jsp,&
-            n_start=1,n_end=ne,&
-            z=z(:,:ne,jsp))
+       if (l_real) THEN
+          CALL read_eig(&
+               eig_id,nk,jsp,&
+               n_start=1,n_end=ne,&
+               z=z_r(:,:ne,jsp))
+       ELSE
+          CALL read_eig(&
+               eig_id,nk,jsp,&
+               n_start=1,n_end=ne,&
+               z=z_c(:,:ne,jsp))
+       endif
        write(6,*) "jspin=",jsp,",nk=",nk
        write(6,"(5f12.4)") eig(:ne,jsp)	       
 
@@ -156,7 +169,7 @@ CONTAINS
          &             DIMENSION,atoms,sym,&
          &             input,lapw,nsz,&
          &             cell,bkpt,&
-         &             z,usdus,&
+         &             l_real,z_r,z_c,usdus,&
          &             zso,noco,oneD,&
          &             kveclo,&
          &             ahelp,bhelp,chelp)
@@ -243,15 +256,15 @@ CONTAINS
              !            sigma_xc_apw(nv+1:,nv+1:) = 0
              i  = nsz(1) * (jsp1-1) + 1 ; i1 = nsz(1) * jsp1
              j  = nsz(1) * (jsp2-1) + 1 ; j1 = nsz(1) * jsp2
-#ifdef CPP_INVERSION
+             if (l_real) THEN
+                sigma_xc(i:i1,j:j1) = &
+                     &        MATMUL (       TRANSPOSE(z_r(:nbas,:,1))  ,&
+                     &        MATMUL ( sigma_xc_apw,   z_r(:nbas,:,1) ) )
+else
              sigma_xc(i:i1,j:j1) = &
-                  &        MATMUL (       TRANSPOSE(z(:nbas,:,1))  ,&
-                  &        MATMUL ( sigma_xc_apw,   z(:nbas,:,1) ) )
-#else
-             sigma_xc(i:i1,j:j1) = &
-                  &        MATMUL ( CONJG(TRANSPOSE(z(:nbas,:,1))) ,&
-                  &        MATMUL ( sigma_xc_apw,   z(:nbas,:,1) ) )
-#endif
+                  &        MATMUL ( CONJG(TRANSPOSE(z_c(:nbas,:,1))) ,&
+                  &        MATMUL ( sigma_xc_apw,   z_c(:nbas,:,1) ) )
+          endif
              hso(i:i1,j:j1) = hso(i:i1,j:j1) + CONJG(sigma_xc(i:i1,j:j1))
              IF(jsp1.NE.jsp2) THEN
                 sigma_xc(j:j1,i:i1) = TRANSPOSE(CONJG(sigma_xc(i:i1,j:j1)))
@@ -321,13 +334,13 @@ CONTAINS
              ENDDO
           ENDDO  ! j
 
-#ifdef CPP_INVERSION
-          CALL CPP_BLAS_cgemm("N","N",DIMENSION%nbasfcn,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(z(:,:,jsp)),&
+if (l_real) THEN
+          CALL CPP_BLAS_cgemm("N","N",DIMENSION%nbasfcn,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(z_r(:,:,jsp)),&
                DIMENSION%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(1,1,jsp2),DIMENSION%nbasfcn)
-#else
-          CALL CPP_BLAS_cgemm("N","N",DIMENSION%nbasfcn,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),z(:,:,jsp),&
+else
+          CALL CPP_BLAS_cgemm("N","N",DIMENSION%nbasfcn,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),z_c(:,:,jsp),&
                DIMENSION%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(:,:,jsp2),DIMENSION%nbasfcn)
-#endif
+endif
 
        ENDDO    !isp
 
@@ -348,7 +361,7 @@ CONTAINS
        DEALLOCATE ( zhelp2 )
     ENDIF ! (.NOT.input%eonly)
 
-    DEALLOCATE ( hso,z )
+    DEALLOCATE (z_r,z_c, hso )
     !
     nmat=lapw%nmat
     RETURN

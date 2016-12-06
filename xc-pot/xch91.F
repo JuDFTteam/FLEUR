@@ -30,11 +30,7 @@ c     ..
       DATA thrd,thrd4/0.333333333333e0,1.33333333333e0/
 c.....-----------------------------------------------------------------
 c     expsm: argument of exponential-smallest.
-#ifdef CPP_DEC
-      expsm=-300.e0
-#else
-      expsm=-500.e0
-#endif
+      expsm=minexponent(expsm)/1.5
 
       fac = ax*d**thrd
       s2 = s*s
