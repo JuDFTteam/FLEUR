@@ -245,7 +245,7 @@
          j = 1
          DO i = 1, nat
             IF (ity(i).NE.ity(j)) CYCLE
-            tr(1:3) = posr(1:3,i) - pos(1:3,j)
+            tr(1:3) = pos(1:3,i) - posr(1:3,j)
             tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
             maxTrVecs = maxTrVecs + 1
             trVecs(:,maxTrVecs) = tr(:)
@@ -253,7 +253,7 @@
             secondAtom(maxTrVecs) = i
          END DO
 
-!!       2. Sort rotated atoms into "location bins"
+!!       2. Sort atoms into "location bins"
 !!          (position vectors are in the region -0.5 to 0.5)
 
          binDim(:) = CEILING(natin**(1.0/3.0)*0.5)
@@ -265,9 +265,9 @@
      &                     -binDim(3)-1:binDim(3)+1))
          binSizes = 0
          DO n = 1, nat
-            iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
+            iBin(:) = NINT(binDim(:) * pos(:,n) / 0.501)
 
-            boundary(:) = (ABS(posr(:,n))-0.5).LE.eps7
+            boundary(:) = (ABS(pos(:,n))-0.5).LE.eps7
             DO i = -1, 1, 2
                IF((i.EQ.-1).AND.(.NOT.boundary(1))) CYCLE
                DO j = -1, 1, 2
@@ -300,9 +300,9 @@
 
          binSizes = 0
          DO n = 1, nat
-            iBin(:) = NINT(binDim(:) * posr(:,n) / 0.501)
+            iBin(:) = NINT(binDim(:) * pos(:,n) / 0.501)
 
-            boundary(:) = (ABS(posr(:,n))-0.5).LE.eps7
+            boundary(:) = (ABS(pos(:,n))-0.5).LE.eps7
             DO i = -1, 1, 2
                IF((i.EQ.-1).AND.(.NOT.boundary(1))) CYCLE
                DO j = -1, 1, 2
@@ -325,7 +325,7 @@
          DO j = 2, nat
             iTr = 1
             DO WHILE (iTr.LE.maxTrVecs)
-               tr(1:3) = pos(1:3,j) + trVecs(1:3,trIndices(iTr))
+               tr(1:3) = posr(1:3,j) + trVecs(1:3,trIndices(iTr))
                tr(1:3) = tr(1:3) - anint(tr(1:3) - eps7)
 
                iBin(:) = NINT(binDim(:) * tr(:) / 0.501)
@@ -335,7 +335,7 @@
                !Search for atoms in the nearest bin
                DO k = 1,binSizes(iBin(1),iBin(2),iBin(3))
                   i = atomIndexBins(k,iBin(1),iBin(2),iBin(3))
-                  rtau(:) = tr(:)-posr(:,i)
+                  rtau(:) = tr(:)-pos(:,i)
                   rtau(:) = rtau(:) - anint(rtau(:) - eps7)
                   IF(ALL(ABS(rtau(:)).LE.eps7)) THEN
                      IF (ity(i).NE.ity(j)) EXIT
@@ -353,7 +353,7 @@
                         DO k = 1,binSizes(iBin(1)+u,iBin(2)+v,iBin(3)+w)
                            i = atomIndexBins(k,iBin(1)+u,iBin(2)+v,
      &                                         iBin(3)+w)
-                           rtau(:) = tr(:)-posr(:,i)
+                           rtau(:) = tr(:)-pos(:,i)
                            rtau(:) = rtau(:) - anint(rtau(:) - eps7)
                            IF(ALL(ABS(rtau(:)).LE.eps7)) THEN
                               IF (ity(i).NE.ity(j)) EXIT binLoop
