@@ -85,7 +85,7 @@ SUBROUTINE w_inpXML(&
 !-odim
 ! ..
 ! ..  Local Variables
-   REAL     ::dtild ,scpos, zc, sumWeight
+   REAL     ::dtild, zc, sumWeight
    INTEGER  ::nw,idsprs, n1, n2
    INTEGER ieq,i,k,na,n,ilo
    REAL s3,ah,a,hs2,rest
@@ -112,9 +112,9 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=200) :: symFilename
    LOGICAL :: kptGamma, l_relcor, l_explicit
    INTEGER :: iAtomType, startCoreStates, endCoreStates
-   CHARACTER(len=100) :: xPosString, yPosString, zPosString
+   CHARACTER(len=100) :: posString(3)
    CHARACTER(len=200) :: coreStatesString, valenceStatesString
-   REAL :: tempTaual(3,atoms%nat)
+   REAL :: tempTaual(3,atoms%nat), scpos(3)
    REAL :: a1Temp(3),a2Temp(3),a3Temp(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
    CHARACTER(len=7) :: coreStateList(29) !'(1s1/2)'
@@ -541,19 +541,21 @@ SUBROUTINE w_inpXML(&
          tempTaual(1,na) = atoms%taual(1,na)
          tempTaual(2,na) = atoms%taual(2,na)
          tempTaual(3,na) = atoms%taual(3,na)
-         DO i = 2,9
-            rest = ABS(i*tempTaual(1,na) - NINT(i*tempTaual(1,na)) ) + ABS(i*tempTaual(2,na) - NINT(i*tempTaual(2,na)))
-            IF (.not.input%film) THEN
-               rest = rest + ABS(i*tempTaual(3,na) - NINT(i*tempTaual(3,na)) )
-            END IF
-            IF (rest.LT.(i*0.000001)) EXIT
-         END DO
          scpos = 1.0
-         IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
+         DO i = 2,9
+            rest = ABS(i*tempTaual(1,na) - NINT(i*tempTaual(1,na)))
+            IF ((scpos(1).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(1) = real(i)
+            rest = ABS(i*tempTaual(2,na) - NINT(i*tempTaual(2,na)))
+            IF ((scpos(2).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(2) = real(i)
+            IF (.not.input%film) THEN
+               rest = ABS(i*tempTaual(3,na) - NINT(i*tempTaual(3,na)) )
+               IF ((scpos(3).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(3) = real(i)
+            END IF
+         END DO
          DO i = 1,2
-            tempTaual(i,na) = tempTaual(i,na)*scpos
-         ENDDO
-         IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos
+            tempTaual(i,na) = tempTaual(i,na)*scpos(i)
+         END DO
+         IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos(3)
          IF (input%film) THEN
             tempTaual(3,na) = dtild*tempTaual(3,na)/scale
          END IF
@@ -568,34 +570,28 @@ SUBROUTINE w_inpXML(&
          ELSE IF (input%film) THEN
 !         <filmPos> x/myConstant  y/myConstant  1/myConstant</filmPos>
             340 FORMAT('         <filmPos>',a,' ',a,' ',a,'</filmPos>')
-            xPosString = ''
-            yPosString = ''
-            zPosString = ''
-            IF((scpos.NE.1.0).AND.((tempTaual(1,na).NE.0.0).OR.(tempTaual(2,na).NE.0.0).OR.(tempTaual(3,na).NE.0.0))) THEN
-               WRITE(xPosString,'(f0.10,a1,f0.10)') tempTaual(1,na), '/', scpos
-               WRITE(yPosString,'(f0.10,a1,f0.10)') tempTaual(2,na), '/', scpos
-            ELSE
-               WRITE(xPosString,'(f0.10)') tempTaual(1,na)
-               WRITE(yPosString,'(f0.10)') tempTaual(2,na)
-            END IF
-            WRITE(zPosString,'(f0.10)') tempTaual(3,na)
-            WRITE (fileNum,340) TRIM(ADJUSTL(xPosString)),TRIM(ADJUSTL(yPosString)),TRIM(ADJUSTL(zPosString))
+            posString(:) = ''
+            DO i = 1, 2
+               IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
+                  WRITE(posString(i),'(f0.3,a1,f0.3)') tempTaual(i,na), '/', scpos(i)
+               ELSE
+                  WRITE(posString(i),'(f0.10)') tempTaual(i,na)
+               END IF
+            END DO
+            WRITE(posString(3),'(f0.10)') tempTaual(3,na)
+            WRITE (fileNum,340) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          ELSE
 !         <relPos> x/myConstant  y/myConstant  z/myConstant</relPos>
             350 FORMAT('         <relPos>',a,' ',a,' ',a,'</relPos>')
-            xPosString = ''
-            yPosString = ''
-            zPosString = ''
-            IF((scpos.NE.1.0).AND.((tempTaual(1,na).NE.0.0).OR.(tempTaual(2,na).NE.0.0).OR.(tempTaual(3,na).NE.0.0))) THEN
-               WRITE(xPosString,'(f0.10,a1,f0.10)') tempTaual(1,na), '/', scpos
-               WRITE(yPosString,'(f0.10,a1,f0.10)') tempTaual(2,na), '/', scpos
-               WRITE(zPosString,'(f0.10,a1,f0.10)') tempTaual(3,na), '/', scpos
-            ELSE
-               WRITE(xPosString,'(f0.10)') tempTaual(1,na)
-               WRITE(yPosString,'(f0.10)') tempTaual(2,na)
-               WRITE(zPosString,'(f0.10)') tempTaual(3,na)
-            END IF
-            WRITE (fileNum,350) TRIM(ADJUSTL(xPosString)),TRIM(ADJUSTL(yPosString)),TRIM(ADJUSTL(zPosString))
+            posString(:) = ''
+            DO i = 1, 3
+               IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
+                  WRITE(posString(i),'(f0.3,a1,f0.3)') tempTaual(i,na), '/', scpos(i)
+               ELSE
+                  WRITE(posString(i),'(f0.10)') tempTaual(i,na)
+               END IF
+            END DO
+            WRITE (fileNum,350) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          END IF
       END DO
 !         <force calculate="F" relaxX="T" relaxY="T" relaxZ="T"/>
