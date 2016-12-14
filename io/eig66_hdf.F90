@@ -602,7 +602,7 @@ CONTAINS
        REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
        REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
        INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-       CLASS(*),TARGET,INTENT(OUT),OPTIONAL  :: z(:,:)
+       CLASS(*),TARGET,OPTIONAL  :: z(:,:)
 
 #ifdef CPP_HDF
        INTEGER:: n1,n,k,k1_t,k2_t,k3_t

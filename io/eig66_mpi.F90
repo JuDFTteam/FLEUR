@@ -267,7 +267,7 @@ CONTAINS
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk3(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    CLASS(*),TARGET,INTENT(OUT),OPTIONAL  :: z(:,:)
+    CLASS(*),TARGET,OPTIONAL  :: z(:,:)
 
 #ifdef CPP_MPI
     INTEGER                   :: pe,tmp_size,e

@@ -240,7 +240,7 @@ CONTAINS
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    CLASS(*),INTENT(OUT),OPTIONAL  :: z(:,:)
+    CLASS(*),OPTIONAL  :: z(:,:)
 
     INTEGER::nrec
     TYPE(t_data_mem),POINTER:: d

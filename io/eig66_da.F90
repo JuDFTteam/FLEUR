@@ -161,7 +161,7 @@ CONTAINS
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    CLASS(*),TARGET,INTENT(OUT),OPTIONAL  :: z(:,:)
+    CLASS(*),TARGET,OPTIONAL  :: z(:,:)
 
     !Local variables
     INTEGER:: nv_s,nmat_s,n,nrec,neig_s

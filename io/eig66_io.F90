@@ -123,7 +123,7 @@ CONTAINS
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    CLASS(*),INTENT(OUT),OPTIONAL  :: z(:,:)
+    CLASS(*),OPTIONAL  :: z(:,:)
     INTEGER::n
     CALL timestart("IO (read)")
     SELECT CASE (eig66_data_mode(id))
