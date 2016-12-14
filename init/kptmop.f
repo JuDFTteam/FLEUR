@@ -386,11 +386,11 @@ c
 
       WRITE (iofile,'(''Bravais lattice vectors'')' )
       DO ii = 1, 3
-         WRITE (iofile,'(43x,3(1x,f9.6))') (bltv(ii,ikc), ikc=1,3)
+         WRITE (iofile,'(43x,3(1x,f11.6))') (bltv(ii,ikc), ikc=1,3)
       ENDDO
       WRITE (iofile,'(''reciprocal lattice vectors'')' )
       DO ii = 1, 3
-         WRITE (iofile,'(43x,3(1x,f9.6))' ) (rltv(ii,ikc), ikc=1,3)
+         WRITE (iofile,'(43x,3(1x,f11.6))' ) (rltv(ii,ikc), ikc=1,3)
       ENDDO
 !
 ! ---> nmop(i) are Monkhorst-Pack parameters; they determine the

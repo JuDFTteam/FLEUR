@@ -54,7 +54,7 @@
         nline = nline + 1
         READ (infh,'(a)',ERR=911,END=999,IOSTAT=ios) line
         LINE = adjustl(line)
-        WRITE(dbgfh,'("line:",i2,">",a71)') nline,line(1:71)
+        WRITE(dbgfh,'("line:",i5,">",a71)') nline,line(1:71)
 
         n = SCAN(line,'!')                 ! remove end of line comments
 
