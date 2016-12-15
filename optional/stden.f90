@@ -254,7 +254,7 @@
              !
              ! Check continuity
              !
-             IF (atoms%ntype<100)THEN
+             IF (input%vchk)THEN
                 DO ispin = 1,input%jspins
                    WRITE (6,'(a8,i2)') 'spin No.',ispin
                    IF (input%film .AND. .NOT.oneD%odi%d1) THEN
