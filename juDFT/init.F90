@@ -5,7 +5,8 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_juDFT_init
-      USE m_judft_time
+      USE m_judft_time 
+      USE  m_judft_sysinfo
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
@@ -13,6 +14,7 @@
      
       SUBROUTINE juDFT_init()
       CALL signal_handler()
+      CALL checkstack()
       END SUBROUTINE juDFT_init
 
       SUBROUTINE signal_handler()

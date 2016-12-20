@@ -17,4 +17,5 @@ juDFT/juDFT.F90
 juDFT/stop.F90
 juDFT/time.F90
 juDFT/args.F90
+juDFT/sysinfo.F90
 )
