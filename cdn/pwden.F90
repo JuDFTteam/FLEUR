@@ -70,6 +70,7 @@ CONTAINS
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !
     !
+!DEC$ NOOPTIMIZE
 #include"cpp_double.h"
     USE m_forceb8
     USE m_pwint

@@ -26,7 +26,7 @@ function configure_machine(){
 		echo "module load Python/2.7.12"
 		exit
 	    fi
-	    module load ELPA/2016.05.003-hybrid
+	    #module load ELPA/2016.05.003-hybrid
 	    module load HDF5
 	    export CC=mpicc
 	    export FC=mpif90
