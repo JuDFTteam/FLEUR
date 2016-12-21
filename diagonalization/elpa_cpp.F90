@@ -4,9 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
     USE m_juDFT
-    USE elpa1
     USE m_subredist1
     USE m_subredist2
+    USE elpa1
 #ifdef CPP_ELPA2
     USE elpa2
 #endif
@@ -84,7 +84,10 @@
     ! Please note: cholesky_complex/invert_trm_complex are not trimmed for speed.
     ! The only reason having them is that the Scalapack counterpart
     ! PDPOTRF very often fails on higher processor numbers for unknown reasons!
-#ifdef CPP_ELPA_NEW
+#ifdef CPP_ELPA_201605003
+    ok=CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)
+    ok=CPP_invert_trm(m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)
+#elif defined CPP_ELPA_NEW
     CALL CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.,ok)
     CALL CPP_invert_trm(m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.,ok)
 #else
@@ -106,15 +109,23 @@
        n_row = numroc (n_col, nb, myrow, 0, nprow)
        asca(n_row+1:myrowssca,i) = eigvec(n_row+1:myrowssca,i)
     ENDDO
-
+#ifdef CPP_ELPA_201605003
+    ok=CPP_mult ('U', 'L',m, m,bsca,myrowssca,asca,SIZE(asca,1),nb, mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca)
+#else
     CALL CPP_mult ('U', 'L',m, m,bsca,myrowssca,asca,SIZE(asca,1),nb, mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca)
-
+#endif
     ! 2b. tmp2 = eigvec**T
     CALL CPP_transpose(m,m,CPP_ONE,eigvec,1,1,sc_desc,CPP_ZERO,tmp2,1,1,sc_desc)
 
     ! 2c. A =  U**-T * tmp2 ( = U**-T * Aorig * U**-1 )
+#ifdef CPP_ELPA_201605003
+    ok=CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1), tmp2,&
+         SIZE(tmp2,1),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
+#else
     CALL CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1), tmp2,&
          SIZE(tmp2,1),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
+#endif
+
 
     ! A is only set in the upper half, solve_evp_real needs a full matrix
     ! Set lower half from upper half
@@ -133,7 +144,15 @@
     ! 3. Calculate eigenvalues/eigenvectors of U**-T * A * U**-1
     !    Eigenvectors go to eigvec
     num2=num
-#ifdef CPP_ELPA_NEW
+#ifdef CPP_ELPA_201605003
+#ifdef CPP_ELPA2
+    ok=CPP_solve_evp_2stage(m,num2,asca,SIZE(asca,1),&
+         eig2,eigvec,SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
+#else
+    ok=CPP_solve_evp_1stage(m, num2,asca,SIZE(asca,1),&
+         eig2,eigvec, SIZE(asca,1), nb,mycolssca,mpi_comm_rows, mpi_comm_cols)
+#endif
+#elif defined CPP_ELPA_NEW
 #ifdef CPP_ELPA2
     err=CPP_solve_evp_2stage(m,num2,asca,SIZE(asca,1),&
          eig2,eigvec,SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
@@ -156,9 +175,13 @@
     ! mult_ah_b_complex needs the transpose of U**-1, thus tmp2 = (U**-1)**T
     CALL CPP_transpose(m,m,CPP_ONE,bsca,1,1,sc_desc,CPP_ZERO,tmp2,1,1,sc_desc)
 
+#ifdef CPP_ELPA_201605003
+    ok= CPP_mult ('L', 'N',m, num2, tmp2, SIZE(asca,1),&
+         eigvec, SIZE(asca,1),nb,mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
+#else
     CALL CPP_mult ('L', 'N',m, num2, tmp2, SIZE(asca,1),&
          eigvec, SIZE(asca,1),nb,mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
-
+#endif
     ! END of ELPA stuff
     CALL BLACS_GRIDEXIT(ictextblacs,ierr)
     CALL MPI_COMM_FREE(mpi_comm_rows,ierr)
