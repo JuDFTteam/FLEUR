@@ -164,8 +164,8 @@ CONTAINS
        !
        !     --->generate spin polarized charge density
        !
-       CALL timestart("optional: spin polarized density")
        IF (input%swsp) THEN
+          CALL timestart("optional: spin polarized density")
           CALL cdnsp(&
                &              atoms,input,vacuum,sphhar,&
                &              stars,&
