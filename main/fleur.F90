@@ -261,6 +261,7 @@
                 IF (it.GT.1) THEN
                    obsolete%eig66(1)= .FALSE.
                 END IF
+                CALL resetIterationDependentTimers()
                 CALL timestart("Iteration")
                 IF (mpi%irank.EQ.0) THEN
                    !-t3e
@@ -858,7 +859,6 @@
           l_cont = ( it < input%itmax )
        END IF
        CALL writeTimesXML()
-       CALL resetIterationDependentTimers()
        CALL check_time_for_next_iteration(it,l_cont)
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
