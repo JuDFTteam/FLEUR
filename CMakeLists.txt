@@ -18,6 +18,8 @@ include("cmake/ReportConfig.txt")
 
 include("cmake/Files_and_Targets.txt")
 
+include("cmake/filespecific.cmake")
+
 #install(TARGETS fleur inpgen DESTINATION bin)
 install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur 
         CONFIGURATIONS Debug
