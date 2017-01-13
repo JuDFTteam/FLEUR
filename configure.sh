@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "------------ Welcome to the FLEUR configuration script -------------"
-. cmake/machines.sh
+. $DIR/cmake/machines.sh
 #check if -h or  --help was given as argument
 if [ "$1" = "" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]
 then
@@ -13,7 +14,7 @@ then
    echo "   $known_machines"
    echo " 
   If you do not find a proper choice you might try
-        './configuration.sh AUTO'
+        'configuration.sh AUTO'
 
   You might also want to add your configuration to the file 
   cmake/machines.sh in this case :-)
@@ -28,14 +29,16 @@ echo "
    By specifying 'debug' in addition to your machine configuration you will build a debugging version"
 fi
 #Check if we are using the git version and ask if we want to update
-if test -d .git
+if test -d $DIR/.git
 then
    #We are using the git version so ask the user (for 10sec)
    echo "Shall we try to update to the newest git version? (y/n)"
    read -n 1 -t 10 x
    if test "$x" == "y"
-   then 
+   then
+       cd $DIR 
        git pull
+       cd -
    fi
 fi
 
@@ -66,7 +69,7 @@ then
 else
    BUILD=Release
 fi
-cmake -DCMAKE_BUILD_TYPE=$BUILD ..
+cmake -DCMAKE_BUILD_TYPE=$BUILD $DIR
 
 
 echo "Configuration finished"
