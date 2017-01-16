@@ -17,6 +17,7 @@ MODULE m_eigen_diag
     USE m_elpa
 #endif
     IMPLICIT NONE
+    PRIVATE
 #ifdef CPP_ELPA
   INTEGER,PARAMETER:: diag_elpa=1
 #else
@@ -39,9 +40,15 @@ MODULE m_eigen_diag
 #endif
   INTEGER,PARAMETER:: diag_lapack=4
   INTEGER,PARAMETER:: diag_lapack2=5
+  PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
+
+  LOGICAL FUNCTION parallel_solver_available()
+    parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
+  END FUNCTION parallel_solver_available
+
   SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
-       sym,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
+       sym,l_zref,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
     USE m_zsymsecloc
     USE m_aline
     USE m_alinemuff
@@ -81,7 +88,7 @@ CONTAINS
     INTEGER,INTENT(IN)  :: ne
     INTEGER,INTENT(OUT) :: ne_found
     REAL,INTENT(IN)     :: el(:,:,:)
-    LOGICAL, INTENT(IN) :: l_wu   
+    LOGICAL, INTENT(IN) :: l_wu,l_zref
     REAL,INTENT(INOUT)  :: bkpt(3)
     TYPE(t_tlmplm),INTENT(IN) :: td
     TYPE(t_usdus),INTENT(IN)  :: ud
@@ -189,14 +196,14 @@ CONTAINS
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
           if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
           IF (l_real) THEN
-          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
+          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
                 jij,matind,nred,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r)
        else
-          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
+          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
                jij,matind,nred,eig,ne_found,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
        endif
        CASE (diag_lapack)
-          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
+          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(l_zref.AND.(atoms%nlotot.EQ.0)),&
                       jij%l_j,matind,nred,input%gw,eig,ne_found,hamOvlp,zMat)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
@@ -255,6 +262,7 @@ CONTAINS
     if (any((/diag_elpa,diag_elemental,diag_scalapack/)==diag_solver).and..not.parallel) call priv_solver_error(diag_solver,parallel)
 
   END FUNCTION priv_select_solver
+
 
   SUBROUTINE priv_solver_error(diag_solver,parallel)
     IMPLICIT NONE

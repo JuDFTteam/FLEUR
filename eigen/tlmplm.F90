@@ -76,14 +76,14 @@ MODULE m_tlmplm
     !--->    generate the wavefunctions for each l
     !
     l_write=mpi%irank==0
-    !$    l_write=.false.
-    !$    call gaunt2(atoms%lmaxd)
-    !$OMP PARALLEL DO DEFAULT(NONE)&
-    !$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
-    !$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
-    !$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
-    !$OMP PRIVATE(nodeu,nsym,na)&
-    !$OMP SHARED(dimension,atoms,gwc,lh0,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
+    !!$    l_write=.false.
+    !!$    call gaunt2(atoms%lmaxd)
+    !!$OMP PARALLEL DO DEFAULT(NONE)&
+    !!$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
+    !!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
+    !!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
+    !!$OMP PRIVATE(nodeu,nsym,na)&
+    !!$OMP SHARED(dimension,atoms,gwc,lh0,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
     DO  n = 1,atoms%ntype
        na=sum(atoms%neq(:n-1))+1
 
@@ -250,7 +250,7 @@ MODULE m_tlmplm
        ENDIF
 
     ENDDO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
 
   END SUBROUTINE tlmplm

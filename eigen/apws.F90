@@ -13,7 +13,7 @@ MODULE m_apws
   !*********************************************************************
 CONTAINS
   SUBROUTINE apws(dimension,input,noco,kpts,&
-       nk,cell,sym,n_size,jspin, bkpt,lapw,matind,nred)
+       nk,cell,l_zref,n_size,jspin, bkpt,lapw,matind,nred)
 
     USE m_types
     USE m_sort
@@ -23,7 +23,6 @@ CONTAINS
     TYPE(t_dimension),INTENT(IN)   :: dimension
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
-    TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_lapw),INTENT(INOUT)     :: lapw
@@ -31,6 +30,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT  (IN) :: nk,n_size,jspin
     INTEGER, INTENT (OUT) :: nred
+    LOGICAL, INTENT (IN)  :: l_zref
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (OUT) :: matind(dimension%nbasfcn,2)
@@ -153,7 +153,7 @@ CONTAINS
        !+gu
        !--->    determine pairs of K-vectors, where K_z = K'_-z to use 
        !--->    z-reflection
-       IF (sym%l_zref) THEN
+       IF (l_zref) THEN
           n=0
           DO i=1,lapw%nv(ispin)
              DO j=1,i

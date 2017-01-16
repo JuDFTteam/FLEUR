@@ -46,9 +46,6 @@ CONTAINS
     USE m_util
     USE m_icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
-#ifdef CPP_MPI
-    USE m_mpimakegroups
-#endif
     USE m_xmlOutput
 
     IMPLICIT NONE
@@ -65,7 +62,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_jij),INTENT(IN)       :: jij
-    TYPE(t_sym),INTENT(INOUT)    :: sym  !l_zref will be modified in EVP
+    TYPE(t_sym),INTENT(IN)       :: sym  
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
@@ -88,7 +85,7 @@ CONTAINS
     INTEGER iter,ne,matsize  ,nrec,lh0
     INTEGER nspins,isp,l,i,j,err,gwc
     INTEGER mlotot,mlolotot,mlot_d,mlolot_d,nlot_d
-    LOGICAL l_wu,lcal_qsgw,l_file,l_real
+    LOGICAL l_wu,lcal_qsgw,l_file,l_real,l_zref
     REAL evac_sv(dimension%jspd)
     INTEGER ::eig_id_hf=-1
     INTEGER :: nu=8
@@ -114,8 +111,7 @@ CONTAINS
     TYPE(t_zMat)    :: zMat
     TYPE(t_hamOvlp) :: hamOvlp
     !
-    INTEGER n_start,n_groups,n_rank,n_size,n,n_stride
-    INTEGER SUB_COMM,fh
+    INTEGER fh,nn,n
     INTEGER ierr(3)
 
     !
@@ -188,9 +184,9 @@ CONTAINS
     !     determine the total number of lo's : nlotot
     !
     mlotot = 0 ; mlolotot = 0
-    DO n = 1, atoms%ntype
-       mlotot = mlotot + atoms%nlo(n)
-       mlolotot = mlolotot + atoms%nlo(n)*(atoms%nlo(n)+1)/2
+    DO nn = 1, atoms%ntype
+       mlotot = mlotot + atoms%nlo(nn)
+       mlolotot = mlolotot + atoms%nlo(nn)*(atoms%nlo(nn)+1)/2
     ENDDO
     nlot_d = atoms%nlotot !max(atoms%nlotot,1)
     ALLOCATE ( kveclo(nlot_d) )
@@ -265,9 +261,9 @@ CONTAINS
        lh0 = 0                         ! for a input%gw-calculation, we
                                        ! now evaluate matrix elements
        DO jsp = 1,input%jspins               ! with the coulomb potential
-          DO n = 1,atoms%ntype                ! but with explicit kinetic energy
-             DO j = 1,atoms%jri(n)
-                vr(j,0,n,jsp) = vr(j,0,n,jsp)-vr0(j,n,jsp)*sfp_const/atoms%rmsh(j,n)
+          DO nn = 1,atoms%ntype                ! but with explicit kinetic energy
+             DO j = 1,atoms%jri(nn)
+                vr(j,0,nn,jsp) = vr(j,0,nn,jsp)-vr0(j,nn,jsp)*sfp_const/atoms%rmsh(j,nn)
              ENDDO
           ENDDO
        ENDDO
@@ -290,49 +286,37 @@ CONTAINS
     !---> set up and solve the eigenvalue problem
     !---> loop over energy windows
 
+!check if z-reflection trick can be used
+
+    l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkptd))).LT.1e-9).and..not.noco%l_noco) 
+
 
 #if ( defined(CPP_MPI))
-    !#if ( defined(CPP_MPI) && defined(CPP_EVP) )
-    !
+    IF (mpi%n_size > 1) l_zref = .false.
     IF ( hybrid%l_calhf ) THEN
-       n_start  = 1
-       n_stride = 1
-    ELSE
-       CALL mpi_make_groups(mpi,dimension,kpts, input,atoms,noco, mlotot,mlolotot,&
-            n_start,n_groups,n,matsize,ne, n_rank,n_size,SUB_COMM)
-       n_stride = kpts%nkpt/n_groups
-       IF (n_size > 1) sym%l_zref = .false.
+       call judft_error("BUG parallelization in HF case must be fixed")
+       !n_start  = 1
+       !n_stride = 1
     END IF
-    !
-#else
-    n_rank = 0
-    n_size = 1
+#endif
+    !Count number of matrix columns on this PE
+    n=0
+    DO i=1+mpi%n_rank,dimension%nbasfcn,mpi%n_size
+       n=n+1
+    enddo
+    IF (mpi%n_size>1) THEN
+       matsize = dimension%nbasfcn * n
+    ELSE
+       matsize = (dimension%nbasfcn+1)*dimension%nbasfcn/2
+    ENDIF
+    ne = max(5,dimension%neigd)
 
-#ifdef CPP_MPI
-    IF ( mpi%isize > kpts%nkpt ) THEN
-       CALL juDFT_error("no. processors must be <= no. kpts")
-    END IF
-    IF ( hybrid%l_calhf ) THEN
-       n_start  = 1
-       n_stride = 1
-    ELSE
-       n_start  = mpi%irank + 1
-       n_stride = mpi%isize
-    END IF
-#else
-    n_start  = 1
-    n_stride = 1
-#endif
-    n = dimension%nbasfcn/n_size
-    matsize = dimension%nbasfcn * (dimension%nbasfcn+1)/2
-    ne = dimension%neigd
-#endif
     if (l_hybrid.or.hybrid%l_calhf) THEN
        eig_id_hf=eig_id
     endif
     eig_id=open_eig(&
          mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,&
-         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,l_real,noco%l_soc,.false.,n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,l_real,noco%l_soc,.false.,mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
     IF (l_real) THEN
        ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
@@ -372,7 +356,7 @@ CONTAINS
           READ(15)
           READ(15)
           READ(15)
-          WRITE(15) n_start,n_stride,n_rank,n_size,dimension%nvd,&
+          WRITE(15) mpi%n_start,mpi%n_stride,mpi%n_rank,mpi%n_size,dimension%nvd,&
                &                 dimension%nbasfcn,atoms%nlotot
           CLOSE(15)
        END IF
@@ -436,7 +420,7 @@ CONTAINS
        IF ( hybrid%l_calhf ) CALL MPI_WAITALL(sndreqd,sndreq,MPI_STATUSES_IGNORE,ierr)
 #endif
 
-       k_loop:DO nk = n_start,kpts%nkpt,n_stride
+       k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
           IF ( hybrid%l_calhf ) THEN
              ! jump to next k-point if this process is not present in communicator
@@ -447,13 +431,13 @@ CONTAINS
 #endif
 
           nrec =  kpts%nkpt*(jsp-1) + nk
-          nrec = n_size*(nrec-1) + n_rank + 1
+          nrec = mpi%n_size*(nrec-1) + mpi%n_rank + 1
           !
           !--->         set up lapw list
           !
           call timestart("Setup of LAPW")
           lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0
-          CALL apws(dimension,input,noco, kpts,nk,cell,sym, n_size,jsp, bkpt,lapw,matind,nred)
+          CALL apws(dimension,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,matind,nred)
 
           call timestop("Setup of LAPW")
           IF (noco%l_noco) THEN
@@ -465,7 +449,7 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           call timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, n_size,n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
+          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
 
           call timestop("Interstitial Hamiltonian&Overlap")
           !
@@ -473,7 +457,7 @@ CONTAINS
           !
           IF (.not.l_wu) THEN
              call timestart("MT Hamiltonian&Overlap")
-             CALL hsmt(dimension,atoms,sphhar,sym,enpara, SUB_COMM,n_size,n_rank,jsp,input,mpi,&
+             CALL hsmt(dimension,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
                   lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
@@ -483,7 +467,7 @@ CONTAINS
 
              CALL hsfock(nk,atoms,lcutm,obsolete,lapw, dimension,kpts,jsp,input,hybrid,maxbasm,&
                   maxindxp,maxlcutm,maxindxm,nindxm, basm,bas1,bas2,bas1_MT,drbas1_MT,ne_eig,eig_irr,&
-                  n_size,sym,cell, noco,noco,oneD, nbasp,nbasm, results,results,it,nbands(nk),maxbands,nobd,&
+                  mpi%n_size,sym,cell, noco,noco,oneD, nbasp,nbasm, results,results,it,nbands(nk),maxbands,nobd,&
                   mnobd,xcpot, core1,core2,nindxc,maxindxc,lmaxc, lmaxcd, kveclo_eig,maxfac,fac,sfac,gauntarr,&
                   nindxp,prod,prodm,gwc, mpi,irank2(nk),isize2(nk),comm(nk), a)
 
@@ -503,11 +487,11 @@ CONTAINS
           call timestart("Vacuum Hamiltonian&Overlap")
           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
              CALL hsvac(vacuum,stars,dimension, atoms, jsp,input,vzxy(1,1,1,jsp),vz,enpara%evac0,cell, &
-                  bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,hamOvlp)
+                  bkpt,lapw,sym, noco,jij, mpi%n_size,mpi%n_rank,nv2,l_real,hamOvlp)
           ELSEIF (oneD%odi%d1) THEN
              CALL od_hsvac(vacuum,stars,dimension, oneD,atoms, jsp,input,vzxy(1,1,1,jsp),vz, &
                   enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
-                  n_size,n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
+                  mpi%n_size,mpi%n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
           END IF
           call timestop("Vacuum Hamiltonian&Overlap")
 
@@ -546,8 +530,8 @@ CONTAINS
           endif
 
        
-          CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,&
-               nred,sub_comm, sym,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
+          CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, mpi%n_rank,mpi%n_size,ne,nk,lapw,input,&
+               nred,mpi%sub_comm, sym,l_zref,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
                oneD,td,ud, eig,ne_found,hamOvlp,zMat)
           
           !
@@ -557,7 +541,7 @@ CONTAINS
           ne_all=ne_found
 #if defined(CPP_MPI)
           !Collect number of all eigenvalues
-          CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, sub_comm,ierr)
+          CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
 #endif
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           if (.not.l_real) THEN
@@ -571,12 +555,12 @@ CONTAINS
              CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,n_size,n_rank,z=zMat%z_r(:,:ne_found))
+                  atoms%nlotot,kveclo,mpi%n_size,mpi%n_rank,z=zMat%z_r(:,:ne_found))
           else
              CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,n_size,n_rank,z=zMat%z_c(:,:ne_found))
+                  atoms%nlotot,kveclo,mpi%n_size,mpi%n_rank,z=zMat%z_c(:,:ne_found))
           endif
           IF (noco%l_noco) THEN
              CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
@@ -695,9 +679,9 @@ endif
     IF (l_hybrid.or.hybrid%l_calhf) THEN
        open(unit=120,file='vr0',form='unformatted')
        DO isp=1,dimension%jspd
-          DO n=1,atoms%ntypd
+          DO nn=1,atoms%ntypd
              DO i=1,atoms%jmtd
-                WRITE(120) vr0(i,n,isp)
+                WRITE(120) vr0(i,nn,isp)
              END DO
           END DO
        END DO

@@ -710,7 +710,6 @@
        LOGICAL ::invs
        !Z-refls. sym
        LOGICAL ::zrfs
-       LOGICAL :: l_zref
        !No of sym ops
        INTEGER ::nop
        !No of 2D-sym ops
@@ -756,6 +755,12 @@
        INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
        INTEGER :: irank    !< rank of task in mpi_comm
        INTEGER :: isize    !< no of tasks in mpi_comm
+       INTEGER :: n_start  !< no of first k-point to calculate on this PE
+       INTEGER :: n_stride !< stride for k-loops
+       INTEGER :: n_size   !< PE per kpoint, i.e. "isize" for eigenvalue parallelization
+       INTEGER :: n_groups !< No of k-loops per PE
+       INTEGER :: sub_comm !< Sub-Communicator for eigenvalue parallelization (all PE working on same k-point)
+       INTEGER :: n_rank   !< rank in sub_comm
       END TYPE
 
       TYPE t_zMat

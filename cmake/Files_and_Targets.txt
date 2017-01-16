@@ -30,9 +30,8 @@ include(vgen/CMakeLists.txt)
 include(inpgen/CMakeLists.txt)
 include(docs/CMakeLists.txt)
 include(tests/CMakeLists.txt)
-if (${FLEUR_USE_MPI})
-  include(mpi/CMakeLists.txt)
-endif()
+include(mpi/CMakeLists.txt)
+
 
 #include(wannier/CMakeLists.txt)
 

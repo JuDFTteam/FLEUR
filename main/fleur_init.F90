@@ -7,7 +7,7 @@
       IMPLICIT NONE
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
-                 input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+                 input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
                  oneD,l_opti)
           USE m_judft
@@ -25,6 +25,7 @@
           USE m_InitParallelProcesses
           USE m_xmlOutput
           USE m_winpXML
+          USE m_setupMPI
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -32,7 +33,7 @@
           !     Types, these variables contain a lot of data!
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
           TYPE(t_input)    ,INTENT(OUT):: input
-          TYPE(t_dimension),INTENT(OUT):: dimension
+          TYPE(t_dimension),INTENT(OUT):: DIMENSION
           TYPE(t_atoms)    ,INTENT(OUT):: atoms
           TYPE(t_sphhar)   ,INTENT(OUT):: sphhar
           TYPE(t_cell)     ,INTENT(OUT):: cell
@@ -118,12 +119,12 @@
                 a3 = 0.0
                 scale = 1.0
                 CALL r_inpXML(&
-                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
+                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
                               cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
                               noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                               xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
 
-                ALLOCATE (results%force(3,atoms%ntype,dimension%jspd))
+                ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
                 results%force(:,:,:) = 0.0
 
@@ -142,7 +143,7 @@
 
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                                        dimension,cell,sym,xcpot,noco,jij,oneD,hybrid,&
+                                        DIMENSION,cell,sym,xcpot,noco,jij,oneD,hybrid,&
                                         kpts,enpara,sphhar,mpi,results,obsolete)
 #endif
 
@@ -152,13 +153,13 @@
                &            mpi,input,&
                &            sym,stars,&
                &            atoms,sphhar,&
-               &            dimension,vacuum,&
+               &            DIMENSION,vacuum,&
                &            obsolete,kpts,&
                &            oneD,hybrid,Jij)
 
 
-          dimension%nn2d= (2*stars%k1d+1)* (2*stars%k2d+1)
-          dimension%nn3d= (2*stars%k1d+1)* (2*stars%k2d+1)* (2*stars%k3d+1)
+          DIMENSION%nn2d= (2*stars%k1d+1)* (2*stars%k2d+1)
+          DIMENSION%nn3d= (2*stars%k1d+1)* (2*stars%k2d+1)* (2*stars%k3d+1)
           !-odim
           IF (oneD%odd%d1) THEN
              oneD%odd%k3 = stars%k3d
@@ -177,7 +178,7 @@
           ALLOCATE ( atoms%ncv(atoms%ntypd),atoms%neq(atoms%ntypd),atoms%ngopr(atoms%natd) )
           ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
           ALLOCATE ( stars%nstr2(stars%n2d),atoms%ntypsy(atoms%natd),stars%nstr(stars%n3d) )
-          ALLOCATE ( stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2),atoms%nflip(atoms%ntypd) )
+          ALLOCATE ( stars%igfft(0:DIMENSION%nn3d-1,2),stars%igfft2(0:DIMENSION%nn2d-1,2),atoms%nflip(atoms%ntypd) )
           ALLOCATE ( atoms%ncst(atoms%ntypd) )
           ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
           ALLOCATE ( sym%invarop(atoms%natd,sym%nop),sym%invarind(atoms%natd) )
@@ -188,24 +189,24 @@
           ALLOCATE ( atoms%rmsh(atoms%jmtd,atoms%ntypd),atoms%rmt(atoms%ntypd),stars%sk2(stars%n2d),stars%sk3(stars%n3d) )
           ALLOCATE ( stars%phi2(stars%n2d) )
           ALLOCATE ( atoms%taual(3,atoms%natd),atoms%volmts(atoms%ntypd),atoms%zatom(atoms%ntypd) )
-          ALLOCATE ( enpara%el0(0:atoms%lmaxd,atoms%ntypd,dimension%jspd) )
-          ALLOCATE ( enpara%evac0(2,dimension%jspd),stars%rgphs(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d)  )
-          ALLOCATE ( results%force(3,atoms%ntypd,dimension%jspd) )
+          ALLOCATE ( enpara%el0(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd) )
+          ALLOCATE ( enpara%evac0(2,DIMENSION%jspd),stars%rgphs(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d)  )
+          ALLOCATE ( results%force(3,atoms%ntypd,DIMENSION%jspd) )
           ALLOCATE ( results%force_old(3,atoms%ntypd) )
           ALLOCATE ( kpts%bk(3,kpts%nkptd),kpts%wtkpt(kpts%nkptd) )
-          ALLOCATE ( stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1) )
+          ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
           ALLOCATE ( stars%ufft(0:27*stars%k1d*stars%k2d*stars%k3d-1) )
           ALLOCATE ( atoms%bmu(atoms%ntypd),atoms%vr0(atoms%ntypd) )
-          ALLOCATE ( enpara%lchange(0:atoms%lmaxd,atoms%ntypd,dimension%jspd) )
-          ALLOCATE ( enpara%lchg_v(2,dimension%jspd),atoms%l_geo(atoms%ntypd) )
-          ALLOCATE ( atoms%nlo(atoms%ntypd),atoms%llo(atoms%nlod,atoms%ntypd),enpara%skiplo(atoms%ntypd,dimension%jspd) )
-          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntypd,dimension%jspd),enpara%llochg(atoms%nlod,atoms%ntypd,dimension%jspd) )
+          ALLOCATE ( enpara%lchange(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd) )
+          ALLOCATE ( enpara%lchg_v(2,DIMENSION%jspd),atoms%l_geo(atoms%ntypd) )
+          ALLOCATE ( atoms%nlo(atoms%ntypd),atoms%llo(atoms%nlod,atoms%ntypd),enpara%skiplo(atoms%ntypd,DIMENSION%jspd) )
+          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntypd,DIMENSION%jspd),enpara%llochg(atoms%nlod,atoms%ntypd,DIMENSION%jspd) )
           ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntypd),atoms%nlol(0:atoms%llod,atoms%ntypd),atoms%lapw_l(atoms%ntypd) )
           ALLOCATE ( noco%alphInit(atoms%ntypd),noco%alph(atoms%ntypd),noco%beta(atoms%ntypd),noco%l_relax(atoms%ntypd) )
           ALLOCATE ( jij%alph1(atoms%ntypd),jij%l_magn(atoms%ntypd),jij%M(atoms%ntypd) )
           ALLOCATE ( jij%magtype(atoms%ntypd),jij%nmagtype(atoms%ntypd) )
           ALLOCATE ( noco%b_con(2,atoms%ntypd),atoms%lda_u(atoms%ntypd),atoms%l_dulo(atoms%nlod,atoms%ntypd) )
-          ALLOCATE ( enpara%enmix(dimension%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
+          ALLOCATE ( enpara%enmix(DIMENSION%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
           ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntypd) )
           ALLOCATE ( noco%soc_opt(atoms%ntypd+2) )
           ALLOCATE ( atoms%numStatesProvided(atoms%ntypd))
@@ -223,7 +224,7 @@
           ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntypd) )
           ALLOCATE ( hybrid%select1(4,atoms%ntypd),hybrid%lcutm1(atoms%ntypd),&
                &           hybrid%select2(4,atoms%ntypd),hybrid%lcutm2(atoms%ntypd),hybrid%lcutwf(atoms%ntypd) )
-          ALLOCATE ( hybrid%ddist(dimension%jspd) )
+          ALLOCATE ( hybrid%ddist(DIMENSION%jspd) )
           hybrid%ddist     = 1.
           !
 
@@ -252,7 +253,7 @@
                   &           stars,oneD,jij,hybrid,kpts)
              !
              IF (xcpot%igrd.NE.0) THEN
-                ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
+                ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
                 !-odim
                 ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                      &             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
@@ -267,8 +268,8 @@
              !-odim
              !+t3e
              INQUIRE(file="cdn1",exist=l_opti)
-             if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-             l_opti=.not.l_opti
+             IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
+             l_opti=.NOT.l_opti
              IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
                   &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
 
@@ -280,7 +281,7 @@
              ENDIF
              !
              CALL setup(&
-                  &     atoms,kpts,dimension,sphhar,&
+                  &     atoms,kpts,DIMENSION,sphhar,&
                   &     obsolete,sym,stars,oneD,input,noco,&
                   &     vacuum,cell,xcpot,&
                   &     sliceplot,enpara,l_opti)
@@ -291,6 +292,9 @@
           CALL timestop("preparation:stars,lattice harmonics,+etc")
 
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
+
+          !Finalize the MPI setup
+          CALL setupMPI(kpts%nkpt,mpi)
 
           !
           !-odim
@@ -330,18 +334,13 @@
           !
           !--> determine more dimensions
           !
-          dimension%nbasfcn = dimension%nvd + atoms%natd*atoms%nlod*(2*atoms%llod+1)
-          dimension%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
-          dimension%lmplmd  = (dimension%lmd* (dimension%lmd+3))/2
+          DIMENSION%nbasfcn = DIMENSION%nvd + atoms%natd*atoms%nlod*(2*atoms%llod+1)
+          DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
+          DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
-          sym%l_zref=.FALSE.
-
-          IF ((mpi%irank.EQ.0).AND.(.NOT.l_opti)) THEN
-             IF (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkptd))).LT.1e-9)) sym%l_zref=.TRUE.
-          ENDIF
+       
           IF (mpi%irank.EQ.0) THEN
-             IF (noco%l_noco) sym%l_zref = .FALSE.
-
+       
              !--- J< 
              jij%l_jenerg = .FALSE.
              IF (jij%l_J) THEN
@@ -383,7 +382,7 @@
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
                &           mpi,stars,sphhar,atoms,obsolete,&
-               &           sym,kpts,jij,dimension,input,&
+               &           sym,kpts,jij,DIMENSION,input,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
                &           noco,oneD,xcpot,hybrid)
           ! initialize record length of the eig file
@@ -422,17 +421,17 @@
           oneD%odg%pgfx => oneD%pgft1x ; oneD%odg%pgfy => oneD%pgft1y
           oneD%odg%pgfxx => oneD%pgft1xx ; oneD%odg%pgfyy => oneD%pgft1yy ; oneD%odg%pgfxy => oneD%pgft1xy
           !+odim
-          IF (noco%l_noco) dimension%nbasfcn = 2*dimension%nbasfcn
+          IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
           !
           !--- J<
           IF (jij%l_J) THEN
              input%itmax = 1
              jij%phnd=2
              jij%nkpt_l = CEILING(REAL(kpts%nkptd)/mpi%isize)
-             ALLOCATE ( jij%eig_l(dimension%neigd+5,jij%nkpt_l) )
+             ALLOCATE ( jij%eig_l(DIMENSION%neigd+5,jij%nkpt_l) )
           ELSE
              jij%nkpt_l = 1
-             ALLOCATE ( jij%eig_l(dimension%neigd+5,1) )
+             ALLOCATE ( jij%eig_l(DIMENSION%neigd+5,1) )
           ENDIF
           !--- J>
 
@@ -490,6 +489,10 @@
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
           END IF
+
+          !new check mode will only run the init-part of FLEUR
+          IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
+
 
      END SUBROUTINE
      END MODULE

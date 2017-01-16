@@ -23,6 +23,7 @@
     TYPE(t_lapw),INTENT(IN)   :: lapw
     real,intent(in)   ::bkpt(3)
     integer,intent(in)::kveclo(atoms%nlotot)
+    logical,intent(in) :: l_zref
 
     !     ..
     !     .. Scalar Arguments ..
@@ -82,7 +83,7 @@
     !******************************************
     ! l_zref=.false. => simply call eigensolver
     !******************************************
-    if(.not.sym%l_zref)then
+    if(.not.l_zref)then
 #ifdef CPP_REALDATA
        call geneigprobl(dimension%nbasfcn, nsize,dimension%neigd,jij%l_j,eig,ne,a,b,z)
 #else
@@ -512,6 +513,6 @@
 
        allocate(a(dimension%nbasfcn*(dimension%nbasfcn+1)/2))
        allocate(b(dimension%nbasfcn*(dimension%nbasfcn+1)/2))
-    endif !sym%l_zref
+    endif !l_zref
 
     deallocate ( z1,z2,etemp1,etemp2,evensort )
