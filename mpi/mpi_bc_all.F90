@@ -48,7 +48,7 @@ CONTAINS
     EXTERNAL MPI_BCAST
 
     IF (mpi%irank.EQ.0) THEN
-       i(1)=1 ; i(2)=obsolete%lpr ; i(3)=atoms%ntype ; i(5)=1 ; i(6)=input%isec1
+       i(1)=1 ; i(3)=atoms%ntype ; i(5)=1 ; i(6)=input%isec1
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
@@ -63,14 +63,14 @@ CONTAINS
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=hybrid%gcutm2
        r(23)=hybrid%tolerance2 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
        r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
-       l(1)=input%eonly ; l(2)=obsolete%form66 ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
+       l(1)=input%eonly  ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
        l(11)=banddos%dos ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip ; l(19)=obsolete%l_f2u ; l(20)=obsolete%l_u2f
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
        l(29)=oneD%odd%d1 ; l(30)=jij%l_J ; l(31)=jij%l_disp ; l(32)=input%ctail
-       l(33)=obsolete%eig66(1) ; l(34)=obsolete%eig66(2) ; l(35)=input%sso_opt(1)
+       l(35)=input%sso_opt(1)
        l(36)=input%sso_opt(2) ; l(37)=obsolete%pot8; l(38)=input%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=input%efield%dirichlet
        l(43)=input%efield%l_dirichlet_coeff
@@ -84,7 +84,7 @@ CONTAINS
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
-    obsolete%lpr=i(2) ; atoms%ntype=i(3) ;  input%isec1=i(6)
+     atoms%ntype=i(3) ;  input%isec1=i(6)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
@@ -99,14 +99,14 @@ CONTAINS
     input%efield%l_dirichlet_coeff = l(43)
     sym%symor=l(39) ; input%frcor=l(40) ; input%tria=l(41) ; input%efield%dirichlet = l(42)
     input%sso_opt(2)=l(36) ; obsolete%pot8=l(37) ; input%efield%l_segmented=l(38)
-    obsolete%eig66(1)=l(33) ; obsolete%eig66(2)=l(34) ; input%sso_opt(1)=l(35)
+     input%sso_opt(1)=l(35)
     oneD%odd%d1=l(29) ; jij%l_J=l(30) ; jij%l_disp=l(31) ; input%ctail=l(32)
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
     input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18) ; obsolete%l_f2u=l(19) ; obsolete%l_u2f=l(20)
     banddos%dos=l(11) ; banddos%vacdos=l(13) ; input%integ=l(14) ; sliceplot%iplot=l(15)
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
-    input%eonly=l(1) ; obsolete%form66=l(2) ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
+    input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     input%efield%l_segmented = l(38) ; sym%symor=l(39); input%efield%dirichlet = l(40)
     input%efield%l_dirichlet_coeff = l(41)
     !

@@ -258,9 +258,6 @@
                    input%alpha = input%alpha - NINT(input%alpha)
                 END IF
                 !
-                IF (it.GT.1) THEN
-                   obsolete%eig66(1)= .FALSE.
-                END IF
                 CALL resetIterationDependentTimers()
                 CALL timestart("Iteration")
                 IF (mpi%irank.EQ.0) THEN
@@ -297,9 +294,9 @@
 
                 jij%alph1(:)=noco%alph(:)
                 stop80= .FALSE.
-                IF ( obsolete%eig66(1) .OR. (noco%l_soc .AND. noco%l_ss) ) THEN
+                IF ( (noco%l_soc .AND. noco%l_ss) ) THEN
                    IF ( (jij%l_J).OR.(jij%nqpt/=1).OR.(jij%nmagn/=1).OR.(jij%phnd/=1) ) THEN
-                      CALL juDFT_error("fleur: J-loop with eig66 = T or ss+soc"&
+                      CALL juDFT_error("fleur: J-loop with ss+soc"&
                            &            ,calledby ="fleur")
                    ENDIF
                 ENDIF
@@ -456,27 +453,11 @@
                       DO j_J=i_J,jij%nmagn
                          DO phn=1,jij%phnd
 
-                            IF (obsolete%eig66(1)) THEN
-                               ! If eig-file exists, use it.
-                               ! If eig-file does not exist, create it and stop.
-                               !
-                               ! eig66(2)=eig66(1)=T <=> in first run of program
-                               !                         only 1st variation is done
-#ifndef CPP_HDF
-                               !TODO: LOGIC HAS to be fixed
-                               !call judft_error("HDF needed for J_ij")
-                               INQUIRE(file='eig.bas',exist=input%eigvar(3))
-#endif
-                               INQUIRE(file='eig.hdf',exist=input%eigvar(3))
-                               input%eigvar(3)=.TRUE.
-                               input%eigvar(1)= .NOT.input%eigvar(3)
-                               input%eigvar(2)= obsolete%eig66(2) .EQV. input%eigvar(3)
-                               PRINT*, input%eigvar
-                            ELSE
-                               input%eigvar(1)= .TRUE.
-                               input%eigvar(2)= .TRUE.
-                               input%eigvar(3)= .TRUE.
-                            ENDIF
+ 
+                            input%eigvar(1)= .TRUE.
+                            input%eigvar(2)= .TRUE.
+                            input%eigvar(3)= .TRUE.
+                            
                             input%eigvar(2)= input%eigvar(2) .AND. ( noco%l_soc .AND. (.NOT.noco%l_noco) )
                             ! eigvar(1/2)= 1st/2nd var. ; eigvar(3)= calc density,etc
 
@@ -576,14 +557,6 @@
 #ifdef CPP_MPI
                             CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
-                            IF (obsolete%eig66(1)) THEN
-                               IF (mpi%irank==0) THEN
-                                  WRITE (*,fmt='(A)')&
-                                       &                'eig-file created, program stops'
-                               ENDIF
-                               !TODO LOGIC??
-                               !stop80= .true.
-                            ENDIF
 
                          ENDIF ! ( input%eigvar(1) .OR. input%eigvar(2) )
 

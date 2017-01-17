@@ -494,12 +494,9 @@
  7220 FORMAT (5x,l1,1x,6x,l1,1x,5x,l1,1x,3x,i1,1x,9x,i4)
 !
       DO i=1,100 ; line(i:i)=' ' ; ENDDO
-      READ (UNIT=5,fmt='(A)',END=99,ERR=99) line
-      obsolete%eig66(2)= ( line(38:44)=='soc66=T' ).or.( line(38:44)=='soc66=t' )
-      BACKSPACE (UNIT=5)
       READ (UNIT=5,FMT=6000,END=99,ERR=99)&
-     &                obsolete%lpr,obsolete%form66,input%l_f,input%eonly,obsolete%eig66(1)
-      WRITE (6,9130) obsolete%lpr,obsolete%form66,input%l_f,input%eonly,obsolete%eig66(1),obsolete%eig66(2)
+     &                idum,ldum,input%l_f,input%eonly
+      WRITE (6,9130) 0,.false.,input%l_f,input%eonly
  6000 FORMAT (4x,i1,8x,l1,5x,l1,7x,l1,7x,l1)
 !
 !+roa
@@ -899,9 +896,8 @@
       WRITE (5,9120) input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
  9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
      &        ',numbands=',i4)
-      WRITE (5,9130) obsolete%lpr,obsolete%form66,input%l_f,input%eonly,obsolete%eig66(1),obsolete%eig66(2)
- 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1,&
-     &        ',eig66=',l1,',soc66=',l1)
+      WRITE (5,9130) 0,.false.,input%l_f,input%eonly
+ 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1)
       IF ( l_hyb ) THEN
         WRITE (chntype,'(i3)') 2*atoms%ntype
         chform = '('//chntype//'i3 )'

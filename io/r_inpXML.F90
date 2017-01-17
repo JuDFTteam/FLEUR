@@ -516,7 +516,6 @@ SUBROUTINE r_inpXML(&
   noco%phi = 0.0
   noco%soc_opt(atoms%ntype+2) = .FALSE.
   noco%soc_opt(atoms%ntype+1) = .FALSE.
-  obsolete%eig66(2) = .FALSE.
 
   IF (numberNodes.EQ.1) THEN
      noco%theta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta'))
@@ -524,7 +523,6 @@ SUBROUTINE r_inpXML(&
      noco%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
      noco%soc_opt(atoms%ntype+2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
      noco%soc_opt(atoms%ntype+1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@off'))
-     obsolete%eig66(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@soc66'))
   END IF
 
   ! Read in optional noco parameters if present
@@ -615,16 +613,12 @@ SUBROUTINE r_inpXML(&
 
   input%gw = 0
   obsolete%pot8 = .FALSE.
-  obsolete%eig66(1) = .FALSE.
-  obsolete%lpr = 0
   input%isec1 = 999999
   input%secvar = .FALSE.
 
   IF (numberNodes.EQ.1) THEN
      input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
      obsolete%pot8 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@pot8'))
-     obsolete%eig66(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
-     obsolete%lpr = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lpr'))
      input%isec1 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isec1'))
      input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
   END IF
@@ -1658,7 +1652,6 @@ SUBROUTINE r_inpXML(&
   input%score = .FALSE.
   sliceplot%plpot = .FALSE.
 
-  obsolete%form66 = .FALSE.
   input%eonly = .FALSE.
   input%l_bmt = .FALSE.
 
@@ -1701,7 +1694,6 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(xPathA)
 
      IF (numberNodes.EQ.1) THEN
-        obsolete%form66 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@form66'))
         input%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
         input%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
      END IF
@@ -2268,13 +2260,6 @@ SUBROUTINE r_inpXML(&
   l_opti=.not.l_opti
   IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
        (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
-
-  obsolete%form76 = .FALSE.
-  IF (noco%l_soc.AND.obsolete%form66) THEN
-     IF (.NOT.input%eonly)  CALL juDFT_error("form66 = T only with eonly = T !",calledby="r_inpXML")
-     obsolete%form66 = .FALSE.
-     obsolete%form76 = .TRUE.
-  END IF
 
   IF (.NOT.l_opti) THEN
      !      The following call to inpeig should not be required.

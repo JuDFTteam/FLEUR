@@ -142,8 +142,8 @@
       sym%namgrp= 'any ' 
       banddos%dos   = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
-      obsolete%pot8 = .false. ; obsolete%eig66(1) = .false. ; obsolete%eig66(2) = .true.  
-      obsolete%form66 = .false. ; obsolete%l_u2f= .false. ; obsolete%l_f2u = .false. 
+      obsolete%pot8 = .false. 
+      obsolete%l_u2f= .false. ; obsolete%l_f2u = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ; obsolete%disp  = .false. ; input%swsp  = .false.
@@ -152,7 +152,7 @@
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ; jij%l_J = .false. ; noco%soc_opt(:) = .false. ; input%jspins = 1
-      obsolete%lpr = 0 ; input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
+      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
       input%spinf = 2.0 ;   obsolete%lepr = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6

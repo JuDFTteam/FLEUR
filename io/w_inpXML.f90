@@ -203,8 +203,8 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,140) input%jspins,noco%l_noco,jij%l_J,input%swsp,input%lflip
 
 !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
-   150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'" soc66="',l1,'"/>')
-   WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1),obsolete%eig66(2)
+   150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'"/>')
+   WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1)
 
    IF (noco%l_noco.OR.l_explicit) THEN
       160 FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,'" sso_opt="',a3,&
@@ -224,8 +224,8 @@ SUBROUTINE w_inpXML(&
    END IF
 
 !      <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F" />
-   180 FORMAT('      <expertModes gw="',i0,'" pot8="',l1,'" eig66="',l1,'" lpr="',i0,'" isec1="',i0,'" secvar="',l1,'"/>')
-   WRITE (fileNum,180) input%gw,obsolete%pot8,obsolete%eig66(1),obsolete%lpr,input%isec1,input%secvar
+   180 FORMAT('      <expertModes gw="',i0,'" pot8="',l1,'" isec1="',i0,'" secvar="',l1,'"/>')
+   WRITE (fileNum,180) input%gw,obsolete%pot8,input%isec1,input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
    190 FORMAT('      <geometryOptimization l_f="',l1,'" xa="',f0.8,'" thetad="',f0.8,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
@@ -634,8 +634,8 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,410) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
 
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
-   420 FORMAT('      <specialOutput form66="',l1,'" eonly="',l1,'" bmt="',l1,'"/>')
-   WRITE (fileNum,420) obsolete%form66,input%eonly,input%l_bmt
+   420 FORMAT('      <specialOutput eonly="',l1,'" bmt="',l1,'"/>')
+   WRITE (fileNum,420) input%eonly,input%l_bmt
 
    WRITE (fileNum,'(a)') '   </output>'
    IF(l_outFile) THEN

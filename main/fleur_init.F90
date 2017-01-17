@@ -271,13 +271,6 @@
              l_opti=.NOT.l_opti
              IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
                   &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
-
-             obsolete%form76 = .FALSE.
-             IF (noco%l_soc.AND.obsolete%form66) THEN
-                IF (.NOT.input%eonly)  CALL juDFT_error("form66 = T only with eonly = T !",calledby="fleur")
-                obsolete%form66 = .FALSE.
-                obsolete%form76 = .TRUE.
-             ENDIF
              !
              CALL setup(&
                   &     atoms,kpts,DIMENSION,sphhar,&

@@ -621,12 +621,8 @@
      END TYPE
 
      TYPE t_obsolete
-        INTEGER:: lpr
         INTEGER:: lepr
-        LOGICAL:: form66
-        LOGICAL:: eig66(2)
         LOGICAL:: disp
-        LOGICAL:: form76
         INTEGER:: ndvgrd
         REAL   :: chng
         LOGICAL :: lwb
