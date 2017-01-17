@@ -37,18 +37,18 @@ CONTAINS
     INTEGER, INTENT (OUT):: nsize,nmat
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoppd (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdp (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdpd(atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoplop (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoplopd(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopdplo(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopplo (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     COMPLEX, INTENT (IN) :: soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2)
     COMPLEX, INTENT (OUT) :: zso(:,:,:)!(dimension%nbasfcn,2*dimension%neigd,wannierspin)
-    REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd),ello(atoms%nlod,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd),ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)
     INTEGER, INTENT (OUT) :: kveclo(atoms%nlotot)
     !-odim
     !+odim
@@ -66,7 +66,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER :: nsz(2)
     REAL    :: bkdu(3),eig(DIMENSION%neigd,DIMENSION%jspd),s(3),bkpt(3)
-    REAL    :: epar(0:atoms%lmaxd,atoms%ntypd),evac(2)
+    REAL    :: epar(0:atoms%lmaxd,atoms%ntype),evac(2)
     REAL,   ALLOCATABLE :: rwork(:)
     COMPLEX,ALLOCATABLE :: cwork(:),chelp(:,:,:,:,:)
     COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:,:),bhelp(:,:,:,:,:)
@@ -161,9 +161,9 @@ CONTAINS
     !
     ! set up A and B coefficients
     !
-    ALLOCATE ( ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd) )
-    ALLOCATE ( bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd) )
-    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%natd ,DIMENSION%jspd) )
+    ALLOCATE ( ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd) )
+    ALLOCATE ( bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd) )
+    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%nat ,DIMENSION%jspd) )
     CALL timestart("alineso SOC: -help") 
     CALL hsohelp(&
          &             DIMENSION,atoms,sym,&

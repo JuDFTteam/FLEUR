@@ -64,9 +64,9 @@
       TYPE(t_noco)::noco_new
 !     ..
 !     .. Local Arrays ..
-      REAL stdn(atoms%ntypd,dimension%jspd),svdn(atoms%ntypd,dimension%jspd),alpha_l(atoms%ntypd),&
-           rh(dimension%msh,atoms%ntypd,dimension%jspd),qint(atoms%ntypd,dimension%jspd)
-      REAL chmom(atoms%ntypd,dimension%jspd),clmom(3,atoms%ntypd,dimension%jspd)
+      REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd),alpha_l(atoms%ntype),&
+           rh(dimension%msh,atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
+      REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
       INTEGER,ALLOCATABLE :: igq_fft(:)
       REAL   ,ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
       REAL   ,ALLOCATABLE :: rht(:,:,:),rho(:,:,:,:)
@@ -75,7 +75,7 @@
       COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
       CHARACTER(LEN=20)   :: attributes(4)
 !---> pk non-collinear
-      REAL    rhoint,momint,alphdiff(atoms%ntypd)
+      REAL    rhoint,momint,alphdiff(atoms%ntype)
       INTEGER igq2_fft(0:stars%kq1d*stars%kq2d-1)
       COMPLEX,ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:),qa21(:)
 !---> pk non-collinear
@@ -90,14 +90,14 @@
 ! Read Potential and keep only vr(:,0,:,:) and vz
 !
       ALLOCATE(vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
-     &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd))
+     &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd))
       OPEN (8,file='pottot',form='unformatted',status='old')
       REWIND (8)
       CALL loddop(stars,vacuum,atoms,sphhar, input,sym, 8, iter,vr,vpw,vz,vzxy)
       CLOSE (8)
       DEALLOCATE ( vpw,vzxy )
       ALLOCATE ( qpw(stars%n3d,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
-      ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
+      ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
 !
 ! Read in input density
 !
@@ -114,7 +114,7 @@
          IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
       ENDIF
       ALLOCATE ( cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
-      ALLOCATE ( qa21(atoms%ntypd) )
+      ALLOCATE ( qa21(atoms%ntype) )
       ALLOCATE ( igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1) )
 !
 !

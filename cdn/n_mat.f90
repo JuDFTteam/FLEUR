@@ -29,7 +29,7 @@ CONTAINS
     REAL,    INTENT (IN) :: we(:)!(dimension%neigd)
     COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(lmaxd+2) ,natd)
     COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(lmaxd+2) ,natd)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
     COMPLEX, INTENT (INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u)
     !     ..
     !     .. Local Scalars ..

@@ -30,7 +30,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     COMPLEX rhpw(stars%n3d,2,2),rhv1(vacuum%nmzxyd,stars%n2d-1,2,2,2)
-    REAL rhsp(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,2,2),rhv0(vacuum%nmzd,2,2,2)
+    REAL rhsp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,2,2),rhv0(vacuum%nmzd,2,2,2)
     REAL dis(2),disz(vacuum%nmzd),rh(atoms%jmtd)
     REAL af3((2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1),input%jspins),&
          bf3((2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1),input%jspins), &

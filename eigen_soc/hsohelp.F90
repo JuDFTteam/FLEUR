@@ -40,9 +40,9 @@ CONTAINS
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)  
     COMPLEX, INTENT (INOUT) :: zso(DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd,DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%natd, DIMENSION%jspd)
+    COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
+    COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
+    COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%nat, DIMENSION%jspd)
     REAL,INTENT(IN)      :: z_r(:,:,:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX,INTENT(IN)   :: z_c(:,:,:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
     !-odim
@@ -75,7 +75,7 @@ CONTAINS
 
     chelp(:,:,:,:,input%jspins) = CMPLX(0.0,0.0)
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:lmd,atoms%natd),bcof(DIMENSION%neigd,0:lmd,atoms%natd) )
+    ALLOCATE ( acof(DIMENSION%neigd,0:lmd,atoms%nat),bcof(DIMENSION%neigd,0:lmd,atoms%nat) )
     DO ispin = 1, input%jspins
        IF (l_real.AND.noco%l_soc) THEN
           zso(:,1:DIMENSION%neigd,ispin) = CMPLX(z_r(:,1:DIMENSION%neigd,ispin),0.0)
@@ -92,7 +92,7 @@ CONTAINS
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
           !
           DO ie = 1, DIMENSION%neigd
-             DO na = 1, atoms%natd
+             DO na = 1, atoms%nat
                 DO l = 1, atoms%lmaxd
                    ll1 = l*(l+1)
                    DO m = -l,l
@@ -117,7 +117,7 @@ CONTAINS
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
           !
           DO ie = 1, DIMENSION%neigd
-             DO na = 1, atoms%natd
+             DO na = 1, atoms%nat
                 DO l = 1, atoms%lmaxd
                    ll1 = l*(l+1)
                    DO m = -l,l

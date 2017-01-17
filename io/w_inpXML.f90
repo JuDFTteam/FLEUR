@@ -58,7 +58,7 @@ SUBROUTINE w_inpXML(&
    REAL, INTENT (IN)     :: xmlCoreOccs(2,29,atoms%ntype)
    INTEGER, INTENT (IN)  :: xmlElectronStates(29,atoms%ntype)
    LOGICAL, INTENT (IN)  :: xmlPrintCoreStates(29,atoms%ntype)
-   CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntypd)
+   CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntype)
    CHARACTER(len=4),INTENT(IN) :: namex
    CHARACTER(len=12),INTENT(IN):: relcor
    CHARACTER(LEN=*),INTENT(IN) :: filename
@@ -93,7 +93,7 @@ SUBROUTINE w_inpXML(&
    INTEGER :: ierr
 ! ..
 !...  Local Arrays
-   CHARACTER :: helpchar(atoms%ntypd)
+   CHARACTER :: helpchar(atoms%ntype)
    CHARACTER(len=  4) :: chntype
    CHARACTER(len= 41) :: chform
    CHARACTER(len=100) :: line
@@ -248,13 +248,13 @@ SUBROUTINE w_inpXML(&
    IF(l_explicit) THEN
       sumWeight = 0.0
       DO i = 1, kpts%nkpt
-         sumWeight = sumWeight + kpts%weight(i)
+         sumWeight = sumWeight + kpts%wtkpt(i)
       END DO
       205 FORMAT('         <kPointList posScale="',f0.8,'" weightScale="',f0.8,'" count="',i0,'">')
       WRITE (fileNum,205) kpts%posScale, sumWeight, kpts%nkpt
       DO i = 1, kpts%nkpt
          206 FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
-         WRITE (fileNum,206) kpts%weight(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
+         WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
       END DO
       WRITE (fileNum,'(a)')('         </kPointList>')
    ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN

@@ -25,16 +25,16 @@ CONTAINS
     !     ..
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (OUT) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsoppd (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsopdp (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsopdpd(atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsoplop (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsoplopd(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsopdplo(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsopplo (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (OUT) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (OUT) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (OUT) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (OUT) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (OUT) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (OUT) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (OUT) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (OUT) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (OUT) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     COMPLEX, INTENT (OUT) :: soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2)
     !     ..

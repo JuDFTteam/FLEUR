@@ -29,9 +29,9 @@ CONTAINS
     !
     !
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+    REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%n3d,dimension%jspd) 
-    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
+    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     !-odim
     !+odim
     !     ..
@@ -42,8 +42,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
 
-    COMPLEX qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
-    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
+    COMPLEX qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
 
     !

@@ -94,7 +94,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3) 
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
     COMPLEX,INTENT(IN):: vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins)
     TYPE(t_usdus),INTENT(INOUT)  :: usdus
 
@@ -179,10 +179,10 @@ CONTAINS
     ENDDO
     !! the fj and gj arrays are constructed in hssphn_sph and used later
     IF (noco%l_constr.OR.l_socfirst) THEN
-       ALLOCATE ( fj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntypd,2),gj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntypd,2))
+       ALLOCATE ( fj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntype,2),gj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntype,2))
     ELSE
-       ALLOCATE(fj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntypd,ab_dim))
-       ALLOCATE(gj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntypd,ab_dim))
+       ALLOCATE(fj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntype,ab_dim))
+       ALLOCATE(gj(DIMENSION%nvd,0:atoms%lmaxd,atoms%ntype,ab_dim))
     ENDIF
     CALL timestop("hsmt init")
 

@@ -44,8 +44,8 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_mcd
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: ncore(atoms%ntypd)
-    REAL, INTENT(IN)      :: e_mcd(atoms%ntypd,input%jspins,ncored)
+    INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
+    REAL, INTENT(IN)      :: e_mcd(atoms%ntype,input%jspins,ncored)
     !-odim
     !+odim
 
@@ -53,9 +53,9 @@ CONTAINS
     INTEGER :: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
     REAL    :: wk,bkpt(3)
     REAL   :: eig(DIMENSION%neigd)
-    REAL   :: qal(0:3,atoms%ntypd,DIMENSION%neigd,DIMENSION%jspd)
-    REAL   :: qis(DIMENSION%neigd,kpts%nkptd,DIMENSION%jspd)
-    REAL   :: qvac(DIMENSION%neigd,2,kpts%nkptd,DIMENSION%jspd)
+    REAL   :: qal(0:3,atoms%ntype,DIMENSION%neigd,DIMENSION%jspd)
+    REAL   :: qis(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd)
+    REAL   :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
     REAL   :: qvlay(DIMENSION%neigd,vacuum%layerd,2)
     COMPLEX :: qstars(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
     INTEGER :: ne,ikpt,kspin,j,i,n

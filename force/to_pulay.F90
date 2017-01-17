@@ -37,16 +37,16 @@ CONTAINS
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: eig(:)!(dimension%neigd)
-    COMPLEX, INTENT (OUT)::      acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT)::      bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT)::      ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (OUT)::    acoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (OUT)::    bcoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (OUT)::     e1cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT)::     e2cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT):: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT):: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT):: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (OUT)::      acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT)::      bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT)::      ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (OUT)::    acoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (OUT)::    bcoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (OUT)::     e1cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT)::     e2cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
 
     LOGICAL,OPTIONAL,INTENT(IN)::realdata
     !-odim
@@ -60,12 +60,12 @@ CONTAINS
     INTEGER inv_f,lo,nintsp,iintsp,nvmax,kspin,nap,inap
     !     ..
     !     .. Local Arrays ..
-    INTEGER kvec(2*(2*atoms%llod+1) ,atoms%nlod,atoms%natd )
-    INTEGER nbasf0(atoms%nlod,atoms%natd),nkvec(atoms%nlod,atoms%natd)
-    REAL alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd),clo1(atoms%nlod,atoms%ntypd)
+    INTEGER kvec(2*(2*atoms%llod+1) ,atoms%nlod,atoms%nat )
+    INTEGER nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
+    REAL alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype),clo1(atoms%nlod,atoms%ntype)
     REAL dfj(0:atoms%lmaxd),fg(3),fgp(3),fgr(3),fj(0:atoms%lmaxd),fk(3), fkp(3),fkr(3)
     COMPLEX ylm( (atoms%lmaxd+1)**2 ),ccchi(2,2)
-    LOGICAL enough(atoms%natd),apw(0:atoms%lmaxd,atoms%ntypd)
+    LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
     COMPLEX, ALLOCATABLE :: aaux(:),baux(:)
     LOGICAL:: l_real
     COMPLEX, ALLOCATABLE :: work(:)

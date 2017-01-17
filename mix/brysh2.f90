@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..
     REAL,    INTENT (IN) :: s_in(:)
-    REAL,    INTENT (OUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
+    REAL,    INTENT (OUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT) :: rht(vacuum%nmz,2,input%jspins)
     COMPLEX, INTENT (OUT) :: qpw(stars%n3d,input%jspins),cdom(stars%n3d),cdomvz(vacuum%nmz,2)
     COMPLEX, INTENT (OUT) :: rhtxy(vacuum%nmzxy,oneD%odi%n2d-1,2,input%jspins)

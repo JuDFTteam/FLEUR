@@ -192,7 +192,7 @@
       ENDDO
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
-      input%delgau = input%tkb ; atoms%ntypd = atoms%ntype ; atoms%natd = atoms%nat
+      input%delgau = input%tkb ; atoms%ntype = atoms%ntype ; atoms%nat = atoms%nat
       DO i = 1, 10
         j = (i-1) * 8 + 1
         input%comment(i) = title(j:j+7)
@@ -315,7 +315,7 @@
       selct2(2,:) = 0
       selct2(3,:) = 4
       selct2(4,:) = 2
-      ALLOCATE(hybrid%lcutm2(atoms%ntypd),hybrid%lcutwf(atoms%ntypd))
+      ALLOCATE(hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
       hybrid%lcutm2      = 4
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
@@ -448,13 +448,13 @@
                STOP 'Error: No kpoint set generation for 1D systems yet!'
                CALL od_kptsgen (kpts%nkpt)
             END IF
-            kpts%nkpts = kpts%nkpt
+            kpts%nkpt = kpts%nkpt
             ALLOCATE(kpts%wtkpt(kpts%nkpt))
             DO i = 1, kpts%nkpt
-               kpts%wtkpt(i) = kpts%weight(i)
+               kpts%wtkpt(i) = kpts%wtkpt(i)
             END DO
 
-            kpts%nkptd = kpts%nkpt
+            kpts%nkpt = kpts%nkpt
 
             !set latnam to any
             cell%latnam = 'any'
@@ -484,11 +484,11 @@
             sumWeight = 0.0
             WRITE(*,*) 'nkpt: ', kpts%nkpt
             DO i = 1, kpts%nkpt
-               sumWeight = sumWeight + kpts%weight(i)
+               sumWeight = sumWeight + kpts%wtkpt(i)
             END DO
             DO i = 1, kpts%nkpt
-               kpts%weight(i) = kpts%weight(i) / sumWeight
-               kpts%wtkpt(i) = kpts%weight(i)
+               kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
+               kpts%wtkpt(i) = kpts%wtkpt(i)
             END DO
          END IF
 

@@ -94,7 +94,7 @@
                &          cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,stars%n2d-1,2),&
                &     ris(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1),&
                &     rvacxy(0:9*stars%k1d*stars%k2d-1,vacuum%nmzxyd,2,4),&
-               &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,4),rht(vacuum%nmzd,2,4) )
+               &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmzd,2,4) )
           !
           !---> initialize arrays for the density matrix
           !
@@ -161,7 +161,7 @@
           !---> for testing: read offdiag. output density matrix
           INQUIRE (file= 'rhomt21', exist= l_fmpl2)
           IF (l_fmpl2) THEN
-             ALLOCATE( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd) )
+             ALLOCATE( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
              OPEN (26,file='rhomt21',form='unformatted',status='unknown')
              READ (26) rho21
              CLOSE (26)

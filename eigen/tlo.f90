@@ -41,8 +41,8 @@ MODULE m_tlo
           REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd)
           REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
           REAL,    INTENT (IN) :: flo(atoms%jmtd,2,atoms%nlod)
-          REAL,    INTENT (IN) :: uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-          REAL,    INTENT (IN) :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+          REAL,    INTENT (IN) :: uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+          REAL,    INTENT (IN) :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
           COMPLEX ci,cil

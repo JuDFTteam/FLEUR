@@ -324,7 +324,7 @@
                       dimension%neigd2 = dimension%neigd
                    END IF
                    IF( .NOT. ALLOCATED(results%w_iks) )&
-                        &          ALLOCATE ( results%w_iks(dimension%neigd2,kpts%nkptd,dimension%jspd) )
+                        &          ALLOCATE ( results%w_iks(dimension%neigd2,kpts%nkpt,dimension%jspd) )
 
 
                    IF( ( xcpot%icorr == icorr_hf  .OR. xcpot%icorr == icorr_pbe0 .OR.&
@@ -340,7 +340,7 @@
                            &              ' calculation of mixedbasis...'
                       IF (it==1)&
                            &         eig_id=open_eig(&
-                           &       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt(1),dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntypd,atoms%nlotot&
+                           &       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt(1),dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
                            &         ,noco%l_noco,.FALSE.,.FALSE.)
                       !               CALL open_eig(mpi_comm,
                       !     >              nbasfcn,neigd,nkpt(1),jspd,lmaxd,nlod,ntypd,nlotot,
@@ -549,7 +549,7 @@
                                   ! this change is sufficient to modify fermie and c
                                   ! the enlarged kpt mesh
                                   kpts%nkpt    = kpts%nkptf
-                                  kpts%nkptd   = kpts%nkptf
+                                  kpts%nkpt   = kpts%nkptf
                                END IF
 
                             ENDIF
@@ -603,7 +603,7 @@
                             IF (jij%l_J) THEN
 
                                CALL timestart("determination of fermi energy")
-                               ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkptd,dimension%jspd) )
+                               ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkpt,dimension%jspd) )
                                CALL fermie(eig_id, mpi,kpts,obsolete,input,&
                                     &        noco,enpara%epara_min,jij,cell,results)
                                DEALLOCATE ( results%w_iks )
@@ -611,7 +611,7 @@
                             ENDIF
                             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd = 2*dimension%neigd
                             IF( .NOT. ALLOCATED(results%w_iks) )&
-                                 &             ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkptd,dimension%jspd) )
+                                 &             ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkpt,dimension%jspd) )
                             IF ( (mpi%irank.EQ.0).AND.(.NOT.jij%l_J) ) THEN
                                CALL timestart("determination of fermi energy")
 

@@ -22,10 +22,10 @@ CONTAINS
     INTEGER, INTENT (IN) :: jsp 
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: f_a12(3,atoms%ntypd),f_a21(3,atoms%ntypd)
-    COMPLEX, INTENT (IN) :: f_b4(3,atoms%ntypd),f_b8(3,atoms%ntypd)
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)
-    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
+    COMPLEX, INTENT (IN) :: f_a12(3,atoms%ntype),f_a21(3,atoms%ntype)
+    COMPLEX, INTENT (IN) :: f_b4(3,atoms%ntype),f_b8(3,atoms%ntype)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (INOUT) :: force(:,:,:) !(3,ntypd,jspd)
     !     ..
     !     .. Local Scalars ..

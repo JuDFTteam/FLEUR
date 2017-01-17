@@ -31,8 +31,8 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: vpw(:,:)!(stars%n3d,input%jspins)
-    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
-    REAL,    INTENT (OUT):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
+    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+    REAL,    INTENT (OUT):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !-odim
     !+odim
     !     ..
@@ -42,8 +42,8 @@ CONTAINS
     INTEGER i,jm,k,l,l21,lh ,n,nd ,lm,n1,nat,m
     !     ..
     !     .. Local Arrays ..
-    COMPLEX vtl(0:sphhar%nlhd,atoms%ntypd)
-    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntypd )
+    COMPLEX vtl(0:sphhar%nlhd,atoms%ntype)
+    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntype )
     REAL    f1r(atoms%jmtd),f2r(atoms%jmtd),x1r(atoms%jmtd),x2r(atoms%jmtd)
     REAL    sbf(0:atoms%lmaxd),rrl(atoms%jmtd),rrl1(atoms%jmtd)
 #ifdef CPP_MPI
@@ -115,11 +115,11 @@ CALL od_phasy(&
     ENDDO
     !$OMP END PARALLEL DO
 #ifdef CPP_MPI
-    n1 = (sphhar%nlhd+1)*atoms%ntypd
+    n1 = (sphhar%nlhd+1)*atoms%ntype
     ALLOCATE(c_b(n1))
     CALL MPI_REDUCE(vtl,c_b,n1,CPP_MPI_COMPLEX,MPI_SUM,0, mpi%mpi_comm,ierr)
     IF (mpi%irank.EQ.0) THEN
-       vtl=reshape(c_b,(/sphhar%nlhd+1,atoms%ntypd/))
+       vtl=reshape(c_b,(/sphhar%nlhd+1,atoms%ntype/))
     ENDIF
     DEALLOCATE (c_b)
 #endif

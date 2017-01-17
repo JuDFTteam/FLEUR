@@ -91,7 +91,7 @@ CONTAINS
          &          cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
          &     ris(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1),&
          &     rz(vacuum%nmzd,2,2),&
-         &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd),rht(vacuum%nmzd,2,DIMENSION%jspd) )
+         &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),rht(vacuum%nmzd,2,DIMENSION%jspd) )
     !
     !---> initialize arrays for the density matrix
     !

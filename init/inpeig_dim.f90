@@ -26,7 +26,7 @@
       REAL  s1,s2,scale,bk(3)
       LOGICAL xyu
    !     ..
-      kpts%nkptd = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
+      kpts%nkpt = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
       stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
@@ -53,7 +53,7 @@
  8040    FORMAT (i5,f20.10)
  8050    FORMAT (i5,f20.10,3x,l1)
 
-         kpts%nkptd = max(kpts%nkptd,kpts%nkpt)
+         kpts%nkpt = max(kpts%nkpt,kpts%nkpt)
  8060    FORMAT (i5,f20.10)
          IF (scale.EQ.0.0) scale = 1.0
          DO nq=1,jij%nqpt

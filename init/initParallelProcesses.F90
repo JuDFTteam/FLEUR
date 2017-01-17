@@ -52,9 +52,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    EXTERNAL MPI_BCAST
 
    CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(atoms%ntypd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(atoms%natd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%nlod,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%llod,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -82,8 +82,8 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(dimension%nv2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%msh,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(kpts%nkpts,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(kpts%nkptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%ntet,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -130,14 +130,14 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
       ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
-      ALLOCATE(kpts%bk(3,kpts%nkpts))
-      ALLOCATE(kpts%weight(kpts%nkpts))
+      ALLOCATE(kpts%bk(3,kpts%nkpt))
+      ALLOCATE(kpts%wtkpt(kpts%nkpt))
       ALLOCATE(kpts%wtkpt(kpts%nkpt))
       ALLOCATE(kpts%ntetra(4,kpts%ntet))
       ALLOCATE(kpts%voltet(kpts%ntet))
 
       ALLOCATE(enpara%evac0(2,input%jspins))
-      ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntypd,input%jspins))
+      ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntype,input%jspins))
       ALLOCATE(enpara%enmix(input%jspins))
 
       ALLOCATE(sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
@@ -176,7 +176,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       ALLOCATE(oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
       ALLOCATE(oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
-      ALLOCATE(oneD%ngopr1(atoms%natd),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
+      ALLOCATE(oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
       ALLOCATE(oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
       ALLOCATE(oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
 

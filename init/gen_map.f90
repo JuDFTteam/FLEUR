@@ -21,10 +21,10 @@ SUBROUTINE gen_map(atoms,sym,oneD,hybrid)
   ! private arrays
   REAL                              :: rtaual(3)
 
-  ALLOCATE( hybrid%map(atoms%natd,sym%nsym) , stat = ok )
+  ALLOCATE( hybrid%map(atoms%nat,sym%nsym) , stat = ok )
   IF( ok .ne. 0 ) STOP 'gen_map: error during allocation of map'
 
-  ALLOCATE( hybrid%tvec(3,atoms%natd,sym%nsym) , stat = ok )
+  ALLOCATE( hybrid%tvec(3,atoms%nat,sym%nsym) , stat = ok )
   IF( ok .ne. 0 ) STOP 'gen_map: error during allocation of tvec'
 
   iatom  = 0

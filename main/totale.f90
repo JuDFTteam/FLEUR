@@ -82,9 +82,9 @@ CONTAINS
     REAL,    ALLOCATABLE :: vr(:,:,:,:),vz(:,:,:)
     COMPLEX, ALLOCATABLE :: vpw(:,:),vxy(:,:,:,:)
     !     ..
-    ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),rht(vacuum%nmzd,2,input%jspins),&
+    ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins),&
          qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
-         vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),vz(vacuum%nmzd,2,input%jspins),&
+         vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmzd,2,input%jspins),&
          vpw(stars%n3d,input%jspins),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins) )
     !
     WRITE (6,FMT=8000)

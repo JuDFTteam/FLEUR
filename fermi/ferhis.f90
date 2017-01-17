@@ -68,13 +68,13 @@ CONTAINS
     REAL,INTENT(IN)     ::  spindg,ws,weight
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: idxeig(:)!(dimension%neigd*kpts%nkptd*dimension%jspd)
-    INTEGER, INTENT (IN) :: idxjsp(:)!(dimension%neigd*kpts%nkptd*dimension%jspd)
-    INTEGER, INTENT (IN) :: idxkpt(:)!(dimension%neigd*kpts%nkptd*dimension%jspd)
-    INTEGER, INTENT (IN) ::  INDEX(:)!(dimension%neigd*kpts%nkptd*dimension%jspd)
-    INTEGER, INTENT (IN) ::     ne(:,:)!(kpts%nkptd,dimension%jspd)
-    REAL,    INTENT (IN) ::      e(:)!(kpts%nkptd*dimension%neigd*dimension%jspd)
-    REAL,    INTENT (INOUT) ::  we(:)!(kpts%nkptd*dimension%neigd*dimension%jspd)
+    INTEGER, INTENT (IN) :: idxeig(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) :: idxjsp(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) :: idxkpt(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::  INDEX(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::     ne(:,:)!(kpts%nkpt,dimension%jspd)
+    REAL,    INTENT (IN) ::      e(:)!(kpts%nkpt*dimension%neigd*dimension%jspd)
+    REAL,    INTENT (INOUT) ::  we(:)!(kpts%nkpt*dimension%neigd*dimension%jspd)
 
     !--- J constants
     !--- J constants

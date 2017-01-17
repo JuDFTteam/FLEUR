@@ -44,7 +44,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: qpw(stars%n3d,DIMENSION%jspd) 
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd) 
+    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd) 
     REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: psq(stars%n3d)
     !-odim
@@ -56,9 +56,9 @@ CONTAINS
     INTEGER ivac,k,l ,n,n1,nc,ncvn,lm,ll1 ,nd,m,nz
     !     ..
     !     .. Local Arrays ..
-    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntypd )
-    COMPLEX  qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
-    REAL q2(vacuum%nmzd),pn(0:atoms%lmaxd,atoms%ntypd),aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
+    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntype )
+    COMPLEX  qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    REAL q2(vacuum%nmzd),pn(0:atoms%lmaxd,atoms%ntype),aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
     REAL rht1(vacuum%nmz)
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -79,7 +79,7 @@ CONTAINS
 #ifdef CPP_MPI
     psq(:) = CMPLX(0.0,0.0)
     CALL MPI_BCAST(qpw,size(qpw),CPP_MPI_COMPLEX,0,mpi,ierr)
-    nd = (2*atoms%lmaxd+1)*(atoms%lmaxd+1)*atoms%ntypd
+    nd = (2*atoms%lmaxd+1)*(atoms%lmaxd+1)*atoms%ntype
     CALL MPI_BCAST(qlm,nd,CPP_MPI_COMPLEX,0,mpi%MPI_COMM,ierr)
 #endif
     !
@@ -126,7 +126,7 @@ CONTAINS
        ELSE
           !-odim
           CALL od_phasy(&
-               &        atoms%ntypd,stars%n3d,atoms%natd,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               &        atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &        atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &        pylm)
           !+odim

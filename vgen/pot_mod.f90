@@ -14,7 +14,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)   :: stars
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    REAL,    INTENT (INOUT) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
+    REAL,    INTENT (INOUT) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
     COMPLEX, INTENT (INOUT) :: vpw(stars%n3d,input%jspins),vpw_w(stars%n3d,input%jspins)
     COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)

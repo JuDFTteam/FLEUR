@@ -96,7 +96,7 @@ CONTAINS
     ELSE
        vacfac = 2.0
     ENDIF
-    mmaph = intfac*stars%n3d + atoms%ntypd*(sphhar%nlhd+1)*atoms%jmtd&
+    mmaph = intfac*stars%n3d + atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd&
                + vacfac*vacuum%nmzxyd*(oneD%odi%n2d-1)*vacuum%nvac + vacuum%nmzd*vacuum%nvac
     mmap  = mmaph*input%jspins
     !---> in a non-collinear calculations extra space is needed for the
@@ -139,7 +139,7 @@ CONTAINS
     ALLOCATE (sm(mmap),fsm(mmap))
 
     ALLOCATE (qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
-                   rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),rht(vacuum%nmzd,2,input%jspins) )
+                   rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins) )
 
     IF (noco%l_noco) THEN
        ALLOCATE (cdom(stars%n3d),cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))

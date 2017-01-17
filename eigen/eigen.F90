@@ -123,9 +123,9 @@ CONTAINS
     INTEGER, INTENT(IN)     ::  maxindxp
     INTEGER, INTENT(IN)     ::  bands
     !     - arrays -
-    INTEGER, INTENT(IN)     ::  nindxm(0:maxlcutm,atoms%ntypd)
-    INTEGER, INTENT(IN)     ::  lcutm(atoms%ntypd)
-    REAL   , INTENT(IN)     ::  basm(atoms%jmtd,maxindxm,0:maxlcutm,atoms%ntypd)
+    INTEGER, INTENT(IN)     ::  nindxm(0:maxlcutm,atoms%ntype)
+    INTEGER, INTENT(IN)     ::  lcutm(atoms%ntype)
+    REAL   , INTENT(IN)     ::  basm(atoms%jmtd,maxindxm,0:maxlcutm,atoms%ntype)
 #endif
     !     - local scalar -
     INTEGER                 ::  itype,ispin,isym,iisym
@@ -139,17 +139,17 @@ CONTAINS
     !     - local arrays -
 #ifdef CPP_NEVER
     INTEGER                 ::  nobd(kpts%nkptf)
-    INTEGER                 ::  lmaxc(atoms%ntypd)
+    INTEGER                 ::  lmaxc(atoms%ntype)
     INTEGER                 ::  g(3)
-    INTEGER                 ::  nindxp(0:maxlcutm,atoms%ntypd)
+    INTEGER                 ::  nindxp(0:maxlcutm,atoms%ntype)
     INTEGER , ALLOCATABLE   ::  nkpt_EIBZ(:)
     INTEGER , ALLOCATABLE   ::  nindxc(:,:)
     INTEGER , ALLOCATABLE   ::  kveclo_eig(:,:)
     INTEGER , ALLOCATABLE   ::  nbasm(:)
     INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
-    REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntypd), ello_eig(atoms%nlod,atoms%ntypd),rarr(3)
-    REAL                    ::  bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntypd)
-    REAL                    ::  drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntypd)
+    REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),rarr(3)
+    REAL                    ::  bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
+    REAL                    ::  drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
     REAL,    ALLOCATABLE    ::  eig_c(:,:,:)
     REAL,    ALLOCATABLE    ::  core1(:,:,:,:),core2(:,:,:,:)
     REAL,    ALLOCATABLE    ::  gauntarr(:,:,:,:,:,:)
@@ -157,26 +157,26 @@ CONTAINS
     REAL,    ALLOCATABLE    ::  prodm(:,:,:,:)
     TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)
 #endif
-    INTEGER                 ::  ne_eig(kpts%nkptd),nbands(kpts%nkptd)
+    INTEGER                 ::  ne_eig(kpts%nkpt),nbands(kpts%nkpt)
     REAL,    ALLOCATABLE    ::  eig_irr(:,:),vr0(:,:,:)
-    REAL                    ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntypd)
-    REAL                    ::  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntypd)
+    REAL                    ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
+    REAL                    ::  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
 
 #ifdef CPP_MPI
-    INTEGER   :: sndreqd,sndreq(mpi%isize*kpts%nkptd)
+    INTEGER   :: sndreqd,sndreq(mpi%isize*kpts%nkpt)
 #endif
     !
     !
     ! --> Allocate
     !
-    ALLOCATE ( ud%uloulopn(atoms%nlod,atoms%nlod,atoms%ntypd,dimension%jspd),nv2(dimension%jspd) )
-    ALLOCATE ( ud%ddn(0:atoms%lmaxd,atoms%ntypd,dimension%jspd),eig(dimension%neigd),bkpt(3) )
-    ALLOCATE ( ud%us(0:atoms%lmaxd,atoms%ntypd,dimension%jspd),ud%uds(0:atoms%lmaxd,atoms%ntypd,dimension%jspd) )
-    ALLOCATE ( ud%dus(0:atoms%lmaxd,atoms%ntypd,dimension%jspd),ud%duds(0:atoms%lmaxd,atoms%ntypd,dimension%jspd))
-    ALLOCATE ( ud%ulos(atoms%nlod,atoms%ntypd,dimension%jspd),ud%dulos(atoms%nlod,atoms%ntypd,dimension%jspd) )
-    ALLOCATE ( ud%uulon(atoms%nlod,atoms%ntypd,dimension%jspd),ud%dulon(atoms%nlod,atoms%ntypd,dimension%jspd) )
-   ! ALLOCATE ( enpara%ello(atoms%nlod,atoms%ntypd,dimension%jspd) )
-   ! ALLOCATE ( enpara%el(0:atoms%lmaxd,atoms%ntypd,dimension%jspd),enpara%evac(2,dimension%jspd) )
+    ALLOCATE ( ud%uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,dimension%jspd),nv2(dimension%jspd) )
+    ALLOCATE ( ud%ddn(0:atoms%lmaxd,atoms%ntype,dimension%jspd),eig(dimension%neigd),bkpt(3) )
+    ALLOCATE ( ud%us(0:atoms%lmaxd,atoms%ntype,dimension%jspd),ud%uds(0:atoms%lmaxd,atoms%ntype,dimension%jspd) )
+    ALLOCATE ( ud%dus(0:atoms%lmaxd,atoms%ntype,dimension%jspd),ud%duds(0:atoms%lmaxd,atoms%ntype,dimension%jspd))
+    ALLOCATE ( ud%ulos(atoms%nlod,atoms%ntype,dimension%jspd),ud%dulos(atoms%nlod,atoms%ntype,dimension%jspd) )
+    ALLOCATE ( ud%uulon(atoms%nlod,atoms%ntype,dimension%jspd),ud%dulon(atoms%nlod,atoms%ntype,dimension%jspd) )
+   ! ALLOCATE ( enpara%ello(atoms%nlod,atoms%ntype,dimension%jspd) )
+   ! ALLOCATE ( enpara%el(0:atoms%lmaxd,atoms%ntype,dimension%jspd),enpara%evac(2,dimension%jspd) )
     ALLOCATE ( lapw%k1(dimension%nvd,dimension%jspd),lapw%k2(dimension%nvd,dimension%jspd),lapw%k3(dimension%nvd,dimension%jspd),lapw%rk(dimension%nvd,dimension%jspd) )
     !
     ! --> some parameters first
@@ -230,11 +230,11 @@ CONTAINS
     ! load potential from file pottot (=unit 8)
     !
     ALLOCATE ( vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
-    ALLOCATE ( vz(vacuum%nmzd,2,4), vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd) )
-    ALLOCATE ( vr0(atoms%jmtd,atoms%ntypd,dimension%jspd) ) ; vr0 = 0
+    ALLOCATE ( vz(vacuum%nmzd,2,4), vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
+    ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,dimension%jspd) ) ; vr0 = 0
     OPEN (nu,file='pottot',form='unformatted',status='old')
     IF (input%gw.eq.2) THEN
-       ALLOCATE ( vpwtot(stars%n3d,dimension%jspd), vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd) )
+       ALLOCATE ( vpwtot(stars%n3d,dimension%jspd), vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
        IF ( mpi%irank == 0 ) WRITE(6,'(A/A/A/A)')&
             &  'Info: vxc matrix elements for GW will be calculated in gw_vxc',&
             &  'Info: and stored in "vxc", the values obtained from the',&
@@ -288,7 +288,7 @@ CONTAINS
 
 !check if z-reflection trick can be used
 
-    l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkptd))).LT.1e-9).and..not.noco%l_noco) 
+    l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).and..not.noco%l_noco) 
 
 
 #if ( defined(CPP_MPI))
@@ -316,7 +316,7 @@ CONTAINS
     endif
     eig_id=open_eig(&
          mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,&
-         atoms%nlod,atoms%ntypd,atoms%nlotot,noco%l_noco,.true.,l_real,noco%l_soc,.false.,mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%natd,nat=atoms%natd,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+         atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.true.,l_real,noco%l_soc,.false.,mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=dimension%nstd,nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.or.input%cdinf,l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
     IF (l_real) THEN
        ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
@@ -384,15 +384,15 @@ CONTAINS
        CALL timestart("tlmplm")
        err=0
        j = 1 ; IF (noco%l_noco) j = 2
-       ALLOCATE(td%tuu(0:dimension%lmplmd,atoms%ntypd,j),stat=err)
-       ALLOCATE(td%tud(0:dimension%lmplmd,atoms%ntypd,j),stat=err)
-       ALLOCATE(td%tdd(0:dimension%lmplmd,atoms%ntypd,j),stat=err)
-       ALLOCATE(td%tdu(0:dimension%lmplmd,atoms%ntypd,j),stat=err)
+       ALLOCATE(td%tuu(0:dimension%lmplmd,atoms%ntype,j),stat=err)
+       ALLOCATE(td%tud(0:dimension%lmplmd,atoms%ntype,j),stat=err)
+       ALLOCATE(td%tdd(0:dimension%lmplmd,atoms%ntype,j),stat=err)
+       ALLOCATE(td%tdu(0:dimension%lmplmd,atoms%ntype,j),stat=err)
        mlot_d = max(mlotot,1) ; mlolot_d = max(mlolotot,1)
        ALLOCATE(td%tdulo(0:dimension%lmd,-atoms%llod:atoms%llod,mlot_d,j),stat=err)
        ALLOCATE(td%tuulo(0:dimension%lmd,-atoms%llod:atoms%llod,mlot_d,j),stat=err)
        ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,j), stat=err)
-       ALLOCATE(td%ind(0:dimension%lmd,0:dimension%lmd,atoms%ntypd,j),stat=err )
+       ALLOCATE(td%ind(0:dimension%lmd,0:dimension%lmd,atoms%ntype,j),stat=err )
        IF (err.NE.0) THEN
           WRITE (*,*) 'eigen: an error occured during allocation of'
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
@@ -679,7 +679,7 @@ endif
     IF (l_hybrid.or.hybrid%l_calhf) THEN
        open(unit=120,file='vr0',form='unformatted')
        DO isp=1,dimension%jspd
-          DO nn=1,atoms%ntypd
+          DO nn=1,atoms%ntype
              DO i=1,atoms%jmtd
                 WRITE(120) vr0(i,nn,isp)
              END DO

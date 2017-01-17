@@ -38,11 +38,11 @@ CONTAINS
     INTEGER,INTENT(IN)         :: jsp
     !     .. Array Arguments ..
     INTEGER, INTENT (IN)  :: kveclo(atoms%nlotot)
-    INTEGER, INTENT (OUT) :: nbasf0(atoms%nlod,atoms%natd),nkvec(atoms%nlod,atoms%natd)
-    INTEGER, INTENT (OUT) :: kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%natd  )
-    REAL,    INTENT (OUT) :: alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (OUT) :: clo1(atoms%nlod,atoms%ntypd)
-    LOGICAL, INTENT (OUT) :: enough(atoms%natd)
+    INTEGER, INTENT (OUT) :: nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
+    INTEGER, INTENT (OUT) :: kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat  )
+    REAL,    INTENT (OUT) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (OUT) :: clo1(atoms%nlod,atoms%ntype)
+    LOGICAL, INTENT (OUT) :: enough(atoms%nat)
     !     ..
     !     .. Local Scalars ..
     REAL ka,kb,ws

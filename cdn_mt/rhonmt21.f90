@@ -28,10 +28,10 @@ CONTAINS
     COMPLEX, INTENT(IN) :: acof(:,0:,:,:)!(nobd,0:lmaxd* (lmaxd+2),natd,jspd)
     COMPLEX, INTENT(IN) :: bcof(:,0:,:,:)
     REAL,    INTENT(IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (INOUT) :: ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntypd  )
-    COMPLEX, INTENT (INOUT) :: dunmt21((atoms%lmaxd+1)**2 ,sphhar%nlhd,atoms%ntypd )
-    COMPLEX, INTENT (INOUT) :: udnmt21((atoms%lmaxd+1)**2 ,sphhar%nlhd,atoms%ntypd )
-    COMPLEX, INTENT (INOUT) :: uunmt21((atoms%lmaxd+1)**2 ,sphhar%nlhd,atoms%ntypd )
+    COMPLEX, INTENT (INOUT) :: ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype  )
+    COMPLEX, INTENT (INOUT) :: dunmt21((atoms%lmaxd+1)**2 ,sphhar%nlhd,atoms%ntype )
+    COMPLEX, INTENT (INOUT) :: udnmt21((atoms%lmaxd+1)**2 ,sphhar%nlhd,atoms%ntype )
+    COMPLEX, INTENT (INOUT) :: uunmt21((atoms%lmaxd+1)**2 ,sphhar%nlhd,atoms%ntype )
     !     ..
     !     .. Local Scalars ..
     COMPLEX coef, cconst, cil, coef1

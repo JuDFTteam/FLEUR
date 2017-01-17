@@ -19,9 +19,9 @@ CONTAINS
     COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:lmaxd* (lmaxd+2),natd)
     COMPLEX, INTENT (IN) :: bcof(:,0:,:)
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    REAL, INTENT (INOUT) :: dd(0:atoms%lmaxd,atoms%ntypd)
-    REAL, INTENT (INOUT) :: du(0:atoms%lmaxd,atoms%ntypd)
-    REAL, INTENT (INOUT) :: uu(0:atoms%lmaxd,atoms%ntypd)
+    REAL, INTENT (INOUT) :: dd(0:atoms%lmaxd,atoms%ntype)
+    REAL, INTENT (INOUT) :: du(0:atoms%lmaxd,atoms%ntype)
+    REAL, INTENT (INOUT) :: uu(0:atoms%lmaxd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lm ,n,na,natom,m

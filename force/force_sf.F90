@@ -83,14 +83,14 @@
       CALL init_sf(sym,cell,atoms)
       isdone = .true.
 
-      ALLOCATE ( bsl(stars%n3d,0:atoms%lmaxd,atoms%ntypd) )
+      ALLOCATE ( bsl(stars%n3d,0:atoms%lmaxd,atoms%ntype) )
 
       ALLOCATE ( pylm2((atoms%lmaxd+1)**2,atoms%ntype ))
       ALLOCATE ( rho((atoms%lmaxd+1)**2),V((atoms%lmaxd+1)**2) )
 
 #ifdef debug
-      ALLOCATE ( ylm((atoms%lmaxd+1)**2),testrho((atoms%lmaxd+1)**2,atoms%ntypd) )
-      ALLOCATE ( testV((atoms%lmaxd+1)**2,atoms%ntypd) )
+      ALLOCATE ( ylm((atoms%lmaxd+1)**2),testrho((atoms%lmaxd+1)**2,atoms%ntype) )
+      ALLOCATE ( testV((atoms%lmaxd+1)**2,atoms%ntype) )
 #endif
 
       coeff(:, :) =   cmplx(0.0,0.0)
@@ -330,10 +330,10 @@
       INTEGER, INTENT (IN) :: ispin 
 
 !     .. Array Arguments ..
-      REAL   , INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd) ! 
-      REAL   , INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-      REAL   , INTENT (IN) :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)
-      REAL   , INTENT (IN) :: vxcr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+      REAL   , INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) ! 
+      REAL   , INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+      REAL   , INTENT (IN) :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+      REAL   , INTENT (IN) :: vxcr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
 
 !     .. Local Scalars ..
       INTEGER :: natom,itype,nd,lh,l,lhp,lp,mem,m,memp,mp,t,i,lmp
@@ -519,7 +519,7 @@
 
       IF (isdone.OR.mtdone) RETURN
       IF (.not.ALLOCATED(force_is)) THEN
-        ALLOCATE ( force_is(3,atoms%ntypd),force_mt(3,atoms%ntypd) )
+        ALLOCATE ( force_is(3,atoms%ntype),force_mt(3,atoms%ntype) )
       END IF
       force_is = 0.0
       force_mt = 0.0
@@ -540,7 +540,7 @@
       REAL,INTENT(INOUT)         :: force(:,:,:)
 
       INTEGER :: itype,dir
-      COMPLEX :: force_sf(3,atoms%ntypd)
+      COMPLEX :: force_sf(3,atoms%ntype)
 
 !     debug
       IF (ALLOCATED(force_is)) THEN

@@ -373,16 +373,16 @@
          IF (ALLOCATED(kpts%bk)) THEN
             DEALLOCATE(kpts%bk)
          END IF
-         IF (ALLOCATED(kpts%weight)) THEN
-            DEALLOCATE(kpts%weight)
+         IF (ALLOCATED(kpts%wtkpt)) THEN
+            DEALLOCATE(kpts%wtkpt)
          END IF
-         ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%weight(kpts%nkpt))
+         ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt))
          IF (idiv.NE.0) kpts%posScale = REAL(idiv)
          DO j = 1, kpts%nkpt
             kpts%bk(1,j) = vkxyz(1,j)
             kpts%bk(2,j) = vkxyz(2,j)
             kpts%bk(3,j) = vkxyz(3,j)
-            kpts%weight(j) = wghtkp(j)
+            kpts%wtkpt(j) = wghtkp(j)
          END DO
          IF (input%tria.AND.random) THEN
             kpts%ntet = ntet

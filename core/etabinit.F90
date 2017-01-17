@@ -28,10 +28,10 @@ CONTAINS
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vr(atoms%jmtd,atoms%ntypd) 
-    REAL   , INTENT (OUT):: etab(100,atoms%ntypd)
+    REAL   , INTENT (IN) :: vr(atoms%jmtd,atoms%ntype) 
+    REAL   , INTENT (OUT):: etab(100,atoms%ntype)
     INTEGER, INTENT (OUT):: ntab(100,atoms%ntype),ltab(100,atoms%ntype)
-    INTEGER, INTENT (OUT):: nkmust(atoms%ntypd)
+    INTEGER, INTENT (OUT):: nkmust(atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     REAL  c,d,dxx,e,fj,fl,fn,rn,rnot,t2 ,z,t1,rr,weight

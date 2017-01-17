@@ -30,14 +30,14 @@ CONTAINS
     COMPLEX, INTENT (IN) :: phase
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%natd) 
-    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntypd)
+    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%nat) 
+    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntype)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
-    INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1) ,atoms%natd)
-    LOGICAL, INTENT (OUT) :: enough(atoms%natd)
-    COMPLEX, INTENT (INOUT) :: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%natd)
-    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
+    INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1) ,atoms%nat)
+    LOGICAL, INTENT (OUT) :: enough(atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat)
+    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)
 
     !     ..
     !     .. Local Scalars ..

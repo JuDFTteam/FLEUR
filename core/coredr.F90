@@ -21,9 +21,9 @@ CONTAINS
     REAL seig
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntypd,DIMENSION%jspd),qints(atoms%ntypd,DIMENSION%jspd)
+    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),qints(atoms%ntype,DIMENSION%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
@@ -31,10 +31,10 @@ CONTAINS
     LOGICAL exetab
     !     ..
     !     .. Local Arrays ..
-    REAL br(atoms%jmtd,atoms%ntypd),brd(DIMENSION%msh),etab(100,atoms%ntypd),&
-         rhcs(atoms%jmtd,atoms%ntypd,DIMENSION%jspd),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
-         tecs(atoms%ntypd,DIMENSION%jspd),vr(atoms%jmtd,atoms%ntypd),vrd(DIMENSION%msh)
-    INTEGER nkmust(atoms%ntypd),ntab(100,atoms%ntype),ltab(100,atoms%ntype)
+    REAL br(atoms%jmtd,atoms%ntype),brd(DIMENSION%msh),etab(100,atoms%ntype),&
+         rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
+         tecs(atoms%ntype,DIMENSION%jspd),vr(atoms%jmtd,atoms%ntype),vrd(DIMENSION%msh)
+    INTEGER nkmust(atoms%ntype),ntab(100,atoms%ntype),ltab(100,atoms%ntype)
 
     !     ..
     ntab(:,:) = -1 ; ltab(:,:) = -1 ; etab(:,:) = 0.0

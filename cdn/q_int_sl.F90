@@ -26,9 +26,9 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne,isp  ,nsl
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nmtsl(atoms%ntypd,nsl) 
-    REAL,    INTENT (IN) :: volintsl(atoms%natd)  
-    REAL,    INTENT (IN) :: zsl(2,atoms%natd) ,volsl(atoms%natd) 
+    INTEGER, INTENT (IN) :: nmtsl(atoms%ntype,nsl) 
+    REAL,    INTENT (IN) :: volintsl(atoms%nat)  
+    REAL,    INTENT (IN) :: zsl(2,atoms%nat) ,volsl(atoms%nat) 
     REAL,    INTENT (OUT):: qintslk(:,:)!(nsl,dimension%neigd)
     LOGICAL,OPTIONAL, INTENT (IN) :: realdata
     !     ..

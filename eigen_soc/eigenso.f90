@@ -85,7 +85,7 @@ CONTAINS
     !
     ! load potential from file pottot (=unit 8)
     !
-    ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd),&
+    ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),&
          vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%n3d,DIMENSION%jspd) )
 
     OPEN (8,file='pottot',form='unformatted',status='old')
@@ -98,13 +98,13 @@ CONTAINS
 
     DEALLOCATE ( vz,vzxy,vpw )
 
-    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),&
-         usdus%uds(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),&
-         usdus%ddn(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),kveclo(atoms%nlotot),&
-         usdus%ulos(atoms%nlod,atoms%ntypd,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntypd,DIMENSION%jspd),&
-         usdus%uulon(atoms%nlod,atoms%ntypd,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntypd,DIMENSION%jspd),&
-         enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntypd,DIMENSION%jspd),&
-         enpara%el0(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd))
+    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
+         usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
+         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),kveclo(atoms%nlotot),&
+         usdus%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
+         usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
+         enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
+         enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
 
     INQUIRE (file='wann_inp',exist=l_file)
     IF (l_file.OR.l_socvec) THEN
@@ -126,11 +126,11 @@ CONTAINS
     ENDDO
     CALL timestart("eigenso: spnorb")
     !  ..
-    ALLOCATE( rsopdp(atoms%ntypd,atoms%lmaxd,2,2),rsopdpd(atoms%ntypd,atoms%lmaxd,2,2),&
-         rsopp(atoms%ntypd,atoms%lmaxd,2,2),rsoppd(atoms%ntypd,atoms%lmaxd,2,2),&
-         rsoplop(atoms%ntypd,atoms%nlod,2,2),rsoplopd(atoms%ntypd,atoms%nlod,2,2),&
-         rsopdplo(atoms%ntypd,atoms%nlod,2,2),rsopplo(atoms%ntypd,atoms%nlod,2,2),&
-         rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2),&
+    ALLOCATE( rsopdp(atoms%ntype,atoms%lmaxd,2,2),rsopdpd(atoms%ntype,atoms%lmaxd,2,2),&
+         rsopp(atoms%ntype,atoms%lmaxd,2,2),rsoppd(atoms%ntype,atoms%lmaxd,2,2),&
+         rsoplop(atoms%ntype,atoms%nlod,2,2),rsoplopd(atoms%ntype,atoms%nlod,2,2),&
+         rsopdplo(atoms%ntype,atoms%nlod,2,2),rsopplo(atoms%ntype,atoms%nlod,2,2),&
+         rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2),&
          soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2) )
 
     soangl(:,:,:,:,:,:) = CMPLX(0.0,0.0)
@@ -144,15 +144,15 @@ CONTAINS
        READ (1,*) n
        WRITE (*,*) 'allbut',n
        CLOSE (1)
-       rsopp(1:n-1,:,:,:) = 0.0 ; rsopp(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopdp(1:n-1,:,:,:) = 0.0 ; rsopdp(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsoppd(1:n-1,:,:,:) = 0.0 ; rsoppd(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopdpd(1:n-1,:,:,:) = 0.0 ; rsopdpd(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsoplop(1:n-1,:,:,:) = 0.0 ; rsoplop(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsoplopd(1:n-1,:,:,:) = 0.0 ; rsoplopd(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopdplo(1:n-1,:,:,:) = 0.0 ; rsopdplo(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopplo(1:n-1,:,:,:) = 0.0 ; rsopplo(n+1:atoms%ntypd,:,:,:) = 0.0
-       rsoploplop(1:n-1,:,:,:,:) = 0.0 ; rsoploplop(n+1:atoms%ntypd,:,:,:,:) = 0.0
+       rsopp(1:n-1,:,:,:) = 0.0 ; rsopp(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopdp(1:n-1,:,:,:) = 0.0 ; rsopdp(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsoppd(1:n-1,:,:,:) = 0.0 ; rsoppd(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopdpd(1:n-1,:,:,:) = 0.0 ; rsopdpd(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsoplop(1:n-1,:,:,:) = 0.0 ; rsoplop(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsoplopd(1:n-1,:,:,:) = 0.0 ; rsoplopd(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopdplo(1:n-1,:,:,:) = 0.0 ; rsopdplo(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopplo(1:n-1,:,:,:) = 0.0 ; rsopplo(n+1:atoms%ntype,:,:,:) = 0.0
+       rsoploplop(1:n-1,:,:,:,:) = 0.0 ; rsoploplop(n+1:atoms%ntype,:,:,:,:) = 0.0
     ENDIF
     l_all = .FALSE.
     INQUIRE (file='socscale',exist=l_all)

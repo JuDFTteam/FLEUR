@@ -21,10 +21,10 @@ CONTAINS
     INTEGER, INTENT (IN) :: nsl,nsld
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    INTEGER, INTENT (IN)  :: nmtsl(atoms%ntypd,atoms%natd)
+    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    INTEGER, INTENT (IN)  :: nmtsl(atoms%ntype,atoms%nat)
     REAL,    INTENT (OUT) :: qmtslk(:,:)!(nsl,dimension%neigd)
     !     ..
     !     .. Local Scalars ..
@@ -41,9 +41,9 @@ CONTAINS
     INTRINSIC conjg,cmplx
 
 
-    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntypd),qmt(atoms%ntypd,SIZE(qmtslk,2)) )
-    ALLOCATE ( qaclo(nobd,atoms%nlod,atoms%ntypd),qbclo(nobd,atoms%nlod,atoms%ntypd) )
-    ALLOCATE ( qmttot(atoms%ntypd,SIZE(qmtslk,2)),qmtlo(atoms%ntypd,SIZE(qmtslk,2)) )
+    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntype),qmt(atoms%ntype,SIZE(qmtslk,2)) )
+    ALLOCATE ( qaclo(nobd,atoms%nlod,atoms%ntype),qbclo(nobd,atoms%nlod,atoms%ntype) )
+    ALLOCATE ( qmttot(atoms%ntype,SIZE(qmtslk,2)),qmtlo(atoms%ntype,SIZE(qmtslk,2)) )
     !
     !--->    l-decomposed density for each valence state
     !

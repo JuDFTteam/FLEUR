@@ -42,7 +42,7 @@ CONTAINS
     INTEGER, INTENT (OUT) :: nsl
     !     ..
     !     ..Array Arguments
-    INTEGER, INTENT (OUT) :: nmtsl(atoms%ntypd,nsld),nslat(atoms%natd,nsld)
+    INTEGER, INTENT (OUT) :: nmtsl(atoms%ntype,nsld),nslat(atoms%nat,nsld)
     REAL,    INTENT (OUT) :: zsl(2,nsld),volsl(nsld)  
     REAL,    INTENT (OUT) :: volintsl(nsld)
     !     ..

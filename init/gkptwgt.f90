@@ -30,7 +30,7 @@
           INTEGER i,j,ikpt,nver
           !     ..
           !     .. Local Arrays ..
-          REAL ver(2,4),dummy(2,kpts%nkptd)
+          REAL ver(2,4),dummy(2,kpts%nkpt)
           !     ..
           !     .. Intrinsic Functions ..
           INTRINSIC abs,atan2
@@ -57,7 +57,7 @@
           !
           !                            changed by shz Feb.96
           DO 10 ikpt = 1 , kpts%nkpt
-             kpts%weight(ikpt) = 0
+             kpts%wtkpt(ikpt) = 0
              dummy(1,ikpt)=kpts%bk(1,ikpt)
              dummy(2,ikpt)=kpts%bk(2,ikpt)
              s1 = 0.0
@@ -86,18 +86,18 @@
                 dot = x1*x2 + y1*y2
                 cross = x1*y2 - y1*x2
                 IF ( ABS(cross).GE.eps ) THEN
-                   kpts%weight(ikpt) = kpts%weight(ikpt) + ATAN2(cross,dot)
+                   kpts%wtkpt(ikpt) = kpts%wtkpt(ikpt) + ATAN2(cross,dot)
                 ENDIF
 30           ENDDO
 20        ENDDO
           !
           DO ikpt = 1 , kpts%nkpt
-             kpts%weight(ikpt) = kpts%weight(ikpt) /tpi_const
+             kpts%wtkpt(ikpt) = kpts%wtkpt(ikpt) /tpi_const
           ENDDO
           !   
           wt = 0.0
           DO ikpt = 1,kpts%nkpt
-             wt = wt + kpts%weight(ikpt)
+             wt = wt + kpts%wtkpt(ikpt)
              kpts%bk(1,ikpt)=dummy(1,ikpt)
              kpts%bk(2,ikpt)=dummy(2,ikpt)
           ENDDO

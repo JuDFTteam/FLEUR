@@ -38,7 +38,7 @@
           !+odim
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: p(3,DIMENSION%nspd)  
-          REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd),fz(vacuum%nmzd,2,DIMENSION%jspd)
+          REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),fz(vacuum%nmzd,2,DIMENSION%jspd)
           COMPLEX, INTENT (IN) :: fpw(stars%n3d,DIMENSION%jspd),fxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
           !     ..
           !     .. Local Scalars ..

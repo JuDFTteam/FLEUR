@@ -175,10 +175,8 @@
       TYPE t_atoms
        !<no of types
        INTEGER :: ntype
-       INTEGER :: ntypd
        !<total-no of atoms
        INTEGER :: nat
-       INTEGER :: natd
        !<dimensions of LO's
        INTEGER ::nlod
        INTEGER ::llod
@@ -260,9 +258,7 @@
 
       TYPE t_kpts
        !no
-       INTEGER :: nkpts
        INTEGER :: nkpt
-       INTEGER :: nkptd
        INTEGER :: ntet
        REAL    :: posScale
        LOGICAL :: l_gamma
@@ -270,7 +266,6 @@
        !(3,nkpts) k-vectors internal units
        REAL,ALLOCATABLE ::bk(:,:)
        !(nkpts) weights
-       REAL,ALLOCATABLE ::weight(:)
        REAL,ALLOCATABLE ::wtkpt(:)
        INTEGER, ALLOCATABLE :: pntgptd(:)
        INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:,:)

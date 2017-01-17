@@ -109,7 +109,7 @@ SUBROUTINE r_inpXML(&
   INTEGER :: ierr
   ! ..
   !...  Local Arrays
-  !   CHARACTER :: helpchar(atoms%ntypd)
+  !   CHARACTER :: helpchar(atoms%ntype)
   CHARACTER(len=  4) :: chntype
   CHARACTER(len= 41) :: chform
   CHARACTER(len=100) :: line
@@ -234,12 +234,12 @@ SUBROUTINE r_inpXML(&
   numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/filmPos')
 
   atoms%nat = numberNodes
-  atoms%natd = numberNodes
+  atoms%nat = numberNodes
 
   numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
 
   atoms%ntype = numberNodes
-  atoms%ntypd = numberNodes
+  atoms%ntype = numberNodes
 
   numSpecies = xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
 
@@ -452,12 +452,12 @@ SUBROUTINE r_inpXML(&
      l_kpts = .FALSE.
      kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-     kpts%nkpts = kpts%nkpt
+     kpts%nkpt = kpts%nkpt
 
-     ALLOCATE(kpts%bk(3,kpts%nkpts))
-     ALLOCATE(kpts%weight(kpts%nkpts))
+     ALLOCATE(kpts%bk(3,kpts%nkpt))
+     ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
-     kpts%weight = 0.0
+     kpts%wtkpt = 0.0
      kpts%posScale = 1.0
 
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint')
@@ -488,11 +488,11 @@ SUBROUTINE r_inpXML(&
      l_kpts = .TRUE.
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint')
      kpts%nkpt = numberNodes
-     kpts%nkpts = numberNodes
-     ALLOCATE(kpts%bk(3,kpts%nkpts))
-     ALLOCATE(kpts%weight(kpts%nkpts))
+     kpts%nkpt = numberNodes
+     ALLOCATE(kpts%bk(3,kpts%nkpt))
+     ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
-     kpts%weight = 0.0
+     kpts%wtkpt = 0.0
 
      kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
      weightScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@weightScale'))
@@ -501,8 +501,8 @@ SUBROUTINE r_inpXML(&
         WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint[',i,']'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
         READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
-        kpts%weight(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
-        kpts%weight(i) = kpts%weight(i) / weightScale
+        kpts%wtkpt(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
+        kpts%wtkpt(i) = kpts%wtkpt(i) / weightScale
      END DO
   END IF
 
@@ -709,7 +709,7 @@ SUBROUTINE r_inpXML(&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ALLOCATE(enpara%evac0(2,input%jspins))
-  ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntypd,input%jspins))
+  ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntype,input%jspins))
   ALLOCATE(enpara%enmix(input%jspins))
 
   enpara%lchg_v = .FALSE.
@@ -1953,17 +1953,17 @@ SUBROUTINE r_inpXML(&
         CALL od_kptsgen (kpts%nkpt)
      END IF
   END IF
-  kpts%nkpts = kpts%nkpt
+  kpts%nkpt = kpts%nkpt
   ALLOCATE(kpts%wtkpt(kpts%nkpt))
   sumWeight = 0.0
   DO i = 1, kpts%nkpt
-     sumWeight = sumWeight + kpts%weight(i)
+     sumWeight = sumWeight + kpts%wtkpt(i)
      kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
   END DO
   kpts%posScale = 1.0
   DO i = 1, kpts%nkpt
-     kpts%weight(i) = kpts%weight(i) / sumWeight
-     kpts%wtkpt(i) = kpts%weight(i)
+     kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
+     kpts%wtkpt(i) = kpts%wtkpt(i)
   END DO
 
   ! Generate missing general parameters
@@ -1977,7 +1977,7 @@ SUBROUTINE r_inpXML(&
      WRITE(*,*) 'changed numbands (dimension%neigd) to ',dimension%neigd
   END IF
 
-  kpts%nkptd = kpts%nkpt
+  kpts%nkpt = kpts%nkpt
   dimension%nvd = 0 ; dimension%nv2d = 0
   stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
   obsolete%l_u2f = .FALSE.
@@ -2030,7 +2030,7 @@ SUBROUTINE r_inpXML(&
   atoms%vr0(:) = 0.0
   na = 0
   DEALLOCATE(noel)
-  ALLOCATE(noel(atoms%ntypd))
+  ALLOCATE(noel(atoms%ntype))
   DO iType = 1, atoms%ntype
      l_vca = .FALSE.
      INQUIRE (file="vca.in", exist=l_vca)
@@ -2090,14 +2090,14 @@ SUBROUTINE r_inpXML(&
   sphhar%ntypsd = 0
   IF (.NOT.oneD%odd%d1) THEN
      CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
+          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
           atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
           atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
           sphhar%nmem,sphhar%mlh,sphhar%clnu)
   ELSE IF (oneD%odd%d1) THEN
      WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
      WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-     ALLOCATE (nq1(atoms%natd),lmx1(atoms%natd),nlhtp1(atoms%natd))
+     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
      ii = 1
      nq1=1
      DO i = 1,atoms%ntype
@@ -2107,7 +2107,7 @@ SUBROUTINE r_inpXML(&
         END DO
      END DO
      CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%natd,nq1,cell%amat,cell%bmat,atoms%taual,&
+          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
           atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
           sphhar%mlh,sphhar%clnu)        
@@ -2172,7 +2172,7 @@ SUBROUTINE r_inpXML(&
 
   ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
   ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
-  ALLOCATE (oneD%ngopr1(atoms%natd),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
+  ALLOCATE (oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
   ALLOCATE (oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
   ALLOCATE (oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
 
@@ -2188,7 +2188,7 @@ SUBROUTINE r_inpXML(&
 
   IF (.NOT.oneD%odd%d1) THEN
      CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
+          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
           atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
@@ -2198,7 +2198,7 @@ SUBROUTINE r_inpXML(&
      WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
      WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
      CALL od_chisym(oneD%odd,oneD%mrot1,oneD%tau1,sym%zrfs,sym%invs,sym%invs2,cell%amat)
-     ALLOCATE (nq1(atoms%natd),lmx1(atoms%natd),nlhtp1(atoms%natd))
+     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
      ii = 1
      DO i = 1,atoms%ntype
         DO j = 1,atoms%neq(i)
@@ -2208,7 +2208,7 @@ SUBROUTINE r_inpXML(&
         END DO
      END DO
      CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%natd,nq1,cell%amat,cell%bmat,atoms%taual,&
+          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
           nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
@@ -2227,7 +2227,7 @@ SUBROUTINE r_inpXML(&
   END IF
   IF (.NOT.oneD%odd%d1) THEN
      CALL mapatom(sym,atoms,cell,input,noco)
-     oneD%ngopr1(1:atoms%natd) = atoms%ngopr(1:atoms%natd)
+     oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
      !     DEALLOCATE ( nq1 )
   ELSE
      CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
@@ -2284,7 +2284,7 @@ SUBROUTINE r_inpXML(&
   CALL prp_qfft(stars,cell,noco,input)
 
   IF (input%gw.GE.1) THEN
-     CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
+     CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
           atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
           atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
           atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)

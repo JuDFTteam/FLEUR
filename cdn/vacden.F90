@@ -76,8 +76,8 @@ CONTAINS
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
     REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
-    REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkptd,DIMENSION%jspd)
-    REAL qvac(DIMENSION%neigd,2,kpts%nkptd,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
+    REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
     COMPLEX, INTENT (INOUT):: cdomvz(vacuum%nmzd,2)
     COMPLEX, INTENT (INOUT):: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     !

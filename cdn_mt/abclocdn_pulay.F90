@@ -33,22 +33,22 @@ CONTAINS
     COMPLEX, INTENT (IN) :: phase
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%natd) 
+    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%nat) 
     INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1),atoms%nlod)
-    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntypd)
+    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntype)
     REAL,    INTENT (IN) :: fgp(3)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 ),ccchi(2)
-    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
     COMPLEX, INTENT (INOUT) :: acoflo(-atoms%llod:,:,:,:)
     COMPLEX, INTENT (INOUT) :: bcoflo(-atoms%llod:,:,:,:)
-    COMPLEX, INTENT (INOUT) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: cveccof(:,-atoms%llod:,:,:,:)!(3,-atoms%llod:llod,nobd,atoms%nlod,atoms%natd)
-    LOGICAL, INTENT (OUT) :: enough(atoms%natd)
-    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (INOUT) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: cveccof(:,-atoms%llod:,:,:,:)!(3,-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
+    LOGICAL, INTENT (OUT) :: enough(atoms%nat)
+    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)
     LOGICAL,OPTIONAL,INTENT(IN) ::realdata
     !     ..
     !     .. Local Scalars ..

@@ -39,7 +39,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: qpwc(stars%n3d)
-    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     !-odim
     !+odim
     !     ..
@@ -51,9 +51,9 @@ CONTAINS
     COMPLEX cp,sm,cprr2
     !     ..
     !     .. Local Arrays ..
-    COMPLEX pylm( (atoms%lmaxd+1)**2,atoms%ntypd ) !,bsl_c(atoms%jmtd,0:lmaxd)
+    COMPLEX pylm( (atoms%lmaxd+1)**2,atoms%ntype ) !,bsl_c(atoms%jmtd,0:lmaxd)
     REAL    bsl(0:atoms%lmaxd),bsl_r(atoms%jmtd,0:atoms%lmaxd),bsl_i(atoms%jmtd,0:atoms%lmaxd)
-    INTEGER mr(atoms%ntypd),lmx(atoms%ntypd),lmxx(atoms%ntypd),ntypsy_o(atoms%ntypd)
+    INTEGER mr(atoms%ntype),lmx(atoms%ntype),lmxx(atoms%ntype),ntypsy_o(atoms%ntype)
     !     ..
     !$      REAL,ALLOCATABLE        :: rho_tmp(:,:,:)
 
@@ -129,7 +129,7 @@ CONTAINS
        ELSE
           !-odim
           CALL od_phasy(&
-               &              atoms%ntypd,stars%n3d,atoms%natd,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               &              atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &              atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &              pylm) !keep
           !+odim

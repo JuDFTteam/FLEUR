@@ -67,11 +67,11 @@
           CHARACTER(len=12) :: relcor
           !     ..
           !     .. Local Arrays ..
-          CHARACTER(3) noel(atoms%ntypd)
+          CHARACTER(3) noel(atoms%ntype)
           CHARACTER(8) llr(0:1)
           CHARACTER(11) pmod(0:1)
-          INTEGER  jri1(atoms%ntypd),lmax1(atoms%ntypd)
-          REAL    rmt1(atoms%ntypd),dx1(atoms%ntypd)
+          INTEGER  jri1(atoms%ntype),lmax1(atoms%ntype)
+          REAL    rmt1(atoms%ntype),dx1(atoms%ntype)
           REAL    a1(3),a2(3),a3(3)
 
           !     ..
@@ -291,7 +291,7 @@
           ENDIF
           !-guta
           !     specification of atoms
-          IF (atoms%ntype.GT.atoms%ntypd) THEN
+          IF (atoms%ntype.GT.atoms%ntype) THEN
              WRITE (6,FMT='(a)') 'ntype > ntypd !!!'
              WRITE (16,FMT='(a)') 'ntype > ntypd !!!'
              CALL juDFT_error("ntypd",calledby ="inped")
@@ -342,7 +342,7 @@
 
              DO n1 = 1,atoms%neq(n)
                 na = na + 1
-                IF (na>atoms%natd)  CALL juDFT_error("natd too small",calledby ="inped")
+                IF (na>atoms%nat)  CALL juDFT_error("natd too small",calledby ="inped")
                 !
                 !--->    the in-plane coordinates refer to the lattice vectors a1 and a2,
                 !--->    i.e. they are given in internal units scaled by 'scpos'

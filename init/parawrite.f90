@@ -36,7 +36,7 @@
  8100 FORMAT (6x,'parameter (kxc1d=',i3,',kxc2d=',i3,',kxc3d=',i3,')')
 
       WRITE (6,'(6x,''(Inequivalent) atoms and radial mesh'')')
-      WRITE (6,8110) atoms%ntype,atoms%natd,atoms%jmtd
+      WRITE (6,8110) atoms%ntype,atoms%nat,atoms%jmtd
 
  8110 FORMAT (6x,'parameter (ntypd=',i3,',natd=',i3,',jmtd=',i4,')')
 
@@ -65,7 +65,7 @@
 
 !+gu
       WRITE (6,'(6x,''3 & 2D planewaves, windows, k-points'')')
-      WRITE (6,8180) dimension%nvd,dimension%nv2d,kpts%nkptd
+      WRITE (6,8180) dimension%nvd,dimension%nv2d,kpts%nkpt
 
  8180 FORMAT (6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=1', ',nkptd=',i5,')')
 

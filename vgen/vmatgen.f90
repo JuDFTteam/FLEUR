@@ -82,7 +82,7 @@ CONTAINS
     ENDIF
 
     ALLOCATE ( vpw(stars%n3d,3),vis(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),&
-         &           vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,3),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),&
+         &           vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,3),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),&
          &           vz(vacuum%nmzd,2,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1) )
 
     !---> reload the spin up and down potential

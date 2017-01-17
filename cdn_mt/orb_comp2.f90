@@ -40,11 +40,11 @@ CONTAINS
     INTEGER, INTENT  (IN) :: nobd,ne,jspin
     !	..
     !	..Array Arguments
-    COMPLEX, INTENT  (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT  (IN) :: bcof(:,0:,:) !nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT  (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%natd)
-    REAL,    INTENT (OUT) :: orbcomp(:,:,:)!(dimension%neigd,23,atoms%natd) 
-    REAL,    INTENT (OUT) :: qmtp(:,:)!(dimension%neigd,atoms%natd) 
+    COMPLEX, INTENT  (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT  (IN) :: bcof(:,0:,:) !nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT  (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+    REAL,    INTENT (OUT) :: orbcomp(:,:,:)!(dimension%neigd,23,atoms%nat) 
+    REAL,    INTENT (OUT) :: qmtp(:,:)!(dimension%neigd,atoms%nat) 
     !	..
     !	..Local Scalars 
     INTEGER  n,mt,ityp,imt,lm,lo

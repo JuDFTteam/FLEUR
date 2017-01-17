@@ -25,11 +25,11 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%natd)
-    REAL,    INTENT (INOUT):: aclo(atoms%nlod,atoms%ntypd),bclo(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (INOUT):: cclo(atoms%nlod,atoms%nlod,atoms%ntypd)
+    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
+    REAL,    INTENT (INOUT):: aclo(atoms%nlod,atoms%ntype),bclo(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (INOUT):: cclo(atoms%nlod,atoms%nlod,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lm,lo,lop ,natom,nn,ntyp,m

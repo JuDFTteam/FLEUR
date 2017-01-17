@@ -31,7 +31,7 @@
 !     .. Array Arguments ..
       COMPLEX,INTENT (INOUT) :: qpw(stars%n3d,input%jspins)
       COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
-      REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
+      REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
       REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
 !     ..
 !     .. Local Scalars ..

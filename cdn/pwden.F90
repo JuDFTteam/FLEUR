@@ -103,9 +103,9 @@ CONTAINS
     INTEGER,INTENT(IN)    :: ikpt,jspin 
     COMPLEX,INTENT(INOUT) :: qpw(:,:) !(stars%n3d,dimension%jspd)
     COMPLEX,INTENT(INOUT) :: cdom(:)!(stars%n3d)
-    REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkptd,dimension%jspd)
-    COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntypd)
-    REAL,    INTENT (INOUT) :: forces(:,:,:) !(3,atoms%ntypd,dimension%jspd)
+    REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
+    COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntype)
+    REAL,    INTENT (INOUT) :: forces(:,:,:) !(3,atoms%ntype,dimension%jspd)
     !
     !-----> LOCAL VARIABLES
     !

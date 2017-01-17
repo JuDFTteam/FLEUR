@@ -19,8 +19,8 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
-    REAL,    INTENT (INOUT) :: force(3,atoms%ntypd,input%jspins)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+    REAL,    INTENT (INOUT) :: force(3,atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL a4_1,a4_2,qcore,s13,s23,w,xi

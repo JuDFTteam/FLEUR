@@ -44,7 +44,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
 
-    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     COMPLEX,INTENT(IN)   :: vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins)
     REAL,INTENT(IN),ALLOCATABLE :: fj(:,:,:,:),gj(:,:,:,:),gk(:,:,:),vk(:,:,:)
 

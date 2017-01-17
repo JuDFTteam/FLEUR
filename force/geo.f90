@@ -53,7 +53,7 @@ CONTAINS
     REAL,    INTENT (IN) :: tote
     ! ..
     ! ..  Array Arguments ..
-    REAL,    INTENT (INOUT) :: forcetot(3,atoms%ntypd)
+    REAL,    INTENT (INOUT) :: forcetot(3,atoms%ntype)
     ! ..
     ! ..  Local Scalars ..
     INTEGER i,j,na ,istep0,istep,itype,jop,ieq
@@ -61,8 +61,8 @@ CONTAINS
     TYPE(t_atoms)  :: atoms_new
     ! ..
     ! ..  Local Arrays ..
-    REAL xold(3*atoms%ntypd),y(3*atoms%ntypd),h(3*atoms%ntypd,3*atoms%ntypd),zat(atoms%ntypd)
-    REAL tau0(3,atoms%ntypd),tau0_i(3,atoms%ntypd) 
+    REAL xold(3*atoms%ntype),y(3*atoms%ntype),h(3*atoms%ntype,3*atoms%ntype),zat(atoms%ntype)
+    REAL tau0(3,atoms%ntype),tau0_i(3,atoms%ntype) 
 
     TYPE(t_input):: input
 
@@ -204,9 +204,9 @@ CONTAINS
           ALLOCATE(atoms_temp%l_dulo(atoms%nlod,atoms%ntype))
 
           ALLOCATE(vacuum_temp%izlay(vacuum%layerd,2))
-          atoms_temp%ntypd = atoms%ntypd
+          atoms_temp%ntypd = atoms%ntype
           atoms_temp%ntype = atoms%ntype
-          ALLOCATE(noel_temp(atoms%ntypd))
+          ALLOCATE(noel_temp(atoms%ntype))
 
           ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
           ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))

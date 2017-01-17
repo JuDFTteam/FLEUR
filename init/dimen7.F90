@@ -93,17 +93,17 @@
 !
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
-      CALL first_glance(atoms%ntype,sym%nop,atoms%natd,atoms%nlod,vacuum%layerd,&
+      CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
                         input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nmop,jij%nqpt,nmopq)
-      atoms%ntypd=atoms%ntype
+      atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
       ALLOCATE (&
-     & atoms%lmax(atoms%ntype),atoms%ntypsy(atoms%natd),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
+     & atoms%lmax(atoms%ntype),atoms%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
      & atoms%rmt(atoms%ntype),atoms%zatom(atoms%ntype),atoms%jri(atoms%ntype),atoms%dx(atoms%ntype), &
      & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),&
      & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%ncst(atoms%ntype),atoms%lnonsph(atoms%ntype),&
-     & atoms%taual(3,atoms%natd),atoms%pos(3,atoms%natd),&
+     & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
      & atoms%l_geo(atoms%ntype),noco%soc_opt(atoms%ntype+2),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype),&
@@ -222,13 +222,13 @@
       sphhar%ntypsd = 0
       IF (.NOT.oneD%odd%d1) THEN
         CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-                       atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
+                       atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
                        atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
                        atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
                        sphhar%nmem,sphhar%mlh,sphhar%clnu)
 !-odim
       ELSEIF (oneD%odd%d1) THEN
-        ntp1 = atoms%natd
+        ntp1 = atoms%nat
         ALLOCATE (nq1(ntp1),lmx1(ntp1),nlhtp1(ntp1))
         ii = 1
         nq1=1
@@ -239,7 +239,7 @@
           END DO
         END DO
         CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-              atoms%natd,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
+              atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
               sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
               atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
               sphhar%mlh,sphhar%clnu)        
@@ -388,7 +388,7 @@
      &                kpts,dimension,stars)
       vacuum%layerd = max(vacuum%layerd,1)
       dimension%nstd = max(dimension%nstd,30)
-      atoms%ntypd = atoms%ntype
+      atoms%ntype = atoms%ntype
       IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 
       atoms%nlod = max(atoms%nlod,2) ! for chkmt

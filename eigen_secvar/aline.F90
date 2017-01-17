@@ -53,7 +53,7 @@ CONTAINS
     INTEGER, INTENT (OUT):: ne
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
     REAL,OPTIONAL,    INTENT (IN)  :: a_r(:),b_r(:)!(matsize)
     COMPLEX,OPTIONAL, INTENT (IN)  :: a_c(:),b_c(:)!(matsize)
@@ -128,8 +128,8 @@ CONTAINS
        END DO
     END DO
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd) )
-    ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%natd) ) 
+    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat) )
+    ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat) ) 
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
     IF (.NOT.l_real) zMat%z_c = CONJG(zMat%z_c)

@@ -78,7 +78,7 @@ CONTAINS
     INTEGER itypsym,itype,jsp,l,nat
     !      INTEGER i_sm,n_sm,i_sta,i_end
     REAL ani,g3,signum,z,rhmn,fix,mfie
-    REAL sig1dh,vz1dh,zat_l(atoms%ntypd),rdum,dpdot ! ,delta,deltb,corr
+    REAL sig1dh,vz1dh,zat_l(atoms%ntype),rdum,dpdot ! ,delta,deltb,corr
     LOGICAL l_pottot,l_vdw
     LOGICAL exi
     LOGICAL, PARAMETER :: l_xyav=.FALSE.
@@ -119,16 +119,16 @@ CONTAINS
     !
     ALLOCATE ( alphm(stars%n2d,2),excpw(stars%n3d),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
          vbar(dimension%jspd),af1(3*stars%k3d),bf1(3*stars%k3d),xp(3,dimension%nspd),&
-         rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd),&
+         rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd),&
          qpw(stars%n3d,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
-         vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd),vz(vacuum%nmzd,2,dimension%jspd),&
+         vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),vz(vacuum%nmzd,2,dimension%jspd),&
          vpw(stars%n3d,dimension%jspd),vpw_exx(stars%n3d,dimension%jspd),vpw_wexx(stars%n3d,dimension%jspd),&
          vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
-         excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd),&
+         excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
          vpw_w(stars%n3d,dimension%jspd),psq(stars%n3d) )
 
     ALLOCATE( vxpw(stars%n3d,dimension%jspd),vxpw_w(stars%n3d,dimension%jspd) )
-    ALLOCATE( vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd) )
+    ALLOCATE( vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
     vxr  = 0
 
     IF (noco%l_noco) THEN
@@ -639,7 +639,7 @@ CONTAINS
 
        INQUIRE(file='vr_exx',exist=exi)
        IF( exi ) THEN
-          ALLOCATE( vr_exx(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd) )
+          ALLOCATE( vr_exx(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
           OPEN (350,file='vr_exx',form='formatted')
           DO jsp = 1,dimension%jspd
              DO  itype = 1,atoms%ntype
@@ -718,7 +718,7 @@ CONTAINS
           !     Veff = Vcoulomb + Vxc
           !
           ALLOCATE( veffpw_w(stars%n3d,dimension%jspd) )
-          ALLOCATE( veffr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd) )
+          ALLOCATE( veffr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
           IF( xcpot%icorr .EQ. icorr_pbe0 ) THEN
              veffpw_w = vpw_w - amix_pbe0 * vxpw_w
              veffr    = vr    - amix_pbe0 * vxr

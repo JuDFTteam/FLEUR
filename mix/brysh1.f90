@@ -32,7 +32,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxy,oneD%odi%n2d-1,2)
     COMPLEX, INTENT (IN) :: cdom(stars%n3d),rhtxy(vacuum%nmzxy,oneD%odi%n2d-1,2,input%jspins)
     COMPLEX, INTENT (IN) :: n_mmp(-3:3,-3:3,atoms%n_u,input%jspins)
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
+    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (IN) :: rht(vacuum%nmz,2,input%jspins)
     REAL,    INTENT (OUT):: sout(:)
     !     ..
@@ -174,7 +174,7 @@ CONTAINS
        ENDIF
     ENDIF
 
-    mapmtd = atoms%ntypd*(sphhar%nlhd+1)*atoms%jmtd
+    mapmtd = atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd
     IF (mapmt .GT. mapmtd) THEN
        WRITE(6,*)'The number of mt coefficients is larger than the'
        WRITE(6,*)'dimensions:'

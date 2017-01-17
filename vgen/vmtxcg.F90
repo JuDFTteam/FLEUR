@@ -50,10 +50,10 @@ CONTAINS
     REAL,    INTENT(INOUT):: rhmn
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (INOUT):: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (INOUT):: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)
+    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (INOUT):: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (INOUT):: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER jr,js,k,lh,n,nd,ist,nsp,ixpm ,i,nat

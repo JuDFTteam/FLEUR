@@ -27,12 +27,12 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%natd)
-    REAL,    INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd)
-    REAL,    INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd)
-    REAL,    INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntypd)
+    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+    REAL,    INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
+    REAL,    INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
+    REAL,    INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ci,cmv,fact,cf1

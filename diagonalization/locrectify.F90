@@ -54,8 +54,8 @@ MODULE m_locrectify
       REAL fk(3),tmk,fkp(3)
       !      complex coeffi(1:28,1:28,0:13)     transferred to mod_loccoeff.f
       !      logical coffkind(1:28,0:13)        import with USE m_loccoeff
-      INTEGER jump(atoms%natd)
-      INTEGER mqnum,nalo,naup,basindex(atoms%natd,atoms%nlod)
+      INTEGER jump(atoms%nat)
+      INTEGER mqnum,nalo,naup,basindex(atoms%nat,atoms%nlod)
       INTEGER zrefnap,zrefinap,coffindex
       LOGICAL l_real,l_invsatswap
 
@@ -63,7 +63,7 @@ MODULE m_locrectify
 
       l_real=PRESENT(locrec_r)
 
-      jump(1:atoms%natd)=0
+      jump(1:atoms%nat)=0
       IF (l_real) THEN
          locrec_r=0.0
       ELSE
@@ -162,7 +162,7 @@ MODULE m_locrectify
 
                      ELSEIF(atoms%invsat(zrefatom).EQ.2)THEN
                         l_invsatswap=.TRUE.
-                        DO info=1,atoms%natd
+                        DO info=1,atoms%nat
                            IF(sym%invsatnr(info).EQ.zrefatom)GOTO 723
                         ENDDO
                         CALL juDFT_error("no atoms for zref",calledby ="locrectify")

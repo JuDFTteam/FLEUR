@@ -22,9 +22,9 @@ CONTAINS
     COMPLEX, INTENT (IN) :: bcof(:,0:,:,:)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:,:) !(-llod:llod,nobd,nlod,natd,jspd)
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntypd)
-    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntypd)
-    COMPLEX,       INTENT (INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntypd)
+    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntype)
+    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntype)
+    COMPLEX,       INTENT (INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER   i,l,lm ,itype,na,natom,lo,lop,m

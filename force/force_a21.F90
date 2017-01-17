@@ -43,15 +43,15 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne,jsp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd),epar(0:atoms%lmaxd,atoms%ntypd)
+    REAL,    INTENT (IN) :: we(nobd),epar(0:atoms%lmaxd,atoms%ntype)
     REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    COMPLEX, INTENT (INOUT) :: f_a21(3,atoms%ntypd),f_b4(3,atoms%ntypd)
-    COMPLEX, INTENT (IN) :: acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2) ,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (IN) :: aveccof(3,nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) :: bveccof(3,nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (INOUT) :: f_a21(3,atoms%ntype),f_b4(3,atoms%ntype)
+    COMPLEX, INTENT (IN) :: acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2) ,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN) :: aveccof(3,nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) :: bveccof(3,nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     INTEGER, PARAMETER :: lmaxb=3
@@ -86,7 +86,7 @@ CONTAINS
          tlmplm%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
          tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
          v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb),&
-         a21(3,atoms%natd),b4(3,atoms%natd),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
+         a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
     !
     natom = 1
     DO  n = 1,atoms%ntype

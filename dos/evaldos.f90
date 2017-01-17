@@ -46,7 +46,7 @@
       LOGICAL, INTENT(IN) :: l_mcd 
 
       INTEGER, INTENT(IN) :: ncore(:)!(ntype)
-      REAL,    INTENT(IN) :: e_mcd(atoms%ntypd,input%jspins,ncored) 
+      REAL,    INTENT(IN) :: e_mcd(atoms%ntype,input%jspins,ncored) 
 !-odim
 !+odim 
 !    locals
@@ -60,9 +60,9 @@
 
       INTEGER  itria(3,2*kpts%nkpt),nevk(kpts%nkpt),itetra(4,6*kpts%nkpt)
       INTEGER, ALLOCATABLE :: ksym(:),jsym(:)
-      REAL     vk(3,kpts%nkptd),wt(kpts%nkptd),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
-      REAL     ev(dimension%neigd,kpts%nkptd),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
-      REAL     e_grid(ned+1),spect(ned,3*atoms%ntypd),ferwe(dimension%neigd,kpts%nkptd)
+      REAL     vk(3,kpts%nkpt),wt(kpts%nkpt),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
+      REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
+      REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:),qal_tmp(:,:,:),qis(:),qvlay(:,:,:)
       REAL,    ALLOCATABLE :: mcd(:,:,:),orbcomp(:,:,:),qmtp(:,:)
       REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:),qvac(:,:)
@@ -87,10 +87,10 @@
           qdim = 23
         ENDIF
       ENDIF
-      ALLOCATE( qal(qdim,dimension%neigd,kpts%nkptd),&
-     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkptd),&
+      ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
+     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
      &          qlay(dimension%neigd,vacuum%layerd,2),qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
-      IF (l_mcd) ALLOCATE( mcd(3*atoms%ntypd*ncored,dimension%neigd,kpts%nkptd) )
+      IF (l_mcd) ALLOCATE( mcd(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
 !
 ! scale energies
       sigma = banddos%sig_dos*factor
@@ -160,8 +160,8 @@
 !
             ALLOCATE( ksym(dimension%neigd),jsym(dimension%neigd) )
             ALLOCATE( qal_tmp(1:lmax,atoms%ntype,dimension%neigd))
-            ALLOCATE( orbcomp(dimension%neigd,23,atoms%natd),qintsl(nsld,dimension%neigd))
-            ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%natd),qvac(dimension%neigd,2))
+            ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat),qintsl(nsld,dimension%neigd))
+            ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%nat),qvac(dimension%neigd,2))
             ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
             CALL read_eig(eig_id,k,jspin,bk=vk(:,k),wk=wt(k),neig=nevk(k),eig=ev(:,k))
             CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
@@ -305,7 +305,7 @@
         IF ( .not.l_mcd ) THEN
          ALLOCATE (g(ned,qdim))
         ELSE
-         ALLOCATE (g(ned,3*atoms%ntypd*ncored))
+         ALLOCATE (g(ned,3*atoms%ntype*ncored))
         ENDIF
 !
          IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3) ) THEN
@@ -334,8 +334,8 @@
             CALL dos_bin(input%jspins,qdim,ned,emin,emax,dimension%neigd,kpts%nkpt,&
                  nevk,wt,ev,qal, g)
             ELSE
-            CALL dos_bin(input%jspins,3*atoms%ntypd*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 nevk(1:kpts%nkpt),wt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntypd*ncored,1:ntb,1:kpts%nkpt), g)
+            CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
+                 nevk(1:kpts%nkpt),wt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
@@ -419,8 +419,8 @@
                    IF ((e_test2.LE.e_grid(l)).AND. (e_test1.GT.e_grid(l))) THEN
                      fac = (e_grid(l)-e_test1)/(e_test2-e_test1)
                      DO k = 3*(n-1)+1,3*(n-1)+3
-                       spect(l,k) = spect(l,k)+ g(i,3*atoms%ntypd*(icore-1)+k)&
-                           *(1.-fac) + fac * g(i+1,3*atoms%ntypd*(icore-1)+k)
+                       spect(l,k) = spect(l,k)+ g(i,3*atoms%ntype*(icore-1)+k)&
+                           *(1.-fac) + fac * g(i+1,3*atoms%ntype*(icore-1)+k)
                      ENDDO
                    ENDIF
                    ENDIF
@@ -443,7 +443,7 @@
 !     >                 ntria,as,atr,2*nkpt,itria,nkptd,ev,qval,e,
 !     <                 g)
             CALL ptdos(emin,emax,input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,ntb,ntria&
-                ,as,atr,2*kpts%nkpt,itria,kpts%nkptd,ev(1:ntb,1:kpts%nkptd), qval(:,1:ntb,1:kpts%nkptd),e,g)
+                ,as,atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt), qval(:,1:ntb,1:kpts%nkpt),e,g)
             
 !---- >     smoothening
             IF ( sigma.GT.0.0 ) THEN
@@ -498,7 +498,7 @@
         chform = '('//chntype//'f15.8)'
         IF ( sigma.GT.0.0 ) THEN
            IF ( l_mcd ) THEN
-             DO ln = 1 , 3*atoms%ntypd
+             DO ln = 1 , 3*atoms%ntype
                CALL smooth(e_grid,spect(1,ln),sigma,ned)
              ENDDO
            ENDIF

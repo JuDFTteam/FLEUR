@@ -29,9 +29,9 @@ CONTAINS
     REAL,    INTENT (OUT) :: seig
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vr(atoms%jmtd,atoms%ntypd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntypd),qint(atoms%ntypd,DIMENSION%jspd)
+    REAL   , INTENT (IN) :: vr(atoms%jmtd,atoms%ntype)
+    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntype),qint(atoms%ntype,DIMENSION%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL e,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2,tec 

@@ -111,9 +111,9 @@
           !     .. Array Arguments ..
           COMPLEX,INTENT (INOUT) :: qpw(stars%n3d,DIMENSION%jspd)
           COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
+          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
           REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntypd)
+          REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
           COMPLEX czero,carg,VALUE,slope,ci
@@ -126,9 +126,9 @@
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpwc(:)
-          REAL    acoff(atoms%ntypd),alpha(atoms%ntypd),rho_out(2)
-          REAL    rat(DIMENSION%msh,atoms%ntypd)
-          INTEGER mshc(atoms%ntypd)
+          REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
+          REAL    rat(DIMENSION%msh,atoms%ntype)
+          INTEGER mshc(atoms%ntype)
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           !     ..
           DATA  czero /(0.0,0.0)/, zero /0.0/, tol_14 /1.0e-10/!-14
@@ -175,7 +175,7 @@
           !      (2) cut_off core tails from noise 
           !
 #ifdef CPP_MPI
-          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntypd,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
 #endif
           nloop: DO  n = 1 , atoms%ntype
               IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
@@ -490,13 +490,13 @@
       type(t_mpi)      ,intent(in) :: mpi
       type(t_dimension),intent(in) :: DIMENSION
       type(t_atoms)    ,intent(in) :: atoms
-      integer          ,intent(in) :: mshc(atoms%ntypd)
-      real             ,intent(in) :: alpha(atoms%ntypd), tol_14
-      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntypd)
-      real             ,intent(in) :: acoff(atoms%ntypd)
+      integer          ,intent(in) :: mshc(atoms%ntype)
+      real             ,intent(in) :: alpha(atoms%ntype), tol_14
+      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntype)
+      real             ,intent(in) :: acoff(atoms%ntype)
       type(t_stars)    ,intent(in) :: stars
       integer          ,intent(in) :: method2
-      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntypd)
+      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntype)
       type(t_cell)     ,intent(in) :: cell
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
@@ -551,7 +551,7 @@
                  END DO
               END IF       
               CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
-                                 atoms%neq(n),atoms%natd,atoms%taual,&
+                                 atoms%neq(n),atoms%nat,atoms%taual,&
                                  cell,qf,qpwc_at)
 #ifdef CPP_MPI
               DO k = 1, stars%n3d

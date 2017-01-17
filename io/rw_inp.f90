@@ -43,7 +43,7 @@
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
       REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3),scale
-      CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntypd)
+      CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
@@ -77,7 +77,7 @@
       INTEGER :: ierr
 ! ..
 !...  Local Arrays
-      CHARACTER :: helpchar(atoms%ntypd)
+      CHARACTER :: helpchar(atoms%ntype)
       CHARACTER(len=  4) :: chntype
       CHARACTER(len= 41) :: chform
       CHARACTER(len=100) :: line

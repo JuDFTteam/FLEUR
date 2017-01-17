@@ -31,9 +31,9 @@ CONTAINS
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),vz(vacuum%nmzd,2,4)
-    REAL :: el(0:atoms%lmaxd,atoms%ntypd,input%jspins) 
-    REAL :: evac(2,input%jspins),ello(atoms%nlod,atoms%ntypd,input%jspins)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmzd,2,4)
+    REAL :: el(0:atoms%lmaxd,atoms%ntype,input%jspins) 
+    REAL :: evac(2,input%jspins),ello(atoms%nlod,atoms%ntype,input%jspins)
 
     !     ..
     !     .. Local Scalars ..
@@ -46,8 +46,8 @@ CONTAINS
     !     .. Local Arrays .. 
     INTEGER nqn(0:atoms%lmaxd),nqn_lo(atoms%nlod)
     REAL, ALLOCATABLE :: f(:,:),vrd(:)
-    LOGICAL l_done(0:atoms%lmaxd,atoms%ntypd,input%jspins)
-    LOGICAL lo_done(atoms%nlod,atoms%ntypd,input%jspins)
+    LOGICAL l_done(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    LOGICAL lo_done(atoms%nlod,atoms%ntype,input%jspins)
     CHARACTER(len=1) :: ch(0:9)
     CHARACTER(LEN=20)    :: attributes(6)
     !     ..

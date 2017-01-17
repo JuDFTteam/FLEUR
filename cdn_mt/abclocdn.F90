@@ -37,17 +37,17 @@ CONTAINS
     COMPLEX, INTENT (IN) :: phase
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%natd) 
-    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntypd)
+    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%nat) 
+    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntype)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
     COMPLEX, INTENT (IN) :: ccchi(2)
     INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1),atoms%nlod )
-    LOGICAL, INTENT (OUT) :: enough(atoms%natd)
-    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
+    LOGICAL, INTENT (OUT) :: enough(atoms%nat)
+    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1

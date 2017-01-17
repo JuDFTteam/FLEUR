@@ -65,8 +65,8 @@
           REAL,    ALLOCATABLE :: xp(:,:),rat(:,:),eig(:,:,:),sigm(:)
           REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
           REAL,    ALLOCATABLE :: vacpar(:)
-          INTEGER lnum(DIMENSION%nstd,atoms%ntypd),nst(atoms%ntypd) 
-          INTEGER jrc(atoms%ntypd)
+          INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
+          INTEGER jrc(atoms%ntype)
           LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
           CHARACTER*8 name_l(10)
           !     ..
@@ -80,20 +80,20 @@
           !
           IF (input%jspins > DIMENSION%jspd)  CALL juDFT_error("input%jspins > dimension%jspd",calledby&
                &     ="stden")
-          ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd) )
+          ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd) )
 
           ALLOCATE ( qpw(stars%n3d,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd) )
-          ALLOCATE ( xp(3,DIMENSION%nspd),rat(DIMENSION%msh,atoms%ntypd),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntypd) )
-          ALLOCATE ( rh(DIMENSION%msh,atoms%ntypd,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntypd,DIMENSION%jspd) )
-          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntypd,input%jspins),vacpar(2) )
-          ALLOCATE ( enpara%el0(0:3,atoms%ntypd,input%jspins))   
-          ALLOCATE ( enpara%lchange(0:3,atoms%ntypd,input%jspins))
-          ALLOCATE ( enpara%skiplo(atoms%ntypd,input%jspins))
-          ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntypd,input%jspins))
+          ALLOCATE ( xp(3,DIMENSION%nspd),rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
+          ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntype,DIMENSION%jspd) )
+          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,input%jspins),vacpar(2) )
+          ALLOCATE ( enpara%el0(0:3,atoms%ntype,input%jspins))   
+          ALLOCATE ( enpara%lchange(0:3,atoms%ntype,input%jspins))
+          ALLOCATE ( enpara%skiplo(atoms%ntype,input%jspins))
+          ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
           ALLOCATE ( enpara%enmix(input%jspins))
           ALLOCATE ( enpara%evac0(2,dimension%jspd))
           ALLOCATE ( enpara%lchg_v(2,dimension%jspd))
-          ALLOCATE ( rht(vacuum%nmzd,2,DIMENSION%jspd),vbar(2,atoms%ntypd),sigm(vacuum%nmzd) )
+          ALLOCATE ( rht(vacuum%nmzd,2,DIMENSION%jspd),vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
           ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
           enpara%enmix=1.0
           rho = 0.0

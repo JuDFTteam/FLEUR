@@ -20,7 +20,7 @@ CONTAINS
     !     .. Arguments
     INTEGER, INTENT (IN) :: jspin
     COMPLEX, INTENT (IN) :: ecwk(stars%n3d)
-    COMPLEX, INTENT (INOUT) :: f_b8(3,atoms%ntypd)
+    COMPLEX, INTENT (INOUT) :: f_b8(3,atoms%ntype)
     real,intent(inout)      :: force(:,:,:)
     !     ..
     !     .. Local Variables

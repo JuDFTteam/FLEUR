@@ -35,7 +35,7 @@
 !     .. Array Arguments ..
       COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%n3d,dimension%jspd)
       COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
-      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
       REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
       REAL,    INTENT (INOUT) :: p(3)
 !     ..

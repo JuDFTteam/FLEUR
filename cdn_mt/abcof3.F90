@@ -30,9 +30,9 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)
-    COMPLEX, INTENT (OUT):: a(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT):: b(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (OUT):: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (OUT):: a(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: b(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat)
     !     .. Local Scalars ..
     COMPLEX phase,c_0,c_1,c_2,ci
     REAL const,df,r1,s,tmk,wronk
@@ -41,12 +41,12 @@ CONTAINS
     INTEGER nk_lo_sv,nk_lo,m
     !     ..
     !     .. Local Arrays ..
-    INTEGER kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%natd  )
-    INTEGER nbasf0(atoms%nlod,atoms%natd),nkvec(atoms%nlod,atoms%natd)
+    INTEGER kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat  )
+    INTEGER nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
     REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fk(3),fkp(3),fkr(3)
-    REAL alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd),clo1(atoms%nlod,atoms%ntypd)
+    REAL alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype),clo1(atoms%nlod,atoms%ntype)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
-    LOGICAL enough(atoms%natd),apw(0:atoms%lmaxd,atoms%ntypd)
+    LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
 
 
     !     

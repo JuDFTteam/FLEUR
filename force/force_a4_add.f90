@@ -48,7 +48,7 @@ CONTAINS
     !     .. Scalar Arguments ..
 
     IF (.not.allocated(force_a4_mt)) THEN
-       ALLOCATE ( force_a4_mt(3,atoms%ntypd,dimension%jspd),force_a4_is(3,atoms%ntypd,dimension%jspd) )
+       ALLOCATE ( force_a4_mt(3,atoms%ntype,dimension%jspd),force_a4_is(3,atoms%ntype,dimension%jspd) )
     END IF
 
   END SUBROUTINE alloc_fa4_arrays

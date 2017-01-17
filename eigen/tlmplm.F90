@@ -39,7 +39,7 @@ MODULE m_tlmplm
     !     ..
     !     .. Array Arguments ..
 
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)   ! this is for the
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)   ! this is for the
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
@@ -59,8 +59,8 @@ MODULE m_tlmplm
     REAL uvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,lh0:sphhar%nlhd )
     REAL f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd),x(atoms%jmtd)
     REAL flo(atoms%jmtd,2,atoms%nlod)
-    REAL uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-    REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+    REAL uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+    REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 
 #ifdef CPP_MPI
      INCLUDE 'mpif.h'
