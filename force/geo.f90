@@ -204,7 +204,6 @@ CONTAINS
           ALLOCATE(atoms_temp%l_dulo(atoms%nlod,atoms%ntype))
 
           ALLOCATE(vacuum_temp%izlay(vacuum%layerd,2))
-          atoms_temp%ntypd = atoms%ntype
           atoms_temp%ntype = atoms%ntype
           ALLOCATE(noel_temp(atoms%ntype))
 
