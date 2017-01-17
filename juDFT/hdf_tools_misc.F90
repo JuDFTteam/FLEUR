@@ -36,7 +36,7 @@
       INTEGER:: err
 
 #ifdef CPP_DEBUG
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
       include "mpif.h"
       integer:: irank
       call MPI_COMM_RANK (MPI_COMM_WORLD,irank,err)
@@ -62,7 +62,7 @@
 
       INTEGER::err
 #ifdef CPP_DEBUG
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
       include "mpif.h"
       integer:: irank
       character(len=20)::filename
@@ -299,7 +299,7 @@
       USE hdf5 
       IMPLICIT NONE 
       INTEGER(HID_T)::trans 
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
       INCLUDE 'mpif.h' 
       INTEGER::hdferr 
       CALL h5pcreate_f(H5P_DATASET_XFER_F, trans, hdferr) 
@@ -318,7 +318,7 @@
       USE hdf5 
       IMPLICIT NONE 
       INTEGER(HID_T),INTENT(INOUT)::trans 
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
       INTEGER::hdferr 
       INCLUDE 'mpif.h' 
       IF (trans==H5P_DEFAULT_f) RETURN 
@@ -350,7 +350,7 @@
       INTEGER (hid_t)     :: itype 
       INTEGER             :: hdferr 
       INTEGER (size_t)    :: n,nn 
-#ifdef CPP_MPI                                                          
+#ifdef CPP_HDFMPI                                                          
       include 'mpif.h' 
       INTEGER             :: irank,nerr 
       CALL MPI_COMM_rank(MPI_COMM_WORLD,irank,nerr) 
