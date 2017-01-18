@@ -65,7 +65,7 @@
       LOGICAL :: isthere
 
 !     .. Local Arrays ..
-      INTEGER :: lmaxb(atoms_in%ntypd)
+      INTEGER :: lmaxb(atoms_in%ntype)
       COMPLEX :: coeff(3,-1:1),qpw2(stars%n3d,size(qpw,2)),qpwcalc(stars%n3d,size(qpw,2))
       REAL   , ALLOCATABLE :: bsl(:,:,:)
       COMPLEX, ALLOCATABLE :: pylm(:,:,:),rho(:),V(:),pylm2(:,:)

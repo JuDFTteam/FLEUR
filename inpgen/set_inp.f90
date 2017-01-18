@@ -448,13 +448,6 @@
                STOP 'Error: No kpoint set generation for 1D systems yet!'
                CALL od_kptsgen (kpts%nkpt)
             END IF
-            kpts%nkpt = kpts%nkpt
-            ALLOCATE(kpts%wtkpt(kpts%nkpt))
-            DO i = 1, kpts%nkpt
-               kpts%wtkpt(i) = kpts%wtkpt(i)
-            END DO
-
-            kpts%nkpt = kpts%nkpt
 
             !set latnam to any
             cell%latnam = 'any'

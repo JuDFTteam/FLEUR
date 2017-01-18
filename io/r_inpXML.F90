@@ -223,7 +223,7 @@ SUBROUTINE r_inpXML(&
 
   ! Check version of inp.xml
   valueString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-  IF(TRIM(ADJUSTL(valueString)).NE.'0.27') THEN
+  IF((TRIM(ADJUSTL(valueString)).NE.'0.27').AND.(TRIM(ADJUSTL(valueString)).NE.'0.28')) THEN
      STOP 'version number of inp.xml file is not compatible with this fleur version'
   END IF
 
