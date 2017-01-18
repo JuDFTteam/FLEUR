@@ -122,16 +122,11 @@ CONTAINS
     DO k = mpi%irank+2,stars%ng3,mpi%isize
        cp = qpwc(k)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
-          CALL phasy1(&
-               &                  atoms,stars,sym,&
-               &                  cell,k,&
-               &                  pylm)
+          CALL phasy1(atoms,stars,sym,cell,k,pylm)
        ELSE
           !-odim
-          CALL od_phasy(&
-               &              atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
-               &              atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
-               &              pylm) !keep
+          CALL od_phasy(atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,pylm) !keep
           !+odim
        END IF
        !
@@ -156,14 +151,11 @@ CONTAINS
                    DO jm = 1,sphhar%nmem(lh,nd)
                       m  = sphhar%mlh(jm,lh,nd)
                       lm = l*(l+1) + m + 1
-                      sm = sm + CONJG(sphhar%clnu(jm,lh,nd))&
-                           &                              *pylm(lm,n)
+                      sm = sm + CONJG(sphhar%clnu(jm,lh,nd)) *pylm(lm,n)
                    END DO
                    !$                if (.false.) THEN
-                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin)&
-                        &                            + bsl_r(:,l) *  REAL(sm)
-                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin)&
-                        &                            - bsl_i(:,l) * AIMAG(sm)
+                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin) + bsl_r(:,l) *  REAL(sm)
+                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin) - bsl_i(:,l) * AIMAG(sm)
                    !$                 endif
                    !$            rho_tmp(:,lh,n)=rho_tmp(:,lh,n)+bsl_r(:,l)*real(sm)
                    !$            rho_tmp(:,lh,n)=rho_tmp(:,lh,n)-bsl_i(:,l)*aimag(sm)

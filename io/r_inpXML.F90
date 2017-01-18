@@ -370,6 +370,7 @@ SUBROUTINE r_inpXML(&
   ! Get parameters for core electrons
 
   input%ctail = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
+  input%coretail_lmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
   input%frcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
   input%kcrel = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
 

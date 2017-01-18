@@ -588,6 +588,7 @@
       obsolete%l_f2u=.false.
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
      &                 input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u
+      input%coretail_lmax=99
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )

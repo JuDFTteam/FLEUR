@@ -452,7 +452,7 @@
              !           components
              !
           ENDIF ! mpi%irank ==0
-          l_cutoff=maxval(atoms%lmax(:atoms%ntype))
+          l_cutoff=input%coretail_lmax
 #ifdef CPP_MPI
           IF ( mpi%isize > 1 ) CALL mpi_bc_st(mpi,stars,qpwc)
 #endif

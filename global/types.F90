@@ -554,6 +554,7 @@
         LOGICAL :: eonly
         LOGICAL :: film
         LOGICAL :: ctail
+        INTEGER :: coretail_lmax
         INTEGER :: itmax
         INTEGER :: maxiter
         INTEGER :: imix
@@ -621,7 +622,7 @@
      END TYPE
 
      TYPE t_obsolete
-        INTEGER:: lepr
+        INTEGER:: lepr !floating energy parameters...
         LOGICAL:: disp
         INTEGER:: ndvgrd
         REAL   :: chng
