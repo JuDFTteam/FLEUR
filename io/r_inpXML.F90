@@ -1945,8 +1945,6 @@ SUBROUTINE r_inpXML(&
         CALL od_kptsgen (kpts%nkpt)
      END IF
   END IF
-  kpts%nkpt = kpts%nkpt
-  ALLOCATE(kpts%wtkpt(kpts%nkpt))
   sumWeight = 0.0
   DO i = 1, kpts%nkpt
      sumWeight = sumWeight + kpts%wtkpt(i)
@@ -1955,7 +1953,6 @@ SUBROUTINE r_inpXML(&
   kpts%posScale = 1.0
   DO i = 1, kpts%nkpt
      kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
-     kpts%wtkpt(i) = kpts%wtkpt(i)
   END DO
 
   ! Generate missing general parameters
