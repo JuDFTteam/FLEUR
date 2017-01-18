@@ -285,9 +285,6 @@
 
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
 
-          !Finalize the MPI setup
-          CALL setupMPI(kpts%nkpt,mpi)
-
           !
           !-odim
           oneD%odd%nq2 = oneD%odd%n2d
@@ -481,6 +478,9 @@
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
           END IF
+
+          !Finalize the MPI setup
+          CALL setupMPI(kpts%nkpt,mpi)
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
