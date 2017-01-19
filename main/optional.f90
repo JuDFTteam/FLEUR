@@ -137,9 +137,10 @@ CONTAINS
     IF (.NOT.(strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
        IF (noco%l_noco) THEN
           INQUIRE (file='rhomat_inp',exist=strho) ! if no density (rhoma
-       ELSE
+       END IF
+       IF(.NOT.strho) THEN
           INQUIRE (file='cdn1',exist=strho)       ! if no density (cdn1)
-       ENDIF
+       END IF
        strho = .NOT.strho                ! create a starting density
     ENDIF
 

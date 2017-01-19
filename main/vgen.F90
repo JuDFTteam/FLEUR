@@ -32,8 +32,8 @@ CONTAINS
     USE m_vvacxy
     USE m_vintcz
     USE m_checkdop
-    USE m_loddop
     USE m_wrtdop
+    USE m_cdn_io
     USE m_qfix
     USE m_types
     USE m_od_vvac
@@ -73,9 +73,9 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX vintcza,xint,rhobar
     INTEGER i,i3,irec2,irec3,ivac,j,js,k,k3,lh,n,nzst1
-    INTEGER imz,imzxy,ichsmrg,ivfft,nt,npd 
+    INTEGER imz,imzxy,ichsmrg,ivfft,npd 
     INTEGER ifftd,ifftd2, ifftxc3d,iter,datend
-    INTEGER itypsym,itype,jsp,l,nat
+    INTEGER itypsym,itype,jsp,l,nat,archiveType
     !      INTEGER i_sm,n_sm,i_sta,i_end
     REAL ani,g3,signum,z,rhmn,fix,mfie
     REAL sig1dh,vz1dh,zat_l(atoms%ntype),rdum,dpdot ! ,delta,deltb,corr
@@ -133,26 +133,14 @@ CONTAINS
 
     IF (noco%l_noco) THEN
        ALLOCATE ( cdom(stars%n3d), cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
+       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
        ALLOCATE ( cdom(1),cdomvz(1,1),cdomvxy(1,1,1) )
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
     !
 
     IF (mpi%irank == 0) THEN
-       ! ff
-       IF (noco%l_noco) THEN
-          ! nt = 70
-          ! OPEN (nt,file='cdn',form='unformatted',status='old')
-          ! In the non-collinear case |m| is calculated from mx,my,mz
-          ! in "visxc(g)","vvacxc(g)" instead of using the "cdn"-file.
-          ! It is done this way as accuracy is lost when transforming
-          ! |m| back to g-space in "rhodirgen" .
-          nt = 26
-          OPEN (nt,file='rhomat_inp',form='unformatted',status='old')
-       ELSE
-          nt = 71
-          OPEN (nt,file='cdn1',form='unformatted',status='old')
-       ENDIF
        !
        ! --  total = .false. and reap = .false. means, that we now calculate
        !     the potential from the output density
@@ -161,33 +149,11 @@ CONTAINS
           IF (noco%l_noco) THEN
              CALL juDFT_error("vgen:1",calledby ="vgen")
           ENDIF
-          CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-               nt, iter,rho,qpw,rht,rhtxy)
-       ENDIF
-       !
-       ! --> load density and fix
-       !
-       CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-            nt, iter,rho,qpw,rht,rhtxy)
-       IF (noco%l_noco) THEN
-          READ (nt,iostat=datend) (cdom(k),k=1,stars%ng3)
-          IF (datend == 0) THEN
-             IF (input%film) THEN
-                READ (nt) ((cdomvz(i,ivac),i=1,vacuum%nmz),ivac=1,vacuum%nvac)
-                READ (nt) (((cdomvxy(i,j-1,ivac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), ivac=1,vacuum%nvac)
-             END IF
-          ELSE
-             ! (datend < 0)  =>  no off-diagonal magnetisation stored
-             !                   in "rhomat_inp"
-             IF (datend > 0) THEN
-                CALL juDFT_error("vgen: error reading ",calledby ="vgen")
-             END IF
-             cdom= CMPLX(0.,0.)
-             IF (input%film) THEN
-                cdomvz= CMPLX(0.,0.)
-                cdomvxy= CMPLX(0.,0.)
-             END IF
-          END IF
+          CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_OUTPUT_DEN_const,&
+                           0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+       ELSE
+          CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                           0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
        END IF
 
        IF (.NOT.l_xyav) THEN
@@ -195,17 +161,12 @@ CONTAINS
           CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.FALSE., fix)
           CALL timestop("Qfix")
        ENDIF
-       IF (input%total.OR.reap) REWIND nt
-       CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-            nt, iter,rho,qpw,rht,rhtxy)
-       IF (noco%l_noco) THEN
-          WRITE (nt) (cdom(k),k=1,stars%ng3)
-          IF (input%film) THEN
-             WRITE (nt) ((cdomvz(i,ivac),i=1,vacuum%nmz),ivac=1,vacuum%nvac)
-             WRITE (nt) (((cdomvxy(i,j-1,ivac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), ivac=1,vacuum%nvac)
-          ENDIF
-       ENDIF
-       !
+
+       IF (input%total.OR.reap) THEN
+          CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                            iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+       END IF
+
        WRITE (6,FMT=8000)
 8000   FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
        vpw  = CMPLX(0.,0.)
@@ -439,19 +400,14 @@ CONTAINS
        !     ----> reload the density for calculating vxc (for spin-pol. case)
        !
        IF (input%jspins.EQ.2) THEN
-          !
-          REWIND nt
-          CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-               nt, iter,rho,qpw,rht,rhtxy)
-          CLOSE (nt)
+          CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                           0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           vr(:,0:,:,2) = vr(:,0:,:,1)
           vpw(:,2) = vpw(:,1)
           IF (input%film) THEN
              vxy(:,:,:,2) = vxy(:,:,:,1)
              vz(:,:,2)=vz(:,:,1)
           END IF
-       ELSE
-          CLOSE (nt)
        END IF
        IF (input%total) THEN
           OPEN (11,file='potcoul',form='unformatted',status='unknown')
@@ -707,11 +663,8 @@ CONTAINS
        IF (input%total) THEN
 
           IF (noco%l_noco) THEN ! load qpw,rht,rhtxy from 'cdn'-file
-             nt = 70
-             OPEN (nt,file='cdn',form='unformatted',status='old')
-             CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                  nt, iter,rho,qpw,rht,rhtxy)
-             CLOSE (nt)
+             CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                              0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           ENDIF
           !
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2
