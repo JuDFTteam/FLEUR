@@ -153,7 +153,7 @@
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ; jij%l_J = .false. ; noco%soc_opt(:) = .false. ; input%jspins = 1
       input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
-      input%spinf = 2.0 ;   obsolete%lepr = 0
+      input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
@@ -162,7 +162,7 @@
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; scale = 1.0 ; scpos = 1.0 
-      zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0 
+      zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0

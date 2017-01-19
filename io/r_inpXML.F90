@@ -166,6 +166,7 @@ SUBROUTINE r_inpXML(&
   CHARACTER(LEN=255) :: valueString, lString, nString, token
   CHARACTER(LEN=255) :: xPathA, xPathB, xPathC, xPathD, xPathE
   CHARACTER(LEN=11)  :: latticeType
+  CHARACTER(LEN=50)  :: versionString
 
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
@@ -222,8 +223,8 @@ SUBROUTINE r_inpXML(&
   CALL xmlInitXPath()
 
   ! Check version of inp.xml
-  valueString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-  IF((TRIM(ADJUSTL(valueString)).NE.'0.27').AND.(TRIM(ADJUSTL(valueString)).NE.'0.28')) THEN
+  versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
+  IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28')) THEN
      STOP 'version number of inp.xml file is not compatible with this fleur version'
   END IF
 
@@ -370,7 +371,11 @@ SUBROUTINE r_inpXML(&
   ! Get parameters for core electrons
 
   input%ctail = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
-  input%coretail_lmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
+  IF((TRIM(ADJUSTL(versionString)).EQ.'0.27')) THEN
+     input%coretail_lmax = 99
+  ELSE
+     input%coretail_lmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
+  END IF
   input%frcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
   input%kcrel = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
 
