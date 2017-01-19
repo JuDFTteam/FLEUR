@@ -28,7 +28,14 @@ c********************************************************************
 !     .. Intrinsic Functions ..
       INTRINSIC abs,cos,sin
 
-      IF (lmax.LT.1)  CALL juDFT_error("sphbes1",calledby="sphbes")
+      IF (lmax==0) THEN
+         IF (x.GE.small) THEN
+            fj(0) = sin(x)/x
+         ELSE
+            fj(0) = 1 - x*x/6.* (1.-x*x/20.* (1.-x*x/42.))
+         END IF
+         RETURN
+      ENDIF
       IF (x.LT.zero)  CALL juDFT_error("sphbes2",calledby="sphbes")
       xx = x*x
       IF (x.GE.small) THEN
