@@ -161,7 +161,11 @@ c
 !     Nevertheless it improves the performance, presumably because it
 !     synchronizes the processes and prevent the latency accumulating.
 !     U.Alekseeva 2015
-      call MPI_BARRIER(MPI_COMM_WORLD,mpiierr) 
+
+!Note: this does not work, two problems:
+! a) MPI_COMM_WORLD should not be used 
+! b) Not all processes might reach this point due to k-point parallelization
+!      call MPI_BARRIER(MPI_COMM_WORLD,mpiierr) 
 #endif
       CALL timestop("cdn_read")
       
