@@ -63,7 +63,7 @@ MODULE m_cdn_io
 
       ! local variables
       INTEGER           :: mode, datend, k, i, iVac, j, iUnit
-      LOGICAL           :: l_exist
+      LOGICAL           :: l_exist, l_rhomatFile
       CHARACTER(len=30) :: filename
 
       CALL getMode(mode)
@@ -96,9 +96,15 @@ MODULE m_cdn_io
 
       IF (mode.EQ.CDN_DIRECT_MODE) THEN
          filename = 'cdn1'
+         l_rhomatFile = .FALSE.
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
             INQUIRE(file="rhomat_inp",EXIST=l_exist)
             IF (l_exist) filename = 'rhomat_inp'
+            IF (inOrOutCDN.EQ.CDN_OUTPUT_DEN_const) THEN
+               INQUIRE(file="rhomat_out",EXIST=l_exist)
+               IF (l_exist) filename = 'rhomat_out'
+            END IF
+            IF(l_exist) l_rhomatFile = .TRUE.
          END IF
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
             filename = 'cdn'
@@ -112,10 +118,7 @@ MODULE m_cdn_io
          iUnit = 93
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),FORM='unformatted',STATUS='old')
 
-         IF (inOrOutCDN.EQ.CDN_OUTPUT_DEN_const) THEN
-            IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
-               CALL juDFT_error("inOrOutCDN.EQ.CDN_OUTPUT_DEN_const incompatible to l_noco",calledby ="readDensity")
-            END IF
+         IF ((inOrOutCDN.EQ.CDN_OUTPUT_DEN_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const)) THEN
             ! call loddop to move the file position to the output density
             CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
                         iUnit,iter,fr,fpw,fz,fzxy)
@@ -126,7 +129,7 @@ MODULE m_cdn_io
                      iUnit,iter,fr,fpw,fz,fzxy)
 
          ! read in additional data if l_noco and data is present
-         IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.(TRIM(ADJUSTL(filename)).EQ.'rhomat_inp')) THEN
+         IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
             READ (iUnit,iostat=datend) (cdom(k),k=1,stars%ng3)
             IF (datend == 0) THEN
                IF (input%film) THEN
@@ -204,6 +207,7 @@ MODULE m_cdn_io
          filename = 'cdn1'
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
             filename = 'rhomat_inp'
+            IF(inOrOutCDN.EQ.CDN_OUTPUT_DEN_const) filename = 'rhomat_out'
          END IF
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
             filename = 'cdn'
@@ -212,10 +216,7 @@ MODULE m_cdn_io
          iUnit = 93
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),FORM='unformatted',STATUS='unknown')
 
-         IF (inOrOutCDN.EQ.CDN_OUTPUT_DEN_const) THEN
-            IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
-               CALL juDFT_error("inOrOutCDN.EQ.CDN_OUTPUT_DEN_const incompatible to l_noco",calledby ="writeDensity")
-            END IF
+         IF ((inOrOutCDN.EQ.CDN_OUTPUT_DEN_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const)) THEN
 
             ! Generate data in temp arrays and variables to be able to perform loddop call.
             ! loddop is called to move the file position to the output density position.

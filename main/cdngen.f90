@@ -21,6 +21,7 @@
       USE m_prpqfftmap
       USE m_cdnval
       USE m_loddop
+      USE m_cdn_io
       USE m_wrtdop
       USE m_cdntot
       USE m_cdnovlp
@@ -59,7 +60,7 @@
       REAL fix,qtot,scor,seig,smom,stot,sval,dummy
       REAL slmom,slxmom,slymom,sum,thetai,phii
       INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
-      INTEGER  ityp,ilayer,urec,itype,iatom
+      INTEGER  ityp,ilayer,urec,itype,iatom,archiveType
       LOGICAL l_relax_any,exst,n_exist,l_st
       TYPE(t_noco)::noco_new
 !     ..
@@ -101,13 +102,12 @@
 !
 ! Read in input density
 !
-      nt = 71
-      IF ( (.NOT. noco%l_noco) .AND. mpi%irank.EQ.0) THEN
-        OPEN (nt,file='cdn1',form='unformatted',status='old')
-        REWIND (nt)
-        CALL loddop(stars,vacuum,atoms,sphhar, input,sym, nt, iter,rho,qpw,rht,rhtxy)
-      ENDIF
-!
+      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+      IF(noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+      ALLOCATE(cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
+      CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                       CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+      DEALLOCATE(cdom,cdomvz,cdomvxy)
 
       IF (mpi%irank.EQ.0) THEN
          INQUIRE(file='enpara',exist=l_enpara)
@@ -473,27 +473,9 @@ enddo
          CLOSE(20) 
           CALL juDFT_error("slice OK",calledby="cdngen")
       END IF
-!
-      IF (noco%l_noco) THEN
-!---> pk non-collinear
-!--->    write output density matrix on file rhomat_out
-!--->    first the diagonal elements of the density matrix
-         OPEN (26,FILE='rhomat_out',FORM='unformatted',&
-     &         STATUS='unknown')
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 26, iter,rho,qpw,rht,rhtxy)
-!--->    and then the off-diagonal part
-         WRITE (26) (cdom(k),k=1,stars%ng3)
-         IF (input%film) THEN
-            WRITE (26) ((cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
-            WRITE (26) (((cdomvxy(j,k-1,ivac),j=1,vacuum%nmzxy), k=2,oneD%odi%nq2),ivac=1,vacuum%nvac)
-         ENDIF
-         CLOSE (26)
-!---> pk non-collinear
-      ELSE
-!      ----> write output density on unit 71
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, nt, iter,rho,qpw,rht,rhtxy)
-         CLOSE (nt)
-      ENDIF
+
+      CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+                        CDN_OUTPUT_DEN_const,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
       ENDIF
 
       DEALLOCATE (cdom,cdomvz,cdomvxy,qa21)

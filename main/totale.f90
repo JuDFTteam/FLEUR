@@ -46,6 +46,7 @@ CONTAINS
     USE m_force_a3
     USE m_forcew
     USE m_loddop
+    USE m_cdn_io
     USE m_icorrkeys
     USE m_types
     USE m_xmlOutput
@@ -69,11 +70,12 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL rhs,totz, eigSum
-    INTEGER n,j,nt,iter,i
+    INTEGER n,j,nt,iter,i, archiveType
 
     !     .. Local Arrays ..
     REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
     REAL dpj(atoms%jmtd)
+    COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
     CHARACTER(LEN=20) :: attributes(3)
     !.....density
     REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
@@ -139,16 +141,12 @@ CONTAINS
     !     ----> VM terms
     !     ---> reload the density
     !
-    IF (noco%l_noco) THEN
-       nt = 70
-       OPEN (nt,file='cdn',form='unformatted',status='old')
-    ELSE
-       nt = 71
-       OPEN (nt,file='cdn1',form='unformatted',status='old')
-    ENDIF
-    CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                     nt, iter,rho,qpw,rht,rhtxy)
-    CLOSE (nt)
+    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
+
+    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+                     CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+
     !+for
     !     ---> reload the COULOMB potential
     !

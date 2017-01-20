@@ -16,7 +16,7 @@ CONTAINS
   SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym, cell, it, noco, oneD,hybrid)
     !
 #include"cpp_double.h"
-    USE m_loddop
+    USE m_cdn_io
     USE m_wrtdop
     USE m_brysh1
     USE m_stmix
@@ -49,7 +49,7 @@ CONTAINS
     REAL fix,intfac,vacfac
     INTEGER i,iter,imap,js,mit,nt,nt1,irecl
     INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
-    INTEGER iq2,iq3,ivac,imz ,iofl
+    INTEGER iq2,iq3,ivac,imz ,iofl, archiveType
     INTEGER n_u_keep
     LOGICAL lexist,l_ldaU
     INTEGER d1,d10,asciioffset
@@ -143,9 +143,18 @@ CONTAINS
 
     IF (noco%l_noco) THEN
        ALLOCATE (cdom(stars%n3d),cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
-       ALLOCATE ( cdom(1),cdomvz(1,1),cdomvxy(1,1,1) )
+       ALLOCATE (cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     ENDIF
+    !---> initialize arrays for the off-diagonal part of the density matrix
+    cdom(:) = CMPLX(0.0,0.0)
+    IF (input%film) THEN
+       cdomvz(:,:) = CMPLX(0.0,0.0)
+       cdomvxy(:,:,:) = CMPLX(0.0,0.0)
+    END IF
+
     !
     INQUIRE (file='broyd.'//CHAR(input%imix+48),exist=lexist)
     DO i = 1,6
@@ -193,44 +202,15 @@ CONTAINS
     !gs-
 
     !---> reload densities of current iteration
-    IF (noco%l_noco) THEN
-       !---> initialize arrays for the off-diagonal part of the density matrix
-       cdom(:) = CMPLX(0.0,0.0)
-       IF (input%film) THEN
-          cdomvz(:,:) = CMPLX(0.0,0.0)
-          cdomvxy(:,:,:) = CMPLX(0.0,0.0)
-       END IF
+    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+                     CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
-       !--->    reload input density matrix from file rhomat_inp
-       OPEN (nrhomfile,FILE='rhomat_inp',FORM='unformatted', STATUS='unknown')
-       !--->    first the diagonal elements of the density matrix
-       CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                        nrhomfile, iter,rho,qpw,rht,rhtxy)
-       !--->    and then the off-diagonal part
-       READ (nrhomfile,END=150,ERR=50) (cdom(iq3),iq3=1,stars%ng3)
-       IF (input%film) THEN
-          READ (nrhomfile,END=75,ERR=50) ((cdomvz(imz,ivac), imz=1,vacuum%nmz),ivac=1,vacuum%nvac)
-          READ (nrhomfile,END=75,ERR=50) (((cdomvxy(imz,iq2-1,ivac), imz=1,vacuum%nmzxy),iq2=2,oneD%odi%nq2),ivac=1,vacuum%nvac)
-       ENDIF
-       GOTO 150
-50     WRITE(6,*)'rhodirgen: ERROR: Problems while reading density'
-       WRITE(6,*)'matrix from file rhomat_inp.'
-       CALL juDFT_error("ERROR while reading file rhomat_inp",calledby ="mix")
-75     WRITE(6,*)'rhomatdir: ERROR: reached end of file rhomat_inp'
-       WRITE(6,*)'while reading the vacuum part of the off-diagonal'
-       WRITE(6,*)'element of the desity matrix.'
-       CALL juDFT_error("ERROR while reading file rhomat_inp",calledby ="mix")
-150    CLOSE (nrhomfile)
-    ELSE
-       nt = 71                 !gs see above
-       OPEN (nt,file='cdn1',form='unformatted',status='old')
-       REWIND nt
-       CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-            nt, iter,rho,qpw,rht,rhtxy)
+    IF (.NOT.noco%l_noco) THEN
        !--->      write density to file for storage
        CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
             nt1, iter,rho,qpw,rht,rhtxy)
-    ENDIF
+    END IF
+
     !
     !--->  put input charge density into arrays sm 
     !      in the spin polarized case the arrays consist of 
@@ -238,29 +218,17 @@ CONTAINS
 
     CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
          intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp(-3,-3,1,1,1), nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
+
     !     load output charge density
-    !
-    IF (noco%l_noco) THEN
-       !--->    reload output density matrix from file rhomat_out
-       OPEN (nrhomfile,FILE='rhomat_out',FORM='unformatted', STATUS='unknown')
-       !--->    first the diagonal elements of the density matrix
-       CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                        nrhomfile, iter,rho,qpw,rht,rhtxy)
-       !--->    and then the off-diagonal part
-       READ (nrhomfile) (cdom(iq3),iq3=1,stars%ng3)
-       IF (input%film) THEN
-          READ (nrhomfile) ((cdomvz(imz,ivac),imz=1,vacuum%nmz),ivac=1,vacuum%nvac)
-          READ (nrhomfile) (((cdomvxy(imz,iq2-1,ivac),imz=1,vacuum%nmzxy), iq2=2,oneD%odi%nq2),ivac=1,vacuum%nvac)
-       ENDIF
-       CLOSE (nrhomfile)
-    ELSE
-       CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                        nt, iter,rho,qpw,rht,rhtxy)
+    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+                     CDN_OUTPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+
+    IF (.NOT.noco%l_noco) THEN
        !--->      write density to file for storage
        CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                        nt1, iter,rho,qpw,rht,rhtxy)
-       CLOSE(nt1)
-    ENDIF
+            nt1, iter,rho,qpw,rht,rhtxy)
+    END IF
+
     !
     !--->  put output charge density into arrays fsm 
     !
@@ -367,31 +335,10 @@ CONTAINS
                    qpw,rhtxy,rho,rht,.FALSE., fix)
 
     iter = iter + 1
-    IF (noco%l_noco) THEN
-       !
-       !--->    write mixed density to file rhomat_out
-       !
-       OPEN (nrhomfile,FILE='rhomat_inp',FORM='unformatted', STATUS='unknown')
-       !--->    first the diagonal elements of the density matrix
-       CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                        nrhomfile, iter,rho,qpw,rht,rhtxy)
-       !--->    and then the off-diagonal part
-       WRITE (nrhomfile) (cdom(iq3),iq3=1,stars%ng3)
-       IF (input%film) THEN
-          WRITE (nrhomfile) ((cdomvz(imz,ivac),imz=1,vacuum%nmz),ivac=1,vacuum%nvac)
-          WRITE (nrhomfile) (((cdomvxy(imz,iq2-1,ivac),imz=1,vacuum%nmzxy),&
-               iq2=2,oneD%odi%nq2),ivac=1,vacuum%nvac)
-       ENDIF
-       CLOSE (nrhomfile)
-    ELSE
-       !
-       !--->    write new density onto unit 71 (overwrite)
-       !
-       REWIND nt
-       CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                        nt, iter,rho,qpw,rht,rhtxy)
-       CLOSE (nt)
-    ENDIF
+
+    CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                      iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+
     DEALLOCATE ( cdom,cdomvz,cdomvxy )
     IF ( atoms%n_u > 0 ) THEN
        OPEN (69,file='n_mmp_mat',status='replace',form='formatted')

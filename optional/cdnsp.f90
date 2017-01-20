@@ -15,32 +15,33 @@
       CONTAINS
         SUBROUTINE cdnsp(&
              &                 atoms,input,vacuum,sphhar,&
-             &                 stars,sym,cell,DIMENSION)
+             &                 stars,sym,oneD,cell,DIMENSION)
 
           USE m_intgr, ONLY : intgr3
           USE m_constants, ONLY : pi_const
-          USE m_loddop
-          USE m_wrtdop
+          USE m_cdn_io
           USE m_types
           IMPLICIT NONE
           !     ..
-          TYPE(t_stars),INTENT(IN)  :: stars
-          TYPE(t_vacuum),INTENT(IN) :: vacuum
-          TYPE(t_atoms),INTENT(IN)  :: atoms
-          TYPE(t_sphhar),INTENT(IN) :: sphhar
+          TYPE(t_stars),INTENT(IN)     :: stars
+          TYPE(t_vacuum),INTENT(IN)    :: vacuum
+          TYPE(t_atoms),INTENT(IN)     :: atoms
+          TYPE(t_sphhar),INTENT(IN)    :: sphhar
           TYPE(t_input),INTENT(INOUT)  :: input
-          TYPE(t_sym),INTENT(IN)    :: sym
-          TYPE(t_cell),INTENT(IN)   :: cell
-          TYPE(t_dimension),INTENT(IN)::DIMENSION
+          TYPE(t_sym),INTENT(IN)       :: sym
+          TYPE(t_oneD),INTENT(IN)      :: oneD
+          TYPE(t_cell),INTENT(IN)      :: cell
+          TYPE(t_dimension),INTENT(IN) :: DIMENSION
           !     ..
           !     .. Local Scalars ..
           REAL dummy,p,pp,qtot1,qtot2,spmtot,qval,sfp
-          INTEGER i,iter,ivac,j,k,lh,n,na,nt,jsp_new
+          INTEGER i,iter,ivac,j,k,lh,n,na,jsp_new
           INTEGER ios 
           LOGICAL n_exist
           !     ..
           !     .. Local Arrays ..
           REAL rhoc(DIMENSION%msh,atoms%ntype)
+          COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
           COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
           REAL   , ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
           CHARACTER(len=140), ALLOCATABLE :: clines(:)
@@ -63,19 +64,11 @@
           ENDDO
           CLOSE (17)
 
-          nt = 71                   !gs, see sub mix
-          OPEN (nt,file='cdn1',form='unformatted',status='old')
-          !
-          !     ---> set jspins=1 to read the paramagnetic density
-          ! 
           input%jspins=1
-          CALL loddop(&
-               &            stars,vacuum,atoms,sphhar,&
-               &            input,sym,&
-               &            nt,&
-               &            iter,rho,qpw,rht,rhtxy)
+          CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                           CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           input%jspins=2
-          !
+
           qval = 0.
           na = 1
           !
@@ -120,14 +113,9 @@
                 ENDDO
              ENDDO
           ENDIF
-          !     ----> write the spin-polarized density on unit nt
-          REWIND nt
-          CALL wrtdop(&
-               &            stars,vacuum,atoms,sphhar,&
-               &            input,sym,&
-               &            nt,&
-               &            iter,rho,qpw,rht,rhtxy)
-          CLOSE (nt)
+          !     ----> write the spin-polarized density
+          CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                            CDN_INPUT_DEN_const,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           !
           !     -----> This part is only used for testing th e magnetic moment in 
           !     ----->   each sphere

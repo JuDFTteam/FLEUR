@@ -169,9 +169,7 @@ CONTAINS
           CALL timestart("optional: spin polarized density")
           CALL cdnsp(&
                &              atoms,input,vacuum,sphhar,&
-               &              stars,&
-               &              sym,&
-               &              cell,DIMENSION)
+               &              stars,sym,oneD,cell,dimension)
           !
           CALL timestop("optional: spin polarized density")
        END IF
@@ -211,7 +209,7 @@ CONTAINS
        IF (input%l_bmt) THEN
           CALL bmt(&
                &           stars,input,noco,atoms,sphhar,vacuum,&
-               &           cell,sym)
+               &           cell,sym,oneD)
        ENDIF
 
     ENDIF ! mpi%irank == 0
