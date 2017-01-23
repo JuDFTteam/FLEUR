@@ -163,7 +163,7 @@ MODULE m_cdn_io
    END SUBROUTINE readDensity
 
    SUBROUTINE writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                           relCdnIndex,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -174,7 +174,7 @@ MODULE m_cdn_io
       TYPE(t_oneD),INTENT(IN)   :: oneD
 
       INTEGER, INTENT (IN)      :: inOrOutCDN
-      INTEGER, INTENT (IN)      :: iter
+      INTEGER, INTENT (IN)      :: relCdnIndex, iter
       INTEGER, INTENT (IN)      :: archiveType
       !     ..
       !     .. Array Arguments ..
@@ -193,7 +193,9 @@ MODULE m_cdn_io
       REAL, ALLOCATABLE    :: frTemp(:,:,:,:), fzTemp(:,:,:)
 
       INTEGER           :: mode, iterTemp, k, i, iVac, j, iUnit
+      INTEGER           :: d1, d10, asciioffset, iUnitTemp
       CHARACTER(len=30) :: filename
+      CHARACTER(len=5)  :: cdnfile
 
       CALL getMode(mode)
 
@@ -215,6 +217,69 @@ MODULE m_cdn_io
 
          iUnit = 93
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),FORM='unformatted',STATUS='unknown')
+
+         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const)) THEN
+            starsTemp%n3d = stars%n3d
+            inputTemp%jspins = input%jspins
+            vacuumTemp%nmzxyd = vacuum%nmzxyd
+            starsTemp%n2d = stars%n2d
+            atomsTemp%jmtd = atoms%jmtd
+            sphharTemp%nlhd = sphhar%nlhd
+            vacuumTemp%nmzd = vacuum%nmzd
+            atomsTemp%ntype = atoms%ntype
+            ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
+            sphharTemp%nlh(:) = sphhar%nlh(:)
+            ALLOCATE (atomsTemp%ntypsy(SIZE(atoms%ntypsy)))
+            atomsTemp%ntypsy(:) = atoms%ntypsy(:)
+            ALLOCATE (atomsTemp%jri(SIZE(atoms%jri)))
+            atomsTemp%jri(:) = atoms%jri(:)
+            ALLOCATE (atomsTemp%neq(SIZE(atoms%neq)))
+            atomsTemp%neq(:) = atoms%neq(:)
+            ALLOCATE (atomsTemp%zatom(SIZE(atoms%zatom)))
+            atomsTemp%zatom(:) = atoms%zatom(:)
+            ALLOCATE (atomsTemp%rmt(SIZE(atoms%rmt)))
+            atomsTemp%rmt(:) = atoms%rmt(:)
+            ALLOCATE (atomsTemp%dx(SIZE(atoms%dx)))
+            atomsTemp%dx(:) = atoms%dx(:)
+            starsTemp%ng3 = stars%ng3
+            symTemp%invs = sym%invs
+            inputTemp%film = input%film
+            vacuumTemp%nvac = vacuum%nvac
+            starsTemp%ng2 = stars%ng2
+            symTemp%invs2 = sym%invs2
+            ALLOCATE (fpwTemp(stars%n3d,input%jspins))
+            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%n2d-1,2,input%jspins))
+            ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
+            ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
+
+            !--->    generate name of file to hold the results of this iteration
+            d1 = MOD(iter,10)
+            d10 = MOD(INT((iter+0.5)/10),10)
+            asciioffset = IACHAR('1')-1
+            IF ( d10.GE.10 ) asciioffset = IACHAR('7')
+            cdnfile = 'cdn'//ACHAR(d10+asciioffset)//ACHAR(d1+IACHAR('1')-1)
+
+            iUnitTemp = 72
+            OPEN (iUnitTemp,file=cdnfile,form='unformatted',status='unknown')
+            REWIND iUnitTemp
+
+
+            CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
+                        iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+            CALL wrtdop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
+                        iUnitTemp,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+            CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
+                        iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+            CALL wrtdop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
+                        iUnitTemp,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+
+            CLOSE(iUnitTemp)
+            REWIND iUnit
+
+            DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
+            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, atomsTemp%ntypsy, sphharTemp%nlh)
+            DEALLOCATE (atomsTemp%rmt, atomsTemp%dx)
+         END IF
 
          IF ((inOrOutCDN.EQ.CDN_OUTPUT_DEN_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const)) THEN
 
@@ -256,7 +321,7 @@ MODULE m_cdn_io
 
          ! Write the density
          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                     iUnit,iter,fr,fpw,fz,fzxy)
+                     iUnit,iter+relCdnIndex,fr,fpw,fz,fzxy)
 
          ! Write additional data if l_noco
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN

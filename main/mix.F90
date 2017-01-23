@@ -17,7 +17,6 @@ CONTAINS
     !
 #include"cpp_double.h"
     USE m_cdn_io
-    USE m_wrtdop
     USE m_brysh1
     USE m_stmix
     USE m_broyden
@@ -47,13 +46,11 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL fix,intfac,vacfac
-    INTEGER i,iter,imap,js,mit,nt,nt1,irecl
+    INTEGER i,iter,imap,js,mit,nt,irecl
     INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
     INTEGER iq2,iq3,ivac,imz ,iofl, archiveType
     INTEGER n_u_keep
     LOGICAL lexist,l_ldaU
-    INTEGER d1,d10,asciioffset
-    CHARACTER (len=5) cdnfile
 
     !     ..
     !     .. Local Arrays ..
@@ -183,33 +180,9 @@ CONTAINS
        WRITE(6,'(''WARNING : for QUASI-NEWTON METHODS SPINF=1'')')
     END IF
 
-    !--->    generate name of file to hold the results of this iteration
-    !gs+  changed cdn filename gen. to cdn//tens//digits
-    !gs   fixed cdn filehandle to 71, otherwise conflict after it>=18
-    !gs   plus: you don't want to have open so many fh's
-    !gs    construct 2char rep of iter --> '01'-->'Z9'
-    d1 = MOD(it,10)
-    d10 = INT( (it + 0.5)/10 )
-    asciioffset = IACHAR('1')-1
-    IF ( d10.GE.10 ) asciioffset = IACHAR('7')
-    cdnfile = 'cdn'//ACHAR(d10+asciioffset)//ACHAR(d1+IACHAR('1')-1)
-    !      WRITE (*,*) d1,d10,'>',cdnfile,'<' !gsdbg
-    IF (.NOT.noco%l_noco) THEN
-       nt1 = 72
-       OPEN (nt1,file=cdnfile,form='unformatted',status='unknown')
-       REWIND nt1
-    ENDIF
-    !gs-
-
     !---> reload densities of current iteration
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
-
-    IF (.NOT.noco%l_noco) THEN
-       !--->      write density to file for storage
-       CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-            nt1, iter,rho,qpw,rht,rhtxy)
-    END IF
 
     !
     !--->  put input charge density into arrays sm 
@@ -222,12 +195,6 @@ CONTAINS
     !     load output charge density
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
                      CDN_OUTPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
-
-    IF (.NOT.noco%l_noco) THEN
-       !--->      write density to file for storage
-       CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-            nt1, iter,rho,qpw,rht,rhtxy)
-    END IF
 
     !
     !--->  put output charge density into arrays fsm 
@@ -334,10 +301,8 @@ CONTAINS
     CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
                    qpw,rhtxy,rho,rht,.FALSE., fix)
 
-    iter = iter + 1
-
     CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                      iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      1,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE ( cdom,cdomvz,cdomvxy )
     IF ( atoms%n_u > 0 ) THEN

@@ -164,7 +164,7 @@ CONTAINS
 
        IF (input%total.OR.reap) THEN
           CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                            iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                            0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
        END IF
 
        WRITE (6,FMT=8000)
