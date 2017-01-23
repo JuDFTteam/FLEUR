@@ -38,6 +38,7 @@
           !                all stored on real space mesh
           !**********************************************************************
 
+          USE m_cdn_io
           USE m_loddop
           USE m_wrtdop
           USE m_qfix
@@ -321,15 +322,11 @@
           ENDIF
 
           !---> save charge density to file cdn
-          OPEN (72,FILE='cdn',FORM='unformatted',STATUS='unknown')
           inp=input
           inp%jspins=1
-          CALL wrtdop(&
-               &            stars,vacuum,atoms,sphhar,&
-               &            inp,sym,72, &
-               &            iter,rho(:,0:,1:,1:1),qpw(1:,1:1),rht(1:,1:,1:1),&
-               &            rhtxy(1:,1:,1:,1:1))
-          CLOSE (72)
+
+          CALL writeDensity(stars,vacuum,atoms,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                            0,iter,rho(:,0:,1:,1:1),qpw(1:,1:1),rht(1:,1:,1:1),rhtxy(1:,1:,1:,1:1),cdom,cdomvz,cdomvxy)
 
           !---> save mx to file mdnx
           OPEN (72,FILE='mdnx',FORM='unformatted',STATUS='unknown')

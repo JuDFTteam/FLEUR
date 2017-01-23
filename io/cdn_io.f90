@@ -194,6 +194,7 @@ MODULE m_cdn_io
 
       INTEGER           :: mode, iterTemp, k, i, iVac, j, iUnit
       INTEGER           :: d1, d10, asciioffset, iUnitTemp
+      LOGICAL           :: l_exist
       CHARACTER(len=30) :: filename
       CHARACTER(len=5)  :: cdnfile
 
@@ -215,10 +216,17 @@ MODULE m_cdn_io
             filename = 'cdn'
          END IF
 
+         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(iter.EQ.0)) THEN
+            INQUIRE(file=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+            IF(l_exist) THEN
+               CALL juDFT_error("Trying to generate starting density while a density exists.",calledby ="writeDensity")
+            END IF
+         END IF
+
          iUnit = 93
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),FORM='unformatted',STATUS='unknown')
 
-         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const)) THEN
+         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(iter.GE.1)) THEN
             starsTemp%n3d = stars%n3d
             inputTemp%jspins = input%jspins
             vacuumTemp%nmzxyd = vacuum%nmzxyd

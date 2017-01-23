@@ -24,7 +24,7 @@
           USE m_qsf
           USE m_checkdop
           USE m_cdnovlp
-          USE m_wrtdop
+          USE m_cdn_io
           USE m_qfix
           USE m_atom2
           USE m_types
@@ -58,6 +58,7 @@
           INTEGER i,iter,ivac,iza,j,jr,k,n,n1,npd,ispin 
           INTEGER nw,ilo,natot,icorr_dummy,nat 
           COMPLEX czero
+          COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
@@ -241,16 +242,9 @@
              !
              ! Write superposed density onto density file
              !
-             iter = 1
-             name_l(:) = name(:)
-             name_l(10) = 'ordered*'    ! always create ordered start density
-             OPEN (71,file='cdn1',form='unformatted',status='new')
-             CALL wrtdop(&
-                  &            stars,vacuum,atoms,sphhar,&
-                  &            input,sym,&
-                  &            71,&
-                  &            iter,rho,qpw,rht,rhtxy)
-             CLOSE (71)
+             iter = 0
+             CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
+                               1,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
              !
              ! Check continuity
              !

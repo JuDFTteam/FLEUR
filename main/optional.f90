@@ -45,14 +45,14 @@ CONTAINS
     !            |                       +- fitchk
     !            |                       +- cotra1
     !            |                       +- ylm3
-    !            +-- cdnsp -+- loddop
-    !            |          +- wrtdop
+    !            +-- cdnsp -+- readDensity
+    !            |          +- writeDensity
     !            |          +- intgr3
-    !            +-- flipcdn -+- loddop
-    !            |            +- wrtdop
+    !            +-- flipcdn -+- readDensity
+    !            |            +- writeDensity
     !            +-- f2u -- wrtdop
     !            +-- u2f -- loddop
-    !            +-- bmt -+- loddop
+    !            +-- bmt -+- readDensity
     !                     +- wrtdop
     !----------------------------------------
     USE m_bmt
@@ -181,7 +181,7 @@ CONTAINS
           CALL timestart('optional: flip magnetic moments')
           CALL flipcdn(&
                &                atoms,input,vacuum,sphhar,&
-               &                stars,sym,cell,noco%l_noco)
+               &                stars,sym,oneD,cell,noco%l_noco)
           !
           CALL timestop('optional: flip magnetic moments')
        END IF
