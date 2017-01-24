@@ -88,7 +88,6 @@ CONTAINS
     LOGICAL l_wu,lcal_qsgw,l_file,l_real,l_zref
     REAL evac_sv(dimension%jspd)
     INTEGER ::eig_id_hf=-1
-    INTEGER :: nu=8
     
     !     ..
     !     .. Local Arrays ..
@@ -239,9 +238,9 @@ CONTAINS
             &  'Info: and stored in "vxc", the values obtained from the',&
             &  'Info: original implementation are saved to "vxc.old".'
     ENDIF
-999 CONTINUE
     CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
                        iter,vr,vpw,vz,vzxy)
+999 CONTINUE
     IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,iter/),&
                                                     reshape((/19,13,5,5/),(/2,2/)))
 
@@ -619,7 +618,6 @@ endif
 #endif
 
     IF ( input%gw.eq.2.AND.(gwc==1) )  THEN        ! go for another round
-       OPEN (nu,file='potcoul',form='unformatted',status='old')
        !
        !       Generate input file abcoeff for subsequent GW calculation
        !       28.10.2003 Arno Schindlmayr
@@ -658,6 +656,8 @@ endif
        ENDDO
        CLOSE (16)
        gwc=2
+       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
+                          iter,vr,vpw,vz,vzxy)
        GOTO 999
     ELSE IF ( input%gw.eq.2.AND.(gwc==2) )  THEN
        CLOSE (12)
