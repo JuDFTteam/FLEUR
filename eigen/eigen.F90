@@ -28,7 +28,7 @@ CONTAINS
     USE m_hsvac
     USE m_od_hsvac
     USE m_usetup
-    USE m_loddop
+    USE m_pot_io
     USE m_eigen_diag
 #ifdef CPP_NOTIMPLEMENTED
     USE m_symm_hf,  ONLY : symm_hf_nkpt_EIBZ
@@ -232,7 +232,6 @@ CONTAINS
     ALLOCATE ( vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
     ALLOCATE ( vz(vacuum%nmzd,2,4), vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
     ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,dimension%jspd) ) ; vr0 = 0
-    OPEN (nu,file='pottot',form='unformatted',status='old')
     IF (input%gw.eq.2) THEN
        ALLOCATE ( vpwtot(stars%n3d,dimension%jspd), vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
        IF ( mpi%irank == 0 ) WRITE(6,'(A/A/A/A)')&
@@ -241,8 +240,8 @@ CONTAINS
             &  'Info: original implementation are saved to "vxc.old".'
     ENDIF
 999 CONTINUE
-    CALL loddop(stars,vacuum,atoms,sphhar, input,sym, nu, iter,vr,vpw,vz,vzxy)
-    CLOSE(nu)
+    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                       iter,vr,vpw,vz,vzxy)
     IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,iter/),&
                                                     reshape((/19,13,5,5/),(/2,2/)))
 
