@@ -279,7 +279,7 @@
                          CALL timestart("gen. spin-up and -down density")
                          CALL rhodirgen(&
                               &                     dimension,sym,stars,atoms,sphhar,&
-                              &                    vacuum,26,22,cell,input,oneD)
+                              &                    vacuum,22,cell,input,oneD)
                          CALL timestop("gen. spin-up and -down density")
                       ENDIF
                       !---> pk non-collinear

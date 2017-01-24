@@ -20,8 +20,8 @@
       USE m_umix
       USE m_prpqfftmap
       USE m_cdnval
-      USE m_loddop
       USE m_cdn_io
+      USE m_pot_io
       USE m_wrtdop
       USE m_cdntot
       USE m_cdnovlp
@@ -92,10 +92,9 @@
 !
       ALLOCATE(vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
      &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd))
-      OPEN (8,file='pottot',form='unformatted',status='old')
-      REWIND (8)
-      CALL loddop(stars,vacuum,atoms,sphhar, input,sym, 8, iter,vr,vpw,vz,vzxy)
-      CLOSE (8)
+
+      CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                         iter,vr,vpw,vz,vzxy)
       DEALLOCATE ( vpw,vzxy )
       ALLOCATE ( qpw(stars%n3d,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
       ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
