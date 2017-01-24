@@ -62,9 +62,9 @@ MODULE m_cdn_io
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
-      INTEGER           :: mode, datend, k, i, iVac, j, iUnit
-      LOGICAL           :: l_exist, l_rhomatFile
-      CHARACTER(len=30) :: filename
+      INTEGER            :: mode, datend, k, i, iVac, j, iUnit
+      LOGICAL            :: l_exist, l_rhomatFile
+      CHARACTER(LEN=30)  :: filename
 
       CALL getMode(mode)
 
@@ -112,7 +112,7 @@ MODULE m_cdn_io
 
          INQUIRE(file=TRIM(ADJUSTL(filename)),EXIST=l_exist)
          IF(.NOT.l_exist) THEN
-            CALL juDFT_error("charge density file missing",calledby ="readDensity")
+            CALL juDFT_error("charge density file "//TRIM(ADJUSTL(filename))//" missing",calledby ="readDensity")
          END IF
 
          iUnit = 93

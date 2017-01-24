@@ -45,7 +45,7 @@ CONTAINS
     USE m_force_a4
     USE m_force_a3
     USE m_forcew
-    USE m_loddop
+    USE m_pot_io
     USE m_cdn_io
     USE m_icorrkeys
     USE m_types
@@ -150,11 +150,8 @@ CONTAINS
     !+for
     !     ---> reload the COULOMB potential
     !
-    OPEN (11,file='potcoul',form='unformatted',status='old')
-    REWIND 11
-    CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                     11, iter,vr,vpw,vz,vxy)
-    CLOSE (11)
+    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
+                       iter,vr,vpw,vz,vxy)
     !
     !     CLASSICAL HELLMAN-FEYNMAN FORCE
     !
@@ -163,12 +160,9 @@ CONTAINS
     IF (input%l_f) THEN
        !
        !       core contribution to force: needs TOTAL POTENTIAL and core charge
-       OPEN (8,file='pottot',form='unformatted',status='old')
-       REWIND 8
-       CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-                          8, iter,vr,vpw,vz,vxy)
-       CLOSE (8)
-       !
+       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                          iter,vr,vpw,vz,vxy)
+
        CALL force_a4(atoms,sphhar,input, vr, results%force)
        !
     ENDIF

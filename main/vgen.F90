@@ -34,6 +34,7 @@ CONTAINS
     USE m_checkdop
     USE m_wrtdop
     USE m_cdn_io
+    USE m_pot_io
     USE m_qfix
     USE m_types
     USE m_od_vvac
@@ -410,20 +411,18 @@ CONTAINS
           END IF
        END IF
        IF (input%total) THEN
-          OPEN (11,file='potcoul',form='unformatted',status='unknown')
           DO js = 1,input%jspins
              ! to enable a GW calculation,
              vpw_w(1:stars%ng3,js)=vpw_w(1:stars%ng3,js)/stars%nstr(1:stars%ng3)     ! the PW-coulomb part is not
              ! used otherwise anyway.
           ENDDO
-          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-               11, iter,vr,vpw_w,vz,vxy)
+          CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
+                              iter,vr,vpw_w,vz,vxy)
           DO js = 1,input%jspins
              DO i = 1,stars%ng3
                 vpw_w(i,js)=vpw_w(i,js)*stars%nstr(i)
              ENDDO
           ENDDO
-          CLOSE(11)
        END IF
        IF (sliceplot%plpot) THEN
           OPEN (11,file='potcoul_pl',form='unformatted',status='unknown')
@@ -836,30 +835,13 @@ CONTAINS
           !     **************** reanalyze vpw *************************
           !                        call cpu_time(cp0)
           IF (input%total) THEN
-             !     ----->write potential to file 8
-             ! -> the following procedure is required in order to run
-             !    correctly on the helga parallel cluster in Hamburg end 2005
-             !                                                Paolo & YM
-             l_pottot = .FALSE.
-             INQUIRE (file='pottot',exist=l_pottot)
-             IF (l_pottot) THEN
-                OPEN (8,file='pottot',form='unformatted',status='unknown')
-                CLOSE (8,status='delete')
-                WRITE(6,*) 'vgen: pottot deleted'
-             ENDIF
-             OPEN (8,file='pottot',form='unformatted',status='unknown')
-             REWIND 8
              DO js=1,input%jspins
                 DO i=1,stars%ng3
                    vpw_w(i,js)=vpw_w(i,js)/stars%nstr(i)
                 ENDDO
              ENDDO
-             CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                  8, iter,vr,vpw_w,vz,vxy) ! vpw_w
-             CLOSE(8)
-
-             OPEN (8,file='potx',form='unformatted',status='unknown')
-             REWIND 8
+             CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                                 iter,vr,vpw_w,vz,vxy)
 
              DO js=1,input%jspins
                 DO i=1,stars%ng3
@@ -867,11 +849,8 @@ CONTAINS
                 ENDDO
              ENDDO
 
-             CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                  8, iter,vxr,vxpw_w,vz,vxy)
-             CLOSE(8)
-
-
+             CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_X_const,&
+                                 iter,vxr,vxpw_w,vz,vxy)
           END IF
 
        ENDIF ! mpi%irank == 0
