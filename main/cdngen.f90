@@ -103,10 +103,12 @@
 !
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
       IF(noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-      ALLOCATE(cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
-      CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                       CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
-      DEALLOCATE(cdom,cdomvz,cdomvxy)
+      IF((.NOT.noco%l_noco).AND.mpi%irank.EQ.0) THEN
+         ALLOCATE(cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
+         CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                          CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+         DEALLOCATE(cdom,cdomvz,cdomvxy)
+      END IF
 
       IF (mpi%irank.EQ.0) THEN
          INQUIRE(file='enpara',exist=l_enpara)
