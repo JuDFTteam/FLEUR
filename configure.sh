@@ -28,6 +28,7 @@ then
 echo "
    By specifying 'debug' in addition to your machine configuration you will build a debugging version"
 fi
+
 #Check if we are using the git version and ask if we want to update
 if test -d $DIR/.git
 then
@@ -43,9 +44,6 @@ then
 fi
 
 
-#Now check the machine and set some defaults 
-machine=$1
-configure_machine
 
 #include a configfile if present
 if test -r config.sh
@@ -61,6 +59,11 @@ then
 fi
 mkdir build
 cd build
+
+#Now check the machine and set some defaults 
+machine=$1
+configure_machine
+
 #run cmake
 if test "debug" == "$2"
 then
