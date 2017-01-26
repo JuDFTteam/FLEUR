@@ -18,16 +18,17 @@ function configure_machine(){
 	if module list 2>&1 |grep -q intel-para
 	then
 	    echo "Intel toolchain used"
-	    if module list 2>&1| grep -q Python/2.7.12
+	    if module list 2>&1| grep -q Python/2.7.12 &&
+               module list 2>&1| grep -q HDF5 &&
+               module list 2>&1| grep -q CMake &&
+	       module list 2>&1| grep -q ELPA
 	    then
-		echo "Python module loaded for XML (OK)"
+		echo "All required modules load loaded"
 	    else
-		echo "You have to load the Python module"
-		echo "module load Python/2.7.12"
+		echo "You have to load the required modules"
+		echo "module load Python/2.7.12 CMake HDF5 ELPA/2016.05.003-hybrid"
 		exit
 	    fi
-	    #module load ELPA/2016.05.003-hybrid
-	    module load HDF5
 	    export CC=mpicc
 	    export FC=mpif90
 	    export CMAKE_Fortran_FLAGS="$CMAKE_Fortran_FLAGS -I$ELPA_MODULES -I$EBROOTHDF5/include -mkl"

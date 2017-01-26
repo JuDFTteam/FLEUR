@@ -119,8 +119,8 @@ CONTAINS
     DO n=n_rank+1,lapw%nmat,n_size
        DO nn=1,n
           i=i+1
-          write(99,'(2(i10,1x),4(f15.4,1x))') n,nn,a(i)
-          write(98,'(2(i10,1x),4(f15.4,1x))') n,nn,b(i)
+          write(99,'(2(i10,1x),4(f15.8,1x))') n,nn,hamOvlp%a_c(i)
+          write(98,'(2(i10,1x),4(f15.8,1x))') n,nn,hamOvlp%b_c(i)
        ENDDO
     ENDDO
     CALL MPI_BARRIER(MPI_COMM_WORLD,err)
@@ -170,9 +170,9 @@ CONTAINS
 #ifdef CPP_ELPA
        CASE (diag_elpa)
           IF (hamovlp%l_real) THEN
-              CALL elpa_diag(lapw%nmat,n,SUB_COMM,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,eig,ne_found)
+              CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,eig,ne_found)
           ELSE
-              CALL elpa_diag(lapw%nmat,n,SUB_COMM,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c,eig,ne_found)
+              CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c,eig,ne_found)
           ENDIF
 #endif
 #ifdef CPP_ELEMENTAL
@@ -186,7 +186,7 @@ CONTAINS
 #endif
 #ifdef CPP_SCALAPACK
        CASE (diag_scalapack)
-          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp,zMat)
+          CALL chani(lapw%nmat,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp,zMat)
 #endif
 #ifdef CPP_MAGMA
        CASE (diag_magma)

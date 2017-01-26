@@ -28,7 +28,7 @@ CONTAINS
 #define CPP_ZERO 0.0
 #define CPP_mult mult_at_b_real
 #define CPP_REAL
-  SUBROUTINE elpa_r(m,n, SUB_COMM, a,b, z,eig,num)
+  SUBROUTINE elpa_r(m, SUB_COMM, a,b, z,eig,num)
     ! 
     !----------------------------------------------------
     !- Parallel eigensystem solver - driver routine based on chani; dw'12
@@ -65,7 +65,7 @@ CONTAINS
 #define CPP_ZERO cmplx(0.,0.)
 #define CPP_mult mult_ah_b_complex
 #undef CPP_REAL
- SUBROUTINE elpa_c(m,n, SUB_COMM, a,b, z,eig,num)
+ SUBROUTINE elpa_c(m, SUB_COMM, a,b, z,eig,num)
     ! 
     !----------------------------------------------------
     !- Parallel eigensystem solver - driver routine based on chani; dw'12

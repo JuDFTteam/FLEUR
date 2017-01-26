@@ -13,7 +13,7 @@
     IMPLICIT NONE
     INCLUDE 'mpif.h'
 
-    INTEGER, INTENT (IN)                  :: m,n
+    INTEGER, INTENT (IN)                  :: m
     INTEGER, INTENT (IN)                  :: SUB_COMM
     INTEGER, INTENT (INOUT)               :: num
     REAL,    INTENT   (OUT)               :: eig(:)
