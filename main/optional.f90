@@ -60,6 +60,7 @@ CONTAINS
     USE m_stden
     USE m_cdnsp
     USE m_flipcdn
+    USE m_cdn_io
     USE m_f2u
     USE m_u2f
     USE m_types
@@ -83,7 +84,7 @@ CONTAINS
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
     !     .. Local Scalars ..
-    INTEGER :: it
+    INTEGER :: it, archiveType
     CHARACTER*10 :: cdnfname
     LOGICAL :: strho
     !     ..
@@ -135,13 +136,11 @@ CONTAINS
     !
     strho=input%strho
     IF (.NOT.(strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        IF (noco%l_noco) THEN
-          INQUIRE (file='rhomat_inp',exist=strho) ! if no density (rhoma
+          archiveType = CDN_ARCHIVE_TYPE_NOCO_const
        END IF
-       IF(.NOT.strho) THEN
-          INQUIRE (file='cdn1',exist=strho)       ! if no density (cdn1)
-       END IF
-       strho = .NOT.strho                ! create a starting density
+       strho = .NOT.isDensityFilePresent(archiveType)
     ENDIF
 
     IF (strho) THEN

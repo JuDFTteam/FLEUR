@@ -21,7 +21,7 @@ MODULE m_cdn_io
    IMPLICIT NONE
 
    PRIVATE
-   PUBLIC readDensity, writeDensity
+   PUBLIC readDensity, writeDensity, isDensityFilePresent
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -352,5 +352,47 @@ MODULE m_cdn_io
       IF (juDFT_was_argument("-stream_cdn")) mode=CDN_STREAM_MODE
       IF (juDFT_was_argument("-hdf_cdn")) mode=CDN_HDF5_MODE
    END SUBROUTINE getMode
+
+   LOGICAL FUNCTION isDensityFilePresent(archiveType)
+
+      INTEGER, INTENT(IN) :: archiveType
+
+      LOGICAL             :: l_exist
+      INTEGER             :: mode
+
+      CALL getMode(mode)
+
+      IF (mode.EQ.CDN_HDF5_MODE) THEN
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF(l_exist) THEN
+            isDensityFilePresent = l_exist
+            RETURN
+         END IF
+      END IF
+
+      IF ((mode.EQ.CDN_STREAM_MODE).OR.(mode.EQ.CDN_HDF5_MODE)) THEN
+         INQUIRE(FILE='cdn.str',EXIST=l_exist)
+         IF(l_exist) THEN
+            isDensityFilePresent = l_exist
+            RETURN
+         END IF
+      END IF
+
+      !cdn1 or rhomat_inp should be enough for any mode...
+      INQUIRE(FILE='cdn1',EXIST=l_exist)
+      IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const) THEN
+         isDensityFilePresent = l_exist
+         RETURN
+      END IF
+      IF (archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+         CALL juDFT_error("Illegal archive type selected.",calledby ="isDensityFilePresent")
+      END IF
+      IF (l_exist) THEN
+         isDensityFilePresent = l_exist
+         RETURN
+      END IF
+      INQUIRE(FILE='rhomat_inp',EXIST=l_exist)
+      isDensityFilePresent = l_exist
+   END FUNCTION isDensityFilePresent
 
 END MODULE m_cdn_io
