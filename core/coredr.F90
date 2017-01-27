@@ -9,6 +9,7 @@ CONTAINS
     USE m_etabinit
     USE m_spratm
     USE m_ccdnup
+    USE m_cdn_io
 
     USE m_types
     IMPLICIT NONE
@@ -165,18 +166,7 @@ CONTAINS
 
     END DO ! loop over atoms (jatom)
     !
-    !---->store core charge densities to file.17
-    OPEN (17,file='cdnc',form='unformatted',status='unknown')
-    REWIND 17
-    DO jspin = 1,input%jspins
-       DO jatom = 1,atoms%ntype
-          WRITE (17) (rhcs(j,jatom,jspin),j=1,atoms%jri(jatom))
-          WRITE (17) tecs(jatom,jspin)
-       END DO
-       WRITE (17) (qints(jatom,jspin),jatom=1,atoms%ntype)
-    END DO
-    CLOSE (17)
-    !
-    RETURN
+    !----> store core charge densities
+    CALL writeCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
   END SUBROUTINE coredr
 END MODULE m_coredr

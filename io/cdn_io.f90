@@ -22,6 +22,7 @@ MODULE m_cdn_io
 
    PRIVATE
    PUBLIC readDensity, writeDensity, isDensityFilePresent
+   PUBLIC readCoreDensity, writeCoreDensity
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -344,6 +345,104 @@ MODULE m_cdn_io
       END IF
 
    END SUBROUTINE writeDensity
+
+   SUBROUTINE readCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+
+      REAL, INTENT(OUT) :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(OUT) :: tecs(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(OUT) :: qints(atoms%ntype,DIMENSION%jspd)
+
+      INTEGER            :: mode, iUnit, iSpin, iAtom, i
+      LOGICAL            :: l_exist
+      CHARACTER(LEN=30)  :: filename
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF (l_exist) THEN
+            !load density from cdn.hdf and exit subroutine
+
+            RETURN
+         ELSE
+            WRITE(*,*) 'cdn.hdf file not found.'
+            WRITE(*,*) 'Falling back to stream access file cdn.str.'
+            mode = CDN_STREAM_MODE
+         END IF
+      END IF
+
+      IF(mode.EQ.CDN_STREAM_MODE) THEN
+         INQUIRE(FILE='cdn.str',EXIST=l_exist)
+         IF (l_exist) THEN
+            !load density from cdn.str and exit subroutine
+
+            RETURN
+         ELSE
+            WRITE(*,*) 'cdn.str file not found.'
+            WRITE(*,*) 'Falling back to direct access file cdnc.'
+            mode = CDN_DIRECT_MODE
+         END IF
+      END IF
+
+      IF (mode.EQ.CDN_DIRECT_MODE) THEN
+         filename = 'cdnc'
+         INQUIRE(file=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+         IF(.NOT.l_exist) THEN
+            CALL juDFT_error("core charge density file "//TRIM(ADJUSTL(filename))//" missing",calledby ="readCoreDensity")
+         END IF
+         iUnit = 17
+         OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
+         DO iSpin = 1,input%jspins
+            DO iAtom = 1,atoms%ntype
+               READ (iUnit) (rhcs(i,iAtom,iSpin),i=1,atoms%jri(iAtom))
+               READ (iUnit) tecs(iAtom,iSpin)
+            END DO
+            READ (iUnit) (qints(iAtom,iSpin),iAtom=1,atoms%ntype)
+         END DO
+         CLOSE (iUnit)
+      END IF
+
+   END SUBROUTINE readCoreDensity
+
+   SUBROUTINE writeCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+
+      REAL, INTENT(IN) :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(IN) :: tecs(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(IN) :: qints(atoms%ntype,DIMENSION%jspd)
+
+      INTEGER :: mode, iUnit, iSpin, iAtom, i
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+         ! Write core density to cdn.hdf file
+         STOP 'CDN_HDF5_MODE not yet implemented!'
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         ! Write core density to cdn.str file
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE
+         iUnit = 17
+         OPEN (iUnit,file='cdnc',form='unformatted',status='unknown')
+         DO iSpin = 1,input%jspins
+            DO iAtom = 1,atoms%ntype
+               WRITE (iUnit) (rhcs(i,iAtom,iSpin),i=1,atoms%jri(iAtom))
+               WRITE (iUnit) tecs(iAtom,iSpin)
+            END DO
+            WRITE (iUnit) (qints(iAtom,iSpin),iAtom=1,atoms%ntype)
+         END DO
+         CLOSE (iUnit)
+      END IF
+
+   END SUBROUTINE writeCoreDensity
+
 
    SUBROUTINE getMode(mode)
       INTEGER, INTENT(OUT) :: mode

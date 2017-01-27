@@ -67,6 +67,7 @@
 !     .. Local Arrays ..
       REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd),alpha_l(atoms%ntype),&
            rh(dimension%msh,atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
+      REAL tec(atoms%ntype,DIMENSION%jspd),rhTemp(dimension%msh,atoms%ntype,dimension%jspd)
       REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
       INTEGER,ALLOCATABLE :: igq_fft(:)
       REAL   ,ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
@@ -196,58 +197,68 @@
             OPEN (15,file='ecore',status='unknown', action='write',form='unformatted')
          ENDIF
 
-         DO  jspin = 1,input%jspins
+         rh = 0.0
+         tec = 0.0
+         qint = 0.0
+         IF (input%frcor) THEN
+            CALL readCoreDensity(input,atoms,dimension,rh,tec,qint)
+         END IF
+
+         DO jspin = 1,input%jspins
             IF ((input%jspins.EQ.2).AND.(mpi%irank.EQ.0)) THEN
                DO n = 1,atoms%ntype
                   svdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-enddo 
-           END IF
+               END DO
+            END IF
 !
 !     block 1 unnecessary for slicing: begin
             IF (.NOT.sliceplot%slice) THEN
 !     ---> add in core density
-              IF (mpi%irank.EQ.0) THEN
-               CALL cored(input,jspin,atoms, rho,dimension, sphhar, vr(:,0,:,jspin), qint,rh,seig)
-               results%seigc = results%seigc + seig
-               IF (input%jspins.EQ.2) THEN
-                  DO  n = 1,atoms%ntype
-                     stdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
- enddo
-               ENDIF
-              ENDIF  ! mpi%irank = 0
+               IF (mpi%irank.EQ.0) THEN
+                  CALL cored(input,jspin,atoms, rho,dimension, sphhar, vr(:,0,:,jspin), qint,rh,tec,seig)
+                  rhTemp(:,:,jspin) = rh(:,:,jspin)
+                  results%seigc = results%seigc + seig
+                  IF (input%jspins.EQ.2) THEN
+                     DO  n = 1,atoms%ntype
+                        stdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+                     END DO
+                  END IF
+               END IF  ! mpi%irank = 0
 !     ---> add core tail charge to qpw
-              IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
-!---> pk non-collinear
-!--->           add the coretail-charge to the constant interstitial
-!--->           charge (star 0), taking into account the direction of
-!--->           magnetisation of this atom
-                IF (jspin .EQ. 2) THEN
-                  DO ityp = 1,atoms%ntype
-                     rhoint  = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
-                     momint  = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
-!--->                rho_11
-                     qpw(1,1) = qpw(1,1) + rhoint + momint*cos(noco%beta(ityp))
-!--->                rho_22
-                     qpw(1,2) = qpw(1,2) + rhoint - momint*cos(noco%beta(ityp))
-!--->                real part rho_21
-                     cdom(1) = cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
-!--->                imaginary part rho_21
-                     cdom(1) = cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
-                  ENDDO
-                ENDIF
-!---> pk non-collinear
-              ELSEIF (input%ctail) THEN
-                CALL cdnovlp(mpi,&
+               IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
+!--->             pk non-collinear
+!--->             add the coretail-charge to the constant interstitial
+!--->             charge (star 0), taking into account the direction of
+!--->             magnetisation of this atom
+                  IF (jspin .EQ. 2) THEN
+                     DO ityp = 1,atoms%ntype
+                        rhoint  = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
+                        momint  = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
+!--->                   rho_11
+                        qpw(1,1) = qpw(1,1) + rhoint + momint*cos(noco%beta(ityp))
+!--->                   rho_22
+                        qpw(1,2) = qpw(1,2) + rhoint - momint*cos(noco%beta(ityp))
+!--->                   real part rho_21
+                        cdom(1) = cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
+!--->                   imaginary part rho_21
+                        cdom(1) = cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
+                     END DO
+                  END IF
+!--->          pk non-collinear
+               ELSE IF (input%ctail) THEN
+                  CALL cdnovlp(mpi,&
                      sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh, qpw,rhtxy,rho,rht)
-              ELSEIF (mpi%irank.EQ.0) THEN
+               ELSE IF (mpi%irank.EQ.0) THEN
                   DO ityp = 1,atoms%ntype
                      qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
-                  ENDDO
-              END IF
+                  END DO
+               END IF
 !     block 1 unnecessary for slicing: end
             END IF
 !
-      ENDDO
+         END DO ! loop over spins
+
+         CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
 
          IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) CLOSE(15)
       ELSE
