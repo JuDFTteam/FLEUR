@@ -744,7 +744,7 @@
 
 
                 CALL timestart('determination of total energy')
-                CALL totale(atoms,sphhar,stars,vacuum,&
+                CALL totale(atoms,sphhar,stars,vacuum,dimension,&
                      sym,input,noco,cell,oneD,xcpot,hybrid,it,results)
 
                 CALL timestop('determination of total energy')

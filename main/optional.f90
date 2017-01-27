@@ -99,22 +99,22 @@ CONTAINS
           IF (noco%l_noco) THEN
              cdnfname = 'cdn'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
              cdnfname = 'mdnx'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
              cdnfname = 'mdny'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
              cdnfname = 'mdnz'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
           ELSE
@@ -124,7 +124,7 @@ CONTAINS
                 cdnfname = 'cdn1'
              ENDIF
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
           ENDIF

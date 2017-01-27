@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_totale
 CONTAINS
-  SUBROUTINE totale(atoms,sphhar,stars,vacuum, &
+  SUBROUTINE totale(atoms,sphhar,stars,vacuum,dimension, &
        sym,input,noco,cell,oneD, xcpot,hybrid, it,results)
     !
     !     ***************************************************
@@ -64,6 +64,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_dimension),INTENT(IN)    :: dimension
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: it      
@@ -163,7 +164,7 @@ CONTAINS
        CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
                           iter,vr,vpw,vz,vxy)
 
-       CALL force_a4(atoms,sphhar,input, vr, results%force)
+       CALL force_a4(atoms,sphhar,input,dimension, vr, results%force)
        !
     ENDIF
     !

@@ -24,7 +24,7 @@
       PRIVATE
       PUBLIC plotdop
       CONTAINS
-      SUBROUTINE plotdop(oneD,&
+      SUBROUTINE plotdop(oneD,dimension,&
      &     stars,vacuum,sphhar,atoms,&
      &     input,sym,cell,sliceplot,&
      &     l_noco,cdnfname)
@@ -36,6 +36,7 @@
 !     ..
 !     .. Scalar Arguments ..
       TYPE(t_oneD),INTENT(IN)     :: oneD
+      TYPE(t_dimension),INTENT(IN):: dimension
       TYPE(t_stars),INTENT(IN)    :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -69,7 +70,7 @@
       oldform = .false.
       INQUIRE(file ="plotin",exist = oldform) 
       IF ( oldform ) THEN 
-         CALL priv_old_plot(oneD,&
+         CALL priv_old_plot(oneD,dimension,&
      &                stars,vacuum,sphhar,atoms,&
      &                input,sym,cell,sliceplot,&
      &                l_noco,cdnfname)
@@ -290,17 +291,19 @@
 !------------------------------------------
 !     The old subroutine from Fleur is here
 !------------------------------------------
-      SUBROUTINE priv_old_plot(oneD,&
+      SUBROUTINE priv_old_plot(oneD,dimension,&
      &                stars,vacuum,sphhar,atoms,&
      &                input,sym,cell,sliceplot,&
      &                l_noco,cdnfname)
 !
       USE m_outcdn
       USE m_loddop
+      USE m_cdn_io
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
       TYPE(t_oneD),INTENT(IN)     :: oneD
+      TYPE(t_dimension),INTENT(IN):: dimension
       TYPE(t_stars),INTENT(IN)    :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -317,7 +320,7 @@
 !+odim
 !     ..
 !     .. Local Scalars ..
-      REAL rx,ry,s,sl,sm,su,x,xm,y,ym,tec,qint,sfp,xdnout
+      REAL rx,ry,s,sl,sm,su,x,xm,y,ym,sfp,xdnout
       INTEGER i,i1,i2,i3,ii3,imshx,imshy,ix,iy,j,jsp,na,nfile,nplo,&
      &        nplot,nq,nt,nplott,jm,jspin,iter,ii1,ii2
       LOGICAL twodim
@@ -326,7 +329,8 @@
       COMPLEX qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
       REAL rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
       REAL ptp(3),rngl(3),rngm(3),rngu(3),tl(3),tm(3)
-      REAL tu(3),vx1(3),vx2(3),tl_r(3),tm_r(3),tu_r(3),rhocc(atoms%jmtd)
+      REAL tu(3),vx1(3),vx2(3),tl_r(3),tm_r(3),tu_r(3),rhocc(atoms%jmtd,atoms%ntype,dimension%jspd)
+      REAL tec(atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
       REAL pt(3),a3(3)
       REAL, ALLOCATABLE :: cdn(:,:)
       CHARACTER(len=10), ALLOCATABLE :: plotname(:)
@@ -342,23 +346,16 @@
      &            iter,rho,qpw,rht,rhtxy)
 !
       IF (input%score) THEN
-         OPEN (17,file='cdnc',form='unformatted',status='old')
-         REWIND 17
-!
+         CALL readCoreDensity(input,atoms,dimension,rhocc,tec,qint)
          DO jspin = 1,input%jspins
             DO nt = 1,atoms%ntype
                jm = atoms%jri(nt)
-               READ (17) (rhocc(i),i=1,jm)
                DO i = 1,atoms%jri(nt)
-                  rho(i,0,nt,jspin) = rho(i,0,nt,jspin) - rhocc(i)/sfp
+                  rho(i,0,nt,jspin) = rho(i,0,nt,jspin) - rhocc(i,nt,jspin)/sfp
                ENDDO
-               READ (17) tec
              ENDDO
-            READ (17) qint
-            qpw(1,jspin) = qpw(1,jspin) - qint/cell%volint
+            qpw(1,jspin) = qpw(1,jspin) - qint(nt,jspin)/cell%volint
          ENDDO
-!
-         CLOSE (17)
       END IF
       OPEN (18,file='plotin')
       READ (18,FMT='(7x,l1)') twodim

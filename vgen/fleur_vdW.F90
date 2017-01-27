@@ -17,6 +17,7 @@ CONTAINS
     USE m_fft3d
     USE m_qpwtonmt
     USE m_convol
+    USE m_cdn_io
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -37,34 +38,31 @@ CONTAINS
     !locals
     TYPE(t_atoms)      :: atoms_tmp
     REAL               :: e_vdW
-    REAL,ALLOCATABLE   :: n_grid(:),v_grid(:),rhc(:)
+    REAL,ALLOCATABLE   :: n_grid(:),v_grid(:),rhc(:,:,:)
     COMPLEX,ALLOCATABLE:: vpw(:),psq(:)
     INTEGER            :: n,ncmsh,j,i
     LOGICAL            :: l_core,l_pot
+    REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
 
 
     l_core=.FALSE. !try to subtract core charge?
     ALLOCATE(n_grid(27*stars%k1d*stars%k2d*stars%k3d),v_grid(27*stars%k1d*stars%k2d*stars%k3d))
     ALLOCATE(vpw(SIZE(qpw)))
-    ALLOCATE(psq(SIZE(qpw)),rhc(DIMENSION%msh))
+    ALLOCATE(psq(SIZE(qpw)),rhc(atoms%jmtd,atoms%ntype,dimension%jspd))
 
-    IF (l_core) INQUIRE(file="cdnc",exist=l_core)
+    IF (l_core) l_core = isCoreDensityPresent()
 
     IF (l_core) THEN
-       WRITE(6,*) "VdW contribution without core charge"
+       WRITE(6,*) "VdW contribution without core charge"       
        ! read the core charge
-       OPEN (17,file='cdnc',form='unformatted',status='unknown')
+       CALL readCoreDensity(input,atoms,dimension,rhc,tec,qintc)
        DO j=1,input%jspins
           DO n=1,atoms%ntype
              ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/atoms%rmsh(1,n) ) / atoms%dx(n) + 1 )
              ncmsh = MIN( ncmsh, DIMENSION%msh )
-             READ(17) (rhc(i),i=1,ncmsh)
-             rho(:,1,n) = rho(:,1,n) - rhc(:SIZE(rho,1))/(4. * SQRT( ATAN (1.) ))
-             READ (17) !kinetic energy not needed
+             rho(:,1,n) = rho(:,1,n) - rhc(:SIZE(rho,1),n,j)/(4. * SQRT( ATAN (1.) ))
           ENDDO
-          READ(17)
        ENDDO
-       CLOSE(17)
     ENDIF
 
     ! Construct the pseudo charge

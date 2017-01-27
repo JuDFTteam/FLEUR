@@ -21,7 +21,8 @@ MODULE m_cdn_io
    IMPLICIT NONE
 
    PRIVATE
-   PUBLIC readDensity, writeDensity, isDensityFilePresent
+   PUBLIC readDensity, writeDensity
+   PUBLIC isDensityFilePresent, isCoreDensityPresent
    PUBLIC readCoreDensity, writeCoreDensity
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
@@ -493,5 +494,38 @@ MODULE m_cdn_io
       INQUIRE(FILE='rhomat_inp',EXIST=l_exist)
       isDensityFilePresent = l_exist
    END FUNCTION isDensityFilePresent
+
+   LOGICAL FUNCTION isCoreDensityPresent()
+
+      LOGICAL             :: l_exist
+      INTEGER             :: mode
+
+      CALL getMode(mode)
+
+      IF (mode.EQ.CDN_HDF5_MODE) THEN
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF(l_exist) THEN
+            STOP 'Not yet implemented!'
+            RETURN
+         END IF
+      END IF
+
+      IF ((mode.EQ.CDN_STREAM_MODE).OR.(mode.EQ.CDN_HDF5_MODE)) THEN
+         INQUIRE(FILE='cdn.str',EXIST=l_exist)
+         IF(l_exist) THEN
+            STOP 'Not yet implemented!'
+            RETURN
+         END IF
+      END IF
+
+      !cdnc should be enough for any mode...
+      INQUIRE(FILE='cdnc',EXIST=l_exist)
+      IF (l_exist) THEN
+         isCoreDensityPresent = l_exist
+         RETURN
+      END IF
+      isCoreDensityPresent = .FALSE.
+   END FUNCTION isCoreDensityPresent
+
 
 END MODULE m_cdn_io
