@@ -232,8 +232,10 @@ END MODULE
 
 PROGRAM fleurjob
     USE m_fleur_jobs
+    USE m_juDFT
     IMPLICIT NONE
     TYPE(t_job),ALLOCATABLE::jobs(:)
+    CALL judft_init()
     CALL fleur_job_init()
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)
