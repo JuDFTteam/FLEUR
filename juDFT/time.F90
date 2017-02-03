@@ -191,7 +191,7 @@ CONTAINS
           sum_time=sum_time+times(i)
           times(i)=0.0
        ENDDO
-       WRITE(fid,"(t77,'Sum:  ',f4.1,'%')") sum_time/timer%time*100.
+       WRITE(fid,"(t77,'Sum: ',f5.1,'%')") sum_time/timer%time*100.
        WRITE(fid,*)
        WRITE(fid,*) "-------------------------------------------------"
        WRITE(fid,*)

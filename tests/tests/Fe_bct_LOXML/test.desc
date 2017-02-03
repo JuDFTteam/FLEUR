@@ -1,7 +1,7 @@
 $test_name="Fleur Fe bct noco LOs XML";
 $test_code="Fleur";
 %test_requirements=("SOC",0,"complex",1);
-$test_stages=2;
+$test_stages=1;
 $test_desc=<<EOF
 Simple test of Fleur with two steps:
 1.Generate a starting density (+get some errors afterwards)

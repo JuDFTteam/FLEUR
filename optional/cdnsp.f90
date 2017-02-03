@@ -40,7 +40,8 @@
           LOGICAL n_exist
           !     ..
           !     .. Local Arrays ..
-          REAL rhoc(DIMENSION%msh,atoms%ntype)
+          REAL rhoc(atoms%jmtd,atoms%ntype,dimension%jspd)
+          REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
           COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
           COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
           REAL   , ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
@@ -56,15 +57,8 @@
           ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),qpw(stars%ng3,input%jspins) )
           ALLOCATE ( rhtxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins),rht(vacuum%nmz,2,input%jspins) )
 
-          !
-          OPEN (17,file='cdnc',form='unformatted',status='old')
-          DO n = 1,atoms%ntype
-             READ (17) (rhoc(j,n),j=1,atoms%jri(n))
-             READ (17) dummy
-          ENDDO
-          CLOSE (17)
-
           input%jspins=1
+          CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
           CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           input%jspins=2
@@ -77,15 +71,15 @@
           !
           DO n = 1,atoms%ntype
              DO j = 1,atoms%jri(n)
-                rho(j,0,n,1) = rho(j,0,n,1) - rhoc(j,n)/sfp
+                rho(j,0,n,1) = rho(j,0,n,1) - rhoc(j,n,1)/sfp
              ENDDO
              !         WRITE (16,FMT='(8f10.4)') (rho(i,0,n,1),i=1,16)
              CALL intgr3(rho(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),qval)
              p = (atoms%bmu(n)+sfp*qval)/ (2.*sfp*qval)
              pp = 1. - p
              DO j = 1,atoms%jri(n)
-                rho(j,0,n,jsp_new) = pp*rho(j,0,n,1) + rhoc(j,n)/ (2.*sfp)
-                rho(j,0,n,1)       =  p*rho(j,0,n,1) + rhoc(j,n)/ (2.*sfp)
+                rho(j,0,n,jsp_new) = pp*rho(j,0,n,1) + rhoc(j,n,1)/ (2.*sfp)
+                rho(j,0,n,1)       =  p*rho(j,0,n,1) + rhoc(j,n,1)/ (2.*sfp)
              ENDDO
              DO lh = 1,sphhar%nlh(atoms%ntypsy(na))
                 DO j = 1,atoms%jri(n)

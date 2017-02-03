@@ -88,7 +88,8 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: alphm(:,:)
     COMPLEX, ALLOCATABLE :: excpw(:),excxy(:,:,:),vpw_w(:,:),psq(:)
     REAL,    ALLOCATABLE :: vbar(:),af1(:),bf1(:),xp(:,:)
-    REAL,    ALLOCATABLE :: rhoc(:),rhoc_vx(:)
+    REAL,    ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
+    REAL,    ALLOCATABLE :: tec(:,:), qintc(:,:)
     !.....density
     REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
     COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
@@ -691,9 +692,10 @@ CONTAINS
           !HF     kinetic energy correction for core states
           IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
                xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse    ) THEN
-             OPEN (17,file='cdnc',form='unformatted',status='unknown')
-             REWIND 17
-             ALLOCATE( rhoc(atoms%jmtd), rhoc_vx(atoms%jmtd) )
+             ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,DIMENSION%jspd), rhoc_vx(atoms%jmtd))
+             ALLOCATE(tec(atoms%ntype,DIMENSION%jspd),qintc(atoms%ntype,DIMENSION%jspd))
+             CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
+             DEALLOCATE(tec,qintc)
           END IF
           !HF
 
@@ -712,12 +714,8 @@ CONTAINS
                   xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse    ) THEN
                 nat = 1
                 DO n = 1,atoms%ntype
-                   READ (17) ( rhoc(j), j = 1,atoms%jri(n) )
-                   !             Skip over parts in cdnc not used
-                   READ (17) rdum
-                   !             calculate exchange correction to kinetic energy by core states
                    DO j = 1, atoms%jri(n)
-                      rhoc_vx(j) = rhoc(j) * vxr(j,0,n,js) / sfp_const
+                      rhoc_vx(j) = rhoc(j,n,js) * vxr(j,0,n,js) / sfp_const
                    END DO
                    CALL intgr3(rhoc_vx,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),dpdot)
                    IF( xcpot%icorr .EQ. icorr_pbe0 ) THEN
@@ -732,7 +730,6 @@ CONTAINS
                    nat     = nat + atoms%neq(n)
                 END DO
                 !           Skip over parts in cdnc not used
-                READ (17) ( rdum, n = 1,atoms%ntype )
              END IF
              !HF
 
@@ -741,7 +738,6 @@ CONTAINS
              !HF
              IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
                   xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse ) THEN
-                CLOSE ( 17 )
                 DEALLOCATE( rhoc, rhoc_vx )
              END IF
              !HF     end kinetic energy correction
