@@ -78,7 +78,7 @@ CONTAINS
          &           qlm)
 #ifdef CPP_MPI
     psq(:) = CMPLX(0.0,0.0)
-    CALL MPI_BCAST(qpw,size(qpw),CPP_MPI_COMPLEX,0,mpi,ierr)
+    CALL MPI_BCAST(qpw,size(qpw),CPP_MPI_COMPLEX,0,mpi%mpi_comm,ierr)
     nd = (2*atoms%lmaxd+1)*(atoms%lmaxd+1)*atoms%ntype
     CALL MPI_BCAST(qlm,nd,CPP_MPI_COMPLEX,0,mpi%MPI_COMM,ierr)
 #endif
@@ -195,6 +195,9 @@ CONTAINS
        ENDIF
        WRITE (6,FMT=8000) psint
        WRITE (16,FMT=8000) psint
+       DO k=2,stars%ng3
+	write(6,*) "PSQ",k,psq(k)
+	ENDDO
 8000   FORMAT (/,10x,'integral of pseudo charge density inside the slab='&
             &       ,5x,2f11.6)
        IF (.NOT.input%film) RETURN

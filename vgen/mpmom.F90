@@ -169,7 +169,7 @@ CONTAINS
     ENDIF
 #ifdef CPP_MPI
     CALL MPI_BCAST(qpw,SIZE(qpw),CPP_MPI_COMPLEX,0,&
-         &                          mpi,ierr)
+         &                          mpi%mpi_comm,ierr)
 #endif
     !      g ne 0 terms : \sum_{K \= 0} 4 \pi i^l \rho_I(K) R_i^{l+3} \times
     !      j_{l+1} (KR_i) / KR_i \exp{iK\xi_i} Y^*_{lm} (K)
@@ -211,7 +211,7 @@ CONTAINS
     n = SIZE(qlmp)
     ALLOCATE(c_b(n))
     CALL MPI_REDUCE(qlmp,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,&
-         &                                   mpi,ierr)
+         &                                   mpi%mpi_comm,ierr)
     IF (mpi%irank.EQ.0) THEN
        qlmp=RESHAPE(c_b,(/SIZE(qlmp,1),SIZE(qlmp,2),SIZE(qlmp,3)/))
     ENDIF
