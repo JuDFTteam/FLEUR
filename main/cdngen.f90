@@ -247,7 +247,7 @@
 !--->          pk non-collinear
                ELSE IF (input%ctail) THEN
                   CALL cdnovlp(mpi,&
-                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh, qpw,rhtxy,rho,rht)
+                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh(:,:,jspin), qpw,rhtxy,rho,rht)
                ELSE IF (mpi%irank.EQ.0) THEN
                   DO ityp = 1,atoms%ntype
                      qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
