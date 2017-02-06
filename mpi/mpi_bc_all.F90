@@ -48,7 +48,7 @@ CONTAINS
     EXTERNAL MPI_BCAST
 
     IF (mpi%irank.EQ.0) THEN
-       i(1)=1 ; i(2)=input$coretail_lmax;i(3)=atoms%ntype ; i(5)=1 ; i(6)=input%isec1
+       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype ; i(5)=1 ; i(6)=input%isec1
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
@@ -85,7 +85,7 @@ CONTAINS
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
      atoms%ntype=i(3) ;  input%isec1=i(6)
-     input$coretail_lmax=i(2)
+     input%coretail_lmax=i(2)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )

@@ -195,9 +195,6 @@ CONTAINS
        ENDIF
        WRITE (6,FMT=8000) psint
        WRITE (16,FMT=8000) psint
-       DO k=2,stars%ng3
-	write(6,*) "PSQ",k,psq(k)
-	ENDDO
 8000   FORMAT (/,10x,'integral of pseudo charge density inside the slab='&
             &       ,5x,2f11.6)
        IF (.NOT.input%film) RETURN
