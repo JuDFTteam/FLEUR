@@ -552,17 +552,10 @@ CONTAINS
                 zMat%z_c(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
              ENDIF
           endif
-          if (l_real) THEN
-             CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
+          CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,mpi%n_size,mpi%n_rank,z=zMat%z_r(:,:ne_found))
-          else
-             CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
-                  lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
-                  bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,mpi%n_size,mpi%n_rank,z=zMat%z_c(:,:ne_found))
-          endif
+                  atoms%nlotot,kveclo,mpi%n_size,mpi%n_rank,zMat)
           IF (noco%l_noco) THEN
              CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
                   lapw%k1(:lapw%nv(2),2),lapw%k2 (:lapw%nv(2),2),lapw%k3(:lapw%nv(2),2),&

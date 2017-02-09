@@ -2,7 +2,7 @@ MODULE m_qintsl
   USE m_juDFT
 CONTAINS
   SUBROUTINE q_int_sl(isp,stars,atoms,sym, volsl,volintsl, cell,&
-       ne,lapw, nsl,zsl,nmtsl,oneD, qintslk,zMat,realdata)          
+       ne,lapw, nsl,zsl,nmtsl,oneD, qintslk,zMat)          
     !     *******************************************************
     !     calculate the charge of the En(k) state 
     !     in the interstitial region of each leyer
@@ -30,7 +30,6 @@ CONTAINS
     REAL,    INTENT (IN) :: volintsl(atoms%nat)  
     REAL,    INTENT (IN) :: zsl(2,atoms%nat) ,volsl(atoms%nat) 
     REAL,    INTENT (OUT):: qintslk(:,:)!(nsl,dimension%neigd)
-    LOGICAL,OPTIONAL, INTENT (IN) :: realdata
     !     ..
     !     .. Local Scalars ..
     REAL q1,zsl1,zsl2,qi,volsli,volintsli
@@ -40,12 +39,6 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: stfunint(:,:),z_z(:)
 
-    LOGICAL :: l_real
-    IF (PRESENT(realdata)) THEN
-       l_real=realdata
-    ELSE
-       l_real=zMat%l_real
-    ENDIF
     !     ..
     IF (oneD%odi%d1) CALL juDFT_error("well, does not work with 1D. Not clear how to define a layer.",calledby ="q_int_sl")
     !
@@ -76,7 +69,7 @@ CONTAINS
     DO  n = 1,ne
        z_z(:) = CMPLX(0.0,0.0)
        q1 = 0.0
-       IF (l_real) THEN
+       IF (zmat%l_real) THEN
           DO  i = 1,lapw%nv(isp)
              q1 = q1 + zMat%z_r(i,n)*zMat%z_r(i,n)
           ENDDO
@@ -102,7 +95,7 @@ CONTAINS
              IF (ind.EQ.0 .OR. indp.EQ.0) CYCLE
              phase = stars%rgphs(ix1,iy1,iz1)/ (stars%nstr(ind)*cell%omtil)
              phasep = stars%rgphs(-ix1,-iy1,-iz1)/ (stars%nstr(indp)*cell%omtil)
-             IF (l_real) THEN
+             IF (zmat%l_real) THEN
                 z_z(ind)  = z_z(ind)  + zMat%z_r(j,n)*zMat%z_r(i,n)*REAL(phase)
                 z_z(indp) = z_z(indp) + zMat%z_r(i,n)*zMat%z_r(j,n)*REAL(phasep)
              ELSE

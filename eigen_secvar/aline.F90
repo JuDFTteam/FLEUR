@@ -82,16 +82,12 @@ CONTAINS
 
 
     lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
-#ifdef __PGI
-        STOP "CODE NOT WORKING WITH PGI"
-#else
+    CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,zmat=zmat)
     IF (l_real) THEN
-       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_r)
        ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
        h_r = 0.0 ; s_r=0.0
        ALLOCATE ( help_r(lhelp) )
     ELSE
-       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_c)
        !     in outeig z is complex conjugated to make it usable for abcof. Here we 
        !                       first have to undo this  complex conjugation for the 
        ! multiplication with a and b matrices.
@@ -101,7 +97,6 @@ CONTAINS
        h_c = 0.0 ; s_c=0.0
        ALLOCATE ( help_r(lhelp) )
     ENDIF
-#endif
     !
     DO i = 1,ne
        IF (l_real) THEN

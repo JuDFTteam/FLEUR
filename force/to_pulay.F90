@@ -8,7 +8,7 @@ CONTAINS
        input,atoms,nobd,sym,lapw,noco,cell,bkpt,ne,eig,&
        usdus,kveclo,jspin,oneD,&
        acof,bcof,e1cof,e2cof,aveccof,bveccof,&
-       ccof,acoflo,bcoflo,cveccof,zMat,realdata)
+       ccof,acoflo,bcoflo,cveccof,zMat)
     !
     USE m_constants, ONLY : tpi_const
     USE m_setabc1locdn
@@ -47,8 +47,6 @@ CONTAINS
     COMPLEX, INTENT (OUT):: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-
-    LOGICAL,OPTIONAL,INTENT(IN)::realdata
     !-odim
     !+odim
     !     ..
@@ -74,8 +72,6 @@ CONTAINS
     COMPLEX,PARAMETER:: czero=CMPLX(.0,0.0)
     COMPLEX,PARAMETER:: ci = CMPLX(0.0,1.0)
 
-    l_real=zMat%l_real
-    IF (PRESENT(realdata)) l_real=realdata
     !     ..
     ALLOCATE ( aaux(nobd),baux(nobd),work(nobd) )
     const = 2 * tpi_const/SQRT(cell%omtil)
@@ -130,7 +126,7 @@ CONTAINS
        !
        DO  k = 1,nvmax
           IF (.NOT.noco%l_noco) THEN
-             IF (l_real) THEN
+             IF (zmat%l_real) THEN
                 work(:ne)=zMat%z_r(k,:ne)
              ELSE
                 work(:ne)=zMat%z_c(k,:ne)
@@ -327,7 +323,7 @@ CONTAINS
                    IF (.NOT.enough(natom)) THEN
                       CALL abclocdn_pulay(atoms, sym, noco,ccchi(1,jspin),kspin, iintsp,const,phase,ylm,n,natom,&
                            k,fgp,s,nvmax,ne,nbasf0, alo1,blo1,clo1,kvec(1,1,natom), nkvec,&
-                           enough,acof,bcof,ccof, acoflo,bcoflo,aveccof,bveccof,cveccof,zMat,realdata)
+                           enough,acof,bcof,ccof, acoflo,bcoflo,aveccof,bveccof,cveccof,zMat)
                    END IF
                    !-inv
                 END IF

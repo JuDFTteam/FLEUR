@@ -18,7 +18,7 @@ MODULE m_sympsi
   ! Jussi Enkovaara, Juelich 2004
 
 CONTAINS
-  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat,l_real)
+  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat)
 
     USE m_grp_k
     USE m_inv3
@@ -39,7 +39,6 @@ CONTAINS
     REAL,    INTENT (IN) :: bkpt(3),eig(DIMENSION%neigd)
 
     INTEGER, INTENT (OUT):: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
-    LOGICAL,INTENT(IN)   :: l_real
     !     ..
     !     .. Local Scalars ..
     REAL degthre
@@ -129,7 +128,7 @@ CONTAINS
              norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
           ENDDO
        ELSE
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              DO k=1,nv
                 norm(i)=norm(i)+ABS(zMat%z_r(k,i))**2
              ENDDO
@@ -161,7 +160,7 @@ CONTAINS
        DO c=1,nclass
           DO n1=1,ndeg
              DO n2=1,ndeg
-                IF (l_real) THEN
+                IF (zmat%l_real) THEN
                    DO k=1,nv
                       csum(n1,n2,c)=csum(n1,n2,c)+zMat%z_r(k,deg(n1))*&
                            zMat%z_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
@@ -221,7 +220,7 @@ CONTAINS
        WRITE(444,124) bkpt
        WRITE(444,*) 'Group is ' ,grpname
        DO c=1,nirr
-          IF (l_real)THEN
+          IF (zmat%l_real)THEN
              IF (ANY(ABS(char_table).GT.0.001)) THEN
                 WRITE(444,123) c,irrname(c),(char_table(c,n),n=1,nclass)
              ELSE

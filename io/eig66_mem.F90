@@ -8,6 +8,7 @@ MODULE m_eig66_mem
   ! eig_vec contains the eigenvectors
   ! The record number is given by nrec=nk+(jspin-1)*nkpts
   USE m_eig66_data
+  USE m_types
   IMPLICIT NONE
 CONTAINS
 
@@ -96,20 +97,20 @@ CONTAINS
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(nmat),k2(nmat),k3(nmat),kveclo(nlotot)
       REAL    :: eig(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
-      REAL    :: z_r(nmat,neig)
-      COMPLEX :: z_c(nmat,neig)
+      TYPE(t_zmat):: zmat
+
+      zmat%l_real=l_real
+      zmat%nbasfcn=nmat
+      zmat%nbands=neig
+      ALLOCATE(zmat%z_r(nmat,neig),zmat%z_c(nmat,neig))
+    
       tmp_id=eig66_data_newid(DA_mode)
       IF (d%l_dos) CPP_error("Can not read DOS-data")
       CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
-            if (l_real) THEN
-               CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_r)
-               CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_r)
-            else
-               CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_c)
-               CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_c)
-            end if
+            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,zmat=zmat)
+            CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,zmat=zmat)
          ENDDO
       ENDDO
       CALL close_eig_IO(tmp_id)
@@ -144,21 +145,19 @@ CONTAINS
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(d%nmat),k2(d%nmat),k3(d%nmat),kveclo(SIZE(d%eig_int,1)-3-3*d%nmat)
       REAL    :: eig(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
-      REAL    :: z_r(d%nmat,SIZE(d%eig_eig,1))
-      COMPLEX :: z_c(d%nmat,SIZE(d%eig_eig,1))
+      TYPE(t_zmat)::zmat
+      zmat%l_real=d%l_real
+      zmat%nbasfcn=d%nmat
+      zmat%nbands=SIZE(d%eig_eig,1)
+      ALLOCATE(zmat%z_r(d%nmat,SIZE(d%eig_eig,1)),zmat%z_c(d%nmat,SIZE(d%eig_eig,1)))
       tmp_id=eig66_data_newid(DA_mode)
       IF (d%l_dos) CPP_error("Could not write DOS data")
       CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
-            IF (d%l_real) THEN
-               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_r)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_r)
-            else
-               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,z=z_c)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,z=z_c)
-            end IF
-         ENDDO
+               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,zmat=zmat)
+           ENDDO
       ENDDO
       CALL close_eig_DA(tmp_id)
       CALL eig66_remove_data(id)
@@ -229,7 +228,7 @@ CONTAINS
 
 
   SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,&
-       ello,evac,kveclo,n_start,n_end,z)
+       ello,evac,kveclo,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
@@ -239,7 +238,7 @@ CONTAINS
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    CLASS(*),OPTIONAL  :: z(:,:)
+    TYPE(t_zMAT),OPTIONAL  :: zmat
 
     INTEGER::nrec
     TYPE(t_data_mem),POINTER:: d
@@ -277,26 +276,26 @@ CONTAINS
     ENDIF
     !data from d%eig_vec
 
-    IF (PRESENT(z)) THEN
-       SELECT TYPE(z)
-       TYPE is (REAL)
+    IF (PRESENT(zmat)) THEN
+      
+       IF (zmat%l_real) THEN
           IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
-             IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory")
-             z=REAL(RESHAPE(d%eig_vecc(:SIZE(z),nrec),SHAPE(z)))
+             IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
+             zmat%z_r=REAL(RESHAPE(d%eig_vecc(:SIZE(zmat%z_r),nrec),SHAPE(zmat%z_r)))
           ELSE
-             z=RESHAPE(d%eig_vecr(:SIZE(z),nrec),SHAPE(z))
+             zmat%z_r=RESHAPE(d%eig_vecr(:SIZE(zmat%z_r),nrec),SHAPE(zmat%z_r))
           ENDIF
-       TYPE is (COMPLEX)
+       ELSE !TYPE is (COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory")
-          z=RESHAPE(d%eig_vecc(:SIZE(z),nrec),SHAPE(z))
-       END SELECT
+          zmat%z_c=RESHAPE(d%eig_vecc(:SIZE(zmat%z_c),nrec),SHAPE(zmat%z_c))
+       END IF
     ENDIF
   END SUBROUTINE read_eig
 
 
   SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk, &
        eig,el,ello,evac,                     &
-       nlotot,kveclo,n_size,n_rank,z)
+       nlotot,kveclo,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
@@ -304,7 +303,7 @@ CONTAINS
     INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
-    CLASS(*),INTENT(IN),OPTIONAL :: z(:,:)
+    TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
     INTEGER::nrec
     TYPE(t_data_mem),POINTER:: d
     CALL priv_find_data(id,d)
@@ -343,19 +342,18 @@ CONTAINS
        !print*,"W:",eig
     ENDIF
     !data from d%eig_vec
-    IF (PRESENT(z)) THEN
-       SELECT TYPE(z)
-       TYPE IS (REAL)
+    IF (PRESENT(zmat)) THEN
+       IF (zmat%l_real) THEN
           IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
              IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not write complex vectors to memory")
-             d%eig_vecc(:SIZE(z),nrec)=RESHAPE(CMPLX(z),(/SIZE(z)/)) !Type cast here
+             d%eig_vecc(:SIZE(zmat%z_r),nrec)=RESHAPE(CMPLX(zmat%z_r),(/SIZE(zmat%z_r)/)) !Type cast here
           ELSE
-             d%eig_vecr(:SIZE(z),nrec)=RESHAPE(REAL(z),(/SIZE(z)/))
+             d%eig_vecr(:SIZE(zmat%z_r),nrec)=RESHAPE(REAL(zmat%z_r),(/SIZE(zmat%z_r)/))
           ENDIF
-       TYPE IS(COMPLEX)
+       ELSE
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not write complex vectors to memory")
-          d%eig_vecc(:SIZE(z),nrec)=RESHAPE(CMPLX(z),(/SIZE(z)/))
-       END SELECT
+          d%eig_vecc(:SIZE(zmat%z_c),nrec)=RESHAPE(zmat%z_c,(/SIZE(zmat%z_c)/))
+       END IF
     ENDIF
 
 

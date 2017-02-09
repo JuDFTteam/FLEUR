@@ -1,7 +1,7 @@
 MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,nobd,sym, cell, bkpt,lapw,ne,usdus,&
-       noco,jspin,kveclo,oneD, acof,bcof,ccof,zMat,realdata)
+       noco,jspin,kveclo,oneD, acof,bcof,ccof,zMat)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -30,7 +30,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: nobd
     INTEGER, INTENT (IN) :: ne
     INTEGER, INTENT (IN) :: jspin
-    LOGICAL,OPTIONAL,INTENT(IN)::realdata
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
@@ -58,14 +57,8 @@ CONTAINS
     REAL,    ALLOCATABLE :: work_r(:)
     COMPLEX, ALLOCATABLE :: work_c(:)
 
-    LOGICAL :: l_real
-    IF (PRESENT(realdata)) THEN
-       l_real=realdata
-    ELSE
-       l_real=zMat%l_real
-    ENDIF
-
-    IF (l_real) THEN
+    
+    IF (zmat%l_real) THEN
        IF (noco%l_soc.AND.sym%invs) CALL judft_error("BUG in abcof, SOC&INVS but real?")
        IF (noco%l_noco) CALL judft_error("BUG in abcof, l_noco but real?")
     ENDIF
@@ -127,11 +120,11 @@ CONTAINS
                 !$OMP& acof_loc,bcof_loc,acof_inv,bcof_inv)&
                 !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,n,ci,iintsp,&
                 !$OMP& jspin,bkpt,qss1,qss2,qss3,&
-                !$OMP& apw,const,natom,l_real,&
+                !$OMP& apw,const,natom,&
                 !$OMP& nobd,&
                 !$OMP& alo1,blo1,clo1,kvec,nbasf0,nkvec,enough,acof,bcof)&
                 !$OMP& REDUCTION(+:ccof)
-                IF (l_real) THEN
+                IF (zmat%l_real) THEN
                    ALLOCATE ( work_r(nobd) )
                 ELSE
                    ALLOCATE ( work_c(nobd) )
@@ -149,7 +142,7 @@ CONTAINS
                 !$OMP  DO
                 DO k = 1,nvmax
                    IF (.NOT.noco%l_noco) THEN
-                      IF (l_real) THEN
+                      IF (zmat%l_real) THEN
                          work_r(:ne)=zMat%z_r(k,:ne)
                       ELSE
                          work_c(:ne)=zMat%z_c(k,:ne)
@@ -240,7 +233,7 @@ CONTAINS
                          c_2 = c_0 * dfj(l)
                          !     ----> loop over bands
                          !$ if (.false.) THEN
-                         IF (l_real) THEN
+                         IF (zmat%l_real) THEN
                             acof(:ne,lm,natom) = acof(:ne,lm,natom) +  c_1 * work_r(:ne)
                             bcof(:ne,lm,natom) = bcof(:ne,lm,natom) +  c_2 * work_r(:ne)
                          ELSE
@@ -248,7 +241,7 @@ CONTAINS
                             bcof(:ne,lm,natom) = bcof(:ne,lm,natom) +  c_2 * work_c(:ne)
                          END IF
                          !$ endif
-                         !$ if (l_real) THEN
+                         !$ if (zmat%l_real) THEN
                          !$   acof_loc(:ne,lm) = acof_loc(:ne,lm) +  c_1 * work_r(:ne)
                          !$   bcof_loc(:ne,lm) = bcof_loc(:ne,lm) +  c_2 * work_r(:ne)
                          !$ else
@@ -294,7 +287,7 @@ CONTAINS
                 !$ if (noco%l_soc.and.sym%invs) THEN
                 !$    IF (atoms%invsat(natom).EQ.1) DEALLOCATE(acof_inv,bcof_inv)
                 !$ endif
-                IF (l_real) THEN
+                IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)
                 ELSE               
                    DEALLOCATE(work_c)

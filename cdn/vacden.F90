@@ -12,7 +12,7 @@ CONTAINS
        we,ikpt,jspin,vz,vz0,&
        ne,bkpt,lapw,&
        evac,eig,rhtxy,rht,qvac,qvlay,&
-       stcoeff,cdomvz,cdomvxy,zMat,realdata)
+       stcoeff,cdomvz,cdomvxy,zMat)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -86,8 +86,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
     !
-    LOGICAL,OPTIONAL,INTENT(IN)::realdata
-
     !     local STM variables
     INTEGER nv2(DIMENSION%jspd)
     INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd),map2(DIMENSION%nvd,DIMENSION%jspd)
@@ -122,12 +120,6 @@ CONTAINS
     REAL,    ALLOCATABLE :: u_1(:,:,:,:),ue_1(:,:,:,:)
     !+odim
     !     ..
-    LOGICAL ::l_real
-    IF (PRESENT(realdata)) THEN
-       l_real=realdata
-    ELSE
-       l_real=zMat%l_real
-    ENDIF
     !     ..
 
     !     *******************************************************************************
@@ -337,7 +329,7 @@ CONTAINS
                               CMPLX(-dt_1(l,m)*bess(m) +&
                               t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                               ((wronk_1)*SQRT(cell%omtil))
-                         IF (l_real) THEN
+                         IF (zmat%l_real) THEN
                             ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*av_1
                             bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*bv_1
                          ELSE
@@ -380,7 +372,7 @@ CONTAINS
                    av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
                    bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                    !     -----> loop over basis functions
-                   IF (l_real) THEN
+                   IF (zmat%l_real) THEN
                       ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_r(kspin,:ne)*av
                       bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_r(kspin,:ne)*bv
                    ELSE
@@ -437,7 +429,7 @@ CONTAINS
                            CMPLX(-dt_1(l,m)*bess(m) +&
                            t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                            ((wronk_1)*SQRT(cell%omtil))
-                      IF (l_real) THEN
+                      IF (zmat%l_real) THEN
                          ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*av_1
                          bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*bv_1
                       ELSE
@@ -475,7 +467,7 @@ CONTAINS
                 av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
                 bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                 !     -----> loop over basis functions
-                IF (l_real) THEN
+                IF (zmat%l_real) THEN
                    ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_r(k,:ne)*av
                    bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_r(k,:ne)*bv
                 ELSE

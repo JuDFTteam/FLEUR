@@ -193,8 +193,7 @@ CONTAINS
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
 
-    LOGICAL :: l_real
-    l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
+    zmat%l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
     !     ..
     !     ..
     llpd=(atoms%lmaxd*(atoms%lmaxd+3))/2
@@ -520,22 +519,13 @@ CONTAINS
                 n_end    = noccbd
              END IF
           END IF
-          zMat%l_real = l_real
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              IF (.NOT.ALLOCATED(zMat%z_r)) THEN
                 ALLOCATE (zMat%z_r(dimension%nbasfcn,dimension%neigd))
                 zMat%nbasfcn = dimension%nbasfcn
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_r = 0
-#ifndef __PGI
-             CALL cdn_read(&
-               eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-               ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
-               noccbd,n_start,n_end,&
-               lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat%z_r)
-#endif
           ELSE
              IF (.NOT.ALLOCATED(zMat%z_c)) THEN
                 ALLOCATE (zMat%z_c(dimension%nbasfcn,dimension%neigd))
@@ -543,15 +533,15 @@ CONTAINS
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_c = 0
-#ifndef __PGI
-             CALL cdn_read(&
+          endif
+          CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat%z_c)
-#endif
-          endif
+               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
+
+
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
           !ENDIF
@@ -587,7 +577,7 @@ CONTAINS
                       nslibd = nslibd + 1
                       eig(nslibd) = eig(i)
                       we(nslibd) = we(i)
-                      if (l_real) THEN
+                      if (zmat%l_real) THEN
                          zMat%z_r(:,nslibd) = zMat%z_r(:,i)
                       else
                          zMat%z_c(:,nslibd) = zMat%z_c(:,i)
@@ -603,7 +593,7 @@ CONTAINS
                    nslibd = nslibd + 1
                    eig(nslibd) = eig(sliceplot%nnne)
                    we(nslibd) = we(sliceplot%nnne)
-                   if (l_real) Then
+                   if (zmat%l_real) Then
                       zMat%z_r(:,nslibd) = zMat%z_r(:,sliceplot%nnne)
                    else
                       zMat%z_c(:,nslibd) = zMat%z_c(:,sliceplot%nnne)
@@ -614,7 +604,7 @@ CONTAINS
                          nslibd = nslibd + 1
                          eig(nslibd) = eig(i)
                          we(nslibd) = we(i)
-                         if (l_real) THEN
+                         if (zmat%l_real) THEN
                             zMat%z_r(:,nslibd) = zMat%z_r(:,i)
                          else
                             zMat%z_c(:,nslibd) = zMat%z_c(:,i)
@@ -644,7 +634,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,zMat,l_real)
+                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -654,7 +644,7 @@ CONTAINS
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL q_int_sl(jspin,stars,atoms,sym, volsl,volintsl,&
-                     cell,noccbd,lapw, nsl,zsl,nmtsl,oneD, qintsl(:,:),zMat,l_real)
+                     cell,noccbd,lapw, nsl,zsl,nmtsl,oneD, qintsl(:,:),zMat)
                
       !
              END IF
@@ -666,7 +656,7 @@ CONTAINS
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
                         gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,bkpt,lapw, evac,eig,&
-                        rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat,l_real)
+                        rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -705,13 +695,13 @@ CONTAINS
                      cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat) )
                 CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt,noccbd,eig,usdus,&
                         kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat,l_real)
+                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
                 CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,kveclo,oneD,&
-                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat,l_real)
+                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat)
                 CALL timestop("cdnval: abcof")
 
              END IF
@@ -840,7 +830,7 @@ CONTAINS
              cartk=matmul(bkpt,cell%bmat)
              IF (banddos%ndir.GT.0) THEN
                 CALL sympsi(bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                     lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat,l_real)
+                     lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
              END IF
              !
              !--dw   now write k-point data to tmp_dos
@@ -854,7 +844,7 @@ CONTAINS
           END IF
 
           !--->  end of loop over PE's
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              DEALLOCATE (zMat%z_r)
           ELSE
              DEALLOCATE (zMat%z_c)

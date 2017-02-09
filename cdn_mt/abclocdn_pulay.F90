@@ -13,7 +13,7 @@ CONTAINS
        &                          con1,phase,ylm,ntyp,na,k,fgp,&
        &                          s,nv,ne,nbasf0,alo1,blo1,clo1,&
        &                          kvec,nkvec,enough,acof,bcof,ccof,&
-       &                          acoflo,bcoflo,aveccof,bveccof,cveccof,zMat,realdata)
+       &                          acoflo,bcoflo,aveccof,bveccof,cveccof,zMat)
     !
     !*********************************************************************
     ! for details see abclocdn; calles by to_pulay
@@ -49,7 +49,6 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: cveccof(:,-atoms%llod:,:,:,:)!(3,-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
     LOGICAL, INTENT (OUT) :: enough(atoms%nat)
     INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)
-    LOGICAL,OPTIONAL,INTENT(IN) ::realdata
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
@@ -60,9 +59,6 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX clotmp(-atoms%llod:atoms%llod)
     !     ..
-    LOGICAL:: l_real
-    l_real=zMat%l_real
-    IF (PRESENT(realdata)) l_real=realdata
     enough(na) = .TRUE.
     term1 = con1* ((atoms%rmt(ntyp)**2)/2)*phase
     !
@@ -96,7 +92,7 @@ CONTAINS
                                ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,ie)+ccchi(2)*zMat%z_c(kspin+nbasf,ie) )
                             ENDIF
                          ELSE
-                            IF (l_real) THEN
+                            IF (zmat%l_real) THEN
                                ctmp = zMat%z_r(nbasf,ie)*clotmp(m)
                             ELSE
                                ctmp = zMat%z_c(nbasf,ie)*clotmp(m)
@@ -144,7 +140,7 @@ CONTAINS
                                ctmp = clotmp(m)*( ccchi(1)*zMat%z_c(nbasf,ie)+ccchi(2)*zMat%z_c(kspin+nbasf,ie) )
                             ENDIF
                          ELSE
-                            IF (l_real) THEN
+                            IF (zmat%l_real) THEN
                                ctmp = zMat%z_r(nbasf,ie)*clotmp(m)
                             ELSE
                                ctmp = zMat%z_c(nbasf,ie)*clotmp(m)

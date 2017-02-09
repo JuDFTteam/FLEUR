@@ -70,7 +70,7 @@ CONTAINS
 
     REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
     COMPLEX, ALLOCATABLE :: vzxy(:,:,:,:),vpw(:,:)
-
+    TYPE(t_zmat)::zmat
 
 
     !  ..
@@ -264,16 +264,18 @@ CONTAINS
                eig=eig_so(:nsz))
 
        ELSE
-
+          allocate(zmat%z_c(zmat%nbasfcn,nsz))
+          zmat%nbands=nsz        
           DO jspin = 1,wannierspin
              CALL timestart("eigenso: write_eig")  
+             zmat%z_c=zso(:,:nsz,jspin)
              CALL write_eig(eig_id,&
                   nk,jspin,neig=nsz,neig_total=nsz,nmat=nmat,&
-                  eig=eig_so(:nsz),z=zso(:,:nsz,jspin))
+                  eig=eig_so(:nsz),zmat=zmat)
 
              CALL timestop("eigenso: write_eig")  
           ENDDO
-
+          deallocate(zmat%z_c)
        ENDIF ! (input%eonly) ELSE
 
     ENDDO ! DO nk 
