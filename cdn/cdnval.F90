@@ -528,12 +528,14 @@ CONTAINS
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_r = 0
+#ifndef __PGI
              CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
                lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat%z_r)
+#endif
           ELSE
              IF (.NOT.ALLOCATED(zMat%z_c)) THEN
                 ALLOCATE (zMat%z_c(dimension%nbasfcn,dimension%neigd))
@@ -541,12 +543,14 @@ CONTAINS
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_c = 0
+#ifndef __PGI
              CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
                lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat%z_c)
+#endif
           endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)

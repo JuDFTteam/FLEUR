@@ -15,13 +15,13 @@ function configure_machine(){
     if [ "$machine" = "JURECA" ] 
     then
 	echo "JURECA configuration used"
-	if module list 2>&1 |grep -q intel-para
+	if module list 2>&1 |grep -q -i intel
 	then
 	    echo "Intel toolchain used"
-	    if module list 2>&1| grep -q Python/2.7.12 &&
-               module list 2>&1| grep -q HDF5 &&
+	    if module list 2>&1| grep -q Python &&
                module list 2>&1| grep -q CMake &&
 	       module list 2>&1| grep -q ELPA
+               #module list 2>&1| grep -q HDF5 
 	    then
 		echo "All required modules load loaded"
 	    else
@@ -33,8 +33,19 @@ function configure_machine(){
 	elif module list 2>&1 |grep -q PGI
 	then
 	    echo "PGI toolchain used"
-	    echo "Needs to be configured"
-	    exit
+	    if module list 2>&1| grep -q MVAPICH2 &&
+               module list 2>&1| grep -q CMake &&
+	       [ -n "${MAGMA_ROOT}" ] &&
+	       [ -n "${XML2_ROOT}" ] 
+            then
+		echo "All required modules loaded, all variables set"
+	    else
+		echo "Please do at least"
+		echo "module load MVAPICH2 CMake"
+		echo "And set the variables XML2_ROOT and MAGMA_ROOT"
+		exit
+	    fi
+	    cp $DIR/cmake/JURECAGPU.cmake config.cmake
 	else
 	    echo "You have to load the correct modules for compiling"
 	    echo " a) intel-para"

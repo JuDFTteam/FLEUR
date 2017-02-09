@@ -111,6 +111,8 @@ CONTAINS
 #if 1==2
     !This is only needed for debugging
     print *,n_rank,lapw%nmat
+    print *,"SR:",n_size,n_rank
+    print *,mpi
     write(f,'(a,i0)') "a.",n_rank
     open(99,file=f)
     write(f,'(a,i0)') "b.",n_rank
@@ -126,7 +128,6 @@ CONTAINS
     CALL MPI_BARRIER(MPI_COMM_WORLD,err)
     close(99)
      close(98)
-    STOP 'DEBUG'
 #endif
     
     !
@@ -169,6 +170,9 @@ CONTAINS
        SELECT CASE (priv_select_solver(parallel))
 #ifdef CPP_ELPA
        CASE (diag_elpa)
+          CALL MPI_COMM_RANK(sub_comm,n,err)
+          write(*,*) "DIAG:",mpi%irank,sub_comm,n
+          write(*,*) "ELPA:",mpi%irank,lapw%nmat,ne_found,size(eig),ndim,ndim1
           IF (hamovlp%l_real) THEN
               CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,eig,ne_found)
           ELSE
@@ -196,11 +200,13 @@ CONTAINS
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
           if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
           IF (l_real) THEN
+#ifndef __PGI
           CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
                 jij,matind,nred,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r)
        else
           CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
                jij,matind,nred,eig,ne_found,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+#endif
        endif
        CASE (diag_lapack)
           CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(l_zref.AND.(atoms%nlotot.EQ.0)),&

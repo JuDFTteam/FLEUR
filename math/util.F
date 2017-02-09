@@ -549,9 +549,9 @@ c     np = max(0,int(log(n*0.001)/log(2d0))) should be a safe choice.
 
       INTEGER, INTENT(IN)  :: n,np
       INTEGER, INTENT(OUT) :: pnt(n)
-      REAL(8), INTENT(IN)  :: rarr(n)
-      REAL(8)              :: rarr1(n)
-      REAL(8)              :: ravg
+      REAL   , INTENT(IN)  :: rarr(n)
+      REAL                 :: rarr1(n)
+      REAL                 :: ravg
       INTEGER              :: pnt1(n),pnt2(n)
       INTEGER              :: n1,n2,i
       

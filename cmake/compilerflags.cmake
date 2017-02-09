@@ -1,5 +1,4 @@
 #cmake file to set compiler flags for some of the known compilers
-
 if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
    message("Intel Fortran detected")
    if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "13.0.0.0")
@@ -9,9 +8,9 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
    endif()     
    set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -xHost -O4")
    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g")
-elseif(${CMAKE_Fortan_COMPILER_ID} MATCHES "PGI")
+elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
    message("PGI Fortran detected")
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics")
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics  -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -fast -O3")
    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -Mchkptr")
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "XL")
