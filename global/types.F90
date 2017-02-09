@@ -759,8 +759,8 @@
         LOGICAL              :: l_real
         INTEGER              :: nbasfcn
         INTEGER              :: nbands
-        REAL,    POINTER :: z_r(:,:) ! z_r(nbasfcn,nbands)
-        COMPLEX, POINTER :: z_c(:,:) ! z_c(nbasfcn,nbands)
+        REAL,    ALLOCATABLE :: z_r(:,:) ! z_r(nbasfcn,nbands)
+        COMPLEX, ALLOCATABLE :: z_c(:,:) ! z_c(nbasfcn,nbands)
       END TYPE
 
       TYPE t_hamOvlp
