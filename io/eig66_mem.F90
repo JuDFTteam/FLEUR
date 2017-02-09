@@ -64,10 +64,9 @@ CONTAINS
     IF (l_noco) length=1
     ALLOCATE(d%eig_eig(neig,jspins*nkpts))
     !d%eig_vec
-    if (l_real) THEN
+    if (l_real.and..not.l_soc) THEN
        print *, "Allocate real in eig66_mem"
        ALLOCATE(d%eig_vecr(nmat*neig,length*nkpts))
-       if (l_soc)  CALL judft_error("SOC+INVERSION can not be used with eigenvalues stored in memory")
     else
        print *, "Allocate complex in eig66_mem"
        ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
@@ -281,8 +280,12 @@ CONTAINS
     IF (PRESENT(z)) THEN
        SELECT TYPE(z)
        TYPE is (REAL)
-          IF (.NOT.ALLOCATED(d%eig_vecr)) CALL juDFT_error("BUG: can not read real vectors from memory")
-          z=RESHAPE(d%eig_vecr(:SIZE(z),nrec),SHAPE(z))
+          IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
+             IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory")
+             z=REAL(RESHAPE(d%eig_vecc(:SIZE(z),nrec),SHAPE(z)))
+          ELSE
+             z=RESHAPE(d%eig_vecr(:SIZE(z),nrec),SHAPE(z))
+          ENDIF
        TYPE is (COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory")
           z=RESHAPE(d%eig_vecc(:SIZE(z),nrec),SHAPE(z))
@@ -341,11 +344,14 @@ CONTAINS
     ENDIF
     !data from d%eig_vec
     IF (PRESENT(z)) THEN
-      
        SELECT TYPE(z)
        TYPE IS (REAL)
-          IF (.NOT.ALLOCATED(d%eig_vecr)) CALL juDFT_error("BUG: can not write real vectors to memory")
-          d%eig_vecr(:SIZE(z),nrec)=RESHAPE(REAL(z),(/SIZE(z)/))
+          IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
+             IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not write complex vectors to memory")
+             d%eig_vecc(:SIZE(z),nrec)=RESHAPE(CMPLX(z),(/SIZE(z)/)) !Type cast here
+          ELSE
+             d%eig_vecr(:SIZE(z),nrec)=RESHAPE(REAL(z),(/SIZE(z)/))
+          ENDIF
        TYPE IS(COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not write complex vectors to memory")
           d%eig_vecc(:SIZE(z),nrec)=RESHAPE(CMPLX(z),(/SIZE(z)/))
