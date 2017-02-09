@@ -54,6 +54,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    REAL                  :: edgeDirec(3), edgeDistVec(3), distVec(3)
 
    INTEGER, ALLOCATABLE  :: cornerPlaneList(:,:)
+   INTEGER, ALLOCATABLE  :: planeCorners(:,:)
 
    ! Subroutine plan:
    ! 0. Initializations
@@ -387,12 +388,14 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    nCorners = nUniqueCorners
 
    ! Add origin to corner points
-   nCorners = nCorners + 1
-   corners(:,nCorners) = 0.0
-   DO i = nOuterPlanes + 1, nPlanes
-      cornerPlaneList(i-nOuterPlanes,nCorners) = i
-   END DO
-   numCornerPlanes(nCorners) = nPlanes - nOuterPlanes
+   IF ((nPlanes-nOuterPlanes).GE.3) THEN ! The origin is only a corner if at least 3 planes feature this point
+      nCorners = nCorners + 1
+      corners(:,nCorners) = 0.0
+      DO i = nOuterPlanes + 1, nPlanes
+         cornerPlaneList(i-nOuterPlanes,nCorners) = i
+      END DO
+      numCornerPlanes(nCorners) = nPlanes - nOuterPlanes
+   END IF
 
    ! Filter out "corners" found for sets of planes that do not meet in a single
    ! point but have a common intersection edge.
@@ -433,9 +436,12 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
 
    ! Count the number of corners for each plane
    nPlaneCorners = 0
+   ALLOCATE(planeCorners(nPlanes,nCorners))
+   planeCorners = 0
    DO i = 1, nCorners
       DO j = 1, numCornerPlanes(i)
          nPlaneCorners(cornerPlaneList(j,i)) = nPlaneCorners(cornerPlaneList(j,i)) + 1
+         planeCorners(cornerPlaneList(j,i),nPlaneCorners(cornerPlaneList(j,i))) = i
       END DO
    END DO
 
@@ -447,12 +453,19 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
          isIBZPlane(n1) = .FALSE.
          CYCLE
       END IF
+!      WRITE(*,*) 'plane ', n1
+!      WRITE(*,'(4f20.13)') dvec(:,n1), ddist(n1)
+!      WRITE(*,*) 'corners:'
+!      DO i = 1, nPlaneCorners(n1)
+!         WRITE(*,'(i5,3f20.13)') planeCorners(n1,i), corners(:,planeCorners(n1,i))
+!      END DO
       nface = nface + 1
    END DO
    
    ! Remove irrelevant corners:
    ncorn = 0
    isIBZCorner(:) = .TRUE.
+!   WRITE(*,*) 'IBZ corners:'
    DO i = 1, nCorners
       numIBZPlanes = 0
       DO j = 1, numCornerPlanes(i)
@@ -463,6 +476,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       IF(numIBZPlanes.LE.2) isIBZCorner(i) = .FALSE.
       IF(.NOT.isIBZCorner(i)) CYCLE
       ncorn = ncorn + 1
+!      WRITE(*,'(i5,3f20.13)') i, corners(:,i)
    END DO
 
    DEALLOCATE(cornerPlaneList)
@@ -527,8 +541,18 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       WRITE(*,*) "ncorn: ", ncorn
       WRITE(*,*) "nface: ", nface
       WRITE(*,*) "nedge: ", nedge
+      WRITE(*,*) "corners: "
+      DO i = 1, ncorn
+         WRITE(*,'(3f20.13)') cpoint(:,i)
+      END DO
+      WRITE(*,*) "faces: "
+      DO i = 1, nface
+         WRITE(*,'(4f20.13)') fnorm(:,i), fdist(i)
+      END DO
       CALL juDFT_error("Brillouin zone does not fulfill Euler characterisic.",calledby ="brzone2")
    END IF
+
+   DEALLOCATE (planeCorners)
 
 END SUBROUTINE brzone2
 
