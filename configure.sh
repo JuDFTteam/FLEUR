@@ -5,7 +5,7 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 #check if -h or  --help was given as argument
 if [ "$1" = "" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]
 then
-   echo "USAGE: configure.sh MACHINE [debug]"
+   echo "USAGE: configure.sh MACHINE [label]"
    echo "
   To help the script finding a proper configuration you should
   provide the name of a specific machine to compile on.
@@ -26,23 +26,22 @@ then
         FLEUR_LIBRARIES     -- list of linker arguments i.e. '-L/lib;-lbla'
         CMAKE_Fortran_FLAGS -- list of compiler options i.e. '-r8'"
 echo "
-   By specifying 'debug' in addition to your machine configuration you will build a debugging version"
+   By specifying a label which contains 'debug' in addition to your 
+   machine configuration you will build a debugging version. Otherwise
+   the label will be added to the build directory name."
 fi
 
-#Check if we are using the git version and ask if we want to update
-if test -d $DIR/.git
+#Check if we are using the git version and update if pull was used as an argument
+if test -d $DIR/.git 
 then
-   #We are using the git version so ask the user (for 10sec)
-   echo "Shall we try to update to the newest git version? (y/n)"
-   read -n 1 -t 10 x
-   if test "$x" == "y"
+   if [[ $1 =~ .*pull.* ]] || [[ $2 =~ .*pull.* ]] || [[ $3 =~ .*pull.* ]] 
    then
        cd $DIR 
        git pull
        cd -
+       exit
    fi
 fi
-
 
 
 #include a configfile if present
@@ -51,21 +50,30 @@ then
  . config.sh
 fi
 
+#Name of the build directory
+label=$2
+if [ -n "$label" ]
+then
+    buildname="build.$label"
+else
+    buildname="build"
+fi
+
 #check if there is a build directory
-if test -d build
+if test -d $buildname
 then
     echo "OLD build directory found, saved in build.$$"
-    mv build build.$$
+    mv $buildname $buildname.$$
 fi
-mkdir build
-cd build
+mkdir $buildname
+cd $buildname
 
 #Now check the machine and set some defaults 
 machine=$1
 configure_machine
 
 #run cmake
-if test "debug" == "$2"
+if [[ $buildname =~ .*debug.* ]]
 then
    echo "Debug version will be build"
    BUILD=Debug
@@ -76,5 +84,5 @@ cmake -DCMAKE_BUILD_TYPE=$BUILD $DIR
 
 
 echo "Configuration finished"
-echo "If no errors occured you should change into directory 'build' "
+echo "If no errors occured you should change into directory $buildname "
 echo "run 'make' or 'make -j4'"
