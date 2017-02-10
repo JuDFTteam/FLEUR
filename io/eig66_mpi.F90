@@ -363,7 +363,7 @@ CONTAINS
              CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
              !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
              zmat%z_c(:,n)=tmp_cmplx
-          END SELECT
+          ENDIF
        ENDDO
     ENDIF
 
