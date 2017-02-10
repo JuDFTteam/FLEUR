@@ -556,7 +556,7 @@
         LOGICAL :: ctail
         INTEGER :: coretail_lmax
         INTEGER :: itmax
-        INTEGER :: minDistance
+        REAL    :: minDistance
         INTEGER :: maxiter
         INTEGER :: imix
         INTEGER :: gw
