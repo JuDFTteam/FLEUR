@@ -33,6 +33,14 @@ fi
 
 #Check if we are using the git version and update if pull was used as an argument
 if test -d $DIR/.git 
+    #Check if hook is installed and install it if needed
+    if test -h $DIR/.git/hooks/pre-commit
+    then
+        echo "Git version found"
+    else
+        ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
+        echo "Git version found, hook installed"
+    fi
 then
    if [[ $1 =~ .*pull.* ]] || [[ $2 =~ .*pull.* ]] || [[ $3 =~ .*pull.* ]] 
    then
