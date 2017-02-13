@@ -13,7 +13,7 @@ MODULE m_mix
   !    IMIX = 7 : GENERALIZED ANDERSEN METHOD                       
   !************************************************************************
 CONTAINS
-  SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym, cell, it, noco, oneD,hybrid)
+  SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym, cell, it, noco, oneD,hybrid,results)
     !
 #include"cpp_double.h"
     USE m_cdn_io
@@ -37,6 +37,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(INOUT) :: atoms !n_u is modified temporarily
+    TYPE(t_results),INTENT(INOUT)::results
     !     ..
     !     .. Scalar Arguments ..
     INTEGER :: nrhomfile=26
@@ -288,10 +289,12 @@ CONTAINS
           WRITE ( 6,FMT=8000) iter,1000*SQRT(ABS(dist(4)/cell%vol))
           WRITE ( 6,FMT=8010) iter,1000*SQRT(ABS(dist(5)/cell%vol))
        END IF
+      
        ! dist/vol should always be >= 0 ,
        ! but for dist=0 numerically you might obtain dist/vol < 0
        ! (e.g. when calculating non-magnetic systems with jspins=2).
     END IF
+    results%last_distance=maxval(1000*SQRT(ABS(dist/cell%vol)))
     DEALLOCATE (sm,fsm)
     CALL closeXMLElement('densityConvergence')
     !

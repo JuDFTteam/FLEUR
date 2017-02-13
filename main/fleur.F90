@@ -786,7 +786,7 @@
              !          ----> mix input and output densities
              !
              CALL timestart("mixing")
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,hybrid)
+             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,hybrid,results)
              !
              CALL timestop("mixing")
              WRITE (6,FMT=8130) it
@@ -833,6 +833,7 @@
        END IF
        CALL writeTimesXML()
        CALL check_time_for_next_iteration(it,l_cont)
+       l_cont=l_cont.AND.(input%mindistance<=results%last_distance)
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
        END IF

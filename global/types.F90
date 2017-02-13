@@ -705,6 +705,7 @@
         REAL              :: te_exc    !<charge density-ex-corr.energy density integral
         REAL              :: e_ldau    !<total energy contribution of LDA+U
         REAL              :: tote
+        REAL              :: last_distance
         TYPE(t_energy_hf) ::  te_hfex
         REAL              ::  te_hfex_loc(2)
         REAL, ALLOCATABLE :: w_iks(:,:,:)
