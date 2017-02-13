@@ -369,7 +369,7 @@ CONTAINS
           !
           !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
           !
-          CALL convol(stars, vpw_w, vpw)
+          CALL convol(stars, vpw_w, vpw, stars%ufft)
           !
           IF (input%jspins.EQ.2) CALL CPP_BLAS_ccopy(stars%ng3,vpw_w(1,1),1,vpw_w(1,input%jspins),1)
           !
