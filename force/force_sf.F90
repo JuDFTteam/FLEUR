@@ -53,10 +53,10 @@
       INTEGER, INTENT (IN) :: jsp
 
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%n3d,dimension%jspd)
+      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,dimension%jspd)
       COMPLEX, INTENT (IN) :: vpw(:,:)!(n3d,jspd)
-      COMPLEX, INTENT (IN) :: excpw(stars%n3d)
-      COMPLEX, INTENT (IN) :: vxcpw(:,:)!(stars%n3d,dimension%jspd)
+      COMPLEX, INTENT (IN) :: excpw(stars%ng3)
+      COMPLEX, INTENT (IN) :: vxcpw(:,:)!(stars%ng3,dimension%jspd)
 
 !     .. Local Scalars ..
       INTEGER :: n,j,itype,s,l ,lm,t,lp,mp,lmp,jp,natom,m
@@ -66,7 +66,7 @@
 
 !     .. Local Arrays ..
       INTEGER :: lmaxb(atoms_in%ntype)
-      COMPLEX :: coeff(3,-1:1),qpw2(stars%n3d,size(qpw,2)),qpwcalc(stars%n3d,size(qpw,2))
+      COMPLEX :: coeff(3,-1:1),qpw2(stars%ng3,size(qpw,2)),qpwcalc(stars%ng3,size(qpw,2))
       REAL   , ALLOCATABLE :: bsl(:,:,:)
       COMPLEX, ALLOCATABLE :: pylm(:,:,:),rho(:),V(:),pylm2(:,:)
 !       COMPLEX, ALLOCATABLE :: qpw2(:,:),qpwcalc(:,:)
@@ -83,7 +83,7 @@
       CALL init_sf(sym,cell,atoms)
       isdone = .true.
 
-      ALLOCATE ( bsl(stars%n3d,0:atoms%lmaxd,atoms%ntype) )
+      ALLOCATE ( bsl(stars%ng3,0:atoms%lmaxd,atoms%ntype) )
 
       ALLOCATE ( pylm2((atoms%lmaxd+1)**2,atoms%ntype ))
       ALLOCATE ( rho((atoms%lmaxd+1)**2),V((atoms%lmaxd+1)**2) )
@@ -107,7 +107,7 @@
         qpw2 = 0.0
         OPEN (15,file='qpw',form='formatted',status='unknown')
         DO jp = 1,size(qpw,2)
-        DO s = 1,stars%n3d
+        DO s = 1,stars%ng3
           READ (15,'(i2,i10,2f20.14)') n,j,qpw2(s,jp)
         END DO ! s
         END DO ! jp

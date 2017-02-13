@@ -33,7 +33,7 @@
 !+odim
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%n3d,dimension%jspd)
+      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,dimension%jspd)
       COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
       REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
       REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
@@ -45,7 +45,7 @@
       COMPLEX ci
 !     ..
 !     .. Local Arrays ..
-      COMPLEX sf2(stars%n2d),sf3(stars%n3d),ylm((atoms%lmaxd+1)**2)
+      COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2)
       REAL rcc(3),x(3)
 !     ..
 !     .. Intrinsic Functions ..

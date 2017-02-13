@@ -25,7 +25,7 @@ CONTAINS
     REAL,    INTENT (IN) :: s_in(:)
     REAL,    INTENT (OUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT) :: rht(vacuum%nmz,2,input%jspins)
-    COMPLEX, INTENT (OUT) :: qpw(stars%n3d,input%jspins),cdom(stars%n3d),cdomvz(vacuum%nmz,2)
+    COMPLEX, INTENT (OUT) :: qpw(stars%ng3,input%jspins),cdom(stars%ng3),cdomvz(vacuum%nmz,2)
     COMPLEX, INTENT (OUT) :: rhtxy(vacuum%nmzxy,oneD%odi%n2d-1,2,input%jspins)
     COMPLEX, INTENT (OUT) :: cdomvxy(vacuum%nmzxy,oneD%odi%n2d-1,2)
     COMPLEX, INTENT (OUT) :: n_mmp(-3:3,-3:3,atoms%n_u,input%jspins)

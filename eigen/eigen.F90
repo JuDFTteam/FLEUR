@@ -228,11 +228,11 @@ CONTAINS
     !
     ! load potential from file pottot (=unit 8)
     !
-    ALLOCATE ( vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
+    ALLOCATE ( vpw(stars%ng3,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
     ALLOCATE ( vz(vacuum%nmzd,2,4), vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
     ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,dimension%jspd) ) ; vr0 = 0
     IF (input%gw.eq.2) THEN
-       ALLOCATE ( vpwtot(stars%n3d,dimension%jspd), vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
+       ALLOCATE ( vpwtot(stars%ng3,dimension%jspd), vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
        IF ( mpi%irank == 0 ) WRITE(6,'(A/A/A/A)')&
             &  'Info: vxc matrix elements for GW will be calculated in gw_vxc',&
             &  'Info: and stored in "vxc", the values obtained from the',&

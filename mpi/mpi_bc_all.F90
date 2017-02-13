@@ -114,8 +114,8 @@ CONTAINS
     ! -> Broadcast the arrays:
     IF (input%efield%l_segmented) THEN
        IF (.NOT. ALLOCATED (input%efield%rhoEF))&
-            &    ALLOCATE (input%efield%rhoEF(3*stars%k1d*3*stars%k2d-1,vacuum%nvac))
-       n = (3*stars%k1d*3*stars%k2d-1)*vacuum%nvac
+            &    ALLOCATE (input%efield%rhoEF(3*stars%mx1*3*stars%mx2-1,vacuum%nvac))
+       n = (3*stars%mx1*3*stars%mx2-1)*vacuum%nvac
        CALL MPI_BCAST (input%efield%rhoEF,n,MPI_REAL,0,mpi%mpi_comm,ierr)
     END IF
     IF (input%efield%l_dirichlet_coeff) THEN
@@ -128,7 +128,7 @@ CONTAINS
        CALL MPI_BCAST (input%efield%C2,n,MPI_REAL,0,mpi%mpi_comm,ierr)
     END IF
    
-    CALL MPI_BCAST(stars%ustep,stars%n3d,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%ustep,stars%ng3,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     n = sphhar%memd*(sphhar%nlhd+1)*sphhar%ntypsd
     CALL MPI_BCAST(sphhar%clnu,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sphhar%mlh,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -146,8 +146,8 @@ CONTAINS
     CALL MPI_BCAST(sym%invsatnr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%ngopr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%mrot,9*sym%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%ig2,stars%n3d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    n = (2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1)
+    CALL MPI_BCAST(stars%ig2,stars%ng3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    n = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
     CALL MPI_BCAST(stars%ig,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%rgphs,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%ellow,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -156,7 +156,7 @@ CONTAINS
     CALL MPI_BCAST(atoms%rmt,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%volmts,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%dx,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%sk3,stars%n3d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%sk3,stars%ng3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%evac0,2*dimension%jspd*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%amat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%bmat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -185,17 +185,15 @@ CONTAINS
     CALL MPI_BCAST(sym%invsatnr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kq2_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kq3_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%kv2,2*stars%n2d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%kv3,3*stars%n3d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%kv2,2*stars%ng2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%kv3,3*stars%ng3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%ng3_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%ng2_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%kmxq_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%kmxq2_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(vacuum%izlay,vacuum%layerd*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%nstr,stars%n3d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%nstr2,stars%n2d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%nstr,stars%ng3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%nstr2,stars%ng2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%igfft,dimension%nn3d*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kq1_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%kmxq_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%pgfft,dimension%nn3d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%efield%sig_b,2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -228,17 +226,17 @@ CONTAINS
     n = 7*7*3*sym%nop
     CALL MPI_BCAST(sym%d_wgn,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(oneD%nstr1,oneD%odd%n2d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%sk2,stars%n2d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%sk2,stars%ng2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(oneD%tau1,3*oneD%odd%nop,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     IF (oneD%odd%d1) THEN
-       CALL MPI_BCAST(stars%phi2,stars%n2d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(stars%phi2,stars%ng2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%tau1,3*oneD%odd%nop,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%mrot1,9*oneD%odd%nop,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%kv1,2*oneD%odd%n2d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%ngopr1,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%igfft1,oneD%odd%nn2d*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%pgfft1,oneD%odd%nn2d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       n = (2*stars%k3d + 1)*(2*ONED%ODD%M +1)
+       n = (2*stars%mx3 + 1)*(2*ONED%ODD%M +1)
        CALL MPI_BCAST(oneD%ig1,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%invtab1,oneD%odd%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%multab1,2*oneD%odd%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)

@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)   :: stars
     !     ..
     !     .. Array Arguments ..
-    COMPLEX :: qpwc(stars%n3d)
+    COMPLEX :: qpwc(stars%ng3)
     !     ..
     !     ..
     !     .. Local Arrays ..
@@ -33,7 +33,7 @@ CONTAINS
     !
     ! -> Broadcast the arrays:
 
-    CALL MPI_BCAST(qpwc,stars%n3d,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 
   END SUBROUTINE mpi_bc_st
   !*********************************************************************

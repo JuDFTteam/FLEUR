@@ -31,7 +31,7 @@
       REAL,    INTENT (OUT):: qtot,qistot
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(stars%n3d,input%jspins)
+      COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins)
       REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
       REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins)
 !-odim

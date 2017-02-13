@@ -80,7 +80,7 @@ CONTAINS
 
     ALLOCATE (&
          ai(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),bi(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),&
-         nvp(DIMENSION%nv2d,DIMENSION%jspd),ind(stars%n2d,DIMENSION%nv2d,DIMENSION%jspd),&
+         nvp(DIMENSION%nv2d,DIMENSION%jspd),ind(stars%ng2,DIMENSION%nv2d,DIMENSION%jspd),&
          kvac3(DIMENSION%nv2d,DIMENSION%jspd),map1(DIMENSION%nvd,DIMENSION%jspd),&
          tddv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
          tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
@@ -113,7 +113,7 @@ CONTAINS
 
        DO ik = 1,DIMENSION%nv2d
           nvp(ik,jspin) = 0
-          DO i = 1,stars%n2d
+          DO i = 1,stars%ng2
              ind(i,ik,jspin) = 0
           END DO
        END DO

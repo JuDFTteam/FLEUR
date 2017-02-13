@@ -62,12 +62,12 @@ CONTAINS
     INTEGER, INTENT (IN) :: nq2_1  
     INTEGER, INTENT (IN) :: nstr2_1(n2d_1)
     INTEGER, INTENT (IN) :: kv2_1(2,n2d_1) 
-    COMPLEX, INTENT (INOUT) :: psq(stars%n3d)
+    COMPLEX, INTENT (INOUT) :: psq(stars%ng3)
     REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,DIMENSION%jspd) 
     REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
     COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxyd,n2d_1-1,2,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,n2d_1-1,2,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: vpw(stars%n3d,DIMENSION%jspd)
+    COMPLEX, INTENT (OUT):: vpw(stars%ng3,DIMENSION%jspd)
 
     !     local
     INTEGER :: m
@@ -89,7 +89,7 @@ CONTAINS
 
     !------> different staff with special functions
 
-    REAL  IR(1:stars%k3d,0:MM)
+    REAL  IR(1:stars%mx3,0:MM)
     REAL, ALLOCATABLE :: II(:),KK(:)
     REAL  fJ,fJ2,fJ1,iJ2,IIIR,fJ3
     REAL, ALLOCATABLE :: III(:),IIII(:,:,:)
@@ -146,27 +146,27 @@ CONTAINS
     !--> time
 
     REAL    gxy0,fxy0,phi
-    COMPLEX gxy(stars%n2d-1)
-    COMPLEX fxy(stars%n2d-1)
+    COMPLEX gxy(stars%ng2-1)
+    COMPLEX fxy(stars%ng2-1)
 
     INTRINSIC REAL,aimag
 
     !--------- preparations ---------->
 
-    ALLOCATE ( KK(vacuum%nmzxyd),II(vacuum%nmzxyd),III(9*stars%k1d*stars%k2d),&
-         &     IIII(9*stars%k1d*stars%k3d,1:stars%k3d,0:MM),&
-         &     rmap(0:3*stars%k1d-1,0:3*stars%k2d-1),rr(1:9*stars%k1d*stars%k2d),&
-         &     fact(vacuum%nmzxyd),val(n2d_1),fJJ(0:MM+1,stars%n2d),&
-         &     val_m(-stars%k3d:stars%k3d,-MM:MM),rxy(vacuum%nmzxyd),iJJ(0:MM+1,1:stars%k3d),&
-         &     vis(0:3*stars%k1d-1,0:3*stars%k2d-1,n2d_1),&
-         &     vis_tot(0:3*stars%k1d-1,0:3*stars%k2d-1),pvac(vacuum%nmzxyd),&
-         &     pint(vacuum%nmzxyd),vis_help(0:3*stars%k1d-1,0:3*stars%k2d-1),&
-         &     af2(0:9*stars%k1d*stars%k2d-1),bf2(0:9*stars%k1d*stars%k2d-1),vpw_help(stars%n3d) )
+    ALLOCATE ( KK(vacuum%nmzxyd),II(vacuum%nmzxyd),III(9*stars%mx1*stars%mx2),&
+         &     IIII(9*stars%mx1*stars%mx3,1:stars%mx3,0:MM),&
+         &     rmap(0:3*stars%mx1-1,0:3*stars%mx2-1),rr(1:9*stars%mx1*stars%mx2),&
+         &     fact(vacuum%nmzxyd),val(n2d_1),fJJ(0:MM+1,stars%ng2),&
+         &     val_m(-stars%mx3:stars%mx3,-MM:MM),rxy(vacuum%nmzxyd),iJJ(0:MM+1,1:stars%mx3),&
+         &     vis(0:3*stars%mx1-1,0:3*stars%mx2-1,n2d_1),&
+         &     vis_tot(0:3*stars%mx1-1,0:3*stars%mx2-1),pvac(vacuum%nmzxyd),&
+         &     pint(vacuum%nmzxyd),vis_help(0:3*stars%mx1-1,0:3*stars%mx2-1),&
+         &     af2(0:9*stars%mx1*stars%mx2-1),bf2(0:9*stars%mx1*stars%mx2-1),vpw_help(stars%ng3) )
 
-    ivfft2d = 9*stars%k1d*stars%k2d
+    ivfft2d = 9*stars%mx1*stars%mx2
     ic = CMPLX(0.,1.)
-    ivfft1 = 3*stars%k1d
-    ivfft2 = 3*stars%k2d
+    ivfft1 = 3*stars%mx1
+    ivfft2 = 3*stars%mx2
     ani1 = 1./REAL(ivfft1)
     ani2 = 1./REAL(ivfft2)
 
@@ -194,7 +194,7 @@ CONTAINS
     !----> if nstr2.ne.1 then it should be changed!!!
 
     DO m = 0,MM+1
-       DO k3 = 1,stars%k3d
+       DO k3 = 1,stars%mx3
           CALL modcyli(m,cell%bmat(3,3)*k3*cell%z1,iJJ(m,k3))
        END DO
        DO irec2 = 1,stars%ng2
@@ -251,7 +251,7 @@ CONTAINS
        ENDDO iy_loop
     END DO
 
-    DO gzi = -stars%k3d,stars%k3d
+    DO gzi = -stars%mx3,stars%mx3
        DO m = -MM,MM
           IF (m.LT.0) THEN
              mult = REAL((-1)**m)
@@ -305,14 +305,14 @@ CONTAINS
     END DO
 
     DO m = 0,MM
-       DO k3 = 1,stars%k3d
+       DO k3 = 1,stars%mx3
           CALL modcyli(m,cell%bmat(3,3)*k3*cell%z1,IR(k3,m))
        END DO
     END DO
 
     DO i = 1,nrd
        DO m = 0,MM
-          DO k3 = 1,stars%k3d
+          DO k3 = 1,stars%mx3
              CALL modcyli(m,cell%bmat(3,3)*k3*rr(i),IIII(i,k3,m))
           END DO
        END DO
@@ -320,7 +320,7 @@ CONTAINS
 
     !------- cycle by positive gz---------->
 
-    DO gzi = 0,stars%k3d                        ! gz
+    DO gzi = 0,stars%mx3                        ! gz
 
        !------- cycle by positive m ---------->
 
@@ -553,11 +553,11 @@ CONTAINS
     !-------  3. Transforming back to the pw-representation 
     !-------  Everything is done in \tilda {\Omega}
 
-    gzmin = -stars%k3d
+    gzmin = -stars%mx3
 
     IF (sym%zrfs.OR.sym%invs) gzmin = 0
 
-    DO k3 = gzmin,stars%k3d          ! collect the Fourier components
+    DO k3 = gzmin,stars%mx3          ! collect the Fourier components
 
        fxy0 = 0.
 
@@ -598,8 +598,8 @@ CONTAINS
 
        i = 0
 
-       DO iy = 0,3*stars%k2d-1
-          DO ix = 0,3*stars%k1d-1
+       DO iy = 0,3*stars%mx2-1
+          DO ix = 0,3*stars%mx1-1
              x = ix*ani1
              IF (x.GT.0.5) x = x - 1.
              y = iy*ani2

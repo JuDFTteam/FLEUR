@@ -86,9 +86,9 @@ CONTAINS
     zero = 0.0 ; czero = CMPLX(0.0,0.0) 
     eps = 1.0e-20
   
-    ALLOCATE (qpw(stars%n3d,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),&
-         &          cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         &     ris(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1),&
+    ALLOCATE (qpw(stars%ng3,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),&
+         &          cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
+         &     ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
          &     rz(vacuum%nmzd,2,2),&
          &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),rht(vacuum%nmzd,2,DIMENSION%jspd) )
     !
@@ -101,9 +101,9 @@ CONTAINS
        cdomvxy(:,:,:) = czero
     ENDIF
 
-    ifft3 = 27*stars%k1d*stars%k2d*stars%k3d
-    ifft2 = 9*stars%k1d*stars%k2d
-    IF (oneD%odi%d1) ifft2 = 9*stars%k3d*oneD%odi%M
+    ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
+    ifft2 = 9*stars%mx1*stars%mx2
+    IF (oneD%odi%d1) ifft2 = 9*stars%mx3*oneD%odi%M
     IF (input%film) ALLOCATE(rvacxy(0:ifft2-1,vacuum%nmzxyd,2,4))
 
     IF (input%jspins .NE. 2) THEN

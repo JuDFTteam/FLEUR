@@ -56,23 +56,23 @@ CONTAINS
     OPEN (1,file='fl7para',form='formatted',status='old',err=200) ! La
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,901,ERR=200,END=200) sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d
-    IF (mpi%irank.EQ.0) WRITE (6,1001) sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d
+    READ (1,901,ERR=200,END=200) sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2
+    IF (mpi%irank.EQ.0) WRITE (6,1001) sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2
 901 FORMAT (22x,i2,5x,i3,5x,i3,5x,i3,5x,i6,5x,i4)
-1001 FORMAT (6x,'parameter (sym%nop= ',i2,',stars%k1d=',i3,',stars%k2d=',i3,',stars%k3d=',&
-         &   i3,',stars%n3d=',i6,',stars%n2d=',i4,')')
+1001 FORMAT (6x,'parameter (sym%nop= ',i2,',stars%mx1=',i3,',stars%mx2=',i3,',stars%mx3=',&
+         &   i3,',stars%ng3=',i6,',stars%ng2=',i4,')')
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,910,ERR=200,END=200) stars%kq1d,stars%kq2d,stars%kq3d
-    IF (mpi%irank.EQ.0) WRITE (6,1010) stars%kq1d,stars%kq2d,stars%kq3d
+    READ (1,910,ERR=200,END=200) stars%kq1_fft,stars%kq2_fft,stars%kq3_fft
+    IF (mpi%irank.EQ.0) WRITE (6,1010) stars%kq1_fft,stars%kq2_fft,stars%kq3_fft
 910 FORMAT (22x,i3,6x,i3,6x,i3)
-1010 FORMAT (6x,'parameter (stars%kq1d=',i3,',stars%kq2d=',i3,',stars%kq3d=',i3,')')
+1010 FORMAT (6x,'parameter (stars%kq1_fft=',i3,',stars%kq2_fft=',i3,',stars%kq3_fft=',i3,')')
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,914,ERR=200,END=200) stars%kxc1d,stars%kxc2d,stars%kxc3d
-    IF (mpi%irank.EQ.0) WRITE (6,1014) stars%kxc1d,stars%kxc2d,stars%kxc3d
+    READ (1,914,ERR=200,END=200) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
+    IF (mpi%irank.EQ.0) WRITE (6,1014) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
 914 FORMAT (23x,i3,7x,i3,7x,i3)
-1014 FORMAT (6x,'parameter (stars%kxc1d=',i3,',stars%kxc2d=',i3,',stars%kxc3d=',i3,')')
+1014 FORMAT (6x,'parameter (stars%kxc1_fft=',i3,',stars%kxc2_fft=',i3,',stars%kxc3_fft=',i3,')')
 
     READ (1,*,ERR=200,END=200)     
     READ (1,902,ERR=200,END=200) atoms%ntype,atoms%nat,atoms%jmtd
@@ -149,7 +149,7 @@ CONTAINS
 917    FORMAT (20x,i3,4x,i3,7x,i3,5x,i3,5x,i3,5x,i3,5x,i6,4x,l1)
 1017   FORMAT (6x,'parameter (vM=',i3,',MM=',i3,',m_cyl=',i3,&
             &     ',chi=',i3,&
-            &     ',rot=',i3,',sym%nop=',i3,',stars%n2d=',i6,',d1=',l1,')')
+            &     ',rot=',i3,',sym%nop=',i3,',stars%ng2=',i6,',d1=',l1,')')
        !+odim
     END IF
     dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
@@ -207,13 +207,13 @@ CONTAINS
     ENDIF
     !     in case of a parallel calculation we have to broadcast
 #ifdef CPP_MPI
-    i_vec = (/sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d,stars%kq1d,stars%kq2d,stars%kq3d,stars%kxc1d,stars%kxc2d,stars%kxc3d&
+    i_vec = (/sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft&
          &     ,atoms%ntype,atoms%nat,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,dimension%jspd,vacuum%nvacd,dimension%nvd,dimension%nv2d&
          &     ,1,kpts%nkpt,dimension%nstd,dimension%neigd,dimension%msh,dimension%ncvd,vacuum%layerd,atoms%nlod,atoms%llod,input%itmax/)
     CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
-    sym%nop=i_vec(1);stars%k1d=i_vec(2);stars%k2d=i_vec(3);stars%k3d=i_vec(4);stars%n3d=i_vec(5)
-    stars%n2d = i_vec(6);stars%kq1d=i_vec(7);stars%kq2d=i_vec(8);stars%kq3d=i_vec(9)
-    stars%kxc1d = i_vec(10);stars%kxc2d = i_vec(11);stars%kxc3d = i_vec(12)
+    sym%nop=i_vec(1);stars%mx1=i_vec(2);stars%mx2=i_vec(3);stars%mx3=i_vec(4);stars%ng3=i_vec(5)
+    stars%ng2 = i_vec(6);stars%kq1_fft=i_vec(7);stars%kq2_fft=i_vec(8);stars%kq3_fft=i_vec(9)
+    stars%kxc1_fft = i_vec(10);stars%kxc2_fft = i_vec(11);stars%kxc3_fft = i_vec(12)
     atoms%ntype = i_vec(13);atoms%nat =i_vec(14);atoms%jmtd=i_vec(15);sphhar%ntypsd=i_vec(16)
     sphhar%nlhd = i_vec(17);sphhar%memd=i_vec(18);atoms%lmaxd=i_vec(19);dimension%jspd=i_vec(20)
     vacuum%nvacd=i_vec(21);dimension%nvd=i_vec(22);dimension%nv2d=i_vec(23)

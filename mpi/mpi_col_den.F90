@@ -35,7 +35,7 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_fmpl
     ! ..
     ! ..  Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: qpw(stars%n3d)
+    COMPLEX, INTENT (INOUT) :: qpw(stars%ng3)
     COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2) 
     REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
@@ -59,7 +59,7 @@ CONTAINS
     COMPLEX,INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX,INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u),cdomvz(vacuum%nmzd,2)
-    COMPLEX,INTENT(INOUT) :: cdom(stars%n3d),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
+    COMPLEX,INTENT(INOUT) :: cdom(stars%ng3),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype)
     TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
     TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
@@ -80,7 +80,7 @@ CONTAINS
     !
     ! -> Collect qpw()
     !
-    n = stars%n3d
+    n = stars%ng3
     ALLOCATE(c_b(n))
     CALL MPI_REDUCE(qpw,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
@@ -347,7 +347,7 @@ CONTAINS
     !
     IF ( noco%l_noco .AND. jspin.EQ.1 ) THEN
 
-       n = stars%n3d
+       n = stars%ng3
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(cdom,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN

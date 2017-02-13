@@ -49,7 +49,7 @@ CONTAINS
     ELSE
        l_pot=.FALSE.
     ENDIF
-    ALLOCATE (g(mmap),wght(vacuum%nmzd),ag3(stars%n3d),fg3(stars%n3d))
+    ALLOCATE (g(mmap),wght(vacuum%nmzd),ag3(stars%ng3),fg3(stars%ng3))
     g=0.0
     IF (sym%invs) THEN
        imap=stars%ng3

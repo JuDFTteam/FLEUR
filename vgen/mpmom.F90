@@ -30,7 +30,7 @@ CONTAINS
     !
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%n3d,dimension%jspd) 
+    COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%ng3,dimension%jspd) 
     COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     !-odim
     !+odim
@@ -179,7 +179,7 @@ CONTAINS
     DO k = mpi%irank+2, stars%ng3, mpi%isize
        IF (od) THEN
           CALL od_phasy(&
-               &           atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &           pylm)
        ELSE

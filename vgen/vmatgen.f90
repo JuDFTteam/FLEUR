@@ -69,9 +69,9 @@ CONTAINS
     REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:)
 
     zero = 0.0
-    ifft3 = 27*stars%k1d*stars%k2d*stars%k3d
-    ifft2 = 9*stars%k1d*stars%k2d
-    IF (oneD%odi%d1) ifft2 = 9*stars%k3d*oneD%odi%M
+    ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
+    ifft2 = 9*stars%mx1*stars%mx2
+    IF (oneD%odi%d1) ifft2 = 9*stars%mx3*oneD%odi%M
     IF (input%film) ALLOCATE(vvacxy(0:ifft2-1,vacuum%nmzxyd,2,4))
 
     IF (input%jspins .NE. 2) THEN
@@ -81,9 +81,9 @@ CONTAINS
        CALL juDFT_error("jspins not equal 2",calledby="vmatgen")
     ENDIF
 
-    ALLOCATE ( vpw(stars%n3d,3),vis(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),&
+    ALLOCATE ( vpw(stars%ng3,3),vis(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),&
          &           vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,3),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),&
-         &           vz(vacuum%nmzd,2,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1) )
+         &           vz(vacuum%nmzd,2,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
 
     !---> reload the spin up and down potential
     !      OPEN (nu,file='pottot',form='unformatted',status='old')

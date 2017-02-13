@@ -27,7 +27,7 @@
 !     ..
 !     .. Array Arguments ..
       REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins) 
-      COMPLEX, INTENT (IN) :: psq(stars%n3d) ! pseudo charge density (see psqpw.F)
+      COMPLEX, INTENT (IN) :: psq(stars%ng3) ! pseudo charge density (see psqpw.F)
       REAL,    INTENT (OUT):: vz(vacuum%nmzd,2,input%jspins)
 !     ..
 !     .. Local Scalar Parameters ..

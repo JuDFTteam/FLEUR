@@ -158,25 +158,25 @@
                &            oneD,hybrid,Jij)
 
 
-          DIMENSION%nn2d= (2*stars%k1d+1)* (2*stars%k2d+1)
-          DIMENSION%nn3d= (2*stars%k1d+1)* (2*stars%k2d+1)* (2*stars%k3d+1)
+          DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
+          DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
           !-odim
           IF (oneD%odd%d1) THEN
-             oneD%odd%k3 = stars%k3d
+             oneD%odd%k3 = stars%mx3
              oneD%odd%nn2d = (2*(oneD%odd%k3) + 1)*(2*(oneD%odd%M) + 1)
           ELSE
              oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
           ENDIF
           !-odim
           ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
-          ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%n3d) )
-          ALLOCATE ( stars%ig(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d),stars%ig2(stars%n3d),stars%igz(stars%n3d) )
-          ALLOCATE ( atoms%jri(atoms%ntype),stars%kv2(2,stars%n2d),stars%kv3(3,stars%n3d),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
+          ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%ng3) )
+          ALLOCATE ( stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3),stars%ig2(stars%ng3) )
+          ALLOCATE ( atoms%jri(atoms%ntype),stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
           ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
           ALLOCATE ( atoms%lmax(atoms%ntype),sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))!,sym%mrot(3,3,sym%nop) )
           ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
           ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
-          ALLOCATE ( stars%nstr2(stars%n2d),atoms%ntypsy(atoms%nat),stars%nstr(stars%n3d) )
+          ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
           ALLOCATE ( stars%igfft(0:DIMENSION%nn3d-1,2),stars%igfft2(0:DIMENSION%nn2d-1,2),atoms%nflip(atoms%ntype) )
           ALLOCATE ( atoms%ncst(atoms%ntype) )
           ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
@@ -185,16 +185,16 @@
           ALLOCATE ( atoms%invsat(atoms%nat),sym%invsatnr(atoms%nat) )
           ALLOCATE ( atoms%lnonsph(atoms%ntype) )
           ALLOCATE ( atoms%dx(atoms%ntype),atoms%pos(3,atoms%nat))!,sym%tau(3,sym%nop) )
-          ALLOCATE ( atoms%rmsh(atoms%jmtd,atoms%ntype),atoms%rmt(atoms%ntype),stars%sk2(stars%n2d),stars%sk3(stars%n3d) )
-          ALLOCATE ( stars%phi2(stars%n2d) )
+          ALLOCATE ( atoms%rmsh(atoms%jmtd,atoms%ntype),atoms%rmt(atoms%ntype),stars%sk2(stars%ng2),stars%sk3(stars%ng3) )
+          ALLOCATE ( stars%phi2(stars%ng2) )
           ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
           ALLOCATE ( enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-          ALLOCATE ( enpara%evac0(2,DIMENSION%jspd),stars%rgphs(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d)  )
+          ALLOCATE ( enpara%evac0(2,DIMENSION%jspd),stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
           ALLOCATE ( results%force(3,atoms%ntype,DIMENSION%jspd) )
           ALLOCATE ( results%force_old(3,atoms%ntype) )
           ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
           ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
-          ALLOCATE ( stars%ufft(0:27*stars%k1d*stars%k2d*stars%k3d-1) )
+          ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
           ALLOCATE ( atoms%bmu(atoms%ntype),atoms%vr0(atoms%ntype) )
           ALLOCATE ( enpara%lchange(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
           ALLOCATE ( enpara%lchg_v(2,DIMENSION%jspd),atoms%l_geo(atoms%ntype) )

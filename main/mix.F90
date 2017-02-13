@@ -93,13 +93,13 @@ CONTAINS
     ELSE
        vacfac = 2.0
     ENDIF
-    mmaph = intfac*stars%n3d + atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd&
+    mmaph = intfac*stars%ng3 + atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd&
                + vacfac*vacuum%nmzxyd*(oneD%odi%n2d-1)*vacuum%nvac + vacuum%nmzd*vacuum%nvac
     mmap  = mmaph*input%jspins
     !---> in a non-collinear calculations extra space is needed for the
     !---> off-diag. part of the density matrix. these coeff. are generally
     !---> complex independ of invs and invs2.
-    IF (noco%l_noco) mmap = mmap + 2*stars%n3d&
+    IF (noco%l_noco) mmap = mmap + 2*stars%ng3&
                            + 2*vacuum%nmzxyd*(oneD%odi%n2d-1)*vacuum%nvac + 2*vacuum%nmzd*vacuum%nvac
 
     INQUIRE (file='n_mmp_mat',exist=l_ldaU) 
@@ -135,11 +135,11 @@ CONTAINS
     !
     ALLOCATE (sm(mmap),fsm(mmap))
 
-    ALLOCATE (qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
+    ALLOCATE (qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
                    rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins) )
 
     IF (noco%l_noco) THEN
-       ALLOCATE (cdom(stars%n3d),cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+       ALLOCATE (cdom(stars%ng3),cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
        ALLOCATE (cdom(1),cdomvz(1,1),cdomvxy(1,1,1))

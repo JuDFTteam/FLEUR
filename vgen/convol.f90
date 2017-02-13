@@ -14,7 +14,7 @@
 !*                            gfft(r,1)=gfft(r,1) * U (r)   *
 !*       fg3(star) <- FFT --- gfft(r,1)                     *
 !*                                                          *
-!* dimension of gfft is (3*stars%k1d x 3*stars%k2d x 3*stars%k3d)             *
+!* dimension of gfft is (3*stars%mx1 x 3*stars%mx2 x 3*stars%mx3)             *
 !*                                                          *
 !************************************************************
       USE m_types
@@ -22,13 +22,13 @@
       IMPLICIT NONE
 
       TYPE(t_stars),INTENT(IN) :: stars
-      COMPLEX, INTENT (IN)     :: ag3(stars%n3d)
-      COMPLEX, INTENT (OUT)    :: fg3(stars%n3d)
+      COMPLEX, INTENT (IN)     :: ag3(stars%ng3)
+      COMPLEX, INTENT (OUT)    :: fg3(stars%ng3)
 
       INTEGER i,ifftd
       REAL, ALLOCATABLE :: gfft(:,:)
 
-      ifftd=27*stars%k1d*stars%k2d*stars%k3d
+      ifftd=27*stars%mx1*stars%mx2*stars%mx3
 
       ALLOCATE (gfft(0:ifftd-1,2))
 

@@ -78,7 +78,7 @@
       CHARACTER(LEN=20)   :: attributes(4)
 !---> pk non-collinear
       REAL    rhoint,momint,alphdiff(atoms%ntype)
-      INTEGER igq2_fft(0:stars%kq1d*stars%kq2d-1)
+      INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
       COMPLEX,ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:),qa21(:)
 !---> pk non-collinear
 
@@ -91,13 +91,13 @@
 !
 ! Read Potential and keep only vr(:,0,:,:) and vz
 !
-      ALLOCATE(vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
+      ALLOCATE(vpw(stars%ng3,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
      &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd))
 
       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
                          iter,vr,vpw,vz,vzxy)
       DEALLOCATE ( vpw,vzxy )
-      ALLOCATE ( qpw(stars%n3d,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
+      ALLOCATE ( qpw(stars%ng3,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
       ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
 !
 ! Read in input density
@@ -115,9 +115,9 @@
          INQUIRE(file='enpara',exist=l_enpara)
          IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
       ENDIF
-      ALLOCATE ( cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
+      ALLOCATE ( cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
       ALLOCATE ( qa21(atoms%ntype) )
-      ALLOCATE ( igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1) )
+      ALLOCATE ( igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1) )
 !
 !
 !--->    initialize density arrays with zero

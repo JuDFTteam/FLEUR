@@ -119,22 +119,22 @@ CONTAINS
     !     ivac=1: upper (positive z) vacuum
     !     units: hartrees
     !
-    ALLOCATE ( alphm(stars%n2d,2),excpw(stars%n3d),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         vbar(dimension%jspd),af1(3*stars%k3d),bf1(3*stars%k3d),xp(3,dimension%nspd),&
+    ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
+         vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),xp(3,dimension%nspd),&
          rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd),&
-         qpw(stars%n3d,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
+         qpw(stars%ng3,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
          vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),vz(vacuum%nmzd,2,dimension%jspd),&
-         vpw(stars%n3d,dimension%jspd),vpw_exx(stars%n3d,dimension%jspd),vpw_wexx(stars%n3d,dimension%jspd),&
+         vpw(stars%ng3,dimension%jspd),vpw_exx(stars%ng3,dimension%jspd),vpw_wexx(stars%ng3,dimension%jspd),&
          vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
          excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
-         vpw_w(stars%n3d,dimension%jspd),psq(stars%n3d) )
+         vpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
 
-    ALLOCATE( vxpw(stars%n3d,dimension%jspd),vxpw_w(stars%n3d,dimension%jspd) )
+    ALLOCATE( vxpw(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd) )
     ALLOCATE( vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
     vxr  = 0
 
     IF (noco%l_noco) THEN
-       ALLOCATE ( cdom(stars%n3d), cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
+       ALLOCATE ( cdom(stars%ng3), cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
        ALLOCATE ( cdom(1),cdomvz(1,1),cdomvxy(1,1,1) )
@@ -240,7 +240,7 @@ CONTAINS
 8010   FORMAT (/,5x,'coulomb potential in the interstitial region:')
        IF (input%film .AND. .NOT.oneD%odi%d1) THEN
           !           -----> create v(z) for each 2-d reciprocal vector
-          ivfft =  3*stars%k3d 
+          ivfft =  3*stars%mx3 
           !         ivfft = 2*mx3 - 1
           ani = 1.0/REAL(ivfft)
           DO  irec2 = 1,stars%ng2
@@ -452,8 +452,8 @@ CONTAINS
 
           CALL timestart("Vxc in vacuum")
 
-          ifftd2 = 9*stars%k1d*stars%k2d
-          IF (oneD%odi%d1) ifftd2 = 9*stars%k3d*oneD%odi%M
+          ifftd2 = 9*stars%mx1*stars%mx2
+          IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
 
           IF ((xcpot%igrd == 0).AND.(xcpot%icorr /= -1)) THEN  ! LDA
 
@@ -498,12 +498,12 @@ CONTAINS
        !     ---> interstitial region
        CALL timestart("Vxc in interstitial")
 
-       ifftd=27*stars%k1d*stars%k2d*stars%k3d
+       ifftd=27*stars%mx1*stars%mx2*stars%mx3
 
        IF ( (.NOT. obsolete%lwb) .OR. ( (xcpot%igrd == 0) .AND. (xcpot%icorr /= -1) ) ) THEN
           ! no White-Bird-trick
 
-          ifftxc3d = stars%kxc1d*stars%kxc2d*stars%kxc3d
+          ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
 
           IF ( (xcpot%igrd == 0) .AND. (xcpot%icorr /= -1) ) THEN
              ! LDA
@@ -670,7 +670,7 @@ CONTAINS
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2
           !     Veff = Vcoulomb + Vxc
           !
-          ALLOCATE( veffpw_w(stars%n3d,dimension%jspd) )
+          ALLOCATE( veffpw_w(stars%ng3,dimension%jspd) )
           ALLOCATE( veffr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
           IF( xcpot%icorr .EQ. icorr_pbe0 ) THEN
              veffpw_w = vpw_w - amix_pbe0 * vxpw_w

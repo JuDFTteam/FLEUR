@@ -931,7 +931,7 @@ CONTAINS
                                m3 = m-m1
                                IF (m3.EQ.0 .AND. i3.EQ.0) CYCLE mprimee
                                IF (iabs(m3).GT.oneD%odi%M) CYCLE mprimee
-                               IF (iabs(i3).GT.stars%k3d) CYCLE lprimee
+                               IF (iabs(i3).GT.stars%mx3) CYCLE lprimee
                                ind1 = oneD%odi%ig(i3,m3)
                                ind1p = oneD%odi%ig(-i3,-m3)
                                IF (ind1.NE.0 .OR. ind1p.NE.0) THEN
@@ -1011,7 +1011,7 @@ CONTAINS
                             i3 = kvac3(l,1) - kvac3(l1,2)
                             m3 = m-m1
                             IF (iabs(m3).GT.oneD%odi%M) CYCLE mprimea
-                            IF (iabs(i3).GT.stars%k3d) CYCLE lprimea
+                            IF (iabs(i3).GT.stars%mx3) CYCLE lprimea
                             ind1 = oneD%odi%ig(i3,m3)
                             IF (ind1.NE.0) THEN
                                IF (m3.EQ.0 .AND. i3.EQ.0) THEN
@@ -1124,7 +1124,7 @@ CONTAINS
                             m3 = m-m1
                             IF (m3.EQ.0 .AND. i3.EQ.0) CYCLE mprime
                             IF (iabs(m3).GT.oneD%odi%M) CYCLE mprime
-                            IF (iabs(i3).GT.stars%k3d) CYCLE lprime
+                            IF (iabs(i3).GT.stars%mx3) CYCLE lprime
                             ind1 = oneD%odi%ig(i3,m3)
                             ind1p = oneD%odi%ig(-i3,-m3)
                             IF (ind1.NE.0 .OR. ind1p.NE.0) THEN

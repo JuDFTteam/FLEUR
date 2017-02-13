@@ -39,7 +39,7 @@
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: p(3,DIMENSION%nspd)  
           REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),fz(vacuum%nmzd,2,DIMENSION%jspd)
-          COMPLEX, INTENT (IN) :: fpw(stars%n3d,DIMENSION%jspd),fxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
+          COMPLEX, INTENT (IN) :: fpw(stars%ng3,DIMENSION%jspd),fxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
           !     ..
           !     .. Local Scalars ..
           REAL av,dms,rms,s,ir2,help,phi
@@ -47,7 +47,7 @@
           COMPLEX ic
           !     ..
           !     .. Local Arrays ..
-          COMPLEX sf2(stars%n2d),sf3(stars%n3d),ylm( (atoms%lmaxd+1)**2 )
+          COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
           REAL rcc(3),v1(DIMENSION%nspd),v2(DIMENSION%nspd),x(3),ri(3)
           !     ..
           !     ..

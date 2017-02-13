@@ -59,7 +59,7 @@ MODULE m_cdn_io
 
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT) :: fpw(stars%n3d,input%jspins), fzxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
+      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
       COMPLEX, INTENT (OUT) :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
@@ -180,7 +180,7 @@ MODULE m_cdn_io
       INTEGER, INTENT (IN)      :: archiveType
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: fpw(stars%n3d,input%jspins), fzxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
+      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
       COMPLEX, INTENT (IN) :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
       REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
@@ -229,10 +229,8 @@ MODULE m_cdn_io
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),FORM='unformatted',STATUS='unknown')
 
          IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(iter.GE.1)) THEN
-            starsTemp%n3d = stars%n3d
             inputTemp%jspins = input%jspins
             vacuumTemp%nmzxyd = vacuum%nmzxyd
-            starsTemp%n2d = stars%n2d
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
             vacuumTemp%nmzd = vacuum%nmzd
@@ -257,8 +255,8 @@ MODULE m_cdn_io
             vacuumTemp%nvac = vacuum%nvac
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
-            ALLOCATE (fpwTemp(stars%n3d,input%jspins))
-            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%n2d-1,2,input%jspins))
+            ALLOCATE (fpwTemp(stars%ng3,input%jspins))
+            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
             ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
             ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
@@ -295,10 +293,8 @@ MODULE m_cdn_io
 
             ! Generate data in temp arrays and variables to be able to perform loddop call.
             ! loddop is called to move the file position to the output density position.
-            starsTemp%n3d = stars%n3d
             inputTemp%jspins = input%jspins
             vacuumTemp%nmzxyd = vacuum%nmzxyd
-            starsTemp%n2d = stars%n2d
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
             vacuumTemp%nmzd = vacuum%nmzd
@@ -317,8 +313,8 @@ MODULE m_cdn_io
             vacuumTemp%nvac = vacuum%nvac
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
-            ALLOCATE (fpwTemp(stars%n3d,input%jspins))
-            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%n2d-1,2,input%jspins))
+            ALLOCATE (fpwTemp(stars%ng3,input%jspins))
+            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
             ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
             ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 

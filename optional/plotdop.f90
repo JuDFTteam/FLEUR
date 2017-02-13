@@ -55,7 +55,7 @@
       LOGICAL       :: twodim,oldform,newform
 !     ..
 !     .. Local Arrays ..
-      COMPLEX :: qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
+      COMPLEX :: qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
       REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
       REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
       INTEGER :: grid(3)
@@ -326,7 +326,7 @@
       LOGICAL twodim
 !     ..
 !     .. Local Arrays ..
-      COMPLEX qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
+      COMPLEX qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
       REAL rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
       REAL ptp(3),rngl(3),rngm(3),rngu(3),tl(3),tm(3)
       REAL tu(3),vx1(3),vx2(3),tl_r(3),tm_r(3),tu_r(3),rhocc(atoms%jmtd,atoms%ntype,dimension%jspd)

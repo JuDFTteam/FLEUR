@@ -46,7 +46,7 @@ CONTAINS
 
 
     l_core=.FALSE. !try to subtract core charge?
-    ALLOCATE(n_grid(27*stars%k1d*stars%k2d*stars%k3d),v_grid(27*stars%k1d*stars%k2d*stars%k3d))
+    ALLOCATE(n_grid(27*stars%mx1*stars%mx2*stars%mx3),v_grid(27*stars%mx1*stars%mx2*stars%mx3))
     ALLOCATE(vpw(SIZE(qpw)))
     ALLOCATE(psq(SIZE(qpw)),rhc(atoms%jmtd,atoms%ntype,dimension%jspd))
 
@@ -151,9 +151,9 @@ CONTAINS
     b2=cell%bmat(:,2)
     b3=cell%bmat(:,3)
 
-    nx=3*stars%k1d
-    ny=3*stars%k2d
-    nz=3*stars%k3d
+    nx=3*stars%mx1
+    ny=3*stars%mx2
+    nz=3*stars%mx3
     n_grid=nx*ny*nz
     IF (SIZE(n_pseudo).NE.n_grid) CALL juDFT_error("BUG2 in fleur_to_vdW")
     g_cut=9*stars%gmax**2  !????
