@@ -51,8 +51,8 @@ CONTAINS
     COMPLEX,INTENT(IN):: vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins)
 
     LOGICAL, INTENT(IN)     :: l_real
-    REAL,    OPTIONAL,INTENT (INOUT) :: aa_r(:)!(matsize)
-    COMPLEX, OPTIONAL,INTENT (INOUT) :: aa_c(:)!(matsize)
+    REAL,    OPTIONAL,INTENT (INOUT),ALLOCATABLE :: aa_r(:)!(matsize)
+    COMPLEX, OPTIONAL,INTENT (INOUT),ALLOCATABLE :: aa_c(:)!(matsize)
 
     !     ..
     !     .. Local Scalars ..

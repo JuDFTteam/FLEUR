@@ -179,7 +179,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,110) input%rkmax,stars%gmax,xcpot%gmaxxc,input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" spinf="2.00"/>
-   120 FORMAT('      <scfLoop itmax="',i0,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" spinf="',f0.8,'"/>')
+   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" spinf="',f0.8,'"/>')
    SELECT CASE (input%imix)
       CASE (1) 
          mixingScheme='straight'
@@ -192,7 +192,7 @@ SUBROUTINE w_inpXML(&
       CASE DEFAULT 
          mixingScheme='errorUnknownMixing'
    END SELECT
-   WRITE (fileNum,120) input%itmax,input%maxiter,TRIM(mixingScheme),input%alpha,input%spinf
+   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%spinf
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')

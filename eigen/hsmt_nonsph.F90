@@ -42,8 +42,8 @@ CONTAINS
     !-odim
     !+odim
     LOGICAL, INTENT(IN)     :: l_real
-    REAL,    INTENT (INOUT) :: aa_r(:)!(matsize)
-    COMPLEX, INTENT (INOUT) :: aa_c(:)
+    REAL,   ALLOCATABLE, INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX,ALLOCATABLE, INTENT (INOUT) :: aa_c(:)
     COMPLEX,PARAMETER :: one=CMPLX(1.0,0.0),zero=CMPLX(0.0,0.0)
 
     !     ..
