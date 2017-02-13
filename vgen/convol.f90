@@ -28,7 +28,7 @@
 
       COMPLEX, INTENT (IN)     :: ag3(stars%ng3)
       COMPLEX, INTENT (OUT)    :: fg3(stars%ng3)
-      REAL,    INTENT (IN)     :: ufft(0:27*stars%k1d*stars%k2d*stars%k3d-1)
+      REAL,    INTENT (IN)     :: ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1)
 
       INTEGER i,ifftd
       REAL, ALLOCATABLE :: gfft(:,:)
