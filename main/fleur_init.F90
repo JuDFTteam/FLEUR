@@ -100,6 +100,7 @@
           ENDIF
 
           input%l_inpXML = .FALSE.
+          input%minDistance = 0.0
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
