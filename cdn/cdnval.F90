@@ -111,13 +111,13 @@ CONTAINS
     INTEGER, INTENT (IN) :: eig_id,jspin
 
     !     .. Array Arguments ..
-    COMPLEX, INTENT(INOUT) :: qpw(stars%n3d,dimension%jspd)
+    COMPLEX, INTENT(INOUT) :: qpw(stars%ng3,dimension%jspd)
     COMPLEX, INTENT(INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
-    COMPLEX, INTENT(INOUT) :: cdom(stars%n3d)
+    COMPLEX, INTENT(INOUT) :: cdom(stars%ng3)
     COMPLEX, INTENT(INOUT) :: cdomvz(vacuum%nmzd,2)
     COMPLEX, INTENT(INOUT) :: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
-    INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1)
+    INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL, INTENT    (IN) :: vz(vacuum%nmzd,2)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)

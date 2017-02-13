@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: cell
 
 
-    COMPLEX, INTENT (IN) :: psq(stars%n3d)
+    COMPLEX, INTENT (IN) :: psq(stars%ng3)
     REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
     REAL,    INTENT (OUT) :: vz(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
 
@@ -53,8 +53,8 @@ CONTAINS
 
     rhobar = -psq(1)
 
-    DO  k1 = -stars%k1d,stars%k1d
-       DO  k2 = -stars%k2d,stars%k2d
+    DO  k1 = -stars%mx1,stars%mx1
+       DO  k2 = -stars%mx2,stars%mx2
           irec3 = stars%ig(k1,k2,0)
           IF (irec3.NE.0) THEN
              irec2 = stars%ig2(irec3)

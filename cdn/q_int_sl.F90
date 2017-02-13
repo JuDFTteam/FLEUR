@@ -47,7 +47,7 @@ CONTAINS
     !    
     !     ----> g=0 star
     !
-    ALLOCATE ( stfunint(stars%n3d,nsl), z_z(stars%n3d) ) 
+    ALLOCATE ( stfunint(stars%ng3,nsl), z_z(stars%ng3) ) 
     !
     !  -----> calculate the integrals of star functions over
     !                     the layer interstitial

@@ -35,13 +35,13 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
+    COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
     COMPLEX, INTENT (INOUT) :: cdomvz(vacuum%nmzd,2) 
-    COMPLEX, INTENT (INOUT) :: cdomvxy(vacuum%nmzxyd,stars%n2d-1,2) 
+    COMPLEX, INTENT (INOUT) :: cdomvxy(vacuum%nmzxyd,stars%ng2-1,2) 
     REAL,    INTENT (OUT) :: excz(vacuum%nmzd,2)
-    COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxyd,stars%n2d-1,2)
+    COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxyd,stars%ng2-1,2)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins) 
+    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins) 
     !     ..
     !     .. Local Scalars ..
     INTEGER :: k,js,nt,irec2,nmzdiff,ivac,ip,i 
@@ -49,7 +49,7 @@ CONTAINS
     REAL    :: chdens,magmom 
     !     ..
     !     .. Local Arrays ..
-    COMPLEX :: fgxy(stars%n2d-1)
+    COMPLEX :: fgxy(stars%ng2-1)
     REAL    :: af2(0:ifftd2-1,input%jspins),bf2(0:ifftd2-1),fgz
     REAL,ALLOCATABLE :: mx(:),my(:) 
     !     warping region
@@ -92,7 +92,7 @@ CONTAINS
                   &               REAL(cdomvz(ip,ivac)),AIMAG(cdomvz(ip,ivac)),&
                   &               cdomvxy(ip,1,ivac),&
                   &               vacuum%nmzxyd,1)
-             DO i=0,9*stars%k1d*stars%k2d-1 
+             DO i=0,9*stars%mx1*stars%mx2-1 
                 chdens= (af2(i,1)+af2(i,2))/2.  
                 magmom= mx(i)**2 + my(i)**2 +&
                      &                ((af2(i,1)-af2(i,2))/2.)**2 

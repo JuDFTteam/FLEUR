@@ -91,8 +91,8 @@ CONTAINS
           !
           !     Write info on 2D-starfunctions
 
-          WRITE (87,'(i2,1x,i2,1x,i2)') stars%mx1,stars%mx2, stars%n2d
-          DO i=1, stars%n2d
+          WRITE (87,'(i2,1x,i2,1x,i2)') stars%mx1,stars%mx2, stars%ng2
+          DO i=1, stars%ng2
              WRITE (87,'(i2)') stars%nstr2(i)
           END DO
           DO i=-stars%mx1, stars%mx1

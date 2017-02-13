@@ -27,9 +27,9 @@ CONTAINS
     !     ..
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN)    :: rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
-    COMPLEX, INTENT (OUT)   :: alphm(stars%n2d,2)
+    COMPLEX, INTENT (IN)    :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+    COMPLEX, INTENT (OUT)   :: alphm(stars%ng2,2)
     !     ..
     !     .. Local Scalars ..
     COMPLEX alph0 ,alph2,alph1,alphaz,betaz,test

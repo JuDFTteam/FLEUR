@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)    :: oneD
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: vpw(:,:)!(stars%n3d,input%jspins)
+    COMPLEX, INTENT (IN) :: vpw(:,:)!(stars%ng3,input%jspins)
     REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !-odim
@@ -90,7 +90,7 @@ CONTAINS
        ELSE
           !-odim
 CALL od_phasy(&
-               &           atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &           pylm)
           !+odim

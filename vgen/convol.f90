@@ -25,14 +25,15 @@
       IMPLICIT NONE
 
       TYPE(t_stars),INTENT(IN) :: stars
-      COMPLEX, INTENT (IN)     :: ag3(stars%n3d)
-      COMPLEX, INTENT (OUT)    :: fg3(stars%n3d)
+
+      COMPLEX, INTENT (IN)     :: ag3(stars%ng3)
+      COMPLEX, INTENT (OUT)    :: fg3(stars%ng3)
       REAL,    INTENT (IN)     :: ufft(0:27*stars%k1d*stars%k2d*stars%k3d-1)
 
       INTEGER i,ifftd
       REAL, ALLOCATABLE :: gfft(:,:)
 
-      ifftd=27*stars%k1d*stars%k2d*stars%k3d
+      ifftd=27*stars%mx1*stars%mx2*stars%mx3
 
       ALLOCATE (gfft(0:ifftd-1,2))
 

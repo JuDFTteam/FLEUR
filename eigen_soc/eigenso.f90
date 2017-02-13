@@ -86,7 +86,7 @@ CONTAINS
     ! load potential from file pottot (=unit 8)
     !
     ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),&
-         vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%n3d,DIMENSION%jspd) )
+         vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%ng3,DIMENSION%jspd) )
 
     OPEN (8,file='pottot',form='unformatted',status='old')
     CALL loddop(&
@@ -264,7 +264,9 @@ CONTAINS
                eig=eig_so(:nsz))
 
        ELSE
+          zmat%nbasfcn=size(eig_so,1)
           allocate(zmat%z_c(zmat%nbasfcn,nsz))
+          zmat%l_real=.false.
           zmat%nbands=nsz        
           DO jspin = 1,wannierspin
              CALL timestart("eigenso: write_eig")  

@@ -109,7 +109,7 @@
           LOGICAL,INTENT (IN) :: l_st
           !     ..
           !     .. Array Arguments ..
-          COMPLEX,INTENT (INOUT) :: qpw(stars%n3d,DIMENSION%jspd)
+          COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,DIMENSION%jspd)
           COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
           REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
           REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
@@ -163,7 +163,7 @@
           !
           ci = CMPLX(0.0,1.0)
 
-          ALLOCATE (qpwc(stars%n3d))
+          ALLOCATE (qpwc(stars%ng3))
           !
           !----> prepare local array to store pw-expansion of pseudo core charge
           !
@@ -500,18 +500,18 @@
       type(t_cell)     ,intent(in) :: cell
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
-      complex         ,intent(out) :: qpwc(stars%n3d)
+      complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
       integer nat1, n, n_out_p, k
       complex czero
 
 !     ..Local arrays
-      real :: qf(stars%n3d)
-      complex qpwc_at(stars%n3d)
+      real :: qf(stars%ng3)
+      complex qpwc_at(stars%ng3)
 #ifdef CPP_MPI
       external mpi_bcast
-      complex :: qpwc_loc(stars%n3d)
+      complex :: qpwc_loc(stars%ng3)
       integer :: ierr
 #include "cpp_double.h"
       include "mpif.h"
@@ -519,11 +519,11 @@
 
       czero = (0.0,0.0)
 #ifdef CPP_MPI
-      DO k = 1 , stars%n3d
+      DO k = 1 , stars%ng3
          qpwc_loc(k) = czero
       ENDDO
 #endif
-      DO k = 1 , stars%n3d    
+      DO k = 1 , stars%ng3    
           qpwc(k) = czero
       ENDDO
 
@@ -554,11 +554,11 @@
                                  atoms%neq(n),atoms%nat,atoms%taual,&
                                  cell,qf,qpwc_at)
 #ifdef CPP_MPI
-              DO k = 1, stars%n3d
+              DO k = 1, stars%ng3
                  qpwc_loc(k) = qpwc_loc(k)  + qpwc_at(k)
               END DO
 #else
-              DO k = 1 , stars%n3d    
+              DO k = 1 , stars%ng3    
                  qpwc(k) = qpwc(k) + qpwc_at(k)
               END DO
 #endif
@@ -566,7 +566,7 @@
           END IF
        ENDDO
 #ifdef CPP_MPI
-       CALL mpi_allreduce(qpwc_loc,qpwc,stars%n3d,CPP_MPI_COMPLEX,mpi_sum, &
+       CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,CPP_MPI_COMPLEX,mpi_sum, &
                mpi%mpi_comm,ierr)
 #endif
 
@@ -590,8 +590,8 @@
        integer          ,intent(in) :: neq,natd
        real             ,intent(in) :: taual(3,natd)
        type(t_cell)     ,intent(in) :: cell
-       real             ,intent(in) :: qf(stars%n3d)
-       complex         ,intent(out) :: qpwc_at(stars%n3d)
+       real             ,intent(in) :: qf(stars%ng3)
+       complex         ,intent(out) :: qpwc_at(stars%ng3)
 
 !      ..Local variables
       integer k, nat2, nat, j
@@ -605,7 +605,7 @@
        complex phaso(oneD%ods%nop)
 
       czero = (0.0,0.0)
-      DO k = 1 , stars%n3d    
+      DO k = 1 , stars%ng3    
           qpwc_at(k) = czero
       ENDDO
 
@@ -688,7 +688,7 @@
       type(t_stars)    ,intent(in) :: stars
       type(t_cell)     ,intent(in) :: cell
       real             ,intent(in) :: acoff
-      real            ,intent(out) :: qf(stars%n3d)
+      real            ,intent(out) :: qf(stars%ng3)
 
 
 !     ..Local variables
@@ -700,7 +700,7 @@
       real rhohelp(DIMENSION%msh)
 
       zero = 0.0
-      DO k = 1,stars%n3d
+      DO k = 1,stars%ng3
         qf(k) = 0.0
       END DO
 

@@ -29,13 +29,13 @@ CONTAINS
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
-    COMPLEX rhpw(stars%n3d,2,2),rhv1(vacuum%nmzxyd,stars%n2d-1,2,2,2)
+    COMPLEX rhpw(stars%ng3,2,2),rhv1(vacuum%nmzxyd,stars%ng2-1,2,2,2)
     REAL rhsp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,2,2),rhv0(vacuum%nmzd,2,2,2)
     REAL dis(2),disz(vacuum%nmzd),rh(atoms%jmtd)
-    REAL af3((2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1),input%jspins),&
-         bf3((2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1),input%jspins), &
-         bf2((2*stars%k1d+1)*(2*stars%k2d+1),input%jspins),&
-         af2((2*stars%k1d+1)*(2*stars%k2d+1),input%jspins)
+    REAL af3((2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1),input%jspins),&
+         bf3((2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1),input%jspins), &
+         bf2((2*stars%mx1+1)*(2*stars%mx2+1),input%jspins),&
+         af2((2*stars%mx1+1)*(2*stars%mx2+1),input%jspins)
     REAL pdis(0:4,0:atoms%ntype,2)
     !     ..
     !
@@ -45,8 +45,8 @@ CONTAINS
 
     tail = .TRUE.
     npz = vacuum%nmz + 1
-    nt = stars%nk1*stars%nk2*stars%nk3
-    nk12 = stars%nk1*stars%nk2
+    nt = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
+    nk12 = (2*stars%mx1+1)*(2*stars%mx2+1)
     fact = cell%omtil/REAL(nt)
     facv = 1.0
     !     ---> reload potentials
@@ -96,15 +96,15 @@ CONTAINS
        !     ----> interstitial part
        !         ---> create density in the real space
        i = 0
-       DO  i3 = 0,stars%nk3 - 1
+       DO  i3 = 0,2*stars%mx3
           k3 = i3
-          IF (k3.GT.stars%mx3) k3 = k3 - stars%nk3
-          DO  i2 = 0,stars%nk2 - 1
+          IF (k3.GT.stars%mx3) k3 = k3 - 2*stars%mx3-1
+          DO  i2 = 0,2*stars%mx2
              k2 = i2
-             IF (k2.GT.stars%mx2) k2 = k2 - stars%nk2
-             DO  i1 = 0,stars%nk1 - 1
+             IF (k2.GT.stars%mx2) k2 = k2 - 2*stars%mx2-1
+             DO  i1 = 0,2*stars%mx1
                 k1 = i1
-                IF (k1.GT.stars%mx1) k1 = k1 - stars%nk1
+                IF (k1.GT.stars%mx1) k1 = k1 - 2*stars%mx3-1
                 i = i + 1
                 id3 = stars%ig(k1,k2,k3)
                 phase = stars%rgphs(k1,k2,k3)
@@ -121,14 +121,14 @@ CONTAINS
           ENDDO
        ENDDO
 
-       CALL cfft(af3(1,1),bf3(1,1),nt,stars%nk1,stars%nk1,1)
-       CALL cfft(af3(1,1),bf3(1,1),nt,stars%nk2,nk12,1)
-       CALL cfft(af3(1,1),bf3(1,1),nt,stars%nk3,nt,1)
+       CALL cfft(af3(1,1),bf3(1,1),nt,stars%mx1*2+1,stars%mx1*2+1,1)
+       CALL cfft(af3(1,1),bf3(1,1),nt,stars%mx2*2+1,nk12,1)
+       CALL cfft(af3(1,1),bf3(1,1),nt,stars%mx3*2+1,nt,1)
        !         ---> form the dot product
        i = 0
-       DO  i3 = 0,stars%nk3 - 1
-          DO  i2 = 0,stars%nk2 - 1
-             DO  i1 = 0,stars%nk1 - 1
+       DO  i3 = 0,stars%mx3*2
+          DO  i2 = 0,stars%mx2*2
+             DO  i1 = 0,stars%mx3*2
                 i = i + 1
                 af3(i,1) = af3(i,1)*af3(i,1)
                 bf3(i,1) = 0.
@@ -136,20 +136,20 @@ CONTAINS
           ENDDO
        ENDDO
        !         ---> back fft
-       CALL cfft(af3(1,1),bf3(1,1),nt,stars%nk1,stars%nk1,-1)
-       CALL cfft(af3(1,1),bf3(1,1),nt,stars%nk2,nk12,-1)
-       CALL cfft(af3(1,1),bf3(1,1),nt,stars%nk3,nt,-1)
+       CALL cfft(af3(1,1),bf3(1,1),nt,stars%mx1*2+1,stars%mx1*2+1,-1)
+       CALL cfft(af3(1,1),bf3(1,1),nt,stars%mx2*2+1,nk12,-1)
+       CALL cfft(af3(1,1),bf3(1,1),nt,stars%mx3*2+1,nt,-1)
        sumis = 0.
        i = 0
-       DO  i3 = 0,stars%nk3 - 1
+       DO  i3 = 0,stars%mx3*2
           k3 = i3
-          IF (k3.GT.stars%mx3) k3 = k3 - stars%nk3
-          DO  i2 = 0,stars%nk2 - 1
+          IF (k3.GT.stars%mx3) k3 = k3 - stars%mx3*2-1
+          DO  i2 = 0,stars%mx2*2
              k2 = i2
-             IF (k2.GT.stars%mx2) k2 = k2 - stars%nk2
-             DO  i1 = 0,stars%nk1 - 1
+             IF (k2.GT.stars%mx2) k2 = k2 - stars%mx2*2-1
+             DO  i1 = 0,stars%mx1*2
                 k1 = i1
-                IF (k1.GT.stars%mx1) k1 = k1 - stars%nk1
+                IF (k1.GT.stars%mx1) k1 = k1 - stars%mx1*2-1
                 i = i + 1
                 phase = stars%rgphs(k1,k2,k3)
                 id3 = stars%ig(k1,k2,k3)
@@ -167,12 +167,12 @@ CONTAINS
              DO  ip = 1,vacuum%nmzxy
                 !         ---> create density in the real space
                 i = 0
-                DO  i2 = 0,stars%nk2 - 1
+                DO  i2 = 0,stars%mx2*2
                    k2 = i2
-                   IF (k2.GT.stars%mx2) k2 = k2 - stars%nk2
-                   DO  i1 = 0,stars%nk1 - 1
+                   IF (k2.GT.stars%mx2) k2 = k2 - stars%mx2*2-1
+                   DO  i1 = 0,stars%mx1*2
                       k1 = i1
-                      IF (k1.GT.stars%mx1) k1 = k1 - stars%nk1
+                      IF (k1.GT.stars%mx1) k1 = k1 - stars%mx1*2-1
                       i = i + 1
                       id3 = stars%ig(k1,k2,0)
                       IF (id3.EQ.0) THEN
@@ -191,20 +191,20 @@ CONTAINS
                       END IF
                    ENDDO
                 ENDDO
-                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%nk1,stars%nk1,1)
-                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%nk2,nk12,1)
+                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%mx1*2+1,stars%mx1*2+1,1)
+                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%mx2*2+1,nk12,1)
                 !         ---> form dot product
                 i = 0
-                DO  i2 = 0,stars%nk2 - 1
-                   DO  i1 = 0,stars%nk1 - 1
+                DO  i2 = 0,stars%mx2*2
+                   DO  i1 = 0,stars%mx1*2
                       i = i + 1
                       af2(i,1) = af2(i,1)*af2(i,1)
                       bf2(i,1) = 0.
                    ENDDO
                 ENDDO
                 !         ---> back fft
-                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%nk1,stars%nk1,-1)
-                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%nk2,nk12,-1)
+                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%mx1*2+1,stars%mx1*2+1,-1)
+                CALL cfft(af2(1,1),bf2(1,1),nk12,stars%mx2*2+1,nk12,-1)
                 disz(npz-ip) = cell%area*af2(1,1)/REAL(nk12)
              ENDDO
              !         ---> beyond warping region

@@ -48,7 +48,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: n_size,n_rank,jspin
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: vpw(stars%n3d)
+    COMPLEX, INTENT (INOUT) :: vpw(stars%ng3)
     REAL,    INTENT (IN)    :: bkpt(3) 
     LOGICAL,INTENT(IN)      :: l_real
     !     ..
@@ -81,7 +81,7 @@ CONTAINS
 
        !--- J const
        IF( jij%l_J) THEN
-          ALLOCATE ( vpw1(stars%n3d) )
+          ALLOCATE ( vpw1(stars%ng3) )
           READ (25) (vpw1(ig3),ig3=1,stars%ng3)
        ENDIF
        !--- J const

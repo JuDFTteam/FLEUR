@@ -306,63 +306,38 @@
 
       !The stars
       TYPE t_stars
-        !dimensions should be deleted later
-        integer :: n3d
-        integer :: n2d
-        integer :: k1d
-        integer :: k2d
-        integer :: k3d
-        integer :: kq1d
-        integer :: kq2d
-        integer :: kq3d
-        integer :: kxc1d
-        integer :: kxc2d
-        integer :: kxc3d
-
-        INTEGER :: nk1
-        INTEGER :: nk2
-        INTEGER :: nk3
-
         !max-length of star
         REAL :: gmax
         REAL :: gmaxInit
         !no of 3d-stars
-        !INTEGER :: nq3
         INTEGER :: ng3
         !no of 2d-stars
-        !INTEGER ::nq2
         INTEGER :: ng2
-        !No of elements in FFT
-        INTEGER ::kimax
-        !No of elements in 2D-FFT
-        INTEGER ::kimax2
         !dim of box
         INTEGER ::mx1
         INTEGER ::mx2
         INTEGER ::mx3
-        !fft boxex
-        integer :: kxc1_fft
-        integer :: kxc2_fft
-        integer :: kxc3_fft
+        !No of elements in FFT
+        INTEGER ::kimax
+        !No of elements in 2D-FFT
+        INTEGER ::kimax2
+       
+        !Box for FFT in pwden
         integer :: kq1_fft
         integer :: kq2_fft
         integer :: kq3_fft
-        INTEGER :: ng2_fft
-        !INTEGER :: nq2_fft
+        integer :: kmxq_fft !no of g-vectors in sphere
+
+        !fft box for xc-pot
+        integer :: kxc1_fft
+        integer :: kxc2_fft
+        integer :: kxc3_fft
+
         INTEGER :: ng3_fft
-        !INTEGER :: nq3_fft
-        INTEGER :: kmxq_fft
-        INTEGER :: kmxq2_fft
-        INTEGER :: ncv3_fft
         INTEGER :: kmxxc_fft !<number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
 
         INTEGER :: nxc3_fft !< number of stars in the  charge density  fft-box
 
-
-        !No of elements in z-direction
-        INTEGER ::ngz
-        INTEGER ::izmin
-        INTEGER ::izmax
         !rep. g-vector of star
         INTEGER,ALLOCATABLE ::kv3(:,:)
         !length of star
@@ -381,7 +356,6 @@
         INTEGER,ALLOCATABLE ::ig2(:)
         !
         REAL,ALLOCATABLE:: phi2(:) !<(n2d)
-        INTEGER,ALLOCATABLE ::igz(:)
         !phase phactor of g-vector
         COMPLEX,ALLOCATABLE    ::rgphs(:,:,:)
         !mapping of stars to FFT-box
@@ -393,16 +367,9 @@
         !same of 2D
         COMPLEX,ALLOCATABLE  :: pgfft2(:)
         !
-        REAL,ALLOCATABLE :: ft2_gfx(:),ft2_gfy(:)
-        !REAL,   ALLOCATABLE  :: pgft2xy(:)
-        !REAL,   ALLOCATABLE  :: pgft2x(:)
-        !REAL,   ALLOCATABLE  :: pgft2y(:)
-        !REAL,   ALLOCATABLE  :: pgft2xx(:)
-        !REAL,   ALLOCATABLE  :: pgft2yy(:)
-      COMPLEX, ALLOCATABLE :: ustep(:)
-       REAL, ALLOCATABLE :: ufft(:)
-
-
+        REAL,ALLOCATABLE     :: ft2_gfx(:),ft2_gfy(:)
+        COMPLEX, ALLOCATABLE :: ustep(:)
+        REAL, ALLOCATABLE    :: ufft(:)
      END TYPE
 
      TYPE t_oneD
@@ -738,6 +705,7 @@
         REAL              :: te_exc    !<charge density-ex-corr.energy density integral
         REAL              :: e_ldau    !<total energy contribution of LDA+U
         REAL              :: tote
+        REAL              :: last_distance
         TYPE(t_energy_hf) ::  te_hfex
         REAL              ::  te_hfex_loc(2)
         REAL, ALLOCATABLE :: w_iks(:,:,:)

@@ -10,13 +10,13 @@
       TYPE(t_stars),INTENT(IN)   :: stars
       TYPE(t_cell),INTENT(IN)   :: cell
       REAL,    INTENT(IN) :: rht(vacuum%nmzd,2)
-      COMPLEX, INTENT(IN) :: psq(stars%n3d)
+      COMPLEX, INTENT(IN) :: psq(stars%ng3)
 
       INTEGER  ivfft,i,j,k
       REAL     ani,z
       REAL,    ALLOCATABLE :: af1(:),bf1(:)
 
-      ivfft =  3*stars%k3d
+      ivfft =  3*stars%mx3
       ALLOCATE (af1(ivfft),bf1(ivfft))
 
       af1(:) = 0.0 ; bf1(:) = 0.0

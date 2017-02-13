@@ -25,7 +25,7 @@ CONTAINS
 
     LOGICAL,INTENT(IN),OPTIONAL:: l_socfirst
     COMPLEX,INTENT(IN),OPTIONAL:: isigma(:,:,:)
-    REAL,INTENT(IN),OPTIONAL   :: cross_k(:,:)
+    REAL,INTENT(IN),OPTIONAL,ALLOCATABLE   :: cross_k(:,:)
     COMPLEX,INTENT(OUT),OPTIONAL:: chj(:,:,:,:)
     COMPLEX,INTENT(OUT),OPTIONAL :: isigma_x(:,:),isigma_y(:,:),isigma_z(:,:)
     COMPLEX,INTENT(OUT),OPTIONAL :: chi11so(:,:),chi21so(:,:),chi22so(:,:)

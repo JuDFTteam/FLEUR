@@ -23,8 +23,8 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)    :: cell
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: psq(stars%n3d)
-    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
+    COMPLEX, INTENT (IN) :: psq(stars%ng3)
+    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
     !     ..
     !     .. Local Scalars ..
     COMPLEX arg,ci

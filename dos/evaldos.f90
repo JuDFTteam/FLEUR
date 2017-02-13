@@ -90,7 +90,11 @@
       ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
      &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
      &          qlay(dimension%neigd,vacuum%layerd,2),qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
-      IF (l_mcd) ALLOCATE( mcd(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
+      IF (l_mcd) THEN 
+         ALLOCATE( mcd(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
+      ELSE
+         ALLOCATE(mcd(0,0,0))
+      ENDIF
 !
 ! scale energies
       sigma = banddos%sig_dos*factor

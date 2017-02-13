@@ -1975,7 +1975,7 @@ SUBROUTINE r_inpXML(&
 
   kpts%nkpt = kpts%nkpt
   dimension%nvd = 0 ; dimension%nv2d = 0
-  stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
+  stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
   obsolete%l_u2f = .FALSE.
   obsolete%l_f2u = .FALSE.
   !cell%aamat=matmul(transpose(cell%amat),cell%amat)
@@ -1998,9 +1998,9 @@ SUBROUTINE r_inpXML(&
            WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
         END IF
         CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
-        stars%kq1d = max(kq1,stars%kq1d)
-        stars%kq2d = max(kq2,stars%kq2d)
-        stars%kq3d = max(kq3,stars%kq3d)
+        stars%kq1_fft = max(kq1,stars%kq1_fft)
+        stars%kq2_fft = max(kq2,stars%kq2_fft)
+        stars%kq3_fft = max(kq3,stars%kq3_fft)
         dimension%nvd = max(dimension%nvd,nv)
         dimension%nv2d = max(dimension%nv2d,nv2)
      END DO ! k-pts
@@ -2125,44 +2125,44 @@ SUBROUTINE r_inpXML(&
 
   IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
      CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,sym%nop2,stars%k1d,stars%k2d,stars%k3d,&
-          stars%n3d,stars%n2d,oneD%odd)
+          sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
+          stars%ng3,stars%ng2,oneD%odd)
 
   ELSE
      CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,stars%k1d,stars%k2d,stars%k3d,&
-          stars%n3d,stars%n2d)
-     oneD%odd%n2d = stars%n2d
-     oneD%odd%nq2 = stars%n2d
+          sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
+          stars%ng3,stars%ng2)
+     oneD%odd%n2d = stars%ng2
+     oneD%odd%nq2 = stars%ng2
      oneD%odd%nop = sym%nop
   END IF
 
-  dimension%nn2d = (2*stars%k1d+1)*(2*stars%k2d+1)
-  dimension%nn3d = (2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1)
+  dimension%nn2d = (2*stars%mx1+1)*(2*stars%mx2+1)
+  dimension%nn3d = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
   IF (oneD%odd%d1) THEN
-     oneD%odd%k3 = stars%k3d
+     oneD%odd%k3 = stars%mx3
      oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
   ELSE
      oneD%odd%k3 = 0
      oneD%odd%M = 0
      oneD%odd%nn2d = 1
   END IF
-  ALLOCATE (stars%ig(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d))
-  ALLOCATE (stars%ig2(stars%n3d),stars%igz(stars%n3d))
-  ALLOCATE (stars%kv2(2,stars%n2d),stars%kv3(3,stars%n3d))
-  ALLOCATE (stars%nstr2(stars%n2d),stars%nstr(stars%n3d))
-  ALLOCATE (stars%sk2(stars%n2d),stars%sk3(stars%n3d),stars%phi2(stars%n2d))
+  ALLOCATE (stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
+  ALLOCATE (stars%ig2(stars%ng3))
+  ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
+  ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
+  ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
   ALLOCATE (stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
-  ALLOCATE (stars%rgphs(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d))
+  ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
   ALLOCATE (stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
-  ALLOCATE (stars%ufft(0:27*stars%k1d*stars%k2d*stars%k3d-1),stars%ustep(stars%n3d))
+  ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
   stars%sk2(:) = 0.0
   stars%phi2(:) = 0.0
 
   ! Initialize xc fft box
 
-  CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1d,stars%kxc2d,stars%kxc3d)
+  CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
 
   ! Initialize missing 1D code arrays
 

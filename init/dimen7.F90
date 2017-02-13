@@ -294,15 +294,15 @@
 !
       IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
          CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-                    sym%tau,sym%nop,sym%nop2,stars%k1d,stars%k2d,stars%k3d,&
-                    stars%n3d,stars%n2d,oneD%odd)
+                    sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
+                    stars%ng3,stars%ng2,oneD%odd)
 
       ELSE
          CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-                    sym%tau,sym%nop,stars%k1d,stars%k2d,stars%k3d,&
-                    stars%n3d,stars%n2d)
-         oneD%odd%n2d = stars%n2d
-         oneD%odd%nq2 = stars%n2d
+                    sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
+                    stars%ng3,stars%ng2)
+         oneD%odd%n2d = stars%ng2
+         oneD%odd%nq2 = stars%ng2
          oneD%odd%nop = sym%nop
       ENDIF
 
@@ -314,7 +314,7 @@
          xcpot%gmaxxc=stars%gmax
       END IF
 
-      CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1d,stars%kxc2d,stars%kxc3d)
+      CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
 !
 ! k-point generator provides kpts-file, if it's missing:
 !

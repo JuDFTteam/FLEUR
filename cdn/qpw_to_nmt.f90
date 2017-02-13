@@ -38,7 +38,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin,l_cutoff    
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: qpwc(stars%n3d)
+    COMPLEX, INTENT (IN) :: qpwc(stars%ng3)
     REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     !-odim
     !+odim
@@ -125,7 +125,7 @@ CONTAINS
           CALL phasy1(atoms,stars,sym,cell,k,pylm)
        ELSE
           !-odim
-          CALL od_phasy(atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+          CALL od_phasy(atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,pylm) !keep
           !+odim
        END IF
