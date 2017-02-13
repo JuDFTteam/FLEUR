@@ -17,7 +17,7 @@
 !*       fg3(star) <- FFT --- gfft(r,1)                     *
 !*                                                          *
 !* dimension of gfft is                                     *
-!* (3*stars%k1d x 3*stars%k2d x 3*stars%k3d)                *
+!* (3*stars%mx1 x 3*stars%mx2 x 3*stars%mx3)                *
 !*                                                          *
 !************************************************************
       USE m_types
@@ -43,7 +43,7 @@
      &           stars,+1) 
 
       DO i=0,ifftd-1
-        gfft(i,:)=gfft(i,:)*stars%ufft(i)
+        gfft(i,:)=gfft(i,:)*ufft(i)
       ENDDO
 
       CALL fft3d(&
