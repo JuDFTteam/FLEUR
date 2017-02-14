@@ -317,10 +317,11 @@ CONTAINS
     !
     !--->    store number of star with respect to z-index in igz
     !
-    ngz = izmax - izmin + 1
-    DO k = 1,stars%ng3
-       igz(k) = stars%kv3(3,k) - izmin + 1
-    ENDDO
+    !ngz = izmax - izmin + 1
+    !DO k = 1,stars%ng3
+    !   igz(k) = stars%kv3(3,k) - izmin + 1
+    !ENDDO
+    igz=0;ngz=0;izmin=0;izmax=0
 
     !--->    generate all star members
     !+gu
@@ -767,11 +768,11 @@ CONTAINS
     !
     !--->    store number of star with respect to z-index in igz
     !
-    ngz = izmax - izmin + 1
-    DO k = 1,stars%ng3
-       igz(k) = stars%kv3(3,k) - izmin + 1
-    ENDDO
-
+    !ngz = izmax - izmin + 1
+    !DO k = 1,stars%ng3
+    !   igz(k) = stars%kv3(3,k) - izmin + 1
+    !ENDDO
+    igz=0;ngz=0;izmax=0;izmin=0
     !--->    generate all star members
     !+gu
     kidx=0

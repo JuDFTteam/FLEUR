@@ -66,10 +66,8 @@ CONTAINS
     ALLOCATE(d%eig_eig(neig,jspins*nkpts))
     !d%eig_vec
     if (l_real.and..not.l_soc) THEN
-       print *, "Allocate real in eig66_mem"
        ALLOCATE(d%eig_vecr(nmat*neig,length*nkpts))
     else
-       print *, "Allocate complex in eig66_mem"
        ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
     endif
     length=length*nkpts
@@ -270,9 +268,6 @@ CONTAINS
     IF (PRESENT(eig)) THEN
        eig=0.0
        eig=d%eig_eig(:SIZE(eig),nrec)
-       !print *,"R-eig:",nrec,shape(eig)
-       !print*,"R-eig(data):",shape(d%eig_eig)
-       !print*,"R:",eig
     ENDIF
     !data from d%eig_vec
 
@@ -338,8 +333,6 @@ CONTAINS
     !data from d%eig_eig
     IF (PRESENT(eig)) THEN
        d%eig_eig(:SIZE(eig),nrec)=eig
-       !print*,"W-eig:",nrec,shape(eig)
-       !print*,"W:",eig
     ENDIF
     !data from d%eig_vec
     IF (PRESENT(zmat)) THEN
