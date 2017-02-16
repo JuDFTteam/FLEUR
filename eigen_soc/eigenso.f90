@@ -264,7 +264,7 @@ CONTAINS
                eig=eig_so(:nsz))
 
        ELSE
-          zmat%nbasfcn=size(eig_so,1)
+          zmat%nbasfcn=size(zso,1)
           allocate(zmat%z_c(zmat%nbasfcn,nsz))
           zmat%l_real=.false.
           zmat%nbands=nsz        

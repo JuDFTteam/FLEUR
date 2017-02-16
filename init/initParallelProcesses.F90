@@ -132,7 +132,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
       ALLOCATE(kpts%bk(3,kpts%nkpt))
       ALLOCATE(kpts%wtkpt(kpts%nkpt))
-      ALLOCATE(kpts%wtkpt(kpts%nkpt))
       ALLOCATE(kpts%ntetra(4,kpts%ntet))
       ALLOCATE(kpts%voltet(kpts%ntet))
 

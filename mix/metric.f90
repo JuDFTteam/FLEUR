@@ -166,7 +166,7 @@ CONTAINS
        CALL convol(&
             &               stars,&
             &               fg3,&
-            &               ag3)
+            &               ag3,stars%ufft)
        IF (sym%invs) THEN
           DO imap = 1,stars%ng3
              sout(imap+nmaph*(js-1)) = cell%omtil*REAL(fg3(imap))
@@ -193,7 +193,7 @@ CONTAINS
        CALL convol(&
             &        stars,&
             &        fg3,&
-            &        ag3)
+            &        ag3,stars%ufft)
        DO imap = 1,stars%ng3
           sout(2*nmaph + imap)       = cell%omtil*REAL(fg3(imap))
           sout(2*nmaph + stars%ng3 + imap) = cell%omtil*AIMAG(fg3(imap))
