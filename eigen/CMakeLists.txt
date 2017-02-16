@@ -13,7 +13,7 @@ eigen/hsmt_hlptomat.F90
 eigen/hsmt_nonsph.F90
 eigen/hsmt_hamil.F90
 eigen/hsmt_simple.F90
-eigen/hsmt_ab.F90
+eigen/hsmt_ab.f90
 eigen/hsmt_soc_init.F90
 eigen/hsmt_sph.F90
 eigen/hsmt_spinor.F90

@@ -65,8 +65,8 @@ CONTAINS
     DO n=1,lapw%nv(1)
        DO nn=1,n
           i=i+1
-          write(61,"(2i5,4f10.7)") n,nn,hamovlp%b_c(i),hamovlp%s_c(nn,n)
-          write(62,"(2i5,4f10.7)") n,nn,hamovlp%a_c(i),hamovlp%h_c(nn,n)
+          write(61,"(2i5,4e15.7)") n,nn,hamovlp%b_c(i),hamovlp%s_c(nn,n)
+          write(62,"(2i5,4e15.7)") n,nn,hamovlp%a_c(i),hamovlp%h_c(nn,n)
        ENDDO
     enddo
     stop "debug"

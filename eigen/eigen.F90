@@ -402,9 +402,8 @@ CONTAINS
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
-#ifndef CPP_SIMPLE
        CALL tlmplm(sphhar,atoms,dimension,enpara, jsp,1,mpi, vr(1,0,1,jsp),gwc,lh0,input, td,ud)
-#else
+#ifdef CPP_SIMPLE
           call tlmplm_cholesky(sphhar,atoms,dimension,enpara,jsp,1,mpi, vr(1,0,1,jsp),input, td,ud)
 #endif
        IF (input%l_f) call write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
@@ -459,6 +458,9 @@ CONTAINS
           call timestart("Interstitial Hamiltonian&Overlap")
 #ifndef CPP_SIMPLE
           CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
+#else
+          hamovlp%a_c=0.0
+          hamovlp%b_c=0.0
 #endif
           call timestop("Interstitial Hamiltonian&Overlap")
           !

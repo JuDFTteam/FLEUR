@@ -53,11 +53,12 @@ MODULE m_tlmplm_cholesky
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 
     REAL,PARAMETER:: e_shift_min=4.0
-    REAL,PARAMETER:: e_shift_max=20.0
+    REAL,PARAMETER:: e_shift_max=200000.0
     
-    !     ..
+    !     ..e_shift
     td%e_shift=e_shift_min
     OK=.false.
+    td%h_loc=0.0
     DO WHILE(.not.OK)
        OK=.true.
        td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
@@ -206,8 +207,8 @@ MODULE m_tlmplm_cholesky
              ENDDO
           ENDDO
           IF (info.ne.0) THEN
-             print *,"Potential shift to small, increasing the value"
-             td%e_shift=td%e_shift+1.0
+             td%e_shift=td%e_shift*2.0
+             print *,"Potential shift to small, increasing the value to:",td%e_shift
              if (td%e_shift>e_shift_max) call judft_error("Potential shift at maximum")
              OK=.false.
           ENDIF
