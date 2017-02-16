@@ -14,8 +14,7 @@ c***************************************************************
       CONTAINS
       SUBROUTINE wann_lapw_int_plot(point,bmat,unigrid,wannint,
      <                              xdnout)
-      use m_cotra, only: cotra1
-      use m_constants, only: pimach
+      use m_constants
       implicit none
       real,intent(in)::point(3)
       real,intent(in)::bmat(3,3)
@@ -31,7 +30,7 @@ c***************************************************************
       integer pw1,pw2,pw3
 
       tpi=2*pimach()
-      call cotra1(point,xiiu,bmat)
+      xiiu=matmul(bmat,point)/tpi_const
 
 
 

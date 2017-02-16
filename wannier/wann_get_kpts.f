@@ -36,7 +36,7 @@ c********************************************************
          if(l_readkpts)then
             IF(SIZE(kpoints,1)/=3) CALL juDFT_error("wann_get_kpts: 1"
      +           ,calledby ="wann_get_kpts")
-            IF(SIZE(kpoints,2)/=nkpts) CALL juDFT_error("wann_get_kpts: 2"
+            IF(SIZE(kpoints,2)/=nkpts)CALL juDFT_error("wann_get_kpts:2"
      +           ,calledby ="wann_get_kpts")
             do iter=1,nkpts
                read(987,*)kpoints(:,iter)
@@ -52,7 +52,7 @@ c********************************************************
          if(l_readkpts)then
             IF(SIZE(kpoints,1)/=3) CALL juDFT_error("wann_get_kpts: 1"
      +           ,calledby ="wann_get_kpts")
-            IF(SIZE(kpoints,2)/=nkpts) CALL juDFT_error("wann_get_kpts: 2"
+            IF(SIZE(kpoints,2)/=nkpts)CALL juDFT_error("wann_get_kpts:2"
      +           ,calledby ="wann_get_kpts")
             do iter=1,nkpts
                read(987,*)kpoints(:,iter)

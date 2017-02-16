@@ -172,7 +172,7 @@ c                     read in _um.dat (old version of wannier90)
 c****************************************************************
       l_umdat=.false.
       inquire (file=spin12(jspin)//'_um.dat',exist=l_umdat)
-      IF(.NOT.l_umdat)  CALL juDFT_error("where is your um_dat?",calledby
+      IF(.NOT.l_umdat) CALL juDFT_error("where is your um_dat?",calledby
      +     ="wann_read_umatrix")
 
 
@@ -181,7 +181,7 @@ c****************************************************************
       read(111)header
       read(111)tmp_omi
       read(111) ntmp,num_kpts,num_nnmax
-      IF(ntmp/=num_wann)  CALL fleur_err("mismatch in num_wann",calledby
+      IF(ntmp/=num_wann)CALL judft_error("mismatch in num_wann",calledby
      +     ="wann_read_umatrix")
 
         read(111)(((u_matrix_tmp(i,j,k),i=1,num_wann),j=1,num_wann),
@@ -252,7 +252,7 @@ c*************************************************************
             enddo
          enddo
       else   
-         IF(num_bands/=num_wann)  CALL juDFT_error("num_bands.ne.num_wann"
+         IF(num_bands/=num_wann) CALL juDFT_error("num_bands/=num_wann"
      +        ,calledby ="wann_read_umatrix")
         u_matrix(:,:,:)=u_matrix_tmp(:,:,:)
       endif   

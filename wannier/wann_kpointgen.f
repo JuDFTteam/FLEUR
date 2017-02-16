@@ -40,7 +40,7 @@ c***********************************************************
       elseif(dim==1)then
          print*,"Create one-dimensional k-point set."
       else
-         CALL juDFT_error("unknown dimension",calledby ="wann_kpointgen")
+         CALL juDFT_error("unknown dimension",calledby="wann_kpointgen")
       endif
       print*,"Specify the number of k-point steps"
       print*,"for each direction."
@@ -104,7 +104,7 @@ c***********************************************************
       integer,intent(in)::nu
       integer k,nnu
       nnu=nu
-      IF(nnu==0)  CALL juDFT_error("nnu.eq.0",calledby ="wann_kpointgen")
+      IF(nnu==0)  CALL juDFT_error("nnu.eq.0",calledby="wann_kpointgen")
       do k=1,3
          if(nnu.eq.1)exit
          if(mod(nnu,5).ne.0)exit

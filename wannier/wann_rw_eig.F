@@ -25,7 +25,7 @@ c****************************************************************
      <              nbnd,kpoints)
 
       use m_cdnread, only:cdn_read
-      use m_od_types,only:od_inp
+      use m_types,only:od_inp
 
       IMPLICIT NONE
       integer,intent(in) :: ntapwf
@@ -242,17 +242,19 @@ c*********************************************************************
 
 
         if(cpu_index.eq.irank)then
-
+#if 1==1
+           call judft_error("NOT IMPLEMENTED")
+#else
            call cdn_read(
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,kptibz,66,neigd,
+     >              eig_id,nvd,jspd,
+     >              irank,isize,kptibz,jspin,nbasfcn,
+     >              l_noco,neigd,
      >              n_start,n_end,      
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-
+     <              k1,k2,k3,bkpt,wk,nbands,eig,zmat)
+#endif
         else !eigenvalues are stored in the file of another process
-
+#if 1==2
            d10=int((cpu_index+0.5)/10)
            d1=mod(cpu_index,10)
            aoff=iachar('1')-1
@@ -273,6 +275,7 @@ c*********************************************************************
      <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
 
            close(666)
+#endif
         endif   !cpu_index==irank
         endif !find process
       enddo !cpu_index
@@ -346,6 +349,9 @@ c-----used and all processors use the same eig-file
 #endif
 #else
 !MPI with HDF or no MPI
+#if 1==1
+        call judft_error("NOT IMPLEMENTED")
+#else
         call cdn_read(
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
@@ -353,7 +359,7 @@ c-----used and all processors use the same eig-file
      >              neigd,n_start,n_end,
      <              nmat,nv,ello,evdu,epar,kveclo,
      <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-
+#endif
 #endif
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig

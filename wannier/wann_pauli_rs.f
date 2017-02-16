@@ -118,7 +118,7 @@ c*****************************************************
           open (203,file=trim(filename),status='old')
           rewind (203)
       else
-             CALL fleur_err("no proj/proj.1/proj.2",calledby
+             CALL judft_error("no proj/proj.1/proj.2",calledby
      +           ="wann_pauli_rs")
       endif
       read (203,*) num_wann,num_bands

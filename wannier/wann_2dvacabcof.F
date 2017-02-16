@@ -16,7 +16,6 @@ c********************************************************
      >nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,z,
      <ac,bc,u,ue)
       
-      use m_dotir
       implicit none
       integer,intent(in)::nv2d
       integer,intent(in)::nslibd
@@ -88,7 +87,7 @@ c********************************************************
                v(1) = bkpt(1) + kvac1(ik)
                v(2) = bkpt(2) + kvac2(ik)
                v(3) = 0.
-               ev = evacp - 0.5*dotirp(v,v,bbmat)
+               ev = evacp - 0.5*dot_product(matmul(v,bbmat),v)
                call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),
      +        dt(ik),
      +        u(1,ik,ivac))

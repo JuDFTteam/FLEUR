@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_read_inp
+      use m_judft
       contains
       subroutine wann_read_inp(
      <               l_p0,wann)
@@ -289,7 +290,7 @@ c-----read the input file 'wann_inp'
             backspace(916)
             read(916,*,iostat=ios)task,version_real
             if (ios /= 0)
-     &        CALL fleur_err ("error reading wan90version",
+     &        CALL judft_error("error reading wan90version",
      &                        calledby="wann_read_inp")
             if(abs(version_real-1.1).lt.1.e-9)then
                wann%wan90version=1
@@ -298,7 +299,7 @@ c-----read the input file 'wann_inp'
             elseif(abs(version_real-2.0).lt.1.e-9)then
                wann%wan90version=3
             else
-              CALL fleur_err ("chosen w90 version unknown",
+              CALL judft_error ("chosen w90 version unknown",
      &                        calledby="wann_read_inp")
             endif
          elseif(trim(task).eq.'atomlist')then
@@ -306,14 +307,14 @@ c-----read the input file 'wann_inp'
             backspace(916)
             read(916,*,iostat=ios)task,wann%atomlist_num
             if (ios /= 0)
-     &        CALL fleur_err ("error reading atomlist_num",
+     &        CALL judft_error ("error reading atomlist_num",
      &                        calledby="wann_read_inp")
             if(allocated(wann%atomlist))deallocate(wann%atomlist)
             allocate(wann%atomlist(wann%atomlist_num))
             backspace(916)
             read(916,*,iostat=ios)task,wann%atomlist_num,wann%atomlist
             if (ios /= 0)
-     &        CALL fleur_err ("error reading atomlist",
+     &        CALL judft_error ("error reading atomlist",
      &                        calledby="wann_read_inp")
             if(l_p0)write(6,*)"atomlist_num=",wann%atomlist_num
             if(l_p0)write(6,*)"atomlist=",wann%atomlist
@@ -322,7 +323,7 @@ c-----read the input file 'wann_inp'
             backspace(916)
             read(916,*,iostat=ios)task,wann%band_min(1),wann%band_max(1)
             if (ios /= 0)
-     &        CALL juDFT_error ("error reading byindex,band_min,band_max",
+     &       CALL juDFT_error("error reading byindex,band_min,band_max",
      &                        calledby="wann_read_inp")
             if(l_p0)write(6,*)"band_min=",wann%band_min(1)
             if(l_p0)write(6,*)"band_max=",wann%band_max(1)

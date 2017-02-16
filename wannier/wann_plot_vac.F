@@ -23,7 +23,6 @@ c***************************************************************
      <     value)
 
       use m_constants, only : pimach
-      use m_dotir
       implicit none
 c     .. scalar Arguments..
       integer, intent (in) :: nmzd,nv2d,n3d,nslibd
@@ -61,10 +60,6 @@ c     ..local scalars..
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
 
-c..   external functions
-      external vacudz,vacuz
-c      real dotirp   !module now
-c      external dotirp
 
       allocate (kvac1(nv2d),kvac2(nv2d),map2(nvd))
 
