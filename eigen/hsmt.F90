@@ -187,43 +187,13 @@ CONTAINS
     CALL timestop("hsmt init")
 
     DO isp = jsp_start,jsp_end
-#if 1==2
-       ALLOCATE(bb_test(size(bb)))
-       bb_test=0.0
-       bb_test=bb
-       fj=0.0
-       gj=0.0
-#endif
+
        CALL timestart("hsmt spherical")
        CALL hsmt_sph(sym,DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
             input,hlpmsize,noco,l_socfirst,cell,nintsp,lapw,enpara%el0,usdus,&
             vr,gk,rsoc,isigma,fj,gj,l_real,hamOvlp)
        CALL timestop("hsmt spherical")
-#if 1==2
-       ALLOCATE(fj_test(size(fj,1),0:size(fj,2)-1,size(fj,3),size(fj,4)))
-       ALLOCATE(gj_test(size(fj,1),0:size(fj,2)-1,size(fj,3),size(fj,4)))
-       fj_test=0.0
-       gj_test=0.0
-       CALL timestart("hsmt_fjgj")
-       CALL hsmt_fjgj(atoms,isp,noco,l_socfirst,cell,nintsp, lapw,usdus,fj_test,gj_test)
-       CALL timestop("hsmt_fjgj")
-       print *,"fj diff",maxval(abs(fj-fj_test))
-       print *,"gj diff",maxval(abs(gj-gj_test))
-       deallocate(fj_test,gj_test)
-       bb=0.0
-       bb_test=0.0
-       CALL timestart("hsmt_overlap")
-       CALL  hsmt_overlap(input,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
-       noco,cell,nintsp, lapw,usdus,gk,fj,gj,bb_test)
-       CALL timestop("hsmt_overlap")
-       CALL timestart("hsmt_overlap_zherk")
-       CALL  hsmt_overlap_zherk(input,sym,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
-       noco,cell,nintsp, lapw,usdus,gk,vk,fj,gj,bb)
-       CALL timestop("hsmt_overlap_zherk")
-       print *,"bb_diff",maxval(abs(bb-bb_test))
-       
-       deallocate(bb_test)
-#endif
+
        IF (.NOT.input%secvar) THEN
           CALL timestart("hsmt extra")
           IF (ANY(atoms%nlo>0).OR.ANY(atoms%lda_u%l.GE.0)) &
@@ -239,10 +209,7 @@ CONTAINS
           CALL timestop("hsmt non-spherical")
        ENDIF
     ENDDO
-#if 1==2
-       print *,"hsmt checkmode"
-       call judft_end("test",0)
-#endif
+
     RETURN
   END SUBROUTINE hsmt
 END MODULE m_hsmt

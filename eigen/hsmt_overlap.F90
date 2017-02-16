@@ -7,6 +7,56 @@ MODULE m_hsmt_overlap
   use m_juDFT
   implicit none
 CONTAINS
+
+  subroutine hsmt_overlap(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+!Calculate overlap matrix
+#include"cpp_double.h"
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_types
+    USE m_ylm
+    USE m_hsmt_ab
+    IMPLICIT NONE
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_usdus),INTENT(IN)    :: usdus
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: ispin
+    !     ..
+    !     .. Array Arguments ..
+    REAL,INTENT(IN) :: gk(:,:,:),vk(:,:,:)
+    REAL,INTENT(IN) :: fj(:,0:,:,:),gj(:,0:,:,:)
+    TYPE(t_hamovlp),INTENT(INOUT) :: hamovlp
+    
+    INTEGER:: n,nn,na,ab_offset,l,m,lm
+    COMPLEX,ALLOCATABLE:: ab(:,:)
+    ALLOCATE(ab(lapw%nv(1),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    
+
+    DO n=1,atoms%ntype
+       DO nn = 1,atoms%neq(n)
+          na = SUM(atoms%neq(:n-1))+nn
+          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+             
+             CALL hsmt_ab(sym,atoms,ispin,n,na,cell,lapw,gk,vk,fj,gj,ab,ab_offset)
+             CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(:,:ab_offset),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
+             DO l=0,atoms%lmax(n)
+                DO m=-l,l
+                   lm=l*(l+1)+m
+                   ab(:,ab_offset+1+lm)=sqrt(usdus%ddn(l,n,ispin))*ab(:,ab_offset+1+lm)
+                ENDDO
+             ENDDO
+             CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(:,ab_offset+1:),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
+          ENDIF
+       end DO
+    end DO
+
+  end subroutine hsmt_overlap
+
+#if 1==2 
+  !old routine based on hssphn
   SUBROUTINE hsmt_overlap(input,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
        noco,cell,nintsp, lapw,usdus,gk,fj,gj,bb)
 !Calculate overlap matrix
@@ -302,112 +352,6 @@ CONTAINS
 
     RETURN
   END SUBROUTINE hsmt_overlap
-
-  subroutine hsmt_overlap_zherk(input,sym,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
-       noco,cell,nintsp, lapw,usdus,gk,vk,fj,gj,bb)
-!Calculate overlap matrix
-#include"cpp_double.h"
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_ylm
-    IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(INOUT)  :: lapw!lpaw%nv_tot is updated
-    TYPE(t_usdus),INTENT(INOUT) :: usdus
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: isp
-    INTEGER, INTENT (IN) :: n_size,n_rank,ab_dim
-    INTEGER, INTENT (IN) :: hlpmsize,nintsp
-    LOGICAL, INTENT (IN) :: l_socfirst
-    !     ..
-    !     .. Array Arguments ..
-    REAL,INTENT(IN) :: gk(:,:,:),vk(:,:,:)
-    REAL,INTENT(IN) :: fj(:,0:,:,:),gj(:,0:,:,:)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: bb(:)
 #endif
-    
-    INTEGER:: n,nn,na,np,spin2,iintsp,k,l,ll1,m,i,ki,kj
-    complex:: term
-    real   :: th,v(3),bmrot(3,3),vmult(3)
-    complex,allocatable:: c_ph(:,:),ylm(:),bb_tmp(:,:),a(:,:,:),b(:,:,:)
-    real,allocatable   :: gkrot(:,:)
-    
-    ALLOCATE(c_ph(lapw%nv(1),1),ylm((atoms%lmaxd+1)**2),bb_tmp(lapw%nv(1),lapw%nv(1)))
-    allocate(a(lapw%nv(1),(atoms%lmaxd+1)**2,1),b(lapw%nv(1),(atoms%lmaxd+1)**2,1))
-    allocate(gkrot(lapw%nv(1),3))
 
-
-    ntyploop: DO n=1,atoms%ntype
-       DO nn = 1,atoms%neq(n)
-	  a=0.0
-          b=0.0
-          na = SUM(atoms%neq(:n-1))+nn
-          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-             np = sym%invtab(atoms%ngopr(na))
-             !--->       loop over interstitial spins
-             DO iintsp = 1,nintsp
-                IF (noco%l_constr.OR.l_socfirst) THEN
-                   spin2=isp
-                ELSE
-                   spin2=iintsp
-                ENDIF
-                !--->          set up phase factors
-                DO k = 1,lapw%nv(iintsp)
-                   th= DOT_PRODUCT((/lapw%k1(k,iintsp),lapw%k2(k,iintsp),lapw%k3(k,iintsp)/)+(iintsp-1.5)*noco%qss,atoms%taual(:,na))
-                   c_ph(k,iintsp) = CMPLX(COS(tpi_const*th),-SIN(tpi_const*th))
-                END DO
-
-                IF (np==1) THEN
-                   gkrot( 1:lapw%nv(iintsp),:) = gk( 1:lapw%nv(iintsp),:,iintsp)
-                ELSE
-                   bmrot=MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
-                   DO k = 1,lapw%nv(iintsp)
-                      !-->  apply the rotation that brings this atom into the
-                      !-->  representative (this is the definition of ngopr(na)
-                      !-->  and transform to cartesian coordinates
-                      v(:) = vk(k,:,iintsp)
-                      gkrot(k,:) = MATMUL(TRANSPOSE(bmrot),v)
-                   END DO
-                END IF
-                DO k = 1,lapw%nv(1)
-                   !-->    generate spherical harmonics
-                   vmult(:) =  gkrot(k,:)
-                   CALL ylm4(atoms%lmax(n),vmult,ylm)
-                   !-->  synthesize the complex conjugates of a and b
-                   DO l = 0,atoms%lmax(n)
-                      ll1 = l* (l+1)
-                      DO m = -l,l
-
-                         term = c_ph(k,iintsp)*ylm(ll1+m+1)
-                         a(k,ll1+m+1,iintsp) = fj(k,l,n,spin2)*term
-                         b(k,ll1+m+1,iintsp) = gj(k,l,n,spin2)*term
-                      END DO
-                   END DO
-                ENDDO !k-loop
-                !--->       end loop over interstitial spin
-                call timestart("zherk")
-                CALL ZHERK("U","N",lapw%nv(iintsp),size(a,2),cmplx(1.,0),a(:,:,iintsp),size(a,1),cmplx(0.0,0.0),bb_tmp,size(bb_tmp,1))
-                CALL ZHERK("U","N",lapw%nv(iintsp),size(a,2),cmplx(1.,0),b(:,:,iintsp),size(a,1),cmplx(1.0,0.0),bb_tmp,size(bb_tmp,1))
-                call timestop("zherk")
-
-                i=1
-                DO ki=1,lapw%nv(1)
-                   DO kj=ki,lapw%nv(1)
-                      bb(i)=bb(i)+bb_tmp(ki,kj)
-                      i=i+1
-                   ENDDO
-                ENDDO
-             ENDDO
-          end IF
-       end DO
-    end DO ntyploop
-  end subroutine hsmt_overlap_zherk
 END MODULE m_hsmt_overlap

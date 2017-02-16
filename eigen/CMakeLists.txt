@@ -11,6 +11,9 @@ eigen/hsmt_fjgj.F90
 eigen/hsmt_overlap.F90
 eigen/hsmt_hlptomat.F90
 eigen/hsmt_nonsph.F90
+eigen/hsmt_hamil.F90
+eigen/hsmt_simple.F90
+eigen/hsmt_ab.F90
 eigen/hsmt_soc_init.F90
 eigen/hsmt_sph.F90
 eigen/hsmt_spinor.F90
@@ -25,6 +28,7 @@ eigen/setabc1locdn.f90
 eigen/setabc1locdn1.f90
 eigen/slomat.F90
 eigen/tlmplm.F90
+eigen/tlmplm_cholesky.F90
 eigen/tlmplm_store.F90
 eigen/tlo.f90
 eigen/vacfun.f90

@@ -3,7 +3,7 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#define CPP_SIMPLE
 MODULE m_eigen
   use m_juDFT
 CONTAINS
@@ -30,6 +30,8 @@ CONTAINS
     USE m_usetup
     USE m_pot_io
     USE m_eigen_diag
+    USE m_hsmt_simple
+    USE m_tlmplm_cholesky
 #ifdef CPP_NOTIMPLEMENTED
     USE m_symm_hf,  ONLY : symm_hf_nkpt_EIBZ
     USE m_gen_bz
@@ -385,6 +387,7 @@ CONTAINS
        CALL timestart("tlmplm")
        err=0
        j = 1 ; IF (noco%l_noco) j = 2
+       ALLOCATE(td%h_loc(0:2*atoms%lmaxd*(atoms%lmaxd+2)+1,0:2*atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype,j))
        ALLOCATE(td%tuu(0:dimension%lmplmd,atoms%ntype,j),stat=err)
        ALLOCATE(td%tud(0:dimension%lmplmd,atoms%ntype,j),stat=err)
        ALLOCATE(td%tdd(0:dimension%lmplmd,atoms%ntype,j),stat=err)
@@ -399,7 +402,11 @@ CONTAINS
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
+#ifndef CPP_SIMPLE
        CALL tlmplm(sphhar,atoms,dimension,enpara, jsp,1,mpi, vr(1,0,1,jsp),gwc,lh0,input, td,ud)
+#else
+          call tlmplm_cholesky(sphhar,atoms,dimension,enpara,jsp,1,mpi, vr(1,0,1,jsp),input, td,ud)
+#endif
        IF (input%l_f) call write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
 
@@ -450,8 +457,9 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           call timestart("Interstitial Hamiltonian&Overlap")
+#ifndef CPP_SIMPLE
           CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
-
+#endif
           call timestop("Interstitial Hamiltonian&Overlap")
           !
           !--->         update with sphere terms
@@ -462,6 +470,9 @@ CONTAINS
                   lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
+#ifdef CPP_SIMPLE
+          call hsmt_simple(jsp,input%jspins,kpts%bk(:,nk),dimension,input,sym,cell,atoms,lapw,td,ud,enpara,hamOvlp)
+#endif
           !
 #ifdef CPP_NOTIMPLEMENTED
           IF( l_hybrid ) THEN

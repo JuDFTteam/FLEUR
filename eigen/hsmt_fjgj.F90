@@ -7,7 +7,7 @@ MODULE m_hsmt_fjgj
   use m_juDFT
   implicit none
 CONTAINS
-  SUBROUTINE hsmt_fjgj(input,atoms,isp,noco,l_socfirst,cell,nintsp, lapw,usdus,fj,gj)
+  SUBROUTINE hsmt_fjgj(input,atoms,ispin,cell,lapw,usdus,fj,gj)
 !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
 !radial functions at the MT boundary as contained in usdus
     USE m_constants, ONLY : fpi_const
@@ -16,16 +16,16 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_noco),INTENT(IN)     :: noco
+    !TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(IN)     :: lapw!lpaw%nv_tot is updated
+    TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_usdus),INTENT(IN)    :: usdus
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: isp 
-    INTEGER, INTENT (IN) :: nintsp
-    LOGICAL,INTENT(IN)   :: l_socfirst
+    INTEGER, INTENT (IN) :: ispin 
+    !INTEGER, INTENT (IN) :: nintsp
+    !LOGICAL,INTENT(IN)   :: l_socfirst
 
     REAL,INTENT(OUT)     :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     ..
@@ -38,7 +38,7 @@ CONTAINS
     LOGICAL apw(0:atoms%lmaxd)
     !     ..
     con1 = fpi_const/sqrt(cell%omtil)
-    DO iintsp = 1,nintsp
+    iintsp = ispin
        !$OMP parallel do DEFAULT(SHARED)&
        !$OMP PRIVATE(n,l,apw,lo,k,gs,fb,gb,ws,ff,gg)
        DO n = 1,atoms%ntype
@@ -57,33 +57,33 @@ CONTAINS
              CALL dsphbs(atoms%lmax(n),gs,fb, gb)
              DO l = 0,atoms%lmax(n)
                 !---> set up wronskians for the matching conditions for each ntype
-                ws = con1/(usdus%uds(l,n,isp)*usdus%dus(l,n,isp)&
-                     - usdus%us(l,n,isp)*usdus%duds(l,n,isp))
+                ws = con1/(usdus%uds(l,n,ispin)*usdus%dus(l,n,ispin)&
+                     - usdus%us(l,n,ispin)*usdus%duds(l,n,ispin))
                 ff = fb(l)
                 gg = lapw%rk(k,iintsp)*gb(l)
                 IF ( apw(l) ) THEN
-                   fj(k,l,n,iintsp) = 1.0*con1 * ff / usdus%us(l,n,isp)
+                   fj(k,l,n,iintsp) = 1.0*con1 * ff / usdus%us(l,n,ispin)
                    gj(k,l,n,iintsp) = 0.0d0
                 ELSE
-                   IF (noco%l_constr.or.l_socfirst) THEN
+                   !IF (noco%l_constr.or.l_socfirst) THEN
                       !--->                 in a constrained calculation fj and gj are needed
-                      !--->                 both local spin directions (isp) at the same time
-                      fj(k,l,n,isp) = ws * ( usdus%uds(l,n,isp)*gg - usdus%duds(l,n,isp)*ff )
-                      gj(k,l,n,isp) = ws * ( usdus%dus(l,n,isp)*ff - usdus%us(l,n,isp)*gg )
-                   ELSE
+                      !--->                 both local spin directions (ispin) at the same time
+                   !   fj(k,l,n,ispin) = ws * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
+                   !   gj(k,l,n,ispin) = ws * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
+                   !ELSE
                       !--->                 in a spin-spiral calculation fj and gj are needed
                       !--->                 both interstitial spin directions at the same time
                       !--->                 In all other cases iintsp runs from 1 to 1.
-                      fj(k,l,n,iintsp) = ws * ( usdus%uds(l,n,isp)*gg - usdus%duds(l,n,isp)*ff )
-                      gj(k,l,n,iintsp) = ws * ( usdus%dus(l,n,isp)*ff - usdus%us(l,n,isp)*gg )
-                   ENDIF
+                      fj(k,l,n,iintsp) = ws * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
+                      gj(k,l,n,iintsp) = ws * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
+                   !ENDIF
                 ENDIF
              ENDDO
           ENDDO ! k = 1, lapw%nv
        ENDDO    ! n = 1,atoms%ntype
        !$OMP end parallel do
 
-    ENDDO       ! iintsp = 1,nintsp
+    !ENDDO       ! iintsp = 1,nintsp
   
 
     RETURN
