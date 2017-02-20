@@ -32,7 +32,10 @@ CONTAINS
     
     INTEGER:: n,nn,na,ab_offset
     COMPLEX,ALLOCATABLE:: ab(:,:)
+    complex XX(2*atoms%lmaxd*(atoms%lmaxd+2)+2)
     ALLOCATE(ab(lapw%nv(1),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+
+   
 
     !Initialize The Hamiltonian with negatively shifted overlap
     hamovlp%h_c=-1.*td%e_shift*hamovlp%s_c
@@ -43,10 +46,9 @@ CONTAINS
           IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
              
              CALL hsmt_ab(sym,atoms,ispin,n,na,cell,lapw,gk,vk,fj,gj,ab,ab_offset)
-
-             !Multiply with cholesky decomposition of local Hamiltonian
-             ab=matmul(ab,td%h_loc(:,:,n,ispin))*sqrt(1.0+atoms%invsat(na))
-
+             
+             ab=matmul(ab,td%h_loc(:,:,n,ispin))
+        
              CALL ZHERK("U","N",lapw%nv(ispin),2*ab_offset,cmplx(1.,0),ab(:,:),size(ab,1),cmplx(1.0,0.0),HamOvlp%h_c,size(HamOvlp%h_c,1))             
           ENDIF
        end DO

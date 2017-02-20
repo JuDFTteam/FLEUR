@@ -41,7 +41,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
-    TYPE(t_lapw),INTENT(INOUT)    :: lapw
+    TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     !     ..
     !     .. Scalar Arguments ..
@@ -62,17 +62,10 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: vpw1(:)  ! for J constants
     !     ..
     ! ..
-    if (l_real) THEN
-       hamOvlp%a_r=0.0
-       hamOvlp%b_r=0.0
-    ELSE
-       hamOvlp%a_c=0.0
-       hamOvlp%b_c=0.0
-    ENDIF
+   
     ust1 = stars%ustep(1)
     ispin = jspin
-    lapw%nmat = lapw%nv(ispin)
-
+    
     !---> pk non-collinear
     IF (noco%l_noco) THEN
        !---> determine spin-up spin-up part of Hamiltonian- and overlapp-matrix
@@ -86,7 +79,6 @@ CONTAINS
        ENDIF
        !--- J const
 
-       lapw%nmat = lapw%nv(1) + lapw%nv(2)
        ispin = 1
 
        !--- J const
@@ -130,21 +122,21 @@ CONTAINS
           !--->    determine matrix element and store
           ts = phase*stars%ustep(in)
           if (l_real) THEN
-          hamOvlp%a_r(ii) = REAL(th)
-          hamOvlp%b_r(ii) = REAL(ts)
+          hamOvlp%a_r(ii) = REAL(th) +hamOvlp%a_r(ii)
+          hamOvlp%b_r(ii) = REAL(ts) +hamOvlp%b_r(ii) 
 else
-          hamOvlp%a_c(ii) = th
-          hamOvlp%b_c(ii) = ts
+          hamOvlp%a_c(ii) = th + hamOvlp%a_c(ii)
+          hamOvlp%b_c(ii) = ts + hamOvlp%b_c(ii)
 endif
        ENDDO
        !--->    diagonal term (g-g'=0 always first star)
        ii = ii + 1
        if (l_real) THEN
-       hamOvlp%a_r(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
-       hamOvlp%b_r(ii) = REAL(ust1)
+       hamOvlp%a_r(ii) = hamOvlp%a_r(ii) + 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
+       hamOvlp%b_r(ii) = hamOvlp%b_r(ii) + REAL(ust1)
 else
-       hamOvlp%a_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
-       hamOvlp%b_c(ii) = ust1
+       hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
+       hamOvlp%b_c(ii) = hamOvlp%b_c(ii) + ust1
 endif
     ENDDO
 
@@ -196,15 +188,15 @@ endif
                 ENDIF
                 !-APW_LO
                 ts = phase*stars%ustep(in)
-                hamOvlp%a_c(ii) = th
-                hamOvlp%b_c(ii) = ts
+                hamOvlp%a_c(ii) = th +hamOvlp%a_c(ii)
+                hamOvlp%b_c(ii) = ts +hamOvlp%b_c(ii)
              ENDIF
           ENDDO
           !--->    diagonal term (g-g'=0 always first star)
           !-gb99   ii = (nv(1)+i)*(nv(1)+i+1)/2
           ii = ii + 1
-          hamOvlp%a_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
-          hamOvlp%b_c(ii) = ust1
+          hamOvlp%a_c(ii) = hamOvlp%a_c(ii)+ 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
+          hamOvlp%b_c(ii) = hamOvlp%b_c(ii)+ust1
        ENDDO
 
        !---> determine spin-down spin-up part of Hamiltonian- and ovlp-matrix
@@ -228,13 +220,8 @@ endif
              IF (in.EQ.0) THEN
                 WRITE (*,*) 'HSINT: G-G'' not in star i,j= ',i,j
              ELSE
-                hamOvlp%a_c(ii) = stars%rgphs(i1,i2,i3)*vpw(in) 
-                !--- J constants 
-                IF(jij%l_J) THEN
-                   hamOvlp%a_c(ii) = 0
-                ENDIF
-                !--- J constants
-
+                hamOvlp%a_c(ii) = hamOvlp%a_c(ii) + stars%rgphs(i1,i2,i3)*vpw(in) 
+                
              ENDIF
           ENDDO
        ENDDO

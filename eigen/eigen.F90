@@ -402,9 +402,10 @@ CONTAINS
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
-       CALL tlmplm(sphhar,atoms,dimension,enpara, jsp,1,mpi, vr(1,0,1,jsp),gwc,lh0,input, td,ud)
 #ifdef CPP_SIMPLE
-          call tlmplm_cholesky(sphhar,atoms,dimension,enpara,jsp,1,mpi, vr(1,0,1,jsp),input, td,ud)
+       call tlmplm_cholesky(sphhar,atoms,dimension,enpara,jsp,1,mpi, vr(1,0,1,jsp),input, td,ud)
+#else
+       CALL tlmplm(sphhar,atoms,dimension,enpara, jsp,1,mpi, vr(1,0,1,jsp),gwc,lh0,input, td,ud)
 #endif
        IF (input%l_f) call write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
@@ -452,30 +453,38 @@ CONTAINS
              !--->         the interstitial region and the vacuum
              OPEN (25,FILE='potmat',FORM='unformatted', STATUS='old')
           ENDIF
-          !
-          !--->         set up interstitial hamiltonian and overlap matrices
-          !
-          call timestart("Interstitial Hamiltonian&Overlap")
-#ifndef CPP_SIMPLE
-          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
-#else
-          hamovlp%a_c=0.0
-          hamovlp%b_c=0.0
-#endif
-          call timestop("Interstitial Hamiltonian&Overlap")
+          !Calculate matrix size from LAPW
+          lapw%nmat = lapw%nv(jsp)
+          IF (noco%l_noco) lapw%nmat=sum(lapw%nv)
+          if (l_real) THEN
+             hamOvlp%a_r=0.0
+             hamOvlp%b_r=0.0
+          ELSE
+             hamOvlp%a_c=0.0
+             hamOvlp%b_c=0.0
+          ENDIF
           !
           !--->         update with sphere terms
           !
+#ifndef CPP_SIMPLE
           IF (.not.l_wu) THEN
              call timestart("MT Hamiltonian&Overlap")
              CALL hsmt(dimension,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
                   lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
-#ifdef CPP_SIMPLE
+#else
           call hsmt_simple(jsp,input%jspins,kpts%bk(:,nk),dimension,input,sym,cell,atoms,lapw,td,ud,enpara,hamOvlp)
 #endif
           !
+          !
+          !--->         set up interstitial hamiltonian and overlap matrices
+          !
+          call timestart("Interstitial Hamiltonian&Overlap")
+          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
+          
+          call timestop("Interstitial Hamiltonian&Overlap")
+
 #ifdef CPP_NOTIMPLEMENTED
           IF( l_hybrid ) THEN
 

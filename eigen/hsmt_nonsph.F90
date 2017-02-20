@@ -83,7 +83,7 @@ CONTAINS
     ALLOCATE(a(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim),b(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim))
     ALLOCATE(ax(DIMENSION%nvd,0:DIMENSION%lmd),bx(DIMENSION%nvd,0:DIMENSION%lmd))
     ALLOCATE(c_ph(DIMENSION%nvd,ab_dim))
-
+    print*,atoms%lnonsph
     ntyploop: DO n=1,atoms%ntype
        IF (noco%l_noco) THEN
           IF (.NOT.noco%l_ss) aahlp=CMPLX(0.0,0.0)
@@ -184,6 +184,7 @@ CONTAINS
                       END DO
                    ENDDO
 !!$OMP END PARALLEL DO
+
                    lmp=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
                    !ax(:nv(jintsp),0:lmp)=(matmul(a(:nv(jintsp),0:lmp,jintsp),utu(0:lmp,0:lmp))+matmul(b(:nv(jintsp),0:lmp,jintsp),utd(0:lmp,0:lmp)))
                    !bx(:nv(jintsp),0:lmp)=(matmul(a(:nv(jintsp),0:lmp,jintsp),dtu(0:lmp,0:lmp))+matmul(b(:nv(jintsp),0:lmp,jintsp),dtd(0:lmp,0:lmp)))
@@ -193,7 +194,7 @@ CONTAINS
 
                    CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,a(1,0,jintsp),SIZE(a,1),dtu(0,0),SIZE(utu,1),zero,bx,SIZE(ax,1))
                    CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,b(1,0,jintsp),SIZE(a,1),dtd(0,0),SIZE(utu,1),one,bx,SIZE(ax,1))
-
+                  
                    !
                    !--->             update hamiltonian and overlap matrices
                    nc = 0

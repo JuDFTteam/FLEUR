@@ -193,7 +193,6 @@ CONTAINS
             input,hlpmsize,noco,l_socfirst,cell,nintsp,lapw,enpara%el0,usdus,&
             vr,gk,rsoc,isigma,fj,gj,l_real,hamOvlp)
        CALL timestop("hsmt spherical")
-
        IF (.NOT.input%secvar) THEN
           CALL timestart("hsmt extra")
           IF (ANY(atoms%nlo>0).OR.ANY(atoms%lda_u%l.GE.0)) &
@@ -205,7 +204,6 @@ CONTAINS
           CALL timestart("hsmt non-spherical")
           CALL hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM,n_size,n_rank,input,isp,nintsp,&
                hlpmsize,noco,l_socfirst,lapw,cell,tlmplm,fj,gj,gk,vk,oneD,l_real,hamOvlp%a_r,hamOvlp%a_c)
-
           CALL timestop("hsmt non-spherical")
        ENDIF
     ENDDO

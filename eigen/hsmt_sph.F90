@@ -519,8 +519,9 @@ CONTAINS
 
                             ij = iii + kj
                             hamOvlp%b_c(ij) = hamOvlp%b_c(ij) + CMPLX(rph(kj,1),cph(kj,1))*fct
-                            hamOvlp%a_c(ij) = hamOvlp%a_c(ij) + CMPLX(rph(kj,1),cph(kj,1)) * (fct*elall + plegend(kj,l)*fl2p1bt(l) *&
-                                 ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+                            hamOvlp%a_c(ij) = hamOvlp%a_c(ij) + CMPLX(rph(kj,1),cph(kj,1)) * ( fct*elall &
+                           + plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+
                             IF (input%l_useapw) THEN
 
                                capw1 = CMPLX(rph(kj,1),cph(kj,1))*plegend(kj,l)&

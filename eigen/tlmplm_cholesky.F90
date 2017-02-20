@@ -38,11 +38,12 @@ MODULE m_tlmplm_cholesky
       COMPLEX cil
       COMPLEX,PARAMETER::ci=cmplx(0.,1.)
       REAL temp,wronk
-      INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info
+      INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
       INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,noded,nodeu ,na,m,nsym,s
       LOGICAL l_write,ok
       !     ..
       !     .. Local Arrays ..
+      REAL vr0(size(vr,1),0:size(vr,2)-1,size(vr,3))
       REAL dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
       REAL dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
       REAL uvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
@@ -51,15 +52,18 @@ MODULE m_tlmplm_cholesky
       REAL flo(atoms%jmtd,2,atoms%nlod)
       REAL uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
+      INTEGER:: indt(0:dimension%lmplmd)
 
-    REAL,PARAMETER:: e_shift_min=4.0
-    REAL,PARAMETER:: e_shift_max=200000.0
+    REAL,PARAMETER:: e_shift_min=64.0
+    REAL,PARAMETER:: e_shift_max=20000000.0
     
+    vr0=vr
+    vr0(:,0,:)=0.0
     !     ..e_shift
     td%e_shift=e_shift_min
     OK=.false.
-    td%h_loc=0.0
     DO WHILE(.not.OK)
+       td%h_loc=0.0
        OK=.true.
        td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
        td%tuulo(:,:,:,jsp) = cmplx(0.0,0.0)
@@ -115,7 +119,7 @@ MODULE m_tlmplm_cholesky
                 !--->    loop over non-spherical components of the potential: must
                 !--->    satisfy the triangular conditions and that l'+l+lamda even
                 !--->    (conditions from the gaunt coefficient)
-                DO lh = 0, nh
+                DO lh = 1, nh
                    lamda = sphhar%llh(lh,nsym)
                    lmin = lp - l
                    lmx = lp + l
@@ -126,22 +130,22 @@ MODULE m_tlmplm_cholesky
                       dvu(lpl,lh) = 0.0
                    ELSE
                       DO i = 1,atoms%jri(n)
-                         x(i) = (f(i,1,lp)*f(i,1,l)+f(i,2,lp)*f(i,2,l))* vr(i,lh,n)
+                         x(i) = (f(i,1,lp)*f(i,1,l)+f(i,2,lp)*f(i,2,l))* vr0(i,lh,n)
                       END DO
                       CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                       uvu(lpl,lh) = temp
                       DO i = 1,atoms%jri(n)
-                         x(i) = (g(i,1,lp)*f(i,1,l)+g(i,2,lp)*f(i,2,l))* vr(i,lh,n)
+                         x(i) = (g(i,1,lp)*f(i,1,l)+g(i,2,lp)*f(i,2,l))* vr0(i,lh,n)
                       END DO
                       CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                       dvu(lpl,lh) = temp
                       DO i = 1,atoms%jri(n)
-                         x(i) = (f(i,1,lp)*g(i,1,l)+f(i,2,lp)*g(i,2,l))* vr(i,lh,n)
+                         x(i) = (f(i,1,lp)*g(i,1,l)+f(i,2,lp)*g(i,2,l))* vr0(i,lh,n)
                       END DO
                       CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                       uvd(lpl,lh) = temp
                       DO i = 1,atoms%jri(n)
-                         x(i) = (g(i,1,lp)*g(i,1,l)+g(i,2,lp)*g(i,2,l))* vr(i,lh,n)
+                         x(i) = (g(i,1,lp)*g(i,1,l)+g(i,2,lp)*g(i,2,l))* vr0(i,lh,n)
                       END DO
                       CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                       dvd(lpl,lh) = temp
@@ -150,6 +154,11 @@ MODULE m_tlmplm_cholesky
              END DO
           END DO
           
+          td%tuu(:,n,jsp) = cmplx(0.0,0.0)
+          td%tdd(:,n,jsp) = cmplx(0.0,0.0)
+          td%tud(:,n,jsp) = cmplx(0.0,0.0)
+          td%tdu(:,n,jsp) = cmplx(0.0,0.0)
+          indt=0
           s=atoms%lmax(n)*(atoms%lmax(n)+2)+1
           !--->    generate the various t(l'm',lm) matrices for l'm'.ge.lm
           !--->    loop over l'm'
@@ -179,31 +188,96 @@ MODULE m_tlmplm_cholesky
                          lmplm = lmpl + lm
                          cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,nsym))*&
                               gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
-                         td%h_loc(lm,lmp,n,jsp) = td%h_loc(lm,lmp,n,jsp) + conjg(cil*uvu(lpl,lh))
-                         td%h_loc(lm+s,lmp+s,n,jsp) = td%h_loc(lm+s,lmp+s,n,jsp) + conjg(cil*dvd(lpl,lh))
-                         td%h_loc(lm,lmp+s,n,jsp) = td%h_loc(lm,lmp+s,n,jsp) + conjg(cil*uvd(lpl,lh))
-                         !td%h_loc(lm+s,lmp,n,jsp) = td%h_loc(lm+s,lmp,n,jsp) + conjg(cil*dvu(lpl,lh))
+                         td%tuu(lmplm,n,jsp) = td%tuu(lmplm,n,jsp) + cil*uvu(lpl,lh)
+                         td%tdd(lmplm,n,jsp) = td%tdd(lmplm,n,jsp) + cil*dvd(lpl,lh)
+                         td%tud(lmplm,n,jsp) = td%tud(lmplm,n,jsp) + cil*uvd(lpl,lh)
+                         td%tdu(lmplm,n,jsp) = td%tdu(lmplm,n,jsp) + cil*dvu(lpl,lh)
+                         indt(lmplm) = 1
                       END DO
                    END DO
                 END DO
              END DO
           END DO
+          !--->    set up mapping array
+          DO lp = 0,atoms%lmax(n)
+             DO mp = -lp,lp
+                lmp = lp* (lp+1) + mp
+                DO l = 0,atoms%lmax(n)
+                   DO m = -l,l
+                      lm = l* (l+1) + m
+                      IF (lmp.GE.lm) THEN
+                         lmplm = (lmp* (lmp+1))/2 + lm
+                         IF (indt(lmplm).NE.0) THEN
+                            td%ind(lmp,lm,n,jsp) = lmplm
+                         ELSE
+                            td%ind(lmp,lm,n,jsp) = -9999
+                         END IF
+                      ELSE
+                         lmplm = (lm* (lm+1))/2 + lmp
+                         IF (indt(lmplm).NE.0) THEN
+                            td%ind(lmp,lm,n,jsp) = -lmplm
+                         ELSE
+                            td%ind(lmp,lm,n,jsp) = -9999
+                         END IF
+                      END IF
+                   END DO
+                END DO
+             END DO
+          ENDDO
+          
+          !Setup local hamiltonian
+          DO lmp=0,atoms%lmax(n)*(atoms%lmax(n)+2)
+             lp=FLOOR(SQRT(1.0*lmp))
+             mp=lmp-lp*(lp+1)
+             IF (lp>atoms%lmax(n).OR.ABS(mp)>lp) STOP "BUG"
+             !--->             loop over l,m
+             DO l = 0,atoms%lmax(n)
+                DO m = -l,l
+                   lm = l* (l+1) + m
+                   in = td%ind(lmp,lm,n,jsp)
+                   IF (in/=-9999) THEN
+                      IF (in>=0) THEN
+                         td%h_loc(lm,lmp,n,jsp) =CONJG(td%tuu(in,n,jsp))
+                         td%h_loc(lm+s,lmp,n,jsp) =CONJG(td%tud(in,n,jsp))
+                         td%h_loc(lm,lmp+s,n,jsp) =CONJG(td%tdu(in,n,jsp))
+                         td%h_loc(lm+s,lmp+s,n,jsp) =CONJG(td%tdd(in,n,jsp))
+                      ELSE
+                         td%h_loc(lm,lmp,n,jsp) =td%tuu(-in,n,jsp)
+                         td%h_loc(lm+s,lmp,n,jsp) =td%tdu(-in,n,jsp)
+                         td%h_loc(lm,lmp+s,n,jsp) =td%tud(-in,n,jsp)
+                         td%h_loc(lm+s,lmp+s,n,jsp) =td%tdd(-in,n,jsp)
+                      END IF
+                      !--->    update ax, bx
+                      
+                   END IF
+                END DO
+             END DO
+          ENDDO
+          !DO lp = 0,atoms%lmax(n)
+          !   lp1 = (lp* (lp+1))/2+lp
+          !   uvu(lp1,0)=uvu(lp1,0)+enpara%el0(lp,n,jsp)+td%e_shift
+          !   uvd(lp1,0)=uvd(lp1,0)+0.5
+          !   dvu(lp1,0)=dvu(lp1,0)+0.5
+          !   dvd(lp1,0)=dvd(lp1,0)+(enpara%el0(lp,n,jsp)+td%e_shift)*ud%ddn(lp,n,jsp)
+          !ENDDO
+   
           !--->    include diagonal terms from muffin-tin hamiltonian
           DO lp = 0,atoms%lmax(n)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                td%h_loc(lmp,lmp,n,jsp)=td%h_loc(lmp,lmp,n,jsp)+enpara%el0(lp,n,jsp)+td%e_shift
-                td%h_loc(lmp,lmp+s,n,jsp)=td%h_loc(lmp,lmp+s,n,jsp)+0.5
-                td%h_loc(lmp+s,lmp,n,jsp)=td%h_loc(lmp+s,lmp,n,jsp)+0.5
-                td%h_loc(lmp+s,lmp+s,n,jsp)=td%h_loc(lmp+s,lmp+s,n,jsp)+(enpara%el0(lp,n,jsp)+td%e_shift)*ud%ddn(lp,n,jsp)
+                td%h_loc(lmp,lmp,n,jsp)=(td%e_shift+enpara%el0(lp,n,jsp))+td%h_loc(lmp,lmp,n,jsp)
+                td%h_loc(lmp,lmp+s,n,jsp)=0.5+td%h_loc(lmp,lmp+s,n,jsp)
+                td%h_loc(lmp+s,lmp,n,jsp)=0.5+td%h_loc(lmp+s,lmp,n,jsp)
+                td%h_loc(lmp+s,lmp+s,n,jsp)=(enpara%el0(lp,n,jsp)+td%e_shift)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
              END DO
-          END DO
+          END DO   
+
           !Perform cholesky decomposition
-          CALL zpotrf("U",2*s,td%h_loc,size(td%h_loc,1),info)
+          CALL zpotrf("L",2*s,td%h_loc(:,:,n,jsp),size(td%h_loc,1),info)
           !Generate full matrix
           DO lm=0,size(td%h_loc,1)-1
              DO lmp=lm+1,size(td%h_loc,1)-1
-                td%h_loc(lmp,lm,n,jsp)=td%h_loc(lm,lmp,n,jsp)
+                td%h_loc(lm,lmp,n,jsp)=0.0!td%h_loc(lm,lmp,n,jsp)
              ENDDO
           ENDDO
           IF (info.ne.0) THEN
@@ -212,6 +286,7 @@ MODULE m_tlmplm_cholesky
              if (td%e_shift>e_shift_max) call judft_error("Potential shift at maximum")
              OK=.false.
           ENDIF
+
           !
           !--->   set up the t-matrices for the local orbitals,
           !--->   if there are any

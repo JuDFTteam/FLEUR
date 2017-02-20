@@ -48,6 +48,7 @@ CONTAINS
                    ab(:,ab_offset+1+lm)=sqrt(usdus%ddn(l,n,ispin))*ab(:,ab_offset+1+lm)
                 ENDDO
              ENDDO
+             print *, shape(ab),ab_offset
              CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(:,ab_offset+1:),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
           ENDIF
        end DO

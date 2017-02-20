@@ -56,19 +56,18 @@ CONTAINS
        CALL  hsmt_overlap(sym,atoms,jsp,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
        CALL timestop("hsmt_overlap")
        
-       CALL timestart("hsmt_overlap")
+       CALL timestart("hsmt_hamil")
        CALL  hsmt_hamil(sym,atoms,jsp,cell,lapw,td,gk,vk,fj,gj,hamovlp)
-       CALL timestop("hsmt_overlap")
+       CALL timestop("hsmt_hamil")
     enddo
 
     i=0
     DO n=1,lapw%nv(1)
        DO nn=1,n
           i=i+1
-          write(61,"(2i5,4e15.7)") n,nn,hamovlp%b_c(i),hamovlp%s_c(nn,n)
-          write(62,"(2i5,4e15.7)") n,nn,hamovlp%a_c(i),hamovlp%h_c(nn,n)
+          hamovlp%b_c(i)=hamovlp%s_c(nn,n)
+          hamovlp%a_c(i)=hamovlp%h_c(nn,n)
        ENDDO
     enddo
-    stop "debug"
   end SUBROUTINE hsmt_simple
 end MODULE m_hsmt_simple

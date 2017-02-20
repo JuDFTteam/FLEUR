@@ -767,6 +767,7 @@ CONTAINS
     !
     !--->    store number of star with respect to z-index in igz
     !
+    izmin=0;izmax=0
     ngz = izmax - izmin + 1
     DO k = 1,stars%ng3
        igz(k) = stars%kv3(3,k) - izmin + 1
