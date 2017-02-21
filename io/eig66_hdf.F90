@@ -517,7 +517,7 @@ CONTAINS
        ELSE
           IF (PRESENT(eig)) CALL juDFT_error("BUG in calling write_eig")
        ENDIF
-       IF (PRESENT(z).AND..NOT.PRESENT(neig))&
+       IF (PRESENT(zmat).AND..NOT.PRESENT(neig))&
             &    CALL juDFT_error("BUG in calling write_eig with eigenvector")
 
        n1=1;n2=0
