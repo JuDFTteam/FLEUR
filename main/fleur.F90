@@ -806,6 +806,7 @@
        !--- J>
 
 #ifdef CPP_MPI
+       CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
        !-t3e
