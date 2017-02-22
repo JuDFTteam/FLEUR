@@ -10,7 +10,47 @@ CONTAINS
 
   subroutine hsmt_overlap(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
 !Calculate overlap matrix
-#include"cpp_double.h"
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_types
+    USE m_ylm
+    USE m_hsmt_ab
+    IMPLICIT NONE
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_usdus),INTENT(IN)    :: usdus
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: ispin
+    !     ..
+    !     .. Array Arguments ..
+    REAL,INTENT(IN) :: gk(:,:,:),vk(:,:,:)
+    REAL,INTENT(IN) :: fj(:,0:,:,:),gj(:,0:,:,:)
+    TYPE(t_hamovlp),INTENT(INOUT) :: hamovlp
+
+    INTEGER:: I(2)
+
+    call timestart("with zherk")
+    call hsmt_overlap_zherk(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+    call timestop("with zherk")
+    hamovlp%h_c=hamovlp%s_c
+    hamovlp%s_c=0.0
+    call timestart("analytic")
+    call hsmt_overlap_analytic(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+    call timestop("analytic")
+    print *,real(hamovlp%h_c(1,:14))
+    print *,real(hamovlp%s_c(1,:14))
+    print *,maxval(abs(hamovlp%h_c-hamovlp%s_c))
+    i=maxloc(abs(hamovlp%h_c-hamovlp%s_c))
+    print *,i
+    print *,hamovlp%h_c(i(1),i(2)),hamovlp%s_c(i(1),i(2))
+    hamovlp%s_c=hamovlp%h_c
+    hamovlp%h_c=0.0
+  end subroutine hsmt_overlap
+ 
+ subroutine hsmt_overlap_zherk(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+!Calculate overlap matrix
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
@@ -54,7 +94,96 @@ CONTAINS
        end DO
     end DO
 
-  end subroutine hsmt_overlap
+  end subroutine hsmt_overlap_zherk
+
+  subroutine hsmt_overlap_analytic(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+    !Calculate overlap matrix
+    USE m_constants
+    USE m_types
+    IMPLICIT NONE
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_usdus),INTENT(IN)    :: usdus
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: ispin
+    !     ..
+    !     .. Array Arguments ..
+    REAL,INTENT(IN) :: gk(:,:,:),vk(:,:,:)
+    REAL,INTENT(IN) :: fj(:,0:,:,:),gj(:,0:,:,:)
+    TYPE(t_hamovlp),INTENT(INOUT) :: hamovlp
+    
+    !     .. Local Scalars ..
+    REAL ski(3)
+    INTEGER ki,kj,l,n,na,nn
+
+    !     ..
+    !     .. Local Arrays ..
+    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
+    REAL, ALLOCATABLE :: plegend(:,:)
+    COMPLEX, ALLOCATABLE :: phase(:,:)
+    INTEGER,PARAMETER::ab_dim=1
+    
+    !     ..
+    DO l = 0,atoms%lmaxd
+       fleg1(l) = real(l+l+1)/real(l+1)
+       fleg2(l) = real(l)/real(l+1)
+       fl2p1(l) = real(l+l+1)/fpi_const
+    END DO
+    !
+    !$OMP PARALLEL default(NONE) &
+    !$OMP SHARED(sym,cell,atoms,lapw,usdus,ispin,gk,vk,fj,gj,hamovlp,fleg1,fl2p1,fleg2)&
+    !$OMP PRIVATE(ski,ki,kj,l,n,na,nn,plegend,phase)
+
+    ALLOCATE(phase(maxval(lapw%nv),ab_dim))
+    ALLOCATE(plegend(maxval(lapw%nv),0:atoms%lmaxd))
+    
+    plegend=0.0
+    !$OMP DO  SCHEDULE(DYNAMIC,1)
+    DO  ki =  1, lapw%nv(ispin)
+       ski = (/lapw%k1(ki,ispin),lapw%k2(ki,ispin),lapw%k3(ki,ispin)/) 
+       !--->       legendre polynomials
+       plegend(:,0)=1.0
+       DO kj = 1,ki
+          plegend(kj,1) = dot_product(gk(kj,:,ispin),gk(ki,:,ispin))
+       END DO
+       DO l = 1,maxval(atoms%lmax) - 1
+          plegend(:,l+1) = fleg1(l)*plegend(:,1)*plegend(:,l) - fleg2(l)*plegend(:,l-1)
+       END DO
+       !include factor fl2p1 already here
+       DO l=0,maxval(atoms%lmax)
+          plegend(:ki,l)=plegend(:ki,l)*fl2p1(l)
+       ENDDO
+       !--->       loop over equivalent atoms
+       DO n = 1,atoms%ntype
+          DO nn = 1,atoms%neq(n)
+             na = SUM(atoms%neq(:n-1))+nn
+             phase=0.0
+             !--->             set up phase factors
+             DO kj = 1,ki
+                phase(kj,1)=phase(kj,1)+exp(cmplx(0.,tpi_const)*dot_product(ski-(/lapw%k1(kj,ispin),lapw%k2(kj,ispin),lapw%k3(kj,ispin)/),atoms%taual(:,na)))
+             END DO
+          END DO
+          
+          !--->          update overlap and l-diagonal hamiltonian matrix
+          DO  l = 0,atoms%lmax(n)
+             DO kj = 1,ki
+                hamovlp%s_c(kj,ki)= hamovlp%s_c(ki,kj)+ phase(kj,1)*plegend(kj,l)*( fj(ki,l,n,ispin)*fj(kj,l,n,ispin) + gj(ki,l,n,ispin)*usdus%ddn(l,n,ispin)*gj(kj,l,n,ispin) )
+             END DO
+             !--->          end loop over l
+          enddo
+          !--->       end loop over atom types (ntype)
+       enddo
+       !--->    end loop over ki
+    enddo
+    !$OMP END DO
+    DEALLOCATE(phase,plegend)
+    !$OMP END PARALLEL
+
+
+  end subroutine hsmt_overlap_analytic
 
 #if 1==2 
   !old routine based on hssphn

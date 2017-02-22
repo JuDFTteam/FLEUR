@@ -474,6 +474,7 @@ CONTAINS
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
 #else
+          lapw%nv_tot=lapw%nv(jsp)
           call hsmt_simple(jsp,input%jspins,kpts%bk(:,nk),dimension,input,sym,cell,atoms,lapw,td,ud,enpara,hamOvlp)
 #endif
           !
