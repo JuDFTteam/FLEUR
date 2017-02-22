@@ -543,6 +543,7 @@ CONTAINS
 #if defined(CPP_MPI)
           !Collect number of all eigenvalues
           CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
+          ne_all=min(dimension%neigd,ne_all)
 #endif
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           if (.not.l_real) THEN

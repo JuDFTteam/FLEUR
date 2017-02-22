@@ -1,6 +1,6 @@
 #Set the compiler names
 set(CMAKE_Fortran_COMPILER mpiifort)
-set(CMAKE_C_COMPILER mpiicc)
+#set(CMAKE_C_COMPILER mpiicc)
 #Add include pathes
 #set(FLEUR_Fortran_FLAGS "")
 #Add linker stuff

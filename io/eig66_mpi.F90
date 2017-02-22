@@ -385,7 +385,7 @@ CONTAINS
 #ifdef CPP_MPI
     INTEGER                   :: pe,tmp_size,e
     INTEGER(MPI_ADDRESS_KIND) :: slot
-    INTEGER                   :: n1,n2,n3,n
+    INTEGER                   :: n1,n2,n3,n,nn
     INTEGER,ALLOCATABLE       :: tmp_int(:)
     REAL,ALLOCATABLE          :: tmp_real(:)
     COMPLEX,ALLOCATABLE       :: tmp_cmplx(:)
@@ -446,7 +446,11 @@ CONTAINS
        IF (PRESENT(n_rank)) n1=n_rank+1
        IF (PRESENT(n_size)) n3=n_size
        n2=SIZE(eig)*n3+n1-1
-       tmp_real(n1:n2:n3)=eig
+       nn=1
+       DO n=n1,min(n2,d%size_eig),n3
+         tmp_real(n)=eig(nn)
+         nn=nn+1
+       ENDDO
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
        IF (n3.ne.1) THEN
           CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)
@@ -464,6 +468,7 @@ CONTAINS
           n1=n-1
           IF (PRESENT(n_size)) n1=n_size*n1
           IF (PRESENT(n_rank)) n1=n1+n_rank
+          IF (n1+1>size(d%slot_ev,3)) EXIT
           slot=d%slot_ev(nk,jspin,n1+1)
           pe=d%pe_ev(nk,jspin,n1+1)
           !print *, "PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
