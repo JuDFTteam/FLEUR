@@ -169,14 +169,14 @@ call timestop("zherk1")
              phase=0.0
              !--->             set up phase factors
              DO kj = 1,ki
-                phase(kj,1)=phase(kj,1)+exp(cmplx(0.,tpi_const)*dot_product(ski-(/lapw%k1(kj,ispin),lapw%k2(kj,ispin),lapw%k3(kj,ispin)/),atoms%taual(:,na)))
+                phase(kj,1)=phase(kj,1)+exp(cmplx(0.,-1.*tpi_const)*dot_product(ski-(/lapw%k1(kj,ispin),lapw%k2(kj,ispin),lapw%k3(kj,ispin)/),atoms%taual(:,na)))
              END DO
           END DO
           
           !--->          update overlap and l-diagonal hamiltonian matrix
           DO  l = 0,atoms%lmax(n)
              DO kj = 1,ki
-                hamovlp%s_c(kj,ki)= hamovlp%s_c(kj,ki)+ phase(kj,1)*plegend(kj,l)*( fj(ki,l,n,ispin)*fj(kj,l,n,ispin) + gj(ki,l,n,ispin)*usdus%ddn(l,n,ispin)*gj(kj,l,n,ispin) )
+                hamovlp%s_c(kj,ki)= hamovlp%s_c(kj,ki)+ phase(kj,1)*(plegend(kj,l)*( fj(ki,l,n,ispin)*fj(kj,l,n,ispin) + gj(ki,l,n,ispin)*usdus%ddn(l,n,ispin)*gj(kj,l,n,ispin) ))
              END DO
              !--->          end loop over l
           enddo

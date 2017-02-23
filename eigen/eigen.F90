@@ -483,6 +483,7 @@ CONTAINS
           ENDIF
           lapw%nv_tot=lapw%nv(jsp)
           call hsmt_simple(jsp,input%jspins,kpts%bk(:,nk),dimension,input,sym,cell,atoms,lapw,td,ud,enpara,hamOvlp)
+          call judft_end("DEBUG",0)
 #endif
           !
           !
