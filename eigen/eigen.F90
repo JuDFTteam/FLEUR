@@ -466,14 +466,21 @@ CONTAINS
           !
           !--->         update with sphere terms
           !
-#ifndef CPP_SIMPLE
+
           IF (.not.l_wu) THEN
              call timestart("MT Hamiltonian&Overlap")
              CALL hsmt(dimension,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
                   lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
-#else
+#ifdef CPP_SIMPLE
+          if (l_real) THEN
+             hamOvlp%a_r=0.0
+             hamOvlp%b_r=0.0
+          ELSE
+             hamOvlp%a_c=0.0
+             hamOvlp%b_c=0.0
+          ENDIF
           lapw%nv_tot=lapw%nv(jsp)
           call hsmt_simple(jsp,input%jspins,kpts%bk(:,nk),dimension,input,sym,cell,atoms,lapw,td,ud,enpara,hamOvlp)
 #endif

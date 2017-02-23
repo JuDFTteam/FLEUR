@@ -79,17 +79,23 @@ CONTAINS
        DO nn = 1,atoms%neq(n)
           na = SUM(atoms%neq(:n-1))+nn
           IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-             
+call timestart("hsmt_ab")             
              CALL hsmt_ab(sym,atoms,ispin,n,na,cell,lapw,gk,vk,fj,gj,ab,ab_offset)
-             CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(:,:ab_offset),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
+call timestop("hsmt_ab")             
+call timestart("zherk")             
+             CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(1,1),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
+call timestop("zherk")             
+call timestart("scale")             
              DO l=0,atoms%lmax(n)
                 DO m=-l,l
                    lm=l*(l+1)+m
                    ab(:,ab_offset+1+lm)=sqrt(usdus%ddn(l,n,ispin))*ab(:,ab_offset+1+lm)
                 ENDDO
              ENDDO
-             print *, shape(ab),ab_offset
-             CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(:,ab_offset+1:),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
+call timestop("scale")             
+call timestart("zherk1")             
+             CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(1,ab_offset+1),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
+call timestop("zherk1")             
           ENDIF
        end DO
     end DO
