@@ -39,12 +39,6 @@ CONTAINS
     call timestart("analytic")
     call hsmt_overlap_analytic(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
     call timestop("analytic")
-    print *,real(hamovlp%h_c(1,:14))
-    print *,real(hamovlp%s_c(1,:14))
-    print *,maxval(abs(hamovlp%h_c-hamovlp%s_c))
-    i=maxloc(abs(hamovlp%h_c-hamovlp%s_c))
-    print *,i
-    print *,hamovlp%h_c(i(1),i(2)),hamovlp%s_c(i(1),i(2))
     hamovlp%s_c=hamovlp%h_c
     hamovlp%h_c=0.0
   end subroutine hsmt_overlap
@@ -79,23 +73,15 @@ CONTAINS
        DO nn = 1,atoms%neq(n)
           na = SUM(atoms%neq(:n-1))+nn
           IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-call timestart("hsmt_ab")             
              CALL hsmt_ab(sym,atoms,ispin,n,na,cell,lapw,gk,vk,fj,gj,ab,ab_offset)
-call timestop("hsmt_ab")             
-call timestart("zherk")             
              CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(1,1),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
-call timestop("zherk")             
-call timestart("scale")             
              DO l=0,atoms%lmax(n)
                 DO m=-l,l
                    lm=l*(l+1)+m
                    ab(:,ab_offset+1+lm)=sqrt(usdus%ddn(l,n,ispin))*ab(:,ab_offset+1+lm)
                 ENDDO
              ENDDO
-call timestop("scale")             
-call timestart("zherk1")             
              CALL ZHERK("U","N",lapw%nv(ispin),ab_offset,cmplx(1.,0),ab(1,ab_offset+1),size(ab,1),cmplx(1.0,0.0),HamOvlp%s_c,size(HamOvlp%s_c,1))
-call timestop("zherk1")             
           ENDIF
        end DO
     end DO
@@ -164,12 +150,12 @@ call timestop("zherk1")
        ENDDO
        !--->       loop over equivalent atoms
        DO n = 1,atoms%ntype
+          phase=0.0
           DO nn = 1,atoms%neq(n)
              na = SUM(atoms%neq(:n-1))+nn
-             phase=0.0
              !--->             set up phase factors
              DO kj = 1,ki
-                phase(kj,1)=phase(kj,1)+exp(cmplx(0.,-1.*tpi_const)*dot_product(ski-(/lapw%k1(kj,ispin),lapw%k2(kj,ispin),lapw%k3(kj,ispin)/),atoms%taual(:,na)))
+                phase(kj,1)=phase(kj,1)+exp(cmplx(0.,1.*tpi_const)*dot_product(ski-(/lapw%k1(kj,ispin),lapw%k2(kj,ispin),lapw%k3(kj,ispin)/),atoms%taual(:,na)))
              END DO
           END DO
           
