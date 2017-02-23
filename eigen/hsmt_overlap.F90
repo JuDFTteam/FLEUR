@@ -170,7 +170,7 @@ CONTAINS
           !--->          update overlap and l-diagonal hamiltonian matrix
           DO  l = 0,atoms%lmax(n)
              DO kj = 1,ki
-                hamovlp%s_c(kj,ki)= hamovlp%s_c(ki,kj)+ phase(kj,1)*plegend(kj,l)*( fj(ki,l,n,ispin)*fj(kj,l,n,ispin) + gj(ki,l,n,ispin)*usdus%ddn(l,n,ispin)*gj(kj,l,n,ispin) )
+                hamovlp%s_c(kj,ki)= hamovlp%s_c(kj,ki)+ phase(kj,1)*plegend(kj,l)*( fj(ki,l,n,ispin)*fj(kj,l,n,ispin) + gj(ki,l,n,ispin)*usdus%ddn(l,n,ispin)*gj(kj,l,n,ispin) )
              END DO
              !--->          end loop over l
           enddo
