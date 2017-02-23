@@ -29,6 +29,9 @@
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
+#ifdef CPP_HDF
+          USE m_hdf_tools
+#endif
           IMPLICIT NONE
           !     Types, these variables contain a lot of data!
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
@@ -78,7 +81,9 @@
 #else
           mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
-
+#ifdef CPP_HDF
+          call hdf_init()
+#endif
           results%seigscv         = 0.0
           results%te_vcoul        = 0.0
           results%te_veff         = 0.0
