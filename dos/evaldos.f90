@@ -475,18 +475,18 @@
             OPEN (18,FILE='bands'//spin12(jspin))
             ntb = minval(nevk(:))    
             kx(1) = 0.0
-            vkr(:,1)=matmul(cell%bmat,vk(:,1))
+            vkr(:,1)=matmul(vk(:,1),cell%bmat)
             DO k = 2, kpts%nkpt
               
-            vkr(:,k)=matmul(cell%bmat,vk(:,k))
-              dk = ( vkr(1,k) - vkr(1,k-1) )**2 + ( vkr(2,k) - vkr(2,k-1) )**2 +&
-                   ( vkr(3,k) - vkr(3,k-1) )**2
-              kx(k) = kx(k-1) + sqrt(dk)
+               vkr(:,k)=matmul(vk(:,k),cell%bmat)
+               dk = (vkr(1,k)-vkr(1,k-1))**2 + (vkr(2,k)-vkr(2,k-1) )**2 + &
+                    (vkr(3,k)-vkr(3,k-1))**2
+               kx(k) = kx(k-1) + sqrt(dk)
             ENDDO
             DO i = 1, ntb
-              DO k = 1, kpts%nkpt
-                write(18,'(2f15.9)') kx(k),ev(i,k)
-              ENDDO
+               DO k = 1, kpts%nkpt
+                  write(18,'(2f15.9)') kx(k),ev(i,k)
+               ENDDO
             ENDDO
             CLOSE (18)
          ENDIF
