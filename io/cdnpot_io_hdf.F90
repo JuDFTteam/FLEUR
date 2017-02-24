@@ -103,8 +103,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T) :: generalGroupID
       INTEGER        :: hdfError
 
-      WRITE(*,*) 'currentStarsIndex',currentStarsIndex
-
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
 
       CALL io_write_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
