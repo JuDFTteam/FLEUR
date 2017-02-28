@@ -89,7 +89,7 @@
              na = na + atoms%neq(n)
           ENDDO
           !     ----> write the spin-polarized density
-          CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                             0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           !
           ! for lda+U: flip n-matrix 

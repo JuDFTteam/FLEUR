@@ -304,7 +304,7 @@ CONTAINS
     CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
                    qpw,rhtxy,rho,rht,.FALSE., fix)
 
-    CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                       1,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE ( cdom,cdomvz,cdomvxy )

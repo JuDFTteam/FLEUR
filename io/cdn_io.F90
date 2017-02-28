@@ -18,6 +18,10 @@ MODULE m_cdn_io
    USE m_juDFT
    USE m_loddop
    USE m_wrtdop
+   USE m_cdnpot_io_hdf
+#ifdef CPP_HDF
+   USE hdf5
+#endif
    IMPLICIT NONE
 
    PRIVATE
@@ -68,19 +72,70 @@ MODULE m_cdn_io
       LOGICAL            :: l_exist, l_rhomatFile
       CHARACTER(LEN=30)  :: filename
 
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex,currentDensityIndex
+      INTEGER           :: lastDensityIndex, densityType
+      CHARACTER(LEN=30) :: archiveName
+      TYPE(t_cell)      :: cellTemp
+
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+
+         densityType = 0
+         archiveName = ''
+
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF (l_exist) THEN
-            !load density from cdn.hdf and exit subroutine
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
 
+            currentDensityIndex = currentDensityIndex + relCdnIndex ! This is actually wrong. I should go back step by step.
+
+            IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
+               archiveName = 'cdn'
+            ELSE
+               WRITE(archiveName,'(a,i0)') '/cdn-', currentDensityIndex
+            END IF
+
+            SELECT CASE (inOrOutCDN)
+               CASE (CDN_INPUT_DEN_const)
+                  IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+                     densityType = DENSITY_TYPE_NOCO_IN_const
+                  ELSE
+                     densityType = DENSITY_TYPE_IN_const
+                  END IF
+               CASE (CDN_OUTPUT_DEN_const)
+                  IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+                     densityType = DENSITY_TYPE_NOCO_OUT_const
+                  ELSE
+                     densityType = DENSITY_TYPE_OUT_const
+                  END IF
+               CASE DEFAULT
+                  WRITE(*,*) 'inOrOutCDN = ', inOrOutCDN
+                  CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="writeDensity")
+            END SELECT
+            l_exist = isDensityEntryPresentHDF(fileID,archiveName,densityType)
+            CALL closeCDN_HDF(fileID)
+         END IF
+
+         IF (l_exist) THEN
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+
+            CALL readDensityHDF(fileID, archiveName, densityType,&
+                                iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+
+            CALL closeCDN_HDF(fileID)
             RETURN
          ELSE
-            WRITE(*,*) 'cdn.hdf file not found.'
+            WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
             WRITE(*,*) 'Falling back to stream access file cdn.str.'
             mode = CDN_STREAM_MODE
          END IF
+#endif
       END IF
 
       IF(mode.EQ.CDN_STREAM_MODE) THEN
@@ -164,12 +219,13 @@ MODULE m_cdn_io
 
    END SUBROUTINE readDensity
 
-   SUBROUTINE writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
+   SUBROUTINE writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
                            relCdnIndex,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_sphhar),INTENT(IN) :: sphhar
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -196,15 +252,83 @@ MODULE m_cdn_io
 
       INTEGER           :: mode, iterTemp, k, i, iVac, j, iUnit
       INTEGER           :: d1, d10, asciioffset, iUnitTemp
-      LOGICAL           :: l_exist
+      LOGICAL           :: l_exist, l_storeIndices
       CHARACTER(len=30) :: filename
       CHARACTER(len=5)  :: cdnfile
+
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex,currentDensityIndex
+      INTEGER           :: lastDensityIndex, densityType
+      CHARACTER(LEN=30) :: archiveName
 
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
-         ! Write density to cdn.hdf file
-         STOP 'CDN_HDF5_MODE not yet implemented!'
+#ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+
+         l_storeIndices = .FALSE.
+         IF (currentStarsIndex.EQ.0) THEN
+            currentStarsIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+         END IF
+         IF (currentLatharmsIndex.EQ.0) THEN
+            currentLatharmsIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, sphhar)
+         END IF
+         IF(currentStructureIndex.EQ.0) THEN
+            currentStructureIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+         END IF
+         lastDensityIndex = currentDensityIndex
+         IF(relCdnIndex.NE.0) THEN
+            currentDensityIndex = currentDensityIndex+relCdnIndex
+            l_storeIndices = .TRUE.
+         END IF
+
+         archiveName = ''
+         IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
+            archiveName = 'cdn'
+         ELSE
+            WRITE(archiveName,'(a,i0)') '/cdn-', currentDensityIndex
+         END IF
+
+         densityType = 0
+         SELECT CASE (inOrOutCDN)
+            CASE (CDN_INPUT_DEN_const)
+               IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+                  densityType = DENSITY_TYPE_NOCO_IN_const
+               ELSE
+                  densityType = DENSITY_TYPE_IN_const
+               END IF
+            CASE (CDN_OUTPUT_DEN_const)
+               IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
+                  densityType = DENSITY_TYPE_NOCO_OUT_const
+               ELSE
+                  densityType = DENSITY_TYPE_OUT_const
+               END IF
+            CASE DEFAULT
+               WRITE(*,*) 'inOrOutCDN = ', inOrOutCDN
+               CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="writeDensity")
+         END SELECT
+
+         CALL writeDensityHDF(input, fileID, archiveName, densityType, lastDensityIndex,&
+                              currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
+                              iter+relCdnIndex,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+
+         IF(l_storeIndices) THEN
+            CALL writeHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                 currentStructureIndex,currentDensityIndex)
+         END IF
+
+         CALL closeCDN_HDF(fileID)
+#endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          ! Write density to cdn.str file
          STOP 'CDN_STREAM_MODE not yet implemented!'
@@ -357,19 +481,28 @@ MODULE m_cdn_io
       LOGICAL            :: l_exist
       CHARACTER(LEN=30)  :: filename
 
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex
+      INTEGER        :: currentStructureIndex,currentDensityIndex
+
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
-         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+#ifdef CPP_HDF
+         l_exist = isCoreDensityPresentHDF()
          IF (l_exist) THEN
-            !load density from cdn.hdf and exit subroutine
-
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+            CALL readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+            CALL closeCDN_HDF(fileID)
             RETURN
          ELSE
-            WRITE(*,*) 'cdn.hdf file not found.'
+            WRITE(*,*) 'No core density is available in HDF5 format.'
             WRITE(*,*) 'Falling back to stream access file cdn.str.'
             mode = CDN_STREAM_MODE
          END IF
+#endif
       END IF
 
       IF(mode.EQ.CDN_STREAM_MODE) THEN
@@ -417,11 +550,20 @@ MODULE m_cdn_io
 
       INTEGER :: mode, iUnit, iSpin, iAtom, i
 
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex
+      INTEGER        :: currentStructureIndex,currentDensityIndex
+
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
-         ! Write core density to cdn.hdf file
-         STOP 'CDN_HDF5_MODE not yet implemented!'
+#ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+         CALL writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+         CALL closeCDN_HDF(fileID)
+#endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          ! Write core density to cdn.str file
          STOP 'CDN_STREAM_MODE not yet implemented!'
@@ -445,8 +587,17 @@ MODULE m_cdn_io
       INTEGER, INTENT(OUT) :: mode
 
       mode = CDN_DIRECT_MODE
-      IF (juDFT_was_argument("-stream_cdn")) mode=CDN_STREAM_MODE
-      IF (juDFT_was_argument("-hdf_cdn")) mode=CDN_HDF5_MODE
+      IF (juDFT_was_argument("-stream_cdn")) THEN
+         mode=CDN_STREAM_MODE
+      END IF
+      IF (juDFT_was_argument("-hdf_cdn")) THEN
+#ifdef CPP_HDF
+         mode=CDN_HDF5_MODE
+#else
+         WRITE(*,*) 'Code not compiled with HDF5 support.'
+         WRITE(*,*) 'Falling back to direct access.'
+#endif
+      END IF
    END SUBROUTINE getMode
 
    LOGICAL FUNCTION isDensityFilePresent(archiveType)
@@ -499,11 +650,13 @@ MODULE m_cdn_io
       CALL getMode(mode)
 
       IF (mode.EQ.CDN_HDF5_MODE) THEN
-         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+#ifdef CPP_HDF
+         l_exist = isCoreDensityPresentHDF()
          IF(l_exist) THEN
-            STOP 'Not yet implemented!'
+            isCoreDensityPresent = l_exist
             RETURN
          END IF
+#endif
       END IF
 
       IF ((mode.EQ.CDN_STREAM_MODE).OR.(mode.EQ.CDN_HDF5_MODE)) THEN

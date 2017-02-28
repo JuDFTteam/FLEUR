@@ -243,7 +243,7 @@
              ! Write superposed density onto density file
              !
              iter = 0
-             CALL writeDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
+             CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
                                1,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
              !
              ! Check continuity

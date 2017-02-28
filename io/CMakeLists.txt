@@ -14,7 +14,8 @@ io/eig66_mpi.F90
 io/nocoInputCheck.F90
 io/inpnoco.F90
 io/loddop.f90
-io/cdn_io.f90
+io/cdnpot_io_hdf.F90
+io/cdn_io.F90
 io/pot_io.f90
 io/rw_inp.f90
 io/rw_noco.f90
