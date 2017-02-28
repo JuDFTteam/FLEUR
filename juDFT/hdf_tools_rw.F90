@@ -1641,33 +1641,31 @@
      &     ncount(:)
       COMPLEX(rkind),INTENT(OUT)    ::DATA(:,:,:,:,:) 
       INTEGER(HID_T),INTENT(IN),OPTIONAL::trans 
-      !locals                                                           
-      INTEGER::foffset(SIZE(start)) 
-      REAL,ALLOCATABLE::a(:,:,:,:,:),b(:,:,:,:,:) 
-      ALLOCATE(A(SIZE(DATA,1),SIZE(DATA,2),SIZE(DATA,3),SIZE(DATA,4)    &
-     &     ,SIZE(DATA,5)),B(SIZE(DATA,1),SIZE(DATA,2),SIZE(DATA,3)      &
-     &     ,SIZE(DATA,4),SIZE(DATA,5)))                                 
+      !locals
+      INTEGER::foffset(SIZE(start)),fncount(SIZE(start))
+      REAL,ALLOCATABLE::a(:,:,:,:,:,:)
+
                      !                                                  
       foffset=start 
+      fncount=ncount
       !DO 2 calls to read real values                                   
       WHERE(start<0) 
-         foffset=1 
+         foffset=1
+         fncount=2
       ENDWHERE 
-      IF (PRESENT(trans)) THEN 
-         CALL io_read_real5(did,foffset,ncount,a,trans)
-      ELSE 
-         CALL io_read_real5(did,foffset,ncount,a)
-      ENDIF 
-      WHERE(start<0) 
-         foffset=2 
-      ENDWHERE 
-      IF (PRESENT(trans)) THEN 
-         CALL io_read_real5(did,foffset,ncount,b,trans)
-      ELSE 
-         CALL io_read_real5(did,foffset,ncount,b)
-      ENDIF 
-      DATA=CMPLX(a,b) 
-      DEALLOCATE(a,b) 
+      if (count(start<0)/=1) CPP_error("Wrong no of negatives")
+      if (start(1)<0) then
+          ALLOCATE(A(2,SIZE(DATA,1),size(data,2),size(data,3),size(data,4),size(data,5)))
+          CALL io_read_real6(did,foffset,fncount,a,trans)
+          DATA=CMPLX(a(1,:,:,:,:,:),a(2,:,:,:,:,:))
+      else if (start(6)<0) then
+          ALLOCATE(A(SIZE(DATA,1),size(data,2),size(data,3),size(data,4),size(data,5),2))
+          CALL io_read_real6(did,foffset,fncount,a,trans)
+          DATA=CMPLX(a(:,:,:,:,:,1),a(:,:,:,:,:,2))
+      else
+          CPP_error("Wrong position of negative")
+      endif
+      DEALLOCATE(a)
       END SUBROUTINE 
       SUBROUTINE io_write_complex0(did,start,ncount,DATA,trans)
 !*****************************************************************      
@@ -1784,26 +1782,20 @@
       INTEGER(HID_T),INTENT(IN),OPTIONAL::trans 
       !locals                                                           
       INTEGER::foffset(SIZE(start)),fncount(SIZE(start))
+      real::a(2,size(data,1),size(data,2),size(data,3),size(data,4))
+
+      a(1,:,:,:,:)=real(data)
+      a(2,:,:,:,:)=aimag(data)
+
       fncount=ncount
                      !                                                  
       foffset=start 
       !DO 2 calls to read real values                                   
       WHERE(start<0) 
-         foffset=1 
+         foffset=1
+         fncount=2
       ENDWHERE 
-      IF (PRESENT(trans)) THEN 
-         CALL io_write_real4(did,foffset,ncount,REAL(DATA),trans)
-      ELSE 
-         CALL io_write_real4(did,foffset,ncount,REAL(DATA))
-      ENDIF 
-      WHERE(start<0) 
-         foffset=2 
-      ENDWHERE 
-      IF (PRESENT(trans)) THEN 
-         CALL io_write_real4(did,foffset,ncount,AIMAG(DATA),trans)
-      ELSE 
-         CALL io_write_real4(did,foffset,ncount,AIMAG(DATA))
-      ENDIF 
+      CALL io_write_real5(did,foffset,fncount,a,trans)
       END SUBROUTINE 
       SUBROUTINE io_write_complex5(did,start,ncount,DATA,trans)
 !*****************************************************************      
@@ -1817,26 +1809,20 @@
       INTEGER(HID_T),INTENT(IN),OPTIONAL::trans 
       !locals                                                           
       INTEGER::foffset(SIZE(start)),fncount(SIZE(start))
+      real::a(2,size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
+
+      a(1,:,:,:,:,:)=real(data)
+      a(2,:,:,:,:,:)=aimag(data)
+
       fncount=ncount
                      !                                                  
       foffset=start 
       !DO 2 calls to read real values                                   
       WHERE(start<0) 
-         foffset=1 
+         foffset=1
+         fncount=2
       ENDWHERE 
-      IF (PRESENT(trans)) THEN 
-         CALL io_write_real5(did,foffset,ncount,REAL(DATA),trans)
-      ELSE 
-         CALL io_write_real5(did,foffset,ncount,REAL(DATA))
-      ENDIF 
-      WHERE(start<0) 
-         foffset=2 
-      ENDWHERE 
-      IF (PRESENT(trans)) THEN 
-         CALL io_write_real5(did,foffset,ncount,AIMAG(DATA),trans)
-      ELSE 
-         CALL io_write_real5(did,foffset,ncount,AIMAG(DATA))
-      ENDIF 
+      CALL io_write_real6(did,foffset,fncount,a,trans)
       END SUBROUTINE 
                                                                         
       !>                                                                
