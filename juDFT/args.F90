@@ -31,7 +31,7 @@ CONTAINS
     IF (ok) RETURN
     !Test for environment variable as well
     CALL GET_ENVIRONMENT_VARIABLE("juDFT",str,status=i)
-    IF (i==0) ok=INDEX(str,ADJUSTL(arg))>0
+    IF (i==0) ok=INDEX(str//' ',TRIM(ADJUSTL(arg))//' ')>0
 
   END FUNCTION juDFT_was_argument
 

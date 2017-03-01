@@ -26,6 +26,7 @@
           USE m_xmlOutput
           USE m_winpXML
           USE m_setupMPI
+          USE m_cdn_io
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -487,6 +488,10 @@
 
           !Finalize the MPI setup
           CALL setupMPI(kpts%nkpt,mpi)
+
+          IF (mpi%irank.EQ.0) THEN
+             CALL setStartingDensity(noco%l_noco)
+          END IF
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
