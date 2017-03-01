@@ -325,7 +325,7 @@
           inp=input
           inp%jspins=1
 
-          CALL writeDensity(stars,vacuum,atoms,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                             0,iter,rho(:,0:,1:,1:1),qpw(1:,1:1),rht(1:,1:,1:1),rhtxy(1:,1:,1:,1:1),cdom,cdomvz,cdomvxy)
 
           !---> save mx to file mdnx
