@@ -1,4 +1,4 @@
-MODULE m_hsmt_nonsph
+MODULE m_hsmt_nonsph_GPU
 #define CPP_BLOCKSIZE 64
   !      USE m_juDFT
   !$     USE omp_lib
@@ -9,7 +9,7 @@ MODULE m_hsmt_nonsph
 
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
+  SUBROUTINE hsmt_nonsph_GPU(DIMENSION,atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
        hlpmsize,noco,l_socfirst, lapw, cell,tlmplm, fj,gj,gk,vk,oneD,l_real,aa_r,aa_c)
 
 #include"cpp_double.h"
@@ -247,11 +247,12 @@ CONTAINS
                          call zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki,0,iintsp),SIZE(a,1),bx(1,0),SIZE(ax,1),one ,aa_block,SIZE(aa_block,1))
                          !$acc end host_data
                       ELSE
+                         stop "Not implemented"
                          !$acc host_data use_device( a,b,ax,bx,aa_block )
-                         CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,a(ki:ki+bsize2-1:n_size,0:lmp,iintsp), &
-                                    SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),ax(1,0),SIZE(ax,1),zero,aa_block,SIZE(aa_block,1))
-                         CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki:ki+bsize2-1:n_size,0:lmp,iintsp), &
-                                    SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),bx(1,0),SIZE(ax,1),one,aa_block,SIZE(aa_block,1))
+                         !CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,a(ki:ki+bsize2-1:n_size,0:lmp,iintsp), &
+                         !           SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),ax(1,0),SIZE(ax,1),zero,aa_block,SIZE(aa_block,1))
+                         !CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki:ki+bsize2-1:n_size,0:lmp,iintsp), &
+                         !           SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),bx(1,0),SIZE(ax,1),one,aa_block,SIZE(aa_block,1))
                          !$acc end host_data
                       ENDIF
                       !$acc kernels
@@ -261,9 +262,11 @@ CONTAINS
                             nc = 1+kii/n_size
                             ii = nc*(nc-1)/2*n_size-(nc-1)*(n_size-n_rank-1)
                             IF ( (n_size==1).OR.(kii+1<=lapw%nv(1)) ) THEN    !
-                               aahlp(ii+1:ii+ki) = aahlp(ii+1:ii+ki)+MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
+                                stop "not implemented"
+                               !comments below must be reactivated
+                               !aahlp(ii+1:ii+ki) = aahlp(ii+1:ii+ki)+MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
                             ELSE                    ! components for <2||2> block unused
-                               aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:DIMENSION%lmd)),b(ki,:lmp,iintsp))
+                               !aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:DIMENSION%lmd)),b(ki,:lmp,iintsp))
                                !--->                   spin-down spin-down part
                                ij = ii + lapw%nv(1)
                                aa_c(ij+1:ij+ki)=aa_c(ij+1:ij+ki)+chi22*aa_tmphlp(:ki)
@@ -296,8 +299,10 @@ CONTAINS
                                chihlp = chi21
                                ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
                             ENDIF
-                            aa_c(ii+1:ii+kjmax) = aa_c(ii+1:ii+kjmax) + chihlp*&
-                                 (MATMUL(CONJG(ax(:kjmax,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:kjmax,:lmp)),b(ki,:lmp,iintsp)))
+                            STOP "NOT implemented"
+                            !next line must be reactivated
+                            !aa_c(ii+1:ii+kjmax) = aa_c(ii+1:ii+kjmax) + chihlp*&
+                            !     (MATMUL(CONJG(ax(:kjmax,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:kjmax,:lmp)),b(ki,:lmp,iintsp)))
                             ki=ki+n_size
                             kii=kii+n_size
                           ENDDO
@@ -347,7 +352,7 @@ CONTAINS
 
 
     RETURN
-  END SUBROUTINE hsmt_nonsph
+  END SUBROUTINE hsmt_nonsph_GPU
 
 
-END MODULE m_hsmt_nonsph
+END MODULE m_hsmt_nonsph_GPU
