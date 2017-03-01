@@ -76,8 +76,9 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex,currentDensityIndex
-      INTEGER           :: lastDensityIndex, densityType
+      INTEGER           :: currentStructureIndex
+      INTEGER           :: readDensityIndex, lastDensityIndex
+      INTEGER           :: previousDensityIndex, densityType
       CHARACTER(LEN=30) :: archiveName
       TYPE(t_cell)      :: cellTemp
 
@@ -91,14 +92,13 @@ MODULE m_cdn_io
 
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF (l_exist) THEN
-            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
-
-            currentDensityIndex = currentDensityIndex + relCdnIndex ! This is actually wrong. I should go back step by step.
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
 
             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
                archiveName = 'cdn'
             ELSE
-               WRITE(archiveName,'(a,i0)') '/cdn-', currentDensityIndex
+               WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
             END IF
 
             SELECT CASE (inOrOutCDN)
@@ -123,7 +123,8 @@ MODULE m_cdn_io
          END IF
 
          IF (l_exist) THEN
-            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
 
             CALL readDensityHDF(fileID, archiveName, densityType,&
                                 iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
@@ -260,15 +261,19 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex,currentDensityIndex
-      INTEGER           :: lastDensityIndex, densityType
+      INTEGER           :: currentStructureIndex
+      INTEGER           :: readDensityIndex, writeDensityIndex, lastDensityIndex
+      INTEGER           :: previousDensityIndex, densityType
+      INTEGER           :: starsIndexTemp, latharmsIndexTemp, structureIndexTemp
+      INTEGER           :: jspinsTemp
       CHARACTER(LEN=30) :: archiveName
 
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
-         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
 
          l_storeIndices = .FALSE.
          IF (currentStarsIndex.EQ.0) THEN
@@ -286,9 +291,12 @@ MODULE m_cdn_io
             l_storeIndices = .TRUE.
             CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
          END IF
-         lastDensityIndex = currentDensityIndex
+         previousDensityIndex = readDensityIndex
+         writeDensityIndex = readDensityIndex
          IF(relCdnIndex.NE.0) THEN
-            currentDensityIndex = currentDensityIndex+relCdnIndex
+            writeDensityIndex = lastDensityIndex+relCdnIndex
+            lastDensityIndex = writeDensityIndex
+            readDensityIndex = writeDensityIndex
             l_storeIndices = .TRUE.
          END IF
 
@@ -296,7 +304,7 @@ MODULE m_cdn_io
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
             archiveName = 'cdn'
          ELSE
-            WRITE(archiveName,'(a,i0)') '/cdn-', currentDensityIndex
+            WRITE(archiveName,'(a,i0)') '/cdn-', writeDensityIndex
          END IF
 
          densityType = 0
@@ -318,13 +326,22 @@ MODULE m_cdn_io
                CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="writeDensity")
          END SELECT
 
-         CALL writeDensityHDF(input, fileID, archiveName, densityType, lastDensityIndex,&
+         IF(relCdnIndex.EQ.0) THEN
+            l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_UNDEFINED_const)
+            IF(l_exist) THEN
+               CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+                                        iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
+                                        previousDensityIndex, jspinsTemp)
+            END IF
+         END IF
+
+         CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
                               iter+relCdnIndex,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
          IF(l_storeIndices) THEN
             CALL writeHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                 currentStructureIndex,currentDensityIndex)
+                                 currentStructureIndex,readDensityIndex,lastDensityIndex)
          END IF
 
          CALL closeCDN_HDF(fileID)
@@ -485,7 +502,8 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER        :: currentStarsIndex,currentLatharmsIndex
-      INTEGER        :: currentStructureIndex,currentDensityIndex
+      INTEGER        :: currentStructureIndex
+      INTEGER        :: readDensityIndex, lastDensityIndex
 
       CALL getMode(mode)
 
@@ -493,7 +511,8 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
          l_exist = isCoreDensityPresentHDF()
          IF (l_exist) THEN
-            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
             CALL readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
             CALL closeCDN_HDF(fileID)
             RETURN
@@ -554,13 +573,15 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER        :: currentStarsIndex,currentLatharmsIndex
-      INTEGER        :: currentStructureIndex,currentDensityIndex
+      INTEGER        :: currentStructureIndex
+      INTEGER        :: readDensityIndex, lastDensityIndex
 
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
-         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,currentDensityIndex)
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
          CALL writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
          CALL closeCDN_HDF(fileID)
 #endif
