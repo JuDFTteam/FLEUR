@@ -28,6 +28,7 @@ MODULE m_cdn_io
    PUBLIC readDensity, writeDensity
    PUBLIC isDensityFilePresent, isCoreDensityPresent
    PUBLIC readCoreDensity, writeCoreDensity
+   PUBLIC setStartingDensity
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -603,6 +604,68 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeCoreDensity
 
+   SUBROUTINE setStartingDensity(l_noco)
+
+      LOGICAL,INTENT(IN) :: l_noco
+
+#ifdef CPP_HDF
+      INTEGER(HID_T)    :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex
+      INTEGER           :: readDensityIndex, lastDensityIndex
+      INTEGER           :: sdIndex, ioStatus, mode
+      INTEGER           :: densityType
+      CHARACTER(LEN=20) :: numberString
+      CHARACTER(LEN=30) :: archiveName
+      LOGICAL           :: l_exist
+
+      IF (.NOT.juDFT_was_argument("-sd")) THEN
+         RETURN
+      END IF
+      numberString = juDFT_string_for_argument("-sd")
+      IF (TRIM(ADJUSTL(numberString)).EQ.'') THEN
+         CALL juDFT_error("No number for starting density set in command line.",calledby ="setStartingDensity")
+      END IF
+      ioStatus = 0
+      READ(numberString,'(i8)',iostat=ioStatus) sdIndex
+      IF(ioStatus.NE.0) THEN
+         CALL juDFT_error("Could not convert starting density index string to number.",calledby ="setStartingDensity")
+      END IF
+
+      WRITE(*,'(a,i0,a)') 'Using density ', sdIndex, ' as starting density.'
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
+         densityType = DENSITY_TYPE_IN_const
+         IF(l_noco) THEN
+            densityType = DENSITY_TYPE_NOCO_IN_const
+         END IF
+         archiveName = ''
+         WRITE(archiveName,'(a,i0)') '/cdn-', sdIndex
+         l_exist = isDensityEntryPresentHDF(fileID,archiveName,densityType)
+         IF(.NOT.l_exist) THEN
+            WRITE(*,*) 'archiveName: ', TRIM(ADJUSTL(archiveName))
+            CALL juDFT_error("For selected starting density index no in-density is present.",calledby ="setStartingDensity")
+         END IF
+         CALL writeHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                              currentStructureIndex,sdIndex,lastDensityIndex)
+         CALL closeCDN_HDF(fileID)
+#endif
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE      
+         WRITE(*,*) 'Explicit setting of starting density in direct access mode'
+         WRITE(*,*) 'not implemented.'
+         WRITE(*,*) ''
+         WRITE(*,*) 'Ignoring -sd command line argument.'
+      END IF
+
+   END SUBROUTINE setStartingDensity
 
    SUBROUTINE getMode(mode)
       INTEGER, INTENT(OUT) :: mode
