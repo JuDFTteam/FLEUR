@@ -97,7 +97,7 @@
           !-t3e
           IF (mpi%irank.EQ.0) THEN
              CALL startXMLOutput()
-#ifndef  __TOS_BGQ__
+#if !(defined(__TOS_BGQ__)||defined(__PGI))
              !Do not open out-file on BlueGene
              OPEN (6,file='out',form='formatted',status='unknown')
 #endif

@@ -13,6 +13,7 @@ MODULE m_magma
   !**********************************************************
 CONTAINS
   SUBROUTINE magma_diag(nsize,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
+    use m_packed_to_full
 #ifdef CPP_MAGMA
     use magma
 #endif    
@@ -62,17 +63,19 @@ CONTAINS
     if (l_real) THEN
        call packed_to_full(nsize,a_r,largea_r)
        call packed_to_full(nsize,b_r,largeb_r)
-       deallocate(a_r,b_r)
+       !deallocate(a_r,b_r)
     ELSE
        call packed_to_full(nsize,a_c,largea_c)
        call packed_to_full(nsize,b_c,largeb_c)
-       deallocate(a_c,b_c)
+       !deallocate(a_c,b_c)
     Endif
 
     if (l_real) call juDFT_error("REAL diagonalization not implemented in magma.F90")
 
     !Query the workspace size 
     allocate(work(1),rwork(1),iwork(1))
+    print *,"Magma workspace query"
+    call flush()
     call magmaf_zhegvdx_2stage_m(NGPU_CONST,1,MagmaVec,MagmaRangeI,MagmaLower,nsize,largea_c,nsize,largeb_c,nsize,&
          0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,err)
     lwork=work(1)
@@ -83,6 +86,8 @@ CONTAINS
     allocate(work(lwork),rwork(lrwork),iwork(liwork))
     if (err/=0) call juDFT_error("Failed to allocate workspaces",calledby="magma.F90")
     !Now the diagonalization
+    print *,"Magma diagonalization"
+    print *,nsize,shape(largea_c),shape(eigTemp),ne
     call magmaf_zhegvdx_2stage_m(NGPU_CONST,1,MagmaVec,MagmaRangeI,MagmaLower,nsize,largea_c,nsize,largeb_c,nsize,&
          0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,err)
     print*,"MAGMA info:",err
@@ -91,8 +96,9 @@ CONTAINS
 
     DO i = 1, ne
        eig(i) = eigTemp(i)
+       z_c(:nsize,i)=largea_c(:nsize,i)
     END DO
-    call judft_error("Eigenvectors are not calculated in MAGMA")
+    !call judft_error("Eigenvectors are not calculated in MAGMA")
 #endif
   END SUBROUTINE magma_diag
 END MODULE m_magma

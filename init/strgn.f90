@@ -516,8 +516,8 @@ CONTAINS
           print *,stars%mx1, mxx1, stars%mx2, mxx2       
           CALL judft_error("BUG in strgn")
     endif
-    stars%mx1=mxx1
-    stars%mx2=mxx2
+    !stars%mx1=mxx1
+    !stars%mx2=mxx2
     !
     !--->    write /str0/ and /str1/ to unit 51
     !
@@ -894,7 +894,7 @@ CONTAINS
           ENDDO
        ENDDO
     ENDIF
-    if ( stars%mx1 .ne. mxx1 .or. stars%mx2 .ne. mxx2 .or. stars%mx3 .ne. mxx3 ) call &
+    if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
          judft_error("BUG 1 in strgen") 
     stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; igz = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0
