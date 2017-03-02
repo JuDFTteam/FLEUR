@@ -46,12 +46,12 @@ CONTAINS
 
     !     ..
     !     .. Local Scalars ..
-    REAL fix,intfac,vacfac
+    REAL fix,intfac,vacfac, fermiEnergyTemp
     INTEGER i,iter,imap,js,mit,nt,irecl
     INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
     INTEGER iq2,iq3,ivac,imz ,iofl, archiveType
     INTEGER n_u_keep
-    LOGICAL lexist,l_ldaU
+    LOGICAL lexist,l_ldaU, l_qfix
 
     !     ..
     !     .. Local Arrays ..
@@ -183,7 +183,7 @@ CONTAINS
 
     !---> reload densities of current iteration
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
     !--->  put input charge density into arrays sm 
@@ -195,7 +195,7 @@ CONTAINS
 
     !     load output charge density
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
-                     CDN_OUTPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     CDN_OUTPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
     !--->  put output charge density into arrays fsm 
@@ -305,7 +305,7 @@ CONTAINS
                    qpw,rhtxy,rho,rht,.FALSE., fix)
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                      1,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      1,results%ef,.TRUE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE ( cdom,cdomvz,cdomvxy )
     IF ( atoms%n_u > 0 ) THEN

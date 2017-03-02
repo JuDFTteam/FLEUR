@@ -91,7 +91,8 @@
 !*****************************************************************      
       SUBROUTINE io_write_attlog0(did,name,DATA) 
 !*****************************************************************      
-      USE hdf5 
+      USE hdf5
+      USE m_hdf_tools3 !This is for the subroutine io_attexists
                                                                         
       IMPLICIT NONE 
       INTEGER(HID_T),INTENT(IN)  ::did 
@@ -100,18 +101,27 @@
       !locals                                                           
       INTEGER(HSIZE_T)::dims(7) 
       INTEGER(HID_t)::atid,sid 
-      INTEGER       ::hdferr,dum 
+      INTEGER       ::hdferr,dum
+      LOGICAL       ::l_exist
+
+      l_exist = io_attexists(did,name)
       dims=(/1,0,0,0,0,0,0/) 
       IF (DATA) THEN 
          dum=1 
       ELSE 
          dum=0 
-      ENDIF 
-      CALL h5screate_simple_f(1,dims,sid,hdferr) 
-      CALL h5acreate_f(did, name,H5T_NATIVE_INTEGER,sid,atid,hdferr) 
-      CALL h5awrite_f(atid,H5T_NATIVE_INTEGER,dum,dims, hdferr) 
-      CALL h5aclose_f(atid,hdferr) 
-      CALL h5sclose_f(sid,hdferr) 
+      ENDIF
+      IF(l_exist) THEN
+         CALL h5aopen_f(did,name,atid,hdferr)
+         CALL h5awrite_f(atid,H5T_NATIVE_INTEGER,dum,dims, hdferr)
+         CALL h5aclose_f(atid,hdferr)
+      ELSE
+         CALL h5screate_simple_f(1,dims,sid,hdferr) 
+         CALL h5acreate_f(did, name,H5T_NATIVE_INTEGER,sid,atid,hdferr) 
+         CALL h5awrite_f(atid,H5T_NATIVE_INTEGER,dum,dims, hdferr) 
+         CALL h5aclose_f(atid,hdferr) 
+         CALL h5sclose_f(sid,hdferr)
+      END IF
       CALL io_check('io_write_attlog0'//name,hdferr) 
       END SUBROUTINE 
 !*****************************************************************      
@@ -158,7 +168,8 @@
 !*****************************************************************      
       SUBROUTINE io_write_attreal1(did,name,DATA) 
 !*****************************************************************      
-      USE hdf5 
+      USE hdf5
+      USE m_hdf_tools3 !This is for the subroutine io_attexists
                                                                         
       IMPLICIT NONE 
       INTEGER(HID_T),INTENT(IN)  ::did 
@@ -167,13 +178,22 @@
       !locals                                                           
       INTEGER(HSIZE_T)::dims(7) 
       INTEGER(HID_t)::atid,sid 
-      INTEGER       ::hdferr 
-      dims=(/SIZE(DATA),0,0,0,0,0,0/) 
-      CALL h5screate_simple_f(1,dims,sid,hdferr) 
-      CALL h5acreate_f(did, name,H5T_NATIVE_DOUBLE,sid,atid,hdferr) 
-      CALL h5awrite_f(atid,H5T_NATIVE_DOUBLE,DATA,dims, hdferr) 
-      CALL h5aclose_f(atid,hdferr) 
-      CALL h5sclose_f(sid,hdferr) 
+      INTEGER       ::hdferr
+      LOGICAL       ::l_exist
+
+      l_exist = io_attexists(did,name)
+      dims=(/SIZE(DATA),0,0,0,0,0,0/)
+      IF(l_exist) THEN
+         CALL h5aopen_f(did,name,atid,hdferr)
+         CALL h5awrite_f(atid,H5T_NATIVE_DOUBLE,DATA,dims, hdferr)
+         CALL h5aclose_f(atid,hdferr)
+      ELSE
+         CALL h5screate_simple_f(1,dims,sid,hdferr) 
+         CALL h5acreate_f(did, name,H5T_NATIVE_DOUBLE,sid,atid,hdferr) 
+         CALL h5awrite_f(atid,H5T_NATIVE_DOUBLE,DATA,dims, hdferr) 
+         CALL h5aclose_f(atid,hdferr) 
+         CALL h5sclose_f(sid,hdferr)
+      END IF
       CALL io_check('io_write_attreal1'//name,hdferr) 
       END SUBROUTINE 
 !*****************************************************************      

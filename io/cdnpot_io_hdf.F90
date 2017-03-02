@@ -1033,15 +1033,17 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex,&
-                              iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_input),    INTENT(IN) :: input
-      INTEGER(HID_T), INTENT(IN)   :: fileID
-      INTEGER, INTENT(IN)          :: densityType, previousDensityIndex
-      INTEGER, INTENT(IN)          :: starsIndex, latharmsIndex, structureIndex
+      INTEGER(HID_T),   INTENT(IN) :: fileID
+      INTEGER,          INTENT(IN) :: densityType, previousDensityIndex
+      INTEGER,          INTENT(IN) :: starsIndex, latharmsIndex, structureIndex
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
       INTEGER, INTENT (IN)         :: iter
+      REAL,    INTENT (IN)         :: fermiEnergy
+      LOGICAL, INTENT (IN)         :: l_qfix
 
       REAL,    INTENT (IN)         :: fr(:,:,:,:)
       REAL,    INTENT (IN)         :: fz(:,:,:)
@@ -1058,13 +1060,13 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HSIZE_T)             :: dims(7)
       INTEGER                      :: dimsInt(7)
 
-      INTEGER(HID_T)                      :: frSpaceID, frSetID
-      INTEGER(HID_T)                      :: fpwSpaceID, fpwSetID
-      INTEGER(HID_T)                      :: fzSpaceID, fzSetID
-      INTEGER(HID_T)                      :: fzxySpaceID, fzxySetID
-      INTEGER(HID_T)                      :: cdomSpaceID, cdomSetID
-      INTEGER(HID_T)                      :: cdomvzSpaceID, cdomvzSetID
-      INTEGER(HID_T)                      :: cdomvxySpaceID, cdomvxySetID
+      INTEGER(HID_T)               :: frSpaceID, frSetID
+      INTEGER(HID_T)               :: fpwSpaceID, fpwSetID
+      INTEGER(HID_T)               :: fzSpaceID, fzSetID
+      INTEGER(HID_T)               :: fzxySpaceID, fzxySetID
+      INTEGER(HID_T)               :: cdomSpaceID, cdomSetID
+      INTEGER(HID_T)               :: cdomvzSpaceID, cdomvzSetID
+      INTEGER(HID_T)               :: cdomvxySpaceID, cdomvxySetID
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -1136,6 +1138,9 @@ MODULE m_cdnpot_io_hdf
          IF(l_exist) THEN
             CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
+            CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
+            CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
+
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
             CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
@@ -1182,6 +1187,9 @@ MODULE m_cdnpot_io_hdf
             CALL h5gclose_f(groupID, hdfError)
          ELSE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+
+            CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
+            CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
 
             dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             dimsInt = dims
@@ -1263,6 +1271,9 @@ MODULE m_cdnpot_io_hdf
 
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
+         CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
+         CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
+
          dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
          dimsInt = dims
          CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
@@ -1335,13 +1346,15 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeDensityHDF
 
    SUBROUTINE readDensityHDF(fileID, archiveName, densityType,&
-                             iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                             fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
       INTEGER, INTENT (OUT)        :: iter
+      REAL,    INTENT (OUT)        :: fermiEnergy
+      LOGICAL, INTENT (OUT)        :: l_qfix
 
       REAL,    INTENT (OUT)        :: fr(:,:,:,:)
       REAL,    INTENT (OUT)        :: fz(:,:,:)
@@ -1453,6 +1466,9 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupBID,'ng2',ng2)
       CALL h5gclose_f(groupBID, hdfError)
 
+      CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
+      CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
+
       dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
       CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
       CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
@@ -1503,15 +1519,18 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE peekDensityEntryHDF(fileID, archiveName, densityType,&
                                   iter, starsIndex, latharmsIndex, structureIndex,&
-                                  previousDensityIndex, jspins)
+                                  previousDensityIndex, jspins,&
+                                  fermiEnergy, l_qfix)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT (OUT)        :: iter
-      INTEGER,INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex
-      INTEGER,INTENT(OUT)          :: previousDensityIndex, jspins
+      INTEGER, INTENT(OUT)          :: iter
+      INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex
+      INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
+      REAL,    INTENT(OUT)          :: fermiEnergy
+      LOGICAL, INTENT(OUT)          :: l_qfix
 
       INTEGER              :: localDensityType
       LOGICAL              :: l_exist
@@ -1569,6 +1588,11 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
+
+      IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
+         CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
+         CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
+      END IF
 
       CALL h5gclose_f(groupID, hdfError)
       CALL h5gclose_f(archiveID, hdfError)

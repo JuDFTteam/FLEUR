@@ -21,6 +21,8 @@ contains
     TYPE(t_oneD),INTENT(IN)     :: oneD
     INTEGER k,i,ivac  ,it 
     INTEGER type,typmag, archiveType
+    REAL fermiEnergyTemp
+    LOGICAL l_qfix
     CHARACTER(len=8) filename 
     COMPLEX, ALLOCATABLE :: fpw(:,:),fzxy(:,:,:,:)
     REAL,    ALLOCATABLE :: fz(:,:,:),fr(:,:,:,:)
@@ -49,7 +51,7 @@ contains
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
 
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,it,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,it,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
     IF ( typmag < atoms%ntype ) THEN 
        DO type= typmag+1,atoms%ntype 

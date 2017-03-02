@@ -12,7 +12,7 @@ MODULE m_checks
       IMPLICIT NONE
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
-      INTEGER:: isize,ierr
+      INTEGER:: isize,ierr,irank
 #endif
       IF (juDFT_was_argument("-hdf")) THEN
 #ifndef CPP_HDF

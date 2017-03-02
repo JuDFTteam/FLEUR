@@ -70,8 +70,9 @@ CONTAINS
     INTEGER,INTENT (IN) :: it      
     !     ..
     !     .. Local Scalars ..
-    REAL rhs,totz, eigSum
+    REAL rhs,totz, eigSum, fermiEnergyTemp
     INTEGER n,j,nt,iter,i, archiveType
+    LOGICAL l_qfix
 
     !     .. Local Arrays ..
     REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
@@ -146,7 +147,7 @@ CONTAINS
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
 
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !+for
     !     ---> reload the COULOMB potential

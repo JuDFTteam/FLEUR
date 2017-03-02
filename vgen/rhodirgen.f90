@@ -73,8 +73,10 @@ CONTAINS
     INTEGER imz,ityp,iri,ilh,imesh,iq2,iq3,iter
     REAL   zero,rho_11,rho_22,rho_21r,rho_21i,rhotot,magmom,phi
     REAL rho_up,rho_down,mx,my,mz,eps,pi,fix,vz_r,vz_i,rziw,theta
+    REAL fermiEnergyTemp
     COMPLEX czero
     CHARACTER*8 dop,iop,name(10)
+    LOGICAL l_qfix
     !     ..
     !     .. Local Arrays ..
     !---> off-diagonal part of the density matrix
@@ -115,7 +117,7 @@ CONTAINS
 
     !---> reload the density matrix from file rhomat_inp
     CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_NOCO_const,CDN_INPUT_DEN_const,&
-                     0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     CALL qfix(&
          &          stars,atoms,sym,vacuum,&
@@ -398,7 +400,7 @@ CONTAINS
     !---> write spin-up and -down density on file cdn
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                      0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,&
          &            ris,fftwork,rz,rho,rht)
