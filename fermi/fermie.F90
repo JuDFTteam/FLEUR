@@ -212,6 +212,7 @@ CONTAINS
     results%ts = 0.0
     !-po
     results%w_iks = 0.0
+    results%bandgap = 0.0
     IF (input%gauss) THEN
        CALL fergwt(kpts,input,mpi,ne, eig,results)
     ELSE IF (input%tria) THEN

@@ -880,7 +880,7 @@ CONTAINS
                sliceplot,noco,sym,&
                cell,&
                l_mcd,ncored,ncore,e_mcd,&
-               results%ef,nsld,oneD)
+               results%ef,results%bandgap,nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              CALL Ek_write_sl(&
                   eig_id,dimension,kpts,atoms,vacuum,&
