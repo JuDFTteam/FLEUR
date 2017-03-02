@@ -18,6 +18,10 @@ MODULE m_pot_io
    USE m_juDFT
    USE m_loddop
    USE m_wrtdop
+   USE m_cdnpot_io_hdf
+#ifdef CPP_HDF
+   USE hdf5
+#endif
    IMPLICIT NONE
 
    PRIVATE
@@ -58,19 +62,57 @@ MODULE m_pot_io
       LOGICAL           :: l_exist
       CHARACTER(len=30) :: filename
 
+#ifdef CPP_HDF
+      INTEGER(HID_T)    :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex
+      INTEGER           :: potentialType
+      CHARACTER(LEN=30) :: archiveName
+
       CALL getMode(mode)
 
       IF(mode.EQ.POT_HDF5_MODE) THEN
+#ifdef CPP_HDF
          INQUIRE(FILE='pot.hdf',EXIST=l_exist)
          IF (l_exist) THEN
-            !load density from pot.hdf and exit subroutine
+            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
 
-            RETURN
+            archiveName = 'illegalPotentialArchive'
+            IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
+               archiveName = 'pottot'
+            END IF
+            IF (archiveType.EQ.POT_ARCHIVE_TYPE_COUL_const) THEN
+               archiveName = 'potcoul'
+            END IF
+            IF (archiveType.EQ.POT_ARCHIVE_TYPE_X_const) THEN
+               archiveName = 'potx'
+            END IF
+
+            potentialType = POTENTIAL_TYPE_IN_const
+
+            l_exist = isPotentialEntryPresentHDF(fileID,archiveName,potentialType)
+
+            CALL closeCDNPOT_HDF(fileID)
+         END IF
+
+         IF(l_exist) THEN
+            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+
+            CALL readPotentialHDF(fileID, archiveName, potentialType,&
+                                  iter,fr,fpw,fz,fzxy)
+
+            CALL closeCDNPOT_HDF(fileID)
          ELSE
-            WRITE(*,*) 'pot.hdf file not found.'
+            WRITE(*,*) 'Potential entry or pot.hdf file not found.'
             WRITE(*,*) 'Falling back to stream access file pot.str.'
             mode = POT_STREAM_MODE
          END IF
+#else
+         WRITE(*,*) 'Not compiled for pot.hdf file usage.'
+         WRITE(*,*) 'Falling back to stream access file pot.str.'
+         mode = POT_STREAM_MODE
+#endif
       END IF
 
       IF(mode.EQ.POT_STREAM_MODE) THEN
@@ -114,15 +156,17 @@ MODULE m_pot_io
 
    END SUBROUTINE readPotential
 
-   SUBROUTINE writePotential(stars,vacuum,atoms,sphhar,input,sym,archiveType,&
+   SUBROUTINE writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                              iter,fr,fpw,fz,fzxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_sphhar),INTENT(IN) :: sphhar
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_oneD),INTENT(IN)   :: oneD
 
       INTEGER, INTENT (IN)      :: iter
       INTEGER, INTENT (IN)      :: archiveType
@@ -133,14 +177,64 @@ MODULE m_pot_io
 
       ! local variables
       INTEGER           :: mode, iUnit
-      LOGICAL           :: l_exist
+      LOGICAL           :: l_exist, l_storeIndices
       CHARACTER(len=30) :: filename
+
+#ifdef CPP_HDF
+      INTEGER(HID_T)    :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex
+      INTEGER           :: potentialType
+      CHARACTER(LEN=30) :: archiveName
 
       CALL getMode(mode)
 
       IF(mode.EQ.POT_HDF5_MODE) THEN
-         ! Write potential to pot.hdf file
-         STOP 'POT_HDF5_MODE not yet implemented!'
+#ifdef CPP_HDF
+         CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+
+         l_storeIndices = .FALSE.
+         IF (currentStarsIndex.EQ.0) THEN
+            currentStarsIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+         END IF
+         IF (currentLatharmsIndex.EQ.0) THEN
+            currentLatharmsIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, sphhar)
+         END IF
+         IF(currentStructureIndex.EQ.0) THEN
+            currentStructureIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+         END IF
+
+         archiveName = 'illegalPotentialArchive'
+         IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
+            archiveName = 'pottot'
+         END IF
+         IF (archiveType.EQ.POT_ARCHIVE_TYPE_COUL_const) THEN
+            archiveName = 'potcoul'
+         END IF
+         IF (archiveType.EQ.POT_ARCHIVE_TYPE_X_const) THEN
+            archiveName = 'potx'
+         END IF
+
+         potentialType = POTENTIAL_TYPE_IN_const
+
+         CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
+                                currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
+                                iter,fr,fpw,fz,fzxy)
+
+         IF(l_storeIndices) THEN
+            CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                    currentStructureIndex)
+         END IF
+
+         CALL closeCDNPOT_HDF(fileID)
+#endif
       ELSE IF(mode.EQ.POT_STREAM_MODE) THEN
          ! Write potential to pot.str file
          STOP 'POT_STREAM_MODE not yet implemented!'
@@ -170,8 +264,15 @@ MODULE m_pot_io
       INTEGER, INTENT(OUT) :: mode
 
       mode = POT_DIRECT_MODE
-      IF (juDFT_was_argument("-stream_pot")) mode=POT_STREAM_MODE
-      IF (juDFT_was_argument("-hdf_pot")) mode=POT_HDF5_MODE
+      IF (juDFT_was_argument("-stream_cdn")) mode=POT_STREAM_MODE
+      IF (juDFT_was_argument("-hdf_cdn")) THEN
+#ifdef CPP_HDF
+         mode=POT_HDF5_MODE
+#else
+         WRITE(*,*) 'Code not compiled with HDF5 support.'
+         WRITE(*,*) 'Falling back to direct access.'
+#endif
+      END IF
    END SUBROUTINE getMode
 
 END MODULE m_pot_io

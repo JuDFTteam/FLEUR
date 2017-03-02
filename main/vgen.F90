@@ -417,7 +417,7 @@ CONTAINS
              vpw_w(1:stars%ng3,js)=vpw_w(1:stars%ng3,js)/stars%nstr(1:stars%ng3)     ! the PW-coulomb part is not
              ! used otherwise anyway.
           ENDDO
-          CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
+          CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,&
                               iter,vr,vpw_w,vz,vxy)
           DO js = 1,input%jspins
              DO i = 1,stars%ng3
@@ -836,7 +836,7 @@ CONTAINS
                    vpw_w(i,js)=vpw_w(i,js)/stars%nstr(i)
                 ENDDO
              ENDDO
-             CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+             CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,&
                                  iter,vr,vpw_w,vz,vxy)
 
              DO js=1,input%jspins
@@ -845,7 +845,7 @@ CONTAINS
                 ENDDO
              ENDDO
 
-             CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_X_const,&
+             CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,&
                                  iter,vxr,vxpw_w,vz,vxy)
           END IF
 
