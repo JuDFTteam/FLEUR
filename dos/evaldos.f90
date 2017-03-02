@@ -473,9 +473,9 @@
 !------------------------------------------------------------------------------
 
          IF (banddos%ndir == -4) THEN
+            eFermiCorrection = 0.0
             IF(bandgap.LT.(8.0*input%tkb*hartree_to_ev_const)) THEN
                CALL readPrevEFermi(eFermiPrev,l_error)
-               eFermiCorrection = 0.0
                IF(.NOT.l_error) THEN
                   WRITE(*,*) 'Fermi energy is automatically corrected in bands.* files.'
                   WRITE(*,*) 'It is consistent with last calculated density!'
