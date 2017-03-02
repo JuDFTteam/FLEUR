@@ -34,10 +34,10 @@
           TYPE(t_dimension),INTENT(IN) :: DIMENSION
           !     ..
           !     .. Local Scalars ..
-          REAL dummy,p,pp,qtot1,qtot2,spmtot,qval,sfp
+          REAL dummy,p,pp,qtot1,qtot2,spmtot,qval,sfp,fermiEnergyTemp
           INTEGER i,iter,ivac,j,k,lh,n,na,jsp_new
           INTEGER ios 
-          LOGICAL n_exist
+          LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
           REAL rhoc(atoms%jmtd,atoms%ntype,dimension%jspd)
@@ -60,7 +60,7 @@
           input%jspins=1
           CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
           CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                           CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           input%jspins=2
 
           qval = 0.
@@ -109,7 +109,7 @@
           ENDIF
           !     ----> write the spin-polarized density
           CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                            CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                            CDN_INPUT_DEN_const,0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           !
           !     -----> This part is only used for testing th e magnetic moment in 
           !     ----->   each sphere

@@ -58,10 +58,10 @@
 !     ..
 !     .. Local Scalars ..
       REAL fix,qtot,scor,seig,smom,stot,sval,dummy
-      REAL slmom,slxmom,slymom,sum,thetai,phii
+      REAL slmom,slxmom,slymom,sum,thetai,phii,fermiEnergyTemp
       INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
       INTEGER  ityp,ilayer,urec,itype,iatom,archiveType
-      LOGICAL l_relax_any,exst,n_exist,l_st
+      LOGICAL l_relax_any,exst,n_exist,l_st,l_qfix
       TYPE(t_noco)::noco_new
 !     ..
 !     .. Local Arrays ..
@@ -107,7 +107,7 @@
       IF((.NOT.noco%l_noco).AND.mpi%irank.EQ.0) THEN
          ALLOCATE(cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
          CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                          CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
          DEALLOCATE(cdom,cdomvz,cdomvxy)
       END IF
 
@@ -487,7 +487,7 @@
       END IF
 
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                        CDN_OUTPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                        CDN_OUTPUT_DEN_const,0,results%ef,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
       ENDIF
 
       DEALLOCATE (cdom,cdomvz,cdomvxy,qa21)

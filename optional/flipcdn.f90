@@ -34,12 +34,12 @@
           LOGICAL,INTENT(IN)        :: l_noco
 
           !     .. Local Scalars ..
-          REAL    rhodummy,rhodumms
+          REAL    rhodummy,rhodumms,fermiEnergyTemp
           INTEGER i,iter,n,nt,j,lh,na ,mp,ispin,n_ldau,urec,itype,m
           INTEGER archiveType
             
           CHARACTER(len=8) iop,dop
-          LOGICAL n_exist
+          LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:),qpw(:,:),rhtxy(:,:,:,:)
@@ -61,7 +61,7 @@
 
           !     ---> read the charge density 
           CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
           !     ---> flip cdn for each atom with nflip=-1
           !
@@ -90,7 +90,7 @@
           ENDDO
           !     ----> write the spin-polarized density
           CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                            0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                            0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           !
           ! for lda+U: flip n-matrix 
           !

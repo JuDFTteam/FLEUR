@@ -78,9 +78,9 @@ CONTAINS
     INTEGER ifftd,ifftd2, ifftxc3d,iter,datend
     INTEGER itypsym,itype,jsp,l,nat,archiveType
     !      INTEGER i_sm,n_sm,i_sta,i_end
-    REAL ani,g3,signum,z,rhmn,fix,mfie
+    REAL ani,g3,signum,z,rhmn,fix,mfie,fermiEnergyTemp
     REAL sig1dh,vz1dh,zat_l(atoms%ntype),rdum,dpdot ! ,delta,deltb,corr
-    LOGICAL l_pottot,l_vdw
+    LOGICAL l_pottot,l_vdw,l_qfix
     LOGICAL exi
     LOGICAL, PARAMETER :: l_xyav=.FALSE.
     !     ..
@@ -152,10 +152,10 @@ CONTAINS
              CALL juDFT_error("vgen:1",calledby ="vgen")
           ENDIF
           CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_OUTPUT_DEN_const,&
-                           0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
        ELSE
           CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
        END IF
 
        IF (.NOT.l_xyav) THEN
@@ -166,7 +166,7 @@ CONTAINS
 
        IF (input%total.OR.reap) THEN
           CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                            0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                            0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
        END IF
 
        WRITE (6,FMT=8000)
@@ -403,7 +403,7 @@ CONTAINS
        !
        IF (input%jspins.EQ.2) THEN
           CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           vr(:,0:,:,2) = vr(:,0:,:,1)
           vpw(:,2) = vpw(:,1)
           IF (input%film) THEN
@@ -664,7 +664,7 @@ CONTAINS
 
           IF (noco%l_noco) THEN ! load qpw,rht,rhtxy from 'cdn'-file
              CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                              0,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                              0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           ENDIF
           !
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2

@@ -47,7 +47,7 @@ MODULE m_cdn_io
    CONTAINS
 
    SUBROUTINE readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                          relCdnIndex,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                          relCdnIndex,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -61,6 +61,8 @@ MODULE m_cdn_io
       INTEGER, INTENT (IN)      :: relCdnIndex
       INTEGER, INTENT (OUT)     :: iter
       INTEGER, INTENT (IN)      :: archiveType
+      REAL,    INTENT (OUT)     :: fermiEnergy
+      LOGICAL, INTENT (OUT)     :: l_qfix
 
       !     ..
       !     .. Array Arguments ..
@@ -82,6 +84,10 @@ MODULE m_cdn_io
       INTEGER           :: previousDensityIndex, densityType
       CHARACTER(LEN=30) :: archiveName
       TYPE(t_cell)      :: cellTemp
+
+      fermiEnergy = 0.0
+      l_qfix = .FALSE.
+      WRITE(*,*) 'fermiEnergy and l_qfix set to default values in readDensity!'
 
       CALL getMode(mode)
 
@@ -117,7 +123,7 @@ MODULE m_cdn_io
                   END IF
                CASE DEFAULT
                   WRITE(*,*) 'inOrOutCDN = ', inOrOutCDN
-                  CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="writeDensity")
+                  CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="readDensity")
             END SELECT
             l_exist = isDensityEntryPresentHDF(fileID,archiveName,densityType)
             CALL closeCDN_HDF(fileID)
@@ -128,7 +134,7 @@ MODULE m_cdn_io
                              readDensityIndex,lastDensityIndex)
 
             CALL readDensityHDF(fileID, archiveName, densityType,&
-                                iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                                fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
             CALL closeCDN_HDF(fileID)
             RETURN
@@ -222,7 +228,7 @@ MODULE m_cdn_io
    END SUBROUTINE readDensity
 
    SUBROUTINE writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           relCdnIndex,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                           relCdnIndex,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -236,6 +242,8 @@ MODULE m_cdn_io
       INTEGER, INTENT (IN)      :: inOrOutCDN
       INTEGER, INTENT (IN)      :: relCdnIndex, iter
       INTEGER, INTENT (IN)      :: archiveType
+      REAL,    INTENT (IN)      :: fermiEnergy
+      LOGICAL, INTENT (IN)      :: l_qfix
       !     ..
       !     .. Array Arguments ..
       COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
@@ -267,6 +275,8 @@ MODULE m_cdn_io
       INTEGER           :: previousDensityIndex, densityType
       INTEGER           :: starsIndexTemp, latharmsIndexTemp, structureIndexTemp
       INTEGER           :: jspinsTemp
+      REAL              :: fermiEnergyTemp
+      LOGICAL           :: l_qfixTemp
       CHARACTER(LEN=30) :: archiveName
 
       CALL getMode(mode)
@@ -332,13 +342,13 @@ MODULE m_cdn_io
             IF(l_exist) THEN
                CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                         iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
-                                        previousDensityIndex, jspinsTemp)
+                                        previousDensityIndex, jspinsTemp, fermiEnergyTemp, l_qfixTemp)
             END IF
          END IF
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              iter+relCdnIndex,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              fermiEnergy,l_qfix,iter+relCdnIndex,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
          IF(l_storeIndices) THEN
             CALL writeHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
