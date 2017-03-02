@@ -34,3 +34,6 @@ eigen/tlo.f90
 eigen/vacfun.f90
 eigen/vec_for_lo.f90
 )
+if (FLEUR_USE_GPU)
+   set(fleur_F90 ${fleur_F90} eigen/hsmt_nonsph_GPU.F90)
+endif()

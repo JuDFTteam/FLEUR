@@ -66,6 +66,9 @@ CONTAINS
 #include"cpp_double.h"
     USE m_hsmt_socinit
     USE m_hsmt_nonsph
+#ifdef CPP_GPU    
+    USE m_hsmt_nonsph_gpu
+#endif
     USE m_hsmt_sph
     USE m_hsmt_extra
     USE m_types
@@ -202,9 +205,17 @@ CONTAINS
                kveclo,l_real,hamOvlp%a_r,hamOvlp%b_r,hamOvlp%a_c,hamOvlp%b_c) !out/in
           CALL timestop("hsmt extra")
           CALL timestart("hsmt non-spherical")
+#ifndef CPP_GPU
           CALL hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM,n_size,n_rank,input,isp,nintsp,&
                hlpmsize,noco,l_socfirst,lapw,cell,tlmplm,fj,gj,gk,vk,oneD,l_real,hamOvlp%a_r,hamOvlp%a_c)
           CALL timestop("hsmt non-spherical")
+#else
+          CALL timestart("hsmt non-spherical-GPU")
+          CALL hsmt_nonsph_gpu(DIMENSION,atoms,sym,SUB_COMM,n_size,n_rank,input,isp,nintsp,&
+               hlpmsize,noco,l_socfirst,lapw,cell,tlmplm,fj,gj,gk,vk,oneD,l_real,hamOvlp%a_r,hamOvlp%a_c)
+
+          CALL timestop("hsmt non-spherical-GPU")
+#endif
        ENDIF
     ENDDO
 

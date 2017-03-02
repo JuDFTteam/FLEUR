@@ -574,6 +574,7 @@ CONTAINS
 #if defined(CPP_MPI)
           !Collect number of all eigenvalues
           CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
+          ne_all=min(dimension%neigd,ne_all)
 #endif
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           if (.not.l_real) THEN
@@ -583,6 +584,7 @@ CONTAINS
                 zMat%z_c(:lapw%nmat,:ne_found) = cmplx(0.0,0.0)
              ENDIF
           endif
+	  zmat%nbands=ne_found
           CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&

@@ -110,7 +110,7 @@ CONTAINS
     CALL convol(                    &
          stars,   &
          psq,               &
-         vpw)
+         vpw,stars%ufft)
 
     ! Add to total potential
     vpw_total(:)=vpw_total(:)+psq

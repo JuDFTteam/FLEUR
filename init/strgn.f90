@@ -317,10 +317,11 @@ CONTAINS
     !
     !--->    store number of star with respect to z-index in igz
     !
-    ngz = izmax - izmin + 1
-    DO k = 1,stars%ng3
-       igz(k) = stars%kv3(3,k) - izmin + 1
-    ENDDO
+    !ngz = izmax - izmin + 1
+    !DO k = 1,stars%ng3
+    !   igz(k) = stars%kv3(3,k) - izmin + 1
+    !ENDDO
+    igz=0;ngz=0;izmin=0;izmax=0
 
     !--->    generate all star members
     !+gu
@@ -510,7 +511,13 @@ CONTAINS
        ENDDO
     ENDIF
 
-    IF (stars%mx1 .ne. mxx1 .or.  stars%mx2 .ne. mxx2) CALL judft_error("BUG in strgn")
+    
+    IF (stars%mx1< mxx1 .or.  stars%mx2< mxx2) then
+          print *,stars%mx1, mxx1, stars%mx2, mxx2       
+          CALL judft_error("BUG in strgn")
+    endif
+    !stars%mx1=mxx1
+    !stars%mx2=mxx2
     !
     !--->    write /str0/ and /str1/ to unit 51
     !
@@ -767,12 +774,11 @@ CONTAINS
     !
     !--->    store number of star with respect to z-index in igz
     !
-    izmin=0;izmax=0
-    ngz = izmax - izmin + 1
-    DO k = 1,stars%ng3
-       igz(k) = stars%kv3(3,k) - izmin + 1
-    ENDDO
-
+    !ngz = izmax - izmin + 1
+    !DO k = 1,stars%ng3
+    !   igz(k) = stars%kv3(3,k) - izmin + 1
+    !ENDDO
+    igz=0;ngz=0;izmax=0;izmin=0
     !--->    generate all star members
     !+gu
     kidx=0
@@ -888,7 +894,7 @@ CONTAINS
           ENDDO
        ENDDO
     ENDIF
-    if ( stars%mx1 .ne. mxx1 .or. stars%mx2 .ne. mxx2 .or. stars%mx3 .ne. mxx3 ) call &
+    if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
          judft_error("BUG 1 in strgen") 
     stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; igz = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0

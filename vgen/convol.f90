@@ -3,18 +3,21 @@
       SUBROUTINE convol(&
      &                  stars, &
      &                  fg3,&
-     &                  ag3&
+     &                  ag3,ufft&
      &                   )
 
 !************************************************************
 !*                                                          *
-!* calculate f(G) = \sum_G' U(G' - G) a(G')                 *
+!* calculate f(G) = \sum_G' U(G - G') a(G')                 *
+!*                                                          *
+!* U is already given on the real space mesh as U(r)        *
 !*                                                          *
 !*       ag3(star) -- FFT --> gfft(r,1)                     *
 !*                            gfft(r,1)=gfft(r,1) * U (r)   *
 !*       fg3(star) <- FFT --- gfft(r,1)                     *
 !*                                                          *
-!* dimension of gfft is (3*stars%mx1 x 3*stars%mx2 x 3*stars%mx3)             *
+!* dimension of gfft is                                     *
+!* (3*stars%mx1 x 3*stars%mx2 x 3*stars%mx3)                *
 !*                                                          *
 !************************************************************
       USE m_types
@@ -22,8 +25,10 @@
       IMPLICIT NONE
 
       TYPE(t_stars),INTENT(IN) :: stars
+
       COMPLEX, INTENT (IN)     :: ag3(stars%ng3)
       COMPLEX, INTENT (OUT)    :: fg3(stars%ng3)
+      REAL,    INTENT (IN)     :: ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1)
 
       INTEGER i,ifftd
       REAL, ALLOCATABLE :: gfft(:,:)
@@ -38,7 +43,7 @@
      &           stars,+1) 
 
       DO i=0,ifftd-1
-        gfft(i,:)=gfft(i,:)*stars%ufft(i)
+        gfft(i,:)=gfft(i,:)*ufft(i)
       ENDDO
 
       CALL fft3d(&

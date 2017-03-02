@@ -194,7 +194,12 @@ CONTAINS
 #endif
 #ifdef CPP_MAGMA
        CASE (diag_magma)
-          CALL magma_diag(lapw%nmat,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+          if (l_real) THEN
+             call juDFT_error("REAL diagonalization not implemented in magma.F90")
+          else
+             print *,"Start magma_diag"
+             CALL magma_diag(lapw%nmat,eig,ne_found,a_c=hamOvlp%a_c,b_c=hamOvlp%b_c,z_c=zMat%z_c)
+          endif
 #endif
        CASE (diag_lapack2)
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")

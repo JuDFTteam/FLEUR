@@ -41,7 +41,7 @@ CONTAINS
     REAL rdum
     !     .. Local Arrays ..
     INTEGER i(36),ierr(3)
-    REAL    r(28)
+    REAL    r(29)
     LOGICAL l(43)
     !     ..
     !     .. External Subroutines.. 
@@ -62,7 +62,7 @@ CONTAINS
        r(15)=input%efield%sigma ; r(16)=input%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=hybrid%gcutm2
        r(23)=hybrid%tolerance2 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
-       r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
+       r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance
        l(1)=input%eonly  ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
        l(11)=banddos%dos ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
@@ -89,6 +89,7 @@ CONTAINS
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
+    input%minDistance=r(29)
     hybrid%tolerance2=r(23) ; input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
     cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) ; hybrid%gcutm2=r(22)
     input%efield%sigma=r(15) ; input%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);

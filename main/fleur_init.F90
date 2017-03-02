@@ -26,8 +26,12 @@
           USE m_xmlOutput
           USE m_winpXML
           USE m_setupMPI
+          USE m_cdn_io
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
+#endif
+#ifdef CPP_HDF
+          USE m_hdf_tools
 #endif
           IMPLICIT NONE
           !     Types, these variables contain a lot of data!
@@ -78,7 +82,9 @@
 #else
           mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
-
+#ifdef CPP_HDF
+          call hdf_init()
+#endif
           results%seigscv         = 0.0
           results%te_vcoul        = 0.0
           results%te_veff         = 0.0
@@ -92,7 +98,7 @@
           !-t3e
           IF (mpi%irank.EQ.0) THEN
              CALL startXMLOutput()
-#ifndef  __TOS_BGQ__
+#if !(defined(__TOS_BGQ__)||defined(__PGI))
              !Do not open out-file on BlueGene
              OPEN (6,file='out',form='formatted',status='unknown')
 #endif
@@ -482,6 +488,10 @@
 
           !Finalize the MPI setup
           CALL setupMPI(kpts%nkpt,mpi)
+
+          IF (mpi%irank.EQ.0) THEN
+             CALL setStartingDensity(noco%l_noco)
+          END IF
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
