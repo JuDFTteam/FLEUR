@@ -74,7 +74,6 @@
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
           
-          CALL check_command_line()
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr(3)
@@ -85,6 +84,7 @@
 #else
           mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
+          CALL check_command_line()
 #ifdef CPP_HDF
           call hdf_init()
 #endif
