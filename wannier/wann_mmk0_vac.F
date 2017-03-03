@@ -24,7 +24,6 @@ c***************************************************************
      <     mmn)
 
       use m_constants, only : pimach
-      use m_dotir
       implicit none
 
 c     .. scalar Arguments..
@@ -74,8 +73,6 @@ c     ..intrinsic functions..
 
 c..   external functions
       external vacudz,vacuz
-c      real dotirp
-c      external dotirp !module now
 
       allocate ( ac(nv2d,neigd),bc(nv2d,neigd),dt(nv2d),
      +           dte(nv2d),t(nv2d),te(nv2d),tei(nv2d),
@@ -142,7 +139,7 @@ c.. the body of the routine
          v(1) = bkpt(1) + kvac1(ik) + qss1
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dotirp(v,v,bbmat)
+         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
          call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
      +        u(1,ik))
          call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te(ik),

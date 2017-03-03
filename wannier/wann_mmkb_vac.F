@@ -26,7 +26,6 @@ c***************************************************************
 
       use m_constants, only : pimach
       use m_intgr, only : intgz0
-      use m_dotir
       implicit none
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
@@ -179,7 +178,7 @@ c.. the body of the routine
          v(1) = bkpt(1) + kvac1(ik) + qss1
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dotirp(v,v,bbmat)
+         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
          call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
      +        u(1,ik))
          call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te(ik),
@@ -230,7 +229,7 @@ c...now for the k+b point
          v(1) = bkpt_b(1) + kvac1_b(ik) + qss1
          v(2) = bkpt_b(2) + kvac2_b(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dotirp(v,v,bbmat)
+         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
          call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t_b(ik),dt_b(ik),
      +        u_b(1,ik))
          call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te_b(ik),

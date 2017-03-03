@@ -466,10 +466,10 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
       if (irank.eq.0) l_p0 = .true.
 
       call cdn_read0(
-     >               lmaxd,ntypd,nlod,neigd,jspd,
-     >               irank,isize,jspin,jsp_start,jsp_end,
-     >               l_noco,nrec,66,
-     <               ello,evac,epar,bkpt,wk,n_bands,nrec1,n_size)
+     >               nrec,
+     >               irank,isize,jspin,jspins,
+     >               l_noco,
+     <               ello,evac,epar,bkpt,wk,n_bands,n_size)
 
 
       allocate ( flo(ntypd,jmtd,2,nlod) )
