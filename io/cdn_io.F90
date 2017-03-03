@@ -28,7 +28,7 @@ MODULE m_cdn_io
    PUBLIC readDensity, writeDensity
    PUBLIC isDensityFilePresent, isCoreDensityPresent
    PUBLIC readCoreDensity, writeCoreDensity
-   PUBLIC setStartingDensity
+   PUBLIC setStartingDensity, readPrevEFermi
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -87,7 +87,6 @@ MODULE m_cdn_io
 
       fermiEnergy = 0.0
       l_qfix = .FALSE.
-      WRITE(*,*) 'fermiEnergy and l_qfix set to default values in readDensity!'
 
       CALL getMode(mode)
 
@@ -126,7 +125,7 @@ MODULE m_cdn_io
                   CALL juDFT_error("Invalid inOrOutCDN selected.",calledby ="readDensity")
             END SELECT
             l_exist = isDensityEntryPresentHDF(fileID,archiveName,densityType)
-            CALL closeCDN_HDF(fileID)
+            CALL closeCDNPOT_HDF(fileID)
          END IF
 
          IF (l_exist) THEN
@@ -136,7 +135,7 @@ MODULE m_cdn_io
             CALL readDensityHDF(fileID, archiveName, densityType,&
                                 fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
-            CALL closeCDN_HDF(fileID)
+            CALL closeCDNPOT_HDF(fileID)
             RETURN
          ELSE
             WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
@@ -351,11 +350,11 @@ MODULE m_cdn_io
                               fermiEnergy,l_qfix,iter+relCdnIndex,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
          IF(l_storeIndices) THEN
-            CALL writeHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                 currentStructureIndex,readDensityIndex,lastDensityIndex)
+            CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                    currentStructureIndex,readDensityIndex,lastDensityIndex)
          END IF
 
-         CALL closeCDN_HDF(fileID)
+         CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          ! Write density to cdn.str file
@@ -495,6 +494,58 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeDensity
 
+   SUBROUTINE readPrevEFermi(eFermiPrev,l_error)
+
+      REAL,    INTENT(OUT) :: eFermiPrev
+      LOGICAL, INTENT(OUT) :: l_error
+
+      INTEGER        :: mode
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex
+      INTEGER        :: currentStructureIndex
+      INTEGER        :: readDensityIndex, lastDensityIndex
+
+      INTEGER           :: starsIndex, latharmsIndex, structureIndex
+      INTEGER           :: iter, jspins, previousDensityIndex
+      REAL              :: fermiEnergy
+      LOGICAL           :: l_qfix, l_exist
+      CHARACTER(LEN=30) :: archiveName
+
+      CALL getMode(mode)
+
+      eFermiPrev = 0.0
+      l_error = .FALSE.
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
+         WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
+         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+                                  iter, starsIndex, latharmsIndex, structureIndex,&
+                                  previousDensityIndex, jspins, fermiEnergy, l_qfix)
+         archiveName = ''
+         WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
+         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_OUT_const)
+         IF(l_exist) THEN
+            CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_OUT_const,&
+                                     iter, starsIndex, latharmsIndex, structureIndex,&
+                                     previousDensityIndex, jspins, fermiEnergy, l_qfix)
+            eFermiPrev = fermiEnergy
+         ELSE
+            l_error = .TRUE.
+         END IF
+         CALL closeCDNPOT_HDF(fileID)
+#endif
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         STOP 'cdn.str not yet implemented!'
+      ELSE
+         l_error = .TRUE.
+      END IF
+
+   END SUBROUTINE
+
    SUBROUTINE readCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
 
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -525,7 +576,7 @@ MODULE m_cdn_io
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              readDensityIndex,lastDensityIndex)
             CALL readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
-            CALL closeCDN_HDF(fileID)
+            CALL closeCDNPOT_HDF(fileID)
             RETURN
          ELSE
             WRITE(*,*) 'No core density is available in HDF5 format.'
@@ -594,7 +645,7 @@ MODULE m_cdn_io
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                           readDensityIndex,lastDensityIndex)
          CALL writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
-         CALL closeCDN_HDF(fileID)
+         CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          ! Write core density to cdn.str file
@@ -662,9 +713,9 @@ MODULE m_cdn_io
             WRITE(*,*) 'archiveName: ', TRIM(ADJUSTL(archiveName))
             CALL juDFT_error("For selected starting density index no in-density is present.",calledby ="setStartingDensity")
          END IF
-         CALL writeHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                              currentStructureIndex,sdIndex,lastDensityIndex)
-         CALL closeCDN_HDF(fileID)
+         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                 currentStructureIndex,sdIndex,lastDensityIndex)
+         CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          STOP 'CDN_STREAM_MODE not yet implemented!'

@@ -105,6 +105,10 @@ CONTAINS
 
     !.....energy density
     REAL,    ALLOCATABLE :: excz(:,:),excr(:,:,:)
+#ifdef CPP_MPI
+    include 'mpif.h'
+    integer:: ierr
+#endif
     !
     ! if you want to calculate potential gradients
     !
@@ -395,7 +399,6 @@ CONTAINS
           ENDIF
 
        END IF
-       !ENDIF !irank==0
        !
        !==========END TOTAL===================================================
        !
@@ -417,7 +420,7 @@ CONTAINS
              vpw_w(1:stars%ng3,js)=vpw_w(1:stars%ng3,js)/stars%nstr(1:stars%ng3)     ! the PW-coulomb part is not
              ! used otherwise anyway.
           ENDDO
-          CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
+          CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,&
                               iter,vr,vpw_w,vz,vxy)
           DO js = 1,input%jspins
              DO i = 1,stars%ng3
@@ -431,6 +434,7 @@ CONTAINS
                11, iter,vr,vpw,vz,vxy)
           CLOSE(11)
        END IF
+    ENDIF !irank==0
 
        !     ******** exchange correlation potential******************
        !+ta
@@ -448,6 +452,7 @@ CONTAINS
        excr(:,:,:) = 0.0
 
        !     ---> vacuum region
+    IF (mpi%irank == 0) THEN
        IF (input%film) THEN
 
           CALL timestart("Vxc in vacuum")
@@ -574,15 +579,24 @@ CONTAINS
        WRITE (6,FMT=8040) (vbar(js),js=1,input%jspins)
        WRITE (16,FMT=8040) (vbar(js),js=1,input%jspins)
 8040   FORMAT (/,5x,'interstitial potential average (vbar) =',2f10.6)
+    ENDIF !irank==0
        !
        !     ------------------------------------------
        !     ----> muffin tin spheres region
 
        CALL timestart ("Vxc in MT")
+#ifdef CPP_MPI
+       CALL MPI_BCAST(atoms%vr0,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(input%efield%vslope,1,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(rho,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(vr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(rhmn,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(ichsmrg,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#endif
        IF ((xcpot%igrd.EQ.0).AND.(xcpot%icorr.NE.-1)) THEN
           CALL vmtxc(dimension,sphhar,atoms, rho,xcpot,input,sym, vr, excr,vxr)
        ELSEIF ((xcpot%igrd.GT.0).OR.(xcpot%icorr.EQ.-1)) THEN
-          CALL vmtxcg(dimension,sphhar,atoms, rho,xcpot,input,sym,&
+          CALL vmtxcg(dimension,mpi,sphhar,atoms, rho,xcpot,input,sym,&
                obsolete, vxr,vr,rhmn,ichsmrg, excr)
        ELSE
           CALL juDFT_error("something wrong with xcpot before vmtxc" ,calledby ="vgen")
@@ -593,6 +607,7 @@ CONTAINS
        ! add MT EXX potential to vr
        !
 
+    IF (mpi%irank == 0) THEN
        INQUIRE(file='vr_exx',exist=exi)
        IF( exi ) THEN
           ALLOCATE( vr_exx(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
@@ -836,7 +851,7 @@ CONTAINS
                    vpw_w(i,js)=vpw_w(i,js)/stars%nstr(i)
                 ENDDO
              ENDDO
-             CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+             CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,&
                                  iter,vr,vpw_w,vz,vxy)
 
              DO js=1,input%jspins
@@ -845,7 +860,7 @@ CONTAINS
                 ENDDO
              ENDDO
 
-             CALL writePotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_X_const,&
+             CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,&
                                  iter,vxr,vxpw_w,vz,vxy)
           END IF
 

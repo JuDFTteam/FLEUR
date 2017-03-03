@@ -706,6 +706,7 @@
         REAL              :: e_ldau    !<total energy contribution of LDA+U
         REAL              :: tote
         REAL              :: last_distance
+        REAL              :: bandgap
         TYPE(t_energy_hf) ::  te_hfex
         REAL              ::  te_hfex_loc(2)
         REAL, ALLOCATABLE :: w_iks(:,:,:)
