@@ -58,7 +58,7 @@ MODULE m_pot_io
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
-      INTEGER           :: mode, iUnit, i,j,k,l
+      INTEGER           :: mode, iUnit
       LOGICAL           :: l_exist
       CHARACTER(len=30) :: filename
 

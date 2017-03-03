@@ -7,7 +7,7 @@ MODULE m_eigenso
   !     way: takes e.v. and e.f. from previous scalar-rel. calc.
   !     makes spin-orbit matrix elements solves e.v. and put it on 'eig'
   !
-  !     Tree:  eigenso-|- loddop
+  !     Tree:  eigenso-|- readPotential
   !                    |- spnorb  : sets up s-o parameters 
   !                    |    |- soinit - sorad  : radial part
   !                    |    |- sgml            : diagonal angular parts
@@ -26,7 +26,7 @@ CONTAINS
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb 
     USE m_alineso
-    USE m_loddop
+    USE m_pot_io
     USE m_types
     IMPLICIT NONE
 
@@ -83,18 +83,13 @@ CONTAINS
     ! now the definition of rotation matrices
     ! is equivalent to the def in the noco-routines
     !
-    ! load potential from file pottot (=unit 8)
+    ! load potential by calling readPotential.
     !
     ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),&
          vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%ng3,DIMENSION%jspd) )
 
-    OPEN (8,file='pottot',form='unformatted',status='old')
-    CALL loddop(&
-         stars,vacuum,atoms,sphhar,&
-         input,sym,&
-         8,&
-         iter,vr,vpw,vz,vzxy)
-    CLOSE(8)
+    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                       iter,vr,vpw,vz,vzxy)
 
     DEALLOCATE ( vz,vzxy,vpw )
 
