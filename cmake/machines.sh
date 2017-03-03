@@ -34,9 +34,7 @@ function configure_machine(){
 	then
 	    echo "PGI toolchain used"
 	    if module list 2>&1| grep -q MVAPICH2 &&
-               module list 2>&1| grep -q CMake &&
-	       [ -n "${MAGMA_ROOT}" ] &&
-	       [ -n "${XML2_ROOT}" ] 
+               module list 2>&1| grep -q CMake 
             then
 		echo "All required modules loaded, all variables set"
 	    else
