@@ -145,11 +145,7 @@ CONTAINS
     n_stride=1
 #endif
 
-
-    ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
-            &       chdf(dimension%nspd,dimension%jspd),chdrr(dimension%nspd,dimension%jspd),chdtt(dimension%nspd,dimension%jspd),&
-            &       chdff(dimension%nspd,dimension%jspd),chdtf(dimension%nspd,dimension%jspd),chdrt(dimension%nspd,dimension%jspd),&
-            &       chdrf(dimension%nspd,dimension%jspd),chlh(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),&
+    ALLOCATE ( chlh(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),&
             &       chlhdr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),chlhdrr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd))
 
     DO 200 n = n_start,atoms%ntype,n_stride
@@ -187,7 +183,7 @@ CONTAINS
        !
        !-->    loop over radial mesh 
        !
-       !$OMP PARALLEL DO DEFAULT(none) &
+       !$OMP PARALLEL DEFAULT(none) &
 #ifdef CPP_MPI
        !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local, rhmn_reduced) &
 #endif
@@ -202,6 +198,11 @@ CONTAINS
        !$OMP& PRIVATE(vx,vxc,exc) &
        !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,grgru,grgrd,gzgr) &
        !$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
+       ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
+            &       chdf(dimension%nspd,dimension%jspd),chdrr(dimension%nspd,dimension%jspd),chdtt(dimension%nspd,dimension%jspd),&
+            &       chdff(dimension%nspd,dimension%jspd),chdtf(dimension%nspd,dimension%jspd),chdrt(dimension%nspd,dimension%jspd),&
+            &       chdrf(dimension%nspd,dimension%jspd))
+       !$OMP DO 
        DO 190 jr = 1,atoms%jri(n)
           !
           !         following are at points on jr-th sphere.
@@ -415,7 +416,9 @@ CONTAINS
           ENDDO
 
 190    ENDDO
-       !$OMP END PARALLEL DO
+       !$OMP END DO
+       DEALLOCATE (ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
+       !$OMP END PARALLEL 
 
        !        WRITE(6,'(/'' n='',i3/'' 9999vr''/(10d15.7))') n,
        !     &   (((vr(jr,lh,n,js),jr=1,jri(n),100),lh=0,ntypsy(nat)),js=1,jspins)
@@ -423,7 +426,6 @@ CONTAINS
        !     &   ((excr(jr,lh,n),jr=1,jri(n),100),lh=0,ntypsy(nat))
 
 200 ENDDO
-    DEALLOCATE (ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
     DEALLOCATE (chlh,chlhdr,chlhdrr)
 
 #ifdef CPP_MPI
