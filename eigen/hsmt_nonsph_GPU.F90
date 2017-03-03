@@ -78,7 +78,7 @@ CONTAINS
 
 
 
-    call nvtxStartRange("hsmt_nonsph",1)    
+    !call nvtxStartRange("hsmt_nonsph",1)    
 
     lnonsphd=MAXVAL(atoms%lnonsph)*(MAXVAL(atoms%lnonsph)+2)
     ALLOCATE(dtd(0:lnonsphd,0:lnonsphd),utd(0:lnonsphd,0:lnonsphd),dtu(0:lnonsphd,0:lnonsphd),utu(0:lnonsphd,0:lnonsphd))
