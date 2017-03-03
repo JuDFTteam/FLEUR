@@ -58,7 +58,7 @@ MODULE m_pot_io
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
-      INTEGER           :: mode, iUnit
+      INTEGER           :: mode, iUnit, i,j,k,l
       LOGICAL           :: l_exist
       CHARACTER(len=30) :: filename
 
@@ -150,8 +150,8 @@ MODULE m_pot_io
 
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
                      iUnit,iter,fr,fpw,fz,fzxy)
-         CLOSE(iUnit)
 
+         CLOSE(iUnit)
       END IF
 
    END SUBROUTINE readPotential
@@ -187,6 +187,9 @@ MODULE m_pot_io
       INTEGER           :: currentStructureIndex
       INTEGER           :: potentialType
       CHARACTER(LEN=30) :: archiveName
+
+      REAL              :: fzTemp(vacuum%nmzd,2,input%jspins)
+      COMPLEX           :: fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
 
       CALL getMode(mode)
 
@@ -224,9 +227,19 @@ MODULE m_pot_io
 
          potentialType = POTENTIAL_TYPE_IN_const
 
+         fzTemp(:,:,:) = fz(:,:,:)
+         fzxyTemp(:,:,:,:) = fzxy(:,:,:,:)
+         IF(vacuum%nvac.EQ.1) THEN
+            fzTemp(:,2,:)=fzTemp(:,1,:)
+            IF (sym%invs) THEN
+               fzxyTemp(:,:,2,:) = CONJG(fzxyTemp(:,:,1,:))
+            ELSE
+               fzxyTemp(:,:,2,:) = fzxyTemp(:,:,1,:)
+            END IF
+         END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                iter,fr,fpw,fz,fzxy)
+                                iter,fr,fpw,fzTemp,fzxyTemp)
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&

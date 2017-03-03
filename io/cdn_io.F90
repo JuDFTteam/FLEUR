@@ -345,9 +345,24 @@ MODULE m_cdn_io
             END IF
          END IF
 
+         ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
+         ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
+         fzTemp(:,:,:) = fz(:,:,:)
+         fzxyTemp(:,:,:,:) = fzxy(:,:,:,:)
+         IF(vacuum%nvac.EQ.1) THEN
+            fzTemp(:,2,:)=fzTemp(:,1,:)
+            IF (sym%invs) THEN
+               fzxyTemp(:,:,2,:) = CONJG(fzxyTemp(:,:,1,:))
+            ELSE
+               fzxyTemp(:,:,2,:) = fzxyTemp(:,:,1,:)
+            END IF
+         END IF
+
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              fermiEnergy,l_qfix,iter+relCdnIndex,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              fermiEnergy,l_qfix,iter+relCdnIndex,fr,fpw,fzTemp,fzxyTemp,cdom,cdomvz,cdomvxy)
+
+         DEALLOCATE(fzTemp,fzxyTemp)
 
          IF(l_storeIndices) THEN
             CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
