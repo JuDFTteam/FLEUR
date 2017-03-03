@@ -128,6 +128,7 @@ CONTAINS
     efermi = results%ef
     IF (nstef.LT.n) THEN
        gap = e(INDEX(nstef+1)) - results%ef
+       results%bandgap = gap*hartree_to_ev_const
        IF ( mpi%irank == 0 ) THEN
           attributes = ''
           WRITE(attributes(1),'(f20.10)') gap*hartree_to_ev_const
