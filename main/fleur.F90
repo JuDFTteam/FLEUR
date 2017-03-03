@@ -288,6 +288,9 @@
                       input%total = .TRUE.
                    ENDIF!(obsolete%pot8)
                 ENDIF !mpi%irank.eq.0
+#ifdef CPP_MPI
+                CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+#endif
 
                 !--- J<
                 IF(jij%l_jenerg) GOTO 234
