@@ -76,7 +76,7 @@ CONTAINS
     allocate(work(1),rwork(1),iwork(1))
     print *,"Magma workspace query"
     call flush()
-    call magmaf_zhegvdx_2stage_m(NGPU_CONST,1,MagmaVec,MagmaRangeI,MagmaLower,nsize,largea_c,nsize,largeb_c,nsize,&
+    call magmaf_zhegvdx(1,'v','i','l',nsize,largea_c,nsize,largeb_c,nsize,&
          0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,err)
     lwork=work(1)
     lrwork=rwork(1)
@@ -88,7 +88,7 @@ CONTAINS
     !Now the diagonalization
     print *,"Magma diagonalization"
     print *,nsize,shape(largea_c),shape(eigTemp),ne
-    call magmaf_zhegvdx_2stage_m(NGPU_CONST,1,MagmaVec,MagmaRangeI,MagmaLower,nsize,largea_c,nsize,largeb_c,nsize,&
+    call magmaf_zhegvdx(1,'v','i','l',nsize,largea_c,nsize,largeb_c,nsize,&
          0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,err)
     print*,"MAGMA info:",err
     if (err/=0) call juDFT_error("Magma failed to diagonalize Hamiltonian")

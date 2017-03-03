@@ -5,8 +5,6 @@ set(CMAKE_C_COMPILER mpicc)
 #set(CMAKE_C_FLAGS " -I$ENV{XML2_ROOT}/include")
 if (DEFINED ENV{MAGMA_ROOT})
 set(FLEUR_Fortran_FLAGS " -I$ENV{MAGMA_ROOT}/include")
-#Linker Stuff
-#set(FLEUR_LIBRARIES "-L$ENV{XML2_ROOT}/lib;-lxml2;-lz;-L$ENV{MAGMA_ROOT}/lib;-lmagma")
 set(FLEUR_LIBRARIES "-L$ENV{MAGMA_ROOT}/lib;-lmagma")
 endif()
 set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_AIX")

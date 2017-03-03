@@ -17,7 +17,7 @@ CONTAINS
        &                   sliceplot,noco,sym,&
        &                   cell,&
        &                   l_mcd,ncored,ncore,e_mcd,&
-       &                   efermi,nsld,oneD)
+       &                   efermi,bandgap,nsld,oneD)
     USE m_eig66_io,ONLY:read_dos,read_eig
     USE m_evaldos
     USE m_cdninf
@@ -40,7 +40,7 @@ CONTAINS
     INTEGER,PARAMETER :: n2max=13 
     INTEGER, INTENT (IN) :: nsld,eig_id 
     INTEGER, INTENT (IN) :: ncored
-    REAL,    INTENT (IN) :: efermi
+    REAL,    INTENT (IN) :: efermi, bandgap
     LOGICAL, INTENT (IN) :: l_mcd
     !     ..
     !     .. Array Arguments ..
@@ -137,7 +137,7 @@ CONTAINS
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(&
             &                eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-            &                DIMENSION,efermi,&
+            &                DIMENSION,efermi,bandgap,&
             &                l_mcd,ncored,ncore,e_mcd,nsld)
     ENDIF
     !

@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-           dimension,efermiarg, l_mcd,ncored,ncore,e_mcd,nsld)
+           dimension,efermiarg,bandgap,l_mcd,ncored,ncore,e_mcd,nsld)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -27,6 +27,8 @@
       USE m_ptdos
       USE m_smooth
       USE m_types
+      USE m_constants
+      USE m_cdn_io
       IMPLICIT NONE
       INTEGER,INTENT(IN)             :: eig_id
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -42,7 +44,7 @@
 
       INTEGER, INTENT(IN) :: ncored 
       INTEGER, INTENT(IN) :: nsld
-      REAL,    INTENT(IN) :: efermiarg
+      REAL,    INTENT(IN) :: efermiarg, bandgap
       LOGICAL, INTENT(IN) :: l_mcd 
 
       INTEGER, INTENT(IN) :: ncore(:)!(ntype)
@@ -51,12 +53,11 @@
 !+odim 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
-      REAL,    PARAMETER :: factor = 27.2
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
       INTEGER  icore,qdim,n_orb
-      REAL     as,de,efermi,emax,emin,qmt,sigma,totdos
-      REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk
-      LOGICAL  l_tria,l_orbcomp
+      REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
+      REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
+      LOGICAL  l_tria,l_orbcomp,l_error
 
       INTEGER  itria(3,2*kpts%nkpt),nevk(kpts%nkpt),itetra(4,6*kpts%nkpt)
       INTEGER, ALLOCATABLE :: ksym(:),jsym(:)
@@ -97,10 +98,10 @@
       ENDIF
 !
 ! scale energies
-      sigma = banddos%sig_dos*factor
-      emin =min(banddos%e1_dos*factor,banddos%e2_dos*factor)
-      emax =max(banddos%e1_dos*factor,banddos%e2_dos*factor)
-      efermi = efermiarg*factor
+      sigma = banddos%sig_dos*hartree_to_ev_const
+      emin =min(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
+      emax =max(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
+      efermi = efermiarg*hartree_to_ev_const
  
       WRITE (6,'(a)') 'DOS-Output is generated!'
 
@@ -135,8 +136,8 @@
             ENDDO
           ENDDO
         ENDDO
-        e_lo = e_lo*factor - efermi - emax 
-        e_up = e_up*factor - efermi
+        e_lo = e_lo*hartree_to_ev_const - efermi - emax 
+        e_up = e_up*hartree_to_ev_const - efermi
         de = (e_up-e_lo)/(ned-1)
         DO i=1,ned
           e_grid(i) = e_lo + (i-1)*de
@@ -237,7 +238,7 @@
 !---- >     convert eigenvalues to ev and shift them by efermi
 !
             DO i = 1 , nevk(k)
-               ev(i,k) = ev(i,k)*factor - efermi
+               ev(i,k) = ev(i,k)*hartree_to_ev_const - efermi
             ENDDO
             DO i = nevk(k) + 1, dimension%neigd
                ev(i,k) = 9.9e+99
@@ -418,8 +419,8 @@
                DO icore = 1 , ncore(n)
                  DO i = 1 , ned-1
                    IF (e(i).GT.0) THEN     ! take unoccupied part only
-                   e_test1 = -e(i) - efermi +e_mcd(n,jspin,icore)*factor
-                   e_test2 = -e(i+1)-efermi +e_mcd(n,jspin,icore)*factor
+                   e_test1 = -e(i) - efermi +e_mcd(n,jspin,icore)*hartree_to_ev_const
+                   e_test2 = -e(i+1)-efermi +e_mcd(n,jspin,icore)*hartree_to_ev_const
                    IF ((e_test2.LE.e_grid(l)).AND. (e_test1.GT.e_grid(l))) THEN
                      fac = (e_grid(l)-e_test1)/(e_test2-e_test1)
                      DO k = 3*(n-1)+1,3*(n-1)+3
@@ -472,6 +473,20 @@
 !------------------------------------------------------------------------------
 
          IF (banddos%ndir == -4) THEN
+            eFermiCorrection = 0.0
+            IF(bandgap.LT.(8.0*input%tkb*hartree_to_ev_const)) THEN
+               CALL readPrevEFermi(eFermiPrev,l_error)
+               IF(.NOT.l_error) THEN
+                  WRITE(*,*) 'Fermi energy is automatically corrected in bands.* files.'
+                  WRITE(*,*) 'It is consistent with last calculated density!'
+                  WRITE(*,*) 'No manual correction (e.g. in band.gnu file) required.'
+                  eFermiCorrection = (eFermiPrev-efermiarg)*hartree_to_ev_const
+               ELSE
+                  WRITE(*,*) 'Fermi energy in bands.* files may not be consistent with last density.'
+                  WRITE(*,*) 'Please correct it manually (e.g. in band.gnu file).'
+               END IF
+            END IF
+
             OPEN (18,FILE='bands'//spin12(jspin))
             ntb = minval(nevk(:))    
             kx(1) = 0.0
@@ -485,7 +500,7 @@
             ENDDO
             DO i = 1, ntb
                DO k = 1, kpts%nkpt
-                  write(18,'(2f15.9)') kx(k),ev(i,k)
+                  write(18,'(2f15.9)') kx(k),ev(i,k)-eFermiCorrection
                ENDDO
             ENDDO
             CLOSE (18)

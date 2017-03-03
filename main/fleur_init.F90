@@ -27,6 +27,7 @@
           USE m_winpXML
           USE m_setupMPI
           USE m_cdn_io
+          USE m_checks
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -72,6 +73,7 @@
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
+          
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr(3)
@@ -82,6 +84,7 @@
 #else
           mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
+          CALL check_command_line()
 #ifdef CPP_HDF
           call hdf_init()
 #endif

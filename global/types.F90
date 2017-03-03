@@ -803,6 +803,7 @@
         REAL              :: e_ldau    !<total energy contribution of LDA+U
         REAL              :: tote
         REAL              :: last_distance
+        REAL              :: bandgap
         TYPE(t_energy_hf) ::  te_hfex
         REAL              ::  te_hfex_loc(2)
         REAL, ALLOCATABLE :: w_iks(:,:,:)
@@ -836,5 +837,100 @@
         COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
         COMPLEX, ALLOCATABLE :: h_c(:,:), s_c(:,:)
       END TYPE
+!
+! type for wannier-functions
+!
+      type t_wann
+        integer :: wan90version
+        integer :: oc_num_orbs
+        integer,allocatable :: oc_orbs(:)
+        logical :: l_unformatted
+        logical :: l_oc_f
+        logical :: l_ndegen
+        logical :: l_orbitalmom
+        logical :: l_orbcomp
+        logical :: l_orbcomprs
+        logical :: l_denmat
+        logical :: l_perturbrs
+        logical :: l_perturb
+        logical :: l_nedrho
+        logical :: l_anglmomrs
+        logical :: l_anglmom
+        logical :: l_spindisp
+        logical :: l_spindisprs
+        logical :: l_socspicom
+        logical :: l_socspicomrs
+        logical :: l_offdiposoprs
+        logical :: l_offdiposop
+        logical :: l_torque
+        logical :: l_torquers
+        logical :: l_atomlist
+        integer :: atomlist_num
+        integer,allocatable :: atomlist(:)
+        logical :: l_berry
+        logical :: l_perpmagrs
+        logical :: l_perpmag
+        logical :: l_perpmagat
+        logical :: l_perpmagatrs
+        logical :: l_socmatrs
+        logical :: l_socmat
+        logical :: l_soctomom
+        logical :: l_kptsreduc2
+        logical :: l_nablapaulirs
+        logical :: l_nablars
+        logical :: l_surfcurr
+        logical :: l_updown
+        logical :: l_ahe
+        logical :: l_she
+        logical :: l_rmat
+        logical :: l_nabla
+        logical :: l_socodi
+        logical :: l_pauli
+        logical :: l_pauliat
+        logical :: l_potmat
+        logical :: l_projgen
+        logical :: l_plot_symm
+        logical :: l_socmmn0
+        logical :: l_bzsym
+        logical :: l_hopping
+        logical :: l_kptsreduc
+        logical :: l_prepwan90
+        logical :: l_plot_umdat
+        logical :: l_wann_plot
+        logical :: l_bynumber
+        logical :: l_stopopt
+        logical :: l_matrixmmn
+        logical :: l_matrixamn
+        logical :: l_projmethod
+        logical :: l_wannierize
+        logical :: l_plotw90
+        logical :: l_byindex
+        logical :: l_byenergy
+        logical :: l_proj_plot
+        logical :: l_bestproj
+        logical :: l_ikptstart
+        logical :: l_lapw
+        logical :: l_plot_lapw
+        logical :: l_fermi
+        logical :: l_dipole
+        logical :: l_dipole2
+        logical :: l_dipole3
+        logical :: l_mmn0
+        logical :: l_mmn0at
+        logical :: l_manyfiles
+        logical :: l_collectmanyfiles
+        logical :: l_ldauwan
+        logical :: l_lapw_kpts
+        logical :: l_lapw_gfleur
+        logical :: l_kpointgen
+        logical :: l_w90kpointgen
+        integer :: ikptstart
+        integer :: band_min(1:2)
+        integer :: band_max(1:2)
+        integer :: gfthick
+        integer :: gfcut
+        integer :: unigrid(6)
+        integer :: mhp(3)
+      end type t_wann
 
       END

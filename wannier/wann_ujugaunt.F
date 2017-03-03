@@ -22,13 +22,11 @@ c***********************************************************************
       use m_constants, only : pimach
       use m_matmul   , only : matmul3,matmul3r
       use m_sphbes
-      use m_dotir
       use m_ylm
-      use m_od_types, only : od_inp, od_sym
+      use m_types, only : od_inp, od_sym
       use m_intgr, only : intgr3
       use m_gaunt, only: gaunt1
-      use m_cotra
-
+  
       IMPLICIT NONE
       integer, intent (in)  :: llod
       INTEGER, INTENT (IN)  :: nntot,ntype,ntypd
@@ -92,7 +90,7 @@ c***********************************************************************
 
       do ikpt_b=1,nntot
         bpt(:)=kdiff(:,ikpt_b)
-        rk = sqrt(dotirp(bpt,bpt,bbmat))
+        rk = sqrt(dot_product(bpt,matmul(bbmat,bpt)))
         do n=1,ntype
          lwn = lmax(n)
 c...generate the j_lpp(br) on the radial grid   
@@ -192,7 +190,8 @@ c..gaunt conditions
 c********************************************************************
 c       multiply with gaunt-coefficient (apw-apw)
 c********************************************************************
-         call cotra3(bpt,bkrot,bmat)
+         bkrot=matmul(bpt,bmat)
+         !call cotra3(bpt,bkrot,bmat)
          call ylm4(lwn,bkrot,ylmpp)
          do l = 0,lwn
           do m = -l,l

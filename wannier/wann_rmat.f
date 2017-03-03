@@ -118,7 +118,7 @@ c*****************************************************
           open (203,file=trim(filename),status='old')
           rewind (203)
          else
-            CALL fleur_err("no proj/proj.1/proj.2",calledby
+            CALL judft_error("no proj/proj.1/proj.2",calledby
      +           ="wann_rmat")
          endif
          read (203,*) num_wann,num_bands
@@ -130,7 +130,7 @@ c****************************************************************
 c        get nntot and bk and wb from bkpts file
 c****************************************************************
          inquire (file='bkpts',exist=l_file)
-         if (.not.l_file)  CALL fleur_err("need bkpts"
+         if (.not.l_file)  CALL jdft_error("need bkpts"
      +      ,calledby ="wann_rmat")
          open (202,file='bkpts',form='formatted',status='old')
          read (202,'(i4)') nntot
@@ -200,7 +200,7 @@ c****************************************************************
          write(6,*)"read in eig-file"
          allocate(energy(num_bands,num_kpts))
          inquire(file=spin12(jspin)//'.eig',exist=l_umdat)
-         IF(.NOT.l_umdat)  CALL fleur_err
+         IF(.NOT.l_umdat)  CALL judft_error
      +        ("Thou shall not hide your eig file",calledby
      +        ="wann_hopping")
          open(300,file=spin12(jspin)//'.eig',form='formatted')
