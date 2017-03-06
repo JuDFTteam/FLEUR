@@ -10,4 +10,7 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
    set_source_files_properties(eigen/apws.F90 PROPERTIES COMPILE_FLAGS -O0)
    set_source_files_properties(init/lhcal.f PROPERTIES COMPILE_FLAGS -O0)
 endif()
+if (${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
+     set_source_files_properties(vgen/vmts.F90 -O0)
+endif()
 
