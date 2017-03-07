@@ -920,7 +920,7 @@ CONTAINS
     !
     !-->  listing
     WRITE (16,FMT=8010) stars%gmax,stars%ng3,izmin,izmax
-8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i5,/,&
+8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i7,/,&
          &       ' izmin=',i5,/,' izmax=',i5,/)
     WRITE (16,FMT=8020) stars%mx1,stars%mx2,stars%mx3
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,' mx3= ',i5,/)
@@ -934,14 +934,14 @@ CONTAINS
          &  stars%kimax
 
     WRITE (6,FMT=8040)
-8040 FORMAT(/4x,'no.',5x,'kv3',9x,'sk3',7x,'nstr'/)
+8040 FORMAT(/6x,'no.',5x,'kv3',9x,'sk3',7x,'nstr'/)
 
     ned1=9
     nint=30
     DO k = 1,ned1
        WRITE (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
     ENDDO
-8050 FORMAT (1x,i5,3i4,f12.6,i6)
+8050 FORMAT (1x,i7,3i4,f12.6,i6)
 
     DO k = ned1+1,stars%ng3,nint
        WRITE (6,FMT=8050) k,(stars%kv3(j,k),j=1,3),stars%sk3(k),stars%nstr(k)
