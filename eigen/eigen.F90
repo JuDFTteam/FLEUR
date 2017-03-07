@@ -323,8 +323,10 @@ CONTAINS
 
     IF (l_real) THEN
        ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
+       ALLOCATE (hamOvlp%a_c(1))
     ELSE
        ALLOCATE ( hamOvlp%a_c(matsize), stat = err )
+       ALLOCATE (hamOvlp%a_r(1))
     endif
     IF (err.NE.0) THEN
        WRITE (*,*) 'eigen: an error occured during allocation of'
@@ -333,8 +335,10 @@ CONTAINS
     ENDIF
     if (l_real) THEN
        ALLOCATE ( hamOvlp%b_r(matsize), stat = err )
+       ALLOCATE (hamOvlp%b_c(1))
     else
        ALLOCATE ( hamOvlp%b_c(matsize), stat = err )
+       ALLOCATE (hamOvlp%b_r(1))
     endif
 
     IF (err.NE.0) THEN
@@ -633,8 +637,10 @@ endif
     DEALLOCATE (matind)
     if (l_real) THEN
        deallocate(hamOvlp%a_r,hamOvlp%b_r)
+       deallocate(hamOvlp%a_c,hamOvlp%b_c)
     else
        deallocate(hamOvlp%a_c,hamOvlp%b_c)
+       deallocate(hamOvlp%a_r,hamOvlp%b_r)
     endif
 #ifdef CPP_NEVER
     IF( hybrid%l_calhf ) THEN

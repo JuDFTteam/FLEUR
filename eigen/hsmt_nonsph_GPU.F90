@@ -84,7 +84,11 @@ CONTAINS
     ALLOCATE(dtd(0:lnonsphd,0:lnonsphd),utd(0:lnonsphd,0:lnonsphd),dtu(0:lnonsphd,0:lnonsphd),utu(0:lnonsphd,0:lnonsphd))
     !Decide how to distribute the work
 
-    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) ALLOCATE ( aahlp(hlpmsize),aa_tmphlp(hlpmsize) )
+    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
+       ALLOCATE ( aahlp(hlpmsize),aa_tmphlp(hlpmsize) )
+    ELSE
+       ALLOCATE ( aahlp(1),aa_tmphlp(1) )
+    END IF
 
     ALLOCATE(aa_block(CPP_BLOCKSIZE,MAXVAL(lapw%nv)))
 
