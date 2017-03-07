@@ -70,6 +70,11 @@ function configure_machine(){
 	echo "IFF cluster configuration used"
 	cp $DIR/cmake/maschines/IFF.cmake config.cmake
 
+    elif [ "$machine" = "JURON" ]
+    then
+	echo "JURON configuration used"
+	cp $DIR/cmake/maschines/JURON.cmake config.cmake
+
     #RWTH cluster
     elif [ "$machine" = "CLAIX" ]
     then
