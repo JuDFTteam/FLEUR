@@ -77,8 +77,9 @@ CONTAINS
     INTEGER :: cublas_stream,istat
 
 
-
-    !call nvtxStartRange("hsmt_nonsph",1)    
+#if defined(_OPENACC)
+!    call nvtxStartRange("hsmt_nonsph",1)
+#endif
 
     lnonsphd=MAXVAL(atoms%lnonsph)*(MAXVAL(atoms%lnonsph)+2)
     ALLOCATE(dtd(0:lnonsphd,0:lnonsphd),utd(0:lnonsphd,0:lnonsphd),dtu(0:lnonsphd,0:lnonsphd),utu(0:lnonsphd,0:lnonsphd))
@@ -99,9 +100,10 @@ CONTAINS
     ALLOCATE(c_ph(DIMENSION%nvd,ab_dim))
 
 
-    !$acc data copy(aa_c,aa_r) copyin(tlmplm, tlmplm%tdd, tlmplm%tdu, tlmplm%tud,tlmplm%tuu, tlmplm%ind ) create(utu,utd,dtu,dtd,ax,bx,a,b,aa_block,aahlp)
+    !$acc data copy(aa_r,aa_c) copyin(tlmplm, tlmplm%tdd, tlmplm%tdu, tlmplm%tud,tlmplm%tuu, tlmplm%ind, atoms,atoms%lnonsph,lapw,lapw%nv,noco ) create(utu,utd,dtu,dtd,ax,bx,a,b,aa_block,aahlp)
+#if defined(_OPENACC)
 !    call nvtxStartRange("hsmt_nonsph_outer_data",2)
-
+#endif
 
     ntyploop: DO n=1,atoms%ntype
        IF (noco%l_noco) THEN
@@ -110,8 +112,8 @@ CONTAINS
           CALL hsmt_spinor(isp,n, noco,input, chi, chi11, chi21, chi22)
        ENDIF
        DO nn = 1,atoms%neq(n)
-	  a=0.0
-	  b=0.0
+          a=0.0
+          b=0.0
           na = SUM(atoms%neq(:n-1))+nn
           IF (atoms%lnonsph(n)<0) CYCLE ntyploop
           IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
@@ -120,7 +122,9 @@ CONTAINS
              np = sym%invtab(atoms%ngopr(na))
              IF (oneD%odi%d1) np = oneD%ods%ngopr(na)
              !Using double buffering create_ab could be overlapped with following GPU work
-          !   call nvtxStartRange("create_ab",6)
+#if defined(_OPENACC)
+!             call nvtxStartRange("create_ab",6)
+#endif
              !--->       loop over interstitial spins
              DO iintsp = 1,nintsp
                 IF (noco%l_constr.OR.l_socfirst) THEN
@@ -166,13 +170,17 @@ CONTAINS
                 ENDDO !k-loop
                 !--->       end loop over interstitial spin
              ENDDO
-             !$acc update device(a,b)
-         !    call nvtxEndRange
+             !$acc update device(a,b,ax,bx)
+#if defined(_OPENACC)
+!             call nvtxEndRange
+#endif
 
              !--->       loops over the interstitial spin
              DO iintsp = 1,nintsp
 
-       !         call nvtxStartRange("hsmt_nonsph_DO_jintsp",3)
+#if defined(_OPENACC)
+!                call nvtxStartRange("hsmt_nonsph_DO_jintsp",3)
+#endif
                 DO jintsp = 1,iintsp
 
                    jd = 1 ; IF (noco%l_noco) jd = isp
@@ -210,12 +218,15 @@ CONTAINS
                       END DO
                    ENDDO
                    !$acc end kernels
+                   
 !!$OMP END PARALLEL DO
                    lmp=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
                    !ax(:nv(jintsp),0:lmp)=(matmul(a(:nv(jintsp),0:lmp,jintsp),utu(0:lmp,0:lmp))+matmul(b(:nv(jintsp),0:lmp,jintsp),utd(0:lmp,0:lmp)))
                    !bx(:nv(jintsp),0:lmp)=(matmul(a(:nv(jintsp),0:lmp,jintsp),dtu(0:lmp,0:lmp))+matmul(b(:nv(jintsp),0:lmp,jintsp),dtd(0:lmp,0:lmp)))
 
-         !          call nvtxStartRange("hsmt_nonsph_zgemm_1",4)
+#if defined(_OPENACC)
+!                   call nvtxStartRange("hsmt_nonsph_zgemm_1",4)
+#endif
                    !$acc host_data use_device(a,b,utu,utd,dtu,dtd,ax,bx )
                    CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,a(1,0,jintsp),SIZE(a,1),utu(0,0),SIZE(utu,1),zero,ax,SIZE(ax,1))
                    CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,b(1,0,jintsp),SIZE(a,1),utd(0,0),SIZE(utu,1),one,ax,SIZE(ax,1))
@@ -223,7 +234,9 @@ CONTAINS
                    CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,a(1,0,jintsp),SIZE(a,1),dtu(0,0),SIZE(utu,1),zero,bx,SIZE(ax,1))
                    CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,b(1,0,jintsp),SIZE(a,1),dtd(0,0),SIZE(utu,1),one,bx,SIZE(ax,1))
                    !$acc end host_data
-          !         call nvtxEndRange
+#if defined(_OPENACC)
+!                   call nvtxEndRange
+#endif
 
 
                    !
@@ -235,7 +248,9 @@ CONTAINS
                       lapw%nv_tot = lapw%nv(iintsp)
                    ENDIF
                    kii=n_rank
-            !       call nvtxStartRange("hsmt_nonsph_while_kii",5)
+#if defined(_OPENACC)
+!                   call nvtxStartRange("hsmt_nonsph_while_kii",5)
+#endif
                    DO WHILE(kii<lapw%nv_tot)
                       !DO kii =  n_rank, nv_tot-1, n_size
                       ki = MOD(kii,lapw%nv(iintsp)) + 1
@@ -259,8 +274,8 @@ CONTAINS
                          !           SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),bx(1,0),SIZE(ax,1),one,aa_block,SIZE(aa_block,1))
                          !$acc end host_data
                       ENDIF
-                      !$acc kernels
                       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
+                          !$acc kernels
                           !$acc loop independent
                           DO kb=1,bsize
                             nc = 1+kii/n_size
@@ -283,7 +298,9 @@ CONTAINS
                             kii=kii+n_size
                           ENDDO
                           !$acc end loop
+                          !$acc end kernels
                        ELSEIF ( noco%l_noco .AND. noco%l_ss ) THEN
+                          !$acc kernels
                           !$acc loop independent
                           DO kb=1,bsize
                             IF ( iintsp==1 .AND. jintsp==1 ) THEN
@@ -311,9 +328,12 @@ CONTAINS
                             kii=kii+n_size
                           ENDDO
                           !$acc end loop
+                          !$acc end kernels
                        ELSE
+                          !$acc kernels
                           !$acc loop independent
                           DO kb=1,bsize
+                     !       WRITE(1276,*) 'B'
                             nc = 1+kii/n_size
                             ii = nc*(nc-1)/2*n_size- (nc-1)*(n_size-n_rank-1)
                             if (l_real) THEN
@@ -329,15 +349,18 @@ CONTAINS
                             kii=kii+n_size
                           ENDDO
                           !$acc end loop
+                          !$acc end kernels
                        ENDIF
-                      !$acc end kernels
-
                       !--->             end loop over ki
                    END DO
-       !            call nvtxEndRange
+#if defined(_OPENACC)
+!                   call nvtxEndRange
+#endif
                    !--->       end loops over interstitial spin
                 ENDDO
-       !         call nvtxEndRange
+#if defined(_OPENACC)
+!                call nvtxEndRange
+#endif
              ENDDO
           ENDIF              ! atoms%invsat(na) = 0 or 1
           !--->    end loop over equivalent atoms
@@ -350,9 +373,13 @@ CONTAINS
        !---> end loop over atom types (ntype)
     ENDDO ntyploop
 
-  !  call nvtxEndRange
+#if defined(_OPENACC)
+!    call nvtxEndRange
+#endif
     !$acc end data
-  !  call nvtxEndRange
+#if defined(_OPENACC)
+!    call nvtxEndRange
+#endif
 
 
     RETURN
