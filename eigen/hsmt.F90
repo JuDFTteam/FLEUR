@@ -204,8 +204,8 @@ CONTAINS
                fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
                kveclo,l_real,hamOvlp%a_r,hamOvlp%b_r,hamOvlp%a_c,hamOvlp%b_c) !out/in
           CALL timestop("hsmt extra")
-          CALL timestart("hsmt non-spherical")
 #ifndef CPP_GPU
+          CALL timestart("hsmt non-spherical")
           CALL hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM,n_size,n_rank,input,isp,nintsp,&
                hlpmsize,noco,l_socfirst,lapw,cell,tlmplm,fj,gj,gk,vk,oneD,l_real,hamOvlp%a_r,hamOvlp%a_c)
           CALL timestop("hsmt non-spherical")
