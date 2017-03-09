@@ -1,5 +1,5 @@
 MODULE m_hsmt_nonsph_GPU
-#define CPP_BLOCKSIZE 64
+#define CPP_BLOCKSIZE 4096
   !      USE m_juDFT
   !$     USE omp_lib
 
@@ -170,7 +170,7 @@ CONTAINS
                 ENDDO !k-loop
                 !--->       end loop over interstitial spin
              ENDDO
-             !$acc update device(a,b,ax,bx)
+             !$acc update device(a,b)
 #if defined(_OPENACC)
 !             call nvtxEndRange
 #endif
@@ -189,14 +189,16 @@ CONTAINS
                    utu=0.0;utd=0.0;dtu=0.0;dtd=0.0
 !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lp,mp,lmp,l,m,lm,in,utu,dtu,utd,dtd,im,k) &
 !!$OMP SHARED(tlmplm,invsfct,lnonsph,nv,jintsp,jd,n)
+                   !$acc loop collapse(2)
                    DO lmp=0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
-                      lp=FLOOR(SQRT(1.0*lmp))
-                      mp=lmp-lp*(lp+1)
-                      IF (lp>atoms%lnonsph(n).OR.ABS(mp)>lp) STOP "BUG"
+       !               lp=FLOOR(SQRT(1.0*lmp))
+       !               mp=lmp-lp*(lp+1)
+       !               IF (lp>atoms%lnonsph(n).OR.ABS(mp)>lp) STOP "BUG"
                       !--->             loop over l,m
-                      DO l = 0,atoms%lnonsph(n)
-                         DO m = -l,l
-                            lm = l* (l+1) + m
+                      DO lm = 0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
+                   !   DO l = 0,atoms%lnonsph(n)
+                   !      DO m = -l,l
+                   !         lm = l* (l+1) + m
                             in = tlmplm%ind(lmp,lm,n,jd)
                             IF (in/=-9999) THEN
                                IF (in>=0) THEN
@@ -214,9 +216,10 @@ CONTAINS
                                !--->    update ax, bx
 
                             END IF
-                         END DO
+                    !     END DO
                       END DO
                    ENDDO
+                   !$acc end loop
                    !$acc end kernels
                    
 !!$OMP END PARALLEL DO
