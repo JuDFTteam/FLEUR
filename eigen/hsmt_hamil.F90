@@ -54,7 +54,9 @@ CONTAINS
     
     !Initialize The Hamiltonian with negatively shifted overlap
     hamovlp%h_c=-1.*td%e_shift*hamovlp%s_c
+#ifdef _OPENACC
     hc_tmp=hamovlp%h_c
+#endif
     !$acc data create(ab)
     DO n=1,atoms%ntype
        DO nn = 1,atoms%neq(n)
@@ -68,8 +70,6 @@ CONTAINS
              n2=SIZE(ab,2)
              n3=SIZE(td%h_loc,1)
              n4=SIZE(hamovlp%h_c,1)             
-             !call c_f_pointer(acc_deviceptr(td%h_loc(1,1,n,ispin)),hloc_tmp, (/size(td%h_loc,1),size(td%h_loc,2)/))     
-             !call c_f_pointer(acc_deviceptr(hamovlp%h_c),hc_tmp,shape(hamovlp%h_c))
              !$acc host_data use_device(ab)
              !CALL nvtxStartRange("hsmt_zgem",2)
              istat = cublaszgemm_v2(cublas_handle,CUBLAS_OP_N,CUBLAS_OP_N,n1,n2,n2,CMPLX(1.0,0.0),ab,n1,hloc_tmp,n3,CMPLX(0.,0.),ab,n1)             

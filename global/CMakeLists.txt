@@ -19,6 +19,7 @@ global/vacudz.f
 global/vacuz.f
 )
 set(fleur_F90 ${fleur_F90}
+global/nvtx.F90
 global/checkdop.F90
 global/chkmt.f90
 global/convn.f90
