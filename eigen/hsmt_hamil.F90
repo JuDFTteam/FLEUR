@@ -21,7 +21,7 @@ CONTAINS
     USE openacc
 #endif
 #ifdef __PGI
-    USE nvtx
+!    USE nvtx
 #endif
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
@@ -49,7 +49,7 @@ CONTAINS
     ALLOCATE(hloc_tmp(SIZE(td%h_loc,1),SIZE(td%h_loc,2)))
     ALLOCATE(hc_tmp(SIZE(hamovlp%h_c,1),SIZE(hamovlp%h_c,2)))
 #endif
-    CALL nvtxStartRange("hsmt_hamil",1)
+    !CALL nvtxStartRange("hsmt_hamil",1)
     ALLOCATE(ab(lapw%nv(1),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     
     !Initialize The Hamiltonian with negatively shifted overlap
@@ -71,15 +71,15 @@ CONTAINS
              !call c_f_pointer(acc_deviceptr(td%h_loc(1,1,n,ispin)),hloc_tmp, (/size(td%h_loc,1),size(td%h_loc,2)/))     
              !call c_f_pointer(acc_deviceptr(hamovlp%h_c),hc_tmp,shape(hamovlp%h_c))
              !$acc host_data use_device(ab)
-             CALL nvtxStartRange("hsmt_zgem",2)
+             !CALL nvtxStartRange("hsmt_zgem",2)
              istat = cublaszgemm_v2(cublas_handle,CUBLAS_OP_N,CUBLAS_OP_N,n1,n2,n2,CMPLX(1.0,0.0),ab,n1,hloc_tmp,n3,CMPLX(0.,0.),ab,n1)             
 !$acc wait
-             CALL nvtxendrange
+             !CALL nvtxendrange
              
-             CALL nvtxStartRange("hsmt_zherk",3)
+             !CALL nvtxStartRange("hsmt_zherk",3)
              istat = cublaszherk_v2(cublas_handle,CUBLAS_FILL_MODE_UPPER,CUBLAS_OP_N,lapw%nv(ispin),2*ab_offset,1.,ab,n1,1.0,hc_tmp,n4) 
              !$acc wait
-             CALL nvtxendrange
+             !CALL nvtxendrange
              !$acc end host_data
 #else             
              CALL zgemm("N","N",SIZE(ab,1),SIZE(ab,2),SIZE(ab,2),CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,ispin),SIZE(td%h_loc,1),CMPLX(0.,0.),ab,SIZE(ab,1))
@@ -90,7 +90,7 @@ CONTAINS
        END DO
     END DO
     !$acc end data
-    CALL nvtxendrange
+    !CALL nvtxendrange
 #ifdef _OPENACC
     hamovlp%h_c=hc_tmp
 #endif
