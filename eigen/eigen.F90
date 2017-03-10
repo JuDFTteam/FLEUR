@@ -563,7 +563,7 @@ CONTAINS
                 CLOSE(88)
              endif
           endif
-
+          if (judft_was_argument("-nodiag")) call judft_end("debug",0)
        
           CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, mpi%n_rank,mpi%n_size,ne,nk,lapw,input,&
                nred,mpi%sub_comm, sym,l_zref,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&

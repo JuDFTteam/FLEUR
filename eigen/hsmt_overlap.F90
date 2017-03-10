@@ -32,7 +32,7 @@ CONTAINS
     INTEGER:: I(2),n,nn
 
     call timestart("analytic")
-    call hsmt_overlap_analytic(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+!    call hsmt_overlap_analytic(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
     call timestop("analytic")
     hamovlp%h_c=hamovlp%s_c
     hamovlp%s_c=0.0

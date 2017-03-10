@@ -69,12 +69,12 @@ CONTAINS
           i=i+1
           diff_h=max(diff_h,abs(hamovlp%b_c(i)-hamovlp%s_c(nn,n)))
           diff_s=max(diff_s,abs(hamovlp%a_c(i)-hamovlp%h_c(nn,n)))
-          hamovlp%b_c(i)=hamovlp%s_c(nn,n)
+         ! hamovlp%b_c(i)=hamovlp%s_c(nn,n)
           hamovlp%a_c(i)=hamovlp%h_c(nn,n)
        ENDDO
     enddo
     print *,"Diff_h:",diff_h
     print *,"Diff_s:",diff_s
-    
+    deallocate(hamovlp%h_c,hamovlp%s_c)    
   end SUBROUTINE hsmt_simple
 end MODULE m_hsmt_simple
