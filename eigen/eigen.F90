@@ -470,25 +470,24 @@ CONTAINS
           !
           !--->         update with sphere terms
           !
-
+!#ifndef CPP_SIMPLE
           IF (.not.l_wu) THEN
              call timestart("MT Hamiltonian&Overlap")
              CALL hsmt(dimension,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
                   lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              call timestop("MT Hamiltonian&Overlap")
           ENDIF
-#ifdef CPP_SIMPLE
-          if (l_real) THEN
-             hamOvlp%a_r=0.0
-             hamOvlp%b_r=0.0
-          ELSE
-             hamOvlp%a_c=0.0
-             hamOvlp%b_c=0.0
-          ENDIF
+!#else
+!!$          if (l_real) THEN
+!!$             hamOvlp%a_r=0.0
+!!$             hamOvlp%b_r=0.0
+!!$          ELSE
+!!$             hamOvlp%a_c=0.0
+!!$             hamOvlp%b_c=0.0
+!!$          ENDIF
           lapw%nv_tot=lapw%nv(jsp)
           call hsmt_simple(jsp,input%jspins,kpts%bk(:,nk),dimension,input,sym,cell,atoms,lapw,td,ud,enpara,hamOvlp)
-          call judft_end("DEBUG",0)
-#endif
+!#endif
           !
           !
           !--->         set up interstitial hamiltonian and overlap matrices
@@ -564,12 +563,13 @@ CONTAINS
                 CLOSE(88)
              endif
           endif
-
+          if (judft_was_argument("-nodiag")) call judft_end("debug",0)
        
           CALL eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, mpi%n_rank,mpi%n_size,ne,nk,lapw,input,&
                nred,mpi%sub_comm, sym,l_zref,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
                oneD,td,ud, eig,ne_found,hamOvlp,zMat)
-          
+          call judft_end("DEBUG",0)
+
           !
           !--->         output results
           !

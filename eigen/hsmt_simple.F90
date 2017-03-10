@@ -28,7 +28,7 @@ CONTAINS
     integer::k,jsp,n,nn,i
     REAL, ALLOCATABLE    :: fj(:,:,:,:),gj(:,:,:,:)
     REAL, ALLOCATABLE    :: gk(:,:,:),vk(:,:,:)
-    REAL                 :: v(3)
+    REAL                 :: v(3),diff_h,diff_s
      REAL, PARAMETER      :: eps = 1.0e-30
 
 
@@ -61,13 +61,20 @@ CONTAINS
        CALL timestop("hsmt_hamil")
     enddo
 
+    diff_h=0.0
+    diff_s=0.0
     i=0
     DO n=1,lapw%nv(1)
        DO nn=1,n
           i=i+1
-          hamovlp%b_c(i)=hamovlp%s_c(nn,n)
+          diff_h=max(diff_h,abs(hamovlp%b_c(i)-hamovlp%s_c(nn,n)))
+          diff_s=max(diff_s,abs(hamovlp%a_c(i)-hamovlp%h_c(nn,n)))
+         ! hamovlp%b_c(i)=hamovlp%s_c(nn,n)
           hamovlp%a_c(i)=hamovlp%h_c(nn,n)
        ENDDO
     enddo
+    print *,"Diff_h:",diff_h
+    print *,"Diff_s:",diff_s
+    deallocate(hamovlp%h_c,hamovlp%s_c)    
   end SUBROUTINE hsmt_simple
 end MODULE m_hsmt_simple
