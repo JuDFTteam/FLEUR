@@ -1,6 +1,6 @@
 init/compileinfo.h
 *~
-#*
+\#*
 build
 build.*
 *.o
