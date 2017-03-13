@@ -228,59 +228,39 @@ CONTAINS
   end subroutine hsmt_overlap_analytic
 
 #if 1==2 
-  !old routine based on hssphn
-  SUBROUTINE hsmt_overlap(input,atoms,n_size,n_rank,isp,l_socfirst,hlpmsize,ab_dim,&
-       noco,cell,nintsp, lapw,usdus,gk,fj,gj,bb)
-!Calculate overlap matrix
-#include"cpp_double.h"
-    USE m_constants, ONLY : fpi_const,tpi_const
+!new version from Markus
+ subroutine hsmt_overlap_analytic(sym,atoms,ispin,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
+    !Calculate overlap matrix
+    USE m_constants
     USE m_types
-    USE m_hsmt_spinor
     IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(INOUT)  :: lapw!lpaw%nv_tot is updated
-    TYPE(t_usdus),INTENT(INOUT) :: usdus
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_usdus),INTENT(IN)    :: usdus
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: isp
-    INTEGER, INTENT (IN) :: n_size,n_rank,ab_dim
-    INTEGER, INTENT (IN) :: hlpmsize,nintsp
-    LOGICAL, INTENT (IN) :: l_socfirst
+    INTEGER, INTENT (IN) :: ispin
     !     ..
     !     .. Array Arguments ..
-    REAL,INTENT(IN) :: gk(:,:,:)
+    REAL,INTENT(IN) :: gk(:,:,:),vk(:,:,:)
     REAL,INTENT(IN) :: fj(:,0:,:,:),gj(:,0:,:,:)
-#ifdef CPP_INVERSION
-    REAL,    INTENT (INOUT) :: bb(:)!(matsize)
-#else
-    COMPLEX, INTENT (INOUT) :: bb(:)
-#endif
-    !     ..
+    TYPE(t_hamovlp),INTENT(INOUT) :: hamovlp
+    
     !     .. Local Scalars ..
-    REAL tnn(3),fct,ski(3),fjkiln,gjkiln
-    COMPLEX chi11,chi21,chi22
-    INTEGER ii,iii,ij,k,ki,kj,l,n,n0,n1,nn,kjmax, nsp,iintsp,jintsp
-    INTEGER nc ,kii
-
+    !REAL ski(3)
+    real :: s
+    INTEGER ki,kj,l,n,na,nn,idx1,idx2
     !     ..
     !     .. Local Arrays ..
-    COMPLEX chi(2,2),bbwa(maxval(lapw%nv))
-    REAL qssbti(3),qssbtj(3)
-    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
-    REAL, ALLOCATABLE :: plegend(:,:)
-    REAL, ALLOCATABLE :: rph(:,:),cph(:,:)
-    COMPLEX, ALLOCATABLE :: bbhlp(:)
+    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
+    
+    REAL, ALLOCATABLE :: plegend(:,:,:),ski(:,:)
+    COMPLEX, ALLOCATABLE :: phase(:,:,:)
+    INTEGER,PARAMETER::ab_dim=1
 
-
-    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
-       !---> pk non-collinear
-       !--->    initialize help array
-       ALLOCATE ( bbhlp(hlpmsize) )
-       bbhlp=cmplx(0.0,0.0)
-    ENDIF
+  
     !     ..
     DO l = 0,atoms%lmaxd
        fleg1(l) = real(l+l+1)/real(l+1)
@@ -288,242 +268,100 @@ CONTAINS
        fl2p1(l) = real(l+l+1)/fpi_const
     END DO
     !
+    !!$OMP PARALLEL default(NONE) &
+    !!$OMP SHARED(sym,cell,atoms,lapw,usdus,ispin,gk,vk,fj,gj,hamovlp,fleg1,fl2p1,fleg2)&
+    !!$OMP PRIVATE(ski,ki,kj,l,n,na,nn,plegend,phase)
     
-    !$OMP PARALLEL  DEFAULT(shared)&
-    !$OMP PRIVATE(kii,ki,nc,iii,kjmax,ski,kj,plegend,l,n1,n)&
-    !$OMP PRIVATE(n0,rph,cph,nn,tnn,fjkiln,gjkiln)&
-    !$OMP PRIVATE(fct,ij)&
-    !$OMP PRIVATE(chi,chi11,chi21,chi22,nsp)&
-    !$OMP PRIVATE(bbwa,ii) 
-    ALLOCATE(rph(maxval(lapw%nv),ab_dim))
-    ALLOCATE(cph(maxval(lapw%nv),ab_dim))
-    ALLOCATE(plegend(maxval(lapw%nv),0:atoms%lmaxd))
-   
-    plegend=0.0
-    DO iintsp = 1,nintsp
-       IF (iintsp.EQ.1) THEN
-          qssbti = - noco%qss/2
-       ELSE
-          qssbti = + noco%qss/2
-       ENDIF
-       DO jintsp = 1,iintsp
-          IF (jintsp.EQ.1) THEN
-             qssbtj = - noco%qss/2
-          ELSE
-             qssbtj = + noco%qss/2
-          ENDIF
 
-          nc = 0                                    ! maybe IF (iintsp.EQ
-          IF ( noco%l_noco .AND. (n_size.GT.1) ) THEN
-             !--->       for EV-parallelization & noco ( see comments at top )
-             lapw%nv_tot = lapw%nv(1) + lapw%nv(2)
-             IF (noco%l_ss)  CALL juDFT_error("ev-|| & spin-spiral !",calledby ="hssphn")
-          ELSE
-             lapw%nv_tot = lapw%nv(iintsp)
-          ENDIF
-
-          !
-          !$OMP  DO SCHEDULE(DYNAMIC,1)
-          DO  kii =  n_rank, lapw%nv_tot-1, n_size
-             ki = mod(kii,lapw%nv(iintsp)) + 1
-             nc = nc + 1
-             !$ nc= 1+ (kii-n_rank)/n_size
-             iii = nc*(nc-1)/2 * n_size - (nc-1)*(n_size - n_rank - 1)
-             !  ii = nc*(nc+1)/2 * n_size -  nc   *(n_size - n_rank - 1)
-
-             IF (noco%l_ss.OR.noco%l_constr.OR.l_socfirst) THEN
-                kjmax = lapw%nv(jintsp)
-             ELSE
-                kjmax = ki
-             ENDIF
-             ski = (/lapw%k1(ki,iintsp),lapw%k2(ki,iintsp),lapw%k3(ki,iintsp)/) + qssbti
-             !--->       legendre polynomials
-             plegend(:,0)=1.0
-             DO kj = 1,kjmax
-                plegend(kj,1) = dot_product(gk(kj,:,jintsp),gk(ki,:,iintsp))
-             END DO
-             DO l = 1,maxval(atoms%lmax) - 1
-                plegend(:,l+1) = fleg1(l)*plegend(:,1)*plegend(:,l) - fleg2(l)*plegend(:,l-1)
-             END DO
-             !include factor fl2p1 already here
-             DO l=0,maxval(atoms%lmax)
-                plegend(:kjmax,l)=plegend(:kjmax,l)*fl2p1(l)
-             ENDDO
-             !--->       loop over equivalent atoms
-             n1 = 0
-             DO n = 1,atoms%ntype
-
-                IF (noco%l_noco) THEN
-                   !--->          pk non-collinear
-                   !--->             set up the spinors of this atom within global
-                   !--->             spin-coordinateframe
-                   call hsmt_spinor(isp,n, noco, input,chi, chi11, chi21, chi22)
-                ENDIF
-                !---> pk non-collinear
-                n0 = n1 + 1
-                n1 = n1 + atoms%neq(n)
-                rph(:,1) = 0.0
-                cph(:,1) = 0.0
-                DO nn = n0,n1
-                   tnn = tpi_const*atoms%taual(:,nn)
-                   !--->             set up phase factors
-                   DO kj = 1,kjmax
-                      rph(kj,1) = rph(kj,1) +&
-                           cos(dot_product(ski-(/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj,tnn))
-
-#ifndef CPP_INVERSION
-                      !--->                if the system does not posses inversion symmetry
-                      !--->                the complex part of the exponential is needed.
-                      cph(kj,1) = cph(kj,1) +&
-                           sin(dot_product((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
-#endif
-                   END DO
-                END DO
-
-                !--->          update overlap and l-diagonal hamiltonian matrix
-                DO  l = 0,atoms%lmax(n)
-                   IF (noco%l_constr.or.l_socfirst) THEN
-                      fjkiln = fj(ki,l,n,isp)
-                      gjkiln = gj(ki,l,n,isp)*usdus%ddn(l,n,isp)
-                   ELSE
-                      fjkiln = fj(ki,l,n,iintsp)
-                      gjkiln = gj(ki,l,n,iintsp)*usdus%ddn(l,n,isp)
-                   ENDIF
-                   !
-                   !
-                   
-              
-                   IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
-                      !--->             pk non-collinear
-#ifndef CPP_INVERSION
-                      IF (noco%l_constr.or.l_socfirst) THEN
-                         DO kj = 1,ki
-                            fct  = plegend(kj,l)*&
-                                 ( fjkiln*fj(kj,l,n,isp) + gjkiln*gj(kj,l,n,isp) )
-
-                            bbwa(kj) = cmplx(rph(kj,1),cph(kj,1))*fct
-                         ENDDO
-                      ELSE
-                         DO kj = 1,ki
-                            fct  = plegend(kj,l)*&
-                                 ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp) )
-
-                            bbwa(kj) = cmplx(rph(kj,1),cph(kj,1))*fct
-                         ENDDO
-                      ENDIF
-                      !+||
-                      IF ( kii+1.LE.lapw%nv(1) ) THEN
-                         !--->                spin-up spin-up part
-                         CALL CPP_BLAS_caxpy(ki,chi11,bbwa,1,bb(iii+1),1)
-                         !--->                spin-down spin-up part, upper triangle.
-                         !--->                the help array is used to allow vectorization on
-                         !--->                Cray PVP systems. it is mapped onto the hamiltonian
-                         !--->                matrix after the setup is complete.
-                         DO kj = 1,ki - 1
-                            ii = iii + kj
-                            bbhlp(ii)=bbhlp(ii)+conjg(bbwa(kj))*chi21
-                         END DO
-                      ENDIF
-                      IF ( (kii+1.GT.lapw%nv(1)).OR.(n_size.EQ.1) ) THEN
-                         IF (n_size.EQ.1) THEN
-                            ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
-                         ELSE
-                            ii = iii
-                         ENDIF
-                         !--->                spin-down spin-up part, lower triangle
-                         CALL CPP_BLAS_caxpy(ki,chi21,bbwa,1,bb(ii+1),1)
-                         !--->                spin-down spin-down part
-                         ii = ii + lapw%nv(1)+atoms%nlotot
-                         CALL CPP_BLAS_caxpy(ki,chi22,bbwa,1,bb(ii+1),1)
-                      ENDIF
-                      !-||
-                      !--->                when fj and gj are available for both local spins
-                      !--->                (isp), add the contribution from the constraint
-                      !--->                B-field.                      
-                   ELSEIF ( noco%l_noco .AND. noco%l_ss ) THEN
-                      IF ( iintsp.EQ.2 .AND. jintsp.EQ.1 ) THEN
-                         kjmax = lapw%nv(1)
-                      ELSE
-                         kjmax = ki
-                      ENDIF
-                      DO kj = 1,kjmax
-                         fct  = plegend(kj,l)* ( fjkiln*fj(kj,l,n,jintsp) +&
-                              gjkiln*gj(kj,l,n,jintsp) )
-
-                         bbwa(kj) = cmplx(rph(kj,1),cph(kj,1))*fct
-                      ENDDO
-                      IF ( iintsp.EQ.1 .AND. jintsp.EQ.1 ) THEN
-                         !--->                   spin-up spin-up part
-                         ii = (ki-1)*(ki)/2
-                         DO kj = 1,ki
-                            bb(ii+kj) = bb(ii+kj) + bbwa(kj)*chi11
-                         ENDDO
-                      ELSEIF ( iintsp.EQ.2 .AND. jintsp.EQ.2 ) THEN
-                         !--->                   spin-down spin-down part
-                         ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 +&
-                              lapw%nv(1)+atoms%nlotot
-                         DO kj = 1,ki
-                            bb(ii+kj) = bb(ii+kj) + bbwa(kj)*chi22
-                         ENDDO
-                      ELSE
-                         !--->                   spin-down spin-up part
-                         ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
-                         DO kj = 1,lapw%nv(1)
-                            bb(ii+kj) = bb(ii+kj) + bbwa(kj)*chi21
-                         ENDDO
-                      ENDIF
-#endif
-                      !--->             pk non-collinear
-                   ELSE
-                      DO kj = 1,ki
-                         fct  = plegend(kj,l)*( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp) )
-
-                         ij = iii + kj
-#ifdef CPP_INVERSION
-                         bb(ij) = bb(ij) + rph(kj,1) * fct
-                         !-APW
-#else
-                         bb(ij) = bb(ij) + cmplx(rph(kj,1),cph(kj,1))*fct
-#endif
-                      END DO
-                   ENDIF
-                   !--->          end loop over l
-                enddo
-                !--->       end loop over atom types (ntype)
-             enddo
-             !--->    end loop over ki
+    ALLOCATE(phase(maxval(lapw%nv),ab_dim,maxval(lapw%nv)))
+    ALLOCATE(plegend(maxval(lapw%nv),0:atoms%lmaxd,maxval(lapw%nv))) ! Markus: think about using the max of
+    ! ab_dim, atoms%lmaxd here and above, i.e. make phase and plegend same
+    ! size. THis will allow to fuse the three initialization loops below
+    ALLOCATE(ski(3,maxval(lapw%nv)))
+    
+    !!$OMP DO  SCHEDULE(DYNAMIC,1)
+    !$acc data  copyin(hamovlp) copy(hamovlp%s_c)& 
+    !$acc& copyin(usdus,usdus%ddn,atoms,atoms%lmax,atoms%taual,atoms%neq,gk,lapw,lapw%nv,lapw%k1,lapw%k2,lapw%k3,fleg1,fleg2,fl2p1,fj,gj)
+    !$acc parallel loop gang create(ski,plegend,phase) num_gangs(3000)
+    DO  ki =  1, lapw%nv(ispin)
+       !$acc loop vector collapse(2)
+       ! initialization loops
+       do idx1=1,size(phase,1) 
+          do idx2=1,size(phase,2)
+             phase(idx1,idx2,ki)=0.0
           enddo
-          !$OMP END DO
-          !---> end loops over interstitial spins
-       ENDDO ! jintsp = 1,iintsp
-    ENDDO   ! iintsp = 1,nintsp
-    deallocate(plegend)
-    deallocate(rph,cph)
-    !$OMP END PARALLEL
+       enddo
+       !$acc loop vector collapse(2)
+       do idx1=1,size(plegend,1)
+          do idx2=1,size(plegend,2)
+             plegend(idx1,idx2,ki)=0.0
+          enddo
+       enddo
+       !$acc loop vector
+       do idx1=1,size(plegend,1)
+          plegend(idx1,0,ki)=1.0
+       enddo
+       
+       ski(:,ki) = (/lapw%k1(ki,ispin),lapw%k2(ki,ispin),lapw%k3(ki,ispin)/) 
+       !--->       legendre polynomials
+!       plegend(:,:,ki)=0.0
+!       plegend(:,0,ki)=1.0
+
+       !$acc loop vector
+       DO kj = 1,ki
+!          plegend(kj,1) = dot_product(gk(kj,:,ispin),gk(ki,:,ispin))
+          plegend(kj,1,ki) = gk(kj,1,ispin)*gk(ki,1,ispin)+ gk(kj,2,ispin)*gk(ki,2,ispin)+ gk(kj,3,ispin)*gk(ki,3,ispin)
+       END DO
+       !$acc loop seq
+       DO l = 1,atoms%lmaxd - 1
+          plegend(:,l+1,ki) = fleg1(l)*plegend(:,1,ki)*plegend(:,l,ki) - fleg2(l)*plegend(:,l-1,ki)
+       END DO
+       !include factor fl2p1 already here
+       !$acc loop vector
+       DO l=0,atoms%lmaxd
+          plegend(:ki,l,ki)=plegend(:ki,l,ki)*fl2p1(l)
+       ENDDO
+       !--->       loop over equivalent atoms
+       !$acc loop collapse(force:3) ! Markus: force: is a PGI extension of OpenACC. It won't be needed
+                                    ! if the prefix sum below is pre-calculated
+       DO n = 1,atoms%ntype
+!          phase(:,:,ki)=0.0
+          DO nn = 1,atoms%neq(n)
+             na = SUM(atoms%neq(:n-1))+nn ! Markus: think about pre-calculating this prefix sum operation
+                                          ! if n is large.
+                                          ! If precalculated, the force:3 can be reduc ed to 3 above
+             !--->             set up phase factors
+             DO kj = 1,ki
+                s=(ski(1)-lapw%k1(kj,ispin))*atoms%taual(1,na)
+                s=s+(ski(2)-lapw%k2(kj,ispin))*atoms%taual(2,na)
+                s=s+(ski(3)-lapw%k3(kj,ispin))*atoms%taual(3,na)
+!                phase(kj,1,ki)=phase(kj,1,ki)+exp(cmplx(0.,1.*tpi_const)*s)
+                phase(kj,1,ki)=phase(kj,1,ki)+exp(cmplx(0.d0,tpi_const)*s) ! Markus: is tpi_const double already? Because s is, correct? -> reduce nr. of conversions
+!                phase(kj,1)=phase(kj,1)+exp(cmplx(0.,1.*tpi_const)*dot_product(ski-(/lapw%k1(kj,ispin),lapw%k2(kj,ispin),lapw%k3(kj,ispin)/),atoms%taual(:,na)))
+             END DO
+          END DO
+          
+          !--->          update overlap and l-diagonal hamiltonian matrix
+          !$acc loop collapse(2) vector    
+          DO  l = 0,atoms%lmax(n)
+             DO kj = 1,ki
+                hamovlp%s_c(kj,ki)= hamovlp%s_c(kj,ki)+ phase(kj,1,ki)*(plegend(kj,l,ki)*( fj(ki,l,n,ispin)*fj(kj,l,n,ispin) + gj(ki,l,n,ispin)*usdus%ddn(l,n,ispin)*gj(kj,l,n,ispin) ))
+             END DO
+             !--->          end loop over l
+          enddo
+          !--->       end loop over atom types (ntype)
+       enddo
+      !--->    end loop over ki
+    enddo
+    !$acc end parallel
+    !$acc wait
+    !$acc end data
+    !!$OMP END DO
+    DEALLOCATE(phase,plegend) 
+    !!$OMP END PARALLEL
 
 
-    !---> pk non-collinear
-    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
-       !--->    map the hamiltonian help array onto the hamitonian matrix
-       IF (n_size.EQ.1) THEN
-          DO ki = 1,lapw%nv(1)
-             ii = (ki-1)*(ki)/2
-             DO kj = 1,ki-1
-                ij = (lapw%nv(1)+atoms%nlotot+kj-1)*(lapw%nv(1)+atoms%nlotot+kj)/2 + ki
-                bb(ij) = bb(ij) + bbhlp(ii+kj)
-             ENDDO
-          ENDDO
-
-       ELSE
-#ifdef CPP_MPI
- !         CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, bb)
-!
-#endif
-       ENDIF
-    ENDIF
-
-    RETURN
-  END SUBROUTINE hsmt_overlap
+  end subroutine hsmt_overlap_analytic
 #endif
 
 END MODULE m_hsmt_overlap
