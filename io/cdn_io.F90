@@ -28,6 +28,7 @@ MODULE m_cdn_io
    PUBLIC readDensity, writeDensity
    PUBLIC isDensityFilePresent, isCoreDensityPresent
    PUBLIC readCoreDensity, writeCoreDensity
+   PUBLIC readStars, writeStars
    PUBLIC setStartingDensity, readPrevEFermi
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
@@ -679,6 +680,156 @@ MODULE m_cdn_io
       END IF
 
    END SUBROUTINE writeCoreDensity
+
+   SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
+
+      TYPE(t_stars),INTENT(IN)   :: stars
+      LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
+
+      INTEGER                    :: mode, ngz, izmin, izmax
+
+      INTEGER :: igz(stars%ng3)
+
+      ngz = 0
+      izmin = 0
+      izmax = 0
+      igz = 0
+
+      CALL getMode(mode)
+
+      mode = CDN_DIRECT_MODE ! temporarily!
+      WRITE(*,*) 'avoiding HDF5 mode in writeStars!'
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+#endif
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         ! Write stars to stars file
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE
+         OPEN (51,file='stars',form='unformatted',status='unknown')
+         WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
+         IF(l_ExtData) THEN
+            IF (.NOT.l_xcExtended) THEN
+!            IF (xcpot%igrd.EQ.0) THEN
+               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                          stars%igfft2,stars%pgfft2
+            ELSE
+               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                          stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+            END IF
+         ELSE
+            IF (.NOT.l_xcExtended) THEN
+!            IF (xcpot%igrd.EQ.0) THEN
+               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                          stars%igfft2,stars%pgfft2
+            ELSE
+               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                          stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+            END IF
+         END IF
+         CLOSE (51)
+      END IF
+   END SUBROUTINE writeStars
+
+   SUBROUTINE readStars(stars,l_xcExtended,l_ExtData,l_error)
+      TYPE(t_stars),INTENT(INOUT) :: stars
+      LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
+      LOGICAL, INTENT(OUT)        :: l_error
+
+      INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
+      LOGICAL                     :: l_exist
+
+      INTEGER :: igz(stars%ng3)
+
+      l_error = .FALSE.
+      ngz = 0
+      izmin = 0
+      izmax = 0
+      igz = 0
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+
+      mode = CDN_DIRECT_MODE ! temporarily!
+      WRITE(*,*) 'avoiding HDF5 mode in readStars!'
+
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF (l_exist) THEN
+#ifdef CPP_HDF
+#endif
+         END IF
+         IF(.NOT.l_exist) THEN
+            mode = CDN_STREAM_MODE
+         END IF
+      END IF
+
+      IF(mode.EQ.CDN_STREAM_MODE) THEN
+         INQUIRE(FILE='cdn.str',EXIST=l_exist)
+         IF (l_exist) THEN
+            STOP 'cdn.str code path not yet implemented!'
+         END IF
+         IF (.NOT.l_exist) THEN
+            mode = CDN_DIRECT_MODE
+         END IF
+      END IF
+
+      IF (mode.EQ.CDN_DIRECT_MODE) THEN
+         INQUIRE(FILE='stars',EXIST=l_exist)
+         IF(.NOT.l_exist) THEN
+            l_error = .TRUE.
+            RETURN
+         END IF
+         OPEN (51,file='stars',form='unformatted',status='unknown')
+
+         READ (51,IOSTAT=ioStatus) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
+         IF (ioStatus.NE.0) THEN
+            l_error = .TRUE.
+            RETURN
+         END IF
+
+         IF (l_ExtData) THEN
+            IF (.NOT.l_xcExtended) THEN
+!            IF (xcpot%igrd.EQ.0) THEN
+               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                                         stars%igfft2,stars%pgfft2
+               stars%ft2_gfx = 0.0
+               stars%ft2_gfy = 0.0
+            ELSE
+               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                                         stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+            END IF
+         ELSE
+            IF (.NOT.l_xcExtended) THEN
+!            IF (xcpot%igrd.EQ.0) THEN
+               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                                         stars%igfft2,stars%pgfft2
+               stars%ft2_gfx = 0.0
+               stars%ft2_gfy = 0.0
+            ELSE
+               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+                                         stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+            END IF
+         END IF
+
+         IF (ioStatus.NE.0) THEN
+            l_error = .TRUE.
+            RETURN
+         END IF
+
+         CLOSE (51)
+      END IF
+
+   END SUBROUTINE readStars
 
    SUBROUTINE setStartingDensity(l_noco)
 
