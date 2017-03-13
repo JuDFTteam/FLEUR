@@ -54,6 +54,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER :: i,iii,ii,ij,im,in,k,ki,kj,l,ll1,lm,lmp,lp,jd,m
     INTEGER :: mp,n,na,nn,np,kjmax,iintsp,jintsp
+    INTEGER :: kiStart, kiiSTart, kc
     INTEGER :: nc ,kii,spin2,ab_dim,lnonsphd,bsize,bsize2,kb
     REAL    :: th,invsfct
     COMPLEX :: term,chi11,chi21,chi22,chihlp
@@ -333,26 +334,39 @@ CONTAINS
                           !$acc end loop
                           !$acc end kernels
                        ELSE
+                          kiStart = ki
+                          kiiSTart = kii
                           !$acc kernels
-                          !$acc loop independent
+                          !$acc loop independent worker
                           DO kb=1,bsize
-                     !       WRITE(1276,*) 'B'
+                            ki = kiStart + (kb-1)*n_size
+                            kii = kiiStart + (kb-1)*n_size
                             nc = 1+kii/n_size
                             ii = nc*(nc-1)/2*n_size- (nc-1)*(n_size-n_rank-1)
                             if (l_real) THEN
-                               aa_r(ii+1:ii+ki) = aa_r(ii+1:ii+ki) + aa_block(kb,:ki)
+                       !        aa_r(ii+1:ii+ki) = aa_r(ii+1:ii+ki) + aa_block(kb,:ki)
+                               !$acc loop independent vector
+                               DO kc = 1, ki
+                                  aa_r(ii+kc) = aa_r(ii+kc) + aa_block(kb,kc)
+                               END DO
                             ELSE
-                               aa_c(ii+1:ii+ki) = aa_c(ii+1:ii+ki) + aa_block(kb,:ki)
+                       !        aa_c(ii+1:ii+ki) = aa_c(ii+1:ii+ki) + aa_block(kb,:ki)
+                               !$acc loop independent vector
+                               DO kc = 1, ki
+                                  aa_c(ii+kc) = aa_c(ii+kc) + aa_block(kb,kc)
+                               END DO
                             endif
                             !print*,ii,ki,kb
                             !                           IF (.not.apw(l)) THEN
                             !aa(ii+1:ii+ki) = aa(ii+1:ii+ki) + b(ki,lmp,iintsp)*bx(:ki)
                             !                           ENDIF
-                            ki=ki+n_size
-                            kii=kii+n_size
+!                            ki=ki+n_size
+!                            kii=kii+n_size
                           ENDDO
                           !$acc end loop
                           !$acc end kernels
+                          ki = kiStart+bsize*n_size
+                          kii = kiiSTart+bsize*n_size
                        ENDIF
                       !--->             end loop over ki
                    END DO
