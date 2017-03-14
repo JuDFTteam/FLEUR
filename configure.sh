@@ -78,6 +78,7 @@ cd $buildname
 
 #Now check the machine and set some defaults 
 machine=$1
+echo "Machine config:$machine"
 configure_machine
 
 #run cmake
