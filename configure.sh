@@ -80,7 +80,7 @@ cd $buildname
 machine=$1
 if [[ $machine =~ FLEUR_CONFIG ]]
 then
-    $machine=$FLEUR_CONFIG
+    machine=$FLEUR_CONFIG
 fi
 echo "Machine config:$machine"
 configure_machine
