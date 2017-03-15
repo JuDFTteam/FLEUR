@@ -686,7 +686,13 @@ MODULE m_cdn_io
       TYPE(t_stars),INTENT(IN)   :: stars
       LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
 
-      INTEGER                    :: mode, ngz, izmin, izmax
+      INTEGER        :: mode, ngz, izmin, izmax
+
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
 
       INTEGER :: igz(stars%ng3)
 
@@ -697,11 +703,18 @@ MODULE m_cdn_io
 
       CALL getMode(mode)
 
-      mode = CDN_DIRECT_MODE ! temporarily!
-      WRITE(*,*) 'avoiding HDF5 mode in writeStars!'
-
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
+
+         currentStarsIndex = currentStarsIndex + 1
+         CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+
+         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                 currentStructureIndex,readDensityIndex,lastDensityIndex)
+
+         CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          ! Write stars to stars file
@@ -711,7 +724,6 @@ MODULE m_cdn_io
          WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
          IF(l_ExtData) THEN
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
                           stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                           stars%igfft2,stars%pgfft2
@@ -722,7 +734,6 @@ MODULE m_cdn_io
             END IF
          ELSE
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
                           stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                           stars%igfft2,stars%pgfft2
@@ -744,6 +755,12 @@ MODULE m_cdn_io
       INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
       LOGICAL                     :: l_exist
 
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
       INTEGER :: igz(stars%ng3)
 
       l_error = .FALSE.
@@ -756,12 +773,17 @@ MODULE m_cdn_io
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 
-      mode = CDN_DIRECT_MODE ! temporarily!
-      WRITE(*,*) 'avoiding HDF5 mode in readStars!'
-
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF (l_exist) THEN
 #ifdef CPP_HDF
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
+            IF (currentStarsIndex.LT.1) THEN
+               mode = CDN_DIRECT_MODE ! (no stars entry found in cdn.hdf file)
+            ELSE
+               CALL readStarsHDF(fileID, currentStarsIndex, stars)
+            END IF
+            CALL closeCDNPOT_HDF(fileID)
 #endif
          END IF
          IF(.NOT.l_exist) THEN
@@ -795,7 +817,6 @@ MODULE m_cdn_io
 
          IF (l_ExtData) THEN
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
                                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                                          stars%igfft2,stars%pgfft2
@@ -808,7 +829,6 @@ MODULE m_cdn_io
             END IF
          ELSE
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
                                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                                          stars%igfft2,stars%pgfft2
@@ -918,13 +938,26 @@ MODULE m_cdn_io
       LOGICAL             :: l_exist
       INTEGER             :: mode
 
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
       CALL getMode(mode)
 
       IF (mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF(l_exist) THEN
-            isDensityFilePresent = l_exist
-            RETURN
+#ifdef CPP_HDF
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
+            CALL closeCDNPOT_HDF(fileID)
+            IF(readDensityIndex.GT.0) THEN
+               isDensityFilePresent = .TRUE.
+               RETURN
+            END IF
+#endif
          END IF
       END IF
 

@@ -385,9 +385,9 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE readStarsHDF(fileID, starsIndex, stars)
 
-      INTEGER(HID_T), INTENT(IN)  :: fileID
-      INTEGER,        INTENT(IN)  :: starsIndex
-      TYPE(t_stars),  INTENT(OUT) :: stars
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: starsIndex
+      TYPE(t_stars),  INTENT(INOUT) :: stars
 
       INTEGER(HID_T)            :: groupID
       INTEGER                   :: hdfError, ft2_gf_dim
@@ -1654,6 +1654,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)              :: cdomSetID
       INTEGER(HID_T)              :: cdomvzSetID
       INTEGER(HID_T)              :: cdomvxySetID
+
+      cdom = CMPLX(0.0,0.0)
+      cdomvz = CMPLX(0.0,0.0)
+      cdomvxy = CMPLX(0.0,0.0)
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
