@@ -1,5 +1,6 @@
       MODULE m_stepf
       USE m_juDFT
+      USE m_cdn_io
       CONTAINS
         SUBROUTINE stepf(sym,stars,atoms,oneD, input,cell, vacuum)
           !
@@ -30,8 +31,9 @@
           COMPLEX c_c,c_phs
           REAL c,dd,gs,th,inv_omtil,r_phs
           REAL g_rmt,g_sqr,help,g_abs,fp_omtil,r_c,gr,gx,gy
-          INTEGER i,k,n,n3,na,nn,i1,i2,i3,ic,ifft2d,ifftd,kk
+          INTEGER i,k,n,na,nn,i1,i2,i3,ic,ifft2d,ifftd,kk
           INTEGER ic1,ic2,ic3,icc,im1,im2,im3,loopstart
+          LOGICAL l_error
           !     ..
           !     .. Local Arrays ..
           COMPLEX sf(stars%ng3)
@@ -40,21 +42,14 @@
           INTEGER, ALLOCATABLE :: icm(:,:,:)
           !     ..
           !     ..
-          !--->    if step function on unit14, then just read it in
+          !--->    if step function stored on disc, then just read it in
           !
           ifftd = 27*stars%mx1*stars%mx2*stars%mx3
-          !
-          OPEN (14,file='wkf2',form='unformatted',status='unknown')
-          REWIND 14
-          READ (14,END=10,err=10) n3,n
-          IF (n3.NE.stars%ng3) GO TO 10
-          IF (n.NE.ifftd) GO TO 10
-          READ (14) (stars%ustep(i),i=1,stars%ng3)
-          READ (14) (stars%ufft(i),i=0,ifftd-1)
-          CLOSE (14)
-          RETURN
 
-10        CONTINUE
+          CALL readStepfunction(stars,l_error)
+          IF(.NOT.l_error) THEN
+             RETURN
+          END IF
 
           IF (input%film) THEN
              dd = vacuum%dvac*cell%area/cell%omtil
@@ -262,13 +257,7 @@
 
           DEALLOCATE ( bfft , icm )
 
-          !--->    store on unit14
-          REWIND 14
-          WRITE (14) stars%ng3,ifftd
-          WRITE (14) (stars%ustep(i),i=1,stars%ng3)
-          WRITE (14) (stars%ufft(i),i=0,ifftd-1)
-
-          CLOSE (14)
+          CALL writeStepfunction(stars)
 
         END SUBROUTINE stepf
       END MODULE m_stepf
