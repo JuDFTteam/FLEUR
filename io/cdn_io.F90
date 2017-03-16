@@ -864,8 +864,9 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
 
-      CALL getMode(mode)
+      ifftd=size(stars%ufft)
 
+      CALL getMode(mode)
       WRITE(*,*) 'temporary fallback to direct mode for stepfunction file!'
       mode = CDN_DIRECT_MODE
 
