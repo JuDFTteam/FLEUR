@@ -13,12 +13,15 @@ export FLEUR_CONFIG_MACHINE=$m
 if [[ $m =~ "JURECA-GPU" ]]
 then
     source cmake/machines/JURECA/pgisource.sh
+    export FLEUR_CONFIG_MACHINE=JURECA
 elif [[ $m =~ "JURECA-GCC" ]]
 then
     source cmake/machines/JURECA/gccsource.sh
+    export FLEUR_CONFIG_MACHINE=AUTO
 elif [[ $m =~ "JURECA" ]]
 then
     source cmake/machines/JURECA/intelsource.sh
+    export FLEUR_CONFIG_MACHINE=JURECA
 fi
 
 $*
