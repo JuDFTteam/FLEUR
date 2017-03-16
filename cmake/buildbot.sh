@@ -8,29 +8,19 @@
 # the environment variable BUILDSLAVE_MACHINE must be set correctly for this to work
 
 m=$BUILDSLAVE_MACHINE
-
+export FLEUR_CONFIG_MACHINE=$m
 
 if [[ $m =~ "JURECA-GPU" ]]
 then
     source cmake/machines/JURECA/pgisource.sh
-    configure.sh JURECA
-    exit
-fi
-
-if [[ $m =~ "JURECA-GCC" ]]
+elif [[ $m =~ "JURECA-GCC" ]]
 then
     source cmake/machines/JURECA/gccsource.sh
-    configure.sh AUTO
-    exit
-fi
-
-if [[ $m =~ "JURECA" ]]
+elif [[ $m =~ "JURECA" ]]
 then
     source cmake/machines/JURECA/intelsource.sh
-    configure.sh JURECA
-    exit
 fi
 
-configure.sh $m
+$*
 
 

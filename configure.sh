@@ -78,9 +78,9 @@ cd $buildname
 
 #Now check the machine and set some defaults 
 machine=$1
-if [[ $machine =~ FLEUR_CONFIG ]]
+if [[ $machine =~ FLEUR_CONFIG_MACHINE ]]
 then
-    machine=$FLEUR_CONFIG
+    machine=$FLEUR_CONFIG_MACHINE
 fi
 echo "Machine config:$machine"
 configure_machine
