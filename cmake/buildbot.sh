@@ -9,12 +9,6 @@
 
 m=$BUILDSLAVE_MACHINE
 
-if [[ $m =~ "JURECA" ]]
-then
-    source cmake/machines/JURECA/intelsource.sh
-    configure.sh JURECA
-    exit
-fi
 
 if [[ $m =~ "JURECA-GPU" ]]
 then
@@ -27,6 +21,13 @@ if [[ $m =~ "JURECA-GCC" ]]
 then
     source cmake/machines/JURECA/gccsource.sh
     configure.sh AUTO
+    exit
+fi
+
+if [[ $m =~ "JURECA" ]]
+then
+    source cmake/machines/JURECA/intelsource.sh
+    configure.sh JURECA
     exit
 fi
 
