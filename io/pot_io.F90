@@ -66,7 +66,7 @@ MODULE m_pot_io
       INTEGER(HID_T)    :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: potentialType
       CHARACTER(LEN=30) :: archiveName
 
@@ -76,7 +76,8 @@ MODULE m_pot_io
 #ifdef CPP_HDF
          INQUIRE(FILE='pot.hdf',EXIST=l_exist)
          IF (l_exist) THEN
-            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                             currentStructureIndex,currentStepfunctionIndex)
 
             archiveName = 'illegalPotentialArchive'
             IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
@@ -97,7 +98,8 @@ MODULE m_pot_io
          END IF
 
          IF(l_exist) THEN
-            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                             currentStructureIndex,currentStepfunctionIndex)
 
             CALL readPotentialHDF(fileID, archiveName, potentialType,&
                                   iter,fr,fpw,fz,fzxy)
@@ -184,7 +186,7 @@ MODULE m_pot_io
       INTEGER(HID_T)    :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: potentialType
       CHARACTER(LEN=30) :: archiveName
 
@@ -195,7 +197,8 @@ MODULE m_pot_io
 
       IF(mode.EQ.POT_HDF5_MODE) THEN
 #ifdef CPP_HDF
-         CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+         CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                          currentStructureIndex,currentStepfunctionIndex)
 
          l_storeIndices = .FALSE.
          IF (currentStarsIndex.EQ.0) THEN
@@ -212,6 +215,11 @@ MODULE m_pot_io
             currentStructureIndex = 1
             l_storeIndices = .TRUE.
             CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+         END IF
+         IF(currentStepfunctionIndex.EQ.0) THEN
+            currentStepfunctionIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
          END IF
 
          archiveName = 'illegalPotentialArchive'
@@ -239,11 +247,11 @@ MODULE m_pot_io
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                iter,fr,fpw,fzTemp,fzxyTemp)
+                                currentStepfunctionIndex,iter,fr,fpw,fzTemp,fzxyTemp)
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                    currentStructureIndex)
+                                    currentStructureIndex,currentStepfunctionIndex)
          END IF
 
          CALL closeCDNPOT_HDF(fileID)

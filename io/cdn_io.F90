@@ -81,7 +81,7 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: readDensityIndex, lastDensityIndex
       INTEGER           :: previousDensityIndex, densityType
       CHARACTER(LEN=30) :: archiveName
@@ -101,7 +101,7 @@ MODULE m_cdn_io
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
                archiveName = 'cdn'
@@ -132,7 +132,7 @@ MODULE m_cdn_io
 
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
             CALL readDensityHDF(fileID, archiveName, densityType,&
                                 fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
@@ -271,10 +271,11 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: readDensityIndex, writeDensityIndex, lastDensityIndex
       INTEGER           :: previousDensityIndex, densityType
       INTEGER           :: starsIndexTemp, latharmsIndexTemp, structureIndexTemp
+      INTEGER           :: stepfunctionIndexTemp
       INTEGER           :: jspinsTemp
       REAL              :: fermiEnergyTemp
       LOGICAL           :: l_qfixTemp
@@ -285,7 +286,7 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          l_storeIndices = .FALSE.
          IF (currentStarsIndex.EQ.0) THEN
@@ -302,6 +303,11 @@ MODULE m_cdn_io
             currentStructureIndex = 1
             l_storeIndices = .TRUE.
             CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+         END IF
+         IF(currentStepfunctionIndex.EQ.0) THEN
+            currentStepfunctionIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
          END IF
          previousDensityIndex = readDensityIndex
          writeDensityIndex = readDensityIndex
@@ -343,7 +349,8 @@ MODULE m_cdn_io
             IF(l_exist) THEN
                CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                         iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
-                                        previousDensityIndex, jspinsTemp, fermiEnergyTemp, l_qfixTemp)
+                                        stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
+                                        fermiEnergyTemp, l_qfixTemp)
             END IF
          END IF
 
@@ -362,13 +369,14 @@ MODULE m_cdn_io
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              fermiEnergy,l_qfix,iter+relCdnIndex,fr,fpw,fzTemp,fzxyTemp,cdom,cdomvz,cdomvxy)
+                              currentStepfunctionIndex,fermiEnergy,l_qfix,iter+relCdnIndex,&
+                              fr,fpw,fzTemp,fzxyTemp,cdom,cdomvz,cdomvxy)
 
          DEALLOCATE(fzTemp,fzxyTemp)
 
          IF(l_storeIndices) THEN
-            CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                    currentStructureIndex,readDensityIndex,lastDensityIndex)
+            CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                    currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          END IF
 
          CALL closeCDNPOT_HDF(fileID)
@@ -521,10 +529,11 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER        :: currentStarsIndex,currentLatharmsIndex
-      INTEGER        :: currentStructureIndex
+      INTEGER        :: currentStructureIndex,currentStepfunctionIndex
       INTEGER        :: readDensityIndex, lastDensityIndex
 
       INTEGER           :: starsIndex, latharmsIndex, structureIndex
+      INTEGER           :: stepfunctionIndex
       INTEGER           :: iter, jspins, previousDensityIndex
       REAL              :: fermiEnergy
       LOGICAL           :: l_qfix, l_exist
@@ -537,17 +546,17 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
          CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
-                                  iter, starsIndex, latharmsIndex, structureIndex,&
+                                  iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                                   previousDensityIndex, jspins, fermiEnergy, l_qfix)
          archiveName = ''
          WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
          l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_OUT_const)
          IF(l_exist) THEN
             CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_OUT_const,&
-                                     iter, starsIndex, latharmsIndex, structureIndex,&
+                                     iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                                      previousDensityIndex, jspins, fermiEnergy, l_qfix)
             eFermiPrev = fermiEnergy
          ELSE
@@ -581,7 +590,7 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER        :: currentStarsIndex,currentLatharmsIndex
-      INTEGER        :: currentStructureIndex
+      INTEGER        :: currentStructureIndex,currentStepfunctionIndex
       INTEGER        :: readDensityIndex, lastDensityIndex
 
       CALL getMode(mode)
@@ -591,7 +600,7 @@ MODULE m_cdn_io
          l_exist = isCoreDensityPresentHDF()
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
             CALL readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
             CALL closeCDNPOT_HDF(fileID)
             RETURN
@@ -652,7 +661,7 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
       INTEGER        :: currentStarsIndex,currentLatharmsIndex
-      INTEGER        :: currentStructureIndex
+      INTEGER        :: currentStructureIndex,currentStepfunctionIndex
       INTEGER        :: readDensityIndex, lastDensityIndex
 
       CALL getMode(mode)
@@ -660,7 +669,7 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          CALL writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
          CALL closeCDNPOT_HDF(fileID)
 #endif
@@ -690,7 +699,7 @@ MODULE m_cdn_io
       INTEGER        :: mode, ngz, izmin, izmax
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
-      INTEGER        :: readDensityIndex,lastDensityIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
       INTEGER(HID_T) :: fileID
 #endif
@@ -707,13 +716,13 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStarsIndex = currentStarsIndex + 1
          CALL writeStarsHDF(fileID, currentStarsIndex, stars)
 
-         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                 currentStructureIndex,readDensityIndex,lastDensityIndex)
+         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                 currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          CALL closeCDNPOT_HDF(fileID)
 #endif
@@ -758,7 +767,7 @@ MODULE m_cdn_io
       LOGICAL                     :: l_exist
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
-      INTEGER        :: readDensityIndex,lastDensityIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
       INTEGER(HID_T) :: fileID
 #endif
@@ -778,7 +787,7 @@ MODULE m_cdn_io
          IF (l_exist) THEN
 #ifdef CPP_HDF
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
             IF (currentStarsIndex.LT.1) THEN
                mode = CDN_DIRECT_MODE ! (no stars entry found in cdn.hdf file)
             ELSE
@@ -859,7 +868,7 @@ MODULE m_cdn_io
       INTEGER                  :: mode, ifftd, i
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
-      INTEGER        :: readDensityIndex,lastDensityIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
       INTEGER(HID_T) :: fileID
 #endif
@@ -867,13 +876,16 @@ MODULE m_cdn_io
       ifftd=size(stars%ufft)
 
       CALL getMode(mode)
-      WRITE(*,*) 'temporary fallback to direct mode for stepfunction file!'
-      mode = CDN_DIRECT_MODE
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+
+         currentStepfunctionIndex = currentStepfunctionIndex + 1
+         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
+         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                 currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          CALL closeCDNPOT_HDF(fileID)
 #endif
@@ -898,11 +910,11 @@ MODULE m_cdn_io
       LOGICAL, INTENT(OUT)        :: l_error
 
       INTEGER        :: mode
-      INTEGER        :: ifftd, ng3Temp, ifftdTemp, ioStatus, i
+      INTEGER        :: ifftd, ng3Temp, ifftdTemp, ioStatus, i, starsIndexTemp
       LOGICAL        :: l_exist
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
-      INTEGER        :: readDensityIndex,lastDensityIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
       INTEGER(HID_T) :: fileID
 #endif
@@ -916,12 +928,18 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF (l_exist) THEN
-            WRITE(*,*) 'temporary fallback to direct mode for stepfunction file!'
-            mode = CDN_DIRECT_MODE
 #ifdef CPP_HDF
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             readDensityIndex,lastDensityIndex)
-
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+            starsIndexTemp = -1
+            IF(currentStepfunctionIndex.GT.0) THEN
+               CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp)
+            END IF
+            IF(starsIndexTemp.EQ.currentStarsIndex) THEN
+               CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, stars)
+            ELSE
+               mode = CDN_STREAM_MODE ! No adequate stepfunction entry found. Fall back to other IO modes.
+            END IF
             CALL closeCDNPOT_HDF(fileID)
 #endif
          END IF
@@ -972,7 +990,7 @@ MODULE m_cdn_io
       INTEGER(HID_T)    :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: readDensityIndex, lastDensityIndex
       INTEGER           :: sdIndex, ioStatus, mode
       INTEGER           :: densityType
@@ -1000,7 +1018,7 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          densityType = DENSITY_TYPE_IN_const
          IF(l_noco) THEN
             densityType = DENSITY_TYPE_NOCO_IN_const
@@ -1012,8 +1030,8 @@ MODULE m_cdn_io
             WRITE(*,*) 'archiveName: ', TRIM(ADJUSTL(archiveName))
             CALL juDFT_error("For selected starting density index no in-density is present.",calledby ="setStartingDensity")
          END IF
-         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                 currentStructureIndex,sdIndex,lastDensityIndex)
+         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                 currentStepfunctionIndex,sdIndex,lastDensityIndex)
          CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
@@ -1052,7 +1070,7 @@ MODULE m_cdn_io
       INTEGER             :: mode
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
-      INTEGER        :: readDensityIndex,lastDensityIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
       INTEGER(HID_T) :: fileID
 #endif
@@ -1064,7 +1082,7 @@ MODULE m_cdn_io
          IF(l_exist) THEN
 #ifdef CPP_HDF
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
             CALL closeCDNPOT_HDF(fileID)
             IF(readDensityIndex.GT.0) THEN
                isDensityFilePresent = .TRUE.
