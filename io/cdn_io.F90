@@ -29,6 +29,7 @@ MODULE m_cdn_io
    PUBLIC isDensityFilePresent, isCoreDensityPresent
    PUBLIC readCoreDensity, writeCoreDensity
    PUBLIC readStars, writeStars
+   PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
@@ -686,7 +687,13 @@ MODULE m_cdn_io
       TYPE(t_stars),INTENT(IN)   :: stars
       LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
 
-      INTEGER                    :: mode, ngz, izmin, izmax
+      INTEGER        :: mode, ngz, izmin, izmax
+
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
 
       INTEGER :: igz(stars%ng3)
 
@@ -697,11 +704,18 @@ MODULE m_cdn_io
 
       CALL getMode(mode)
 
-      mode = CDN_DIRECT_MODE ! temporarily!
-      WRITE(*,*) 'avoiding HDF5 mode in writeStars!'
-
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
+
+         currentStarsIndex = currentStarsIndex + 1
+         CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+
+         CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                 currentStructureIndex,readDensityIndex,lastDensityIndex)
+
+         CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
          ! Write stars to stars file
@@ -711,7 +725,6 @@ MODULE m_cdn_io
          WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
          IF(l_ExtData) THEN
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
                           stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                           stars%igfft2,stars%pgfft2
@@ -722,7 +735,6 @@ MODULE m_cdn_io
             END IF
          ELSE
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
                           stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                           stars%igfft2,stars%pgfft2
@@ -737,12 +749,19 @@ MODULE m_cdn_io
    END SUBROUTINE writeStars
 
    SUBROUTINE readStars(stars,l_xcExtended,l_ExtData,l_error)
+
       TYPE(t_stars),INTENT(INOUT) :: stars
       LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
       LOGICAL, INTENT(OUT)        :: l_error
 
       INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
       LOGICAL                     :: l_exist
+
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
 
       INTEGER :: igz(stars%ng3)
 
@@ -755,13 +774,17 @@ MODULE m_cdn_io
       CALL getMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
-
-      mode = CDN_DIRECT_MODE ! temporarily!
-      WRITE(*,*) 'avoiding HDF5 mode in readStars!'
-
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF (l_exist) THEN
 #ifdef CPP_HDF
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
+            IF (currentStarsIndex.LT.1) THEN
+               mode = CDN_DIRECT_MODE ! (no stars entry found in cdn.hdf file)
+            ELSE
+               CALL readStarsHDF(fileID, currentStarsIndex, stars)
+            END IF
+            CALL closeCDNPOT_HDF(fileID)
 #endif
          END IF
          IF(.NOT.l_exist) THEN
@@ -795,7 +818,6 @@ MODULE m_cdn_io
 
          IF (l_ExtData) THEN
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
                                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                                          stars%igfft2,stars%pgfft2
@@ -808,7 +830,6 @@ MODULE m_cdn_io
             END IF
          ELSE
             IF (.NOT.l_xcExtended) THEN
-!            IF (xcpot%igrd.EQ.0) THEN
                READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
                                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
                                          stars%igfft2,stars%pgfft2
@@ -830,6 +851,117 @@ MODULE m_cdn_io
       END IF
 
    END SUBROUTINE readStars
+
+   SUBROUTINE writeStepfunction(stars)
+
+      TYPE(t_stars),INTENT(IN) :: stars
+
+      INTEGER                  :: mode, ifftd, i
+
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
+      CALL getMode(mode)
+
+      WRITE(*,*) 'temporary fallback to direct mode for stepfunction file!'
+      mode = CDN_DIRECT_MODE
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          readDensityIndex,lastDensityIndex)
+
+         CALL closeCDNPOT_HDF(fileID)
+#endif
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         ! Write stars to stars file
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE
+         OPEN (14,file='wkf2',form='unformatted',status='unknown')
+
+         WRITE (14) stars%ng3,ifftd
+         WRITE (14) (stars%ustep(i),i=1,stars%ng3)
+         WRITE (14) (stars%ufft(i),i=0,ifftd-1)
+
+         CLOSE (14)
+      END IF
+
+   END SUBROUTINE writeStepfunction
+
+   SUBROUTINE readStepfunction(stars, l_error)
+
+      TYPE(t_stars),INTENT(INOUT) :: stars
+      LOGICAL, INTENT(OUT)        :: l_error
+
+      INTEGER        :: mode
+      INTEGER        :: ifftd, ng3Temp, ifftdTemp, ioStatus, i
+      LOGICAL        :: l_exist
+
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
+      l_error = .FALSE.
+      ioStatus = 0
+      ifftd = 27*stars%mx1*stars%mx2*stars%mx3
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF (l_exist) THEN
+            WRITE(*,*) 'temporary fallback to direct mode for stepfunction file!'
+            mode = CDN_DIRECT_MODE
+#ifdef CPP_HDF
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
+
+            CALL closeCDNPOT_HDF(fileID)
+#endif
+         END IF
+         IF(.NOT.l_exist) THEN
+            mode = CDN_STREAM_MODE
+         END IF
+      END IF
+
+      IF(mode.EQ.CDN_STREAM_MODE) THEN
+         INQUIRE(FILE='cdn.str',EXIST=l_exist)
+         IF (l_exist) THEN
+            STOP 'cdn.str code path not yet implemented!'
+         END IF
+         IF (.NOT.l_exist) THEN
+            mode = CDN_DIRECT_MODE
+         END IF
+      END IF
+
+      IF (mode.EQ.CDN_DIRECT_MODE) THEN
+         INQUIRE(FILE='wkf2',EXIST=l_exist)
+         IF(.NOT.l_exist) THEN
+            l_error = .TRUE.
+            RETURN
+         END IF
+         OPEN (14,file='wkf2',form='unformatted',status='unknown')
+
+         READ (14,IOSTAT=ioStatus) ng3Temp, ifftdTemp
+         IF (ng3Temp.NE.stars%ng3) ioStatus = 1
+         IF (ifftdTemp.NE.ifftd) ioStatus = 1
+         IF (ioStatus.NE.0) THEN
+            l_error = .TRUE.
+            CLOSE (14)
+            RETURN
+         END IF
+         READ (14) (stars%ustep(i),i=1,stars%ng3)
+         READ (14) (stars%ufft(i),i=0,ifftd-1)
+
+         CLOSE (14)
+      END IF
+
+   END SUBROUTINE readStepfunction
 
    SUBROUTINE setStartingDensity(l_noco)
 
@@ -918,13 +1050,26 @@ MODULE m_cdn_io
       LOGICAL             :: l_exist
       INTEGER             :: mode
 
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: readDensityIndex,lastDensityIndex
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
       CALL getMode(mode)
 
       IF (mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
          IF(l_exist) THEN
-            isDensityFilePresent = l_exist
-            RETURN
+#ifdef CPP_HDF
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             readDensityIndex,lastDensityIndex)
+            CALL closeCDNPOT_HDF(fileID)
+            IF(readDensityIndex.GT.0) THEN
+               isDensityFilePresent = .TRUE.
+               RETURN
+            END IF
+#endif
          END IF
       END IF
 
