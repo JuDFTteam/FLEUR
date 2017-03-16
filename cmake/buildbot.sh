@@ -6,21 +6,21 @@
 # the correct machine name
 
 # the environment variable BUILDSLAVE_MACHINE must be set correctly for this to work
-
+DIR="`dirname \"$0\"`"
 m=$BUILDSLAVE_MACHINE
 export FLEUR_CONFIG_MACHINE=$m
 
 if [[ $m =~ "JURECA-GPU" ]]
 then
-    source cmake/machines/JURECA/pgisource.sh
+    source $DIR/machines/JURECA/pgisource.sh
     export FLEUR_CONFIG_MACHINE=JURECA
 elif [[ $m =~ "JURECA-GCC" ]]
 then
-    source cmake/machines/JURECA/gccsource.sh
+    source $DIR/machines/JURECA/gccsource.sh
     export FLEUR_CONFIG_MACHINE=AUTO
 elif [[ $m =~ "JURECA" ]]
 then
-    source cmake/machines/JURECA/intelsource.sh
+    source $DIR/machines/JURECA/intelsource.sh
     export FLEUR_CONFIG_MACHINE=JURECA
 fi
 
