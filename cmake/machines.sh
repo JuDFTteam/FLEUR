@@ -19,7 +19,6 @@ function configure_machine(){
 	then
 	    echo "Intel toolchain used"
 	    if module list 2>&1| grep -q Python &&
-               module list 2>&1| grep -q CMake &&
 	       module list 2>&1| grep -q ELPA
                #module list 2>&1| grep -q HDF5 
 	    then
@@ -34,7 +33,6 @@ function configure_machine(){
 	then
 	    echo "PGI toolchain used"
 	    if module list 2>&1| grep -q MVAPICH2 &&
-               module list 2>&1| grep -q CMake &&
 	       [ -n "${MAGMA_ROOT}" ] &&
 	       [ -n "${XML2_ROOT}" ] 
             then
