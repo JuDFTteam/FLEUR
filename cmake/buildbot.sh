@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 #This skript is used by buildbot to set up the environment on different machines
 # is loads modules and sets environment variables by sourcing the corresponding 

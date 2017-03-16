@@ -30,17 +30,14 @@ c******************************************************************
       use m_wann_rw_eig
       use m_wann_read_umatrix
       use m_abcof
-      use m_dotir
       use m_radfun
       use m_radflo
       use m_cdnread, only : cdn_read0
-      use m_od_types, only : od_inp, od_sym
+      use m_types, only : od_inp, od_sym
       use m_loddop
-      use m_constants, only : pimach
+      use m_constants
       use m_wann_real
       use m_xsf_io
-      use m_cotra,only:cotra1
-c      use m_dwigner
       use m_wann_plot_vac
 
 
@@ -98,7 +95,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer i1,i2,i3,in,ikpt_k,lda
       integer n_bands(0:neigd),nslibd
       character*8 dop,iop,name(10)
-      real bkpt(3),sfp,tpi,wronk,wk,wk_b,phase
+      real bkpt(3),wronk,wk,wk_b,phase
       real eig(neigd),cp_time(9)
       logical l_p0,l_bkpts,l_proj,l_amn,l_mmn,l_eig,wann,wann_plott
 !!! energy window boundaries
@@ -175,8 +172,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real v(3),scale,ev
       complex av,bv
       real volume
-c      external dotirp !module now
-c      real dotirp
       REAL          :: s,const
       COMPLEX       :: xdnout,factor
       INTEGER       :: ii3,ix,iy,iz,nplo,nbn
@@ -215,8 +210,6 @@ c specify number of unit-cells that are calculated
       if(sortrule==3)l_byenergy=.true.
 
 
-      sfp = 2* sqrt( pimach() )
-      tpi = 2* pimach()
       lmd = lmaxd*(lmaxd+2)
       nkpts = maxval(nkpt(:))
 
@@ -237,13 +230,15 @@ cccccccccccccccc   initialize the potential   cccccccccccc
 
       open (8,file='pottot',form='unformatted',status='old')
       rewind (8)
-
+#ifdef CPP_NEVER  
       call loddop(
      >      jspd,n3d,odi%n2d,nmzxyd,nmzd,jmtd,nlhd,ntypd,
      >      jspins,nq3,odi%nq2,nvac,ntype,invs,invs2,film,
      >      nlh,jri,ntypsd,ntypsy,8,natd,neq,
      <      iop,dop,iter,vrf,vpw,vz,vzxy,name)
-
+#else
+      call judft_error("NOT implemented")
+#endif
       close (8)
 
       do jspin = 1,jspins
@@ -296,7 +291,7 @@ c*******************************************************
       close(355)
       if(l_byindex.and.
      &     .not.((1+band_max(jspin)-band_min(jspin)).eq.num_bands))
-     &     CALL juDFT_error("1+band_max-band_min  /=  num_bands",calledby
+     &     CALL juDFT_error("1+band_max-band_min/=num_bands",calledby
      +     ="wannier_to_lapw")
 
 c**************************************************************
@@ -386,7 +381,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 
       l_p0 = .false.
       if (irank.eq.0) l_p0 = .true.
-
+#ifdef CPP_NEVER
       call cdn_read0(
      >               lmaxd,ntypd,nlod,neigd,wannierspin,
      >               irank,isize,jspin,jsp_start,jsp_end,
@@ -418,7 +413,9 @@ c       do ilo = 1, nlo(n)
 c       enddo
 c       na = na + neq(n)
    40 continue
-
+#else
+      call judft_error("NOT implemented")
+#endif
 
 
       allocate(knorm(fullnkpts,num_bands))
@@ -562,7 +559,7 @@ c***************************************************************
       do i1=-cell1,cell1
        do i2=-cell2,cell2
         do i3=-cell3,cell3
-         factor=exp(ci*tpi*(i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
+         factor=exp(ci*tpi_const*(i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
          do i=1,num_wann
           do n=1,noccbd
             wann_acof(i,0:lmd,1:natd,i1,i2,i3)=
@@ -602,21 +599,21 @@ c***************************************************************
           denom=-pw1+unigrid(1)*(k1(j,jspin)+bkpt(1))  
           wannz2(j,:)=wannz(j,:)
           if(abs(denom).gt.1e-5)then
-             denom=denom*tpi/2
+             denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
      /              (ci*denom*2)
           endif   
           denom=-pw2+unigrid(2)*(k2(j,jspin)+bkpt(2))  
           if(abs(denom).gt.1e-5)then
-             denom=denom*tpi/2
+             denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
      /              (ci*denom*2)
           endif   
           denom=-pw3+unigrid(3)*(k3(j,jspin)+bkpt(3))  
           if(abs(denom).gt.1e-5)then
-             denom=denom*tpi/2
+             denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
      /              (ci*denom*2)

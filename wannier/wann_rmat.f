@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_rmat
-      USE m_fleurenv
+      USE m_juDFT
       contains
       subroutine wann_rmat(
      >          bmat,amat, 
@@ -130,7 +130,7 @@ c****************************************************************
 c        get nntot and bk and wb from bkpts file
 c****************************************************************
          inquire (file='bkpts',exist=l_file)
-         if (.not.l_file)  CALL jdft_error("need bkpts"
+         if (.not.l_file)  CALL judft_error("need bkpts"
      +      ,calledby ="wann_rmat")
          open (202,file='bkpts',form='formatted',status='old')
          read (202,'(i4)') nntot

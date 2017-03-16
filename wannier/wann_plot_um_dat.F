@@ -213,6 +213,7 @@ c     ..basis wavefunctions in the vacuum
       complex :: nsfactor
       integer :: ngopr1(natd)
 
+#ifdef CPP_NEVER
       um_format=.false.
       l_byindex=.false.
       l_byenergy=.false.
@@ -1058,6 +1059,6 @@ c*****************************************************************
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,mpiierr)
 #endif      
-
+#endif
       END SUBROUTINE wann_plot_um_dat
       END MODULE m_wann_plot_um_dat
