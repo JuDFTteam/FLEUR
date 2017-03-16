@@ -946,7 +946,7 @@ MODULE m_cdn_io
             RETURN
          END IF
          OPEN (14,file='wkf2',form='unformatted',status='unknown')
-
+         ng3temp=0;ifftdTemp=0
          READ (14,IOSTAT=ioStatus) ng3Temp, ifftdTemp
          IF (ng3Temp.NE.stars%ng3) ioStatus = 1
          IF (ifftdTemp.NE.ifftd) ioStatus = 1
