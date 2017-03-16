@@ -128,7 +128,7 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_init()
-        USE m_fleur_info
+        USE m_fleur_help
         INTEGER:: i
         INTEGER:: irank=0
 #ifdef CPP_MPI
@@ -140,7 +140,7 @@ CONTAINS
         !$        juDFT_error("MPI not usable with OpenMP")
         !Select the io-mode from the command-line
 #endif
-        if (irank==0) call fleur_info()
+        if (irank==0) call fleur_help()
     END SUBROUTINE
 
     SUBROUTINE fleur_job_execute(jobs)

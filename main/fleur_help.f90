@@ -3,10 +3,10 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_fleur_info
+MODULE m_fleur_help
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleur_info()
+  SUBROUTINE fleur_help()
     USE m_compile_descr
     USE m_constants
     USE m_juDFT
@@ -55,5 +55,5 @@ CONTAINS
     WRITE(*,*)"Please check the documentation on www.flapw.de for more details"
 
     CALL juDFT_error("help was written")
-  END SUBROUTINE fleur_info
-END MODULE m_fleur_info
+  END SUBROUTINE fleur_help
+END MODULE m_fleur_help
