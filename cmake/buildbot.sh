@@ -22,6 +22,10 @@ elif [[ $m =~ "JURECA" ]]
 then
     source $DIR/machines/JURECA/intelsource.sh
     export FLEUR_CONFIG_MACHINE=JURECA
+elif [[ $m =~ "JUQUEEN" ]]
+then
+    source $DIR/machines/JUQUEEN/xlfsource.sh
+    export FLEUR_CONFIG_MACHINE=JUQUEEN
 fi
 
 $*
