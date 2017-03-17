@@ -91,8 +91,14 @@ module load LIBRARIES
 	cp $DIR/cmake/machines/MARCONI.cmake config.cmake
     elif [ "$machine" = "AUTO" ] 
     then
-	echo "No machine specific settings used"
-	echo "GOOD LUCK!"
+        if [ -r ../config.cmake ] 
+        then
+           echo "Using AUTO-mode with user provided config.cmake"
+           cp ../config.cmake .
+        else
+	   echo "No machine specific settings used"
+	   echo "GOOD LUCK!"
+        fi
     else
 	echo "No valid machine configuration specified"
 	exit

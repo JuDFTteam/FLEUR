@@ -1,12 +1,17 @@
 Welcome to the source code of FLEUR
+===================================
 
-Outline:
-1. Short Overview of the code
-2. Installation
+Please note that the documentation of the
+code can be found at the [FLEUR Homepage]
+(http://www.flapw.de/pm/index.php?n=User-Documentation.Documentation).
 
-----------------------------------------------
-1. Overview of the code
-----------------------------------------------
+For further instructions on Installation/Usage,
+please check the [FLEUR Homepage]
+(http://www.flapw.de/pm/index.php?n=User-Documentation.Documentation).
+
+The rest of this document summarizes only the 
+structure of the FLEUR source code. Did
+we mention to check the Homepage?
 
 The source of FLEUR is organized in several 
 subdirectories. Some of them collect code 
@@ -44,42 +49,11 @@ include: c-type include files
 
 global: code used everywhere (here you find types.F90 with the data-types)
 
-cmake: definitions used by cmake (see Installation)
+cmake: definitions used by cmake
 
 If you modify FLEUR please do so in the develop branch by running
-git checkout -t origin/develop
-after cloning the git repository.
+'git checkout -t origin/develop'
+after cloning the git repository. For larger changes you might want to
+create your own branch.
 
-----------------------------------------------
-2. Installation
-----------------------------------------------
-
-For the compilation of FLEUR you will need:
-
-- Fortran compiler (should support Fortran2008)
-- Compatible C compiler for the XML-IO
-- cmake for controlling the make-process
-- Libraries:
-  * LAPACK/BLAS
-  * MPI for parallelization
-  * SCALAPACK or ELPA or ELEMENTAL if you want to use parallel diagonalization
-    	      (without you can only exploit k-point parallelism)
-  * HDF5 for parallel IO (if you have lots of memory, you might not need to do IO :-)
-
-FLEUR now comes with a configuration script. This skript will
-create a build sub-directory in the main FLEUR directory (where this file resides) and
-then use cmake to generate a makefile. You should use it like 
-
-./configure.sh CONFIGURATION
-
-where CONFIGURATION refers to a predefined maschine setup. Call ./configure.sh without any
-argument for more information.
-
-After the configure.sh script finishes, you should do
-
-cd build
-make 
-
-This might generate the FLEUR executables. It most probable will only work on systems we know as
-only for those there will be specific configurations available.
 
