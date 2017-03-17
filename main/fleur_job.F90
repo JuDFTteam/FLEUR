@@ -140,7 +140,9 @@ CONTAINS
         !$        juDFT_error("MPI not usable with OpenMP")
         !Select the io-mode from the command-line
 #endif
-        if (irank==0) call fleur_help()
+        IF (irank==0) THEN
+           CALL fleur_help()
+        END IF
     END SUBROUTINE
 
     SUBROUTINE fleur_job_execute(jobs)

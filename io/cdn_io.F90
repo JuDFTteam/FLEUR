@@ -25,6 +25,7 @@ MODULE m_cdn_io
    IMPLICIT NONE
 
    PRIVATE
+   PUBLIC printDensityFileInfo
    PUBLIC readDensity, writeDensity
    PUBLIC isDensityFilePresent, isCoreDensityPresent
    PUBLIC readCoreDensity, writeCoreDensity
@@ -47,6 +48,69 @@ MODULE m_cdn_io
    INTEGER,          PARAMETER :: CDN_HDF5_MODE   = 3
 
    CONTAINS
+
+   SUBROUTINE printDensityFileInfo()
+
+      INTEGER            :: mode, i
+      LOGICAL            :: l_exist
+
+#ifdef CPP_HDF
+      INTEGER(HID_T)    :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
+      INTEGER           :: readDensityIndex, lastDensityIndex
+      CHARACTER(LEN=30) :: archiveName
+
+      INTEGER           :: iterTemp, starsIndexTemp, latharmsIndexTemp 
+      INTEGER           :: structureIndexTemp,stepfunctionIndexTemp
+      INTEGER           :: previousDensityIndex, jspinsTemp
+      REAL              :: fermiEnergyTemp
+      LOGICAL           :: l_qfixTemp
+
+
+      CALL getMode(mode)
+
+      WRITE(*,'(a)') 'Available densities info'
+      WRITE(*,*)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF (l_exist) THEN
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+            WRITE(*,'(a)') 'densityIndex   prevDensity   iteration'
+            DO i = 1, lastDensityIndex
+               archiveName = ''
+               WRITE(archiveName,'(a,i0)') '/cdn-', i
+
+               l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_UNDEFINED_const)
+               IF(.NOT.l_exist) THEN
+                  CYCLE
+               END IF
+
+               CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+                                        iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
+                                        stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
+                                        fermiEnergyTemp, l_qfixTemp)
+
+               WRITE(*,'(3i10)') i, previousDensityIndex, iterTemp
+
+            END DO
+            CALL closeCDNPOT_HDF(fileID)
+         ELSE
+            WRITE(*,'(a)') "No cdn.hdf file found. Density file info is not available."
+         END IF
+#else
+         WRITE(*,'(a)') "Fleur is not compiled with HDF5 support. Density file info is not available."
+#endif
+      ELSE
+         WRITE(*,'(a)') "Density file info is only available if '-hdf_cdn' switch is used."
+      END IF
+
+   END SUBROUTINE printDensityFileInfo
+
 
    SUBROUTINE readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
                           relCdnIndex,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
