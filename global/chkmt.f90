@@ -125,7 +125,7 @@
          taualAux(1,i) = atoms%taual(1,i) - FLOOR(atoms%taual(1,i))
          taualAux(2,i) = atoms%taual(2,i) - FLOOR(atoms%taual(2,i))
          taualAux(3,i) = atoms%taual(3,i) - FLOOR(atoms%taual(3,i))
-         posAux(:,i) = matmul(amatAux,taualAux(:,i))
+         posAux(:,i) = MATMUL(TRANSPOSE(amatAux),taualAux(:,i))
       END DO
 
 !     2. Get minimal and maximal coordinates for auxiliary unit cell

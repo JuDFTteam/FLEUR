@@ -6,6 +6,7 @@ main/fleur.F90
 main/fleur_init.F90
 main/fleur_job.F90
 main/fleur_help.f90
+main/fleur_info.f90
 main/mix.F90
 main/optional.f90
 main/totale.f90
