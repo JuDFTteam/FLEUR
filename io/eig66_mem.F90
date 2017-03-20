@@ -253,7 +253,7 @@ CONTAINS
        IF (.NOT.PRESENT(k2).OR..NOT.PRESENT(k3)) CALL juDFT_error("BUG: always read k1,k2,k3")
        k1=d%eig_int(3+1:3+size(k1),nrec)
        k2=d%eig_int(3+d%nmat+1:3+d%nmat+size(k1),nrec)
-       k3=d%eig_int(3+2*d%nmat+1:3+2*d%nmat*size(k1),nrec)
+       k3=d%eig_int(3+2*d%nmat+1:3+2*d%nmat+size(k1),nrec)
     ENDIF
     IF (PRESENT(kveclo)) kveclo=d%eig_int(4+3*d%nmat:3+3*d%nmat+SIZE(kveclo),nrec)
 
