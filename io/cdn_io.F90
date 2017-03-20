@@ -65,7 +65,7 @@ MODULE m_cdn_io
       INTEGER           :: iterTemp, starsIndexTemp, latharmsIndexTemp 
       INTEGER           :: structureIndexTemp,stepfunctionIndexTemp
       INTEGER           :: previousDensityIndex, jspinsTemp
-      REAL              :: fermiEnergyTemp
+      REAL              :: fermiEnergyTemp, distanceTemp
       LOGICAL           :: l_qfixTemp
 
 
@@ -80,7 +80,7 @@ MODULE m_cdn_io
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            WRITE(*,'(a)') 'densityIndex   prevDensity   iteration'
+            WRITE(*,'(a)') 'densityIndex   prevDensity   iteration      distance'
             DO i = 1, lastDensityIndex
                archiveName = ''
                WRITE(archiveName,'(a,i0)') '/cdn-', i
@@ -93,9 +93,9 @@ MODULE m_cdn_io
                CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                         iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
-                                        fermiEnergyTemp, l_qfixTemp)
+                                        distanceTemp, fermiEnergyTemp, l_qfixTemp)
 
-               WRITE(*,'(3i10)') i, previousDensityIndex, iterTemp
+               WRITE(*,'(i7,8x,i7,5x,i7,4x,f15.8)') i, previousDensityIndex, iterTemp, distanceTemp
 
             END DO
             CALL closeCDNPOT_HDF(fileID)
@@ -293,7 +293,7 @@ MODULE m_cdn_io
    END SUBROUTINE readDensity
 
    SUBROUTINE writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           relCdnIndex,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                           relCdnIndex,distance,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -307,7 +307,7 @@ MODULE m_cdn_io
       INTEGER, INTENT (IN)      :: inOrOutCDN
       INTEGER, INTENT (IN)      :: relCdnIndex, iter
       INTEGER, INTENT (IN)      :: archiveType
-      REAL,    INTENT (IN)      :: fermiEnergy
+      REAL,    INTENT (IN)      :: fermiEnergy, distance
       LOGICAL, INTENT (IN)      :: l_qfix
       !     ..
       !     .. Array Arguments ..
@@ -341,7 +341,7 @@ MODULE m_cdn_io
       INTEGER           :: starsIndexTemp, latharmsIndexTemp, structureIndexTemp
       INTEGER           :: stepfunctionIndexTemp
       INTEGER           :: jspinsTemp
-      REAL              :: fermiEnergyTemp
+      REAL              :: fermiEnergyTemp, distanceTemp
       LOGICAL           :: l_qfixTemp
       CHARACTER(LEN=30) :: archiveName
 
@@ -414,7 +414,7 @@ MODULE m_cdn_io
                CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                         iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
-                                        fermiEnergyTemp, l_qfixTemp)
+                                        distanceTemp, fermiEnergyTemp, l_qfixTemp)
             END IF
          END IF
 
@@ -433,7 +433,7 @@ MODULE m_cdn_io
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              currentStepfunctionIndex,fermiEnergy,l_qfix,iter+relCdnIndex,&
+                              currentStepfunctionIndex,distance,fermiEnergy,l_qfix,iter+relCdnIndex,&
                               fr,fpw,fzTemp,fzxyTemp,cdom,cdomvz,cdomvxy)
 
          DEALLOCATE(fzTemp,fzxyTemp)
@@ -599,7 +599,7 @@ MODULE m_cdn_io
       INTEGER           :: starsIndex, latharmsIndex, structureIndex
       INTEGER           :: stepfunctionIndex
       INTEGER           :: iter, jspins, previousDensityIndex
-      REAL              :: fermiEnergy
+      REAL              :: fermiEnergy, distance
       LOGICAL           :: l_qfix, l_exist
       CHARACTER(LEN=30) :: archiveName
 
@@ -614,14 +614,14 @@ MODULE m_cdn_io
          WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
          CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                   iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                                  previousDensityIndex, jspins, fermiEnergy, l_qfix)
+                                  previousDensityIndex, jspins, distance, fermiEnergy, l_qfix)
          archiveName = ''
          WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
          l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_OUT_const)
          IF(l_exist) THEN
             CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_OUT_const,&
                                      iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                                     previousDensityIndex, jspins, fermiEnergy, l_qfix)
+                                     previousDensityIndex, jspins, distance, fermiEnergy, l_qfix)
             eFermiPrev = fermiEnergy
          ELSE
             l_error = .TRUE.
