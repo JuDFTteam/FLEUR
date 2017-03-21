@@ -46,6 +46,8 @@ MODULE m_cdnpot_io_hdf
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_IN_const = 1
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_OUT_const = 2
 
+   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 28
+
    CONTAINS
 
 #ifdef CPP_HDF
@@ -58,7 +60,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT(OUT) :: currentStepfunctionIndex, readDensityIndex,lastDensityIndex
 
       INTEGER(HID_T) :: generalGroupID
-      INTEGER        :: hdfError
+      INTEGER        :: hdfError, fileFormatVersion
       LOGICAL        :: l_exist
 
       currentStarsIndex = 0
@@ -67,6 +69,7 @@ MODULE m_cdnpot_io_hdf
       currentStepfunctionIndex = 0
       readDensityIndex = 0
       lastDensityIndex = 0
+      fileFormatVersion = 0
 
       INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
       IF(l_exist) THEN ! only open file
@@ -80,8 +83,13 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
          CALL io_read_attint0(generalGroupID,'readDensityIndex',readDensityIndex)
          CALL io_read_attint0(generalGroupID,'lastDensityIndex',lastDensityIndex)
+         CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
 
          CALL h5gclose_f(generalGroupID, hdfError)
+         IF(fileFormatVersion.NE.FILE_FORMAT_VERSION_const) THEN
+            WRITE(*,'(a,i4)') 'cdn.hdf has file format version ', fileFormatVersion
+            CALL juDFT_error('cdn.hdf file format not readable.' ,calledby ="openCDN_HDF")
+         END IF
       ELSE ! create file
          CALL h5fcreate_f('cdn.hdf', H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
@@ -93,6 +101,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
          CALL io_write_attint0(generalGroupID,'readDensityIndex',readDensityIndex)
          CALL io_write_attint0(generalGroupID,'lastDensityIndex',lastDensityIndex)
+         CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
          CALL h5gclose_f(generalGroupID, hdfError)
       END IF
@@ -108,13 +117,14 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT(OUT) :: currentStructureIndex, currentStepfunctionIndex
 
       INTEGER(HID_T) :: generalGroupID
-      INTEGER        :: hdfError
+      INTEGER        :: hdfError, fileFormatVersion
       LOGICAL        :: l_exist
 
       currentStarsIndex = 0
       currentLatharmsIndex = 0
       currentStructureIndex = 0
       currentStepfunctionIndex = 0
+      fileFormatVersion = 0
 
       INQUIRE(FILE='pot.hdf',EXIST=l_exist)
       IF(l_exist) THEN ! only open file
@@ -126,8 +136,13 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
          CALL io_read_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
          CALL io_read_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
+         CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
 
          CALL h5gclose_f(generalGroupID, hdfError)
+         IF(fileFormatVersion.NE.FILE_FORMAT_VERSION_const) THEN
+            WRITE(*,'(a,i4)') 'pot.hdf has file format version ', fileFormatVersion
+            CALL juDFT_error('pot.hdf file format not readable.' ,calledby ="openPOT_HDF")
+         END IF
       ELSE ! create file
          CALL h5fcreate_f('pot.hdf', H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
@@ -137,6 +152,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
          CALL io_write_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
          CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
+         CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
          CALL h5gclose_f(generalGroupID, hdfError)
       END IF
@@ -175,6 +191,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
       CALL io_write_attint0(generalGroupID,'readDensityIndex',readDensityIndex)
       CALL io_write_attint0(generalGroupID,'lastDensityIndex',lastDensityIndex)
+      CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
       CALL h5gclose_f(generalGroupID, hdfError)
 
@@ -198,6 +215,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
       CALL io_write_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
       CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
+      CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
       CALL h5gclose_f(generalGroupID, hdfError)
 
@@ -1248,7 +1266,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              distance,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_input),    INTENT(IN) :: input
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -1258,7 +1276,7 @@ MODULE m_cdnpot_io_hdf
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
       INTEGER, INTENT (IN)         :: iter
-      REAL,    INTENT (IN)         :: fermiEnergy
+      REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
 
       REAL,    INTENT (IN)         :: fr(:,:,:,:)
@@ -1349,6 +1367,9 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
+         IF (distance.GE.-1e-10) THEN
+            CALL io_write_attreal0(archiveID,'distance',distance)
+         END IF
 
          l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
 
@@ -1486,6 +1507,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
+         CALL io_write_attreal0(archiveID,'distance',distance)
 
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
@@ -2080,7 +2102,7 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE peekDensityEntryHDF(fileID, archiveName, densityType,&
                                   iter, starsIndex, latharmsIndex, structureIndex,&
                                   stepfunctionIndex, previousDensityIndex, jspins,&
-                                  fermiEnergy, l_qfix)
+                                  distance, fermiEnergy, l_qfix)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
@@ -2089,7 +2111,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT(OUT)          :: iter
       INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
-      REAL,    INTENT(OUT)          :: fermiEnergy
+      REAL,    INTENT(OUT)          :: fermiEnergy, distance
       LOGICAL, INTENT(OUT)          :: l_qfix
 
       INTEGER              :: localDensityType
@@ -2149,6 +2171,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
+      CALL io_read_attreal0(archiveID,'distance',distance)
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
          CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)

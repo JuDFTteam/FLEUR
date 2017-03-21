@@ -19,12 +19,16 @@ MODULE m_fleur_info
 
    CONTAINS
 
-   SUBROUTINE fleur_info()
+   SUBROUTINE fleur_info(kpts)
 
       USE m_juDFT
       USE m_cdn_io
+      USE m_setupMPI
+      USE m_types
 
       IMPLICIT NONE
+
+      TYPE(t_kpts), INTENT(IN)     :: kpts
 
       LOGICAL       :: l_exist
 
@@ -32,6 +36,8 @@ MODULE m_fleur_info
 
       WRITE(*,*) 'Fleur info mode'
       WRITE(*,*) '================================================='
+      WRITE(*,*) ''
+      CALL priv_dist_info(kpts%nkpt)
       WRITE(*,*) ''
       CALL printDensityFileInfo()
       WRITE(*,*) '================================================='

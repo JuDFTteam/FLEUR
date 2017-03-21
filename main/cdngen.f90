@@ -487,7 +487,8 @@
       END IF
 
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                        CDN_OUTPUT_DEN_const,0,results%ef,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                        CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,iter,&
+                        rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
       ENDIF
 
       DEALLOCATE (cdom,cdomvz,cdomvxy,qa21)

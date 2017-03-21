@@ -491,7 +491,7 @@
           END IF
 
           IF (mpi%irank.EQ.0) THEN
-             CALL fleur_info()
+             CALL fleur_info(kpts)
           END IF
 
           !Finalize the MPI setup
