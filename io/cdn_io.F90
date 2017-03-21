@@ -71,7 +71,7 @@ MODULE m_cdn_io
 
       CALL getMode(mode)
 
-      WRITE(*,'(a)') 'Available densities info'
+      WRITE(*,*) 'Available densities info:'
       WRITE(*,*)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
@@ -80,7 +80,7 @@ MODULE m_cdn_io
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            WRITE(*,'(a)') 'densityIndex   prevDensity   iteration      distance'
+            WRITE(*,*) 'densityIndex   iteration   prevDensity   prevDistance'
             DO i = 1, lastDensityIndex
                archiveName = ''
                WRITE(archiveName,'(a,i0)') '/cdn-', i
@@ -95,7 +95,7 @@ MODULE m_cdn_io
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
                                         distanceTemp, fermiEnergyTemp, l_qfixTemp)
 
-               WRITE(*,'(i7,8x,i7,5x,i7,4x,f15.8)') i, previousDensityIndex, iterTemp, distanceTemp
+               WRITE(*,'(1x,i7,6x,i7,7x,i7,4x,f15.8)') i, iterTemp, previousDensityIndex, distanceTemp
 
             END DO
             CALL closeCDNPOT_HDF(fileID)
