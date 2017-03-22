@@ -25,7 +25,7 @@ MODULE m_cdnpot_io_hdf
    PUBLIC writePotentialHDF, readPotentialHDF
    PUBLIC writeCoreDensityHDF, readCoreDensityHDF
    PUBLIC writeCDNHeaderData, writePOTHeaderData
-   PUBLIC isCoreDensityPresentHDF
+   PUBLIC isCoreDensityPresentHDF, deleteDensityEntryHDF
    PUBLIC isDensityEntryPresentHDF, isPotentialEntryPresentHDF
    PUBLIC peekDensityEntryHDF
 #endif
@@ -2317,6 +2317,26 @@ MODULE m_cdnpot_io_hdf
       CALL h5gclose_f(cdncGroupID, hdfError)
 
    END SUBROUTINE readCoreDensityHDF
+
+   LOGICAL FUNCTION deleteDensityEntryHDF(fileID,archiveName)
+
+      INTEGER(HID_T), INTENT(IN)   :: fileID
+      CHARACTER(LEN=*), INTENT(IN) :: archiveName
+
+      INTEGER                      :: hdfError
+      LOGICAL                      :: l_exist
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
+      IF(.NOT.l_exist) THEN
+         deleteDensityEntryHDF = .FALSE.
+         RETURN
+      END IF
+
+      CALL h5ldelete_f(fileID, archiveName, hdfError)
+
+      deleteDensityEntryHDF = .TRUE.
+
+   END FUNCTION deleteDensityEntryHDF
 
    LOGICAL FUNCTION isCoreDensityPresentHDF()
 

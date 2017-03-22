@@ -31,7 +31,7 @@ MODULE m_cdn_io
    PUBLIC readCoreDensity, writeCoreDensity
    PUBLIC readStars, writeStars
    PUBLIC readStepfunction, writeStepfunction
-   PUBLIC setStartingDensity, readPrevEFermi
+   PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -1132,6 +1132,91 @@ MODULE m_cdn_io
       END IF
 
    END SUBROUTINE setStartingDensity
+
+   SUBROUTINE deleteDensities()
+
+#ifdef CPP_HDF
+      INTEGER(HID_T)    :: fileID
+#endif
+      INTEGER           :: currentStarsIndex,currentLatharmsIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
+      INTEGER           :: readDensityIndex, lastDensityIndex
+      INTEGER           :: ioStatus, mode, i
+      INTEGER           :: startNumber, endNumber, separatorIndex
+      CHARACTER(LEN=20) :: ddString
+      CHARACTER(LEN=30) :: archiveName
+      LOGICAL           :: l_exist, l_deleted
+
+      IF (.NOT.juDFT_was_argument("-dd")) THEN
+         RETURN
+      END IF
+      ddString = juDFT_string_for_argument("-dd")
+      IF (TRIM(ADJUSTL(ddString)).EQ.'') THEN
+         CALL juDFT_error("Densities to be deleted not specified.",calledby ="deleteDensities")
+      END IF
+
+      separatorIndex = -1
+      startNumber = -1
+      endNumber = -1
+      DO i = 1, LEN(TRIM(ADJUSTL(ddString)))
+         IF(VERIFY(ddString(i:i),'1234567890').NE.0) THEN
+            IF ((ddString(i:i).EQ.'-').AND.(separatorIndex.EQ.-1)) THEN
+               separatorIndex = i
+            ELSE
+               CALL juDFT_error("density deletion string format error",calledby ="deleteDensities")
+            END IF
+         END IF
+      END DO
+
+      IF(separatorIndex.NE.-1) THEN
+         READ(ddString(1:separatorIndex-1),'(i)') startNumber
+         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') endNumber
+      ELSE
+         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') startNumber
+         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') endNumber
+      END IF
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         IF (l_exist) THEN
+#ifdef CPP_HDF
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+
+            DO i = startNumber, endNumber
+               archiveName = ''
+               WRITE(archiveName,'(a,i0)') '/cdn-', i
+
+               l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_UNDEFINED_const)
+               IF(.NOT.l_exist) THEN
+                  CYCLE
+               END IF
+               
+               l_deleted = deleteDensityEntryHDF(fileID,archiveName)
+               IF (l_deleted) THEN
+                  WRITE(*,*) 'deleted density entry ', TRIM(ADJUSTL(archiveName))
+               END IF
+            END DO
+
+            CALL closeCDNPOT_HDF(fileID)
+#endif
+         ELSE
+            WRITE(*,*) "No cdn.hdf file found. No density entry deleted."
+         END IF
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE      
+         WRITE(*,*) 'Explicit deletion of densities in direct access mode'
+         WRITE(*,*) 'not implemented.'
+         WRITE(*,*) ''
+         WRITE(*,*) 'Ignoring -dd command line argument.'
+      END IF
+
+      CALL juDFT_error("Densities deleted.")
+      
+   END SUBROUTINE deleteDensities
 
    SUBROUTINE getMode(mode)
       INTEGER, INTENT(OUT) :: mode
