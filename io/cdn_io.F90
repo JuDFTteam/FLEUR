@@ -62,11 +62,16 @@ MODULE m_cdn_io
       INTEGER           :: readDensityIndex, lastDensityIndex
       CHARACTER(LEN=30) :: archiveName
 
+      INTEGER           :: dateTemp, timeTemp
       INTEGER           :: iterTemp, starsIndexTemp, latharmsIndexTemp 
       INTEGER           :: structureIndexTemp,stepfunctionIndexTemp
       INTEGER           :: previousDensityIndex, jspinsTemp
       REAL              :: fermiEnergyTemp, distanceTemp
       LOGICAL           :: l_qfixTemp
+      CHARACTER(LEN=10) :: dateString
+      CHARACTER(LEN=10) :: timeString
+      CHARACTER(LEN=19) :: timeStampString
+      CHARACTER(LEN=15) :: distanceString
 
 
       CALL getMode(mode)
@@ -80,7 +85,7 @@ MODULE m_cdn_io
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            WRITE(*,*) 'densityIndex   iteration   prevDensity   prevDistance'
+            WRITE(*,*) 'densityIndex   iteration   prevDensity   prevDistance        timeStamp'
             DO i = 1, lastDensityIndex
                archiveName = ''
                WRITE(archiveName,'(a,i0)') '/cdn-', i
@@ -93,10 +98,22 @@ MODULE m_cdn_io
                CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                         iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
-                                        distanceTemp, fermiEnergyTemp, l_qfixTemp)
+                                        dateTemp, timeTemp, distanceTemp, fermiEnergyTemp, l_qfixTemp)
 
-               WRITE(*,'(1x,i7,6x,i7,7x,i7,4x,f15.8)') i, iterTemp, previousDensityIndex, distanceTemp
+               WRITE(dateString,'(i8)'), dateTemp
+               WRITE(timeString,'(i6)'), timeTemp
 
+               distanceString = ''
+               IF (distanceTemp.GE.-1e-10) THEN
+                  WRITE(distanceString,'(f15.8)') distanceTemp
+               END IF
+
+               WRITE(timeStampString,'(a4,a1,a2,a1,a2,1x,a2,a1,a2,a1,a2)') &
+                  dateString(1:4),'/',dateString(5:6),'/',dateString(7:8),&
+                  timeString(1:2),':',timeString(3:4),':',timeString(5:6)
+
+               WRITE(*,'(1x,i7,6x,i7,7x,i7,4x,a15,3x,a)') i, iterTemp, previousDensityIndex, distanceString,&
+                                                            TRIM(ADJUSTL(timeStampString))
             END DO
             CALL closeCDNPOT_HDF(fileID)
          ELSE
@@ -341,11 +358,18 @@ MODULE m_cdn_io
       INTEGER           :: starsIndexTemp, latharmsIndexTemp, structureIndexTemp
       INTEGER           :: stepfunctionIndexTemp
       INTEGER           :: jspinsTemp
+      INTEGER           :: date, time, dateTemp, timeTemp
       REAL              :: fermiEnergyTemp, distanceTemp
       LOGICAL           :: l_qfixTemp
       CHARACTER(LEN=30) :: archiveName
+      CHARACTER(LEN=8)  :: dateString
+      CHARACTER(LEN=10) :: timeString
+      CHARACTER(LEN=10) :: zone
 
       CALL getMode(mode)
+      CALL DATE_AND_TIME(dateString,timeString,zone)
+      READ(dateString,'(i8)') date
+      READ(timeString,'(i6)') time
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -414,7 +438,7 @@ MODULE m_cdn_io
                CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                         iterTemp, starsIndexTemp, latharmsIndexTemp, structureIndexTemp,&
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
-                                        distanceTemp, fermiEnergyTemp, l_qfixTemp)
+                                        dateTemp, timeTemp, distanceTemp, fermiEnergyTemp, l_qfixTemp)
             END IF
          END IF
 
@@ -433,7 +457,7 @@ MODULE m_cdn_io
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              currentStepfunctionIndex,distance,fermiEnergy,l_qfix,iter+relCdnIndex,&
+                              currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,iter+relCdnIndex,&
                               fr,fpw,fzTemp,fzxyTemp,cdom,cdomvz,cdomvxy)
 
          DEALLOCATE(fzTemp,fzxyTemp)
@@ -598,7 +622,7 @@ MODULE m_cdn_io
 
       INTEGER           :: starsIndex, latharmsIndex, structureIndex
       INTEGER           :: stepfunctionIndex
-      INTEGER           :: iter, jspins, previousDensityIndex
+      INTEGER           :: date, time, iter, jspins, previousDensityIndex
       REAL              :: fermiEnergy, distance
       LOGICAL           :: l_qfix, l_exist
       CHARACTER(LEN=30) :: archiveName
@@ -614,14 +638,14 @@ MODULE m_cdn_io
          WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
          CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
                                   iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                                  previousDensityIndex, jspins, distance, fermiEnergy, l_qfix)
+                                  previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
          archiveName = ''
          WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
          l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_OUT_const)
          IF(l_exist) THEN
             CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_OUT_const,&
                                      iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                                     previousDensityIndex, jspins, distance, fermiEnergy, l_qfix)
+                                     previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
             eFermiPrev = fermiEnergy
          ELSE
             l_error = .TRUE.

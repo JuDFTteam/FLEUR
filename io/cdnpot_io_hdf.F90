@@ -1266,7 +1266,8 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              distance,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              date,time,distance,fermiEnergy,l_qfix,iter,&
+                              fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_input),    INTENT(IN) :: input
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -1275,7 +1276,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER,          INTENT(IN) :: stepfunctionIndex
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT (IN)         :: iter
+      INTEGER, INTENT (IN)         :: date, time, iter
       REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
 
@@ -1507,6 +1508,8 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
+         CALL io_write_attint0(archiveID,'date',date)
+         CALL io_write_attint0(archiveID,'time',time)
          CALL io_write_attreal0(archiveID,'distance',distance)
 
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
@@ -2102,13 +2105,13 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE peekDensityEntryHDF(fileID, archiveName, densityType,&
                                   iter, starsIndex, latharmsIndex, structureIndex,&
                                   stepfunctionIndex, previousDensityIndex, jspins,&
-                                  distance, fermiEnergy, l_qfix)
+                                  date, time, distance, fermiEnergy, l_qfix)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT(OUT)          :: iter
+      INTEGER, INTENT(OUT)          :: date, time, iter
       INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
       REAL,    INTENT(OUT)          :: fermiEnergy, distance
@@ -2122,7 +2125,7 @@ MODULE m_cdnpot_io_hdf
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
-         CALL juDFT_error('density archive '//TRIM(ADJUSTL(archiveName))//' does not exist.' ,calledby ="peekDensityHDF")
+         CALL juDFT_error('density archive '//TRIM(ADJUSTL(archiveName))//' does not exist.' ,calledby ="peekDensityEntryHDF")
       END IF
 
       localDensityType = densityType
@@ -2152,13 +2155,13 @@ MODULE m_cdnpot_io_hdf
          CASE(DENSITY_TYPE_PRECOND_const)
             densityTypeName = '/precond'
          CASE DEFAULT
-            CALL juDFT_error("Unknown density type selected",calledby ="peekDensityHDF")
+            CALL juDFT_error("Unknown density type selected",calledby ="peekDensityEntryHDF")
       END SELECT
 
       groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
       IF(.NOT.l_exist) THEN
-         CALL juDFT_error('density entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="peekDensityHDF")
+         CALL juDFT_error('density entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="peekDensityEntryHDF")
       END IF
 
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
@@ -2171,6 +2174,8 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
+      CALL io_read_attint0(archiveID,'date',date)
+      CALL io_read_attint0(archiveID,'time',time)
       CALL io_read_attreal0(archiveID,'distance',distance)
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
