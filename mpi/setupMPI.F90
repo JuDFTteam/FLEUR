@@ -143,7 +143,7 @@ CONTAINS
           pe_k_only(k_only)=n
        ENDIF
     END DO
-    WRITE(*,*) "Most efficient parallelization for:"
+    WRITE(*,*) "Most efficient MPI parallelization for:"
     WRITE(*,*) pe_k_only(:k_only)
     !check if eigenvalue parallelization is possible
     IF (parallel_solver_available()) WRITE(*,*) "Additional eigenvalue parallelization possible"
