@@ -1147,10 +1147,10 @@ MODULE m_cdn_io
       CHARACTER(LEN=30) :: archiveName
       LOGICAL           :: l_exist, l_deleted
 
-      IF (.NOT.juDFT_was_argument("-dd")) THEN
+      IF (.NOT.juDFT_was_argument("-delden")) THEN
          RETURN
       END IF
-      ddString = juDFT_string_for_argument("-dd")
+      ddString = juDFT_string_for_argument("-delden")
       IF (TRIM(ADJUSTL(ddString)).EQ.'') THEN
          CALL juDFT_error("Densities to be deleted not specified.",calledby ="deleteDensities")
       END IF
@@ -1202,6 +1202,12 @@ MODULE m_cdn_io
 
             CALL closeCDNPOT_HDF(fileID)
 #endif
+            WRITE(*,*) 'Please note:'
+            WRITE(*,*) 'The deletion of the densities does not free the associated disk space.'
+            WRITE(*,*) 'To do this you have to repack the cdn.hdf file.'
+            WRITE(*,*) 'It can be done by using the tool h5repack, e.g., by invoking'
+            WRITE(*,*) 'h5repack -i cdn.hdf -o cdn-packed.hdf'
+            WRITE(*,*) 'mv cdn-packed.hdf cdn.hdf'
          ELSE
             WRITE(*,*) "No cdn.hdf file found. No density entry deleted."
          END IF
