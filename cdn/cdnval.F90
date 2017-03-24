@@ -540,8 +540,10 @@ CONTAINS
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
                lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
-
-
+#ifdef CPP_MPI
+          ! Sinchronizes the RMA operations
+          if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
           !ENDIF
