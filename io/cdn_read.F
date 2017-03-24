@@ -158,17 +158,6 @@ c
      <                  zmat=zmat)
 
       ENDIF
-#ifdef CPP_MPI
-!     The barrier here is not algorithmically required.
-!     Nevertheless it improves the performance, presumably because it
-!     synchronizes the processes and prevent the latency accumulating.
-!     U.Alekseeva 2015
-
-!Note: this does not work, two problems:
-! a) MPI_COMM_WORLD should not be used 
-! b) Not all processes might reach this point due to k-point parallelization
-!      call MPI_BARRIER(MPI_COMM_WORLD,mpiierr) 
-#endif
       CALL timestop("cdn_read")
       
 !      IF (nbands>neigd)   CALL juDFT_error("nbands.GT.neigd",calledby

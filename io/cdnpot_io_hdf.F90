@@ -25,7 +25,7 @@ MODULE m_cdnpot_io_hdf
    PUBLIC writePotentialHDF, readPotentialHDF
    PUBLIC writeCoreDensityHDF, readCoreDensityHDF
    PUBLIC writeCDNHeaderData, writePOTHeaderData
-   PUBLIC isCoreDensityPresentHDF
+   PUBLIC isCoreDensityPresentHDF, deleteDensityEntryHDF
    PUBLIC isDensityEntryPresentHDF, isPotentialEntryPresentHDF
    PUBLIC peekDensityEntryHDF
 #endif
@@ -1196,7 +1196,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5dclose_f(neqSetID, hdfError)
 
       dimsInt(:1)=(/atoms%ntype/)
-      CALL h5dopen_f(groupID, 'jri', nzSetID, hdfError)
+      CALL h5dopen_f(groupID, 'jri', jriSetID, hdfError)
       CALL io_read_integer1(jriSetID,(/1/),dimsInt(:1),atoms%jri)
       CALL h5dclose_f(jriSetID, hdfError)
 
@@ -1266,7 +1266,8 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              distance,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              date,time,distance,fermiEnergy,l_qfix,iter,&
+                              fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_input),    INTENT(IN) :: input
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -1275,7 +1276,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER,          INTENT(IN) :: stepfunctionIndex
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT (IN)         :: iter
+      INTEGER, INTENT (IN)         :: date, time, iter
       REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
 
@@ -1507,6 +1508,8 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
+         CALL io_write_attint0(archiveID,'date',date)
+         CALL io_write_attint0(archiveID,'time',time)
          CALL io_write_attreal0(archiveID,'distance',distance)
 
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
@@ -1798,8 +1801,16 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePotentialHDF
 
-   SUBROUTINE readDensityHDF(fileID, archiveName, densityType,&
+   SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
+                             archiveName, densityType,&
                              fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_sphhar),INTENT(IN) :: latharms
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_oneD),INTENT(IN)   :: oneD
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
@@ -1927,23 +1938,27 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
       CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
 
-      dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
+      fr = 0.0
+      dimsInt(:4)=(/MIN(jmtd,atoms%jmtd),MIN(nlhd,latharms%nlhd)+1,MIN(ntype,atoms%ntype),MIN(jspins,input%jspins)/)
       CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
       CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
       CALL h5dclose_f(frSetID, hdfError)
 
-      dimsInt(:3)=(/2,ng3,jspins/)
+      fpw = CMPLX(0.0,0.0)
+      dimsInt(:3)=(/2,MIN(ng3,stars%ng3),MIN(jspins,input%jspins)/)
       CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
       CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpw)
       CALL h5dclose_f(fpwSetID, hdfError)
 
       IF (l_film) THEN
-         dimsInt(:3)=(/nmzd,2,jspins/)
+         fz = 0.0
+         dimsInt(:3)=(/MIN(nmzd,vacuum%nmzd),2,MIN(jspins,input%jspins)/)
          CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
          CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
          CALL h5dclose_f(fzSetID, hdfError)
 
-         dimsInt(:5)=(/2,nmzxyd,ng2-1,2,jspins/)
+         fzxy = CMPLX(0.0,0.0)
+         dimsInt(:5)=(/2,MIN(nmzxyd,vacuum%nmzxyd),MIN(ng2,stars%ng2)-1,2,MIN(jspins,input%jspins)/)
          CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
          CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
          CALL h5dclose_f(fzxySetID, hdfError)
@@ -1952,18 +1967,21 @@ MODULE m_cdnpot_io_hdf
       IF((localDensityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
          (localDensityType.EQ.DENSITY_TYPE_NOCO_OUT_const)) THEN
 
-         dimsInt(:2)=(/2,ng3/)
+         cdom = CMPLX(0.0,0.0)
+         dimsInt(:2)=(/2,MIN(ng3,stars%ng3)/)
          CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
          CALL io_read_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdom)
          CALL h5dclose_f(cdomSetID, hdfError)
 
          IF (l_film) THEN
-            dimsInt(:3)=(/2,nmz,nvac/)
+            cdomvz = CMPLX(0.0,0.0)
+            dimsInt(:3)=(/2,MIN(nmz,vacuum%nmz),MIN(nvac,vacuum%nvac)/)
             CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
             CALL io_read_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
             CALL h5dclose_f(cdomvzSetID, hdfError)
 
-            dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
+            cdomvxy = CMPLX(0.0,0.0)
+            dimsInt(:4)=(/2,MIN(nmzxy,vacuum%nmzxy),MIN(od_nq2,oneD%odi%nq2)-1,MIN(nvac,vacuum%nvac)/)
             CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
             CALL io_read_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxy)
             CALL h5dclose_f(cdomvxySetID, hdfError)
@@ -2102,13 +2120,13 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE peekDensityEntryHDF(fileID, archiveName, densityType,&
                                   iter, starsIndex, latharmsIndex, structureIndex,&
                                   stepfunctionIndex, previousDensityIndex, jspins,&
-                                  distance, fermiEnergy, l_qfix)
+                                  date, time, distance, fermiEnergy, l_qfix)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT(OUT)          :: iter
+      INTEGER, INTENT(OUT)          :: date, time, iter
       INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
       REAL,    INTENT(OUT)          :: fermiEnergy, distance
@@ -2122,7 +2140,7 @@ MODULE m_cdnpot_io_hdf
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
-         CALL juDFT_error('density archive '//TRIM(ADJUSTL(archiveName))//' does not exist.' ,calledby ="peekDensityHDF")
+         CALL juDFT_error('density archive '//TRIM(ADJUSTL(archiveName))//' does not exist.' ,calledby ="peekDensityEntryHDF")
       END IF
 
       localDensityType = densityType
@@ -2152,13 +2170,13 @@ MODULE m_cdnpot_io_hdf
          CASE(DENSITY_TYPE_PRECOND_const)
             densityTypeName = '/precond'
          CASE DEFAULT
-            CALL juDFT_error("Unknown density type selected",calledby ="peekDensityHDF")
+            CALL juDFT_error("Unknown density type selected",calledby ="peekDensityEntryHDF")
       END SELECT
 
       groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
       IF(.NOT.l_exist) THEN
-         CALL juDFT_error('density entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="peekDensityHDF")
+         CALL juDFT_error('density entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="peekDensityEntryHDF")
       END IF
 
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
@@ -2171,6 +2189,8 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
+      CALL io_read_attint0(archiveID,'date',date)
+      CALL io_read_attint0(archiveID,'time',time)
       CALL io_read_attreal0(archiveID,'distance',distance)
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
@@ -2312,6 +2332,26 @@ MODULE m_cdnpot_io_hdf
       CALL h5gclose_f(cdncGroupID, hdfError)
 
    END SUBROUTINE readCoreDensityHDF
+
+   LOGICAL FUNCTION deleteDensityEntryHDF(fileID,archiveName)
+
+      INTEGER(HID_T), INTENT(IN)   :: fileID
+      CHARACTER(LEN=*), INTENT(IN) :: archiveName
+
+      INTEGER                      :: hdfError
+      LOGICAL                      :: l_exist
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
+      IF(.NOT.l_exist) THEN
+         deleteDensityEntryHDF = .FALSE.
+         RETURN
+      END IF
+
+      CALL h5ldelete_f(fileID, archiveName, hdfError)
+
+      deleteDensityEntryHDF = .TRUE.
+
+   END FUNCTION deleteDensityEntryHDF
 
    LOGICAL FUNCTION isCoreDensityPresentHDF()
 
