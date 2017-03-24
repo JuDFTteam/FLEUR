@@ -10,11 +10,28 @@ MODULE m_setupMPI
 
 CONTAINS
   SUBROUTINE setupMPI(nkpt,mpi)
-    USE m_types
+!$  use omp_lib
+    USE m_types  
     USE m_eigen_diag,ONLY:parallel_solver_available
     INTEGER,INTENT(in)           :: nkpt
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
+    integer :: omp=-1
+
+    !$ omp=omp_get_max_threads()
+    if (mpi%irank==0) THEN
+       !print INFO on parallelization
+#ifdef CPP_MPI
+       write(*,*) "Number of MPI-tasks:  ",mpi%isize
+       !$write(*,*) "Number of OMP-threads:",omp
+#else
+       if (omp==-1) THEN
+          write(*,*) "No OpenMP version of FLEUR."
+       else
+          write(*,*) "Number of OMP-threads:",omp
+       endif
+#endif
+    endif
     IF (mpi%isize==1) THEN
        !give some info on available parallelisation
        CALL priv_dist_info(nkpt)
@@ -132,9 +149,11 @@ CONTAINS
   SUBROUTINE priv_dist_info(nkpt)
     USE m_eigen_diag,ONLY:parallel_solver_available
     IMPLICIT NONE
-    INTEGER,INTENT(in)        :: nkpt
+    INTEGER,INTENT(in)           :: nkpt
 
     INTEGER:: n,k_only,pe_k_only(nkpt)
+    
+
     !Create a list of PE that will lead to k-point parallelization only
     k_only=0
     DO n=1,nkpt
