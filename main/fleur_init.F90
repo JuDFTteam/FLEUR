@@ -76,7 +76,16 @@
           REAL                          :: scale, dtild
           LOGICAL                       :: l_found
 
+#ifdef CPP_MPI
+          INCLUDE 'mpif.h'
+          INTEGER ierr(3)
+          CALL MPI_COMM_RANK (mpi%mpi_comm,mpi%irank,ierr)
+          CALL MPI_COMM_SIZE (mpi%mpi_comm,mpi%isize,ierr)
 
+          sliceplot%iplot=.FALSE.
+#else
+          mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
+#endif
           !determine if we use an xml-input file
           INQUIRE (file='inp.xml',exist=input%l_inpXML)
           INQUIRE(file='inp',exist=l_found)
@@ -91,16 +100,7 @@
           END IF
 
 
-#ifdef CPP_MPI
-          INCLUDE 'mpif.h'
-          INTEGER ierr(3)
-          CALL MPI_COMM_RANK (mpi%mpi_comm,mpi%irank,ierr)
-          CALL MPI_COMM_SIZE (mpi%mpi_comm,mpi%isize,ierr)
 
-          sliceplot%iplot=.FALSE.
-#else
-          mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
-#endif
           CALL check_command_line()
 #ifdef CPP_HDF
           CALL hdf_init()
