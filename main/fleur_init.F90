@@ -7,9 +7,9 @@
       IMPLICIT NONE
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
-                 input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-                 sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-                 oneD,l_opti)
+             input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+             sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+             oneD,l_opti)
           USE m_judft
           USE m_juDFT_init
           USE m_types
@@ -58,7 +58,7 @@
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
           TYPE(t_oneD)     ,INTENT(OUT):: oneD
           LOGICAL,          INTENT(OUT):: l_opti
-         
+
 
           INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
           INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
@@ -74,7 +74,23 @@
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
-          
+          LOGICAL                       :: l_found
+
+
+          !determine if we use an xml-input file
+          INQUIRE (file='inp.xml',exist=input%l_inpXML)
+          INQUIRE(file='inp',exist=l_found)
+          IF (input%l_inpXML) THEN
+             !xml found, we will use it, check if we also have a inp-file
+             IF (l_found.AND..NOT.(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml"))) &
+                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files or specify -xml to use inp.xml")
+          ELSE
+             IF(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml")) &
+                  CALL judft_error("inp.xml not found",calledby="fleur_init",hint="You gave the -xml option but provided no inp.xml file")
+             IF (.NOT.l_found) CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide either an 'inp' or an 'inp.xml' file in the working directory")
+          END IF
+
+
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr(3)
@@ -87,7 +103,7 @@
 #endif
           CALL check_command_line()
 #ifdef CPP_HDF
-          call hdf_init()
+          CALL hdf_init()
 #endif
           results%seigscv         = 0.0
           results%te_vcoul        = 0.0
@@ -109,14 +125,9 @@
              OPEN (16,file='inf',form='formatted',status='unknown')
           ENDIF
 
-          input%l_inpXML = .FALSE.
           input%minDistance = 0.0
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
-          INQUIRE (file='inp.xml',exist=input%l_inpXML)
-          IF(.NOT.(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml"))) THEN
-             input%l_inpXML = .FALSE.
-          END IF
           IF (input%l_inpXML) THEN
              IF (mpi%irank.EQ.0) THEN
                 ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
@@ -130,10 +141,10 @@
                 a3 = 0.0
                 scale = 1.0
                 CALL r_inpXML(&
-                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
-                              cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
-                              noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
-                              xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
+                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
+                     noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
 
                 ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
@@ -142,157 +153,157 @@
                 filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
-     &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
-     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
-     &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
-     &                        .TRUE.,numSpecies,enpara)
+                     &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+                     &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
+                     &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+                     &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
+                     &                        .TRUE.,numSpecies,enpara)
                 DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
 
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                                        DIMENSION,cell,sym,xcpot,noco,jij,oneD,hybrid,&
-                                        kpts,enpara,sphhar,mpi,results,obsolete)
+                  DIMENSION,cell,sym,xcpot,noco,jij,oneD,hybrid,&
+                  kpts,enpara,sphhar,mpi,results,obsolete)
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
 
-          CALL dimens(&
-               &            mpi,input,&
-               &            sym,stars,&
-               &            atoms,sphhar,&
-               &            DIMENSION,vacuum,&
-               &            obsolete,kpts,&
-               &            oneD,hybrid,Jij)
+             CALL dimens(&
+                  &            mpi,input,&
+                  &            sym,stars,&
+                  &            atoms,sphhar,&
+                  &            DIMENSION,vacuum,&
+                  &            obsolete,kpts,&
+                  &            oneD,hybrid,Jij)
 
 
-          DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
-          DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
-          !-odim
-          IF (oneD%odd%d1) THEN
-             oneD%odd%k3 = stars%mx3
-             oneD%odd%nn2d = (2*(oneD%odd%k3) + 1)*(2*(oneD%odd%M) + 1)
-          ELSE
-             oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
-          ENDIF
-          !-odim
-          ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
-          ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%ng3) )
-          ALLOCATE ( stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3),stars%ig2(stars%ng3) )
-          ALLOCATE ( atoms%jri(atoms%ntype),stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
-          ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
-          ALLOCATE ( atoms%lmax(atoms%ntype),sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))!,sym%mrot(3,3,sym%nop) )
-          ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
-          ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
-          ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-          ALLOCATE ( stars%igfft(0:DIMENSION%nn3d-1,2),stars%igfft2(0:DIMENSION%nn2d-1,2),atoms%nflip(atoms%ntype) )
-          ALLOCATE ( atoms%ncst(atoms%ntype) )
-          ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
-          ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
-          ALLOCATE ( sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop) )
-          ALLOCATE ( atoms%invsat(atoms%nat),sym%invsatnr(atoms%nat) )
-          ALLOCATE ( atoms%lnonsph(atoms%ntype) )
-          ALLOCATE ( atoms%dx(atoms%ntype),atoms%pos(3,atoms%nat))!,sym%tau(3,sym%nop) )
-          ALLOCATE ( atoms%rmsh(atoms%jmtd,atoms%ntype),atoms%rmt(atoms%ntype),stars%sk2(stars%ng2),stars%sk3(stars%ng3) )
-          ALLOCATE ( stars%phi2(stars%ng2) )
-          ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
-          ALLOCATE ( enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-          ALLOCATE ( enpara%evac0(2,DIMENSION%jspd),stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
-          ALLOCATE ( results%force(3,atoms%ntype,DIMENSION%jspd) )
-          ALLOCATE ( results%force_old(3,atoms%ntype) )
-          ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
-          ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
-          ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
-          ALLOCATE ( atoms%bmu(atoms%ntype),atoms%vr0(atoms%ntype) )
-          ALLOCATE ( enpara%lchange(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-          ALLOCATE ( enpara%lchg_v(2,DIMENSION%jspd),atoms%l_geo(atoms%ntype) )
-          ALLOCATE ( atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),enpara%skiplo(atoms%ntype,DIMENSION%jspd) )
-          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),enpara%llochg(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
-          ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntype),atoms%nlol(0:atoms%llod,atoms%ntype),atoms%lapw_l(atoms%ntype) )
-          ALLOCATE ( noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),noco%l_relax(atoms%ntype) )
-          ALLOCATE ( jij%alph1(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype) )
-          ALLOCATE ( jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype) )
-          ALLOCATE ( noco%b_con(2,atoms%ntype),atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
-          ALLOCATE ( enpara%enmix(DIMENSION%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
-          ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
-          ALLOCATE ( noco%soc_opt(atoms%ntype+2) )
-          ALLOCATE ( atoms%numStatesProvided(atoms%ntype))
-          ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
-          !+odim
-          ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
-          ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )
-          ALLOCATE ( oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop) )
-          ALLOCATE ( oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop) )
-          ALLOCATE ( oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1) )
-          stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
-          !-odim
-
-          ! HF/hybrid functionals/EXX
-          ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
-          ALLOCATE ( hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
-               &           hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype) )
-          ALLOCATE ( hybrid%ddist(DIMENSION%jspd) )
-          hybrid%ddist     = 1.
-          !
-
-          atoms%numStatesProvided(:) = 0
-
-          atoms%vr0(:)         = 0.0
-          jij%M(:)             = 0.0
-          jij%l_magn(:)        =.FALSE.
-          results%force(:,:,:) = 0.0
-
-          CALL timestart("preparation:stars,lattice harmonics,+etc")
-          !--- J< 
-          jij%l_wr=.TRUE.
-          jij%nqptd=1
-          jij%nmagn=1
-          jij%mtypes=1
-          jij%phnd=1
-          !--- J>
-          !+t3e
-          IF (mpi%irank.EQ.0) THEN
-             !-t3e
-             CALL inped( &
-                  &           atoms,obsolete,vacuum,&
-                  &           input,banddos,xcpot,sym,&
-                  &           cell,sliceplot,noco,&
-                  &           stars,oneD,jij,hybrid,kpts)
-             !
-             IF (xcpot%igrd.NE.0) THEN
-                ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
-                !-odim
-                ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-                     &             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-                     &             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
-             ELSE
-                ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-                !-odim
-                ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-                     &             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
-             ENDIF
-             oneD%odd%nq2 = oneD%odd%n2d
+             DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
+             DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
              !-odim
-             !+t3e
-             INQUIRE(file="cdn1",exist=l_opti)
-             IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-             l_opti=.NOT.l_opti
-             IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-                  &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
+             IF (oneD%odd%d1) THEN
+                oneD%odd%k3 = stars%mx3
+                oneD%odd%nn2d = (2*(oneD%odd%k3) + 1)*(2*(oneD%odd%M) + 1)
+             ELSE
+                oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
+             ENDIF
+             !-odim
+             ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
+             ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%ng3) )
+             ALLOCATE ( stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3),stars%ig2(stars%ng3) )
+             ALLOCATE ( atoms%jri(atoms%ntype),stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
+             ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
+             ALLOCATE ( atoms%lmax(atoms%ntype),sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))!,sym%mrot(3,3,sym%nop) )
+             ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
+             ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
+             ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
+             ALLOCATE ( stars%igfft(0:DIMENSION%nn3d-1,2),stars%igfft2(0:DIMENSION%nn2d-1,2),atoms%nflip(atoms%ntype) )
+             ALLOCATE ( atoms%ncst(atoms%ntype) )
+             ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
+             ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
+             ALLOCATE ( sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop) )
+             ALLOCATE ( atoms%invsat(atoms%nat),sym%invsatnr(atoms%nat) )
+             ALLOCATE ( atoms%lnonsph(atoms%ntype) )
+             ALLOCATE ( atoms%dx(atoms%ntype),atoms%pos(3,atoms%nat))!,sym%tau(3,sym%nop) )
+             ALLOCATE ( atoms%rmsh(atoms%jmtd,atoms%ntype),atoms%rmt(atoms%ntype),stars%sk2(stars%ng2),stars%sk3(stars%ng3) )
+             ALLOCATE ( stars%phi2(stars%ng2) )
+             ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
+             ALLOCATE ( enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
+             ALLOCATE ( enpara%evac0(2,DIMENSION%jspd),stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
+             ALLOCATE ( results%force(3,atoms%ntype,DIMENSION%jspd) )
+             ALLOCATE ( results%force_old(3,atoms%ntype) )
+             ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
+             ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
+             ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
+             ALLOCATE ( atoms%bmu(atoms%ntype),atoms%vr0(atoms%ntype) )
+             ALLOCATE ( enpara%lchange(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
+             ALLOCATE ( enpara%lchg_v(2,DIMENSION%jspd),atoms%l_geo(atoms%ntype) )
+             ALLOCATE ( atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),enpara%skiplo(atoms%ntype,DIMENSION%jspd) )
+             ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),enpara%llochg(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
+             ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntype),atoms%nlol(0:atoms%llod,atoms%ntype),atoms%lapw_l(atoms%ntype) )
+             ALLOCATE ( noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),noco%l_relax(atoms%ntype) )
+             ALLOCATE ( jij%alph1(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype) )
+             ALLOCATE ( jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype) )
+             ALLOCATE ( noco%b_con(2,atoms%ntype),atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
+             ALLOCATE ( enpara%enmix(DIMENSION%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
+             ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
+             ALLOCATE ( noco%soc_opt(atoms%ntype+2) )
+             ALLOCATE ( atoms%numStatesProvided(atoms%ntype))
+             ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
+             !+odim
+             ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
+             ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )
+             ALLOCATE ( oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop) )
+             ALLOCATE ( oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop) )
+             ALLOCATE ( oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1) )
+             stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
+             !-odim
+
+             ! HF/hybrid functionals/EXX
+             ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
+             ALLOCATE ( hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
+                  &           hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype) )
+             ALLOCATE ( hybrid%ddist(DIMENSION%jspd) )
+             hybrid%ddist     = 1.
              !
-             CALL setup(&
-                  &     atoms,kpts,DIMENSION,sphhar,&
-                  &     obsolete,sym,stars,oneD,input,noco,&
-                  &     vacuum,cell,xcpot,&
-                  &     sliceplot,enpara,l_opti)
-             !
-             stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
+
+             atoms%numStatesProvided(:) = 0
+
+             atoms%vr0(:)         = 0.0
+             jij%M(:)             = 0.0
+             jij%l_magn(:)        =.FALSE.
+             results%force(:,:,:) = 0.0
+
+             CALL timestart("preparation:stars,lattice harmonics,+etc")
+             !--- J< 
+             jij%l_wr=.TRUE.
+             jij%nqptd=1
+             jij%nmagn=1
+             jij%mtypes=1
+             jij%phnd=1
+             !--- J>
              !+t3e
-          ENDIF ! mpi%irank.eq.0
-          CALL timestop("preparation:stars,lattice harmonics,+etc")
+             IF (mpi%irank.EQ.0) THEN
+                !-t3e
+                CALL inped( &
+                     &           atoms,obsolete,vacuum,&
+                     &           input,banddos,xcpot,sym,&
+                     &           cell,sliceplot,noco,&
+                     &           stars,oneD,jij,hybrid,kpts)
+                !
+                IF (xcpot%igrd.NE.0) THEN
+                   ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
+                   !-odim
+                   ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
+                        &             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
+                        &             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
+                ELSE
+                   ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
+                   !-odim
+                   ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
+                        &             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
+                ENDIF
+                oneD%odd%nq2 = oneD%odd%n2d
+                !-odim
+                !+t3e
+                INQUIRE(file="cdn1",exist=l_opti)
+                IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
+                l_opti=.NOT.l_opti
+                IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
+                     &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
+                !
+                CALL setup(&
+                     &     atoms,kpts,DIMENSION,sphhar,&
+                     &     obsolete,sym,stars,oneD,input,noco,&
+                     &     vacuum,cell,xcpot,&
+                     &     sliceplot,enpara,l_opti)
+                !
+                stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
+                !+t3e
+             ENDIF ! mpi%irank.eq.0
+             CALL timestop("preparation:stars,lattice harmonics,+etc")
 
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
 
@@ -338,9 +349,9 @@
           DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
-       
+
           IF (mpi%irank.EQ.0) THEN
-       
+
              !--- J< 
              jij%l_jenerg = .FALSE.
              IF (jij%l_J) THEN
@@ -505,5 +516,5 @@
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 
 
-     END SUBROUTINE
+        END SUBROUTINE fleur_init
      END MODULE
