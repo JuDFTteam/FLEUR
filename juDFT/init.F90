@@ -42,11 +42,16 @@
 
       CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
       WRITE(*,*) "Signal ",signal," detected on PE:",irank
-      CALL writetimes()
 #else
       WRITE(*,*) "Signal detected:",signal
-      CALL writetimes()
 #endif
+      WRITE(*,*) "This is might be due to either:"
+      WRITE(*,*) " - A bug in FLEUR"
+      WRITE(*,*) " - Your job running out of memory"
+      WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
+      WRITE(*,*) " - ...."
+      WRITE(*,*) "Please check and report if you believe you found a bug"
+      CALL writetimes()
       STOP "Signal"
       intel_signal_handler=0
       END FUNCTION intel_signal_handler

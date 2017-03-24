@@ -11,7 +11,7 @@ CONTAINS
     USE m_constants
     USE m_juDFT
     IMPLICIT NONE
-    CHARACTER(LEN=50):: gitdesc,githash,compile_date,compile_user,compile_host
+    CHARACTER(LEN=500):: infostring
 
     PRINT *,"     Welcome to FLEUR        (www.flapw.de)   "
     PRINT *,"     MaX-Release 1         (www.max-centre.eu)"
@@ -19,10 +19,8 @@ CONTAINS
     IF (.NOT. (juDFT_was_argument("-h").OR.juDFT_was_argument("--help"))) RETURN
 
     !now print version info and help on command line arguments:
-    CALL get_compile_desc(gitdesc,githash,compile_date,compile_user,compile_host)
-    WRITE(*,*) "This is version: ",version_const
-    WRITE(*,*) "FLEUR was compiled at ",TRIM(compile_date)," by ",TRIM(compile_user)," on ",TRIM(compile_host)
-    WRITE(*,*) "Its git version is ",TRIM(gitdesc)," with hash: ",TRIM(githash)
+    CALL get_compile_desc_string(infostring)
+    WRITE(*,'(a500)') infostring
     WRITE(*,*)
     WRITE(*,*)"------------------------------------------------------"
     WRITE(*,*)"Usage info:"
