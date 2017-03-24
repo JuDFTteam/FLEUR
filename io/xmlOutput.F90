@@ -381,7 +381,7 @@ MODULE m_xmlOutput
 
       IMPLICIT NONE
 
-      CHARACTER(LEN= 30), INTENT(IN)    :: contentList(:)
+      CHARACTER(LEN= *), INTENT(IN)    :: contentList(:)
       CHARACTER(LEN=200), INTENT(INOUT) :: contentLineList(:)
       INTEGER,            INTENT(IN)    :: contentLineLength
       INTEGER :: i, j

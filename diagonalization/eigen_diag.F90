@@ -98,8 +98,6 @@ CONTAINS
     LOGICAL,OPTIONAL,INTENT(IN) :: realdata
 
     !Locals
-    REAL :: time1
-    REAL :: time2
     INTEGER :: ndim,err,n,nn,i,ndim1
     LOGICAL :: parallel
     CHARACTER(len=20)::f

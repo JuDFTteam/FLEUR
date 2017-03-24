@@ -20,11 +20,12 @@ MODULE m_cdnpot_io_hdf
    PUBLIC writeStarsHDF, readStarsHDF
    PUBLIC writeLatharmsHDF, readLatharmsHDF
    PUBLIC writeStructureHDF, readStructureHDF
+   PUBLIC writeStepfunctionHDF, readStepfunctionHDF, peekStepfunctionHDF
    PUBLIC writeDensityHDF, readDensityHDF
    PUBLIC writePotentialHDF, readPotentialHDF
    PUBLIC writeCoreDensityHDF, readCoreDensityHDF
    PUBLIC writeCDNHeaderData, writePOTHeaderData
-   PUBLIC isCoreDensityPresentHDF
+   PUBLIC isCoreDensityPresentHDF, deleteDensityEntryHDF
    PUBLIC isDensityEntryPresentHDF, isPotentialEntryPresentHDF
    PUBLIC peekDensityEntryHDF
 #endif
@@ -45,26 +46,30 @@ MODULE m_cdnpot_io_hdf
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_IN_const = 1
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_OUT_const = 2
 
+   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 28
+
    CONTAINS
 
 #ifdef CPP_HDF
 
    SUBROUTINE openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
       INTEGER(HID_T), INTENT(OUT) :: fileID
       INTEGER, INTENT(OUT) :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
-      INTEGER, INTENT(OUT) :: readDensityIndex,lastDensityIndex
+      INTEGER, INTENT(OUT) :: currentStepfunctionIndex, readDensityIndex,lastDensityIndex
 
       INTEGER(HID_T) :: generalGroupID
-      INTEGER        :: hdfError
+      INTEGER        :: hdfError, fileFormatVersion
       LOGICAL        :: l_exist
 
       currentStarsIndex = 0
       currentLatharmsIndex = 0
       currentStructureIndex = 0
+      currentStepfunctionIndex = 0
       readDensityIndex = 0
       lastDensityIndex = 0
+      fileFormatVersion = 0
 
       INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
       IF(l_exist) THEN ! only open file
@@ -75,10 +80,16 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
          CALL io_read_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
          CALL io_read_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
+         CALL io_read_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
          CALL io_read_attint0(generalGroupID,'readDensityIndex',readDensityIndex)
          CALL io_read_attint0(generalGroupID,'lastDensityIndex',lastDensityIndex)
+         CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
 
          CALL h5gclose_f(generalGroupID, hdfError)
+         IF(fileFormatVersion.NE.FILE_FORMAT_VERSION_const) THEN
+            WRITE(*,'(a,i4)') 'cdn.hdf has file format version ', fileFormatVersion
+            CALL juDFT_error('cdn.hdf file format not readable.' ,calledby ="openCDN_HDF")
+         END IF
       ELSE ! create file
          CALL h5fcreate_f('cdn.hdf', H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
@@ -87,8 +98,10 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
          CALL io_write_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
          CALL io_write_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
+         CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
          CALL io_write_attint0(generalGroupID,'readDensityIndex',readDensityIndex)
          CALL io_write_attint0(generalGroupID,'lastDensityIndex',lastDensityIndex)
+         CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
          CALL h5gclose_f(generalGroupID, hdfError)
       END IF
@@ -96,18 +109,22 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE openCDN_HDF
 
 
-   SUBROUTINE openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+   SUBROUTINE openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                          currentStructureIndex,currentStepfunctionIndex)
 
       INTEGER(HID_T), INTENT(OUT) :: fileID
-      INTEGER, INTENT(OUT) :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER, INTENT(OUT) :: currentStarsIndex,currentLatharmsIndex
+      INTEGER, INTENT(OUT) :: currentStructureIndex, currentStepfunctionIndex
 
       INTEGER(HID_T) :: generalGroupID
-      INTEGER        :: hdfError
+      INTEGER        :: hdfError, fileFormatVersion
       LOGICAL        :: l_exist
 
       currentStarsIndex = 0
       currentLatharmsIndex = 0
       currentStructureIndex = 0
+      currentStepfunctionIndex = 0
+      fileFormatVersion = 0
 
       INQUIRE(FILE='pot.hdf',EXIST=l_exist)
       IF(l_exist) THEN ! only open file
@@ -118,8 +135,14 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
          CALL io_read_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
          CALL io_read_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
+         CALL io_read_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
+         CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
 
          CALL h5gclose_f(generalGroupID, hdfError)
+         IF(fileFormatVersion.NE.FILE_FORMAT_VERSION_const) THEN
+            WRITE(*,'(a,i4)') 'pot.hdf has file format version ', fileFormatVersion
+            CALL juDFT_error('pot.hdf file format not readable.' ,calledby ="openPOT_HDF")
+         END IF
       ELSE ! create file
          CALL h5fcreate_f('pot.hdf', H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
@@ -128,6 +151,8 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
          CALL io_write_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
          CALL io_write_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
+         CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
+         CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
          CALL h5gclose_f(generalGroupID, hdfError)
       END IF
@@ -145,12 +170,13 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE closeCDNPOT_HDF
 
    SUBROUTINE writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                              readDensityIndex,lastDensityIndex)
+                                 currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: currentStarsIndex
       INTEGER, INTENT(IN)        :: currentLatharmsIndex
       INTEGER, INTENT(IN)        :: currentStructureIndex
+      INTEGER, INTENT(IN)        :: currentStepfunctionIndex
       INTEGER, INTENT(IN)        :: readDensityIndex
       INTEGER, INTENT(IN)        :: lastDensityIndex
 
@@ -162,19 +188,23 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
       CALL io_write_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
       CALL io_write_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
+      CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
       CALL io_write_attint0(generalGroupID,'readDensityIndex',readDensityIndex)
       CALL io_write_attint0(generalGroupID,'lastDensityIndex',lastDensityIndex)
+      CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
       CALL h5gclose_f(generalGroupID, hdfError)
 
    END SUBROUTINE writeCDNHeaderData
 
-   SUBROUTINE writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+   SUBROUTINE writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
+                                 currentStructureIndex,currentStepfunctionIndex)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: currentStarsIndex
       INTEGER, INTENT(IN)        :: currentLatharmsIndex
       INTEGER, INTENT(IN)        :: currentStructureIndex
+      INTEGER, INTENT(IN)        :: currentStepfunctionIndex
 
       INTEGER(HID_T) :: generalGroupID
       INTEGER        :: hdfError
@@ -184,6 +214,8 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(generalGroupID,'currentStarsIndex',currentStarsIndex)
       CALL io_write_attint0(generalGroupID,'currentLatharmsIndex',currentLatharmsIndex)
       CALL io_write_attint0(generalGroupID,'currentStructureIndex',currentStructureIndex)
+      CALL io_write_attint0(generalGroupID,'currentStepfunctionIndex',currentStepfunctionIndex)
+      CALL io_write_attint0(generalGroupID,'fileFormatVersion',FILE_FORMAT_VERSION_const)
 
       CALL h5gclose_f(generalGroupID, hdfError)
 
@@ -385,9 +417,9 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE readStarsHDF(fileID, starsIndex, stars)
 
-      INTEGER(HID_T), INTENT(IN)  :: fileID
-      INTEGER,        INTENT(IN)  :: starsIndex
-      TYPE(t_stars),  INTENT(OUT) :: stars
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: starsIndex
+      TYPE(t_stars),  INTENT(INOUT) :: stars
 
       INTEGER(HID_T)            :: groupID
       INTEGER                   :: hdfError, ft2_gf_dim
@@ -539,12 +571,12 @@ MODULE m_cdnpot_io_hdf
 
       dimsInt(:2)=(/2,stars%kimax+1/)
       CALL h5dopen_f(groupID, 'pgfft', pgfftSetID, hdfError)
-      CALL io_read_complex1(pgfftSetID,(/-1,1/),dimsInt(:1),stars%pgfft(0:stars%kimax))
+      CALL io_read_complex1(pgfftSetID,(/-1,1/),dimsInt(:2),stars%pgfft(0:stars%kimax))
       CALL h5dclose_f(pgfftSetID, hdfError)
 
       dimsInt(:2)=(/2,stars%kimax2+1/)
       CALL h5dopen_f(groupID, 'pgfft2', pgfft2SetID, hdfError)
-      CALL io_read_complex1(pgfft2SetID,(/-1,1/),dimsInt(:1),stars%pgfft2(0:stars%kimax2))
+      CALL io_read_complex1(pgfft2SetID,(/-1,1/),dimsInt(:2),stars%pgfft2(0:stars%kimax2))
       CALL h5dclose_f(pgfft2SetID, hdfError)
 
       dimsInt(:1)=(/ft2_gf_dim/)
@@ -560,6 +592,143 @@ MODULE m_cdnpot_io_hdf
       CALL h5gclose_f(groupID, hdfError)
 
    END SUBROUTINE readStarsHDF
+
+   SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, stars)
+
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: stepfunctionIndex, starsIndex
+      TYPE(t_stars),  INTENT(IN)    :: stars
+
+      INTEGER                   :: ifftd
+
+      INTEGER                   :: hdfError
+      INTEGER(HID_T)            :: groupID
+      INTEGER(HID_T)            :: ustepSpaceID, ustepSetID
+      INTEGER(HID_T)            :: ufftSpaceID, ufftSetID
+      CHARACTER(LEN=30)         :: groupName
+      INTEGER(HSIZE_T)          :: dims(7)
+      INTEGER                   :: dimsInt(7)
+      LOGICAL                   :: l_exist
+
+      WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+
+      IF (l_exist) THEN
+         CALL juDFT_error('stepfunction entry '//TRIM(ADJUSTL(groupName))//' already exists.' ,calledby ="writeStepfunctionHDF")
+      END IF
+
+      ifftd = size(stars%ufft)
+
+      CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+
+      CALL io_write_attint0(groupID,'starsIndex',starsIndex)
+      CALL io_write_attint0(groupID,'ifftd',ifftd)
+      CALL io_write_attint0(groupID,'ng3',stars%ng3)
+
+      dims(:2)=(/2,stars%ng3/)
+      dimsInt = dims
+      CALL h5screate_simple_f(2,dims(:2),ustepSpaceID,hdfError)
+      CALL h5dcreate_f(groupID, "ustep", H5T_NATIVE_DOUBLE, ustepSpaceID, ustepSetID, hdfError)
+      CALL h5sclose_f(ustepSpaceID,hdfError)
+      CALL io_write_complex1(ustepSetID,(/-1,1/),dimsInt(:2),stars%ustep)
+      CALL h5dclose_f(ustepSetID, hdfError)
+
+      dims(:1)=(/ifftd/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),ufftSpaceID,hdfError)
+      CALL h5dcreate_f(groupID, "ufft", H5T_NATIVE_DOUBLE, ufftSpaceID, ufftSetID, hdfError)
+      CALL h5sclose_f(ufftSpaceID,hdfError)
+      CALL io_write_real1(ufftSetID,(/1/),dimsInt(:1),stars%ufft)
+      CALL h5dclose_f(ufftSetID, hdfError)
+
+      CALL h5gclose_f(groupID, hdfError)
+
+   END SUBROUTINE writeStepfunctionHDF
+
+   SUBROUTINE readStepfunctionHDF(fileID, stepfunctionIndex, stars)
+
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: stepfunctionIndex
+      TYPE(t_stars),  INTENT(INOUT) :: stars
+
+      INTEGER                   :: starsIndex, ng3Temp, ifftd, ifftdStars
+
+      INTEGER(HID_T)            :: groupID
+      INTEGER                   :: hdfError
+      INTEGER                   :: dimsInt(7)
+      CHARACTER(LEN=30)         :: groupName
+      LOGICAL                   :: l_exist
+
+      INTEGER(HID_T)            :: ustepSetID
+      INTEGER(HID_T)            :: ufftSetID
+
+      WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+
+      IF (.NOT.l_exist) THEN
+         CALL juDFT_error('stepfunction entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="readStepfunctionHDF")
+      END IF
+
+      CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+
+      ifftdStars = 27*stars%mx1*stars%mx2*stars%mx3
+
+      CALL io_read_attint0(groupID,'starsIndex',starsIndex)
+      CALL io_read_attint0(groupID,'ng3',ng3Temp)
+      CALL io_read_attint0(groupID,'ifftd',ifftd)
+
+      IF((ng3Temp.NE.stars%ng3).OR.(ifftd.NE.ifftdStars)) THEN
+         WRITE(*,'(a,i7,a,i7)') 'ng3   (stepfunction): ', ng3Temp, ' ng3   (stars) :', stars%ng3
+         WRITE(*,'(a,i7,a,i7)') 'ifftd (stepfunction): ', ifftd,   ' ifftd (stars) :', ifftdStars
+         CALL juDFT_error('stepfunction entry '//TRIM(ADJUSTL(groupName))//' does not fit to stars.' ,calledby ="readStepfunctionHDF")
+      END IF
+
+      IF(ALLOCATED(stars%ustep)) DEALLOCATE(stars%ustep)
+      IF(ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
+
+      ALLOCATE(stars%ustep(stars%ng3))
+      ALLOCATE(stars%ufft(0:ifftd-1))
+
+      dimsInt(:2)=(/2,ng3Temp/)
+      CALL h5dopen_f(groupID, 'ustep', ustepSetID, hdfError)
+      CALL io_read_complex1(ustepSetID,(/-1,1/),dimsInt(:2),stars%ustep)
+      CALL h5dclose_f(ustepSetID, hdfError)
+
+      dimsInt(:1)=(/ifftd/)
+      CALL h5dopen_f(groupID, 'ufft', ufftSetID, hdfError)
+      CALL io_read_real1(ufftSetID,(/1/),dimsInt(:1),stars%ufft(0:ifftd-1))
+      CALL h5dclose_f(ufftSetID, hdfError)
+
+      CALL h5gclose_f(groupID, hdfError)
+
+   END SUBROUTINE readStepfunctionHDF
+
+   SUBROUTINE peekStepfunctionHDF(fileID, stepfunctionIndex, starsIndex)
+
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: stepfunctionIndex
+      INTEGER,        INTENT(OUT)   :: starsIndex
+
+      INTEGER(HID_T)            :: groupID
+      INTEGER                   :: hdfError
+      CHARACTER(LEN=30)         :: groupName
+      LOGICAL                   :: l_exist
+
+      WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+
+      IF (.NOT.l_exist) THEN
+         CALL juDFT_error('stepfunction entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="readStepfunctionHDF")
+      END IF
+
+      CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+      CALL io_read_attint0(groupID,'starsIndex',starsIndex)
+      CALL h5gclose_f(groupID, hdfError)
+
+   END SUBROUTINE peekStepfunctionHDF
 
    SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, latharms)
 
@@ -1027,7 +1196,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5dclose_f(neqSetID, hdfError)
 
       dimsInt(:1)=(/atoms%ntype/)
-      CALL h5dopen_f(groupID, 'jri', nzSetID, hdfError)
+      CALL h5dopen_f(groupID, 'jri', jriSetID, hdfError)
       CALL io_read_integer1(jriSetID,(/1/),dimsInt(:1),atoms%jri)
       CALL h5dclose_f(jriSetID, hdfError)
 
@@ -1096,17 +1265,19 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE readStructureHDF
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
-                              starsIndex, latharmsIndex, structureIndex,&
-                              fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
+                              date,time,distance,fermiEnergy,l_qfix,iter,&
+                              fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_input),    INTENT(IN) :: input
       INTEGER(HID_T),   INTENT(IN) :: fileID
       INTEGER,          INTENT(IN) :: densityType, previousDensityIndex
       INTEGER,          INTENT(IN) :: starsIndex, latharmsIndex, structureIndex
+      INTEGER,          INTENT(IN) :: stepfunctionIndex
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT (IN)         :: iter
-      REAL,    INTENT (IN)         :: fermiEnergy
+      INTEGER, INTENT (IN)         :: date, time, iter
+      REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
 
       REAL,    INTENT (IN)         :: fr(:,:,:,:)
@@ -1194,8 +1365,12 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'starsIndex',starsIndex)
          CALL io_write_attint0(archiveID,'latharmsIndex',latharmsIndex)
          CALL io_write_attint0(archiveID,'structureIndex',structureIndex)
+         CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
+         IF (distance.GE.-1e-10) THEN
+            CALL io_write_attreal0(archiveID,'distance',distance)
+         END IF
 
          l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
 
@@ -1330,8 +1505,12 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'starsIndex',starsIndex)
          CALL io_write_attint0(archiveID,'latharmsIndex',latharmsIndex)
          CALL io_write_attint0(archiveID,'structureIndex',structureIndex)
+         CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
+         CALL io_write_attint0(archiveID,'date',date)
+         CALL io_write_attint0(archiveID,'time',time)
+         CALL io_write_attreal0(archiveID,'distance',distance)
 
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
@@ -1410,13 +1589,14 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeDensityHDF
 
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
-                                starsIndex, latharmsIndex, structureIndex,&
+                                starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
                                 iter,fr,fpw,fz,fzxy)
 
       TYPE(t_input),    INTENT(IN) :: input
       INTEGER(HID_T),   INTENT(IN) :: fileID
       INTEGER,          INTENT(IN) :: potentialType
       INTEGER,          INTENT(IN) :: starsIndex, latharmsIndex, structureIndex
+      INTEGER,          INTENT(IN) :: stepfunctionIndex
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
       INTEGER, INTENT (IN)         :: iter
@@ -1495,6 +1675,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'starsIndex',starsIndex)
          CALL io_write_attint0(archiveID,'latharmsIndex',latharmsIndex)
          CALL io_write_attint0(archiveID,'structureIndex',structureIndex)
+         CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
 
@@ -1573,6 +1754,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'starsIndex',starsIndex)
          CALL io_write_attint0(archiveID,'latharmsIndex',latharmsIndex)
          CALL io_write_attint0(archiveID,'structureIndex',structureIndex)
+         CALL io_write_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
          CALL io_write_attint0(archiveID,'spins',input%jspins)
          CALL io_write_attint0(archiveID,'iter',iter)
 
@@ -1619,8 +1801,16 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePotentialHDF
 
-   SUBROUTINE readDensityHDF(fileID, archiveName, densityType,&
+   SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
+                             archiveName, densityType,&
                              fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_sphhar),INTENT(IN) :: latharms
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_oneD),INTENT(IN)   :: oneD
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
@@ -1636,7 +1826,7 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, INTENT (OUT)        :: fzxy(:,:,:,:)
       COMPLEX, INTENT (OUT)        :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
 
-      INTEGER              :: starsIndex, latharmsIndex, structureIndex
+      INTEGER              :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER              :: previousDensityIndex, jspins
       INTEGER              :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER              :: nmz, nvac, od_nq2, nmzxy
@@ -1654,6 +1844,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)              :: cdomSetID
       INTEGER(HID_T)              :: cdomvzSetID
       INTEGER(HID_T)              :: cdomvxySetID
+
+      cdom = CMPLX(0.0,0.0)
+      cdomvz = CMPLX(0.0,0.0)
+      cdomvxy = CMPLX(0.0,0.0)
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -1701,6 +1895,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
       CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
       CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
+      CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
 
@@ -1743,23 +1938,27 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
       CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
 
-      dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
+      fr = 0.0
+      dimsInt(:4)=(/MIN(jmtd,atoms%jmtd),MIN(nlhd,latharms%nlhd)+1,MIN(ntype,atoms%ntype),MIN(jspins,input%jspins)/)
       CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
       CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
       CALL h5dclose_f(frSetID, hdfError)
 
-      dimsInt(:3)=(/2,ng3,jspins/)
+      fpw = CMPLX(0.0,0.0)
+      dimsInt(:3)=(/2,MIN(ng3,stars%ng3),MIN(jspins,input%jspins)/)
       CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
       CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpw)
       CALL h5dclose_f(fpwSetID, hdfError)
 
       IF (l_film) THEN
-         dimsInt(:3)=(/nmzd,2,jspins/)
+         fz = 0.0
+         dimsInt(:3)=(/MIN(nmzd,vacuum%nmzd),2,MIN(jspins,input%jspins)/)
          CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
          CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
          CALL h5dclose_f(fzSetID, hdfError)
 
-         dimsInt(:5)=(/2,nmzxyd,ng2-1,2,jspins/)
+         fzxy = CMPLX(0.0,0.0)
+         dimsInt(:5)=(/2,MIN(nmzxyd,vacuum%nmzxyd),MIN(ng2,stars%ng2)-1,2,MIN(jspins,input%jspins)/)
          CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
          CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
          CALL h5dclose_f(fzxySetID, hdfError)
@@ -1768,18 +1967,21 @@ MODULE m_cdnpot_io_hdf
       IF((localDensityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
          (localDensityType.EQ.DENSITY_TYPE_NOCO_OUT_const)) THEN
 
-         dimsInt(:2)=(/2,ng3/)
+         cdom = CMPLX(0.0,0.0)
+         dimsInt(:2)=(/2,MIN(ng3,stars%ng3)/)
          CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
          CALL io_read_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdom)
          CALL h5dclose_f(cdomSetID, hdfError)
 
          IF (l_film) THEN
-            dimsInt(:3)=(/2,nmz,nvac/)
+            cdomvz = CMPLX(0.0,0.0)
+            dimsInt(:3)=(/2,MIN(nmz,vacuum%nmz),MIN(nvac,vacuum%nvac)/)
             CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
             CALL io_read_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
             CALL h5dclose_f(cdomvzSetID, hdfError)
 
-            dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
+            cdomvxy = CMPLX(0.0,0.0)
+            dimsInt(:4)=(/2,MIN(nmzxy,vacuum%nmzxy),MIN(od_nq2,oneD%odi%nq2)-1,MIN(nvac,vacuum%nvac)/)
             CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
             CALL io_read_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxy)
             CALL h5dclose_f(cdomvxySetID, hdfError)
@@ -1805,7 +2007,7 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, INTENT (OUT)        :: fpw(:,:)
       COMPLEX, INTENT (OUT)        :: fzxy(:,:,:,:)
 
-      INTEGER              :: starsIndex, latharmsIndex, structureIndex
+      INTEGER              :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER              :: jspins
       INTEGER              :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER              :: nmz, nvac, od_nq2, nmzxy
@@ -1847,6 +2049,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
       CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
       CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
+      CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
 
@@ -1916,17 +2119,17 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE peekDensityEntryHDF(fileID, archiveName, densityType,&
                                   iter, starsIndex, latharmsIndex, structureIndex,&
-                                  previousDensityIndex, jspins,&
-                                  fermiEnergy, l_qfix)
+                                  stepfunctionIndex, previousDensityIndex, jspins,&
+                                  date, time, distance, fermiEnergy, l_qfix)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT(OUT)          :: iter
-      INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex
+      INTEGER, INTENT(OUT)          :: date, time, iter
+      INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
-      REAL,    INTENT(OUT)          :: fermiEnergy
+      REAL,    INTENT(OUT)          :: fermiEnergy, distance
       LOGICAL, INTENT(OUT)          :: l_qfix
 
       INTEGER              :: localDensityType
@@ -1937,7 +2140,7 @@ MODULE m_cdnpot_io_hdf
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
-         CALL juDFT_error('density archive '//TRIM(ADJUSTL(archiveName))//' does not exist.' ,calledby ="peekDensityHDF")
+         CALL juDFT_error('density archive '//TRIM(ADJUSTL(archiveName))//' does not exist.' ,calledby ="peekDensityEntryHDF")
       END IF
 
       localDensityType = densityType
@@ -1967,13 +2170,13 @@ MODULE m_cdnpot_io_hdf
          CASE(DENSITY_TYPE_PRECOND_const)
             densityTypeName = '/precond'
          CASE DEFAULT
-            CALL juDFT_error("Unknown density type selected",calledby ="peekDensityHDF")
+            CALL juDFT_error("Unknown density type selected",calledby ="peekDensityEntryHDF")
       END SELECT
 
       groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
       IF(.NOT.l_exist) THEN
-         CALL juDFT_error('density entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="peekDensityHDF")
+         CALL juDFT_error('density entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="peekDensityEntryHDF")
       END IF
 
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
@@ -1983,8 +2186,12 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
       CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
       CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
+      CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
       CALL io_read_attint0(archiveID,'iter',iter)
+      CALL io_read_attint0(archiveID,'date',date)
+      CALL io_read_attint0(archiveID,'time',time)
+      CALL io_read_attreal0(archiveID,'distance',distance)
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
          CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
@@ -2126,11 +2333,31 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE readCoreDensityHDF
 
+   LOGICAL FUNCTION deleteDensityEntryHDF(fileID,archiveName)
+
+      INTEGER(HID_T), INTENT(IN)   :: fileID
+      CHARACTER(LEN=*), INTENT(IN) :: archiveName
+
+      INTEGER                      :: hdfError
+      LOGICAL                      :: l_exist
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
+      IF(.NOT.l_exist) THEN
+         deleteDensityEntryHDF = .FALSE.
+         RETURN
+      END IF
+
+      CALL h5ldelete_f(fileID, archiveName, hdfError)
+
+      deleteDensityEntryHDF = .TRUE.
+
+   END FUNCTION deleteDensityEntryHDF
+
    LOGICAL FUNCTION isCoreDensityPresentHDF()
 
       INTEGER(HID_T) :: fileID
       INTEGER        :: currentStarsIndex,currentLatharmsIndex
-      INTEGER        :: currentStructureIndex
+      INTEGER        :: currentStructureIndex, currentStepfunctionIndex
       INTEGER        :: readDensityIndex, lastDensityIndex
       LOGICAL        :: l_exist
 
@@ -2140,7 +2367,7 @@ MODULE m_cdnpot_io_hdf
          RETURN
       END IF
       CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                       readDensityIndex,lastDensityIndex)
+                       currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
       isCoreDensityPresentHDF = io_groupexists(fileID,'/cdnc')
       CALL closeCDNPOT_HDF(fileID)
    END FUNCTION

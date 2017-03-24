@@ -60,6 +60,7 @@ CONTAINS
     t%time=0.0
     t%name=name
     t%n_subtimers=0
+    t%parenttimer=>null()
     ALLOCATE(t%subtimer(max_subtimer))
 
     IF (ASSOCIATED(current_timer)) THEN

@@ -20,7 +20,6 @@ then
   cmake/machines.sh in this case :-)
   
   In addition you can modify some environment variables:
-        FLEUR_NO_SERIAL     -- if defined no serial executables will be build
         FC                  -- name of Fortran compiler
         CC                  -- name of C compiler
         FLEUR_LIBRARIES     -- list of linker arguments i.e. '-L/lib;-lbla'
@@ -78,6 +77,11 @@ cd $buildname
 
 #Now check the machine and set some defaults 
 machine=$1
+if [[ $machine =~ FLEUR_CONFIG_MACHINE ]]
+then
+    machine=$FLEUR_CONFIG_MACHINE
+fi
+echo "Machine config:$machine"
 configure_machine
 
 #run cmake

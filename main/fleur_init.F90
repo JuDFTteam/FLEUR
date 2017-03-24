@@ -27,6 +27,7 @@
           USE m_winpXML
           USE m_setupMPI
           USE m_cdn_io
+          USE m_fleur_info
           USE m_checks
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
@@ -487,6 +488,11 @@
              END IF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
+          END IF
+
+          IF (mpi%irank.EQ.0) THEN
+             CALL fleur_info(kpts)
+             CALL deleteDensities()
           END IF
 
           !Finalize the MPI setup

@@ -247,6 +247,7 @@
           it     = 0
           ithf   = 0
           l_cont = ( it < input%itmax )
+          results%last_distance = -1.0
           IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
           DO 80 WHILE ( l_cont )
              it = it + 1
