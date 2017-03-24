@@ -60,7 +60,7 @@
           ENDIF
 
           !     ---> read the charge density 
-          CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
           !     ---> flip cdn for each atom with nflip=-1

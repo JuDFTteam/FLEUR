@@ -1803,7 +1803,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
                              archiveName, densityType,&
-                             fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                             fermiEnergy,l_qfix,l_DimChange,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_stars),INTENT(IN)  :: stars
@@ -1818,7 +1818,7 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER, INTENT (OUT)        :: iter
       REAL,    INTENT (OUT)        :: fermiEnergy
-      LOGICAL, INTENT (OUT)        :: l_qfix
+      LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
       REAL,    INTENT (OUT)        :: fr(:,:,:,:)
       REAL,    INTENT (OUT)        :: fz(:,:,:)
@@ -1826,24 +1826,32 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, INTENT (OUT)        :: fzxy(:,:,:,:)
       COMPLEX, INTENT (OUT)        :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
 
-      INTEGER              :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
-      INTEGER              :: previousDensityIndex, jspins
-      INTEGER              :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
-      INTEGER              :: nmz, nvac, od_nq2, nmzxy
-      INTEGER              :: localDensityType
-      LOGICAL              :: l_film, l_exist
-      INTEGER(HID_T)       :: archiveID, groupID, groupBID
-      INTEGER              :: hdfError
-      CHARACTER(LEN=30)    :: groupName, groupBName, densityTypeName
-      INTEGER              :: dimsInt(7)
+      INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
+      INTEGER               :: previousDensityIndex, jspins
+      INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
+      INTEGER               :: nmz, nvac, od_nq2, nmzxy
+      INTEGER               :: localDensityType
+      LOGICAL               :: l_film, l_exist
+      INTEGER(HID_T)        :: archiveID, groupID, groupBID
+      INTEGER               :: hdfError
+      CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
+      INTEGER               :: dimsInt(7)
+      INTEGER               :: jmtdOut, ntypeOut, nmzdOut, nmzxydOut, nlhdOut, ng3Out, ng2Out
+      INTEGER               :: nmzOut, nvacOut, od_nq2Out, nmzxyOut, jspinsOut
 
-      INTEGER(HID_T)              :: frSetID
-      INTEGER(HID_T)              :: fpwSetID
-      INTEGER(HID_T)              :: fzSetID
-      INTEGER(HID_T)              :: fzxySetID
-      INTEGER(HID_T)              :: cdomSetID
-      INTEGER(HID_T)              :: cdomvzSetID
-      INTEGER(HID_T)              :: cdomvxySetID
+      INTEGER(HID_T)        :: frSetID
+      INTEGER(HID_T)        :: fpwSetID
+      INTEGER(HID_T)        :: fzSetID
+      INTEGER(HID_T)        :: fzxySetID
+      INTEGER(HID_T)        :: cdomSetID
+      INTEGER(HID_T)        :: cdomvzSetID
+      INTEGER(HID_T)        :: cdomvxySetID
+
+      REAL,    ALLOCATABLE  :: frTemp(:,:,:,:)
+      REAL,    ALLOCATABLE  :: fzTemp(:,:,:)
+      COMPLEX, ALLOCATABLE  :: fpwTemp(:,:)
+      COMPLEX, ALLOCATABLE  :: fzxyTemp(:,:,:,:)
+      COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
 
       cdom = CMPLX(0.0,0.0)
       cdomvz = CMPLX(0.0,0.0)
@@ -1938,53 +1946,104 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
       CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
 
+      jmtdOut = MIN(jmtd,atoms%jmtd)
+      ntypeOut = MIN(ntype,atoms%ntype)
+      nmzdOut = MIN(nmzd,vacuum%nmzd)
+      nmzxydOut = MIN(nmzxyd,vacuum%nmzxyd)
+      nlhdOut = MIN(nlhd,latharms%nlhd)
+      ng3Out = MIN(ng3,stars%ng3)
+      ng2Out = MIN(ng2,stars%ng2)
+      nmzOut = MIN(nmz,vacuum%nmz)
+      nvacOut = MIN(nvac,vacuum%nvac)
+      od_nq2Out = MIN(od_nq2,oneD%odi%nq2)
+      nmzxyOut = MIN(nmzxy,vacuum%nmzxy)
+      jspinsOut = MIN(jspins,input%jspins)
+
+      l_DimChange = .FALSE.
+      IF(atoms%jmtd.NE.jmtd) l_DimChange = .TRUE.
+      IF(atoms%ntype.NE.ntype) l_DimChange = .TRUE.
+      IF(vacuum%nmzd.NE.nmzd) l_DimChange = .TRUE.
+      IF(vacuum%nmzxyd.NE.nmzxyd) l_DimChange = .TRUE.
+      IF(latharms%nlhd.NE.nlhd) l_DimChange = .TRUE.
+      IF(stars%ng3.NE.ng3) l_DimChange = .TRUE.
+      IF(stars%ng2.NE.ng2) l_DimChange = .TRUE.
+      IF(vacuum%nmz.NE.nmz) l_DimChange = .TRUE.
+      IF(vacuum%nvac.NE.nvac) l_DimChange = .TRUE.
+      IF(oneD%odi%nq2.NE.od_nq2) l_DimChange = .TRUE.
+      IF(vacuum%nmzxy.NE.nmzxy) l_DimChange = .TRUE.
+      IF(input%jspins.NE.jspins) l_DimChange = .TRUE.
+
       fr = 0.0
-      dimsInt(:4)=(/MIN(jmtd,atoms%jmtd),MIN(nlhd,latharms%nlhd)+1,MIN(ntype,atoms%ntype),MIN(jspins,input%jspins)/)
+      ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,jspins))
+      dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
       CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-      CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+      CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp)
       CALL h5dclose_f(frSetID, hdfError)
+      fr(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut) =&
+         frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
+      DEALLOCATE(frTemp)
 
       fpw = CMPLX(0.0,0.0)
-      dimsInt(:3)=(/2,MIN(ng3,stars%ng3),MIN(jspins,input%jspins)/)
+      ALLOCATE(fpwTemp(ng3,jspins))
+      dimsInt(:3)=(/2,ng3,jspins/)
       CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
-      CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpw)
+      CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpwTemp)
       CALL h5dclose_f(fpwSetID, hdfError)
+      fpw(1:ng3Out,1:jspinsOut) = fpwTemp(1:ng3Out,1:jspinsOut)
+      DEALLOCATE(fpwTemp)
 
       IF (l_film) THEN
          fz = 0.0
-         dimsInt(:3)=(/MIN(nmzd,vacuum%nmzd),2,MIN(jspins,input%jspins)/)
+         ALLOCATE(fzTemp(nmzd,2,jspins))
+         dimsInt(:3)=(/nmzd,2,jspins/)
          CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
-         CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+         CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fzTemp)
          CALL h5dclose_f(fzSetID, hdfError)
+         fz(1:nmzdOut,1:2,1:jspinsOut) = fzTemp(1:nmzdOut,1:2,1:jspinsOut)
+         DEALLOCATE(fzTemp)
 
          fzxy = CMPLX(0.0,0.0)
-         dimsInt(:5)=(/2,MIN(nmzxyd,vacuum%nmzxyd),MIN(ng2,stars%ng2)-1,2,MIN(jspins,input%jspins)/)
+         ALLOCATE(fzxyTemp(nmzxyd,ng2-1,2,jspins))
+         dimsInt(:5)=(/2,nmzxyd,ng2-1,2,jspins/)
          CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
-         CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+         CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxyTemp)
          CALL h5dclose_f(fzxySetID, hdfError)
+         fzxy(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut) =&
+            fzxyTemp(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut)
+         DEALLOCATE(fzxyTemp)
       END IF
 
       IF((localDensityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
          (localDensityType.EQ.DENSITY_TYPE_NOCO_OUT_const)) THEN
 
          cdom = CMPLX(0.0,0.0)
-         dimsInt(:2)=(/2,MIN(ng3,stars%ng3)/)
+         ALLOCATE(cdomTemp(ng3))
+         dimsInt(:2)=(/2,ng3/)
          CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
-         CALL io_read_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdom)
+         CALL io_read_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdomTemp)
          CALL h5dclose_f(cdomSetID, hdfError)
+         cdom(1:ng3Out) = cdomTemp(1:ng3Out)
+         DEALLOCATE(cdomTemp)
 
          IF (l_film) THEN
             cdomvz = CMPLX(0.0,0.0)
-            dimsInt(:3)=(/2,MIN(nmz,vacuum%nmz),MIN(nvac,vacuum%nvac)/)
+            ALLOCATE(cdomvzTemp(nmz,nvac))
+            dimsInt(:3)=(/2,nmz,nvac/)
             CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
-            CALL io_read_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
+            CALL io_read_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvzTemp)
             CALL h5dclose_f(cdomvzSetID, hdfError)
+            cdomvz(1:nmzOut,1:nvacOut) = cdomvzTemp(1:nmzOut,1:nvacOut)
+            DEALLOCATE(cdomvzTemp)
 
             cdomvxy = CMPLX(0.0,0.0)
-            dimsInt(:4)=(/2,MIN(nmzxy,vacuum%nmzxy),MIN(od_nq2,oneD%odi%nq2)-1,MIN(nvac,vacuum%nvac)/)
+            ALLOCATE(cdomvxyTemp(nmzxy,od_nq2-1,nvac))
+            dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
             CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
-            CALL io_read_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxy)
+            CALL io_read_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxyTemp)
             CALL h5dclose_f(cdomvxySetID, hdfError)
+            cdomvxy(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut) =&
+               cdomvxyTemp(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut)
+            DEALLOCATE(cdomvxyTemp)
          END IF
       END IF
 
