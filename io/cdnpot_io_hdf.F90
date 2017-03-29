@@ -1289,11 +1289,14 @@ MODULE m_cdnpot_io_hdf
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz, nvac, od_nq2, nmzxy
       INTEGER                      :: hdfError
-      LOGICAL                      :: l_film, l_exist
+      LOGICAL                      :: l_film, l_exist, l_delete
       INTEGER(HID_T)               :: archiveID, groupID
       CHARACTER(LEN=30)            :: groupName, densityTypeName
       INTEGER(HSIZE_T)             :: dims(7)
       INTEGER                      :: dimsInt(7)
+      INTEGER                      :: starsIndexTemp, latharmsIndexTemp
+      INTEGER                      :: structureIndexTemp, stepfunctionIndexTemp
+      INTEGER                      :: jspinsTemp
 
       INTEGER(HID_T)               :: frSpaceID, frSetID
       INTEGER(HID_T)               :: fpwSpaceID, fpwSetID
@@ -1302,6 +1305,8 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)               :: cdomSpaceID, cdomSetID
       INTEGER(HID_T)               :: cdomvzSpaceID, cdomvzSetID
       INTEGER(HID_T)               :: cdomvxySpaceID, cdomvxySetID
+
+      WRITE(*,*) 'writeDensity - start'
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -1357,6 +1362,30 @@ MODULE m_cdnpot_io_hdf
       END SELECT
 
       groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(densityTypeName))
+
+      l_delete = .FALSE.
+      IF(l_exist) THEN
+         CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
+
+         CALL io_read_attint0(archiveID,'starsIndex',starsIndexTemp)
+         CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndexTemp)
+         CALL io_read_attint0(archiveID,'structureIndex',structureIndexTemp)
+         CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndexTemp)
+         CALL io_read_attint0(archiveID,'spins',jspinsTemp)
+
+         IF (starsIndex.NE.starsIndexTemp) l_delete = .TRUE.
+         IF (latharmsIndex.NE.latharmsIndexTemp) l_delete = .TRUE.
+         IF (structureIndex.NE.structureIndexTemp) l_delete = .TRUE.
+         IF (stepfunctionIndex.NE.stepfunctionIndexTemp) l_delete = .TRUE.
+         IF (input%jspins.NE.jspinsTemp) l_delete = .TRUE.
+
+         CALL h5gclose_f(archiveID, hdfError)
+      END IF
+
+      IF(l_delete) THEN
+         CALL h5ldelete_f(fileID, archiveName, hdfError)
+         l_exist = .FALSE.
+      END IF
 
       IF(l_exist) THEN
          CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
@@ -1586,6 +1615,8 @@ MODULE m_cdnpot_io_hdf
          CALL h5gclose_f(archiveID, hdfError)
       END IF
 
+      WRITE(*,*) 'writeDensity - end'
+
    END SUBROUTINE writeDensityHDF
 
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
@@ -1609,16 +1640,22 @@ MODULE m_cdnpot_io_hdf
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz, nvac, od_nq2, nmzxy
       INTEGER                      :: hdfError
-      LOGICAL                      :: l_film, l_exist
+      LOGICAL                      :: l_film, l_exist, l_delete
       INTEGER(HID_T)               :: archiveID, groupID
       CHARACTER(LEN=30)            :: groupName, potentialTypeName
       INTEGER(HSIZE_T)             :: dims(7)
       INTEGER                      :: dimsInt(7)
 
+      INTEGER                      :: starsIndexTemp, latharmsIndexTemp
+      INTEGER                      :: structureIndexTemp, stepfunctionIndexTemp
+      INTEGER                      :: jspinsTemp
+
       INTEGER(HID_T)               :: frSpaceID, frSetID
       INTEGER(HID_T)               :: fpwSpaceID, fpwSetID
       INTEGER(HID_T)               :: fzSpaceID, fzSetID
       INTEGER(HID_T)               :: fzxySpaceID, fzxySetID
+
+      WRITE(*,*) 'writePotential - start'
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -1668,6 +1705,30 @@ MODULE m_cdnpot_io_hdf
       END SELECT
 
       groupName = TRIM(ADJUSTL(archiveName))//TRIM(ADJUSTL(potentialTypeName))
+
+      l_delete = .FALSE.
+      IF(l_exist) THEN
+         CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
+
+         CALL io_read_attint0(archiveID,'starsIndex',starsIndexTemp)
+         CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndexTemp)
+         CALL io_read_attint0(archiveID,'structureIndex',structureIndexTemp)
+         CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndexTemp)
+         CALL io_read_attint0(archiveID,'spins',jspinsTemp)
+
+         IF (starsIndex.NE.starsIndexTemp) l_delete = .TRUE.
+         IF (latharmsIndex.NE.latharmsIndexTemp) l_delete = .TRUE.
+         IF (structureIndex.NE.structureIndexTemp) l_delete = .TRUE.
+         IF (stepfunctionIndex.NE.stepfunctionIndexTemp) l_delete = .TRUE.
+         IF (input%jspins.NE.jspinsTemp) l_delete = .TRUE.
+
+         CALL h5gclose_f(archiveID, hdfError)
+      END IF
+
+      IF(l_delete) THEN
+         CALL h5ldelete_f(fileID, archiveName, hdfError)
+         l_exist = .FALSE.
+      END IF
 
       IF(l_exist) THEN
          CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
@@ -1799,6 +1860,8 @@ MODULE m_cdnpot_io_hdf
          CALL h5gclose_f(archiveID, hdfError)
       END IF
 
+      WRITE(*,*) 'writePotential - end'
+
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
@@ -1856,6 +1919,8 @@ MODULE m_cdnpot_io_hdf
       cdom = CMPLX(0.0,0.0)
       cdomvz = CMPLX(0.0,0.0)
       cdomvxy = CMPLX(0.0,0.0)
+
+      WRITE(*,*) 'readDensity - start'
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -2050,6 +2115,8 @@ MODULE m_cdnpot_io_hdf
       CALL h5gclose_f(groupID, hdfError)
       CALL h5gclose_f(archiveID, hdfError)
 
+      WRITE(*,*) 'readDensity - end'
+
    END SUBROUTINE readDensityHDF
 
    SUBROUTINE readPotentialHDF(fileID, archiveName, potentialType,&
@@ -2081,6 +2148,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)              :: fzSetID
       INTEGER(HID_T)              :: fzxySetID
 
+      WRITE(*,*) 'readPotential - start'
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -2172,6 +2240,8 @@ MODULE m_cdnpot_io_hdf
 
       CALL h5gclose_f(groupID, hdfError)
       CALL h5gclose_f(archiveID, hdfError)
+
+      WRITE(*,*) 'readPotential - end'
 
    END SUBROUTINE readPotentialHDF
 
@@ -2280,6 +2350,8 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HSIZE_T) :: dims(7)
       INTEGER          :: dimsInt(7)
 
+      WRITE(*,*) 'writeCoreDensity - start'
+
       l_exist = io_groupexists(fileID,'/cdnc')
 
       IF(l_exist) THEN ! replace current core density
@@ -2339,6 +2411,8 @@ MODULE m_cdnpot_io_hdf
          CALL h5gclose_f(cdncGroupID, hdfError)
       END IF
 
+      WRITE(*,*) 'writeCoreDensity - end'
+
    END SUBROUTINE writeCoreDensityHDF
 
    SUBROUTINE readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
@@ -2357,6 +2431,8 @@ MODULE m_cdnpot_io_hdf
       INTEGER jspdTemp, ntypeTemp, jmtdTemp
       LOGICAL l_exist
       INTEGER :: dimsInt(7)
+
+      WRITE(*,*) 'readCoreDensity - start'
 
       l_exist = io_groupexists(fileID,'/cdnc')
       IF(.NOT.l_exist) THEN
@@ -2389,6 +2465,8 @@ MODULE m_cdnpot_io_hdf
       CALL h5dclose_f(qintsSetID, hdfError)
 
       CALL h5gclose_f(cdncGroupID, hdfError)
+
+      WRITE(*,*) 'readCoreDensity - end'
 
    END SUBROUTINE readCoreDensityHDF
 
