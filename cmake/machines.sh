@@ -59,7 +59,7 @@ function configure_machine(){
            echo "All required modules load loaded"
 	else
 	   echo "You have to load the required modules"
-	   echo "module load hdf5/1.8.15_BGQ scalapack/2.0.2_elpa_simd"
+	   echo "'source $DIR/cmake/machines/JUQUEEN/xlfsource.sh' should help"
 	   exit
 	fi
         cp $DIR/cmake/machines/JUQUEEN/JUQUEEN.cmake config.cmake
