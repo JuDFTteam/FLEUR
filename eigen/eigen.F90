@@ -569,6 +569,10 @@ CONTAINS
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,2), enpara%ello0(:,:,2),enpara%evac0(:,2),&
                   atoms%nlotot,kveclo)
           ENDIF
+#if defined(CPP_MPI)
+          !RMA synchronization
+          CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#endif
 
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
           IF ( hybrid%l_calhf ) THEN
