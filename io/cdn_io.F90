@@ -19,6 +19,7 @@ MODULE m_cdn_io
    USE m_loddop
    USE m_wrtdop
    USE m_cdnpot_io_hdf
+   USE m_cdnpot_io_common
 #ifdef CPP_HDF
    USE hdf5
 #endif
@@ -129,12 +130,13 @@ MODULE m_cdn_io
    END SUBROUTINE printDensityFileInfo
 
 
-   SUBROUTINE readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
+   SUBROUTINE readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
                           relCdnIndex,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_sphhar),INTENT(IN) :: sphhar
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -155,7 +157,7 @@ MODULE m_cdn_io
 
       ! local variables
       INTEGER            :: mode, datend, k, i, iVac, j, iUnit
-      LOGICAL            :: l_exist, l_rhomatFile
+      LOGICAL            :: l_exist, l_rhomatFile, l_DimChange
       CHARACTER(LEN=30)  :: filename
 
 #ifdef CPP_HDF
@@ -216,9 +218,14 @@ MODULE m_cdn_io
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
-                                fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                                fermiEnergy,l_qfix,l_DimChange,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
             CALL closeCDNPOT_HDF(fileID)
+
+            IF(l_DimChange) THEN
+               CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
+                           1,-1.0,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+            END IF
             RETURN
          ELSE
             WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
@@ -346,7 +353,7 @@ MODULE m_cdn_io
 
       INTEGER           :: mode, iterTemp, k, i, iVac, j, iUnit
       INTEGER           :: d1, d10, asciioffset, iUnitTemp
-      LOGICAL           :: l_exist, l_storeIndices, l_writeNew
+      LOGICAL           :: l_exist, l_storeIndices, l_writeNew, l_same
       LOGICAL           :: l_writeAll
       CHARACTER(len=30) :: filename
       CHARACTER(len=5)  :: cdnfile
@@ -379,92 +386,10 @@ MODULE m_cdn_io
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
-         l_storeIndices = .FALSE.
-         l_writeAll = .FALSE.
-         IF(currentStructureIndex.EQ.0) THEN
-            currentStructureIndex = 1
-            l_storeIndices = .TRUE.
-            l_writeAll = .TRUE.
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
-         ELSE
-            CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, currentStructureIndex)
-            l_writeNew = .FALSE.
-            IF(atoms%ntype.NE.atomsTemp%ntype) l_writeNew = .TRUE.
-            IF(atoms%nat.NE.atomsTemp%nat) l_writeNew = .TRUE.
-            IF(atoms%lmaxd.NE.atomsTemp%lmaxd) l_writeNew = .TRUE.
-            IF(atoms%jmtd.NE.atomsTemp%jmtd) l_writeNew = .TRUE.
-            IF(vacuum%dvac.NE.vacuumTemp%dvac) l_writeNew = .TRUE.
-            IF(ANY(ABS(cell%amat(:,:)-cellTemp%amat(:,:)).GT.1e-10)) l_writeNew = .TRUE.
-            IF(.NOT.l_writeNew) THEN
-               IF(ANY(atoms%nz(:).NE.atomsTemp%nz(:))) l_writeNew = .TRUE.
-               IF(ANY(atoms%lmax(:).NE.atomsTemp%lmax(:))) l_writeNew = .TRUE.
-            END IF
-            IF(.NOT.l_writeNew) THEN
-               DO i = 1, atoms%nat
-                  IF(ANY(ABS(atoms%pos(:,i)-atomsTemp%pos(:,i)).GT.1e-10)) l_writeNew = .TRUE.
-               END DO
-            END IF
-            IF(l_writeNew) THEN
-               currentStructureIndex = currentStructureIndex + 1
-               l_storeIndices = .TRUE.
-               l_writeAll = .TRUE.
-               CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
-            END IF
-         END IF
-         IF (currentStarsIndex.EQ.0) THEN
-            currentStarsIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, stars)
-         ELSE
-            CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
-            l_writeNew = .FALSE.
-            IF(ABS(stars%gmax-starsTemp%gmax).GT.1e-10) l_writeNew = .TRUE.
-            IF(stars%ng3.NE.starsTemp%ng3) l_writeNew = .TRUE.
-            IF(stars%ng2.NE.starsTemp%ng2) l_writeNew = .TRUE.
-            IF(stars%mx1.NE.starsTemp%mx1) l_writeNew = .TRUE.
-            IF(stars%mx2.NE.starsTemp%mx2) l_writeNew = .TRUE.
-            IF(stars%mx3.NE.starsTemp%mx3) l_writeNew = .TRUE.
-            IF(stars%kimax.NE.starsTemp%kimax) l_writeNew = .TRUE.
-            IF(stars%kimax2.NE.starsTemp%kimax2) l_writeNew = .TRUE.
-            IF(l_writeNew.OR.l_writeAll) THEN
-               currentStarsIndex = currentStarsIndex + 1
-               l_storeIndices = .TRUE.
-               CALL writeStarsHDF(fileID, currentStarsIndex, stars)
-            END IF
-         END IF
-         IF (currentLatharmsIndex.EQ.0) THEN
-            currentLatharmsIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, sphhar)
-         ELSE
-            CALL readLatharmsHDF(fileID, currentLatharmsIndex, sphharTemp)
-            l_writeNew = .FALSE.
-            IF(sphhar%ntypsd.NE.sphharTemp%ntypsd) l_writeNew = .TRUE.
-            IF(sphhar%memd.NE.sphharTemp%memd) l_writeNew = .TRUE.
-            IF(sphhar%nlhd.NE.sphharTemp%nlhd) l_writeNew = .TRUE.
-            IF(l_writeNew.OR.l_writeAll) THEN
-               currentLatharmsIndex = currentLatharmsIndex + 1
-               l_storeIndices = .TRUE.
-               CALL writeLatharmsHDF(fileID, currentLatharmsIndex, sphhar)
-            END IF
-         END IF
-         IF(currentStepfunctionIndex.EQ.0) THEN
-            currentStepfunctionIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
-         ELSE
-            CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, starsTemp)
-            l_writeNew = .FALSE.
-            IF(stars%ng3.NE.starsTemp%ng3) l_writeNew = .TRUE.
-            IF(stars%mx1.NE.starsTemp%mx1) l_writeNew = .TRUE.
-            IF(stars%mx2.NE.starsTemp%mx2) l_writeNew = .TRUE.
-            IF(stars%mx3.NE.starsTemp%mx3) l_writeNew = .TRUE.
-            IF(l_writeNew.OR.l_writeAll) THEN
-               currentStepfunctionIndex = currentStepfunctionIndex + 1
-               l_storeIndices = .TRUE.
-               CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
-            END IF
-         END IF
+         CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, sphhar, sym,&
+                                       currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                       currentStepfunctionIndex,l_storeIndices)
+
          previousDensityIndex = readDensityIndex
          writeDensityIndex = readDensityIndex
          IF(relCdnIndex.NE.0) THEN
@@ -919,8 +844,10 @@ MODULE m_cdn_io
       LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
       LOGICAL, INTENT(OUT)        :: l_error
 
+
+      TYPE(t_stars)               :: starsTemp
       INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
-      LOGICAL                     :: l_exist
+      LOGICAL                     :: l_exist, l_same
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
       INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
@@ -947,7 +874,14 @@ MODULE m_cdn_io
             IF (currentStarsIndex.LT.1) THEN
                mode = CDN_DIRECT_MODE ! (no stars entry found in cdn.hdf file)
             ELSE
-               CALL readStarsHDF(fileID, currentStarsIndex, stars)
+               CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
+               CALL compareStars(stars, starsTemp, l_same)
+               WRITE(*,*) 'l_same', l_same
+               IF(l_same) THEN
+                  CALL readStarsHDF(fileID, currentStarsIndex, stars)
+               ELSE
+                 mode = CDN_DIRECT_MODE ! (no adequate stars entry found in cdn.hdf file)
+               END IF
             END IF
             CALL closeCDNPOT_HDF(fileID)
 #endif

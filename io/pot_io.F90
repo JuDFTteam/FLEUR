@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -19,6 +19,7 @@ MODULE m_pot_io
    USE m_loddop
    USE m_wrtdop
    USE m_cdnpot_io_hdf
+   USE m_cdnpot_io_common
 #ifdef CPP_HDF
    USE hdf5
 #endif
@@ -200,27 +201,9 @@ MODULE m_pot_io
          CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
                           currentStructureIndex,currentStepfunctionIndex)
 
-         l_storeIndices = .FALSE.
-         IF (currentStarsIndex.EQ.0) THEN
-            currentStarsIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, stars)
-         END IF
-         IF (currentLatharmsIndex.EQ.0) THEN
-            currentLatharmsIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, sphhar)
-         END IF
-         IF(currentStructureIndex.EQ.0) THEN
-            currentStructureIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
-         END IF
-         IF(currentStepfunctionIndex.EQ.0) THEN
-            currentStepfunctionIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
-         END IF
+         CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, sphhar, sym,&
+                                       currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                       currentStepfunctionIndex,l_storeIndices)
 
          archiveName = 'illegalPotentialArchive'
          IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN

@@ -182,7 +182,7 @@ CONTAINS
     END IF
 
     !---> reload densities of current iteration
-    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
@@ -194,7 +194,7 @@ CONTAINS
          intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp(-3,-3,1,1,1), nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
 
     !     load output charge density
-    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_OUTPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !

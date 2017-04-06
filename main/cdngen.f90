@@ -106,7 +106,7 @@
       IF(noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       IF((.NOT.noco%l_noco).AND.mpi%irank.EQ.0) THEN
          ALLOCATE(cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
-         CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
          DEALLOCATE(cdom,cdomvz,cdomvxy)
       END IF
