@@ -77,7 +77,7 @@ MODULE m_cdnpot_io_common
       IF(ANY(ABS(cell%amat(:,:)-refCell%amat(:,:)).GT.1e-10)) l_same = .FALSE.
       IF(l_same) THEN
          IF(ANY(atoms%nz(:).NE.refAtoms%nz(:))) l_same = .FALSE.
-         IF(ANY(atoms%lmax(:).NE.refAtoms%lmax(:))) l_same = .FALSE.
+!         IF(ANY(atoms%lmax(:).NE.refAtoms%lmax(:))) l_same = .FALSE.
       END IF
       IF(l_same) THEN
          DO i = 1, atoms%nat
@@ -181,14 +181,16 @@ MODULE m_cdnpot_io_common
       IF(currentStepfunctionIndex.EQ.0) THEN
          currentStepfunctionIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
+         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
+                                   currentStructureIndex, stars)
       ELSE
          CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, starsTemp)
          CALL compareStepfunctions(stars, starsTemp, l_same)
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentStepfunctionIndex = currentStepfunctionIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
+            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
+                                      currentStructureIndex, stars)
          END IF
       END IF
 

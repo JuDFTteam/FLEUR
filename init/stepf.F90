@@ -46,7 +46,7 @@
           !
           ifftd = 27*stars%mx1*stars%mx2*stars%mx3
 
-          CALL readStepfunction(stars,l_error)
+          CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
           IF(.NOT.l_error) THEN
              RETURN
           END IF
