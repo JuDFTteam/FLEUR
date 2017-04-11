@@ -101,8 +101,8 @@ MODULE m_cdn_io
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
                                         dateTemp, timeTemp, distanceTemp, fermiEnergyTemp, l_qfixTemp)
 
-               WRITE(dateString,'(i8)'), dateTemp
-               WRITE(timeString,'(i6)'), timeTemp
+               WRITE(dateString,'(i8)') dateTemp
+               WRITE(timeString,'(i6)') timeTemp
 
                distanceString = ''
                IF (distanceTemp.GE.-1e-10) THEN
@@ -768,6 +768,64 @@ MODULE m_cdn_io
       END IF
 
    END SUBROUTINE writeCoreDensity
+
+   SUBROUTINE writeStructureIfNew(input, atoms, cell, vacuum, oneD)
+
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
+      TYPE(t_oneD),INTENT(IN)    :: oneD
+
+      TYPE(t_input)              :: inputTemp
+      TYPE(t_atoms)              :: atomsTemp
+      TYPE(t_cell)               :: cellTemp
+      TYPE(t_vacuum)             :: vacuumTemp
+      TYPE(t_oneD)               :: oneDTemp
+
+      INTEGER        :: mode
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
+      LOGICAL        :: l_writeStructure, l_same
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         l_writeStructure = .FALSE.
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+
+         IF (currentStructureIndex.EQ.0) THEN
+            currentStructureIndex = currentStructureIndex + 1
+            l_writeStructure = .TRUE.
+         ELSE
+            CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, currentStructureIndex)
+            CALL compareStructure(atoms, vacuum, cell, atomsTemp, vacuumTemp, cellTemp, l_same)
+            IF(.NOT.l_same) THEN
+               l_writeStructure = .TRUE.
+            END IF
+         END IF
+
+         IF (l_writeStructure) THEN
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+            CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                    currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+         END IF
+
+         CALL closeCDNPOT_HDF(fileID)
+#endif
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         ! Write stars to stars file
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE
+         ! In direct access mode no structure information is written to any file.
+      END IF
+
+   END SUBROUTINE writeStructureIfNew
 
    SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
 
