@@ -769,7 +769,7 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeCoreDensity
 
-   SUBROUTINE writeStructureIfNew(input, atoms, cell, vacuum, oneD)
+   SUBROUTINE storeStructureIfNew(input, atoms, cell, vacuum, oneD)
 
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -825,7 +825,7 @@ MODULE m_cdn_io
          ! In direct access mode no structure information is written to any file.
       END IF
 
-   END SUBROUTINE writeStructureIfNew
+   END SUBROUTINE storeStructureIfNew
 
    SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
 
