@@ -1249,11 +1249,11 @@ MODULE m_cdn_io
       END DO
 
       IF(separatorIndex.NE.-1) THEN
-         READ(ddString(1:separatorIndex-1),'(i)') startNumber
-         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') endNumber
+         READ(ddString(1:separatorIndex-1),'(i0)') startNumber
+         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i0)') endNumber
       ELSE
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') startNumber
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') endNumber
+         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i0)') startNumber
+         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i0)') endNumber
       END IF
 
       CALL getMode(mode)
