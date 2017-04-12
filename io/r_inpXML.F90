@@ -51,6 +51,7 @@ SUBROUTINE r_inpXML(&
   USE m_prpqfft
   USE m_prpxcfft
   USE m_stepf
+  USE m_cdn_io
   USE m_convn
   USE m_efield
   USE m_writegw
@@ -2243,6 +2244,11 @@ SUBROUTINE r_inpXML(&
           oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
   END IF
   oneD%odd%nq2 = oneD%odd%n2d
+  oneD%odi%nq2 = oneD%odd%nq2
+
+  ! Store structure data
+
+  CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD)
 
   ! Generate stars
 

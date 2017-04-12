@@ -132,6 +132,7 @@ MODULE m_cdnpot_io_common
       TYPE(t_cell)         :: cellTemp
       TYPE(t_oneD)         :: oneDTemp
 
+      INTEGER                    :: starsIndexTemp, structureIndexTemp
       LOGICAL                    :: l_same, l_writeAll
 
       l_storeIndices = .FALSE.
@@ -155,27 +156,35 @@ MODULE m_cdnpot_io_common
       IF (currentStarsIndex.EQ.0) THEN
          currentStarsIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
       ELSE
-         CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
-         CALL compareStars(stars, starsTemp, l_same)
+         CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
+         l_same = structureIndexTemp.EQ.currentStructureIndex
+         IF(l_same) THEN
+            CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
+            CALL compareStars(stars, starsTemp, l_same)
+         END IF
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentStarsIndex = currentStarsIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
          END IF
       END IF
       IF (currentLatharmsIndex.EQ.0) THEN
          currentLatharmsIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeLatharmsHDF(fileID, currentLatharmsIndex, latharms)
+         CALL writeLatharmsHDF(fileID, currentLatharmsIndex, currentStructureIndex, latharms)
       ELSE
-         CALL readLatharmsHDF(fileID, currentLatharmsIndex, latharmsTemp)
-         CALL compareLatharms(latharms, latharmsTemp, l_same)
+         CALL peekLatharmsHDF(fileID, currentLatharmsIndex, structureIndexTemp)
+         l_same = structureIndexTemp.EQ.currentStructureIndex
+         IF(l_same) THEN
+            CALL readLatharmsHDF(fileID, currentLatharmsIndex, latharmsTemp)
+            CALL compareLatharms(latharms, latharmsTemp, l_same)
+         END IF
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentLatharmsIndex = currentLatharmsIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, latharms)
+            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, currentStructureIndex, latharms)
          END IF
       END IF
       IF(currentStepfunctionIndex.EQ.0) THEN
@@ -184,8 +193,12 @@ MODULE m_cdnpot_io_common
          CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
                                    currentStructureIndex, stars)
       ELSE
-         CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, starsTemp)
-         CALL compareStepfunctions(stars, starsTemp, l_same)
+         CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp, structureIndexTemp)
+         l_same = (starsIndexTemp.EQ.currentStarsIndex).AND.(structureIndexTemp.EQ.currentStructureIndex)
+         IF(l_same) THEN
+            CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, starsTemp)
+            CALL compareStepfunctions(stars, starsTemp, l_same)
+         END IF
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentStepfunctionIndex = currentStepfunctionIndex + 1
             l_storeIndices = .TRUE.

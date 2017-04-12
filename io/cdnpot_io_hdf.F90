@@ -17,8 +17,8 @@ MODULE m_cdnpot_io_hdf
    PRIVATE
 #ifdef CPP_HDF
    PUBLIC openCDN_HDF, openPOT_HDF, closeCDNPOT_HDF
-   PUBLIC writeStarsHDF, readStarsHDF
-   PUBLIC writeLatharmsHDF, readLatharmsHDF
+   PUBLIC writeStarsHDF, readStarsHDF, peekStarsHDF
+   PUBLIC writeLatharmsHDF, readLatharmsHDF, peekLatharmsHDF
    PUBLIC writeStructureHDF, readStructureHDF
    PUBLIC writeStepfunctionHDF, readStepfunctionHDF, peekStepfunctionHDF
    PUBLIC writeDensityHDF, readDensityHDF
@@ -221,10 +221,10 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePOTHeaderData
 
-   SUBROUTINE writeStarsHDF(fileID, starsIndex, stars)
+   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
-      INTEGER,        INTENT(IN) :: starsIndex
+      INTEGER,        INTENT(IN) :: starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN) :: stars
 
       INTEGER(HID_T)            :: groupID
@@ -261,6 +261,8 @@ MODULE m_cdnpot_io_hdf
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
       ft2_gf_dim = SIZE(stars%ft2_gfx,1)
+
+      CALL io_write_attint0(groupID,'structureIndex',structureIndex)
 
       CALL io_write_attreal0(groupID,'gmax',stars%gmax)
       CALL io_write_attreal0(groupID,'gmaxInit',stars%gmaxInit)
@@ -593,6 +595,31 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE readStarsHDF
 
+   SUBROUTINE peekStarsHDF(fileID, starsIndex, structureIndex)
+
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: starsIndex
+      INTEGER,        INTENT(OUT)   :: structureIndex
+
+      INTEGER(HID_T)            :: groupID
+      INTEGER                   :: hdfError
+      CHARACTER(LEN=30)         :: groupName
+      LOGICAL                   :: l_exist
+
+      WRITE(groupname,'(a,i0)') '/stars-', starsIndex
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+
+      IF (.NOT.l_exist) THEN
+         CALL juDFT_error('stars entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="readStarsHDF")
+      END IF
+
+      CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+      CALL io_read_attint0(groupID,'structureIndex',structureIndex)
+      CALL h5gclose_f(groupID, hdfError)
+
+   END SUBROUTINE peekStarsHDF
+
    SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, structureIndex, stars)
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
@@ -734,10 +761,10 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekStepfunctionHDF
 
-   SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, latharms)
+   SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, structureIndex, latharms)
 
       INTEGER(HID_T), INTENT(IN)  :: fileID
-      INTEGER,        INTENT(IN)  :: latharmsIndex
+      INTEGER,        INTENT(IN)  :: latharmsIndex, structureIndex
       TYPE(t_sphhar), INTENT(IN)  :: latharms
 
       INTEGER                   :: hdfError
@@ -762,6 +789,7 @@ MODULE m_cdnpot_io_hdf
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
+      CALL io_write_attint0(groupID,'structureIndex',structureIndex)
       CALL io_write_attint0(groupID,'ntypsd',latharms%ntypsd)
       CALL io_write_attint0(groupID,'memd',latharms%memd)
       CALL io_write_attint0(groupID,'nlhd',latharms%nlhd)
@@ -876,6 +904,31 @@ MODULE m_cdnpot_io_hdf
       CALL h5gclose_f(groupID, hdfError)
 
    END SUBROUTINE readLatharmsHDF
+
+   SUBROUTINE peekLatharmsHDF(fileID, latharmsIndex, structureIndex)
+
+      INTEGER(HID_T), INTENT(IN)    :: fileID
+      INTEGER,        INTENT(IN)    :: latharmsIndex
+      INTEGER,        INTENT(OUT)   :: structureIndex
+
+      INTEGER(HID_T)            :: groupID
+      INTEGER                   :: hdfError
+      CHARACTER(LEN=30)         :: groupName
+      LOGICAL                   :: l_exist
+
+      WRITE(groupname,'(a,i0)') '/latharms-', latharmsIndex
+
+      l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
+
+      IF (.NOT.l_exist) THEN
+         CALL juDFT_error('latharms entry '//TRIM(ADJUSTL(groupName))//' does not exist.' ,calledby ="readLatharmsHDF")
+      END IF
+
+      CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+      CALL io_read_attint0(groupID,'structureIndex',structureIndex)
+      CALL h5gclose_f(groupID, hdfError)
+
+   END SUBROUTINE peekLatharmsHDF
 
    SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, structureIndex)
 
@@ -2095,6 +2148,7 @@ MODULE m_cdnpot_io_hdf
             DEALLOCATE(cdomvzTemp)
 
             cdomvxy = CMPLX(0.0,0.0)
+            ! No change in od_nq2 allowed at the moment!
             ALLOCATE(cdomvxyTemp(nmzxy,od_nq2-1,nvac))
             dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
             CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)

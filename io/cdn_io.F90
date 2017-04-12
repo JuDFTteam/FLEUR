@@ -33,6 +33,7 @@ MODULE m_cdn_io
    PUBLIC readStars, writeStars
    PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
+   PUBLIC storeStructureIfNew
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -806,6 +807,7 @@ MODULE m_cdn_io
             CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, currentStructureIndex)
             CALL compareStructure(atoms, vacuum, cell, atomsTemp, vacuumTemp, cellTemp, l_same)
             IF(.NOT.l_same) THEN
+               currentStructureIndex = currentStructureIndex + 1
                l_writeStructure = .TRUE.
             END IF
          END IF
@@ -855,7 +857,7 @@ MODULE m_cdn_io
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStarsIndex = currentStarsIndex + 1
-         CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
 
          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
@@ -904,6 +906,7 @@ MODULE m_cdn_io
       INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
       LOGICAL                     :: l_exist, l_same
 
+      INTEGER        :: structureIndexTemp
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
       INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
@@ -929,9 +932,12 @@ MODULE m_cdn_io
             IF (currentStarsIndex.LT.1) THEN
                mode = CDN_DIRECT_MODE ! (no stars entry found in cdn.hdf file)
             ELSE
-               CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
-               CALL compareStars(stars, starsTemp, l_same)
-               WRITE(*,*) 'l_same', l_same
+               CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
+               l_same = structureIndexTemp.EQ.currentStructureIndex
+               IF(l_same) THEN
+                  CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
+                  CALL compareStars(stars, starsTemp, l_same)
+               END IF
                IF(l_same) THEN
                   CALL readStarsHDF(fileID, currentStarsIndex, stars)
                ELSE
@@ -1028,8 +1034,7 @@ MODULE m_cdn_io
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStepfunctionIndex = currentStepfunctionIndex + 1
-         ! Note: Since the stepfunction is stored before the structure I add 1 to currentStructureIndex.
-         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex+1, stars)
+         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars)
          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
@@ -1088,19 +1093,9 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            starsIndexTemp = -1
             IF(currentStepfunctionIndex.GT.0) THEN
                CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp, structureIndexTemp)
-            END IF
-            IF(starsIndexTemp.EQ.currentStarsIndex) THEN
-               CALL readStarsHDF(fileID, starsIndexTemp, starsTemp)
-               CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, starsTemp)
-               CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, structureIndexTemp)
-
-               CALL compareStars(stars, starsTemp, l_same)
-               CALL compareStructure(atoms, vacuum, cell, atomsTemp, vacuumTemp, cellTemp, l_sameTemp)
-               l_same = l_same.AND.l_sameTemp
-               IF (l_same) THEN
+               IF((starsIndexTemp.EQ.currentStarsIndex).AND.(structureIndexTemp.EQ.currentStructureIndex)) THEN
                   CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, stars)
                ELSE
                   mode = CDN_STREAM_MODE ! No adequate stepfunction entry found. Fall back to other IO modes.

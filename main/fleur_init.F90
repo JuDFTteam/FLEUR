@@ -286,6 +286,7 @@
                         &             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
                 ENDIF
                 oneD%odd%nq2 = oneD%odd%n2d
+                oneD%odi%nq2 = oneD%odd%nq2
                 !-odim
                 !+t3e
                 INQUIRE(file="cdn1",exist=l_opti)
@@ -332,6 +333,7 @@
           oneD%odg%pgfxx => oneD%pgft1xx ; oneD%odg%pgfyy => oneD%pgft1yy ; oneD%odg%pgfxy => oneD%pgft1xy
           !+odim
           !
+
 #ifdef CPP_MPI
           CALL MPI_BCAST(l_opti,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(noco%l_noco,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
@@ -406,7 +408,6 @@
              ENDDO
           ENDDO
 
-
           jij%qn = 0.0
           !-t3e
           !-odim
@@ -445,7 +446,6 @@
              ALLOCATE ( jij%eig_l(DIMENSION%neigd+5,1) )
           ENDIF
           !--- J>
-
 
           IF( sym%invs .OR. noco%l_soc ) THEN
              sym%nsym = sym%nop
