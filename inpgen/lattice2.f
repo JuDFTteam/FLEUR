@@ -94,6 +94,10 @@
         cr = gamma
       ENDIF
 
+      scale(1) = a
+      scale(2) = b
+      scale(3) = c
+
       latsys = ADJUSTL(latsys)
 
 !===>  1: cubic-P          (cP) sc
@@ -103,9 +107,10 @@
 
         noangles=.true.
         i_c = 1
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
 
         IF ( a.NE.b .OR. a.NE.c ) err = 11
         IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0) ) err = 12
@@ -117,9 +122,10 @@
 
         noangles=.true.
         i_c = 2
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
 
         IF ( a.NE.b .OR. a.NE.c ) err = 21
 
@@ -130,9 +136,10 @@
 
         noangles=.true.
         i_c = 3
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
 
         IF ( a.NE.b .OR. a.NE.c ) err = 31
 
@@ -143,9 +150,10 @@
 
         noangles=.true.
         i_c = 4
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
 
         IF ( a.NE.b ) err = 41
 
@@ -155,9 +163,10 @@
 
         noangles=.true.
         i_c = 4
-        a1 =  lmat((/2,1,3/),1,i_c)
-        a2 = -lmat((/2,1,3/),2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 =  lmat((/2,1,3/),1,i_c) * scale(:)
+        a2 = -lmat((/2,1,3/),2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
         i_c = 9
 
         IF ( a.NE.b ) err = 41
@@ -173,7 +182,7 @@
         a1 = lmat(:,1,i_c)
         a2 = lmat(:,2,i_c)
         a3 = lmat(:,3,i_c)
-
+        
         IF ( a.NE.b ) err = 51
         IF ( b.NE.c ) err = 51
         IF ( alpha.EQ.0.0  .OR. 
@@ -234,9 +243,10 @@
 
         noangles=.true.
         i_c = 1
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
           
         IF ( a.NE.b ) err = 61
         IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0)  ) err= 62
@@ -248,9 +258,10 @@
 
         noangles=.true.
         i_c = 3
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
           
         IF ( a.NE.b ) err = 61
 
@@ -261,9 +272,10 @@
 
         noangles=.true.
         i_c = 1
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
           
 !===>  9: orthorhombic-F   (oF) 
 
@@ -273,9 +285,10 @@
 
         noangles=.true.
         i_c = 2
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
           
 !===> 10: orthorhombic-I   (oI) 
 
@@ -285,9 +298,10 @@
 
         noangles=.true.
         i_c = 3
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
           
 !===> 11: orthorhombic-S   (oS) (oC) 
 
@@ -297,9 +311,10 @@
 
         noangles=.true.
         i_c = 6
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
           
 !===> 11a: orthorhombic-A   (oA)
 
@@ -309,9 +324,10 @@
 
         noangles=.true.
         i_c = 8
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
 
 !===> 11b: orthorhombic-B   (oB)
 
@@ -321,9 +337,10 @@
 
         noangles=.true.
         i_c = 7
-        a1 = lmat(:,1,i_c)
-        a2 = lmat(:,2,i_c)
-        a3 = lmat(:,3,i_c)
+        a1 = lmat(:,1,i_c) * scale(:)
+        a2 = lmat(:,2,i_c) * scale(:)
+        a3 = lmat(:,3,i_c) * scale(:)
+        scale = 1.0
 
 !===> 12: monoclinic-P     (mP) 
       ELSEIF ( latsys =='monoclinic-P'.OR.latsys =='mP'.OR
@@ -470,6 +487,8 @@
       ENDIF
 
       IF (abs(scale(1)) < eps) THEN
+        CALL juDFT_error("Illegal program section reached!"
+     +          ,calledby ="lattice2")
         scale(1) = a
         scale(2) = b
         scale(3) = c
