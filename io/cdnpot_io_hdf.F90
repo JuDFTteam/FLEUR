@@ -258,6 +258,10 @@ MODULE m_cdnpot_io_hdf
          CALL juDFT_error('stars entry '//TRIM(ADJUSTL(groupName))//' already exists.' ,calledby ="writeStarsHDF")
       END IF
 
+      INQUIRE(FILE='broyd',EXIST=l_exist)
+      IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
+      IF (l_exist) CALL juDFT_warn('Stars change but broyden files detected!')
+
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
       ft2_gf_dim = SIZE(stars%ft2_gfx,1)
@@ -645,6 +649,10 @@ MODULE m_cdnpot_io_hdf
          CALL juDFT_error('stepfunction entry '//TRIM(ADJUSTL(groupName))//' already exists.' ,calledby ="writeStepfunctionHDF")
       END IF
 
+      INQUIRE(FILE='broyd',EXIST=l_exist)
+      IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
+      IF (l_exist) CALL juDFT_warn('Stepfunction change but broyden files detected!')
+
       ifftd = size(stars%ufft)
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
@@ -786,6 +794,10 @@ MODULE m_cdnpot_io_hdf
       IF (l_exist) THEN
          CALL juDFT_error('latharms entry '//TRIM(ADJUSTL(groupName))//' already exists.' ,calledby ="writeLatharmsHDF")
       END IF
+
+      INQUIRE(FILE='broyd',EXIST=l_exist)
+      IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
+      IF (l_exist) CALL juDFT_warn('Lattice harmonics change but broyden files detected!')
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
@@ -974,6 +986,10 @@ MODULE m_cdnpot_io_hdf
       IF (l_exist) THEN
          CALL juDFT_error('structure entry '//TRIM(ADJUSTL(groupName))//' already exists.' ,calledby ="writeStructureHDF")
       END IF
+
+      INQUIRE(FILE='broyd',EXIST=l_exist)
+      IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
+      IF (l_exist) CALL juDFT_warn('Structure change but broyden files detected!')
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
