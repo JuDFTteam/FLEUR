@@ -58,12 +58,13 @@ MODULE m_cdnpot_io_common
 
    END SUBROUTINE compareStepfunctions
 
-   SUBROUTINE compareStructure(atoms, vacuum, cell, refAtoms, refVacuum,&
-                               refCell, l_same)
+   SUBROUTINE compareStructure(atoms, vacuum, cell, sym, refAtoms, refVacuum,&
+                               refCell, refSym, l_same)
 
       TYPE(t_atoms),INTENT(IN)  :: atoms, refAtoms
       TYPE(t_vacuum),INTENT(IN) :: vacuum, refVacuum
       TYPE(t_cell),INTENT(IN)   :: cell, refCell
+      TYPE(t_sym),INTENT(IN)    :: sym, refSym
 
       LOGICAL,      INTENT(OUT) :: l_same
 
@@ -74,10 +75,14 @@ MODULE m_cdnpot_io_common
       IF(atoms%lmaxd.NE.refAtoms%lmaxd) l_same = .FALSE.
       IF(atoms%jmtd.NE.refAtoms%jmtd) l_same = .FALSE.
       IF(vacuum%dvac.NE.refVacuum%dvac) l_same = .FALSE.
+      IF(sym%nop.NE.refSym%nop) l_same = .FALSE.
+      IF(sym%nop2.NE.refSym%nop2) l_same = .FALSE.
+
       IF(ANY(ABS(cell%amat(:,:)-refCell%amat(:,:)).GT.1e-10)) l_same = .FALSE.
       IF(l_same) THEN
          IF(ANY(atoms%nz(:).NE.refAtoms%nz(:))) l_same = .FALSE.
-!         IF(ANY(atoms%lmax(:).NE.refAtoms%lmax(:))) l_same = .FALSE.
+         IF(ANY(sym%mrot(:,:,:sym%nop).NE.refSym%mrot(:,:,:sym%nop))) l_same = .FALSE.
+         IF(ANY(ABS(sym%tau(:,:sym%nop)-refSym%tau(:,:sym%nop)).GT.1e-10)) l_same = .FALSE.
       END IF
       IF(l_same) THEN
          DO i = 1, atoms%nat
@@ -128,9 +133,9 @@ MODULE m_cdnpot_io_common
       TYPE(t_atoms)        :: atomsTemp
       TYPE(t_sphhar)       :: latharmsTemp
       TYPE(t_input)        :: inputTemp
-      TYPE(t_sym)          :: symTemp
       TYPE(t_cell)         :: cellTemp
       TYPE(t_oneD)         :: oneDTemp
+      TYPE(t_sym)          :: symTemp
 
       INTEGER                    :: starsIndexTemp, structureIndexTemp
       LOGICAL                    :: l_same, l_writeAll
@@ -141,16 +146,16 @@ MODULE m_cdnpot_io_common
       IF(currentStructureIndex.EQ.0) THEN
          currentStructureIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
       ELSE
-         CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, currentStructureIndex)
-         CALL compareStructure(atoms, vacuum, cell, atomsTemp, vacuumTemp, cellTemp, l_same)
+         CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
+         CALL compareStructure(atoms, vacuum, cell, sym, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
 
          IF(.NOT.l_same) THEN
             currentStructureIndex = currentStructureIndex + 1
             l_storeIndices = .TRUE.
             l_writeAll = .TRUE.
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
          END IF
       END IF
       IF (currentStarsIndex.EQ.0) THEN

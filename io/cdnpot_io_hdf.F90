@@ -930,7 +930,7 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekLatharmsHDF
 
-   SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, structureIndex)
+   SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: structureIndex
@@ -939,6 +939,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_oneD),INTENT(IN)    :: oneD
+      TYPE(t_sym),INTENT(IN)     :: sym
 
       INTEGER(HID_T)            :: groupID
       INTEGER                   :: hdfError
@@ -963,6 +964,8 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: zatomSpaceID, zatomSetID
       INTEGER(HID_T)                   :: posSpaceID, posSetID
       INTEGER(HID_T)                   :: taualSpaceID, taualSetID
+      INTEGER(HID_T)                   :: mrotSpaceID, mrotSetID
+      INTEGER(HID_T)                   :: tauSpaceID, tauSetID
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
@@ -1001,6 +1004,14 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attreal0(groupID,'dvac',vacuum%dvac)
 
       CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
+
+      CALL io_write_attlog0(groupID,'invs2',sym%invs2)
+      CALL io_write_attlog0(groupID,'invs',sym%invs)
+      CALL io_write_attlog0(groupID,'zrfs',sym%zrfs)
+      CALL io_write_attint0(groupID,'nop',sym%nop)
+      CALL io_write_attint0(groupID,'nop2',sym%nop2)
+      CALL io_write_attchar0(groupID,'latnam',sym%latnam)
+      CALL io_write_attchar0(groupID,'namgrp',sym%namgrp)
 
       dims(:2)=(/3,3/)
       dimsInt = dims
@@ -1130,11 +1141,27 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_real2(taualSetID,(/1,1/),dimsInt(:2),atoms%taual)
       CALL h5dclose_f(taualSetID, hdfError)
 
+      dims(:3)=(/3,3,sym%nop/)
+      dimsInt = dims
+      CALL h5screate_simple_f(3,dims(:3),mrotSpaceID,hdfError)
+      CALL h5dcreate_f(groupID, "mrot", H5T_NATIVE_INTEGER, mrotSpaceID, mrotSetID, hdfError)
+      CALL h5sclose_f(mrotSpaceID,hdfError)
+      CALL io_write_integer3(mrotSetID,(/1,1,1/),dimsInt(:3),sym%mrot)
+      CALL h5dclose_f(mrotSetID, hdfError)
+
+      dims(:2)=(/3,sym%nop/)
+      dimsInt = dims
+      CALL h5screate_simple_f(2,dims(:2),tauSpaceID,hdfError)
+      CALL h5dcreate_f(groupID, "tau", H5T_NATIVE_DOUBLE, tauSpaceID, tauSetID, hdfError)
+      CALL h5sclose_f(tauSpaceID,hdfError)
+      CALL io_write_real2(tauSetID,(/1,1/),dimsInt(:2),sym%tau)
+      CALL h5dclose_f(tauSetID, hdfError)
+
       CALL h5gclose_f(groupID, hdfError)
 
    END SUBROUTINE writeStructureHDF
 
-   SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum, oneD, structureIndex)
+   SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex)
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER, INTENT(IN)           :: structureIndex
@@ -1143,6 +1170,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_cell), INTENT(INOUT)   :: cell
       TYPE(t_vacuum), INTENT(INOUT) :: vacuum
       TYPE(t_oneD),INTENT(INOUT)    :: oneD
+      TYPE(t_sym),INTENT(INOUT)     :: sym
 
       INTEGER(HID_T)            :: groupID
       INTEGER                   :: hdfError
@@ -1166,6 +1194,8 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: zatomSetID
       INTEGER(HID_T)                   :: posSetID
       INTEGER(HID_T)                   :: taualSetID
+      INTEGER(HID_T)                   :: mrotSetID
+      INTEGER(HID_T)                   :: tauSetID
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
@@ -1205,6 +1235,14 @@ MODULE m_cdnpot_io_hdf
 
       CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
 
+      CALL io_read_attlog0(groupID,'invs2',sym%invs2)
+      CALL io_read_attlog0(groupID,'invs',sym%invs)
+      CALL io_read_attlog0(groupID,'zrfs',sym%zrfs)
+      CALL io_read_attint0(groupID,'nop',sym%nop)
+      CALL io_read_attint0(groupID,'nop2',sym%nop2)
+      CALL io_read_attchar0(groupID,'latnam',sym%latnam)
+      CALL io_read_attchar0(groupID,'namgrp',sym%namgrp)
+
       IF(ALLOCATED(atoms%nz)) DEALLOCATE(atoms%nz)
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
       IF(ALLOCATED(atoms%jri)) DEALLOCATE(atoms%jri)
@@ -1220,6 +1258,8 @@ MODULE m_cdnpot_io_hdf
       IF(ALLOCATED(atoms%zatom)) DEALLOCATE(atoms%zatom)
       IF(ALLOCATED(atoms%pos)) DEALLOCATE(atoms%pos)
       IF(ALLOCATED(atoms%taual)) DEALLOCATE(atoms%taual)
+      IF(ALLOCATED(sym%mrot)) DEALLOCATE(sym%mrot)
+      IF(ALLOCATED(sym%tau)) DEALLOCATE(sym%tau)
 
       ALLOCATE(atoms%nz(atoms%ntype))
       ALLOCATE(atoms%neq(atoms%ntype))
@@ -1236,6 +1276,8 @@ MODULE m_cdnpot_io_hdf
       ALLOCATE(atoms%zatom(atoms%ntype))
       ALLOCATE(atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%taual(3,atoms%nat))
+      ALLOCATE(sym%mrot(3,3,sym%nop))
+      ALLOCATE(sym%tau(3,sym%nop))
 
       dimsInt(:2)=(/3,3/)
       CALL h5dopen_f(groupID, 'amat', amatSetID, hdfError)
@@ -1316,6 +1358,16 @@ MODULE m_cdnpot_io_hdf
       CALL h5dopen_f(groupID, 'taual', taualSetID, hdfError)
       CALL io_read_real2(taualSetID,(/1,1/),dimsInt(:2),atoms%taual)
       CALL h5dclose_f(taualSetID, hdfError)
+
+      dimsInt(:3) = (/3,3,sym%nop/)
+      CALL h5dopen_f(groupID, 'mrot', mrotSetID, hdfError)
+      CALL io_read_integer3(mrotSetID,(/1,1,1/),dimsInt(:3),sym%mrot)
+      CALL h5dclose_f(mrotSetID, hdfError)
+
+      dimsInt(:2) = (/3,sym%nop/)
+      CALL h5dopen_f(groupID, 'tau', tauSetID, hdfError)
+      CALL io_read_real2(tauSetID,(/1,1/),dimsInt(:2),sym%tau)
+      CALL h5dclose_f(tauSetID, hdfError)
 
       CALL h5gclose_f(groupID, hdfError)
 

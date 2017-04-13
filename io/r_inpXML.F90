@@ -2248,7 +2248,7 @@ SUBROUTINE r_inpXML(&
 
   ! Store structure data
 
-  CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD)
+  CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
 
   ! Generate stars
 

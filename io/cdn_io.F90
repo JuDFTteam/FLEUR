@@ -770,19 +770,21 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeCoreDensity
 
-   SUBROUTINE storeStructureIfNew(input, atoms, cell, vacuum, oneD)
+   SUBROUTINE storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
 
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_oneD),INTENT(IN)    :: oneD
+      TYPE(t_sym),INTENT(IN)     :: sym
 
       TYPE(t_input)              :: inputTemp
       TYPE(t_atoms)              :: atomsTemp
       TYPE(t_cell)               :: cellTemp
       TYPE(t_vacuum)             :: vacuumTemp
       TYPE(t_oneD)               :: oneDTemp
+      TYPE(t_sym)                :: symTemp
 
       INTEGER        :: mode
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
@@ -804,8 +806,8 @@ MODULE m_cdn_io
             currentStructureIndex = currentStructureIndex + 1
             l_writeStructure = .TRUE.
          ELSE
-            CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, currentStructureIndex)
-            CALL compareStructure(atoms, vacuum, cell, atomsTemp, vacuumTemp, cellTemp, l_same)
+            CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
+            CALL compareStructure(atoms, vacuum, cell, sym, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
             IF(.NOT.l_same) THEN
                currentStructureIndex = currentStructureIndex + 1
                l_writeStructure = .TRUE.
@@ -813,7 +815,7 @@ MODULE m_cdn_io
          END IF
 
          IF (l_writeStructure) THEN
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
             CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                     currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          END IF
