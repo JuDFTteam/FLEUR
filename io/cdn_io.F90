@@ -1245,11 +1245,11 @@ MODULE m_cdn_io
       END DO
 
       IF(separatorIndex.NE.-1) THEN
-         READ(ddString(1:separatorIndex-1),'(i0)') startNumber
-         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i0)') endNumber
+         READ(ddString(1:separatorIndex-1),'(i7)') startNumber
+         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
       ELSE
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i0)') startNumber
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i0)') endNumber
+         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') startNumber
+         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
       END IF
 
       CALL getMode(mode)
@@ -1293,7 +1293,7 @@ MODULE m_cdn_io
          WRITE(*,*) 'Explicit deletion of densities in direct access mode'
          WRITE(*,*) 'not implemented.'
          WRITE(*,*) ''
-         WRITE(*,*) 'Ignoring -dd command line argument.'
+         WRITE(*,*) 'Ignoring -delden command line argument.'
       END IF
 
       CALL juDFT_error("Densities deleted.")
