@@ -1234,22 +1234,39 @@ MODULE m_cdn_io
       separatorIndex = -1
       startNumber = -1
       endNumber = -1
-      DO i = 1, LEN(TRIM(ADJUSTL(ddString)))
-         IF(VERIFY(ddString(i:i),'1234567890').NE.0) THEN
-            IF ((ddString(i:i).EQ.'-').AND.(separatorIndex.EQ.-1)) THEN
-               separatorIndex = i
-            ELSE
-               CALL juDFT_error("density deletion string format error",calledby ="deleteDensities")
-            END IF
-         END IF
-      END DO
+      IF (TRIM(ADJUSTL(ddString)).EQ.'allbutlast') THEN
+         CALL getMode(mode)
 
-      IF(separatorIndex.NE.-1) THEN
-         READ(ddString(1:separatorIndex-1),'(i7)') startNumber
-         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
+         IF(mode.EQ.CDN_HDF5_MODE) THEN
+            INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+            IF (l_exist) THEN
+#ifdef CPP_HDF
+               CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+               CALL closeCDNPOT_HDF(fileID)
+               startNumber = 1
+               endNumber = lastDensityIndex - 1
+            END IF
+#endif
+         END IF
       ELSE
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') startNumber
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
+         DO i = 1, LEN(TRIM(ADJUSTL(ddString)))
+            IF(VERIFY(ddString(i:i),'1234567890').NE.0) THEN
+               IF ((ddString(i:i).EQ.'-').AND.(separatorIndex.EQ.-1)) THEN
+                  separatorIndex = i
+               ELSE
+                  CALL juDFT_error("density deletion string format error",calledby ="deleteDensities")
+               END IF
+            END IF
+         END DO
+
+         IF(separatorIndex.NE.-1) THEN
+            READ(ddString(1:separatorIndex-1),'(i7)') startNumber
+            READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
+         ELSE
+            READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') startNumber
+            READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
+         END IF
       END IF
 
       CALL getMode(mode)
