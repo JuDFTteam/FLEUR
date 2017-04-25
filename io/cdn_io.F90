@@ -75,7 +75,6 @@ MODULE m_cdn_io
       CHARACTER(LEN=19) :: timeStampString
       CHARACTER(LEN=15) :: distanceString
 
-
       CALL getMode(mode)
 
       WRITE(*,*) 'Available densities info:'
