@@ -87,6 +87,10 @@ CONTAINS
     INTEGER :: it, archiveType
     CHARACTER*10 :: cdnfname
     LOGICAL :: strho
+#ifdef CPP_MPI
+    include 'mpif.h'
+    INTEGER :: ierr(2)
+#endif
     !     ..
     it = 1
 
@@ -140,9 +144,13 @@ CONTAINS
        IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
        END IF
-       strho = .NOT.isDensityFilePresent(archiveType)
+       IF (mpi%irank == 0) THEN
+          strho = .NOT.isDensityFilePresent(archiveType)
+       END IF
+#ifdef CPP_MPI
+       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+#endif
     ENDIF
-
     IF (strho) THEN
        strho=input%total 
        input%total = .FALSE.
@@ -212,6 +220,5 @@ CONTAINS
        ENDIF
 
     ENDIF ! mpi%irank == 0
-
   END SUBROUTINE OPTIONAL
 END MODULE m_optional
