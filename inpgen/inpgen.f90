@@ -162,9 +162,9 @@ PROGRAM inpgen
       nops = sym%nop
       symfn = 'sym.out'
       IF (.not.input%film) sym%nop2=sym%nop
-      CALL rw_symfile(&
-     &                'W',symfh,symfn,nops,cell%bmat,&
-     &                 sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
+      IF ((juDFT_was_argument("-old")).OR.(.NOT.juDFT_was_argument("-explicit"))) THEN
+         CALL rw_symfile('W',symfh,symfn,nops,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
+      END IF
 
       ALLOCATE (atomTypeSpecies(atoms%ntype))
       ALLOCATE (speciesRepAtomType(atoms%nat))

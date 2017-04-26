@@ -39,6 +39,7 @@
           USE m_dwigner
           USE m_strgn
           USE m_stepf
+          USE m_cdn_io
           USE m_mapatom
           USE m_writegw
           USE m_convn
@@ -135,6 +136,10 @@
              CALL mapatom(sym,atoms, cell,input, noco)
              CALL od_mapatom(oneD,atoms,sym,cell)
           END IF
+
+          ! Store structure data
+
+          CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
 
           !+odim
           IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN

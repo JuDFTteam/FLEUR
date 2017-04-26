@@ -33,6 +33,7 @@ MODULE m_cdn_io
    PUBLIC readStars, writeStars
    PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
+   PUBLIC storeStructureIfNew
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -74,7 +75,6 @@ MODULE m_cdn_io
       CHARACTER(LEN=19) :: timeStampString
       CHARACTER(LEN=15) :: distanceString
 
-
       CALL getMode(mode)
 
       WRITE(*,*) 'Available densities info:'
@@ -101,8 +101,8 @@ MODULE m_cdn_io
                                         stepfunctionIndexTemp,previousDensityIndex, jspinsTemp,&
                                         dateTemp, timeTemp, distanceTemp, fermiEnergyTemp, l_qfixTemp)
 
-               WRITE(dateString,'(i8)'), dateTemp
-               WRITE(timeString,'(i6)'), timeTemp
+               WRITE(dateString,'(i8)') dateTemp
+               WRITE(timeString,'(i6)') timeTemp
 
                distanceString = ''
                IF (distanceTemp.GE.-1e-10) THEN
@@ -156,7 +156,7 @@ MODULE m_cdn_io
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
-      INTEGER            :: mode, datend, k, i, iVac, j, iUnit
+      INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l
       LOGICAL            :: l_exist, l_rhomatFile, l_DimChange
       CHARACTER(LEN=30)  :: filename
 
@@ -226,7 +226,6 @@ MODULE m_cdn_io
                CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
                            1,-1.0,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
             END IF
-            RETURN
          ELSE
             WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
             WRITE(*,*) 'Falling back to stream access file cdn.str.'
@@ -240,7 +239,6 @@ MODULE m_cdn_io
          IF (l_exist) THEN
             !load density from cdn.str and exit subroutine
 
-            RETURN
          ELSE
             WRITE(*,*) 'cdn.str file not found.'
             WRITE(*,*) 'Falling back to direct access file cdn1.'
@@ -310,9 +308,8 @@ MODULE m_cdn_io
                cdomvxy = CMPLX(0.0,0.0)
             END IF
          END IF
+         CLOSE(iUnit)
       END IF
-
-      CLOSE(iUnit)
 
    END SUBROUTINE readDensity
 
@@ -772,6 +769,67 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeCoreDensity
 
+   SUBROUTINE storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
+      TYPE(t_oneD),INTENT(IN)    :: oneD
+      TYPE(t_sym),INTENT(IN)     :: sym
+
+      TYPE(t_input)              :: inputTemp
+      TYPE(t_atoms)              :: atomsTemp
+      TYPE(t_cell)               :: cellTemp
+      TYPE(t_vacuum)             :: vacuumTemp
+      TYPE(t_oneD)               :: oneDTemp
+      TYPE(t_sym)                :: symTemp
+
+      INTEGER        :: mode
+      INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+      INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
+      LOGICAL        :: l_writeStructure, l_same
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+#endif
+
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         l_writeStructure = .FALSE.
+         CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+
+         IF (currentStructureIndex.EQ.0) THEN
+            currentStructureIndex = currentStructureIndex + 1
+            l_writeStructure = .TRUE.
+         ELSE
+            CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
+            CALL compareStructure(atoms, vacuum, cell, sym, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
+            IF(.NOT.l_same) THEN
+               currentStructureIndex = currentStructureIndex + 1
+               l_writeStructure = .TRUE.
+            END IF
+         END IF
+
+         IF (l_writeStructure) THEN
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
+            CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                    currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+         END IF
+
+         CALL closeCDNPOT_HDF(fileID)
+#endif
+      ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
+         ! Write stars to stars file
+         STOP 'CDN_STREAM_MODE not yet implemented!'
+      ELSE
+         ! In direct access mode no structure information is written to any file.
+      END IF
+
+   END SUBROUTINE storeStructureIfNew
+
    SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
 
       TYPE(t_stars),INTENT(IN)   :: stars
@@ -800,7 +858,7 @@ MODULE m_cdn_io
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStarsIndex = currentStarsIndex + 1
-         CALL writeStarsHDF(fileID, currentStarsIndex, stars)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
 
          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
@@ -849,6 +907,7 @@ MODULE m_cdn_io
       INTEGER                     :: mode, ioStatus, ngz,izmin,izmax
       LOGICAL                     :: l_exist, l_same
 
+      INTEGER        :: structureIndexTemp
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
       INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
 #ifdef CPP_HDF
@@ -874,9 +933,12 @@ MODULE m_cdn_io
             IF (currentStarsIndex.LT.1) THEN
                mode = CDN_DIRECT_MODE ! (no stars entry found in cdn.hdf file)
             ELSE
-               CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
-               CALL compareStars(stars, starsTemp, l_same)
-               WRITE(*,*) 'l_same', l_same
+               CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
+               l_same = structureIndexTemp.EQ.currentStructureIndex
+               IF(l_same) THEN
+                  CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
+                  CALL compareStars(stars, starsTemp, l_same)
+               END IF
                IF(l_same) THEN
                   CALL readStarsHDF(fileID, currentStarsIndex, stars)
                ELSE
@@ -973,7 +1035,7 @@ MODULE m_cdn_io
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStepfunctionIndex = currentStepfunctionIndex + 1
-         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, stars)
+         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars)
          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
@@ -994,14 +1056,25 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeStepfunction
 
-   SUBROUTINE readStepfunction(stars, l_error)
+   SUBROUTINE readStepfunction(stars, atoms, cell, vacuum, l_error)
 
-      TYPE(t_stars),INTENT(INOUT) :: stars
-      LOGICAL, INTENT(OUT)        :: l_error
+      TYPE(t_stars),INTENT(INOUT)   :: stars
+      TYPE(t_atoms), INTENT(IN)     :: atoms
+      TYPE(t_cell), INTENT(IN)      :: cell
+      TYPE(t_vacuum), INTENT(IN)    :: vacuum
+      LOGICAL, INTENT(OUT)          :: l_error
+
+      TYPE(t_stars)                 :: starsTemp
+      TYPE(t_input)                 :: inputTemp
+      TYPE(t_atoms)                 :: atomsTemp
+      TYPE(t_cell)                  :: cellTemp
+      TYPE(t_vacuum)                :: vacuumTemp
+      TYPE(t_oneD)                  :: oneDTemp
 
       INTEGER        :: mode
       INTEGER        :: ifftd, ng3Temp, ifftdTemp, ioStatus, i, starsIndexTemp
-      LOGICAL        :: l_exist
+      INTEGER        :: structureIndexTemp
+      LOGICAL        :: l_exist, l_same, l_sameTemp
 
       INTEGER        :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
       INTEGER        :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex
@@ -1021,12 +1094,13 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            starsIndexTemp = -1
             IF(currentStepfunctionIndex.GT.0) THEN
-               CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp)
-            END IF
-            IF(starsIndexTemp.EQ.currentStarsIndex) THEN
-               CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, stars)
+               CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp, structureIndexTemp)
+               IF((starsIndexTemp.EQ.currentStarsIndex).AND.(structureIndexTemp.EQ.currentStructureIndex)) THEN
+                  CALL readStepfunctionHDF(fileID, currentStepfunctionIndex, stars)
+               ELSE
+                  mode = CDN_STREAM_MODE ! No adequate stepfunction entry found. Fall back to other IO modes.
+               END IF
             ELSE
                mode = CDN_STREAM_MODE ! No adequate stepfunction entry found. Fall back to other IO modes.
             END IF
@@ -1160,22 +1234,39 @@ MODULE m_cdn_io
       separatorIndex = -1
       startNumber = -1
       endNumber = -1
-      DO i = 1, LEN(TRIM(ADJUSTL(ddString)))
-         IF(VERIFY(ddString(i:i),'1234567890').NE.0) THEN
-            IF ((ddString(i:i).EQ.'-').AND.(separatorIndex.EQ.-1)) THEN
-               separatorIndex = i
-            ELSE
-               CALL juDFT_error("density deletion string format error",calledby ="deleteDensities")
-            END IF
-         END IF
-      END DO
+      IF (TRIM(ADJUSTL(ddString)).EQ.'allbutlast') THEN
+         CALL getMode(mode)
 
-      IF(separatorIndex.NE.-1) THEN
-         READ(ddString(1:separatorIndex-1),'(i)') startNumber
-         READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') endNumber
+         IF(mode.EQ.CDN_HDF5_MODE) THEN
+            INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+            IF (l_exist) THEN
+#ifdef CPP_HDF
+               CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+               CALL closeCDNPOT_HDF(fileID)
+               startNumber = 1
+               endNumber = lastDensityIndex - 1
+            END IF
+#endif
+         END IF
       ELSE
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') startNumber
-         READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i)') endNumber
+         DO i = 1, LEN(TRIM(ADJUSTL(ddString)))
+            IF(VERIFY(ddString(i:i),'1234567890').NE.0) THEN
+               IF ((ddString(i:i).EQ.'-').AND.(separatorIndex.EQ.-1)) THEN
+                  separatorIndex = i
+               ELSE
+                  CALL juDFT_error("density deletion string format error",calledby ="deleteDensities")
+               END IF
+            END IF
+         END DO
+
+         IF(separatorIndex.NE.-1) THEN
+            READ(ddString(1:separatorIndex-1),'(i7)') startNumber
+            READ(ddString(separatorIndex+1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
+         ELSE
+            READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') startNumber
+            READ(ddString(1:LEN(TRIM(ADJUSTL(ddString)))),'(i7)') endNumber
+         END IF
       END IF
 
       CALL getMode(mode)
@@ -1219,7 +1310,7 @@ MODULE m_cdn_io
          WRITE(*,*) 'Explicit deletion of densities in direct access mode'
          WRITE(*,*) 'not implemented.'
          WRITE(*,*) ''
-         WRITE(*,*) 'Ignoring -dd command line argument.'
+         WRITE(*,*) 'Ignoring -delden command line argument.'
       END IF
 
       CALL juDFT_error("Densities deleted.")

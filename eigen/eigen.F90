@@ -47,6 +47,9 @@ CONTAINS
     USE m_icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
     USE m_xmlOutput
+#ifdef CPP_MPI
+    USE m_mpi_bc_pot
+#endif
 
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
@@ -238,8 +241,16 @@ CONTAINS
             &  'Info: and stored in "vxc", the values obtained from the',&
             &  'Info: original implementation are saved to "vxc.old".'
     ENDIF
-    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                       iter,vr,vpw,vz,vzxy)
+
+    IF (mpi%irank.EQ.0) THEN
+       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                          iter,vr,vpw,vz,vzxy)
+    END IF
+#ifdef CPP_MPI
+    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
+                    iter,vr,vpw,vz,vzxy)
+#endif
+
 999 CONTINUE
     IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,iter/),&
                                                     RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -663,8 +674,15 @@ ENDIF
        ENDDO
        CLOSE (16)
        gwc=2
-       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
-                          iter,vr,vpw,vz,vzxy)
+
+       IF (mpi%irank.EQ.0) THEN
+          CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
+                             iter,vr,vpw,vz,vzxy)
+       END IF
+#ifdef CPP_MPI
+       CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
+                       iter,vr,vpw,vz,vzxy)
+#endif
        GOTO 999
     ELSE IF ( input%gw.EQ.2.AND.(gwc==2) )  THEN
        CLOSE (12)
