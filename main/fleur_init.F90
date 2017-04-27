@@ -29,6 +29,7 @@
           USE m_cdn_io
           USE m_fleur_info
           USE m_checks
+          USE m_writeOutHeader
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -121,6 +122,7 @@
 #if !(defined(__TOS_BGQ__)||defined(__PGI))
              !Do not open out-file on BlueGene
              OPEN (6,file='out',form='formatted',status='unknown')
+             CALL writeOutHeader()
 #endif
              OPEN (16,file='inf',form='formatted',status='unknown')
           ENDIF
@@ -130,6 +132,7 @@
           kpts%numSpecialPoints = 1
           IF (input%l_inpXML) THEN
              IF (mpi%irank.EQ.0) THEN
+                WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
                 ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
                 ALLOCATE(noel(1),atomTypeSpecies(1),speciesRepAtomType(1))
                 ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
