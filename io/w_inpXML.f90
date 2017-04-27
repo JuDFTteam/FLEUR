@@ -542,7 +542,7 @@ SUBROUTINE w_inpXML(&
          tempTaual(2,na) = atoms%taual(2,na)
          tempTaual(3,na) = atoms%taual(3,na)
          scpos = 1.0
-         DO i = 2,9
+         DO i = 2,40
             rest = ABS(i*tempTaual(1,na) - NINT(i*tempTaual(1,na)))
             IF ((scpos(1).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(1) = real(i)
             rest = ABS(i*tempTaual(2,na) - NINT(i*tempTaual(2,na)))

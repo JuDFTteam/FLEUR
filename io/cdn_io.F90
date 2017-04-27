@@ -1246,8 +1246,8 @@ MODULE m_cdn_io
                CALL closeCDNPOT_HDF(fileID)
                startNumber = 1
                endNumber = lastDensityIndex - 1
-            END IF
 #endif
+            END IF
          END IF
       ELSE
          DO i = 1, LEN(TRIM(ADJUSTL(ddString)))
