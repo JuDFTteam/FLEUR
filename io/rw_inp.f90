@@ -855,26 +855,18 @@
         END IF
          DO ieq=1,atoms%neq(n)
             na = na + 1
-            DO i = 2,9
+            scpos = 1.0
+            DO i = 2,100
               rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
      &             + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
               IF (.not.input%film) THEN
                 rest = rest + ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
               END IF
-              IF (rest.LT.(i*0.000001)) EXIT
+              IF (rest.LT.(i*0.000001)) THEN
+                 scpos = real(i)
+                 EXIT
+              END IF
             ENDDO
-            scpos = 1.0
-            IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
-!            IF (.not.film) THEN           ! now check z-coordinate
-!              DO i = 2,9
-!                rest = ABS(i*scpos*taual(3,na) -
-!     +                NINT(i*scpos*taual(3,na)) )
-!                IF (rest.LT.(i*scpos*0.000001)) THEN
-!                  scpos = i*scpos
-!                  EXIT
-!                ENDIF
-!              ENDDO
-!            ENDIF
             DO i = 1,2
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO

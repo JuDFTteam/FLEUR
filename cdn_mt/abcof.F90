@@ -51,8 +51,6 @@ CONTAINS
     REAL alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype),clo1(atoms%nlod,atoms%ntype)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     COMPLEX ccchi(2,2)
-    !$    COMPLEX, ALLOCATABLE :: acof_loc(:,:), bcof_loc(:,:)
-    !$    COMPLEX, ALLOCATABLE :: acof_inv(:,:), bcof_inv(:,:)
     LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
     REAL,    ALLOCATABLE :: work_r(:)
     COMPLEX, ALLOCATABLE :: work_c(:)
@@ -106,40 +104,30 @@ CONTAINS
        ENDIF
 
        !---> loop over atom types
-       natom = 0
+       !$OMP PARALLEL DO &
+       !$OMP& DEFAULT(none)&
+       !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
+       !$OMP& inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
+       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,&
+       !$OMP& jspin,bkpt,qss1,qss2,qss3,&
+       !$OMP& apw,const,nobd,&
+       !$OMP& alo1,blo1,clo1,kvec,nbasf0,nkvec,enough,&
+       !$OMP& acof,bcof,ccof)
        DO n = 1,atoms%ntype
           !  ----> loop over equivalent atoms
           DO nn = 1,atoms%neq(n)
-             natom = natom + 1
+             natom = 0
+             DO i = 1, n-1
+                natom = natom + atoms%neq(i)
+             ENDDO
+             natom = natom + nn
              IF ((atoms%invsat(natom).EQ.0) .OR. (atoms%invsat(natom).EQ.1)) THEN
                 !--->        loop over lapws
-                !$OMP PARALLEL IF(enough(natom)) &
-                !$OMP& DEFAULT(none)&
-                !$OMP& PRIVATE(k,i,work_r,work_c,ccchi,kspin,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
-                !$OMP& inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm,&
-                !$OMP& acof_loc,bcof_loc,acof_inv,bcof_inv)&
-                !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,n,ci,iintsp,&
-                !$OMP& jspin,bkpt,qss1,qss2,qss3,&
-                !$OMP& apw,const,natom,&
-                !$OMP& nobd,&
-                !$OMP& alo1,blo1,clo1,kvec,nbasf0,nkvec,enough,acof,bcof)&
-                !$OMP& REDUCTION(+:ccof)
                 IF (zmat%l_real) THEN
                    ALLOCATE ( work_r(nobd) )
                 ELSE
                    ALLOCATE ( work_c(nobd) )
                 ENDIF
-                !$    ALLOCATE(acof_loc(nobd,0:size(acof,2)-1),bcof_loc(nobd,0:size(acof,2)-1))
-                !$    acof_loc(:,:) = cmplx(0.0,0.0)
-                !$    bcof_loc(:,:) = cmplx(0.0,0.0)
-                !$ if (noco%l_soc.and.sym%invs) THEN
-                !$ IF (atoms%invsat(natom).EQ.1) THEN
-                !$    ALLOCATE(acof_inv(nobd,0:size(acof,2)-1),bcof_inv(nobd,0:size(acof,2)-1))
-                !$    acof_inv(:,:) = cmplx(0.0,0.0)
-                !$    bcof_inv(:,:) = cmplx(0.0,0.0)
-                !$ ENDIF 
-                !$ endif
-                !$OMP  DO
                 DO k = 1,nvmax
                    IF (.NOT.noco%l_noco) THEN
                       IF (zmat%l_real) THEN
@@ -232,7 +220,6 @@ CONTAINS
                          c_1 = c_0 *  fj(l)
                          c_2 = c_0 * dfj(l)
                          !     ----> loop over bands
-                         !$ if (.false.) THEN
                          IF (zmat%l_real) THEN
                             acof(:ne,lm,natom) = acof(:ne,lm,natom) +  c_1 * work_r(:ne)
                             bcof(:ne,lm,natom) = bcof(:ne,lm,natom) +  c_2 * work_r(:ne)
@@ -240,14 +227,6 @@ CONTAINS
                             acof(:ne,lm,natom) = acof(:ne,lm,natom) +  c_1 * work_c(:ne)
                             bcof(:ne,lm,natom) = bcof(:ne,lm,natom) +  c_2 * work_c(:ne)
                          END IF
-                         !$ endif
-                         !$ if (zmat%l_real) THEN
-                         !$   acof_loc(:ne,lm) = acof_loc(:ne,lm) +  c_1 * work_r(:ne)
-                         !$   bcof_loc(:ne,lm) = bcof_loc(:ne,lm) +  c_2 * work_r(:ne)
-                         !$ else
-                         !$   acof_loc(:ne,lm) = acof_loc(:ne,lm) +  c_1 * work_c(:ne)
-                         !$   bcof_loc(:ne,lm) = bcof_loc(:ne,lm) +  c_2 * work_c(:ne)
-                         !$ endif
 
                          IF (noco%l_soc.AND.sym%invs) THEN
                             IF (atoms%invsat(natom).EQ.1) THEN
@@ -256,46 +235,26 @@ CONTAINS
                                inv_f = (-1)**(l-m)
                                c_1 =  CONJG(c_1) * inv_f
                                c_2 =  CONJG(c_2) * inv_f
-                               !$ if (.false.) THEN
                                CALL CPP_BLAS_caxpy(ne,c_1,work_c,1, acof(1,lmp,jatom),1)
                                CALL CPP_BLAS_caxpy(ne,c_2,work_c,1, bcof(1,lmp,jatom),1)
-                               !$ endif
-                               !$  CALL CPP_BLAS_caxpy(ne,c_1,work_c,1,acof_inv(1,lmp),1)
-                               !$  CALL CPP_BLAS_caxpy(ne,c_2,work_c,1,bcof_inv(1,lmp),1)
                             ENDIF
                          ENDIF
                       ENDDO ! loop over m
                    ENDDO ! loop over l
                    IF (.NOT.enough(natom)) THEN
                       CALL abclocdn(atoms,sym, noco,ccchi(1,jspin),kspin,iintsp,const,phase,ylm,n,natom,k,&
-                           s,nvmax,ne,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),nkvec,enough,acof,bcof,ccof,zMat)
+                           s,nvmax,ne,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),nkvec,enough(natom),acof,bcof,ccof,zMat)
                    ENDIF
                 ENDDO ! loop over LAPWs
-                !$OMP END DO
-                !$OMP CRITICAL
-                !$      acof(:,:,natom) = acof(:,:,natom) + acof_loc(:,:)
-                !$      bcof(:,:,natom) = bcof(:,:,natom) + bcof_loc(:,:)
-                !$ if (noco%l_soc.and.sym%invs) THEN
-                !$      IF (atoms%invsat(natom).EQ.1) THEN
-                !$        jatom = sym%invsatnr(natom)
-                !$        acof(:,:,jatom) = acof(:,:,jatom) + acof_inv(:,:)
-                !$        bcof(:,:,jatom) = bcof(:,:,jatom) + bcof_inv(:,:)
-                !$      ENDIF
-                !$ endif
-                !$OMP END CRITICAL
-                !$    DEALLOCATE(acof_loc,bcof_loc)
-                !$ if (noco%l_soc.and.sym%invs) THEN
-                !$    IF (atoms%invsat(natom).EQ.1) DEALLOCATE(acof_inv,bcof_inv)
-                !$ endif
                 IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)
                 ELSE               
                    DEALLOCATE(work_c)
                 ENDIF
-                !$OMP END PARALLEL
              ENDIF  ! invsatom == ( 0 v 1 )
           ENDDO    ! loop over equivalent atoms
        ENDDO       ! loop over atom types
+       !$OMP END PARALLEL DO
     ENDDO       ! loop over interstitial spin
     IF (noco%l_soc.AND.sym%invs) THEN
 

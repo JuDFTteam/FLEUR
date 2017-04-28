@@ -29,6 +29,7 @@
           USE m_cdn_io
           USE m_fleur_info
           USE m_checks
+          USE m_writeOutHeader
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #endif
@@ -121,6 +122,7 @@
 #if !(defined(__TOS_BGQ__)||defined(__PGI))
              !Do not open out-file on BlueGene
              OPEN (6,file='out',form='formatted',status='unknown')
+             CALL writeOutHeader()
 #endif
              OPEN (16,file='inf',form='formatted',status='unknown')
           ENDIF
@@ -130,6 +132,7 @@
           kpts%numSpecialPoints = 1
           IF (input%l_inpXML) THEN
              IF (mpi%irank.EQ.0) THEN
+                WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
                 ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
                 ALLOCATE(noel(1),atomTypeSpecies(1),speciesRepAtomType(1))
                 ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
@@ -286,6 +289,7 @@
                         &             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
                 ENDIF
                 oneD%odd%nq2 = oneD%odd%n2d
+                oneD%odi%nq2 = oneD%odd%nq2
                 !-odim
                 !+t3e
                 INQUIRE(file="cdn1",exist=l_opti)
@@ -332,6 +336,7 @@
           oneD%odg%pgfxx => oneD%pgft1xx ; oneD%odg%pgfyy => oneD%pgft1yy ; oneD%odg%pgfxy => oneD%pgft1xy
           !+odim
           !
+
 #ifdef CPP_MPI
           CALL MPI_BCAST(l_opti,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(noco%l_noco,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
@@ -406,7 +411,6 @@
              ENDDO
           ENDDO
 
-
           jij%qn = 0.0
           !-t3e
           !-odim
@@ -445,7 +449,6 @@
              ALLOCATE ( jij%eig_l(DIMENSION%neigd+5,1) )
           ENDIF
           !--- J>
-
 
           IF( sym%invs .OR. noco%l_soc ) THEN
              sym%nsym = sym%nop

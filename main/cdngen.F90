@@ -32,6 +32,10 @@
       use m_m_perp
       USE m_types
       USE m_xmlOutput
+#ifdef CPP_MPI
+      USE m_mpi_bc_pot
+      USE m_mpi_bc_coreden
+#endif
       IMPLICIT NONE
       TYPE(t_results),INTENT(INOUT):: results
       TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -94,8 +98,15 @@
       ALLOCATE(vpw(stars%ng3,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
      &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd))
 
-      CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                         iter,vr,vpw,vz,vzxy)
+      IF (mpi%irank.EQ.0) THEN
+         CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                            iter,vr,vpw,vz,vzxy)
+      END IF
+#ifdef CPP_MPI
+      CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
+                      iter,vr,vpw,vz,vzxy)
+#endif
+
       DEALLOCATE ( vpw,vzxy )
       ALLOCATE ( qpw(stars%ng3,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
       ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
@@ -164,7 +175,6 @@
          IF (noco%l_mperp) jspmax = 1
          DO jspin = 1,jspmax
             CALL timestart("cdngen: cdnval")
-
             CALL cdnval(eig_id,&
                         mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
                         sphhar, sym,obsolete, igq_fft, vr,vz(:,:,jspin), oneD,&
@@ -201,7 +211,13 @@
          tec = 0.0
          qint = 0.0
          IF (input%frcor) THEN
-            CALL readCoreDensity(input,atoms,dimension,rh,tec,qint)
+            IF (mpi%irank.EQ.0) THEN
+               CALL readCoreDensity(input,atoms,dimension,rh,tec,qint)
+            END IF
+#ifdef CPP_MPI
+            CALL mpi_bc_coreDen(mpi,atoms,input,dimension,&
+                                rh,tec,qint)
+#endif
          END IF
 
          DO jspin = 1,input%jspins
@@ -257,9 +273,9 @@
             END IF
 !
          END DO ! loop over spins
-
-         CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
-
+         IF (mpi%irank.EQ.0) THEN
+            CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
+         END IF
          IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) CLOSE(15)
       ELSE
 ! relativistic core implementation : kcrel.eq.1
@@ -286,6 +302,7 @@
                END DO
             END IF
            ENDIF
+
             IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
 !---> pk non-collinear
 !--->          add the coretail-charge to the constant interstitial

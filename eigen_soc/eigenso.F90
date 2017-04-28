@@ -1,7 +1,7 @@
 MODULE m_eigenso
   !
   !*********************************************************************
-  !     sets up and solves the spin-orbit eigenvalue problem in the
+  !     sets ur and solves the spin-orbit eigenvalue problem in the
   !     second variation procedure.
   !
   !     way: takes e.v. and e.f. from previous scalar-rel. calc.
@@ -72,7 +72,8 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: vzxy(:,:,:,:),vpw(:,:)
     TYPE(t_zmat)::zmat
 
-
+    INTEGER :: ierr
+    
     !  ..
 
     INQUIRE (4649,opened=l_socvec)
@@ -119,6 +120,10 @@ CONTAINS
             el=enpara%el0(:,:,jspin),&
             ello=enpara%ello0(:,:,jspin),evac=enpara%evac0(:,jspin))
     ENDDO
+#if defined(CPP_MPI)
+    !RMA synchronization
+    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#endif
     CALL timestart("eigenso: spnorb")
     !  ..
     ALLOCATE( rsopdp(atoms%ntype,atoms%lmaxd,2,2),rsopdpd(atoms%ntype,atoms%lmaxd,2,2),&

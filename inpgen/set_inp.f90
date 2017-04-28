@@ -358,12 +358,15 @@
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
       CLOSE (6)
-      inquire(file="inp",exist=l_exists)
+      INQUIRE(file="inp",exist=l_exists)
       IF (l_exists) THEN
-         CALL juDFT_error("Cannot overwrite existing inp-file ",calledby&
-     &        ="set_inp")
+         CALL juDFT_error("inp-file exists. Cannot write another input file in this directory.",calledby="set_inp")
       ENDIF
-      
+      INQUIRE(file="inp.xml",exist=l_exists)
+      IF (l_exists) THEN
+         CALL juDFT_error("inp.xml-file exists. Cannot write another input file in this directory.",calledby="set_inp")
+      ENDIF
+
       nu = 8 
       input%gw = 0
 
@@ -412,7 +415,7 @@
       Jij%phnd=1
 
 
-      IF(.NOT.juDFT_was_argument("-noXML")) THEN
+      IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
 
@@ -498,7 +501,7 @@
       IF (atoms%ntype.GT.999) THEN
          WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
          WRITE(*,*) 'Use inp.xml file instead!'
-      ELSE
+      ELSE IF (juDFT_was_argument("-old")) THEN
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&

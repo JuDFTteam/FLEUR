@@ -47,21 +47,21 @@
 !  matrices of lattice vectors in full Cartesian units
 
       DO i=1,3
-         amat(i,1) = aa*scale(1)*a1(i)
-         amat(i,2) = aa*scale(2)*a2(i)
-         amat(i,3) = aa*scale(3)*a3(i)
+         amat(i,1) = aa*scale(i)*a1(i)
+         amat(i,2) = aa*scale(i)*a2(i)
+         amat(i,3) = aa*scale(i)*a3(i)
       ENDDO
 
       DO i=1,3
-         bmat(1,i) = (pi_const/(aa*scale(1))) * b1(i)
-         bmat(2,i) = (pi_const/(aa*scale(2))) * b2(i)
-         bmat(3,i) = (pi_const/(aa*scale(3))) * b3(i)
+         bmat(1,i) = (pi_const/(aa*scale(i))) * b1(i)
+         bmat(2,i) = (pi_const/(aa*scale(i))) * b2(i)
+         bmat(3,i) = (pi_const/(aa*scale(i))) * b3(i)
       ENDDO
 
       DO i=1,3
-         amatinv(1,i) = (1.0/(aa*scale(1))) * b1(i)
-         amatinv(2,i) = (1.0/(aa*scale(2))) * b2(i)
-         amatinv(3,i) = (1.0/(aa*scale(3))) * b3(i)
+         amatinv(1,i) = (1.0/(aa*scale(i))) * b1(i)
+         amatinv(2,i) = (1.0/(aa*scale(i))) * b2(i)
+         amatinv(3,i) = (1.0/(aa*scale(i))) * b3(i)
       ENDDO
 
 !--->  check that amat and amatinv consistent 

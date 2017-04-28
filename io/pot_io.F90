@@ -269,12 +269,12 @@ MODULE m_pot_io
 
       mode = POT_DIRECT_MODE
       IF (juDFT_was_argument("-stream_cdn")) mode=POT_STREAM_MODE
-      IF (juDFT_was_argument("-hdf_cdn")) THEN
+      IF (.NOT.juDFT_was_argument("-no_cdn_hdf")) THEN !juDFT_was_argument("-hdf_cdn")) THEN
 #ifdef CPP_HDF
          mode=POT_HDF5_MODE
 #else
-         WRITE(*,*) 'Code not compiled with HDF5 support.'
-         WRITE(*,*) 'Falling back to direct access.'
+!         WRITE(*,*) 'Code not compiled with HDF5 support.'
+!         WRITE(*,*) 'Falling back to direct access.'
 #endif
       END IF
    END SUBROUTINE getMode
