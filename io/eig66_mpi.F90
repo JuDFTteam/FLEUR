@@ -132,6 +132,7 @@ CONTAINS
             d%qmtp_data(1),d%orbcomp_data(1))
     ENDIF
     IF (PRESENT(filename).AND..NOT.create) CALL priv_readfromfile()
+    CALL MPI_BARRIER(MPI_COMM,e)
     CALL timestop("create data spaces in ei66_mpi")
   CONTAINS
     SUBROUTINE priv_create_memory(slot_size,local_slots,handle,int_data_ptr,real_data_ptr,cmplx_data_ptr)
