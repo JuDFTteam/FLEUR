@@ -191,6 +191,7 @@
                 oneD%odd%nn2d = (2*(oneD%odd%k3) + 1)*(2*(oneD%odd%M) + 1)
              ELSE
                 oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
+                oneD%odd%mb = 0
              ENDIF
              !-odim
              ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
