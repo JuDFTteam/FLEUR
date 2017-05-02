@@ -1209,7 +1209,7 @@ SUBROUTINE r_inpXML(&
      END IF
   END IF
 
-  WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
+  ! WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
   IF (namex.EQ.'vhse') THEN
      ! overwrite if sane input
      IF (aMix > 0 .and. aMix <= 1) THEN
@@ -1266,7 +1266,7 @@ SUBROUTINE r_inpXML(&
         lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
      END IF
 
-     WRITE(*,*) 'APW+lo cutoffs ignored for the moment'
+     ! WRITE(*,*) 'APW+lo cutoffs ignored for the moment'
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
      ldau_l = -1
