@@ -28,6 +28,7 @@ CONTAINS
     USE m_alineso
     USE m_pot_io
     USE m_types
+    USE m_mpi_bc_pot
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -89,8 +90,13 @@ CONTAINS
     ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),&
          vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%ng3,DIMENSION%jspd) )
 
-    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                       iter,vr,vpw,vz,vzxy)
+    IF (mpi%irank.EQ.0) THEN
+       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                          iter,vr,vpw,vz,vzxy)
+    END IF
+#ifdef CPP_MPI
+    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,iter,vr,vpw,vz,vzxy)
+#endif
 
     DEALLOCATE ( vz,vzxy,vpw )
 
