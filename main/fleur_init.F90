@@ -520,5 +520,10 @@
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 
 
+          !Now check for additional input files
+          INQUIRE(file='orbcomp',exists=banddos%l_orb)
+          INQUIRE(file='mcd_inp',exists=banddos%l_mcd)
+          
+
         END SUBROUTINE fleur_init
      END MODULE
