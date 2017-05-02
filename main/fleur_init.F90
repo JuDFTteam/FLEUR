@@ -524,7 +524,9 @@
           !Now check for additional input files
           INQUIRE(file='orbcomp',exist=banddos%l_orb)
           INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
-          
+
+          !check for broken feature
+          IF (mpi%n_size>1.and.atoms%nlod>0.and.noco%l_noco) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
 
         END SUBROUTINE fleur_init
      END MODULE
