@@ -2147,6 +2147,7 @@ SUBROUTINE r_inpXML(&
      oneD%odd%k3 = 0
      oneD%odd%M = 0
      oneD%odd%nn2d = 1
+     oneD%odd%mb = 0
   END IF
   ALLOCATE (stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
   ALLOCATE (stars%ig2(stars%ng3))
