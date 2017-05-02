@@ -522,8 +522,8 @@
 
 
           !Now check for additional input files
-          INQUIRE(file='orbcomp',exists=banddos%l_orb)
-          INQUIRE(file='mcd_inp',exists=banddos%l_mcd)
+          INQUIRE(file='orbcomp',exist=banddos%l_orb)
+          INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
           
 
         END SUBROUTINE fleur_init
