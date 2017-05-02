@@ -383,11 +383,11 @@ endif
        ENDIF
        IF (MOD(ierr/8,2).NE.0) THEN
           WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
-          !CALL CPP_flush(6)
+          CALL judft_error("SCALAPACK failed to solve eigenvalue problem",calledby="chani.F90")
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
           WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
-          !CALL CPP_flush(6)
+          CALL judft_error("SCALAPACK failed: B was not positive definite",calledby="chani.F90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN

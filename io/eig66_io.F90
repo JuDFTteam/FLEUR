@@ -66,7 +66,7 @@ CONTAINS
 
     id=eig66_data_newid(mode)
 
-    PRINT *,"open_eig:",id,mode
+    !PRINT *,"open_eig:",id,mode
 
     CALL timestart("Open file/memory for IO of eig66")
     SELECT CASE (eig66_data_mode(id))
@@ -94,7 +94,7 @@ CONTAINS
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER  :: mode
     mode=eig66_data_mode(id)
-    PRINT*,"close_eig:",id,mode
+    !PRINT*,"close_eig:",id,mode
     SELECT CASE (mode)
     CASE (DA_mode)
        CALL close_eig_DA(id,filename)

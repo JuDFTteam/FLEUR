@@ -140,7 +140,7 @@ CONTAINS
     CALL MPI_COMM_GROUP (mpi%MPI_COMM,WORLD_GROUP,ierr)
     CALL MPI_GROUP_INCL (WORLD_GROUP,mpi%n_size,i_mygroup,SUB_GROUP,ierr)
     CALL MPI_COMM_CREATE (mpi%MPI_COMM,SUB_GROUP,mpi%SUB_COMM,ierr)
-    write (*,"(a,i0,100i4)") "MPI:",mpi%sub_comm,mpi%irank,mpi%n_groups,mpi%n_size,n,i_mygroup
+    !write (*,"(a,i0,100i4)") "MPI:",mpi%sub_comm,mpi%irank,mpi%n_groups,mpi%n_size,n,i_mygroup
 
     CALL MPI_COMM_RANK (mpi%SUB_COMM,mpi%n_rank,ierr)
 #endif
