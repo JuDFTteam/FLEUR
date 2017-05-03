@@ -13,6 +13,7 @@ endif()
 if (${FLEUR_USE_MPI})
    #tests of fleur
    foreach(test ${Testdirs})
-    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${MPIEXEC} ${MPI_NUMPROC_FLAGS 2")
+    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl
+${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${MPIEXEC} ${MPI_NUMPROC_FLAGS} 2")
    endforeach(test)
 endif()
