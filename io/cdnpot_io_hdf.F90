@@ -2471,7 +2471,7 @@ MODULE m_cdnpot_io_hdf
 
          dimsInt(:3)=(/atoms%jmtd,atoms%ntype,DIMENSION%jspd/)
          CALL h5dopen_f(cdncGroupID, 'rhcs', rhcsSetID, hdfError)
-         CALL io_write_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs)
+         CALL io_write_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs(:dimsInt(1),:dimsInt(2),:dimsInt(3)))
          CALL h5dclose_f(rhcsSetID, hdfError)
 
          dimsInt(:2)=(/atoms%ntype,DIMENSION%jspd/)
