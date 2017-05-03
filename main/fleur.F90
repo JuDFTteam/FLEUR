@@ -823,6 +823,7 @@
        END IF
        !+fo
        INQUIRE (file='inp_new',exist=l_endit)
+       IF (.NOT.l_endit) INQUIRE (file='inp_new.xml',exist=l_endit)
        IF (l_endit) THEN
           CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
        END IF

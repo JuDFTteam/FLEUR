@@ -215,6 +215,17 @@ CONTAINS
                       banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
                       kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,&
                       input_temp%comment)
+          input_temp%l_f = input%l_f
+          input_temp%tkb = input%tkb
+          input_temp%delgau = input%tkb
+          cell_temp = cell
+          sym_temp = sym
+          vacuum_temp = vacuum
+          CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+               banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
+               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
+               input_temp%comment)
+    END IF
        ELSE
           kpts_temp%numSpecialPoints = 1
           ALLOCATE(kpts_temp%specialPoints(3,kpts_temp%numSpecialPoints))
@@ -241,17 +252,6 @@ CONTAINS
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
        END IF
 
-       input_temp%l_f = input%l_f
-       input_temp%tkb = input%tkb
-       input_temp%delgau = input%tkb
-       cell_temp = cell
-       sym_temp = sym
-       vacuum_temp = vacuum
-       CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                   banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-                   kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
-                   input_temp%comment)
-    END IF
 
     RETURN
   END SUBROUTINE geo
