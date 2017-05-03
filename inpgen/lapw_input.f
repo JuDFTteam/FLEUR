@@ -3,11 +3,11 @@
 !-----------------------------------------------------------------------
 ! read in some lapw-specific input or set appropriate defauts
 !-----------------------------------------------------------------------
-      INTEGER, PARAMETER  :: dbgfh=6, errfh=6, bfh=93, warnfh=6
+      INTEGER, PARAMETER  :: dbgfh=6, errfh=6, warnfh=6
 
       CONTAINS
       SUBROUTINE lapw_input(
-     >                      infh,nline,xl_buffer,buffer,
+     >                      infh,nline,xl_buffer,bfh,buffer,
      <                      jspins,kcrel,ndvgrd,nkpt,div,
      <                      frcor,ctail,chng,tria,kmax,gmax,gmaxxc,
      <                      igrd,dvac,dtild,tkb,namex,relcor)
@@ -15,7 +15,7 @@
       USE m_readrecord
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)  :: xl_buffer,infh
+      INTEGER, INTENT (IN)  :: xl_buffer,infh,bfh
       INTEGER, INTENT (OUT) :: jspins,kcrel,ndvgrd,nkpt,div(3)
       INTEGER, INTENT (OUT) :: igrd
       LOGICAL, INTENT (OUT) :: frcor,ctail,tria
@@ -60,7 +60,7 @@
 
       IF (nbuffer == 0) then
         DO
-          CALL read_record(infh,xl_buffer,nline,nbuffer,buffer,ios)
+          CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
           IF (ios==1) GOTO 999
           IF (ios == 2)  CALL juDFT_error
      +         ("end of file while reading a record",calledby

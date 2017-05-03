@@ -25,9 +25,9 @@ PROGRAM inpgen
       USE m_types
       IMPLICIT NONE
     
-      INTEGER natmax,nop48,nline,natin,ngen,i,j
+      INTEGER natmax,nop48,nline,natin,ngen,i,j,bfh
       INTEGER nops,no3,no2,na,numSpecies,i_c
-      INTEGER infh,errfh,bfh,warnfh,symfh,dbgfh,outfh,dispfh
+      INTEGER infh,errfh,warnfh,symfh,dbgfh,outfh,dispfh
       LOGICAL cal_symm,checkinp,newSpecies
       LOGICAL cartesian,oldfleur,l_hyb  ,inistop
       REAL    aa
@@ -59,12 +59,13 @@ PROGRAM inpgen
       ngen = 0
       infh = 5
       errfh = 6 ; warnfh = 6 ; dbgfh = 6 ; outfh = 6
-      bfh = 93
       symfh = 94
       symfn = 'sym    '
       dispfh = 97
       dispfn='disp'
       nline = 0
+
+      bfh = 93
 
       input%l_inpXML = .FALSE. 
 
@@ -73,9 +74,10 @@ PROGRAM inpgen
 
 !      OPEN (5,file='inp2',form='formatted',status='old')
       OPEN (6,file='out',form='formatted',status='unknown')
+      OPEN (bfh,file='bfh.txt',form='formatted',status='unknown')
 
       CALL struct_input(&
-     &                  infh,errfh,bfh,warnfh,symfh,symfn,&
+     &                  infh,errfh,warnfh,symfh,symfn,bfh,&
      &                  natmax,nop48,&
      &                  nline,xl_buffer,buffer,&
      &                  title,input%film,cal_symm,checkinp,sym%symor,&
@@ -193,7 +195,7 @@ PROGRAM inpgen
       ALLOCATE ( atoms%rmt(atoms%ntype) )
       atoms%nlod=9  ! This fixed dimensioning might have to be made more dynamical!
       CALL set_inp(&
-     &             infh,nline,xl_buffer,buffer,l_hyb,&
+     &             infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &             atoms,sym,cell,title,idlist,&
      &             input,vacuum,noco,&
      &             atomTypeSpecies,speciesRepAtomType,&
@@ -201,6 +203,8 @@ PROGRAM inpgen
 
       DEALLOCATE (atomTypeSpecies,speciesRepAtomType)
       DEALLOCATE ( ntyrep, natype, natrep, atomid )
+
+      CLOSE(bfh,STATUS='delete')
 
 !
 ! --> Structure in povray or xsf-format
