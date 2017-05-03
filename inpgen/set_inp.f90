@@ -13,7 +13,7 @@
 !---------------------------------------------------------------------
       CONTAINS
       SUBROUTINE set_inp(&
-     &                   infh,nline,xl_buffer,buffer,l_hyb,&
+     &                   infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &                   atoms,sym,cell,title,idlist,&
      &                   input,vacuum,noco,&
      &                   atomTypeSpecies,speciesRepAtomType,&
@@ -41,7 +41,7 @@
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
-      INTEGER, INTENT (IN) :: infh,xl_buffer
+      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh
       INTEGER, INTENT (INOUT) :: nline
       INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
       INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
@@ -221,7 +221,7 @@
       ALLOCATE (enpara%enmix(input%jspins))
 
       CALL atom_input(&
-     &                infh,xl_buffer,buffer,&
+     &                infh,xl_buffer,bfh,buffer,&
      &                input%jspins,input%film,idlist,xmlCoreRefOccs,&
      &                nline,&
      &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
@@ -350,7 +350,7 @@
 ! read some lapw input
 !
       CALL lapw_input(&
-     &                infh,nline,xl_buffer,buffer,&
+     &                infh,nline,xl_buffer,bfh,buffer,&
      &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                xcpot%igrd,vacuum%dvac,dtild,input%tkb,namex,relcor)
