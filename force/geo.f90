@@ -225,7 +225,7 @@ CONTAINS
                banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
                kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
                input_temp%comment)
-    END IF
+    
        ELSE
           kpts_temp%numSpecialPoints = 1
           ALLOCATE(kpts_temp%specialPoints(3,kpts_temp%numSpecialPoints))
@@ -252,7 +252,7 @@ CONTAINS
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
        END IF
 
-
+    ENDIF
     RETURN
   END SUBROUTINE geo
 END MODULE m_geo
