@@ -846,6 +846,7 @@
 
      contains
        subroutine priv_geo_end(mpi)
+         TYPE(t_mpi),INTENT(IN)::mpi
          LOGICAL :: l_exist
          !Check if a new input was generated
          INQUIRE (file='inp_new',exist=l_exist)
@@ -853,7 +854,7 @@
             CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
          END IF
          !check for inp.xml
-         INQUIRE (file='inp_new.xml',exist=l_exit)
+         INQUIRE (file='inp_new.xml',exist=l_exist)
          IF (.NOT.l_exist) return
          IF (mpi%irank==0) then
             CALL system('mv inp.xml inp_old.xml')
