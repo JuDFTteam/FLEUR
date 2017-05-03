@@ -582,7 +582,7 @@ SUBROUTINE r_inpXML(&
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
      READ(valueString,*) noco%qss(1), noco%qss(2), noco%qss(3)
 
-     WRITE(*,*) 'Note: TODO: Calculation of q points!'
+     !WRITE(*,*) 'Note: TODO: Calculation of q points!'
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/qsc')
      IF (numberNodes.EQ.1) THEN
@@ -591,8 +591,8 @@ SUBROUTINE r_inpXML(&
         DO i = 1, 3
            noco%qss(i) = noco%qss(i) / qsc(i)
         END DO
-        WRITE(*,*) 'Note: TODO: Integrate qsc directly into qss in input file!'
-        WRITE(*,*) '(no problem for users)'
+        !WRITE(*,*) 'Note: TODO: Integrate qsc directly into qss in input file!'
+        !WRITE(*,*) '(no problem for users)'
      END IF
   END IF
 
@@ -826,7 +826,7 @@ SUBROUTINE r_inpXML(&
            a3(2) = evaluateFirst(valueString)
            a3(3) = evaluateFirst(valueString)
         ELSE
-           WRITE(*,*) 'Note: For film calculations only the upper left 2x2 part of the Bravais matrix is considered.'
+           !WRITE(*,*) 'Note: For film calculations only the upper left 2x2 part of the Bravais matrix is considered.'
         END IF
      END IF
   END IF ! Note: Further ways to define lattices might be added later. (1D lattice,...)
@@ -1994,10 +1994,10 @@ SUBROUTINE r_inpXML(&
         DO i = 1, 3
            bk(i) = kpts%bk(i,ikpt)
         END DO
-        IF (input%film .OR.oneD%odd%d1) THEN
-           WRITE(*,*) 'There might be additional work required for the k points here!'
-           WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
-        END IF
+        !IF (input%film .OR.oneD%odd%d1) THEN
+        !   WRITE(*,*) 'There might be additional work required for the k points here!'
+        !   WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
+        !END IF
         CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
         stars%kq1_fft = max(kq1,stars%kq1_fft)
         stars%kq2_fft = max(kq2,stars%kq2_fft)
