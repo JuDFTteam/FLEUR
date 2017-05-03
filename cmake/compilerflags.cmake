@@ -1,7 +1,7 @@
 #cmake file to set compiler flags for some of the known compilers
 if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
    message("Intel Fortran detected")
-   if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "13.0.0.0")
+   if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "14.1.0.0")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mkl -r8 -openmp")
    else()
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mkl -r8 -qopenmp")
