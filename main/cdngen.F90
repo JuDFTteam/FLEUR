@@ -89,8 +89,6 @@
       LOGICAL   l_enpara
       PARAMETER (l_st=.false.)
    
-      IF (mpi%irank.EQ.0) WRITE (2,8005)
- 8005 FORMAT ('CHARGE DENSITY PART (cdngen):')
      
 !
 ! Read Potential and keep only vr(:,0,:,:) and vz
