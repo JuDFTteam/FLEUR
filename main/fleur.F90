@@ -822,11 +822,8 @@
           CALL system('rm -f broyd*')
        END IF
        !+fo
-       INQUIRE (file='inp_new',exist=l_endit)
-       IF (.NOT.l_endit) INQUIRE (file='inp_new.xml',exist=l_endit)
-       IF (l_endit) THEN
-          CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
-       END IF
+       call priv_geo_end(mpi)
+       
        !-fo
        IF ( hybrid%l_calhf ) ithf = ithf + 1
        IF ( xcpot%icorr == icorr_hf .OR. xcpot%icorr == icorr_pbe0 .OR.&
@@ -847,5 +844,40 @@
        IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
        CALL juDFT_end("all done",mpi%irank)
 
+     contains
+       subroutine priv_geo_end(mpi)
+         LOGICAL :: l_exist
+         !Check if a new input was generated
+         INQUIRE (file='inp_new',exist=l_exist)
+         IF (l_exist) THEN
+            CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
+         END IF
+         !check for inp.xml
+         INQUIRE (file='inp_new.xml',exist=l_exit)
+         IF (.NOT.l_exist) return
+         IF (mpi%irank==0) then
+            CALL system('mv inp.xml inp_old.xml')
+            CALL system('mv inp_new.xml inp.xml')
+            INQUIRE (file='qfix',exist=l_exist)
+            IF (l_exist) THEN
+               OPEN(2,file='qfix')
+               WRITE(2,*)"F"
+               CLOSE(2)
+               print *,"qfix set to F"
+            ENDIF
+            INQUIRE(file='broyd',exist=l_exist)
+            IF (l_exist) THEN
+               CALL system('rm broyd')
+               print *,"broyd file deleted"
+            ENDIF
+            INQUIRE(file='broyd.7',exist=l_exist)
+            IF (l_exist) THEN
+               CALL system('rm broyd.7')
+               print *,"broyd.7 file deleted"
+            ENDIF
+         ENDIF
+         CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
+     end subroutine priv_geo_end
+       
      END SUBROUTINE
       END MODULE
