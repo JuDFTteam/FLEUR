@@ -656,9 +656,9 @@ MODULE m_cdn_io
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
-      REAL, INTENT(OUT) :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(OUT) :: tecs(atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(OUT) :: qints(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(OUT) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(OUT) :: tecs(:,:)!(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(OUT) :: qints(:,:)!(atoms%ntype,DIMENSION%jspd)
 
       INTEGER            :: mode, iUnit, iSpin, iAtom, i
       LOGICAL            :: l_exist
@@ -729,9 +729,9 @@ MODULE m_cdn_io
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
-      REAL, INTENT(IN) :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(IN) :: tecs(atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(IN) :: qints(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(IN) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(IN) :: tecs(:,:)!(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(IN) :: qints(:,:)!(atoms%ntype,DIMENSION%jspd)
 
       INTEGER :: mode, iUnit, iSpin, iAtom, i
 

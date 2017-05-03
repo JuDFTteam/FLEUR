@@ -2449,9 +2449,9 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
       INTEGER(HID_T), INTENT(IN) :: fileID
-      REAL,           INTENT(IN) :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-      REAL,           INTENT(IN) :: tecs(atoms%ntype,DIMENSION%jspd)
-      REAL,           INTENT(IN) :: qints(atoms%ntype,DIMENSION%jspd)
+      REAL,           INTENT(IN) :: rhcs(:,:,:)!(dimension%msh,atoms%ntype,DIMENSION%jspd)
+      REAL,           INTENT(IN) :: tecs(:,:)!(atoms%ntype,DIMENSION%jspd)
+      REAL,           INTENT(IN) :: qints(:,:)!(atoms%ntype,DIMENSION%jspd)
 
       INTEGER hdfError
       INTEGER(HID_T) cdncGroupID, rhcsSpaceID, rhcsSetID
@@ -2497,7 +2497,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(3,dims(:3),rhcsSpaceID,hdfError)
          CALL h5dcreate_f(cdncGroupID, "rhcs", H5T_NATIVE_DOUBLE, rhcsSpaceID, rhcsSetID, hdfError)
          CALL h5sclose_f(rhcsSpaceID,hdfError)
-         CALL io_write_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs)
+         CALL io_write_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs(:dimsInt(1),:dimsInt(2),:dimsInt(3))
          CALL h5dclose_f(rhcsSetID, hdfError)
 
          dims(:2)=(/atoms%ntype,DIMENSION%jspd/)
