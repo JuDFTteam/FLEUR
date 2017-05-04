@@ -23,6 +23,7 @@ PROGRAM inpgen
       USE m_writestruct
       USE m_xsf_io, ONLY : xsf_write_atoms
       USE m_types
+      USE m_inpgen_help
       IMPLICIT NONE
     
       INTEGER natmax,nop48,nline,natin,ngen,i,j,bfh
@@ -53,7 +54,9 @@ PROGRAM inpgen
           TYPE(t_sym)      :: sym
           TYPE(t_noco)     :: noco
           TYPE(t_vacuum)   :: vacuum
-       
+      
+      CALL inpgen_help()
+
       nop48 = 48
       natmax = 9999
       ngen = 0
