@@ -265,7 +265,7 @@ c
       k1d = i2357(mxx1)
       k2d = i2357(mxx2)
       k3d = i2357(mxx3)
-      write(*,*) k1d,mxx1
+      !write(*,*) k1d,mxx1
 #else
       k1d = mxx1
       k2d = mxx2

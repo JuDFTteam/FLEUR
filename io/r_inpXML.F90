@@ -216,7 +216,7 @@ SUBROUTINE r_inpXML(&
   !TODO! these switches should be in the inp-file
   input%l_core_confpot=.true. !former CPP_CORE
   input%l_useapw=.false.   !former CPP_APW
-  WRITE(*,*) 'Start reading of inp.xml file'
+  !WRITE(*,*) 'Start reading of inp.xml file'
   CALL xmlInitInterface()
   CALL xmlParseSchema(schemaFilename)
   CALL xmlParseDoc(docFilename)
@@ -1969,9 +1969,11 @@ SUBROUTINE r_inpXML(&
   IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
   IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
   IF (dimension%neigd.LT.minNeigd) THEN
-     WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
+     IF (dimension%neigd>0) THEN
+        WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
+        WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
+     ENDIF
      dimension%neigd = minNeigd
-     WRITE(*,*) 'changed numbands (dimension%neigd) to ',dimension%neigd
   END IF
 
   kpts%nkpt = kpts%nkpt
@@ -2300,7 +2302,7 @@ SUBROUTINE r_inpXML(&
 
   CALL xmlFreeResources()
 
-  WRITE(*,*) 'Reading of inp.xml file finished'
+  !WRITE(*,*) 'Reading of inp.xml file finished'
 
   DEALLOCATE(speciesNames, speciesNLO)
 

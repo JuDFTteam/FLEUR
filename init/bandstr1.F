@@ -134,7 +134,7 @@
       CHARACTER(LEN=200) tempTitle
       aoff = iachar('a')-1
       adel = iachar('a')-iachar('A')
-      write(*,*) aoff,adel 
+      !write(*,*) aoff,adel 
 
       OPEN (27,file='band.gnu',status='unknown')
       WRITE (27,900)
@@ -270,7 +270,7 @@
       END IF
 
       !No band_inp file -> determine default lines for bandstructure
-      write(*,*) idsyst,idtype
+      !write(*,*) idsyst,idtype
       nosyp = -1
       IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
         nosyp = 7

@@ -121,10 +121,18 @@
              CALL startXMLOutput()
 #if !(defined(__TOS_BGQ__)||defined(__PGI))
              !Do not open out-file on BlueGene
-             OPEN (6,file='out',form='formatted',status='unknown')
+             IF (judft_was_argument("-info")) THEN
+                  OPEN (6,status='SCRATCH')
+             ELSE
+                  OPEN (6,file='out',form='formatted',status='unknown')
+             ENDIF
              CALL writeOutHeader()
 #endif
-             OPEN (16,file='inf',form='formatted',status='unknown')
+             IF (judft_was_argument("-info")) THEN
+                OPEN (16,status='SCRATCH')
+             ELSE
+                OPEN (16,file='inf',form='formatted',status='unknown')
+             ENDIF
           ENDIF
 
           input%minDistance = 0.0
