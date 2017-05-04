@@ -41,7 +41,8 @@ MODULE m_xmlOutput
    END FUNCTION getXMLOutputUnitNumber
 
    SUBROUTINE startXMLOutput()
-      USE m_judft
+
+      USE m_juDFT_args
       USE m_constants
       USE m_utility
       USE m_compile_descr
@@ -71,7 +72,7 @@ MODULE m_xmlOutput
       CALL DATE_AND_TIME(date,time,zone)
       WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
       WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)
-      IF (judft_was_argument("-info")) THEN
+      IF (juDFT_was_argument("-info")) THEN
          OPEN (xmlOutputUnit,status='scratch')
       ELSE
          OPEN (xmlOutputUnit,file='out.xml',form='formatted',status='unknown')
