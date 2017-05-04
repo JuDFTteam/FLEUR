@@ -32,6 +32,7 @@
       USE m_outcdn
       USE m_loddop
       USE m_xsf_io
+      USE m_cdn_io
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
@@ -49,15 +50,16 @@
       CHARACTER(len=10), INTENT (IN) :: cdnfname
 
 !     .. Local Scalars ..
-      REAL          :: s,tec,qint,xdnout
+      REAL          :: s,tec,qint,xdnout,fermiEnergyTemp
       INTEGER       :: i,i1,i2,i3,ii3,ix,iy,iz,jsp,na,nplo
       INTEGER       :: nplot,nq,nt,jm,jspin,iter,ii1,ii2
-      LOGICAL       :: twodim,oldform,newform
+      LOGICAL       :: twodim,oldform,newform,l_qfix
 !     ..
 !     .. Local Arrays ..
       COMPLEX :: qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
       REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
       REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
+      COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
       INTEGER :: grid(3)
       LOGICAL :: cartesian,xsf
       REAL    :: rhocc(atoms%jmtd)
@@ -99,11 +101,18 @@
 
       ! new input
       !<-- Open the charge/potential file
-      OPEN (20,file = cdnfname,form='unformatted',status='old')
-      CALL loddop(&
-     &            stars,vacuum,atoms,sphhar,input,sym,&
-     &            20,&
-     &            iter,rho,qpw,rht,rhtxy)
+      IF(TRIM(ADJUSTL(cdnfname)).EQ.'cdn1') THEN
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+      ELSE IF(TRIM(ADJUSTL(cdnfname)).EQ.'cdn') THEN
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+      ELSE
+         OPEN(20,file = cdnfname,form='unformatted',status='old')
+         CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&
+                     iter,rho,qpw,rht,rhtxy)
+         CLOSE(20)
+      END IF
       !<--Perhaps only the core charge should be plotted
       IF (input%score) THEN
          OPEN (17,file='cdnc',form='unformatted',status='old')
