@@ -796,6 +796,7 @@
              WRITE (6,FMT=8130) it
              WRITE (16,FMT=8130) it
 8130         FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
+	     write(*,*) "Iteration:",it," Distance:",results%last_distance
              CALL timestop("Iteration")
              !+t3e
           ENDIF ! mpi%irank.EQ.0
