@@ -110,7 +110,7 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=10) :: loType
    CHARACTER(len=10) :: bzIntMode
    CHARACTER(len=200) :: symFilename
-   LOGICAL :: kptGamma, l_relcor, l_explicit
+   LOGICAL :: kptGamma, l_relcor, l_explicit, l_nocoOpt
    INTEGER :: iAtomType, startCoreStates, endCoreStates
    CHARACTER(len=100) :: posString(3)
    CHARACTER(len=200) :: coreStatesString, valenceStatesString
@@ -133,6 +133,7 @@ SUBROUTINE w_inpXML(&
    IF (PRESENT(name_opt)) name=name_opt
 
    l_explicit = l_explicitIn.OR.l_outFile
+   l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
 
    symFilename = 'sym.out'
    kptGamma = l_gamma
@@ -206,7 +207,7 @@ SUBROUTINE w_inpXML(&
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'"/>')
    WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1)
 
-   IF (noco%l_noco.OR.l_explicit) THEN
+   IF (l_nocoOpt.OR.l_explicit) THEN
       160 FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,'" sso_opt="',a3,&
                  '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
       sso_optString='FFF'
@@ -598,7 +599,7 @@ SUBROUTINE w_inpXML(&
       360 FORMAT('         <force calculate="',l1,'" relaxXYZ="',3l1,'"/>')
       WRITE (fileNum,360) atoms%l_geo(iAtomType),atoms%relax(1,iAtomType),atoms%relax(2,iAtomType),atoms%relax(3,iAtomType)
 
-      IF(noco%l_noco.OR.l_explicit) THEN
+      IF(l_nocoOpt.OR.l_explicit) THEN
          362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.10,'" alpha="',f0.10,'" beta="',&
                     f0.10,'" b_cons_x="',f0.10,'" b_cons_y="',f0.10,'"/>')
          WRITE(fileNum,362) noco%l_relax(iAtomType), Jij%l_magn(iAtomType), Jij%M(iAtomType), noco%alphInit(iAtomType),&
