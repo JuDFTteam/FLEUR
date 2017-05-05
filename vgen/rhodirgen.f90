@@ -28,7 +28,7 @@ CONTAINS
   SUBROUTINE rhodirgen(&
        &                     DIMENSION,sym,stars,&
        &                     atoms,sphhar,vacuum,&
-       &                     nrhomfile,ndomfile,&
+       &                     ndomfile,&
        &                     cell,input,oneD)
 
     !******** ABBREVIATIONS ***********************************************
@@ -45,8 +45,7 @@ CONTAINS
     !**********************************************************************
 
     USE m_constants
-    USE m_loddop
-    USE m_wrtdop
+    USE m_cdn_io
     USE m_qfix
     USE m_fft2d
     USE m_fft3d
@@ -64,7 +63,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)       :: atoms
 
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nrhomfile,ndomfile    
+    INTEGER, INTENT (IN) :: ndomfile    
     !     ..
     !     ..
     !-odim
@@ -74,8 +73,10 @@ CONTAINS
     INTEGER imz,ityp,iri,ilh,imesh,iq2,iq3,iter
     REAL   zero,rho_11,rho_22,rho_21r,rho_21i,rhotot,magmom,phi
     REAL rho_up,rho_down,mx,my,mz,eps,pi,fix,vz_r,vz_i,rziw,theta
+    REAL fermiEnergyTemp
     COMPLEX czero
     CHARACTER*8 dop,iop,name(10)
+    LOGICAL l_qfix
     !     ..
     !     .. Local Arrays ..
     !---> off-diagonal part of the density matrix
@@ -87,11 +88,11 @@ CONTAINS
     zero = 0.0 ; czero = CMPLX(0.0,0.0) 
     eps = 1.0e-20
   
-    ALLOCATE (qpw(stars%n3d,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),&
-         &          cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         &     ris(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1),&
+    ALLOCATE (qpw(stars%ng3,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),&
+         &          cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
+         &     ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
          &     rz(vacuum%nmzd,2,2),&
-         &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd),rht(vacuum%nmzd,2,DIMENSION%jspd) )
+         &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),rht(vacuum%nmzd,2,DIMENSION%jspd) )
     !
     !---> initialize arrays for the density matrix
     !
@@ -102,9 +103,9 @@ CONTAINS
        cdomvxy(:,:,:) = czero
     ENDIF
 
-    ifft3 = 27*stars%k1d*stars%k2d*stars%k3d
-    ifft2 = 9*stars%k1d*stars%k2d
-    IF (oneD%odi%d1) ifft2 = 9*stars%k3d*oneD%odi%M
+    ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
+    ifft2 = 9*stars%mx1*stars%mx2
+    IF (oneD%odi%d1) ifft2 = 9*stars%mx3*oneD%odi%M
     IF (input%film) ALLOCATE(rvacxy(0:ifft2-1,vacuum%nmzxyd,2,4))
 
     IF (input%jspins .NE. 2) THEN
@@ -115,35 +116,9 @@ CONTAINS
     ENDIF
 
     !---> reload the density matrix from file rhomat_inp
-    OPEN (nrhomfile,FILE='rhomat_inp',FORM='unformatted',&
-         &      STATUS='unknown')
-    !---> first the diagonal elements of the density matrix
-    CALL loddop(stars,vacuum,atoms,sphhar,&
-         &       input,sym,&
-         &       nrhomfile,&
-         &       iter,rho,qpw,rht,rhtxy)
-    !---> and then the off-diagonal part
-    READ (nrhomfile,END=100,ERR=50) (cdom(iq3),iq3=1,stars%ng3)
-    IF (input%film) THEN
-       READ (nrhomfile,END=75,ERR=50) ((cdomvz(imz,ivac),imz=1,vacuum%nmz)&
-            &                              ,ivac=1,vacuum%nvac)
-       READ (nrhomfile,END=75,ERR=50) (((cdomvxy(imz,iq2-1,ivac)&
-            &                       ,imz=1,vacuum%nmzxy),iq2=2,oneD%odi%nq2),ivac=1,vacuum%nvac)
-    ENDIF
-    GOTO 150
-50  WRITE(6,*)'rhodirgen: ERROR: Problems while reading density'
-    WRITE(6,*)'matrix from file rhomat_inp.'
-    CALL juDFT_error("ERROR while reading file rhomat_inp",calledby&
-         &     ="rhodirgen")
-75  WRITE(6,*)'rhodirgen: ERROR: reached end of file rhomat_inp'
-    WRITE(6,*)'while reading the vacuum part of the off-diagonal'
-    WRITE(6,*)'element of the desity matrix.'
-    CALL juDFT_error("ERROR while reading file rhomat_inp",calledby&
-         &     ="rhodirgen")
-100 WRITE(6,*)'rhodirgen: WARNING: The file rhomat_inp does not'
-    WRITE(6,*)'contain off-diagonal part of the density matrix.'
-    WRITE(6,*)'Assuming collinear magnetization.'
-150 CLOSE (nrhomfile)
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_NOCO_const,CDN_INPUT_DEN_const,&
+                     0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+
     CALL qfix(&
          &          stars,atoms,sym,vacuum,&
          &          sphhar,input,cell,oneD,&
@@ -423,13 +398,9 @@ CONTAINS
     CLOSE (ndomfile)
 
     !---> write spin-up and -down density on file cdn
-    OPEN (70,FILE='cdn',FORM='unformatted',STATUS='unknown')
-    CALL wrtdop(&
-         &            stars,vacuum,atoms,sphhar,&
-         &            input,sym,&
-         &            70,&
-         &            iter,rho,qpw,rht,rhtxy)
-    CLOSE (70)
+
+    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                      0,-1.0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,&
          &            ris,fftwork,rz,rho,rht)

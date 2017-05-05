@@ -29,10 +29,10 @@ CONTAINS
     INTEGER, INTENT (IN) :: itype
     !     ..
     !     .. Array Arguments ..
-    REAL, INTENT    (IN) :: chmom(:,:)!(atoms%ntypd,dimension%jspd)
-    REAL, INTENT    (IN) :: alphdiff(atoms%ntypd) 
-    REAL, INTENT    (IN) :: vr0(:,:,:)!(atoms%jmtd,atoms%ntypd,jspd)
-    COMPLEX, INTENT (IN) :: qa21(atoms%ntypd)
+    REAL, INTENT    (IN) :: chmom(:,:)!(atoms%ntype,dimension%jspd)
+    REAL, INTENT    (IN) :: alphdiff(atoms%ntype) 
+    REAL, INTENT    (IN) :: vr0(:,:,:)!(atoms%jmtd,atoms%ntype,jspd)
+    COMPLEX, INTENT (IN) :: qa21(atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER iri
@@ -42,7 +42,7 @@ CONTAINS
     COMPLEX rho21
     !     ..
     !     .. Local Arrays ..
-    REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntypd)
+    REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntype)
 
 
     !---> calculated the comp. of the local moment vector

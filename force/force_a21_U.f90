@@ -22,13 +22,13 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(nobd) 
     COMPLEX, INTENT (IN) :: v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (IN) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    REAL, INTENT (INOUT) :: a21(3,atoms%natd)
+    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    REAL, INTENT (INOUT) :: a21(3,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX v_a,v_b,v_c,p1,p2,p3

@@ -100,7 +100,7 @@
          xyu = .false.
   912    CONTINUE
          
-         IF (kpts%nkpt.GT.kpts%nkptd)  THEN
+         IF (kpts%nkpt.GT.kpts%nkpt)  THEN
            CALL juDFT_error('nkptd too small',calledby='inpeig')
          ENDIF
  8100    FORMAT (i5,f20.10)
@@ -155,7 +155,7 @@
 !
                CALL gkptwgt(&
      &                      kpts,cell)
-               wt=sum(kpts%weight)
+               wt=sum(kpts%wtkpt)
              ELSE
                CALL juDFT_error("wtkpts",calledby ="inpeig",hint&
      &              ="The sum of weights in the kpts file is zero")

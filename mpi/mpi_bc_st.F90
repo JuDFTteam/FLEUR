@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)   :: stars
     !     ..
     !     .. Array Arguments ..
-    COMPLEX :: qpwc(stars%n3d)
+    COMPLEX :: qpwc(stars%ng3)
     !     ..
     !     ..
     !     .. Local Arrays ..
@@ -33,7 +33,7 @@ CONTAINS
     !
     ! -> Broadcast the arrays:
 
-    CALL MPI_BCAST(qpwc,stars%n3d,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(qpwc,stars%ng3,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 
   END SUBROUTINE mpi_bc_st
   !*********************************************************************
@@ -50,17 +50,17 @@ CONTAINS
     EXTERNAL MPI_REDUCE
     !     ..
     !     .. Scalar Arguments ..
-    REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)
+    REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
 
     INTEGER n
     INTEGER ierr(3)
     REAL, ALLOCATABLE :: r_b(:)
 
-    n = atoms%jmtd*(sphhar%nlhd+1)*atoms%ntypd
+    n = atoms%jmtd*(sphhar%nlhd+1)*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(rho,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,&
          &                                       mpi%mpi_comm,ierr)
-    IF (mpi%irank == 0) rho=reshape(r_b,(/atoms%jmtd,1+sphhar%nlhd,atoms%ntypd/))
+    IF (mpi%irank == 0) rho=reshape(r_b,(/atoms%jmtd,1+sphhar%nlhd,atoms%ntype/))
 
     DEALLOCATE(r_b) 
 

@@ -69,10 +69,11 @@ c
      >                    ikpt,jspin,nbasfcn,l_ss,l_noco,
      >                    noccbd,n_start,n_end,
      <                    nmat,nv,ello,evdu,epar,kveclo,
-     <                    k1,k2,k3,bkpt,wk,nbands,eig,z)
+     <                    k1,k2,k3,bkpt,wk,nbands,eig,zmat)
 
       USE m_eig66_io, ONLY : read_eig
-
+      USE m_types
+ 
       IMPLICIT NONE
 !
 ! Arguments ...
@@ -90,7 +91,7 @@ c
       REAL,    INTENT (INOUT) :: ello(:,:,:),evdu(:,:) !ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (INOUT) :: epar(0:,:,:) !epar(0:lmaxd,ntypd,jspd)
 
-      CLASS(*), INTENT (OUT) :: z(:,:) !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
 !
 ! Local variables ...
 !
@@ -115,7 +116,7 @@ c
         ENDDO
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,nmat=nmat,z=z)
+     <                 eig=eig,nmat=nmat,zmat=zmat)
 !
 ! For Non-Collinear, but no Spin-Spirals
 !
@@ -127,7 +128,7 @@ c
      <                  k2=k2(:,1),k3=k3(:,1),kveclo=kveclo)
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,nmat=nmat,z=z)
+     <                 eig=eig,nmat=nmat,zmat=zmat)
          nv(jspd) = nv(1)
          DO iv = 1,nv(1)
             k1(iv,jspd) = k1(iv,1)
@@ -141,28 +142,22 @@ c
          CALL read_eig(eig_id,ikpt,jspin,
      <                   nmat=nmat)
 
-         SELECT TYPE(z)
-           TYPE IS (real)
-             z=0
-           TYPE IS (complex)
-              z=0
-          END SELECT
-         CALL read_eig(
+         IF (zmat%l_real) THEN
+            zmat%z_r=0
+         ELSE
+            zmat%z_c=0
+         ENDIF
+ 
+     
+      CALL read_eig(
      >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
      <                  bk=bkpt,wk=wk,
      <                 neig=nbands,eig=eig,
      <                   nv=nv(jspin),k1=k1(:,jspin),
      <                   k2=k2(:,jspin),k3=k3(:,jspin),kveclo=kveclo,
-     <                  z=z(:,:noccbd))
+     <                  zmat=zmat)
 
       ENDIF
-#ifdef CPP_MPI
-!     The barrier here is not algorithmically required.
-!     Nevertheless it improves the performance, presumably because it
-!     synchronizes the processes and prevent the latency accumulating.
-!     U.Alekseeva 2015
-      call MPI_BARRIER(MPI_COMM_WORLD,mpiierr) 
-#endif
       CALL timestop("cdn_read")
       
 !      IF (nbands>neigd)   CALL juDFT_error("nbands.GT.neigd",calledby

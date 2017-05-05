@@ -35,7 +35,7 @@ CONTAINS
     REAL    zs
     !       ..
     !       ..Local Arrays 
-    REAL    znz(atoms%natd)
+    REAL    znz(atoms%nat)
     !       ..
     !    ----------------------------------------------
     REAL,PARAMETER:: epsz=1.e-3 
@@ -58,7 +58,7 @@ CONTAINS
        ENDDO
     ENDDO
     nsld = nz
-    IF(nsld>atoms%natd)   CALL juDFT_error("nsld.GT.atoms%natd ",calledby="slab_dim")
+    IF(nsld>atoms%nat)   CALL juDFT_error("nsld.GT.atoms%nat ",calledby="slab_dim")
     !
   END SUBROUTINE slab_dim
 END MODULE m_slabdim

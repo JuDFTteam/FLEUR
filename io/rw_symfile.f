@@ -25,7 +25,7 @@
 !===> Variables
       INTEGER i,j,n,ios,no2,no3,gen1,isrt(nop)
       REAL    t,d
-      LOGICAL ex,op
+      LOGICAL ex,op,l_exist
       CHARACTER(len=3) :: type
       CHARACTER(len=7) :: sym2fn
 
@@ -65,6 +65,11 @@
       ELSEIF ( SCAN(rw,'rR') > 0 ) THEN
 
 !===> read symfile
+        INQUIRE(FILE=TRIM(ADJUSTL(symfn)),EXIST=l_exist)
+        IF(.NOT.l_exist) THEN
+           CALL juDFT_error("File "//TRIM(ADJUSTL(symfn))//
+     +                      " is missing.",calledby="rw_symfile")
+        END IF
         OPEN (symfh, file=trim(symfn),status='old',err=911,iostat=ios)
         READ (symfh,*) nop,nop2,symor
         IF (symfn.EQ.'sym.out') THEN

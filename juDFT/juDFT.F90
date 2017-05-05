@@ -9,5 +9,5 @@
       USE m_juDFT_time
       USE m_juDFT_init
       USE m_judft_args
-
+      USE m_judft_info
       END MODULE m_juDFT

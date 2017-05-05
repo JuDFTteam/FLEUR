@@ -30,12 +30,12 @@ CONTAINS
     !
     OPEN (741,file='fleur2tddft.dat',&
          &         form='unformatted',status='unknown')
-    WRITE (741)  sphhar%memd,atoms%lmaxd,dimension%nspd,sphhar%nlhd,atoms%ntypd,sym%nsymt
-    WRITE (741) dimension%jspd,stars%n3d,stars%n2d,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
-         &          input%jspins,stars%ng3,stars%ng2,vacuum%nvac,atoms%ntype,sphhar%ntypsd,atoms%natd,&
+    WRITE (741)  sphhar%memd,atoms%lmaxd,dimension%nspd,sphhar%nlhd,atoms%ntype,sym%nsymt
+    WRITE (741) dimension%jspd,stars%ng3,stars%ng2,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
+         &          input%jspins,stars%ng3,stars%ng2,vacuum%nvac,atoms%ntype,sphhar%ntypsd,atoms%nat,&
          &          sym%invs,sym%invs2,input%film
     WRITE (741)   sphhar%clnu, sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,atoms%jri,atoms%ntypsy,atoms%neq
-    WRITE (741)  stars%k1d,stars%k2d,stars%k3d,stars%ng3,stars%kimax
+    WRITE (741)  stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%kimax
     WRITE (741)  stars%igfft,stars%pgfft,stars%nstr
     WRITE (741)  stars%kv3,stars%ig
     CLOSE (741)
@@ -45,23 +45,23 @@ CONTAINS
     IF (.false.) THEN
 
        WRITE (335,*) 'these are the prime elements of the stars'
-       WRITE (335,*) 'number of stars:  ', stars%n3d
-       DO i = 1, stars%n3d
+       WRITE (335,*) 'number of stars:  ', stars%ng3
+       DO i = 1, stars%ng3
           WRITE (335,'(i5,10x,3i5)') i, stars%kv3(1:3,i)
        ENDDO
        WRITE (335,*)
        WRITE (335,*)'mapping from larger mesh to prime elements of stars'
-       WRITE (335,*) 'mesh size k1,k2,k3 =', stars%k1d,stars%k2d,stars%k3d
-       DO i1 = -stars%k1d,stars%k1d
-          DO i2 = -stars%k2d,stars%k2d
-             DO i3 = -stars%k3d,stars%k3d
+       WRITE (335,*) 'mesh size k1,k2,k3 =', stars%mx1,stars%mx2,stars%mx3
+       DO i1 = -stars%mx1,stars%mx1
+          DO i2 = -stars%mx2,stars%mx2
+             DO i3 = -stars%mx3,stars%mx3
                 WRITE (335,'(4i5)') i1,i2,i3,stars%ig(i1,i2,i3)
              ENDDO
           ENDDO
        ENDDO
        WRITE (335,*)
        WRITE (335,*) 'number of stars'
-       DO i = 1,stars%n3d
+       DO i = 1,stars%ng3
           WRITE (335,'(2i5)') i, stars%nstr(i)
        ENDDO
        WRITE (335,*)

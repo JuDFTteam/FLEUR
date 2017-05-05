@@ -17,7 +17,7 @@ CONTAINS
        &                   sliceplot,noco,sym,&
        &                   cell,&
        &                   l_mcd,ncored,ncore,e_mcd,&
-       &                   efermi,nsld,oneD)
+       &                   efermi,bandgap,nsld,oneD)
     USE m_eig66_io,ONLY:read_dos,read_eig
     USE m_evaldos
     USE m_cdninf
@@ -40,12 +40,12 @@ CONTAINS
     INTEGER,PARAMETER :: n2max=13 
     INTEGER, INTENT (IN) :: nsld,eig_id 
     INTEGER, INTENT (IN) :: ncored
-    REAL,    INTENT (IN) :: efermi
+    REAL,    INTENT (IN) :: efermi, bandgap
     LOGICAL, INTENT (IN) :: l_mcd
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: ncore(atoms%ntypd)
-    REAL, INTENT(IN)      :: e_mcd(atoms%ntypd,input%jspins,ncored)
+    INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
+    REAL, INTENT(IN)      :: e_mcd(atoms%ntype,input%jspins,ncored)
     !-odim
     !+odim
 
@@ -53,9 +53,9 @@ CONTAINS
     INTEGER :: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
     REAL    :: wk,bkpt(3)
     REAL   :: eig(DIMENSION%neigd)
-    REAL   :: qal(0:3,atoms%ntypd,DIMENSION%neigd,DIMENSION%jspd)
-    REAL   :: qis(DIMENSION%neigd,kpts%nkptd,DIMENSION%jspd)
-    REAL   :: qvac(DIMENSION%neigd,2,kpts%nkptd,DIMENSION%jspd)
+    REAL   :: qal(0:3,atoms%ntype,DIMENSION%neigd,DIMENSION%jspd)
+    REAL   :: qis(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd)
+    REAL   :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
     REAL   :: qvlay(DIMENSION%neigd,vacuum%layerd,2)
     COMPLEX :: qstars(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
     INTEGER :: ne,ikpt,kspin,j,i,n
@@ -137,7 +137,7 @@ CONTAINS
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(&
             &                eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-            &                DIMENSION,efermi,&
+            &                DIMENSION,efermi,bandgap,&
             &                l_mcd,ncored,ncore,e_mcd,nsld)
     ENDIF
     !

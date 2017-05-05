@@ -19,24 +19,24 @@
       write(6,*) "-----------fl7para file starts here-----------"
 
       WRITE (6,'(6x,''Symmetry elements and FFT parameters '')')
-      WRITE (6,8080) sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d
+      WRITE (6,8080) sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2
 
  8080 FORMAT (6x,'parameter (nop =',i2,',k1d=',i3,',k2d=',i3,',k3d=',i3,&
      &       ',n3d=',i6,',n2d=',i4,')')
 
 !+sb(cdn_fft;Feb.97)
       WRITE (6,'(6x,''FFT-parameters for charge density'')')
-      WRITE (6,8090) stars%kq1d,stars%kq2d,stars%kq3d
+      WRITE (6,8090) stars%kq1_fft,stars%kq2_fft,stars%kq3_fft
 
  8090 FORMAT (6x,'parameter (kq1d=',i3,',kq2d=',i3,',kq3d=',i3,')')
 
       WRITE (6,'(6x,''FFT-parameters for XC-potential'')')
-      WRITE (6,8100) stars%kxc1d,stars%kxc2d,stars%kxc3d
+      WRITE (6,8100) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
 
  8100 FORMAT (6x,'parameter (kxc1d=',i3,',kxc2d=',i3,',kxc3d=',i3,')')
 
       WRITE (6,'(6x,''(Inequivalent) atoms and radial mesh'')')
-      WRITE (6,8110) atoms%ntype,atoms%natd,atoms%jmtd
+      WRITE (6,8110) atoms%ntype,atoms%nat,atoms%jmtd
 
  8110 FORMAT (6x,'parameter (ntypd=',i3,',natd=',i3,',jmtd=',i4,')')
 
@@ -65,7 +65,7 @@
 
 !+gu
       WRITE (6,'(6x,''3 & 2D planewaves, windows, k-points'')')
-      WRITE (6,8180) dimension%nvd,dimension%nv2d,kpts%nkptd
+      WRITE (6,8180) dimension%nvd,dimension%nv2d,kpts%nkpt
 
  8180 FORMAT (6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=1', ',nkptd=',i5,')')
 
@@ -99,7 +99,7 @@
      &                           oneD%odd%nop,oneD%odd%n2d,oneD%odd%d1
       ELSE
         WRITE (6,'(6x,''One-dimensional parameters'')')
-        WRITE (6,8230) 0,0,0,0,0,sym%nop,stars%n2d,.false.
+        WRITE (6,8230) 0,0,0,0,0,sym%nop,stars%ng2,.false.
       END IF
 
  8230   FORMAT (6x,'parameter (vM=',i3,',MM=',i3,',m_cyl=',i3,&

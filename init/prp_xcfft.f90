@@ -157,16 +157,16 @@
 !
 !------> check dimensions of fft chargedensity box used in pwden.f
 !
-       IF (stars%kxc1_fft.GT.stars%kxc1d .OR. stars%kxc2_fft.gt.stars%kxc2d .OR. &
-     &                            stars%kxc3_fft.gt.stars%kxc3d) THEN
+       IF (stars%kxc1_fft.GT.stars%kxc1_fft .OR. stars%kxc2_fft.gt.stars%kxc2_fft .OR. &
+     &                            stars%kxc3_fft.gt.stars%kxc3_fft) THEN
           WRITE (6,'('' box dim. for fft too small'')')
-          WRITE (6,2110) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1d,stars%kxc2d,stars%kxc3d
+          WRITE (6,2110) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
           WRITE(16,'('' box dim. for fft too small'')')
-          WRITE(16,2110) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1d,stars%kxc2d,stars%kxc3d
+          WRITE(16,2110) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
           CALL juDFT_error("mxc[1,2,3]d>kxc[1,2,3]d ",calledby&
      &         ="prp_xcfft")
        ENDIF
- 2110  FORMAT (' stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1d,stars%kxc2d,stars%kxc3d ',6i5)
+ 2110  FORMAT (' stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft ',6i5)
 !
 !-----> how many stars are in charge density sphere?
 !       assume stars are ordered according to length
@@ -188,11 +188,11 @@
          CALL juDFT_error("nxc3_fft==0",calledby ="prp_xcfft")
       ENDIF
 !
-      IF ( stars%nxc3_fft.GT.stars%n3d ) THEN
+      IF ( stars%nxc3_fft.GT.stars%ng3 ) THEN
          WRITE (6,'('' nxc3_fft > n3d '')')
-         WRITE (6,'('' nxc3_fft, n3d '',2i10)') stars%nxc3_fft, stars%n3d
+         WRITE (6,'('' nxc3_fft, n3d '',2i10)') stars%nxc3_fft, stars%ng3
          WRITE (16,'('' nxc3_fft > n3d '')')
-         WRITE (16,'('' nxc3_fft, n3d '',2i10)') stars%nxc3_fft, stars%n3d
+         WRITE (16,'('' nxc3_fft, n3d '',2i10)') stars%nxc3_fft, stars%ng3
          CALL juDFT_error("nxc3_fft>n3d ",calledby ="prp_xcfft")
       ENDIF
 !
@@ -225,7 +225,7 @@
          stars%kmxxc_fft = stars%kmxxc_fft + stars%nstr(istr)
       ENDDO
 
-      IF ( stars%kmxxc_fft .gt. stars%kxc1d*stars%kxc2d*stars%kxc3d ) then
+      IF ( stars%kmxxc_fft .gt. stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft ) then
          WRITE (6,'('' array dimensions in later subroutines too'',&
      &             '' small'')')
       ENDIF

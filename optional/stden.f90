@@ -24,7 +24,7 @@
           USE m_qsf
           USE m_checkdop
           USE m_cdnovlp
-          USE m_wrtdop
+          USE m_cdn_io
           USE m_qfix
           USE m_atom2
           USE m_types
@@ -58,6 +58,7 @@
           INTEGER i,iter,ivac,iza,j,jr,k,n,n1,npd,ispin 
           INTEGER nw,ilo,natot,icorr_dummy,nat 
           COMPLEX czero
+          COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
@@ -65,8 +66,8 @@
           REAL,    ALLOCATABLE :: xp(:,:),rat(:,:),eig(:,:,:),sigm(:)
           REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
           REAL,    ALLOCATABLE :: vacpar(:)
-          INTEGER lnum(DIMENSION%nstd,atoms%ntypd),nst(atoms%ntypd) 
-          INTEGER jrc(atoms%ntypd)
+          INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
+          INTEGER jrc(atoms%ntype)
           LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
           CHARACTER*8 name_l(10)
           !     ..
@@ -80,20 +81,20 @@
           !
           IF (input%jspins > DIMENSION%jspd)  CALL juDFT_error("input%jspins > dimension%jspd",calledby&
                &     ="stden")
-          ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd) )
+          ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd) )
 
-          ALLOCATE ( qpw(stars%n3d,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd) )
-          ALLOCATE ( xp(3,DIMENSION%nspd),rat(DIMENSION%msh,atoms%ntypd),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntypd) )
-          ALLOCATE ( rh(DIMENSION%msh,atoms%ntypd,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntypd,DIMENSION%jspd) )
-          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntypd,input%jspins),vacpar(2) )
-          ALLOCATE ( enpara%el0(0:3,atoms%ntypd,input%jspins))   
-          ALLOCATE ( enpara%lchange(0:3,atoms%ntypd,input%jspins))
-          ALLOCATE ( enpara%skiplo(atoms%ntypd,input%jspins))
-          ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntypd,input%jspins))
+          ALLOCATE ( qpw(stars%ng3,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd) )
+          ALLOCATE ( xp(3,DIMENSION%nspd),rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
+          ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntype,DIMENSION%jspd) )
+          ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,input%jspins),vacpar(2) )
+          ALLOCATE ( enpara%el0(0:3,atoms%ntype,input%jspins))   
+          ALLOCATE ( enpara%lchange(0:3,atoms%ntype,input%jspins))
+          ALLOCATE ( enpara%skiplo(atoms%ntype,input%jspins))
+          ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
           ALLOCATE ( enpara%enmix(input%jspins))
           ALLOCATE ( enpara%evac0(2,dimension%jspd))
           ALLOCATE ( enpara%lchg_v(2,dimension%jspd))
-          ALLOCATE ( rht(vacuum%nmzd,2,DIMENSION%jspd),vbar(2,atoms%ntypd),sigm(vacuum%nmzd) )
+          ALLOCATE ( rht(vacuum%nmzd,2,DIMENSION%jspd),vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
           ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
           enpara%enmix=1.0
           rho = 0.0
@@ -241,20 +242,13 @@
              !
              ! Write superposed density onto density file
              !
-             iter = 1
-             name_l(:) = name(:)
-             name_l(10) = 'ordered*'    ! always create ordered start density
-             OPEN (71,file='cdn1',form='unformatted',status='new')
-             CALL wrtdop(&
-                  &            stars,vacuum,atoms,sphhar,&
-                  &            input,sym,&
-                  &            71,&
-                  &            iter,rho,qpw,rht,rhtxy)
-             CLOSE (71)
+             iter = 0
+             CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
+                               1,-1.0,0.0,.TRUE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
              !
              ! Check continuity
              !
-             IF (atoms%ntype<100)THEN
+             IF (input%vchk)THEN
                 DO ispin = 1,input%jspins
                    WRITE (6,'(a8,i2)') 'spin No.',ispin
                    IF (input%film .AND. .NOT.oneD%odi%d1) THEN

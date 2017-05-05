@@ -33,7 +33,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: jsp   ,n_size,n_rank
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%n2d-1,2)
+    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%ng2-1,2)
     INTEGER, INTENT (OUT):: nv2(DIMENSION%jspd)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
@@ -54,7 +54,7 @@ CONTAINS
     INTEGER map2(DIMENSION%nvd,DIMENSION%jspd)
     COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
-    COMPLEX vxy_help(stars%n2d-1)
+    COMPLEX vxy_help(stars%ng2-1)
     COMPLEX a(DIMENSION%nvd,DIMENSION%jspd),b(DIMENSION%nvd,DIMENSION%jspd)
     REAL ddnv(DIMENSION%nv2d,DIMENSION%jspd),dudz(DIMENSION%nv2d,DIMENSION%jspd)
     REAL duz(DIMENSION%nv2d,DIMENSION%jspd), udz(DIMENSION%nv2d,DIMENSION%jspd)
@@ -65,7 +65,7 @@ CONTAINS
 
     d2 = SQRT(cell%omtil/cell%area)
 
-    IF (jij%l_J) ALLOCATE (vxy1(vacuum%nmzxyd,stars%n2d-1,2))
+    IF (jij%l_J) ALLOCATE (vxy1(vacuum%nmzxyd,stars%ng2-1,2))
 
     !--->    set up mapping function from 3d-->2d lapws
 

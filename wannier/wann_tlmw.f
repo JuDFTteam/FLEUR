@@ -232,7 +232,7 @@ c..sp3d2-5
             endif
 
          else
-            CALL juDFT_error("no tlmw for this lr",calledby ="wann_tlmw")
+            CALL juDFT_error("no tlmw for this lr",calledby="wann_tlmw")
          endif
 
       enddo

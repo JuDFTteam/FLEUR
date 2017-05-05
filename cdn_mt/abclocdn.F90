@@ -37,17 +37,17 @@ CONTAINS
     COMPLEX, INTENT (IN) :: phase
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%natd) 
-    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntypd),blo1(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntypd)
+    INTEGER, INTENT (IN) :: nbasf0(atoms%nlod,atoms%nat) 
+    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntype)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
     COMPLEX, INTENT (IN) :: ccchi(2)
     INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1),atoms%nlod )
-    LOGICAL, INTENT (OUT) :: enough(atoms%natd)
-    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%natd)
+    LOGICAL, INTENT (OUT) :: enough ! enough(na)
+    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
@@ -60,7 +60,7 @@ CONTAINS
     LOGICAL :: l_real
     l_real=zMat%l_real
     !     ..
-    enough(na) = .TRUE.
+    enough = .TRUE.
     term1 = con1 * ((atoms%rmt(ntyp)**2)/2) * phase
     !---> the whole program is in hartree units, therefore 1/wronskian is
     !---> (rmt**2)/2. the factor i**l, which usually appears in the a, b
@@ -72,7 +72,7 @@ CONTAINS
           IF (atoms%invsat(na).EQ.0) THEN
 
              IF ((nkvec(lo,na)).LT. (2*atoms%llo(lo,ntyp)+1)) THEN
-                enough(na) = .FALSE.
+                enough = .FALSE.
                 nkvec(lo,na) = nkvec(lo,na) + 1
                 nbasf = nbasf0(lo,na) + nkvec(lo,na)
                 l = atoms%llo(lo,ntyp)
@@ -114,7 +114,7 @@ CONTAINS
 
           ELSEIF (atoms%invsat(na).EQ.1) THEN
              IF ((nkvec(lo,na)).LT. (2* (2*atoms%llo(lo,ntyp)+1))) THEN
-                enough(na) = .FALSE.
+                enough = .FALSE.
                 nkvec(lo,na) = nkvec(lo,na) + 1
                 nbasf = nbasf0(lo,na) + nkvec(lo,na)
                 l = atoms%llo(lo,ntyp)
@@ -167,10 +167,10 @@ CONTAINS
              CALL juDFT_error("invsat =/= 0 or 1",calledby ="abclocdn")
           ENDIF
        ELSE
-          enough(na) = .FALSE.
+          enough = .FALSE.
        ENDIF  ! s > eps  & l >= 1
     END DO
-    IF ((k.EQ.nv) .AND. (.NOT.enough(na))) THEN
+    IF ((k.EQ.nv) .AND. (.NOT.enough)) THEN
        WRITE (6,FMT=*) 'abclocdn did not find enough linearly independent'
        WRITE (6,FMT=*) 'ccof coefficient-vectors.'
        CALL juDFT_error("did not find enough lin. ind. ccof-vectors" ,calledby ="abclocdn")

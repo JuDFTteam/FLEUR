@@ -35,7 +35,7 @@ module m_hdf_accessprp
 
       integer :: n,i,hdferr,ierr,info
       character(len=128)::path
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
       INCLUDE 'mpif.h'
 #endif
 
@@ -60,7 +60,7 @@ module m_hdf_accessprp
       n=0
       readloop:DO
         filename="default"
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
         driver="mpiio"
 #else
         driver="default"
@@ -95,7 +95,7 @@ module m_hdf_accessprp
             CALL h5pset_fapl_core_f(access_prp(n), mem_increment, keep,hdferr)
             cycle readloop
         ENDIF
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
         CALL MPI_BARRIER(MPI_COMM_WORLD,hdferr)
         IF (index(driver,"mpiio")==1) THEN
             !create info object

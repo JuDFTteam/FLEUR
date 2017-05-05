@@ -90,8 +90,8 @@ c     --------
 
       function blockmat_d(a,b)
       implicit none
-      real(8), intent(in) :: a(:,:),b(:,:)
-      real(8)             :: blockmat_d(size(a,1)+size(b,1),
+      real, intent(in) :: a(:,:),b(:,:)
+      real             :: blockmat_d(size(a,1)+size(b,1),
      +                                  size(a,1)+size(b,1))
       integer             :: na,nb
       na = size(a,1) ; nb = size(b,1)
@@ -106,8 +106,8 @@ c     --------
 
       function blockmat_z(a,b)
       implicit none
-      complex(8), intent(in) :: a(:,:),b(:,:)
-      complex(8)             :: blockmat_z(size(a,1)+size(b,1),
+      complex, intent(in) :: a(:,:),b(:,:)
+      complex             :: blockmat_z(size(a,1)+size(b,1),
      +                                     size(a,1)+size(b,1))
       integer                :: na,nb
       na = size(a,1) ; nb = size(b,1)
@@ -124,8 +124,8 @@ c     --------
 
       function packmat_d(mat)
       implicit none
-      real(8), intent(in)  :: mat(:,:)
-      real(8)              :: packmat_d(size(mat,1)*(size(mat,1)+1)/2)
+      real, intent(in)  :: mat(:,:)
+      real              :: packmat_d(size(mat,1)*(size(mat,1)+1)/2)
       integer              :: n,nn,i,j,k
       n = size(mat,1) ; nn = n*(n+1)/2
       if(size(mat,2).ne.n) stop 'packmat_d: array dimensions differ.'
@@ -144,8 +144,8 @@ c     --------
       
       function packmatcoul_d(mat)
       implicit none
-      real(8), intent(in)  :: mat(:,:)
-      real(8)              :: packmatcoul_d(
+      real, intent(in)  :: mat(:,:)
+      real              :: packmatcoul_d(
      +                                    size(mat,1)*(size(mat,1)+1)/2)
       integer              :: n,nn,i,j,k
       n = size(mat,1) ; nn = n*(n+1)/2
@@ -166,8 +166,8 @@ c     --------
 
       function unpackmat_d(mat)
       implicit none
-      real(8), intent(in)  :: mat(:)
-      real(8)              :: unpackmat_d(
+      real, intent(in)  :: mat(:)
+      real              :: unpackmat_d(
      +                             nint(sqrt(0.25d0+2*size(mat))-0.5d0),
      &                             nint(sqrt(0.25d0+2*size(mat))-0.5d0))
       integer              :: n,nn,i,j,k
@@ -186,8 +186,8 @@ c     --------
 
       function packmat_z(mat)
       implicit none
-      complex(8), intent(in) :: mat(:,:)
-      complex(8)             :: packmat_z(size(mat,1)*(size(mat,1)+1)/2)
+      complex, intent(in) :: mat(:,:)
+      complex             :: packmat_z(size(mat,1)*(size(mat,1)+1)/2)
       integer                :: n,nn,i,j,k
       n = size(mat,1) ; nn = n*(n+1)/2
       if(size(mat,2).ne.n) stop 'packmat_z: array dimensions differ.'
@@ -206,8 +206,8 @@ c     --------
 
       function packmatcoul_z(mat)
       implicit none
-      complex(8), intent(in)  :: mat(:,:)
-      complex(8)              :: packmatcoul_z(
+      complex, intent(in)  :: mat(:,:)
+      complex              :: packmatcoul_z(
      +                                    size(mat,1)*(size(mat,1)+1)/2)
       integer                 :: n,nn,i,j,k
       n = size(mat,1) ; nn = n*(n+1)/2
@@ -228,8 +228,8 @@ c     --------
   
       function unpackmat_z(mat)
       implicit none
-      complex(8), intent(in)  :: mat(:)
-      complex(8)              :: unpackmat_z(
+      complex, intent(in)  :: mat(:)
+      complex              :: unpackmat_z(
      +                             nint(sqrt(0.25d0+2*size(mat))-0.5d0),
      &                             nint(sqrt(0.25d0+2*size(mat))-0.5d0))
       integer                 :: n,nn,i,j,k
@@ -248,10 +248,10 @@ c     --------
 
       function dotprod_dd(vec1,vec2)
       implicit none
-      real(8), intent(in) :: vec1(:),vec2(:)
-      real(8)             :: dotprod_dd
+      real, intent(in) :: vec1(:),vec2(:)
+      real             :: dotprod_dd
       integer             :: n
-      real(8)             :: ddot
+      real             :: ddot
       n = size(vec1) 
       if(size(vec2).ne.n) 
      +  stop 'dotprod_dd: sizes of input vectors differ.'
@@ -260,11 +260,11 @@ c     --------
 
       function dotprod_dz(vec1,vec2)
       implicit none
-      real(8),    intent(in) :: vec1(:)
-      complex(8), intent(in) :: vec2(:)
-      complex(8)             :: dotprod_dz
+      real,    intent(in) :: vec1(:)
+      complex, intent(in) :: vec2(:)
+      complex             :: dotprod_dz
       integer                :: n
-      real(8)                :: ddot
+      real                :: ddot
       n = size(vec1) 
       if(size(vec2).ne.n) 
      +  stop 'dotprod_dz: sizes of input vectors differ.'
@@ -274,11 +274,11 @@ c     --------
 
       function dotprod_zd(vec1,vec2)
       implicit none
-      complex(8), intent(in) :: vec1(:)
-      real(8),    intent(in) :: vec2(:)
-      complex(8)             :: dotprod_zd
+      complex, intent(in) :: vec1(:)
+      real,    intent(in) :: vec2(:)
+      complex             :: dotprod_zd
       integer                :: n
-      real(8)                :: ddot
+      real                :: ddot
       n = size(vec1) 
       if(size(vec2).ne.n)
      +  stop 'dotprod_zd: sizes of input vectors differ.'
@@ -288,10 +288,10 @@ c     --------
 
       function dotprod_zz(vec1,vec2)
       implicit none
-      complex(8), intent(in) :: vec1(:),vec2(:)
-      complex(8)             :: dotprod_zz
+      complex, intent(in) :: vec1(:),vec2(:)
+      complex             :: dotprod_zz
       integer                :: n
-      complex(8)             :: zdotc
+      complex             :: zdotc
       n = size(vec1)
       if(size(vec2).ne.n)
      +  stop 'dotprod_zz: sizes of input vectors differ.'
@@ -302,8 +302,8 @@ c     --------
 
       function matvec_dpd(mat,vec)
       implicit none
-      real(8), intent(in)  :: mat(:),vec(:)
-      real(8)              :: matvec_dpd(size(vec))
+      real, intent(in)  :: mat(:),vec(:)
+      real              :: matvec_dpd(size(vec))
       integer              :: nn,n
       n  = size(vec)
       nn = n*(n+1)/2 
@@ -313,10 +313,10 @@ c     --------
 
       function matvec_dpz(mat,vec)
       implicit none
-      real(8),    intent(in) :: mat(:)
-      complex(8), intent(in) :: vec(:)
-      complex(8)             :: matvec_dpz(size(vec))
-      real(8),   allocatable :: vecr(:),veci(:)
+      real,    intent(in) :: mat(:)
+      complex, intent(in) :: vec(:)
+      complex             :: matvec_dpz(size(vec))
+      real,   allocatable :: vecr(:),veci(:)
       integer                :: nn,n
       n  = size(vec) ; allocate ( vecr(n),veci(n) )
       nn = n*(n+1)/2 
@@ -329,10 +329,10 @@ c     --------
 
       function matvec_zpd(mat,vec)
       implicit none
-      complex(8), intent(in) :: mat(:)
-      real(8),    intent(in) :: vec(:)
-      complex(8)             :: matvec_zpd(size(vec))
-      real(8),   allocatable :: vecr(:),veci(:)
+      complex, intent(in) :: mat(:)
+      real,    intent(in) :: vec(:)
+      complex             :: matvec_zpd(size(vec))
+      real,   allocatable :: vecr(:),veci(:)
       integer                :: nn,n
       n  = size(vec) ; allocate ( vecr(n),veci(n) )
       nn = n*(n+1)/2 
@@ -345,8 +345,8 @@ c     --------
       
       function matvec_zpz(mat,vec)
       implicit none
-      complex(8), intent(in)  :: mat(:),vec(:)
-      complex(8)              :: matvec_zpz(size(vec))
+      complex, intent(in)  :: mat(:),vec(:)
+      complex              :: matvec_zpz(size(vec))
       integer                 :: nn,n
       n  = size(vec)
       nn = n*(n+1)/2 
@@ -358,11 +358,11 @@ c     --------
 
       function matmat_dpdp(mat1,mat2)
       implicit none
-      real(8), intent(in)  :: mat1(:),mat2(:)
-      real(8)              :: matmat_dpdp(
+      real, intent(in)  :: mat1(:),mat2(:)
+      real              :: matmat_dpdp(
      +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
      &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
-      real(8), allocatable :: vec(:),vec2(:)
+      real, allocatable :: vec(:),vec2(:)
       integer              :: nn,n,k1,i,j,k
       nn = size(mat1)
       n  = nint(sqrt(0.25d0+2*nn)-0.5d0) ; allocate ( vec(n),vec2(n) )
@@ -385,13 +385,13 @@ c     --------
 
       function matmat_dpzp(mat1,mat2)
       implicit none
-      real(8),    intent(in)  :: mat1(:)
-      complex(8), intent(in)  :: mat2(:)
-      complex(8)              :: matmat_dpzp(
+      real,    intent(in)  :: mat1(:)
+      complex, intent(in)  :: mat2(:)
+      complex              :: matmat_dpzp(
      +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
      &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
-      real(8),    allocatable :: vecr(:),veci(:)
-      complex(8), allocatable :: vec2(:)
+      real,    allocatable :: vecr(:),veci(:)
+      complex, allocatable :: vec2(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
       n  = nint(sqrt(0.25d0+2*nn)-0.5d0) 
@@ -416,13 +416,13 @@ c     --------
 
       function matmat_zpdp(mat1,mat2)
       implicit none
-      complex(8), intent(in)  :: mat1(:)
-      real(8),    intent(in)  :: mat2(:)
-      complex(8)              :: matmat_zpdp(
+      complex, intent(in)  :: mat1(:)
+      real,    intent(in)  :: mat2(:)
+      complex              :: matmat_zpdp(
      +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
      &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
-      real(8),    allocatable :: vecr(:),veci(:)
-      complex(8), allocatable :: vec1(:)
+      real,    allocatable :: vecr(:),veci(:)
+      complex, allocatable :: vec1(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
       n  = nint(sqrt(0.25d0+2*nn)-0.5d0) 
@@ -447,11 +447,11 @@ c     --------
 
       function matmat_zpzp(mat1,mat2)
       implicit none
-      complex(8), intent(in)  :: mat1(:),mat2(:)
-      complex(8)              :: matmat_zpzp(
+      complex, intent(in)  :: mat1(:),mat2(:)
+      complex              :: matmat_zpzp(
      +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
      &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
-      complex(8), allocatable :: vec(:),vec2(:)
+      complex, allocatable :: vec(:),vec2(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
       n  = nint(sqrt(0.25d0+2*nn)-0.5d0) ; allocate ( vec(n),vec2(n) )
@@ -474,9 +474,9 @@ c     --------
 
       function matmat_dpdm(mat1,mat2)
       implicit none
-      real(8), intent(in)  :: mat1(:),mat2(:,:)
-      real(8)              :: matmat_dpdm(size(mat2,1),size(mat2,1))
-      real(8), allocatable :: vec(:),vec2(:)
+      real, intent(in)  :: mat1(:),mat2(:,:)
+      real              :: matmat_dpdm(size(mat2,1),size(mat2,1))
+      real, allocatable :: vec(:),vec2(:)
       integer              :: nn,n,k1,i
       n = size(mat2,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
       if(size(mat2,2).ne.n)  
@@ -493,9 +493,9 @@ c     --------
 
       function matmat_dmdp(mat1,mat2)
       implicit none
-      real(8), intent(in)  :: mat1(:,:),mat2(:)
-      real(8)              :: matmat_dmdp(size(mat1,1),size(mat1,1))
-      real(8), allocatable :: vec(:),vec2(:)
+      real, intent(in)  :: mat1(:,:),mat2(:)
+      real              :: matmat_dmdp(size(mat1,1),size(mat1,1))
+      real, allocatable :: vec(:),vec2(:)
       integer              :: nn,n,k1,i
       n = size(mat1,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
       if(size(mat1,2).ne.n)  
@@ -512,8 +512,8 @@ c     --------
 
       function matmat_dmdm(mat1,mat2)
       implicit none
-      real(8), intent(in) :: mat1(:,:),mat2(:,:)
-      real(8)             :: matmat_dmdm(size(mat1,1),size(mat1,1))
+      real, intent(in) :: mat1(:,:),mat2(:,:)
+      real             :: matmat_dmdm(size(mat1,1),size(mat1,1))
       integer             :: n
       n = size(mat1,1)
       if(size(mat1,2).ne.n)
@@ -527,11 +527,11 @@ c     --------
 
       function matmat_dpzm(mat1,mat2)
       implicit none
-      real(8),    intent(in)  :: mat1(:)
-      complex(8), intent(in)  :: mat2(:,:)
-      complex(8)              :: matmat_dpzm(size(mat2,1),size(mat2,1))
-      real(8),    allocatable :: vecr(:),veci(:)
-      complex(8), allocatable :: vec2(:)
+      real,    intent(in)  :: mat1(:)
+      complex, intent(in)  :: mat2(:,:)
+      complex              :: matmat_dpzm(size(mat2,1),size(mat2,1))
+      real,    allocatable :: vecr(:),veci(:)
+      complex, allocatable :: vec2(:)
       integer                 :: nn,n,k1,i
       n = size(mat2,1) 
       nn = n*(n+1)/2 ; allocate ( vecr(n),veci(n),vec2(n) )
@@ -550,10 +550,10 @@ c     --------
 
       function matmat_dmzp(mat1,mat2)
       implicit none
-      real(8),    intent(in)  :: mat1(:,:)
-      complex(8), intent(in)  :: mat2(:)
-      complex(8)              :: matmat_dmzp(size(mat1,1),size(mat1,1))
-      complex(8), allocatable :: vec1(:),vec(:)
+      real,    intent(in)  :: mat1(:,:)
+      complex, intent(in)  :: mat2(:)
+      complex              :: matmat_dmzp(size(mat1,1),size(mat1,1))
+      complex, allocatable :: vec1(:),vec(:)
       integer                 :: nn,n,k1,i
       n = size(mat1,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec1(n) )
       if(size(mat1,2).ne.n)
@@ -570,10 +570,10 @@ c     --------
 
       function matmat_dmzm(mat1,mat2)
       implicit none
-      real(8),    intent(in) :: mat1(:,:)
-      complex(8), intent(in) :: mat2(:,:)
-      complex(8)             :: matmat_dmzm(size(mat1,1),size(mat2,2))
-      real(8)                :: matr(size(mat1,1),size(mat2,2)),
+      real,    intent(in) :: mat1(:,:)
+      complex, intent(in) :: mat2(:,:)
+      complex             :: matmat_dmzm(size(mat1,1),size(mat2,2))
+      real                :: matr(size(mat1,1),size(mat2,2)),
      +                          mati(size(mat1,1),size(mat2,2))
       integer                :: n,n1,n2
       n1 = size(mat1,1)
@@ -588,10 +588,10 @@ c     --------
 
       function matmat_zpdm(mat1,mat2)
       implicit none
-      complex(8), intent(in)  :: mat1(:)
-      real(8),    intent(in)  :: mat2(:,:)
-      complex(8)              :: matmat_zpdm(size(mat2,1),size(mat2,1))
-      complex(8), allocatable :: vec(:),vec2(:)
+      complex, intent(in)  :: mat1(:)
+      real,    intent(in)  :: mat2(:,:)
+      complex              :: matmat_zpdm(size(mat2,1),size(mat2,1))
+      complex, allocatable :: vec(:),vec2(:)
       integer                 :: nn,n,k1,i
       n = size(mat2,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
       if(size(mat2,2).ne.n)
@@ -608,11 +608,11 @@ c     --------
 
       function matmat_zmdp(mat1,mat2)
       implicit none
-      complex(8), intent(in)  :: mat1(:,:)
-      real(8),    intent(in)  :: mat2(:)
-      complex(8)              :: matmat_zmdp(size(mat1,1),size(mat1,1))
-      complex(8), allocatable :: vec1(:)
-      real(8),    allocatable :: vecr(:),veci(:)
+      complex, intent(in)  :: mat1(:,:)
+      real,    intent(in)  :: mat2(:)
+      complex              :: matmat_zmdp(size(mat1,1),size(mat1,1))
+      complex, allocatable :: vec1(:)
+      real,    allocatable :: vecr(:),veci(:)
       integer                 :: nn,n,k1,i
       n = size(mat1,1) ; nn = n*(n+1)/2 
       allocate ( vecr(n),veci(n),vec1(n) )
@@ -631,10 +631,10 @@ c     --------
 
       function matmat_zmdm(mat1,mat2)
       implicit none
-      complex(8), intent(in) :: mat1(:,:)
-      real(8),    intent(in) :: mat2(:,:)
-      complex(8)             :: matmat_zmdm(size(mat1,1),size(mat2,2))
-      real(8)                :: matr(size(mat1,1),size(mat2,2)),
+      complex, intent(in) :: mat1(:,:)
+      real,    intent(in) :: mat2(:,:)
+      complex             :: matmat_zmdm(size(mat1,1),size(mat2,2))
+      real                :: matr(size(mat1,1),size(mat2,2)),
      +                          mati(size(mat1,1),size(mat2,2)) 
       integer                :: n,n1,n2
       n1 = size(mat1,1)
@@ -649,9 +649,9 @@ c     --------
 
       function matmat_zpzm(mat1,mat2)
       implicit none
-      complex(8), intent(in)  :: mat1(:),mat2(:,:)
-      complex(8)              :: matmat_zpzm(size(mat2,1),size(mat2,2))
-      complex(8), allocatable :: vec(:),vec2(:)
+      complex, intent(in)  :: mat1(:),mat2(:,:)
+      complex              :: matmat_zpzm(size(mat2,1),size(mat2,2))
+      complex, allocatable :: vec(:),vec2(:)
       integer                 :: nn,n,k1,i,n2
       n  = size(mat2,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
       n2 = size(mat2,2)
@@ -667,9 +667,9 @@ c     --------
 
       function matmat_zmzp(mat1,mat2)
       implicit none
-      complex(8), intent(in)  :: mat1(:,:),mat2(:)
-      complex(8)              :: matmat_zmzp(size(mat1,1),size(mat1,1))
-      complex(8), allocatable :: vec(:),vec2(:)
+      complex, intent(in)  :: mat1(:,:),mat2(:)
+      complex              :: matmat_zmzp(size(mat1,1),size(mat1,1))
+      complex, allocatable :: vec(:),vec2(:)
       integer                 :: nn,n,k1,i
       n = size(mat1,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
       if(size(mat1,2).ne.n)
@@ -686,8 +686,8 @@ c     --------
 
       function matmat_zmzm(mat1,mat2)
       implicit none
-      complex(8), intent(in) :: mat1(:,:),mat2(:,:)
-      complex(8)             :: matmat_zmzm(size(mat1,1),size(mat2,2))
+      complex, intent(in) :: mat1(:,:),mat2(:,:)
+      complex             :: matmat_zmzm(size(mat1,1),size(mat2,2))
       integer                :: n1,n,n2
       complex, parameter     :: one = (1,0), zero = 0
       n1 = size(mat1,1)
@@ -702,8 +702,8 @@ c     --------
 
       function matmatmatd_ddd(diag1,mat,diag2)
       implicit none
-      real(8), intent(in) :: diag1(:),mat(:,:),diag2(:)
-      real(8)             :: matmatmatd_ddd(size(diag1),size(diag1))
+      real, intent(in) :: diag1(:),mat(:,:),diag2(:)
+      real             :: matmatmatd_ddd(size(diag1),size(diag1))
       integer             :: n,i
       n = size(diag1)
       if(size(mat,1).ne.n) 
@@ -722,9 +722,9 @@ c     --------
 
       function matmatmatd_dzd(diag1,mat,diag2)
       implicit none
-      real(8),    intent(in) :: diag1(:),diag2(:)
-      complex(8), intent(in) :: mat(:,:)
-      complex(8)             :: matmatmatd_dzd(size(diag1),size(diag1))
+      real,    intent(in) :: diag1(:),diag2(:)
+      complex, intent(in) :: mat(:,:)
+      complex             :: matmatmatd_dzd(size(diag1),size(diag1))
       integer                :: n,i
       n = size(diag1)
       if(size(mat,1).ne.n)
@@ -745,9 +745,9 @@ c     --------
       
       subroutine diagonalize_de(eval,mat)
       implicit none
-      real(8), intent(out) :: eval(:)
-      real(8), intent(in)  :: mat(:,:)
-      real(8), allocatable :: mat1(:,:),work(:)
+      real, intent(out) :: eval(:)
+      real, intent(in)  :: mat(:,:)
+      real, allocatable :: mat1(:,:),work(:)
       integer              :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -764,9 +764,9 @@ c     --------
 
       subroutine diagonalize_dv(evec,eval,mat)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:,:)
-      real(8), allocatable :: work(:)
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:,:)
+      real, allocatable :: work(:)
       integer              :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -787,9 +787,9 @@ c     --------
 
       subroutine diagonalize_dpe(eval,mat)
       implicit none
-      real(8), intent(out) :: eval(:)
-      real(8), intent(in)  :: mat(:)
-      real(8), allocatable :: mat1(:),work(:)
+      real, intent(out) :: eval(:)
+      real, intent(in)  :: mat(:)
+      real, allocatable :: mat1(:),work(:)
       integer              :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -804,9 +804,9 @@ c     --------
 
       subroutine diagonalize_dpv(evec,eval,mat)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:)
-      real(8), allocatable :: mat1(:),work(:)
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:)
+      real, allocatable :: mat1(:),work(:)
       integer              :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -825,10 +825,10 @@ c     --------
 
       subroutine diagonalize_ze(eval,mat)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(in)  :: mat(:,:)
-      complex(8), allocatable :: mat1(:,:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(in)  :: mat(:,:)
+      complex, allocatable :: mat1(:,:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -845,11 +845,11 @@ c     --------
 
       subroutine diagonalize_zv(evec,eval,mat)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:,:)
-      complex(8), allocatable :: work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:,:)
+      complex, allocatable :: work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -870,10 +870,10 @@ c     --------
 
       subroutine diagonalize_zpe(eval,mat)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(in)  :: mat(:)
-      complex(8), allocatable :: mat1(:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(in)  :: mat(:)
+      complex, allocatable :: mat1(:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -888,11 +888,11 @@ c     --------
 
       subroutine diagonalize_zpv(evec,eval,mat)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:)
-      complex(8), allocatable :: mat1(:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:)
+      complex, allocatable :: mat1(:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -911,9 +911,9 @@ c     --------
 
       subroutine diagonalize_deo(eval,mat,olap)
       implicit none
-      real(8), intent(out) :: eval(:)
-      real(8), intent(in)  :: mat(:,:),olap(:,:)
-      real(8), allocatable :: mat1(:,:),olap1(:,:),work(:)
+      real, intent(out) :: eval(:)
+      real, intent(in)  :: mat(:,:),olap(:,:)
+      real, allocatable :: mat1(:,:),olap1(:,:),work(:)
       integer              :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -935,9 +935,9 @@ c     --------
 
       subroutine diagonalize_dvo(evec,eval,mat,olap)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:,:),olap(:,:)
-      real(8), allocatable :: olap1(:,:),work(:)
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:,:),olap(:,:)
+      real, allocatable :: olap1(:,:),work(:)
       integer              :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -962,9 +962,9 @@ c     --------
 
       subroutine diagonalize_dpeo(eval,mat,olap)
       implicit none
-      real(8), intent(out) :: eval(:)
-      real(8), intent(in)  :: mat(:),olap(:)
-      real(8), allocatable :: mat1(:),olap1(:),work(:)
+      real, intent(out) :: eval(:)
+      real, intent(in)  :: mat(:),olap(:)
+      real, allocatable :: mat1(:),olap1(:),work(:)
       integer              :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -982,9 +982,9 @@ c     --------
 
       subroutine diagonalize_dpvo(evec,eval,mat,olap)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:),olap(:)
-      real(8), allocatable :: mat1(:),olap1(:),work(:)
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:),olap(:)
+      real, allocatable :: mat1(:),olap1(:),work(:)
       integer              :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -1006,10 +1006,10 @@ c     --------
 
       subroutine diagonalize_zeo(eval,mat,olap)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(in)  :: mat(:,:),olap(:,:)
-      complex(8), allocatable :: mat1(:,:),olap1(:,:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(in)  :: mat(:,:),olap(:,:)
+      complex, allocatable :: mat1(:,:),olap1(:,:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -1031,11 +1031,11 @@ c     --------
 
       subroutine diagonalize_zvo(evec,eval,mat,olap)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:,:),olap(:,:)
-      complex(8), allocatable :: olap1(:,:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:,:),olap(:,:)
+      complex, allocatable :: olap1(:,:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,info
       n = size(mat,1)
       if(n.eq.0)
@@ -1061,10 +1061,10 @@ c     --------
 
       subroutine diagonalize_zpeo(eval,mat,olap)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(in)  :: mat(:),olap(:)
-      complex(8), allocatable :: mat1(:),olap1(:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(in)  :: mat(:),olap(:)
+      complex, allocatable :: mat1(:),olap1(:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -1082,11 +1082,11 @@ c     --------
 
       subroutine diagonalize_zpvo(evec,eval,mat,olap)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:),olap(:)
-      complex(8), allocatable :: mat1(:),olap1(:),work(:)
-      real(8),    allocatable :: rwork(:)
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:),olap(:)
+      complex, allocatable :: mat1(:),olap1(:),work(:)
+      real,    allocatable :: rwork(:)
       integer                 :: n,nn,info
       n = size(eval,1) ; nn = n*(n+1)/2
       if(n.eq.0)
@@ -1108,10 +1108,10 @@ c     --------
 
       subroutine diagonalize_dvs(evec,eval,mat,m)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:,:)
-      real(8), allocatable :: work(:),mat1(:,:)
-      real(8)              :: abstol,dlamch
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:,:)
+      real, allocatable :: work(:),mat1(:,:)
+      real              :: abstol,dlamch
       integer, intent(in)  :: m
       integer, allocatable :: iwork(:),ifail(:)
       integer              :: n,ma,idum,info
@@ -1144,10 +1144,10 @@ c     --------
 
       subroutine diagonalize_dvos(evec,eval,mat,olap,m)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:,:),olap(:,:)
-      real(8), allocatable :: work(:),mat1(:,:),olap1(:,:)
-      real(8)              :: abstol,dlamch
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:,:),olap(:,:)
+      real, allocatable :: work(:),mat1(:,:),olap1(:,:)
+      real              :: abstol,dlamch
       integer, intent(in)  :: m
       integer, allocatable :: iwork(:),ifail(:)
       integer              :: n,ma,idum,info
@@ -1185,10 +1185,10 @@ c     --------
 
       subroutine diagonalize_dpvs(evec,eval,mat,m)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:)
-      real(8), allocatable :: work(:),mat1(:)
-      real(8)              :: abstol,dlamch
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:)
+      real, allocatable :: work(:),mat1(:)
+      real              :: abstol,dlamch
       integer, intent(in)  :: m
       integer, allocatable :: iwork(:),ifail(:)
       integer              :: n,nn,ma,idum,info
@@ -1220,10 +1220,10 @@ c     --------
 
       subroutine diagonalize_dpvos(evec,eval,mat,olap,m)
       implicit none
-      real(8), intent(out) :: eval(:),evec(:,:)
-      real(8), intent(in)  :: mat(:),olap(:)
-      real(8), allocatable :: work(:),mat1(:),olap1(:)
-      real(8)              :: abstol,dlamch
+      real, intent(out) :: eval(:),evec(:,:)
+      real, intent(in)  :: mat(:),olap(:)
+      real, allocatable :: work(:),mat1(:),olap1(:)
+      real              :: abstol,dlamch
       integer, intent(in)  :: m
       integer, allocatable :: iwork(:),ifail(:)
       integer              :: n,nn,ma,idum,info
@@ -1258,12 +1258,12 @@ c     --------
 
       subroutine diagonalize_zvs(evec,eval,mat,m)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:,:)
-      complex(8), allocatable :: work(:),mat1(:,:)
-      real(8),    allocatable :: rwork(:)
-      real(8)                 :: abstol,dlamch
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:,:)
+      complex, allocatable :: work(:),mat1(:,:)
+      real,    allocatable :: rwork(:)
+      real                 :: abstol,dlamch
       integer,    intent(in)  :: m
       integer,    allocatable :: iwork(:),ifail(:)
       integer                 :: n,ma,idum,info
@@ -1297,12 +1297,12 @@ c     --------
 
       subroutine diagonalize_zvos(evec,eval,mat,olap,m)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:,:),olap(:,:)
-      complex(8), allocatable :: work(:),mat1(:,:),olap1(:,:)
-      real(8),    allocatable :: rwork(:)
-      real(8)                 :: abstol,dlamch
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:,:),olap(:,:)
+      complex, allocatable :: work(:),mat1(:,:),olap1(:,:)
+      real,    allocatable :: rwork(:)
+      real                 :: abstol,dlamch
       integer,    intent(in)  :: m
       integer,    allocatable :: iwork(:),ifail(:)
       integer                 :: n,ma,idum,info
@@ -1340,12 +1340,12 @@ c     --------
 
       subroutine diagonalize_zpvs(evec,eval,mat,m)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:)
-      complex(8), allocatable :: work(:),mat1(:)
-      real(8),    allocatable :: rwork(:)
-      real(8)                 :: abstol,dlamch
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:)
+      complex, allocatable :: work(:),mat1(:)
+      real,    allocatable :: rwork(:)
+      real                 :: abstol,dlamch
       integer,    intent(in)  :: m
       integer,    allocatable :: iwork(:),ifail(:)
       integer                 :: n,nn,ma,idum,info
@@ -1378,12 +1378,12 @@ c     --------
 
       subroutine diagonalize_zpvos(evec,eval,mat,olap,m)
       implicit none
-      real(8),    intent(out) :: eval(:)
-      complex(8), intent(out) :: evec(:,:)
-      complex(8), intent(in)  :: mat(:),olap(:)
-      complex(8), allocatable :: work(:),mat1(:),olap1(:)
-      real(8),    allocatable :: rwork(:)
-      real(8)                 :: abstol,dlamch
+      real,    intent(out) :: eval(:)
+      complex, intent(out) :: evec(:,:)
+      complex, intent(in)  :: mat(:),olap(:)
+      complex, allocatable :: work(:),mat1(:),olap1(:)
+      real,    allocatable :: rwork(:)
+      real                 :: abstol,dlamch
       integer,    intent(in)  :: m
       integer,    allocatable :: iwork(:),ifail(:)
       integer                 :: n,nn,ma,idum,info
@@ -1421,11 +1421,11 @@ c     --------
 
       subroutine diagonalize_dvx(evec,eval,mat,ir1,ir2,r1,r2)
       implicit none
-      real(8), intent(out)   :: eval(:),evec(:,:)
-      real(8), intent(in)    :: mat(:,:)
-      real(8), allocatable   :: work(:),mat1(:,:)
-      real(8)                :: abstol,dlamch
-      real(8), intent(in)    :: r1,r2
+      real, intent(out)   :: eval(:),evec(:,:)
+      real, intent(in)    :: mat(:,:)
+      real, allocatable   :: work(:),mat1(:,:)
+      real                :: abstol,dlamch
+      real, intent(in)    :: r1,r2
       integer, intent(in)    :: ir1
       integer, intent(inout) :: ir2
       integer, allocatable   :: iwork(:),ifail(:)
@@ -1462,11 +1462,11 @@ c     --------
 
       subroutine diagonalize_dvox(evec,eval,mat,olap,ir1,ir2,r1,r2)
       implicit none
-      real(8), intent(out)   :: eval(:),evec(:,:)
-      real(8), intent(in)    :: mat(:,:),olap(:,:)
-      real(8), allocatable   :: work(:),mat1(:,:),olap1(:,:)
-      real(8)                :: abstol,dlamch
-      real(8), intent(in)    :: r1,r2
+      real, intent(out)   :: eval(:),evec(:,:)
+      real, intent(in)    :: mat(:,:),olap(:,:)
+      real, allocatable   :: work(:),mat1(:,:),olap1(:,:)
+      real                :: abstol,dlamch
+      real, intent(in)    :: r1,r2
       integer, intent(in)    :: ir1
       integer, intent(inout) :: ir2
       integer, allocatable   :: iwork(:),ifail(:)
@@ -1508,11 +1508,11 @@ c     --------
 
       subroutine diagonalize_dpvx(evec,eval,mat,ir1,ir2,r1,r2)
       implicit none
-      real(8), intent(out)   :: eval(:),evec(:,:)
-      real(8), intent(in)    :: mat(:)
-      real(8), allocatable   :: work(:),mat1(:)
-      real(8)                :: abstol,dlamch
-      real(8), intent(in)    :: r1,r2
+      real, intent(out)   :: eval(:),evec(:,:)
+      real, intent(in)    :: mat(:)
+      real, allocatable   :: work(:),mat1(:)
+      real                :: abstol,dlamch
+      real, intent(in)    :: r1,r2
       integer, intent(in)    :: ir1
       integer, intent(inout) :: ir2
       integer, allocatable   :: iwork(:),ifail(:)
@@ -1548,11 +1548,11 @@ c     --------
 
       subroutine diagonalize_dpvox(evec,eval,mat,olap,ir1,ir2,r1,r2)
       implicit none
-      real(8), intent(out)   :: eval(:),evec(:,:)
-      real(8), intent(in)    :: mat(:),olap(:)
-      real(8), allocatable   :: work(:),mat1(:),olap1(:)
-      real(8)                :: abstol,dlamch
-      real(8), intent(in)    :: r1,r2
+      real, intent(out)   :: eval(:),evec(:,:)
+      real, intent(in)    :: mat(:),olap(:)
+      real, allocatable   :: work(:),mat1(:),olap1(:)
+      real                :: abstol,dlamch
+      real, intent(in)    :: r1,r2
       integer, intent(in)    :: ir1
       integer, intent(inout) :: ir2
       integer, allocatable   :: iwork(:),ifail(:)
@@ -1591,13 +1591,13 @@ c     --------
 
       subroutine diagonalize_zvx(evec,eval,mat,ir1,ir2,r1,r2)
       implicit none
-      real(8),    intent(out)   :: eval(:)
-      complex(8), intent(out)   :: evec(:,:)
-      complex(8), intent(in)    :: mat(:,:)
-      complex(8), allocatable   :: work(:),mat1(:,:)
-      real(8),    allocatable   :: rwork(:)
-      real(8)                   :: abstol,dlamch
-      real(8),    intent(in)    :: r1,r2
+      real,    intent(out)   :: eval(:)
+      complex, intent(out)   :: evec(:,:)
+      complex, intent(in)    :: mat(:,:)
+      complex, allocatable   :: work(:),mat1(:,:)
+      real,    allocatable   :: rwork(:)
+      real                   :: abstol,dlamch
+      real,    intent(in)    :: r1,r2
       integer,    intent(in)    :: ir1
       integer,    intent(inout) :: ir2
       integer,    allocatable   :: iwork(:),ifail(:)
@@ -1634,13 +1634,13 @@ c     --------
 
       subroutine diagonalize_zvox(evec,eval,mat,olap,ir1,ir2,r1,r2)
       implicit none
-      real(8),    intent(out)   :: eval(:)
-      complex(8), intent(out)   :: evec(:,:)
-      complex(8), intent(in)    :: mat(:,:),olap(:,:)
-      complex(8), allocatable   :: work(:),mat1(:,:),olap1(:,:)
-      real(8),    allocatable   :: rwork(:)
-      real(8)                   :: abstol,dlamch
-      real(8),    intent(in)    :: r1,r2
+      real,    intent(out)   :: eval(:)
+      complex, intent(out)   :: evec(:,:)
+      complex, intent(in)    :: mat(:,:),olap(:,:)
+      complex, allocatable   :: work(:),mat1(:,:),olap1(:,:)
+      real,    allocatable   :: rwork(:)
+      real                   :: abstol,dlamch
+      real,    intent(in)    :: r1,r2
       integer,    intent(in)    :: ir1
       integer,    intent(inout) :: ir2
       integer,    allocatable   :: iwork(:),ifail(:)
@@ -1682,13 +1682,13 @@ c     --------
 
       subroutine diagonalize_zpvx(evec,eval,mat,ir1,ir2,r1,r2)
       implicit none
-      real(8),    intent(out)   :: eval(:)
-      complex(8), intent(out)   :: evec(:,:)
-      complex(8), intent(in)    :: mat(:)
-      complex(8), allocatable   :: work(:),mat1(:)
-      real(8),    allocatable   :: rwork(:)
-      real(8)                   :: abstol,dlamch
-      real(8),    intent(in)    :: r1,r2
+      real,    intent(out)   :: eval(:)
+      complex, intent(out)   :: evec(:,:)
+      complex, intent(in)    :: mat(:)
+      complex, allocatable   :: work(:),mat1(:)
+      real,    allocatable   :: rwork(:)
+      real                   :: abstol,dlamch
+      real,    intent(in)    :: r1,r2
       integer,    intent(in)    :: ir1
       integer,    intent(inout) :: ir2
       integer,    allocatable   :: iwork(:),ifail(:)
@@ -1725,13 +1725,13 @@ c     --------
 
       subroutine diagonalize_zpvox(evec,eval,mat,olap,ir1,ir2,r1,r2)
       implicit none
-      real(8),    intent(out)   :: eval(:)
-      complex(8), intent(out)   :: evec(:,:)
-      complex(8), intent(in)    :: mat(:),olap(:)
-      complex(8), allocatable   :: work(:),mat1(:),olap1(:)
-      real(8),    allocatable   :: rwork(:)
-      real(8)                   :: abstol,dlamch
-      real(8),    intent(in)    :: r1,r2
+      real,    intent(out)   :: eval(:)
+      complex, intent(out)   :: evec(:,:)
+      complex, intent(in)    :: mat(:),olap(:)
+      complex, allocatable   :: work(:),mat1(:),olap1(:)
+      real,    allocatable   :: rwork(:)
+      real                   :: abstol,dlamch
+      real,    intent(in)    :: r1,r2
       integer,    intent(in)    :: ir1
       integer,    intent(inout) :: ir2
       integer,    allocatable   :: iwork(:),ifail(:)
@@ -1772,14 +1772,14 @@ c     --------
 
       subroutine geteigen_zpvo(evec,eval,mat,olap)
       implicit none
-      real(8),    intent(out) :: eval
-      complex(8), intent(out) :: evec(:)
-      complex(8), intent(in)  :: mat(:),olap(:)
-      complex(8), allocatable :: mat1(:),olap1(:),work(:),evec1(:,:)
-      real(8),    allocatable :: eval1(:),rwork(:)
+      real,    intent(out) :: eval
+      complex, intent(out) :: evec(:)
+      complex, intent(in)  :: mat(:),olap(:)
+      complex, allocatable :: mat1(:),olap1(:),work(:),evec1(:,:)
+      real,    allocatable :: eval1(:),rwork(:)
       integer,    allocatable :: iwork(:),ifail(:)
       integer                 :: n,nn,info
-      real(8)                 :: dlamch
+      real                 :: dlamch
       stop 'geteigen: disabled!'
       n = size(evec) ; nn = n*(n+1)/2
       if(size(mat) .ne.nn) 
@@ -1800,8 +1800,8 @@ c     --------
 
       subroutine inverse_d(mati,mat)
       implicit none
-      real(8), intent(out) :: mati(:,:)
-      real(8), intent(in)  :: mat(:,:)
+      real, intent(out) :: mati(:,:)
+      real, intent(in)  :: mat(:,:)
       integer              :: n,info,i,j
       n = size(mat,1)
       if(size(mat,2) .ne.n)
@@ -1820,8 +1820,8 @@ c     --------
 
       subroutine inverse_dp(mati,mat)
       implicit none
-      real(8), intent(out) :: mati(:)
-      real(8), intent(in)  :: mat(:)
+      real, intent(out) :: mati(:)
+      real, intent(in)  :: mat(:)
       integer              :: n,nn,info
       nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
       if(size(mati).ne.nn)
@@ -1835,8 +1835,8 @@ c     --------
 
       subroutine inverse_z(mati,mat)
       implicit none
-      complex(8), intent(out) :: mati(:,:)
-      complex(8), intent(in)  :: mat(:,:)
+      complex, intent(out) :: mati(:,:)
+      complex, intent(in)  :: mat(:,:)
       integer                 :: n,info,i,j
       n = size(mat,1)
       if(size(mat,2) .ne.n)
@@ -1862,8 +1862,8 @@ c     --------
 
       subroutine inverse_zp(mati,mat)
       implicit none
-      complex(8), intent(out) :: mati(:)
-      complex(8), intent(in)  :: mat(:)
+      complex, intent(out) :: mati(:)
+      complex, intent(in)  :: mat(:)
       integer                 :: n,nn,info
       nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
       if(size(mati).ne.nn)
@@ -1877,8 +1877,8 @@ c     --------
 
       subroutine inverse_d1(mat)
       implicit none
-      real(8), intent(inout) :: mat(:,:)
-      real(8), allocatable   :: work(:)
+      real, intent(inout) :: mat(:,:)
+      real, allocatable   :: work(:)
       integer, allocatable   :: ipiv(:)
       integer                :: n,info,i,j
       n = size(mat,1)
@@ -1892,7 +1892,7 @@ c     --------
 
       subroutine inverse_dp1(mat)
       implicit none
-      real(8), intent(inout) :: mat(:)
+      real, intent(inout) :: mat(:)
       integer                :: n,nn,info
       nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
       call dpptrf('U',n,mat,info)
@@ -1903,8 +1903,8 @@ c     --------
 
       subroutine inverse_z1(mat)
       implicit none
-      complex(8), intent(inout) :: mat(:,:)
-      complex(8), allocatable   :: work(:)
+      complex, intent(inout) :: mat(:,:)
+      complex, allocatable   :: work(:)
       integer,    allocatable   :: ipiv(:)
       integer                   :: n,info
       n = size(mat,1)
@@ -1918,8 +1918,8 @@ c     --------
 
       subroutine inverse_zp1(mat)
       implicit none
-      complex(8), intent(inout) :: mat(:)
-      complex(8), allocatable   :: work(:)
+      complex, intent(inout) :: mat(:)
+      complex, allocatable   :: work(:)
       integer,    allocatable   :: ipiv(:)
       integer                   :: n,nn,info
       nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0) 
@@ -1934,9 +1934,9 @@ c     --------
 
       subroutine sqrtmat_d(matout,matin)
       implicit none
-      real(8), intent(out) :: matout(:,:)
-      real(8), intent(in)  :: matin(:,:)
-      real(8), allocatable :: eval(:),evec(:,:)
+      real, intent(out) :: matout(:,:)
+      real, intent(in)  :: matin(:,:)
+      real, allocatable :: eval(:),evec(:,:)
       integer              :: n,i
       n = size(matin,1)
       if(size(matin,2).ne.n) 
@@ -1953,9 +1953,9 @@ c     --------
 
       subroutine sqrtmat_dp(matout,matin)
       implicit none
-      real(8), intent(out) :: matout(:)
-      real(8), intent(in)  :: matin(:)
-      real(8), allocatable :: eval(:),evec(:,:)
+      real, intent(out) :: matout(:)
+      real, intent(in)  :: matin(:)
+      real, allocatable :: eval(:),evec(:,:)
       integer              :: nn,n,i,j
       nn = size(matin,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
       if(size(matout).ne.nn)
@@ -1972,10 +1972,10 @@ c     --------
 
       subroutine sqrtmat_z(matout,matin)
       implicit none
-      complex(8), intent(out) :: matout(:,:)
-      complex(8), intent(in)  :: matin(:,:)
-      complex(8), allocatable :: evec(:,:)
-      real(8),    allocatable :: eval(:)
+      complex, intent(out) :: matout(:,:)
+      complex, intent(in)  :: matin(:,:)
+      complex, allocatable :: evec(:,:)
+      real,    allocatable :: eval(:)
       integer                 :: n,i
       n = size(matin,1)
       if(size(matin,2).ne.n) 
@@ -1992,10 +1992,10 @@ c     --------
 
       subroutine sqrtmat_zp(matout,matin)
       implicit none
-      complex(8), intent(out) :: matout(:)
-      complex(8), intent(in)  :: matin(:)
-      complex(8), allocatable :: evec(:,:)
-      real(8),    allocatable :: eval(:)
+      complex, intent(out) :: matout(:)
+      complex, intent(in)  :: matin(:)
+      complex, allocatable :: evec(:,:)
+      real,    allocatable :: eval(:)
       integer                 :: nn,n,i,j
       nn = size(matin,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
       if(size(matout).ne.nn)
@@ -2012,8 +2012,8 @@ c     --------
 
       subroutine sqrtmat_d1(mat)
       implicit none
-      real(8), intent(inout) :: mat(:,:)
-      real(8), allocatable   :: eval(:),evec(:,:)
+      real, intent(inout) :: mat(:,:)
+      real, allocatable   :: eval(:),evec(:,:)
       integer                :: n,i
       n = size(mat,1)
       if(size(mat,2).ne.n) stop 'sqrtmat_d1: array dimensions differ.'
@@ -2029,8 +2029,8 @@ c     --------
 
       subroutine sqrtmat_dp1(mat)
       implicit none
-      real(8), intent(inout) :: mat(:)
-      real(8), allocatable   :: eval(:),evec(:,:)
+      real, intent(inout) :: mat(:)
+      real, allocatable   :: eval(:),evec(:,:)
       integer                :: nn,n,i,j
       nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
       allocate ( evec(n,n),eval(n) )
@@ -2045,9 +2045,9 @@ c     --------
 
       subroutine sqrtmat_z1(mat)
       implicit none
-      complex(8), intent(inout) :: mat(:,:)
-      complex(8), allocatable   :: evec(:,:)
-      real(8),    allocatable   :: eval(:)
+      complex, intent(inout) :: mat(:,:)
+      complex, allocatable   :: evec(:,:)
+      real,    allocatable   :: eval(:)
       integer                   :: n,i
       n = size(mat,1) 
       if(size(mat,2).ne.n) stop 'sqrtmat_z1: array dimensions differ.'
@@ -2063,9 +2063,9 @@ c     --------
 
       subroutine sqrtmat_zp1(mat)
       implicit none
-      complex(8), intent(inout) :: mat(:)
-      complex(8), allocatable   :: evec(:,:)
-      real(8),    allocatable   :: eval(:)
+      complex, intent(inout) :: mat(:)
+      complex, allocatable   :: evec(:,:)
+      real,    allocatable   :: eval(:)
       integer                   :: nn,n,i,j
       nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0) 
       allocate ( eval(n),evec(n,n) )

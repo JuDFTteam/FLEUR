@@ -23,7 +23,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: nsl ,jspin 
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nslat(atoms%natd,nsld)
+    INTEGER, INTENT (IN) :: nslat(atoms%nat,nsld)
     !     ..
     !     .. Local Scalars
     INTEGER :: nbands,ikpt,kspin,j,i,n,it ,na,iband,mt,l
@@ -44,9 +44,9 @@ CONTAINS
     IF (nsl.GT.nsld)  THEN
        CALL juDFT_error("nsl.GT.nsld",calledby="Ek_write_sl")
     ENDIF
-    ALLOCATE(eig(dimension%neigd),orbcomp(dimension%neigd,23,atoms%natd,kpts%nkptd,dimension%jspd))
-    ALLOCATE(qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd),qintsl(nsld,dimension%neigd,kpts%nkptd,dimension%jspd))
-    ALLOCATE(qmtsl(nsld,dimension%neigd,kpts%nkptd,dimension%jspd),qmtp(dimension%neigd,atoms%natd,kpts%nkptd,dimension%jspd))
+    ALLOCATE(eig(dimension%neigd),orbcomp(dimension%neigd,23,atoms%nat,kpts%nkpt,dimension%jspd))
+    ALLOCATE(qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd),qintsl(nsld,dimension%neigd,kpts%nkpt,dimension%jspd))
+    ALLOCATE(qmtsl(nsld,dimension%neigd,kpts%nkpt,dimension%jspd),qmtp(dimension%neigd,atoms%nat,kpts%nkpt,dimension%jspd))
     ALLOCATE(qal(4,atoms%ntype,dimension%neigd),qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
     ALLOCATE(qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
     ALLOCATE(ksym(dimension%neigd),jsym(dimension%neigd))
@@ -69,7 +69,7 @@ CONTAINS
     WRITE (130,FMT=904) atoms%ntype,(atoms%neq(n),n=1,atoms%ntype) 
     WRITE (130,FMT=805)  
     DO j=1,nsl
-       WRITE (130,FMT=806) j,(nslat(i,j),i=1,atoms%natd)
+       WRITE (130,FMT=806) j,(nslat(i,j),i=1,atoms%nat)
     ENDDO
     DO kspin = 1,input%jspins
        WRITE (130,FMT=907)  kspin,input%jspins

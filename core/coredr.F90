@@ -9,6 +9,7 @@ CONTAINS
     USE m_etabinit
     USE m_spratm
     USE m_ccdnup
+    USE m_cdn_io
 
     USE m_types
     IMPLICIT NONE
@@ -21,9 +22,9 @@ CONTAINS
     REAL seig
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntypd,DIMENSION%jspd),qints(atoms%ntypd,DIMENSION%jspd)
+    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),qints(atoms%ntype,DIMENSION%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
@@ -31,10 +32,10 @@ CONTAINS
     LOGICAL exetab
     !     ..
     !     .. Local Arrays ..
-    REAL br(atoms%jmtd,atoms%ntypd),brd(DIMENSION%msh),etab(100,atoms%ntypd),&
-         rhcs(atoms%jmtd,atoms%ntypd,DIMENSION%jspd),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
-         tecs(atoms%ntypd,DIMENSION%jspd),vr(atoms%jmtd,atoms%ntypd),vrd(DIMENSION%msh)
-    INTEGER nkmust(atoms%ntypd),ntab(100,atoms%ntype),ltab(100,atoms%ntype)
+    REAL br(atoms%jmtd,atoms%ntype),brd(DIMENSION%msh),etab(100,atoms%ntype),&
+         rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
+         tecs(atoms%ntype,DIMENSION%jspd),vr(atoms%jmtd,atoms%ntype),vrd(DIMENSION%msh)
+    INTEGER nkmust(atoms%ntype),ntab(100,atoms%ntype),ltab(100,atoms%ntype)
 
     !     ..
     ntab(:,:) = -1 ; ltab(:,:) = -1 ; etab(:,:) = 0.0
@@ -165,18 +166,7 @@ CONTAINS
 
     END DO ! loop over atoms (jatom)
     !
-    !---->store core charge densities to file.17
-    OPEN (17,file='cdnc',form='unformatted',status='unknown')
-    REWIND 17
-    DO jspin = 1,input%jspins
-       DO jatom = 1,atoms%ntype
-          WRITE (17) (rhcs(j,jatom,jspin),j=1,atoms%jri(jatom))
-          WRITE (17) tecs(jatom,jspin)
-       END DO
-       WRITE (17) (qints(jatom,jspin),jatom=1,atoms%ntype)
-    END DO
-    CLOSE (17)
-    !
-    RETURN
+    !----> store core charge densities
+    CALL writeCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
   END SUBROUTINE coredr
 END MODULE m_coredr

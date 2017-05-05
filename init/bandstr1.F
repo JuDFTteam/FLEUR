@@ -81,19 +81,19 @@
          ENDDO
       ENDDO
       bkTemp(:,n) = syp(:,nosyp)
-      kpts%nkpts = kpts%nkpt
+      kpts%nkpt = kpts%nkpt
       kpts%posScale = 1.0
 
       IF(l_fillArrays) THEN
          IF(ALLOCATED(kpts%bk)) THEN
             DEALLOCATE(kpts%bk)
          END IF
-         IF(ALLOCATED(kpts%weight)) THEN
-            DEALLOCATE(kpts%weight)
+         IF(ALLOCATED(kpts%wtkpt)) THEN
+            DEALLOCATE(kpts%wtkpt)
          END IF
-         ALLOCATE (kpts%bk(3,kpts%nkpt), kpts%weight(kpts%nkpt))
+         ALLOCATE (kpts%bk(3,kpts%nkpt), kpts%wtkpt(kpts%nkpt))
          kpts%bk(:,:) = bkTemp(:,:)
-         kpts%weight = 1.0
+         kpts%wtkpt = 1.0
       ELSE
          OPEN (41,file='kpts',form='formatted',status='new')
          IF (.NOT.input%film) THEN
@@ -134,7 +134,7 @@
       CHARACTER(LEN=200) tempTitle
       aoff = iachar('a')-1
       adel = iachar('a')-iachar('A')
-      write(*,*) aoff,adel 
+      !write(*,*) aoff,adel 
 
       OPEN (27,file='band.gnu',status='unknown')
       WRITE (27,900)
@@ -270,7 +270,7 @@
       END IF
 
       !No band_inp file -> determine default lines for bandstructure
-      write(*,*) idsyst,idtype
+      !write(*,*) idsyst,idtype
       nosyp = -1
       IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
         nosyp = 7

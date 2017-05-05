@@ -45,14 +45,14 @@ CONTAINS
     !            |                       +- fitchk
     !            |                       +- cotra1
     !            |                       +- ylm3
-    !            +-- cdnsp -+- loddop
-    !            |          +- wrtdop
+    !            +-- cdnsp -+- readDensity
+    !            |          +- writeDensity
     !            |          +- intgr3
-    !            +-- flipcdn -+- loddop
-    !            |            +- wrtdop
+    !            +-- flipcdn -+- readDensity
+    !            |            +- writeDensity
     !            +-- f2u -- wrtdop
     !            +-- u2f -- loddop
-    !            +-- bmt -+- loddop
+    !            +-- bmt -+- readDensity
     !                     +- wrtdop
     !----------------------------------------
     USE m_bmt
@@ -60,6 +60,7 @@ CONTAINS
     USE m_stden
     USE m_cdnsp
     USE m_flipcdn
+    USE m_cdn_io
     USE m_f2u
     USE m_u2f
     USE m_types
@@ -83,9 +84,13 @@ CONTAINS
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
     !     .. Local Scalars ..
-    INTEGER :: it
+    INTEGER :: it, archiveType
     CHARACTER*10 :: cdnfname
     LOGICAL :: strho
+#ifdef CPP_MPI
+    include 'mpif.h'
+    INTEGER :: ierr(2)
+#endif
     !     ..
     it = 1
 
@@ -98,22 +103,22 @@ CONTAINS
           IF (noco%l_noco) THEN
              cdnfname = 'cdn'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
              cdnfname = 'mdnx'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
              cdnfname = 'mdny'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
              cdnfname = 'mdnz'
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
           ELSE
@@ -123,7 +128,7 @@ CONTAINS
                 cdnfname = 'cdn1'
              ENDIF
              CALL plotdop(&
-                  &           oneD,stars,vacuum,sphhar,atoms,&
+                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
                   &           input,sym,cell,sliceplot,&
                   &           noco%l_noco,cdnfname)
           ENDIF
@@ -135,14 +140,17 @@ CONTAINS
     !
     strho=input%strho
     IF (.NOT.(strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        IF (noco%l_noco) THEN
-          INQUIRE (file='rhomat_inp',exist=strho) ! if no density (rhoma
-       ELSE
-          INQUIRE (file='cdn1',exist=strho)       ! if no density (cdn1)
-       ENDIF
-       strho = .NOT.strho                ! create a starting density
+          archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+       END IF
+       IF (mpi%irank == 0) THEN
+          strho = .NOT.isDensityFilePresent(archiveType)
+       END IF
+#ifdef CPP_MPI
+       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+#endif
     ENDIF
-
     IF (strho) THEN
        strho=input%total 
        input%total = .FALSE.
@@ -164,13 +172,11 @@ CONTAINS
        !
        !     --->generate spin polarized charge density
        !
-       CALL timestart("optional: spin polarized density")
        IF (input%swsp) THEN
+          CALL timestart("optional: spin polarized density")
           CALL cdnsp(&
                &              atoms,input,vacuum,sphhar,&
-               &              stars,&
-               &              sym,&
-               &              cell,DIMENSION)
+               &              stars,sym,oneD,cell,dimension)
           !
           CALL timestop("optional: spin polarized density")
        END IF
@@ -182,7 +188,7 @@ CONTAINS
           CALL timestart('optional: flip magnetic moments')
           CALL flipcdn(&
                &                atoms,input,vacuum,sphhar,&
-               &                stars,sym,cell,noco%l_noco)
+               &                stars,sym,oneD,cell,noco%l_noco)
           !
           CALL timestop('optional: flip magnetic moments')
        END IF
@@ -210,10 +216,9 @@ CONTAINS
        IF (input%l_bmt) THEN
           CALL bmt(&
                &           stars,input,noco,atoms,sphhar,vacuum,&
-               &           cell,sym)
+               &           cell,sym,oneD)
        ENDIF
 
     ENDIF ! mpi%irank == 0
-
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

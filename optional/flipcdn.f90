@@ -18,10 +18,9 @@
       CONTAINS
         SUBROUTINE flipcdn(&
              &                   atoms,input,vacuum,sphhar,&
-             &                   stars,sym,cell,&
+             &                   stars,sym,oneD,cell,&
              &                   l_noco)
-          USE m_loddop
-          USE m_wrtdop
+          USE m_cdn_io
           USE m_types
           IMPLICIT NONE
           TYPE(t_stars),INTENT(IN)  :: stars
@@ -30,15 +29,17 @@
           TYPE(t_sphhar),INTENT(IN) :: sphhar
           TYPE(t_input),INTENT(IN)  :: input
           TYPE(t_sym),INTENT(IN)    :: sym
+          TYPE(t_oneD),INTENT(IN)     :: oneD
           TYPE(t_cell),INTENT(IN)   :: cell
           LOGICAL,INTENT(IN)        :: l_noco
 
           !     .. Local Scalars ..
-          REAL    rhodummy,rhodumms
+          REAL    rhodummy,rhodumms,fermiEnergyTemp
           INTEGER i,iter,n,nt,j,lh,na ,mp,ispin,n_ldau,urec,itype,m
+          INTEGER archiveType
             
           CHARACTER(len=8) iop,dop
-          LOGICAL n_exist
+          LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:),qpw(:,:),rhtxy(:,:,:,:)
@@ -51,29 +52,17 @@
           !sphhar%nlhd = MAXVAL(sphhar%nlh(:))
           ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),qpw(stars%ng3,input%jspins) )
           ALLOCATE ( rhtxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins),rht(vacuum%nmz,2,input%jspins) )
+          archiveType = CDN_ARCHIVE_TYPE_CDN1_const
           IF (l_noco) THEN
              ALLOCATE( cdom(stars%ng3) )
              ALLOCATE( cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxy,stars%ng2-1,2) )
+             archiveType = CDN_ARCHIVE_TYPE_NOCO_const
           ENDIF
 
-          nt = 71                   !gs, see sub mix
-          IF (l_noco) THEN
-             OPEN (nt,file='rhomat_inp',form='unformatted',status='old')
-          ELSE
-             OPEN (nt,file='cdn1',form='unformatted',status='old')
-          ENDIF
           !     ---> read the charge density 
-          CALL loddop(&
-               &            stars,vacuum,atoms,sphhar,input,sym,&
-               &            nt,&
-               &            iter,rho,qpw,rht,rhtxy)
-          IF (l_noco) THEN
-             READ (nt) (cdom(j),j=1,stars%ng3)
-             IF (input%film) THEN
-                READ (nt) ((cdomvz(n,i),n=1,vacuum%nmz),i=1,vacuum%nvac)
-                READ (nt) (((cdomvxy(n,j-1,i),n=1,vacuum%nmzxy),j=2,stars%ng2),i=1,vacuum%nvac) 
-             ENDIF
-          ENDIF
+          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+
           !     ---> flip cdn for each atom with nflip=-1
           !
           na = 1
@@ -99,20 +88,9 @@
              END IF
              na = na + atoms%neq(n)
           ENDDO
-          !     ----> write the spin-polarized density on unit nt
-          REWIND nt
-          CALL wrtdop(&
-               &            stars,vacuum,atoms,sphhar,input,sym,&
-               &            nt,&
-               &            iter,rho,qpw,rht,rhtxy)
-          IF (l_noco) THEN
-             WRITE (nt) (cdom(j),j=1,stars%ng3)
-             IF (input%film) THEN
-                WRITE (nt) ((cdomvz(n,i),n=1,vacuum%nmz),i=1,vacuum%nvac)
-                WRITE (nt) (((cdomvxy(n,j-1,i),n=1,vacuum%nmzxy),j=2,stars%ng2),i=1,vacuum%nvac)
-             ENDIF
-          ENDIF
-          CLOSE (nt)
+          !     ----> write the spin-polarized density
+          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                            0,-1.0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
           !
           ! for lda+U: flip n-matrix 
           !

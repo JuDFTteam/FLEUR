@@ -43,7 +43,7 @@
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
       REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3),scale
-      CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntypd)
+      CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
@@ -77,7 +77,7 @@
       INTEGER :: ierr
 ! ..
 !...  Local Arrays
-      CHARACTER :: helpchar(atoms%ntypd)
+      CHARACTER :: helpchar(atoms%ntype)
       CHARACTER(len=  4) :: chntype
       CHARACTER(len= 41) :: chform
       CHARACTER(len=100) :: line
@@ -494,12 +494,9 @@
  7220 FORMAT (5x,l1,1x,6x,l1,1x,5x,l1,1x,3x,i1,1x,9x,i4)
 !
       DO i=1,100 ; line(i:i)=' ' ; ENDDO
-      READ (UNIT=5,fmt='(A)',END=99,ERR=99) line
-      obsolete%eig66(2)= ( line(38:44)=='soc66=T' ).or.( line(38:44)=='soc66=t' )
-      BACKSPACE (UNIT=5)
       READ (UNIT=5,FMT=6000,END=99,ERR=99)&
-     &                obsolete%lpr,obsolete%form66,input%l_f,input%eonly,obsolete%eig66(1)
-      WRITE (6,9130) obsolete%lpr,obsolete%form66,input%l_f,input%eonly,obsolete%eig66(1),obsolete%eig66(2)
+     &                idum,ldum,input%l_f,input%eonly
+      WRITE (6,9130) 0,.false.,input%l_f,input%eonly
  6000 FORMAT (4x,i1,8x,l1,5x,l1,7x,l1,7x,l1)
 !
 !+roa
@@ -591,6 +588,7 @@
       obsolete%l_f2u=.false.
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
      &                 input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u
+      input%coretail_lmax=99
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
@@ -857,26 +855,18 @@
         END IF
          DO ieq=1,atoms%neq(n)
             na = na + 1
-            DO i = 2,9
+            scpos = 1.0
+            DO i = 2,100
               rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
      &             + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
               IF (.not.input%film) THEN
                 rest = rest + ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
               END IF
-              IF (rest.LT.(i*0.000001)) EXIT
+              IF (rest.LT.(i*0.000001)) THEN
+                 scpos = real(i)
+                 EXIT
+              END IF
             ENDDO
-            scpos = 1.0
-            IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
-!            IF (.not.film) THEN           ! now check z-coordinate
-!              DO i = 2,9
-!                rest = ABS(i*scpos*taual(3,na) -
-!     +                NINT(i*scpos*taual(3,na)) )
-!                IF (rest.LT.(i*scpos*0.000001)) THEN
-!                  scpos = i*scpos
-!                  EXIT
-!                ENDIF
-!              ENDDO
-!            ENDIF
             DO i = 1,2
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO
@@ -899,9 +889,8 @@
       WRITE (5,9120) input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
  9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
      &        ',numbands=',i4)
-      WRITE (5,9130) obsolete%lpr,obsolete%form66,input%l_f,input%eonly,obsolete%eig66(1),obsolete%eig66(2)
- 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1,&
-     &        ',eig66=',l1,',soc66=',l1)
+      WRITE (5,9130) 0,.false.,input%l_f,input%eonly
+ 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1)
       IF ( l_hyb ) THEN
         WRITE (chntype,'(i3)') 2*atoms%ntype
         chform = '('//chntype//'i3 )'

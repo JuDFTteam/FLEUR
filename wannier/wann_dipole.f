@@ -139,7 +139,8 @@ c*************************************************
         open (203,file=trim(filename),status='old')
         rewind (203)
       else
-         CALL juDFT_error("no proj/proj.1/proj.2",calledby ="wann_dipole")
+         CALL juDFT_error("no proj/proj.1/proj.2",
+     +        calledby ="wann_dipole")
       endif  
       read(203,*)num_wann
       close(203)

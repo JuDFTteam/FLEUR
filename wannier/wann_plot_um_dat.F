@@ -30,16 +30,14 @@ c******************************************************************
       use m_wann_rw_eig
       use m_abcof
       use m_wann_2dvacabcof
-      use m_dotir
       use m_radfun
       use m_radflo
       use m_cdnread, only : cdn_read0
-      use m_od_types, only : od_inp, od_sym
+      use m_types, only : od_inp, od_sym
       use m_loddop
-      use m_constants, only : pimach
+      use m_constants
       use m_wann_real
       use m_xsf_io
-      use m_cotra,only:cotra1
       use m_wann_read_umatrix
       use m_wann_kptsrotate
       use m_wann_plot_vac
@@ -194,8 +192,6 @@ c     ..basis wavefunctions in the vacuum
       real v(3),scale,ev
       complex av,bv
       real volume
-c      external dotirp !module now
-c      real dotirp
       REAL          :: s,const
       COMPLEX       :: xdnout,factor
       INTEGER       :: ii3,ix,iy,iz,nplo,nbn
@@ -217,6 +213,7 @@ c      real dotirp
       complex :: nsfactor
       integer :: ngopr1(natd)
 
+#ifdef CPP_NEVER
       um_format=.false.
       l_byindex=.false.
       l_byenergy=.false.
@@ -470,10 +467,10 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
       if (irank.eq.0) l_p0 = .true.
 
       call cdn_read0(
-     >               lmaxd,ntypd,nlod,neigd,jspd,
-     >               irank,isize,jspin,jsp_start,jsp_end,
-     >               l_noco,nrec,66,
-     <               ello,evac,epar,bkpt,wk,n_bands,nrec1,n_size)
+     >               nrec,
+     >               irank,isize,jspin,jspins,
+     >               l_noco,
+     <               ello,evac,epar,bkpt,wk,n_bands,n_size)
 
 
       allocate ( flo(ntypd,jmtd,2,nlod) )
@@ -679,7 +676,7 @@ c**************************************************************************
             point = zero+vec1*(ix+0.0)/(grid(1)-1)+vec2*(iy+0.0)
      $                 /(grid(2)-1)
             IF (.NOT.twodim) point = point+vec3*(iz+0.0)/(grid(3)-1)
-            call cotra1(point,poinint,bmat)
+            poinint=matmul(bmat,point)/tpi_const
             phas=tpi*(bkpt(1)*poinint(1)
      +      +bkpt(2)*poinint(2)+bkpt(3)*poinint(3))
             factor=cmplx(cos(phas),sin(phas))
@@ -1062,6 +1059,6 @@ c*****************************************************************
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,mpiierr)
 #endif      
-
+#endif
       END SUBROUTINE wann_plot_um_dat
       END MODULE m_wann_plot_um_dat

@@ -29,9 +29,9 @@ CONTAINS
     !
     !
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%n3d,dimension%jspd) 
-    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
+    REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%ng3,dimension%jspd) 
+    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     !-odim
     !+odim
     !     ..
@@ -42,8 +42,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
 
-    COMPLEX qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
-    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntypd)
+    COMPLEX qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
 
     !
@@ -169,7 +169,7 @@ CONTAINS
     ENDIF
 #ifdef CPP_MPI
     CALL MPI_BCAST(qpw,SIZE(qpw),CPP_MPI_COMPLEX,0,&
-         &                          mpi,ierr)
+         &                          mpi%mpi_comm,ierr)
 #endif
     !      g ne 0 terms : \sum_{K \= 0} 4 \pi i^l \rho_I(K) R_i^{l+3} \times
     !      j_{l+1} (KR_i) / KR_i \exp{iK\xi_i} Y^*_{lm} (K)
@@ -179,7 +179,7 @@ CONTAINS
     DO k = mpi%irank+2, stars%ng3, mpi%isize
        IF (od) THEN
           CALL od_phasy(&
-               &           atoms%ntype,stars%n3d,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &           pylm)
        ELSE
@@ -211,7 +211,7 @@ CONTAINS
     n = SIZE(qlmp)
     ALLOCATE(c_b(n))
     CALL MPI_REDUCE(qlmp,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,&
-         &                                   mpi,ierr)
+         &                                   mpi%mpi_comm,ierr)
     IF (mpi%irank.EQ.0) THEN
        qlmp=RESHAPE(c_b,(/SIZE(qlmp,1),SIZE(qlmp,2),SIZE(qlmp,3)/))
     ENDIF

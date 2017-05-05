@@ -26,13 +26,13 @@ MODULE m_zsymsecloc
      MODULE procedure zsymsecloc_r,zsymsecloc_c
   END INTERFACE zsymsecloc
 CONTAINS
-  SUBROUTINE zsymsecloc_r(jsp,input,lapw,bkpt,atoms, kveclo, sym,cell, dimension,matsize, nsize, jij,matind,nred,eig,ne, a,b, z)
+  SUBROUTINE zsymsecloc_r(jsp,input,lapw,bkpt,atoms, kveclo, sym,l_zref,cell, dimension,matsize, nsize, jij,matind,nred,eig,ne, a,b, z)
 
 #define CPP_REALDATA
 #include "zsymsecloc_cpp.F90"
   END SUBROUTINE zsymsecloc_r
 
-  SUBROUTINE zsymsecloc_c(jsp,input,lapw,bkpt,atoms, kveclo, sym,cell, dimension,matsize, nsize, jij,matind,nred,eig,ne, a,b, z)
+  SUBROUTINE zsymsecloc_c(jsp,input,lapw,bkpt,atoms, kveclo, sym,l_zref,cell, dimension,matsize, nsize, jij,matind,nred,eig,ne, a,b, z)
 
 #undef CPP_REALDATA
 #include "zsymsecloc_cpp.F90"

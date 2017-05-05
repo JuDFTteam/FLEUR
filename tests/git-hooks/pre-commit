@@ -1,0 +1,18 @@
+#!/bin/sh
+git stash -q --keep-index
+if git diff HEAD|grep -i " STOP"|grep -q '\+' 
+then 
+  cat <<\EOF
+
+It looks like you introduced a stop command in your code.
+Please use calls to judft_error instead, as this ensures proper 
+termination of the program.
+
+If this is actually a false alarm, please commit again with
+the --no-verify option.
+
+EOF
+    git stash pop -q
+    exit 1
+fi
+git stash pop -q

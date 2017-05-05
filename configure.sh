@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "------------ Welcome to the FLEUR configuration script -------------"
-. cmake/machines.sh
+. $DIR/cmake/machines.sh
 #check if -h or  --help was given as argument
 if [ "$1" = "" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]
 then
-   echo "USAGE: configure.sh MACHINE [debug]"
+   echo "USAGE: configure.sh MACHINE [label]"
    echo "
   To help the script finding a proper configuration you should
   provide the name of a specific machine to compile on.
@@ -13,36 +14,42 @@ then
    echo "   $known_machines"
    echo " 
   If you do not find a proper choice you might try
-        './configuration.sh AUTO'
+        'configuration.sh AUTO'
 
   You might also want to add your configuration to the file 
   cmake/machines.sh in this case :-)
   
   In addition you can modify some environment variables:
-        FLEUR_NO_SERIAL     -- if defined no serial executables will be build
         FC                  -- name of Fortran compiler
         CC                  -- name of C compiler
         FLEUR_LIBRARIES     -- list of linker arguments i.e. '-L/lib;-lbla'
         CMAKE_Fortran_FLAGS -- list of compiler options i.e. '-r8'"
 echo "
-   By specifying 'debug' in addition to your machine configuration you will build a debugging version"
+   By specifying a label which contains 'debug' in addition to your 
+   machine configuration you will build a debugging version. Otherwise
+   the label will be added to the build directory name."
 fi
-#Check if we are using the git version and ask if we want to update
-if test -d .git
+
+#Check if we are using the git version and update if pull was used as an argument
+if test -d $DIR/.git 
+    #Check if hook is installed and install it if needed
+    if test -h $DIR/.git/hooks/pre-commit
+    then
+        echo "Git version found"
+    else
+        ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
+        echo "Git version found, hook installed"
+    fi
 then
-   #We are using the git version so ask the user (for 10sec)
-   echo "Shall we try to update to the newest git version? (y/n)"
-   read -n 1 -t 10 x
-   if test "$x" == "y"
-   then 
+   if [[ $1 =~ .*pull.* ]] || [[ $2 =~ .*pull.* ]] || [[ $3 =~ .*pull.* ]] 
+   then
+       cd $DIR 
        git pull
+       cd -
+       exit
    fi
 fi
 
-
-#Now check the machine and set some defaults 
-machine=$1
-configure_machine
 
 #include a configfile if present
 if test -r config.sh
@@ -50,25 +57,44 @@ then
  . config.sh
 fi
 
+#Name of the build directory
+label=$2
+if [ -n "$label" ]
+then
+    buildname="build.$label"
+else
+    buildname="build"
+fi
+
 #check if there is a build directory
-if test -d build
+if test -d $buildname
 then
     echo "OLD build directory found, saved in build.$$"
-    mv build build.$$
+    mv $buildname $buildname.$$
 fi
-mkdir build
-cd build
+mkdir $buildname
+cd $buildname
+
+#Now check the machine and set some defaults 
+machine=$1
+if [[ $machine =~ FLEUR_CONFIG_MACHINE ]]
+then
+    machine=$FLEUR_CONFIG_MACHINE
+fi
+echo "Machine config:$machine"
+configure_machine
+
 #run cmake
-if test "debug" == "$2"
+if [[ $buildname =~ .*debug.* ]]
 then
    echo "Debug version will be build"
    BUILD=Debug
 else
    BUILD=Release
 fi
-cmake -DCMAKE_BUILD_TYPE=$BUILD ..
+cmake -DCMAKE_BUILD_TYPE=$BUILD $DIR
 
 
 echo "Configuration finished"
-echo "If no errors occured you should change into directory 'build' "
+echo "If no errors occured you should change into directory $buildname "
 echo "run 'make' or 'make -j4'"

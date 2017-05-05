@@ -1,5 +1,6 @@
       MODULE m_stepf
       USE m_juDFT
+      USE m_cdn_io
       CONTAINS
         SUBROUTINE stepf(sym,stars,atoms,oneD, input,cell, vacuum)
           !
@@ -30,31 +31,25 @@
           COMPLEX c_c,c_phs
           REAL c,dd,gs,th,inv_omtil,r_phs
           REAL g_rmt,g_sqr,help,g_abs,fp_omtil,r_c,gr,gx,gy
-          INTEGER i,k,n,n3,na,nn,i1,i2,i3,ic,ifft2d,ifftd,kk
+          INTEGER i,k,n,na,nn,i1,i2,i3,ic,ifft2d,ifftd,kk
           INTEGER ic1,ic2,ic3,icc,im1,im2,im3,loopstart
+          LOGICAL l_error
           !     ..
           !     .. Local Arrays ..
-          COMPLEX sf(stars%n3d)
+          COMPLEX sf(stars%ng3)
           REAL g(3),gm(3),fJ
           REAL,    ALLOCATABLE :: bfft(:)
           INTEGER, ALLOCATABLE :: icm(:,:,:)
           !     ..
           !     ..
-          !--->    if step function on unit14, then just read it in
+          !--->    if step function stored on disc, then just read it in
           !
-          ifftd = 27*stars%k1d*stars%k2d*stars%k3d
-          !
-          OPEN (14,file='wkf2',form='unformatted',status='unknown')
-          REWIND 14
-          READ (14,END=10,err=10) n3,n
-          IF (n3.NE.stars%ng3) GO TO 10
-          IF (n.NE.ifftd) GO TO 10
-          READ (14) (stars%ustep(i),i=1,stars%ng3)
-          READ (14) (stars%ufft(i),i=0,ifftd-1)
-          CLOSE (14)
-          RETURN
+          ifftd = 27*stars%mx1*stars%mx2*stars%mx3
 
-10        CONTINUE
+          CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
+          IF(.NOT.l_error) THEN
+             RETURN
+          END IF
 
           IF (input%film) THEN
              dd = vacuum%dvac*cell%area/cell%omtil
@@ -124,8 +119,8 @@
           !
           ! --> set up stepfunction on fft-grid:
           !
-          ALLOCATE (  bfft(0:27*stars%k1d*stars%k2d*stars%k3d-1) )
-          im1=CEILING(1.5*stars%k1d); im2=CEILING(1.5*stars%k2d); im3=CEILING(1.5*stars%k3d) 
+          ALLOCATE (  bfft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
+          im1=CEILING(1.5*stars%mx1); im2=CEILING(1.5*stars%mx2); im3=CEILING(1.5*stars%mx3) 
           ALLOCATE ( icm(-im1:im1,-im2:im2,-im3:im3) )
           icm = 0
           ic=1
@@ -139,16 +134,16 @@
           ENDDO
           stars%ufft(0)=1.0-stars%ufft(0)*inv_omtil
           loopstart=1
-          DO i3=0,3*stars%k3d-1
+          DO i3=0,3*stars%mx3-1
              gm(3)=REAL(i3)
-             IF ( gm(3) > 1.5*stars%k3d ) gm(3)=gm(3)-3.0*stars%k3d
-             DO i2=0,3*stars%k2d-1
+             IF ( gm(3) > 1.5*stars%mx3 ) gm(3)=gm(3)-3.0*stars%mx3
+             DO i2=0,3*stars%mx2-1
                 gm(2)=REAL(i2)
-                IF ( gm(2) > 1.5*stars%k2d ) gm(2)=gm(2)-3.0*stars%k2d
-                DO i1=loopstart,3*stars%k1d-1
+                IF ( gm(2) > 1.5*stars%mx2 ) gm(2)=gm(2)-3.0*stars%mx2
+                DO i1=loopstart,3*stars%mx1-1
                    loopstart=0 !all further loops start at i1=0
                    gm(1)=REAL(i1)
-                   IF ( gm(1) > 1.5*stars%k1d ) gm(1)=gm(1)-3.0*stars%k1d
+                   IF ( gm(1) > 1.5*stars%mx1 ) gm(1)=gm(1)-3.0*stars%mx1
                    !
                    !-> use inversion <-> c.c.
                    !
@@ -212,13 +207,13 @@
                    ENDIF
 
 
-                   IF (((i3.EQ.3*stars%k3d/2).OR. (i2.EQ.3*stars%k2d/2)).OR. (i1.EQ.3*stars%k1d/2)) THEN
+                   IF (((i3.EQ.3*stars%mx3/2).OR. (i2.EQ.3*stars%mx2/2)).OR. (i1.EQ.3*stars%mx1/2)) THEN
                       stars%ufft(ic)=0.0 
                       bfft(ic)=0.0 
                    ENDIF
                    !-odim
                    IF (oneD%odd%d1) THEN
-                      IF (ic.LT.9*stars%k1d*stars%k2d .AND. ic.NE.0) THEN
+                      IF (ic.LT.9*stars%mx1*stars%mx2 .AND. ic.NE.0) THEN
                          gx = (cell%bmat(1,1)*gm(1) + cell%bmat(2,1)*gm(2))
                          gy = (cell%bmat(1,2)*gm(1) + cell%bmat(2,2)*gm(2))
                          gr = SQRT(gx**2 + gy**2)
@@ -236,12 +231,12 @@
           !
           IF (input%film .AND. .NOT.oneD%odd%d1) THEN
 
-             ifft2d=9*stars%k1d*stars%k2d
+             ifft2d=9*stars%mx1*stars%mx2
              stars%ufft(0)=stars%ufft(0)+cell%vol*inv_omtil-1.0
 
-             DO i3=1,3*stars%k3d-1
+             DO i3=1,3*stars%mx3-1
                 gm(3)=REAL(i3)
-                IF ( gm(3) > 1.5*stars%k3d ) gm(3)=gm(3)-3.0*stars%k3d
+                IF ( gm(3) > 1.5*stars%mx3 ) gm(3)=gm(3)-3.0*stars%mx3
                 th=cell%bmat(3,3)*gm(3)*cell%z1
                 stars%ufft(i3*ifft2d)=stars%ufft(i3*ifft2d)+cell%vol*inv_omtil*SIN(th)/th
              ENDDO
@@ -256,19 +251,13 @@
           ! --> make fft
           !
           IF (sym%invs) bfft=0.0
-          CALL cfft(stars%ufft,bfft,ifftd,3*stars%k1d,3*stars%k1d,+1)
-          CALL cfft(stars%ufft,bfft,ifftd,3*stars%k2d,9*stars%k1d*stars%k2d,+1)
-          CALL cfft(stars%ufft,bfft,ifftd,3*stars%k3d,ifftd,+1)
+          CALL cfft(stars%ufft,bfft,ifftd,3*stars%mx1,3*stars%mx1,+1)
+          CALL cfft(stars%ufft,bfft,ifftd,3*stars%mx2,9*stars%mx1*stars%mx2,+1)
+          CALL cfft(stars%ufft,bfft,ifftd,3*stars%mx3,ifftd,+1)
 
           DEALLOCATE ( bfft , icm )
 
-          !--->    store on unit14
-          REWIND 14
-          WRITE (14) stars%ng3,ifftd
-          WRITE (14) (stars%ustep(i),i=1,stars%ng3)
-          WRITE (14) (stars%ufft(i),i=0,ifftd-1)
-
-          CLOSE (14)
+          CALL writeStepfunction(stars)
 
         END SUBROUTINE stepf
       END MODULE m_stepf

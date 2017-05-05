@@ -19,14 +19,14 @@ CONTAINS
     INTEGER, INTENT (IN) :: noccbd 
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (INout)  :: we(noccbd),qal(0:,:,:,:)!(0:3,atoms%ntypd,DIMENSION%neigd,input%jspins)
-    REAL,    INTENT (IN)  :: uloulopn21(atoms%nlod,atoms%nlod,atoms%ntypd)
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,input%jspins)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%natd,input%jspins)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%natd,input%jspins)
-    REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntypd,DIMENSION%neigd,4)
-    TYPE (t_mt21), INTENT (IN) :: mt21(0:atoms%lmaxd,atoms%ntypd)
-    TYPE (t_lo21), INTENT (IN) :: lo21(0:atoms%lmaxd,atoms%ntypd)
+    REAL,    INTENT (INout)  :: we(noccbd),qal(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,input%jspins)
+    REAL,    INTENT (IN)  :: uloulopn21(atoms%nlod,atoms%nlod,atoms%ntype)
+    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins)
+    COMPLEX, INTENT (IN)  :: acof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%nat,input%jspins)
+    COMPLEX, INTENT (IN)  :: bcof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%nat,input%jspins)
+    REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,4)
+    TYPE (t_mt21), INTENT (IN) :: mt21(0:atoms%lmaxd,atoms%ntype)
+    TYPE (t_lo21), INTENT (IN) :: lo21(0:atoms%lmaxd,atoms%ntype)
 
     !     ..
     !     .. Local Scalars ..
@@ -38,10 +38,10 @@ CONTAINS
 
     !     ..
     !     .. Local Arrays ..
-    COMPLEX qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntypd)
-    COMPLEX qaclo(noccbd,atoms%nlod,atoms%ntypd),qbclo(noccbd,atoms%nlod,atoms%ntypd)
-    COMPLEX qcloa(noccbd,atoms%nlod,atoms%ntypd),qclob(noccbd,atoms%nlod,atoms%ntypd)
-    COMPLEX qal21(0:3,atoms%ntypd,size(qmat,3))
+    COMPLEX qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
+    COMPLEX qaclo(noccbd,atoms%nlod,atoms%ntype),qbclo(noccbd,atoms%nlod,atoms%ntype)
+    COMPLEX qcloa(noccbd,atoms%nlod,atoms%ntype),qclob(noccbd,atoms%nlod,atoms%ntype)
+    COMPLEX qal21(0:3,atoms%ntype,size(qmat,3))
     COMPLEX q_loc(2,2),q_hlp(2,2),chi(2,2)
     !     ..
     !     .. Intrinsic Functions ..

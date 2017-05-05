@@ -31,8 +31,8 @@
       REAL,    INTENT (OUT):: qtot,qistot
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(stars%n3d,input%jspins)
-      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins)
+      COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins)
+      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
       REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins)
 !-odim
 !+odim
@@ -44,7 +44,7 @@
       INTEGER i,ivac,j,jspin,n,nz
 !     ..
 !     .. Local Arrays ..
-      REAL qmt(atoms%ntypd),qvac(2),q2(vacuum%nmz),rht1(vacuum%nmzd,2,input%jspins)
+      REAL qmt(atoms%ntype),qvac(2),q2(vacuum%nmz),rht1(vacuum%nmzd,2,input%jspins)
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
 !     ..

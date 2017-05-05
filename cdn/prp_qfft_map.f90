@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)   :: stars
     !
     !
-    INTEGER igq2_fft(0:stars%kq1d*stars%kq2d-1),igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1)
+    INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1),igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     !
     !---> local variables
     !
@@ -104,13 +104,6 @@ CONTAINS
        WRITE (6,'('' stars%kmxq_fft, acutal kidx '',2i5)') &
             &                stars%kmxq_fft, kidx
        CALL juDFT_error("something wrong with stars or nq3_fft"&
-            &        ,calledby ="prp_qfft_map")
-    ENDIF
-    IF (input%film.AND.(kid2x .NE. stars%kmxq2_fft).AND.(stars%kmxq2_fft.NE.0)) THEN
-       WRITE (6,'('' something wrong with stars%kmxq2_fft or nq2_fft'')')
-       WRITE (6,'('' stars%kmxq2_fft, acutal kid2x '',2i5)') &
-            &                stars%kmxq2_fft, kid2x
-       CALL juDFT_error("something wrong with stars or nq2_fft"&
             &        ,calledby ="prp_qfft_map")
     ENDIF
 

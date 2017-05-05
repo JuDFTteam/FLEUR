@@ -15,53 +15,61 @@ function configure_machine(){
     if [ "$machine" = "JURECA" ] 
     then
 	echo "JURECA configuration used"
-	if module list 2>&1 |grep -q intel-para
+	if module list 2>&1 |grep -q -i intel
 	then
 	    echo "Intel toolchain used"
-	    if module list 2>&1| grep -q Python/2.7.12
+	    if module list 2>&1| grep -q Python &&
+	       module list 2>&1| grep -q ELPA
+               #module list 2>&1| grep -q HDF5 
 	    then
-		echo "Python module loaded for XML (OK)"
+		echo "All required modules load loaded"
 	    else
-		echo "You have to load the Python module"
-		echo "module load Python/2.7.12"
+		echo "You have to load the required modules"
+		echo "See and/or source $DIR/cmake/machines/JURECA/intelsource.sh"
 		exit
 	    fi
-	    module load ELPA/2016.05.003-hybrid
-	    module load HDF5
-	    export CC=mpicc
-	    export FC=mpif90
-	    export CMAKE_Fortran_FLAGS="$CMAKE_Fortran_FLAGS -I$ELPA_MODULES -I$EBROOTHDF5/include -mkl"
-	    export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-L$ELPA_LIB;-lelpa_openmp;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L$EBROOTHDF5/lib;-lhdf5;-lhdf5_fortran"
+	    cp $DIR/cmake/machines/JURECA/JURECA.cmake config.cmake
 	elif module list 2>&1 |grep -q PGI
 	then
 	    echo "PGI toolchain used"
-	    echo "Needs to be configured"
-	    exit
+	    if module list 2>&1| grep -q MVAPICH2 &&
+	       [ -n "${MAGMA_ROOT}" ] &&
+	       [ -n "${XML2_ROOT}" ] 
+            then
+		echo "All required modules loaded, all variables set"
+	    else
+		echo "Not all modules are loaded"
+		echo "See and/or source $DIR/cmake/machines/JURECA/pgisource.sh"
+		echo "And set the variables XML2_ROOT and MAGMA_ROOT"
+		exit
+	    fi
+	    cp $DIR/cmake/machines/JURECA/JURECAGPU.cmake config.cmake
 	else
 	    echo "You have to load the correct modules for compiling"
-	    echo " a) intel-para, Python/2.7.12"
-	    echo " or"
-	    echo " b) PGI"
+	    echo " Look for files to source in $DIR/cmake/machines/JURECA"
 	    exit
 	fi
     # JUQUEEN
     elif [ "$machine" = "JUQUEEN" ]
     then 
    	echo "JUQUEEN configuration used"
-	module load  hdf5/1.8.15_BGQ
-	module load  scalapack/2.0.2_elpa_simd
-	export CC=mpixlc
-	export FC=mpixlf2008_r
-	export CMAKE_Fortran_FLAGS="$CMAKE_Fortran_FLAGS -I${HDF5_DIR}/include -I${ELPA_INCLUDE}"
-	export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-L$SCALAPACK_ROOT/lib;-lelpa;-lscalapack;-L/bgsys/local/lapack/3.3.0_g/lib;-llapack;-L/bgsys/local/lib;-qessl;-lesslsmpbg;-L$XML2LIB;-lxml2;-L${HDF5_DIR}/lib;-lhdf5_fortran;-lhdf5;-L/bgsys/local/zlib/lib/;-lz;-L/bgsys/local/szip/lib/;-lsz"
+	if module list 2>&1| grep -q hdf5 &&
+           module list 2>&1| grep -q scalapack
+        then
+           echo "All required modules load loaded"
+	else
+	   echo "You have to load the required modules"
+	   echo "'source $DIR/cmake/machines/JUQUEEN/xlfsource.sh' should help"
+	   exit
+	fi
+        cp $DIR/cmake/machines/JUQUEEN/JUQUEEN.cmake config.cmake
 	
     #IFF linux cluster
     elif [ "$machine" = "IFF" ]
     then
 	echo "IFF cluster configuration used"
-        export CC=mpiicc
-	export FC=mpiifort
-	export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
+	cp $DIR/cmake/machines/IFF.cmake config.cmake
+
     #RWTH cluster
     elif [ "$machine" = "CLAIX" ]
     then
@@ -71,10 +79,8 @@ function configure_machine(){
 	    echo "Please use intelmpi, e.g. do a module switch openmpi intelmpi"
 	    exit
 	fi
-	module load LIBRARIES
-	module load hdf5
-	export FC=mpiifort
-	export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
+	cp $DIR/cmake/machines/CLAIX.cmake config.cmake
+module load LIBRARIES
     elif [ "$machine" = "MARCONI" ]
     then
 	if ! module list 2>&1| grep -q " intel\/" || ! module list 2>&1| grep -q " intelmpi" ||! module list 2>&1| grep -q cmake
@@ -82,12 +88,17 @@ function configure_machine(){
 	    echo "Load the modules needed to compile: intel,intelmpi,cmake"
 	    exit
 	fi
-	export FC=mpif90
-	export FLEUR_LIBRARIES="$FLEUR_LIBRARIES;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
+	cp $DIR/cmake/machines/MARCONI.cmake config.cmake
     elif [ "$machine" = "AUTO" ] 
     then
-	echo "No machine specific settings used"
-	echo "GOOD LUCK!"
+        if [ -r ../config.cmake ] 
+        then
+           echo "Using AUTO-mode with user provided config.cmake"
+           cp ../config.cmake .
+        else
+	   echo "No machine specific settings used"
+	   echo "GOOD LUCK!"
+        fi
     else
 	echo "No valid machine configuration specified"
 	exit

@@ -41,7 +41,7 @@
 !
 !---> local variables
 !
-      INTEGER ksfft,mq1,mq2,mq3,istr,iofile
+      INTEGER ksfft,mq1,mq2,mq3,istr,iofile,ng2_fft,kmxq2_fft
       REAL    arltv1,arltv2,arltv3,rknew
 !
 !---> intrinsic functions
@@ -161,18 +161,7 @@
 !     mq2 = kq2_fft
 !     mq3 = kq3_fft
 !
-!------> check dimensions of FFT chargedensity box used in pwden.f
-!
-       IF ( stars%kq1_fft.gt.stars%kq1d .OR. stars%kq2_fft.gt.stars%kq2d .OR. stars%kq3_fft.gt.stars%kq3d) THEN
-          WRITE ( 6,'('' box dim. for FFT too small'')')
-          WRITE ( 6,'('' kq1_fft,kq2_fft,kq3_fft,kq1d,kq2d,kq3d '',6i5)')&
-     &                   stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,stars%kq1d,stars%kq2d,stars%kq3d
-          WRITE (16,'('' box dim. for FFT too small'')')
-          WRITE (16,'('' mq1d,mq2d,mq3d,kq1d,kq2d,kq3d '',6i5)')&
-     &                 stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,stars%kq1d,stars%kq2d,stars%kq3d
-          CALL juDFT_error("box dim. for FFT too small",calledby&
-     &         ="prp_qfft")
-       ENDIF
+
 !
 !-----> how many stars are in charge density sphere?
 !       assume stars are ordered according to length
@@ -185,10 +174,10 @@
          ENDIF
       ENDDO
 !---> 2d stars
-      stars%ng2_fft = 0
+      ng2_fft = 0
       DO istr = 1 , stars%ng2
          IF ( stars%sk2(istr).LE.gmaxp*input%rkmax ) THEN
-            stars%ng2_fft = istr
+            ng2_fft = istr
          ENDIF
       ENDDO
 !
@@ -202,11 +191,11 @@
          CALL juDFT_error("presumably ng3 too small","prp_qfft")
       ENDIF
 !
-      IF ( stars%ng3_fft.GT.stars%n3d ) THEN
+      IF ( stars%ng3_fft.GT.stars%ng3 ) THEN
          WRITE(6,'('' nq3_fft > n3d '')')
-         WRITE(6,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%n3d
+         WRITE(6,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%ng3
          WRITE(16,'('' nq3_fft > n3d '')')
-         WRITE(16,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%n3d
+         WRITE(16,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%ng3
           CALL juDFT_error("nq3_fft > n3d",calledby="prp_qfft")
       ENDIF
 !
@@ -238,18 +227,18 @@
       DO istr = 1 , stars%ng3_fft
          stars%kmxq_fft = stars%kmxq_fft + stars%nstr(istr)
       ENDDO
-      IF ( stars%kmxq_fft .GT. stars%kq1d*stars%kq2d*stars%kq3d ) THEN
+      IF ( stars%kmxq_fft .GT. stars%kq1_fft*stars%kq2_fft*stars%kq3_fft ) THEN
          WRITE (6,'('' array dimensions in later subroutines too'',&
-     &             '' small'',2i10)') stars%kmxq_fft,stars%kq1d*stars%kq2d*stars%kq3d
+     &             '' small'',2i10)') stars%kmxq_fft,stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
       ENDIF
 !---> 2d vectors
-      stars%kmxq2_fft = 0
-      DO istr = 1 , stars%ng2_fft
-         stars%kmxq2_fft = stars%kmxq2_fft + stars%nstr2(istr)
+      kmxq2_fft = 0
+      DO istr = 1 , ng2_fft
+         kmxq2_fft = kmxq2_fft + stars%nstr2(istr)
       ENDDO
-      IF ( stars%kmxq2_fft .GT. stars%kq1d*stars%kq2d ) THEN
+      IF ( kmxq2_fft .GT. stars%kq1_fft*stars%kq2_fft ) THEN
          WRITE (6,'('' array dimensions in later subroutines too'',&
-     &             '' small'',2i10)') stars%kmxq2_fft,stars%kq1d*stars%kq2d
+     &             '' small'',2i10)') kmxq2_fft,stars%kq1_fft*stars%kq2_fft
       ENDIF
 
 !

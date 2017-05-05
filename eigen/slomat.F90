@@ -50,8 +50,8 @@ CONTAINS
     REAL,   INTENT (IN) :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod) 
     REAL,   INTENT (IN) :: gk(:,:,:)!(dimension%nvd,3,ab_dim)
     REAL,   INTENT (IN) :: rph(:,:),cph(:,:)!(nvd,ab_dim)
-    REAL,   INTENT (IN) :: f(:,0:,:,:)!(dimension%nvd,0:atoms%lmaxd,atoms%ntypd,ab_dim)
-    REAL,   INTENT (IN) :: g(:,0:,:,:)!(dimension%nvd,0:atoms%lmaxd,atoms%ntypd,ab_dim)
+    REAL,   INTENT (IN) :: f(:,0:,:,:)!(dimension%nvd,0:atoms%lmaxd,atoms%ntype,ab_dim)
+    REAL,   INTENT (IN) :: g(:,0:,:,:)!(dimension%nvd,0:atoms%lmaxd,atoms%ntype,ab_dim)
     TYPE(t_usdus),INTENT(IN):: ud
     REAL,  ALLOCATABLE,  OPTIONAL,INTENT (INOUT) :: bb_r(:)!(matsize)
     COMPLEX,ALLOCATABLE, OPTIONAL,INTENT (INOUT) :: bb_c(:)!(matsize)

@@ -13,7 +13,7 @@
 !---------------------------------------------------------------------
       CONTAINS
       SUBROUTINE set_inp(&
-     &                   infh,nline,xl_buffer,buffer,l_hyb,&
+     &                   infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &                   atoms,sym,cell,title,idlist,&
      &                   input,vacuum,noco,&
      &                   atomTypeSpecies,speciesRepAtomType,&
@@ -41,7 +41,7 @@
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
-      INTEGER, INTENT (IN) :: infh,xl_buffer
+      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh
       INTEGER, INTENT (INOUT) :: nline
       INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
       INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
@@ -142,8 +142,8 @@
       sym%namgrp= 'any ' 
       banddos%dos   = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
-      obsolete%pot8 = .false. ; obsolete%eig66(1) = .false. ; obsolete%eig66(2) = .true.  
-      obsolete%form66 = .false. ; obsolete%l_u2f= .false. ; obsolete%l_f2u = .false. 
+      obsolete%pot8 = .false. 
+      obsolete%l_u2f= .false. ; obsolete%l_f2u = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ; obsolete%disp  = .false. ; input%swsp  = .false.
@@ -152,8 +152,8 @@
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ; jij%l_J = .false. ; noco%soc_opt(:) = .false. ; input%jspins = 1
-      obsolete%lpr = 0 ; input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 
-      input%spinf = 2.0 ;   obsolete%lepr = 0
+      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 ; input%minDistance = 0.0
+      input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
@@ -162,7 +162,7 @@
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; scale = 1.0 ; scpos = 1.0 
-      zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0 
+      zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -192,7 +192,7 @@
       ENDDO
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
-      input%delgau = input%tkb ; atoms%ntypd = atoms%ntype ; atoms%natd = atoms%nat
+      input%delgau = input%tkb ; atoms%ntype = atoms%ntype ; atoms%nat = atoms%nat
       DO i = 1, 10
         j = (i-1) * 8 + 1
         input%comment(i) = title(j:j+7)
@@ -221,7 +221,7 @@
       ALLOCATE (enpara%enmix(input%jspins))
 
       CALL atom_input(&
-     &                infh,xl_buffer,buffer,&
+     &                infh,xl_buffer,bfh,buffer,&
      &                input%jspins,input%film,idlist,xmlCoreRefOccs,&
      &                nline,&
      &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
@@ -315,7 +315,7 @@
       selct2(2,:) = 0
       selct2(3,:) = 4
       selct2(4,:) = 2
-      ALLOCATE(hybrid%lcutm2(atoms%ntypd),hybrid%lcutwf(atoms%ntypd))
+      ALLOCATE(hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
       hybrid%lcutm2      = 4
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
@@ -350,7 +350,7 @@
 ! read some lapw input
 !
       CALL lapw_input(&
-     &                infh,nline,xl_buffer,buffer,&
+     &                infh,nline,xl_buffer,bfh,buffer,&
      &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                xcpot%igrd,vacuum%dvac,dtild,input%tkb,namex,relcor)
@@ -358,12 +358,15 @@
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
       CLOSE (6)
-      inquire(file="inp",exist=l_exists)
+      INQUIRE(file="inp",exist=l_exists)
       IF (l_exists) THEN
-         CALL juDFT_error("Cannot overwrite existing inp-file ",calledby&
-     &        ="set_inp")
+         CALL juDFT_error("inp-file exists. Cannot write another input file in this directory.",calledby="set_inp")
       ENDIF
-      
+      INQUIRE(file="inp.xml",exist=l_exists)
+      IF (l_exists) THEN
+         CALL juDFT_error("inp.xml-file exists. Cannot write another input file in this directory.",calledby="set_inp")
+      ENDIF
+
       nu = 8 
       input%gw = 0
 
@@ -412,7 +415,7 @@
       Jij%phnd=1
 
 
-      IF(.NOT.juDFT_was_argument("-noXML")) THEN
+      IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
 
@@ -448,13 +451,6 @@
                STOP 'Error: No kpoint set generation for 1D systems yet!'
                CALL od_kptsgen (kpts%nkpt)
             END IF
-            kpts%nkpts = kpts%nkpt
-            ALLOCATE(kpts%wtkpt(kpts%nkpt))
-            DO i = 1, kpts%nkpt
-               kpts%wtkpt(i) = kpts%weight(i)
-            END DO
-
-            kpts%nkptd = kpts%nkpt
 
             !set latnam to any
             cell%latnam = 'any'
@@ -484,11 +480,11 @@
             sumWeight = 0.0
             WRITE(*,*) 'nkpt: ', kpts%nkpt
             DO i = 1, kpts%nkpt
-               sumWeight = sumWeight + kpts%weight(i)
+               sumWeight = sumWeight + kpts%wtkpt(i)
             END DO
             DO i = 1, kpts%nkpt
-               kpts%weight(i) = kpts%weight(i) / sumWeight
-               kpts%wtkpt(i) = kpts%weight(i)
+               kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
+               kpts%wtkpt(i) = kpts%wtkpt(i)
             END DO
          END IF
 
@@ -505,7 +501,7 @@
       IF (atoms%ntype.GT.999) THEN
          WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
          WRITE(*,*) 'Use inp.xml file instead!'
-      ELSE
+      ELSE IF (juDFT_was_argument("-old")) THEN
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&

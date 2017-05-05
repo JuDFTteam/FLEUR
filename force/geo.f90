@@ -53,7 +53,7 @@ CONTAINS
     REAL,    INTENT (IN) :: tote
     ! ..
     ! ..  Array Arguments ..
-    REAL,    INTENT (INOUT) :: forcetot(3,atoms%ntypd)
+    REAL,    INTENT (INOUT) :: forcetot(3,atoms%ntype)
     ! ..
     ! ..  Local Scalars ..
     INTEGER i,j,na ,istep0,istep,itype,jop,ieq
@@ -61,8 +61,8 @@ CONTAINS
     TYPE(t_atoms)  :: atoms_new
     ! ..
     ! ..  Local Arrays ..
-    REAL xold(3*atoms%ntypd),y(3*atoms%ntypd),h(3*atoms%ntypd,3*atoms%ntypd),zat(atoms%ntypd)
-    REAL tau0(3,atoms%ntypd),tau0_i(3,atoms%ntypd) 
+    REAL xold(3*atoms%ntype),y(3*atoms%ntype),h(3*atoms%ntype,3*atoms%ntype),zat(atoms%ntype)
+    REAL tau0(3,atoms%ntype),tau0_i(3,atoms%ntype) 
 
     TYPE(t_input):: input
 
@@ -204,9 +204,8 @@ CONTAINS
           ALLOCATE(atoms_temp%l_dulo(atoms%nlod,atoms%ntype))
 
           ALLOCATE(vacuum_temp%izlay(vacuum%layerd,2))
-          atoms_temp%ntypd = atoms%ntypd
           atoms_temp%ntype = atoms%ntype
-          ALLOCATE(noel_temp(atoms%ntypd))
+          ALLOCATE(noel_temp(atoms%ntype))
 
           ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
           ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))
@@ -216,6 +215,17 @@ CONTAINS
                       banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
                       kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,&
                       input_temp%comment)
+          input_temp%l_f = input%l_f
+          input_temp%tkb = input%tkb
+          input_temp%delgau = input%tkb
+          cell_temp = cell
+          sym_temp = sym
+          vacuum_temp = vacuum
+          CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+               banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
+               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
+               input_temp%comment)
+    
        ELSE
           kpts_temp%numSpecialPoints = 1
           ALLOCATE(kpts_temp%specialPoints(3,kpts_temp%numSpecialPoints))
@@ -242,18 +252,7 @@ CONTAINS
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
        END IF
 
-       input_temp%l_f = input%l_f
-       input_temp%tkb = input%tkb
-       input_temp%delgau = input%tkb
-       cell_temp = cell
-       sym_temp = sym
-       vacuum_temp = vacuum
-       CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                   banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-                   kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
-                   input_temp%comment)
-    END IF
-
+    ENDIF
     RETURN
   END SUBROUTINE geo
 END MODULE m_geo

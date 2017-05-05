@@ -16,6 +16,7 @@ MODULE m_eig66_da
   ! eig.vec: ne,eig,z**
   !**: real or complex depending on calculation type
   USE m_eig66_data
+  USE m_types
   IMPLICIT NONE
 
 CONTAINS
@@ -151,7 +152,7 @@ CONTAINS
     d%fname="eig"
     CALL eig66_remove_data(id)
   END SUBROUTINE close_eig
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,ello,evac,kveclo,n_start,n_end,z)
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,ello,evac,kveclo,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
@@ -161,15 +162,13 @@ CONTAINS
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    CLASS(*),TARGET,INTENT(OUT),OPTIONAL  :: z(:,:)
+    TYPE(t_zmat),OPTIONAL  :: zmat
 
     !Local variables
     INTEGER:: nv_s,nmat_s,n,nrec,neig_s
     REAL   :: bkpt(3),wtkpt
     REAL,ALLOCATABLE::eig_s(:),zr_s(:,:)
     COMPLEX,ALLOCATABLE::zc_s(:,:)
-    REAL,POINTER :: zr(:,:)
-    COMPLEX,POINTER:: zc(:,:)
     TYPE(t_data_DA),POINTER:: d
 
 
@@ -200,24 +199,21 @@ CONTAINS
        IF (PRESENT(kveclo)) kveclo=d%kveclo_s
     ENDIF
 
-    IF (.NOT.(PRESENT(eig).OR.PRESENT(neig).OR.PRESENT(z))) RETURN
+    IF (.NOT.(PRESENT(eig).OR.PRESENT(neig).OR.PRESENT(zmat))) RETURN
     READ(d%file_io_id_vec,REC=nrec) neig_s
     IF (PRESENT(neig)) neig=neig_s
-    IF (.NOT.(PRESENT(eig).OR.PRESENT(z))) RETURN
+    IF (.NOT.(PRESENT(eig).OR.PRESENT(zmat))) RETURN
     ALLOCATE(eig_s(neig_s))
-    IF (PRESENT(z)) THEN
-       SELECT TYPE(z)
-       TYPE IS (REAL)
-          INQUIRE(IOLENGTH=n) neig_s,eig_s,REAL(z)
+    IF (PRESENT(zmat)) THEN
+       IF (zmat%l_real) THEN
+          INQUIRE(IOLENGTH=n) neig_s,eig_s,REAL(zmat%z_r)
           IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
-          zr=>z
-          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zr
-       TYPE IS (COMPLEX)
-          INQUIRE(IOLENGTH=n) neig_s,eig_s,CMPLX(z)
+          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_r
+       ELSE
+          INQUIRE(IOLENGTH=n) neig_s,eig_s,CMPLX(zmat%z_c)
           IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
-          zc=>z
-          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zc
-       END SELECT
+          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_c
+       ENDIF
     ELSE
        INQUIRE(IOLENGTH=n) neig_s,eig_s
        IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
@@ -228,7 +224,7 @@ CONTAINS
   END SUBROUTINE read_eig
 
   SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk, &
-       eig,el,ello,evac,nlotot,kveclo,n_size,n_rank,z)
+       eig,el,ello,evac,nlotot,kveclo,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
@@ -236,7 +232,7 @@ CONTAINS
     INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
-    CLASS(*),INTENT(IN),OPTIONAL :: z(:,:)
+    TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
 
     INTEGER:: nrec,r_len
     INTEGER:: nv_s,nmat_s
@@ -290,17 +286,16 @@ CONTAINS
     ENDIF
     IF (.NOT.PRESENT(eig).OR..NOT.PRESENT(neig)) RETURN
     !Now the IO of the eigenvalues/vectors
-    IF (PRESENT(z)) THEN
-       SELECT TYPE(z)
-       TYPE IS (REAL)
-          INQUIRE(IOLENGTH=r_len) neig,eig,REAL(z)
+    IF (PRESENT(zmat)) THEN
+       IF (zmat%l_real) THEN
+          INQUIRE(IOLENGTH=r_len) neig,eig,REAL(zmat%z_r)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(z)
-       TYPE IS (COMPLEX)
-          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(z)
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(zmat%z_r)
+       ELSE
+          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(zmat%z_c)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(z)
-       END SELECT
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%z_c)
+       ENDIF
     ELSE
        INQUIRE(IOLENGTH=r_len) neig,eig
        IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")

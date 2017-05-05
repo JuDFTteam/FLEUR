@@ -5,20 +5,21 @@
 !--------------------------------------------------------------------------------
 MODULE m_elpa
   PRIVATE
-  
-  interface elpa
+#ifdef CPP_ELPA  
+  interface elpa_diag
      module procedure elpa_r,elpa_c
-  end interface elpa
+  end interface elpa_diag
   
   !Module to call elpa library for parallel diagonalization
   !uses ssubredist1/2 for redistribution
 
-  PUBLIC elpa
+  PUBLIC elpa_diag
 
 CONTAINS
   ! First the real version of the code
 #define CPP_CHOLESKY cholesky_real
 #define CPP_invert_trm invert_trm_real
+#define CPP_solve_evp_1stage solve_evp_real_1stage
 #define CPP_solve_evp solve_evp_real
 #define CPP_solve_evp_2stage solve_evp_real_2stage
 #define CPP_REALCOMPLEX real
@@ -27,7 +28,7 @@ CONTAINS
 #define CPP_ZERO 0.0
 #define CPP_mult mult_at_b_real
 #define CPP_REAL
-  SUBROUTINE elpa_r(m,n, SUB_COMM, a,b, z,eig,num)
+  SUBROUTINE elpa_r(m, SUB_COMM, a,b, z,eig,num)
     ! 
     !----------------------------------------------------
     !- Parallel eigensystem solver - driver routine based on chani; dw'12
@@ -55,6 +56,7 @@ CONTAINS
   ! Now the complex version
 #define CPP_CHOLESKY cholesky_complex
 #define CPP_invert_trm invert_trm_complex
+#define CPP_solve_evp_1stage solve_evp_complex_1stage
 #define CPP_solve_evp solve_evp_complex
 #define CPP_solve_evp_2stage solve_evp_complex_2stage
 #define CPP_REALCOMPLEX complex
@@ -63,7 +65,7 @@ CONTAINS
 #define CPP_ZERO cmplx(0.,0.)
 #define CPP_mult mult_ah_b_complex
 #undef CPP_REAL
- SUBROUTINE elpa_c(m,n, SUB_COMM, a,b, z,eig,num)
+ SUBROUTINE elpa_c(m, SUB_COMM, a,b, z,eig,num)
     ! 
     !----------------------------------------------------
     !- Parallel eigensystem solver - driver routine based on chani; dw'12
@@ -190,7 +192,7 @@ CONTAINS
 
     !Create communicators for ELPA
     !print *,"creating ELPA comms"
-#ifdef CPP_ELPA_NEW
+#if (defined CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
     ierr=get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
 #else
     CALL get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
@@ -202,7 +204,8 @@ CONTAINS
     IF (ierr /=0 ) CALL juDFT_error('descinit1 failed',calledby='elpa')
 
   END SUBROUTINE priv_create_blacsgrid
-
-
+#else
+  LOGICAL :: elpa_used=.false.
+#endif
 end MODULE m_elpa
 

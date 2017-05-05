@@ -1,13 +1,13 @@
 MODULE m_eigenso
   !
   !*********************************************************************
-  !     sets up and solves the spin-orbit eigenvalue problem in the
+  !     sets ur and solves the spin-orbit eigenvalue problem in the
   !     second variation procedure.
   !
   !     way: takes e.v. and e.f. from previous scalar-rel. calc.
   !     makes spin-orbit matrix elements solves e.v. and put it on 'eig'
   !
-  !     Tree:  eigenso-|- loddop
+  !     Tree:  eigenso-|- readPotential
   !                    |- spnorb  : sets up s-o parameters 
   !                    |    |- soinit - sorad  : radial part
   !                    |    |- sgml            : diagonal angular parts
@@ -26,8 +26,11 @@ CONTAINS
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb 
     USE m_alineso
-    USE m_loddop
+    USE m_pot_io
     USE m_types
+#ifdef CPP_MPI
+    USE m_mpi_bc_pot
+#endif
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -70,9 +73,10 @@ CONTAINS
 
     REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
     COMPLEX, ALLOCATABLE :: vzxy(:,:,:,:),vpw(:,:)
+    TYPE(t_zmat)::zmat
 
-
-
+    INTEGER :: ierr
+    
     !  ..
 
     INQUIRE (4649,opened=l_socvec)
@@ -83,28 +87,28 @@ CONTAINS
     ! now the definition of rotation matrices
     ! is equivalent to the def in the noco-routines
     !
-    ! load potential from file pottot (=unit 8)
+    ! load potential by calling readPotential.
     !
-    ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd),&
-         vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%n3d,DIMENSION%jspd) )
+    ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),&
+         vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%ng3,DIMENSION%jspd) )
 
-    OPEN (8,file='pottot',form='unformatted',status='old')
-    CALL loddop(&
-         stars,vacuum,atoms,sphhar,&
-         input,sym,&
-         8,&
-         iter,vr,vpw,vz,vzxy)
-    CLOSE(8)
+    IF (mpi%irank.EQ.0) THEN
+       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                          iter,vr,vpw,vz,vzxy)
+    END IF
+#ifdef CPP_MPI
+    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,iter,vr,vpw,vz,vzxy)
+#endif
 
     DEALLOCATE ( vz,vzxy,vpw )
 
-    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),&
-         usdus%uds(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),&
-         usdus%ddn(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd),kveclo(atoms%nlotot),&
-         usdus%ulos(atoms%nlod,atoms%ntypd,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntypd,DIMENSION%jspd),&
-         usdus%uulon(atoms%nlod,atoms%ntypd,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntypd,DIMENSION%jspd),&
-         enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntypd,DIMENSION%jspd),&
-         enpara%el0(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd))
+    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
+         usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
+         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),kveclo(atoms%nlotot),&
+         usdus%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
+         usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
+         enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
+         enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
 
     INQUIRE (file='wann_inp',exist=l_file)
     IF (l_file.OR.l_socvec) THEN
@@ -124,13 +128,17 @@ CONTAINS
             el=enpara%el0(:,:,jspin),&
             ello=enpara%ello0(:,:,jspin),evac=enpara%evac0(:,jspin))
     ENDDO
+#if defined(CPP_MPI)
+    !RMA synchronization
+    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#endif
     CALL timestart("eigenso: spnorb")
     !  ..
-    ALLOCATE( rsopdp(atoms%ntypd,atoms%lmaxd,2,2),rsopdpd(atoms%ntypd,atoms%lmaxd,2,2),&
-         rsopp(atoms%ntypd,atoms%lmaxd,2,2),rsoppd(atoms%ntypd,atoms%lmaxd,2,2),&
-         rsoplop(atoms%ntypd,atoms%nlod,2,2),rsoplopd(atoms%ntypd,atoms%nlod,2,2),&
-         rsopdplo(atoms%ntypd,atoms%nlod,2,2),rsopplo(atoms%ntypd,atoms%nlod,2,2),&
-         rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2),&
+    ALLOCATE( rsopdp(atoms%ntype,atoms%lmaxd,2,2),rsopdpd(atoms%ntype,atoms%lmaxd,2,2),&
+         rsopp(atoms%ntype,atoms%lmaxd,2,2),rsoppd(atoms%ntype,atoms%lmaxd,2,2),&
+         rsoplop(atoms%ntype,atoms%nlod,2,2),rsoplopd(atoms%ntype,atoms%nlod,2,2),&
+         rsopdplo(atoms%ntype,atoms%nlod,2,2),rsopplo(atoms%ntype,atoms%nlod,2,2),&
+         rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2),&
          soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2) )
 
     soangl(:,:,:,:,:,:) = CMPLX(0.0,0.0)
@@ -144,15 +152,15 @@ CONTAINS
        READ (1,*) n
        WRITE (*,*) 'allbut',n
        CLOSE (1)
-       rsopp(1:n-1,:,:,:) = 0.0 ; rsopp(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopdp(1:n-1,:,:,:) = 0.0 ; rsopdp(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsoppd(1:n-1,:,:,:) = 0.0 ; rsoppd(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopdpd(1:n-1,:,:,:) = 0.0 ; rsopdpd(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsoplop(1:n-1,:,:,:) = 0.0 ; rsoplop(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsoplopd(1:n-1,:,:,:) = 0.0 ; rsoplopd(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopdplo(1:n-1,:,:,:) = 0.0 ; rsopdplo(n+1:atoms%ntypd,:,:,:) = 0.0 
-       rsopplo(1:n-1,:,:,:) = 0.0 ; rsopplo(n+1:atoms%ntypd,:,:,:) = 0.0
-       rsoploplop(1:n-1,:,:,:,:) = 0.0 ; rsoploplop(n+1:atoms%ntypd,:,:,:,:) = 0.0
+       rsopp(1:n-1,:,:,:) = 0.0 ; rsopp(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopdp(1:n-1,:,:,:) = 0.0 ; rsopdp(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsoppd(1:n-1,:,:,:) = 0.0 ; rsoppd(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopdpd(1:n-1,:,:,:) = 0.0 ; rsopdpd(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsoplop(1:n-1,:,:,:) = 0.0 ; rsoplop(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsoplopd(1:n-1,:,:,:) = 0.0 ; rsoplopd(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopdplo(1:n-1,:,:,:) = 0.0 ; rsopdplo(n+1:atoms%ntype,:,:,:) = 0.0 
+       rsopplo(1:n-1,:,:,:) = 0.0 ; rsopplo(n+1:atoms%ntype,:,:,:) = 0.0
+       rsoploplop(1:n-1,:,:,:,:) = 0.0 ; rsoploplop(n+1:atoms%ntype,:,:,:,:) = 0.0
     ENDIF
     l_all = .FALSE.
     INQUIRE (file='socscale',exist=l_all)
@@ -264,16 +272,20 @@ CONTAINS
                eig=eig_so(:nsz))
 
        ELSE
-
+          zmat%nbasfcn=size(zso,1)
+          allocate(zmat%z_c(zmat%nbasfcn,nsz))
+          zmat%l_real=.false.
+          zmat%nbands=nsz        
           DO jspin = 1,wannierspin
              CALL timestart("eigenso: write_eig")  
+             zmat%z_c=zso(:,:nsz,jspin)
              CALL write_eig(eig_id,&
                   nk,jspin,neig=nsz,neig_total=nsz,nmat=nmat,&
-                  eig=eig_so(:nsz),z=zso(:,:nsz,jspin))
+                  eig=eig_so(:nsz),zmat=zmat)
 
              CALL timestop("eigenso: write_eig")  
           ENDDO
-
+          deallocate(zmat%z_c)
        ENDIF ! (input%eonly) ELSE
 
     ENDDO ! DO nk 

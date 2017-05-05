@@ -22,8 +22,8 @@
     
       INTEGER, INTENT (IN) :: isn
       TYPE(t_stars),INTENT(IN):: stars
-      REAL,    INTENT (INOUT) :: afft(0:27*stars%k1d*stars%k2d*stars%k3d-1)
-      REAL,    INTENT (INOUT) :: bfft(0:27*stars%k1d*stars%k2d*stars%k3d-1)
+      REAL,    INTENT (INOUT) :: afft(0:27*stars%mx1*stars%mx2*stars%mx3-1)
+      REAL,    INTENT (INOUT) :: bfft(0:27*stars%mx1*stars%mx2*stars%mx3-1)
       COMPLEX                 :: fg3(stars%ng3)
       LOGICAL,INTENT(IN),OPTIONAL :: scaled !< determines if coefficients are scaled by stars%nstr
 
@@ -31,7 +31,7 @@
       REAL scale
       COMPLEX ctmp
 
-      ifftd=27*stars%k1d*stars%k2d*stars%k3d
+      ifftd=27*stars%mx1*stars%mx2*stars%mx3
      
       IF (isn.GT.0) THEN
 !
@@ -48,9 +48,9 @@
 
 !---> now do the fft (isn=+1 : G -> r ; isn=-1 : r -> G)
 
-      CALL cfft(afft,bfft,ifftd,3*stars%k1d,3*stars%k1d,isn)
-      CALL cfft(afft,bfft,ifftd,3*stars%k2d,9*stars%k1d*stars%k2d,isn)
-      CALL cfft(afft,bfft,ifftd,3*stars%k3d,ifftd,isn)
+      CALL cfft(afft,bfft,ifftd,3*stars%mx1,3*stars%mx1,isn)
+      CALL cfft(afft,bfft,ifftd,3*stars%mx2,9*stars%mx1*stars%mx2,isn)
+      CALL cfft(afft,bfft,ifftd,3*stars%mx3,ifftd,isn)
 
       IF (isn.LT.0) THEN
 !

@@ -260,10 +260,10 @@ c       printout of representative vector vkrep of star
 c
           if (nkrep(ik) .lt. 1)
      +      write(iofile,'(1x,''WARNING: we have found no '',
-     +          ''k-point of star # '',i4, ''  inside irr BZ'')') ik
+     +          ''k-point of star no '',i4, ''  inside irr BZ'')') ik
           if (nkrep(ik) .gt. 1)
      +      write(iofile,'(1x,''WARNING: we have found more than '',
-     +      ''one k-point of star # '',i4, ''  inside irr BZ'')') ik
+     +      ''one k-point of star no '',i4, ''  inside irr BZ'')') ik
             write(iofile,'(1x,i4,3(1x,f10.7),1x,i4,10x,
      +         ''nkstar,vkrep(kpn),nkrep: repr k-point in irr BZ'',/)')
      +            ik,(vkrep(i1,ik),i1=1,3),nkrep(ik)
@@ -392,7 +392,7 @@ c
            if (ktest.ge.2) then
              write(iofile,'(/,'' result of ordering :'')')
              write(iofile,'(1x,i4,1x,i4,2x,
-     +              ''# of stars, # of k-points contained in them'')')
+     +              ''no of stars, no of k-points contained in them'')')
      +                                                   nstnew, isumkpt
            end if
 c
@@ -522,7 +522,7 @@ c
            if (ktest.ge.2) then
              write(iofile,'(/,'' result of ordering :'')')
              write(iofile,'(1x,i4,1x,i4,2x,
-     +              ''# of stars, # of k-points contained in them'')')
+     +              ''no of stars, no of k-points contained in them'')')
      +                                                   nstnew, isumkpt
            end if
 c
@@ -558,11 +558,11 @@ c --->  printout of representative vector vkrep of star
 c
           if (nkrep(ik) .lt. 1)
      +      write(iofile,'(1x,''WARNING: we have found no '',
-     +          ''k-point of star # '',i4, ''  inside irr BZ; '',
+     +          ''k-point of star no '',i4, ''  inside irr BZ; '',
      +          ''vkrep set to zero'')') ik
           if (nkrep(ik) .gt. 1)
      +      write(iofile,'(1x,''WARNING: we have found more than '',
-     +      ''one k-point of star # '',i4, ''  inside irr BZ; '',
+     +      ''one k-point of star no '',i4, ''  inside irr BZ; '',
      +      ''last vkrep shown'')') ik
             write(iofile,'(1x,i4,3(1x,f10.7),1x,i4,10x,
      +           ''nkstar,vkrep(kpn),nkrep: repr k-point in irr BZ'')')

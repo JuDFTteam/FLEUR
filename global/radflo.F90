@@ -66,10 +66,10 @@ CONTAINS
     LOGICAL, INTENT (IN), OPTIONAL :: lout_all
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: ello(atoms%nlod,atoms%ntypd),vr(atoms%jmtd)
+    REAL,    INTENT (IN) :: ello(atoms%nlod,atoms%ntype),vr(atoms%jmtd)
     REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
-    REAL,    INTENT (OUT):: uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (OUT):: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+    REAL,    INTENT (OUT):: uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (OUT):: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
     REAL,    INTENT (OUT):: flo(atoms%jmtd,2,atoms%nlod)
     !     ..
     !     .. Local Scalars ..

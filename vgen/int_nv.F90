@@ -30,8 +30,8 @@ CONTAINS
 
     !     ..
     !     .. Array Arguments ..
-    COMPLEX qpw(stars%n3d),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         &       vpw_w(stars%n3d),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
+    COMPLEX qpw(stars%ng3),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
+         &       vpw_w(stars%ng3),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     REAL    rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),rht(vacuum%nmzd,2),&
          &      vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),vz(vacuum%nmzd,2)
    

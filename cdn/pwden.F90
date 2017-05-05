@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne, igq_fft,we,eig,bkpt, qpw,cdom, qis,forces,f_b8,zMat,realdata)
+       ikpt,jspin,lapw,ne, igq_fft,we,eig,bkpt, qpw,cdom, qis,forces,f_b8,zMat)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -70,6 +70,7 @@ CONTAINS
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !
     !
+!DEC$ NOOPTIMIZE
 #include"cpp_double.h"
     USE m_forceb8
     USE m_pwint
@@ -91,20 +92,19 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_zMat),INTENT(IN)     :: zMat
 
-    INTEGER, INTENT (IN)        :: igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1)
+    INTEGER, INTENT (IN)        :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL,INTENT(IN)   :: we(:) !(nobd) 
     REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
     REAL,INTENT(IN)   :: bkpt(3)
     !----->  BASIS FUNCTION INFORMATION
     INTEGER,INTENT(IN):: ne
-    LOGICAL,OPTIONAL,INTENT(IN)::realdata
     !----->  CHARGE DENSITY INFORMATION
     INTEGER,INTENT(IN)    :: ikpt,jspin 
-    COMPLEX,INTENT(INOUT) :: qpw(:,:) !(stars%n3d,dimension%jspd)
-    COMPLEX,INTENT(INOUT) :: cdom(:)!(stars%n3d)
-    REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkptd,dimension%jspd)
-    COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntypd)
-    REAL,    INTENT (INOUT) :: forces(:,:,:) !(3,atoms%ntypd,dimension%jspd)
+    COMPLEX,INTENT(INOUT) :: qpw(:,:) !(stars%ng3,dimension%jspd)
+    COMPLEX,INTENT(INOUT) :: cdom(:)!(stars%ng3)
+    REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
+    COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntype)
+    REAL,    INTENT (INOUT) :: forces(:,:,:) !(3,atoms%ntype,dimension%jspd)
     !
     !-----> LOCAL VARIABLES
     !
@@ -121,7 +121,7 @@ CONTAINS
     REAL,PARAMETER:: zero   = 0.00,  tol_3=1.0e-3 
     !
     INTEGER  iv1d(SIZE(lapw%k1,1),input%jspins)
-    REAL wtf(ne),wsave(stars%kq3d+15)
+    REAL wtf(ne),wsave(stars%kq3_fft+15)
     REAL,    ALLOCATABLE :: psir(:),psii(:),rhon(:)
     REAL,    ALLOCATABLE :: psi1r(:),psi1i(:),psi2r(:),psi2i(:)
     REAL,    ALLOCATABLE :: rhomat(:,:)
@@ -135,12 +135,7 @@ CONTAINS
     COMPLEX  CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc
 
-    IF (PRESENT(realdata)) THEN
-       l_real=realdata
-    ELSE
-       l_real=zMat%l_real
-    ENDIF
-
+    
     !------->          ABBREVIATIONS
     !
     !     rhon  : charge density in real space
@@ -182,29 +177,29 @@ CONTAINS
     !
 
 
-    ALLOCATE(cwk(stars%n3d),ecwk(stars%n3d))
+    ALLOCATE(cwk(stars%ng3),ecwk(stars%ng3))
 
     IF (noco%l_noco) THEN
-       ALLOCATE ( psi1r(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-            psi1i(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-            psi2r(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-            psi2i(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-            rhomat(0:stars%kq1d*stars%kq2d*stars%kq3d-1,4) )
+       ALLOCATE ( psi1r(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+            psi1i(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+            psi2r(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+            psi2i(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+            rhomat(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1,4) )
     ELSE
-       IF (l_real) THEN
-          ALLOCATE ( psir(-stars%kq1d*stars%kq2d:2*stars%kq1d*stars%kq2d*(stars%kq3d+1)-1),&
+       IF (zmat%l_real) THEN
+          ALLOCATE ( psir(-stars%kq1_fft*stars%kq2_fft:2*stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft+1)-1),&
                psii(1),&
-               rhon(-stars%kq1d*stars%kq2d:stars%kq1d*stars%kq2d*(stars%kq3d+1)-1) )
+               rhon(-stars%kq1_fft*stars%kq2_fft:stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft+1)-1) )
           IF (input%l_f) ALLOCATE ( kpsii(1),&
-               kpsir(-stars%kq1d*stars%kq2d:2*stars%kq1d*stars%kq2d*(stars%kq3d+1)-1),&
-               ekin(-stars%kq1d*stars%kq2d:2*stars%kq1d*stars%kq2d*(stars%kq3d+1)-1))
+               kpsir(-stars%kq1_fft*stars%kq2_fft:2*stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft+1)-1),&
+               ekin(-stars%kq1_fft*stars%kq2_fft:2*stars%kq1_fft*stars%kq2_fft*(stars%kq3_fft+1)-1))
        ELSE
-          ALLOCATE ( psir(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-               psii(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-               rhon(0:stars%kq1d*stars%kq2d*stars%kq3d-1) )
-          IF (input%l_f) ALLOCATE ( kpsir(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-               kpsii(0:stars%kq1d*stars%kq2d*stars%kq3d-1),&
-               ekin(0:stars%kq1d*stars%kq2d*stars%kq3d-1) )
+          ALLOCATE ( psir(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+               psii(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+               rhon(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1) )
+          IF (input%l_f) ALLOCATE ( kpsir(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+               kpsii(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+               ekin(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1) )
        ENDIF
     ENDIF
     !
@@ -216,8 +211,8 @@ CONTAINS
     ifftq1  = stars%kq1_fft
     ifftq2  = stars%kq1_fft*stars%kq2_fft
     ifftq3  = stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
-    ifftq3d = stars%kq1d*stars%kq2d*stars%kq3d
-    ifftq2d = stars%kq1d*stars%kq2d
+    ifftq3d = stars%kq1_fft*stars%kq2_fft*stars%kq3_fft
+    ifftq2d = stars%kq1_fft*stars%kq2_fft
     !
     nw1=NINT(stars%kq1_fft/4.+0.3)
     nw2=NINT(stars%kq2_fft/4.+0.3)
@@ -232,7 +227,7 @@ CONTAINS
     IF (noco%l_noco) THEN
        q0_11 = zero
        q0_22 = zero
-       IF (.NOT.l_real ) THEN
+       IF (.NOT.zmat%l_real ) THEN
           DO nu = 1 , ne
              q0_11 = q0_11 + we(nu) * CPP_BLAS_cdotc(lapw%nv(1),zMat%z_c(1,nu),1,zMat%z_c(1,nu),1)
              q0_22 = q0_22 + we(nu) * CPP_BLAS_cdotc(lapw%nv(2),zMat%z_c(lapw%nv(1)+atoms%nlotot+1,nu),1, zMat%z_c(lapw%nv(1)+atoms%nlotot+1,nu),1)
@@ -241,7 +236,7 @@ CONTAINS
        q0_11 = q0_11/cell%omtil
        q0_22 = q0_22/cell%omtil
     ELSE
-       IF (l_real) THEN
+       IF (zmat%l_real) THEN
           DO nu = 1 , ne
              q0=q0+we(nu)*CPP_BLAS_sdot(lapw%nv(jspin),zMat%z_r(1,nu),1,zMat%z_r(1,nu),1)
           ENDDO
@@ -337,7 +332,7 @@ CONTAINS
           psir=0.0
           psii=0.0
           !------> map WF into FFTbox
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              DO iv = 1 , lapw%nv(jspin)
                 psir( iv1d(iv,jspin) ) = zMat%z_r(iv,nu)
              ENDDO
@@ -364,7 +359,7 @@ CONTAINS
           CALL cfft(psi2r,psi2i,ifftq3,stars%kq3_fft,ifftq3,isn)
        ELSE
           isn = 1
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
                   nw1,nw2,nw3,wsave,psir(ifftq3d), psir(-ifftq2))
 
@@ -489,7 +484,7 @@ CONTAINS
              ENDDO
           ENDIF
        ELSE
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              DO in=-1,stars%kq3_fft,2
                 DO im=0,ifftq2-1
                    ir = ifftq2 * in + im
@@ -531,7 +526,7 @@ CONTAINS
           CALL cfft(rhomat(0,idens),psi1r,ifftq3,stars%kq3_fft,ifftq3,isn)
        ELSE
           !--->  psir is used here as work array, charge is real ,but fft complex
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              psir(ifftq3d:)=0.0
              IF (input%l_f) kpsir(ifftq3d:)=0.0
           ELSE
@@ -542,7 +537,7 @@ CONTAINS
           ENDIF
 
           isn = -1
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
                   stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,psir(ifftq3d), rhon(-ifftq2))
              IF (input%l_f) CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
@@ -568,7 +563,7 @@ CONTAINS
              cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(rhomat(igq_fft(ik),idens),psi1r(igq_fft(ik)))
           ENDDO
        ELSE
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              DO ik = 0 , stars%kmxq_fft - 1
                 cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(rhon(igq_fft(ik)),zero)
              ENDDO
@@ -579,7 +574,7 @@ CONTAINS
           ENDIF
           !+apw
           IF (input%l_f) THEN 
-             IF (l_real) THEN
+             IF (zmat%l_real) THEN
                 DO ik = 0 , stars%kmxq_fft - 1
                    ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(ekin(igq_fft(ik)),zero)
                 ENDDO
@@ -619,7 +614,7 @@ CONTAINS
           IF ( ABS( q0 ) .GT. 1.0e-9) THEN
              IF ( ABS( q0 - REAL(cwk(1)) )/q0 .GT. tol_3 ) THEN
                 WRITE(99,*) "XX:",ne,lapw%nv
-                IF (l_real) THEN
+                IF (zmat%l_real) THEN
                    DO istr=1,SIZE(zMat%z_r,2)
                       WRITE(99,*) "X:",istr,zMat%z_r(:,istr)
                    ENDDO

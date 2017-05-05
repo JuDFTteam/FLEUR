@@ -20,7 +20,8 @@
       USE m_umix
       USE m_prpqfftmap
       USE m_cdnval
-      USE m_loddop
+      USE m_cdn_io
+      USE m_pot_io
       USE m_wrtdop
       USE m_cdntot
       USE m_cdnovlp
@@ -31,6 +32,10 @@
       use m_m_perp
       USE m_types
       USE m_xmlOutput
+#ifdef CPP_MPI
+      USE m_mpi_bc_pot
+      USE m_mpi_bc_coreden
+#endif
       IMPLICIT NONE
       TYPE(t_results),INTENT(INOUT):: results
       TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -57,16 +62,17 @@
 !     ..
 !     .. Local Scalars ..
       REAL fix,qtot,scor,seig,smom,stot,sval,dummy
-      REAL slmom,slxmom,slymom,sum,thetai,phii
+      REAL slmom,slxmom,slymom,sum,thetai,phii,fermiEnergyTemp
       INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
-      INTEGER  ityp,ilayer,urec,itype,iatom
-      LOGICAL l_relax_any,exst,n_exist,l_st
+      INTEGER  ityp,ilayer,urec,itype,iatom,archiveType
+      LOGICAL l_relax_any,exst,n_exist,l_st,l_qfix
       TYPE(t_noco)::noco_new
 !     ..
 !     .. Local Arrays ..
-      REAL stdn(atoms%ntypd,dimension%jspd),svdn(atoms%ntypd,dimension%jspd),alpha_l(atoms%ntypd),&
-           rh(dimension%msh,atoms%ntypd,dimension%jspd),qint(atoms%ntypd,dimension%jspd)
-      REAL chmom(atoms%ntypd,dimension%jspd),clmom(3,atoms%ntypd,dimension%jspd)
+      REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd),alpha_l(atoms%ntype),&
+           rh(dimension%msh,atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
+      REAL tec(atoms%ntype,DIMENSION%jspd),rhTemp(dimension%msh,atoms%ntype,dimension%jspd)
+      REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
       INTEGER,ALLOCATABLE :: igq_fft(:)
       REAL   ,ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
       REAL   ,ALLOCATABLE :: rht(:,:,:),rho(:,:,:,:)
@@ -75,47 +81,52 @@
       COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
       CHARACTER(LEN=20)   :: attributes(4)
 !---> pk non-collinear
-      REAL    rhoint,momint,alphdiff(atoms%ntypd)
-      INTEGER igq2_fft(0:stars%kq1d*stars%kq2d-1)
+      REAL    rhoint,momint,alphdiff(atoms%ntype)
+      INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
       COMPLEX,ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:),qa21(:)
 !---> pk non-collinear
 
       LOGICAL   l_enpara
       PARAMETER (l_st=.false.)
    
-      IF (mpi%irank.EQ.0) WRITE (2,8005)
- 8005 FORMAT ('CHARGE DENSITY PART (cdngen):')
      
 !
 ! Read Potential and keep only vr(:,0,:,:) and vz
 !
-      ALLOCATE(vpw(stars%n3d,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
-     &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd))
-      OPEN (8,file='pottot',form='unformatted',status='old')
-      REWIND (8)
-      CALL loddop(stars,vacuum,atoms,sphhar, input,sym, 8, iter,vr,vpw,vz,vzxy)
-      CLOSE (8)
+      ALLOCATE(vpw(stars%ng3,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
+     &       vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd))
+
+      IF (mpi%irank.EQ.0) THEN
+         CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+                            iter,vr,vpw,vz,vzxy)
+      END IF
+#ifdef CPP_MPI
+      CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
+                      iter,vr,vpw,vz,vzxy)
+#endif
+
       DEALLOCATE ( vpw,vzxy )
-      ALLOCATE ( qpw(stars%n3d,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
-      ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
+      ALLOCATE ( qpw(stars%ng3,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
+      ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
 !
 ! Read in input density
 !
-      nt = 71
-      IF ( (.NOT. noco%l_noco) .AND. mpi%irank.EQ.0) THEN
-        OPEN (nt,file='cdn1',form='unformatted',status='old')
-        REWIND (nt)
-        CALL loddop(stars,vacuum,atoms,sphhar, input,sym, nt, iter,rho,qpw,rht,rhtxy)
-      ENDIF
-!
+      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+      IF(noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+      IF((.NOT.noco%l_noco).AND.mpi%irank.EQ.0) THEN
+         ALLOCATE(cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+         DEALLOCATE(cdom,cdomvz,cdomvxy)
+      END IF
 
       IF (mpi%irank.EQ.0) THEN
          INQUIRE(file='enpara',exist=l_enpara)
          IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
       ENDIF
-      ALLOCATE ( cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
-      ALLOCATE ( qa21(atoms%ntypd) )
-      ALLOCATE ( igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1) )
+      ALLOCATE ( cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
+      ALLOCATE ( qa21(atoms%ntype) )
+      ALLOCATE ( igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1) )
 !
 !
 !--->    initialize density arrays with zero
@@ -162,7 +173,6 @@
          IF (noco%l_mperp) jspmax = 1
          DO jspin = 1,jspmax
             CALL timestart("cdngen: cdnval")
-
             CALL cdnval(eig_id,&
                         mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
                         sphhar, sym,obsolete, igq_fft, vr,vz(:,:,jspin), oneD,&
@@ -195,59 +205,75 @@
             OPEN (15,file='ecore',status='unknown', action='write',form='unformatted')
          ENDIF
 
-         DO  jspin = 1,input%jspins
+         rh = 0.0
+         tec = 0.0
+         qint = 0.0
+         IF (input%frcor) THEN
+            IF (mpi%irank.EQ.0) THEN
+               CALL readCoreDensity(input,atoms,dimension,rh,tec,qint)
+            END IF
+#ifdef CPP_MPI
+            CALL mpi_bc_coreDen(mpi,atoms,input,dimension,&
+                                rh,tec,qint)
+#endif
+         END IF
+
+         DO jspin = 1,input%jspins
             IF ((input%jspins.EQ.2).AND.(mpi%irank.EQ.0)) THEN
                DO n = 1,atoms%ntype
                   svdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-enddo 
-           END IF
+               END DO
+            END IF
 !
 !     block 1 unnecessary for slicing: begin
             IF (.NOT.sliceplot%slice) THEN
 !     ---> add in core density
-              IF (mpi%irank.EQ.0) THEN
-               CALL cored(input,jspin,atoms, rho,dimension, sphhar, vr(:,0,:,jspin), qint,rh,seig)
-               results%seigc = results%seigc + seig
-               IF (input%jspins.EQ.2) THEN
-                  DO  n = 1,atoms%ntype
-                     stdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
- enddo
-               ENDIF
-              ENDIF  ! mpi%irank = 0
+               IF (mpi%irank.EQ.0) THEN
+                  CALL cored(input,jspin,atoms, rho,dimension, sphhar, vr(:,0,:,jspin), qint,rh,tec,seig)
+                  rhTemp(:,:,jspin) = rh(:,:,jspin)
+                  results%seigc = results%seigc + seig
+                  IF (input%jspins.EQ.2) THEN
+                     DO  n = 1,atoms%ntype
+                        stdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+                     END DO
+                  END IF
+               END IF  ! mpi%irank = 0
 !     ---> add core tail charge to qpw
-              IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
-!---> pk non-collinear
-!--->           add the coretail-charge to the constant interstitial
-!--->           charge (star 0), taking into account the direction of
-!--->           magnetisation of this atom
-                IF (jspin .EQ. 2) THEN
-                  DO ityp = 1,atoms%ntype
-                     rhoint  = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
-                     momint  = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
-!--->                rho_11
-                     qpw(1,1) = qpw(1,1) + rhoint + momint*cos(noco%beta(ityp))
-!--->                rho_22
-                     qpw(1,2) = qpw(1,2) + rhoint - momint*cos(noco%beta(ityp))
-!--->                real part rho_21
-                     cdom(1) = cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
-!--->                imaginary part rho_21
-                     cdom(1) = cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
-                  ENDDO
-                ENDIF
-!---> pk non-collinear
-              ELSEIF (input%ctail) THEN
-                CALL cdnovlp(mpi,&
-                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh, qpw,rhtxy,rho,rht)
-              ELSEIF (mpi%irank.EQ.0) THEN
+               IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
+!--->             pk non-collinear
+!--->             add the coretail-charge to the constant interstitial
+!--->             charge (star 0), taking into account the direction of
+!--->             magnetisation of this atom
+                  IF (jspin .EQ. 2) THEN
+                     DO ityp = 1,atoms%ntype
+                        rhoint  = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
+                        momint  = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
+!--->                   rho_11
+                        qpw(1,1) = qpw(1,1) + rhoint + momint*cos(noco%beta(ityp))
+!--->                   rho_22
+                        qpw(1,2) = qpw(1,2) + rhoint - momint*cos(noco%beta(ityp))
+!--->                   real part rho_21
+                        cdom(1) = cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
+!--->                   imaginary part rho_21
+                        cdom(1) = cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
+                     END DO
+                  END IF
+!--->          pk non-collinear
+               ELSE IF (input%ctail) THEN
+                  CALL cdnovlp(mpi,&
+                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh(:,:,jspin), qpw,rhtxy,rho,rht)
+               ELSE IF (mpi%irank.EQ.0) THEN
                   DO ityp = 1,atoms%ntype
                      qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
-                  ENDDO
-              END IF
+                  END DO
+               END IF
 !     block 1 unnecessary for slicing: end
             END IF
 !
-      ENDDO
-
+         END DO ! loop over spins
+         IF (mpi%irank.EQ.0) THEN
+            CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
+         END IF
          IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) CLOSE(15)
       ELSE
 ! relativistic core implementation : kcrel.eq.1
@@ -274,6 +300,7 @@ enddo
                END DO
             END IF
            ENDIF
+
             IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
 !---> pk non-collinear
 !--->          add the coretail-charge to the constant interstitial
@@ -473,27 +500,10 @@ enddo
          CLOSE(20) 
           CALL juDFT_error("slice OK",calledby="cdngen")
       END IF
-!
-      IF (noco%l_noco) THEN
-!---> pk non-collinear
-!--->    write output density matrix on file rhomat_out
-!--->    first the diagonal elements of the density matrix
-         OPEN (26,FILE='rhomat_out',FORM='unformatted',&
-     &         STATUS='unknown')
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 26, iter,rho,qpw,rht,rhtxy)
-!--->    and then the off-diagonal part
-         WRITE (26) (cdom(k),k=1,stars%ng3)
-         IF (input%film) THEN
-            WRITE (26) ((cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
-            WRITE (26) (((cdomvxy(j,k-1,ivac),j=1,vacuum%nmzxy), k=2,oneD%odi%nq2),ivac=1,vacuum%nvac)
-         ENDIF
-         CLOSE (26)
-!---> pk non-collinear
-      ELSE
-!      ----> write output density on unit 71
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, nt, iter,rho,qpw,rht,rhtxy)
-         CLOSE (nt)
-      ENDIF
+
+      CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+                        CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,iter,&
+                        rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
       ENDIF
 
       DEALLOCATE (cdom,cdomvz,cdomvxy,qa21)

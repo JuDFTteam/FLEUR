@@ -20,4 +20,5 @@ inpgen/write_struct.f
 )
 set(fleur_F90 ${fleur_F90}
 inpgen/set_inp.f90
+inpgen/inpgen_help.f90
 )

@@ -12,9 +12,11 @@ juDFT/hdf_tools_rw_var.F90
 juDFT/hdf_tools_stride.F90)
 endif()
 set(fleur_F90 ${fleur_F90}
+juDFT/info.F90
 juDFT/init.F90
 juDFT/juDFT.F90
 juDFT/stop.F90
 juDFT/time.F90
 juDFT/args.F90
+juDFT/sysinfo.F90
 )

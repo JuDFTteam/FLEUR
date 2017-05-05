@@ -111,17 +111,17 @@ CONTAINS
     INTEGER, INTENT (IN) :: eig_id,jspin
 
     !     .. Array Arguments ..
-    COMPLEX, INTENT(INOUT) :: qpw(stars%n3d,dimension%jspd)
+    COMPLEX, INTENT(INOUT) :: qpw(stars%ng3,dimension%jspd)
     COMPLEX, INTENT(INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
-    COMPLEX, INTENT(INOUT) :: cdom(stars%n3d)
+    COMPLEX, INTENT(INOUT) :: cdom(stars%ng3)
     COMPLEX, INTENT(INOUT) :: cdomvz(vacuum%nmzd,2)
     COMPLEX, INTENT(INOUT) :: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    COMPLEX, INTENT(INOUT) :: qa21(atoms%ntypd)
-    INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1d*stars%kq2d*stars%kq3d-1)
+    COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
+    INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL, INTENT    (IN) :: vz(vacuum%nmzd,2)
-    REAL, INTENT    (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL, INTENT   (OUT) :: chmom(atoms%ntypd,dimension%jspd),clmom(3,atoms%ntypd,dimension%jspd)
-    REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+    REAL, INTENT    (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
+    REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: rht(vacuum%nmzd,2,dimension%jspd)
     COMPLEX, INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u)
 
@@ -140,14 +140,14 @@ CONTAINS
     COMPLEX,parameter:: czero=(0.0,0.0)
     LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
     !     ...Local Arrays ..
-    INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntypd)
-    REAL    cartk(3),bkpt(3),xp(3,dimension%nspd),e_mcd(atoms%ntypd,input%jspins,dimension%nstd)
-    REAL    ello(atoms%nlod,atoms%ntypd,dimension%jspd),evac(2,dimension%jspd)
-    REAL    epar(0:atoms%lmaxd,atoms%ntypd,dimension%jspd),evdu(2,dimension%jspd)
+    INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
+    REAL    cartk(3),bkpt(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
+    REAL    ello(atoms%nlod,atoms%ntype,dimension%jspd),evac(2,dimension%jspd)
+    REAL    epar(0:atoms%lmaxd,atoms%ntype,dimension%jspd),evdu(2,dimension%jspd)
     REAL    eig(dimension%neigd)
     REAL    vz0(2)
-    REAL    uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-    REAL    ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+    REAL    uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+    REAL    ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 
     INTEGER, PARAMETER :: n2max_nstm3=13
 
@@ -193,8 +193,7 @@ CONTAINS
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
 
-    LOGICAL :: l_real
-    l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
+    zmat%l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
     !     ..
     !     ..
     llpd=(atoms%lmaxd*(atoms%lmaxd+3))/2
@@ -209,15 +208,15 @@ CONTAINS
        !--->    added. if l_mperp = F, these loops run only from jspin - jspin.
        jsp_start = 1
        jsp_end   = 2
-       ALLOCATE ( mt21(0:atoms%lmaxd,atoms%ntypd),lo21(atoms%nlod,atoms%ntypd) )  ! Deallocation at end of subroutine
-       ALLOCATE ( uloulopn21(atoms%nlod,atoms%nlod,atoms%ntypd) )
-       ALLOCATE ( uloulop21(atoms%nlod,atoms%nlod,atoms%ntypd) )
-       ALLOCATE ( qmat(0:3,atoms%ntypd,dimension%neigd,4) )
+       ALLOCATE ( mt21(0:atoms%lmaxd,atoms%ntype),lo21(atoms%nlod,atoms%ntype) )  ! Deallocation at end of subroutine
+       ALLOCATE ( uloulopn21(atoms%nlod,atoms%nlod,atoms%ntype) )
+       ALLOCATE ( uloulop21(atoms%nlod,atoms%nlod,atoms%ntype) )
+       ALLOCATE ( qmat(0:3,atoms%ntype,dimension%neigd,4) )
        IF (l_fmpl) THEN
-          ALLOCATE ( uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntypd) )
-          ALLOCATE ( ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntypd) )
-          ALLOCATE ( dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntypd) )
-          ALLOCATE ( udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntypd) )
+          ALLOCATE ( uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype) )
+          ALLOCATE ( ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype) )
+          ALLOCATE ( dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype) )
+          ALLOCATE ( udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype) )
        ELSE
           ALLOCATE ( uunmt21(1,1,1),ddnmt21(1,1,1) )
           ALLOCATE ( dunmt21(1,1,1),udnmt21(1,1,1) )
@@ -235,31 +234,31 @@ CONTAINS
     !
     ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )      ! Deallocation before mpi_col_den
     ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
-    ALLOCATE (   usdus%us(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE (  usdus%uds(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
+    ALLOCATE (   usdus%us(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE (  usdus%uds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( lapw%k1(dimension%nvd,dimension%jspd),lapw%k2(dimension%nvd,dimension%jspd),lapw%k3(dimension%nvd,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
-    ALLOCATE (  usdus%ulos(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%dulos(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%uulon(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%dulon(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%uloulopn(atoms%nlod,atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( uu(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( dd(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( du(0:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( uunmt(0:llpd,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( ddnmt(0:llpd,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( dunmt(0:llpd,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( udnmt(0:llpd,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( qal(0:3,atoms%ntypd,dimension%neigd,jsp_start:jsp_end) )
-    ALLOCATE ( sqal(0:3,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( ener(0:3,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE (   sqlo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
-    ALLOCATE ( enerlo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end) )
+    ALLOCATE (  usdus%ulos(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%dulos(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%uulon(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%dulon(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( usdus%uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( uu(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( dd(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( du(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( uunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( ddnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( dunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( udnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( qal(0:3,atoms%ntype,dimension%neigd,jsp_start:jsp_end) )
+    ALLOCATE ( sqal(0:3,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( ener(0:3,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE (   sqlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
+    ALLOCATE ( enerlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( svac(2,jsp_start:jsp_end) )
     ALLOCATE ( pvac(2,jsp_start:jsp_end) )
     ALLOCATE ( qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2) )
@@ -285,9 +284,9 @@ CONTAINS
     sqal(:,:,:) = 0.0 ; ener(:,:,:) = 0.0
     !+soc
     IF (noco%l_soc) THEN
-       ALLOCATE ( orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntypd,jsp_start:jsp_end) )
-       ALLOCATE ( orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd,jsp_start:jsp_end)     )
-       ALLOCATE ( orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd,jsp_start:jsp_end))
+       ALLOCATE ( orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
+       ALLOCATE ( orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype,jsp_start:jsp_end)     )
+       ALLOCATE ( orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype,jsp_start:jsp_end))
        orb(:,:,:,:)%uu = 0.0 ; orb(:,:,:,:)%dd = 0.0
        orb(:,:,:,:)%uum = czero ; orb(:,:,:,:)%uup = czero
        orb(:,:,:,:)%ddm = czero ; orb(:,:,:,:)%ddp = czero
@@ -303,8 +302,8 @@ CONTAINS
     ENDIF
     !+for
     IF (input%l_f) THEN
-       ALLOCATE ( f_a12(3,atoms%ntypd),f_a21(3,atoms%ntypd) )
-       ALLOCATE ( f_b4(3,atoms%ntypd),f_b8(3,atoms%ntypd) )
+       ALLOCATE ( f_a12(3,atoms%ntype),f_a21(3,atoms%ntype) )
+       ALLOCATE ( f_b4(3,atoms%ntype),f_b8(3,atoms%ntype) )
        f_b4(:,:) = czero  ; f_a12(:,:) = czero
        f_b8(:,:) = czero  ; f_a21(:,:) = czero
     ELSE
@@ -316,8 +315,8 @@ CONTAINS
        OPEN (23,file='mcd_inp',STATUS='old',FORM='formatted')
        READ (23,*) emcd_lo,emcd_up
        CLOSE (23)
-       ALLOCATE ( m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntypd,2) )
-       ALLOCATE ( mcd(3*atoms%ntypd,dimension%nstd,dimension%neigd) )
+       ALLOCATE ( m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2) )
+       ALLOCATE ( mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
        IF (.not.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
     ELSE
        ALLOCATE ( m_mcd(1,1,1,1),mcd(1,1,1) )
@@ -341,18 +340,18 @@ CONTAINS
     !+lo
     !---> if local orbitals are used, the eigenvector has a higher
     !---> dimension then nvd
-    ALLOCATE ( aclo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end), &
-         bclo(atoms%nlod,atoms%ntypd,jsp_start:jsp_end),&
-         cclo(atoms%nlod,atoms%nlod,atoms%ntypd,jsp_start:jsp_end),&
-         acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end), &
-         bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end), &
-         ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntypd,jsp_start:jsp_end) )
+    ALLOCATE ( aclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end), &
+         bclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end),&
+         cclo(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end),&
+         acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end), &
+         bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end), &
+         ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end) )
     aclo(:,:,:) = 0.0 ; bclo(:,:,:) = 0.0 ; ccnmt(:,:,:,:,:) = 0.0
     acnmt(:,:,:,:,:)=0.0 ; bcnmt(:,:,:,:,:)=0.0 ; cclo(:,:,:,:)=0.0
 
-    ALLOCATE ( qis(dimension%neigd,kpts%nkptd,dimension%jspd), &
-         qvac(dimension%neigd,2,kpts%nkptd,dimension%jspd), &
-         qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkptd,dimension%jspd) )
+    ALLOCATE ( qis(dimension%neigd,kpts%nkpt,dimension%jspd), &
+         qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd), &
+         qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd) )
     qvac(:,:,:,:)=0.0 ;  qvlay(:,:,:,:,:)=0.0
 
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
@@ -426,7 +425,7 @@ CONTAINS
     IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
        IF (oneD%odi%d1)  CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
        CALL slab_dim(atoms, nsld)
-       ALLOCATE ( nmtsl(atoms%ntypd,nsld),nslat(atoms%natd,nsld) )
+       ALLOCATE ( nmtsl(atoms%ntype,nsld),nslat(atoms%nat,nsld) )
        ALLOCATE ( zsl(2,nsld),volsl(nsld) )
        ALLOCATE ( volintsl(nsld) )
        CALL slabgeom(&
@@ -435,8 +434,8 @@ CONTAINS
 
        ALLOCATE ( qintsl(nsld,dimension%neigd))
        ALLOCATE ( qmtsl(nsld,dimension%neigd))
-       ALLOCATE ( orbcomp(dimension%neigd,23,atoms%natd) )
-       ALLOCATE ( qmtp(dimension%neigd,atoms%natd) )
+       ALLOCATE ( orbcomp(dimension%neigd,23,atoms%nat) )
+       ALLOCATE ( qmtp(dimension%neigd,atoms%nat) )
        IF (.NOT.input%film) qvac(:,:,:,jspin) = 0.0
     ELSE
        ALLOCATE(nmtsl(1,1),nslat(1,1),zsl(1,1),volsl(1),volintsl(1))
@@ -520,20 +519,13 @@ CONTAINS
                 n_end    = noccbd
              END IF
           END IF
-          zMat%l_real = l_real
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              IF (.NOT.ALLOCATED(zMat%z_r)) THEN
                 ALLOCATE (zMat%z_r(dimension%nbasfcn,dimension%neigd))
                 zMat%nbasfcn = dimension%nbasfcn
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_r = 0
-             CALL cdn_read(&
-               eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-               ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
-               noccbd,n_start,n_end,&
-               lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat%z_r)
           ELSE
              IF (.NOT.ALLOCATED(zMat%z_c)) THEN
                 ALLOCATE (zMat%z_c(dimension%nbasfcn,dimension%neigd))
@@ -541,13 +533,17 @@ CONTAINS
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_c = 0
-             CALL cdn_read(&
+          endif
+          CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat%z_c)
-          endif
+               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
+#ifdef CPP_MPI
+          ! Sinchronizes the RMA operations
+          if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
           !ENDIF
@@ -583,7 +579,7 @@ CONTAINS
                       nslibd = nslibd + 1
                       eig(nslibd) = eig(i)
                       we(nslibd) = we(i)
-                      if (l_real) THEN
+                      if (zmat%l_real) THEN
                          zMat%z_r(:,nslibd) = zMat%z_r(:,i)
                       else
                          zMat%z_c(:,nslibd) = zMat%z_c(:,i)
@@ -599,7 +595,7 @@ CONTAINS
                    nslibd = nslibd + 1
                    eig(nslibd) = eig(sliceplot%nnne)
                    we(nslibd) = we(sliceplot%nnne)
-                   if (l_real) Then
+                   if (zmat%l_real) Then
                       zMat%z_r(:,nslibd) = zMat%z_r(:,sliceplot%nnne)
                    else
                       zMat%z_c(:,nslibd) = zMat%z_c(:,sliceplot%nnne)
@@ -610,7 +606,7 @@ CONTAINS
                          nslibd = nslibd + 1
                          eig(nslibd) = eig(i)
                          we(nslibd) = we(i)
-                         if (l_real) THEN
+                         if (zmat%l_real) THEN
                             zMat%z_r(:,nslibd) = zMat%z_r(:,i)
                          else
                             zMat%z_c(:,nslibd) = zMat%z_c(:,i)
@@ -640,7 +636,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,zMat,l_real)
+                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -650,7 +646,7 @@ CONTAINS
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL q_int_sl(jspin,stars,atoms,sym, volsl,volintsl,&
-                     cell,noccbd,lapw, nsl,zsl,nmtsl,oneD, qintsl(:,:),zMat,l_real)
+                     cell,noccbd,lapw, nsl,zsl,nmtsl,oneD, qintsl(:,:),zMat)
                
       !
              END IF
@@ -662,7 +658,7 @@ CONTAINS
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
                         gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,bkpt,lapw, evac,eig,&
-                        rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat,l_real)
+                        rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -678,36 +674,36 @@ CONTAINS
           !--->    valence density in the atomic spheres
           !--->    construct a(tilta) and b(tilta)
           IF (noco%l_mperp) THEN
-             ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%natd,dimension%jspd),&
+             ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd),&
                                 ! Deallocated before call to sympsi
-                  bcof(noccbd,0:dimension%lmd,atoms%natd,dimension%jspd),                &
-                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,dimension%jspd) )
+                  bcof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd),                &
+                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,dimension%jspd) )
           ELSE
-             ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%natd,jspin:jspin),&
-                  bcof(noccbd,0:dimension%lmd,atoms%natd,jspin:jspin),&
-                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd,jspin:jspin) )
+             ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin),&
+                  bcof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin),&
+                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin) )
           END IF
 
           DO ispin = jsp_start,jsp_end
              IF (input%l_f) THEN
                 CALL timestart("cdnval: to_pulay")
-                ALLOCATE (e1cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
+                ALLOCATE (e1cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                                 ! Deallocated after call to force_a21
-                     e2cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                     acoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd),&
-                     bcoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd),&
-                     aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                     bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd),&
-                     cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd) )
+                     e2cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
+                     acoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat),&
+                     bcoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat),&
+                     aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
+                     bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
+                     cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat) )
                 CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt,noccbd,eig,usdus,&
                         kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat,l_real)
+                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
                 CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,kveclo,oneD,&
-                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat,l_real)
+                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat)
                 CALL timestop("cdnval: abcof")
 
              END IF
@@ -836,7 +832,7 @@ CONTAINS
              cartk=matmul(bkpt,cell%bmat)
              IF (banddos%ndir.GT.0) THEN
                 CALL sympsi(bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                     lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat,l_real)
+                     lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
              END IF
              !
              !--dw   now write k-point data to tmp_dos
@@ -850,7 +846,7 @@ CONTAINS
           END IF
 
           !--->  end of loop over PE's
-          IF (l_real) THEN
+          IF (zmat%l_real) THEN
              DEALLOCATE (zMat%z_r)
           ELSE
              DEALLOCATE (zMat%z_c)
@@ -886,7 +882,7 @@ CONTAINS
                sliceplot,noco,sym,&
                cell,&
                l_mcd,ncored,ncore,e_mcd,&
-               results%ef,nsld,oneD)
+               results%ef,results%bandgap,nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              CALL Ek_write_sl(&
                   eig_id,dimension,kpts,atoms,vacuum,&

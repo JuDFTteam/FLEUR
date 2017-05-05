@@ -26,6 +26,7 @@ MODULE m_eig66_hdf
   !                          Daniel Wortmann, Tue Nov  512:07:522002
   !*****************************************************************
   USE m_eig66_data
+  USE m_types
 #ifdef CPP_HDF
   USE hdf5
   USE m_hdf_tools
@@ -410,7 +411,7 @@ CONTAINS
 
      SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk,&
           &                  eig,el,ello,evac,&
-          &                  nlotot,kveclo,n_size,n_rank,z)
+          &                  nlotot,kveclo,n_size,n_rank,zmat)
 
        !*****************************************************************
        !     writes all eignevecs for the nk-th kpoint
@@ -424,7 +425,7 @@ CONTAINS
        INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
        REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:)
        REAL,    INTENT(IN),OPTIONAL :: evac(2),ello(:,:)
-       CLASS(*),INTENT(IN),OPTIONAL :: z(:,:)
+       TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
 
        INTEGER i,j,k,nv_local,n1,n2,ne
        TYPE(t_data_HDF),POINTER::d
@@ -516,28 +517,26 @@ CONTAINS
        ELSE
           IF (PRESENT(eig)) CALL juDFT_error("BUG in calling write_eig")
        ENDIF
-       IF (PRESENT(z).AND..NOT.PRESENT(neig))&
+       IF (PRESENT(zmat).AND..NOT.PRESENT(neig))&
             &    CALL juDFT_error("BUG in calling write_eig with eigenvector")
 
        n1=1;n2=0
        IF (PRESENT(n_size)) n1=n_size
        IF (PRESENT(n_rank)) n2=n_rank
-       IF (PRESENT(z)) THEN
-
-          SELECT TYPE(z)
-          TYPE IS (REAL)
+       IF (PRESENT(zmat)) THEN
+          IF (zmat%l_real) THEN
              CALL io_write_real2s(&
                   &                     d%evsetid,(/1,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),REAL(z(:nmat,:neig)),(/1,1,n1,1,1/))
-          TYPE IS (COMPLEX)
+                  &           (/1,nmat,neig,1,1/),REAL(zmat%z_r(:nmat,:neig)),(/1,1,n1,1,1/))
+          ELSE
              CALL io_write_real2s(&
                   &                     d%evsetid,(/1,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),REAL(z(:nmat,:neig)),(/1,1,n1,1,1/))
+                  &           (/1,nmat,neig,1,1/),REAL(zmat%z_c(:nmat,:neig)),(/1,1,n1,1,1/))
              CALL io_write_real2s(&
                   &                     d%evsetid,(/2,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),AIMAG(z(:nmat,:neig)),&
+                  &           (/1,nmat,neig,1,1/),AIMAG(zmat%z_c(:nmat,:neig)),&
                   &           (/1,1,n1,1,1/))
-          END SELECT
+          ENDIF
        ENDIF
 
 #endif
@@ -592,7 +591,7 @@ CONTAINS
 #endif
 
      SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,&
-          &            ello,evac,kveclo,n_start,n_end,z)
+          &            ello,evac,kveclo,n_start,n_end,zMat)
        IMPLICIT NONE
        INTEGER, INTENT(IN)            :: id,nk,jspin
        INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
@@ -602,7 +601,7 @@ CONTAINS
        REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
        REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
        INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-       CLASS(*),TARGET,INTENT(OUT),OPTIONAL  :: z(:,:)
+       TYPE(t_zMat),OPTIONAL  :: zmat
 
 #ifdef CPP_HDF
        INTEGER:: n1,n,k,k1_t,k2_t,k3_t
@@ -666,13 +665,12 @@ CONTAINS
 
        IF (PRESENT(n_start)) THEN
           IF (.NOT.PRESENT(n_end)) CALL juDFT_error("BUG3 in read_eig")
-          IF (PRESENT(z)) THEN
-             SELECT TYPE(z)
-             TYPE IS (REAL)
-                CALL priv_r_vec(d,nk,jspin,n_start,n_end,n1,z)
-             TYPE is (COMPLEX)
-                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,n1,z)
-             END SELECT
+          IF (PRESENT(zMat)) THEN
+             IF (zmat%l_real) THEN
+                CALL priv_r_vec(d,nk,jspin,n_start,n_end,n1,zmat%z_r)
+             ELSE
+                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,n1,zmat%z_c)
+             ENDIF
           ENDIF
           IF (PRESENT(nmat)) nmat=n1
        ENDIF

@@ -42,8 +42,8 @@ CONTAINS
     !-odim
     !+odim
     LOGICAL, INTENT(IN)     :: l_real
-    REAL,    INTENT (INOUT) :: aa_r(:)!(matsize)
-    COMPLEX, INTENT (INOUT) :: aa_c(:)
+    REAL,   ALLOCATABLE, INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX,ALLOCATABLE, INTENT (INOUT) :: aa_c(:)
     COMPLEX,PARAMETER :: one=CMPLX(1.0,0.0),zero=CMPLX(0.0,0.0)
 
     !     ..
@@ -224,7 +224,7 @@ CONTAINS
                             nc = 1+kii/n_size
                             ii = nc*(nc-1)/2*n_size-(nc-1)*(n_size-n_rank-1)
                             IF ( (n_size==1).OR.(kii+1<=lapw%nv(1)) ) THEN    !
-                               aahlp(ii+1:ii+ki) = aahlp(ii+1:ii+ki)+MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
+                               aahlp(ii+1:ii+ki) = aahlp(ii+1:ii+ki)+MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
                             ELSE                    ! components for <2||2> block unused
                                aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:DIMENSION%lmd)),b(ki,:lmp,iintsp))
                                !--->                   spin-down spin-down part
@@ -254,7 +254,7 @@ CONTAINS
                                ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
                             ENDIF
                             aa_c(ii+1:ii+kjmax) = aa_c(ii+1:ii+kjmax) + chihlp*&
-                                 (MATMUL(CONJG(ax(:kjmax,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:kjmax,:lmp)),b(ki,:lmp,iintsp)))
+                                 (MATMUL(CONJG(ax(:kjmax,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:kjmax,:lmp)),b(ki,:lmp,iintsp)))
                          ELSE
                             nc = 1+kii/n_size
                             ii = nc*(nc-1)/2*n_size- (nc-1)*(n_size-n_rank-1)

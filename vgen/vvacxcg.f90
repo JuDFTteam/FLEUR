@@ -51,13 +51,13 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxy,stars%n2d-1,2,input%jspins)
+    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
     COMPLEX, INTENT (IN) :: cdomvz(vacuum%nmzd,2)
-    COMPLEX, INTENT (IN) :: cdomvxy(vacuum%nmzxy,stars%n2d-1,2)
+    COMPLEX, INTENT (IN) :: cdomvxy(vacuum%nmzxy,stars%ng2-1,2)
     REAL,    INTENT (OUT) :: excz(vacuum%nmzd,2)
-    COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxy,stars%n2d-1,2)
+    COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxy,stars%ng2-1,2)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxy,stars%n2d-1,2,input%jspins)
+    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
     !     ..
     !     .. Local Scalars ..
     INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip
@@ -106,7 +106,7 @@ CONTAINS
     WRITE (6,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE(6,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
-    ALLOCATE ( rxydz(vacuum%nmzxy,stars%n2d-1,input%jspins),rxydzz(vacuum%nmzxyd,stars%n2d-1,input%jspins) )
+    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,input%jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,input%jspins) )
     ALLOCATE ( rhtdz(vacuum%nmzd,input%jspins),rhtdzz(vacuum%nmzd,input%jspins) )
 
     DO ivac=1,vacuum%nvac 
@@ -147,7 +147,7 @@ CONTAINS
                   &                 cdomvxy(ip,1,ivac),&
                   &                 vacuum%nmzxy,+1)
 
-             DO i=0,9*stars%k1d*stars%k2d-1
+             DO i=0,9*stars%mx1*stars%mx2-1
                 magmom(i,ip)= mx(i)**2 + my(i)**2 +&
                      &          ((af2noco(i,ip,1)-af2noco(i,ip,2))/2.)**2
                 magmom(i,ip)= SQRT(magmom(i,ip))
@@ -212,7 +212,7 @@ CONTAINS
 
              ALLOCATE ( rhtxyr(vacuum%nmzxy),dummy(vacuum%nmzxy)   )
              ALLOCATE ( rxydzr(vacuum%nmzxy),rxydzzr(vacuum%nmzxy) )
-             DO i=0,9*stars%k1d*stars%k2d-1 
+             DO i=0,9*stars%mx1*stars%mx2-1 
                 DO ip=1,vacuum%nmzxy
                    rhtxyr(ip)=magmom(i,ip)
                 ENDDO
@@ -239,8 +239,8 @@ CONTAINS
        ALLOCATE ( g2r(0:ifftd2-1),g2ru(0:ifftd2-1),g2rd(0:ifftd2-1) )
        ALLOCATE ( gggr(0:ifftd2-1),gggru(0:ifftd2-1),gzgr(0:ifftd2-1) )
        ALLOCATE ( vxc(0:ifftd2-1,input%jspins),exc(0:ifftd2-1) )
-       ALLOCATE ( cqpw(stars%n2d-1),af2(0:ifftd2-1,input%jspins) )
-       ALLOCATE ( fgxy(stars%n2d-1),bf2(0:ifftd2-1) )
+       ALLOCATE ( cqpw(stars%ng2-1),af2(0:ifftd2-1,input%jspins) )
+       ALLOCATE ( fgxy(stars%ng2-1),bf2(0:ifftd2-1) )
 
        ALLOCATE( vx(0:ifftd2-1,input%jspins) )
 
@@ -263,7 +263,7 @@ CONTAINS
 
           ELSE
 
-             DO i=0,9*stars%k1d*stars%k2d-1
+             DO i=0,9*stars%mx1*stars%mx2-1
                 af2(i,1)= af2noco(i,ip,1) 
                 af2(i,2)= af2noco(i,ip,2)
              END DO
@@ -372,9 +372,9 @@ CONTAINS
                 ! ! already calculated in g-space, will be used. 
 
                 CALL grdrsvac(&
-                     &               magmom(0,ip),bmat1,3*stars%k1d,3*stars%k2d,obsolete%ndvgrd,&
+                     &               magmom(0,ip),bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd,&
                      &               dxmagmom,dymagmom) 
-                DO i=0,9*stars%k1d*stars%k2d-1 
+                DO i=0,9*stars%mx1*stars%mx2-1 
                    chdens= rhdx(i,1)/2.+rhdx(i,2)/2.
                    rhdx(i,1)= chdens + dxmagmom(i) 
                    rhdx(i,2)= chdens - dxmagmom(i) 
@@ -387,12 +387,12 @@ CONTAINS
                 END DO
 
                 CALL grdrsvac(&
-                     &               dxmagmom,bmat1,3*stars%k1d,3*stars%k2d,obsolete%ndvgrd, &
+                     &               dxmagmom,bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd, &
                      &               ddxmagmom(0,1),ddymagmom(0,1))
                 CALL grdrsvac(&
-                     &               dymagmom,bmat1,3*stars%k1d,3*stars%k2d,obsolete%ndvgrd, &
+                     &               dymagmom,bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd, &
                      &               ddxmagmom(0,2),ddymagmom(0,2))
-                DO i=0,9*stars%k1d*stars%k2d-1
+                DO i=0,9*stars%mx1*stars%mx2-1
                    chdens= rhdxx(i,1)/2.+rhdxx(i,2)/2. 
                    rhdxx(i,1)= chdens + ddxmagmom(i,1) 
                    rhdxx(i,2)= chdens - ddxmagmom(i,1) 
@@ -406,9 +406,9 @@ CONTAINS
                         &           ( ddxmagmom(i,2) + ddymagmom(i,1) )/2.
                 END DO
                 CALL grdrsvac(&
-                     &               dzmagmom(0,ip),bmat1,3*stars%k1d,3*stars%k2d,obsolete%ndvgrd, &
+                     &               dzmagmom(0,ip),bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd, &
                      &               ddxmagmom(0,1),ddymagmom(0,1))
-                DO i=0,9*stars%k1d*stars%k2d-1
+                DO i=0,9*stars%mx1*stars%mx2-1
                    chdens= rhdzx(i,1)/2.+rhdzx(i,2)/2. 
                    rhdzx(i,1)= chdens + ddxmagmom(i,1) 
                    rhdzx(i,2)= chdens - ddxmagmom(i,1) 

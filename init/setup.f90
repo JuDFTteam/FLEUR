@@ -39,6 +39,7 @@
           USE m_dwigner
           USE m_strgn
           USE m_stepf
+          USE m_cdn_io
           USE m_mapatom
           USE m_writegw
           USE m_convn
@@ -86,7 +87,7 @@
           IF (.NOT.oneD%odd%d1) THEN
              CALL local_sym(&
                   atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-                  atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
+                  atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
                   sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
                   atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
              sym%nsymt = sphhar%ntypsd
@@ -95,7 +96,7 @@
              oneD%tau1(:,:) = sym%tau(:,:)
           ELSEIF (oneD%odd%d1) THEN
              CALL od_chisym(oneD%odd,oneD%mrot1,oneD%tau1,sym%zrfs,sym%invs,sym%invs2,cell%amat)
-             ntp1 = atoms%natd
+             ntp1 = atoms%nat
              ALLOCATE (nq1(ntp1),lmx1(ntp1),nlhtp1(ntp1))
              ii = 1
              DO i = 1,atoms%ntype
@@ -107,7 +108,7 @@
              END DO
              CALL local_sym(&
                   atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-                  atoms%natd,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
+                  atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
                   sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
                   nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
 
@@ -127,7 +128,7 @@
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
              CALL mapatom(sym,atoms, cell,input, noco)
-             oneD%ngopr1(1:atoms%natd) = atoms%ngopr(1:atoms%natd)
+             oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
              !        DEALLOCATE ( nq1 )
           ELSE
              !-odim
@@ -135,6 +136,10 @@
              CALL mapatom(sym,atoms, cell,input, noco)
              CALL od_mapatom(oneD,atoms,sym,cell)
           END IF
+
+          ! Store structure data
+
+          CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
 
           !+odim
           IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
@@ -157,7 +162,7 @@
           CALL  prp_qfft(stars, cell,noco, input)
 
           IF (input%gw.GE.1) CALL write_gw(&
-               atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
+               atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
                atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
                atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
                atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)

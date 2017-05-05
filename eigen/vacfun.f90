@@ -34,7 +34,7 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nv2(dimension%jspd)
     INTEGER, INTENT (IN) :: kvac1(dimension%nv2d,dimension%jspd),kvac2(dimension%nv2d,dimension%jspd)
-    COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxyd,stars%n2d-1)
+    COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxyd,stars%ng2-1)
     COMPLEX, INTENT (OUT):: tddv(dimension%nv2d,dimension%nv2d),tduv(dimension%nv2d,dimension%nv2d)
     COMPLEX, INTENT (OUT):: tudv(dimension%nv2d,dimension%nv2d),tuuv(dimension%nv2d,dimension%nv2d)
     REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4) ,evac(2,dimension%jspd)

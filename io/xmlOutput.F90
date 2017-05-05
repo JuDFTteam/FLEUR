@@ -42,6 +42,7 @@ MODULE m_xmlOutput
 
    SUBROUTINE startXMLOutput()
 
+      USE m_juDFT_args
       USE m_constants
       USE m_utility
       USE m_compile_descr
@@ -61,7 +62,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=6)  :: precisionString
       CHARACTER(LEN=9)  :: flags(11)
       CHARACTER(LEN=20) :: structureSpecifiers(11)
-      CHARACTER(LEN=50) :: gitdesc,githash,compile_date,compile_user,compile_host
+      CHARACTER(LEN=50) :: gitdesc,githash,gitbranch,compile_date,compile_user,compile_host
       
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
@@ -71,13 +72,17 @@ MODULE m_xmlOutput
       CALL DATE_AND_TIME(date,time,zone)
       WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
       WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)
-      OPEN (xmlOutputUnit,file='out.xml',form='formatted',status='unknown')
+      IF (juDFT_was_argument("-info")) THEN
+         OPEN (xmlOutputUnit,status='scratch')
+      ELSE
+         OPEN (xmlOutputUnit,file='out.xml',form='formatted',status='unknown')
+      ENDIF
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
-      CALL get_compile_desc(gitdesc,githash,compile_date,compile_user,compile_host)
+      CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host)
       CALL writeXMLElement('compilationInfo',(/'date','user','host'/),(/compile_date,compile_user,compile_host/))
-      CALL writeXMLElement('gitInfo',(/'version       ','lastCommitHash'/),(/gitdesc,githash/))
+      CALL writeXMLElement('gitInfo',(/'version       ','branch        ','lastCommitHash'/),(/gitdesc,gitbranch,githash/))
       CALL getComputerArchitectures(flags, numFlags)
       IF (numFlags.EQ.0) THEN
          numFlags = 1
@@ -381,7 +386,7 @@ MODULE m_xmlOutput
 
       IMPLICIT NONE
 
-      CHARACTER(LEN= 30), INTENT(IN)    :: contentList(:)
+      CHARACTER(LEN= *), INTENT(IN)    :: contentList(:)
       CHARACTER(LEN=200), INTENT(INOUT) :: contentLineList(:)
       INTEGER,            INTENT(IN)    :: contentLineLength
       INTEGER :: i, j

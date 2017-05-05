@@ -24,7 +24,7 @@
       PRIVATE
       PUBLIC plotdop
       CONTAINS
-      SUBROUTINE plotdop(oneD,&
+      SUBROUTINE plotdop(oneD,dimension,&
      &     stars,vacuum,sphhar,atoms,&
      &     input,sym,cell,sliceplot,&
      &     l_noco,cdnfname)
@@ -32,10 +32,12 @@
       USE m_outcdn
       USE m_loddop
       USE m_xsf_io
+      USE m_cdn_io
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
       TYPE(t_oneD),INTENT(IN)     :: oneD
+      TYPE(t_dimension),INTENT(IN):: dimension
       TYPE(t_stars),INTENT(IN)    :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -48,15 +50,16 @@
       CHARACTER(len=10), INTENT (IN) :: cdnfname
 
 !     .. Local Scalars ..
-      REAL          :: s,tec,qint,xdnout
+      REAL          :: s,tec,qint,xdnout,fermiEnergyTemp
       INTEGER       :: i,i1,i2,i3,ii3,ix,iy,iz,jsp,na,nplo
       INTEGER       :: nplot,nq,nt,jm,jspin,iter,ii1,ii2
-      LOGICAL       :: twodim,oldform,newform
+      LOGICAL       :: twodim,oldform,newform,l_qfix
 !     ..
 !     .. Local Arrays ..
-      COMPLEX :: qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
-      REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),rht(vacuum%nmzd,2,input%jspins)
+      COMPLEX :: qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
       REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
+      COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
       INTEGER :: grid(3)
       LOGICAL :: cartesian,xsf
       REAL    :: rhocc(atoms%jmtd)
@@ -69,7 +72,7 @@
       oldform = .false.
       INQUIRE(file ="plotin",exist = oldform) 
       IF ( oldform ) THEN 
-         CALL priv_old_plot(oneD,&
+         CALL priv_old_plot(oneD,dimension,&
      &                stars,vacuum,sphhar,atoms,&
      &                input,sym,cell,sliceplot,&
      &                l_noco,cdnfname)
@@ -98,11 +101,18 @@
 
       ! new input
       !<-- Open the charge/potential file
-      OPEN (20,file = cdnfname,form='unformatted',status='old')
-      CALL loddop(&
-     &            stars,vacuum,atoms,sphhar,input,sym,&
-     &            20,&
-     &            iter,rho,qpw,rht,rhtxy)
+      IF(TRIM(ADJUSTL(cdnfname)).EQ.'cdn1') THEN
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+      ELSE IF(TRIM(ADJUSTL(cdnfname)).EQ.'cdn') THEN
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+      ELSE
+         OPEN(20,file = cdnfname,form='unformatted',status='old')
+         CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&
+                     iter,rho,qpw,rht,rhtxy)
+         CLOSE(20)
+      END IF
       !<--Perhaps only the core charge should be plotted
       IF (input%score) THEN
          OPEN (17,file='cdnc',form='unformatted',status='old')
@@ -290,17 +300,19 @@
 !------------------------------------------
 !     The old subroutine from Fleur is here
 !------------------------------------------
-      SUBROUTINE priv_old_plot(oneD,&
+      SUBROUTINE priv_old_plot(oneD,dimension,&
      &                stars,vacuum,sphhar,atoms,&
      &                input,sym,cell,sliceplot,&
      &                l_noco,cdnfname)
 !
       USE m_outcdn
       USE m_loddop
+      USE m_cdn_io
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
       TYPE(t_oneD),INTENT(IN)     :: oneD
+      TYPE(t_dimension),INTENT(IN):: dimension
       TYPE(t_stars),INTENT(IN)    :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -317,16 +329,17 @@
 !+odim
 !     ..
 !     .. Local Scalars ..
-      REAL rx,ry,s,sl,sm,su,x,xm,y,ym,tec,qint,sfp,xdnout
+      REAL rx,ry,s,sl,sm,su,x,xm,y,ym,sfp,xdnout
       INTEGER i,i1,i2,i3,ii3,imshx,imshy,ix,iy,j,jsp,na,nfile,nplo,&
      &        nplot,nq,nt,nplott,jm,jspin,iter,ii1,ii2
       LOGICAL twodim
 !     ..
 !     .. Local Arrays ..
-      COMPLEX qpw(stars%n3d,input%jspins),rhtxy(vacuum%nmzxyd,stars%n2d-1,2,input%jspins)
-      REAL rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),rht(vacuum%nmzd,2,input%jspins)
+      COMPLEX qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      REAL rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
       REAL ptp(3),rngl(3),rngm(3),rngu(3),tl(3),tm(3)
-      REAL tu(3),vx1(3),vx2(3),tl_r(3),tm_r(3),tu_r(3),rhocc(atoms%jmtd)
+      REAL tu(3),vx1(3),vx2(3),tl_r(3),tm_r(3),tu_r(3),rhocc(atoms%jmtd,atoms%ntype,dimension%jspd)
+      REAL tec(atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
       REAL pt(3),a3(3)
       REAL, ALLOCATABLE :: cdn(:,:)
       CHARACTER(len=10), ALLOCATABLE :: plotname(:)
@@ -342,23 +355,16 @@
      &            iter,rho,qpw,rht,rhtxy)
 !
       IF (input%score) THEN
-         OPEN (17,file='cdnc',form='unformatted',status='old')
-         REWIND 17
-!
+         CALL readCoreDensity(input,atoms,dimension,rhocc,tec,qint)
          DO jspin = 1,input%jspins
             DO nt = 1,atoms%ntype
                jm = atoms%jri(nt)
-               READ (17) (rhocc(i),i=1,jm)
                DO i = 1,atoms%jri(nt)
-                  rho(i,0,nt,jspin) = rho(i,0,nt,jspin) - rhocc(i)/sfp
+                  rho(i,0,nt,jspin) = rho(i,0,nt,jspin) - rhocc(i,nt,jspin)/sfp
                ENDDO
-               READ (17) tec
              ENDDO
-            READ (17) qint
-            qpw(1,jspin) = qpw(1,jspin) - qint/cell%volint
+            qpw(1,jspin) = qpw(1,jspin) - qint(nt,jspin)/cell%volint
          ENDDO
-!
-         CLOSE (17)
       END IF
       OPEN (18,file='plotin')
       READ (18,FMT='(7x,l1)') twodim

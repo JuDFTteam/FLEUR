@@ -17,13 +17,13 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:) !(nobd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%natd)
+    COMPLEX, INTENT (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntypd)
-    TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd)
-    TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd)
+    TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype)
+    TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
+    TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lm ,n,na,natom,ilo,ilop,m

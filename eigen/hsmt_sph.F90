@@ -42,8 +42,8 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_socfirst
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
     REAL,INTENT(IN)      :: gk(:,:,:)
     COMPLEX,INTENT(IN)   :: isigma(2,2,3)
     TYPE(t_rsoc),INTENT(IN) :: rsoc
@@ -73,7 +73,7 @@ CONTAINS
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
 
 
-    COMPLEX chi(2,2),chj(2,2,2,atoms%ntypd),aawa(DIMENSION%nvd),bbwa(DIMENSION%nvd)
+    COMPLEX chi(2,2),chj(2,2,2,atoms%ntype),aawa(DIMENSION%nvd),bbwa(DIMENSION%nvd)
     COMPLEX, ALLOCATABLE :: aahlp(:),bbhlp(:)
     LOGICAL apw(0:atoms%lmaxd)
 
@@ -98,8 +98,8 @@ CONTAINS
     !---> calculate the overlap of the radial basis functions with different
     !---> spin directions.
     IF (noco%l_constr) THEN
-       ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntypd),udn21(0:atoms%lmaxd,atoms%ntypd),&
-            dun21(0:atoms%lmaxd,atoms%ntypd),ddn21(0:atoms%lmaxd,atoms%ntypd) )
+       ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
+            dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
        CALL rad_ovlp(atoms,usdus,input,vr,el(0:,:,:), uun21,udn21,dun21,ddn21)
     ENDIF
     !---> loop over each atom type
@@ -199,7 +199,7 @@ CONTAINS
           IF ( noco%l_noco .AND. (n_size.GT.1) ) THEN
              !--->       for EV-parallelization & noco ( see comments at top )
              lapw%nv_tot = lapw%nv(1) + lapw%nv(2)
-             IF (noco%l_ss)  CALL juDFT_error("ev-|| & spin-spiral !",calledby ="hssphn")
+             IF (noco%l_ss)  CALL juDFT_error("ev-parallelization & spin-spiral !",calledby ="hsmt_sph")
           ELSE
              lapw%nv_tot = lapw%nv(iintsp)
           ENDIF

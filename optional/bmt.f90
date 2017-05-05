@@ -2,15 +2,15 @@ MODULE m_bmt
 contains
   SUBROUTINE bmt(&
        & stars,input,noco,atoms,sphhar,vacuum,&
-       & cell,sym)
+       & cell,sym,oneD)
     !
     use m_types
     use m_juDFT
-    USE m_loddop
+    USE m_cdn_io
     USE m_wrtdop
     IMPLICIT NONE
     !     ..
-    TYPE(t_stars),INTENT(IN)     :: stars
+    TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_input),INTENT(INOUT) :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -18,11 +18,16 @@ contains
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_oneD),INTENT(IN)     :: oneD
     INTEGER k,i,ivac  ,it 
-    INTEGER type,typmag 
+    INTEGER type,typmag, archiveType
+    REAL fermiEnergyTemp
+    LOGICAL l_qfix
     CHARACTER(len=8) filename 
     COMPLEX, ALLOCATABLE :: fpw(:,:),fzxy(:,:,:,:)
     REAL,    ALLOCATABLE :: fz(:,:,:),fr(:,:,:,:)
+    COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
+
     !     ..
     !     ..
 
@@ -38,19 +43,15 @@ contains
     !atoms%jmtd = maxval(atoms%jri(:))
     !sphhar%nlhd = maxval(sphhar%nlh(:))
 
-    ALLOCATE( fpw(stars%ng3,input%jspins),fzxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins) )
-    ALLOCATE( fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),fz(vacuum%nmz,2,input%jspins) )
+    ALLOCATE(fpw(stars%ng3,input%jspins),fzxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins))
+    ALLOCATE(fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),fz(vacuum%nmz,2,input%jspins))
+    ALLOCATE(cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
 
-    IF (noco%l_noco) THEN 
-       OPEN (98,file='rhomat_inp',form='unformatted',action='read')
-    ELSE
-       OPEN (98,file='cdn1',form='unformatted',action='read')
-    ENDIF
-    CALL loddop(&
-         & stars,vacuum,atoms,sphhar,input,sym,&
-         & 98,&
-         & it,fr,fpw,fz,fzxy)
-    CLOSE (98)
+    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,it,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
 
     IF ( typmag < atoms%ntype ) THEN 
        DO type= typmag+1,atoms%ntype 
@@ -97,7 +98,8 @@ contains
          & it,fr,fpw,fz,fzxy)
     CLOSE(98) 
 
-    DEALLOCATE( fpw,fzxy,fr,fz)
+    DEALLOCATE(cdom,cdomvz,cdomvxy)
+    DEALLOCATE(fpw,fzxy,fr,fz)
 
   END SUBROUTINE bmt
 END MODULE m_bmt

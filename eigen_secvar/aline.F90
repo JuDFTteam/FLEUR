@@ -53,7 +53,7 @@ CONTAINS
     INTEGER, INTENT (OUT):: ne
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
     REAL,OPTIONAL,    INTENT (IN)  :: a_r(:),b_r(:)!(matsize)
     COMPLEX,OPTIONAL, INTENT (IN)  :: a_c(:),b_c(:)!(matsize)
@@ -82,17 +82,17 @@ CONTAINS
 
 
     lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
+    CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,zmat=zmat)
     IF (l_real) THEN
-       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_r)
        ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
        h_r = 0.0 ; s_r=0.0
        ALLOCATE ( help_r(lhelp) )
     ELSE
-       CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,z=zMat%z_c)
-
        !     in outeig z is complex conjugated to make it usable for abcof. Here we 
        !                       first have to undo this  complex conjugation for the 
-       zMat%z_c = CONJG(zMat%z_c)    ! multiplication with a and b matrices.
+       ! multiplication with a and b matrices.
+
+       zmat%z_c=conjg(zmat%z_c)
        ALLOCATE ( h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd) )
        h_c = 0.0 ; s_c=0.0
        ALLOCATE ( help_r(lhelp) )
@@ -128,8 +128,8 @@ CONTAINS
        END DO
     END DO
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd) )
-    ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%natd) ) 
+    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat) )
+    ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat) ) 
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
     IF (.NOT.l_real) zMat%z_c = CONJG(zMat%z_c)

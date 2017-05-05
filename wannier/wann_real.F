@@ -22,10 +22,9 @@ c     ********************************************************
      >                  nv,k1,k2,k3,lmd,nbasfcn,
      <                  xdnout)
 c
-      USE m_od_types, ONLY : od_inp, od_sym
-      USE m_cotra, ONLY : cotra0,cotra1
+      USE m_types, ONLY : od_inp, od_sym
       USE m_ylm
-      USE m_constants, ONLY : pimach
+      USE m_constants
       IMPLICIT NONE
 c
 C     .. Scalar Arguments ..
@@ -80,7 +79,7 @@ C     ..
       const = 1./(sqrt(omtil))
 
 c..define the factor e^{-ikr}
-      CALL cotra1(p(1),rcc2,bmat)
+      rcc2=matmul(bmat,p)/tpi_const
       arg = -tpi*( bkpt(1)*rcc2(1) + bkpt(2)*rcc2(2) + bkpt(3)*rcc2(3) )
       arg1 = tpi*( bkpt(1)*rcc2(1) + bkpt(2)*rcc2(2) + bkpt(3)*rcc2(3) )
       const2 = cmplx(cos(arg),sin(arg))
@@ -92,7 +91,7 @@ c     write (6,*) 'bkpt,const2,const3=',bkpt(:),const2,const3
       IF (iflag.EQ.0) GO TO 20
       IF (iflag.EQ.1) GO TO 40
 c     ---> interstitial part
-      CALL cotra1(p(1),rcc,bmat)
+      rcc=matmul(bmat,p)/tpi_const
       xdnout = cmplx(0.,0.)
 c     write (6,*) 'nv,nvd=',nv,nvd
       DO 10 k = 1,nv
@@ -133,7 +132,7 @@ c     ----> m.t. part
       sx = sqrt(sx)
       IF (nopa.NE.1) THEN
 c... switch to internal units
-         CALL cotra1(x,rcc,bmat)
+         rcc=matmul(bmat,p)/tpi_const
 c... rotate into representative
          DO 70 i = 1,3
             p(i) = 0.
@@ -146,7 +145,7 @@ c... rotate into representative
    60       CONTINUE
    70    CONTINUE
 c... switch back to cartesian units
-         CALL cotra0(p,x,amat)
+         x=matmul(amat,p)
       END IF
       DO 80 j = jri(n),2,-1
          IF (sx.GE.rmsh(j,n)) GO TO 90

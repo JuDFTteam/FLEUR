@@ -17,6 +17,7 @@ MODULE m_eigen_diag
     USE m_elpa
 #endif
     IMPLICIT NONE
+    PRIVATE
 #ifdef CPP_ELPA
   INTEGER,PARAMETER:: diag_elpa=1
 #else
@@ -39,9 +40,15 @@ MODULE m_eigen_diag
 #endif
   INTEGER,PARAMETER:: diag_lapack=4
   INTEGER,PARAMETER:: diag_lapack2=5
+  PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
+
+  LOGICAL FUNCTION parallel_solver_available()
+    parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
+  END FUNCTION parallel_solver_available
+
   SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
-       sym,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
+       sym,l_zref,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
     USE m_zsymsecloc
     USE m_aline
     USE m_alinemuff
@@ -81,7 +88,7 @@ CONTAINS
     INTEGER,INTENT(IN)  :: ne
     INTEGER,INTENT(OUT) :: ne_found
     REAL,INTENT(IN)     :: el(:,:,:)
-    LOGICAL, INTENT(IN) :: l_wu   
+    LOGICAL, INTENT(IN) :: l_wu,l_zref
     REAL,INTENT(INOUT)  :: bkpt(3)
     TYPE(t_tlmplm),INTENT(IN) :: td
     TYPE(t_usdus),INTENT(IN)  :: ud
@@ -91,8 +98,6 @@ CONTAINS
     LOGICAL,OPTIONAL,INTENT(IN) :: realdata
 
     !Locals
-    REAL :: time1
-    REAL :: time2
     INTEGER :: ndim,err,n,nn,i,ndim1
     LOGICAL :: parallel
     CHARACTER(len=20)::f
@@ -104,6 +109,8 @@ CONTAINS
 #if 1==2
     !This is only needed for debugging
     print *,n_rank,lapw%nmat
+    print *,"SR:",n_size,n_rank
+    print *,mpi
     write(f,'(a,i0)') "a.",n_rank
     open(99,file=f)
     write(f,'(a,i0)') "b.",n_rank
@@ -112,14 +119,13 @@ CONTAINS
     DO n=n_rank+1,lapw%nmat,n_size
        DO nn=1,n
           i=i+1
-          write(99,'(2(i10,1x),4(f15.4,1x))') n,nn,a(i)
-          write(98,'(2(i10,1x),4(f15.4,1x))') n,nn,b(i)
+          write(99,'(2(i10,1x),4(f15.8,1x))') n,nn,hamOvlp%a_c(i)
+          write(98,'(2(i10,1x),4(f15.8,1x))') n,nn,hamOvlp%b_c(i)
        ENDDO
     ENDDO
     CALL MPI_BARRIER(MPI_COMM_WORLD,err)
     close(99)
      close(98)
-    STOP 'DEBUG'
 #endif
     
     !
@@ -162,10 +168,13 @@ CONTAINS
        SELECT CASE (priv_select_solver(parallel))
 #ifdef CPP_ELPA
        CASE (diag_elpa)
+          CALL MPI_COMM_RANK(sub_comm,n,err)
+          write(*,*) "DIAG:",mpi%irank,sub_comm,n
+          write(*,*) "ELPA:",mpi%irank,lapw%nmat,ne_found,size(eig),ndim,ndim1
           IF (hamovlp%l_real) THEN
-              CALL elpa(lapw%nmat,n,SUB_COMM,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,eig,ne_found)
+              CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,eig,ne_found)
           ELSE
-              CALL elpa(lapw%nmat,n,SUB_COMM,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c,eig,ne_found)
+              CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c,eig,ne_found)
           ENDIF
 #endif
 #ifdef CPP_ELEMENTAL
@@ -179,24 +188,31 @@ CONTAINS
 #endif
 #ifdef CPP_SCALAPACK
        CASE (diag_scalapack)
-          CALL chani(lapw%nmat,dimension%nbasfcn/n_size,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp,zMat)
+          CALL chani(lapw%nmat,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp,zMat)
 #endif
 #ifdef CPP_MAGMA
        CASE (diag_magma)
-          CALL magma_diag(lapw%nmat,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+          if (l_real) THEN
+             call juDFT_error("REAL diagonalization not implemented in magma.F90")
+          else
+             print *,"Start magma_diag"
+             CALL magma_diag(lapw%nmat,eig,ne_found,a_c=hamOvlp%a_c,b_c=hamOvlp%b_c,z_c=zMat%z_c)
+          endif
 #endif
        CASE (diag_lapack2)
           if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
           if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
           IF (l_real) THEN
-          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
+#ifndef __PGI
+          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
                 jij,matind,nred,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r)
        else
-          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,cell, dimension,matsize,ndim,&
+          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
                jij,matind,nred,eig,ne_found,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+#endif
        endif
        CASE (diag_lapack)
-          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(sym%l_zref.AND.(atoms%nlotot.EQ.0)),&
+          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(l_zref.AND.(atoms%nlotot.EQ.0)),&
                       jij%l_j,matind,nred,input%gw,eig,ne_found,hamOvlp,zMat)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
@@ -255,6 +271,7 @@ CONTAINS
     if (any((/diag_elpa,diag_elemental,diag_scalapack/)==diag_solver).and..not.parallel) call priv_solver_error(diag_solver,parallel)
 
   END FUNCTION priv_select_solver
+
 
   SUBROUTINE priv_solver_error(diag_solver,parallel)
     IMPLICIT NONE

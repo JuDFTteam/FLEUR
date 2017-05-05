@@ -67,17 +67,15 @@
           CHARACTER(len=12) :: relcor
           !     ..
           !     .. Local Arrays ..
-          CHARACTER(3) noel(atoms%ntypd)
+          CHARACTER(3) noel(atoms%ntype)
           CHARACTER(8) llr(0:1)
-          CHARACTER(11) pmod(0:1)
-          INTEGER  jri1(atoms%ntypd),lmax1(atoms%ntypd)
-          REAL    rmt1(atoms%ntypd),dx1(atoms%ntypd)
+          INTEGER  jri1(atoms%ntype),lmax1(atoms%ntype)
+          REAL    rmt1(atoms%ntype),dx1(atoms%ntype)
           REAL    a1(3),a2(3),a3(3)
 
           !     ..
           !     .. Data statements ..
           DATA llr(0)/'absolute'/,llr(1)/'floating'/
-          DATA pmod(0)/'not printed'/,pmod(1)/'printed    '/
           !
 
           a1(:) = 0
@@ -291,7 +289,7 @@
           ENDIF
           !-guta
           !     specification of atoms
-          IF (atoms%ntype.GT.atoms%ntypd) THEN
+          IF (atoms%ntype.GT.atoms%ntype) THEN
              WRITE (6,FMT='(a)') 'ntype > ntypd !!!'
              WRITE (16,FMT='(a)') 'ntype > ntypd !!!'
              CALL juDFT_error("ntypd",calledby ="inped")
@@ -342,7 +340,7 @@
 
              DO n1 = 1,atoms%neq(n)
                 na = na + 1
-                IF (na>atoms%natd)  CALL juDFT_error("natd too small",calledby ="inped")
+                IF (na>atoms%nat)  CALL juDFT_error("natd too small",calledby ="inped")
                 !
                 !--->    the in-plane coordinates refer to the lattice vectors a1 and a2,
                 !--->    i.e. they are given in internal units scaled by 'scpos'
@@ -394,13 +392,6 @@
              ENDDO
           ENDDO
           !
-          !--->    input various parameters for eigenvalue parts: see intro. to
-          !--->    eigen for the various values:
-          !--->    lpr=0,form66=f,l_f=f,eonly=f   is an example.
-          IF (ALL(obsolete%lpr.NE.(/0,1/))) CALL judft_error("Wrong choice of lpr",calledby="inped")
-
-          !
-          !--->    lnonsph(n): max. l for H -setup in each atom type;
           !
           IF (input%l_useapw) THEN
 
@@ -418,13 +409,11 @@
           !--->    parameters given on absolute (floating) scale
           WRITE (16,FMT=*) 'nwd=',1,'lepr=',obsolete%lepr
           IF (ALL(obsolete%lepr .NE. (/0,1/))) CALL judft_error("Wrong choice of lepr",calledby="inped")
-          WRITE (6,FMT=8320) pmod(obsolete%lpr),obsolete%form66,input%l_f,input%eonly,1,llr(obsolete%lepr)
-          WRITE (16,FMT=8320) pmod(obsolete%lpr),obsolete%form66,input%l_f,input%eonly,1,llr(obsolete%lepr)
+          WRITE (6,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
+          WRITE (16,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
           WRITE (6,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
           WRITE (16,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
 8320      FORMAT (1x,/,/,/,' input of parameters for eigenvalues:',/,t5,&
-               &       'eigenvectors are ',a11,/,t5,&
-               &       'formatted eigenvector file = ',l1,/,t5,&
                &       'calculate Pulay-forces = ',l1,/,t5,'eigenvalues ',&
                &       'only = ',l1,/,t5,'number of energy windows =',i2,/,t5,&
                &       'energy parameter mode: ',a8,/,/)

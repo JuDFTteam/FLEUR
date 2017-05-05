@@ -30,11 +30,11 @@ CONTAINS
     INTEGER, INTENT (IN)  :: itype
     INTEGER, INTENT (IN)  :: jspin
     REAL,    INTENT (IN)  :: emcd_up,emcd_lo
-    REAL,    INTENT (IN)  :: vr(atoms%jmtd,atoms%ntypd,input%jspins)
+    REAL,    INTENT (IN)  :: vr(atoms%jmtd,atoms%ntype,input%jspins)
     REAL,    INTENT (IN)  :: f(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
     REAL,    INTENT (IN)  :: g(atoms%jmtd,2,0:atoms%lmaxd,jspin:jspin)
-    INTEGER, INTENT (OUT) :: ncore(atoms%ntypd)
-    REAL,    INTENT (OUT) :: e_mcd(atoms%ntypd,input%jspins,DIMENSION%nstd)
+    INTEGER, INTENT (OUT) :: ncore(atoms%ntype)
+    REAL,    INTENT (OUT) :: e_mcd(atoms%ntype,input%jspins,DIMENSION%nstd)
     COMPLEX, INTENT (OUT) :: m_mcd(:,:,:,:)
 
     ! Locals ...
@@ -143,7 +143,7 @@ CONTAINS
 
              DO i = 1, 2
                 !              write(*,*) j_core(icore),l_core(icore),l_max,ms
-                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),DIMENSION%nstd,atoms%ntypd,&
+                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),DIMENSION%nstd,atoms%ntype,&
                      j_core(icore),l_core(icore),l_max,ms,atoms%rmsh(:,itype),gc(:,icore,ispin),&
                      gv(:,0:,ispin,i),dgv(:,0:,ispin,i), m_mcd(:,:,:,i) )
              ENDDO

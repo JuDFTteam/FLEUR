@@ -34,8 +34,8 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_socfirst
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL,INTENT(IN)      :: gk(:,:,:)
     COMPLEX,INTENT(IN)   :: isigma(2,2,3)
     TYPE(t_rsoc),INTENT(IN) :: rsoc

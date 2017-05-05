@@ -16,15 +16,19 @@ MODULE m_vmtxcg
   !     avoid a least square fit
   !     ** r.pentcheva 04.03.96
   !     *********************************************************
-  !
+  !     MPI and OpenMP parallelization
+  !             U.Alekseeva, February 2017
+  !     *********************************************************
+
 CONTAINS
   SUBROUTINE vmtxcg(&
-       &                dimension,sphhar,atoms,&
+       &                dimension,mpi,sphhar,atoms,&
        &                rho,xcpot,input,sym,&
        &                obsolete,&
        &                vxr,vr,rhmn,ichsmrg,&
        &                excr)
 
+#include"cpp_double.h"
     USE m_lhglptg
     USE m_grdchlh
     USE m_mkgylm
@@ -36,12 +40,13 @@ CONTAINS
 
     TYPE(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_mpi),INTENT(IN)         :: mpi
     TYPE(t_obsolete),INTENT(IN)    :: obsolete
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
-#ifdef CPP_MPI_OK
+#ifdef CPP_MPI
     include "mpif.h"
 #endif
     !     ..
@@ -50,10 +55,10 @@ CONTAINS
     REAL,    INTENT(INOUT):: rhmn
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (INOUT):: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (INOUT):: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
-    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)
+    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (OUT):: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (INOUT):: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER jr,js,k,lh,n,nd,ist,nsp,ixpm ,i,nat
@@ -62,7 +67,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL vx(dimension%nspd,dimension%jspd),vxc(dimension%nspd,dimension%jspd),exc(dimension%nspd),rx(3,dimension%nspd)
-    REAL vxl(dimension%nspd,dimension%jspd),vxcl(dimension%nspd,dimension%jspd),excl(dimension%nspd),divi
+!    REAL vxl(dimension%nspd,dimension%jspd),vxcl(dimension%nspd,dimension%jspd),excl(dimension%nspd),divi
     REAL wt(dimension%nspd),rr2(atoms%jmtd),thet(dimension%nspd)
     REAL agr(dimension%nspd),agru(dimension%nspd),agrd(dimension%nspd),g2r(dimension%nspd),g2ru(dimension%nspd)
     REAL g2rd(dimension%nspd),gggr(dimension%nspd),gggru(dimension%nspd),gggrd(dimension%nspd)
@@ -76,8 +81,14 @@ CONTAINS
 
     !locals for mpi
     integer :: ierr
-    real,allocatable:: buffer(:)
     integer:: n_start,n_stride
+#ifdef CPP_MPI
+    REAL :: vr_local(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL :: vxr_local(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)  
+    REAL :: excr_local(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    INTEGER :: ichsmrg_local
+    REAL :: rhmn_local, rhmn_reduced
+#endif    
     !     ..
     !     .. Intrinsic Functions ..
     INTRINSIC max,mod,min
@@ -85,7 +96,14 @@ CONTAINS
     !.....------------------------------------------------------------------
 
 
-
+#ifdef CPP_MPI
+    CALL MPI_BCAST(obsolete%ndvgrd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    vr_local = 0.d0
+    vxr_local = 0.d0
+    excr_local = 0.d0
+    rhmn_local = rhmn
+#endif
+    vxr = 0.d0
 
     lwbc=.false.
 
@@ -119,38 +137,18 @@ CONTAINS
     !
 
 
-#ifdef CPP_MPI_OK
-    CALL MPI_COMM_RANK(MPI_COMM,mpi%irank,ierr)
-    CALL MPI_COMM_SIZE(MPI_COMM,mpi%isize,ierr)
-
+#ifdef CPP_MPI
     n_start=mpi%irank+1
     n_stride=mpi%isize
-
-    IF (mpi%irank>0) THEN
-       vxr=0.0
-       vr=0.0
-    ENDIF
-    excr=0.0
-
 #else
     n_start=1
     n_stride=1
 #endif
 
-
-    !$OMP PARALLEL DO DEFAULT(SHARED)&
-    !$OMP& PRIVATE(jr,js,k,lh,n,nd,nat,i,rhmnm,elh,vlh)&
-    !$OMP& PRIVATE(vx,vxc,exc,vxl,vxcl,excl,divi,rr2)&
-    !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd)&
-    !$OMP& PRIVATE(grgru,grgrd,gzgr,chlh,chlhdr,chlhdrr,ch,chdr,chdt)&
-    !$OMP& PRIVATE(chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
-    DO 200 n = 1,atoms%ntype
-       ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
-            &       chdf(dimension%nspd,dimension%jspd),chdrr(dimension%nspd,dimension%jspd),chdtt(dimension%nspd,dimension%jspd),&
-            &       chdff(dimension%nspd,dimension%jspd),chdtf(dimension%nspd,dimension%jspd),chdrt(dimension%nspd,dimension%jspd),&
-            &       chdrf(dimension%nspd,dimension%jspd),chlh(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),&
+    ALLOCATE ( chlh(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),&
             &       chlhdr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),chlhdrr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd))
 
+    DO 200 n = n_start,atoms%ntype,n_stride
 
        nat=sum(atoms%neq(:n-1))+1
        nd = atoms%ntypsy(nat)
@@ -181,9 +179,30 @@ CONTAINS
 
           ENDDO ! js
        ENDDO   ! lh
+       
        !
        !-->    loop over radial mesh 
        !
+       !$OMP PARALLEL DEFAULT(none) &
+#ifdef CPP_MPI
+       !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local, rhmn_reduced) &
+#endif
+       !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg) &
+       !$OMP& SHARED(dimension,mpi,sphhar,atoms,rho,xcpot,input,sym,obsolete)&
+       !$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
+       !$OMP& SHARED(rx,wt,rr2,thet) &
+       !$OMP& SHARED(ylh,ylht,ylhtt,ylhf,ylhff,ylhtf) &
+       !$OMP& SHARED(chlh,chlhdr,chlhdrr) &
+       !$OMP& SHARED(ierr,n_start,n_stride) &
+       !$OMP& PRIVATE(js,k,lh,i,rhmnm,elh,vlh) &
+       !$OMP& PRIVATE(vx,vxc,exc) &
+       !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,grgru,grgrd,gzgr) &
+       !$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
+       ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
+            &       chdf(dimension%nspd,dimension%jspd),chdrr(dimension%nspd,dimension%jspd),chdtt(dimension%nspd,dimension%jspd),&
+            &       chdff(dimension%nspd,dimension%jspd),chdtf(dimension%nspd,dimension%jspd),chdrt(dimension%nspd,dimension%jspd),&
+            &       chdrf(dimension%nspd,dimension%jspd))
+       !$OMP DO 
        DO 190 jr = 1,atoms%jri(n)
           !
           !         following are at points on jr-th sphere.
@@ -257,10 +276,18 @@ CONTAINS
              ENDDO
           ENDDO
 
+#ifdef CPP_MPI 
+          IF (rhmnm.LT.rhmn_local) THEN
+             !$OMP ATOMIC WRITE
+             rhmn_local = rhmnm
+          ENDIF
+#else
           IF (rhmnm.LT.rhmn) THEN
+             !$OMP ATOMIC WRITE
              rhmn = rhmnm
              ichsmrg = 1
           ENDIF
+#endif
 
           IF (rhmn.LT.obsolete%chng) THEN
              WRITE (6,'(/'' rhmn.lt.obsolete%chng in vmtxc. rhmn,obsolete%chng='',&
@@ -271,19 +298,24 @@ CONTAINS
           !
           !         calculate the ex.-cor. potential
 
-          IF (mod(jr,1000).eq.0)&
-               &      WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp,iwb='',5i5,l3/&
-               &            '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
-               &            nsp,lwbc,((ch(k,js),k=1,nsp),js=1,input%jspins)
+          IF (mpi%irank == 0) THEN
+             IF (mod(jr,1000).eq.0)&
+                  &      WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp,iwb='',5i5,l3/&
+                  &            '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
+                  &            nsp,lwbc,((ch(k,js),k=1,nsp),js=1,input%jspins)
+          ENDIF !irank==0
 
           CALL vxcallg(&
                &                 xcpot%icorr,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
                &                 vx,vxc)!keep
 
+
+          IF (mpi%irank == 0) THEN
           IF (mod(jr,1000).eq.0)&
                &              WRITE (6,'(/'' 999vxc''/(10d15.7))')&
                &                    ((vxc(k,js),k=1,nsp),js=1,input%jspins)
+          ENDIF !irank==0
 
 
           !         now determine the corresponding potential number
@@ -297,10 +329,12 @@ CONTAINS
                 vxc(k,js) = vxc(k,js)*wt(k)
              ENDDO
 
-             IF (mod(jr,1500).EQ.0)&
-                  &        WRITE (6,'('' 999wt''/(10d15.7))') (wt(k),k=1,nsp)
-             IF (mod(jr,1500).EQ.0)&
-                  &        WRITE (6,'('' 999vxc''/(10d15.7))') (vxc(k,js),k=1,nsp)
+             IF (mpi%irank == 0) THEN
+                IF (mod(jr,1500).EQ.0)&
+                     &        WRITE (6,'('' 999wt''/(10d15.7))') (wt(k),k=1,nsp)
+                IF (mod(jr,1500).EQ.0)&
+                     &        WRITE (6,'('' 999vxc''/(10d15.7))') (vxc(k,js),k=1,nsp)
+             ENDIF !irank==0
 
              DO lh = 0,sphhar%nlh(nd)
                 !
@@ -308,7 +342,11 @@ CONTAINS
                 !c            through gauss integration
                 !
                 vlh=dot_product(vxc(:nsp,js),ylh(:nsp,lh,nd))
+#ifdef CPP_MPI             
+                vr_local(jr,lh,n,js) = vr_local(jr,lh,n,js) + vlh
+#else
                 vr(jr,lh,n,js) = vr(jr,lh,n,js) + vlh
+#endif
 
                 ! --->        add to the given potential
 
@@ -319,30 +357,36 @@ CONTAINS
                 ENDIF
 
                 vlh=dot_product(vx(:nsp,js),ylh(:nsp,lh,nd))
-             
+
+#ifdef CPP_MPI             
+                vxr_local(jr,lh,n,js) = vxr_local(jr,lh,n,js) + vlh
+#else
                 vxr(jr,lh,n,js) = vxr(jr,lh,n,js) + vlh
+#endif
 
              ENDDO ! lh
           ENDDO   ! js
-
 
           IF (input%total) then
              !
              !           calculate the ex.-cor energy density
              !
+             IF (mpi%irank == 0) THEN
              IF (mod(jr,2500).EQ.0)&
                   &        WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp='',5i5/&
                   &               '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
                   &               nsp,((ch(k,js),k=1,nsp),js=1,input%jspins)
+             ENDIF !irank==0
 
              CALL excallg(xcpot%icorr,lwbc,input%jspins,nsp,&
                   &                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
                   &                   gggr,gggru,gggrd,gzgr,&
                   &                   exc)!keep
 
-
+             IF (mpi%irank == 0) THEN
              IF (mod(jr,10000).EQ.0)&
                   &        WRITE (6,'(/'' 999exc''/(10d15.7))') (exc(k),k=1,nsp)
+             ENDIF !irank==0
 
           ENDIF
 
@@ -363,38 +407,38 @@ CONTAINS
              DO k = 1,nsp
                 elh = elh + exc(k)*ylh(k,lh,nd)
              ENDDO
+#ifdef CPP_MPI
+             excr_local(jr,lh,n) =  elh
+#else
              excr(jr,lh,n) =  elh
+#endif
 
           ENDDO
 
 190    ENDDO
+       !$OMP END DO
+       DEALLOCATE (ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
+       !$OMP END PARALLEL 
 
        !        WRITE(6,'(/'' n='',i3/'' 9999vr''/(10d15.7))') n,
        !     &   (((vr(jr,lh,n,js),jr=1,jri(n),100),lh=0,ntypsy(nat)),js=1,jspins)
        !        WRITE(6,'(/'' 9999excr''/(10d15.7))')
        !     &   ((excr(jr,lh,n),jr=1,jri(n),100),lh=0,ntypsy(nat))
 
-       DEALLOCATE (ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
-       DEALLOCATE (chlh,chlhdr,chlhdrr)
-
-
 200 ENDDO
-    !$OMP END PARALLEL DO
-#ifdef CPP_MPI_OK
-    if (mpi%irank==0) allocate(buffer(size(vxr))
+    DEALLOCATE (chlh,chlhdr,chlhdrr)
 
-    CALL MPI_REDUCE(vxr,buffer,size(vxr),CPP_MPI_REAL,MPI_SUM,0,&
-         &                                mpi,ierr)
-    IF (mpi%irank==0) vxr=reshape(buffer,shape(vxr))
-
-    CALL MPI_REDUCE(vr,buffer,size(vxr),CPP_MPI_REAL,MPI_SUM,0,&
-         &                                mpi,ierr)
-    IF (mpi%irank==0) vr=reshape(buffer,shape(vr))
-
-    CALL MPI_REDUCE(excr,buffer,size(excr),CPP_MPI_REAL,MPI_SUM,0,&
-         &                                mpi,ierr)
-    IF (mpi%irank==0) excr=reshape(buffer(:size(excr)),shape(excr))
-    IF (mpi%irank==0) deallocate(buffer)
+#ifdef CPP_MPI
+    CALL MPI_ALLREDUCE(vxr_local,vxr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
+    !using vxr_local as a temporal buffer
+    CALL MPI_ALLREDUCE(vr_local,vxr_local,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+    vr = vr + vxr_local
+    CALL MPI_ALLREDUCE(excr_local,excr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+     CALL MPI_ALLREDUCE(rhmn_local,rhmn_reduced,1,MPI_INTEGER,MPI_MIN,mpi%mpi_comm,ierr)
+     IF (rhmn_reduced.LT.rhmn) THEN
+             rhmn = rhmn_reduced
+             ichsmrg = 1
+     ENDIF
 #endif
     !
 

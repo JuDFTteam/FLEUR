@@ -39,7 +39,7 @@ MODULE m_tlmplm
     !     ..
     !     .. Array Arguments ..
 
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)   ! this is for the
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)   ! this is for the
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
@@ -59,8 +59,8 @@ MODULE m_tlmplm
     REAL uvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,lh0:sphhar%nlhd )
     REAL f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd),x(atoms%jmtd)
     REAL flo(atoms%jmtd,2,atoms%nlod)
-    REAL uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-    REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+    REAL uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+    REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 
 #ifdef CPP_MPI
      INCLUDE 'mpif.h'
@@ -76,14 +76,14 @@ MODULE m_tlmplm
     !--->    generate the wavefunctions for each l
     !
     l_write=mpi%irank==0
-    !$    l_write=.false.
-    !$    call gaunt2(atoms%lmaxd)
-    !$OMP PARALLEL DO DEFAULT(NONE)&
-    !$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
-    !$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
-    !$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
-    !$OMP PRIVATE(nodeu,nsym,na)&
-    !$OMP SHARED(dimension,atoms,gwc,lh0,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
+    !!$    l_write=.false.
+    !!$    call gaunt2(atoms%lmaxd)
+    !!$OMP PARALLEL DO DEFAULT(NONE)&
+    !!$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
+    !!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
+    !!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
+    !!$OMP PRIVATE(nodeu,nsym,na)&
+    !!$OMP SHARED(dimension,atoms,gwc,lh0,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
     DO  n = 1,atoms%ntype
        na=sum(atoms%neq(:n-1))+1
 
@@ -250,7 +250,7 @@ MODULE m_tlmplm
        ENDIF
 
     ENDDO
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
 
   END SUBROUTINE tlmplm

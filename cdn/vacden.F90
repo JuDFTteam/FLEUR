@@ -12,7 +12,7 @@ CONTAINS
        we,ikpt,jspin,vz,vz0,&
        ne,bkpt,lapw,&
        evac,eig,rhtxy,rht,qvac,qvlay,&
-       stcoeff,cdomvz,cdomvxy,zMat,realdata)
+       stcoeff,cdomvz,cdomvxy,zMat)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -76,8 +76,8 @@ CONTAINS
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
     REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
-    REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkptd,DIMENSION%jspd)
-    REAL qvac(DIMENSION%neigd,2,kpts%nkptd,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
+    REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
     COMPLEX, INTENT (INOUT):: cdomvz(vacuum%nmzd,2)
     COMPLEX, INTENT (INOUT):: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     !
@@ -86,8 +86,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
     !
-    LOGICAL,OPTIONAL,INTENT(IN)::realdata
-
     !     local STM variables
     INTEGER nv2(DIMENSION%jspd)
     INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd),map2(DIMENSION%nvd,DIMENSION%jspd)
@@ -122,12 +120,6 @@ CONTAINS
     REAL,    ALLOCATABLE :: u_1(:,:,:,:),ue_1(:,:,:,:)
     !+odim
     !     ..
-    LOGICAL ::l_real
-    IF (PRESENT(realdata)) THEN
-       l_real=realdata
-    ELSE
-       l_real=zMat%l_real
-    ENDIF
     !     ..
 
     !     *******************************************************************************
@@ -337,7 +329,7 @@ CONTAINS
                               CMPLX(-dt_1(l,m)*bess(m) +&
                               t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                               ((wronk_1)*SQRT(cell%omtil))
-                         IF (l_real) THEN
+                         IF (zmat%l_real) THEN
                             ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*av_1
                             bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*bv_1
                          ELSE
@@ -380,7 +372,7 @@ CONTAINS
                    av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
                    bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                    !     -----> loop over basis functions
-                   IF (l_real) THEN
+                   IF (zmat%l_real) THEN
                       ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_r(kspin,:ne)*av
                       bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_r(kspin,:ne)*bv
                    ELSE
@@ -437,7 +429,7 @@ CONTAINS
                            CMPLX(-dt_1(l,m)*bess(m) +&
                            t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                            ((wronk_1)*SQRT(cell%omtil))
-                      IF (l_real) THEN
+                      IF (zmat%l_real) THEN
                          ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*av_1
                          bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*bv_1
                       ELSE
@@ -475,7 +467,7 @@ CONTAINS
                 av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
                 bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                 !     -----> loop over basis functions
-                IF (l_real) THEN
+                IF (zmat%l_real) THEN
                    ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_r(k,:ne)*av
                    bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_r(k,:ne)*bv
                 ELSE
@@ -939,7 +931,7 @@ CONTAINS
                                m3 = m-m1
                                IF (m3.EQ.0 .AND. i3.EQ.0) CYCLE mprimee
                                IF (iabs(m3).GT.oneD%odi%M) CYCLE mprimee
-                               IF (iabs(i3).GT.stars%k3d) CYCLE lprimee
+                               IF (iabs(i3).GT.stars%mx3) CYCLE lprimee
                                ind1 = oneD%odi%ig(i3,m3)
                                ind1p = oneD%odi%ig(-i3,-m3)
                                IF (ind1.NE.0 .OR. ind1p.NE.0) THEN
@@ -1019,7 +1011,7 @@ CONTAINS
                             i3 = kvac3(l,1) - kvac3(l1,2)
                             m3 = m-m1
                             IF (iabs(m3).GT.oneD%odi%M) CYCLE mprimea
-                            IF (iabs(i3).GT.stars%k3d) CYCLE lprimea
+                            IF (iabs(i3).GT.stars%mx3) CYCLE lprimea
                             ind1 = oneD%odi%ig(i3,m3)
                             IF (ind1.NE.0) THEN
                                IF (m3.EQ.0 .AND. i3.EQ.0) THEN
@@ -1132,7 +1124,7 @@ CONTAINS
                             m3 = m-m1
                             IF (m3.EQ.0 .AND. i3.EQ.0) CYCLE mprime
                             IF (iabs(m3).GT.oneD%odi%M) CYCLE mprime
-                            IF (iabs(i3).GT.stars%k3d) CYCLE lprime
+                            IF (iabs(i3).GT.stars%mx3) CYCLE lprime
                             ind1 = oneD%odi%ig(i3,m3)
                             ind1p = oneD%odi%ig(-i3,-m3)
                             IF (ind1.NE.0 .OR. ind1p.NE.0) THEN

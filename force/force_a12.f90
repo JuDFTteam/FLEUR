@@ -27,13 +27,13 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(nobd) 
-    COMPLEX, INTENT (IN) ::  acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) ::  bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) :: e1cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) :: e2cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd )
-    COMPLEX, INTENT (IN) :: acoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (INOUT) :: f_a12(3,atoms%ntypd)
+    COMPLEX, INTENT (IN) ::  acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) ::  bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) :: e1cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) :: e2cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    COMPLEX, INTENT (IN) :: acoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: f_a12(3,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX a12,cil1,cil2

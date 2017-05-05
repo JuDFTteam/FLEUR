@@ -18,7 +18,7 @@ CONTAINS
     USE m_types
     USE m_dimen7
     USE m_firstglance
-    USE m_constants
+    USE m_writeOutHeader
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(INOUT) :: mpi
     TYPE(t_input),INTENT(INOUT) :: input
@@ -48,37 +48,35 @@ CONTAINS
     oneD%odd%d1=.TRUE.
     l_kpts=.TRUE.
 
-    IF (mpi%irank.EQ.0) call priv_hello(version_const)
-
     WRITE (6,*) 'Your parameters: '
 
 
     OPEN (1,file='fl7para',form='formatted',status='old',err=200) ! La
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,901,ERR=200,END=200) sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d
-    IF (mpi%irank.EQ.0) WRITE (6,1001) sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d
+    READ (1,901,ERR=200,END=200) sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2
+    IF (mpi%irank.EQ.0) WRITE (6,1001) sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2
 901 FORMAT (22x,i2,5x,i3,5x,i3,5x,i3,5x,i6,5x,i4)
-1001 FORMAT (6x,'parameter (sym%nop= ',i2,',stars%k1d=',i3,',stars%k2d=',i3,',stars%k3d=',&
-         &   i3,',stars%n3d=',i6,',stars%n2d=',i4,')')
+1001 FORMAT (6x,'parameter (sym%nop= ',i2,',stars%mx1=',i3,',stars%mx2=',i3,',stars%mx3=',&
+         &   i3,',stars%ng3=',i6,',stars%ng2=',i4,')')
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,910,ERR=200,END=200) stars%kq1d,stars%kq2d,stars%kq3d
-    IF (mpi%irank.EQ.0) WRITE (6,1010) stars%kq1d,stars%kq2d,stars%kq3d
+    READ (1,910,ERR=200,END=200) stars%kq1_fft,stars%kq2_fft,stars%kq3_fft
+    IF (mpi%irank.EQ.0) WRITE (6,1010) stars%kq1_fft,stars%kq2_fft,stars%kq3_fft
 910 FORMAT (22x,i3,6x,i3,6x,i3)
-1010 FORMAT (6x,'parameter (stars%kq1d=',i3,',stars%kq2d=',i3,',stars%kq3d=',i3,')')
+1010 FORMAT (6x,'parameter (stars%kq1_fft=',i3,',stars%kq2_fft=',i3,',stars%kq3_fft=',i3,')')
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,914,ERR=200,END=200) stars%kxc1d,stars%kxc2d,stars%kxc3d
-    IF (mpi%irank.EQ.0) WRITE (6,1014) stars%kxc1d,stars%kxc2d,stars%kxc3d
+    READ (1,914,ERR=200,END=200) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
+    IF (mpi%irank.EQ.0) WRITE (6,1014) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
 914 FORMAT (23x,i3,7x,i3,7x,i3)
-1014 FORMAT (6x,'parameter (stars%kxc1d=',i3,',stars%kxc2d=',i3,',stars%kxc3d=',i3,')')
+1014 FORMAT (6x,'parameter (stars%kxc1_fft=',i3,',stars%kxc2_fft=',i3,',stars%kxc3_fft=',i3,')')
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,902,ERR=200,END=200) atoms%ntypd,atoms%natd,atoms%jmtd
-    IF (mpi%irank.EQ.0) WRITE (6,1002) atoms%ntypd,atoms%natd,atoms%jmtd
+    READ (1,902,ERR=200,END=200) atoms%ntype,atoms%nat,atoms%jmtd
+    IF (mpi%irank.EQ.0) WRITE (6,1002) atoms%ntype,atoms%nat,atoms%jmtd
 902 FORMAT (23x,i3,6x,i3,6x,i4)
-1002 FORMAT (6x,'parameter (atoms%ntypd=',i3,',atoms%natd=',i3,',atoms%jmtd=',i4,')')
+1002 FORMAT (6x,'parameter (atoms%ntype=',i3,',atoms%nat=',i3,',atoms%jmtd=',i4,')')
 
     READ (1,*,ERR=200,END=200)     
     READ (1,903,ERR=200,END=200) sphhar%ntypsd,sphhar%nlhd,sphhar%memd
@@ -105,8 +103,8 @@ CONTAINS
 1006 FORMAT(6x,'parameter (vacuum%nmzd=',i3,',vacuum%nmzxyd=',i3,')')
 
     READ (1,*,ERR=200,END=200)     
-    READ (1,909,ERR=200,END=200) dimension%nvd,dimension%nv2d,kpts%nkptd
-    IF (mpi%irank.EQ.0) WRITE (6,1009) dimension%nvd,dimension%nv2d,1,kpts%nkptd
+    READ (1,909,ERR=200,END=200) dimension%nvd,dimension%nv2d,kpts%nkpt
+    IF (mpi%irank.EQ.0) WRITE (6,1009) dimension%nvd,dimension%nv2d,1,kpts%nkpt
 909 FORMAT (21x,i5,6x,i4,6x,i1,7x,i5,6x,i4)
 1009 FORMAT(6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=1',',nkptd=',i5,')')
 
@@ -149,7 +147,7 @@ CONTAINS
 917    FORMAT (20x,i3,4x,i3,7x,i3,5x,i3,5x,i3,5x,i3,5x,i6,4x,l1)
 1017   FORMAT (6x,'parameter (vM=',i3,',MM=',i3,',m_cyl=',i3,&
             &     ',chi=',i3,&
-            &     ',rot=',i3,',sym%nop=',i3,',stars%n2d=',i6,',d1=',l1,')')
+            &     ',rot=',i3,',sym%nop=',i3,',stars%ng2=',i6,',d1=',l1,')')
        !+odim
     END IF
     dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
@@ -171,11 +169,11 @@ CONTAINS
             &                    n1,n2,n3,n5,n6,input%itmax,&
             &                    l_kpts,l_qpts,ldum,n7,n8,n9,n10)
        !
-       IF (n1>atoms%ntypd)   CALL juDFT_error("atoms%ntypd  too small in fl7para" ,calledby ="dimens")
+       IF (n1>atoms%ntype)   CALL juDFT_error("atoms%ntype  too small in fl7para" ,calledby ="dimens")
        IF (n2.LT.24) THEN
           IF (n2>sym%nop )    CALL juDFT_error("sym%nop   too small in fl7para" ,calledby ="dimens")
        ENDIF
-       IF (n3>atoms%natd )   CALL juDFT_error("atoms%natd   too small in fl7para" ,calledby ="dimens")
+       IF (n3>atoms%nat )   CALL juDFT_error("atoms%nat   too small in fl7para" ,calledby ="dimens")
        IF (n5>atoms%nlod )   CALL juDFT_error("atoms%nlod   too small in fl7para" ,calledby ="dimens")
        IF (n6>vacuum%layerd)  CALL juDFT_error("vacuum%layerd too small in fl7para" ,calledby ="dimens")
        IF ((.not.l_kpts).OR.(.not.l_qpts))  GOTO 201
@@ -207,17 +205,17 @@ CONTAINS
     ENDIF
     !     in case of a parallel calculation we have to broadcast
 #ifdef CPP_MPI
-    i_vec = (/sym%nop,stars%k1d,stars%k2d,stars%k3d,stars%n3d,stars%n2d,stars%kq1d,stars%kq2d,stars%kq3d,stars%kxc1d,stars%kxc2d,stars%kxc3d&
-         &     ,atoms%ntypd,atoms%natd,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,dimension%jspd,vacuum%nvacd,dimension%nvd,dimension%nv2d&
-         &     ,1,kpts%nkptd,dimension%nstd,dimension%neigd,dimension%msh,dimension%ncvd,vacuum%layerd,atoms%nlod,atoms%llod,input%itmax/)
+    i_vec = (/sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft&
+         &     ,atoms%ntype,atoms%nat,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,dimension%jspd,vacuum%nvacd,dimension%nvd,dimension%nv2d&
+         &     ,1,kpts%nkpt,dimension%nstd,dimension%neigd,dimension%msh,dimension%ncvd,vacuum%layerd,atoms%nlod,atoms%llod,input%itmax/)
     CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
-    sym%nop=i_vec(1);stars%k1d=i_vec(2);stars%k2d=i_vec(3);stars%k3d=i_vec(4);stars%n3d=i_vec(5)
-    stars%n2d = i_vec(6);stars%kq1d=i_vec(7);stars%kq2d=i_vec(8);stars%kq3d=i_vec(9)
-    stars%kxc1d = i_vec(10);stars%kxc2d = i_vec(11);stars%kxc3d = i_vec(12)
-    atoms%ntypd = i_vec(13);atoms%natd =i_vec(14);atoms%jmtd=i_vec(15);sphhar%ntypsd=i_vec(16)
+    sym%nop=i_vec(1);stars%mx1=i_vec(2);stars%mx2=i_vec(3);stars%mx3=i_vec(4);stars%ng3=i_vec(5)
+    stars%ng2 = i_vec(6);stars%kq1_fft=i_vec(7);stars%kq2_fft=i_vec(8);stars%kq3_fft=i_vec(9)
+    stars%kxc1_fft = i_vec(10);stars%kxc2_fft = i_vec(11);stars%kxc3_fft = i_vec(12)
+    atoms%ntype = i_vec(13);atoms%nat =i_vec(14);atoms%jmtd=i_vec(15);sphhar%ntypsd=i_vec(16)
     sphhar%nlhd = i_vec(17);sphhar%memd=i_vec(18);atoms%lmaxd=i_vec(19);dimension%jspd=i_vec(20)
     vacuum%nvacd=i_vec(21);dimension%nvd=i_vec(22);dimension%nv2d=i_vec(23)
-    kpts%nkptd = i_vec(25); dimension%nstd=i_vec(26);dimension%neigd=i_vec(27);dimension%msh=i_vec(28)
+    kpts%nkpt = i_vec(25); dimension%nstd=i_vec(26);dimension%neigd=i_vec(27);dimension%msh=i_vec(28)
     dimension%ncvd=i_vec(29);vacuum%layerd=i_vec(30);atoms%nlod=i_vec(31);atoms%llod=i_vec(32)
     input%itmax=i_vec(33)
     CALL MPI_BCAST(oneD%odd%d1,1,MPI_LOGICAL,0,mpi%Mpi_comm,ierr)
@@ -239,50 +237,4 @@ CONTAINS
 
   END SUBROUTINE dimens
 
-
-  SUBROUTINE priv_hello(ivers)
-    USE m_compile_descr
-    IMPLICIT NONE
-    CHARACTER(len=9), INTENT (IN)  :: ivers
-    CHARACTER(len=9) :: cppflag(11)
-    CHARACTER(LEN=50):: gitdesc,githash,compile_date,compile_user,compile_host
-    INTEGER          :: i,j
-    WRITE (6,*) 'This output is generated by ',ivers
-    WRITE (6,*) '                                      * * '
-#if ( defined(CPP_AIX) )
-    WRITE (6,*)  '                                    * \\:/ *'
-#else
-    WRITE (6,*)  '                                    * \:/ *'
-#endif
-    WRITE (6,*)  '                                    *  |  *'
-    WRITE (6,*)  '                                      * *  '
-    WRITE (6,*) 
-
-    CALL get_compile_desc(gitdesc,githash,compile_date,compile_user,compile_host)
-    write (6,*) "FLEUR was compiled at ",trim(compile_date)," by ",trim(compile_user)," on ",trim(compile_host)
-    write (6,*) "Its git version is ",trim(gitdesc)," with hash: ",trim(githash)
-
-    CALL getComputerArchitectures(cppflag,i) ! First determine the architecture
-    IF (i.GT.1) THEN 
-       WRITE (6,*) 'You set compiler flags for more than one'
-       WRITE (6,*) 'architecture: ', (cppflag(j),j=1,i)
-       WRITE (6,*) 'Define only one system architecture! '
-       CALL juDFT_error("Define only one system architecture! "&
-            &         ,calledby ="dimens")
-    ENDIF
-    IF (i == 0) THEN
-       WRITE (6,*) 'No system architecture specified in Makefile'
-       cppflag(1) = 'GEN'
-    ENDIF
-    !
-    !       check for double precision etc.
-    !
-
-    CALL getAdditionalCompilationFlags(cppflag,i)
-    IF (i.GT.0) THEN
-       WRITE (6,*) 'Additional flags are: ', (cppflag(j),j=1,i)
-    ENDIF
-
-  END SUBROUTINE priv_hello
-
-      END MODULE m_dimens
+END MODULE m_dimens

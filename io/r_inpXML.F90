@@ -51,6 +51,7 @@ SUBROUTINE r_inpXML(&
   USE m_prpqfft
   USE m_prpxcfft
   USE m_stepf
+  USE m_cdn_io
   USE m_convn
   USE m_efield
   USE m_writegw
@@ -109,7 +110,7 @@ SUBROUTINE r_inpXML(&
   INTEGER :: ierr
   ! ..
   !...  Local Arrays
-  !   CHARACTER :: helpchar(atoms%ntypd)
+  !   CHARACTER :: helpchar(atoms%ntype)
   CHARACTER(len=  4) :: chntype
   CHARACTER(len= 41) :: chform
   CHARACTER(len=100) :: line
@@ -166,6 +167,7 @@ SUBROUTINE r_inpXML(&
   CHARACTER(LEN=255) :: valueString, lString, nString, token
   CHARACTER(LEN=255) :: xPathA, xPathB, xPathC, xPathD, xPathE
   CHARACTER(LEN=11)  :: latticeType
+  CHARACTER(LEN=50)  :: versionString
 
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
@@ -214,7 +216,7 @@ SUBROUTINE r_inpXML(&
   !TODO! these switches should be in the inp-file
   input%l_core_confpot=.true. !former CPP_CORE
   input%l_useapw=.false.   !former CPP_APW
-  WRITE(*,*) 'Start reading of inp.xml file'
+  !WRITE(*,*) 'Start reading of inp.xml file'
   CALL xmlInitInterface()
   CALL xmlParseSchema(schemaFilename)
   CALL xmlParseDoc(docFilename)
@@ -222,8 +224,8 @@ SUBROUTINE r_inpXML(&
   CALL xmlInitXPath()
 
   ! Check version of inp.xml
-  valueString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-  IF(TRIM(ADJUSTL(valueString)).NE.'0.27') THEN
+  versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
+  IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28')) THEN
      STOP 'version number of inp.xml file is not compatible with this fleur version'
   END IF
 
@@ -234,12 +236,12 @@ SUBROUTINE r_inpXML(&
   numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/filmPos')
 
   atoms%nat = numberNodes
-  atoms%natd = numberNodes
+  atoms%nat = numberNodes
 
   numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
 
   atoms%ntype = numberNodes
-  atoms%ntypd = numberNodes
+  atoms%ntype = numberNodes
 
   numSpecies = xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
 
@@ -348,6 +350,7 @@ SUBROUTINE r_inpXML(&
   ! Read SCF loop parametrization
 
   input%itmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
+  input%minDistance = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
   input%maxiter = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
 
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
@@ -370,6 +373,11 @@ SUBROUTINE r_inpXML(&
   ! Get parameters for core electrons
 
   input%ctail = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
+  IF((TRIM(ADJUSTL(versionString)).EQ.'0.27')) THEN
+     input%coretail_lmax = 99
+  ELSE
+     input%coretail_lmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
+  END IF
   input%frcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
   input%kcrel = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
 
@@ -452,12 +460,12 @@ SUBROUTINE r_inpXML(&
      l_kpts = .FALSE.
      kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-     kpts%nkpts = kpts%nkpt
+     kpts%nkpt = kpts%nkpt
 
-     ALLOCATE(kpts%bk(3,kpts%nkpts))
-     ALLOCATE(kpts%weight(kpts%nkpts))
+     ALLOCATE(kpts%bk(3,kpts%nkpt))
+     ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
-     kpts%weight = 0.0
+     kpts%wtkpt = 0.0
      kpts%posScale = 1.0
 
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint')
@@ -488,11 +496,11 @@ SUBROUTINE r_inpXML(&
      l_kpts = .TRUE.
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint')
      kpts%nkpt = numberNodes
-     kpts%nkpts = numberNodes
-     ALLOCATE(kpts%bk(3,kpts%nkpts))
-     ALLOCATE(kpts%weight(kpts%nkpts))
+     kpts%nkpt = numberNodes
+     ALLOCATE(kpts%bk(3,kpts%nkpt))
+     ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
-     kpts%weight = 0.0
+     kpts%wtkpt = 0.0
 
      kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
      weightScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@weightScale'))
@@ -501,8 +509,8 @@ SUBROUTINE r_inpXML(&
         WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint[',i,']'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
         READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
-        kpts%weight(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
-        kpts%weight(i) = kpts%weight(i) / weightScale
+        kpts%wtkpt(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
+        kpts%wtkpt(i) = kpts%wtkpt(i) / weightScale
      END DO
   END IF
 
@@ -516,7 +524,6 @@ SUBROUTINE r_inpXML(&
   noco%phi = 0.0
   noco%soc_opt(atoms%ntype+2) = .FALSE.
   noco%soc_opt(atoms%ntype+1) = .FALSE.
-  obsolete%eig66(2) = .FALSE.
 
   IF (numberNodes.EQ.1) THEN
      noco%theta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta'))
@@ -524,7 +531,6 @@ SUBROUTINE r_inpXML(&
      noco%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
      noco%soc_opt(atoms%ntype+2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
      noco%soc_opt(atoms%ntype+1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@off'))
-     obsolete%eig66(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@soc66'))
   END IF
 
   ! Read in optional noco parameters if present
@@ -576,7 +582,7 @@ SUBROUTINE r_inpXML(&
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
      READ(valueString,*) noco%qss(1), noco%qss(2), noco%qss(3)
 
-     WRITE(*,*) 'Note: TODO: Calculation of q points!'
+     !WRITE(*,*) 'Note: TODO: Calculation of q points!'
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/qsc')
      IF (numberNodes.EQ.1) THEN
@@ -585,8 +591,8 @@ SUBROUTINE r_inpXML(&
         DO i = 1, 3
            noco%qss(i) = noco%qss(i) / qsc(i)
         END DO
-        WRITE(*,*) 'Note: TODO: Integrate qsc directly into qss in input file!'
-        WRITE(*,*) '(no problem for users)'
+        !WRITE(*,*) 'Note: TODO: Integrate qsc directly into qss in input file!'
+        !WRITE(*,*) '(no problem for users)'
      END IF
   END IF
 
@@ -615,16 +621,12 @@ SUBROUTINE r_inpXML(&
 
   input%gw = 0
   obsolete%pot8 = .FALSE.
-  obsolete%eig66(1) = .FALSE.
-  obsolete%lpr = 0
   input%isec1 = 999999
   input%secvar = .FALSE.
 
   IF (numberNodes.EQ.1) THEN
      input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
      obsolete%pot8 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@pot8'))
-     obsolete%eig66(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
-     obsolete%lpr = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lpr'))
      input%isec1 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isec1'))
      input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
   END IF
@@ -709,7 +711,7 @@ SUBROUTINE r_inpXML(&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ALLOCATE(enpara%evac0(2,input%jspins))
-  ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntypd,input%jspins))
+  ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntype,input%jspins))
   ALLOCATE(enpara%enmix(input%jspins))
 
   enpara%lchg_v = .FALSE.
@@ -824,7 +826,7 @@ SUBROUTINE r_inpXML(&
            a3(2) = evaluateFirst(valueString)
            a3(3) = evaluateFirst(valueString)
         ELSE
-           WRITE(*,*) 'Note: For film calculations only the upper left 2x2 part of the Bravais matrix is considered.'
+           !WRITE(*,*) 'Note: For film calculations only the upper left 2x2 part of the Bravais matrix is considered.'
         END IF
      END IF
   END IF ! Note: Further ways to define lattices might be added later. (1D lattice,...)
@@ -1207,7 +1209,7 @@ SUBROUTINE r_inpXML(&
      END IF
   END IF
 
-  WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
+  ! WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
   IF (namex.EQ.'vhse') THEN
      ! overwrite if sane input
      IF (aMix > 0 .and. aMix <= 1) THEN
@@ -1264,7 +1266,7 @@ SUBROUTINE r_inpXML(&
         lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
      END IF
 
-     WRITE(*,*) 'APW+lo cutoffs ignored for the moment'
+     ! WRITE(*,*) 'APW+lo cutoffs ignored for the moment'
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
      ldau_l = -1
@@ -1658,7 +1660,6 @@ SUBROUTINE r_inpXML(&
   input%score = .FALSE.
   sliceplot%plpot = .FALSE.
 
-  obsolete%form66 = .FALSE.
   input%eonly = .FALSE.
   input%l_bmt = .FALSE.
 
@@ -1701,7 +1702,6 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(xPathA)
 
      IF (numberNodes.EQ.1) THEN
-        obsolete%form66 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@form66'))
         input%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
         input%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
      END IF
@@ -1953,17 +1953,14 @@ SUBROUTINE r_inpXML(&
         CALL od_kptsgen (kpts%nkpt)
      END IF
   END IF
-  kpts%nkpts = kpts%nkpt
-  ALLOCATE(kpts%wtkpt(kpts%nkpt))
   sumWeight = 0.0
   DO i = 1, kpts%nkpt
-     sumWeight = sumWeight + kpts%weight(i)
+     sumWeight = sumWeight + kpts%wtkpt(i)
      kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
   END DO
   kpts%posScale = 1.0
   DO i = 1, kpts%nkpt
-     kpts%weight(i) = kpts%weight(i) / sumWeight
-     kpts%wtkpt(i) = kpts%weight(i)
+     kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
   END DO
 
   ! Generate missing general parameters
@@ -1972,14 +1969,16 @@ SUBROUTINE r_inpXML(&
   IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
   IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
   IF (dimension%neigd.LT.minNeigd) THEN
-     WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
+     IF (dimension%neigd>0) THEN
+        WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
+        WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
+     ENDIF
      dimension%neigd = minNeigd
-     WRITE(*,*) 'changed numbands (dimension%neigd) to ',dimension%neigd
   END IF
 
-  kpts%nkptd = kpts%nkpt
+  kpts%nkpt = kpts%nkpt
   dimension%nvd = 0 ; dimension%nv2d = 0
-  stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
+  stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
   obsolete%l_u2f = .FALSE.
   obsolete%l_f2u = .FALSE.
   !cell%aamat=matmul(transpose(cell%amat),cell%amat)
@@ -1997,14 +1996,14 @@ SUBROUTINE r_inpXML(&
         DO i = 1, 3
            bk(i) = kpts%bk(i,ikpt)
         END DO
-        IF (input%film .OR.oneD%odd%d1) THEN
-           WRITE(*,*) 'There might be additional work required for the k points here!'
-           WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
-        END IF
+        !IF (input%film .OR.oneD%odd%d1) THEN
+        !   WRITE(*,*) 'There might be additional work required for the k points here!'
+        !   WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
+        !END IF
         CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
-        stars%kq1d = max(kq1,stars%kq1d)
-        stars%kq2d = max(kq2,stars%kq2d)
-        stars%kq3d = max(kq3,stars%kq3d)
+        stars%kq1_fft = max(kq1,stars%kq1_fft)
+        stars%kq2_fft = max(kq2,stars%kq2_fft)
+        stars%kq3_fft = max(kq3,stars%kq3_fft)
         dimension%nvd = max(dimension%nvd,nv)
         dimension%nv2d = max(dimension%nv2d,nv2)
      END DO ! k-pts
@@ -2030,7 +2029,7 @@ SUBROUTINE r_inpXML(&
   atoms%vr0(:) = 0.0
   na = 0
   DEALLOCATE(noel)
-  ALLOCATE(noel(atoms%ntypd))
+  ALLOCATE(noel(atoms%ntype))
   DO iType = 1, atoms%ntype
      l_vca = .FALSE.
      INQUIRE (file="vca.in", exist=l_vca)
@@ -2090,14 +2089,14 @@ SUBROUTINE r_inpXML(&
   sphhar%ntypsd = 0
   IF (.NOT.oneD%odd%d1) THEN
      CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
+          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
           atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
           atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
           sphhar%nmem,sphhar%mlh,sphhar%clnu)
   ELSE IF (oneD%odd%d1) THEN
      WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
      WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-     ALLOCATE (nq1(atoms%natd),lmx1(atoms%natd),nlhtp1(atoms%natd))
+     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
      ii = 1
      nq1=1
      DO i = 1,atoms%ntype
@@ -2107,7 +2106,7 @@ SUBROUTINE r_inpXML(&
         END DO
      END DO
      CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%natd,nq1,cell%amat,cell%bmat,atoms%taual,&
+          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
           atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
           sphhar%mlh,sphhar%clnu)        
@@ -2129,50 +2128,51 @@ SUBROUTINE r_inpXML(&
 
   IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
      CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,sym%nop2,stars%k1d,stars%k2d,stars%k3d,&
-          stars%n3d,stars%n2d,oneD%odd)
+          sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
+          stars%ng3,stars%ng2,oneD%odd)
 
   ELSE
      CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,stars%k1d,stars%k2d,stars%k3d,&
-          stars%n3d,stars%n2d)
-     oneD%odd%n2d = stars%n2d
-     oneD%odd%nq2 = stars%n2d
+          sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
+          stars%ng3,stars%ng2)
+     oneD%odd%n2d = stars%ng2
+     oneD%odd%nq2 = stars%ng2
      oneD%odd%nop = sym%nop
   END IF
 
-  dimension%nn2d = (2*stars%k1d+1)*(2*stars%k2d+1)
-  dimension%nn3d = (2*stars%k1d+1)*(2*stars%k2d+1)*(2*stars%k3d+1)
+  dimension%nn2d = (2*stars%mx1+1)*(2*stars%mx2+1)
+  dimension%nn3d = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
   IF (oneD%odd%d1) THEN
-     oneD%odd%k3 = stars%k3d
+     oneD%odd%k3 = stars%mx3
      oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
   ELSE
      oneD%odd%k3 = 0
      oneD%odd%M = 0
      oneD%odd%nn2d = 1
+     oneD%odd%mb = 0
   END IF
-  ALLOCATE (stars%ig(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d))
-  ALLOCATE (stars%ig2(stars%n3d),stars%igz(stars%n3d))
-  ALLOCATE (stars%kv2(2,stars%n2d),stars%kv3(3,stars%n3d))
-  ALLOCATE (stars%nstr2(stars%n2d),stars%nstr(stars%n3d))
-  ALLOCATE (stars%sk2(stars%n2d),stars%sk3(stars%n3d),stars%phi2(stars%n2d))
+  ALLOCATE (stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
+  ALLOCATE (stars%ig2(stars%ng3))
+  ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
+  ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
+  ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
   ALLOCATE (stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
-  ALLOCATE (stars%rgphs(-stars%k1d:stars%k1d,-stars%k2d:stars%k2d,-stars%k3d:stars%k3d))
+  ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
   ALLOCATE (stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
-  ALLOCATE (stars%ufft(0:27*stars%k1d*stars%k2d*stars%k3d-1),stars%ustep(stars%n3d))
+  ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
   stars%sk2(:) = 0.0
   stars%phi2(:) = 0.0
 
   ! Initialize xc fft box
 
-  CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1d,stars%kxc2d,stars%kxc3d)
+  CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
 
   ! Initialize missing 1D code arrays
 
   ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
   ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
-  ALLOCATE (oneD%ngopr1(atoms%natd),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
+  ALLOCATE (oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
   ALLOCATE (oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
   ALLOCATE (oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
 
@@ -2188,7 +2188,7 @@ SUBROUTINE r_inpXML(&
 
   IF (.NOT.oneD%odd%d1) THEN
      CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
+          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
           atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
@@ -2198,7 +2198,7 @@ SUBROUTINE r_inpXML(&
      WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
      WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
      CALL od_chisym(oneD%odd,oneD%mrot1,oneD%tau1,sym%zrfs,sym%invs,sym%invs2,cell%amat)
-     ALLOCATE (nq1(atoms%natd),lmx1(atoms%natd),nlhtp1(atoms%natd))
+     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
      ii = 1
      DO i = 1,atoms%ntype
         DO j = 1,atoms%neq(i)
@@ -2208,7 +2208,7 @@ SUBROUTINE r_inpXML(&
         END DO
      END DO
      CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%natd,atoms%natd,nq1,cell%amat,cell%bmat,atoms%taual,&
+          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
           nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
@@ -2227,7 +2227,7 @@ SUBROUTINE r_inpXML(&
   END IF
   IF (.NOT.oneD%odd%d1) THEN
      CALL mapatom(sym,atoms,cell,input,noco)
-     oneD%ngopr1(1:atoms%natd) = atoms%ngopr(1:atoms%natd)
+     oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
      !     DEALLOCATE ( nq1 )
   ELSE
      CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
@@ -2247,6 +2247,11 @@ SUBROUTINE r_inpXML(&
           oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
   END IF
   oneD%odd%nq2 = oneD%odd%n2d
+  oneD%odi%nq2 = oneD%odd%nq2
+
+  ! Store structure data
+
+  CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
 
   ! Generate stars
 
@@ -2269,13 +2274,6 @@ SUBROUTINE r_inpXML(&
   IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
        (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
 
-  obsolete%form76 = .FALSE.
-  IF (noco%l_soc.AND.obsolete%form66) THEN
-     IF (.NOT.input%eonly)  CALL juDFT_error("form66 = T only with eonly = T !",calledby="r_inpXML")
-     obsolete%form66 = .FALSE.
-     obsolete%form76 = .TRUE.
-  END IF
-
   IF (.NOT.l_opti) THEN
      !      The following call to inpeig should not be required.
      !      CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara)
@@ -2284,7 +2282,7 @@ SUBROUTINE r_inpXML(&
   CALL prp_qfft(stars,cell,noco,input)
 
   IF (input%gw.GE.1) THEN
-     CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%natd,&
+     CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
           atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
           atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
           atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
@@ -2304,7 +2302,7 @@ SUBROUTINE r_inpXML(&
 
   CALL xmlFreeResources()
 
-  WRITE(*,*) 'Reading of inp.xml file finished'
+  !WRITE(*,*) 'Reading of inp.xml file finished'
 
   DEALLOCATE(speciesNames, speciesNLO)
 

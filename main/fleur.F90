@@ -247,6 +247,7 @@
           it     = 0
           ithf   = 0
           l_cont = ( it < input%itmax )
+          results%last_distance = -1.0
           IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
           DO 80 WHILE ( l_cont )
              it = it + 1
@@ -258,9 +259,7 @@
                    input%alpha = input%alpha - NINT(input%alpha)
                 END IF
                 !
-                IF (it.GT.1) THEN
-                   obsolete%eig66(1)= .FALSE.
-                END IF
+                CALL resetIterationDependentTimers()
                 CALL timestart("Iteration")
                 IF (mpi%irank.EQ.0) THEN
                    !-t3e
@@ -281,7 +280,7 @@
                          CALL timestart("gen. spin-up and -down density")
                          CALL rhodirgen(&
                               &                     dimension,sym,stars,atoms,sphhar,&
-                              &                    vacuum,26,22,cell,input,oneD)
+                              &                    vacuum,22,cell,input,oneD)
                          CALL timestop("gen. spin-up and -down density")
                       ENDIF
                       !---> pk non-collinear
@@ -290,15 +289,18 @@
                       input%total = .TRUE.
                    ENDIF!(obsolete%pot8)
                 ENDIF !mpi%irank.eq.0
+#ifdef CPP_MPI
+                CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+#endif
 
                 !--- J<
                 IF(jij%l_jenerg) GOTO 234
 
                 jij%alph1(:)=noco%alph(:)
                 stop80= .FALSE.
-                IF ( obsolete%eig66(1) .OR. (noco%l_soc .AND. noco%l_ss) ) THEN
+                IF ( (noco%l_soc .AND. noco%l_ss) ) THEN
                    IF ( (jij%l_J).OR.(jij%nqpt/=1).OR.(jij%nmagn/=1).OR.(jij%phnd/=1) ) THEN
-                      CALL juDFT_error("fleur: J-loop with eig66 = T or ss+soc"&
+                      CALL juDFT_error("fleur: J-loop with ss+soc"&
                            &            ,calledby ="fleur")
                    ENDIF
                 ENDIF
@@ -323,7 +325,7 @@
                       dimension%neigd2 = dimension%neigd
                    END IF
                    IF( .NOT. ALLOCATED(results%w_iks) )&
-                        &          ALLOCATE ( results%w_iks(dimension%neigd2,kpts%nkptd,dimension%jspd) )
+                        &          ALLOCATE ( results%w_iks(dimension%neigd2,kpts%nkpt,dimension%jspd) )
 
 
                    IF( ( xcpot%icorr == icorr_hf  .OR. xcpot%icorr == icorr_pbe0 .OR.&
@@ -339,7 +341,7 @@
                            &              ' calculation of mixedbasis...'
                       IF (it==1)&
                            &         eig_id=open_eig(&
-                           &       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt(1),dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntypd,atoms%nlotot&
+                           &       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt(1),dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
                            &         ,noco%l_noco,.FALSE.,.FALSE.)
                       !               CALL open_eig(mpi_comm,
                       !     >              nbasfcn,neigd,nkpt(1),jspd,lmaxd,nlod,ntypd,nlotot,
@@ -455,27 +457,11 @@
                       DO j_J=i_J,jij%nmagn
                          DO phn=1,jij%phnd
 
-                            IF (obsolete%eig66(1)) THEN
-                               ! If eig-file exists, use it.
-                               ! If eig-file does not exist, create it and stop.
-                               !
-                               ! eig66(2)=eig66(1)=T <=> in first run of program
-                               !                         only 1st variation is done
-#ifndef CPP_HDF
-                               !TODO: LOGIC HAS to be fixed
-                               !call judft_error("HDF needed for J_ij")
-                               INQUIRE(file='eig.bas',exist=input%eigvar(3))
-#endif
-                               INQUIRE(file='eig.hdf',exist=input%eigvar(3))
-                               input%eigvar(3)=.TRUE.
-                               input%eigvar(1)= .NOT.input%eigvar(3)
-                               input%eigvar(2)= obsolete%eig66(2) .EQV. input%eigvar(3)
-                               PRINT*, input%eigvar
-                            ELSE
-                               input%eigvar(1)= .TRUE.
-                               input%eigvar(2)= .TRUE.
-                               input%eigvar(3)= .TRUE.
-                            ENDIF
+ 
+                            input%eigvar(1)= .TRUE.
+                            input%eigvar(2)= .TRUE.
+                            input%eigvar(3)= .TRUE.
+                            
                             input%eigvar(2)= input%eigvar(2) .AND. ( noco%l_soc .AND. (.NOT.noco%l_noco) )
                             ! eigvar(1/2)= 1st/2nd var. ; eigvar(3)= calc density,etc
 
@@ -516,14 +502,14 @@
                                      ! send all result of local total energies to the r
                                      IF (mpi%irank==0) THEN
                                         CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,&
-                                             1,MPI_REAL8,MPI_SUM,0,mpi,ierr(1))
+                                             1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
                                         CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,&
-                                             1,MPI_REAL8,MPI_SUM,0,mpi,ierr(1))
+                                             1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
                                      ELSE
                                         CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,&
-                                             1,MPI_REAL8,MPI_SUM,0, mpi,ierr(1))
+                                             1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
                                         CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,&
-                                             1,MPI_REAL8,MPI_SUM,0, mpi,ierr(1))
+                                             1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
                                      ENDIF
 !                                  END IF
 #endif
@@ -548,7 +534,7 @@
                                   ! this change is sufficient to modify fermie and c
                                   ! the enlarged kpt mesh
                                   kpts%nkpt    = kpts%nkptf
-                                  kpts%nkptd   = kpts%nkptf
+                                  kpts%nkpt   = kpts%nkptf
                                END IF
 
                             ENDIF
@@ -575,14 +561,6 @@
 #ifdef CPP_MPI
                             CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
-                            IF (obsolete%eig66(1)) THEN
-                               IF (mpi%irank==0) THEN
-                                  WRITE (*,fmt='(A)')&
-                                       &                'eig-file created, program stops'
-                               ENDIF
-                               !TODO LOGIC??
-                               !stop80= .true.
-                            ENDIF
 
                          ENDIF ! ( input%eigvar(1) .OR. input%eigvar(2) )
 
@@ -602,7 +580,7 @@
                             IF (jij%l_J) THEN
 
                                CALL timestart("determination of fermi energy")
-                               ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkptd,dimension%jspd) )
+                               ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkpt,dimension%jspd) )
                                CALL fermie(eig_id, mpi,kpts,obsolete,input,&
                                     &        noco,enpara%epara_min,jij,cell,results)
                                DEALLOCATE ( results%w_iks )
@@ -610,7 +588,7 @@
                             ENDIF
                             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd = 2*dimension%neigd
                             IF( .NOT. ALLOCATED(results%w_iks) )&
-                                 &             ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkptd,dimension%jspd) )
+                                 &             ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkpt,dimension%jspd) )
                             IF ( (mpi%irank.EQ.0).AND.(.NOT.jij%l_J) ) THEN
                                CALL timestart("determination of fermi energy")
 
@@ -770,7 +748,7 @@
 
 
                 CALL timestart('determination of total energy')
-                CALL totale(atoms,sphhar,stars,vacuum,&
+                CALL totale(atoms,sphhar,stars,vacuum,dimension,&
                      sym,input,noco,cell,oneD,xcpot,hybrid,it,results)
 
                 CALL timestop('determination of total energy')
@@ -812,12 +790,13 @@
              !          ----> mix input and output densities
              !
              CALL timestart("mixing")
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,hybrid)
+             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,hybrid,results)
              !
              CALL timestop("mixing")
              WRITE (6,FMT=8130) it
              WRITE (16,FMT=8130) it
 8130         FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
+	     write(*,*) "Iteration:",it," Distance:",results%last_distance
              CALL timestop("Iteration")
              !+t3e
           ENDIF ! mpi%irank.EQ.0
@@ -832,6 +811,7 @@
        !--- J>
 
 #ifdef CPP_MPI
+       CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
        !-t3e
@@ -843,10 +823,8 @@
           CALL system('rm -f broyd*')
        END IF
        !+fo
-       INQUIRE (file='inp_new',exist=l_endit)
-       IF (l_endit) THEN
-          CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
-       END IF
+       call priv_geo_end(mpi)
+       
        !-fo
        IF ( hybrid%l_calhf ) ithf = ithf + 1
        IF ( xcpot%icorr == icorr_hf .OR. xcpot%icorr == icorr_pbe0 .OR.&
@@ -858,8 +836,8 @@
           l_cont = ( it < input%itmax )
        END IF
        CALL writeTimesXML()
-       CALL resetIterationDependentTimers()
        CALL check_time_for_next_iteration(it,l_cont)
+       l_cont=l_cont.AND.(input%mindistance<=results%last_distance)
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
        END IF
@@ -867,5 +845,41 @@
        IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
        CALL juDFT_end("all done",mpi%irank)
 
+     contains
+       subroutine priv_geo_end(mpi)
+         TYPE(t_mpi),INTENT(IN)::mpi
+         LOGICAL :: l_exist
+         !Check if a new input was generated
+         INQUIRE (file='inp_new',exist=l_exist)
+         IF (l_exist) THEN
+            CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
+         END IF
+         !check for inp.xml
+         INQUIRE (file='inp_new.xml',exist=l_exist)
+         IF (.NOT.l_exist) return
+         IF (mpi%irank==0) then
+            CALL system('mv inp.xml inp_old.xml')
+            CALL system('mv inp_new.xml inp.xml')
+            INQUIRE (file='qfix',exist=l_exist)
+            IF (l_exist) THEN
+               OPEN(2,file='qfix')
+               WRITE(2,*)"F"
+               CLOSE(2)
+               print *,"qfix set to F"
+            ENDIF
+            INQUIRE(file='broyd',exist=l_exist)
+            IF (l_exist) THEN
+               CALL system('rm broyd')
+               print *,"broyd file deleted"
+            ENDIF
+            INQUIRE(file='broyd.7',exist=l_exist)
+            IF (l_exist) THEN
+               CALL system('rm broyd.7')
+               print *,"broyd.7 file deleted"
+            ENDIF
+         ENDIF
+         CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
+     end subroutine priv_geo_end
+       
      END SUBROUTINE
       END MODULE

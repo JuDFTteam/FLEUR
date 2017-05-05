@@ -27,7 +27,7 @@
       LOGICAL :: l_new
 !     ..
 !     .. Local Arrays ..
-      REAL forcetot(3,atoms%ntypd)
+      REAL forcetot(3,atoms%ntype)
       CHARACTER(LEN=20) :: attributes(7)
 !
 !     write spin-dependent forces

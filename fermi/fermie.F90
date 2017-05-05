@@ -53,7 +53,7 @@ CONTAINS
     REAL,INTENT(IN)      :: e_min
     !     ..
     !     .. Array Arguments ..
-    !REAL,    INTENT (OUT):: w(:,:,:) !(dimension%neigd,kpts%nkptd,dimension%jspd)
+    !REAL,    INTENT (OUT):: w(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL del  ,spindg,ssc ,ws,zc,tkb_1,weight
@@ -64,7 +64,7 @@ CONTAINS
     !
     INTEGER, ALLOCATABLE :: idxeig(:),idxjsp(:),idxkpt(:),INDEX(:)
     REAL,    ALLOCATABLE :: e(:),eig(:,:,:),we(:)
-    INTEGER ne(kpts%nkptd,SIZE(results%w_iks,3))
+    INTEGER ne(kpts%nkpt,SIZE(results%w_iks,3))
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -105,7 +105,7 @@ CONTAINS
     !
     IF (jij%l_J) THEN
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
-       CALL mpi_col_eigJ(mpi%mpi_comm,mpi%irank,mpi%isize,kpts%nkptd,SIZE(results%w_iks,1),kpts%nkpt,&
+       CALL mpi_col_eigJ(mpi%mpi_comm,mpi%irank,mpi%isize,kpts%nkpt,SIZE(results%w_iks,1),kpts%nkpt,&
             &                       jij%nkpt_l,jij%eig_l,&
             &                    kpts%bk,kpts%wtkpt,ne(1,1),eig)
        IF (mpi%irank.NE.0) THEN
@@ -212,6 +212,7 @@ CONTAINS
     results%ts = 0.0
     !-po
     results%w_iks = 0.0
+    results%bandgap = 0.0
     IF (input%gauss) THEN
        CALL fergwt(kpts,input,mpi,ne, eig,results)
     ELSE IF (input%tria) THEN

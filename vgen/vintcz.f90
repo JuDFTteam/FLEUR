@@ -25,8 +25,8 @@ CONTAINS
     REAL,    INTENT (IN) :: sig1dh,vz1dh  ,z
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: psq(stars%n3d),vxy(:,:,:,:) !(vacuum%nmzxyd,stars%n2d-1,2,jspins)
-    COMPLEX, INTENT (IN) :: alphm(stars%n2d,2)
+    COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2,jspins)
+    COMPLEX, INTENT (IN) :: alphm(stars%ng2,2)
     REAL,    INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,jspins)  
     !     ..
     !     .. Local Scalars ..

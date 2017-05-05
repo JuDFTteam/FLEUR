@@ -25,10 +25,10 @@ CONTAINS
     INTEGER, INTENT (IN) :: jsp,ne     
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntypd,DIMENSION%jspd)
-    COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%natd)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%natd)
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
+    COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat)
 
     REAL,    OPTIONAL,INTENT (INOUT) :: h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd)
     COMPLEX, OPTIONAL,INTENT (INOUT) :: h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd)

@@ -28,15 +28,15 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(:,:)!(atoms%jmtd,dimension%jspd),
-    REAL,    INTENT (INOUT) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsoppd (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsopdp (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsopdpd(atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsoplop (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsoplopd(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsopdplo(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsopplo (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (INOUT) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (INOUT) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     !     ..
     !     .. Local Scalars ..
     REAL ddn1,e ,ulops,dulops,duds1

@@ -64,10 +64,10 @@ CONTAINS
     !
     !-----> charge density, potential and energy density
     !
-    COMPLEX, INTENT (IN) :: qpw(stars%n3d,input%jspins)
-    COMPLEX, INTENT (OUT) :: excpw(stars%n3d)
-    COMPLEX, INTENT (INOUT) ::vpw(stars%n3d,input%jspins),vpw_w(stars%n3d,input%jspins),cdom(stars%n3d)
-    COMPLEX, INTENT (INOUT) ::vxpw(stars%n3d,input%jspins),vxpw_w(stars%n3d,input%jspins)
+    COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins)
+    COMPLEX, INTENT (OUT) :: excpw(stars%ng3)
+    COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins),cdom(stars%ng3)
+    COMPLEX, INTENT (INOUT) ::vxpw(stars%ng3,input%jspins),vxpw_w(stars%ng3,input%jspins)
     !     ..
     !     .. Local Scalars ..
     INTEGER :: i ,k,js,nt,ifftxc3,idm,jdm,ndm,ig
@@ -128,8 +128,8 @@ CONTAINS
     !     in principle this can also be done in main program once.
     !     it is done here to save memory.
     !
-    ifftd=27*stars%k1d*stars%k2d*stars%k3d
-    ifftxc3d = stars%kxc1d*stars%kxc2d*stars%kxc3d
+    ifftd=27*stars%mx1*stars%mx2*stars%mx3
+    ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     ALLOCATE ( igxc_fft(0:ifftxc3d-1),gxc_fft(0:ifftxc3d-1,3) )
     CALL prp_xcfft_map(&
          &                   stars,sym,&
@@ -139,8 +139,8 @@ CONTAINS
     ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     lwbc=obsolete%lwb
 
-    IF (stars%ng3.GT.stars%n3d) THEN
-       WRITE(6,'(/'' stars%ng3.gt.stars%n3d. stars%ng3,stars%n3d='',2i6)') stars%ng3,stars%n3d
+    IF (stars%ng3.GT.stars%ng3) THEN
+       WRITE(6,'(/'' stars%ng3.gt.stars%ng3. stars%ng3,stars%ng3='',2i6)') stars%ng3,stars%ng3
        CALL juDFT_error("ng3.gt.n3d",calledby="visxcg")
     ENDIF
 
@@ -200,7 +200,7 @@ CONTAINS
     !
     !         ph_wrk: exp(i*(g_x,g_y,g_z)*tau) * g_(x,y,z).
 
-    ALLOCATE(cqpw(stars%n3d,input%jspins))
+    ALLOCATE(cqpw(stars%ng3,input%jspins))
 
     DO js= 1,input%jspins
        DO i = 1,stars%ng3
@@ -370,7 +370,7 @@ CONTAINS
     !----> back fft to g space
     !----> perform back  fft transform: vxc(r) --> vxc(star)
     !
-    ALLOCATE(fg3(stars%n3d))
+    ALLOCATE(fg3(stars%ng3))
 
     DO js = 1,input%jspins
        bf3=0.0

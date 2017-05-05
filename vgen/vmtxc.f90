@@ -38,10 +38,10 @@ CONTAINS
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (INOUT):: vr (atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd)
-    REAL,    INTENT (INOUT),OPTIONAL:: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (INOUT):: vr (atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    REAL,    INTENT (INOUT),OPTIONAL:: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
 
     !     ..
     !     .. Local Scalars ..

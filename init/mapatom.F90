@@ -209,7 +209,7 @@
          WRITE (6,FMT=8060) n1,sym%invtab(n1)
       END DO
 
-      DO na = 1,atoms%natd
+      DO na = 1,atoms%nat
          atoms%invsat(na) = 0
          sym%invsatnr(na) = 0
       END DO

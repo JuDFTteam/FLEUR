@@ -6,7 +6,7 @@
 
 MODULE m_chani
 CONTAINS
-  SUBROUTINE chani(M,N,Neigd, Myid,Np,Sub_comm,mpi_comm, &
+  SUBROUTINE chani(M,Neigd, Myid,Np,Sub_comm,mpi_comm, &
        Eig,Num,hamOvlp,zMat)
     !
     !----------------------------------------------------
@@ -39,7 +39,7 @@ CONTAINS
     IMPLICIT NONE
     INCLUDE 'mpif.h'
 
-    INTEGER, INTENT (IN) :: neigd,m,n
+    INTEGER, INTENT (IN) :: neigd,m
     INTEGER, INTENT (IN) :: SUB_COMM,np,myid,mpi_comm
     INTEGER, INTENT (INOUT) :: num
     REAL,    INTENT   (OUT) :: eig(neigd)
@@ -88,11 +88,11 @@ CONTAINS
     DO i = myid+1, m, np
        nc = nc + 1
     ENDDO
-    IF (nc.GT.n) THEN
-       WRITE (6,*) myid,'gets more columns than allowed:'
-       WRITE (6,*) myid,'will get',nc,' columns, only',n,' allowed'
-       CALL juDFT_error("chani: nc > n",calledby ="chani")
-    ENDIF
+    !IF (nc.GT.n) THEN
+    !   WRITE (6,*) myid,'gets more columns than allowed:'
+    !   WRITE (6,*) myid,'will get',nc,' columns, only',n,' allowed'
+    !   CALL juDFT_error("chani: nc > n",calledby ="chani")
+    !ENDIF
     !
     ! determine block size
     !
@@ -383,11 +383,11 @@ endif
        ENDIF
        IF (MOD(ierr/8,2).NE.0) THEN
           WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
-          !CALL CPP_flush(6)
+          CALL judft_error("SCALAPACK failed to solve eigenvalue problem",calledby="chani.F90")
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
           WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
-          !CALL CPP_flush(6)
+          CALL judft_error("SCALAPACK failed: B was not positive definite",calledby="chani.F90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN

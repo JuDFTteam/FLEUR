@@ -1,55 +1,47 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!
+!!! This module realizes the Fleur info mode: It prints out some information
+!!! about the charge density file and then ends the program.
+!!!
+!!!                             GM'17
+!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 MODULE m_fleur_info
-  IMPLICIT NONE
-CONTAINS
-  SUBROUTINE fleur_info()
-    USE m_compile_descr
-    USE m_constants
-    USE m_juDFT
-    IMPLICIT NONE
-    CHARACTER(LEN=50):: gitdesc,githash,compile_date,compile_user,compile_host
 
-    PRINT *,"     Welcome to FLEUR        (www.flapw.de)   "
-    PRINT *,"     MaX-Release 1         (www.max-centre.eu)"
+   IMPLICIT NONE
 
-    IF (.NOT. (juDFT_was_argument("-h").OR.juDFT_was_argument("--help"))) RETURN
+   CONTAINS
 
-    !now print version info and help on command line arguments:
-    CALL get_compile_desc(gitdesc,githash,compile_date,compile_user,compile_host)
-    WRITE(*,*) "This is version: ",version_const
-    WRITE(*,*) "FLEUR was compiled at ",TRIM(compile_date)," by ",TRIM(compile_user)," on ",TRIM(compile_host)
-    WRITE(*,*) "Its git version is ",TRIM(gitdesc)," with hash: ",TRIM(githash)
-    WRITE(*,*)
-    WRITE(*,*)"------------------------------------------------------"
-    WRITE(*,*)"Usage info:"
-    WRITE(*,*)"The following command line options are known:"
-    WRITE(*,*)"-da,-mem,-mpi,-hdf: choose a storage for the eigenvalues"
-    WRITE(*,*)"                    and eigenvectors. The default will depend"
-    WRITE(*,*)"                    be -mem for serial and -mpi for parallel builds" 
-    WRITE(*,*)""
-    WRITE(*,*)"-lapack,-lapack2,"
-    write(*,*)"-elpa,-scalapack,"
-    WRITE(*,*)"-elemental,-magma : choose diagonalization. Not all might be available"
-    WRITE(*,*)""
-    WRITE(*,*)"-debugtime        : write out the start/stop of all timers to STDOUT"
-    WRITE(*,*)""
-    WRITE(*,*)"-genEnpara        : write enpara file"
-    WRITE(*,*)""
-    WRITE(*,*)"-xmlInput or -xml : use inp.xml instead of inp"
-    WRITE(*,*)""
-    WRITE(*,*)"-wtime XXXXX      : run for XXXX minutes (used to estimate if another iteration is started"
-    WRITE(*,*)""
-    WRITE(*,*)"-j #:DIR          : run subjob in directory DIR using # PEs"
-    WRITE(*,*)"-f FILENAME       : obtain info on subjobs from file FILENAME"
-    WRITE(*,*)""
-    WRITE(*,*)"-h, --help        : print this text :-)"
-    WRITE(*,*)""
-    WRITE(*,*)"Please check the documentation on www.flapw.de for more details"
+   SUBROUTINE fleur_info(kpts)
 
-    CALL juDFT_error("help was written")
-  END SUBROUTINE fleur_info
+      USE m_juDFT
+      USE m_cdn_io
+      USE m_setupMPI
+      USE m_types
+
+      IMPLICIT NONE
+
+      TYPE(t_kpts), INTENT(IN)     :: kpts
+
+      LOGICAL       :: l_exist
+
+      IF (.NOT.juDFT_was_argument("-info")) RETURN
+
+      WRITE(*,*) 'Fleur info mode'
+      WRITE(*,*) '================================================='
+      WRITE(*,*) ''
+      CALL priv_dist_info(kpts%nkpt)
+      WRITE(*,*) ''
+      CALL printDensityFileInfo()
+      WRITE(*,*) '================================================='
+      CALL juDFT_error("Fleur info output completed")
+   END SUBROUTINE fleur_info
+
 END MODULE m_fleur_info

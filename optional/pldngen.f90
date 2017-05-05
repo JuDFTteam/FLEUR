@@ -38,6 +38,7 @@
           !                all stored on real space mesh
           !**********************************************************************
 
+          USE m_cdn_io
           USE m_loddop
           USE m_wrtdop
           USE m_qfix
@@ -87,14 +88,14 @@
           !---> end of test part
           !
           zero = 0.0 ; czero = CMPLX(0.0,0.0)
-          ifft3 = 27*stars%k1d*stars%k2d*stars%k3d
-          ifft2 = 9*stars%k1d*stars%k2d
+          ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
+          ifft2 = 9*stars%mx1*stars%mx2
 
-          ALLOCATE (qpw(stars%n3d,4),rhtxy(vacuum%nmzxyd,stars%n2d-1,2,4),&
-               &          cdom(stars%n3d),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,stars%n2d-1,2),&
-               &     ris(0:27*stars%k1d*stars%k2d*stars%k3d-1,4),fftwork(0:27*stars%k1d*stars%k2d*stars%k3d-1),&
-               &     rvacxy(0:9*stars%k1d*stars%k2d-1,vacuum%nmzxyd,2,4),&
-               &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,4),rht(vacuum%nmzd,2,4) )
+          ALLOCATE (qpw(stars%ng3,4),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4),&
+               &          cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,stars%ng2-1,2),&
+               &     ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
+               &     rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4),&
+               &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmzd,2,4) )
           !
           !---> initialize arrays for the density matrix
           !
@@ -161,7 +162,7 @@
           !---> for testing: read offdiag. output density matrix
           INQUIRE (file= 'rhomt21', exist= l_fmpl2)
           IF (l_fmpl2) THEN
-             ALLOCATE( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd) )
+             ALLOCATE( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
              OPEN (26,file='rhomt21',form='unformatted',status='unknown')
              READ (26) rho21
              CLOSE (26)
@@ -321,15 +322,11 @@
           ENDIF
 
           !---> save charge density to file cdn
-          OPEN (72,FILE='cdn',FORM='unformatted',STATUS='unknown')
           inp=input
           inp%jspins=1
-          CALL wrtdop(&
-               &            stars,vacuum,atoms,sphhar,&
-               &            inp,sym,72, &
-               &            iter,rho(:,0:,1:,1:1),qpw(1:,1:1),rht(1:,1:,1:1),&
-               &            rhtxy(1:,1:,1:,1:1))
-          CLOSE (72)
+
+          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                            0,-1.0,0.0,.FALSE.,iter,rho(:,0:,1:,1:1),qpw(1:,1:1),rht(1:,1:,1:1),rhtxy(1:,1:,1:,1:1),cdom,cdomvz,cdomvxy)
 
           !---> save mx to file mdnx
           OPEN (72,FILE='mdnx',FORM='unformatted',STATUS='unknown')

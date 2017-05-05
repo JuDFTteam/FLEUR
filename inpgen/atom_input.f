@@ -7,7 +7,7 @@
       MODULE m_atominput
       use m_juDFT
 
-      INTEGER, PARAMETER  :: dbgfh=6, errfh=6, bfh=93, warnfh=6
+      INTEGER, PARAMETER  :: dbgfh=6, errfh=6, warnfh=6
       REAL, PARAMETER     :: eps=0.00000001
 
       CONTAINS
@@ -16,7 +16,7 @@
 !     file. Part of inp-generator
 !***********************************************************************
       SUBROUTINE atom_input(
-     >                      infh,xl_buffer,buffer,
+     >                      infh,xl_buffer,bfh,buffer,
      >                      jspins,film,idlist,xmlCoreRefOccs,
      X                      nline,xmlElectronStates,
      X                      xmlPrintCoreStates,xmlCoreOccs,
@@ -36,6 +36,7 @@
 
 ! ... Arguments ...
       INTEGER, INTENT (IN)    :: infh  ! file number of input-file
+      INTEGER, INTENT (IN)    :: bfh
       INTEGER, INTENT (INOUT) :: nline ! current line in this file
       INTEGER, INTENT (INOUT) :: nel   ! number of valence electrons
 
@@ -125,7 +126,7 @@
 
       IF (nbuffer == 0) THEN
         DO
-          CALL read_record(infh,xl_buffer,nline,nbuffer,buffer,ios)
+          CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
           IF (ios==1) GOTO 999
           IF (ios == 2)  CALL juDFT_error
      +         ("end of file while reading a record",
@@ -150,7 +151,7 @@
         ELSE
 !--->     read defaults for atom defaults
           CALL read_allatoms(
-     >                       l_buffer,
+     >                       bfh,l_buffer,
      <                       rmt0_def,dx0_def,jri0_def,lmax0_def,
      <                       lnonsph0_def,ncst0_def,econfig0_def,
      <                       bmu0_def,ios)
@@ -211,7 +212,7 @@
 
 !--->   read namelist
         CALL read_atom(
-     >                 l_buffer,lotype,
+     >                 bfh,l_buffer,lotype,
      <                 id,zat0,rmt0,jri0,dx0,lmax0,lnonsph0,
      <                 ncst0,econfig0,bmu0,lo0,nlod0,llod,ios)
         IF (ios.ne.0) THEN
@@ -699,7 +700,7 @@ c           in s and p states equal occupation of up and down states
 !----------------------------------------------------------------
 !================================================================
       SUBROUTINE read_allatoms(
-     >                         l_buffer,
+     >                         bfh,l_buffer,
      X                         rmt,dx,jri,lmax,lnonsph,ncst,econfig,
      <                         bmu,ios)
 !****************************************************************
@@ -708,7 +709,7 @@ c           in s and p states equal occupation of up and down states
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)    :: l_buffer
+      INTEGER, INTENT (IN)    :: bfh,l_buffer
       INTEGER, INTENT (INOUT) :: jri     ! mt radial mesh points
       INTEGER, INTENT (INOUT) :: lmax    ! max. l to include for density, overlap etc.
       INTEGER, INTENT (INOUT) :: lnonsph ! max. l for nonspherical MT-contributions
@@ -727,7 +728,7 @@ c           in s and p states equal occupation of up and down states
       END SUBROUTINE read_allatoms
 !================================================================
       SUBROUTINE read_atom(
-     >                     l_buffer,lotype,
+     >                     bfh,l_buffer,lotype,
      X                     id,z,rmt,jri,dx,lmax,lnonsph,ncst,econfig,
      <                     bmu,lo,nlod,llod,ios )
 !***********************************************************************
@@ -738,7 +739,7 @@ c           in s and p states equal occupation of up and down states
       IMPLICIT NONE
 
 ! ... arguments ...
-      INTEGER, INTENT (IN)     :: l_buffer
+      INTEGER, INTENT (IN)     :: bfh,l_buffer
       REAL, INTENT (OUT)       :: id,z,rmt,dx,bmu
       INTEGER                  :: lmax,lnonsph,ncst,jri,nlod,llod
       CHARACTER(len=l_buffer)  :: econfig

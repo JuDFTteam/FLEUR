@@ -175,10 +175,8 @@
       TYPE t_atoms
        !<no of types
        INTEGER :: ntype
-       INTEGER :: ntypd
        !<total-no of atoms
        INTEGER :: nat
-       INTEGER :: natd
        !<dimensions of LO's
        INTEGER ::nlod
        INTEGER ::llod
@@ -260,9 +258,7 @@
 
       TYPE t_kpts
        !no
-       INTEGER :: nkpts
        INTEGER :: nkpt
-       INTEGER :: nkptd
        INTEGER :: ntet
        REAL    :: posScale
        LOGICAL :: l_gamma
@@ -270,7 +266,6 @@
        !(3,nkpts) k-vectors internal units
        REAL,ALLOCATABLE ::bk(:,:)
        !(nkpts) weights
-       REAL,ALLOCATABLE ::weight(:)
        REAL,ALLOCATABLE ::wtkpt(:)
        INTEGER, ALLOCATABLE :: pntgptd(:)
        INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:,:)
@@ -311,63 +306,38 @@
 
       !The stars
       TYPE t_stars
-        !dimensions should be deleted later
-        integer :: n3d
-        integer :: n2d
-        integer :: k1d
-        integer :: k2d
-        integer :: k3d
-        integer :: kq1d
-        integer :: kq2d
-        integer :: kq3d
-        integer :: kxc1d
-        integer :: kxc2d
-        integer :: kxc3d
-
-        INTEGER :: nk1
-        INTEGER :: nk2
-        INTEGER :: nk3
-
         !max-length of star
         REAL :: gmax
         REAL :: gmaxInit
         !no of 3d-stars
-        !INTEGER :: nq3
         INTEGER :: ng3
         !no of 2d-stars
-        !INTEGER ::nq2
         INTEGER :: ng2
-        !No of elements in FFT
-        INTEGER ::kimax
-        !No of elements in 2D-FFT
-        INTEGER ::kimax2
         !dim of box
         INTEGER ::mx1
         INTEGER ::mx2
         INTEGER ::mx3
-        !fft boxex
-        integer :: kxc1_fft
-        integer :: kxc2_fft
-        integer :: kxc3_fft
+        !No of elements in FFT
+        INTEGER ::kimax
+        !No of elements in 2D-FFT
+        INTEGER ::kimax2
+       
+        !Box for FFT in pwden
         integer :: kq1_fft
         integer :: kq2_fft
         integer :: kq3_fft
-        INTEGER :: ng2_fft
-        !INTEGER :: nq2_fft
+        integer :: kmxq_fft !no of g-vectors in sphere
+
+        !fft box for xc-pot
+        integer :: kxc1_fft
+        integer :: kxc2_fft
+        integer :: kxc3_fft
+
         INTEGER :: ng3_fft
-        !INTEGER :: nq3_fft
-        INTEGER :: kmxq_fft
-        INTEGER :: kmxq2_fft
-        INTEGER :: ncv3_fft
         INTEGER :: kmxxc_fft !<number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
 
         INTEGER :: nxc3_fft !< number of stars in the  charge density  fft-box
 
-
-        !No of elements in z-direction
-        INTEGER ::ngz
-        INTEGER ::izmin
-        INTEGER ::izmax
         !rep. g-vector of star
         INTEGER,ALLOCATABLE ::kv3(:,:)
         !length of star
@@ -386,7 +356,6 @@
         INTEGER,ALLOCATABLE ::ig2(:)
         !
         REAL,ALLOCATABLE:: phi2(:) !<(n2d)
-        INTEGER,ALLOCATABLE ::igz(:)
         !phase phactor of g-vector
         COMPLEX,ALLOCATABLE    ::rgphs(:,:,:)
         !mapping of stars to FFT-box
@@ -398,16 +367,9 @@
         !same of 2D
         COMPLEX,ALLOCATABLE  :: pgfft2(:)
         !
-        REAL,ALLOCATABLE :: ft2_gfx(:),ft2_gfy(:)
-        !REAL,   ALLOCATABLE  :: pgft2xy(:)
-        !REAL,   ALLOCATABLE  :: pgft2x(:)
-        !REAL,   ALLOCATABLE  :: pgft2y(:)
-        !REAL,   ALLOCATABLE  :: pgft2xx(:)
-        !REAL,   ALLOCATABLE  :: pgft2yy(:)
-      COMPLEX, ALLOCATABLE :: ustep(:)
-       REAL, ALLOCATABLE :: ufft(:)
-
-
+        REAL,ALLOCATABLE     :: ft2_gfx(:),ft2_gfy(:)
+        COMPLEX, ALLOCATABLE :: ustep(:)
+        REAL, ALLOCATABLE    :: ufft(:)
      END TYPE
 
      TYPE t_oneD
@@ -559,7 +521,9 @@
         LOGICAL :: eonly
         LOGICAL :: film
         LOGICAL :: ctail
+        INTEGER :: coretail_lmax
         INTEGER :: itmax
+        REAL    :: minDistance
         INTEGER :: maxiter
         INTEGER :: imix
         INTEGER :: gw
@@ -626,12 +590,8 @@
      END TYPE
 
      TYPE t_obsolete
-        INTEGER:: lpr
-        INTEGER:: lepr
-        LOGICAL:: form66
-        LOGICAL:: eig66(2)
+        INTEGER:: lepr !floating energy parameters...
         LOGICAL:: disp
-        LOGICAL:: form76
         INTEGER:: ndvgrd
         REAL   :: chng
         LOGICAL :: lwb
@@ -710,7 +670,6 @@
        LOGICAL ::invs
        !Z-refls. sym
        LOGICAL ::zrfs
-       LOGICAL :: l_zref
        !No of sym ops
        INTEGER ::nop
        !No of 2D-sym ops
@@ -746,6 +705,8 @@
         REAL              :: te_exc    !<charge density-ex-corr.energy density integral
         REAL              :: e_ldau    !<total energy contribution of LDA+U
         REAL              :: tote
+        REAL              :: last_distance
+        REAL              :: bandgap
         TYPE(t_energy_hf) ::  te_hfex
         REAL              ::  te_hfex_loc(2)
         REAL, ALLOCATABLE :: w_iks(:,:,:)
@@ -756,6 +717,12 @@
        INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
        INTEGER :: irank    !< rank of task in mpi_comm
        INTEGER :: isize    !< no of tasks in mpi_comm
+       INTEGER :: n_start  !< no of first k-point to calculate on this PE
+       INTEGER :: n_stride !< stride for k-loops
+       INTEGER :: n_size   !< PE per kpoint, i.e. "isize" for eigenvalue parallelization
+       INTEGER :: n_groups !< No of k-loops per PE
+       INTEGER :: sub_comm !< Sub-Communicator for eigenvalue parallelization (all PE working on same k-point)
+       INTEGER :: n_rank   !< rank in sub_comm
       END TYPE
 
       TYPE t_zMat
@@ -772,5 +739,100 @@
         REAL,    ALLOCATABLE :: a_r(:), b_r(:)
         COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
       END TYPE
+!
+! type for wannier-functions
+!
+      type t_wann
+        integer :: wan90version
+        integer :: oc_num_orbs
+        integer,allocatable :: oc_orbs(:)
+        logical :: l_unformatted
+        logical :: l_oc_f
+        logical :: l_ndegen
+        logical :: l_orbitalmom
+        logical :: l_orbcomp
+        logical :: l_orbcomprs
+        logical :: l_denmat
+        logical :: l_perturbrs
+        logical :: l_perturb
+        logical :: l_nedrho
+        logical :: l_anglmomrs
+        logical :: l_anglmom
+        logical :: l_spindisp
+        logical :: l_spindisprs
+        logical :: l_socspicom
+        logical :: l_socspicomrs
+        logical :: l_offdiposoprs
+        logical :: l_offdiposop
+        logical :: l_torque
+        logical :: l_torquers
+        logical :: l_atomlist
+        integer :: atomlist_num
+        integer,allocatable :: atomlist(:)
+        logical :: l_berry
+        logical :: l_perpmagrs
+        logical :: l_perpmag
+        logical :: l_perpmagat
+        logical :: l_perpmagatrs
+        logical :: l_socmatrs
+        logical :: l_socmat
+        logical :: l_soctomom
+        logical :: l_kptsreduc2
+        logical :: l_nablapaulirs
+        logical :: l_nablars
+        logical :: l_surfcurr
+        logical :: l_updown
+        logical :: l_ahe
+        logical :: l_she
+        logical :: l_rmat
+        logical :: l_nabla
+        logical :: l_socodi
+        logical :: l_pauli
+        logical :: l_pauliat
+        logical :: l_potmat
+        logical :: l_projgen
+        logical :: l_plot_symm
+        logical :: l_socmmn0
+        logical :: l_bzsym
+        logical :: l_hopping
+        logical :: l_kptsreduc
+        logical :: l_prepwan90
+        logical :: l_plot_umdat
+        logical :: l_wann_plot
+        logical :: l_bynumber
+        logical :: l_stopopt
+        logical :: l_matrixmmn
+        logical :: l_matrixamn
+        logical :: l_projmethod
+        logical :: l_wannierize
+        logical :: l_plotw90
+        logical :: l_byindex
+        logical :: l_byenergy
+        logical :: l_proj_plot
+        logical :: l_bestproj
+        logical :: l_ikptstart
+        logical :: l_lapw
+        logical :: l_plot_lapw
+        logical :: l_fermi
+        logical :: l_dipole
+        logical :: l_dipole2
+        logical :: l_dipole3
+        logical :: l_mmn0
+        logical :: l_mmn0at
+        logical :: l_manyfiles
+        logical :: l_collectmanyfiles
+        logical :: l_ldauwan
+        logical :: l_lapw_kpts
+        logical :: l_lapw_gfleur
+        logical :: l_kpointgen
+        logical :: l_w90kpointgen
+        integer :: ikptstart
+        integer :: band_min(1:2)
+        integer :: band_max(1:2)
+        integer :: gfthick
+        integer :: gfcut
+        integer :: unigrid(6)
+        integer :: mhp(3)
+      end type t_wann
 
       END

@@ -37,17 +37,17 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_mcd,l_evp
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: ncore(atoms%ntypd)
+    INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
     REAL,    INTENT (IN)  :: eig(:)!(dimension%neigd),
     REAL,    INTENT (IN)  :: we(noccbd) 
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%natd)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%natd)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%natd)
+    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN)  :: m_mcd(:,:,:,:)!(dimension%nstd,(3+1)**2,3*ntypd ,2)
-    REAL,    INTENT (OUT) :: enerlo(atoms%nlod,atoms%ntypd),sqlo(atoms%nlod,atoms%ntypd)
-    REAL,    INTENT (OUT) :: ener(0:3,atoms%ntypd),sqal(0:3,atoms%ntypd)
-    REAL,    INTENT (OUT) :: qal(0:,:,:)!(0:3,atoms%ntypd,dimension%neigd)
-    REAL,    INTENT (OUT) :: mcd(:,:,:)!(3*atoms%ntypd,dimension%nstd,dimension%neigd)
+    REAL,    INTENT (OUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (OUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
+    REAL,    INTENT (OUT) :: qal(0:,:,:)!(0:3,atoms%ntype,dimension%neigd)
+    REAL,    INTENT (OUT) :: mcd(:,:,:)!(3*atoms%ntype,dimension%nstd,dimension%neigd)
 
     !     ..
     !     .. Local Scalars ..
@@ -57,8 +57,8 @@ CONTAINS
     COMPLEX suma,sumb,sumab,sumba
     !     ..
     !     .. Local Arrays ..
-    REAL qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntypd)
-    REAL qaclo(noccbd,atoms%nlod,atoms%ntypd),qbclo(noccbd,atoms%nlod,atoms%ntypd)
+    REAL qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
+    REAL qaclo(noccbd,atoms%nlod,atoms%ntype),qbclo(noccbd,atoms%nlod,atoms%ntype)
     !     ..
     !
     !---> initialize ener, sqal, enerlo and sqlo on first call

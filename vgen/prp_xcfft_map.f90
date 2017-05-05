@@ -33,8 +33,8 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)  :: cell
     !
     !
-    INTEGER,INTENT(OUT) ::    igxc_fft(0:stars%kxc1d*stars%kxc2d*stars%kxc3d-1)
-    REAL   ,INTENT(OUT) ::    gxc_fft(0:stars%kxc1d*stars%kxc2d*stars%kxc3d-1,3)
+    INTEGER,INTENT(OUT) ::    igxc_fft(0:stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft-1)
+    REAL   ,INTENT(OUT) ::    gxc_fft(0:stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft-1,3)
     !
     !---> local variables
     !

@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-           dimension,efermiarg, l_mcd,ncored,ncore,e_mcd,nsld)
+           dimension,efermiarg,bandgap,l_mcd,ncored,ncore,e_mcd,nsld)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -27,6 +27,8 @@
       USE m_ptdos
       USE m_smooth
       USE m_types
+      USE m_constants
+      USE m_cdn_io
       IMPLICIT NONE
       INTEGER,INTENT(IN)             :: eig_id
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -42,27 +44,26 @@
 
       INTEGER, INTENT(IN) :: ncored 
       INTEGER, INTENT(IN) :: nsld
-      REAL,    INTENT(IN) :: efermiarg
+      REAL,    INTENT(IN) :: efermiarg, bandgap
       LOGICAL, INTENT(IN) :: l_mcd 
 
       INTEGER, INTENT(IN) :: ncore(:)!(ntype)
-      REAL,    INTENT(IN) :: e_mcd(atoms%ntypd,input%jspins,ncored) 
+      REAL,    INTENT(IN) :: e_mcd(atoms%ntype,input%jspins,ncored) 
 !-odim
 !+odim 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
-      REAL,    PARAMETER :: factor = 27.2
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
       INTEGER  icore,qdim,n_orb
-      REAL     as,de,efermi,emax,emin,qmt,sigma,totdos
-      REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk
-      LOGICAL  l_tria,l_orbcomp
+      REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
+      REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
+      LOGICAL  l_tria,l_orbcomp,l_error
 
       INTEGER  itria(3,2*kpts%nkpt),nevk(kpts%nkpt),itetra(4,6*kpts%nkpt)
       INTEGER, ALLOCATABLE :: ksym(:),jsym(:)
-      REAL     vk(3,kpts%nkptd),wt(kpts%nkptd),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
-      REAL     ev(dimension%neigd,kpts%nkptd),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
-      REAL     e_grid(ned+1),spect(ned,3*atoms%ntypd),ferwe(dimension%neigd,kpts%nkptd)
+      REAL     vk(3,kpts%nkpt),wt(kpts%nkpt),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
+      REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
+      REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:),qal_tmp(:,:,:),qis(:),qvlay(:,:,:)
       REAL,    ALLOCATABLE :: mcd(:,:,:),orbcomp(:,:,:),qmtp(:,:)
       REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:),qvac(:,:)
@@ -87,16 +88,20 @@
           qdim = 23
         ENDIF
       ENDIF
-      ALLOCATE( qal(qdim,dimension%neigd,kpts%nkptd),&
-     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkptd),&
+      ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
+     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
      &          qlay(dimension%neigd,vacuum%layerd,2),qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
-      IF (l_mcd) ALLOCATE( mcd(3*atoms%ntypd*ncored,dimension%neigd,kpts%nkptd) )
+      IF (l_mcd) THEN 
+         ALLOCATE( mcd(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
+      ELSE
+         ALLOCATE(mcd(0,0,0))
+      ENDIF
 !
 ! scale energies
-      sigma = banddos%sig_dos*factor
-      emin =min(banddos%e1_dos*factor,banddos%e2_dos*factor)
-      emax =max(banddos%e1_dos*factor,banddos%e2_dos*factor)
-      efermi = efermiarg*factor
+      sigma = banddos%sig_dos*hartree_to_ev_const
+      emin =min(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
+      emax =max(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
+      efermi = efermiarg*hartree_to_ev_const
  
       WRITE (6,'(a)') 'DOS-Output is generated!'
 
@@ -131,8 +136,8 @@
             ENDDO
           ENDDO
         ENDDO
-        e_lo = e_lo*factor - efermi - emax 
-        e_up = e_up*factor - efermi
+        e_lo = e_lo*hartree_to_ev_const - efermi - emax 
+        e_up = e_up*hartree_to_ev_const - efermi
         de = (e_up-e_lo)/(ned-1)
         DO i=1,ned
           e_grid(i) = e_lo + (i-1)*de
@@ -160,8 +165,8 @@
 !
             ALLOCATE( ksym(dimension%neigd),jsym(dimension%neigd) )
             ALLOCATE( qal_tmp(1:lmax,atoms%ntype,dimension%neigd))
-            ALLOCATE( orbcomp(dimension%neigd,23,atoms%natd),qintsl(nsld,dimension%neigd))
-            ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%natd),qvac(dimension%neigd,2))
+            ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat),qintsl(nsld,dimension%neigd))
+            ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%nat),qvac(dimension%neigd,2))
             ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
             CALL read_eig(eig_id,k,jspin,bk=vk(:,k),wk=wt(k),neig=nevk(k),eig=ev(:,k))
             CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
@@ -233,7 +238,7 @@
 !---- >     convert eigenvalues to ev and shift them by efermi
 !
             DO i = 1 , nevk(k)
-               ev(i,k) = ev(i,k)*factor - efermi
+               ev(i,k) = ev(i,k)*hartree_to_ev_const - efermi
             ENDDO
             DO i = nevk(k) + 1, dimension%neigd
                ev(i,k) = 9.9e+99
@@ -305,7 +310,7 @@
         IF ( .not.l_mcd ) THEN
          ALLOCATE (g(ned,qdim))
         ELSE
-         ALLOCATE (g(ned,3*atoms%ntypd*ncored))
+         ALLOCATE (g(ned,3*atoms%ntype*ncored))
         ENDIF
 !
          IF ( l_tria.and.(.not.l_mcd).and.(banddos%ndir.NE.-3) ) THEN
@@ -334,8 +339,8 @@
             CALL dos_bin(input%jspins,qdim,ned,emin,emax,dimension%neigd,kpts%nkpt,&
                  nevk,wt,ev,qal, g)
             ELSE
-            CALL dos_bin(input%jspins,3*atoms%ntypd*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 nevk(1:kpts%nkpt),wt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntypd*ncored,1:ntb,1:kpts%nkpt), g)
+            CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
+                 nevk(1:kpts%nkpt),wt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
@@ -414,13 +419,13 @@
                DO icore = 1 , ncore(n)
                  DO i = 1 , ned-1
                    IF (e(i).GT.0) THEN     ! take unoccupied part only
-                   e_test1 = -e(i) - efermi +e_mcd(n,jspin,icore)*factor
-                   e_test2 = -e(i+1)-efermi +e_mcd(n,jspin,icore)*factor
+                   e_test1 = -e(i) - efermi +e_mcd(n,jspin,icore)*hartree_to_ev_const
+                   e_test2 = -e(i+1)-efermi +e_mcd(n,jspin,icore)*hartree_to_ev_const
                    IF ((e_test2.LE.e_grid(l)).AND. (e_test1.GT.e_grid(l))) THEN
                      fac = (e_grid(l)-e_test1)/(e_test2-e_test1)
                      DO k = 3*(n-1)+1,3*(n-1)+3
-                       spect(l,k) = spect(l,k)+ g(i,3*atoms%ntypd*(icore-1)+k)&
-                           *(1.-fac) + fac * g(i+1,3*atoms%ntypd*(icore-1)+k)
+                       spect(l,k) = spect(l,k)+ g(i,3*atoms%ntype*(icore-1)+k)&
+                           *(1.-fac) + fac * g(i+1,3*atoms%ntype*(icore-1)+k)
                      ENDDO
                    ENDIF
                    ENDIF
@@ -443,7 +448,7 @@
 !     >                 ntria,as,atr,2*nkpt,itria,nkptd,ev,qval,e,
 !     <                 g)
             CALL ptdos(emin,emax,input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,ntb,ntria&
-                ,as,atr,2*kpts%nkpt,itria,kpts%nkptd,ev(1:ntb,1:kpts%nkptd), qval(:,1:ntb,1:kpts%nkptd),e,g)
+                ,as,atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt), qval(:,1:ntb,1:kpts%nkpt),e,g)
             
 !---- >     smoothening
             IF ( sigma.GT.0.0 ) THEN
@@ -468,21 +473,35 @@
 !------------------------------------------------------------------------------
 
          IF (banddos%ndir == -4) THEN
+            eFermiCorrection = 0.0
+            IF(bandgap.LT.(8.0*input%tkb*hartree_to_ev_const)) THEN
+               CALL readPrevEFermi(eFermiPrev,l_error)
+               IF(.NOT.l_error) THEN
+                  WRITE(*,*) 'Fermi energy is automatically corrected in bands.* files.'
+                  WRITE(*,*) 'It is consistent with last calculated density!'
+                  WRITE(*,*) 'No manual correction (e.g. in band.gnu file) required.'
+                  eFermiCorrection = (eFermiPrev-efermiarg)*hartree_to_ev_const
+               ELSE
+                  WRITE(*,*) 'Fermi energy in bands.* files may not be consistent with last density.'
+                  WRITE(*,*) 'Please correct it manually (e.g. in band.gnu file).'
+               END IF
+            END IF
+
             OPEN (18,FILE='bands'//spin12(jspin))
             ntb = minval(nevk(:))    
             kx(1) = 0.0
-            vkr(:,1)=matmul(cell%bmat,vk(:,1))
+            vkr(:,1)=matmul(vk(:,1),cell%bmat)
             DO k = 2, kpts%nkpt
               
-            vkr(:,k)=matmul(cell%bmat,vk(:,k))
-              dk = ( vkr(1,k) - vkr(1,k-1) )**2 + ( vkr(2,k) - vkr(2,k-1) )**2 +&
-                   ( vkr(3,k) - vkr(3,k-1) )**2
-              kx(k) = kx(k-1) + sqrt(dk)
+               vkr(:,k)=matmul(vk(:,k),cell%bmat)
+               dk = (vkr(1,k)-vkr(1,k-1))**2 + (vkr(2,k)-vkr(2,k-1) )**2 + &
+                    (vkr(3,k)-vkr(3,k-1))**2
+               kx(k) = kx(k-1) + sqrt(dk)
             ENDDO
             DO i = 1, ntb
-              DO k = 1, kpts%nkpt
-                write(18,'(2f15.9)') kx(k),ev(i,k)
-              ENDDO
+               DO k = 1, kpts%nkpt
+                  write(18,'(2f15.9)') kx(k),ev(i,k)-eFermiCorrection
+               ENDDO
             ENDDO
             CLOSE (18)
          ENDIF
@@ -498,7 +517,7 @@
         chform = '('//chntype//'f15.8)'
         IF ( sigma.GT.0.0 ) THEN
            IF ( l_mcd ) THEN
-             DO ln = 1 , 3*atoms%ntypd
+             DO ln = 1 , 3*atoms%ntype
                CALL smooth(e_grid,spect(1,ln),sigma,ned)
              ENDDO
            ENDIF

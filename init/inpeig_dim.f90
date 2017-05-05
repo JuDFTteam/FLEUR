@@ -26,8 +26,8 @@
       REAL  s1,s2,scale,bk(3)
       LOGICAL xyu
    !     ..
-      kpts%nkptd = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
-      stars%kq1d = 0 ; stars%kq2d = 0 ; stars%kq3d = 0
+      kpts%nkpt = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
+      stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
@@ -53,7 +53,7 @@
  8040    FORMAT (i5,f20.10)
  8050    FORMAT (i5,f20.10,3x,l1)
 
-         kpts%nkptd = max(kpts%nkptd,kpts%nkpt)
+         kpts%nkpt = max(kpts%nkpt,kpts%nkpt)
  8060    FORMAT (i5,f20.10)
          IF (scale.EQ.0.0) scale = 1.0
          DO nq=1,jij%nqpt
@@ -100,9 +100,9 @@
              CALL apws_dim(&
      &                     bk(:),cell,input,noco,oneD,&
      &                     nv,nv2,kq1,kq2,kq3)
-             stars%kq1d = max(kq1,stars%kq1d)
-             stars%kq2d = max(kq2,stars%kq2d)
-             stars%kq3d = max(kq3,stars%kq3d)
+             stars%kq1_fft = max(kq1,stars%kq1_fft)
+             stars%kq2_fft = max(kq2,stars%kq2_fft)
+             stars%kq3_fft = max(kq3,stars%kq3_fft)
              
              dimension%nvd = max(dimension%nvd,nv)
              dimension%nv2d = max(dimension%nv2d,nv2)

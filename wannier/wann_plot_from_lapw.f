@@ -21,7 +21,7 @@ c****************************************************************
      >     lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,nnne,kk,
      >     nlod,llod,lmd,omtil,nlo,llo)
 
-      USE m_od_types, ONLY : od_inp, od_sym
+      USE m_types, ONLY : od_inp, od_sym
       USE m_xsf_io
       USE m_wann_lapw_int_plot
       USE m_wann_lapw_sph_plot
@@ -227,26 +227,30 @@ c..loop by the wannierfunctions
             write (name3,24) nbn,jspin
    24       format (i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(
-     >                        55,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
-            OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(
-     >                        56,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
-            OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(
-     >                        57,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
-            CALL xsf_WRITE_header(55,twodim,filename,(vec1),
-     &       (vec2),(vec3),zero
-     $           ,grid)
-            CALL xsf_WRITE_header(56,twodim,filename,(vec1),
-     &       (vec2),(vec3),zero
-     $           ,grid)
-            CALL xsf_WRITE_header(57,twodim,filename,(vec1),
-     &       (vec2),(vec3),zero
-     $           ,grid)
+!#if 1==1
+            call judft_error("NOT INPLEMENTED")
+c$$$#else
+c$$$            CALL xsf_WRITE_atoms(
+c$$$     >                        55,film,odi%d1,amat,neq(:ntype),
+c$$$     >                        zatom(:ntype),pos)
+c$$$            OPEN(56,file=name2)
+c$$$            CALL xsf_WRITE_atoms(
+c$$$     >                        56,film,odi%d1,amat,neq(:ntype),
+c$$$     >                        zatom(:ntype),pos)
+c$$$            OPEN(57,file=name3)
+c$$$            CALL xsf_WRITE_atoms(
+c$$$     >                        57,film,odi%d1,amat,neq(:ntype),
+c$$$     >                        zatom(:ntype),pos)
+c$$$            CALL xsf_WRITE_header(55,twodim,filename,(vec1),
+c$$$     &       (vec2),(vec3),zero
+c$$$     $           ,grid)
+c$$$            CALL xsf_WRITE_header(56,twodim,filename,(vec1),
+c$$$     &       (vec2),(vec3),zero
+c$$$     $           ,grid)
+c$$$            CALL xsf_WRITE_header(57,twodim,filename,(vec1),
+c$$$     &       (vec2),(vec3),zero
+c$$$     $           ,grid)
+c$$$#endif
          ELSE
                WRITE (vandername,201) nbn,jspin
   201          FORMAT (i5.5,'.',i1)            

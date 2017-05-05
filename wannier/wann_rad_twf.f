@@ -101,7 +101,7 @@ c**************************************
 c..project onto local orbitals
 c**************************************
        elseif(rwf(nwf).eq.-6)then
-          IF(nlod<1) CALL juDFT_error("nlod.lt.1",calledby ="wann_rad_twf"
+         IF(nlod<1) CALL juDFT_error("nlod<1",calledby="wann_rad_twf"
      +         )
           do l=0,3
            do j=1,jri(ntyp)
@@ -109,7 +109,7 @@ c**************************************
            enddo!j
           enddo!l
        elseif(rwf(nwf).eq.-7)then
-          IF(nlod<2) CALL juDFT_error("nlod.lt.2",calledby ="wann_rad_twf"
+         IF(nlod<2) CALL juDFT_error("nlod<2",calledby="wann_rad_twf"
      +         )
           do l=0,3
            do j=1,jri(ntyp)
@@ -117,7 +117,7 @@ c**************************************
            enddo!j
           enddo!l
        elseif(rwf(nwf).eq.-8)then
-          IF(nlod<3) CALL juDFT_error("nlod.lt.3",calledby ="wann_rad_twf"
+          IF(nlod<3) CALL juDFT_error("nlod<3",calledby ="wann_rad_twf"
      +         )
           do l=0,3
            do j=1,jri(ntyp)

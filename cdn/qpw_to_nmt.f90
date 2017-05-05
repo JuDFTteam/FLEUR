@@ -38,8 +38,8 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin,l_cutoff    
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: qpwc(stars%n3d)
-    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,dimension%jspd)
+    COMPLEX, INTENT (IN) :: qpwc(stars%ng3)
+    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     !-odim
     !+odim
     !     ..
@@ -51,9 +51,9 @@ CONTAINS
     COMPLEX cp,sm,cprr2
     !     ..
     !     .. Local Arrays ..
-    COMPLEX pylm( (atoms%lmaxd+1)**2,atoms%ntypd ) !,bsl_c(atoms%jmtd,0:lmaxd)
+    COMPLEX pylm( (atoms%lmaxd+1)**2,atoms%ntype ) !,bsl_c(atoms%jmtd,0:lmaxd)
     REAL    bsl(0:atoms%lmaxd),bsl_r(atoms%jmtd,0:atoms%lmaxd),bsl_i(atoms%jmtd,0:atoms%lmaxd)
-    INTEGER mr(atoms%ntypd),lmx(atoms%ntypd),lmxx(atoms%ntypd),ntypsy_o(atoms%ntypd)
+    INTEGER mr(atoms%ntype),lmx(atoms%ntype),lmxx(atoms%ntype),ntypsy_o(atoms%ntype)
     !     ..
     !$      REAL,ALLOCATABLE        :: rho_tmp(:,:,:)
 
@@ -122,16 +122,11 @@ CONTAINS
     DO k = mpi%irank+2,stars%ng3,mpi%isize
        cp = qpwc(k)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
-          CALL phasy1(&
-               &                  atoms,stars,sym,&
-               &                  cell,k,&
-               &                  pylm)
+          CALL phasy1(atoms,stars,sym,cell,k,pylm)
        ELSE
           !-odim
-          CALL od_phasy(&
-               &              atoms%ntypd,stars%n3d,atoms%natd,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
-               &              atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
-               &              pylm) !keep
+          CALL od_phasy(atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+               atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,pylm) !keep
           !+odim
        END IF
        !
@@ -156,14 +151,11 @@ CONTAINS
                    DO jm = 1,sphhar%nmem(lh,nd)
                       m  = sphhar%mlh(jm,lh,nd)
                       lm = l*(l+1) + m + 1
-                      sm = sm + CONJG(sphhar%clnu(jm,lh,nd))&
-                           &                              *pylm(lm,n)
+                      sm = sm + CONJG(sphhar%clnu(jm,lh,nd)) *pylm(lm,n)
                    END DO
                    !$                if (.false.) THEN
-                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin)&
-                        &                            + bsl_r(:,l) *  REAL(sm)
-                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin)&
-                        &                            - bsl_i(:,l) * AIMAG(sm)
+                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin) + bsl_r(:,l) *  REAL(sm)
+                   rho(:,lh,n,jspin) = rho(:,lh,n,jspin) - bsl_i(:,l) * AIMAG(sm)
                    !$                 endif
                    !$            rho_tmp(:,lh,n)=rho_tmp(:,lh,n)+bsl_r(:,l)*real(sm)
                    !$            rho_tmp(:,lh,n)=rho_tmp(:,lh,n)-bsl_i(:,l)*aimag(sm)

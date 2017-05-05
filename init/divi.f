@@ -39,9 +39,11 @@
         ENDIF
         n(3) = 0
         IF (nop2.GE.4) THEN
-          n(1) = 2*NINT(n(1)/2.0+0.1)
-          n(2) = 2*NINT(n(2)/2.0+0.1)
+          n(1) = MAX(2*NINT(n(1)/2.0+0.1),1)
+          n(2) = MAX(2*NINT(n(2)/2.0+0.1),1)
         ENDIF
+        n(1) = MAX(n(1),1)
+        n(2) = MAX(n(2),1)
         WRITE (*,*) n(1),n(2),n(1)*n(2)
       ELSE
         ntes = ntot
@@ -67,6 +69,9 @@
           n(2) = MAX(2*NINT(n(2)/2.0-0.1),1)
           n(3) = MAX(2*NINT(n(3)/2.0-0.1),1)
         ENDIF
+        n(1) = MAX(n(1),1)
+        n(2) = MAX(n(2),1)
+        n(3) = MAX(n(3),1)
         WRITE (*,*) n(1),n(2),n(3),n(1)*n(2)*n(3)
       ENDIF
 

@@ -9,10 +9,15 @@ jt::testrun($executable,$workdir);
 
 #now test output
 $result=jt::test_fileexists("$workdir/out");
-$result+=jt::test_fileexists("$workdir/cdn1");
+$result+=min(jt::test_fileexists("$workdir/cdn1"),jt::test_fileexists("$workdir/cdn.hdf"));
 $result+=jt::test_grepexists("$workdir/out","total charge");
 $result+=jt::test_grepnumber("$workdir/out","qfix","qfix= *([^ ]*)",1.0,0.00001);
 
-jt::stageresult($workdir,$result,"1");
+$result=jt::test_grepexists("$workdir/out","it= *4 *is completed");
+$result+=jt::test_grepnumber("$workdir/out","new fermi energy",".*: *([^ ]*)",0.341,0.01);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-2545.5968,0.01);
+#$result+=jt::test_grepnumber("$workdir/out","distance of charge densities for it= *20",": *([^ ]*)",6.68,0.3);
+$result+=jt::test_grepnumber("$workdir/out","mm       2",".*mm       2 *([^ ]*)",1.8,0.1);
 
+jt::stageresult($workdir,$result,"1");
 

@@ -95,7 +95,7 @@ CONTAINS
           IF ( noco%l_noco .AND. (n_size.GT.1) ) THEN
              !--->       for EV-parallelization & noco ( see comments at top )
              lapw%nv_tot = lapw%nv(1) + lapw%nv(2)
-             IF (noco%l_ss)  CALL juDFT_error("ev-|| & spin-spiral !",calledby ="hssphn")
+             IF (noco%l_ss)  CALL juDFT_error("ev-parallelization & spin-spiral !",calledby ="hsmt_overlap")
           ELSE
              lapw%nv_tot = lapw%nv(iintsp)
           ENDIF

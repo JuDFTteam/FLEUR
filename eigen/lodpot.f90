@@ -31,9 +31,9 @@ CONTAINS
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,input%jspins),vz(vacuum%nmzd,2,4)
-    REAL :: el(0:atoms%lmaxd,atoms%ntypd,input%jspins) 
-    REAL :: evac(2,input%jspins),ello(atoms%nlod,atoms%ntypd,input%jspins)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmzd,2,4)
+    REAL :: el(0:atoms%lmaxd,atoms%ntype,input%jspins) 
+    REAL :: evac(2,input%jspins),ello(atoms%nlod,atoms%ntype,input%jspins)
 
     !     ..
     !     .. Local Scalars ..
@@ -46,8 +46,8 @@ CONTAINS
     !     .. Local Arrays .. 
     INTEGER nqn(0:atoms%lmaxd),nqn_lo(atoms%nlod)
     REAL, ALLOCATABLE :: f(:,:),vrd(:)
-    LOGICAL l_done(0:atoms%lmaxd,atoms%ntypd,input%jspins)
-    LOGICAL lo_done(atoms%nlod,atoms%ntypd,input%jspins)
+    LOGICAL l_done(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    LOGICAL lo_done(atoms%nlod,atoms%ntype,input%jspins)
     CHARACTER(len=1) :: ch(0:9)
     CHARACTER(LEN=20)    :: attributes(6)
     !     ..
@@ -60,7 +60,7 @@ CONTAINS
        e=1.0
        ch(0:9) = (/'s','p','d','f','g','h','i','j','k','l'/)
        DO jsp = 1,input%jspins
-          IF( input%jspins .GT. 1 ) WRITE(6,'(A,i3)') ' Spin: ',jsp
+          !IF( input%jspins .GT. 1 ) WRITE(6,'(A,i3)') ' Spin: ',jsp
 !$OMP PARALLEL DO DEFAULT(none) &
 !$OMP SHARED(atoms,enpara,jsp,l_done,mpi,vr,c,el,ch,lo_done,ello) &
 !$OMP PRIVATE(n,nqn,nqn_lo,d,rn,msh,f,vrd,j,t1,t2,rr,l,node,nodeu,e,start,us,dus,e_lo,e_up) &

@@ -109,11 +109,11 @@
           LOGICAL,INTENT (IN) :: l_st
           !     ..
           !     .. Array Arguments ..
-          COMPLEX,INTENT (INOUT) :: qpw(stars%n3d,DIMENSION%jspd)
+          COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,DIMENSION%jspd)
           COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
+          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
           REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntypd)
+          REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
           COMPLEX czero,carg,VALUE,slope,ci
@@ -126,9 +126,9 @@
           !     ..
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpwc(:)
-          REAL    acoff(atoms%ntypd),alpha(atoms%ntypd),rho_out(2)
-          REAL    rat(DIMENSION%msh,atoms%ntypd)
-          INTEGER mshc(atoms%ntypd)
+          REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
+          REAL    rat(DIMENSION%msh,atoms%ntype)
+          INTEGER mshc(atoms%ntype)
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           !     ..
           DATA  czero /(0.0,0.0)/, zero /0.0/, tol_14 /1.0e-10/!-14
@@ -163,7 +163,7 @@
           !
           ci = CMPLX(0.0,1.0)
 
-          ALLOCATE (qpwc(stars%n3d))
+          ALLOCATE (qpwc(stars%ng3))
           !
           !----> prepare local array to store pw-expansion of pseudo core charge
           !
@@ -175,7 +175,7 @@
           !      (2) cut_off core tails from noise 
           !
 #ifdef CPP_MPI
-          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntypd,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
 #endif
           nloop: DO  n = 1 , atoms%ntype
               IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
@@ -452,7 +452,7 @@
              !           components
              !
           ENDIF ! mpi%irank ==0
-          l_cutoff=maxval(atoms%lmax(:atoms%ntype))
+          l_cutoff=input%coretail_lmax
 #ifdef CPP_MPI
           IF ( mpi%isize > 1 ) CALL mpi_bc_st(mpi,stars,qpwc)
 #endif
@@ -490,28 +490,28 @@
       type(t_mpi)      ,intent(in) :: mpi
       type(t_dimension),intent(in) :: DIMENSION
       type(t_atoms)    ,intent(in) :: atoms
-      integer          ,intent(in) :: mshc(atoms%ntypd)
-      real             ,intent(in) :: alpha(atoms%ntypd), tol_14
-      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntypd)
-      real             ,intent(in) :: acoff(atoms%ntypd)
+      integer          ,intent(in) :: mshc(atoms%ntype)
+      real             ,intent(in) :: alpha(atoms%ntype), tol_14
+      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntype)
+      real             ,intent(in) :: acoff(atoms%ntype)
       type(t_stars)    ,intent(in) :: stars
       integer          ,intent(in) :: method2
-      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntypd)
+      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntype)
       type(t_cell)     ,intent(in) :: cell
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
-      complex         ,intent(out) :: qpwc(stars%n3d)
+      complex         ,intent(out) :: qpwc(stars%ng3)
 
 !     ..Local variables
       integer nat1, n, n_out_p, k
       complex czero
 
 !     ..Local arrays
-      real :: qf(stars%n3d)
-      complex qpwc_at(stars%n3d)
+      real :: qf(stars%ng3)
+      complex qpwc_at(stars%ng3)
 #ifdef CPP_MPI
       external mpi_bcast
-      complex :: qpwc_loc(stars%n3d)
+      complex :: qpwc_loc(stars%ng3)
       integer :: ierr
 #include "cpp_double.h"
       include "mpif.h"
@@ -519,11 +519,11 @@
 
       czero = (0.0,0.0)
 #ifdef CPP_MPI
-      DO k = 1 , stars%n3d
+      DO k = 1 , stars%ng3
          qpwc_loc(k) = czero
       ENDDO
 #endif
-      DO k = 1 , stars%n3d    
+      DO k = 1 , stars%ng3    
           qpwc(k) = czero
       ENDDO
 
@@ -551,14 +551,14 @@
                  END DO
               END IF       
               CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
-                                 atoms%neq(n),atoms%natd,atoms%taual,&
+                                 atoms%neq(n),atoms%nat,atoms%taual,&
                                  cell,qf,qpwc_at)
 #ifdef CPP_MPI
-              DO k = 1, stars%n3d
+              DO k = 1, stars%ng3
                  qpwc_loc(k) = qpwc_loc(k)  + qpwc_at(k)
               END DO
 #else
-              DO k = 1 , stars%n3d    
+              DO k = 1 , stars%ng3    
                  qpwc(k) = qpwc(k) + qpwc_at(k)
               END DO
 #endif
@@ -566,7 +566,7 @@
           END IF
        ENDDO
 #ifdef CPP_MPI
-       CALL mpi_allreduce(qpwc_loc,qpwc,stars%n3d,CPP_MPI_COMPLEX,mpi_sum, &
+       CALL mpi_allreduce(qpwc_loc,qpwc,stars%ng3,CPP_MPI_COMPLEX,mpi_sum, &
                mpi%mpi_comm,ierr)
 #endif
 
@@ -590,8 +590,8 @@
        integer          ,intent(in) :: neq,natd
        real             ,intent(in) :: taual(3,natd)
        type(t_cell)     ,intent(in) :: cell
-       real             ,intent(in) :: qf(stars%n3d)
-       complex         ,intent(out) :: qpwc_at(stars%n3d)
+       real             ,intent(in) :: qf(stars%ng3)
+       complex         ,intent(out) :: qpwc_at(stars%ng3)
 
 !      ..Local variables
       integer k, nat2, nat, j
@@ -605,7 +605,7 @@
        complex phaso(oneD%ods%nop)
 
       czero = (0.0,0.0)
-      DO k = 1 , stars%n3d    
+      DO k = 1 , stars%ng3    
           qpwc_at(k) = czero
       ENDDO
 
@@ -688,7 +688,7 @@
       type(t_stars)    ,intent(in) :: stars
       type(t_cell)     ,intent(in) :: cell
       real             ,intent(in) :: acoff
-      real            ,intent(out) :: qf(stars%n3d)
+      real            ,intent(out) :: qf(stars%ng3)
 
 
 !     ..Local variables
@@ -700,7 +700,7 @@
       real rhohelp(DIMENSION%msh)
 
       zero = 0.0
-      DO k = 1,stars%n3d
+      DO k = 1,stars%ng3
         qf(k) = 0.0
       END DO
 

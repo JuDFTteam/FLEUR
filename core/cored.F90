@@ -5,7 +5,7 @@ CONTAINS
        &                 rho,DIMENSION,&
        &                 sphhar,&
        &                 vr,&
-       &                 qint,rhc,seig)
+       &                 qint,rhc,tec,seig)
 
     !     *******************************************************
     !     *****   set up the core densities for compounds.  *****
@@ -29,16 +29,19 @@ CONTAINS
     REAL,    INTENT (OUT) :: seig
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vr(atoms%jmtd,atoms%ntypd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntypd,DIMENSION%jspd)
-    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntypd),qint(atoms%ntypd,DIMENSION%jspd)
+    REAL,    INTENT(IN)    :: vr(atoms%jmtd,atoms%ntype)
+    REAL,    INTENT(INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT(INOUT) :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT(INOUT) :: qint(atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT(INOUT) :: tec(atoms%ntype,DIMENSION%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL e,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2,tec 
+    REAL e,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2
     REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight
     INTEGER i,j,jatom,jm,korb,n,ncmsh,nm,nm1,nst ,l,ierr
     !     ..
     !     .. Local Arrays ..
+    
     REAL rhcs(DIMENSION%msh),rhoc(DIMENSION%msh),rhoss(DIMENSION%msh),vrd(DIMENSION%msh),f(0:3)
     REAL occ(DIMENSION%nstd),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
     REAL occ_h(DIMENSION%nstd,2)
@@ -48,26 +51,18 @@ CONTAINS
     !     ..
     c = c_light(1.0)
     seig = 0.
-    IF (jspin.EQ.1) THEN
-       OPEN (17,file='cdnc',form='unformatted',status='unknown')
-    ENDIF
     !
     IF (input%frcor) THEN
-       IF (jspin.EQ.1) REWIND 17
        DO  n = 1,atoms%ntype
           jm = atoms%jri(n)
           rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
           ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )
           ncmsh = MIN( ncmsh, DIMENSION%msh )
-          !     --->    read in core density
-          READ (17) (rhc(i,n),i=1,ncmsh)
           !     --->    update spherical charge density
           DO  i = 1,atoms%jri(n)
-             rhoc(i) = rhc(i,n)
+             rhoc(i) = rhc(i,n,jspin)
              rho(i,0,n,jspin) = rho(i,0,n,jspin) + rhoc(i)/sfp_const
           ENDDO
-          !     --->    read in kinetic enrgy of the core
-          READ (17) tec
           !     ---> for total energy calculations, determine the sum of the
           !     ---> eigenvalues by requiring that the core kinetic energy
           !     ---> remains constant.
@@ -76,13 +71,11 @@ CONTAINS
           ENDDO
           nm = atoms%jri(n)
           CALL intgr3(rhoc,atoms%rmsh(1,n),atoms%dx(n),nm,rhos)
-          sea = tec + rhos
-          WRITE (16,FMT=8030) n,jspin,tec,sea
-          WRITE (6,FMT=8030) n,jspin,tec,sea
+          sea = tec(n,jspin) + rhos
+          WRITE (16,FMT=8030) n,jspin,tec(n,jspin),sea
+          WRITE (6,FMT=8030) n,jspin,tec(n,jspin),sea
           seig = seig + atoms%neq(n)*sea
        ENDDO
-       !     --->    read in qint
-       READ (17) (qint(n,jspin),n=1,atoms%ntype)
        RETURN
     END IF
 
@@ -172,20 +165,17 @@ CONTAINS
           rho(j,0,jatom,jspin) = rho(j,0,jatom,jspin) + rhoc(j)/sfp_const
        ENDDO
 
-       rhc(1:ncmsh,jatom)   = rhoss(1:ncmsh) / input%jspins
-       rhc(ncmsh+1:DIMENSION%msh,jatom) = 0.0
+       rhc(1:ncmsh,jatom,jspin)   = rhoss(1:ncmsh) / input%jspins
+       rhc(ncmsh+1:DIMENSION%msh,jatom,jspin) = 0.0
 
        seig = seig + atoms%neq(jatom)*sume
-       !         WRITE (17) (rhoc(i),i=1,nm)
-       WRITE (17) (rhc(i,jatom),i=1,ncmsh)
        DO  i = 1,nm
           rhoc(i) = rhoc(i)*vr(i,jatom)/atoms%rmsh(i,jatom)
        ENDDO
        CALL intgr3(rhoc,atoms%rmsh(1,jatom),atoms%dx(jatom),nm,rhs)
-       tec = sume - rhs
-       WRITE (6,FMT=8030) jatom,jspin,tec,sume
-       WRITE (16,FMT=8030) jatom,jspin,tec,sume
-       WRITE (17) tec
+       tec(jatom,jspin) = sume - rhs
+       WRITE (6,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
+       WRITE (16,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
 
        !     ---> simpson integration
        rad = atoms%rmt(jatom)
@@ -206,7 +196,7 @@ CONTAINS
        WRITE(attributes(1),'(i0)') jatom
        WRITE(attributes(2),'(i0)') NINT(z)
        WRITE(attributes(3),'(i0)') jspin
-       WRITE(attributes(4),'(f18.10)') tec
+       WRITE(attributes(4),'(f18.10)') tec(jatom,jspin)
        WRITE(attributes(5),'(f18.10)') sume
        WRITE(attributes(6),'(f9.6)') q/input%jspins
        CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
@@ -229,14 +219,9 @@ CONTAINS
        CALL closeXMLElement('coreStates')
     ENDDO
 
-
-    !      qint=0.
-    WRITE (17) (qint(n,jspin),n=1,atoms%ntype)
-    !
-    IF (jspin.EQ.input%jspins) CLOSE (17)
     RETURN
 
-8000 FORMAT (/,/,10x,'z=',f4.0,5x,'r(1)=',e14.6,5x,'dx=',f8.6,5x,&
+8000 FORMAT (/,/,10x,'z=',f4.0,5x,'r(1)=',e14.6,5x,'dx=',f9.6,5x,&
          &       'm.t.index=',i4,/,15x,'n',4x,'l',5x,'j',4x,'energy',7x,&
          &       'weight')
 8010 FORMAT (12x,2f5.0,f6.1,f10.4,f10.0)

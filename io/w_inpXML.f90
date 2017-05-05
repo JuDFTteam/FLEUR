@@ -58,7 +58,7 @@ SUBROUTINE w_inpXML(&
    REAL, INTENT (IN)     :: xmlCoreOccs(2,29,atoms%ntype)
    INTEGER, INTENT (IN)  :: xmlElectronStates(29,atoms%ntype)
    LOGICAL, INTENT (IN)  :: xmlPrintCoreStates(29,atoms%ntype)
-   CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntypd)
+   CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntype)
    CHARACTER(len=4),INTENT(IN) :: namex
    CHARACTER(len=12),INTENT(IN):: relcor
    CHARACTER(LEN=*),INTENT(IN) :: filename
@@ -85,7 +85,7 @@ SUBROUTINE w_inpXML(&
 !-odim
 ! ..
 ! ..  Local Variables
-   REAL     ::dtild ,scpos, zc, sumWeight
+   REAL     ::dtild, zc, sumWeight
    INTEGER  ::nw,idsprs, n1, n2
    INTEGER ieq,i,k,na,n,ilo
    REAL s3,ah,a,hs2,rest
@@ -93,7 +93,7 @@ SUBROUTINE w_inpXML(&
    INTEGER :: ierr
 ! ..
 !...  Local Arrays
-   CHARACTER :: helpchar(atoms%ntypd)
+   CHARACTER :: helpchar(atoms%ntype)
    CHARACTER(len=  4) :: chntype
    CHARACTER(len= 41) :: chform
    CHARACTER(len=100) :: line
@@ -110,11 +110,11 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=10) :: loType
    CHARACTER(len=10) :: bzIntMode
    CHARACTER(len=200) :: symFilename
-   LOGICAL :: kptGamma, l_relcor, l_explicit
+   LOGICAL :: kptGamma, l_relcor, l_explicit, l_nocoOpt
    INTEGER :: iAtomType, startCoreStates, endCoreStates
-   CHARACTER(len=100) :: xPosString, yPosString, zPosString
+   CHARACTER(len=100) :: posString(3)
    CHARACTER(len=200) :: coreStatesString, valenceStatesString
-   REAL :: tempTaual(3,atoms%nat)
+   REAL :: tempTaual(3,atoms%nat), scpos(3)
    REAL :: a1Temp(3),a2Temp(3),a3Temp(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
    CHARACTER(len=7) :: coreStateList(29) !'(1s1/2)'
@@ -133,6 +133,7 @@ SUBROUTINE w_inpXML(&
    IF (PRESENT(name_opt)) name=name_opt
 
    l_explicit = l_explicitIn.OR.l_outFile
+   l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
 
    symFilename = 'sym.out'
    kptGamma = l_gamma
@@ -163,7 +164,7 @@ SUBROUTINE w_inpXML(&
       REWIND (fileNum)
 
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.27">'
+      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.28">'
    END IF
 
    IF(PRESENT(name_opt)) THEN
@@ -179,7 +180,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,110) input%rkmax,stars%gmax,xcpot%gmaxxc,input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" spinf="2.00"/>
-   120 FORMAT('      <scfLoop itmax="',i0,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" spinf="',f0.8,'"/>')
+   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" spinf="',f0.8,'"/>')
    SELECT CASE (input%imix)
       CASE (1) 
          mixingScheme='straight'
@@ -192,21 +193,21 @@ SUBROUTINE w_inpXML(&
       CASE DEFAULT 
          mixingScheme='errorUnknownMixing'
    END SELECT
-   WRITE (fileNum,120) input%itmax,input%maxiter,TRIM(mixingScheme),input%alpha,input%spinf
+   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%spinf
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
-   130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'"/>')
-   WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel
+   130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
+   WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel,input%coretail_lmax
 
 !      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
    140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" l_J="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
    WRITE (fileNum,140) input%jspins,noco%l_noco,jij%l_J,input%swsp,input%lflip
 
 !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
-   150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'" soc66="',l1,'"/>')
-   WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1),obsolete%eig66(2)
+   150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'"/>')
+   WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1)
 
-   IF (noco%l_noco.OR.l_explicit) THEN
+   IF (l_nocoOpt.OR.l_explicit) THEN
       160 FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,'" sso_opt="',a3,&
                  '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
       sso_optString='FFF'
@@ -224,8 +225,8 @@ SUBROUTINE w_inpXML(&
    END IF
 
 !      <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F" />
-   180 FORMAT('      <expertModes gw="',i0,'" pot8="',l1,'" eig66="',l1,'" lpr="',i0,'" isec1="',i0,'" secvar="',l1,'"/>')
-   WRITE (fileNum,180) input%gw,obsolete%pot8,obsolete%eig66(1),obsolete%lpr,input%isec1,input%secvar
+   180 FORMAT('      <expertModes gw="',i0,'" pot8="',l1,'" isec1="',i0,'" secvar="',l1,'"/>')
+   WRITE (fileNum,180) input%gw,obsolete%pot8,input%isec1,input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
    190 FORMAT('      <geometryOptimization l_f="',l1,'" xa="',f0.8,'" thetad="',f0.8,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
@@ -248,13 +249,13 @@ SUBROUTINE w_inpXML(&
    IF(l_explicit) THEN
       sumWeight = 0.0
       DO i = 1, kpts%nkpt
-         sumWeight = sumWeight + kpts%weight(i)
+         sumWeight = sumWeight + kpts%wtkpt(i)
       END DO
       205 FORMAT('         <kPointList posScale="',f0.8,'" weightScale="',f0.8,'" count="',i0,'">')
       WRITE (fileNum,205) kpts%posScale, sumWeight, kpts%nkpt
       DO i = 1, kpts%nkpt
          206 FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
-         WRITE (fileNum,206) kpts%weight(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
+         WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
       END DO
       WRITE (fileNum,'(a)')('         </kPointList>')
    ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN
@@ -541,19 +542,21 @@ SUBROUTINE w_inpXML(&
          tempTaual(1,na) = atoms%taual(1,na)
          tempTaual(2,na) = atoms%taual(2,na)
          tempTaual(3,na) = atoms%taual(3,na)
-         DO i = 2,9
-            rest = ABS(i*tempTaual(1,na) - NINT(i*tempTaual(1,na)) ) + ABS(i*tempTaual(2,na) - NINT(i*tempTaual(2,na)))
-            IF (.not.input%film) THEN
-               rest = rest + ABS(i*tempTaual(3,na) - NINT(i*tempTaual(3,na)) )
-            END IF
-            IF (rest.LT.(i*0.000001)) EXIT
-         END DO
          scpos = 1.0
-         IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
+         DO i = 2,40
+            rest = ABS(i*tempTaual(1,na) - NINT(i*tempTaual(1,na)))
+            IF ((scpos(1).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(1) = real(i)
+            rest = ABS(i*tempTaual(2,na) - NINT(i*tempTaual(2,na)))
+            IF ((scpos(2).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(2) = real(i)
+            IF (.not.input%film) THEN
+               rest = ABS(i*tempTaual(3,na) - NINT(i*tempTaual(3,na)) )
+               IF ((scpos(3).EQ.1.0).AND.(rest.LT.(i*0.000001))) scpos(3) = real(i)
+            END IF
+         END DO
          DO i = 1,2
-            tempTaual(i,na) = tempTaual(i,na)*scpos
-         ENDDO
-         IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos
+            tempTaual(i,na) = tempTaual(i,na)*scpos(i)
+         END DO
+         IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos(3)
          IF (input%film) THEN
             tempTaual(3,na) = dtild*tempTaual(3,na)/scale
          END IF
@@ -568,41 +571,35 @@ SUBROUTINE w_inpXML(&
          ELSE IF (input%film) THEN
 !         <filmPos> x/myConstant  y/myConstant  1/myConstant</filmPos>
             340 FORMAT('         <filmPos>',a,' ',a,' ',a,'</filmPos>')
-            xPosString = ''
-            yPosString = ''
-            zPosString = ''
-            IF((scpos.NE.1.0).AND.((tempTaual(1,na).NE.0.0).OR.(tempTaual(2,na).NE.0.0).OR.(tempTaual(3,na).NE.0.0))) THEN
-               WRITE(xPosString,'(f0.10,a1,f0.10)') tempTaual(1,na), '/', scpos
-               WRITE(yPosString,'(f0.10,a1,f0.10)') tempTaual(2,na), '/', scpos
-            ELSE
-               WRITE(xPosString,'(f0.10)') tempTaual(1,na)
-               WRITE(yPosString,'(f0.10)') tempTaual(2,na)
-            END IF
-            WRITE(zPosString,'(f0.10)') tempTaual(3,na)
-            WRITE (fileNum,340) TRIM(ADJUSTL(xPosString)),TRIM(ADJUSTL(yPosString)),TRIM(ADJUSTL(zPosString))
+            posString(:) = ''
+            DO i = 1, 2
+               IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
+                  WRITE(posString(i),'(f0.3,a1,f0.3)') tempTaual(i,na), '/', scpos(i)
+               ELSE
+                  WRITE(posString(i),'(f0.10)') tempTaual(i,na)
+               END IF
+            END DO
+            WRITE(posString(3),'(f0.10)') tempTaual(3,na)
+            WRITE (fileNum,340) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          ELSE
 !         <relPos> x/myConstant  y/myConstant  z/myConstant</relPos>
             350 FORMAT('         <relPos>',a,' ',a,' ',a,'</relPos>')
-            xPosString = ''
-            yPosString = ''
-            zPosString = ''
-            IF((scpos.NE.1.0).AND.((tempTaual(1,na).NE.0.0).OR.(tempTaual(2,na).NE.0.0).OR.(tempTaual(3,na).NE.0.0))) THEN
-               WRITE(xPosString,'(f0.10,a1,f0.10)') tempTaual(1,na), '/', scpos
-               WRITE(yPosString,'(f0.10,a1,f0.10)') tempTaual(2,na), '/', scpos
-               WRITE(zPosString,'(f0.10,a1,f0.10)') tempTaual(3,na), '/', scpos
-            ELSE
-               WRITE(xPosString,'(f0.10)') tempTaual(1,na)
-               WRITE(yPosString,'(f0.10)') tempTaual(2,na)
-               WRITE(zPosString,'(f0.10)') tempTaual(3,na)
-            END IF
-            WRITE (fileNum,350) TRIM(ADJUSTL(xPosString)),TRIM(ADJUSTL(yPosString)),TRIM(ADJUSTL(zPosString))
+            posString(:) = ''
+            DO i = 1, 3
+               IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
+                  WRITE(posString(i),'(f0.3,a1,f0.3)') tempTaual(i,na), '/', scpos(i)
+               ELSE
+                  WRITE(posString(i),'(f0.10)') tempTaual(i,na)
+               END IF
+            END DO
+            WRITE (fileNum,350) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          END IF
       END DO
 !         <force calculate="F" relaxX="T" relaxY="T" relaxZ="T"/>
       360 FORMAT('         <force calculate="',l1,'" relaxXYZ="',3l1,'"/>')
       WRITE (fileNum,360) atoms%l_geo(iAtomType),atoms%relax(1,iAtomType),atoms%relax(2,iAtomType),atoms%relax(3,iAtomType)
 
-      IF(noco%l_noco.OR.l_explicit) THEN
+      IF(l_nocoOpt.OR.l_explicit) THEN
          362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.10,'" alpha="',f0.10,'" beta="',&
                     f0.10,'" b_cons_x="',f0.10,'" b_cons_y="',f0.10,'"/>')
          WRITE(fileNum,362) noco%l_relax(iAtomType), Jij%l_magn(iAtomType), Jij%M(iAtomType), noco%alphInit(iAtomType),&
@@ -638,8 +635,8 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,410) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
 
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
-   420 FORMAT('      <specialOutput form66="',l1,'" eonly="',l1,'" bmt="',l1,'"/>')
-   WRITE (fileNum,420) obsolete%form66,input%eonly,input%l_bmt
+   420 FORMAT('      <specialOutput eonly="',l1,'" bmt="',l1,'"/>')
+   WRITE (fileNum,420) input%eonly,input%l_bmt
 
    WRITE (fileNum,'(a)') '   </output>'
    IF(l_outFile) THEN

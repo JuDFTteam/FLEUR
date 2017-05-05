@@ -21,7 +21,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: kv(3)  
-    INTEGER, INTENT (IN) :: nmtsl1(atoms%ntypd) 
+    INTEGER, INTENT (IN) :: nmtsl1(atoms%ntype) 
     !     ..
     !     .. Local Scalars ..
     COMPLEX s1,sfs

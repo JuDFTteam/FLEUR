@@ -19,7 +19,7 @@
 !***********************************************************************
       CONTAINS
       SUBROUTINE read_record(
-     >                       infh,xl_buffer,
+     >                       infh,xl_buffer,bfh,
      X                       nline, 
      <                       nbuffer,buffer,ios )
 
@@ -27,6 +27,7 @@
 
       INTEGER, INTENT (IN)    :: infh            ! input filehandle (5)
       INTEGER, INTENT (IN)    :: xl_buffer       ! maximum length of read record
+      INTEGER, INTENT (IN)    :: bfh
       INTEGER, INTENT (INOUT) :: nline           ! in: last line read ; on output new read lines added
       INTEGER, INTENT (OUT)   :: nbuffer, ios    ! read buffer & I/O status
       CHARACTER(len=xl_buffer), INTENT (OUT)   :: buffer
@@ -37,7 +38,7 @@
 
       LOGICAL, SAVE :: reached_EOF = .false.
 
-      INTEGER, PARAMETER  :: dbgfh=6, errfh=6, bfh=93
+      INTEGER, PARAMETER  :: dbgfh=6, errfh=6
 !---> initialize some variables
 
       building = .false.
@@ -54,7 +55,7 @@
         nline = nline + 1
         READ (infh,'(a)',ERR=911,END=999,IOSTAT=ios) line
         LINE = adjustl(line)
-        WRITE(dbgfh,'("line:",i2,">",a71)') nline,line(1:71)
+        WRITE(dbgfh,'("line:",i5,">",a71)') nline,line(1:71)
 
         n = SCAN(line,'!')                 ! remove end of line comments
 

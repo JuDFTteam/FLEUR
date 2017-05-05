@@ -32,17 +32,17 @@
            
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(stars%n3d,input%jspins),cdom(stars%n3d)  
-      COMPLEX, INTENT (OUT) :: excpw(stars%n3d)
-      COMPLEX, INTENT (INOUT) ::vpw(stars%n3d,input%jspins),vpw_w(stars%n3d,input%jspins)
-      COMPLEX, INTENT (INOUT) ::vxpw(stars%n3d,input%jspins),vxpw_w(stars%n3d,input%jspins)
+      COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins),cdom(stars%ng3)  
+      COMPLEX, INTENT (OUT) :: excpw(stars%ng3)
+      COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins)
+      COMPLEX, INTENT (INOUT) ::vxpw(stars%ng3,input%jspins),vxpw_w(stars%ng3,input%jspins)
 !     ..
 !     .. Local Scalars ..
       INTEGER i,k,js,nt
       REAL    chdens,magmom
 !     ..
 !     .. Local Arrays
-      COMPLEX fg3(stars%n3d)
+      COMPLEX fg3(stars%ng3)
       REAL, ALLOCATABLE :: mx(:),my(:)
       REAL, ALLOCATABLE :: exc(:),vcon(:),vxc(:,:),vx(:,:)
       REAL, ALLOCATABLE :: af3(:,:),bf3(:)
@@ -71,7 +71,7 @@
      &             mx,my,&
      &             cdom,&
      &             stars,+1)
-        DO i=0,27*stars%k1d*stars%k2d*stars%k3d-1
+        DO i=0,27*stars%mx1*stars%mx2*stars%mx3-1
           chdens= (af3(i,1)+af3(i,2))/2.
           magmom= mx(i)**2 + my(i)**2 + ((af3(i,1)-af3(i,2))/2.)**2
           magmom= SQRT(magmom)

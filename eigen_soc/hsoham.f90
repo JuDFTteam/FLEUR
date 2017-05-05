@@ -20,18 +20,18 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(:)!(dimension%jspd)  
-    REAL,    INTENT (IN) :: rsopp  (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoppd (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdp (atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdpd(atoms%ntypd,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoplop (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoplopd(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopdplo(atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopplo (atoms%ntypd,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoploplop(atoms%ntypd,atoms%nlod,atoms%nlod,2,2)
-    COMPLEX, INTENT (IN) :: ahelp(-atoms%lmaxd:,:,:,:,:)!(-lmaxd:lmaxd,lmaxd,atoms%natd,dimension%neigd,dimension%jspd)
-    COMPLEX, INTENT (IN) :: bhelp(-atoms%lmaxd:,:,:,:,:)!(-lmaxd:lmaxd,lmaxd,atoms%natd,dimension%neigd,dimension%jspd)
-    COMPLEX, INTENT (IN) :: chelp(-atoms%llod :,:,:,:,:)!(-llod:llod ,dimension%neigd,atoms%nlod,atoms%natd ,dimension%jspd)
+    REAL,    INTENT (IN) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
+    REAL,    INTENT (IN) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
+    REAL,    INTENT (IN) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
+    COMPLEX, INTENT (IN) :: ahelp(-atoms%lmaxd:,:,:,:,:)!(-lmaxd:lmaxd,lmaxd,atoms%nat,dimension%neigd,dimension%jspd)
+    COMPLEX, INTENT (IN) :: bhelp(-atoms%lmaxd:,:,:,:,:)!(-lmaxd:lmaxd,lmaxd,atoms%nat,dimension%neigd,dimension%jspd)
+    COMPLEX, INTENT (IN) :: chelp(-atoms%llod :,:,:,:,:)!(-llod:llod ,dimension%neigd,atoms%nlod,atoms%nat ,dimension%jspd)
     COMPLEX, INTENT (IN) :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)!(lmaxd,-lmaxd:lmaxd,2,lmaxd,-lmaxd:lmaxd,2)
     COMPLEX, INTENT (OUT):: hsomtx(:,:,:,:)!(2,2,dimension%neigd,neigd)
     !     ..
@@ -69,9 +69,9 @@ CONTAINS
           !$OMP SHARED(rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop)&
           !$OMP SHARED(rsopp,rsoppd,rsopdp,rsopdpd)
 
-          ALLOCATE ( c_b(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd),&
-               c_a(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%natd),&
-               c_c(-atoms%llod :atoms%llod ,atoms%nlod ,atoms%natd) )
+          ALLOCATE ( c_b(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat),&
+               c_a(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat),&
+               c_c(-atoms%llod :atoms%llod ,atoms%nlod ,atoms%nat) )
 
           !$OMP DO 
 

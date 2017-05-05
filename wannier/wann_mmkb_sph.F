@@ -40,8 +40,7 @@ c***********************************************************************
       use m_ylm
       use m_intgr, only : intgr3
       use m_gaunt, only: gaunt1
-      use m_cotra
-
+    
       implicit none
 
 c     .. scalar arguments ..

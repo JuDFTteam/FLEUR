@@ -35,36 +35,36 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_fmpl
     ! ..
     ! ..  Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: qpw(stars%n3d)
+    COMPLEX, INTENT (INOUT) :: qpw(stars%ng3)
     COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2) 
-    REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntypd),sqal(0:3,atoms%ntype)
+    REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
     REAL,    INTENT (INOUT) :: svac(2),pvac(2)
-    REAL,  INTENT (INOUT) :: dd(0:atoms%lmaxd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: du(0:atoms%lmaxd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: uu(0:atoms%lmaxd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: ddnmt(0:llpd,sphhar%nlhd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: dunmt(0:llpd,sphhar%nlhd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: udnmt(0:llpd,sphhar%nlhd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: uunmt(0:llpd,sphhar%nlhd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: sqlo(atoms%nlod,atoms%ntypd),enerlo(atoms%nlod,atoms%ntype)
-    REAL,  INTENT (INOUT) :: aclo(atoms%nlod,atoms%ntypd),bclo(atoms%nlod,atoms%ntype)
-    REAL,  INTENT (INOUT) :: cclo(atoms%nlod,atoms%nlod,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntypd)
-    REAL,  INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntypd)
+    REAL,  INTENT (INOUT) :: dd(0:atoms%lmaxd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: du(0:atoms%lmaxd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: uu(0:atoms%lmaxd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: ddnmt(0:llpd,sphhar%nlhd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: dunmt(0:llpd,sphhar%nlhd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: udnmt(0:llpd,sphhar%nlhd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: uunmt(0:llpd,sphhar%nlhd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: sqlo(atoms%nlod,atoms%ntype),enerlo(atoms%nlod,atoms%ntype)
+    REAL,  INTENT (INOUT) :: aclo(atoms%nlod,atoms%ntype),bclo(atoms%nlod,atoms%ntype)
+    REAL,  INTENT (INOUT) :: cclo(atoms%nlod,atoms%nlod,atoms%ntype)
+    REAL,  INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
+    REAL,  INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype)
     COMPLEX,INTENT(INOUT) :: ddnmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: dunmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: udnmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2  )
-    COMPLEX,INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntypd)
+    COMPLEX,INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX,INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u),cdomvz(vacuum%nmzd,2)
-    COMPLEX,INTENT(INOUT) :: cdom(stars%n3d),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntypd)
-    TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd)
-    TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntypd)
-    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntypd)
-    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntypd)
+    COMPLEX,INTENT(INOUT) :: cdom(stars%ng3),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
+    TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype)
+    TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
+    TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
+    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntype)
+    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntype)
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n
@@ -80,7 +80,7 @@ CONTAINS
     !
     ! -> Collect qpw()
     !
-    n = stars%n3d
+    n = stars%ng3
     ALLOCATE(c_b(n))
     CALL MPI_REDUCE(qpw,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
@@ -114,7 +114,7 @@ CONTAINS
     !
     ! -> Collect uu(),ud() and dd()
     !
-    n = (atoms%lmaxd+1)*atoms%ntypd
+    n = (atoms%lmaxd+1)*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(uu,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
@@ -132,7 +132,7 @@ CONTAINS
     !
     !--> Collect uunmt,udnmt,dunmt,ddnmt
     !
-    n = (llpd+1)*sphhar%nlhd*atoms%ntypd
+    n = (llpd+1)*sphhar%nlhd*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(uunmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
@@ -154,7 +154,7 @@ CONTAINS
     !
     !--> ener & sqal
     !
-    n=4*atoms%ntypd
+    n=4*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(ener,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
@@ -188,7 +188,7 @@ CONTAINS
     !   
     IF (input%l_f) THEN
 
-       n=3*atoms%ntypd
+       n=3*atoms%ntype
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(results%force(1,1,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -202,7 +202,7 @@ CONTAINS
     !
     IF (atoms%nlod.GE.1) THEN
 
-       n=atoms%nlod*atoms%ntypd 
+       n=atoms%nlod*atoms%ntype 
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(aclo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -222,7 +222,7 @@ CONTAINS
        ENDIF
        DEALLOCATE (r_b)
 
-       n = atoms%nlod * atoms%nlod * atoms%ntypd
+       n = atoms%nlod * atoms%nlod * atoms%ntype
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(cclo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -230,7 +230,7 @@ CONTAINS
        ENDIF
        DEALLOCATE (r_b)
 
-       n = (atoms%lmaxd+1) * atoms%ntypd * atoms%nlod * sphhar%nlhd
+       n = (atoms%lmaxd+1) * atoms%ntype * atoms%nlod * sphhar%nlhd
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(acnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -242,7 +242,7 @@ CONTAINS
        ENDIF
        DEALLOCATE (r_b)
 
-       n = atoms%ntypd * sphhar%nlhd * atoms%nlod**2
+       n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(ccnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -257,7 +257,7 @@ CONTAINS
     IF (noco%l_soc) THEN
        !
        ! orb
-       n=(atoms%lmaxd+1)*(2*atoms%lmaxd+1)*atoms%ntypd
+       n=(atoms%lmaxd+1)*(2*atoms%lmaxd+1)*atoms%ntype
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(orb(:,:,:)%uu,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -289,7 +289,7 @@ CONTAINS
        DEALLOCATE (c_b)
        ! orbl
        !
-       n = atoms%nlod * (2*atoms%llod+1) * atoms%ntypd
+       n = atoms%nlod * (2*atoms%llod+1) * atoms%ntype
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(orbl(:,:,:)%uulo,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -321,7 +321,7 @@ CONTAINS
        DEALLOCATE (c_b)
        ! orblo
        !
-       n = atoms%nlod * atoms%nlod * (2*atoms%llod+1) * atoms%ntypd
+       n = atoms%nlod * atoms%nlod * (2*atoms%llod+1) * atoms%ntype
        ALLOCATE (r_b(n))
        CALL MPI_REDUCE(orblo(:,:,:,:)%z,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -347,7 +347,7 @@ CONTAINS
     !
     IF ( noco%l_noco .AND. jspin.EQ.1 ) THEN
 
-       n = stars%n3d
+       n = stars%ng3
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(cdom,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -380,7 +380,7 @@ CONTAINS
           !
           ! -->     for (spin)-off diagonal part of muffin-tin
           !
-          n = (atoms%lmaxd+1) * atoms%ntypd
+          n = (atoms%lmaxd+1) * atoms%ntype
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(mt21(:,:)%uu,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
@@ -402,7 +402,7 @@ CONTAINS
           !
           ! -->     lo,u coeff's:
           !
-          n = atoms%nlod * atoms%ntypd
+          n = atoms%nlod * atoms%ntype
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(lo21(:,:)%uulo,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
@@ -424,7 +424,7 @@ CONTAINS
           !
           ! -->     lo,lo' coeff's:
           !
-          n = atoms%nlod*atoms%nlod*atoms%ntypd
+          n = atoms%nlod*atoms%nlod*atoms%ntype
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(uloulop21,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
@@ -436,7 +436,7 @@ CONTAINS
              !
              !-->        Full magnetization plots: Collect uunmt21, etc.
              !
-             n = (atoms%lmaxd+1)**2 *sphhar%nlhd*atoms%ntypd
+             n = (atoms%lmaxd+1)**2 *sphhar%nlhd*atoms%ntype
              ALLOCATE(c_b(n))
              CALL MPI_REDUCE(uunmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
              IF (mpi%irank.EQ.0) THEN

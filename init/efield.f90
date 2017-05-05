@@ -73,7 +73,7 @@
       WRITE (6, '(3x,a,f12.5)') 'total electronic charge   =', qe
       WRITE (6, '(3x,a,f12.5)') 'total nuclear charge      =', qn
 
-      CALL read_efield (input%efield, stars%k1d, stars%k2d, vacuum%nvac, cell%area)
+      CALL read_efield (input%efield, stars%mx1, stars%mx2, vacuum%nvac, cell%area)
 
       ! Sign convention of electric field: E>0 repels electrons,
       ! consistent with conventional choice that current is
@@ -117,7 +117,7 @@
 
         IF (input%efield%plot_rho)&
      &    CALL print_rhoEF(&
-     &                     input%efield, stars%k1d, stars%k2d, vacuum%nvac, stars%n2d, sym%nop, sym%nop2,&
+     &                     input%efield, stars%mx1, stars%mx2, vacuum%nvac, stars%ng2, sym%nop, sym%nop2,&
      &                     stars%ng2, stars%kv2, sym%mrot, sym%symor, sym%tau, sym%invtab,&
      &                     cell%area, stars%nstr2, cell%amat)
       END IF
@@ -812,7 +812,7 @@
           ! Local variables:
           INTEGER :: i, ivac
           REAL :: fg, fgi
-          REAL :: rhoRS(3*stars%k1d,3*stars%k2d), rhoRSimag(3*stars%k1d,3*stars%k2d) ! Real space density
+          REAL :: rhoRS(3*stars%mx1,3*stars%mx2), rhoRSimag(3*stars%mx1,3*stars%mx2) ! Real space density
 
           ALLOCATE (input%efield%rhoEF (stars%ng2-1, vacuum%nvac))
 
@@ -824,7 +824,7 @@
             IF (input%efield%dirichlet) THEN
               rhoRS(:,:) = input%efield%sigEF(:,:,ivac)
             ELSE
-              rhoRS(:,:) = input%efield%sigEF(:,:,ivac)*(3*stars%k1d*3*stars%k2d)
+              rhoRS(:,:) = input%efield%sigEF(:,:,ivac)*(3*stars%mx1*3*stars%mx2)
             END IF
 
             ! FFT rhoRS(r_2d) -> rhoEF(g_2d)
@@ -839,9 +839,9 @@
               PRINT *, 'INFO: Difference of average potential: fg=',&
      &                 fg,', sig_b=', input%efield%sig_b(ivac),&
      &                 ", ivac=", ivac
-            ELSE IF (ABS (fg/(3*stars%k1d*3*stars%k2d)) > 1.0e-15) THEN
+            ELSE IF (ABS (fg/(3*stars%mx1*3*stars%mx2)) > 1.0e-15) THEN
               PRINT *, 'INFO: Difference of average potential: fg=',&
-     &                 fg/(3*stars%k1d*3*stars%k2d),', sig_b=', input%efield%sig_b(ivac),&
+     &                 fg/(3*stars%mx1*3*stars%mx2),', sig_b=', input%efield%sig_b(ivac),&
      &                 ", ivac=", ivac
             END IF
           END DO ! ivac
