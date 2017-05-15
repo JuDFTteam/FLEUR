@@ -837,7 +837,7 @@
        END IF
        CALL writeTimesXML()
        CALL check_time_for_next_iteration(it,l_cont)
-       l_cont=l_cont.AND.(input%mindistance<=results%last_distance)
+       l_cont=l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
        END IF
