@@ -46,7 +46,7 @@ CONTAINS
     !Distribute the work
     CALL priv_distribute_k(nkpt,mpi)
 
-    !Now check is parallelization is possible
+    !Now check if parallelization is possible
     IF (mpi%n_size>1.AND..NOT.parallel_solver_available()) &
          CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")       
 #endif
