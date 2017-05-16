@@ -75,7 +75,7 @@ CONTAINS
 
         IF (nlo(n)>0) THEN
             mlo=sum(nlo(:n-1))+1
-            mlolo=dot_product(nlo(:n-1),nlo(:n-1)+2)/2+1
+            mlolo=dot_product(nlo(:n-1),nlo(:n-1)+1)/2+1
             tuulo(:,:,mlo:(mlo+nlo(n)-1))=&
                td_stored%tuulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
             tdulo(:,:,mlo:(mlo+nlo(n)-1))=&
