@@ -123,7 +123,7 @@
 
       END SUBROUTINE juDFT_warn
 
-      SUBROUTINE juDFT_END(message, irank)
+      SUBROUTINE juDFT_END(message, irank, l_endXML)
       ! If irank is present every mpi process has to call this routine.
       ! Otherwise only a single mpi process is allowed to call the routine.
       USE m_xmlOutput
@@ -134,12 +134,22 @@
 #endif
       CHARACTER*(*), INTENT(IN)      :: message
       INTEGER, OPTIONAL, INTENT(IN)  :: irank
+      LOGICAL, OPTIONAL, INTENT(IN)  :: l_endXML
 
-      IF(PRESENT(irank)) THEN
-         IF (irank.EQ.0) CALL endXMLOutput()
-      ELSE
-         ! It is assumed that this is the only mpi process calling this routine.
-         CALL endXMLOutput()
+      LOGICAL l_endXML_local
+
+      l_endXML_local = .TRUE.
+      IF(PRESENT(l_endXML)) THEN
+         l_endXML_local = l_endXML
+      END IF
+
+      IF(l_endXML_local) THEN
+         IF(PRESENT(irank)) THEN
+            IF (irank.EQ.0) CALL endXMLOutput()
+         ELSE
+            ! It is assumed that this is the only mpi process calling this routine.
+            CALL endXMLOutput()
+         END IF
       END IF
 
       WRITE(0,*) "*****************************************"
@@ -153,9 +163,10 @@
       IF(PRESENT(irank)) THEN
          CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
          CALL MPI_FINALIZE(ierr)
+      ELSE
+         CALL juDFT_STOP(0)
       END IF
 #endif
-      CALL juDFT_STOP(0)
       STOP 'OK'
       END SUBROUTINE juDFT_END
 
