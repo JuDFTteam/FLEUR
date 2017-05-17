@@ -122,6 +122,7 @@
 #if !(defined(__TOS_BGQ__)||defined(__PGI))
              !Do not open out-file on BlueGene
              IF (judft_was_argument("-info")) THEN
+                  CLOSE(6)
                   OPEN (6,status='SCRATCH')
              ELSE
                   OPEN (6,file='out',form='formatted',status='unknown')
