@@ -124,16 +124,23 @@
       END SUBROUTINE juDFT_warn
 
       SUBROUTINE juDFT_END(message, irank)
+      ! If irank is present every mpi process has to call this routine.
+      ! Otherwise only a single mpi process is allowed to call the routine.
       USE m_xmlOutput
       IMPLICIT NONE
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
       INTEGER :: ierr
 #endif
-      CHARACTER*(*)        :: message
-      INTEGER, INTENT(IN)  :: irank
+      CHARACTER*(*), INTENT(IN)      :: message
+      INTEGER, OPTIONAL, INTENT(IN)  :: irank
 
-      IF (irank.EQ.0) CALL endXMLOutput()
+      IF(PRESENT(irank)) THEN
+         IF (irank.EQ.0) CALL endXMLOutput()
+      ELSE
+         ! It is assumed that this is the only mpi process calling this routine.
+         CALL endXMLOutput()
+      END IF
 
       WRITE(0,*) "*****************************************"
       WRITE(0,*) "Run finished successfully"
@@ -143,25 +150,35 @@
       CALL writetimes()
       CALL priv_memory_info()
 #ifdef CPP_MPI
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-      CALL MPI_FINALIZE(ierr)
+      IF(PRESENT(irank)) THEN
+         CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+         CALL MPI_FINALIZE(ierr)
+      END IF
 #endif
+      CALL juDFT_STOP(0)
       STOP 'OK'
       END SUBROUTINE juDFT_END
 
       !this is a private subroutine that stops the calculations
       !different compilers might have to be added here
-      SUBROUTINE juDFT_stop()
-
-
+      SUBROUTINE juDFT_stop(errorCode)
 #ifdef __INTEL_COMPILER
       USE ifcore
 #endif
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
+#endif
+      INTEGER, OPTIONAL, INTENT(IN)  :: errorCode
+      INTEGER :: error
+      LOGICAL :: calltrace
+#ifdef CPP_MPI
       INTEGER :: ierr
 #endif
-      LOGICAL :: calltrace
+      error = 1
+
+      IF(PRESENT(errorCode)) THEN
+         error = errorCode
+      END IF
       !try to print times
       !call writelocation()
       !CALL writetimes(.true.)
@@ -175,7 +192,14 @@
       ENDIF
 
 #if defined(CPP_MPI)
-      CALL MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+      IF(error.EQ.0) THEN
+         WRITE(0,*) ""
+         WRITE(0,*) "Terminating all MPI processes."
+         WRITE(0,*) "Note: This is a normal procedure."
+         WRITE(0,*) "      Error messages in the following lines can be ignored."
+         WRITE(0,*) ""
+      END IF
+      CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
 #endif
       STOP 'juDFT-STOPPED'
       END SUBROUTINE juDFT_stop

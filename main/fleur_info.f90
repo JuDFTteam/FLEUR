@@ -41,7 +41,7 @@ MODULE m_fleur_info
       WRITE(*,*) ''
       CALL printDensityFileInfo()
       WRITE(*,*) '================================================='
-      CALL juDFT_error("Fleur info output completed")
+      CALL juDFT_end("Fleur info output completed")
    END SUBROUTINE fleur_info
 
 END MODULE m_fleur_info
