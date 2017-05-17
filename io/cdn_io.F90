@@ -1313,7 +1313,7 @@ MODULE m_cdn_io
          WRITE(*,*) 'Ignoring -delden command line argument.'
       END IF
 
-      CALL juDFT_error("Densities deleted.")
+      CALL juDFT_end("Selected densities deleted.")
       
    END SUBROUTINE deleteDensities
 

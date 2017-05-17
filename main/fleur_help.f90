@@ -62,6 +62,6 @@ CONTAINS
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 
-    CALL juDFT_error("help was written")
+    CALL juDFT_end("help was written")
   END SUBROUTINE fleur_help
 END MODULE m_fleur_help

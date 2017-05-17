@@ -498,7 +498,7 @@
             ENDIF
          ENDIF
          CLOSE(20) 
-          CALL juDFT_error("slice OK",calledby="cdngen")
+          CALL juDFT_end("slice OK")
       END IF
 
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
@@ -509,7 +509,7 @@
       DEALLOCATE (cdom,cdomvz,cdomvxy,qa21)
       DEALLOCATE (qpw,rhtxy,rho,rht,igq_fft)
 
-      IF (sliceplot%slice) CALL juDFT_error("sliceplot%slice OK",calledby="cdngen")
+      IF (sliceplot%slice) CALL juDFT_end("sliceplot%slice OK",mpi%irank)
 
       RETURN
       END SUBROUTINE cdngen
