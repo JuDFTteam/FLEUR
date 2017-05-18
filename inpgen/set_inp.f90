@@ -190,7 +190,6 @@
         IF (atoms%nz(n).EQ.68) atoms%bmu(n) = 3.1
         IF (atoms%nz(n).EQ.69) atoms%bmu(n) = 2.1
       ENDDO
-      IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
       input%delgau = input%tkb ; atoms%ntype = atoms%ntype ; atoms%nat = atoms%nat
       DO i = 1, 10
@@ -211,18 +210,9 @@
       stars%gmax = 3.0 * kmax ; xcpot%gmaxxc = 2.5 * kmax ; input%rkmax = kmax
       atoms%lnonsph(:) = min( max( (atoms%lmax(:)-2),3 ), 8 )
 
-      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%evac0(2,input%jspins))
-      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%lchg_v(2,input%jspins))
-      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
-      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%enmix(input%jspins))
-
       CALL atom_input(&
      &                infh,xl_buffer,bfh,buffer,&
-     &                input%jspins,input%film,idlist,xmlCoreRefOccs,&
+     &                input,idlist,xmlCoreRefOccs,&
      &                nline,&
      &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                nel,atoms,enpara)
