@@ -380,7 +380,7 @@
       ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
       ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
 
-      noco%l_ss = .FALSE.
+      IF (noco%l_ss) input%ctail = .FALSE.
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
       Jij%l_disp = .FALSE.
