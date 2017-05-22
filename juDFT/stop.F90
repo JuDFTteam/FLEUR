@@ -33,9 +33,18 @@
       USE m_judft_time
       IMPLICIT NONE
       PRIVATE
-      PUBLIC juDFT_error,juDFT_warn,juDFT_end
+      PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
       CONTAINS
 
+        SUBROUTINE judfT_file_readable(filename,warning)
+          IMPLICIT NONE
+          CHARACTER(len=*),INTENT(IN):: filename
+          LOGICAL,INTENT(IN),OPTIONAL:: warning
+          LOGICAL  :: l_exist
+
+          INQUIRE(file=filename,exist=l_exist)
+          IF (.not.l_exist) CALL judft_error("File not readable:"//filename,hint="FLEUR wants to read a file that is not present",warning=warning)
+        END SUBROUTINE judfT_file_readable
 
       SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
       IMPLICIT NONE
