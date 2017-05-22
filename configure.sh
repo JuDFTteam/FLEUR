@@ -5,7 +5,7 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 #check if -h or  --help was given as argument
 if [ "$1" = "" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]
 then
-   echo "USAGE: configure.sh MACHINE [label]"
+   echo "USAGE: configure.sh [MACHINE] [label]"
    echo "
   To help the script finding a proper configuration you should
   provide the name of a specific machine to compile on.
@@ -14,7 +14,7 @@ then
    echo "   $known_machines"
    echo " 
   If you do not find a proper choice you might try
-        'configuration.sh AUTO'
+        'configure.sh AUTO'
 
   You might also want to add your configuration to the file 
   cmake/machines.sh in this case :-)
