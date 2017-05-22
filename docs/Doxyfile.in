@@ -796,6 +796,8 @@ FILE_PATTERNS          = *.c \
                          *.dox \
                          *.py \
                          *.f90 \
+                         *.F90 \
+                         *.F \
                          *.f \
                          *.for \
                          *.tcl \

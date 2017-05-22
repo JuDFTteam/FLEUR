@@ -538,4 +538,4 @@
           IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
 
         END SUBROUTINE fleur_init
-     END MODULE
+      END MODULE m_fleur_init
