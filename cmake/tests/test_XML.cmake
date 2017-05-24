@@ -21,12 +21,12 @@ message("XML Library found for linking:${FLEUR_USE_XML}")
 
 if (FLEUR_USE_XML)
    try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.c
-   LINK_LIBRARIES ${FLEUR_LIBRARIES})
+   LINK_LIBRARIES "-lxml2")
    if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
       set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}")
       try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.c
-      LINK_LIBRARIES ${FLEUR_LIBRARIES})
+      LINK_LIBRARIES ${LIBXML2_LIBRARIES})
    endif()
 endif()
 
