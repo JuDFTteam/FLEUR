@@ -49,12 +49,13 @@
       INTEGER ios,istep0, binSize, maxBinSize
       INTEGER locBinDim(3), secondAtom(natin)
       INTEGER binDim(3), iBin(3)
+      INTEGER trIndices(natin)
       CHARACTER(len=30) :: filen
 
       REAL    posr(3,natin),rtau(3),tr(3),disp(3,natin)
       REAL    ttau(3,nop48),trs(3,natin)
       REAL    eps7
-      REAL    trVecs(3,natin), trIndices(natin)
+      REAL    trVecs(3,natin)
 
       LOGICAL lnew,lclose, foundOne, boundary(3)
       LOGICAL l_exist

@@ -60,7 +60,7 @@ c----------------------------------------------------------------------
      +        .OR. icorr.EQ.icorr_hseloc .OR. icorr.EQ.icorr_vhse ) THEN
          uk=0.8040
       ELSE
-         WRITE(6,'(//'' icorr error. icorr='',i5)'),icorr
+         WRITE(6,'(//'' icorr error. icorr='',i5)') icorr
          CALL judft_error("icorr is not correctly transferred",
      + calledby="exchpbe.F")
       ENDIF
