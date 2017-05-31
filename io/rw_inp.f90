@@ -855,22 +855,27 @@
         END IF
          DO ieq=1,atoms%neq(n)
             na = na + 1
+
             scpos = 1.0
-            DO i = 2,100
-              rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
-     &             + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
-              IF (.not.input%film) THEN
-                rest = rest + ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
-              END IF
-              IF (rest.LT.(i*0.000001)) THEN
-                 scpos = real(i)
-                 EXIT
-              END IF
+            DO i = 2,9
+               rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
+                    + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
+               IF (rest.LT.(i*0.000001)) EXIT
             ENDDO
+            IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
+            IF (.NOT.input%film) THEN           ! now check z-coordinate
+              DO i = 2,9
+                rest = ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
+                IF (rest.LT.(i*scpos*0.000001)) THEN
+                  scpos = i*scpos
+                  EXIT
+                ENDIF
+              ENDDO
+            ENDIF
             DO i = 1,2
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO
-            IF (.not.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
+            IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
             IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/scale
 !+odim in 1D case all the coordinates are given in cartesian YM
             IF (oneD%odd%d1) THEN
