@@ -1,8 +1,10 @@
-job1:
+build:
+  image: ubuntu:16.10
   stage: build
   script:
-    - cd /builds/fleur/fleur; ./configure.sh IFF; cd build; make 
-job2:
+    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
+    - cd /builds/fleur/fleur; ./configure.sh AUTO; cd build; make 
+test:
   stage: test
   script:
     - cd /builds/fleur/fleur/build;ctest
