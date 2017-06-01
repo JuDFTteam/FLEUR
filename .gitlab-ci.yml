@@ -1,9 +1,9 @@
 job1:
   stage: build
   script:
-    - configure.sh IFF; cd build; make 
+    - cd /builds/fleur/fleur; ./configure.sh IFF; cd build; make 
 job2:
   stage: test
   script:
-    - cd build;ctest
+    - cd /builds/fleur/fleur/build;ctest
 
