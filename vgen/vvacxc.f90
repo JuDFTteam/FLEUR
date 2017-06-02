@@ -150,7 +150,6 @@ CONTAINS
                   &                 exc,bf2,&
                   &                 excz(ip,ivac),rhti,excxy(ip,1,ivac),&
                   &                 vacuum%nmzxyd,-1)
-
           ENDIF
 
        ENDDO
@@ -201,7 +200,7 @@ CONTAINS
           CALL excall&
                &                   (6,xcpot%icorr,input%krla,input%jspins,&
                &                    vacuum%nmzd,nmzdiff,af2,&
-               &                    excz( +1,ivac)) 
+               &                    excz(vacuum%nmzxy+1,ivac))
        END IF
     ENDDO
     IF (noco%l_noco) THEN 
