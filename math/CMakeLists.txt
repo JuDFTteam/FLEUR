@@ -28,3 +28,6 @@ math/differentiate.f90
 math/fft2d.F90
 math/fft3d.f90
 )
+if (FLEUR_USE_FFTMKL)
+   set(fleur_F90 ${fleur_F90} math/mkl_dfti.f90)
+endif()
