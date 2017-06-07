@@ -16,8 +16,8 @@
 !* pgfft(i)   contains the phases of the G-vectors of sph.  *
 !*                                                          *
 !************************************************************
-      USE m_cfft
       USE m_types
+      USE m_fft_interface
       IMPLICIT NONE
     
       INTEGER, INTENT (IN) :: isn
@@ -30,6 +30,9 @@
       INTEGER i,ifftd
       REAL scale
       COMPLEX ctmp
+      LOGICAL forw
+      INTEGER length_zfft(3)
+      complex :: zfft(0:27*stars%mx1*stars%mx2*stars%mx3-1)
 
       ifftd=27*stars%mx1*stars%mx2*stars%mx3
      
@@ -48,9 +51,19 @@
 
 !---> now do the fft (isn=+1 : G -> r ; isn=-1 : r -> G)
 
-      CALL cfft(afft,bfft,ifftd,3*stars%mx1,3*stars%mx1,isn)
-      CALL cfft(afft,bfft,ifftd,3*stars%mx2,9*stars%mx1*stars%mx2,isn)
-      CALL cfft(afft,bfft,ifftd,3*stars%mx3,ifftd,isn)
+      zfft = cmplx(afft,bfft)
+      if (isn == -1) then
+          forw = .true.
+      else
+          forw = .false.
+      end if
+      length_zfft(1) = 3*stars%mx1
+      length_zfft(2) = 3*stars%mx2
+      length_zfft(3) = 3*stars%mx3
+      call fft_interface(3,length_zfft,zfft,forw)
+
+      afft = real(zfft)
+      bfft = aimag(zfft)
 
       IF (isn.LT.0) THEN
 !
@@ -61,7 +74,7 @@
         ENDDO
         DO i=0,stars%kimax
           fg3(stars%igfft(i,1)) = fg3(stars%igfft(i,1)) + CONJG( stars%pgfft(i) ) * &
-     &                CMPLX(afft(stars%igfft(i,2)),bfft(stars%igfft(i,2)))
+     &                 zfft(stars%igfft(i,2))
         ENDDO
         scale=1.0/ifftd
         IF (PRESENT(scaled)) THEN
