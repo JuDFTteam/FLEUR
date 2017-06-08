@@ -217,13 +217,7 @@
                                       IF (xsf) THEN
                                          write(55,*) xdnout
                                       ELSE
-                                         IF (twodim) THEN
-                                            WRITE(55,'(3e15.7)')&
-     &                                           point(1:2),xdnout
-                                         ELSE
-                                            WRITE(55,'(4e15.7)') point&
-     &                                           ,xdnout
-                                         ENDIF
+                                            WRITE(55,'(4e15.7)') point ,xdnout
                                       ENDIF
                                       CYCLE xloop
                                    ENDIF
@@ -242,11 +236,7 @@
                        IF (xsf) THEN
                           write(55,*) xdnout
                        ELSE
-                          IF (twodim) THEN
-                             WRITE(55,'(3e15.7)') point(1:2),xdnout
-                          ELSE
-                             WRITE(55,'(4e15.7)') point(:),xdnout
-                          ENDIF
+                          WRITE(55,'(4e15.7)') point(:),xdnout
                        ENDIF
                        CYCLE xloop
                     END IF
@@ -259,11 +249,7 @@
                           IF (xsf) THEN
                              WRITE(55,*) xdnout
                           ELSE
-                             IF (twodim) THEN
-                                WRITE (55,'(3e15.7)') point(1:2),xdnout
-                             ELSE
-                                WRITE (55,'(4e15.7)') point(:),xdnout
-                             ENDIF
+                             WRITE (55,'(4e15.7)') point(:),xdnout
                           ENDIF
                           CYCLE xloop
                        END IF
@@ -275,11 +261,7 @@
                     IF (xsf) THEN
                        WRITE(55,*) xdnout
                     ELSE
-                       IF (twodim) THEN
-                          WRITE(55,'(3e15.7)') point(1:2),xdnout
-                       ELSE
-                          WRITE(55,'(4e15.7)') point(:),xdnout
-                       ENDIF
+                       WRITE(55,'(4e15.7)') point(:),xdnout
                     ENDIF
                  ENDDO xloop
               ENDDO
