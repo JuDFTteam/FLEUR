@@ -41,7 +41,7 @@ if [ $# -gt 0 ]
 then
     if [ "$label" = "" ]
     then
-	label=$1
+	label=$1;shift
     else
 	error="You specified the -l switch and gave an additional LABEL argument"
     fi
@@ -56,6 +56,7 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 
 if [ "$error" != "" ]
 then
+    echo $error
     echo "ERROR in calling configure. Please use -h for help on usage"
     exit 1
 fi
@@ -96,9 +97,8 @@ then
         FLEUR_LIBRARIES     -- list of linker arguments i.e. '-L/lib;-lbla'
         CMAKE_Fortran_FLAGS -- list of compiler options i.e. '-r8'"
 echo "
-   By specifying a label which contains 'debug' in addition to your 
-   machine configuration you will build a debugging version. Otherwise
-   the label will be added to the build directory name."
+   By specifying a label you can have different build directories.
+   The label will be added to the 'build' directory name."
   exit 1
 fi
 
