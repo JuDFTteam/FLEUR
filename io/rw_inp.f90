@@ -695,14 +695,25 @@
 ! of the input file,
 ! we demand that the values given there are consistent with the kpts-file
 
-      IF(namex=='hf  ' .OR. namex=='pbe0' .OR. namex=='exx ' &
-     &  .OR. namex=='hse ' .OR. namex=='vhse' .OR.&
-     & ( banddos%dos .AND. banddos%ndir == -3 ) ) THEN
-        READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',&
-     &       END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3) 
+      IF(namex=='hf  '.OR.namex=='pbe0'.OR.namex=='exx '.OR.namex=='hse '.OR.namex=='vhse'.OR.&
+         (banddos%dos.AND.(banddos%ndir == -3))) THEN
+         READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3)
+
+         IF(idum.EQ.0) THEN
+            WRITE(*,*) ''
+            WRITE(*,*) 'nkpt is set to 0.'
+            WRITE(*,*) 'For this fleur mode it has to be larger than 0!'
+            WRITE(*,*) ''
+            CALL juDFT_error("Invalid declaration of k-point set (1)",calledby="rw_inp")
+         END IF
       
-        IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum )&
-     &    STOP 'rw_inp: error k-point set'
+         IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum ) THEN
+            WRITE(*,*) ''
+            WRITE(*,*) 'nx*ny*nz is not equal to nkpt.'
+            WRITE(*,*) 'For this fleur mode this is required!'
+            WRITE(*,*) ''
+            CALL juDFT_error("Invalid declaration of k-point set (2)",calledby="rw_inp")
+         END IF
       END IF
 
 ! for a exx calcuation a second mixed basis set is needed to
