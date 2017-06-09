@@ -154,15 +154,15 @@
 ! nomal labels
 !
       IF (iachar(ssy(1)) < aoff ) THEN
-        WRITE (27,907) ssy(1),d(1)
+        WRITE (27,907) ssy(1),d(1),achar(92)
       ELSE
-        WRITE (27,907) " ",d(1)
+        WRITE (27,907) " ",d(1),achar(92)
       ENDIF
       DO n = 2, nosyp-1
         IF (iachar(ssy(n)) < aoff ) THEN 
-          WRITE (27,908) ssy(n),d(n)
+          WRITE (27,908) ssy(n),d(n),achar(92)
         ELSE
-          WRITE (27,908) " ",d(n)
+          WRITE (27,908) " ",d(n),achar(92)
         ENDIF
       ENDDO
       IF (iachar(ssy(nosyp)) < aoff ) THEN
@@ -182,8 +182,8 @@
 ! now write the rest
 !
       WRITE (27,910) 
-      WRITE (27,911) d(nosyp)+0.00001
-      IF (input%jspins == 2) WRITE (27,912)
+      WRITE (27,911) d(nosyp)+0.00001,achar(92)
+      IF (input%jspins == 2) WRITE (27,912) achar(92)
       WRITE (27,913)
       CLOSE (27)
 
@@ -194,22 +194,12 @@
  904  FORMAT ('set title "',a,'"')
  905  FORMAT ('set arrow from',f9.5,', -9.0 to',f9.5,',  5.0 nohead')
  906  FORMAT ('set arrow from',f9.5,', 0.0 to',f9.5,', 0.0 nohead lt 3')
-#ifdef CPP_AIX
- 907  FORMAT ('set xtics ("',a1,'"',f9.5,', \\')
- 908  FORMAT ('           "',a1,'"',f9.5,', \\')
-#else
- 907  FORMAT ('set xtics ("',a1,'"',f9.5,', \')
- 908  FORMAT ('           "',a1,'"',f9.5,', \')
-#endif
+ 907  FORMAT ('set xtics ("',a1,'"',f9.5,', ',a)
+ 908  FORMAT ('           "',a1,'"',f9.5,', ',a)
  909  FORMAT ('           "',a1,'"',f9.5,'  )')
  910  FORMAT ('set ytics -8,2,4')
-#ifdef CPP_AIX
- 911  FORMAT ('plot [0:',f9.5,'] [-9:5] \\')
- 912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \\')
-#else
- 911  FORMAT ('plot [0:',f9.5,'] [-9:5] \')
- 912  FORMAT ('"bands.2" using 1:($2+0.00)  w p pt 12 ps 0.5, \')
-#endif
+ 911  FORMAT ('plot [0:',f9.5,'] [-9:5] ',a)
+ 912  FORMAT ('"bands.2" using 1:($2+0.00) w p pt 12 ps 0.5,',a)
  913  FORMAT ('"bands.1" using 1:($2+0.00)  w p pt  7 ps 0.5')
  914  FORMAT ('set label "',a1,'" at ',f9.5,
      +        ', -9.65 center font "Symbol,20"')

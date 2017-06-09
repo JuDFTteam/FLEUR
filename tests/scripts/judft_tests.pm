@@ -30,7 +30,7 @@ sub execute_test($$$$){
         #run all stages of the test
 	for(my $stage=1;$stage<=$stages;$stage++){
 	    print "Stage: $stage / $stages\n";
-		do "test.run$stage";
+		eval `cat test.run$stage`;
 	}   
 	chdir($old_dir);
 	my $time=time()-$starttime;
@@ -46,8 +46,19 @@ sub test_applicable($$){
 
 
     #read description of test
-    do "tests/$testdir/test.desc";
-
+    eval `cat tests/$testdir/test.desc`;
+    
+    #open(DESC,"<tests/$testdir/test.desc") or die "Could not open tests/$testdir/test.desc";
+    #LINE:while(<DESC>){
+    #    next LINE if /^#/;  # discard comments
+    #	if (/NAME:(.*)/){
+    #	    $test_name=$1;
+    #	}
+    #	if (/STAGES:(.*)/){
+    #	    $test_stages=$1*1;
+    #	}
+    #}
+    #close(DESC);
     #check if executable name starts with code name
     #if (!($exec=~/^\Q$test_code\E/i)){
     #	return (0,"");
@@ -62,9 +73,9 @@ sub test_applicable($$){
 #    if ($exec=~/_INVS/){
 #	return (0,"") if ($test_requirements{"complex"}==1);
 #    }
-    if (!($exec=~/_MPI/)){
-	return (0,"") if ($test_requirements{"MPI"}==1);
-    }
+#    if (!($exec=~/_MPI/)){
+#	return (0,"") if ($test_requirements{"MPI"}==1);
+#    }
     return ($test_stages,$test_name);
 }
 	
