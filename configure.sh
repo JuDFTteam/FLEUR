@@ -21,8 +21,8 @@ do
 	-gitupdate) gitupdate=1;;
 	-t) all_tests=1;;
 	-all_tests) all_tests=1;;
-	-l) label=$1;shift;;
-	-m) machine=$1;shift;;
+	-l) shift;label=$1;;
+	-m) shift;machine=$1;;
 	-*) error="Unkown argument";;
 	*)  break;;	# terminate while loop
     esac
