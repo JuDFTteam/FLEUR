@@ -23,6 +23,7 @@ do
 	-all_tests) all_tests=1;;
 	-l) shift;label=$1;;
 	-m) shift;machine=$1;;
+   -d) debug=1;;
 	-*) error="Unkown argument";;
 	*)  break;;	# terminate while loop
     esac
