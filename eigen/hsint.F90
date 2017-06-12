@@ -55,7 +55,7 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX th,ts,phase
     REAL b1(3),b2(3),r2
-    INTEGER i,i1,i2,i3,ii,in,j,ig3,ispin,l
+    INTEGER i,i1,i2,i3,ii,in,j,ig3,ispin,l,iloc
     INTEGER istart,nc
 
     COMPLEX ust1,vp1
@@ -104,10 +104,19 @@ CONTAINS
     vp1 = vpw(1)
     !---> loop over (k+g')
     ii = 0
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP SHARED(n_rank,n_size,lapw,ispin,stars,input,bkpt,cell,vpw,ust1,vp1) &
+    !$OMP SHARED(l_real,hamOvlp)&
+    !$OMP PRIVATE(i,j,iloc,i1,i2,i3,in,phase,b1,b2,r2,th,ts)&
+    !$OMP FIRSTPRIVATE(ii)
     DO  i = n_rank+1, lapw%nv(ispin), n_size
        !--->    loop over (k+g)
        DO  j = 1,i - 1
-          ii = ii + 1
+          ii = 0
+          DO iloc = n_rank+1,i-n_size,n_size
+             ii = ii + iloc
+          ENDDO
+          ii = ii + j
           !-->     determine index and phase factor
           i1 = lapw%k1(i,ispin) - lapw%k1(j,ispin)
           i2 = lapw%k2(i,ispin) - lapw%k2(j,ispin)
@@ -132,21 +141,22 @@ CONTAINS
           if (l_real) THEN
           hamOvlp%a_r(ii) = REAL(th)
           hamOvlp%b_r(ii) = REAL(ts)
-else
+          else
           hamOvlp%a_c(ii) = th
           hamOvlp%b_c(ii) = ts
-endif
+          endif
        ENDDO
        !--->    diagonal term (g-g'=0 always first star)
        ii = ii + 1
        if (l_real) THEN
        hamOvlp%a_r(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*REAL(ust1) + REAL(vp1)
        hamOvlp%b_r(ii) = REAL(ust1)
-else
+       else
        hamOvlp%a_c(ii) = 0.5*lapw%rk(i,ispin)*lapw%rk(i,ispin)*ust1 + vp1
        hamOvlp%b_c(ii) = ust1
-endif
+       endif
     ENDDO
+    !$OMP END PARALLEL DO
 
     !---> pk non-collinear
     IF (noco%l_noco) THEN
