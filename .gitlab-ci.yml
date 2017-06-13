@@ -23,16 +23,16 @@ build-pgi:
   stage: build
   cache: 
      paths:
-       - build
+       - build.debug
   script:
     - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev
-    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build; make 
+    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
 test-pgi:
   image: hopobcn/pgi-ce
   stage: test
   cache:
      paths:
-       - build
+       - build.debug
   script:
     - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
-    - cd /builds/fleur/fleur/build;ctest
+    - cd /builds/fleur/fleur/build.debug;ctest
