@@ -73,10 +73,9 @@
       DATA spin12/'.1' , '.2'/
       DATA ch_mcd/'.+' , '.-' , '.0'/
 !
+      qdim = lmax*atoms%ntype+3
       l_orbcomp = .false.
-      IF  (banddos%ndir.NE.-3) THEN
-        qdim = lmax*atoms%ntype+3
-      ELSE
+      IF (banddos%ndir.EQ.-3) THEN
         qdim = 2*nsld 
         n_orb = 0
         INQUIRE(file='orbcomp',exist=l_orbcomp)
@@ -170,12 +169,12 @@
             ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
             CALL read_eig(eig_id,k,jspin,bk=vk(:,k),wk=wt(k),neig=nevk(k),eig=ev(:,k))
             CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-            qal(1:lmax*atoms%ntype,:,k)=reshape(qal_tmp,(/lmax*atoms%ntype,size(qal_tmp,3)/))
-            qal(lmax*atoms%ntype+2,:,k)=qvac(:,1)         ! vacuum 1
-            qal(lmax*atoms%ntype+3,:,k)=qvac(:,2)         ! vacuum 2
-            qal(lmax*atoms%ntype+1,:,k)=qis              ! interstitial
-            DEALLOCATE( ksym,jsym )
-            IF (l_orbcomp)THEN
+            IF (.NOT.l_orbcomp) THEN
+               qal(1:lmax*atoms%ntype,:,k)=reshape(qal_tmp,(/lmax*atoms%ntype,size(qal_tmp,3)/))
+               qal(lmax*atoms%ntype+2,:,k)=qvac(:,1)         ! vacuum 1
+               qal(lmax*atoms%ntype+3,:,k)=qvac(:,2)         ! vacuum 2
+               qal(lmax*atoms%ntype+1,:,k)=qis              ! interstitial
+            ELSE
                IF (n_orb == 0) THEN
                   qal(1:nsld,:,k)        = qintsl(:,:)
                   qal(nsld+1:2*nsld,:,k) = qmtsl(:,:)
@@ -183,13 +182,14 @@
                   DO i = 1, 23
                      DO l = 1, nevk(k)
                         qal(i,l,k) = orbcomp(l,i,n_orb)*qmtp(l,n_orb)/10000.
-                     ENDDO
+                     END DO
                      DO l = nevk(k)+1, dimension%neigd
                         qal(i,l,k) = 0.0
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ENDIF
+                     END DO
+                  END DO
+               END IF
+            END IF
+            DEALLOCATE( ksym,jsym )
             DEALLOCATE( orbcomp,qintsl,qmtsl,qmtp,qvac,qis,qal_tmp,qvlay)
             ntb = max(ntb,nevk(k))
 !

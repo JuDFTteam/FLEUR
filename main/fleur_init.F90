@@ -508,7 +508,26 @@
              END DO
           ELSE
              IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
+                WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
                 CALL gen_bz(kpts,sym)
+                kpts%nkpt = kpts%nkptf
+                DEALLOCATE(kpts%bk,kpts%wtkpt)
+                ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
+                kpts%bk(:,:) = kpts%bkf(:,:)
+                IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
+                   IF(kpts%l_gamma) THEN
+                      kpts%wtkpt = 1.0 / (kpts%nkptf-1)
+                      DO i = 1, kpts%nkptf
+                         IF(ALL(kpts%bk(:,i).EQ.0.0)) THEN
+                            kpts%wtkpt(i) = 0.0
+                         END IF
+                      END DO
+                   ELSE
+                      CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="fleur_init")
+                   END IF
+                ELSE
+                   kpts%wtkpt = 1.0 / kpts%nkptf
+                END IF
              END IF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
