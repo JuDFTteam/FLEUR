@@ -23,7 +23,7 @@ do
 	-all_tests) all_tests=1;;
 	-l) shift;label=$1;;
 	-m) shift;machine=$1;;
-   -d) debug=1;;
+        -d) debug=1;;
 	-*) error="Unkown argument";;
 	*)  break;;	# terminate while loop
     esac
@@ -141,7 +141,7 @@ if [ $debug -gt 0 ]
 then
    echo "Debug version will be build"
    BUILD=Debug
-   $buildname="$buildname.debug"
+   buildname="$buildname.debug"
 else
    BUILD=Release
 fi
