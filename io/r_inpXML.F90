@@ -1962,6 +1962,7 @@ SUBROUTINE r_inpXML(&
   DO i = 1, kpts%nkpt
      kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
   END DO
+  kpts%nkpt3(:) = kpts%nmop(:)
 
   ! Generate missing general parameters
 
