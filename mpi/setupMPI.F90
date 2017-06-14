@@ -23,7 +23,7 @@ CONTAINS
        !print INFO on parallelization
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
-       !$write(*,*) "Number of OMP-threads:",omp
+       !$ write(*,*) "Number of OMP-threads:",omp
 #else
        if (omp==-1) THEN
           write(*,*) "No OpenMP version of FLEUR."
