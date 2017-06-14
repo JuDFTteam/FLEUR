@@ -47,16 +47,16 @@ CONTAINS
     nz = 1
     na = 0
     DO i=1,atoms%ntype
-       DO j=1,atoms%neq(i)
+       equivAtomsLoop: DO j=1,atoms%neq(i)
           na = na + 1
           zs = atoms%pos(3,na)
           DO iz=1,nz
-             IF(ABS(zs-znz(iz)).LT.epsz) CYCLE
-          ENDDO
+             IF(ABS(zs-znz(iz)).LT.epsz) CYCLE equivAtomsLoop
+          END DO
           nz = nz+1
           znz(nz) = zs
-       ENDDO
-    ENDDO
+       END DO equivAtomsLoop
+    END DO
     nsld = nz
     IF(nsld>atoms%nat)   CALL juDFT_error("nsld.GT.atoms%nat ",calledby="slab_dim")
     !

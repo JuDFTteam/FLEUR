@@ -519,8 +519,14 @@
                                ! so transform the eig file such that each kpt is ro
                                ! to its symmetry equivalent ones
                                IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
-                                  ! generate pointer from gpts at one kpt to a diffe
 #ifdef CPP_NEVER
+                                  ! This code section has to be reimplemented to enable
+                                  ! calculations of the orbital decomposed DOS with
+                                  ! eigenvectors up to this point only calculated for the
+                                  ! IBZ. Here we reconstruct the eigenvectors for the full
+                                  ! BZ from this subset.
+
+                                  ! generate pointer from gpts at one kpt to a diffe
                                   ALLOCATE( kpts%pntgptd(3) )
                                   CALL generate_pntgpt(&
                                        &                      dimension,obsolete,input,&
@@ -529,12 +535,13 @@
                                   CALL rotate_eig(&
                                        &                      kpts,dimension,atoms,&
                                        &                      sym,mpi)
-#endif
+
                                   DEALLOCATE( kpts%pntgptd, kpts%pntgpt )
                                   ! this change is sufficient to modify fermie and c
                                   ! the enlarged kpt mesh
                                   kpts%nkpt    = kpts%nkptf
                                   kpts%nkpt   = kpts%nkptf
+#endif
                                END IF
 
                             ENDIF
