@@ -480,7 +480,9 @@ SUBROUTINE r_inpXML(&
         DO i = 1, kpts%numSpecialPoints
            WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint[',i,']'
            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-           READ(valueString,*) kpts%specialPoints(1,i), kpts%specialPoints(2,i), kpts%specialPoints(3,i)
+           kpts%specialPoints(1,i) = evaluatefirst(valueString)
+           kpts%specialPoints(2,i) = evaluatefirst(valueString)
+           kpts%specialPoints(3,i) = evaluatefirst(valueString)
            kpts%specialPointNames(i) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')
         END DO
      END IF
