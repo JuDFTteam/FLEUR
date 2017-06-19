@@ -584,6 +584,7 @@
        LOGICAL :: l_orb
        LOGICAL :: vacdos
        INTEGER :: ndir
+       INTEGER :: orbCompAtom
        REAL    :: e1_dos
        real    :: e2_dos
        real    :: sig_dos
