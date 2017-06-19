@@ -316,6 +316,8 @@
                 !
                 stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
                 !+t3e
+                banddos%l_orb = .FALSE.
+                banddos%orbCompAtom = 0
              ENDIF ! mpi%irank.eq.0
              CALL timestop("preparation:stars,lattice harmonics,+etc")
 
@@ -406,11 +408,13 @@
 
           !Now check for additional input files
           IF (mpi%irank.EQ.0) THEN
-             INQUIRE(file='orbcomp',exist=banddos%l_orb)
-             IF (banddos%l_orb) THEN
-                OPEN (111,file='orbcomp',form='formatted')
-                READ (111,*) banddos%orbCompAtom
-                CLOSE (111)
+             IF(.NOT.banddos%l_orb) THEN
+                INQUIRE(file='orbcomp',exist=banddos%l_orb)
+                IF (banddos%l_orb) THEN
+                   OPEN (111,file='orbcomp',form='formatted')
+                   READ (111,*) banddos%orbCompAtom
+                   CLOSE (111)
+                END IF
              END IF
              INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
           END IF

@@ -153,7 +153,7 @@ SUBROUTINE r_inpXML(&
   REAL               :: tauTemp(3,48)
   REAL               :: bk(3)
   LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
-  LOGICAL            :: l_vca, coreConfigPresent, l_enpara
+  LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
   REAL               :: weightScale, eParamUp, eParamDown
@@ -1568,6 +1568,8 @@ SUBROUTINE r_inpXML(&
 !!! Start of atomGroup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  banddos%l_orb = .FALSE.
+  banddos%orbCompAtom = 0
   atoms%l_geo = .FALSE.
   atoms%relax = 0
   na = 0
@@ -1607,6 +1609,14 @@ SUBROUTINE r_inpXML(&
         atoms%taual(2,na) = evaluatefirst(valueString)
         atoms%taual(3,na) = evaluatefirst(valueString)
         atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
+        l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
+        IF(l_orbcomp) THEN
+           IF(banddos%l_orb) THEN
+              CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
+           END IF
+           banddos%l_orb = .TRUE.
+           banddos%orbCompAtom = na
+        END IF
      END DO
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
@@ -1624,6 +1634,14 @@ SUBROUTINE r_inpXML(&
         atoms%taual(2,na) = evaluatefirst(valueString)
         atoms%taual(3,na) = evaluatefirst(valueString) / cell%amat(3,3)
         atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
+        l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
+        IF(l_orbcomp) THEN
+           IF(banddos%l_orb) THEN
+              CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
+           END IF
+           banddos%l_orb = .TRUE.
+           banddos%orbCompAtom = na
+        END IF
      END DO
 
      !Read in atom group specific noco parameters
@@ -1965,6 +1983,7 @@ SUBROUTINE r_inpXML(&
      kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
   END DO
   kpts%nkpt3(:) = kpts%nmop(:)
+  IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
 
   ! Generate missing general parameters
 
