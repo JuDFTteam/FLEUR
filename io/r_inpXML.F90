@@ -1252,6 +1252,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
 
   atoms%numStatesProvided = 0
+  atoms%lapw_l(:) = -1
 
   DO iSpecies = 1, numSpecies
      ! Attributes of species
@@ -1275,8 +1276,6 @@ SUBROUTINE r_inpXML(&
      IF (numberNodes.EQ.1) THEN
         lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
      END IF
-
-     ! WRITE(*,*) 'APW+lo cutoffs ignored for the moment'
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
      ldau_l = -1
@@ -1813,6 +1812,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
   ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
 
+  IF (ANY(atoms%lapw_l(:).NE.-1)) input%l_useapw = .TRUE.
   DO iType = 1, atoms%ntype
      IF (atoms%nlo(iType).GE.1) THEN
         IF (input%secvar) THEN
@@ -1851,7 +1851,6 @@ SUBROUTINE r_inpXML(&
 
         DO ilo = 1,atoms%nlo(iType)
            if (input%l_useapW) THEN
-
               IF (atoms%ulo_der(ilo,iType).EQ.1) THEN
                  atoms%l_dulo(ilo,iType) = .TRUE.
               END IF
