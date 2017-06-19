@@ -316,6 +316,8 @@
                 !
                 stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
                 !+t3e
+                banddos%l_orb = .FALSE.
+                banddos%orbCompAtom = 0
              ENDIF ! mpi%irank.eq.0
              CALL timestop("preparation:stars,lattice harmonics,+etc")
 
@@ -403,6 +405,19 @@
           ENDIF
           !-t3e
           !--- J>
+
+          !Now check for additional input files
+          IF (mpi%irank.EQ.0) THEN
+             IF(.NOT.banddos%l_orb) THEN
+                INQUIRE(file='orbcomp',exist=banddos%l_orb)
+                IF (banddos%l_orb) THEN
+                   OPEN (111,file='orbcomp',form='formatted')
+                   READ (111,*) banddos%orbCompAtom
+                   CLOSE (111)
+                END IF
+             END IF
+             INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
+          END IF
 
 
 #ifdef CPP_MPI
@@ -547,11 +562,6 @@
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
-
-
-          !Now check for additional input files
-          INQUIRE(file='orbcomp',exist=banddos%l_orb)
-          INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
 
           !check for broken feature
           IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")

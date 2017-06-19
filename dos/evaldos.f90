@@ -74,18 +74,15 @@
       DATA ch_mcd/'.+' , '.-' , '.0'/
 !
       qdim = lmax*atoms%ntype+3
-      l_orbcomp = .false.
+      l_orbcomp = banddos%l_orb
       IF (banddos%ndir.EQ.-3) THEN
         qdim = 2*nsld 
         n_orb = 0
-        INQUIRE(file='orbcomp',exist=l_orbcomp)
-        IF (l_orbcomp) THEN
-          OPEN (1,file='orbcomp',form='formatted')
-          READ (1,*) n_orb
-          WRITE (*,*) 'DOS: orbcomp',n_orb
-          CLOSE (1)
-          qdim = 23
-        ENDIF
+        IF (banddos%l_orb) THEN
+           n_orb = banddos%orbCompAtom
+           WRITE (*,*) 'DOS: orbcomp',n_orb
+           qdim = 23
+        END IF
       ENDIF
       ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
      &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
