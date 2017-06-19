@@ -43,6 +43,7 @@ SUBROUTINE r_inpXML(&
   USE m_localsym
   USE m_od_chisym
   USE m_ylm
+  USE m_chkmt
   USE m_convndim
   USE m_dwigner
   USE m_mapatom
@@ -177,6 +178,13 @@ SUBROUTINE r_inpXML(&
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
   REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
+
+! Variables for MT radius testing:
+
+  REAL                 :: dtild1,kmax1,dvac1
+  LOGICAL              :: l_test
+  INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
+  REAL, ALLOCATABLE    :: rmt1(:), dx1(:)
 
   EXTERNAL prp_xcfft_box
 
@@ -2091,6 +2099,16 @@ SUBROUTINE r_inpXML(&
 
      noel(iType) = namat_const(atoms%nz(iType))
   END DO
+
+
+  ! Check muffin tin radii
+
+  ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
+  ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
+  l_test = .TRUE. ! only checking, dont use new parameters
+  CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
+             kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
+  DEALLOCATE (jri1,lmax1,rmt1,dx1)
 
   ! Read in enpara file iff available
 
