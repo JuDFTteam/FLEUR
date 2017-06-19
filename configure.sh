@@ -175,7 +175,7 @@ configure_machine
 
 #run cmake
 
-cmake -Dall_tests=$all_tests -DCMAKE_BUILD_TYPE=$BUILD $DIR
+cmake -Dall_tests=$all_tests -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
 
 if [ -r $buildname/Makefile ]
 then
