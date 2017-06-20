@@ -62,13 +62,31 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: vpw1(:)  ! for J constants
     !     ..
     ! ..
+    !$OMP PARALLEL 
     if (l_real) THEN
-       hamOvlp%a_r=0.0
-       hamOvlp%b_r=0.0
+       !$OMP DO 
+       do i = 1, size(hamOvlp%a_r)
+           hamOvlp%a_r(i)=0.0
+       end do
+       !OMP END DO
+       !$OMP DO 
+       do i = 1, size(hamOvlp%b_r)
+           hamOvlp%b_r(i)=0.0
+       end do
+       !OMP END DO
     ELSE
-       hamOvlp%a_c=0.0
-       hamOvlp%b_c=0.0
+       !$OMP DO 
+       do i = 1, size(hamOvlp%a_c)
+           hamOvlp%a_c(i)=0.0
+       end do
+       !$OMP END DO
+       !$OMP DO 
+       do i = 1, size(hamOvlp%b_c)
+           hamOvlp%b_c(i)=0.0
+       end do
+       !$OMP END DO
     ENDIF
+    !$OMP END PARALLEL 
     ust1 = stars%ustep(1)
     ispin = jspin
     lapw%nmat = lapw%nv(ispin)
@@ -104,7 +122,7 @@ CONTAINS
     vp1 = vpw(1)
     !---> loop over (k+g')
     ii = 0
-    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
     !$OMP SHARED(n_rank,n_size,lapw,ispin,stars,input,bkpt,cell,vpw,ust1,vp1) &
     !$OMP SHARED(l_real,hamOvlp)&
     !$OMP PRIVATE(i,j,iloc,i1,i2,i3,in,phase,b1,b2,r2,th,ts)&
