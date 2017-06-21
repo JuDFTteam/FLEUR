@@ -97,7 +97,9 @@
       IF (ch_rw.eq.'r') THEN
 !--------------------------------------------------------------------
       OPEN (5,file='inp',form='formatted',status='old')
-
+      
+      !default not read in in old inp-file
+      input%qfix=2
 !
       a1(:) = 0
       a2(:) = 0

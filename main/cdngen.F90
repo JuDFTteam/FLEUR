@@ -345,7 +345,7 @@
 !     block 2 unnecessary for slicing: begin
       IF (.NOT.sliceplot%slice) THEN
          CALL openXMLElementNoAttributes('allElectronCharges')
-         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.TRUE., fix)
+         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.TRUE.,.true., fix)
          CALL closeXMLElement('allElectronCharges')
 !---> pk non-collinear
          IF (noco%l_noco) THEN
