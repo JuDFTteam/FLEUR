@@ -10,6 +10,10 @@ c     return type of the pure intgrf function
         INTEGER :: ierror   ! error code
       END TYPE intgrf_out
 
+      INTERFACE derivative
+        MODULE PROCEDURE:: derivative_t,derivative_nt
+      END INTERFACE
+      
       CONTAINS
 
 
@@ -427,7 +431,19 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 c     Returns derivative of f in df.
 
-      SUBROUTINE derivative(df,f,jmtd,jri,dx,rmsh,ntype,itype)
+      SUBROUTINE derivative_t(df,f,atoms,itype)
+      USE m_types
+      IMPLICIT NONE
+      REAL,   INTENT(IN)   ::   f(:)
+      REAL,   INTENT(OUT)  ::   df(:)
+      TYPE(t_atoms),INTENT(IN)::atoms
+      INTEGER,INTENT(IN)   ::   itype
+
+      call derivative_nt(df,f,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,
+     +     atoms%ntype,itype)
+      END SUBROUTINE
+      
+      SUBROUTINE derivative_nt(df,f,jmtd,jri,dx,rmsh,ntype,itype)
 
       IMPLICIT NONE
 
@@ -481,7 +497,7 @@ c     Returns derivative of f in df.
      &          - d41*d42 / (d31*d32*d43)         * f(n-1) 
      &          + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
 
-      END SUBROUTINE derivative
+      END SUBROUTINE derivative_nt
 
 
 c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

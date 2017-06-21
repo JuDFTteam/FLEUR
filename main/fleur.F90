@@ -132,8 +132,8 @@
           USE m_wann_optional
           USE m_wannier
 #endif
-!          USE m_mixedbasis
-!          USE m_coulomb
+          USE m_mixedbasis
+          USE m_coulomb
           USE m_gen_map
           USE m_dwigner
           USE m_gen_bz
@@ -315,7 +315,7 @@
 
                    ENDIF
                    !HF
-#if defined(CPP_HF) && (2==1)
+!#if defined(CPP_HF) && (2==1)
                    hybrid%l_subvxc = ( xcpot%icorr == icorr_hf .OR. xcpot%icorr == icorr_pbe0 .OR.&
                         &          xcpot%icorr == icorr_hse .OR. xcpot%icorr == icorr_vhse )
 
@@ -340,33 +340,25 @@
                            &         WRITE(*,'(/A)',advance='no')&
                            &              ' calculation of mixedbasis...'
                       IF (it==1)&
-                           &         eig_id=open_eig(&
-                           &       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt(1),dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
-                           &         ,noco%l_noco,.FALSE.,.FALSE.)
-                      !               CALL open_eig(mpi_comm,
-                      !     >              nbasfcn,neigd,nkpt(1),jspd,lmaxd,nlod,ntypd,nlotot,
-                      !     >                 l_noco,.false.,.true.)
+                           STOP "open_eig in fleur.F"
+                           !eig_id=open_eig(&
+                           !mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
+                           !,noco%l_noco,.FALSE.,.FALSE.)
                       !DW TODO! eig_id has to be adjusted here
-                      CALL mixedbasis(atoms,kpts,obsolete,&
-                           &                  sphhar,dimension,input,&
-                           &                  enpara,cell,vacuum,sym,&
-                           &                  oneD,stars,xcpot,hybrid,&
-                           &                  eig_id,mpi,l_restart)
-                      IF ( irank == 0 ) WRITE(*,'(A)')'...done'
+                      CALL mixedbasis(atoms,kpts,&
+                           sphhar,dimension,input, enpara,cell,vacuum,sym,&
+                           oneD,stars,xcpot,hybrid, eig_id,mpi,l_restart)
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
 
-                      IF ( mpi%irank == 0 )&
-                           &          WRITE(*,'(A)',advance='no')&
-                           &               ' calculation of coulomb matrix ...'
-                      CALL coulombmatrix(&
-                           &            mpi,obsolete,atoms,kpts,&
-                           &            cell,sym,hybrid,xcpot,l_restart,&
-                           &            oneD)
-                      IF ( irank == 0 ) WRITE(*,'(A)')'...done'
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' calculation of coulomb matrix ...'
+                      CALL coulombmatrix(mpi,atoms,kpts,&
+                           cell,sym,hybrid,xcpot,l_restart)
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
+                      !calculate whole Brilloun zone
+                      CALL gen_bz(kpts,sym)
 #ifdef CPP_MPI
-                      CALL MPI_Bcast( hybrid%maxbasm1,1,MPI_INTEGER4,0,&
-                           &                        mpi%mpi_comm,ierr(1) )
-                      CALL MPI_Bcast( hybrid%radshmin,1,MPI_REAL8,   0,&
-                           &                        mpi%mpi_comm,ierr(1) )
+                      CALL MPI_Bcast( hybrid%maxbasm1,1,MPI_INTEGER4,0, mpi%mpi_comm,ierr(1) )
+                      CALL MPI_Bcast( hybrid%radshmin,1,MPI_REAL8,   0, mpi%mpi_comm,ierr(1) )
 #endif
                       CALL timestop("generation of mixedbasis and coulombmatrix")
 
@@ -375,11 +367,9 @@
                          input%zelec = input%zelec * 2
                       END IF
 
-                      IF ( mpi%irank == 0 )&
-                           &          WRITE(*,'(A)',advance='no') ' start fermie....'
-                      CALL fermie(eig_id,&
-                           &               mpi,dimension,kpts,obsolete,atoms,&
-                           &               input,noco,results,jij,cell)
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' start fermie....'
+                      CALL fermie(eig_id, mpi,kpts,obsolete,&
+                           input,noco,enpara%epara_min,jij,cell,results)
 
                       IF ( noco%l_soc ) THEN
                          input%zelec = input%zelec / 2
@@ -397,11 +387,11 @@
                       hybrid%maxgptm1 = 0; hybrid%maxgptm2 = 0; hybrid%maxindxm1 = 0; hybrid%maxindxm2 = 0
                       hybrid%maxlcutm1 = 0; hybrid%maxlcutm2 = 0; hybrid%maxindxp1 = 0; hybrid%maxindxp2 = 0
                       ALLOCATE(hybrid%gptm(0,0),hybrid%ngptm(0),hybrid%pgptm(0,0),hybrid%ngptm1(0),&
-                           &                hybrid%pgptm1(0,0),hybrid%ngptm2(0),hybrid%pgptm2(0,0),hybrid%basm1(0,0,0,0),&
-                           &                hybrid%basm2(0,0,0,0),hybrid%nindxm1(0,0),hybrid%nindxm2(0,0))
+                           hybrid%pgptm1(0,0),hybrid%ngptm2(0),hybrid%pgptm2(0,0),hybrid%basm1(0,0,0,0),&
+                           hybrid%basm2(0,0,0,0),hybrid%nindxm1(0,0),hybrid%nindxm2(0,0))
                    END IF ! first iteration hybrids
                    !HF
-#endif
+!#endif
                    IF (.NOT.obsolete%pot8) THEN
                       CALL timestart("generation of potential")
 
@@ -529,12 +519,12 @@
                                   CALL rotate_eig(&
                                        &                      kpts,dimension,atoms,&
                                        &                      sym,mpi)
-#endif
                                   DEALLOCATE( kpts%pntgptd, kpts%pntgpt )
                                   ! this change is sufficient to modify fermie and c
                                   ! the enlarged kpt mesh
                                   kpts%nkpt    = kpts%nkptf
                                   kpts%nkpt   = kpts%nkptf
+#endif
                                END IF
 
                             ENDIF

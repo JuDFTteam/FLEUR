@@ -31,7 +31,7 @@ include(inpgen/CMakeLists.txt)
 include(docs/CMakeLists.txt)
 include(tests/CMakeLists.txt)
 include(mpi/CMakeLists.txt)
-
+include(hybrid/CMakeLists.txt)
 
 #include(wannier/CMakeLists.txt)
 

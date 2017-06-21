@@ -267,8 +267,6 @@
        REAL,ALLOCATABLE ::bk(:,:)
        !(nkpts) weights
        REAL,ALLOCATABLE ::wtkpt(:)
-       INTEGER, ALLOCATABLE :: pntgptd(:)
-       INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:,:)
        INTEGER               ::  nkptf !<k-vectors in full BZ
        INTEGER               ::  nkpt3(3)
        REAL   ,ALLOCATABLE   ::  bkf(:,:)
@@ -396,13 +394,14 @@
      END TYPE
 
      TYPE t_hybrid
+      LOGICAL               ::  l_hybrid
       INTEGER               ::  ewaldlambda
       INTEGER               ::  lexp
-      INTEGER               ::  bands1
-      INTEGER               ::  bands2
-      INTEGER(4)            ::  maxlcutm1
-      INTEGER(4)            ::  maxindxm1
-      INTEGER(4)            ::  maxbasm1
+      INTEGER               ::  bands1 !Only read in
+      INTEGER               ::  bands2 !Only read in
+      INTEGER               ::  maxlcutm1
+      INTEGER               ::  maxindxm1
+      INTEGER               ::  maxbasm1
       INTEGER               ::  maxlcutm2
       INTEGER               ::  maxindxm2
       INTEGER               ::  maxbasm2
@@ -415,9 +414,9 @@
       INTEGER               ::  maxlmindx
       INTEGER               ::  gptmd
       INTEGER,ALLOCATABLE   ::  nindx(:,:)
-      INTEGER(4),ALLOCATABLE::  select1(:,:)
-      INTEGER(4),ALLOCATABLE::  lcutm1(:)
-      INTEGER(4),ALLOCATABLE::  select2(:,:)
+      INTEGER,ALLOCATABLE   ::  select1(:,:)
+      INTEGER,ALLOCATABLE   ::  lcutm1(:)
+      INTEGER,ALLOCATABLE   ::  select2(:,:)
       INTEGER,ALLOCATABLE   ::  lcutm2(:)
       INTEGER,ALLOCATABLE   ::  nindxm1(:,:)
       INTEGER,ALLOCATABLE   ::  nindxm2(:,:)
@@ -433,20 +432,45 @@
       INTEGER,ALLOCATABLE   ::  lcutwf(:)
       INTEGER,ALLOCATABLE   ::  map(:,:)
       INTEGER,ALLOCATABLE   ::  tvec(:,:,:)
-      REAL(8)               ::  radshmin
+      REAL                  ::  radshmin
       REAL                  ::  gcutm1
       REAL                  ::  gcutm2
-      REAL                  ::  tolerance1
-      REAL                  ::  tolerance2
-      REAL(8),ALLOCATABLE   ::  ddist(:)
+      REAL                  ::  tolerance1  !only read in
+      REAL                  ::  tolerance2  !only read in
+      REAL   ,ALLOCATABLE   ::  ddist(:)
       REAL   ,ALLOCATABLE   ::  basm1(:,:,:,:)
       REAL   ,ALLOCATABLE   ::  basm2(:,:,:,:)
       COMPLEX,ALLOCATABLE   ::  d_wgn2(:,:,:,:)
       LOGICAL               ::  l_subvxc
       LOGICAL               ::  l_calhf
       LOGICAL,ALLOCATABLE   ::  l_exxc(:,:)
-     END TYPE
-
+   END TYPE t_hybrid
+   
+   TYPE prodtype
+      INTEGER :: l1,l2,n1,n2
+   END TYPE prodtype
+   TYPE t_hybdat
+        INTEGER              :: nbasp
+        INTEGER              :: lmaxcd,maxindxc
+        REAL,  ALLOCATABLE   ::  gridf(:,:)
+        INTEGER , ALLOCATABLE::  nindxc(:,:)
+        INTEGER,ALLOCATABLE  :: lmaxc(:)
+        REAL,    ALLOCATABLE ::  core1(:,:,:,:),core2(:,:,:,:)
+        REAL,    ALLOCATABLE ::  eig_c(:,:,:)
+        INTEGER , ALLOCATABLE::  kveclo_eig(:,:)
+        INTEGER,ALLOCATABLE  ::  ne_eig(:),nbands(:),nobd(:)
+        INTEGER , ALLOCATABLE::  nbasm(:)
+        INTEGER              ::  maxfac
+        REAL,    ALLOCATABLE ::  sfac(:),fac(:)
+        REAL,    ALLOCATABLE ::  gauntarr(:,:,:,:,:,:)
+        REAL,    ALLOCATABLE ::  bas1(:,:,:,:),bas2(:,:,:,:)!(jmtd,maxindx,0:lmaxd,ntypd)
+        REAL ,   ALLOCATABLE ::  bas1_MT(:,:,:),drbas1_MT(:,:,:)!(maxindx,0:lmaxd,ntypd)
+        REAL, ALLOCATABLE    ::  prodm(:,:,:,:)
+        TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)
+        INTEGER, ALLOCATABLE :: pntgptd(:)
+        INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)
+     END type t_hybdat
+     
      TYPE t_dimension
         INTEGER :: jspd
         INTEGER :: nspd

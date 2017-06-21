@@ -30,6 +30,8 @@ CONTAINS
     USE m_usetup
     USE m_pot_io
     USE m_eigen_diag
+    USE m_eigen_hf_init
+    USE m_eigen_hf_setup
 #ifdef CPP_NOTIMPLEMENTED
     USE m_symm_hf,  ONLY : symm_hf_nkpt_EIBZ
     USE m_gen_bz
@@ -57,7 +59,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_hybrid),INTENT(IN)    :: hybrid
+    TYPE(t_hybrid),INTENT(INOUT) :: hybrid
     TYPE(t_enpara),INTENT(INOUT) :: enpara_in
     TYPE(t_obsolete),INTENT(IN)  :: obsolete
     TYPE(t_input),INTENT(IN)     :: input
@@ -137,8 +139,10 @@ CONTAINS
     INTEGER                 ::  maxindxc,mnobd
     INTEGER                 ::  maxfac
     INTEGER                 ::  maxbands
-    LOGICAL                 ::  l_hybrid
     !     - local arrays -
+    TYPE(t_hybdat)   :: hybdat
+    INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
+  
 #ifdef CPP_NEVER
     INTEGER                 ::  nobd(kpts%nkptf)
     INTEGER                 ::  lmaxc(atoms%ntype)
@@ -148,7 +152,6 @@ CONTAINS
     INTEGER , ALLOCATABLE   ::  nindxc(:,:)
     INTEGER , ALLOCATABLE   ::  kveclo_eig(:,:)
     INTEGER , ALLOCATABLE   ::  nbasm(:)
-    INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
     REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),rarr(3)
     REAL                    ::  bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
     REAL                    ::  drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
@@ -195,14 +198,14 @@ CONTAINS
     !     ..
     nbands     = 0
     bas1 = 0 ; bas2 = 0
-    l_hybrid   = (&
+    hybrid%l_hybrid   = (&
          xcpot%icorr == icorr_pbe0 .OR.&
          xcpot%icorr == icorr_hse  .OR.&
          xcpot%icorr == icorr_vhse .OR.&
          xcpot%icorr == icorr_hf   .OR.&
          xcpot%icorr == icorr_exx)
     l_real=sym%invs.AND..NOT.noco%l_noco
-    IF (noco%l_soc.AND.l_real.AND.l_hybrid ) THEN
+    IF (noco%l_soc.AND.l_real.AND.hybrid%l_hybrid ) THEN
        CALL juDFT_error('hybrid functional + SOC + inv.symmetry is not tested', calledby='eigen')
     END IF
 
@@ -290,7 +293,7 @@ CONTAINS
     ENDIF
     !
    
-
+    CALL eigen_hf_init(hybrid,kpts,sym,atoms,input,dimension,hybdat,irank2,isize2)
 
     !---> set up and solve the eigenvalue problem
     !---> loop over energy windows
@@ -325,7 +328,7 @@ CONTAINS
     IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
     ne = MAX(5,DIMENSION%neigd)
 
-    IF (l_hybrid.OR.hybrid%l_calhf) THEN
+    IF (hybrid%l_hybrid.OR.hybrid%l_calhf) THEN
        eig_id_hf=eig_id
     ENDIF
     eig_id=open_eig(&
@@ -391,9 +394,8 @@ CONTAINS
     !--->    loop over k-points: each can be a separate task
 
     DO jsp = 1,nspins
-       !+do
-
-       !-do
+       CALL eigen_HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id_hf,&
+         hybdat,irank2,it,vr0)  
 
        !
        !--->       set up k-point independent t(l'm',lm) matrices
@@ -480,7 +482,7 @@ CONTAINS
           ENDIF
           !
 #ifdef CPP_NOTIMPLEMENTED
-          IF( l_hybrid ) THEN
+          IF( hybrid%l_hybrid ) THEN
 
              CALL hsfock(nk,atoms,lcutm,obsolete,lapw, DIMENSION,kpts,jsp,input,hybrid,maxbasm,&
                   maxindxp,maxlcutm,maxindxm,nindxm, basm,bas1,bas2,bas1_MT,drbas1_MT,ne_eig,eig_irr,&
@@ -496,7 +498,7 @@ CONTAINS
                      oneD, vr(:,:,:,jsp),vpw(:,jsp), a)
              END IF
 
-          END IF ! l_hybrid
+          END IF ! hybrid%l_hybrid
 #endif
           !
           !--->         update with vacuum terms
@@ -700,7 +702,7 @@ ENDIF
     ENDIF
 
     !     hf: write out radial potential vr0
-    IF (l_hybrid.OR.hybrid%l_calhf) THEN
+    IF (hybrid%l_hybrid.OR.hybrid%l_calhf) THEN
        OPEN(unit=120,file='vr0',form='unformatted')
        DO isp=1,DIMENSION%jspd
           DO nn=1,atoms%ntype
@@ -717,11 +719,11 @@ ENDIF
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
-    IF (l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id_hf)
+    IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id_hf)
     atoms%n_u=n_u_in
 
 
-    IF( input%jspins .EQ. 1 .AND. l_hybrid ) THEN
+    IF( input%jspins .EQ. 1 .AND. hybrid%l_hybrid ) THEN
        results%te_hfex%valence = 2*results%te_hfex%valence
        results%te_hfex%core    = 2*results%te_hfex%core
     END IF
