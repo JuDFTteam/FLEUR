@@ -37,21 +37,15 @@ MODULE m_hsfock
       CONTAINS
 
       SUBROUTINE hsfock(&
-     &             nk,atoms,lcutm,obsolete,lapw,dimension,&
+     &             nk,atoms,hybrid,obsolete,lapw,dimension,&
      &             kpts,nkpti,jsp,input,&
-     &             hybrid,maxbasm,maxindxp,maxlcutm,&
-     &             maxindxm,nindxm,&
-     &             basm,bas1,bas2,bas1_MT,drbas1_MT,&
-     &             ne_eig,eig_irr,n_size,sym,&
+     &             hybdat,&
+     &             eig_irr,n_size,sym,&
      &             cell,noco,oneD,&
-     &             nbasp,nbasm,&
      &             results,&
-     &             it,nbands,maxbands,nobd,mnobd,&
+     &             it,maxbands,mnobd,&
      &             xcpot,&
-     &             core1,core2,nindxc,maxindxc,lmaxc,lmaxcd,&
-     &             kveclo_eig,&
-     &             maxfac,fac,sfac,gauntarr,&
-     &             nindxp,prod,prodm,gwc,&
+     &             gwc,&
      &             mpi,irank2,isize2,comm,&
      &             a)
 
@@ -66,13 +60,13 @@ MODULE m_hsfock
       USE m_icorrkeys
       USE m_types
       IMPLICIT NONE
-
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
       TYPE(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_oneD),INTENT(IN)   :: oneD
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
+      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_obsolete),INTENT(IN)   :: obsolete
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_noco),INTENT(IN)   :: noco
@@ -84,46 +78,18 @@ MODULE m_hsfock
 
 !     - scalars -
       INTEGER,INTENT(IN)      :: jsp 
-      INTEGER,INTENT(IN)      :: nbands
       INTEGER,INTENT(IN)      :: it
       INTEGER,INTENT(IN)      ::  n_size 
       INTEGER,INTENT(IN)      :: irank2 ,isize2,comm
       INTEGER,INTENT(IN)      ::  nkpti  ,nk
-      INTEGER,INTENT(IN)      ::  maxindxp,maxindxm,maxlcutm,maxbasm
       INTEGER,INTENT(IN)      :: maxbands 
-      INTEGER,INTENT(IN)      ::  nbasp
       INTEGER,INTENT(IN)      ::  mnobd
-      INTEGER,INTENT(IN)      ::  lmaxcd,maxindxc
-      INTEGER,INTENT(IN)      ::  maxfac
       INTEGER,INTENT(IN)      :: gwc
 
 
       !     -  arrays -
-      INTEGER,INTENT(IN)      ::  nindxm(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      ::  lcutm(atoms%ntype) 
-      INTEGER,INTENT(IN)      ::  ne_eig(nkpti) 
-
-      INTEGER,INTENT(IN)      ::  kveclo_eig(atoms%nlotot,nkpti)
-      INTEGER,INTENT(IN)      ::  nbasm(kpts%nkptf)
-      INTEGER,INTENT(IN)      ::  nobd(kpts%nkptf)
-      INTEGER,INTENT(IN)      ::  nindxc(0:lmaxcd,atoms%ntype)
-      INTEGER,INTENT(IN)      ::  lmaxc(atoms%ntype)
-  
-      INTEGER,INTENT(IN)      ::  nindxp(0:maxlcutm,atoms%ntype)
-
-      REAL,INTENT(IN)         ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                            bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL,INTENT(IN)         ::    bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                            drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL                    ::  basm(atoms%jmtd,maxindxm,0:maxlcutm,atoms%ntype)
       REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,nkpti)
-      REAL,INTENT(IN)         ::  fac(0:maxfac),sfac(0:maxfac)
-      REAL,INTENT(IN)         ::  gauntarr(2,0:atoms%lmaxd,0:atoms%lmaxd,0:maxlcutm,&
-     &                                  -atoms%lmaxd:atoms%lmaxd,-maxlcutm:maxlcutm)
-      REAL,INTENT(IN)         ::  core1(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype),&
-     &                            core2(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype)
-
-      REAL,INTENT(IN)      ::  prodm(maxindxm,maxindxp,0:maxlcutm,atoms%ntype)
+      
 
 #ifdef CPP_INVERSION
       REAL,INTENT(INOUT)      ::  a(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
@@ -136,7 +102,6 @@ MODULE m_hsfock
       REAL,ALLOCATABLE        ::  z(:,:)
 #endif
   
-      TYPE(PRODTYPE),INTENT(IN)::  prod(maxindxp,0:maxlcutm,atoms%ntype)
 
 !     - local scalars -
       INTEGER                 ::  i,j,ic,ic1,l,itype
@@ -155,8 +120,8 @@ MODULE m_hsfock
       REAL                    ::  a_ex
 !     - local arrays -
       INTEGER                 ::  gpt(3,lapw%nv(jsp))
-      INTEGER                 ::  degenerat(ne_eig(nk))
-      INTEGER                 ::  nsest(nbands),indx_sest(nbands,nbands)
+      INTEGER                 ::  degenerat(hybdat%ne_eig(nk))
+      INTEGER                 ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
 
       INTEGER,ALLOCATABLE     ::  parent(:),symop(:)
       INTEGER,ALLOCATABLE     ::  psym(:)
@@ -164,8 +129,7 @@ MODULE m_hsfock
       INTEGER,ALLOCATABLE     ::  n_q(:)
 
       REAL                    ::  wl_iks(dimension%neigd,kpts%nkptf)
-      REAL                    ::  div_vv(nbands)
-      REAL,ALLOCATABLE        ::  gridf(:,:)
+      REAL                    ::  div_vv(hybdat%nbands(nk))
 
 
 #ifdef CPP_INVERSION
@@ -199,7 +163,7 @@ MODULE m_hsfock
       !
       
       ! initialize gridf for radial integration
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
+      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       !
       ! initialize weighting factor for HF exchange part
@@ -264,8 +228,8 @@ MODULE m_hsfock
       mat_ex = 0
 
       IF( hybrid%l_calhf ) THEN
-        ncstd = sum( (/ ( (nindxc(l,itype)*(2*l+1)*atoms%neq(itype),&
-     &             l=0,lmaxc(itype)), itype = 1,atoms%ntype) /) )
+        ncstd = sum( (/ ( (hybdat%nindxc(l,itype)*(2*l+1)*atoms%neq(itype),&
+     &             l=0,hybdat%lmaxc(itype)), itype = 1,atoms%ntype) /) )
         IF( nk .eq. 1 .and. mpi%irank == 0 )&
      &      WRITE(*,*) 'calculate new HF matrix'
         IF( nk .eq. 1 .and. jsp .eq. 1 .and. input%imix .gt. 10)&
@@ -278,11 +242,10 @@ MODULE m_hsfock
         parent = 0 ; symop = 0
 
         CALL symm_hf( kpts,nkpti,nk,sym,&
-     &             dimension,ne_eig(nk),eig_irr,nbands,&
-     &             atoms,hybrid,bas1,bas2,cell,&
+     &             dimension,hybdat,eig_irr,&
+     &             atoms,hybrid,cell,&
      &             lapw,jsp,&
      &             gpt,&
-     &             lmaxcd,&
      &             mpi,irank2,&
      &             nsymop,psym,nkpt_EIBZ,n_q,parent,&
      &             symop,degenerat,pointer_EIBZ,maxndb,nddb,&
@@ -304,17 +267,10 @@ MODULE m_hsfock
         CALL timestart("valence exchange calculation")
 
         CALL exchange_valence_hf(&
-     &            nk,kpts,nkpti,nkpt_EIBZ,&
-     &            sym,atoms,hybrid,&
-     &            cell,&
-     &            dimension,input,jsp,&
-     &            basm,bas1,bas2,bas1_MT,&
-     &            drbas1_MT,maxlcutm,lcutm,nindxm,maxindxm,nbasp,&
-     &            nbasm,maxbasm,maxindxp,nindxp,&
-     &            prod,prodm,mnobd,&
-     &            nobd,nbands,ne_eig(nk),lapw,&
+     &            nk,kpts,nkpti,nkpt_EIBZ, sym,atoms,hybrid,&
+     &            cell, dimension,input,jsp, hybdat, mnobd, lapw,&
      &            eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,&
-     &            kveclo_eig,gauntarr,it,xcpot,&
+     &            it,xcpot,&
      &            noco,nsest,indx_sest,&
      &            mpi,irank2,isize2,comm,&
      &            div_vv,mat_ex)
@@ -332,35 +288,32 @@ MODULE m_hsfock
 #ifdef CPP_NEVER           
           CALL exchange_vccvHSE(&
      &                 nk,kpts,nkpti,atoms,&
-     &                 hybrid,lmaxc,&
-     &                 nindxc,maxindxc,core1,core2,lcutm,&
-     &                 bas1,bas2,dimension,jsp,&
-     &                 maxfac,fac,sfac,lapw,nbands,&
-     &                 gridf,nsymop,nsest,indx_sest,mpi,&
-     &                 a_ex,nobd,results,&
+     &                 hybrid,hybdat,&
+     &                 dimension,jsp,&
+     &                 lapw,&
+     &                 nsymop,nsest,indx_sest,mpi,&
+     &                 a_ex,results,&
      &                 mat_ex%core )
           CALL exchange_ccccHSE(&
-     &                 nk,nkpti,obsolete,atoms,lmaxcd,lmaxc,&
-     &                 nindxc,maxindxc,ncstd,&
-     &                 core1,core2,kpts(:,nk),gridf,&
-     &                 sym,maxfac,fac,a_ex,mpi,&
+     &                 nk,nkpti,obsolete,atoms,hybdat,&
+     &                 ncstd,&
+     &                 kpts(:,nk),&
+     &                 sym,a_ex,mpi,&
      &                 results%core )
 #endif
           STOP "HSE not implemented in hsfock"
         ELSE
           CALL exchange_vccv1(&
      &                 nk,kpts,nkpti,atoms,&
-     &                 hybrid,lmaxc,&
-     &                 nindxc,maxindxc,core1,core2,lcutm,&
-     &                 bas1,bas2,dimension,jsp,&
-     &                 maxfac,fac,sfac,lapw,nbands,&
-     &                 gridf,nsymop,nsest,indx_sest,mpi,&
-     &                 a_ex,nobd,results,&
+     &                 hybrid,hybdat,&
+     &                 dimension,jsp,&
+     &                 lapw,&
+     &                 nsymop,nsest,indx_sest,mpi,&
+     &                 a_ex,results,&
      &                 mat_ex)
           CALL exchange_cccc(&
-     &                 nk,nkpti,atoms,lmaxcd,lmaxc,&
-     &                 nindxc,maxindxc,ncstd,&
-     &                 core1,core2,gridf,&
+     &                 nk,nkpti,atoms,hybdat,&
+     &                 ncstd,&
      &                 sym,kpts,a_ex,mpi,&
      &                 results )
         END IF
@@ -370,8 +323,8 @@ MODULE m_hsfock
 
         CALL timestart("time for performing T^-1*mat_ex*T^-1*")
         !calculate trafo from wavefunctions to APW basis
-        IF( dimension%neigd .lt. nbands ) STOP 'mhsfock:   < nbands; &&
-     &trafo from wavefunctions to APW requires at least nbands'
+        IF( dimension%neigd .lt. hybdat%nbands(nk) ) STOP 'mhsfock: neigd  < nbands(nk) ; &&
+     &trafo from wavefunctions to APW requires at least nbands(nk) '
 
         ALLOCATE(z(dimension%nbasfcn,dimension%neigd),stat=ok)
         IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation z'
@@ -388,12 +341,12 @@ MODULE m_hsfock
         CLOSE(778)
 
         !unpack mat_ex
-        ALLOCATE( ex(nbands,nbands), stat = ok )
+        ALLOCATE( ex(hybdat%nbands(nk),hybdat%nbands(nk)), stat = ok )
         IF( ok .ne. 0 ) STOP 'mhsfock: error allocation ex'
         ex = 0
 
         ic = 0
-        DO i = 1,nbands
+        DO i = 1,hybdat%nbands(nk)
           DO j = 1,i
             ic = ic + 1
             ex(j,i) = mat_ex(ic)
@@ -409,11 +362,11 @@ MODULE m_hsfock
         ! calculate trafo
         ic = lapw%nv(jsp) + atoms%nlotot
 
-        ALLOCATE( trafo(ic,nbands), stat= ok )
+        ALLOCATE( trafo(ic,hybdat%nbands(nk)), stat= ok )
         IF( ok .ne. 0 ) STOP 'mhsfock: error allocation trafo'
-        trafo  = matmul(olap(:ic,:ic),z(:ic,:nbands))
+        trafo  = matmul(olap(:ic,:ic),z(:ic,:hybdat%nbands(nk)))
 
-        ALLOCATE( invtrafo(nbands,ic), stat= ok )
+        ALLOCATE( invtrafo(hybdat%nbands(nk),ic), stat= ok )
         IF( ok .ne. 0 ) STOP 'mhsfock: error allocation invtrafo'
 
 #ifdef CPP_INVERSION
@@ -444,7 +397,7 @@ MODULE m_hsfock
 
         CALL symmetrizeh(atoms,&
      &                   kpts%bk(:,nk),dimension,jsp,lapw,gpt,&
-     &                   sym,kveclo_eig,&
+     &                   sym,hybdat%kveclo_eig,&
      &                   cell,nsymop,psym,&
      &                   v_x )
 
@@ -525,7 +478,7 @@ MODULE m_hsfock
         exch = 0
         ALLOCATE( carr(ic),stat=ok )
         IF( ok .ne. 0 ) STOP 'hsfock: error allocation carr'
-        DO iband1 = 1,nbands
+        DO iband1 = 1,hybdat%nbands(nk)
           carr = matvec(v_x(:ic1),z(:ic,iband1))
           DO iband2 = 1,iband1
             exch(iband2,iband1) = dotprod(z(:ic,iband2),carr(:ic))
@@ -533,8 +486,8 @@ MODULE m_hsfock
           END DO
         END DO
 
-        DO iband = 1,nbands
-          IF( iband .le. nobd(nk) ) THEN
+        DO iband = 1,hybdat%nbands(nk)
+          IF( iband .le. hybdat%nobd(nk) ) THEN
             results%te_hfex%valence = results%te_hfex%valence -&
      &                        a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
           END IF
@@ -553,9 +506,9 @@ MODULE m_hsfock
         CLOSE(778)
       ELSE
         exch = 0
-        DO iband = 1,nbands
+        DO iband = 1,hybdat%nbands(nk)
           exch(iband,iband) = dotprod(z(:ic,iband),matvec(v_x(:ic1),z(:ic,iband)))
-          IF( iband .le. nobd(nk) ) THEN
+          IF( iband .le. hybdat%nobd(nk) ) THEN
             results%te_hfex%valence = results%te_hfex%valence -&
      &                        a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
           END IF

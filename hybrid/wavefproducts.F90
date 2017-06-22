@@ -6,9 +6,9 @@
       CONTAINS
 
       SUBROUTINE wavefproducts_noinv(bandi,bandf,nk,iq,dimension,jsp,&                  !cprod,&
-     &                 cell,atoms,hybrid,nindxm, lcutm,maxlcutm,maxindxp,nindxp,gauntarr,&
-     &                 kpts,maxindxm, maxbasm,prod,prodm,mnobd,&
-     &                 lapw,sym,nobd,nbasm_mt,nkqpt,cprod)
+     &                 cell,atoms,hybrid,hybdat,&
+     &                 kpts,mnobd,&
+     &                 lapw,sym,nbasm_mt,nkqpt,cprod)
 
 
       USE m_constants
@@ -17,6 +17,7 @@
       USE m_types
       IMPLICIT NONE
 
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_sym),INTENT(IN)   :: sym
@@ -27,27 +28,19 @@
 
 !     - scalars -
       INTEGER,INTENT(IN)      ::  nk,iq ,jsp
-      INTEGER,INTENT(IN)      :: maxindxm
-      INTEGER,INTENT(IN)      ::  maxbasm,mnobd 
-      INTEGER,INTENT(IN)      ::  maxlcutm,maxindxp 
-      INTEGER,INTENT(IN)      ::  nobd(kpts%nkpt),nbasm_mt
+      INTEGER,INTENT(IN)      :: mnobd 
+      INTEGER,INTENT(IN)      :: nbasm_mt
       INTEGER,INTENT(IN)      ::  bandi,bandf
       INTEGER,INTENT(OUT)     ::  nkqpt
       
 
       
 !     - arrays -      
-      INTEGER,INTENT(IN)      ::  nindxm(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      ::  lcutm(atoms%ntype)
-      INTEGER,INTENT(IN)      ::  nindxp(0:maxlcutm,atoms%ntype)
       
 
-      REAL,INTENT(IN)         ::  prodm( maxindxm,maxindxp,0:maxlcutm, atoms%ntype )
-      REAL,INTENT(IN)         ::  gauntarr(2,0:atoms%lmaxd,0:atoms%lmaxd,0:maxlcutm,-atoms%lmaxd:atoms%lmaxd,-maxlcutm:maxlcutm)
+      
+      COMPLEX ,INTENT(OUT)    ::  cprod(hybrid%maxbasm1,mnobd,bandf-bandi+1)
 
-      COMPLEX ,INTENT(OUT)    ::  cprod(maxbasm,mnobd,bandf-bandi+1)
-
-      TYPE(PRODTYPE)          ::  prod(maxindxp,0:maxlcutm,atoms%ntype) 
 
 !     - local scalars -      
       INTEGER                 ::  ic,l,n,l1,l2,n1,n2,lm_0,lm1_0,lm2_0, lm,lm1,lm2 ,m1,m2,i,j,ll
@@ -181,7 +174,7 @@
 
         END DO
 
-        DO iband1 = 1, nobd(nkqpt)
+        DO iband1 = 1, hybdat%nobd(nkqpt)
 
           z_help(:) = z_kqpt(iarr(:),iband1)
 
@@ -215,13 +208,13 @@
           cexp = exp ( -2*img*pi_const* dot_product( kpts%bk(:,iq),atoms%taual(:,ic) ) )
           
 
-          DO l = 0,lcutm(itype)
-            DO n = 1,nindxp(l,itype) ! loop over basis-function products
+          DO l = 0,hybrid%lcutm1(itype)
+            DO n = 1,hybrid%nindxp1(l,itype) ! loop over basis-function products
 
-              l1 = prod(n,l,itype)%l1 !
-              l2 = prod(n,l,itype)%l2 ! current basis-function product
-              n1 = prod(n,l,itype)%n1 ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
-              n2 = prod(n,l,itype)%n2 !
+              l1 = hybdat%prod(n,l,itype)%l1 !
+              l2 = hybdat%prod(n,l,itype)%l2 ! current basis-function product
+              n1 = hybdat%prod(n,l,itype)%n1 ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
+              n2 = hybdat%prod(n,l,itype)%n2 !
 
               IF( mod(l1+l2+l,2) .ne. 0 ) cycle
 
@@ -241,7 +234,7 @@
                   m2  = m1 + m ! Gaunt condition -m1+m2-m=0
                   IF(abs(m2).le.l2) THEN
                     lm2  = lm2_0 + n2 + (m2+l2)*hybrid%nindx(l2,itype)
-                    rdum = gauntarr(1,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
+                    rdum = hybdat%gauntarr(1,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
                     IF(rdum.ne.0) THEN
                       DO iband = bandi,bandf
                         cdum = rdum * conjg(cmt_nk(iband,lm1,ic)) !nk
@@ -256,7 +249,7 @@
                   m2  = m1 - m ! switch role of b1 and b2
                   IF(abs(m2).le.l2.and.offdiag) THEN
                     lm2  = lm2_0 + n2 + (m2+l2)*hybrid%nindx(l2,itype)
-                    rdum = gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
+                    rdum = hybdat%gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
                     IF(rdum.ne.0) THEN
                       DO iband = bandi,bandf
                         cdum = rdum * conjg(cmt_nk(iband,lm2,ic)) !nk
@@ -275,20 +268,20 @@
                 DO iband  = bandi,bandf  
                   DO iband1 = 1,mnobd
                     cdum = carr(iband1,iband) * cexp
-                    DO i = 1,nindxm(l,itype)
+                    DO i = 1,hybrid%nindxm1(l,itype)
                       j = lm + i
-                      cprod(j,iband1,iband) = cprod(j,iband1,iband) + prodm(i,n,l,itype) * cdum
+                      cprod(j,iband1,iband) = cprod(j,iband1,iband) + hybdat%prodm(i,n,l,itype) * cdum
                     END DO
 
                   END DO
                 END DO
                 
-                lm = lm + nindxm(l,itype) ! go to lm start index for next m-quantum number
+                lm = lm + hybrid%nindxm1(l,itype) ! go to lm start index for next m-quantum number
 
               END DO
  
             END DO
-            lm_0 = lm_0 + nindxm(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
+            lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
             IF(lm.ne.lm_0) STOP 'wavefproducts: counting of lm-index incorrect (bug?)'
           END DO
         END DO
@@ -319,11 +312,9 @@
       SUBROUTINE wavefproducts_inv(&
      &                  bandi,bandf,dimension,jsp,atoms,&
      &                  lapw,nkpti,kpts,nkpt_EIBZ,&
-     &                  nk,iq,nobd,mnobd,maxbasm,hybrid,&
+     &                  nk,iq,hybdat,mnobd,hybrid,&
      &                  parent,cell,&
-     &                  lcutm,maxlcutm,maxindxp,&
-     &                  maxindxm,nindxp,nindxm,&
-     &                  prodm,prod,gauntarr,nbasm_mt,sym,&
+     &                  nbasm_mt,sym,&
      &                  nkqpt,cprod)
 
       USE m_util     , ONLY : modulo1
@@ -331,7 +322,7 @@
       USE m_constants 
       USE m_types
       IMPLICIT NONE
-
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_sym),INTENT(IN)   :: sym
@@ -343,25 +334,17 @@
       ! - scalars -
       INTEGER,INTENT(IN)      ::    bandi,bandf
       INTEGER,INTENT(IN)      ::    jsp , nkpti ,nkpt_EIBZ,nk,iq 
-      INTEGER,INTENT(IN)      ::    mnobd,maxbasm
-      INTEGER,INTENT(IN)      ::    maxlcutm ,maxindxp, maxindxm
+      INTEGER,INTENT(IN)      ::    mnobd 
       INTEGER,INTENT(IN)      ::    nbasm_mt
       INTEGER,INTENT(OUT)     ::    nkqpt
 
   
       ! - arrays -
-      INTEGER,INTENT(IN)      ::    nobd(kpts%nkpt)
       INTEGER,INTENT(IN)      ::    parent(kpts%nkpt)
-      INTEGER,INTENT(IN)      ::    lcutm(atoms%ntype)
-      INTEGER,INTENT(IN)      ::    nindxp(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      ::    nindxm(0:maxlcutm,atoms%ntype)
 
-      REAL,INTENT(IN)         ::    prodm(maxindxm,maxindxp, 0:maxlcutm,atoms%ntype)
-      REAL,INTENT(IN)         ::    gauntarr(2,0:atoms%lmaxd,0:atoms%lmaxd,0:maxlcutm, -atoms%lmaxd:atoms%lmaxd,-maxlcutm:maxlcutm)
 
-      REAL ,INTENT(OUT)       ::    cprod(maxbasm,mnobd,bandf-bandi+1)
+      REAL ,INTENT(OUT)       ::    cprod(hybrid%maxbasm1,mnobd,bandf-bandi+1)
 
-      TYPE(PRODTYPE)          ::    prod(maxindxp,0:maxlcutm,atoms%ntype)
 
       ! - local scalars -
       INTEGER                 ::    irecl_z,irecl_cprod,irecl_cmt
@@ -386,7 +369,7 @@
       INTEGER                 ::    gsum(3)
       INTEGER                 ::    g_t(3)
       INTEGER                 ::    lmstart (0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::    lmstart2(0:maxlcutm,atoms%nat)
+      INTEGER                 ::    lmstart2(0:hybrid%maxlcutm1,atoms%nat)
       REAL                    ::    kqpt(3),kqpthlp(3)
 
       
@@ -469,7 +452,7 @@
 
         END DO
 
-        DO iband1 = 1, nobd(nkqpt)
+        DO iband1 = 1, hybdat%nobd(nkqpt)
 
           z_help(:) = z_kqpt(iarr(:),iband1)
 
@@ -583,7 +566,7 @@
       iiatom = 0
 
       DO itype = 1,atoms%ntype
-        ioffset = sum( (/ ( (2*ll+1)*nindxm(ll,itype),ll=0,lcutm(itype) ) /)  )
+        ioffset = sum( (/ ( (2*ll+1)*hybrid%nindxm1(ll,itype),ll=0,hybrid%lcutm1(itype) ) /)  )
         lm_0 = lm_00
         DO ieq = 1,atoms%neq(itype)
           iatom1 = iatom1 + 1
@@ -596,15 +579,15 @@
 
           IF( iatom1 .ne. iatom2 ) THEN
             ! loop over l of mixed basis
-            DO l = 0,lcutm(itype)
+            DO l = 0,hybrid%lcutm1(itype)
               ! loop over basis functions products, which belong to l
-              DO n = 1,nindxp(l,itype)
+              DO n = 1,hybrid%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                l1 = prod(n,l,itype)%l1 
-                l2 = prod(n,l,itype)%l2
-                p1 = prod(n,l,itype)%n1
-                p2 = prod(n,l,itype)%n2
+                l1 = hybdat%prod(n,l,itype)%l1 
+                l2 = hybdat%prod(n,l,itype)%l2
+                p1 = hybdat%prod(n,l,itype)%n1
+                p2 = hybdat%prod(n,l,itype)%n2
 
                 ! condition for Gaunt coefficients
                 IF( mod(l+l1+l2,2) .ne. 0 ) CYCLE
@@ -633,13 +616,13 @@
                     IF(abs(m2).le.l2) THEN
                       lmp2  = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                       ! precalculated Gaunt coefficient
-                      rdum = gauntarr(1,l1,l2,l,m1,m) 
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m) 
                       IF(rdum.ne.0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum * cmt_nk(iband,lmp1,iatom1)
                           rdum2 = rdum * cmt_nk(iband,lmp1,iatom2) 
                           ! loop over occupied bands
-                          DO ibando = 1,mnobd!nobd(peibz(ikpt))
+                          DO ibando = 1,mnobd!hybdat%nobd(peibz(ikpt))
 
                             rarr(1,ibando,iband) = rarr(1,ibando,iband) + rdum1 * cmt(ibando,lmp2,iatom1) + rdum2 * cmt(ibando,lmp2,iatom2) 
 
@@ -653,13 +636,13 @@
                     m2  = m1 - m ! switch role of b1 and b2
                     IF(abs(m2).le.l2.and.offdiag) THEN
                       lmp2  = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
-                      rdum = gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
+                      rdum = hybdat%gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
                       IF(rdum.ne.0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum * cmt_nk(iband,lmp2,iatom1)
                           rdum2 = rdum * cmt_nk(iband,lmp2,iatom2)
                           ! loop over occupied bands
-                          DO ibando = 1,mnobd!nobd(peibz(ikpt)
+                          DO ibando = 1,mnobd!hybdat%nobd(peibz(ikpt)
                             rarr(1,ibando,iband) = rarr(1,ibando,iband) + rdum1 * cmt(ibando,lmp1,iatom1) + rdum2 * cmt(ibando,lmp1,iatom2)
 
                             rarr(2,ibando,iband) = rarr(2,ibando,iband) + rdum1 * cmt(ibando,lmp1,iatom2) - rdum2 * cmt(ibando,lmp1,iatom1)
@@ -673,7 +656,7 @@
 
                   END DO  !m1
 
-                  ishift = -2*m*nindxm(l,itype)
+                  ishift = -2*m*hybrid%nindxm1(l,itype)
 
                   ! go to lm mixed basis startindx for l and m
                   lm1   =  lm + ( iatom1-1 - iiatom ) * ioffset
@@ -692,23 +675,23 @@
 !                       cos2  = rdum2*rfac2
                       add1 = rdum1*rfac2 + rdum2*rfac1
                       add2 = rdum2*rfac2 - rdum1*rfac1
-                      DO i = 1,nindxm(l,itype)
+                      DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*add1!( cos1 + sin2 )
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add1!( cos1 + sin2 )
                         j = lm2 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*add2!( cos2 - sin1 )
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add2!( cos2 - sin1 )
 
                       END DO  !i -> loop over mixed basis functions
                     END DO  !ibando
                   END DO  !iband
                   
                   ! go to lm start index for next m-quantum number
-                  lm = lm + nindxm(l,itype) 
+                  lm = lm + hybrid%nindxm1(l,itype) 
 
                 END DO  !m
 
               END DO !n
-              lm_0 = lm_0 + nindxm(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
+              lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
               IF(lm.ne.lm_0) STOP 'wavefproducts: counting of lm-index incorrect (bug?)'
             END DO !l
 
@@ -716,16 +699,16 @@
 
              ! loop over l of mixed basis
             monepl = -1
-            DO l = 0,lcutm(itype)
+            DO l = 0,hybrid%lcutm1(itype)
               monepl = -monepl
               ! loop over basis functions products, which belong to l
-              DO n = 1,nindxp(l,itype)
+              DO n = 1,hybrid%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                l1 = prod(n,l,itype)%l1 
-                l2 = prod(n,l,itype)%l2
-                p1 = prod(n,l,itype)%n1
-                p2 = prod(n,l,itype)%n2
+                l1 = hybdat%prod(n,l,itype)%l1 
+                l2 = hybdat%prod(n,l,itype)%l2
+                p1 = hybdat%prod(n,l,itype)%n1
+                p2 = hybdat%prod(n,l,itype)%n2
 
                 ! condition for Gaunt coefficients
                 IF( mod(l+l1+l2,2) .ne. 0 ) CYCLE
@@ -766,7 +749,7 @@
                       lmp2 = lp2 + (-m+l2)*hybrid%nindx(l2,itype)
                     END IF
 
-                    rdum = gauntarr(1,l1,l2,l,0,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,0,m)
                     IF( rdum .ne. 0 ) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp1,iatom1)
@@ -778,7 +761,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,-m,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,-m,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -800,7 +783,7 @@
                     END IF
                     lmp2 = lp2 + l2*hybrid%nindx(l2,itype)
 
-                    rdum = gauntarr(1,l1,l2,l,-m,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,-m,m)
                     IF(rdum .ne. 0) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp3,iatom1)
@@ -812,7 +795,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,0,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,0,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -841,7 +824,7 @@
                     monepl1m1 = monepl1*monepm1
                     m2 = m1 + m
                     IF( abs(m2) .le. l2 .and. m2 .ne. 0) THEN
-                      rdum = gauntarr(1,l1,l2,l,m1,m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)
                       IF( rdum .ne. 0 ) THEN
                         IF( sign(1,m2) + sign(1,m1) .ne. 0 ) THEN
                           lmp2 = lp2 + ( m2+l2)*hybrid%nindx(l2,itype)
@@ -860,7 +843,7 @@
                       END IF  ! rdum .ne. 0
 
                       IF( offdiag ) THEN
-                        rdum = gauntarr(1,l2,l1,l,m2,-m)
+                        rdum = hybdat%gauntarr(1,l2,l1,l,m2,-m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -885,7 +868,7 @@
                     m2 = m1 - m
                     IF ( abs(m2) .le. l2 .and. m2 .ne. 0 ) THEN
 
-                      rdum = gauntarr(1,l1,l2,l,m1,-m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,-m)
                       IF( rdum .ne. 0 ) THEN
 
                         IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -907,7 +890,7 @@
 
 
                       IF( offdiag ) THEN
-                        rdum = gauntarr(1,l2,l1,l,m2,m)
+                        rdum = hybdat%gauntarr(1,l2,l1,l,m2,m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m1) + sign(1,m2) .ne. 0) THEN
@@ -938,15 +921,15 @@
                   DO iband  = bandi,bandf    
                     DO ibando = 1,mnobd
                       rdum = rarr1(ibando,iband)
-                      DO i = 1,nindxm(l,itype)
+                      DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*rdum
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*rdum
                       END DO  !i -> loop over mixed basis functions
                     END DO  !ibando
                   END DO  !iband
 
                   ! go to lm start index for next m-quantum number
-                  lm = lm + nindxm(l,itype) 
+                  lm = lm + hybrid%nindxm1(l,itype) 
 
                 END DO  ! m=-l,-1
 
@@ -982,9 +965,9 @@
 
                     !precalculated Gaunt coefficient
                     IF( mod(l,2) .eq. 0 ) THEN
-                      rdum = gauntarr(1,l1,l2,l,m1,m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)
                     ELSE
-                      rdum = gauntarr(1,l1,l2,l,m1,m)*fac1
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)*fac1
                     END IF
                     IF(rdum.ne.0) THEN
                       DO iband = bandi,bandf
@@ -998,9 +981,9 @@
                     !change role of b1 and b2
                     IF( offdiag ) THEN
                       IF( mod(l,2) .eq. 0 ) THEN
-                        rdum = gauntarr(2,l1,l2,l,m1,m)
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,m)
                       ELSE
-                        rdum = gauntarr(2,l1,l2,l,m1,m)*fac2
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,m)*fac2
                       END IF
                       IF(rdum.ne.0) THEN
                         DO iband = bandi,bandf
@@ -1023,15 +1006,15 @@
                 DO iband  = bandi,bandf 
                   DO ibando = 1,mnobd
                     rdum = rarr1(ibando,iband)
-                    DO i = 1,nindxm(l,itype)
+                    DO i = 1,hybrid%nindxm1(l,itype)
                       j = lm1 + i
-                      cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*rdum
+                      cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*rdum
                     END DO  !i -> loop over mixed basis functions
                   END DO  !ibando
                 END DO  !iband
 
                 ! go to lm start index for next m-quantum number
-                lm = lm + nindxm(l,itype) 
+                lm = lm + hybrid%nindxm1(l,itype) 
 
                 !
                 ! case: m>0
@@ -1053,7 +1036,7 @@
                       lmp2 = lp2 + (-m+l2)*hybrid%nindx(l2,itype)
                     END IF
 
-                    rdum = gauntarr(1,l1,l2,l,0,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,0,m)
                     IF( rdum .ne. 0 ) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp1,iatom1)
@@ -1065,7 +1048,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,-m,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,-m,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -1087,7 +1070,7 @@
                     END IF
                     lmp2 = lp2 + l2*hybrid%nindx(l2,itype)
 
-                    rdum = gauntarr(1,l1,l2,l,-m,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,-m,m)
                     IF(rdum .ne. 0) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp3,iatom1)
@@ -1099,7 +1082,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,0,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,0,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -1131,7 +1114,7 @@
                     ! (-1)**(l1+m1)
                     monepl1m1 = monepl1*monepm1
                     IF( abs(m2) .le. l2 .and. m2 .ne. 0) THEN
-                      rdum = gauntarr(1,l1,l2,l,m1,m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)
                       IF( rdum .ne. 0 ) THEN
 
                         IF( sign(1,m2) + sign(1,m1) .ne. 0 ) THEN
@@ -1153,7 +1136,7 @@
                       END IF  ! rdum .ne. 0
 
                       IF ( offdiag ) THEN
-                        rdum = gauntarr(2,l1,l2,l,m1,-m)
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,-m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -1180,7 +1163,7 @@
                     m2 = m1 - m
                     IF ( abs(m2) .le. l2 .and. m2 .ne. 0 ) THEN
 
-                      rdum = gauntarr(1,l1,l2,l,m1,-m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,-m)
                       IF( rdum .ne. 0 ) THEN
 
                         IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -1200,7 +1183,7 @@
                       END IF  ! rdum .ne. 0
 
                       IF( offdiag ) THEN
-                        rdum = gauntarr(2,l1,l2,l,m1,m)
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -1236,20 +1219,20 @@
                   DO iband  = bandi,bandf 
                     DO ibando = 1,mnobd
                       rdum = rarr1(ibando,iband)
-                      DO i = 1,nindxm(l,itype)
+                      DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*rdum
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*rdum
                       END DO  !i -> loop over mixed basis functions
                     END DO  !ibando
                   END DO  !iband
 
                   ! go to lm start index for next m-quantum number
-                  lm = lm + nindxm(l,itype) 
+                  lm = lm + hybrid%nindxm1(l,itype) 
 
                 END DO  ! m=1,l
 
               END DO !n
-              lm_0 = lm_0 + nindxm(l,itype) * (2*l+1) ! go to the m start index of the next l-quantum number
+              lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the m start index of the next l-quantum number
               IF(lm.ne.lm_0) STOP 'wavefproducts: counting of lm-index incorrect (bug?)'
             END DO !l
 
@@ -1281,11 +1264,9 @@
      &                    bandi,bandf,bandoi,bandof,&
      &                    dimension,input,jsp,atoms,&
      &                    lapw,nkpti,kpts,nkpt_EIBZ,&
-     &                    nk,iq,nobd,mnobd,maxbasm,hybrid,&
+     &                    nk,iq,hybdat,mnobd,hybrid,&
      &                    parent,cell,&
-     &                    lcutm,maxlcutm,maxindxp,&
-     &                    maxindxm,nindxp,nindxm,&
-     &                    prodm,prod,gauntarr,nbasm_mt,sym,&
+     &                    nbasm_mt,sym,&
      &                    noco,&
      &                    nkqpt,cprod)
 
@@ -1296,6 +1277,7 @@
       USE m_apws
       USE m_types
       IMPLICIT NONE
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_input),INTENT(IN)   :: input
@@ -1309,26 +1291,18 @@
       ! - scalars -
       INTEGER,INTENT(IN)      :: bandi,bandf,bandoi,bandof
       INTEGER,INTENT(IN)      :: jsp   ,nkpti ,nkpt_EIBZ,nk,iq 
-      INTEGER,INTENT(IN)      :: mnobd,maxbasm
-      INTEGER,INTENT(IN)      :: maxlcutm ,maxindxp, maxindxm
+      INTEGER,INTENT(IN)      :: mnobd 
       INTEGER,INTENT(IN)      :: nbasm_mt
       INTEGER,INTENT(OUT)     :: nkqpt
 
       
 
       ! - arrays -
-      INTEGER,INTENT(IN)      ::    nobd(kpts%nkpt)
       INTEGER,INTENT(IN)      ::    parent(kpts%nkpt)
-      INTEGER,INTENT(IN)      ::    lcutm(atoms%ntype)
-      INTEGER,INTENT(IN)      ::    nindxp(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      ::    nindxm(0:maxlcutm,atoms%ntype)
 
-      REAL,INTENT(IN)         ::    prodm(maxindxm,maxindxp, 0:maxlcutm,atoms%ntype)
-      REAL,INTENT(IN)         ::    gauntarr(2,0:atoms%lmaxd,0:atoms%lmaxd,0:maxlcutm, -atoms%lmaxd:atoms%lmaxd,-maxlcutm:maxlcutm)
+    
+      REAL,INTENT(OUT)        ::    cprod(hybrid%maxbasm1,bandoi:bandof, bandf-bandi+1)
 
-      REAL,INTENT(OUT)        ::    cprod(maxbasm,bandoi:bandof, bandf-bandi+1)
-
-      TYPE(PRODTYPE)          ::    prod(maxindxp,0:maxlcutm,atoms%ntype)
 
       ! - local scalars -
       INTEGER                 ::    irecl_z,irecl_cprod,irecl_cmt
@@ -1623,7 +1597,7 @@
       iiatom = 0
 
       DO itype = 1,atoms%ntype
-        ioffset = sum( (/ ( (2*ll+1)*nindxm(ll,itype),ll=0,lcutm(itype) ) /)  )
+        ioffset = sum( (/ ( (2*ll+1)*hybrid%nindxm1(ll,itype),ll=0,hybrid%lcutm1(itype) ) /)  )
         lm_0 = lm_00
         DO ieq = 1,atoms%neq(itype)
           iatom1 = iatom1 + 1
@@ -1636,15 +1610,15 @@
 
           IF( iatom1 .ne. iatom2 ) THEN
             ! loop over l of mixed basis
-            DO l = 0,lcutm(itype)
+            DO l = 0,hybrid%lcutm1(itype)
               ! loop over basis functions products, which belong to l
-              DO n = 1,nindxp(l,itype)
+              DO n = 1,hybrid%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                l1 = prod(n,l,itype)%l1 
-                l2 = prod(n,l,itype)%l2
-                p1 = prod(n,l,itype)%n1
-                p2 = prod(n,l,itype)%n2
+                l1 = hybdat%prod(n,l,itype)%l1 
+                l2 = hybdat%prod(n,l,itype)%l2
+                p1 = hybdat%prod(n,l,itype)%n1
+                p2 = hybdat%prod(n,l,itype)%n2
 
                 ! condition for Gaunt coefficients
                 IF( mod(l+l1+l2,2) .ne. 0 ) CYCLE
@@ -1673,7 +1647,7 @@
                     IF(abs(m2).le.l2) THEN
                       lmp2  = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                       ! precalculated Gaunt coefficient
-                      rdum = gauntarr(1,l1,l2,l,m1,m) 
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m) 
                       IF(rdum.ne.0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum * cmt_nk(iband,lmp1,iatom1)
@@ -1695,7 +1669,7 @@
                     m2  = m1 - m ! switch role of b1 and b2
                     IF(abs(m2).le.l2.and.offdiag) THEN
                       lmp2  = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
-                      rdum = gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
+                      rdum = hybdat%gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
                       IF(rdum.ne.0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum * cmt_nk(iband,lmp2,iatom1)
@@ -1717,7 +1691,7 @@
 
                   END DO  !m1
 
-                  ishift = -2*m*nindxm(l,itype)
+                  ishift = -2*m*hybrid%nindxm1(l,itype)
 
                   ! go to lm mixed basis startindx for l and m
                   lm1   =  lm + ( iatom1-1 - iiatom ) * ioffset
@@ -1736,23 +1710,23 @@
 !                       cos2  = rdum2*rfac2
                       add1 = rdum1*rfac2 + rdum2*rfac1
                       add2 = rdum2*rfac2 - rdum1*rfac1
-                      DO i = 1,nindxm(l,itype)
+                      DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*add1!( cos1 + sin2 )
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add1!( cos1 + sin2 )
                         j = lm2 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*add2!( cos2 - sin1 )
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add2!( cos2 - sin1 )
 
                       END DO  !i -> loop over mixed basis functions
                     END DO  !ibando
                   END DO  !iband
                   
                   ! go to lm start index for next m-quantum number
-                  lm = lm + nindxm(l,itype) 
+                  lm = lm + hybrid%nindxm1(l,itype) 
 
                 END DO  !m
 
               END DO !n
-              lm_0 = lm_0 + nindxm(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
+              lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
               IF(lm.ne.lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
             END DO !l
 
@@ -1760,16 +1734,16 @@
 
              ! loop over l of mixed basis
             monepl = -1
-            DO l = 0,lcutm(itype)
+            DO l = 0,hybrid%lcutm1(itype)
               monepl = -monepl
               ! loop over basis functions products, which belong to l
-              DO n = 1,nindxp(l,itype)
+              DO n = 1,hybrid%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                l1 = prod(n,l,itype)%l1 
-                l2 = prod(n,l,itype)%l2
-                p1 = prod(n,l,itype)%n1
-                p2 = prod(n,l,itype)%n2
+                l1 = hybdat%prod(n,l,itype)%l1 
+                l2 = hybdat%prod(n,l,itype)%l2
+                p1 = hybdat%prod(n,l,itype)%n1
+                p2 = hybdat%prod(n,l,itype)%n2
 
                 ! condition for Gaunt coefficients
                 IF( mod(l+l1+l2,2) .ne. 0 ) CYCLE
@@ -1810,7 +1784,7 @@
                       lmp2 = lp2 + (-m+l2)*hybrid%nindx(l2,itype)
                     END IF
 
-                    rdum = gauntarr(1,l1,l2,l,0,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,0,m)
                     IF( rdum .ne. 0 ) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp1,iatom1)
@@ -1822,7 +1796,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,-m,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,-m,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -1844,7 +1818,7 @@
                     END IF
                     lmp2 = lp2 + l2*hybrid%nindx(l2,itype)
 
-                    rdum = gauntarr(1,l1,l2,l,-m,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,-m,m)
                     IF(rdum .ne. 0) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp3,iatom1)
@@ -1856,7 +1830,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,0,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,0,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -1885,7 +1859,7 @@
                     monepl1m1 = monepl1*monepm1
                     m2 = m1 + m
                     IF( abs(m2) .le. l2 .and. m2 .ne. 0) THEN
-                      rdum = gauntarr(1,l1,l2,l,m1,m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)
                       IF( rdum .ne. 0 ) THEN
                         IF( sign(1,m2) + sign(1,m1) .ne. 0 ) THEN
                           lmp2 = lp2 + ( m2+l2)*hybrid%nindx(l2,itype)
@@ -1904,7 +1878,7 @@
                       END IF  ! rdum .ne. 0
 
                       IF( offdiag ) THEN
-                        rdum = gauntarr(1,l2,l1,l,m2,-m)
+                        rdum = hybdat%gauntarr(1,l2,l1,l,m2,-m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -1929,7 +1903,7 @@
                     m2 = m1 - m
                     IF ( abs(m2) .le. l2 .and. m2 .ne. 0 ) THEN
 
-                      rdum = gauntarr(1,l1,l2,l,m1,-m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,-m)
                       IF( rdum .ne. 0 ) THEN
 
                         IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -1951,7 +1925,7 @@
 
 
                       IF( offdiag ) THEN
-                        rdum = gauntarr(1,l2,l1,l,m2,m)
+                        rdum = hybdat%gauntarr(1,l2,l1,l,m2,m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m1) + sign(1,m2) .ne. 0) THEN
@@ -1982,15 +1956,15 @@
                   DO iband  = bandi,bandf    
                     DO ibando = bandoi,bandof
                       rdum = rarr2(ibando,iband)
-                      DO i = 1,nindxm(l,itype)
+                      DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*rdum
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*rdum
                       END DO  !i -> loop over mixed basis functions
                     END DO  !ibando
                   END DO  !iband
 
                   ! go to lm start index for next m-quantum number
-                  lm = lm + nindxm(l,itype) 
+                  lm = lm + hybrid%nindxm1(l,itype) 
 
                 END DO  ! m=-l,-1
 
@@ -2026,9 +2000,9 @@
 
                     !precalculated Gaunt coefficient
                     IF( mod(l,2) .eq. 0 ) THEN
-                      rdum = gauntarr(1,l1,l2,l,m1,m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)
                     ELSE
-                      rdum = gauntarr(1,l1,l2,l,m1,m)*fac1
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)*fac1
                     END IF
                     IF(rdum.ne.0) THEN
                       DO iband = bandi,bandf
@@ -2042,9 +2016,9 @@
                     !change role of b1 and b2
                     IF( offdiag ) THEN
                       IF( mod(l,2) .eq. 0 ) THEN
-                        rdum = gauntarr(2,l1,l2,l,m1,m)
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,m)
                       ELSE
-                        rdum = gauntarr(2,l1,l2,l,m1,m)*fac2
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,m)*fac2
                       END IF
                       IF(rdum.ne.0) THEN
                         DO iband = bandi,bandf
@@ -2067,15 +2041,15 @@
                 DO iband  = bandi,bandf 
                   DO ibando = bandoi,bandof
                     rdum = rarr2(ibando,iband)
-                    DO i = 1,nindxm(l,itype)
+                    DO i = 1,hybrid%nindxm1(l,itype)
                       j = lm1 + i
-                      cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*rdum
+                      cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*rdum
                     END DO  !i -> loop over mixed basis functions
                   END DO  !ibando
                 END DO  !iband
 
                 ! go to lm start index for next m-quantum number
-                lm = lm + nindxm(l,itype) 
+                lm = lm + hybrid%nindxm1(l,itype) 
 
                 !
                 ! case: m>0
@@ -2097,7 +2071,7 @@
                       lmp2 = lp2 + (-m+l2)*hybrid%nindx(l2,itype)
                     END IF
 
-                    rdum = gauntarr(1,l1,l2,l,0,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,0,m)
                     IF( rdum .ne. 0 ) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp1,iatom1)
@@ -2109,7 +2083,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,-m,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,-m,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -2131,7 +2105,7 @@
                     END IF
                     lmp2 = lp2 + l2*hybrid%nindx(l2,itype)
 
-                    rdum = gauntarr(1,l1,l2,l,-m,m)
+                    rdum = hybdat%gauntarr(1,l1,l2,l,-m,m)
                     IF(rdum .ne. 0) THEN
                       DO iband = bandi,bandf
                         rdum1 = rdum*cmt_nk(iband,lmp3,iatom1)
@@ -2143,7 +2117,7 @@
                     END IF  ! rdum .ne. 0
 
                     IF( offdiag ) THEN
-                      rdum = gauntarr(1,l2,l1,l,0,m)
+                      rdum = hybdat%gauntarr(1,l2,l1,l,0,m)
                       IF(rdum .ne. 0) THEN
                         DO iband = bandi,bandf
                           rdum1 = rdum*cmt_nk(iband,lmp2,iatom1)
@@ -2175,7 +2149,7 @@
                     ! (-1)**(l1+m1)
                     monepl1m1 = monepl1*monepm1
                     IF( abs(m2) .le. l2 .and. m2 .ne. 0) THEN
-                      rdum = gauntarr(1,l1,l2,l,m1,m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,m)
                       IF( rdum .ne. 0 ) THEN
 
                         IF( sign(1,m2) + sign(1,m1) .ne. 0 ) THEN
@@ -2197,7 +2171,7 @@
                       END IF  ! rdum .ne. 0
 
                       IF ( offdiag ) THEN
-                        rdum = gauntarr(2,l1,l2,l,m1,-m)
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,-m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -2224,7 +2198,7 @@
                     m2 = m1 - m
                     IF ( abs(m2) .le. l2 .and. m2 .ne. 0 ) THEN
 
-                      rdum = gauntarr(1,l1,l2,l,m1,-m)
+                      rdum = hybdat%gauntarr(1,l1,l2,l,m1,-m)
                       IF( rdum .ne. 0 ) THEN
 
                         IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -2244,7 +2218,7 @@
                       END IF  ! rdum .ne. 0
 
                       IF( offdiag ) THEN
-                        rdum = gauntarr(2,l1,l2,l,m1,m)
+                        rdum = hybdat%gauntarr(2,l1,l2,l,m1,m)
                         IF( rdum .ne. 0 ) THEN
                           lmp2 = lp2 + (m2+l2)*hybrid%nindx(l2,itype)
                           IF( sign(1,m2) + sign(1,m1) .ne. 0) THEN
@@ -2280,20 +2254,20 @@
                   DO iband  = bandi,bandf 
                     DO ibando = bandoi,bandof
                       rdum = rarr2(ibando,iband)
-                      DO i = 1,nindxm(l,itype)
+                      DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + prodm(i,n,l,itype)*rdum
+                        cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*rdum
                       END DO  !i -> loop over mixed basis functions
                     END DO  !ibando
                   END DO  !iband
 
                   ! go to lm start index for next m-quantum number
-                  lm = lm + nindxm(l,itype) 
+                  lm = lm + hybrid%nindxm1(l,itype) 
 
                 END DO  ! m=1,l
 
               END DO !n
-              lm_0 = lm_0 + nindxm(l,itype) * (2*l+1) ! go to the m start index of the next l-quantum number
+              lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the m start index of the next l-quantum number
               IF(lm.ne.lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
             END DO !l
 
@@ -2326,12 +2300,12 @@
       SUBROUTINE wavefproducts_noinv5(&
      &                      bandi,bandf,bandoi,bandof,&
      &                      nk,iq,dimension,input,jsp,&
-     &                      cell,atoms,hybrid,nindxm,&
-     &                      lcutm,maxlcutm,maxindxp,nindxp,gauntarr,&
-     &                      kpts,maxindxm,&
-     &                      maxbasm,prod,prodm,mnobd,&
+     &                      cell,atoms,hybrid,&
+     &                      hybdat,&
+     &                      kpts,&
+     &                      mnobd,&
      &                      lapw,sym,&
-     &                      nobd,nbasm_mt,&
+     &                      nbasm_mt,&
      &                      noco,&
      &                      nkqpt,cprod)
 
@@ -2344,6 +2318,7 @@
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_input),INTENT(IN)   :: input
@@ -2357,24 +2332,15 @@
 !     - scalars -
       INTEGER,INTENT(IN)      ::  bandi,bandf,bandoi,bandof
       INTEGER,INTENT(IN)      ::  nk,iq ,jsp 
-      INTEGER,INTENT(IN)      :: maxindxm
-      INTEGER,INTENT(IN)      ::  maxbasm,mnobd ,nbasm_mt
-      INTEGER,INTENT(IN)      ::  maxlcutm,maxindxp 
+      INTEGER,INTENT(IN)      :: mnobd ,nbasm_mt
       INTEGER,INTENT(OUT)     ::  nkqpt
       
       
 !     - arrays -      
-      INTEGER,INTENT(IN)      ::  nindxm(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      :: lcutm(atoms%ntype)
-      INTEGER,INTENT(IN)      ::  nindxp(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      ::  nobd(kpts%nkpt)
 
 
-      REAL,INTENT(IN)         ::  prodm( maxindxm,maxindxp,0:maxlcutm, atoms%ntype )
-      REAL,INTENT(IN)         ::  gauntarr(2,0:atoms%lmaxd,0:atoms%lmaxd,0:maxlcutm, -atoms%lmaxd:atoms%lmaxd,-maxlcutm:maxlcutm)
-      COMPLEX ,INTENT(OUT)    ::  cprod(maxbasm,bandoi:bandof, bandf-bandi+1)
+      COMPLEX ,INTENT(OUT)    ::  cprod(hybrid%maxbasm1,bandoi:bandof, bandf-bandi+1)
 
-      TYPE(PRODTYPE)          ::  prod(maxindxp,0:maxlcutm,atoms%ntype) 
 
 !     - local scalars -      
       INTEGER                 ::  ic,l,n,l1,l2,n1,n2,lm_0,lm1_0,lm2_0, lm,lm1,lm2 ,m1,m2,i,j,ll
@@ -2596,13 +2562,13 @@
           cexp = exp ( -img*tpi_const* dot_product( kpts%bk(:,iq),atoms%taual(:,ic) ) )
           
 
-          DO l = 0,lcutm(itype)
-            DO n = 1,nindxp(l,itype) ! loop over basis-function products
+          DO l = 0,hybrid%lcutm1(itype)
+            DO n = 1,hybrid%nindxp1(l,itype) ! loop over basis-function products
 
-              l1 = prod(n,l,itype)%l1 !
-              l2 = prod(n,l,itype)%l2 ! current basis-function product
-              n1 = prod(n,l,itype)%n1 ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
-              n2 = prod(n,l,itype)%n2 !
+              l1 = hybdat%prod(n,l,itype)%l1 !
+              l2 = hybdat%prod(n,l,itype)%l2 ! current basis-function product
+              n1 = hybdat%prod(n,l,itype)%n1 ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
+              n2 = hybdat%prod(n,l,itype)%n2 !
 
               IF( mod(l1+l2+l,2) .ne. 0 ) cycle
 
@@ -2622,7 +2588,7 @@
                   m2  = m1 + m ! Gaunt condition -m1+m2-m=0
                   IF(abs(m2).le.l2) THEN
                     lm2  = lm2_0 + n2 + (m2+l2)*hybrid%nindx(l2,itype)
-                    rdum = gauntarr(1,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
+                    rdum = hybdat%gauntarr(1,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
                     IF(rdum.ne.0) THEN
                       DO iband = bandi,bandf
                         cdum = rdum * conjg(cmt_nk(iband,lm1,ic)) !nk
@@ -2637,7 +2603,7 @@
                   m2  = m1 - m ! switch role of b1 and b2
                   IF(abs(m2).le.l2.and.offdiag) THEN
                     lm2  = lm2_0 + n2 + (m2+l2)*hybrid%nindx(l2,itype)
-                    rdum = gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
+                    rdum = hybdat%gauntarr(2,l1,l2,l,m1,m) ! precalculated Gaunt coefficient
                     IF(rdum.ne.0) THEN
                       DO iband = bandi,bandf
                         cdum = rdum * conjg(cmt_nk(iband,lm2,ic)) !nk
@@ -2656,20 +2622,20 @@
                 DO iband  = bandi,bandf  
                   DO iband1 = bandoi,bandof
                     cdum = carr2(iband1,iband) * cexp
-                    DO i = 1,nindxm(l,itype)
+                    DO i = 1,hybrid%nindxm1(l,itype)
                       j = lm + i
-                      cprod(j,iband1,iband) = cprod(j,iband1,iband) + prodm(i,n,l,itype) * cdum
+                      cprod(j,iband1,iband) = cprod(j,iband1,iband) + hybdat%prodm(i,n,l,itype) * cdum
                     END DO
 
                   END DO
                 END DO
                 
-                lm = lm + nindxm(l,itype) ! go to lm start index for next m-quantum number
+                lm = lm + hybrid%nindxm1(l,itype) ! go to lm start index for next m-quantum number
 
               END DO
  
             END DO
-            lm_0 = lm_0 + nindxm(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
+            lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
             IF(lm.ne.lm_0) STOP 'wavefproducts_noinv2: counting of lm-index incorrect (bug?)'
           END DO
         END DO

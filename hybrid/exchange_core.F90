@@ -22,12 +22,10 @@
 
       SUBROUTINE exchange_vccv(&
      &                   nk,bkpt,kpts,nkpti,atoms,&
-     &                   hybrid,lmaxc,nindxc,&
-     &                   maxindxc,core1,core2,lcutm,&
-     &                   bas1,bas2,&
-     &                   dimension,jsp,maxfac,fac,sfac,lapw,&
-     &                   nbands,maxbands,ne_eig,nobd,mnobd,mpi,irank2,&
-     &                   gridf,degenerat,symequivalent,results,&
+     &                   hybrid,hybdat,&
+     &                   dimension,jsp,lapw,&
+     &                   maxbands,mnobd,mpi,irank2,&
+     &                   degenerat,symequivalent,results,&
      &                   ex_vv)
 
 
@@ -37,6 +35,7 @@
       USE m_types
       IMPLICIT NONE
 
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -47,21 +46,11 @@
 
 !     -scalars -
       INTEGER,INTENT(IN)      :: jsp 
-      INTEGER,INTENT(IN)      ::  maxfac,nbands  ,&
-     &                            maxindxc,nk  ,maxbands,&
-     &                            mnobd
+      INTEGER,INTENT(IN)      ::nk  ,maxbands, mnobd
       INTEGER,INTENT(IN)      :: nkpti ,irank2
 !     - arays -
-      INTEGER,INTENT(IN)      :: lcutm(atoms%ntype) , lmaxc(atoms%ntype), nindxc(0:maxval(lmaxc),atoms%ntype)
-      INTEGER,INTENT(IN)      ::  ne_eig,degenerat(ne_eig)
-      INTEGER,INTENT(IN)      ::  nobd(kpts%nkpt)
-      REAL,INTENT(IN)         ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                            bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL,INTENT(IN)    ::  core1(atoms%jmtd,maxindxc,0:maxval(lmaxc),atoms%ntype ),&
-     &                       core2(atoms%jmtd,maxindxc,0:maxval(lmaxc),atoms%ntype )
-      REAL,INTENT(IN)         ::  fac( 0:maxfac),sfac( 0:maxfac)
+      INTEGER,INTENT(IN)      ::  degenerat(hybdat%ne_eig(nk))
       REAL,INTENT(IN)         ::  bkpt(3)
-      REAL,INTENT(IN)         ::  gridf(atoms%jmtd,atoms%ntype)
 
 #ifdef CPP_INVERSION
       REAL    ,INTENT(INOUT)  ::  ex_vv(maxbands,mnobd,nkpti)
@@ -93,10 +82,10 @@
       REAL,ALLOCATABLE        ::  integral(:,:)
 
       COMPLEX                 ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
-      COMPLEX                 ::  exchange(nbands,nbands)
+      COMPLEX                 ::  exchange(hybdat%nbands(nk),hybdat%nbands(nk))
       COMPLEX,ALLOCATABLE     ::  carr(:,:),carr2(:,:),carr3(:,:)
 
-      LOGICAL                 ::  ldum(nbands,nbands)
+      LOGICAL                 ::  ldum(hybdat%nbands(nk),hybdat%nbands(nk))
 
       IF ( irank2 == 0 ) THEN
         WRITE(6,'(A)') new_line('n') // new_line('n') // '### valence-core-core-valence exchange ###'
@@ -111,15 +100,15 @@
 
       ALLOCATE ( fprod(atoms%jmtd,5),larr(5),parr(5) )
 
-       ! generate ldum(nbands,nbands), which is true if the corresponding matrix entry is non-zero
+       ! generate ldum(nbands(nk),nbands(nk)), which is true if the corresponding matrix entry is non-zero
       ic1  = 0
       ldum = .false.
-      DO iband1 = 1,nbands
+      DO iband1 = 1,hybdat%nbands(nk)
         ndb1 = degenerat(iband1)
         IF( ndb1 .ge. 1 ) THEN
           ic1 = ic1 + 1
           ic2 = 0
-          DO iband2 = 1,nbands
+          DO iband2 = 1,hybdat%nbands(nk)
             ndb2 = degenerat(iband2)
             IF( ndb2 .ge. 1 ) THEN
               ic2 = ic2 + 1
@@ -143,10 +132,10 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l1 = 0,lmaxc(itype)
-            DO p1 = 1,nindxc(l1,itype)
+          DO l1 = 0,hybdat%lmaxc(itype)
+            DO p1 = 1,hybdat%nindxc(l1,itype)
 
-              DO l = 0,lcutm(itype)
+              DO l = 0,hybrid%lcutm1(itype)
 
               ! Define core-valence product functions
 
@@ -167,8 +156,8 @@
                       parr(:M)    = parr2
                       DEALLOCATE ( fprod2,larr2,parr2 )
                     END IF
-                    fprod(:,n) = ( core1(:,p1,l1,itype) *bas1 (:,p2,l2,itype)&
-     &                            +core2(:,p1,l1,itype) *bas2 (:,p2,l2,itype) )/ atoms%rmsh(:,itype)
+                    fprod(:,n) = ( hybdat%core1(:,p1,l1,itype) *hybdat%bas1 (:,p2,l2,itype)&
+     &                            +hybdat%core2(:,p1,l1,itype) *hybdat%bas2 (:,p2,l2,itype) )/ atoms%rmsh(:,itype)
                     larr(n)    = l2
                     parr(n)    = p2
                   END DO
@@ -176,7 +165,7 @@
 
                 ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                ALLOCATE ( integral(n,n),carr(n,nbands), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
+                ALLOCATE ( integral(n,n),carr(n,hybdat%nbands(nk)), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
 
                 DO i = 1,n
                   CALL primitivef(primf1,fprod(:,i)*atoms%rmsh(:,itype)**(l+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
@@ -187,7 +176,7 @@
                   DO j = 1,n
                     integrand     = fprod(:,j) * (primf1 + primf2)
                     integral(i,j) = fpi_const/(2*l+1) * intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,&
-     &                                     atoms%dx,atoms%ntype,itype,gridf)
+     &                                     atoms%dx,atoms%ntype,itype,hybdat%gridf)
                   END DO
                 END DO
 
@@ -199,7 +188,7 @@
 
                     carr = 0
                     ic   = 0
-                    DO n1=1,nbands
+                    DO n1=1,hybdat%nbands(nk)
 
                       DO i = 1,n
                         ll      = larr(i)
@@ -207,7 +196,7 @@
 
                         lm = sum((/ ((2*l2+1)*hybrid%nindx(l2,itype),l2=0,ll-1) /)) + (m2+ll)*hybrid%nindx(ll,itype) + parr(i)
 
-                        carr(i,n1) = cmt(n1,lm,iatom) * gaunt(l1,ll,l,m1,m2,M,maxfac,fac,sfac)
+                        carr(i,n1) = cmt(n1,lm,iatom) * gaunt(l1,ll,l,m1,m2,M,hybdat%maxfac,hybdat%fac,hybdat%sfac)
 
                       END DO
                       DO n2=1,n1
@@ -242,8 +231,8 @@
 
 !      ic         = 0
       sum_offdia = 0
-      DO n1=1,nobd(nk)
-        DO n2=1,nbands
+      DO n1=1,hybdat%nobd(nk)
+        DO n2=1,hybdat%nbands(nk)
           ex_vv(n2,n1,nk) = ex_vv(n2,n1,nk) - exchange(n1,n2)
           IF( n1 /= n2) sum_offdia = sum_offdia + 2*abs(exchange(n1,n2))
 
@@ -251,7 +240,7 @@
       END DO
 
 
-      DO n1=1,nobd(nk)
+      DO n1=1,hybdat%nobd(nk)
         results%te_hfex%core = results%te_hfex%core - results%w_iks(n1,nk,jsp)*exchange(n1,n1)
       END DO
 
@@ -263,12 +252,11 @@
       END SUBROUTINE exchange_vccv
 
       SUBROUTINE exchange_vccv1(nk,kpts,nkpti,atoms,&
-     &                          hybrid,lmaxc,nindxc,&
-     &                          maxindxc,core1,core2,lcutm,&
-     &                          bas1,bas2,dimension,jsp,&
-     &                          maxfac,fac,sfac,lapw,nbands,&
-     &                          gridf,nsymop,nsest,indx_sest,mpi,&
-     &                          a_ex,nobd,results,&
+     &                          hybrid,hybdat,&
+     &                          dimension,jsp,&
+     &                          lapw,&
+     &                          nsymop,nsest,indx_sest,mpi,&
+     &                          a_ex,results,&
      &                          mat_ex)
      
       USE m_constants  
@@ -276,6 +264,8 @@
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
+
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -286,20 +276,13 @@
       
 !     -scalars -
       INTEGER,INTENT(IN)      :: jsp 
-      INTEGER,INTENT(IN)      ::  maxfac,nbands  , maxindxc,nk  
+      INTEGER,INTENT(IN)      :: nk  
       INTEGER,INTENT(IN)      :: nkpti 
       INTEGER,INTENT(IN)      ::  nsymop
       REAL,INTENT(IN)         ::  a_ex
 !     - arays -
-      INTEGER,INTENT(IN)      :: lcutm(atoms%ntype) , lmaxc(atoms%ntype), nindxc(0:maxval(lmaxc),atoms%ntype) 
-      INTEGER,INTENT(IN)      ::  nsest(nbands),indx_sest(nbands,nbands)
-      INTEGER,INTENT(IN)      ::  nobd(kpts%nkpt)
-      REAL,INTENT(IN)         ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                            bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL,INTENT(IN)    ::  core1(atoms%jmtd,maxindxc,0:maxval(lmaxc),atoms%ntype ),&
-           &                       core2(atoms%jmtd,maxindxc,0:maxval(lmaxc),atoms%ntype)
-      REAL,INTENT(IN)         ::  fac( 0:maxfac),sfac( 0:maxfac)
-      REAL,INTENT(IN)         ::  gridf(atoms%jmtd,atoms%ntype)
+      INTEGER,INTENT(IN)      ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
+      
 
 #ifdef CPP_INVERSION
       REAL    ,INTENT(INOUT)  ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
@@ -327,10 +310,10 @@
       REAL,ALLOCATABLE        ::  integral(:,:)
      
       COMPLEX                 ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
-      COMPLEX                 ::  exchange(nbands,nbands)
+      COMPLEX                 ::  exchange(hybdat%nbands(nk),hybdat%nbands(nk))
       COMPLEX,ALLOCATABLE     ::  carr(:,:),carr2(:,:),carr3(:,:)
       
-      LOGICAL                 ::  ldum(nbands,nbands)
+      LOGICAL                 ::  ldum(hybdat%nbands(nk),hybdat%nbands(nk))
       
       
 
@@ -348,10 +331,10 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l1 = 0,lmaxc(itype)
-            DO p1 = 1,nindxc(l1,itype)
+          DO l1 = 0,hybdat%lmaxc(itype)
+            DO p1 = 1,hybdat%nindxc(l1,itype)
 
-              DO l = 0,lcutm(itype) 
+              DO l = 0,hybrid%lcutm1(itype) 
               
               ! Define core-valence product functions
 
@@ -372,8 +355,8 @@
                       parr(:M)    = parr2
                       DEALLOCATE ( fprod2,larr2,parr2 )
                     END IF
-                    fprod(:,n) = ( core1(:,p1,l1,itype) *bas1 (:,p2,l2,itype) &
-     &                            +core2(:,p1,l1,itype) *bas2 (:,p2,l2,itype) )/ atoms%rmsh(:,itype)
+                    fprod(:,n) = ( hybdat%core1(:,p1,l1,itype) *hybdat%bas1 (:,p2,l2,itype) &
+     &                            +hybdat%core2(:,p1,l1,itype) *hybdat%bas2 (:,p2,l2,itype) )/ atoms%rmsh(:,itype)
                     larr(n)    = l2
                     parr(n)    = p2
                   END DO
@@ -381,7 +364,7 @@
 
                 ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                ALLOCATE ( integral(n,n),carr(n,nbands), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
+                ALLOCATE ( integral(n,n),carr(n,hybdat%nbands(nk)), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
 
                 DO i = 1,n
                    CALL primitivef(primf1,fprod(:,i)*atoms%rmsh(:,itype)**(l+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
@@ -392,7 +375,7 @@
                   DO j = 1,n
                     integrand     = fprod(:,j) * (primf1 + primf2)
                     integral(i,j) = fpi_const/(2*l+1) * intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,&
-     &                                     atoms%dx,atoms%ntype,itype,gridf)
+     &                                     atoms%dx,atoms%ntype,itype,hybdat%gridf)
                   END DO
                 END DO
 
@@ -403,7 +386,7 @@
                     m2 = m1 + M
 
                     carr = 0
-                    DO n1=1,nbands
+                    DO n1=1,hybdat%nbands(nk)
 
                       DO i = 1,n
                         ll      = larr(i)
@@ -412,7 +395,7 @@
                         lm = sum((/ ((2*l2+1)*hybrid%nindx(l2,itype),l2=0,ll-1) /))&
                              + (m2+ll)*hybrid%nindx(ll,itype) + parr(i)
                         
-                        carr(i,n1) = cmt(n1,lm,iatom) * gaunt(l1,ll,l,m1,m2,M,maxfac,fac,sfac)
+                        carr(i,n1) = cmt(n1,lm,iatom) * gaunt(l1,ll,l,m1,m2,M,hybdat%maxfac,hybdat%fac,hybdat%sfac)
                       
                       END DO
                       DO n2=1,nsest(n1)!n1
@@ -442,7 +425,7 @@
       END IF
 #endif
       
-      DO n1=1,nobd(nk)
+      DO n1=1,hybdat%nobd(nk)
         results%te_hfex%core = results%te_hfex%Core - a_ex * results%w_iks(n1,nk,jsp)*exchange(n1,n1)
       END DO
 
@@ -451,7 +434,7 @@
       
       ic         = 0
       sum_offdia = 0
-      DO n1=1,nbands
+      DO n1=1,hybdat%nbands(nk)
         DO n2=1,n1
           ic = ic + 1
           mat_ex(ic) = mat_ex(ic) + conjg(exchange(n2,n1))/nsymop
@@ -462,12 +445,8 @@
       END SUBROUTINE exchange_vccv1
 
                   
-      SUBROUTINE exchange_cccc(&
-           nk,nkpti,atoms,lmaxcd,lmaxc,&
-           nindxc,maxindxc,ncstd,&
-           core1,core2,gridf,&
-           sym,kpts,a_ex,mpi,&
-           results)
+      SUBROUTINE exchange_cccc(nk,nkpti,atoms,hybdat, ncstd,&
+           sym,kpts,a_ex,mpi, results)
      
      
       USE m_constants   
@@ -477,6 +456,7 @@
       USE m_trafo
       USE m_types
       IMPLICIT NONE
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_sym),INTENT(IN)   :: sym
@@ -485,18 +465,11 @@
       
       ! - scalars - 
       INTEGER,INTENT(IN)    ::  nk,nkpti   ,ncstd
-      INTEGER,INTENT(IN)    ::  lmaxcd  
-      INTEGER,INTENT(IN)    :: maxindxc
 
       REAL   ,INTENT(IN)    ::  a_ex
 
       ! - arays -
-      INTEGER,INTENT(IN)    :: lmaxc(atoms%ntype)
-      INTEGER,INTENT(IN)    ::  nindxc(0:lmaxcd,atoms%ntype)
                             
-      REAL   ,INTENT(IN)    ::  core1(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype),&
-     &                          core2(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype)
-      REAL   ,INTENT(IN)    ::  gridf(atoms%jmtd,atoms%ntype)
       ! - local scalars - 
       INTEGER               ::  itype,ieq,icst,icst1,icst2,iatom,iatom0
       INTEGER               ::  l1,l2,l,ll,llmax
@@ -505,7 +478,7 @@
       
       REAL                  ::  rdum,rdum1
       ! - local arrays -
-      INTEGER               ::  point(maxindxc,-lmaxcd:lmaxcd, 0:lmaxcd,atoms%nat)
+      INTEGER               ::  point(hybdat%maxindxc,-hybdat%lmaxcd:hybdat%lmaxcd, 0:hybdat%lmaxcd,atoms%nat)
       REAL                  ::  rprod(atoms%jmtd),primf1(atoms%jmtd),primf2(atoms%jmtd), integrand(atoms%jmtd)
       COMPLEX               ::  exch(ncstd,ncstd)
 
@@ -521,9 +494,9 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l = 0,lmaxc(itype)
+          DO l = 0,hybdat%lmaxc(itype)
             DO M = -l,l
-              DO n = 1,nindxc(l,itype)
+              DO n = 1,hybdat%nindxc(l,itype)
                 icst = icst + 1
                 point(n,M,l,iatom) = icst
               END DO
@@ -532,14 +505,14 @@
         END DO
       END DO
       
-      llmax  = 2*lmaxcd 
+      llmax  = 2*hybdat%lmaxcd 
       exch   = 0
       iatom0 = 0
       DO itype = 1,atoms%ntype
                 
-        DO l1 = 0,lmaxc(itype)  ! left core state
-          DO l2 = 0,lmaxc(itype)  ! right core state
-            DO l = 0,lmaxc(itype)   ! occupied core state
+        DO l1 = 0,hybdat%lmaxc(itype)  ! left core state
+          DO l2 = 0,hybdat%lmaxc(itype)  ! right core state
+            DO l = 0,hybdat%lmaxc(itype)   ! occupied core state
             
               DO ll = abs(l1-l),l1+l
                 IF( ll .lt. abs(l-l2) .or. ll .gt. l+l2 ) CYCLE
@@ -554,10 +527,10 @@
                     IF( abs(mm) .gt. ll ) CYCLE
                     rdum = fpi_const/(2*ll+1)*gaunt1(l,ll,l1,M,mm,m1,llmax) *gaunt1(l,ll,l2,M,mm,m2,llmax)
                       
-                    DO n = 1,nindxc(l,itype)
-                      DO n2 = 1,nindxc(l2,itype)
-                        rprod(:) = ( core1(:,n,l,itype)*core1(:,n2,l2,itype)&
-                             +core2(:,n,l,itype)*core2(:,n2,l2,itype) ) / atoms%rmsh(:,itype)
+                    DO n = 1,hybdat%nindxc(l,itype)
+                      DO n2 = 1,hybdat%nindxc(l2,itype)
+                        rprod(:) = ( hybdat%core1(:,n,l,itype)*hybdat%core1(:,n2,l2,itype)&
+                             +hybdat%core2(:,n,l,itype)*hybdat%core2(:,n2,l2,itype) ) / atoms%rmsh(:,itype)
 
                         CALL primitivef(primf1,rprod(:)*atoms%rmsh(:,itype)**(ll+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
                         CALL primitivef(primf2,rprod(:)/atoms%rmsh(:,itype)**ll ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd,-itype,atoms%ntype)  ! -itype is to enforce inward integration
@@ -566,15 +539,15 @@
                         primf1 = primf1 / atoms%rmsh(:,itype)**ll
                         primf2 = primf2 * atoms%rmsh(:,itype)**(ll+1)
                 
-                        DO n1 = 1,nindxc(l1,itype)
+                        DO n1 = 1,hybdat%nindxc(l1,itype)
                             
-                          rprod(:) = ( core1(:,n,l,itype)*core1(:,n1,l1,itype)&
-                               +core2(:,n,l,itype)*core2(:,n1,l1,itype) ) / atoms%rmsh(:,itype)
+                          rprod(:) = ( hybdat%core1(:,n,l,itype)*hybdat%core1(:,n1,l1,itype)&
+                               +hybdat%core2(:,n,l,itype)*hybdat%core2(:,n1,l1,itype) ) / atoms%rmsh(:,itype)
       
                           integrand     = rprod * (primf1 + primf2)
                           
                           rdum1 = rdum*intgrf(integrand,atoms%jri,atoms%jmtd,&
-                                        atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+                                        atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf)
                           
                           iatom = iatom0
                           DO ieq = 1,atoms%neq(itype)
@@ -601,8 +574,8 @@
        
 #ifdef CPP_INVERSION
       CALL symmetrize(exch,ncstd,ncstd,3,.false.,&
-                     atoms,ntype,lmaxc,lmaxcd,&
-                     nindxc,sym)
+                     atoms,ntype,hybdat,&
+                     sym)
        IF( any( abs(aimag(exch)) .gt. 1E-6 ) ) STOP 'exchange_cccc: exch possesses significant imaginary part'
 #endif
 !       DO icst = 1,ncstd
@@ -620,10 +593,9 @@
       END SUBROUTINE exchange_cccc
       
       SUBROUTINE exchange_cccv( &
-     &        nk,nkpti,atoms,lmaxcd,lmaxc,nindxc,maxindxc,&
-     &        hybrid,dimension,nbands,maxbands,ncstd,&
-     &        core1,core2,bas1,bas2,&
-     &        bkpt,gridf,sym,mpi,&
+     &        nk,nkpti,atoms,hybdat,&
+     &        hybrid,dimension,maxbands,ncstd,&
+     &        bkpt,sym,mpi,&
      &        exch_cv )
      
       USE m_constants   
@@ -634,6 +606,7 @@
       
     USE m_types
       IMPLICIT NONE
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
@@ -641,19 +614,10 @@
       TYPE(t_atoms),INTENT(IN)   :: atoms
       ! - scalars - 
       INTEGER,INTENT(IN)    ::  nk,nkpti  ,ncstd
-      INTEGER,INTENT(IN)    ::  lmaxcd 
-      INTEGER,INTENT(IN)    ::  maxindxc  
-      INTEGER,INTENT(IN)    :: nbands,maxbands
+      INTEGER,INTENT(IN)    :: maxbands
 
       ! - arays -
-      INTEGER,INTENT(IN)    ::  lmaxc(atoms%ntype) 
-      INTEGER,INTENT(IN)    ::  nindxc(0:lmaxcd,atoms%ntype) 
-      REAL   ,INTENT(IN)    ::  core1(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype),&
-     &                          core2(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype)
-      REAL,INTENT(IN)       ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                          bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
       REAL   ,INTENT(IN)    ::  bkpt(3)
-      REAL   ,INTENT(IN)    ::  gridf(atoms%jmtd,atoms%ntype)
 #ifdef CPP_INVERSION
       REAL   ,INTENT(INOUT) ::  exch_cv(maxbands,ncstd,nkpti)
 #else
@@ -672,13 +636,13 @@
       COMPLEX               ::  cdum
       COMPLEX,PARAMETER     ::  img=(0d0,1d0)
       ! - local arrays -
-      INTEGER               ::  point(maxindxc,-lmaxcd:lmaxcd, 0:lmaxcd,atoms%nat)
+      INTEGER               ::  point(hybdat%maxindxc,-hybdat%lmaxcd:hybdat%lmaxcd, 0:hybdat%lmaxcd,atoms%nat)
       INTEGER               ::  lmstart(0:atoms%lmaxd,atoms%ntype)
       REAL                  ::  rprod(atoms%jmtd),primf1(atoms%jmtd),primf2(atoms%jmtd),&
      &                          integrand(atoms%jmtd)
       COMPLEX               ::  cexp(atoms%nat)
-      COMPLEX               ::  exch(nbands,ncstd)
-      COMPLEX               ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat),carr(nbands)
+      COMPLEX               ::  exch(hybdat%nbands(nk),ncstd)
+      COMPLEX               ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat),carr(hybdat%nbands(nk))
 
       IF ( mpi%irank == 0 ) THEN
         WRITE(6,'(//A)') '### core-core-core-valence exchange  ###'
@@ -691,9 +655,9 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l = 0,lmaxc(itype)
+          DO l = 0,hybdat%lmaxc(itype)
             DO M = -l,l
-              DO n = 1,nindxc(l,itype)
+              DO n = 1,hybdat%nindxc(l,itype)
                 icst = icst + 1
                 point(n,M,l,iatom) = icst
               END DO
@@ -725,15 +689,15 @@
 
       cmt = conjg(cmt)
 
-      llmax = max(2*lmaxcd,atoms%lmaxd)
+      llmax = max(2*hybdat%lmaxcd,atoms%lmaxd)
 
       exch   = 0
       iatom0 = 0
       DO itype = 1,atoms%ntype
                 
-        DO l1 = 0,lmaxc(itype)  ! left core state
+        DO l1 = 0,hybdat%lmaxc(itype)  ! left core state
           DO l2 = 0,atoms%lmax(itype)  ! right valence state
-            DO l = 0,lmaxc(itype)   ! occupied core state
+            DO l = 0,hybdat%lmaxc(itype)   ! occupied core state
             
               DO ll = abs(l1-l),l1+l
                 IF( ll .lt. abs(l-l2) .or. ll .gt. l+l2 ) CYCLE
@@ -755,12 +719,12 @@
                     rdum1 = gaunt1(l,ll,l1,M,mm,m1,llmax)&
                          *gaunt1(l,ll,l2,M,mm,m1,llmax)*rdum0
                      
-                    DO n = 1,nindxc(l,itype)
+                    DO n = 1,hybdat%nindxc(l,itype)
                       DO n2 = 1,hybrid%nindx(l2,itype)
                         lmp2 = lm2 + n2
                         
-                        rprod(:) = ( core1(:,n,l,itype)*bas1(:,n2,l2,itype)&
-                              +core2(:,n,l,itype)*bas2(:,n2,l2,itype) ) / atoms%rmsh(:,itype)
+                        rprod(:) = ( hybdat%core1(:,n,l,itype)*hybdat%bas1(:,n2,l2,itype)&
+                              +hybdat%core2(:,n,l,itype)*hybdat%bas2(:,n2,l2,itype) ) / atoms%rmsh(:,itype)
 
                         CALL primitivef(primf1,rprod(:)*atoms%rmsh(:,itype)**(ll+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
                         CALL primitivef(primf2,rprod(:)/atoms%rmsh(:,itype)**ll ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd,-itype,atoms%ntype)  ! -itype is to enforce inward integration
@@ -771,21 +735,21 @@
                         primf1 = primf1 / atoms%rmsh(:,itype)**ll
                         primf2 = primf2 * atoms%rmsh(:,itype)**(ll+1)
                 
-                        DO n1 = 1,nindxc(l1,itype)
+                        DO n1 = 1,hybdat%nindxc(l1,itype)
                           
-                          rprod(:) = ( core1(:,n,l,itype)*core1(:,n1,l1,itype)&
-                               +core2(:,n,l,itype)*core2(:,n1,l1,itype) ) / atoms%rmsh(:,itype)
+                          rprod(:) = ( hybdat%core1(:,n,l,itype)*hybdat%core1(:,n1,l1,itype)&
+                               +hybdat%core2(:,n,l,itype)*hybdat%core2(:,n1,l1,itype) ) / atoms%rmsh(:,itype)
       
                           integrand     = rprod * (primf1 + primf2)
                           
-                          rdum2 = rdum1*intgrf(integrand,atoms%jri,atoms%jmtd, atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+                          rdum2 = rdum1*intgrf(integrand,atoms%jri,atoms%jmtd, atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf)
                           
                           iatom = iatom0
                           DO ieq = 1,atoms%neq(itype)
                             iatom = iatom + 1
                             icst1 = point(n1,m1,l1,iatom)
                             cdum  = rdum2*cexp(iatom)
-                            DO iband = 1,nbands
+                            DO iband = 1,hybdat%nbands(nk)
 
                               exch(iband,icst1) = exch(iband,icst1) + cdum*cmt(iband,lmp2,iatom)
 
@@ -811,16 +775,16 @@
 
 #ifdef CPP_INVERSION
       !symmetrize core-wavefunctions such that phi(-r) = phi(r)*
-      CALL symmetrize( exch,nbands,ncstd,2,.false.,&
-     &                 atoms,ntype,lmaxc,lmaxcd,&
-     &                 nindxc,sym)
+      CALL symmetrize( exch,hybdat,ncstd,2,.false.,&
+     &                 atoms,ntype,&
+     &                 sym)
      
       IF( any( abs(aimag(exch)) .gt. 1E-6 ) ) STOP 'exchange_cccv: exch possesses significant imaginary part'
 #endif
 
 
       DO icst = 1,ncstd
-        DO iband = 1,nbands
+        DO iband = 1,hybdat%nbands(nk)
           exch_cv(iband,icst,nk) = exch_cv(iband,icst,nk) - exch(iband,icst)
         END DO
       END DO

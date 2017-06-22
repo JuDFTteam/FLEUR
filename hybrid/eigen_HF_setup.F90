@@ -170,11 +170,10 @@ module m_eigen_hf_setup
      &                 atoms,el_eig,&
      &                 ello_eig,cell,dimension,&
      &                 hybrid,vr0,&
-     &                 hybdat%kveclo_eig,&
+     &                 hybdat,&
      &                 noco,oneD,mpi,irank2,&
-     &                 hybdat%nbands,input,jsp,&
-     &                 zmat,&
-     &                 hybdat%bas1,hybdat%bas2,hybdat%bas1_MT,hybdat%drbas1_MT)
+     &                 input,jsp,&
+     &                 zmat)
 
               ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
               CALL corewf(atoms,jsp,input,dimension,vr0,&
@@ -189,13 +188,11 @@ module m_eigen_hf_setup
               !
               ! check olap between core-basis/core-valence/basis-basis
               !
-              CALL checkolap(atoms,hybdat%lmaxc,hybdat%lmaxcd,hybdat%nindxc,hybdat%maxindxc,&
-     &                      hybdat%core1,hybdat%core2,hybrid,hybdat%bas1,&
-     &                      hybdat%bas2,kpts%nkpt,kpts,&
+              CALL checkolap(atoms,hybdat,hybrid,&
+     &                      kpts%nkpt,kpts,&
      &                      dimension,mpi,irank2,skip_kpt,&
      &                      input,sym,&
-     &                      noco,cell,lapw,jsp,&
-     &                       maxval(hybdat%nbands),hybdat%nbands)
+     &                      noco,cell,lapw,jsp)
 
               !
               ! set up pointer pntgpt

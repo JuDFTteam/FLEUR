@@ -13,11 +13,10 @@
      &          nkpti,kpts,it,sym,&
      &          atoms,el_eig,ello_eig,cell,&
      &          dimension,hybrid,vr0,&
-     &          kveclo_eig,&
+     &          hybdat,&
      &          noco,oneD,mpi,irank2,&
-     &          nbands,input,jsp,&
-     &          zmat,&
-     &          bas1,bas2,bas1_MT,drbas1_MT)
+     &          input,jsp,&
+     &          zmat)
 
 
       ! nkpti      ::     number of irreducible k-points
@@ -33,16 +32,18 @@
       USE m_olap
       USE m_types
       IMPLICIT NONE
-      TYPE(t_mpi),INTENT(IN)   :: mpi
+
+      TYPE(t_hybdat),INTENT(INOUT)   :: hybdat
+      TYPE(t_mpi),INTENT(IN)         :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_oneD),INTENT(IN)   :: oneD
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_noco),INTENT(IN)   :: noco
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_hybrid),INTENT(IN)      :: hybrid
+      TYPE(t_input),INTENT(IN)       :: input
+      TYPE(t_noco),INTENT(IN)        :: noco
+      TYPE(t_sym),INTENT(IN)         :: sym
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_kpts),INTENT(IN)        :: kpts
+      TYPE(t_atoms),INTENT(IN)       :: atoms
 
 !     - - scalars - -
       INTEGER,INTENT(IN)      ::  nkpti ,it    
@@ -55,25 +56,15 @@
 !     - - arrays - -
       INTEGER,INTENT(IN)      ::  irank2(nkpti)
 
-!     arrays for abcoff
-      INTEGER,INTENT(IN)      :: kveclo_eig(atoms%nlotot,nkpti)
 
-!     arrays for apws
-
-
-      INTEGER,INTENT(IN)      ::  nbands(nkpti) 
       REAL,INTENT(IN)         ::  vr0(:,:,:)!(jmtd,ntype,jspd)
       
       REAL,INTENT(IN)         ::  el_eig(0:atoms%lmaxd,atoms%ntype)
       REAL,INTENT(IN)         ::  ello_eig(atoms%nlod,atoms%ntype)
-      REAL,INTENT(INOUT)      ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                            bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL,INTENT(INOUT)      ::    bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                            drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
       TYPE(t_zmat),INTENT(IN) :: zmat(:) !for all kpoints 
 
   !     - - local scalars - - 
-      INTEGER                 ::  ilo,idum,maxlmindx,m
+      INTEGER                 ::  ilo,idum ,m,maxlmindx
       REAL                    ::  rdum,merror
       COMPLEX                 ::  cdum,cdum1,cdum2
 
@@ -212,15 +203,15 @@
                usdus%us(l,itype,1),usdus%dus(l,itype,1),nodem,usdus%uds(l,itype,1),&
                usdus%duds(l,itype,1),noded,usdus%ddn(l,itype,1),wronk
 
-          bas1(1:ng,1,l,itype) =  f(1:ng,1,l)
-          bas2(1:ng,1,l,itype) =  f(1:ng,2,l)
-          bas1(1:ng,2,l,itype) = df(1:ng,1,l)
-          bas2(1:ng,2,l,itype) = df(1:ng,2,l)
+          hybdat%bas1(1:ng,1,l,itype) =  f(1:ng,1,l)
+          hybdat%bas2(1:ng,1,l,itype) =  f(1:ng,2,l)
+          hybdat%bas1(1:ng,2,l,itype) = df(1:ng,1,l)
+          hybdat%bas2(1:ng,2,l,itype) = df(1:ng,2,l)
 
-            bas1_MT(1,l,itype) =   usdus%us(l,itype,1)
-          drbas1_MT(1,l,itype) =  usdus%dus(l,itype,1)
-            bas1_MT(2,l,itype) =  usdus%uds(l,itype,1)
-          drbas1_MT(2,l,itype) = usdus%duds(l,itype,1)
+            hybdat%bas1_MT(1,l,itype) =   usdus%us(l,itype,1)
+          hybdat%drbas1_MT(1,l,itype) =  usdus%dus(l,itype,1)
+            hybdat%bas1_MT(2,l,itype) =  usdus%uds(l,itype,1)
+          hybdat%drbas1_MT(2,l,itype) = usdus%duds(l,itype,1)
         END DO
 
         IF (atoms%nlo(itype).GE.1) THEN
@@ -232,14 +223,14 @@
 
           DO ilo=1,atoms%nlo(itype)
             iarr(atoms%llo(ilo,itype),itype) = iarr(atoms%llo(ilo,itype),itype) + 1
-            bas1(1:ng,iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
+            hybdat%bas1(1:ng,iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
      &                                                = flo(1:ng,1,ilo)
-            bas2(1:ng,iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
+            hybdat%bas2(1:ng,iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
      &                                                = flo(1:ng,2,ilo)
 
-              bas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
+              hybdat%bas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
      &                                                = usdus%ulos(ilo,itype,1)
-            drbas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
+            hybdat%drbas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype)&
      &                                                = usdus%dulos(ilo,itype,1)
           END DO
 
@@ -298,9 +289,9 @@
       IF( ok .ne. 0 ) STOP 'gen_wavf: failure allocation bcof'
       ALLOCATE( ccof(-atoms%llod:atoms%llod,dimension%neigd,atoms%nlod,atoms%nat),stat=ok )
       IF( ok .ne. 0 ) STOP 'gen_wavf: failure allocation ccof'
-      ALLOCATE ( cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat), stat=ok)
+      ALLOCATE ( cmt(dimension%neigd,maxlmindx,atoms%nat), stat=ok)
       IF(  ok .ne. 0 ) STOP 'gen_wavf: Failure allocation cmt'
-      ALLOCATE ( cmthlp(dimension%neigd,hybrid%maxlmindx,atoms%nat), stat=ok)
+      ALLOCATE ( cmthlp(dimension%neigd,maxlmindx,atoms%nat), stat=ok)
       IF( ok .ne. 0) STOP 'gen_wavf: failure allocation cmthlp'
       if (zmat(1)%l_real) THEN
          ALLOCATE ( zhlp_r(dimension%nbasfcn,dimension%neigd), stat=ok)
@@ -309,7 +300,7 @@
       ENDIF
       IF( ok .ne. 0) STOP 'gen_wavf: failure allocation zhlp'
 
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
+      irecl_cmt = dimension%neigd*maxlmindx*atoms%nat*16
       OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
      &     recl=irecl_cmt)
 
@@ -328,9 +319,9 @@
         ! abcof calculates the wavefunction coefficients
         ! stored in acof,bcof,ccof
         CALL abcof(&
-              input,atoms,nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw, &
-              ngpt(jsp,ikpt0)+nbands(ikpt0),usdus,noco,jsp,kveclo_eig(:,ikpt0),&
-              oneD,acof(:nbands(ikpt0),:,:),bcof(:nbands(ikpt0),:,:),ccof(:,:nbands(ikpt0),:,:),&
+              input,atoms,hybdat%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw, &
+              ngpt(jsp,ikpt0)+hybdat%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
+              oneD,acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),ccof(:,: hybdat%nbands(ikpt0),:,:),&
               zmat(ikpt))
         
 
@@ -348,11 +339,11 @@
         ! rotate them in the global one
 
         CALL abcrot(&
-                atoms,nbands(ikpt0),dimension,&
-                nbands(ikpt0),sym,&
+                atoms,hybdat%nbands(ikpt0),dimension,&
+                 hybdat%nbands(ikpt0),sym,&
                 cell,oneD,&
-                acof(:nbands(ikpt0),:,:),bcof(:nbands(ikpt0),:,:),&
-                ccof(:,:nbands(ikpt0),:,:) )
+                acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),&
+                ccof(:,: hybdat%nbands(ikpt0),:,:) )
 
 !       CALL cpu_time(time3)
 
@@ -437,7 +428,7 @@
               CALL waveftrafo_genwavf( cmthlp,zhlp_r,zhlp_c,&
      &                 cmt(:,:,:),zmat(1)%l_real,zmat(ikpt0)%z_r(:,:),zmat(ikpt0)%z_c(:,:),ikpt0,iop,atoms,&
      &                 hybrid,kpts,sym,&
-     &                 jsp,dimension,nbands(ikpt0),&
+     &                 jsp,dimension,hybdat%nbands(ikpt0),&
      &                 cell,gpt(:,:ngpt(jsp,ikpt0),jsp,ikpt0),&
      &                 ngpt(:,ikpt0),gpt(:,:ngpt(jsp,ikpt),jsp,ikpt),&
      &                 ngpt(:,ikpt),.true.)

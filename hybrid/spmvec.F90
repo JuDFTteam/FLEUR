@@ -3,8 +3,8 @@
       CONTAINS
        
       SUBROUTINE spmvec(&
-     &           atoms,lcutm,maxlcutm,nindxm,maxindxm,&
-     &           nbasm,nbasp,hybrid,ikpt,kpts,cell,&
+     &           atoms,hybrid,&
+     &           hybdat,ikpt,kpts,cell,&
      &           coulomb_mt1,coulomb_mt2,coulomb_mt3,&
      &           coulomb_mtir,vecin,&
      &           vecout)
@@ -13,45 +13,40 @@
       USE m_constants
       USE m_types
       IMPLICIT NONE
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_cell),INTENT(IN)     :: cell
+      TYPE(t_kpts),INTENT(IN)     :: kpts
+      TYPE(t_atoms),INTENT(IN)    :: atoms
       
       ! - scalars -
       INTEGER, INTENT(IN) ::  ikpt 
-      INTEGER, INTENT(IN) ::  nbasm,nbasp 
-      INTEGER, INTENT(IN) ::  maxindxm,maxlcutm
-            
+          
       ! - arrays -
-      INTEGER, INTENT(IN) ::  lcutm(atoms%ntype)
-      INTEGER, INTENT(IN) ::  nindxm(0:maxlcutm,atoms%ntype)
-      
-      
-      REAL   , INTENT(IN) ::  coulomb_mt1(maxindxm-1,maxindxm-1,&
-     &                                    0:maxlcutm,atoms%ntype)
+      REAL   , INTENT(IN) ::  coulomb_mt1(hybrid%maxindxm1-1,hybrid%maxindxm1-1,&
+     &                                    0:hybrid%maxlcutm1,atoms%ntype)
 #ifdef CPP_INVERSION      
-      REAL   , INTENT(IN) ::  coulomb_mt2(maxindxm-1,-maxlcutm:maxlcutm,&
-     &                                    0:maxlcutm+1,atoms%nat)
-      REAL   , INTENT(IN) ::  coulomb_mt3(maxindxm-1,atoms%nat,nat)
+      REAL   , INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1-1,-hybrid%maxlcutm1:maxlcutm,&
+     &                                    0:hybrid%maxlcutm1+1,atoms%nat)
+      REAL   , INTENT(IN) ::  coulomb_mt3(hybrid%maxindxm1-1,atoms%nat,nat)
 #ifdef CPP_IRCOULOMBAPPROX
       REAL   , INTENT(IN) ::  coulomb_mtir(:,:)
 #else
       REAL   , INTENT(IN) ::  coulomb_mtir(:)
 #endif
-      REAL   , INTENT(IN) ::  vecin (nbasm)
-      REAL   , INTENT(OUT)::  vecout(nbasm)
+      REAL   , INTENT(IN) ::  vecin (:)!(hybdat%nbasm)
+      REAL   , INTENT(OUT)::  vecout(:)!(hybdat%nbasm)
 #else
-      COMPLEX, INTENT(IN) ::  coulomb_mt2(maxindxm-1,-maxlcutm:maxlcutm,&
-     &                                    0:maxlcutm+1,atoms%nat)
-      COMPLEX, INTENT(IN) ::  coulomb_mt3(maxindxm-1,atoms%nat,atoms%nat)
+      COMPLEX, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1-1,-hybrid%maxlcutm1:-hybrid%maxlcutm1,&
+     &                                    0:hybrid%maxlcutm1+1,atoms%nat)
+      COMPLEX, INTENT(IN) ::  coulomb_mt3(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
 #ifdef CPP_IRCOULOMBAPPROX
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:,:)
 #else
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
 #endif
-      COMPLEX, INTENT(IN) ::  vecin (nbasm)
-      COMPLEX, INTENT(OUT)::  vecout(nbasm)
+      COMPLEX, INTENT(IN) ::  vecin (:)!(hybdat%nbasm)
+      COMPLEX, INTENT(OUT)::  vecout(:)!(hybdat%nbasm)
 #endif
       
       ! - local scalars -
@@ -68,11 +63,11 @@
       ! - local arrays -
       
 #ifdef CPP_INVERSION
-      REAL                ::  vecinhlp (nbasm)
+      REAL                ::  vecinhlp (hybdat%nbasm(ikpt))
       REAL   ,ALLOCATABLE ::  coulhlp(:,:)
 #else
-      REAL                ::  vecr(maxindxm-1),veci(maxindxm-1)
-      COMPLEX             ::  vecinhlp (nbasm)
+      REAL                ::  vecr(hybrid%maxindxm1-1),veci(hybrid%maxindxm1-1)
+      COMPLEX             ::  vecinhlp (hybdat%nbasm(ikpt))
       COMPLEX,ALLOCATABLE ::  coulhlp(:,:)
 #endif
  
@@ -80,7 +75,7 @@
       
       vecinhlp = vecin
       
-      CALL reorder(nbasm,nbasp,atoms,lcutm, maxlcutm,nindxm,1, vecinhlp)
+      CALL reorder(hybdat%nbasm(ikpt),hybdat%nbasp,atoms,hybrid%lcutm1, hybrid%maxlcutm1,hybrid%nindxm1,1, vecinhlp)
   
 
       ibasm = 0
@@ -88,9 +83,9 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l = 0,lcutm(itype)
+          DO l = 0,hybrid%lcutm1(itype)
             DO m = -l,l
-              ibasm = ibasm + nindxm(l,itype) - 1
+              ibasm = ibasm + hybrid%nindxm1(l,itype) - 1
             END DO
           END DO
         END DO
@@ -103,14 +98,14 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l = 0,lcutm(itype)
+          DO l = 0,hybrid%lcutm1(itype)
             DO m = -l,l
               indx1 = indx1 + 1
-              indx2 = indx2 + nindxm(l,itype) - 1
+              indx2 = indx2 + hybrid%nindxm1(l,itype) - 1
               indx3 = indx3 + 1
 
               
-              vecout(indx1:indx2) = matmul(coulomb_mt1(:nindxm(l,itype)-1,:nindxm(l,itype)-1, l,itype),&
+              vecout(indx1:indx2) = matmul(coulomb_mt1(:hybrid%nindxm1(l,itype)-1,:hybrid%nindxm1(l,itype)-1, l,itype),&
      &                vecinhlp(indx1:indx2))
 
 ! #ifdef CPP_INVERSION
@@ -124,7 +119,7 @@
 ! #endif  
               
               
-              vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:nindxm(l,itype)-1,m,l,iatom) * vecinhlp(indx3) 
+              vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%nindxm1(l,itype)-1,m,l,iatom) * vecinhlp(indx3) 
             
               indx1 = indx2
             END DO
@@ -141,34 +136,34 @@
         iatom = 0
         indx0 = 0
         DO itype = 1,atoms%ntype
-          ishift = sum( (/ ((2*l+1)*(nindxm(l,itype)-1), l=0,lcutm(itype) )/) )
+          ishift = sum( (/ ((2*l+1)*(hybrid%nindxm1(l,itype)-1), l=0,hybrid%lcutm1(itype) )/) )
           DO ieq = 1,atoms%neq(itype)
             iatom = iatom + 1
             l = 0
             m = 0
             
             indx1 = indx0 + 1 
-            indx2 = indx1 + nindxm(l,itype) - 2
+            indx2 = indx1 + hybrid%nindxm1(l,itype) - 2
             
             iatom1 = 0
             indx3  = ibasm
             DO itype1 = 1,atoms%ntype
-              ishift1 = (lcutm(itype1)+1)**2
+              ishift1 = (hybrid%lcutm1(itype1)+1)**2
               DO ieq1 = 1,atoms%neq(itype1)
                 iatom1 = iatom1 + 1
                 indx4  = indx3 + (ieq1 - 1)*ishift1 + 1
                 IF( iatom .eq. iatom1 ) CYCLE
                 
                 vecout(indx1:indx2) = vecout(indx1:indx2)&
-     &                              + coulomb_mt3(:nindxm(l,itype)-1, iatom1,iatom) * vecinhlp(indx4)
+     &                              + coulomb_mt3(:hybrid%nindxm1(l,itype)-1, iatom1,iatom) * vecinhlp(indx4)
 
               END DO
               indx3 = indx3 + atoms%neq(itype1)*ishift1
             END DO
             
-            IF( indx3 .ne. nbasp ) STOP 'spmvec: error counting index indx3'
+            IF( indx3 .ne. hybdat%nbasp ) STOP 'spmvec: error counting index indx3'
      
-            vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:nindxm(l,itype)-1,0, maxlcutm+1,iatom) * vecinhlp(indx3+1)
+            vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%nindxm1(l,itype)-1,0, hybrid%maxlcutm1+1,iatom) * vecinhlp(indx3+1)
      
             indx0 = indx0 + ishift
           END DO
@@ -180,18 +175,18 @@
       
 #ifdef CPP_IRCOULOMBAPPROX
         
-      indx0 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,lcutm(itype)), itype=1,atoms%ntype ) /) )+ hybrid%ngptm
-      indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,lcutm(itype)), itype=1,atoms%ntype ) /) )
+      indx0 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)), itype=1,atoms%ntype ) /) )+ hybrid%ngptm
+      indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)), itype=1,atoms%ntype ) /) )
 
 #ifdef CPP_INVERSION
-      CALL DGEMV('N',indx1,indx0,1d0,coulomb_mtir,(maxlcutm+1)**2*atoms,&
+      CALL DGEMV('N',indx1,indx0,1d0,coulomb_mtir,(hybrid%maxlcutm1+1)**2*atoms,&
      &          vecinhlp(ibasm+1:),1,0d0,vecout(ibasm+1:),1)
       
       CALL DGEMV('T',indx1,hybrid,1d0,coulomb_mtir(:indx1,indx1+1:),&
      &          indx1,vecinhlp(ibasm+1:),1,0d0,vecout(ibasm+indx1+1:),1)
 #else    
       CALL ZGEMV('N',indx1,indx0,(1d0,0d0),coulomb_mtir,&
-     &          (maxlcutm+1)**2*atoms,vecinhlp(ibasm+1:),&
+     &          (hybrid%maxlcutm1+1)**2*atoms,vecinhlp(ibasm+1:),&
      &          1,(0d0,0d0),vecout(ibasm+1:),1)
       
       CALL ZGEMV('C',indx1,hybrid,(1d0,0d0),coulomb_mtir(:indx1,indx1+1:)&
@@ -205,7 +200,7 @@
 
       
       indx0 = ibasm + indx1
-      IF( indx0 .ne. nbasp ) STOP 'spmvec: error indx0'
+      IF( indx0 .ne. hybdat%nbasp ) STOP 'spmvec: error indx0'
       DO i = 1,hybrid%ngptm 
         indx0 = indx0 + 1
         igptm = hybrid%pgptm(i)
@@ -216,7 +211,7 @@
       
 #else
 
-      indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,lcutm(itype)),&
+      indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)),&
      &                                      itype=1,atoms%ntype ) /) )+ hybrid%ngptm(ikpt)
 #ifdef CPP_INVERSION
       CALL dspmv('U',indx1,1d0,coulomb_mtir,vecinhlp(ibasm+1),1,0d0, vecout(ibasm+1),1)
@@ -230,8 +225,8 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
-          DO l = 0,lcutm(itype)
-            n = nindxm(l,itype)
+          DO l = 0,hybrid%lcutm1(itype)
+            n = hybrid%nindxm1(l,itype)
             DO m = -l,l
               indx1 = indx1 + 1
               indx2 = indx2 + 1
@@ -250,12 +245,12 @@
         iatom = 0
         indx0 = 0
         DO itype = 1,atoms%ntype
-          ishift = sum( (/ ((2*l+1)*(nindxm(l,itype)-1), l=0,lcutm(itype) )/) )
+          ishift = sum( (/ ((2*l+1)*(hybrid%nindxm1(l,itype)-1), l=0,hybrid%lcutm1(itype) )/) )
           DO ieq = 1,atoms%neq(itype)
             iatom = iatom + 1
             indx1 = indx0 + 1
-            indx2 = indx1 + nindxm(0,itype) - 2
-            vecout(nbasp+1) = vecout(nbasp+1) + dotprod(coulomb_mt2(:nindxm(0,itype)-1,0, maxlcutm+1,iatom), vecinhlp(indx1:indx2))
+            indx2 = indx1 + hybrid%nindxm1(0,itype) - 2
+            vecout(hybdat%nbasp+1) = vecout(hybdat%nbasp+1) + dotprod(coulomb_mt2(:hybrid%nindxm1(0,itype)-1,0, hybrid%maxlcutm1+1,iatom), vecinhlp(indx1:indx2))
         
            indx0 = indx0 + ishift
           END DO
@@ -264,7 +259,7 @@
         iatom = 0
         indx0 = ibasm
         DO itype = 1,atoms%ntype
-          ishift = (lcutm(itype)+1)**2
+          ishift = (hybrid%lcutm1(itype)+1)**2
           DO ieq = 1,atoms%neq(itype)
             iatom = iatom + 1
             indx1 = indx0 + 1
@@ -272,15 +267,15 @@
             iatom1 = 0
             indx2  = 0
             DO itype1 = 1,atoms%ntype
-              ishift1 = sum( (/ ( (2*l+1)*(nindxm(l,itype1)-1), l=0,lcutm(itype1)) /))
+              ishift1 = sum( (/ ( (2*l+1)*(hybrid%nindxm1(l,itype1)-1), l=0,hybrid%lcutm1(itype1)) /))
               DO ieq1 = 1,atoms%neq(itype1)
                 iatom1 = iatom1 + 1
                 IF( iatom1 .eq. iatom ) CYCLE
                 
                 indx3  = indx2 + (ieq1 - 1)*ishift1 + 1
-                indx4  = indx3 + nindxm(0,itype1) - 2
+                indx4  = indx3 + hybrid%nindxm1(0,itype1) - 2
 
-                vecout(indx1) = vecout(indx1) + dotprod(coulomb_mt3(:nindxm(0,itype1)-1,iatom,iatom1), vecinhlp(indx3:indx4))
+                vecout(indx1) = vecout(indx1) + dotprod(coulomb_mt3(:hybrid%nindxm1(0,itype1)-1,iatom,iatom1), vecinhlp(indx3:indx4))
 
               END DO
               indx2 = indx2 + atoms%neq(itype1)*ishift1
@@ -288,11 +283,11 @@
             indx0 = indx0 + ishift
           END DO
         END DO
-        IF( indx0 .ne. nbasp ) STOP 'spmvec: error index counting (indx0)'
+        IF( indx0 .ne. hybdat%nbasp ) STOP 'spmvec: error index counting (indx0)'
       END IF
       
-      CALL reorder(nbasm,nbasp,atoms,lcutm,&
-     &             maxlcutm,nindxm,2,&
+      CALL reorder(hybdat%nbasm(ikpt),hybdat%nbasp,atoms,hybrid%lcutm1,hybrid%maxlcutm1,hybrid%nindxm1,&
+     &             2,&
      &             vecout)
       
 

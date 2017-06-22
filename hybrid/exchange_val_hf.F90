@@ -53,20 +53,11 @@
       CONTAINS
 
       SUBROUTINE exchange_valence_hf(&
-                    nk,kpts,nkpti,nkpt_EIBZ,&
-                    sym,atoms,hybrid,&
-                    cell,&
-                    dimension,input,jsp,&
-                    basm,bas1,bas2,bas1_MT,&
-                    drbas1_MT,maxlcutm,lcutm,nindxm,maxindxm,nbasp,&
-                    nbasm,maxbasm,maxindxp,nindxp,&
-                    prod,prodm,mnobd,&
-                    nobd,nbands,ne_eig,lapw,&
+                    nk,kpts,nkpti,nkpt_EIBZ, sym,atoms,hybrid,&
+                    cell, dimension,input,jsp, hybdat, mnobd, lapw,&
                     eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,&
-                    kveclo,gauntarr,it,xcpot,&
-                    noco,nsest,indx_sest,&
-                    mpi,irank2,isize2,comm,&
-                    div_vv,mat_ex)
+                    it,xcpot, noco,nsest,indx_sest,&
+                    mpi,irank2,isize2,comm, div_vv,mat_ex)
 
 
       USE m_wrapper
@@ -85,11 +76,12 @@
       USE m_kp_perturbation
       USE m_types
       IMPLICIT NONE
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(IN)   :: results
       TYPE(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
+      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_sym),INTENT(IN)   :: sym
@@ -101,44 +93,29 @@
 !     - scalars -
       INTEGER,INTENT(IN)      :: it  ,irank2 ,isize2,comm
       INTEGER,INTENT(IN)      :: jsp
-      INTEGER,INTENT(IN)      ::  maxbasm,maxlcutm,maxindxm
-      INTEGER,INTENT(IN)      ::  maxindxp
       INTEGER,INTENT(IN)      ::  nk ,nkpti ,nkpt_EIBZ
-      INTEGER,INTENT(IN)      ::  nbasp  ,ne_eig   
-      INTEGER,INTENT(IN)      :: mnobd,nbands
+      INTEGER,INTENT(IN)      :: mnobd 
 
 
 
 !     - arrays -
-      INTEGER,INTENT(IN)      :: lcutm(atoms%ntype)
-      INTEGER,INTENT(IN)      ::  nobd(kpts%nkptf),nbasm(kpts%nkptf)
       INTEGER,INTENT(IN)      ::  n_q(nkpt_EIBZ)
-      INTEGER,INTENT(IN)      ::  nindxm(0:maxlcutm,atoms%ntype),&
-                                  nindxp(0:maxlcutm,atoms%ntype)
+
       INTEGER,INTENT(IN)      ::  parent(kpts%nkptf)
       INTEGER,INTENT(IN)      ::  pointer_EIBZ(nkpt_EIBZ)
-      INTEGER,INTENT(IN)      ::  kveclo(atoms%nlotot,nkpti)
-      INTEGER,INTENT(IN)      ::  nsest(nbands),indx_sest(nbands,nbands)
+      INTEGER,INTENT(IN)      ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
 
-      REAL   ,INTENT(IN)      ::  basm(atoms%jmtd,maxindxm,0:maxlcutm,atoms%ntype)
-      REAL   ,INTENT(IN)      ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-                                  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL   ,INTENT(IN)      ::    bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-                                  drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)   
+ 
       REAL   ,INTENT(IN)      ::  eig_irr(dimension%neigd,nkpti)
-      REAL   ,INTENT(IN)      ::  gauntarr(2,0:atoms%lmaxd,0:atoms%lmaxd,0:maxlcutm,&
-                                        -atoms%lmaxd:atoms%lmaxd,-maxlcutm:maxlcutm)
-      REAL   ,INTENT(IN)      ::  prodm(maxindxm,maxindxp,&
-                                        0:maxlcutm,atoms%ntype)
+
       REAL   ,INTENT(IN)      ::  wl_iks(dimension%neigd,kpts%nkptf)
-      REAL   ,INTENT(OUT)     ::  div_vv(nbands)
+      REAL   ,INTENT(OUT)     ::  div_vv(hybdat%nbands(nk))
 
 #ifdef CPP_INVERSION
       REAL   ,INTENT(OUT)     ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
 #else
       COMPLEX,INTENT(OUT)     ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
 #endif
-      TYPE(PRODTYPE)          ::  prod(maxindxp,0:maxlcutm,atoms%ntype)
 
 !     - local scalars -
       INTEGER                 ::  iband,iband1,ibando,ikpt,ikpt0
@@ -179,52 +156,52 @@
 
       COMPLEX,ALLOCATABLE     ::  phase_vv(:,:)
       COMPLEX                 ::  exchcorrect(kpts%nkptf)
-      COMPLEX                 ::  dcprod(nbands,nbands,3) 
+      COMPLEX                 ::  dcprod(hybdat%nbands(nk),hybdat%nbands(nk),3) 
 
-      COMPLEX(8)              ::  exch_vv(nbands,nbands)
+      COMPLEX(8)              ::  exch_vv(hybdat%nbands(nk),hybdat%nbands(nk))
 #ifdef CPP_MPI
-      COMPLEX(8)              ::  buf_vv(nbands,nbands)
+      COMPLEX(8)              ::  buf_vv(hybdat%nbands(nk),nbands(nk))
 #endif
       COMPLEX                 ::  hessian(3,3)
-      COMPLEX                 ::  proj_ibsc(3,mnobd,nbands)
+      COMPLEX                 ::  proj_ibsc(3,mnobd,hybdat%nbands(nk))
       COMPLEX                 ::  olap_ibsc(3,3,mnobd,mnobd)
 #if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-      REAL                    ::  coulomb_mt1(maxindxm-1,maxindxm-1, 0:maxlcutm,atoms%ntype)       
+      REAL                    ::  coulomb_mt1(hybrid%maxindxm1-1,hybrid%maxindxm1-1, 0:hybrid%maxlcutm1,atoms%ntype)       
 #ifdef CPP_INVERSION
-      REAL                    ::  coulomb_mt2(maxindxm-1, -maxlcutm:maxlcutm, 0:maxlcutm+1,atoms%nat)
-      REAL                    ::  coulomb_mt3(maxindxm-1,atoms%nat,atoms%nat)
+      REAL                    ::  coulomb_mt2(hybrid%maxindxm1-1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat)
+      REAL                    ::  coulomb_mt3(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
 #else
-      COMPLEX                 ::  coulomb_mt2(maxindxm-1, -maxlcutm:maxlcutm, 0:maxlcutm+1,atoms%nat)
-      COMPLEX                 ::  coulomb_mt3(maxindxm-1,atoms%nat,atoms%nat)
+      COMPLEX                 ::  coulomb_mt2(hybrid%maxindxm1-1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat)
+      COMPLEX                 ::  coulomb_mt3(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
 #endif
 
 #else
 
 #ifdef CPP_INVERSION
-      REAL                    ::  coulomb(maxbasm*(maxbasm+1)/2)
+      REAL                    ::  coulomb(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2)
 #else
-      COMPLEX                 ::  coulomb(maxbasm*(maxbasm+1)/2)
+      COMPLEX                 ::  coulomb(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2)
 #endif 
 
 #endif
 
 #if ( defined(CPP_INVERSION) )
       REAL   ,ALLOCATABLE     ::  cprod_vv(:,:,:),cprod_cv(:,:,:), carr3_vv(:,:,:),carr3_cv(:,:,:)
-      REAL                    ::  carr1_v(maxbasm),carr1_c(maxbasm)
+      REAL                    ::  carr1_v(hybrid%maxbasm1),carr1_c(hybrid%maxbasm1)
 #ifdef CPP_IRCOULOMBAPPROX
-      REAL                    ::  coulomb_mtir((maxlcutm+1)**2* , (maxlcutm+1)**2* +maxval(hybrid%ngptm) )
+      REAL                    ::  coulomb_mtir((hybrid%maxlcutm1+1)**2* , (hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm) )
 #else
-      REAL                    ::  coulomb_mtir(((maxlcutm+1)**2* +maxval(hybrid%ngptm))* ((maxlcutm+1)**2* +maxval(hybrid%ngptm)+1)/2 )
+      REAL                    ::  coulomb_mtir(((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm)+1)/2 )
 #endif
 
 #else
       COMPLEX,ALLOCATABLE     ::  cprod_vv(:,:,:),cprod_cv(:,:,:), carr3_vv(:,:,:),carr3_cv(:,:,:)
-      COMPLEX                 ::  carr1_v(maxbasm),carr1_c(maxbasm)
+      COMPLEX                 ::  carr1_v(hybrid%maxbasm1),carr1_c(hybrid%maxbasm1)
 
 #ifdef CPP_IRCOULOMBAPPROX
-      COMPLEX                 ::  coulomb_mtir((maxlcutm+1)**2* , (maxlcutm+1)**2* +maxval(hybrid%ngptm) )
+      COMPLEX                 ::  coulomb_mtir((hybrid%maxlcutm1+1)**2* , (hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm) )
 #else
-      COMPLEX                 ::  coulomb_mtir(((maxlcutm+1)**2* +maxval(hybrid%ngptm))* ((maxlcutm+1)**2* +maxval(hybrid%ngptm)+1)/2 )
+      COMPLEX                 ::  coulomb_mtir(((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm)+1)/2 )
 #endif
 
 #endif
@@ -288,17 +265,17 @@
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
 
 #ifdef CPP_INVERSION
-      irecl_coulomb1 = ( atoms%ntype*(maxlcutm+1)*(maxindxm-1)**2&
-                    +    atoms%nat *(maxlcutm+2)*(2*maxlcutm+1)*(maxindxm-1)&
-                    +    (maxindxm-1)*atoms%nat**2&
-                    +    ((maxlcutm+1)**2*atoms%nat+maxval(hybrid%ngptm))&
-                    *    ((maxlcutm+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *8
+      irecl_coulomb1 = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
+                    +    atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
+                    +    (hybrid%maxindxm1-1)*atoms%nat**2&
+                    +    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
+                    *    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *8
 #else
-      irecl_coulomb1 = ( atoms%ntype*(maxlcutm+1)*(maxindxm-1)**2&
-                     +   atoms%nat *(maxlcutm+2)*(2*maxlcutm+1)*(maxindxm-1)&
-                     +   (maxindxm-1)*atoms%nat**2&
-                     +   ((maxlcutm+1)**2*atoms%nat+maxval(hybrid%ngptm))&
-                     *   ((maxlcutm+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *16
+      irecl_coulomb1 = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
+                     +   atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
+                     +   (hybrid%maxindxm1-1)*atoms%nat**2&
+                     +   ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
+                     *   ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *16
 #endif
       OPEN(unit=676,file='coulomb1',form='unformatted',access='direct',&
            recl=irecl_coulomb1)
@@ -307,9 +284,9 @@
 
       !open direct acces file coulomb/cprod
 #ifdef CPP_INVERSION
-      irecl_coulomb =  maxbasm*(maxbasm+1)*4 !(maxbasm*maxbasm)* 8+maxbasm*8 + 8
+      irecl_coulomb =  hybrid%maxbasm1*(hybrid%maxbasm1+1)*4 !(hybrid%maxbasm1*maxbasm1)* 8+hybrid%maxbasm1*8 + 8
 #else
-      irecl_coulomb =  maxbasm*(maxbasm+1)*8!(maxbasm*maxbasm)*16+maxbasm*8 + 8
+      irecl_coulomb =  hybrid%maxbasm1*(hybrid%maxbasm1+1)*8!(hybrid%maxbasm1*maxbasm1)*16+hybrid%maxbasm1*8 + 8
 #endif
 
       OPEN(unit=677,file='coulomb',form='unformatted',access='direct',&
@@ -324,7 +301,7 @@
 
 
       ! determine package size loop over the occupied bands
-      rdum  = maxbasm*nbands*bytes/1048576.
+      rdum  = hybrid%maxbasm1*hybdat%nbands(nk)*bytes/1048576.
       psize = 1
       DO iband = mnobd,1,-1
         ! ensure that the packages have equal size
@@ -338,14 +315,14 @@
       END DO
 
       IF( psize .ne. mnobd ) THEN
-        WRITE(6,'(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied bands in packages', ' of the size',psize,' (cprod=',rdum*psize,'MB)'
+        WRITE(6,'(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybrid%bands in packages', ' of the size',psize,' (cprod=',rdum*psize,'MB)'
       END IF
 
-      ALLOCATE( cprod_vv(maxbasm,psize,nbands),stat=ok )
+      ALLOCATE( cprod_vv(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
-      ALLOCATE( carr3_vv(maxbasm,psize,nbands),stat=ok )
+      ALLOCATE( carr3_vv(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
-      ALLOCATE( phase_vv(psize,nbands),stat=ok )
+      ALLOCATE( phase_vv(psize,hybdat%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation phase'
       cprod_vv = 0 ; carr3_vv = 0 ; phase_vv = 0
 
@@ -362,8 +339,8 @@
       DO ikpt = iqptmin,iqptmax
         ikpt0 = pointer_EIBZ(ikpt)
 
-        n  = nbasp + hybrid%ngptm(ikpt0)
-        IF( nbasm(ikpt0) .ne. n ) STOP 'error nbasm'
+        n  = hybdat%nbasp + hybrid%ngptm(ikpt0)
+        IF( hybdat%nbasm(ikpt0) .ne. n ) STOP 'error hybdat%nbasm'
         nn = n*(n+1)/2
 
         ! read in coulomb matrix from direct access file coulomb
@@ -399,24 +376,17 @@
 
 #ifdef CPP_IRAPPROX
           CALL wavefproducts_inv(&
-                         1,nbands,dimension,jsp,atoms,&
+                         1,hybdat,dimension,jsp,atoms,&
                          lapw,obsolete,nkpti,kpts,kpts,nkpt_EIBZ,&
-                         nk,ikpt0,nobd,mnobd,hybrid,maxbasm,&
-                         parent,cell,&
-                         lcutm,maxlcutm,maxindxp,&
-                         maxindxm,nindxp,nindxm,&
-                         prodm,prod,gauntarr,nbasp,sym,&
+                         nk,ikpt0,mnobd,hybrid, parent,cell, sym,&
                          time_mt,time_ir,nkqpt,cprod_vv)
 #else
           CALL wavefproducts_inv5(&
-                         1,nbands,ibando,ibando+psize-1,&
+                         1,hybdat,ibando,ibando+psize-1,&
                          dimension,input,jsp,atoms,&
                          lapw,obsolete,nkpti,kpts,kpts,nkpt_EIBZ,&
-                         nk,ikpt0,nobd,mnobd,hybrid,maxbasm,&
-                         parent,cell,&
-                         lcutm,maxlcutm,maxindxp,&
-                         maxindxm,nindxp,nindxm,&
-                         prodm,prod,gauntarr,nbasp,sym,&
+                         nk,ikpt0,mnobd,hybrid,&
+                         parent,cell, sym,&
                          noco,noco,&
                          time_mt,time_ir,nkqpt,cprod_vv)
 #endif
@@ -424,25 +394,22 @@
 #else
 #ifdef CPP_IRAPPROX
           CALL wavefproducts_noinv(&
-                         1,nbands,nk,ikpt0,dimension,jsp,&
-                         cell,atoms,hybrid,nindxm,&
-                         lcutm,maxlcutm,maxindxp,nindxp,gauntarr,&
-                         kpts,maxindxm,&
-                         maxbasm,prod,prodm,mnobd,&
+                         1,hybdat,nk,ikpt0,dimension,jsp,&
+                         cell,atoms,hybrid, 
+                         kpts,&
+                         mnobd,&
                          lapw,sym,&
-                         nobd,nbasp,nkqpt,&
+                         nkqpt,&
                          cprod_vv)
 #else
           CALL wavefproducts_noinv5(&
-                         1,nbands,ibando,ibando+psize-1,&
+                         1,hybdat%nbands(nk),ibando,ibando+psize-1,&
                          nk,ikpt0,dimension,input,jsp, &!jsp,&
-                         cell,atoms,hybrid,nindxm,&
-                         lcutm,maxlcutm,maxindxp,nindxp,gauntarr,&
-                         kpts,maxindxm,&
-                         maxbasm,prod,prodm,mnobd,&
-                         lapw,sym,&
-                         nobd,nbasp,&
-                         noco,&
+                         cell,atoms,hybrid,hybdat, &
+                         kpts,&
+                         mnobd,&
+                         lapw,sym, &
+                         hybdat%nbasm(nk),noco,&
                          nkqpt,cprod_vv)
 #endif
 
@@ -455,14 +422,14 @@
           ! in Fourier space
 #ifndef CPP_NOSPMVEC
           IF ( xcpot%icorr == icorr_hse .OR. xcpot%icorr == icorr_vhse ) THEN
-            iband1  = nobd(nkqpt)
+            iband1  = hybdat%nobd(nkqpt)
             exch_vv = exch_vv + dynamic_hse_adjustment(&
                        atoms%rmsh,atoms%rmt,atoms%dx,atoms%jri,atoms%jmtd,kpts%bk(:,ikpt0),ikpt0,kpts%nkptf,&
-                       cell%bmat,vol,atoms%ntype,atoms%neq,atoms%nat,atoms%taual,lcutm,maxlcutm,&
-                       nindxm,maxindxm,hybrid%gptm,hybrid%ngptm(ikpt0),hybrid%pgptm(:,ikpt0),&
-                       hybrid%gptmd,basm,nbasm(ikpt0),iband1,nbands,nsest,&
+                       cell%bmat,vol,atoms%ntype,atoms%neq,atoms%nat,atoms%taual,hybrid%lcutm1,hybrid%maxlcutm1,&
+                       hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptm,hybrid%ngptm(ikpt0),hybrid%pgptm(:,ikpt0),&
+                       hybrid%gptmd,hybrid%basm1,hybdat%nbasm(ikpt0),iband1,hybdat%nbands(nk),nsest,&
                        ibando,psize,indx_sest,atoms%invsat,sym%invsatnr,mpi%irank,&
-                       cprod_vv(:nbasm(ikpt0),:,:),&
+                       cprod_vv(:hybdat%nbasm(ikpt0),:,:),&
                        wl_iks(:iband1,nkqpt),n_q(ikpt))
           END IF
 #endif
@@ -474,30 +441,30 @@
              STOP "INTERFACE to bra_trafo2"
           !  CALL bra_trafo2(&
           !      carr3_vv(:nbasm(ikpt0),:,:),cprod_vv(:nbasm(ikpt0),:,:),&
-          !      nbasm(ikpt0),psize,nbands,&
+          !      nbasm(ikpt0),psize,nbands(nk),&
           !      kpts(ikpt0),ikpt0(ikpt0),sym,&
-          !      hybrid,cell,maxlcutm,atoms,&
-          !      lcutm,nindxm,maxindxm,nw,obsolete,&
+          !      hybrid,cell,maxlcutm1,atoms,&
+          !      lcutm,nindxm,maxindxm1,nw,obsolete,&
           !      nbasp,&
           !      phase_vv)
 
-            cprod_vv(:nbasm(ikpt0),:,:) = carr3_vv(:nbasm(ikpt0),:,:)
+            cprod_vv(:hybdat%nbasm(ikpt0),:,:) = carr3_vv(:hybdat%nbasm(ikpt0),:,:)
           ELSE
             phase_vv(:,:) = (1d0,0d0)
           END IF
 
           ! calculate exchange matrix at ikpt0
 
-          DO n1=1,nbands
+          DO n1=1,hybdat%nbands(nk)
             DO iband = 1,psize
-              IF( ibando + iband - 1 .gt. nobd(nkqpt) ) CYCLE
+              IF( ibando + iband - 1 .gt. hybdat%nobd(nkqpt) ) CYCLE
               cdum  = wl_iks(ibando+iband-1,nkqpt)&
                     * conjg(phase_vv(iband,n1))/n_q(ikpt)
 
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
               carr1_v(:n) = 0 
-              CALL spmvec(atoms,lcutm,maxlcutm,nindxm,maxindxm,&
-                          nbasm(ikpt0),nbasp,hybrid,ikpt0,kpts,&
+              CALL spmvec(atoms,hybrid,&
+                          hybdat,ikpt0,kpts,&
                           cell,&
                           coulomb_mt1,coulomb_mt2,coulomb_mt3,&
                           coulomb_mtir,cprod_vv(:n,iband,n1),&
@@ -534,12 +501,12 @@
         ierr = 0
         DO rank = 1, isize2-1
           buf_vv = 0
-          CALL MPI_RECV(buf_vv,nbands*nbands,MPI_COMPLEX16,rank,&
+          CALL MPI_RECV(buf_vv,hybdat*nbands(nk),MPI_COMPLEX16,rank,&
                         TAG_SNDRCV_EXCH_VV,comm,MPI_STATUS_IGNORE,ierr)
           exch_vv = exch_vv + buf_vv
         END DO
       ELSE
-        CALL MPI_BSEND(exch_vv,nbands*nbands,MPI_COMPLEX16,0,&
+        CALL MPI_BSEND(exch_vv,hybdat*nbands(nk),MPI_COMPLEX16,0,&
                        TAG_SNDRCV_EXCH_VV,comm,ierr)
       END IF
       IF ( ierr /= 0 ) THEN
@@ -577,13 +544,13 @@
         END IF
         IF( zero_order ) THEN
           CALL dwavefproducts(  &
-                            dcprod,nk,1,nbands,1,nbands,.false., atoms,hybrid,&
-                            cell, nbands,kpts,nkpti,lapw,&
-                            bas1,bas2,dimension,jsp,&
-                            eig_irr,ne_eig)
+                            dcprod,nk,1,hybdat%nbands(nk),1,hybdat%nbands(nk),.false., atoms,hybrid,&
+                            cell,hybdat, kpts,nkpti,lapw,&
+                            dimension,jsp,&
+                            eig_irr )
 
           ! make dcprod hermitian
-          DO n1 = 1,nbands
+          DO n1 = 1,hybdat%nbands(nk)
             DO n2 = 1,n1
               dcprod(n1,n2,:) = (dcprod(n1,n2,:) &
                               - conjg(dcprod(n2,n1,:)))/2   
@@ -595,10 +562,10 @@
             CALL ibs_correction(&
                         nk,atoms,&
                         dimension,input,jsp,&
-                        bas1,bas2,bas1_MT,drbas1_MT,hybrid,&
+                        hybdat,hybrid,&
                         lapw,kpts,nkpti,&
-                        nbands,cell,mnobd,&
-                        sym,kveclo,&
+                        cell,mnobd,&
+                        sym,&
                         proj_ibsc,olap_ibsc)
           END IF
 
@@ -606,7 +573,7 @@
 
 
         occup = .false.
-        DO i=1,ne_eig
+        DO i=1,hybdat%ne_eig(nk)
           IF ( results%ef  .ge. eig_irr(i,nk) ) THEN
             occup(i) = .true.
           ELSE IF ( eig_irr(i,nk) - results%ef .le. 1E-06) THEN
@@ -615,7 +582,7 @@
         END DO
 
 
-        DO n1 = 1,nbands
+        DO n1 = 1,hybdat%nbands(nk)
           DO n2 = 1,nsest(n1)!n1
             nn2 = indx_sest(n2,n1)
             exchcorrect = 0
@@ -635,7 +602,7 @@
                 DO i = 1,3
                   j = i
 
-                  DO iband = 1,nbands
+                  DO iband = 1,hybdat%nbands(nk)
                     IF( occup(iband) ) THEN
                       hessian(i,j) = hessian(i,j) + conjg(dcprod(iband,n1,i)) *dcprod(iband,nn2,j)
                     END IF
@@ -645,7 +612,7 @@
                   ! ibs correction
                   IF( ibs_corr ) THEN 
                     hessian(i,j) = hessian(i,j) - olap_ibsc(i,j,n1,nn2)/vol
-                    DO iband = 1,nbands
+                    DO iband = 1,hybdat%nbands(nk)
                       hessian(i,j) = hessian(i,j) + conjg(proj_ibsc(i,nn2,iband)) * proj_ibsc(j,n1,iband)/vol
                     END DO
                   END IF
@@ -655,7 +622,7 @@
 
                 DO i = 1,3
                   j = i 
-                  DO iband = 1,nbands
+                  DO iband = 1,hybdat%nbands(nk)
                     IF( occup(iband) ) THEN
                       hessian(i,j) = hessian(i,j) + conjg(dcprod(iband,n1,i)) * dcprod(iband,nn2,j)
                     END IF
@@ -733,7 +700,7 @@
 
       ! write exch_vv in mat_ex
       ic = 0
-      DO n1=1,nbands
+      DO n1=1,hybdat%nbands(nk)
         DO n2=1,n1
           ic = ic + 1
           mat_ex(ic) = mat_ex(ic) + exch_vv(n2,n1)

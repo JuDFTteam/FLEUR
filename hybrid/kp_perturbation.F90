@@ -5,10 +5,10 @@
       SUBROUTINE ibs_correction(&
                         nk,atoms,&
                         dimension,input,jsp,&
-                        bas1,bas2,bas1_MT,drbas1_MT,hybrid,&
+                        hybdat,hybrid,&
                         lapw,kpts,nkpti,&
-                        nbands,cell,mnobd,&
-                        sym,kveclo,&
+                        cell,mnobd,&
+                        sym,&
                         proj_ibsc,olap_ibsc)
 
       USE m_sphbes
@@ -20,8 +20,10 @@
       USE m_util
       USE m_types
       IMPLICIT NONE
+
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
+      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -33,7 +35,6 @@
       INTEGER, INTENT(IN)   :: jsp 
       INTEGER, INTENT(IN)   ::  mnobd
       INTEGER, INTENT(IN)   ::  nk  ,nkpti
-      INTEGER, INTENT(IN)   ::  nbands  
       
             
       
@@ -41,16 +42,10 @@
       
       ! - arrays -
       
-      INTEGER, INTENT(IN)   ::  kveclo(atoms%nlotot,nkpti)      
-      
-      REAL   , INTENT(IN)   ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-                                bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-      REAL   , INTENT(IN)   ::  bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-                                drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)   
 
       
       COMPLEX, INTENT(INOUT)::  olap_ibsc(3,3,mnobd,mnobd)
-      COMPLEX, INTENT(INOUT)::  proj_ibsc(3,mnobd,nbands)
+      COMPLEX, INTENT(INOUT)::  proj_ibsc(:,:,:)!(3,mnobd,hybdat%nbands(nk))
       ! - local scalars -
       INTEGER               ::  i,itype,ieq,iatom,iatom1 ,iband,iband1
       INTEGER               ::  iband2,ilo,ibas,ic,ikpt,ikvec,invsfct
@@ -73,7 +68,6 @@
       COMPLEX, PARAMETER    ::  img = (0d0,1d0)
       ! - local arrays -
       INTEGER               ::  lmp_start(atoms%ntype)
-      INTEGER               ::  nindx(0:atoms%lmaxd,atoms%ntype)
       REAL                  ::  alo(atoms%nlod,atoms%ntype),blo(atoms%nlod,atoms%ntype),&
                                 clo(atoms%nlod,atoms%ntype)
       REAL                  ::  u1_lo(atoms%jmtd,atoms%nlod,atoms%ntype),&
@@ -88,10 +82,9 @@
       REAL                  ::  iu1(atoms%jmtd,3,mnobd),iu2(atoms%jmtd,3,mnobd)
       REAL                  ::  rintegrand(atoms%jmtd),iintegrand(atoms%jmtd),&
                                 integrand(atoms%jmtd)
-      REAL   ,ALLOCATABLE   ::  gridf(:,:)
   
       COMPLEX               ::  f(atoms%jmtd,mnobd)
-      COMPLEX               ::  carr(3),carr2(3,nbands)
+      COMPLEX               ::  carr(3),carr2(3,hybdat%nbands(nk))
       COMPLEX               ::  ylm( (atoms%lmaxd+2)**2 )
       COMPLEX,ALLOCATABLE   ::  u1(:,:,:,:,:),u2(:,:,:,:,:)
       COMPLEX,ALLOCATABLE   ::  cmt_lo(:,:,:,:)
@@ -103,21 +96,21 @@
 #endif
 
 
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
+      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       
 
-      bas1_tmp(:,:,0:atoms%lmaxd,:)    = bas1(:,:,0:atoms%lmaxd,:)
-      bas2_tmp(:,:,0:atoms%lmaxd,:)    = bas2(:,:,0:atoms%lmaxd,:)
+      bas1_tmp(:,:,0:atoms%lmaxd,:)    = hybdat%bas1(:,:,0:atoms%lmaxd,:)
+      bas2_tmp(:,:,0:atoms%lmaxd,:)    = hybdat%bas2(:,:,0:atoms%lmaxd,:)
 
-        bas1_MT_tmp(:,0:atoms%lmaxd,:) =   bas1_MT(:,0:atoms%lmaxd,:)
-      drbas1_MT_tmp(:,0:atoms%lmaxd,:) = drbas1_MT(:,0:atoms%lmaxd,:)
+      bas1_MT_tmp(:,0:atoms%lmaxd,:) =   hybdat%bas1_MT(:,0:atoms%lmaxd,:)
+      drbas1_MT_tmp(:,0:atoms%lmaxd,:) = hybdat%drbas1_MT(:,0:atoms%lmaxd,:)
        
-      bas1_tmp(:,:,atoms%lmaxd+1,:)    = bas1(:,:,atoms%lmaxd,:)
-      bas2_tmp(:,:,atoms%lmaxd+1,:)    = bas2(:,:,atoms%lmaxd,:)
+      bas1_tmp(:,:,atoms%lmaxd+1,:)    = hybdat%bas1(:,:,atoms%lmaxd,:)
+      bas2_tmp(:,:,atoms%lmaxd+1,:)    = hybdat%bas2(:,:,atoms%lmaxd,:)
         
-        bas1_MT_tmp(:,atoms%lmaxd+1,:) =   bas1_MT(:,atoms%lmaxd,:)
-      drbas1_MT_tmp(:,atoms%lmaxd+1,:) = drbas1_MT(:,atoms%lmaxd,:)
+      bas1_MT_tmp(:,atoms%lmaxd+1,:) =   hybdat%bas1_MT(:,atoms%lmaxd,:)
+      drbas1_MT_tmp(:,atoms%lmaxd+1,:) = hybdat%drbas1_MT(:,atoms%lmaxd,:)
 
 
       
@@ -136,36 +129,36 @@
       ! with this the local orbitals have a trivial k-dependence
 
       ! compute radial lo matching coefficients
-      nindx = 2
+      hybrid%nindx = 2
       DO itype = 1,atoms%ntype
         DO ilo = 1,atoms%nlo(itype)
           l              = atoms%llo(ilo,itype)
-          nindx(l,itype) = nindx(l,itype) + 1          
-          p              = nindx(l,itype)
+          hybrid%nindx(l,itype) = hybrid%nindx(l,itype) + 1          
+          p              = hybrid%nindx(l,itype)
 
-          ws = -wronskian(bas1_MT(1,l,itype),drbas1_MT(1,l,itype), bas1_MT(2,l,itype),drbas1_MT(2,l,itype) )
+          ws = -wronskian(hybdat%bas1_MT(1,l,itype),hybdat%drbas1_MT(1,l,itype), hybdat%bas1_MT(2,l,itype),hybdat%drbas1_MT(2,l,itype) )
  
-          ka = 1.0/ws*wronskian(bas1_MT(p,l,itype),drbas1_MT(p,l,itype), bas1_MT(2,l,itype),drbas1_MT(2,l,itype))
+          ka = 1.0/ws*wronskian(hybdat%bas1_MT(p,l,itype),hybdat%drbas1_MT(p,l,itype), hybdat%bas1_MT(2,l,itype),hybdat%drbas1_MT(2,l,itype))
 
-          kb = 1.0/ws*wronskian(bas1_MT(1,l,itype),drbas1_MT(1,l,itype), bas1_MT(p,l,itype),drbas1_MT(p,l,itype))
+          kb = 1.0/ws*wronskian(hybdat%bas1_MT(1,l,itype),hybdat%drbas1_MT(1,l,itype), hybdat%bas1_MT(p,l,itype),hybdat%drbas1_MT(p,l,itype))
 
-          integrand    = bas1(:,2,l,itype)*bas1(:,2,l,itype) + bas2(:,2,l,itype)*bas2(:,2,l,itype) 
-          olap_udot    = intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype, gridf)
+          integrand    = hybdat%bas1(:,2,l,itype)*hybdat%bas1(:,2,l,itype) + hybdat%bas2(:,2,l,itype)*hybdat%bas2(:,2,l,itype) 
+          olap_udot    = intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype, hybdat%gridf)
           
-          integrand    = bas1(:,1,l,itype)*bas1(:,p,l,itype) + bas2(:,1,l,itype)*bas2(:,p,l,itype) 
-          olap_uulo    = intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype, gridf)
+          integrand    = hybdat%bas1(:,1,l,itype)*hybdat%bas1(:,p,l,itype) + hybdat%bas2(:,1,l,itype)*hybdat%bas2(:,p,l,itype) 
+          olap_uulo    = intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype, hybdat%gridf)
           
-          integrand    = bas1(:,2,l,itype)*bas1(:,p,l,itype) + bas2(:,2,l,itype)*bas2(:,p,l,itype)
-          olap_udotulo = intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype, gridf)
+          integrand    = hybdat%bas1(:,2,l,itype)*hybdat%bas1(:,p,l,itype) + hybdat%bas2(:,2,l,itype)*hybdat%bas2(:,p,l,itype)
+          olap_udotulo = intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype, hybdat%gridf)
 
           rdum           =  ka**2 + (kb**2)*olap_udot + 1.0 +  2.0*ka*olap_uulo + 2.0*kb*olap_udotulo 
           clo(ilo,itype) = 1.0/sqrt( rdum  )
           alo(ilo,itype) = ka*clo(ilo,itype)
           blo(ilo,itype) = kb*clo(ilo,itype)
           
-          u1_lo(:,ilo,itype) =  alo(ilo,itype)*bas1(:,1,l,itype) +  blo(ilo,itype)*bas1(:,2,l,itype) +  clo(ilo,itype)*bas1(:,p,l,itype)
+          u1_lo(:,ilo,itype) =  alo(ilo,itype)*hybdat%bas1(:,1,l,itype) +  blo(ilo,itype)*hybdat%bas1(:,2,l,itype) +  clo(ilo,itype)*hybdat%bas1(:,p,l,itype)
 
-          u2_lo(:,ilo,itype) =  alo(ilo,itype)*bas2(:,1,l,itype) +  blo(ilo,itype)*bas2(:,2,l,itype) +  clo(ilo,itype)*bas2(:,p,l,itype)
+          u2_lo(:,ilo,itype) =  alo(ilo,itype)*hybdat%bas2(:,1,l,itype) +  blo(ilo,itype)*hybdat%bas2(:,2,l,itype) +  clo(ilo,itype)*hybdat%bas2(:,p,l,itype)
          END DO
       END DO
 
@@ -197,7 +190,7 @@
                 ic    = ic   + 1
                 ibas  = ibas + 1
                 work  = z(ibas,:)
-                kvec  = kpts%bk(:,nk) +(/ lapw%k1(kveclo(ic,nk),jsp), lapw%k2(kveclo(ic,nk),jsp), lapw%k3(kveclo(ic,nk),jsp)/)
+                kvec  = kpts%bk(:,nk) +(/ lapw%k1(hybdat%kveclo_eig(ic,nk),jsp), lapw%k2(hybdat%kveclo_eig(ic,nk),jsp), lapw%k3(hybdat%kveclo_eig(ic,nk),jsp)/)
                 
                phase=exp(img*tpi_const*dot_product(atoms%taual(:,iatom),kvec))
                 cdum1 = cdum*phase
@@ -208,7 +201,7 @@
                 DO M = -l,l
                   lm   = lm + 1
                   cdum2 = cdum1*conjg(ylm(lm))
-                  DO iband = 1,nbands
+                  DO iband = 1,hybdat%nbands(nk)
                     cmt_lo(iband,M,ilo,iatom ) = cmt_lo(iband,M,ilo,iatom)  + cdum2*work(iband)
                     IF( invsfct .eq. 2 ) THEN
                       ! the factor (-1)**l is necessary as we do not calculate
@@ -284,7 +277,7 @@
                   cdum  = (-1)**(p+1)*enum/denom
 
 
-                  DO iband = 1,nbands
+                  DO iband = 1,hybdat%nbands(nk)
                     cmt_apw(iband,lmp,iatom) = cmt_apw(iband,lmp,iatom) + cdum*work(iband)
                   END DO
 
@@ -302,9 +295,9 @@
       ! construct radial functions (complex) for the first order 
       ! incomplete basis set correction 
       
-      ALLOCATE( u1(atoms%jmtd,3,mnobd,(atoms%lmaxd+1)**2,atoms%nat),stat=ok )!nbands
+      ALLOCATE( u1(atoms%jmtd,3,mnobd,(atoms%lmaxd+1)**2,atoms%nat),stat=ok )!hybdat%nbands
       IF( ok .ne. 0 ) STOP 'kp_perturbation: failure allocation u1' 
-      ALLOCATE( u2(atoms%jmtd,3,mnobd,(atoms%lmaxd+1)**2,atoms%nat),stat=ok )!nbands
+      ALLOCATE( u2(atoms%jmtd,3,mnobd,(atoms%lmaxd+1)**2,atoms%nat),stat=ok )!hybdat%nbands
       IF( ok .ne. 0 ) STOP 'kp_perturbation: failure allocation u2' 
       u1 = 0; u2 = 0
       
@@ -325,13 +318,13 @@
                 lmp2  = 2*l2**2 + p1 
                 DO m2 = -l2,l2                  
                   carr = gauntvec(l1,m1,l2,m2,atoms)
-                  DO iband = 1,mnobd! nbands
+                  DO iband = 1,mnobd! hybdat%nbands
                     carr2(1:3,iband) = carr2(1:3,iband) + carr*cmt_apw(iband,lmp2,iatom)
                   END DO
                   lmp2 = lmp2 + 2
                 END DO
                   
-                DO iband = 1,mnobd! nbands
+                DO iband = 1,mnobd! hybdat%nbands
                   DO i = 1,3
                     DO ig = 1,atoms%jri(itype)
                       ! the r factor is already included in bas1
@@ -347,13 +340,13 @@
                   lmp2 = 2*l2**2 + p1
                   DO m2 = -l2,l2
                     carr = gauntvec(l1,m1,l2,m2,atoms)
-                    DO iband = 1,mnobd! nbands
+                    DO iband = 1,mnobd! hybdat%nbands
                       carr2(1:3,iband) = carr2(1:3,iband) + carr*cmt_apw(iband,lmp2,iatom)
                     END DO
                     lmp2 = lmp2 + 2
                   END DO
                   
-                  DO iband = 1,mnobd! nbands
+                  DO iband = 1,mnobd! hybdat%nbands
                     DO i = 1,3
                       DO ig = 1,atoms%jri(itype)
                         ! the r factor is already included in bas1
@@ -372,14 +365,14 @@
                   carr = gauntvec(l1,m1,l2,m2,atoms)
                   DO p2 = 1,2
                     lmp2 = lmp2 + 1
-                    rdum = w(p1,l1,p2,l2,itype,bas1_MT_tmp, drbas1_MT_tmp,atoms,hybrid)
-                    DO iband = 1,mnobd! nbands
+                    rdum = w(p1,l1,p2,l2,itype,bas1_MT_tmp, drbas1_MT_tmp,atoms%rmt)
+                    DO iband = 1,mnobd! hybdat%nbands
                       carr2(1:3,iband) = carr2(1:3,iband) + img*carr*rdum*cmt_apw(iband,lmp2,iatom)
                     END DO
                   END DO
                 END DO
                   
-                DO iband = 1,mnobd! nbands
+                DO iband = 1,mnobd! hybdat%nbands
                   DO i = 1,3
                     DO ig = 1,atoms%jri(itype)
                       u1(ig,i,iband,lm1,iatom)= u1(ig,i,iband,lm1,iatom) + bas1_tmp(ig,p1,l1,itype) * carr2(i,iband)/atoms%rmsh(ig,itype)
@@ -396,14 +389,14 @@
                     carr = gauntvec(l1,m1,l2,m2,atoms)
                     DO p2 = 1,2
                       lmp2 = lmp2 + 1
-                      rdum = w(p1,l1,p2,l2,itype,bas1_MT_tmp, drbas1_MT_tmp,atoms,hybrid)
-                      DO iband = 1,mnobd! nbands
+                      rdum = w(p1,l1,p2,l2,itype,bas1_MT_tmp, drbas1_MT_tmp,atoms%rmt)
+                      DO iband = 1,mnobd! hybdat%nbands
                         carr2(1:3,iband) = carr2(1:3,iband) + img*carr*rdum*cmt_apw(iband,lmp2,iatom)
                       END DO
                     END DO
                   END DO
                   
-                  DO iband = 1,mnobd! nbands
+                  DO iband = 1,mnobd! hybdat%nbands
                     DO i = 1,3
                       DO ig = 1,atoms%jri(itype)
                         u1(ig,i,iband,lm1,iatom) = u1(ig,i,iband,lm1,iatom) &
@@ -427,12 +420,12 @@
       iatom = 0
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
-          nindx = 2
+          hybrid%nindx = 2
           iatom = iatom + 1
           DO ilo = 1,atoms%nlo(itype)
             l1              = atoms%llo(ilo,itype)
-            nindx(l1,itype) = nindx(l1,itype) + 1
-            p1              = nindx(l1,itype)
+            hybrid%nindx(l1,itype) = hybrid%nindx(l1,itype) + 1
+            p1              = hybrid%nindx(l1,itype)
                                                   
             l2  = l1 + 1
             lm2 = l2**2
@@ -513,22 +506,22 @@
               DO p = 1,2
                 lmp = lmp + 1
                 
-                DO iband = 1,mnobd! nbands
+                DO iband = 1,mnobd! hybdat%nbands
                   DO i = 1,3
                     
-                    rintegrand = atoms%rmsh(:,itype)*(bas1(:,p,l,itype)*ru1(:,i,iband) +bas2(:,p,l,itype)*ru2(:,i,iband))
+                    rintegrand = atoms%rmsh(:,itype)*(hybdat%bas1(:,p,l,itype)*ru1(:,i,iband) +hybdat%bas2(:,p,l,itype)*ru2(:,i,iband))
 
-                    iintegrand = atoms%rmsh(:,itype)*(bas1(:,p,l,itype)*iu1(:,i,iband) +bas2(:,p,l,itype)*iu2(:,i,iband))
+                    iintegrand = atoms%rmsh(:,itype)*(hybdat%bas1(:,p,l,itype)*iu1(:,i,iband) +hybdat%bas2(:,p,l,itype)*iu2(:,i,iband))
                     
-                    carr2(i,iband)=     intgrf(rintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,gridf)&
-                                  + img*intgrf(iintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,gridf)
+                    carr2(i,iband)=     intgrf(rintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,hybdat%gridf)&
+                                  + img*intgrf(iintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,hybdat%gridf)
   
                   END DO
                 END DO
                 
-                DO iband1 = 1,nbands
+                DO iband1 = 1,hybdat%nbands(nk)
                   cdum = conjg(cmt_apw(iband1,lmp,iatom))
-                  DO iband2 = 1,mnobd! nbands
+                  DO iband2 = 1,mnobd! hybdat%nbands
                     proj_ibsc(1:3,iband2,iband1)= proj_ibsc(1:3,iband2,iband1)+cdum*carr2(1:3,iband2)
                   END DO
                 END DO
@@ -554,22 +547,22 @@
               ru2 = real( u2(:,:,:,lm,iatom) )
               iu2 = aimag( u2(:,:,:,lm,iatom) )
               
-              DO iband = 1,mnobd! nbands
+              DO iband = 1,mnobd! hybdat%nbands
                 DO i = 1,3
                     
                   rintegrand = atoms%rmsh(:,itype)*(u1_lo(:,ilo,itype)*ru1(:,i,iband) +u2_lo(:,ilo,itype)*ru2(:,i,iband) )
 
                   iintegrand = atoms%rmsh(:,itype)*(u1_lo(:,ilo,itype)*iu1(:,i,iband) +u2_lo(:,ilo,itype)*iu2(:,i,iband) )
                     
-                  carr2(i,iband) =     intgrf(rintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,gridf)&
-                                 + img*intgrf(iintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,gridf)
+                  carr2(i,iband) =     intgrf(rintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,hybdat%gridf)&
+                                 + img*intgrf(iintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,hybdat%gridf)
   
                 END DO
               END DO
               
-              DO iband1 = 1,nbands
+              DO iband1 = 1,hybdat%nbands(nk)
                 cdum = conjg(cmt_lo(iband1,M,ilo,iatom))
-                DO iband2 = 1,mnobd! nbands
+                DO iband2 = 1,mnobd! hybdat%nbands
                   proj_ibsc(1:3,iband2,iband1) = proj_ibsc(1:3,iband2,iband1) + cdum*carr2(1:3,iband2)
                 END DO
               END DO
@@ -598,7 +591,7 @@
               ru2 = real( u2(:,:,:,lm,iatom) )
               iu2 = aimag( u2(:,:,:,lm,iatom) )
               
-              DO iband1 = 1,mnobd ! nbands
+              DO iband1 = 1,mnobd ! hybdat%nbands
                 DO iband2 = 1,mnobd!iband1 
                   DO i = 1,3
                     DO j = 1,3
@@ -610,8 +603,8 @@
                                     - iu1(:,i,iband1)*ru1(:,j,iband2) - iu2(:,i,iband1)*ru2(:,j,iband2) )
                   
                       olap_ibsc(i,j,iband2,iband1) = olap_ibsc(i,j,iband2,iband1) &
-                    +     intgrf(rintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,gridf)&
-                    + img*intgrf(iintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,gridf)
+                    +     intgrf(rintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,hybdat%gridf)&
+                    + img*intgrf(iintegrand,atoms%jri,atoms%jmtd,atoms%rmsh, atoms%dx,atoms%ntype,itype,hybdat%gridf)
   
                     END DO
                   END DO
@@ -666,16 +659,14 @@
 
       END FUNCTION gauntvec
 
-      FUNCTION w(p1,l1,p2,l2,itype,bas1_MT,drbas1_MT,&
-                 atoms,hybrid)
+      FUNCTION w(p1,l1,p2,l2,itype,bas1_mt,drbas1_mt,&
+                 rmt)
         USE m_types
         IMPLICIT NONE
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_atoms),INTENT(IN)   :: atoms
-      INTEGER , INTENT(IN)  ::  p1,l1,p2,l2
-      INTEGER , INTENT(IN)  ::  itype 
-      REAL    , INTENT(IN)  ::    bas1_MT(hybrid%maxindx,0:atoms%lmaxd+1,atoms%ntype)
-      REAL    , INTENT(IN)  ::  drbas1_MT(hybrid%maxindx,0:atoms%lmaxd+1,atoms%ntype)
+
+      INTEGER , INTENT(IN)       ::  p1,l1,p2,l2
+      INTEGER , INTENT(IN)       ::  itype
+      REAL,INTENT(IN)            :: rmt(:),bas1_mt(:,0:,:),drbas1_mt(:,0:,:)
       
       REAL                  ::  w
       
@@ -688,7 +679,7 @@
 
       p = p1 + (-1)**(p1-1)
       
-      enum  = bas1_MT(p,l1,itype)*bas1_MT(p2,l2,itype) + atoms%rmt(itype)*wronskian(  bas1_MT(p ,l1,itype),&
+      enum  = bas1_MT(p,l1,itype)*bas1_MT(p2,l2,itype) + rmt(itype)*wronskian(  bas1_MT(p ,l1,itype),&
                                    drbas1_MT(p ,l1,itype), bas1_MT(p2,l2,itype), drbas1_MT(p2,l2,itype) )
       
       w = (-1)**(p1+1)*enum/denom
@@ -730,13 +721,15 @@
                            dcprod,nk,bandi1,bandf1,bandi2,bandf2,lwrite,&
                            atoms,hybrid,&
                            cell,&
-                           nbands,kpts,nkpti,lapw,&
-                           bas1,bas2,dimension,jsp,&
-                           eig_irr,ne_eig)
+                           hybdat,kpts,nkpti,lapw,&
+                           dimension,jsp,&
+                           eig_irr)
 
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
+
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
 
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
@@ -747,15 +740,12 @@
 
 !     - scalars -
       INTEGER,INTENT(IN)      ::  nk,bandi1,bandf1,bandi2,bandf2
-      INTEGER,INTENT(IN)      :: nbands ,nkpti
-      INTEGER,INTENT(IN)      ::  ne_eig
+      INTEGER,INTENT(IN)      :: nkpti
       INTEGER,INTENT(IN)      :: jsp   
 
 
 !     - arrays -
 
-      REAL,INTENT(IN)         ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-                                  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
       REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,nkpti)
       COMPLEX,INTENT(OUT)     ::  dcprod(bandi2:bandf2,bandi1:bandf1,3)
 
@@ -772,8 +762,8 @@
                      dcprod,nk,bandi1,bandf1,bandi2,bandf2,&
                      atoms,hybrid,&
                      cell,&
-                     nbands,kpts,lapw,&
-                     bas1,bas2,dimension,jsp,ne_eig)
+                     hybdat,kpts,lapw,&
+                     dimension,jsp)
 
 
       !                                                __
@@ -810,8 +800,8 @@
                       momentum,nk,bandi1,bandf1,bandi2,bandf2,&
                       atoms,hybrid,&
                       cell,&
-                      nbands,kpts,lapw,&
-                      bas1,bas2,dimension,jsp,ne_eig)
+                      hybdat,kpts,lapw,&
+                      dimension,jsp)
 
 
 
@@ -822,6 +812,8 @@
       USE m_constants
       USE m_types
       IMPLICIT NONE
+
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -832,15 +824,10 @@
 !     - scalars -
       INTEGER,INTENT(IN)      ::  bandi1,bandf1,bandi2,bandf2
       INTEGER,INTENT(IN)      :: nk 
-      INTEGER,INTENT(IN)      ::  nbands   
       INTEGER,INTENT(IN)      :: jsp
-      INTEGER,INTENT(IN)      :: ne_eig
 
 
 !     - arrays -
-
-      REAL                    ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-                                  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
 
 #if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
       COMPLEX                 ::  z(dimension%nbasfcn,dimension%neigd)
@@ -863,7 +850,6 @@
       REAL                    ::  qmat1(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype), dbas1(atoms%jmtd)
       REAL                    ::  qmat2(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype), dbas2(atoms%jmtd)
       REAL                    ::  qg(lapw%nv(jsp),3)
-      REAL,ALLOCATABLE        ::  gridf(:,:)
 
       COMPLEX                 ::  hlp(3,3)
       COMPLEX                 ::  cvec1(hybrid%maxlmindx),cvec2(hybrid%maxlmindx), cvec3(hybrid%maxlmindx)
@@ -898,7 +884,7 @@
       CLOSE(778)
 
 
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
+      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       gpt(1,1:lapw%nv(jsp)) = lapw%k1(1:lapw%nv(jsp),jsp)
       gpt(2,1:lapw%nv(jsp)) = lapw%k2(1:lapw%nv(jsp),jsp)
@@ -928,19 +914,19 @@
         DO l = 0,atoms%lmax(itype)
           DO n2 = 1,hybrid%nindx(l,itype)
             !ic = ic + 1
-            CALL derivative(dbas1,bas1(:,n2,l,itype),atoms, itype)
-            dbas1 = dbas1 - bas1(:,n2,l,itype)/atoms%rmsh(:,itype)
+            CALL derivative(dbas1,hybdat%bas1(:,n2,l,itype),atoms, itype)
+            dbas1 = dbas1 - hybdat%bas1(:,n2,l,itype)/atoms%rmsh(:,itype)
 
-            CALL derivative(dbas2,bas2(:,n2,l,itype),atoms, itype)
-            dbas2 = dbas2 - bas2(:,n2,l,itype)/atoms%rmsh(:,itype)
+            CALL derivative(dbas2,hybdat%bas2(:,n2,l,itype),atoms, itype)
+            dbas2 = dbas2 - hybdat%bas2(:,n2,l,itype)/atoms%rmsh(:,itype)
             
             IF(l.ne.0) THEN
               DO n1 = 1,hybrid%nindx(l-1,itype)
                 ic = ic + 1
-                qmat1(n1,n2,l,itype) = intgrf( dbas1(:) * bas1(:,n1,l-1,itype) +&
-                          dbas2(:) * bas2(:,n1,l-1,itype) , atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf )&
-                + intgrf( ( bas1(:,n2,l,itype) * bas1(:,n1,l-1,itype) + bas2(:,n2,l,itype) * bas2(:,n1,l-1,itype) ) &
-                          / atoms%rmsh(:,itype) , atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf ) * (l+1)
+                qmat1(n1,n2,l,itype) = intgrf( dbas1(:) * hybdat%bas1(:,n1,l-1,itype) +&
+                          dbas2(:) * hybdat%bas2(:,n1,l-1,itype) , atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf )&
+                + intgrf( ( hybdat%bas1(:,n2,l,itype) * hybdat%bas1(:,n1,l-1,itype) + hybdat%bas2(:,n2,l,itype) * hybdat%bas2(:,n1,l-1,itype) ) &
+                          / atoms%rmsh(:,itype) , atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf ) * (l+1)
 
               END DO
             END IF
@@ -948,10 +934,10 @@
               DO n1 = 1,hybrid%nindx(l+1,itype)
 
 
-                qmat2(n1,n2,l,itype) = intgrf( dbas1(:) * bas1(:,n1,l+1,itype) + dbas2(:) * bas2(:,n1,l+1,itype) , &
-                          atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf )&
-                - intgrf( ( bas1(:,n2,l,itype) * bas1(:,n1,l+1,itype) + bas2(:,n2,l,itype) * bas2(:,n1,l+1,itype) ) &
-                          / atoms%rmsh(:,itype) , atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf ) * l
+                qmat2(n1,n2,l,itype) = intgrf( dbas1(:) * hybdat%bas1(:,n1,l+1,itype) + dbas2(:) * hybdat%bas2(:,n1,l+1,itype) , &
+                          atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf )&
+                - intgrf( ( hybdat%bas1(:,n2,l,itype) * hybdat%bas1(:,n1,l+1,itype) + hybdat%bas2(:,n2,l,itype) * hybdat%bas2(:,n1,l+1,itype) ) &
+                          / atoms%rmsh(:,itype) , atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf ) * l
 
 
               END DO

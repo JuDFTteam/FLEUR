@@ -2,18 +2,19 @@
 
       CONTAINS
 
-      SUBROUTINE checkolap(atoms,lmaxc,lmaxcd,nindxc,maxindxc,&
-     &                  core1,core2,hybrid,&
-     &                  bas1,bas2,nkpti,kpts,&
+      SUBROUTINE checkolap(atoms,hybdat,&
+     &                  hybrid,&
+     &                  nkpti,kpts,&
      &                  dimension,mpi,irank2,skip_kpt,&
      &                  input,sym,noco,&
-     &                  cell,lapw,jsp,&
-     &                  maxbands,nbands)
+     &                  cell,lapw,jsp)
       USE m_util     , ONLY: intgrf,intgrf_init,chr,sphbessel,harmonicsr
       USE m_constants
       USE m_apws
       USE m_types
       IMPLICIT NONE
+
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
 
       TYPE(t_mpi),INTENT(IN)         :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -28,21 +29,13 @@
 
       ! - scalars -
       INTEGER, INTENT(IN)     :: jsp
-      INTEGER, INTENT(IN)     ::  lmaxcd 
-      INTEGER, INTENT(IN)     ::  maxindxc ,maxbands
       INTEGER, INTENT(IN)     ::  nkpti 
 
 
       ! - arrays -
-      INTEGER, INTENT(IN)     ::  lmaxc(atoms%ntype)
-      INTEGER, INTENT(IN)     ::  nindxc(0:lmaxcd,atoms%ntype)
-      INTEGER, INTENT(IN)     ::  nbands(nkpti)
       INTEGER, INTENT(IN)     ::  irank2(nkpti)
 
-      REAL   , INTENT(IN)     ::  bas1 (atoms%jmtd,hybrid%maxindx ,0:atoms%lmaxd ,atoms%ntype),&
-     &                            bas2 (atoms%jmtd,hybrid%maxindx ,0:atoms%lmaxd ,atoms%ntype)
-      REAL   , INTENT(IN)     ::  core1(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype),&
-     &                            core2(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype)
+   
       LOGICAL, INTENT(IN)     ::  skip_kpt(nkpti)
 
       ! - local scalars -
@@ -68,9 +61,8 @@
       REAL                    ::  q(3)
       REAL                    ::  integrand(atoms%jmtd)
       REAL                    ::  bkpt(3) 
-      REAL                    ::  rarr(maxbands)
+      REAL                    ::  rarr(maxval(hybdat%nbands))
       REAL                    ::  rtaual(3)
-      REAL    , ALLOCATABLE   ::  gridf(:,:)
       REAL    , ALLOCATABLE   ::  olapcb(:)
       REAL    , ALLOCATABLE   :: olapcv_avg(:,:,:,:),olapcv_max(:,:,:,:)
 #ifdef CPP_INVERSION
@@ -98,7 +90,7 @@
       cmt = 0
     
       ! initialize gridf
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
+      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       ! read in cmt
       irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
@@ -116,15 +108,15 @@
       DO itype=1,atoms%ntype
         IF(atoms%ntype.gt.1 .AND. mpi%irank==0) &
      &     WRITE(6,'(A,I3)') ' Atom type',itype
-        DO l=0,lmaxc(itype)
-          DO i=1,nindxc(l,itype)
+        DO l=0,hybdat%lmaxc(itype)
+          DO i=1,hybdat%nindxc(l,itype)
             IF ( mpi%irank == 0 )&
      &        WRITE(6,'(1x,I1,A,2X)',advance='no') i+l,lchar(l)
             DO j=1,i
-              integrand =  core1(:,i,l,itype)*core1(:,j,l,itype)&
-     &                  +  core2(:,i,l,itype)*core2(:,j,l,itype)
+              integrand =  hybdat%core1(:,i,l,itype)*hybdat%core1(:,j,l,itype)&
+     &                  +  hybdat%core2(:,i,l,itype)*hybdat%core2(:,j,l,itype)
               IF ( mpi%irank == 0 ) WRITE(6,'(F10.6)', advance='no')&
-     &           intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+     &           intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf)
             END DO
             IF ( mpi%irank == 0 ) WRITE(6,*)
           END DO 
@@ -132,29 +124,29 @@
       END DO
 
       IF ( mpi%irank == 0 ) WRITE(6,'(/A)') ' Overlap <core|basis>'
-      ALLOCATE( olapcb(hybrid%maxindx),olapcv(maxbands,nkpti),&
-     &          olapcv_avg(  -lmaxcd:lmaxcd,maxindxc,0:lmaxcd,atoms%ntype),&
-     &          olapcv_max(  -lmaxcd:lmaxcd,maxindxc,0:lmaxcd,atoms%ntype),&
-     &          olapcv_loc(2,-lmaxcd:lmaxcd,maxindxc,0:lmaxcd,atoms%ntype) )
+      ALLOCATE( olapcb(hybrid%maxindx),olapcv(maxval(hybdat%nbands),nkpti),&
+     &          olapcv_avg(  -hybdat%lmaxcd:hybdat%lmaxcd,hybdat%maxindxc,0:hybdat%lmaxcd,atoms%ntype),&
+     &          olapcv_max(  -hybdat%lmaxcd:hybdat%lmaxcd,hybdat%maxindxc,0:hybdat%lmaxcd,atoms%ntype),&
+     &          olapcv_loc(2,-hybdat%lmaxcd:hybdat%lmaxcd,hybdat%maxindxc,0:hybdat%lmaxcd,atoms%ntype) )
 
       DO itype=1,atoms%ntype
         IF(atoms%ntype.gt.1 .AND. mpi%irank==0) &
      &     WRITE(6,'(A,I3)') ' Atom type',itype
-        DO l=0,lmaxc(itype)
+        DO l=0,hybdat%lmaxc(itype)
           IF(l.gt.atoms%lmax(itype)) EXIT ! very improbable case
           IF ( mpi%irank == 0 ) &
      &        WRITE(6,"(9X,'u(',A,')',4X,'udot(',A,')',:,3X,'ulo(',A,"//&
      &                "') ...')") (lchar(l),i=1,min(3,hybrid%nindx(l,itype)))
-          DO i=1,nindxc(l,itype)
+          DO i=1,hybdat%nindxc(l,itype)
             IF ( mpi%irank == 0 )&
      &        WRITE(6,'(1x,I1,A,2X)',advance='no') i+l,lchar(l)
             DO j=1,hybrid%nindx(l,itype)
 
-              integrand = core1(:,i,l,itype)*bas1(:,j,l,itype)&
-     &                  + core2(:,i,l,itype)*bas2(:,j,l,itype)
+              integrand = hybdat%core1(:,i,l,itype)*hybdat%bas1(:,j,l,itype)&
+     &                  + hybdat%core2(:,i,l,itype)*hybdat%bas2(:,j,l,itype)
 
               olapcb(j) = &
-     &              intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+     &              intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf)
 
               IF ( mpi%irank == 0 )&
      &          WRITE(6,'(F10.6)',advance='no') olapcb(j)
@@ -167,13 +159,13 @@
               DO j=1,hybrid%nindx(l,itype)
                 lm = lm + 1
                 olapcv(:,:) = olapcv(:,:) + &
-     &                        olapcb(j)*cmt(:maxbands,lm,iatom,:nkpti)
+     &                        olapcb(j)*cmt(:maxval(hybdat%nbands),lm,iatom,:nkpti)
               END DO
               rdum                      = sum    ( abs(olapcv(:,:))**2 )
               rdum1                     = maxval ( abs(olapcv(:,:))    )
               iarr                      = maxloc ( abs(olapcv(:,:))    )
               olapcv_avg(  m,i,l,itype) = &
-     &                sqrt( rdum / nkpti / sum(nbands(:nkpti)) * nkpti )
+     &                sqrt( rdum / nkpti / sum(hybdat%nbands(:nkpti)) * nkpti )
               olapcv_max(  m,i,l,itype) = rdum1
               olapcv_loc(:,m,i,l,itype) = iarr
             END DO
@@ -187,8 +179,8 @@
         WRITE(6,'(/A)') ' Average overlap <core|val>'
         DO itype=1,atoms%ntype
           IF(atoms%ntype.gt.1) write(6,'(A,I3)') ' Atom type',itype
-          DO l=0,lmaxc(itype)
-            DO i=1,nindxc(l,itype)
+          DO l=0,hybdat%lmaxc(itype)
+            DO i=1,hybdat%nindxc(l,itype)
               WRITE(6,'(1x,I1,A,2X)',advance='no') i+l,lchar(l)
               WRITE(6,'('//chr(2*l+1)//'F10.6)') &
      &                                        olapcv_avg(-l:l,i,l,itype)
@@ -199,8 +191,8 @@
         WRITE(6,'(/A)') ' Maximum overlap <core|val> at (band/kpoint)'
         DO itype=1,atoms%ntype
           IF(atoms%ntype.gt.1) write(6,'(A,I3)') ' Atom type',itype
-          DO l=0,lmaxc(itype)
-            DO i=1,nindxc(l,itype)
+          DO l=0,hybdat%lmaxc(itype)
+            DO i=1,hybdat%nindxc(l,itype)
               WRITE(6,'(1x,I1,A,2X)',advance='no') i+l,lchar(l)
               WRITE(6,'('//chr(2*l+1)//&
      &                 '(F10.6,'' ('',I3.3,''/'',I4.3,'')''))')&
@@ -231,11 +223,11 @@
               END SELECT
             END IF
             DO j=1,i
-              integrand = bas1(:,i,l,itype)*bas1(:,j,l,itype)&
-     &                  + bas2(:,i,l,itype)*bas2(:,j,l,itype)
+              integrand = hybdat%bas1(:,i,l,itype)*hybdat%bas1(:,j,l,itype)&
+     &                  + hybdat%bas2(:,i,l,itype)*hybdat%bas2(:,j,l,itype)
 
               IF ( mpi%irank == 0 ) WRITE(6,'(F10.6)',advance='no')&
-     &              intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+     &              intgrf(integrand,atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf)
             END DO
             IF ( mpi%irank == 0 ) WRITE(6,*)
           END DO
@@ -246,9 +238,9 @@
 
       IF ( mpi%irank == 0 ) WRITE(6,'(/A)') &
      &          'Mismatch of wave functions at the MT-sphere boundaries'
-      ALLOCATE (carr1(maxbands,(atoms%lmaxd+1)**2))
-      ALLOCATE (carr2(maxbands,(atoms%lmaxd+1)**2))
-      ALLOCATE (carr3(maxbands,(atoms%lmaxd+1)**2))
+      ALLOCATE (carr1(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
+      ALLOCATE (carr2(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
+      ALLOCATE (carr3(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
 
 #ifdef CPP_INVERSION
       irecl_z   =  dimension%nbasfcn*dimension%neigd*8
@@ -302,7 +294,7 @@
                 cdum = 4*pi_const*img**l/sqrt(cell%omtil) * sphbes(l) * cexp
                 DO m = -l,l
                   lm = lm + 1
-                  DO iband = 1,nbands(ikpt)
+                  DO iband = 1,hybdat%nbands(ikpt)
                     carr2(iband,lm) = carr2(iband,lm) + cdum * z(igpt,iband,ikpt) * y(lm)
                   END DO
                 END DO
@@ -317,8 +309,8 @@
                 lm = lm + 1
                 DO n = 1,hybrid%nindx(l,itype)
                   lm1  = lm1 + 1
-                  rdum = bas1(atoms%jri(itype),n,l,itype) / atoms%rmt(itype)
-                  DO iband = 1,nbands(ikpt)
+                  rdum = hybdat%bas1(atoms%jri(itype),n,l,itype) / atoms%rmt(itype)
+                  DO iband = 1,hybdat%nbands(ikpt)
                     carr3(iband,lm) = carr3(iband,lm) + cmt(iband,lm1,iatom,ikpt) * rdum
                   END DO
                 END DO

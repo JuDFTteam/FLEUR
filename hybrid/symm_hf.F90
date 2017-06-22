@@ -16,11 +16,10 @@
       CONTAINS
 
       SUBROUTINE symm_hf(kpts,nkpti,nk,sym,&
-     &                   dimension,ne_eig,eig_irr,nbands,&
-     &                   atoms,hybrid,bas1,bas2,cell,&
+     &                   dimension,hybdat,eig_irr,&
+     &                   atoms,hybrid,cell,&
      &                   lapw,jsp,&
      &                   gpt,&
-     &                   lmaxcd,&
      &                   mpi,irank2,&
      &                   nsymop,psym,nkpt_EIBZ,n_q,parent,&
      &                   symop,degenerat,pointer_EIBZ,maxndb,nddb,&
@@ -34,6 +33,8 @@
     USE m_types
       IMPLICIT NONE
 
+      TYPE(t_hybdat),INTENT(IN)   :: hybdat
+
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
@@ -44,9 +45,8 @@
       TYPE(t_lapw),INTENT(IN)   :: lapw
 
 !     - scalars -
-      INTEGER,INTENT(IN)              :: nkpti  ,nk,ne_eig,nbands
+      INTEGER,INTENT(IN)              :: nkpti  ,nk  
       INTEGER,INTENT(IN)              :: jsp
-      INTEGER,INTENT(IN)              :: lmaxcd
       INTEGER,INTENT(IN)              :: irank2
       INTEGER,INTENT(OUT)             :: nkpt_EIBZ
       INTEGER,INTENT(OUT)             :: nsymop
@@ -56,14 +56,12 @@
       INTEGER,INTENT(IN)              :: gpt(3,lapw%nv(jsp))
       INTEGER,INTENT(OUT)             :: parent(kpts%nkpt)
       INTEGER,INTENT(OUT)             :: symop(kpts%nkpt)
-      INTEGER,INTENT(INOUT)           :: degenerat(ne_eig)
-      INTEGER,INTENT(OUT)             :: nsest(nbands), indx_sest(nbands,nbands)  
+      INTEGER,INTENT(INOUT)           :: degenerat(hybdat%ne_eig(nk))
+      INTEGER,INTENT(OUT)             :: nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))  
       INTEGER,ALLOCATABLE,INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER,ALLOCATABLE,INTENT(OUT) :: psym(:),n_q(:)      
 
       REAL,INTENT(IN)                 :: eig_irr(dimension%neigd,nkpti)
-      REAL,INTENT(IN)               :: bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),&
-     &                                 bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
       COMPLEX,ALLOCATABLE,INTENT(OUT) :: rep_c(:,:,:,:,:)
 
 !     - local scalars -
@@ -91,7 +89,6 @@
       
       REAL                            :: rotkpt(3),g(3)
       REAL   ,ALLOCATABLE             :: olapmt(:,:,:,:)
-      REAL   ,ALLOCATABLE             :: gridf(:,:)
 
       COMPLEX                         :: cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX                         :: carr1(hybrid%maxlmindx,atoms%nat)
@@ -276,15 +273,15 @@
         WRITE(6,'(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
      END IF
 
-      DO i=1,nbands
-        DO j=i+1,nbands
+      DO i=1,hybdat%nbands(nk)
+        DO j=i+1,hybdat%nbands(nk)
           IF( abs(eig_irr(i,nk)-eig_irr(j,nk)) .le. tolerance) THEN
             degenerat(i) = degenerat(i) + 1
           END IF
         END DO
       END DO
 
-      DO i=1,ne_eig
+      DO i=1,hybdat%ne_eig(nk)
         IF ( degenerat(i) .ne. 1 .or. degenerat(i) .ne. 0 ) THEN
           degenerat(i+1:i+degenerat(i)-1) = 0
         END IF
@@ -300,8 +297,8 @@
 
       IF ( irank2 == 0 ) THEN
         WRITE(6,*) ' Degenerate states:'
-        DO iband = 1,nbands/5+1
-          WRITE(6,'(5i5)')degenerat(iband*5-4:min(iband*5,nbands))
+        DO iband = 1,hybdat%nbands(nk)/5+1
+          WRITE(6,'(5i5)')degenerat(iband*5-4:min(iband*5,hybdat%nbands(nk)))
         END DO
       END IF
 
@@ -340,17 +337,17 @@
         CALL wfolap_init (olappw,olapmt,gpt,&
      &                   atoms,hybrid,&
      &                    cell,&
-     &                    bas1,bas2)
+     &                    hybdat%bas1,hybdat%bas2)
 
 
 #ifdef CPP_DEBUG1
         ! check orthogonality of wavefunctions
         OPEN(677,file='ortho')
         WRITE(677,*) 'iteration',it,'k-point',nk
-        DO iband=1,nbands
+        DO iband=1,hybdat%nbands(nk)
           IF(degenerat(iband) .ge. 1) THEN
             ndb = degenerat(iband)
-            DO i= 1,nbands!iband,iband+ndb-1
+            DO i= 1,hybdat%nbands(nk)!iband,iband+ndb-1
               WRITE(677,*) iband,i,&
      &          wfolap1( cmt(iband,:,:),z(:lapw%nv(jsp),iband),&
      &           cmt(i,:,:),z(:lapw%nv(jsp),i),&
@@ -380,7 +377,7 @@
           END IF
 #endif
           ic = 0
-          DO i=1,nbands
+          DO i=1,hybdat%nbands(nk)
             ndb = degenerat(i)
             IF ( ndb .ge. 1 ) THEN
               ic     = ic + 1
@@ -418,7 +415,7 @@
 
         ic    = 0
         trace = 0
-        DO iband = 1,nbands
+        DO iband = 1,hybdat%nbands(nk)
           ndb = degenerat(iband)
           IF( ndb .ge. 1 ) THEN
             ic = ic + 1
@@ -440,12 +437,12 @@
 
         ic1 = 0
         symequivalent = .false.
-        DO iband1 = 1,nbands
+        DO iband1 = 1,hybdat%nbands(nk)
           ndb1 = degenerat(iband1)
           IF( ndb1 .ge. 1 ) THEN
             ic1 = ic1 + 1
             ic2 = 0
-            DO iband2 = 1,nbands
+            DO iband2 = 1,hybdat%nbands(nk)
               ndb2 = degenerat(iband2)
               IF( ndb2 .ge. 1 ) THEN
                 ic2 = ic2 + 1
@@ -474,7 +471,7 @@
         READ(777,rec=nk) cmt
         CLOSE(777)
         
-        CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
+        CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
         
         IF( allocated(olapmt)) deallocate(olapmt)
         ALLOCATE( olapmt(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),stat=ok)
@@ -487,15 +484,15 @@
             DO n2 = 1,nn
               DO n1 = 1,nn
                 olapmt(n1,n2,l,itype) = intgrf ( &
-     &                        bas1(:,n1,l,itype)*bas1(:,n2,l,itype)&
-     &                       +bas2(:,n1,l,itype)*bas2(:,n2,l,itype),&
-     &                        atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+     &                        hybdat%bas1(:,n1,l,itype)*hybdat%bas1(:,n2,l,itype)&
+     &                       +hybdat%bas2(:,n1,l,itype)*hybdat%bas2(:,n2,l,itype),&
+     &                        atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,hybdat%gridf)
               END DO
             END DO
           END DO
         END DO
       
-        ALLOCATE( wavefolap(nbands,nbands),carr(hybrid%maxindx),stat=ok )
+        ALLOCATE( wavefolap(hybdat%nbands(nk),hybdat%nbands(nk)),carr(hybrid%maxindx),stat=ok )
         IF( ok .ne. 0) STOP 'symm: failure allocation wfolap/maxindx'
         wavefolap = 0
         
@@ -507,7 +504,7 @@
             DO l = 0,atoms%lmax(itype)
               DO M = -l,l
                 nn     = hybrid%nindx(l,itype)
-                DO iband1 = 1,nbands
+                DO iband1 = 1,hybdat%nbands(nk)
                   carr(:nn) = matmul( olapmt(:nn,:nn,l,itype),&
      &                                cmt(iband1,lm+1:lm+nn,iatom)) 
                   DO iband2 = 1,iband1 
@@ -522,7 +519,7 @@
           END DO
         END DO
         
-        DO iband1 = 1,nbands
+        DO iband1 = 1,hybdat%nbands(nk)
           DO iband2 = 1,iband1
             wavefolap(iband1,iband2) = conjg(wavefolap(iband2,iband1))
           END DO
@@ -532,12 +529,12 @@
         IF( ok .ne. 0) STOP 'symm: failure allocation symequivalent'
         symequivalent = .false.
         ic1 = 0
-        DO iband1 = 1,nbands
+        DO iband1 = 1,hybdat%nbands(nk)
           ndb1 = degenerat(iband1)
           IF( ndb1 .eq. 0 ) CYCLE
           ic1 = ic1 + 1
           ic2 = 0
-          DO iband2 = 1,nbands
+          DO iband2 = 1,hybdat%nbands(nk)
             ndb2 = degenerat(iband2)
             IF( ndb2 .eq. 0 ) CYCLE
             ic2 = ic2 + 1
@@ -558,7 +555,7 @@
       ic1       = 0
       indx_sest = 0
       nsest     = 0
-      DO iband1 = 1,nbands
+      DO iband1 = 1,hybdat%nbands(nk)
         ndb1 = degenerat(iband1)
         IF( ndb1 .ge. 1 ) ic1 = ic1 + 1
         i = 0
@@ -567,7 +564,7 @@
         END DO
         ndb1 = degenerat(iband1-i)
         ic2 = 0
-        DO iband2 = 1,nbands
+        DO iband2 = 1,hybdat%nbands(nk)
           ndb2 = degenerat(iband2)
           IF( ndb2 .ge. 1 ) ic2 = ic2 + 1
           i = 0
@@ -597,10 +594,10 @@
 
       pi = pimach()
 
-      IF( lmaxcd .gt. atoms%lmaxd ) STOP &
-     & 'symm_hf: The very impropable case that lmaxcd > atoms%lmaxd occurs'
+      IF( hybdat%lmaxcd .gt. atoms%lmaxd ) STOP &
+     & 'symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs'
 
-      ALLOCATE(rep_c(-lmaxcd:lmaxcd,-lmaxcd:lmaxcd,0:lmaxcd,nsymop,atoms%nat)&
+      ALLOCATE(rep_c(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,nsymop,atoms%nat)&
      &        , stat=ok )
       IF( ok .ne. 0) STOP 'symm_hf: failure allocation rep_c'
 
@@ -625,7 +622,7 @@
      &               exp( 2*pi*img*dot_product(g,atoms%taual(:,ratom)))
 
             rep_c(:,:,:,iop,iatom) = &
-     &         sym%d_wgn(-lmaxcd:lmaxcd,-lmaxcd:lmaxcd,0:lmaxcd,isym) * cdum
+     &         sym%d_wgn(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,isym) * cdum
           END DO
         END DO
         iatom0 = iatom0 + atoms%neq(itype)

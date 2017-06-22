@@ -6,22 +6,15 @@
 
       CONTAINS
 
-      SUBROUTINE read_core( atoms, lmaxc,nindxc,maxindxc,core1,core2)
+      SUBROUTINE read_core( atoms, hybdat )
 
 
     USE m_types
       IMPLICIT NONE
 
-      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_hybdat),INTENT(INOUT)   :: hybdat
+      TYPE(t_atoms),INTENT(IN)       :: atoms
 
-      ! - scalars -
-      INTEGER,INTENT(INOUT)              ::  maxindxc
-      ! -arrays -
-      INTEGER,INTENT(INOUT)              ::  lmaxc(:)
-      INTEGER,ALLOCATABLE,INTENT(INOUT)  ::  nindxc(:,:)
-
-      REAL,ALLOCATABLE,INTENT(INOUT)     ::  core1(:,:,:,:),&
-     &                                       core2(:,:,:,:)
 
       ! - local scalars -
       INTEGER                            ::  ncst
@@ -49,7 +42,7 @@
       IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation nindxcr'
 
       nindxcr = 0
-      lmaxc   = 0
+      hybdat%lmaxc   = 0
       l_qn    = 0
       ncst    = 0
       DO itype=1,atoms%ntype
@@ -59,13 +52,13 @@
           READ(77) n_qn(i,itype),l_qn(i,itype),j_qn(i,itype)
           nindxcr(l_qn(i,itype),itype) = nindxcr(l_qn(i,itype),itype)+1
         END DO
-        lmaxc(itype) = maxval(l_qn(:,itype))
+        hybdat%lmaxc(itype) = maxval(l_qn(:,itype))
       END DO
 
 
 
-      ALLOCATE( core1r(atoms%jmtd,0:maxval(lmaxc),maxval(nindxcr),atoms%ntype) )
-      ALLOCATE( core2r(atoms%jmtd,0:maxval(lmaxc),maxval(nindxcr),atoms%ntype) )
+      ALLOCATE( core1r(atoms%jmtd,0:maxval(hybdat%lmaxc),maxval(nindxcr),atoms%ntype) )
+      ALLOCATE( core2r(atoms%jmtd,0:maxval(hybdat%lmaxc),maxval(nindxcr),atoms%ntype) )
       core1r = 0
       core2r = 0
       REWIND(77)
@@ -87,60 +80,60 @@
 
 
 
-      ALLOCATE( nindxc(0:maxval(lmaxc),atoms%ntype),stat=ok )
+      ALLOCATE( hybdat%nindxc(0:maxval(hybdat%lmaxc),atoms%ntype),stat=ok )
       IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation nindxc'
-      ALLOCATE( core1(atoms%jmtd,0:maxval(lmaxc),maxval(nindxcr(0,:),&
+      ALLOCATE( hybdat%core1(atoms%jmtd,0:maxval(hybdat%lmaxc),maxval(nindxcr(0,:),&
      &                nint((maxval(nindxcr)/2.0))),atoms%ntype),stat=ok )
       IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation core1'
-      ALLOCATE( core2(atoms%jmtd,0:maxval(lmaxc),maxval(nindxcr(0,:),&
+      ALLOCATE( hybdat%core2(atoms%jmtd,0:maxval(hybdat%lmaxc),maxval(nindxcr(0,:),&
      &                nint((maxval(nindxcr)/2.0))),atoms%ntype),stat=ok )
       IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation core2'
-      nindxc = 0 ; core1 = 0 ; core2 = 0
+      hybdat%nindxc = 0 ; hybdat%core1 = 0 ; hybdat%core2 = 0
 
       ! average over core states that only differ in j
       ! core functions with l-qn equal 0 doesnot change during averaging
 
-      nindxc(0,:) = nindxcr(0,:)
+      hybdat%nindxc(0,:) = nindxcr(0,:)
       DO itype=1,atoms%ntype
-        core1(:,0,:nindxc(0,itype),itype)&
-     &    = core1r(:,0,:nindxc(0,itype),itype)
-        core2(:,0,:nindxc(0,itype),itype)&
-     &    = core2r(:,0,:nindxc(0,itype),itype)
+        hybdat%core1(:,0,:hybdat%nindxc(0,itype),itype)&
+     &    = core1r(:,0,:hybdat%nindxc(0,itype),itype)
+        hybdat%core2(:,0,:hybdat%nindxc(0,itype),itype)&
+     &    = core2r(:,0,:hybdat%nindxc(0,itype),itype)
       END DO
 
 
       DO itype=1,atoms%ntype
-        DO l=1,lmaxc(itype)
+        DO l=1,hybdat%lmaxc(itype)
           weight1 = 2*(l-0.5) + 1
           weight2 = 2*(l+0.5) + 1
           IF( modulo(nindxcr(l,itype),2) .eq. 0 ) THEN
             DO i=1,nindxcr(l,itype),2
-              nindxc(l,itype) = nindxc(l,itype) + 1
-              core1(:atoms%jri(itype),l,nindxc(l,itype),itype) =&
+              hybdat%nindxc(l,itype) = hybdat%nindxc(l,itype) + 1
+              hybdat%core1(:atoms%jri(itype),l,hybdat%nindxc(l,itype),itype) =&
      &                        (weight1*core1r(:atoms%jri(itype),l,i  ,itype) +&
      &                         weight2*core1r(:atoms%jri(itype),l,i+1,itype))&
      &                        / (weight1+weight2)
-              core2(:atoms%jri(itype),l,nindxc(l,itype),itype) =&
+              hybdat%core2(:atoms%jri(itype),l,hybdat%nindxc(l,itype),itype) =&
      &                        (weight1*core2r(:atoms%jri(itype),l,i  ,itype) +&
      &                         weight2*core2r(:atoms%jri(itype),l,i+1,itype))&
      &                        / (weight1+weight2)
             END DO
           ELSE
             DO i=1,nindxcr(l,itype)-1,2
-              nindxc(l,itype) = nindxc(l,itype) + 1
-              core1(:atoms%jri(itype),l,nindxc(l,itype),itype) =&
+              hybdat%nindxc(l,itype) = hybdat%nindxc(l,itype) + 1
+              hybdat%core1(:atoms%jri(itype),l,hybdat%nindxc(l,itype),itype) =&
      &                        (weight1*core1r(:atoms%jri(itype),l,i  ,itype) +&
      &                         weight2*core1r(:atoms%jri(itype),l,i+1,itype))&
      &                        / (weight1+weight2)
-              core2(:atoms%jri(itype),l,nindxc(l,itype),itype) =&
+              hybdat%core2(:atoms%jri(itype),l,hybdat%nindxc(l,itype),itype) =&
      &                        (weight1*core2r(:atoms%jri(itype),l,i  ,itype) +&
      &                         weight2*core2r(:atoms%jri(itype),l,i+1,itype))&
      &                        / (weight1+weight2)
             END DO
-              nindxc(l,itype) = nindxc(l,itype) + 1
-              core1(:atoms%jri(itype),l,nindxc(l,itype),itype)&
+              hybdat%nindxc(l,itype) = hybdat%nindxc(l,itype) + 1
+              hybdat%core1(:atoms%jri(itype),l,hybdat%nindxc(l,itype),itype)&
      &          = core1r(:atoms%jri(itype),l,nindxcr(l,itype),itype)
-              core2(:atoms%jri(itype),l,nindxc(l,itype),itype)&
+              hybdat%core2(:atoms%jri(itype),l,hybdat%nindxc(l,itype),itype)&
      &          = core2r(:atoms%jri(itype),l,nindxcr(l,itype),itype)
           END IF
 
@@ -149,7 +142,7 @@
 
       DEALLOCATE( nindxcr, core1r,core2r )
 
-      maxindxc = maxval(nindxc)
+      hybdat%maxindxc = maxval(hybdat%nindxc)
       CLOSE(77)
 
       END SUBROUTINE read_core
@@ -477,8 +470,7 @@
 
       END SUBROUTINE calcorewf
 
-      SUBROUTINE core_init( dimension,input,atoms,&
-     &                      lmaxcd,maxindxc)
+      SUBROUTINE core_init( dimension,input,atoms, lmaxcd,maxindxc)
 
 
       USE m_intgr, ONLY : intgr3,intgr0,intgr1
@@ -487,13 +479,13 @@
       USE m_differ
       USE m_types
       IMPLICIT NONE
+
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_input),INTENT(IN)       :: input
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+      INTEGER,INTENT(OUT)            :: maxindxc,lmaxcd
 
-      !  - scalars -
-      INTEGER, INTENT (OUT):: lmaxcd,maxindxc
-
+      
       !  - local scalars -
       INTEGER              :: i,j,itype,korb,ncmsh,nst,ierr
       REAL                 :: e,fj,fl,fn,t,bmu,c
@@ -501,9 +493,9 @@
 
       !  - local arrays -
       INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
-      INTEGER              :: nindxcr(0:dimension%nstd,atoms%ntype),lmaxc(atoms%ntype)
+      INTEGER              :: nindxcr(0:dimension%nstd,atoms%ntype) 
       REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(dimension%msh),b(dimension%msh)
-
+      INTEGER              :: lmaxc(atoms%ntype)
 
 
       !   - intrinsic functions -
@@ -519,8 +511,7 @@
         z    = atoms%zatom(itype)
         dxx  = atoms%dx(itype)
         bmu  = 0.0
-        CALL setcor(itype,input%jspins,atoms,input,bmu,&
-     &               nst,kappa,nprnc,occ_h)
+        CALL setcor(itype,input%jspins,atoms,input,bmu, nst,kappa,nprnc,occ_h)
 
         occ(1:nst) = occ_h(1:nst,1) 
 
@@ -532,8 +523,8 @@
 
         nst = atoms%ncst(itype)
 
-        DO 80 korb = 1,nst
-          IF (occ(korb).EQ.0) GOTO 80
+        DO  korb = 1,nst
+          IF (occ(korb).EQ.0) CYCLE
             fn = nprnc(korb)
             fj = iabs(kappa(korb)) - .5e0
 
@@ -542,7 +533,7 @@
 
             nindxcr(NINT(fl),itype) = nindxcr(NINT(fl),itype) + 1
             lmaxc(itype)            = max(lmaxc(itype),NINT(fl))
-   80   END DO
+         END DO
 
       END DO
 
