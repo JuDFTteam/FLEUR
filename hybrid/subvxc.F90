@@ -1,17 +1,7 @@
       MODULE m_subvxc
       CONTAINS
-      SUBROUTINE subvxc(&
-           lapw,bk,&
-           dimension,input,jsp,vr0,&
-           atoms,usdus,&
-           hybrid,matsize,&
-           el,ello,sym,&
-           nlot_d,kveclo,&
-           cell,&
-           sphhar,&
-           stars,xcpot,mpi,irank2,&
-           vacuum,oneD,&
-           vrtot,vpwtot,a)
+      SUBROUTINE subvxc(lapw,bk, dimension,input,jsp,vr0, atoms,usdus, hybrid, el,ello,sym,&
+           nlot_d,kveclo, cell, sphhar, stars,xcpot,mpi,oneD,hamovlp)
 
 
       USE m_intgr,     ONLY : intgr3
@@ -26,26 +16,23 @@
       USE m_hybridmix
       USE m_types
       IMPLICIT NONE
-      TYPE(t_xcpot),INTENT(IN)   :: xcpot
-      TYPE(t_mpi),INTENT(IN)   :: mpi
-      TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_oneD),INTENT(IN)   :: oneD
-      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_vacuum),INTENT(IN)   :: vacuum
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_stars),INTENT(IN)   :: stars
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_sphhar),INTENT(IN)   :: sphhar
-      TYPE(t_atoms),INTENT(IN)   :: atoms
-      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_xcpot),INTENT(IN)     :: xcpot
+      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_dimension),INTENT(IN) :: dimension
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_hybrid),INTENT(INOUT) :: hybrid
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_lapw),INTENT(IN)      :: lapw
       TYPE(t_usdus),INTENT(INOUT)  :: usdus
 !     .. Scalar Arguments ..
     
       INTEGER, INTENT (IN) :: jsp 
-      INTEGER, INTENT (IN) :: matsize 
       INTEGER, INTENT (IN) :: nlot_d
-      INTEGER, INTENT (IN) :: irank2 
      
 
 
@@ -53,29 +40,21 @@
 !     .. Array Arguments ..
       INTEGER, INTENT (IN) :: kveclo(nlot_d)
 
-      REAL,    INTENT (IN) :: vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
       REAL,    INTENT (IN) :: vr0(atoms%jmtd,atoms%ntype,dimension%jspd)               ! just for radial functions
       REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,dimension%jspd)
       REAL,    INTENT (IN) :: ello(atoms%nlod,atoms%ntype,dimension%jspd)
       REAL,    INTENT (IN) :: bk(3)
-      COMPLEX, INTENT (IN) :: vpwtot(stars%ng3)
-      
-#ifdef CPP_INVERSION
-      REAL,INTENT(INOUT)   :: a(matsize)
-#else
-      COMPLEX,INTENT(INOUT):: a(matsize)
-#endif
+      TYPE(t_hamovlp),INTENT(INOUT)::hamovlp
 
 !     .. Local Scalars ..
       INTEGER               ::  ic,indx,m,ig1,ig2
-      INTEGER               ::  nu,iter
-      INTEGER               ::  nlharm,nnbas,nbas,typsym,lm
+      INTEGER               ::  nlharm,nnbas,typsym,lm
       INTEGER               ::  noded,nodeu
-      INTEGER               ::  nbasd,nnbasd,nbasf0
+      INTEGER               ::  nbasf0
       INTEGER               ::  i,j,l,ll,l1,l2 ,m1,m2  ,j1,j2
-      INTEGER               ::  ok,p,p1,p2,lh,mh,pp1,pp2,lo,lo1
-      INTEGER               ::  igrid,itype,itype1,ilharm,iband,istar
-      INTEGER               ::  ineq,iatom,ilo,ilop,ilo1,ieq,icentry
+      INTEGER               ::  ok,p1,p2,lh,mh,pp1,pp2
+      INTEGER               ::  igrid,itype,ilharm,istar
+      INTEGER               ::  ineq,iatom,ilo,ilop,ieq,icentry
       INTEGER               ::  ikvecat,ikvecprevat,invsfct,ikvec,ikvecp
       INTEGER               ::  lp,mp,pp
       REAL                  ::  a_ex
@@ -90,10 +69,8 @@
       REAL                  ::  grid(atoms%jmtd)
       REAL                  ::  vr(atoms%jmtd,0:sphhar%nlhd)
       REAL                  ::  vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-      REAL                  ::  vxz(vacuum%nmzd,2,dimension%jspd)
       REAL                  ::  f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
       REAL                  ::  flo(atoms%jmtd,2,atoms%nlod)
-      REAL                  ::  uloulopn(atoms%nlod,atoms%nlod,atoms%ntype)
       REAL                  ::  uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
       REAL                  ::  ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
       
@@ -103,29 +80,14 @@
 
       COMPLEX               ::  vxpw(stars%ng3,dimension%jspd)
       COMPLEX               ::  vpw(stars%ng3)
-      COMPLEX               ::  vxc(matsize)
+      COMPLEX               ::  vxc(hamovlp%matsize)
       COMPLEX               ::  vrmat(hybrid%maxlmindx,hybrid%maxlmindx)
-      COMPLEX               ::  vxzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
       COMPLEX               ::  carr(hybrid%maxlmindx,dimension%nvd),carr1(dimension%nvd,dimension%nvd)
       COMPLEX ,ALLOCATABLE  ::  ahlp(:,:,:),bhlp(:,:,:)
       COMPLEX, ALLOCATABLE  ::  bascof(:,:,:)
-      COMPLEX               ::  bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,&
-                                          atoms%nat)
+      COMPLEX               ::  bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod, atoms%nat)
 
-      CHARACTER*8           ::  dop,iop,name(10)
-
-#ifdef CPP_INVERSION
-      REAL                  ::  z(dimension%nbasfcn,dimension%neigd)
-#else
-      COMPLEX               ::  z(dimension%nbasfcn,dimension%neigd)
-#endif
-      COMPLEX               ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
-      INTEGER               ::  igpt,ikpt,nrec,idum
-      REAL                  ::  rdum,indx1
-      REAL                  ::  vrcou(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-      REAL                  ::  vzcou(vacuum%nmzd,2,dimension%jspd)
-      COMPLEX               ::  vpwcou(stars%ng3,dimension%jspd) 
-      COMPLEX               ::  vzxycou(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
+  
 
       CALL timestart("subvxc")
       vxc=0
@@ -600,13 +562,15 @@
         STOP 'subvxc: error icorr'
       END IF
 
-      DO i=1,matsize
-#ifdef CPP_INVERSION
-        a(i) = a(i) - a_ex*real(vxc(i))
-#else
-        a(i) = a(i) - a_ex*vxc(i)
-#endif
-      END DO
+      IF (hamovlp%l_real) THEN
+         DO i=1,hamovlp%matsize
+            hamovlp%a_r(i) = hamovlp%a_r(i) - a_ex*real(vxc(i))
+         ENDDO
+      ELSE
+         DO i=1,hamovlp%matsize
+            hamovlp%a_c(i) = hamovlp%a_c(i) - a_ex*vxc(i)
+         ENDDO
+      ENDIF
 
       CALL timestop("subvxc")
 

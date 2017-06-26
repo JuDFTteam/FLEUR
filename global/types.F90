@@ -452,23 +452,23 @@
    TYPE t_hybdat
         INTEGER              :: nbasp
         INTEGER              :: lmaxcd,maxindxc
-        REAL,  ALLOCATABLE   ::  gridf(:,:)
-        INTEGER , ALLOCATABLE::  nindxc(:,:)
-        INTEGER,ALLOCATABLE  :: lmaxc(:)
-        REAL,    ALLOCATABLE ::  core1(:,:,:,:),core2(:,:,:,:)
-        REAL,    ALLOCATABLE ::  eig_c(:,:,:)
-        INTEGER , ALLOCATABLE::  kveclo_eig(:,:)
-        INTEGER,ALLOCATABLE  ::  ne_eig(:),nbands(:),nobd(:)
-        INTEGER , ALLOCATABLE::  nbasm(:)
+        REAL,  ALLOCATABLE   ::  gridf(:,:)                                    !alloc in util.F
+        INTEGER , ALLOCATABLE::  nindxc(:,:)                                   !alloc in eigen_HF_init
+        INTEGER,ALLOCATABLE  :: lmaxc(:)                                       !alloc in eigen_HF_init
+        REAL,    ALLOCATABLE ::  core1(:,:,:,:),core2(:,:,:,:)                 !alloc in eigen_HF_init
+        REAL,    ALLOCATABLE ::  eig_c(:,:,:)                                  !alloc in eigen_HF_init
+        INTEGER , ALLOCATABLE::  kveclo_eig(:,:)                               !alloc in eigen_HF_setup
+        INTEGER,ALLOCATABLE  ::  ne_eig(:),nbands(:),nobd(:)                   !alloc in eigen_HF_init
+        INTEGER , ALLOCATABLE::  nbasm(:)                                      !alloc in eigen_HF_init
         INTEGER              ::  maxfac
-        REAL,    ALLOCATABLE ::  sfac(:),fac(:)
-        REAL,    ALLOCATABLE ::  gauntarr(:,:,:,:,:,:)
-        REAL,    ALLOCATABLE ::  bas1(:,:,:,:),bas2(:,:,:,:)!(jmtd,maxindx,0:lmaxd,ntypd)
-        REAL ,   ALLOCATABLE ::  bas1_MT(:,:,:),drbas1_MT(:,:,:)!(maxindx,0:lmaxd,ntypd)
-        REAL, ALLOCATABLE    ::  prodm(:,:,:,:)
-        TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)
-        INTEGER, ALLOCATABLE :: pntgptd(:)
-        INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)
+        REAL,    ALLOCATABLE ::  sfac(:),fac(:)                                !alloc in eigen_HF_init
+        REAL,    ALLOCATABLE ::  gauntarr(:,:,:,:,:,:)                         !alloc in eigen_HF_init
+        REAL,    ALLOCATABLE ::  bas1(:,:,:,:),bas2(:,:,:,:)                   !alloc in eigen_HF_init
+        REAL ,   ALLOCATABLE ::  bas1_MT(:,:,:),drbas1_MT(:,:,:)               !alloc in eigen_HF_init
+        REAL, ALLOCATABLE    ::  prodm(:,:,:,:)                                !alloc in eigen_HF_setup
+        TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)                              !alloc in eigen_HF_setup
+        INTEGER, ALLOCATABLE :: pntgptd(:)                                     !alloc in eigen_HF_setup
+        INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)                                !alloc in eigen_HF_setup
      END type t_hybdat
      
      TYPE t_dimension
@@ -858,5 +858,59 @@
         integer :: unigrid(6)
         integer :: mhp(3)
       end type t_wann
+    
+      TYPE t_potden
+         INTEGER             :: iter
+         COMPLEX,allocatable :: pw(:,:)
+         REAL,ALLocatable    :: mt(:,:,:,:)
+         real,allocatable    :: vacz(:,:,:)
+         complex,allocatable :: vacxy(:,:,:,:)
+         !this type contains two init routines that should be used to allocate
+         !memory. You can either specify the datatypes or give the dimensions as integers
+         !See implementation below!
+         contains
+         procedure :: init_potden_types
+         procedure :: init_potden_simple
+         generic   :: init=>init_potden_types,init_potden_simple
+      END type t_potden
+    contains
+      subroutine init_potden_types(pd,stars,atoms,sphhar,vacuum,oneD,jsp)
+        USE m_judft
+        implicit none
+        class(t_potden),INTENT(OUT):: pd
+        TYPE(t_atoms),INTENT(IN) :: atoms
+        TYPE(t_stars),INTENT(IN) :: stars
+        TYPE(t_sphhar),INTENT(IN):: sphhar
+        TYPE(t_vacuum),INTENT(IN):: vacuum
+        TYPE(t_oneD),INTENT(IN)  :: oneD
+        INTEGER,INTENT(IN) :: jsp
 
+        CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
+      END subroutine init_potden_types
+        
+      subroutine init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,nmzd,nmzxyd,n2d)
+        USE m_judft
+        implicit none
+        class(t_potden),INTENT(OUT) :: pd
+        INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,jsp
+        INTEGER,INTENT(IN),OPTIONAL :: nmzd,nmzxyd,n2d
+        
+        INTEGER:: err(4)
+
+        err=0
+        pd%iter=0
+        ALLOCATE(pd%pw(ng3,jsp),stat=err(1))
+        ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
+        IF (present(nmzd)) THEN
+           ALLOCATE(pd%vacz(nmzd,2,jsp),stat=err(3))
+           ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
+        ENDIF
+        if (any(err>0)) call judft_error("Not enough memory allocating potential or density")
+        pd%pw=0.0
+        pd%mt=0.0
+        if (present(nmzd)) THEN
+           pd%vacz=0.0
+           pd%vacxy=0.0
+        endif
+      end subroutine init_potden_simple
       END

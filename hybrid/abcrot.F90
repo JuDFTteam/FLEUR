@@ -1,3 +1,6 @@
+
+MODULE m_abcrot
+  CONTAINS
       SUBROUTINE abcrot(atoms,neig,sym,cell,oneD,&
      &                 acof,bcof,ccof)
 !     ***************************************************************
@@ -11,9 +14,9 @@
       USE m_types
       IMPLICIT NONE
       TYPE(t_oneD),INTENT(IN)   :: oneD
-      TYPE(t_sym),INTENT(INOUT) :: sym
+      TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_atoms),INTENT(IN)  :: atoms  
 !     ..
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: neig
@@ -35,13 +38,14 @@
 #ifndef CPP_MPI
         PRINT*,"calculate wigner-matrix"
 #endif
-        IF (.NOT.oneD%odi%d1) THEN
-          ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
-          CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
-        ELSE
-          ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,oneD%ods%nop))
-          CALL d_wigner(oneD%ods%nop,oneD%ods%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
-        ENDIF
+        STOP "WIGNER MATRIX should be available in hybrid part"
+        !IF (.NOT.oneD%odi%d1) THEN
+        !  ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
+        !  CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
+        !ELSE
+        !  ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,oneD%ods%nop))
+        !  CALL d_wigner(oneD%ods%nop,oneD%ods%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
+        !ENDIF
       ENDIF
 
       iatom=0
@@ -83,4 +87,5 @@
         ENDDO
       ENDDO
 
-      END
+    END SUBROUTINE abcrot
+  end MODULE m_abcrot

@@ -1941,7 +1941,6 @@ SUBROUTINE r_inpXML(&
            sym%nop=n1
            sym%nop2=n2
         ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-           STOP 'Error: No kpoint set generation for gamma=T yet!'
            CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
                 kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
                 sym%mrot,sym%tau)

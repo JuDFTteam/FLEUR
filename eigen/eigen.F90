@@ -9,7 +9,7 @@ MODULE m_eigen
 CONTAINS
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
        sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
-       it,eig_id,results)
+       it,eig_id,results,v)
     !*********************************************************************
     !     sets up and solves the eigenvalue problem for a basis of lapws.
     !
@@ -32,17 +32,8 @@ CONTAINS
     USE m_eigen_diag
     USE m_eigen_hf_init
     USE m_eigen_hf_setup
-#ifdef CPP_NOTIMPLEMENTED
-    USE m_symm_hf,  ONLY : symm_hf_nkpt_EIBZ
-    USE m_gen_bz
-    USE m_gen_wavf
     USE m_hsfock
-    USE m_read_core
     USE m_subvxc
-    USE m_gweig
-    USE m_gw_qsgw
-    USE m_checkolap
-#endif
     USE m_hsefunctional
     USE m_hybridmix    , ONLY: amix_pbe0,amix_hf
     USE m_util
@@ -72,8 +63,8 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_atoms),INTENT(INOUT)  :: atoms !in u_setup n_u might be modified
-
+    TYPE(t_atoms),INTENT(INOUT)  :: atoms!in u_setup n_u might be modified
+    TYPE(t_potden),INTENT(INOUT) :: v
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
@@ -87,11 +78,10 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER jsp,nk,nred,ne_all,n_u_in,ne_found
-    INTEGER iter,ne,matsize  ,nrec,lh0
-    INTEGER nspins,isp,l,i,j,err,gwc
-    INTEGER mlotot,mlolotot,mlot_d,mlolot_d,nlot_d
-    LOGICAL l_wu,lcal_qsgw,l_file,l_real,l_zref
-    REAL evac_sv(DIMENSION%jspd)
+    INTEGER ne,matsize  ,nrec,lh0
+    INTEGER nspins,isp,i,j,err
+    INTEGER mlotot,mlolotot
+    LOGICAL l_wu,l_file,l_real,l_zref
     INTEGER ::eig_id_hf=-1
     
     !     ..
@@ -101,11 +91,6 @@ CONTAINS
     INTEGER, ALLOCATABLE :: nv2(:)
     REAL,    ALLOCATABLE :: bkpt(:)
     REAL,    ALLOCATABLE :: eig(:)
-
-    COMPLEX, ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
-    COMPLEX, ALLOCATABLE :: vpwtot(:,:)
-    REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
-    REAL,    ALLOCATABLE :: vrtot(:,:,:,:)
 
     COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
     TYPE(t_tlmplm)  :: td
@@ -118,54 +103,12 @@ CONTAINS
     INTEGER fh,nn,n
     INTEGER ierr(3)
 
-    !
+
     !     .. variables for HF or hybrid functional calculation ..
     !
-    !      - scalar -
-#ifdef CPP_NEVER
-    INTEGER, INTENT(IN)     ::  maxlcutm,maxindxm,maxbasm
-    INTEGER, INTENT(IN)     ::  maxindxp
-    INTEGER, INTENT(IN)     ::  bands
-    !     - arrays -
-    INTEGER, INTENT(IN)     ::  nindxm(0:maxlcutm,atoms%ntype)
-    INTEGER, INTENT(IN)     ::  lcutm(atoms%ntype)
-    REAL   , INTENT(IN)     ::  basm(atoms%jmtd,maxindxm,0:maxlcutm,atoms%ntype)
-#endif
-    !     - local scalar -
-    INTEGER                 ::  itype,ispin,isym,iisym
-    INTEGER                 ::  indx,ic
-    INTEGER                 ::  ll,lm,l1,l2
-    INTEGER                 ::  lmaxcd
-    INTEGER                 ::  maxindxc,mnobd
-    INTEGER                 ::  maxfac
-    INTEGER                 ::  maxbands
-    !     - local arrays -
-    TYPE(t_hybdat)   :: hybdat
+    TYPE(t_hybdat)          :: hybdat
     INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
-  
-#ifdef CPP_NEVER
-    INTEGER                 ::  nobd(kpts%nkptf)
-    INTEGER                 ::  lmaxc(atoms%ntype)
-    INTEGER                 ::  g(3)
-    INTEGER                 ::  nindxp(0:maxlcutm,atoms%ntype)
-    INTEGER , ALLOCATABLE   ::  nkpt_EIBZ(:)
-    INTEGER , ALLOCATABLE   ::  nindxc(:,:)
-    INTEGER , ALLOCATABLE   ::  kveclo_eig(:,:)
-    INTEGER , ALLOCATABLE   ::  nbasm(:)
-    REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),rarr(3)
-    REAL                    ::  bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-    REAL                    ::  drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-    REAL,    ALLOCATABLE    ::  eig_c(:,:,:)
-    REAL,    ALLOCATABLE    ::  core1(:,:,:,:),core2(:,:,:,:)
-    REAL,    ALLOCATABLE    ::  gauntarr(:,:,:,:,:,:)
-    REAL,    ALLOCATABLE    ::  sfac(:),fac(:)
-    REAL,    ALLOCATABLE    ::  prodm(:,:,:,:)
-    TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)
-#endif
-    INTEGER                 ::  ne_eig(kpts%nkpt),nbands(kpts%nkpt)
     REAL,    ALLOCATABLE    ::  eig_irr(:,:),vr0(:,:,:)
-    REAL                    ::  bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
-    REAL                    ::  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
 
 #ifdef CPP_MPI
     INTEGER   :: sndreqd,sndreq(mpi%isize*kpts%nkpt)
@@ -180,44 +123,28 @@ CONTAINS
     ALLOCATE ( ud%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),ud%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
     ALLOCATE ( ud%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),ud%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
     ALLOCATE ( ud%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),ud%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
-   ! ALLOCATE ( enpara%ello(atoms%nlod,atoms%ntype,dimension%jspd) )
-   ! ALLOCATE ( enpara%el(0:atoms%lmaxd,atoms%ntype,dimension%jspd),enpara%evac(2,dimension%jspd) )
-    ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
+    ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),&
+         lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
     !
     ! --> some parameters first
     !
     !     determine the total number of lo's : nlotot
     !
-    mlotot = 0 ; mlolotot = 0
+    mlotot =sum(atoms%nlo)
+  
+    mlolotot = 0
     DO nn = 1, atoms%ntype
-       mlotot = mlotot + atoms%nlo(nn)
        mlolotot = mlolotot + atoms%nlo(nn)*(atoms%nlo(nn)+1)/2
     ENDDO
-    nlot_d = atoms%nlotot !max(atoms%nlotot,1)
-    ALLOCATE ( kveclo(nlot_d) )
+    ALLOCATE ( kveclo(atoms%nlotot) )
     !     ..
-    nbands     = 0
-    bas1 = 0 ; bas2 = 0
-    hybrid%l_hybrid   = (&
-         xcpot%icorr == icorr_pbe0 .OR.&
-         xcpot%icorr == icorr_hse  .OR.&
-         xcpot%icorr == icorr_vhse .OR.&
-         xcpot%icorr == icorr_hf   .OR.&
-         xcpot%icorr == icorr_exx)
+    
     l_real=sym%invs.AND..NOT.noco%l_noco
     IF (noco%l_soc.AND.l_real.AND.hybrid%l_hybrid ) THEN
        CALL juDFT_error('hybrid functional + SOC + inv.symmetry is not tested', calledby='eigen')
     END IF
 
-    !
-    !  if gw = 1 or 2, we are in the first or second run of a GW  calculation
-    !  if gw = 1 we just proceed as normal (one round),
-    !  if gw = 2 it's the second run: write out the eigenfunctions and
-    !  the matrix elements with the xc-potential (needs two rounds)
-    !  if gw = 3 energy-independet hermitian self-energy is read in from file
-    !            spex.qsgw, transformed to the APW basis, and SCF is performed
-    !
-    gwc = 1
+    
     fh = 0
     !
     ! look, if WU diagonalisation
@@ -234,66 +161,30 @@ CONTAINS
     !
     ! load potential from file pottot (=unit 8)
     !
-    ALLOCATE ( vpw(stars%ng3,DIMENSION%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd) )
-    ALLOCATE ( vz(vacuum%nmzd,2,4), vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd) )
     ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd) ) ; vr0 = 0
-    IF (input%gw.EQ.2) THEN
-       ALLOCATE ( vpwtot(stars%ng3,DIMENSION%jspd), vrtot(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd) )
-       IF ( mpi%irank == 0 ) WRITE(6,'(A/A/A/A)')&
-            &  'Info: vxc matrix elements for GW will be calculated in gw_vxc',&
-            &  'Info: and stored in "vxc", the values obtained from the',&
-            &  'Info: original implementation are saved to "vxc.old".'
-    ENDIF
-
-    IF (mpi%irank.EQ.0) THEN
-       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                          iter,vr,vpw,vz,vzxy)
-    END IF
+   
+    !IF (mpi%irank.EQ.0) THEN
+    !   CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
+    !                      v%iter,v%mt,v%pw,v%vacz,v%vacxy)
+    !END IF
 #ifdef CPP_MPI
     CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
-                    iter,vr,vpw,vz,vzxy)
+                    v%iter,v%mt,v%pw,v%vacz,v%vacxy)
 #endif
 
 999 CONTINUE
-    IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,iter/),&
+    IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
                                                     RESHAPE((/19,13,5,5/),(/2,2/)))
 
-    !
-    ! some modifications for gw-calculations
-    !
-    IF (input%gw.EQ.2.AND.gwc.EQ.1) THEN
-       vrtot(:,:,:,:)  = vr  ! store potential for subroutine gw_vxc
-       vpwtot(:,:) = vpw !
-    ENDIF
-
-    IF (gwc==1) THEN
-       vr0(:,:,:) = vr(:,0,:,:)
-       lh0 = 1
-    ELSE IF (gwc==2) THEN
-       lh0 = 0                         ! for a input%gw-calculation, we
-                                       ! now evaluate matrix elements
-       DO jsp = 1,input%jspins               ! with the coulomb potential
-          DO nn = 1,atoms%ntype                ! but with explicit kinetic energy
-             DO j = 1,atoms%jri(nn)
-                vr(j,0,nn,jsp) = vr(j,0,nn,jsp)-vr0(j,nn,jsp)*sfp_const/atoms%rmsh(j,nn)
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDIF
-
-    INQUIRE(file='fleur.qsgw',EXIST=lcal_qsgw)
-    lcal_qsgw = .NOT. lcal_qsgw
-
+   
     !
     ! set energy parameters (normally to that, what we read in)
     !
-    IF (gwc /= 2) THEN
-       CALL lodpot(mpi,atoms,sphhar,obsolete,vacuum,&
-            input, vr,vz, enpara_in, enpara)
-    ENDIF
+    CALL lodpot(mpi,atoms,sphhar,obsolete,vacuum,&
+            input, v%mt,v%vacz, enpara_in, enpara)
     !
    
-    CALL eigen_hf_init(hybrid,kpts,sym,atoms,input,dimension,hybdat,irank2,isize2)
+    CALL eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2)
 
     !---> set up and solve the eigenvalue problem
     !---> loop over energy windows
@@ -369,24 +260,12 @@ CONTAINS
     nspins = input%jspins
     IF (noco%l_noco) nspins = 1
     !
-    !        Append information about file eig to gwa
-    IF(input%gw.EQ.2.AND.gwc.EQ.1) THEN
-       IF ( mpi%irank == 0 ) THEN
-          OPEN(15,file='gwa',status='old',form='unformatted')
-          READ(15)
-          READ(15)
-          READ(15)
-          WRITE(15) mpi%n_start,mpi%n_stride,mpi%n_rank,mpi%n_size,DIMENSION%nvd,&
-               &                 DIMENSION%nbasfcn,atoms%nlotot
-          CLOSE(15)
-       END IF
-    ENDIF
     !  ..
     !  LDA+U
     n_u_in=atoms%n_u
     IF ((atoms%n_u.GT.0)) THEN
        ALLOCATE( vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins) )
-       CALL u_setup(sym,atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),vr,mpi, vs_mmp,results)
+       CALL u_setup(sym,atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),v%mt,mpi, vs_mmp,results)
     ELSE
        ALLOCATE( vs_mmp(-lmaxb:-lmaxb,-lmaxb:-lmaxb,1,2) )
     ENDIF
@@ -395,7 +274,7 @@ CONTAINS
 
     DO jsp = 1,nspins
        CALL eigen_HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id_hf,&
-         hybdat,irank2,it,vr0)  
+         hybdat,irank2,it,l_real,vr0)  
 
        !
        !--->       set up k-point independent t(l'm',lm) matrices
@@ -407,17 +286,17 @@ CONTAINS
        ALLOCATE(td%tud(0:DIMENSION%lmplmd,atoms%ntype,j),stat=err)
        ALLOCATE(td%tdd(0:DIMENSION%lmplmd,atoms%ntype,j),stat=err)
        ALLOCATE(td%tdu(0:DIMENSION%lmplmd,atoms%ntype,j),stat=err)
-       mlot_d = MAX(mlotot,1) ; mlolot_d = MAX(mlolotot,1)
-       ALLOCATE(td%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,j),stat=err)
-       ALLOCATE(td%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,j),stat=err)
-       ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,j), stat=err)
+       mlotot = MAX(mlotot,1) 
+       ALLOCATE(td%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlotot,j),stat=err)
+       ALLOCATE(td%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlotot,j),stat=err)
+       ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),j), stat=err)
        ALLOCATE(td%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,j),stat=err )
        IF (err.NE.0) THEN
           WRITE (*,*) 'eigen: an error occured during allocation of'
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
-       CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, vr(1,0,1,jsp),gwc,lh0,input, td,ud)
+       CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, v%mt(1,0,1,jsp),lh0,input, td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
 
@@ -428,7 +307,7 @@ CONTAINS
        IF (noco%l_noco) THEN
           isp = 2
           CALL timestart("tlmplm")
-          CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, vr(1,0,1,isp),gwc,lh0,input, td,ud)
+          CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud)
           IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,2,2,input%jspins)
           CALL timestop("tlmplm")
        ENDIF
@@ -445,7 +324,7 @@ CONTAINS
              ! jump to next k-point if this process is not present in communicator
              IF ( comm(nk) == MPI_COMM_NULL ) CYCLE
              ! allocate buffer for communication of the results
-             IF ( irank2(nk) /= 0 ) CALL work_dist_reserve_buffer( nbands(nk) )
+             IF ( irank2(nk) /= 0 ) CALL work_dist_reserve_buffer( hybdat%nbands(nk) )
           END IF
 #endif
 
@@ -468,7 +347,7 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           CALL timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(input,noco,jij,stars, vpw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
+          CALL hsint(input,noco,jij,stars, v%pw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
 
           CALL timestop("Interstitial Hamiltonian&Overlap")
           !
@@ -477,61 +356,39 @@ CONTAINS
           IF (.NOT.l_wu) THEN
              CALL timestart("MT Hamiltonian&Overlap")
              CALL hsmt(DIMENSION,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
-                  lmaxb,gwc, noco,cell, lapw, bkpt,vr, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
+                  lmaxb, noco,cell, lapw, bkpt,v%mt, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
              CALL timestop("MT Hamiltonian&Overlap")
           ENDIF
           !
-#ifdef CPP_NOTIMPLEMENTED
           IF( hybrid%l_hybrid ) THEN
 
-             CALL hsfock(nk,atoms,lcutm,obsolete,lapw, DIMENSION,kpts,jsp,input,hybrid,maxbasm,&
-                  maxindxp,maxlcutm,maxindxm,nindxm, basm,bas1,bas2,bas1_MT,drbas1_MT,ne_eig,eig_irr,&
-                  mpi%n_size,sym,cell, noco,noco,oneD, nbasp,nbasm, results,results,it,nbands(nk),maxbands,nobd,&
-                  mnobd,xcpot, core1,core2,nindxc,maxindxc,lmaxc, lmaxcd, kveclo_eig,maxfac,fac,sfac,gauntarr,&
-                  nindxp,prod,prodm,gwc, mpi,irank2(nk),isize2(nk),comm(nk), a)
+             CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,kpts%nkpt,jsp,input,hybdat,eig_irr,&
+                  sym,cell,noco,results,it,maxval(hybdat%nobd),xcpot,&
+                  mpi,irank2(nk),isize2(nk),comm(nk), hamovlp)
 
              IF ( irank2(nk) /= 0 ) CYCLE
 
              IF( hybrid%l_subvxc ) THEN
-                CALL subvxc(lapw,kpts(:,nk),obsolete,DIMENSION, input,jsp,atoms, hybrid,matsize,enpara%el0,enpara%ello0,&
-                     sym, nlot_d,kveclo, cell,sphhar, stars,stars, xcpot,mpi, irank2(nk),vacuum,&
-                     oneD, vr(:,:,:,jsp),vpw(:,jsp), a)
+                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,vr0,atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                     sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
+                     oneD,  hamovlp)
              END IF
 
           END IF ! hybrid%l_hybrid
-#endif
           !
           !--->         update with vacuum terms
           !
           CALL timestart("Vacuum Hamiltonian&Overlap")
           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             CALL hsvac(vacuum,stars,DIMENSION, atoms, jsp,input,vzxy(1,1,1,jsp),vz,enpara%evac0,cell, &
+             CALL hsvac(vacuum,stars,DIMENSION, atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz,enpara%evac0,cell, &
                   bkpt,lapw,sym, noco,jij, mpi%n_size,mpi%n_rank,nv2,l_real,hamOvlp)
           ELSEIF (oneD%odi%d1) THEN
-             CALL od_hsvac(vacuum,stars,DIMENSION, oneD,atoms, jsp,input,vzxy(1,1,1,jsp),vz, &
+             CALL od_hsvac(vacuum,stars,DIMENSION, oneD,atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz, &
                   enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
                   mpi%n_size,mpi%n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
           END IF
           CALL timestop("Vacuum Hamiltonian&Overlap")
 
-#ifdef CPP_NOTIMPLEMENTED
-          IF ( input%gw.EQ.3.OR.(input%gw.EQ.2.AND.gwc.EQ.1.AND..NOT.lcal_qsgw)) THEN
-
-             CALL gw_qsgw ( lcal_qsgw, b,cell,sym,atoms,&
-                  jsp,DIMENSION,lapw, nk,kpts, matsize,oneD%tau,noco, a )
-
-
-          END IF
-
-          IF (gwc==2) THEN
-             CALL gw_eig(eig_id,nk,kpts,atoms,DIMENSION,neigd,sym,&
-                  kveclo,cell, ud%us(0,1,jsp),ud%dus(0,1,jsp),ud%uds(0,1,jsp),&
-                  ud%duds(0,1,jsp),ud%ddn(0,1,jsp),ud%ulos(1,1,jsp),ud%uulon(1,1,jsp),ud%dulon(1,1,jsp),&
-                  ud%dulos(1,1,jsp),nrec,noco,jsp,matsize,a,sphhar,stars,stars,&
-                  vrtot(1,0,1,jsp),vpwtot,vr,vpw,vs_mmp(-lmaxb,-lmaxb,1,jsp),lmaxb,oneD)
-             CYCLE k_loop
-          ENDIF
-#endif
           IF (noco%l_noco) CLOSE (25)
 
           !write overlap matrix b to direct access file olap
@@ -637,70 +494,7 @@ ENDIF
     IF ( hybrid%l_calhf ) DEALLOCATE (nkpt_EIBZ)
 #endif
 
-    IF ( input%gw.EQ.2.AND.(gwc==1) )  THEN        ! go for another round
-       !
-       !       Generate input file abcoeff for subsequent GW calculation
-       !       28.10.2003 Arno Schindlmayr
-       !
-       IF ( mpi%irank == 0 ) THEN
-          WRITE(6,'(A)') 'Info: Write out vxc for GW and vxc.old.'
-          WRITE(6,'(A)') 'Info: Write out abcoeff for GW.'
-          WRITE(6,'(A)') 'Info: Write out radfun for gw_vxc and GW.'
-       END IF
-       OPEN (12,file='vxc.old',form='formatted',status='unknown') ! contains vxc from gw_eig
-       OPEN (13,file='vxc',form='formatted',status='unknown')     ! contains vxc from gw_vxc
-       OPEN (1013,file='vxcfull',form='unformatted',status='unknown')
-       INQUIRE(file='fleur.qsgw',exist=l_file)
-       IF(l_file) THEN
-          WRITE(6,'(A)') 'Info: Write file qsgw for GW.'
-          OPEN(1014,file='qsgw',form='unformatted')
-       ENDIF
-       OPEN (15,file='abcoeff',form='unformatted',status='unknown', action='write')
-       OPEN (14,file='radfun',form='unformatted',status='unknown')
-       WRITE(14) atoms%jri(1:atoms%ntype)
-       OPEN (16,file='latharm',form='unformatted',status='unknown')
-       WRITE(16) sphhar%nlhd,sphhar%memd
-       l = 0
-       DO i = 1,atoms%ntype
-          j = atoms%ntypsy(SUM(atoms%neq(:i-1))+1)
-          WRITE(16) sphhar%nlh(j),sphhar%llh(:sphhar%nlh(j),j),sphhar%nmem(:sphhar%nlh(j),j),&
-               sphhar%mlh(:sphhar%memd,:sphhar%nlh(j),j),sphhar%clnu(:sphhar%memd,:sphhar%nlh(j),j)
-          DO j = 1,atoms%neq(i)
-             l = l + 1
-             IF(atoms%invsat(l).EQ.2) THEN
-                WRITE(16) -atoms%ngopr(sym%invsatnr(l))
-             ELSE
-                WRITE(16)  atoms%ngopr(l)
-             ENDIF
-          ENDDO
-       ENDDO
-       CLOSE (16)
-       gwc=2
-
-       IF (mpi%irank.EQ.0) THEN
-          CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
-                             iter,vr,vpw,vz,vzxy)
-       END IF
-#ifdef CPP_MPI
-       CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
-                       iter,vr,vpw,vz,vzxy)
-#endif
-       GOTO 999
-    ELSE IF ( input%gw.EQ.2.AND.(gwc==2) )  THEN
-       CLOSE (12)
-       CLOSE (13)
-       CLOSE (1013)
-       CLOSE (14)
-       CLOSE (15)
-       IF(.NOT.noco%l_soc)  THEN
-          INQUIRE(1014,opened=l_file)
-          IF(l_file) CLOSE(1014)
-          INQUIRE(667,opened=l_file)
-          IF(l_file) CLOSE(667)
-          CALL juDFT_end("GW finished",mpi%irank)
-       ENDIF
-    ENDIF
-
+  
     !     hf: write out radial potential vr0
     IF (hybrid%l_hybrid.OR.hybrid%l_calhf) THEN
        OPEN(unit=120,file='vr0',form='unformatted')
@@ -713,8 +507,6 @@ ENDIF
        END DO
        CLOSE(120)
     ENDIF
-
-    DEALLOCATE ( vpw,vzxy,vz,vr,vr0 )
 
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)

@@ -37,14 +37,12 @@
       CONTAINS
 
 
-      SUBROUTINE coulombmatrix(mpi,atoms,kpts,&
-           cell, sym, hybrid, xcpot,l_restart)
+      SUBROUTINE coulombmatrix(mpi,atoms,kpts,cell, sym, hybrid, xcpot,l_restart)
 
       USE m_constants    , ONLY : pi_const
       USE m_olap         , ONLY : olap_pw,gptnorm
       USE m_trafo        , ONLY : symmetrize,bramat_trafo
-      USE m_util         , ONLY : sphbessel,intgrf,intgrf_init,&
-     &                            harmonicsr,primitivef
+      USE m_util         , ONLY : sphbessel,intgrf,intgrf_init, harmonicsr,primitivef
       USE m_hsefunctional, ONLY : change_coulombmatrix
 #ifdef CPP_MPI
       USE m_mpi_work_dist, ONLY : work_dist_coulomb
@@ -72,19 +70,15 @@
       INTEGER                    :: maxfac
 !       INTEGER                   ::  irecl_coulomb
       INTEGER                    :: inviop
-      INTEGER                    :: nqnrm,iqnrm,iqnrm1,iqnrm2,&
-     &                              iqnrmstart,iqnrmstep
-      INTEGER                    :: itype,l ,ix,iy,iy0,i,j,lm,l1,l2,m1,&
-     &                              m2,ineq,idum,ikpt,ikpt0,ikpt1
-      INTEGER                    :: lm1,lm2,itype1,itype2,ineq1,ineq2,n,&
-     &                              n1,n2,ng
+      INTEGER                    :: nqnrm,iqnrm,iqnrm1,iqnrm2, iqnrmstart,iqnrmstep
+      INTEGER                    :: itype,l ,ix,iy,iy0,i,j,lm,l1,l2,m1, m2,ineq,idum,ikpt,ikpt0,ikpt1
+      INTEGER                    :: lm1,lm2,itype1,itype2,ineq1,ineq2,n, n1,n2,ng
       INTEGER                    :: ic,ic1,ic2,ic3,ic4,ic5,ic6,ic7,ic8
       INTEGER                    :: igpt,igpt1,igpt2,igptp,igptp1,igptp2
       INTEGER                    :: isym,isym1,isym2,igpt0
       INTEGER                    :: maxlcut,ok
       INTEGER                    :: nbasp,m
       INTEGER                    :: ikptmin,ikptmax,nkminmax
-      INTEGER                    :: idisp,icnt
 #ifdef CPP_INVERSION
       INTEGER    , PARAMETER     :: coul_size =  8
 #else
@@ -108,11 +102,9 @@
       INTEGER                    :: rrot(3,3,sym%nsym),invrrot(3,3,sym%nsym)
       INTEGER    , ALLOCATABLE   :: iarr(:),pointer(:,:,:,:)!,pointer(:,:,:)
       INTEGER                    :: igptmin(kpts%nkpt),igptmax(kpts%nkpt)
-      INTEGER    , ALLOCATABLE   :: nsym_gpt(:,:),sym_sym1(:,:,:), sym_gpt(:,:,:)
-      INTEGER                    :: nsym1(kpts%nkpt+1),ngptm1(kpts%nkpt+1), sym1(sym%nsym,kpts%nkpt+1)
+      INTEGER    , ALLOCATABLE   :: nsym_gpt(:,:), sym_gpt(:,:,:)
+      INTEGER                    :: nsym1(kpts%nkpt+1), sym1(sym%nsym,kpts%nkpt+1)
    
-      INTEGER                    :: comm(kpts%nkpt)
-
       LOGICAL                    :: calc_mt(kpts%nkpt)
 
       REAL                       :: q(3),q1(3),q2(3)
@@ -125,7 +117,7 @@
       REAL                       :: sphbesmoment1(atoms%jmtd,0:hybrid%maxlcutm1)
       REAL                       :: rarr(0:hybrid%lexp+1),rarr1(0:hybrid%maxlcutm1)
       REAL       , ALLOCATABLE   :: fac(:),sfac(:),facfac(:)
-      REAL       , ALLOCATABLE   :: gmat(:,:),qnrm(:),eig(:)
+      REAL       , ALLOCATABLE   :: gmat(:,:),qnrm(:)
       REAL       , ALLOCATABLE   :: sphbesmoment(:,:,:)
       REAL       , ALLOCATABLE   :: sphbes0(:,:,:)   
       REAL       , ALLOCATABLE   :: olap(:,:,:,:),integral(:,:,:,:)
@@ -136,17 +128,14 @@
      &                                          kpts%nkpt)             ! nw = 1
       COMPLEX                    :: y((hybrid%lexp+1)**2),y1((hybrid%lexp+1)**2),&
      &                              y2((hybrid%lexp+1)**2)
-      COMPLEX                    :: imgl(0:hybrid%lexp)
       COMPLEX                    :: dwgn(-hybrid%maxlcutm1:hybrid%maxlcutm1,&
      &                                   -hybrid%maxlcutm1:hybrid%maxlcutm1,&
      &                                           0:hybrid%maxlcutm1,sym%nsym)
       COMPLEX    , ALLOCATABLE   :: smat(:,:)
       COMPLEX    , ALLOCATABLE   :: coulmat(:,:)
-      COMPLEX    , ALLOCATABLE   :: carr1(:),carr2(:,:),carr2a(:,:),&
+      COMPLEX    , ALLOCATABLE   :: carr2(:,:),carr2a(:,:),&
      &                              carr2b(:,:)
       COMPLEX    , ALLOCATABLE   :: structconst1(:,:)
-
-      REAL       , ALLOCATABLE   :: eval(:)
       REAL       , ALLOCATABLE   :: coulomb_mt1(:,:,:,:,:)
 #if ( defined(CPP_INVERSION) )
       REAL       , ALLOCATABLE   :: coulomb(:,:),coulhlp(:,:),&
@@ -160,7 +149,7 @@
 #else
       COMPLEX   , ALLOCATABLE   :: coulomb(:,:),coulhlp(:,:),&
      &                              coulhlp1(:,:)
-      COMPLEX   , ALLOCATABLE   :: olapm(:,:),evec(:,:),invecec(:,:)
+      COMPLEX   , ALLOCATABLE   :: olapm(:,:)
       COMPLEX   , ALLOCATABLE   :: coulomb_mt2(:,:,:,:,:),&
      &                              coulomb_mt3(:,:,:,:)
       COMPLEX   , ALLOCATABLE   :: coulomb_mtir(:,:,:),&
@@ -229,12 +218,7 @@
         facfac(i) = facfac(i-1)*(2*i+1)   !
       END DO
 
-      ! Define imgl(l) = img**l
-      imgl(0) = 1
-      DO i=1,hybrid%lexp
-        imgl(i) = imgl(i-1) * img
-      END DO
-
+    
 #     ifdef CPP_NOSPMVEC
         irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * coul_size / 2
 
@@ -749,7 +733,7 @@
                       DO l1=0,hybrid%lexp
                         l2   = l + l1 ! for structconst
                         idum = 1
-                        cdum = sphbesmoment(l1,itype1,iqnrm) * imgl(l1) * cexp
+                        cdum = sphbesmoment(l1,itype1,iqnrm) * img**(l1) * cexp
                         DO m1=-l1,l1
                           lm1  = lm1 + 1
                           m2   = M - m1              ! for structconst
@@ -788,7 +772,7 @@
 
                   ! finally define coulomb
                   idum = ix*(ix-1)/2
-                  cdum = (4*pi_const)**2 * imgl(l) * y(lm) * exp(img * 2*pi_const&
+                  cdum = (4*pi_const)**2 * img**(l) * y(lm) * exp(img * 2*pi_const&
                        * dot_product(hybrid%gptm(:,igptp),atoms%taual(:,ic)))
                   DO n=1,hybrid%nindxm1(l,itype)
                     iy = iy + 1
@@ -934,7 +918,7 @@
           DO l=0,hybrid%lexp
             DO M=-l,l
               lm              = lm + 1
-              carr2a(lm,igpt) = 4*pi_const * imgl(l) * y(lm)
+              carr2a(lm,igpt) = 4*pi_const * img**(l) * y(lm)
             END DO
           END DO
           DO ic = 1,atoms%nat
@@ -2262,11 +2246,11 @@
       COMPLEX , INTENT(INOUT)   ::  structconst((2*hybrid%lexp+1)**2 ,atoms%nat,atoms%nat, kpts%nkpt)
 
       ! - local scalars -
-      INTEGER                   ::  i,ic1,ic2,lm,ikpt,l ,ilastsh, ishell,nshell,i1,i2
-      INTEGER                   ::  ix,iy,iz,n,nn,m
-      INTEGER                   ::  nptsh,maxl,maxlm
+      INTEGER                   ::  i,ic1,ic2,lm,ikpt,l ,ishell,nshell
+      INTEGER                   ::  m
+      INTEGER                   ::  nptsh,maxl
       
-      REAL                      ::  rad,rrad ,rdum,rvol
+      REAL                      ::  rad,rrad ,rdum
       REAL                      ::  a,a1,aa
       REAL                      ::  pref,rexp
       REAL                      ::  time1,time2
@@ -2278,18 +2262,16 @@
       LOGICAL,    SAVE          ::  first = .true.
       ! - local arrays -
       INTEGER                   ::  conv(0:2*hybrid%lexp) 
-      INTEGER , ALLOCATABLE     ::  shell(:)
       INTEGER , ALLOCATABLE     ::  pnt(:),ptsh(:,:)
 
-      REAL                      ::  r(3),rc(3),ra(3),k(3),ki(3),ka(3)
+      REAL                      ::  rc(3),ra(3),k(3),ki(3),ka(3)
       REAL                      ::  convpar(0:2*hybrid%lexp),g(0:2*hybrid%lexp)
       REAL    , ALLOCATABLE     ::  radsh(:)
-      REAL    , ALLOCATABLE     ::  structdum2(:,:)
+     
 
       COMPLEX                   ::  y((2*hybrid%lexp+1)**2)
       COMPLEX                   ::  shlp((2*hybrid%lexp+1)**2,kpts%nkpt)
-      COMPLEX , ALLOCATABLE     ::  structdum(:,:,:),structhlp(:,:), chlp(:),structdum1(:)
-
+  
       IF ( mpi%irank /= 0 ) first = .false.
 
       rdum   = cell%vol**(1d0/3) ! define "average lattice parameter"

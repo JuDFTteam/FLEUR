@@ -35,12 +35,10 @@
 
 !     - local scalars -
       INTEGER                 ::  ic,iop,ikpt,ikpt1
-      REAL                    ::  rdum
       LOGICAL                 ::  ldum
       
 !     - local arrays - 
       INTEGER,ALLOCATABLE     ::  iarr(:)
-      REAL                    ::  wt(kpts%nkpt)
       REAL                    ::  rrot(3,3,sym%nsym),rotkpt(3)
       REAL,ALLOCATABLE        ::  rarr1(:,:)
 
@@ -54,19 +52,6 @@
           rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
         END IF
       END DO
-
-
-      ! read in number of kpts
-      OPEN (41,file='kpts',form='formatted',status='old')
-      READ (41,*) ikpt, rdum ! jump over first line
-      DO ikpt=1,kpts%nkpt
-        READ (41,*) rdum,rdum,rdum,wt(ikpt)
-      END DO
-      CLOSE (41)
-      kpts%nkptf = nint( sum( wt ) )
-#ifdef CPP_DEBUG
-      WRITE(*,*) 'whole BZ consists of',kpts%nkptf,' k-points'
-#endif
 
 
       !apply symmetrie operations to all k-points of IBZ
@@ -97,9 +82,8 @@
           END IF
         END DO
       END DO
-      
-      IF ( kpts%nkptf /= ic ) STOP 'gen_bz: error kpts/symmetrie '
-
+      kpts%nkptf = ic
+    
       !reallocate bkf,bkp,bksym
       ALLOCATE (iarr(kpts%nkptf))
       iarr = kpts%bkp(:kpts%nkptf)
@@ -119,23 +103,6 @@
       
      
 
-#ifdef CPP_DEBUG
-       !test
-      DO ikpt=2,kpts%nkptf
-        IF ( kpts%bkp(ikpt) .ne. ikpt) THEN
-          rotkpt = matmul( rrot(:,:,kpts%bksym(ikpt)),kpts%bkf(:,kpts%bkp(ikpt)))
-          rotkpt = modulo1(rotkpt,kpts%nkpt3)
-          IF( maxval( abs( rotkpt - kpts%bkf(:,ikpt) ) ) .gt. 1e-8) THEN
-            STOP 'gen_bz: failure kpts%bksym,bkp'
-          END IF
-        END IF
-      END DO
-
-      WRITE(*,*)'whole BZ',kpts%nkptf
-      DO ikpt=1,kpts%nkptf
-        WRITE(*,*) kpts%bkf(:,ikpt)
-      END DO
-#endif
       END SUBROUTINE gen_bz
 
       END MODULE m_gen_bz

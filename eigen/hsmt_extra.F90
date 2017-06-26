@@ -9,7 +9,7 @@ MODULE m_hsmt_extra
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt_extra(DIMENSION,atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
-       hlpmsize,lmaxb,gwc,noco,l_socfirst, lapw,cell,el, fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
+       hlpmsize,lmaxb,noco,l_socfirst, lapw,cell,el, fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
        kveclo,l_real,aa_r,bb_r,aa_c,bb_c) !out/inout
     USE m_constants, ONLY : tpi_const,fpi_const
     USE m_uham
@@ -37,7 +37,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: n_size,n_rank ,nintsp,sub_comm
     INTEGER, INTENT (IN) :: hlpmsize
     INTEGER, INTENT (IN) :: lmaxb
-    INTEGER, INTENT (IN) :: gwc
     LOGICAL, INTENT (IN) :: l_socfirst 
 
 
@@ -268,7 +267,7 @@ CONTAINS
                 ENDIF
              END IF
 
-             IF (atoms%n_u>0.and.atoms%lda_u(n)%l.GE.0.AND.gwc.EQ.1) THEN
+             IF (atoms%n_u>0.and.atoms%lda_u(n)%l.GE.0) THEN
                 IF ( noco%l_noco .AND. (.NOT.noco%l_ss) ) THEN
                    CALL u_ham(&
                         atoms,input,lapw,isp,n,invsfct,&

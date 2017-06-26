@@ -513,7 +513,7 @@
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
           END IF
-
+          CALL hybrid_default(hybrid,xcpot)
           IF (mpi%irank.EQ.0) THEN
              CALL fleur_info(kpts)
              CALL deleteDensities()
@@ -538,4 +538,28 @@
           IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
 
         END SUBROUTINE fleur_init
+        SUBROUTINE hybrid_default(hybrid,xcpot)
+          use m_types
+          use m_judft
+          use m_icorrkeys
+          IMPLICIT NONE
+          TYPE(t_hybrid)::hybrid
+          TYPE(t_xcpot) :: xcpot
+          print *,"DEBUGGING VERSION"
+          print *,"REMOVE hybrid_default in fleur_init"
+          if (.not.judft_was_argument("-hybrid")) return
+          xcpot%icorr= icorr_pbe0
+          hybrid%gcutm1=3.1
+          hybrid%tolerance1=0.0001
+          hybrid%ewaldlambda=3
+          hybrid%lexp=16
+          hybrid%bands1=64
+
+          hybrid%lcutm1=4
+          hybrid%select1(1,:)=4
+          hybrid%select1(2,:)=0
+          hybrid%select1(3,:)=4
+          hybrid%select1(4,:)=2
+          hybrid%lcutwf=8
+        end SUBROUTINE hybrid_default
       END MODULE m_fleur_init

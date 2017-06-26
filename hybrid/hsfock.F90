@@ -37,17 +37,16 @@ MODULE m_hsfock
       CONTAINS
 
       SUBROUTINE hsfock(&
-     &             nk,atoms,hybrid,obsolete,lapw,dimension,&
+     &             nk,atoms,hybrid,lapw,dimension,&
      &             kpts,nkpti,jsp,input,&
      &             hybdat,&
-     &             eig_irr,n_size,sym,&
-     &             cell,noco,oneD,&
+     &             eig_irr,sym,&
+     &             cell,noco,&
      &             results,&
-     &             it,maxbands,mnobd,&
+     &             it,mnobd,&
      &             xcpot,&
-     &             gwc,&
      &             mpi,irank2,isize2,comm,&
-     &             a)
+     &             hamovlp)
 
       USE m_symm_hf       ,ONLY: symm_hf
       USE m_util          ,ONLY: intgrf,intgrf_init
@@ -65,9 +64,7 @@ MODULE m_hsfock
       TYPE(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-      TYPE(t_obsolete),INTENT(IN)   :: obsolete
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_sym),INTENT(IN)   :: sym
@@ -79,23 +76,15 @@ MODULE m_hsfock
 !     - scalars -
       INTEGER,INTENT(IN)      :: jsp 
       INTEGER,INTENT(IN)      :: it
-      INTEGER,INTENT(IN)      ::  n_size 
       INTEGER,INTENT(IN)      :: irank2 ,isize2,comm
       INTEGER,INTENT(IN)      ::  nkpti  ,nk
-      INTEGER,INTENT(IN)      :: maxbands 
       INTEGER,INTENT(IN)      ::  mnobd
-      INTEGER,INTENT(IN)      :: gwc
-
+    
 
       !     -  arrays -
       REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,nkpti)
       
-
-#ifdef CPP_INVERSION
-      REAL,INTENT(INOUT)      ::  a(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#else
-      COMPLEX,INTENT(INOUT)   ::  a(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#endif
+      TYPE(t_hamovlp),INTENT(INOUT)::hamovlp
 #if ( !defined(CPP_INVERSION) )
       COMPLEX,ALLOCATABLE     ::  z(:,:)
 #else
@@ -109,9 +98,8 @@ MODULE m_hsfock
       INTEGER                 ::  ikpt,ikpt0
       INTEGER                 ::  irec
       INTEGER                 ::  irecl_olap,irecl_z,irecl_vx
-      INTEGER                 ::  irecl_gw
       INTEGER                 ::  maxndb
-      INTEGER                 ::  nddb,ndb1,ndb2
+      INTEGER                 ::  nddb
       INTEGER                 ::  nsymop
       INTEGER                 ::  nkpt_EIBZ
       INTEGER                 ::  ncstd
@@ -140,18 +128,16 @@ MODULE m_hsfock
 
 #ifdef CPP_INVERSION
       REAL   ,ALLOCATABLE     ::  trafo(:,:),invtrafo(:,:)
-      REAL   ,ALLOCATABLE     ::  ex(:,:),v(:,:),v_x(:),v_xp(:)
+      REAL   ,ALLOCATABLE     ::  ex(:,:),v(:,:),v_x(:)
       REAL   ,ALLOCATABLE     ::  mat_ex(:)
 #else
       COMPLEX,ALLOCATABLE     ::  trafo(:,:),invtrafo(:,:)
-      COMPLEX,ALLOCATABLE     ::  ex(:,:),v(:,:),v_x(:),v_xp(:)
+      COMPLEX,ALLOCATABLE     ::  ex(:,:),v(:,:),v_x(:)
       COMPLEX,ALLOCATABLE     ::  mat_ex(:)
 #endif
       COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
       COMPLEX,ALLOCATABLE     ::  carr(:)
       COMPLEX,ALLOCATABLE     ::  rep_c(:,:,:,:,:)
-
-      real :: rdum
 
       
       CALL timestart("total time hsfock")
@@ -266,7 +252,7 @@ MODULE m_hsfock
         ! HF exchange
         CALL timestart("valence exchange calculation")
 
-        CALL exchange_valence_hf(&
+        CALL exchange_valence_hf(& 
      &            nk,kpts,nkpti,nkpt_EIBZ, sym,atoms,hybrid,&
      &            cell, dimension,input,jsp, hybdat, mnobd, lapw,&
      &            eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,&
@@ -454,9 +440,11 @@ MODULE m_hsfock
       END IF ! hybrid%l_calhf
 
       ! add non-local x-potential to the hamiltonian a
-      a = a - a_ex*v_x
-
-
+      IF (hamovlp%l_real) THEN
+         hamovlp%a_r = hamovlp%a_r - a_ex*v_x
+      ELSE
+         hamovlp%a_c = hamovlp%a_c - a_ex*v_x
+      ENDIF
       ! calculate HF energy
       IF( hybrid%l_calhf ) THEN
         WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
@@ -474,51 +462,20 @@ MODULE m_hsfock
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen_hf.F
 
-      IF( input%gw .eq.2 .and. gwc .eq. 1 ) THEN
-        exch = 0
-        ALLOCATE( carr(ic),stat=ok )
-        IF( ok .ne. 0 ) STOP 'hsfock: error allocation carr'
-        DO iband1 = 1,hybdat%nbands(nk)
-          carr = matvec(v_x(:ic1),z(:ic,iband1))
-          DO iband2 = 1,iband1
-            exch(iband2,iband1) = dotprod(z(:ic,iband2),carr(:ic))
-            exch(iband1,iband2) = conjg(exch(iband2,iband1))
-          END DO
-        END DO
-
-        DO iband = 1,hybdat%nbands(nk)
-          IF( iband .le. hybdat%nobd(nk) ) THEN
+      exch = 0
+      DO iband = 1,hybdat%nbands(nk)
+         exch(iband,iband) = dotprod(z(:ic,iband),matvec(v_x(:ic1),z(:ic,iband)))
+         IF( iband .le. hybdat%nobd(nk) ) THEN
             results%te_hfex%valence = results%te_hfex%valence -&
-     &                        a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
-          END IF
-          IF(hybrid%l_calhf) THEN
+                 &                        a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
+         END IF
+         IF(hybrid%l_calhf) THEN
             WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
-     &  kpts%bk(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
-     &  div_vv(iband)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
-          END IF
-        END DO
-
-        ! write exch(:,:) to file gw_vxnl
-        irec     = (jsp-1)*nkpti + nk
-        irecl_gw = dimension%neigd*dimension%neigd*16
-        OPEN(unit=778,file='gw_vxnl',access='direct',recl=irecl_gw)
-        WRITE(778,rec=irec) -exch
-        CLOSE(778)
-      ELSE
-        exch = 0
-        DO iband = 1,hybdat%nbands(nk)
-          exch(iband,iband) = dotprod(z(:ic,iband),matvec(v_x(:ic1),z(:ic,iband)))
-          IF( iband .le. hybdat%nobd(nk) ) THEN
-            results%te_hfex%valence = results%te_hfex%valence -&
-     &                        a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
-          END IF
-          IF(hybrid%l_calhf) THEN
-            WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
-     &  kpts%bk(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
-     &  div_vv(iband)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
-          END IF
-        END DO
-      END IF
+                 &  kpts%bk(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
+                 &  div_vv(iband)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
+         END IF
+      END DO
+     
 
       DEALLOCATE( z,v_x )
 

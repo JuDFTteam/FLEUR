@@ -4,7 +4,7 @@ module m_eigen_hf_init
 !     preparations for HF and hybrid functional calculation
 !
 contains
-  subroutine eigen_hf_init(hybrid,kpts,sym,atoms,input,dimension,hybdat,irank2,isize2)
+  subroutine eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2)
     USE m_types
     USE m_read_core
     USE m_util
@@ -12,12 +12,11 @@ contains
   implicit none
   TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
   TYPE(t_kpts),INTENT(IN)          :: kpts
-  TYPE(t_sym),INTENT(IN)           :: sym
   TYPE(t_atoms),INTENT(IN)         :: atoms
   TYPE(t_input),INTENT(IN)         :: input
   TYPE(t_dimension),INTENT(IN)     :: dimension
   INTEGER,INTENT(OUT)              :: irank2(:),isize2(:)
-  TYPE(t_hybdat),INTENT(OUT):: hybdat
+  TYPE(t_hybdat),INTENT(OUT)       :: hybdat
   
  
 
@@ -29,8 +28,7 @@ contains
   
    IF( .NOT. hybrid%l_hybrid ) THEN
         hybrid%l_calhf  = .false.
-      ELSE IF( (all(hybrid%ddist .lt. 1E-5) .or. init_vex .or. nohf_it >= 50 )&
-     &         .and. input%imix .gt. 10) THEN
+      ELSE IF( (all(hybrid%ddist .lt. 1E-5) .or. init_vex .or. nohf_it >= 50 ) .and. input%imix .gt. 10) THEN
         hybrid%l_calhf  = .true.
         init_vex = .false.
         nohf_it  = 0
@@ -48,8 +46,15 @@ contains
         !initialize hybdat%gridf for radial integration
         CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
-   
-
+        !Alloc variables
+        ALLOCATE(hybdat%lmaxc(atoms%ntype))
+        ALLOCATE(hybdat%ne_eig(kpts%nkpt),hybdat%nbands(kpts%nkpt))
+        ALLOCATE(hybdat%nobd(kpts%nkptf))
+        ALLOCATE(hybdat%bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))
+        ALLOCATE(hybdat%bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))
+        ALLOCATE(hybdat%bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))
+        ALLOCATE(hybdat%drbas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))
+        
         !sym%tau = oneD%ods%tau
 
         ! preparations for core states

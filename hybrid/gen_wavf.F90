@@ -31,6 +31,7 @@
       USE m_setabc1locdn
       USE m_olap
       USE m_types
+      USE m_abcrot
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(INOUT)   :: hybdat
@@ -339,8 +340,8 @@
         ! rotate them in the global one
 
         CALL abcrot(&
-                atoms,hybdat%nbands(ikpt0),dimension,&
-                 hybdat%nbands(ikpt0),sym,&
+                atoms,hybdat%nbands(ikpt0),&
+                 sym,&
                 cell,oneD,&
                 acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),&
                 ccof(:,: hybdat%nbands(ikpt0),:,:) )
