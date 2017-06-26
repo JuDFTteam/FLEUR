@@ -509,6 +509,8 @@ MODULE m_cdn_io
             vacuumTemp%nvac = vacuum%nvac
             vacuumTemp%nmzxy = vacuum%nmzxy
             vacuumTemp%nmz = vacuum%nmz
+            vacuumTemp%dvac = vacuum%dvac
+            vacuumTemp%delz = vacuum%delz
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
@@ -569,6 +571,8 @@ MODULE m_cdn_io
             vacuumTemp%nvac = vacuum%nvac
             vacuumTemp%nmzxy = vacuum%nmzxy
             vacuumTemp%nmz = vacuum%nmz
+            vacuumTemp%dvac = vacuum%dvac
+            vacuumTemp%delz = vacuum%delz
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
