@@ -1,38 +1,38 @@
-#build-gfortran:
-#  image: ubuntu:16.10
-#  stage: build
-#  cache: 
-#     paths:
-#       - build
-#  script:
-#    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
-#    - cd /builds/fleur/fleur; ./configure.sh AUTO; cd build; make 
-#test-gfortran:
-#  image: ubuntu:16.10
-#  stage: test
-#  cache:
-#     paths:
-#       - build
-#  script:
-#    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
-#    - cd /builds/fleur/fleur/build;ctest
-
-
-build-pgi:
-  image: hopobcn/pgi-ce
+build-gfortran:
+  image: ubuntu:16.10
   stage: build
   cache: 
      paths:
-       - build.debug
+       - build
   script:
-    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev
-    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
-test-pgi:
-  image: hopobcn/pgi-ce
+    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
+    - cd /builds/fleur/fleur; ./configure.sh AUTO; cd build; make 
+test-gfortran:
+  image: ubuntu:16.10
   stage: test
   cache:
      paths:
-       - build.debug
+       - build
   script:
-    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
-    - cd /builds/fleur/fleur/build.debug;ctest
+    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
+    - ulimit -s unlimited ;cd /builds/fleur/fleur/build;ctest
+
+
+#build-pgi:
+#  image: hopobcn/pgi-ce
+#  stage: build
+#  cache: 
+#     paths:
+#       - build.debug
+#  script:
+#    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev
+#    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
+#test-pgi:
+#  image: hopobcn/pgi-ce
+#  stage: test
+#  cache:
+#     paths:
+#       - build.debug
+#  script:
+#    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
+#    - cd /builds/fleur/fleur/build.debug;ctest
