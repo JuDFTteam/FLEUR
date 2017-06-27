@@ -29,7 +29,6 @@
       USE m_types
       USE m_juDFT_init
       USE m_julia
-      USE m_kptgen_hybrid
       USE m_od_kptsgen
       USE m_inv3
 
@@ -418,7 +417,7 @@
             ! kpts generation
             CALL inv3(cell%amat,cell%bmat,cell%omtil)
             cell%bmat=tpi_const*cell%bmat
-            kpts%nmop(:) = div(:)
+            kpts%nkpt3(:) = div(:)
             kpts%l_gamma = l_gamma
             IF (.NOT.oneD%odd%d1) THEN
                IF (jij%l_J) THEN
@@ -431,9 +430,9 @@
                   sym%nop2=n2
                ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
                   STOP 'Error: No kpoint set generation for gamma=T yet!'
-                  CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                                     kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                                     sym%mrot,sym%tau)
+                  !CALL kptgen_hybrid(kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3),&
+                  !                   kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
+                  !                   sym%mrot,sym%tau)
                ELSE
                   CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
                END IF

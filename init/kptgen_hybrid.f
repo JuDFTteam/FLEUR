@@ -8,18 +8,18 @@
 
       CONTAINS
       
-      ! this programm generates an aequdistant kpoint set including the
-      ! Gamma point; it is reduced to IBZ and written in kpts
+! this programm generates an aequdistant kpoint set including the
+! Gamma point; it is reduced to IBZ and written in kpts (M.B.)
+
+      !Modified for types D.W.
 
 
-      SUBROUTINE kptgen_hybrid(nx,ny,nz,nkpt,invs,l_soc,nop,mrot,tau)
-
+      SUBROUTINE kptgen_hybrid(kpts,invs,l_soc,nop,mrot,tau)
+      USE m_types
       IMPLICIT NONE
 
-
+      TYPE(t_kpts),INTENT(INOUT)::kpts
       ! - scalars -
-      INTEGER, INTENT(IN)   ::  nx,ny,nz
-      INTEGER, INTENT(IN)   ::  nkpt
       INTEGER, INTENT(IN)   ::  nop
       LOGICAL, INTENT(IN)   ::  invs
       LOGICAL, INTENT(IN)   ::  l_soc
@@ -27,12 +27,10 @@
       INTEGER, INTENT(IN)   ::  mrot(3,3,nop)
       REAL   , INTENT(IN)   ::  tau(3,nop)
       ! - local scalars -
-      INTEGER               ::  i,j,k
-      INTEGER               ::  ikpt,ikpt0,ikpt1,nkpti
-      INTEGER               ::  iop
-      INTEGER               ::  nrkpt,nsym
+      INTEGER               ::  i,j,k,nkpt
+      INTEGER               ::  ikpt,ikpt0,nkpti
+      INTEGER               ::  nsym
       ! - local arrays -
-      INTEGER               ::  nkpt3(3)              ! generate axbxc k-point set
       INTEGER,ALLOCATABLE   ::  rot(:,:,:),rrot(:,:,:)
       INTEGER,ALLOCATABLE   ::  invtab(:)
       INTEGER,ALLOCATABLE   ::  neqkpt(:)
@@ -41,23 +39,18 @@
       REAL,ALLOCATABLE      ::  rtau(:,:)
       REAL,ALLOCATABLE      ::  bk(:,:),bkhlp(:,:)
       REAL,ALLOCATABLE      ::  rarr(:)
-      REAL                  ::  rotkpt(3)
-      REAL                  ::  rdum
-      LOGICAL               ::  inv,ldum
+      LOGICAL               ::  ldum
 
-      IF( nx*ny*nz .ne. nkpt ) 
-     &STOP 'kptgen_hybrid: nx*ny*nz=/nkpt'
-      nkpt3(1) = nx; nkpt3(2) = ny; nkpt3(3) = nz      
-      
+      nkpt=kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
       ALLOCATE( bk(3,nkpt),bkhlp(3,nkpt) )
 
       ikpt = 0
-      DO i=0,nkpt3(1)-1
-        DO j=0,nkpt3(2)-1
-          DO k=0,nkpt3(3)-1
+      DO i=0,kpts%nkpt3(1)-1
+        DO j=0,kpts%nkpt3(2)-1
+          DO k=0,kpts%nkpt3(3)-1
             ikpt       = ikpt + 1
-            bk(:,ikpt) = (/ 1.0*i/nkpt3(1),1.0*j/nkpt3(2),
-     &                                     1.0*k/nkpt3(3) /)
+            bk(:,ikpt) = (/ 1.0*i/kpts%nkpt3(1),1.0*j/kpts%nkpt3(2),
+     &                                     1.0*k/kpts%nkpt3(3) /)
           END DO
         END DO
       END DO
@@ -112,16 +105,16 @@
       END DO
 
       ALLOCATE ( kptp(nkpt),symkpt(nkpt),rarr(3),iarr2(3),iarr(nkpt) )
-      ALLOCATE ( pkpt(nkpt3(1)+1,nkpt3(2)+1,nkpt3(3)+1) )
+      ALLOCATE ( pkpt(kpts%nkpt3(1)+1,kpts%nkpt3(2)+1,kpts%nkpt3(3)+1) )
       pkpt = 0
       DO ikpt = 1,nkpt
-        iarr2 = nint ( bk(:,ikpt) * nkpt3 ) + 1
+        iarr2 = nint ( bk(:,ikpt) * kpts%nkpt3 ) + 1
         pkpt(iarr2(1),iarr2(2),iarr2(3)) = ikpt
       END DO
 
-      pkpt(nkpt3(1)+1,    :     ,    :     ) = pkpt(1,:,:)
-      pkpt(    :     ,nkpt3(2)+1,    :     ) = pkpt(:,1,:)
-      pkpt(    :     ,    :     ,nkpt3(3)+1) = pkpt(:,:,1)
+      pkpt(kpts%nkpt3(1)+1,    :     ,    :     ) = pkpt(1,:,:)
+      pkpt(    :     ,kpts%nkpt3(2)+1,    :     ) = pkpt(:,1,:)
+      pkpt(    :     ,    :     ,kpts%nkpt3(3)+1) = pkpt(:,:,1)
       
       IF(any(pkpt.eq.0)) 
      &STOP 'kptgen: Definition of pkpt-pointer failed.'
@@ -132,15 +125,15 @@
         kptp(i)   = i
         symkpt(i) = 1
         DO k = 2,nsym
-          rarr  = matmul(rrot(:,:,k),bk(:,i)) * nkpt3
+          rarr  = matmul(rrot(:,:,k),bk(:,i)) * kpts%nkpt3
           iarr2 = nint(rarr)
           IF(any(abs(iarr2-rarr).gt.1d-10)) THEN
             WRITE(6,'(A,I3,A)') 'kptgen: Symmetry operation',k,
      &                        ' incompatible with k-point set.'
             ldum = .true.
           END IF
-          iarr2 = modulo(iarr2,nkpt3) + 1
-          IF(any(iarr2.gt.nkpt3)) 
+          iarr2 = modulo(iarr2,kpts%nkpt3) + 1
+          IF(any(iarr2.gt.kpts%nkpt3)) 
      &    STOP 'kptgen: pointer indices exceed pointer dimensions.'
           j     = pkpt(iarr2(1),iarr2(2),iarr2(3))
           IF(j.eq.0) STOP 'kptgen: k-point index is zero (bug?)'
@@ -171,15 +164,14 @@
       kptp         = iarr(kptp)
       kptp(iarr)   = kptp
       symkpt(iarr) = symkpt
-      DO i=1,nkpt3(1)+1 
-        DO j=1,nkpt3(2)+1
-          DO k=1,nkpt3(3)+1 
+      DO i=1,kpts%nkpt3(1)+1 
+        DO j=1,kpts%nkpt3(2)+1
+          DO k=1,kpts%nkpt3(3)+1 
             pkpt(i,j,k) = iarr(pkpt(i,j,k))
           END DO
         END DO
       END DO
-      DEALLOCATE (rarr,iarr,iarr2)
-  
+   
       ALLOCATE( neqkpt(nkpti) )
       neqkpt = 0
       DO ikpt0 = 1,nkpti
@@ -188,15 +180,19 @@
         END DO
       END DO
 
-      OPEN(unit=41,file='kpts',form='formatted',status='new')
+!     Do not do any IO, but store in kpts
+      kpts%nkpt=nkpti
+      if (allocated(kpts%bk)) deallocate(kpts%bk)
+      if (allocated(kpts%wtkpt)) deallocate(kpts%wtkpt)
+      ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt))
 
-      rdum = kgv( (/nkpt3(1),nkpt3(2),nkpt3(3)/),3 )
-      WRITE(41,'(I5,F20.10)') nkpti,rdum
+      
       DO ikpt=1,nkpti
-        WRITE(41,'(4F10.5)') bk(:,ikpt)*rdum,1.0*neqkpt(ikpt) !3x,f7.5,3x,f7.5,3x,f7.5,f10.5
+         kpts%bk(:,ikpt)=bk(:,ikpt)
+         kpts%wtkpt(ikpt)=neqkpt(ikpt)
       END DO
-      CLOSE(41)
-
+      kpts%posScale=1.0
+      
       CONTAINS
 
       ! Returns least common multiple of the integers iarr(1:n).

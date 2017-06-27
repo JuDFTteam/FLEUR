@@ -66,7 +66,6 @@
           USE m_coulomb
           USE m_gen_map
           USE m_dwigner
-          USE m_gen_bz
           !          USE m_generate_pntgpt
           !          USE m_rotate_eig
           USE m_ylm
@@ -234,7 +233,7 @@
                    IF( .NOT. ALLOCATED(results%w_iks) )&
                         ALLOCATE ( results%w_iks(dimension%neigd2,kpts%nkpt,dimension%jspd) )
 
-
+#ifdef CPP_NEVER
                    IF(  hybrid%l_hybrid .AND. it == 1 ) THEN
                       CALL juDFT_WARN ("Hybrid functionals not working in this version")
                       CALL timestart("generation of mixedbasis and coulombmatrix")
@@ -246,9 +245,7 @@
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-                  
-                      !calculate whole Brilloun zone
-                      CALL gen_bz(kpts,sym)
+                      if (kpts%nkptf==0) call judft_error("kpoint-set of full BZ not available",hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
                       !construct the mixed-basis
                       CALL mixedbasis(atoms,kpts, dimension,input,cell,sym,xcpot,hybrid, eig_id,mpi,v,l_restart)
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
@@ -291,6 +288,7 @@
                            hybrid%pgptm1(0,0),hybrid%ngptm2(0),hybrid%pgptm2(0,0),hybrid%basm1(0,0,0,0),&
                            hybrid%basm2(0,0,0,0),hybrid%nindxm1(0,0),hybrid%nindxm2(0,0))
                    END IF ! first iteration hybrids
+#endif
                    !HF
                    !#endif
                    IF (.NOT.obsolete%pot8) THEN
@@ -319,6 +317,33 @@
                       !
                       !+t3e
                    ENDIF ! .not.obsolete%pot8
+                   IF(  hybrid%l_hybrid .AND. it == 1 ) THEN
+                      CALL juDFT_WARN ("Hybrid functionals not working in this version")
+                      CALL timestart("generation of mixedbasis and coulombmatrix")
+
+                      IF ( mpi%irank == 0 ) WRITE(*,'(/A)',advance='no') ' calculation of mixedbasis...'
+                      eig_id=open_eig(&
+                      mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
+                      ,noco%l_noco,.FALSE.,.FALSE.,noco%l_soc,.FALSE.,&
+         mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
+         nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
+         l_orb=banddos%l_orb)
+                      if (kpts%nkptf==0) call judft_error("kpoint-set of full BZ not available",hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
+                      !construct the mixed-basis
+                      CALL mixedbasis(atoms,kpts, dimension,input,cell,sym,xcpot,hybrid, eig_id,mpi,v,l_restart)
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
+
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' calculation of coulomb matrix ...'
+                      CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
+                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
+
+#ifdef CPP_MPI
+                      CALL MPI_Bcast( hybrid%maxbasm1,1,MPI_INTEGER4,0, mpi%mpi_comm,ierr(1) )
+                      CALL MPI_Bcast( hybrid%radshmin,1,MPI_REAL8,   0, mpi%mpi_comm,ierr(1) )
+#endif
+                      CALL timestop("generation of mixedbasis and coulombmatrix")
+                   ENDIF
+                   
 #ifdef CPP_MPI
                    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif

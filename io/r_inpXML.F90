@@ -34,9 +34,6 @@ SUBROUTINE r_inpXML(&
   USE m_icorrkeys
   USE m_constants
   USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
-  USE m_julia
-  USE m_kptgen_hybrid
-  USE m_od_kptsgen
   USE m_strgndim
   USE m_strgn
   USE m_od_strgn1
@@ -59,6 +56,7 @@ SUBROUTINE r_inpXML(&
   USE m_apwsdim
   USE m_sort
   USE m_nocoInputCheck
+  USE m_kpoints
   USE m_enpara,    ONLY : r_enpara
 
   IMPLICIT NONE
@@ -402,7 +400,6 @@ SUBROUTINE r_inpXML(&
   ! Read in Brillouin zone integration parameters
 
   kpts%nkpt3 = 0
-  kpts%nmop = 0
   l_kpts = .FALSE.
 
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
@@ -455,9 +452,6 @@ SUBROUTINE r_inpXML(&
      kpts%nkpt3(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ny'))
      kpts%nkpt3(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-     kpts%nmop(1) = kpts%nkpt3(1)
-     kpts%nmop(2) = kpts%nkpt3(2)
-     kpts%nmop(3) = kpts%nkpt3(3)
      kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
   END IF
 
@@ -1956,40 +1950,8 @@ SUBROUTINE r_inpXML(&
   END IF
 
   ! Calculate missing kpts parameters
-
-  IF (.not.l_kpts) THEN
-     IF (.NOT.oneD%odd%d1) THEN
-        IF (jij%l_J) THEN
-           n1=sym%nop
-           n2=sym%nop2
-           sym%nop=1
-           sym%nop2=1
-           CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-           sym%nop=n1
-           sym%nop2=n2
-        ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-           CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                sym%mrot,sym%tau)
-        ELSE
-           CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-        END IF
-     ELSE
-        STOP 'Error: No kpoint set generation for 1D systems yet!'
-        CALL od_kptsgen (kpts%nkpt)
-     END IF
-  END IF
-  sumWeight = 0.0
-  DO i = 1, kpts%nkpt
-     sumWeight = sumWeight + kpts%wtkpt(i)
-     kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
-  END DO
-  kpts%posScale = 1.0
-  DO i = 1, kpts%nkpt
-     kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
-  END DO
-  kpts%nkpt3(:) = kpts%nmop(:)
-  IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
+  call kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+  
 
   ! Generate missing general parameters
 

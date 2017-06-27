@@ -38,7 +38,6 @@ CONTAINS
     USE m_radflo,   ONLY : radflo
     USE m_loddop,   ONLY : loddop
     USE m_util,     ONLY : intgrf_init,intgrf,rorderpf
-    USE m_gen_bz
     USE m_read_core
     USE m_wrapper
     USE m_icorrkeys
@@ -53,7 +52,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_kpts),INTENT(INOUT)   :: kpts
+    TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: v
 
@@ -143,6 +142,8 @@ CONTAINS
     IF(ALLOCATED(hybrid%basm1) )   DEALLOCATE(hybrid%basm1)
     IF(ALLOCATED(hybrid%basm2) )   DEALLOCATE(hybrid%basm2)
 
+    call usdus%init(atoms,dimension%jspd)
+
     ! If restart is specified read file if it already exists
     ! create it otherwise
     IF ( l_restart ) THEN
@@ -200,9 +201,6 @@ CONTAINS
 
     ! initialize gridf for radial integration
     CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
-
-    ! generate whole BZ form k-points given in kpts
-    CALL gen_bz(kpts,sym)
 
     !
     ! read in energy parameters from file eig

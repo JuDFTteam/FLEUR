@@ -28,7 +28,6 @@
       USE m_strgndim
       USE m_convndim
       USE m_inpeigdim
-      USE m_kptgen_hybrid
       USE m_ylm
       IMPLICIT NONE
 !
@@ -94,7 +93,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nmop,jij%nqpt,nmopq)
+                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,jij%nqpt,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
@@ -330,10 +329,8 @@
      &              kpts,.false.,.FALSE.)
          sym%nop=n1
          sym%nop2=n2
-         ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
-         CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                            kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                            sym%mrot,sym%tau)
+      ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
+         call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
          CALL julia(&
      &              sym,cell,input,noco,banddos,&
@@ -371,7 +368,7 @@
 ! Using the k-point generator also for creation of q-points for the
 ! J-constants calculation:
       IF(.not.l_qpts)THEN
-        kpts%nmop=nmopq
+        kpts%nkpt3=nmopq
         l_tmp=(/noco%l_ss,noco%l_soc/)
         noco%l_ss=.false.
         noco%l_soc=.false.

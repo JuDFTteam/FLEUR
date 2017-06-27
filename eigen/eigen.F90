@@ -117,12 +117,9 @@ CONTAINS
     !
     ! --> Allocate
     !
-    ALLOCATE ( ud%uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,DIMENSION%jspd),nv2(DIMENSION%jspd) )
-    ALLOCATE ( ud%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),eig(DIMENSION%neigd),bkpt(3) )
-    ALLOCATE ( ud%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),ud%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-    ALLOCATE ( ud%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),ud%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
-    ALLOCATE ( ud%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),ud%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
-    ALLOCATE ( ud%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),ud%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
+    call ud%init(atoms,DIMENSION%jspd)
+    ALLOCATE ( nv2(DIMENSION%jspd) )
+    ALLOCATE ( eig(DIMENSION%neigd),bkpt(3) )
     ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),&
          lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
     !

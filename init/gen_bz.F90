@@ -43,25 +43,27 @@ SUBROUTINE gen_bz( kpts,sym)
       
 !  - local arrays - 
    INTEGER,ALLOCATABLE     ::  iarr(:)
-   REAL                    ::  rrot(3,3,sym%nsym),rotkpt(3)
+   REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
    REAL,ALLOCATABLE        ::  rarr1(:,:)
-
-   ALLOCATE (kpts%bkf(3,sym%nsym*kpts%nkpt))
-   ALLOCATE (kpts%bkp(sym%nsym*kpts%nkpt))
-   ALLOCATE (kpts%bksym(sym%nsym*kpts%nkpt))
+   INTEGER:: nsym
+   
+   nsym=sym%nop
+   if (.not.sym%invs) nsym=2*sym%nop
+   
+   ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
+   ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
+   ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
       
    ! Generate symmetry operations in reciprocal space
-
-   DO iop=1,sym%nsym
+   DO iop=1,nsym
       IF( iop .le. sym%nop ) THEN
-         rrot(:,:,iop) = transpose( sym%mrot(:,:,sym%invtab(iop)) )
+         rrot(:,:,iop) = transpose( sym%mrot(:,:,iop) )
       ELSE
          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
       END IF
    END DO
 
    ! Set target number for k points in full BZ
-
    kpts%nkptf = kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
    IF(kpts%l_gamma) THEN
       IF (ANY(MODULO(kpts%nkpt3(:),2).EQ.0)) THEN
@@ -76,7 +78,7 @@ SUBROUTINE gen_bz( kpts,sym)
    kpts%bkf = 0
    ic = 0
       
-   DO iop=1,sym%nsym
+   DO iop=1,nsym
       DO ikpt=1,kpts%nkpt
          l_found = .FALSE.
          rotkpt = MATMUL(rrot(:,:,iop), kpts%bk(:,ikpt))
@@ -98,21 +100,22 @@ SUBROUTINE gen_bz( kpts,sym)
       END DO
    END DO
 
-   IF (kpts%nkptf /= ic) THEN
-      WRITE(*,*) ''
-      WRITE(*,*) 'Generation of full Brilloun zone from IBZ failed.'
-      WRITE(*,*) 'Number of generated k points in full BZ does not'
-      WRITE(*,*) 'agree with target.'
-      WRITE(*,*) 'Number of generated k points in full BZ: ', ic
-      WRITE(*,*) 'Target: ', kpts%nkptf
-      WRITE(*,*) ''
+   kpts%nkptf = ic
+   !IF (kpts%nkptf /= ic) THEN
+   !   WRITE(*,*) ''
+   !   WRITE(*,*) 'Generation of full Brilloun zone from IBZ failed.'
+   !   WRITE(*,*) 'Number of generated k points in full BZ does not'
+   !   WRITE(*,*) 'agree with target.'
+   !   WRITE(*,*) 'Number of generated k points in full BZ: ', ic
+   !   WRITE(*,*) 'Target: ', kpts%nkptf
+   !   WRITE(*,*) ''
 
-!      DO ikpt=1,kpts%nkptf
-!         WRITE(*,*) kpts%bkf(:,ikpt)
-!      END DO
+   !   DO ikpt=1,kpts%nkptf
+   !      WRITE(*,*) kpts%bkf(:,ikpt)
+   !   END DO
 
-      CALL juDFT_error("gen_bz: error kpts/symmetry",calledby="gen_bz")
-   END IF
+   !   CALL juDFT_error("gen_bz: error kpts/symmetry",calledby="gen_bz")
+   !END IF
 
    ! Reallocate bkf, bkp, bksym
    ALLOCATE (iarr(kpts%nkptf))
