@@ -162,7 +162,7 @@ CONTAINS
 
        IF (.NOT.l_xyav) THEN
           CALL timestart("Qfix")
-          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.FALSE., fix)
+          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.FALSE.,.false., fix)
           CALL timestop("Qfix")
        ENDIF
 

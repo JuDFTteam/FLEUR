@@ -1,131 +1,106 @@
-      MODULE m_qfix
-      USE m_juDFT
-!     *******************************************************
-!     check total charge and renormalize        c,l.fu
-!     *******************************************************
-      CONTAINS
-      SUBROUTINE qfix(&
-     &                stars,atoms,sym,vacuum,&
-     &                sphhar,input,cell,oneD,&
-     &                qpw,rhtxy,rho,rht,l_printData,&
-     &                fix)
+MODULE m_qfix
+  USE m_juDFT
+  !Calculate total charge
+  !Depending on variable input%qfix, the following will be done to fix the charge
+  !Input qfix can be 1 or 2
+  ! qfix=0 (no qfix in inp.xml) means we usually do not run the code
+  !                       if force_fix is .true. we run the code and assume qfix=2
+  !                       in the call to qfix we will always run it
+  ! qfix=1 (qfix=f in inp.xml) means we fix only in INT (only done in firstcall)
+  ! qfix=2 (qfix=t in inp.xml) means we fix total charge
+  ! qfix file no longer supported!
 
-      USE m_types
-      USE m_cdntot
-      IMPLICIT NONE
-!     ..
-!     .. Scalar Arguments ..
-      TYPE(t_stars),INTENT(IN) :: stars
-      TYPE(t_atoms),INTENT(IN) :: atoms
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_vacuum),INTENT(IN):: vacuum
-      TYPE(t_sphhar),INTENT(IN):: sphhar
-      TYPE(t_input),INTENT(IN) :: input
-      TYPE(t_oneD),INTENT(IN)  :: oneD
-      TYPE(t_cell),INTENT(IN)  :: cell
-      LOGICAL,INTENT(IN)       :: l_printData
-      REAL,    INTENT (OUT) :: fix
-!-odim
-!+odim
-!     ..
-!     .. Array Arguments ..
-      COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
-      COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
-      REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-      REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
-!     ..
-!     .. Local Scalars ..
-      LOGICAL fixtot,l99
-      REAL qtot,qis,zc
-      INTEGER ivac,j,jm,jspin,k,lh,n,nl,ns,na
-!     ..
-      CALL cdntot(&
-     &            stars,atoms,sym,&
-     &            vacuum,input,cell,oneD,&
-     &            qpw,rho,rht,.FALSE.,&
-     &            qtot,qis)
-      zc = 0.
-      DO 10 n = 1,atoms%ntype
-         zc = zc + atoms%neq(n)*atoms%zatom(n)
-   10 CONTINUE
+CONTAINS
+  SUBROUTINE qfix( stars,atoms,sym,vacuum,&
+       sphhar,input,cell,oneD,qpw,rhtxy,rho,rht,l_printData,force_fix,fix)
 
-!+roa (check via qfix file if total charge or only interstitial to fix)
-      fixtot=.TRUE.
-      INQUIRE(file='qfix',exist=l99)
-      IF (l99) then
-        OPEN (99,file='qfix',status='old',form='formatted')
-        READ (99,'(1x,l1)',end=1199) fixtot
-        IF (.NOT.fixtot ) THEN
-           REWIND (99)
-           WRITE (99,'(1x,l1,70a)') .TRUE.,&
-     &      ' (1x,l1) F..fix interstitial T..fix total charge '
-        ENDIF
- 1199   CLOSE (99)
-      ENDIF
-      zc = zc + 2*input%efield%sigma
-      IF ( fixtot ) THEN
-!-roa
-         fix = zc/qtot
-         DO 100 jspin = 1,input%jspins
-            na = 1
-            DO 40 n = 1,atoms%ntype
-               ns = atoms%ntypsy(na)
-               lh = sphhar%nlh(ns)
-               jm = atoms%jri(n)
-               DO 30 nl = 0,lh
-                  DO 20 j = 1,jm
-                     rho(j,nl,n,jspin) = fix*rho(j,nl,n,jspin)
-   20             CONTINUE
-   30          CONTINUE
-               na = na + atoms%neq(n)
-   40       CONTINUE
-            DO 50 k = 1,stars%ng3
-               qpw(k,jspin) = fix*qpw(k,jspin)
-   50       CONTINUE
-            IF (input%film) THEN
-               DO 90 ivac = 1,vacuum%nvac
-                  DO 60 n = 1,vacuum%nmz
-                     rht(n,ivac,jspin) = fix*rht(n,ivac,jspin)
-   60             CONTINUE
-                  DO 80 n = 1,vacuum%nmzxy
-                     DO 70 k = 2,oneD%odi%nq2
-                        rhtxy(n,k-1,ivac,jspin) = fix*&
-     &                    rhtxy(n,k-1,ivac,jspin)
-   70                CONTINUE
-   80             CONTINUE
-   90          CONTINUE
-            END IF
-  100    CONTINUE
-         WRITE (6,FMT=8000) zc,fix
-         CALL cdntot(&
-     &               stars,atoms,sym,&
-     &               vacuum,input,cell,oneD,&
-     &               qpw,rho,rht,l_printData,&
-     &               qtot,qis)
-!+roa 
-      ELSE
-         fix = (zc - qtot) / qis + 1.
-         DO jspin = 1,input%jspins
-            DO k = 1,stars%ng3
-               qpw(k,jspin) = fix*qpw(k,jspin)
-            ENDDO
-         ENDDO
-         WRITE (6,FMT=8001) zc,fix
-         CALL cdntot(&
-     &               stars,atoms,sym,&
-     &               vacuum,input,cell,oneD,&
-     &               qpw,rho,rht,l_printData,&
-     &               qtot,qis)
+    USE m_types
+    USE m_cdntot
+    IMPLICIT NONE
+    !     ..
+    !     .. Scalar Arguments ..
+    TYPE(t_stars),INTENT(IN) :: stars
+    TYPE(t_atoms),INTENT(IN) :: atoms
+    TYPE(t_sym),INTENT(IN)   :: sym
+    TYPE(t_vacuum),INTENT(IN):: vacuum
+    TYPE(t_sphhar),INTENT(IN):: sphhar
+    TYPE(t_input),INTENT(IN) :: input
+    TYPE(t_oneD),INTENT(IN)  :: oneD
+    TYPE(t_cell),INTENT(IN)  :: cell
+    LOGICAL,INTENT(IN)       :: l_printData,force_fix
+    REAL,    INTENT (OUT)    :: fix
+    !     ..
+    !     .. Array Arguments ..
+    COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
+    COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
+    REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+    REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
+    !     ..
+    !     .. Local Scalars ..
+    LOGICAL :: l_qfixfile,fixtotal
+    LOGICAL :: l_firstcall=.true.
+    REAL    :: qtot,qis,zc
+    INTEGER :: jm,lh,n,na
+    !     ..
+    fixtotal=.true. !this is the default
+    fix=1.0
+    if (l_firstcall) THEN
+       INQUIRE(file='qfix',exist=l_qfixfile)
+       IF (l_qfixfile) CALL judft_info("qfix file no longer supported, check the qfix option in inp.xml","INFO")
+       if (input%qfix==1) fixtotal=.false.
+       l_firstcall=.false.
+    ELSE
+       IF (input%qfix==0.AND..NOT.force_fix) RETURN
+    ENDIF
+    ! qfix==0 means no qfix was given in inp.xml. 
+    ! In this case do nothing except when forced to fix!
+    
+    CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
+         qpw,rho,rht,.FALSE., qtot,qis)
 
-      ENDIF
+    !The total nucleii charge
+    zc=SUM(atoms%neq(:)*atoms%zatom(:))
+    zc = zc + 2*input%efield%sigma
 
-      IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
-      IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
+   
+    IF (fixtotal) THEN
+       !-roa
+       fix = zc/qtot
+       na = 1
+       DO n = 1,atoms%ntype
+          lh = sphhar%nlh(atoms%ntypsy(na))
+          jm = atoms%jri(n)
+          rho(:jm,0:lh,n,:) = fix*rho(:jm,0:lh,n,:)
+          na = na + atoms%neq(n)
+       ENDDO
+       qpw(:stars%ng3,:) = fix*qpw(:stars%ng3,:)
+       IF (input%film) THEN
+          rht(:vacuum%nmz,:vacuum%nvac,:) = fix*rht(:vacuum%nmz,:vacuum%nvac,:)
+          rhtxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:) = fix*&
+               rhtxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:)
+       END IF
+       WRITE (6,FMT=8000) zc,fix
+       IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
+       CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
+            qpw,rho,rht,l_printData, qtot,qis)
+       !+roa 
+    ELSE
+       fix = (zc - qtot) / qis + 1.
+       qpw(:stars%ng3,:) = fix*qpw(:stars%ng3,:)
+       WRITE (6,FMT=8001) zc,fix
+       IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
+       CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
+            qpw,rho,rht,l_printData, qtot,qis)
+
+    ENDIF
+
+    IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
+    IF (fix<.9) CALL juDFT_WARN("You gained too much charge")
 
 
- 8000 FORMAT (/,10x,'zc= ',f12.6,5x,'qfix=  ',f10.6)
- 8001 FORMAT (/,' > broy only qis: ','zc= ',f12.6,5x,'qfix=  ',f10.6)
-!-roa
+8000 FORMAT (/,10x,'zc= ',f12.6,5x,'qfix=  ',f10.6)
+8001 FORMAT (/,' > broy only qis: ','zc= ',f12.6,5x,'qfix=  ',f10.6)
+    !-roa
 
-      END SUBROUTINE qfix
-      END MODULE m_qfix
+  END SUBROUTINE qfix
+END MODULE m_qfix

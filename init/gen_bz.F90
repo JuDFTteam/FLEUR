@@ -4,105 +4,134 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! gen_bz generates the (whole) Brillouin zone from the          !
-      ! (irreducible) k-points given in the kpts file.                !
-      !                                                               !
-      !                                     M.Betzinger (09/07)       !
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! gen_bz generates the (whole) Brillouin zone from the          !
+! (irreducible) k-points given in the kpts file.                !
+!                                                               !
+!                                     M.Betzinger (09/07)       !
+!                                                               !
+!                        Refactored in 2017 by G.M.             !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
  
-      MODULE m_gen_bz
+MODULE m_gen_bz
 
-      CONTAINS
+CONTAINS
 
-      SUBROUTINE gen_bz( kpts,sym)
+SUBROUTINE gen_bz( kpts,sym)
 
-      !     bk       ::    irreducible k-points
-      !     nkpt     ::    number of irr. k-points
-      !     bkf    ::    all k-points
-      !     nkptf      ::    number of all k-points
-      !     bkp       ::    k-point parent
-      !     bksym     ::    symmetry operation, that connects the parent
-      !                     k-point with the current one
+   !     bk     ::    irreducible k-points
+   !     nkpt   ::    number of irr. k-points
+   !     bkf    ::    all k-points
+   !     nkptf  ::    number of all k-points
+   !     bkp    ::    k-point parent
+   !     bksym  ::    symmetry operation, that connects the parent
+   !                  k-point with the current one
 
-      USE m_util  ,ONLY: modulo1
-      USE m_types
+   USE m_juDFT
+   USE m_util, ONLY: modulo1
+   USE m_types
 
-      IMPLICIT NONE
-      TYPE(t_kpts),INTENT(INOUT) :: kpts
-      TYPE(t_sym),INTENT(IN)     :: sym
+   IMPLICIT NONE
 
-!     - local scalars -
-      INTEGER                 ::  ic,iop,ikpt,ikpt1
-      LOGICAL                 ::  ldum
+   TYPE(t_kpts),INTENT(INOUT) :: kpts
+   TYPE(t_sym),INTENT(IN)     :: sym
+
+!  - local scalars -
+   INTEGER                 ::  ic,iop,ikpt,ikpt1
+   LOGICAL                 ::  l_found
       
-!     - local arrays - 
-      INTEGER,ALLOCATABLE     ::  iarr(:)
-      REAL                    ::  rrot(3,3,sym%nsym),rotkpt(3)
-      REAL,ALLOCATABLE        ::  rarr1(:,:)
+!  - local arrays - 
+   INTEGER,ALLOCATABLE     ::  iarr(:)
+   REAL                    ::  rrot(3,3,sym%nsym),rotkpt(3)
+   REAL,ALLOCATABLE        ::  rarr1(:,:)
 
-      ALLOCATE( kpts%bkf(3,sym%nsym*kpts%nkpt),kpts%bkp(sym%nsym*kpts%nkpt),kpts%bksym(sym%nsym*kpts%nkpt) )
+   ALLOCATE (kpts%bkf(3,sym%nsym*kpts%nkpt))
+   ALLOCATE (kpts%bkp(sym%nsym*kpts%nkpt))
+   ALLOCATE (kpts%bksym(sym%nsym*kpts%nkpt))
       
-      ! symmetrie operation in reciprocal space
-      DO iop=1,sym%nsym
-        IF( iop .le. sym%nop ) THEN
-          rrot(:,:,iop) = transpose( sym%mrot(:,:,sym%invtab(iop)) )
-        ELSE
-          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
-        END IF
-      END DO
+   ! Generate symmetry operations in reciprocal space
 
+   DO iop=1,sym%nsym
+      IF( iop .le. sym%nop ) THEN
+         rrot(:,:,iop) = transpose( sym%mrot(:,:,sym%invtab(iop)) )
+      ELSE
+         rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
+      END IF
+   END DO
 
-      !apply symmetrie operations to all k-points of IBZ
-      kpts%bkf = 0
-      kpts%bkf(:,1) = 0
-      kpts%bkp(1)      = 1
-      kpts%bksym(1)    = 1
-      ic          = 1
+   ! Set target number for k points in full BZ
+
+   kpts%nkptf = kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
+   IF(kpts%l_gamma) THEN
+      IF (ANY(MODULO(kpts%nkpt3(:),2).EQ.0)) THEN
+         kpts%nkptf = kpts%nkptf + 1
+      END IF
+   END IF
+
+   ! Apply symmetrie operations to all k-points of IBZ, test whether
+   ! generated k-point already is in the full BZ set of k-points, and
+   ! add it if it is not yet in this set.
+
+   kpts%bkf = 0
+   ic = 0
       
-      DO iop=1,sym%nsym
-        DO ikpt=2,kpts%nkpt
-          ldum = .false.
-          rotkpt = matmul ( rrot(:,:,iop), kpts%bk(:,ikpt) )
-          !transform back into IBZ
-          rotkpt = modulo1( rotkpt,kpts%nkpt3 )
-          DO ikpt1=1,ic
-            IF (maxval( abs( kpts%bkf(:,ikpt1) - rotkpt )) .le. 1E-06)THEN
-              ldum = .true.
-              EXIT
+   DO iop=1,sym%nsym
+      DO ikpt=1,kpts%nkpt
+         l_found = .FALSE.
+         rotkpt = MATMUL(rrot(:,:,iop), kpts%bk(:,ikpt))
+         !transform back into IBZ
+         rotkpt = modulo1(rotkpt,kpts%nkpt3)
+         DO ikpt1=1,ic
+            IF (MAXVAL(ABS(kpts%bkf(:,ikpt1) - rotkpt)).LE.1e-08) THEN
+               l_found = .TRUE.
+               EXIT
             END IF
-          END DO
+         END DO
           
-          IF( .not. ldum ) THEN
+         IF(.NOT.l_found) THEN
             ic = ic + 1
             kpts%bkf(:,ic) = rotkpt
-            kpts%bkp(ic)      = ikpt
-            kpts%bksym(ic)    = iop
-          END IF
-        END DO
+            kpts%bkp(ic) = ikpt
+            kpts%bksym(ic) = iop
+         END IF
       END DO
-      kpts%nkptf = ic
-    
-      !reallocate bkf,bkp,bksym
-      ALLOCATE (iarr(kpts%nkptf))
-      iarr = kpts%bkp(:kpts%nkptf)
-      DEALLOCATE( kpts%bkp )
-      ALLOCATE ( kpts%bkp(kpts%nkptf) )
-      kpts%bkp = iarr
-      iarr= kpts%bksym(:kpts%nkptf)
-      DEALLOCATE ( kpts%bksym )
-      ALLOCATE ( kpts%bksym(kpts%nkptf) )
-      kpts%bksym = iarr
-      DEALLOCATE( iarr )
-      ALLOCATE ( rarr1(3,kpts%nkptf) )
-      rarr1 = kpts%bkf(:,:kpts%nkptf)
-      DEALLOCATE ( kpts%bkf )
-      ALLOCATE ( kpts%bkf(3,kpts%nkptf) )
-      kpts%bkf = rarr1
+   END DO
+
+   IF (kpts%nkptf /= ic) THEN
+      WRITE(*,*) ''
+      WRITE(*,*) 'Generation of full Brilloun zone from IBZ failed.'
+      WRITE(*,*) 'Number of generated k points in full BZ does not'
+      WRITE(*,*) 'agree with target.'
+      WRITE(*,*) 'Number of generated k points in full BZ: ', ic
+      WRITE(*,*) 'Target: ', kpts%nkptf
+      WRITE(*,*) ''
+
+!      DO ikpt=1,kpts%nkptf
+!         WRITE(*,*) kpts%bkf(:,ikpt)
+!      END DO
+
+      CALL juDFT_error("gen_bz: error kpts/symmetry",calledby="gen_bz")
+   END IF
+
+   ! Reallocate bkf, bkp, bksym
+   ALLOCATE (iarr(kpts%nkptf))
+   iarr = kpts%bkp(:kpts%nkptf)
+   DEALLOCATE(kpts%bkp)
+   ALLOCATE (kpts%bkp(kpts%nkptf))
+   kpts%bkp = iarr
+   iarr= kpts%bksym(:kpts%nkptf)
+   DEALLOCATE (kpts%bksym )
+   ALLOCATE (kpts%bksym(kpts%nkptf))
+   kpts%bksym = iarr
+   DEALLOCATE(iarr)
+   ALLOCATE (rarr1(3,kpts%nkptf))
+   rarr1 = kpts%bkf(:,:kpts%nkptf)
+   DEALLOCATE (kpts%bkf )
+   ALLOCATE (kpts%bkf(3,kpts%nkptf))
+   kpts%bkf = rarr1
+   DEALLOCATE(rarr1)
       
-     
+END SUBROUTINE gen_bz
 
-      END SUBROUTINE gen_bz
-
-      END MODULE m_gen_bz
+END MODULE m_gen_bz

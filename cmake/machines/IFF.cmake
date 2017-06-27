@@ -4,4 +4,4 @@ set(CMAKE_Fortran_COMPILER mpiifort)
 #Add include pathes
 #set(FLEUR_Fortran_FLAGS "")
 #Add linker stuff
-set(FLEUR_LIBRARIES ${FLEUR_LIBRARIES} "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64")
+set(FLEUR_LIBRARIES ${FLEUR_LIBRARIES} "-lxml2;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-mt_mpi")

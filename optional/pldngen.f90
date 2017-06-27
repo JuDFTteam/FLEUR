@@ -155,7 +155,7 @@
              CALL qfix(&
                   &          stars,atoms,sym,vacuum,&
                   &          sphhar,input,cell,oneD,&
-                  &          qpw,rhtxy,rho,rht,.FALSE.,&
+                  &          qpw,rhtxy,rho,rht,.FALSE.,.true.,&
                   &          fix)
           ENDIF
 

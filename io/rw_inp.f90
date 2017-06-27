@@ -97,7 +97,9 @@
       IF (ch_rw.eq.'r') THEN
 !--------------------------------------------------------------------
       OPEN (5,file='inp',form='formatted',status='old')
-
+      
+      !default not read in in old inp-file
+      input%qfix=2
 !
       a1(:) = 0
       a2(:) = 0
@@ -695,14 +697,25 @@
 ! of the input file,
 ! we demand that the values given there are consistent with the kpts-file
 
-      IF(namex=='hf  ' .OR. namex=='pbe0' .OR. namex=='exx ' &
-     &  .OR. namex=='hse ' .OR. namex=='vhse' .OR.&
-     & ( banddos%dos .AND. banddos%ndir == -3 ) ) THEN
-        READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',&
-     &       END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3) 
+      IF(namex=='hf  '.OR.namex=='pbe0'.OR.namex=='exx '.OR.namex=='hse '.OR.namex=='vhse'.OR.&
+         (banddos%dos.AND.(banddos%ndir == -3))) THEN
+         READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3)
+
+         IF(idum.EQ.0) THEN
+            WRITE(*,*) ''
+            WRITE(*,*) 'nkpt is set to 0.'
+            WRITE(*,*) 'For this fleur mode it has to be larger than 0!'
+            WRITE(*,*) ''
+            CALL juDFT_error("Invalid declaration of k-point set (1)",calledby="rw_inp")
+         END IF
       
-        IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum )&
-     &    STOP 'rw_inp: error k-point set'
+         IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum ) THEN
+            WRITE(*,*) ''
+            WRITE(*,*) 'nx*ny*nz is not equal to nkpt.'
+            WRITE(*,*) 'For this fleur mode this is required!'
+            WRITE(*,*) ''
+            CALL juDFT_error("Invalid declaration of k-point set (2)",calledby="rw_inp")
+         END IF
       END IF
 
 ! for a exx calcuation a second mixed basis set is needed to
@@ -855,22 +868,27 @@
         END IF
          DO ieq=1,atoms%neq(n)
             na = na + 1
+
             scpos = 1.0
-            DO i = 2,100
-              rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
-     &             + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
-              IF (.not.input%film) THEN
-                rest = rest + ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
-              END IF
-              IF (rest.LT.(i*0.000001)) THEN
-                 scpos = real(i)
-                 EXIT
-              END IF
+            DO i = 2,9
+               rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
+                    + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
+               IF (rest.LT.(i*0.000001)) EXIT
             ENDDO
+            IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
+            IF (.NOT.input%film) THEN           ! now check z-coordinate
+              DO i = 2,9
+                rest = ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
+                IF (rest.LT.(i*scpos*0.000001)) THEN
+                  scpos = i*scpos
+                  EXIT
+                ENDIF
+              ENDDO
+            ENDIF
             DO i = 1,2
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO
-            IF (.not.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
+            IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
             IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/scale
 !+odim in 1D case all the coordinates are given in cartesian YM
             IF (oneD%odd%d1) THEN

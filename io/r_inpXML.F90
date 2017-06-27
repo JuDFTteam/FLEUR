@@ -43,6 +43,7 @@ SUBROUTINE r_inpXML(&
   USE m_localsym
   USE m_od_chisym
   USE m_ylm
+  USE m_chkmt
   USE m_convndim
   USE m_dwigner
   USE m_mapatom
@@ -153,7 +154,7 @@ SUBROUTINE r_inpXML(&
   REAL               :: tauTemp(3,48)
   REAL               :: bk(3)
   LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
-  LOGICAL            :: l_vca, coreConfigPresent, l_enpara
+  LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
   REAL               :: weightScale, eParamUp, eParamDown
@@ -177,6 +178,13 @@ SUBROUTINE r_inpXML(&
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
   REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
+
+! Variables for MT radius testing:
+
+  REAL                 :: dtild1,kmax1,dvac1
+  LOGICAL              :: l_test
+  INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
+  REAL, ALLOCATABLE    :: rmt1(:), dx1(:)
 
   EXTERNAL prp_xcfft_box
 
@@ -480,7 +488,9 @@ SUBROUTINE r_inpXML(&
         DO i = 1, kpts%numSpecialPoints
            WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint[',i,']'
            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-           READ(valueString,*) kpts%specialPoints(1,i), kpts%specialPoints(2,i), kpts%specialPoints(3,i)
+           kpts%specialPoints(1,i) = evaluatefirst(valueString)
+           kpts%specialPoints(2,i) = evaluatefirst(valueString)
+           kpts%specialPoints(3,i) = evaluatefirst(valueString)
            kpts%specialPointNames(i) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')
         END DO
      END IF
@@ -1242,6 +1252,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
 
   atoms%numStatesProvided = 0
+  atoms%lapw_l(:) = -1
 
   DO iSpecies = 1, numSpecies
      ! Attributes of species
@@ -1265,8 +1276,6 @@ SUBROUTINE r_inpXML(&
      IF (numberNodes.EQ.1) THEN
         lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
      END IF
-
-     ! WRITE(*,*) 'APW+lo cutoffs ignored for the moment'
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
      ldau_l = -1
@@ -1566,6 +1575,8 @@ SUBROUTINE r_inpXML(&
 !!! Start of atomGroup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  banddos%l_orb = .FALSE.
+  banddos%orbCompAtom = 0
   atoms%l_geo = .FALSE.
   atoms%relax = 0
   na = 0
@@ -1605,6 +1616,14 @@ SUBROUTINE r_inpXML(&
         atoms%taual(2,na) = evaluatefirst(valueString)
         atoms%taual(3,na) = evaluatefirst(valueString)
         atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
+        l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
+        IF(l_orbcomp) THEN
+           IF(banddos%l_orb) THEN
+              CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
+           END IF
+           banddos%l_orb = .TRUE.
+           banddos%orbCompAtom = na
+        END IF
      END DO
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
@@ -1622,6 +1641,14 @@ SUBROUTINE r_inpXML(&
         atoms%taual(2,na) = evaluatefirst(valueString)
         atoms%taual(3,na) = evaluatefirst(valueString) / cell%amat(3,3)
         atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
+        l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
+        IF(l_orbcomp) THEN
+           IF(banddos%l_orb) THEN
+              CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
+           END IF
+           banddos%l_orb = .TRUE.
+           banddos%orbCompAtom = na
+        END IF
      END DO
 
      !Read in atom group specific noco parameters
@@ -1785,6 +1812,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
   ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
 
+  IF (ANY(atoms%lapw_l(:).NE.-1)) input%l_useapw = .TRUE.
   DO iType = 1, atoms%ntype
      IF (atoms%nlo(iType).GE.1) THEN
         IF (input%secvar) THEN
@@ -1823,7 +1851,6 @@ SUBROUTINE r_inpXML(&
 
         DO ilo = 1,atoms%nlo(iType)
            if (input%l_useapW) THEN
-
               IF (atoms%ulo_der(ilo,iType).EQ.1) THEN
                  atoms%l_dulo(ilo,iType) = .TRUE.
               END IF
@@ -1961,6 +1988,8 @@ SUBROUTINE r_inpXML(&
   DO i = 1, kpts%nkpt
      kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
   END DO
+  kpts%nkpt3(:) = kpts%nmop(:)
+  IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
 
   ! Generate missing general parameters
 
@@ -2068,6 +2097,16 @@ SUBROUTINE r_inpXML(&
 
      noel(iType) = namat_const(atoms%nz(iType))
   END DO
+
+
+  ! Check muffin tin radii
+
+  ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
+  ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
+  l_test = .TRUE. ! only checking, dont use new parameters
+  CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
+             kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
+  DEALLOCATE (jri1,lmax1,rmt1,dx1)
 
   ! Read in enpara file iff available
 

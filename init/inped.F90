@@ -90,6 +90,11 @@
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
           atoms%lapw_l(:) = -1
+          IF(ANY(atoms%lnonsph(:).GT.39)) THEN
+             WRITE(*,*) 'lnonsph > 39 detected. This is interpreted as an intention to use APW+lo.'
+             WRITE(*,*) 'Switching to APW+lo!'
+             input%l_useapw=.TRUE.
+          END IF
           !---> pk non-collinear
           !---> read the angle information from nocoinf
           noco%qss(:) = 0.0

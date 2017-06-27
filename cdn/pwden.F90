@@ -78,6 +78,7 @@ CONTAINS
     USE m_rfft
     USE m_cfft
     USE m_types
+    USE m_fft_interface
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_mpi),INTENT(IN)      :: mpi
@@ -134,6 +135,10 @@ CONTAINS
     EXTERNAL CPP_BLAS_sdot
     COMPLEX  CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc
+
+    LOGICAL forw
+    INTEGER length_zfft(3)
+    COMPLEX, ALLOCATABLE :: zfft(:)
 
     
     !------->          ABBREVIATIONS
@@ -196,6 +201,7 @@ CONTAINS
        ELSE
           ALLOCATE ( psir(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
                psii(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
+               zfft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
                rhon(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1) )
           IF (input%l_f) ALLOCATE ( kpsir(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
                kpsii(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1),&
@@ -396,9 +402,21 @@ CONTAINS
                 ENDDO
              ENDIF
           ELSE
-             CALL cfft(psir,psii,ifftq3,stars%kq1_fft,ifftq1,isn)
-             CALL cfft(psir,psii,ifftq3,stars%kq2_fft,ifftq2,isn)
-             CALL cfft(psir,psii,ifftq3,stars%kq3_fft,ifftq3,isn)
+             !--------------------------------
+             ! FFT transform
+             zfft = cmplx(psir,psii)
+             if (isn == -1) then
+                forw = .true.
+             else
+                forw = .false.
+             end if
+             length_zfft(1) = stars%kq1_fft
+             length_zfft(2) = stars%kq2_fft
+             length_zfft(3) = stars%kq3_fft
+             call fft_interface(3,length_zfft,zfft,forw)
+             psir = real(zfft)
+             psii = aimag(zfft)
+             !--------------------------------
              ! GM forces part
              IF (input%l_f) THEN
                 DO ir = 0,ifftq3d-1
@@ -420,9 +438,21 @@ CONTAINS
                       kpsii( iv1d(iv,jspin) ) = s * AIMAG(zMat%z_c(iv,nu))
                    ENDDO
 
-                   CALL cfft(kpsir,kpsii,ifftq3,stars%kq1_fft,ifftq1,isn)
-                   CALL cfft(kpsir,kpsii,ifftq3,stars%kq2_fft,ifftq2,isn)
-                   CALL cfft(kpsir,kpsii,ifftq3,stars%kq3_fft,ifftq3,isn)
+                   !--------------------------------
+                   ! FFT transform
+                   zfft = cmplx(kpsir,kpsii)
+                   if (isn == -1) then
+                      forw = .true.
+                   else
+                      forw = .false.
+                   end if
+                   length_zfft(1) = stars%kq1_fft
+                   length_zfft(2) = stars%kq2_fft
+                   length_zfft(3) = stars%kq3_fft
+                   call fft_interface(3,length_zfft,zfft,forw)
+                   kpsir = real(zfft)
+                   kpsii = aimag(zfft)
+                   !--------------------------------
 
                    DO ir = 0,ifftq3d-1
                       ekin(ir) = ekin(ir) + wtf(nu) * 0.5 * (kpsir(ir)**2+kpsii(ir)**2)
@@ -543,14 +573,38 @@ CONTAINS
              IF (input%l_f) CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
                   stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,wsave,kpsir(ifftq3d), ekin(-ifftq2))
           ELSE
-             CALL cfft(rhon,psir,ifftq3,stars%kq1_fft,ifftq1,isn)
-             CALL cfft(rhon,psir,ifftq3,stars%kq2_fft,ifftq2,isn)
-             CALL cfft(rhon,psir,ifftq3,stars%kq3_fft,ifftq3,isn)
+             !--------------------------------
+             ! FFT transform
+             zfft = cmplx(rhon,psir)
+             if (isn == -1) then
+                forw = .true.
+             else
+                forw = .false.
+             end if
+             length_zfft(1) = stars%kq1_fft
+             length_zfft(2) = stars%kq2_fft
+             length_zfft(3) = stars%kq3_fft
+             call fft_interface(3,length_zfft,zfft,forw)
+             rhon = real(zfft)
+             psir = aimag(zfft)
+             !--------------------------------
              !+apw
              IF (input%l_f) THEN 
-                CALL cfft(ekin,psii,ifftq3,stars%kq1_fft,ifftq1,isn)
-                CALL cfft(ekin,psii,ifftq3,stars%kq2_fft,ifftq2,isn)
-                CALL cfft(ekin,psii,ifftq3,stars%kq3_fft,ifftq3,isn)
+                !--------------------------------
+                ! FFT transform
+                zfft = cmplx(ekin,psii)
+                if (isn == -1) then
+                   forw = .true.
+                else
+                   forw = .false.
+                end if
+                length_zfft(1) = stars%kq1_fft
+                length_zfft(2) = stars%kq2_fft
+                length_zfft(3) = stars%kq3_fft
+                call fft_interface(3,length_zfft,zfft,forw)
+                ekin = real(zfft)
+                psii = aimag(zfft)
+                !--------------------------------
              ENDIF
           ENDIF
        ENDIF

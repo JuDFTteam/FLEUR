@@ -391,7 +391,7 @@
 #endif
                                   END IF ! xcpot%icorr = any hybrid
 
-                               
+
 
                             ENDIF
                             IF (input%eigvar(2)) THEN
