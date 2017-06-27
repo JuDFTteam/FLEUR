@@ -76,6 +76,7 @@
       INTEGER,ALLOCATABLE :: igq_fft(:)
       REAL   ,ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
       REAL   ,ALLOCATABLE :: rht(:,:,:),rho(:,:,:,:)
+      REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
       COMPLEX,ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
       COMPLEX,ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
       COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
@@ -124,14 +125,18 @@
          INQUIRE(file='enpara',exist=l_enpara)
          IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
       ENDIF
-      ALLOCATE ( cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
-      ALLOCATE ( qa21(atoms%ntype) )
-      ALLOCATE ( igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1) )
+      ALLOCATE (cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+      ALLOCATE (qa21(atoms%ntype))
+      ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
+      ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
+      ALLOCATE (igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
 !
 !
 !--->    initialize density arrays with zero
 !
          qa21(:) = cmplx(0.0,0.0)
+         qvac(:,:,:,:) = 0.0 
+         qvlay(:,:,:,:,:) = 0.0
          rho(:,:,:,:) = 0.0
          qpw(:,:) = cmplx(0.0,0.0)
          cdom(:) =  cmplx(0.0,0.0)
@@ -176,7 +181,7 @@
             CALL cdnval(eig_id,&
                         mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
                         sphhar, sym,obsolete, igq_fft, vr,vz(:,:,jspin), oneD,&
-                        n_mmp(-3:,-3:,:,jspin),results, qpw,rhtxy,rho,rht,cdom,cdomvz,cdomvxy,qa21, chmom,clmom)
+                        n_mmp(-3:,-3:,:,jspin),results, qpw,rhtxy,rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
             CALL timestop("cdngen: cdnval")
 !-fo
          END DO
@@ -340,7 +345,7 @@
 !     block 2 unnecessary for slicing: begin
       IF (.NOT.sliceplot%slice) THEN
          CALL openXMLElementNoAttributes('allElectronCharges')
-         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.TRUE., fix)
+         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.TRUE.,.true., fix)
          CALL closeXMLElement('allElectronCharges')
 !---> pk non-collinear
          IF (noco%l_noco) THEN
@@ -498,7 +503,7 @@
             ENDIF
          ENDIF
          CLOSE(20) 
-          CALL juDFT_error("slice OK",calledby="cdngen")
+          CALL juDFT_end("slice OK")
       END IF
 
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
@@ -506,10 +511,10 @@
                         rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
       ENDIF
 
-      DEALLOCATE (cdom,cdomvz,cdomvxy,qa21)
+      DEALLOCATE (cdom,cdomvz,cdomvxy,qvac,qvlay,qa21)
       DEALLOCATE (qpw,rhtxy,rho,rht,igq_fft)
 
-      IF (sliceplot%slice) CALL juDFT_error("sliceplot%slice OK",calledby="cdngen")
+      IF (sliceplot%slice) CALL juDFT_end("sliceplot%slice OK",mpi%irank)
 
       RETURN
       END SUBROUTINE cdngen

@@ -116,10 +116,11 @@
         CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       ENDIF
 
+      oldfleurset = .FALSE.
+      l_hyb = .FALSE.
       IF ( buffer(1:6)=='&input' ) THEN      ! get namelist 'input'
         READ (bfh,input)
         l_hyb       = hybrid
-        oldfleurset = .false.
         IF ( index(buffer,'oldfleur')>0 ) oldfleurset = .true.
         op = 0 
         IF ( op > 0 ) THEN

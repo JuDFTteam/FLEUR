@@ -136,9 +136,20 @@ CONTAINS
         INTEGER ierr(3)
         CALL MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,i,ierr)
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
-        !$    IF (i<MPI_THREAD_SERIALIZED) call &
-        !$        juDFT_error("MPI not usable with OpenMP")
-        !Select the io-mode from the command-line
+        IF(irank.EQ.0) THEN
+           !$    IF (i<MPI_THREAD_SERIALIZED) THEN
+           !$       WRITE(*,*) ""
+           !$       WRITE(*,*) "Linked MPI version does not support OpenMP."
+           !$       WRITE(*,*) ""
+           !$       WRITE(*,*) "To solve this problem please do one of:"
+           !$       WRITE(*,*) "   1. Link an adequate MPI version."
+           !$       WRITE(*,*) "   2. Use fleur without MPI."
+           !$       WRITE(*,*) "   3. Compile and use fleur without OpenMP."
+           !$       WRITE(*,*) ""
+           !$       CALL juDFT_error("MPI not usable with OpenMP")
+           !$    END IF
+           !Select the io-mode from the command-line
+        END IF
 #endif
         IF (irank==0) THEN
            CALL fleur_help()

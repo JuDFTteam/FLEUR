@@ -18,7 +18,7 @@
 *                                                          *
 ************************************************************
 
-      USE m_cfft
+      USE m_fft_interface
       IMPLICIT NONE
 
       INTEGER k1d,k2d,k3d,ng3,kimax,isn
@@ -31,6 +31,10 @@
       INTEGER i,ifftd
       REAL scale,zero
       COMPLEX ctmp
+
+      LOGICAL forw
+      INTEGER length_zfft(3)
+      complex :: zfft(0:k1d*k2d*k3d-1)
 
       ifftd=k1d*k2d*k3d
       zero=0.0
@@ -50,9 +54,18 @@ c
 
 c---> now do the fft (isn=+1 : g -> r ; isn=-1 : r -> g)
 
-      CALL cfft(afft,bfft,ifftd,k1d,k1d,isn)
-      CALL cfft(afft,bfft,ifftd,k2d,k1d*k2d,isn)
-      CALL cfft(afft,bfft,ifftd,k3d,ifftd,isn)
+      zfft = cmplx(afft,bfft)
+      if (isn == -1) then
+          forw = .true.
+      else
+          forw = .false.
+      end if
+      length_zfft(1) = k1d
+      length_zfft(2) = k2d
+      length_zfft(3) = k3d
+      call fft_interface(3,length_zfft,zfft,forw)
+      afft = real(zfft)
+      bfft = aimag(zfft)
 
       IF (isn.LT.0) THEN
 c
@@ -64,7 +77,7 @@ c
         scale=1.0/ifftd
         DO i=0,kimax-1
           fg3(igfft1(i))=fg3(igfft1(i))+CONJG(pgfft(i))*
-     +                cmplx(afft(igfft2(i)),bfft(igfft2(i)))
+     +                zfft(igfft2(i))
         ENDDO
         DO i=1,ng3
           fg3(i)=scale*fg3(i)/nstr(i)

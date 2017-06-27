@@ -17,7 +17,7 @@
 !***********************************************************************
       SUBROUTINE atom_input(
      >                      infh,xl_buffer,bfh,buffer,
-     >                      jspins,film,idlist,xmlCoreRefOccs,
+     >                      input,idlist,xmlCoreRefOccs,
      X                      nline,xmlElectronStates,
      X                      xmlPrintCoreStates,xmlCoreOccs,
      <                      nel,atoms,enpara )
@@ -31,7 +31,8 @@
 
       IMPLICIT NONE
 
-      TYPE(t_enpara),INTENT(INOUT)     :: enpara
+      TYPE(t_input),INTENT(INOUT)    :: input
+      TYPE(t_enpara),INTENT(INOUT)   :: enpara
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
 ! ... Arguments ...
@@ -40,8 +41,7 @@
       INTEGER, INTENT (INOUT) :: nline ! current line in this file
       INTEGER, INTENT (INOUT) :: nel   ! number of valence electrons
 
-      INTEGER, INTENT (IN)     :: xl_buffer,jspins
-      LOGICAL, INTENT (IN)     :: film
+      INTEGER, INTENT (IN)     :: xl_buffer
       REAL   , INTENT (IN)     :: idlist(atoms%ntype)
       REAL   , INTENT (IN)     :: xmlCoreRefOccs(29)
       REAL, INTENT (INOUT)     :: xmlCoreOccs(2,29,atoms%ntype)
@@ -346,6 +346,18 @@
       coreocc(1:nstd,1:atoms%ntype) = -1.0
 
       nel = 0
+
+      IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
+
+      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%evac0(2,input%jspins))
+      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%lchg_v(2,input%jspins))
+      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
+      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
+      ALLOCATE (enpara%enmix(input%jspins))
+
       enpara%el0 = -9999.9
       enpara%ello0 = -9999.9
       enpara%evac0 = eVac0Default_const
@@ -600,7 +612,7 @@ c           in s and p states equal occupation of up and down states
 
       ENDDO
 
-      DO j = 1, jspins
+      DO j = 1, input%jspins
          CALL default_enpara(j,atoms,enpara)
       END DO
 
@@ -631,9 +643,9 @@ c           in s and p states equal occupation of up and down states
          lmaxdTemp = atoms%lmaxd
          atoms%lmaxd = 3
          OPEN (40,file='enpara',form='formatted',status='unknown') ! write out an enpara-file
-         DO j = 1, jspins
+         DO j = 1, input%jspins
             OPEN (42)
-            CALL w_enpara(atoms,j,film,enpara,42)
+            CALL w_enpara(atoms,j,input%film,enpara,42)
             CLOSE (42,status='delete')
          ENDDO
          CLOSE (40)

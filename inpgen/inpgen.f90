@@ -48,12 +48,12 @@ PROGRAM inpgen
       CHARACTER(len=7) :: symfn
       CHARACTER(len=4) :: dispfn
 
-            TYPE(t_input)    :: input
-          TYPE(t_atoms)    :: atoms
-          TYPE(t_cell)     :: cell
-          TYPE(t_sym)      :: sym
-          TYPE(t_noco)     :: noco
-          TYPE(t_vacuum)   :: vacuum
+      TYPE(t_input)    :: input
+      TYPE(t_atoms)    :: atoms
+      TYPE(t_cell)     :: cell
+      TYPE(t_sym)      :: sym
+      TYPE(t_noco)     :: noco
+      TYPE(t_vacuum)   :: vacuum
       
       CALL inpgen_help()
 
@@ -70,7 +70,7 @@ PROGRAM inpgen
 
       bfh = 93
 
-      input%l_inpXML = .FALSE. 
+      input%l_inpXML = .FALSE.
 
       ALLOCATE ( mmrot(3,3,nop48), ttr(3,nop48) )
       ALLOCATE ( atompos(3,natmax),atomid(natmax) )
@@ -78,6 +78,8 @@ PROGRAM inpgen
 !      OPEN (5,file='inp2',form='formatted',status='old')
       OPEN (6,file='out',form='formatted',status='unknown')
       OPEN (bfh,file='bfh.txt',form='formatted',status='unknown')
+
+      noco%l_ss = .FALSE.
 
       CALL struct_input(&
      &                  infh,errfh,warnfh,symfh,symfn,bfh,&

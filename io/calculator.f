@@ -21,6 +21,7 @@
       REAL,ALLOCATABLE,SAVE                :: var_values(:)
       INTEGER,SAVE                         :: n_vars
       INTEGER,PARAMETER                    :: num_predef = 6
+      LOGICAL,SAVE                         :: initialized=.false.
 
       CONTAINS
 
@@ -74,7 +75,26 @@
       CALL juDFT_error("Error in expression",calledby="calculator")
       END SUBROUTINE
       !> 
-
+      SUBROUTINE priv_init()
+      IMPLICIT NONE
+      initialized=.true.
+      ALLOCATE(var_values(num_predef))
+      ALLOCATE(var_names(num_predef))
+      n_vars=num_predef
+      var_names (1) = 'Pi'
+      var_values(1) = 3.1415926535897932384626433832795
+      var_names (2) = 'Deg'
+      var_values(2) = 17.453292519943295E-3
+      var_names (3) = 'Ang'
+      var_values(3) =   1.8897261247728981
+      var_names (4) = 'nm'
+      var_values(4) =   18.897261247728981
+      var_names (5) = 'pm'
+      var_values(5) = 0.018897261247728981
+      var_names (6) = 'Bohr'
+      var_values(6) = 1.0
+      END subroutine priv_init
+      
       !<-- S: priv_increase_storage()
       SUBROUTINE priv_increase_storage()
 !-----------------------------------------------
@@ -92,27 +112,9 @@
       INTEGER :: i
       !>
 
-      IF (ALLOCATED(var_names)) THEN
-         IF (n_vars+1 < SIZE(var_names)) RETURN  !nothing to be done
-      ELSE
-!        WRITE(*,*) "Predefine variables:", num_predef
-         n_vars = num_predef
-         ALLOCATE(var_values(n_vars))
-         ALLOCATE(var_names(n_vars))
-         var_names (1) = 'Pi'
-         var_values(1) = 3.1415926535897932384626433832795
-         var_names (2) = 'Deg'
-         var_values(2) = 17.453292519943295E-3
-         var_names (3) = 'Ang'
-         var_values(3) =   1.8897261247728981
-         var_names (4) = 'nm'
-         var_values(4) =   18.897261247728981
-         var_names (5) = 'pm'
-         var_values(5) = 0.018897261247728981
-         var_names (6) = 'Bohr'
-         var_values(6) = 1.0
-      ENDIF
-
+      IF (.not.initialized) CALL priv_init()
+      IF (n_vars+1 < SIZE(var_names)) RETURN !nothing to be done
+ 
 
       !<-- copy old data
       IF (ALLOCATED(var_names)) THEN
@@ -169,7 +171,8 @@
       INTEGER             :: n
       CHARACTER(len = 10) :: s
       !>
-
+      IF (.not.initialized) CALL priv_init()
+   
       s = TRIM(ADJUSTL(var))
 
       DO n = 1,n_vars
@@ -590,7 +593,8 @@
       CHARACTER(len = 10) :: command, nextcommand
       REAL                :: nextnumber
       !>
-
+      IF (.not.initialized) CALL priv_init()
+   
       number = 0
 
       CALL priv_peeknextatom(string, nextnumber, nextcommand)
@@ -629,7 +633,8 @@
       tmp_s  = TRIM(ADJUSTL(s))
       number = 0
       command = ' '
-
+      IF (.not.initialized) CALL priv_init()
+   
       DO WHILE(command /= 'end')
          CALL priv_getnextatom(tmp_s, number, command)
          number = priv_calc(tmp_s, number, command)
@@ -722,7 +727,8 @@
       !<-- Locals
       INTEGER             :: pos
       !>
-
+      IF (.not.initialized) CALL priv_init()
+   
       s = ADJUSTL(s)
       IF (len_TRIM(s) == 0) THEN
          number = 0

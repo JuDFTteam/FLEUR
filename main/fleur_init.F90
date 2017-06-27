@@ -119,9 +119,10 @@
           !-t3e
           IF (mpi%irank.EQ.0) THEN
              CALL startXMLOutput()
-#if !(defined(__TOS_BGQ__)||defined(__PGI))
+#ifndef __TOS_BGQ__
              !Do not open out-file on BlueGene
              IF (judft_was_argument("-info")) THEN
+                  CLOSE(6)
                   OPEN (6,status='SCRATCH')
              ELSE
                   OPEN (6,file='out',form='formatted',status='unknown')
@@ -315,6 +316,8 @@
                 !
                 stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
                 !+t3e
+                banddos%l_orb = .FALSE.
+                banddos%orbCompAtom = 0
              ENDIF ! mpi%irank.eq.0
              CALL timestop("preparation:stars,lattice harmonics,+etc")
 
@@ -402,6 +405,19 @@
           ENDIF
           !-t3e
           !--- J>
+
+          !Now check for additional input files
+          IF (mpi%irank.EQ.0) THEN
+             IF(.NOT.banddos%l_orb) THEN
+                INQUIRE(file='orbcomp',exist=banddos%l_orb)
+                IF (banddos%l_orb) THEN
+                   OPEN (111,file='orbcomp',form='formatted')
+                   READ (111,*) banddos%orbCompAtom
+                   CLOSE (111)
+                END IF
+             END IF
+             INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
+          END IF
 
 
 #ifdef CPP_MPI
@@ -507,7 +523,26 @@
              END DO
           ELSE
              IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
+                WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
                 CALL gen_bz(kpts,sym)
+                kpts%nkpt = kpts%nkptf
+                DEALLOCATE(kpts%bk,kpts%wtkpt)
+                ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
+                kpts%bk(:,:) = kpts%bkf(:,:)
+                IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
+                   IF(kpts%l_gamma) THEN
+                      kpts%wtkpt = 1.0 / (kpts%nkptf-1)
+                      DO i = 1, kpts%nkptf
+                         IF(ALL(kpts%bk(:,i).EQ.0.0)) THEN
+                            kpts%wtkpt(i) = 0.0
+                         END IF
+                      END DO
+                   ELSE
+                      CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="fleur_init")
+                   END IF
+                ELSE
+                   kpts%wtkpt = 1.0 / kpts%nkptf
+                END IF
              END IF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
@@ -528,13 +563,8 @@
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 
-
-          !Now check for additional input files
-          INQUIRE(file='orbcomp',exist=banddos%l_orb)
-          INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
-
           !check for broken feature
           IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
 
         END SUBROUTINE fleur_init
-     END MODULE
+      END MODULE m_fleur_init

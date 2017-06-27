@@ -3,7 +3,7 @@ MODULE m_cdnval
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
        vacuum,dimension, sphhar, sym,obsolete, igq_fft,vr, vz, oneD, n_mmp,results, qpw,rhtxy,&
-       rho,rht,cdom,cdomvz,cdomvxy,qa21, chmom,clmom)
+       rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
@@ -123,6 +123,8 @@ CONTAINS
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: rht(vacuum%nmzd,2,dimension%jspd)
+    REAL, INTENT (INOUT) :: qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd)
+    REAL, INTENT (INOUT) :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
     COMPLEX, INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u)
 
 #ifdef CPP_MPI
@@ -158,7 +160,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: volintsl(:)
     REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:)
     REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
-    REAL,    ALLOCATABLE :: qis(:,:,:),qvac(:,:,:,:),qvlay(:,:,:,:,:)
+    REAL,    ALLOCATABLE :: qis(:,:,:)
     !-new_sl
     !-dw
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
@@ -349,10 +351,7 @@ CONTAINS
     aclo(:,:,:) = 0.0 ; bclo(:,:,:) = 0.0 ; ccnmt(:,:,:,:,:) = 0.0
     acnmt(:,:,:,:,:)=0.0 ; bcnmt(:,:,:,:,:)=0.0 ; cclo(:,:,:,:)=0.0
 
-    ALLOCATE ( qis(dimension%neigd,kpts%nkpt,dimension%jspd), &
-         qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd), &
-         qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd) )
-    qvac(:,:,:,:)=0.0 ;  qvlay(:,:,:,:,:)=0.0
+    ALLOCATE ( qis(dimension%neigd,kpts%nkpt,dimension%jspd))
 
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
@@ -919,6 +918,7 @@ CONTAINS
                   ener(0,1,ispin),sqal(0,1,ispin),&
                   enerlo(1,1,ispin),&
                   sqlo(1,1,ispin))
+
              CALL w_enpara(&
                   atoms,jspin,input%film,&
                   enpara,16)

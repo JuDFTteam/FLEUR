@@ -23,7 +23,7 @@ CONTAINS
        !print INFO on parallelization
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
-       !$write(*,*) "Number of OMP-threads:",omp
+       !$ write(*,*) "Number of OMP-threads:",omp
 #else
        if (omp==-1) THEN
           write(*,*) "No OpenMP version of FLEUR."
@@ -46,7 +46,7 @@ CONTAINS
     !Distribute the work
     CALL priv_distribute_k(nkpt,mpi)
 
-    !Now check is parallelization is possible
+    !Now check if parallelization is possible
     IF (mpi%n_size>1.AND..NOT.parallel_solver_available()) &
          CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")       
 #endif
@@ -63,32 +63,31 @@ CONTAINS
     INTEGER,INTENT(in)      :: nkpt
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
-    !------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     !
     ! Distribute the k-point / eigenvector  parallelisation so, that
     ! all pe's have aproximately equal load. Maximize for k-point 
     ! parallelisation. The naming conventions are as follows:
     !
-    ! groups             1               2          (n_groups = 2) 
-    !                 /     \         /     \
-    ! k-points:      1       2       3       4      (nkpts = 4)
-    !               /|\     /|\     /|\     /|\    
-    ! irank        01 2   34 5   01 2   34 5    (isize = 6)
+    ! groups             1               2               3             4      (n_groups = 4) 
+    !                 /     \         /     \          /   \         /   \
+    ! k-points:      1       2       3       4       5       6      7     8     (nkpts = 8)
+    !               /|\     /|\     /|\     /|\     /|\     /|\    /|\   /|\
+    ! irank        0 1 2   3 4 5   1 2 3   4 5 6   0 1 2   3 4 5  1 2 3  4 5 6  (mpi%isize = 6)
     !
-    ! n_rank       01 2   01 2   01 2   01 2    (n_size = 3)
+    ! n_rank       0 1 2   0 1 2   0 1 2   0 1 2   0 1 2   0 1 2  0 1 2  0 1 2  (mpi%n_size = 3)
     !
-    ! nrec         12 3   45 6   78 9  1011 12  ...rec. no. on eig-file
-    !              * *     * *     * *     *  *
     !
-    ! In the above example, 6 pe's should work on 4 k-points and distribute
+    ! In the above example, 6 pe's should work on 8 k-points and distribute
     ! their load in a way, that 3 pe's work on each k-points, so 2 k-points
-    ! are done in parellel (n_members=2) and there are 2 groups of k-points.
+    ! are done in parellel (n_members=2) and each processor runs a loop over
+    ! 4 k-points (mpi%n_groups = 4).
     ! n_rank and n_size are the equivalents of irank and isize. The former
     ! belong to the communicator SUB_COMM, the latter to MPI_COMM.
     !
     !          G.B. `99
     !
-    !------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     INTEGER:: n_members,n_size_min
     CHARACTER(len=20)::txt
 
@@ -119,23 +118,64 @@ CONTAINS
     INTEGER,INTENT(in)      :: nkpt
     TYPE(t_mpi),INTENT(inout)    :: mpi
 #ifdef CPP_MPI
-    INTEGER:: n_members,n,i,ierr,sub_group,world_group
-    INTEGER:: i_mygroup(mpi%n_size)
+    INTEGER :: n_members,n,i,ierr,sub_group,world_group
+    INTEGER :: i_mygroup(mpi%n_size)
+    LOGICAL :: compact ! Deside how to distribute k-points
 
-
+    compact = .true.
     n_members = nkpt/mpi%n_groups
-    !
+    
     ! now, we make the groups
-    !
-    mpi%n_start = MOD(mpi%irank,n_members) + 1
-    !!      n_start = INT(irank/n_size) * n_size
-    n = 0
-    DO i = mpi%n_start,mpi%isize,n_members
-       !!      DO i = n_start+1,n_start+n_size
-       n = n+1
-       i_mygroup(n) = i-1
-    ENDDO
+    
+    
+    IF (compact) THEN
 
+        ! This will distribute sub ranks in a compact manner.
+        ! For example, if nkpt = 8 and mpi%isize = 6:
+        
+        !  -----------------------------------
+        ! |  0  |  1  |  2  |  3  |  4  |  5  |    mpi%irank
+        !  -----------------------------------
+        ! |  0  |  1  |  3  |  0  |  1  |  2  |    mpi%n_rank
+        !  -----------------------------------
+        ! |        1        |        2        |    k - points
+        ! |        3        |        4        |
+        ! |        5        |        6        |
+        ! |        7        |        8        |
+        !  -----------------------------------
+    
+        mpi%n_start = INT(mpi%irank/mpi%n_size) + 1
+        i_mygroup(1) = (mpi%n_start-1) * mpi%n_size
+        do i = 2, mpi%n_size
+           i_mygroup(i) = i_mygroup(i-1) + 1
+        enddo
+
+    ELSE
+
+        ! This will distribute sub ranks in a spread manner.
+        ! For example, if nkpt = 8 and mpi%isize = 6:
+    
+        !  -----------------------------------
+        ! |  0  |  1  |  2  |  3  |  4  |  5  |    mpi%irank
+        !  -----------------------------------
+        ! |  0  |  1  |  3  |  0  |  1  |  2  |    mpi%n_rank
+        !  -----------------------------------
+        ! |  1  |  2  |  1  |  2  |  1  |  2  |    k - points
+        ! |  3  |  4  |  3  |  4  |  3  |  4  |
+        ! |  5  |  6  |  5  |  6  |  5  |  6  |  
+        ! |  7  |  8  |  7  |  8  |  7  |  8  |
+        !  -----------------------------------
+
+        mpi%n_start = MOD(mpi%irank,n_members) + 1
+        !!      n_start = INT(irank/n_size) * n_size
+        n = 0
+        DO i = mpi%n_start,mpi%isize,n_members
+        !!      DO i = n_start+1,n_start+n_size
+           n = n+1
+           i_mygroup(n) = i-1
+        ENDDO
+
+    ENDIF ! compact
 
     CALL MPI_COMM_GROUP (mpi%MPI_COMM,WORLD_GROUP,ierr)
     CALL MPI_GROUP_INCL (WORLD_GROUP,mpi%n_size,i_mygroup,SUB_GROUP,ierr)

@@ -507,6 +507,10 @@ MODULE m_cdn_io
             symTemp%invs = sym%invs
             inputTemp%film = input%film
             vacuumTemp%nvac = vacuum%nvac
+            vacuumTemp%nmzxy = vacuum%nmzxy
+            vacuumTemp%nmz = vacuum%nmz
+            vacuumTemp%dvac = vacuum%dvac
+            vacuumTemp%delz = vacuum%delz
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
@@ -565,6 +569,10 @@ MODULE m_cdn_io
             symTemp%invs = sym%invs
             inputTemp%film = input%film
             vacuumTemp%nvac = vacuum%nvac
+            vacuumTemp%nmzxy = vacuum%nmzxy
+            vacuumTemp%nmz = vacuum%nmz
+            vacuumTemp%dvac = vacuum%dvac
+            vacuumTemp%delz = vacuum%delz
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
@@ -1313,7 +1321,7 @@ MODULE m_cdn_io
          WRITE(*,*) 'Ignoring -delden command line argument.'
       END IF
 
-      CALL juDFT_error("Densities deleted.")
+      CALL juDFT_end("Selected densities deleted.")
       
    END SUBROUTINE deleteDensities
 
