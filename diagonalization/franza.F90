@@ -218,6 +218,16 @@ CONTAINS
           ENDIF
           DEALLOCATE ( cwork )
        ENDIF
+       IF((info.EQ.0).AND.(ne.NE.iu)) THEN
+          WRITE(*,*) ''
+          WRITE(*,*) 'Call to LAPACK routine sspevx/dspevx/chpevx/zhpevx resulted in problem:'
+          WRITE(*,*) 'The library does not report an error but the number of found eigenvalues'
+          WRITE(*,*) 'does not agree with the target number of eigenvalues to be calculated.'
+          WRITE(*,*) 'The LAPACK library you are linking to seems to be broken. Please link a'
+          WRITE(*,*) 'different LAPACK library.'
+          WRITE(*,*) ''
+          CALL juDFT_error("Broken LAPACK library",calledby="franza")
+       END IF
        IF(addstate) THEN ! cut topmost subspace of degenerate states to avoid symmetry breaking (CF)
           iu = ne
           ne = ne - 1
