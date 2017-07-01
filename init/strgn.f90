@@ -732,6 +732,8 @@ CONTAINS
     ! sum over phases
     !
     stars%rgphs(:,:,:) = cmplx(0.0,0.0)
+    stars%igfft = 0
+    stars%pgfft = cmplx(0.0,0.0)
     starloop: DO k = 1,stars%ng3
 
        CALL spgrot(&

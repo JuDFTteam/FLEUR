@@ -388,6 +388,8 @@
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)') '...done'
 
                    ELSEIF ( it == 1 ) THEN ! allocate some dummy arrays
+#endif
+                   IF (it==1) THEN ! temporary until HF is not excluded by #if any more
                       IF ( noco%l_soc ) THEN
                          dimension%neigd2 = dimension%neigd*2
                       ELSE
@@ -401,7 +403,6 @@
                            &                hybrid%basm2(0,0,0,0),hybrid%nindxm1(0,0),hybrid%nindxm2(0,0))
                    END IF ! first iteration hybrids
                    !HF
-#endif
                    IF (.NOT.obsolete%pot8) THEN
                       CALL timestart("generation of potential")
 

@@ -921,6 +921,7 @@ SUBROUTINE r_inpXML(&
 
   IF (numberNodes.EQ.1) THEN
      symmetryDef = 2
+     sym%nop = 48
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
 
      CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
@@ -1759,6 +1760,13 @@ SUBROUTINE r_inpXML(&
      END IF
 
      vacuum%layers = 1
+     input%integ = .FALSE.
+     vacuum%starcoeff = .FALSE.
+     vacuum%nstars = 0
+     vacuum%locx = 0.0
+     vacuum%locy = 0.0
+     vacuum%nstm = 0
+     vacuum%tworkf = 0.0
      IF ((banddos%vacdos).AND.(numberNodes.EQ.1)) THEN
         vacuum%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
         input%integ = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
