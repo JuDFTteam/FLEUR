@@ -1363,6 +1363,7 @@ SUBROUTINE r_inpXML(&
   enpara%el0 = 0.0
   enpara%ello0 = 0.0
   enpara%lchange = .FALSE.
+  enpara%llochg = .FALSE.
   dimension%nstd = 29
 
   ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
