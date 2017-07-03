@@ -53,7 +53,7 @@
       CONTAINS
 
       SUBROUTINE exchange_valence_hf(&
-                    nk,kpts,nkpti,nkpt_EIBZ, sym,atoms,hybrid,&
+                    nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,&
                     cell, dimension,input,jsp, hybdat, mnobd, lapw,&
                     eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,&
                     it,xcpot, noco,nsest,indx_sest,&
@@ -93,7 +93,7 @@
 !     - scalars -
       INTEGER,INTENT(IN)      :: it  ,irank2 ,isize2,comm
       INTEGER,INTENT(IN)      :: jsp
-      INTEGER,INTENT(IN)      ::  nk ,nkpti ,nkpt_EIBZ
+      INTEGER,INTENT(IN)      ::  nk ,nkpt_EIBZ
       INTEGER,INTENT(IN)      :: mnobd 
 
 
@@ -106,7 +106,7 @@
       INTEGER,INTENT(IN)      ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
 
  
-      REAL   ,INTENT(IN)      ::  eig_irr(dimension%neigd,nkpti)
+      REAL   ,INTENT(IN)      ::  eig_irr(dimension%neigd,kpts%nkpt)
 
       REAL   ,INTENT(IN)      ::  wl_iks(dimension%neigd,kpts%nkptf)
       REAL   ,INTENT(OUT)     ::  div_vv(hybdat%nbands(nk))
@@ -377,14 +377,14 @@
 #ifdef CPP_IRAPPROX
           CALL wavefproducts_inv(&
                          1,hybdat,dimension,jsp,atoms,&
-                         lapw,obsolete,nkpti,kpts,kpts,nkpt_EIBZ,&
+                         lapw,obsolete,kpts,&
                          nk,ikpt0,mnobd,hybrid, parent,cell, sym,&
                          time_mt,time_ir,nkqpt,cprod_vv)
 #else
           CALL wavefproducts_inv5(&
                          1,hybdat,ibando,ibando+psize-1,&
                          dimension,input,jsp,atoms,&
-                         lapw,obsolete,nkpti,kpts,kpts,nkpt_EIBZ,&
+                         lapw,obsolete,kpts,&
                          nk,ikpt0,mnobd,hybrid,&
                          parent,cell, sym,&
                          noco,noco,&
@@ -424,7 +424,7 @@
           IF ( xcpot%icorr == icorr_hse .OR. xcpot%icorr == icorr_vhse ) THEN
             iband1  = hybdat%nobd(nkqpt)
             exch_vv = exch_vv + dynamic_hse_adjustment(&
-                       atoms%rmsh,atoms%rmt,atoms%dx,atoms%jri,atoms%jmtd,kpts%bk(:,ikpt0),ikpt0,kpts%nkptf,&
+                       atoms%rmsh,atoms%rmt,atoms%dx,atoms%jri,atoms%jmtd,kpts%bkf(:,ikpt0),ikpt0,kpts%nkptf,&
                        cell%bmat,vol,atoms%ntype,atoms%neq,atoms%nat,atoms%taual,hybrid%lcutm1,hybrid%maxlcutm1,&
                        hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptm,hybrid%ngptm(ikpt0),hybrid%pgptm(:,ikpt0),&
                        hybrid%gptmd,hybrid%basm1,hybdat%nbasm(ikpt0),iband1,hybdat%nbands(nk),nsest,&
@@ -545,7 +545,7 @@
         IF( zero_order ) THEN
           CALL dwavefproducts(  &
                             dcprod,nk,1,hybdat%nbands(nk),1,hybdat%nbands(nk),.false., atoms,hybrid,&
-                            cell,hybdat, kpts,nkpti,lapw,&
+                            cell,hybdat, kpts,kpts%nkpt,lapw,&
                             dimension,jsp,&
                             eig_irr )
 
@@ -563,7 +563,7 @@
                         nk,atoms,&
                         dimension,input,jsp,&
                         hybdat,hybrid,&
-                        lapw,kpts,nkpti,&
+                        lapw,kpts,kpts%nkpt,&
                         cell,mnobd,&
                         sym,&
                         proj_ibsc,olap_ibsc)
@@ -643,10 +643,10 @@
               ! Calculate distances from the eight reciprocal unit-cell corners
               knorm = k0
               DO i = 1,8
-                rdum=sqrt(sum(matmul(kpts%bk(:,ikpt)-kcorner(:,i),cell%bmat)**2))
+                rdum=sqrt(sum(matmul(kpts%bkf(:,ikpt)-kcorner(:,i),cell%bmat)**2))
                 IF(rdum.lt.k0) THEN
                   knorm = rdum
-                  kvec  = ( kpts%bk(:,ikpt) - kcorner(:,i) ) / knorm
+                  kvec  = ( kpts%bkf(:,ikpt) - kcorner(:,i) ) / knorm
                 END IF
               END DO
 

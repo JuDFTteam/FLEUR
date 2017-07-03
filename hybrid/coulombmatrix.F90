@@ -294,7 +294,7 @@
             rrot(:,:,isym) = transpose(sym%mrot(:,:,inviop))
             DO l = 0,hybrid%maxlcutm1
               dwgn(:,:,l,isym) = transpose( &
-     &             sym%d_wgn(-hybrid%maxlcutm1:hybrid%maxlcutm1,-hybrid%maxlcutm1:hybrid%maxlcutm1,l,isym) )
+     &             hybrid%d_wgn2(-hybrid%maxlcutm1:hybrid%maxlcutm1,-hybrid%maxlcutm1:hybrid%maxlcutm1,l,isym) )
             END DO
           ELSE
             inviop           = isym - sym%nop
@@ -339,8 +339,8 @@
           nsym1(ikpt) = isym1
         END DO
         ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
-        ALLOCATE ( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt),iarr(hybrid%maxgptm),&
-     &             pointer(kpts%nkpt,&
+        !ALLOCATE ( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt)) !in mixedbasis
+        ALLOCATE (iarr(hybrid%maxgptm), pointer(kpts%nkpt,&
      &                     minval(hybrid%gptm(1,:))-1:maxval(hybrid%gptm(1,:))+1,&
      &                     minval(hybrid%gptm(2,:))-1:maxval(hybrid%gptm(2,:))+1,&
      &                     minval(hybrid%gptm(3,:))-1:maxval(hybrid%gptm(3,:))+1))
@@ -1296,7 +1296,7 @@
         ALLOCATE( olapm(hybrid%ngptm(ikpt),hybrid%ngptm(ikpt)) )
         olapm = 0
 
-        CALL olap_pw(olapm,hybrid%gptm(:hybrid%ngptm(ikpt),ikpt),hybrid%ngptm(ikpt), atoms,cell )
+        CALL olap_pw(olapm,hybrid%gptm(:,hybrid%pgptm(:hybrid%ngptm(ikpt),ikpt)),hybrid%ngptm(ikpt), atoms,cell )
 
 !         !calculate eigenvalues of olapm
 !         ALLOCATE( eval(ngptm(ikpt)),evec(ngptm(ikpt),ngptm(ikpt)) )

@@ -948,13 +948,9 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/symOp')
      sym%nop = numberNodes
 
-     IF (ALLOCATED(sym%mrot)) THEN
-        DEALLOCATE(sym%mrot)
-     END IF
+     IF (ALLOCATED(sym%mrot)) DEALLOCATE(sym%mrot)
      ALLOCATE(sym%mrot(3,3,sym%nop))
-     IF (ALLOCATED(sym%tau)) THEN
-        DEALLOCATE(sym%tau)
-     END IF
+     IF (ALLOCATED(sym%tau)) DEALLOCATE(sym%tau)
      ALLOCATE(sym%tau(3,sym%nop))
      sym%symor = .TRUE.
      DO i = 1, sym%nop

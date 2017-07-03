@@ -20,8 +20,8 @@ MODULE m_hsfock
 !         |  calculate valence-core contribution                              c
 !                                                                             c
 !     variables:                                                              c
-!         nkptf   :=   number of kpoints                                      c
-!         nkpti   :=   number of irreducible kpoints                          c
+!         kpts%nkptf   :=   number of kpoints                                      c
+!         kpts%nkpt   :=   number of irreducible kpoints                          c
 !         nbands  :=   number of bands for which the exchange matrix (mat_ex) c
 !                      in the space of the wavefunctions is calculated        c
 !         te_hfex :=   hf exchange contribution to the total energy           c
@@ -38,7 +38,7 @@ MODULE m_hsfock
 
       SUBROUTINE hsfock(&
      &             nk,atoms,hybrid,lapw,dimension,&
-     &             kpts,nkpti,jsp,input,&
+     &             kpts,jsp,input,&
      &             hybdat,&
      &             eig_irr,sym,&
      &             cell,noco,&
@@ -59,30 +59,30 @@ MODULE m_hsfock
       USE m_icorrkeys
       USE m_types
       IMPLICIT NONE
-      TYPE(t_hybdat),INTENT(IN)   :: hybdat
+      TYPE(t_hybdat),INTENT(IN)       :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
-      TYPE(t_xcpot),INTENT(IN)   :: xcpot
-      TYPE(t_mpi),INTENT(IN)   :: mpi
-      TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_noco),INTENT(IN)   :: noco
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
-      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_xcpot),INTENT(IN)        :: xcpot
+      TYPE(t_mpi),INTENT(IN)          :: mpi
+      TYPE(t_dimension),INTENT(IN)    :: dimension
+      TYPE(t_hybrid),INTENT(INOUT)    :: hybrid
+      TYPE(t_input),INTENT(IN)        :: input
+      TYPE(t_noco),INTENT(IN)         :: noco
+      TYPE(t_sym),INTENT(IN)          :: sym
+      TYPE(t_cell),INTENT(IN)         :: cell
+      TYPE(t_kpts),INTENT(IN)         :: kpts
+      TYPE(t_atoms),INTENT(IN)        :: atoms
+      TYPE(t_lapw),INTENT(IN)         :: lapw
 
 !     - scalars -
       INTEGER,INTENT(IN)      :: jsp 
       INTEGER,INTENT(IN)      :: it
       INTEGER,INTENT(IN)      :: irank2 ,isize2,comm
-      INTEGER,INTENT(IN)      ::  nkpti  ,nk
-      INTEGER,INTENT(IN)      ::  mnobd
+      INTEGER,INTENT(IN)      :: nk
+      INTEGER,INTENT(IN)      :: mnobd
     
 
       !     -  arrays -
-      REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,nkpti)
+      REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,kpts%nkpt)
       
       TYPE(t_hamovlp),INTENT(INOUT)::hamovlp
 #if ( !defined(CPP_INVERSION) )
@@ -184,7 +184,7 @@ MODULE m_hsfock
 #else
       irecl_olap = dimension%nbasfcn*(dimension%nbasfcn+1)*8
 #endif
-      irec = nkpti*(jsp-1) + nk
+      irec = kpts%nkpt*(jsp-1) + nk
       print *, "Olap read:",irec
       OPEN(88,file='olap',form='unformatted',access='direct',&
      &     recl=irecl_olap)
@@ -220,14 +220,13 @@ MODULE m_hsfock
      &      WRITE(*,*) 'calculate new HF matrix'
         IF( nk .eq. 1 .and. jsp .eq. 1 .and. input%imix .gt. 10)&
      &      CALL system('rm -f broyd*')
-
         ! calculate all symmetrie operations, which yield k invariant
 
         ALLOCATE( parent(kpts%nkptf),symop(kpts%nkptf) ,stat=ok)
         IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation parent/symop'
         parent = 0 ; symop = 0
 
-        CALL symm_hf( kpts,nkpti,nk,sym,&
+        CALL symm_hf( kpts,nk,sym,&
      &             dimension,hybdat,eig_irr,&
      &             atoms,hybrid,cell,&
      &             lapw,jsp,&
@@ -253,7 +252,7 @@ MODULE m_hsfock
         CALL timestart("valence exchange calculation")
 
         CALL exchange_valence_hf(& 
-     &            nk,kpts,nkpti,nkpt_EIBZ, sym,atoms,hybrid,&
+     &            nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,&
      &            cell, dimension,input,jsp, hybdat, mnobd, lapw,&
      &            eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,&
      &            it,xcpot,&
@@ -273,7 +272,7 @@ MODULE m_hsfock
         IF ( xcpot%icorr.eq.icorr_hse .OR. xcpot%icorr.eq.icorr_vhse ) THEN
 #ifdef CPP_NEVER           
           CALL exchange_vccvHSE(&
-     &                 nk,kpts,nkpti,atoms,&
+     &                 nk,atoms,&
      &                 hybrid,hybdat,&
      &                 dimension,jsp,&
      &                 lapw,&
@@ -281,7 +280,7 @@ MODULE m_hsfock
      &                 a_ex,results,&
      &                 mat_ex%core )
           CALL exchange_ccccHSE(&
-     &                 nk,nkpti,obsolete,atoms,hybdat,&
+     &                 nk,obsolete,atoms,hybdat,&
      &                 ncstd,&
      &                 kpts(:,nk),&
      &                 sym,a_ex,mpi,&
@@ -290,7 +289,7 @@ MODULE m_hsfock
           STOP "HSE not implemented in hsfock"
         ELSE
           CALL exchange_vccv1(&
-     &                 nk,kpts,nkpti,atoms,&
+     &                 nk,atoms,&
      &                 hybrid,hybdat,&
      &                 dimension,jsp,&
      &                 lapw,&
@@ -298,7 +297,7 @@ MODULE m_hsfock
      &                 a_ex,results,&
      &                 mat_ex)
           CALL exchange_cccc(&
-     &                 nk,nkpti,atoms,hybdat,&
+     &                 nk,atoms,hybdat,&
      &                 ncstd,&
      &                 sym,kpts,a_ex,mpi,&
      &                 results )
@@ -382,7 +381,7 @@ MODULE m_hsfock
         END DO
 
         CALL symmetrizeh(atoms,&
-     &                   kpts%bk(:,nk),dimension,jsp,lapw,gpt,&
+     &                   kpts%bkf(:,nk),dimension,jsp,lapw,gpt,&
      &                   sym,hybdat%kveclo_eig,&
      &                   cell,nsymop,psym,&
      &                   v_x )
@@ -396,7 +395,7 @@ MODULE m_hsfock
           irecl_vx = dimension%nbasfcn*(dimension%nbasfcn+1)*8
 #endif
 
-          irec = nkpti*(jsp-1) + nk
+          irec = kpts%nkpt*(jsp-1) + nk
           OPEN(778,file='vex',form='unformatted',access='direct',&
      &         recl=irecl_vx)
 #ifdef CPP_INVERSION
@@ -431,7 +430,7 @@ MODULE m_hsfock
 #else
         irecl_vx = dimension%nbasfcn*(dimension%nbasfcn+1)*8
 #endif
-        irec = nkpti*(jsp-1) + nk
+        irec = kpts%nkpt*(jsp-1) + nk
         OPEN(778,file='vex',form='unformatted',access='direct',&
      &       recl=irecl_vx)
         READ(778,rec=irec) v_x
@@ -471,7 +470,7 @@ MODULE m_hsfock
          END IF
          IF(hybrid%l_calhf) THEN
             WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
-                 &  kpts%bk(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
+                 &  kpts%bkf(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
                  &  div_vv(iband)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
          END IF
       END DO

@@ -98,15 +98,15 @@
       !
       ! compute k+q point for given q point in EIBZ(k)
       !
-      kqpthlp         = kpts%bk(:,nk) + kpts%bk(:,iq)
+      kqpthlp         = kpts%bkf(:,nk) + kpts%bkf(:,iq)
       ! k+q can lie outside the first BZ, transfer
       ! it back into the 1. BZ
       kqpt        = modulo1(kqpthlp,kpts%nkpt3)
       g_t(:) = nint( kqpt - kqpthlp )
       ! determine number of kqpt
       nkqpt   = 0
-      DO ikpt = 1,kpts%nkpt
-        IF ( maxval( abs( kqpt - kpts%bk(:,ikpt) ) ) .le. 1E-06 ) THEN
+      DO ikpt = 1,kpts%nkptf
+        IF ( maxval( abs( kqpt - kpts%bkf(:,ikpt) ) ) .le. 1E-06 ) THEN
           nkqpt = ikpt
           EXIT
         END IF
@@ -205,7 +205,7 @@
           ic =  ic + 1
           ic1 = 0
 
-          cexp = exp ( -2*img*pi_const* dot_product( kpts%bk(:,iq),atoms%taual(:,ic) ) )
+          cexp = exp ( -2*img*pi_const* dot_product( kpts%bkf(:,iq),atoms%taual(:,ic) ) )
           
 
           DO l = 0,hybrid%lcutm1(itype)
@@ -311,7 +311,7 @@
 
       SUBROUTINE wavefproducts_inv(&
      &                  bandi,bandf,dimension,jsp,atoms,&
-     &                  lapw,nkpti,kpts,nkpt_EIBZ,&
+     &                  lapw,kpts,&
      &                  nk,iq,hybdat,mnobd,hybrid,&
      &                  parent,cell,&
      &                  nbasm_mt,sym,&
@@ -333,14 +333,14 @@
 
       ! - scalars -
       INTEGER,INTENT(IN)      ::    bandi,bandf
-      INTEGER,INTENT(IN)      ::    jsp , nkpti ,nkpt_EIBZ,nk,iq 
+      INTEGER,INTENT(IN)      ::    jsp  ,nk,iq 
       INTEGER,INTENT(IN)      ::    mnobd 
       INTEGER,INTENT(IN)      ::    nbasm_mt
       INTEGER,INTENT(OUT)     ::    nkqpt
 
   
       ! - arrays -
-      INTEGER,INTENT(IN)      ::    parent(kpts%nkpt)
+      INTEGER,INTENT(IN)      ::    parent(kpts%nkptf)
 
 
       REAL ,INTENT(OUT)       ::    cprod(hybrid%maxbasm1,mnobd,bandf-bandi+1)
@@ -408,14 +408,14 @@
       ! compute k+q point for q (iq) in EIBZ(k)
       !
      
-      kqpthlp = kpts%bk(:,nk) + kpts%bk(:,iq)
+      kqpthlp = kpts%bkf(:,nk) + kpts%bkf(:,iq)
       ! kqpt can lie outside the first BZ, transfer it back
       kqpt         = modulo1(kqpthlp,kpts%nkpt3)
       g_t(:)  = nint( kqpt - kqpthlp )
       ! determine number of kqpt
       nkqpt = 0
-      DO ikpt = 1,kpts%nkpt
-        IF ( maxval( abs( kqpt - kpts%bk(:,ikpt) ) ) .le. 1E-06 ) THEN
+      DO ikpt = 1,kpts%nkptf
+        IF ( maxval( abs( kqpt - kpts%bkf(:,ikpt) ) ) .le. 1E-06 ) THEN
           nkqpt = ikpt
           EXIT
         END IF
@@ -491,9 +491,9 @@
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
           
-          cexp   (iatom) = exp( (-img)*tpi_const * dotprod(kpts%bk(:,iq)+kpts%bk(:,nk),atoms%taual(:,iatom)) )
+          cexp   (iatom) = exp( (-img)*tpi_const * dotprod(kpts%bkf(:,iq)+kpts%bkf(:,nk),atoms%taual(:,iatom)) )
 
-          cexp_nk(iatom) = exp( (-img)*tpi_const * dotprod(kpts%bk(:,nk),atoms%taual(:,iatom)) )
+          cexp_nk(iatom) = exp( (-img)*tpi_const * dotprod(kpts%bkf(:,nk),atoms%taual(:,iatom)) )
         END DO
       END DO
 
@@ -662,7 +662,7 @@
                   lm1   =  lm + ( iatom1-1 - iiatom ) * ioffset
                   lm2   =  lm + ( iatom2-1 - iiatom ) * ioffset + ishift
                   
-                  rdum  = tpi_const*dotprod(kpts%bk(:,iq),atoms%taual(:,iatom1))
+                  rdum  = tpi_const*dotprod(kpts%bkf(:,iq),atoms%taual(:,iatom1))
                   rfac1 = sin(rdum)/sr2
                   rfac2 = cos(rdum)/sr2
                   DO iband  = bandi,bandf  
@@ -1263,7 +1263,7 @@
       SUBROUTINE wavefproducts_inv5(&
      &                    bandi,bandf,bandoi,bandof,&
      &                    dimension,input,jsp,atoms,&
-     &                    lapw,nkpti,kpts,nkpt_EIBZ,&
+     &                    lapw,kpts,&
      &                    nk,iq,hybdat,mnobd,hybrid,&
      &                    parent,cell,&
      &                    nbasm_mt,sym,&
@@ -1290,7 +1290,7 @@
 
       ! - scalars -
       INTEGER,INTENT(IN)      :: bandi,bandf,bandoi,bandof
-      INTEGER,INTENT(IN)      :: jsp   ,nkpti ,nkpt_EIBZ,nk,iq 
+      INTEGER,INTENT(IN)      :: jsp    ,nk,iq 
       INTEGER,INTENT(IN)      :: mnobd 
       INTEGER,INTENT(IN)      :: nbasm_mt
       INTEGER,INTENT(OUT)     :: nkqpt
@@ -1298,7 +1298,7 @@
       
 
       ! - arrays -
-      INTEGER,INTENT(IN)      ::    parent(kpts%nkpt)
+      INTEGER,INTENT(IN)      ::    parent(kpts%nkptf)
 
     
       REAL,INTENT(OUT)        ::    cprod(hybrid%maxbasm1,bandoi:bandof, bandf-bandi+1)
@@ -1366,14 +1366,14 @@
       ! compute k+q point for q (iq) in EIBZ(k)
       !
      
-      kqpthlp = kpts%bk(:,nk) + kpts%bk(:,iq)
+      kqpthlp = kpts%bkf(:,nk) + kpts%bkf(:,iq)
       ! kqpt can lie outside the first BZ, transfer it back
       kqpt    = modulo1(kqpthlp,kpts%nkpt3)
       g_t(:)  = nint( kqpt - kqpthlp )
       ! determine number of kqpt
       nkqpt = 0
-      DO ikpt = 1,kpts%nkpt
-        IF ( maxval( abs( kqpt - kpts%bk(:,ikpt) ) ) .le. 1E-06 ) THEN
+      DO ikpt = 1,kpts%nkptf
+        IF ( maxval( abs( kqpt - kpts%bkf(:,ikpt) ) ) .le. 1E-06 ) THEN
           nkqpt = ikpt
           EXIT
         END IF
@@ -1520,9 +1520,9 @@
         DO ieq = 1,atoms%neq(itype)
           iatom = iatom + 1
           
-          cexp   (iatom) = exp( (-img)*tpi_const *dotprod(kpts%bk(:,iq)+kpts%bk(:,nk),atoms%taual(:,iatom)) )
+          cexp   (iatom) = exp( (-img)*tpi_const *dotprod(kpts%bkf(:,iq)+kpts%bkf(:,nk),atoms%taual(:,iatom)) )
 
-          cexp_nk(iatom) = exp( (-img)*tpi_const *dotprod(kpts%bk(:,nk),atoms%taual(:,iatom)) )
+          cexp_nk(iatom) = exp( (-img)*tpi_const *dotprod(kpts%bkf(:,nk),atoms%taual(:,iatom)) )
         END DO
       END DO
 
@@ -1697,7 +1697,7 @@
                   lm1   =  lm + ( iatom1-1 - iiatom ) * ioffset
                   lm2   =  lm + ( iatom2-1 - iiatom ) * ioffset + ishift
                   
-                  rdum  = tpi_const*dotprod(kpts%bk(:,iq),atoms%taual(:,iatom1))
+                  rdum  = tpi_const*dotprod(kpts%bkf(:,iq),atoms%taual(:,iatom1))
                   rfac1 = sin(rdum)/sr2
                   rfac2 = cos(rdum)/sr2
                   DO iband  = bandi,bandf  
@@ -2394,15 +2394,15 @@
       !
       ! compute k+q point for given q point in EIBZ(k)
       !
-      kqpthlp = kpts%bk(:,nk) + kpts%bk(:,iq)
+      kqpthlp = kpts%bkf(:,nk) + kpts%bkf(:,iq)
       ! k+q can lie outside the first BZ, transfer
       ! it back into the 1. BZ
       kqpt   = modulo1(kqpthlp,kpts%nkpt3)
       g_t(:) = nint( kqpt - kqpthlp )
       ! determine number of kqpt
       nkqpt   = 0
-      DO ikpt = 1,kpts%nkpt
-        IF ( maxval( abs( kqpt - kpts%bk(:,ikpt) ) ) .le. 1E-06 ) THEN
+      DO ikpt = 1,kpts%nkptf
+        IF ( maxval( abs( kqpt - kpts%bkf(:,ikpt) ) ) .le. 1E-06 ) THEN
           nkqpt = ikpt
           EXIT
         END IF
@@ -2559,7 +2559,7 @@
           ic =  ic + 1
           ic1 = 0
 
-          cexp = exp ( -img*tpi_const* dot_product( kpts%bk(:,iq),atoms%taual(:,ic) ) )
+          cexp = exp ( -img*tpi_const* dot_product( kpts%bkf(:,iq),atoms%taual(:,ic) ) )
           
 
           DO l = 0,hybrid%lcutm1(itype)

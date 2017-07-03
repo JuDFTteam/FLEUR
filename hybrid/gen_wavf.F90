@@ -137,9 +137,10 @@
 
       TYPE(t_lapw) :: lapw
       TYPE(t_usdus):: usdus
-      
-      CALL CPU_TIME(time1)
 
+      CALL CPU_TIME(time1)
+      call usdus%init(atoms,dimension%jspd)
+     
       ! setup rotations in reciprocal space
       DO iop=1,sym%nsym
         IF( iop .le. sym%nop ) THEN

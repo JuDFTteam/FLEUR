@@ -239,9 +239,10 @@
                       CALL timestart("generation of mixedbasis and coulombmatrix")
 
                       IF ( mpi%irank == 0 ) WRITE(*,'(/A)',advance='no') ' calculation of mixedbasis...'
+                      print *,"symcheck:",sym%invs,noco%l_noco 
                       eig_id=open_eig(&
                       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
-                      ,noco%l_noco,.FALSE.,.FALSE.,noco%l_soc,.FALSE.,&
+                      ,noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,&
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
@@ -324,7 +325,7 @@
                       IF ( mpi%irank == 0 ) WRITE(*,'(/A)',advance='no') ' calculation of mixedbasis...'
                       eig_id=open_eig(&
                       mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
-                      ,noco%l_noco,.FALSE.,.FALSE.,noco%l_soc,.FALSE.,&
+                      ,noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,&
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)

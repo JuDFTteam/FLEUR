@@ -21,7 +21,7 @@
       CONTAINS
 
       SUBROUTINE exchange_vccv(&
-     &                   nk,bkpt,kpts,nkpti,atoms,&
+     &                   nk,atoms,&
      &                   hybrid,hybdat,&
      &                   dimension,jsp,lapw,&
      &                   maxbands,mnobd,mpi,irank2,&
@@ -40,22 +40,20 @@
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_kpts),INTENT(IN)   :: kpts
       TYPE(t_atoms),INTENT(IN)   :: atoms
       TYPE(t_lapw),INTENT(IN)   :: lapw
 
 !     -scalars -
       INTEGER,INTENT(IN)      :: jsp 
       INTEGER,INTENT(IN)      ::nk  ,maxbands, mnobd
-      INTEGER,INTENT(IN)      :: nkpti ,irank2
+      INTEGER,INTENT(IN)      :: irank2
 !     - arays -
       INTEGER,INTENT(IN)      ::  degenerat(hybdat%ne_eig(nk))
-      REAL,INTENT(IN)         ::  bkpt(3)
-
+    
 #ifdef CPP_INVERSION
-      REAL    ,INTENT(INOUT)  ::  ex_vv(maxbands,mnobd,nkpti)
+      REAL    ,INTENT(INOUT)  ::  ex_vv(:,:,:)!(maxbands,mnobd,nkpti)
 #else
-      COMPLEX ,INTENT(INOUT)  ::  ex_vv(maxbands,mnobd,nkpti)
+      COMPLEX ,INTENT(INOUT)  ::  ex_vv(:,:,:)!(maxbands,mnobd,nkpti)
 #endif
       LOGICAL                 ::  symequivalent(count(degenerat .ge. 1),&
      &                                          count(degenerat .ge. 1))
@@ -251,7 +249,7 @@
 
       END SUBROUTINE exchange_vccv
 
-      SUBROUTINE exchange_vccv1(nk,kpts,nkpti,atoms,&
+      SUBROUTINE exchange_vccv1(nk,atoms,&
      &                          hybrid,hybdat,&
      &                          dimension,jsp,&
      &                          lapw,&
@@ -270,14 +268,12 @@
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_kpts),INTENT(IN)   :: kpts
       TYPE(t_atoms),INTENT(IN)   :: atoms
       TYPE(t_lapw),INTENT(IN)   :: lapw
       
 !     -scalars -
       INTEGER,INTENT(IN)      :: jsp 
       INTEGER,INTENT(IN)      :: nk  
-      INTEGER,INTENT(IN)      :: nkpti 
       INTEGER,INTENT(IN)      ::  nsymop
       REAL,INTENT(IN)         ::  a_ex
 !     - arays -
@@ -445,7 +441,7 @@
       END SUBROUTINE exchange_vccv1
 
                   
-      SUBROUTINE exchange_cccc(nk,nkpti,atoms,hybdat, ncstd,&
+      SUBROUTINE exchange_cccc(nk,atoms,hybdat, ncstd,&
            sym,kpts,a_ex,mpi, results)
      
      
@@ -464,7 +460,7 @@
       TYPE(t_atoms),INTENT(IN)   :: atoms
       
       ! - scalars - 
-      INTEGER,INTENT(IN)    ::  nk,nkpti   ,ncstd
+      INTEGER,INTENT(IN)    ::  nk,  ncstd
 
       REAL   ,INTENT(IN)    ::  a_ex
 
@@ -593,7 +589,7 @@
       END SUBROUTINE exchange_cccc
       
       SUBROUTINE exchange_cccv( &
-     &        nk,nkpti,atoms,hybdat,&
+     &        nk,atoms,hybdat,&
      &        hybrid,dimension,maxbands,ncstd,&
      &        bkpt,sym,mpi,&
      &        exch_cv )
@@ -613,15 +609,15 @@
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_atoms),INTENT(IN)   :: atoms
       ! - scalars - 
-      INTEGER,INTENT(IN)    ::  nk,nkpti  ,ncstd
+      INTEGER,INTENT(IN)    ::  nk  ,ncstd
       INTEGER,INTENT(IN)    :: maxbands
 
       ! - arays -
       REAL   ,INTENT(IN)    ::  bkpt(3)
 #ifdef CPP_INVERSION
-      REAL   ,INTENT(INOUT) ::  exch_cv(maxbands,ncstd,nkpti)
+      REAL   ,INTENT(INOUT) ::  exch_cv(:,:,:)!(maxbands,ncstd,nkpti)
 #else
-      COMPLEX,INTENT(INOUT) ::  exch_cv(maxbands,ncstd,nkpti)
+      COMPLEX,INTENT(INOUT) ::  exch_cv(:,:,:) !(maxbands,ncstd,nkpti)
 #endif
       ! - local scalars - 
       INTEGER               ::  itype,ieq,icst,icst1,icst2,iatom,iatom0,&

@@ -92,15 +92,6 @@
       CALL timestart("subvxc")
       vxc=0
 
-      ! load v_Coulomb
-  
-!       OPEN (11,file='potcoul',form='unformatted',status='old')
-!       CALL loddop(
-!      >            jspd,ng3,odi%n2d,nmzxyd,nmzd,jmtd,nlhd,ntype,
-!      >            jspins,nq3,odi%nq2,nvac,ntype,invs,invs2,film,
-!      >            nlh,jri,ntypsd,ntypsy,11,nat,neq,
-!      <            iop,dop,iter,vrcou,vpwcou,vzcou,vzxycou,name)
-!       CLOSE(11)
       
       OPEN (11,file='potx',form='unformatted',status='old')
       STOP "IO in subvxc TODO"

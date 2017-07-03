@@ -322,7 +322,7 @@
              CALL timestop("preparation:stars,lattice harmonics,+etc")
 
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
-
+          CALL hybrid_default(hybrid,xcpot)
           !
           !-odim
           oneD%odd%nq2 = oneD%odd%n2d
@@ -492,13 +492,13 @@
                   &                 //"for HF/EXX/PBE0/HSE", calledby ="fleur",&
                   &                 hint="Use a supercell or a different functional")
 
-             IF( ANY( atoms%l_geo  ) )&
-                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
-                  &                    calledby ="fleur")
+!             IF( ANY( atoms%l_geo  ) )&
+!                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
+!                  &                    calledby ="fleur")
 
-             IF (.NOT. obsolete%pot8) STOP 'Choose pot8=T'
+!             IF (.NOT. obsolete%pot8) STOP 'Choose pot8=T'
              !calculate whole Brilloun zone
-             CALL gen_bz(kpts,sym)
+             !CALL gen_bz(kpts,sym)
              CALL gen_map(&
                   &          atoms,sym,oneD,hybrid)
              !
@@ -547,7 +547,7 @@
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf   = .FALSE.
           END IF
-          CALL hybrid_default(hybrid,xcpot)
+ 
           IF (mpi%irank.EQ.0) THEN
              CALL fleur_info(kpts)
              CALL deleteDensities()

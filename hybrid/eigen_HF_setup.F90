@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_hybdat),INTENT(INOUT):: hybdat
 
 
-    INTEGER:: ok,nk,nrec1,i,j,bands,ll,l1,l2,ng,itype,n,l,n1,n2,nn
+    INTEGER:: ok,nk,nrec1,i,j,ll,l1,l2,ng,itype,n,l,n1,n2,nn
 
 
     TYPE(t_zmat),ALLOCATABLE :: zmat(:)
@@ -51,7 +51,7 @@ CONTAINS
        !
        CALL timestart("gen_bz and gen_wavf")
 
-       ALLOCATE(zmat(kpts%nkpt))
+       ALLOCATE(zmat(kpts%nkptf),stat=ok)
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation z_c'
        ALLOCATE ( eig_irr(DIMENSION%neigd2,kpts%nkpt)      ,stat=ok )
        IF( ok .NE. 0 ) STOP'eigen_hf: failure allocation eig_irr'
@@ -74,8 +74,10 @@ CONTAINS
           else
              ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
           endif
+          print *,"eigen_HF_Setup: read_eig:",nk
+          print *,zmat(nk)%nbasfcn,zmat(nk)%nbands,hybdat%ne_eig(nk)
           CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybdat%ne_eig(nk),eig=eig_irr(:,nk), kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk)) !TODO introduce zmat!!,z=z_irr(:,:,nk))
-
+          print *,"Done"
 
        END DO
 
@@ -114,7 +116,7 @@ CONTAINS
 
           ! set the size of the exchange matrix in the space of the wavefunctions
 
-          hybdat%nbands(nk)=bands
+          hybdat%nbands(nk)=hybrid%bands1
           IF(hybdat%nbands(nk).GT.hybdat%ne_eig(nk)) THEN
              IF ( mpi%irank == 0 ) THEN
                 WRITE(*,*) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
@@ -290,7 +292,7 @@ CONTAINS
        DEALLOCATE ( eig_irr , hybdat%kveclo_eig )
 
        hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
-       hybdat%nbands    = MIN( bands, DIMENSION%neigd )
+       hybdat%nbands    = MIN( hybrid%bands1, DIMENSION%neigd )
 
     ENDIF ! hybrid%l_calhf
   END SUBROUTINE eigen_hf_setup

@@ -49,6 +49,11 @@ CONTAINS
     REAL,    ALLOCATABLE :: rk_help(:)
     INTEGER, ALLOCATABLE :: k_help(:,:) ,pos(:)
 #endif
+    IF (.not.allocated(lapw%k1)) THEN
+       ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),&
+            lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
+    ENDIF
+    lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0
     !     ..
     !     ..
     !---> in a spin-spiral calculation different basis sets are used for

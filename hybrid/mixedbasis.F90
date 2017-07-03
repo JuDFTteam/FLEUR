@@ -151,7 +151,7 @@ CONTAINS
        ! Test if file exists
        INQUIRE(FILE=ioname,EXIST=l_found)
 
-       IF ( l_found ) THEN
+       IF ( l_found .and..false.) THEN !reading not working yet
 
           ! Open file
           OPEN(UNIT=iounit,FILE=ioname,FORM='unformatted',STATUS='old')
@@ -319,7 +319,7 @@ CONTAINS
     i     = 0
     n     =-1
 
-    rdum1 = MAXVAL( (/ (SQRT(SUM(MATMUL(kpts%bk(:,ikpt),cell%bmat)**2)),ikpt=1,kpts%nkptf ) /) )
+    rdum1 = MAXVAL( (/ (SQRT(SUM(MATMUL(kpts%bkf(:,ikpt),cell%bmat)**2)),ikpt=1,kpts%nkptf ) /) )
 
     ! a first run for the determination of the dimensions of the fields
     ! gptm,pgptm
@@ -337,7 +337,7 @@ CONTAINS
                 IF(rdum.GT. gcutm) CYCLE
                 ldum1 = .FALSE.
                 DO ikpt = 1,kpts%nkptf
-                   kvec = kpts%bk(:,ikpt)
+                   kvec = kpts%bkf(:,ikpt)
                    rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
 
                    IF(rdum.LE.gcutm**2) THEN
@@ -390,7 +390,7 @@ CONTAINS
                 IF(rdum.GT. gcutm) CYCLE
                 ldum1 = .FALSE.
                 DO ikpt = 1,kpts%nkptf
-                   kvec = kpts%bk(:,ikpt)
+                   kvec = kpts%bkf(:,ikpt)
                    rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
 
                    IF(rdum.LE.(gcutm)**2) THEN
@@ -444,7 +444,7 @@ CONTAINS
     DO igpt = 1,hybrid%gptmd
        g = hybrid%gptm(:,igpt)
        DO ikpt = 1,kpts%nkptf
-          kvec = kpts%bk(:,ikpt)
+          kvec = kpts%bkf(:,ikpt)
           rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
           IF( rdum .LE. hybrid%gcutm1**2 ) THEN
              hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
@@ -466,7 +466,7 @@ CONTAINS
     DO igpt = 1,hybrid%gptmd
        g = hybrid%gptm(:,igpt)
        DO ikpt = 1,kpts%nkptf
-          kvec = kpts%bk(:,ikpt)
+          kvec = kpts%bkf(:,ikpt)
           rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
           IF( rdum .LE. hybrid%gcutm1**2 ) THEN
              hybrid%ngptm1(ikpt)                   = hybrid%ngptm1(ikpt) + 1
@@ -507,7 +507,7 @@ CONTAINS
        DO igpt = 1,hybrid%gptmd
           g = hybrid%gptm(:,igpt)
           DO ikpt = 1,kpts%nkptf
-             kvec = kpts%bk(:,ikpt)
+             kvec = kpts%bkf(:,ikpt)
              rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
              IF( rdum .LE. hybrid%gcutm2**2 ) THEN
                 hybrid%ngptm2(ikpt) = hybrid%ngptm2(ikpt) + 1
@@ -529,7 +529,7 @@ CONTAINS
        DO igpt = 1,hybrid%gptmd
           g = hybrid%gptm(:,igpt)
           DO ikpt = 1,kpts%nkptf
-             kvec = kpts%bk(:,ikpt)
+             kvec = kpts%bkf(:,ikpt)
              rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
              IF( rdum .LE. hybrid%gcutm2**2 ) THEN
                 hybrid%ngptm2(ikpt)                   = hybrid%ngptm2(ikpt) + 1
@@ -1415,7 +1415,7 @@ CONTAINS
     IF ( l_restart .AND. mpi%irank == 0 ) THEN
 
        OPEN(UNIT=iounit,FILE=ioname,FORM='unformatted', STATUS='replace')
-
+ 
        WRITE(iounit) kpts%nkptf,hybrid%gptmd
        WRITE(iounit) hybrid%maxgptm,hybrid%maxindx
        WRITE(iounit) hybrid%ngptm,hybrid%gptm,hybrid%pgptm,hybrid%nindx

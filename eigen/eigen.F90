@@ -82,7 +82,6 @@ CONTAINS
     INTEGER nspins,isp,i,j,err
     INTEGER mlotot,mlolotot
     LOGICAL l_wu,l_file,l_real,l_zref
-    INTEGER ::eig_id_hf=-1
     
     !     ..
     !     .. Local Arrays ..
@@ -120,8 +119,7 @@ CONTAINS
     call ud%init(atoms,DIMENSION%jspd)
     ALLOCATE ( nv2(DIMENSION%jspd) )
     ALLOCATE ( eig(DIMENSION%neigd),bkpt(3) )
-    ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),&
-         lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
+   
     !
     ! --> some parameters first
     !
@@ -216,16 +214,14 @@ CONTAINS
     IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
     ne = MAX(5,DIMENSION%neigd)
 
-    IF (hybrid%l_hybrid.OR.hybrid%l_calhf) THEN
-       eig_id_hf=eig_id
-    ENDIF
-    eig_id=open_eig(&
+    IF (.not.hybrid%l_calhf) THEN
+       eig_id=open_eig(&
          mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
          atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-
+    endif
     IF (l_real) THEN
        ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
     ELSE
@@ -270,7 +266,7 @@ CONTAINS
     !--->    loop over k-points: each can be a separate task
 
     DO jsp = 1,nspins
-       CALL eigen_HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id_hf,&
+       CALL eigen_HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id,&
          hybdat,irank2,it,l_real,vr0)  
 
        !
@@ -331,7 +327,6 @@ CONTAINS
           !--->         set up lapw list
           !
           CALL timestart("Setup of LAPW")
-          lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0
           CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,matind,nred)
 
           CALL timestop("Setup of LAPW")
@@ -359,7 +354,7 @@ CONTAINS
           !
           IF( hybrid%l_hybrid ) THEN
 
-             CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,kpts%nkpt,jsp,input,hybdat,eig_irr,&
+             CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,&
                   sym,cell,noco,results,it,maxval(hybdat%nobd),xcpot,&
                   mpi,irank2(nk),isize2(nk),comm(nk), hamovlp)
 
@@ -508,7 +503,7 @@ ENDIF
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
-    IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id_hf)
+    !IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id)
     atoms%n_u=n_u_in
 
 

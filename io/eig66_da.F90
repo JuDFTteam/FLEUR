@@ -59,6 +59,8 @@ CONTAINS
     INQUIRE(IOLENGTH=recl_eig) d%el_s,d%evac_s,d%ello_s,r3,r1,i1,i1,d%kvec_s,d%kveclo_s
     d%recl_bas=recl_eig
     INQUIRE(IOLENGTH=recl_eig) r1
+    print *,lmax,ntype,nlo,nlotot,nmat,neig
+    
     recl_eig=recl_eig*(neig+2) ! add a 2 for integer 'neig'
     if (l_real.and..not.l_soc ) THEN
        INQUIRE(IOLENGTH=recl_z) r1
@@ -68,6 +70,8 @@ CONTAINS
     recl_z=recl_z*nmat*neig
 
     d%recl_vec=recl_eig+recl_z
+    print *,l_real,l_soc
+    print *,"reclen:",d%recl_vec,nmat,neig,recl_z,recl_eig
 
     IF (d%l_dos) THEN
        IF (.NOT.(PRESENT(layers).AND.PRESENT(nstars).AND.PRESENT(ncored).AND.PRESENT(nsld).AND.PRESENT(nat))) &
@@ -95,7 +99,7 @@ CONTAINS
        d%file_io_id_bas=priv_free_uid()
        INQUIRE(file=TRIM(d%fname)//".bas",opened=l_file)
        DO WHILE(l_file)
-          PRINT *,"eig66_open_da:",d%fname," in use"
+          write(*,*) "eig66_open_da:",d%fname," in use"
           d%fname=TRIM(d%fname)//"6"
           INQUIRE(file=TRIM(d%fname)//".bas",opened=l_file)
        ENDDO
@@ -207,13 +211,24 @@ CONTAINS
     IF (PRESENT(zmat)) THEN
        IF (zmat%l_real) THEN
           INQUIRE(IOLENGTH=n) neig_s,eig_s,REAL(zmat%z_r)
-          IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
+          IF (n>d%recl_vec) THEN
+             print *,n,d%recl_vec
+             print *,size(eig_s)
+             print *,size(zmat%z_r)
+             CALL juDFT_error("BUG: Too long record")
+          END IF
           READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_r
        ELSE
           INQUIRE(IOLENGTH=n) neig_s,eig_s,CMPLX(zmat%z_c)
-          IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
+          IF (n>d%recl_vec) THEN
+             print *,n,d%recl_vec
+             print *,size(eig_s)
+             print *,size(zmat%z_c)
+             CALL juDFT_error("BUG: Too long record")
+          END IF
           READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_c
        ENDIF
+       print *,"R:",nrec,nk,neig_s
     ELSE
        INQUIRE(IOLENGTH=n) neig_s,eig_s
        IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
@@ -296,6 +311,7 @@ CONTAINS
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
           WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%z_c)
        ENDIF
+       print *,"W:",nrec,nk,neig
     ELSE
        INQUIRE(IOLENGTH=r_len) neig,eig
        IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")

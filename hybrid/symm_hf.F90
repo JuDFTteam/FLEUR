@@ -15,7 +15,7 @@
 
       CONTAINS
 
-      SUBROUTINE symm_hf(kpts,nkpti,nk,sym,&
+      SUBROUTINE symm_hf(kpts,nk,sym,&
      &                   dimension,hybdat,eig_irr,&
      &                   atoms,hybrid,cell,&
      &                   lapw,jsp,&
@@ -30,22 +30,22 @@
       USE m_util   ,ONLY: modulo1,intgrf,intgrf_init
       USE m_olap   ,ONLY: wfolap,wfolap1,wfolap_init
       USE m_trafo  ,ONLY: waveftrafo_symm
-    USE m_types
+      USE m_types
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
 
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_sym),INTENT(IN)   :: sym
+      TYPE(t_hybrid),INTENT(IN) :: hybrid
+      TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_lapw),INTENT(IN)   :: lapw
 
 !     - scalars -
-      INTEGER,INTENT(IN)              :: nkpti  ,nk  
+      INTEGER,INTENT(IN)              :: nk  
       INTEGER,INTENT(IN)              :: jsp
       INTEGER,INTENT(IN)              :: irank2
       INTEGER,INTENT(OUT)             :: nkpt_EIBZ
@@ -54,14 +54,14 @@
 
 !     - arrays -
       INTEGER,INTENT(IN)              :: gpt(3,lapw%nv(jsp))
-      INTEGER,INTENT(OUT)             :: parent(kpts%nkpt)
-      INTEGER,INTENT(OUT)             :: symop(kpts%nkpt)
+      INTEGER,INTENT(OUT)             :: parent(kpts%nkptf)
+      INTEGER,INTENT(OUT)             :: symop(kpts%nkptf)
       INTEGER,INTENT(INOUT)           :: degenerat(hybdat%ne_eig(nk))
       INTEGER,INTENT(OUT)             :: nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))  
       INTEGER,ALLOCATABLE,INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER,ALLOCATABLE,INTENT(OUT) :: psym(:),n_q(:)      
 
-      REAL,INTENT(IN)                 :: eig_irr(dimension%neigd,nkpti)
+      REAL,INTENT(IN)                 :: eig_irr(dimension%neigd,kpts%nkpt)
       COMPLEX,ALLOCATABLE,INTENT(OUT) :: rep_c(:,:,:,:,:)
 
 !     - local scalars -
@@ -83,8 +83,8 @@
 
 !     - local arrays -
       INTEGER                         :: rrot(3,3,sym%nsym)
-      INTEGER                         :: neqvkpt(kpts%nkpt)
-      INTEGER                         :: list(kpts%nkpt)
+      INTEGER                         :: neqvkpt(kpts%nkptf)
+      INTEGER                         :: list(kpts%nkptf)
       INTEGER,ALLOCATABLE             :: help(:)
       
       REAL                            :: rotkpt(3),g(3)
@@ -133,13 +133,13 @@
       
       DO iop=1,sym%nsym
 
-        rotkpt = matmul( rrot(:,:,iop), kpts%bk(:,nk) )
+        rotkpt = matmul( rrot(:,:,iop), kpts%bkf(:,nk) )
 
         !transfer rotkpt into BZ
         rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
         !check if rotkpt is identical to bk(:,nk)
-        IF( maxval( abs( rotkpt - kpts%bk(:,nk) ) ) .le. 1E-07) THEN
+        IF( maxval( abs( rotkpt - kpts%bkf(:,nk) ) ) .le. 1E-07) THEN
           ic = ic + 1
           psym(ic) = iop
         END IF
@@ -149,7 +149,7 @@
 
       IF ( irank2 == 0 ) THEN
         WRITE(6,'(A,i3)') ' nk',nk
-        WRITE(6,'(A,3f10.5)') ' kpts%bk(:,nk):',kpts%bk(:,nk)
+        WRITE(6,'(A,3f10.5)') ' kpts%bkf(:,nk):',kpts%bkf(:,nk)
         WRITE(6,'(A,i3)') ' Number of elements in the little group:',nsymop
       END IF
 
@@ -167,23 +167,23 @@
 
       neqvkpt = 0
 
-      DO i=1,kpts%nkpt
+      DO i=1,kpts%nkptf
         list(i) = i-1
       END DO
 
       symop = 0
-      DO ikpt=2,kpts%nkpt
+      DO ikpt=2,kpts%nkptf
         DO iop=1,nsymop
 
-          rotkpt = matmul( rrot(:,:,psym(iop)), kpts%bk(:,ikpt) )
+          rotkpt = matmul( rrot(:,:,psym(iop)), kpts%bkf(:,ikpt) )
 
           !transfer rotkpt into BZ
           rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
           !determine number of rotkpt
           nrkpt = 0
-          DO ikpt1=1,kpts%nkpt
-            IF ( maxval( abs( rotkpt - kpts%bk(:,ikpt1) ) ) <= 1E-06 ) THEN
+          DO ikpt1=1,kpts%nkptf
+            IF ( maxval( abs( rotkpt - kpts%bkf(:,ikpt1) ) ) <= 1E-06 ) THEN
               nrkpt = ikpt1
               EXIT
             END IF
@@ -206,7 +206,7 @@
       neqvkpt(1) = 1
 
 #ifdef CPP_DEBUG
-      IF( sum(neqvkpt(:)) .ne. kpts%nkpt) THEN
+      IF( sum(neqvkpt(:)) .ne. kpts%nkptf) THEN
         IF ( mpi%irank == 0 ) WRITE(6,'(A,i3)') ' Check EIBZ(k) by summing&&
      & up equivalent k-points:',sum(neqvkpt(:))
         STOP 'symm: neqvkpt not identical to nkpt'
@@ -215,14 +215,14 @@
 
       ! determine number of members in the EIBZ(k)
       ic = 0
-      DO ikpt=1,kpts%nkpt
+      DO ikpt=1,kpts%nkptf
         IF(parent(ikpt) .eq. ikpt) ic = ic + 1
       END DO
       nkpt_EIBZ = ic
 
       ALLOCATE( pointer_EIBZ(nkpt_EIBZ) )
       ic = 0
-      DO ikpt=1,kpts%nkpt
+      DO ikpt=1,kpts%nkptf
         IF(parent(ikpt) .eq. ikpt) THEN
           ic = ic + 1
           pointer_EIBZ(ic) = ikpt
@@ -241,18 +241,18 @@
 
       ic  = 0
       n_q = 0
-      DO ikpt = 1,kpts%nkpt
+      DO ikpt = 1,kpts%nkptf
         IF ( parent(ikpt) .eq. ikpt ) THEN
           ic = ic + 1
           DO iop=1,nsymop
             isym = psym(iop)
-            rotkpt = matmul( rrot(:,:,isym), kpts%bk(:,ikpt) )
+            rotkpt = matmul( rrot(:,:,isym), kpts%bkf(:,ikpt) )
 
             !transfer rotkpt into BZ
             rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
             !check if rotkpt is identical to bk(:,ikpt)
-            IF( maxval( abs( rotkpt - kpts%bk(:,ikpt) ) ) .le. 1E-06) THEN
+            IF( maxval( abs( rotkpt - kpts%bkf(:,ikpt) ) ) .le. 1E-06) THEN
               n_q(ic) = n_q(ic) + 1 
             END IF
           END DO
@@ -370,9 +370,9 @@
           iop= psym(isym) 
 
 #ifdef CPP_DEBUG
-          rotkpt   = matmul(rrot(:,:,iop),kpts%bk(:,nk))
+          rotkpt   = matmul(rrot(:,:,iop),kpts%bkf(:,nk))
           rotkpt   = modulo1(rotkpt,kpts%nkpt3)
-          IF( maxval( abs( rotkpt - kpts%bk(:,nk) ) ) .gt. 1e-08) THEN
+          IF( maxval( abs( rotkpt - kpts%bkf(:,nk) ) ) .gt. 1e-08) THEN
             STOP 'symm: error in psym'
           END IF
 #endif
@@ -615,8 +615,8 @@
             END IF
 
             ratom  = hybrid%map(iatom,isym)
-            rotkpt = matmul( rrot(:,:,isym), kpts%bk(:,nk) )
-            g      = nint(rotkpt - kpts%bk(:,nk))
+            rotkpt = matmul( rrot(:,:,isym), kpts%bkf(:,nk) )
+            g      = nint(rotkpt - kpts%bkf(:,nk))
 
             cdum   = exp(-2*pi*img*dot_product(rotkpt,sym%tau(:,iisym)))* &
      &               exp( 2*pi*img*dot_product(g,atoms%taual(:,ratom)))
@@ -633,7 +633,7 @@
       INTEGER FUNCTION symm_hf_nkpt_EIBZ(kpts,nk,sym)
 
       USE m_util, ONLY: modulo1
-    USE m_types
+      USE m_types
       IMPLICIT NONE
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_kpts),INTENT(IN)   :: kpts
@@ -647,8 +647,8 @@
       INTEGER               ::  nsymop,nrkpt
 !     - local arrays -
       INTEGER               ::  rrot(3,3,sym%nsym)
-      INTEGER               ::  neqvkpt(kpts%nkpt),list(kpts%nkpt),parent(kpts%nkpt),&
-     &                          symop(kpts%nkpt)
+      INTEGER               ::  neqvkpt(kpts%nkptf),list(kpts%nkptf),parent(kpts%nkptf),&
+     &                          symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)!,help(:)
       REAL                  ::  rotkpt(3)
 
@@ -670,13 +670,13 @@
       ALLOCATE(psym(sym%nsym))
 
       DO iop=1,sym%nsym
-        rotkpt = matmul( rrot(:,:,iop), kpts%bk(:,nk) )
+        rotkpt = matmul( rrot(:,:,iop), kpts%bkf(:,nk) )
 
         !transfer rotkpt into BZ
         rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
         !check if rotkpt is identical to bk(:,nk)
-        IF( maxval( abs( rotkpt - kpts%bk(:,nk) ) ) .le. 1E-07) THEN
+        IF( maxval( abs( rotkpt - kpts%bkf(:,nk) ) ) .le. 1E-07) THEN
           ic = ic + 1
           psym(ic) = iop
         END IF
@@ -698,22 +698,22 @@
       neqvkpt = 0
 
 !       list = (/ (ikpt-1, ikpt=1,nkpt) /)
-      DO ikpt=1,kpts%nkpt
+      DO ikpt=1,kpts%nkptf
         list(ikpt) = ikpt-1
       END DO
 
-      DO ikpt=2,kpts%nkpt
+      DO ikpt=2,kpts%nkptf
         DO iop=1,nsymop
 
-          rotkpt = matmul( rrot(:,:,psym(iop)), kpts%bk(:,ikpt) )
+          rotkpt = matmul( rrot(:,:,psym(iop)), kpts%bkf(:,ikpt) )
 
           !transfer rotkpt into BZ
           rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
           !determine number of rotkpt
           nrkpt = 0
-          DO ikpt1=1,kpts%nkpt
-            IF ( maxval( abs( rotkpt - kpts%bk(:,ikpt1) ) ) .le. 1E-06 ) THEN
+          DO ikpt1=1,kpts%nkptf
+            IF ( maxval( abs( rotkpt - kpts%bkf(:,ikpt1) ) ) .le. 1E-06 ) THEN
               nrkpt = ikpt1
               EXIT
             END IF
@@ -737,7 +737,7 @@
 
       ! determine number of members in the EIBZ(k)
       ic = 0
-      DO ikpt=1,kpts%nkpt
+      DO ikpt=1,kpts%nkptf
         IF(parent(ikpt) .eq. ikpt) ic = ic + 1
       END DO
       symm_hf_nkpt_EIBZ = ic
