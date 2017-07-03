@@ -183,6 +183,16 @@
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
 
+             !--- J< 
+             jij%l_wr=.TRUE.
+             jij%nqptd=1
+             jij%nmagn=1
+             jij%mtypes=1
+             jij%phnd=1
+             jij%M(:)             = 0.0
+             jij%l_magn(:)        =.FALSE.
+             !--- J>
+
              CALL dimens(&
                   &            mpi,input,&
                   &            sym,stars,&
@@ -265,18 +275,10 @@
              atoms%numStatesProvided(:) = 0
 
              atoms%vr0(:)         = 0.0
-             jij%M(:)             = 0.0
-             jij%l_magn(:)        =.FALSE.
              results%force(:,:,:) = 0.0
 
              CALL timestart("preparation:stars,lattice harmonics,+etc")
-             !--- J< 
-             jij%l_wr=.TRUE.
-             jij%nqptd=1
-             jij%nmagn=1
-             jij%mtypes=1
-             jij%phnd=1
-             !--- J>
+
              !+t3e
              IF (mpi%irank.EQ.0) THEN
                 !-t3e
