@@ -189,8 +189,6 @@
              jij%nmagn=1
              jij%mtypes=1
              jij%phnd=1
-             jij%M(:)             = 0.0
-             jij%l_magn(:)        =.FALSE.
              !--- J>
 
              CALL dimens(&
@@ -273,6 +271,9 @@
              !
 
              atoms%numStatesProvided(:) = 0
+
+             jij%M(:)             = 0.0
+             jij%l_magn(:)        =.FALSE.
 
              atoms%vr0(:)         = 0.0
              results%force(:,:,:) = 0.0
