@@ -142,7 +142,7 @@ SUBROUTINE r_inpXML(&
   REAL             :: speciesXMLCoreOccs(2,29)
   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
-  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l
+  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum
   INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
@@ -936,14 +936,27 @@ SUBROUTINE r_inpXML(&
      END IF
      ALLOCATE(sym%tau(3,sym%nop))
 
+     sym%invs = .FALSE.
+     sym%zrfs = .FALSE.
+
      DO k = 1, sym%nop
+        absSum = 0
         DO i = 1, 3
            DO j = 1, 3
               sym%mrot(j,i,k) = mrotTemp(j,i,k)
+              absSum = absSum + ABS(sym%mrot(j,i,k))
            END DO
            sym%tau(i,k) = tauTemp(i,k)
         END DO
+        IF (absSum.EQ.3) THEN
+           IF (ALL(sym%tau(:,k).EQ.0.0)) THEN
+              IF ((sym%mrot(1,1,k).EQ.-1).AND.(sym%mrot(2,2,k).EQ.-1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%invs = .TRUE.
+              IF ((sym%mrot(1,1,k).EQ.1).AND.(sym%mrot(2,2,k).EQ.1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%zrfs = .TRUE.
+           END IF
+        END IF
      END DO
+
+     sym%invs2 = sym%invs.AND.sym%zrfs
   END IF
 
   xPathA = '/fleurInput/cell/symmetryOperations'
@@ -1187,10 +1200,10 @@ SUBROUTINE r_inpXML(&
      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
   END IF
   xcpot%igrd = 0
+  obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
      xcpot%igrd = 1
-     ! Am I sure about the following 3 lines? They were included in a similar section in rw_inp
-     obsolete%lwb=.false.
+     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
