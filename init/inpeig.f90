@@ -55,6 +55,9 @@
          WRITE(6,*) "No enpara file found, using default values"
          enpara%el0(:,:,1)=0.0
          enpara%el0(0,:,1)=-999999.0
+         enpara%lchange = .FALSE.
+         enpara%llochg = .FALSE.
+         enpara%lchg_v = .FALSE.
          DO n = 1, atoms%ntype
             l_clf = .FALSE.  
             WRITE(fname,"('corelevels.',i2.2)") NINT(atoms%zatom(n))
