@@ -122,7 +122,8 @@ CONTAINS
        END DO
        iread=MIN(mit-1,input%maxiter+1)
        DO it = 2,iread
-          READ (59,rec=it-1) (ui(i),i=1,nmap),(vi(i),i=1,nmap),dfivi
+          READ (59,rec=(it-1)*2-1) (ui(i),i=1,nmap)
+          READ (59,rec=(it-1)*2)   (vi(i),i=1,nmap),dfivi
           am(it) = CPP_BLAS_sdot(nmap,vi,1,fm1,1)
           CALL CPP_BLAS_saxpy(nmap,-am(it),ui,1,um,1)
           WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
@@ -147,8 +148,8 @@ CONTAINS
           !
           vm(:) = input%alpha*fm1(:) 
           DO it = 2,iread
-             READ (59,rec=it-1)(ui(i),i=1,nmap),&
-                  &                           (vi(i),i=1,nmap),dfivi
+             READ (59,rec=2*(it-1)-1)(ui(i),i=1,nmap)
+             READ (59,rec=2*(it-1))(vi(i),i=1,nmap),dfivi
              bm = CPP_BLAS_sdot(nmap,ui,1,fm1,1)
              CALL CPP_BLAS_saxpy(nmap,-bm,vi,1,vm,1)
              !write(6,FMT='(5x,"<ui|w|Fm> for it",i2,5x,f10.6)') it, bm 
@@ -193,8 +194,8 @@ CONTAINS
                &           mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
           !
           DO it = 2,iread
-             READ (59,rec=it-1) (ui(i),i=1,nmap),&
-                  &                            (vi(i),i=1,nmap),dfivi
+             READ (59,rec=2*(it-1)-1) (ui(i),i=1,nmap)
+             READ (59,rec=2*(it-1))   (vi(i),i=1,nmap),dfivi
              CALL CPP_BLAS_saxpy(nmap,-am(it)*dfivi,vi,1,vm,1)
           END DO
           !
@@ -216,7 +217,8 @@ CONTAINS
        IF (mit.GT.input%maxiter+1) THEN
           npos = MOD(mit-2,input%maxiter)+1
        ENDIF
-       WRITE (59,rec=npos) (um(i),i=1,nmap),(vm(i),i=1,nmap),dfivi
+       WRITE (59,rec=2*npos-1) (um(i),i=1,nmap)
+       WRITE (59,rec=2*npos)  (vm(i),i=1,nmap),dfivi
        !
        !     update rho(m+1)
        !
