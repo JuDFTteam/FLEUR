@@ -302,6 +302,8 @@ CONTAINS
     kidx2=0
     !-gu
     stars%rgphs(:,:,:) = cmplx(0.0,0.0)
+    stars%ft2_gfx = 0.0
+    stars%ft2_gfy = 0.0
     DO  k = 1,stars%ng3
 
        CALL spgrot(&
