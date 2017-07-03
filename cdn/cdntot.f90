@@ -16,6 +16,7 @@
       USE m_pwint
       USE m_types
       USE m_juDFT
+      USE m_convol
       USE m_xmlOutput
       IMPLICIT NONE
 !     ..
@@ -91,7 +92,11 @@
    20       CONTINUE
          END IF
 !     -----is region
-         qis = 0.
+         IF (.not.judft_was_Argument("-oldfix")) THEN
+            CALL convol(stars,x,qpw(:,jspin),stars%ufft)
+            qis = x(1)*cell%omtil
+         ELSE
+          qis = 0.
 !         DO 30 j = 1,nq3
 !            CALL pwint(
 !     >                 k1d,k2d,k3d,n3d,ntypd,natd,nop,invtab,odi,
@@ -108,6 +113,7 @@
          DO j = 1,stars%ng3
              qis = qis + qpw(j,jspin)*x(j)*stars%nstr(j)
          ENDDO
+         endif
          qistot = qistot + qis
          q = q + qis
          WRITE (6,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype)
