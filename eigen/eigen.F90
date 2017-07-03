@@ -453,7 +453,7 @@ CONTAINS
           !--->         set up lapw list
           !
           CALL timestart("Setup of LAPW")
-          lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0
+          lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0 ; lapw%nv = 0
           CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,matind,nred)
 
           CALL timestop("Setup of LAPW")
