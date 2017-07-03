@@ -1200,10 +1200,10 @@ SUBROUTINE r_inpXML(&
      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
   END IF
   xcpot%igrd = 0
+  obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
      xcpot%igrd = 1
-     ! Am I sure about the following 3 lines? They were included in a similar section in rw_inp
-     obsolete%lwb=.false.
+     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
