@@ -691,7 +691,8 @@
       banddos%sig_dos=1e-4
       READ (UNIT=5,FMT='(9x,f10.5,10x,f10.5,9x,f10.5)',&
      &     END=98,ERR=98) banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
-      
+
+      kpts%posScale = 1.0
  
 ! added for exact-exchange or hybrid functional calculations:
 ! read in the number of k-points and nx,ny and nz given in the last line
