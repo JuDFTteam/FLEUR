@@ -38,6 +38,7 @@ CONTAINS
     WRITE(*,'(a)')"-genEnpara        : write enpara file"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"-xmlInput or -xml : use inp.xml instead of inp"
+    WRITE(*,'(a)')"-toXML            : convert inp file to XML input file (experimental)"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"-check            : run in check mode, i.e. stop after init"
     WRITE(*,'(a)')""

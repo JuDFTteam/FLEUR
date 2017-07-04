@@ -460,6 +460,7 @@
 !
       READ (UNIT=5,FMT=7210,END=99,ERR=99) stars%gmax,xcpot%gmaxxc
       WRITE (6,9110) stars%gmax,xcpot%gmaxxc
+      stars%gmaxInit = stars%gmax
  7210 FORMAT (2f10.6)
 !
       INQUIRE(file='fl7para',exist=ldum)  ! fl7para must not exist for input%gw=2
