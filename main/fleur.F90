@@ -205,9 +205,12 @@
           integer:: ierr(2)
 #endif
           mpi%mpi_comm=mpi_comm
+         
+         CALL timestart("Initialization")
          CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
                  oneD,l_opti)
+         CALL timestop("Initialization")
 
          IF (l_opti) THEN
              IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
