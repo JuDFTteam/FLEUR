@@ -244,11 +244,9 @@ SUBROUTINE r_inpXML(&
   numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/filmPos')
 
   atoms%nat = numberNodes
-  atoms%nat = numberNodes
 
   numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
 
-  atoms%ntype = numberNodes
   atoms%ntype = numberNodes
 
   numSpecies = xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
