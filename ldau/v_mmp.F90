@@ -20,6 +20,7 @@ CONTAINS
   SUBROUTINE v_mmp(sym,atoms,jspins,lmaxb,ns_mmp,u,f0,f2, vs_mmp,results)
 
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -50,15 +51,15 @@ CONTAINS
        l = atoms%lda_u(itype)%l
        IF (l.GE.0) THEN
           n = n + 1
-          u_htr = atoms%lda_u(itype)%u / 27.21
-          j_htr = atoms%lda_u(itype)%j / 27.21
-          u_htr = f0(n)/27.21
+          u_htr = atoms%lda_u(itype)%u / hartree_to_ev_const
+          j_htr = atoms%lda_u(itype)%j / hartree_to_ev_const
+          u_htr = f0(n)/hartree_to_ev_const
           IF (l.EQ.1) THEN
-             j_htr = f2(n)/(5*27.21)
+             j_htr = f2(n)/(5*hartree_to_ev_const)
           ELSEIF (l.EQ.2) THEN
-             j_htr = 1.625*f2(n)/(14*27.21)
+             j_htr = 1.625*f2(n)/(14*hartree_to_ev_const)
           ELSEIF (l.EQ.3) THEN
-             j_htr = (286.+195*451/675+250*1001/2025)*f2(n)/(6435*27.21)
+             j_htr = (286.+195*451/675+250*1001/2025)*f2(n)/(6435*hartree_to_ev_const)
           ENDIF
           !
           ! calculate spin-density 'rho_sig' and total density 'rho_tot'

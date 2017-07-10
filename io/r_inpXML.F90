@@ -160,7 +160,6 @@ SUBROUTINE r_inpXML(&
   REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-  REAL, PARAMETER    :: htr_eV   = 27.21138386 ! eV
 
 
 
@@ -699,8 +698,8 @@ SUBROUTINE r_inpXML(&
      !      ALLOCATE(input%efield%sigEF(3*k1d, 3*k2d, nvac))
      !      input%efield%sigEF = 0.0
      IF (l_eV) THEN
-        input%efield%sig_b(:) = input%efield%sig_b/htr_eV
-        !         input%efield%sigEF(:,:,:) = input%efield%sigEF/htr_eV
+        input%efield%sig_b(:) = input%efield%sig_b/hartree_to_ev_const
+        !         input%efield%sigEF(:,:,:) = input%efield%sigEF/hartree_to_ev_const
      END IF
   END IF
 
