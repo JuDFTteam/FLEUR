@@ -110,21 +110,6 @@ SUBROUTINE gen_bz( kpts,sym)
    END DO
 
    kpts%nkptf = ic
-   !IF (kpts%nkptf /= ic) THEN
-   !   WRITE(*,*) ''
-   !   WRITE(*,*) 'Generation of full Brilloun zone from IBZ failed.'
-   !   WRITE(*,*) 'Number of generated k points in full BZ does not'
-   !   WRITE(*,*) 'agree with target.'
-   !   WRITE(*,*) 'Number of generated k points in full BZ: ', ic
-   !   WRITE(*,*) 'Target: ', kpts%nkptf
-   !   WRITE(*,*) ''
-
-   !   DO ikpt=1,kpts%nkptf
-   !      WRITE(*,*) kpts%bkf(:,ikpt)
-   !   END DO
-
-   !   CALL juDFT_error("gen_bz: error kpts/symmetry",calledby="gen_bz")
-   !END IF
 
    ! Reallocate bkf, bkp, bksym
    ALLOCATE (iarr(kpts%nkptf))

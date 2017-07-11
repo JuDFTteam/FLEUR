@@ -8,7 +8,7 @@ CONTAINS
        lmaxb,ntype,n_u,lda_u,f0,f2,f4,f6,&
        u)
 
-    USE m_constants, ONLY : pi_const
+    USE m_constants
     USE m_sgaunt
     IMPLICIT NONE
 
@@ -34,11 +34,11 @@ CONTAINS
        IF (lda_u(itype).GE.0) THEN
           n = n + 1
           l_l(n) = lda_u(itype)
-          fk(1,n) = f0(n) / 27.21
-          fk(2,n) = f2(n) / 27.21
-          fk(3,n) = f4(n) / 27.21
+          fk(1,n) = f0(n) / hartree_to_ev_const
+          fk(2,n) = f2(n) / hartree_to_ev_const
+          fk(3,n) = f4(n) / hartree_to_ev_const
           IF (l_l(n).EQ.3) THEN
-             fk(4,n) = f6(n) / 27.21
+             fk(4,n) = f6(n) / hartree_to_ev_const
           ELSEIF (l_l(n).GT.3) THEN
              CALL juDFT_error("LDA+U for p, d or f-states!", calledby="umtx")
           ENDIF
@@ -110,8 +110,8 @@ CONTAINS
        !        WRITE (6,*) 'J-matr:'
        !        IF (l.eq.2) WRITE (6,111) ((u(i,j,j,i,n),i=-l,l),j=-l,l)
        !        IF (l.eq.3) WRITE (6,211) ((u(i,j,j,i,n),i=-l,l),j=-l,l)
-       !         PRINT*,'U-av:',avu*27.21
-       !         PRINT*,'J-av:',avj*27.21
+       !         PRINT*,'U-av:',avu*hartree_to_ev_const
+       !         PRINT*,'J-av:',avj*hartree_to_ev_const
 111    FORMAT (5f8.4)
 211    FORMAT (7f8.4)
 112    FORMAT (10e20.10)

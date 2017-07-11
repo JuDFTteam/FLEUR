@@ -30,7 +30,7 @@
              & atoms,obsolete,vacuum,&
              & input,banddos,xcpot,sym,&
              & cell,sliceplot,noco,&
-             & stars,oneD,jij,hybrid,kpts)
+             & stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
           USE m_rwinp
           USE m_chkmt
           USE m_inpnoco
@@ -42,36 +42,40 @@
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..
-          TYPE(t_atoms),     INTENT(INOUT)::atoms
-          TYPE(t_obsolete),  INTENT(INOUT)::obsolete
-          TYPE(t_vacuum),    INTENT(INOUT)::vacuum
-          TYPE(t_input),     INTENT(INOUT)::input
-          TYPE(t_banddos),   INTENT(INOUT)::banddos
-          TYPE(t_xcpot),     INTENT(INOUT)::xcpot
-          TYPE(t_sym),       INTENT(INOUT)::sym
-          TYPE(t_cell),      INTENT(INOUT)::cell
-          TYPE(t_sliceplot), INTENT(INOUT)::sliceplot
-          TYPE(t_noco),      INTENT(INOUT)::noco
-          TYPE(t_stars),     INTENT(INOUT)::stars
-          TYPE(t_oneD),      INTENT(INOUT)::oneD
-          TYPE(t_jij),       INTENT(INOUT)::jij
-          TYPE(t_hybrid),    INTENT(INOUT)::hybrid
-          TYPE(t_kpts),      INTENT(INOUT)::kpts
+          TYPE(t_atoms),     INTENT(INOUT) :: atoms
+          TYPE(t_obsolete),  INTENT(INOUT) :: obsolete
+          TYPE(t_vacuum),    INTENT(INOUT) :: vacuum
+          TYPE(t_input),     INTENT(INOUT) :: input
+          TYPE(t_banddos),   INTENT(INOUT) :: banddos
+          TYPE(t_xcpot),     INTENT(INOUT) :: xcpot
+          TYPE(t_sym),       INTENT(INOUT) :: sym
+          TYPE(t_cell),      INTENT(INOUT) :: cell
+          TYPE(t_sliceplot), INTENT(INOUT) :: sliceplot
+          TYPE(t_noco),      INTENT(INOUT) :: noco
+          TYPE(t_stars),     INTENT(INOUT) :: stars
+          TYPE(t_oneD),      INTENT(INOUT) :: oneD
+          TYPE(t_jij),       INTENT(INOUT) :: jij
+          TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
+          TYPE(t_kpts),      INTENT(INOUT) :: kpts
+          REAL,              INTENT(OUT)   :: scale
+          REAL,              INTENT(OUT)   :: a1(3)
+          REAL,              INTENT(OUT)   :: a2(3)
+          REAL,              INTENT(OUT)   :: a3(3)
+          CHARACTER(len=4),  INTENT(OUT)   :: namex 
+          CHARACTER(len=12), INTENT(OUT)   :: relcor
 
           !     .. Local Scalars ..
-          REAL dr,dtild,r,kmax1,dvac1,zp,scale
+          REAL dr,dtild,r,kmax1,dvac1,zp
           INTEGER i,iz,j,n,n1,na,ntst,nn,ios
           LOGICAL l_gga,l_test,l_vca
           CHARACTER(len=2)  :: str_up,str_do
-          CHARACTER(len=4)  :: namex
-          CHARACTER(len=12) :: relcor
+
           !     ..
           !     .. Local Arrays ..
           CHARACTER(3) noel(atoms%ntype)
           CHARACTER(8) llr(0:1)
           INTEGER  jri1(atoms%ntype),lmax1(atoms%ntype)
           REAL    rmt1(atoms%ntype),dx1(atoms%ntype)
-          REAL    a1(3),a2(3),a3(3)
 
           !     ..
           !     .. Data statements ..

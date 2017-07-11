@@ -5,6 +5,6 @@ $test_stages=1;
 $test_desc=<<EOF
 Simple test of Fleur with two steps:
 1.Generate a starting density
-2.Run 20 iterations and compare convergence, fermi-energy & total energy
+2.Run 4 noco iterations and compare convergence, fermi-energy & total energy
 EOF
 ;

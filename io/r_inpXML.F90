@@ -140,7 +140,7 @@ SUBROUTINE r_inpXML(&
   REAL             :: speciesXMLCoreOccs(2,29)
   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
-  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l
+  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum
   INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
@@ -158,7 +158,6 @@ SUBROUTINE r_inpXML(&
   REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-  REAL, PARAMETER    :: htr_eV   = 27.21138386 ! eV
 
 
 
@@ -242,11 +241,9 @@ SUBROUTINE r_inpXML(&
   numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/filmPos')
 
   atoms%nat = numberNodes
-  atoms%nat = numberNodes
 
   numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
 
-  atoms%ntype = numberNodes
   atoms%ntype = numberNodes
 
   numSpecies = xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
@@ -695,8 +692,8 @@ SUBROUTINE r_inpXML(&
      !      ALLOCATE(input%efield%sigEF(3*k1d, 3*k2d, nvac))
      !      input%efield%sigEF = 0.0
      IF (l_eV) THEN
-        input%efield%sig_b(:) = input%efield%sig_b/htr_eV
-        !         input%efield%sigEF(:,:,:) = input%efield%sigEF/htr_eV
+        input%efield%sig_b(:) = input%efield%sig_b/hartree_to_ev_const
+        !         input%efield%sigEF(:,:,:) = input%efield%sigEF/hartree_to_ev_const
      END IF
   END IF
 
@@ -915,6 +912,7 @@ SUBROUTINE r_inpXML(&
 
   IF (numberNodes.EQ.1) THEN
      symmetryDef = 2
+     sym%nop = 48
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
 
      CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
@@ -929,14 +927,27 @@ SUBROUTINE r_inpXML(&
      END IF
      ALLOCATE(sym%tau(3,sym%nop))
 
+     sym%invs = .FALSE.
+     sym%zrfs = .FALSE.
+
      DO k = 1, sym%nop
+        absSum = 0
         DO i = 1, 3
            DO j = 1, 3
               sym%mrot(j,i,k) = mrotTemp(j,i,k)
+              absSum = absSum + ABS(sym%mrot(j,i,k))
            END DO
            sym%tau(i,k) = tauTemp(i,k)
         END DO
+        IF (absSum.EQ.3) THEN
+           IF (ALL(sym%tau(:,k).EQ.0.0)) THEN
+              IF ((sym%mrot(1,1,k).EQ.-1).AND.(sym%mrot(2,2,k).EQ.-1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%invs = .TRUE.
+              IF ((sym%mrot(1,1,k).EQ.1).AND.(sym%mrot(2,2,k).EQ.1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%zrfs = .TRUE.
+           END IF
+        END IF
      END DO
+
+     sym%invs2 = sym%invs.AND.sym%zrfs
   END IF
 
   xPathA = '/fleurInput/cell/symmetryOperations'
@@ -1176,10 +1187,10 @@ SUBROUTINE r_inpXML(&
      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
   END IF
   xcpot%igrd = 0
+  obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
      xcpot%igrd = 1
-     ! Am I sure about the following 3 lines? They were included in a similar section in rw_inp
-     obsolete%lwb=.false.
+     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
@@ -1352,6 +1363,7 @@ SUBROUTINE r_inpXML(&
   enpara%el0 = 0.0
   enpara%ello0 = 0.0
   enpara%lchange = .FALSE.
+  enpara%llochg = .FALSE.
   dimension%nstd = 29
 
   ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
@@ -1749,6 +1761,13 @@ SUBROUTINE r_inpXML(&
      END IF
 
      vacuum%layers = 1
+     input%integ = .FALSE.
+     vacuum%starcoeff = .FALSE.
+     vacuum%nstars = 0
+     vacuum%locx = 0.0
+     vacuum%locy = 0.0
+     vacuum%nstm = 0
+     vacuum%tworkf = 0.0
      IF ((banddos%vacdos).AND.(numberNodes.EQ.1)) THEN
         vacuum%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
         input%integ = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))

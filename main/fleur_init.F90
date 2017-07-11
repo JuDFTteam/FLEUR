@@ -24,6 +24,7 @@
           USE m_ylm
           USE m_InitParallelProcesses
           USE m_xmlOutput
+          USE m_constants
           USE m_winpXML
           USE m_setupMPI
           USE m_cdn_io
@@ -165,12 +166,12 @@
                 filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
-                     &                        atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                     &                        cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
-                     &                        noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
-                     &                        xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-                     &                        atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
-                     &                        .TRUE.,numSpecies,enpara)
+                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+                              cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                              noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
+                              xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+                              atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
+                             .TRUE.,numSpecies,enpara)
                 DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
@@ -182,6 +183,17 @@
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
+
+             namex = '    '
+             relcor = '            '
+
+             !--- J< 
+             jij%l_wr=.TRUE.
+             jij%nqptd=1
+             jij%nmagn=1
+             jij%mtypes=1
+             jij%phnd=1
+             !--- J>
 
              CALL dimens(&
                   &            mpi,input,&
@@ -264,19 +276,14 @@
 
              atoms%numStatesProvided(:) = 0
 
-             atoms%vr0(:)         = 0.0
              jij%M(:)             = 0.0
              jij%l_magn(:)        =.FALSE.
+
+             atoms%vr0(:)         = 0.0
              results%force(:,:,:) = 0.0
 
              CALL timestart("preparation:stars,lattice harmonics,+etc")
-             !--- J< 
-             jij%l_wr=.TRUE.
-             jij%nqptd=1
-             jij%nmagn=1
-             jij%mtypes=1
-             jij%phnd=1
-             !--- J>
+
              !+t3e
              IF (mpi%irank.EQ.0) THEN
                 !-t3e
@@ -284,7 +291,7 @@
                      &           atoms,obsolete,vacuum,&
                      &           input,banddos,xcpot,sym,&
                      &           cell,sliceplot,noco,&
-                     &           stars,oneD,jij,hybrid,kpts)
+                     &           stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
                 !
                 IF (xcpot%igrd.NE.0) THEN
                    ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
@@ -318,7 +325,44 @@
                 !+t3e
                 banddos%l_orb = .FALSE.
                 banddos%orbCompAtom = 0
-             ENDIF ! mpi%irank.eq.0
+
+                IF(juDFT_was_argument("-toXML")) THEN
+                   WRITE(*,*) ''
+                   WRITE(*,*) 'Please note:'
+                   WRITE(*,*) 'The inp to xml input conversion is experimental and'
+                   WRITE(*,*) 'only made for basic inp files without sophisticated'
+                   WRITE(*,*) 'parametrizations. You might have to adjust the generated'
+                   WRITE(*,*) 'file by hand to really obtain an adequate input file.'
+                   WRITE(*,*) 'Also the generated XML input file is not meant to be'
+                   WRITE(*,*) 'beautiful.'
+                   WRITE(*,*) ''
+                   ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
+                   ALLOCATE(xmlElectronStates(29,atoms%ntype),xmlPrintCoreStates(29,atoms%ntype))
+                   ALLOCATE(xmlCoreOccs(1,1,1))
+                   filename = 'inpConverted.xml'
+                   xmlElectronStates = noState_const
+                   xmlPrintCoreStates = .FALSE.
+                   DO i = 1, atoms%ntype
+                      noel(i) = namat_const(atoms%nz(i))
+                      atomTypeSpecies(i) = i
+                      speciesRepAtomType(i) = i
+                   END DO
+                   numSpecies = SIZE(speciesRepAtomType)
+                   a1(:) = a1(:) / scale
+                   a2(:) = a2(:) / scale
+                   a3(:) = a3(:) / scale
+                   CALL w_inpXML(&
+                                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+                                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
+                                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+                                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
+                                 .TRUE.,numSpecies,enpara)
+                   DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
+                   DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
+                   CALL juDFT_end("Fleur inp to XML input conversion completed.")
+                END IF
+             END IF ! mpi%irank.eq.0
              CALL timestop("preparation:stars,lattice harmonics,+etc")
 
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"

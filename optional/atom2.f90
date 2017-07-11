@@ -175,7 +175,7 @@
                               &f(kk/2))
 
                  ENDDO
-!                 write(*,*) (27.21*2*f(kk),kk=0,l)
+!                 write(*,*) (hartree_to_ev_const*2*f(kk),kk=0,l)
               ENDIF
 !-ldau
               eig(k,ispin) = e

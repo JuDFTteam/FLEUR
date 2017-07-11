@@ -14,7 +14,7 @@ CONTAINS
     CHARACTER(LEN=500):: infostring
 
     PRINT *,"     Welcome to FLEUR        (www.flapw.de)   "
-    PRINT *,"     MaX-Release 1.2       (www.max-centre.eu)"
+    PRINT *,"     MaX-Release 1.3       (www.max-centre.eu)"
 
     IF (.NOT. (juDFT_was_argument("-h").OR.juDFT_was_argument("--help"))) RETURN
 
@@ -38,6 +38,7 @@ CONTAINS
     WRITE(*,'(a)')"-genEnpara        : write enpara file"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"-xmlInput or -xml : use inp.xml instead of inp"
+    WRITE(*,'(a)')"-toXML            : convert inp file to XML input file (experimental)"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"-check            : run in check mode, i.e. stop after init"
     WRITE(*,'(a)')""

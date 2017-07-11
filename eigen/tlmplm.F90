@@ -76,7 +76,6 @@ MODULE m_tlmplm
     !--->    generate the wavefunctions for each l
     !
     l_write=mpi%irank==0
-
     !$    l_write=.false.
     !$    call gaunt2(atoms%lmaxd)
     !$OMP PARALLEL DO DEFAULT(NONE)&

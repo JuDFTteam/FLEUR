@@ -1,10 +1,11 @@
 #define POTENTIAL
       MODULE param
+      USE m_constants
       IMPLICIT NONE
 !
 
       REAL,PARAMETER   :: au2A =0.529177249
-      REAL,PARAMETER   :: Ha2eV=27.211396132
+      REAL,PARAMETER   :: Ha2eV=hartree_to_ev_const
       REAL,PARAMETER   :: pi=3.14159265358979323846
 !
       INTEGER, PARAMETER   :: jnlout=6

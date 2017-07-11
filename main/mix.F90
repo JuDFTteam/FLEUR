@@ -211,7 +211,7 @@ CONTAINS
     !
     ! open files for broyden
     !
-    irecl=(2*nmap+1)*8
+    irecl=(nmap+1)*8
     IF (input%imix.GE.3) THEN
        OPEN (57,file='broyd',form='unformatted',status='unknown')
        OPEN (59,file='broyd.'//CHAR(input%imix+48),access='direct',&

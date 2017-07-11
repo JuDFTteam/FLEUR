@@ -8,7 +8,7 @@ MODULE  m_fergwt
 CONTAINS
   SUBROUTINE fergwt(kpts,input,mpi, ne,eig, results)
 
-    USE m_constants, ONLY : pi_const
+    USE m_constants
     USE m_types
     IMPLICIT NONE
 
@@ -90,7 +90,7 @@ CONTAINS
        IF ( mpi%irank == 0 ) WRITE (6,FMT=8000) eps
 8000   FORMAT (10x,'warning: eps has been increased to',e12.5)
     ENDDO conv_loop
-    workf = -27.2116*results%ef
+    workf = -hartree_to_ev_const*results%ef
     IF ( mpi%irank == 0 ) THEN
        WRITE (16,FMT=8010) results%ef,workf,s
        WRITE (6,FMT=8010) results%ef,workf,s

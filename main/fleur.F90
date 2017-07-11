@@ -117,8 +117,12 @@
           integer:: ierr(2)
 #endif
           mpi%mpi_comm=mpi_comm
-          CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-               sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,oneD,l_opti)
+         
+         CALL timestart("Initialization")
+         CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+                 sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+                 oneD,l_opti)
+         CALL timestop("Initialization")
 
           hybrid%l_hybrid   = (&
                xcpot%icorr == icorr_pbe0 .OR.&
@@ -277,6 +281,7 @@
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)') '...done'
 
                    ELSEIF ( it == 1 ) THEN ! allocate some dummy arrays
+                   IF (it==1) THEN ! temporary until HF is not excluded by #if any more
                       IF ( noco%l_soc ) THEN
                          dimension%neigd2 = dimension%neigd*2
                       ELSE
