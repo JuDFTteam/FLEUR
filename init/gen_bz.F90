@@ -64,18 +64,6 @@ SUBROUTINE gen_bz( kpts,sym)
    END DO
 
    ! Set target number for k points in full BZ
-   kpts%nkptf = kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
-   IF(kpts%l_gamma) THEN
-      IF (ANY(MODULO(kpts%nkpt3(:),2).EQ.0)) THEN
-         kpts%nkptf = kpts%nkptf + 1
-      END IF
-   END IF
-
-   ! Apply symmetrie operations to all k-points of IBZ, test whether
-   ! generated k-point already is in the full BZ set of k-points, and
-   ! add it if it is not yet in this set.
-
-   kpts%bkf = 0
   
    !Add existing vectors to list of full vectors
    print *,"WARNING from gen_bz"
