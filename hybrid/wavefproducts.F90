@@ -15,6 +15,7 @@
       USE m_util     , ONLY : modulo1
       USE m_wrapper
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -136,9 +137,7 @@
       READ(778,rec=nk) z_nk
 
       ! read in cmt coefficients from direct access file cmt
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk) cmt_nk(:,:,:)
+      call read_cmt(cmt_nk,nk)
 
 !       ! open file cprod
 !       irecl_cprod = maxbasm*mnobd*(bandf-bandi+1)*16
@@ -195,8 +194,7 @@
       !
       ! MT contribution
       ! 
-        
-      READ(777,rec=nkqpt) cmt(:,:,:)
+      call read_cmt(cmt,nkqpt)
       lm_0     = 0      
       ic       = 0
         
@@ -301,7 +299,6 @@
       END DO
       
 
-      CLOSE(777)
       CLOSE(778)
 
 
@@ -321,6 +318,7 @@
       USE m_wrapper
       USE m_constants 
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -476,15 +474,12 @@
       END DO
 
       ! read in cmt coefficient at k-point nk
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk)  ccmt_nk
+
+      CALL read_cmt(ccmt_nk,nk)
 
       !read in cmt coefficients at k+q point
-      READ(777,rec=nkqpt)  ccmt(:,:,:)
+      call read_cmt(ccmt,nkqpt)
       
-      CLOSE(777)
-
 
       iatom = 0
       DO itype = 1,atoms%ntype
@@ -1276,6 +1271,7 @@
       USE m_constants
       USE m_apws
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -1505,15 +1501,10 @@
       ALLOCATE(ccmt_nk(dimension%neigd,hybrid%maxlmindx,atoms%nat),ccmt(dimension%neigd,hybrid%maxlmindx,atoms%nat), stat=ok)
       IF( ok .ne. 0 ) STOP 'wavefproducts_inv5: error allocation ccmt_nk/ccmt'
 
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk)  ccmt_nk
-
+      call read_cmt(ccmt_nk,nk)
       !read in cmt coefficients at k+q point
-      READ(777,rec=nkqpt)  ccmt(:,:,:)
+      call read_cmt(ccmt,nkqpt)
       
-      CLOSE(777)
-
 
       iatom = 0
       DO itype = 1,atoms%ntype
@@ -2317,6 +2308,7 @@
       USE m_trafo
       USE m_wrapper
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
@@ -2545,12 +2537,9 @@
       
 
       ! read in cmt coefficients from direct access file cmt
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk) cmt_nk(:,:,:)    
-      READ(777,rec=nkqpt) cmt(:,:,:)
-      CLOSE(777)
-
+      call read_cmt(cmt_nk(:,:,:),nk)    
+      call read_cmt(cmt(:,:,:),nkqpt)
+     
       lm_0     = 0      
       ic       = 0
         

@@ -31,6 +31,7 @@
       USE m_olap   ,ONLY: wfolap,wfolap1,wfolap_init
       USE m_trafo  ,ONLY: waveftrafo_symm
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -308,12 +309,7 @@
         ! P(R,T)\phi_n,k = \sum_{n'\in degenerat(n)} rep_v(n',n) *\phi_n',k
       
         ! read in cmt and z at current k-point (nk)
-        irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-        OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-     &       recl=irecl_cmt)
-        READ(777,rec=nk) cmt
-        CLOSE(777)
-
+         CALL read_cmt(cmt,nk)
 #ifdef CPP_INVERSION
         irecl_z   =  dimension%nbasfcn*dimension%neigd*8
 #else
@@ -465,13 +461,9 @@
         
       ELSE
         ! read in cmt and z at current k-point (nk)
-        irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-        OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-     &       recl=irecl_cmt)
-        READ(777,rec=nk) cmt
-        CLOSE(777)
-        
-        CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      
+           CALL read_cmt(cmt,nk)
+        !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
         
         IF( allocated(olapmt)) deallocate(olapmt)
         ALLOCATE( olapmt(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),stat=ok)
@@ -622,7 +614,7 @@
      &               exp( 2*pi*img*dot_product(g,atoms%taual(:,ratom)))
 
             rep_c(:,:,:,iop,iatom) = &
-     &         sym%d_wgn(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,isym) * cdum
+     &         hybrid%d_wgn2(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,isym) * cdum
           END DO
         END DO
         iatom0 = iatom0 + atoms%neq(itype)

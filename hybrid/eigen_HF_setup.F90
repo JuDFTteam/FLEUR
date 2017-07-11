@@ -2,7 +2,7 @@
 MODULE m_eigen_hf_setup
 CONTAINS
   SUBROUTINE eigen_hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,results,jsp,eig_id_hf,&
-       hybdat,irank2,it,l_real,vr0) 
+       hybdat,irank2,it,l_real,vr0,eig_irr) 
     USE m_types
     USE m_eig66_io
     USE m_util
@@ -28,13 +28,13 @@ CONTAINS
     REAL, INTENT(IN)            :: vr0(:,:,:)
     LOGICAL,INTENT(IN)          :: l_real
     TYPE(t_hybdat),INTENT(INOUT):: hybdat
-
+    REAL,ALLOCATABLE,INTENT(OUT):: eig_irr(:,:)
+ 
 
     INTEGER:: ok,nk,nrec1,i,j,ll,l1,l2,ng,itype,n,l,n1,n2,nn
 
 
     TYPE(t_zmat),ALLOCATABLE :: zmat(:)
-    REAL,    ALLOCATABLE    ::  eig_irr(:,:)
     REAL,    ALLOCATABLE    ::  basprod(:)
     REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),bk(3)
     INTEGER                 ::  degenerat(DIMENSION%neigd2+1,kpts%nkpt)
@@ -54,19 +54,20 @@ CONTAINS
        ALLOCATE(zmat(kpts%nkptf),stat=ok)
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation z_c'
        ALLOCATE ( eig_irr(DIMENSION%neigd2,kpts%nkpt)      ,stat=ok )
-       IF( ok .NE. 0 ) STOP'eigen_hf: failure allocation eig_irr'
+       IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation eig_irr'
        ALLOCATE ( hybdat%kveclo_eig(atoms%nlotot,kpts%nkpt)  ,stat=ok )
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation hybdat%kveclo_eig'
        eig_irr = 0 ; hybdat%kveclo_eig = 0
 
-       ! Reading the eig file
+
+       zmat(:)%l_real=l_real
+      ! Reading the eig file
        DO nk = 1,kpts%nkpt
 #               ifdef CPP_MPI
           ! jump to next k-point if this process is not present in communicator
           IF ( skip_kpt(nk) ) CYCLE
 #               endif
           nrec1 = kpts%nkpt*(jsp-1) + nk
-          zmat(nk)%l_real=l_real
           zmat(nk)%nbasfcn=dimension%nbasfcn
           zmat(nk)%nbands=dimension%neigd2
           if (l_real) THEN
@@ -80,7 +81,16 @@ CONTAINS
           print *,"Done"
 
        END DO
-
+       !Allocate further space
+       DO nk=kpts%nkpt+1,kpts%nkptf
+          zmat(nk)%nbasfcn=dimension%nbasfcn
+          zmat(nk)%nbands=dimension%neigd2
+          if (l_real) THEN
+             ALLOCATE(zmat(nk)%z_r(dimension%nbasfcn,dimension%neigd2))
+          else
+             ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
+          endif
+       Enddo
        !
        !determine degenerate states at each k-point
        !
@@ -209,6 +219,7 @@ CONTAINS
        !
 
        ! setup dimension of pntgpt
+       ALLOCATE(hybdat%pntgptd(3))
        hybdat%pntgptd = 0
        DO nk = 1,kpts%nkptf
           CALL apws(DIMENSION,input,noco, kpts,nk,cell,sym%zrfs,&
@@ -239,7 +250,7 @@ CONTAINS
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation hybdat%prod'
        basprod = 0 ; hybdat%prodm = 0 ; hybdat%prod%l1 = 0 ; hybdat%prod%l2 = 0
        hybdat%prod%n1 = 0 ; hybdat%prod%n2 = 0
-
+       ALLOCATE(hybrid%nindxp1(0:hybrid%maxlcutm1,atoms%ntype))
        hybrid%nindxp1 = 0
        DO itype = 1,atoms%ntype
           ng = atoms%jri(itype)
@@ -281,16 +292,12 @@ CONTAINS
     ELSE IF (hybrid%l_hybrid ) THEN ! hybrid%l_calhf is false
 
        ! Reading the eig file
-       ALLOCATE ( eig_irr(DIMENSION%neigd2,1) )
-       ALLOCATE ( hybdat%kveclo_eig(atoms%nlotot,1) )
        !DO nk = n_start,kpts%nkpt,n_stride
        DO nk = 1,kpts%nkpt,1
-          nrec1 = kpts%nkpt*(jsp-1) + nk
           CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybdat%ne_eig(nk))
           hybdat%nobd(nk) = COUNT( results%w_iks(:hybdat%ne_eig(nk),nk,jsp) > 0.0 )
        END DO
-       DEALLOCATE ( eig_irr , hybdat%kveclo_eig )
-
+    
        hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
        hybdat%nbands    = MIN( hybrid%bands1, DIMENSION%neigd )
 

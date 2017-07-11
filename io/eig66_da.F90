@@ -197,9 +197,9 @@ CONTAINS
        IF (PRESENT(wk)) wk=wtkpt
        IF (PRESENT(nv)) nv=nv_s
        IF (PRESENT(nmat)) nmat=nmat_s
-       IF (PRESENT(k1)) k1=d%kvec_s(:,1)
-       IF (PRESENT(k2)) k2=d%kvec_s(:,2)
-       IF (PRESENT(k3)) k3=d%kvec_s(:,3)
+       IF (PRESENT(k1)) k1=d%kvec_s(:size(k1),1)
+       IF (PRESENT(k2)) k2=d%kvec_s(:size(k1),2)
+       IF (PRESENT(k3)) k3=d%kvec_s(:size(k1),3)
        IF (PRESENT(kveclo)) kveclo=d%kveclo_s
     ENDIF
 
@@ -282,9 +282,9 @@ CONTAINS
             PRESENT(bk).AND.PRESENT(el).AND.PRESENT(ello).AND.PRESENT(evac))) THEN
           CALL juDFT_error("BUG:Direct access IO of eig-file only with all data")
        ENDIF
-       d%kvec_s(:,1)=k1
-       d%kvec_s(:,2)=k2
-       d%kvec_s(:,3)=k3
+       d%kvec_s(:size(k1),1)=k1
+       d%kvec_s(:size(k1),2)=k2
+       d%kvec_s(:size(k1),3)=k3
        IF ((SIZE(el).NE.SIZE(d%el_s)).OR.(SIZE(ello).NE.SIZE(d%ello_s).OR.(SIZE(evac).NE.SIZE(d%evac_s)))) THEN
           WRITE(*,*) SHAPE(el),SHAPE(d%el_s)
           WRITE(*,*) SHAPE(ello),SHAPE(d%ello_s)

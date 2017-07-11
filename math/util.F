@@ -217,7 +217,7 @@ c     Initializes fast numerical integration intgrf (see below).
       INTEGER, INTENT(IN)   :: ntype,jmtd
       INTEGER, INTENT(IN)   :: jri(ntype)
       REAL,    INTENT(IN)   :: dx(ntype),rmsh(jmtd,ntype)
-      REAL,    ALLOCATABLE  :: gridf(:,:)
+      REAL, INTENT(OUT), ALLOCATABLE  :: gridf(:,:)
 
 c     - local -
       INTEGER              :: i,j,itype

@@ -33,6 +33,7 @@
       USE m_util
       USE m_wrapper
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -62,7 +63,7 @@
       INTEGER                 ::  iatom,ieq,itype,ic,l,l1,l2,&
      &                            ll,lm ,m1,m2,p1,p2,n,n1,n2,i,j
       INTEGER                 ::  iband1,iband2,ndb1,ndb2,ic1,ic2
-      INTEGER                 ::  irecl_cmt,m
+      INTEGER                 ::  m
 
       REAL                    ::  time1,time2
       REAL                    ::  rdum
@@ -91,11 +92,7 @@
       END IF
 
       ! read in mt wavefunction coefficients from file cmt
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk) cmt(:,:,:)
-      CLOSE(777)
-
+      call read_cmt(cmt,nk)
       ALLOCATE ( fprod(atoms%jmtd,5),larr(5),parr(5) )
 
        ! generate ldum(nbands(nk),nbands(nk)), which is true if the corresponding matrix entry is non-zero
@@ -261,6 +258,7 @@
       USE m_util
       USE m_wrapper
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -279,17 +277,12 @@
 !     - arays -
       INTEGER,INTENT(IN)      ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
       
-
-#ifdef CPP_INVERSION
-      REAL    ,INTENT(INOUT)  ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#else
-      COMPLEX ,INTENT(INOUT)  ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#endif
+      TYPE(t_mat),INTENT(INOUT):: mat_ex
 !     - local scalars - 
       INTEGER                 ::  iatom,ieq,itype,ic,l,l1,l2,&
      &                            ll,lm ,m1,m2,p1,p2,n,n1,n2,nn2,i,j
       INTEGER                 ::  iband1,iband2,ndb1,ndb2,ic1,ic2
-      INTEGER                 ::  irecl_cmt,m
+      INTEGER                 ::  m
       
       REAL                    ::  time1,time2
       REAL                    ::  rdum
@@ -314,11 +307,9 @@
       
 
       ! read in mt wavefunction coefficients from file cmt
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk) cmt(:,:,:)
-      CLOSE(777)
-
+      
+      CALL read_cmt(cmt,nk)
+      
       ALLOCATE ( fprod(atoms%jmtd,5),larr(5),parr(5) )
       
       exchange = 0
@@ -430,13 +421,11 @@
       
       ic         = 0
       sum_offdia = 0
-      DO n1=1,hybdat%nbands(nk)
-        DO n2=1,n1
-          ic = ic + 1
-          mat_ex(ic) = mat_ex(ic) + conjg(exchange(n2,n1))/nsymop
-        END DO
-      END DO
-
+      if (mat_ex%l_real) THEN
+         mat_ex%data_r=mat_ex%data_r+exchange/nsymop
+      else
+         mat_ex%data_c=mat_ex%data_c+conjg(exchange)/nsymop
+      end if
 
       END SUBROUTINE exchange_vccv1
 
@@ -451,6 +440,7 @@
       USE m_gaunt
       USE m_trafo
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
@@ -599,8 +589,8 @@
       USE m_wrapper
       USE m_gaunt
       USE m_trafo
-      
-    USE m_types
+      USE m_io_hybrid
+      USE m_types
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_mpi),INTENT(IN)   :: mpi
@@ -626,7 +616,6 @@
       INTEGER               ::  lm2,lmp2
       INTEGER               ::  m1,m2 ,mm,m
       INTEGER               ::  n1,n2,n,nn
-      INTEGER               ::  irecl_cmt
       
       REAL                  ::  rdum0,rdum1,rdum2,rdum3,rdum4
       COMPLEX               ::  cdum
@@ -670,11 +659,8 @@
       END DO
 
       ! read in cmt coefficient at k-point nk
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk)  cmt(:,:,:)      
-      CLOSE(777)
-  
+      
+      call read_cmt(cmt,nk)
       iatom = 0
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)

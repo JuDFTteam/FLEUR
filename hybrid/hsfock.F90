@@ -58,6 +58,7 @@ MODULE m_hsfock
       USE m_hybridmix
       USE m_icorrkeys
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)       :: hybdat
       TYPE(t_results),INTENT(INOUT)   :: results
@@ -85,15 +86,11 @@ MODULE m_hsfock
       REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,kpts%nkpt)
       
       TYPE(t_hamovlp),INTENT(INOUT)::hamovlp
-#if ( !defined(CPP_INVERSION) )
-      COMPLEX,ALLOCATABLE     ::  z(:,:)
-#else
-      REAL,ALLOCATABLE        ::  z(:,:)
-#endif
+
   
 
 !     - local scalars -
-      INTEGER                 ::  i,j,ic,ic1,l,itype
+      INTEGER                 ::  i,j,ic,ic1,l,itype,n,nn
       INTEGER                 ::  iband,iband1,iband2
       INTEGER                 ::  ikpt,ikpt0
       INTEGER                 ::  irec
@@ -119,22 +116,7 @@ MODULE m_hsfock
       REAL                    ::  wl_iks(dimension%neigd,kpts%nkptf)
       REAL                    ::  div_vv(hybdat%nbands(nk))
 
-
-#ifdef CPP_INVERSION
-      REAL,ALLOCATABLE        ::  olap(:,:),olap_p(:)
-#else
-      COMPLEX,ALLOCATABLE     ::  olap(:,:),olap_p(:)
-#endif
-
-#ifdef CPP_INVERSION
-      REAL   ,ALLOCATABLE     ::  trafo(:,:),invtrafo(:,:)
-      REAL   ,ALLOCATABLE     ::  ex(:,:),v(:,:),v_x(:)
-      REAL   ,ALLOCATABLE     ::  mat_ex(:)
-#else
-      COMPLEX,ALLOCATABLE     ::  trafo(:,:),invtrafo(:,:)
-      COMPLEX,ALLOCATABLE     ::  ex(:,:),v(:,:),v_x(:)
-      COMPLEX,ALLOCATABLE     ::  mat_ex(:)
-#endif
+      TYPE(t_mat)             :: olap,trafo,invtrafo,ex,tmp,v_x,z
       COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
       COMPLEX,ALLOCATABLE     ::  carr(:)
       COMPLEX,ALLOCATABLE     ::  rep_c(:,:,:,:,:)
@@ -149,7 +131,7 @@ MODULE m_hsfock
       !
       
       ! initialize gridf for radial integration
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       !
       ! initialize weighting factor for HF exchange part
@@ -169,49 +151,14 @@ MODULE m_hsfock
 
       ! write k1,k2,k3 in gpt
       DO i=1,lapw%nv(jsp)
-        gpt(1,i) = lapw%k1(i,jsp)
-        gpt(2,i) = lapw%k2(i,jsp)
-        gpt(3,i) = lapw%k3(i,jsp)
+        gpt(:,i) = (/lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp)/)
       END DO
 
+      
       ! read in lower triangle part of overlap matrix from direct acces file olap
-      ALLOCATE( olap_p(dimension%nbasfcn*(dimension%nbasfcn+1)/2), stat=ok)
-      IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation olap_p'
-      olap_p = 0
-
-#ifdef CPP_INVERSION
-      irecl_olap = dimension%nbasfcn*(dimension%nbasfcn+1)*4
-#else
-      irecl_olap = dimension%nbasfcn*(dimension%nbasfcn+1)*8
-#endif
-      irec = kpts%nkpt*(jsp-1) + nk
-      print *, "Olap read:",irec
-      OPEN(88,file='olap',form='unformatted',access='direct',&
-     &     recl=irecl_olap)
-      READ(88,rec=irec) olap_p
-      CLOSE(88)
-
-      !unpack olap_p into olap
-      ALLOCATE( olap(dimension%nbasfcn,dimension%nbasfcn), stat=ok)
-      IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation olap'
-      olap = 0
-      ic = 0
-      DO i=1,dimension%nbasfcn
-        DO j=1,i
-          ic = ic + 1
-          olap(i,j) = olap_p(ic)
-#ifdef CPP_INVERSION
-          olap(j,i) = olap(i,j)
-#else
-          olap(j,i) = conjg(olap_p(ic))
-#endif
-        END DO
-      END DO
-      DEALLOCATE(olap_p)
-
-      ALLOCATE( mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)),stat=ok )
-      IF ( ok .ne. 0) STOP 'mhsfock: failure allocation mat_ex'
-      mat_ex = 0
+      call olap%alloc(hamovlp%l_real,dimension%nbasfcn)
+      call read_olap(olap, kpts%nkpt*(jsp-1) + nk)
+      if (.not.olap%l_real) olap%data_c=conjg(olap%data_c)
 
       IF( hybrid%l_calhf ) THEN
         ncstd = sum( (/ ( (hybdat%nindxc(l,itype)*(2*l+1)*atoms%neq(itype),&
@@ -258,7 +205,7 @@ MODULE m_hsfock
      &            it,xcpot,&
      &            noco,nsest,indx_sest,&
      &            mpi,irank2,isize2,comm,&
-     &            div_vv,mat_ex)
+     &            div_vv,ex)
 
         DEALLOCATE ( rep_c )
         CALL timestop("valence exchange calculation")
@@ -295,7 +242,7 @@ MODULE m_hsfock
      &                 lapw,&
      &                 nsymop,nsest,indx_sest,mpi,&
      &                 a_ex,results,&
-     &                 mat_ex)
+     &                 ex)
           CALL exchange_cccc(&
      &                 nk,atoms,hybdat,&
      &                 ncstd,&
@@ -311,75 +258,28 @@ MODULE m_hsfock
         IF( dimension%neigd .lt. hybdat%nbands(nk) ) STOP 'mhsfock: neigd  < nbands(nk) ; &&
      &trafo from wavefunctions to APW requires at least nbands(nk) '
 
-        ALLOCATE(z(dimension%nbasfcn,dimension%neigd),stat=ok)
-        IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation z'
-        z = 0
-#ifdef CPP_INVERSION
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-#else
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-#endif
+        call z%alloc(olap%l_real,dimension%nbasfcn,dimension%neigd)
 
-        OPEN(unit=778,file='z',form='unformatted',access='direct',&
-     &       recl=irecl_z)
-        READ(778,rec=nk) z
-        CLOSE(778)
-
-        !unpack mat_ex
-        ALLOCATE( ex(hybdat%nbands(nk),hybdat%nbands(nk)), stat = ok )
-        IF( ok .ne. 0 ) STOP 'mhsfock: error allocation ex'
-        ex = 0
-
-        ic = 0
-        DO i = 1,hybdat%nbands(nk)
-          DO j = 1,i
-            ic = ic + 1
-            ex(j,i) = mat_ex(ic)
-#ifdef CPP_INVERSION
-            ex(i,j) = ex(j,i)
-#else
-            ex(i,j) = conjg(mat_ex(ic))
-#endif
-          END DO
-        END DO
-
-
+        call read_z(z,nk) !what about spin?
+      
         ! calculate trafo
         ic = lapw%nv(jsp) + atoms%nlotot
-
-        ALLOCATE( trafo(ic,hybdat%nbands(nk)), stat= ok )
-        IF( ok .ne. 0 ) STOP 'mhsfock: error allocation trafo'
-        trafo  = matmul(olap(:ic,:ic),z(:ic,:hybdat%nbands(nk)))
-
-        ALLOCATE( invtrafo(hybdat%nbands(nk),ic), stat= ok )
-        IF( ok .ne. 0 ) STOP 'mhsfock: error allocation invtrafo'
-
-#ifdef CPP_INVERSION
-        invtrafo = transpose(trafo)
-#else
-        invtrafo = conjg(transpose(trafo))
-#endif
-
-        ALLOCATE( v(ic,ic), stat = ok )
-        IF( ok .ne. 0 ) STOP 'mhsfock: error allocation v'
-
-        v = matmul(trafo,matmul(ex,invtrafo))
-
-        DEALLOCATE( mat_ex,ex,trafo,invtrafo,olap )
+        z%matsize1=ic
+        z%matsize2=hybdat%nbands(nk)
+        olap%matsize1=ic
+        olap%matsize2=ic
+        
+        call olap%multiply(z,trafo)
+        
+        call invtrafo%alloc(olap%l_real,hybdat%nbands(nk),ic)
+        CALL trafo%transpose(invtrafo)
+        
+        CALL ex%multiply(invtrafo,tmp)
+        CALL trafo%multiply(tmp,v_x)
+        
         CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
-        !store only lower triangle of v
-        ALLOCATE( v_x(dimension%nbasfcn*(dimension%nbasfcn+1)/2), stat = ok )
-        IF( ok .ne. 0 ) STOP 'mhsfock: error allocation v_x'
-        v_x = 0
-        ic  = 0
-        DO i=1,lapw%nv(jsp)+atoms%nlotot
-          DO j = 1,i
-            ic      = ic + 1
-            v_x(ic) = v(i,j)
-          END DO
-        END DO
-
+      
         CALL symmetrizeh(atoms,&
      &                   kpts%bkf(:,nk),dimension,jsp,lapw,gpt,&
      &                   sym,hybdat%kveclo_eig,&
@@ -389,84 +289,45 @@ MODULE m_hsfock
 
 
         IF( input%imix .ge. 10 ) THEN
-#ifdef CPP_INVERSION
-          irecl_vx = dimension%nbasfcn*(dimension%nbasfcn+1)*4
-#else
-          irecl_vx = dimension%nbasfcn*(dimension%nbasfcn+1)*8
-#endif
-
-          irec = kpts%nkpt*(jsp-1) + nk
-          OPEN(778,file='vex',form='unformatted',access='direct',&
-     &         recl=irecl_vx)
-#ifdef CPP_INVERSION
-          WRITE(778,rec=irec) v_x
-#else
-          WRITE(778,rec=irec) v_x
-#endif
-          CLOSE(778)
+          CALL write_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
         END IF
 
       ELSE ! not hybrid%l_calhf
-
-        ALLOCATE(z(dimension%nbasfcn,dimension%neigd),stat=ok)
-        IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation z'
-        z = 0
-#ifdef CPP_INVERSION
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-#else
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-#endif
-
-        OPEN(unit=778,file='z',form='unformatted',access='direct',&
-     &       recl=irecl_z)
-        READ(778,rec=nk) z
-        CLOSE(778)
-
-        ALLOCATE( v_x(dimension%nbasfcn*(dimension%nbasfcn+1)/2), stat = ok )
-        IF( ok .ne. 0 ) STOP 'mhsfock: error allocation v_x'
-        v_x = 0
-#ifdef CPP_INVERSION
-        irecl_vx = dimension%nbasfcn*(dimension%nbasfcn+1)*4
-#else
-        irecl_vx = dimension%nbasfcn*(dimension%nbasfcn+1)*8
-#endif
-        irec = kpts%nkpt*(jsp-1) + nk
-        OPEN(778,file='vex',form='unformatted',access='direct',&
-     &       recl=irecl_vx)
-        READ(778,rec=irec) v_x
-        CLOSE(778)
-
-      END IF ! hybrid%l_calhf
-
-      ! add non-local x-potential to the hamiltonian a
-      IF (hamovlp%l_real) THEN
-         hamovlp%a_r = hamovlp%a_r - a_ex*v_x
-      ELSE
-         hamovlp%a_c = hamovlp%a_c - a_ex*v_x
-      ENDIF
+         CALL read_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
+     END IF ! hybrid%l_calhf
+      ! add non-local x-potential to the hamiltonian a (in packed storage)
+     ic=1
+     DO n=1,v_x%matsize1
+        DO nn=1,n           
+           IF (hamovlp%l_real) THEN
+              hamovlp%a_r(ic) = hamovlp%a_r(ic) - a_ex*v_x%data_r(n,nn)
+           ELSE
+              hamovlp%a_c(ic) = hamovlp%a_c(ic) - a_ex*v_x%data_c(n,nn)
+           ENDIF
+        ENDDO
+     END DO
       ! calculate HF energy
       IF( hybrid%l_calhf ) THEN
-        WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
+         WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
         
-        WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band       tail      pole     input%total(valence+core)'
+         WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band       tail      pole     input%total(valence+core)'
         
       END IF
-      ic  = lapw%nv(jsp) + atoms%nlotot
-      ic1 = ic*(ic+1)/2
-
-#if( !defined CPP_INVERSION )
-      v_x(:ic1) = conjg(v_x(:ic1))
-#endif
-
+ 
+     
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen_hf.F
-
+      if (.not.v_x%l_real) v_x%data_c=conjg(v_x%data_c) 
       exch = 0
+      call v_x%multiply(z,tmp)
       DO iband = 1,hybdat%nbands(nk)
-         exch(iband,iband) = dotprod(z(:ic,iband),matvec(v_x(:ic1),z(:ic,iband)))
+         if (z%l_real) THEN
+            exch(iband,iband) = dot_product(z%data_r(:,iband),tmp%data_r(:,iband))
+         else
+            exch(iband,iband) = dot_product(z%data_r(:,iband),tmp%data_r(:,iband))
+         endif
          IF( iband .le. hybdat%nobd(nk) ) THEN
-            results%te_hfex%valence = results%te_hfex%valence -&
-                 &                        a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
+            results%te_hfex%valence = results%te_hfex%valence -a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
          END IF
          IF(hybrid%l_calhf) THEN
             WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
@@ -475,8 +336,6 @@ MODULE m_hsfock
          END IF
       END DO
      
-
-      DEALLOCATE( z,v_x )
 
       CALL timestop("total time hsfock")
 

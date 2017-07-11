@@ -111,11 +111,7 @@
       REAL   ,INTENT(IN)      ::  wl_iks(dimension%neigd,kpts%nkptf)
       REAL   ,INTENT(OUT)     ::  div_vv(hybdat%nbands(nk))
 
-#ifdef CPP_INVERSION
-      REAL   ,INTENT(OUT)     ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#else
-      COMPLEX,INTENT(OUT)     ::  mat_ex(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#endif
+      TYPE(t_mat),INTENT(INOUT):: mat_ex
 
 !     - local scalars -
       INTEGER                 ::  iband,iband1,ibando,ikpt,ikpt0
@@ -217,7 +213,7 @@
       vol  = cell%omtil
       svol = sqrt(cell%omtil)
 
-      rws  = (3*cell%omtil/fpi_const)**(1d0/3)  ! Wigner-Seitz radius
+      rws  = (3*cell%omtil/fpi_const)**(1.0/3)  ! Wigner-Seitz radius
 #if   ALGORITHM == 1
       npot = 3                        ! for switching-off function 
       k0   = hybrid%radshmin / 2             ! radius of largest sphere that fits inside the BZ
@@ -699,14 +695,9 @@
 #endif
 
       ! write exch_vv in mat_ex
-      ic = 0
-      DO n1=1,hybdat%nbands(nk)
-        DO n2=1,n1
-          ic = ic + 1
-          mat_ex(ic) = mat_ex(ic) + exch_vv(n2,n1)
-        END DO
-      END DO
-
+      call mat_ex%alloc(matsize1=hybdat%nbands(nk))
+      mat_ex%data_c=exch_vv(n2,n1)
+     
       END SUBROUTINE exchange_valence_hf
 
 

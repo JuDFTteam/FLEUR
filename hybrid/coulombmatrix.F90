@@ -2064,12 +2064,12 @@
 #     else
 
         !write coulomb matrix to direct access file coulomb
-        OPEN(unit=777,file=fname,form='unformatted',access='direct',&
+        OPEN(unit=677,file=fname,form='unformatted',access='direct',&
      &       recl=irecl_coulomb)
         DO i=1,kpts%nkpt
-          WRITE(777,rec=i) coulomb(:,i)
+          WRITE(677,rec=i) coulomb(:,i)
         END DO
-        CLOSE(777)
+        CLOSE(677)
 
 #     endif
 

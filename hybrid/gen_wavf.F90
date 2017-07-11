@@ -28,10 +28,10 @@
       USE m_abcof
       USE m_trafo     ,ONLY: waveftrafo_genwavf
       USE m_util      ,ONLY: modulo1
-      USE m_setabc1locdn
       USE m_olap
       USE m_types
       USE m_abcrot
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(INOUT)   :: hybdat
@@ -65,16 +65,13 @@
       TYPE(t_zmat),INTENT(IN) :: zmat(:) !for all kpoints 
 
   !     - - local scalars - - 
-      INTEGER                 ::  ilo,idum ,m,maxlmindx
-      REAL                    ::  rdum,merror
-      COMPLEX                 ::  cdum,cdum1,cdum2
+      INTEGER                 ::  ilo,idum ,m
+      COMPLEX                 ::  cdum
 
 !     local scalars for apws
       INTEGER                 ::  nred
-      INTEGER                 ::  ikpt0,ikpt,ikpt1,iband,itype,iop,&
-     &                            ispin,ieq,ic,indx,iatom
-      INTEGER                 ::  i,j,l ,ll,lm,nrkpt,ng,ok
-      REAL                    ::  time1,time2,time3,time4
+      INTEGER                 ::  ikpt0,ikpt,itype,iop,ispin,ieq,indx,iatom
+      INTEGER                 ::  i,j,l ,ll,lm,ng,ok
       COMPLEX                 ::  img=(0d0,1d0)
 
 !     local scalars for radfun
@@ -89,7 +86,6 @@
       INTEGER                 ::  rrot(3,3,sym%nsym)
       INTEGER                 ::  map_lo(atoms%nlod)
       INTEGER                 ::  iarr(0:atoms%lmaxd,atoms%ntype)
-      REAL                    ::  rotkpt(3)
       COMPLEX,ALLOCATABLE     ::  acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
       REAL,ALLOCATABLE        ::  zhlp_r(:,:)
       COMPLEX,ALLOCATABLE     ::  zhlp_c(:,:)
@@ -107,38 +103,21 @@
 
 !     local arrays for radflo
       REAL                    ::  flo(atoms%jmtd,2,atoms%nlod)
-      REAL                    ::  uloulopn(atoms%nlod,atoms%nlod,atoms%ntype)
       REAL                    ::  uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
       REAL                    ::  ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
-
-!     local arrays for setabc1locdn
-      INTEGER                 ::  nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
-      INTEGER                 ::  kvec(2*(2*atoms%llod+1)  )
-      LOGICAL                 ::  enough(atoms%nat)
-
+   
 
 !     local arrays for apws
       INTEGER                 ::  matind(dimension%nbasfcn,2)
-      INTEGER                 ::  gpthlp1(3,dimension%nvd,dimension%jspd),nvhlp1(dimension%jspd)
-      INTEGER                 ::  gpthlp2(3,dimension%nvd,dimension%jspd),nvhlp2(dimension%jspd)
-      INTEGER                 ::  k1hlp(dimension%nvd,dimension%jspd),k2hlp(dimension%nvd,dimension%jspd),&
-     &                            k3hlp(dimension%nvd,dimension%jspd),nvhlp(dimension%jspd)
-      REAL                    :: bkpt(3)
+      REAL                    :: bkpt(3) 
 
-      REAL,ALLOCATABLE        ::  olapmt(:,:,:,:)
-#if ( defined(CPP_INVERSION) )
-      REAL,ALLOCATABLE        ::  olappw(:,:)
-#else
-      COMPLEX,ALLOCATABLE     ::  olappw(:,:)
-#endif
       INTEGER                 ::  irecl_cmt,irecl_z
 
-      INTEGER                 ::  gpt(3,dimension%nvd,dimension%jspd,kpts%nkpt),ngpt(dimension%jspd,kpts%nkpt)
 
-      TYPE(t_lapw) :: lapw
+      TYPE(t_lapw) :: lapw(kpts%nkpt)
       TYPE(t_usdus):: usdus
 
-      CALL CPU_TIME(time1)
+      !CALL CPU_TIME(time1)
       call usdus%init(atoms,dimension%jspd)
      
       ! setup rotations in reciprocal space
@@ -155,7 +134,7 @@
       DO ikpt=1,kpts%nkpt
         CALL apws(dimension,input,noco,&
      &            kpts,ikpt,cell,sym%zrfs,&
-     &            1,jsp,bkpt,lapw,matind,nred)
+     &            1,jsp,bkpt,lapw(ikpt),matind,nred)
 
       END DO
 
@@ -274,10 +253,7 @@
       END IF
 
 
-      maxlmindx = maxval(&
-     &       (/ ( sum( (/ (hybrid%nindx(l,itype)*(2*l+1),l=0,atoms%lmax(itype)) /) ),&
-     &                                              itype=1,atoms%ntype) /) )
-
+    
       ! calculate wavefunction expansion in the the MT region
       ! (acof,bcof,ccof) and APW-basis coefficients
       ! (a,b,bascofold_lo) at irred. kpoints
@@ -291,9 +267,9 @@
       IF( ok .ne. 0 ) STOP 'gen_wavf: failure allocation bcof'
       ALLOCATE( ccof(-atoms%llod:atoms%llod,dimension%neigd,atoms%nlod,atoms%nat),stat=ok )
       IF( ok .ne. 0 ) STOP 'gen_wavf: failure allocation ccof'
-      ALLOCATE ( cmt(dimension%neigd,maxlmindx,atoms%nat), stat=ok)
+      ALLOCATE ( cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat), stat=ok)
       IF(  ok .ne. 0 ) STOP 'gen_wavf: Failure allocation cmt'
-      ALLOCATE ( cmthlp(dimension%neigd,maxlmindx,atoms%nat), stat=ok)
+      ALLOCATE ( cmthlp(dimension%neigd,hybrid%maxlmindx,atoms%nat), stat=ok)
       IF( ok .ne. 0) STOP 'gen_wavf: failure allocation cmthlp'
       if (zmat(1)%l_real) THEN
          ALLOCATE ( zhlp_r(dimension%nbasfcn,dimension%neigd), stat=ok)
@@ -302,9 +278,7 @@
       ENDIF
       IF( ok .ne. 0) STOP 'gen_wavf: failure allocation zhlp'
 
-      irecl_cmt = dimension%neigd*maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-     &     recl=irecl_cmt)
+   
 
 #     ifdef CPP_INVERSION
         irecl_z   =  dimension%nbasfcn*dimension%neigd*8
@@ -320,9 +294,10 @@
 
         ! abcof calculates the wavefunction coefficients
         ! stored in acof,bcof,ccof
+        lapw(ikpt0)%nmat=lapw(ikpt0)%nv(jsp)+atoms%nlotot
         CALL abcof(&
-              input,atoms,hybdat%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw, &
-              ngpt(jsp,ikpt0)+hybdat%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
+              input,atoms,hybdat%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw(ikpt0), &
+              hybdat%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
               oneD,acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),ccof(:,: hybdat%nbands(ikpt0),:,:),&
               zmat(ikpt))
         
@@ -341,7 +316,7 @@
         ! rotate them in the global one
 
         CALL abcrot(&
-                atoms,hybdat%nbands(ikpt0),&
+                hybrid,atoms,hybdat%nbands(ikpt0),&
                  sym,&
                 cell,oneD,&
                 acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),&
@@ -407,7 +382,7 @@
 !       CALL cpu_time(time3)
 
         ! write cmt at irreducible k-points in direct-access file cmt
-        WRITE(777,rec=ikpt0) cmt
+        call write_cmt(cmt,ikpt0)
 
         ! write z at irreducible k-points in direct-access file z
         IF (zmat(1)%l_real) THEN
@@ -431,11 +406,9 @@
      &                 cmt(:,:,:),zmat(1)%l_real,zmat(ikpt0)%z_r(:,:),zmat(ikpt0)%z_c(:,:),ikpt0,iop,atoms,&
      &                 hybrid,kpts,sym,&
      &                 jsp,dimension,hybdat%nbands(ikpt0),&
-     &                 cell,gpt(:,:ngpt(jsp,ikpt0),jsp,ikpt0),&
-     &                 ngpt(:,ikpt0),gpt(:,:ngpt(jsp,ikpt),jsp,ikpt),&
-     &                 ngpt(:,ikpt),.true.)
+     &                 cell,lapw(ikpt0),lapw(ikpt),.true.)
 
-              WRITE(777,rec=ikpt) cmthlp
+              call write_cmt(cmthlp,ikpt)
               IF (zmat(1)%l_real) THEN
                  WRITE(778,rec=ikpt) zhlp_r
               ELSE
@@ -449,7 +422,6 @@
       DEALLOCATE( cmt,cmthlp)
 
       !close file cmt and z
-      CLOSE(777)
       CLOSE(778)
 
       END SUBROUTINE gen_wavf

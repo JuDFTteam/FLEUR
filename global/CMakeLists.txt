@@ -27,5 +27,6 @@ global/phasy1.f90
 global/qfix.f90
 global/radflo.F90
 global/types.F90
+global/types_rcmat.F90
 global/utility.F90
 )

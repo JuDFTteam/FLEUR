@@ -1,7 +1,7 @@
 
 MODULE m_abcrot
   CONTAINS
-      SUBROUTINE abcrot(atoms,neig,sym,cell,oneD,&
+      SUBROUTINE abcrot(hybrid,atoms,neig,sym,cell,oneD,&
      &                 acof,bcof,ccof)
 !     ***************************************************************
 !     * This routine transforms a/b/cof which are given wrt rotated *
@@ -13,6 +13,7 @@ MODULE m_abcrot
       USE m_dwigner
       USE m_types
       IMPLICIT NONE
+      TYPE(t_hybrid),INTENT(IN) :: hybrid
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -34,7 +35,7 @@ MODULE m_abcrot
 !***** COMPLEX, ALLOCATABLE :: d_wgn(:,:,:,:) !put into module m_savewigner
 !
 
-      IF ( .NOT.ALLOCATED(sym%d_wgn) ) THEN    !calculate sym%d_wgn only once
+      IF ( .NOT.ALLOCATED(hybrid%d_wgn2) ) THEN    !calculate sym%d_wgn only once
 #ifndef CPP_MPI
         PRINT*,"calculate wigner-matrix"
 #endif
@@ -72,15 +73,15 @@ MODULE m_abcrot
           DO l=1,atoms%lmax(itype)
 !  replaced d_wgn by conjg(d_wgn),FF October 2006
             DO i=1,neig
-              acof(i,l**2:l*(l+2),iatom) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)), acof(i,l**2:l*(l+2),iatom))
-              bcof(i,l**2:l*(l+2),iatom) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)), bcof(i,l**2:l*(l+2),iatom))
+              acof(i,l**2:l*(l+2),iatom) = ifac**l * matmul(conjg(hybrid%d_wgn2(-l:l,-l:l,l,iop)), acof(i,l**2:l*(l+2),iatom))
+              bcof(i,l**2:l*(l+2),iatom) = ifac**l * matmul(conjg(hybrid%d_wgn2(-l:l,-l:l,l,iop)), bcof(i,l**2:l*(l+2),iatom))
             ENDDO
           ENDDO
           DO ilo=1,atoms%nlo(itype)
             l=atoms%llo(ilo,itype)
             IF(l.gt.0) THEN
               DO i=1,neig
-                ccof(-l:l,i,ilo,iatom) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)), ccof(-l:l,i,ilo,iatom))
+                ccof(-l:l,i,ilo,iatom) = ifac**l * matmul(conjg(hybrid%d_wgn2(-l:l,-l:l,l,iop)), ccof(-l:l,i,ilo,iatom))
               ENDDO
             ENDIF
           ENDDO

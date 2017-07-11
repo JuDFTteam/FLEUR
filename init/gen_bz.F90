@@ -76,8 +76,17 @@ SUBROUTINE gen_bz( kpts,sym)
    ! add it if it is not yet in this set.
 
    kpts%bkf = 0
-   ic = 0
-      
+  
+   !Add existing vectors to list of full vectors
+   print *,"WARNING from gen_bz"
+   print *,"Assuming Identity to be fist symmetry op!"
+   DO ic=1,kpts%nkpt
+      kpts%bkf(:,ic) = kpts%bk(:,ic)
+      kpts%bkp(ic)  = ic
+      kpts%bksym(ic) = 1
+   ENDDO
+   ic=ic-1
+   
    DO iop=1,nsym
       DO ikpt=1,kpts%nkpt
          l_found = .FALSE.

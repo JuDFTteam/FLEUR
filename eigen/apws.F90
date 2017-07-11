@@ -59,9 +59,11 @@ CONTAINS
     !---> in a spin-spiral calculation different basis sets are used for
     !---> the two spin directions, because the cutoff radius is defined
     !---> by |G + k +/- qss/2| < rkmax.
-
-    bkpt(:) = kpts%bk(:,nk)
-
+    IF (nk>kpts%nkpt) THEN
+       bkpt(:)=kpts%bkf(:,nk)
+    ELSE
+       bkpt(:) = kpts%bk(:,nk)
+    ENDIF
     !---> Determine rkmax box of size mk1, mk2, mk3,
     !     for which |G(mk1,mk2,mk3) + (k1,k2,k3)| < rkmax
     !     arltv(i) length of reciprical lattice vector along direction (i)

@@ -5,6 +5,8 @@ io/rw_symfile.f
 io/write_gw.F
 )
 set(fleur_F90 ${fleur_F90}
+io/io_matrix.F90
+io/io_hybrid.F90
 io/eig66_da.F90
 io/eig66_data.F90
 io/eig66_hdf.F90

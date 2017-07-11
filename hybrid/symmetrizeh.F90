@@ -9,7 +9,7 @@
      &                       bk,dimension,jsp,lapw,gpt,&
      &                       sym,kveclo,cell,&
      &                       nsymop,psym,&
-     &                       a)
+     &                       hmat)
 
 
       USE m_constants
@@ -30,12 +30,7 @@
       INTEGER,INTENT(IN)    ::  psym(nsymop)
       REAL,INTENT(IN)       :: bk(3)
 
-
-#if ( defined(CPP_INVERSION) && !defined(CPP_SOC) )
-      REAL,INTENT(INOUT)    ::  a(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#else
-      COMPLEX,INTENT(INOUT) ::  a(dimension%nbasfcn*(dimension%nbasfcn+1)/2)
-#endif
+      TYPE(T_mat),INTENT(INOUT) :: hmat
 
       ! - local scalars -
       INTEGER               ::  ilotot,itype,itype1,ilo,ilo1
@@ -67,12 +62,6 @@
       REAL                  ::  rtaual(3),kghlp(3)
       REAL                  ::  rotkpthlp(3),rotkpt(3)
       REAL                  ::  trans(3,nsymop)
-
-#ifdef CPP_INVERSION
-      REAL                  ::  v(dimension%nbasfcn,dimension%nbasfcn)
-#else
-      COMPLEX               ::  v(dimension%nbasfcn,dimension%nbasfcn)
-#endif
       COMPLEX,ALLOCATABLE   ::  c_lo(:,:,:,:),c_rot(:,:,:,:,:),y(:)
       COMPLEX,ALLOCATABLE   ::  cfac(:,:),chelp(:,:)
 
@@ -169,22 +158,6 @@
       END DO
 
 
-      ! unpack a into v and initialize indx
-      ic = 0
-      DO j = 1,lapw%nv(jsp)+atoms%nlotot
-        DO i = 1,j
-          ic            = ic + 1
-          indx(j,i)     = ic
-          indx(i,j)     = ic
-          v(j,i)        = a(ic)
-#ifdef CPP_INVERSION
-          v(i,j)        = v(j,i)
-#else
-          v(i,j)        = conjg(v(j,i))
-#endif
-        END DO
-      END DO
-
 
 
 
@@ -203,13 +176,21 @@
 
             IF( iop .le. sym%nop) THEN
               IF( igpt .ne. 0 .and. igpt1 .ne. 0 ) THEN
-                ic   = ic + 1
-                cdum = cdum + conjg(cfac(i,isym))*v(igpt,igpt1)*cfac(j,isym)
+                 ic   = ic + 1
+                 if (hmat%l_real) THEN
+                    cdum = cdum + conjg(cfac(i,isym))*hmat%data_r(igpt,igpt1)*cfac(j,isym)
+                 else
+                    cdum = cdum + conjg(cfac(i,isym))*hmat%data_c(igpt,igpt1)*cfac(j,isym)
+                 endif
               END IF
             ELSE
               IF( igpt .ne. 0 .and. igpt1 .ne. 0 ) THEN
-                ic   = ic + 1
-                cdum = cdum + conjg(conjg(cfac(i,isym))*v(igpt,igpt1)*cfac(j,isym))
+                 ic   = ic + 1
+                 if (hmat%l_real) THEN
+                    cdum = cdum + conjg(conjg(cfac(i,isym))*hmat%data_r(igpt,igpt1)*cfac(j,isym))
+                 else
+                    cdum = cdum + conjg(conjg(cfac(i,isym))*hmat%data_c(igpt,igpt1)*cfac(j,isym))
+                 end if
               END IF
 
             END IF
@@ -224,13 +205,23 @@
             IF( igpt  .eq. 0 .or. igpt1 .eq. 0 ) CYCLE
             IF( igpt1 .gt. igpt ) CYCLE
             IF( ldum(igpt,igpt1) ) THEN
-              IF( iop .le. sym%nop) THEN
-                a(indx(igpt,igpt1)) = cdum/(conjg(cfac(i,isym))*cfac(j,isym))
-                ldum(igpt,igpt1)    = .false.
-              ELSE
-                a(indx(igpt,igpt1)) = conjg(cdum/(conjg(cfac(i,isym))*cfac(j,isym)))
-                ldum(igpt,igpt1)    = .false.
-              END IF
+               if (hmat%l_real) THEN
+                  IF( iop .le. sym%nop) THEN
+                     hmat%data_r(igpt,igpt1) = cdum/(conjg(cfac(i,isym))*cfac(j,isym))
+                     ldum(igpt,igpt1)    = .false.
+                  ELSE
+                     hmat%data_r(igpt,igpt1) = conjg(cdum/(conjg(cfac(i,isym))*cfac(j,isym)))
+                     ldum(igpt,igpt1)    = .false.
+                  END IF
+               else
+                 IF( iop .le. sym%nop) THEN
+                     hmat%data_c(igpt,igpt1) = cdum/(conjg(cfac(i,isym))*cfac(j,isym))
+                     ldum(igpt,igpt1)    = .false.
+                  ELSE
+                     hmat%data_c(igpt,igpt1) = conjg(cdum/(conjg(cfac(i,isym))*cfac(j,isym)))
+                     ldum(igpt,igpt1)    = .false.
+                  END IF
+               end if
             END IF
           END DO
         END DO
@@ -459,8 +450,12 @@
                       cdum2 = 0
                       ic1   = 0
                       DO igpt2 = igpt_lo1,igpt_lo2
-                        ic1   = ic1 + 1
-                        cdum2 = cdum2 + conjg(c_rot(ic1,igpt,ilo,ratom,isym)) * v(lapw%nv(jsp)+igpt2,igpt1)
+                         ic1   = ic1 + 1
+                         if (hmat%l_real) THEN
+                            cdum2 = cdum2 + conjg(c_rot(ic1,igpt,ilo,ratom,isym)) * hmat%data_r(lapw%nv(jsp)+igpt2,igpt1)
+                         else
+                            cdum2 = cdum2 + conjg(c_rot(ic1,igpt,ilo,ratom,isym)) * hmat%data_c(lapw%nv(jsp)+igpt2,igpt1)
+                         end if
                       END DO
 
                       IF( iop .le. sym%nop) THEN
@@ -469,8 +464,11 @@
                         cdum = cdum + conjg(cdum2*conjg(cfac(lapw%nv(jsp)+i,isym)) * cfac(j,isym))
                       END IF
                     END DO
-
-                    a(indx(lapw%nv(jsp)+i,j)) = cdum/ic
+                    if (hmat%l_real) THEN
+                       hmat%data_r(lapw%nv(jsp)+i,j) = cdum/ic
+                    else
+                       hmat%data_c(lapw%nv(jsp)+i,j) = cdum/ic
+                    end if
                   END DO
                 END DO
               END DO
@@ -554,22 +552,29 @@
                                 ic1 = ic1 + 1
                                 ic2 = 0
                                 DO igpt3 = igpt1_lo1,igpt1_lo2
-                                  ic2 = ic2 + 1
-                                  cdum2 = cdum2 + conjg(c_rot(ic1,igpt,ilo,ratom,isym))&
-     &                          *      v(lapw%nv(jsp)+igpt2,lapw%nv(jsp)+igpt3) * c_rot(ic2,igpt1,ilo1,ratom1,isym)
-                                END DO
-                              END DO
-!
-                              ic = ic + 1
+                                   ic2 = ic2 + 1
+                                   if (hmat%l_real) THEN
+                                      cdum2 = cdum2 + conjg(c_rot(ic1,igpt,ilo,ratom,isym))&
+                                           * hmat%data_r(lapw%nv(jsp)+igpt2,lapw%nv(jsp)+igpt3) * c_rot(ic2,igpt1,ilo1,ratom1,isym)
+                                   else
+                                      cdum2 = cdum2 + conjg(c_rot(ic1,igpt,ilo,ratom,isym))&
+                                           * hmat%data_c(lapw%nv(jsp)+igpt2,lapw%nv(jsp)+igpt3) * c_rot(ic2,igpt1,ilo1,ratom1,isym)
+                                   end if
+                                end DO
+                             end DO
+                             ic = ic + 1
                               IF( iop .le. sym%nop ) THEN
-                                cdum = cdum + cdum2 *conjg(cfac(lapw%nv(jsp)+i,isym))*cfac(lapw%nv(jsp)+j,isym)
-                              ELSE
+                                cdum = cdum + cdum2*conjg(cfac(lapw%nv(jsp)+i,isym))*cfac(lapw%nv(jsp)+j,isym)
+                             ELSE  
                                 cdum = cdum + conjg(cdum2*conjg(cfac(lapw%nv(jsp)+i,isym))*cfac(lapw%nv(jsp)+j,isym))
-                              END IF
-                            END DO  ! isym
-
-                            a(indx(lapw%nv(jsp)+i,lapw%nv(jsp)+j)) = cdum/ic
-
+                                
+                             END IF
+                          END DO
+                          if (hmat%l_real) THEN
+                             hmat%data_r(lapw%nv(jsp)+i,lapw%nv(jsp)+j) = cdum!/ic
+                          else
+                             hmat%data_c(lapw%nv(jsp)+i,lapw%nv(jsp)+j) = cdum!/ic
+                            end if
                           END DO  ! igpt_lo1
 
                         END DO  ! ilo1

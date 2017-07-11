@@ -160,7 +160,7 @@
       SUBROUTINE waveftrafo_genwavf( &
            cmt_out,z_rout,z_cout,cmt,l_real,z_r,z_c,nk,iop,atoms,&
            hybrid,kpts,sym,jsp,dimension,nbands,&
-           cell,gpt_nk,nv_nk,gpt_rkpt,nv_rkpt,phase)
+           cell,lapw_nk,lapw_rkpt,phase)
 
         use m_juDFT
         USE m_constants   
@@ -175,14 +175,12 @@
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_kpts),INTENT(IN)   :: kpts
       TYPE(t_atoms),INTENT(IN)   :: atoms
-
+      TYPE(t_lapw),INTENT(IN)    :: lapw_nk,lapw_rkpt
 !     - scalars -
       INTEGER,INTENT(IN)      :: nk,jsp   ,nbands
       INTEGER,INTENT(IN)      ::  iop
       LOGICAL                 ::  phase
 !     - arrays -
-      INTEGER,INTENT(IN)      ::  nv_nk  (dimension%jspd),gpt_nk  (3,nv_nk  (jsp))
-      INTEGER,INTENT(IN)      ::  nv_rkpt(dimension%jspd),gpt_rkpt(3,nv_rkpt(jsp))
       COMPLEX,INTENT(IN)      ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       LOGICAL,INTENT(IN)      :: l_real
       REAL,INTENT(IN)         ::  z_r(dimension%nbasfcn,dimension%neigd)
@@ -281,18 +279,18 @@
       ! PW coefficients
 
       zhlp = 0
-      DO igpt = 1,nv_rkpt(jsp)
-        g    = matmul( invrrot,gpt_rkpt(:,igpt)+g1 )
+      DO igpt = 1,lapw_rkpt%nv(jsp)
+        g    = matmul( invrrot,(/lapw_rkpt%k1(igpt,jsp),lapw_rkpt%k2(igpt,jsp),lapw_rkpt%k3(igpt,jsp)/)+g1 )
         !determine number of g
         igpt1 = 0
-        DO i=1,nv_nk(jsp)
-          IF ( maxval( abs( g - gpt_nk(:,i) ) ) .le. 1E-06  ) THEN
+        DO i=1,lapw_nk%nv(jsp)
+          IF ( maxval( abs( g - (/lapw_nk%k1(i,jsp),lapw_nk%k2(i,jsp),lapw_nk%k3(i,jsp)/) ) ) .le. 1E-06  ) THEN
             igpt1 = i
             EXIT
           END IF
         END DO 
         IF ( igpt1 .eq. 0 ) CYCLE
-        cdum = exp(tpiimg*dotprod(rkpt+gpt_rkpt(:,igpt),trans ) )
+        cdum = exp(tpiimg*dotprod(rkpt+(/lapw_rkpt%k1(igpt,jsp),lapw_rkpt%k2(igpt,jsp),lapw_rkpt%k3(igpt,jsp)/),trans ) )
         if (l_real) THEN
            zhlp(igpt,:nbands)   =  cdum*z_r(igpt1,:nbands)
         else

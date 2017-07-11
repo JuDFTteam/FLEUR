@@ -96,7 +96,7 @@
 #endif
 
 
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       
 
@@ -811,6 +811,7 @@
       USE m_dr2fdr
       USE m_constants
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -868,11 +869,9 @@
 #endif
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct', recl=irecl_cmt)
-      READ(777,rec=nk) cmt
-      CLOSE(777)
-
+     
+      call read_cmt(cmt,nk)
+      
       ! read in z coefficients from direct access file z at kpoint nk
 #ifdef CPP_INVERSION
       irecl_z   =  dimension%nbasfcn*dimension%neigd*8
@@ -884,7 +883,7 @@
       CLOSE(778)
 
 
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       gpt(1,1:lapw%nv(jsp)) = lapw%k1(1:lapw%nv(jsp),jsp)
       gpt(2,1:lapw%nv(jsp)) = lapw%k2(1:lapw%nv(jsp),jsp)

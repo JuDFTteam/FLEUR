@@ -4,11 +4,11 @@ module m_eigen_hf_init
 !     preparations for HF and hybrid functional calculation
 !
 contains
-  subroutine eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2)
+  subroutine eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2,l_real)
     USE m_types
     USE m_read_core
     USE m_util
-
+    USE m_io_hybrid
   implicit none
   TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
   TYPE(t_kpts),INTENT(IN)          :: kpts
@@ -17,6 +17,7 @@ contains
   TYPE(t_dimension),INTENT(IN)     :: dimension
   INTEGER,INTENT(OUT)              :: irank2(:),isize2(:)
   TYPE(t_hybdat),INTENT(OUT)       :: hybdat
+  LOGICAL,INTENT(IN)               :: l_real
   
  
 
@@ -42,7 +43,9 @@ contains
       END IF
 
       IF( hybrid%l_calhf ) THEN
-
+         hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
+         call open_hybrid_io(hybrid,dimension,atoms,l_real)
+         
         !initialize hybdat%gridf for radial integration
         CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 

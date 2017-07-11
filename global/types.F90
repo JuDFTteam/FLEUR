@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
  
 MODULE m_types
+  USE m_types_rcmat
   !*************************************************************
   !     This module contains definitions for all kind of types
   !*************************************************************
@@ -83,7 +84,7 @@ MODULE m_types
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulon !(nlod,ntype,jspd)
      REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: uloulopn!  (nlod,nlod,ntypd,jspd)
    CONTAINS
-     PROCEDURE init => usdus_init
+     PROCEDURE :: init => usdus_init
   END TYPE t_usdus
 
 
@@ -765,14 +766,7 @@ MODULE m_types
      COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
   END TYPE t_hamOvlp
 
-  TYPE t_lapwmat
-     LOGICAL              :: l_real
-     INTEGER              :: matsize
-     REAL,    ALLOCATABLE :: mat_r(:)
-     COMPLEX, ALLOCATABLE :: mat_c(:)
-   CONTAINS
-     PROCEDURE allocate_space =>t_lapwmat_allocate
-  END TYPE t_lapwmat
+ 
   !
   ! type for wannier-functions
   !
@@ -947,19 +941,5 @@ CONTAINS
     ENDIF
   END SUBROUTINE init_potden_simple
 
-  SUBROUTINE   t_lapwmat_allocate(mat)
-    USE m_judft
-    IMPLICIT NONE
-    CLASS(t_lapwmat),INTENT(INOUT) :: mat
-    INTEGER:: err
-    
-    IF (mat%l_real) THEN
-       if (allocated(mat%mat_r)) CALL juDFT_error("Matrix already allocated",hint="this is a bug in the code,please report")
-       allocate(mat%mat_r(mat%matsize),stat=err)
-    ELSE
-       if (allocated(mat%mat_c)) CALL juDFT_error("Matrix already allocated",hint="this is a bug in the code,please report")
-       allocate(mat%mat_c(mat%matsize),stat=err)
-    endif
-    IF (err>0) CALL judft_error("Not enough memory allocating a lapw-matrix")
-  end SUBROUTINE t_lapwmat_allocate
+ 
 END MODULE m_types

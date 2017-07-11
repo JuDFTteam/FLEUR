@@ -40,6 +40,7 @@ CONTAINS
     USE m_icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
     USE m_xmlOutput
+    USE m_io_hybrid
 #ifdef CPP_MPI
     USE m_mpi_bc_pot
 #endif
@@ -98,6 +99,7 @@ CONTAINS
     TYPE(t_enpara)  :: enpara
     TYPE(t_zMat)    :: zMat
     TYPE(t_hamOvlp) :: hamOvlp
+    TYPE(T_mat)     :: olap
     !
     INTEGER fh,nn,n
     INTEGER ierr(3)
@@ -179,7 +181,7 @@ CONTAINS
             input, v%mt,v%vacz, enpara_in, enpara)
     !
    
-    CALL eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2)
+    CALL eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2,l_real)
 
     !---> set up and solve the eigenvalue problem
     !---> loop over energy windows
@@ -267,7 +269,7 @@ CONTAINS
 
     DO jsp = 1,nspins
        CALL eigen_HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id,&
-         hybdat,irank2,it,l_real,vr0)  
+         hybdat,irank2,it,l_real,vr0,eig_irr)  
 
        !
        !--->       set up k-point independent t(l'm',lm) matrices
@@ -353,6 +355,11 @@ CONTAINS
           ENDIF
           !
           IF( hybrid%l_hybrid ) THEN
+             !write overlap matrix b to direct access file olap
+             print *,"Wrong overlap matrix used, fix this later"
+             call olap%from_packed(dimension%nbasfcn,l_real,hamovlp%b_r,hamovlp%b_c)
+             call write_olap(olap,nrec)
+            
 
              CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,&
                   sym,cell,noco,results,it,maxval(hybdat%nobd),xcpot,&
@@ -383,21 +390,9 @@ CONTAINS
 
           IF (noco%l_noco) CLOSE (25)
 
-          !write overlap matrix b to direct access file olap
-          INQUIRE(file='olap',exist=l_file)
-          IF (l_file) THEN
-             IF (l_real) THEN
-                OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*8)
-                WRITE(88,rec=nrec) hamOvlp%b_r
-                CLOSE(88)
-             ELSE
-                OPEN(88,file='olap',form='unformatted',access='direct', recl=matsize*16)
-                WRITE(88,rec=nrec) hamOvlp%b_c
-                CLOSE(88)
-             ENDIF
-          ENDIF
-
-       
+         
+          
+          
           CALL eigen_diag(jsp,eig_id,it,atoms,DIMENSION,matsize,mpi, mpi%n_rank,mpi%n_size,ne,nk,lapw,input,&
                nred,mpi%sub_comm, sym,l_zref,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
                oneD,td,ud, eig,ne_found,hamOvlp,zMat)

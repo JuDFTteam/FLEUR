@@ -12,6 +12,7 @@
       USE m_constants
       USE m_apws
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -89,21 +90,17 @@
 
       cmt = 0
     
-      ! initialize gridf
-      CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
+      ! initialize gridf -> was done in eigen_HF_init
+      !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
       ! read in cmt
-      irecl_cmt = dimension%neigd*hybrid%maxlmindx*atoms%nat*16
-      OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-     &     recl=irecl_cmt)
       DO ikpt = 1,nkpti
 #ifdef CPP_MPI
         IF ( skip_kpt(ikpt) ) CYCLE
 #endif
-        READ(777,rec=ikpt)  cmt(:,:,:,ikpt)
-      END DO
-      CLOSE(777)
-
+        call read_cmt(cmt(:,:,:,ikpt),ikpt)
+     END DO
+     
       IF ( mpi%irank == 0 ) WRITE(6,'(/A)') ' Overlap <core|core>'
       DO itype=1,atoms%ntype
         IF(atoms%ntype.gt.1 .AND. mpi%irank==0) &
