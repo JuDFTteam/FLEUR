@@ -139,9 +139,10 @@
 !
       TYPE t_utype
         SEQUENCE
-        REAL u,j
-        INTEGER l
-        LOGICAL :: l_amf
+        REAL u,j         ! the actual U and J parameters
+        INTEGER l        ! the l quantum number to which this U parameter belongs
+        INTEGER atomType ! The atom type to which this U parameter belongs
+        LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
       END TYPE t_utype
 
 !

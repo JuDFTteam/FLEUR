@@ -57,13 +57,13 @@ CONTAINS
     INTEGER, PARAMETER :: lmaxb=3
     COMPLEX dtd,dtu,utd,utu
     INTEGER lo, mlotot, mlolotot, mlot_d, mlolot_d
-    INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m
+    INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
     INTEGER natrun,is,isinv,j,irinv,it
     REAL   ,PARAMETER:: zero=0.0
     COMPLEX,PARAMETER:: czero=CMPLX(0.,0.)
     !     ..
     !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: v_mmp(:,:)
+    COMPLEX, ALLOCATABLE :: v_mmp(:,:,:)
     REAL,    ALLOCATABLE :: a21(:,:),b4(:,:)
     COMPLEX forc_a21(3),forc_b4(3)
     REAL starsum(3),starsum2(3),gvint(3),gvint2(3)
@@ -85,9 +85,15 @@ CONTAINS
          tlmplm%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
          tlmplm%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
          tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
-         v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb),&
          a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
     !
+    IF(atoms%n_u.GT.0) THEN
+       ALLOCATE(v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u))
+       v_mmp = CMPLX(0.0,0.0)
+       CALL read_tlmplm_vs_mmp(jsp,atoms%n_u,v_mmp)
+    END IF
+
+    i_u = 1
     natom = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -95,9 +101,9 @@ CONTAINS
           forc_b4(:) = czero
 
 
-          CALL read_tlmplm(n,jsp,atoms%nlo,atoms%lda_u%l.GE.0,&
+          CALL read_tlmplm(n,jsp,atoms%nlo,&
                tlmplm%tuu(:,n,1),tlmplm%tud(:,n,1),tlmplm%tdu(:,n,1),tlmplm%tdd(:,n,1),&
-               tlmplm%ind(:,:,n,1),tlmplm%tuulo(:,:,:,1),tlmplm%tuloulo(:,:,:,1),tlmplm%tdulo(:,:,:,1),v_mmp)
+               tlmplm%ind(:,:,n,1),tlmplm%tuulo(:,:,:,1),tlmplm%tuloulo(:,:,:,1),tlmplm%tdulo(:,:,:,1))
 
           DO natrun = natom,natom + atoms%neq(n) - 1
              a21(:,natrun) = zero
@@ -190,9 +196,11 @@ CONTAINS
                acof,bcof,ccof,aveccof,bveccof,&
                cveccof, tlmplm,usdus, a21)
 
-          CALL force_a21_U(nobd,atoms,lmaxb,n,jsp,we,ne,&
-               usdus,v_mmp,acof,bcof,ccof,&
-               aveccof,bveccof,cveccof, a21)
+          IF ((atoms%n_u.GT.0).AND.(i_u.LE.atoms%n_u)) THEN
+             CALL force_a21_U(nobd,atoms,lmaxb,i_u,n,jsp,we,ne,&
+                              usdus,v_mmp,acof,bcof,ccof,&
+                              aveccof,bveccof,cveccof, a21)
+          END IF
           IF (input%l_useapw) THEN
              ! -> B4 force
              DO ie = 1,ne
@@ -352,7 +360,7 @@ CONTAINS
        natom = natom + atoms%neq(n)
     ENDDO
     !
-    DEALLOCATE (tlmplm%tdd,tlmplm%tuu,tlmplm%tdu,tlmplm%tud,tlmplm%tuulo,tlmplm%tdulo,tlmplm%tuloulo,v_mmp,tlmplm%ind,a21,b4)
+    DEALLOCATE (tlmplm%tdd,tlmplm%tuu,tlmplm%tdu,tlmplm%tud,tlmplm%tuulo,tlmplm%tdulo,tlmplm%tuloulo,tlmplm%ind,a21,b4)
 
   END SUBROUTINE force_a21
 END MODULE m_forcea21

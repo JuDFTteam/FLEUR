@@ -14,7 +14,7 @@ MODULE m_tlmplm_store
     PRIVATE
     TYPE(t_tlmplm)            :: td_stored
     COMPLEX,ALLOCATABLE       :: vs_mmp_stored(:,:,:,:)
-    PUBLIC write_tlmplm,read_tlmplm
+    PUBLIC write_tlmplm, read_tlmplm, read_tlmplm_vs_mmp
 CONTAINS
     SUBROUTINE write_tlmplm(td,vs_mmp,ldau,ispin,jspin,jspins)
         TYPE(t_tlmplm),INTENT(IN) :: td
@@ -58,15 +58,13 @@ CONTAINS
 
     END SUBROUTINE write_tlmplm
 
-    SUBROUTINE read_tlmplm(n,jspin,nlo,ldau,tuu,tud,tdu,tdd,ind,tuulo,tuloulo,tdulo,vs_mmp)
+    SUBROUTINE read_tlmplm(n,jspin,nlo,tuu,tud,tdu,tdd,ind,tuulo,tuloulo,tdulo)
         COMPLEX,INTENT(OUT)::tuu(:),tdd(:),tud(:),tdu(:)
         INTEGER,INTENT(OUT)::ind(:,:)
         COMPLEX,INTENT(OUT)::tuulo(:,:,:),tdulo(:,:,:),tuloulo(:,:,:)
-        COMPLEX,INTENT(OUT)::vs_mmp(:,:)
         INTEGER,INTENT(IN) :: n,jspin,nlo(:)
-        LOGICAL,INTENT(IN) :: ldau(:)
 
-        INTEGER:: mlo,mlolo,nn
+        INTEGER:: mlo,mlolo
         tuu=td_stored%tuu(:size(tuu,1),n,jspin)
         tud=td_stored%tud(:size(tuu,1),n,jspin)
         tdu=td_stored%tdu(:size(tuu,1),n,jspin)
@@ -83,10 +81,18 @@ CONTAINS
             tuloulo(:,:,mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1)=&
                td_stored%tuloulo(:size(tuloulo,1),:size(tuloulo,2),mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1,jspin)
         ENDIF
-        IF(ldau(n)) THEN
-            nn=count(ldau(:n-1))+1
-            vs_mmp=vs_mmp_stored(size(vs_mmp,1),size(vs_mmp,2),nn,jspin)
-        ENDIF
     
     END SUBROUTINE read_tlmplm
+
+    SUBROUTINE read_tlmplm_vs_mmp(jspin,n_u,vs_mmp)
+
+       INTEGER, INTENT(IN)  :: jspin, n_u
+       COMPLEX, INTENT(OUT) :: vs_mmp(:,:,:)
+
+       IF(n_u.GT.0) THEN
+          vs_mmp(:,:,:) = vs_mmp_stored(:,:,:,jspin)
+       END IF
+
+    END SUBROUTINE read_tlmplm_vs_mmp
+
 END MODULE m_tlmplm_store

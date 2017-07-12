@@ -148,7 +148,7 @@ SUBROUTINE r_inpXML(&
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
   INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
   INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
-  INTEGER            :: ldau_l, numVac
+  INTEGER            :: ldau_l(4), numVac, numU
   INTEGER            :: speciesEParams(0:3)
   INTEGER            :: mrotTemp(3,3,48)
   REAL               :: tauTemp(3,48)
@@ -156,9 +156,9 @@ SUBROUTINE r_inpXML(&
   LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
   LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-  REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
+  REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
   REAL               :: weightScale, eParamUp, eParamDown
-  LOGICAL            :: l_amf
+  LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
 
@@ -260,7 +260,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%lnonsph(atoms%ntype))
   ALLOCATE(atoms%nflip(atoms%ntype))
   ALLOCATE(atoms%l_geo(atoms%ntype))
-  ALLOCATE(atoms%lda_u(atoms%ntype))
+  ALLOCATE(atoms%lda_u(4*atoms%ntype))
   ALLOCATE(atoms%bmu(atoms%ntype))
   ALLOCATE(atoms%relax(3,atoms%ntype))
   ALLOCATE(atoms%neq(atoms%ntype))
@@ -1264,6 +1264,7 @@ SUBROUTINE r_inpXML(&
 
   atoms%numStatesProvided = 0
   atoms%lapw_l(:) = -1
+  atoms%n_u = 0
 
   DO iSpecies = 1, numSpecies
      ! Attributes of species
@@ -1288,20 +1289,17 @@ SUBROUTINE r_inpXML(&
         lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
      END IF
 
-     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
+     numU = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
+     IF (numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
      ldau_l = -1
      ldau_u = 0.0
      ldau_j = 0.0
      l_amf = .FALSE.
-     DO i = 1, numberNodes
-        IF (i.GT.1) THEN
-           WRITE (*,*) 'Not yet implemented:'
-           STOP 'ERROR: More than 1 U parameter provided for a certain species.'
-        END IF
-        ldau_l = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l'))
-        ldau_u = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@U'))
-        ldau_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@J'))
-        l_amf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l_amf'))
+     DO i = 1, numU
+        ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l'))
+        ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@U'))
+        ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@J'))
+        l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l_amf'))
      END DO
 
      speciesNLO(iSpecies) = 0
@@ -1345,10 +1343,14 @@ SUBROUTINE r_inpXML(&
               atoms%nflip(iType) = 0
            ENDIF
            atoms%bmu(iType) = magMom
-           atoms%lda_u(iType)%l = ldau_l
-           atoms%lda_u(iType)%u = ldau_u
-           atoms%lda_u(iType)%j = ldau_j
-           atoms%lda_u(iType)%l_amf = l_amf
+           DO i = 1, numU
+              atoms%n_u = atoms%n_u + 1
+              atoms%lda_u(atoms%n_u)%l = ldau_l(i)
+              atoms%lda_u(atoms%n_u)%u = ldau_u(i)
+              atoms%lda_u(atoms%n_u)%j = ldau_j(i)
+              atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
+              atoms%lda_u(atoms%n_u)%atomType = iType
+           END DO
            atomTypeSpecies(iType) = iSpecies
            IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
         END IF
@@ -1897,20 +1899,16 @@ SUBROUTINE r_inpXML(&
 
   ! Check lda+u stuff (from inped)
 
-  atoms%n_u = 0
-  DO iType = 1,atoms%ntype
-     IF (atoms%lda_u(iType)%l.GE.0)  THEN
-        atoms%n_u = atoms%n_u + 1
-        IF (atoms%nlo(iType).GE.1) THEN
-           DO iLLO = 1, atoms%nlo(iType)
-              IF ((abs(atoms%llo(iLLO,iType)).EQ.atoms%lda_u(iType)%l).AND.&
-                   .NOT.atoms%l_dulo(iLLO,iType)) THEN
-                 WRITE (*,*) 'LO and LDA+U for same l not implemented'
-              END IF
-           END DO
-        END IF
+  DO i = 1, atoms%n_u
+     n = atoms%lda_u(i)%atomType
+     IF (atoms%nlo(n).GE.1) THEN
+        DO j = 1, atoms%nlo(n)
+           IF ((ABS(atoms%llo(j,n)).EQ.atoms%lda_u(i)%l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
+              WRITE (*,*) 'LO and LDA+U for same l not implemented'
+        END DO
      END IF
   END DO
+
   IF (atoms%n_u.GT.0) THEN
      IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="r_inpXML")
      IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="r_inpXML")
