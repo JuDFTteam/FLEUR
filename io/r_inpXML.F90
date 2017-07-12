@@ -1296,10 +1296,11 @@ SUBROUTINE r_inpXML(&
      ldau_j = 0.0
      l_amf = .FALSE.
      DO i = 1, numU
-        ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l'))
-        ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@U'))
-        ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@J'))
-        l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l_amf'))
+        WRITE(xPathB,*) i
+        ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
+        ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@U'))
+        ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
+        l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
      END DO
 
      speciesNLO(iSpecies) = 0

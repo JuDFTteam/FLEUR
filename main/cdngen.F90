@@ -164,6 +164,7 @@
          ELSE
             ALLOCATE (n_mmp(-3:-3,-3:-3,1,input%jspins))
          ENDIF
+         n_mmp = CMPLX(0.0,0.0)
 
 !
 !--->    in a non-collinear calcuation where the off-diagonal part of
