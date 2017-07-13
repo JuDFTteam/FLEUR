@@ -1,0 +1,11 @@
+$test_name="GaAs: displaced atoms with U parameters and forces";
+$test_code="Fleur";
+$test_stages=3;
+$test_desc=<<EOF
+Simple test of Fleur with three steps:
+1.Generate a starting density and run 1 iteration
+2.Remove Broyden files, last line of n_mmp_mat and run 12 iterations
+3.Calculate forces
+Uses: LDA+U,forces
+EOF
+;
