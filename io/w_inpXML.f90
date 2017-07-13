@@ -71,7 +71,8 @@ SUBROUTINE w_inpXML(&
 
 !+lda+u
    REAL    u,j
-   INTEGER l
+   INTEGER l, i_u
+   INTEGER uIndices(2,atoms%ntype)
    LOGICAL l_amf
    CHARACTER(len=3) ch_test
    NAMELIST /ldaU/ l,u,j,l_amf
@@ -417,6 +418,12 @@ SUBROUTINE w_inpXML(&
 !   WRITE (fileNum,290) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
 !   WRITE (fileNum,'(a)') '   </xcFunctional>'
 
+   uIndices = -1
+   DO i_u = 1, atoms%n_u
+      IF(uIndices(1,atoms%lda_u(i_u)%atomType).EQ.-1) uIndices(1,atoms%lda_u(i_u)%atomType) = i_u
+      uIndices(2,atoms%lda_u(i_u)%atomType) = i_u
+   END DO
+
    WRITE (fileNum,'(a)') '   <atomSpecies>'
    DO iSpecies=1, numSpecies
       iAtomType = speciesRepAtomType(iSpecies)
@@ -508,6 +515,14 @@ SUBROUTINE w_inpXML(&
             END IF
          END DO
          WRITE (fileNum,'(a)') '         </electronConfig>'
+      END IF
+
+      IF (uIndices(1,iAtomType).NE.-1) THEN
+!         <ldaU l="2" U="5.5" J="0.9" l_amf="F"/>
+         DO i_u = uIndices(1,iAtomType), uIndices(2,iAtomType)
+            326 FORMAT('         <ldaU l="',i0,'" U="',f0.5,'" J="',f0.5,'" l_amf="',l1,'"/>')
+            WRITE (fileNum,326) atoms%lda_u(i_u)%l, atoms%lda_u(i_u)%u, atoms%lda_u(i_u)%j, atoms%lda_u(i_u)%l_amf
+         END DO
       END IF
 
       DO ilo = 1, atoms%nlo(iAtomType)
