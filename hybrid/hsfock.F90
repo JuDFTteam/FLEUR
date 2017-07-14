@@ -198,6 +198,7 @@ MODULE m_hsfock
         ! HF exchange
         CALL timestart("valence exchange calculation")
 
+        ex%l_real=hamovlp%l_real
         CALL exchange_valence_hf(& 
      &            nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,&
      &            cell, dimension,input,jsp, hybdat, mnobd, lapw,&

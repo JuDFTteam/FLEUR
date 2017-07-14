@@ -11,7 +11,7 @@ c     return type of the pure intgrf function
       END TYPE intgrf_out
 
       INTERFACE derivative
-        MODULE PROCEDURE:: derivative_t,derivative_nt
+        MODULE PROCEDURE derivative_t,derivative_nt
       END INTERFACE
       
       CONTAINS

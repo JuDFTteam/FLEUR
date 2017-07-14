@@ -149,8 +149,11 @@ CONTAINS
              IF(results%w_iks(i,nk,jsp) .GT. 0d0 ) hybdat%nobd(nk) = hybdat%nobd(nk) + 1
 
           END DO
-
-
+          IF (hybdat%nobd(nk)>hybdat%nbands(nk)) THEN
+             CALL judft_warn("More occupied bands than total no of bands!?")
+             hybdat%nbands(nk)=hybdat%nobd(nk)
+          ENDIF
+          PRINT *,"bands:",nk, hybdat%nobd(nk),hybdat%nbands(nk),hybdat%ne_eig(nk)
        END DO
 
 #             ifdef CPP_MPI

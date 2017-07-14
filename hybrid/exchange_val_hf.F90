@@ -68,6 +68,7 @@
       USE m_mpi_work_dist
       USE m_mpi_tags
 #endif
+      USE m_io_hybrid
       USE m_icorrkeys
       USE m_kp_perturbation
       USE m_types
@@ -162,9 +163,9 @@
       REAL   ,ALLOCATABLE     ::  cprod_vv_r(:,:,:),cprod_cv_r(:,:,:), carr3_vv_r(:,:,:),carr3_cv_r(:,:,:)
       REAL                    ::  carr1_v_r(hybrid%maxbasm1),carr1_c_r(hybrid%maxbasm1)
 #ifdef CPP_IRCOULOMBAPPROX
-      REAL                    ::  coulomb_mtir_r((hybrid%maxlcutm1+1)**2* , (hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm) )
+      REAL                    ::  coulomb_mtir_r((hybrid%maxlcutm1+1)**2*atoms%nat , (hybrid%maxlcutm1+1)**2*atoms%nat +maxval(hybrid%ngptm) )
 #else
-      REAL                    ::  coulomb_mtir_r(((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm)+1)/2 )
+      REAL                    ::  coulomb_mtir_r(((hybrid%maxlcutm1+1)**2*atoms%nat +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2*atoms%nat +maxval(hybrid%ngptm)+1)/2 )
 #endif
       COMPLEX,ALLOCATABLE     ::  cprod_vv_c(:,:,:),cprod_cv_c(:,:,:), carr3_vv_c(:,:,:),carr3_cv_c(:,:,:)
       COMPLEX                 ::  carr1_v_c(hybrid%maxbasm1),carr1_c_c(hybrid%maxbasm1)
@@ -190,22 +191,6 @@
          initialize = .false.
       END IF
    
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-      irecl_coulomb1 = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
-           +    atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
-           +    (hybrid%maxindxm1-1)*atoms%nat**2&
-           +    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
-           *    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *8
-      if (.not.mat_ex%l_real) irecl_coulomb1=irecl_coulomb1*2 !complex size double of real
-      OPEN(unit=676,file='coulomb1',form='unformatted',access='direct',&
-           recl=irecl_coulomb1)
-#else
-      !open direct acces file coulomb/cprod
-      irecl_coulomb =  hybrid%maxbasm1*(hybrid%maxbasm1+1)*4 !(hybrid%maxbasm1*maxbasm1)* 8+hybrid%maxbasm1*8 + 8
-      if (.not.mat_ex%l_real) irecl_coulomb=irecl_coulomb*2 !complex size double of real
-      OPEN(unit=677,file='coulomb',form='unformatted',access='direct',&
-           recl=irecl_coulomb)
-#endif
 
       ! calculate valence-valence-valence-valence, core-valence-valence-valence
       ! and core-valence-valence-core exchange at current k-point
@@ -264,12 +249,12 @@
         ! read in coulomb matrix from direct access file coulomb
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
         if (mat_ex%l_real) THEN
-           READ(676,rec=kpts%bkp(ikpt0)) coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r
+	   call read_coulomb_spm_r(ikpt0,coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r)
         else
-           READ(676,rec=kpts%bkp(ikpt0)) coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c
+           call read_coulomb_spm_c(ikpt0,coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c)
         end if
 #else
-        READ(677,rec=kpts%bkp(ikpt0)) coulomb
+	call read_coulomb(kpts%bkp(ikpt0),coulomb)
 #endif
 
         IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
@@ -356,31 +341,21 @@ endif
           ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
           ! from IBZ to current k-point
           IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
-             if (mat_ex%l_real) THEN
              STOP "INTERFACE to bra_trafo2"
-          !  CALL bra_trafo2(&
-          !      carr3_vv(:nbasm(ikpt0),:,:),cprod_vv(:nbasm(ikpt0),:,:),&
-          !      nbasm(ikpt0),psize,nbands(nk),&
-          !      kpts(ikpt0),ikpt0(ikpt0),sym,&
-          !      hybrid,cell,maxlcutm1,atoms,&
-          !      lcutm,nindxm,maxindxm1,nw,obsolete,&
-          !      nbasp,&
-          !      phase_vv)
+             CALL bra_trafo2(&
+                mat_ex%l_real,carr3_vv_r(:nbasm(ikpt0),:,:),carr3_vv_r(:nbasm(ikpt0),:,:),cprod_vv_r(:nbasm(ikpt0),:,:),cprod_vv_c(:nbasm(ikpt0),:,:),&
+                nbasm(ikpt0),psize,nbands(nk),&
+                ikpt0,kpts%bkp(ikpt0),iop,sym,&
+                hybrid,kpts,cell,hybrid%maxlcutm1,atoms,&
+                hybrid%lcutm1,hybrid%nindxm1,hybrid%maxindxm1,nqptmall,&
+                hybrid%nbasp,&
+                phase_vv)
 
-             cprod_vv_r(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_r(:hybdat%nbasm(ikpt0),:,:)
-          else
-             STOP "INTERFACE to bra_trafo2"
-          !  CALL bra_trafo2(&
-          !      carr3_vv(:nbasm(ikpt0),:,:),cprod_vv(:nbasm(ikpt0),:,:),&
-          !      nbasm(ikpt0),psize,nbands(nk),&
-          !      kpts(ikpt0),ikpt0(ikpt0),sym,&
-          !      hybrid,cell,maxlcutm1,atoms,&
-          !      lcutm,nindxm,maxindxm1,nw,obsolete,&
-          !      nbasp,&
-          !      phase_vv)
-
-             cprod_vv_c(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_c(:hybdat%nbasm(ikpt0),:,:)
-          endif
+             IF (mat_ex%l_real) THEN
+                cprod_vv_r(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_r(:hybdat%nbasm(ikpt0),:,:)
+             ELSE
+                cprod_vv_c(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_c(:hybdat%nbasm(ikpt0),:,:)
+             ENDIF
           ELSE
             phase_vv(:,:) = (1d0,0d0)
           END IF
@@ -436,13 +411,6 @@ endif
           END DO  !n1
         END DO !ibando
       END DO  !ikpt
-
-      ! close direct access file coulomb
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-      CLOSE(676)
-#else
-      CLOSE(677)
-#endif
 
 
       !

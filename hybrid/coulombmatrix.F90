@@ -1492,15 +1492,16 @@ CONTAINS
 
        if (sym%invs) THEN
 #         ifdef CPP_IRCOULOMBAPPROX
-       call write_coulomb_spm_r(ikpt,coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r, coulomb_mtir_r)
+       call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulomb_mtir_r(:,1))
 #         else
-       call write_coulomb_spm_r(ikpt,coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r, coulombp_mtir_r)
+       call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulombp_mtir_r(:,1))
 #         endif
     else
 #         ifdef CPP_IRCOULOMBAPPROX
-       call write_coulomb_spm_c(ikpt,coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c, coulomb_mtir_c)
+       call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulomb_mtir_c(:,1))
 #         else
-       call write_coulomb_spm_c(ikpt,coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c, coulombp_mtir_c)
+       call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulombp_mtir_c(:,1))
+
 #         endif
     endif
 

@@ -75,19 +75,20 @@ contains
 
    subroutine write_coulomb_spm_r(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
     implicit none
-    real,intent(in)    :: coulomb_mt1(:,:,:,:,:)
-    real,intent(in) :: coulomb_mt2(:,:,:,:,:), coulomb_mt3(:,:,:,:)
-    real,intent(in) :: coulomb_mtir(:,:)
+    real,intent(in)    :: coulomb_mt1(:,:,:,:)
+    real,intent(in) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
+    real,intent(in) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
+    print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine write_coulomb_spm_r
 
    subroutine write_coulomb_spm_c(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
     implicit none
-    real,intent(in)    :: coulomb_mt1(:,:,:,:,:)
-    complex,intent(in) :: coulomb_mt2(:,:,:,:,:), coulomb_mt3(:,:,:,:)
-    complex,intent(in) :: coulomb_mtir(:,:)
+    real,intent(in)    :: coulomb_mt1(:,:,:,:)
+    complex,intent(in) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
+    complex,intent(in) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
     write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
@@ -95,21 +96,21 @@ contains
 
      subroutine read_coulomb_spm_r(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
     implicit none
-    real,intent(out)    :: coulomb_mt1(:,:,:,:,:)
-    real,intent(out) :: coulomb_mt2(:,:,:,:,:), coulomb_mt3(:,:,:,:)
-    real,intent(out) :: coulomb_mtir(:,:)
+    real,intent(out)    :: coulomb_mt1(:,:,:,:)
+    real,intent(out) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
+    real,intent(out) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
+    print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine read_coulomb_spm_r
 
    subroutine read_coulomb_spm_c(nk,coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir)
     implicit none
-    real,intent(out)    :: coulomb_mt1(:,:,:,:,:)
-    complex,intent(out) :: coulomb_mt2(:,:,:,:,:), coulomb_mt3(:,:,:,:)
-    complex,intent(out) :: coulomb_mtir(:,:)
+    real,intent(out)    :: coulomb_mt1(:,:,:,:)
+    complex,intent(out) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
+    complex,intent(out) :: coulomb_mtir(:)
     integer,intent(in) :: nk
-    
     read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine read_coulomb_spm_c
 
