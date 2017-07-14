@@ -84,6 +84,9 @@ CONTAINS
     USE m_doswrite
     USE m_cylpts
     USE m_cdnread, ONLY : cdn_read0, cdn_read
+    USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
+    USE m_corespec_io, only : corespec_init
+    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
 #ifdef CPP_MPI
     USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
@@ -324,6 +327,11 @@ CONTAINS
        ALLOCATE ( m_mcd(1,1,1,1),mcd(1,1,1) )
     ENDIF
 
+! calculation of core spectra (EELS) initializations -start-
+    CALL corespec_init(atoms)
+    IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
+! calculation of core spectra (EELS) initializations -end-
+
     ALLOCATE ( kveclo(atoms%nlotot) )
 
     IF (mpi%irank==0) THEN
@@ -361,7 +369,7 @@ CONTAINS
     ncored = 0
 
     ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
-    DO  n = 1,atoms%ntype
+    DO n = 1,atoms%ntype
        IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8001) n
        DO  l = 0,atoms%lmax(n)
           DO ispin = jsp_start,jsp_end
@@ -388,6 +396,11 @@ CONTAINS
                ncore,e_mcd,m_mcd)
           ncored = max(ncore(n),ncored)
        END IF
+
+       IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
+                                  input%jspins,jspin,results%ef,&
+                                  dimension%msh,vr(:,0,:,:),f,g)
+
        !
        !--->   generate the extra wavefunctions for the local orbitals,
        !--->   if there are any.
@@ -802,6 +815,13 @@ CONTAINS
                 DEALLOCATE (acoflo,bcoflo,cveccof)
                 CALL timestop("cdnval: force_a12/21")
              END IF
+
+             IF(l_cs) THEN
+                CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,&
+                                  dimension%neigd,noccbd,results%ef,banddos%sig_dos,&
+                                  eig,we,acof(1,0,1,ispin),bcof(1,0,1,ispin),&
+                                  ccof(-atoms%llod,1,1,1,ispin))
+             END IF
           END DO !--->    end loop over ispin
 
           IF (noco%l_mperp) THEN
@@ -872,6 +892,9 @@ CONTAINS
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
+
+    IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
+
     IF (((jspin.eq.input%jspins).OR.noco%l_mperp) .AND. (banddos%dos.or.banddos%vacdos.or.input%cdinf) ) THEN
        CALL timestart("cdnval: dos")
        IF (mpi%irank==0) THEN
