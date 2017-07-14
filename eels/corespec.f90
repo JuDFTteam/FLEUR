@@ -83,7 +83,9 @@ module m_corespec
      real, allocatable :: fc(:,:,:,:)  ! core radial function
      real, allocatable :: fv(:,:,:,:)  ! valence radial function
      real, allocatable :: fb(:,:,:,:,:)  ! bessel function
-     real, allocatable :: rme(:,:,:,:,:,:,:,:)  ! matrix elements
+     real, allocatable :: rmeA(:,:,:,:,:,:,:)  ! matrix elements
+     real, allocatable :: rmeB(:,:,:,:,:,:,:)  ! matrix elements
+     real, allocatable :: rmeC(:,:,:,:,:,:,:)  ! matrix elements
      real, allocatable :: dose(:,:,:,:,:)  ! dos (bands)
      real, allocatable :: dosb(:,:,:,:,:)  ! dos (bands)
      complex, allocatable :: ddscs(:,:,:,:,:)  ! dos (bands)
