@@ -41,7 +41,7 @@
 
       ! - local scalars -
       INTEGER                 ::  i,itype,iatom,ikpt,ineq,igpt,iband
-      INTEGER                 ::  irecl_cmt,irecl_z
+      INTEGER                 ::  irecl_cmt
       INTEGER                 ::  j,m
       INTEGER                 ::  l
       INTEGER                 :: lm,lm1
@@ -66,13 +66,7 @@
       REAL                    ::  rtaual(3)
       REAL    , ALLOCATABLE   ::  olapcb(:)
       REAL    , ALLOCATABLE   :: olapcv_avg(:,:,:,:),olapcv_max(:,:,:,:)
-#ifdef CPP_INVERSION
-      REAL    , ALLOCATABLE   ::  olappp(:,:)
-      REAL                    ::  z(dimension%nbasfcn,dimension%neigd,nkpti)
-#else
-      COMPLEX , ALLOCATABLE   ::  olappp(:,:)
-      COMPLEX                 ::  z(dimension%nbasfcn,dimension%neigd,nkpti)
-#endif
+      TYPE(t_mat),ALLOCATABLE :: z(:)
 
       COMPLEX                 ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat,nkpti)
       COMPLEX                 ::  y((atoms%lmaxd+1)**2)
@@ -85,7 +79,11 @@
      &            'x','x','x','x','x','x','x','x','x','x','x','x','x' /)
       LOGICAL                 ::  l_mism = .true.
 
-
+      ALLOCATE(z(nkpti))
+      DO ikpt=1,nkpti
+         call z(ikpt)%alloc(sym%invs,dimension%nbasfcn,dimension%neigd)
+      ENDDO
+      
       IF ( mpi%irank == 0 ) WRITE(6,'(//A)') '### checkolap ###'
 
       cmt = 0
@@ -238,18 +236,9 @@
       ALLOCATE (carr1(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
       ALLOCATE (carr2(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
       ALLOCATE (carr3(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
-
-#ifdef CPP_INVERSION
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-#else
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-#endif
-      OPEN(unit=778,file='z',form='unformatted',access='direct',&
-     &     recl=irecl_z)
       DO ikpt = 1,nkpti
-        READ(778,rec=ikpt) z(:,:,ikpt)
+         call read_z(z(ikpt),ikpt)
       END DO
-      CLOSE(778)
 
       iatom = 0
       DO itype = 1,atoms%ntype
@@ -292,8 +281,12 @@
                 DO m = -l,l
                   lm = lm + 1
                   DO iband = 1,hybdat%nbands(ikpt)
-                    carr2(iband,lm) = carr2(iband,lm) + cdum * z(igpt,iband,ikpt) * y(lm)
-                  END DO
+                     if (z(1)%l_real) THEN
+                        carr2(iband,lm) = carr2(iband,lm) + cdum * z(ikpt)%data_r(igpt,iband) * y(lm)
+                     Else
+                        carr2(iband,lm) = carr2(iband,lm) + cdum * z(ikpt)%data_c(igpt,iband) * y(lm)
+                     END if
+                  end DO
                 END DO
               END DO
             END DO

@@ -164,6 +164,7 @@ c     --------
       enddo
       end function packmatcoul_d
 
+            
       function unpackmat_d(mat)
       implicit none
       real, intent(in)  :: mat(:)

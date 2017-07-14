@@ -1849,7 +1849,7 @@ CONTAINS
       ntype,neq,natd,taual,lcutm,maxlcutm,nindxm,maxindxm,&
       gptm,ngptm,pgptm,gptmd,basm,nbasm,&
       nobd,nbands,nsst,ibando,psize,indx,invsat,invsatnr,irank,&
-      cprod,wl_iks,n_q)
+      cprod_r,cprod_c,l_real,wl_iks,n_q)
 
     USE m_trafo, ONLY: symmetrize
     USE m_olap,  ONLY: olap_pw, olap_pwp
@@ -1881,18 +1881,12 @@ CONTAINS
     REAL, INTENT(IN)     :: bmat(3,3)
     REAL, INTENT(IN)     :: taual(3,natd)
     REAL, INTENT(IN)     :: wl_iks(nobd)
-#ifdef CPP_INVERSION
-    REAL, INTENT(IN)     :: cprod(nbasm,psize,nbands)
-#else
-    COMPLEX, INTENT(IN)  :: cprod(nbasm,psize,nbands)
-#endif
+    REAL, INTENT(IN)     :: cprod_r(nbasm,psize,nbands)
+    COMPLEX, INTENT(IN)  :: cprod_c(nbasm,psize,nbands)
+    LOGICAL,INTENT(IN)   :: l_real
 
     ! return type definition
-#ifdef CPP_INVERSION
-    REAL                 :: dynamic_hse_adjustment(nbands,nbands)
-#else
     COMPLEX              :: dynamic_hse_adjustment(nbands,nbands)
-#endif
 
     ! private scalars
     INTEGER              :: noGpts,nbasp
@@ -1912,17 +1906,15 @@ CONTAINS
     COMPLEX              :: fourier_trafo(nbasm-ngptm,maxNoGPts)        ! Fourier trafo of all mixed basis functions
 #endif
 
-#ifdef CPP_INVERSION
-    REAL                 :: cprod_fourier_trafo(maxNoGpts,psize,nbands)  ! Product of cprod and Fourier trafo
-#else
-    COMPLEX              :: cprod_fourier_trafo(maxNoGpts,psize,nbands)  ! Product of cprod and Fourier trafo
-#endif
+    REAL                 :: cprod_fourier_trafo_r(maxNoGpts,psize,nbands)  ! Product of cprod and Fourier trafo
+    COMPLEX              :: cprod_fourier_trafo_c(maxNoGpts,psize,nbands)  ! Product of cprod and Fourier trafo
 
     ! Initialisation
     dynamic_hse_adjustment = 0.0
     potential              = 0.0
     fourier_trafo          = 0.0
-    cprod_fourier_trafo    = 0.0
+    cprod_fourier_trafo_r    = 0.0
+    cprod_fourier_trafo_c    = 0.0
     noGPts                 = MIN(ngptm,maxNoGPts)
     nbasp                  = nbasm - ngptm
 
@@ -1944,18 +1936,19 @@ CONTAINS
         iobd = iobd0 + ibando - 1
         IF( iobd .GT. nobd ) CYCLE
         DO iband1 = 1,nbands
-          cprod_fourier_trafo(igpt,iobd0,iband1) = &
-#ifdef CPP_INVERSION
-              ! muffin tin contribution
-              dotprod( fourier_trafo(:nbasp,igpt), cprod(:nbasp,iobd0,iband1) ) &
-              ! interstitial contribution (interstitial is kronecker_G,G')
-              + cprod(nbasp+igpt,iobd0,iband1)
-#else
-              ! muffin tin contribution
-              dotprod( cprod(:nbasp,iobd0,iband1), fourier_trafo(:nbasp,igpt) ) &
-              ! interstitial contribution (interstitial is kronecker_G,G')
-              + CONJG( cprod(nbasp+igpt,iobd0,iband1) )
-#endif
+           if (l_real) THEN
+              cprod_fourier_trafo_r(igpt,iobd0,iband1) = &
+                   ! muffin tin contribution
+                   dotprod( fourier_trafo(:nbasp,igpt), cprod_r(:nbasp,iobd0,iband1) ) &
+                   ! interstitial contribution (interstitial is kronecker_G,G')
+                   + cprod_r(nbasp+igpt,iobd0,iband1)
+           else
+              cprod_fourier_trafo_c(igpt,iobd0,iband1) = &
+                   ! muffin tin contribution
+                   dotprod( cprod_c(:nbasp,iobd0,iband1), fourier_trafo(:nbasp,igpt) ) &
+                   ! interstitial contribution (interstitial is kronecker_G,G')
+                   + CONJG( cprod_c(nbasp+igpt,iobd0,iband1) )
+           endif
         END DO
       END DO
     END DO
@@ -1970,13 +1963,15 @@ CONTAINS
         DO isst = 1,nsst(iband1)
           iband2  = indx(isst,iband1)
           ! do summation over G-vectors
-          gPtsSum = cdum * gPtsSummation(noGPts,&
-#ifdef CPP_INVERSION
-                           cprod_fourier_trafo(:,iobd0,iband1),&
-#else
-                           CONJG( cprod_fourier_trafo(:,iobd0,iband1) ),&
-#endif
-                           potential,cprod_fourier_trafo(:,iobd0,iband2) )
+          if (l_real) THEN
+             gPtsSum = cdum * gPtsSummation(noGPts,&
+                  cprod_fourier_trafo_r(:,iobd0,iband1),&
+                  potential,cprod_fourier_trafo_r(:,iobd0,iband2) )
+          ELSE
+             gPtsSum = cdum * gPtsSummation(noGPts,&
+                  conjg(cprod_fourier_trafo_c(:,iobd0,iband1)),&
+                  potential,cprod_fourier_trafo_c(:,iobd0,iband2) )
+          endif
           dynamic_hse_adjustment(iband2,iband1) = &
               dynamic_hse_adjustment(iband2,iband1) - gPtsSum
         END DO

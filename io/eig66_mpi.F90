@@ -97,7 +97,7 @@ CONTAINS
     d%real_data=1E99
 
     !The eigenvalues
-    d%size_eig=neig
+    d%size_eig=2*neig
     CALL priv_create_memory(d%size_eig,local_slots,d%eig_handle,real_data_ptr=d%eig_data)
     d%eig_data=1E99
     !The eigenvectors
@@ -188,7 +188,7 @@ CONTAINS
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(nmat),k2(nmat),k3(nmat),kveclo(nlotot)
-      REAL    :: eig(neig),ello(nlo,ntype),el(lmax,ntype)
+      REAL    :: eig(neig),w_iks(neig),ello(nlo,ntype),el(lmax,ntype)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
       zmat%nbasfcn=nmat
@@ -201,8 +201,8 @@ CONTAINS
          CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,d%l_real,l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
-                  CALL read_eig_DA(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,zmat=zmat)
-                  CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,zmat=zmat)
+                  CALL read_eig_DA(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
+                  CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
               ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -229,7 +229,7 @@ CONTAINS
       INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(d%nmat),k2(d%nmat),k3(d%nmat),kveclo(d%nlotot)
-      REAL    :: eig(d%neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(d%neig),w_iks(d%neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
       zmat%nbasfcn=d%nmat
@@ -243,8 +243,8 @@ CONTAINS
          CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,d%jspins
             DO nk=1,d%nkpts
-               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,zmat=zmat)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,zmat=zmat)
+               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
             ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -254,13 +254,13 @@ CONTAINS
 
   END SUBROUTINE close_eig
 
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk3,wk,neig,eig,el,&
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk3,wk,neig,eig,w_iks,el,&
        ello,evac,kveclo,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
-    REAL,    INTENT(OUT),OPTIONAL  :: eig(:)
+    REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk3(:),wk
@@ -318,15 +318,18 @@ CONTAINS
        IF (PRESENT(ello)) ello=RESHAPE(tmp_real(6+d%size_el+1:6+d%size_el+SIZE(ello)),SHAPE(ello))
        DEALLOCATE(tmp_real)
     ENDIF
-    IF (PRESENT(eig)) THEN
+    IF (PRESENT(eig).or.PRESENT(w_iks)) THEN
        CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%eig_handle,e)
        ALLOCATE(tmp_real(d%size_eig))
        CALL MPI_GET(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
        CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
-       n1=1;n3=1;n2=SIZE(eig)
-       IF (PRESENT(n_start)) n1=n_start
-       IF (PRESENT(n_end)) n2=n_end
-       eig(:n2-n1+1)=tmp_real(n1:n2)
+       IF (PRESENT(eig)) THEN
+          n1=1;n3=1;n2=SIZE(eig)
+          IF (PRESENT(n_start)) n1=n_start
+          IF (PRESENT(n_end)) n2=n_end
+          eig(:n2-n1+1)=tmp_real(n1:n2)
+       END IF
+       IF (PRESENT(w_iks)) w_iks=tmp_real(d%size_eig/2+1:d%size_eig/2+size(w_iks))
        DEALLOCATE(tmp_real)
     ENDIF
 
@@ -372,14 +375,14 @@ CONTAINS
   END SUBROUTINE read_eig
 
   SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk3,wk, &
-       eig,el,ello,evac,                     &
+       eig,w_iks,el,ello,evac,                     &
        nlotot,kveclo,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
     INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
-    REAL,    INTENT(IN),OPTIONAL :: bk3(3),eig(:),el(:,:)
+    REAL,    INTENT(IN),OPTIONAL :: bk3(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
     TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
 
@@ -440,18 +443,21 @@ CONTAINS
        CALL MPI_WIN_UNLOCK(pe,d%real_handle,e)
        DEALLOCATE(tmp_real)
     ENDIF
-    IF (PRESENT(eig)) THEN
+    IF (PRESENT(eig).OR.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
        tmp_real=1E99
-       n1=1;n3=1
-       IF (PRESENT(n_rank)) n1=n_rank+1
-       IF (PRESENT(n_size)) n3=n_size
-       n2=SIZE(eig)*n3+n1-1
-       nn=1
-       DO n=n1,min(n2,d%size_eig),n3
-         tmp_real(n)=eig(nn)
-         nn=nn+1
-       ENDDO
+       if (PRESENT(EIG)) THEN
+          n1=1;n3=1
+          IF (PRESENT(n_rank)) n1=n_rank+1
+          IF (PRESENT(n_size)) n3=n_size
+          n2=SIZE(eig)*n3+n1-1
+          nn=1
+          DO n=n1,min(n2,d%size_eig),n3
+             tmp_real(n)=eig(nn)
+             nn=nn+1
+          ENDDO
+       END if
+       IF (PRESENT(w_iks)) tmp_real(d%size_eig/2+1:d%size_eig/2+size(w_iks))=w_iks
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
        IF (n3.ne.1) THEN
           CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)

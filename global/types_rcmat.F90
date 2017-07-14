@@ -12,6 +12,8 @@ module m_types_rcmat
      PROCEDURE        :: multiply=>t_mat_multiply
      PROCEDURE        :: transpose=>t_mat_transpose
      PROCEDURE        :: from_packed=>t_mat_from_packed
+     PROCEDURE        :: inverse =>t_mat_inverse
+     PROCEDURE        :: to_packed=>t_mat_to_packed
    END type t_mat
 
  CONTAINS
@@ -33,7 +35,9 @@ module m_types_rcmat
     
     IF (mat%l_real) THEN
        ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2),STAT=err)
+       ALLOCATE(mat%data_c(0,0))
     ELSE
+       ALLOCATE(mat%data_r(0,0))
        ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2),STAT=err)
     ENDIF
 
@@ -86,7 +90,7 @@ module m_types_rcmat
     end IF
   end SUBROUTINE t_mat_transpose
 
-  SUBROUTINE t_mat_from_packed(mat1,matsize,l_real,packed_r,packed_c)
+  SUBROUTINE t_mat_from_packed(mat1,l_real,matsize,packed_r,packed_c)
     CLASS(t_mat),INTENT(INOUT)       :: mat1
     INTEGER,INTENT(IN)               :: matsize
     LOGICAL,INTENT(IN)               :: l_real
@@ -94,17 +98,68 @@ module m_types_rcmat
     COMPLEX,INTENT(IN)               :: packed_c(:)
 
     INTEGER:: n,nn,i
-    call mat1%alloc(l_real,matsize)
+    call mat1%alloc(l_real,matsize,matsize)
     i=1
     DO n=1,matsize
        DO nn=1,n
           if (l_real) THEN
              mat1%data_r(n,nn)=packed_r(i)
+             mat1%data_r(nn,n)=packed_r(i)
           else
-             mat1%data_c(n,nn)=packed_c(i)
+             mat1%data_c(n,nn)=conjg(packed_c(i))
+             mat1%data_c(nn,n)=packed_c(i)
           end if
           i=i+1
        end DO
     end DO
   end SUBROUTINE t_mat_from_packed
+
+  function t_mat_to_packed(mat)result(packed)
+    CLASS(t_mat),INTENT(IN)       :: mat
+    COMPLEX                       :: packed(mat%matsize1*(mat%matsize1+1)/2)
+    integer :: n,nn,i
+    real,parameter :: tol=1e-5
+    if (mat%matsize1.ne.mat%matsize2) call judft_error("Could not pack no-square matrix",hint='This is a BUG, please report')
+    i=1
+    DO n=1,mat%matsize1
+       DO nn=1,n
+          if (mat%l_real) THEN
+             packed(i)=(mat%data_r(n,nn)+mat%data_r(nn,n))/2.
+             if (abs(mat%data_r(n,nn)-mat%data_r(nn,n))>tol) call judft_warn("Large unsymmetry in matrix packing")
+          else
+             packed(i)=(conjg(mat%data_c(n,nn))+mat%data_c(nn,n))/2.
+             if (abs(conjg(mat%data_c(n,nn))-mat%data_c(nn,n))>tol) call judft_warn("Large unsymmetry in matrix packing")
+          endif
+          i=i+1
+       end DO
+    end DO
+  end function t_mat_to_packed
+
+  subroutine t_mat_inverse(mat)
+    implicit none
+    CLASS(t_mat),INTENT(INOUT)       :: mat
+    integer                :: info
+    real, allocatable      :: work_r(:)
+    integer, allocatable   :: ipiv(:)
+    complex,allocatable    :: work_c(:)
+    
+    
+    if (mat%matsize1.ne.mat%matsize2) call judft_error("Can only invert square matrices",hint="This is a BUG in FLEUR, please report")
+    ALLOCATE(ipiv(mat%matsize1))
+
+    if (mat%l_real) THEN
+       ALLOCATE(work_r(mat%matsize1))
+       call dgetrf(mat%matsize1,mat%matsize1,mat%data_r,size(mat%data_r,1),ipiv,info)
+       if(info.ne.0) call judft_error("Failed to invert matrix: dpotrf failed.")
+       call dgetri(mat%matsize1,mat%data_r,size(mat%data_r,1),ipiv,work_r,size(work_r),info)
+       if(info.ne.0) call judft_error("Failed to invert matrix: dpotrf failed.")
+    else
+       ALLOCATE(work_c(mat%matsize1))
+       call zgetrf(mat%matsize1,mat%matsize1,mat%data_c,size(mat%data_c,1),ipiv,info)
+       if(info.ne.0) call judft_error("Failed to invert matrix: dpotrf failed.")
+       call zgetri(mat%matsize1,mat%data_c,size(mat%data_c,1),ipiv,work_c,size(work_c),info)
+       if(info.ne.0) call judft_error("Failed to invert matrix: dpotrf failed.")
+    end if
+  end subroutine t_mat_inverse
+     
 end module m_types_rcmat

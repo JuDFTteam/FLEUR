@@ -257,14 +257,14 @@
               DO i = 1,nbands
                  if (l_real) THEN
                 cmt_out(i,lm1:lm2:nn,iatom1) = cdum * matmul( cmt(i,lm1:lm2:nn,iatom),&
-     &                             sym%d_wgn(-l:l,-l:l,l,iop)   )
+     &                             hybrid%d_wgn2(-l:l,-l:l,l,iop)   )
              else
                 IF( trs ) THEN
                   cmthlp(:2*l+1) = conjg ( cmt(i,lm1:lm2:nn,iatom) )
                 ELSE
                   cmthlp(:2*l+1) =         cmt(i,lm1:lm2:nn,iatom)
                 END IF
-                cmt_out(i,lm1:lm2:nn,iatom1) = cdum * matmul(cmthlp(:2*l+1),sym%d_wgn(-l:l,-l:l,l,iop))
+                cmt_out(i,lm1:lm2:nn,iatom1) = cdum * matmul(cmthlp(:2*l+1),hybrid%d_wgn2(-l:l,-l:l,l,iop))
              endif
 
 
@@ -631,7 +631,7 @@
         trans  = sym%tau(:,iop)
 
         dwgn (-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm) &
-             = sym%d_wgn(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm,inviop)
+             = hybrid%d_wgn2(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm,inviop)
 
 
       ELSE
@@ -642,7 +642,7 @@
         trans  = sym%tau(:,iiop)
 
         dwgn (-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm)&
-             = conjg( sym%d_wgn(-maxlcutm:maxlcutm, -maxlcutm:maxlcutm, 0:maxlcutm,inviop))
+             = conjg( hybrid%d_wgn2(-maxlcutm:maxlcutm, -maxlcutm:maxlcutm, 0:maxlcutm,inviop))
 
       END IF
 
@@ -1129,7 +1129,7 @@
 
       DO l = 0,maxlcutm
         dwgn(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l) =&
-             transpose(sym%d_wgn(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l,isym))
+             transpose(hybrid%d_wgn2(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l,isym))
       END DO
 
       rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
@@ -1577,7 +1577,7 @@
 
       DO l = 0,maxlcutm
         dwgn(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l) =&
-             transpose(sym%d_wgn(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l,isym))
+             transpose(hybrid%d_wgn2(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l,isym))
       END DO
 
 

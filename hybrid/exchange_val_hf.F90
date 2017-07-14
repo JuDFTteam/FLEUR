@@ -44,11 +44,8 @@
 !     converges well with q0. (Should be the default.)
       MODULE m_exchange_valence_hf
 
-
-#define ALGORITHM 3
-#define zero_order .false.
-#define ibs_corr   .false.
-#define maxmem      600
+        LOGICAL,PARAMETER:: zero_order=.false.,ibs_corr=.false.
+        INTEGER,PARAMETER:: maxmem=600
 
       CONTAINS
 
@@ -63,7 +60,6 @@
       USE m_wrapper
       USE m_constants   
       USE m_trafo
-      USE m_util          ,ONLY: cerf
       USE m_wavefproducts
       USE m_olap
       USE m_spmvec
@@ -118,38 +114,26 @@
       INTEGER                 ::  i,ic,ix,iy,iz
       INTEGER                 ::  irecl_coulomb,irecl_coulomb1
       INTEGER                 ::  j
-      INTEGER                 :: m1,m2
+      INTEGER                 ::  m1,m2
       INTEGER                 ::  n,n1,n2,nn,nn2
       INTEGER                 ::  nkqpt
       INTEGER                 ::  npot
       INTEGER                 ::  ok
       INTEGER                 ::  psize
-      INTEGER                 ::  iqptmin,iqptmax
-#ifdef CPP_INVERSION
-      INTEGER                 ::  bytes = 8
-#else
-      INTEGER                 ::  bytes = 16
-#endif
-      REAL                    :: svol
-      REAL                    ::  rws,rrad,rdum
-      REAL                    ::  k0,knorm,knorm2
-      REAL                    ::  time1,time2,time3
-      REAL                    ::  constant1,constant2,constant3
-      REAL                    ::  time_mt,time_ir,vol
-      REAL                    ::  expo
+      REAL                    ::  rdum
+      REAL                    ::  k0
+     
       REAL , SAVE             ::  divergence
 
       COMPLEX                 ::  cdum,cdum1,cdum2 
       COMPLEX                 ::  exch0
-
-      LOGICAL                 ::  found
+ 
       LOGICAL, SAVE           ::  initialize = .true.
 
 !     - local arrays -
       INTEGER                 ::  kcorner(3,8) = reshape((/ 0,0,0, 1,0,0, 0,1,0, 0,0,1,&
                                              1,1,0, 1,0,1, 0,1,1, 1,1,1 /), (/3,8/) )
-      REAL                    ::  k(3),kv1(3),kv2(3),kv3(3),kvec(3)
-
+   
       COMPLEX,ALLOCATABLE     ::  phase_vv(:,:)
       COMPLEX                 ::  exchcorrect(kpts%nkptf)
       COMPLEX                 ::  dcprod(hybdat%nbands(nk),hybdat%nbands(nk),3) 
@@ -163,131 +147,64 @@
       COMPLEX                 ::  olap_ibsc(3,3,mnobd,mnobd)
 #if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
       REAL                    ::  coulomb_mt1(hybrid%maxindxm1-1,hybrid%maxindxm1-1, 0:hybrid%maxlcutm1,atoms%ntype)       
-#ifdef CPP_INVERSION
-      REAL                    ::  coulomb_mt2(hybrid%maxindxm1-1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat)
-      REAL                    ::  coulomb_mt3(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
-#else
-      COMPLEX                 ::  coulomb_mt2(hybrid%maxindxm1-1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat)
-      COMPLEX                 ::  coulomb_mt3(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
-#endif
+      REAL                    ::  coulomb_mt2_r(hybrid%maxindxm1-1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat)
+      REAL                    ::  coulomb_mt3_r(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
+      COMPLEX                 ::  coulomb_mt2_c(hybrid%maxindxm1-1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat)
+      COMPLEX                 ::  coulomb_mt3_c(hybrid%maxindxm1-1,atoms%nat,atoms%nat)
 
 #else
 
-#ifdef CPP_INVERSION
-      REAL                    ::  coulomb(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2)
-#else
-      COMPLEX                 ::  coulomb(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2)
-#endif 
+      REAL                    ::  coulomb_r(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2)
+      COMPLEX                 ::  coulomb_c(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2)
 
 #endif
 
-#if ( defined(CPP_INVERSION) )
-      REAL   ,ALLOCATABLE     ::  cprod_vv(:,:,:),cprod_cv(:,:,:), carr3_vv(:,:,:),carr3_cv(:,:,:)
-      REAL                    ::  carr1_v(hybrid%maxbasm1),carr1_c(hybrid%maxbasm1)
+      REAL   ,ALLOCATABLE     ::  cprod_vv_r(:,:,:),cprod_cv_r(:,:,:), carr3_vv_r(:,:,:),carr3_cv_r(:,:,:)
+      REAL                    ::  carr1_v_r(hybrid%maxbasm1),carr1_c_r(hybrid%maxbasm1)
 #ifdef CPP_IRCOULOMBAPPROX
-      REAL                    ::  coulomb_mtir((hybrid%maxlcutm1+1)**2* , (hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm) )
+      REAL                    ::  coulomb_mtir_r((hybrid%maxlcutm1+1)**2* , (hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm) )
 #else
-      REAL                    ::  coulomb_mtir(((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm)+1)/2 )
+      REAL                    ::  coulomb_mtir_r(((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm)+1)/2 )
 #endif
-
-#else
-      COMPLEX,ALLOCATABLE     ::  cprod_vv(:,:,:),cprod_cv(:,:,:), carr3_vv(:,:,:),carr3_cv(:,:,:)
-      COMPLEX                 ::  carr1_v(hybrid%maxbasm1),carr1_c(hybrid%maxbasm1)
+      COMPLEX,ALLOCATABLE     ::  cprod_vv_c(:,:,:),cprod_cv_c(:,:,:), carr3_vv_c(:,:,:),carr3_cv_c(:,:,:)
+      COMPLEX                 ::  carr1_v_c(hybrid%maxbasm1),carr1_c_c(hybrid%maxbasm1)
 
 #ifdef CPP_IRCOULOMBAPPROX
-      COMPLEX                 ::  coulomb_mtir((hybrid%maxlcutm1+1)**2* , (hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm) )
+      COMPLEX                 ::  coulomb_mtir_c((hybrid%maxlcutm1+1)**2*atoms%nat , (hybrid%maxlcutm1+1)**2*atoms%nat +maxval(hybrid%ngptm) )
 #else
-      COMPLEX                 ::  coulomb_mtir(((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2* +maxval(hybrid%ngptm)+1)/2 )
+      COMPLEX                 ::  coulomb_mtir_c(((hybrid%maxlcutm1+1)**2*atoms%nat +maxval(hybrid%ngptm))* ((hybrid%maxlcutm1+1)**2*atoms%nat +maxval(hybrid%ngptm)+1)/2 )
 #endif
 
-#endif
       LOGICAL                 ::  occup(dimension%neigd)
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER                 :: ierr,ierr2,length,rank
       CHARACTER(LEN=MPI_MAX_ERROR_STRING) :: errmsg
 #endif
-      time_mt = 0
-      time_ir = 0
-
-      vol  = cell%omtil
-      svol = sqrt(cell%omtil)
-
-      rws  = (3*cell%omtil/fpi_const)**(1.0/3)  ! Wigner-Seitz radius
-#if   ALGORITHM == 1
-      npot = 3                        ! for switching-off function 
-      k0   = hybrid%radshmin / 2             ! radius of largest sphere that fits inside the BZ
-#elif ALGORITHM == 3
+     
+     
       IF( initialize ) THEN !it .eq. 1 .and. nk .eq. 1) THEN
-!         CALL cpu_time(time1)
-        expo       = 5d-3
-        rrad       = sqrt(-log(5d-3)/expo)
-        cdum       = sqrt(expo)*rrad
-        divergence = vol / (tpi_const**2) * sqrt(pi_const/expo) * cerf(cdum)
-        rrad       = rrad**2
-        kv1        = cell%bmat(1,:)/kpts%nkpt3(1)
-        kv2        = cell%bmat(2,:)/kpts%nkpt3(2)
-        kv3        = cell%bmat(3,:)/kpts%nkpt3(3)
-        n          = 1
-        found      = .true.
-        DO WHILE(found)
-          found = .false.
-          DO ix = -n,n
-            DO iy = -(n-abs(ix)),n-abs(ix)
-              iz     = n - abs(ix) - abs(iy)
- 1            k(1)   = ix*kv1(1) + iy*kv2(1) + iz*kv3(1)
-              k(2)   = ix*kv1(2) + iy*kv2(2) + iz*kv3(2)
-              k(3)   = ix*kv1(3) + iy*kv2(3) + iz*kv3(3)
-              knorm2 = k(1)**2   + k(2)**2   + k(3)**2
-              IF(knorm2.lt.rrad) THEN
-                found      = .true.
-                divergence = divergence &
-                           - exp(-expo*knorm2)/knorm2 / kpts%nkptf
-              END IF
-              IF(iz.gt.0) THEN
-                iz = -iz
-                GOTO 1
-              END IF
-            END DO
-          END DO
-          n = n + 1
-        END DO
-!         CALL cpu_time(time2)
-!         WRITE(*,*) 'time for calculating periodic function',time2-time1
-        initialize = .false.
+         print *,divergence
+         print *,Cell%omtil,kpts%nkpt3,kpts%nkptf
+         call calc_divergence(cell,kpts,divergence)
+         initialize = .false.
       END IF
-#endif
-
+   
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-
-#ifdef CPP_INVERSION
       irecl_coulomb1 = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
-                    +    atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
-                    +    (hybrid%maxindxm1-1)*atoms%nat**2&
-                    +    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
-                    *    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *8
-#else
-      irecl_coulomb1 = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
-                     +   atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
-                     +   (hybrid%maxindxm1-1)*atoms%nat**2&
-                     +   ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
-                     *   ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *16
-#endif
+           +    atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
+           +    (hybrid%maxindxm1-1)*atoms%nat**2&
+           +    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
+           *    ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2) *8
+      if (.not.mat_ex%l_real) irecl_coulomb1=irecl_coulomb1*2 !complex size double of real
       OPEN(unit=676,file='coulomb1',form='unformatted',access='direct',&
            recl=irecl_coulomb1)
-
 #else
-
       !open direct acces file coulomb/cprod
-#ifdef CPP_INVERSION
       irecl_coulomb =  hybrid%maxbasm1*(hybrid%maxbasm1+1)*4 !(hybrid%maxbasm1*maxbasm1)* 8+hybrid%maxbasm1*8 + 8
-#else
-      irecl_coulomb =  hybrid%maxbasm1*(hybrid%maxbasm1+1)*8!(hybrid%maxbasm1*maxbasm1)*16+hybrid%maxbasm1*8 + 8
-#endif
-
+      if (.not.mat_ex%l_real) irecl_coulomb=irecl_coulomb*2 !complex size double of real
       OPEN(unit=677,file='coulomb',form='unformatted',access='direct',&
            recl=irecl_coulomb)
-
 #endif
 
       ! calculate valence-valence-valence-valence, core-valence-valence-valence
@@ -297,7 +214,11 @@
 
 
       ! determine package size loop over the occupied bands
-      rdum  = hybrid%maxbasm1*hybdat%nbands(nk)*bytes/1048576.
+      if (mat_ex%l_real) THEn
+         rdum  = hybrid%maxbasm1*hybdat%nbands(nk)*4/1048576.
+      else
+         rdum  = hybrid%maxbasm1*hybdat%nbands(nk)*4/1048576.
+      endif
       psize = 1
       DO iband = mnobd,1,-1
         ! ensure that the packages have equal size
@@ -313,81 +234,81 @@
       IF( psize .ne. mnobd ) THEN
         WRITE(6,'(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybrid%bands in packages', ' of the size',psize,' (cprod=',rdum*psize,'MB)'
       END IF
-
-      ALLOCATE( cprod_vv(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
-      IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
-      ALLOCATE( carr3_vv(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
-      IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
       ALLOCATE( phase_vv(psize,hybdat%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation phase'
-      cprod_vv = 0 ; carr3_vv = 0 ; phase_vv = 0
-
-      CALL cpu_time(time1) 
+      phase_vv=0
+      IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation phase'
+      if (mat_ex%l_real) THEN
+         ALLOCATE( cprod_vv_r(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
+         ALLOCATE( carr3_vv_r(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
+         cprod_vv_r = 0 ; carr3_vv_r = 0 
+      ELSE
+         ALLOCATE( cprod_vv_c(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
+         ALLOCATE( carr3_vv_c(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
+         cprod_vv_c = 0 ; carr3_vv_c = 0
+      endif
+         
       exch_vv = 0
 
-#     ifndef CPP_MPI
-        iqptmin = 1
-        iqptmax = nkpt_EIBZ
-#     else
-        ! read the limits for current k-point
-        CALL work_dist_nqpt_limits(nk,iqptmax,iqptmin)
-#     endif
-      DO ikpt = iqptmin,iqptmax
+      DO ikpt = 1,nkpt_EIBZ
         ikpt0 = pointer_EIBZ(ikpt)
 
-        n  = hybdat%nbasp + hybrid%ngptm(ikpt0)
+        n  = hybrid%nbasp + hybrid%ngptm(ikpt0)
         IF( hybdat%nbasm(ikpt0) .ne. n ) STOP 'error hybdat%nbasm'
         nn = n*(n+1)/2
 
         ! read in coulomb matrix from direct access file coulomb
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-        READ(676,rec=kpts%bkp(ikpt0)) coulomb_mt1,coulomb_mt2,&
-                                 coulomb_mt3,coulomb_mtir
+        if (mat_ex%l_real) THEN
+           READ(676,rec=kpts%bkp(ikpt0)) coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r
+        else
+           READ(676,rec=kpts%bkp(ikpt0)) coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c
+        end if
 #else
         READ(677,rec=kpts%bkp(ikpt0)) coulomb
 #endif
 
         IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-
-#ifndef CPP_INVERSION
-          IF( kpts%bksym(ikpt0) .gt. sym%nop ) THEN
-!             coulomb_mt1 = conjg(coulomb_mt1)
-            coulomb_mt2 = conjg(coulomb_mt2)
-            coulomb_mtir= conjg(coulomb_mtir)
+          IF( kpts%bksym(ikpt0) .gt. sym%nop.and..not.mat_ex%l_real ) THEN
+            coulomb_mt2_c = conjg(coulomb_mt2_c)
+            coulomb_mtir_c= conjg(coulomb_mtir_c)
           END IF
-#endif
 
 #else
 
-#ifndef CPP_INVERSION
+          if (.not.mat_ex%l_real) THEN
           IF( kpts%bksym(ikpt0) .gt. sym%nop ) coulomb = conjg(coulomb)
-#endif
+       endif
 
 #endif
         END IF
 
         DO ibando = 1,mnobd,psize
-#ifdef CPP_INVERSION
+        if (mat_ex%l_real) THEN
 
 #ifdef CPP_IRAPPROX
           CALL wavefproducts_inv(&
                          1,hybdat,dimension,jsp,atoms,&
                          lapw,obsolete,kpts,&
                          nk,ikpt0,mnobd,hybrid, parent,cell, sym,&
-                         time_mt,time_ir,nkqpt,cprod_vv)
+                         nkqpt,cprod_vv)
 #else
           CALL wavefproducts_inv5(&
-                         1,hybdat,ibando,ibando+psize-1,&
+                         1,hybdat%nbands(nk),ibando,ibando+psize-1,&
                          dimension,input,jsp,atoms,&
-                         lapw,obsolete,kpts,&
-                         nk,ikpt0,mnobd,hybrid,&
-                         parent,cell, sym,&
-                         noco,noco,&
-                         time_mt,time_ir,nkqpt,cprod_vv)
+                         lapw,kpts,&
+                         nk,ikpt0,hybdat,mnobd,hybrid,&
+                         parent,cell,hybrid%nbasp,sym,&
+                         noco,&
+                         nkqpt,cprod_vv_r)
 #endif
 
-#else
+       else
 #ifdef CPP_IRAPPROX
           CALL wavefproducts_noinv(&
                          1,hybdat,nk,ikpt0,dimension,jsp,&
@@ -405,11 +326,11 @@
                          kpts,&
                          mnobd,&
                          lapw,sym, &
-                         hybdat%nbasm(nk),noco,&
-                         nkqpt,cprod_vv)
+                         hybrid%nbasp,noco,&
+                         nkqpt,cprod_vv_c)
 #endif
 
-#endif
+endif
 
           ! The sparse matrix technique is not feasible for the HSE
           ! functional. Thus, a dynamic adjustment is implemented
@@ -421,12 +342,13 @@
             iband1  = hybdat%nobd(nkqpt)
             exch_vv = exch_vv + dynamic_hse_adjustment(&
                        atoms%rmsh,atoms%rmt,atoms%dx,atoms%jri,atoms%jmtd,kpts%bkf(:,ikpt0),ikpt0,kpts%nkptf,&
-                       cell%bmat,vol,atoms%ntype,atoms%neq,atoms%nat,atoms%taual,hybrid%lcutm1,hybrid%maxlcutm1,&
+                       cell%bmat,cell%omtil,atoms%ntype,atoms%neq,atoms%nat,atoms%taual,hybrid%lcutm1,hybrid%maxlcutm1,&
                        hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptm,hybrid%ngptm(ikpt0),hybrid%pgptm(:,ikpt0),&
                        hybrid%gptmd,hybrid%basm1,hybdat%nbasm(ikpt0),iband1,hybdat%nbands(nk),nsest,&
                        ibando,psize,indx_sest,atoms%invsat,sym%invsatnr,mpi%irank,&
-                       cprod_vv(:hybdat%nbasm(ikpt0),:,:),&
-                       wl_iks(:iband1,nkqpt),n_q(ikpt))
+                       cprod_vv_r(:hybdat%nbasm(ikpt0),:,:),&
+                       cprod_vv_c(:hybdat%nbasm(ikpt0),:,:),&
+                       mat_ex%l_real,wl_iks(:iband1,nkqpt),n_q(ikpt))
           END IF
 #endif
 
@@ -434,6 +356,7 @@
           ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
           ! from IBZ to current k-point
           IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
+             if (mat_ex%l_real) THEN
              STOP "INTERFACE to bra_trafo2"
           !  CALL bra_trafo2(&
           !      carr3_vv(:nbasm(ikpt0),:,:),cprod_vv(:nbasm(ikpt0),:,:),&
@@ -444,7 +367,20 @@
           !      nbasp,&
           !      phase_vv)
 
-            cprod_vv(:hybdat%nbasm(ikpt0),:,:) = carr3_vv(:hybdat%nbasm(ikpt0),:,:)
+             cprod_vv_r(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_r(:hybdat%nbasm(ikpt0),:,:)
+          else
+             STOP "INTERFACE to bra_trafo2"
+          !  CALL bra_trafo2(&
+          !      carr3_vv(:nbasm(ikpt0),:,:),cprod_vv(:nbasm(ikpt0),:,:),&
+          !      nbasm(ikpt0),psize,nbands(nk),&
+          !      kpts(ikpt0),ikpt0(ikpt0),sym,&
+          !      hybrid,cell,maxlcutm1,atoms,&
+          !      lcutm,nindxm,maxindxm1,nw,obsolete,&
+          !      nbasp,&
+          !      phase_vv)
+
+             cprod_vv_c(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_c(:hybdat%nbasm(ikpt0),:,:)
+          endif
           ELSE
             phase_vv(:,:) = (1d0,0d0)
           END IF
@@ -458,25 +394,44 @@
                     * conjg(phase_vv(iband,n1))/n_q(ikpt)
 
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-              carr1_v(:n) = 0 
-              CALL spmvec(atoms,hybrid,&
-                          hybdat,ikpt0,kpts,&
-                          cell,&
-                          coulomb_mt1,coulomb_mt2,coulomb_mt3,&
-                          coulomb_mtir,cprod_vv(:n,iband,n1),&
-                          carr1_v(:n))
+              if (mat_ex%l_real) THEN
+                 carr1_v_r(:n) = 0 
+                 CALL spmvec_invs(atoms,hybrid,&
+                      hybdat,ikpt0,kpts,&
+                      cell,&
+                      coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,&
+                      coulomb_mtir_r,cprod_vv_r(:n,iband,n1),&
+                      carr1_v_r(:n))
+              ELSE
+                 carr1_v_c(:n) = 0 
+                 CALL spmvec_noinvs(atoms,hybrid,&
+                      hybdat,ikpt0,kpts,&
+                      cell,&
+                      coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,&
+                      coulomb_mtir_c,cprod_vv_c(:n,iband,n1),&
+                      carr1_v_c(:n))
+              endif
 #else
-              carr1_v(:n) = matvec( coulomb(:nn),cprod_vv(:n,iband,n1) )
+              if (mat_ex%l_real) THEN
+                 carr1_v_r(:n) = matvec( coulomb_r(:nn),cprod_vv_r(:n,iband,n1) )
+              ELSE
+                 carr1_v_r(:n) = matvec( coulomb_c(:nn),cprod_vv_c(:n,iband,n1) )
+              endif
 #endif
 
-              DO n2=1,nsest(n1)!n1
-                nn2 = indx_sest(n2,n1)
-                exch_vv(nn2,n1) = exch_vv(nn2,n1) &
-                                + cdum*phase_vv(iband,nn2)&
-                                *dotprod( carr1_v(:n), &
-                                          cprod_vv(:n,iband,nn2) )
-
-              END DO !n2
+              if (mat_ex%l_real) THEN
+                 DO n2=1,nsest(n1)!n1
+                    nn2 = indx_sest(n2,n1)
+                    exch_vv(nn2,n1) = exch_vv(nn2,n1) + cdum*phase_vv(iband,nn2)&
+                         *dotprod( carr1_v_r(:n), cprod_vv_r(:n,iband,nn2) )
+                 END DO !n2
+              else
+                 DO n2=1,nsest(n1)!n1
+                    nn2 = indx_sest(n2,n1)
+                    exch_vv(nn2,n1) = exch_vv(nn2,n1) + cdum*phase_vv(iband,nn2)&
+                         *dotprod( carr1_v_c(:n), cprod_vv_c(:n,iband,nn2) )
+                 END DO !n2
+              end if
             END DO
           END DO  !n1
         END DO !ibando
@@ -489,47 +444,11 @@
       CLOSE(677)
 #endif
 
-!
-!     Send data from all processes to master of the subgroup
-!
-#ifdef CPP_MPI
-      IF ( irank2 == 0 ) THEN
-        ierr = 0
-        DO rank = 1, isize2-1
-          buf_vv = 0
-          CALL MPI_RECV(buf_vv,hybdat*nbands(nk),MPI_COMPLEX16,rank,&
-                        TAG_SNDRCV_EXCH_VV,comm,MPI_STATUS_IGNORE,ierr)
-          exch_vv = exch_vv + buf_vv
-        END DO
-      ELSE
-        CALL MPI_BSEND(exch_vv,hybdat*nbands(nk),MPI_COMPLEX16,0,&
-                       TAG_SNDRCV_EXCH_VV,comm,ierr)
-      END IF
-      IF ( ierr /= 0 ) THEN
-        CALL MPI_ERROR_STRING( ierr, errmsg, length, ierr2 )
-        WRITE(*,*) errmsg
-        STOP
-      END IF
-      CALL cpu_time(time2)
-      IF ( irank2 /= 0 ) RETURN
-#endif
-
-      CALL cpu_time(time3)
-
-      !CALL outtime('             time for calculating cprod(IR):', time_ir,mpi,mpi)
-      !CALL outtime('             time for calculating cprod(MT):', time_mt,mpi,mpi)
-      !CALL outtime('          time for calculating cprod:', time_ir+time_mt,mpi,mpi)
-
-      !CALL outtime('          time for all k-points except G point:', time3-time1-time_ir-time_mt,mpi,mpi)
-
 
       !
       ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
       !
-      constant1 =  fpi_const/vol
-      constant2 =  fpi_const/sqrt(vol)
-      constant3 =  fpi_const/3
-
+     
       ! valence-valence-valence-valence exchange
 
       IF ( xcpot%icorr .NE. icorr_hse .AND. xcpot%icorr   .NE. icorr_vhse ) THEN ! no gamma point correction needed for HSE functional
@@ -566,8 +485,8 @@
           END IF
 
         END IF
-
-
+        
+        !This should be done with w_iks I guess!TODO
         occup = .false.
         DO i=1,hybdat%ne_eig(nk)
           IF ( results%ef  .ge. eig_irr(i,nk) ) THEN
@@ -607,9 +526,9 @@
 
                   ! ibs correction
                   IF( ibs_corr ) THEN 
-                    hessian(i,j) = hessian(i,j) - olap_ibsc(i,j,n1,nn2)/vol
+                    hessian(i,j) = hessian(i,j) - olap_ibsc(i,j,n1,nn2)/cell%omtil
                     DO iband = 1,hybdat%nbands(nk)
-                      hessian(i,j) = hessian(i,j) + conjg(proj_ibsc(i,nn2,iband)) * proj_ibsc(j,n1,iband)/vol
+                      hessian(i,j) = hessian(i,j) + conjg(proj_ibsc(i,nn2,iband)) * proj_ibsc(j,n1,iband)/cell%omtil
                     END DO
                   END IF
 
@@ -626,56 +545,22 @@
                 END DO
 
               END IF
-
-              exchcorrect(1) = constant3 * (hessian(1,1)+hessian(2,2)+hessian(3,3))
+ 
+              exchcorrect(1) = fpi_const/3 * (hessian(1,1)+hessian(2,2)+hessian(3,3))
               exch0          = exchcorrect(1)/kpts%nkptf
             END IF
 
 
             ! tail correction/contribution from all other k-points (it  goes into exchcorrect )
-#if ALGORITHM == 1
-            DO ikpt = 2,kpts%nkptf
-
-              ! Calculate distances from the eight reciprocal unit-cell corners
-              knorm = k0
-              DO i = 1,8
-                rdum=sqrt(sum(matmul(kpts%bkf(:,ikpt)-kcorner(:,i),cell%bmat)**2))
-                IF(rdum.lt.k0) THEN
-                  knorm = rdum
-                  kvec  = ( kpts%bkf(:,ikpt) - kcorner(:,i) ) / knorm
-                END IF
-              END DO
-
-              ! The tail of the divergent term goes into exchcorrect.
-              IF(knorm.lt.k0) THEN
-                rdum = 1 - (knorm/k0)**npot * (npot+1-npot*knorm/k0)
-
-                IF ( (n1 .eq. nn2) .and.  occup(n1)  ) THEN 
-                  exchcorrect(ikpt) = - rdum * constant1 / knorm**2 
-                END IF
-
-                ! the contribution in the case unoccupied/occupied band proportional to 1/k
-                ! vanishes after summing up over all k-points
-
-              END IF
-
-            END DO
-#endif
 
             ! Analytic contribution
 
             cdum2 = 0
-#if   ALGORITHM == 1
-            IF ( (n1 .eq. nn2) .and. occup(n1) ) THEN
-              cdum2 = 2*k0/pi_const * npot/(npot+2) + sum(exchcorrect(2:))/kpts%nkptf ! the tail is subtracted here
-            END IF
-#elif ALGORITHM == 3
             !multiply divergent contribution with occupation number;
             !this only affects metals 
             IF ( n1 .eq. nn2 ) THEN
-               cdum2 = fpi_const/vol * divergence * wl_iks(n1,nk)*kpts%nkptf
+               cdum2 = fpi_const/cell%omtil * divergence * wl_iks(n1,nk)*kpts%nkptf
             END IF
-#endif
 
             ! due to the symmetrization afterwards the factor 1/n_q(1) must be added
 
@@ -690,15 +575,61 @@
       END IF ! xcpot%icorr .ne. icorr_hse
 
 
-#ifdef CPP_INVERSION
-      IF(any( abs(aimag(exch_vv)) .gt. 1E-08)) STOP 'exchange: unusally large imaginary part of exch_vv'
-#endif
+      if (.not.mat_ex%l_real) THEN
+         IF(any( abs(aimag(exch_vv)) .gt. 1E-08)) CALL judft_warn('unusally large imaginary part of exch_vv',calledby='exchange_val_hf.F90')
+      ENDIF
 
       ! write exch_vv in mat_ex
       call mat_ex%alloc(matsize1=hybdat%nbands(nk))
-      mat_ex%data_c=exch_vv(n2,n1)
+      mat_ex%data_c=exch_vv
      
       END SUBROUTINE exchange_valence_hf
 
-
-      END MODULE m_exchange_valence_hf
+      subroutine calc_divergence(cell,kpts,divergence)
+        USE m_util          ,ONLY: cerf
+        use m_types
+        use m_constants
+        implicit none
+        TYPE(t_cell),INTENT(IN) :: cell
+        TYPE(t_kpts),INTENT(IN) :: kpts
+        REAL,INTENT(OUT)        :: divergence
+        
+        INTEGER :: ix,iy,iz,sign,n
+        logical :: found
+        REAL    :: expo,rrad,k(3),kv1(3),kv2(3),kv3(3),knorm2
+        COMPLEX :: cdum
+        
+        expo       = 5d-3
+        rrad       = sqrt(-log(5d-3)/expo)
+        cdum       = sqrt(expo)*rrad
+        divergence = cell%omtil / (tpi_const**2) * sqrt(pi_const/expo) * cerf(cdum)
+        rrad       = rrad**2
+        kv1        = cell%bmat(1,:)/kpts%nkpt3(1)
+        kv2        = cell%bmat(2,:)/kpts%nkpt3(2)
+        kv3        = cell%bmat(3,:)/kpts%nkpt3(3)
+        n          = 1
+        found      = .true.
+        DO WHILE(found)
+           found = .false.
+           DO ix = -n,n
+              DO iy = -(n-abs(ix)),n-abs(ix)
+                 iz     = n - abs(ix) - abs(iy)
+                 DO sign=-1,1,2
+                    iz=sign*iz
+                    k(1)   = ix*kv1(1) + iy*kv2(1) + iz*kv3(1)
+                    k(2)   = ix*kv1(2) + iy*kv2(2) + iz*kv3(2)
+                    k(3)   = ix*kv1(3) + iy*kv2(3) + iz*kv3(3)
+                    knorm2 = k(1)**2   + k(2)**2   + k(3)**2
+                    IF(knorm2.lt.rrad) THEN
+                       found      = .true.
+                       divergence = divergence - exp(-expo*knorm2)/knorm2 / kpts%nkptf
+                    END IF
+                    IF(iz==0) exit
+                 enddo
+                 
+              END DO
+           END DO
+           n = n + 1
+        END DO
+      end subroutine calc_divergence
+    END MODULE m_exchange_valence_hf

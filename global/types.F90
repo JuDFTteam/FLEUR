@@ -401,6 +401,7 @@ MODULE m_types
      INTEGER               ::  lexp
      INTEGER               ::  bands1 !Only read in
      INTEGER               ::  bands2 !Only read in
+     INTEGER               :: nbasp
      INTEGER               ::  maxlcutm1
      INTEGER               ::  maxindxm1
      INTEGER               ::  maxbasm1
@@ -452,7 +453,6 @@ MODULE m_types
      INTEGER :: l1,l2,n1,n2
   END TYPE prodtype
   TYPE t_hybdat
-     INTEGER              :: nbasp
      INTEGER              :: lmaxcd,maxindxc
      REAL,  ALLOCATABLE   ::  gridf(:,:)                                    !alloc in util.F
      INTEGER , ALLOCATABLE::  nindxc(:,:)                                   !alloc in eigen_HF_init

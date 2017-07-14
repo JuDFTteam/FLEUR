@@ -20,9 +20,9 @@ module m_eig66_data
     TYPE,EXTENDS(t_data):: t_data_DA
         REAL,   ALLOCATABLE:: el_s(:,:),ello_s(:,:),evac_s(:)
         INTEGER,ALLOCATABLE:: kvec_s(:,:),kveclo_s(:)
-        INTEGER            :: recl_bas=0,recl_vec=0,recl_dos
+        INTEGER            :: recl_bas=0,recl_vec=0,recl_dos,recl_wiks
         CHARACTER(LEN=20)  :: fname="eig"
-        INTEGER            :: file_io_id_bas,file_io_id_vec,file_io_id_dos
+        INTEGER            :: file_io_id_bas,file_io_id_vec,file_io_id_dos,file_io_id_wiks
     END TYPE
 
     TYPE,extends(t_data):: t_data_MPI
@@ -48,7 +48,7 @@ module m_eig66_data
          INTEGER(HID_T) :: esetid,evacsetid,ellosetid
          INTEGER(HID_T) :: bksetid,wksetid,ksetid
          INTEGER(HID_T) :: neigsetid,nvsetid,nmatsetid
-         INTEGER(HID_T) :: energysetid,evsetid
+         INTEGER(HID_T) :: energysetid,wikssetid,evsetid
          INTEGER(HID_T) :: qalsetid,qvacsetid,qissetid,qvlaysetid
          INTEGER(HID_T) :: qstarssetid,ksymsetid,jsymsetid,mcdsetid
          INTEGER(HID_T) :: qintslsetid,qmtslsetid,qmtpsetid,orbcompsetid
@@ -59,7 +59,7 @@ module m_eig66_data
    TYPE,EXTENDS(t_data):: t_data_mem
         INTEGER,ALLOCATABLE :: eig_int(:,:)
         REAL,ALLOCATABLE    :: eig_real(:,:)
-        REAL,ALLOCATABLE    :: eig_eig(:,:)
+        REAL,ALLOCATABLE    :: eig_eig(:,:,:)
         REAL,ALLOCATABLE    :: eig_vecr(:,:)
         COMPLEX,ALLOCATABLE :: eig_vecc(:,:)
         REAL,ALLOCATABLE    :: qal(:,:,:,:)

@@ -50,17 +50,12 @@
       INTEGER                 ::  q,idum,m
       INTEGER                 ::  nbasm_ir
       INTEGER                 ::  nbasmmt,nred
-      INTEGER                 ::  irecl_cmt,irecl_z,irecl_cprod
       INTEGER                 ::  ok
       REAL                    ::  rdum,svol,s2,pi
       REAL                    ::  mtthr= 0
       COMPLEX                 ::  cdum,cdum0
       COMPLEX,PARAMETER       ::  img = (0d0,1d0)  
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX                 ::  dum1,dum2
-#else
-      REAL                    ::  dum1,dum2
-#endif
+
       LOGICAL                 ::  offdiag      
 !      - local arrays -
       INTEGER                 ::  iarr(lapw%nv(jsp))
@@ -76,15 +71,14 @@
       COMPLEX                 ::  carr(1:mnobd,bandf-bandi+1)
 !      COMPLEX                 :: chelp(maxbasm,mnobd,bandf-bandi+1,nkpt_EIBZ)
       COMPLEX                 ::  cexp
-      COMPLEX                 ::  z_nk  (dimension%nbasfcn,dimension%neigd)
-      COMPLEX                 ::  z_kqpt(0:dimension%nbasfcn,dimension%neigd)
       COMPLEX                 ::  z_help(lapw%nv(jsp))
       COMPLEX                 ::  cmt   (dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX,ALLOCATABLE     ::  cprod_ir(:,:,:)
-
+      TYPE(t_mat)             :: z_nk,z_kqpt
       CALL timestart("wavefproducts_noinv")
-   
+      call z_nk%alloc(.false.,dimension%nbasfcn,dimension%neigd)
+      call z_kqpt%alloc(.false.,dimension%nbasfcn,dimension%neigd)
       !
       ! preparations
       !
@@ -132,22 +126,11 @@
       cprod = 0
       
       ! read in z at current k-point nk    
-      irecl_z = dimension%nbasfcn*dimension%neigd*16
-      OPEN(unit=778,file='z',form='unformatted',access='direct', recl=irecl_z)
-      READ(778,rec=nk) z_nk
 
+      call read_z(z_nk,nk)
+      
       ! read in cmt coefficients from direct access file cmt
       call read_cmt(cmt_nk,nk)
-
-!       ! open file cprod
-!       irecl_cprod = maxbasm*mnobd*(bandf-bandi+1)*16
-!       OPEN(unit=779,file='cprod',form='unformatted',access='direct',recl=irecl_cprod)
-
-      
-      ! set z_kqpt(0,:) to zero, so that if gsum belongs not the set of
-      ! G-vectors around k+q, it sums up zero
-      z_kqpt = 0
-
       
         
       !
@@ -157,8 +140,8 @@
       CALL timestart("wavefproducts_noinv IR")
       
       ! read in z_kqpt
-      READ(778,rec=nkqpt) z_kqpt(1:,:)
-
+     
+      call read_z(z_kqpt,nkqpt)
 
       DO igpt = 1,hybrid%ngptm(iq)
         igptp = hybrid%pgptm(igpt,iq)
@@ -174,13 +157,14 @@
         END DO
 
         DO iband1 = 1, hybdat%nobd(nkqpt)
-
-          z_help(:) = z_kqpt(iarr(:),iband1)
+           where (iarr>0)
+              z_help(:) = z_kqpt%data_c(iarr(:),iband1)
+           elsewhere
+              z_help=0.0
+           end where
 
           DO iband = bandi,bandf
-
-            cprod_ir(iband,iband1,igpt) = 1/svol * dotprod( z_nk(:lapw%nv(jsp),iband),z_help )
-
+             cprod_ir(iband,iband1,igpt) = 1/svol * dotprod( z_nk%data_c(:lapw%nv(jsp),iband),z_help )
           END DO !iband
 
         END DO  !iband1
@@ -299,8 +283,6 @@
       END DO
       
 
-      CLOSE(778)
-
 
 
       END SUBROUTINE wavefproducts_noinv
@@ -345,7 +327,6 @@
 
 
       ! - local scalars -
-      INTEGER                 ::    irecl_z,irecl_cprod,irecl_cmt
       INTEGER                 ::    i,ikpt,ic,iband,iband1,igpt,igptp, ibando,iatom,iiatom,itype,ieq, ishift,ioffset,iatom1,iatom2
       INTEGER                 ::    l ,p,l1,m1,l2,m2,p1,p2,n,ok
       INTEGER                 ::    lm,lm1,lm2,lm_0,lm_00,lm1_0,lm2_0, lmp1,lmp2,lmp3,lmp4,lp1,lp2
@@ -373,8 +354,6 @@
       
       REAL,ALLOCATABLE        ::    cprod_ir(:,:,:)
 
-      REAL                    ::    z_nk  (dimension%nbasfcn,dimension%neigd)
-      REAL                    ::    z_kqpt(0:dimension%nbasfcn,dimension%neigd)
       REAL                    ::    z_help(lapw%nv(jsp))
 
 
@@ -388,9 +367,12 @@
       REAL                    ::    rarr(2,1:mnobd,bandf-bandi+1)
       COMPLEX                 ::    cmthlp(dimension%neigd),cmthlp1(dimension%neigd)
       COMPLEX                 ::    cexp(atoms%nat),cexp_nk(atoms%nat)
+      TYPE(t_mat)             :: z_nk,z_kqpt
 
       CALL timestart("wavefproducts_inv")
       CALL timestart("wavefproducts_inv IR")
+      call z_nk%alloc(.true.,dimension%nbasfcn,dimension%neigd)
+      call z_kqpt%alloc(.true.,dimension%nbasfcn,dimension%neigd)
       svol  = sqrt(cell%omtil)
       sr2   = sqrt(2d0)
       
@@ -423,20 +405,14 @@
 
       ! read in z at current k-point nk
 
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-      OPEN(unit=778,file='z',form='unformatted',access='direct', recl=irecl_z)
-      READ(778,rec=nk) z_nk
-
-      ! set z_kqpt(0,:) to zero, so that if gsum belongs not the set of
-      ! G-vectors around k+q, it sums up zero
-      z_kqpt = 0
-
+     
+      call read_z(z_nk,nk)
+      
+     
 
 
       ! read in z_kqpt
-      READ(778,rec=nkqpt) z_kqpt(1:,:)
-      CLOSE(778)
-
+      call read_z(z_kqpt,nkqpt)
       DO igpt = 1, hybrid%ngptm(iq)
         igptp = hybrid%pgptm(igpt,iq)
         ghelp = hybrid%gptm(:,igptp)- g_t(:)
@@ -451,13 +427,14 @@
         END DO
 
         DO iband1 = 1, hybdat%nobd(nkqpt)
-
-          z_help(:) = z_kqpt(iarr(:),iband1)
-
+           where (iarr>0)
+              z_help(:) = z_kqpt%data_r(iarr(:),iband1)
+           elsewhere
+              z_help=0.0
+           end where
           DO iband = bandi,bandf
-
-            cprod_ir(iband,iband1,igpt) = 1/svol * dotprod( z_nk(:lapw%nv(jsp),iband),z_help )
-
+              cprod_ir(iband,iband1,igpt) = 1/svol * dotprod( z_nk%data_r(:lapw%nv(jsp),iband),z_help )
+            
           END DO !iband
 
         END DO  !iband1
@@ -1301,7 +1278,6 @@
 
 
       ! - local scalars -
-      INTEGER                 ::    irecl_z,irecl_cprod,irecl_cmt
       INTEGER                 ::    i,ikpt,ic,iband,iband1,igpt,igptp,ig,ig2,ig1
       INTEGER                 ::    iatom,iiatom,itype,ieq,ishift
       INTEGER                 ::    ibando,iatom1,iatom2,ioffset
@@ -1320,20 +1296,17 @@
       COMPLEX                 ::    cdum,cconst,cfac
       COMPLEX,PARAMETER       ::    img=(0d0,1d0)
       LOGICAL                 ::    offdiag
-
+      TYPE(t_lapw)            ::    lapw_nkqpt
+      
       ! - local arrays -
       INTEGER                 ::    g(3),g_t(3)
-      INTEGER                 ::    k1_nkqpt(dimension%nvd,dimension%jspd), k2_nkqpt(dimension%nvd,dimension%jspd), k3_nkqpt(dimension%nvd,dimension%jspd)
       INTEGER                 ::    lmstart (0:atoms%lmaxd,atoms%ntype)
       INTEGER                 ::    matind(dimension%nbasfcn,2)
-      INTEGER                 ::    nv_nkqpt(dimension%jspd)
       INTEGER, ALLOCATABLE    ::    gpt0(:,:)
       INTEGER, ALLOCATABLE    ::    pointer(:,:,:)
 
       REAL                    ::    kqpt(3),kqpthlp(3)
       REAL                    ::    bkpt(3)
-      REAL                    ::    z_nk  (dimension%nbasfcn,dimension%neigd)
-      REAL                    ::    z_kqpt(dimension%nbasfcn,dimension%neigd)      
       REAL                    ::    cmt_nk(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       REAL                    ::    cmt   (dimension%neigd,hybrid%maxlmindx,atoms%nat)
       REAL                    ::    rarr1(bandoi:bandof)
@@ -1345,10 +1318,15 @@
       COMPLEX                 ::    cexp(atoms%nat),cexp_nk(atoms%nat)
       COMPLEX,ALLOCATABLE     ::    ccmt_nk(:,:,:)
       COMPLEX,ALLOCATABLE     ::    ccmt   (:,:,:)
+      TYPE(t_mat)             :: z_nk,z_kqpt
 
+      
       CALL timestart("wavefproducts_inv5")
       CALL timestart("wavefproducts_inv5 IR")
-
+      call z_nk%alloc(.true.,dimension%nbasfcn,dimension%neigd)
+      call z_kqpt%alloc(.true.,dimension%nbasfcn,dimension%neigd)
+      
+      
       cprod = 0
       svol  = sqrt(cell%omtil)
       sr2   = sqrt(2d0)
@@ -1379,26 +1357,22 @@
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
-      STOP "CHECK call to aps"
-   !   CALL apws(dimension,input,noco, kpts(:,nkqpt),nkqpt,1,cell,cell,sym,&
-   !  &          1,jsp,bkpt,nv_nkqpt,lapw,k1_nkqpt, k2_nkqpt,k3_nkqpt,matind,nred)
+      CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
+           1,jsp,bkpt,lapw_nkqpt,matind,nred)
+
 
       ! read in z at k-point nk and nkqpt
-
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-      OPEN(unit=778,file='z',form='unformatted',access='direct', recl=irecl_z)
-      READ(778,rec=nk)    z_nk
-      READ(778,rec=nkqpt) z_kqpt
-      CLOSE(778)
+      CALL read_z(z_nk,nk)
+      call read_z(z_kqpt,nkqpt)
 
       g(1) = maxval(abs(lapw%k1      (:lapw%nv(jsp)      ,jsp))) &
-     &     + maxval(abs(k1_nkqpt(:nv_nkqpt(jsp),jsp)))&
+     &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp),jsp)))&
      &     + maxval(abs(hybrid%gptm(1,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
       g(2) = maxval(abs(lapw%k2      (:lapw%nv(jsp)      ,jsp)))&
-     &     + maxval(abs(k2_nkqpt(:nv_nkqpt(jsp),jsp)))&
+     &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp),jsp)))&
      &     + maxval(abs(hybrid%gptm(2,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
       g(3) = maxval(abs(lapw%k3      (:lapw%nv(jsp)      ,jsp)))&
-     &     + maxval(abs(k3_nkqpt(:nv_nkqpt(jsp),jsp)))&
+     &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp),jsp)))&
      &     + maxval(abs(hybrid%gptm(3,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
 
 
@@ -1445,12 +1419,12 @@
       ALLOCATE ( z0(bandoi:bandof,ngpt0), stat=ok )
       IF( ok .ne. 0 ) STOP 'wavefproducts_inv5: error allocation z0'
       z0 = 0
-      DO ig2 = 1,nv_nkqpt(jsp)
-        rarr1 = z_kqpt(ig2,bandoi:bandof)
+      DO ig2 = 1,lapw_nkqpt%nv(jsp)
+        rarr1 = z_kqpt%data_r(ig2,bandoi:bandof)
         DO ig = 1,ngpt0
-          g(1)    = gpt0(1,ig) - k1_nkqpt(ig2,jsp)
-          g(2)    = gpt0(2,ig) - k2_nkqpt(ig2,jsp)
-          g(3)    = gpt0(3,ig) - k3_nkqpt(ig2,jsp)
+          g(1)    = gpt0(1,ig) - lapw_nkqpt%k1(ig2,jsp)
+          g(2)    = gpt0(2,ig) - lapw_nkqpt%k2(ig2,jsp)
+          g(3)    = gpt0(3,ig) - lapw_nkqpt%k3(ig2,jsp)
           rdum    = stepfunc(g(1),g(2),g(3)) / svol
           DO n2 = bandoi,bandof
             z0(n2,ig) = z0(n2,ig) + rarr1(n2)*rdum
@@ -1478,7 +1452,7 @@
         
 
           DO n1 = 1,bandf-bandi+1
-            rdum1 = z_nk(ig1,n1)
+            rdum1 = z_nk%data_r(ig1,n1)
             DO n2 = bandoi,bandof
               rarr2(n2,n1) = rarr2(n2,n1) + rdum1*z0(n2,ig2)  
             END DO
@@ -2272,16 +2246,6 @@
 
 
 
-!       ! write out in file cprod for calculation of the non-local exchange term
-!       irecl_cprod = maxbasm*mnobd*(bandf-bandi+1)*8
-!       OPEN(unit=779,file='cprod',form='unformatted',access='direct',recl=irecl_cprod)
-! 
-!       WRITE(779,rec=iq)   (/  ( ( (cprod(i,ibando,iband),i=1,nbasm_mt ),
-!      &                            (cprod_ir(iband,ibando,j),j=1,nbasm_ir ),ibando=1,mnobd )
-!      &                                                                    ,iband =bandi,bandf ) /)
-! 
-!       CLOSE(779)
-
       
       CALL timestop("wavefproducts_inv5")
 
@@ -2342,7 +2306,6 @@
       INTEGER                 ::  q,idum
       INTEGER                 :: nbasm_ir,ngpt0
       INTEGER                 ::  nbasmmt,nred
-      INTEGER                 ::  irecl_cmt,irecl_z
       INTEGER                 ::  ok,m
       
       REAL                    ::  rdum,svol,s2
@@ -2351,13 +2314,13 @@
       COMPLEX                 ::  cexp
       COMPLEX,PARAMETER       ::  img = (0d0,1d0) 
        
-      LOGICAL                 ::  offdiag      
+      LOGICAL                 ::  offdiag
+      TYPE(t_lapw)            ::    lapw_nkqpt
+
 !      - local arrays -
       INTEGER                 ::  g(3),g_t(3)
-      INTEGER                 ::  k1_nkqpt(dimension%nvd,dimension%jspd),k2_nkqpt(dimension%nvd,dimension%jspd), k3_nkqpt(dimension%nvd,dimension%jspd)
       INTEGER                 ::  lmstart(0:atoms%lmaxd,atoms%ntype)
       INTEGER                 ::  matind(dimension%nbasfcn,2)
-      INTEGER                 ::  nv_nkqpt(dimension%jspd)
       INTEGER, ALLOCATABLE    ::  gpt0(:,:)
       INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
       
@@ -2366,13 +2329,14 @@
       
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof,bandf-bandi+1)
-      COMPLEX                 ::  z_nk  (dimension%nbasfcn,dimension%neigd)
-      COMPLEX                 ::  z_kqpt(dimension%nbasfcn,dimension%neigd)
+      TYPE(t_mat)             ::  z_nk,z_kqpt
       COMPLEX                 ::  cmt   (dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX,ALLOCATABLE     ::  stepfunc(:,:,:)
       COMPLEX,ALLOCATABLE     ::  z0(:,:)
 
+      call z_nk%alloc(.false.,dimension%nbasfcn,dimension%neigd)
+      call z_kqpt%alloc(.false.,dimension%nbasfcn,dimension%neigd)
       call timestart("wavefproducts_noinv5")
       call timestart("wavefproducts_noinv5 IR")
       cprod = 0
@@ -2408,27 +2372,22 @@
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
-      STOP "CHECK apws call"
-    !  CALL apws(dimension,input,noco,noco, kpts(:,nkqpt),nkqpt,1,cell,cell,sym,&
-    ! &          1,jsp,bkpt,nv_nkqpt,lapw,k1_nkqpt, k2_nkqpt,k3_nkqpt,matind,nred)
+      CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
+               1,jsp,bkpt,lapw_nkqpt,matind,nred)
 
       ! read in z at k-point nk and nkqpt
 
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-      OPEN(unit=778,file='z',form='unformatted',access='direct',&
-     &     recl=irecl_z)
-      READ(778,rec=nk)    z_nk
-      READ(778,rec=nkqpt) z_kqpt
-      CLOSE(778)
+      call read_z(z_nk,nk)
+      call read_z(z_kqpt,nkqpt)
       
       g(1) = maxval(abs(lapw%k1      (:lapw%nv(jsp)      ,jsp))) &
-     &     + maxval(abs(k1_nkqpt(:nv_nkqpt(jsp),jsp)))&
+     &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp),jsp)))&
      &     + maxval(abs(hybrid%gptm(1,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
       g(2) = maxval(abs(lapw%k2      (:lapw%nv(jsp)      ,jsp)))&
-     &     + maxval(abs(k2_nkqpt(:nv_nkqpt(jsp),jsp)))&
+     &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp),jsp)))&
      &     + maxval(abs(hybrid%gptm(2,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
       g(3) = maxval(abs(lapw%k3      (:lapw%nv(jsp)      ,jsp)))&
-     &     + maxval(abs(k3_nkqpt(:nv_nkqpt(jsp),jsp)))&
+     &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp),jsp)))&
      &     + maxval(abs(hybrid%gptm(3,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
 
 
@@ -2473,12 +2432,12 @@
       !(2) calculate convolution
       ALLOCATE ( z0(bandoi:bandof,ngpt0) )
       z0 = 0
-      DO ig2 = 1,nv_nkqpt(jsp)
-        carr1 = z_kqpt(ig2,bandoi:bandof)
-        DO ig = 1,ngpt0
-          g(1)    = gpt0(1,ig) - k1_nkqpt(ig2,jsp)
-          g(2)    = gpt0(2,ig) - k2_nkqpt(ig2,jsp)
-          g(3)    = gpt0(3,ig) - k3_nkqpt(ig2,jsp)
+      DO ig2 = 1,lapw_nkqpt%nv(jsp)
+         carr1 = z_kqpt%data_c(ig2,bandoi:bandof)
+         DO ig = 1,ngpt0
+          g(1)    = gpt0(1,ig) - lapw_nkqpt%k1(ig2,jsp)
+          g(2)    = gpt0(2,ig) - lapw_nkqpt%k2(ig2,jsp)
+          g(3)    = gpt0(3,ig) - lapw_nkqpt%k3(ig2,jsp)
           cdum    = stepfunc(g(1),g(2),g(3)) / svol
           DO n2 = bandoi,bandof
             z0(n2,ig) = z0(n2,ig) + carr1(n2)*cdum
@@ -2504,8 +2463,8 @@
           END IF
         
           DO n1 = 1,bandf-bandi+1
-            cdum1 = conjg(z_nk(ig1,n1))
-            DO n2 = bandoi,bandof
+                cdum1 = conjg(z_nk%data_c(ig1,n1))
+             DO n2 = bandoi,bandof
               carr2(n2,n1) = carr2(n2,n1) + cdum1*z0(n2,ig2)
             END DO
           END DO
@@ -2646,11 +2605,7 @@
       TYPE(t_atoms),INTENT(IN)   :: atoms
 
       INTEGER, INTENT(IN) :: g(3)
-#ifdef CPP_INVERSION
-      REAL                :: stepfunction
-#else
-      COMPLEX             :: stepfunction
-#endif
+      COMPLEX             :: stepfunction  !Is real in inversion case
       REAL                :: gnorm,gnorm3,r,fgr
       INTEGER             :: itype,ieq,icent
       

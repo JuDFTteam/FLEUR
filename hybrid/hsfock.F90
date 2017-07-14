@@ -319,12 +319,13 @@ MODULE m_hsfock
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen_hf.F
       if (.not.v_x%l_real) v_x%data_c=conjg(v_x%data_c) 
       exch = 0
+      print *,"sizes:",shape(z%data_r),shape(v_x%data_r)
       call v_x%multiply(z,tmp)
       DO iband = 1,hybdat%nbands(nk)
          if (z%l_real) THEN
-            exch(iband,iband) = dot_product(z%data_r(:,iband),tmp%data_r(:,iband))
+            exch(iband,iband) = dot_product(z%data_r(:z%matsize1,iband),tmp%data_r(:,iband))
          else
-            exch(iband,iband) = dot_product(z%data_r(:,iband),tmp%data_r(:,iband))
+            exch(iband,iband) = dot_product(z%data_r(:z%matsize1,iband),tmp%data_r(:,iband))
          endif
          IF( iband .le. hybdat%nobd(nk) ) THEN
             results%te_hfex%valence = results%te_hfex%valence -a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)

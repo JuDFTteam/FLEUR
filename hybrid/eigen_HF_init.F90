@@ -43,8 +43,6 @@ contains
       END IF
 
       IF( hybrid%l_calhf ) THEN
-         hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
-         call open_hybrid_io(hybrid,dimension,atoms,l_real)
          
         !initialize hybdat%gridf for radial integration
         CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
@@ -72,25 +70,11 @@ contains
         IF( ok .ne. 0 ) STOP 'eigen_hf: failure allocation hybdat%eig_c'
         hybdat%nindxc = 0 ; hybdat%core1 = 0 ; hybdat%core2 = 0 ; hybdat%eig_c = 0
 
-        ! determine the size of the mixed basis at each k-point
-        ! ( can be done in mixedbasis only once)
-        hybdat%nbasp = 0
-        DO itype=1,atoms%ntype
-          DO ieq=1,atoms%neq(itype)
-            DO l=0,hybrid%lcutm1(itype)
-              DO m=-l,l
-                DO i=1,hybrid%nindxm1(l,itype)
-                  hybdat%nbasp = hybdat%nbasp + 1
-                END DO
-              END DO
-            END DO
-          END DO
-        END DO
-
+      
         ALLOCATE( hybdat%nbasm(kpts%nkptf) ,stat=ok)
         IF( ok .ne. 0 ) STOP 'eigen_hf: failure allocation hybdat%nbasm'
         DO nk = 1,kpts%nkptf
-          hybdat%nbasm(nk) = hybdat%nbasp + hybrid%ngptm(nk)
+          hybdat%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
         END DO
 
         ! pre-calculate gaunt coefficients

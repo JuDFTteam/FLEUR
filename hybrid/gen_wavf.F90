@@ -67,7 +67,7 @@
   !     - - local scalars - - 
       INTEGER                 ::  ilo,idum ,m
       COMPLEX                 ::  cdum
-
+      TYPE(t_mat)             :: zhlp
 !     local scalars for apws
       INTEGER                 ::  nred
       INTEGER                 ::  ikpt0,ikpt,itype,iop,ispin,ieq,indx,iatom
@@ -87,9 +87,7 @@
       INTEGER                 ::  map_lo(atoms%nlod)
       INTEGER                 ::  iarr(0:atoms%lmaxd,atoms%ntype)
       COMPLEX,ALLOCATABLE     ::  acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
-      REAL,ALLOCATABLE        ::  zhlp_r(:,:)
-      COMPLEX,ALLOCATABLE     ::  zhlp_c(:,:)
-
+      
       COMPLEX,ALLOCATABLE     ::  cmt(:,:,:),cmthlp(:,:,:)
 
 
@@ -114,12 +112,14 @@
       INTEGER                 ::  irecl_cmt,irecl_z
 
 
-      TYPE(t_lapw) :: lapw(kpts%nkpt)
+      TYPE(t_lapw) :: lapw(kpts%nkptf)
       TYPE(t_usdus):: usdus
 
       !CALL CPU_TIME(time1)
       call usdus%init(atoms,dimension%jspd)
-     
+      call zhlp%alloc(zmat(1)%l_real,zmat(1)%nbasfcn,zmat(1)%nbands)
+
+      
       ! setup rotations in reciprocal space
       DO iop=1,sym%nsym
         IF( iop .le. sym%nop ) THEN
@@ -131,7 +131,7 @@
 
       ! generate G-vectors, which fulfill |k+G|<rkmax
       ! for all k-points
-      DO ikpt=1,kpts%nkpt
+      DO ikpt=1,kpts%nkptf
         CALL apws(dimension,input,noco,&
      &            kpts,ikpt,cell,sym%zrfs,&
      &            1,jsp,bkpt,lapw(ikpt),matind,nred)
@@ -271,22 +271,8 @@
       IF(  ok .ne. 0 ) STOP 'gen_wavf: Failure allocation cmt'
       ALLOCATE ( cmthlp(dimension%neigd,hybrid%maxlmindx,atoms%nat), stat=ok)
       IF( ok .ne. 0) STOP 'gen_wavf: failure allocation cmthlp'
-      if (zmat(1)%l_real) THEN
-         ALLOCATE ( zhlp_r(dimension%nbasfcn,dimension%neigd), stat=ok)
-      ELSE
-         ALLOCATE ( zhlp_c(dimension%nbasfcn,dimension%neigd), stat=ok)
-      ENDIF
-      IF( ok .ne. 0) STOP 'gen_wavf: failure allocation zhlp'
-
+    
    
-
-#     ifdef CPP_INVERSION
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-#     else
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-#     endif
-      OPEN(unit=778,file='z',form='unformatted',access='direct',&
-     &     recl=irecl_z)
 
       DO ikpt0 = lower, upper
 
@@ -299,7 +285,7 @@
               input,atoms,hybdat%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw(ikpt0), &
               hybdat%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
               oneD,acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),ccof(:,: hybdat%nbands(ikpt0),:,:),&
-              zmat(ikpt))
+              zmat(ikpt0))
         
 
 ! call was ...
@@ -383,37 +369,30 @@
 
         ! write cmt at irreducible k-points in direct-access file cmt
         call write_cmt(cmt,ikpt0)
-
-        ! write z at irreducible k-points in direct-access file z
-        IF (zmat(1)%l_real) THEN
-           WRITE(778,rec=ikpt0) zmat(ikpt0)%z_r(:,:)
+        call zhlp%alloc(zmat(1)%l_real,zmat(1)%nbasfcn,zmat(1)%nbands)
+        
+        IF (zhlp%l_real) THEN
+           zhlp%data_r=zmat(ikpt0)%z_r
         ELSE
-           WRITE(778,rec=ikpt0) zmat(ikpt0)%z_c(:,:)
-        ENDIF
+           zhlp%data_c=zmat(ikpt0)%z_c
+        end IF
+        call write_z(zhlp,ikpt0)
        
 
         ! generate wavefunctions coefficients at all k-points from
         ! irreducible k-points
-
-        DO ikpt=1,kpts%nkpt
+        
+        DO ikpt=1,kpts%nkptf
           IF ( kpts%bkp(ikpt) .eq. ikpt0 .and. ikpt0 .ne. ikpt ) THEN
             iop = kpts%bksym(ikpt)
-
-
- 
-            
-              CALL waveftrafo_genwavf( cmthlp,zhlp_r,zhlp_c,&
+              CALL waveftrafo_genwavf( cmthlp,zhlp%data_r,zhlp%data_c,&
      &                 cmt(:,:,:),zmat(1)%l_real,zmat(ikpt0)%z_r(:,:),zmat(ikpt0)%z_c(:,:),ikpt0,iop,atoms,&
      &                 hybrid,kpts,sym,&
      &                 jsp,dimension,hybdat%nbands(ikpt0),&
      &                 cell,lapw(ikpt0),lapw(ikpt),.true.)
 
               call write_cmt(cmthlp,ikpt)
-              IF (zmat(1)%l_real) THEN
-                 WRITE(778,rec=ikpt) zhlp_r
-              ELSE
-                 WRITE(778,rec=ikpt) zhlp_c
-              ENDIF
+              call write_z(zhlp,ikpt)
           END IF
         END DO  !ikpt
       END DO !ikpt0
@@ -421,9 +400,7 @@
       DEALLOCATE( acof,bcof,ccof )
       DEALLOCATE( cmt,cmthlp)
 
-      !close file cmt and z
-      CLOSE(778)
-
+     
       END SUBROUTINE gen_wavf
 
       END MODULE m_gen_wavf

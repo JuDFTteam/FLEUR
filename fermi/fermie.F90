@@ -28,7 +28,7 @@ CONTAINS
     !-----------------------------------------------------------------------
 
 
-    USE m_eig66_io, ONLY : read_eig
+    USE m_eig66_io, ONLY : read_eig,write_eig
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     USE m_mpi_col_eigJ
 #endif
@@ -235,6 +235,13 @@ CONTAINS
     WRITE(attributes(2),'(a)') 'Htr'
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
 
+    !Put w_iks into eig-file
+    DO jsp = 1,nspins
+       DO  k = 1,kpts%nkpt
+          CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
+       ENDDO
+    ENDDO
+    
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
          &       10x,'first approx. to ef    (T=0)  :',f10.6,' htr',&

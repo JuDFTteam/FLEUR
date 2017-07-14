@@ -19,6 +19,7 @@
       USE m_apws
       USE m_util
       USE m_types
+      USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
@@ -89,11 +90,9 @@
       COMPLEX,ALLOCATABLE   ::  u1(:,:,:,:,:),u2(:,:,:,:,:)
       COMPLEX,ALLOCATABLE   ::  cmt_lo(:,:,:,:)
       COMPLEX,ALLOCATABLE   ::  cmt_apw(:,:,:)
-#ifdef CPP_INVERSION
-      REAL                  ::  z(dimension%nbasfcn,dimension%neigd),work(dimension%neigd)
-#else
-      COMPLEX               ::  z(dimension%nbasfcn,dimension%neigd),work(dimension%neigd)
-#endif
+      TYPE(t_mat)           ::  z
+      REAL                  ::  work_r(dimension%neigd)
+      COMPLEX               ::  work_c(dimension%neigd)
 
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
@@ -115,14 +114,8 @@
 
       
       ! read in z coefficient from direct access file z at k-point nk
-#ifdef CPP_INVERSION      
-      irecl_z = dimension%nbasfcn*dimension%neigd*8
-#else
-      irecl_z = dimension%nbasfcn*dimension%neigd*16
-#endif 
-      OPEN(unit=778,file='z',form='unformatted',access='direct', recl=irecl_z)
-      READ(778,rec=nk) z
-      CLOSE(778)
+
+      call read_z(z,nk)
 
       ! construct local orbital consisting of radial function times spherical harmonic
       ! where the radial function vanishes on the MT sphere boundary
@@ -189,7 +182,6 @@
               DO ikvec = 1,invsfct*(2*l+1)
                 ic    = ic   + 1
                 ibas  = ibas + 1
-                work  = z(ibas,:)
                 kvec  = kpts%bk(:,nk) +(/ lapw%k1(hybdat%kveclo_eig(ic,nk),jsp), lapw%k2(hybdat%kveclo_eig(ic,nk),jsp), lapw%k3(hybdat%kveclo_eig(ic,nk),jsp)/)
                 
                phase=exp(img*tpi_const*dot_product(atoms%taual(:,iatom),kvec))
@@ -201,15 +193,29 @@
                 DO M = -l,l
                   lm   = lm + 1
                   cdum2 = cdum1*conjg(ylm(lm))
-                  DO iband = 1,hybdat%nbands(nk)
-                    cmt_lo(iband,M,ilo,iatom ) = cmt_lo(iband,M,ilo,iatom)  + cdum2*work(iband)
-                    IF( invsfct .eq. 2 ) THEN
+                if (z%l_real) THEN
+                   work_r  = z%data_r(ibas,:)
+                   DO iband = 1,hybdat%nbands(nk)
+                      cmt_lo(iband,M,ilo,iatom ) = cmt_lo(iband,M,ilo,iatom)  + cdum2*work_r(iband)
+                      IF( invsfct .eq. 2 ) THEN
                       ! the factor (-1)**l is necessary as we do not calculate
                       ! the cmt_lo in the local coordinate system of the atom
-                      cmt_lo(iband,-M,ilo,iatom1) = cmt_lo(iband,-M,ilo,iatom1) + (-1)**(l+M)*conjg(cdum2)*work(iband)
-                    END IF
-                  END DO
-                END DO
+                         cmt_lo(iband,-M,ilo,iatom1) = cmt_lo(iband,-M,ilo,iatom1) + (-1)**(l+M)*conjg(cdum2)*work_r(iband)
+                      END IF
+                   END DO
+                else
+                   work_c  = z%data_c(ibas,:)
+                   DO iband = 1,hybdat%nbands(nk)
+                      cmt_lo(iband,M,ilo,iatom ) = cmt_lo(iband,M,ilo,iatom)  + cdum2*work_c(iband)
+                      IF( invsfct .eq. 2 ) THEN
+                      ! the factor (-1)**l is necessary as we do not calculate
+                      ! the cmt_lo in the local coordinate system of the atom
+                         cmt_lo(iband,-M,ilo,iatom1) = cmt_lo(iband,-M,ilo,iatom1) + (-1)**(l+M)*conjg(cdum2)*work_c(iband)
+                      END IF
+                   END DO
+                end if
+                   
+             END DO
                 
               END DO  !ikvec
             END DO  ! ilo
@@ -235,8 +241,7 @@
       ALLOCATE( cmt_apw(dimension%neigd,idum,atoms%nat) )
       cmt_apw = 0
       DO i = 1,lapw%nv(jsp)
-        work  = z(i,:)
-        kvec  = kpts%bk(:,nk) + (/ lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp) /)
+         kvec  = kpts%bk(:,nk) + (/ lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp) /)
         kvecn = sqrt(dot_product(matmul(kvec,cell%bmat),matmul(kvec,cell%bmat)))
         
         iatom = 0
@@ -275,12 +280,17 @@
                                 wronskian(  bas1_MT_tmp(p1,l,itype), drbas1_MT_tmp(p1,l,itype), AIMAG(cj),AIMAG(cdj)))
           
                   cdum  = (-1)**(p+1)*enum/denom
-
-
+                  if (z%l_real) THEN
+                  work_r  = z%data_r(i,:)
                   DO iband = 1,hybdat%nbands(nk)
-                    cmt_apw(iband,lmp,iatom) = cmt_apw(iband,lmp,iatom) + cdum*work(iband)
+                    cmt_apw(iband,lmp,iatom) = cmt_apw(iband,lmp,iatom) + cdum*work_r(iband)
                   END DO
-
+               else
+                     work_c  = z%data_c(i,:)
+                  DO iband = 1,hybdat%nbands(nk)
+                    cmt_apw(iband,lmp,iatom) = cmt_apw(iband,lmp,iatom) + cdum*work_c(iband)
+                  END DO
+               end if
                 END DO  !p
               END DO  !M
             END DO  !l
@@ -829,12 +839,7 @@
 
 
 !     - arrays -
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX                 ::  z(dimension%nbasfcn,dimension%neigd)
-#else
-      REAL                    ::  z(dimension%nbasfcn,dimension%neigd)
-#endif
+      TYPE(t_mat):: z
       COMPLEX,INTENT(OUT)     :: momentum(bandi2:bandf2,bandi1:bandf1,3)
 
 !     - local scalars -
@@ -857,31 +862,18 @@
       COMPLEX                 ::  cmt1(hybrid%maxlmindx,bandi1:bandf1), cmt2(hybrid%maxlmindx,bandi2:bandf2)
       COMPLEX                 ::  carr1(3),carr2(3)
       COMPLEX                 ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
-#if ( defined(CPP_INVERSION) )
-      REAL                    ::  olap(lapw%nv(jsp)*(lapw%nv(jsp)+1)/2)
-#else
-      COMPLEX                 ::  olap(lapw%nv(jsp)*(lapw%nv(jsp)+1)/2)
-#endif      
-#if ( defined(CPP_INVERSION) )
-      REAL                    ::  vec1(lapw%nv(jsp)),vec2(lapw%nv(jsp)), vec3(lapw%nv(jsp))
-#else
-      COMPLEX                 ::  vec1(lapw%nv(jsp)),vec2(lapw%nv(jsp)), vec3(lapw%nv(jsp))
-#endif
+      REAL                    ::  olap_r(lapw%nv(jsp)*(lapw%nv(jsp)+1)/2)
+      COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp)+1)/2)
+      REAL                    ::  vec1_r(lapw%nv(jsp)),vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))
+      COMPLEX                 ::  vec1_c(lapw%nv(jsp)),vec2_c(lapw%nv(jsp)), vec3_c(lapw%nv(jsp))
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
      
       call read_cmt(cmt,nk)
       
       ! read in z coefficients from direct access file z at kpoint nk
-#ifdef CPP_INVERSION
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-#else
-      irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-#endif
-      OPEN(unit=778,file='z',form='unformatted',access='direct', recl=irecl_z)
-      READ(778,rec=nk) z
-      CLOSE(778)
 
+      call read_z(z,nk)
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
@@ -1036,23 +1028,36 @@
 
       ! plane-wave contribution
 
-      CALL olap_pwp(olap,gpt,lapw%nv(jsp),atoms,cell)
+      CALL olap_pwp(z%l_real,olap_r,olap_c,gpt,lapw%nv(jsp),atoms,cell)
 
       DO nn = 1,lapw%nv(jsp)
         qg(nn,:) = matmul(kpts%bk(:,nk)+gpt(:,nn),cell%bmat)
       END DO
 
+      if (z%l_real) THEN
       DO iband2 = bandi2,bandf2
-        vec1 = matvec( olap , z(:lapw%nv(jsp),iband2) * qg(:,1) )
-        vec2 = matvec( olap , z(:lapw%nv(jsp),iband2) * qg(:,2) )
-        vec3 = matvec( olap , z(:lapw%nv(jsp),iband2) * qg(:,3) )
+        vec1_r = matvec( olap_r , z%data_r(:lapw%nv(jsp),iband2) * qg(:,1) )
+        vec2_r = matvec( olap_r , z%data_r(:lapw%nv(jsp),iband2) * qg(:,2) )
+        vec3_r = matvec( olap_r , z%data_r(:lapw%nv(jsp),iband2) * qg(:,3) )
         DO iband1 = bandi1,bandf1
-          momentum(iband2,iband1,1) = momentum(iband2,iband1,1) + dotprod(z(:lapw%nv(jsp),iband1),vec1)
-          momentum(iband2,iband1,2) = momentum(iband2,iband1,2) + dotprod(z(:lapw%nv(jsp),iband1),vec2)
-          momentum(iband2,iband1,3) = momentum(iband2,iband1,3) + dotprod(z(:lapw%nv(jsp),iband1),vec3)
+          momentum(iband2,iband1,1) = momentum(iband2,iband1,1) + dotprod(z%data_r(:lapw%nv(jsp),iband1),vec1_r)
+          momentum(iband2,iband1,2) = momentum(iband2,iband1,2) + dotprod(z%data_r(:lapw%nv(jsp),iband1),vec2_r)
+          momentum(iband2,iband1,3) = momentum(iband2,iband1,3) + dotprod(z%data_r(:lapw%nv(jsp),iband1),vec3_r)
         END DO
       END DO
-
+   else
+  DO iband2 = bandi2,bandf2
+        vec1_c = matvec( olap_c , z%data_c(:lapw%nv(jsp),iband2) * qg(:,1) )
+        vec2_c = matvec( olap_c , z%data_c(:lapw%nv(jsp),iband2) * qg(:,2) )
+        vec3_c = matvec( olap_c , z%data_c(:lapw%nv(jsp),iband2) * qg(:,3) )
+        DO iband1 = bandi1,bandf1
+          momentum(iband2,iband1,1) = momentum(iband2,iband1,1) + dotprod(z%data_c(:lapw%nv(jsp),iband1),vec1_c)
+          momentum(iband2,iband1,2) = momentum(iband2,iband1,2) + dotprod(z%data_c(:lapw%nv(jsp),iband1),vec2_c)
+          momentum(iband2,iband1,3) = momentum(iband2,iband1,3) + dotprod(z%data_c(:lapw%nv(jsp),iband1),vec3_c)
+        END DO
+     END DO
+  end if
+      
       END SUBROUTINE momentum_matrix
       
       END MODULE m_kp_perturbation

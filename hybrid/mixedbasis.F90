@@ -1395,6 +1395,23 @@ CONTAINS
        IF ( ANY(hybrid%nindxm1(0:hybrid%lcutm1(itype),itype) == 0) ) call judft_error('any hybrid%nindxm1 eq 0',calledby='mixedbasis')
     END DO
 
+    !count basis functions
+    hybrid%nbasp   = 0
+    DO itype=1,atoms%ntype
+       DO i=1,atoms%neq(itype)
+          DO l=0,hybrid%lcutm1(itype)
+             DO M=-l,l
+                DO j=1,hybrid%nindxm1(l,itype)
+                   hybrid%nbasp = hybrid%nbasp + 1
+                END DO
+             END DO
+          END DO
+       END DO
+    END DO
+    hybrid%maxbasm1  = hybrid%nbasp  + hybrid%maxgptm
+    
+    !
+    
     !       ic = 0
     !       DO itype = 1,ntype
     !         DO l = 0,lcutm2(itype)

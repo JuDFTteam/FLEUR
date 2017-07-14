@@ -9,7 +9,7 @@ MODULE m_eigen
 CONTAINS
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
        sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
-       it,eig_id,results,v)
+       it,eig_id,results,v,vx)
     !*********************************************************************
     !     sets up and solves the eigenvalue problem for a basis of lapws.
     !
@@ -65,7 +65,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(INOUT)  :: atoms!in u_setup n_u might be modified
-    TYPE(t_potden),INTENT(INOUT) :: v
+    TYPE(t_potden),INTENT(INOUT) :: v,vx
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
@@ -291,6 +291,7 @@ CONTAINS
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
+       lh0=1
        CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, v%mt(1,0,1,jsp),lh0,input, td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
@@ -358,7 +359,7 @@ CONTAINS
           IF( hybrid%l_hybrid ) THEN
              !write overlap matrix b to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"
-             call olap%from_packed(dimension%nbasfcn,l_real,hamovlp%b_r,hamovlp%b_c)
+             call olap%from_packed(l_real,dimension%nbasfcn,hamovlp%b_r,hamovlp%b_c)
              call write_olap(olap,nrec)
             
 
@@ -371,7 +372,7 @@ CONTAINS
              IF( hybrid%l_subvxc ) THEN
                 CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,vr0,atoms,ud,hybrid,enpara%el0,enpara%ello0,&
                      sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
-                     oneD,  hamovlp)
+                     oneD,  hamovlp,vx)
              END IF
 
           END IF ! hybrid%l_hybrid
@@ -419,13 +420,13 @@ CONTAINS
 	  zmat%nbands=ne_found
           CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
-                  bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,jsp), enpara%ello0(:,:,jsp),enpara%evac0(:,jsp),&
-                  atoms%nlotot,kveclo,mpi%n_size,mpi%n_rank,zMat)
+                  bkpt, kpts%wtkpt(nk),eig(:ne_found),el=enpara%el0(0:,:,jsp),ello=enpara%ello0(:,:,jsp),evac=enpara%evac0(:,jsp),&
+                  nlotot=atoms%nlotot,kveclo=kveclo,n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
           IF (noco%l_noco) THEN
              CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
                   lapw%k1(:lapw%nv(2),2),lapw%k2 (:lapw%nv(2),2),lapw%k3(:lapw%nv(2),2),&
-                  bkpt, kpts%wtkpt(nk),eig(:ne_found),enpara%el0(0:,:,2), enpara%ello0(:,:,2),enpara%evac0(:,2),&
-                  atoms%nlotot,kveclo)
+                  bkpt, kpts%wtkpt(nk),eig(:ne_found),el=enpara%el0(0:,:,2),ello= enpara%ello0(:,:,2),evac=enpara%evac0(:,2),&
+                  nlotot=atoms%nlotot,kveclo=kveclo)
           ENDIF
 #if defined(CPP_MPI)
           !RMA synchronization

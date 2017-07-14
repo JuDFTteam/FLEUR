@@ -21,7 +21,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_results),INTENT(IN)  :: results
+    TYPE(t_results),INTENT(INOUT):: results
     INTEGER,INTENT(IN)          :: irank2(:),it
 
     INTEGER,INTENT(IN)          :: jsp,eig_id_hf
@@ -40,7 +40,7 @@ CONTAINS
     INTEGER                 ::  degenerat(DIMENSION%neigd2+1,kpts%nkpt)
     INTEGER                 :: matind(DIMENSION%nbasfcn,2),nred
     TYPE(t_lapw)            :: lapw
-
+  
     LOGICAL:: skip_kpt(kpts%nkpt)
     REAL   :: g(3)
     skip_kpt=.FALSE.
@@ -72,12 +72,14 @@ CONTAINS
           zmat(nk)%nbands=dimension%neigd2
           if (l_real) THEN
              ALLOCATE(zmat(nk)%z_r(dimension%nbasfcn,dimension%neigd2))
+             ALLOCATE(zmat(nk)%z_c(0,0))
           else
              ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
+             ALLOCATE(zmat(nk)%z_r(0,0))
           endif
           print *,"eigen_HF_Setup: read_eig:",nk
           print *,zmat(nk)%nbasfcn,zmat(nk)%nbands,hybdat%ne_eig(nk)
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybdat%ne_eig(nk),eig=eig_irr(:,nk), kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk)) !TODO introduce zmat!!,z=z_irr(:,:,nk))
+          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybdat%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk))
           print *,"Done"
 
        END DO
@@ -144,7 +146,7 @@ CONTAINS
           END DO
 
           DO i = 1,hybdat%ne_eig(nk)
-             IF( results%w_iks(i,nk,jsp) .GT. 0d0 ) hybdat%nobd(nk) = hybdat%nobd(nk) + 1
+             IF(results%w_iks(i,nk,jsp) .GT. 0d0 ) hybdat%nobd(nk) = hybdat%nobd(nk) + 1
 
           END DO
 
@@ -294,8 +296,8 @@ CONTAINS
        ! Reading the eig file
        !DO nk = n_start,kpts%nkpt,n_stride
        DO nk = 1,kpts%nkpt,1
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybdat%ne_eig(nk))
-          hybdat%nobd(nk) = COUNT( results%w_iks(:hybdat%ne_eig(nk),nk,jsp) > 0.0 )
+          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybdat%ne_eig(nk),w_iks=results%w_iks(:,nk,jsp))
+          hybdat%nobd(nk) = COUNT(results%w_iks(:hybdat%ne_eig(nk),nk,jsp) > 0.0 )
        END DO
     
        hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )

@@ -63,6 +63,7 @@
           USE m_wannier
 #endif
           USE m_mixedbasis
+          USE m_io_hybrid
           USE m_coulomb
           USE m_gen_map
           USE m_dwigner
@@ -103,7 +104,7 @@
 
           !     .. Local Scalars ..
           INTEGER:: eig_id
-          INTEGER:: it,ithf
+          INTEGER:: it,ithf,itype,l
           LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
           !--- J<
           INTEGER             :: phn
@@ -254,7 +255,10 @@
                       !construct the mixed-basis
                       CALL mixedbasis(atoms,kpts, dimension,input,cell,sym,xcpot,hybrid, eig_id,mpi,v,l_restart)
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
-
+                      hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
+                    
+                      call open_hybrid_io(hybrid,dimension,atoms,sym%invs)
+                      
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' calculation of coulomb matrix ...'
                       CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
@@ -338,7 +342,9 @@
                       !construct the mixed-basis
                       CALL mixedbasis(atoms,kpts, dimension,input,cell,sym,xcpot,hybrid, eig_id,mpi,v,l_restart)
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
-
+                      hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
+                      
+                      call open_hybrid_io(hybrid,dimension,atoms,sym%invs)
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' calculation of coulomb matrix ...'
                       CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
                       IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
@@ -398,7 +404,7 @@
                                   CALL timestart("eigen")
                                   CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                        sym,kpts,dimension,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
-                                       it,eig_id, results,v)
+                                       it,eig_id, results,v,vx)
                                   CALL timestop("eigen")
                                   !
                                   !                   add all contributions to total energy

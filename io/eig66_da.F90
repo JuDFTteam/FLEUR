@@ -59,6 +59,9 @@ CONTAINS
     INQUIRE(IOLENGTH=recl_eig) d%el_s,d%evac_s,d%ello_s,r3,r1,i1,i1,d%kvec_s,d%kveclo_s
     d%recl_bas=recl_eig
     INQUIRE(IOLENGTH=recl_eig) r1
+
+    d%recl_wiks=recl_eig*neig
+    
     print *,lmax,ntype,nlo,nlotot,nmat,neig
     
     recl_eig=recl_eig*(neig+2) ! add a 2 for integer 'neig'
@@ -68,7 +71,7 @@ CONTAINS
        INQUIRE(IOLENGTH=recl_z) c1
     endif
     recl_z=recl_z*nmat*neig
-
+    
     d%recl_vec=recl_eig+recl_z
     print *,l_real,l_soc
     print *,"reclen:",d%recl_vec,nmat,neig,recl_z,recl_eig
@@ -106,6 +109,8 @@ CONTAINS
        OPEN(d%file_io_id_bas,FILE=TRIM(d%fname)//".bas",ACCESS='direct',FORM='unformatted',RECL=d%recl_bas,STATUS='unknown')
        d%file_io_id_vec=priv_free_uid()
        OPEN(d%file_io_id_vec,FILE=TRIM(d%fname)//".vec",ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='unknown')
+       d%file_io_id_wiks=priv_free_uid()
+       OPEN(d%file_io_id_wiks,FILE=TRIM(d%fname)//".wiks",ACCESS='direct',FORM='unformatted',RECL=d%recl_wiks,STATUS='unknown')
        IF(d%recl_dos>0) THEN
           d%file_io_id_dos=priv_free_uid()
           OPEN(d%file_io_id_dos,FILE=TRIM(d%fname)//".dos",ACCESS='direct',FORM='unformatted',RECL=d%recl_dos,STATUS='unknown')
@@ -116,6 +121,8 @@ CONTAINS
        OPEN(d%file_io_id_bas,FILE=TRIM(d%fname)//".bas",ACCESS='direct',FORM='unformatted',RECL=d%recl_bas,STATUS='old')
        d%file_io_id_vec=priv_free_uid()
        OPEN(d%file_io_id_vec,FILE=TRIM(d%fname)//".vec",ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='old')
+       d%file_io_id_wiks=priv_free_uid()
+       OPEN(d%file_io_id_wiks,FILE=TRIM(d%fname)//".wiks",ACCESS='direct',FORM='unformatted',RECL=d%recl_wiks,STATUS='old')
        IF(d%recl_dos>0) THEN
           d%file_io_id_dos=priv_free_uid()
           OPEN(d%file_io_id_dos,FILE=TRIM(d%fname)//".dos",ACCESS='direct',FORM='unformatted',RECL=d%recl_dos,STATUS='old')
@@ -143,8 +150,10 @@ CONTAINS
     DEALLOCATE(d%el_s,d%ello_s,d%evac_s,d%kvec_s,d%kveclo_s)
     CLOSE(d%file_io_id_bas)
     CLOSE(d%file_io_id_vec)
+    CLOSE(d%file_io_id_wiks)
     d%recl_vec=0
     d%recl_bas=0
+    d%recl_wiks=0
 
     !If a filename was given and the name is not the current filename then rename
     IF (PRESENT(filename)) THEN
@@ -156,12 +165,12 @@ CONTAINS
     d%fname="eig"
     CALL eig66_remove_data(id)
   END SUBROUTINE close_eig
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,ello,evac,kveclo,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,w_iks,el,ello,evac,kveclo,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
-    REAL,    INTENT(OUT),OPTIONAL  :: eig(:)
+    REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
@@ -203,9 +212,18 @@ CONTAINS
        IF (PRESENT(kveclo)) kveclo=d%kveclo_s
     ENDIF
 
+    IF (PRESENT(w_iks)) THEN
+       print *, "R:w_iks:",nrec
+        read(d%file_io_id_wiks,REC=nrec) w_iks
+    ENDIF
+      
+    
     IF (.NOT.(PRESENT(eig).OR.PRESENT(neig).OR.PRESENT(zmat))) RETURN
     READ(d%file_io_id_vec,REC=nrec) neig_s
-    IF (PRESENT(neig)) neig=neig_s
+    IF (PRESENT(neig)) THEN
+       print *,"R:",neig_s
+       neig=neig_s
+    ENDIF
     IF (.NOT.(PRESENT(eig).OR.PRESENT(zmat))) RETURN
     ALLOCATE(eig_s(neig_s))
     IF (PRESENT(zmat)) THEN
@@ -235,17 +253,17 @@ CONTAINS
        READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s
     ENDIF
     IF (PRESENT(eig)) eig(:min(size(eig),neig_s))=eig_s(:min(size(eig),neig_s))
-
+   
   END SUBROUTINE read_eig
 
   SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk, &
-       eig,el,ello,evac,nlotot,kveclo,n_size,n_rank,zmat)
+       eig,w_iks,el,ello,evac,nlotot,kveclo,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
     INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
-    REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:)
+    REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
     TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
 
@@ -276,7 +294,7 @@ CONTAINS
             PRESENT(bk).OR.PRESENT(ello).OR.PRESENT(evac)) THEN
           CALL juDFT_error("BUG:Direct access IO of eig-file only with all scalar data")
        ENDIF
-    ELSE
+    ELSE IF (PRESENT(el)) THEN
        IF (.NOT.(PRESENT(wk).AND.PRESENT(nv).AND.PRESENT(nmat).AND.PRESENT(nlotot) &
             .AND.PRESENT(k1).AND.PRESENT(k2).AND.PRESENT(k3).AND.PRESENT(kveclo).AND.&
             PRESENT(bk).AND.PRESENT(el).AND.PRESENT(ello).AND.PRESENT(evac))) THEN
@@ -292,13 +310,18 @@ CONTAINS
           CALL juDFT_error("Mismatch of sizes")
        ENDIF
        WRITE(d%file_io_id_bas,REC=nrec) nmat,el,evac,ello,bk,wk,nv,d%kvec_s,kveclo
-
     ENDIF
     IF (PRESENT(neig).AND.PRESENT(neig_total)) THEN
        IF (neig.NE.neig_total) THEN
           CALL juDFT_error("Neig and neig_total have to be equal in DA mode",calledby="eig66_da")
        ENDIF
     ENDIF
+    IF (PRESENT(w_iks)) THEN
+       print *, "W:w_iks:",nrec
+       write(d%file_io_id_wiks,REC=nrec) w_iks
+    ENDIF
+ 
+
     IF (.NOT.PRESENT(eig).OR..NOT.PRESENT(neig)) RETURN
     !Now the IO of the eigenvalues/vectors
     IF (PRESENT(zmat)) THEN

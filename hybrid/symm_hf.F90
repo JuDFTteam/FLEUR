@@ -28,7 +28,7 @@
 
       USE m_constants
       USE m_util   ,ONLY: modulo1,intgrf,intgrf_init
-      USE m_olap   ,ONLY: wfolap,wfolap1,wfolap_init
+      USE m_olap   ,ONLY: wfolap_inv,wfolap_noinv,wfolap1,wfolap_init
       USE m_trafo  ,ONLY: waveftrafo_symm
       USE m_types
       USE m_io_hybrid
@@ -98,15 +98,7 @@
       COMPLEX,ALLOCATABLE             :: cpwhlp(:,:)
       COMPLEX,ALLOCATABLE             :: trace(:,:)
 
-#if ( defined(CPP_INVERSION) )
-      REAL                            :: carr2(lapw%nv(jsp))
-      REAL                            :: z(dimension%nbasfcn,dimension%neigd)
-      REAL,ALLOCATABLE                :: olappw(:,:)
-#else
-      COMPLEX                         :: carr2(lapw%nv(jsp))
-      COMPLEX                         :: z(dimension%nbasfcn,dimension%neigd)
-      COMPLEX,ALLOCATABLE             :: olappw(:,:)
-#endif 
+      TYPE(t_mat)                     :: olappw,z
       COMPLEX,ALLOCATABLE             :: rep_d(:,:,:)
       LOGICAL,ALLOCATABLE             :: symequivalent(:,:)
 
@@ -206,13 +198,7 @@
       parent(1)  = 1
       neqvkpt(1) = 1
 
-#ifdef CPP_DEBUG
-      IF( sum(neqvkpt(:)) .ne. kpts%nkptf) THEN
-        IF ( mpi%irank == 0 ) WRITE(6,'(A,i3)') ' Check EIBZ(k) by summing&&
-     & up equivalent k-points:',sum(neqvkpt(:))
-        STOP 'symm: neqvkpt not identical to nkpt'
-      END IF
-#endif
+
 
       ! determine number of members in the EIBZ(k)
       ic = 0
@@ -310,25 +296,16 @@
       
         ! read in cmt and z at current k-point (nk)
          CALL read_cmt(cmt,nk)
-#ifdef CPP_INVERSION
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*8
-#else
-        irecl_z   =  dimension%nbasfcn*dimension%neigd*16
-#endif
-        OPEN(unit=778,file='z',form='unformatted',access='direct',&
-     &      recl=irecl_z)
-        READ(778,rec=nk) z
-        CLOSE(778)
+         call read_z(z,nk)
 
         ALLOCATE(rep_d(maxndb,nddb,nsymop),stat=ok )
         IF( ok .ne. 0) STOP 'symm: failure allocation rep_v'
 
 
-        ALLOCATE( olappw(lapw%nv(jsp),lapw%nv(jsp)),&
-     &            olapmt(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),stat=ok)
-        IF( ok .ne. 0) STOP 'symm: failure allocation olappw/olapmt'
+        call olappw%alloc(z%l_real,lapw%nv(jsp),lapw%nv(jsp))
+        ALLOCATE( olapmt(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),stat=ok)
+        IF( ok .ne. 0) STOP 'symm: failure allocation olapmt'
 
-        olappw = 0
         olapmt = 0
         CALL wfolap_init (olappw,olapmt,gpt,&
      &                   atoms,hybrid,&
@@ -336,27 +313,7 @@
      &                    hybdat%bas1,hybdat%bas2)
 
 
-#ifdef CPP_DEBUG1
-        ! check orthogonality of wavefunctions
-        OPEN(677,file='ortho')
-        WRITE(677,*) 'iteration',it,'k-point',nk
-        DO iband=1,hybdat%nbands(nk)
-          IF(degenerat(iband) .ge. 1) THEN
-            ndb = degenerat(iband)
-            DO i= 1,hybdat%nbands(nk)!iband,iband+ndb-1
-              WRITE(677,*) iband,i,&
-     &          wfolap1( cmt(iband,:,:),z(:lapw%nv(jsp),iband),&
-     &           cmt(i,:,:),z(:lapw%nv(jsp),i),&
-     &          lapw%nv(jsp),lapw%nv(jsp),olappw,olapmt,&
-     &          atoms%ntype,atoms%neq,atoms%nat,atoms%lmax,atoms%lmaxd,hybrid%nindx,hybrid%maxindx,hybrid%maxlmindx)
 
-
-            END DO
-          
-          END IF
-        END DO
-        CLOSE(677)
-#endif
 
         ALLOCATE( cmthlp(hybrid%maxlmindx,atoms%nat,maxndb), cpwhlp(lapw%nv(jsp),maxndb),&
      &            stat= ok )
@@ -365,13 +322,7 @@
         DO isym=1,nsymop 
           iop= psym(isym) 
 
-#ifdef CPP_DEBUG
-          rotkpt   = matmul(rrot(:,:,iop),kpts%bkf(:,nk))
-          rotkpt   = modulo1(rotkpt,kpts%nkpt3)
-          IF( maxval( abs( rotkpt - kpts%bkf(:,nk) ) ) .gt. 1e-08) THEN
-            STOP 'symm: error in psym'
-          END IF
-#endif
+
           ic = 0
           DO i=1,hybdat%nbands(nk)
             ndb = degenerat(i)
@@ -379,9 +330,8 @@
               ic     = ic + 1
               cmthlp = 0
               cpwhlp = 0
-              STOP "WAVETRAVO_SYM real/complex"
               CALL waveftrafo_symm( &
-     &                      cmthlp(:,:,:ndb),cpwhlp(:,:ndb),cmt,.false.,(/0.1/),z,&
+     &                      cmthlp(:,:,:ndb),cpwhlp(:,:ndb),cmt,z%l_real,z%data_r,z%data_c,&
      &                      i,ndb,nk,iop,atoms,&
      &                      hybrid,kpts,&
      &                      sym,&
@@ -391,10 +341,13 @@
             
               DO iband = 1,ndb
                 carr1 = cmt(iband+i-1,:,:)
-                carr2 = z(:lapw%nv(jsp),iband+i-1)
-                rep_d(iband,ic,isym) &
-     &        = wfolap( carr1,carr2,cmthlp(:,:,iband),cpwhlp(:,iband),&
-     &                  lapw%nv(jsp),lapw%nv(jsp),olappw,olapmt,atoms,hybrid)
+                IF(z%l_real) THEN
+                   rep_d(iband,ic,isym) = wfolap_inv( carr1,z%data_r(:lapw%nv(jsp),iband+i-1),cmthlp(:,:,iband),&
+                        cpwhlp(:,iband), lapw%nv(jsp),lapw%nv(jsp),olappw%data_r,olapmt,atoms,hybrid)
+                else
+                   rep_d(iband,ic,isym) = wfolap_noinv( carr1,z%data_c(:lapw%nv(jsp),iband+i-1),cmthlp(:,:,iband),&
+                        cpwhlp(:,iband), lapw%nv(jsp),lapw%nv(jsp),olappw%data_c,olapmt,atoms,hybrid)
+                endif
               END DO
             
             END IF
