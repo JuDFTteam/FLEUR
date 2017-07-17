@@ -341,13 +341,12 @@ endif
           ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
           ! from IBZ to current k-point
           IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
-             STOP "INTERFACE to bra_trafo2"
              CALL bra_trafo2(&
-                mat_ex%l_real,carr3_vv_r(:nbasm(ikpt0),:,:),carr3_vv_r(:nbasm(ikpt0),:,:),cprod_vv_r(:nbasm(ikpt0),:,:),cprod_vv_c(:nbasm(ikpt0),:,:),&
-                nbasm(ikpt0),psize,nbands(nk),&
-                ikpt0,kpts%bkp(ikpt0),iop,sym,&
+                mat_ex%l_real,carr3_vv_r(:hybdat%nbasm(ikpt0),:,:),cprod_vv_r(:hybdat%nbasm(ikpt0),:,:),carr3_vv_c(:hybdat%nbasm(ikpt0),:,:),cprod_vv_c(:hybdat%nbasm(ikpt0),:,:),&
+                hybdat%nbasm(ikpt0),psize,hybdat%nbands(nk),&
+                ikpt0,kpts%bkp(ikpt0),kpts%bksym(ikpt0),sym,&
                 hybrid,kpts,cell,hybrid%maxlcutm1,atoms,&
-                hybrid%lcutm1,hybrid%nindxm1,hybrid%maxindxm1,nqptmall,&
+                hybrid%lcutm1,hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptmd,&
                 hybrid%nbasp,&
                 phase_vv)
 
