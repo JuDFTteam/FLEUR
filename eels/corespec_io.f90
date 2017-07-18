@@ -31,10 +31,6 @@ MODULE m_corespec_io
 
     namelist /csinp/ csi
 
-    smeno = "corespec_init"
-
-    write(*,'(/,a)') trim(smeno)//ssep
-
     l_cs = .false.
 
 ! initialization of input parameters: type csi
@@ -60,6 +56,10 @@ MODULE m_corespec_io
     else
       return
     endif
+
+    smeno = "corespec_init"
+
+    write(*,'(/,a)') trim(smeno)//ssep
 
     IF(ANY(atoms%nlo(:).NE.0)) CALL juDFT_error("EELS + LOs not available at the moment!" ,calledby ="corespec_io")
 
