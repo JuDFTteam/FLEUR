@@ -45,7 +45,7 @@ CONTAINS
     INTEGER,INTENT(IN)      ::nk  ,maxbands, mnobd
     INTEGER,INTENT(IN)      :: irank2
     !     - arays -
-    INTEGER,INTENT(IN)      ::  degenerat(hybdat%ne_eig(nk))
+    INTEGER,INTENT(IN)      ::  degenerat(hybrid%ne_eig(nk))
     LOGICAL,INTENT(IN)      :: l_real
     REAL    ,INTENT(INOUT)  ::  ex_vv_r(:,:,:)!(maxbands,mnobd,nkpti)
     COMPLEX ,INTENT(INOUT)  ::  ex_vv_c(:,:,:)!(maxbands,mnobd,nkpti)
@@ -72,10 +72,10 @@ CONTAINS
     REAL,ALLOCATABLE        ::  integral(:,:)
 
     COMPLEX                 ::  cmt(DIMENSION%neigd,hybrid%maxlmindx,atoms%nat)
-    COMPLEX                 ::  exchange(hybdat%nbands(nk),hybdat%nbands(nk))
+    COMPLEX                 ::  exchange(hybrid%nbands(nk),hybrid%nbands(nk))
     COMPLEX,ALLOCATABLE     ::  carr(:,:),carr2(:,:),carr3(:,:)
 
-    LOGICAL                 ::  ldum(hybdat%nbands(nk),hybdat%nbands(nk))
+    LOGICAL                 ::  ldum(hybrid%nbands(nk),hybrid%nbands(nk))
 
     IF ( irank2 == 0 ) THEN
        WRITE(6,'(A)') new_LINE('n') // new_LINE('n') // '### valence-core-core-valence exchange ###'
@@ -89,12 +89,12 @@ CONTAINS
     ! generate ldum(nbands(nk),nbands(nk)), which is true if the corresponding matrix entry is non-zero
     ic1  = 0
     ldum = .FALSE.
-    DO iband1 = 1,hybdat%nbands(nk)
+    DO iband1 = 1,hybrid%nbands(nk)
        ndb1 = degenerat(iband1)
        IF( ndb1 .GE. 1 ) THEN
           ic1 = ic1 + 1
           ic2 = 0
-          DO iband2 = 1,hybdat%nbands(nk)
+          DO iband2 = 1,hybrid%nbands(nk)
              ndb2 = degenerat(iband2)
              IF( ndb2 .GE. 1 ) THEN
                 ic2 = ic2 + 1
@@ -151,7 +151,7 @@ CONTAINS
 
                    ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                   ALLOCATE ( integral(n,n),carr(n,hybdat%nbands(nk)), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
+                   ALLOCATE ( integral(n,n),carr(n,hybrid%nbands(nk)), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
 
                    DO i = 1,n
                       CALL primitivef(primf1,fprod(:,i)*atoms%rmsh(:,itype)**(l+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
@@ -174,7 +174,7 @@ CONTAINS
 
                          carr = 0
                          ic   = 0
-                         DO n1=1,hybdat%nbands(nk)
+                         DO n1=1,hybrid%nbands(nk)
 
                             DO i = 1,n
                                ll      = larr(i)
@@ -218,22 +218,22 @@ CONTAINS
     !      ic         = 0
     sum_offdia = 0
     IF (l_real) THEN
-       DO n1=1,hybdat%nobd(nk)
-          DO n2=1,hybdat%nbands(nk)
+       DO n1=1,hybrid%nobd(nk)
+          DO n2=1,hybrid%nbands(nk)
              ex_vv_r(n2,n1,nk) = ex_vv_r(n2,n1,nk) - exchange(n1,n2)
              IF( n1 /= n2) sum_offdia = sum_offdia + 2*ABS(exchange(n1,n2))
           END DO
        END DO
     ELSE
-       DO n1=1,hybdat%nobd(nk)
-          DO n2=1,hybdat%nbands(nk)
+       DO n1=1,hybrid%nobd(nk)
+          DO n2=1,hybrid%nbands(nk)
              ex_vv_c(n2,n1,nk) = ex_vv_c(n2,n1,nk) - exchange(n1,n2)
              IF( n1 /= n2) sum_offdia = sum_offdia + 2*ABS(exchange(n1,n2))
           END DO
        END DO
     END IF
 
-    DO n1=1,hybdat%nobd(nk)
+    DO n1=1,hybrid%nobd(nk)
        results%te_hfex%core = results%te_hfex%core - results%w_iks(n1,nk,jsp)*exchange(n1,n1)
     END DO
 
@@ -268,7 +268,7 @@ CONTAINS
     INTEGER,INTENT(IN)      ::  nsymop
     REAL,INTENT(IN)         ::  a_ex
     !     - arays -
-    INTEGER,INTENT(IN)      ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
+    INTEGER,INTENT(IN)      ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
 
     TYPE(t_mat),INTENT(INOUT):: mat_ex
     !     - local scalars - 
@@ -292,10 +292,10 @@ CONTAINS
     REAL,ALLOCATABLE        ::  integral(:,:)
 
     COMPLEX                 ::  cmt(DIMENSION%neigd,hybrid%maxlmindx,atoms%nat)
-    COMPLEX                 ::  exchange(hybdat%nbands(nk),hybdat%nbands(nk))
+    COMPLEX                 ::  exchange(hybrid%nbands(nk),hybrid%nbands(nk))
     COMPLEX,ALLOCATABLE     ::  carr(:,:),carr2(:,:),carr3(:,:)
 
-    LOGICAL                 ::  ldum(hybdat%nbands(nk),hybdat%nbands(nk))
+    LOGICAL                 ::  ldum(hybrid%nbands(nk),hybrid%nbands(nk))
 
 
 
@@ -344,7 +344,7 @@ CONTAINS
 
                    ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                   ALLOCATE ( integral(n,n),carr(n,hybdat%nbands(nk)), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
+                   ALLOCATE ( integral(n,n),carr(n,hybrid%nbands(nk)), carr2(n,lapw%nv(jsp)),carr3(n,lapw%nv(jsp)) )
 
                    DO i = 1,n
                       CALL primitivef(primf1,fprod(:,i)*atoms%rmsh(:,itype)**(l+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
@@ -366,7 +366,7 @@ CONTAINS
                          m2 = m1 + M
 
                          carr = 0
-                         DO n1=1,hybdat%nbands(nk)
+                         DO n1=1,hybrid%nbands(nk)
 
                             DO i = 1,n
                                ll      = larr(i)
@@ -406,7 +406,7 @@ CONTAINS
        END IF
     ENDIF
 
-    DO n1=1,hybdat%nobd(nk)
+    DO n1=1,hybrid%nobd(nk)
        results%te_hfex%core = results%te_hfex%Core - a_ex * results%w_iks(n1,nk,jsp)*exchange(n1,n1)
     END DO
 
@@ -612,8 +612,8 @@ CONTAINS
     REAL                  ::  rprod(atoms%jmtd),primf1(atoms%jmtd),primf2(atoms%jmtd)
     REAL                  ::  integrand(atoms%jmtd)
     COMPLEX               ::  cexp(atoms%nat)
-    COMPLEX               ::  exch(hybdat%nbands(nk),ncstd)
-    COMPLEX               ::  cmt(DIMENSION%neigd,hybrid%maxlmindx,atoms%nat),carr(hybdat%nbands(nk))
+    COMPLEX               ::  exch(hybrid%nbands(nk),ncstd)
+    COMPLEX               ::  cmt(DIMENSION%neigd,hybrid%maxlmindx,atoms%nat),carr(hybrid%nbands(nk))
 
     IF ( mpi%irank == 0 ) THEN
        WRITE(6,'(//A)') '### core-core-core-valence exchange  ###'
@@ -717,7 +717,7 @@ CONTAINS
                                      iatom = iatom + 1
                                      icst1 = point(n1,m1,l1,iatom)
                                      cdum  = rdum2*cexp(iatom)
-                                     DO iband = 1,hybdat%nbands(nk)
+                                     DO iband = 1,hybrid%nbands(nk)
 
                                         exch(iband,icst1) = exch(iband,icst1) + cdum*cmt(iband,lmp2,iatom)
 
@@ -743,20 +743,20 @@ CONTAINS
 
     IF (l_real) THEN
        !symmetrize core-wavefunctions such that phi(-r) = phi(r)*
-       CALL symmetrize( exch,hybdat%nbands(nk),ncstd,2,.FALSE., atoms,hybdat%lmaxc,hybdat%lmaxcd,hybdat%nindxc, sym)
+       CALL symmetrize( exch,hybrid%nbands(nk),ncstd,2,.FALSE., atoms,hybdat%lmaxc,hybdat%lmaxcd,hybdat%nindxc, sym)
 
        IF( ANY( ABS(AIMAG(exch)) .GT. 1E-6 ) ) STOP 'exchange_cccv: exch possesses significant imaginary part'
     ENDIF
 
     IF (l_real) THEN
        DO icst = 1,ncstd
-          DO iband = 1,hybdat%nbands(nk)
+          DO iband = 1,hybrid%nbands(nk)
              exch_cv_r(iband,icst,nk) = exch_cv_r(iband,icst,nk) - exch(iband,icst)
           END DO
        END DO
     ELSE
        DO icst = 1,ncstd
-          DO iband = 1,hybdat%nbands(nk)
+          DO iband = 1,hybrid%nbands(nk)
              exch_cv_c(iband,icst,nk) = exch_cv_c(iband,icst,nk) - exch(iband,icst)
           END DO
        END DO

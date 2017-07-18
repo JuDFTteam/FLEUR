@@ -1,7 +1,7 @@
 
-MODULE m_eigen_hf_setup
+MODULE m_hf_setup
 CONTAINS
-  SUBROUTINE eigen_hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,results,jsp,eig_id_hf,&
+  SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,results,jsp,eig_id_hf,&
        hybdat,irank2,it,l_real,vr0,eig_irr) 
     USE m_types
     USE m_eig66_io
@@ -78,8 +78,8 @@ CONTAINS
              ALLOCATE(zmat(nk)%z_r(0,0))
           endif
           print *,"eigen_HF_Setup: read_eig:",nk
-          print *,zmat(nk)%nbasfcn,zmat(nk)%nbands,hybdat%ne_eig(nk)
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybdat%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk))
+          print *,zmat(nk)%nbasfcn,zmat(nk)%nbands,hybrid%ne_eig(nk)
+          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk))
           print *,"Done"
 
        END DO
@@ -106,21 +106,21 @@ CONTAINS
                &bands  |   maximal number of bands"
        END IF
        degenerat = 1
-       hybdat%nobd      = 0
+       hybrid%nobd      = 0
        DO nk=1 ,kpts%nkpt
 #               ifdef CPP_MPI
           ! jump to next k-point if this k-point is not treated at this process
           IF ( skip_kpt(nk) ) CYCLE
 #               endif
-          DO i=1,hybdat%ne_eig(nk)
-             DO j=i+1,hybdat%ne_eig(nk)
+          DO i=1,hybrid%ne_eig(nk)
+             DO j=i+1,hybrid%ne_eig(nk)
                 IF( ABS(eig_irr(i,nk)-eig_irr(j,nk)) < 1E-07) THEN !0.015
                    degenerat(i,nk) = degenerat(i,nk) + 1
                 END IF
              END DO
           END DO
 
-          DO i=1,hybdat%ne_eig(nk)
+          DO i=1,hybrid%ne_eig(nk)
              IF( degenerat(i,nk) .NE. 1 .OR. degenerat(i,nk) .NE. 0 ) &
                   degenerat(i+1:i+degenerat(i,nk)-1,nk) = 0
           END DO
@@ -128,32 +128,32 @@ CONTAINS
 
           ! set the size of the exchange matrix in the space of the wavefunctions
 
-          hybdat%nbands(nk)=hybrid%bands1
-          IF(hybdat%nbands(nk).GT.hybdat%ne_eig(nk)) THEN
+          hybrid%nbands(nk)=hybrid%bands1
+          IF(hybrid%nbands(nk).GT.hybrid%ne_eig(nk)) THEN
              IF ( mpi%irank == 0 ) THEN
-                WRITE(*,*) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
+                WRITE(*,*) ' maximum for hybrid%nbands is', hybrid%ne_eig(nk)
                 WRITE(*,*) ' increase energy window to obtain enough eigenvalues'
-                WRITE(*,*) ' set hybdat%nbands equal to hybdat%ne_eig'
+                WRITE(*,*) ' set hybrid%nbands equal to hybrid%ne_eig'
              END IF
-             hybdat%nbands(nk)=hybdat%ne_eig(nk)
+             hybrid%nbands(nk)=hybrid%ne_eig(nk)
           END IF
 
-          DO i = hybdat%nbands(nk)-1,1,-1
-             IF( (degenerat(i,nk) .GE. 1) .AND. (degenerat(i,nk)+i-1 .NE. hybdat%nbands(nk) ) ) THEN
-                hybdat%nbands(nk) = i + degenerat(i,nk) - 1
+          DO i = hybrid%nbands(nk)-1,1,-1
+             IF( (degenerat(i,nk) .GE. 1) .AND. (degenerat(i,nk)+i-1 .NE. hybrid%nbands(nk) ) ) THEN
+                hybrid%nbands(nk) = i + degenerat(i,nk) - 1
                 EXIT
              END IF
           END DO
 
-          DO i = 1,hybdat%ne_eig(nk)
-             IF(results%w_iks(i,nk,jsp) .GT. 0d0 ) hybdat%nobd(nk) = hybdat%nobd(nk) + 1
+          DO i = 1,hybrid%ne_eig(nk)
+             IF(results%w_iks(i,nk,jsp) .GT. 0d0 ) hybrid%nobd(nk) = hybrid%nobd(nk) + 1
 
           END DO
-          IF (hybdat%nobd(nk)>hybdat%nbands(nk)) THEN
+          IF (hybrid%nobd(nk)>hybrid%nbands(nk)) THEN
              CALL judft_warn("More occupied bands than total no of bands!?")
-             hybdat%nbands(nk)=hybdat%nobd(nk)
+             hybrid%nbands(nk)=hybrid%nobd(nk)
           ENDIF
-          PRINT *,"bands:",nk, hybdat%nobd(nk),hybdat%nbands(nk),hybdat%ne_eig(nk)
+          PRINT *,"bands:",nk, hybrid%nobd(nk),hybrid%nbands(nk),hybrid%ne_eig(nk)
        END DO
 
 #             ifdef CPP_MPI
@@ -162,28 +162,28 @@ CONTAINS
        DO nk = 1,kpts%nkpt
           IF ( skip_kpt(nk) ) THEN
              rcvreqd = rcvreqd + 1
-             CALL MPI_IRECV(hybdat%nobd(nk),1,MPI_INTEGER4, MPI_ANY_SOURCE,TAG_SNDRCV_HYBDAT%NOBD+nk, mpi,rcvreq(rcvreqd),ierr(1))
+             CALL MPI_IRECV(hybrid%nobd(nk),1,MPI_INTEGER4, MPI_ANY_SOURCE,TAG_SNDRCV_HYBDAT%NOBD+nk, mpi,rcvreq(rcvreqd),ierr(1))
           ELSE
              i = MOD( mpi%irank + isize2(nk), mpi%isize )
              DO WHILE ( i < mpi%irank-irank2(nk) .OR. i >= mpi%irank-irank2(nk)+isize2(nk) )
                 sndreqd = sndreqd + 1
-                CALL MPI_ISSEND(hybdat%nobd(nk),1,MPI_INTEGER4,i, TAG_SNDRCV_HYBDAT%NOBD+nk,mpi, sndreq(sndreqd),ierr(1) )
+                CALL MPI_ISSEND(hybrid%nobd(nk),1,MPI_INTEGER4,i, TAG_SNDRCV_HYBDAT%NOBD+nk,mpi, sndreq(sndreqd),ierr(1) )
                 i = MOD( i + isize2(nk), mpi%isize )
              END DO
           END IF
        END DO
        CALL MPI_WAITALL( rcvreqd, rcvreq, MPI_STATUSES_IGNORE, ierr(1) )
        ! Necessary to avoid compiler optimization
-       ! Compiler does not know that hybdat%nobd is modified in mpi_waitall
-       CALL MPI_GET_ADDRESS( hybdat%nobd, addr, ierr(1) )
+       ! Compiler does not know that hybrid%nobd is modified in mpi_waitall
+       CALL MPI_GET_ADDRESS( hybrid%nobd, addr, ierr(1) )
        rcvreqd = 0
 
 #             endif
 
-       ! spread hybdat%nobd from IBZ to whole BZ
+       ! spread hybrid%nobd from IBZ to whole BZ
        DO nk = 1,kpts%nkptf
           i       = kpts%bkp(nk)
-          hybdat%nobd(nk)= hybdat%nobd(i)
+          hybrid%nobd(nk)= hybrid%nobd(i)
        END DO
 
        !
@@ -299,13 +299,13 @@ CONTAINS
        ! Reading the eig file
        !DO nk = n_start,kpts%nkpt,n_stride
        DO nk = 1,kpts%nkpt,1
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybdat%ne_eig(nk),w_iks=results%w_iks(:,nk,jsp))
-          hybdat%nobd(nk) = COUNT(results%w_iks(:hybdat%ne_eig(nk),nk,jsp) > 0.0 )
+          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybrid%ne_eig(nk),w_iks=results%w_iks(:,nk,jsp))
+          hybrid%nobd(nk) = COUNT(results%w_iks(:hybrid%ne_eig(nk),nk,jsp) > 0.0 )
        END DO
     
        hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
-       hybdat%nbands    = MIN( hybrid%bands1, DIMENSION%neigd )
+       hybrid%nbands    = MIN( hybrid%bands1, DIMENSION%neigd )
 
     ENDIF ! hybrid%l_calhf
-  END SUBROUTINE eigen_hf_setup
-END MODULE m_eigen_hf_setup
+  END SUBROUTINE hf_setup
+END MODULE m_hf_setup

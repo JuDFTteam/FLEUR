@@ -28,7 +28,7 @@ CONTAINS
     USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_hybrid),INTENT(INOUT):: hybrid !ddist is modified here
+    TYPE(t_hybrid),INTENT(IN)   :: hybrid 
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -250,8 +250,6 @@ CONTAINS
     END IF
     DO js = 1,input%jspins
        dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, sm(nmaph*(js-1)+1),1)
-
-       hybrid%ddist(js) = 1000*SQRT(ABS(dist(js)/cell%vol))
 
        attributes = ''
        WRITE(attributes(1),'(i0)') js

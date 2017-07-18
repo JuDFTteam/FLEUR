@@ -397,56 +397,41 @@ MODULE m_types
 
   TYPE t_hybrid
      LOGICAL               ::  l_hybrid
+     LOGICAL               ::  l_subvxc
+     LOGICAL               ::  l_calhf
+     LOGICAL               ::  l_addhf
      INTEGER               ::  ewaldlambda
      INTEGER               ::  lexp
      INTEGER               ::  bands1 !Only read in
-     INTEGER               ::  bands2 !Only read in
-     INTEGER               :: nbasp
+     INTEGER               ::  nbasp
      INTEGER               ::  maxlcutm1
      INTEGER               ::  maxindxm1
      INTEGER               ::  maxbasm1
-     INTEGER               ::  maxlcutm2
-     INTEGER               ::  maxindxm2
-     INTEGER               ::  maxbasm2
      INTEGER               ::  maxindxp1
-     INTEGER               ::  maxindxp2
      INTEGER               ::  maxgptm
      INTEGER               ::  maxgptm1
-     INTEGER               ::  maxgptm2
      INTEGER               ::  maxindx
      INTEGER               ::  maxlmindx
      INTEGER               ::  gptmd
      INTEGER,ALLOCATABLE   ::  nindx(:,:)
      INTEGER,ALLOCATABLE   ::  select1(:,:)
      INTEGER,ALLOCATABLE   ::  lcutm1(:)
-     INTEGER,ALLOCATABLE   ::  select2(:,:)
-     INTEGER,ALLOCATABLE   ::  lcutm2(:)
      INTEGER,ALLOCATABLE   ::  nindxm1(:,:)
-     INTEGER,ALLOCATABLE   ::  nindxm2(:,:)
      INTEGER,ALLOCATABLE   ::  gptm(:,:)
      INTEGER,ALLOCATABLE   ::  ngptm1(:)
      INTEGER,ALLOCATABLE   ::  pgptm1(:,:)
-     INTEGER,ALLOCATABLE   ::  ngptm2(:)
-     INTEGER,ALLOCATABLE   ::  pgptm2(:,:)
      INTEGER,ALLOCATABLE   ::  ngptm (:)
      INTEGER,ALLOCATABLE   ::  pgptm (:,:)
      INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
-     INTEGER,ALLOCATABLE   ::  nindxp2(:,:)
      INTEGER,ALLOCATABLE   ::  lcutwf(:)
      INTEGER,ALLOCATABLE   ::  map(:,:)
      INTEGER,ALLOCATABLE   ::  tvec(:,:,:)
-     REAL                  ::  radshmin
+     INTEGER , ALLOCATABLE ::  nbasm(:)                                     
      REAL                  ::  gcutm1
-     REAL                  ::  gcutm2
      REAL                  ::  tolerance1  !only read in
-     REAL                  ::  tolerance2  !only read in
-     REAL   ,ALLOCATABLE   ::  ddist(:)
      REAL   ,ALLOCATABLE   ::  basm1(:,:,:,:)
-     REAL   ,ALLOCATABLE   ::  basm2(:,:,:,:)
      COMPLEX,ALLOCATABLE   ::  d_wgn2(:,:,:,:)
-     LOGICAL               ::  l_subvxc
-     LOGICAL               ::  l_calhf
-     LOGICAL,ALLOCATABLE   ::  l_exxc(:,:)
+     INTEGER,ALLOCATABLE   ::  ne_eig(:),nbands(:),nobd(:)                   !alloc in eigen_HF_init
   END TYPE t_hybrid
 
   TYPE prodtype
@@ -460,8 +445,6 @@ MODULE m_types
      REAL,    ALLOCATABLE ::  core1(:,:,:,:),core2(:,:,:,:)                 !alloc in eigen_HF_init
      REAL,    ALLOCATABLE ::  eig_c(:,:,:)                                  !alloc in eigen_HF_init
      INTEGER , ALLOCATABLE::  kveclo_eig(:,:)                               !alloc in eigen_HF_setup
-     INTEGER,ALLOCATABLE  ::  ne_eig(:),nbands(:),nobd(:)                   !alloc in eigen_HF_init
-     INTEGER , ALLOCATABLE::  nbasm(:)                                      !alloc in eigen_HF_init
      INTEGER              ::  maxfac
      REAL,    ALLOCATABLE ::  sfac(:),fac(:)                                !alloc in eigen_HF_init
      REAL,    ALLOCATABLE ::  gauntarr(:,:,:,:,:,:)                         !alloc in eigen_HF_init

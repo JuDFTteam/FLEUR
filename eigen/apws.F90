@@ -13,7 +13,7 @@ MODULE m_apws
   !*********************************************************************
 CONTAINS
   SUBROUTINE apws(dimension,input,noco,kpts,&
-       nk,cell,l_zref,n_size,jspin, bkpt,lapw,matind,nred)
+       nk,cell,l_zref,n_size,jspin,bkpt,lapw,matind,nred)
 
     USE m_types
     USE m_sort

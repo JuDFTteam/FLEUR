@@ -100,13 +100,13 @@
 
       INTEGER,INTENT(IN)      ::  parent(kpts%nkptf)
       INTEGER,INTENT(IN)      ::  pointer_EIBZ(nkpt_EIBZ)
-      INTEGER,INTENT(IN)      ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
+      INTEGER,INTENT(IN)      ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
 
  
       REAL   ,INTENT(IN)      ::  eig_irr(dimension%neigd,kpts%nkpt)
 
       REAL   ,INTENT(IN)      ::  wl_iks(dimension%neigd,kpts%nkptf)
-      REAL   ,INTENT(OUT)     ::  div_vv(hybdat%nbands(nk))
+      REAL   ,INTENT(OUT)     ::  div_vv(hybrid%nbands(nk))
 
       TYPE(t_mat),INTENT(INOUT):: mat_ex
 
@@ -137,14 +137,14 @@
    
       COMPLEX,ALLOCATABLE     ::  phase_vv(:,:)
       COMPLEX                 ::  exchcorrect(kpts%nkptf)
-      COMPLEX                 ::  dcprod(hybdat%nbands(nk),hybdat%nbands(nk),3) 
+      COMPLEX                 ::  dcprod(hybrid%nbands(nk),hybrid%nbands(nk),3) 
 
-      COMPLEX(8)              ::  exch_vv(hybdat%nbands(nk),hybdat%nbands(nk))
+      COMPLEX(8)              ::  exch_vv(hybrid%nbands(nk),hybrid%nbands(nk))
 #ifdef CPP_MPI
-      COMPLEX(8)              ::  buf_vv(hybdat%nbands(nk),nbands(nk))
+      COMPLEX(8)              ::  buf_vv(hybrid%nbands(nk),nbands(nk))
 #endif
       COMPLEX                 ::  hessian(3,3)
-      COMPLEX                 ::  proj_ibsc(3,mnobd,hybdat%nbands(nk))
+      COMPLEX                 ::  proj_ibsc(3,mnobd,hybrid%nbands(nk))
       COMPLEX                 ::  olap_ibsc(3,3,mnobd,mnobd)
 #if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
       REAL                    ::  coulomb_mt1(hybrid%maxindxm1-1,hybrid%maxindxm1-1, 0:hybrid%maxlcutm1,atoms%ntype)       
@@ -200,9 +200,9 @@
 
       ! determine package size loop over the occupied bands
       if (mat_ex%l_real) THEn
-         rdum  = hybrid%maxbasm1*hybdat%nbands(nk)*4/1048576.
+         rdum  = hybrid%maxbasm1*hybrid%nbands(nk)*4/1048576.
       else
-         rdum  = hybrid%maxbasm1*hybdat%nbands(nk)*4/1048576.
+         rdum  = hybrid%maxbasm1*hybrid%nbands(nk)*4/1048576.
       endif
       psize = 1
       DO iband = mnobd,1,-1
@@ -219,20 +219,20 @@
       IF( psize .ne. mnobd ) THEN
         WRITE(6,'(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybrid%bands in packages', ' of the size',psize,' (cprod=',rdum*psize,'MB)'
       END IF
-      ALLOCATE( phase_vv(psize,hybdat%nbands(nk)),stat=ok )
+      ALLOCATE( phase_vv(psize,hybrid%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation phase'
       phase_vv=0
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation phase'
       if (mat_ex%l_real) THEN
-         ALLOCATE( cprod_vv_r(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         ALLOCATE( cprod_vv_r(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
-         ALLOCATE( carr3_vv_r(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         ALLOCATE( carr3_vv_r(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
          cprod_vv_r = 0 ; carr3_vv_r = 0 
       ELSE
-         ALLOCATE( cprod_vv_c(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         ALLOCATE( cprod_vv_c(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
-         ALLOCATE( carr3_vv_c(hybrid%maxbasm1,psize,hybdat%nbands(nk)),stat=ok )
+         ALLOCATE( carr3_vv_c(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
          cprod_vv_c = 0 ; carr3_vv_c = 0
       endif
@@ -243,7 +243,7 @@
         ikpt0 = pointer_EIBZ(ikpt)
 
         n  = hybrid%nbasp + hybrid%ngptm(ikpt0)
-        IF( hybdat%nbasm(ikpt0) .ne. n ) STOP 'error hybdat%nbasm'
+        IF( hybrid%nbasm(ikpt0) .ne. n ) STOP 'error hybrid%nbasm'
         nn = n*(n+1)/2
 
         ! read in coulomb matrix from direct access file coulomb
@@ -284,7 +284,7 @@
                          nkqpt,cprod_vv)
 #else
           CALL wavefproducts_inv5(&
-                         1,hybdat%nbands(nk),ibando,ibando+psize-1,&
+                         1,hybrid%nbands(nk),ibando,ibando+psize-1,&
                          dimension,input,jsp,atoms,&
                          lapw,kpts,&
                          nk,ikpt0,hybdat,mnobd,hybrid,&
@@ -305,7 +305,7 @@
                          cprod_vv)
 #else
           CALL wavefproducts_noinv5(&
-                         1,hybdat%nbands(nk),ibando,ibando+psize-1,&
+                         1,hybrid%nbands(nk),ibando,ibando+psize-1,&
                          nk,ikpt0,dimension,input,jsp, &!jsp,&
                          cell,atoms,hybrid,hybdat, &
                          kpts,&
@@ -324,15 +324,15 @@ endif
           ! in Fourier space
 #ifndef CPP_NOSPMVEC
           IF ( xcpot%icorr == icorr_hse .OR. xcpot%icorr == icorr_vhse ) THEN
-            iband1  = hybdat%nobd(nkqpt)
+            iband1  = hybrid%nobd(nkqpt)
             exch_vv = exch_vv + dynamic_hse_adjustment(&
                        atoms%rmsh,atoms%rmt,atoms%dx,atoms%jri,atoms%jmtd,kpts%bkf(:,ikpt0),ikpt0,kpts%nkptf,&
                        cell%bmat,cell%omtil,atoms%ntype,atoms%neq,atoms%nat,atoms%taual,hybrid%lcutm1,hybrid%maxlcutm1,&
                        hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptm,hybrid%ngptm(ikpt0),hybrid%pgptm(:,ikpt0),&
-                       hybrid%gptmd,hybrid%basm1,hybdat%nbasm(ikpt0),iband1,hybdat%nbands(nk),nsest,&
+                       hybrid%gptmd,hybrid%basm1,hybrid%nbasm(ikpt0),iband1,hybrid%nbands(nk),nsest,&
                        ibando,psize,indx_sest,atoms%invsat,sym%invsatnr,mpi%irank,&
-                       cprod_vv_r(:hybdat%nbasm(ikpt0),:,:),&
-                       cprod_vv_c(:hybdat%nbasm(ikpt0),:,:),&
+                       cprod_vv_r(:hybrid%nbasm(ikpt0),:,:),&
+                       cprod_vv_c(:hybrid%nbasm(ikpt0),:,:),&
                        mat_ex%l_real,wl_iks(:iband1,nkqpt),n_q(ikpt))
           END IF
 #endif
@@ -342,8 +342,8 @@ endif
           ! from IBZ to current k-point
           IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
              CALL bra_trafo2(&
-                mat_ex%l_real,carr3_vv_r(:hybdat%nbasm(ikpt0),:,:),cprod_vv_r(:hybdat%nbasm(ikpt0),:,:),carr3_vv_c(:hybdat%nbasm(ikpt0),:,:),cprod_vv_c(:hybdat%nbasm(ikpt0),:,:),&
-                hybdat%nbasm(ikpt0),psize,hybdat%nbands(nk),&
+                mat_ex%l_real,carr3_vv_r(:hybrid%nbasm(ikpt0),:,:),cprod_vv_r(:hybrid%nbasm(ikpt0),:,:),carr3_vv_c(:hybrid%nbasm(ikpt0),:,:),cprod_vv_c(:hybrid%nbasm(ikpt0),:,:),&
+                hybrid%nbasm(ikpt0),psize,hybrid%nbands(nk),&
                 ikpt0,kpts%bkp(ikpt0),kpts%bksym(ikpt0),sym,&
                 hybrid,kpts,cell,hybrid%maxlcutm1,atoms,&
                 hybrid%lcutm1,hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptmd,&
@@ -351,9 +351,9 @@ endif
                 phase_vv)
 
              IF (mat_ex%l_real) THEN
-                cprod_vv_r(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_r(:hybdat%nbasm(ikpt0),:,:)
+                cprod_vv_r(:hybrid%nbasm(ikpt0),:,:) = carr3_vv_r(:hybrid%nbasm(ikpt0),:,:)
              ELSE
-                cprod_vv_c(:hybdat%nbasm(ikpt0),:,:) = carr3_vv_c(:hybdat%nbasm(ikpt0),:,:)
+                cprod_vv_c(:hybrid%nbasm(ikpt0),:,:) = carr3_vv_c(:hybrid%nbasm(ikpt0),:,:)
              ENDIF
           ELSE
             phase_vv(:,:) = (1d0,0d0)
@@ -361,9 +361,9 @@ endif
 
           ! calculate exchange matrix at ikpt0
 
-          DO n1=1,hybdat%nbands(nk)
+          DO n1=1,hybrid%nbands(nk)
             DO iband = 1,psize
-              IF( ibando + iband - 1 .gt. hybdat%nobd(nkqpt) ) CYCLE
+              IF( ibando + iband - 1 .gt. hybrid%nobd(nkqpt) ) CYCLE
               cdum  = wl_iks(ibando+iband-1,nkqpt)&
                     * conjg(phase_vv(iband,n1))/n_q(ikpt)
 
@@ -426,13 +426,13 @@ endif
         END IF
         IF( zero_order ) THEN
           CALL dwavefproducts(  &
-                            dcprod,nk,1,hybdat%nbands(nk),1,hybdat%nbands(nk),.false., atoms,hybrid,&
+                            dcprod,nk,1,hybrid%nbands(nk),1,hybrid%nbands(nk),.false., atoms,hybrid,&
                             cell,hybdat, kpts,kpts%nkpt,lapw,&
                             dimension,jsp,&
                             eig_irr )
 
           ! make dcprod hermitian
-          DO n1 = 1,hybdat%nbands(nk)
+          DO n1 = 1,hybrid%nbands(nk)
             DO n2 = 1,n1
               dcprod(n1,n2,:) = (dcprod(n1,n2,:) &
                               - conjg(dcprod(n2,n1,:)))/2   
@@ -455,7 +455,7 @@ endif
         
         !This should be done with w_iks I guess!TODO
         occup = .false.
-        DO i=1,hybdat%ne_eig(nk)
+        DO i=1,hybrid%ne_eig(nk)
           IF ( results%ef  .ge. eig_irr(i,nk) ) THEN
             occup(i) = .true.
           ELSE IF ( eig_irr(i,nk) - results%ef .le. 1E-06) THEN
@@ -464,7 +464,7 @@ endif
         END DO
 
 
-        DO n1 = 1,hybdat%nbands(nk)
+        DO n1 = 1,hybrid%nbands(nk)
           DO n2 = 1,nsest(n1)!n1
             nn2 = indx_sest(n2,n1)
             exchcorrect = 0
@@ -484,7 +484,7 @@ endif
                 DO i = 1,3
                   j = i
 
-                  DO iband = 1,hybdat%nbands(nk)
+                  DO iband = 1,hybrid%nbands(nk)
                     IF( occup(iband) ) THEN
                       hessian(i,j) = hessian(i,j) + conjg(dcprod(iband,n1,i)) *dcprod(iband,nn2,j)
                     END IF
@@ -494,7 +494,7 @@ endif
                   ! ibs correction
                   IF( ibs_corr ) THEN 
                     hessian(i,j) = hessian(i,j) - olap_ibsc(i,j,n1,nn2)/cell%omtil
-                    DO iband = 1,hybdat%nbands(nk)
+                    DO iband = 1,hybrid%nbands(nk)
                       hessian(i,j) = hessian(i,j) + conjg(proj_ibsc(i,nn2,iband)) * proj_ibsc(j,n1,iband)/cell%omtil
                     END DO
                   END IF
@@ -504,7 +504,7 @@ endif
 
                 DO i = 1,3
                   j = i 
-                  DO iband = 1,hybdat%nbands(nk)
+                  DO iband = 1,hybrid%nbands(nk)
                     IF( occup(iband) ) THEN
                       hessian(i,j) = hessian(i,j) + conjg(dcprod(iband,n1,i)) * dcprod(iband,nn2,j)
                     END IF
@@ -547,7 +547,7 @@ endif
       ENDIF
 
       ! write exch_vv in mat_ex
-      call mat_ex%alloc(matsize1=hybdat%nbands(nk))
+      call mat_ex%alloc(matsize1=hybrid%nbands(nk))
       mat_ex%data_c=exch_vv
      
       END SUBROUTINE exchange_valence_hf

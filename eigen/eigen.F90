@@ -30,17 +30,14 @@ CONTAINS
     USE m_usetup
     USE m_pot_io
     USE m_eigen_diag
-    USE m_eigen_hf_init
-    USE m_eigen_hf_setup
-    USE m_hsfock
+    USE m_add_vnonlocal
     USE m_subvxc
-    USE m_hsefunctional
-    USE m_hybridmix    , ONLY: amix_pbe0,amix_hf
+    !USE m_hsefunctional
     USE m_util
-    USE m_icorrkeys
+    USE m_io_hybrid
+    !USE m_icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
     USE m_xmlOutput
-    USE m_io_hybrid
 #ifdef CPP_MPI
     USE m_mpi_bc_pot
 #endif
@@ -107,10 +104,8 @@ CONTAINS
 
     !     .. variables for HF or hybrid functional calculation ..
     !
-    TYPE(t_hybdat)          :: hybdat
     INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
-    REAL,    ALLOCATABLE    ::  eig_irr(:,:),vr0(:,:,:)
-
+    
 #ifdef CPP_MPI
     INTEGER   :: sndreqd,sndreq(mpi%isize*kpts%nkpt)
 #endif
@@ -155,10 +150,6 @@ CONTAINS
 8120   FORMAT (' IT=',i4,'  ISEC1=',i4,' reduced diagonalization')
        l_wu = .TRUE.
     END IF
-    !
-    ! load potential from file pottot (=unit 8)
-    !
-    ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd) ) ; vr0 = 0
    
     !IF (mpi%irank.EQ.0) THEN
     !   CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
@@ -180,8 +171,7 @@ CONTAINS
     CALL lodpot(mpi,atoms,sphhar,obsolete,vacuum,&
             input, v%mt,v%vacz, enpara_in, enpara)
     !
-   
-    CALL eigen_hf_init(hybrid,kpts,atoms,input,dimension,hybdat,irank2,isize2,l_real)
+
 
     !---> set up and solve the eigenvalue problem
     !---> loop over energy windows
@@ -268,8 +258,7 @@ CONTAINS
     !--->    loop over k-points: each can be a separate task
 
     DO jsp = 1,nspins
-       CALL eigen_HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id,&
-         hybdat,irank2,it,l_real,vr0,eig_irr)  
+       
 
        !
        !--->       set up k-point independent t(l'm',lm) matrices
@@ -315,17 +304,8 @@ CONTAINS
 #endif
 
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-          IF ( hybrid%l_calhf ) THEN
-             ! jump to next k-point if this process is not present in communicator
-             IF ( comm(nk) == MPI_COMM_NULL ) CYCLE
-             ! allocate buffer for communication of the results
-             IF ( irank2(nk) /= 0 ) CALL work_dist_reserve_buffer( hybdat%nbands(nk) )
-          END IF
-#endif
 
           nrec =  kpts%nkpt*(jsp-1) + nk
-          nrec = mpi%n_size*(nrec-1) + mpi%n_rank + 1
           !
           !--->         set up lapw list
           !
@@ -362,15 +342,13 @@ CONTAINS
              call olap%from_packed(l_real,dimension%nbasfcn,hamovlp%b_r,hamovlp%b_c)
              call write_olap(olap,nrec)
             
-
-             CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,&
-                  sym,cell,noco,results,it,maxval(hybdat%nobd),xcpot,&
-                  mpi,irank2(nk),isize2(nk),comm(nk), hamovlp)
-
+             if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
+             
+             
              IF ( irank2(nk) /= 0 ) CYCLE
 
              IF( hybrid%l_subvxc ) THEN
-                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,vr0,atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
                      sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
                      oneD,  hamovlp,vx)
              END IF
@@ -433,20 +411,6 @@ CONTAINS
           CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
 
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-          IF ( hybrid%l_calhf ) THEN
-             IF ( isize2(nk) == 1 ) THEN
-                WRITE(*,'(a,i6,a,i6,a)') 'HF: kpt ', nk, ' was done by rank ', mpi%irank, '.'
-             ELSE
-                WRITE(*,'(a,i6,a,i6,a,i6,a)')&
-                     'HF: kpt ', nk, ' was done by rank ', mpi%irank, ' and ', isize2(nk)-1, ' more.'
-             END IF
-             !                ELSE
-             !                  WRITE(*,'(a,i6,a,i6,a)')        '    kpt ', nk, ' was done by rank ', irank, '.'
-          END IF
-          !#             else
-          !                WRITE (*,*) 'pe: ',irank,' wrote ',nrec
-#             endif
           CALL timestop("EV output")
           !#ifdef CPP_MPI
           IF (l_real) THEN
@@ -460,11 +424,6 @@ ENDIF
        DEALLOCATE (td%tuu,td%tud,td%tdu,td%tdd)
        DEALLOCATE (td%ind,td%tuulo,td%tdulo)
        DEALLOCATE (td%tuloulo)
-#ifdef CPP_NEVER
-       IF ( hybrid%l_calhf ) THEN
-          DEALLOCATE ( eig_irr,kveclo_eig )
-       END IF
-#endif
     END DO ! spin loop ends
     DEALLOCATE( vs_mmp )
     DEALLOCATE (matind)
@@ -473,30 +432,11 @@ ENDIF
     ELSE
        DEALLOCATE(hamOvlp%a_c,hamOvlp%b_c)
     ENDIF
-#ifdef CPP_NEVER
-    IF( hybrid%l_calhf ) THEN
-       DEALLOCATE( fac,sfac,gauntarr )
-       DEALLOCATE( nindxc,core1,core2,nbasm,eig_c )
-    END IF
-#endif
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     IF ( hybrid%l_calhf ) DEALLOCATE (nkpt_EIBZ)
 #endif
 
   
-    !     hf: write out radial potential vr0
-    IF (hybrid%l_hybrid.OR.hybrid%l_calhf) THEN
-       OPEN(unit=120,file='vr0',form='unformatted')
-       DO isp=1,DIMENSION%jspd
-          DO nn=1,atoms%ntype
-             DO i=1,atoms%jmtd
-                WRITE(120) vr0(i,nn,isp)
-             END DO
-          END DO
-       END DO
-       CLOSE(120)
-    ENDIF
-
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif

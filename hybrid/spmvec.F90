@@ -35,8 +35,8 @@
 #else
       REAL   , INTENT(IN) ::  coulomb_mtir(:)
 #endif
-      REAL   , INTENT(IN) ::  vecin (:)!(hybdat%nbasm)
-      REAL   , INTENT(OUT)::  vecout(:)!(hybdat%nbasm)
+      REAL   , INTENT(IN) ::  vecin (:)!(hybrid%nbasm)
+      REAL   , INTENT(OUT)::  vecout(:)!(hybrid%nbasm)
       
       ! - local scalars -
       INTEGER             ::  itype,ieq,iatom,ishift
@@ -51,14 +51,14 @@
       COMPLEX, PARAMETER  ::  img = (0d0,1d0)
       ! - local arrays -
       
-      REAL                ::  vecinhlp (hybdat%nbasm(ikpt))
+      REAL                ::  vecinhlp (hybrid%nbasm(ikpt))
       REAL   ,ALLOCATABLE ::  coulhlp(:,:)
  
   
       
       vecinhlp = vecin
       
-      CALL reorder(hybdat%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1, hybrid%maxlcutm1,hybrid%nindxm1,1, vecinhlp)
+      CALL reorder(hybrid%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1, hybrid%maxlcutm1,hybrid%nindxm1,1, vecinhlp)
   
 
       ibasm = 0
@@ -244,7 +244,7 @@
         IF( indx0 .ne. hybrid%nbasp ) STOP 'spmvec: error index counting (indx0)'
       END IF
       
-      CALL reorder(hybdat%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1,hybrid%maxlcutm1,hybrid%nindxm1,&
+      CALL reorder(hybrid%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1,hybrid%maxlcutm1,hybrid%nindxm1,&
      &             2,&
      &             vecout)
       
@@ -282,8 +282,8 @@
 #else
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
 #endif
-      COMPLEX, INTENT(IN) ::  vecin (:)!(hybdat%nbasm)
-      COMPLEX, INTENT(OUT)::  vecout(:)!(hybdat%nbasm)
+      COMPLEX, INTENT(IN) ::  vecin (:)!(hybrid%nbasm)
+      COMPLEX, INTENT(OUT)::  vecout(:)!(hybrid%nbasm)
       
       ! - local scalars -
       INTEGER             ::  itype,ieq,iatom,ishift
@@ -299,14 +299,14 @@
       ! - local arrays -
       
       REAL                ::  vecr(hybrid%maxindxm1-1),veci(hybrid%maxindxm1-1)
-      COMPLEX             ::  vecinhlp (hybdat%nbasm(ikpt))
+      COMPLEX             ::  vecinhlp (hybrid%nbasm(ikpt))
       COMPLEX,ALLOCATABLE ::  coulhlp(:,:)
  
   
       
       vecinhlp = vecin
       
-      CALL reorder(hybdat%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1, hybrid%maxlcutm1,hybrid%nindxm1,1, vec_c=vecinhlp)
+      CALL reorder(hybrid%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1, hybrid%maxlcutm1,hybrid%nindxm1,1, vec_c=vecinhlp)
   
 
       ibasm = 0
@@ -495,7 +495,7 @@
         IF( indx0 .ne. hybrid%nbasp ) STOP 'spmvec: error index counting (indx0)'
       END IF
       
-      CALL reorder(hybdat%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1,hybrid%maxlcutm1,hybrid%nindxm1,&
+      CALL reorder(hybrid%nbasm(ikpt),hybrid%nbasp,atoms,hybrid%lcutm1,hybrid%maxlcutm1,hybrid%nindxm1,&
      &             2,&
      &             vec_c=vecout)
       

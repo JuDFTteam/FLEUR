@@ -108,7 +108,7 @@
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype),&
      & jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype),noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
-     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),&
+     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
      & hybrid%lcutwf(atoms%ntype), STAT=ok)
 !
 !---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and 
@@ -399,7 +399,7 @@
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
      & vacuum%izlay,atoms%ncst,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%soc_opt,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,jij%l_magn,jij%M,noco%b_con,sphhar%clnu,sphhar%nlh,&
-     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,hybrid%select2,hybrid%lcutm2,&
+     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,&
      & hybrid%lcutwf)
 !
       RETURN

@@ -55,6 +55,7 @@
           USE m_mix
           USE m_xmlOutput
           USE m_juDFT_time
+          use m_calc_hybrid
           !          USE m_jcoff
           !          USE m_jcoff2
           !          USE m_ssomat
@@ -62,9 +63,7 @@
           USE m_wann_optional
           USE m_wannier
 #endif
-          USE m_mixedbasis
-          USE m_io_hybrid
-          USE m_coulomb
+
           USE m_gen_map
           USE m_dwigner
           !          USE m_generate_pntgpt
@@ -104,7 +103,7 @@
 
           !     .. Local Scalars ..
           INTEGER:: eig_id
-          INTEGER:: it,ithf,itype,l
+          INTEGER:: it,ithf
           LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
           !--- J<
           INTEGER             :: phn
@@ -118,19 +117,14 @@
           integer:: ierr(2)
 #endif
           mpi%mpi_comm=mpi_comm
-         
-         CALL timestart("Initialization")
-         CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-                 sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-                 oneD,l_opti)
-         CALL timestop("Initialization")
 
-          hybrid%l_hybrid   = (&
-               xcpot%icorr == icorr_pbe0 .OR.&
-               xcpot%icorr == icorr_hse  .OR.&
-               xcpot%icorr == icorr_vhse .OR.&
-               xcpot%icorr == icorr_hf   .OR.&
-               xcpot%icorr == icorr_exx)
+          CALL timestart("Initialization")
+          CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+               sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+               oneD,l_opti)
+          CALL timestop("Initialization")
+
+
 
           IF (l_opti) THEN
              IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
@@ -227,79 +221,18 @@
                       CALL timestart("Q-point for J_ij(total)")
 
                    ENDIF
-                   !HF
-                   hybrid%l_subvxc = ( hybrid%l_hybrid.and.xcpot%icorr /= icorr_exx )
+
 
                    IF ( noco%l_soc ) THEN
                       dimension%neigd2 = dimension%neigd*2
                    ELSE
                       dimension%neigd2 = dimension%neigd
                    END IF
-                   IF( .NOT. ALLOCATED(results%w_iks) )&
-                        ALLOCATE ( results%w_iks(dimension%neigd2,kpts%nkpt,dimension%jspd) )
-
-#ifdef CPP_NEVER
-                   IF(  hybrid%l_hybrid .AND. it == 1 ) THEN
-                      CALL juDFT_WARN ("Hybrid functionals not working in this version")
-                      CALL timestart("generation of mixedbasis and coulombmatrix")
-
-                      IF ( mpi%irank == 0 ) WRITE(*,'(/A)',advance='no') ' calculation of mixedbasis...'
-                      print *,"symcheck:",sym%invs,noco%l_noco 
-                      eig_id=open_eig(&
-                      mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
-                      ,noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,&
-         mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-         nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
-         l_orb=banddos%l_orb)
-                      if (kpts%nkptf==0) call judft_error("kpoint-set of full BZ not available",hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
-                      !construct the mixed-basis
-                      CALL mixedbasis(atoms,kpts, dimension,input,cell,sym,xcpot,hybrid, eig_id,mpi,v,l_restart)
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
-                      hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
-                    
-                      call open_hybrid_io(hybrid,dimension,atoms,sym%invs)
-                      
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' calculation of coulomb matrix ...'
-                      CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
-
-#ifdef CPP_MPI
-                      CALL MPI_Bcast( hybrid%maxbasm1,1,MPI_INTEGER4,0, mpi%mpi_comm,ierr(1) )
-                      CALL MPI_Bcast( hybrid%radshmin,1,MPI_REAL8,   0, mpi%mpi_comm,ierr(1) )
-#endif
-                      CALL timestop("generation of mixedbasis and coulombmatrix")
 
 
-                      IF ( noco%l_soc ) THEN
-                         input%zelec = input%zelec * 2
-                      END IF
-
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' start fermie....'
-                      CALL fermie(eig_id, mpi,kpts,obsolete,&
-                           input,noco,enpara%epara_min,jij,cell,results)
-
-                      IF ( noco%l_soc ) THEN
-                         input%zelec = input%zelec / 2
-                      END IF
-
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)') '...done'
-
-                   ELSEIF ( it == 1 ) THEN ! allocate some dummy arrays
-                   IF (it==1) THEN ! temporary until HF is not excluded by #if any more
-                      IF ( noco%l_soc ) THEN
-                         dimension%neigd2 = dimension%neigd*2
-                      ELSE
-                         dimension%neigd2 = dimension%neigd
-                      END IF
-                      kpts%nkptf = 0; hybrid%maxindx = 0; hybrid%gptmd = 0; hybrid%maxgptm = 0
-                      hybrid%maxgptm1 = 0; hybrid%maxgptm2 = 0; hybrid%maxindxm1 = 0; hybrid%maxindxm2 = 0
-                      hybrid%maxlcutm1 = 0; hybrid%maxlcutm2 = 0; hybrid%maxindxp1 = 0; hybrid%maxindxp2 = 0
-                      ALLOCATE(hybrid%gptm(0,0),hybrid%ngptm(0),hybrid%pgptm(0,0),hybrid%ngptm1(0),&
-                           hybrid%pgptm1(0,0),hybrid%ngptm2(0),hybrid%pgptm2(0,0),hybrid%basm1(0,0,0,0),&
-                           hybrid%basm2(0,0,0,0),hybrid%nindxm1(0,0),hybrid%nindxm2(0,0))
-                   END IF ! first iteration hybrids
-#endif
                    !HF
+                   IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
+                        cell,vacuum,oneD,banddos,results,sym,xcpot,v,it  )
                    !#endif
                    IF (.NOT.obsolete%pot8) THEN
                       CALL timestart("generation of potential")
@@ -327,35 +260,9 @@
                       !
                       !+t3e
                    ENDIF ! .not.obsolete%pot8
-                   IF(  hybrid%l_hybrid .AND. it == 1 ) THEN
-                      CALL juDFT_WARN ("Hybrid functionals not working in this version")
-                      CALL timestart("generation of mixedbasis and coulombmatrix")
 
-                      IF ( mpi%irank == 0 ) WRITE(*,'(/A)',advance='no') ' calculation of mixedbasis...'
-                      eig_id=open_eig(&
-                      mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
-                      ,noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,&
-         mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-         nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
-         l_orb=banddos%l_orb)
-                      if (kpts%nkptf==0) call judft_error("kpoint-set of full BZ not available",hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
-                      !construct the mixed-basis
-                      CALL mixedbasis(atoms,kpts, dimension,input,cell,sym,xcpot,hybrid, eig_id,mpi,v,l_restart)
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
-                      hybrid%maxlmindx = MAXVAL((/ ( SUM( (/ (hybrid%nindx(l,itype)*(2*l+1), l=0,atoms%lmax(itype)) /) ),itype=1,atoms%ntype) /) )
-                      
-                      call open_hybrid_io(hybrid,dimension,atoms,sym%invs)
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)',advance='no') ' calculation of coulomb matrix ...'
-                      CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
-                      IF ( mpi%irank == 0 ) WRITE(*,'(A)')'...done'
 
-#ifdef CPP_MPI
-                      CALL MPI_Bcast( hybrid%maxbasm1,1,MPI_INTEGER4,0, mpi%mpi_comm,ierr(1) )
-                      CALL MPI_Bcast( hybrid%radshmin,1,MPI_REAL8,   0, mpi%mpi_comm,ierr(1) )
-#endif
-                      CALL timestop("generation of mixedbasis and coulombmatrix")
-                   ENDIF
-                   
+
 #ifdef CPP_MPI
                    CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
@@ -409,25 +316,22 @@
                                   !
                                   !                   add all contributions to total energy
                                   !
-                                  IF( hybrid%l_subvxc) THEN
-                                     DEALLOCATE( results%w_iks )
 #ifdef CPP_MPI
-                                     ! send all result of local total energies to the r
-                                     IF (mpi%irank==0) THEN
-                                        CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,&
-                                             1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-                                        CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,&
-                                             1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-                                     ELSE
-                                        CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,&
-                                             1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-                                        CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,&
-                                             1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-                                     ENDIF
-                                     !                                  END IF
+                                  ! send all result of local total energies to the r
+                                  IF (mpi%irank==0) THEN
+                                     CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,&
+                                          1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+                                     CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,&
+                                          1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+                                  ELSE
+                                     CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,&
+                                          1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+                                     CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,&
+                                          1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+                                  ENDIF
+                                  !                                  END IF
 #endif
-                                  END IF ! xcpot%icorr = any hybrid
-
+                            
 
 
                             ENDIF
@@ -583,13 +487,6 @@
                 CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                      dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
                      enpara,cell,noco,jij,results,oneD)
-                !
-                ! the w_iks are needed for hybrid functionals so do not
-                ! deallocate them in that case
-
-                IF ( hybrid%l_hybrid ) THEN
-                   DEALLOCATE ( results%w_iks )
-                END IF
 
                 IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
                 !+t3e

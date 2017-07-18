@@ -45,8 +45,7 @@ MODULE m_hsfock
      &             results,&
      &             it,mnobd,&
      &             xcpot,&
-     &             mpi,irank2,isize2,comm,&
-     &             hamovlp)
+     &             mpi,irank2,isize2,comm)
 
       USE m_symm_hf       ,ONLY: symm_hf
       USE m_util          ,ONLY: intgrf,intgrf_init
@@ -85,8 +84,7 @@ MODULE m_hsfock
       !     -  arrays -
       REAL,INTENT(IN)         ::  eig_irr(dimension%neigd,kpts%nkpt)
       
-      TYPE(t_hamovlp),INTENT(INOUT)::hamovlp
-
+     
   
 
 !     - local scalars -
@@ -105,8 +103,8 @@ MODULE m_hsfock
       REAL                    ::  a_ex
 !     - local arrays -
       INTEGER                 ::  gpt(3,lapw%nv(jsp))
-      INTEGER                 ::  degenerat(hybdat%ne_eig(nk))
-      INTEGER                 ::  nsest(hybdat%nbands(nk)),indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))
+      INTEGER                 ::  degenerat(hybrid%ne_eig(nk))
+      INTEGER                 ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
 
       INTEGER,ALLOCATABLE     ::  parent(:),symop(:)
       INTEGER,ALLOCATABLE     ::  psym(:)
@@ -114,7 +112,7 @@ MODULE m_hsfock
       INTEGER,ALLOCATABLE     ::  n_q(:)
 
       REAL                    ::  wl_iks(dimension%neigd,kpts%nkptf)
-      REAL                    ::  div_vv(hybdat%nbands(nk))
+      REAL                    ::  div_vv(hybrid%nbands(nk))
 
       TYPE(t_mat)             :: olap,trafo,invtrafo,ex,tmp,v_x,z
       COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
@@ -136,17 +134,7 @@ MODULE m_hsfock
       !
       ! initialize weighting factor for HF exchange part
       !
-      IF     ( xcpot%icorr .eq. icorr_pbe0 ) THEN
-        a_ex = amix_pbe0
-      ELSE IF( xcpot%icorr .eq. icorr_hf   ) THEN
-        a_ex = amix_hf
-      ELSE IF (xcpot%icorr .eq. icorr_hse) THEN
-        a_ex = aMix_HSE
-      ELSE IF (xcpot%icorr .eq. icorr_vhse ) THEN
-        a_ex = aMix_VHSE()
-      ELSE
-        STOP 'mhsfock: xc functional can not be identified'
-      END IF
+      a_ex=get_exchange_weight(xcpot%icorr)
 
 
       ! write k1,k2,k3 in gpt
@@ -156,7 +144,7 @@ MODULE m_hsfock
 
       
       ! read in lower triangle part of overlap matrix from direct acces file olap
-      call olap%alloc(hamovlp%l_real,dimension%nbasfcn)
+      call olap%alloc(sym%invs,dimension%nbasfcn)
       call read_olap(olap, kpts%nkpt*(jsp-1) + nk)
       if (.not.olap%l_real) olap%data_c=conjg(olap%data_c)
 
@@ -198,7 +186,7 @@ MODULE m_hsfock
         ! HF exchange
         CALL timestart("valence exchange calculation")
 
-        ex%l_real=hamovlp%l_real
+        ex%l_real=sym%invs
         CALL exchange_valence_hf(& 
      &            nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,&
      &            cell, dimension,input,jsp, hybdat, mnobd, lapw,&
@@ -256,7 +244,7 @@ MODULE m_hsfock
 
         CALL timestart("time for performing T^-1*mat_ex*T^-1*")
         !calculate trafo from wavefunctions to APW basis
-        IF( dimension%neigd .lt. hybdat%nbands(nk) ) STOP 'mhsfock: neigd  < nbands(nk) ; &&
+        IF( dimension%neigd .lt. hybrid%nbands(nk) ) STOP 'mhsfock: neigd  < nbands(nk) ; &&
      &trafo from wavefunctions to APW requires at least nbands(nk) '
 
         call z%alloc(olap%l_real,dimension%nbasfcn,dimension%neigd)
@@ -266,13 +254,13 @@ MODULE m_hsfock
         ! calculate trafo
         ic = lapw%nv(jsp) + atoms%nlotot
         z%matsize1=ic
-        z%matsize2=hybdat%nbands(nk)
+        z%matsize2=hybrid%nbands(nk)
         olap%matsize1=ic
         olap%matsize2=ic
         
         call olap%multiply(z,trafo)
         
-        call invtrafo%alloc(olap%l_real,hybdat%nbands(nk),ic)
+        call invtrafo%alloc(olap%l_real,hybrid%nbands(nk),ic)
         CALL trafo%transpose(invtrafo)
         
         CALL ex%multiply(invtrafo,tmp)
@@ -289,56 +277,12 @@ MODULE m_hsfock
 
 
 
-        IF( input%imix .ge. 10 ) THEN
           CALL write_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
-        END IF
-
-      ELSE ! not hybrid%l_calhf
-         CALL read_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
      END IF ! hybrid%l_calhf
-      ! add non-local x-potential to the hamiltonian a (in packed storage)
-     ic=1
-     DO n=1,v_x%matsize1
-        DO nn=1,n           
-           IF (hamovlp%l_real) THEN
-              hamovlp%a_r(ic) = hamovlp%a_r(ic) - a_ex*v_x%data_r(n,nn)
-           ELSE
-              hamovlp%a_c(ic) = hamovlp%a_c(ic) - a_ex*v_x%data_c(n,nn)
-           ENDIF
-        ENDDO
-     END DO
-      ! calculate HF energy
-      IF( hybrid%l_calhf ) THEN
-         WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
-        
-         WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band       tail      pole     input%total(valence+core)'
-        
-      END IF
- 
      
-      ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
-      ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen_hf.F
-      if (.not.v_x%l_real) v_x%data_c=conjg(v_x%data_c) 
-      exch = 0
-      print *,"sizes:",shape(z%data_r),shape(v_x%data_r)
-      call v_x%multiply(z,tmp)
-      DO iband = 1,hybdat%nbands(nk)
-         if (z%l_real) THEN
-            exch(iband,iband) = dot_product(z%data_r(:z%matsize1,iband),tmp%data_r(:,iband))
-         else
-            exch(iband,iband) = dot_product(z%data_r(:z%matsize1,iband),tmp%data_r(:,iband))
-         endif
-         IF( iband .le. hybdat%nobd(nk) ) THEN
-            results%te_hfex%valence = results%te_hfex%valence -a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
-         END IF
-         IF(hybrid%l_calhf) THEN
-            WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
-                 &  kpts%bkf(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
-                 &  div_vv(iband)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
-         END IF
-      END DO
-     
-
+  
+       
+       
       CALL timestop("total time hsfock")
 
       END SUBROUTINE hsfock

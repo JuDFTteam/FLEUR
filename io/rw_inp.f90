@@ -724,20 +724,19 @@
 ! represent the response function, its parameters are read in here
 
       IF(namex=='exx ') THEN
-        READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',&
-     &       END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
+         CALL judft_error("No EXX calculations in this FLEUR version")
+        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
 
-        DO i=1,atoms%ntype
-          READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
-     &       END=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
-     &                  hybrid%select2(3,i),hybrid%select2(4,i)
-        END DO
+        !DO i=1,atoms%ntype
+          !READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
+            !END IF=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
+            !           hybrid%select2(3,i),hybrid%select2(4,i)
+        !END DO
         
-        ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
-        DO i=1,atoms%ntype
-          READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98) &
-     &        (hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
-        END DO
+        !ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
+        !DO i=1,atoms%ntype
+   !       READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98)(hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
+       ! END DO
       END IF
 
  98   CONTINUE

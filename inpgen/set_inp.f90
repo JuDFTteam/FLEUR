@@ -292,8 +292,6 @@
 !HF   added for HF and hybrid functionals
       gcutm       = input%rkmax - 0.5
       tolerance   = 1e-4
-      hybrid%gcutm2      = input%rkmax - 0.5
-      hybrid%tolerance2  = 1e-4
       taual_hyb   = atoms%taual
       selct(1,:)  = 4
       selct(2,:)  = 0
@@ -304,13 +302,11 @@
       selct2(2,:) = 0
       selct2(3,:) = 4
       selct2(4,:) = 2
-      ALLOCATE(hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-      hybrid%lcutm2      = 4
+      ALLOCATE(hybrid%lcutwf(atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
       hybrid%lexp        = 16
       bands       = max( nint(input%zelec)*10, 60 )
-      hybrid%bands2      = max( nint(input%zelec)*10, 60 )
       nkpt3       = (/ 4, 4, 4 /)
       l_gamma     = .false.
       IF ( l_hyb ) THEN
@@ -330,7 +326,6 @@
       input%rkmax  = real(NINT( input%rkmax  * 10  ) / 10.)
       xcpot%gmaxxc  = real(NINT( xcpot%gmaxxc  * 10  ) / 10.)
       gcutm   = real(INT( gcutm   * 10  ) / 10.)
-      hybrid%gcutm2  = real(NINT( hybrid%gcutm2  * 10  ) / 10.)
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)
@@ -539,7 +534,7 @@
         CLOSE (iofile)
       END IF ! l_hyb
 
-      DEALLOCATE(hybrid%lcutm2,hybrid%lcutwf)
+      DEALLOCATE(hybrid%lcutwf)
 !HF
       END SUBROUTINE set_inp
       END MODULE m_setinp

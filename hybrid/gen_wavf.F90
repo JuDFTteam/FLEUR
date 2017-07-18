@@ -282,9 +282,9 @@
         ! stored in acof,bcof,ccof
         lapw(ikpt0)%nmat=lapw(ikpt0)%nv(jsp)+atoms%nlotot
         CALL abcof(&
-              input,atoms,hybdat%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw(ikpt0), &
-              hybdat%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
-              oneD,acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),ccof(:,: hybdat%nbands(ikpt0),:,:),&
+              input,atoms,hybrid%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw(ikpt0), &
+              hybrid%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
+              oneD,acof(: hybrid%nbands(ikpt0),:,:),bcof(: hybrid%nbands(ikpt0),:,:),ccof(:,: hybrid%nbands(ikpt0),:,:),&
               zmat(ikpt0))
         
 
@@ -302,11 +302,11 @@
         ! rotate them in the global one
 
         CALL abcrot(&
-                hybrid,atoms,hybdat%nbands(ikpt0),&
+                hybrid,atoms,hybrid%nbands(ikpt0),&
                  sym,&
                 cell,oneD,&
-                acof(: hybdat%nbands(ikpt0),:,:),bcof(: hybdat%nbands(ikpt0),:,:),&
-                ccof(:,: hybdat%nbands(ikpt0),:,:) )
+                acof(: hybrid%nbands(ikpt0),:,:),bcof(: hybrid%nbands(ikpt0),:,:),&
+                ccof(:,: hybrid%nbands(ikpt0),:,:) )
 
 !       CALL cpu_time(time3)
 
@@ -388,7 +388,7 @@
               CALL waveftrafo_genwavf( cmthlp,zhlp%data_r,zhlp%data_c,&
      &                 cmt(:,:,:),zmat(1)%l_real,zmat(ikpt0)%z_r(:,:),zmat(ikpt0)%z_c(:,:),ikpt0,iop,atoms,&
      &                 hybrid,kpts,sym,&
-     &                 jsp,dimension,hybdat%nbands(ikpt0),&
+     &                 jsp,dimension,hybrid%nbands(ikpt0),&
      &                 cell,lapw(ikpt0),lapw(ikpt),.true.)
 
               call write_cmt(cmthlp,ikpt)

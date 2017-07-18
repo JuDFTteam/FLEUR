@@ -31,7 +31,7 @@
 !     For the PW contribution we have to construct plane waves within the MT spheres with the help
 !     of spherical Bessel functions. The value lexp (LEXP in gwinp) is the corresponding cutoff.
 !
-MODULE m_coulomb
+MODULE m_coulombmatrix
 
 CONTAINS
 
@@ -1886,7 +1886,7 @@ CONTAINS
     !
     CALL getshells(ptsh,nptsh,radsh,nshell,rrad,cell%bmat,first)
     ! minimum nonzero reciprocal-shell radius (needed in routines concerning the non-local hartree-fock exchange)
-    hybrid%radshmin = radsh(2) 
+    !hybrid%radshmin = radsh(2) 
     !
     !     Fourier-space sum
     !
@@ -2231,4 +2231,4 @@ CONTAINS
   !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
-END MODULE m_coulomb
+END MODULE m_coulombmatrix

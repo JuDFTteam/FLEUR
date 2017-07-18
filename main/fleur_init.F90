@@ -269,9 +269,8 @@
              ! HF/hybrid functionals/EXX
              ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
              ALLOCATE ( hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
-                  &           hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype) )
-             ALLOCATE ( hybrid%ddist(DIMENSION%jspd) )
-             hybrid%ddist     = 1.
+                  &           hybrid%lcutwf(atoms%ntype) )
+           
              !
 
              atoms%numStatesProvided(:) = 0
@@ -609,6 +608,14 @@
 
           !check for broken feature
           IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
+
+          !Check if a hybrid functional calculation should be performed
+          hybrid%l_hybrid   = (&
+               xcpot%icorr == icorr_pbe0 .OR.&
+               xcpot%icorr == icorr_hse  .OR.&
+               xcpot%icorr == icorr_vhse .OR.&
+               xcpot%icorr == icorr_hf   .OR.&
+               xcpot%icorr == icorr_exx)
 
         END SUBROUTINE fleur_init
         SUBROUTINE hybrid_default(hybrid,xcpot)

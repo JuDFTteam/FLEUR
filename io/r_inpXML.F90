@@ -2195,9 +2195,9 @@ SUBROUTINE r_inpXML(&
 
   ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
   ALLOCATE (hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-  ALLOCATE (hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-  ALLOCATE (hybrid%ddist(dimension%jspd))
-  hybrid%ddist = 1.0
+  ALLOCATE (hybrid%lcutwf(atoms%ntype))
+ 
+  
 
   ! Generate lattice harmonics
 

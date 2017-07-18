@@ -209,7 +209,7 @@ CONTAINS
 
           ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
           ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))
-          ALLOCATE (hybrid_temp%select2(4,atoms%ntype),hybrid_temp%lcutm2(atoms%ntype),hybrid_temp%lcutwf(atoms%ntype))
+          ALLOCATE (hybrid_temp%lcutwf(atoms%ntype))
 
           CALL rw_inp('r',atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                       banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&

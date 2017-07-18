@@ -62,7 +62,7 @@
       REAL                    ::  q(3)
       REAL                    ::  integrand(atoms%jmtd)
       REAL                    ::  bkpt(3) 
-      REAL                    ::  rarr(maxval(hybdat%nbands))
+      REAL                    ::  rarr(maxval(hybrid%nbands))
       REAL                    ::  rtaual(3)
       REAL    , ALLOCATABLE   ::  olapcb(:)
       REAL    , ALLOCATABLE   :: olapcv_avg(:,:,:,:),olapcv_max(:,:,:,:)
@@ -119,7 +119,7 @@
       END DO
 
       IF ( mpi%irank == 0 ) WRITE(6,'(/A)') ' Overlap <core|basis>'
-      ALLOCATE( olapcb(hybrid%maxindx),olapcv(maxval(hybdat%nbands),nkpti),&
+      ALLOCATE( olapcb(hybrid%maxindx),olapcv(maxval(hybrid%nbands),nkpti),&
      &          olapcv_avg(  -hybdat%lmaxcd:hybdat%lmaxcd,hybdat%maxindxc,0:hybdat%lmaxcd,atoms%ntype),&
      &          olapcv_max(  -hybdat%lmaxcd:hybdat%lmaxcd,hybdat%maxindxc,0:hybdat%lmaxcd,atoms%ntype),&
      &          olapcv_loc(2,-hybdat%lmaxcd:hybdat%lmaxcd,hybdat%maxindxc,0:hybdat%lmaxcd,atoms%ntype) )
@@ -154,13 +154,13 @@
               DO j=1,hybrid%nindx(l,itype)
                 lm = lm + 1
                 olapcv(:,:) = olapcv(:,:) + &
-     &                        olapcb(j)*cmt(:maxval(hybdat%nbands),lm,iatom,:nkpti)
+     &                        olapcb(j)*cmt(:maxval(hybrid%nbands),lm,iatom,:nkpti)
               END DO
               rdum                      = sum    ( abs(olapcv(:,:))**2 )
               rdum1                     = maxval ( abs(olapcv(:,:))    )
               iarr                      = maxloc ( abs(olapcv(:,:))    )
               olapcv_avg(  m,i,l,itype) = &
-     &                sqrt( rdum / nkpti / sum(hybdat%nbands(:nkpti)) * nkpti )
+     &                sqrt( rdum / nkpti / sum(hybrid%nbands(:nkpti)) * nkpti )
               olapcv_max(  m,i,l,itype) = rdum1
               olapcv_loc(:,m,i,l,itype) = iarr
             END DO
@@ -233,9 +233,9 @@
 
       IF ( mpi%irank == 0 ) WRITE(6,'(/A)') &
      &          'Mismatch of wave functions at the MT-sphere boundaries'
-      ALLOCATE (carr1(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
-      ALLOCATE (carr2(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
-      ALLOCATE (carr3(maxval(hybdat%nbands),(atoms%lmaxd+1)**2))
+      ALLOCATE (carr1(maxval(hybrid%nbands),(atoms%lmaxd+1)**2))
+      ALLOCATE (carr2(maxval(hybrid%nbands),(atoms%lmaxd+1)**2))
+      ALLOCATE (carr3(maxval(hybrid%nbands),(atoms%lmaxd+1)**2))
       DO ikpt = 1,nkpti
          call read_z(z(ikpt),ikpt)
       END DO
@@ -280,7 +280,7 @@
                 cdum = 4*pi_const*img**l/sqrt(cell%omtil) * sphbes(l) * cexp
                 DO m = -l,l
                   lm = lm + 1
-                  DO iband = 1,hybdat%nbands(ikpt)
+                  DO iband = 1,hybrid%nbands(ikpt)
                      if (z(1)%l_real) THEN
                         carr2(iband,lm) = carr2(iband,lm) + cdum * z(ikpt)%data_r(igpt,iband) * y(lm)
                      Else
@@ -300,7 +300,7 @@
                 DO n = 1,hybrid%nindx(l,itype)
                   lm1  = lm1 + 1
                   rdum = hybdat%bas1(atoms%jri(itype),n,l,itype) / atoms%rmt(itype)
-                  DO iband = 1,hybdat%nbands(ikpt)
+                  DO iband = 1,hybrid%nbands(ikpt)
                     carr3(iband,lm) = carr3(iband,lm) + cmt(iband,lm1,iatom,ikpt) * rdum
                   END DO
                 END DO

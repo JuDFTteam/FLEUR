@@ -57,8 +57,8 @@
       INTEGER,INTENT(IN)              :: gpt(3,lapw%nv(jsp))
       INTEGER,INTENT(OUT)             :: parent(kpts%nkptf)
       INTEGER,INTENT(OUT)             :: symop(kpts%nkptf)
-      INTEGER,INTENT(INOUT)           :: degenerat(hybdat%ne_eig(nk))
-      INTEGER,INTENT(OUT)             :: nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk),hybdat%nbands(nk))  
+      INTEGER,INTENT(INOUT)           :: degenerat(hybrid%ne_eig(nk))
+      INTEGER,INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))  
       INTEGER,ALLOCATABLE,INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER,ALLOCATABLE,INTENT(OUT) :: psym(:),n_q(:)      
 
@@ -260,15 +260,15 @@
         WRITE(6,'(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
      END IF
 
-      DO i=1,hybdat%nbands(nk)
-        DO j=i+1,hybdat%nbands(nk)
+      DO i=1,hybrid%nbands(nk)
+        DO j=i+1,hybrid%nbands(nk)
           IF( abs(eig_irr(i,nk)-eig_irr(j,nk)) .le. tolerance) THEN
             degenerat(i) = degenerat(i) + 1
           END IF
         END DO
       END DO
 
-      DO i=1,hybdat%ne_eig(nk)
+      DO i=1,hybrid%ne_eig(nk)
         IF ( degenerat(i) .ne. 1 .or. degenerat(i) .ne. 0 ) THEN
           degenerat(i+1:i+degenerat(i)-1) = 0
         END IF
@@ -284,8 +284,8 @@
 
       IF ( irank2 == 0 ) THEN
         WRITE(6,*) ' Degenerate states:'
-        DO iband = 1,hybdat%nbands(nk)/5+1
-          WRITE(6,'(5i5)')degenerat(iband*5-4:min(iband*5,hybdat%nbands(nk)))
+        DO iband = 1,hybrid%nbands(nk)/5+1
+          WRITE(6,'(5i5)')degenerat(iband*5-4:min(iband*5,hybrid%nbands(nk)))
         END DO
       END IF
 
@@ -324,7 +324,7 @@
 
 
           ic = 0
-          DO i=1,hybdat%nbands(nk)
+          DO i=1,hybrid%nbands(nk)
             ndb = degenerat(i)
             IF ( ndb .ge. 1 ) THEN
               ic     = ic + 1
@@ -364,7 +364,7 @@
 
         ic    = 0
         trace = 0
-        DO iband = 1,hybdat%nbands(nk)
+        DO iband = 1,hybrid%nbands(nk)
           ndb = degenerat(iband)
           IF( ndb .ge. 1 ) THEN
             ic = ic + 1
@@ -386,12 +386,12 @@
 
         ic1 = 0
         symequivalent = .false.
-        DO iband1 = 1,hybdat%nbands(nk)
+        DO iband1 = 1,hybrid%nbands(nk)
           ndb1 = degenerat(iband1)
           IF( ndb1 .ge. 1 ) THEN
             ic1 = ic1 + 1
             ic2 = 0
-            DO iband2 = 1,hybdat%nbands(nk)
+            DO iband2 = 1,hybrid%nbands(nk)
               ndb2 = degenerat(iband2)
               IF( ndb2 .ge. 1 ) THEN
                 ic2 = ic2 + 1
@@ -437,7 +437,7 @@
           END DO
         END DO
       
-        ALLOCATE( wavefolap(hybdat%nbands(nk),hybdat%nbands(nk)),carr(hybrid%maxindx),stat=ok )
+        ALLOCATE( wavefolap(hybrid%nbands(nk),hybrid%nbands(nk)),carr(hybrid%maxindx),stat=ok )
         IF( ok .ne. 0) STOP 'symm: failure allocation wfolap/maxindx'
         wavefolap = 0
         
@@ -449,7 +449,7 @@
             DO l = 0,atoms%lmax(itype)
               DO M = -l,l
                 nn     = hybrid%nindx(l,itype)
-                DO iband1 = 1,hybdat%nbands(nk)
+                DO iband1 = 1,hybrid%nbands(nk)
                   carr(:nn) = matmul( olapmt(:nn,:nn,l,itype),&
      &                                cmt(iband1,lm+1:lm+nn,iatom)) 
                   DO iband2 = 1,iband1 
@@ -464,7 +464,7 @@
           END DO
         END DO
         
-        DO iband1 = 1,hybdat%nbands(nk)
+        DO iband1 = 1,hybrid%nbands(nk)
           DO iband2 = 1,iband1
             wavefolap(iband1,iband2) = conjg(wavefolap(iband2,iband1))
           END DO
@@ -474,12 +474,12 @@
         IF( ok .ne. 0) STOP 'symm: failure allocation symequivalent'
         symequivalent = .false.
         ic1 = 0
-        DO iband1 = 1,hybdat%nbands(nk)
+        DO iband1 = 1,hybrid%nbands(nk)
           ndb1 = degenerat(iband1)
           IF( ndb1 .eq. 0 ) CYCLE
           ic1 = ic1 + 1
           ic2 = 0
-          DO iband2 = 1,hybdat%nbands(nk)
+          DO iband2 = 1,hybrid%nbands(nk)
             ndb2 = degenerat(iband2)
             IF( ndb2 .eq. 0 ) CYCLE
             ic2 = ic2 + 1
@@ -500,7 +500,7 @@
       ic1       = 0
       indx_sest = 0
       nsest     = 0
-      DO iband1 = 1,hybdat%nbands(nk)
+      DO iband1 = 1,hybrid%nbands(nk)
         ndb1 = degenerat(iband1)
         IF( ndb1 .ge. 1 ) ic1 = ic1 + 1
         i = 0
@@ -509,7 +509,7 @@
         END DO
         ndb1 = degenerat(iband1-i)
         ic2 = 0
-        DO iband2 = 1,hybdat%nbands(nk)
+        DO iband2 = 1,hybrid%nbands(nk)
           ndb2 = degenerat(iband2)
           IF( ndb2 .ge. 1 ) ic2 = ic2 + 1
           i = 0
