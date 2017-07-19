@@ -315,11 +315,13 @@
                 IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
                      &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
                 !
+             END IF ! mpi%irank.eq.0
                 CALL setup(&
-                     &     atoms,kpts,DIMENSION,sphhar,&
+                     &     mpi,atoms,kpts,DIMENSION,sphhar,&
                      &     obsolete,sym,stars,oneD,input,noco,&
                      &     vacuum,cell,xcpot,&
                      &     sliceplot,enpara,l_opti)
+             IF (mpi%irank.EQ.0) THEN
                 !
                 stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
                 !+t3e
