@@ -30,7 +30,7 @@
       CASE DEFAULT
          call judft_error('xc functional can not be identified')
       END SELECT
-      END
+      END FUNCTION
       
       END MODULE m_icorrkeys
 

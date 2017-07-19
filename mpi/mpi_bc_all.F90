@@ -55,14 +55,14 @@ CONTAINS
        i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = xcpot%icorr ; i(26) = xcpot%igrd
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
-       i(35)=hybrid%bands1 ; i(36)=hybrid%bands2 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
+       i(35)=hybrid%bands1 ; i(36)=1 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
 
        r(1)=cell%omtil ; r(2)=cell%area ; r(3)=vacuum%delz ; r(4)=cell%z1 ; r(5)=input%alpha
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta ; r(9)=noco%phi ; r(10)=vacuum%tworkf 
        r(11)=vacuum%locx(1) ; r(12)=vacuum%locx(2); r(13)=vacuum%locy(1) ; r(14)=vacuum%locy(2)
        r(15)=input%efield%sigma ; r(16)=input%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
-       r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=hybrid%gcutm2
-       r(23)=hybrid%tolerance2 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
+       r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
+       r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
        r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance
 
        l(1)=input%eonly  ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
@@ -79,7 +79,7 @@ CONTAINS
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    hybrid%bands1=i(35) ; hybrid%bands2=i(36) ; input%imix=i(37)
+    hybrid%bands1=i(35) ;  input%imix=i(37)
     input%gw=i(31) ; input%gw_neigd=i(32) ; hybrid%ewaldlambda=i(33) ; hybrid%lexp=i(34)
     vacuum%nstars=i(27) ; vacuum%nstm=i(28) ; oneD%odd%nq2=i(29) ; oneD%odd%nop=i(30)
     atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) ; xcpot%icorr=i(25) ; xcpot%igrd=i(26)
@@ -92,8 +92,8 @@ CONTAINS
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
     input%minDistance=r(29)
-    hybrid%tolerance2=r(23) ; input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
-    cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) ; hybrid%gcutm2=r(22)
+    input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
+    cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) 
     input%efield%sigma=r(15) ; input%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);
     vacuum%locx(1)=r(11); vacuum%locx(2)=r(12); vacuum%locy(1)=r(13); vacuum%locy(2)=r(14)
     sliceplot%e1s=r(6) ; sliceplot%e2s=r(7) ; noco%theta=r(8) ; noco%phi=r(9) ; vacuum%tworkf=r(10)
@@ -261,8 +261,6 @@ CONTAINS
     CALL MPI_BCAST(kpts%nkpt3,3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%select2,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%lcutm2,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     !--- HF>
 
     IF(input%l_inpXML) THEN
