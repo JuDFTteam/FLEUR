@@ -16,19 +16,21 @@ CONTAINS
 
     USE m_types
     USE m_nmat_rot
-    !
+    USE m_xmlOutput
+
     ! ... Arguments
-    USE m_types
+
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms
     INTEGER, INTENT (IN)       :: jspins 
     COMPLEX, INTENT (INOUT)    :: n_mmp_new(-3:3,-3:3,atoms%n_u,jspins)
     !
     ! ... Locals ...
-    INTEGER j,k,iofl,l,itype,ios,i_u,lty(atoms%n_u)
-    REAL alpha,spinf,gam,del,sum1,sum2,mix_u
+    INTEGER j,k,iofl,l,itype,ios,i_u,jsp,lty(atoms%n_u)
+    REAL alpha,spinf,gam,del,sum1,sum2,mix_u, uParam, jParam
     REAL    theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
     LOGICAL n_exist
+    CHARACTER(LEN=20)   :: attributes(6)
     COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:),n_mmp_old(:,:,:,:)
     !
     ! check for possible rotation of n_mmp
@@ -51,6 +53,30 @@ CONTAINS
        zero = 0.0
        CALL nmat_rot(zero,-theta,-phi,3,atoms%n_u,jspins,lty,n_mmp_new)
     END IF
+
+    ! Write out n_mmp_new to out.xml file
+
+    CALL openXMLElementNoAttributes('ldaUDensityMatrix')
+    DO jsp = 1, jspins
+       DO i_u = 1, atoms%n_u
+          l = atoms%lda_u(i_u)%l
+          itype = atoms%lda_u(i_u)%atomType
+          uParam = atoms%lda_u(i_u)%u
+          jParam = atoms%lda_u(i_u)%j
+          attributes = ''
+          WRITE(attributes(1),'(i0)') jsp
+          WRITE(attributes(2),'(i0)') itype
+          WRITE(attributes(3),'(i0)') i_u
+          WRITE(attributes(4),'(i0)') l
+          WRITE(attributes(5),'(f15.8)') uParam
+          WRITE(attributes(6),'(f15.8)') jParam
+          CALL writeXMLElementMatrixPoly('densityMatrixFor',&
+                                         (/'spin    ','atomType','uIndex  ','l       ','U       ','J       '/),&
+                                         attributes,n_mmp_new(-l:l,-l:l,atoms%n_u,jsp))
+       END DO
+    END DO
+    CALL closeXMLElement('ldaUDensityMatrix')
+
     !
     ! check for LDA+U and open density-matrix - file
     !

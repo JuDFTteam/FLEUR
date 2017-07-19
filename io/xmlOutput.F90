@@ -27,6 +27,8 @@ MODULE m_xmlOutput
    PUBLIC startXMLOutput, endXMLOutput
    PUBLIC writeXMLElementFormPoly, writeXMLElementPoly
    PUBLIC writeXMLElementForm, writeXMLElement
+   PUBLIC writeXMLElementMatrixPoly, writeXMLElementMatrixFormPoly
+   PUBLIC writeXMLElementMatrixForm
    PUBLIC openXMLElementFormPoly, openXMLElementPoly
    PUBLIC openXMLElementForm, openXMLElement
    PUBLIC openXMLElementNoAttributes, closeXMLElement
@@ -306,6 +308,167 @@ MODULE m_xmlOutput
       DEALLOCATE (bigLengths)
 
    END SUBROUTINE writeXMLElementForm
+
+   SUBROUTINE writeXMLElementMatrixPoly(elementName,attributeNames,attributeValues,matrix)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      CLASS(*),         INTENT(IN)           :: attributeValues(:)
+      CLASS(*),         INTENT(IN)           :: matrix(:,:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+      INTEGER              :: numDifferentMatrixElementLengths
+
+      numDifferentMatrixElementLengths = 1 ! At the moment nothing else is implemented.
+                                           ! In principle one could think about an own
+                                           ! length for each matrix element.
+
+      ALLOCATE(lengths(MAX(SIZE(attributeNames),numDifferentMatrixElementLengths),3))
+      lengths = 0
+      CALL writeXMLElementMatrixFormPoly(elementName,attributeNames,attributeValues,lengths,matrix)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE writeXMLElementMatrixPoly
+
+   SUBROUTINE writeXMLElementMatrixFormPoly(elementName,attributeNames,attributeValues,lengths,matrix)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      CLASS(*),         INTENT(IN)           :: attributeValues(:)
+      INTEGER,          INTENT(IN)           :: lengths(:,:)
+      CLASS(*),         INTENT(IN)           :: matrix(:,:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      CHARACTER(LEN= 50), ALLOCATABLE :: charMatrix(:,:)
+      INTEGER                         :: i, j
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+      ALLOCATE(charMatrix(SIZE(matrix,1),SIZE(matrix,2)))
+
+      charAttributeValues = ''
+      charMatrix = ''
+
+      DO i = 1, SIZE(attributeValues)
+         SELECT TYPE (attributeValues)
+           TYPE IS(INTEGER)
+               WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
+            TYPE IS(REAL)
+               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
+            TYPE IS(LOGICAL)
+               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
+#ifndef __PGI
+            TYPE IS(CHARACTER(LEN=*))
+               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
+            CLASS DEFAULT
+               STOP 'Type of attributeValues not allowed'
+#endif
+         END SELECT
+      END DO
+
+      DO j = 1, SIZE(matrix,2)
+         DO i = 1, SIZE(matrix,1)
+            SELECT TYPE(matrix)
+               TYPE IS(INTEGER)
+                  WRITE(charMatrix(i,j),'(i0)') matrix(i,j)
+               TYPE IS(REAL)
+                  WRITE(charMatrix(i,j),'(f19.10)') matrix(i,j)
+               TYPE IS(COMPLEX)
+                  WRITE(charMatrix(i,j),'(a,f0.8,a,f0.8,a)') '(',REAL(matrix(i,j)),',', AIMAG(matrix(i,j)),')'
+               TYPE IS(LOGICAL)
+                  WRITE(charMatrix(i,j),'(l1)') matrix(i,j)
+#ifndef __PGI
+               TYPE IS(CHARACTER(LEN=*))
+                  WRITE(charMatrix(i,j),'(a)') TRIM(ADJUSTL(matrix(i,j)))
+               CLASS DEFAULT
+                  STOP 'Type of matrix not allowed'
+#endif
+            END SELECT
+         END DO
+      END DO
+
+      CALL writeXMLElementMatrixForm(elementName,attributeNames,charAttributeValues,lengths,charMatrix)
+      DEALLOCATE(charMatrix,charAttributeValues)
+   END SUBROUTINE writeXMLElementMatrixFormPoly
+
+   SUBROUTINE writeXMLElementMatrixForm(elementName,attributeNames,attributeValues,lengths,matrix)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN) :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      CHARACTER(LEN=*), INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: lengths(:,:)
+      CHARACTER(LEN=*), INTENT(IN) :: matrix(:,:)
+
+      CHARACTER(LEN=400), ALLOCATABLE :: matrixRows(:)
+      INTEGER, ALLOCATABLE            :: bigLengths(:,:)
+      INTEGER                         :: i, j
+      CHARACTER(LEN=70)               :: format
+      CHARACTER(LEN=400)              :: outputString
+      INTEGER                         :: matrixRowLength, numMatrixRows
+      INTEGER                         :: overallListSize
+      INTEGER                         :: lengthsShape(2)
+
+      IF(SIZE(attributeNames).NE.SIZE(attributeValues)) THEN
+         WRITE(*,*) 'attributeNames', attributeNames
+         WRITE(*,*) 'attributeValues', attributeValues
+         STOP 'ERROR in writeXMLElementMatrixForm: SIZE(attributeNames).NE.SIZE(attributeValues)'
+      END IF
+
+      lengthsShape = SHAPE(lengths)
+
+      overallListSize = MAX(SIZE(attributeNames),1)
+      ALLOCATE(bigLengths(overallListSize,2))
+      bigLengths = 0
+      DO j = 1, 2
+         DO i = 1, MIN(overallListSize,lengthsShape(1))
+            bigLengths(i,j) = lengths(i,j)
+         END DO
+      END DO
+
+      outputString = '<'//TRIM(ADJUSTL(elementName))
+      DO i = 1, SIZE(attributeNames)
+         WRITE(format,'(a)') "(a,a,a"
+         IF (bigLengths(i,1).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,1)
+         WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a,a"
+         IF (bigLengths(i,2).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,2)
+         WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a)"
+         WRITE(outputString,format) TRIM(ADJUSTL(outputString)), ' ', TRIM(ADJUSTL(attributeNames(i))),&
+                                    '="', TRIM(ADJUSTL(attributeValues(i))), '"'
+      END DO
+      WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
+
+      matrixRowLength = SIZE(matrix,1)
+      numMatrixRows = SIZE(matrix,2)
+
+      ALLOCATE(matrixRows(numMatrixRows))
+
+      matrixRows = ''
+      DO i = 1, numMatrixRows
+         DO j = 1, matrixRowLength
+            WRITE(matrixRows(i),'(a,a1,a)') TRIM(ADJUSTL(matrixRows(i))),' ',TRIM(ADJUSTL(matrix(j,i)))
+         END DO
+      END DO
+
+      outputString = TRIM(ADJUSTL(outputString))//'>'
+      WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
+
+      DO i = 1, numMatrixRows
+         WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+2),",a)"
+         WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(matrixRows(i)))
+      END DO
+
+      WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
+      outputString = '</'//TRIM(ADJUSTL(elementName))//'>'
+      WRITE(xmlOutputUnit,format) ' ', TRIM(ADJUSTL(outputString))
+
+      DEALLOCATE (bigLengths)
+
+   END SUBROUTINE writeXMLElementMatrixForm
 
    SUBROUTINE writeXMLElement(elementName,attributeNames,attributeValues,contentList)
 
