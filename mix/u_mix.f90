@@ -72,7 +72,7 @@ CONTAINS
           WRITE(attributes(6),'(f15.8)') jParam
           CALL writeXMLElementMatrixPoly('densityMatrixFor',&
                                          (/'spin    ','atomType','uIndex  ','l       ','U       ','J       '/),&
-                                         attributes,n_mmp_new(-l:l,-l:l,atoms%n_u,jsp))
+                                         attributes,n_mmp_new(-l:l,-l:l,i_u,jsp))
        END DO
     END DO
     CALL closeXMLElement('ldaUDensityMatrix')
