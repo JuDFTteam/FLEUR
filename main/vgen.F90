@@ -6,7 +6,7 @@
 MODULE m_vgen
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen(reap,input,xcpot,dimension, atoms,sphhar,stars,&
+  SUBROUTINE vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,&
        vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco,v,vx)
     !     ***********************************************************
     !     FLAPW potential generator                           *
@@ -54,6 +54,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_xcpot),INTENT(IN)        :: xcpot
+    TYPE(t_hybrid),INTENT(IN)       :: hybrid
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_dimension),INTENT(IN)    :: dimension
     TYPE(t_oneD),INTENT(IN)         :: oneD
@@ -701,8 +702,8 @@ CONTAINS
           END IF
 
           !HF     kinetic energy correction for core states
-          IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
-               xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse    ) THEN
+          IF ( hybrid%l_addhf.AND.(xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
+               xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse  )  ) THEN
              ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,DIMENSION%jspd), rhoc_vx(atoms%jmtd))
              ALLOCATE(tec(atoms%ntype,DIMENSION%jspd),qintc(atoms%ntype,DIMENSION%jspd))
              CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
@@ -721,8 +722,8 @@ CONTAINS
                   rht(:,:,js),v%vacz(:,:,js), rho(1,0,1,js),veffr(1,0,1,js), results%te_veff)
 
              !HF
-             IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
-                  xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse    ) THEN
+             IF (hybrid%l_addhf.and.( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
+                  xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse  )  ) THEN
                 nat = 1
                 DO n = 1,atoms%ntype
                    DO j = 1, atoms%jri(n)
@@ -747,10 +748,10 @@ CONTAINS
 370          CONTINUE
 
              !HF
-             IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
-                  xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse ) THEN
-                DEALLOCATE( rhoc, rhoc_vx )
-             END IF
+             !IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
+             !     xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse ) THEN
+             !   DEALLOCATE( rhoc, rhoc_vx )
+             !END IF
              !HF     end kinetic energy correction
 
              DEALLOCATE( veffpw_w,veffr )

@@ -422,7 +422,6 @@ MODULE m_types
      INTEGER,ALLOCATABLE   ::  pgptm1(:,:)
      INTEGER,ALLOCATABLE   ::  ngptm (:)
      INTEGER,ALLOCATABLE   ::  pgptm (:,:)
-     INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
      INTEGER,ALLOCATABLE   ::  lcutwf(:)
      INTEGER,ALLOCATABLE   ::  map(:,:)
      INTEGER,ALLOCATABLE   ::  tvec(:,:,:)
@@ -454,7 +453,8 @@ MODULE m_types
      TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)                              !alloc in eigen_HF_setup
      INTEGER, ALLOCATABLE :: pntgptd(:)                                     !alloc in eigen_HF_setup
      INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)                                !alloc in eigen_HF_setup
-  END TYPE t_hybdat
+     INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
+    END TYPE t_hybdat
 
   TYPE t_dimension
      INTEGER :: jspd

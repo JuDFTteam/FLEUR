@@ -869,8 +869,6 @@ CONTAINS
        END DO
     END DO
     hybrid%maxbasm1  = hybrid%nbasp  + hybrid%maxgptm
-    ALLOCATE( hybrid%nbasm(kpts%nkptf) ,stat=ok)
-    IF( ok .ne. 0 ) STOP 'eigen_hf: failure allocation hybrid%nbasm'
     DO nk = 1,kpts%nkptf
        hybrid%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
     END DO

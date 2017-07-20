@@ -43,6 +43,7 @@ CONTAINS
     REAL,    ALLOCATABLE    ::  eig_irr(:,:)
     real               :: bkpt(3)
     
+    CALL open_hybrid_io1(DIMENSION,sym%invs)
     IF (kpts%nkptf==0) CALL judft_error("kpoint-set of full BZ not available",hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
     
     !Check if new non-local potential shall be generated
@@ -50,25 +51,22 @@ CONTAINS
     hybrid%l_subvxc = ( hybrid%l_hybrid.AND.xcpot%icorr /= icorr_exx )
     IF (.NOT.ALLOCATED(v%pw)) THEN
        hybrid%l_calhf=.FALSE.
-       INQUIRE(file="v_x.mat",exist=hybrid%l_addhf)
+       !INQUIRE(file="v_x.mat",exist=hybrid%l_addhf)
+       hybrid%l_addhf=.false.
        hybrid%l_subvxc = ( hybrid%l_subvxc .AND. hybrid%l_addhf)
        RETURN
     ENDIF
+ 
     hybrid%l_addhf=.true.
-    IF( ( init_vex .OR. nohf_it >= 50 ) .AND. input%imix .GT. 10) THEN
-       !  IF( (all(hybrid%ddist .lt. 1E-5) .or. init_vex .or. nohf_it >= 50 ) .and. input%imix .gt. 10) THEN
-       hybrid%l_calhf  = .TRUE.
-       init_vex = .FALSE.
-       nohf_it  = 0
-    ELSE IF( input%imix .LT. 10 ) THEN
-       hybrid%l_calhf  = .TRUE.
-       init_vex = .TRUE.
-       nohf_it  = 0
-    ELSE
-       hybrid%l_calhf = .FALSE.
-       nohf_it = nohf_it + 1
-    END IF
-
+    !In first iteration allocate some memory
+    IF (init_vex) THEN
+       ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf))
+       ALLOCATE( hybrid%nbasm(kpts%nkptf))
+       init_vex=.false.
+    ENDIF
+    hybrid%l_calhf  = .TRUE.
+    
+    
     IF( .NOT. ALLOCATED(results%w_iks) )&
          ALLOCATE ( results%w_iks(DIMENSION%neigd2,kpts%nkpt,DIMENSION%jspd) )
     
@@ -98,7 +96,7 @@ CONTAINS
     CALL timestop("generation of mixed basis")
 
          
-    CALL open_hybrid_io(hybrid,DIMENSION,atoms,sym%invs)
+    CALL open_hybrid_io2(hybrid,DIMENSION,atoms,sym%invs)
 
     CALL timestart("generation of coulomb matrix")
     CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)

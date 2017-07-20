@@ -82,7 +82,8 @@ MODULE m_add_vnonlocal
       a_ex=get_exchange_weight(xcpot%icorr)
       
       
-     
+      v_x%l_real=hamovlp%l_real
+      v_x%matsize1=dimension%nbasfcn
 
        CALL read_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
       ! add non-local x-potential to the hamiltonian a (in packed storage)

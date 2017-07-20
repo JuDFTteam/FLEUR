@@ -8,23 +8,40 @@ module m_io_hybrid
   !public:: open_hybrid_io,read_cmt,write_cmt
 contains
 
-  subroutine open_hybrid_io(hybrid,dimension,atoms,l_real)
+  SUBROUTINE open_hybrid_io1(DIMENSION,l_real)
     implicit none
-    TYPE(t_hybrid),INTENT(IN)   :: hybrid
     TYPE(t_dimension),INTENT(IN):: dimension
-    TYPE(t_atoms),INTENT(IN)    :: atoms
     LOGICAL,INTENT(IN)          :: l_real
+    LOGICAL :: opened=.false.
 
-    INTEGER:: irecl_coulomb
     
-    OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=dimension%neigd*hybrid%maxlmindx*atoms%nat*16)
+
+    if (opened) return
+    opened=.true.
+
     print *,"Open olap.mat"
     id_olap=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"olap.mat")
     print *,"Open z.mat"
     id_z=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"z.mat")
     print *,"Open v_x.mat"
     id_v_x=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"v_x.mat")
+  END SUBROUTINE open_hybrid_io1
+  SUBROUTINE open_hybrid_io2(hybrid,DIMENSION,atoms,l_real)
+    IMPLICIT NONE
+    TYPE(t_hybrid),INTENT(IN)   :: hybrid
+    TYPE(t_dimension),INTENT(IN):: dimension
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    LOGICAL,INTENT(IN)          :: l_real
+    INTEGER:: irecl_coulomb
+    LOGICAL :: opened=.FALSE.
+
+    
+
+    if (opened) return
+    opened=.true.
+    OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
+         &     recl=dimension%neigd*hybrid%maxlmindx*atoms%nat*16)
+  
 #ifdef CPP_NOSPMVEC
     irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * 8 / 2
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
@@ -42,7 +59,7 @@ contains
     OPEN(unit=778,file='coulomb1',form='unformatted',access='direct', recl=irecl_coulomb)
     id_coulomb_spm=778
 #endif
-  end subroutine open_hybrid_io
+  END SUBROUTINE open_hybrid_io2
   
   subroutine write_cmt(cmt,nk)
     implicit none

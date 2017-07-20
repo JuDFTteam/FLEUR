@@ -191,7 +191,7 @@
           
 
           DO l = 0,hybrid%lcutm1(itype)
-            DO n = 1,hybrid%nindxp1(l,itype) ! loop over basis-function products
+            DO n = 1,hybdat%nindxp1(l,itype) ! loop over basis-function products
 
               l1 = hybdat%prod(n,l,itype)%l1 !
               l2 = hybdat%prod(n,l,itype)%l2 ! current basis-function product
@@ -553,7 +553,7 @@
             ! loop over l of mixed basis
             DO l = 0,hybrid%lcutm1(itype)
               ! loop over basis functions products, which belong to l
-              DO n = 1,hybrid%nindxp1(l,itype)
+              DO n = 1,hybdat%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
                 l1 = hybdat%prod(n,l,itype)%l1 
@@ -674,7 +674,7 @@
             DO l = 0,hybrid%lcutm1(itype)
               monepl = -monepl
               ! loop over basis functions products, which belong to l
-              DO n = 1,hybrid%nindxp1(l,itype)
+              DO n = 1,hybdat%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
                 l1 = hybdat%prod(n,l,itype)%l1 
@@ -1577,7 +1577,7 @@
             ! loop over l of mixed basis
             DO l = 0,hybrid%lcutm1(itype)
               ! loop over basis functions products, which belong to l
-              DO n = 1,hybrid%nindxp1(l,itype)
+              DO n = 1,hybdat%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
                 l1 = hybdat%prod(n,l,itype)%l1 
@@ -1702,7 +1702,7 @@
             DO l = 0,hybrid%lcutm1(itype)
               monepl = -monepl
               ! loop over basis functions products, which belong to l
-              DO n = 1,hybrid%nindxp1(l,itype)
+              DO n = 1,hybdat%nindxp1(l,itype)
 
                 ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
                 l1 = hybdat%prod(n,l,itype)%l1 
@@ -2511,7 +2511,7 @@
           
 
           DO l = 0,hybrid%lcutm1(itype)
-            DO n = 1,hybrid%nindxp1(l,itype) ! loop over basis-function products
+            DO n = 1,hybdat%nindxp1(l,itype) ! loop over basis-function products
 
               l1 = hybdat%prod(n,l,itype)%l1 !
               l2 = hybdat%prod(n,l,itype)%l2 ! current basis-function product

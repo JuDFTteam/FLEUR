@@ -647,7 +647,7 @@
       END IF
 
 
-      rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
+      rkpt    = matmul(rrot,kpts%bkf(:,ikpt0))
       rkpthlp = rkpt
       rkpt    = modulo1(rkpt,kpts%nkpt3)
       g       = nint(rkpthlp-rkpt)
@@ -681,7 +681,7 @@
 
 !     Multiplication
       ! MT
-      cexp   = exp(img*tpi_const*dot_product( kpts%bk(:,ikpt1)+g,trans(:) ) )
+      cexp   = exp(img*tpi_const*dot_product( kpts%bkf(:,ikpt1)+g,trans(:) ) )
       ic     = 0
       iiatom = 0
       DO itype = 1,atoms%ntype
@@ -733,7 +733,7 @@
           WRITE(*,*) g
           STOP 'bra_trafo2: G-point not found in G-point set.'
         END IF
-        cdum = exp(img*tpi_const*dot_product(kpts%bk(:,ikpt1)+g1,trans(:)))
+        cdum = exp(img*tpi_const*dot_product(kpts%bkf(:,ikpt1)+g1,trans(:)))
 
         vecout1(nbasp+igptm,:,:)= cdum * vecin1(nbasp+igptm2,:,:)
       END DO

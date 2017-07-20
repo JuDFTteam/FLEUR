@@ -31,8 +31,6 @@ CONTAINS
     
     !Alloc variables
     ALLOCATE(hybdat%lmaxc(atoms%ntype))
-    ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt))
-    ALLOCATE(hybrid%nobd(kpts%nkptf))
     ALLOCATE(hybdat%bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))
     ALLOCATE(hybdat%bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))
     ALLOCATE(hybdat%bas1_MT(hybrid%maxindx,0:atoms%lmaxd,atoms%ntype))

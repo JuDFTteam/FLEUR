@@ -236,7 +236,7 @@
                    !#endif
                    IF (.NOT.obsolete%pot8) THEN
                       CALL timestart("generation of potential")
-                      CALL vgen(reap,input,xcpot,dimension, atoms,sphhar,stars,vacuum,&
+                      CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
                            sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,v,vx)
                       CALL timestop("generation of potential")
 
@@ -519,7 +519,7 @@
                       reap = .FALSE.
                       input%total = .FALSE.
                       CALL timestart("generation of potential (total)")
-                      CALL vgen(reap,input,xcpot,dimension, atoms,sphhar,stars,vacuum,sym,&
+                      CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
                            obsolete,cell,oneD,sliceplot,mpi, results,noco,v,vx)
                       CALL timestop("generation of potential (total)")
 

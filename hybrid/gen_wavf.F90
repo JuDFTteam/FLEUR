@@ -143,20 +143,7 @@
       ! eigen_hf writes spherical component in file vr0
       ! if it = 1 vr0 is identical to the potential of the
       ! previous calculation
-
-      IF( it .ne. 1) THEN
-        OPEN(unit=220,file='vr0',form='unformatted')
-        DO ispin=1,dimension%jspd
-          DO itype=1,atoms%ntype
-            DO i=1,atoms%jmtd
-              READ(220) vr(i,itype,ispin)
-            END DO
-          END DO
-        END DO
-        CLOSE(220)
-      ELSE
-        vr = vr0
-      END IF
+      vr = vr0
 
 
 !       ALLOCATE ( z_out(nbasfcn,neigd,nkpti),stat=ok )

@@ -224,12 +224,14 @@
       phase_vv=0
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation phase'
       if (mat_ex%l_real) THEN
+         ALLOCATE( cprod_vv_c(0,0,0), carr3_vv_c(0,0,0))
          ALLOCATE( cprod_vv_r(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
          ALLOCATE( carr3_vv_r(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
          cprod_vv_r = 0 ; carr3_vv_r = 0 
       ELSE
+         ALLOCATE( cprod_vv_r(0,0,0), carr3_vv_r(0,0,0))
          ALLOCATE( cprod_vv_c(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
          IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
          ALLOCATE( carr3_vv_c(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
@@ -249,9 +251,9 @@
         ! read in coulomb matrix from direct access file coulomb
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
         if (mat_ex%l_real) THEN
-	   call read_coulomb_spm_r(ikpt0,coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r)
+	   call read_coulomb_spm_r(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r)
         else
-           call read_coulomb_spm_c(ikpt0,coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c)
+           call read_coulomb_spm_c(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c)
         end if
 #else
 	call read_coulomb(kpts%bkp(ikpt0),coulomb)

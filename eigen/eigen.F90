@@ -206,14 +206,12 @@ CONTAINS
     IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
     ne = MAX(5,DIMENSION%neigd)
 
-    IF (.not.hybrid%l_calhf) THEN
-       eig_id=open_eig(&
-         mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
+    eig_id=open_eig(&
+          mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
          atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-    endif
     IF (l_real) THEN
        ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
     ELSE
@@ -345,8 +343,6 @@ CONTAINS
              if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
              
              
-             IF ( irank2(nk) /= 0 ) CYCLE
-
              IF( hybrid%l_subvxc ) THEN
                 CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
                      sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&

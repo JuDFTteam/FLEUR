@@ -255,8 +255,8 @@ CONTAINS
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation hybdat%prod'
        basprod = 0 ; hybdat%prodm = 0 ; hybdat%prod%l1 = 0 ; hybdat%prod%l2 = 0
        hybdat%prod%n1 = 0 ; hybdat%prod%n2 = 0
-       ALLOCATE(hybrid%nindxp1(0:hybrid%maxlcutm1,atoms%ntype))
-       hybrid%nindxp1 = 0
+       ALLOCATE(hybdat%nindxp1(0:hybrid%maxlcutm1,atoms%ntype))
+       hybdat%nindxp1 = 0
        DO itype = 1,atoms%ntype
           ng = atoms%jri(itype)
           DO l2 = 0,MIN(atoms%lmax(itype),hybrid%lcutwf(itype))
@@ -272,8 +272,8 @@ CONTAINS
                          basprod(:ng) = ( hybdat%bas1(:ng,n1,l1,itype)*hybdat%bas1(:ng,n2,l2,itype) +hybdat%bas2(:ng,n1,l1,itype)*hybdat%bas2(:ng,n2,l2,itype)) / atoms%rmsh(:ng,itype)
                          DO l = ABS(l1-l2),MIN(hybrid%lcutm1(itype),l1+l2)
                             IF(MOD(l1+l2+l,2).EQ.0) THEN
-                               hybrid%nindxp1(l,itype)    = hybrid%nindxp1(l,itype) + 1
-                               n                  = hybrid%nindxp1(l,itype)
+                               hybdat%nindxp1(l,itype)    = hybdat%nindxp1(l,itype) + 1
+                               n                  = hybdat%nindxp1(l,itype)
                                hybdat%prod(n,l,itype)%l1 = l1
                                hybdat%prod(n,l,itype)%l2 = l2
                                hybdat%prod(n,l,itype)%n1 = n1
