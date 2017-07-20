@@ -84,7 +84,7 @@
     ! Please note: cholesky_complex/invert_trm_complex are not trimmed for speed.
     ! The only reason having them is that the Scalapack counterpart
     ! PDPOTRF very often fails on higher processor numbers for unknown reasons!
-#ifdef CPP_ELPA_201605003
+#if defined(CPP_ELPA_201605003) || defined(CPP_ELPA_201605004)
     ok=CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)
     ok=CPP_invert_trm(m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)
 #elif defined CPP_ELPA_NEW
@@ -109,7 +109,10 @@
        n_row = numroc (n_col, nb, myrow, 0, nprow)
        asca(n_row+1:myrowssca,i) = eigvec(n_row+1:myrowssca,i)
     ENDDO
-#ifdef CPP_ELPA_201605003
+#ifdef CPP_ELPA_201605004
+    ok=CPP_mult ('U', 'L',m, m,bsca,myrowssca,mycolssca,asca,SIZE(asca,1),SIZE(asca,2),nb,&
+         mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca,mycolssca)
+#elif CPP_ELPA_201605003
     ok=CPP_mult ('U', 'L',m, m,bsca,myrowssca,asca,SIZE(asca,1),nb, mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca)
 #else
     CALL CPP_mult ('U', 'L',m, m,bsca,myrowssca,asca,SIZE(asca,1),nb, mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca)
@@ -118,7 +121,10 @@
     CALL CPP_transpose(m,m,CPP_ONE,eigvec,1,1,sc_desc,CPP_ZERO,tmp2,1,1,sc_desc)
 
     ! 2c. A =  U**-T * tmp2 ( = U**-T * Aorig * U**-1 )
-#ifdef CPP_ELPA_201605003
+#ifdef CPP_ELPA_201605004
+    ok=CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1),SIZE(bsca,2), tmp2,&
+         SIZE(tmp2,1),SIZE(tmp2,2),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1),SIZE(asca,2))
+#elif CPP_ELPA_201605003
     ok=CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1), tmp2,&
          SIZE(tmp2,1),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
 #else
@@ -144,7 +150,7 @@
     ! 3. Calculate eigenvalues/eigenvectors of U**-T * A * U**-1
     !    Eigenvectors go to eigvec
     num2=num
-#ifdef CPP_ELPA_201605003
+#if defined(CPP_ELPA_201605003) || defined(CPP_ELPA_201605004)
 #ifdef CPP_ELPA2
     ok=CPP_solve_evp_2stage(m,num2,asca,SIZE(asca,1),&
          eig2,eigvec,SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
@@ -155,10 +161,10 @@
 #elif defined CPP_ELPA_NEW
 #ifdef CPP_ELPA2
     err=CPP_solve_evp_2stage(m,num2,asca,SIZE(asca,1),&
-         eig2,eigvec,SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
+         eig2,eigvec, SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
 #else
     err=CPP_solve_evp(m, num2,asca,SIZE(asca,1),&
-         eig2,eigvec, SIZE(asca,1), nb,mpi_comm_rows, mpi_comm_cols)
+         eig2,eigvec, SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols)
 #endif
 #else
 #ifdef CPP_ELPA2
@@ -175,7 +181,10 @@
     ! mult_ah_b_complex needs the transpose of U**-1, thus tmp2 = (U**-1)**T
     CALL CPP_transpose(m,m,CPP_ONE,bsca,1,1,sc_desc,CPP_ZERO,tmp2,1,1,sc_desc)
 
-#ifdef CPP_ELPA_201605003
+#ifdef CPP_ELPA_201605004
+    ok= CPP_mult ('L', 'N',m, num2, tmp2, SIZE(asca,1),SIZE(asca,2),&
+         eigvec, SIZE(asca,1),SIZE(asca,2),nb,mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1),SIZE(asca,2))
+#elif CPP_ELPA_201605003
     ok= CPP_mult ('L', 'N',m, num2, tmp2, SIZE(asca,1),&
          eigvec, SIZE(asca,1),nb,mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
 #else
