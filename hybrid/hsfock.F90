@@ -112,8 +112,7 @@ MODULE m_hsfock
       INTEGER,ALLOCATABLE     ::  n_q(:)
 
       REAL                    ::  wl_iks(dimension%neigd,kpts%nkptf)
-      REAL                    ::  div_vv(hybrid%nbands(nk))
-
+    
       TYPE(t_mat)             :: olap,trafo,invtrafo,ex,tmp,v_x,z
       COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
       COMPLEX,ALLOCATABLE     ::  carr(:)
@@ -194,7 +193,7 @@ MODULE m_hsfock
      &            it,xcpot,&
      &            noco,nsest,indx_sest,&
      &            mpi,irank2,isize2,comm,&
-     &            div_vv,ex)
+     &            ex)
 
         DEALLOCATE ( rep_c )
         CALL timestop("valence exchange calculation")

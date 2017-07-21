@@ -54,7 +54,7 @@
                     cell, dimension,input,jsp, hybdat, mnobd, lapw,&
                     eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,&
                     it,xcpot, noco,nsest,indx_sest,&
-                    mpi,irank2,isize2,comm, div_vv,mat_ex)
+                    mpi,irank2,isize2,comm,mat_ex)
 
 
       USE m_wrapper
@@ -106,8 +106,7 @@
       REAL   ,INTENT(IN)      ::  eig_irr(dimension%neigd,kpts%nkpt)
 
       REAL   ,INTENT(IN)      ::  wl_iks(dimension%neigd,kpts%nkptf)
-      REAL   ,INTENT(OUT)     ::  div_vv(hybrid%nbands(nk))
-
+    
       TYPE(t_mat),INTENT(INOUT):: mat_ex
 
 !     - local scalars -
@@ -250,11 +249,11 @@
 
         ! read in coulomb matrix from direct access file coulomb
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
-        if (mat_ex%l_real) THEN
-	   call read_coulomb_spm_r(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r)
-        else
-           call read_coulomb_spm_c(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c)
-        end if
+        IF (mat_ex%l_real) THEN
+	   CALL read_coulomb_spm_r(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r)
+        ELSE
+           CALL read_coulomb_spm_c(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c)
+        END IF
 #else
 	call read_coulomb(kpts%bkp(ikpt0),coulomb)
 #endif
@@ -533,15 +532,13 @@ endif
 
             ! due to the symmetrization afterwards the factor 1/n_q(1) must be added
 
-            IF( n1 .eq. nn2 ) div_vv(n1) = real(cdum2) 
+            IF( n1 .EQ. nn2 ) hybrid%div_vv(n1,nk,jsp) = REAL(cdum2) 
 
             exch_vv(nn2,n1)  = exch_vv(nn2,n1) + (exch0 + cdum2)/n_q(1)
 
           END DO !n2
         END DO !n1
-      ELSE
-        div_vv = 0.
-      END IF ! xcpot%icorr .ne. icorr_hse
+       END IF ! xcpot%icorr .ne. icorr_hse
 
 
       if (.not.mat_ex%l_real) THEN

@@ -222,9 +222,11 @@ CONTAINS
        WRITE (*,*) 'the Hamilton Matrix: ',err,'  size: ',matsize
        CALL juDFT_error("eigen: Error during allocation of Hamilton" //"matrix",calledby ="eigen")
     ENDIF
-    IF (l_real) THEN
+    IF (l_real) THEN 
+       ALLOCATE ( hamOvlp%b_c(0))
        ALLOCATE ( hamOvlp%b_r(matsize), stat = err )
-    ELSE
+    ELSE   
+       ALLOCATE ( hamOvlp%b_r(0))
        ALLOCATE ( hamOvlp%b_c(matsize), stat = err )
     ENDIF
 

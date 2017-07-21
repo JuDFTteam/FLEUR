@@ -36,9 +36,11 @@ module m_types_rcmat
     IF (mat%l_real) THEN
        ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2),STAT=err)
        ALLOCATE(mat%data_c(0,0))
+       mat%data_r=0.0
     ELSE
        ALLOCATE(mat%data_r(0,0))
        ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2),STAT=err)
+       mat%data_c=0.0
     ENDIF
 
     IF (err>0) CALL judft_error("Allocation of memmory failed for mat datatype",hint="You probably run out of memory")

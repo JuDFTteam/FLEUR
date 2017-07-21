@@ -77,11 +77,8 @@ CONTAINS
              ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
              ALLOCATE(zmat(nk)%z_r(0,0))
           endif
-          print *,"eigen_HF_Setup: read_eig:",nk
-          print *,zmat(nk)%nbasfcn,zmat(nk)%nbands,hybrid%ne_eig(nk)
           CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk))
-          print *,"Done"
-
+     
        END DO
        !Allocate further space
        DO nk=kpts%nkpt+1,kpts%nkptf

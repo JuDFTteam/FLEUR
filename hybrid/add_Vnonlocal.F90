@@ -68,8 +68,6 @@ MODULE m_add_vnonlocal
       INTEGER                 ::  iband
 
       REAL                    ::  a_ex
-!     - local arrays -
-      REAL                    ::  div_vv(hybrid%nbands(nk))
 
       TYPE(t_mat)             :: olap,tmp,v_x,z
       COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
@@ -102,7 +100,7 @@ MODULE m_add_vnonlocal
        IF( hybrid%l_calhf ) THEN
           WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
           
-          WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band       tail      pole     input%total(valence+core)'
+          WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band       tail      pole     total(valence+core)'
           
        END IF
 
@@ -117,7 +115,7 @@ MODULE m_add_vnonlocal
        
        
        ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
-       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen_hf.F TODO
+       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90 
        if (.not.v_x%l_real) v_x%data_c=conjg(v_x%data_c) 
        exch = 0
        print *,"sizes:",shape(z%data_r),shape(v_x%data_r)
@@ -133,8 +131,8 @@ MODULE m_add_vnonlocal
           END IF
           IF(hybrid%l_calhf) THEN
              WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
-                  &  kpts%bkf(:,nk),iband, (REAL(exch(iband,iband))-div_vv(iband))*(-27.211608),&
-                  &  div_vv(iband)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
+                  &  kpts%bkf(:,nk),iband, (REAL(exch(iband,iband))-hybrid%div_vv(iband,nk,jsp))*(-27.211608),&
+                  &  hybrid%div_vv(iband,nk,jsp)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
           END IF
        END DO
      

@@ -80,8 +80,8 @@ contains
   subroutine write_coulomb(nk,l_real,coulomb)
     implicit none
     complex,intent(in) :: coulomb(:)
-    integer,intent(in) :: l_real
-    logical,intent(in) :: nk
+    integer,intent(in) :: nk
+    logical,intent(in) :: l_real
 
     if (l_real) THEN
        write(id_coulomb,rec=nk) real(coulomb)
@@ -134,7 +134,7 @@ contains
   subroutine read_coulomb_r(nk,coulomb)
     implicit none
     real   ,intent(out) :: coulomb(:)
-    logical,intent(in) :: nk
+    integer,intent(in) :: nk
 
     read(id_coulomb,rec=nk) coulomb
   end subroutine read_coulomb_r
@@ -142,7 +142,7 @@ contains
   subroutine read_coulomb_c(nk,coulomb)
     implicit none
     complex,intent(out) :: coulomb(:)
-    logical,intent(in) :: nk
+    integer,intent(in) :: nk
     
     read(id_coulomb,rec=nk) coulomb
   end subroutine read_coulomb_c

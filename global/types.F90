@@ -431,6 +431,7 @@ MODULE m_types
      REAL   ,ALLOCATABLE   ::  basm1(:,:,:,:)
      COMPLEX,ALLOCATABLE   ::  d_wgn2(:,:,:,:)
      INTEGER,ALLOCATABLE   ::  ne_eig(:),nbands(:),nobd(:)                   !alloc in eigen_HF_init
+     REAL   ,ALLOCATABLE   ::  div_vv(:,:,:)
   END TYPE t_hybrid
 
   TYPE prodtype

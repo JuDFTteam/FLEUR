@@ -62,6 +62,7 @@ CONTAINS
     IF (init_vex) THEN
        ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf))
        ALLOCATE( hybrid%nbasm(kpts%nkptf))
+       ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
        init_vex=.false.
     ENDIF
     hybrid%l_calhf  = .TRUE.
