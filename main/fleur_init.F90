@@ -14,6 +14,7 @@
           USE m_juDFT_init
           USE m_types
           USE m_rinpXML
+          USE m_postprocessInput
           USE m_dimens
           USE m_inped
           USE m_setup
@@ -76,7 +77,7 @@
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
-          LOGICAL                       :: l_found
+          LOGICAL                       :: l_found, l_kpts, l_gga
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -155,9 +156,10 @@
                 scale = 1.0
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
-                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
+                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
-                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
+                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
+                     l_kpts,l_gga)
 
                 ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
@@ -172,6 +174,12 @@
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
                              .TRUE.,numSpecies,enpara)
+
+                CALL postprocessInput(input,sym,stars,atoms,vacuum,obsolete,kpts,&
+                                      oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                                      noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
+                                      l_gga)
+
                 DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
