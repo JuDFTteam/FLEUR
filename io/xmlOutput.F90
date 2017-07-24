@@ -377,7 +377,7 @@ MODULE m_xmlOutput
                TYPE IS(REAL)
                   WRITE(charMatrix(i,j),'(f19.10)') matrix(i,j)
                TYPE IS(COMPLEX)
-                  WRITE(charMatrix(i,j),'(a,f0.8,a,f0.8,a)') '(',REAL(matrix(i,j)),',', AIMAG(matrix(i,j)),')'
+                  WRITE(charMatrix(i,j),'(a,SP,f8.5,a,f8.5,a)') '(',REAL(matrix(i,j)),',', AIMAG(matrix(i,j)),')'
                TYPE IS(LOGICAL)
                   WRITE(charMatrix(i,j),'(l1)') matrix(i,j)
 #ifndef __PGI

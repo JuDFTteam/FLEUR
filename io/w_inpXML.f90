@@ -615,8 +615,8 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,360) atoms%l_geo(iAtomType),atoms%relax(1,iAtomType),atoms%relax(2,iAtomType),atoms%relax(3,iAtomType)
 
       IF(l_nocoOpt.OR.l_explicit) THEN
-         362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.10,'" alpha="',f0.10,'" beta="',&
-                    f0.10,'" b_cons_x="',f0.10,'" b_cons_y="',f0.10,'"/>')
+         362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.8,'" alpha="',f0.8,'" beta="',&
+                    f0.8,'" b_cons_x="',f0.8,'" b_cons_y="',f0.8,'"/>')
          WRITE(fileNum,362) noco%l_relax(iAtomType), Jij%l_magn(iAtomType), Jij%M(iAtomType), noco%alphInit(iAtomType),&
                             noco%beta(iAtomType),noco%b_con(1,iAtomType),noco%b_con(2,iAtomType)
       END IF
@@ -638,7 +638,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,380) banddos%ndir,banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
-   390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.8,'" locy1="',f0.8,'" locx2="',f0.8,'" locy2="',f0.8,'" nstm="',i0,'" tworkf="',f0.8,'"/>')
+   390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.5,'" locy1="',f0.5,'" locx2="',f0.5,'" locy2="',f0.5,'" nstm="',i0,'" tworkf="',f0.5,'"/>')
    WRITE (fileNum,390) vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
 
 !      <plotting iplot="F" score="F" plplot="F"/>
