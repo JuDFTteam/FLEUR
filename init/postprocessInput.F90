@@ -591,8 +591,8 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 #endif
 
   IF (.NOT.sliceplot%iplot) THEN
+        CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
      IF (mpi%irank.EQ.0) THEN
-        CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum)
         CALL convn(DIMENSION,atoms,stars)
         CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
      END IF !(mpi%irank.EQ.0)
