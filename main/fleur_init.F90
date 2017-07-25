@@ -362,6 +362,7 @@
                    a2(:) = a2(:) / scale
                    a3(:) = a3(:) / scale
                    kpts%specificationType = 3
+                   sym%symSpecType = 3
                    CALL w_inpXML(&
                                  atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
                                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nmop,kpts%l_gamma,&

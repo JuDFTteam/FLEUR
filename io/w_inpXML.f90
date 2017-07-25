@@ -277,7 +277,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,'(a)') '   </calculationSetup>'
    WRITE (fileNum,'(a)') '   <cell>'
 
-   IF(l_explicit) THEN
+   IF(sym%symSpecType.EQ.3) THEN
       WRITE(fileNum,'(a)') '      <symmetryOperations>'
       DO i = 1, sym%nop
       WRITE(fileNum,'(a)') '         <symOp>'
@@ -290,10 +290,10 @@ SUBROUTINE w_inpXML(&
       WRITE(fileNum,'(a)') '         </symOp>'
       END DO
       WRITE(fileNum,'(a)') '      </symmetryOperations>'
-   ELSE IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
+   ELSE IF(sym%symSpecType.EQ.1) THEN
       228 FORMAT('      <symmetryFile filename="',a,'"/>')
       WRITE(fileNum,228) TRIM(ADJUSTL(symFilename))
-   ELSE
+   ELSE !(sym%symSpecType.EQ.2)
 !      <symmetry spgrp="any" invs="T" zrfs="F"/>
       230 FORMAT('      <symmetry spgrp="',a,'" invs="',l1,'" zrfs="',l1,'"/>')
       WRITE (fileNum,230) TRIM(ADJUSTL(sym%namgrp)),sym%invs,sym%zrfs

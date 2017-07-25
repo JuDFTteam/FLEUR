@@ -661,6 +661,7 @@
 
       !symmetry information
       TYPE t_sym
+       INTEGER :: symSpecType
        !Symophic group
        LOGICAL ::symor
        INTEGER ::nsymt

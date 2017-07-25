@@ -829,6 +829,7 @@ SUBROUTINE r_inpXML(&
   numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/symmetry')
 
   IF (numberNodes.EQ.1) THEN
+     sym%symSpecType = 2
      symmetryDef = 1
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spgrp')))
      READ(valueString,*) sym%namgrp
@@ -898,6 +899,7 @@ SUBROUTINE r_inpXML(&
 
   IF (numberNodes.EQ.1) THEN
      symmetryDef = 2
+     sym%symSpecType = 1
      sym%nop = 48
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
 
@@ -940,6 +942,7 @@ SUBROUTINE r_inpXML(&
   numberNodes = xmlGetNumberOfNodes(xPathA)
 
   IF (numberNodes.EQ.1) THEN
+     sym%symSpecType = 3
      symmetryDef = 3
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/symOp')

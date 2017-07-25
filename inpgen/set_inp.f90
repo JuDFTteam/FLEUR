@@ -374,6 +374,12 @@
          kpts%specificationType = 2
       END IF
 
+      IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
+         sym%symSpecType = 1
+      ELSE
+         sym%symSpecType = 2
+      END IF
+
       ! set vacuum%nvac
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
@@ -426,6 +432,7 @@
             kpts%nmop(:) = div(:)
             kpts%l_gamma = l_gamma
             kpts%specificationType = 3
+            sym%symSpecType = 3
             IF (.NOT.oneD%odd%d1) THEN
                IF (jij%l_J) THEN
                   n1=sym%nop
