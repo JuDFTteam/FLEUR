@@ -368,6 +368,11 @@
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
       ENDIF
+      IF((div(1).EQ.0).OR.(div(2).EQ.0)) THEN
+         kpts%specificationType = 1
+      ELSE
+         kpts%specificationType = 2
+      END IF
 
       ! set vacuum%nvac
       vacuum%nvac = 2
@@ -420,6 +425,7 @@
             cell%bmat=tpi_const*cell%bmat
             kpts%nmop(:) = div(:)
             kpts%l_gamma = l_gamma
+            kpts%specificationType = 3
             IF (.NOT.oneD%odd%d1) THEN
                IF (jij%l_J) THEN
                   n1=sym%nop

@@ -258,6 +258,7 @@
       END TYPE
 
       TYPE t_kpts
+       INTEGER :: specificationType
        !no
        INTEGER :: nkpt
        INTEGER :: ntet
