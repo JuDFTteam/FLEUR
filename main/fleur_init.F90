@@ -169,7 +169,7 @@
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
                               atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                              cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                              cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nmop,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
@@ -361,9 +361,10 @@
                    a1(:) = a1(:) / scale
                    a2(:) = a2(:) / scale
                    a3(:) = a3(:) / scale
+                   kpts%specificationType = 3
                    CALL w_inpXML(&
                                  atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nmop,kpts%l_gamma,&
                                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
                                  xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&

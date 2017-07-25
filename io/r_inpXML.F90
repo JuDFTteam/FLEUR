@@ -433,6 +433,7 @@ SUBROUTINE r_inpXML(&
      kpts%nmop(2) = kpts%nkpt3(2)
      kpts%nmop(3) = kpts%nkpt3(3)
      kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+     kpts%specificationType = 2
   END IF
 
   ! Option kPointCount
@@ -443,6 +444,7 @@ SUBROUTINE r_inpXML(&
      kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
      kpts%nkpt = kpts%nkpt
+     kpts%specificationType = 1
 
      ALLOCATE(kpts%bk(3,kpts%nkpt))
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
@@ -485,6 +487,7 @@ SUBROUTINE r_inpXML(&
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
      kpts%wtkpt = 0.0
+     kpts%specificationType = 3
 
      kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
      weightScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@weightScale'))

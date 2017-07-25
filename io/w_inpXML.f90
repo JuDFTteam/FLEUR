@@ -247,7 +247,7 @@ SUBROUTINE w_inpXML(&
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
-   IF(l_explicit) THEN
+   IF(kpts%specificationType.EQ.3) THEN
       sumWeight = 0.0
       DO i = 1, kpts%nkpt
          sumWeight = sumWeight + kpts%wtkpt(i)
@@ -259,11 +259,11 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
       END DO
       WRITE (fileNum,'(a)')('         </kPointList>')
-   ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN
+   ELSE IF(kpts%specificationType.EQ.1) THEN
 !            <kPointCount count="100" gamma="F"/>
       208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
       WRITE (fileNum,208) kpts%nkpt,kptGamma
-   ELSE
+   ELSE !(kpts%specificationType.EQ.2)
 !            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
       210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
       WRITE (fileNum,210) div(1),div(2),div(3),kptGamma
