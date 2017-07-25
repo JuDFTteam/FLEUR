@@ -42,7 +42,7 @@
           REAL g(3),gm(3),fJ
           REAL,    ALLOCATABLE :: bfft(:)
           INTEGER, ALLOCATABLE :: icm(:,:,:)
-          INTEGER :: mpi_id, i3_start, i3_end
+          INTEGER :: mpi_id, i3_start, i3_end, chunk_size,leftover_size
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr
@@ -198,12 +198,17 @@
         i3_end = im3
 #ifdef CPP_MPI
         IF (PRESENT(mpi)) THEN
-            i3_start = mpi%irank * (im3/mpi%isize)
-            i3_end = (mpi%irank + 1) * (im3/mpi%isize) - 1
-            IF (mpi%irank == mpi%isize - 1) i3_end = im3
+            chunk_size = im3/mpi%isize
+            leftover_size = modulo(im3,mpi%isize)
+            IF (mpi%irank < leftover_size ) THEN
+                i3_start =  mpi%irank      * (chunk_size + 1)
+                i3_end   = (mpi%irank + 1) * (chunk_size + 1) - 1
+            ELSE
+                i3_start = leftover_size * (chunk_size + 1) + (mpi%irank - leftover_size) * chunk_size
+                i3_end = (i3_start + chunk_size) - 1
+            ENDIF
         ENDIF
 #endif
-
         DO i3=i3_start,i3_end
              gm(3)=REAL(i3)
              DO i2=0,3*stars%mx2-1
