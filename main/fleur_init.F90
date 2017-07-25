@@ -142,10 +142,11 @@
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
           IF (input%l_inpXML) THEN
+             ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
                 ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
-                ALLOCATE(noel(1),atomTypeSpecies(1),speciesRepAtomType(1))
+                ALLOCATE(atomTypeSpecies(1),speciesRepAtomType(1))
                 ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
                 ALLOCATE(xmlCoreOccs(1,1,1))
                 namex = '    '
@@ -175,14 +176,16 @@
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
                              .TRUE.,numSpecies,enpara)
 
-                CALL postprocessInput(input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                      oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                                      noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
-                                      l_gga)
-
-                DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
+                DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
+
+             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+                                   oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
+                                   l_gga)
+
+             DEALLOCATE(noel)
 
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
