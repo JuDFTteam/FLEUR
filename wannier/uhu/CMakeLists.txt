@@ -1,0 +1,29 @@
+set(fleur_F77 ${fleur_F77}
+wannier/uhu/d2fdz2cmplx.F
+wannier/uhu/d2fdz2.F
+wannier/uhu/dujdr.F
+wannier/uhu/wann_uHu_commat.f
+wannier/uhu/wann_uHu_commat_save.f
+wannier/uhu/wann_uHu_dmi.F
+wannier/uhu/wann_uHu.F
+wannier/uhu/wann_uHu_int2.F
+wannier/uhu/wann_uHu_int.F
+wannier/uhu/wann_uHu_od_vac.F
+wannier/uhu/wann_uHu_radintsra2.F
+wannier/uhu/wann_uHu_radintsra3.F
+wannier/uhu/wann_uHu_radintsra4.F
+wannier/uhu/wann_uHu_radintsra5.F
+wannier/uhu/wann_uHu_radintsra.F
+wannier/uhu/wann_uHu_soc.F
+wannier/uhu/wann_uHu_soc_tlo.F
+wannier/uhu/wann_uHu_sph.F
+wannier/uhu/wann_uHu_symcheck.F
+wannier/uhu/wann_uHu_tlmplm2.F
+wannier/uhu/wann_uHu_tlmplm.F
+wannier/uhu/wann_uHu_tlo.F
+wannier/uhu/wann_uHu_util.F
+wannier/uhu/wann_uHu_vac.F
+wannier/uhu/wann_write_uHu.F
+)
+set(fleur_F90 ${fleur_F90}
+)

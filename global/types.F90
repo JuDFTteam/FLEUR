@@ -830,6 +830,11 @@
         logical :: l_lapw_gfleur
         logical :: l_kpointgen
         logical :: l_w90kpointgen
+        logical :: l_finishnocoplot
+        logical :: l_finishgwf
+        logical :: l_skipkov
+        logical :: l_matrixuHu
+        logical :: l_matrixuHu_dmi
         integer :: ikptstart
         integer :: band_min(1:2)
         integer :: band_max(1:2)
