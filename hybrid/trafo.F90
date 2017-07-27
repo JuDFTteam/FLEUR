@@ -549,9 +549,7 @@
       SUBROUTINE bra_trafo2 (&
                l_real,vecout_r,vecin_r,vecout_c,vecin_c,&
                dim,nobd,nbands,ikpt0,ikpt1,iop,sym,&
-               hybrid,kpts,cell,maxlcutm,atoms,&
-               lcutm,nindxm,maxindxm,&
-               ngptmall,nbasp,&
+               hybrid,kpts,cell,atoms,&
                phase)
 
       !  ikpt0  ::  parent of ikpt1
@@ -570,10 +568,9 @@
 
 !     - scalars -
       INTEGER,INTENT(IN)      ::  ikpt0,ikpt1,iop,dim,nobd,nbands
-      INTEGER,INTENT(IN)      :: maxlcutm  ,maxindxm,nbasp 
+   
 !     - arrays -
-      INTEGER,INTENT(IN)      :: lcutm(atoms%ntype),nindxm(0:maxlcutm,atoms%ntype)
-      INTEGER,INTENT(IN)      ::  ngptmall
+     
       
       LOGICAL,INTENT(IN)      :: l_real
 
@@ -593,12 +590,12 @@
 !     - arrays - 
 
       INTEGER                 ::  rrot(3,3),invrot(3,3)
-      INTEGER                 ::  pnt(maxindxm,0:maxlcutm,atoms%nat)
+      INTEGER                 ::  pnt(hybrid%maxindxm1,0:hybrid%maxlcutm1,atoms%nat)
       INTEGER                 ::  g(3),g1(3)
       REAL                    ::  rkpt(3),rkpthlp(3),rtaual(3),trans(3)
       REAL                    ::  arg
-      COMPLEX                 ::  dwgn(-maxlcutm:maxlcutm,&
-     &                                 -maxlcutm:maxlcutm,0:maxlcutm)
+      COMPLEX                 ::  dwgn(-hybrid%maxlcutm1:hybrid%maxlcutm1,&
+     &                                 -hybrid%maxlcutm1:hybrid%maxlcutm1,0:hybrid%maxlcutm1)
 !       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)
       COMPLEX, ALLOCATABLE    ::  vecin1(:,:,:),vecout1(:,:,:)
 
@@ -608,15 +605,15 @@
      &             STOP 'bra_trafo2: error allocating vecin1 or vecout1'
       vecin1 = 0 ; vecout1 = 0
 
-      IF( maxlcutm .gt. atoms%lmaxd ) STOP 'bra_trafo2: maxlcutm > atoms%lmaxd'   ! very improbable case
+      IF( hybrid%maxlcutm1 .gt. atoms%lmaxd ) STOP 'bra_trafo2: maxlcutm > atoms%lmaxd'   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       if (l_real) THEN
          vecin1 = vecin_r
          DO i=1,nbands
             DO j=1,nobd
-               CALL desymmetrize(vecin1(:nbasp,j,i),nbasp,1,1,&
-                    atoms,lcutm,maxlcutm, nindxm,sym)
+               CALL desymmetrize(vecin1(:hybrid%nbasp,j,i),hybrid%nbasp,1,1,&
+                    atoms,hybrid%lcutm1,hybrid%maxlcutm1, hybrid%nindxm1,sym)
             END DO
          END DO
       else
@@ -630,8 +627,8 @@
         invrot = sym%mrot(:,:,sym%invtab(iop))
         trans  = sym%tau(:,iop)
 
-        dwgn (-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm) &
-             = hybrid%d_wgn2(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm,inviop)
+        dwgn (-hybrid%maxlcutm1:hybrid%maxlcutm1,-hybrid%maxlcutm1:hybrid%maxlcutm1,0:hybrid%maxlcutm1) &
+             = hybrid%d_wgn2(-hybrid%maxlcutm1:hybrid%maxlcutm1,-hybrid%maxlcutm1:hybrid%maxlcutm1,0:hybrid%maxlcutm1,inviop)
 
 
       ELSE
@@ -641,8 +638,8 @@
         invrot = sym%mrot(:,:,sym%invtab(iiop))
         trans  = sym%tau(:,iiop)
 
-        dwgn (-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,0:maxlcutm)&
-             = conjg( hybrid%d_wgn2(-maxlcutm:maxlcutm, -maxlcutm:maxlcutm, 0:maxlcutm,inviop))
+        dwgn (-hybrid%maxlcutm1:hybrid%maxlcutm1,-hybrid%maxlcutm1:hybrid%maxlcutm1,0:hybrid%maxlcutm1)&
+             = conjg( hybrid%d_wgn2(-hybrid%maxlcutm1:hybrid%maxlcutm1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1,inviop))
 
       END IF
 
@@ -652,7 +649,7 @@
       rkpt    = modulo1(rkpt,kpts%nkpt3)
       g       = nint(rkpthlp-rkpt)
 
-#ifdef CPP_DEBUG
+!#ifdef CPP_DEBUG
        !test
       DO i=1,kpts%nkpt
         IF ( maxval( abs(rkpt - kpts%bk(:,i)) ) .le. 1E-06  ) THEN
@@ -661,7 +658,7 @@
         END IF
       END DO
       IF( nrkpt .ne. ikpt1 ) STOP 'bra_trafo2: rotation failed'
-#endif
+!#endif
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       i  = 0
@@ -669,12 +666,12 @@
       DO itype = 1,atoms%ntype
         DO ieq = 1,atoms%neq(itype)
           ic = ic + 1
-          DO l = 0,lcutm(itype)
-            DO n = 1,nindxm(l,itype)
+          DO l = 0,hybrid%lcutm1(itype)
+            DO n = 1,hybrid%nindxm1(l,itype)
               i           = i + 1
               pnt(n,l,ic) = i
             END DO
-            i = i + nindxm(l,itype) * 2*l
+            i = i + hybrid%nindxm1(l,itype) * 2*l
           END DO
         END DO
       END DO
@@ -692,8 +689,8 @@
 
           cdum = cexp *exp(-img*tpi_const*dot_product(g,atoms%taual(:,rcent)))
 
-          DO l = 0,lcutm(itype)
-            nn = nindxm(l,itype)
+          DO l = 0,hybrid%lcutm1(itype)
+            nn = hybrid%nindxm1(l,itype)
             DO n = 1,nn
 
               i1 = pnt(n,l,ic)
@@ -729,13 +726,18 @@
           WRITE(*,*) ikpt0,ikpt1,g1
           WRITE(*,*) hybrid%ngptm(ikpt0),hybrid%ngptm(ikpt1)
           WRITE(*,*)
-          WRITE(*,*) hybrid%gptm(:,igptp)
+          WRITE(*,*) igptp,hybrid%gptm(:,igptp)
           WRITE(*,*) g
+          WRITE(*,*) rrot
+          WRITE (*,*) "Failed tests:",g1
+          DO i=1,hybrid%ngptm(ikpt1)
+             WRITE(*,*) hybrid%gptm(:,hybrid%pgptm(i,ikpt1))
+          ENDDO
           STOP 'bra_trafo2: G-point not found in G-point set.'
         END IF
         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:,ikpt1)+g1,trans(:)))
 
-        vecout1(nbasp+igptm,:,:)= cdum * vecin1(nbasp+igptm2,:,:)
+        vecout1(hybrid%nbasp+igptm,:,:)= cdum * vecin1(hybrid%nbasp+igptm2,:,:)
       END DO
 
       DEALLOCATE ( vecin1 )
@@ -745,7 +747,7 @@
             DO j=1,nobd
 
                CALL symmetrize(vecout1(:,j,i),dim,1,1,.false.,&
-                    atoms,lcutm,maxlcutm, nindxm,sym)
+                    atoms,hybrid%lcutm1,hybrid%maxlcutm1, hybrid%nindxm1,sym)
 
                CALL commonphase(phase(j,i),vecout1(:,j,i),dim)
                vecout1(:,j,i) = vecout1(:,j,i) / phase(j,i)

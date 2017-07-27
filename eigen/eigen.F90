@@ -341,7 +341,7 @@ CONTAINS
              print *,"Wrong overlap matrix used, fix this later"
              call olap%from_packed(l_real,dimension%nbasfcn,hamovlp%b_r,hamovlp%b_c)
              call write_olap(olap,nrec)
-            
+             PRINT *,"BASIS:",lapw%nv(jsp),atoms%nlotot
              if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
              
              

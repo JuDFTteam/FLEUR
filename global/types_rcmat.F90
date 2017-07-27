@@ -17,10 +17,11 @@ module m_types_rcmat
    END type t_mat
 
  CONTAINS
-  SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2)
+  SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2,init)
     CLASS(t_mat) :: mat
     LOGICAL,INTENT(IN),OPTIONAL:: l_real
     INTEGER,INTENT(IN),OPTIONAL:: matsize1,matsize2
+    REAL,INTENT(IN),OPTIONAL   :: init
 
     INTEGER:: err
     IF (present(l_real)) mat%l_real=l_real
@@ -36,11 +37,11 @@ module m_types_rcmat
     IF (mat%l_real) THEN
        ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2),STAT=err)
        ALLOCATE(mat%data_c(0,0))
-       mat%data_r=0.0
+       if (present(init)) mat%data_r=init
     ELSE
        ALLOCATE(mat%data_r(0,0))
        ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2),STAT=err)
-       mat%data_c=0.0
+       IF (PRESENT(init)) mat%data_c=init
     ENDIF
 
     IF (err>0) CALL judft_error("Allocation of memmory failed for mat datatype",hint="You probably run out of memory")

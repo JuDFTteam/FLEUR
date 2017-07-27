@@ -343,13 +343,12 @@ endif
           ! from IBZ to current k-point
           IF( kpts%bkp(ikpt0) .ne. ikpt0 ) THEN
              CALL bra_trafo2(&
-                mat_ex%l_real,carr3_vv_r(:hybrid%nbasm(ikpt0),:,:),cprod_vv_r(:hybrid%nbasm(ikpt0),:,:),carr3_vv_c(:hybrid%nbasm(ikpt0),:,:),cprod_vv_c(:hybrid%nbasm(ikpt0),:,:),&
-                hybrid%nbasm(ikpt0),psize,hybrid%nbands(nk),&
-                ikpt0,kpts%bkp(ikpt0),kpts%bksym(ikpt0),sym,&
-                hybrid,kpts,cell,hybrid%maxlcutm1,atoms,&
-                hybrid%lcutm1,hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptmd,&
-                hybrid%nbasp,&
-                phase_vv)
+                  mat_ex%l_real,carr3_vv_r(:hybrid%nbasm(ikpt0),:,:),cprod_vv_r(:hybrid%nbasm(ikpt0),:,:),&
+                  carr3_vv_c(:hybrid%nbasm(ikpt0),:,:),cprod_vv_c(:hybrid%nbasm(ikpt0),:,:),&
+                  hybrid%nbasm(ikpt0),psize,hybrid%nbands(nk),&
+                  kpts%bkp(ikpt0),ikpt0,kpts%bksym(ikpt0),sym,&
+                  hybrid,kpts,cell,atoms,&
+                  phase_vv)
 
              IF (mat_ex%l_real) THEN
                 cprod_vv_r(:hybrid%nbasm(ikpt0),:,:) = carr3_vv_r(:hybrid%nbasm(ikpt0),:,:)
@@ -546,8 +545,12 @@ endif
       ENDIF
 
       ! write exch_vv in mat_ex
-      call mat_ex%alloc(matsize1=hybrid%nbands(nk))
-      mat_ex%data_c=exch_vv
+      CALL mat_ex%alloc(matsize1=hybrid%nbands(nk))
+      IF (mat_ex%l_real) THEN
+         mat_ex%data_r=exch_vv
+      ELSE
+         mat_ex%data_c=exch_vv
+      END IF
      
       END SUBROUTINE exchange_valence_hf
 

@@ -1150,7 +1150,7 @@ CONTAINS
     DO ikpt = ikptmin,ikptmax
 
        !calculate IR overlap-matrix
-       call olapm%alloc(sym%invs,hybrid%ngptm(ikpt),hybrid%ngptm(ikpt))
+       CALL olapm%alloc(sym%invs,hybrid%ngptm(ikpt),hybrid%ngptm(ikpt),0.0)
        
        CALL olap_pw(olapm,hybrid%gptm(:,hybrid%pgptm(:hybrid%ngptm(ikpt),ikpt)),hybrid%ngptm(ikpt), atoms,cell )
 
@@ -1494,7 +1494,17 @@ CONTAINS
 #         ifdef CPP_IRCOULOMBAPPROX
        call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulomb_mtir_r(:,1))
 #         else
-       call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulombp_mtir_r(:,1))
+       CALL write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulombp_mtir_r(:,1))
+!!$       print *,"DEBUG"
+!!$       DO n1=1,SIZE(coulomb_mt1,1)
+!!$          DO n2=1,SIZE(coulomb_mt1,2)
+!!$             DO i=1,SIZE(coulomb_mt1,3)
+!!$                DO j=1,SIZE(coulomb_mt1,4)
+!!$                   WRITE(732,*) n1,n2,i-1,j,coulomb_mt2_r(n1,n2,i-1,j,1)
+!!$                ENDDO
+!!$             ENDDO
+!!$          ENDDO
+!!$       ENDDO
 #         endif
     else
 #         ifdef CPP_IRCOULOMBAPPROX
@@ -1528,7 +1538,7 @@ CONTAINS
        CALL cpu_TIME(time2) 
        WRITE(6,'(2X,A,F8.2,A)') '( Timing:',time2-time1,' )'
     END IF
-
+     
   CONTAINS
 
     !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .

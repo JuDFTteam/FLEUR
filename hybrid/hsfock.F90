@@ -194,6 +194,7 @@ MODULE m_hsfock
      &            noco,nsest,indx_sest,&
      &            mpi,irank2,isize2,comm,&
      &            ex)
+       
 
         DEALLOCATE ( rep_c )
         CALL timestop("valence exchange calculation")
@@ -267,7 +268,7 @@ MODULE m_hsfock
         
         CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
-      
+        
         CALL symmetrizeh(atoms,&
      &                   kpts%bkf(:,nk),dimension,jsp,lapw,gpt,&
      &                   sym,hybdat%kveclo_eig,&

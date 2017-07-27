@@ -90,12 +90,13 @@ MODULE m_add_vnonlocal
           DO nn=1,n           
              IF (hamovlp%l_real) THEN
                 hamovlp%a_r(ic) = hamovlp%a_r(ic) - a_ex*v_x%data_r(n,nn)
+                WRITE(732,*) n,nn,v_x%data_r(n,nn)
              ELSE
                 hamovlp%a_c(ic) = hamovlp%a_c(ic) - a_ex*v_x%data_c(n,nn)
              ENDIF
           ENDDO
        END DO
-
+       STOP "DEBUG"
        ! calculate HF energy
        IF( hybrid%l_calhf ) THEN
           WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
