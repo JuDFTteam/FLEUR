@@ -107,12 +107,6 @@ SUBROUTINE r_inpXML(&
   CHARACTER(len=100) :: xPosString, yPosString, zPosString
   CHARACTER(len=200) :: coreStatesString
   !   REAL :: tempTaual(3,atoms%nat)
-  CHARACTER(len=7) :: coreStateList(29) !'(1s1/2)'
-  CHARACTER(len=4) :: nobleGasConfigList(6) !'[He]'
-  INTEGER          :: nobleGasNumStatesList(6)
-  REAL             :: coreStateNumElecsList(29) !(per spin)
-  INTEGER          :: coreStateNprncList(29)
-  INTEGER          :: coreStateKappaList(29)
   REAL             :: coreStateOccs(29,2)
   INTEGER          :: coreStateNprnc(29), coreStateKappa(29)
   INTEGER          :: speciesXMLElectronStates(29)
@@ -179,23 +173,6 @@ SUBROUTINE r_inpXML(&
 
   schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
   docFilename = "inp.xml"//C_NULL_CHAR
-
-  DATA coreStateList / '(1s1/2)','(2s1/2)','(2p1/2)','(2p3/2)','(3s1/2)',&
-       &                       '(3p1/2)','(3p3/2)','(3d3/2)','(3d5/2)','(4s1/2)',&
-       &                       '(4p1/2)','(4p3/2)','(5s1/2)','(4d3/2)','(4d5/2)',&
-       &                       '(5p1/2)','(5p3/2)','(6s1/2)','(4f5/2)','(4f7/2)',&
-       &                       '(5d3/2)','(5d5/2)','(6p1/2)','(6p3/2)','(7s1/2)',&
-       &                       '(5f5/2)','(5f7/2)','(6d3/2)','(6d5/2)' /
-
-  DATA nobleGasConfigList / '[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]' /
-  DATA nobleGasNumStatesList / 1, 4, 7, 12, 17, 24 /
-  DATA coreStateNumElecsList / 1, 1, 1, 2, 1, 1, 2, 2, 3, 1, 1, 2, 1, 2,&
-       &                               3, 1, 2, 1, 3, 4, 2, 3, 1, 2, 1, 3, 4, 2, 3 /
-  DATA coreStateNprncList    / 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 4, 4,&
-       &                               5, 5, 6, 4, 4, 5, 5, 6, 6, 7, 5, 5, 6, 6 /
-  DATA coreStateKappaList    /-1,-1, 1,-2,-1, 1,-2, 2,-3,-1, 1,-2,-1, 2,-3,&
-       &                               1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3 /
-
 
   !TODO! these switches should be in the inp-file
   input%l_core_confpot=.true. !former CPP_CORE
@@ -1400,29 +1377,29 @@ SUBROUTINE r_inpXML(&
         DO WHILE (token.NE.' ')
            IF (token(1:1).EQ.'[') THEN
               DO i = 1, 6
-                 IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList(i)) THEN
-                    IF (providedCoreStates+nobleGasNumStatesList(i).GT.29) THEN
+                 IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList_const(i)) THEN
+                    IF (providedCoreStates+nobleGasNumStatesList_const(i).GT.29) THEN
                        STOP 'Error: Too many core states provided in xml input file!'
                     END IF
-                    DO j = providedCoreStates+1, providedCoreStates+nobleGasNumStatesList(i)
-                       coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList(j)
-                       coreStateNprnc(j-providedCoreStates) = coreStateNprncList(j)
-                       coreStateKappa(j-providedCoreStates) = coreStateKappaList(j)
+                    DO j = providedCoreStates+1, providedCoreStates+nobleGasNumStatesList_const(i)
+                       coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList_const(j)
+                       coreStateNprnc(j-providedCoreStates) = coreStateNprncList_const(j)
+                       coreStateKappa(j-providedCoreStates) = coreStateKappaList_const(j)
                        speciesXMLElectronStates(j) = coreState_const
                     END DO
-                    providedCoreStates = providedCoreStates + nobleGasNumStatesList(i)
+                    providedCoreStates = providedCoreStates + nobleGasNumStatesList_const(i)
                  END IF
               END DO
            ELSE
               DO i = 1, 29
-                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList(i)) THEN
+                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
                     providedCoreStates = providedCoreStates + 1
                     IF (providedCoreStates.GT.29) THEN
                        STOP 'Error: Too many core states provided in xml input file!'
                     END IF
-                    coreStateOccs(providedCoreStates,:) = coreStateNumElecsList(i)
-                    coreStateNprnc(providedCoreStates) = coreStateNprncList(i)
-                    coreStateKappa(providedCoreStates) = coreStateKappaList(i)
+                    coreStateOccs(providedCoreStates,:) = coreStateNumElecsList_const(i)
+                    coreStateNprnc(providedCoreStates) = coreStateNprncList_const(i)
+                    coreStateKappa(providedCoreStates) = coreStateKappaList_const(i)
                     speciesXMLElectronStates(i) = coreState_const
                  END IF
               END DO
@@ -1436,14 +1413,14 @@ SUBROUTINE r_inpXML(&
            token = popFirstStringToken(valueString)
            DO WHILE (token.NE.' ')
               DO i = 1, 29
-                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList(i)) THEN
+                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
                     providedStates = providedStates + 1
                     IF (providedStates.GT.29) THEN
                        STOP 'Error: Too many valence states provided in xml input file!'
                     END IF
-                    coreStateOccs(providedStates,:) = coreStateNumElecsList(i)
-                    coreStateNprnc(providedStates) = coreStateNprncList(i)
-                    coreStateKappa(providedStates) = coreStateKappaList(i)
+                    coreStateOccs(providedStates,:) = coreStateNumElecsList_const(i)
+                    coreStateNprnc(providedStates) = coreStateNprncList_const(i)
+                    coreStateKappa(providedStates) = coreStateKappaList_const(i)
                     speciesXMLElectronStates(i) = valenceState_const
                  END IF
               END DO
@@ -1467,9 +1444,9 @@ SUBROUTINE r_inpXML(&
            nprncTemp = 0
            kappaTemp = 0
            DO j = 1, 29
-              IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList(j)) THEN
-                 nprncTemp = coreStateNprncList(j)
-                 kappaTemp = coreStateKappaList(j)
+              IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList_const(j)) THEN
+                 nprncTemp = coreStateNprncList_const(j)
+                 kappaTemp = coreStateKappaList_const(j)
                  speciesXMLPrintCoreStates(j) = .TRUE.
                  speciesXMLCoreOccs(1,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
                  speciesXMLCoreOccs(2,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
