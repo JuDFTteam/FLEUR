@@ -40,7 +40,7 @@ CONTAINS
     INTEGER n
     REAL rdum
     !     .. Local Arrays ..
-    INTEGER i(38),ierr(3)
+    INTEGER i(39),ierr(3)
     REAL    r(29)
     LOGICAL l(43)
     !     ..
@@ -56,6 +56,7 @@ CONTAINS
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
        i(35)=hybrid%bands1 ; i(36)=hybrid%bands2 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
+       i(39)=input%kcrel
 
        r(1)=cell%omtil ; r(2)=cell%area ; r(3)=vacuum%delz ; r(4)=cell%z1 ; r(5)=input%alpha
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta ; r(9)=noco%phi ; r(10)=vacuum%tworkf 
@@ -87,7 +88,7 @@ CONTAINS
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
      atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38)
-     input%coretail_lmax=i(2) ; input%krla=i(4)
+     input%coretail_lmax=i(2) ; input%krla=i(4) ; input%kcrel=i(39)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
