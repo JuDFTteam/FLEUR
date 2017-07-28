@@ -65,7 +65,7 @@ CONTAINS
        r(23)=hybrid%tolerance2 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
        r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance
 
-       l(1)=input%eonly  ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
+       l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
        l(11)=banddos%dos ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip ; l(19)=obsolete%l_f2u ; l(20)=obsolete%l_u2f
@@ -100,7 +100,7 @@ CONTAINS
     cell%omtil=r(1) ; cell%area=r(2) ; vacuum%delz=r(3) ; cell%z1=r(4) ; input%alpha=r(5)
     !
     CALL MPI_BCAST(l,SIZE(l),MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    input%efield%l_dirichlet_coeff = l(43)
+    input%efield%l_dirichlet_coeff = l(43) ; input%l_useapw=l(2)
     sym%symor=l(39) ; input%frcor=l(40) ; input%tria=l(41) ; input%efield%dirichlet = l(42)
     input%sso_opt(2)=l(36) ; obsolete%pot8=l(37) ; input%efield%l_segmented=l(38)
      input%sso_opt(1)=l(35)
