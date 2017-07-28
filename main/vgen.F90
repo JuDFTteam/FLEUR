@@ -198,6 +198,11 @@ CONTAINS
 
        !     ----> create pesudo-charge density coefficients
     ENDIF ! (mpi%irank == 0)
+
+#ifdef CPP_MPI
+       CALL MPI_BCAST(rho,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+#endif
+
     CALL timestart("psqpw")      
     CALL psqpw(mpi, atoms,sphhar,stars,vacuum, dimension,cell,input,sym,oneD,&
          qpw,rho,rht,l_xyav, psq)
