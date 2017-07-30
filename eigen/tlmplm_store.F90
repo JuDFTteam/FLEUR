@@ -65,19 +65,19 @@ CONTAINS
         INTEGER,INTENT(IN) :: n,jspin,nlo(:)
 
         INTEGER:: mlo,mlolo
-        tuu=td_stored%tuu(:size(tuu,1),n,jspin)
-        tud=td_stored%tud(:size(tuu,1),n,jspin)
-        tdu=td_stored%tdu(:size(tuu,1),n,jspin)
-        tdd=td_stored%tdd(:size(tuu,1),n,jspin)
-        ind=td_stored%ind(:size(ind,1),:size(ind,2),n,jspin)
+        tuu(1:size(tuu,1))=td_stored%tuu(0:size(tuu,1)-1,n,jspin)
+        tud(1:size(tuu,1))=td_stored%tud(0:size(tuu,1)-1,n,jspin)
+        tdu(1:size(tuu,1))=td_stored%tdu(0:size(tuu,1)-1,n,jspin)
+        tdd(1:size(tuu,1))=td_stored%tdd(0:size(tuu,1)-1,n,jspin)
+        ind(1:size(ind,1),1:size(ind,2))=td_stored%ind(0:size(ind,1)-1,0:size(ind,2)-1,n,jspin)
 
         IF (nlo(n)>0) THEN
             mlo=sum(nlo(:n-1))+1
             mlolo=dot_product(nlo(:n-1),nlo(:n-1)+1)/2+1
-            tuulo(:,:,mlo:(mlo+nlo(n)-1))=&
-               td_stored%tuulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
-            tdulo(:,:,mlo:(mlo+nlo(n)-1))=&
-               td_stored%tdulo(:size(tuulo,1),:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
+            tuulo(1:size(tuulo,1),:,mlo:(mlo+nlo(n)-1))=&
+               td_stored%tuulo(0:size(tuulo,1)-1,:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
+            tdulo(1:size(tuulo,1),:,mlo:(mlo+nlo(n)-1))=&
+               td_stored%tdulo(0:size(tuulo,1)-1,:size(tuulo,2),mlo:mlo+nlo(n)-1,jspin)
             tuloulo(:,:,mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1)=&
                td_stored%tuloulo(:size(tuloulo,1),:size(tuloulo,2),mlolo:mlolo+nlo(n)*(nlo(n)+1)/2-1,jspin)
         ENDIF
