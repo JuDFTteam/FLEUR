@@ -13,17 +13,18 @@ c     Frank Freimuth
 c***********************************************************************
       CONTAINS
       SUBROUTINE wann_anglmom(
-     >                  llod,noccbd,nlod,natd,ntypd,lmaxd,lmd,
+     >                  llod,noccbd,nlod,natd,ntypd,lmax,lmd,
      >                  ntype,neq,nlo,llo,acof,bcof,ccof,
      >                  ddn,uulon,dulon,uloulopn,
      =                  mmn)
       implicit none
 c     .. scalar arguments ..
-      integer, intent (in) :: llod,nlod,natd,ntypd,lmaxd,lmd
+      integer, intent (in) :: llod,nlod,natd,ntypd,lmd
       integer, intent (in) :: ntype,noccbd
 c     .. array arguments ..
       integer, intent (in)  :: neq(:)!neq(ntypd)
       integer, intent (in)  :: nlo(:)!nlo(ntypd)
+      integer, intent (in)  :: lmax(:)!lmax(ntypd)
       integer, intent (in)  :: llo(:,:)!llo(nlod,ntypd)
       real,    intent (in)  :: ddn(0:,:)!ddn(0:lmaxd,ntypd)
       real,    intent (in)  :: uloulopn(:,:,:)!uloulopn(nlod,nlod,ntypd)
@@ -34,8 +35,9 @@ c     .. array arguments ..
       complex, intent (in)  :: bcof(:,0:,:)!bcof(noccbd,0:lmd,natd)
       complex, intent (inout) :: mmn(:,:,:)!mmn(3,noccbd,noccbd)
 c     .. local scalars ..
+      logical :: l_select
       integer :: i,j,l,lo,lop,m,natom,nn,ntyp
-      integer :: nt1,nt2,lm,n,ll1
+      integer :: nt1,nt2,lm,n,ll1,indat
       complex :: suma_z,sumb_z
       complex :: suma_p,sumb_p
       complex :: suma_m,sumb_m
@@ -66,16 +68,28 @@ C     .. intrinsic functions ..
      +          qaclo_m(noccbd,noccbd,nlod,ntypd),
      +          qbclo_m(noccbd,noccbd,nlod,ntypd) )
 
+      inquire(file='select_anglmom',exist=l_select)
+      write(*,*)'select_anglmom: ',l_select
+      if(l_select) then
+         open(866,file='select_anglmom')
+         read(866,*)indat
+         close(866)
+         write(*,*)'anglmom for atom=',indat
+         write(*,*)ntype
+         write(*,*)neq(indat)
+      endif
+
 c-----> lapw-lapw-Terms
       do i = 1,noccbd            
        do j = 1,noccbd
          nt1 = 1
          do n = 1,ntype
             nt2 = nt1 + neq(n) - 1
-            do l = 0,lmaxd
+            do l = 0,lmax(n)
                suma_z = cmplx(0.,0.); sumb_z = cmplx(0.,0.)
                suma_m = cmplx(0.,0.); sumb_m = cmplx(0.,0.)
                suma_p = cmplx(0.,0.); sumb_p = cmplx(0.,0.)
+               if(l_select .and. (n.ne.indat)) cycle
                ll1 = l* (l+1)
                do m = -l,l
                   lm = ll1 + m
@@ -125,6 +139,7 @@ c---> Terms involving local orbitals.
       do ntyp = 1,ntype
        do nn = 1,neq(ntyp)
          natom = natom + 1
+         if(l_select .and. (ntyp.ne.indat)) cycle
          do lo = 1,nlo(ntyp)
            l = llo(lo,ntyp)
            ll1 = l* (l+1)
@@ -197,6 +212,7 @@ c---> Terms involving local orbitals.
 c---> perform summation of the coefficients with the integrals
 c---> of the radial basis functions
       do ntyp = 1,ntype
+         if(l_select .and. (ntyp.ne.indat) ) cycle
          do lo = 1,nlo(ntyp)
             l = llo(lo,ntyp)
             do j = 1,noccbd
