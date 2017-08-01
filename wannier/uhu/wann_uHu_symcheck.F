@@ -6,7 +6,7 @@ c*********************************************c
       module m_wann_uHu_symcheck
       contains
       subroutine wann_uHu_symcheck(uHu,nbnd,nntot,nntot2,fullnkpts)
-      use m_fleurenv
+
       implicit none 
       integer,intent(in) :: nbnd,nntot,nntot2,fullnkpts
       complex,intent(in) :: uHu(nbnd,nbnd,nntot2,nntot,fullnkpts)

@@ -4,7 +4,7 @@ c  composite matrices as  c
 c  input for wannier90    c
 c*************************c
       module m_wann_gwf_commat
-      USE m_fleurenv
+      USE m_juDFT
       implicit none
       contains
 
@@ -72,8 +72,8 @@ c*************************c
       
       write(*,*)'dimension:',arr_len
       write(*,*)'x?,y?,z? :',l_dim(1:3)
-      if(arr_len.le.3) call fleur_err("dimension<4",
-     >                                calledby='wann_gwf_commat')
+      if(arr_len.le.3) call juDFT_error("dimension<4",
+     >                                  calledby='wann_gwf_commat')
 
       nkqpts=nkpts*nqpts
       tpi = 2.0*pimach()
@@ -170,7 +170,7 @@ c     >                      latt_const_q,mmn_arti)
       inquire(file='proj',exist=l_proj)
       if(.not.l_proj) write(*,*)'missing: proj'
       if(l_miss.or.(.not.l_exist).or.(.not.l_proj))
-     >   call fleur_err("missing file(s) for HDWFs")
+     >   call juDFT_error("missing file(s) for HDWFs")
 
 ! get number of bands and wfs from proj
       open(405,file='proj',status='old')
@@ -317,8 +317,8 @@ c*****************************c
                   mmn(:,:,nn,ikqpt)=mmnq(:,:,nq,k)
                   !write(*,*)'q neig',q,qb,nq
                else ! otherwise problem
-                  call fleur_err("problem in overlap mmn gwf",
-     >                        calledby="wann_gwf_commat")
+                  call juDFT_error("problem in overlap mmn gwf",
+     >                             calledby="wann_gwf_commat")
                endif
              enddo!nn
            enddo!k
@@ -398,8 +398,8 @@ c*****************************c
                      enddo
                   enddo
                else ! otherwise problem
-                  call fleur_err("problem in overlap mmn gwf",
-     >                        calledby="wann_gwf_commat")
+                  call juDFT_error("problem in overlap mmn gwf",
+     >                             calledby="wann_gwf_commat")
                endif
              enddo!nn
            enddo!k

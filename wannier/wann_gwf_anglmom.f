@@ -3,7 +3,7 @@ c  routine to set up the  c
 c  composite matrix anglmom c
 c*************************c
       module m_wann_gwf_anglmom
-      USE m_fleurenv
+
       implicit none
       contains
 

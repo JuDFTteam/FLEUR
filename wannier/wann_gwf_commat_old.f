@@ -1,5 +1,5 @@
       module m_wann_gwf_commat
-      USE m_fleurenv
+      USE m_juDFT
       implicit none
 
       contains
@@ -58,7 +58,7 @@
 
 c      inquire(file='WF1_arti.mmn',exist=l_file)
 c      if(.not.l_file) 
-c     >  call fleur_err("provide WF1_arti.mmn",calledby ="wann_gwf_mmkb")
+c     >  call juDFT_error("provide WF1_arti.mmn",calledby ="wann_gwf_mmkb")
 c
 c      open(200,file='WF1_arti.mmn',status='old',action='read')
 c      read(200,*)!header
@@ -67,8 +67,8 @@ c
 c      if(nbnd_arti.ne.1 .or. nqpts_arti.ne.nqpts 
 c     >                  .or. nntot_arti.ne.nntot_q) then
 c         close(200)
-c         call fleur_err("check format WF1_arti.mmn",
-c     >                  calledby="wann_gwf_mmkb")
+c         call juDFT_error("check format WF1_arti.mmn",
+c     >                    calledby="wann_gwf_mmkb")
 c      endif
 c
 c      do iqpt=1,nqpts
@@ -88,7 +88,7 @@ c      close(200)
 
 c      inquire(file='WF1_arti.amn',exist=l_file)
 c      if(.not.l_file) 
-c     >  call fleur_err("provide WF1_arti.amn",calledby ="wann_gwf_mmkb")
+c     >  call juDFT_error("provide WF1_arti.amn",calledby ="wann_gwf_mmkb")
 c
 c      open(200,file='WF1_arti.amn',status='old',action='read')
 c      read(200,*)!header
@@ -97,25 +97,25 @@ c
 c      if(nbnd_arti.ne.1 .or. nqpts_arti.ne.nqpts 
 c     >                  .or. nntot_arti.ne.1) then
 c         close(200)
-c         call fleur_err("check format WF1_arti.amn",
+c         call juDFT_error("check format WF1_arti.amn",
 c     >                  calledby="wann_gwf_mmkb")
 c      endif
 
 c      do iqpt=1,nqpts
 c         read(200,*)nbnd_arti,nbnd_arti,iqpt_help,mmn_r,mmn_i
-c         if(iqpt_help.ne.iqpt) call fleur_err("iqpt_help.ne.iqpt",
+c         if(iqpt_help.ne.iqpt) call juDFT_error("iqpt_help.ne.iqpt",
 c     >                                        calledby="wann_gwf_mmkb")
 c         amn_arti(iqpt) = cmplx(mmn_r,mmn_i) 
 c      enddo
 c      close(200)
 
-c      call fleur_end("stop in wann_gwf_mmkb")
+c      call juDFT_end("stop in wann_gwf_mmkb")
 
 
 ! read in bkqpts
        nkqpts=nkpts*nqpts
        inquire (file='bkqpts',exist=l_file)
-       if (.not.l_file)  CALL fleur_err("need bkqpts for l_gwf"
+       if (.not.l_file)  CALL juDFT_error("need bkqpts for l_gwf"
      +      ,calledby ="wann_gwf_mmkb")
        open (202,file='bkqpts',form='formatted',status='old')
        rewind (202)
@@ -127,18 +127,18 @@ c      call fleur_end("stop in wann_gwf_mmkb")
         do nn=1,nntot_kq
          read (202,'(2i6,3x,4i4)')
      &     ikqpt_help,bpt_kq(nn,ikqpt),(gb_kq(i,nn,ikqpt),i=1,4)
-         if (ikqpt/=ikqpt_help)  CALL fleur_err("ikqpt.ne.ikqpt_help"
+         if (ikqpt/=ikqpt_help)  CALL juDFT_error("ikqpt.ne.ikqpt_help"
      +        ,calledby ="wann_gwf_mmkb")
          if (bpt_kq(nn,ikqpt)>nkqpts)
-     &        CALL fleur_err("bpt_kq.gt.nkqpts",
-     >                       calledby ="wann_gwf_mmkb")
+     &        CALL juDFT_error("bpt_kq.gt.nkqpts",
+     >                         calledby ="wann_gwf_mmkb")
 c         write(*,'(2i6,3x,4i4)')ikqpt_help,bpt_kq(nn,ikqpt),
 c     >                          (gb_kq(i,nn,ikqpt),i=1,4)
         enddo
        enddo
        close (202)
 
-       !call fleur_end("stop")
+       !call juDFT_end("stop")
 
 ! construct composite mmn and amn matrices and eig
       allocate(mmn_comp(nbnd,nbnd,nntot_kq,nkqpts))
@@ -179,7 +179,7 @@ c               write(*,*)'k neighbor nr.',nn
 c               write(*,*)'q neighbor nr.',nn
 c               do nn_arti=1,nntot_q
 c                  if(bpt_arti(nn_arti,iqpt).eq.bpt_q(nn,iqpt)) exit
-c                  if(nn_arti.eq.nntot_q) call fleur_err(
+c                  if(nn_arti.eq.nntot_q) call juDFT_error(
 c     >                   "nn_arti not found",calledby="wann_gwf_mmkb")
 c               enddo
 c               write(*,*)'q nn',nn,'arti nn',nn_arti
@@ -187,8 +187,8 @@ c               write(*,*)'q nn',nn,'arti nn',nn_arti
      >                                     * temp_mmn
 c     >                                     * mmn_arti(nn_arti,iqpt) 
             else !problem
-               call fleur_err("overlap mmn gwf",
-     >                        calledby="wann_gwf_mmkb")
+               call juDFT_error("overlap mmn gwf",
+     >                          calledby="wann_gwf_mmkb")
             endif
             !write(*,*)
 

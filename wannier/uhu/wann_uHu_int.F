@@ -27,7 +27,7 @@ c*****************************************c
      >               bkpt,bbmat,vpw,z_b,z_b2,
      >               rgphs,ustep,ig,l_kin,sign,uHu)
 #include "cpp_double.h"
-      use m_dotir, ONLY : dotirp
+
       implicit none
 
 c     ..arguments..
@@ -80,7 +80,8 @@ c     ..local variables..
        s(1) = bkpt(1) + k1_b(i) - gb(1)
        s(2) = bkpt(2) + k2_b(i) - gb(2)
        s(3) = bkpt(3) + k3_b(i) - gb(3)
-       rk_b(i) = dotirp(s,s,bbmat)
+       rk_b(i) = dot_product(s,matmul(bbmat,s))
+!       rk_b(i) = dotirp(s,s,bbmat)
       enddo
 
       ! set up |k+G'-G(k+b2)|^2
@@ -88,7 +89,8 @@ c     ..local variables..
        s(1) = bkpt(1) + k1_b2(i) - gb2(1)
        s(2) = bkpt(2) + k2_b2(i) - gb2(2)
        s(3) = bkpt(3) + k3_b2(i) - gb2(3)
-       rk_b2(i) = dotirp(s,s,bbmat)
+       rk_b2(i) = dot_product(s,matmul(bbmat,s))
+!       rk_b2(i) = dotirp(s,s,bbmat)
       enddo
 
       ! construct vstep(g,g') ~ V(g-g') 

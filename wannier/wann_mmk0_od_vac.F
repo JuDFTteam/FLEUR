@@ -26,7 +26,7 @@ c***************************************************************
      <     mmn)
 
       use m_constants, only : pimach
-      use m_od_types, only : od_inp
+      use m_types
       use m_od_abvac
       use m_cylbes
       use m_dcylbs

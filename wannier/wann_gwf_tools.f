@@ -133,15 +133,15 @@ c       write(*,*)'nn not found!'
 
 
       subroutine gwf_plottemplate()
-      use m_fleurenv
+      use m_juDFT
       implicit none
       integer :: i,nwfs,numbands
       logical :: l_exist
 
       inquire(file='proj',exist=l_exist)
       if(.not.l_exist) then
-         call fleur_err('Where is proj?',
-     >                  calledby='gwf_plottemplate')
+         call juDFT_error('Where is proj?',
+     >                    calledby='gwf_plottemplate')
       endif
 
       open(8888,file='proj',status='old')
