@@ -22,7 +22,7 @@ c****************************************************************
      >              l_bzsym,l_byindex,l_bynumber,l_byenergy,
      >              irreduc,odi,band_min,band_max,numbands,
      >              e1s,e2s,ef,l_paulimag,nkpt,    
-     <              nbnd,kpoints)
+     <              nbnd,kpoints,l_gwf,iqpt)
 
       use m_cdnread, only:cdn_read
       use m_types,only:od_inp
@@ -67,6 +67,12 @@ c****************************************************************
       complex, allocatable :: paulimat(:,:,:,:) 
       real             :: sum1,sum2,sum3
       integer          :: num_bands,err
+      
+! BEGIN QPOINTS
+      LOGICAL, INTENT(IN) :: l_gwf
+      INTEGER, INTENT(IN) :: iqpt
+      CHARACTER(len=12) :: fname
+! END QPOINTS
       real,parameter   :: hartree=27.21138505
 
 #if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
@@ -74,22 +80,29 @@ c****************************************************************
 #else
       REAL     :: z(nbasfcn,neigd)
 #endif
-
+!      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
+!      WRITE(*,*)'wann_rw_eig: neigd',neigd
       n_start=1
       n_end=neigd
+      IF (l_gwf) THEN
+         WRITE(fname,'("_",i4.4,".eig")')iqpt
+         fname=spin12(jspin)//trim(fname)
+      ELSE
+         fname=spin12(jspin)//'.eig'
+      ENDIF
 
-      inquire (file=spin12(jspin)//'.eig',exist=l_eig)
+!      WRITE(*,*)'wann_rw_eig.F: writing eig file ',fname
+
+      inquire (file=fname,exist=l_eig)
       if (l_eig) then
-         open (306,file=spin12(jspin)//'.eig',
+         open (306,file=fname,
      &                               form='formatted',status='old')
          rewind (306)
       else
-         open (306,file=spin12(jspin)//'.eig',
+         open (306,file=fname,
      &                               form='formatted',status='new')
       endif!l_eig
 
-  
-      write(*,*)"nkpt=",nkpt
       if(l_paulimag.and..false.)then
         num_bands=band_max-band_min+1
         allocate( paulimat(num_bands,num_bands,3,nkpt),stat=err )
@@ -125,10 +138,12 @@ c****************************************************************
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,66,
+     >              l_gwf,iqpt)
 
 
         nkbnd = 0
+!        WRITE(*,*)'wann_rw_eig: nbands',nbands
         do i = 1,nbands
          if((eig(i).ge.e1s .and. nkbnd.lt.numbands.and.l_bynumber).or.
      &      (eig(i).ge.e1s.and.eig(i).le.e2s.and.l_byenergy ).or.
@@ -146,7 +161,8 @@ c****************************************************************
               endif
            endif   
          endif 
-        enddo 
+        enddo
+!        WRITE(*,*)'wann_rw_eig: nkbnd',nkbnd,'nbnd',nbnd 
         if (nkbnd.ge.nbnd) nbnd = nkbnd
 
         if (odi%d1) kpoints(ikpt) = bkpt(3)
@@ -170,7 +186,8 @@ c****************************************************************
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,66,
+     >              l_gwf,iqpt)
 
 
               nkbnd = 0
@@ -195,20 +212,21 @@ c*********************************************************************
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,
+     >              l_gwf,iqpt)
 
       use m_cdnread, only:cdn_read
       implicit none
       INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd,nlotot
       INTEGER, INTENT (IN) :: nrec,nvd,jspd,jspin
-      INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod
+      INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod,iqpt
+      LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
 #ifndef CPP_MPI
       integer(8), intent (in) :: irecl
 #else
       include 'mpif.h'
       INTEGER(KIND=MPI_OFFSET_KIND),intent(in) :: irecl
 #endif
-      LOGICAL, INTENT (IN) :: l_ss,l_noco
       INTEGER, INTENT (OUT) :: nbands,nmat
       REAL,    INTENT (OUT) :: wk
 
@@ -225,7 +243,9 @@ c*********************************************************************
       REAL,    INTENT (OUT) :: z(nbasfcn,neigd)
 #endif
 
-      character(len=12) :: fname
+      INTEGER, INTENT(IN) :: funit
+
+      character(len=12) :: fname,fend
       integer :: aoff,d1,d10
       integer :: cpu_index
       logical :: l_eig
@@ -234,6 +254,8 @@ c*********************************************************************
       n_start=1
       n_end=neigd
 
+      fend=''
+      if(l_gwf) write(fend,'("_",i4.4)')iqpt
 
       do cpu_index=0,isize-1
 
@@ -242,25 +264,28 @@ c*********************************************************************
 
 
         if(cpu_index.eq.irank)then
-#if 1==1
-           call judft_error("NOT IMPLEMENTED")
-#else
+
            call cdn_read(
-     >              eig_id,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,
-     >              l_noco,neigd,
+     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
+     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
+     >              l_ss,l_noco,nrec,kptibz,funit,neigd,
      >              n_start,n_end,      
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zmat)
-#endif
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
+
         else !eigenvalues are stored in the file of another process
-#if 1==2
+
+
            d10=int((cpu_index+0.5)/10)
            d1=mod(cpu_index,10)
            aoff=iachar('1')-1
            if(d10.ge.10)aoff=iachar('7')
            fname='eig'//achar(d10+aoff)//achar(d1+iachar('1')-1)
+           fname=trim(fname)//trim(fend)
            l_eig=.false.
+           !write(*,*)fname
+c           if(irank.eq.0) write(*,*) 'opening file=',fname
+
            inquire(file=fname,exist=l_eig)
            IF(.NOT.l_eig)  CALL juDFT_error("one of eig files not found"
      +          ,calledby ="wann_rw_eig")
@@ -275,37 +300,35 @@ c*********************************************************************
      <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
 
            close(666)
-#endif
         endif   !cpu_index==irank
         endif !find process
-      enddo !cpu_index
-
-
+        enddo !cpu_index
       end subroutine wann_mpi_read_eig  
 c*****************************************************************
 c     read in eig file
 c*****************************************************************
-      subroutine wann_read_eig(  
+      subroutine wann_read_eig(     
      >              ntapwf,
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,
+     >              l_gwf,iqpt)
 
       use m_cdnread, only:cdn_read
       implicit none
       integer, intent (in) :: ntapwf
       INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd,nlotot
       INTEGER, INTENT (IN) :: nrec,nvd,jspd,jspin
-      INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod
+      INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod,iqpt
+      LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
 #ifndef CPP_MPI
       integer(8), intent (in) :: irecl
 #else
       include 'mpif.h'
       INTEGER(KIND=MPI_OFFSET_KIND),intent(in) :: irecl
 #endif
-      LOGICAL, INTENT (IN) :: l_ss,l_noco
       INTEGER, INTENT (OUT) :: nbands,nmat
       REAL,    INTENT (OUT) :: wk
 
@@ -322,6 +345,8 @@ c*****************************************************************
       REAL,    INTENT (OUT) :: z(nbasfcn,neigd)
 #endif
 
+      INTEGER, INTENT(IN) :: funit    !QPOINTS
+
       integer :: n_start,n_end
 
       n_start=1
@@ -329,37 +354,24 @@ c*****************************************************************
 
 #if( defined(CPP_MPI) && !defined(CPP_HDF) )
 ! MPI without HDF
-#ifdef CPP_HYBEIG
-c-----if hybrid functionals are used, and mpi is defined, mpi-io is
-c-----used and all processors use the same eig-file
-        call cdn_read(
-     >          lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >          irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >          l_ss,l_noco,nrec,kptibz,ntapwf,neigd,
-     >          n_start,n_end,      
-     <          nmat,nv,ello,evdu,epar,kveclo,
-     <          k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-#else
-        call wann_mpi_read_eig(     
+      call wann_mpi_read_eig(     
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-#endif
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,
+     >              l_gwf,iqpt)
+
 #else
 !MPI with HDF or no MPI
-#if 1==1
-        call judft_error("NOT IMPLEMENTED")
-#else
         call cdn_read(
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,kptibz,66,
+     >              l_ss,l_noco,nrec,kptibz,funit,
      >              neigd,n_start,n_end,
      <              nmat,nv,ello,evdu,epar,kveclo,
      <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-#endif
+
 #endif
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig

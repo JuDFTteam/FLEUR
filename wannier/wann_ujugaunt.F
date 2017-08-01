@@ -15,10 +15,11 @@ c    Frank Freimuth, October 2006
 c*********************************************************************** 
      >                          llod,nntot,kdiff,lmax,
      >                          ntype,ntypd,bbmat,bmat,
-     >                          nlod,nlo,llo,flo,f,g,jri,rmsh,dx,jmtd,
+     >                          nlod,nlo,llo,flo,flo_b,f,f_b,g,g_b,
+     >                          jri,rmsh,dx,jmtd,
      >                          lmaxd,lmd,
      <                          ujug,ujdg,djug,djdg,ujulog,djulog,
-     <                          ulojug,ulojdg,ulojulog)
+     <                          ulojug,ulojdg,ulojulog,l_q,sign_q)
       use m_constants, only : pimach
       use m_matmul   , only : matmul3,matmul3r
       use m_sphbes
@@ -26,7 +27,7 @@ c***********************************************************************
       use m_types, only : od_inp, od_sym
       use m_intgr, only : intgr3
       use m_gaunt, only: gaunt1
-  
+
       IMPLICIT NONE
       integer, intent (in)  :: llod
       INTEGER, INTENT (IN)  :: nntot,ntype,ntypd
@@ -40,10 +41,16 @@ c***********************************************************************
       integer, intent (in)  :: nlo(:) !(ntypd)
       integer, intent (in)  :: llo(:,:) !(nlod,ntypd)    
       real,    intent (in)  :: f(:,:,:,0:) !(ntypd,jmtd,2,0:lmaxd)
+      real,    intent (in)  :: f_b(:,:,:,0:) !(ntypd,jmtd,2,0:lmaxd)
       real,    intent (in)  :: g(:,:,:,0:) !(ntypd,jmtd,2,0:lmaxd)
+      real,    intent (in)  :: g_b(:,:,:,0:) !(ntypd,jmtd,2,0:lmaxd)
       real,    intent (in)  :: flo(:,:,:,:) !(ntypd,jmtd,2,nlod)
+      real,    intent (in)  :: flo_b(:,:,:,:) !(ntypd,jmtd,2,nlod)
       real,    intent (in)  :: rmsh(:,:) !(jmtd,ntypd)
       real,    intent (in)  :: dx(:) !(ntypd)
+
+      logical,    intent (in)  :: l_q    ! if true, we deal with q points
+      integer,    intent (in)  :: sign_q  ! if we deal with q points, we might pick up an additional sign
 
       complex, intent (out) :: ujug(0:,0:,:,:) !(0:lmd,0:lmd,1:ntype,1:nntot)
       complex, intent (out) :: ujdg(0:,0:,:,:) !(0:lmd,0:lmd,1:ntype,1:nntot)
@@ -56,7 +63,9 @@ c***********************************************************************
       complex, intent (out) :: ulojulog(:,-llod:,:,-llod:,:,:) !(1:nlod,-llod:llod,1:nlod,-llod:llod,1:ntype,1:nntot)
 
       real, allocatable :: djd(:,:,:),ujd(:,:,:),uju(:,:,:)
+      real, allocatable :: dju(:,:,:)
       real, allocatable :: ujulo(:,:,:),djulo(:,:,:),ulojulo(:,:,:)
+      real, allocatable :: uloju(:,:,:),ulojd(:,:,:)
       integer           :: ikpt_b,i,lwn,n,lpp,lop,lo,l,lp
       integer           :: lmini,lmaxi,m,mp,llpp,mpp
       integer           :: lmpp,lminp,lmaxp,lm,lpmp
@@ -64,15 +73,19 @@ c***********************************************************************
       real              :: jj(0:lmaxd,jmtd),x(jmtd)
       real              :: bkrot(3)
       complex           :: ylmpp((lmaxd+1)**2),factor,ic
+      complex           :: factor2
 
       ic = cmplx(0.,1.)
 
       allocate( djd(0:lmaxd,0:lmaxd,0:lmaxd) )
       allocate( ujd(0:lmaxd,0:lmaxd,0:lmaxd) )
+      allocate( dju(0:lmaxd,0:lmaxd,0:lmaxd) )
       allocate( uju(0:lmaxd,0:lmaxd,0:lmaxd) ) 
 
       allocate( ujulo(nlod,0:lmaxd,0:lmaxd) )
       allocate( djulo(nlod,0:lmaxd,0:lmaxd) )
+      allocate( uloju(nlod,0:lmaxd,0:lmaxd) )
+      allocate( ulojd(nlod,0:lmaxd,0:lmaxd) )
 
       allocate( ulojulo(nlod,nlod,0:lmaxd) )
 
@@ -87,10 +100,12 @@ c***********************************************************************
       ulojdg = cmplx(0.0,0.0)
 
       ulojulog = cmplx(0.0,0.0)
-
+      
       do ikpt_b=1,nntot
         bpt(:)=kdiff(:,ikpt_b)
         rk = sqrt(dot_product(bpt,matmul(bbmat,bpt)))
+        !write(*,*)'ujugaunt rk',rk
+
         do n=1,ntype
          lwn = lmax(n)
 c...generate the j_lpp(br) on the radial grid   
@@ -116,8 +131,8 @@ c..the gaunt conditions
                ulojulo(lo,lop,lpp) = 0. 
              else 
               do i = 1,jri(n)
-                x(i) = ( flo(n,i,1,lo)*flo(n,i,1,lop)+
-     +                   flo(n,i,2,lo)*flo(n,i,2,lop) )*jj(lpp,i)
+                x(i) = ( flo(n,i,1,lo)*flo_b(n,i,1,lop)+
+     +                   flo(n,i,2,lo)*flo_b(n,i,2,lop) )*jj(lpp,i)
               enddo 
               call intgr3(x,rmsh(1:,n),dx(n),jri(n),ulojulo(lo,lop,lpp))
              endif
@@ -136,23 +151,30 @@ c..gaunt conditions
      +             (lpp.gt.lmaxi)) then
              uju(l,lp,lpp) = 0.
              ujd(l,lp,lpp) = 0.
+             dju(l,lp,lpp) = 0.
              djd(l,lp,lpp) = 0.
             else
              do i = 1,jri(n)
-                x(i) = ( f(n,i,1,l)*f(n,i,1,lp)+
-     +                   f(n,i,2,l)*f(n,i,2,lp) )*jj(lpp,i)
+                x(i) = ( f(n,i,1,l)*f_b(n,i,1,lp)+
+     +                   f(n,i,2,l)*f_b(n,i,2,lp) )*jj(lpp,i)
              enddo      
              call intgr3(x,rmsh(1:,n),dx(n),jri(n),uju(l,lp,lpp))
 
              do i = 1,jri(n)
-                x(i) = ( f(n,i,1,l)*g(n,i,1,lp)+
-     +                   f(n,i,2,l)*g(n,i,2,lp) )*jj(lpp,i)
+                x(i) = ( f(n,i,1,l)*g_b(n,i,1,lp)+
+     +                   f(n,i,2,l)*g_b(n,i,2,lp) )*jj(lpp,i)
              enddo      
              call intgr3(x,rmsh(1:,n),dx(n),jri(n),ujd(l,lp,lpp))
 
              do i = 1,jri(n)
-                x(i) = ( g(n,i,1,l)*g(n,i,1,lp)+
-     +                   g(n,i,2,l)*g(n,i,2,lp) )*jj(lpp,i)
+                x(i) = ( g(n,i,1,l)*f_b(n,i,1,lp)+
+     +                   g(n,i,2,l)*f_b(n,i,2,lp) )*jj(lpp,i)
+             enddo      
+             call intgr3(x,rmsh(1:,n),dx(n),jri(n),dju(l,lp,lpp))
+
+             do i = 1,jri(n)
+                x(i) = ( g(n,i,1,l)*g_b(n,i,1,lp)+
+     +                   g(n,i,2,l)*g_b(n,i,2,lp) )*jj(lpp,i)
              enddo     
              call intgr3(x,rmsh(1:,n),dx(n),jri(n),djd(l,lp,lpp))
             endif
@@ -171,17 +193,29 @@ c..gaunt conditions
      +             (lpp.gt.lmaxi)) then
                ujulo(lo,lp,lpp) = 0.
                djulo(lo,lp,lpp) = 0.
+               uloju(lo,lp,lpp) = 0.
+               ulojd(lo,lp,lpp) = 0.
              else
               do i = 1,jri(n)
-               x(i) = ( flo(n,i,1,lo)*f(n,i,1,lp)+
-     +                  flo(n,i,2,lo)*f(n,i,2,lp) )*jj(lpp,i)
+               x(i) = ( flo(n,i,1,lo)*f_b(n,i,1,lp)+
+     +                  flo(n,i,2,lo)*f_b(n,i,2,lp) )*jj(lpp,i)
               enddo 
               call intgr3(x,rmsh(1:,n),dx(n),jri(n),ujulo(lo,lp,lpp))
               do i = 1,jri(n)
-               x(i) = ( flo(n,i,1,lo)*g(n,i,1,lp)+
-     +                  flo(n,i,2,lo)*g(n,i,2,lp) )*jj(lpp,i)
+               x(i) = ( flo(n,i,1,lo)*g_b(n,i,1,lp)+
+     +                  flo(n,i,2,lo)*g_b(n,i,2,lp) )*jj(lpp,i)
               enddo 
               call intgr3(x,rmsh(1:,n),dx(n),jri(n),djulo(lo,lp,lpp))
+              do i = 1,jri(n)
+               x(i) = ( flo_b(n,i,1,lo)*f(n,i,1,lp)+
+     +                  flo_b(n,i,2,lo)*f(n,i,2,lp) )*jj(lpp,i)
+              enddo 
+              call intgr3(x,rmsh(1:,n),dx(n),jri(n),uloju(lo,lp,lpp))
+              do i = 1,jri(n)
+               x(i) = ( flo_b(n,i,1,lo)*g(n,i,1,lp)+
+     +                  flo_b(n,i,2,lo)*g(n,i,2,lp) )*jj(lpp,i)
+              enddo 
+              call intgr3(x,rmsh(1:,n),dx(n),jri(n),ulojd(lo,lp,lpp))
              endif
             enddo !lo  
            endif  ! local orbitals  
@@ -191,7 +225,6 @@ c********************************************************************
 c       multiply with gaunt-coefficient (apw-apw)
 c********************************************************************
          bkrot=matmul(bpt,bmat)
-         !call cotra3(bpt,bkrot,bmat)
          call ylm4(lwn,bkrot,ylmpp)
          do l = 0,lwn
           do m = -l,l
@@ -201,21 +234,31 @@ c********************************************************************
              lpmp=lp*(lp+1)+mp  
              do lpp = 0,lwn
                llpp = lpp*(lpp+1)
+
                mpp = mp - m
+
                lmpp = llpp + mpp 
                lmini = abs(l-lpp)
                lmaxi = l+lpp
                if ((lmini.le.lp).and.(lp.le.lmaxi).and.
      &            (mod(l+lp+lpp,2).eq.0).and.(abs(mpp).LE.lpp))then  
+                  
                   factor=conjg(ylmpp(lmpp+1))*(ic**(l+lpp-lp))*
      *                     gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)
+
+c                  if(factor.ne.0 .and. uju(l,lp,lpp).ne.0)
+c     >               write(*,*)lpp,lp,l,mp,m
+
+                  if(l_q) then
+                    factor=(sign_q**lpp)*factor            ! additional sign for q points
+                  endif
      
                 ujug(lpmp,lm,n,ikpt_b)=ujug(lpmp,lm,n,ikpt_b)+
      +               factor*uju(l,lp,lpp)
                 ujdg(lpmp,lm,n,ikpt_b)=ujdg(lpmp,lm,n,ikpt_b)+
      +               factor*ujd(l,lp,lpp)
                 djug(lpmp,lm,n,ikpt_b)=djug(lpmp,lm,n,ikpt_b)+
-     +               factor*ujd(lp,l,lpp)
+     +               factor*dju(l,lp,lpp)
                 djdg(lpmp,lm,n,ikpt_b)=djdg(lpmp,lm,n,ikpt_b)+
      +               factor*djd(l,lp,lpp)
               
@@ -248,6 +291,9 @@ c******************************************************************
                 lmpp = llpp + mpp
                 factor=conjg(ylmpp(lmpp+1))*(ic**(l+lpp-lp))*
      *                   gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)
+                if(l_q) then
+                  factor=(sign_q**lpp)*factor            ! additional sign for q points
+                endif
 
                 ujulog(lpmp,lo,m,n,ikpt_b)=ujulog(lpmp,lo,m,n,ikpt_b)+
      +               factor*ujulo(lo,lp,lpp)
@@ -261,11 +307,14 @@ c******************************************************************
                 lmpp = llpp + mpp
                 factor=conjg(ylmpp(lmpp+1))*(ic**(lp+lpp-l))*
      *                   gaunt1(l,lpp,lp,m,mpp,mp,lmaxd)
-
+                if(l_q) then
+                   factor=(sign_q**lpp)*factor
+                endif
+             
                 ulojug(lpmp,lo,m,n,ikpt_b)=ulojug(lpmp,lo,m,n,ikpt_b)+
-     +               factor*ujulo(lo,lp,lpp)         
+     +               factor*uloju(lo,lp,lpp)         
                 ulojdg(lpmp,lo,m,n,ikpt_b)=ulojdg(lpmp,lo,m,n,ikpt_b)+
-     +               factor*djulo(lo,lp,lpp)        
+     +               factor*ulojd(lo,lp,lpp)        
                endif
               enddo  ! lpp
             enddo ! mp
@@ -291,11 +340,19 @@ c*************************************************************
                lmaxi = l+lpp
                if ((lmini.le.lp).and.(lp.le.lmaxi).and.
      &            (mod(l+lp+lpp,2).eq.0).and.(abs(mpp).LE.lpp))then  
-                     ulojulog(lop,mp,lo,m,n,ikpt_b)=
+                  
+                  factor= conjg(ylmpp(lmpp+1))*(ic**(l+lpp-lp))*
+     *                 gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)
+                  if(l_q) then
+                    factor=(sign_q**lpp)*factor            ! additional sign for q points
+                  endif
+
+                  ulojulog(lop,mp,lo,m,n,ikpt_b)=
      =                 ulojulog(lop,mp,lo,m,n,ikpt_b)+
-     +                 conjg(ylmpp(lmpp+1))*(ic**(l+lpp-lp))*
-     *                 gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)*
-     *                     ulojulo(lo,lop,lpp)
+     +                    ulojulo(lo,lop,lpp)*factor
+!     +                 conjg(ylmpp(lmpp+1))*(ic**(l+lpp-lp))*
+!     *                 gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)*
+!     *                      ulojulo(lo,lop,lpp)
                endif
               enddo  ! lpp
             enddo ! mp lop
@@ -306,6 +363,7 @@ c*************************************************************
         enddo !ntype
       enddo !ikpt_b   
       deallocate(djd,ujd,uju,ujulo,djulo,ulojulo)
+      deallocate(dju,uloju,ulojd)
 
       end subroutine wann_ujugaunt
       end module m_wann_ujugaunt

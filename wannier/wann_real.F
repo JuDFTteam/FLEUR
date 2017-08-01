@@ -19,7 +19,7 @@ c     ********************************************************
      >                  lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >                  omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >                  ff,gg,flo,acof,bcof,ccof,z,
-     >                  nv,k1,k2,k3,lmd,nbasfcn,
+     >                  nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <                  xdnout)
 c
       USE m_types, ONLY : od_inp, od_sym
@@ -32,8 +32,9 @@ C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: lmaxd,jmtd,ntypd,natd,nmzd
       INTEGER, INTENT (IN) :: iflag,n,na,iv,lmd,nv,nvd,nbasfcn
       INTEGER, INTENT (IN) :: nq3,nvac,nmz,nmzxy,nq2,nop,nop2
-      LOGICAL, INTENT (IN) :: invs
-      REAL,    INTENT (IN) :: z1,delz,omtil,bkpt(3)
+      LOGICAL, INTENT (IN) :: invs,l_ss
+      REAL,    INTENT (IN) :: z1,delz,omtil,bkpt(3),qss(3)
+      INTEGER, INTENT (IN) :: jspin,addnoco
       COMPLEX, INTENT (OUT):: xdnout
 c-odim
       TYPE (od_inp), INTENT (IN) :: odi
@@ -69,6 +70,7 @@ C     ..
 C     .. Local Arrays ..
       COMPLEX sf2(n2d),sf3(n3d),ylm((lmaxd+1)**2)
       REAL rcc(3),x(3),rcc2(3)
+      REAL bqpt(3)
 
 C     ..
 C     .. Intrinsic Functions ..
@@ -80,7 +82,18 @@ C     ..
 
 c..define the factor e^{-ikr}
       rcc2=matmul(bmat,p)/tpi_const
-      arg = -tpi*( bkpt(1)*rcc2(1) + bkpt(2)*rcc2(2) + bkpt(3)*rcc2(3) )
+
+      bqpt = 0.0
+!      if(l_ss.and.jspin.eq.1) then 
+!         bqpt = -qss/2.0
+!      elseif(l_ss.and.jspin.eq.2) then
+!         bqpt = +qss/2.0
+!      endif
+
+      arg = -tpi*(   (bkpt(1)+bqpt(1))*rcc2(1) 
+     >             + (bkpt(2)+bqpt(2))*rcc2(2)
+     >             + (bkpt(3)+bqpt(3))*rcc2(3)  )
+
       arg1 = tpi*( bkpt(1)*rcc2(1) + bkpt(2)*rcc2(2) + bkpt(3)*rcc2(3) )
       const2 = cmplx(cos(arg),sin(arg))
       const3 = cmplx(cos(arg1),sin(arg1))
@@ -100,7 +113,7 @@ c        write (6,*) 'z(k)=', z(k)
          arg = tpi*((k1(k))*rcc(1)+ 
      +              (k2(k))*rcc(2)+ 
      +              (k3(k))*rcc(3) )
-         xdnout = xdnout + z(k)*cmplx(cos(arg),sin(arg))*const
+         xdnout = xdnout + z(k+addnoco)*cmplx(cos(arg),sin(arg))*const
        IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
      &  .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
 c        write (6,*) 'p(i)=',p(1:2)
