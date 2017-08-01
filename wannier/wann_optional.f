@@ -12,7 +12,8 @@
      >               nop,mrot,bmat,amat,tau,
      >               taual,film,
      >               l_onedimens,l_soc,l_noco,
-     >               omtil,pos)
+     >               omtil,pos,l_ms,l_sgwf,l_socgwf,
+     >               aux_latt_const,param_file,l_dim)
 c**************************************************
 c     Make preparations for the calculation of 
 c     Wannier functions.
@@ -44,12 +45,16 @@ c**************************************************
       logical,intent(in)  :: l_onedimens
       logical,intent(in)  :: l_soc
       logical,intent(in)  :: l_noco
-      real,intent(in)     :: omtil
+      real,intent(in)     :: omtil,aux_latt_const
       real,intent(in)     :: pos(3,natd)
+      character(len=20),intent(in) :: param_file
 
       type(t_wann)  :: wann
       integer       :: num_wann(2)
       logical       :: l_nocosoc
+
+      logical, intent(in) :: l_ms,l_sgwf,l_socgwf
+      logical,intent(in) :: l_dim(3)
 
       l_nocosoc=l_noco.or.l_soc
 
@@ -96,7 +101,9 @@ c-----generate WF1.win and bkpts
          call wann_wan90prep(
      >            jspins,amat,bmat,
      >            natd,taual,zatom,ntype,
-     >            ntype,neq,wann%l_bzsym,film,l_onedimens)
+     >            ntype,neq,wann%l_bzsym,film,l_onedimens,
+     >            l_ms,l_sgwf,l_socgwf,aux_latt_const,
+     >            param_file,l_dim)
       endif
 
 c-----calculate polarization, if not wannierize
