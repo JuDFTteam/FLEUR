@@ -1,5 +1,5 @@
       MODULE m_wann_nocoplot
-      USE m_fleurenv
+      USE m_juDFT
 c     ++++++++++++++++++++++++++++++++++++++++++++++++
 c     +  If noco=t, transform wave functions within  +
 c     +  mu-th MT back to the global frame to plot   +
@@ -7,19 +7,20 @@ c     +  to plot WFs in a meaningful way.            +
 c     +                                              +
 c     ++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
-      SUBROUTINE wann_nocoplot(slice,nnne,amat,bmat
+      SUBROUTINE wann_nocoplot(atoms,slice,nnne,amat,bmat
      >                        ,nkpts,odi,film,natd,ntypd,jmtd
      >                        ,ntype,neq,pos,jri,rmsh,alph,beta
      >                        ,nqpts,qss,z1,zatom)
 !    *****************************************************
-      USE m_od_types, ONLY : od_inp, od_sym
-      USE m_dotir
+      USE m_types
       USE m_xsf_io
-      USE m_cotra, ONLY : cotra1
       USE m_wann_gwf_tools, ONLY : get_index_q
-      USE m_constants, ONLY : pimach
+      USE m_constants
 
       IMPLICIT NONE
+
+      TYPE(t_atoms),INTENT(IN):: atoms
+
       LOGICAL, INTENT(IN) :: slice,film
       INTEGER, INTENT(IN) :: nnne,nkpts,ntypd,jmtd,natd
       INTEGER, INTENT(IN) :: ntype,neq(ntypd)
@@ -59,7 +60,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
 
       INQUIRE(file ="plot_inp",exist=twodim)
       IF(.NOT.twodim) THEN
-         CALL fleur_err("Need the plot_inp from RNK generation!"
+         CALL juDFT_error("Need the plot_inp from RNK generation!"
      >                  ,calledby="wann_nocoplot")
       ENDIF
 
@@ -68,7 +69,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
       READ(18,'(i2,5x,l1)') nplot,xsf
 
       IF (nplot.ge.2) 
-     &     CALL fleur_err
+     &     CALL juDFT_error
      +     ("plots one by one, please, this is not charge density"
      +     ,calledby="wann_nocoplot")
 
@@ -78,10 +79,10 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
          zero = (/0.,0.,0./);filename="default"
          READ(18,plot)
          IF (twodim.AND.ANY(grid(1:2)<1)) 
-     +        CALL fleur_err("Illegal grid size in plot",calledby
+     +        CALL juDFT_error("Illegal grid size in plot",calledby
      +        ="wann_nocoplot")
          IF (.NOT.twodim.AND.ANY(grid<1)) 
-     +        CALL fleur_err("Illegal grid size in plot",calledby
+     +        CALL juDFT_error("Illegal grid size in plot",calledby
      +        ="wann_nocoplot")
          IF (twodim) grid(3) = 1
          !calculate cartesian coordinates if needed
@@ -130,17 +131,11 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(600+jspin,file=name1)
-            CALL xsf_WRITE_atoms(
-     >                        600+jspin,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(600+jspin,atoms,film,odi%d1,amat)
             OPEN(602+jspin,file=name2)
-            CALL xsf_WRITE_atoms(
-     >                        602+jspin,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(602+jspin,atoms,film,odi%d1,amat)
             OPEN(604+jspin,file=name3)
-            CALL xsf_WRITE_atoms(
-     >                        604+jspin,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(604+jspin,atoms,film,odi%d1,amat)
             CALL xsf_WRITE_header(600+jspin,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)
@@ -195,7 +190,8 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
                     
                     ! transform wfs to global frame
                     DO iintsp=1,2
-                       CALL cotra1(pt(1),rcc2,bmat)
+                       pt = matmul(bmat,rcc2)/tpi_const
+!                       CALL cotra1(pt(1),rcc2,bmat)
                        arg = -pi*real(2*iintsp-3)*( qss(1,iqpt)*rcc2(1)
      >                                             +qss(2,iqpt)*rcc2(2)
      >                                             +qss(3,iqpt)*rcc2(3))

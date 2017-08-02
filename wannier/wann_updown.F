@@ -41,7 +41,7 @@ c****************************************************************************
       use m_od_types, only : od_inp, od_sym
       use m_loddop
       use m_constants, only : pimach
-      use m_wann_mmk0_od_vac
+!      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
       use m_wann_mmk0_updown_sph
       use m_wann_abinv

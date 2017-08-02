@@ -158,7 +158,7 @@ c... rotate into representative
    60       CONTINUE
    70    CONTINUE
 c... switch back to cartesian units
-         x=matmul(amat,p)
+         x=matmul(amat,p)/tpi_const
       END IF
       DO 80 j = jri(n),2,-1
          IF (sx.GE.rmsh(j,n)) GO TO 90

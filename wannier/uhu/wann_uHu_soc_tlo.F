@@ -11,6 +11,7 @@ c*****************************************c
       MODULE m_wann_uHu_soc_tlo
       CONTAINS
       SUBROUTINE wann_uHu_soc_tlo(
+     >                  input,atoms,
      >                  ntypd,jmtd,lmaxd,jspd,
      >                  ntype,dx,rmsh,jri,lmax,natd,
      >                  lmd,irank,nlod,llod,
@@ -23,17 +24,20 @@ c*****************************************c
 
       USE m_intgr, ONLY : intgr0
       USE m_sphbes
-      USE m_dotir
       USE m_ylm
-      USE m_cotra
       USE m_gaunt, ONLY: gaunt1
       USE m_sointg
-      USE m_constants, ONLY : c_light
+      USE m_constants
+      USE m_types
       
 
       IMPLICIT NONE
 C     .. Intrinsic Functions ..
       INTRINSIC abs,cmplx,max,mod
+
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_atoms),INTENT(IN)   :: atoms
+
 C     ..
 C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: ntypd,jmtd,lmaxd,jspd,jspins
@@ -148,9 +152,7 @@ c****************************************************c
      >          +ello(lop,ntyp,1) + ello(lop,ntyp,jspins) )/4.
         END IF
 
-        CALL sointg(
-     >         e,vr(:,ntyp,:),v0,r0,dx(ntyp),jri(ntyp),jmtd,c,jspins,
-     <         vso)  
+        CALL sointg(ntyp,e,vr(:,ntyp,:),v0,atoms,input,vso)  
 
         ! spin-averaging
         if(l_spav)then
@@ -210,9 +212,7 @@ c****************************************************c
      >          +ello(lop,ntyp,1) + ello(lop,ntyp,jspins) )/4.
         END IF
 
-        CALL sointg(
-     >         e,vr(:,ntyp,:),v0,r0,dx(ntyp),jri(ntyp),jmtd,c,jspins,
-     <         vso)  
+        CALL sointg(ntyp,e,vr(:,ntyp,:),v0,atoms,input,vso)  
 
         ! spin-averaging
         if(l_spav)then

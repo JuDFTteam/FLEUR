@@ -9,7 +9,6 @@ c**************************c
      <               uHu_in,nkpt_loc,counts,displs,nnodes,
      >               l_unformatted,l_symcc,l_check)
       use m_types
-      use m_fleurenv
       use m_wann_uHu_symcheck
 
       implicit none

@@ -8,7 +8,6 @@ c**********************************************************
 
 c**********************************************************
       use m_types
-      use m_fleurenv
       implicit none
       logical, intent(in)     :: l_p0,l_unformatted
       integer, intent(in)     :: fullnkpts

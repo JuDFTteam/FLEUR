@@ -1,5 +1,5 @@
       module m_wann_get_qpts
-      USE m_fleurenv
+      USE m_juDFT
       contains
       subroutine wann_get_qpts(
      >               l_bzsym,film,l_onedimens,l_readqpts,
@@ -23,33 +23,35 @@ c********************************************************
 
       if(l_bzsym)then
          inquire(file='w90qpts',exist=l_file)
-         IF(.NOT.l_file) CALL fleur_err("where is w90qpts?",calledby
+         IF(.NOT.l_file) CALL juDFT_error("where is w90qpts?",calledby
      +        ="wann_get_qpts")
          open(987,file='w90qpts',status='old',form='formatted')
          read(987,*)nqpts, scale
          write(6,*)"wann_get_qpts: nqpts=",nqpts
          if(l_readqpts)then
-            IF(SIZE(qpoints,1)/=3) CALL fleur_err("wann_get_qpts: 1"
+            IF(SIZE(qpoints,1)/=3) CALL juDFT_error("wann_get_qpts: 1"
      +           ,calledby ="wann_get_qpts")
-            IF(SIZE(qpoints,2)/=nqpts) CALL fleur_err("wann_get_qpts: 2"
-     +           ,calledby ="wann_get_qpts")
+            IF(SIZE(qpoints,2)/=nqpts) 
+     +         CALL juDFT_error("wann_get_qpts: 2",
+     +                          calledby ="wann_get_qpts")
             do iter=1,nqpts
                read(987,*)qpoints(:,iter)
             enddo
          endif   
       else
          inquire(file=param_file,exist=l_file)
-         IF(.NOT.l_file) CALL fleur_err(
+         IF(.NOT.l_file) CALL juDFT_error(
      >         "where is "//trim(param_file)//"?",calledby
      +        ="wann_get_qpts")
          open(987,file=param_file,status='old',form='formatted')
          read(987,*)nqpts,scale
          write(6,*)"wann_get_qpts: nqpts=",nqpts
          if(l_readqpts)then
-            IF(SIZE(qpoints,1)/=3) CALL fleur_err("wann_get_qpts: 1"
+            IF(SIZE(qpoints,1)/=3) CALL juDFT_error("wann_get_qpts: 1"
      +           ,calledby ="wann_get_qpts")
-            IF(SIZE(qpoints,2)/=nqpts) CALL fleur_err("wann_get_qpts: 2"
-     +           ,calledby ="wann_get_qpts")
+            IF(SIZE(qpoints,2)/=nqpts) 
+     +         CALL juDFT_error("wann_get_qpts: 2",
+     +                          calledby ="wann_get_qpts")
             do iter=1,nqpts
                read(987,*)qpoints(:,iter)
             enddo

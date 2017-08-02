@@ -15,15 +15,13 @@ c     m.t. wavefunctions for each band and atom.       c.l. fu
 c     ************************************************************
 #include "cpp_double.h"
 
-      USE m_cotra,     ONLY : cotra3
-      USE m_constants, ONLY : pimach
-      USE m_dotir,     ONLY : dotirp
+      USE m_constants
       USE m_setabc1locdn
       USE m_sphbes
       USE m_dsphbs
       USE m_abclocdn
       USE m_ylm
-      USE m_od_types, ONLY : od_inp, od_sym
+      USE m_types
 
       IMPLICIT NONE
 C     ..
@@ -186,7 +184,8 @@ c--->              (jspin counts the local spin directions inside each MT)
                  fk(2) = bkpt(2) + k2(k,jspin) + qss2
                  fk(3) = bkpt(3) + k3(k,jspin) + qss3
                ENDIF ! (l_ss)
-               s = dotirp(fk,fk,bbmat)
+               s = dot_product(fk,matmul(bbmat,fk))
+!               s = dotirp(fk,fk,bbmat)
                s = sqrt(s)
                r1 = rmt(n)*s
                CALL sphbes(
@@ -227,7 +226,8 @@ c  ----> construct a and b coefficients
                    END IF
                  ENDDO
                ENDDO
-               CALL cotra3(fkr,fkp,bmat)
+               fkp=MATMUL(fkr,bmat)
+!               CALL cotra3(fkr,fkp,bmat)
 c     ----> generate spherical harmonics
                CALL ylm4(
      >                   lmax(n),fkp,

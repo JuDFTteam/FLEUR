@@ -26,10 +26,9 @@ c****************************************c
      >        tuu,tud,tdu,tdd,tuulo,tulou,tdulo,tulod,tuloulo,
      >        kdiff,kdiff2,nntot,nntot2,uHu)
 #include "cpp_double.h"
-      USE m_fleurenv
+      USE m_juDFT
       use m_constants, only : pimach
       use m_matmul   , only : matmul3,matmul3r
-      use m_cotra
 
       implicit none
 
@@ -98,7 +97,7 @@ C     .. intrinsic functions ..
       do nene=1,nntot
          if(all(abs(bpt(:)-kdiff(:,nene)).lt.1e-4)) exit
       enddo
-      IF(nene==nntot+1) CALL fleur_err
+      IF(nene==nntot+1) CALL juDFT_error
      +     ("cannot find matching nearest neighbor k+b1",calledby
      +     ="wann_uHu_sph")
 
@@ -107,7 +106,7 @@ C     .. intrinsic functions ..
       do nene2=1,nntot2
          if(all(abs(bpt2(:)-kdiff2(:,nene2)).lt.1e-4)) exit
       enddo  
-      IF(nene2==nntot2+1) CALL fleur_err
+      IF(nene2==nntot2+1) CALL juDFT_error
      +     ("cannot find matching nearest neighbor k+b2",calledby
      +     ="wann_uHu_sph")
 

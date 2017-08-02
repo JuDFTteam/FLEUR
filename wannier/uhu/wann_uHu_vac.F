@@ -7,7 +7,7 @@ c***************************************c
 c              J.-P. Hanke, Dec. 2015   c
 c***************************************c
       MODULE m_wann_uHu_vac
-      USE m_fleurenv
+      USE m_juDFT
 
       CONTAINS
       SUBROUTINE wann_uHu_vac(
@@ -20,7 +20,6 @@ c***************************************c
 #include "cpp_double.h"
       use m_constants, only : pimach
       use m_intgr, only : intgz0
-      use m_dotir
       use m_d2fdz2cmplx
 
       implicit none
@@ -156,7 +155,7 @@ c         write(*,*)'vz0',ivac,vz0(ivac),vz0_b(ivac)
             write(*,*)n2,nv2d,'jspin',jspin
          endif
  
-         IF (n2>nv2d)  CALL fleur_err("wannier uHu vac",calledby
+         IF (n2>nv2d)  CALL juDFT_error("wannier uHu vac",calledby
      +        ="wann_uHu_vac")
 
          kvac1(n2) = k1(k,jspin)
@@ -181,7 +180,7 @@ c.. and for the b-point
             write(*,*)n2_b,nv2d,'jspin_b',jspin_b
          endif
 
-         IF (n2_b>nv2d)  CALL fleur_err("wannier uHu vac",calledby
+         IF (n2_b>nv2d)  CALL juDFT_error("wannier uHu vac",calledby
      +        ="wann_uHu_vac")
 
          kvac1_b(n2_b) = k1_b(k,jspin_b)
@@ -236,7 +235,8 @@ c.. the body of the routine
          v(1) = bkpt(1) + kvac1(ik) + qss1
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dotirp(v,v,bbmat)
+         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
+!         ev = evacp - 0.5*dotirp(v,v,bbmat)
          call vacuz(ev,vz(1,ivac,jspin2),vz0(ivac),nmz,delz,t(ik),
      +        dt(ik),u(1,ik))
          call vacudz(ev,vz(1,ivac,jspin2),vz0(ivac),nmz,delz,te(ik),
@@ -289,7 +289,8 @@ c...now for the k+b point
          v(1) = bkpt_b(1) + kvac1_b(ik) + qss1
          v(2) = bkpt_b(2) + kvac2_b(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dotirp(v,v,bbmat)
+         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
+!         ev = evacp - 0.5*dotirp(v,v,bbmat)
          call vacuz(ev,vz(1,ivac,jspin2_b),vz0_b(ivac),nmz,delz,
      +        t_b(ik),dt_b(ik),u_b(1,ik))
          call vacudz(ev,vz(1,ivac,jspin2_b),vz0_b(ivac),nmz,delz,
@@ -354,7 +355,7 @@ c        i2 = -i2
         endif
 
         ind2 = ig2(ind3)
-        IF (ind2.EQ.0) CALL fleur_err("error in map2 for 2-d stars",
+        IF (ind2.EQ.0) CALL juDFT_error("error in map2 for 2-d stars",
      >                                calledby="wann_uHu_vac")
         ind2 = ind2 - 1
         IF (ind2.NE.0) THEN ! warping components G=/=0
@@ -421,13 +422,15 @@ c        i2 = -i2
               ! determine |G+k+b1|^2 and |G'+k+b2|^2
               s(1) = bkpt(1) + kvac1(l)
               s(2) = bkpt(2) + kvac2(l)
-              s(3) = 0.0 
-              rk = dotirp(s,s,bbmat)
+              s(3) = 0.0
+              rk = dot_product(s,matmul(bbmat,s))
+!              rk = dotirp(s,s,bbmat)
 
               s(1) = bkpt_b(1) + kvac1_b(lp)
               s(2) = bkpt_b(2) + kvac2_b(lp)
               s(3) = 0.0 
-              rk_b = dotirp(s,s,bbmat)
+              rk_b = dot_product(s,matmul(bbmat,s))
+!              rk_b = dotirp(s,s,bbmat)
 
 c              ! no kinetic energy if jspin =/= jspin_b
 c              if(jspin.ne.jspin_b) then

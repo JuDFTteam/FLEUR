@@ -1,5 +1,5 @@
       module m_wann_uHu_commat
-      USE m_fleurenv
+      USE m_juDFT
       implicit none
       contains
 
@@ -50,8 +50,8 @@
       
       write(*,*)'dimension:',arr_len
       write(*,*)'x?,y?,z? :',l_dim(1:3)
-      if(arr_len.le.3) call fleur_err("dimension<4",
-     >                                calledby='wann_gwf_commat')
+      if(arr_len.le.3) call juDFT_error("dimension<4",
+     >                                  calledby='wann_gwf_commat')
 
       nkqpts=nkpts*nqpts
       tpi = 2.0*pimach()
@@ -80,7 +80,7 @@
       inquire(file='proj',exist=l_proj)
       if(.not.l_proj) write(*,*)'missing: proj'
       if(l_miss.or.(.not.l_exist).or.(.not.l_proj))
-     >   call fleur_err("missing file(s) for HDWFs")
+     >   call juDFT_error("missing file(s) for HDWFs")
 
 ! get number of bands and wfs from proj
       open(405,file='proj',status='old')
@@ -193,8 +193,8 @@ c                  write(*,'(a,8i8)')'<q|k>',q,k,qb,qb2,kb,kb2,nq,nk2
                   uHu(:,:,nn2,nn,ikqpt)=cmplx(0.,0.)
 c                  write(*,'(a,8i8)')'<k|q>',q,k,qb,qb2,kb,kb2,nk,nq2
                   else
-                     call fleur_err("problem k,q neighbors",
-     >                              calledby="wann_uHu_commat")
+                     call juDFT_error("problem k,q neighbors",
+     >                                calledby="wann_uHu_commat")
                   endif
                endif
                enddo
@@ -331,8 +331,8 @@ c     >                      real(mq(j,i,nq)),aimag(mq(j,i,nq))
                   enddo
 
                   else
-                     call fleur_err("problem k,q neighbors",
-     >                              calledby="wann_uHu_commat")
+                     call juDFT_error("problem k,q neighbors",
+     >                                calledby="wann_uHu_commat")
                   endif
                endif
                enddo
