@@ -14,6 +14,7 @@ c      Y. Mokrousov, F. Freimuth
 c*************************************************************** 
       CONTAINS
       SUBROUTINE wann_mmkb_od_vac(
+     >     DIMENSION,oneD,vacuum,stars,cell,
      >     vacchi,l_noco,nlotot,
      >     nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,n2d_1,
@@ -23,14 +24,21 @@ c***************************************************************
      >     z,z_b,nv,nv_b,sk2,phi2,omtil,gb,qss,
      >     l_q, sign_q,
      <     mmn)
-      use m_constants, only : pimach
-      use m_od_types, only : od_inp
+      use m_constants
+      use m_types
       use m_od_abvac
       use m_cylbes
       use m_dcylbs
       use m_intgr, only : intgz0
 
       implicit none
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
       integer, intent (in) :: nlotot
@@ -173,10 +181,9 @@ c...for the k-point
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac,bkpt,odi%M,odi%mb,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin),odi%n2d,
+     >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz,kvac3,nv2,
      <      uz(1,-vM),duz(1,-vM),u(1,1,-vM),udz(1,-vM),
      <      dudz(1,-vM),ddnv(1,-vM),ud(1,1,-vM))
@@ -218,10 +225,9 @@ c...for the b-point
 
       DO ispin = 1,1 ! jspins
       call od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin_b),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac_b,bkpt_b,odi%M,odi%mb,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin_b),odi%n2d,
+     >      wronk,evac_b,bkpt_b,odi%M,odi%mb,
      >      vz_b,kvac3_b,nv2_b,
      <      uz_b(1,-vM),duz_b(1,-vM),u_b(1,1,-vM),udz_b(1,-vM),
      <      dudz_b(1,-vM),ddnv_b(1,-vM),ud_b(1,1,-vM))

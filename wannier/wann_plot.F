@@ -37,7 +37,9 @@
 !       written to the file kk.nnne.real.jsp.xsf and kk.nnne.imag.jsp.xsf
 !     +++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
-      SUBROUTINE wann_plot(nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
+      SUBROUTINE wann_plot(
+     >     DIMENSION,oneD,vacuum,stars,cell,atoms,
+     >     nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
      >     ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
      >     nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
      >     invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
@@ -47,18 +49,24 @@
      >     k1d,k2d,k3d,ig,ig2,sk2,phi2,l_noco,l_ss,qss,addnoco,
      >     index_kq,l_sgwf)
 !    *****************************************************
-      USE m_constants, ONLY : pimach
-      USE m_od_types, ONLY : od_inp, od_sym
+      USE m_constants
+      USE m_types
       USE m_wann_real
       USE m_xsf_io
-      USE m_dotir
       USE m_wann_plot_vac
       USE m_wann_2dvacabcof
       USE m_wann_plot_od_vac
       USE m_wann_1dvacabcof
 
       IMPLICIT NONE
-!     ..
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,ikpt,jspin,nv2d
       INTEGER, INTENT (IN) :: lmaxd,jmtd,ntypd,natd,nmzd
@@ -184,6 +192,7 @@ c make preparations for plotting in vacuum
      &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
      &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
          call wann_1dvacabcof(
+     >         DIMENSION,oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:),
      >         nv,bkpt,z1,odi,ods,
      >         nvd,k1,k2,k3,evac,
@@ -236,17 +245,11 @@ c..loop by the bands
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(
-     >                        55,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(55,atoms,film,odi%d1,amat)
             OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(
-     >                        56,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(56,atoms,film,odi%d1,amat)
             OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(
-     >                        57,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(57,atoms,film,odi%d1,amat)
             CALL xsf_WRITE_header(55,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)

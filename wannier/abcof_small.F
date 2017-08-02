@@ -1,6 +1,7 @@
       MODULE m_abcof_small
       CONTAINS
       SUBROUTINE abcof_small(
+     >                 sym,atoms,usdus,lapw,noco,zMat,
      >                 lmaxd,ntypd,neigd,nobd,natd,nop,nvd,jspd,
      >                 lmd,nbasfcn,llod,nlod,nlotot,invtab,
      >                 ntype,mrot,ngopr,taual,neq,lmax,rmt,omtil,
@@ -24,6 +25,14 @@ c     ************************************************************
       USE m_types
 
       IMPLICIT NONE
+
+      TYPE(t_sym),INTENT(IN)     :: sym
+      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_usdus),INTENT(IN)   :: usdus
+      TYPE(t_lapw),INTENT(IN)    :: lapw
+      TYPE(t_noco),INTENT(IN)    :: noco
+      TYPE(t_zMat),INTENT(IN)    :: zMat
+
 C     ..
 C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: lmaxd,ntypd,neigd,nobd,natd,nop,nvd,jspd
@@ -116,11 +125,8 @@ c---> loop over the interstitial spin
       IF (l_ss) nvmax = nv(iintsp)
 c
       CALL setabc1locdn(
-     >                  ntypd,natd,nlod,llod,nobd,lmaxd,nvmax,
-     >                  nmat,ne,ntype,neq,l_noco,iintsp,
-     >                  nlo,llo,l_dulo,invsat,invsatnr,ddn,
-     >                  us,dus,uds,duds,dulos,ulos,dulon,uulon,
-     >                  nlotot,kveclo,
+     >                  jspin,atoms,lapw,ne,noco,iintsp,sym,usdus,
+     >                  kveclo,
      <                  enough,nkvec,kvec,nbasf0,ccof,
      <                  alo1,blo1,clo1)
 c
@@ -268,12 +274,10 @@ c     ----> loop over bands
                IF (.NOT.enough(natom)) THEN
                  write(*,*)'.not.enough(natom)'
                  CALL abclocdn(
-     >                 nobd,natd,nlod,llod,lmaxd,neigd,ntypd,
-     >                 lmd,nbasfcn,nlo,llo,invsat,invsatnr,
-     >                 l_noco,ccchi(1,jspin),kspin,l_ss,iintsp,
-     >                 const,rmt(n),phase,ylm,n,natom,k,s,nvmax,
-     >                 ne,z,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),
-     <                 nkvec,enough,acof,bcof,ccof)
+     >                 atoms,sym,noco,ccchi(1,jspin),kspin,iintsp,
+     >                 const,phase,ylm,n,natom,k,s,nvmax,
+     >                 ne,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),
+     <                 nkvec,enough(natom),acof,bcof,ccof,zMat)
                ENDIF
              !ENDDO ! loop over LAPWs
            ENDIF  ! invsatom == ( 0 v 1 )

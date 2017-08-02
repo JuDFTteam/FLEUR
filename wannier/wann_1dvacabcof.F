@@ -5,6 +5,7 @@ c********************************************************
       module m_wann_1dvacabcof
       contains
       subroutine wann_1dvacabcof(
+     >    DIMENSION,oneD,vacuum,stars,cell,
      >    nv2d,nslibd,nmzd,nmz,omtil,vz,
      >    nv,bkpt,z1,odi,ods,
      >    nvd,k1,k2,k3,evac,
@@ -13,13 +14,18 @@ c********************************************************
      >    phi2,k1d,k2d,k3d,
      <    ac,bc,u,ue,addnoco,l_ss,qss,jspin)
 
-      use m_dotir
-      use m_od_types
+      use m_types
       use m_od_abvac
-      use m_constants, only : pimach
+      use m_constants
       use m_cylbes
       use m_dcylbs
       implicit none
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
 
       integer,intent(in)::nv2d,n2d,n3d
       integer,intent(in)::nslibd
@@ -107,9 +113,8 @@ c********************************************************
          endif
          ispin=1
          call od_abvac(
-     >           z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >           ig,odi%ig,tpi,qssbti(3,jspin),
-     >           nmzxy,nmz,delz,ig2,odi%n2d,bbmat,wronk,evacp,bkpt,
+     >           cell,vacuum,DIMENSION,stars,oneD,
+     >           qssbti(3,jspin),odi%n2d,wronk,evacp,bkpt,
      >           odi%M,odi%mb,vz(1,nvac),kvac3(1),nv2,
      >           t(1,-odi%mb),dt(1,-odi%mb),u(1,1,-odi%mb),
      <           te(1,-odi%mb),dte(1,-odi%mb),tei(1,-odi%mb),

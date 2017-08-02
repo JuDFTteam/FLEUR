@@ -10,6 +10,7 @@ c*****************************************c
       MODULE m_wann_uHu_soc
       CONTAINS
       SUBROUTINE wann_uHu_soc(
+     >                  input,atoms,
      >                  ntypd,jmtd,lmaxd,jspd,ntype,dx,rmsh,jri,lmax,
      >                  natd,lmd,lmplmd,neq,irank,nlod,llod,loplod,
      >                  ello,llo,nlo,lo1l,l_dulo,ulo_der,f,g,flo,f_b,
@@ -21,21 +22,24 @@ c*****************************************c
 
       USE m_intgr, ONLY : intgr0
       USE m_sphbes
-      USE m_dotir
       USE m_ylm
-      USE m_cotra
       USE m_gaunt, ONLY: gaunt1
       USE m_sointg
-      USE m_constants, ONLY : c_light
-      USE m_wann_uHu_soc_tlo 
+      USE m_constants
+      USE m_wann_uHu_soc_tlo
+      USE m_types
 
       IMPLICIT NONE
+
       REAL :: sgml
       COMPLEX :: anglso
       EXTERNAL sgml,anglso
 C     .. Intrinsic Functions ..
       INTRINSIC abs,cmplx,max,mod
-C     ..
+
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_atoms),INTENT(IN)   :: atoms
+
 C     .. Scalar Arguments ..
       LOGICAL, INTENT (IN) :: l_noco,l_skip_loc
       INTEGER, INTENT (IN) :: ntypd,jmtd,lmaxd,jspd,jspins
@@ -167,7 +171,8 @@ c  begin 1st neighbor loop:   <k+b1|    c
 c***************************************c
       do ikpt_b=1,nntot
        bpt = kdiff(:,ikpt_b)
-       rk1= sqrt(dotirp(bpt,bpt,bbmat))
+       rk1 = sqrt(dot_product(bpt,matmul(bbmat,bpt)))
+!       rk1= sqrt(dotirp(bpt,bpt,bbmat))
 
 c***************************************c
 c  begin 2nd neighbor loop:   |k+b2>    c
@@ -176,7 +181,8 @@ c***************************************c
         indexx = ikpt_b2 + (ikpt_b-1)*nntot2
 
         bpt2 = kdiff2(:,ikpt_b2)
-        rk2= sqrt(dotirp(bpt2,bpt2,bbmat))
+        rk2 = sqrt(dot_product(bpt2,matmul(bbmat,bpt2)))
+!        rk2= sqrt(dotirp(bpt2,bpt2,bbmat))
 
       ! loop over atoms
       DO 210 n = 1,ntype
@@ -201,11 +207,13 @@ c***************************************c
        ! set up spherical harmonics
        ! yl1(lm) for b1 and yl2(lm) for b2
        yl1 = cmplx(0.,0.)
-       call cotra3(bpt,bkrot,bmat)
+       bkrot=MATMUL(bpt,bmat)
+!       call cotra3(bpt,bkrot,bmat)
        call ylm4(lwn,bkrot,yl1)
 
        yl2 = cmplx(0.,0.)
-       call cotra3(bpt2,bkrot,bmat)
+       bkrot=MATMUL(bpt2,bmat)
+!       call cotra3(bpt2,bkrot,bmat)
        call ylm4(lwn,bkrot,yl2)
        call cpu_time(t0)
        t33 = t33 + t0-t1
@@ -243,9 +251,7 @@ c****************************************************c
      >          +epar(lp,n,1)+epar(lp,n,jspins) )/4.
         END IF
 
-        CALL sointg(
-     >         e,vr(:,n,:),v0,r0,dx(n),jri(n),jmtd,c,jspins,
-     <         vso)  
+        CALL sointg(n,e,vr(:,n,:),v0,atoms,input,vso)  
 
         ! spin-averaging
         if(l_spav)then
@@ -410,6 +416,7 @@ c*********************************************************c
        IF((nlo(n).GE.1).AND.(.NOT.l_skip_loc)) THEN
 
           call wann_uHu_soc_tlo(
+     >           input,atoms,
      >           ntypd,jmtd,lmaxd,jspd,ntype,dx,rmsh,jri,lmax,
      >           natd,lmd,irank,nlod,llod,loplod,ello,llo,nlo,
      >           lo1l,l_dulo,ulo_der,flo,flo_b,kdiff,kdiff2,

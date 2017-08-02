@@ -9,6 +9,7 @@ c***************************************c
       MODULE m_wann_uHu_od_vac
       CONTAINS
       SUBROUTINE wann_uHu_od_vac(
+     >     DIMENSION,oneD,vacuum,stars,cell,
      >     chi,l_noco,l_soc,jspins,nlotot,
      >     nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,
@@ -18,16 +19,23 @@ c***************************************c
      >     jspd,nvd,area,nbasfcn,neigd,
      >     z,z_b,nv,nv_b,sk2,phi2,omtil,gb,gb2,qss,sign2,
      <     uHu)
-      use m_constants, only : pimach
-      use m_od_types, only : od_inp
+
+      use m_constants
+      use m_types
       use m_od_abvac
       use m_cylbes
       use m_dcylbs
       use m_intgr, only : intgz0
       use m_d2fdz2
-      use m_dotir
 
       implicit none
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco,l_soc
       integer, intent (in) :: jspins,nlotot,ico
@@ -193,10 +201,9 @@ c...for the k-point
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac,bkpt,odi%M,odi%mb,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin),odi%n2d,
+     >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz(1,ivac,jspin2),kvac3,nv2,
      <      uz(1,-odi%mb),duz(1,-odi%mb),u(1,1,-odi%mb),udz(1,-odi%mb),
      <      dudz(1,-odi%mb),ddnv(1,-odi%mb),ud(1,1,-odi%mb))
@@ -238,10 +245,9 @@ c...for the b-point
 
       DO ispin = 1,1 ! jspins
       call od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin_b),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac_b,bkpt_b,odi%M,odi%mb,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin_b),odi%n2d,
+     >      wronk,evac_b,bkpt_b,odi%M,odi%mb,
      >      vz(1,ivac,jspin2_b),kvac3_b,nv2_b,
      <      uz_b(1,-odi%mb),duz_b(1,-odi%mb),u_b(1,1,-odi%mb),
      <      udz_b(1,-odi%mb),
@@ -418,12 +424,14 @@ c  now actually computing the uHu matrix
                     s(1) = 0.0
                     s(2) = 0.0
                     s(3) = bkpt(3) + kvac3(l) + qssbti(3,jspin)!-gb(3)
-                    rk   = dotirp(s,s,bbmat)
+                    rk = dot_product(s,matmul(bbmat,s))
+!                    rk   = dotirp(s,s,bbmat)
 
                     s(1) = 0.0
                     s(2) = 0.0
                     s(3) = bkpt_b(3) + kvac3_b(lp) + qssbti(3,jspin_b)!-gb2(3)
-                    rk_b = dotirp(s,s,bbmat)
+                    rk_b = dot_product(s,matmul(bbmat,s))
+!                    rk_b = dotirp(s,s,bbmat)
 
                     ! construct symmetrized 'pseudopotential'
                     ! TODO: valid to simply symmetrize?

@@ -212,10 +212,11 @@ c*********************************************************************
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,
+     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,zMat,
      >              l_gwf,iqpt)
 
       use m_cdnread, only:cdn_read
+      USE m_types
       implicit none
       INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd,nlotot
       INTEGER, INTENT (IN) :: nrec,nvd,jspd,jspin
@@ -236,6 +237,8 @@ c*********************************************************************
       REAL,    INTENT (INOUT) :: cp_time(9)
       REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
+
+      TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
 
 #if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
       COMPLEX, INTENT (OUT) :: z(nbasfcn,neigd)
@@ -266,12 +269,11 @@ c*********************************************************************
         if(cpu_index.eq.irank)then
 
            call cdn_read(
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,kptibz,funit,neigd,
-     >              n_start,n_end,      
+     >              eig_id,
+     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
+     >              l_ss,l_noco,neigd,n_start,n_end,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
+     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat)
 
         else !eigenvalues are stored in the file of another process
 

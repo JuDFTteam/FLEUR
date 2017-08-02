@@ -23,7 +23,7 @@ wannier/wann_gwf_auxbrav.F
 wannier/wann_gwf_auxovlp.F
 wannier/wann_gwf_commat2.f
 wannier/wann_gwf_commat.f
-wannier/wann_gwf_commat_old.f
+#wannier/wann_gwf_commat_old.f
 wannier/wann_gwf_tools.f
 wannier/wann_gwf_write_mmnk.F
 wannier/wann_hopping.F
@@ -93,6 +93,7 @@ wannier/wann_write_matrix5.F
 wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
+wannier/wann_plot_od_vac.F
 )
 set(fleur_F90 ${fleur_F90}
 )

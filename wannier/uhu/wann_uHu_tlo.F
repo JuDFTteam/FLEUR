@@ -27,13 +27,11 @@ c****************************************c
       USE m_radfun
       USE m_tlo
       USE m_sphbes
-      USE m_dotir
       USE m_ylm
-      USE m_cotra
       USE m_gaunt, ONLY: gaunt1
       USE m_wann_uHu_radintsra3
       USE m_wann_uHu_radintsra5
-      USE m_constants, ONLY : pimach
+      USE m_constants
       USE m_dujdr
 
       IMPLICIT NONE

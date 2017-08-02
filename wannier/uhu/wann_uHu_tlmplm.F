@@ -33,15 +33,13 @@ c****************************************c
       USE m_radfun
       USE m_tlo
       USE m_sphbes
-      USE m_dotir
       USE m_ylm
-      USE m_cotra
       USE m_gaunt, ONLY: gaunt1
       USE m_dujdr
       USE m_wann_uHu_radintsra5
       USE m_wann_uHu_radintsra3
       USE m_wann_uHu_tlo
-      USE m_constants, ONLY : pimach
+      USE m_constants
 
       IMPLICIT NONE
 C     ..
@@ -176,7 +174,8 @@ c  begin 1st neighbor loop:   <k+b1|    c
 c***************************************c
       do ikpt_b=1,nntot
        bpt = kdiff(:,ikpt_b)
-       rk1= sqrt(dotirp(bpt,bpt,bbmat))
+       rk1 = sqrt(dot_product(bpt,matmul(bbmat,bpt)))
+!       rk1= sqrt(dotirp(bpt,bpt,bbmat))
 
 c***************************************c
 c  begin 2nd neighbor loop:   |k+b2>    c
@@ -184,7 +183,8 @@ c***************************************c
        do ikpt_b2=1,nntot2
         indexx = ikpt_b2 + (ikpt_b-1)*nntot2
         bpt2 = kdiff2(:,ikpt_b2)
-        rk2= sqrt(dotirp(bpt2,bpt2,bbmat))
+        rk2 = sqrt(dot_product(bpt2,matmul(bbmat,bpt2)))
+!        rk2= sqrt(dotirp(bpt2,bpt2,bbmat))
 
         na = 1
         mlo = 1 ; mlolo = 1
@@ -219,11 +219,13 @@ c***************************************c
        ! set up spherical harmonics
        ! yl1(lm) for b1 and yl2(lm) for b2
        yl1 = cmplx(0.,0.)
-       call cotra3(bpt,bkrot,bmat)
+       bkrot=MATMUL(bpt,bmat)
+!       call cotra3(bpt,bkrot,bmat)
        call ylm4(lwn,bkrot,yl1)
 
        yl2 = cmplx(0.,0.)
-       call cotra3(bpt2,bkrot,bmat)
+       bkrot=MATMUL(bpt2,bmat)
+!       call cotra3(bpt2,bkrot,bmat)
        call ylm4(lwn,bkrot,yl2)
 
        call cpu_time(t0)
