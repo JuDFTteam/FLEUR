@@ -37,24 +37,28 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    INTEGER               :: info, n1, n2, n3, n4, i, j, k, iPlane, iSym
    INTEGER               :: nPlanes, nOuterPlanes, nCorners, numIBZPlanes
    INTEGER               :: maxNumPlanes, nUniqueCorners, duplicateNum
-   INTEGER               :: nbszLocal
+   INTEGER               :: nbszLocal, planesDim
    INTEGER               :: ipiv(3), krecip(3)
-   INTEGER               :: cornerPlanes(3,5000), nPlaneCorners(1000)
+   INTEGER               :: cornerPlanes(3,5000)
    INTEGER               :: numCornerPlanes(5000)
    LOGICAL               :: foundDuplicate, filterOut
-   LOGICAL               :: isIBZPlane(1000), isIBZCorner(5000)
+   LOGICAL               :: isIBZCorner(5000)
    REAL, PARAMETER       :: eps09 = 1.0e-9
    REAL                  :: pi, maxRecDist, vecDist, recScale, scalarProduct
    REAL                  :: norm, normalScalarProduct
    REAL                  :: denominator, vec1Fac, vec2Fac, edgeDist
    REAL                  :: testVec(3), sk(3), vecA(3), vecB(3), vecC(3)
-   REAL                  :: dvec(3,1000), ddist(1000), corners(3,5000)
+   REAL                  :: corners(3,5000)
    REAL                  :: planesMatrix(3,3), solutions(3,1)
    REAL                  :: equationSystem(3,3)
    REAL                  :: edgeDirec(3), edgeDistVec(3), distVec(3)
 
    INTEGER, ALLOCATABLE  :: cornerPlaneList(:,:)
    INTEGER, ALLOCATABLE  :: planeCorners(:,:)
+   INTEGER, ALLOCATABLE  :: nPlaneCorners(:)
+   LOGICAL, ALLOCATABLE  :: isIBZPlane(:)
+
+   REAL, ALLOCATABLE     :: dvec(:,:), ddist(:)
 
    ! Subroutine plan:
    ! 0. Initializations
@@ -137,6 +141,10 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
 
    ! loops over all neighboring lattice vectors. The size of the 
    ! neigborhood is defined by nbszLocal.
+
+   planesDim = nbszLocal*nbszLocal*nbszLocal + nsym
+   ALLOCATE(dvec(3,planesDim), ddist(planesDim))
+   ALLOCATE(nPlaneCorners(planesDim),isIBZPlane(planesDim))
 
    nPlanes = 0
    DO n1 = -nbszLocal, nbszLocal
@@ -552,7 +560,7 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
       CALL juDFT_error("Brillouin zone does not fulfill Euler characterisic.",calledby ="brzone2")
    END IF
 
-   DEALLOCATE (planeCorners)
+   DEALLOCATE (planeCorners,dvec,ddist,nPlaneCorners,isIBZPlane)
 
 END SUBROUTINE brzone2
 
