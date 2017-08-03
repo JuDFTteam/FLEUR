@@ -251,6 +251,7 @@ CONTAINS
 
     ENDDO ! end of loop over atom types
     !$OMP END DO
+    DEALLOCATE ( f,g)
     !$OMP END PARALLEL
 
     WRITE (6,FMT=8000)
@@ -286,8 +287,6 @@ CONTAINS
        DEALLOCATE ( rho21 )
     ENDIF
     !---> end of test output
-
-    DEALLOCATE ( f,g)
 
   END SUBROUTINE cdnmt
 END MODULE m_cdnmt
