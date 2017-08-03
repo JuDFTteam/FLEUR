@@ -81,14 +81,8 @@ CONTAINS
     !
 
     CALL timestart("cdnmt")
-    !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
-    !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,orbl,orblo,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
-    !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,qmtl,nd,lh,lp,llp,cs)
+
     IF (noco%l_mperp) THEN
-       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
        ALLOCATE ( usdus%us(0:atoms%lmaxd,atoms%ntype,jspd),usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd) )
        ALLOCATE ( usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd) )
        ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jspd) )
@@ -97,16 +91,26 @@ CONTAINS
           rho21(:,:,:) = cmplx(0.0,0.0)
        ENDIF
     ELSE
-       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
-       ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
        ALLOCATE (   usdus%us(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE (  usdus%uds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE (  usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ENDIF
- 
-  
+
+    !$OMP PARALLEL DEFAULT(none) &
+    !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21) &
+    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
+    !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,orbl,orblo,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
+    !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
+    !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,qmtl,nd,lh,lp,llp,cs)
+    IF (noco%l_mperp) THEN
+       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
+    ELSE
+       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
+       ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
+    ENDIF
+
     qmtl = 0
     
     !$OMP DO
