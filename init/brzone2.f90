@@ -142,7 +142,8 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    ! loops over all neighboring lattice vectors. The size of the 
    ! neigborhood is defined by nbszLocal.
 
-   planesDim = nbszLocal*nbszLocal*nbszLocal + nsym
+   planesDim = 2*nbszLocal+1
+   planesDim = planesDim*planesDim*planesDim + nsym
    ALLOCATE(dvec(3,planesDim), ddist(planesDim))
    ALLOCATE(nPlaneCorners(planesDim),isIBZPlane(planesDim))
 
