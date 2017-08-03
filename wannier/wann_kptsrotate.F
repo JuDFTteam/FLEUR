@@ -20,7 +20,8 @@ c****************************************
      >               nv,shiftkpt,
      >               tau,
      x               bkpt,k1,k2,k3,
-     x               z,nsfactor)
+     x               zMat,nsfactor)
+      USE m_types
       use m_inv3
       use m_constants,only:pimach
       implicit none
@@ -46,11 +47,9 @@ c****************************************
       real,intent(in)       :: tau(3,nop)
       real,intent(inout)    :: bkpt(3)
       integer,intent(inout) :: k1(:,:),k2(:,:),k3(:,:) !nvd,jspd
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex,intent(inout) :: z(:,:)
-#else
-      real,intent(inout)    :: z(:,:)
-#endif
+
+      TYPE(t_zmat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+
       complex,intent(out)   :: nsfactor !phase of non-symmorphic ops
 
       real    :: bkrot(3),tpi,arg
@@ -75,13 +74,12 @@ c      print*,testmat
 c      testmat=matmul(rotmat,mrot(:,:,absoper))
 c      print*,testmat
 
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      if(oper.lt.0)then
-         z=conjg(z) ! time-inversion symmetry
-         shiftnonsymm=-1.0*shiftnonsymm
-      endif
-#endif
+      IF(.NOT.zMat%l_real) THEN
+         if(oper.lt.0)then
+            zMat%z_c = CONJG(zMat%z_c)
+            shiftnonsymm=-1.0*shiftnonsymm
+         endif
+      END IF
 
       if(l_noco) then
          jsp_start=1
@@ -135,7 +133,11 @@ c      print*,testmat
      +         + k3(j,jspin) * shiftnonsymm(3)
          phase = tpi*phase
          phase = cos(phase)
-         z(j+jj,:)  = phase * z(j+jj,:) 
+         IF(zMat%l_real) THEN
+            zMat%z_r(j+jj,:)  = phase * zMat%z_r(j+jj,:) 
+         ELSE
+            zMat%z_c(j+jj,:)  = phase * zMat%z_c(j+jj,:) 
+         END IF
         enddo    
         jj=jj+nv(jspin)
         do ilo=1,nlotot
@@ -145,7 +147,11 @@ c      print*,testmat
      +         + k3(j,jspin) * shiftnonsymm(3)
          phase = tpi*phase
          phase = cos(phase)
-         z(jj+ilo,:)  = phase * z(jj+ilo,:) 
+         IF(zMat%l_real) THEN
+            zMat%z_r(jj+ilo,:)  = phase * zMat%z_r(jj+ilo,:) 
+         ELSE
+            zMat%z_c(jj+ilo,:)  = phase * zMat%z_c(jj+ilo,:) 
+         END IF
         enddo
       enddo  
 

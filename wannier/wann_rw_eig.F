@@ -15,30 +15,25 @@ c      Frank Freimuth, October 2006
 c****************************************************************
       CONTAINS
       SUBROUTINE wann_write_eig(
-     >              ntapwf,
+     >              eig_id,
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              isize,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,fullnkpts,irecl,
+     >              l_ss,l_noco,nrec,fullnkpts,
      >              l_bzsym,l_byindex,l_bynumber,l_byenergy,
      >              irreduc,odi,band_min,band_max,numbands,
      >              e1s,e2s,ef,l_paulimag,nkpt,    
      <              nbnd,kpoints,l_gwf,iqpt)
 
       use m_cdnread, only:cdn_read
-      use m_types,only:od_inp
+      use m_types
 
       IMPLICIT NONE
-      integer,intent(in) :: ntapwf
+      integer,intent(in) :: eig_id
       integer,intent(in) :: lmaxd,ntypd,nlod,neigd,nvd,jspd
       integer,intent(in) :: isize,jspin,nbasfcn,nlotot
       logical,intent(in) :: l_ss,l_noco
       integer,intent(in) :: nrec,fullnkpts
-#ifndef CPP_MPI
-      integer(8), intent (in) :: irecl
-#else
-      include 'mpif.h'
-      INTEGER(KIND=MPI_OFFSET_KIND),intent(in) :: irecl
-#endif
+
       logical,intent(in) :: l_byindex,l_bynumber,l_byenergy
       integer,intent(in) :: irreduc(fullnkpts)
       type (od_inp),intent(in) :: odi
@@ -75,11 +70,8 @@ c****************************************************************
 ! END QPOINTS
       real,parameter   :: hartree=27.21138505
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX  :: z(nbasfcn,neigd)
-#else
-      REAL     :: z(nbasfcn,neigd)
-#endif
+      TYPE(t_zmat) :: zmat !z(nbasfcn,noccbd) !can be real/complex
+
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
 !      WRITE(*,*)'wann_rw_eig: neigd',neigd
       n_start=1
@@ -133,12 +125,12 @@ c****************************************************************
         kptibz=ikpt 
         if(l_bzsym) kptibz=irreduc(ikpt)
             call wann_read_eig(
-     >              ntapwf,     
+     >              eig_id,     
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
+     >              l_ss,l_noco,nrec,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,66,
+     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
 
@@ -181,12 +173,12 @@ c****************************************************************
             kptibz=ikpt
             if(l_bzsym)kptibz=irreduc(ikpt)
             call wann_read_eig(     
-     >              ntapwf,       
+     >              eig_id,       
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
+     >              l_ss,l_noco,nrec,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,66,
+     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
 
@@ -202,178 +194,50 @@ c****************************************************************
       endif
       close (306)
       end subroutine wann_write_eig
-c*********************************************************************
-c     each process writes its own eig file if hdf is not used for mpi
-c     this routine finds the appropriate eig file for a given kpoint
-c     Frank Freimuth, October 2006
-c*********************************************************************
-      subroutine wann_mpi_read_eig(     
+ 
+c*****************************************************************
+c     read in eig file
+c*****************************************************************
+      subroutine wann_read_eig(     
+     >              eig_id,
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
+     >              l_ss,l_noco,nrec,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,zMat,
+     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
-      use m_cdnread, only:cdn_read
       USE m_types
+      use m_cdnread, only:cdn_read
       implicit none
+      integer, intent (in) :: eig_id
       INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd,nlotot
       INTEGER, INTENT (IN) :: nrec,nvd,jspd,jspin
       INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod,iqpt
       LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
-#ifndef CPP_MPI
-      integer(8), intent (in) :: irecl
-#else
-      include 'mpif.h'
-      INTEGER(KIND=MPI_OFFSET_KIND),intent(in) :: irecl
-#endif
+
       INTEGER, INTENT (OUT) :: nbands,nmat
       REAL,    INTENT (OUT) :: wk
 
       INTEGER, INTENT (OUT) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       INTEGER, INTENT (OUT) :: nv(jspd),kveclo(nlotot)
       REAL,    INTENT (OUT) :: bkpt(3),eig(neigd)
-      REAL,    INTENT (INOUT) :: cp_time(9)
       REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
 
       TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (OUT) :: z(nbasfcn,neigd)
-#else
-      REAL,    INTENT (OUT) :: z(nbasfcn,neigd)
-#endif
-
-      INTEGER, INTENT(IN) :: funit
-
-      character(len=12) :: fname,fend
-      integer :: aoff,d1,d10
-      integer :: cpu_index
-      logical :: l_eig
       integer :: n_start,n_end
 
       n_start=1
       n_end=neigd
 
-      fend=''
-      if(l_gwf) write(fend,'("_",i4.4)')iqpt
-
-      do cpu_index=0,isize-1
-
-        if (mod(kptibz-1,isize).eq.cpu_index) then
-
-
-
-        if(cpu_index.eq.irank)then
-
-           call cdn_read(
+      CALL cdn_read(
      >              eig_id,
      >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,neigd,n_start,n_end,
      <              nmat,nv,ello,evdu,epar,kveclo,
      <              k1,k2,k3,bkpt,wk,nbands,eig,zMat)
 
-        else !eigenvalues are stored in the file of another process
-
-
-           d10=int((cpu_index+0.5)/10)
-           d1=mod(cpu_index,10)
-           aoff=iachar('1')-1
-           if(d10.ge.10)aoff=iachar('7')
-           fname='eig'//achar(d10+aoff)//achar(d1+iachar('1')-1)
-           fname=trim(fname)//trim(fend)
-           l_eig=.false.
-           !write(*,*)fname
-c           if(irank.eq.0) write(*,*) 'opening file=',fname
-
-           inquire(file=fname,exist=l_eig)
-           IF(.NOT.l_eig)  CALL juDFT_error("one of eig files not found"
-     +          ,calledby ="wann_rw_eig")
-           OPEN(666,file=fname,access='direct',form='unformatted',
-     &                            recl=irecl,status='old')
-           call cdn_read(
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              cpu_index,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,kptibz,666,neigd,
-     >              n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-
-           close(666)
-        endif   !cpu_index==irank
-        endif !find process
-        enddo !cpu_index
-      end subroutine wann_mpi_read_eig  
-c*****************************************************************
-c     read in eig file
-c*****************************************************************
-      subroutine wann_read_eig(     
-     >              ntapwf,
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,
-     >              l_gwf,iqpt)
-
-      use m_cdnread, only:cdn_read
-      implicit none
-      integer, intent (in) :: ntapwf
-      INTEGER, INTENT (IN) :: irank,isize,kptibz,nbasfcn,neigd,nlotot
-      INTEGER, INTENT (IN) :: nrec,nvd,jspd,jspin
-      INTEGER, INTENT (IN) :: lmaxd,ntypd,nlod,iqpt
-      LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
-#ifndef CPP_MPI
-      integer(8), intent (in) :: irecl
-#else
-      include 'mpif.h'
-      INTEGER(KIND=MPI_OFFSET_KIND),intent(in) :: irecl
-#endif
-      INTEGER, INTENT (OUT) :: nbands,nmat
-      REAL,    INTENT (OUT) :: wk
-
-      INTEGER, INTENT (OUT) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      INTEGER, INTENT (OUT) :: nv(jspd),kveclo(nlotot)
-      REAL,    INTENT (OUT) :: bkpt(3),eig(neigd)
-      REAL,    INTENT (INOUT) :: cp_time(9)
-      REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
-      REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (OUT) :: z(nbasfcn,neigd)
-#else
-      REAL,    INTENT (OUT) :: z(nbasfcn,neigd)
-#endif
-
-      INTEGER, INTENT(IN) :: funit    !QPOINTS
-
-      integer :: n_start,n_end
-
-      n_start=1
-      n_end=neigd
-
-#if( defined(CPP_MPI) && !defined(CPP_HDF) )
-! MPI without HDF
-      call wann_mpi_read_eig(     
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time,funit,
-     >              l_gwf,iqpt)
-
-#else
-!MPI with HDF or no MPI
-        call cdn_read(
-     >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
-     >              0,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,kptibz,funit,
-     >              neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,z,cp_time)
-
-#endif
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig
