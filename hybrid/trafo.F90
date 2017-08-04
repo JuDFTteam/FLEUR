@@ -651,13 +651,21 @@
 
 !#ifdef CPP_DEBUG
        !test
-      DO i=1,kpts%nkpt
-        IF ( maxval( abs(rkpt - kpts%bk(:,i)) ) .le. 1E-06  ) THEN
+      nrkpt=0
+      DO i=1,kpts%nkptf
+        IF ( maxval( abs(rkpt - kpts%bkf(:,i)) ) .le. 1E-06  ) THEN
           nrkpt = i
           EXIT
         END IF
       END DO
-      IF( nrkpt .ne. ikpt1 ) STOP 'bra_trafo2: rotation failed'
+      IF( nrkpt .NE. ikpt1 ) THEN
+         PRINT *,ikpt0,ikpt1
+         PRINT *,kpts%bkf(:,ikpt1)
+         PRINT *,kpts%bkf(:,ikpt0)
+         PRINT *,rkpt
+
+         STOP 'bra_trafo2: rotation failed'
+      ENDIF
 !#endif
 
 !     Define pointer to first mixed-basis functions (with m = -l)

@@ -45,7 +45,7 @@ SUBROUTINE gen_bz( kpts,sym)
    INTEGER,ALLOCATABLE     ::  iarr(:)
    REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
    REAL,ALLOCATABLE        ::  rarr1(:,:)
-   INTEGER:: nsym
+   INTEGER                 :: nsym,ID_mat(3,3)
    
    nsym=sym%nop
    if (.not.sym%invs) nsym=2*sym%nop
@@ -57,24 +57,18 @@ SUBROUTINE gen_bz( kpts,sym)
    ! Generate symmetry operations in reciprocal space
    DO iop=1,nsym
       IF( iop .le. sym%nop ) THEN
-         rrot(:,:,iop) = transpose( sym%mrot(:,:,iop) )
+         rrot(:,:,iop) = transpose( sym%mrot(:,:,sym%invtab(iop)) )
       ELSE
          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
       END IF
    END DO
-
-   ! Set target number for k points in full BZ
   
    !Add existing vectors to list of full vectors
-   print *,"WARNING from gen_bz"
-   print *,"Assuming Identity to be fist symmetry op!"
-   DO ic=1,kpts%nkpt
-      kpts%bkf(:,ic) = kpts%bk(:,ic)
-      kpts%bkp(ic)  = ic
-      kpts%bksym(ic) = 1
-   ENDDO
-   ic=ic-1
+   id_mat=0
+   ID_mat(1,1)=1;ID_mat(2,2)=1;ID_mat(3,3)=1
+   IF (ANY(sym%mrot(:,:,1).NE.ID_mat)) CALL judft_error("Identity must be first symmetry operation",calledby="gen_bz")
    
+   ic=0
    DO iop=1,nsym
       DO ikpt=1,kpts%nkpt
          l_found = .FALSE.
