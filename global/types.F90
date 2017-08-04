@@ -3,7 +3,7 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
- 
+
 MODULE m_types
   USE m_types_rcmat
   !*************************************************************
@@ -144,6 +144,7 @@ MODULE m_types
      SEQUENCE
      REAL u,j
      INTEGER l
+     INTEGER atomType
      LOGICAL :: l_amf
   END TYPE t_utype
 
@@ -260,6 +261,7 @@ MODULE m_types
   END TYPE t_atoms
 
   TYPE t_kpts
+     INTEGER :: specificationType
      !no
      INTEGER :: nkpt
      INTEGER :: ntet
@@ -669,6 +671,7 @@ MODULE m_types
 
   !symmetry information
   TYPE t_sym
+     INTEGER :: symSpecType
      !Symophic group
      LOGICAL ::symor
      INTEGER ::nsymt
@@ -838,6 +841,11 @@ MODULE m_types
      LOGICAL :: l_lapw_gfleur
      LOGICAL :: l_kpointgen
      LOGICAL :: l_w90kpointgen
+     LOGICAL :: l_finishnocoplot
+     LOGICAL :: l_finishgwf
+     LOGICAL :: l_skipkov
+     LOGICAL :: l_matrixuHu
+     LOGICAL :: l_matrixuHu_dmi
      INTEGER :: ikptstart
      INTEGER :: band_min(1:2)
      INTEGER :: band_max(1:2)

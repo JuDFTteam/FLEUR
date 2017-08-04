@@ -9,7 +9,7 @@
       SUBROUTINE wann_postproc_setup(
      >           natd,nkpts,kpoints,amat,bmat,
      >           num,num_bands,ntype,neq,
-     >           zatom,taual,namat)
+     >           zatom,taual,namat,seed,bkpts_filename)
 c******************************************************
 c     Call the Wannier90 setup routine.
 c     Purpose: get the file of nearest-neighbor kpoints
@@ -29,6 +29,8 @@ c******************************************************
       real,    intent(in)         :: zatom(ntype)
       real,    intent(in)         :: taual(:,:)
       character(len=2),intent(in) :: namat(0:103)
+      character(len=*),intent(in) :: seed    ! QPOINTS
+      character(len=*),intent(in) :: bkpts_filename ! QPOINTS
 
       integer             :: i,j,at
       character(len=50)   :: seedname
@@ -53,6 +55,7 @@ c******************************************************
       integer             :: nn,ikpt
       real                :: pos(3,natd)
 
+
       ! Taken from wannier90-1.2/src/wannier_lib.F90
       interface
         subroutine wannier_setup(seed__name, mp_grid_loc, num_kpts_loc,
@@ -62,6 +65,7 @@ c******************************************************
      +    nnlist_loc, nncell_loc, num_bands_loc, num_wann_loc,
      +    proj_site_loc, proj_l_loc, proj_m_loc, proj_radial_loc,
      +    proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc)
+
          implicit none
          integer, parameter :: dp = selected_real_kind(15,300)
          integer, parameter :: num_nnmax=12
@@ -80,6 +84,7 @@ c******************************************************
      +      atoms_cart_loc
          logical, intent(in) :: gamma_only_loc
          logical, intent(in) :: spinors_loc
+
          integer, intent(out) :: nntot_loc
          integer, dimension(num_kpts_loc,num_nnmax), intent(out) ::
      +      nnlist_loc
@@ -108,7 +113,8 @@ c******************************************************
          pos(:,j)=matmul(amat(:,:),taual(:,j))
       enddo
 
-      seedname='WF1'
+      !seedname='WF1'
+      seedname=seed
       gamma_only=.false.
       spinors=.false.
 
@@ -140,7 +146,7 @@ c**********************************************************
 c******************************************************
 c           write bkpts
 c******************************************************
-      open(202,file='bkpts',form='formatted')
+      open(202,file=bkpts_filename,form='formatted')
       write (202,'(i4)') nntot
       do ikpt=1,nkpts
         do nn=1,nntot
@@ -150,6 +156,7 @@ c     &     ikpt,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
         enddo
       enddo
       close(202)
+
 
       END SUBROUTINE wann_postproc_setup
       END MODULE m_wann_postproc_setup

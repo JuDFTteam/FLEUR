@@ -20,7 +20,7 @@
      >          dx,rmsh,
      >          e1s,e2s,ulo_der,ustep,k1d,k2d,k3d,nop2,
      >          ig,rgphs,slice,kk,nnne,irecl,nv2d,nmzxy,nmz,nq2,
-     >          delz,area,z1,volint,ig2,tau,symor,ef)
+     >          delz,area,z1,volint,ig2,tau,symor,ef,l_sgwf,fullnqpts)
 c     <          fermi_weights)
 
 c***********************************************
@@ -49,6 +49,7 @@ c***********************************************
       use m_wann_fft4
       use m_wann_fft5
       use m_wann_rmat
+      use m_wann_nocoplot
 #ifdef CPP_TOPO
       use m_wann_torque_rs
       use m_wann_offdiposop_rs
@@ -75,7 +76,7 @@ c***********************************************
       real,         intent(in) :: omtil
       logical,      intent(in) :: l_soc,l_noco
       integer,      intent(in) :: neigd
-      integer,      intent(in) :: fullnkpts
+      integer,      intent(in) :: fullnkpts,fullnqpts
       type(od_inp), intent(in) :: odi
       logical,      intent(in) :: l_proj
       integer, intent (in)     :: lmaxd,ntypd,nop,nvd,jspd
@@ -88,7 +89,8 @@ c***********************************************
       integer, intent (in)     :: invsat(natd),invsatnr(natd),nkpt(nwdd)
       real,    intent (in)     :: taual(3,natd),rmt(ntypd)
       real,    intent (in)     :: bbmat(3,3)
-      real, intent (inout)     :: alph(ntypd),beta(ntypd),qss(3)
+      real, intent (inout)     :: alph(ntypd),beta(ntypd)
+      real, intent (inout)     :: qss(3,fullnqpts)
       real,    intent (in)     :: sk2(n2d),phi2(n2d)
       type (od_sym),intent(in) :: ods
       integer, intent (in)     :: irank,isize,n3d
@@ -112,9 +114,11 @@ c***********************************************
       real,    intent (in) :: tau(3,nop)
       logical, intent (in) :: symor
       real,    intent (in) :: ef
+      logical, intent (in) :: l_sgwf
 c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 
-      integer :: i,kpts,ikpt
+      character(len=12) :: fending
+      integer :: i,kpts,ikpt,nkqpts,iqpt
       real(4) :: delta3,time_lapw_expand,delta2,time_lapw_plot
       logical :: l_need_fft,l_file
       integer :: hopmin_z,hopmax_z
@@ -316,15 +320,17 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,.false.,wann%wan90version)
       endif
 
-      if(wann%l_anglmomrs.and.l_p0)then
+
+       if(wann%l_anglmomrs.and.l_p0)then
         call wann_fft4(
-     >       'WF1.anglmom','anglmomrs.1',.false.,
+     >       'WF1.anglmom',
+     >       'anglmomrs.1',.false.,
      >       rvecnum,rvec,kpoints,
      >       jspins,fullnkpts,wann%l_bzsym,film,odi%d1,
      >       l_soc,wann%band_min,wann%band_max,neigd,
      >       .false.,wann%wan90version)
-      endif
-
+       endif
+ 
 #ifdef CPP_TOPO
       if(wann%l_offdiposoprs.and.l_p0)then
          call wann_offdiposop_rs(
@@ -419,7 +425,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -438,7 +444,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -455,7 +461,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -474,7 +480,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -507,6 +513,19 @@ c     >     nlod,llod,lmd,omtil,nlo,llo)
 
       write(6,*)"time_lapw_expand=",time_lapw_expand
       write(6,*)"time_lapw_plot=",time_lapw_plot
+
+      if(wann%l_finishnocoplot.and.l_p0) then
+c         write(*,*)'doing the UNK mixing'
+c         write(*,*)'alph',alph
+c         write(*,*)'beta',beta
+c         nkqpts=fullnkpts
+c         if(l_sgwf) nkqpts=fullnkpts*fullnqpts 
+         call wann_nocoplot(slice,nnne,!nslibd
+     >                      amat,bmat,fullnkpts,odi,film,
+     >                      natd,ntypd,jmtd,ntype,neq,pos,
+     >                      jri,rmsh,alph,beta,fullnqpts,qss,
+     >                      z1,zatom)
+      endif
 
       end subroutine wann_postproc
       end module m_wann_postproc

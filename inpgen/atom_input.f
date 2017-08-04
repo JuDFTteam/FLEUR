@@ -61,7 +61,7 @@
       INTEGER :: natomst,ncorest,nvalst,z,nlo0
       INTEGER :: xmlCoreStateNumber, lmaxdTemp
       REAL    :: rmt0_def,dx0_def,bmu0_def
-      REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom
+      REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom, electronsLeft
       LOGICAL :: fatalerror, h_atom, h_allatoms
       LOGICAL :: idone(atoms%ntype) 
       INTEGER :: lonqn(atoms%nlod,atoms%ntype),z_int(atoms%ntype)
@@ -593,6 +593,32 @@ c           in s and p states equal occupation of up and down states
                                          !for default setting of enparas
           ENDIF
 
+          IF(juDFT_was_argument("-electronConfig")) THEN
+             electronsLeft = NINT(atoms%zatom(n))
+             DO i = 1, 29
+                electronsLeft = electronsLeft - xmlCoreRefOccs(i)
+                IF(electronsLeft.GT.-xmlCoreRefOccs(i)+eps) THEN
+                   natomst = i
+                   IF(electronsLeft.LT.-eps) THEN
+                      xmlPrintCoreStates(i,n) = .TRUE.
+                      SELECT CASE(i)
+                         CASE (9:10,14:15,19:22,26:29)
+                            up = MIN((xmlCoreRefOccs(i)/2),
+     +                               -electronsLeft)
+                            dn = MAX(0.0,(-electronsLeft)-up)
+                         CASE DEFAULT
+                            up = CEILING((-electronsLeft)/2)
+                            dn = FLOOR((-electronsLeft)/2)
+                      END SELECT
+                      xmlCoreOccs(1,i,n) = up
+                      xmlCoreOccs(2,i,n) = dn
+                   END IF
+                END IF
+             END DO
+             xmlElectronStates(1:atoms%ncst(n),n) = coreState_const
+             xmlElectronStates(atoms%ncst(n)+1:natomst,n) = 
+     +          valenceState_const
+          END IF
 
         ENDIF
 

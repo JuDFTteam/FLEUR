@@ -635,7 +635,7 @@ c**************************************************************************
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >                   ccof(:,nbn,:,:),z(:,nbn),
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >                   lmd,nbasfcn,
+     >                   lmd,nbasfcn,l_ss,qss,jspin,0,
      <                   xdnout)
                     wannierfunc(posi,nbn,ikpt)=xdnout*factor
 
@@ -693,7 +693,7 @@ c     <              xdnout)
      >               ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >               ccof(:,nbn,:,:),z(:,nbn),
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >                lmd,nbasfcn,
+     >                lmd,nbasfcn,l_ss,qss,jspin,0,
      <               xdnout)
                 wannierfunc(posi,nbn,ikpt)=xdnout
 
@@ -710,7 +710,7 @@ c     <              xdnout)
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >             ccof(:,nbn,:,:),z(:,nbn),
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >             lmd,nbasfcn,
+     >             lmd,nbasfcn,l_ss,qss,jspin,0,
      <             xdnout)
              wannierfunc(posi,nbn,ikpt)=xdnout*factor
 

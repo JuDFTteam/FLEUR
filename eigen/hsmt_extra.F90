@@ -63,12 +63,11 @@ CONTAINS
 
 
     COMPLEX chi11,chi21,chi22
-    INTEGER k,i,spin2,&
-         l,ll1,lo,jd,&
-         m,n,na,nn,np,&
-         iiloh,iilos,nkvecprevath,nkvecprevats,&
-         iintsp,jintsp
+    INTEGER k,i,spin2,l,ll1,lo,jd
+    INTEGER m,n,na,nn,np,i_u
+    INTEGER iiloh,iilos,nkvecprevath,nkvecprevats,iintsp,jintsp
     INTEGER nc,locolh,locols,nkvecprevatu,iilou,locolu
+    INTEGER nkvecprevatuTemp,iilouTemp,locoluTemp
     INTEGER ab_dim,nkvec_sv,fjstart
     LOGICAL enough,l_lo1
     !     ..
@@ -104,6 +103,7 @@ CONTAINS
     na = 0
     nkvecprevats = 0
     nkvecprevath = 0
+    nkvecprevatu = 0
     nkvec_sv = 0
     !Determine index of first LO
     locols = lapw%nv(1)
@@ -122,7 +122,10 @@ CONTAINS
     iiloh = lapw%nv(1)* (lapw%nv(1)+1)/2
 #endif
 
+    iilou = iilos
+    locolu = locols
 
+    i_u = 1
     ntype_loop: DO n=1,atoms%ntype
 
        IF (noco%l_noco) THEN
@@ -267,29 +270,43 @@ CONTAINS
                 ENDIF
              END IF
 
-             IF (atoms%n_u>0.and.atoms%lda_u(n)%l.GE.0) THEN
-                IF ( noco%l_noco .AND. (.NOT.noco%l_ss) ) THEN
-                   CALL u_ham(&
-                        atoms,input,lapw,isp,n,invsfct,&
-                        ar,ai,br,bi,vs_mmp,lmaxb,&
-                        alo,blo,clo,&
-                        n_size,n_rank,isp,usdus,noco,&
-                        1,1,chi11,chi22,chi21,&
-                        nkvecprevatu,iilou,locolu,.false.,aa_c=aahlp)
-                ELSE
-                   DO iintsp = 1,nintsp
-                      DO jintsp = 1,iintsp
-                         CALL u_ham(&
-                              atoms,input,lapw,isp,n,invsfct,&
-                              ar,ai,br,bi,vs_mmp,lmaxb,&
-                              alo,blo,clo,&
-                              n_size,n_rank,isp,usdus,noco,&
-                              iintsp,jintsp,chi11,chi22,chi21,&
-                              nkvecprevatu,iilou,locolu,l_real,aa_r,aa_c)
-                      ENDDO
-                   ENDDO
-                ENDIF
-             ENDIF
+
+             IF (atoms%n_u.GT.0) THEN
+                nkvecprevatuTemp = nkvecprevatu
+                iilouTemp = iilou
+                locoluTemp = locolu
+                DO WHILE (i_u.LE.atoms%n_u)
+                   IF (atoms%lda_u(i_u)%atomType.GT.n) EXIT
+                   nkvecprevatuTemp = nkvecprevatu
+                   iilouTemp = iilou
+                   locoluTemp = locolu
+                   IF (atoms%lda_u(i_u)%atomType.EQ.n) THEN
+                      IF ((noco%l_noco).AND.(.NOT.noco%l_ss)) THEN
+                         CALL u_ham(atoms,input,lapw,isp,n,i_u,invsfct,&
+                                    ar,ai,br,bi,vs_mmp,lmaxb,&
+                                    alo,blo,clo,&
+                                    n_size,n_rank,isp,usdus,noco,&
+                                    1,1,chi11,chi22,chi21,&
+                                    nkvecprevatuTemp,iilouTemp,locoluTemp,.false.,aa_c=aahlp)
+                      ELSE
+                         DO iintsp = 1,nintsp
+                            DO jintsp = 1,iintsp
+                               CALL u_ham(atoms,input,lapw,isp,n,i_u,invsfct,&
+                                          ar,ai,br,bi,vs_mmp,lmaxb,&
+                                          alo,blo,clo,&
+                                          n_size,n_rank,isp,usdus,noco,&
+                                          iintsp,jintsp,chi11,chi22,chi21,&
+                                          nkvecprevatuTemp,iilouTemp,locoluTemp,l_real,aa_r,aa_c)
+                            END DO
+                         END DO
+                      END IF
+                   END IF
+                   i_u = i_u + 1
+                END DO
+                nkvecprevatu = nkvecprevatuTemp
+                iilou = iilouTemp
+                locolu = locoluTemp
+             END IF
 
           ENDIF                                ! atoms%invsat(na) = 0 or 1
           !--->    end loop over equivalent atoms

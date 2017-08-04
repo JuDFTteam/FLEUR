@@ -14,6 +14,7 @@
           USE m_juDFT_init
           USE m_types
           USE m_rinpXML
+          USE m_postprocessInput
           USE m_dimens
           USE m_inped
           USE m_setup
@@ -76,7 +77,7 @@
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
-          LOGICAL                       :: l_found
+          LOGICAL                       :: l_found, l_kpts, l_gga
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -141,10 +142,11 @@
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
           IF (input%l_inpXML) THEN
+             ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
                 ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
-                ALLOCATE(noel(1),atomTypeSpecies(1),speciesRepAtomType(1))
+                ALLOCATE(atomTypeSpecies(1),speciesRepAtomType(1))
                 ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
                 ALLOCATE(xmlCoreOccs(1,1,1))
                 namex = '    '
@@ -155,9 +157,10 @@
                 scale = 1.0
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
-                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
+                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
-                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
+                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
+                     l_kpts,l_gga)
 
                 ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
@@ -167,14 +170,22 @@
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
                               atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                              cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                              cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
                              .TRUE.,numSpecies,enpara)
-                DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
+
+                DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
+
+             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+                                   oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
+                                   l_gga)
+
+             DEALLOCATE(noel)
 
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
@@ -314,11 +325,13 @@
                 IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
                      &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
                 !
+             END IF ! mpi%irank.eq.0
                 CALL setup(&
-                     &     atoms,kpts,DIMENSION,sphhar,&
+                     &     mpi,atoms,kpts,DIMENSION,sphhar,&
                      &     obsolete,sym,stars,oneD,input,noco,&
                      &     vacuum,cell,xcpot,&
                      &     sliceplot,enpara,l_opti)
+             IF (mpi%irank.EQ.0) THEN
                 !
                 stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
                 !+t3e
@@ -350,9 +363,11 @@
                    a1(:) = a1(:) / scale
                    a2(:) = a2(:) / scale
                    a3(:) = a3(:) / scale
+                   kpts%specificationType = 3
+                   sym%symSpecType = 3
                    CALL w_inpXML(&
                                  atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,(/1,1,1/),kpts%l_gamma,&
+                                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
                                  xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&

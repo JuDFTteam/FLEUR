@@ -17,6 +17,7 @@ c***************************************************************
       CONTAINS
 
       SUBROUTINE wann_mmk0_od_vac(
+     >     DIMENSION, oneD, vacuum, stars, cell,
      >     l_noco,nlotot,
      >     z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,n2d_1,
@@ -26,12 +27,20 @@ c***************************************************************
      <     mmn)
 
       use m_constants, only : pimach
-      use m_od_types, only : od_inp
+      use m_types
       use m_od_abvac
       use m_cylbes
       use m_dcylbs
+      USE m_types
 
       implicit none
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
       integer, intent (in) :: nlotot
@@ -119,10 +128,9 @@ c     ..intrinsic functions..
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac,bkpt,odi%M,odi%mb,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin),odi%n2d,
+     >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz,kvac3(1),nv2,
      <      uz(1,-vM),duz(1,-vM),u(1,1,-vM),udz(1,-vM),
      <      dudz(1,-vM),ddnv(1,-vM),ud(1,1,-vM))

@@ -11,8 +11,7 @@ contains
     use m_julia
     use m_kptgen_hybrid
     use m_od_kptsgen
-    USE m_gen_bz
-
+  
     implicit none
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)     :: sym
@@ -50,12 +49,7 @@ contains
   kpts%posScale = 1.0
   IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
 
-  !Calculate kpoint in the full BZ
-  IF (all(kpts%nkpt3>0)) THEN
-     CALL gen_bz(kpts,sym)
-  else
-     kpts%nkptf=0
-  endif
+  
   
 end subroutine kpoints
 end module m_kpoints

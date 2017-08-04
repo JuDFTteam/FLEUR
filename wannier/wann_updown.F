@@ -41,7 +41,7 @@ c****************************************************************************
       use m_od_types, only : od_inp, od_sym
       use m_loddop
       use m_constants, only : pimach
-      use m_wann_mmk0_od_vac
+!      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
       use m_wann_mmk0_updown_sph
       use m_wann_abinv
@@ -114,7 +114,7 @@ c****************************************************************************
 cccccccccccccccccc   local variables   cccccccccccccccccccc
       type(t_wann) :: wann
       integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
-      integer :: addnoco,funbas,loplod
+      integer :: addnoco,addnoco2,funbas,loplod
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer :: jsp_start,jsp_end,nrec,nrec1,nbands,nbands_b
       integer :: nodeu,noded,n_size,na,n_rank,nbnd,numbands
@@ -335,8 +335,8 @@ c**************************************************************
          open(713,file='kptsmap')
          do i=1,fullnkpts
             read(713,*)kpt,irreduc(i),mapkoper(i),shiftkpt(:,i)
-            IF(kpt/=i) CALL juDFT_error("kpt.ne.i",calledby ="wann_updown"
-     +           )
+            IF(kpt/=i) CALL juDFT_error("kpt.ne.i",
+     +                                  calledby ="wann_updown")
             if(l_p0)print*,i,irreduc(i),mapkoper(i)
          enddo
          close(713)
@@ -431,8 +431,8 @@ c..reading the proj.1 / proj.2 / proj file
          rewind (203)
          close (203)
        else
-          CALL juDFT_error("no proj/proj.1/proj.2",calledby ="wann_updown"
-     +         )
+          CALL juDFT_error("no proj/proj.1/proj.2",
+     +                     calledby ="wann_updown")
        endif  
 
 
@@ -472,7 +472,7 @@ c*************************************************************
      >            wann%band_max(jspin),
      >            numbands,
      >            e1s,e2s,efermi,wann%l_pauli,nkpts,
-     <            nbnd,kpoints)
+     <            nbnd,kpoints,.false.,-1)
          if(odi%d1)then
             kpoints(:)=kpoints(:)*bmat(3,3)
          endif
@@ -746,7 +746,7 @@ c****************************************************************
      >            l_ss,l_noco,nrec,irecl,
      <            nmat,nv,ello,evdu,epar,kveclo,
      <            k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),
-     <            zz(:,:,jspin),cp_time)
+     <            zz(:,:,jspin),cp_time,66,.false.,1)
 #endif
          nrec=0
       enddo !jspin
@@ -767,7 +767,7 @@ c...we work only within the energy window
 
       do jspin=1,wannierspin
        nslibd=0
-       print*,"bands used:"
+       !print*,"bands used:"
        do i = 1,nbands
         if ((eigg(i,1).ge.e1s.and.nslibd.lt.numbands.
      &       and.wann%l_bynumber)
@@ -777,7 +777,7 @@ c...we work only within the energy window
      &        (i.le.wann%band_max(jspin))
      &       .and.wann%l_byindex))then
 
-           print*,i
+           !print*,i
            nslibd = nslibd + 1
            eig(nslibd) = eigg(i,1)
            if(l_noco)then
@@ -1011,8 +1011,9 @@ c$$$
 c$$$  22     continue
 c$$$       enddo !i  
 
+      addnoco2 = addnoco      ! TODO: correct for addnoco2
       call wann_mmkb_int(
-     >         0,addnoco,
+     >         cmplx(1.,0.),addnoco,addnoco2,
      >         nvd,k1d,k2d,k3d,
      >         n3d,k1(:,jspin),k2(:,jspin),k3(:,jspin),
      >         nv(jspin),neigd,nbasfcn,z(:,:,1),nslibd,
@@ -1026,7 +1027,7 @@ c$$$       enddo !i
 c---> spherical contribution to updown.mmn0-matrix
        call wann_mmk0_updown_sph(
      >          l_noco,alph,beta,
-     >          llod,noccbd,nlod,natd,ntypd,lmaxd,lmd,
+     >          llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
      >          ntype,neq,nlo,llo,
      >          radial1_ff,radial1_gg,radial1_fg,radial1_gf,
      >          radial1_flo,radial1_glo,
@@ -1106,8 +1107,8 @@ c******************************************************
      >      mpi_comm,l_p0,'updown.mmn0',
      >      'Overlaps of the wavefunct. at the same kpoint',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,.false.,wann%l_unformatted,
-     <      mmn)
+     >      irank,isize,.false.,
+     <      mmn,wann%l_unformatted)
       endif !l_soc and l_mmn0  
 
       if(wann%l_perpmag)then
@@ -1115,8 +1116,8 @@ c******************************************************
      >      mpi_comm,l_p0,'updown.perpmag',
      >      'Overlaps of the wavefunct. with Beff',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,.true.,wann%l_unformatted,
-     <      perpmag)
+     >      irank,isize,.true.,
+     <      perpmag,wann%l_unformatted)
       endif !l_soc and l_mmn0  
 
       if(wann%l_surfcurr)then

@@ -406,7 +406,7 @@ c       do ilo = 1, nlo(n)
          call radflo(
      >             ntypd,nlod,jspd,jmtd,lmaxd,n,jspin,
      >             ello(1,1,jspin),vr(1,n,jspin),
-     >             jri(n),rmsh(1,n),dx(n),ff(n,1:,1:,0:),
+     >             jri(n),rmsh(1,n),dx(n),ff(n,1:,1:,0:), 
      >             gg(n,1:,1:,0:),llo,nlo,l_dulo(1,n),irank,ulo_der,
      <             ulos(1,1),dulos(1,1),uulon(1,1),dulon(1,1),
      <             uloulopn(1,1,1),uuilon,duilon,ulouilopn,flo(n,:,:,:))
@@ -464,7 +464,8 @@ c******************************************************************
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,irecl,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zz,cp_time)
+     <              k1,k2,k3,bkpt,wk,nbands,eigg,zz,cp_time,66,
+     >              .false.,1)
 
 
       nslibd = 0

@@ -55,7 +55,7 @@
 
 !+lda+u
       REAL    u,j
-      INTEGER l
+      INTEGER l, i_u
       LOGICAL l_amf
       CHARACTER(len=3) ch_test
       NAMELIST /ldaU/ l,u,j,l_amf
@@ -375,6 +375,7 @@
       na = 0
       READ (UNIT=5,FMT=7110,END=99,ERR=99)
       WRITE (6,9060)
+      atoms%n_u = 0
       DO n=1,atoms%ntype
 !
          READ (UNIT=5,FMT=7140,END=99,ERR=99) noel(n),atoms%nz(n),&
@@ -387,16 +388,17 @@
          READ (UNIT=5,FMT=7180,END=199,ERR=199) ch_test
  7180    FORMAT (a3)
          IF (ch_test.EQ.'&ld') THEN
-           l=0 ; u=0.0 ; j=0.0 ; l_amf = .false.
-           BACKSPACE (5)
-           READ (5,ldaU)
-           atoms%lda_u(n)%l = l ; atoms%lda_u(n)%u = u ; atoms%lda_u(n)%j = j
-           atoms%lda_u(n)%l_amf= l_amf
-           WRITE (6,8180) l,u,j,l_amf
-         ELSE
-            WRITE (6,*) '   '
-            atoms%lda_u(n)%l = -1
-         ENDIF
+            l=0 ; u=0.0 ; j=0.0 ; l_amf = .false.
+            BACKSPACE (5)
+            READ (5,ldaU)
+            atoms%n_u = atoms%n_u + 1
+            atoms%lda_u(atoms%n_u)%l = l
+            atoms%lda_u(atoms%n_u)%u = u
+            atoms%lda_u(atoms%n_u)%j = j
+            atoms%lda_u(atoms%n_u)%l_amf = l_amf
+            atoms%lda_u(atoms%n_u)%atomType = n
+            WRITE (6,8180) l,u,j,l_amf
+         END IF
  199     CONTINUE
 !-lda+u
 !
@@ -843,18 +845,26 @@
       na = 0
       WRITE (5,9060)
  9060 FORMAT ('**********************************')
+      i_u = 1
       DO n=1,atoms%ntype
          WRITE (5,9070) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),&
      &                       atoms%rmt(n),atoms%dx(n)
  9070    FORMAT (a3,i3,3i5,2f10.6)
 !+lda_u
-         IF (atoms%lda_u(n)%l.GE.0) THEN
-           WRITE (5,8180) atoms%lda_u(n)%l,atoms%lda_u(n)%u,atoms%lda_u(n)%j,&
-     &                                               atoms%lda_u(n)%l_amf
- 8180      FORMAT ('&ldaU l=',i1,',u=',f4.2,',j=',f4.2,',l_amf=',l1,'/')
+         IF (i_u.LE.atoms%n_u) THEN
+            DO WHILE (atoms%lda_u(i_u)%atomType.LT.n)
+               i_u = i_u + 1
+               IF (i_u.GE.atoms%n_u) EXIT
+            END DO
+            IF (atoms%lda_u(i_u)%atomType.EQ.n) THEN
+               WRITE (5,8180) atoms%lda_u(i_u)%l,atoms%lda_u(i_u)%u,atoms%lda_u(i_u)%j,atoms%lda_u(i_u)%l_amf
+ 8180          FORMAT ('&ldaU l=',i1,',u=',f4.2,',j=',f4.2,',l_amf=',l1,'/')
+            ELSE
+               WRITE (5,*) '   '
+            ENDIF
          ELSE
             WRITE (5,*) '   '
-         ENDIF
+         END IF
 !-lda_u
         IF ( l_hyb ) THEN
           WRITE (5,9090) atoms%neq(n),atoms%l_geo(n),hybrid%lcutm1(n),hybrid%select1(1,n),&

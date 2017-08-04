@@ -26,13 +26,16 @@ c   calculates certain matrix elements that have to be treated only
 c   once per calculation
 c   Frank Freimuth, October 2006
 c***********************************************************************
+c   use BLAS matrix-matrix multiplication in apw-apw part to be faster
+c   J.-P. Hanke, Dec. 2015
+c***********************************************************************
      >        nbnd,llod,nslibd,nslibd_b,nlod,natd,ntypd,lmd,jmtd,
      >        taual,nop,lmax,
      >        ntype,neq,nlo,llo,acof,bcof,ccof,bbpt,
      >        acof_b,bcof_b,ccof_b,gb,bkpt,ujug,ujdg,djug,djdg,ujulog,
-     >        djulog,ulojug,ulojdg,ulojulog,kdiff,nntot,
+     >        djulog,ulojug,ulojdg,ulojulog,kdiff,nntot,chi,
      =        mmn)
-
+#include "cpp_double.h"
       use m_juDFT
       use m_constants, only : pimach
       use m_matmul   , only : matmul3,matmul3r
@@ -53,6 +56,7 @@ c     .. array arguments ..
       integer, intent (in)  :: lmax(:) !(ntypd)
       integer, intent (in)  :: nlo(:) !(ntypd)
       integer, intent (in)  :: llo(:,:) !(nlod,ntypd)
+      complex, intent (in)  :: chi(ntypd)
       real,    intent (in)  :: bbpt(:) !(3)
       real,    intent (in)  :: taual(:,:) !(3,natd)
       real,    intent (in)  :: bkpt(:) !(3)
@@ -75,17 +79,18 @@ c     .. array arguments ..
       complex, intent (in)  :: ulojulog(:,-llod:,:,-llod:,:,:) !(1:nlod,-llod:llod,1:nlod,-llod:llod,1:ntype,1:nntot)
 
       real, intent (in)     :: kdiff(:,:) !(3,nntot)
-      complex,intent(inout) :: mmn(:,:) !(nbnd,nbnd)
+      complex,intent(inout) :: mmn(:,:)!nbnd,nbnd) !(nbnd,nbnd)
 
 
 c     .. local scalars ..
       integer i,lm,nn,n,na,j,lmp,l,lp,m,mp,lwn,lo,lop
       integer ll,llp
-      real rph,cph,tpi,th,t1nn,t2nn,t3nn
+      real rph,cph,tpi,th,t1nn,t2nn,t3nn,dummy
       complex ic
-      integer nene
+      integer nene,lmd2
       complex :: fac1,fac2,fac3,fac4
       complex :: fac5,fac6,fac7,fac8
+      complex :: mat(0:lmd,nslibd_b)
 C     ..
 C     .. local arrays ..
       real bpt(3)
@@ -96,17 +101,17 @@ C     .. intrinsic functions ..
 
       ic = cmplx(0.,1.)
       tpi = 2* pimach()
+      lmd2 = lmd+1
       
       na = 0
 
       bpt(:) = bbpt(:) + gb(:) - bkpt(:)
       do nene=1,nntot
          if(all(abs(bpt(:)-kdiff(:,nene)).lt.1e-4)) exit
-      enddo   
+      enddo  
       IF(nene==nntot+1) CALL juDFT_error
      +     ("cannot find matching nearest neighbor k",calledby
      +     ="wann_mmkb_sph")
-
 
       do n=1,ntype
        lwn = lmax(n)
@@ -123,50 +128,43 @@ c...set up phase factors ( e^{ib\tau} )
          cph = 2*tpi*sin(th)
 
 c...contributions from the apws
+         call CPP_BLAS_cgemm(
+     >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+     >          ujug(0,0,n,nene),lmd2,acof_b(1,0,na),nslibd_b,
+     >          cmplx(0.0),mat(0,1),lmd2)
+         call CPP_BLAS_cgemm(
+     >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
+     >          acof(1,0,na),nslibd,mat(0,1),lmd2,
+     >          cmplx(1.0),mmn,nbnd)
 
-         do l = 0,lwn
-          ll = l*(l+1)
-          do m = -l,l
-           lm = ll + m
+         call CPP_BLAS_cgemm(
+     >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+     >          ujdg(0,0,n,nene),lmd2,bcof_b(1,0,na),nslibd_b,
+     >          cmplx(0.0),mat(0,1),lmd2)
+         call CPP_BLAS_cgemm(
+     >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
+     >          acof(1,0,na),nslibd,mat(0,1),lmd2,
+     >          cmplx(1.0),mmn,nbnd)
 
-           do lp = 0,lwn
-            llp = lp*(lp+1)
-            do mp = -lp,lp
-             lmp = llp + mp
-             fac1=cmplx(rph,cph)*ujug(lmp,lm,n,nene)
-             fac2=cmplx(rph,cph)*ujdg(lmp,lm,n,nene)
-             fac3=cmplx(rph,cph)*djug(lmp,lm,n,nene)
-             fac4=cmplx(rph,cph)*djdg(lmp,lm,n,nene)
+         call CPP_BLAS_cgemm(
+     >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+     >          djug(0,0,n,nene),lmd2,acof_b(1,0,na),nslibd_b,
+     >          cmplx(0.0),mat(0,1),lmd2)
+         call CPP_BLAS_cgemm(
+     >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
+     >          bcof(1,0,na),nslibd,mat(0,1),lmd2,
+     >          cmplx(1.0),mmn,nbnd)
 
-               do j = 1,nslibd_b
-                fac5=conjg(acof_b(j,lmp,na))*fac1
-                fac6=conjg(bcof_b(j,lmp,na))*fac2
-                fac7=conjg(acof_b(j,lmp,na))*fac3
-                fac8=conjg(bcof_b(j,lmp,na))*fac4
-                do i = 1,nslibd             
-                 mmn(i,j) = mmn(i,j) + 
-     +                    acof(i,lm,na)*fac5+
-     +                    acof(i,lm,na)*fac6+
-     +                    bcof(i,lm,na)*fac7+
-     +                    bcof(i,lm,na)*fac8
+         call CPP_BLAS_cgemm(
+     >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+     >          djdg(0,0,n,nene),lmd2,bcof_b(1,0,na),nslibd_b,
+     >          cmplx(0.0),mat(0,1),lmd2)
+         call CPP_BLAS_cgemm(
+     >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
+     >          bcof(1,0,na),nslibd,mat(0,1),lmd2,
+     >          cmplx(1.0),mmn,nbnd)
 
-c                 mmn(i,j) = mmn(i,j) + 
-c    +               cmplx(rph,cph)*
-c    *  ( acof(i,lm,na)*conjg(acof_b(j,lmp,na))*ujug(lmp,lm,n,nene)+
-c    +    acof(i,lm,na)*conjg(bcof_b(j,lmp,na))*ujdg(lmp,lm,n,nene)+
-c    +    bcof(i,lm,na)*conjg(acof_b(j,lmp,na))*djug(lmp,lm,n,nene)+
-c    +    bcof(i,lm,na)*conjg(bcof_b(j,lmp,na))*djdg(lmp,lm,n,nene))
 
-                 enddo 
-                enddo  
-
-            enddo ! mp
-           enddo  ! lp
-
-          enddo  ! m
-         enddo   ! l
-
-c...contributions from the local orbitals with apws
 
          if (nlo(n).ge.1) then 
          
@@ -181,11 +179,15 @@ c...contributions from the local orbitals with apws
             do mp = -lp,lp
              lmp = llp + mp
 
-             fac1=cmplx(rph,cph)*ujulog(lmp,lo,m,n,nene)
-             fac2=cmplx(rph,cph)*djulog(lmp,lo,m,n,nene)
-             fac3=cmplx(rph,cph)*ulojdg(lmp,lo,m,n,nene)
-             fac4=cmplx(rph,cph)*ulojug(lmp,lo,m,n,nene)
-
+             fac1=cmplx(rph,cph)*ujulog(lmp,lo,m,n,nene)*chi(n)
+             fac2=cmplx(rph,cph)*djulog(lmp,lo,m,n,nene)*chi(n)
+             fac3=cmplx(rph,cph)*ulojdg(lmp,lo,m,n,nene)*chi(n)
+             fac4=cmplx(rph,cph)*ulojug(lmp,lo,m,n,nene)*chi(n)
+             
+c             if(fac1.ne.0)write(*,*)'fac1',lmp,lm
+c             if(fac2.ne.0)write(*,*)'fac2',lmp,lm
+c             if(fac3.ne.0)write(*,*)'fac3',lmp,lm
+c             if(fac4.ne.0)write(*,*)'fac4',lmp,lm
 
                 do j = 1,nslibd_b
                  do i = 1,nslibd
@@ -221,13 +223,16 @@ c...contributions from lo*lo
             do mp = -lp,lp
              lmp = llp + mp
 
-             fac1=cmplx(rph,cph)*ulojulog(lop,mp,lo,m,n,nene)
+             fac1=cmplx(rph,cph)*ulojulog(lop,mp,lo,m,n,nene)*chi(n)
+
+c             if(fac1.ne.0)write(*,*)'fac1',lop,lo,mp,m
+
                 do j = 1,nslibd_b
                  do i = 1,nslibd
 
                   mmn(i,j) = mmn(i,j) +
      +               ccof(m,i,lo,na)*conjg(ccof_b(mp,j,lop,na))*
-     *                        fac1 
+     *                        fac1
 
                  enddo 
                 enddo  

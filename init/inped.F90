@@ -520,18 +520,15 @@
           !
           ! Check for LDA+U:
           !
-          atoms%n_u = 0
-          DO  n = 1,atoms%ntype
-             IF (atoms%lda_u(n)%l.GE.0)  THEN
-                atoms%n_u = atoms%n_u + 1
-                IF (atoms%nlo(n).GE.1) THEN
-                   DO j = 1, atoms%nlo(n)
-                      IF ((ABS(atoms%llo(j,n)).EQ.atoms%lda_u(n)%l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
-                           WRITE (*,*) 'LO and LDA+U for same l not implemented'
-                   ENDDO
-                ENDIF
-             ENDIF
-          ENDDO
+          DO i = 1, atoms%n_u
+             n = atoms%lda_u(i)%atomType
+             IF (atoms%nlo(n).GE.1) THEN
+                DO j = 1, atoms%nlo(n)
+                   IF ((ABS(atoms%llo(j,n)).EQ.atoms%lda_u(i)%l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
+                        WRITE (*,*) 'LO and LDA+U for same l not implemented'
+                END DO
+             END IF
+          END DO
           IF (atoms%n_u.GT.0) THEN
              IF (input%secvar)          CALL juDFT_error ("LDA+U and sevcar not implemented",calledby ="inped")
              IF (input%isec1<input%itmax)  CALL juDFT_error("LDA+U and Wu not implemented",calledby ="inped")

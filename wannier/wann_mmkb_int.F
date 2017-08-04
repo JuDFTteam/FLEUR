@@ -7,7 +7,7 @@
       module m_wann_mmkb_int
       contains
       subroutine wann_mmkb_int(
-     >               addnoco,addnoco2,nvd,k1d,k2d,k3d,
+     >               interchi,addnoco,addnoco2,nvd,k1d,k2d,k3d,
      >               n3d,k1,k2,k3,
      >               nv,neigd,nbasfcn,z,nslibd,
      >               k1_b,k2_b,k3_b,
@@ -23,7 +23,7 @@
       integer, intent(in) :: nbnd
       integer, intent(in) :: k1d,k2d,k3d
       real,    intent(in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      complex, intent(in) :: ustep(n3d)
+      complex, intent(in) :: ustep(n3d),interchi
       integer, intent(in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent(in) :: gb(3)
 #if (!defined(CPP_INVERSION)||defined(CPP_SOC))
@@ -81,8 +81,8 @@ c-->     determine index and phase factor
 c     &            stepf,nv_b,z_b,
      &            nbasfcn,cmplx(0.0),
      &            phasusbmat,nv)
-      phasusbmat=conjg(phasusbmat)
-      call CPP_BLAS_cgemm('T','N',nslibd,nslibd_b,nv,cmplx(1.0),
+      phasusbmat=conjg(phasusbmat)            
+      call CPP_BLAS_cgemm('T','N',nslibd,nslibd_b,nv,interchi, 
      &            z(1+addnoco,1),nbasfcn,phasusbmat,nv,cmplx(1.0),
 c     &            z,nbasfcn,phasusbmat,nv,cmplx(1.0),
      &            mmnk,nbnd)
@@ -96,7 +96,7 @@ c     &            stepf,nv_b,z_b,nbasfcn,real(0.0),
 c     &            z,nbasfcn,phasusbmat,nv,real(0.0),
      &            mmnk_tmp,nbnd)
       mmnk(1:nslibd,1:nslibd_b)=mmnk(1:nslibd,1:nslibd_b)+
-     &            mmnk_tmp(1:nslibd,1:nslibd_b)
+     &            mmnk_tmp(1:nslibd,1:nslibd_b)*interchi
 #endif
 
 

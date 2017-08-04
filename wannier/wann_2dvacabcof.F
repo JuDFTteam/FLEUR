@@ -14,10 +14,11 @@ c********************************************************
       SUBROUTINE wann_2dvacabcof(
      >nv2d,nslibd,nvac,nmzd,nmz,omtil,vz,nv,bkpt,z1,
      >nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,z,
-     <ac,bc,u,ue)
+     <ac,bc,u,ue,addnoco,l_ss,qss,jspin)
       
       implicit none
-      integer,intent(in)::nv2d
+      logical,intent(in)::l_ss
+      integer,intent(in)::nv2d,jspin,addnoco
       integer,intent(in)::nslibd
       integer,intent(in)::nvac
       integer,intent(in)::nmzd
@@ -28,14 +29,14 @@ c********************************************************
       real,intent(in)::evac(2)
       real,intent(in)::bbmat(3,3)
       real,intent(in)::delz
-      real,intent(in)::bmat(3,3)
+      real,intent(in)::bmat(3,3) 
       real,intent(in)::z1
       integer,intent(in)::nv
       integer,intent(in)::nvd
       integer,intent(in)::k1(nvd)
       integer,intent(in)::k2(nvd)
       integer,intent(in)::k3(nvd)
-      real,intent(in)::bkpt(3)
+      real,intent(in)::bkpt(3),qss(3)
       complex,intent(out)::ac(nv2d,nslibd,2)
       complex,intent(out)::bc(nv2d,nslibd,2)
       real,intent(out)::u(nmzd,nv2d,nvac)
@@ -52,6 +53,7 @@ c********************************************************
       integer ivac,n2,k,nv2,ik,jvac,symvac,symvacvac,n,l
       real vz0(2),evacp,sign,v(3),ev,scale,zks,arg
       integer kvac1(nv2d),kvac2(nv2d),map2(nvd),i,j
+      real :: qss1,qss2
 
          wronk = 2.0
          const = 1.0 / ( sqrt(omtil)*wronk )
@@ -80,12 +82,23 @@ c********************************************************
             map2(k) = n2
  40      continue
          nv2=n2
+
+      qss1=0.0
+      qss2=0.0
+      if(l_ss.and.jspin.eq.1)then
+        qss1=-qss(1)/2.0
+        qss2=-qss(2)/2.0
+      elseif(l_ss.and.jspin.eq.2)then
+        qss1=qss(1)/2.0
+        qss2=qss(2)/2.0
+      endif
+
          do ivac=1,nvac  
             evacp=evac(ivac)
             sign=3-2*ivac
             do ik = 1,nv2
-               v(1) = bkpt(1) + kvac1(ik)
-               v(2) = bkpt(2) + kvac2(ik)
+               v(1) = bkpt(1) + kvac1(ik)+qss1
+               v(2) = bkpt(2) + kvac2(ik)+qss2
                v(3) = 0.
                ev = evacp - 0.5*dot_product(matmul(v,bbmat),v)
                call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),
@@ -139,8 +152,8 @@ c            enddo
                   bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
                   do n = 1,nslibd
-                     ac(l,n,jvac) = ac(l,n,jvac) + z(k,n)*av
-                     bc(l,n,jvac) = bc(l,n,jvac) + z(k,n)*bv
+                     ac(l,n,jvac) = ac(l,n,jvac) + z(k+addnoco,n)*av
+                     bc(l,n,jvac) = bc(l,n,jvac) + z(k+addnoco,n)*bv
                   enddo
            
                enddo
