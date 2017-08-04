@@ -17,7 +17,7 @@ c******************************************************************
       contains
       subroutine wannier_to_lapw(
      >      mpi_comm,eig_id,
-     >      input,lapw,oneD,noco,sym,cell,atoms,
+     >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
      >      l_soc,unigrid,sortrule,band_min,band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -53,6 +53,9 @@ c******************************************************************
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_sphhar),INTENT(IN) :: sphhar
 
 #ifdef CPP_MPI
       include 'mpif.h'
@@ -237,15 +240,11 @@ cccccccccccccccc   initialize the potential   cccccccccccc
 
       open (8,file='pottot',form='unformatted',status='old')
       rewind (8)
-#ifdef CPP_NEVER  
-      call loddop(
-     >      jspd,n3d,odi%n2d,nmzxyd,nmzd,jmtd,nlhd,ntypd,
-     >      jspins,nq3,odi%nq2,nvac,ntype,invs,invs2,film,
-     >      nlh,jri,ntypsd,ntypsy,8,natd,neq,
-     <      iop,dop,iter,vrf,vpw,vz,vzxy,name)
-#else
-      call judft_error("NOT implemented")
-#endif
+
+      call loddop(stars,vacuum,atoms,sphhar,input,sym,
+     >            8,
+     <            iter,vrf,vpw,vz,vzxy)
+
       close (8)
 
       do jspin = 1,jspins

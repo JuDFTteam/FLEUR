@@ -50,6 +50,14 @@ c******************************************************************
 
       implicit none
 
+#include "cpp_double.h"
+#ifdef CPP_MPI
+      include 'mpif.h'
+      integer mpiierr(3)
+      integer cpu_index
+      integer stt(MPI_STATUS_SIZE)
+#endif
+
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -62,14 +70,6 @@ c******************************************************************
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
-
-#include "cpp_double.h"
-#ifdef CPP_MPI
-      include 'mpif.h'
-      integer mpiierr(3)
-      integer cpu_index
-      integer stt(MPI_STATUS_SIZE)
-#endif
 
       integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
       logical, intent (in) :: l_soc

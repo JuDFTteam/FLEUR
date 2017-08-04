@@ -16,7 +16,10 @@ MODULE m_eig66_io
   PUBLIC read_dos,write_dos
 CONTAINS
 
-  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,l_noco,l_create,l_real,l_soc,l_readonly,n_size,mode_in,filename,layers,nstars,ncored,nsld,nat,l_dos,l_mcd,l_orb)RESULT(id)
+  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,&
+                    l_noco,l_create,l_real,l_soc,l_readonly,n_size,mode_in,&
+                    filename,layers,nstars,ncored,nsld,nat,l_dos,l_mcd,l_orb)&
+           RESULT(id)
     USE m_eig66_hdf,ONLY:open_eig_hdf=>open_eig
     USE m_eig66_DA ,ONLY:open_eig_DA=>open_eig
     USE m_eig66_mem,ONLY:open_eig_mem=>open_eig

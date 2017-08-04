@@ -458,7 +458,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       if(wann%l_lapw.and.l_p0)then
          call wannier_to_lapw(
      >      mpi_comm,eig_id,
-     >      input,lapw,oneD,noco,sym,cell,atoms,
+     >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
      >      l_soc,wann%unigrid,i,wann%band_min,wann%band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -540,7 +540,7 @@ c         write(*,*)'alph',alph
 c         write(*,*)'beta',beta
 c         nkqpts=fullnkpts
 c         if(l_sgwf) nkqpts=fullnkpts*fullnqpts 
-         call wann_nocoplot(slice,nnne,!nslibd
+         call wann_nocoplot(atoms,slice,nnne,!nslibd
      >                      amat,bmat,fullnkpts,odi,film,
      >                      natd,ntypd,jmtd,ntype,neq,pos,
      >                      jri,rmsh,alph,beta,fullnqpts,qss,
