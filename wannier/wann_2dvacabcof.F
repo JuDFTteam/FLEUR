@@ -13,10 +13,15 @@ c********************************************************
       CONTAINS
       SUBROUTINE wann_2dvacabcof(
      >nv2d,nslibd,nvac,nmzd,nmz,omtil,vz,nv,bkpt,z1,
-     >nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,z,
+     >nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,zMat,
      <ac,bc,u,ue,addnoco,l_ss,qss,jspin)
-      
+
+      USE m_types
+
       implicit none
+
+      TYPE(t_zMat),INTENT(IN)   :: zMat
+
       logical,intent(in)::l_ss
       integer,intent(in)::nv2d,jspin,addnoco
       integer,intent(in)::nslibd
@@ -41,11 +46,7 @@ c********************************************************
       complex,intent(out)::bc(nv2d,nslibd,2)
       real,intent(out)::u(nmzd,nv2d,nvac)
       real,intent(out)::ue(nmzd,nv2d,nvac)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (IN) :: z(nbasfcn,neigd)
-#else
-      REAL, INTENT (IN) :: z(nbasfcn,neigd)
-#endif
+
       real wronk,const
       complex c_1,av,bv
       real,    allocatable :: dt(:),dte(:)
@@ -151,11 +152,21 @@ c            enddo
                   av = -c_1 * cmplx( dte(l),zks*te(l) )
                   bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
-                  do n = 1,nslibd
-                     ac(l,n,jvac) = ac(l,n,jvac) + z(k+addnoco,n)*av
-                     bc(l,n,jvac) = bc(l,n,jvac) + z(k+addnoco,n)*bv
-                  enddo
-           
+                  IF (zMat%l_real) THEN
+                     do n = 1,nslibd
+                        ac(l,n,jvac) = ac(l,n,jvac) + 
+     +                                 zMat%z_r(k+addnoco,n)*av
+                        bc(l,n,jvac) = bc(l,n,jvac) + 
+     +                                 zMat%z_r(k+addnoco,n)*bv
+                     enddo
+                  ELSE
+                     do n = 1,nslibd
+                        ac(l,n,jvac) = ac(l,n,jvac) + 
+     +                                 zMat%z_c(k+addnoco,n)*av
+                        bc(l,n,jvac) = bc(l,n,jvac) + 
+     +                                 zMat%z_c(k+addnoco,n)*bv
+                     enddo
+                  END IF
                enddo
             enddo !symvac    
          enddo               !loop over ivac

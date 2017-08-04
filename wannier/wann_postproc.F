@@ -7,6 +7,8 @@
       module m_wann_postproc
       contains 
       subroutine wann_postproc(
+     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          lapw,oneD,noco,cell,eig_id,
      >          mpi_comm,wann,l_p0,film,jspins,n2d,
      >          natd,pos,amat,bmat,ntype,neq,zatom,
      >          omtil,l_soc,l_noco,neigd,fullnkpts,
@@ -42,7 +44,7 @@ c***********************************************
       use m_wann_nabla_pauli_rs
       use m_wann_socmat_rs
       use m_wann_perpmag_rs
-      use m_od_types, only : od_inp, od_sym
+      use m_types
       use m_wann_wigner_seitz
       use m_wann_get_mp
       use m_wann_get_kpts
@@ -63,10 +65,24 @@ c***********************************************
       use m_wannier_lapw_gfleur
 #endif
       implicit none
+
+      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_cell),INTENT(IN)      :: cell
+
       type(t_wann), intent(in) :: wann
       logical,      intent(in) :: l_p0
       logical,      intent(in) :: film
-      integer,      intent(in) :: jspins,n2d,mpi_comm
+      integer,      intent(in) :: jspins,n2d,mpi_comm, eig_id, irecl
       integer,      intent(in) :: natd
       real,         intent(in) :: pos(3,natd)
       real,         intent(in) :: amat(3,3),bmat(3,3)
@@ -107,7 +123,7 @@ c***********************************************
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       logical, intent (in) :: slice
-      integer, intent (in) :: kk,nnne,irecl
+      integer, intent (in) :: kk,nnne
       integer, intent (in) :: nv2d,nmzxy,nmz,nq2
       real,    intent (in) :: delz,area,z1,volint
       integer, intent (in) :: ig2(n3d)
@@ -187,7 +203,8 @@ c*********************************************************
       if(wann%l_byindex)  i=1
 
       if(wann%l_plotw90)then
-         CALL juDFT_error("not in this version",calledby ="wann_postproc")
+         CALL juDFT_error("not in this version",
+     +                    calledby ="wann_postproc")
 
 c         call wann_plotw90(i,wann%band_min,wann%band_max,numbands,nwfs,
 c     >   l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -420,6 +437,8 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
 
       if(wann%l_plot_umdat)then
          call wann_plot_um_dat(
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >      lapw,oneD,noco,cell,eig_id,
      >      mpi_comm,i,wann%band_min,wann%band_max,l_soc,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -430,7 +449,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
-     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl,
+     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,
      >      wann%wan90version)
       endif
 
@@ -438,8 +457,9 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       call cpu_time(delta2)
       if(wann%l_lapw.and.l_p0)then
          call wannier_to_lapw(
-     >      mpi_comm,l_soc,
-     >      wann%unigrid,i,wann%band_min,wann%band_max,
+     >      mpi_comm,eig_id,
+     >      input,lapw,oneD,noco,sym,cell,atoms,
+     >      l_soc,wann%unigrid,i,wann%band_min,wann%band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -449,7 +469,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
-     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl,
+     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,
      >      wann%wan90version)
       endif
 

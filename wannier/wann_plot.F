@@ -45,7 +45,7 @@
      >     invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
      >     lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,nnne,kk,
      >     nvd,nlod,llod,nv,lmd,bkpt,omtil,nlo,llo,k1,k2,k3,evac,vz,
-     >     nslibd,nbasfcn,neigd,ff,gg,flo,acof,bcof,ccof,z,
+     >     nslibd,nbasfcn,neigd,ff,gg,flo,acof,bcof,ccof,zMat,
      >     k1d,k2d,k3d,ig,ig2,sk2,phi2,l_noco,l_ss,qss,addnoco,
      >     index_kq,l_sgwf)
 !    *****************************************************
@@ -66,6 +66,7 @@
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
       TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_zMat),INTENT(IN)        :: zMat
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,ikpt,jspin,nv2d
@@ -98,11 +99,7 @@
       real,    intent (in) :: sk2(n2d),phi2(n2d)
       TYPE (od_inp), INTENT (IN) :: odi
       TYPE (od_sym), INTENT (IN) :: ods
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (IN) :: z(nbasfcn,neigd)
-#else
-      REAL, INTENT (IN) :: z(nbasfcn,neigd)
-#endif
+
 !     ..
 !     .. Local Scalars ..
       integer n2,k,j,l
@@ -182,7 +179,7 @@ c make preparations for plotting in vacuum
      +         u(nmzd,nv2d,nvac),ue(nmzd,nv2d,nvac))
          call wann_2dvacabcof(
      >         nv2d,nslibd,nvac,nmzd,nmz,omtil,vz,nv,bkpt,z1,
-     >         nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,z,
+     >         nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,zMat,
      <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
       endif
 
@@ -196,7 +193,7 @@ c make preparations for plotting in vacuum
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:),
      >         nv,bkpt,z1,odi,ods,
      >         nvd,k1,k2,k3,evac,
-     >         bbmat,delz,bmat,nbasfcn,neigd,z,
+     >         bbmat,delz,bmat,nbasfcn,neigd,zMat,
      >         n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,phi2,k1d,k2d,k3d,
      <         ac_1,bc_1,u_1,ue_1,addnoco,l_ss,qss,jspin)
       endif !preparations for vacuum   
@@ -309,14 +306,14 @@ c..loop by the bands
                   s  = SQRT(dot_PRODUCT(pos(:,na)-pt,pos(:,na)-pt))
                   IF (s<rmsh(jri(nt),nt)) THEN
                     CALL wann_real(
-     >                   pt,nt,na,0,1,bkpt,
+     >                   pt,nt,na,0,1,bkpt,nbn,
      >                   n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >                   omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >                   ccof(:,nbn,:,:),z(:,nbn),
+     >                   ccof(:,nbn,:,:),zMat,
      >                   nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <                   xdnout)
                     xdnout=xdnout*factor
@@ -342,7 +339,7 @@ c..loop by the bands
                 if(nvac==1)jvac=1
                 call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
      >            nmz,delz,bmat,bbmat,evac,bkpt,vz,jspin,k1,k2,k3,nvd, 
-     >            nbasfcn,neigd,z(:,nbn),nv,omtil,nslibd,ac(:,nbn,ivac),
+     >            nbasfcn,neigd,nv,omtil,nslibd,ac(:,nbn,ivac),
      &             bc(:,nbn,ivac),
      &            u(:,:,jvac),ue(:,:,jvac),xdnout)
                 xdnout=xdnout*factor
@@ -390,14 +387,14 @@ c     <              xdnout)
               END IF
              END IF
              CALL wann_real(
-     >             point,0,0,0,2,bkpt,
+     >             point,0,0,0,2,bkpt,nbn,
      >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >             omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >             ccof(:,nbn,:,:),z(:,nbn),
+     >             ccof(:,nbn,:,:),zMat,
      >             nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <             xdnout)
              xdnout=xdnout*factor
