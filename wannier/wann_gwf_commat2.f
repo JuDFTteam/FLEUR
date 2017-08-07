@@ -4,7 +4,7 @@ c  composite matrices as  c
 c  input for wannier90    c
 c*************************c
       module m_wann_gwf_commat2
-      USE m_fleurenv
+      USE m_juDFT
       implicit none
       contains
 
@@ -101,7 +101,7 @@ c*************************c
       inquire(file='proj',exist=l_proj)
       if(.not.l_proj) write(*,*)'missing: proj'
       if(l_miss.or.(.not.l_exist).or.(.not.l_proj))
-     >   call fleur_err("missing file(s) for HDWFs")
+     >   call juDFT_error("missing file(s) for HDWFs")
 
 ! get number of bands and wfs from proj
       open(405,file='proj',status='old')
@@ -238,7 +238,7 @@ c*****************************c
      >                         gb_q(1:3,1:nntot_q,q))
                   mmn(:,:,nn,ikqpt)=mmnq(:,:,nq,k)
                else ! otherwise problem
-                  call fleur_err("problem in overlap mmn gwf",
+                  call juDFT_error("problem in overlap mmn gwf",
      >                        calledby="wann_gwf_commat")
                endif
              enddo!nn
@@ -318,7 +318,7 @@ c*****************************c
                      enddo
                   enddo
                else ! otherwise problem
-                  call fleur_err("problem in overlap mmn gwf",
+                  call juDFT_error("problem in overlap mmn gwf",
      >                        calledby="wann_gwf_commat")
                endif
              enddo!nn

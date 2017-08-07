@@ -20,6 +20,7 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
+     >      lapw,oneD,noco,cell,
      >      l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -79,6 +80,10 @@ c*******************************************c
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_banddos),INTENT(IN)   :: banddos
+      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_cell),INTENT(IN)      :: cell
 
 c     ..scalar arguments..
       character(len=20),intent(in) :: param_file
@@ -166,15 +171,6 @@ c      complex, allocatable :: uHuold(:,:)
       complex, allocatable :: tulod_soc(:,:,:,:,:)
       complex, allocatable :: tulou_soc(:,:,:,:,:)
       complex, allocatable :: tuloulo_soc(:,:,:,:,:,:)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, allocatable :: z(:,:),zz(:,:)
-      complex, allocatable :: z_b(:,:)
-      complex, allocatable :: z_b2(:,:)
-#else
-      real,    allocatable :: z(:,:),zz(:,:)
-      real,    allocatable :: z_b(:,:)
-      real,    allocatable :: z_b2(:,:)
-#endif
 
 c     ..local arrays..
       character(len=2) :: spin012(0:2)
@@ -237,6 +233,8 @@ c     ..local scalars..
       complex :: ci
 
       TYPE(t_usdus) :: usdus
+      TYPE(t_zmat)  :: zMat, zzMat, zMat_b, zMat_b2
+      TYPE(t_lapw)  :: lapw_b, lapw_b2
 
 
 c     ..initializations..
@@ -934,7 +932,7 @@ c        write(*,*)irank,ikpt
         i_rec = i_rec + 1
 c      if (mod(i_rec-1,isize).eq.irank) then
 
-      allocate ( zz(nbasfcn,neigd),eigg(neigd) )
+      allocate ( eigg(neigd) )
 
           n_start=1
           n_end=neigd
@@ -952,8 +950,21 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
-      allocate ( z_b(nbasfcn,neigd), we_b(neigd) )
-      allocate ( z_b2(nbasfcn,neigd), we_b2(neigd) )
+      zMat_b%l_real = zzMat%l_real
+      zMat_b2%l_real = zzMat%l_real
+      zMat_b%nbasfcn = zzMat%nbasfcn
+      zMat_b2%nbasfcn = zzMat%nbasfcn
+      zMat_b%nbands = zzMat%nbands
+      zMat_b2%nbands = zzMat%nbands
+      IF(zzMat%l_real) THEN
+         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
+      ELSE
+         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
+      END IF
+
+      allocate (we_b(neigd), we_b2(neigd))
 
   !!! the cycle by the nearest neighbors (nntot) for each kpoint
 
@@ -978,11 +989,12 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
         nslibd_b = 0
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      z_b(:,:) = cmplx(0.,0.)
-#else
-      z_b(:,:) = 0.
-#endif
+      IF(zzMat%l_real) THEN
+         zMat_b%z_r = 0.0
+      ELSE
+         zMat_b%z_c = CMPLX(0.0,0.0)
+      END IF
+
       eig_b(:) = 0.
 
         do i = 1,nbands_b
@@ -1003,9 +1015,15 @@ c      if (mod(i_rec-1,isize).eq.irank) then
             else
                funbas = nv_b(jspin) + nlotot
             endif
-            do  j = 1,funbas
-              z_b(j,nslibd_b) = zz(j,i)
-            enddo
+            IF (zzMat%l_real) THEN
+               do j = 1,funbas
+                  zMat_b%z_r(j,nslibd_b) = zzMat%z_r(j,i)
+               enddo
+            ELSE
+               do j = 1,funbas
+                  zMat_b%z_c(j,nslibd_b) = zzMat%z_c(j,i)
+               enddo
+            END IF
           endif
         enddo
 
@@ -1025,7 +1043,7 @@ c***********************************************************
      >            tau,
      x            bkpt_b,k1_b(:,:),
      x            k2_b(:,:),k3_b(:,:),
-     x            z_b,nsfactor_b)
+     x            zMat_b,nsfactor_b)
       else
          nsfactor_b=cmplx(1.0,0.0)
       endif
@@ -1042,20 +1060,17 @@ c***********************************************************
      >          ccof_b(-llod:llod,noccbd_b,nlod,natd) )
 
       call cpu_time(t0)
-      call abcof(
-     >        lmaxd,ntypd,neigd,noccbd_b,natd,nop,nvd,wannierspin,
-     >        lmd,nbasfcn,llod,nlod,nlotot,invtab,
-     >        ntype,mrot,ngopr1,taual,neq,lmax,rmt,omtil,
-     >        bmat,bbmat,bkpt_b,
-     >        k1_b,k2_b,k3_b,nv_b,nmat_b,noccbd_b,z_b,
-     >        us(0,1,jspin),dus(0,1,jspin),uds(0,1,jspin),
-     >        duds(0,1,jspin),ddn(0,1,jspin),invsat,invsatnr,
-     >        ulos(1,1,jspin),uulon(1,1,jspin),dulon(1,1,jspin),
-     >        dulos(1,1,jspin),llo,nlo,l_dulo,lapw_l,
-     >        l_noco,l_ss,jspin,alph_i,beta_i,qpt_i,
-     >        kveclo_b,odi,ods,
-     <        acof_b(1,0,1),bcof_b(1,0,1),
-     <        ccof_b(-llod,1,1,1))
+
+      lapw_b = lapw
+      lapw_b%k1 = k1_b
+      lapw_b%k2 = k2_b
+      lapw_b%k3 = k3_b
+      lapw_b%nmat = nmat_b
+      lapw_b%nv = nv_b
+
+      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
+     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
+     +           acof_b,bcof_b,ccof_b,zMat_b)
          
       call wann_abinv(
      >        ntypd,natd,noccbd_b,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -1076,6 +1091,9 @@ c***********************************************************
           eigg = 0.
           call cpu_time(t0)
 
+          WRITE(*,*) 'Here probably the wrong record is read in'
+          WRITE(*,*) 'Should eig_id not be dependent on iqpt_b?'
+          WRITE(*,*) '(in wann_uHu)'
           CALL cdn_read(
      >                  eig_id,
      >                  nvd,jspd,irank,isize,kptibz_b2,jspin,nbasfcn, !wannierspin instead of jspd?
@@ -1086,11 +1104,12 @@ c***********************************************************
 
         nslibd_b2 = 0
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      z_b2(:,:) = cmplx(0.,0.)
-#else
-      z_b2(:,:) = 0.
-#endif
+      IF(zzMat%l_real) THEN
+         zMat_b2%z_r = 0.0
+      ELSE
+         zMat_b2%z_c = CMPLX(0.0,0.0)
+      END IF
+
       eig_b2(:) = 0.
 
         do i = 1,nbands_b2
@@ -1111,9 +1130,15 @@ c***********************************************************
             else
                funbas = nv_b2(jspin_b) + nlotot
             endif
-            do  j = 1,funbas
-              z_b2(j,nslibd_b2) = zz(j,i)
-            enddo
+            IF (zzMat%l_real) THEN
+               do j = 1,funbas
+                  zMat_b2%z_r(j,nslibd_b2) = zzMat%z_r(j,i)
+               enddo
+            ELSE
+               do j = 1,funbas
+                  zMat_b2%z_c(j,nslibd_b2) = zzMat%z_c(j,i)
+               enddo
+            END IF
           endif
         enddo
 
@@ -1133,7 +1158,7 @@ c***********************************************************
      >            tau,
      x            bkpt_b2,k1_b2(:,:),
      x            k2_b2(:,:),k3_b2(:,:),
-     x            z_b2,nsfactor_b2)
+     x            zMat_b2,nsfactor_b2)
       else
          nsfactor_b2=cmplx(1.0,0.0)
       endif
@@ -1150,20 +1175,17 @@ c***********************************************************
      >          ccof_b2(-llod:llod,noccbd_b2,nlod,natd) )
 
       call cpu_time(t0)
-      call abcof(
-     >        lmaxd,ntypd,neigd,noccbd_b2,natd,nop,nvd,wannierspin,
-     >        lmd,nbasfcn,llod,nlod,nlotot,invtab,
-     >        ntype,mrot,ngopr1,taual,neq,lmax,rmt,omtil,
-     >        bmat,bbmat,bkpt_b2,
-     >        k1_b2,k2_b2,k3_b2,nv_b2,nmat_b2,noccbd_b2,z_b2,
-     >        us(0,1,jspin_b),dus(0,1,jspin_b),uds(0,1,jspin_b),
-     >        duds(0,1,jspin_b),ddn(0,1,jspin_b),invsat,invsatnr,
-     >        ulos(1,1,jspin_b),uulon(1,1,jspin_b),dulon(1,1,jspin_b),
-     >        dulos(1,1,jspin_b),llo,nlo,l_dulo,lapw_l,
-     >        l_noco,l_ss,jspin_b,alph_i,beta_i,qpt_i,
-     >        kveclo_b2,odi,ods,
-     <        acof_b2(1,0,1),bcof_b2(1,0,1),
-     <        ccof_b2(-llod,1,1,1))
+
+      lapw_b2 = lapw
+      lapw_b2%k1 = k1_b2
+      lapw_b2%k2 = k2_b2
+      lapw_b2%k3 = k3_b2
+      lapw_b2%nmat = nmat_b2
+      lapw_b2%nv = nv_b2
+
+      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
+     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
+     +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
          
       call wann_abinv(
      >        ntypd,natd,noccbd_b2,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -1268,7 +1290,7 @@ c      endif
      >            gb(:,ikpt_b,ikpt),
      >            k1_b2(:,jspin_b),k2_b2(:,jspin_b),k3_b2(:,jspin_b),
      >            gb(:,ikpt_b2,ikpt),
-     >            bkpt,bbmat,vpw(:,jspin3),z_b,z_b2,rgphs,
+     >            bkpt,bbmat,vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
      >            ustep,ig,jspin.eq.jspin_b,sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
             call cpu_time(t1)
@@ -1294,7 +1316,7 @@ c      endif
      >            vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
      >            jspin,jspin_b,doublespin,k1_b,k2_b,k3_b,
      >            k1_b2,k2_b2,k3_b2,wannierspin,nvd,nbasfcn,neigd,
-     >            z_b,z_b2,nv_b,nv_b2,omtil,gb(:,ikpt_b,ikpt),
+     >            zMat_b,zMat_b2,nv_b,nv_b2,omtil,gb(:,ikpt_b,ikpt),
      >            gb(:,ikpt_b2,ikpt),sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
             call cpu_time(t1)
@@ -1304,12 +1326,13 @@ c      endif
 
             call cpu_time(t0)
             call wann_uHu_od_vac(
+     >            DIMENSION,oneD,vacuum,stars,cell,
      >            cmplx(1.,0.),l_noco,l_soc,jspins,nlotot,nbnd,z1,
      >            nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,ig,nmzxy,nmz,
      >            delz,ig2,bbmat,evac(1,jspin4),evac(1,jspin4_b),bkpt_b,
      >            bkpt_b2,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
      >            jspin,jspin_b,doublespin,k1_b,k2_b,k3_b,k1_b2,k2_b2,
-     >            k3_b2,wannierspin,nvd,area,nbasfcn,neigd,z_b,z_b2,
+     >          k3_b2,wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
      >            nv_b,nv_b2,sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
      >            gb(:,ikpt_b2,ikpt),qpt_i,sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
@@ -1337,9 +1360,8 @@ c      endif
 
         deallocate (acof_b,bcof_b,ccof_b)
 15      continue ! end of loop by the nearest k-neighbors
-        deallocate ( z_b,we_b )
-        deallocate ( z_b2,we_b2 )
-      deallocate ( zz,eigg )
+        deallocate ( we_b,we_b2 )
+      deallocate ( eigg )
 
       endif   ! loop by processors
 
