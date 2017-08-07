@@ -21,7 +21,7 @@ wannier/wann_get_qpts.f
 wannier/wann_gwf_anglmom.f
 wannier/wann_gwf_auxbrav.F
 wannier/wann_gwf_auxovlp.F
-wannier/wann_gwf_commat2.f
+#wannier/wann_gwf_commat2.f
 wannier/wann_gwf_commat.f
 #wannier/wann_gwf_commat_old.f
 wannier/wann_gwf_tools.f
@@ -43,9 +43,9 @@ wannier/wann_mmk0_updown_sph.f
 wannier/wann_mmk0_vac.F
 wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
-wannier/wann_mmkb_od_vac2.F
+#wannier/wann_mmkb_od_vac2.F
 wannier/wann_mmkb_od_vac.F
-wannier/wann_mmkb_sph2.F
+#wannier/wann_mmkb_sph2.F
 wannier/wann_mmkb_sph.F
 wannier/wann_mmkb_vac.F
 wannier/wann_mmnk_symm.f
@@ -54,7 +54,7 @@ wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
 wannier/wann_optional.f
 wannier/wann_orbcomp.f
-wannier/wann_orbmag.F
+#wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
 wannier/wann_perpmag_rs.f
 wannier/wann_plot.F
