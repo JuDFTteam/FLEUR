@@ -16,7 +16,7 @@ c*******************************************c
 c                  J.-P. Hanke, Feb. 2016   c
 c*******************************************c
       MODULE m_wann_uHu_dmi
-      USE m_fleurenv
+      USE m_juDFT
       CONTAINS
       SUBROUTINE wann_uHu_dmi(
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -40,8 +40,8 @@ c*******************************************c
       use m_abcof
       use m_radfun
       use m_radflo
-      use m_cdnread, only : cdn_read0, cdn_read
-      use m_od_types, only : od_inp, od_sym
+      use m_cdnread
+      use m_types
       use m_loddop
       use m_constants, only : pimach
       use m_wann_projmethod
@@ -216,7 +216,7 @@ c     ..local scalars..
       integer :: doublespin,doublespin_max,doublespin_start,nrec5
       integer :: aoff,d1,d10,d100
       real    :: tpi,wronk,wk,wk_b,wk_b2
-      real    :: t0,t00,t1,t_tlmplm,t_init
+      real    :: t0,t00,t1,t_myTlmplm,t_init
       real    :: t_int,t_sph,t_vac,t_abcof,t_eig,t_total
       real    :: efermi,htr2ev
       real    :: theta_i, thetab_i, phi_i, phib_i,dth,dph
@@ -234,7 +234,7 @@ c     ..initializations..
       call cpu_time(t00)
 
       ci = cmplx(0.,1.)
-      t_init = 0.; t_tlmplm = 0.; t_eig = 0.
+      t_init = 0.; t_myTlmplm = 0.; t_eig = 0.
       t_abcof = 0.; t_int = 0.; t_sph = 0.
       t_vac = 0.; t_total = 0.
       htr2ev = 27.2
@@ -277,14 +277,14 @@ c-----read the input file to determine what to do
      >         l_p0,
      <         wann)
 
-      if(wann%l_byenergy.and.wann%l_byindex) CALL fleur_err
+      if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wannier")
-      if(wann%l_byenergy.and.wann%l_bynumber) CALL fleur_err
+      if(wann%l_byenergy.and.wann%l_bynumber) CALL juDFT_error
      +     ("byenergy.and.bynumber",calledby ="wannier")
-      if(wann%l_bynumber.and.wann%l_byindex) CALL fleur_err
+      if(wann%l_bynumber.and.wann%l_byindex) CALL juDFT_error
      +     ("bynumber.and.byindex",calledby ="wannier")
       if(.not.(wann%l_bynumber.or.wann%l_byindex.or.wann%l_byenergy))
-     &     CALL fleur_err("no rule to sort bands",calledby ="wannier")
+     &     CALL juDFT_error("no rule to sort bands",calledby ="wannier")
 
 
       efermi=ef
@@ -300,28 +300,28 @@ c**************************************************************
       if (wann%l_bzsym) then
          l_file=.false.
          inquire(file='w90kpts',exist=l_file)
-         if(.not.l_file)  CALL fleur_err
+         if(.not.l_file)  CALL juDFT_error
      +        ("w90kpts not found, needed if bzsym",calledby ="wannier")
          open(412,file='w90kpts',form='formatted')
          read(412,*)fullnkpts
          close(412)
          if(l_p0)print*,"fullnkpts=",fullnkpts
-         if(fullnkpts<nkpts) CALL fleur_err("fullnkpts.lt.nkpts"
+         if(fullnkpts<nkpts) CALL juDFT_error("fullnkpts.lt.nkpts"
      +        ,calledby ="wannier")
          allocate(irreduc(fullnkpts),mapkoper(fullnkpts))
          allocate(shiftkpt(3,fullnkpts))
          l_file=.false.
          inquire(file='kptsmap',exist=l_file)
-         if(.not.l_file)  CALL fleur_err
+         if(.not.l_file)  CALL juDFT_error
      +        ("kptsmap not found, needed if bzsym",calledby ="wannier")
          open(713,file='kptsmap')
          do i=1,fullnkpts
             read(713,*)kpt,irreduc(i),mapkoper(i),shiftkpt(:,i)
-            if(kpt/=i) CALL fleur_err("kpt.ne.i",calledby ="wannier")
+            if(kpt/=i) CALL juDFT_error("kpt.ne.i",calledby ="wannier")
             if(l_p0)print*,i,irreduc(i),mapkoper(i)
          enddo
          close(713)
-         if(maxval(irreduc(:))/=nkpts) CALL fleur_err
+         if(maxval(irreduc(:))/=nkpts) CALL juDFT_error
      +        ("max(irreduc(:))/=nkpts",calledby ="wannier")
       else
          fullnkpts=nkpts
@@ -357,7 +357,7 @@ ccccccccccccccc   read in the bkpts file  ccccccccccccccccc
 c**********************************************************
        l_bkpts = .false.
        inquire (file='bkpts',exist=l_bkpts)
-       if (.not.l_bkpts)  CALL fleur_err("need bkpts for matrixmmn"
+       if (.not.l_bkpts)  CALL juDFT_error("need bkpts for matrixmmn"
      +      ,calledby ="wannier")
        open (202,file='bkpts',form='formatted',status='old')
        rewind (202)
@@ -372,9 +372,9 @@ c**********************************************************
         do nn=1,nntot
          read (202,'(2i6,3x,3i4)')
      &     ikpt_help,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
-         if (ikpt/=ikpt_help)  CALL fleur_err("ikpt.ne.ikpt_help"
+         if (ikpt/=ikpt_help)  CALL juDFT_error("ikpt.ne.ikpt_help"
      +        ,calledby ="wannier")       
-         if (bpt(nn,ikpt)>fullnkpts)  CALL fleur_err("bpt.gt.fullnkpts"
+         if (bpt(nn,ikpt)>fullnkpts) CALL juDFT_error("bpt.gt.fullnkpts"
      +        ,calledby ="wannier")
         enddo
        enddo
@@ -387,7 +387,7 @@ c**********************************************************
       if (l_gwf.or.l_ms) then ! for Omega functional minimization
        l_bqpts = .false.
        inquire (file='bqpts',exist=l_bqpts)
-       if (.not.l_bqpts)  CALL fleur_err("need bqpts for matrixmmn"
+       if (.not.l_bqpts)  CALL juDFT_error("need bqpts for matrixmmn"
      +     ,calledby ="wannier")
        open (202,file='bqpts',form='formatted',status='old')
        rewind (202)
@@ -402,10 +402,10 @@ c**********************************************************
         do nn=1,nntot_q
          read (202,'(2i6,3x,3i4)')
      &     iqpt_help,bpt_q(nn,iqpt),(gb_q(i,nn,iqpt),i=1,3)
-         if (iqpt/=iqpt_help)  CALL fleur_err("iqpt.ne.iqpt_help"
+         if (iqpt/=iqpt_help)  CALL juDFT_error("iqpt.ne.iqpt_help"
      +        ,calledby ="wannier")
          if (bpt_q(nn,iqpt)>fullnqpts)
-     &        CALL fleur_err("bpt_q.gt.fullnqpts",calledby ="wannier")
+     &        CALL juDFT_error("bpt_q.gt.fullnqpts",calledby ="wannier")
         enddo
        enddo
        close (202)
@@ -711,7 +711,7 @@ c..reading the proj.1 / proj.2 / proj file
          close (203)
        elseif(wann%l_projmethod.or.wann%l_bestproj
      &                         .or.wann%l_matrixamn)then
-          CALL fleur_err("no proj/proj.1/proj.2",calledby ="wannier")
+          CALL juDFT_error("no proj/proj.1/proj.2",calledby ="wannier")
        endif  
 
 
@@ -825,7 +825,7 @@ c       na = na + neq(n)
      >        tdulo(:,:,:,:,:,doublespin),tulod(:,:,:,:,:,doublespin),
      >        tuloulo(:,:,:,:,:,:,doublespin))
          call cpu_time(t1)
-         t_tlmplm = t_tlmplm + t1-t0
+         t_myTlmplm = t_myTlmplm + t1-t0
 
       endif!iqpt.eq.1
 
@@ -863,7 +863,7 @@ c       na = na + neq(n)
      >     tdulo_soc(:,:,:,:,:,tspin),tulod_soc(:,:,:,:,:,tspin),
      >     tuloulo_soc(:,:,:,:,:,:,tspin))
          call cpu_time(t1)
-         t_tlmplm = t_tlmplm + t1-t0
+         t_myTlmplm = t_myTlmplm + t1-t0
          enddo!tspin 
       endif!l_soc
 
@@ -1412,7 +1412,7 @@ c************************************************c
       t_total = t1-t00
       if(l_p0) then
        write(*,900)'t_init  =',t_init
-       write(*,900)'t_tlmplm=',t_tlmplm
+       write(*,900)'t_myTlmplm=',t_myTlmplm
        write(*,900)'t_eig   =',t_eig   
        write(*,900)'t_abcof =',t_abcof 
        write(*,900)'t_int   =',t_int   

@@ -41,7 +41,7 @@ c*******************************************c
       use m_abcof
       use m_radfun
       use m_radflo
-      use m_cdnread, only : cdn_read0, cdn_read
+      use m_cdnread
       use m_loddop
       use m_constants, only : pimach
       use m_wann_projmethod
@@ -941,24 +941,14 @@ c      if (mod(i_rec-1,isize).eq.irank) then
  
       call cpu_time(t0)
       ! get current bkpt vector
-#if(!defined(CPP_HDF) && defined(CPP_MPI))
-        call wann_read_eig(
-     >              lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
+
+      CALL cdn_read(
+     >              eig_id,
+     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
+     >              l_ss,l_noco,neigd,n_start,n_end,
      <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,
-     <              eigg,zz,cp_time,66,l_gwf,iqpt)
-#else
-        call cdn_read(
-     >                lmaxd,ntypd,nlod,neigd,nvd,jspd,!wannierspin,
-     >                irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >                l_ss,l_noco,nrec,kptibz,66,
-     >                neigd,n_start,n_end,
-     <                nmat,nv,ello,evdu,epar,kveclo,
-     <                k1,k2,k3,bkpt,wk,nbands,
-     <                eigg,zz,cp_time)
-#endif
+     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
+
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
@@ -978,25 +968,14 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
         eigg = 0.
         call cpu_time(t0)
-#if(!defined(CPP_HDF) && defined(CPP_MPI))
-        call wann_read_eig(
-     >              lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >              irank,isize,kptibz_b,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,irecl,
-     <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,
-     <              eigg,zz,cp_time,66,l_gwf,iqpt)
-#else
-        call cdn_read(
-     >                lmaxd,ntypd,nlod,neigd,nvd,jspd,!wannierspin,
-     >                irank,isize,kptibz_b,jspin,nbasfcn,nlotot,
-     >                l_ss,l_noco,nrec,kptibz_b,66,
-     >                neigd,n_start,n_end,
-     <                nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-     <                k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,
-     <                eigg,zz,cp_time)
 
-#endif
+        CALL cdn_read(
+     >                eig_id,
+     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
+     >                l_ss,l_noco,neigd,n_start,n_end,
+     <                nmat_b,nv_b,ello,evdu,epar,kveclo_b,
+     <                k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
+
         nslibd_b = 0
 
 #if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
@@ -1096,25 +1075,15 @@ c***********************************************************
 
           eigg = 0.
           call cpu_time(t0)
-#if(!defined(CPP_HDF) && defined(CPP_MPI))
-        call wann_read_eig(
-     >              lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >              irank,isize,kptibz_b2,jspin_b,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec_b,irecl,
-     <              nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
-     <              k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
-     <              eigg,zz,cp_time,66,l_gwf,iqpt)
-#else
-        call cdn_read(
-     >                lmaxd,ntypd,nlod,neigd,nvd,jspd,!wannierspin,
-     >                irank,isize,kptibz_b2,jspin_b,nbasfcn,nlotot,
-     >                l_ss,l_noco,nrec_b,kptibz_b2,66,
-     >                neigd,n_start,n_end,
-     <                nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
-     <                k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
-     <                eigg,zz,cp_time)
 
-#endif
+          CALL cdn_read(
+     >                  eig_id,
+     >                  nvd,jspd,irank,isize,kptibz_b2,jspin,nbasfcn, !wannierspin instead of jspd?
+     >                  l_ss,l_noco,neigd,n_start,n_end,
+     <                  nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
+     <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
+     <                  eigg,zzMat)
+
         nslibd_b2 = 0
 
 #if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
