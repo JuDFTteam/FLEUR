@@ -24,7 +24,10 @@ c***************************************************************
      <     mmn)
 
       USE m_types
-      use m_constants, only : pimach
+      use m_constants
+      USE m_vacuz
+      USE m_vacudz
+
       implicit none
 
       TYPE(t_zmat), INTENT(IN) :: zMat
@@ -67,9 +70,6 @@ c     ..local scalars..
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
-
-c..   external functions
-      external vacudz,vacuz
 
       allocate ( ac(nv2d,neigd),bc(nv2d,neigd),dt(nv2d),
      +           dte(nv2d),t(nv2d),te(nv2d),tei(nv2d),
@@ -137,9 +137,9 @@ c.. the body of the routine
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
          ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
-         call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
+         call vacuz(ev,vz(1:,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
      +        u(1,ik))
-         call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te(ik),
+         call vacudz(ev,vz(1:,ivac),vz0(ivac),nmz,delz,te(ik),
      +        dte(ik),tei(ik),ue(1,ik),dt(ik),
      +        u(1,ik))
          scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))

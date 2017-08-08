@@ -25,8 +25,11 @@ c***************************************************************
      <     mmn)
 
       USE m_types
-      use m_constants, only : pimach
+      use m_constants
       use m_intgr, only : intgz0
+      USE m_vacuz
+      USE m_vacudz
+
       implicit none
 
       TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
@@ -75,11 +78,6 @@ c     ..local scalars..
       integer symvac,symvacvac
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
-
-c..   external functions
-      external vacudz,vacuz
-c      real dotirp
-c      external dotirp  ! module now
 
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),

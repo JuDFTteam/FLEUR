@@ -17,6 +17,8 @@ c********************************************************
      <ac,bc,u,ue,addnoco,l_ss,qss,jspin)
 
       USE m_types
+      USE m_vacuz
+      USE m_vacudz
 
       implicit none
 

@@ -18,10 +18,13 @@ c***************************************c
      >     ico,k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,nbasfcn,neigd,
      >     zMat,zMat_b,nv,nv_b,omtil,gb,gb2,sign2,uHu)
 #include "cpp_double.h"
+
       USE m_types
       use m_constants, only : pimach
       use m_intgr, only : intgz0
       use m_d2fdz2cmplx
+      USE m_vacuz
+      USE m_vacudz
 
       implicit none
 
@@ -84,9 +87,6 @@ c      complex :: tuu,tud,tdu,tdd
       character(len=20) :: fname
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
-
-c..   external functions
-      external vacudz,vacuz
 
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),

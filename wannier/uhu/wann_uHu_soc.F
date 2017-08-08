@@ -28,12 +28,12 @@ c*****************************************c
       USE m_constants
       USE m_wann_uHu_soc_tlo
       USE m_types
+      USE m_anglso
 
       IMPLICIT NONE
 
       REAL :: sgml
-      COMPLEX :: anglso
-      EXTERNAL sgml,anglso
+      EXTERNAL sgml
 C     .. Intrinsic Functions ..
       INTRINSIC abs,cmplx,max,mod
 
