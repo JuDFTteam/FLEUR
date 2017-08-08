@@ -62,7 +62,7 @@ wannier/wann_plot_from_lapw.f
 wannier/wann_plot_symm.f
 wannier/wann_plot_um_dat.F
 wannier/wann_plot_vac.F
-wannier/wann_plotw90.F
+#wannier/wann_plotw90.F
 wannier/wann_postproc.F
 wannier/wann_postproc_setup4.f
 wannier/wann_postproc_setup5.f

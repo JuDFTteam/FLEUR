@@ -20,11 +20,14 @@ c***************************************************************
      >     ig,nmz,delz,ig2,area,bmat,
      >     bbmat,evac,bkpt,vz,
      >     nslibd,jspin,k1,k2,k3,jspd,nvd,
-     >     nbasfcn,neigd,z,nv,omtil,
+     >     nbasfcn,neigd,zMat,nv,omtil,
      <     mmn)
 
+      USE m_types
       use m_constants, only : pimach
       implicit none
+
+      TYPE(t_zmat), INTENT(IN) :: zMat
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
@@ -48,12 +51,6 @@ c     ..array arguments..
       integer, intent (in) :: k2(:,:) !k2(nvd,jspd)
       integer, intent (in) :: k3(:,:) !k3(nvd,jspd)
       complex, intent (inout) :: mmn(:,:) !mmn(nslibd,nslibd)
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(:,:) !z(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(:,:) !z(nbasfcn,neigd)
-#endif
 
 c     ..basis wavefunctions in the vacuum
       complex, allocatable :: ac(:,:),bc(:,:)
@@ -175,10 +172,17 @@ c-----> construct a and b coefficients
           av = -c_1 * cmplx( dte(l),zks*te(l) )
           bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
-          do n = 1,nslibd
-            ac(l,n) = ac(l,n) + z(k+addnoco,n)*av
-            bc(l,n) = bc(l,n) + z(k+addnoco,n)*bv
-          enddo
+          IF(zMat%l_real) THEN
+             do n = 1,nslibd
+                ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
+                bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+             enddo
+          ELSE
+             do n = 1,nslibd
+                ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
+                bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+             enddo
+          END IF
         enddo
 
         do l = 1,nv2 
