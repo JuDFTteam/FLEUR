@@ -21,7 +21,7 @@ c***************************************************************
      >     bbmat,evac,evac_b,bkpt,bkpt_b,MM,vM,vz,vz_b,odi,
      >     nslibd,nslibd_b,jspin,jspin_b,k1,k2,k3,k1_b,k2_b,k3_b,
      >     jspd,nvd,area,nbasfcn,neigd,
-     >     z,z_b,nv,nv_b,sk2,phi2,omtil,gb,qss,
+     >     zMat,zMat_b,nv,nv_b,sk2,phi2,omtil,gb,qss,
      >     l_q, sign_q,
      <     mmn)
       use m_constants
@@ -38,6 +38,7 @@ c***************************************************************
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_zmat), INTENT(IN)       :: zMat, zMat_b
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
@@ -64,13 +65,6 @@ c     ..array arguments..
       integer, intent (in) :: k1(:,:),k2(:,:),k3(:,:) !k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer, intent (in) :: k1_b(:,:),k2_b(:,:),k3_b(:,:) !k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
       complex, intent (inout) :: mmn(:,:) !mmn(nbnd,nbnd)
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(:,:),z_b(:,:) !z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(:,:),z_b(:,:) !z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#endif
-
 
       !logical, intent (in) :: l_q   ! dealing with q points?
 
@@ -209,14 +203,25 @@ c...for the k-point
      *              cmplx(-duz(l,m)*bess(m) +
      -              uz(l,m)*sk2(irec2)*dbss(m),0.0)/
      /              ((wronk1)*sqrt(omtil))
-               do n = 1,nslibd
-                   acof(l,m,n) = acof(l,m,n) +
-     +                z(k+addnoco,n)*avac
-c     +                 conjg(z(k,n))*avac
-                   bcof(l,m,n) = bcof(l,m,n) +
-     +                z(k+addnoco,n)*bvac
-c     +                 conjg(z(k,n))*bvac
-               enddo
+               IF (zMat%l_real) THEN
+                  do n = 1,nslibd
+                      acof(l,m,n) = acof(l,m,n) +
+     +                   zMat%z_r(k+addnoco,n)*avac
+c     +                    conjg(zMat%z_r(k,n))*avac
+                      bcof(l,m,n) = bcof(l,m,n) +
+     +                   zMat%z_r(k+addnoco,n)*bvac
+c     +                    conjg(zMat%z_r(k,n))*bvac
+                  enddo
+               ELSE
+                  do n = 1,nslibd
+                      acof(l,m,n) = acof(l,m,n) +
+     +                   zMat%z_c(k+addnoco,n)*avac
+c     +                    conjg(zMat%z_c(k,n))*avac
+                      bcof(l,m,n) = bcof(l,m,n) +
+     +                   zMat%z_c(k+addnoco,n)*bvac
+c     +                    conjg(zMat%z_c(k,n))*bvac
+                  enddo
+               END IF
             enddo      ! -mb:mb
          endif
       enddo
@@ -253,14 +258,25 @@ c...for the b-point
      &              cmplx(-duz_b(l,m)*bess(m) +
      -              uz_b(l,m)*sk2(irec2)*dbss(m),0.0)/
      /              ((wronk1)*sqrt(omtil))
-               do n = 1,nslibd_b
-                   acof_b(l,m,n) = acof_b(l,m,n) +
-     +                z_b(k+addnoco2,n)*avac
-c     +                 conjg(z(k,n))*avac
-                   bcof_b(l,m,n) = bcof_b(l,m,n) +
-     +                z_b(k+addnoco2,n)*bvac
-c     +                 conjg(z(k,n))*bvac
-               enddo
+               IF (zMat_b%l_real) THEN
+                  do n = 1,nslibd_b
+                      acof_b(l,m,n) = acof_b(l,m,n) +
+     +                   zMat_b%z_r(k+addnoco2,n)*avac
+c     +                    conjg(zMat_b%z_r(k,n))*avac
+                      bcof_b(l,m,n) = bcof_b(l,m,n) +
+     +                   zMat_b%z_r(k+addnoco2,n)*bvac
+c     +                    conjg(zMat_b%z_r(k,n))*bvac
+                  enddo
+               ELSE
+                  do n = 1,nslibd_b
+                      acof_b(l,m,n) = acof_b(l,m,n) +
+     +                   zMat_b%z_c(k+addnoco2,n)*avac
+c     +                    conjg(zMat_b%z_c(k,n))*avac
+                      bcof_b(l,m,n) = bcof_b(l,m,n) +
+     +                   zMat_b%z_c(k+addnoco2,n)*bvac
+c     +                    conjg(zMat_b%z_c(k,n))*bvac
+                  enddo
+               END IF
             enddo      ! -mb:mb
          endif 
       enddo          ! k = 1,nv

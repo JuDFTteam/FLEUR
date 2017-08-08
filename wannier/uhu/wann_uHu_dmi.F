@@ -666,7 +666,7 @@ c*****************************************************************c
        IF (l_gwf) THEN
           do iqpt_b=1,nntot_q
             WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
-            eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,
+            eig_idList(iqpt_b)=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,
      +                  DIMENSION%neigd,
      +                  nkpts,wannierspin,atoms%lmaxd,
      +                  atoms%nlod,atoms%ntype,atoms%nlotot,

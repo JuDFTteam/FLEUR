@@ -21,12 +21,16 @@ c***************************************************************
      >     bbmat,evac,evac_b,bkpt,bkpt_b,vz,vz_b,
      >     nslibd,nslibd_b,jspin,jspin_b,
      >     k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,
-     >     nbasfcn,neigd,z,z_b,nv,nv_b,omtil,gb,
+     >     nbasfcn,neigd,zMat,zMat_b,nv,nv_b,omtil,gb,
      <     mmn)
 
+      USE m_types
       use m_constants, only : pimach
       use m_intgr, only : intgz0
       implicit none
+
+      TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
       integer, intent (in) :: nlotot,jspin_b
@@ -48,12 +52,6 @@ c     ..array arguments..
       integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer,intent(in)::k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
       complex, intent (inout) :: mmn(nbnd,nbnd)
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#endif
 
 c     ..basis wavefunctions in the vacuum
       complex, allocatable :: ac(:,:),bc(:,:),ac_b(:,:),bc_b(:,:)
@@ -232,10 +230,17 @@ c-----> construct a and b coefficients for the k-point
          av = -c_1 * cmplx( dte(l),zks*te(l) )
          bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
-         do n = 1,nslibd
-            ac(l,n) = ac(l,n) + z(k+addnoco,n)*av
-            bc(l,n) = bc(l,n) + z(k+addnoco,n)*bv
-         enddo
+         IF(zMat%l_real) THEN
+            do n = 1,nslibd
+               ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+            enddo
+         ELSE
+            do n = 1,nslibd
+               ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+            enddo
+         END IF
       enddo
 
 c...now for the k+b point
@@ -269,10 +274,17 @@ c-----> construct a and b coefficients for the k+b point
          av = -c_1 * cmplx( dte_b(l),zks*te_b(l) )
          bv =  c_1 * cmplx( dt_b(l),zks*t_b(l) )
 c-----> loop over basis functions
-         do n = 1,nslibd_b
-            ac_b(l,n) = ac_b(l,n) + z_b(k+addnoco2,n)*av
-            bc_b(l,n) = bc_b(l,n) + z_b(k+addnoco2,n)*bv
-         enddo
+         IF(zMat_b%l_real) THEN
+            do n = 1,nslibd_b
+               ac_b(l,n) = ac_b(l,n) + zMat_b%z_r(k+addnoco,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%z_r(k+addnoco,n)*bv
+            enddo
+         ELSE
+            do n = 1,nslibd_b
+               ac_b(l,n) = ac_b(l,n) + zMat_b%z_c(k+addnoco,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%z_c(k+addnoco,n)*bv
+            enddo
+         END IF
       enddo
 
 
