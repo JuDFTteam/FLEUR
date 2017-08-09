@@ -160,7 +160,7 @@ c***************************************************
      <         kpts,kpoints)
       if (kpts /= fullnkpts)
      +  CALL juDFT_error ('mismatch in number of kpoints',
-     +                  calledby="wann_read_inp")
+     +                  calledby="wann_postproc")
 
       call wann_get_kpts(
      >         wann%l_bzsym,film,odi%d1,.true.,
@@ -173,9 +173,16 @@ c*********************************************************
      <         num)
 
       if(wann%l_wannierize.and.l_p0)then
+#ifndef CPP_WANN
+         WRITE(*,*) 'At this point a wannierization has to be performed'
+         WRITE(*,*) 'but the Wannier90 library is not linked!'
+         CALL juDFT_error ('Wannierization without Wannier90 library',
+     +                     calledby="wann_postproc")
+#else
          call wann_wannierize(
      >            film,wann%l_bzsym,jspins,
      >            natd,pos,amat,bmat,ntype,neq,zatom)
+#endif
       endif
 
       if(wann%l_dipole2.and.l_p0)then
@@ -256,7 +263,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
             rvecind=rvecind+1
             if (rvecind > rvecnum)
      +        CALL juDFT_error ('mismatch in number of kpoints',
-     +                         calledby="wann_read_inp")
+     +                         calledby="wann_postproc")
 
             rvec(1,rvecind)=r1
             rvec(2,rvecind)=r2

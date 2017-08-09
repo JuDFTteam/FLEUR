@@ -64,9 +64,9 @@ wannier/wann_plot_um_dat.F
 wannier/wann_plot_vac.F
 #wannier/wann_plotw90.F
 wannier/wann_postproc.F
-wannier/wann_postproc_setup4.f
-wannier/wann_postproc_setup5.f
-wannier/wann_postproc_setup.f
+wannier/wann_postproc_setup4.F
+wannier/wann_postproc_setup5.F
+wannier/wann_postproc_setup.F
 wannier/wann_projgen.F
 wannier/wann_projmethod.F
 wannier/wann_radovlp_integrals.F
@@ -83,8 +83,8 @@ wannier/wann_tlmw.f
 wannier/wann_ujugaunt.F
 wannier/wann_updown.F
 wannier/wann_w90kpointgen.f
-wannier/wann_wan90prep.f
-wannier/wann_wannierize.f
+wannier/wann_wan90prep.F
+wannier/wann_wannierize.F
 wannier/wann_wigner_seitz.f
 wannier/wann_write_amn.F
 wannier/wann_write_hsomtx.F

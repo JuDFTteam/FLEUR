@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_postproc_setup
+#ifdef CPP_WANN
       CONTAINS
       SUBROUTINE wann_postproc_setup(
      >           natd,nkpts,kpoints,amat,bmat,
@@ -159,4 +160,5 @@ c     &     ikpt,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
 
 
       END SUBROUTINE wann_postproc_setup
+#endif
       END MODULE m_wann_postproc_setup
