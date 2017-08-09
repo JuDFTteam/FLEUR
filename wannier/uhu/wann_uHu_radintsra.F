@@ -5,10 +5,9 @@
 
       USE m_intgr, ONLY : intgr3
       USE m_constants
-      IMPLICIT NONE
+      USE m_difcub
 
-      REAL difcub
-      EXTERNAL difcub
+      IMPLICIT NONE
       
       REAL, INTENT(IN) :: f(jmtd,2),g(jmtd,2)
       REAL, INTENT(IN) :: vr(jmtd)

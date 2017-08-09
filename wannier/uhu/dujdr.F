@@ -4,10 +4,9 @@
       SUBROUTINE dujdr(jmtd,jri,rmsh,dx,ub,j2,b,l,lmaxd,dub)
 
       USE m_constants
-      IMPLICIT NONE
+      USE m_difcub
 
-      REAL difcub
-      EXTERNAL difcub
+      IMPLICIT NONE
       
       REAL, INTENT(IN) :: rmsh(jmtd),dx
       REAL, INTENT(IN) :: ub(jmtd,2)       ! u(b2)
