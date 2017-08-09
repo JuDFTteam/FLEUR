@@ -89,9 +89,6 @@ C     .. Local Arrays ..
       REAL,    ALLOCATABLE :: work(:)
 #endif
 C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC cmplx,conjg,exp,sqrt
-C     ..
       ci = cmplx(0.0,1.0)
       tpi = 2 * pimach()
       const = 2 * tpi/sqrt(omtil)

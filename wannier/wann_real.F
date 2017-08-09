@@ -71,9 +71,6 @@ C     .. Local Arrays ..
       REAL bqpt(3)
 
 C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC abs,real,sqrt,cos,sin,conjg
-C     ..
       ci = cmplx(0.,1.)
       tpi   = 2 * pimach()
       const = 1./(sqrt(omtil))

@@ -68,8 +68,6 @@ c     ..local scalars..
       integer symvacvac
       complex av,bv,ic,c_1
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
 
       allocate ( ac(nv2d,neigd),bc(nv2d,neigd),dt(nv2d),
      +           dte(nv2d),t(nv2d),te(nv2d),tei(nv2d),

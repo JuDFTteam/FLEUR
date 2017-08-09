@@ -76,8 +76,6 @@ c     ..local scalars..
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
       integer, allocatable :: kvac1_b(:),kvac2_b(:),map2_b(:)
       integer symvac,symvacvac
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
 
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),

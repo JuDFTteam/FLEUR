@@ -101,9 +101,6 @@ c     ..local scalars..
       real, allocatable :: gdu(:),gdud(:),gdu_b(:),gdud_b(:)
       REAL qssbti(3,2)
 
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
-
       addnoco=0
       addnoco2=0
       if(l_noco.and.(jspin.eq.2))then

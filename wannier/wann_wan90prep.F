@@ -204,7 +204,7 @@ c******************************************************
       WRITE(*,*) 'but the Wannier90 library is not linked.'
       CALL juDFT_error("Wannier setup without Wannier90 library",
      +                 calledby ="wann_wan90prep")
-#else CPP_WANN
+#else
       call wann_postproc_setup(
      >         natd,nkpts,kpoints,amat_ang,bmat_ang,
      >         num,num_bands,ntype,neq,

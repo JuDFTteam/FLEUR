@@ -99,9 +99,6 @@ c     ..local scalars..
       real, allocatable :: gbess(:,:),besss(:)
       REAL qssbti(3,2)
 
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
-
       addnoco=0
       addnoco2=0
       if(l_noco.and.(jspin.eq.2))then
