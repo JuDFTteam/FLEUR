@@ -172,11 +172,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
       INTEGER, ALLOCATABLE :: eig_idList(:)
       real,    allocatable :: we(:),we_b(:)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, allocatable :: ztrans(:,:)
-#else
-      real,    allocatable :: ztrans(:,:)
-#endif
+
       real,    allocatable :: eigg(:)
       real kpoints(nkptd)
 !!! a and b coeff. constructed for each k-point

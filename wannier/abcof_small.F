@@ -1,7 +1,7 @@
       MODULE m_abcof_small
       CONTAINS
       SUBROUTINE abcof_small(
-     >                 sym,atoms,usdus,lapw,noco,zMat,
+     >                 input,sym,atoms,usdus,lapw,noco,zMat,
      >                 lmaxd,ntypd,neigd,nobd,natd,nop,nvd,jspd,
      >                 lmd,nbasfcn,llod,nlod,nlotot,invtab,
      >                 ntype,mrot,ngopr,taual,neq,lmax,rmt,omtil,
@@ -26,6 +26,7 @@ c     ************************************************************
 
       IMPLICIT NONE
 
+      TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_sym),INTENT(IN)     :: sym
       TYPE(t_atoms),INTENT(IN)   :: atoms
       TYPE(t_usdus),INTENT(IN)   :: usdus
@@ -104,9 +105,9 @@ c+APW_LO
            DO lo = 1,nlo(n)
              IF (l_dulo(lo,n)) apw(l,n) = .true.
            ENDDO
-#ifdef CPP_APW
-           IF (lapw_l(n).GE.l) apw(l,n) = .false.
-#endif
+           IF (input%l_useapw) THEN
+              IF (lapw_l(n).GE.l) apw(l,n) = .false.
+           END IF
          ENDDO
          DO lo = 1,nlo(n)
            IF (l_dulo(lo,n)) apw(llo(lo,n),n) = .true.

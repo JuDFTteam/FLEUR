@@ -1,5 +1,5 @@
 set(fleur_F77 ${fleur_F77}
-wannier/abcof_small.F
+#wannier/abcof_small.F
 wannier/eulerrot.f
 #wannier/w90kpunktgen.f
 wannier/wann_1dvacabcof.F
@@ -41,7 +41,7 @@ wannier/wann_mmk0_od_vac.F
 wannier/wann_mmk0_sph.f
 wannier/wann_mmk0_updown_sph.f
 wannier/wann_mmk0_vac.F
-wannier/wann_mmkb_int2.F
+#wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
 #wannier/wann_mmkb_od_vac2.F
 wannier/wann_mmkb_od_vac.F

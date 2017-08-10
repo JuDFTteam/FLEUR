@@ -144,13 +144,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer, allocatable :: kveclo_b(:),nv_b(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, allocatable :: z_b(:,:)
-      complex, allocatable :: ztrans(:,:)
-#else
-      real,    allocatable :: z_b(:,:)
-      real,    allocatable :: ztrans(:,:)
-#endif
+
       real,    allocatable :: eigg(:,:)
       real kpoints(nkptd)
 !!! a and b coeff. constructed for each k-point
