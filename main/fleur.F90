@@ -239,9 +239,7 @@
           input%l_wann = .FALSE.
           INQUIRE (file='wann_inp',exist=input%l_wann)
           IF (input%l_wann .AND. (mpi%irank == 0))THEN
-             CALL wann_optional(&
-                  &                      input,atoms,&
-                  &                      sym,cell,oneD,noco)
+             CALL wann_optional(input,atoms,sym,cell,oneD,noco)
           ENDIF
 #endif
 
