@@ -8,7 +8,7 @@ c****************************************************************
      >              eig_id,
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              isize,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,fullnkpts,irecl,
+     >              l_ss,l_noco,nrec,fullnkpts,
      >              l_bzsym,l_byindex,l_bynumber,l_byenergy,
      >              irreduc,odi,band_min,band_max,numbands,
      >              e1s,e2s,ef,nkpt,nbnd,l_gwf,iqpt)
@@ -21,7 +21,7 @@ c****************************************************************
       integer,intent(in) :: lmaxd,ntypd,nlod,neigd,nvd,jspd,eig_id
       integer,intent(in) :: isize,jspin,nbasfcn,nlotot,iqpt
       logical,intent(in) :: l_ss,l_noco,l_gwf
-      integer,intent(in) :: nrec,fullnkpts,irecl
+      integer,intent(in) :: nrec,fullnkpts
       logical,intent(in) :: l_byindex,l_bynumber,l_byenergy
       integer,intent(in) :: irreduc(fullnkpts)
       type (od_inp),intent(in) :: odi

@@ -12,14 +12,14 @@
      >      enpara,
      >      eig_id,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
-     >      volint,symor,pos,ef,irecl,l_soc,
+     >      volint,symor,pos,ef,l_soc,
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
      >      theta,phi,soc_opt)
 c****************************************************************************
@@ -89,28 +89,27 @@ c****************************************************************************
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2,eig_id
-      integer, intent (in) :: llod,nlod,ntype,nwdd,n3d,n2d
+      integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: nlh(ntypsd),jri(ntypd),ntypsy(natd)
       integer, intent (in) :: nlo(ntypd),llo(nlod,ntypd),lapw_l(ntypd)
       integer, intent (in) :: invtab(nop),mrot(3,3,nop),ngopr(natd)
       integer, intent (in) :: neq(ntypd),lmax(ntypd)
-      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt(nwdd)
+      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
       integer, intent (in) :: ulo_der(nlod,ntypd),ig2(n3d)
       real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd)
       real,    intent (in) :: amat(3,3),bmat(3,3),bbmat(3,3)
       real,    intent (in) :: rmsh(jmtd,ntypd),tau(3,nop),zatom(ntype)
-      real, intent (inout) :: alph(ntypd),beta(ntypd),qss(3)
+      real,    intent (in) :: alph(ntypd),beta(ntypd),qss(3)
       real,    intent (in) :: pos(3,natd)
       real, intent(in)     :: ef
       complex, intent (in) :: ustep(n3d)
       logical, intent (in) :: l_dulo(nlod,ntypd),l_noco,l_ss
-      integer, intent (in) :: irecl
       logical, intent (in) :: l_soc
       integer, intent (in) :: memd
       integer, intent (in) :: lnonsph(ntypd)
@@ -298,7 +297,7 @@ c-----initializations
       lmd = lmaxd*(lmaxd+2)
 
 !!!   should be changed in case the windows are really used
-      nkpts = maxval(nkpt(:))
+      nkpts = nkpt
 
 c-----read the input file to determine what to do
       call wann_read_inp(

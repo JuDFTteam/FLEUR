@@ -28,7 +28,7 @@
       integer, intent(in) :: nv_b,k1_b(nvd),k2_b(nvd),k3_b(nvd)
       integer, intent(in) :: nbnd
       integer, intent(in) :: k1d,k2d,k3d
-      real,    intent(in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent(in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       complex, intent(in) :: ustep(n3d),interchi
       integer, intent(in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent(in) :: gb(3)

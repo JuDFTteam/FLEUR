@@ -45,7 +45,7 @@ c     ..array arguments..
       real,    intent (in) :: qss(3)
       real,    intent (in) :: vz(nmzd,2,4)
       real,    intent (in) :: bbmat(3,3),bmat(3,3)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig2(n3d),nv(jspd),nv_b(jspd)
       integer, intent (in) :: kv2(2,n2d)

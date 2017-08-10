@@ -9,20 +9,8 @@
       CONTAINS
       SUBROUTINE wannier(
      >      DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,lapw,oneD,
-     >      noco,cell,enpara,banddos,
-     >      l_real,
-     >      mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
-     >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
-     >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
-     >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
-     >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
-     >      z1,nv2d,nmzxy,nmz,delz,zrfs,ig2,area,tau,zatom,nq2,kv2,nop2,
-     >      volint,symor,pos,ef,irecl,l_soc,
-     >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt,
+     >      noco,cell,enpara,banddos,sliceplot,odi,ods,results,
+     >      l_real,nkpt,nkptd,k1d,k2d,k3d,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
      >      param_file,param_vec,nparampts,param_alpha,l_dim)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -63,7 +51,7 @@ c     The matrix Amn is non-diagonal by default (N(k)*N).
 cccccc ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     Total number of wannier functions: nwfs
 c
-c     e1s,e2s: lower and upper boundaries of the energy window:
+c     sliceplot%e1s,sliceplot%e2s: lower and upper boundaries of the energy window:
 c     Needed for sorting by number and sorting by energy.
 c     Not needed for sorting by index.
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -130,61 +118,37 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
-      TYPE(t_mpi),INTENT(IN)       :: mpi
-      TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_sym),INTENT(IN)       :: sym
-      TYPE(t_atoms),INTENT(IN)     :: atoms
-      TYPE(t_stars),INTENT(IN)     :: stars
-      TYPE(t_vacuum),INTENT(IN)    :: vacuum
-      TYPE(t_sphhar),INTENT(IN)    :: sphhar
-      TYPE(t_lapw),INTENT(IN)      :: lapw
-      TYPE(t_oneD),INTENT(IN)      :: oneD
-      TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_cell),INTENT(IN)      :: cell
-      TYPE(t_enpara),INTENT(IN)    :: enpara
-      TYPE(t_banddos),INTENT(IN)   :: banddos
+      TYPE(t_dimension), INTENT(IN) :: DIMENSION
+      TYPE(t_mpi),       INTENT(IN) :: mpi
+      TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_sym),       INTENT(IN) :: sym
+      TYPE(t_atoms),     INTENT(IN) :: atoms
+      TYPE(t_stars),     INTENT(IN) :: stars
+      TYPE(t_vacuum),    INTENT(IN) :: vacuum
+      TYPE(t_sphhar),    INTENT(IN) :: sphhar
+      TYPE(t_lapw),      INTENT(IN) :: lapw
+      TYPE(t_oneD),      INTENT(IN) :: oneD
+      TYPE(t_noco),      INTENT(IN) :: noco
+      TYPE(t_cell),      INTENT(IN) :: cell
+      TYPE(t_enpara),    INTENT(IN) :: enpara
+      TYPE(t_banddos),   INTENT(IN) :: banddos
+      TYPE(t_sliceplot), INTENT(IN) :: sliceplot
+      type (od_inp),     INTENT(IN) :: odi
+      type (od_sym),     INTENT(IN) :: ods
+      TYPE(t_results),   INTENT(IN) :: results
 
-      logical, intent (in) :: invs,invs2,film,slice,symor,zrfs,l_real
-      integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
-      integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
-      integer, intent (in) :: llod,nlod,ntype,nwdd,n3d,n2d
-      integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
-      integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
-      real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
-      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      integer, intent (in) :: nlh(ntypsd),jri(ntypd),ntypsy(natd)
-      integer, intent (in) :: nlo(ntypd),llo(nlod,ntypd),lapw_l(ntypd)
-      integer, intent (in) :: invtab(nop),mrot(3,3,nop),ngopr(natd)
-      integer, intent (in) :: neq(ntypd),lmax(ntypd)
-      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt(nwdd)
-      integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
-      integer, intent (in) :: ulo_der(nlod,ntypd),ig2(n3d),kv2(2,n2d)
-      real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd)
-      real,    intent (in) :: amat(3,3),bmat(3,3),bbmat(3,3)
-      real,    intent (in) :: rmsh(jmtd,ntypd),tau(3,nop),zatom(ntype)
-      real, intent (inout) :: alph(ntypd),beta(ntypd),qss(3)
-      real,    intent (in) :: pos(3,natd)
-      real, intent(in)     :: ef
+      logical, intent (in) :: l_real
+      integer, intent (in) :: nkptd
+      integer, intent (in) :: k1d,k2d,k3d
+      integer, intent (in) :: nkpt
 
-      complex, intent (in) :: ustep(n3d)
-      logical, intent (in) :: l_dulo(nlod,ntypd),l_noco,l_ss
-      integer, intent (in) :: irecl
-      logical, intent (in) :: l_soc
-      integer, intent (in) :: memd
-      integer, intent (in) :: lnonsph(ntypd)
-      complex, intent (in) :: clnu(memd,0:nlhd,ntypsd)
-      integer, intent (in) :: lmplmd
-      integer, intent (in) :: mlh(memd,0:nlhd,ntypsd)
-      integer, intent (in) :: nmem(0:nlhd,ntypsd)
-      integer, intent (in) :: llh(0:nlhd,ntypsd)
-      integer, intent (in) :: lo1l(0:llod,ntypd)
-      real,    intent (in) :: sk2(n2d),phi2(n2d)
-      type (od_inp), intent (in) :: odi
-      type (od_sym), intent (in) :: ods
-      real, intent(in) :: theta,phi
-      logical,intent(in) :: soc_opt(ntype+2)
+      ! NEW INPUT PARAMETERS (for gwf)
+      real,             intent(in) :: aux_latt_const
+      real,             intent(in) :: param_vec(3,nparampts)
+      real,             intent(in) :: param_alpha(atoms%ntype,nparampts)
+      integer,          intent(in) :: nparampts
+      logical,          intent(in) :: l_ms,l_sgwf,l_socgwf,l_dim(3)
+      character(len=20),intent(in) :: param_file
 
 cccccccccccccccccc   local variables   cccccccccccccccccccc
       type(t_wann) :: wann
@@ -194,11 +158,12 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer :: jsp_start,jsp_end,nrec,nrec1,nrec_b,nbands,nbands_b
       integer :: nodeu,noded,n_size,na,n_rank,nbnd,numbands
       integer :: i1,i2,i3,in,lda
-      integer :: n_bands(0:neigd),nslibd,nslibd_b
+      integer :: n_bands(0:DIMENSION%neigd),nslibd,nslibd_b
       character(len=8) :: dop,iop,name(10)
       real    :: bkpt(3),bkpt_b(3),sfp,tpi,wronk,wk,wk_b,phase
       complex :: c_phase
-      real    :: eig(neigd),eig_b(neigd),cp_time(9),efermi
+      real    :: eig(DIMENSION%neigd),eig_b(DIMENSION%neigd),cp_time(9)
+      real    :: efermi
       logical :: l_p0,l_bkpts,l_proj,l_amn,l_mmn
 !!! energy window boundaries
       integer, allocatable :: kveclo(:),nv(:)
@@ -231,11 +196,14 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real,    allocatable :: flo(:,:,:,:,:),vso(:,:,:)
       real,    allocatable :: ff(:,:,:,:,:),gg(:,:,:,:,:)
 
-      real     :: uuilon(nlod,ntypd),duilon(nlod,ntypd)
-      real     :: ulouilopn(nlod,nlod,ntypd)
+      real     :: uuilon(atoms%nlod,atoms%ntype)
+      real     :: duilon(atoms%nlod,atoms%ntype)
+      real     :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 !!! energy parameters
-      real    :: ello(nlod,ntypd,max(2,jspd)),evac(2,max(2,jspd))
-      real    :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(jspd,2))
+      real    :: ello(atoms%nlod,atoms%ntype,max(2,DIMENSION%jspd))
+      real    :: evac(2,max(2,DIMENSION%jspd))
+      real    :: epar(0:atoms%lmaxd,atoms%ntype,max(2,DIMENSION%jspd))
+      real    :: evdu(2,max(DIMENSION%jspd,2))
 !!! the Mmn matrices
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)           
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)        
@@ -263,7 +231,7 @@ c      real, allocatable :: ei(:)
       integer :: ios,kplot,kplotoper,plotoper,gfcut
       complex :: phasust
       integer,allocatable::pair_to_do(:,:)
-      integer :: ngopr1(natd)
+      integer :: ngopr1(atoms%nat)
       integer,allocatable::maptopair(:,:,:)
       integer :: wannierspin,jspin2,jspin7,jspin2_b
       real, allocatable :: rwork(:)
@@ -298,24 +266,17 @@ c      real, allocatable :: ei(:)
       complex,allocatable :: vxy(:,:,:)
 
 
-c---->gwf     
-      ! NEW INPUT PARAMETERS
-      real,             intent(in) :: aux_latt_const
-      real,             intent(in) :: param_vec(3,nparampts),
-     >                                param_alpha(ntypd,nparampts)
-      integer,          intent(in) :: nparampts
-      logical,          intent(in) :: l_ms,l_sgwf,l_socgwf,l_dim(3)
-      character(len=20),intent(in) :: param_file
+c---->gwf
 
       ! FURTHER VARIABLES
       real :: qpt_i(3),qptb_i(3)
-      real :: alph_i(ntypd),alphb_i(ntypd)
-      real :: beta_i(ntypd),betab_i(ntypd)
+      real :: alph_i(atoms%ntype),alphb_i(atoms%ntype)
+      real :: beta_i(atoms%ntype),betab_i(atoms%ntype)
       real :: theta_i, thetab_i, phi_i, phib_i
       real :: dalph,db1,db2,coph,siph
-      real :: zero_taual(3,natd),bqpt(3),wqb
+      real :: zero_taual(3,atoms%nat),bqpt(3),wqb
       real :: tt1,tt2,tt3,tt4,tt5,tt6,t_it,t_kov,t_qov
-      real :: eig_qb(neigd)
+      real :: eig_qb(DIMENSION%neigd)
 
       real,allocatable :: qdiff(:,:), we_qb(:)                
       real,allocatable :: energies(:,:,:)  
@@ -374,13 +335,13 @@ c----<gwf
 
 
       aoff = iachar('1')-1
-      d1  = mod(irank,10)
-      IF (irank < 100) THEN
-        d10 = int( (irank + 0.5)/10 )
+      d1  = mod(mpi%irank,10)
+      IF (mpi%irank < 100) THEN
+        d10 = int( (mpi%irank + 0.5)/10 )
         fstart = 'eig'//achar(d10+aoff)//achar(d1+aoff)
       ELSE
-        d10 = mod((irank-d1)/10,10)
-        d100 = (irank-10*d10-d1)/100
+        d10 = mod((mpi%irank-d1)/10,10)
+        d100 = (mpi%irank-10*d10-d1)/100
         IF ( d100.GE.10 ) d100 = d100 + iachar('7')
         fstart =
      +  'eig'//achar(d100+aoff)//achar(d10+aoff)//achar(d1+aoff)
@@ -405,14 +366,14 @@ c-----initializations
       call cpu_time(time_total)
 
       l_p0 = .false.
-      if (irank.eq.0) l_p0 = .true.
+      if (mpi%irank.eq.0) l_p0 = .true.
 
       sfp = 2* sqrt( pimach() )
       tpi = 2* pimach()
-      lmd = lmaxd*(lmaxd+2)
+      lmd = atoms%lmaxd*(atoms%lmaxd+2)
 
 !!!   should be changed in case the windows are really used
-      nkpts = maxval(nkpt(:))
+      nkpts = nkpt
 
       ! do we have to construct GWF ?
       l_gwf = .false.
@@ -423,11 +384,11 @@ c-----initializations
       if(l_gwf.and.l_p0) write(*,*)'disable chi trafo: ',l_nochi
 
       if(l_gwf.and.l_p0) call gwf_plottemplate()
-      allocate( chi(ntypd) )
+      allocate( chi(atoms%ntype) )
 
 c-----read the input file to determine what to do
-      wann%atomlist_num=natd
-      wann%oc_num_orbs=natd
+      wann%atomlist_num=atoms%nat
+      wann%oc_num_orbs=atoms%nat
       call wann_read_inp(
      >         l_p0,
      <         wann)
@@ -445,7 +406,7 @@ c-----input file for orbital decomposition
             enddo
             close(159)
          else !default is all atoms including f
-            wann%oc_num_orbs=natd
+            wann%oc_num_orbs=atoms%nat
             wann%l_oc_f=.true.
             allocate(wann%oc_orbs(wann%oc_num_orbs))
             do n=1,wann%oc_num_orbs
@@ -458,20 +419,28 @@ c-----input file for orbital decomposition
          call wann_updown(
      >      mpi,input,sym,atoms,stars,vacuum,sphhar,lapw,oneD,noco,cell,
      >      enpara,
-     >      eig_id,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
-     >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,                    ! TODO: adapt if needed
-     >      sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,  
-     >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,          
-     >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
-     >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
-     >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
-     >      volint,symor,pos,ef,irecl,l_soc,                         
-     >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt)
-         CALL juDFT_end("updown done",irank)
+     >      eig_id,mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,
+     >      atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,
+     >      DIMENSION%nvd,DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,
+     >      atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,
+     >      atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,
+     >      atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,
+     >      atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
+     >      noco%beta,noco%qss,                    ! TODO: adapt if needed
+     >      stars%sk2,stars%phi2,odi,ods,mpi%irank,mpi%isize,stars%ng3,
+     >      vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,sphhar%nlhd,stars%ng3,
+     >      vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,
+     >      atoms%jri,sphhar%ntypsd,atoms%ntypsy,input%jspins,nkptd,
+     >      atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,
+     >      atoms%ulo_der,stars%ustep,stars%ig,k1d,k2d,k3d,stars%rgphs,
+     >      sliceplot%slice,sliceplot%kk,sliceplot%nnne,cell%z1,
+     >      DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,
+     >      stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,
+     >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
+     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
+     >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
+     >      noco%theta,noco%phi,noco%soc_opt)
+         CALL juDFT_end("updown done",mpi%irank)
       endif
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -482,22 +451,31 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
      >      lapw,oneD,noco,cell,
-     >      l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
-     >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
-     >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
-     >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
-     >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
-     >      z1,nv2d,nmzxy,nmz,delz,zrfs,ig2,area,tau,zatom,nq2,kv2,nop2,
-     >      volint,symor,pos,ef,irecl,l_soc,
-     >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt,
+     >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
+     >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
+     >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
+     >      atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,
+     >      atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,
+     >      atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,
+     >      atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
+     >      noco%beta,noco%qss,stars%sk2,stars%phi2,odi,ods,mpi%irank,
+     >      mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,
+     >      sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,
+     >      input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,atoms%ntypsy,
+     >      input%jspins,nkptd,atoms%dx,stars%ng2,atoms%rmsh,
+     >      sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,
+     >      stars%ig,k1d,k2d,k3d,stars%rgphs,sliceplot%slice,
+     >      sliceplot%kk,sliceplot%nnne,cell%z1,DIMENSION%nv2d,
+     >      vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,
+     >      cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,
+     >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
+     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
+     >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
+     >      noco%theta,noco%phi,noco%soc_opt,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
      >      param_file,param_vec,nparampts,param_alpha,l_dim)
 
-        CALL juDFT_end("wann_uHu done",irank)
+        CALL juDFT_end("wann_uHu done",mpi%irank)
       endif
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -508,22 +486,31 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call wann_uHu_dmi(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
      >      lapw,oneD,noco,cell,
-     >      l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
-     >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
-     >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
-     >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
-     >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
-     >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
-     >      z1,nv2d,nmzxy,nmz,delz,zrfs,ig2,area,tau,zatom,nq2,kv2,nop2,
-     >      volint,symor,pos,ef,irecl,l_soc,
-     >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt,
+     >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
+     >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
+     >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
+     >      atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,
+     >      atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,
+     >      atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,
+     >      atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
+     >      noco%beta,noco%qss,stars%sk2,stars%phi2,odi,ods,mpi%irank,
+     >      mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,
+     >      sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,
+     >      input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,atoms%ntypsy,
+     >      input%jspins,nkptd,atoms%dx,stars%ng2,atoms%rmsh,
+     >      sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,
+     >      stars%ig,k1d,k2d,k3d,stars%rgphs,sliceplot%slice,
+     >      sliceplot%kk,sliceplot%nnne,cell%z1,DIMENSION%nv2d,
+     >      vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,
+     >      cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,
+     >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
+     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
+     >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
+     >      noco%theta,noco%phi,noco%soc_opt,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
      >      param_file,param_vec,nparampts,param_alpha,l_dim,l_nochi)
 
-        CALL juDFT_end("wann_uHu dmi done",irank)
+        CALL juDFT_end("wann_uHu dmi done",mpi%irank)
       endif
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
@@ -536,11 +523,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      &     CALL juDFT_error("no rule to sort bands",calledby ="wannier")
 
 
-      efermi=ef
+      efermi=results%ef
       if(.not.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
-         call MPI_BARRIER(mpi_comm,ierr)
+         call MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
 c**************************************************************
@@ -583,13 +570,13 @@ c**************************************************************
       nrec = 0
       if(l_p0)then
       write (*,*) 'fermi energy:',efermi
-      write (*,*) 'emin,emax=',e1s,e2s
-      write (*,*) 'nbasfcn =',nbasfcn
+      write (*,*) 'emin,emax=',sliceplot%e1s,sliceplot%e2s
+      write (*,*) 'nbasfcn =',DIMENSION%nbasfcn
       endif
       nlotot = 0
-      do n = 1, ntype
-        do l = 1,nlo(n)
-          nlotot = nlotot + neq(n) * ( 2*llo(l,n) + 1 )
+      do n = 1, atoms%ntype
+        do l = 1,atoms%nlo(n)
+          nlotot = nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
         enddo
       enddo
 
@@ -683,8 +670,8 @@ c********************************************************
          allocate(pair_to_do(fullnkpts,nntot))
          call wann_mmnk_symm(
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
-     >     irreduc,mapkoper,l_p0,film,nop,invtab,mrot,odi%d1,
-     >     tau,
+     >     irreduc,mapkoper,l_p0,input%film,sym%nop,sym%invtab,sym%mrot,
+     >     odi%d1,sym%tau,
      <     pair_to_do,maptopair,kdiff,.false.,param_file)
          call cpu_time(delta1)
          time_symm=delta1-delta
@@ -696,8 +683,8 @@ c********************************************************
          allocate(pair_to_do_q(fullnqpts,nntot_q))
          call wann_mmnk_symm(
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
-     >     irreduc_q,mapqoper,l_p0,.false.,1,invtab(1),mrot(:,:,1),
-     >     .false.,tau,
+     >     irreduc_q,mapqoper,l_p0,.false.,1,sym%invtab(1),
+     >     sym%mrot(:,:,1),.false.,sym%tau,
      <     pair_to_do_q,maptopair_q,qdiff,.true.,param_file)
       endif
 
@@ -706,10 +693,13 @@ c*********************************************************
 cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
-      allocate ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd) )
-      allocate ( vz(nmzd,2,4),vrf(jmtd,0:nlhd,ntypd,jspd) )
-      allocate ( vr(jmtd,ntypd,jspd) )
-      allocate ( vso(jmtd,natd,2) )
+      allocate ( vpw(stars%ng3,DIMENSION%jspd) )
+      allocate ( vzxy(vacuum%nmzxyd,odi%n2d-1,2,DIMENSION%jspd) )
+      allocate ( vz(vacuum%nmzd,2,4) )
+      allocate ( vrf(atoms%jmtd,0:sphhar%nlhd,
+     +               atoms%ntype,DIMENSION%jspd) )
+      allocate ( vr(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )
+      allocate ( vso(atoms%jmtd,atoms%nat,2) )
 
       open (8,file='pottot',form='unformatted',status='old')
       rewind (8)
@@ -720,9 +710,9 @@ c*********************************************************
 
       close (8)
 
-      do jspin = 1,jspins
-        do n = 1, ntype
-          do j = 1,jri(n)
+      do jspin = 1,input%jspins
+        do n = 1, atoms%ntype
+          do j = 1,atoms%jri(n)
             vr(j,n,jspin) = vrf(j,0,n,jspin)
           enddo
         enddo
@@ -735,35 +725,36 @@ c*********************************************************
       deallocate ( vpw,vzxy )
       deallocate(vrf)
 
-      if(l_noco.and.film)then
+      if(noco%l_noco.and.input%film)then
          npotmatfile=25
-         allocate(vpw(n3d,1))
+         allocate(vpw(stars%ng3,1))
          if(.not.odi%d1)
-     &    allocate( vxy(nmzxyd,n2d-1,2) )
+     &    allocate( vxy(vacuum%nmzxyd,stars%ng2-1,2) )
 
          OPEN (npotmatfile,FILE='potmat',FORM='unformatted',
      +                  STATUS='old')
-         READ (npotmatfile) (vpw(ig3,1),ig3=1,n3d)
-         READ (npotmatfile) (vpw(ig3,1),ig3=1,n3d)
-         READ (npotmatfile) (vpw(ig3,1),ig3=1,n3d)
+         READ (npotmatfile) (vpw(ig3,1),ig3=1,stars%ng3)
+         READ (npotmatfile) (vpw(ig3,1),ig3=1,stars%ng3)
+         READ (npotmatfile) (vpw(ig3,1),ig3=1,stars%ng3)
          maxvac=2
          if(odi%d1)maxvac=1
          DO ivac = 1,maxvac
 c--->       if the two vacuua are equivalent, the potential file has to
 c--->       be backspaced, because the potential is the same at both
 c--->       surfaces of the film
-            IF ((ivac.EQ.2) .AND. (nvac.EQ.1)) THEN
+            IF ((ivac.EQ.2) .AND. (vacuum%nvac.EQ.1)) THEN
                DO irec = 1,4
                   BACKSPACE (npotmatfile)
                ENDDO
             ENDIF
 c--->       load the non-warping part of the potential
-            READ (npotmatfile)((vz(imz,ivac,ipot),imz=1,nmzd),ipot=1,4)
+            READ (npotmatfile)
+     +         ((vz(imz,ivac,ipot),imz=1,vacuum%nmzd),ipot=1,4)
 
             if(.not.odi%d1)then
             DO ipot = 1,3
-                  READ (npotmatfile)((vxy(imz,igvm2,ivac),
-     +                           imz=1,nmzxy),igvm2=1,nq2-1)
+               READ (npotmatfile)((vxy(imz,igvm2,ivac),
+     +            imz=1,vacuum%nmzxy),igvm2=1,stars%ng2-1)
             enddo    
             endif   
          enddo   
@@ -775,31 +766,36 @@ c--->       load the non-warping part of the potential
       endif   
     
 cccccccccccccccc   end of the potential part  ccccccccccc
-      wannierspin=jspd
-      if(l_soc) wannierspin=2
+      wannierspin=DIMENSION%jspd
+      if(noco%l_soc) wannierspin=2
      
       allocate ( kveclo(nlotot),nv(wannierspin) )
       allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
       IF(l_gwf) allocate ( kveclo_qb(nlotot),nv_qb(wannierspin) )
-      allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
-     &           k3(nvd,wannierspin) )
-      allocate ( k1_b(nvd,wannierspin),k2_b(nvd,wannierspin),
-     &           k3_b(nvd,wannierspin) )
-      IF(l_gwf) allocate( k1_qb(nvd,wannierspin),k2_qb(nvd,wannierspin),
-     &           k3_qb(nvd,wannierspin) )
+      allocate ( k1(DIMENSION%nvd,wannierspin) )
+      allocate ( k2(DIMENSION%nvd,wannierspin) )
+      allocate ( k3(DIMENSION%nvd,wannierspin) )
+      allocate ( k1_b(DIMENSION%nvd,wannierspin) )
+      allocate ( k2_b(DIMENSION%nvd,wannierspin) )
+      allocate ( k3_b(DIMENSION%nvd,wannierspin) )
+      IF(l_gwf) THEN
+         allocate ( k1_qb(DIMENSION%nvd,wannierspin) )
+         allocate ( k2_qb(DIMENSION%nvd,wannierspin) )
+         allocate ( k3_qb(DIMENSION%nvd,wannierspin) )
+      END IF
 
-      allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( gg(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( usdus%us(0:lmaxd,ntypd,2) )
-      allocate ( usdus%uds(0:lmaxd,ntypd,2) )
-      allocate ( usdus%dus(0:lmaxd,ntypd,2) )
-      allocate ( usdus%duds(0:lmaxd,ntypd,2) )
-      allocate ( usdus%ddn(0:lmaxd,ntypd,2) )
-      allocate ( usdus%ulos(nlod,ntypd,2) )
-      allocate ( usdus%dulos(nlod,ntypd,2) )
-      allocate ( usdus%uulon(nlod,ntypd,2) )
-      allocate ( usdus%dulon(nlod,ntypd,2) )
-      allocate ( usdus%uloulopn(nlod,nlod,ntypd,2) )
+      allocate ( ff(atoms%ntype,atoms%jmtd,2,0:atoms%lmaxd,2) )
+      allocate ( gg(atoms%ntype,atoms%jmtd,2,0:atoms%lmaxd,2) )
+      allocate ( usdus%us(0:atoms%lmaxd,atoms%ntype,2) )
+      allocate ( usdus%uds(0:atoms%lmaxd,atoms%ntype,2) )
+      allocate ( usdus%dus(0:atoms%lmaxd,atoms%ntype,2) )
+      allocate ( usdus%duds(0:atoms%lmaxd,atoms%ntype,2) )
+      allocate ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,2) )
+      allocate ( usdus%ulos(atoms%nlod,atoms%ntype,2) )
+      allocate ( usdus%dulos(atoms%nlod,atoms%ntype,2) )
+      allocate ( usdus%uulon(atoms%nlod,atoms%ntype,2) )
+      allocate ( usdus%dulon(atoms%nlod,atoms%ntype,2) )
+      allocate ( usdus%uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,2) )
 
       if(l_gwf.and..not.(wann%l_wann_plot)) then
          doublespin_max=4!2
@@ -827,11 +823,11 @@ c*****************************************************************c
         if(wann%l_bzsym .AND. l_gwf) qptibz=irreduc_q(iqpt)
         if(wann%l_bzsym .AND. l_gwf) oper_q=mapqoper(iqpt)
 
-       qpt_i = qss
-       alph_i = alph
-       beta_i = beta
-       theta_i = theta
-       phi_i = phi
+       qpt_i = noco%qss
+       alph_i = noco%alph
+       beta_i = noco%beta
+       theta_i = noco%theta
+       phi_i = noco%phi
        if(l_sgwf.or.l_ms) then
           qpt_i(:) = param_vec(:,qptibz)
           alph_i(:) = param_alpha(:,qptibz)
@@ -849,7 +845,7 @@ c*****************************************************************c
      +                  DIMENSION%neigd,
      +                  nkpts,wannierspin,atoms%lmaxd,
      +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
      +                  mpi%n_size,filename=trim(fstart)//fending,
      +                  layers=vacuum%layers,nstars=vacuum%nstars,
      +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
@@ -863,7 +859,7 @@ c*****************************************************************c
         eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
      +                  nkpts,wannierspin,atoms%lmaxd,
      +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
      +                  mpi%n_size,filename=trim(fstart)//fending,
      +                  layers=vacuum%layers,nstars=vacuum%nstars,
      +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
@@ -876,7 +872,7 @@ c*****************************************************************c
         eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
      +                  nkpts,wannierspin,atoms%lmaxd,
      +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
      +                  mpi%n_size,filename=trim(fstart)//fending,
      +                  layers=vacuum%layers,nstars=vacuum%nstars,
      +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
@@ -902,7 +898,7 @@ c****************************************************
 
          nrec_b = nrec
 
-         if(.not.l_noco) then
+         if(.not.noco%l_noco) then
             nrec = (jspin-1)*nkpts
             nrec_b = (jspin_b-1)*nkpts
          endif
@@ -938,9 +934,9 @@ c..reading the proj.1 / proj.2 / proj file
 
 
        jspin2=jspin
-       if(l_soc .and. jspins.eq.1)jspin2=1
+       if(noco%l_soc .and. input%jspins.eq.1)jspin2=1
        jspin2_b=jspin_b
-       if(l_soc .and. jspins.eq.1)jspin2_b=1
+       if(noco%l_soc .and. input%jspins.eq.1)jspin2_b=1
 
        jsp_start = jspin ; jsp_end = jspin
 
@@ -951,9 +947,10 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 !       jspin5=jspin
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
-       if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
+       if(.not.noco%l_noco) nrec5 = (jspin5-1)*nkpts
 
-       call cdn_read0(eig_id,irank,isize,jspin5,jspd,l_noco, !wannierspin instead of jspd?
+       call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,DIMENSION%jspd, !wannierspin instead of DIMENSION%jspd?
+     >                noco%l_noco,
      <                ello,evac,epar,bkpt,wk,n_bands,n_size)
 
        enddo
@@ -972,19 +969,20 @@ c*************************************************************
       if(l_p0)then         
          call wann_write_eig(
      >            eig_id,
-     >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >            isize,jspin,nbasfcn,nlotot,
-     >            l_ss,l_noco,nrec,fullnkpts,
+     >            atoms%lmaxd,atoms%ntype,atoms%nlod,DIMENSION%neigd,
+     >            DIMENSION%nvd,wannierspin,
+     >            mpi%isize,jspin,DIMENSION%nbasfcn,nlotot,
+     >            noco%l_ss,noco%l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,
      >            irreduc,odi,wann%band_min(jspin),
      >            wann%band_max(jspin),
      >            numbands,
-     >            e1s,e2s,efermi,.false.,nkpts,
+     >            sliceplot%e1s,sliceplot%e2s,efermi,.false.,nkpts,
      <            nbnd,kpoints,l_gwf,iqpt)       
 
          if(odi%d1)then
-            kpoints(:)=kpoints(:)*bmat(3,3)         
+            kpoints(:)=kpoints(:)*cell%bmat(3,3)         
          endif
       endif!l_p0
 !      call cpu_time(tt2)
@@ -994,21 +992,21 @@ c*************************************************************
 ! nbnd is calculated for process zero and is sent here to the others
 #ifdef CPP_MPI
       if(l_p0)then
-         do cpu_index=1,isize-1
-      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi_comm,ierr)
+         do cpu_index=1,mpi%isize-1
+      call MPI_SEND(nbnd,1,MPI_INTEGER,cpu_index,1,mpi%mpi_comm,ierr)
          enddo
       else
-       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi_comm,stt,ierr)
+       call MPI_RECV(nbnd,1,MPI_INTEGER,0,1,mpi%mpi_comm,stt,ierr)
       endif
 #endif
      
-       print*,"process: ",irank," nbnd= ",nbnd
+       print*,"process: ",mpi%irank," nbnd= ",nbnd
 !       call cpu_time(tt3)
 c##################################################################
       if(wann%l_mmn0)then
            allocate ( mmn(nbnd,nbnd,fullnkpts) )
            mmn(:,:,:) = cmplx(0.,0.)
-           if((l_soc.or.l_noco) .and. (doublespin.eq.1))
+           if((noco%l_soc.or.noco%l_noco) .and. (doublespin.eq.1))
      &          allocate(socmmn(nbnd,nbnd,fullnkpts) )
       endif     
       if(wann%l_nabla)then
@@ -1083,16 +1081,16 @@ c##################################################################
       endif
 
  
-      allocate ( flo(ntypd,jmtd,2,nlod,2) )
+      allocate ( flo(atoms%ntype,atoms%jmtd,2,atoms%nlod,2) )
 !      call cpu_time(tt2)
       !if(l_p0) write(*,*)'allocate',tt2-tt3
 
       do jspin4=1,wannierspin!2
          jspin3=jspin4
-         if(jspins.eq.1) jspin3=1
+         if(input%jspins.eq.1) jspin3=1
       na = 1
-      do 40 n = 1,ntype
-       do 30 l = 0,lmax(n)
+      do 40 n = 1,atoms%ntype
+       do 30 l = 0,atoms%lmax(n)
 c...compute the l-dependent, k-independent radial MT- basis functions
 
          call radfun(
@@ -1102,7 +1100,7 @@ c...compute the l-dependent, k-independent radial MT- basis functions
 
    30  continue
 c...and the local orbital radial functions
-       do ilo = 1, nlo(n)
+       do ilo = 1, atoms%nlo(n)
 
          call radflo(
      >             atoms,n,jspin4,ello(:,:,jspin3),vr(1,n,jspin3),
@@ -1110,7 +1108,7 @@ c...and the local orbital radial functions
      <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
 
        enddo
-c       na = na + neq(n)
+c       na = na + atoms%neq(n)
    40 continue
       enddo!jspin3
 !      call cpu_time(tt3)
@@ -1125,33 +1123,35 @@ c****************************************************************
       if(wann%l_matrixmmn)then
          call cpu_time(delta)
          allocate(ujug(0:lmd,0:lmd,
-     &              1:ntype,1:nntot))
+     &              1:atoms%ntype,1:nntot))
          allocate(ujdg(0:lmd,0:lmd,
-     &              1:ntype,1:nntot))
+     &              1:atoms%ntype,1:nntot))
          allocate(djug(0:lmd,0:lmd,
-     &              1:ntype,1:nntot))
+     &              1:atoms%ntype,1:nntot))
          allocate(djdg(0:lmd,0:lmd,
-     &              1:ntype,1:nntot))
-         allocate(ujulog(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot))
-         allocate(djulog(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot))
-         allocate(ulojug(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot))
-         allocate(ulojdg(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot))
-         allocate(ulojulog(1:nlod,-llod:llod,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot))
+     &              1:atoms%ntype,1:nntot))
+         allocate(ujulog(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot))
+         allocate(djulog(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot))
+         allocate(ulojug(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot))
+         allocate(ulojdg(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot))
+         allocate(ulojulog(1:atoms%nlod,-atoms%llod:atoms%llod,
+     &                     1:atoms%nlod,-atoms%llod:atoms%llod,
+     &                     1:atoms%ntype,1:nntot))
 
          call wann_ujugaunt(
-     >            llod,nntot,kdiff,lmax,ntype,ntypd,bbmat,
-     >            bmat,nlod,nlo,llo,flo(:,:,:,:,jspin),
+     >            atoms%llod,nntot,kdiff,atoms%lmax,atoms%ntype,
+     >            atoms%ntype,cell%bbmat,cell%bmat,atoms%nlod,atoms%nlo,
+     >            atoms%llo,flo(:,:,:,:,jspin),
      >            flo(:,:,:,:,jspin),
      >            ff(:,:,:,:,jspin),
      >            ff(:,:,:,:,jspin),
      >            gg(:,:,:,:,jspin),
-     >            gg(:,:,:,:,jspin),jri,rmsh,dx,jmtd,
-     >            lmaxd,lmd,
+     >            gg(:,:,:,:,jspin),atoms%jri,atoms%rmsh,atoms%dx,
+     >            atoms%jmtd,atoms%lmaxd,lmd,
      <            ujug,ujdg,djug,djdg,
      <            ujulog,djulog,ulojug,ulojdg,ulojulog,.false.,1)
 
@@ -1161,48 +1161,52 @@ c****************************************************************
 ! neighboring q-points
          IF(l_gwf)THEN
             allocate(ujug_q(0:lmd,0:lmd,
-     &              1:ntype,1:nntot_q))
+     &              1:atoms%ntype,1:nntot_q))
             allocate(ujdg_q(0:lmd,0:lmd,
-     &              1:ntype,1:nntot_q))
+     &              1:atoms%ntype,1:nntot_q))
             allocate(djug_q(0:lmd,0:lmd,
-     &              1:ntype,1:nntot_q))
+     &              1:atoms%ntype,1:nntot_q))
             allocate(djdg_q(0:lmd,0:lmd,
-     &              1:ntype,1:nntot_q))
-            allocate(ujulog_q(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot_q))
-            allocate(djulog_q(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot_q))
-            allocate(ulojug_q(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot_q))
-            allocate(ulojdg_q(0:lmd,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot_q))
-            allocate(ulojulog_q(1:nlod,-llod:llod,1:nlod,-llod:llod,
-     &              1:ntype,1:nntot_q))
+     &              1:atoms%ntype,1:nntot_q))
+            allocate(ujulog_q(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot_q))
+            allocate(djulog_q(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot_q))
+            allocate(ulojug_q(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot_q))
+            allocate(ulojdg_q(0:lmd,1:atoms%nlod,-atoms%llod:atoms%llod,
+     &              1:atoms%ntype,1:nntot_q))
+            allocate(ulojulog_q(1:atoms%nlod,-atoms%llod:atoms%llod,
+     &                          1:atoms%nlod,-atoms%llod:atoms%llod,
+     &                          1:atoms%ntype,1:nntot_q))
             
             ! we need G(q+b)/2 as argument for the sph. Bessel func.
             ! and additionally a spin-dependent sign (-/+ 1)^{lpp}
             if(l_sgwf) call wann_ujugaunt(
-     >            llod,nntot_q,qdiff/2.0,lmax,ntype,ntypd,bbmat,
-     >            bmat,nlod,nlo,llo,flo(:,:,:,:,jspin),
+     >            atoms%llod,nntot_q,qdiff/2.0,atoms%lmax,atoms%ntype,
+     >            atoms%ntype,cell%bbmat,cell%bmat,atoms%nlod,atoms%nlo,
+     >            atoms%llo,flo(:,:,:,:,jspin),
      >            flo(:,:,:,:,jspin_b),
      >            ff(:,:,:,:,jspin),
      >            ff(:,:,:,:,jspin_b),
      >            gg(:,:,:,:,jspin),
-     >            gg(:,:,:,:,jspin_b),jri,rmsh,dx,jmtd,
-     >            lmaxd,lmd,
+     >            gg(:,:,:,:,jspin_b),atoms%jri,atoms%rmsh,atoms%dx,
+     >            atoms%jmtd,atoms%lmaxd,lmd,
      <            ujug_q,ujdg_q,djug_q,djdg_q,
      <            ujulog_q,djulog_q,ulojug_q,ulojdg_q,ulojulog_q,.true.,
      >            sign_q)
 
             if(l_socgwf) call wann_ujugaunt(
-     >            llod,nntot_q,zero_qdiff,lmax,ntype,ntypd,bbmat,
-     >            bmat,nlod,nlo,llo,flo(:,:,:,:,jspin),
+     >            atoms%llod,nntot_q,zero_qdiff,atoms%lmax,atoms%ntype,
+     >            atoms%ntype,cell%bbmat,cell%bmat,atoms%nlod,atoms%nlo,
+     >            atoms%llo,flo(:,:,:,:,jspin),
      >            flo(:,:,:,:,jspin_b),
      >            ff(:,:,:,:,jspin),
      >            ff(:,:,:,:,jspin_b),
      >            gg(:,:,:,:,jspin),
-     >            gg(:,:,:,:,jspin_b),jri,rmsh,dx,jmtd,
-     >            lmaxd,lmd,ujug_q,ujdg_q,djug_q,djdg_q,
+     >            gg(:,:,:,:,jspin_b),atoms%jri,atoms%rmsh,atoms%dx,
+     >            atoms%jmtd,
+     >            atoms%lmaxd,lmd,ujug_q,ujdg_q,djug_q,djdg_q,
      <            ujulog_q,djulog_q,ulojug_q,ulojdg_q,ulojulog_q,
      >            .false.,1)
       
@@ -1227,13 +1231,13 @@ c****************************************************************
         if(wann%l_bzsym) oper=mapkoper(ikpt)
 
         i_rec = i_rec + 1
-      if (mod(i_rec-1,isize).eq.irank) then
+      if (mod(i_rec-1,mpi%isize).eq.mpi%irank) then
 
-      allocate ( we(neigd),eigg(neigd) )
+      allocate ( we(DIMENSION%neigd),eigg(DIMENSION%neigd) )
 
       call cpu_time(delta)
       n_start=1
-      n_end=neigd
+      n_end=DIMENSION%neigd
 
 
 ! read information of diagonalization for fixed q-point iqpt
@@ -1242,8 +1246,9 @@ c****************************************************************
 
       CALL cdn_read(
      >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
-     >              l_ss,l_noco,neigd,n_start,n_end,
+     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     >              kptibz,jspin,DIMENSION%nbasfcn,
+     >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
      <              nmat,nv,ello,evdu,epar,kveclo,
      <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
 
@@ -1272,17 +1277,17 @@ c...we work only within the energy window
 !      print*,"bands used:"
 
       do i = 1,nbands
-        if ((eigg(i).ge.e1s.and.nslibd.lt.numbands.and.wann%l_bynumber)
-     &    .or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
-     &    .or.(i.ge.wann%band_min(jspin).and.
-     &    (i.le.wann%band_max(jspin))
-     &       .and.wann%l_byindex))then
+        if ((eigg(i).ge.sliceplot%e1s.and.nslibd.lt.numbands.and.
+     &       wann%l_bynumber).or.
+     &      (eigg(i).ge.sliceplot%e1s.and.eigg(i).le.sliceplot%e2s.and.
+     &       wann%l_byenergy).or.(i.ge.wann%band_min(jspin).and.
+     &      (i.le.wann%band_max(jspin)).and.wann%l_byindex))then
 
 !           print*,i
            nslibd = nslibd + 1
            eig(nslibd) = eigg(i)
            we(nslibd) = we(i)
-           if(l_noco)then
+           if(noco%l_noco)then
              funbas=       nv(1)+nlotot
              funbas=funbas+nv(2)+nlotot
            else
@@ -1305,14 +1310,14 @@ c              rotate the wavefunction
 c***********************************************************
       if (wann%l_bzsym.and.oper.ne.1) then  !rotate bkpt
          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
-     >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
+     >            atoms%nat,atoms%nlod,atoms%llod,
+     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
+     >            noco%l_noco,noco%l_soc,
+     >            atoms%ntype,atoms%neq,nlotot,
      >            kveclo,jspin,
-     >            oper,nop,mrot,nvd,nv,
+     >            oper,sym%nop,sym%mrot,DIMENSION%nvd,nv,
      >            shiftkpt(:,ikpt),
-     >            tau,
+     >            sym%tau,
      x            bkpt,k1(:,:),k2(:,:),k3(:,:),
      x            zMat,nsfactor)
       else
@@ -1328,9 +1333,9 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
 
       noccbd = nslibd
 
-      allocate ( acof(noccbd,0:lmd,natd),
-     &           bcof(noccbd,0:lmd,natd),
-     &           ccof(-llod:llod,noccbd,nlod,natd))
+      allocate(acof(noccbd,0:lmd,atoms%nat),
+     &         bcof(noccbd,0:lmd,atoms%nat),
+     &         ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
 
       acof(:,:,:) = cmplx(0.,0.) ; bcof(:,:,:) = cmplx(0.,0.)
       ccof(:,:,:,:) = cmplx(0.,0.)
@@ -1347,8 +1352,10 @@ c...for the lapws and local orbitals, summed by the basis functions
       time_abcof=time_abcof+delta1-delta
 
       call wann_abinv(
-     >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
-     >        noccbd,lmax,nlo,llo,invsat,invsatnr,bkpt,taual,
+     >        atoms%ntype,atoms%nat,noccbd,atoms%lmaxd,lmd,atoms%llod,
+     >        atoms%nlod,atoms%ntype,atoms%neq,noccbd,atoms%lmax,
+     >        atoms%nlo,atoms%llo,atoms%invsat,sym%invsatnr,bkpt,
+     >        atoms%taual,
      X        acof,bcof,ccof)
 !      call cpu_time(tt4)
       !if(l_p0) write(*,*)'abcof=',tt4-tt3
@@ -1359,8 +1366,9 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_orbcomp)then
          call wann_orbcomp(
-     >            llod,noccbd,nlod,natd,ntypd,lmaxd,lmd,
-     >            ntype,neq,nlo,llo,acof,bcof,ccof,
+     >            atoms%llod,noccbd,atoms%nlod,atoms%nat,atoms%ntype,
+     >            atoms%lmaxd,lmd,atoms%ntype,atoms%neq,atoms%nlo,
+     >            atoms%llo,acof,bcof,ccof,
      >            usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),
      >            usdus%dulon(:,:,jspin),usdus%uloulopn(:,:,:,jspin),
      >            wann%oc_num_orbs,
@@ -1371,8 +1379,10 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_anglmom)then
          call wann_anglmom(
-     >                  llod,noccbd,nlod,natd,ntypd,lmax,lmd,!lmaxd,lmd,
-     >                  ntype,neq,nlo,llo,acof,bcof,ccof,
+     >                  atoms%llod,noccbd,atoms%nlod,atoms%nat,
+     >                  atoms%ntype,atoms%lmax,lmd,!atoms%lmaxd,lmd,
+     >                  atoms%ntype,atoms%neq,atoms%nlo,atoms%llo,
+     >                  acof,bcof,ccof,
      >                  usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),
      >                  usdus%dulon(:,:,jspin),
      >                  usdus%uloulopn(:,:,:,jspin),
@@ -1382,49 +1392,53 @@ c...for the lapws and local orbitals, summed by the basis functions
 #ifdef CPP_TOPO
       if(wann%l_surfcurr)then
 c         call wann_surfcurr_int(
-c     >        nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
-c     >        ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
-c     >        nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
-c     >        invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
-c     >        lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,nnne,kk,
-c     >        nvd,nlod,llod,nv(jspin),lmd,bkpt,omtil,nlo,llo,
+c     >        DIMENSION%nv2d,jspin,odi,ods,stars%ng3,vacuum%nmzxyd,stars%ng2,sphhar%ntypsd,
+c     >        atoms%ntype,atoms%lmaxd,atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,stars%ng3,vacuum%nvac,
+c     >        vacuum%nmz,vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,sym%symor,
+c     >        sym%invs,sym%invs2,cell%z1,vacuum%delz,atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
+c     >        atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,sliceplot%kk,
+c     >        DIMENSION%nvd,atoms%nlod,atoms%llod,nv(jspin),lmd,bkpt,cell%omtil,atoms%nlo,atoms%llo,
 c     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
 c     >        vz(:,:,jspin2),
-c     >        nslibd,nbasfcn,neigd,ff,gg,flo,acof,bcof,ccof,z,
+c     >        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,ff,gg,flo,acof,bcof,ccof,z,
 c     >        surfcurr(:,:,:,ikpt))
 
          call wann_surfcurr_int2(
-     >            nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
-     >            ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
-     >            nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
-     >            invs,invs2,z1,delz,ngopr,ntypsy,jri,
-     >            pos,taual,zatom,rmt,
-     >            lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,
-     >            nvd,nv(jspin),bkpt,omtil,
+     >            DIMENSION%nv2d,jspin,odi,ods,stars%ng3,vacuum%nmzxyd,
+     >            stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,
+     >            atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,
+     >            atoms%neq,stars%ng3,vacuum%nvac,vacuum%nmz,
+     >            vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,
+     >            input%film,sliceplot%slice,sym%symor,
+     >            sym%invs,sym%invs2,cell%z1,vacuum%delz,atoms%ngopr,
+     >            atoms%ntypsy,atoms%jri,atoms%pos,atoms%taual,
+     >            atoms%zatom,atoms%rmt,atoms%lmax,sym%mrot,sym%tau,
+     >            atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,
+     >            ikpt,DIMENSION%nvd,nv(jspin),bkpt,cell%omtil,
      >            k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >            nslibd,nbasfcn,neigd,z,
+     >            nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,z,
      <            dirfacs,
      >            surfcurr(:,:,:,ikpt))
 
          call wann_surfcurr(
-     >            dirfacs,amat,
-     >            jspin,ntype,lmaxd,lmax,natd,
-     >            neq,noccbd,lmd,natd,llod,nlod,
-     >            nlo,llo, 
+     >            dirfacs,cell%amat,
+     >            jspin,atoms%ntype,atoms%lmaxd,atoms%lmax,atoms%nat,
+     >            atoms%neq,noccbd,lmd,atoms%nat,atoms%llod,atoms%nlod,
+     >            atoms%nlo,atoms%llo, 
      >            acof,bcof,ccof,
      >            us(:,:,jspin),dus(:,:,jspin),duds(:,:,jspin),
      >            uds(:,:,jspin),
      >            ulos(:,:,jspin),dulos(:,:,jspin),
-     >            rmt,pos, 
+     >            atoms%rmt,atoms%pos, 
      &            surfcurr(:,:,:,ikpt))
         write(6,*)"dirfacs=",dirfacs
       endif
 
       if(wann%l_soctomom)then
          call wann_soc_to_mom(
-     >            jspin,ntype,lmaxd,lmax,natd,
-     >            jmtd,jri,rmsh,dx,neq,
-     >            noccbd,lmd,natd,llod,nlod,
+     >            jspin,atoms%ntype,atoms%lmaxd,atoms%lmax,atoms%nat,
+     >            atoms%jmtd,atoms%jri,atoms%rmsh,atoms%dx,atoms%neq,
+     >            noccbd,lmd,atoms%nat,atoms%llod,atoms%nlod,
      >            vso(:,:,1), 
      >            ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),
      >            acof,bcof,ccof,
@@ -1433,20 +1447,21 @@ c     >        surfcurr(:,:,:,ikpt))
 
       if(wann%l_nabla)then
          call wann_nabla(
-     >       nlo,llo,
-     >       jspin,ntype,lmaxd,lmax,natd,
-     >       jmtd,jri,rmsh,dx,neq,
-     >       noccbd,lmd,natd,llod,nlod, 
+     >       atoms%nlo,atoms%llo,
+     >       jspin,atoms%ntype,atoms%lmaxd,atoms%lmax,atoms%nat,
+     >       atoms%jmtd,atoms%jri,atoms%rmsh,atoms%dx,atoms%neq,
+     >       noccbd,lmd,atoms%nat,atoms%llod,atoms%nlod, 
      >       ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >       acof,bcof,ccof,
      &       nablamat(:,:,:,ikpt))
-         if(film.and..not.odi%d1)then
+         if(input%film.and..not.odi%d1)then
             call wann_nabla_vac(
-     >          z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >          ig,nmz,delz,ig2,area,bmat,
-     >          bbmat,evac(:,jspin),bkpt,vz(:,:,jspin2),
-     >          nslibd,jspin,k1,k2,k3,wannierspin,nvd,
-     >          nbasfcn,neigd,z,nv,omtil,
+     >          cell%z1,vacuum%nmzd,DIMENSION%nv2d,k1d,k2d,k3d,
+     >          stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,
+     >          stars%ig2,cell%area,cell%bmat,cell%bbmat,evac(:,jspin),
+     >          bkpt,vz(:,:,jspin2),nslibd,jspin,k1,k2,k3,wannierspin,
+     >          DIMENSION%nvd,DIMENSION%nbasfcn,DIMENSION%neigd,z,nv,
+     >          cell%omtil,
      <          nablamat(:,:,:,ikpt))
          endif   
          addnoco=0
@@ -1454,18 +1469,21 @@ c     >        surfcurr(:,:,:,ikpt))
            b1(1)=bkpt(1)+k1(i,jspin)
            b1(2)=bkpt(2)+k2(i,jspin)
            b1(3)=bkpt(3)+k3(i,jspin)
-           b2(1)=b1(1)*bmat(1,1)+b1(2)*bmat(2,1)+b1(3)*bmat(3,1)
-           b2(2)=b1(1)*bmat(1,2)+b1(2)*bmat(2,2)+b1(3)*bmat(3,2)
-           b2(3)=b1(1)*bmat(1,3)+b1(2)*bmat(2,3)+b1(3)*bmat(3,3)
+           b2(1)=b1(1)*cell%bmat(1,1)+b1(2)*cell%bmat(2,1)+
+     +           b1(3)*cell%bmat(3,1)
+           b2(2)=b1(1)*cell%bmat(1,2)+b1(2)*cell%bmat(2,2)+
+     +           b1(3)*cell%bmat(3,2)
+           b2(3)=b1(1)*cell%bmat(1,3)+b1(2)*cell%bmat(2,3)+
+     +           b1(3)*cell%bmat(3,3)
            do 42 j = n_rank+1,nv(jspin),n_size
 c-->     determine index and phase factor
             i1 = k1(j,jspin) - k1(i,jspin)
             i2 = k2(j,jspin) - k2(i,jspin)
             i3 = k3(j,jspin) - k3(i,jspin)
-            in = ig(i1,i2,i3)
+            in = stars%ig(i1,i2,i3)
             if (in.eq.0) goto 42
-            phase   = rgphs(i1,i2,i3)
-            phasust = cmplx(phase,0.0)*ustep(in)
+            phase   = stars%rgphs(i1,i2,i3)
+            phasust = cmplx(phase,0.0)*stars%ustep(in)
 
             do m = 1,nslibd
              do n = 1,nslibd
@@ -1500,7 +1518,7 @@ c     &    (.not.wann%l_mmn0)) goto 3
 c------mmn0-matrix
        if(wann%l_mmn0)then
        addnoco=0
-       if(l_noco.and.(jspin.eq.2))then
+       if(noco%l_noco.and.(jspin.eq.2))then
           addnoco=nv(1)+nlotot
        endif
        
@@ -1513,10 +1531,10 @@ c$$$            i2 = k2(j,jspin) - k2(i,jspin)
 c$$$            i3 = k3(j,jspin) - k3(i,jspin)
 c$$$c            if(abs(i1).gt.k1d.or.abs(i2).gt.k2d
 c$$$c     & .or. abs(i3).gt.k3d)print*,"interstitial warning"
-c$$$            in = ig(i1,i2,i3)
+c$$$            in = stars%ig(i1,i2,i3)
 c$$$            if (in.eq.0) goto 22
-c$$$            phase   = rgphs(i1,i2,i3)
-c$$$            phasust = cmplx(phase,0.0)*ustep(in)
+c$$$            phase   = stars%rgphs(i1,i2,i3)
+c$$$            phasust = cmplx(phase,0.0)*stars%ustep(in)
 c$$$            do m = 1,nslibd
 c$$$             do n = 1,nslibd
 c$$$#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
@@ -1538,47 +1556,51 @@ c-----> interstitial contribution to mmn0-matrix
 
       call wann_mmkb_int(
      >         cmplx_1,addnoco,addnoco,
-     >         nvd,k1d,k2d,k3d,
-     >         n3d,k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >         nv(jspin),neigd,nbasfcn,zMat,nslibd,
+     >         DIMENSION%nvd,k1d,k2d,k3d,
+     >         stars%ng3,k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >         nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,
      >         k1(:,jspin),k2(:,jspin),k3(:,jspin),
      >         nv(jspin),zMat,nslibd,
      >         nbnd,
-     >         rgphs,ustep,ig,(/ 0,0,0 /),
+     >         stars%rgphs,stars%ustep,stars%ig,(/ 0,0,0 /),
      <         mmn(:,:,ikpt))
 
 c---> spherical contribution to mmn0-matrix
 
        call wann_mmk0_sph(
-     >           llod,noccbd,nlod,natd,ntypd,lmaxd,lmd,
-     >           ntype,neq,nlo,llo,acof(1:noccbd,:,:),
+     >           atoms%llod,noccbd,atoms%nlod,atoms%nat,atoms%ntype,
+     >           atoms%lmaxd,lmd,atoms%ntype,atoms%neq,atoms%nlo,
+     >           atoms%llo,acof(1:noccbd,:,:),
      >           bcof(1:noccbd,:,:),ccof(:,1:noccbd,:,:),
      >           usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),
      >           usdus%dulon(:,:,jspin),usdus%uloulopn,
      =           mmn(:,:,ikpt))
 c---> vacuum contribution to mmn0-matrix
 
-       if (film .and. .not.odi%d1) then
+       if (input%film .and. .not.odi%d1) then
 
             call wann_mmk0_vac(
-     >           l_noco,nlotot,qpt_i,
-     >           z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >           ig,nmz,delz,ig2,area,bmat,
-     >           bbmat,evac(:,jspin),bkpt,vz(:,:,jspin2),
-     >           nslibd,jspin,k1,k2,k3,wannierspin,nvd,
-     >           nbasfcn,neigd,zMat,nv,omtil,
+     >           noco%l_noco,nlotot,qpt_i,
+     >           cell%z1,vacuum%nmzd,DIMENSION%nv2d,k1d,k2d,k3d,
+     >           stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,
+     >           stars%ig2,cell%area,cell%bmat,
+     >           cell%bbmat,evac(:,jspin),bkpt,vz(:,:,jspin2),
+     >           nslibd,jspin,k1,k2,k3,wannierspin,DIMENSION%nvd,
+     >           DIMENSION%nbasfcn,DIMENSION%neigd,zMat,nv,cell%omtil,
      <           mmn(:,:,ikpt))
        elseif (odi%d1) then
 
              call wann_mmk0_od_vac(
      >           DIMENSION, oneD, vacuum, stars, cell,
-     >           l_noco,nlotot,
-     >           z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >           ig,nmzxy,nmz,delz,ig2,odi%n2d,
-     >           bbmat,evac(1,jspin),bkpt,odi%M,odi%mb,
+     >           noco%l_noco,nlotot,
+     >           cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           k1d,k2d,k3d,stars%ng2,stars%ng3,
+     >           stars%ig,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,
+     >           odi%n2d,cell%bbmat,evac(1,jspin),bkpt,odi%M,odi%mb,
      >           vz(:,1,jspin2),odi,
-     >           nslibd,jspin,k1,k2,k3,wannierspin,nvd,area,
-     >           nbasfcn,neigd,zMat,nv,sk2,phi2,omtil,qpt_i,
+     >           nslibd,jspin,k1,k2,k3,wannierspin,DIMENSION%nvd,
+     >           cell%area,DIMENSION%nbasfcn,DIMENSION%neigd,zMat,nv,
+     >           stars%sk2,stars%phi2,cell%omtil,qpt_i,
      <           mmn(:,:,ikpt))
 
        endif
@@ -1592,25 +1614,27 @@ c---> overlaps with the trial orbitals
          amnchi = cmplx_1!cmplx(1.,0.)
 
          call wann_amn (
-     >            amnchi,nslibd,nwfs,ntypd,nlod,llod,llo,nlo,
-     >            lmaxd,jmtd,lmd,neq,natd,ikpt,nbnd,
-     >            rmsh,rmt,jri,dx,lmax,
+     >            amnchi,nslibd,nwfs,atoms%ntype,atoms%nlod,atoms%llod,
+     >            atoms%llo,atoms%nlo,atoms%lmaxd,atoms%jmtd,lmd,
+     >            atoms%neq,atoms%nat,ikpt,nbnd,
+     >            atoms%rmsh,atoms%rmt,atoms%jri,atoms%dx,atoms%lmax,
      >            usdus%us(:,:,jspin),usdus%dus(:,:,jspin),
      >            usdus%uds(:,:,jspin),
      >            usdus%duds(:,:,jspin),flo(:,:,:,:,jspin),
      >            ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),acof,bcof,ccof,
-     >            (l_soc.or.l_noco),jspin,
+     >            (noco%l_soc.or.noco%l_noco),jspin,
      &            l_amn2,amn(:,:,ikpt))
          if(l_amn2)then
           call wann_amn (
-     >            amnchi,nslibd,nwfs,ntypd,nlod,llod,llo,nlo,
-     >            lmaxd,jmtd,lmd,neq,natd,ikpt,nbnd,
-     >            rmsh,rmt,jri,dx,lmax,
+     >            amnchi,nslibd,nwfs,atoms%ntype,atoms%nlod,atoms%llod,
+     >            atoms%llo,atoms%nlo,atoms%lmaxd,atoms%jmtd,lmd,
+     >            atoms%neq,atoms%nat,ikpt,nbnd,
+     >            atoms%rmsh,atoms%rmt,atoms%jri,atoms%dx,atoms%lmax,
      >            usdus%us(:,:,jspin),usdus%dus(:,:,jspin),
      >            usdus%uds(:,:,jspin),
      >            usdus%duds(:,:,jspin),flo(:,:,:,:,jspin),
      >            ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),acof,bcof,ccof,
-     >            (l_soc.or.l_noco),jspin,
+     >            (noco%l_soc.or.noco%l_noco),jspin,
      &            l_amn2,amn(:,:,ikpt),bkpt)
          endif
 c         amn(ikpt,:,:)=amn(ikpt,:,:)*conjg(nsfactor)
@@ -1625,7 +1649,7 @@ c...         vanderbilt mmn matrix
 c***************************************************************
       if (wann%l_matrixmmn .and.
      >     (.not.wann%l_skipkov)) then   !  vanderbilt procedure Mmn matrix
-      allocate ( we_b(neigd) )
+      allocate ( we_b(DIMENSION%neigd) )
 
   !!! the cycle by the nearest neighbors (nntot) for each kpoint
 
@@ -1646,12 +1670,13 @@ c        print*,"something to do"
 
           call cpu_time(delta)
           n_start=1
-          n_end=neigd
+          n_end=DIMENSION%neigd
 
       CALL cdn_read(
      >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
-     >              l_ss,l_noco,neigd,n_start,n_end,
+     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     >              kptibz_b,jspin,DIMENSION%nbasfcn,
+     >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
      <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
      <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
 
@@ -1676,18 +1701,16 @@ c        print*,"something to do"
       eig_b(:) = 0.
 
         do i = 1,nbands_b
-          if((eigg(i).ge.e1s.and.nslibd_b.lt.numbands
-     & .and.wann%l_bynumber)
-     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
-     &.or.(i.ge.wann%band_min(jspin)
-     &                 .and.
-     &       (i.le.wann%band_max(jspin))
-     &                 .and.
+          if((eigg(i).ge.sliceplot%e1s.and.nslibd_b.lt.numbands
+     &        .and.wann%l_bynumber).or.
+     &       (eigg(i).ge.sliceplot%e1s.and.eigg(i).le.sliceplot%e2s.and.
+     &        wann%l_byenergy).or.(i.ge.wann%band_min(jspin).and.
+     &        (i.le.wann%band_max(jspin)).and.
      &       wann%l_byindex))then
             nslibd_b = nslibd_b + 1
             eig_b(nslibd_b) = eigg(i)
             we_b(nslibd_b) = we_b(i)
-            if(l_noco)then
+            if(noco%l_noco)then
                funbas =        nv_b(1) + nlotot
                funbas = funbas+nv_b(2) + nlotot
             else
@@ -1710,15 +1733,15 @@ c              Rotate the wavefunction of next neighbor.
 c***********************************************************
       if (wann%l_bzsym .and. (oper_b.ne.1)  ) then
          call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
-     >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
+     >            atoms%nat,atoms%nlod,atoms%llod,
+     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
+     >            noco%l_noco,noco%l_soc,
+     >            atoms%ntype,atoms%neq,nlotot,
      >            kveclo_b,jspin,
-     >            oper_b,nop,mrot,nvd,
+     >            oper_b,sym%nop,sym%mrot,DIMENSION%nvd,
      >            nv_b,
      >            shiftkpt(:,bpt(ikpt_b,ikpt)),
-     >            tau,
+     >            sym%tau,
      x            bkpt_b,k1_b(:,:),
      x            k2_b(:,:),k3_b(:,:),
      x            zMat_b,nsfactor_b)
@@ -1740,9 +1763,10 @@ ccccc   we start with the Mmn matrix   ccccccccccccc
 
 cccccccccccc  Spherical Contributions         ccccccccccccc
 
-      allocate ( acof_b(noccbd_b,0:lmd,natd),
-     &             bcof_b(noccbd_b,0:lmd,natd),
-     &             ccof_b(-llod:llod,noccbd_b,nlod,natd))
+      allocate (acof_b(noccbd_b,0:lmd,atoms%nat),
+     &          bcof_b(noccbd_b,0:lmd,atoms%nat),
+     &          ccof_b(-atoms%llod:atoms%llod,noccbd_b,atoms%nlod,
+     &          atoms%nat))
       
 !!! get the band-dependent k-dependent ab coeff.
       call cpu_time(delta)
@@ -1762,8 +1786,10 @@ cccccccccccc  Spherical Contributions         ccccccccccccc
       time_abcof=time_abcof+delta1-delta
 
       call wann_abinv(
-     >         ntypd,natd,noccbd_b,lmaxd,lmd,llod,nlod,ntype,neq,
-     >         noccbd_b,lmax,nlo,llo,invsat,invsatnr,bkpt_b,taual,
+     >         atoms%ntype,atoms%nat,noccbd_b,atoms%lmaxd,lmd,
+     >         atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,
+     >         noccbd_b,atoms%lmax,atoms%nlo,atoms%llo,atoms%invsat,
+     >         sym%invsatnr,bkpt_b,atoms%taual,
      X         acof_b,bcof_b,ccof_b)
 !      call cpu_time(tt4)
       !if(l_p0) write(*,*)'abcof_b=',tt4-tt5
@@ -1781,20 +1807,20 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       addnoco=0
       addnoco2=0
-      if(l_noco.and.(jspin.eq.2))then
+      if(noco%l_noco.and.(jspin.eq.2))then
          addnoco  = nv(1)   + nlotot
          addnoco2 = nv_b(1) + nlotot
       endif
 
       call wann_mmkb_int(
      >         cmplx_1,addnoco,addnoco2,
-     >         nvd,k1d,k2d,k3d,
-     >         n3d,k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >         nv(jspin),neigd,nbasfcn,zMat,nslibd,
+     >         DIMENSION%nvd,k1d,k2d,k3d,
+     >         stars%ng3,k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >         nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,
      >         k1_b(:,jspin),k2_b(:,jspin),k3_b(:,jspin),
      >         nv_b(jspin),zMat_b,nslibd_b,
      >         nbnd,
-     >         rgphs,ustep,ig,gb(:,ikpt_b,ikpt),
+     >         stars%rgphs,stars%ustep,stars%ig,gb(:,ikpt_b,ikpt),
      <         mmnk(:,:,ikpt_b,ikpt))
 
 !      call cpu_time(tt5)
@@ -1808,10 +1834,10 @@ cccccccccccc  Spherical Contributions  ccccccccccccc
 
         chi = cmplx_1
          call wann_mmkb_sph(
-     >       nbnd,llod,nslibd,nslibd_b,nlod,natd,ntypd,lmd,jmtd,
-     >       taual,nop,lmax,
-     >       ntype,neq,nlo,llo,acof,bcof,ccof,bkpt_b,
-     >       acof_b,bcof_b,ccof_b,gb(:,ikpt_b,ikpt),bkpt,
+     >       nbnd,atoms%llod,nslibd,nslibd_b,atoms%nlod,atoms%nat,
+     >       atoms%ntype,lmd,atoms%jmtd,atoms%taual,sym%nop,atoms%lmax,
+     >       atoms%ntype,atoms%neq,atoms%nlo,atoms%llo,acof,bcof,ccof,
+     >       bkpt_b,acof_b,bcof_b,ccof_b,gb(:,ikpt_b,ikpt),bkpt,
      >       ujug,ujdg,
      >       djug,djdg,ujulog,djulog,ulojug,ulojdg,ulojulog,kdiff,
      >       nntot,chi,
@@ -1826,33 +1852,37 @@ cccccccccccc  Spherical Contributions  ccccccccccccc
 
 c...vacuum contributions
          call cpu_time(delta)
-        if (film .and. .not.odi%d1) then
+        if (input%film .and. .not.odi%d1) then
 
            call wann_mmkb_vac(
-     >              cmplx_1,l_noco,nlotot,qpt_i,
-     >              nbnd,z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >              ig,nmz,delz,ig2,area,bmat,
-     >              bbmat,evac(:,jspin),evac(:,jspin_b),
+     >              cmplx_1,noco%l_noco,nlotot,qpt_i,
+     >              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,k1d,k2d,k3d,
+     >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
+     >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
+     >              cell%bbmat,evac(:,jspin),evac(:,jspin_b),
      >              bkpt,bkpt_b,vz(:,:,jspin2),vz(:,:,jspin2_b),
      >              nslibd,nslibd_b,jspin,jspin_b,
      >              k1,k2,k3,k1_b,k2_b,k3_b,
-     >              wannierspin,nvd,
-     >              nbasfcn,neigd,zMat,zMat_b,nv,nv_b,omtil,
+     >              wannierspin,DIMENSION%nvd,
+     >              DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_b,
+     >              nv,nv_b,cell%omtil,
      >              gb(:,ikpt_b,ikpt),
      <              mmnk(:,:,ikpt_b,ikpt))
          elseif (odi%d1) then
 
            call wann_mmkb_od_vac(
      >           DIMENSION,oneD,vacuum,stars,cell,
-     >           cmplx_1,l_noco,nlotot,
-     >           nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >           ig,nmzxy,nmz,delz,ig2,odi%n2d,
-     >           bbmat,evac(1,jspin),evac(1,jspin_b),
+     >           cmplx_1,noco%l_noco,nlotot,
+     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           k1d,k2d,k3d,stars%ng2,stars%ng3,stars%ig,vacuum%nmzxy,
+     >           vacuum%nmz,vacuum%delz,stars%ig2,odi%n2d,
+     >           cell%bbmat,evac(1,jspin),evac(1,jspin_b),
      >           bkpt,bkpt_b,odi%M,odi%mb,
      >           vz(:,1,jspin2),vz(:,1,jspin2_b),odi,
      >           nslibd,nslibd_b,jspin,jspin_b,k1,k2,k3,k1_b,k2_b,k3_b,
-     >           wannierspin,nvd,area,nbasfcn,neigd,
-     >           zMat,zMat_b,nv,nv_b,sk2,phi2,omtil,
+     >           wannierspin,DIMENSION%nvd,cell%area,DIMENSION%nbasfcn,
+     >           DIMENSION%neigd,
+     >           zMat,zMat_b,nv,nv_b,stars%sk2,stars%phi2,cell%omtil,
      >           gb(:,ikpt_b,ikpt),qpt_i,
      >           .false.,1,
      <           mmnk(:,:,ikpt_b,ikpt))
@@ -1885,7 +1915,7 @@ c     &          mmnk(:,:,ikpt_b,ikpt)*nsfactor*conjg(nsfactor_b)
 c*******************************************c 
 c          START Q-NEIGHBOR LOOP            c
 c*******************************************c      
-      allocate ( we_qb(neigd) )
+      allocate ( we_qb(DIMENSION%neigd) )
 
       DO iqpt_b=1,nntot_q 
 !         call cpu_time(tt3)
@@ -1895,11 +1925,11 @@ c*******************************************c
         IF(qptibz_b.EQ.qptibz) CYCLE     ! no need to compute overlaps
                                          ! with periodic images for now
 
-        qptb_i = qss
-        alphb_i = alph
-        betab_i = beta
-        thetab_i = theta
-        phib_i = phi
+        qptb_i = noco%qss
+        alphb_i = noco%alph
+        betab_i = noco%beta
+        thetab_i = noco%theta
+        phib_i = noco%phi
         if(l_sgwf) then
            qptb_i(:) = param_vec(:,qptibz_b)
            alphb_i(:) = param_alpha(:,qptibz_b)
@@ -1913,7 +1943,7 @@ c*******************************************c
         if (wann%l_bzsym) qptibz_b=irreduc_q(qptibz_b)
 
         n_start=1
-        n_end=neigd
+        n_end=DIMENSION%neigd
         
 ! read in diagonalization information from corresponding
 ! eig file to q-point iqpt_b at a given k-point ikpt.
@@ -1923,8 +1953,10 @@ c*******************************************c
 
        CALL cdn_read(
      >               eig_idList(iqpt_b),
-     >               nvd,jspd,irank,isize,kptibz,jspin_b,nbasfcn, !wannierspin instead of jspd? !kptibz_b2?
-     >               l_ss,l_noco,neigd,n_start,n_end,
+     >               DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd? !kptibz_b2?
+     >               kptibz,jspin_b,DIMENSION%nbasfcn,
+     >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
+     >               n_end,
      <               nmat_qb,nv_qb,ello,evdu,epar,kveclo_qb,
      <               k1_qb,k2_qb,k3_qb,bkpt,wqb,nbands_qb,eigg,   !we_qb instead of wqb?
      <               zzMat)
@@ -1952,18 +1984,15 @@ c*******************************************c
 
        nslibd_qb = 0
        do i = 1,nbands_qb
-          if((eigg(i).ge.e1s.and.nslibd_qb.lt.numbands
-     &    .and.wann%l_bynumber)
-     &    .or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
-     &    .or.(i.ge.wann%band_min(jspin)
-     &                 .and.
-     &       (i.le.wann%band_max(jspin))
-     &                 .and.
-     &       wann%l_byindex))then
+          if((eigg(i).ge.sliceplot%e1s.and.nslibd_qb.lt.numbands
+     &       .and.wann%l_bynumber).or.
+     &       (eigg(i).ge.sliceplot%e1s.and.eigg(i).le.sliceplot%e2s.and.
+     &        wann%l_byenergy).or.(i.ge.wann%band_min(jspin).and.
+     &       (i.le.wann%band_max(jspin)).and.wann%l_byindex)) then
             nslibd_qb = nslibd_qb + 1
             eig_qb(nslibd_qb) = eigg(i)
             we_qb(nslibd_qb) = we_qb(i)
-            if(l_noco)then
+            if(noco%l_noco)then
                funbas =        nv_qb(1) + nlotot
                funbas = funbas+nv_qb(2) + nlotot
             else
@@ -2005,9 +2034,10 @@ c*******************************************c
 !         call cpu_time(tt5)
          !if(l_p0) write(*,*)'nbnd_qb=',tt5-tt4
 
-        allocate ( acof_qb(noccbd_qb,0:lmd,natd),
-     &             bcof_qb(noccbd_qb,0:lmd,natd),
-     &             ccof_qb(-llod:llod,noccbd_qb,nlod,natd))
+        allocate (acof_qb(noccbd_qb,0:lmd,atoms%nat),
+     &            bcof_qb(noccbd_qb,0:lmd,atoms%nat),
+     &            ccof_qb(-atoms%llod:atoms%llod,noccbd_qb,atoms%nlod,
+     &            atoms%nat))
 
         acof_qb(:,:,:) = cmplx(0.,0.) ; bcof_qb(:,:,:) = cmplx(0.,0.)
         ccof_qb(:,:,:,:) = cmplx(0.,0.)
@@ -2027,10 +2057,12 @@ c*******************************************c
      +             acof_qb,bcof_qb,ccof_qb,zMat_qb)
 
         call wann_abinv(
-     >        ntypd,natd,noccbd_qb,lmaxd,lmd,llod,nlod,ntype,neq,      
-     >        noccbd_qb,lmax,nlo,llo,invsat,invsatnr,
+     >        atoms%ntype,atoms%nat,noccbd_qb,atoms%lmaxd,lmd,
+     >        atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,      
+     >        noccbd_qb,atoms%lmax,atoms%nlo,atoms%llo,atoms%invsat,
+     >        sym%invsatnr,
      >        bqpt,  ! does not enter            
-     >        taual, ! does not enter
+     >        atoms%taual, ! does not enter
      X        acof_qb,bcof_qb,ccof_qb)
 
 ! check that A,B,C coefficients are the same if q+b = q
@@ -2045,16 +2077,16 @@ c*******************************************c
 
         addnoco=0
         addnoco2=0
-        if(l_noco.and.(jspin.eq.2))then
+        if(noco%l_noco.and.(jspin.eq.2))then
            addnoco  = nv(1)   + nlotot
         endif
-        if(l_noco.and.(jspin_b.eq.2))then
+        if(noco%l_noco.and.(jspin_b.eq.2))then
            addnoco2 = nv_qb(1) + nlotot
         endif
 
 
 ! set up local->global transformation for overlaps
-        do n=1,ntype
+        do n=1,atoms%ntype
            if(l_sgwf) then
               dalph = alph_i(n)-alphb_i(n)
               db1 = beta_i(n)/2.
@@ -2116,9 +2148,10 @@ c*******************************************c
 ! calculated especially for the q-points before. then, q and q+b
 ! take the role of k and k+b and the same for G(q+b) and G(k+b)
         if(l_sgwf) call wann_mmkb_sph(        
-     >       nbnd,llod,nslibd,nslibd_qb,nlod,natd,ntypd,lmd,jmtd,
-     >       sign_q*taual/2.0,nop,lmax,                                    
-     >       ntype,neq,nlo,llo,acof,bcof,ccof,qptb_i,
+     >       nbnd,atoms%llod,nslibd,nslibd_qb,atoms%nlod,atoms%nat,
+     >       atoms%ntype,lmd,atoms%jmtd,sign_q*atoms%taual/2.0,sym%nop,
+     >       atoms%lmax,atoms%ntype,atoms%neq,atoms%nlo,atoms%llo,
+     >       acof,bcof,ccof,qptb_i,
      >       acof_qb,bcof_qb,ccof_qb,gb_q(:,iqpt_b,iqpt),qpt_i,
      >       ujug_q,ujdg_q,
      >       djug_q,djdg_q,ujulog_q,djulog_q,ulojug_q,ulojdg_q,
@@ -2126,9 +2159,10 @@ c*******************************************c
      >       nntot_q,chi,
      =       mmnk_q(:,:,iqpt_b,ikpt))
         if(l_socgwf) call wann_mmkb_sph(        
-     >       nbnd,llod,nslibd,nslibd_qb,nlod,natd,ntypd,lmd,jmtd,
-     >       zero_taual,nop,lmax,                        
-     >       ntype,neq,nlo,llo,acof,bcof,ccof,
+     >       nbnd,atoms%llod,nslibd,nslibd_qb,atoms%nlod,atoms%nat,
+     >       atoms%ntype,lmd,atoms%jmtd,
+     >       zero_taual,sym%nop,atoms%lmax,                        
+     >       atoms%ntype,atoms%neq,atoms%nlo,atoms%llo,acof,bcof,ccof,
      >       (/ 0.0, phib_i/tpi, thetab_i/tpi /),
      >       acof_qb,bcof_qb,ccof_qb,gb_q(:,iqpt_b,iqpt),
      >       (/ 0.0, phi_i/tpi, theta_i/tpi /),
@@ -2143,9 +2177,9 @@ c*******************************************c
 
 
        if(((doublespin.ne.3).and.(doublespin.ne.4))
-     >     .or.(.not.l_noco)) then
+     >     .or.(.not.noco%l_noco)) then
 
-          if(.not.l_noco)then
+          if(.not.noco%l_noco)then
              interchi=chi(1)
              vacchi=chi(1)
           else
@@ -2159,55 +2193,60 @@ c*******************************************c
 ! and lattice vectors G(k,q) (k1...) and G(k,q+b) (k1_qb...)
         if(l_sgwf) call wann_mmkb_int(
      >         interchi,addnoco,addnoco2,
-     >         nvd,k1d,k2d,k3d,
-     >         n3d,k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >         nv(jspin),neigd,nbasfcn,zMat,nslibd,
+     >         DIMENSION%nvd,k1d,k2d,k3d,
+     >         stars%ng3,k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >         nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,
      >         k1_qb(:,jspin_b),k2_qb(:,jspin_b),k3_qb(:,jspin_b),
      >         nv_qb(jspin_b),zMat_qb,nslibd_qb,
      >         nbnd,
-     >         rgphs,ustep,ig,sign_q*gb_q(:,iqpt_b,iqpt)/2,     
+     >         stars%rgphs,stars%ustep,stars%ig,
+     >         sign_q*gb_q(:,iqpt_b,iqpt)/2,     
      =         mmnk_q(:,:,iqpt_b,ikpt))                        
         if(l_socgwf) call wann_mmkb_int(
      >         interchi,addnoco,addnoco2,
-     >         nvd,k1d,k2d,k3d,
-     >         n3d,k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >         nv(jspin),neigd,nbasfcn,zMat,nslibd,
+     >         DIMENSION%nvd,k1d,k2d,k3d,
+     >         stars%ng3,k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >         nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,
      >         k1_qb(:,jspin_b),k2_qb(:,jspin_b),k3_qb(:,jspin_b),
      >         nv_qb(jspin_b),zMat_qb,nslibd_qb,
      >         nbnd,
-     >         rgphs,ustep,ig,(/ 0, 0, 0 /),     
+     >         stars%rgphs,stars%ustep,stars%ig,(/ 0, 0, 0 /),     
      =         mmnk_q(:,:,iqpt_b,ikpt))!m_int(:,:,iqpt_b,ikpt))      
 
 !        call cpu_time(tt5)
         !if(l_p0) write(*,*)'int=',tt5-tt4
 
 ! vacuum contribution in film calculation
-        if (film .and. .not.odi%d1) then
+        if (input%film .and. .not.odi%d1) then
            if(l_sgwf) call wann_mmkb_vac(                  
-     >              vacchi,l_noco,nlotot,sign_q*2.*bkpt,
-     >              nbnd,z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >              ig,nmz,delz,ig2,area,bmat,
-     >              bbmat,evac(:,jspin),evac(:,jspin_b),
+     >              vacchi,noco%l_noco,nlotot,sign_q*2.*bkpt,
+     >              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,k1d,k2d,k3d,
+     >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
+     >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
+     >              cell%bbmat,evac(:,jspin),evac(:,jspin_b),
      >              sign_q*qpt_i/2.,
      >              sign_q*qptb_i/2.,
      >              vz(:,:,jspin2),vz(:,:,jspin2_b),
      >              nslibd,nslibd_qb,jspin,jspin_b,
      >              k1,k2,k3,k1_qb,k2_qb,k3_qb,
-     >              wannierspin,nvd,
-     >              nbasfcn,neigd,zMat,zMat_qb,nv,nv_qb,omtil,
+     >              wannierspin,DIMENSION%nvd,
+     >              DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_qb,nv,
+     >              nv_qb,cell%omtil,
      >              sign_q*gb_q(:,iqpt_b,iqpt)/2,
      =              mmnk_q(:,:,iqpt_b,ikpt))
            if(l_socgwf) call wann_mmkb_vac(                    
-     >              vacchi,l_noco,nlotot,qpt_i,
-     >              nbnd,z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >              ig,nmz,delz,ig2,area,bmat,
-     >              bbmat,evac(:,jspin),evac(:,jspin_b),
+     >              vacchi,noco%l_noco,nlotot,qpt_i,
+     >              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,k1d,k2d,k3d,
+     >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
+     >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
+     >              cell%bbmat,evac(:,jspin),evac(:,jspin_b),
      >              bqpt,bqpt,
      >              vz(:,:,jspin2),vz(:,:,jspin2_b),
      >              nslibd,nslibd_qb,jspin,jspin_b,
      >              k1,k2,k3,k1_qb,k2_qb,k3_qb,
-     >              wannierspin,nvd,
-     >              nbasfcn,neigd,zMat,zMat_qb,nv,nv_qb,omtil,
+     >              wannierspin,DIMENSION%nvd,
+     >              DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_qb,nv,
+     >              nv_qb,cell%omtil,
      >              (/ 0, 0, 0 /),
      =              mmnk_q(:,:,iqpt_b,ikpt))
 
@@ -2220,35 +2259,37 @@ c*******************************************c
          elseif (odi%d1) then
            if(l_sgwf) call wann_mmkb_od_vac(
      >           DIMENSION,oneD,vacuum,stars,cell,
-     >           vacchi,l_noco,nlotot,          
-     >           nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >           ig,nmzxy,nmz,delz,ig2,odi%n2d,
-     >           bbmat,evac(1,jspin),evac(1,jspin_b),
+     >           vacchi,noco%l_noco,nlotot,          
+     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           k1d,k2d,k3d,stars%ng2,stars%ng3,stars%ig,vacuum%nmzxy,
+     >           vacuum%nmz,vacuum%delz,stars%ig2,odi%n2d,
+     >           cell%bbmat,evac(1,jspin),evac(1,jspin_b),
      >           sign_q*qpt_i/2.,sign_q*qptb_i/2.,
      >           odi%M,odi%mb,
      >           vz(:,1,jspin2),vz(:,1,jspin2_b),odi,
      >           nslibd,nslibd_qb,jspin,jspin_b,
      >           k1,k2,k3,k1_qb,k2_qb,k3_qb,
-     >           wannierspin,nvd,area,nbasfcn,neigd,
-     >           zMat,zMat_qb,nv,nv_qb,sk2,phi2,
-     >           omtil,
+     >           wannierspin,DIMENSION%nvd,cell%area,DIMENSION%nbasfcn,
+     >           DIMENSION%neigd,zMat,zMat_qb,nv,nv_qb,stars%sk2,
+     >           stars%phi2,cell%omtil,
      >           sign_q*gb_q(:,iqpt_b,iqpt)/2,sign_q*2.*bkpt, 
      >           .true.,sign_q,
      =           mmnk_q(:,:,iqpt_b,ikpt))
            if(l_socgwf) call wann_mmkb_od_vac(   
      >           DIMENSION,oneD,vacuum,stars,cell,               
-     >           vacchi,l_noco,nlotot,          
-     >           nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >           ig,nmzxy,nmz,delz,ig2,odi%n2d,
-     >           bbmat,evac(1,jspin),evac(1,jspin_b),
+     >           vacchi,noco%l_noco,nlotot,          
+     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           k1d,k2d,k3d,stars%ng2,stars%ng3,stars%ig,vacuum%nmzxy,
+     >           vacuum%nmz,vacuum%delz,stars%ig2,odi%n2d,
+     >           cell%bbmat,evac(1,jspin),evac(1,jspin_b),
      >           bqpt,bqpt,
      >           odi%M,odi%mb,
      >           vz(:,1,jspin2),vz(:,1,jspin2_b),odi,
      >           nslibd,nslibd_qb,jspin,jspin_b,
      >           k1,k2,k3,k1_qb,k2_qb,k3_qb,
-     >           wannierspin,nvd,area,nbasfcn,neigd,
-     >           zMat,zMat_qb,nv,nv_qb,sk2,phi2,
-     >           omtil,
+     >           wannierspin,DIMENSION%nvd,cell%area,DIMENSION%nbasfcn,
+     >           DIMENSION%neigd,zMat,zMat_qb,nv,nv_qb,stars%sk2,
+     >           stars%phi2,cell%omtil,
      >           (/ 0, 0, 0 /),qpt_i, 
      >           .false.,1,
      =           mmnk_q(:,:,iqpt_b,ikpt))
@@ -2282,48 +2323,62 @@ c$$$  3     continue !goto jump no longer needed?
      >        (doublespin.eq.1 .or. doublespin.eq.2)) then
 
          addnoco=0
-         if(l_noco.and.(jspin.eq.2))then
+         if(noco%l_noco.and.(jspin.eq.2))then
             addnoco=nv(1)+nlotot
          endif
 
-         if (slice) then
-          if (ikpt.eq.kk) then
+         if (sliceplot%slice) then
+          if (ikpt.eq.sliceplot%kk) then
 
-           write (6,*) 'nnne=',nnne
-           write (6,*) 'eig(nnne)=',eig(nnne)
-           write (6,*) 'we(nnne)=',we(nnne)
+           write (6,*) 'nnne=',sliceplot%nnne
+           write (6,*) 'eig(nnne)=',eig(sliceplot%nnne)
+           write (6,*) 'we(nnne)=',we(sliceplot%nnne)
 
            call wann_plot(
      >        DIMENSION,oneD,vacuum,stars,cell,atoms,
-     >        nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,       
-     >        ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
-     >        nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
-     >        invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
-     >        lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,nnne,kk,
-     >        nvd,nlod,llod,nv(jspin),lmd,bkpt,omtil,nlo,llo,
+     >        DIMENSION%nv2d,jspin,odi,ods,stars%ng3,vacuum%nmzxyd,
+     >        stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,
+     >        atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,
+     >        stars%ng3,vacuum%nvac,vacuum%nmz,vacuum%nmzxy,stars%ng2,
+     >        sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,
+     >        sym%symor,sym%invs,sym%invs2,cell%z1,vacuum%delz,
+     >        atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
+     >        atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,
+     >        cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,
+     >        sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,
+     >        nv(jspin),lmd,bkpt,cell%omtil,atoms%nlo,atoms%llo,
      >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
      >        vz(:,:,jspin2),
-     >        nslibd,nbasfcn,neigd,ff(:,:,:,:,jspin),
+     >        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,
+     >        ff(:,:,:,:,jspin),
      >        gg(:,:,:,:,jspin),flo,acof,bcof,ccof,zMat,
-     >        k1d,k2d,k3d,ig,ig2,sk2,phi2,l_noco,l_ss,qpt_i,
+     >        k1d,k2d,k3d,stars%ig,stars%ig2,stars%sk2,stars%phi2,
+     >        noco%l_noco,noco%l_ss,qpt_i,
      >        addnoco,get_index_kq(ikpt,iqpt,fullnkpts),l_sgwf)
 
           endif
-         else ! not slice
+         else ! not sliceplot%slice
 
           call wann_plot(
      >        DIMENSION,oneD,vacuum,stars,cell,atoms,
-     >        nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
-     >        ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
-     >        nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
-     >        invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
-     >        lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,nnne,kk,
-     >        nvd,nlod,llod,nv(jspin),lmd,bkpt,omtil,nlo,llo,
+     >        DIMENSION%nv2d,jspin,odi,ods,stars%ng3,vacuum%nmzxyd,
+     >        stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,
+     >        atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,
+     >        stars%ng3,vacuum%nvac,vacuum%nmz,vacuum%nmzxy,stars%ng2,
+     >        sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,
+     >        sym%symor,sym%invs,sym%invs2,cell%z1,vacuum%delz,
+     >        atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
+     >        atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,
+     >        cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,
+     >        sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,
+     >        nv(jspin),lmd,bkpt,cell%omtil,atoms%nlo,atoms%llo,
      >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
      >         vz(:,:,jspin2),
-     >        nslibd,nbasfcn,neigd,ff(:,:,:,:,jspin),
+     >        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,
+     >        ff(:,:,:,:,jspin),
      >        gg(:,:,:,:,jspin),flo,acof,bcof,ccof,zMat,
-     >        k1d,k2d,k3d,ig,ig2,sk2,phi2,l_noco,l_ss,qpt_i,
+     >        k1d,k2d,k3d,stars%ig,stars%ig2,stars%sk2,stars%phi2,
+     >        noco%l_noco,noco%l_ss,qpt_i,
      >        addnoco,get_index_kq(ikpt,iqpt,fullnkpts),l_sgwf)
 
           if(wann%l_plot_symm.and.wann%l_bzsym)then
@@ -2336,9 +2391,9 @@ c$$$  3     continue !goto jump no longer needed?
               else
                  l_conjugate=.false.
               endif
-              kplotoper=invtab(plotoper)
-              call wann_plot_symm(jspin,mrot(:,:,kplotoper),ikpt,kplot,
-     &                                 l_conjugate)
+              kplotoper=sym%invtab(plotoper)
+              call wann_plot_symm(jspin,sym%mrot(:,:,kplotoper),ikpt,
+     &                            kplot,l_conjugate)
             endif
            enddo
           endif
@@ -2372,7 +2427,7 @@ c$$$  3     continue !goto jump no longer needed?
      &                 ulojdg_q)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
 
@@ -2384,69 +2439,70 @@ c******************************************************
       if(doublespin.eq.3 .or. doublespin.eq.4) goto 912
 
       if(wann%l_nabla)then
-        hescale=tpi*condquant/bohrtocm/omtil
+        hescale=tpi*condquant/bohrtocm/cell%omtil
         hescale=sqrt(hescale)
         nablamat=nablamat*hescale
         call wann_write_nabla(
-     >           mpi_comm,l_p0,spin12(jspin)//'.nabl',
+     >           mpi%mpi_comm,l_p0,spin12(jspin)//'.nabl',
      >           'Matrix elements of nabla operator',
      >           nbnd,fullnkpts,nbnd,
-     >           irank,isize,
+     >           mpi%irank,mpi%isize,
      <           nablamat)
       endif
 
       if(wann%l_soctomom)then
-        hescale=tpi*condquant/bohrtocm/omtil
+        hescale=tpi*condquant/bohrtocm/cell%omtil
         hescale=sqrt(hescale)
         soctomom=soctomom*hescale
         call wann_write_nabla(
-     >           mpi_comm,l_p0,spin12(jspin)//'.stm',
+     >           mpi%mpi_comm,l_p0,spin12(jspin)//'.stm',
      >           'Matrix elements of stm operator',
      >           nbnd,fullnkpts,nbnd,
-     >           irank,isize,
+     >           mpi%irank,mpi%isize,
      <           soctomom)
       endif
 
       if(wann%l_surfcurr)then
         surfcurr = conjg( surfcurr/cmplx(0.0,2.0) )
-        hescale=tpi*condquant/bohrtocm/omtil
+        hescale=tpi*condquant/bohrtocm/cell%omtil
         hescale=sqrt(hescale)
         surfcurr=surfcurr*hescale
         call wann_write_nabla(
-     >           mpi_comm,l_p0,spin12(jspin)//'.surfcurr',
+     >           mpi%mpi_comm,l_p0,spin12(jspin)//'.surfcurr',
      >           'Surface currents',
      >           nbnd,fullnkpts,nbnd,
-     >           irank,isize,
+     >           mpi%irank,mpi%isize,
      <           surfcurr)
       endif
 
-      if((l_soc.or.l_noco).and.wann%l_mmn0)then
+      if((noco%l_soc.or.noco%l_noco).and.wann%l_mmn0)then
         call wann_write_amn(
-     >           mpi_comm,l_p0,spin12(jspin)//trim(fending)//'.socmmn0',
+     >           mpi%mpi_comm,
+     >           l_p0,spin12(jspin)//trim(fending)//'.socmmn0',
      >           'Overlaps of the wavefunct. at the same kpoint',
      >           nbnd,fullnkpts,nbnd,
-     >           irank,isize,.false.,
+     >           mpi%irank,mpi%isize,.false.,
      <           mmn,.false.)
-      endif !l_soc and l_mmn0  
+      endif !noco%l_soc and l_mmn0  
 
       if(wann%l_orbcomp)then
          num_angl=9
          if(wann%l_oc_f)num_angl=16
          call wann_write_matrix5(
-     >            mpi_comm,l_p0,spin12(jspin)//'.orbcomp',
+     >            mpi%mpi_comm,l_p0,spin12(jspin)//'.orbcomp',
      >            'angular components',
      >            nbnd,nbnd,
      >            num_angl,wann%oc_num_orbs,fullnkpts,
-     >            irank,isize,
+     >            mpi%irank,mpi%isize,
      <            orbcomp)
       endif
 
-      if((l_soc.or.l_noco) .and. (doublespin.eq.1)) then
+      if((noco%l_soc.or.noco%l_noco) .and. (doublespin.eq.1)) then
          if(wann%l_mmn0) socmmn(:,:,:)=mmn(:,:,:)
          goto 912
       endif
 
-      if(l_soc.or.l_noco) then
+      if(noco%l_soc.or.noco%l_noco) then
          jspin2=1
          if(wann%l_mmn0)      mmn(:,:,:)=socmmn(:,:,:)+mmn(:,:,:)
          if(wann%l_mmn0)      deallocate(socmmn)
@@ -2455,10 +2511,11 @@ c******************************************************
 !      call cpu_time(tt3)
       if (wann%l_matrixamn)then
          call wann_write_amn(
-     >           mpi_comm,l_p0,spin12(jspin2)//trim(fending)//'.amn',
+     >           mpi%mpi_comm,
+     >           l_p0,spin12(jspin2)//trim(fending)//'.amn',
      >           'Overlaps of the wavefunct. with the trial orbitals',
      >           nbnd,fullnkpts,nwfs,
-     >           irank,isize,.false.,
+     >           mpi%irank,mpi%isize,.false.,
      <           amn(:,:,:),wann%l_unformatted)
       endif !wann%l_matrixamn
 !      call cpu_time(tt4)
@@ -2466,10 +2523,11 @@ c******************************************************
 
       if(wann%l_anglmom)then
         call wann_write_matrix4(
-     >          mpi_comm,l_p0,spin12(jspin2)//trim(fending)//'.anglmom',
+     >          mpi%mpi_comm,
+     >          l_p0,spin12(jspin2)//trim(fending)//'.anglmom',
      >          'Matrix elements of angular momentum',
      >          nbnd,nbnd,3,fullnkpts,
-     >          irank,isize,
+     >          mpi%irank,mpi%isize,
      <          anglmom)
       endif
 
@@ -2479,10 +2537,10 @@ c            for projmethod: write down WF1.umn
 c*************************************************************
        if((wann%l_projmethod.or.wann%l_bestproj))then
          call wann_write_amn(
-     >           mpi_comm,l_p0,spin12(jspin2)//'.umn',
+     >           mpi%mpi_comm,l_p0,spin12(jspin2)//'.umn',
      >           'transformation to first guess Wannier functions',
      >           nbnd,fullnkpts,nwfs,
-     >           irank,isize,.false.,
+     >           mpi%irank,mpi%isize,.false.,
      <           psiw,.false.)
 #ifdef CPP_MPI
          allocate( hwfr2(size(hwfr,1),size(hwfr,2)) )
@@ -2490,7 +2548,7 @@ c*************************************************************
          CALL MPI_REDUCE(
      +           hwfr,hwfr2,length,
      +           CPP_MPI_COMPLEX,MPI_SUM,0,
-     +           mpi_comm,ierr)
+     +           mpi%mpi_comm,ierr)
          hwfr=hwfr2
          deallocate(hwfr2)
 #endif
@@ -2516,10 +2574,11 @@ c*********************************************************
 
       if(wann%l_mmn0)then
          call wann_write_amn(
-     >            mpi_comm,l_p0,spin12(jspin2)//trim(fending)//'.mmn0',
+     >            mpi%mpi_comm,
+     >            l_p0,spin12(jspin2)//trim(fending)//'.mmn0',
      >            'Overlaps of the wavefunct. at the same kpoint',
      >            nbnd,fullnkpts,nbnd,
-     >            irank,isize,.false.,
+     >            mpi%irank,mpi%isize,.false.,
      <            mmn,.false.)
       endif !wann%l_mmn0  
 
@@ -2532,9 +2591,9 @@ c*****************************************************
 !      call cpu_time(tt3)
       if(wann%l_matrixmmn.and.(.not.wann%l_skipkov))then
          call wann_write_mmnk(
-     >            mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,
+     >            mpi%mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,
      >            maptopair,pair_to_do,nbnd,bpt,gb,
-     >            isize,irank,fending,     
+     >            mpi%isize,mpi%irank,fending,     
      <            mmnk,wann%l_unformatted)
       endif !wann%l_matrixmmn
 !      call cpu_time(tt4)
@@ -2550,7 +2609,7 @@ c*****************************************************
          write(fname,'("param_",i4.4,".mmn")')iqpt
          call wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,
      >                         nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,
-     >                         isize,irank,fname,mmnk_q,
+     >                         mpi%isize,mpi%irank,fname,mmnk_q,
      >                         wann%l_unformatted)
       endif
 
@@ -2558,23 +2617,23 @@ c*****************************************************
          write(fname,'("param_",i4.4,"_",i1,".mmn")')iqpt,doublespin
          call wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,
      >                         nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,
-     >                         isize,irank,fname,m_sph+m_int+m_vac,
-     >                         wann%l_unformatted)
+     >                         mpi%isize,mpi%irank,fname,
+     >                         m_sph+m_int+m_vac,wann%l_unformatted)
 
          write(fname,'("param_",i4.4,"_",i1,"_int.mmn")')iqpt,doublespin
          call wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,
      >                         nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,
-     >                         isize,irank,fname,m_int,
+     >                         mpi%isize,mpi%irank,fname,m_int,
      >                         wann%l_unformatted)
          write(fname,'("param_",i4.4,"_",i1,"_sph.mmn")')iqpt,doublespin
          call wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,
      >                         nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,
-     >                         isize,irank,fname,m_sph,
+     >                         mpi%isize,mpi%irank,fname,m_sph,
      >                         wann%l_unformatted)
          write(fname,'("param_",i4.4,"_",i1,"_vac.mmn")')iqpt,doublespin
          call wann_write_mmnk2(l_p0,fullnkpts,nntot_q,wann,
      >                         nbnd,bpt_q(:,iqpt),gb_q(:,:,iqpt)/2,
-     >                         isize,irank,fname,m_vac,
+     >                         mpi%isize,mpi%irank,fname,m_vac,
      >                         wann%l_unformatted)
       endif
 !      m_int = cmplx(0.,0.)
@@ -2592,28 +2651,28 @@ c*****************************************************
       if( allocated (surfcurr) ) deallocate( surfcurr )
       if( allocated( mmn ) ) deallocate(mmn)
       if( allocated( amn ) ) then
-         if(.not.(l_soc.or.l_noco))deallocate(amn)
+         if(.not.(noco%l_soc.or.noco%l_noco))deallocate(amn)
       endif
       if ( allocated (psiw) ) deallocate ( psiw )
       if (wann%l_matrixmmn) then
-         if(.not.(l_soc.or.l_noco))deallocate (mmnk)
+         if(.not.(noco%l_soc.or.noco%l_noco))deallocate (mmnk)
       endif  
       if (wann%l_anglmom .and. allocated(anglmom))then
-         if(.not.(l_soc.or.l_noco))deallocate (anglmom)
+         if(.not.(noco%l_soc.or.noco%l_noco))deallocate (anglmom)
       endif
       deallocate(flo)
 
-      if(.not.l_noco)nrec=nrec+nkpts
+      if(.not.noco%l_noco)nrec=nrec+nkpts
 
 c#ifdef CPP_MPI
-c      call MPI_BARRIER(mpi_comm,ierr)
+c      call MPI_BARRIER(mpi%mpi_comm,ierr)
 c#endif
 
 110   continue ! end of cycle by spins
 
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
       ! close eig files
@@ -2726,26 +2785,32 @@ c************************************************c
       call wann_postproc(
      >         DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
      >         lapw,oneD,noco,cell,eig_id,                !eig_id is used here after closing the files?!
-     >         mpi_comm,wann,l_p0,film,jspins,n2d,
-     >         natd,pos,amat,bmat,ntype,neq,zatom,
-     >         omtil,l_soc,l_noco,neigd,fullnkpts,
-     >         odi,l_proj,
-     >         l_dulo,l_ss,lmaxd,ntypd,nop,nvd,jspd,nbasfcn,
-     >         llod,nlod,nwdd,nlo,llo,lapw_l,invtab,mrot,ngopr,
-     >         lmax,invsat,invsatnr,nkpt,taual,rmt,bbmat,alph,
-     >         beta,qss,sk2,phi2,ods,
-     >         irank,isize,n3d,nmzxyd,nmzd,jmtd,nlhd,nq3,nvac,
-     >         invs,invs2,nlh,jri,ntypsy,ntypsd,nkptd,
-     >         dx,rmsh,
-     >         e1s,e2s,ulo_der,ustep,k1d,k2d,k3d,nop2,
-     >         ig,rgphs,slice,kk,nnne,irecl,nv2d,nmzxy,nmz,nq2,
-     >         delz,area,z1,volint,ig2,tau,symor,ef,l_sgwf,fullnqpts)
+     >         mpi%mpi_comm,wann,l_p0,input%film,input%jspins,stars%ng2,
+     >         atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,
+     >         atoms%neq,atoms%zatom,cell%omtil,noco%l_soc,noco%l_noco,
+     >         DIMENSION%neigd,fullnkpts,odi,l_proj,atoms%l_dulo,
+     >         noco%l_ss,atoms%lmaxd,atoms%ntype,sym%nop,DIMENSION%nvd,
+     >         DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
+     >         atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,
+     >         sym%mrot,atoms%ngopr,atoms%lmax,atoms%invsat,
+     >         sym%invsatnr,nkpt,atoms%taual,atoms%rmt,cell%bbmat,
+     >         noco%alph,noco%beta,noco%qss,stars%sk2,stars%phi2,ods,
+     >         mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,
+     >         atoms%jmtd,sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,
+     >         sym%invs2,sphhar%nlh,atoms%jri,atoms%ntypsy,
+     >         sphhar%ntypsd,nkptd,atoms%dx,atoms%rmsh,
+     >         sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,
+     >         k1d,k2d,k3d,sym%nop2,stars%ig,stars%rgphs,
+     >         sliceplot%slice,sliceplot%kk,sliceplot%nnne,
+     >         DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,stars%ng2,
+     >         vacuum%delz,cell%area,cell%z1,cell%volint,stars%ig2,
+     >         sym%tau,sym%symor,results%ef,l_sgwf,fullnqpts)
 
 #ifdef CPP_MPI
-      call MPI_BARRIER(mpi_comm,ierr)
+      call MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
-      if(.not.wann%l_ldauwan)  CALL juDFT_end("wannier good",irank)
+      if(.not.wann%l_ldauwan)  CALL juDFT_end("wannier good",mpi%irank)
 
       END SUBROUTINE wannier
 

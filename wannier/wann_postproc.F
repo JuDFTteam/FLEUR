@@ -14,14 +14,14 @@
      >          omtil,l_soc,l_noco,neigd,fullnkpts,
      >          odi,l_proj,
      >          l_dulo,l_ss,lmaxd,ntypd,nop,nvd,jspd,nbasfcn,
-     >          llod,nlod,nwdd,nlo,llo,lapw_l,invtab,mrot,ngopr,
+     >          llod,nlod,nlo,llo,lapw_l,invtab,mrot,ngopr,
      >          lmax,invsat,invsatnr,nkpt,taual,rmt,bbmat,alph,
      >          beta,qss,sk2,phi2,ods,
      >          irank,isize,n3d,nmzxyd,nmzd,jmtd,nlhd,nq3,nvac,
      >          invs,invs2,nlh,jri,ntypsy,ntypsd,nkptd,
      >          dx,rmsh,
      >          e1s,e2s,ulo_der,ustep,k1d,k2d,k3d,nop2,
-     >          ig,rgphs,slice,kk,nnne,irecl,nv2d,nmzxy,nmz,nq2,
+     >          ig,rgphs,slice,kk,nnne,nv2d,nmzxy,nmz,nq2,
      >          delz,area,z1,volint,ig2,tau,symor,ef,l_sgwf,fullnqpts)
 c     <          fermi_weights)
 
@@ -82,7 +82,7 @@ c***********************************************
       type(t_wann), intent(in) :: wann
       logical,      intent(in) :: l_p0
       logical,      intent(in) :: film
-      integer,      intent(in) :: jspins,n2d,mpi_comm, eig_id, irecl
+      integer,      intent(in) :: jspins,n2d,mpi_comm, eig_id
       integer,      intent(in) :: natd
       real,         intent(in) :: pos(3,natd)
       real,         intent(in) :: amat(3,3),bmat(3,3)
@@ -96,17 +96,17 @@ c***********************************************
       type(od_inp), intent(in) :: odi
       logical,      intent(in) :: l_proj
       integer, intent (in)     :: lmaxd,ntypd,nop,nvd,jspd
-      integer, intent (in)     :: nbasfcn,llod,nlod,nwdd
+      integer, intent (in)     :: nbasfcn,llod,nlod
       integer, intent (in)     :: nlo(ntypd),llo(nlod,ntypd)
       integer, intent (in)     :: lapw_l(ntypd)
       logical, intent (in)     :: l_dulo(nlod,ntypd),l_ss
       integer, intent (in)     :: invtab(nop),mrot(3,3,nop),ngopr(natd)
       integer, intent (in)     :: lmax(ntypd)
-      integer, intent (in)     :: invsat(natd),invsatnr(natd),nkpt(nwdd)
+      integer, intent (in)     :: invsat(natd),invsatnr(natd),nkpt
       real,    intent (in)     :: taual(3,natd),rmt(ntypd)
       real,    intent (in)     :: bbmat(3,3)
-      real, intent (inout)     :: alph(ntypd),beta(ntypd)
-      real, intent (inout)     :: qss(3,fullnqpts)
+      real,    intent (in)     :: alph(ntypd),beta(ntypd)
+      real,    intent (in)     :: qss(3,fullnqpts)
       real,    intent (in)     :: sk2(n2d),phi2(n2d)
       type (od_sym),intent(in) :: ods
       integer, intent (in)     :: irank,isize,n3d
@@ -121,7 +121,7 @@ c***********************************************
       complex, intent (in) :: ustep(n3d)
       integer, intent (in) :: k1d,k2d,k3d,nop2
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       logical, intent (in) :: slice
       integer, intent (in) :: kk,nnne
       integer, intent (in) :: nv2d,nmzxy,nmz,nq2
@@ -449,7 +449,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      mpi_comm,i,wann%band_min,wann%band_max,l_soc,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
@@ -469,7 +469,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      l_soc,wann%unigrid,i,wann%band_min,wann%band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,

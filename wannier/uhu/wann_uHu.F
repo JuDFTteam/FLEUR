@@ -23,14 +23,14 @@ c*******************************************c
      >      lapw,oneD,noco,cell,
      >      l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >      z1,nv2d,nmzxy,nmz,delz,zrfs,ig2,area,tau,zatom,nq2,kv2,nop2,
-     >      volint,symor,pos,ef,irecl,l_soc,
+     >      volint,symor,pos,ef,l_soc,
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
      >      theta,phi,soc_opt,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
@@ -94,11 +94,11 @@ c     ..scalar arguments..
       logical, intent (in) :: l_ms,l_sgwf,l_socgwf
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
-      integer, intent (in) :: llod,nlod,ntype,nwdd,n3d,n2d
+      integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
-      integer, intent (in) :: irecl,memd,lmplmd,nparampts
+      integer, intent (in) :: memd,lmplmd,nparampts
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
       real,    intent (in) :: ef,theta,phi,aux_latt_const
 
@@ -110,17 +110,17 @@ c     ..array arguments..
       integer, intent (in) :: nlo(ntypd),llo(nlod,ntypd),lapw_l(ntypd)
       integer, intent (in) :: invtab(nop),mrot(3,3,nop),ngopr(natd)
       integer, intent (in) :: neq(ntypd),lmax(ntypd)
-      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt(nwdd)
+      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt
       integer, intent (in) :: ulo_der(nlod,ntypd),ig2(n3d),kv2(2,n2d)
       integer, intent (in) :: mlh(memd,0:nlhd,ntypsd)
       integer, intent (in) :: nmem(0:nlhd,ntypsd)
       integer, intent (in) :: llh(0:nlhd,ntypsd),lnonsph(ntypd)
       integer, intent (in) :: lo1l(0:llod,ntypd)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd)
       real,    intent (in) :: amat(3,3),bmat(3,3),bbmat(3,3)
       real,    intent (in) :: rmsh(jmtd,ntypd),tau(3,nop),zatom(ntype)
-      real, intent (inout) :: alph(ntypd),beta(ntypd),qss(3)
+      real,    intent (in) :: alph(ntypd),beta(ntypd),qss(3)
       real,    intent (in) :: pos(3,natd),sk2(n2d),phi2(n2d)
       real,    intent (in) :: param_vec(3,nparampts)
       real,    intent (in) :: param_alpha(ntypd,nparampts)
@@ -142,7 +142,8 @@ c     ..allocatable arrays..
       integer, allocatable :: maptopair_q(:,:,:)              
       integer, allocatable :: counts(:),displs(:)
       integer, allocatable :: gb(:,:,:),bpt(:,:)
-      integer, allocatable :: gb_q(:,:,:),bpt_q(:,:)         
+      integer, allocatable :: gb_q(:,:,:),bpt_q(:,:)
+      INTEGER, ALLOCATABLE :: eig_idList(:)
       real,    allocatable :: we(:),we_b(:),we_b2(:)
       real,    allocatable :: eigg(:)
       real,    allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
@@ -278,7 +279,7 @@ c     ..initializations..
       lmd = lmaxd*(lmaxd+2)
 
 !!!   should be changed in case the windows are really used
-      nkpts = maxval(nkpt(:))
+      nkpts = nkpt
 
       ! do we have to construct GWF ?
       l_gwf = .false.
@@ -645,6 +646,8 @@ c                         START Q LOOP                            c
 c*****************************************************************c
       do 314 iqpt = 1,fullnqpts  ! loop by q-points starts
 
+       ALLOCATE(eig_idList(nntot_q))
+
         qptibz=iqpt                          
         if(wann%l_bzsym .AND. l_gwf) qptibz=irreduc_q(iqpt)
         if(wann%l_bzsym .AND. l_gwf) oper_q=mapqoper(iqpt)
@@ -674,9 +677,18 @@ c*****************************************************************c
        IF (l_gwf) THEN
           do iqpt_b=1,nntot_q
             WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
-            OPEN(funit_start+iqpt_b,file=trim(fstart)//fending,
-     >          access='direct',
-     >          form='unformatted',recl=irecl,status='old')
+
+            eig_idList(iqpt_b)=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,
+     +                  DIMENSION%neigd,
+     +                  nkpts,wannierspin,atoms%lmaxd,
+     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
+     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+     +                  mpi%n_size,filename=trim(fstart)//fending,
+     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+
           enddo
         WRITE(fending,'("_",i4.4)')qptibz
 
@@ -786,7 +798,7 @@ c..   now we want to define the maximum number of the bands by all kpts
      >            eig_id,
      >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
      >            isize,jspin,nbasfcn,nlotot,
-     >            l_ss,l_noco,nrec,fullnkpts,irecl,
+     >            l_ss,l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,
      >            irreduc,odi,wann%band_min(jspin),
@@ -1398,9 +1410,9 @@ c      endif
          CALL close_eig(eig_id)
 
 !         CLOSE(66)
-            DO iqpt_b=1,nntot_q
-               CLOSE(funit_start+iqpt_b)
-            ENDDO
+         DO iqpt_b=1,nntot_q
+            CALL close_eig(eig_idList(iqpt_b))
+         ENDDO
       ENDIF
 
 
@@ -1412,6 +1424,8 @@ c     >          counts(irank),counts,displs,isize,
 c     >          wann%l_unformatted,.true.)
       if(allocated(uHu)) deallocate(uHu)
 c      if(allocated(uHuold)) deallocate(uHuold)
+
+      DEALLOCATE(eig_idList)
 
 314   continue ! iqpt, q-points
 c************************************************c
