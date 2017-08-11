@@ -9,7 +9,7 @@
         SUBROUTINE fleur_init(mpi,&
              input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-             oneD,l_opti)
+             oneD,wann,l_opti)
           USE m_judft
           USE m_juDFT_init
           USE m_types
@@ -60,6 +60,7 @@
           TYPE(t_kpts)     ,INTENT(OUT):: kpts
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
           TYPE(t_oneD)     ,INTENT(OUT):: oneD
+          TYPE(t_wann)     ,INTENT(OUT):: wann
           LOGICAL,          INTENT(OUT):: l_opti
 
 
@@ -70,14 +71,14 @@
           LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:,:)
           CHARACTER(len=3), ALLOCATABLE :: noel(:)
           !     .. Local Scalars ..
-          INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies
+          INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType
           COMPLEX    :: cdum
           CHARACTER(len=4)              :: namex
           CHARACTER(len=12)             :: relcor, tempNumberString
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
-          REAL                          :: scale, dtild
-          LOGICAL                       :: l_found, l_kpts, l_gga
+          REAL                          :: scale, dtild, phi_add
+          LOGICAL                       :: l_found, l_kpts, l_gga, l_exist
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -550,6 +551,113 @@
              sym%nsym = 2*sym%nop
           END IF
 
+          ! Initializations for Wannier functions (start)
+          wann%l_ms=.false.
+          wann%l_sgwf=.false.
+          wann%l_socgwf=.false.
+          wann%l_gwf=.false.
+          wann%l_bs_comf=.false. !.true.
+          wann%scale_param = 1.0
+          wann%aux_latt_const = 8.0!5.5!5.45886450 !5.98136400 !8.0725882513951497 !5.4170 !1.0
+          wann%param_file='qpts'
+          wann%l_dim=.false.
+          IF (mpi%irank.EQ.0) THEN
+
+             INQUIRE(FILE='plotbscomf',EXIST=wann%l_bs_comf)
+             WRITE(*,*)'l_bs_comf=',wann%l_bs_comf
+
+             WRITE(*,*) 'Logical variables for wannier functions to be read in!!'
+             wann%l_gwf = wann%l_ms.or.wann%l_sgwf.or.wann%l_socgwf
+
+             if(wann%l_gwf) then
+                WRITE(*,*)'running HDWF-extension of FLEUR code'
+                WRITE(*,*)'with l_sgwf =',wann%l_sgwf,' and l_socgwf =',wann%l_socgwf
+
+                IF(wann%l_socgwf.AND. .NOT.noco%l_soc) THEN
+                  CALL juDFT_error("set l_soc=T if l_socgwf=T",calledby="fleur_init")
+                END IF
+
+                IF((wann%l_ms.or.wann%l_sgwf).AND..NOT.(noco%l_noco.AND.noco%l_ss)) THEN
+                   CALL juDFT_error("set l_noco=l_ss=T for l_sgwf.or.l_ms",calledby="fleur_init")
+                END IF
+
+                IF((wann%l_ms.or.wann%l_sgwf).and.wann%l_socgwf) THEN
+                   CALL juDFT_error("(l_ms.or.l_sgwf).and.l_socgwf",calledby="fleur_init")
+                END IF
+
+                INQUIRE(FILE=wann%param_file,EXIST=l_exist)
+                IF(.NOT.l_exist) THEN
+                   CALL juDFT_error("where is param_file"//trim(wann%param_file)//"?",calledby="fleur_init")
+                END IF
+                OPEN (113,file=wann%param_file,status='old')
+                READ (113,*) wann%nparampts,wann%scale_param
+                CLOSE(113)
+             ELSE
+                wann%nparampts=1
+                wann%scale_param=1.0
+             END IF
+          END IF
+
+#ifdef CPP_MPI
+          CALL MPI_BCAST(wann%l_bs_comf,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(wann%l_gwf,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(wann%nparampts,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(wann%scale_param,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
+          CALL MPI_BCAST(wann%l_sgwf,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_BCAST(wann%l_socgwf,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_BCAST(wann%l_ms,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+#endif
+
+          ALLOCATE (wann%param_vec(3,wann%nparampts))
+          ALLOCATE (wann%param_alpha(atoms%ntype,wann%nparampts))
+
+          IF(mpi%irank.EQ.0) THEN
+             IF(wann%l_gwf) THEN
+                OPEN(113,file=wann%param_file,status='old')
+                READ(113,*)!header
+                write(6,*) 'parameter points for HDWFs generation:'
+                IF(wann%l_sgwf.or.wann%l_ms) THEN
+                   WRITE(6,*)'      q1       ','      q2       ','      q3'
+                ELSE IF(wann%l_socgwf) THEN
+                   WRITE(6,*)'      --       ','     phi       ','    theta'
+                END IF
+
+                DO pc = 1, wann%nparampts
+                   READ(113,'(3(f14.10,1x))') wann%param_vec(1,pc), wann%param_vec(2,pc), wann%param_vec(3,pc)
+                   wann%param_vec(:,pc) = wann%param_vec(:,pc) / wann%scale_param
+                   WRITE(6,'(3(f14.10,1x))') wann%param_vec(1,pc), wann%param_vec(2,pc), wann%param_vec(3,pc)
+                   IF(wann%l_sgwf.or.wann%l_ms) THEN
+                      iAtom = 1
+                      DO iType = 1, atoms%ntype
+                         phi_add = tpi_const*(wann%param_vec(1,pc)*atoms%taual(1,iAtom) +&
+                                              wann%param_vec(2,pc)*atoms%taual(2,iAtom) +&
+                                              wann%param_vec(3,pc)*atoms%taual(3,iAtom))
+                         wann%param_alpha(iType,pc) = noco%alph(iType) + phi_add
+                         iAtom = iAtom + atoms%neq(iType)
+                      END DO  
+                   END IF
+                END DO
+
+                IF(ANY(wann%param_vec(1,:).NE.wann%param_vec(1,1))) wann%l_dim(1)=.true.
+                IF(ANY(wann%param_vec(2,:).NE.wann%param_vec(2,1))) wann%l_dim(2)=.true.
+                IF(ANY(wann%param_vec(3,:).NE.wann%param_vec(3,1))) wann%l_dim(3)=.true.
+
+                CLOSE(113)
+
+                IF(wann%l_dim(1).and.wann%l_socgwf) THEN
+                   CALL juDFT_error("do not specify 1st component if l_socgwf",calledby="fleur_init")
+                END IF
+             END IF!(wann%l_gwf)
+          END IF!(mpi%irank.EQ.0)
+
+#ifdef CPP_MPI
+          CALL MPI_BCAST(wann%param_vec,3*wann%nparampts,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_BCAST(wann%param_alpha,atoms%ntype*wann%nparampts,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_BCAST(wann%l_dim,3,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+#endif
+
+          ! Initializations for Wannier functions (end)
 
           IF (    (xcpot%icorr.EQ.icorr_hf ) .OR. (xcpot%icorr.EQ.icorr_pbe0)&
                &    .OR.(xcpot%icorr.EQ.icorr_exx) .OR. (xcpot%icorr.EQ.icorr_hse)&

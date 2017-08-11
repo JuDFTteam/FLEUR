@@ -178,6 +178,7 @@
           TYPE(t_hybrid)   :: hybrid
           TYPE(t_oneD)     :: oneD
           TYPE(t_mpi)      :: mpi
+          TYPE(t_wann)     :: wann
 
 
           !     .. Local Scalars ..
@@ -209,7 +210,7 @@
          CALL timestart("Initialization")
          CALL fleur_init(mpi,input,dimension,atoms,sphhar,cell,stars,sym,noco,vacuum,&
                  sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-                 oneD,l_opti)
+                 oneD,wann,l_opti)
          CALL timestop("Initialization")
 
          IF (l_opti) THEN
@@ -238,9 +239,10 @@
 #ifdef CPP_WANN
           input%l_wann = .FALSE.
           INQUIRE (file='wann_inp',exist=input%l_wann)
-          IF (input%l_wann .AND. (mpi%irank == 0))THEN
-             CALL wann_optional(input,atoms,sym,cell,oneD,noco)
-          ENDIF
+          IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
+             CALL wann_optional(input,atoms,sym,cell,oneD,noco,wann)
+          END IF
+          IF (wann%l_gwf) input%itmax=1
 #endif
 
           l_restart = .TRUE.
@@ -695,7 +697,7 @@
                    CALL wannier(mpi,atoms,noco,&
                         &         dimension,sym,obsolete,cell,kpts,&
                         &         stars,oneD,vacuum,sphhar,input,&
-                        &         sliceplotresults)
+                        &         sliceplot,results)
                 ENDIF
 #endif
                 !-Wannier

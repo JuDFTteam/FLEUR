@@ -9,7 +9,7 @@
       CONTAINS
       SUBROUTINE wannier(
      >      DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,lapw,oneD,
-     >      noco,cell,enpara,banddos,sliceplot,odi,ods,results,
+     >      wann,noco,cell,enpara,banddos,sliceplot,odi,ods,results,
      >      l_real,nkpt,nkptd,k1d,k2d,k3d,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
      >      param_file,param_vec,nparampts,param_alpha,l_dim)
@@ -133,9 +133,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       TYPE(t_enpara),    INTENT(IN) :: enpara
       TYPE(t_banddos),   INTENT(IN) :: banddos
       TYPE(t_sliceplot), INTENT(IN) :: sliceplot
-      type (od_inp),     INTENT(IN) :: odi
-      type (od_sym),     INTENT(IN) :: ods
+      TYPE(od_inp),      INTENT(IN) :: odi
+      TYPE(od_sym),      INTENT(IN) :: ods
       TYPE(t_results),   INTENT(IN) :: results
+      TYPE(t_wann),      INTENT(INOUT) :: wann
 
       logical, intent (in) :: l_real
       integer, intent (in) :: nkptd
@@ -151,7 +152,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character(len=20),intent(in) :: param_file
 
 cccccccccccccccccc   local variables   cccccccccccccccccccc
-      type(t_wann) :: wann
       integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
       integer :: addnoco,funbas,loplod,addnoco2,igvm2,eig_id
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp

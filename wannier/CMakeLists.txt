@@ -94,6 +94,7 @@ wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
 wannier/wann_plot_od_vac.F
+wannier/bs_comfort.F
 )
 set(fleur_F90 ${fleur_F90}
 )

@@ -843,6 +843,27 @@
         integer :: gfcut
         integer :: unigrid(6)
         integer :: mhp(3)
+!---> gwf
+        LOGICAL :: l_ms
+        LOGICAL :: l_sgwf
+        LOGICAL :: l_socgwf
+        LOGICAL :: l_gwf
+        LOGICAL :: l_bs_comf
+        LOGICAL :: l_exist
+        LOGICAL :: l_opened
+        LOGICAL :: l_cleverskip
+        LOGICAL :: l_dim(3)
+        REAL    :: scale_param
+        REAL    :: aux_latt_const
+        REAL    :: hdwf_t1
+        REAL    :: hdwf_t2
+        INTEGER :: nparampts
+        CHARACTER(len=20) :: fn_eig
+        CHARACTER(len=20) :: param_file
+        REAL,ALLOCATABLE :: param_vec(:,:)
+        REAL,ALLOCATABLE :: param_alpha(:,:)
+!---> gwf
+
       end type t_wann
 
       END

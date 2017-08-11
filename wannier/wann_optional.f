@@ -8,7 +8,7 @@
       use m_juDFT
       contains
       subroutine wann_optional(
-     >               input,atoms,sym,cell,oneD,noco,
+     >               input,atoms,sym,cell,oneD,noco,wann,
      >               l_ms,l_sgwf,l_socgwf,
      >               aux_latt_const,param_file,l_dim)
 c**************************************************
@@ -29,17 +29,17 @@ c**************************************************
 
       implicit none
 
-      TYPE(t_input),     INTENT(IN) :: input
-      TYPE(t_atoms),     INTENT(IN) :: atoms
-      TYPE(t_sym),       INTENT(IN) :: sym
-      TYPE(t_cell),      INTENT(IN) :: cell
-      TYPE(t_oneD),      INTENT(IN) :: oneD
-      TYPE(t_noco),      INTENT(IN) :: noco
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_wann),      INTENT(INOUT) :: wann
 
       real,intent(in)     :: aux_latt_const
       character(len=20),intent(in) :: param_file
 
-      type(t_wann)  :: wann
       integer       :: num_wann(2)
       logical       :: l_nocosoc
 
