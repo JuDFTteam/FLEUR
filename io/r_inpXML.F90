@@ -98,7 +98,7 @@ SUBROUTINE r_inpXML(&
   INTEGER               :: idum
   CHARACTER (len=1)     ::  check
 
-  CHARACTER(len=20) :: tempNumberString, speciesName
+  CHARACTER(len=20) :: tempNumberString
   CHARACTER(len=150) :: format
   CHARACTER(len=20) :: mixingScheme
   CHARACTER(len=10) :: loType
@@ -142,7 +142,6 @@ SUBROUTINE r_inpXML(&
 
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
-  CHARACTER(LEN=50), ALLOCATABLE :: speciesNames(:)
   INTEGER, ALLOCATABLE :: speciesNLO(:)
   INTEGER, ALLOCATABLE :: multtab(:,:), invOps(:), optype(:)
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
@@ -1220,7 +1219,7 @@ SUBROUTINE r_inpXML(&
 !!! Start of species section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
+  ALLOCATE (speciesNLO(numSpecies))
   ALLOCATE(atoms%speciesName(numSpecies))
 
   atoms%numStatesProvided = 0
@@ -1233,8 +1232,7 @@ SUBROUTINE r_inpXML(&
   DO iSpecies = 1, numSpecies
      ! Attributes of species
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
-     speciesNames(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
-     atoms%speciesName(iSpecies) = TRIM(ADJUSTL(speciesNames(iSpecies)))
+     atoms%speciesName(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
      atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
      coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
      magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
@@ -1288,7 +1286,7 @@ SUBROUTINE r_inpXML(&
      DO iType = 1, atoms%ntype
         WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-        IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+        IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
            atoms%nz(iType) = atomicNumber
            IF (atoms%nz(iType).EQ.0) THEN
               WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', iType
@@ -1508,7 +1506,7 @@ SUBROUTINE r_inpXML(&
      DO iType = 1, atoms%ntype
         WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-        IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+        IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
            atoms%numStatesProvided(iType) = providedStates
            IF (coreConfigPresent) THEN
               IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
@@ -1815,7 +1813,7 @@ SUBROUTINE r_inpXML(&
 
   !WRITE(*,*) 'Reading of inp.xml file finished'
 
-  DEALLOCATE(speciesNames, speciesNLO)
+  DEALLOCATE(speciesNLO)
 
 END SUBROUTINE r_inpXML
 

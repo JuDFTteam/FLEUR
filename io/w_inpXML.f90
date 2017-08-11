@@ -105,7 +105,7 @@ SUBROUTINE w_inpXML(&
    INTEGER               :: idum
    CHARACTER (len=1)     ::  check
 
-   CHARACTER(len=20) :: tempNumberString, speciesName
+   CHARACTER(len=20) :: speciesName
    CHARACTER(len=150) :: format
    CHARACTER(len=20) :: mixingScheme
    CHARACTER(len=10) :: loType
@@ -421,9 +421,6 @@ SUBROUTINE w_inpXML(&
       END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
-      tempNumberString = ''
-      WRITE(tempNumberString,'(i0)') iSpecies
-!      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
@@ -537,9 +534,6 @@ SUBROUTINE w_inpXML(&
       iSpecies = atomTypeSpecies(iAtomType)
 !      <atomGroup species="Si-1">
       330 FORMAT('      <atomGroup species="',a,'">')
-      tempNumberString = ''
-      WRITE(tempNumberString,'(i0)') iSpecies
-!      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,330) TRIM(ADJUSTL(speciesName))
 

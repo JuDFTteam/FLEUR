@@ -73,7 +73,7 @@
           INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies
           COMPLEX    :: cdum
           CHARACTER(len=4)              :: namex
-          CHARACTER(len=12)             :: relcor
+          CHARACTER(len=12)             :: relcor, tempNumberString
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild
@@ -361,6 +361,13 @@
                       speciesRepAtomType(i) = i
                    END DO
                    numSpecies = SIZE(speciesRepAtomType)
+                   ALLOCATE(atoms%speciesName(numSpecies))
+                   atoms%speciesName = ''
+                   DO i = 1, numSpecies
+                      tempNumberString = ''
+                      WRITE(tempNumberString,'(i0)') i
+                      atoms%speciesName(i) = TRIM(ADJUSTL(noel(speciesRepAtomType(i)))) // '-' // TRIM(ADJUSTL(tempNumberString))
+                   END DO
                    a1(:) = a1(:) / scale
                    a2(:) = a2(:) / scale
                    a3(:) = a3(:) / scale
@@ -373,6 +380,7 @@
                                  xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
                                  .TRUE.,numSpecies,enpara)
+                   DEALLOCATE(atoms%speciesName)
                    DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                    DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
                    CALL juDFT_end("Fleur inp to XML input conversion completed.")
