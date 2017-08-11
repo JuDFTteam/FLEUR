@@ -1221,6 +1221,7 @@ SUBROUTINE r_inpXML(&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
+  ALLOCATE(atoms%speciesName(numSpecies))
 
   atoms%numStatesProvided = 0
   atoms%lapw_l(:) = -1
@@ -1233,6 +1234,7 @@ SUBROUTINE r_inpXML(&
      ! Attributes of species
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
      speciesNames(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
+     atoms%speciesName(iSpecies) = TRIM(ADJUSTL(speciesNames(iSpecies)))
      atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
      coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
      magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))

@@ -24,16 +24,18 @@ PROGRAM inpgen
       USE m_xsf_io, ONLY : xsf_write_atoms
       USE m_types
       USE m_inpgen_help
+      USE m_constants
       IMPLICIT NONE
     
       INTEGER natmax,nop48,nline,natin,ngen,i,j,bfh
-      INTEGER nops,no3,no2,na,numSpecies,i_c
+      INTEGER nops,no3,no2,na,numSpecies,i_c,element
       INTEGER infh,errfh,warnfh,symfh,dbgfh,outfh,dispfh
       LOGICAL cal_symm,checkinp,newSpecies
       LOGICAL cartesian,oldfleur,l_hyb  ,inistop
       REAL    aa
  
       REAL a1(3),a2(3),a3(3),scale(3),factor(3)
+      INTEGER              :: elementNumSpecies(0:104)
       INTEGER, ALLOCATABLE :: mmrot(:,:,:)
       REAL,    ALLOCATABLE :: ttr(:, :),atompos(:, :),atomid(:) 
       REAL,    ALLOCATABLE :: idlist(:)
@@ -47,6 +49,7 @@ PROGRAM inpgen
       CHARACTER(len=80):: title
       CHARACTER(len=7) :: symfn
       CHARACTER(len=4) :: dispfn
+      CHARACTER(LEN=8) :: tempNumberString
 
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
@@ -175,9 +178,12 @@ PROGRAM inpgen
 
       ALLOCATE (atomTypeSpecies(atoms%ntype))
       ALLOCATE (speciesRepAtomType(atoms%nat))
+      ALLOCATE (atoms%speciesName(atoms%nat))
+      elementNumSpecies = 0
       numSpecies = 0
       speciesRepAtomType = -1
       atomTypeSpecies = -1
+      atoms%speciesName = ''
       DO i = 1, atoms%nat
          newSpecies = .TRUE.
          DO j = 1, i-1
@@ -191,6 +197,12 @@ PROGRAM inpgen
             numSpecies = numSpecies + 1
             speciesRepAtomType(numSpecies) = natype(i)
             atomTypeSpecies(natype(i)) = numSpecies
+            element = nint(atoms%zatom(natype(i)))
+            elementNumSpecies(element) = elementNumSpecies(element) + 1
+            tempNumberString = ''
+            WRITE(tempNumberString,'(i0)') elementNumSpecies(element)
+            atoms%speciesName(numSpecies) = &
+               TRIM(ADJUSTL(namat_const(element))) // '-' // TRIM(ADJUSTL(tempNumberString))
          END IF
       END DO
 
@@ -203,10 +215,10 @@ PROGRAM inpgen
      &             infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &             atoms,sym,cell,title,idlist,&
      &             input,vacuum,noco,&
-     &             atomTypeSpecies,speciesRepAtomType,&
+     &             atomTypeSpecies,speciesRepAtomType,numSpecies,&
      &             a1,a2,a3)
 
-      DEALLOCATE (atomTypeSpecies,speciesRepAtomType)
+      DEALLOCATE (atoms%speciesName,atomTypeSpecies,speciesRepAtomType)
       DEALLOCATE ( ntyrep, natype, natrep, atomid )
 
       CLOSE(bfh,STATUS='delete')

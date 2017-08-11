@@ -423,7 +423,8 @@ SUBROUTINE w_inpXML(&
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
       tempNumberString = ''
       WRITE(tempNumberString,'(i0)') iSpecies
-      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+!      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
@@ -538,7 +539,8 @@ SUBROUTINE w_inpXML(&
       330 FORMAT('      <atomGroup species="',a,'">')
       tempNumberString = ''
       WRITE(tempNumberString,'(i0)') iSpecies
-      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+!      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,330) TRIM(ADJUSTL(speciesName))
 
       DO ieq=1,atoms%neq(iAtomType)

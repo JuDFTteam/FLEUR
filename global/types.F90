@@ -251,6 +251,7 @@
        !pos of atom (relat)(3,nat)
        REAL,ALLOCATABLE::taual(:,:)
        !lda_u information(ntype)
+       CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
        TYPE(t_utype),ALLOCATABLE::lda_u(:)
        INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
        INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
