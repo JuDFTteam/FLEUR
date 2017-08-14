@@ -224,6 +224,14 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
               na = na + atoms%neq(iType)
            END DO
         END IF
+     ELSE
+        IF (noco%l_ss) THEN
+           WRITE(*,*) "l_noco=F and l_ss=T is meaningless. Setting l_ss to F."
+           noco%l_ss = .FALSE.
+           WRITE(*,*) "Note: Actually this should be fixed by leaving l_ss=T"
+           WRITE(*,*) "      and adapting including (l_noco=.TRUE.).AND. in the"
+           WRITE(*,*) "      respective IF clauses all over the code"
+        END IF
      END IF
 
      ! Calculate missing kpts parameters
