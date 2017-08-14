@@ -218,6 +218,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%relax(3,atoms%ntype))
   ALLOCATE(atoms%neq(atoms%ntype))
   ALLOCATE(atoms%taual(3,atoms%nat))
+  ALLOCATE(atoms%label(atoms%nat))
   ALLOCATE(atoms%pos(3,atoms%nat))
   ALLOCATE(atoms%rmt(atoms%ntype))
   ALLOCATE(atoms%numStatesProvided(atoms%ntype))
@@ -1590,6 +1591,11 @@ SUBROUTINE r_inpXML(&
      DO i = 1, numberNodes
         na = na + 1
         WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'/relPos[',i,']'
+        IF(xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@label').NE.0) THEN
+           atoms%label(na) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@label')
+        ELSE
+           WRITE(atoms%label(na),'(i0)') na
+        END IF
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
         atoms%taual(1,na) = evaluatefirst(valueString)
         atoms%taual(2,na) = evaluatefirst(valueString)
@@ -1615,6 +1621,11 @@ SUBROUTINE r_inpXML(&
      DO i = 1, numberNodes
         na = na + 1
         WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'/filmPos[',i,']'
+        IF(xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@label').NE.0) THEN
+           atoms%label(na) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@label')
+        ELSE
+           WRITE(atoms%label(na),'(i0)') na
+        END IF
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
         atoms%taual(1,na) = evaluatefirst(valueString)
         atoms%taual(2,na) = evaluatefirst(valueString)

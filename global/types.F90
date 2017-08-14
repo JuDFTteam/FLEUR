@@ -250,6 +250,8 @@
        REAL,ALLOCATABLE::pos(:,:)
        !pos of atom (relat)(3,nat)
        REAL,ALLOCATABLE::taual(:,:)
+       !labels
+       CHARACTER(LEN=20), ALLOCATABLE :: label(:)
        !lda_u information(ntype)
        CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
        TYPE(t_utype),ALLOCATABLE::lda_u(:)

@@ -50,6 +50,7 @@ PROGRAM inpgen
       CHARACTER(len=7) :: symfn
       CHARACTER(len=4) :: dispfn
       CHARACTER(LEN=8) :: tempNumberString
+      CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
 
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
@@ -77,6 +78,8 @@ PROGRAM inpgen
 
       ALLOCATE ( mmrot(3,3,nop48), ttr(3,nop48) )
       ALLOCATE ( atompos(3,natmax),atomid(natmax) )
+      ALLOCATE (atomLabel(natmax))
+      atomLabel = ''
 
 !      OPEN (5,file='inp2',form='formatted',status='old')
       OPEN (6,file='out',form='formatted',status='unknown')
@@ -90,7 +93,7 @@ PROGRAM inpgen
      &                  nline,xl_buffer,buffer,&
      &                  title,input%film,cal_symm,checkinp,sym%symor,&
      &                  cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,i_c,&
-     &                 factor,natin,atomid,atompos,ngen,mmrot,ttr,&
+     &                 factor,natin,atomid,atompos,ngen,mmrot,ttr,atomLabel,&
      &                  l_hyb,noco%l_soc,noco%l_ss,noco%theta,noco%phi,noco%qss,inistop)!keep
 
 !      CLOSE (5)
@@ -147,7 +150,8 @@ PROGRAM inpgen
       ENDIF
       DEALLOCATE ( mmrot, ttr, atompos )
 
-      ALLOCATE ( atoms%taual(3,atoms%nat),idlist(atoms%ntype) ) 
+      ALLOCATE ( atoms%taual(3,atoms%nat),idlist(atoms%ntype) )
+      ALLOCATE (atoms%label(atoms%nat))
       WRITE (6,*)
       WRITE (6,'(a6,i3,a6,i3)') 'atoms%ntype=',atoms%ntype,' atoms%nat= ',atoms%nat
       na = 0
@@ -158,13 +162,15 @@ PROGRAM inpgen
            WRITE (6,'(3f10.6,10x,i7)')&
      &           atoms%pos(:,natmap(na+j)),natmap(na+j)
            atoms%taual(:,na+j) = atoms%pos(:,natmap(na+j))      ! reorder coordinates
-           idlist(i)    = atomid(natmap(na+j))      !     and atomic id's
+           idlist(i)           = atomid(natmap(na+j))           ! and atomic id's
+           atoms%label(na+j)      = atomLabel(natmap(na+j))        ! and labels
         ENDDO
         na = na + atoms%neq(i)
       ENDDO
       DO i=1,atoms%nat
         atoms%pos(:,i) = matmul( cell%amat , atoms%taual(:,i) )
       ENDDO
+      DEALLOCATE(atomLabel)
 
 !
 ! --> write a file 'sym.out' with accepted symmetry operations

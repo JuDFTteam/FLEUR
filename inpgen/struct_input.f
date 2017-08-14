@@ -11,6 +11,7 @@
      <                        title,film,cal_symm,checkinp,symor,
      <                    cartesian,oldfleur,a1,a2,a3,dvac,aa,scale,i_c,
      <                       factor,natin,atomid,atompos,ngen,mmrot,ttr,
+     <                       atomLabel,
      <                        l_hyb,l_soc,l_ss,theta,phi,qss,inistop)
 
       use m_calculator
@@ -39,6 +40,7 @@
       REAL,    INTENT (OUT)   :: ttr(3,nop48)
       CHARACTER(len=80), INTENT (OUT) :: title
       CHARACTER(len=7),  INTENT (IN)  :: symfn
+      CHARACTER(LEN=20), INTENT (OUT) :: atomLabel(natmax)
 
 !===> data
       REAL,             PARAMETER :: eps=1.e-7
@@ -268,6 +270,11 @@
         atompos(1,n)=evaluatefirst(buffer)
         atompos(2,n)=evaluatefirst(buffer)
         atompos(3,n)=evaluatefirst(buffer)
+        IF(TRIM(ADJUSTL(buffer)).NE.'') THEN
+           atomLabel(n) = TRIM(ADJUSTL(buffer))
+        ELSE
+           WRITE(atomLabel(n),'(i0)') n
+        END IF
       ENDDO
 
       CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)

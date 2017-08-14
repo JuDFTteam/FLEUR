@@ -570,7 +570,7 @@ SUBROUTINE w_inpXML(&
             STOP '1D position output not implemented!'
          ELSE IF (input%film) THEN
 !         <filmPos> x/myConstant  y/myConstant  1/myConstant</filmPos>
-            340 FORMAT('         <filmPos>',a,' ',a,' ',a,'</filmPos>')
+            340 FORMAT('         <filmPos label="',a20,'">',a,' ',a,' ',a,'</filmPos>')
             posString(:) = ''
             DO i = 1, 2
                IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
@@ -580,10 +580,11 @@ SUBROUTINE w_inpXML(&
                END IF
             END DO
             WRITE(posString(3),'(f0.10)') tempTaual(3,na)
-            WRITE (fileNum,340) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
+            WRITE (fileNum,340) TRIM(ADJUSTL(atoms%label(na))), &
+                                TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          ELSE
 !         <relPos> x/myConstant  y/myConstant  z/myConstant</relPos>
-            350 FORMAT('         <relPos>',a,' ',a,' ',a,'</relPos>')
+            350 FORMAT('         <relPos label="',a20,'">',a,' ',a,' ',a,'</relPos>')
             posString(:) = ''
             DO i = 1, 3
                IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
@@ -592,7 +593,8 @@ SUBROUTINE w_inpXML(&
                   WRITE(posString(i),'(f0.10)') tempTaual(i,na)
                END IF
             END DO
-            WRITE (fileNum,350) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
+            WRITE (fileNum,350) TRIM(ADJUSTL(atoms%label(na))), &
+                                TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          END IF
       END DO
 !         <force calculate="F" relaxX="T" relaxY="T" relaxZ="T"/>

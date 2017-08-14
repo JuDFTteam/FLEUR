@@ -352,10 +352,13 @@
                    WRITE(*,*) ''
                    ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
                    ALLOCATE(xmlElectronStates(29,atoms%ntype),xmlPrintCoreStates(29,atoms%ntype))
-                   ALLOCATE(xmlCoreOccs(1,1,1))
+                   ALLOCATE(xmlCoreOccs(1,1,1),atoms%label(atoms%nat))
                    filename = 'inpConverted.xml'
                    xmlElectronStates = noState_const
                    xmlPrintCoreStates = .FALSE.
+                   DO i = 1, atoms%nat
+                      WRITE(atoms%label(i),'(i0)'), i
+                   END DO
                    DO i = 1, atoms%ntype
                       noel(i) = namat_const(atoms%nz(i))
                       atomTypeSpecies(i) = i
@@ -381,7 +384,7 @@
                                  xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
                                  .TRUE.,numSpecies,enpara)
-                   DEALLOCATE(atoms%speciesName)
+                   DEALLOCATE(atoms%speciesName, atoms%label)
                    DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
                    DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
                    CALL juDFT_end("Fleur inp to XML input conversion completed.")
