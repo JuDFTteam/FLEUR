@@ -162,51 +162,51 @@ MODULE m_fleur
       !                                 r.pentcheva,kfa,Feb'96
 
       !     Types, these variables contain a lot of data!
-      TYPE(t_input)       :: input
-      TYPE(t_dimension)   :: dimension
-      TYPE(t_atoms)       :: atoms
-      TYPE(t_sphhar)      :: sphhar
-      TYPE(t_cell)        :: cell
-      TYPE(t_stars)       :: stars
-      TYPE(t_sym)         :: sym
-      TYPE(t_noco)        :: noco
-      TYPE(t_vacuum)      :: vacuum
-      TYPE(t_sliceplot)   :: sliceplot
-      TYPE(t_banddos)     :: banddos
-      TYPE(t_obsolete)    :: obsolete
-      TYPE(t_enpara)      :: enpara
-      TYPE(t_xcpot)       :: xcpot
-      TYPE(t_results)     :: results
-      TYPE(t_jij)         :: jij
-      TYPE(t_kpts)        :: kpts
-      TYPE(t_hybrid)      :: hybrid
-      TYPE(t_oneD)        :: oneD
-      TYPE(t_mpi)         :: mpi
-      TYPE(t_wann)        :: wann
+      TYPE(t_input)        :: input
+      TYPE(t_dimension)    :: dimension
+      TYPE(t_atoms)        :: atoms
+      TYPE(t_sphhar)       :: sphhar
+      TYPE(t_cell)         :: cell
+      TYPE(t_stars)        :: stars
+      TYPE(t_sym)          :: sym
+      TYPE(t_noco)         :: noco
+      TYPE(t_vacuum)       :: vacuum
+      TYPE(t_sliceplot)    :: sliceplot
+      TYPE(t_banddos)      :: banddos
+      TYPE(t_obsolete)     :: obsolete
+      TYPE(t_enpara)       :: enpara
+      TYPE(t_xcpot)        :: xcpot
+      TYPE(t_results)      :: results
+      TYPE(t_jij)          :: jij
+      TYPE(t_kpts)         :: kpts
+      TYPE(t_hybrid)       :: hybrid
+      TYPE(t_oneD)         :: oneD
+      TYPE(t_mpi)          :: mpi
+      TYPE(t_wann)         :: wann
 
       !     .. Local Scalars ..
-      INTEGER             :: eig_id
-      INTEGER             :: i,it,ithf,jspin,n,pc
-      LOGICAL             :: stop80,reap,l_endit,l_opti,l_cont
-      CHARACTER(len=12)   :: fname(3)
+      INTEGER              :: eig_id
+      INTEGER              :: i,it,ithf,jspin,n,pc
+      LOGICAL              :: stop80,reap,l_endit,l_opti,l_cont
       !--- J<
-      INTEGER             :: phn
-      REAL, PARAMETER     :: tol = 1.e-8
-      INTEGER             :: qcount ,imt,i_J,j_J
+      INTEGER              :: phn
+      REAL, PARAMETER      :: tol = 1.e-8
+      INTEGER              :: qcount ,imt,i_J,j_J
       !--- J>
 
       !     .. Local Arrays ..
-      CHARACTER(8)        :: name(10)
+      CHARACTER(8)         :: name(10)
 
       !     HF/hybrid-functionals/EXX
-      INTEGER             ::  l,j,m1,m2,isym,iisym
-      INTEGER             ::  ok
-      LOGICAL             ::  l_restart
-      COMPLEX             ::  cdum
+      INTEGER              ::  l,j,m1,m2,isym,iisym
+      INTEGER              ::  ok
+      LOGICAL              ::  l_restart
+      COMPLEX              ::  cdum
 #ifdef CPP_MPI
       include 'mpif.h'
-      integer             :: ierr(2)
+      integer              :: ierr(2)
 #endif
+      INTEGER, ALLOCATABLE :: eig_idList(:)
       mpi%mpi_comm = mpi_comm
          
       CALL timestart("Initialization")
@@ -244,6 +244,7 @@ MODULE m_fleur
       END IF
       IF (wann%l_gwf) input%itmax = 1
 #endif
+      ALLOCATE (eig_idList(wann%nparampts))
 
       l_restart = .TRUE.
 
@@ -304,7 +305,8 @@ MODULE m_fleur
             jij%alph1(:)=noco%alph(:)
             stop80= .FALSE.
             IF ((noco%l_soc.AND.noco%l_ss)) THEN
-               IF ((jij%l_J).OR.(jij%nqpt/=1).OR.(jij%nmagn/=1).OR.(jij%phnd/=1)) THEN
+               IF ((.NOT.wann%l_gwf).AND.&
+                   ((jij%l_J).OR.(jij%nqpt/=1).OR.(jij%nmagn/=1).OR.(jij%phnd/=1))) THEN
                   CALL juDFT_error("fleur: J-loop with ss+soc", calledby ="fleur")
                END IF
             END IF
@@ -315,7 +317,7 @@ MODULE m_fleur
                   noco%qss(:)=jij%qj(:,qcount)
                   jij%qn = ( noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2 )
                END IF
-               IF (jij%l_J.AND.(mpi%irank.EQ.0)) THEN
+               IF ((input%l_wann.OR.jij%l_J).AND.(mpi%irank.EQ.0)) THEN
                   WRITE(6,*) 'qss=(',noco%qss(1),',',noco%qss(2),',',noco%qss(3),')'
                   CALL timestart("Q-point for J_ij(total)")
                END IF
@@ -348,8 +350,8 @@ MODULE m_fleur
 
                   IF (it==1) THEN
                      eig_id=open_eig(mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt(1),&
-                                     dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot,&
-                                     noco%l_noco,.FALSE.,.FALSE.)
+                                             dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot,&
+                                             noco%l_noco,.FALSE.,.FALSE.)
                       !               CALL open_eig(mpi_comm,
                       !     >              nbasfcn,neigd,nkpt(1),jspd,lmaxd,nlod,ntypd,nlotot,
                       !     >                 l_noco,.false.,.true.)
@@ -420,8 +422,8 @@ MODULE m_fleur
                      jij%qn = (noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2)
                      noco%alph(:) = wann%param_alpha(:,pc)
                   ELSE IF (wann%l_socgwf) THEN
-                     IF(wann%l_dim(2)) noco%phi = tpi_const*wann%param_vec(2,pc)
-                     IF(wann%l_dim(3)) noco%theta = tpi_const*wann%param_vec(3,pc)
+                     IF(wann%l_dim(2)) noco%phi   = tpi_const * wann%param_vec(2,pc)
+                     IF(wann%l_dim(3)) noco%theta = tpi_const * wann%param_vec(3,pc)
                   END IF
 !---< gwf
 
@@ -506,6 +508,7 @@ MODULE m_fleur
                                  CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                             sym,kpts,dimension,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
                                             it,eig_id, results)
+                                 eig_idList(pc) = eig_id
                                  CALL timestop("eigen")
                                  !
                                  !                   add all contributions to total energy
@@ -660,7 +663,7 @@ MODULE m_fleur
 
                   END DO !imt
 
-                  IF ((mpi%irank.EQ.0).AND.(jij%l_J)) THEN
+                  IF ((input%l_wann.OR.jij%l_J).AND.(mpi%irank.EQ.0)) THEN
                      CALL timestop("Q-point for J_ij(total)")
                   END IF
 
@@ -804,7 +807,9 @@ MODULE m_fleur
                IF (xcpot%icorr /= icorr_pbe0.AND.xcpot%icorr /= icorr_hse .AND. &
                    xcpot%icorr /= icorr_hf  .AND.xcpot%icorr /= icorr_exx .AND. &
                    xcpot%icorr /= icorr_vhse) THEN
-                  CALL close_eig(eig_id)
+                  DO pc = 1, wann%nparampts
+                     CALL close_eig(eig_idList(pc))
+                  END DO
                END IF
 
             END IF !(if not jij%l_J)

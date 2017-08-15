@@ -20,8 +20,8 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      lapw,oneD,noco,cell,
-     >      l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
+     >      lapw,oneD,noco,cell,wann,
+     >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
@@ -84,11 +84,13 @@ c*******************************************c
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_wann),INTENT(INOUT)   :: wann
 
 c     ..scalar arguments..
       character(len=20),intent(in) :: param_file
       type (od_inp), intent (in) :: odi
       type (od_sym), intent (in) :: ods
+      INTEGER, INTENT (IN) :: eig_idList(wann%nparampts)
       logical, intent (in) :: invs,invs2,film,slice,symor,zrfs
       logical, intent (in) :: l_real,l_noco,l_ss,l_soc
       logical, intent (in) :: l_ms,l_sgwf,l_socgwf
@@ -143,7 +145,7 @@ c     ..allocatable arrays..
       integer, allocatable :: counts(:),displs(:)
       integer, allocatable :: gb(:,:,:),bpt(:,:)
       integer, allocatable :: gb_q(:,:,:),bpt_q(:,:)
-      INTEGER, ALLOCATABLE :: eig_idList(:)
+      INTEGER, ALLOCATABLE :: innerEig_idList(:)
       real,    allocatable :: we(:),we_b(:),we_b2(:)
       real,    allocatable :: eigg(:)
       real,    allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
@@ -196,7 +198,6 @@ c     ..local scalars..
       character(len=8) :: dop,iop
       character(len=12) fending
       character(len=30) fstart
-      type(t_wann) :: wann
       logical :: l_p0,l_bkpts,l_proj,l_file
       logical :: l_bqpts,l_gwf,l_exist,l_nocosoc,l_symcheck
       logical :: l_skip_sph,l_skip_non,l_skip_soc
@@ -646,7 +647,7 @@ c                         START Q LOOP                            c
 c*****************************************************************c
       do 314 iqpt = 1,fullnqpts  ! loop by q-points starts
 
-       ALLOCATE(eig_idList(nntot_q))
+       ALLOCATE(innerEig_idList(nntot_q))
 
         qptibz=iqpt                          
         if(wann%l_bzsym .AND. l_gwf) qptibz=irreduc_q(iqpt)
@@ -676,46 +677,52 @@ c*****************************************************************c
 
        IF (l_gwf) THEN
           do iqpt_b=1,nntot_q
-            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
 
-            eig_idList(iqpt_b)=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,
-     +                  DIMENSION%neigd,
-     +                  nkpts,wannierspin,atoms%lmaxd,
-     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
-     +                  mpi%n_size,filename=trim(fstart)//fending,
-     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
-     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
-     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+            innerEig_idList(iqpt_b) = eig_idList(bpt_q(iqpt_b,iqpt))
+
+!            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
+!            innerEig_idList(iqpt_b)=open_eig(mpi%mpi_comm,
+!     +                  DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                  nkpts,wannierspin,atoms%lmaxd,
+!     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
+!     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+!     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
           enddo
-        WRITE(fending,'("_",i4.4)')qptibz
 
-         eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
-     +                   nkpts,wannierspin,atoms%lmaxd,
-     +                   atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                   l_noco,.FALSE.,l_real,l_soc,.FALSE.,
-     +                   mpi%n_size,filename=trim(fstart)//fending,
-     +                   layers=vacuum%layers,nstars=vacuum%nstars,
-     +                   ncored=DIMENSION%nstd,nsld=atoms%nat,
-     +                   nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
-     +                   l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+          eig_id = eig_idList(qptibz)
+
+!          WRITE(fending,'("_",i4.4)')qptibz
+!         eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                   nkpts,wannierspin,atoms%lmaxd,
+!     +                   atoms%nlod,atoms%ntype,atoms%nlotot,
+!     +                   l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+!     +                   mpi%n_size,filename=trim(fstart)//fending,
+!     +                   layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                   ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                   nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+!     +                   l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
 !        OPEN(66,file=trim(fstart)//fending,access='direct',
 !     >          form='unformatted',recl=irecl,status='old')
        ELSEIF(l_ms) THEN
-        WRITE(fending,'("_",i4.4)')qptibz
 
-        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
-     +                  nkpts,wannierspin,atoms%lmaxd,
-     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
-     +                  mpi%n_size,filename=trim(fstart)//fending,
-     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
-     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
-     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+          eig_id = eig_idList(qptibz)
+
+!        WRITE(fending,'("_",i4.4)')qptibz
+!        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                  nkpts,wannierspin,atoms%lmaxd,
+!     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
+!     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+!     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
 !        OPEN(66,file=trim(fstart)//fending,access='direct',
 !     >          form='unformatted',recl=irecl,status='old')
@@ -1407,11 +1414,11 @@ c      endif
       ! close eig files
       IF (l_gwf) THEN
 
-         CALL close_eig(eig_id)
+!         CALL close_eig(eig_id)
 
 !         CLOSE(66)
          DO iqpt_b=1,nntot_q
-            CALL close_eig(eig_idList(iqpt_b))
+!            CALL close_eig(innerEig_idList(iqpt_b))
          ENDDO
       ENDIF
 
@@ -1425,7 +1432,7 @@ c     >          wann%l_unformatted,.true.)
       if(allocated(uHu)) deallocate(uHu)
 c      if(allocated(uHuold)) deallocate(uHuold)
 
-      DEALLOCATE(eig_idList)
+      DEALLOCATE(innerEig_idList)
 
 314   continue ! iqpt, q-points
 c************************************************c

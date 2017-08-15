@@ -10,7 +10,7 @@
       SUBROUTINE wannier(
      >      DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,lapw,oneD,
      >      wann,noco,cell,enpara,banddos,sliceplot,odi,ods,results,
-     >      l_real,nkpt,nkptd,k1d,k2d,k3d,
+     >      eig_idList,l_real,nkpt,nkptd,k1d,k2d,k3d,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
      >      param_file,param_vec,nparampts,param_alpha,l_dim)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -142,6 +142,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer, intent (in) :: nkptd
       integer, intent (in) :: k1d,k2d,k3d
       integer, intent (in) :: nkpt
+      INTEGER, INTENT (IN) :: eig_idList(wann%nparampts)
 
       ! NEW INPUT PARAMETERS (for gwf)
       real,             intent(in) :: aux_latt_const
@@ -170,7 +171,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer, allocatable :: kveclo_b(:),nv_b(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
-      INTEGER, ALLOCATABLE :: eig_idList(:)
+      INTEGER, ALLOCATABLE :: innerEig_idList(:)
       real,    allocatable :: we(:),we_b(:)
 
       real,    allocatable :: eigg(:)
@@ -446,7 +447,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       if(wann%l_matrixuHu)then
          call wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      lapw,oneD,noco,cell,
+     >      lapw,oneD,noco,cell,wann,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -481,7 +482,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       if(wann%l_matrixuHu_dmi)then
          call wann_uHu_dmi(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      lapw,oneD,noco,cell,
+     >      lapw,oneD,noco,cell,wann,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -809,7 +810,7 @@ c                and l_ms = l_sgwf = l_socgwf = F                 c
 c*****************************************************************c
       do 314 iqpt = 1,fullnqpts  ! loop by q-points starts
 
-       ALLOCATE(eig_idList(nntot_q))
+       ALLOCATE(innerEig_idList(nntot_q))
 
        call cpu_time(tt1)
        t_kov=0.0
@@ -835,45 +836,51 @@ c*****************************************************************c
        IF (l_gwf) THEN
         IF(wann%l_matrixmmn)THEN
           do iqpt_b=1,nntot_q
-            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
 
-            eig_idList(iqpt_b)=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,
-     +                  DIMENSION%neigd,
-     +                  nkpts,wannierspin,atoms%lmaxd,
-     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
-     +                  mpi%n_size,filename=trim(fstart)//fending,
-     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
-     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
-     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+            innerEig_idList(iqpt_b) = eig_idList(bpt_q(iqpt_b,iqpt))
+
+!            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
+!            innerEig_idList(iqpt_b)=open_eig(mpi%mpi_comm,
+!     +                  DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                  nkpts,wannierspin,atoms%lmaxd,
+!     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
+!     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+!     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
           enddo
         ENDIF
-        WRITE(fending,'("_",i4.4)')qptibz
 
-        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
-     +                  nkpts,wannierspin,atoms%lmaxd,
-     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
-     +                  mpi%n_size,filename=trim(fstart)//fending,
-     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
-     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
-     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+        eig_id = eig_idList(qptibz)
+
+!        WRITE(fending,'("_",i4.4)')qptibz
+!        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                  nkpts,wannierspin,atoms%lmaxd,
+!     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
+!     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+!     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
        ELSEIF(l_ms) THEN
-        WRITE(fending,'("_",i4.4)')qptibz
 
-        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
-     +                  nkpts,wannierspin,atoms%lmaxd,
-     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
-     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
-     +                  mpi%n_size,filename=trim(fstart)//fending,
-     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
-     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
-     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
+        eig_id = eig_idList(qptibz)
+
+!        WRITE(fending,'("_",i4.4)')qptibz
+!        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                  nkpts,wannierspin,atoms%lmaxd,
+!     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
+!     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
+!     +                  mpi%n_size,filename=trim(fstart)//fending,
+!     +                  layers=vacuum%layers,nstars=vacuum%nstars,
+!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
+!     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
        ELSE
           fending=''
@@ -1948,7 +1955,7 @@ c*******************************************c
 ! in (k1_qb,k2_qb,k3_qb) for later use.
 
        CALL cdn_read(
-     >               eig_idList(iqpt_b),
+     >               innerEig_idList(iqpt_b),
      >               DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd? !kptibz_b2?
      >               kptibz,jspin_b,DIMENSION%nbasfcn,
      >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
@@ -2673,10 +2680,10 @@ c#endif
 
       ! close eig files
       IF (l_gwf) THEN
-         CALL close_eig(eig_id)
+!         CALL close_eig(eig_id)
          IF(wann%l_matrixmmn)THEN
             DO iqpt_b=1,nntot_q
-               CALL close_eig(eig_idList(iqpt_b))
+!               CALL close_eig(innerEig_idList(iqpt_b))
             ENDDO
          ENDIF
       ENDIF
@@ -2711,7 +2718,7 @@ c#endif
          write(*,*)t_kov,t_qov,t_it
       endif
 
-      DEALLOCATE(eig_idList)
+      DEALLOCATE(innerEig_idList)
 
 314   continue ! iqpt, q-points
 c************************************************c
