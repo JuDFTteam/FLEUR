@@ -20,7 +20,7 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      lapw,oneD,noco,cell,wann,
+     >      oneD,noco,cell,wann,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -80,7 +80,6 @@ c*******************************************c
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_banddos),INTENT(IN)   :: banddos
-      TYPE(t_lapw),INTENT(IN)      :: lapw
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
@@ -1080,17 +1079,22 @@ c***********************************************************
 
       call cpu_time(t0)
 
-      lapw_b = lapw
+      ALLOCATE(lapw_b%k1(SIZE(k1_b,1),SIZE(k1_b,2)))
+      ALLOCATE(lapw_b%k2(SIZE(k1_b,1),SIZE(k1_b,2)))
+      ALLOCATE(lapw_b%k3(SIZE(k1_b,1),SIZE(k1_b,2)))
       lapw_b%k1 = k1_b
       lapw_b%k2 = k2_b
       lapw_b%k3 = k3_b
       lapw_b%nmat = nmat_b
       lapw_b%nv = nv_b
+      ! I think the other variables of lapw are not needed here.
 
       CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
      +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
      +           acof_b,bcof_b,ccof_b,zMat_b)
-         
+
+      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
+
       call wann_abinv(
      >        ntypd,natd,noccbd_b,lmaxd,lmd,llod,nlod,ntype,neq,
      >        noccbd_b,lmax,nlo,llo,invsat,invsatnr,bkpt_b,taual,
@@ -1195,17 +1199,23 @@ c***********************************************************
 
       call cpu_time(t0)
 
-      lapw_b2 = lapw
+
+      ALLOCATE(lapw_b2%k1(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+      ALLOCATE(lapw_b2%k2(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+      ALLOCATE(lapw_b2%k3(SIZE(k1_b2,1),SIZE(k1_b2,2)))
       lapw_b2%k1 = k1_b2
       lapw_b2%k2 = k2_b2
       lapw_b2%k3 = k3_b2
       lapw_b2%nmat = nmat_b2
       lapw_b2%nv = nv_b2
+      ! I think the other variables of lapw are not needed here.
 
       CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
      +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
      +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
-         
+
+      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
+
       call wann_abinv(
      >        ntypd,natd,noccbd_b2,lmaxd,lmd,llod,nlod,ntype,neq,
      >        noccbd_b2,lmax,nlo,llo,invsat,invsatnr,bkpt_b2,taual,

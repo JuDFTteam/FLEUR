@@ -133,10 +133,10 @@ MODULE m_fleur
 !      USE m_jcoff
 !      USE m_jcoff2
 !      USE m_ssomat
-#ifdef CPP_WANN
+
       USE m_wann_optional
       USE m_wannier
-#endif
+
 !      USE m_mixedbasis
 !      USE m_coulomb
       USE m_gen_map
@@ -187,7 +187,7 @@ MODULE m_fleur
       !     .. Local Scalars ..
       INTEGER              :: eig_id
       INTEGER              :: i,it,ithf,jspin,n,pc
-      LOGICAL              :: stop80,reap,l_endit,l_opti,l_cont
+      LOGICAL              :: stop80,reap,l_endit,l_opti,l_cont,l_real
       !--- J<
       INTEGER              :: phn
       REAL, PARAMETER      :: tol = 1.e-8
@@ -235,15 +235,16 @@ MODULE m_fleur
       IF (obsolete%l_u2f)    CALL juDFT_end("conversion to formatted",mpi%irank)
       IF (input%l_bmt)       CALL juDFT_end('"cdnbmt" written',mpi%irank)
 
-
-#ifdef CPP_WANN
+!+Wannier
       input%l_wann = .FALSE.
       INQUIRE (file='wann_inp',exist=input%l_wann)
       IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
          CALL wann_optional(input,atoms,sym,cell,oneD,noco,wann)
       END IF
       IF (wann%l_gwf) input%itmax = 1
-#endif
+      l_real = (sym%invs).AND.(.NOT.noco%l_noco) ! Is this right? I took it from eigen.
+!-Wannier
+
       ALLOCATE (eig_idList(wann%nparampts))
 
       l_restart = .TRUE.
@@ -708,18 +709,15 @@ MODULE m_fleur
                !
                !        ----> charge density
 
-               !+Wannier functions
-#ifdef CPP_WANN
+!+Wannier functions
                input%l_wann = .FALSE.
                INQUIRE (file='wann_inp',exist=input%l_wann)
                IF (input%l_wann) THEN
-                  CALL wannier(mpi,atoms,noco,&
-                               dimension,sym,obsolete,cell,kpts,&
-                               stars,oneD,vacuum,sphhar,input,&
-                               sliceplot,results)
+                  CALL wannier(DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,&
+                               wann,noco,cell,enpara,banddos,sliceplot,results,&
+                               eig_idList,l_real,kpts%nkpt)
                END IF
-#endif
-               !-Wannier
+!-Wannier
 
                CALL timestart("generation of new charge density (total)")
 

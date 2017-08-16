@@ -7,10 +7,7 @@
       module m_wann_optional
       use m_juDFT
       contains
-      subroutine wann_optional(
-     >               input,atoms,sym,cell,oneD,noco,wann,
-     >               l_ms,l_sgwf,l_socgwf,
-     >               aux_latt_const,param_file,l_dim)
+      subroutine wann_optional(input,atoms,sym,cell,oneD,noco,wann)
 c**************************************************
 c     Make preparations for the calculation of 
 c     Wannier functions.
@@ -37,14 +34,8 @@ c**************************************************
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_wann),      INTENT(INOUT) :: wann
 
-      real,intent(in)     :: aux_latt_const
-      character(len=20),intent(in) :: param_file
-
       integer       :: num_wann(2)
       logical       :: l_nocosoc
-
-      logical, intent(in) :: l_ms,l_sgwf,l_socgwf
-      logical,intent(in) :: l_dim(3)
 
       l_nocosoc=noco%l_noco.or.noco%l_soc
 
@@ -92,8 +83,8 @@ c-----generate WF1.win and bkpts
      >            input%jspins,cell%amat,cell%bmat,
      >            atoms%nat,atoms%taual,atoms%zatom,atoms%ntype,
      >            atoms%ntype,atoms%neq,wann%l_bzsym,input%film,
-     >            oneD%odi%d1,l_ms,l_sgwf,l_socgwf,aux_latt_const,
-     >            param_file,l_dim)
+     >            oneD%odi%d1,wann%l_ms,wann%l_sgwf,wann%l_socgwf,
+     >            wann%aux_latt_const,wann%param_file,wann%l_dim)
       endif
 
 c-----calculate polarization, if not wannierize

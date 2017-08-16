@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      mpi,input,sym,atoms,stars,vacuum,sphhar,lapw,oneD,noco,cell,
+     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,
      >      enpara,
      >      eig_id,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -80,7 +80,6 @@ c****************************************************************************
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_sphhar),INTENT(IN) :: sphhar
-      TYPE(t_lapw),INTENT(IN)   :: lapw
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -263,7 +262,8 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: spinloop1,spinloop2,ilop
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat) :: zMat(2),zzMat(2)
+      TYPE(t_zmat)  :: zMat(2),zzMat(2)
+      TYPE(t_lapw)  :: lapw
 
       IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
      +     ,calledby ="wann_updown")
@@ -832,6 +832,16 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
 c...generation the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions
 
+      ALLOCATE(lapw%k1(SIZE(k1,1),SIZE(k1,2)))
+      ALLOCATE(lapw%k2(SIZE(k1,1),SIZE(k1,2)))
+      ALLOCATE(lapw%k3(SIZE(k1,1),SIZE(k1,2)))
+      lapw%nv = nv
+      lapw%nmat = nmat
+      lapw%k1 = k1
+      lapw%k2 = k2
+      lapw%k3 = k3
+      ! I think the other variables of lapw are not needed here.
+
       call cpu_time(delta)
       do jspin=1,wannierspin
 
@@ -847,6 +857,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      <       ccof(-llod,1,1,1,jspin))
       enddo !jspin
 
+      DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
 
       jspin=1
       call cpu_time(delta1)
