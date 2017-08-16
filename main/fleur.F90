@@ -136,6 +136,7 @@ MODULE m_fleur
 
       USE m_wann_optional
       USE m_wannier
+      USE m_bs_comfort
 
 !      USE m_mixedbasis
 !      USE m_coulomb
@@ -630,6 +631,25 @@ MODULE m_fleur
                                                 input,noco,enpara%epara_min,jij,cell,results)
                                  END IF
                                  CALL timestop("determination of fermi energy")
+!+Wannier
+                                 IF(wann%l_bs_comf)THEN
+                                    IF(pc.EQ.1) THEN
+                                       OPEN(777,file='out_eig.1')
+                                       OPEN(778,file='out_eig.2')
+                                       OPEN(779,file='out_eig.1_diag')
+                                       OPEN(780,file='out_eig.2_diag')
+                                    END IF
+
+                                    CALL bs_comfort(eig_id,DIMENSION,input,noco,kpts%nkpt,pc)
+
+                                    IF(pc.EQ.wann%nparampts)THEN
+                                       CLOSE(777)
+                                       CLOSE(778)
+                                       CLOSE(779)
+                                       CLOSE(780)
+                                    END IF
+                                 END IF
+!-Wannier
                               END IF
 
                               IF (input%eonly) THEN
@@ -712,11 +732,12 @@ MODULE m_fleur
 !+Wannier functions
                input%l_wann = .FALSE.
                INQUIRE (file='wann_inp',exist=input%l_wann)
-               IF (input%l_wann) THEN
+               IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
                   CALL wannier(DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,&
                                wann,noco,cell,enpara,banddos,sliceplot,results,&
                                eig_idList,l_real,kpts%nkpt)
                END IF
+               IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
 !-Wannier
 
                CALL timestart("generation of new charge density (total)")
