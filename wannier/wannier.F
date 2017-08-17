@@ -138,7 +138,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INTEGER, INTENT (IN) :: eig_idList(wann%nparampts)
 
 cccccccccccccccccc   local variables   cccccccccccccccccccc
-      integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
+      integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b, pc
       integer :: addnoco,funbas,loplod,addnoco2,igvm2,eig_id
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer :: jsp_start,jsp_end,nrec,nrec1,nrec_b,nbands,nbands_b
@@ -425,6 +425,11 @@ c-----input file for orbital decomposition
      >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
      >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
      >      noco%theta,noco%phi,noco%soc_opt)
+
+         DO pc = 1, wann%nparampts
+            CALL close_eig(eig_idList(pc))
+         END DO
+
          CALL juDFT_end("updown done",mpi%irank)
       endif
 
@@ -463,6 +468,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,
      >      wann%param_file,wann%param_vec,wann%nparampts,
      >      wann%param_alpha,wann%l_dim)
+
+         DO pc = 1, wann%nparampts
+            CALL close_eig(eig_idList(pc))
+         END DO
 
         CALL juDFT_end("wann_uHu done",mpi%irank)
       endif
@@ -503,7 +512,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      wann%param_file,wann%param_vec,wann%nparampts,
      >      wann%param_alpha,wann%l_dim,l_nochi)
 
-        CALL juDFT_end("wann_uHu dmi done",mpi%irank)
+         DO pc = 1, wann%nparampts
+            CALL close_eig(eig_idList(pc))
+         END DO
+
+         CALL juDFT_end("wann_uHu dmi done",mpi%irank)
       endif
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
@@ -2846,7 +2859,13 @@ c************************************************c
       call MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
-      if(.not.wann%l_ldauwan)  CALL juDFT_end("wannier good",mpi%irank)
+      IF(.not.wann%l_ldauwan) THEN
+         DO pc = 1, wann%nparampts
+            CALL close_eig(eig_idList(pc))
+         END DO
+
+         CALL juDFT_end("wannier good",mpi%irank)
+      END IF
 
       END SUBROUTINE wannier
 

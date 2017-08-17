@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       MODULE m_bs_comfort
 
       CONTAINS
@@ -9,7 +15,7 @@
 
       IMPLICIT NONE
 
-      TYPE(t_DIMENSION), INTENT(IN)   :: DIMENSION
+      TYPE(t_dimension), INTENT(IN)   :: DIMENSION
       TYPE(t_input),     INTENT(IN)   :: input
       TYPE(t_noco),      INTENT(IN)   :: noco
 
@@ -19,7 +25,7 @@ C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: param
 
 C     .. Local Scalars ..
-      INTEGER              :: i, jsp,k,nspins
+      INTEGER              :: i, jsp, k, nspins
 
 C     .. Local Arrays ..
       REAL,    ALLOCATABLE :: eig(:,:,:)
