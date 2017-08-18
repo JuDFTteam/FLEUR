@@ -814,7 +814,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       endif
 
       t_it=0.0
-      t_kov=0.0
+!      t_kov=0.0
       t_qov=0.0
 c*****************************************************************c
 c                         START Q LOOP                            c
@@ -826,7 +826,7 @@ c*****************************************************************c
        ALLOCATE(innerEig_idList(nntot_q))
 
        call cpu_time(tt1)
-       t_kov=0.0
+!       t_kov=0.0
        t_qov=0.0
 
         qptibz=iqpt                          
@@ -1234,6 +1234,37 @@ c****************************************************************
 !      call cpu_time(tt2)
       !if(l_p0) write(*,*)'ujugaunt=',tt2-tt3
 
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = DIMENSION%nbasfcn
+      zzMat%nbands = DIMENSION%neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
+
+      zMat%l_real = zzMat%l_real
+      zMat%nbasfcn = zzMat%nbasfcn
+      zMat%nbands = zzMat%nbands
+      IF (zzMat%l_real) THEN
+         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+         zMat%z_r = 0.0
+      ELSE
+         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+         zMat%z_c = CMPLX(0.0,0.0)
+      END IF
+
+      zMat_b%l_real = zzMat%l_real
+      zMat_b%nbasfcn = zzMat%nbasfcn
+      zMat_b%nbands = zzMat%nbands
+      IF (zzMat%l_real) THEN
+         ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
+         zMat_b%z_r = 0.0
+      ELSE
+         ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
+         zMat_b%z_c = CMPLX(0.0,0.0)
+      END IF
+
       i_rec = 0 ; n_rank = 0
       
 c****************************************************************
@@ -1260,15 +1291,6 @@ c****************************************************************
 ! stored in the eig file on unit 66. the lattice respectively
 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
 
-      zzMat%l_real = l_real
-      zzMat%nbasfcn = DIMENSION%nbasfcn
-      zzMat%nbands = DIMENSION%neigd
-      IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
-      ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
-      END IF
-
       CALL cdn_read(
      >              eig_id,
      >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
@@ -1285,17 +1307,6 @@ c****************************************************************
       nslibd = 0
 
 c...we work only within the energy window
-
-      zMat%l_real = zzMat%l_real
-      zMat%nbasfcn = zzMat%nbasfcn
-      zMat%nbands = zzMat%nbands
-      IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat%z_r = 0.0
-      ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat%z_c = CMPLX(0.0,0.0)
-      END IF
 
       eig(:) = 0.
 
@@ -1727,17 +1738,6 @@ c        print*,"something to do"
         time_rw=time_rw+delta1-delta
         nslibd_b = 0
 
-      zMat_b%l_real = zzMat%l_real
-      zMat_b%nbasfcn = zzMat%nbasfcn
-      zMat_b%nbands = zzMat%nbands
-      IF (zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat_b%z_r = 0.0
-      ELSE
-         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat_b%z_c = CMPLX(0.0,0.0)
-      END IF
-
       eig_b(:) = 0.
 
         do i = 1,nbands_b
@@ -1947,7 +1947,7 @@ c     &          mmnk(:,:,ikpt_b,ikpt)*nsfactor*conjg(nsfactor_b)
 
 !        call cpu_time(tt4)
         !if(l_p0) write(*,*)'k-neig',ikpt_b,' total=',tt4-tt3
-        t_kov=t_kov+tt4-tt3
+!        t_kov=t_kov+tt4-tt3
 
 15      continue ! end of loop by the nearest k-neighbors
 
@@ -2772,7 +2772,7 @@ c#endif
       !if(l_p0) write(*,*)'q-loop',iqpt,' total=',tt2-tt1
       t_it = tt2-tt1
       if(l_p0) then
-         write(*,*)t_kov,t_qov,t_it
+!         write(*,*)t_kov,t_qov,t_it
       endif
 
       DEALLOCATE(innerEig_idList)
