@@ -314,6 +314,8 @@ c---->gwf
       TYPE(t_lapw)  :: lapw, lapw_b, lapw_qb
       TYPE(t_wann)  :: wannTemp
 
+      eig_id = eig_idList(1)
+
 c----<gwf
 
 
