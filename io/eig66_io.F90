@@ -140,7 +140,7 @@ CONTAINS
     CASE (mpi_mode)
        CALL read_eig_mpi(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,ello,evac,kveclo,n_start,n_end,zmat)
     CASE (-1)
-       CALL juDFT_error("Could not read eig-file before opening")
+       CALL juDFT_error("Could not read eig-file before opening", calledby = "eig66_io")
     END SELECT
     CALL timestop("IO (read)")
   END SUBROUTINE read_eig
@@ -168,7 +168,7 @@ CONTAINS
     CASE (MPI_mode)
        CALL write_eig_MPI(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk,eig,el,ello,evac,nlotot,kveclo,n_start,n_end,zmat)
     CASE (-1)
-       CALL juDFT_error("Could not write eig-file before opening")
+       CALL juDFT_error("Could not write eig-file before opening", calledby = "eig66_io")
     END SELECT
     CALL timestop("IO (write)")
   END SUBROUTINE write_eig
@@ -196,7 +196,7 @@ CONTAINS
     CASE (MPI_mode)
        CALL write_dos_MPI(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
     CASE (-1)
-       CALL juDFT_error("Could not write eig-file before opening")
+       CALL juDFT_error("Could not write DOS to eig-file before opening", calledby = "eig66_io")
     END SELECT
     CALL timestop("IO (dos-write)")
   END SUBROUTINE write_dos
@@ -225,7 +225,7 @@ CONTAINS
     CASE (MPI_mode)
        CALL read_dos_MPI(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
     CASE (-1)
-       CALL juDFT_error("Could not read eig-file before opening")
+       CALL juDFT_error("Could not DOS from read eig-file before opening", calledby = "eig66_io")
     END SELECT
     CALL timestop("IO (dos-read)")
   END SUBROUTINE read_dos

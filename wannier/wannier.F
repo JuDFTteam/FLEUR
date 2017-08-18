@@ -567,6 +567,8 @@ c**************************************************************
      +        ("max(irreduc(:))/=nkpts",calledby ="wannier")
       else
          fullnkpts=nkpts
+         allocate(irreduc(fullnkpts),mapkoper(fullnkpts))
+         allocate(shiftkpt(3,fullnkpts))
       endif
 
 
