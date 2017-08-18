@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_postproc_setup4
-#ifdef CPP_WANN
+#ifdef CPP_WANN4
       CONTAINS
       SUBROUTINE wann_postproc_setup4(
      >           natd,nkpts,kpoints,amat,bmat,

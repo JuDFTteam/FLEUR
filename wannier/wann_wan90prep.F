@@ -199,16 +199,16 @@ c        proj file provides num_wann and num_bands
 c******************************************************
 c     call wannier90 routines to get bkpts
 c******************************************************
-#ifndef CPP_WANN
-      WRITE(*,*) 'The code is supposed to perform the Wannier setup'
-      WRITE(*,*) 'but the Wannier90 library is not linked.'
-      CALL juDFT_error("Wannier setup without Wannier90 library",
-     +                 calledby ="wann_wan90prep")
-#else
+#ifdef CPP_WANN
       call wann_postproc_setup(
      >         natd,nkpts,kpoints,amat_ang,bmat_ang,
      >         num,num_bands,ntype,neq,
      >         zatom,taual,namat,win_filename,'bkpts')
+#else
+      WRITE(*,*) 'The code is supposed to perform the Wannier setup'
+      WRITE(*,*) 'but the Wannier90 library is not linked.'
+      CALL juDFT_error("Wannier setup without Wannier90 library (1)",
+     +                 calledby ="wann_wan90prep")
 #endif
 c******************************************************
 c     call wannier90 routines to get bqpts
@@ -238,6 +238,11 @@ c******************************************************
      >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
      >         numq,num_bands,ntype,neq,
      >         zatom,taual_q,namat,'WF1_q','bqpts')
+#else
+      WRITE(*,*) 'The code is supposed to perform the Wannier setup'
+      WRITE(*,*) 'but the Wannier90 library is not linked.'
+      CALL juDFT_error("Wannier setup without Wannier90 library (2)",
+     +                 calledby ="wann_wan90prep")
 #endif
 
       !bkqpts part below
@@ -287,18 +292,28 @@ c******************************************************
 
 
       if(arr_len.eq.4) then
-#ifdef CPP_WANN
+#ifdef CPP_WANN4
          call wann_postproc_setup4(
      >         natd,nkqpts,kqpoints,amat_kq*bohr,bmat_kq/bohr,
      >         numkq,num_bands,ntype,neq,
      >         zatom,taual_kq,namat,'WF1_gwf','bkqpts')
+#else
+      WRITE(*,*) 'The code is supposed to perform the Wannier-4 setup'
+      WRITE(*,*) 'but the modified Wannier90-4 library is not linked.'
+      CALL juDFT_error("Wannier-4 setup without Wannier90-4 library",
+     +                 calledby ="wann_wan90prep")
 #endif
       elseif(arr_len.eq.5) then
-#ifdef CPP_WANN
+#ifdef CPP_WANN5
          call wann_postproc_setup5(
      >         natd,nkqpts,kqpoints,amat_kq*bohr,bmat_kq/bohr,
      >         numkq,num_bands,ntype,neq,
      >         zatom,taual_kq,namat,'WF1_gwf','bkqpts')
+#else
+      WRITE(*,*) 'The code is supposed to perform the Wannier-5 setup'
+      WRITE(*,*) 'but the modified Wannier90-5 library is not linked.'
+      CALL juDFT_error("Wannier-5 setup without Wannier90-5 library",
+     +                 calledby ="wann_wan90prep")
 #endif
 !         call juDFT_error("arr_len.eq.5 not yet implemented",
 !     >                  calledby='wann_wan90prep')
