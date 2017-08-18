@@ -14,7 +14,7 @@ c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
      >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,cell,eig_id,
+     >          lapw,oneD,noco,cell,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
@@ -72,7 +72,7 @@ c******************************************************************
       TYPE(t_cell),INTENT(IN)      :: cell
 
       integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
-      logical, intent (in) :: l_soc
+      logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
@@ -538,7 +538,14 @@ c******************************************************************
 
       allocate (we(neigd),eigg(neigd))
 
-
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = nbasfcn
+      zzMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
 
       call wann_read_eig(
      >              eig_id,

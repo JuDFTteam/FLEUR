@@ -801,7 +801,7 @@ c..   now we want to define the maximum number of the bands by all kpts
 
       if(l_p0)then         
          call wann_maxbnd(
-     >            eig_id,
+     >            eig_id,l_real,
      >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
      >            isize,jspin,nbasfcn,nlotot,
      >            l_ss,l_noco,nrec,fullnkpts,
@@ -957,6 +957,15 @@ c      if (mod(i_rec-1,isize).eq.irank) then
  
       call cpu_time(t0)
       ! get current bkpt vector
+
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = nbasfcn
+      zzMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
 
       CALL cdn_read(
      >              eig_id,

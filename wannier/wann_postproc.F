@@ -8,7 +8,7 @@
       contains 
       subroutine wann_postproc(
      >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,cell,eig_id,
+     >          lapw,oneD,noco,cell,eig_id,l_real,
      >          mpi_comm,wann,l_p0,film,jspins,n2d,
      >          natd,pos,amat,bmat,ntype,neq,zatom,
      >          omtil,l_soc,l_noco,neigd,fullnkpts,
@@ -81,7 +81,7 @@ c***********************************************
 
       type(t_wann), intent(in) :: wann
       logical,      intent(in) :: l_p0
-      logical,      intent(in) :: film
+      logical,      intent(in) :: film, l_real
       integer,      intent(in) :: jspins,n2d,mpi_comm, eig_id
       integer,      intent(in) :: natd
       real,         intent(in) :: pos(3,natd)
@@ -445,7 +445,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       if(wann%l_plot_umdat)then
          call wann_plot_um_dat(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >      lapw,oneD,noco,cell,eig_id,
+     >      lapw,oneD,noco,cell,eig_id,l_real,
      >      mpi_comm,i,wann%band_min,wann%band_max,l_soc,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -464,7 +464,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       call cpu_time(delta2)
       if(wann%l_lapw.and.l_p0)then
          call wannier_to_lapw(
-     >      mpi_comm,eig_id,
+     >      mpi_comm,eig_id,l_real,
      >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
      >      l_soc,wann%unigrid,i,wann%band_min,wann%band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,

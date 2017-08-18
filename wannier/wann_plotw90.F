@@ -16,7 +16,7 @@ c******************************************************************
       CONTAINS
       SUBROUTINE wann_plotw90(
      >      mpi,stars,vacuum,atoms,sphhar,input,sym,cell,lapw,noco,oneD,
-     >      eig_id,
+     >      eig_id,l_real,
      >      bandswitch,band_min,band_max,num_bands,
      >      num_wann,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -59,7 +59,7 @@ c******************************************************************
       integer,intent(in)   :: band_min
       integer,intent(in)   :: band_max
       integer, intent (in) :: num_wann
-      logical, intent (in) :: invs,invs2,film,slice,symor
+      logical, intent (in) :: invs,invs2,film,slice,symor,l_real
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,eig_id
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
       integer, intent (in) :: llod,nlod,ntype,nwdd,n3d,n2d
@@ -479,6 +479,15 @@ c       na = na + neq(n)
 
       n_start=1
       n_end=neigd
+
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = nbasfcn
+      zzMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
 
       CALL cdn_read(
      >              eig_id,

@@ -403,7 +403,7 @@ c-----input file for orbital decomposition
       if(wann%l_updown)then            
          call wann_updown(
      >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,
-     >      enpara,eig_idList(1),
+     >      enpara,eig_idList(1),l_real,
      >      mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,
      >      atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,
      >      DIMENSION%nvd,DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,
@@ -984,7 +984,7 @@ c..write individual files if multi-spiral mode wann%l_ms=T
 c*************************************************************
       if(l_p0)then         
          call wann_write_eig(
-     >            eig_id,
+     >            eig_id,l_real,
      >            atoms%lmaxd,atoms%ntype,atoms%nlod,DIMENSION%neigd,
      >            DIMENSION%nvd,wannierspin,
      >            mpi%isize,jspin,DIMENSION%nbasfcn,nlotot,
@@ -1259,6 +1259,15 @@ c****************************************************************
 ! read information of diagonalization for fixed q-point iqpt
 ! stored in the eig file on unit 66. the lattice respectively
 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
+
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = DIMENSION%nbasfcn
+      zzMat%nbands = DIMENSION%neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
 
       CALL cdn_read(
      >              eig_id,
@@ -2835,7 +2844,7 @@ c************************************************c
 
       call wann_postproc(
      >         DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >         lapw,oneD,noco,cell,eig_id,                !eig_id is used here after closing the files?!
+     >         lapw,oneD,noco,cell,eig_id,l_real,                !eig_id is used here after closing the files?!
      >         mpi%mpi_comm,wann,l_p0,input%film,input%jspins,stars%ng2,
      >         atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,
      >         atoms%neq,atoms%zatom,cell%omtil,noco%l_soc,noco%l_noco,

@@ -10,7 +10,7 @@
       SUBROUTINE wann_updown(
      >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,
      >      enpara,
-     >      eig_id,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
+     >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
@@ -85,7 +85,7 @@ c****************************************************************************
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_enpara),INTENT(IN) :: enpara
 
-      logical, intent (in) :: invs,invs2,film,slice,symor
+      logical, intent (in) :: invs,invs2,film,slice,symor,l_real
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne,mpi_comm
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2,eig_id
       integer, intent (in) :: llod,nlod,ntype,n3d,n2d
@@ -463,7 +463,7 @@ c..writing down the eig.1 and/or eig.2 files
 c*************************************************************
       if(l_p0)then
          call wann_write_eig(
-     >            eig_id,
+     >            eig_id,l_real,
      >            lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
      >            isize,jspin,nbasfcn,nlotot,
      >            l_ss,l_noco,nrec,fullnkpts,
@@ -724,6 +724,17 @@ c****************************************************************
          if(l_noco)nrec=0
          n_start=1
          n_end=neigd
+
+      zzMat(jspin)%l_real = l_real
+      zzMat(jspin)%nbasfcn = nbasfcn
+      zzMat(jspin)%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
+     +                              zzMat(jspin)%nbands))
+      ELSE
+         ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
+     +                              zzMat(jspin)%nbands))
+      END IF
 
          CALL cdn_read(
      >              eig_id,

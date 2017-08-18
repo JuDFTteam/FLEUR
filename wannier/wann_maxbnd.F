@@ -5,7 +5,7 @@ c    determine maximum of number of bands
 c****************************************************************
       CONTAINS
       SUBROUTINE wann_maxbnd(
-     >              eig_id,
+     >              eig_id,l_real,
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              isize,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,fullnkpts,
@@ -20,7 +20,7 @@ c****************************************************************
       IMPLICIT NONE
       integer,intent(in) :: lmaxd,ntypd,nlod,neigd,nvd,jspd,eig_id
       integer,intent(in) :: isize,jspin,nbasfcn,nlotot,iqpt
-      logical,intent(in) :: l_ss,l_noco,l_gwf
+      logical,intent(in) :: l_ss,l_noco,l_gwf,l_real
       integer,intent(in) :: nrec,fullnkpts
       logical,intent(in) :: l_byindex,l_bynumber,l_byenergy
       integer,intent(in) :: irreduc(fullnkpts)
@@ -44,6 +44,15 @@ c****************************************************************
       integer          :: num_bands
 
       TYPE(t_zmat)     :: zMat
+
+      zMat%l_real = l_real
+      zMat%nbasfcn = nbasfcn
+      zMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+      ELSE
+         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+      END IF
 
       n_start=1
       n_end=neigd

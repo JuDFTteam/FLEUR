@@ -16,7 +16,7 @@ c******************************************************************
       use m_juDFT
       contains
       subroutine wannier_to_lapw(
-     >      mpi_comm,eig_id,
+     >      mpi_comm,eig_id,l_real,
      >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
      >      l_soc,unigrid,sortrule,band_min,band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -64,7 +64,7 @@ c******************************************************************
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
 #endif
-      logical,intent(in):: l_soc
+      logical,intent(in):: l_soc, l_real
       integer,intent(in)::unigrid(4),mpi_comm,eig_id
       integer,intent(in)::band_min(2),band_max(2)
       logical, intent (in) :: invs,invs2,film,slice,symor
@@ -463,7 +463,14 @@ c******************************************************************
 
       allocate (we(neigd),eigg(neigd))
 
-
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = nbasfcn
+      zzMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
 
       call wann_read_eig(
      >              eig_id,
