@@ -166,7 +166,14 @@
                 ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
                 results%force(:,:,:) = 0.0
+             END IF
 
+             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+                                   oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
+                                   l_gga)
+
+             IF (mpi%irank.EQ.0) THEN
                 filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
@@ -180,11 +187,6 @@
                 DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
              END IF
-
-             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                   oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
-                                   l_gga)
 
              DEALLOCATE(noel)
 

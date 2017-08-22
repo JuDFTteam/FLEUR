@@ -215,13 +215,13 @@
 
       IMPLICIT NONE
 
-      TYPE(t_kpts),INTENT (IN)  :: kpts
-      LOGICAL,     INTENT (IN)  :: l_film
-      INTEGER,     INTENT (IN)  :: idsyst,idtype
-      REAL,        INTENT (IN)  :: bmat(3,3)
-      INTEGER,     INTENT (OUT) :: nosyp
-      REAL,             POINTER :: syp(:,:)  ! actually intent out
-      CHARACTER(len=1), POINTER :: ssy(:)
+      TYPE(t_kpts),INTENT (INOUT)  :: kpts
+      LOGICAL,     INTENT (IN)     :: l_film
+      INTEGER,     INTENT (IN)     :: idsyst,idtype
+      REAL,        INTENT (IN)     :: bmat(3,3)
+      INTEGER,     INTENT (OUT)    :: nosyp
+      REAL,             POINTER    :: syp(:,:)  ! actually intent out
+      CHARACTER(len=1), POINTER    :: ssy(:)
 
       LOGICAL         :: band_inp_file
       INTEGER         :: n
@@ -245,6 +245,23 @@
             READ(99,*,err = 110,END=110) ssy(n),syp(:,n)
          ENDDO
          CLOSE(99)
+
+         IF(nosyp.GE.2) THEN
+            kpts%numSpecialPoints = nosyp
+            IF (ALLOCATED(kpts%specialPoints)) THEN
+               DEALLOCATE (kpts%specialPoints)
+            END IF
+            IF (ALLOCATED(kpts%specialPointNames)) THEN
+               DEALLOCATE (kpts%specialPointNames)
+            END IF
+            ALLOCATE (kpts%specialPoints(3,kpts%numSpecialPoints))
+            ALLOCATE (kpts%specialPointNames(kpts%numSpecialPoints))
+            DO n = 1, kpts%numSpecialPoints
+               kpts%specialPointNames(n) = TRIM(ADJUSTL(ssy(n)))
+               kpts%specialPoints(:,n) = syp(:,n)
+            END DO
+         END IF
+
          RETURN
  110     WRITE(*,*) "Error reading band_inp file"
           CALL juDFT_error("Bandstr1",calledby="bandstr1")
@@ -436,6 +453,22 @@
             syp(:,4) = (/zro,f12, zro/)  ; ssy(4) = "Y"    ! via Delta
             syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"    ! via Lambda
          ENDIF
+      END IF
+
+      IF(nosyp.GE.2) THEN
+         kpts%numSpecialPoints = nosyp
+         IF (ALLOCATED(kpts%specialPoints)) THEN
+            DEALLOCATE (kpts%specialPoints)
+         END IF
+         IF (ALLOCATED(kpts%specialPointNames)) THEN
+            DEALLOCATE (kpts%specialPointNames)
+         END IF
+         ALLOCATE (kpts%specialPoints(3,kpts%numSpecialPoints))
+         ALLOCATE (kpts%specialPointNames(kpts%numSpecialPoints))
+         DO n = 1, kpts%numSpecialPoints
+            kpts%specialPointNames(n) = TRIM(ADJUSTL(ssy(n)))
+            kpts%specialPoints(:,n) = syp(:,n)
+         END DO
       END IF
 
       IF (nosyp == -1) THEN

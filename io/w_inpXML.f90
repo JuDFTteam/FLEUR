@@ -249,9 +249,20 @@ SUBROUTINE w_inpXML(&
       END DO
       WRITE (fileNum,'(a)')('         </kPointList>')
    ELSE IF(kpts%specificationType.EQ.1) THEN
+      IF (kpts%numSpecialPoints.GE.2) THEN
+         207 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'">')
+         WRITE (fileNum,207) kpts%nkpt,kptGamma
+         209 FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
+         DO i = 1, kpts%numSpecialPoints
+            WRITE(fileNum,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),&
+                               kpts%specialPoints(1,i),kpts%specialPoints(2,i),kpts%specialPoints(3,i)
+         END DO
+         WRITE (fileNum,'(a)') '         </kPointCount>'
+      ELSE
 !            <kPointCount count="100" gamma="F"/>
-      208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
-      WRITE (fileNum,208) kpts%nkpt,kptGamma
+         208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
+         WRITE (fileNum,208) kpts%nkpt,kptGamma
+      END IF
    ELSE !(kpts%specificationType.EQ.2)
 !            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
       210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
