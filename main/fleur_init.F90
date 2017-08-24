@@ -13,6 +13,7 @@
           USE m_judft
           USE m_juDFT_init
           USE m_types
+          USE m_init_wannier_defaults
           USE m_rinpXML
           USE m_postprocessInput
           USE m_dimens
@@ -138,6 +139,8 @@
                 OPEN (16,file='inf',form='formatted',status='unknown')
              ENDIF
           ENDIF
+
+          CALL initWannierDefaults(wann)
 
           input%minDistance = 0.0
           kpts%ntet = 1

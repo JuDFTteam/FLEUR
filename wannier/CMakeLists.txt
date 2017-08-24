@@ -97,4 +97,5 @@ wannier/wann_plot_od_vac.F
 wannier/bs_comfort.F
 )
 set(fleur_F90 ${fleur_F90}
+wannier/init_wannier_defaults.f90
 )
