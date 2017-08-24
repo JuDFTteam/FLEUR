@@ -158,7 +158,7 @@
                 scale = 1.0
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
-                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,&
+                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts,l_gga)

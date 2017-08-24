@@ -16,7 +16,7 @@ MODULE m_rinpXML
 CONTAINS
 SUBROUTINE r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,&
+                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts,l_gga)
@@ -58,6 +58,7 @@ SUBROUTINE r_inpXML(&
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
+  TYPE(t_wann)   ,INTENT(INOUT)  :: wann
   LOGICAL, INTENT(OUT)           :: l_kpts, l_gga
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
@@ -113,7 +114,7 @@ SUBROUTINE r_inpXML(&
   REAL             :: speciesXMLCoreOccs(2,29)
   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
-  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum
+  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum, numTokens
   INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
@@ -1690,6 +1691,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+     input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
 
@@ -1793,6 +1795,61 @@ SUBROUTINE r_inpXML(&
         banddos%ndir = -4
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
+
+     ! Read in optional Wannier functions parameters
+
+     xPathA = '/fleurInput/output/wannier'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((input%l_wann).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("wannier is true but Wannier parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     IF (numberNodes.EQ.1) THEN
+        wann%l_ms = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ms'))
+        wann%l_sgwf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sgwf'))
+        wann%l_socgwf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socgwf'))
+        wann%l_bs_comf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bsComf'))
+        wann%l_atomlist = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomList'))
+     END IF
+
+     xPathA = '/fleurInput/output/wannier/bandSelection'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        wann%l_byindex=.TRUE.
+        wann%band_min(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
+        wann%band_max(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
+        xPathA = '/fleurInput/output/wannier/bandSelection/@minSpinDown'
+        numberNodes = xmlGetNumberOfNodes(xPathA)
+        IF (numberNodes.EQ.1) THEN
+           wann%band_min(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+           wann%band_min(2) = wann%band_min(1)
+        END IF
+        xPathA = '/fleurInput/output/wannier/bandSelection/@maxSpinDown'
+        numberNodes = xmlGetNumberOfNodes(xPathA)
+        IF (numberNodes.EQ.1) THEN
+           wann%band_max(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+           wann%band_max(2) = wann%band_max(1)
+        END IF
+     END IF
+
+     xPathA = '/fleurInput/output/wannier/jobList'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        xPathA = 'normalize-space(/fleurInput/output/wannier/jobList/text())[1]'
+
+        ! Note: At the moment only 255 characters for the text in this node. Maybe this is not enough.
+        valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))
+        numTokens = countStringTokens(valueString)
+        ALLOCATE(wann%jobList(numTokens))
+        DO i = 1, numTokens
+           wann%jobList(i) = popFirstStringToken(valueString)
+        END DO
+     END IF
 
   END IF
 
@@ -1940,5 +1997,32 @@ FUNCTION popFirstStringToken(line) RESULT(firstToken)
    END IF
 
 END FUNCTION popFirstStringToken
+
+FUNCTION countStringTokens(line) RESULT(tokenCount)
+
+   IMPLICIT NONE
+
+   CHARACTER(*), INTENT(IN) :: line
+   INTEGER                  :: tokenCount
+
+   CHARACTER(LEN=LEN(line)) :: tempLine
+   INTEGER separatorIndex
+
+   tokenCount = 0
+
+   tempLine = TRIM(ADJUSTL(line))
+
+   DO WHILE (tempLine.NE.'')
+      separatorIndex = 0
+      separatorIndex = INDEX(tempLine,' ')
+      IF (separatorIndex.EQ.0) THEN
+         tempLine = ''
+      ELSE
+         tempLine = TRIM(ADJUSTL(tempLine(separatorIndex+1:)))
+      END IF
+      tokenCount = tokenCount + 1
+   END DO
+
+END FUNCTION countStringTokens
 
 END MODULE m_rinpXML

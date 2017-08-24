@@ -864,6 +864,7 @@
         CHARACTER(len=20) :: param_file
         REAL,ALLOCATABLE :: param_vec(:,:)
         REAL,ALLOCATABLE :: param_alpha(:,:)
+        CHARACTER(LEN=20), ALLOCATABLE :: jobList(:)
 !---> gwf
 
       end type t_wann
