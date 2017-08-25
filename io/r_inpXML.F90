@@ -148,6 +148,7 @@ SUBROUTINE r_inpXML(&
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
   REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
+  LOGICAL, ALLOCATABLE :: wannAtomList(:)
 
 ! Variables for MT radius testing:
 
@@ -250,6 +251,8 @@ SUBROUTINE r_inpXML(&
   xmlCoreOccs = 0.0
 
   ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
+
+  ALLOCATE (wannAtomList(atoms%nat))
 
   ! Read in constants
 
@@ -1610,6 +1613,7 @@ SUBROUTINE r_inpXML(&
            banddos%l_orb = .TRUE.
            banddos%orbCompAtom = na
         END IF
+        wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
      END DO
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
@@ -1640,6 +1644,7 @@ SUBROUTINE r_inpXML(&
            banddos%l_orb = .TRUE.
            banddos%orbCompAtom = na
         END IF
+        wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
      END DO
 
      !Read in atom group specific noco parameters
@@ -1856,6 +1861,31 @@ SUBROUTINE r_inpXML(&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of output section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+     ! Generate / fill wann%atomlist(:) array
+     IF (wann%l_atomlist) THEN
+        absSum = 0
+        DO i = 1, atoms%nat
+           IF (wannAtomList(i)) absSum = absSum + 1
+        END DO
+        wann%atomlist_num = absSum
+        ALLOCATE(wann%atomlist(wann%atomlist_num))
+        j = 1
+        DO i = 1, atoms%nat
+           IF (wannAtomList(i)) THEN
+              wann%atomlist(j) = i
+              j = j + 1
+           END IF
+        END DO
+     ELSE
+        wann%atomlist_num = atoms%nat
+        ALLOCATE(wann%atomlist(wann%atomlist_num))
+        DO i = 1, atoms%nat
+           wann%atomlist(i) = i
+        END DO
+     END IF
+
+     DEALLOCATE(wannAtomList)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of non-XML input
