@@ -578,24 +578,24 @@ MODULE m_corespec_eval
 
                     do id1 = 1,2 ; 
                       do id2 = 1,2
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
-                        prd(ip1,ip2) = prd(ip1,ip2)+ &
-                           csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(0,0) = prd(0,0)+ &
+                           csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeA(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(0,1) = prd(0,1)+ &
+                           csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeB(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(0,2) = prd(0,2)+ &
+                           csv%rmeA(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeC(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(1,0) = prd(1,0)+ &
+                           csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeA(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(1,1) = prd(1,1)+ &
+                           csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeB(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(1,2) = prd(1,2)+ &
+                           csv%rmeB(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeC(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(2,0) = prd(2,0)+ &
+                           csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeA(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(2,1) = prd(2,1)+ &
+                           csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeB(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
+                        prd(2,2) = prd(2,2)+ &
+                           csv%rmeC(id1,l1,la1,iljc,ic,iqv,ie)*csv%rmeC(id2,l2,la2,iljc,ic,iqv,ie)*csv%dose(id1,id2,lm1,lm2,ie)
                       enddo 
                     enddo
 
