@@ -1,6 +1,9 @@
 enable_testing()
 
-set(Testdirs CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML Fe_bct_LO Fe_bct_LOXML Fe_bct Fe_bctXML PTO PTOXML Fe_fcc Fe_fccXML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML GaAsMultiUForceXML) 
+set(Testdirs CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS
+CuDOSXML Fe_bct_LO Fe_bct_LOXML Fe_bct Fe_bctXML PTO PTOXML Fe_fcc Fe_fccXML
+Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML
+GaAsMultiUForceXML TiO2eels) 
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
