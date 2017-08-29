@@ -10,7 +10,10 @@ if (all_tests)
     set(Testdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldau NiO_ldauXML)
 endif()
 
-
+#Add Wannier tests if fleur is compiled with Wannier support
+if (${FLEUR_USE_WANN})
+    set(Testdirs ${Testdirs} Cwann)
+endif()
 
 #The serial tests
 if (${FLEUR_USE_SERIAL})
