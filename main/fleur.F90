@@ -240,6 +240,7 @@ MODULE m_fleur
       input%l_wann = .FALSE.
       INQUIRE (file='wann_inp',exist=input%l_wann)
       IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
+         IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
          CALL wann_optional(input,atoms,sym,cell,oneD,noco,wann)
       END IF
       IF (wann%l_gwf) input%itmax = 1

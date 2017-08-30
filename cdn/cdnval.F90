@@ -329,6 +329,7 @@ CONTAINS
 
 ! calculation of core spectra (EELS) initializations -start-
     CALL corespec_init(atoms)
+    IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
     IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
 ! calculation of core spectra (EELS) initializations -end-
 
