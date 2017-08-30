@@ -239,6 +239,9 @@
                   &          sphhar,input,cell,oneD,&
                   &          qpw,rhtxy,rho,rht,.FALSE.,.true.,&
                   &          fix)
+             z=SUM(atoms%neq(:)*atoms%zatom(:))
+             IF (ABS(fix*z-z)>0.5) CALL judft_warn("Starting density not charge neutral",hint= &
+                  "Your electronic configuration might be broken",calledby="stden.f90")
              !
              ! Write superposed density onto density file
              !
