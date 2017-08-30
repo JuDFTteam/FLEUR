@@ -63,7 +63,7 @@
       INTEGER :: lmax0,lnonsph0,jri0,ncst0,nlod0,llod
       INTEGER :: natomst,ncorest,nvalst,z,nlo0
       INTEGER :: xmlCoreStateNumber, lmaxdTemp
-      REAL    :: rmt0_def,dx0_def,bmu0_def
+      REAL    :: rmt0_def,dx0_def,bmu0_def, upReal, dnReal
       REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom, electronsLeft
       LOGICAL :: fatalerror, h_atom, h_allatoms
       LOGICAL :: idone(atoms%ntype) 
@@ -505,6 +505,8 @@ c           in s and p states equal occupation of up and down states
               ENDIF
               up = j
               dn = j
+              upReal = coreocc(i,n) / 2.0
+              dnReal = coreocc(i,n) / 2.0
             END IF
             WRITE(27,'(4i3,i4,a1)') coreqn(1,i,n),coreqn(2,i,n),up,dn,
      &                      coreqn(1,i,n),lotype(lval(i,n))
@@ -560,8 +562,8 @@ c           in s and p states equal occupation of up and down states
 !                  up = CEILING(coreocc(i,n)/2)
 !                  dn = FLOOR(coreocc(i,n)/2)
 !            END SELECT
-            xmlCoreOccs(1,xmlCoreStateNumber,n) = up
-            xmlCoreOccs(2,xmlCoreStateNumber,n) = dn
+            xmlCoreOccs(1,xmlCoreStateNumber,n) = upReal
+            xmlCoreOccs(2,xmlCoreStateNumber,n) = dnReal
           ENDDO
           WRITE (6,*) '----------'
 
