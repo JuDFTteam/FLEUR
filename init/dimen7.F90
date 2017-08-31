@@ -164,7 +164,7 @@
       ENDDO
       CALL ylmnorm_init(atoms%lmaxd)
 !      IF (mod(lmaxd,2).NE.0) lmaxd = lmaxd + 1
-      IF (2*DIMENSION%neigd.LT.MAX(5,input%zelec)) THEN
+      IF (2*DIMENSION%neigd.LT.MAX(5.0,input%zelec)) THEN
         WRITE(6,*) dimension%neigd,' states estimated in dimen7 ...'
         DIMENSION%neigd = MAX(5,NINT(0.75*input%zelec))
         WRITE(6,*) 'changed dimension%neigd to ',dimension%neigd

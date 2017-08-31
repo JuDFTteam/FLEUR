@@ -61,7 +61,7 @@ CONTAINS
     ALLOCATE (gsk3(stars%ng3),INDEX(stars%ng3),index3(stars%ng3),kv3rev(stars%ng3,3))
 
     !
-    WRITE (*,*) ' stars are always ordered '
+    !WRITE (*,*) ' stars are always ordered '
 
     l_xcExtended = xcpot%igrd.NE.0
     !--->    read in information if exists

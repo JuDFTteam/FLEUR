@@ -21,6 +21,7 @@ CONTAINS
     !$ omp=omp_get_max_threads()
     if (mpi%irank==0) THEN
        !print INFO on parallelization
+       WRITE(*,*) "--------------------------------------------------------"
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
        !$ write(*,*) "Number of OMP-threads:",omp
@@ -53,6 +54,7 @@ CONTAINS
 
     !generate the MPI communicators
     CALL priv_create_comm(nkpt,mpi)
+    if (mpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
 
   END SUBROUTINE setupMPI
 
