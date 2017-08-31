@@ -13,8 +13,8 @@ module m_hsmt_hlptomat
         implicit none
         integer, intent(in)                :: nlotot,nv(:),sub_comm
         complex, intent(in)                :: chi11,chi21,chi22
-        complex, allocatable,intent(inout) :: aahlp(:)
-        complex,             intent(inout) :: aa(:)
+        complex, intent(inout)             :: aahlp(:)
+        complex, intent(inout)             :: aa(:)
         complex, optional,intent(inout)    :: bb(:),bbhlp(:)
 
         integer :: ii,ij,ki,kj,n_rank,n_size

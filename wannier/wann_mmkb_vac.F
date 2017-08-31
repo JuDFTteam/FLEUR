@@ -15,21 +15,28 @@ c      Y. Mokrousov, F. Freimuth
 c*************************************************************** 
       CONTAINS
       SUBROUTINE wann_mmkb_vac(
-     >     l_noco,nlotot,qss,
+     >     vacchi,l_noco,nlotot,qss,
      >     nbnd,z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
      >     ig,nmz,delz,ig2,area,bmat,
-     >     bbmat,evac,bkpt,bkpt_b,vz,
-     >     nslibd,nslibd_b,jspin,
+     >     bbmat,evac,evac_b,bkpt,bkpt_b,vz,vz_b,
+     >     nslibd,nslibd_b,jspin,jspin_b,
      >     k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,
-     >     nbasfcn,neigd,z,z_b,nv,nv_b,omtil,gb,
+     >     nbasfcn,neigd,zMat,zMat_b,nv,nv_b,omtil,gb,
      <     mmn)
 
-      use m_constants, only : pimach
+      USE m_types
+      use m_constants
       use m_intgr, only : intgz0
+      USE m_vacuz
+      USE m_vacudz
+
       implicit none
+
+      TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
-      integer, intent (in) :: nlotot
+      integer, intent (in) :: nlotot,jspin_b
       real,    intent (in) :: qss(3)
       integer, intent (in) :: nmzd,nv2d,k1d,k2d,k3d,n3d,nbnd
       integer, intent (in) :: nmz,nslibd,nslibd_b,nvac
@@ -37,21 +44,17 @@ c     .. scalar Arguments..
       integer, intent (in) :: nbasfcn,neigd
       integer, intent (in) :: gb(3)
       real,    intent (in) :: delz,z1,omtil,area
+      complex, intent (in) :: vacchi
 
 c     ..array arguments..
-      real,    intent (in) :: bkpt(3),bkpt_b(3),evac(2)
+      real,    intent (in) :: bkpt(3),bkpt_b(3),evac(2),evac_b(2)
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig2(n3d),nv(jspd),nv_b(jspd)
-      real,    intent (in) :: vz(nmzd,2),bbmat(3,3),bmat(3,3)
+      real,    intent (in) :: vz(nmzd,2),vz_b(nmzd,2)
+      real,    intent (in) :: bbmat(3,3),bmat(3,3)
       integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer,intent(in)::k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
       complex, intent (inout) :: mmn(nbnd,nbnd)
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#endif
 
 c     ..basis wavefunctions in the vacuum
       complex, allocatable :: ac(:,:),bc(:,:),ac_b(:,:),bc_b(:,:)
@@ -64,7 +67,7 @@ c     ..basis wavefunctions in the vacuum
 
 c     ..local scalars..
       logical tail
-      real wronk,arg,zks,tpi,vz0(2),scale,evacp,ev,const
+      real wronk,arg,zks,tpi,vz0(2),vz0_b(2),scale,evacp,ev,const
       real uu,ud,du,dd,xx(nmz),xximag(nmz)
       real :: uuimag,udimag,duimag,ddimag,qss1,qss2
       integer i,m,l,j,k,n,nv2,nv2_b,ivac,n2,n2_b,sign,ik
@@ -73,13 +76,6 @@ c     ..local scalars..
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
       integer, allocatable :: kvac1_b(:),kvac2_b(:),map2_b(:)
       integer symvac,symvacvac
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
-
-c..   external functions
-      external vacudz,vacuz
-c      real dotirp
-c      external dotirp  ! module now
 
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),
@@ -103,6 +99,7 @@ c.. for the k-point
 
       do ivac = 1,2
          vz0(ivac) = vz(nmz,ivac)
+         vz0_b(ivac) = vz_b(nmz,ivac)
       enddo
 
       n2 = 0 ; n2_b = 0
@@ -111,6 +108,8 @@ c.. for the k-point
       addnoco2=0
       if(l_noco.and.jspin.eq.2)then
         addnoco=nv(1)+nlotot
+      endif
+      if(l_noco.and.jspin_b.eq.2)then
         addnoco2=nv_b(1)+nlotot
       endif
 
@@ -123,7 +122,11 @@ c.. for the k-point
              endif 
  30      continue
          n2 = n2 + 1
-        
+         
+         IF(n2>nv2d) then
+            write(*,*)n2,nv2d,'jspin',jspin
+         endif
+ 
          IF (n2>nv2d)  CALL juDFT_error("wannier Mmn vac",calledby
      +        ="wann_mmkb_vac")
 
@@ -131,26 +134,32 @@ c.. for the k-point
          kvac2(n2) = k2(k,jspin)
          map2(k) = n2
  40   continue
+         !write(*,*)'ok',n2,nv2d,'jspin',jspin
 
 c.. and for the b-point
  
-      do 41 k = 1,nv_b(jspin)
+      do 41 k = 1,nv_b(jspin_b)
          do 31 j = 1,n2_b
-            if ( k1_b(k,jspin).eq.kvac1_b(j) .and.
-     +          k2_b(k,jspin).eq.kvac2_b(j) ) then
+            if ( k1_b(k,jspin_b).eq.kvac1_b(j) .and.
+     +          k2_b(k,jspin_b).eq.kvac2_b(j) ) then
                 map2_b(k) = j
                 goto 41
              endif
  31      continue
          n2_b = n2_b + 1
      
+         IF(n2_b>nv2d) then
+            write(*,*)n2_b,nv2d,'jspin_b',jspin_b
+         endif
+
          IF (n2_b>nv2d)  CALL juDFT_error("wannier Mmn vac",calledby
      +        ="wann_mmkb_vac")
 
-         kvac1_b(n2_b) = k1_b(k,jspin)
-         kvac2_b(n2_b) = k2_b(k,jspin)
+         kvac1_b(n2_b) = k1_b(k,jspin_b)
+         kvac2_b(n2_b) = k2_b(k,jspin_b)
          map2_b(k) = n2_b
  41   continue
+         !write(*,*)'ok',n2_b,nv2d,'jspin_b',jspin_b
 
 c...cycle by the vacua
       do 140 ivac = 1,nvac
@@ -217,22 +226,30 @@ c-----> construct a and b coefficients for the k-point
          av = -c_1 * cmplx( dte(l),zks*te(l) )
          bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
-         do n = 1,nslibd
-            ac(l,n) = ac(l,n) + z(k+addnoco,n)*av
-            bc(l,n) = bc(l,n) + z(k+addnoco,n)*bv
-         enddo
+         IF(zMat%l_real) THEN
+            do n = 1,nslibd
+               ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+            enddo
+         ELSE
+            do n = 1,nslibd
+               ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+            enddo
+         END IF
       enddo
 
 c...now for the k+b point
 
+      evacp = evac_b(ivac)
       do ik = 1,nv2_b
          v(1) = bkpt_b(1) + kvac1_b(ik) + qss1
          v(2) = bkpt_b(2) + kvac2_b(ik) + qss2
          v(3) = 0.
          ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
-         call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t_b(ik),dt_b(ik),
-     +        u_b(1,ik))
-         call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te_b(ik),
+         call vacuz(ev,vz_b(1,ivac),vz0_b(ivac),nmz,delz,t_b(ik),
+     +        dt_b(ik),u_b(1,ik))
+         call vacudz(ev,vz_b(1,ivac),vz0_b(ivac),nmz,delz,te_b(ik),
      +        dte_b(ik),tei_b(ik),ue_b(1,ik),dt_b(ik),
      +        u_b(1,ik))
          scale = wronk/ (te_b(ik)*dt_b(ik)-dte_b(ik)*t_b(ik))
@@ -245,18 +262,25 @@ c...now for the k+b point
       enddo
 c-----> construct a and b coefficients for the k+b point
 
-      do k = 1,nv_b(jspin)
+      do k = 1,nv_b(jspin_b)
          l = map2_b(k)
-         zks = k3_b(k,jspin)*bmat(3,3)*sign
+         zks = k3_b(k,jspin_b)*bmat(3,3)*sign
          arg = zks*z1
          c_1 = cmplx(cos(arg),sin(arg)) * const
          av = -c_1 * cmplx( dte_b(l),zks*te_b(l) )
          bv =  c_1 * cmplx( dt_b(l),zks*t_b(l) )
 c-----> loop over basis functions
-         do n = 1,nslibd_b
-            ac_b(l,n) = ac_b(l,n) + z_b(k+addnoco2,n)*av
-            bc_b(l,n) = bc_b(l,n) + z_b(k+addnoco2,n)*bv
-         enddo
+         IF(zMat_b%l_real) THEN
+            do n = 1,nslibd_b
+               ac_b(l,n) = ac_b(l,n) + zMat_b%z_r(k+addnoco,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%z_r(k+addnoco,n)*bv
+            enddo
+         ELSE
+            do n = 1,nslibd_b
+               ac_b(l,n) = ac_b(l,n) + zMat_b%z_c(k+addnoco,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%z_c(k+addnoco,n)*bv
+            enddo
+         END IF
       enddo
 
 
@@ -307,7 +331,7 @@ c-----> loop over basis functions
      *  ac(l,i)*conjg(ac_b(lprime,j))*cmplx(uu,uuimag) +
      +  ac(l,i)*conjg(bc_b(lprime,j))*cmplx(ud,udimag) +
      *  bc(l,i)*conjg(ac_b(lprime,j))*cmplx(du,duimag) +
-     +  bc(l,i)*conjg(bc_b(lprime,j))*cmplx(dd,ddimag) )
+     +  bc(l,i)*conjg(bc_b(lprime,j))*cmplx(dd,ddimag) )*vacchi
             enddo
          enddo
 

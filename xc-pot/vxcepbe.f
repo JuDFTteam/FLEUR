@@ -36,6 +36,17 @@ c.....------------------------------------------------------------------
       REAL, PARAMETER :: sml = 1.e-14
       REAL, PARAMETER :: smlc = 2.01e-14
 
+!$OMP PARALLEL DEFAULT(none)
+!$OMP+ SHARED(irmx,rh,icorr,jspins)
+!$OMP+ SHARED(agr,agru,agrd,g2ru,g2rd,gggr,gggru,gggrd)
+!$OMP+ SHARED(vx,vxc)
+!$OMP+ PRIVATE(rou,rod,vxlu,vclu,vxld,vcld,vxgu,vcgu,vxgd,vcgd)
+!$OMP+ PRIVATE(vxupsr,vxdnsr,ro,lcor,lpot,up,agrup,delgrup)
+!$OMP+ PRIVATE(uplap,dn,agrdn,delgrdn,dnlap,agrt,delgrt)
+!$OMP+ PRIVATE(exlsd,vxuplsd,vxdnlsd,eclsd,vcuplsd,vcdnlsd)
+!$OMP+ PRIVATE(expbe,vxuppbe,vxdnpbe,ecpbe,vcuppbe,vcdnpbe)
+!$OMP+ PRIVATE(xcptu,xcptd)
+!$OMP DO
       DO i = 1,irmx
 
         IF (jspins.eq.1) THEN
@@ -86,11 +97,11 @@ c.....
           delgrt  = gggr(i)
 
           CALL easypbe(icorr,
-     &           up,agrup,delgrup,uplap,dn,agrdn,delgrdn,dnlap,
-     1           agrt,delgrt,lcor,lpot,
-     1           exlsd,vxuplsd,vxdnlsd,eclsd,vcuplsd,vcdnlsd,
-     1           expbe,vxuppbe,vxdnpbe,ecpbe,vcuppbe,vcdnpbe,
-     1           vxupsr,vxdnsr)
+     >           up,agrup,delgrup,uplap,dn,agrdn,delgrdn,dnlap,
+     >           agrt,delgrt,lcor,lpot,
+     <           exlsd,vxuplsd,vxdnlsd,eclsd,vcuplsd,vcdnlsd,
+     <           expbe,vxuppbe,vxdnpbe,ecpbe,vcuppbe,vcdnpbe,
+     <           vxupsr,vxdnsr)
 
           vxlu=vxuplsd
           vclu=vcuplsd
@@ -120,6 +131,8 @@ c.....
         vxc(i,jspins) = xcptd*2    ! back to htr in calling routine
 
       END DO
+!$OMP END DO
+!$OMP END PARALLEL 
 
       END SUBROUTINE vxcepbe
       END MODULE m_vxcepbe

@@ -20,6 +20,7 @@
      >                      input,idlist,xmlCoreRefOccs,
      X                      nline,xmlElectronStates,
      X                      xmlPrintCoreStates,xmlCoreOccs,
+     >                      atomTypeSpecies,numSpecies,
      <                      nel,atoms,enpara )
 
       USE m_types
@@ -38,10 +39,12 @@
 ! ... Arguments ...
       INTEGER, INTENT (IN)    :: infh  ! file number of input-file
       INTEGER, INTENT (IN)    :: bfh
+      INTEGER, INTENT (IN)    :: numSpecies
       INTEGER, INTENT (INOUT) :: nline ! current line in this file
       INTEGER, INTENT (INOUT) :: nel   ! number of valence electrons
 
       INTEGER, INTENT (IN)     :: xl_buffer
+      INTEGER, INTENT (IN)     :: atomTypeSpecies(atoms%ntype)
       REAL   , INTENT (IN)     :: idlist(atoms%ntype)
       REAL   , INTENT (IN)     :: xmlCoreRefOccs(29)
       REAL, INTENT (INOUT)     :: xmlCoreOccs(2,29,atoms%ntype)
@@ -60,8 +63,8 @@
       INTEGER :: lmax0,lnonsph0,jri0,ncst0,nlod0,llod
       INTEGER :: natomst,ncorest,nvalst,z,nlo0
       INTEGER :: xmlCoreStateNumber, lmaxdTemp
-      REAL    :: rmt0_def,dx0_def,bmu0_def
-      REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom
+      REAL    :: rmt0_def,dx0_def,bmu0_def, upReal, dnReal
+      REAL    :: rmt0,dx0,bmu0,zat0,id,electronsOnAtom, electronsLeft
       LOGICAL :: fatalerror, h_atom, h_allatoms
       LOGICAL :: idone(atoms%ntype) 
       INTEGER :: lonqn(atoms%nlod,atoms%ntype),z_int(atoms%ntype)
@@ -74,6 +77,7 @@
       CHARACTER(len= l_buffer) :: econfig(atoms%ntype) ! verbose electronic config
       CHARACTER(len=80) :: lo(atoms%ntype), lo0
       CHARACTER(len=13) :: fname
+      CHARACTER(LEN=20) :: speciesName0
 
       CHARACTER(len=1) :: lotype(0:3)
 
@@ -209,12 +213,14 @@
         econfig0 = 'NONE'
         bmu0     = -9999.9
         lo0      = ' '
+        speciesName0 = ''
 
 !--->   read namelist
         CALL read_atom(
      >                 bfh,l_buffer,lotype,
      <                 id,zat0,rmt0,jri0,dx0,lmax0,lnonsph0,
-     <                 ncst0,econfig0,bmu0,lo0,nlod0,llod,ios)
+     <                 ncst0,econfig0,speciesName0,bmu0,lo0,nlod0,llod,
+     <                 ios)
         IF (ios.ne.0) THEN
           CALL err(3)
         ELSE
@@ -226,6 +232,24 @@
               fatalerror=.true.
               EXIT
             ELSE
+              IF (speciesName0.NE.'') THEN
+                 atoms%speciesName(atomTypeSpecies(n)) = 
+     &              TRIM(ADJUSTL(speciesName0))
+                 DO i = 1, numSpecies
+                    IF (i.NE.atomTypeSpecies(n)) THEN
+                       IF((TRIM(ADJUSTL(speciesName0))).EQ.
+     &                    (TRIM(ADJUSTL(atoms%speciesName(i))))) THEN
+                          WRITE(*,*) ''
+                          WRITE(*,*) 'Error for species name'
+                          WRITE(*,*) TRIM(ADJUSTL(speciesName0))
+                          WRITE(*,*) ''
+                          CALL juDFT_error
+     +                       ("Same name for different species",
+     +                        calledby ="atom_input")
+                       END IF
+                    END IF
+                 END DO
+              END IF
               IF (rmt0 > -9999.8) THEN
                 atoms%rmt(n)  = rmt0
                 WRITE (6,'(a9,i4,2a2,a16,f12.6)') 'for atom ',n,
@@ -481,6 +505,8 @@ c           in s and p states equal occupation of up and down states
               ENDIF
               up = j
               dn = j
+              upReal = coreocc(i,n) / 2.0
+              dnReal = coreocc(i,n) / 2.0
             END IF
             WRITE(27,'(4i3,i4,a1)') coreqn(1,i,n),coreqn(2,i,n),up,dn,
      &                      coreqn(1,i,n),lotype(lval(i,n))
@@ -536,8 +562,8 @@ c           in s and p states equal occupation of up and down states
 !                  up = CEILING(coreocc(i,n)/2)
 !                  dn = FLOOR(coreocc(i,n)/2)
 !            END SELECT
-            xmlCoreOccs(1,xmlCoreStateNumber,n) = up
-            xmlCoreOccs(2,xmlCoreStateNumber,n) = dn
+            xmlCoreOccs(1,xmlCoreStateNumber,n) = upReal
+            xmlCoreOccs(2,xmlCoreStateNumber,n) = dnReal
           ENDDO
           WRITE (6,*) '----------'
 
@@ -593,6 +619,32 @@ c           in s and p states equal occupation of up and down states
                                          !for default setting of enparas
           ENDIF
 
+          IF(juDFT_was_argument("-electronConfig")) THEN
+             electronsLeft = NINT(atoms%zatom(n))
+             DO i = 1, 29
+                electronsLeft = electronsLeft - xmlCoreRefOccs(i)
+                IF(electronsLeft.GT.-xmlCoreRefOccs(i)+eps) THEN
+                   natomst = i
+                   IF(electronsLeft.LT.-eps) THEN
+                      xmlPrintCoreStates(i,n) = .TRUE.
+                      SELECT CASE(i)
+                         CASE (9:10,14:15,19:22,26:29)
+                            up = MIN((xmlCoreRefOccs(i)/2),
+     +                               -electronsLeft)
+                            dn = MAX(0.0,(-electronsLeft)-up)
+                         CASE DEFAULT
+                            up = CEILING((-electronsLeft)/2)
+                            dn = FLOOR((-electronsLeft)/2)
+                      END SELECT
+                      xmlCoreOccs(1,i,n) = up
+                      xmlCoreOccs(2,i,n) = dn
+                   END IF
+                END IF
+             END DO
+             xmlElectronStates(1:atoms%ncst(n),n) = coreState_const
+             xmlElectronStates(atoms%ncst(n)+1:natomst,n) = 
+     +          valenceState_const
+          END IF
 
         ENDIF
 
@@ -742,7 +794,7 @@ c           in s and p states equal occupation of up and down states
       SUBROUTINE read_atom(
      >                     bfh,l_buffer,lotype,
      X                     id,z,rmt,jri,dx,lmax,lnonsph,ncst,econfig,
-     <                     bmu,lo,nlod,llod,ios )
+     <                     speciesName,bmu,lo,nlod,llod,ios )
 !***********************************************************************
 !     reads in muffin-tin radius, mesh, etc.
 !***********************************************************************
@@ -751,31 +803,37 @@ c           in s and p states equal occupation of up and down states
       IMPLICIT NONE
 
 ! ... arguments ...
-      INTEGER, INTENT (IN)     :: bfh,l_buffer
-      REAL, INTENT (OUT)       :: id,z,rmt,dx,bmu
-      INTEGER                  :: lmax,lnonsph,ncst,jri,nlod,llod
-      CHARACTER(len=l_buffer)  :: econfig
-      CHARACTER(len=80)        :: lo
-      INTEGER, INTENT (OUT)    :: ios
-      CHARACTER(len=1), INTENT (IN) :: lotype(0:3)
+      INTEGER, INTENT (IN)           :: bfh,l_buffer
+      REAL, INTENT (OUT)             :: id,z,rmt,dx,bmu
+      INTEGER                        :: lmax,lnonsph,ncst,jri,nlod,llod
+      CHARACTER(len=l_buffer)        :: econfig
+      CHARACTER(len=80)              :: lo
+      CHARACTER(len=20), INTENT(OUT) :: speciesName
+      INTEGER, INTENT (OUT)          :: ios
+      CHARACTER(len=1), INTENT (IN)  :: lotype(0:3)
 
 ! ... internal variables ...
       INTEGER                  :: i,j,k,l,n
       REAL                     :: zz
       CHARACTER(len=2)         :: element
+      CHARACTER(len=20)        :: name
       CHARACTER(len=80)        :: lo1
 
       CHARACTER(len=2) :: lotype2(0:3)
       DATA lotype2 /'sS','pP','dD','fF'/
 
       NAMELIST /atom/ id,z,rmt,dx,jri,lmax,lnonsph,ncst,
-     &                econfig,bmu,lo,element
+     &                econfig,bmu,lo,element,name
 
       id = -9999.9
       z  = -9999.9
       element = ' '
+      speciesName = ''
+      name = ''
 
       READ (bfh,atom,err=911,end=911,iostat=ios)
+
+      speciesName = TRIM(ADJUSTL(name))
 
 ! -> determine which atom we are concerned with ...
 

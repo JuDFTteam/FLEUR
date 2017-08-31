@@ -17,6 +17,8 @@ global/starf.f
 global/triang.f
 global/vacudz.f
 global/vacuz.f
+global/abcrot.f
+global/savewigner.f
 )
 set(fleur_F90 ${fleur_F90}
 global/checkdop.F90

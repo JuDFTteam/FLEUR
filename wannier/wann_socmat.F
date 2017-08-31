@@ -7,6 +7,7 @@
       module m_wann_socmat
       contains
       subroutine wann_socmat(
+     >               mpi,enpara,input,noco,atoms,
      >               lmaxd,ntypd,nlod,natd,neigd,
      >               llod,jmtd,jspd,nlhd,soc_opt,neq,
      >               ntype,theta_in,phi_in,jspins,irank,
@@ -24,7 +25,16 @@ c     Frank Freimuth
 c***********************************************************************
       USE m_spnorb 
       USE m_hsoham
+      USE m_types
       implicit none
+
+      TYPE(t_mpi),INTENT(IN)      :: mpi
+
+      TYPE(t_enpara),INTENT(IN)   :: enpara
+      TYPE(t_input),INTENT(IN)    :: input
+      TYPE(t_noco),INTENT(IN)     :: noco
+      TYPE(t_atoms),INTENT(IN)    :: atoms
+
       integer, intent(in) :: lmaxd
       integer, intent(in) :: ntypd
       integer, intent(in) :: nlod
@@ -90,6 +100,8 @@ c***********************************************************************
       REAL,    ALLOCATABLE :: rsopplo(:,:,:,:),rsoploplop(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: soangl(:,:,:,:,:,:)
 
+      TYPE(t_usdus):: usdus
+
       nwdd=1
       nw=1
       nsz=neigd
@@ -130,6 +142,16 @@ c***********************************************************************
      +          rsoploplop(ntypd,nlod,nlod,2,2),
      +          soangl(lmaxd,-lmaxd:lmaxd,2,lmaxd,-lmaxd:lmaxd,2) )
 
+      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,jspd), 
+     +         usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),
+     +         usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd),
+     +         usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd),
+     +         usdus%ddn(0:atoms%lmaxd,atoms%ntype,jspd),
+     +         usdus%ulos(atoms%nlod,atoms%ntype,jspd),
+     +         usdus%dulos(atoms%nlod,atoms%ntype,jspd),
+     +         usdus%uulon(atoms%nlod,atoms%ntype,jspd),
+     +         usdus%dulon(atoms%nlod,atoms%ntype,jspd))
+
       ALLOCATE( us(0:lmaxd,ntypd,jspd), dus(0:lmaxd,ntypd,jspd),
      +          uds(0:lmaxd,ntypd,jspd),duds(0:lmaxd,ntypd,jspd),
      +          ddn(0:lmaxd,ntypd,jspd),
@@ -138,13 +160,9 @@ c***********************************************************************
 
       soangl(:,:,:,:,:,:) = cmplx(0.0,0.0)
       CALL spnorb(
-     >         ntypd,lmaxd,jmtd,jspd,nwdd,nlhd,nlod,
-     >         theta,phi,jspins,ntype,nw,irank,
-     >         jri,lmax,dx,rmsh,el,ello,nlo,llo,l_dulo,ulo_der,vr,
-     >         soc_opt(ntype+2), 
-     <         rsopp,rsoppd,rsopdp,rsopdpd,ddn,
-     <         rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,
-     <         us,dus,uds,duds,ulos,dulos,uulon,dulon,soangl)
+     >         atoms,noco,input,mpi, enpara,
+     >         vr,rsopp,rsoppd,rsopdp,rsopdpd,usdus,
+     <         rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,soangl)
 
       l_all=.false.
       IF (irank==0) THEN
@@ -170,8 +188,8 @@ c***********************************************************************
       soangl(:,:,:,:,:,:) = conjg(soangl(:,:,:,:,:,:))
 
       CALL hsoham(
-     >    jspd,neigd,natd,lmaxd,ntypd,nlod,llod,
-     >    ntype,soc_opt,jspins,nsz,lmax,neq,nlo,llo,chelp,
+     >    atoms,noco,input,
+     >    nsz,chelp,
      >    rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,
      >    ahelp,bhelp,rsopp,rsoppd,rsopdp,rsopdpd,soangl,
      <    hsomtx)

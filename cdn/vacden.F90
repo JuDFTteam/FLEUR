@@ -43,7 +43,7 @@ CONTAINS
     !                off-diagonal elements n_21
     !***********************************************************************
     !
-    USE m_constants, ONLY : tpi_const
+    USE m_constants
     USE m_grdchlh
     USE m_qsf
     USE m_cylbes
@@ -70,7 +70,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne    
     INTEGER, INTENT (IN) :: ikpt
     INTEGER,PARAMETER    :: n2max=13
-    REAL,PARAMETER        :: emax=2.0/27.2
+    REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)

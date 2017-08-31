@@ -323,7 +323,7 @@ CONTAINS
        ENDIF
     ENDIF
     IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
-    ne = MAX(5,DIMENSION%neigd)
+    ne = DIMENSION%neigd
 
     IF (l_hybrid.OR.hybrid%l_calhf) THEN
        eig_id_hf=eig_id
@@ -453,7 +453,7 @@ CONTAINS
           !--->         set up lapw list
           !
           CALL timestart("Setup of LAPW")
-          lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0
+          lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0 ; lapw%nv = 0
           CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,matind,nred)
 
           CALL timestop("Setup of LAPW")

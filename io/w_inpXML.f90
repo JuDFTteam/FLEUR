@@ -71,7 +71,8 @@ SUBROUTINE w_inpXML(&
 
 !+lda+u
    REAL    u,j
-   INTEGER l
+   INTEGER l, i_u
+   INTEGER uIndices(2,atoms%ntype)
    LOGICAL l_amf
    CHARACTER(len=3) ch_test
    NAMELIST /ldaU/ l,u,j,l_amf
@@ -104,7 +105,7 @@ SUBROUTINE w_inpXML(&
    INTEGER               :: idum
    CHARACTER (len=1)     ::  check
 
-   CHARACTER(len=20) :: tempNumberString, speciesName
+   CHARACTER(len=20) :: speciesName
    CHARACTER(len=150) :: format
    CHARACTER(len=20) :: mixingScheme
    CHARACTER(len=10) :: loType
@@ -117,17 +118,6 @@ SUBROUTINE w_inpXML(&
    REAL :: tempTaual(3,atoms%nat), scpos(3)
    REAL :: a1Temp(3),a2Temp(3),a3Temp(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
-   CHARACTER(len=7) :: coreStateList(29) !'(1s1/2)'
-   CHARACTER(len=4) :: nobleGasConfigList(6) !'[He]'
-
-   DATA coreStateList / '(1s1/2)','(2s1/2)','(2p1/2)','(2p3/2)','(3s1/2)',&
-&                       '(3p1/2)','(3p3/2)','(3d3/2)','(3d5/2)','(4s1/2)',&
-&                       '(4p1/2)','(4p3/2)','(5s1/2)','(4d3/2)','(4d5/2)',&
-&                       '(5p1/2)','(5p3/2)','(6s1/2)','(4f5/2)','(4f7/2)',&
-&                       '(5d3/2)','(5d5/2)','(6p1/2)','(6p3/2)','(7s1/2)',&
-&                       '(5f5/2)','(5f7/2)','(6d3/2)','(6d5/2)' /
-
-   DATA nobleGasConfigList / '[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]' /
 
    IF (PRESENT(dtild_opt)) dtild=dtild_opt
    IF (PRESENT(name_opt)) name=name_opt
@@ -246,7 +236,7 @@ SUBROUTINE w_inpXML(&
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
-   IF(l_explicit) THEN
+   IF(kpts%specificationType.EQ.3) THEN
       sumWeight = 0.0
       DO i = 1, kpts%nkpt
          sumWeight = sumWeight + kpts%wtkpt(i)
@@ -258,11 +248,22 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
       END DO
       WRITE (fileNum,'(a)')('         </kPointList>')
-   ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN
+   ELSE IF(kpts%specificationType.EQ.1) THEN
+      IF (kpts%numSpecialPoints.GE.2) THEN
+         207 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'">')
+         WRITE (fileNum,207) kpts%nkpt,kptGamma
+         209 FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
+         DO i = 1, kpts%numSpecialPoints
+            WRITE(fileNum,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),&
+                               kpts%specialPoints(1,i),kpts%specialPoints(2,i),kpts%specialPoints(3,i)
+         END DO
+         WRITE (fileNum,'(a)') '         </kPointCount>'
+      ELSE
 !            <kPointCount count="100" gamma="F"/>
-      208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
-      WRITE (fileNum,208) kpts%nkpt,kptGamma
-   ELSE
+         208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
+         WRITE (fileNum,208) kpts%nkpt,kptGamma
+      END IF
+   ELSE !(kpts%specificationType.EQ.2)
 !            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
       210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
       WRITE (fileNum,210) div(1),div(2),div(3),kptGamma
@@ -276,7 +277,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,'(a)') '   </calculationSetup>'
    WRITE (fileNum,'(a)') '   <cell>'
 
-   IF(l_explicit) THEN
+   IF(sym%symSpecType.EQ.3) THEN
       WRITE(fileNum,'(a)') '      <symmetryOperations>'
       DO i = 1, sym%nop
       WRITE(fileNum,'(a)') '         <symOp>'
@@ -289,10 +290,10 @@ SUBROUTINE w_inpXML(&
       WRITE(fileNum,'(a)') '         </symOp>'
       END DO
       WRITE(fileNum,'(a)') '      </symmetryOperations>'
-   ELSE IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
+   ELSE IF(sym%symSpecType.EQ.1) THEN
       228 FORMAT('      <symmetryFile filename="',a,'"/>')
       WRITE(fileNum,228) TRIM(ADJUSTL(symFilename))
-   ELSE
+   ELSE !(sym%symSpecType.EQ.2)
 !      <symmetry spgrp="any" invs="T" zrfs="F"/>
       230 FORMAT('      <symmetry spgrp="',a,'" invs="',l1,'" zrfs="',l1,'"/>')
       WRITE (fileNum,230) TRIM(ADJUSTL(sym%namgrp)),sym%invs,sym%zrfs
@@ -417,6 +418,12 @@ SUBROUTINE w_inpXML(&
 !   WRITE (fileNum,290) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
 !   WRITE (fileNum,'(a)') '   </xcFunctional>'
 
+   uIndices = -1
+   DO i_u = 1, atoms%n_u
+      IF(uIndices(1,atoms%lda_u(i_u)%atomType).EQ.-1) uIndices(1,atoms%lda_u(i_u)%atomType) = i_u
+      uIndices(2,atoms%lda_u(i_u)%atomType) = i_u
+   END DO
+
    WRITE (fileNum,'(a)') '   <atomSpecies>'
    DO iSpecies=1, numSpecies
       iAtomType = speciesRepAtomType(iSpecies)
@@ -425,9 +432,7 @@ SUBROUTINE w_inpXML(&
       END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
-      tempNumberString = ''
-      WRITE(tempNumberString,'(i0)') iSpecies
-      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
@@ -456,42 +461,42 @@ SUBROUTINE w_inpXML(&
          IF ((endCoreStates.GE.24).AND.&
 &            (ALL(xmlPrintCoreStates(1:24,iAtomType).EQV..FALSE.)).AND.&
 &            (ALL(xmlElectronStates(1:24,iAtomType).EQ.coreState_const)) ) THEN
-            coreStatesString = nobleGasConfigList(6)
+            coreStatesString = nobleGasConfigList_const(6)
             startCoreStates = 25
          ELSE IF ((endCoreStates.GE.17).AND.&
 &                 (ALL(xmlPrintCoreStates(1:17,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:17,iAtomType).EQ.coreState_const))) THEN
-            coreStatesString = nobleGasConfigList(5)
+            coreStatesString = nobleGasConfigList_const(5)
             startCoreStates = 18
          ELSE IF ((endCoreStates.GE.12).AND.&
 &                 (ALL(xmlPrintCoreStates(1:12,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:12,iAtomType).EQ.coreState_const))) THEN
-            coreStatesString = nobleGasConfigList(4)
+            coreStatesString = nobleGasConfigList_const(4)
             startCoreStates = 13
          ELSE IF ((endCoreStates.GE.7).AND.&
 &                 (ALL(xmlPrintCoreStates(1:7,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:7,iAtomType).EQ.coreState_const))) THEN
-            coreStatesString = nobleGasConfigList(3)
+            coreStatesString = nobleGasConfigList_const(3)
             startCoreStates = 8
          ELSE IF ((endCoreStates.GE.4).AND.&
 &                 (ALL(xmlPrintCoreStates(1:4,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:4,iAtomType).EQ.coreState_const))) THEN
-            coreStatesString = nobleGasConfigList(2)
+            coreStatesString = nobleGasConfigList_const(2)
             startCoreStates = 5
          ELSE IF ((endCoreStates.GE.1).AND.&
 &                 (ALL(xmlPrintCoreStates(1:1,iAtomType).EQV..FALSE.)).AND.&
 &                 (ALL(xmlElectronStates(1:1,iAtomType).EQ.coreState_const))) THEN
-            coreStatesString = nobleGasConfigList(1)
+            coreStatesString = nobleGasConfigList_const(1)
             startCoreStates = 2
          END IF
          DO i = startCoreStates, endCoreStates
             IF(xmlElectronStates(i,iAtomType).EQ.coreState_const) THEN
-               coreStatesString = TRIM(ADJUSTL(coreStatesString)) // ' ' // coreStateList(i)
+               coreStatesString = TRIM(ADJUSTL(coreStatesString)) // ' ' // coreStateList_const(i)
             END IF
          END DO
          DO i = 1, 29
             IF(xmlElectronStates(i,iAtomType).EQ.valenceState_const) THEN
-               valenceStatesString = TRIM(ADJUSTL(valenceStatesString)) // ' ' // coreStateList(i)
+               valenceStatesString = TRIM(ADJUSTL(valenceStatesString)) // ' ' // coreStateList_const(i)
             END IF
          END DO
          WRITE (fileNum,'(a)') '         <electronConfig>'
@@ -504,10 +509,18 @@ SUBROUTINE w_inpXML(&
             IF ((xmlElectronStates(i,iAtomType).NE.noState_const).AND.(xmlPrintCoreStates(i,iAtomType))) THEN
 !         <coreStateOccupation state="(2s1/2)" spinUp="1.0" spinDown="1.0"/>
                325 FORMAT('            <stateOccupation state="',a,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
-               WRITE(fileNum,325) coreStateList(i), xmlCoreOccs(1,i,iAtomType), xmlCoreOccs(2,i,iAtomType)
+               WRITE(fileNum,325) coreStateList_const(i), xmlCoreOccs(1,i,iAtomType), xmlCoreOccs(2,i,iAtomType)
             END IF
          END DO
          WRITE (fileNum,'(a)') '         </electronConfig>'
+      END IF
+
+      IF (uIndices(1,iAtomType).NE.-1) THEN
+!         <ldaU l="2" U="5.5" J="0.9" l_amf="F"/>
+         DO i_u = uIndices(1,iAtomType), uIndices(2,iAtomType)
+            326 FORMAT('         <ldaU l="',i0,'" U="',f0.5,'" J="',f0.5,'" l_amf="',l1,'"/>')
+            WRITE (fileNum,326) atoms%lda_u(i_u)%l, atoms%lda_u(i_u)%u, atoms%lda_u(i_u)%j, atoms%lda_u(i_u)%l_amf
+         END DO
       END IF
 
       DO ilo = 1, atoms%nlo(iAtomType)
@@ -532,9 +545,7 @@ SUBROUTINE w_inpXML(&
       iSpecies = atomTypeSpecies(iAtomType)
 !      <atomGroup species="Si-1">
       330 FORMAT('      <atomGroup species="',a,'">')
-      tempNumberString = ''
-      WRITE(tempNumberString,'(i0)') iSpecies
-      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,330) TRIM(ADJUSTL(speciesName))
 
       DO ieq=1,atoms%neq(iAtomType)
@@ -570,7 +581,7 @@ SUBROUTINE w_inpXML(&
             STOP '1D position output not implemented!'
          ELSE IF (input%film) THEN
 !         <filmPos> x/myConstant  y/myConstant  1/myConstant</filmPos>
-            340 FORMAT('         <filmPos>',a,' ',a,' ',a,'</filmPos>')
+            340 FORMAT('         <filmPos label="',a20,'">',a,' ',a,' ',a,'</filmPos>')
             posString(:) = ''
             DO i = 1, 2
                IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
@@ -580,10 +591,11 @@ SUBROUTINE w_inpXML(&
                END IF
             END DO
             WRITE(posString(3),'(f0.10)') tempTaual(3,na)
-            WRITE (fileNum,340) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
+            WRITE (fileNum,340) TRIM(ADJUSTL(atoms%label(na))), &
+                                TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          ELSE
 !         <relPos> x/myConstant  y/myConstant  z/myConstant</relPos>
-            350 FORMAT('         <relPos>',a,' ',a,' ',a,'</relPos>')
+            350 FORMAT('         <relPos label="',a20,'">',a,' ',a,' ',a,'</relPos>')
             posString(:) = ''
             DO i = 1, 3
                IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
@@ -592,7 +604,8 @@ SUBROUTINE w_inpXML(&
                   WRITE(posString(i),'(f0.10)') tempTaual(i,na)
                END IF
             END DO
-            WRITE (fileNum,350) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
+            WRITE (fileNum,350) TRIM(ADJUSTL(atoms%label(na))), &
+                                TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          END IF
       END DO
 !         <force calculate="F" relaxX="T" relaxY="T" relaxZ="T"/>
@@ -600,8 +613,8 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,360) atoms%l_geo(iAtomType),atoms%relax(1,iAtomType),atoms%relax(2,iAtomType),atoms%relax(3,iAtomType)
 
       IF(l_nocoOpt.OR.l_explicit) THEN
-         362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.10,'" alpha="',f0.10,'" beta="',&
-                    f0.10,'" b_cons_x="',f0.10,'" b_cons_y="',f0.10,'"/>')
+         362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.8,'" alpha="',f0.8,'" beta="',&
+                    f0.8,'" b_cons_x="',f0.8,'" b_cons_y="',f0.8,'"/>')
          WRITE(fileNum,362) noco%l_relax(iAtomType), Jij%l_magn(iAtomType), Jij%M(iAtomType), noco%alphInit(iAtomType),&
                             noco%beta(iAtomType),noco%b_con(1,iAtomType),noco%b_con(2,iAtomType)
       END IF
@@ -623,7 +636,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,380) banddos%ndir,banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
-   390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.8,'" locy1="',f0.8,'" locx2="',f0.8,'" locy2="',f0.8,'" nstm="',i0,'" tworkf="',f0.8,'"/>')
+   390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.5,'" locy1="',f0.5,'" locx2="',f0.5,'" locy2="',f0.5,'" nstm="',i0,'" tworkf="',f0.5,'"/>')
    WRITE (fileNum,390) vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
 
 !      <plotting iplot="F" score="F" plplot="F"/>

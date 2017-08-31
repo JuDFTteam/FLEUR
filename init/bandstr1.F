@@ -29,9 +29,9 @@
       INTEGER, ALLOCATABLE      :: nk(:)
       INTEGER nosyp,i,j,n,ntot
       REAL dk(3),syp1(3),rsyp1(3)
-      
+
       CALL get_points(
-     >                idsyst,idtype,bmat,kpts,
+     >                input%film,idsyst,idtype,bmat,kpts,
      <                nosyp,syp,ssy)
 !
 ! --> transform to cartesian units
@@ -210,17 +210,18 @@
 ! and their names (lowercase = greek)
 !----------------------------------------------------------------------
       SUBROUTINE get_points(
-     >                      idsyst,idtype,bmat,kpts,
+     >                      l_film,idsyst,idtype,bmat,kpts,
      <                      nosyp,syp,ssy)
 
       IMPLICIT NONE
 
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      INTEGER,     INTENT (IN)  :: idsyst,idtype
-      REAL,        INTENT (IN)  :: bmat(3,3)
-      INTEGER,     INTENT (OUT) :: nosyp
-      REAL,             POINTER :: syp(:,:)  ! actually intent out
-      CHARACTER(len=1), POINTER :: ssy(:)
+      TYPE(t_kpts),INTENT (INOUT)  :: kpts
+      LOGICAL,     INTENT (IN)     :: l_film
+      INTEGER,     INTENT (IN)     :: idsyst,idtype
+      REAL,        INTENT (IN)     :: bmat(3,3)
+      INTEGER,     INTENT (OUT)    :: nosyp
+      REAL,             POINTER    :: syp(:,:)  ! actually intent out
+      CHARACTER(len=1), POINTER    :: ssy(:)
 
       LOGICAL         :: band_inp_file
       INTEGER         :: n
@@ -244,6 +245,23 @@
             READ(99,*,err = 110,END=110) ssy(n),syp(:,n)
          ENDDO
          CLOSE(99)
+
+         IF(nosyp.GE.2) THEN
+            kpts%numSpecialPoints = nosyp
+            IF (ALLOCATED(kpts%specialPoints)) THEN
+               DEALLOCATE (kpts%specialPoints)
+            END IF
+            IF (ALLOCATED(kpts%specialPointNames)) THEN
+               DEALLOCATE (kpts%specialPointNames)
+            END IF
+            ALLOCATE (kpts%specialPoints(3,kpts%numSpecialPoints))
+            ALLOCATE (kpts%specialPointNames(kpts%numSpecialPoints))
+            DO n = 1, kpts%numSpecialPoints
+               kpts%specialPointNames(n) = TRIM(ADJUSTL(ssy(n)))
+               kpts%specialPoints(:,n) = syp(:,n)
+            END DO
+         END IF
+
          RETURN
  110     WRITE(*,*) "Error reading band_inp file"
           CALL juDFT_error("Bandstr1",calledby="bandstr1")
@@ -262,128 +280,205 @@
       !No band_inp file -> determine default lines for bandstructure
       !write(*,*) idsyst,idtype
       nosyp = -1
-      IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
-        nosyp = 7
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/f12,f12,one/)  ; ssy(1) = "X"
-        syp(:,2) = (/f38,f38,f34/)  ; ssy(2) = "K"
-        syp(:,3) = (/zro,zro,zro/)  ; ssy(3) = "g"
-        syp(:,4) = (/f12,f12,f12/)  ; ssy(4) = "L"
-        syp(:,5) = (/f12,f14,f34/)  ; ssy(5) = "W"
-        syp(:,6) = (/f12,zro,f12/)  ; ssy(6) = "X"
-        syp(:,7) = (/zro,zro,zro/)  ; ssy(7) = "g"
-      ENDIF
-      IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
-        nosyp = 8
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/f12,f12, f12/)  ; ssy(1) = "Z"
-        syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"
-        syp(:,3) = (/f14,f14,-f14/)  ; ssy(3) = "K"
-        syp(:,4) = (/f12,f12,-f12/)  ; ssy(4) = "Z"
-        syp(:,5) = (/f14,f12,-f14/)  ; ssy(5) = "W"
-        syp(:,6) = (/zro,f12, zro/)  ; ssy(6) = "L"
-        syp(:,7) = (/zro,zro, zro/)  ; ssy(7) = "g"
-        syp(:,8) = (/f12,f12, zro/)  ; ssy(8) = "F"
-      ENDIF
-      IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
-        nosyp = 8
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        IF (bmat(1,1)*bmat(2,1)+bmat(1,2)*bmat(2,2) > 0.0) THEN
-          syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
-          syp(:,2) = (/zro,f12, zro/)  ; ssy(2) = "M"
-          syp(:,3) = (/f13,f13, zro/)  ; ssy(3) = "K"
-          syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"
-          syp(:,5) = (/zro,zro, f12/)  ; ssy(5) = "A"
-          syp(:,6) = (/zro,f12, f12/)  ; ssy(6) = "L"
-          syp(:,7) = (/f13,f13, f12/)  ; ssy(7) = "H"
-          syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "A"
-        ELSE                                             ! hexagonal (angle = 60)
-          syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
-          syp(:,2) = (/f12,f12, zro/)  ; ssy(2) = "M"
-          syp(:,3) = (/f13,f23, zro/)  ; ssy(3) = "K"
-          syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"
-          syp(:,5) = (/zro,zro, f12/)  ; ssy(5) = "A"
-          syp(:,6) = (/f12,f12, f12/)  ; ssy(6) = "L"
-          syp(:,7) = (/f13,f23, f12/)  ; ssy(7) = "H"
-          syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "A"
-        ENDIF
-      ENDIF
-      IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
-        nosyp = 8
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/f12,f12, zro/)  ; ssy(1) = "M"
-        syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"
-        syp(:,3) = (/f12,zro, zro/)  ; ssy(3) = "X"
-        syp(:,4) = (/f12,f12, zro/)  ; ssy(4) = "M"
-        syp(:,5) = (/f12,f12, f12/)  ; ssy(5) = "R"
-        syp(:,6) = (/f12,zro, zro/)  ; ssy(6) = "X"
-        syp(:,7) = (/zro,zro, zro/)  ; ssy(7) = "g"
-        syp(:,8) = (/f12,f12, f12/)  ; ssy(8) = "R"
-      ENDIF
-      IF ( (idsyst == 1).AND.(idtype ==  2) ) THEN       ! body centered cubic
-        nosyp = 6
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
-        syp(:,2) = (/f12,-f12,f12/)  ; ssy(2) = "H"
-        syp(:,3) = (/zro,zro, f12/)  ; ssy(3) = "N"
-        syp(:,4) = (/f14,f14, f14/)  ; ssy(4) = "P"
-        syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"
-        syp(:,6) = (/zro,zro, f12/)  ; ssy(6) = "N"
-      ENDIF
-      IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a > c)
-        nosyp = 8
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/f12,f12,-f12/)  ; ssy(1) = "Z"    ! via Lambda and V
-        syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"    ! via Sigma
-        syp(:,3) = (/-f12,f12,f12/)  ; ssy(3) = "Z"    ! via Y
-        syp(:,4) = (/zro,zro, f12/)  ; ssy(4) = "X"    ! via Delta
-        syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"    
-        syp(:,6) = (/zro,f12, zro/)  ; ssy(6) = "N"    ! via Q
-        syp(:,7) = (/f14,f14, f14/)  ; ssy(7) = "P"    ! via W
-        syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "X"
-      ENDIF
-      IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a < c)
-        nosyp = 9
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/-f12,f12,f12/)  ; ssy(1) = "Z"    ! via F and Sigma
-        syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"    ! via Delta
-        syp(:,3) = (/zro,zro, f12/)  ; ssy(3) = "X"    ! via W
-        syp(:,4) = (/f14,f14, f14/)  ; ssy(4) = "P"    ! via Q
-        syp(:,5) = (/zro,f12, zro/)  ; ssy(5) = "N"     
-        syp(:,6) = (/zro,zro, zro/)  ; ssy(6) = "g"    ! via Lambda
-        syp(:,7) = (/f12,f12,-f12/)  ; ssy(7) = "Z"    ! via U and Y
-        syp(:,8) = (/f12,f12, zro/)  ; ssy(8) = "X"
-        syp(:,9) = (/f14,f14, f14/)  ; ssy(9) = "P"
-      ENDIF
-      IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-        nosyp = 8
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"    ! via Delta
-        syp(:,2) = (/f12,zro, zro/)  ; ssy(2) = "X"    ! via Y
-        syp(:,3) = (/f12,f12, zro/)  ; ssy(3) = "M"    ! via Sigma
-        syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"    ! via Lambda
-        syp(:,5) = (/zro,zro, f12/)  ; ssy(5) = "Z"    ! via U
-        syp(:,6) = (/f12,zro, f12/)  ; ssy(6) = "R"    ! via T
-        syp(:,7) = (/f12,f12, f12/)  ; ssy(7) = "A"    ! via S
-        syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "Z"
-      ENDIF
-      IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-        nosyp = 10
-        ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
-        syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"    ! via Sigma
-        syp(:,2) = (/f12,zro, zro/)  ; ssy(2) = "X"    ! via D
-        syp(:,3) = (/f12,f12, zro/)  ; ssy(3) = "S"    ! via C
-        syp(:,4) = (/zro,f12, zro/)  ; ssy(4) = "Y"    ! via Delta
-        syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"    ! via Lambda
-        syp(:,6) = (/zro,zro, f12/)  ; ssy(6) = "Z"    ! via A
-        syp(:,7) = (/f12,zro, f12/)  ; ssy(7) = "U"    ! via P
-        syp(:,8) = (/f12,f12, f12/)  ; ssy(8) = "R"    ! via E
-        syp(:,9) = (/zro,f12, f12/)  ; ssy(8) = "T"    ! via B
-        syp(:,10)= (/zro,zro, f12/)  ; ssy(8) = "Z"
-      ENDIF
+      IF (.NOT.l_film) THEN
+         IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
+            nosyp = 7
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/f12,f12,one/)  ; ssy(1) = "X"
+            syp(:,2) = (/f38,f38,f34/)  ; ssy(2) = "K"
+            syp(:,3) = (/zro,zro,zro/)  ; ssy(3) = "g"
+            syp(:,4) = (/f12,f12,f12/)  ; ssy(4) = "L"
+            syp(:,5) = (/f12,f14,f34/)  ; ssy(5) = "W"
+            syp(:,6) = (/f12,zro,f12/)  ; ssy(6) = "X"
+            syp(:,7) = (/zro,zro,zro/)  ; ssy(7) = "g"
+         ENDIF
+         IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
+            nosyp = 8
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/f12,f12, f12/)  ; ssy(1) = "Z"
+            syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"
+            syp(:,3) = (/f14,f14,-f14/)  ; ssy(3) = "K"
+            syp(:,4) = (/f12,f12,-f12/)  ; ssy(4) = "Z"
+            syp(:,5) = (/f14,f12,-f14/)  ; ssy(5) = "W"
+            syp(:,6) = (/zro,f12, zro/)  ; ssy(6) = "L"
+            syp(:,7) = (/zro,zro, zro/)  ; ssy(7) = "g"
+            syp(:,8) = (/f12,f12, zro/)  ; ssy(8) = "F"
+         ENDIF
+         IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
+            nosyp = 8
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            IF (bmat(1,1)*bmat(2,1)+bmat(1,2)*bmat(2,2) > 0.0) THEN
+               syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
+               syp(:,2) = (/zro,f12, zro/)  ; ssy(2) = "M"
+               syp(:,3) = (/f13,f13, zro/)  ; ssy(3) = "K"
+               syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"
+               syp(:,5) = (/zro,zro, f12/)  ; ssy(5) = "A"
+               syp(:,6) = (/zro,f12, f12/)  ; ssy(6) = "L"
+               syp(:,7) = (/f13,f13, f12/)  ; ssy(7) = "H"
+               syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "A"
+            ELSE                                             ! hexagonal (angle = 60)
+               syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
+               syp(:,2) = (/f12,f12, zro/)  ; ssy(2) = "M"
+               syp(:,3) = (/f13,f23, zro/)  ; ssy(3) = "K"
+               syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"
+               syp(:,5) = (/zro,zro, f12/)  ; ssy(5) = "A"
+               syp(:,6) = (/f12,f12, f12/)  ; ssy(6) = "L"
+               syp(:,7) = (/f13,f23, f12/)  ; ssy(7) = "H"
+               syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "A"
+            ENDIF
+         ENDIF
+         IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
+            nosyp = 8
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/f12,f12, zro/)  ; ssy(1) = "M"
+            syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"
+            syp(:,3) = (/f12,zro, zro/)  ; ssy(3) = "X"
+            syp(:,4) = (/f12,f12, zro/)  ; ssy(4) = "M"
+            syp(:,5) = (/f12,f12, f12/)  ; ssy(5) = "R"
+            syp(:,6) = (/f12,zro, zro/)  ; ssy(6) = "X"
+            syp(:,7) = (/zro,zro, zro/)  ; ssy(7) = "g"
+            syp(:,8) = (/f12,f12, f12/)  ; ssy(8) = "R"
+         ENDIF
+         IF ( (idsyst == 1).AND.(idtype ==  2) ) THEN       ! body centered cubic
+            nosyp = 6
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
+            syp(:,2) = (/f12,-f12,f12/)  ; ssy(2) = "H"
+            syp(:,3) = (/zro,zro, f12/)  ; ssy(3) = "N"
+            syp(:,4) = (/f14,f14, f14/)  ; ssy(4) = "P"
+            syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"
+            syp(:,6) = (/zro,zro, f12/)  ; ssy(6) = "N"
+         ENDIF
+         IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a > c)
+            nosyp = 8
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/f12,f12,-f12/)  ; ssy(1) = "Z"    ! via Lambda and V
+            syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"    ! via Sigma
+            syp(:,3) = (/-f12,f12,f12/)  ; ssy(3) = "Z"    ! via Y
+            syp(:,4) = (/zro,zro, f12/)  ; ssy(4) = "X"    ! via Delta
+            syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"    
+            syp(:,6) = (/zro,f12, zro/)  ; ssy(6) = "N"    ! via Q
+            syp(:,7) = (/f14,f14, f14/)  ; ssy(7) = "P"    ! via W
+            syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "X"
+         ENDIF
+         IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a < c)
+            nosyp = 9
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/-f12,f12,f12/)  ; ssy(1) = "Z"    ! via F and Sigma
+            syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"    ! via Delta
+            syp(:,3) = (/zro,zro, f12/)  ; ssy(3) = "X"    ! via W
+            syp(:,4) = (/f14,f14, f14/)  ; ssy(4) = "P"    ! via Q
+            syp(:,5) = (/zro,f12, zro/)  ; ssy(5) = "N"     
+            syp(:,6) = (/zro,zro, zro/)  ; ssy(6) = "g"    ! via Lambda
+            syp(:,7) = (/f12,f12,-f12/)  ; ssy(7) = "Z"    ! via U and Y
+            syp(:,8) = (/f12,f12, zro/)  ; ssy(8) = "X"
+            syp(:,9) = (/f14,f14, f14/)  ; ssy(9) = "P"
+         ENDIF
+         IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+            nosyp = 8
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"    ! via Delta
+            syp(:,2) = (/f12,zro, zro/)  ; ssy(2) = "X"    ! via Y
+            syp(:,3) = (/f12,f12, zro/)  ; ssy(3) = "M"    ! via Sigma
+            syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"    ! via Lambda
+            syp(:,5) = (/zro,zro, f12/)  ; ssy(5) = "Z"    ! via U
+            syp(:,6) = (/f12,zro, f12/)  ; ssy(6) = "R"    ! via T
+            syp(:,7) = (/f12,f12, f12/)  ; ssy(7) = "A"    ! via S
+            syp(:,8) = (/zro,zro, f12/)  ; ssy(8) = "Z"
+         ENDIF
+         IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+            nosyp = 10
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"    ! via Sigma
+            syp(:,2) = (/f12,zro, zro/)  ; ssy(2) = "X"    ! via D
+            syp(:,3) = (/f12,f12, zro/)  ; ssy(3) = "S"    ! via C
+            syp(:,4) = (/zro,f12, zro/)  ; ssy(4) = "Y"    ! via Delta
+            syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"    ! via Lambda
+            syp(:,6) = (/zro,zro, f12/)  ; ssy(6) = "Z"    ! via A
+            syp(:,7) = (/f12,zro, f12/)  ; ssy(7) = "U"    ! via P
+            syp(:,8) = (/f12,f12, f12/)  ; ssy(8) = "R"    ! via E
+            syp(:,9) = (/zro,f12, f12/)  ; ssy(8) = "T"    ! via B
+            syp(:,10)= (/zro,zro, f12/)  ; ssy(8) = "Z"
+         ENDIF
+      ELSE
+         WRITE(*,*) 'Note:'
+         WRITE(*,*) 'Default k point paths for film band structures'
+         WRITE(*,*) 'are experimental. If the generated k point path'
+         WRITE(*,*) 'is not correct please specify it directly.'
+         IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
+            nosyp = 3
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,6) = (/zro,f12, zro/)  ; ssy(6) = "L"
+            syp(:,7) = (/zro,zro, zro/)  ; ssy(7) = "g"
+            syp(:,8) = (/f12,f12, zro/)  ; ssy(8) = "F"
+         ENDIF
+         IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
+            nosyp = 4
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            IF (bmat(1,1)*bmat(2,1)+bmat(1,2)*bmat(2,2) > 0.0) THEN
+               syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
+               syp(:,2) = (/zro,f12, zro/)  ; ssy(2) = "M"
+               syp(:,3) = (/f13,f13, zro/)  ; ssy(3) = "K"
+               syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"
 
-      IF ( nosyp == -1 )  CALL juDFT_error
-     +     ("lattice not implemented",calledby ="bandstr1")
+            ELSE                                             ! hexagonal (angle = 60)
+               syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"
+               syp(:,2) = (/f12,f12, zro/)  ; ssy(2) = "M"
+               syp(:,3) = (/f13,f23, zro/)  ; ssy(3) = "K"
+               syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"
+            ENDIF
+         ENDIF
+         IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
+            nosyp = 4
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/f12,f12, zro/)  ; ssy(1) = "M"
+            syp(:,2) = (/zro,zro, zro/)  ; ssy(2) = "g"
+            syp(:,3) = (/f12,zro, zro/)  ; ssy(3) = "X"
+            syp(:,4) = (/f12,f12, zro/)  ; ssy(4) = "M"
+         ENDIF
+         IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+            nosyp = 4
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"    ! via Delta
+            syp(:,2) = (/f12,zro, zro/)  ; ssy(2) = "X"    ! via Y
+            syp(:,3) = (/f12,f12, zro/)  ; ssy(3) = "M"    ! via Sigma
+            syp(:,4) = (/zro,zro, zro/)  ; ssy(4) = "g"    ! via Lambda
+         ENDIF
+         IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+            nosyp = 5
+            ALLOCATE ( syp(3,nosyp),ssy(nosyp) )
+            syp(:,1) = (/zro,zro, zro/)  ; ssy(1) = "g"    ! via Sigma
+            syp(:,2) = (/f12,zro, zro/)  ; ssy(2) = "X"    ! via D
+            syp(:,3) = (/f12,f12, zro/)  ; ssy(3) = "S"    ! via C
+            syp(:,4) = (/zro,f12, zro/)  ; ssy(4) = "Y"    ! via Delta
+            syp(:,5) = (/zro,zro, zro/)  ; ssy(5) = "g"    ! via Lambda
+         ENDIF
+      END IF
+
+      IF(nosyp.GE.2) THEN
+         kpts%numSpecialPoints = nosyp
+         IF (ALLOCATED(kpts%specialPoints)) THEN
+            DEALLOCATE (kpts%specialPoints)
+         END IF
+         IF (ALLOCATED(kpts%specialPointNames)) THEN
+            DEALLOCATE (kpts%specialPointNames)
+         END IF
+         ALLOCATE (kpts%specialPoints(3,kpts%numSpecialPoints))
+         ALLOCATE (kpts%specialPointNames(kpts%numSpecialPoints))
+         DO n = 1, kpts%numSpecialPoints
+            kpts%specialPointNames(n) = TRIM(ADJUSTL(ssy(n)))
+            kpts%specialPoints(:,n) = syp(:,n)
+         END DO
+      END IF
+
+      IF (nosyp == -1) THEN
+         WRITE(*,*) 'l_film = ', l_film
+         WRITE(*,*) 'idsyst = ', idsyst
+         WRITE(*,*) 'idtype = ', idtype
+         CALL juDFT_error
+     +   ("band structure path for lattice not implemented",
+     +   calledby ="bandstr1")
+      END IF
 
       END SUBROUTINE get_points
 !----------------------------------------------------------------------

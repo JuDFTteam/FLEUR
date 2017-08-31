@@ -16,7 +16,7 @@
      &                   infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &                   atoms,sym,cell,title,idlist,&
      &                   input,vacuum,noco,&
-     &                   atomTypeSpecies,speciesRepAtomType,&
+     &                   atomTypeSpecies,speciesRepAtomType,numSpecies,&
      &                   a1,a2,a3)
 
       USE iso_c_binding
@@ -41,7 +41,7 @@
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
-      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh
+      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh,numSpecies
       INTEGER, INTENT (INOUT) :: nline
       INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
       INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
@@ -66,7 +66,7 @@
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
       INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus, numSpecies
+      INTEGER  n ,iostat, errorStatus
       REAL    scale,scpos ,zc
 
       TYPE(t_banddos)::banddos
@@ -215,6 +215,7 @@
      &                input,idlist,xmlCoreRefOccs,&
      &                nline,&
      &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                atomTypeSpecies,numSpecies,&
      &                nel,atoms,enpara)
 
       DO n = 1, atoms%ntype
@@ -368,6 +369,17 @@
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
       ENDIF
+      IF((div(1).EQ.0).OR.(div(2).EQ.0)) THEN
+         kpts%specificationType = 1
+      ELSE
+         kpts%specificationType = 2
+      END IF
+
+      IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
+         sym%symSpecType = 1
+      ELSE
+         sym%symSpecType = 2
+      END IF
 
       ! set vacuum%nvac
       vacuum%nvac = 2
@@ -420,6 +432,8 @@
             cell%bmat=tpi_const*cell%bmat
             kpts%nmop(:) = div(:)
             kpts%l_gamma = l_gamma
+            kpts%specificationType = 3
+            sym%symSpecType = 3
             IF (.NOT.oneD%odd%d1) THEN
                IF (jij%l_J) THEN
                   n1=sym%nop
@@ -456,7 +470,6 @@
             STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
          filename = 'inp.xml'
-         numSpecies = atoms%nat
 
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&

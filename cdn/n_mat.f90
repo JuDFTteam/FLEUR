@@ -11,6 +11,7 @@ MODULE m_nmat
   !     all atoms are stored in lda_u(), if lda_u()<0, no +U is used.
   !     For details see Eq.(12) of Shick et al. PRB 60, 10765 (1999)
   !     Part of the LDA+U package                   G.B., Oct. 2000
+  !     Extension to multiple U per atom type by G.M. 2017
   !     ************************************************************
 CONTAINS
   SUBROUTINE n_mat(atoms,sym, ne,usdus,jspin,we, acof,bcof,ccof, n_mmp)
@@ -34,7 +35,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     COMPLEX c_0
-    INTEGER i,j,k,l ,mp,n,it,is,isi,natom,n_ldau,lp,m
+    INTEGER i,j,k,l ,mp,n,it,is,isi,natom,natomTemp,n_ldau,lp,m,i_u
     INTEGER ilo,ilop,ll1,nn,lmp,lm
     REAL fac
     !     ..
@@ -45,16 +46,17 @@ CONTAINS
     !
     ! calculate n_mat:
     !
-    n_ldau = 0
     natom = 0
+    i_u = 1
     DO n = 1,atoms%ntype
-       IF (atoms%lda_u(n)%l.GE.0) THEN
-          n_ldau = n_ldau + 1
-          n_tmp(:,:) =cmplx(0.0,0.0)
-          l = atoms%lda_u(n)%l
+       DO WHILE (i_u.LE.atoms%n_u)
+          IF (atoms%lda_u(i_u)%atomType.GT.n) EXIT
+          natomTemp = natom
+          n_tmp(:,:) = cmplx(0.0,0.0)
+          l = atoms%lda_u(i_u)%l
           ll1 = (l+1)*l 
           DO nn = 1, atoms%neq(n)
-             natom = natom + 1
+             natomTemp = natomTemp + 1
              !
              !  prepare n_mat in local frame (in noco-calculations this depends 
              !                                also on alpha(n) and beta(n) )
@@ -66,8 +68,8 @@ CONTAINS
                    c_0 = cmplx(0.0,0.0)
                    DO i = 1,ne
                       c_0 = c_0 +  we(i) * ( usdus%ddn(l,n,jspin) *&
-                           conjg(bcof(i,lmp,natom))*bcof(i,lm,natom) +&
-                           conjg(acof(i,lmp,natom))*acof(i,lm,natom) )
+                           conjg(bcof(i,lmp,natomTemp))*bcof(i,lm,natomTemp) +&
+                           conjg(acof(i,lmp,natomTemp))*acof(i,lm,natomTemp) )
                    ENDDO
                    n_tmp(m,mp) = c_0 
                 ENDDO
@@ -85,17 +87,17 @@ CONTAINS
                          c_0 = cmplx(0.0,0.0)
                          DO i = 1,ne
                             c_0 = c_0 +  we(i) * (  usdus%uulon(ilo,n,jspin) * (&
-                                 conjg(acof(i,lmp,natom))*ccof(m,i,ilo,natom) +&
-                                 conjg(ccof(mp,i,ilo,natom))*acof(i,lm,natom) )&
+                                 conjg(acof(i,lmp,natomTemp))*ccof(m,i,ilo,natomTemp) +&
+                                 conjg(ccof(mp,i,ilo,natomTemp))*acof(i,lm,natomTemp) )&
                                  + usdus%dulon(ilo,n,jspin) * (&
-                                 conjg(bcof(i,lmp,natom))*ccof(m,i,ilo,natom) +&
-                                 conjg(ccof(mp,i,ilo,natom))*bcof(i,lm,natom)))
+                                 conjg(bcof(i,lmp,natomTemp))*ccof(m,i,ilo,natomTemp) +&
+                                 conjg(ccof(mp,i,ilo,natomTemp))*bcof(i,lm,natomTemp)))
                          ENDDO
                          DO ilop = 1, atoms%nlo(n)
                             IF (atoms%llo(ilop,n).EQ.l) THEN
                                DO i = 1,ne
                                   c_0 = c_0 +  we(i) * usdus%uloulopn(ilo,ilop,n,jspin) *&
-                                       conjg(ccof(mp,i,ilop,natom)) *ccof(m ,i,ilo ,natom)
+                                       conjg(ccof(mp,i,ilop,natomTemp)) *ccof(m ,i,ilo ,natomTemp)
                                ENDDO
                             ENDIF
                          ENDDO
@@ -108,10 +110,10 @@ CONTAINS
              !
              !  n_mmp should be rotated by D_mm' ; compare force_a21
              !
-             DO it = 1, sym%invarind(natom)
+             DO it = 1, sym%invarind(natomTemp)
 
-                fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
-                is = sym%invarop(natom,it)
+                fac = 1.0  /  ( sym%invarind(natomTemp) * atoms%neq(n) )
+                is = sym%invarop(natomTemp,it)
                 isi = sym%invtab(is)
                 d_tmp(:,:) = cmplx(0.0,0.0)
                 DO m = -l,l
@@ -123,16 +125,16 @@ CONTAINS
                 n1_tmp =  matmul( nr_tmp, d_tmp )
                 DO m = -l,l
                    DO mp = -l,l
-                      n_mmp(m,mp,n_ldau) = n_mmp(m,mp,n_ldau) +conjg(n1_tmp(m,mp)) * fac
+                      n_mmp(m,mp,i_u) = n_mmp(m,mp,i_u) + conjg(n1_tmp(m,mp)) * fac
                    ENDDO
                 ENDDO
 
              ENDDO
 
           ENDDO ! sum  over equivalent atoms
-       ELSE
-          natom = natom + atoms%neq(n)
-       ENDIF
+          i_u = i_u + 1
+       END DO
+       natom = natom + atoms%neq(n)
     ENDDO     ! loop over atom types
 
     !     do m=-l,l

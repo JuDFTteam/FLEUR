@@ -20,11 +20,17 @@ c***************************************************************
      >     ig,nmz,delz,ig2,area,bmat,
      >     bbmat,evac,bkpt,vz,
      >     nslibd,jspin,k1,k2,k3,jspd,nvd,
-     >     nbasfcn,neigd,z,nv,omtil,
+     >     nbasfcn,neigd,zMat,nv,omtil,
      <     mmn)
 
-      use m_constants, only : pimach
+      USE m_types
+      use m_constants
+      USE m_vacuz
+      USE m_vacudz
+
       implicit none
+
+      TYPE(t_zmat), INTENT(IN) :: zMat
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
@@ -49,12 +55,6 @@ c     ..array arguments..
       integer, intent (in) :: k3(:,:) !k3(nvd,jspd)
       complex, intent (inout) :: mmn(:,:) !mmn(nslibd,nslibd)
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(:,:) !z(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(:,:) !z(nbasfcn,neigd)
-#endif
-
 c     ..basis wavefunctions in the vacuum
       complex, allocatable :: ac(:,:),bc(:,:)
       real,    allocatable :: dt(:),dte(:)
@@ -68,11 +68,6 @@ c     ..local scalars..
       integer symvacvac
       complex av,bv,ic,c_1
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
-
-c..   external functions
-      external vacudz,vacuz
 
       allocate ( ac(nv2d,neigd),bc(nv2d,neigd),dt(nv2d),
      +           dte(nv2d),t(nv2d),te(nv2d),tei(nv2d),
@@ -140,9 +135,9 @@ c.. the body of the routine
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
          ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
-         call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
+         call vacuz(ev,vz(1:,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
      +        u(1,ik))
-         call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te(ik),
+         call vacudz(ev,vz(1:,ivac),vz0(ivac),nmz,delz,te(ik),
      +        dte(ik),tei(ik),ue(1,ik),dt(ik),
      +        u(1,ik))
          scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
@@ -175,10 +170,17 @@ c-----> construct a and b coefficients
           av = -c_1 * cmplx( dte(l),zks*te(l) )
           bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
-          do n = 1,nslibd
-            ac(l,n) = ac(l,n) + z(k+addnoco,n)*av
-            bc(l,n) = bc(l,n) + z(k+addnoco,n)*bv
-          enddo
+          IF(zMat%l_real) THEN
+             do n = 1,nslibd
+                ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
+                bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+             enddo
+          ELSE
+             do n = 1,nslibd
+                ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
+                bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+             enddo
+          END IF
         enddo
 
         do l = 1,nv2 

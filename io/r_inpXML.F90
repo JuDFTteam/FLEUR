@@ -15,10 +15,11 @@ MODULE m_rinpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE r_inpXML(&
-  &                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-  &                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,sphhar,l_opti,&
-       &                   noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
-       &                   xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType)
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
+                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,wann,&
+                     noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
+                     l_kpts,l_gga)
 
   USE iso_c_binding
   USE m_juDFT
@@ -34,31 +35,8 @@ SUBROUTINE r_inpXML(&
   USE m_icorrkeys
   USE m_constants
   USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
-  USE m_julia
-  USE m_kptgen_hybrid
-  USE m_od_kptsgen
-  USE m_strgndim
-  USE m_strgn
-  USE m_od_strgn1
-  USE m_localsym
-  USE m_od_chisym
-  USE m_ylm
-  USE m_chkmt
-  USE m_convndim
-  USE m_dwigner
-  USE m_mapatom
-  USE m_od_mapatom
   USE m_inpeig
-  USE m_prpqfft
-  USE m_prpxcfft
-  USE m_stepf
-  USE m_cdn_io
-  USE m_convn
-  USE m_efield
-  USE m_writegw
-  USE m_apwsdim
   USE m_sort
-  USE m_nocoInputCheck
   USE m_enpara,    ONLY : r_enpara
 
   IMPLICIT NONE
@@ -80,8 +58,8 @@ SUBROUTINE r_inpXML(&
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
-  TYPE(t_sphhar)   ,INTENT(OUT)  :: sphhar
-  LOGICAL, INTENT(OUT)           :: l_opti
+  TYPE(t_wann)   ,INTENT(INOUT)  :: wann
+  LOGICAL, INTENT(OUT)           :: l_kpts, l_gga
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: speciesRepAtomType(:)
@@ -121,7 +99,7 @@ SUBROUTINE r_inpXML(&
   INTEGER               :: idum
   CHARACTER (len=1)     ::  check
 
-  CHARACTER(len=20) :: tempNumberString, speciesName
+  CHARACTER(len=20) :: tempNumberString
   CHARACTER(len=150) :: format
   CHARACTER(len=20) :: mixingScheme
   CHARACTER(len=10) :: loType
@@ -130,37 +108,30 @@ SUBROUTINE r_inpXML(&
   CHARACTER(len=100) :: xPosString, yPosString, zPosString
   CHARACTER(len=200) :: coreStatesString
   !   REAL :: tempTaual(3,atoms%nat)
-  CHARACTER(len=7) :: coreStateList(29) !'(1s1/2)'
-  CHARACTER(len=4) :: nobleGasConfigList(6) !'[He]'
-  INTEGER          :: nobleGasNumStatesList(6)
-  REAL             :: coreStateNumElecsList(29) !(per spin)
-  INTEGER          :: coreStateNprncList(29)
-  INTEGER          :: coreStateKappaList(29)
   REAL             :: coreStateOccs(29,2)
   INTEGER          :: coreStateNprnc(29), coreStateKappa(29)
   INTEGER          :: speciesXMLElectronStates(29)
   REAL             :: speciesXMLCoreOccs(2,29)
   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
-  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l
+  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum, numTokens
   INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
   INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
   INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
-  INTEGER            :: ldau_l, numVac
+  INTEGER            :: ldau_l(4), numVac, numU
   INTEGER            :: speciesEParams(0:3)
   INTEGER            :: mrotTemp(3,3,48)
   REAL               :: tauTemp(3,48)
   REAL               :: bk(3)
-  LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ, l_gga, l_kpts
+  LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
   LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-  REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u, ldau_j, tempReal
+  REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
   REAL               :: weightScale, eParamUp, eParamDown
-  LOGICAL            :: l_amf
+  LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-  REAL, PARAMETER    :: htr_eV   = 27.21138386 ! eV
 
 
 
@@ -172,12 +143,12 @@ SUBROUTINE r_inpXML(&
 
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
-  CHARACTER(LEN=50), ALLOCATABLE :: speciesNames(:)
   INTEGER, ALLOCATABLE :: speciesNLO(:)
   INTEGER, ALLOCATABLE :: multtab(:,:), invOps(:), optype(:)
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
   REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
+  LOGICAL, ALLOCATABLE :: wannAtomList(:)
 
 ! Variables for MT radius testing:
 
@@ -204,23 +175,6 @@ SUBROUTINE r_inpXML(&
   schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
   docFilename = "inp.xml"//C_NULL_CHAR
 
-  DATA coreStateList / '(1s1/2)','(2s1/2)','(2p1/2)','(2p3/2)','(3s1/2)',&
-       &                       '(3p1/2)','(3p3/2)','(3d3/2)','(3d5/2)','(4s1/2)',&
-       &                       '(4p1/2)','(4p3/2)','(5s1/2)','(4d3/2)','(4d5/2)',&
-       &                       '(5p1/2)','(5p3/2)','(6s1/2)','(4f5/2)','(4f7/2)',&
-       &                       '(5d3/2)','(5d5/2)','(6p1/2)','(6p3/2)','(7s1/2)',&
-       &                       '(5f5/2)','(5f7/2)','(6d3/2)','(6d5/2)' /
-
-  DATA nobleGasConfigList / '[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]' /
-  DATA nobleGasNumStatesList / 1, 4, 7, 12, 17, 24 /
-  DATA coreStateNumElecsList / 1, 1, 1, 2, 1, 1, 2, 2, 3, 1, 1, 2, 1, 2,&
-       &                               3, 1, 2, 1, 3, 4, 2, 3, 1, 2, 1, 3, 4, 2, 3 /
-  DATA coreStateNprncList    / 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 4, 4,&
-       &                               5, 5, 6, 4, 4, 5, 5, 6, 6, 7, 5, 5, 6, 6 /
-  DATA coreStateKappaList    /-1,-1, 1,-2,-1, 1,-2, 2,-3,-1, 1,-2,-1, 2,-3,&
-       &                               1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3 /
-
-
   !TODO! these switches should be in the inp-file
   input%l_core_confpot=.true. !former CPP_CORE
   input%l_useapw=.false.   !former CPP_APW
@@ -244,11 +198,9 @@ SUBROUTINE r_inpXML(&
   numberNodes = numberNodes + xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup/filmPos')
 
   atoms%nat = numberNodes
-  atoms%nat = numberNodes
 
   numberNodes = xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
 
-  atoms%ntype = numberNodes
   atoms%ntype = numberNodes
 
   numSpecies = xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
@@ -263,11 +215,12 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%lnonsph(atoms%ntype))
   ALLOCATE(atoms%nflip(atoms%ntype))
   ALLOCATE(atoms%l_geo(atoms%ntype))
-  ALLOCATE(atoms%lda_u(atoms%ntype))
+  ALLOCATE(atoms%lda_u(4*atoms%ntype))
   ALLOCATE(atoms%bmu(atoms%ntype))
   ALLOCATE(atoms%relax(3,atoms%ntype))
   ALLOCATE(atoms%neq(atoms%ntype))
   ALLOCATE(atoms%taual(3,atoms%nat))
+  ALLOCATE(atoms%label(atoms%nat))
   ALLOCATE(atoms%pos(3,atoms%nat))
   ALLOCATE(atoms%rmt(atoms%ntype))
   ALLOCATE(atoms%numStatesProvided(atoms%ntype))
@@ -298,6 +251,8 @@ SUBROUTINE r_inpXML(&
   xmlCoreOccs = 0.0
 
   ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
+
+  ALLOCATE (wannAtomList(atoms%nat))
 
   ! Read in constants
 
@@ -459,6 +414,7 @@ SUBROUTINE r_inpXML(&
      kpts%nmop(2) = kpts%nkpt3(2)
      kpts%nmop(3) = kpts%nkpt3(3)
      kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+     kpts%specificationType = 2
   END IF
 
   ! Option kPointCount
@@ -469,6 +425,7 @@ SUBROUTINE r_inpXML(&
      kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
      kpts%nkpt = kpts%nkpt
+     kpts%specificationType = 1
 
      ALLOCATE(kpts%bk(3,kpts%nkpt))
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
@@ -511,6 +468,7 @@ SUBROUTINE r_inpXML(&
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
      kpts%wtkpt = 0.0
+     kpts%specificationType = 3
 
      kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
      weightScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@weightScale'))
@@ -701,8 +659,8 @@ SUBROUTINE r_inpXML(&
      !      ALLOCATE(input%efield%sigEF(3*k1d, 3*k2d, nvac))
      !      input%efield%sigEF = 0.0
      IF (l_eV) THEN
-        input%efield%sig_b(:) = input%efield%sig_b/htr_eV
-        !         input%efield%sigEF(:,:,:) = input%efield%sigEF/htr_eV
+        input%efield%sig_b(:) = input%efield%sig_b/hartree_to_ev_const
+        !         input%efield%sigEF(:,:,:) = input%efield%sigEF/hartree_to_ev_const
      END IF
   END IF
 
@@ -852,6 +810,7 @@ SUBROUTINE r_inpXML(&
   numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/symmetry')
 
   IF (numberNodes.EQ.1) THEN
+     sym%symSpecType = 2
      symmetryDef = 1
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spgrp')))
      READ(valueString,*) sym%namgrp
@@ -921,6 +880,8 @@ SUBROUTINE r_inpXML(&
 
   IF (numberNodes.EQ.1) THEN
      symmetryDef = 2
+     sym%symSpecType = 1
+     sym%nop = 48
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
 
      CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
@@ -935,20 +896,34 @@ SUBROUTINE r_inpXML(&
      END IF
      ALLOCATE(sym%tau(3,sym%nop))
 
+     sym%invs = .FALSE.
+     sym%zrfs = .FALSE.
+
      DO k = 1, sym%nop
+        absSum = 0
         DO i = 1, 3
            DO j = 1, 3
               sym%mrot(j,i,k) = mrotTemp(j,i,k)
+              absSum = absSum + ABS(sym%mrot(j,i,k))
            END DO
            sym%tau(i,k) = tauTemp(i,k)
         END DO
+        IF (absSum.EQ.3) THEN
+           IF (ALL(sym%tau(:,k).EQ.0.0)) THEN
+              IF ((sym%mrot(1,1,k).EQ.-1).AND.(sym%mrot(2,2,k).EQ.-1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%invs = .TRUE.
+              IF ((sym%mrot(1,1,k).EQ.1).AND.(sym%mrot(2,2,k).EQ.1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%zrfs = .TRUE.
+           END IF
+        END IF
      END DO
+
+     sym%invs2 = sym%invs.AND.sym%zrfs
   END IF
 
   xPathA = '/fleurInput/cell/symmetryOperations'
   numberNodes = xmlGetNumberOfNodes(xPathA)
 
   IF (numberNodes.EQ.1) THEN
+     sym%symSpecType = 3
      symmetryDef = 3
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/symOp')
@@ -1186,10 +1161,10 @@ SUBROUTINE r_inpXML(&
      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
   END IF
   xcpot%igrd = 0
+  obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
      xcpot%igrd = 1
-     ! Am I sure about the following 3 lines? They were included in a similar section in rw_inp
-     obsolete%lwb=.false.
+     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
@@ -1249,15 +1224,20 @@ SUBROUTINE r_inpXML(&
 !!! Start of species section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
+  ALLOCATE (speciesNLO(numSpecies))
+  ALLOCATE(atoms%speciesName(numSpecies))
 
   atoms%numStatesProvided = 0
   atoms%lapw_l(:) = -1
+  atoms%n_u = 0
+
+  DEALLOCATE(noel)
+  ALLOCATE(noel(atoms%ntype))
 
   DO iSpecies = 1, numSpecies
      ! Attributes of species
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
-     speciesNames(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
+     atoms%speciesName(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
      atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
      coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
      magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
@@ -1277,20 +1257,18 @@ SUBROUTINE r_inpXML(&
         lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
      END IF
 
-     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
+     numU = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
+     IF (numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
      ldau_l = -1
      ldau_u = 0.0
      ldau_j = 0.0
      l_amf = .FALSE.
-     DO i = 1, numberNodes
-        IF (i.GT.1) THEN
-           WRITE (*,*) 'Not yet implemented:'
-           STOP 'ERROR: More than 1 U parameter provided for a certain species.'
-        END IF
-        ldau_l = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l'))
-        ldau_u = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@U'))
-        ldau_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@J'))
-        l_amf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU/@l_amf'))
+     DO i = 1, numU
+        WRITE(xPathB,*) i
+        ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
+        ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@U'))
+        ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
+        l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
      END DO
 
      speciesNLO(iSpecies) = 0
@@ -1313,12 +1291,13 @@ SUBROUTINE r_inpXML(&
      DO iType = 1, atoms%ntype
         WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-        IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+        IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
            atoms%nz(iType) = atomicNumber
            IF (atoms%nz(iType).EQ.0) THEN
               WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', iType
               atoms%zatom(iType) = 1.0e-10
            END IF
+           noel(iType) = namat_const(atoms%nz(iType))
            atoms%zatom(iType) = atoms%nz(iType)
            atoms%rmt(iType) = radius
            atoms%jri(iType) = gridPoints
@@ -1334,10 +1313,14 @@ SUBROUTINE r_inpXML(&
               atoms%nflip(iType) = 0
            ENDIF
            atoms%bmu(iType) = magMom
-           atoms%lda_u(iType)%l = ldau_l
-           atoms%lda_u(iType)%u = ldau_u
-           atoms%lda_u(iType)%j = ldau_j
-           atoms%lda_u(iType)%l_amf = l_amf
+           DO i = 1, numU
+              atoms%n_u = atoms%n_u + 1
+              atoms%lda_u(atoms%n_u)%l = ldau_l(i)
+              atoms%lda_u(atoms%n_u)%u = ldau_u(i)
+              atoms%lda_u(atoms%n_u)%j = ldau_j(i)
+              atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
+              atoms%lda_u(atoms%n_u)%atomType = iType
+           END DO
            atomTypeSpecies(iType) = iSpecies
            IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
         END IF
@@ -1362,6 +1345,7 @@ SUBROUTINE r_inpXML(&
   enpara%el0 = 0.0
   enpara%ello0 = 0.0
   enpara%lchange = .FALSE.
+  enpara%llochg = .FALSE.
   dimension%nstd = 29
 
   ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
@@ -1398,29 +1382,29 @@ SUBROUTINE r_inpXML(&
         DO WHILE (token.NE.' ')
            IF (token(1:1).EQ.'[') THEN
               DO i = 1, 6
-                 IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList(i)) THEN
-                    IF (providedCoreStates+nobleGasNumStatesList(i).GT.29) THEN
+                 IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList_const(i)) THEN
+                    IF (providedCoreStates+nobleGasNumStatesList_const(i).GT.29) THEN
                        STOP 'Error: Too many core states provided in xml input file!'
                     END IF
-                    DO j = providedCoreStates+1, providedCoreStates+nobleGasNumStatesList(i)
-                       coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList(j)
-                       coreStateNprnc(j-providedCoreStates) = coreStateNprncList(j)
-                       coreStateKappa(j-providedCoreStates) = coreStateKappaList(j)
+                    DO j = providedCoreStates+1, providedCoreStates+nobleGasNumStatesList_const(i)
+                       coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList_const(j)
+                       coreStateNprnc(j-providedCoreStates) = coreStateNprncList_const(j)
+                       coreStateKappa(j-providedCoreStates) = coreStateKappaList_const(j)
                        speciesXMLElectronStates(j) = coreState_const
                     END DO
-                    providedCoreStates = providedCoreStates + nobleGasNumStatesList(i)
+                    providedCoreStates = providedCoreStates + nobleGasNumStatesList_const(i)
                  END IF
               END DO
            ELSE
               DO i = 1, 29
-                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList(i)) THEN
+                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
                     providedCoreStates = providedCoreStates + 1
                     IF (providedCoreStates.GT.29) THEN
                        STOP 'Error: Too many core states provided in xml input file!'
                     END IF
-                    coreStateOccs(providedCoreStates,:) = coreStateNumElecsList(i)
-                    coreStateNprnc(providedCoreStates) = coreStateNprncList(i)
-                    coreStateKappa(providedCoreStates) = coreStateKappaList(i)
+                    coreStateOccs(providedCoreStates,:) = coreStateNumElecsList_const(i)
+                    coreStateNprnc(providedCoreStates) = coreStateNprncList_const(i)
+                    coreStateKappa(providedCoreStates) = coreStateKappaList_const(i)
                     speciesXMLElectronStates(i) = coreState_const
                  END IF
               END DO
@@ -1434,14 +1418,14 @@ SUBROUTINE r_inpXML(&
            token = popFirstStringToken(valueString)
            DO WHILE (token.NE.' ')
               DO i = 1, 29
-                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList(i)) THEN
+                 IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
                     providedStates = providedStates + 1
                     IF (providedStates.GT.29) THEN
                        STOP 'Error: Too many valence states provided in xml input file!'
                     END IF
-                    coreStateOccs(providedStates,:) = coreStateNumElecsList(i)
-                    coreStateNprnc(providedStates) = coreStateNprncList(i)
-                    coreStateKappa(providedStates) = coreStateKappaList(i)
+                    coreStateOccs(providedStates,:) = coreStateNumElecsList_const(i)
+                    coreStateNprnc(providedStates) = coreStateNprncList_const(i)
+                    coreStateKappa(providedStates) = coreStateKappaList_const(i)
                     speciesXMLElectronStates(i) = valenceState_const
                  END IF
               END DO
@@ -1465,9 +1449,9 @@ SUBROUTINE r_inpXML(&
            nprncTemp = 0
            kappaTemp = 0
            DO j = 1, 29
-              IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList(j)) THEN
-                 nprncTemp = coreStateNprncList(j)
-                 kappaTemp = coreStateKappaList(j)
+              IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList_const(j)) THEN
+                 nprncTemp = coreStateNprncList_const(j)
+                 kappaTemp = coreStateKappaList_const(j)
                  speciesXMLPrintCoreStates(j) = .TRUE.
                  speciesXMLCoreOccs(1,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
                  speciesXMLCoreOccs(2,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
@@ -1527,7 +1511,7 @@ SUBROUTINE r_inpXML(&
      DO iType = 1, atoms%ntype
         WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-        IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+        IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
            atoms%numStatesProvided(iType) = providedStates
            IF (coreConfigPresent) THEN
               IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
@@ -1611,6 +1595,11 @@ SUBROUTINE r_inpXML(&
      DO i = 1, numberNodes
         na = na + 1
         WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'/relPos[',i,']'
+        IF(xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@label').NE.0) THEN
+           atoms%label(na) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@label')
+        ELSE
+           WRITE(atoms%label(na),'(i0)') na
+        END IF
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
         atoms%taual(1,na) = evaluatefirst(valueString)
         atoms%taual(2,na) = evaluatefirst(valueString)
@@ -1624,6 +1613,7 @@ SUBROUTINE r_inpXML(&
            banddos%l_orb = .TRUE.
            banddos%orbCompAtom = na
         END IF
+        wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
      END DO
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
@@ -1636,6 +1626,11 @@ SUBROUTINE r_inpXML(&
      DO i = 1, numberNodes
         na = na + 1
         WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'/filmPos[',i,']'
+        IF(xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@label').NE.0) THEN
+           atoms%label(na) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@label')
+        ELSE
+           WRITE(atoms%label(na),'(i0)') na
+        END IF
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
         atoms%taual(1,na) = evaluatefirst(valueString)
         atoms%taual(2,na) = evaluatefirst(valueString)
@@ -1649,6 +1644,7 @@ SUBROUTINE r_inpXML(&
            banddos%l_orb = .TRUE.
            banddos%orbCompAtom = na
         END IF
+        wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
      END DO
 
      !Read in atom group specific noco parameters
@@ -1700,6 +1696,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+     input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
 
@@ -1759,6 +1756,13 @@ SUBROUTINE r_inpXML(&
      END IF
 
      vacuum%layers = 1
+     input%integ = .FALSE.
+     vacuum%starcoeff = .FALSE.
+     vacuum%nstars = 0
+     vacuum%locx = 0.0
+     vacuum%locy = 0.0
+     vacuum%nstm = 0
+     vacuum%tworkf = 0.0
      IF ((banddos%vacdos).AND.(numberNodes.EQ.1)) THEN
         vacuum%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
         input%integ = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
@@ -1797,317 +1801,95 @@ SUBROUTINE r_inpXML(&
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
 
+     ! Read in optional Wannier functions parameters
+
+     xPathA = '/fleurInput/output/wannier'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((input%l_wann).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("wannier is true but Wannier parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     IF (numberNodes.EQ.1) THEN
+        wann%l_ms = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ms'))
+        wann%l_sgwf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sgwf'))
+        wann%l_socgwf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socgwf'))
+        wann%l_bs_comf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bsComf'))
+        wann%l_atomlist = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomList'))
+     END IF
+
+     xPathA = '/fleurInput/output/wannier/bandSelection'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        wann%l_byindex=.TRUE.
+        wann%band_min(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
+        wann%band_max(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
+        xPathA = '/fleurInput/output/wannier/bandSelection/@minSpinDown'
+        numberNodes = xmlGetNumberOfNodes(xPathA)
+        IF (numberNodes.EQ.1) THEN
+           wann%band_min(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+           wann%band_min(2) = wann%band_min(1)
+        END IF
+        xPathA = '/fleurInput/output/wannier/bandSelection/@maxSpinDown'
+        numberNodes = xmlGetNumberOfNodes(xPathA)
+        IF (numberNodes.EQ.1) THEN
+           wann%band_max(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+           wann%band_max(2) = wann%band_max(1)
+        END IF
+     END IF
+
+     xPathA = '/fleurInput/output/wannier/jobList'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        xPathA = 'normalize-space(/fleurInput/output/wannier/jobList/text())[1]'
+
+        ! Note: At the moment only 255 characters for the text in this node. Maybe this is not enough.
+        valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))
+        numTokens = countStringTokens(valueString)
+        ALLOCATE(wann%jobList(numTokens))
+        DO i = 1, numTokens
+           wann%jobList(i) = popFirstStringToken(valueString)
+        END DO
+     END IF
+
   END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of output section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Start of input postprocessing (calculate missing parameters)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  ! Check the LO stuff and call setlomap (from inped):
-
-  ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
-  ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
-
-  IF (ANY(atoms%lapw_l(:).NE.-1)) input%l_useapw = .TRUE.
-  DO iType = 1, atoms%ntype
-     IF (atoms%nlo(iType).GE.1) THEN
-        IF (input%secvar) THEN
-           CALL juDFT_error("LO + sevcar not implemented",calledby ="r_inpXML")
-        END IF
-        IF (input%isec1<input%itmax) THEN
-           CALL juDFT_error("LO + Wu not implemented",calledby ="r_inpXML")
-        END IF
-        IF (atoms%nlo(iType).GT.atoms%nlod) THEN
-           WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
-           CALL juDFT_error("nlo(n)>nlod",calledby ="r_inpXML")
-        END IF
-        DO j=1,atoms%nlo(iType)
-           IF (.NOT.input%l_useapw) THEN
-              IF (atoms%llo(j,iType).LT.0) THEN ! CALL juDFT_error("llo<0 ; compile with DCPP_APW!",calledby="inped")
-                 WRITE(6,'(A)') 'Info: l_useapw not set.'
-                 WRITE(6,'(A,I2,A,I2,A)') '      LO #', j, ' at atom type', iType, ' is an e-derivative.'
-              END IF
-           ENDIF
-           IF ( (atoms%llo(j,iType).GT.atoms%llod).OR.(mod(-atoms%llod,10)-1).GT.atoms%llod ) THEN
-              WRITE (6,*) 'llo(j,n) =',atoms%llo(j,iType),' > llod =',atoms%llod
-              CALL juDFT_error("llo(j,n)>llod",calledby ="r_inpXML")
+     ! Generate / fill wann%atomlist(:) array
+     IF (wann%l_atomlist) THEN
+        absSum = 0
+        DO i = 1, atoms%nat
+           IF (wannAtomList(i)) absSum = absSum + 1
+        END DO
+        wann%atomlist_num = absSum
+        ALLOCATE(wann%atomlist(wann%atomlist_num))
+        j = 1
+        DO i = 1, atoms%nat
+           IF (wannAtomList(i)) THEN
+              wann%atomlist(j) = i
+              j = j + 1
            END IF
         END DO
-
-        ! Replace call to setlomap with the following 3 loops (preliminary).
-        ! atoms%nlol and atoms%lo1l arrays are strange. This should be solved differently.
-        DO l = 0,atoms%llod
-           atoms%nlol(l,iType) = 0
-           atoms%lo1l(l,iType) = 0
-        END DO
-
-        DO ilo = 1,atoms%nlod
-           atoms%l_dulo(ilo,iType) = .FALSE.
-        END DO
-
-        DO ilo = 1,atoms%nlo(iType)
-           if (input%l_useapW) THEN
-              IF (atoms%ulo_der(ilo,iType).EQ.1) THEN
-                 atoms%l_dulo(ilo,iType) = .TRUE.
-              END IF
-           endif
-           WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,iType),'. derivative of l =',atoms%llo(ilo,iType)
-           IF (atoms%llo(ilo,iType)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="r_inpXML")
-           l = atoms%llo(ilo,iType)
-           IF (ilo.EQ.1) THEN
-              atoms%lo1l(l,iType) = ilo
-           ELSE
-              IF (l.NE.atoms%llo(ilo-1,iType)) THEN
-                 atoms%lo1l(l,iType) = ilo
-              END IF
-           END IF
-           atoms%nlol(l,iType) = atoms%nlol(l,iType) + 1
-        END DO
-        WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(iType)
-     END IF
-
-     enpara%skiplo(iType,:) = 0
-     DO j = 1, atoms%nlo(iType)
-        enpara%skiplo(iType,:) = enpara%skiplo(iType,1) + (2*atoms%llo(j,iType)+1)
-     END DO
-  END DO
-
-  ! Check lda+u stuff (from inped)
-
-  atoms%n_u = 0
-  DO iType = 1,atoms%ntype
-     IF (atoms%lda_u(iType)%l.GE.0)  THEN
-        atoms%n_u = atoms%n_u + 1
-        IF (atoms%nlo(iType).GE.1) THEN
-           DO iLLO = 1, atoms%nlo(iType)
-              IF ((abs(atoms%llo(iLLO,iType)).EQ.atoms%lda_u(iType)%l).AND.&
-                   .NOT.atoms%l_dulo(iLLO,iType)) THEN
-                 WRITE (*,*) 'LO and LDA+U for same l not implemented'
-              END IF
-           END DO
-        END IF
-     END IF
-  END DO
-  IF (atoms%n_u.GT.0) THEN
-     IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="r_inpXML")
-     IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="r_inpXML")
-     IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="r_inpXML")
-  END IF
-
-  ! Check DOS related stuff (from inped)
-
-  IF ((banddos%ndir.LT.0).AND..NOT.banddos%dos) THEN
-     CALL juDFT_error('STOP banddos: the inbuild dos-program  <0'//&
-          ' can only be used if dos = true',calledby ="r_inpXML")
-  END IF
-
-  IF ((banddos%ndir.LT.0).AND.banddos%dos) THEN
-     IF (banddos%e1_dos-banddos%e2_dos.LT.1e-3) THEN
-        CALL juDFT_error("STOP banddos: no valid energy window for "//&
-             "internal dos-program",calledby ="r_inpXML")
-     END IF
-     IF (banddos%sig_dos.LT.0) THEN
-        CALL juDFT_error("STOP DOS: no valid broadening (sig_dos) for "//&
-             "internal dos-PROGRAM",calledby ="r_inpXML")
-     END IF
-  END IF
-
-  IF (banddos%vacdos) THEN
-     IF (.NOT.banddos%dos) THEN
-        CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="r_inpXML")
-     END IF
-     IF (.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1))THEN
-        CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="r_inpXML")
-     END IF
-     IF (vacuum%layers.LT.1) THEN
-        CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="r_inpXML")
-     END IF
-     DO i=1,vacuum%layers
-        IF (vacuum%izlay(i,1).LT.1) THEN
-           CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="r_inpXML")
-        END IF
-     END DO
-  END IF
-
-  ! Check noco stuff and calculate missing noco parameters
-
-  IF (noco%l_noco) THEN
-     CALL nocoInputCheck(atoms,input,vacuum,jij,noco)
-
-     IF (.not.jij%l_j.and.noco%l_ss) THEN
-
-        !--->    the angle beta is relative to the spiral in a spin-spiral
-        !--->    calculation, i.e. if beta = 0 for all atoms in the unit cell
-        !--->    that means that the moments are "in line" with the spin-spiral
-        !--->    (beta = qss * taual). note: this means that only atoms within
-        !--->    a plane perpendicular to qss can be equivalent!
-
-        na = 1
-        DO iType = 1,atoms%ntype
-           noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,na))
-           noco%alph(iType) = noco%alphInit(iType) + noco%phi
-           na = na + atoms%neq(iType)
-        END DO
-     END IF
-  END IF
-
-  ! Calculate missing kpts parameters
-
-  IF (.not.l_kpts) THEN
-     IF (.NOT.oneD%odd%d1) THEN
-        IF (jij%l_J) THEN
-           n1=sym%nop
-           n2=sym%nop2
-           sym%nop=1
-           sym%nop2=1
-           CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-           sym%nop=n1
-           sym%nop2=n2
-        ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-           STOP 'Error: No kpoint set generation for gamma=T yet!'
-           CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                sym%mrot,sym%tau)
-        ELSE
-           CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-        END IF
      ELSE
-        STOP 'Error: No kpoint set generation for 1D systems yet!'
-        CALL od_kptsgen (kpts%nkpt)
-     END IF
-  END IF
-  sumWeight = 0.0
-  DO i = 1, kpts%nkpt
-     sumWeight = sumWeight + kpts%wtkpt(i)
-     kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
-  END DO
-  kpts%posScale = 1.0
-  DO i = 1, kpts%nkpt
-     kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
-  END DO
-  kpts%nkpt3(:) = kpts%nmop(:)
-  IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
-
-  ! Generate missing general parameters
-
-  minNeigd = NINT(0.75*input%zelec) + 1
-  IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
-  IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
-  IF (dimension%neigd.LT.minNeigd) THEN
-     IF (dimension%neigd>0) THEN
-        WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
-        WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
-     ENDIF
-     dimension%neigd = minNeigd
-  END IF
-
-  kpts%nkpt = kpts%nkpt
-  dimension%nvd = 0 ; dimension%nv2d = 0
-  stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
-  obsolete%l_u2f = .FALSE.
-  obsolete%l_f2u = .FALSE.
-  !cell%aamat=matmul(transpose(cell%amat),cell%amat)
-  cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
-  jij%nqpt=1
-  IF (jij%l_J) THEN
-     WRITE(*,*) 'jij%nqpt has to be corrected. Not yet done!'
-  END IF
-
-  DO iqpt=1,jij%nqpt
-     IF(jij%l_J) THEN
-        WRITE(*,*) 'select noco%qss here. ...not yet implemented'
-     END IF
-     DO ikpt = 1,kpts%nkpt
-        DO i = 1, 3
-           bk(i) = kpts%bk(i,ikpt)
+        wann%atomlist_num = atoms%nat
+        ALLOCATE(wann%atomlist(wann%atomlist_num))
+        DO i = 1, atoms%nat
+           wann%atomlist(i) = i
         END DO
-        !IF (input%film .OR.oneD%odd%d1) THEN
-        !   WRITE(*,*) 'There might be additional work required for the k points here!'
-        !   WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
-        !END IF
-        CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
-        stars%kq1_fft = max(kq1,stars%kq1_fft)
-        stars%kq2_fft = max(kq2,stars%kq2_fft)
-        stars%kq3_fft = max(kq3,stars%kq3_fft)
-        dimension%nvd = max(dimension%nvd,nv)
-        dimension%nv2d = max(dimension%nv2d,nv2)
-     END DO ! k-pts
-  END DO ! q-pts
-
-  obsolete%lepr = 0
-
-  IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
-
-  ! Generate missing parameters for atoms and calculate volume of the different regions
-
-  cell%volint = cell%vol
-  atoms%jmtd = maxval(atoms%jri(:))
-  CALL ylmnorm_init(atoms%lmaxd)
-  dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-  rmtmax = maxval(atoms%rmt(:))
-  rmtmax = rmtmax*stars%gmax
-  CALL convn_dim(rmtmax,dimension%ncvd)
-  dimension%msh = 0
-  ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
-  ALLOCATE(atoms%volmts(atoms%ntype))
-  ALLOCATE(atoms%vr0(atoms%ntype))  ! This should actually not be in the atoms type!
-  atoms%vr0(:) = 0.0
-  na = 0
-  DEALLOCATE(noel)
-  ALLOCATE(noel(atoms%ntype))
-  DO iType = 1, atoms%ntype
-     l_vca = .FALSE.
-     INQUIRE (file="vca.in", exist=l_vca)
-     IF (l_vca) THEN
-        WRITE(*,*) 'Note: Implementation for virtual crystal approximation should be changed in r_inpXML!'
-        WRITE(*,*) 'I am not sure whether the implementation actually makes any sense. It is from inped.'
-        WRITE(*,*) 'We have to get rid of the file vca.in!'
-        OPEN (17,file='vca.in',form='formatted')
-        DO i= 1, iType
-           READ (17,*,IOSTAT=ios) ntst,zp
-           IF (ios /= 0) EXIT
-           IF (ntst == iType) THEN
-              atoms%zatom(iType) = atoms%zatom(iType) + zp
-           END IF
-        END DO
-        CLOSE (17)
      END IF
 
-     ! Calculate mesh for valence states
-     radius = atoms%rmt(iType)*exp(atoms%dx(iType)*(1-atoms%jri(iType)))
-     dr = exp(atoms%dx(iType))
-     DO i = 1, atoms%jri(iType)
-        atoms%rmsh(i,iType) = radius
-        radius = radius*dr
-     END DO
-     ! Calculate mesh dimension for core states
-     radius = atoms%rmt(iType)
-     jrc = atoms%jri(iType)
-     DO WHILE (radius < atoms%rmt(iType) + 20.0)
-        jrc = jrc + 1
-        radius = radius*dr
-     END DO
-     dimension%msh = max(dimension%msh,jrc)
+     DEALLOCATE(wannAtomList)
 
-     atoms%volmts(iType) = (fpi_const/3.0)*atoms%rmt(iType)**3
-     cell%volint = cell%volint - atoms%volmts(iType)*atoms%neq(iType)
-
-     noel(iType) = namat_const(atoms%nz(iType))
-  END DO
-
-
-  ! Check muffin tin radii
-
-  ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
-  ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
-  l_test = .TRUE. ! only checking, dont use new parameters
-  CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
-             kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
-  DEALLOCATE (jri1,lmax1,rmt1,dx1)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Start of non-XML input
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Read in enpara file iff available
 
@@ -2121,229 +1903,15 @@ SUBROUTINE r_inpXML(&
      CLOSE (40)
   END IF
 
-  ! Dimensioning of lattice harmonics
-
-  ALLOCATE(atoms%nlhtyp(atoms%ntype),atoms%ntypsy(atoms%nat))
-  ALLOCATE(sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1))
-  sphhar%ntypsd = 0
-  IF (.NOT.oneD%odd%d1) THEN
-     CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
-          atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
-          atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
-          sphhar%nmem,sphhar%mlh,sphhar%clnu)
-  ELSE IF (oneD%odd%d1) THEN
-     WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
-     WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
-     ii = 1
-     nq1=1
-     DO i = 1,atoms%ntype
-        DO j = 1,atoms%neq(i)
-           lmx1(ii) = atoms%lmax(i)
-           ii = ii + 1
-        END DO
-     END DO
-     CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
-          sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
-          atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
-          sphhar%mlh,sphhar%clnu)        
-     ii = 1
-     DO i = 1,atoms%ntype
-        atoms%nlhtyp(i) = nlhtp1(ii)
-        ii = ii + atoms%neq(i)
-     END DO
-     DEALLOCATE (nq1,lmx1,nlhtp1)
-  END IF
-  DEALLOCATE(sphhar%clnu,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh)
-
-  ALLOCATE(sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
-  ALLOCATE(sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd))
-  ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
-  ALLOCATE(sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd))
-
-  ! Dimensioning of stars
-
-  IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
-     CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
-          stars%ng3,stars%ng2,oneD%odd)
-
-  ELSE
-     CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
-          stars%ng3,stars%ng2)
-     oneD%odd%n2d = stars%ng2
-     oneD%odd%nq2 = stars%ng2
-     oneD%odd%nop = sym%nop
-  END IF
-
-  dimension%nn2d = (2*stars%mx1+1)*(2*stars%mx2+1)
-  dimension%nn3d = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
-  IF (oneD%odd%d1) THEN
-     oneD%odd%k3 = stars%mx3
-     oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
-  ELSE
-     oneD%odd%k3 = 0
-     oneD%odd%M = 0
-     oneD%odd%nn2d = 1
-     oneD%odd%mb = 0
-  END IF
-  ALLOCATE (stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-  ALLOCATE (stars%ig2(stars%ng3))
-  ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
-  ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
-  ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-  ALLOCATE (stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
-  ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-  ALLOCATE (stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
-  ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-
-  stars%sk2(:) = 0.0
-  stars%phi2(:) = 0.0
-
-  ! Initialize xc fft box
-
-  CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
-
-  ! Initialize missing 1D code arrays
-
-  ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
-  ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
-  ALLOCATE (oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
-  ALLOCATE (oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
-  ALLOCATE (oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
-
-  ! Initialize missing hybrid functionals arrays
-
-  ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
-  ALLOCATE (hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-  ALLOCATE (hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-  ALLOCATE (hybrid%ddist(dimension%jspd))
-  hybrid%ddist = 1.0
-
-  ! Generate lattice harmonics
-
-  IF (.NOT.oneD%odd%d1) THEN
-     CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
-          sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-          atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
-     sym%nsymt = sphhar%ntypsd
-     oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
-     oneD%tau1(:,:) = sym%tau(:,:)
-  ELSE IF (oneD%odd%d1) THEN
-     WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
-     WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-     CALL od_chisym(oneD%odd,oneD%mrot1,oneD%tau1,sym%zrfs,sym%invs,sym%invs2,cell%amat)
-     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
-     ii = 1
-     DO i = 1,atoms%ntype
-        DO j = 1,atoms%neq(i)
-           nq1(ii) = 1
-           lmx1(ii) = atoms%lmax(i)
-           ii = ii + 1
-        END DO
-     END DO
-     CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
-          sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-          nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
-     sym%nsymt = sphhar%ntypsd
-     ii = 1
-     DO i = 1,atoms%ntype
-        atoms%nlhtyp(i) = nlhtp1(ii)
-        ii = ii + atoms%neq(i)
-     END DO
-     DEALLOCATE (lmx1,nlhtp1)
-  END IF
-
-  ! Calculate additional symmetry information
-
-  IF (atoms%n_u.GT.0) THEN
-     CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
-  END IF
-  IF (.NOT.oneD%odd%d1) THEN
-     CALL mapatom(sym,atoms,cell,input,noco)
-     oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
-     !     DEALLOCATE ( nq1 )
-  ELSE
-     CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
-     CALL mapatom(sym,atoms,cell,input,noco)
-     CALL od_mapatom(oneD,atoms,sym,cell)
-  END IF
-
-  ! Missing xc functionals initializations
-  IF (xcpot%igrd.NE.0) THEN
-     ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
-     ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-          oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-          oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
-  ELSE
-     ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-     ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-          oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
-  END IF
-  oneD%odd%nq2 = oneD%odd%n2d
-  oneD%odi%nq2 = oneD%odd%nq2
-
-  ! Store structure data
-
-  CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
-
-  ! Generate stars
-
-  IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
-     CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
-     IF (oneD%odd%d1) THEN
-        CALL od_strgn1(xcpot,cell,sym,oneD)
-     END IF
-  ELSE
-     CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
-  END IF
-
-  ! Other small stuff
-
-  input%strho = .FALSE.
-
-  INQUIRE(file="cdn1",exist=l_opti)
-  if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-  l_opti=.not.l_opti
-  IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-       (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
-
-  IF (.NOT.l_opti) THEN
-     !      The following call to inpeig should not be required.
-     !      CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara)
-  END IF
-
-  CALL prp_qfft(stars,cell,noco,input)
-
-  IF (input%gw.GE.1) THEN
-     CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
-          atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-          atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-          atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
-  END IF
-
-  CALL  prp_xcfft(stars,input,cell,xcpot)
-
-  IF (.NOT.sliceplot%iplot) THEN
-     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum)
-     CALL convn(DIMENSION,atoms,stars)
-     CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
-  END IF
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! End of input postprocessing (calculate missing parameters)
+!!! End of non-XML input
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   CALL xmlFreeResources()
 
   !WRITE(*,*) 'Reading of inp.xml file finished'
 
-  DEALLOCATE(speciesNames, speciesNLO)
+  DEALLOCATE(speciesNLO)
 
 END SUBROUTINE r_inpXML
 
@@ -2459,5 +2027,32 @@ FUNCTION popFirstStringToken(line) RESULT(firstToken)
    END IF
 
 END FUNCTION popFirstStringToken
+
+FUNCTION countStringTokens(line) RESULT(tokenCount)
+
+   IMPLICIT NONE
+
+   CHARACTER(*), INTENT(IN) :: line
+   INTEGER                  :: tokenCount
+
+   CHARACTER(LEN=LEN(line)) :: tempLine
+   INTEGER separatorIndex
+
+   tokenCount = 0
+
+   tempLine = TRIM(ADJUSTL(line))
+
+   DO WHILE (tempLine.NE.'')
+      separatorIndex = 0
+      separatorIndex = INDEX(tempLine,' ')
+      IF (separatorIndex.EQ.0) THEN
+         tempLine = ''
+      ELSE
+         tempLine = TRIM(ADJUSTL(tempLine(separatorIndex+1:)))
+      END IF
+      tokenCount = tokenCount + 1
+   END DO
+
+END FUNCTION countStringTokens
 
 END MODULE m_rinpXML

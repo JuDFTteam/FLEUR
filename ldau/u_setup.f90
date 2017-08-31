@@ -13,6 +13,8 @@ MODULE m_usetup
   !     potential matrix: vs_mmp                                      |
   !     total energy contribution: e_ldau                             |
   !                                                  G.B. Oct. 2000   |
+  !                                                                   |
+  !     Extension to multiple U per atom type  G.M. 2017              |
   !-------------------------------------------------------------------+
 CONTAINS
   SUBROUTINE u_setup(sym,atoms,lmaxb,sphhar, input,el,vr,mpi, vs_mmp,results,number)
@@ -37,13 +39,13 @@ CONTAINS
     COMPLEX,INTENT (OUT)::vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins)
     INTEGER,INTENT(IN),OPTIONAL::number
     ! ... Local Variables ...
-    INTEGER itype,ispin,j,k,l,n,jspin,urec
-    INTEGER noded,nodeu,ios,lty(atoms%ntype)
+    INTEGER itype,ispin,j,k,l,jspin,urec,i_u
+    INTEGER noded,nodeu,ios,lty(atoms%n_u)
     REAL wronk
     LOGICAL n_mmp_exist,n_exist
     CHARACTER*8 l_type*2,l_form*9
     CHARACTER*12 ::filename
-    REAL f(atoms%jmtd,2),g(atoms%jmtd,2),theta(atoms%ntype),phi(atoms%ntype),zero(atoms%ntype)
+    REAL f(atoms%jmtd,2),g(atoms%jmtd,2),theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
     REAL f0(atoms%n_u,input%jspins),f2(atoms%n_u,input%jspins),f4(atoms%n_u,input%jspins),f6(atoms%n_u,input%jspins)
     REAL, ALLOCATABLE :: u(:,:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: ns_mmp(:,:,:,:)
@@ -59,9 +61,8 @@ CONTAINS
        !
        ! calculate slater integrals from u and j
        !
-       CALL uj2f(&
-            input%jspins,atoms,&
-            f0,f2,f4,f6)
+       CALL uj2f(input%jspins,atoms,&
+                 f0,f2,f4,f6)
        !
        ! set up e-e- interaction matrix
        !
@@ -72,11 +73,10 @@ CONTAINS
           f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
           f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
           f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-          CALL umtx(&
-               lmaxb,atoms%ntype,atoms%n_u,atoms%lda_u(:)%l,f0(1,ispin),&
-               f2(1,ispin),f4(1,ispin),f6(1,ispin),&
-               u(-lmaxb,-lmaxb,-lmaxb,-lmaxb,1,ispin) )
-       ENDDO
+          CALL umtx(atoms,lmaxb,f0(1,ispin),&
+                    f2(1,ispin),f4(1,ispin),f6(1,ispin),&
+                    u(-lmaxb,-lmaxb,-lmaxb,-lmaxb,1,ispin) )
+       END DO
        !
        ! read density matrix
        !
@@ -91,20 +91,18 @@ CONTAINS
        INQUIRE (file='n_mmp_rot',exist=n_exist)
        IF (n_exist) THEN
           OPEN (68,file='n_mmp_rot',status='old',form='formatted')
-          n = 1
-          DO itype = 1,atoms%ntype
-             l = atoms%lda_u(itype)%l
-             IF (l.GE.0) THEN
-                READ(68,*,iostat=ios) theta(n),phi(n)
-                IF (ios == 0) THEN
-                   lty(n) = l ; n = n + 1
-                ELSE
-                   IF (n == 1)  CALL juDFT_error("ERROR reading n_mmp_rot",calledby ="u_setup")
-                   theta(n) = theta(n-1) ; phi(n) = phi(n-1)
-                   lty(n) = lty(n-1) ; n = n + 1
-                ENDIF
-             ENDIF
-          ENDDO
+          DO i_u = 1, atoms%n_u
+             itype = atoms%lda_u(i_u)%atomType
+             l = atoms%lda_u(i_u)%l
+             READ(68,*,iostat=ios) theta(i_u),phi(i_u)
+             IF (ios == 0) THEN
+                lty(i_u) = l
+             ELSE
+                IF (i_u == 1)  CALL juDFT_error("ERROR reading n_mmp_rot",calledby ="u_setup")
+                theta(i_u) = theta(i_u-1) ; phi(i_u) = phi(i_u-1)
+                lty(i_u) = lty(i_u-1)
+             END IF
+          END DO
           CLOSE (68)
           zero = 0.0
           CALL nmat_rot(phi,theta,zero,3,atoms%n_u,input%jspins,lty,ns_mmp)
@@ -112,31 +110,27 @@ CONTAINS
        !
        ! calculate potential matrix and total energy correction
        !
-       CALL v_mmp(&
-            sym,atoms,input%jspins,lmaxb,ns_mmp,u,f0,f2,&
-            vs_mmp,results)
+       CALL v_mmp(sym,atoms,input%jspins,lmaxb,ns_mmp,u,f0,f2,&
+                  vs_mmp,results)
        IF (mpi%irank.EQ.0) THEN
           DO jspin = 1,input%jspins
-             n = 0
              WRITE (6,'(a7,i3)') 'spin #',jspin
-             DO itype = 1,atoms%ntype
-                l = atoms%lda_u(itype)%l
-                IF (l.GE.0) THEN
-                   n = n + 1
-                   WRITE (l_type,'(i2)') 2*(2*l+1)
-                   l_form = '('//l_type//'f12.7)'
-                   WRITE (6,'(a20,i3)') 'n-matrix for atom # ',itype
-                   WRITE (6,l_form) ((ns_mmp(k,j,n,jspin),k=-l,l),j=-l,l)
-                   WRITE (6,'(a20,i3)') 'V-matrix for atom # ',itype
-                   IF (atoms%lda_u(itype)%l_amf) THEN
-                      WRITE (6,*) 'using the around-mean-field limit '
-                   ELSE
-                      WRITE (6,*) 'using the atomic limit of LDA+U '
-                   ENDIF
-                   WRITE (6,l_form) ((vs_mmp(k,j,n,jspin),k=-l,l),j=-l,l)
+             DO i_u = 1, atoms%n_u
+                itype = atoms%lda_u(i_u)%atomType
+                l = atoms%lda_u(i_u)%l
+                WRITE (l_type,'(i2)') 2*(2*l+1)
+                l_form = '('//l_type//'f12.7)'
+                WRITE (6,'(a20,i3)') 'n-matrix for atom # ',itype
+                WRITE (6,l_form) ((ns_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                WRITE (6,'(a20,i3)') 'V-matrix for atom # ',itype
+                IF (atoms%lda_u(i_u)%l_amf) THEN
+                   WRITE (6,*) 'using the around-mean-field limit '
+                ELSE
+                   WRITE (6,*) 'using the atomic limit of LDA+U '
                 ENDIF
-             ENDDO
-          ENDDO
+                WRITE (6,l_form) ((vs_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+             END DO
+          END DO
           WRITE (6,*) results%e_ldau
        ENDIF
        DEALLOCATE ( u,ns_mmp )

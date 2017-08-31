@@ -19,11 +19,12 @@ c***************************************************************
      >     evac,bkpt,vz,
      >     jspin,
      >     k1,k2,k3,nvd,
-     >     nbasfcn,neigd,z,nv,omtil,nslibd,ac,bc,u,ue,
+     >     nbasfcn,neigd,nv,omtil,nslibd,ac,bc,u,ue,
      <     value)
 
       use m_constants, only : pimach
       implicit none
+
 c     .. scalar Arguments..
       integer, intent (in) :: nmzd,nv2d,n3d,nslibd
       integer, intent (in) :: nmz,nvac
@@ -37,12 +38,6 @@ c     ..array arguments..
       real,    intent (in) :: vz(nmzd,2),bmat(3,3),bbmat(3,3)
       integer, intent (in) :: k1(nvd),k2(nvd),k3(nvd)
       complex, intent (out) :: value
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(nbasfcn)
-#else
-      real,    intent (in):: z(nbasfcn)
-#endif
 
 c     ..basis wavefunctions in the vacuum
       complex, intent(in) :: ac(nv2d),bc(nv2d)

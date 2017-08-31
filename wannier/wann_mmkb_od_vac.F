@@ -14,32 +14,46 @@ c      Y. Mokrousov, F. Freimuth
 c*************************************************************** 
       CONTAINS
       SUBROUTINE wann_mmkb_od_vac(
-     >     l_noco,nlotot,
+     >     DIMENSION,oneD,vacuum,stars,cell,
+     >     vacchi,l_noco,nlotot,
      >     nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,n2d_1,
-     >     bbmat,evac,bkpt,bkpt_b,MM,vM,vz,odi,
-     >     nslibd,nslibd_b,jspin,k1,k2,k3,k1_b,k2_b,k3_b,
+     >     bbmat,evac,evac_b,bkpt,bkpt_b,MM,vM,vz,vz_b,odi,
+     >     nslibd,nslibd_b,jspin,jspin_b,k1,k2,k3,k1_b,k2_b,k3_b,
      >     jspd,nvd,area,nbasfcn,neigd,
-     >     z,z_b,nv,nv_b,sk2,phi2,omtil,gb,qss,
+     >     zMat,zMat_b,nv,nv_b,sk2,phi2,omtil,gb,qss,
+     >     l_q, sign_q,
      <     mmn)
-      use m_constants, only : pimach
-      use m_od_types, only : od_inp
+      use m_constants
+      use m_types
       use m_od_abvac
       use m_cylbes
       use m_dcylbs
       use m_intgr, only : intgz0
 
       implicit none
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_zmat), INTENT(IN)       :: zMat, zMat_b
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
       integer, intent (in) :: nlotot
       integer, intent (in) :: nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n3d
       integer, intent (in) :: nmzxy,nmz,MM,n2d,vM,nbnd
       integer, intent (in) :: nslibd,nslibd_b
-      integer, intent (in) :: n2d_1,jspin,jspd,nvd
+      integer, intent (in) :: n2d_1,jspin,jspin_b,jspd,nvd
       integer, intent (in) :: nbasfcn,neigd
-      real,    intent (in) :: delz,z1,evac,area,omtil
+      real,    intent (in) :: delz,z1,evac,area,omtil,evac_b
+      complex, intent (in) :: vacchi
       type (od_inp), intent (in) :: odi
+
+      logical, intent (in) :: l_q
+      integer, intent (in) :: sign_q
 
 c     ..array arguments..
       real,    intent (in) :: bkpt(:),bkpt_b(:),qss(:) !bkpt(3),bkpt_b(3),qss(3)
@@ -47,16 +61,12 @@ c     ..array arguments..
       integer, intent (in) :: ig(-k1d:,-k2d:,-k3d:) !ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig2(:),nv(:),nv_b(:) !ig2(n3d),nv(jspd),nv_b(jspd)
       integer, intent (in) :: gb(:) !gb(3)
-      real,    intent (in) :: vz(:),bbmat(:,:) !vz(nmzd),bbmat(3,3)
+      real,    intent (in) :: vz(:),vz_b(:),bbmat(:,:) !vz(nmzd),bbmat(3,3)
       integer, intent (in) :: k1(:,:),k2(:,:),k3(:,:) !k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
       integer, intent (in) :: k1_b(:,:),k2_b(:,:),k3_b(:,:) !k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
       complex, intent (inout) :: mmn(:,:) !mmn(nbnd,nbnd)
 
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(:,:),z_b(:,:) !z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(:,:),z_b(:,:) !z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#endif
+      !logical, intent (in) :: l_q   ! dealing with q points?
 
 c     ..basis wavefunctions in the vacuum
       real,    allocatable :: udz(:,:)
@@ -89,13 +99,12 @@ c     ..local scalars..
       real, allocatable :: gbess(:,:),besss(:)
       REAL qssbti(3,2)
 
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
-
       addnoco=0
       addnoco2=0
       if(l_noco.and.(jspin.eq.2))then
          addnoco  = nv(1)   + nlotot
+      endif
+      if(l_noco.and.(jspin_b.eq.2))then
          addnoco2 = nv_b(1) + nlotot
       endif
 
@@ -138,16 +147,16 @@ c     ..intrinsic functions..
          map1(k) = nv2
  20   continue
 
-      do 21 k = 1,nv_b(jspin)
+      do 21 k = 1,nv_b(jspin_b)
          do 11 j = 1,nv2_b
-            if (k3_b(k,jspin).eq.kvac3_b(j)) then
+            if (k3_b(k,jspin_b).eq.kvac3_b(j)) then
                map1_b(k) = j
                goto 21
             endif
  11      continue
          nv2_b = nv2_b + 1
          if (nv2_b.gt.nv2d) stop 'nv2d'
-         kvac3_b(nv2_b) = k3_b(k,jspin)
+         kvac3_b(nv2_b) = k3_b(k,jspin_b)
          map1_b(k) = nv2_b
  21   continue
 
@@ -163,10 +172,9 @@ c...for the k-point
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac,bkpt,odi%M,odi%mb,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin),odi%n2d,
+     >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz,kvac3,nv2,
      <      uz(1,-vM),duz(1,-vM),u(1,1,-vM),udz(1,-vM),
      <      dudz(1,-vM),ddnv(1,-vM),ud(1,1,-vM))
@@ -192,14 +200,25 @@ c...for the k-point
      *              cmplx(-duz(l,m)*bess(m) +
      -              uz(l,m)*sk2(irec2)*dbss(m),0.0)/
      /              ((wronk1)*sqrt(omtil))
-               do n = 1,nslibd
-                   acof(l,m,n) = acof(l,m,n) +
-     +                z(k+addnoco,n)*avac
-c     +                 conjg(z(k,n))*avac
-                   bcof(l,m,n) = bcof(l,m,n) +
-     +                z(k+addnoco,n)*bvac
-c     +                 conjg(z(k,n))*bvac
-               enddo
+               IF (zMat%l_real) THEN
+                  do n = 1,nslibd
+                      acof(l,m,n) = acof(l,m,n) +
+     +                   zMat%z_r(k+addnoco,n)*avac
+c     +                    conjg(zMat%z_r(k,n))*avac
+                      bcof(l,m,n) = bcof(l,m,n) +
+     +                   zMat%z_r(k+addnoco,n)*bvac
+c     +                    conjg(zMat%z_r(k,n))*bvac
+                  enddo
+               ELSE
+                  do n = 1,nslibd
+                      acof(l,m,n) = acof(l,m,n) +
+     +                   zMat%z_c(k+addnoco,n)*avac
+c     +                    conjg(zMat%z_c(k,n))*avac
+                      bcof(l,m,n) = bcof(l,m,n) +
+     +                   zMat%z_c(k+addnoco,n)*bvac
+c     +                    conjg(zMat%z_c(k,n))*bvac
+                  enddo
+               END IF
             enddo      ! -mb:mb
          endif
       enddo
@@ -208,18 +227,17 @@ c...for the b-point
 
       DO ispin = 1,1 ! jspins
       call od_abvac(
-     >      z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-     >      ig,odi%ig,tpi,qssbti(3,jspin),
-     >      nmzxy,nmz,delz,ig2,odi%n2d,
-     >      bbmat,wronk,evac,bkpt_b,odi%M,odi%mb,
-     >      vz,kvac3_b,nv2_b,
+     >      cell,vacuum,DIMENSION,stars,oneD,
+     >      qssbti(3,jspin_b),odi%n2d,
+     >      wronk,evac_b,bkpt_b,odi%M,odi%mb,
+     >      vz_b,kvac3_b,nv2_b,
      <      uz_b(1,-vM),duz_b(1,-vM),u_b(1,1,-vM),udz_b(1,-vM),
      <      dudz_b(1,-vM),ddnv_b(1,-vM),ud_b(1,1,-vM))
       ENDDO
 
-      do k = 1,nv_b(jspin)
+      do k = 1,nv_b(jspin_b)
          l = map1_b(k)
-         irec3 = ig(k1_b(k,jspin),k2_b(k,jspin),k3_b(k,jspin))
+         irec3 = ig(k1_b(k,jspin_b),k2_b(k,jspin_b),k3_b(k,jspin_b))
          if (irec3.ne.0) then
             irec2 = ig2(irec3)
             zks = sk2(irec2)*z1
@@ -237,14 +255,25 @@ c...for the b-point
      &              cmplx(-duz_b(l,m)*bess(m) +
      -              uz_b(l,m)*sk2(irec2)*dbss(m),0.0)/
      /              ((wronk1)*sqrt(omtil))
-               do n = 1,nslibd_b
-                   acof_b(l,m,n) = acof_b(l,m,n) +
-     +                z_b(k+addnoco2,n)*avac
-c     +                 conjg(z(k,n))*avac
-                   bcof_b(l,m,n) = bcof_b(l,m,n) +
-     +                z_b(k+addnoco2,n)*bvac
-c     +                 conjg(z(k,n))*bvac
-               enddo
+               IF (zMat_b%l_real) THEN
+                  do n = 1,nslibd_b
+                      acof_b(l,m,n) = acof_b(l,m,n) +
+     +                   zMat_b%z_r(k+addnoco2,n)*avac
+c     +                    conjg(zMat_b%z_r(k,n))*avac
+                      bcof_b(l,m,n) = bcof_b(l,m,n) +
+     +                   zMat_b%z_r(k+addnoco2,n)*bvac
+c     +                    conjg(zMat_b%z_r(k,n))*bvac
+                  enddo
+               ELSE
+                  do n = 1,nslibd_b
+                      acof_b(l,m,n) = acof_b(l,m,n) +
+     +                   zMat_b%z_c(k+addnoco2,n)*avac
+c     +                    conjg(zMat_b%z_c(k,n))*avac
+                      bcof_b(l,m,n) = bcof_b(l,m,n) +
+     +                   zMat_b%z_c(k+addnoco2,n)*bvac
+c     +                    conjg(zMat_b%z_c(k,n))*bvac
+                  enddo
+               END IF
             enddo      ! -mb:mb
          endif 
       enddo          ! k = 1,nv
@@ -257,6 +286,8 @@ c  now actually computing the Mmn matrix
       zks0 = sk2(irec2)
       arg = phi2(irec2)
 
+      !write(*,*)'mmkb_od_vac zks0',zks0
+      
       gbess(:,:) = 0.
       do i = 1,nmz
          zz = z1+(i-1)*delz
@@ -278,6 +309,7 @@ c           gbess(i) = 1.
         do mp = -odi%mb,odi%mb
 
          phasfc = exp(-cmplx(0.0,(mp-m)*arg))
+         if(l_q) phasfc =  (sign_q)**(mp-m) * phasfc
 
          do i = 1,nmz
            zz = z1+(i-1)*delz
@@ -309,7 +341,7 @@ c           gbess(i) = 1.
      *          acof(l,m,i)*conjg(acof_b(lprime,mp,j))*uuo +
      +          acof(l,m,i)*conjg(bcof_b(lprime,mp,j))*udo +
      +          bcof(l,m,i)*conjg(acof_b(lprime,mp,j))*duo +
-     +          bcof(l,m,i)*conjg(bcof_b(lprime,mp,j))*ddo )  
+     +          bcof(l,m,i)*conjg(bcof_b(lprime,mp,j))*ddo )*vacchi  
            enddo 
          enddo
 

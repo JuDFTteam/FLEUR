@@ -203,6 +203,7 @@
       !call writelocation()
       !CALL writetimes(.true.)
       INQUIRE(FILE="JUDFT_TRACE",EXIST=calltrace)
+      IF (error.EQ.1) calltrace = .TRUE.
       IF (calltrace) THEN
 #ifdef __INTEL_COMPILER
          CALL tracebackqq(USER_EXIT_CODE=-1) !return after traceback

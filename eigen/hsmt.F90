@@ -229,7 +229,7 @@ CONTAINS
 #endif
        IF (.NOT.input%secvar) THEN
           CALL timestart("hsmt extra")
-          IF (ANY(atoms%nlo>0).OR.ANY(atoms%lda_u%l.GE.0)) &
+          IF (ANY(atoms%nlo>0).OR.(atoms%n_u.GT.0)) &
                CALL hsmt_extra(DIMENSION,atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
                hlpmsize,lmaxb,gwc,noco,l_socfirst,lapw,cell,enpara%el0,&
                fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in

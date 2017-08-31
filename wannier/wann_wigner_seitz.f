@@ -22,7 +22,7 @@
       integer, intent(out):: ndegen(:)	
 
       integer             :: idist (3)
-      real                :: dist(125),summa,dist_min
+      real                :: dist(1331),summa,dist_min
       integer             :: k1,k2,k3,i1,i2,i3,count,i,j
       real                :: eps7,eps8
       real                :: metric(3,3)
@@ -34,13 +34,13 @@
       metric=matmul(transpose(amat),amat)
 
       rvecnum = 0  
-      do k1=-num(1),num(1)  
-       do k2=-num(2),num(2)  
-        do k3=-num(3),num(3)  
+      do k1=-2*num(1),2*num(1)  
+       do k2=-2*num(2),2*num(2)  
+        do k3=-2*num(3),2*num(3)  
          count=0  
-         do i1=-2,2  
-          do i2=-2,2  
-           do i3=-2,2  
+         do i1=-5,5  
+          do i2=-5,5  
+           do i3=-5,5  
             count=count+1  
             ! Get |r-R|^2
             idist(1)=k1-i1*num(1)  
@@ -57,13 +57,13 @@
           enddo !i2
          enddo !i1
          dist_min=minval(dist)
-         if (abs(dist(63) - dist_min ) .lt. eps7 ) then
+         if (abs(dist(666) - dist_min ) .lt. eps7 ) then
                 rvecnum = rvecnum + 1  
                 if(.not. l_get_rvecnum) then
 c                   if(.not.allocated(ndegen))
 c     &                 allocate(ndegen(rvecnum_in))
                    ndegen(rvecnum)=0
-                   do i=1,125
+                   do i=1,1331
                       if (abs (dist (i) - dist_min) .lt. eps7 ) 
      &                   ndegen(rvecnum)=ndegen(rvecnum)+1
                    end do
@@ -83,8 +83,8 @@ c------ Consistency Check.
        summa = summa + 1.0/real(ndegen(i))  
       enddo
       if (abs (summa - real(num(1)*num(2)*num(3)) ) > eps8) then
-         CALL juDFT_error("problem finding Wigner-Seitz points",calledby
-     +        ="wann_wigner_seitz")
+         CALL juDFT_error("problem finding Wigner-Seitz points",
+     +                    calledby ="wann_wigner_seitz")
       endif
 
       end subroutine wann_wigner_seitz

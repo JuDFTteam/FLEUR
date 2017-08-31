@@ -19,7 +19,7 @@ c******************************************************************
      >               fullnkpts,nntot,bpt,gb,l_bzsym,
      >               irreduc,mapkoper,l_p0,film,nop,
      >               invtab,mrot,l_onedimens,tau,
-     <               pair_to_do,maptopair,kdiff)
+     <               pair_to_do,maptopair,kdiff,l_q,param_file)
 
       implicit none
       integer,intent(in) :: nop
@@ -38,6 +38,9 @@ c******************************************************************
       integer,intent(out):: pair_to_do(fullnkpts,nntot)
       integer,intent(out):: maptopair(3,fullnkpts,nntot)
       real,intent(out)   :: kdiff(3,nntot)
+
+      logical, intent(in) :: l_q
+      character(len=20), intent(in) :: param_file
 
       integer :: ikpt,ikpt_k,kptibz,ikpt_b
       integer :: num_pair,kptibz_b
@@ -204,7 +207,11 @@ c        endif !gb=0
       write(6,*)"maps by conjugation: ",num_conj
       write(6,*)"maps by rotation:", num_rot
       write(6,*)"num_pair+num_rot+num_conj:",num_pair+num_conj+num_rot
-      write(6,*)"fullnkpts*nntot:", fullnkpts*nntot
+      if(.not.l_q) then
+         write(6,*)"fullnkpts*nntot:", fullnkpts*nntot
+      else
+          write(6,*)"fullnqpts*nntot:", fullnkpts*nntot
+      endif
       endif !l_p0
 
 c*****************************************************************
@@ -212,11 +219,19 @@ c     determine difference vectors that occur on the k-mesh
 c*****************************************************************      
       if (l_bzsym) then
          l_file=.false.
-         inquire(file='w90kpts',exist=l_file)
-         IF(.NOT.l_file)  CALL juDFT_error
+         IF(.NOT.l_q)THEN
+           inquire(file='w90kpts',exist=l_file)
+           IF(.NOT.l_file)  CALL juDFT_error
      +        ("w90kpts not found, needed if bzsym",calledby
      +        ="wann_mmnk_symm")
-         open(412,file='w90kpts',form='formatted')
+           open(412,file='w90kpts',form='formatted')
+         ELSE
+           inquire(file='w90qpts',exist=l_file)
+           IF(.NOT.l_file)  CALL juDFT_error
+     +        ("w90qpts not found, needed if bzsym",calledby
+     +        ="wann_mmnk_symm")
+           open(412,file='w90qpts',form='formatted')            
+         ENDIF
          read(412,*)fullnkpts_tmp,scale
          do k=1,fullnkpts
                read(412,*)kpoints(:,k)
@@ -224,8 +239,13 @@ c*****************************************************************
          kpoints=kpoints/scale
          close(412)
       else   
-            open(412,file='kpts',form='formatted')
-            read(412,*)fullnkpts_tmp,scale
+            IF(.not.l_q)THEN
+              open(412,file='kpts',form='formatted')
+              read(412,*)fullnkpts_tmp,scale
+            ELSE
+              open(412,file=param_file,form='formatted')
+              read(412,*)fullnkpts_tmp,scale
+            ENDIF
             do k=1,fullnkpts
                read(412,*)kpoints(:,k)
             enddo   
@@ -233,8 +253,13 @@ c*****************************************************************
             if (film.and..not.l_onedimens) kpoints(3,:)=0.0
             close(412)
       endif
+      
       if(l_p0)then
-         print*,"vectors combining nearest neighbor k-points:"
+         IF(.not.l_q) THEN
+           print*,"vectors combining nearest neighbor k-points:"
+         ELSE
+           print*,"vectors combining nearest neighbor q-points:"
+         ENDIF
       endif   
       ky=1
       do k=1,fullnkpts

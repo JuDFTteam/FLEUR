@@ -159,11 +159,12 @@
 !--->    LDA+U: initialise density-matrix if needed
 !
          IF (atoms%n_u.GT.0) THEN
-            ALLOCATE (  n_mmp(-3:3,-3:3,atoms%n_u,input%jspins) )
+            ALLOCATE (n_mmp(-3:3,-3:3,atoms%n_u,input%jspins))
             n_mmp(:,:,:,:) = cmplx(0.0,0.0)
          ELSE
-            ALLOCATE ( n_mmp(-3:-3,-3:-3,1,input%jspins))
+            ALLOCATE (n_mmp(-3:-3,-3:-3,1,input%jspins))
          ENDIF
+         n_mmp = CMPLX(0.0,0.0)
 
 !
 !--->    in a non-collinear calcuation where the off-diagonal part of
@@ -186,8 +187,8 @@
 !-fo
          END DO
 !-lda+U
-      IF ( (atoms%n_u.GT.0).and. (mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,n_mmp)
-      DEALLOCATE (  n_mmp )
+      IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,n_mmp)
+      DEALLOCATE (n_mmp)
 !-lda-U
 !+t3e
       IF (mpi%irank.EQ.0) THEN

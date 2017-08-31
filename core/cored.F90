@@ -224,7 +224,7 @@ CONTAINS
 8000 FORMAT (/,/,10x,'z=',f4.0,5x,'r(1)=',e14.6,5x,'dx=',f9.6,5x,&
          &       'm.t.index=',i4,/,15x,'n',4x,'l',5x,'j',4x,'energy',7x,&
          &       'weight')
-8010 FORMAT (12x,2f5.0,f6.1,f10.4,f10.0)
+8010 FORMAT (12x,2f5.0,f6.1,f10.4,f12.4)
 8020 FORMAT (f20.8,'  electrons lost from core.')
 8030 FORMAT (10x,'atom type',i3,'  (spin',i2,') ',/,10x,&
          &       'kinetic energy=',e20.12,5x,'sum of the eigenvalues=',&

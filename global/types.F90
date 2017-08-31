@@ -139,9 +139,10 @@
 !
       TYPE t_utype
         SEQUENCE
-        REAL u,j
-        INTEGER l
-        LOGICAL :: l_amf
+        REAL u,j         ! the actual U and J parameters
+        INTEGER l        ! the l quantum number to which this U parameter belongs
+        INTEGER atomType ! The atom type to which this U parameter belongs
+        LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
       END TYPE t_utype
 
 !
@@ -249,7 +250,10 @@
        REAL,ALLOCATABLE::pos(:,:)
        !pos of atom (relat)(3,nat)
        REAL,ALLOCATABLE::taual(:,:)
+       !labels
+       CHARACTER(LEN=20), ALLOCATABLE :: label(:)
        !lda_u information(ntype)
+       CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
        TYPE(t_utype),ALLOCATABLE::lda_u(:)
        INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
        INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
@@ -257,6 +261,7 @@
       END TYPE
 
       TYPE t_kpts
+       INTEGER :: specificationType
        !no
        INTEGER :: nkpt
        INTEGER :: ntet
@@ -659,6 +664,7 @@
 
       !symmetry information
       TYPE t_sym
+       INTEGER :: symSpecType
        !Symophic group
        LOGICAL ::symor
        INTEGER ::nsymt
@@ -827,6 +833,11 @@
         logical :: l_lapw_gfleur
         logical :: l_kpointgen
         logical :: l_w90kpointgen
+        logical :: l_finishnocoplot
+        logical :: l_finishgwf
+        logical :: l_skipkov
+        logical :: l_matrixuHu
+        logical :: l_matrixuHu_dmi
         integer :: ikptstart
         integer :: band_min(1:2)
         integer :: band_max(1:2)
@@ -834,6 +845,28 @@
         integer :: gfcut
         integer :: unigrid(6)
         integer :: mhp(3)
+!---> gwf
+        LOGICAL :: l_ms
+        LOGICAL :: l_sgwf
+        LOGICAL :: l_socgwf
+        LOGICAL :: l_gwf
+        LOGICAL :: l_bs_comf
+        LOGICAL :: l_exist
+        LOGICAL :: l_opened
+        LOGICAL :: l_cleverskip
+        LOGICAL :: l_dim(3)
+        REAL    :: scale_param
+        REAL    :: aux_latt_const
+        REAL    :: hdwf_t1
+        REAL    :: hdwf_t2
+        INTEGER :: nparampts
+        CHARACTER(len=20) :: fn_eig
+        CHARACTER(len=20) :: param_file
+        REAL,ALLOCATABLE :: param_vec(:,:)
+        REAL,ALLOCATABLE :: param_alpha(:,:)
+        CHARACTER(LEN=20), ALLOCATABLE :: jobList(:)
+!---> gwf
+
       end type t_wann
 
       END

@@ -8,7 +8,7 @@
       CONTAINS
       SUBROUTINE wann_mmk0_updown_sph(
      >               l_noco,alph,beta,
-     >               llod,noccbd,nlod,natd,ntypd,lmaxd,lmd,
+     >               llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
      >               ntype,neq,nlo,llo,
      >               radial1_ff,radial1_gg,
      >               radial1_fg,radial1_gf,
@@ -26,6 +26,7 @@ c************************************************************
       implicit none
       logical, intent (in)  :: l_noco
       integer, intent (in)  :: llod,nlod,natd,ntypd,lmaxd,lmd
+      integer, intent (in)  :: lmax(:) !(ntypd)
       integer, intent (in)  :: ntype,noccbd
       REAL,    INTENT (IN)  :: alph(ntypd),beta(ntypd)
       integer, intent (in)  :: neq(ntypd)
@@ -72,7 +73,7 @@ c---> performs summations of the overlaps of the wavefunctions
                ccchi(2,2) = conjg( exp(-ci*alph(n)/2)*cos(beta(n)/2))
             endif
             nt2 = nt1 + neq(n) - 1
-            do l = 0,lmaxd
+            do l = 0,lmax(n)
              if(.not.l_noco)then  
                suma = cmplx(0.,0.)
                sumb = cmplx(0.,0.)

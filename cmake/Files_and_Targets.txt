@@ -31,9 +31,11 @@ include(inpgen/CMakeLists.txt)
 include(docs/CMakeLists.txt)
 include(tests/CMakeLists.txt)
 include(mpi/CMakeLists.txt)
+include(eels/CMakeLists.txt)
 
 
-#include(wannier/CMakeLists.txt)
+include(wannier/CMakeLists.txt)
+include(wannier/uhu/CMakeLists.txt)
 
 set(inpgen_F77 
 global/constants.f inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f

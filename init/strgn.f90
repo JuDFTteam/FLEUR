@@ -61,7 +61,7 @@ CONTAINS
     ALLOCATE (gsk3(stars%ng3),INDEX(stars%ng3),index3(stars%ng3),kv3rev(stars%ng3,3))
 
     !
-    WRITE (*,*) ' stars are always ordered '
+    !WRITE (*,*) ' stars are always ordered '
 
     l_xcExtended = xcpot%igrd.NE.0
     !--->    read in information if exists
@@ -75,6 +75,7 @@ CONTAINS
     stars%ng2 = 0
     kv(3) = 0
 
+    stars%kv2 = 0
     DO  k1 = stars%mx1,-stars%mx1,-1
        kv(1) = k1
        k2_loop:DO  k2 = stars%mx2,-stars%mx2,-1
@@ -183,6 +184,7 @@ CONTAINS
     !     three dimensional stars
     !
     stars%ng3 = 0
+    stars%ig = 0
     DO k3 = -stars%mx3,stars%mx3
        DO k2 = -stars%mx2,stars%mx2
           DO k1 = -stars%mx1,stars%mx1
@@ -210,6 +212,9 @@ CONTAINS
     !     zrfs,invs: z-reflection, inversion.
     IF (sym%zrfs .OR. sym%invs) m0 = 0
 
+    stars%ig2 = 0
+    stars%sk3 = 0.0
+    stars%kv3 = 0
     DO  k2 = 1,stars%ng2
        DO  k3 = m0,stars%mx3
           s = SQRT(stars%sk2(k2)**2+ (k3*cell%bmat(3,3))**2)
@@ -302,6 +307,8 @@ CONTAINS
     kidx2=0
     !-gu
     stars%rgphs(:,:,:) = cmplx(0.0,0.0)
+    stars%ft2_gfx = 0.0
+    stars%ft2_gfy = 0.0
     DO  k = 1,stars%ng3
 
        CALL spgrot(&
@@ -432,10 +439,9 @@ CONTAINS
     !     count number of members for each star
     !     nstr2 ... members of 2-dim stars
     !
-    DO k = 1,stars%ng3
-       stars%nstr2(stars%ig2(k)) = 0
-       stars%nstr(k) = 0
-    ENDDO
+
+    stars%nstr2(:) = 0
+    stars%nstr(:) = 0
 
     DO k3 = -stars%mx3,stars%mx3
        DO k2 = -mxx2,mxx2
@@ -732,6 +738,8 @@ CONTAINS
     ! sum over phases
     !
     stars%rgphs(:,:,:) = cmplx(0.0,0.0)
+    stars%igfft = 0
+    stars%pgfft = cmplx(0.0,0.0)
     starloop: DO k = 1,stars%ng3
 
        CALL spgrot(&

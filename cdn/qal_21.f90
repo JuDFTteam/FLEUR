@@ -7,7 +7,6 @@ MODULE m_qal21
 CONTAINS
   SUBROUTINE qal_21(atoms, input,noccbd,we,ccof, noco,acof,bcof,mt21,lo21,uloulopn21, qal,qmat)
 
-    USE m_types, ONLY : t_mt21, t_lo21
     USE m_rotdenmat
     USE m_types
     IMPLICIT NONE

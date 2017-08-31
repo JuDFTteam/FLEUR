@@ -32,7 +32,9 @@
       !<--Locals                                                        
       INTEGER(HID_t)::testid 
       INTEGER       ::hdferr 
-      !>                                                                
+      !>
+      testid = 0
+      hdferr = 0
       CALL h5eclear_f(hdferr) 
                                     !No automatic error checking!       
       CALL h5eset_auto_f(0, hdferr) 
@@ -62,7 +64,9 @@
       !<--Locals                                                        
       INTEGER(HID_t)::testid 
       INTEGER       ::hdferr 
-      !>                                                                
+      !>
+      testid = 0
+      hdferr = 0
       CALL h5eclear_f(hdferr) 
                                     !No automatic error checking!       
       CALL h5eset_auto_f(0, hdferr) 
@@ -91,7 +95,9 @@
       !<--Locals                                                        
       INTEGER(HID_t)::testid 
       INTEGER       ::hdferr 
-      !>                                                                
+      !>
+      testid = 0
+      hdferr = 0
       CALL h5eclear_f(hdferr) 
                                     !No automatic error checking!       
       CALL h5eset_auto_f(0, hdferr) 

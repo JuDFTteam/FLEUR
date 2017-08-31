@@ -4,7 +4,6 @@ jt::copyfile("files/nocoinp",$workdir);
 jt::copyfile("files/inp",$workdir);
 jt::copyfile("files/kpts",$workdir);
 jt::copyfile("files/sym.out",$workdir);
-jt::copyfile("files/JUDFT_WARN_ONLY",$workdir);
 
 jt::testrun($executable,$workdir);
 

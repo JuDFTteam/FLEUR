@@ -7,20 +7,22 @@
       module m_wann_postproc
       contains 
       subroutine wann_postproc(
+     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          lapw,oneD,noco,cell,eig_id,l_real,
      >          mpi_comm,wann,l_p0,film,jspins,n2d,
      >          natd,pos,amat,bmat,ntype,neq,zatom,
      >          omtil,l_soc,l_noco,neigd,fullnkpts,
      >          odi,l_proj,
      >          l_dulo,l_ss,lmaxd,ntypd,nop,nvd,jspd,nbasfcn,
-     >          llod,nlod,nwdd,nlo,llo,lapw_l,invtab,mrot,ngopr,
+     >          llod,nlod,nlo,llo,lapw_l,invtab,mrot,ngopr,
      >          lmax,invsat,invsatnr,nkpt,taual,rmt,bbmat,alph,
      >          beta,qss,sk2,phi2,ods,
      >          irank,isize,n3d,nmzxyd,nmzd,jmtd,nlhd,nq3,nvac,
      >          invs,invs2,nlh,jri,ntypsy,ntypsd,nkptd,
      >          dx,rmsh,
      >          e1s,e2s,ulo_der,ustep,k1d,k2d,k3d,nop2,
-     >          ig,rgphs,slice,kk,nnne,irecl,nv2d,nmzxy,nmz,nq2,
-     >          delz,area,z1,volint,ig2,tau,symor,ef)
+     >          ig,rgphs,slice,kk,nnne,nv2d,nmzxy,nmz,nq2,
+     >          delz,area,z1,volint,ig2,tau,symor,ef,l_sgwf,fullnqpts)
 c     <          fermi_weights)
 
 c***********************************************
@@ -42,13 +44,14 @@ c***********************************************
       use m_wann_nabla_pauli_rs
       use m_wann_socmat_rs
       use m_wann_perpmag_rs
-      use m_od_types, only : od_inp, od_sym
+      use m_types
       use m_wann_wigner_seitz
       use m_wann_get_mp
       use m_wann_get_kpts
       use m_wann_fft4
       use m_wann_fft5
       use m_wann_rmat
+      use m_wann_nocoplot
 #ifdef CPP_TOPO
       use m_wann_torque_rs
       use m_wann_offdiposop_rs
@@ -62,10 +65,24 @@ c***********************************************
       use m_wannier_lapw_gfleur
 #endif
       implicit none
+
+      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_cell),INTENT(IN)      :: cell
+
       type(t_wann), intent(in) :: wann
       logical,      intent(in) :: l_p0
-      logical,      intent(in) :: film
-      integer,      intent(in) :: jspins,n2d,mpi_comm
+      logical,      intent(in) :: film, l_real
+      integer,      intent(in) :: jspins,n2d,mpi_comm, eig_id
       integer,      intent(in) :: natd
       real,         intent(in) :: pos(3,natd)
       real,         intent(in) :: amat(3,3),bmat(3,3)
@@ -75,20 +92,21 @@ c***********************************************
       real,         intent(in) :: omtil
       logical,      intent(in) :: l_soc,l_noco
       integer,      intent(in) :: neigd
-      integer,      intent(in) :: fullnkpts
+      integer,      intent(in) :: fullnkpts,fullnqpts
       type(od_inp), intent(in) :: odi
       logical,      intent(in) :: l_proj
       integer, intent (in)     :: lmaxd,ntypd,nop,nvd,jspd
-      integer, intent (in)     :: nbasfcn,llod,nlod,nwdd
+      integer, intent (in)     :: nbasfcn,llod,nlod
       integer, intent (in)     :: nlo(ntypd),llo(nlod,ntypd)
       integer, intent (in)     :: lapw_l(ntypd)
       logical, intent (in)     :: l_dulo(nlod,ntypd),l_ss
       integer, intent (in)     :: invtab(nop),mrot(3,3,nop),ngopr(natd)
       integer, intent (in)     :: lmax(ntypd)
-      integer, intent (in)     :: invsat(natd),invsatnr(natd),nkpt(nwdd)
+      integer, intent (in)     :: invsat(natd),invsatnr(natd),nkpt
       real,    intent (in)     :: taual(3,natd),rmt(ntypd)
       real,    intent (in)     :: bbmat(3,3)
-      real, intent (inout)     :: alph(ntypd),beta(ntypd),qss(3)
+      real,    intent (in)     :: alph(ntypd),beta(ntypd)
+      real,    intent (in)     :: qss(3,fullnqpts)
       real,    intent (in)     :: sk2(n2d),phi2(n2d)
       type (od_sym),intent(in) :: ods
       integer, intent (in)     :: irank,isize,n3d
@@ -103,18 +121,20 @@ c***********************************************
       complex, intent (in) :: ustep(n3d)
       integer, intent (in) :: k1d,k2d,k3d,nop2
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       logical, intent (in) :: slice
-      integer, intent (in) :: kk,nnne,irecl
+      integer, intent (in) :: kk,nnne
       integer, intent (in) :: nv2d,nmzxy,nmz,nq2
       real,    intent (in) :: delz,area,z1,volint
       integer, intent (in) :: ig2(n3d)
       real,    intent (in) :: tau(3,nop)
       logical, intent (in) :: symor
       real,    intent (in) :: ef
+      logical, intent (in) :: l_sgwf
 c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 
-      integer :: i,kpts,ikpt
+      character(len=12) :: fending
+      integer :: i,kpts,ikpt,nkqpts,iqpt
       real(4) :: delta3,time_lapw_expand,delta2,time_lapw_plot
       logical :: l_need_fft,l_file
       integer :: hopmin_z,hopmax_z
@@ -140,7 +160,7 @@ c***************************************************
      <         kpts,kpoints)
       if (kpts /= fullnkpts)
      +  CALL juDFT_error ('mismatch in number of kpoints',
-     +                  calledby="wann_read_inp")
+     +                  calledby="wann_postproc")
 
       call wann_get_kpts(
      >         wann%l_bzsym,film,odi%d1,.true.,
@@ -153,9 +173,16 @@ c*********************************************************
      <         num)
 
       if(wann%l_wannierize.and.l_p0)then
+#ifndef CPP_WANN
+         WRITE(*,*) 'At this point a wannierization has to be performed'
+         WRITE(*,*) 'but the Wannier90 library is not linked!'
+         CALL juDFT_error ('Wannierization without Wannier90 library',
+     +                     calledby="wann_postproc")
+#else
          call wann_wannierize(
      >            film,wann%l_bzsym,jspins,
      >            natd,pos,amat,bmat,ntype,neq,zatom)
+#endif
       endif
 
       if(wann%l_dipole2.and.l_p0)then
@@ -183,7 +210,8 @@ c*********************************************************
       if(wann%l_byindex)  i=1
 
       if(wann%l_plotw90)then
-         CALL juDFT_error("not in this version",calledby ="wann_postproc")
+         CALL juDFT_error("not in this version",
+     +                    calledby ="wann_postproc")
 
 c         call wann_plotw90(i,wann%band_min,wann%band_max,numbands,nwfs,
 c     >   l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -235,7 +263,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
             rvecind=rvecind+1
             if (rvecind > rvecnum)
      +        CALL juDFT_error ('mismatch in number of kpoints',
-     +                         calledby="wann_read_inp")
+     +                         calledby="wann_postproc")
 
             rvec(1,rvecind)=r1
             rvec(2,rvecind)=r2
@@ -316,15 +344,17 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,.false.,wann%wan90version)
       endif
 
-      if(wann%l_anglmomrs.and.l_p0)then
+
+       if(wann%l_anglmomrs.and.l_p0)then
         call wann_fft4(
-     >       'WF1.anglmom','anglmomrs.1',.false.,
+     >       'WF1.anglmom',
+     >       'anglmomrs.1',.false.,
      >       rvecnum,rvec,kpoints,
      >       jspins,fullnkpts,wann%l_bzsym,film,odi%d1,
      >       l_soc,wann%band_min,wann%band_max,neigd,
      >       .false.,wann%wan90version)
-      endif
-
+       endif
+ 
 #ifdef CPP_TOPO
       if(wann%l_offdiposoprs.and.l_p0)then
          call wann_offdiposop_rs(
@@ -414,17 +444,19 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
 
       if(wann%l_plot_umdat)then
          call wann_plot_um_dat(
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >      lapw,oneD,noco,cell,eig_id,l_real,
      >      mpi_comm,i,wann%band_min,wann%band_max,l_soc,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
-     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl,
+     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,
      >      wann%wan90version)
       endif
 
@@ -432,18 +464,19 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       call cpu_time(delta2)
       if(wann%l_lapw.and.l_p0)then
          call wannier_to_lapw(
-     >      mpi_comm,l_soc,
-     >      wann%unigrid,i,wann%band_min,wann%band_max,
+     >      mpi_comm,eig_id,l_real,
+     >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
+     >      l_soc,wann%unigrid,i,wann%band_min,wann%band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
-     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl,
+     >      volint,symor,pos,ef,wann%l_bzsym,wann%l_proj_plot,
      >      wann%wan90version)
       endif
 
@@ -455,7 +488,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -474,7 +507,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss(:,1),sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -507,6 +540,19 @@ c     >     nlod,llod,lmd,omtil,nlo,llo)
 
       write(6,*)"time_lapw_expand=",time_lapw_expand
       write(6,*)"time_lapw_plot=",time_lapw_plot
+
+      if(wann%l_finishnocoplot.and.l_p0) then
+c         write(*,*)'doing the UNK mixing'
+c         write(*,*)'alph',alph
+c         write(*,*)'beta',beta
+c         nkqpts=fullnkpts
+c         if(l_sgwf) nkqpts=fullnkpts*fullnqpts 
+         call wann_nocoplot(atoms,slice,nnne,!nslibd
+     >                      amat,bmat,fullnkpts,odi,film,
+     >                      natd,ntypd,jmtd,ntype,neq,pos,
+     >                      jri,rmsh,alph,beta,fullnqpts,qss,
+     >                      z1,zatom)
+      endif
 
       end subroutine wann_postproc
       end module m_wann_postproc

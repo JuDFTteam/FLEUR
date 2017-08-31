@@ -48,7 +48,7 @@ CONTAINS
     oneD%odd%d1=.TRUE.
     l_kpts=.TRUE.
 
-    WRITE (6,*) 'Your parameters: '
+    IF (mpi%irank.EQ.0) WRITE (6,*) 'Your parameters: '
 
 
     OPEN (1,file='fl7para',form='formatted',status='old',err=200) ! La
