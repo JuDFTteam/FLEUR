@@ -273,7 +273,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 
      ! Generate missing general parameters
 
-     minNeigd = NINT(0.75*input%zelec) + 1
+     minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
      IF (dimension%neigd.LT.minNeigd) THEN
