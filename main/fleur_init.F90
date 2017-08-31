@@ -570,12 +570,12 @@
           wann%param_file='qpts'
           wann%l_dim=.false.
           IF (mpi%irank.EQ.0) THEN
-
+#ifdef CPP_WANN             
              INQUIRE(FILE='plotbscomf',EXIST=wann%l_bs_comf)
              WRITE(*,*)'l_bs_comf=',wann%l_bs_comf
-
              WRITE(*,*) 'Logical variables for wannier functions to be read in!!'
-             wann%l_gwf = wann%l_ms.or.wann%l_sgwf.or.wann%l_socgwf
+#endif
+             wann%l_gwf = wann%l_ms.OR.wann%l_sgwf.OR.wann%l_socgwf
 
              if(wann%l_gwf) then
                 WRITE(*,*)'running HDWF-extension of FLEUR code'
