@@ -232,7 +232,7 @@
        INTEGER,ALLOCATABLE ::nlhtyp(:)
        !atom mapped to by inversion (nat
        INTEGER,ALLOCATABLE ::invsat(:)
-       !Claculate forces for this atom?
+       !Calculate forces for this atom?
        LOGICAL,ALLOCATABLE :: l_geo(:)
        !MT-Radius (ntype)
        REAL,ALLOCATABLE::rmt(:)
@@ -252,6 +252,12 @@
        REAL,ALLOCATABLE::taual(:,:)
        !labels
        CHARACTER(LEN=20), ALLOCATABLE :: label(:)
+       !name and other data of explicitely provided xc functional
+       CHARACTER(len=4), ALLOCATABLE :: namex(:)
+       INTEGER,          ALLOCATABLE :: icorr(:)
+       INTEGER,          ALLOCATABLE :: igrd(:)
+       INTEGER,          ALLOCATABLE :: krla(:)
+       LOGICAL,          ALLOCATABLE :: relcor(:)
        !lda_u information(ntype)
        CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
        TYPE(t_utype),ALLOCATABLE::lda_u(:)

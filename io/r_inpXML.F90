@@ -141,6 +141,10 @@ SUBROUTINE r_inpXML(&
   CHARACTER(LEN=11)  :: latticeType
   CHARACTER(LEN=50)  :: versionString
 
+  CHARACTER(LEN=4)   :: namexSpecies
+  LOGICAL            :: relcorSpecies
+  INTEGER            :: icorrSpecies, igrdSpecies, krlaSpecies
+
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
   INTEGER, ALLOCATABLE :: speciesNLO(:)
@@ -224,6 +228,14 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%pos(3,atoms%nat))
   ALLOCATE(atoms%rmt(atoms%ntype))
   ALLOCATE(atoms%numStatesProvided(atoms%ntype))
+  ALLOCATE(atoms%namex(atoms%ntype))
+  ALLOCATE(atoms%icorr(atoms%ntype))
+  ALLOCATE(atoms%igrd(atoms%ntype))
+  ALLOCATE(atoms%krla(atoms%ntype))
+  ALLOCATE(atoms%relcor(atoms%ntype))
+
+  atoms%namex = ''
+  atoms%icorr = -99
 
   ALLOCATE(atoms%ncv(atoms%ntype)) ! For what is this?
   ALLOCATE(atoms%ngopr(atoms%nat)) ! For what is this?
@@ -1124,64 +1136,13 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  xcpot%icorr = -99
-  !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
-  IF (namex.EQ.'exx ') xcpot%icorr = icorr_exx
-  IF (namex.EQ.'hf  ') xcpot%icorr = icorr_hf
-  IF (namex.EQ.'l91 ') xcpot%icorr = -1
-  IF (namex.EQ.'x-a ') xcpot%icorr =  0
-  IF (namex.EQ.'wign') xcpot%icorr =  1
-  IF (namex.EQ.'mjw')  xcpot%icorr =  2
-  IF (namex.EQ.'hl')   xcpot%icorr =  3
-  IF (namex.EQ.'bh')   xcpot%icorr =  3
-  IF (namex.EQ.'vwn')  xcpot%icorr =  4
-  IF (namex.EQ.'pz')   xcpot%icorr =  5
-  IF (namex.EQ.'pw91') xcpot%icorr =  6
-  !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
-  !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
-  !  Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
-  IF (namex.eq.'pbe')  xcpot%icorr =  7
-  IF (namex.eq.'rpbe') xcpot%icorr =  8
-  IF (namex.eq.'Rpbe') xcpot%icorr =  9
-  IF (namex.eq.'wc')   xcpot%icorr = 10
-  !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
-  IF (namex.eq.'PBEs') xcpot%icorr = 11
-  !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
-  IF (namex.eq.'pbe0') xcpot%icorr = icorr_pbe0
-  !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
-  IF (namex.eq.'hse ') xcpot%icorr = icorr_hse
-  IF (namex.eq.'vhse') xcpot%icorr = icorr_vhse
-  ! local part of HSE
-  IF (namex.eq.'lhse') xcpot%icorr = icorr_hseloc
+  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,input%krla)
 
-  IF (xcpot%icorr == -99) THEN
-     WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
-     WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,'//&
-          &                'wc,PBEs,pbe0,hf,hse,lhse'
-     CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
-  END IF
-  xcpot%igrd = 0
   obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
-     xcpot%igrd = 1
-     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
-  input%krla = 0
-  IF (l_relcor) THEN 
-     input%krla = 1    
-     IF (xcpot%igrd.EQ.1) THEN
-        WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
-        WRITE(6,*) 'only without relativistic corrections !'
-        CALL juDFT_error("relativistic corrections + GGA not implemented",&
-             &                         calledby ="r_inpXML")
-     END IF
-  END IF
-
-  IF (xcpot%icorr.eq.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
-  IF (xcpot%icorr.eq.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
-  IF ((xcpot%icorr.eq.2).and.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
 
   IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
      obsolete%ndvgrd = max(obsolete%ndvgrd,3)
@@ -1364,6 +1325,21 @@ SUBROUTINE r_inpXML(&
      speciesEParams(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@d'))
      speciesEParams(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@f'))
 
+     ! Explicitely provided xc functional
+
+     WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/xcFunctional'
+     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+     namexSpecies = ''
+     relcorSpecies = .FALSE.
+     icorrSpecies = -99
+     igrdSpecies = 0
+     krlaSpecies = 0
+     IF (numberNodes.EQ.1) THEN
+        namexSpecies = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
+        relcorSpecies = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@relativisticCorrections'))
+        CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,igrdSpecies,krlaSpecies)
+     END IF
+
      ! Explicitely provided core configurations
 
      coreConfigPresent = .FALSE.
@@ -1545,6 +1521,12 @@ SUBROUTINE r_inpXML(&
                  enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)
               END DO
            END DO
+           ! Explicit xc functional
+           atoms%namex(iType) = namexSpecies
+           atoms%relcor(iType) = relcorSpecies
+           atoms%icorr(iType) = icorrSpecies
+           atoms%igrd(iType) = igrdSpecies
+           atoms%krla(iType) = krlaSpecies
         END IF
      END DO
      DEALLOCATE(loOrderList)
@@ -1914,6 +1896,76 @@ SUBROUTINE r_inpXML(&
   DEALLOCATE(speciesNLO)
 
 END SUBROUTINE r_inpXML
+
+SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
+
+   USE m_juDFT
+   USE m_icorrkeys
+
+   IMPLICIT NONE
+
+   CHARACTER(LEN=4),     INTENT(IN)  :: namex
+   LOGICAL,              INTENT(IN)  :: relcor
+   INTEGER,              INTENT(OUT) :: icorr
+   INTEGER,              INTENT(OUT) :: igrd
+   INTEGER,              INTENT(OUT) :: krla
+
+   icorr = -99
+   !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
+   IF (namex.EQ.'exx ') icorr = icorr_exx
+   IF (namex.EQ.'hf  ') icorr = icorr_hf
+   IF (namex.EQ.'l91 ') icorr = -1
+   IF (namex.EQ.'x-a ') icorr =  0
+   IF (namex.EQ.'wign') icorr =  1
+   IF (namex.EQ.'mjw')  icorr =  2
+   IF (namex.EQ.'hl')   icorr =  3
+   IF (namex.EQ.'bh')   icorr =  3
+   IF (namex.EQ.'vwn')  icorr =  4
+   IF (namex.EQ.'pz')   icorr =  5
+   IF (namex.EQ.'pw91') icorr =  6
+   !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
+   !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
+   !  Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
+   IF (namex.eq.'pbe')  icorr =  7
+   IF (namex.eq.'rpbe') icorr =  8
+   IF (namex.eq.'Rpbe') icorr =  9
+   IF (namex.eq.'wc')   icorr = 10
+   !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
+   IF (namex.eq.'PBEs') icorr = 11
+   !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
+   IF (namex.eq.'pbe0') icorr = icorr_pbe0
+   !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
+   IF (namex.eq.'hse ') icorr = icorr_hse
+   IF (namex.eq.'vhse') icorr = icorr_vhse
+   ! local part of HSE
+   IF (namex.eq.'lhse') icorr = icorr_hseloc
+
+   IF (icorr == -99) THEN
+      WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
+      WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
+      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
+   END IF
+
+   igrd = 0
+   IF (icorr.GE.6) THEN
+      igrd = 1
+   END IF
+
+   krla = 0
+   IF (relcor) THEN 
+      krla = 1    
+      IF (igrd.EQ.1) THEN
+         WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
+         WRITE(6,*) 'only without relativistic corrections !'
+         CALL juDFT_error("relativistic corrections + GGA not implemented", calledby ="r_inpXML")
+      END IF
+   END IF
+
+   IF (icorr.eq.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
+   IF (icorr.eq.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
+   IF ((icorr.eq.2).and.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
+
+END SUBROUTINE getXCParameters
 
 SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
 

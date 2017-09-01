@@ -289,7 +289,15 @@
                   &           hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype) )
              ALLOCATE ( hybrid%ddist(DIMENSION%jspd) )
              hybrid%ddist     = 1.
-             !
+
+             ! Explicit atom-dependent xc functional
+             ALLOCATE(atoms%namex(atoms%ntype))
+             ALLOCATE(atoms%relcor(atoms%ntype))
+             ALLOCATE(atoms%icorr(atoms%ntype))
+             ALLOCATE(atoms%igrd(atoms%ntype))
+             ALLOCATE(atoms%krla(atoms%ntype))
+             atoms%namex = ''
+             atoms%icorr = -99
 
              atoms%numStatesProvided(:) = 0
 

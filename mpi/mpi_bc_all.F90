@@ -267,6 +267,11 @@ CONTAINS
     CALL MPI_BCAST(hybrid%lcutm2,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     !--- HF>
 
+    CALL MPI_BCAST(atoms%relcor,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%icorr,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%igrd,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%krla,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+
     IF(input%l_inpXML) THEN
        n = dimension%nstd*atoms%ntype
        CALL MPI_BCAST(atoms%numStatesProvided,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
