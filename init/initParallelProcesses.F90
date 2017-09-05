@@ -203,6 +203,15 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                    oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
       END IF
 
+      ! Explicit atom-dependent xc functional
+      ALLOCATE(atoms%namex(atoms%ntype))
+      ALLOCATE(atoms%relcor(atoms%ntype))
+      ALLOCATE(atoms%icorr(atoms%ntype))
+      ALLOCATE(atoms%igrd(atoms%ntype))
+      ALLOCATE(atoms%krla(atoms%ntype))
+      atoms%namex = ''
+      atoms%icorr = -99
+
       oneD%odd%nq2 = oneD%odd%n2d
       atoms%vr0(:)         = 0.0
       jij%M(:)             = 0.0
