@@ -37,8 +37,10 @@ C     .. Array Arguments ..
       REAL,    INTENT (INOUT) :: we(:) !(nkptd*neigd*jspd)
 C     ..
 C     .. Local Scalars ..
-      REAL dff,expo,sdff,sff
+      REAL dff,expo,sdff,sff,efmin,efmax 
       INTEGER icnt,idim,rec_level
+      LOGICAL efminok,efmaxok
+      
 C     ..
 C     .. Local Arrays ..
       REAL ff(size(e))
@@ -77,20 +79,25 @@ c***********************************************************************
       ENDIF
 c     
 c     --->    NEWTON CYCLE
-c     
+c
+      efminok= .false. 
+      efmaxok= .false. 
       DO icnt = 1,50
          sff = 0.0 
          sdff = 0.0
          DO idim = inkem + 1,nocst
 c     
-c     --->    COMPUTE FERMI-FUNCTION
-c     
-            expo = exp((e(index(idim))-ef)/tkb)
-            ff(idim) = 1.0/ (expo+1.0)
-c     
-c     --->    COMPUTE THE DERIVATIVE
-c     
-            dff = ff(idim)*ff(idim)*expo/tkb
+c --->    COMPUTE FERMI-FUNCTION ff AND THE DERIVATIVE dff
+c
+            expo= -ABS(e(index(idim))-ef)/tkb 
+            expo= EXP(expo)
+            IF (e(index(idim))<ef) THEN
+               ff(idim) = 1./ (expo+1.)
+            ELSE
+               ff(idim)= expo/ (expo+1.)
+            ENDIF 
+            dff= (1.+expo)**2 
+            dff= expo/(dff*tkb)
 c     
 c     --->    MULTIPLY WITH THE WEIGHT
 c     
@@ -134,8 +141,20 @@ c
      X             w_near_ef,ef,we,rec_level)
             RETURN
          ENDIF
-
+         IF (sff > 0.) THEN
+           efmax= ef 
+           efmaxok= .true.  
+         ELSE 
+           efmin= ef 
+           efminok= .true. 
+         ENDIF
          ef = ef - sff/sdff
+         ! if the Newton method is not stable, nested intervals are used 
+         IF ( efminok .and. efmaxok ) THEN 
+           IF ( (ef<efmin) .or. (ef>efmax) ) THEN 
+             ef= (efmin+efmax)/2.
+           ENDIF 
+         ENDIF 
       END DO
 c     
 c---  > NOT CONVERGED AFTER 50 ITERATIONS
