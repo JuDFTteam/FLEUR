@@ -648,7 +648,7 @@
           hybrid%tolerance1=0.0001
           hybrid%ewaldlambda=3
           hybrid%lexp=16
-          hybrid%bands1=64
+          hybrid%bands1=80
 
           hybrid%lcutm1=4
           hybrid%select1(1,:)=4

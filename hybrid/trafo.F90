@@ -649,7 +649,7 @@
       rkpt    = modulo1(rkpt,kpts%nkpt3)
       g       = nint(rkpthlp-rkpt)
 
-!#ifdef CPP_DEBUG
+#ifdef CPP_DEBUG
        !test
       nrkpt=0
       DO i=1,kpts%nkptf
@@ -666,7 +666,7 @@
 
          STOP 'bra_trafo2: rotation failed'
       ENDIF
-!#endif
+#endif
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       i  = 0

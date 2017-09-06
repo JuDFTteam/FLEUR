@@ -581,10 +581,6 @@
                 CALL timestop("Iteration")
                 !+t3e
              ENDIF ! mpi%irank.EQ.0
-             ! hybrid functionals - ddist is needed on all processes
-#        ifdef CPP_MPI
-             CALL MPI_BCAST(hybrid%ddist,dimension%jspd,MPI_REAL8,0,mpi%mpi_comm,ierr)
-#        endif
 
              !--- J<
           ELSE
