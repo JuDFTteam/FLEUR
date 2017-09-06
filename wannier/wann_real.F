@@ -12,23 +12,25 @@ c                          Y.Mokrousov 16.8.6
 c     ********************************************************
       CONTAINS
       SUBROUTINE wann_real(
-     >                  p,n,na,iv,iflag,bkpt,
+     >                  p,n,na,iv,iflag,bkpt,iband,
      >                  n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >                  natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                  nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                  lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >                  omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
-     >                  ff,gg,flo,acof,bcof,ccof,z,
+     >                  ff,gg,flo,acof,bcof,ccof,zMat,
      >                  nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <                  xdnout)
-c
-      USE m_types, ONLY : od_inp, od_sym
+
+      USE m_types
       USE m_ylm
       USE m_constants
       IMPLICIT NONE
-c
+
+      TYPE(t_zMat),INTENT(IN)        :: zMat
+
 C     .. Scalar Arguments ..
-      INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,llod,nlod
+      INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,llod,nlod,iband
       INTEGER, INTENT (IN) :: lmaxd,jmtd,ntypd,natd,nmzd
       INTEGER, INTENT (IN) :: iflag,n,na,iv,lmd,nv,nvd,nbasfcn
       INTEGER, INTENT (IN) :: nq3,nvac,nmz,nmzxy,nq2,nop,nop2
@@ -55,11 +57,7 @@ C     .. Array Arguments ..
       REAL,    INTENT (IN) :: gg(ntypd,jmtd,2,0:lmaxd)
       REAL,    INTENT (IN) :: flo(ntypd,jmtd,2,nlod)
       REAL,    INTENT (INOUT) :: p(3)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (IN) :: z(nbasfcn)
-#else
-      REAL, INTENT (IN) :: z(nbasfcn)
-#endif
+
 C     ..
 C     .. Local Scalars ..
       REAL delta,sx,xx1,xx2,rrr,phi,const,arg,tpi,arg1
@@ -72,9 +70,6 @@ C     .. Local Arrays ..
       REAL rcc(3),x(3),rcc2(3)
       REAL bqpt(3)
 
-C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC abs,real,sqrt,cos,sin,conjg
 C     ..
       ci = cmplx(0.,1.)
       tpi   = 2 * pimach()
@@ -107,21 +102,37 @@ c     ---> interstitial part
       rcc=matmul(bmat,p)/tpi_const
       xdnout = cmplx(0.,0.)
 c     write (6,*) 'nv,nvd=',nv,nvd
-      DO 10 k = 1,nv
-c        write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
-c        write (6,*) 'z(k)=', z(k)
-         arg = tpi*((k1(k))*rcc(1)+ 
-     +              (k2(k))*rcc(2)+ 
-     +              (k3(k))*rcc(3) )
-         xdnout = xdnout + z(k+addnoco)*cmplx(cos(arg),sin(arg))*const
-       IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
-     &  .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
-c        write (6,*) 'p(i)=',p(1:2)
-c        write (6,*) 'G=',k1(k),k2(k),k3(k)
-c        write (6,*) 'z(k)=',z(k)
-c        write (6,*) 'val=',z(k)*cmplx(cos(arg),sin(arg))
-       ENDIF
-   10 CONTINUE
+      IF (zMat%l_real) THEN
+         DO k = 1,nv
+c           write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
+c           write (6,*) 'z(k,iband)=', z(k,iband)
+            arg = tpi * ((k1(k))*rcc(1)+(k2(k))*rcc(2)+(k3(k))*rcc(3))
+            xdnout = xdnout + zMat%z_r(k+addnoco,iband)*
+     +                        cmplx(cos(arg),sin(arg))*const
+            IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
+     &    .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
+c              write (6,*) 'p(i)=',p(1:2)
+c              write (6,*) 'G=',k1(k),k2(k),k3(k)
+c              write (6,*) 'z(k,iband)=',z(k,iband)
+c              write (6,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
+            ENDIF
+         END DO
+      ELSE
+         DO k = 1,nv
+c           write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
+c           write (6,*) 'z(k,iband)=', z(k,iband)
+            arg = tpi * ((k1(k))*rcc(1)+(k2(k))*rcc(2)+(k3(k))*rcc(3))
+            xdnout = xdnout + zMat%z_c(k+addnoco,iband)*
+     +                        cmplx(cos(arg),sin(arg))*const
+            IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
+     &    .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
+c              write (6,*) 'p(i)=',p(1:2)
+c              write (6,*) 'G=',k1(k),k2(k),k3(k)
+c              write (6,*) 'z(k,iband)=',z(k,iband)
+c              write (6,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
+            ENDIF
+         END DO
+      END IF
 c     write (6,*) 'ir:p(i)',p(:)
       RETURN
 c     ---> vacuum part

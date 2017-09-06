@@ -204,7 +204,7 @@ CONTAINS
        ENDIF
     ENDIF
     IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
-    ne = MAX(5,DIMENSION%neigd)
+    ne = DIMENSION%neigd
 
     eig_id=open_eig(&
           mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&

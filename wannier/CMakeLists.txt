@@ -1,7 +1,7 @@
 set(fleur_F77 ${fleur_F77}
-wannier/abcof_small.F
+#wannier/abcof_small.F
 wannier/eulerrot.f
-wannier/w90kpunktgen.f
+#wannier/w90kpunktgen.f
 wannier/wann_1dvacabcof.F
 wannier/wann_2dvacabcof.F
 wannier/wann_abinv.f
@@ -21,7 +21,7 @@ wannier/wann_get_qpts.f
 wannier/wann_gwf_anglmom.f
 wannier/wann_gwf_auxbrav.F
 wannier/wann_gwf_auxovlp.F
-wannier/wann_gwf_commat2.f
+#wannier/wann_gwf_commat2.f
 wannier/wann_gwf_commat.f
 #wannier/wann_gwf_commat_old.f
 wannier/wann_gwf_tools.f
@@ -41,11 +41,11 @@ wannier/wann_mmk0_od_vac.F
 wannier/wann_mmk0_sph.f
 wannier/wann_mmk0_updown_sph.f
 wannier/wann_mmk0_vac.F
-wannier/wann_mmkb_int2.F
+#wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
-wannier/wann_mmkb_od_vac2.F
+#wannier/wann_mmkb_od_vac2.F
 wannier/wann_mmkb_od_vac.F
-wannier/wann_mmkb_sph2.F
+#wannier/wann_mmkb_sph2.F
 wannier/wann_mmkb_sph.F
 wannier/wann_mmkb_vac.F
 wannier/wann_mmnk_symm.f
@@ -54,19 +54,19 @@ wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
 wannier/wann_optional.f
 wannier/wann_orbcomp.f
-wannier/wann_orbmag.F
-wannier/wann_pauli_rs.f
+#wannier/wann_orbmag.F
+wannier/wann_pauli_rs.F
 wannier/wann_perpmag_rs.f
 wannier/wann_plot.F
 wannier/wann_plot_from_lapw.f
 wannier/wann_plot_symm.f
 wannier/wann_plot_um_dat.F
 wannier/wann_plot_vac.F
-wannier/wann_plotw90.F
+#wannier/wann_plotw90.F
 wannier/wann_postproc.F
-wannier/wann_postproc_setup4.f
-wannier/wann_postproc_setup5.f
-wannier/wann_postproc_setup.f
+wannier/wann_postproc_setup4.F
+wannier/wann_postproc_setup5.F
+wannier/wann_postproc_setup.F
 wannier/wann_projgen.F
 wannier/wann_projmethod.F
 wannier/wann_radovlp_integrals.F
@@ -83,8 +83,8 @@ wannier/wann_tlmw.f
 wannier/wann_ujugaunt.F
 wannier/wann_updown.F
 wannier/wann_w90kpointgen.f
-wannier/wann_wan90prep.f
-wannier/wann_wannierize.f
+wannier/wann_wan90prep.F
+wannier/wann_wannierize.F
 wannier/wann_wigner_seitz.f
 wannier/wann_write_amn.F
 wannier/wann_write_hsomtx.F
@@ -94,6 +94,8 @@ wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
 wannier/wann_plot_od_vac.F
+wannier/bs_comfort.F
 )
 set(fleur_F90 ${fleur_F90}
+wannier/init_wannier_defaults.f90
 )

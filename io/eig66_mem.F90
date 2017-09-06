@@ -286,7 +286,7 @@ CONTAINS
              zmat%z_r=RESHAPE(d%eig_vecr(:SIZE(zmat%z_r),nrec),SHAPE(zmat%z_r))
           ENDIF
        ELSE !TYPE is (COMPLEX)
-          IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory")
+          IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby = "eig66_mem")
           zmat%z_c=RESHAPE(d%eig_vecc(:SIZE(zmat%z_c),nrec),SHAPE(zmat%z_c))
        END IF
     ENDIF

@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_wannierize
+#ifdef CPP_WANN
       use m_juDFT
 c****************************************************
 c     Call wannier90 subroutines needed for
@@ -308,5 +309,6 @@ c********read the u_matrix and write it to a formatted file
       enddo !jspin
 
       END SUBROUTINE wann_wannierize
+#endif
       END MODULE m_wann_wannierize
 

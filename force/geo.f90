@@ -85,6 +85,7 @@ CONTAINS
     TYPE(t_kpts)                  :: kpts_temp
     TYPE(t_hybrid)                :: hybrid_temp
     TYPE(t_oneD)                  :: oneD_temp
+    TYPE(t_wann)                  :: wann_temp
     LOGICAL                       :: l_kpts_temp, l_gga_temp
     INTEGER                       :: numSpecies
     INTEGER                       :: div(3)
@@ -233,7 +234,7 @@ CONTAINS
           ALLOCATE(xmlCoreOccs(1,1,1))
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
-                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,noel_temp,&
+                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,wann_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,xmlElectronStates,&
                         xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp,l_gga_temp)
           numSpecies = SIZE(speciesRepAtomType)

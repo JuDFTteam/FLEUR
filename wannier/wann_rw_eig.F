@@ -15,7 +15,7 @@ c      Frank Freimuth, October 2006
 c****************************************************************
       CONTAINS
       SUBROUTINE wann_write_eig(
-     >              eig_id,
+     >              eig_id,l_real,
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              isize,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,fullnkpts,
@@ -31,7 +31,7 @@ c****************************************************************
       integer,intent(in) :: eig_id
       integer,intent(in) :: lmaxd,ntypd,nlod,neigd,nvd,jspd
       integer,intent(in) :: isize,jspin,nbasfcn,nlotot
-      logical,intent(in) :: l_ss,l_noco
+      logical,intent(in) :: l_ss,l_noco,l_real
       integer,intent(in) :: nrec,fullnkpts
 
       logical,intent(in) :: l_byindex,l_bynumber,l_byenergy
@@ -70,7 +70,16 @@ c****************************************************************
 ! END QPOINTS
       real,parameter   :: hartree=27.21138505
 
-      TYPE(t_zmat) :: zmat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_zmat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+
+      zMat%l_real = l_real
+      zMat%nbasfcn = nbasfcn
+      zMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+      ELSE
+         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+      END IF
 
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
 !      WRITE(*,*)'wann_rw_eig: neigd',neigd
@@ -225,7 +234,7 @@ c*****************************************************************
       REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
 
-      TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_zMat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       integer :: n_start,n_end
 

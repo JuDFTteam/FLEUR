@@ -61,7 +61,12 @@ MODULE m_corespec_io
 
     write(*,'(/,a)') trim(smeno)//ssep
 
-    IF(ANY(atoms%nlo(:).NE.0)) CALL juDFT_error("EELS + LOs not available at the moment!" ,calledby ="corespec_io")
+    IF(ANY(atoms%nlo(:).NE.0)) THEN
+       WRITE(*,*) 'PLEASE NOTE:'
+       WRITE(*,*) 'EELS + LOs is only for experienced users.'
+       WRITE(*,*) 'I hope you know what you are doing.'
+!       CALL juDFT_error("EELS + LOs not available at the moment!" ,calledby ="corespec_io")
+    END IF
 
 ! sanity check of the input parameters; if they are not correct, program stops
 ! unit conversion if necessary

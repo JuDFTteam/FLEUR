@@ -9,7 +9,7 @@ c********************************************************
      >    nv2d,nslibd,nmzd,nmz,omtil,vz,
      >    nv,bkpt,z1,odi,ods,
      >    nvd,k1,k2,k3,evac,
-     >    bbmat,delz,bmat,nbasfcn,neigd,z,
+     >    bbmat,delz,bmat,nbasfcn,neigd,zMat,
      >    n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,
      >    phi2,k1d,k2d,k3d,
      <    ac,bc,u,ue,addnoco,l_ss,qss,jspin)
@@ -26,6 +26,7 @@ c********************************************************
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_zMat),INTENT(IN)        :: zMat
 
       integer,intent(in)::nv2d,n2d,n3d
       integer,intent(in)::nslibd
@@ -58,11 +59,7 @@ c********************************************************
       complex,intent(out)::bc(nv2d,-odi%mb:odi%mb,nslibd)
       real,intent(out)::u(nmzd,nv2d,-odi%mb:odi%mb)
       real,intent(out)::ue(nmzd,nv2d,-odi%mb:odi%mb)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (IN) :: z(nbasfcn,neigd)
-#else
-      REAL, INTENT (IN) :: z(nbasfcn,neigd)
-#endif
+
       real wronk,const,wronk_1
       complex av,bv,ic
       real,    allocatable :: dt(:,:),dte(:,:)
@@ -139,10 +136,17 @@ c********************************************************
      *                 cmplx(-dt(l,m)*bess(m) +
      -                 t(l,m)*sk2(irec2)*dbss(m),0.0)/
      /                 ((wronk_1)*sqrt(omtil))
-                  do n = 1,nslibd
-                      ac(l,m,n) = ac(l,m,n) + z(k+addnoco,n)*av
-                      bc(l,m,n) = bc(l,m,n) + z(k+addnoco,n)*bv
-                  end do
+                  IF (zMat%l_real) THEN
+                     do n = 1,nslibd
+                        ac(l,m,n) = ac(l,m,n) + zMat%z_r(k+addnoco,n)*av
+                        bc(l,m,n) = bc(l,m,n) + zMat%z_r(k+addnoco,n)*bv
+                     end do
+                  ELSE
+                     do n = 1,nslibd
+                        ac(l,m,n) = ac(l,m,n) + zMat%z_c(k+addnoco,n)*av
+                        bc(l,m,n) = bc(l,m,n) + zMat%z_c(k+addnoco,n)*bv
+                     end do
+                  END IF
                end do      ! -mb:mb
             end if
          end do         ! k = 1,nv

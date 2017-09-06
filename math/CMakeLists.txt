@@ -22,6 +22,7 @@ math/sphbes.f
 math/sphpts.f
 math/util.F
 math/ylm4.f
+math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}
 math/differentiate.f90

@@ -99,11 +99,12 @@ CONTAINS
     ENDIF
 
     !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21) &
+
+    !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
     !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,orbl,orblo,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
     !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,qmtl,nd,lh,lp,llp,cs)
+    !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE

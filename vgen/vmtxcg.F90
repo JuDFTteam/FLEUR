@@ -185,7 +185,7 @@ CONTAINS
        !
        !$OMP PARALLEL DEFAULT(none) &
 #ifdef CPP_MPI
-       !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local, rhmn_reduced) &
+       !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local) &
 #endif
        !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg) &
        !$OMP& SHARED(dimension,mpi,sphhar,atoms,rho,xcpot,input,sym,obsolete)&
@@ -434,7 +434,7 @@ CONTAINS
     CALL MPI_ALLREDUCE(vr_local,vxr_local,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
     vr = vr + vxr_local
     CALL MPI_ALLREDUCE(excr_local,excr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
-     CALL MPI_ALLREDUCE(rhmn_local,rhmn_reduced,1,MPI_INTEGER,MPI_MIN,mpi%mpi_comm,ierr)
+     CALL MPI_ALLREDUCE(rhmn_local,rhmn_reduced,1,CPP_MPI_REAL,MPI_MIN,mpi%mpi_comm,ierr)
      IF (rhmn_reduced.LT.rhmn) THEN
              rhmn = rhmn_reduced
              ichsmrg = 1

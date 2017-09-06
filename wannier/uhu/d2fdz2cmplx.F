@@ -3,10 +3,9 @@
 
       SUBROUTINE d2fdz2cmplx(jmtd,jri,rmsh,dx,f,fac,d2f)
 
-      IMPLICIT NONE
+      USE m_difcub
 
-      REAL difcub
-      EXTERNAL difcub
+      IMPLICIT NONE
       
       COMPLEX, INTENT(INOUT) :: d2f(jmtd)
       COMPLEX, INTENT(IN)    :: fac(jmtd)

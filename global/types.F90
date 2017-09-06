@@ -142,12 +142,11 @@ MODULE m_types
   !
   TYPE t_utype
      SEQUENCE
-     REAL u,j
-     INTEGER l
-     INTEGER atomType
-     LOGICAL :: l_amf
+     REAL u,j         ! the actual U and J parameters
+     INTEGER l        ! the l quantum number to which this U parameter belongs
+     INTEGER atomType ! The atom type to which this U parameter belongs
+     LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
   END TYPE t_utype
-
   !
   ! Type for the HF total energy
   !
@@ -235,7 +234,7 @@ MODULE m_types
      INTEGER,ALLOCATABLE ::nlhtyp(:)
      !atom mapped to by inversion (nat
      INTEGER,ALLOCATABLE ::invsat(:)
-     !Claculate forces for this atom?
+     !Calaculate forces for this atom?
      LOGICAL,ALLOCATABLE :: l_geo(:)
      !MT-Radius (ntype)
      REAL,ALLOCATABLE::rmt(:)
@@ -252,7 +251,16 @@ MODULE m_types
      !pos of atom (absol) (3,nat)
      REAL,ALLOCATABLE::pos(:,:)
      !pos of atom (relat)(3,nat)
-     REAL,ALLOCATABLE::taual(:,:)
+     REAL,ALLOCATABLE::taual(:,:)  
+     !labels
+     CHARACTER(LEN=20), ALLOCATABLE :: label(:)
+     CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
+     !name and other data of explicitely provided xc functional
+     CHARACTER(len=4), ALLOCATABLE :: namex(:)
+     INTEGER,          ALLOCATABLE :: icorr(:)
+     INTEGER,          ALLOCATABLE :: igrd(:)
+     INTEGER,          ALLOCATABLE :: krla(:)
+     LOGICAL,          ALLOCATABLE :: relcor(:)
      !lda_u information(ntype)
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
@@ -457,7 +465,7 @@ MODULE m_types
      INTEGER, ALLOCATABLE :: pntgptd(:)                                     !alloc in eigen_HF_setup
      INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)                                !alloc in eigen_HF_setup
      INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
-    END TYPE t_hybdat
+  END TYPE t_hybdat
 
   TYPE t_dimension
      INTEGER :: jspd
@@ -753,7 +761,7 @@ MODULE m_types
      COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
   END TYPE t_hamOvlp
 
- 
+
   !
   ! type for wannier-functions
   !
@@ -853,7 +861,30 @@ MODULE m_types
      INTEGER :: gfcut
      INTEGER :: unigrid(6)
      INTEGER :: mhp(3)
+     !---> gwf
+     LOGICAL :: l_ms
+     LOGICAL :: l_sgwf
+     LOGICAL :: l_socgwf
+     LOGICAL :: l_gwf
+     LOGICAL :: l_bs_comf
+     LOGICAL :: l_exist
+     LOGICAL :: l_opened
+     LOGICAL :: l_cleverskip
+     LOGICAL :: l_dim(3)
+     REAL    :: scale_param
+     REAL    :: aux_latt_const
+     REAL    :: hdwf_t1
+     REAL    :: hdwf_t2
+     INTEGER :: nparampts
+     CHARACTER(len=20) :: fn_eig
+     CHARACTER(len=20) :: param_file
+     REAL,ALLOCATABLE :: param_vec(:,:)
+     REAL,ALLOCATABLE :: param_alpha(:,:)
+     CHARACTER(LEN=20), ALLOCATABLE :: jobList(:)
+     !---> gwf
+
   END TYPE t_wann
+
 
   TYPE t_potden
      INTEGER             :: iter
@@ -933,5 +964,5 @@ CONTAINS
     ENDIF
   END SUBROUTINE init_potden_simple
 
- 
+
 END MODULE m_types

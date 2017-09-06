@@ -1,0 +1,11 @@
+&csinp
+  csi%verb = 1
+  csi%type = 1
+  csi%edge = 'L'
+  csi%edgeidx = 3
+  csi%lx = 2
+  csi%ek0 = 300
+  csi%emn = -1
+  csi%emx = 15
+  csi%ein = 1.
+/

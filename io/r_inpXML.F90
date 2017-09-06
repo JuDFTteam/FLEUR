@@ -15,7 +15,7 @@ MODULE m_rinpXML
 CONTAINS
 SUBROUTINE r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,&
+                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts,l_gga)
@@ -34,7 +34,6 @@ SUBROUTINE r_inpXML(&
   USE m_icorrkeys
   USE m_constants
   USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
-
   USE m_inpeig
   USE m_sort
   USE m_enpara,    ONLY : r_enpara
@@ -58,6 +57,7 @@ SUBROUTINE r_inpXML(&
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
+  TYPE(t_wann)   ,INTENT(INOUT)  :: wann
   LOGICAL, INTENT(OUT)           :: l_kpts, l_gga
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
@@ -98,7 +98,7 @@ SUBROUTINE r_inpXML(&
   INTEGER               :: idum
   CHARACTER (len=1)     ::  check
 
-  CHARACTER(len=20) :: tempNumberString, speciesName
+  CHARACTER(len=20) :: tempNumberString
   CHARACTER(len=150) :: format
   CHARACTER(len=20) :: mixingScheme
   CHARACTER(len=10) :: loType
@@ -113,7 +113,7 @@ SUBROUTINE r_inpXML(&
   REAL             :: speciesXMLCoreOccs(2,29)
   LOGICAL          :: speciesXMLPrintCoreStates(29)
 
-  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum
+  INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum, numTokens
   INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
@@ -140,14 +140,18 @@ SUBROUTINE r_inpXML(&
   CHARACTER(LEN=11)  :: latticeType
   CHARACTER(LEN=50)  :: versionString
 
+  CHARACTER(LEN=4)   :: namexSpecies
+  LOGICAL            :: relcorSpecies
+  INTEGER            :: icorrSpecies, igrdSpecies, krlaSpecies
+
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
-  CHARACTER(LEN=50), ALLOCATABLE :: speciesNames(:)
   INTEGER, ALLOCATABLE :: speciesNLO(:)
   INTEGER, ALLOCATABLE :: multtab(:,:), invOps(:), optype(:)
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: speciesLOEDeriv(:)
   REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
+  LOGICAL, ALLOCATABLE :: wannAtomList(:)
 
 ! Variables for MT radius testing:
 
@@ -219,9 +223,18 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%relax(3,atoms%ntype))
   ALLOCATE(atoms%neq(atoms%ntype))
   ALLOCATE(atoms%taual(3,atoms%nat))
+  ALLOCATE(atoms%label(atoms%nat))
   ALLOCATE(atoms%pos(3,atoms%nat))
   ALLOCATE(atoms%rmt(atoms%ntype))
   ALLOCATE(atoms%numStatesProvided(atoms%ntype))
+  ALLOCATE(atoms%namex(atoms%ntype))
+  ALLOCATE(atoms%icorr(atoms%ntype))
+  ALLOCATE(atoms%igrd(atoms%ntype))
+  ALLOCATE(atoms%krla(atoms%ntype))
+  ALLOCATE(atoms%relcor(atoms%ntype))
+
+  atoms%namex = ''
+  atoms%icorr = -99
 
   ALLOCATE(atoms%ncv(atoms%ntype)) ! For what is this?
   ALLOCATE(atoms%ngopr(atoms%nat)) ! For what is this?
@@ -249,6 +262,8 @@ SUBROUTINE r_inpXML(&
   xmlCoreOccs = 0.0
 
   ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
+
+  ALLOCATE (wannAtomList(atoms%nat))
 
   ! Read in constants
 
@@ -1112,64 +1127,13 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  xcpot%icorr = -99
-  !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
-  IF (namex.EQ.'exx ') xcpot%icorr = icorr_exx
-  IF (namex.EQ.'hf  ') xcpot%icorr = icorr_hf
-  IF (namex.EQ.'l91 ') xcpot%icorr = -1
-  IF (namex.EQ.'x-a ') xcpot%icorr =  0
-  IF (namex.EQ.'wign') xcpot%icorr =  1
-  IF (namex.EQ.'mjw')  xcpot%icorr =  2
-  IF (namex.EQ.'hl')   xcpot%icorr =  3
-  IF (namex.EQ.'bh')   xcpot%icorr =  3
-  IF (namex.EQ.'vwn')  xcpot%icorr =  4
-  IF (namex.EQ.'pz')   xcpot%icorr =  5
-  IF (namex.EQ.'pw91') xcpot%icorr =  6
-  !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
-  !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
-  !  Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
-  IF (namex.eq.'pbe')  xcpot%icorr =  7
-  IF (namex.eq.'rpbe') xcpot%icorr =  8
-  IF (namex.eq.'Rpbe') xcpot%icorr =  9
-  IF (namex.eq.'wc')   xcpot%icorr = 10
-  !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
-  IF (namex.eq.'PBEs') xcpot%icorr = 11
-  !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
-  IF (namex.eq.'pbe0') xcpot%icorr = icorr_pbe0
-  !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
-  IF (namex.eq.'hse ') xcpot%icorr = icorr_hse
-  IF (namex.eq.'vhse') xcpot%icorr = icorr_vhse
-  ! local part of HSE
-  IF (namex.eq.'lhse') xcpot%icorr = icorr_hseloc
+  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,input%krla)
 
-  IF (xcpot%icorr == -99) THEN
-     WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
-     WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,'//&
-          &                'wc,PBEs,pbe0,hf,hse,lhse'
-     CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
-  END IF
-  xcpot%igrd = 0
   obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
-     xcpot%igrd = 1
-     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
-  input%krla = 0
-  IF (l_relcor) THEN 
-     input%krla = 1    
-     IF (xcpot%igrd.EQ.1) THEN
-        WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
-        WRITE(6,*) 'only without relativistic corrections !'
-        CALL juDFT_error("relativistic corrections + GGA not implemented",&
-             &                         calledby ="r_inpXML")
-     END IF
-  END IF
-
-  IF (xcpot%icorr.eq.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
-  IF (xcpot%icorr.eq.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
-  IF ((xcpot%icorr.eq.2).and.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
 
   IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
      obsolete%ndvgrd = max(obsolete%ndvgrd,3)
@@ -1212,7 +1176,8 @@ SUBROUTINE r_inpXML(&
 !!! Start of species section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ALLOCATE (speciesNames(numSpecies), speciesNLO(numSpecies))
+  ALLOCATE (speciesNLO(numSpecies))
+  ALLOCATE(atoms%speciesName(numSpecies))
 
   atoms%numStatesProvided = 0
   atoms%lapw_l(:) = -1
@@ -1224,7 +1189,7 @@ SUBROUTINE r_inpXML(&
   DO iSpecies = 1, numSpecies
      ! Attributes of species
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
-     speciesNames(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
+     atoms%speciesName(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
      atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
      coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
      magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
@@ -1278,7 +1243,7 @@ SUBROUTINE r_inpXML(&
      DO iType = 1, atoms%ntype
         WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-        IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+        IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
            atoms%nz(iType) = atomicNumber
            IF (atoms%nz(iType).EQ.0) THEN
               WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', iType
@@ -1350,6 +1315,21 @@ SUBROUTINE r_inpXML(&
      speciesEParams(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@p'))
      speciesEParams(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@d'))
      speciesEParams(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@f'))
+
+     ! Explicitely provided xc functional
+
+     WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/xcFunctional'
+     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+     namexSpecies = ''
+     relcorSpecies = .FALSE.
+     icorrSpecies = -99
+     igrdSpecies = 0
+     krlaSpecies = 0
+     IF (numberNodes.EQ.1) THEN
+        namexSpecies = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
+        relcorSpecies = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@relativisticCorrections'))
+        CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,igrdSpecies,krlaSpecies)
+     END IF
 
      ! Explicitely provided core configurations
 
@@ -1498,7 +1478,7 @@ SUBROUTINE r_inpXML(&
      DO iType = 1, atoms%ntype
         WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-        IF(TRIM(ADJUSTL(speciesNames(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+        IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
            atoms%numStatesProvided(iType) = providedStates
            IF (coreConfigPresent) THEN
               IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
@@ -1532,6 +1512,12 @@ SUBROUTINE r_inpXML(&
                  enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)
               END DO
            END DO
+           ! Explicit xc functional
+           atoms%namex(iType) = namexSpecies
+           atoms%relcor(iType) = relcorSpecies
+           atoms%icorr(iType) = icorrSpecies
+           atoms%igrd(iType) = igrdSpecies
+           atoms%krla(iType) = krlaSpecies
         END IF
      END DO
      DEALLOCATE(loOrderList)
@@ -1582,6 +1568,11 @@ SUBROUTINE r_inpXML(&
      DO i = 1, numberNodes
         na = na + 1
         WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'/relPos[',i,']'
+        IF(xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@label').NE.0) THEN
+           atoms%label(na) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@label')
+        ELSE
+           WRITE(atoms%label(na),'(i0)') na
+        END IF
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
         atoms%taual(1,na) = evaluatefirst(valueString)
         atoms%taual(2,na) = evaluatefirst(valueString)
@@ -1595,6 +1586,7 @@ SUBROUTINE r_inpXML(&
            banddos%l_orb = .TRUE.
            banddos%orbCompAtom = na
         END IF
+        wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
      END DO
 
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
@@ -1607,6 +1599,11 @@ SUBROUTINE r_inpXML(&
      DO i = 1, numberNodes
         na = na + 1
         WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'/filmPos[',i,']'
+        IF(xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@label').NE.0) THEN
+           atoms%label(na) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@label')
+        ELSE
+           WRITE(atoms%label(na),'(i0)') na
+        END IF
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
         atoms%taual(1,na) = evaluatefirst(valueString)
         atoms%taual(2,na) = evaluatefirst(valueString)
@@ -1620,6 +1617,7 @@ SUBROUTINE r_inpXML(&
            banddos%l_orb = .TRUE.
            banddos%orbCompAtom = na
         END IF
+        wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
      END DO
 
      !Read in atom group specific noco parameters
@@ -1671,6 +1669,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+     input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
 
@@ -1775,11 +1774,91 @@ SUBROUTINE r_inpXML(&
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
 
+     ! Read in optional Wannier functions parameters
+
+     xPathA = '/fleurInput/output/wannier'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((input%l_wann).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("wannier is true but Wannier parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     IF (numberNodes.EQ.1) THEN
+        wann%l_ms = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ms'))
+        wann%l_sgwf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sgwf'))
+        wann%l_socgwf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socgwf'))
+        wann%l_bs_comf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bsComf'))
+        wann%l_atomlist = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomList'))
+     END IF
+
+     xPathA = '/fleurInput/output/wannier/bandSelection'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        wann%l_byindex=.TRUE.
+        wann%band_min(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
+        wann%band_max(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
+        xPathA = '/fleurInput/output/wannier/bandSelection/@minSpinDown'
+        numberNodes = xmlGetNumberOfNodes(xPathA)
+        IF (numberNodes.EQ.1) THEN
+           wann%band_min(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+           wann%band_min(2) = wann%band_min(1)
+        END IF
+        xPathA = '/fleurInput/output/wannier/bandSelection/@maxSpinDown'
+        numberNodes = xmlGetNumberOfNodes(xPathA)
+        IF (numberNodes.EQ.1) THEN
+           wann%band_max(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+           wann%band_max(2) = wann%band_max(1)
+        END IF
+     END IF
+
+     xPathA = '/fleurInput/output/wannier/jobList'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        xPathA = 'normalize-space(/fleurInput/output/wannier/jobList/text())[1]'
+
+        ! Note: At the moment only 255 characters for the text in this node. Maybe this is not enough.
+        valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))
+        numTokens = countStringTokens(valueString)
+        ALLOCATE(wann%jobList(numTokens))
+        DO i = 1, numTokens
+           wann%jobList(i) = popFirstStringToken(valueString)
+        END DO
+     END IF
+
   END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of output section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+     ! Generate / fill wann%atomlist(:) array
+     IF (wann%l_atomlist) THEN
+        absSum = 0
+        DO i = 1, atoms%nat
+           IF (wannAtomList(i)) absSum = absSum + 1
+        END DO
+        wann%atomlist_num = absSum
+        ALLOCATE(wann%atomlist(wann%atomlist_num))
+        j = 1
+        DO i = 1, atoms%nat
+           IF (wannAtomList(i)) THEN
+              wann%atomlist(j) = i
+              j = j + 1
+           END IF
+        END DO
+     ELSE
+        wann%atomlist_num = atoms%nat
+        ALLOCATE(wann%atomlist(wann%atomlist_num))
+        DO i = 1, atoms%nat
+           wann%atomlist(i) = i
+        END DO
+     END IF
+
+     DEALLOCATE(wannAtomList)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of non-XML input
@@ -1805,9 +1884,79 @@ SUBROUTINE r_inpXML(&
 
   !WRITE(*,*) 'Reading of inp.xml file finished'
 
-  DEALLOCATE(speciesNames, speciesNLO)
+  DEALLOCATE(speciesNLO)
 
 END SUBROUTINE r_inpXML
+
+SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
+
+   USE m_juDFT
+   USE m_icorrkeys
+
+   IMPLICIT NONE
+
+   CHARACTER(LEN=4),     INTENT(IN)  :: namex
+   LOGICAL,              INTENT(IN)  :: relcor
+   INTEGER,              INTENT(OUT) :: icorr
+   INTEGER,              INTENT(OUT) :: igrd
+   INTEGER,              INTENT(OUT) :: krla
+
+   icorr = -99
+   !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
+   IF (namex.EQ.'exx ') icorr = icorr_exx
+   IF (namex.EQ.'hf  ') icorr = icorr_hf
+   IF (namex.EQ.'l91 ') icorr = -1
+   IF (namex.EQ.'x-a ') icorr =  0
+   IF (namex.EQ.'wign') icorr =  1
+   IF (namex.EQ.'mjw')  icorr =  2
+   IF (namex.EQ.'hl')   icorr =  3
+   IF (namex.EQ.'bh')   icorr =  3
+   IF (namex.EQ.'vwn')  icorr =  4
+   IF (namex.EQ.'pz')   icorr =  5
+   IF (namex.EQ.'pw91') icorr =  6
+   !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
+   !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
+   !  Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
+   IF (namex.eq.'pbe')  icorr =  7
+   IF (namex.eq.'rpbe') icorr =  8
+   IF (namex.eq.'Rpbe') icorr =  9
+   IF (namex.eq.'wc')   icorr = 10
+   !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
+   IF (namex.eq.'PBEs') icorr = 11
+   !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
+   IF (namex.eq.'pbe0') icorr = icorr_pbe0
+   !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
+   IF (namex.eq.'hse ') icorr = icorr_hse
+   IF (namex.eq.'vhse') icorr = icorr_vhse
+   ! local part of HSE
+   IF (namex.eq.'lhse') icorr = icorr_hseloc
+
+   IF (icorr == -99) THEN
+      WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
+      WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
+      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
+   END IF
+
+   igrd = 0
+   IF (icorr.GE.6) THEN
+      igrd = 1
+   END IF
+
+   krla = 0
+   IF (relcor) THEN 
+      krla = 1    
+      IF (igrd.EQ.1) THEN
+         WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
+         WRITE(6,*) 'only without relativistic corrections !'
+         CALL juDFT_error("relativistic corrections + GGA not implemented", calledby ="r_inpXML")
+      END IF
+   END IF
+
+   IF (icorr.eq.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
+   IF (icorr.eq.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
+   IF ((icorr.eq.2).and.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
+
+END SUBROUTINE getXCParameters
 
 SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
 
@@ -1921,5 +2070,32 @@ FUNCTION popFirstStringToken(line) RESULT(firstToken)
    END IF
 
 END FUNCTION popFirstStringToken
+
+FUNCTION countStringTokens(line) RESULT(tokenCount)
+
+   IMPLICIT NONE
+
+   CHARACTER(*), INTENT(IN) :: line
+   INTEGER                  :: tokenCount
+
+   CHARACTER(LEN=LEN(line)) :: tempLine
+   INTEGER separatorIndex
+
+   tokenCount = 0
+
+   tempLine = TRIM(ADJUSTL(line))
+
+   DO WHILE (tempLine.NE.'')
+      separatorIndex = 0
+      separatorIndex = INDEX(tempLine,' ')
+      IF (separatorIndex.EQ.0) THEN
+         tempLine = ''
+      ELSE
+         tempLine = TRIM(ADJUSTL(tempLine(separatorIndex+1:)))
+      END IF
+      tokenCount = tokenCount + 1
+   END DO
+
+END FUNCTION countStringTokens
 
 END MODULE m_rinpXML

@@ -22,13 +22,17 @@ c*****************************************c
      >               n3d,nv_b,nv_b2,nbnd,neigd,
      >               nslibd_b,nslibd_b2,nbasfcn,
      >               addnoco,addnoco2,
-     >               k1_b ,k2_b ,k3_b,  gb,
+     >               k1_b ,k2_b ,k3_b, gb,
      >               k1_b2,k2_b2,k3_b2,gb2,
-     >               bkpt,bbmat,vpw,z_b,z_b2,
+     >               bkpt,bbmat,vpw,zMat_b,zMat_b2,
      >               rgphs,ustep,ig,l_kin,sign,uHu)
 #include "cpp_double.h"
 
+      USE m_types
+
       implicit none
+
+      TYPE(t_zmat), INTENT(IN) :: zMat_b, zMat_b2
 
 c     ..arguments..
       logical, intent(in) :: l_kin
@@ -40,40 +44,39 @@ c     ..arguments..
       integer, intent(in) :: k1_b(nvd) ,k2_b(nvd) ,k3_b(nvd)
       integer, intent(in) :: k1_b2(nvd),k2_b2(nvd),k3_b2(nvd)
       integer, intent(in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent(in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent(in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       real,    intent(in) :: bkpt(3),bbmat(3,3)
       complex, intent(in) :: ustep(n3d),vpw(n3d)
       complex, intent(in) :: chi
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent(in) :: z_b(nbasfcn,neigd),z_b2(nbasfcn,neigd)
-#else
-      real,    intent(in) :: z_b(nbasfcn,neigd),z_b2(nbasfcn,neigd)
-#endif 
+
       complex, intent(inout) :: uHu(nbnd,nbnd)
 
 c     ..local variables..
-#if (!defined(CPP_INVERSION)||defined(CPP_SOC))
-      complex,allocatable :: vstep(:,:)
-      complex,allocatable :: mat(:,:)
-      complex :: th
-#else
-      real,allocatable :: vstep(:,:)
-      real,allocatable :: mat(:,:)
+      complex,allocatable :: vstep_c(:,:)
+      complex,allocatable :: mat_c(:,:)
+      complex :: th_c
+      real,allocatable :: vstep_r(:,:)
+      real,allocatable :: mat_r(:,:)
       real,allocatable :: uHu_tmp(:,:)
-      real :: th
-#endif
+      real :: th_r
+
       real,allocatable :: rk_b(:),rk_b2(:)
       real :: phase,phase2,ekk,s(3)
       integer :: i,j,j1,j2,j3,i1,i2,i3,in,ind
 
-      allocate( vstep(nv_b2,nv_b) )
-      allocate( mat(nv_b,nslibd_b2) )
       allocate( rk_b (nv_b)  )
       allocate( rk_b2(nv_b2) )
-#if (!defined(CPP_INVERSION)||defined(CPP_SOC))
-#else
-      allocate( uHu_tmp(nslibd_b,nslibd_b2) )
-#endif
+
+      IF(zMat_b%l_real) THEN
+         allocate( uHu_tmp(nslibd_b,nslibd_b2) )
+         allocate( vstep_r(nv_b2,nv_b) )
+         allocate( mat_r(nv_b,nslibd_b2) )
+         vstep_r(:,:) = 0.0
+      ELSE
+         allocate( vstep_c(nv_b2,nv_b) )
+         allocate( mat_c(nv_b,nslibd_b2) )
+         vstep_c(:,:) = CMPLX(0.0,0.0)
+      END IF
 
       ! set up |k+G-G(k+b1)|^2
       do i=1,nv_b
@@ -95,7 +98,6 @@ c     ..local variables..
 
       ! construct vstep(g,g') ~ V(g-g') 
       !                       + Theta(g-g')*[rk_b+rk_b2]
-      vstep(:,:) = 0.0
       do i=1,nv_b
        j1 = -k1_b(i) + gb(1) - gb2(1)
        j2 = -k2_b(i) + gb(2) - gb2(2)
@@ -113,42 +115,47 @@ c     ..local variables..
         endif
 
         ekk = rk_b(i) + rk_b2(j)
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )        
-        th = phase*conjg(vpw(in))
-        if(l_kin) th = th + phase*0.25*ekk*conjg(ustep(in))
-#else
-        th = phase*real(vpw(in))
-        if(l_kin) th = th + phase*0.25*ekk*real(ustep(in))
-#endif
-        vstep(j,i) = th
+
+        IF(zMat_b%l_real) THEN
+           th_r = phase*real(vpw(in))
+           if(l_kin) th_r = th_r + phase*0.25*ekk*real(ustep(in))
+           vstep_r(j,i) = th_r
+        ELSE
+           th_c = phase*conjg(vpw(in))
+           if(l_kin) th_c = th_c + phase*0.25*ekk*conjg(ustep(in))
+           vstep_c(j,i) = th_c
+        END IF
        enddo
       enddo
 
       ! complex conjugate of (z(k+b1,g))^* vstep(g,g') z(k+b2,g')
-#if (!defined(CPP_INVERSION) || defined(CPP_SOC))
-      call CPP_BLAS_cgemm('T','N',nv_b,nslibd_b2,nv_b2,cmplx(1.0),
-     >            vstep,nv_b2,z_b2(1+addnoco2,1),nbasfcn,
-     >            cmplx(0.0),mat,nv_b)
-      mat = conjg(mat)
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >           chi,z_b(1+addnoco,1),nbasfcn,
-     >           mat,nv_b,cmplx(1.0),uHu,nbnd)
-#else
-      call CPP_BLAS_sgemm('T','N',nv_b,nslibd_b2,nv_b2,real(1.0),
-     >            vstep,nv_b2,z_b2(1+addnoco2,1),nbasfcn,
-     >            real(0.0),mat,nv_b)
-      call CPP_BLAS_sgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >           real(1.0),z_b(1+addnoco,1),nbasfcn,
-     >           mat,nv_b,real(0.0),uHu_tmp,nslibd_b)
-      uHu(1:nslibd_b,1:nslibd_b2) = uHu(1:nslibd_b,1:nslibd_b2)
+      IF(zMat_b%l_real) THEN
+         call CPP_BLAS_sgemm('T','N',nv_b,nslibd_b2,nv_b2,real(1.0),
+     >               vstep_r,nv_b2,zMat_b2%z_r(1+addnoco2,1),nbasfcn,
+     >               real(0.0),mat_r,nv_b)
+         call CPP_BLAS_sgemm('T','N',nslibd_b,nslibd_b2,nv_b,
+     >              real(1.0),zMat_b%z_r(1+addnoco,1),nbasfcn,
+     >              mat_r,nv_b,real(0.0),uHu_tmp,nslibd_b)
+         uHu(1:nslibd_b,1:nslibd_b2) = uHu(1:nslibd_b,1:nslibd_b2)
      >                            + uHu_tmp(1:nslibd_b,1:nslibd_b2)*chi
-#endif
+      ELSE
+         call CPP_BLAS_cgemm('T','N',nv_b,nslibd_b2,nv_b2,cmplx(1.0),
+     >               vstep_c,nv_b2,zMat_b2%z_c(1+addnoco2,1),nbasfcn,
+     >               cmplx(0.0),mat_c,nv_b)
+         mat_c = conjg(mat_c)
+         call CPP_BLAS_cgemm('T','N',nslibd_b,nslibd_b2,nv_b,
+     >              chi,zMat_b%z_c(1+addnoco,1),nbasfcn,
+     >              mat_c,nv_b,cmplx(1.0),uHu,nbnd)
+      END IF
 
-      deallocate( vstep, mat )
       deallocate( rk_b, rk_b2 )
-#if (!defined(CPP_INVERSION) || defined(CPP_SOC))
-#else
-      deallocate( uHu_tmp )
-#endif
+
+      IF(zMat_b%l_real) THEN
+         deallocate( uHu_tmp )
+         deallocate( vstep_r, mat_r )
+      ELSE
+         deallocate( vstep_c, mat_c )
+      END IF
+
       end subroutine
       end module m_wann_uHu_int

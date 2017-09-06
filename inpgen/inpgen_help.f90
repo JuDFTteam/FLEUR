@@ -14,7 +14,7 @@ CONTAINS
     CHARACTER(LEN=500):: infostring
 
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
-    PRINT *,"     MaX-Release 1.3           (www.max-centre.eu)"
+    PRINT *,"     MaX-Release 2            (www.max-centre.eu)"
 
     IF (.NOT. (juDFT_was_argument("-h").OR.juDFT_was_argument("--help"))) RETURN
 

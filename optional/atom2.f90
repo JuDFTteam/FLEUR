@@ -73,6 +73,9 @@
       enddo
       rn = rad(n)
       bmu_l = atoms%bmu(ntyp)
+      IF (bmu_l>0.001.AND.atoms%numStatesProvided(ntyp).NE.0) CALL &
+           judft_warn("You specified both: inital moment and occupation numbers.", &
+           hint="The inital moment will be ignored, set magMom=0.0",calledby="atom2.f90")
       CALL setcor(ntyp,input%jspins,atoms,input,bmu_l, nst,kappa,nprnc,occ)
 
 !

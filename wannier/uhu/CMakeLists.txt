@@ -3,10 +3,10 @@ wannier/uhu/d2fdz2cmplx.F
 wannier/uhu/d2fdz2.F
 wannier/uhu/dujdr.F
 wannier/uhu/wann_uHu_commat.f
-wannier/uhu/wann_uHu_commat_save.f
+#wannier/uhu/wann_uHu_commat_save.f
 wannier/uhu/wann_uHu_dmi.F
 wannier/uhu/wann_uHu.F
-wannier/uhu/wann_uHu_int2.F
+#wannier/uhu/wann_uHu_int2.F
 wannier/uhu/wann_uHu_int.F
 wannier/uhu/wann_uHu_od_vac.F
 wannier/uhu/wann_uHu_radintsra2.F

@@ -110,7 +110,7 @@ c-----some defaults
       wann%ikptstart=1
       wann%band_min(1:2)=-1
       wann%band_max(1:2)=-1
-      wann%wan90version=1
+      wann%wan90version=2 ! Set the standard to Wannier90-1.2
 
 c-----read the input file 'wann_inp'
       l_file=.false.

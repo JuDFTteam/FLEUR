@@ -9,10 +9,9 @@
 
       USE m_intgr, ONLY : intgr3
       USE m_constants
-      IMPLICIT NONE
+      USE m_difcub
 
-      REAL difcub
-      EXTERNAL difcub
+      IMPLICIT NONE
       
       REAL, INTENT(IN) :: p(jmtd,2)
       REAL, INTENT(IN) :: q(jmtd,2)

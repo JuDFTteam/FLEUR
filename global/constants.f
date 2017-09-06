@@ -31,21 +31,21 @@
 
       CHARACTER(7),DIMENSION(29),PARAMETER :: coreStateList_const=(/
      +     '(1s1/2)','(2s1/2)','(2p1/2)','(2p3/2)','(3s1/2)',
-     +     '(3p1/2)','(3p3/2)','(3d3/2)','(3d5/2)','(4s1/2)',
+     +     '(3p1/2)','(3p3/2)','(4s1/2)','(3d3/2)','(3d5/2)',
      +     '(4p1/2)','(4p3/2)','(5s1/2)','(4d3/2)','(4d5/2)',
      +     '(5p1/2)','(5p3/2)','(6s1/2)','(4f5/2)','(4f7/2)',
      +     '(5d3/2)','(5d5/2)','(6p1/2)','(6p3/2)','(7s1/2)',
      +     '(5f5/2)','(5f7/2)','(6d3/2)','(6d5/2)' /)
 
       INTEGER,DIMENSION(29),PARAMETER :: coreStateNumElecsList_const=(/ ! This is the number of electrons per spin
-     +      1, 1, 1, 2, 1, 1, 2, 2, 3, 1, 1, 2, 1, 2,
+     +      1, 1, 1, 2, 1, 1, 2, 1, 2, 3, 1, 2, 1, 2,
      +      3, 1, 2, 1, 3, 4, 2, 3, 1, 2, 1, 3, 4, 2, 3/)
 
       INTEGER,DIMENSION(29),PARAMETER :: coreStateNprncList_const=(/ 
-     +      1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 4, 4,
+     +      1, 2, 2, 2, 3, 3, 3, 4, 3, 3, 4, 4, 5, 4, 4,
      +      5, 5, 6, 4, 4, 5, 5, 6, 6, 7, 5, 5, 6, 6/)
       INTEGER,DIMENSION(29),PARAMETER :: coreStateKappaList_const=(/
-     +     -1,-1, 1,-2,-1, 1,-2, 2,-3,-1, 1,-2,-1, 2,-3,
+     +     -1,-1, 1,-2,-1, 1,-2,-1, 2,-3, 1,-2,-1, 2,-3,
      +      1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3/)
 
       CHARACTER(4),DIMENSION(6),PARAMETER :: nobleGasConfigList_const=(/

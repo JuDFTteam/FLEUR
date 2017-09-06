@@ -13,12 +13,13 @@ c       FF, September 2006
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
-     >          stars,vacuum,atoms,sphhar,input,sym,mpi,eig_id,
+     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          lapw,oneD,noco,cell,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
      >          neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
-     >          nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
+     >          omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >          invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
      >          beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
      >          jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
@@ -26,7 +27,7 @@ c******************************************************************
      >          ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
      >          z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
      >          volint,symor,pos,ef,l_bzsym,
-     >          l_proj_plot,irecl,wan90version)
+     >          l_proj_plot,wan90version)
 
       use m_wann_rw_eig
       use m_abcof
@@ -49,14 +50,6 @@ c******************************************************************
 
       implicit none
 
-      TYPE(t_stars),INTENT(IN)  :: stars
-      TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_atoms),INTENT(IN)  :: atoms
-      TYPE(t_sphhar),INTENT(IN) :: sphhar
-      TYPE(t_input),INTENT(IN)  :: input
-      TYPE(t_sym),INTENT(IN)    :: sym
-      TYPE(t_mpi),INTENT(IN)    :: mpi
-
 #include "cpp_double.h"
 #ifdef CPP_MPI
       include 'mpif.h'
@@ -65,39 +58,47 @@ c******************************************************************
       integer stt(MPI_STATUS_SIZE)
 #endif
 
+      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_cell),INTENT(IN)      :: cell
+
       integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
-      logical, intent (in) :: l_soc
+      logical, intent (in) :: l_soc,l_real
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
-      integer, intent (in) :: llod,nlod,ntype,nwdd,n3d,n2d
+      integer, intent (in) :: llod,nlod,ntype,n3d,n2d
       integer, intent (in) :: nmzxyd,nmzd,jmtd,nlhd,nq3,nvac 
       integer, intent (in) :: ntypsd,jspins,k1d,k2d,k3d
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: nlh(ntypsd),jri(ntypd),ntypsy(natd)
       integer, intent (in) :: nlo(ntypd),llo(nlod,ntypd),lapw_l(ntypd)
       integer, intent (in) :: invtab(nop),mrot(3,3,nop),ngopr(natd)
       integer, intent (in) :: neq(ntypd),lmax(ntypd)
       integer, intent (in) :: wan90version
-      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt(nwdd)
+      integer, intent (in) :: invsat(natd),invsatnr(natd),nkpt
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
       integer, intent (in) :: ulo_der(nlod,ntypd),ig2(n3d)
       real,    intent (in) :: taual(3,natd),rmt(ntypd),dx(ntypd) 
       real,    intent (in) :: amat(3,3),bmat(3,3),bbmat(3,3)
       real,    intent (in) :: rmsh(jmtd,ntypd),tau(3,nop),zatom(ntype)
-      real, intent (inout) :: alph(ntypd),beta(ntypd),qss(3)  
+      real,    intent (in) :: alph(ntypd),beta(ntypd),qss(3)  
       real,    intent (in) :: pos(3,natd),ef
       complex, intent (in) :: ustep(n3d)
       logical, intent (in) :: l_dulo(nlod,ntypd),l_noco,l_ss,l_bzsym
       logical,intent(in)::l_proj_plot
       integer,intent(in)::sortrule
-#ifndef CPP_MPI
-      integer(8), intent (in) :: irecl
-#else
-      INTEGER(KIND=MPI_OFFSET_KIND),intent(in) :: irecl
-#endif
 c-odim
       real,    intent (in) :: sk2(n2d),phi2(n2d)
       type (od_inp), intent (in) :: odi
@@ -297,7 +298,7 @@ c         WRITE(20,*) "  filename='plot1' /"
       sfp = 2* sqrt( pimach() )
       tpi = 2* pimach()
       lmd = lmaxd*(lmaxd+2)
-      nkpts = maxval(nkpt(:))
+      nkpts = nkpt
 
       nrec = 0
       nlotot = 0
@@ -537,7 +538,14 @@ c******************************************************************
 
       allocate (we(neigd),eigg(neigd))
 
-
+      zzMat%l_real = l_real
+      zzMat%nbasfcn = nbasfcn
+      zzMat%nbands = neigd
+      IF(l_real) THEN
+         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+      ELSE
+         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+      END IF
 
       call wann_read_eig(
      >              eig_id,
@@ -621,18 +629,9 @@ c******************************************************************
 c...generation of the A,B,C coefficients in the spheres 
 c...for the lapws and local orbitals, summed by the basis functions 
       ngopr1(:)=1
-      call abcof(
-     >           lmaxd,ntypd,neigd,noccbd,natd,nop,nvd,wannierspin,
-     >           lmd,nbasfcn,llod,nlod,nlotot,invtab,
-     >           ntype,mrot,ngopr1,taual,neq,lmax,rmt,omtil,
-     >           bmat,bbmat,bkpt,k1,k2,k3,nv,nmat,noccbd,zMat,
-     >           us(0,1),dus(0,1),uds(0,1),
-     >           duds(0,1),ddn(0,1),invsat,invsatnr,
-     >           ulos(1,1),uulon(1,1),dulon(1,1),
-     >           dulos(1,1),llo,nlo,l_dulo,lapw_l,
-     >           l_noco,l_ss,jspin,alph,beta,qss,kveclo,odi,ods,
-     <           acof(1,0,1),bcof(1,0,1),
-     <           ccof(-llod,1,1,1))
+
+      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
+     >           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
 
       call wann_abinv(
      >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -660,6 +659,7 @@ c***********************************************************************
      &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
      &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
          call wann_1dvacabcof(
+     >         DIMENSION,oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,odi,ods,
      >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
@@ -711,14 +711,14 @@ c**************************************************************************
                   s  = SQRT(dot_PRODUCT(pos(:,na)-pt,pos(:,na)-pt))
                   IF (s<rmsh(jri(nt),nt)) THEN
                     CALL wann_real(
-     >                   pt,nt,na,0,1,bkpt,
+     >                   pt,nt,na,0,1,bkpt,nbn,
      >                   n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >                   omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >                   ccof(:,nbn,:,:),z(:,nbn),
+     >                   ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
      >                   lmd,nbasfcn,l_ss,qss,jspin,0,
      <                   xdnout)
@@ -741,7 +741,7 @@ c**************************************************************************
                 call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
      >            nmz,delz,bmat,bbmat,evac(:,jspin),bkpt,vz,jspin,
      >            k1(:,jspin),k2(:,jspin),k3(:,jspin),nvd, 
-     >            nbasfcn,neigd,z(:,nbn),nv(jspin),omtil,nslibd,
+     >            nbasfcn,neigd,nv(jspin),omtil,nslibd,
      >            ac(:,nbn,ivac),
      &             bc(:,nbn,ivac),
      &            u(:,:,jvac),ue(:,:,jvac),xdnout)
@@ -764,14 +764,14 @@ c**************************************************************************
               END IF
              END IF
              CALL wann_real(
-     >             point,0,0,0,2,bkpt,
+     >             point,0,0,0,2,bkpt,nbn,
      >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >             omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >             ccof(:,nbn,:,:),z(:,nbn),
+     >             ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
      >             lmd,nbasfcn,l_ss,qss,jspin,0,
      <             xdnout)
@@ -887,17 +887,11 @@ c***************************************************************
             write (name3,24) nplo,jspin
    24       format (i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(
-     >                        55,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(55,atoms,film,odi%d1,amat)
             OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(
-     >                        56,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(56,atoms,film,odi%d1,amat)
             OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(
-     >                        57,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(57,atoms,film,odi%d1,amat)
             CALL xsf_WRITE_header(55,twodim,filename,vec1,vec2,vec3,zero
      $           ,grid)
             CALL xsf_WRITE_header(56,twodim,filename,vec1,vec2,vec3,zero
@@ -1046,8 +1040,7 @@ c*****************************************************************
 
 
       deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
-      deallocate ( ff,gg,us,dus,duds,uds,ddn)
-      deallocate ( ulos,dulos,uulon,dulon,uloulopn )
+      deallocate ( ff,gg)
  
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_comm,mpiierr)

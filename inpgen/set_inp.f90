@@ -16,7 +16,7 @@
      &                   infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &                   atoms,sym,cell,title,idlist,&
      &                   input,vacuum,noco,&
-     &                   atomTypeSpecies,speciesRepAtomType,&
+     &                   atomTypeSpecies,speciesRepAtomType,numSpecies,&
      &                   a1,a2,a3)
 
       USE iso_c_binding
@@ -40,7 +40,7 @@
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
-      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh
+      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh,numSpecies
       INTEGER, INTENT (INOUT) :: nline
       INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
       INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
@@ -65,7 +65,7 @@
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
       INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus, numSpecies
+      INTEGER  n ,iostat, errorStatus
       REAL    scale,scpos ,zc
 
       TYPE(t_banddos)::banddos
@@ -214,6 +214,7 @@
      &                input,idlist,xmlCoreRefOccs,&
      &                nline,&
      &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                atomTypeSpecies,numSpecies,&
      &                nel,atoms,enpara)
 
       DO n = 1, atoms%ntype
@@ -463,7 +464,6 @@
             STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
          filename = 'inp.xml'
-         numSpecies = atoms%nat
 
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&

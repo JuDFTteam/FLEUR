@@ -226,14 +226,19 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
               na = na + atoms%neq(iType)
            END DO
         END IF
+     ELSE
+        IF (noco%l_ss) THEN
+           CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
+           noco%l_ss = .FALSE.
+        END IF
      END IF
 
      ! Calculate missing kpts parameters
      CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
     
      ! Generate missing general parameters
-
-     minNeigd = NINT(0.75*input%zelec) + 1
+     
+     minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
      IF (dimension%neigd.LT.minNeigd) THEN

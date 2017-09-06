@@ -9,7 +9,6 @@ MODULE m_rhomt21
 CONTAINS
   SUBROUTINE rhomt21(atoms, we,ne,acof,bcof, ccof,mt21,lo21,uloulop21)
 
-    USE m_types, ONLY : t_mt21,t_lo21
     USE m_types
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms

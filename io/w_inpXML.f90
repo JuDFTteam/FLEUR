@@ -105,7 +105,7 @@ SUBROUTINE w_inpXML(&
    INTEGER               :: idum
    CHARACTER (len=1)     ::  check
 
-   CHARACTER(len=20) :: tempNumberString, speciesName
+   CHARACTER(len=20) :: speciesName
    CHARACTER(len=150) :: format
    CHARACTER(len=20) :: mixingScheme
    CHARACTER(len=10) :: loType
@@ -249,9 +249,22 @@ SUBROUTINE w_inpXML(&
       END DO
       WRITE (fileNum,'(a)')('         </kPointList>')
    ELSE IF(kpts%specificationType.EQ.1) THEN
+
+      IF (kpts%numSpecialPoints.GE.2) THEN
+         207 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'">')
+         WRITE (fileNum,207) kpts%nkpt,kptGamma
+         209 FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
+         DO i = 1, kpts%numSpecialPoints
+            WRITE(fileNum,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),&
+                               kpts%specialPoints(1,i),kpts%specialPoints(2,i),kpts%specialPoints(3,i)
+         END DO
+         WRITE (fileNum,'(a)') '         </kPointCount>'
+      ELSE
 !            <kPointCount count="100" gamma="F"/>
-      208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
-      WRITE (fileNum,208) kpts%nkpt,kptGamma
+         208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
+         WRITE (fileNum,208) kpts%nkpt,kptGamma
+      END IF
+
    ELSE !(kpts%specificationType.EQ.2)
 !            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
       210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
@@ -421,9 +434,7 @@ SUBROUTINE w_inpXML(&
       END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
-      tempNumberString = ''
-      WRITE(tempNumberString,'(i0)') iSpecies
-      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
@@ -536,9 +547,7 @@ SUBROUTINE w_inpXML(&
       iSpecies = atomTypeSpecies(iAtomType)
 !      <atomGroup species="Si-1">
       330 FORMAT('      <atomGroup species="',a,'">')
-      tempNumberString = ''
-      WRITE(tempNumberString,'(i0)') iSpecies
-      speciesName = TRIM(ADJUSTL(noel(iAtomType))) // '-' // TRIM(ADJUSTL(tempNumberString))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,330) TRIM(ADJUSTL(speciesName))
 
       DO ieq=1,atoms%neq(iAtomType)
@@ -574,7 +583,7 @@ SUBROUTINE w_inpXML(&
             STOP '1D position output not implemented!'
          ELSE IF (input%film) THEN
 !         <filmPos> x/myConstant  y/myConstant  1/myConstant</filmPos>
-            340 FORMAT('         <filmPos>',a,' ',a,' ',a,'</filmPos>')
+            340 FORMAT('         <filmPos label="',a20,'">',a,' ',a,' ',a,'</filmPos>')
             posString(:) = ''
             DO i = 1, 2
                IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
@@ -584,10 +593,11 @@ SUBROUTINE w_inpXML(&
                END IF
             END DO
             WRITE(posString(3),'(f0.10)') tempTaual(3,na)
-            WRITE (fileNum,340) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
+            WRITE (fileNum,340) TRIM(ADJUSTL(atoms%label(na))), &
+                                TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          ELSE
 !         <relPos> x/myConstant  y/myConstant  z/myConstant</relPos>
-            350 FORMAT('         <relPos>',a,' ',a,' ',a,'</relPos>')
+            350 FORMAT('         <relPos label="',a20,'">',a,' ',a,' ',a,'</relPos>')
             posString(:) = ''
             DO i = 1, 3
                IF((scpos(i).NE.1.0).AND.(tempTaual(i,na).NE.0.0)) THEN
@@ -596,7 +606,8 @@ SUBROUTINE w_inpXML(&
                   WRITE(posString(i),'(f0.10)') tempTaual(i,na)
                END IF
             END DO
-            WRITE (fileNum,350) TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
+            WRITE (fileNum,350) TRIM(ADJUSTL(atoms%label(na))), &
+                                TRIM(ADJUSTL(posString(1))),TRIM(ADJUSTL(posString(2))),TRIM(ADJUSTL(posString(3)))
          END IF
       END DO
 !         <force calculate="F" relaxX="T" relaxY="T" relaxZ="T"/>

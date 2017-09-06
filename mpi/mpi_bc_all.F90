@@ -62,11 +62,9 @@ CONTAINS
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta ; r(9)=noco%phi ; r(10)=vacuum%tworkf 
        r(11)=vacuum%locx(1) ; r(12)=vacuum%locx(2); r(13)=vacuum%locy(1) ; r(14)=vacuum%locy(2)
        r(15)=input%efield%sigma ; r(16)=input%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
-
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
        r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance ; r(30)=obsolete%chng
-
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
        l(11)=banddos%dos ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
@@ -93,11 +91,9 @@ CONTAINS
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
-
     input%minDistance=r(29) ; obsolete%chng=r(30)
     input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
     cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) 
-
     input%efield%sigma=r(15) ; input%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);
     vacuum%locx(1)=r(11); vacuum%locx(2)=r(12); vacuum%locy(1)=r(13); vacuum%locy(2)=r(14)
     sliceplot%e1s=r(6) ; sliceplot%e2s=r(7) ; noco%theta=r(8) ; noco%phi=r(9) ; vacuum%tworkf=r(10)
@@ -267,6 +263,11 @@ CONTAINS
     CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     !--- HF>
+
+    CALL MPI_BCAST(atoms%relcor,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%icorr,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%igrd,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%krla,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
        n = dimension%nstd*atoms%ntype

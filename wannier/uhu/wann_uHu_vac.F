@@ -16,13 +16,20 @@ c***************************************c
      >     nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,evac,evac_b,
      >     bkpt,bkpt_b,vzxy,vz,nslibd,nslibd_b,jspin,jspin_b,
      >     ico,k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,nbasfcn,neigd,
-     >     z,z_b,nv,nv_b,omtil,gb,gb2,sign2,uHu)
+     >     zMat,zMat_b,nv,nv_b,omtil,gb,gb2,sign2,uHu)
 #include "cpp_double.h"
+
+      USE m_types
       use m_constants, only : pimach
       use m_intgr, only : intgz0
       use m_d2fdz2cmplx
+      USE m_vacuz
+      USE m_vacudz
 
       implicit none
+
+      TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
+
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco,l_soc,zrfs
       integer, intent (in) :: nlotot,jspin_b,n2d,jspins,ico
@@ -38,7 +45,7 @@ c     ..array arguments..
       real,    intent (in) :: qss(3)
       real,    intent (in) :: vz(nmzd,2,4)
       real,    intent (in) :: bbmat(3,3),bmat(3,3)
-      real,    intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig2(n3d),nv(jspd),nv_b(jspd)
       integer, intent (in) :: kv2(2,n2d)
@@ -48,12 +55,6 @@ c     ..array arguments..
       integer, intent (in) :: k3_b(nvd,jspd)
       complex, intent (in) :: vzxy(nmzxyd,n2d-1,2)
       complex, intent (inout) :: uHu(nbnd,nbnd)
-
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      complex, intent (in):: z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#else
-      real,    intent (in):: z(nbasfcn,neigd),z_b(nbasfcn,neigd)
-#endif
 
 c     ..local arrays..
       complex, allocatable :: ac(:,:),bc(:,:),ac_b(:,:),bc_b(:,:)
@@ -86,9 +87,6 @@ c      complex :: tuu,tud,tdu,tdd
       character(len=20) :: fname
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
-
-c..   external functions
-      external vacudz,vacuz
 
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),
@@ -275,10 +273,18 @@ c       if (nvac==1) symvacvac=2
          av = -c_1 * cmplx( dte(l),zks*te(l) )
          bv =  c_1 * cmplx(  dt(l),zks* t(l) )
 c-----> loop over basis functions
-         do n = 1,nslibd
-            ac(l,n) = ac(l,n) + z(k+addnoco,n)*av
-            bc(l,n) = bc(l,n) + z(k+addnoco,n)*bv
-         enddo
+
+         IF(zMat%l_real) THEN
+            do n = 1,nslibd
+               ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+            enddo
+         ELSE
+            do n = 1,nslibd
+               ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+            enddo
+         END IF
       enddo
 
 
@@ -314,10 +320,18 @@ c-----> construct a and b coefficients for the k+b point
          av = -c_1 * cmplx( dte_b(l),zks*te_b(l) )
          bv =  c_1 * cmplx( dt_b(l),zks*t_b(l) )
 c-----> loop over basis functions
-         do n = 1,nslibd_b
-            ac_b(l,n) = ac_b(l,n) + z_b(k+addnoco2,n)*av
-            bc_b(l,n) = bc_b(l,n) + z_b(k+addnoco2,n)*bv
-         enddo
+
+         IF(zMat_b%l_real) THEN
+            do n = 1,nslibd_b
+               ac_b(l,n) = ac_b(l,n) + zMat_b%z_r(k+addnoco2,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%z_r(k+addnoco2,n)*bv
+            enddo
+         ELSE
+            do n = 1,nslibd_b
+               ac_b(l,n) = ac_b(l,n) + zMat_b%z_c(k+addnoco2,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%z_c(k+addnoco2,n)*bv
+            enddo
+         END IF
       enddo
 
 
