@@ -31,6 +31,7 @@ SUBROUTINE gen_bz( kpts,sym)
    USE m_juDFT
    USE m_util, ONLY: modulo1
    USE m_types
+   USE m_closure
 
    IMPLICIT NONE
 
@@ -45,7 +46,15 @@ SUBROUTINE gen_bz( kpts,sym)
    INTEGER,ALLOCATABLE     ::  iarr(:)
    REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
    REAL,ALLOCATABLE        ::  rarr1(:,:)
-   INTEGER                 :: nsym,ID_mat(3,3)
+
+   INTEGER:: nsym,ID_mat(3,3)
+
+   !As we might be early in init process, the inverse operation might not be available in sym. Hence
+   !we calculate it here
+   INTEGER                 :: inv_op(sym%nop),optype(sym%nop)
+   INTEGER                 :: multtab(sym%nop,sym%nop)
+
+   CALL check_close(sym%nop,sym%mrot,sym%tau,multtab,inv_op,optype)
    
    nsym=sym%nop
    if (.not.sym%invs) nsym=2*sym%nop
@@ -57,7 +66,7 @@ SUBROUTINE gen_bz( kpts,sym)
    ! Generate symmetry operations in reciprocal space
    DO iop=1,nsym
       IF( iop .le. sym%nop ) THEN
-         rrot(:,:,iop) = transpose( sym%mrot(:,:,sym%invtab(iop)) )
+         rrot(:,:,iop) = TRANSPOSE( sym%mrot(:,:,inv_op(iop)) )
       ELSE
          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
       END IF
