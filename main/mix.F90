@@ -213,9 +213,15 @@ CONTAINS
     !
     irecl=(nmap+1)*8
     IF (input%imix.GE.3) THEN
-       OPEN (57,file='broyd',form='unformatted',status='unknown')
-       OPEN (59,file='broyd.'//CHAR(input%imix+48),access='direct',&
-            recl=irecl,form='unformatted',status='unknown')
+       IF (hybrid%l_calhf) THEN
+          OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
+          OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
+               recl=irecl,form='unformatted',status='unknown')
+       ELSE
+          OPEN (57,file='broyd',form='unformatted',status='unknown')
+          OPEN (59,file='broyd.'//CHAR(input%imix+48),access='direct',&
+               recl=irecl,form='unformatted',status='unknown')
+       ENDIF
     END IF
     !
     !----->  mixing of the densities

@@ -36,27 +36,45 @@ CONTAINS
     TYPE(t_hybdat) :: hybdat
     type(t_lapw)   :: lapw
     LOGICAL        :: init_vex=.TRUE. !In first call we have to init v_nonlocal
-    INTEGER,SAVE   :: nohf_it
+    INTEGER,SAVE   :: nohf_it=99      !Do not rely on a converged density
     INTEGER        ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
     LOGICAL        :: l_restart=.FALSE.,l_zref
     INTEGER, ALLOCATABLE :: matind(:,:)
     REAL,    ALLOCATABLE    ::  eig_irr(:,:)
     real               :: bkpt(3)
-    
+
+    INQUIRE(file="v_x.mat",exist=hybrid%l_addhf)
     CALL open_hybrid_io1(DIMENSION,sym%invs)
     IF (kpts%nkptf==0) CALL judft_error("kpoint-set of full BZ not available",hint="to generate kpts in the full BZ you should specify a k-mesh in inp.xml")
     
     !Check if new non-local potential shall be generated
 
     hybrid%l_subvxc = ( hybrid%l_hybrid.AND.xcpot%icorr /= icorr_exx )
+    !If this is the first iteration loop we can not calculate a new
+    !non-local potential
     IF (.NOT.ALLOCATED(v%pw)) THEN
        hybrid%l_calhf=.FALSE.
-       !INQUIRE(file="v_x.mat",exist=hybrid%l_addhf)
-       hybrid%l_addhf=.false.
+       if (hybrid%l_addhf) INQUIRE(file="cdnc",exist=hybrid%l_addhf)
        hybrid%l_subvxc = ( hybrid%l_subvxc .AND. hybrid%l_addhf)
        RETURN
     ENDIF
- 
+    !Check if we are converged well enough to calculate a new potential
+#ifdef   CPP_MPI
+    CALL judft_error("Hybrid functionals do not work in parallel version yet")
+    CALL MPI_BCAST(results%last_distance .... 
+#endif
+    hybrid%l_calhf=results%last_distance<1E-5
+    IF (nohf_it>50) THEN
+       hybrid%l_calhf=.TRUE.
+       nohf_it=0
+    ELSE
+       IF (hybrid%l_calhf) THEN
+          nohf_it=0
+       ELSE
+          nohf_it=nohf_it+1
+       END IF
+    ENDIF
+    
     hybrid%l_addhf=.true.
     !In first iteration allocate some memory
     IF (init_vex) THEN
@@ -65,14 +83,17 @@ CONTAINS
        ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
        init_vex=.false.
     ENDIF
-    hybrid%l_calhf  = .TRUE.
     
     
+    hybrid%l_subvxc = ( hybrid%l_subvxc .AND. hybrid%l_addhf)
     IF( .NOT. ALLOCATED(results%w_iks) )&
          ALLOCATE ( results%w_iks(DIMENSION%neigd2,kpts%nkpt,DIMENSION%jspd) )
     
     IF (.NOT.hybrid%l_calhf) RETURN !use existing non-local potential
 
+    !Delete broyd files
+    CALL system("rm broyd*")
+    
     !check if z-reflection trick can be used
 
     l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco) 
