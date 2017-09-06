@@ -68,7 +68,7 @@ CONTAINS
        open_DA=open_DA+1
     END DO
     !openfile
-    OPEN(unit=open_DA,file=filename,access='direct',recl=datasize*matsize*matsize)
+    OPEN(unit=open_DA,file=filename,access='direct',recl=datasize*(matsize*matsize+4))!Three to include matsize
 
 
   END FUNCTION open_DA
@@ -76,12 +76,16 @@ CONTAINS
   SUBROUTINE read_matrix_DA(mat,rec,id)
     TYPE(t_Mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec,id
-
-    INTEGER:: err
+    LOGICAL :: l_real
+    INTEGER:: err,matsize1,matsize2
+    l_real=mat%l_real
+    READ(id,rec=rec,iostat=err) matsize1,matsize2
+    if (matsize1<1) call judft_error("Data not found in file")
+    IF (mat%matsize1.NE.matsize1.OR.mat%matsize2.NE.matsize2) CALL mat%alloc(l_real,matsize1,matsize2)
     IF (mat%l_real) THEN
-       READ(id,rec=rec,iostat=err) mat%data_r
+       READ(id,rec=rec,iostat=err) matsize1,matsize2,mat%data_r
     ELSE
-       READ(id,rec=rec,iostat=err) mat%data_c
+       READ(id,rec=rec,iostat=err) matsize1,matsize2,mat%data_c
     END IF
     IF (err.NE.0) CALL judft_error("Failed in reading of matrix")
   END SUBROUTINE read_matrix_DA
@@ -91,9 +95,9 @@ CONTAINS
     INTEGER,INTENT(IN)        :: rec,id
     INTEGER:: err
     IF (mat%l_real) THEN
-       WRITE(id,rec=rec,iostat=err) mat%data_r
+       WRITE(id,rec=rec,iostat=err) mat%matsize1,mat%matsize2,mat%data_r
     ELSE
-       WRITE(id,rec=rec,iostat=err) mat%data_c
+       WRITE(id,rec=rec,iostat=err) mat%matsize1,mat%matsize2,mat%data_c
     END IF
     IF (err.NE.0) CALL judft_error("Failed in writing of matrix")
   END SUBROUTINE write_matrix_DA
