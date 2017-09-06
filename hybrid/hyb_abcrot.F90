@@ -1,7 +1,7 @@
 
-MODULE m_abcrot
+MODULE m_hyb_abcrot
   CONTAINS
-      SUBROUTINE abcrot(hybrid,atoms,neig,sym,cell,oneD,&
+      SUBROUTINE hyb_abcrot(hybrid,atoms,neig,sym,cell,oneD,&
      &                 acof,bcof,ccof)
 !     ***************************************************************
 !     * This routine transforms a/b/cof which are given wrt rotated *
@@ -88,5 +88,5 @@ MODULE m_abcrot
         ENDDO
       ENDDO
 
-    END SUBROUTINE abcrot
-  end MODULE m_abcrot
+    END SUBROUTINE hyb_abcrot
+  END MODULE m_hyb_abcrot

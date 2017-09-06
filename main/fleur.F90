@@ -103,7 +103,7 @@ CONTAINS
 
     !     .. Local Scalars ..
     INTEGER:: eig_id
-    INTEGER:: it,ithf
+    INTEGER:: it,ithf,pc
     LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
     !--- J<
     INTEGER             :: phn
@@ -153,7 +153,7 @@ CONTAINS
        CALL wann_optional(input,atoms,sym,cell,oneD,noco,wann)
     END IF
     IF (wann%l_gwf) input%itmax = 1
-    l_real = (sym%invs).AND.(.NOT.noco%l_noco) ! Is this right? I took it from eigen.
+    
     !-Wannier
 
     ALLOCATE (eig_idList(wann%nparampts))
@@ -525,7 +525,7 @@ CONTAINS
              IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
                 CALL wannier(DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,&
                      wann,noco,cell,enpara,banddos,sliceplot,results,&
-                     eig_idList,l_real,kpts%nkpt)
+                     eig_idList,(sym%invs).AND.(.NOT.noco%l_noco),kpts%nkpt)
              END IF
              IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
              !-Wannier

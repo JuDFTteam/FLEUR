@@ -1,4 +1,11 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
       MODULE m_wann_postproc_setup5
+#ifdef CPP_WANN5
       CONTAINS
       SUBROUTINE wann_postproc_setup5(
      >           natd,nkpts,kpoints,amat,bmat,
@@ -154,4 +161,5 @@ c     &     ikpt,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
 
 
       END SUBROUTINE wann_postproc_setup5
+#endif
       END MODULE m_wann_postproc_setup5

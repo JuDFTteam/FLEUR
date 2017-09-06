@@ -30,7 +30,7 @@
       USE m_util      ,ONLY: modulo1
       USE m_olap
       USE m_types
-      USE m_abcrot
+      USE m_hyb_abcrot
       USE m_io_hybrid
       IMPLICIT NONE
 
@@ -288,7 +288,7 @@
         ! MT wavefunction coefficients are calculated in a local coordinate system
         ! rotate them in the global one
 
-        CALL abcrot(&
+        CALL hyb_abcrot(&
                 hybrid,atoms,hybrid%nbands(ikpt0),&
                  sym,&
                 cell,oneD,&
