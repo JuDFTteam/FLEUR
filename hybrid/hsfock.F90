@@ -261,7 +261,18 @@ MODULE m_hsfock
         call olap%multiply(z,trafo)
         
         call invtrafo%alloc(olap%l_real,hybrid%nbands(nk),ic)
-        CALL trafo%transpose(invtrafo)
+        CALL trafo%TRANSPOSE(invtrafo)
+       
+        DO i=1,hybrid%nbands(nk)
+           DO j=1,i-1
+              IF (ex%l_real) THEN
+                 ex%data_r(i,j)=ex%data_r(j,i)
+              ELSE
+                 ex%data_c(i,j)=conjg(ex%data_c(j,i))
+              END IF
+           ENDDO
+        ENDDO
+
         
         CALL ex%multiply(invtrafo,tmp)
         CALL trafo%multiply(tmp,v_x)

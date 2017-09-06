@@ -90,13 +90,12 @@ MODULE m_add_vnonlocal
           DO nn=1,n           
              IF (hamovlp%l_real) THEN
                 hamovlp%a_r(ic) = hamovlp%a_r(ic) - a_ex*v_x%data_r(n,nn)
-                WRITE(732,*) n,nn,v_x%data_r(n,nn)
              ELSE
                 hamovlp%a_c(ic) = hamovlp%a_c(ic) - a_ex*v_x%data_c(n,nn)
              ENDIF
+             ic=ic+1
           ENDDO
        END DO
-       STOP "DEBUG"
        ! calculate HF energy
        IF( hybrid%l_calhf ) THEN
           WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
@@ -119,7 +118,7 @@ MODULE m_add_vnonlocal
        ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90 
        if (.not.v_x%l_real) v_x%data_c=conjg(v_x%data_c) 
        exch = 0
-       print *,"sizes:",shape(z%data_r),shape(v_x%data_r)
+       z%matsize1=MIN(z%matsize1,v_x%matsize2)
        call v_x%multiply(z,tmp)
        DO iband = 1,hybrid%nbands(nk)
           if (z%l_real) THEN

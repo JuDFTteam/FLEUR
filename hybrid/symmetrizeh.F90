@@ -197,7 +197,7 @@
 
                 END DO
 
-                cdum = cdum/ic
+                cdum = cdum!/ic
                 DO isym = 1,nsymop
                    iop   = psym(isym)
                    igpt  = pointer_apw(i,isym)
@@ -466,9 +466,9 @@
                                   END IF
                                END DO
                                IF (hmat%l_real) THEN
-                                  hmat%data_r(lapw%nv(jsp)+i,j) = cdum/ic
+                                  hmat%data_r(lapw%nv(jsp)+i,j) = cdum!/ic
                                ELSE
-                                  hmat%data_c(lapw%nv(jsp)+i,j) = cdum/ic
+                                  hmat%data_c(lapw%nv(jsp)+i,j) = cdum!/ic
                                END IF
                             END DO
                          END DO
