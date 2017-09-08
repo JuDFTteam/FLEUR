@@ -445,8 +445,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ! Initialize missing hybrid functionals arrays
 
      ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
-     ALLOCATE (hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-
+   
      ! Generate lattice harmonics
 
      IF (.NOT.oneD%odd%d1) THEN

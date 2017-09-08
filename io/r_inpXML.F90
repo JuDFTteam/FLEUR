@@ -33,7 +33,6 @@ SUBROUTINE r_inpXML(&
   USE m_calculator
   USE m_icorrkeys
   USE m_constants
-  USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
   USE m_inpeig
   USE m_sort
   USE m_enpara,    ONLY : r_enpara
@@ -93,16 +92,11 @@ SUBROUTINE r_inpXML(&
   CHARACTER(len= 41) :: chform
   CHARACTER(len=100) :: line
   
-  !     added for HF and hybrid functionals
-  REAL                  ::  aMix,omega
-  INTEGER               :: idum
-  CHARACTER (len=1)     ::  check
-
   CHARACTER(len=20) :: tempNumberString
   CHARACTER(len=150) :: format
   CHARACTER(len=20) :: mixingScheme
   CHARACTER(len=10) :: loType
-  LOGICAL :: kptGamma, l_relcor
+  LOGICAL :: kptGamma, l_relcor,ldummy
   INTEGER :: iAtomType, startCoreStates, endCoreStates
   CHARACTER(len=100) :: xPosString, yPosString, zPosString
   CHARACTER(len=200) :: coreStatesString
@@ -131,7 +125,7 @@ SUBROUTINE r_inpXML(&
   REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-
+  INTEGER            :: lcutm,lcutwf,select(4)
 
 
   CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
@@ -1127,7 +1121,9 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,input%krla)
+  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,input%krla,hybrid%l_hybrid)
+
+  IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
   obsolete%lwb=.FALSE.
   IF (xcpot%icorr.GE.6) THEN
@@ -1146,32 +1142,27 @@ SUBROUTINE r_inpXML(&
      END IF
   END IF
 
-  ! WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
-  IF (namex.EQ.'vhse') THEN
-     ! overwrite if sane input
-     IF (aMix > 0 .and. aMix <= 1) THEN
-        aMix = aMix_VHSE( aMix )
-     ELSE
-        aMix = aMix_VHSE()
-     END IF
-     ! overwrite if sane input
-     IF (omega > 0) THEN
-        omega = omega_VHSE(omega)
-     ELSE
-        omega = omega_VHSE()
-     END IF
-     !       WRITE (6,9041) namex,relcor,aMix,omega
-  ELSE
-     !       WRITE (6,9040) namex,relcor
-  END IF
 
   l_gga = .FALSE.
   IF (xcpot%icorr.GE.6) l_gga = .TRUE.
 
+  !!! Hybrid stuff
+  numberNodes = xmlGetNumberOfNodes('/fleurInput/xcFunctional/hybridFunctional')
+  IF (numberNodes==0) THEN
+     IF (hybrid%l_hybrid) CALL judft_error("Hybrid input missing in inp.xml")
+  ELSE
+     IF (.NOT.hybrid%l_hybrid) CALL judft_error("Hybrid parameters specified but no hybrid functional used")
+     hybrid%gcutm1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@gcutm'))
+     hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@tolerance'))
+     hybrid%ewaldlambda=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@ewaldlambda'))
+     hybrid%lexp=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@lexp'))
+     hybrid%bands1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@bands'))
+  ENDIF
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of XC functional section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of species section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1316,6 +1307,20 @@ SUBROUTINE r_inpXML(&
      speciesEParams(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@d'))
      speciesEParams(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@f'))
 
+     ! Parameters for hybrid functionals
+     IF (hybrid%l_hybrid) THEN
+        WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/prodBasis'
+        numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+        IF (numberNodes.NE.1) CALL judft_error("Parameters for mixed basis are missing for some specified")
+        lcutm =evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutm'))
+        lcutwf=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutwf'))
+        xPathA=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@select')
+        SELECT(1)=evaluateFirstIntOnly(xPathA)
+        SELECT(2)=evaluateFirstIntOnly(xPathA)
+        SELECT(3)=evaluateFirstIntOnly(xPathA)
+        SELECT(4)=evaluateFirstIntOnly(xPathA)
+     ENDIF
+        
      ! Explicitely provided xc functional
 
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/xcFunctional'
@@ -1328,7 +1333,7 @@ SUBROUTINE r_inpXML(&
      IF (numberNodes.EQ.1) THEN
         namexSpecies = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
         relcorSpecies = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@relativisticCorrections'))
-        CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,igrdSpecies,krlaSpecies)
+        CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,igrdSpecies,krlaSpecies,ldummy)
      END IF
 
      ! Explicitely provided core configurations
@@ -1512,6 +1517,12 @@ SUBROUTINE r_inpXML(&
                  enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)
               END DO
            END DO
+           !Hybrid functional stuff
+           IF (hybrid%l_hybrid) THEN
+              hybrid%lcutm1(iType)=lcutm
+              hybrid%lcutwf(iType)=lcutwf
+              hybrid%select1(:,iType)=SELECT
+           ENDIF
            ! Explicit xc functional
            atoms%namex(iType) = namexSpecies
            atoms%relcor(iType) = relcorSpecies
@@ -1888,7 +1899,7 @@ SUBROUTINE r_inpXML(&
 
 END SUBROUTINE r_inpXML
 
-SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
+SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla,l_hybrid)
 
    USE m_juDFT
    USE m_icorrkeys
@@ -1900,11 +1911,11 @@ SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
    INTEGER,              INTENT(OUT) :: icorr
    INTEGER,              INTENT(OUT) :: igrd
    INTEGER,              INTENT(OUT) :: krla
-
+   LOGICAL,              INTENT(OUT) :: l_hybrid
    icorr = -99
+   l_hybrid=.FALSE.
+   
    !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
-   IF (namex.EQ.'exx ') icorr = icorr_exx
-   IF (namex.EQ.'hf  ') icorr = icorr_hf
    IF (namex.EQ.'l91 ') icorr = -1
    IF (namex.EQ.'x-a ') icorr =  0
    IF (namex.EQ.'wign') icorr =  1
@@ -1913,6 +1924,7 @@ SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
    IF (namex.EQ.'bh')   icorr =  3
    IF (namex.EQ.'vwn')  icorr =  4
    IF (namex.EQ.'pz')   icorr =  5
+   !Now GGA section starts
    IF (namex.EQ.'pw91') icorr =  6
    !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
    !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
@@ -1922,7 +1934,8 @@ SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
    IF (namex.eq.'Rpbe') icorr =  9
    IF (namex.eq.'wc')   icorr = 10
    !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
-   IF (namex.eq.'PBEs') icorr = 11
+   IF (namex.EQ.'PBEs') icorr = 11
+   IF (icorr == -99) l_hybrid=.true. !only hybrid functional below here
    !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
    IF (namex.eq.'pbe0') icorr = icorr_pbe0
    !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
@@ -1930,6 +1943,8 @@ SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla)
    IF (namex.eq.'vhse') icorr = icorr_vhse
    ! local part of HSE
    IF (namex.eq.'lhse') icorr = icorr_hseloc
+   IF (namex.EQ.'exx ') icorr = icorr_exx
+   IF (namex.EQ.'hf  ') icorr = icorr_hf
 
    IF (icorr == -99) THEN
       WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
