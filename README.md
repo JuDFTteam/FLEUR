@@ -43,6 +43,8 @@ Here a short description of the directories:
 * mpi: code for parallel execution
 * io: subroutines doing IO
 * juDFT: timing, error handling, etc
+* eels: code for electron-energy loss spectroscopy
+* hybrid: code for hybrid functionals 
 * math: code providing math functionality
 * include: c-type include files
 * global: code used everywhere (here you find types.F90 with the data-types)
