@@ -508,8 +508,8 @@
       WRITE (chntype,'(i4)') 2*atoms%ntype
       chform = '('//chntype//'i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99) &
-     &                (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
-      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
+     &                (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
+      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
  6010 FORMAT (25i3)
 !
       READ (UNIT=5,FMT=6010,END=99,ERR=99) nw,obsolete%lepr
