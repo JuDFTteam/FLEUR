@@ -446,6 +446,7 @@ CONTAINS
     IF (PRESENT(eig).OR.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
        tmp_real=1E99
+       n3 = 1
        if (PRESENT(EIG)) THEN
           n1=1;n3=1
           IF (PRESENT(n_rank)) n1=n_rank+1

@@ -65,9 +65,10 @@ CONTAINS
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
        r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance ; r(30)=obsolete%chng
+
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
-       l(11)=banddos%dos ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
+       l(11)=banddos%dos ; l(12) = hybrid%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip ; l(19)=obsolete%l_f2u ; l(20)=obsolete%l_u2f
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
@@ -108,7 +109,7 @@ CONTAINS
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
     input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18) ; obsolete%l_f2u=l(19) ; obsolete%l_u2f=l(20)
-    banddos%dos=l(11) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
+    banddos%dos=l(11) ; hybrid%l_hybrid=l(12) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
     input%integ=l(14) ; sliceplot%iplot=l(15)
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
@@ -258,10 +259,12 @@ CONTAINS
     ENDIF
     !--- J>
     !--- HF<
-    CALL MPI_BCAST(hybrid%lcutwf,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%nkpt3,3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    IF(hybrid%l_hybrid) THEN
+       CALL MPI_BCAST(hybrid%lcutwf,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    END IF
     !--- HF>
 
     CALL MPI_BCAST(atoms%relcor,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
