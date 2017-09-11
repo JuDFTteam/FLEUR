@@ -59,7 +59,7 @@ CONTAINS
        RETURN
     ENDIF
     !Check if we are converged well enough to calculate a new potential
-#ifdef   CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
     CALL judft_error("Hybrid functionals do not work in parallel version yet")
     CALL MPI_BCAST(results%last_distance .... 
 #endif

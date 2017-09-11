@@ -31,7 +31,7 @@ CONTAINS
     REAL,ALLOCATABLE,INTENT(OUT):: eig_irr(:,:)
  
 
-    INTEGER:: ok,nk,nrec1,i,j,ll,l1,l2,ng,itype,n,l,n1,n2,nn
+    INTEGER :: ok,nk,nrec1,i,j,ll,l1,l2,ng,itype,n,l,n1,n2,nn
 
 
     TYPE(t_zmat),ALLOCATABLE :: zmat(:)
@@ -43,6 +43,14 @@ CONTAINS
   
     LOGICAL:: skip_kpt(kpts%nkpt)
     REAL   :: g(3)
+
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
+    INTEGER :: sndreqd, rcvreqd, rcvreq(kpts%nkpt)
+    INTEGER(KIND=MPI_ADDRESS_KIND) :: addr
+    INTEGER :: ierr(3)
+    INCLUDE 'mpif.h'
+#endif
+
     skip_kpt=.FALSE.
 
     IF( hybrid%l_calhf ) THEN
@@ -63,10 +71,10 @@ CONTAINS
        zmat(:)%l_real=l_real
       ! Reading the eig file
        DO nk = 1,kpts%nkpt
-#               ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
           ! jump to next k-point if this process is not present in communicator
           IF ( skip_kpt(nk) ) CYCLE
-#               endif
+#endif
           nrec1 = kpts%nkpt*(jsp-1) + nk
           zmat(nk)%nbasfcn=dimension%nbasfcn
           zmat(nk)%nbands=dimension%neigd2
@@ -105,10 +113,10 @@ CONTAINS
        degenerat = 1
        hybrid%nobd      = 0
        DO nk=1 ,kpts%nkpt
-#               ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
           ! jump to next k-point if this k-point is not treated at this process
           IF ( skip_kpt(nk) ) CYCLE
-#               endif
+#endif
           DO i=1,hybrid%ne_eig(nk)
              DO j=i+1,hybrid%ne_eig(nk)
                 IF( ABS(eig_irr(i,nk)-eig_irr(j,nk)) < 1E-07) THEN !0.015
@@ -153,7 +161,7 @@ CONTAINS
           PRINT *,"bands:",nk, hybrid%nobd(nk),hybrid%nbands(nk),hybrid%ne_eig(nk)
        END DO
 
-#             ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
        ! send results for occupied bands to all processes
        sndreqd = 0 ; rcvreqd = 0
        DO nk = 1,kpts%nkpt
@@ -175,7 +183,7 @@ CONTAINS
        CALL MPI_GET_ADDRESS( hybrid%nobd, addr, ierr(1) )
        rcvreqd = 0
 
-#             endif
+#endif
 
        ! spread hybrid%nobd from IBZ to whole BZ
        DO nk = 1,kpts%nkptf
@@ -202,10 +210,10 @@ CONTAINS
             &                    hybdat%lmaxcd,hybdat%maxindxc,mpi,&
             &                    hybdat%lmaxc,hybdat%nindxc,hybdat%core1,hybdat%core2,hybdat%eig_c)
 
-#             ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
        ! wait until all files are written in gen_wavf
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
-#             endif
+#endif
 
        !
        ! check olap between core-basis/core-valence/basis-basis

@@ -189,8 +189,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       ALLOCATE(hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-      ALLOCATE(hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-      ALLOCATE(hybrid%ddist(dimension%jspd))
+      ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
       IF (xcpot%igrd.NE.0) THEN
          ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
@@ -222,7 +221,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       jij%nmagn=1
       jij%mtypes=1
       jij%phnd=1
-      hybrid%ddist     = 1.0
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0
    END IF

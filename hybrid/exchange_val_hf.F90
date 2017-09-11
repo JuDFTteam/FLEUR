@@ -64,7 +64,7 @@
       USE m_olap
       USE m_spmvec
       USE m_hsefunctional ,ONLY: dynamic_hse_adjustment
-#ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
       USE m_mpi_work_dist
       USE m_mpi_tags
 #endif
@@ -139,7 +139,7 @@
       COMPLEX                 ::  dcprod(hybrid%nbands(nk),hybrid%nbands(nk),3) 
 
       COMPLEX(8)              ::  exch_vv(hybrid%nbands(nk),hybrid%nbands(nk))
-#ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
       COMPLEX(8)              ::  buf_vv(hybrid%nbands(nk),nbands(nk))
 #endif
       COMPLEX                 ::  hessian(3,3)
@@ -176,7 +176,7 @@
 #endif
 
       LOGICAL                 ::  occup(dimension%neigd)
-#ifdef CPP_MPI
+#if defined(CPP_MPI)&&defined(CPP_NEVER)
       INCLUDE "mpif.h"
       INTEGER                 :: ierr,ierr2,length,rank
       CHARACTER(LEN=MPI_MAX_ERROR_STRING) :: errmsg
