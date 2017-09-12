@@ -89,7 +89,7 @@ CONTAINS
     nkvec(:,:) = 0
     cwork(:,:,:,:) = CMPLX(0.0,0.0)
     enough=.FALSE.
-    DO k = 1,MIN(lapw%nv(1),lapw%nv(nintsp))
+    DO k = 2,MIN(lapw%nv(1),lapw%nv(nintsp))
 
        IF (.NOT.enough) THEN
           DO iintsp = 1,nintsp
@@ -97,27 +97,27 @@ CONTAINS
              !-->        generate spherical harmonics
              vmult(:) =  gkrot(k,:,iintsp)
              CALL ylm4(atoms%lnonsph(ntyp),vmult, ylm)
-             l_lo1=.FALSE.
-             IF ((lapw%rk(k,iintsp).LT.eps).AND.(.NOT.noco%l_ss)) THEN
-                l_lo1=.TRUE.
-             ELSE
-                l_lo1=.FALSE.
-             ENDIF
-             ! --> here comes a part of abccoflo() 
-             IF ( l_lo1) THEN
-                DO lo = 1,atoms%nlo(ntyp)
-                   IF ((nkvec(lo,iintsp).EQ.0).AND.(atoms%llo(lo,ntyp).EQ.0)) THEN
-                      enough = .FALSE.
-                      nkvec(lo,iintsp) = 1
-                      kvec(nkvec(lo,iintsp),lo) = k
-                      term1 = con1* ((atoms%rmt(ntyp)**2)/2)
-                      cwork(0,1,lo,iintsp) = term1 / SQRT(2*tpi_const)
-                      IF((atoms%invsat(na).EQ.1).OR.(atoms%invsat(na).EQ.2)) THEN
-                         cwork(1,1,lo,iintsp) = CONJG(term1) / SQRT(2*tpi_const)
-                      ENDIF
-                   ENDIF
-                ENDDO
-             ELSE
+!!$             l_lo1=.FALSE.
+!!$             IF ((lapw%rk(k,iintsp).LT.eps).AND.(.NOT.noco%l_ss)) THEN
+!!$                l_lo1=.TRUE.
+!!$             ELSE
+!!$                l_lo1=.FALSE.
+!!$             ENDIF
+!!$             ! --> here comes a part of abccoflo() 
+!!$             IF ( l_lo1) THEN
+!!$                DO lo = 1,atoms%nlo(ntyp)
+!!$                   IF ((nkvec(lo,iintsp).EQ.0).AND.(atoms%llo(lo,ntyp).EQ.0)) THEN
+!!$                      enough = .FALSE.
+!!$                      nkvec(lo,iintsp) = 1
+!!$                      kvec(nkvec(lo,iintsp),lo) = k
+!!$                      term1 = con1* ((atoms%rmt(ntyp)**2)/2)
+!!$                      cwork(0,1,lo,iintsp) = term1 / SQRT(2*tpi_const)
+!!$                      IF((atoms%invsat(na).EQ.1).OR.(atoms%invsat(na).EQ.2)) THEN
+!!$                         cwork(1,1,lo,iintsp) = CONJG(term1) / SQRT(2*tpi_const)
+!!$                      ENDIF
+!!$                   ENDIF
+!!$                ENDDO
+!!$             ELSE
                 enough = .TRUE.
                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)* CMPLX(rph(k,iintsp),cph(k,iintsp))
                 DO lo = 1,atoms%nlo(ntyp)
@@ -174,7 +174,7 @@ CONTAINS
                    WRITE(*,*) na,k,lapw%nv 
                    CALL juDFT_error("not enough lin. indep. clo-vectors" ,calledby ="vec_for_lo")
                 END IF
-             ENDIF
+             !ENDIF
              ! -- >        end of abccoflo-part           
           ENDDO
        ENDIF
