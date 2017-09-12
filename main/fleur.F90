@@ -103,7 +103,7 @@ CONTAINS
 
     !     .. Local Scalars ..
     INTEGER:: eig_id
-    INTEGER:: it,ithf,pc
+    INTEGER:: n,it,ithf,pc
     LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
     !--- J<
     INTEGER             :: phn
