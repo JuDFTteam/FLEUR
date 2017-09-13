@@ -28,14 +28,14 @@ module m_eig66_data
     TYPE,extends(t_data):: t_data_MPI
        INTEGER             :: n_size=1
        INTEGER             :: size_k,size_el,size_ello,size_eig
-       INTEGER             :: int_handle,real_handle,eig_handle,zr_handle,zc_handle,neig_handle
+       INTEGER             :: int_handle,real_handle,eig_handle,zr_handle,zc_handle,neig_handle,w_iks_handle
        INTEGER             :: qal_handle,qvac_handle,qis_handle,qvlay_handle,qintsl_handle,qmtsl_handle
        INTEGER             :: qmtp_handle,orbcomp_handle,qstars_handle,mcd_handle,jsym_handle,ksym_handle
        INTEGER,ALLOCATABLE :: pe_basis(:,:),slot_basis(:,:)
        INTEGER,ALLOCATABLE :: pe_ev(:,:,:),slot_ev(:,:,:)
        INTEGER             :: irank
        INTEGER,POINTER     :: neig_data(:),int_data(:)
-       REAL,POINTER        :: eig_data(:),zr_data(:),real_data(:)
+       REAL,POINTER        :: eig_data(:),zr_data(:),real_data(:), w_iks_data(:)
        REAL,POINTER        :: qal_data(:),qvac_data(:),qis_data(:),qvlay_data(:)
        REAL,POINTER        :: qintsl_data(:),qmtsl_data(:),qmtp_data(:),orbcomp_data(:),mcd_data(:)
        COMPLEX,POINTER     :: qstars_data(:)
