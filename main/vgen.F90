@@ -854,6 +854,14 @@ CONTAINS
                    v%pw(i,js)=vpw_w(i,js)/stars%nstr(i)
                 ENDDO
              ENDDO
+             IF (vacuum%nvac==1) THEN
+                v%vacz(:,2,:)=v%vacz(:,1,:)
+                IF (sym%invs) THEN
+                   v%vacxy(:,:,2,:)= cmplx(v%vacxy(:,:,1,:))
+                ELSE
+                   v%vacxy(:,:,2,:)=v%vacxy(:,:,1,:)
+                ENDIF
+             ENDIF
              CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,&
                                  v%iter,v%mt,v%pw,v%vacz,v%vacxy)
 

@@ -47,6 +47,7 @@ CONTAINS
        IF (create) THEN
           d%neig_data=0
           d%eig_data=1E99
+          d%w_iks_data=1E99
           d%int_data=9999999
           d%real_data=1E99
           if (d%l_real.and..not.l_soc) THEN
@@ -97,9 +98,13 @@ CONTAINS
     d%real_data=1E99
 
     !The eigenvalues
-    d%size_eig=2*neig
+    d%size_eig=neig
     CALL priv_create_memory(d%size_eig,local_slots,d%eig_handle,real_data_ptr=d%eig_data)
     d%eig_data=1E99
+    !The w_iks
+    CALL priv_create_memory(d%size_eig,local_slots,d%w_iks_handle,real_data_ptr=d%w_iks_data)
+    d%w_iks_data=1E99
+
     !The eigenvectors
     local_slots=COUNT(d%pe_ev==d%irank)
     slot_size=nmat
@@ -319,17 +324,22 @@ CONTAINS
        DEALLOCATE(tmp_real)
     ENDIF
     IF (PRESENT(eig).or.PRESENT(w_iks)) THEN
-       CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%eig_handle,e)
        ALLOCATE(tmp_real(d%size_eig))
-       CALL MPI_GET(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
-       CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
        IF (PRESENT(eig)) THEN
+          CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%eig_handle,e)
+          CALL MPI_GET(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
+          CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
           n1=1;n3=1;n2=SIZE(eig)
           IF (PRESENT(n_start)) n1=n_start
           IF (PRESENT(n_end)) n2=n_end
           eig(:n2-n1+1)=tmp_real(n1:n2)
        END IF
-       IF (PRESENT(w_iks)) w_iks=tmp_real(d%size_eig/2+1:d%size_eig/2+size(w_iks))
+       IF (PRESENT(w_iks)) THEN
+          CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%w_iks_handle,e)
+          CALL MPI_GET(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%w_iks_handle,e)
+          CALL MPI_WIN_UNLOCK(pe,d%w_iks_handle,e)
+          w_iks=tmp_real(:size(w_iks))
+       END IF
        DEALLOCATE(tmp_real)
     ENDIF
 
@@ -446,7 +456,6 @@ CONTAINS
     IF (PRESENT(eig).OR.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
        tmp_real=1E99
-       n3 = 1
        if (PRESENT(EIG)) THEN
           n1=1;n3=1
           IF (PRESENT(n_rank)) n1=n_rank+1
@@ -457,15 +466,20 @@ CONTAINS
              tmp_real(n)=eig(nn)
              nn=nn+1
           ENDDO
+          CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
+          IF (n3.ne.1) THEN
+             CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)
+          ELSE
+             CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
+          ENDIF
+          CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
        END if
-       IF (PRESENT(w_iks)) tmp_real(d%size_eig/2+1:d%size_eig/2+size(w_iks))=w_iks
-       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
-       IF (n3.ne.1) THEN
-          CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)
-       ELSE
-          CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
-       ENDIF
-       CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
+       IF (PRESENT(w_iks)) THEN
+          tmp_real(:size(w_iks))=w_iks
+          CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%w_iks_handle,e)
+          CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%w_iks_handle,e)
+          CALL MPI_WIN_UNLOCK(pe,d%w_iks_handle,e)
+       END IF
        DEALLOCATE(tmp_real)
     ENDIF
     IF (PRESENT(zmat)) THEN
