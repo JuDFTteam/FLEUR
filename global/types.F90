@@ -526,12 +526,7 @@ MODULE m_types
      REAL                 :: phi
   END TYPE t_noco
 
-  TYPE t_xcpot
-     INTEGER :: icorr
-     INTEGER :: igrd
-     REAL    :: gmaxxc
-  END TYPE t_xcpot
-
+ 
 
   TYPE t_input
      LOGICAL :: strho
@@ -554,7 +549,6 @@ MODULE m_types
      REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
      REAL    :: epsforce !< minimal force. If all forces <epsforce stop
      INTEGER :: isec1
-     INTEGER :: krla
      REAL    :: delgau
      REAL    :: alpha
      REAL    :: spinf
@@ -965,5 +959,5 @@ CONTAINS
     ENDIF
   END SUBROUTINE init_potden_simple
 
-
+ 
 END MODULE m_types

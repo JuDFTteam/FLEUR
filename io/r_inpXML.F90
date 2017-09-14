@@ -1121,7 +1121,7 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,input%krla,hybrid%l_hybrid)
+  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,xcpot%krla,hybrid%l_hybrid)
 
   IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 

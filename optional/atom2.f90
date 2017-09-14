@@ -221,7 +221,7 @@
          ENDDO
          IF ((xcpot%igrd.EQ.0).AND.(xcpot%icorr.NE.-1)) THEN
 !
-           CALL  vxcall(6,xcpot%icorr,input%krla,input%jspins,&
+           CALL  vxcall(6,xcpot%icorr,xcpot%krla,input%jspins,&
      &                   size(vx,1),jrc,rhoss,&
      &                   vx,vxc)
 !

@@ -256,9 +256,9 @@
           ENDIF
           xcpot%igrd = 0
           IF (xcpot%icorr.GE.6) xcpot%igrd = 1
-          input%krla = 0
+          xcpot%krla = 0
           IF (relcor.EQ.'relativistic') THEN
-             input%krla = 1
+             xcpot%krla = 1
              IF (xcpot%igrd.EQ.1) THEN
                 WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
                 WRITE(6,*) 'only without relativistic corrections !'

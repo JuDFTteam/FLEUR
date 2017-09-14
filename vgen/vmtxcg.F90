@@ -301,7 +301,7 @@ CONTAINS
           IF (mpi%irank == 0) THEN
              IF (mod(jr,1000).eq.0)&
                   &      WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp,iwb='',5i5,l3/&
-                  &            '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
+                  &            '' ch''/(10d15.7))') xcpot%icorr,xcpot%krla,xcpot%igrd,input%jspins,&
                   &            nsp,lwbc,((ch(k,js),k=1,nsp),js=1,input%jspins)
           ENDIF !irank==0
 
@@ -374,7 +374,7 @@ CONTAINS
              IF (mpi%irank == 0) THEN
              IF (mod(jr,2500).EQ.0)&
                   &        WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp='',5i5/&
-                  &               '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
+                  &               '' ch''/(10d15.7))') xcpot%icorr,xcpot%krla,xcpot%igrd,input%jspins,&
                   &               nsp,((ch(k,js),k=1,nsp),js=1,input%jspins)
              ENDIF !irank==0
 

@@ -393,7 +393,7 @@
                          ENDDO
                          CALL qsf(vacuum%delz,sigm,vacpar(ivac),vacuum%nmz,0)
                          denz1(1) = rht(1,ivac,ispin)          ! get estimate for potential at
-                         CALL  vxcall(6,icorr_dummy,input%krla,1,&    !               vacuum boundary&
+                         CALL  vxcall(6,icorr_dummy,xcpot%krla,1,&    !               vacuum boundary&
                          &                     1,1,denz1,&
                               &                     vacxpot,vacpot)
                          ! seems to be the best choice for 1D not to substract vacpar

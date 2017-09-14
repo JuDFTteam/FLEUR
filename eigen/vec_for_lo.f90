@@ -90,7 +90,7 @@ CONTAINS
     cwork(:,:,:,:) = CMPLX(0.0,0.0)
     enough=.FALSE.
     DO k = 1,MIN(lapw%nv(1),lapw%nv(nintsp))
-       IF (lapw%rk(k,iintsp).LT.eps) CYCLE
+       IF (ANY(lapw%rk(k,:nintsp)).LT.eps) CYCLE
        IF (.NOT.enough) THEN
           DO iintsp = 1,nintsp
 
