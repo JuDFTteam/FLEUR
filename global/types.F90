@@ -924,7 +924,7 @@ CONTAINS
 
   END SUBROUTINE usdus_init
 
-  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,oneD,jsp)
+  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,oneD,jsp,l_noco)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd
@@ -933,16 +933,17 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN):: sphhar
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_oneD),INTENT(IN)  :: oneD
-    INTEGER,INTENT(IN) :: jsp
-
-    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
+    INTEGER,INTENT(IN)       :: jsp
+    LOGICAL,INTENT(IN)       :: l_noco
+    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,l_noco,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,l_noco,nmzd,nmzxyd,n2d)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
     INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,jsp
+    LOGICAL,INTENT(IN)          :: l_noco
     INTEGER,INTENT(IN),OPTIONAL :: nmzd,nmzxyd,n2d
 
     INTEGER:: err(4)
@@ -952,7 +953,7 @@ CONTAINS
     ALLOCATE(pd%pw(ng3,jsp),stat=err(1))
     ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
     IF (PRESENT(nmzd)) THEN
-       ALLOCATE(pd%vacz(nmzd,2,jsp),stat=err(3))
+       ALLOCATE(pd%vacz(nmzd,2,MERGE(jsp,4,l_noco)),stat=err(3))
        ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
     ENDIF
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")

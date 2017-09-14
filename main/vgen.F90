@@ -124,8 +124,7 @@ CONTAINS
     !     ivac=1: upper (positive z) vacuum
     !     units: hartrees
     !
-    call v%init(stars,atoms,sphhar,vacuum,oneD,dimension%jspd)
-    
+    CALL v%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
     ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
          vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),xp(3,dimension%nspd),&
          rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd),&
@@ -134,7 +133,7 @@ CONTAINS
          excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
          vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
 
-    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,dimension%jspd)
+    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.false.)
   
     IF (noco%l_noco) THEN
        ALLOCATE ( cdom(stars%ng3), cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
