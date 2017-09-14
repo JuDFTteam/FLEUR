@@ -526,7 +526,13 @@ MODULE m_types
      REAL                 :: phi
   END TYPE t_noco
 
- 
+  TYPE t_xcpot
+     INTEGER             :: icorr,igrd
+     INTEGER,ALLOCATABLE :: icorr_mt(:)
+     REAL                :: gmaxxc
+     INTEGER             :: krla !relativistic corrections
+
+  END TYPE t_xcpot
 
   TYPE t_input
      LOGICAL :: strho
