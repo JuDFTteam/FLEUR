@@ -102,35 +102,25 @@ CONTAINS
                &        ="optional")
           IF (noco%l_noco) THEN
              cdnfname = 'cdn'
-             CALL plotdop(&
-                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
-                  &           input,sym,cell,sliceplot,&
-                  &           noco%l_noco,cdnfname)
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cdnfname)
              cdnfname = 'mdnx'
-             CALL plotdop(&
-                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
-                  &           input,sym,cell,sliceplot,&
-                  &           noco%l_noco,cdnfname)
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cdnfname)
              cdnfname = 'mdny'
-             CALL plotdop(&
-                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
-                  &           input,sym,cell,sliceplot,&
-                  &           noco%l_noco,cdnfname)
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cdnfname)
              cdnfname = 'mdnz'
-             CALL plotdop(&
-                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
-                  &           input,sym,cell,sliceplot,&
-                  &           noco%l_noco,cdnfname)
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cdnfname)
           ELSE
              IF (sliceplot%slice) THEN
                 cdnfname = 'cdn_slice'
              ELSE
                 cdnfname = 'cdn1'
              ENDIF
-             CALL plotdop(&
-                  &           oneD,dimension,stars,vacuum,sphhar,atoms,&
-                  &           input,sym,cell,sliceplot,&
-                  &           noco%l_noco,cdnfname)
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cdnfname)
           ENDIF
           CALL timestop("Plotting")
        END IF

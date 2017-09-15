@@ -24,10 +24,8 @@
       PRIVATE
       PUBLIC plotdop
       CONTAINS
-      SUBROUTINE plotdop(oneD,dimension,&
-     &     stars,vacuum,sphhar,atoms,&
-     &     input,sym,cell,sliceplot,&
-     &     l_noco,cdnfname)
+      SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                         input,sym,cell,sliceplot,noco,cdnfname)
 !    *****************************************************
       USE m_outcdn
       USE m_loddop
@@ -46,7 +44,7 @@
       TYPE(t_sym),INTENT(IN)      :: sym
       TYPE(t_cell),INTENT(IN)     :: cell
       TYPE(t_sliceplot),INTENT(IN):: sliceplot
-      LOGICAL,INTENT(in)          :: l_noco
+      TYPE(t_noco),INTENT(IN)     :: noco
       CHARACTER(len=10), INTENT (IN) :: cdnfname
 
 !     .. Local Scalars ..
@@ -75,7 +73,7 @@
          CALL priv_old_plot(oneD,dimension,&
      &                stars,vacuum,sphhar,atoms,&
      &                input,sym,cell,sliceplot,&
-     &                l_noco,cdnfname)
+     &                noco%l_noco,cdnfname)
          RETURN
       ENDIF
       INQUIRE(file ="plot_inp",exist= newform)
@@ -139,7 +137,7 @@
       READ(18,'(i2,5x,l1)')    nplot,xsf
       ! If xsf is specified we create an input file for xcrysden
       IF (xsf) THEN
-         IF (l_noco) THEN
+         IF (noco%l_noco) THEN
              append = '_pl.xsf'
              OPEN (55,file = trim(cdnfname)//append,form='formatted')
          ELSE
@@ -175,7 +173,7 @@
             CALL xsf_WRITE_header(55,twodim,filename,vec1,vec2,vec3,zero&
      &           ,grid)
          ELSE
-            IF (l_noco) THEN
+            IF (noco%l_noco) THEN
                OPEN (55,file = filename//cdnfname,form='formatted')
             ELSE
                OPEN (55,file = filename,form='formatted')
