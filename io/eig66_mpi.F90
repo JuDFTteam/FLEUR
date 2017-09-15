@@ -167,7 +167,7 @@ CONTAINS
           CALL MPI_TYPE_SIZE(MPI_INTEGER,type_size,e)
       ENDIF
       if (length.ne.1) call judft_error("Bug in eig66_mpi:create_memory") 
-      length=MIN(1,slot_size*local_slots)
+      length=MAX(1,slot_size*local_slots)
  
       length=length*type_size
 
