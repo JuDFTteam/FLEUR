@@ -629,7 +629,7 @@ CONTAINS
                   &                      eig(:neig))
           ENDIF
           IF (PRESENT(w_iks)) THEN
-             CALL io_read_real1(d%wikssetid,(/1,nk,jspin/),(/size(w_iks),1,1/),w_iks,(/1,1,1/))
+             CALL io_read_real1(d%wikssetid,(/1,nk,jspin/),(/size(w_iks),1,1/),w_iks)
           ENDIF
        ENDIF
 
