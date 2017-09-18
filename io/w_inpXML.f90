@@ -414,11 +414,6 @@ SUBROUTINE w_inpXML(&
    280 FORMAT('   <xcFunctional name="',a,'" relativisticCorrections="',l1,'"/>')
    WRITE (fileNum,280) TRIM(namex), l_relcor
 
-!      <xcParams igrd="1" lwb="F" ndvgrd="6" idsprs="0" chng="-0.100e-11"/>
-
-!   290 FORMAT('      <xcParams igrd="',i0,'" lwb="',l1,'" ndvgrd="',i0,'" idsprs="',i0,'" chng="',e,'"/>')
-!   WRITE (fileNum,290) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
-!   WRITE (fileNum,'(a)') '   </xcFunctional>'
 
    uIndices = -1
    DO i_u = 1, atoms%n_u

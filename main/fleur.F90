@@ -45,7 +45,6 @@ CONTAINS
     USE m_rhodirgen
     USE m_writexcstuff
     USE m_vmatgen
-    USE m_icorrkeys
     USE m_eigen
     USE m_eigenso
     USE m_fermie

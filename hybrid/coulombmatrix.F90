@@ -44,7 +44,6 @@ CONTAINS
     USE m_util         , ONLY : sphbessel,intgrf,intgrf_init, harmonicsr,primitivef
     USE m_hsefunctional, ONLY : change_coulombmatrix
     USE m_wrapper
-    USE m_icorrkeys
     USE m_io_hybrid
     USE m_types
 
@@ -1127,7 +1126,7 @@ CONTAINS
 1   DEALLOCATE (qnrm,pqnrm)
 
     CALL cpu_TIME(time1)
-    IF ( xcpot%icorr == icorr_hse .OR. xcpot%icorr == icorr_vhse ) THEN
+    IF ( xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
        !
        ! The HSE functional is realized subtracting erf/r from
        ! the normal Coulomb matrix

@@ -2,8 +2,6 @@ set(fleur_F77 ${fleur_F77}
 global/constants.f
 global/differ.f
 global/fitchk.f
-global/hybridmix.f
-global/icorrkeys.f
 global/nmat_rot.f
 global/od_cylbes.f
 global/od_phasy.f
@@ -30,5 +28,6 @@ global/qfix.f90
 global/radflo.F90
 global/types.F90
 global/types_rcmat.F90
+global/types_xcpot.F90
 global/utility.F90
 )

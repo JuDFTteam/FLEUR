@@ -10,14 +10,13 @@
      >                      infh,nline,xl_buffer,bfh,buffer,
      <                      jspins,kcrel,ndvgrd,nkpt,div,
      <                      frcor,ctail,chng,tria,kmax,gmax,gmaxxc,
-     <                      igrd,dvac,dtild,tkb,namex,relcor)
+     <                      dvac,dtild,tkb,namex,relcor)
      
       USE m_readrecord
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: xl_buffer,infh,bfh
       INTEGER, INTENT (OUT) :: jspins,kcrel,ndvgrd,nkpt,div(3)
-      INTEGER, INTENT (OUT) :: igrd
       LOGICAL, INTENT (OUT) :: frcor,ctail,tria
       REAL,    INTENT (OUT) :: kmax,gmax,gmaxxc,tkb,chng
       REAL,    INTENT (INOUT) :: dvac,dtild
@@ -47,7 +46,7 @@
 
         relcor = 'non-relativi'
         namex = 'pbe '
-        igrd = 1 ; ndvgrd = 6 ; chng= -1.0e-12 
+        ndvgrd = 6 ; chng= -1.0e-12 
         nkpt = 0 ; div = 0 
         tkb = 0.001 ; tria = .false.
  
@@ -105,7 +104,7 @@
 
         IF (iflag==2) THEN
         ELSE
-         igrd = 0 ; ndvgrd = 0 ; chng= 0.0
+          ndvgrd = 0 ; chng= 0.0
         ENDIF
 
 !===> film

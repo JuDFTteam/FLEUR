@@ -14,17 +14,16 @@ c     [d] J.~Heyd, G.~E.~Scuseria, M.~Ernzerhof, J. Chem. Phys. {\bf 118},
 c     8207 (2003) 
 c----------------------------------------------------------------------
       CONTAINS
-      SUBROUTINE exchpbe(icorr,rho,s,u,v,lgga,lpot,
+      SUBROUTINE exchpbe(xcpot,rho,s,u,v,lgga,lpot,
      <     ex,vx,vx_sr)
       USE m_hsefunctional, ONLY: calculateEnhancementFactor
-      USE m_hybridmix
       USE m_constants,     ONLY: pi_const
-      USE m_icorrkeys
+      USE m_types
       USE m_judft
       IMPLICIT NONE
 
 !     .. Arguments
-      INTEGER, INTENT (IN)  :: icorr
+      TYPE(t_xcpot), INTENT (IN)  :: xcpot
       INTEGER, INTENT (IN)  :: lgga ! =0=>don't put in gradient corrections, just lda
       INTEGER, INTENT (IN)  :: lpot ! =0=>don't get potential and don't need u and v
       REAL,    INTENT (IN)  :: rho ! density
@@ -50,21 +49,20 @@ c----------------------------------------------------------------------
 c----------------------------------------------------------------------
 c     uk, ul defined after [a](13)  (for icorr==7)
 c----------------------------------------------------------------------
-      IF ((icorr == 7).OR.(icorr == 10).OR.(icorr == 11)) THEN
+      IF (xcpot%is_name("pbe").OR.xcpot%is_name("wc").OR.
+     +     xcpot%is_name("PBEs")) THEN
          uk=0.8040
-      ELSEIF (icorr.EQ.8) THEN
+      ELSEIF (xcpot%is_name("rpbe")) THEN
          uk=1.2450
-      ELSEIF (icorr.EQ.9) THEN  ! changed to [c]
+      ELSEIF (xcpot%is_name("Rpbe")) THEN  ! changed to [c]
          uk=0.8040
-      ELSEIF (icorr.EQ.icorr_pbe0   .OR. icorr.EQ.icorr_hse
-     +        .OR. icorr.EQ.icorr_hseloc .OR. icorr.EQ.icorr_vhse ) THEN
+      ELSEIF (xcpot%is_name("pbe0").OR.xcpot%is_name("hse")
+     +        .OR. xcpot%is_name("lhse").OR.xcpot%is_name("vhse")) THEN
          uk=0.8040
       ELSE
-         WRITE(6,'(//'' icorr error. icorr='',i5)') icorr
-         CALL judft_error("icorr is not correctly transferred",
-     + calledby="exchpbe.F")
+         CALL judft_error("BUG:Wrong xcpot",calledby="exchpbe.F")
       ENDIF
-      IF (icorr == 11) THEN     ! pbe_sol
+      IF (xcpot%is_name("PBEs")) THEN     ! pbe_sol
          um=0.123456790123456d0
       ELSE
          um=0.2195149727645171e0
@@ -88,16 +86,17 @@ c     fxpbe(s)=1+uk-uk/(1+ul*s*s)                 [a](13)
 c----------------------------------------------------------------------
       s2 = s*s
 c     +gu
-      IF (icorr.EQ.7 .OR. icorr.EQ. 8 .OR. icorr.EQ.icorr_pbe0 .OR.
-     &     icorr.EQ.icorr_hse .OR. icorr.EQ.icorr_hseloc .OR.
-     &     icorr.EQ.icorr_vhse ) THEN
+      if (xcpot%is_name("pbe").or.xcpot%is_name("rpbe")
+     &     .or.xcpot%is_name("pbe0").or.xcpot%is_name("hse")
+     &     .or.xcpot%is_name("lhse").or.xcpot%is_name("vhse")) then
+      
 !     calculate fxpbe
          p0 = 1.e0 + ul*s2
          fxpbe = 1e0 + uk - uk/p0
-      ELSEIF (icorr.EQ.9) THEN
+      ELSEIF (xcpot%is_name("Rpbe")) THEN
          p0 = exp( - ul*s2 )
          fxpbe = 1e0 + uk * ( 1e0 - p0 )
-      ELSEIF (icorr.EQ.10) THEN
+      ELSEIF (xcpot%is_name("wc")) THEN
          css = 1+cwu*s2*s2
          xwu = teo*s2 + (um-teo)*s2*exp(-s2) + log(css)
          p0 = 1.e0 + xwu/uk
@@ -105,8 +104,8 @@ c     +gu
       ENDIF
 c     -gu
 !     Mixing of short and long range components
-      IF ( icorr == icorr_hse .OR. icorr == icorr_hseloc .OR.
-     +     icorr == icorr_vhse ) THEN
+      IF (xcpot%is_name("hse")
+     &     .or.xcpot%is_name("lhse").or.xcpot%is_name("vhse")) THEN
 !     ex = (1-a)ex,SR + ex,LR
 !     = (1-a)ex,SR + (ex,PBE - ex,SR)
 !     = (fxpbe - a*fxhse)*exunif
@@ -115,11 +114,7 @@ c     -gu
          kF = (3.0 * pi_const**2 * rho)**thrd
          CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
      &        dFx_dkF, d2Fx_dsdkF)
-         IF ( icorr == icorr_vhse ) THEN
-            ex = exunif * (fxpbe - aMix_VHSE() * fxhse )
-         ELSE
-            ex = exunif * (fxpbe - aMix_HSE * fxhse )
-         END IF
+         ex = exunif * (fxpbe - xcpot%get_exchange_weight() * fxhse )
       ELSE
          ex = exunif*fxpbe
       END IF
@@ -131,16 +126,16 @@ c     fs=(1/s)*d fxpbe/ ds
 c     fss=d fs/ds
 c----------------------------------------------------------------------
 c     +gu
-      IF (icorr.EQ.7 .OR. icorr.EQ.8 .OR. icorr.EQ.icorr_pbe0 .OR.
-     &     icorr.EQ.icorr_hse .OR. icorr.EQ.icorr_hseloc .OR.
-     &     icorr.EQ.icorr_vhse ) THEN
+      if (xcpot%is_name("pbe").or.xcpot%is_name("rpbe")
+     &     .or.xcpot%is_name("pbe0").or.xcpot%is_name("hse")
+     &     .or.xcpot%is_name("lhse").or.xcpot%is_name("vhse")) then
 !     derivatives for the pbe part
          fs = 2.e0*uk*ul/ (p0*p0)
          fss = -4.e0*ul*s*fs/p0
-      ELSEIF (icorr.EQ.9) THEN
+      ELSEIF (xcpot%is_name("Rpbe")) THEN
          fs = 2.e0*ul*p0
          fss = -2.e0*ul*s*fs
-      ELSEIF (icorr.EQ.10) THEN
+      ELSEIF (xcpot%is_name("wc")) THEN
          dxwu = 2*teo + 2*(um-teo)*exp(-s2)*(1-s2) + 4*cwu*s2/css
          fs = dxwu / (p0*p0)
          ddx = 4*s*((um-teo)*exp(-s2)*(s2-2)+2*cwu*(1-cwu*s2*s2)/css**2)
@@ -152,7 +147,8 @@ c     calculate potential from [b](24)
 c----------------------------------------------------------------------
       vx = exunif* (thrd4*fxpbe- (u-thrd4*s2*s)*fss-v*fs)
 
-      IF ( all((/icorr_hse,icorr_hseloc,icorr_vhse/) /= icorr)) RETURN
+      IF (.not.(xcpot%is_name("hse").or.xcpot%is_name("lhse")
+     &     .or.xcpot%is_name("vhse"))) RETURN
 
 c----------------------------------------------------------------------
 c     short ranged potential (HSE functional)

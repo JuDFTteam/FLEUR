@@ -86,7 +86,7 @@ CONTAINS
     TYPE(t_hybrid)                :: hybrid_temp
     TYPE(t_oneD)                  :: oneD_temp
     TYPE(t_wann)                  :: wann_temp
-    LOGICAL                       :: l_kpts_temp, l_gga_temp
+    LOGICAL                       :: l_kpts_temp
     INTEGER                       :: numSpecies
     INTEGER                       :: div(3)
     INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
@@ -236,7 +236,7 @@ CONTAINS
                         banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,wann_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,xmlElectronStates,&
-                        xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp,l_gga_temp)
+                        xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
           numSpecies = SIZE(speciesRepAtomType)
           filename = 'inp_new.xml'
           input_temp%l_f = input%l_f

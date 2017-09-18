@@ -94,7 +94,7 @@ CONTAINS
           ENDDO
           !     calculate the ex.-cor. potential
           !
-          CALL vxcall (6,xcpot%icorr,xcpot%krla,input%jspins, nsp,nsp,rhoxc, vx,vxc) 
+          CALL vxcall (6,xcpot,input%jspins, nsp,nsp,rhoxc, vx,vxc) 
           !     ----> now determine the corresponding potential number 
           DO js = 1,input%jspins
              !
@@ -131,7 +131,7 @@ CONTAINS
              !
              !     calculate the ex.-cor energy density
              !
-             CALL excall(6,xcpot%icorr,xcpot%krla,input%jspins, nsp,nsp,rhoxc, exc) 
+             CALL excall(6,xcpot,input%jspins, nsp,nsp,rhoxc, exc) 
           END IF
           !     ----> now determine the corresponding energy density number 
           !

@@ -22,7 +22,6 @@
           USE m_gen_map
           USE m_dwigner
           USE m_gen_bz
-          USE m_icorrkeys
           USE m_ylm
           USE m_InitParallelProcesses
           USE m_xmlOutput
@@ -79,7 +78,7 @@
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild, phi_add
-          LOGICAL                       :: l_found, l_kpts, l_gga, l_exist
+          LOGICAL                       :: l_found, l_kpts, l_exist
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -164,7 +163,7 @@
                      cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
-                     l_kpts,l_gga)
+                     l_kpts)
 
                 ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
                 ALLOCATE (results%force_old(3,atoms%ntype))
@@ -173,8 +172,7 @@
 
              CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
-                                   l_gga)
+                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
              IF (mpi%irank.EQ.0) THEN
                 filename = ''
@@ -286,15 +284,7 @@
              ! HF/hybrid functionals/EXX
              ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
            
-             ! Explicit atom-dependent xc functional
-             ALLOCATE(atoms%namex(atoms%ntype))
-             ALLOCATE(atoms%relcor(atoms%ntype))
-             ALLOCATE(atoms%icorr(atoms%ntype))
-             ALLOCATE(atoms%igrd(atoms%ntype))
-             ALLOCATE(atoms%krla(atoms%ntype))
-             atoms%namex = ''
-             atoms%icorr = -99
-
+         
              atoms%numStatesProvided(:) = 0
 
              jij%M(:)             = 0.0
@@ -314,7 +304,7 @@
                      &           cell,sliceplot,noco,&
                      &           stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
                 !
-                IF (xcpot%igrd.NE.0) THEN
+                IF (xcpot%is_gga()) THEN
                    ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
                    !-odim
                    ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
@@ -670,9 +660,7 @@
 
           ! Initializations for Wannier functions (end)
 
-          IF (    (xcpot%icorr.EQ.icorr_hf ) .OR. (xcpot%icorr.EQ.icorr_pbe0)&
-               &    .OR.(xcpot%icorr.EQ.icorr_exx) .OR. (xcpot%icorr.EQ.icorr_hse)&
-               &    .OR.(xcpot%icorr.EQ.icorr_vhse) ) THEN
+          IF (    xcpot%is_hybrid() ) THEN
              IF (input%film .OR. oneD%odi%d1)&
                   &    CALL juDFT_error("2D film and 1D calculations not implemented"&
                   &                 //"for HF/EXX/PBE0/HSE", calledby ="fleur",&

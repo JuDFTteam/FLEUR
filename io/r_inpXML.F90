@@ -18,7 +18,7 @@ SUBROUTINE r_inpXML(&
                      cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
-                     l_kpts,l_gga)
+                     l_kpts)
 
   USE iso_c_binding
   USE m_juDFT
@@ -31,7 +31,6 @@ SUBROUTINE r_inpXML(&
   USE m_closure, ONLY : check_close
   USE m_symproperties
   USE m_calculator
-  USE m_icorrkeys
   USE m_constants
   USE m_inpeig
   USE m_sort
@@ -57,7 +56,7 @@ SUBROUTINE r_inpXML(&
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
   TYPE(t_wann)   ,INTENT(INOUT)  :: wann
-  LOGICAL, INTENT(OUT)           :: l_kpts, l_gga
+  LOGICAL, INTENT(OUT)           :: l_kpts
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: speciesRepAtomType(:)
@@ -1121,30 +1120,20 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  CALL getXCParameters(namex,l_relcor,xcpot%icorr,xcpot%igrd,xcpot%krla,hybrid%l_hybrid)
+  CALL getXCParameters(namex,l_relcor,xcpot,hybrid%l_hybrid)
 
   IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
   obsolete%lwb=.FALSE.
-  IF (xcpot%icorr.GE.6) THEN
+  IF (xcpot%is_gga()) THEN
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
 
-  IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
+  IF (xcpot%is_gga()) THEN
      obsolete%ndvgrd = max(obsolete%ndvgrd,3)
-     IF ((xcpot%igrd.NE.0).AND.(xcpot%igrd.NE.1)) THEN 
-        WRITE (6,*) 'selecting l91 or pw91 as XC-Potental you should'
-        WRITE (6,*) ' have 2 lines like this in your inp-file:'
-        WRITE (6,*) 'igrd=1,lwb=F,ndvgrd=4,idsprs=0,chng= 1.000E-16'
-        WRITE (6,*) 'iggachk=1,idsprs0=1,idsprsl=1,idsprsi=1,idsprsv=1'
-        CALL juDFT_error("igrd =/= 0 or 1",calledby ="inped")
-     END IF
   END IF
 
-
-  l_gga = .FALSE.
-  IF (xcpot%icorr.GE.6) l_gga = .TRUE.
 
   !!! Hybrid stuff
   numberNodes = xmlGetNumberOfNodes('/fleurInput/xcFunctional/hybridFunctional')
@@ -1333,7 +1322,7 @@ SUBROUTINE r_inpXML(&
      IF (numberNodes.EQ.1) THEN
         namexSpecies = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
         relcorSpecies = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@relativisticCorrections'))
-        CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,igrdSpecies,krlaSpecies,ldummy)
+        !CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,krlaSpecies,ldummy)
      END IF
 
      ! Explicitely provided core configurations
@@ -1527,7 +1516,6 @@ SUBROUTINE r_inpXML(&
            atoms%namex(iType) = namexSpecies
            atoms%relcor(iType) = relcorSpecies
            atoms%icorr(iType) = icorrSpecies
-           atoms%igrd(iType) = igrdSpecies
            atoms%krla(iType) = krlaSpecies
         END IF
      END DO
@@ -1899,78 +1887,23 @@ SUBROUTINE r_inpXML(&
 
 END SUBROUTINE r_inpXML
 
-SUBROUTINE getXCParameters(namex,relcor,icorr,igrd,krla,l_hybrid)
+SUBROUTINE getXCParameters(namex,relcor,xcpot,l_hybrid)
 
    USE m_juDFT
-   USE m_icorrkeys
+   USE m_types
 
    IMPLICIT NONE
 
    CHARACTER(LEN=4),     INTENT(IN)  :: namex
    LOGICAL,              INTENT(IN)  :: relcor
-   INTEGER,              INTENT(OUT) :: icorr
-   INTEGER,              INTENT(OUT) :: igrd
-   INTEGER,              INTENT(OUT) :: krla
+   TYPE(t_xcpot),INTENT(INOUT)       :: xcpot
    LOGICAL,              INTENT(OUT) :: l_hybrid
-   icorr = -99
-   l_hybrid=.FALSE.
-   
-   !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
-   IF (namex.EQ.'l91 ') icorr = -1
-   IF (namex.EQ.'x-a ') icorr =  0
-   IF (namex.EQ.'wign') icorr =  1
-   IF (namex.EQ.'mjw')  icorr =  2
-   IF (namex.EQ.'hl')   icorr =  3
-   IF (namex.EQ.'bh')   icorr =  3
-   IF (namex.EQ.'vwn')  icorr =  4
-   IF (namex.EQ.'pz')   icorr =  5
-   !Now GGA section starts
-   IF (namex.EQ.'pw91') icorr =  6
-   !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
-   !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
-   !  Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
-   IF (namex.eq.'pbe')  icorr =  7
-   IF (namex.eq.'rpbe') icorr =  8
-   IF (namex.eq.'Rpbe') icorr =  9
-   IF (namex.eq.'wc')   icorr = 10
-   !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
-   IF (namex.EQ.'PBEs') icorr = 11
-   IF (icorr == -99) l_hybrid=.true. !only hybrid functional below here
-   !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
-   IF (namex.eq.'pbe0') icorr = icorr_pbe0
-   !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
-   IF (namex.eq.'hse ') icorr = icorr_hse
-   IF (namex.eq.'vhse') icorr = icorr_vhse
-   ! local part of HSE
-   IF (namex.eq.'lhse') icorr = icorr_hseloc
-   IF (namex.EQ.'exx ') icorr = icorr_exx
-   IF (namex.EQ.'hf  ') icorr = icorr_hf
 
-   IF (icorr == -99) THEN
-      WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
-      WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
-      CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
-   END IF
-
-   igrd = 0
-   IF (icorr.GE.6) THEN
-      igrd = 1
-   END IF
-
-   krla = 0
-   IF (relcor) THEN 
-      krla = 1    
-      IF (igrd.EQ.1) THEN
-         WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
-         WRITE(6,*) 'only without relativistic corrections !'
-         CALL juDFT_error("relativistic corrections + GGA not implemented", calledby ="r_inpXML")
-      END IF
-   END IF
-
-   IF (icorr.eq.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
-   IF (icorr.eq.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
-   IF ((icorr.eq.2).and.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
-
+   CALL xcpot%init(namex,relcor)
+   l_hybrid=xcpot%is_hybrid()
+  
+  
+ 
 END SUBROUTINE getXCParameters
 
 SUBROUTINE getIntegerSequenceFromString(string, sequence, count)

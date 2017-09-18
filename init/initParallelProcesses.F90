@@ -99,7 +99,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(oneD%odd%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    !CALL MPI_BCAST(obsolete%nwdd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(jij%nqptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(xcpot%igrd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    IF (mpi%irank.NE.0) THEN
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
@@ -191,7 +190,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
-      IF (xcpot%igrd.NE.0) THEN
+      IF (xcpot%is_gga()) THEN
          ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                    oneD%pgft1xy(0:oneD%odd%nn2d-1),&
@@ -206,7 +205,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%namex(atoms%ntype))
       ALLOCATE(atoms%relcor(atoms%ntype))
       ALLOCATE(atoms%icorr(atoms%ntype))
-      ALLOCATE(atoms%igrd(atoms%ntype))
       ALLOCATE(atoms%krla(atoms%ntype))
       atoms%namex = ''
       atoms%icorr = -99

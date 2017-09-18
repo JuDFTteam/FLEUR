@@ -19,8 +19,7 @@
 !*********************************************************************
       USE m_calculator
       USE m_types
-      USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
-
+  
       IMPLICIT NONE
 ! ..
 ! ..   Arguments ..
@@ -291,37 +290,21 @@
      &    (namex.EQ.'Rpbe').OR.(namex.EQ.'wc')  .OR.&
      &    (namex.EQ.'pbe0').OR.(namex.EQ.'hse ').OR.&
      &    (namex.EQ.'lhse').OR.(namex.EQ.'vhse')) THEN                    ! some defaults
-        xcpot%igrd=1 ; obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
+         obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
       ENDIF
       ! set mixing and screening for variable HSE functional
-      IF (namex.EQ.'vhse') THEN
-        ! overwrite if sane input
-        IF ( aMix > 0 .and. aMix <= 1 ) THEN
-          aMix = aMix_VHSE( aMix )
-        ELSE
-          aMix = aMix_VHSE()
-        END IF
-        ! overwrite if sane input
-        IF ( omega > 0 ) THEN
-          omega = omega_VHSE( omega )
-        ELSE
-          omega = omega_VHSE()
-        END IF
-        WRITE (6,9041) namex,relcor,aMix,omega
-      ELSE
-        WRITE (6,9040) namex,relcor
-      END IF
-!
+      WRITE (6,9040) namex,relcor
+     
 ! look what comes in the next two lines
 !
       READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
       IF (ch_test.EQ.'igr') THEN                          ! GGA input
          BACKSPACE (5)
          READ (UNIT=5,FMT=7121,END=99,ERR=99)&
-     &                   xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+     &                   idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
          IF (idsprs.ne.0)&
      &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
-         WRITE (6,9121) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+         WRITE (6,9121) idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
  7121    FORMAT (5x,i1,5x,l1,8x,i1,8x,i1,6x,d10.3)
 
          READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
@@ -818,7 +801,7 @@
       IF ((namex.EQ.'pw91').OR.(namex.EQ.'l91').OR.&
      &    (namex.eq.'pbe').OR.(namex.eq.'rpbe').OR.&
    &    (namex.EQ.'Rpbe').OR.(namex.eq.'wc') ) THEN
-        WRITE (5,FMT=9121) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
+        WRITE (5,FMT=9121) idum,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
  9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1,&
      &           ',chng=',d10.3)
       ENDIF

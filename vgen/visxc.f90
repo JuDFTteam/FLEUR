@@ -88,7 +88,7 @@
 !
        nt=ifftd
        CALL vxcall&
-     &            (6,xcpot%icorr,xcpot%krla,input%jspins,&
+     &            (6,xcpot,input%jspins,&
      &             ifftd,nt,af3,&
      &             vx,vxc)
       
@@ -133,7 +133,7 @@
 !     calculate the ex.-cor energy density in real space
 !
                 CALL excall&
-     &               (6,xcpot%icorr,xcpot%krla,input%jspins,&
+     &               (6,xcpot,input%jspins,&
      &                ifftd,nt,af3,&
      &                exc)
 

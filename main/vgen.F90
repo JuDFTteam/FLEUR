@@ -45,8 +45,6 @@ CONTAINS
     USE m_psqpw
     USE m_potmod
     USE m_intgr,         ONLY : intgr3
-    USE m_hybridmix
-    USE m_icorrkeys
     USE m_cfft
     USE m_sphpts
     USE m_points
@@ -461,7 +459,7 @@ CONTAINS
           ifftd2 = 9*stars%mx1*stars%mx2
           IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
 
-          IF ((xcpot%igrd == 0).AND.(xcpot%icorr /= -1)) THEN  ! LDA
+          IF (.NOT.xcpot%is_gga()) THEN  ! LDA
 
              IF (.NOT.oneD%odi%d1) THEN
 
@@ -506,12 +504,12 @@ CONTAINS
 
        ifftd=27*stars%mx1*stars%mx2*stars%mx3
 
-       IF ( (.NOT. obsolete%lwb) .OR. ( (xcpot%igrd == 0) .AND. (xcpot%icorr /= -1) ) ) THEN
+       IF ( (.NOT. obsolete%lwb) .OR. ( .not.xcpot%is_gga() ) ) THEN
           ! no White-Bird-trick
 
           ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
 
-          IF ( (xcpot%igrd == 0) .AND. (xcpot%icorr /= -1) ) THEN
+          IF ( .NOT.xcpot%is_gga() ) THEN
              ! LDA
 
              CALL visxc(ifftd,stars,noco,xcpot,input, qpw,cdom,&
@@ -596,13 +594,11 @@ CONTAINS
        CALL MPI_BCAST(rhmn,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(ichsmrg,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 #endif
-       IF ((xcpot%igrd.EQ.0).AND.(xcpot%icorr.NE.-1)) THEN
-          CALL vmtxc(dimension,sphhar,atoms, rho,xcpot,input,sym, v%mt, excr,vx%mt)
-       ELSEIF ((xcpot%igrd.GT.0).OR.(xcpot%icorr.EQ.-1)) THEN
+       IF (xcpot%is_gga()) THEN
           CALL vmtxcg(dimension,mpi,sphhar,atoms, rho,xcpot,input,sym,&
                obsolete, vx%mt,v%mt,rhmn,ichsmrg, excr)
        ELSE
-          CALL juDFT_error("something wrong with xcpot before vmtxc" ,calledby ="vgen")
+          CALL vmtxc(DIMENSION,sphhar,atoms, rho,xcpot,input,sym, v%mt, excr,vx%mt)
        ENDIF
 
 
@@ -690,26 +686,16 @@ CONTAINS
           !
           ALLOCATE( veffpw_w(stars%ng3,dimension%jspd) )
           ALLOCATE( veffr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
-          IF( xcpot%icorr .EQ. icorr_pbe0 ) THEN
-             veffpw_w = vpw_w - amix_pbe0 * vxpw_w
-             veffr    = v%mt    - amix_pbe0 * vx%mt
-          ELSE IF ( xcpot%icorr==icorr_hse .OR. xcpot%icorr==icorr_hseloc ) THEN
-             veffpw_w = vpw_w - aMix_HSE * vxpw_w
-             veffr    = v%mt    - aMix_HSE * vx%mt
-          ELSE IF ( xcpot%icorr .EQ. icorr_vhse ) THEN
-             veffpw_w = vpw_w - aMix_VHSE() * vxpw_w
-             veffr    = v%mt    - aMix_VHSE() * vx%mt
-          ELSE IF ( xcpot%icorr .EQ. icorr_hf ) THEN
-             veffpw_w = vpw_w - amix_hf  * vxpw_w
-             veffr    = v%mt    - amix_hf  * vx%mt
+          IF( xcpot%is_hybrid() ) THEN
+             veffpw_w = vpw_w - xcpot%get_exchange_weight() * vxpw_w
+             veffr    = v%mt    - xcpot%get_exchange_weight() * vx%mt
           ELSE
              veffpw_w = vpw_w
              veffr    = v%mt
           END IF
 
           !HF     kinetic energy correction for core states
-          IF ( hybrid%l_addhf.AND.(xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
-               xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse  )  ) THEN
+          IF ( hybrid%l_addhf.AND.(xcpot%is_hybrid()  )  ) THEN
              ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,DIMENSION%jspd), rhoc_vx(atoms%jmtd))
              ALLOCATE(tec(atoms%ntype,DIMENSION%jspd),qintc(atoms%ntype,DIMENSION%jspd))
              CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
@@ -728,22 +714,15 @@ CONTAINS
                   rht(:,:,js),v%vacz(:,:,js), rho(1,0,1,js),veffr(1,0,1,js), results%te_veff)
 
              !HF
-             IF (hybrid%l_addhf.and.( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
-                  xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse  )  ) THEN
+             IF (hybrid%l_addhf.and.( xcpot%is_hybrid()  )  ) THEN
                 nat = 1
                 DO n = 1,atoms%ntype
                    DO j = 1, atoms%jri(n)
                       rhoc_vx(j) = rhoc(j,n,js) * vx%mt(j,0,n,js) / sfp_const
                    END DO
                    CALL intgr3(rhoc_vx,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),dpdot)
-                   IF( xcpot%icorr .EQ. icorr_pbe0 ) THEN
-                      results%te_veff = results%te_veff + amix_pbe0 * dpdot*atoms%neq(n)
-                   ELSE IF( xcpot%icorr .EQ. icorr_hse ) THEN
-                      results%te_veff = results%te_veff + aMix_HSE * dpdot*atoms%neq(n)
-                   ELSE IF( xcpot%icorr .EQ. icorr_vhse ) THEN
-                      results%te_veff = results%te_veff + aMix_VHSE() * dpdot*atoms%neq(n)
-                   ELSE IF( xcpot%icorr .EQ. icorr_hf  ) THEN
-                      results%te_veff = results%te_veff + amix_hf * dpdot*atoms%neq(n)
+                   IF( xcpot%is_hybrid() ) THEN
+                      results%te_veff = results%te_veff + xcpot%get_exchange_weight() * dpdot*atoms%neq(n)
                    END IF
                    nat     = nat + atoms%neq(n)
                 END DO
@@ -753,13 +732,7 @@ CONTAINS
 
 370          CONTINUE
 
-             !HF
-             !IF ( xcpot%icorr == icorr_pbe0 .OR. xcpot%icorr == icorr_hse .OR.&
-             !     xcpot%icorr == icorr_hf   .OR. xcpot%icorr == icorr_vhse ) THEN
-             !   DEALLOCATE( rhoc, rhoc_vx )
-             !END IF
-             !HF     end kinetic energy correction
-
+          
              DEALLOCATE( veffpw_w,veffr )
              WRITE (6,FMT=8060) results%te_veff
              WRITE (16,FMT=8060) results%te_veff

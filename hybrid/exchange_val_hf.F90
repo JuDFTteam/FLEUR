@@ -69,7 +69,6 @@
       USE m_mpi_tags
 #endif
       USE m_io_hybrid
-      USE m_icorrkeys
       USE m_kp_perturbation
       USE m_types
       IMPLICIT NONE
@@ -324,7 +323,7 @@ endif
           ! are Fourier transformed, so that the exchange can be calculated
           ! in Fourier space
 #ifndef CPP_NOSPMVEC
-          IF ( xcpot%icorr == icorr_hse .OR. xcpot%icorr == icorr_vhse ) THEN
+          IF ( xcpot%is_name("hse") .OR. xcpot%is_name("vhse") ) THEN
             iband1  = hybrid%nobd(nkqpt)
             exch_vv = exch_vv + dynamic_hse_adjustment(&
                        atoms%rmsh,atoms%rmt,atoms%dx,atoms%jri,atoms%jmtd,kpts%bkf(:,ikpt0),ikpt0,kpts%nkptf,&
@@ -418,7 +417,7 @@ endif
      
       ! valence-valence-valence-valence exchange
 
-      IF ( xcpot%icorr .NE. icorr_hse .AND. xcpot%icorr   .NE. icorr_vhse ) THEN ! no gamma point correction needed for HSE functional
+      IF ( (.not.xcpot%is_name("hse")) .AND. (.not.xcpot%is_name("vhse")) ) THEN ! no gamma point correction needed for HSE functional
         IF( zero_order .and. .not. ibs_corr ) THEN
           WRITE(6,'(A)') ' Take zero order terms into account.'
         ELSE IF( zero_order .and.  ibs_corr ) THEN

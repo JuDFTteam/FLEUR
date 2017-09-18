@@ -54,8 +54,6 @@ MODULE m_hsfock
       USE m_symmetrizeh
       USE m_wrapper
       USE m_hsefunctional ,ONLY: exchange_vccvHSE,exchange_ccccHSE
-      USE m_hybridmix
-      USE m_icorrkeys
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
@@ -133,7 +131,7 @@ MODULE m_hsfock
       !
       ! initialize weighting factor for HF exchange part
       !
-      a_ex=get_exchange_weight(xcpot%icorr)
+      a_ex=xcpot%get_exchange_weight()
 
 
       ! write k1,k2,k3 in gpt
@@ -205,7 +203,7 @@ MODULE m_hsfock
 
   
         ! calculate contribution from the core states to the HF exchange
-        IF ( xcpot%icorr.eq.icorr_hse .OR. xcpot%icorr.eq.icorr_vhse ) THEN
+        IF ( xcpot%is_name("hse") .OR. xcpot%is_name("vhse") ) THEN
 #ifdef CPP_NEVER           
           CALL exchange_vccvHSE(&
      &                 nk,atoms,&

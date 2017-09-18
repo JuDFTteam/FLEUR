@@ -14,7 +14,7 @@ c [c] j. p. perdew and y. wang, phys. rev. b {\bf 45}, 13244 (1992).
 c----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE corpbe(
-     >                  icorr,rs,zet,t,uu,vv,ww,lgga,lpot,
+     >                  xcpot,rs,zet,t,uu,vv,ww,lgga,lpot,
      <                  ec,vcup,vcdn,h,dvcup,dvcdn)
 c----------------------------------------------------------------------
 c  input: rs=seitz radius=(3/4pi rho)^(1/3)
@@ -35,9 +35,10 @@ c        : dvcdn=nonlocal correction to vcdn
 c----------------------------------------------------------------------
 
       USE m_pbecor2
+      USE m_types
       IMPLICIT NONE
-
-      INTEGER, INTENT (IN)  :: icorr,lgga,lpot
+      type(t_xcpot),intent(in)::xcpot
+      INTEGER, INTENT (IN)  :: lgga,lpot
       REAL,    INTENT (IN)  :: rs,zet,t,uu,vv,ww
       REAL,    INTENT (OUT) :: dvcdn,dvcup,ec,h,vcdn,vcup
 
@@ -78,7 +79,7 @@ c construct ec, using [c](8)
      +     t2,t4,t6,z4,delt,bet
 c     ..
 
-      IF (icorr == 11) THEN ! PBE_sol
+      IF (xcpot%is_name("PBEs")) THEN ! PBE_sol
         bet=0.046e0
       ELSE
         bet=0.06672455060314922e0
