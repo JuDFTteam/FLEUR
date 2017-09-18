@@ -48,10 +48,11 @@
       CHARACTER(len=10), INTENT (IN) :: cdnfname
 
 !     .. Local Scalars ..
-      REAL          :: s,tec,qint,xdnout,fermiEnergyTemp
+      REAL          :: s,tec,qint,xdnout,fermiEnergyTemp,phi0
       INTEGER       :: i,i1,i2,i3,ii3,ix,iy,iz,jsp,na,nplo
       INTEGER       :: nplot,nq,nt,jm,jspin,iter,ii1,ii2
       LOGICAL       :: twodim,oldform,newform,l_qfix
+      LOGICAL       :: cartesian,xsf,unwind
 !     ..
 !     .. Local Arrays ..
       COMPLEX :: qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
@@ -59,23 +60,18 @@
       REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
       COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
       INTEGER :: grid(3)
-      LOGICAL :: cartesian,xsf
       REAL    :: rhocc(atoms%jmtd)
       REAL    :: point(3)
       CHARACTER (len=30) :: filename
       CHARACTER (len=7)  :: append
-      NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename
-
+      NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
       oldform = .false.
       INQUIRE(file ="plotin",exist = oldform) 
-      IF ( oldform ) THEN 
-         CALL priv_old_plot(oneD,dimension,&
-     &                stars,vacuum,sphhar,atoms,&
-     &                input,sym,cell,sliceplot,&
-     &                noco%l_noco,cdnfname)
-         RETURN
+      IF (oldform) THEN 
+         CALL juDFT_error("Use of plotin file no longer supported",calledby = "plotdop")
       ENDIF
+
       INQUIRE(file ="plot_inp",exist= newform)
       IF (.NOT.newform) THEN !no input file exists, create a template and
                             !exit
@@ -275,235 +271,6 @@
       ENDDO   !nplot      
       CLOSE(18)
       IF (xsf) CLOSE(55)
-      RETURN
       END SUBROUTINE plotdop
-!------------------------------------------
-!     The old subroutine from Fleur is here
-!------------------------------------------
-      SUBROUTINE priv_old_plot(oneD,dimension,&
-     &                stars,vacuum,sphhar,atoms,&
-     &                input,sym,cell,sliceplot,&
-     &                l_noco,cdnfname)
-!
-      USE m_outcdn
-      USE m_loddop
-      USE m_cdn_io
-      IMPLICIT NONE
-!     ..
-!     .. Scalar Arguments ..
-      TYPE(t_oneD),INTENT(IN)     :: oneD
-      TYPE(t_dimension),INTENT(IN):: dimension
-      TYPE(t_stars),INTENT(IN)    :: stars
-      TYPE(t_vacuum),INTENT(IN)   :: vacuum
-      TYPE(t_sphhar),INTENT(IN)   :: sphhar
-      TYPE(t_atoms),INTENT(IN)    :: atoms
-      TYPE(t_input),INTENT(IN)    :: input
-      TYPE(t_sym),INTENT(IN)      :: sym
-      TYPE(t_cell),INTENT(IN)     :: cell
-      TYPE(t_sliceplot),INTENT(IN):: sliceplot
-      LOGICAL,INTENT(IN)          :: l_noco
-      CHARACTER(len=10), INTENT (IN) :: cdnfname
-!     ..
-!     .. Array Arguments ..
-!-odim
-!+odim
-!     ..
-!     .. Local Scalars ..
-      REAL rx,ry,s,sl,sm,su,x,xm,y,ym,sfp,xdnout
-      INTEGER i,i1,i2,i3,ii3,imshx,imshy,ix,iy,j,jsp,na,nfile,nplo,&
-     &        nplot,nq,nt,nplott,jm,jspin,iter,ii1,ii2
-      LOGICAL twodim
-!     ..
-!     .. Local Arrays ..
-      COMPLEX qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-      REAL rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
-      REAL ptp(3),rngl(3),rngm(3),rngu(3),tl(3),tm(3)
-      REAL tu(3),vx1(3),vx2(3),tl_r(3),tm_r(3),tu_r(3),rhocc(atoms%jmtd,atoms%ntype,dimension%jspd)
-      REAL tec(atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
-      REAL pt(3),a3(3)
-      REAL, ALLOCATABLE :: cdn(:,:)
-      CHARACTER(len=10), ALLOCATABLE :: plotname(:)
-!     ..
-      sfp = 2.0 * sqrt( pi_const )
-      a3(3) = cell%amat(3,3)
-!     ..
-      OPEN (20,file=cdnfname,form='unformatted',status='old')
-      CALL loddop(&
-     &            stars,vacuum,atoms,sphhar,&
-     &            input,sym,&
-     &            20,&
-     &            iter,rho,qpw,rht,rhtxy)
-!
-      IF (input%score) THEN
-         CALL readCoreDensity(input,atoms,dimension,rhocc,tec,qint)
-         DO jspin = 1,input%jspins
-            DO nt = 1,atoms%ntype
-               jm = atoms%jri(nt)
-               DO i = 1,atoms%jri(nt)
-                  rho(i,0,nt,jspin) = rho(i,0,nt,jspin) - rhocc(i,nt,jspin)/sfp
-               ENDDO
-             ENDDO
-            qpw(1,jspin) = qpw(1,jspin) - qint(nt,jspin)/cell%volint
-         ENDDO
-      END IF
-      OPEN (18,file='plotin')
-      READ (18,FMT='(7x,l1)') twodim
-
-      READ (18,FMT=8000) nplot
-      ALLOCATE ( plotname(nplot) )
- 8000 FORMAT (6x,i2)
-      nplott=nplot
-      if (nplot.eq.1) nplott=2
-      DO 140 nplo = 1,nplot
-         IF (twodim.OR.(nplo.eq.1)) THEN
-           nfile = 55 + nplo
-           READ (18,FMT='(a,3x,a)') plotname(nplo)
-           IF (l_noco) THEN
-              OPEN (nfile,file=plotname(nplo)//cdnfname,&
-     &                    form='formatted')
-           ELSE
-              OPEN (nfile,file=plotname(nplo),form='formatted')
-           ENDIF
-           READ (18,FMT=8010) (tu_r(i),i=1,3)
-           READ (18,FMT=8010) (tm_r(i),i=1,3)
-           READ (18,FMT=8010) (tl_r(i),i=1,3)
- 8010      FORMAT (4f10.6)
-           READ (18,FMT=8020) imshx,imshy
- 8020      FORMAT (6x,i5,7x,i5)
-           ALLOCATE (cdn(imshx,imshy))
-         ENDIF
-         IF (twodim) THEN
-           DO i=1,3
-             tu(i) = tu_r(i)
-             tm(i) = tm_r(i)
-             tl(i) = tl_r(i)
-           ENDDO 
-         ELSE
-           DO i=1,2
-             tu(i) = tu_r(i)
-             tm(i) = tm_r(i)
-             tl(i) = tl_r(i)
-           ENDDO 
-           tu(3) = tu_r(3) + a3(3)*(nplo-1)/(2*nplott-2)
-           tm(3) = tm_r(3) + a3(3)*(nplo-1)/(2*nplott-2)
-           tl(3) = tl_r(3) + a3(3)*(nplo-1)/(2*nplott-2)
-         ENDIF
-
-         tu(3) = tu(3)/a3(3)
-         tm(3) = tm(3)/a3(3)
-         tl(3) = tl(3)/a3(3)
-!--->    evaluate cartesian coordinates of positions
-         DO 20 i = 1,3
-            su = 0.
-            sm = 0.
-            sl = 0.
-            DO 10 j = 1,3
-               su = su + cell%amat(i,j)*tu(j)
-               sm = sm + cell%amat(i,j)*tm(j)
-               sl = sl + cell%amat(i,j)*tl(j)
-   10       CONTINUE
-            rngu(i) = su
-            rngm(i) = sm
-            rngl(i) = sl
-   20    CONTINUE
-         DO 30 i = 1,3
-            vx1(i) = rngu(i) - rngm(i)
-            vx2(i) = rngl(i) - rngm(i)
-   30    CONTINUE
-         rx = sqrt(vx1(1)*vx1(1)+vx1(2)*vx1(2)+vx1(3)*vx1(3))
-         ry = sqrt(vx2(1)*vx2(1)+vx2(2)*vx2(2)+vx2(3)*vx2(3))
-         DO 130 jsp = 1,input%jspins
-            WRITE (16,FMT=8030) rx,ry
- 8030       FORMAT (2f10.6)
-            WRITE (nfile,FMT=8050) imshy,imshx,ry,rx
-            WRITE (16,FMT=8050) imshx,imshy
-            xm = imshx - 1
-            ym = imshy - 1
-            DO 120 ix = 1,imshx
-               DO 110 iy = 1,imshy
-                  x = ix - 1
-                  y = iy - 1
-                  pt(1) = rngm(1) + vx1(1)*x/xm + vx2(1)*y/ym
-                  pt(2) = rngm(2) + vx1(2)*x/xm + vx2(2)*y/ym
-                  pt(3) = rngm(3) + vx1(3)*x/xm + vx2(3)*y/ym
-                  ii1 = 3
-                  ii2 = 3
-                  ii3 = 3
-                  IF (input%film .AND. .NOT.oneD%odi%d1) ii3 = 0
-                  IF (oneD%odi%d1) THEN
-                     ii1 = 0 ; ii2 = 0
-                  END IF
-                  DO 100 i1 = -ii1,ii1
-                     DO 90 i2 = -ii2,ii2
-                        DO 80 i3 = -ii3,ii3
-                           DO 40 i = 1,3
-                              ptp(i) = pt(i) + i1*cell%amat(i,1) +&
-     &                                 i2*cell%amat(i,2) + i3*cell%amat(i,3)
-   40                      CONTINUE
-                           na = 0
-                           DO 70 nt = 1,atoms%ntype
-                              DO 60 nq = 1,atoms%neq(nt)
-                                 na = na + 1
-                                 s = 0.
-                                 DO 50 i = 1,3
-                                    s = s + (ptp(i)-atoms%pos(i,na))**2
-   50                            CONTINUE
-                                 s = sqrt(s)
-                                 IF (s.LT.atoms%rmsh(atoms%jri(nt),nt)) THEN
-                                    CALL outcdn(&
-     &                  ptp,nt,na,0,1,jsp,sliceplot,stars,&
-     &                  vacuum,sphhar,atoms,sym,cell,oneD,&
-     &                  qpw,rhtxy,rho,rht,xdnout)
-                                    cdn(ix,iy) = xdnout
-                                    GO TO 110
-                                 END IF
-   60                         CONTINUE
-   70                      CONTINUE
-   80                   CONTINUE
-   90                CONTINUE
-  100             CONTINUE
-                  IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-                    IF (abs(pt(3)).GE.cell%z1) THEN
-                      CALL outcdn(&
-     &                  pt,0,0,1,0,jsp,sliceplot,stars,&
-     &                  vacuum,sphhar,atoms,sym,cell,oneD,&
-     &                  qpw,rhtxy,rho,rht,xdnout)
-                        cdn(ix,iy) = xdnout
-                      GO TO 110
-                    END IF
-                  END IF
-!-odim
-                  IF (oneD%odi%d1) THEN
-                     IF (sqrt((pt(1))**2 + (pt(2))**2).GE.cell%z1) THEN
-                      CALL outcdn(&
-     &                  pt,0,0,1,0,jsp,sliceplot,stars,&
-     &                  vacuum,sphhar,atoms,sym,cell,oneD,&
-     &                  qpw,rhtxy,rho,rht,xdnout)
-                        cdn(ix,iy) = xdnout
-                      GO TO 110
-                     END IF
-                  END IF
-!+odim
-                  CALL outcdn(&
-     &                  pt,0,0,0,2,jsp,sliceplot,stars,&
-     &                  vacuum,sphhar,atoms,sym,cell,oneD,&
-     &                  qpw,rhtxy,rho,rht,xdnout)
-                  cdn(ix,iy) = xdnout
-  110          CONTINUE
-  120       CONTINUE
-            WRITE (nfile,FMT=8040) ((cdn(ix,iy),ix=1,imshx),iy=1,imshy)
- 8040       FORMAT (5e14.6)
- 8050       FORMAT (2i5,2f12.6)
-  130    CONTINUE
-         IF (twodim) THEN
-            DEALLOCATE (cdn)
-            CLOSE (nfile)
-         ENDIF
-  140 CONTINUE
-      DEALLOCATE ( plotname )
-      IF (.not.twodim) CLOSE (nfile)
-      CLOSE (18)
-      CLOSE (20)
-      END SUBROUTINE priv_old_plot
 
       END MODULE m_plotdop
