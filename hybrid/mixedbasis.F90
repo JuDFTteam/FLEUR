@@ -40,7 +40,6 @@ CONTAINS
     USE m_util,     ONLY : intgrf_init,intgrf,rorderpf
     USE m_read_core
     USE m_wrapper
-    USE m_icorrkeys
     USE m_eig66_io
     USE m_types
     IMPLICIT NONE
@@ -127,7 +126,7 @@ CONTAINS
     IF ( mpi%irank == 0 ) WRITE(6,'(//A,I2,A)') '### subroutine: mixedbasis ###'
 
 
-    exx = ( xcpot%icorr .EQ. icorr_exx )
+    exx = xcpot%is_name("exx")
     if (exx) call judft_error("EXX is not implemented in this version",calledby='mixedbasis.F90')
     
     ! Deallocate arrays which might have been allocated in a previous run of this subroutine

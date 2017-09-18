@@ -56,7 +56,7 @@
           REAL d,del,fix,h,r,rnot,sign,z,bm,qdel
           REAL denz1(1),vacxpot(1),vacpot(1) 
           INTEGER i,iter,ivac,iza,j,jr,k,n,n1,npd,ispin 
-          INTEGER nw,ilo,natot,icorr_dummy,nat 
+          INTEGER nw,ilo,natot,nat 
           COMPLEX czero
           COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
           !     ..
@@ -70,6 +70,8 @@
           INTEGER jrc(atoms%ntype)
           LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
           CHARACTER*8 name_l(10)
+          TYPE(t_xcpot)    :: xcpot_dummy
+        
           !     ..
           !     .. Intrinsic Functions ..
           INTRINSIC abs,exp
@@ -387,13 +389,13 @@
                       !           generate coulomb potential by integrating inward to z1
                       !
                       DO ivac = 1, vacuum%nvac
-                         icorr_dummy = MIN(MAX(xcpot%icorr,0),5)  ! use LDA for this purpose
+                         CALL xcpot_dummy%init("vwn",.false.)
                          DO i=1,vacuum%nmz
                             sigm(i) = (i-1)*vacuum%delz*rht(i,ivac,ispin)
                          ENDDO
                          CALL qsf(vacuum%delz,sigm,vacpar(ivac),vacuum%nmz,0)
                          denz1(1) = rht(1,ivac,ispin)          ! get estimate for potential at
-                         CALL  vxcall(6,icorr_dummy,xcpot%krla,1,&    !               vacuum boundary&
+                         CALL  vxcall(6,xcpot_dummy,1,&    !               vacuum boundary&
                          &                     1,1,denz1,&
                               &                     vacxpot,vacpot)
                          ! seems to be the best choice for 1D not to substract vacpar

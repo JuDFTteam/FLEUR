@@ -10,14 +10,13 @@
 MODULE m_hsefunctional
   USE m_judft
   IMPLICIT NONE
+
 #ifdef __PGI
     REAL,EXTERNAL ::erfc
 #endif
   ! Constant omega of the HSE exchange functional
-!   REAL, PARAMETER :: omega_HSE = 0.11
+   REAL, PARAMETER :: omega_HSE = 0.11
 
-  ! Mixing parameter of HSE and PBE exchange
-!   REAL, PARAMETER :: aMix_HSE = 0.25
 
   ! Constant for the maximum number of G points
   INTEGER, PARAMETER :: maxNoGPts = 50
@@ -69,8 +68,7 @@ CONTAINS
   !         d2Fx_ds2 - second derivative with respect to s
   SUBROUTINE calculateEnhancementFactor(kF, s_inp, F_x, dFx_Ds, d2Fx_Ds2, dFx_dkF, d2Fx_dsdkF)
 
-    USE m_hybridmix
-
+ 
     IMPLICIT NONE
 
     REAL, INTENT(IN)  :: kF, s_inp
@@ -120,7 +118,7 @@ CONTAINS
 
     ! Calculate different helper variables
     r1_kF        = 1.0 / kF
-    omega_kF     = omega_VHSE() * r1_kF
+    omega_kF     = omega_hse * r1_kF !was omega_VHSE()
     omega_kF_Sqr = omega_kF * omega_kF
 
     ! calculate the functions H and F in [3] and its derivatives
@@ -975,7 +973,6 @@ CONTAINS
       potential,muffintin,interstitial)
 
     USE m_constants
-    USE m_hybridmix
     USE m_olap,      ONLY : gptnorm
     USE m_util,      ONLY : sphbessel,pure_intgrf,intgrf_init,intgrf_out,NEGATIVE_EXPONENT_WARNING,NEGATIVE_EXPONENT_ERROR
 
@@ -1040,7 +1037,7 @@ CONTAINS
     sVol       = SQRT(vol)
     r4Pi_sVol  = r4Pi / sVol
     r4Pi_Vol   = r4Pi / Vol
-    omega      = omega_VHSE()
+    omega      = omega_hse!omega_VHSE()
     r1_omega2  = 1.0 / omega**2
     r1_4omega2 = 0.25 * r1_omega2
     pi_omega2  = pi_const * r1_omega2
@@ -1309,7 +1306,6 @@ CONTAINS
       potential, fourier_trafo)
 
     USE m_constants
-    USE m_hybridmix
     USE m_util,      ONLY : sphbessel,pure_intgrf,intgrf_init,intgrf_out,NEGATIVE_EXPONENT_WARNING,NEGATIVE_EXPONENT_ERROR
     USE m_trafo,     ONLY : symmetrize
 
@@ -1403,7 +1399,7 @@ CONTAINS
       sVol       = SQRT(vol)
       r4Pi_sVol  = r4Pi / sVol
       r4Pi_Vol   = r4Pi / Vol
-      omega      = omega_VHSE()
+      omega      = omega_hse!omega_VHSE()
       r1_omega2  = 1.0 / omega**2
       r1_4omega2 = 0.25 * r1_omega2
       pi_omega2  = pi_const * r1_omega2
@@ -2599,8 +2595,7 @@ CONTAINS
   FUNCTION calculate_coefficients(rmsh,lmax,ncut,fac) RESULT (d_ln)
 
     USE m_constants
-    USE m_hybridmix
-
+  
     IMPLICIT NONE
 
     REAL, INTENT(IN)           :: rmsh(:)
@@ -2631,7 +2626,7 @@ CONTAINS
     r1_spi = 1.0 / SQRT( pi_const )
 
     ! Calculate x and x^2 and the functions erfc(x) and exp(x^2)
-    rx     = omega_VHSE() * rmsh
+    rx     = omega_HSe * rmsh
     x2     = rx**2
     erfc_x = erfc(rx)
     exp_x2 = EXP(-x2)

@@ -163,7 +163,7 @@ CONTAINS
        !      ENDDO    ! ivac
        !      DO ivac = 1,nvac
 
-       IF (xcpot%igrd.GT.0) THEN
+       IF (xcpot%is_gga()) THEN
           DO js=1,input%jspins
              !
              ! calculate first (rhtdz) & second (rhtdzz) derivative of rht(1:nmz)
@@ -270,7 +270,7 @@ CONTAINS
 
           END IF
 
-          IF (xcpot%igrd > 0) THEN 
+          IF (xcpot%is_gga()) THEN 
              ! calculate derivatives with respect to x,y in g-space 
              ! and transform them to real-space.  
 
@@ -422,7 +422,7 @@ CONTAINS
 
              END IF ! noco%l_noco  
 
-          END IF ! xcpot%igrd > 0 
+          END IF ! xcpot%is_gga 
           !
           ! set minimal value of af2 to 1.0e-13
           !
@@ -437,14 +437,14 @@ CONTAINS
 
           if(oneD%odi%d1)then
              CALL od_mkgxyz3(&
-                  &           xcpot%igrd,ifftd2,input%jspins,ifftd2,input%jspins,&
+                  &           ifftd2,input%jspins,ifftd2,input%jspins,&
                   &           af2,rd,rhdx,rhdy,rhdz,rhdxx,rhdyy,&
                   &           rhdzz,rhdyz,rhdzx,rhdxy,&
                   &           agr,agru,agrd,g2r,g2ru,g2rd,&
                   &           gggr,gggru,gggrd,gzgr)
           else
              CALL mkgxyz3(&
-                  &           xcpot%igrd,ifftd2,input%jspins,ifftd2,input%jspins,af2,rhdx,rhdy,&
+                  &           ifftd2,input%jspins,ifftd2,input%jspins,af2,rhdx,rhdy,&
                   &           rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy,&
                   &           agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,&
                   &           gzgr)
@@ -474,7 +474,7 @@ CONTAINS
           !
 
           CALL vxcallg(&
-               &                 xcpot%icorr,lwbc,input%jspins,nt,nt,af2,agr,agru,agrd,&
+               &                 xcpot,lwbc,input%jspins,nt,nt,af2,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
                &                 vx,vxc)
 
@@ -510,7 +510,7 @@ CONTAINS
           IF (input%total) THEN
 
              CALL excallg(&
-                  &                   xcpot%icorr,lwbc,input%jspins,nt,af2,agr,agru,agrd,&
+                  &                   xcpot,lwbc,input%jspins,nt,af2,agr,agru,agrd,&
                   &                   g2r,g2ru,g2rd, gggr,gggru,gggrd,gzgr,&
                   &                   exc)
 
@@ -589,7 +589,7 @@ CONTAINS
        g2ru(:)=0.0 ; g2rd(:)=0.0 ; gggr(:)=0.0 ; gggru(:)=0.0
        gggrd(:)=0.0 ; gzgr(:)=0.0
 
-       IF (xcpot%igrd.gt.0)  THEN
+       IF (xcpot%is_gga())  THEN
           if(oneD%odi%d1)then
              CALL od_mkgz(&
                   &            cell%z1,vacuum%nmzxy,vacuum%delz,&
@@ -636,7 +636,7 @@ CONTAINS
        ENDIF
 
        CALL vxcallg(&
-            &             xcpot%icorr,lwbc,input%jspins,vacuum%nmzd,nmzdiff,rhtxc,agr(:vacuum%nmzd),agru,&
+            &             xcpot,lwbc,input%jspins,vacuum%nmzd,nmzdiff,rhtxc,agr(:vacuum%nmzd),agru,&
             &               agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
             &               vxz,vxcz)
 
@@ -655,7 +655,7 @@ CONTAINS
        !
        IF (input%total) THEN
           CALL excallg(&
-               &                   xcpot%icorr,lwbc,input%jspins,nmzdiff,rhtxc,agr,agru,&
+               &                   xcpot,lwbc,input%jspins,nmzdiff,rhtxc,agr,agru,&
                &                   agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
                &                   excz(vacuum%nmzxy+1,ivac))
        ENDIF

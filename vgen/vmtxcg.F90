@@ -170,7 +170,7 @@ CONTAINS
                 chlh(jr,lh,js) = rho(jr,lh,n,js)*rr2(jr)
              ENDDO
 
-             IF (xcpot%igrd.GT.0) THEN 
+             IF (xcpot%is_gga()) THEN 
                 CALL grdchlh(&
                      &                     ixpm,ist,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
                      &                     chlh(1,lh,js),obsolete%ndvgrd,&
@@ -228,7 +228,7 @@ CONTAINS
                    ch(k,js) = ch(k,js) + ylh(k,lh,nd)*chlh(jr,lh,js)
                 ENDDO
 
-                IF (xcpot%igrd.GT.0) THEN
+                IF (xcpot%is_gga()) THEN
                    ! 
                    DO k = 1,nsp
                       chdr(k,js) =chdr(k,js)+ ylh(k,lh,nd)*chlhdr(jr,lh,js)
@@ -251,7 +251,7 @@ CONTAINS
              ENDDO ! lh
           ENDDO   ! js
 
-          IF (xcpot%igrd.GT.0) THEN
+          IF (xcpot%is_gga()) THEN
              CALL mkgylm(&
                   &                  input%jspins,atoms%rmsh(jr,n),thet,nsp,dimension%nspd,dimension%jspd,ch,chdr,&
                   &                  chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,&
@@ -298,15 +298,9 @@ CONTAINS
           !
           !         calculate the ex.-cor. potential
 
-          IF (mpi%irank == 0) THEN
-             IF (mod(jr,1000).eq.0)&
-                  &      WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp,iwb='',5i5,l3/&
-                  &            '' ch''/(10d15.7))') xcpot%icorr,xcpot%krla,xcpot%igrd,input%jspins,&
-                  &            nsp,lwbc,((ch(k,js),k=1,nsp),js=1,input%jspins)
-          ENDIF !irank==0
-
+         
           CALL vxcallg(&
-               &                 xcpot%icorr,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
+               &                 xcpot,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
                &                 vx,vxc)!keep
 
@@ -371,14 +365,9 @@ CONTAINS
              !
              !           calculate the ex.-cor energy density
              !
-             IF (mpi%irank == 0) THEN
-             IF (mod(jr,2500).EQ.0)&
-                  &        WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp='',5i5/&
-                  &               '' ch''/(10d15.7))') xcpot%icorr,xcpot%krla,xcpot%igrd,input%jspins,&
-                  &               nsp,((ch(k,js),k=1,nsp),js=1,input%jspins)
-             ENDIF !irank==0
+          
 
-             CALL excallg(xcpot%icorr,lwbc,input%jspins,nsp,&
+             CALL excallg(xcpot,lwbc,input%jspins,nsp,&
                   &                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
                   &                   gggr,gggru,gggrd,gzgr,&
                   &                   exc)!keep

@@ -6,6 +6,7 @@
 
 MODULE m_types
   USE m_types_rcmat
+  USE m_types_xcpot
   !*************************************************************
   !     This module contains definitions for all kind of types
   !*************************************************************
@@ -525,14 +526,6 @@ MODULE m_types
      REAL                 :: theta
      REAL                 :: phi
   END TYPE t_noco
-
-  TYPE t_xcpot
-     INTEGER             :: icorr,igrd
-     INTEGER,ALLOCATABLE :: icorr_mt(:)
-     REAL                :: gmaxxc
-     INTEGER             :: krla !relativistic corrections
-
-  END TYPE t_xcpot
 
   TYPE t_input
      LOGICAL :: strho

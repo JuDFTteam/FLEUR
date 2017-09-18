@@ -12,8 +12,6 @@ CONTAINS
     USE m_radflo
     USE m_radfun
     USE m_abcof3
-    USE m_icorrkeys
-    USE m_hybridmix
     USE m_types
     IMPLICIT NONE
     TYPE(t_xcpot),INTENT(IN)     :: xcpot
@@ -532,18 +530,8 @@ CONTAINS
     END IF ! if any atoms%llo
 
     !initialize weighting factor
-    IF( xcpot%icorr .EQ. icorr_hf) THEN
-       a_ex = amix_hf
-    ELSE  IF( xcpot%icorr .EQ. icorr_pbe0 ) THEN
-       a_ex = amix_pbe0
-    ELSE IF ( xcpot%icorr .EQ. icorr_hse ) THEN
-       a_ex = aMix_HSE
-    ELSE IF ( xcpot%icorr .EQ. icorr_vhse ) THEN
-       a_ex = aMix_VHSE()
-    ELSE
-       STOP 'subvxc: error icorr'
-    END IF
-
+    a_ex=xcpot%get_exchange_weight()
+    
     IF (hamovlp%l_real) THEN
        DO i=1,hamovlp%matsize
           hamovlp%a_r(i) = hamovlp%a_r(i) - a_ex*REAL(vxc(i))

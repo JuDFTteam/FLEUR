@@ -47,7 +47,6 @@ CONTAINS
     USE m_forcew
     USE m_pot_io
     USE m_cdn_io
-    USE m_icorrkeys
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
@@ -126,12 +125,13 @@ CONTAINS
     !
     !      ---> Fock exchange contribution 
     !
-    IF( xcpot%icorr .EQ. icorr_hf .OR. xcpot%icorr .EQ. icorr_pbe0 &
-             .OR. xcpot%icorr .EQ. icorr_hse .OR. xcpot%icorr .EQ. icorr_vhse ) THEN
-       results%tote = results%tote - 0.5e0*results%te_hfex%valence + 0.5e0*results%te_hfex%core
-    ELSE IF ( xcpot%icorr .EQ. icorr_exx ) THEN
-       results%tote = results%tote + 0.5e0*results%te_hfex%valence
-    END IF
+    IF (xcpot%is_hybrid()) THEN
+       IF (xcpot%is_name("exx")) THEN
+          results%tote = results%tote + 0.5e0*results%te_hfex%valence
+       ELSE
+          results%tote = results%tote - 0.5e0*results%te_hfex%valence + 0.5e0*results%te_hfex%core
+       END IF
+    ENDIF
     WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
     WRITE (16,FMT=8100) 0.5e0*results%te_hfex%valence
     WRITE (6,FMT=8101)  0.5e0*results%te_hfex%core

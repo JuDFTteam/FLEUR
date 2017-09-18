@@ -338,7 +338,7 @@
      &                infh,nline,xl_buffer,bfh,buffer,&
      &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
-     &                xcpot%igrd,vacuum%dvac,dtild,input%tkb,namex,relcor)
+     &                vacuum%dvac,dtild,input%tkb,namex,relcor)
 !
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 

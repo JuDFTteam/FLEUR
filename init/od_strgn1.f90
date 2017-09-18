@@ -38,7 +38,7 @@
           oneD%igfft1(0:oneD%odd%nn2d-1,1:2) = 0
           oneD%pgfft1(0:oneD%odd%nn2d-1) = 0.
 
-          IF (xcpot%igrd.NE.0) THEN
+          IF (xcpot%is_gga()) THEN
              !         ALLOCATE ( odg%pgfx(0:odg%nn2d-1),
              !     &              odg%pgfy(0:odg%nn2d-1),
              !     &              odg%pgfxx(0:odg%nn2d-1),
@@ -125,7 +125,7 @@
              oneD%pgfft1(i-1) = 1.
           ENDDO
 
-          IF (xcpot%igrd.NE.0) THEN
+          IF (xcpot%is_gga()) THEN
              DO  i = 1,oneD%odd%nq2
                 kfx_1 = oneD%kv1(1,i)
                 kfy_1 = oneD%kv1(2,i)

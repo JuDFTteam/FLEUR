@@ -11,7 +11,6 @@ CONTAINS
     USE m_eig66_io
     USE m_apws
     USE m_io_hybrid
-    USE m_icorrkeys
     IMPLICIT NONE
     TYPE(t_xcpot),INTENT(IN)     :: xcpot
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -49,7 +48,7 @@ CONTAINS
     
     !Check if new non-local potential shall be generated
 
-    hybrid%l_subvxc = ( hybrid%l_hybrid.AND.xcpot%icorr /= icorr_exx )
+    hybrid%l_subvxc = ( hybrid%l_hybrid.AND..not.xcpot%is_name("exx") )
     !If this is the first iteration loop we can not calculate a new
     !non-local potential
     IF (.NOT.ALLOCATED(v%pw)) THEN

@@ -4,8 +4,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
                             oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                            noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
-                            l_gga)
+                            noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -59,7 +58,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
-  LOGICAL,          INTENT   (IN) :: l_gga
   CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
 
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt, iqpt
@@ -68,7 +66,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   REAL                 :: sumWeight, rmtmax, zp, radius, dr
   REAL                 :: kmax1, dtild1, dvac1
   REAL                 :: bk(3)
-  LOGICAL              :: l_vca, l_test
+  LOGICAL              :: l_vca, l_test,l_gga
 
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
@@ -344,6 +342,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
      ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
      l_test = .TRUE. ! only checking, dont use new parameters
+     l_gga=xcpot%is_gga()
      CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
                 kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
      DEALLOCATE (jri1,lmax1,rmt1,dx1)
@@ -505,7 +504,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ENDIF
 
      ! Missing xc functionals initializations
-     IF (xcpot%igrd.NE.0) THEN
+     IF (xcpot%is_gga()) THEN
         ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
         ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                   oneD%pgft1xy(0:oneD%odd%nn2d-1),&

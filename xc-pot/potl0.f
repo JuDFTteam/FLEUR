@@ -5,17 +5,17 @@ c     gradients,dens,... only for nonmagnetic.
 c     ******************************************************************
       CONTAINS
       SUBROUTINE potl0(
-     >                 mshd,jspd,jspins,icorr,msh,dx,rad,dens,
+     >                 xcpot,mshd,jspd,jspins,msh,dx,rad,dens,
      <                 vxc)
 
       USE m_grdchlh
       USE m_mkgl0
       USE m_xcallg , ONLY : vxcallg
-
+      USE m_types
       IMPLICIT NONE
 c     ..
+      TYPE(t_xcpot),intent(in)::xcpot
       INTEGER, INTENT (IN) :: jspins,jspd,mshd,msh
-      INTEGER, INTENT (IN) :: icorr
       REAL,    INTENT (IN) :: dx
       REAL,    INTENT (IN) :: rad(msh),dens(mshd,jspd)
       REAL,    INTENT (OUT):: vxc(mshd,jspd)
@@ -54,7 +54,7 @@ c     .. previously untyped names ..
 ! --> calculate the potential.
 !
       CALL vxcallg(
-     >             icorr,.false.,jspins,mshd,msh,dens,
+     >             xcpot,.false.,jspins,mshd,msh,dens,
      +             agrt,agru,agrd,g2rt,g2ru,g2rd,gggrt,gggru,gggrd,
      +             gzgr,vx,vxc)
 
