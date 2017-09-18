@@ -51,15 +51,17 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    CHARACTER(len=10), INTENT (IN) :: cdnfname
 
 !  .. Local Scalars ..
-   REAL          :: s,tec,qint,xdnout,fermiEnergyTemp,phi0
-   INTEGER       :: i,i1,i2,i3,ii3,ix,iy,iz,jsp,na,nplo
-   INTEGER       :: nplot,nq,nt,jm,jspin,iter,ii1,ii2
+   REAL          :: tec,qint,xdnout,fermiEnergyTemp,phi0
+   INTEGER       :: i,ix,iy,iz,jsp,na,nplo,iv,iflag
+   INTEGER       :: nplot,nt,jm,jspin,iter
    LOGICAL       :: twodim,oldform,newform,l_qfix
    LOGICAL       :: cartesian,xsf,unwind
 
 !  .. Local Arrays ..
-   COMPLEX :: qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-   REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins)
+   COMPLEX :: qpw(stars%ng3,input%jspins)
+   COMPLEX :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+   REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+   REAL    :: rht(vacuum%nmzd,2,input%jspins)
    REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
    COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
    INTEGER :: grid(3)
@@ -186,84 +188,47 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
          !loop over all points
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
-               xloop:DO ix = 0, grid(1)-1
+               DO ix = 0, grid(1)-1
 
                   point = zero + vec1*REAL(ix)/(grid(1)-1) +&
                                  vec2*REAL(iy)/(grid(2)-1)
                   IF (.NOT.twodim) point = point + vec3*REAL(iz)/(grid(3)-1)
-                  !Check if the point is in MT-sphere
-                  ii1 = 3
-                  ii2 = 3
-                  ii3 = 3
-                  IF (input%film .AND. .NOT.oneD%odi%d1) ii3 = 0
-                  IF (oneD%odi%d1) THEN
-                     ii1 = 0 ; ii2 = 0
+
+                  ! Set region specific parameters for point
+                  
+                  ! Get MT sphere for point if point is in MT sphere
+                  CALL getMTSphere(input,cell,atoms,oneD,point,nt,na,pt)
+                  IF (na.NE.0) THEN
+                     ! In MT sphere
+                     iv = 0
+                     iflag = 1
+                  ELSE IF (input%film.AND..NOT.oneD%odi%d1.AND.ABS(point(3))>=cell%z1) THEN
+                     ! In vacuum in 2D system
+                     iv = 1
+                     iflag = 0
+                     pt(:) = point(:)
+                  ELSE IF ((oneD%odi%d1).AND.(SQRT((point(1))**2 + (point(2))**2)>=cell%z1)) THEN
+                     ! In vacuum in 1D system
+                     iv = 1
+                     iflag = 0
+                     pt(:) = point(:)
+                  ELSE
+                     ! In interstitial region
+                     iv = 0
+                     iflag = 2
+                     pt(:) = point(:)
                   END IF
 
-                  DO i1 = -ii1, ii1
-                     DO i2 = -ii2, ii2
-                        DO i3 = -ii3, ii3
-                           pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
-                           na = 0
-                           DO nt = 1, atoms%ntype
-                              DO nq = 1, atoms%neq(nt)
-                                 na   = na + 1
-                                 s  = SQRT(dot_PRODUCT(atoms%pos(:,na)-pt,&
-                                                       atoms%pos(:,na)-pt))
-                                 IF (s<atoms%rmsh(atoms%jri(nt),nt)) THEN
-                                    CALL outcdn(pt,nt,na,0,1,jsp,sliceplot,stars,&
-                                                vacuum,sphhar,atoms,sym,cell,oneD,&
-                                                qpw,rhtxy,rho,rht,xdnout)
-                                    IF (xsf) THEN
-                                       WRITE(55,*) xdnout
-                                    ELSE
-                                       WRITE(55,'(4e15.7)') point ,xdnout
-                                    END IF
-                                    CYCLE xloop
-                                 END IF
-                              END DO
-                           END DO !nt
-                        END DO
-                     END DO
-                  END DO !i1
-
-                  !Check for point in vacuum
-                  IF (input%film.AND..NOT.oneD%odi%d1.AND.ABS(point(3))>=cell%z1) THEN
-                     CALL outcdn(point,0,0,1,0,jsp,sliceplot,stars,&
-                                 vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 qpw,rhtxy,rho,rht,xdnout)
-                     IF (xsf) THEN
-                        WRITE(55,*) xdnout
-                     ELSE
-                        WRITE(55,'(4e15.7)') point(:), xdnout
-                     END IF
-                     CYCLE xloop
-                  END IF
-
-                  IF (oneD%odi%d1) THEN
-                     IF (SQRT((pt(1))**2 + (pt(2))**2)>=cell%z1) THEN
-                        CALL outcdn(pt,0,0,1,0,jsp,sliceplot,stars,&
-                                    vacuum,sphhar,atoms,sym,cell,oneD,&
-                                    qpw,rhtxy,rho,rht,xdnout)
-                        IF (xsf) THEN
-                           WRITE(55,*) xdnout
-                        ELSE
-                           WRITE (55,'(4e15.7)') point(:), xdnout
-                        END IF
-                        CYCLE xloop
-                     END IF
-                  END IF
-
-                  CALL outcdn(point,0,0,0,2,jsp,sliceplot,stars,&
+                  CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&
                               vacuum,sphhar,atoms,sym,cell,oneD,&
                               qpw,rhtxy,rho,rht,xdnout)
                   IF (xsf) THEN
                      WRITE(55,*) xdnout
                   ELSE
-                     WRITE(55,'(4e15.7)') point(:), xdnout
+                     WRITE(55,'(4e15.7)') point ,xdnout
                   END IF
 
-               END DO xloop
+               END DO
             END DO
          END DO !z-loop
          IF (xsf.AND.jsp /= input%jspins) &
@@ -280,5 +245,58 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    CLOSE(18)
    IF (xsf) CLOSE(55)
    END SUBROUTINE plotdop
+
+
+
+   SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
+
+   IMPLICIT NONE
+
+   TYPE(t_input), INTENT(IN)    :: input
+   TYPE(t_cell),  INTENT(IN)    :: cell
+   TYPE(t_atoms), INTENT(IN)    :: atoms
+   TYPE(t_oneD),  INTENT(IN)    :: oneD
+
+   INTEGER,       INTENT(OUT)   :: iType, iAtom
+   REAL,          INTENT(OUT)   :: pt(3)
+   REAL,          INTENT(IN)    :: point(3)
+
+   INTEGER                      :: ii1, ii2, ii3, i1, i2, i3, nq
+   REAL                         :: s
+
+   ii1 = 3
+   ii2 = 3
+   ii3 = 3
+   IF (input%film .AND. .NOT.oneD%odi%d1) ii3 = 0
+   IF (oneD%odi%d1) THEN
+      ii1 = 0
+      ii2 = 0
+   END IF
+
+   DO i1 = -ii1, ii1
+      DO i2 = -ii2, ii2
+         DO i3 = -ii3, ii3
+            pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
+            iAtom = 0
+            DO iType = 1, atoms%ntype
+               DO nq = 1, atoms%neq(iType)
+                  iAtom = iAtom + 1
+                  s = SQRT(DOT_PRODUCT(atoms%pos(:,iAtom)-pt,atoms%pos(:,iAtom)-pt))
+                  IF (s<atoms%rmsh(atoms%jri(iType),iType)) THEN
+                     ! Return with the current iType, iAtom, pt
+                     RETURN
+                  END IF
+               END DO
+            END DO
+         END DO
+      END DO
+   END DO !i1
+
+   ! If no MT sphere encloses the point return 0 for iType, iAtom
+   iType = 0
+   iAtom = 0
+   pt(:) = point(:)
+
+   END SUBROUTINE getMTSphere
 
 END MODULE m_plotdop
