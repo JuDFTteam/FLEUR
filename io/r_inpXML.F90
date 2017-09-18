@@ -1795,19 +1795,19 @@ SUBROUTINE r_inpXML(&
 
      IF (numberNodes.EQ.1) THEN
         wann%l_byindex=.TRUE.
-        wann%band_min(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
-        wann%band_max(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
+        wann%band_min(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
+        wann%band_max(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
         xPathA = '/fleurInput/output/wannier/bandSelection/@minSpinDown'
         numberNodes = xmlGetNumberOfNodes(xPathA)
         IF (numberNodes.EQ.1) THEN
-           wann%band_min(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+           wann%band_min(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
         ELSE
            wann%band_min(2) = wann%band_min(1)
         END IF
         xPathA = '/fleurInput/output/wannier/bandSelection/@maxSpinDown'
         numberNodes = xmlGetNumberOfNodes(xPathA)
         IF (numberNodes.EQ.1) THEN
-           wann%band_max(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+           wann%band_max(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
         ELSE
            wann%band_max(2) = wann%band_max(1)
         END IF
