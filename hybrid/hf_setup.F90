@@ -41,8 +41,8 @@ CONTAINS
     INTEGER                 :: matind(DIMENSION%nbasfcn,2),nred
     TYPE(t_lapw)            :: lapw
   
-    LOGICAL:: skip_kpt(kpts%nkpt)
-    REAL   :: g(3)
+    LOGICAL :: skip_kpt(kpts%nkpt)
+    INTEGER :: g(3)
 
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     INTEGER :: sndreqd, rcvreqd, rcvreq(kpts%nkpt)

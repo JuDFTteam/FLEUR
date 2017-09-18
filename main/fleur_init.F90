@@ -356,7 +356,7 @@
                    xmlElectronStates = noState_const
                    xmlPrintCoreStates = .FALSE.
                    DO i = 1, atoms%nat
-                      WRITE(atoms%label(i),'(i0)'), i
+                      WRITE(atoms%label(i),'(i0)') i
                    END DO
                    DO i = 1, atoms%ntype
                       noel(i) = namat_const(atoms%nz(i))
