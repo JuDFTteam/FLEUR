@@ -36,9 +36,12 @@ c.....------------------------------------------------------------------
 
       REAL, PARAMETER :: sml = 1.e-14
       REAL, PARAMETER :: smlc = 2.01e-14
+      LOGICAL         :: l_hse
+      l_hse=(xcpot%is_name("hse").or.xcpot%is_name("vhse").or.
+     +       xcpot%is_name("lhse"))
 
 !$OMP PARALLEL DEFAULT(none)
-!$OMP+ SHARED(irmx,rh,xcpot,jspins)
+!$OMP+ SHARED(irmx,rh,xcpot,jspins,l_hse)
 !$OMP+ SHARED(agr,agru,agrd,g2ru,g2rd,gggr,gggru,gggrd)
 !$OMP+ SHARED(vx,vxc)
 !$OMP+ PRIVATE(rou,rod,vxlu,vclu,vxld,vcld,vxgu,vcgu,vxgd,vcgd)
@@ -119,8 +122,7 @@ c.....
         xcptu = vxlu + vclu + vxgu + vcgu
         xcptd = vxld + vcld + vxgd + vcgd
 
-        IF (xcpot%is_name("hse").or.xcpot%is_name("vhse").or.
-     +       xcpot%is_name("lhse"))then
+        IF (l_hse)then
           vx(i,1)       = vxupsr * 2
           vx(i,jspins)  = vxdnsr * 2
         ELSE

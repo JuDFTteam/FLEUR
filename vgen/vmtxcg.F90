@@ -92,9 +92,10 @@ CONTAINS
     !     ..
     !     .. Intrinsic Functions ..
     INTRINSIC max,mod,min
+    LOGICAL l_gga
     !ta+
     !.....------------------------------------------------------------------
-
+    l_gga=xcpot%is_gga()
 
 #ifdef CPP_MPI
     CALL MPI_BCAST(obsolete%ndvgrd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -170,7 +171,7 @@ CONTAINS
                 chlh(jr,lh,js) = rho(jr,lh,n,js)*rr2(jr)
              ENDDO
 
-             IF (xcpot%is_gga()) THEN 
+             IF (l_gga) THEN 
                 CALL grdchlh(&
                      &                     ixpm,ist,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
                      &                     chlh(1,lh,js),obsolete%ndvgrd,&
@@ -187,7 +188,7 @@ CONTAINS
 #ifdef CPP_MPI
        !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local) &
 #endif
-       !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg) &
+       !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg,l_gga) &
        !$OMP& SHARED(dimension,mpi,sphhar,atoms,rho,xcpot,input,sym,obsolete)&
        !$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
        !$OMP& SHARED(rx,wt,rr2,thet) &
@@ -228,7 +229,7 @@ CONTAINS
                    ch(k,js) = ch(k,js) + ylh(k,lh,nd)*chlh(jr,lh,js)
                 ENDDO
 
-                IF (xcpot%is_gga()) THEN
+                IF (l_gga) THEN
                    ! 
                    DO k = 1,nsp
                       chdr(k,js) =chdr(k,js)+ ylh(k,lh,nd)*chlhdr(jr,lh,js)
@@ -251,7 +252,7 @@ CONTAINS
              ENDDO ! lh
           ENDDO   ! js
 
-          IF (xcpot%is_gga()) THEN
+          IF (l_gga) THEN
              CALL mkgylm(&
                   &                  input%jspins,atoms%rmsh(jr,n),thet,nsp,dimension%nspd,dimension%jspd,ch,chdr,&
                   &                  chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,&
