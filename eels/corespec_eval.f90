@@ -220,7 +220,7 @@ MODULE m_corespec_eval
       write(*,'(a,i5,3f8.4)') "ui",0,sum1,sum2,sum1+sum2
 
       write(60,*) ""
-      csv%occ(iljc) = dble(occ((nc-1)**2+csi%edgeidx(iljc),jspin))
+      csv%occ(iljc) = dble(occ((csv%nc-1)**2+csi%edgeidx(iljc),jspin))
       write(*,"(a,2(a,i2),a,f3.1,2(a,i2),a,f16.8,a)") trim(smeno)//ssep,&
            &"core state: iljc = ",iljc,&
            &", nc = ",nint(nc),&
