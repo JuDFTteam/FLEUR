@@ -100,28 +100,10 @@ CONTAINS
           CALL timestart("Plotting")
           IF (input%strho)  CALL juDFT_error("strho = T and iplot=T",calledby&
                &        ="optional")
-          IF (noco%l_noco) THEN
-             cdnfname = 'cdn'
-             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                          input,sym,cell,sliceplot,noco,cdnfname)
-             cdnfname = 'mdnx'
-             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                          input,sym,cell,sliceplot,noco,cdnfname)
-             cdnfname = 'mdny'
-             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                          input,sym,cell,sliceplot,noco,cdnfname)
-             cdnfname = 'mdnz'
-             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                          input,sym,cell,sliceplot,noco,cdnfname)
-          ELSE
-             IF (sliceplot%slice) THEN
-                cdnfname = 'cdn_slice'
-             ELSE
-                cdnfname = 'cdn1'
-             ENDIF
-             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                          input,sym,cell,sliceplot,noco,cdnfname)
-          ENDIF
+          WRITE(*,*) 'optional - a'
+          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                       input,sym,cell,sliceplot,noco)
+          WRITE(*,*) 'optional - b'
           CALL timestop("Plotting")
        END IF
     ENDIF ! mpi%irank == 0

@@ -8,7 +8,6 @@ MODULE m_plotdop
 
 use m_juDFT
 use m_types
-use m_constants,ONLY: pi_const
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++
 !  plot the charge density for fleur  code output
@@ -34,41 +33,47 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    USE m_loddop
    USE m_xsf_io
    USE m_cdn_io
+   USE m_constants
 
    IMPLICIT NONE
 
-   TYPE(t_oneD),INTENT(IN)     :: oneD
-   TYPE(t_dimension),INTENT(IN):: dimension
-   TYPE(t_stars),INTENT(IN)    :: stars
-   TYPE(t_vacuum),INTENT(IN)   :: vacuum
-   TYPE(t_sphhar),INTENT(IN)   :: sphhar
-   TYPE(t_atoms),INTENT(IN)    :: atoms
-   TYPE(t_input),INTENT(IN)    :: input
-   TYPE(t_sym),INTENT(IN)      :: sym
-   TYPE(t_cell),INTENT(IN)     :: cell
-   TYPE(t_sliceplot),INTENT(IN):: sliceplot
-   TYPE(t_noco),INTENT(IN)     :: noco
-   CHARACTER(len=10), INTENT (IN) :: cdnfname
+   TYPE(t_oneD),                INTENT(IN)    :: oneD
+   TYPE(t_dimension),           INTENT(IN)    :: dimension
+   TYPE(t_stars),               INTENT(IN)    :: stars
+   TYPE(t_vacuum),              INTENT(IN)    :: vacuum
+   TYPE(t_sphhar),              INTENT(IN)    :: sphhar
+   TYPE(t_atoms),               INTENT(IN)    :: atoms
+   TYPE(t_input),               INTENT(IN)    :: input
+   TYPE(t_sym),                 INTENT(IN)    :: sym
+   TYPE(t_cell),                INTENT(IN)    :: cell
+   TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
+   TYPE(t_noco),                INTENT(IN)    :: noco
+   CHARACTER(len=10), OPTIONAL, INTENT(IN)    :: cdnfname
 
 !  .. Local Scalars ..
-   REAL          :: tec,qint,xdnout,fermiEnergyTemp,phi0
-   INTEGER       :: i,ix,iy,iz,jsp,na,nplo,iv,iflag
-   INTEGER       :: nplot,nt,jm,jspin,iter
+   REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
+   INTEGER       :: i,j,ix,iy,iz,jsp,na,nplo,iv,iflag,nfile
+   INTEGER       :: nplot,nt,jm,jspin,iter,numInFiles,numOutFiles
    LOGICAL       :: twodim,oldform,newform,l_qfix
-   LOGICAL       :: cartesian,xsf,unwind
+   LOGICAL       :: cartesian,xsf,unwind,polar
 
 !  .. Local Arrays ..
-   COMPLEX :: qpw(stars%ng3,input%jspins)
-   COMPLEX :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-   REAL    :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-   REAL    :: rht(vacuum%nmzd,2,input%jspins)
-   REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
+   COMPLEX, ALLOCATABLE :: qpw(:,:,:)
+   COMPLEX, ALLOCATABLE :: rhtxy(:,:,:,:,:)
+   REAL, ALLOCATABLE    :: rho(:,:,:,:,:)
+   REAL, ALLOCATABLE    :: rht(:,:,:,:)
+   REAL, ALLOCATABLE    :: xdnout(:)
+   REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
    COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
    INTEGER :: grid(3)
    REAL    :: rhocc(atoms%jmtd)
    REAL    :: point(3)
-   CHARACTER (len=30) :: filename
-   CHARACTER (len=7)  :: append
+   CHARACTER (len=10), ALLOCATABLE :: cdnFilenames(:)
+   CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
+   CHARACTER (len=30)              :: filename
+   CHARACTER (len=7)               :: textline
+
+   REAL, PARAMETER :: eps = 1.0e-15
 
    NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
@@ -97,51 +102,117 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       CALL juDFT_error("Missing input for plot; modify plot_inp",calledby ="plotdop")
    END IF
 
-   ! Read in charge/potential
-   IF(TRIM(ADJUSTL(cdnfname)).EQ.'cdn1') THEN
-      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
-   ELSE IF(TRIM(ADJUSTL(cdnfname)).EQ.'cdn') THEN
-      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+   nfile = 120
+   numInFiles = 0
+   numOutFiles = 0
+   IF(PRESENT(cdnfname)) THEN
+      numInFiles = 1
+      numOutFiles = 1
    ELSE
-      OPEN(20,file = cdnfname,form='unformatted',status='old')
-      CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&
-                  iter,rho,qpw,rht,rhtxy)
-      CLOSE(20)
+      IF(noco%l_noco) THEN
+         numInFiles = 4
+         numOutFiles = 4
+      ELSE
+         numInFiles = 1
+         numOutFiles = 1
+      END IF
+   END IF
+   ALLOCATE(cdnFilenames(numInFiles))
+   ALLOCATE(qpw(stars%ng3,input%jspins,numInFiles))
+   ALLOCATE(rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins,numInFiles))
+   ALLOCATE(rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins,numInFiles))
+   ALLOCATE(rht(vacuum%nmzd,2,input%jspins,numInFiles))
+   IF(PRESENT(cdnfname)) THEN
+      cdnFilenames(1) = cdnfname
+   ELSE
+      IF(noco%l_noco) THEN
+        cdnFilenames(1)='cdn'
+        cdnFilenames(2)='mdnx'
+        cdnFilenames(3)='mdny'
+        cdnFilenames(4)='mdnz'
+      ELSE
+         IF (sliceplot%slice) THEN
+            cdnFilenames(1)='cdn_slice'
+         ELSE
+            cdnFilenames(1)='cdn1'
+         END IF
+      END IF
    END IF
 
-   ! Perhaps only the core charge should be plotted
-   IF (input%score) THEN
-      OPEN (17,file='cdnc',form='unformatted',status='old')
-      REWIND 17
-      DO jspin = 1, input%jspins
-         DO nt = 1, atoms%ntype
-            jm = atoms%jri(nt)
-            READ (17) (rhocc(i),i=1,jm)
-            DO i = 1, atoms%jri(nt)
-               rho(i,0,nt,jspin) = rho(i,0,nt,jspin) - rhocc(i)/2.0/SQRT(pi_const)
+   ! Read in charge/potential
+   DO i = 1, numInFiles
+      IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho(:,0:,:,:,i),qpw(:,:,i),&
+                          rht(:,:,:,i),rhtxy(:,:,:,:,i),cdom,cdomvz,cdomvxy)
+      ELSE IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn') THEN
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho(:,0:,:,:,i),qpw(:,:,i),&
+                          rht(:,:,:,i),rhtxy(:,:,:,:,i),cdom,cdomvz,cdomvxy)
+      ELSE
+         OPEN(20,file = cdnFilenames(i),form='unformatted',status='old')
+         CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&
+                     iter,rho(:,0:,:,:,i),qpw(:,:,i),rht(:,:,:,i),rhtxy(:,:,:,:,i))
+         CLOSE(20)
+      END IF
+
+      ! Subtract core charge if input%score is set
+      IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
+         OPEN (17,file='cdnc',form='unformatted',status='old')
+         REWIND 17
+         DO jspin = 1, input%jspins
+            DO nt = 1, atoms%ntype
+               jm = atoms%jri(nt)
+               READ (17) (rhocc(j),j=1,jm)
+               DO j = 1, atoms%jri(nt)
+                  rho(j,0,nt,jspin,i) = rho(j,0,nt,jspin,i) - rhocc(j)/2.0/SQRT(pi_const)
+               END DO
+               READ (17) tec
             END DO
-            READ (17) tec
+            READ (17) qint
+            qpw(1,jspin,i) = qpw(1,jspin,i) - qint/cell%volint
          END DO
-         READ (17) qint
-         qpw(1,jspin) = qpw(1,jspin) - qint/cell%volint
-      END DO
-      CLOSE (17)
-   END IF
+         CLOSE (17)
+      ELSE IF (input%score) THEN
+         CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plotdop')
+      END IF
+   END DO
+
+   IF (noco%l_ss) THEN 
+      qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss) 
+   END IF 
 
    ! Open the plot_inp file for input
    OPEN (18,file='plot_inp')
-   READ(18,'(i2,5x,l1)') nplot,xsf
-   ! If xsf is specified we create an input file for xcrysden
-   IF (xsf) THEN
-      IF (noco%l_noco) THEN
-         append = '_pl.xsf'
-         OPEN (55,file = trim(cdnfname)//append,form='formatted')
-      ELSE
-         OPEN(55,file="plot.xsf")
+   READ(18,'(i2,5x,l1,a)') nplot,xsf,textline
+   polar = .FALSE.
+   IF ((noco%l_noco).AND.(numInFiles.EQ.4)) THEN
+      polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
+      IF (polar) THEN
+         numOutFiles = 7
       END IF
-      CALL xsf_WRITE_atoms(55,atoms,input%film,oneD%odi%d1,cell%amat)
+   END IF
+   ALLOCATE(outFilenames(numOutFiles))
+   ALLOCATE(xdnout(numOutFiles))
+   IF(numOutFiles.EQ.1) THEN
+      outFilenames(1) = 'plot'
+   ELSE
+      DO i = 1, numInFiles
+         outFilenames(i) = cdnFilenames(i)//'_pl'
+      END DO
+      IF (polar) THEN
+         outFilenames(5) = 'mabs_pl'
+         outFilenames(6) = 'mtha_pl'
+         outFilenames(7) = 'mphi_pl'
+      END IF
+   END IF
+
+   ! If xsf is specified we create input files for xcrysden
+   IF (xsf) THEN
+      DO i = 1, numOutFiles
+         OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
+         CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
+      END DO
    END IF
 
    ! Loop over all plots
@@ -173,15 +244,17 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
       !Open the file
       IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
-      IF (xsf) THEN
-         CALL xsf_WRITE_header(55,twodim,filename,vec1,vec2,vec3,zero,grid)
-      ELSE
-         IF (noco%l_noco) THEN
-            OPEN (55,file = filename//cdnfname,form='formatted')
+      DO i = 1, numOutFiles
+         IF (xsf) THEN
+            CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
          ELSE
-            OPEN (55,file = filename,form='formatted')
+            IF (numOutFiles.NE.1) THEN
+               OPEN (nfile+i,file = filename//outFilenames(i),form='formatted')
+            ELSE
+               OPEN (nfile+i,file = filename,form='formatted')
+            END IF
          END IF
-      END IF
+      END DO
 
       !loop over spins
       DO jsp = 1, input%jspins
@@ -219,31 +292,110 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                      pt(:) = point(:)
                   END IF
 
-                  CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&
-                              vacuum,sphhar,atoms,sym,cell,oneD,&
-                              qpw,rhtxy,rho,rht,xdnout)
-                  IF (xsf) THEN
-                     WRITE(55,*) xdnout
-                  ELSE
-                     WRITE(55,'(4e15.7)') point ,xdnout
+                  DO i = 1, numInFiles
+                     CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&
+                                 vacuum,sphhar,atoms,sym,cell,oneD,&
+                                 qpw(:,:,i),rhtxy(:,:,:,:,i),rho(:,0:,:,:,i),&
+                                 rht(:,:,:,i),xdnout(i))
+                  END DO
+
+                  IF (na.NE.0) THEN
+                     IF (noco%l_ss) THEN 
+                        ! rotate magnetization "backward"
+                        angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
+                        help(1) = xdnout(2)
+                        help(2) = xdnout(3)
+                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
+                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
+                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
+                     END IF
                   END IF
+
+                  IF (noco%l_ss .AND. (.NOT. unwind)) THEN
+                     ! rotate magnetization
+                     angss = DOT_PRODUCT(qssc,point)
+                     help(1) = xdnout(2)
+                     help(2) = xdnout(3)
+                     xdnout(2) = +help(1)*COS(angss) -help(2)*SIN(angss)
+                     xdnout(3) = +help(1)*SIN(angss) +help(2)*COS(angss)
+                  END IF
+
+                  IF (polar) THEN
+                     xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
+                     IF (xdnout(5)<eps) THEN
+                        xdnout(5)= 0.0
+                        xdnout(6)= -tpi_const
+                        xdnout(7)= -tpi_const
+                     ELSE
+                        DO j = 1, 3
+                           help(j) = xdnout(1+j)/xdnout(5) 
+                        END DO
+                        IF (help(3)<0.5) THEN
+                           xdnout(6)= ACOS(help(3))
+                        ELSE
+                           xdnout(6)= pi_const/2.0-ASIN(help(3))
+                        END IF
+                        IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
+                           xdnout(7)= -tpi_const
+                        ELSE
+                           IF ( ABS(help(1)) > ABS(help(2)) ) THEN
+                              xdnout(7)= ABS(ATAN(help(2)/help(1)))
+                           ELSE
+                              xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
+                           END IF
+                           IF (help(2)<0.0) THEN
+                              xdnout(7)= -xdnout(7)
+                           END IF
+                           IF (help(1)<0.0) THEN
+                              xdnout(7)= pi_const-xdnout(7)
+                           END IF
+                           DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
+                              xdnout(7)= xdnout(7)-tpi_const
+                           END DO
+                           DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
+                              xdnout(7)= xdnout(7)+tpi_const
+                           END DO
+                        END IF
+                     END IF
+                     xdnout(6)= xdnout(6)/pi_const
+                     xdnout(7)= xdnout(7)/pi_const
+                  END IF ! (polar)
+
+                  DO i = 1, numOutFiles
+                     IF (xsf) THEN
+                        WRITE(nfile+i,*) xdnout(i)
+                     ELSE
+                        WRITE(nfile+i,'(4e15.7)') point ,xdnout(i)
+                     END IF
+                  END DO
 
                END DO
             END DO
          END DO !z-loop
-         IF (xsf.AND.jsp /= input%jspins) &
-            CALL xsf_WRITE_newblock(55,twodim,vec1,vec2,vec3,zero,grid)
+         DO i = 1, numOutFiles
+            IF (xsf.AND.jsp /= input%jspins) &
+               CALL xsf_WRITE_newblock(nfile+i,twodim,vec1,vec2,vec3,zero,grid)
+         END DO
       END DO !Spin-loop
 
-      IF (xsf) THEN
-         CALL xsf_WRITE_endblock(55,twodim)
-      ELSE
-         CLOSE(55)
-      END IF
+      DO i = 1, numOutFiles
+         IF (xsf) THEN
+            CALL xsf_WRITE_endblock(nfile+i,twodim)
+         ELSE
+            CLOSE(nfile+i)
+         END IF
+      END DO
    END DO !nplot  
     
    CLOSE(18)
-   IF (xsf) CLOSE(55)
+   IF (xsf) THEN
+      DO i = 1, numOutFiles
+         CLOSE(nfile+i)
+      END DO
+   END IF
+
+   DEALLOCATE(rho, qpw, rhtxy, rht, xdnout, cdnFilenames, outFilenames)
+
    END SUBROUTINE plotdop
 
 
