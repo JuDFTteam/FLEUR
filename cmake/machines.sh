@@ -100,8 +100,13 @@ module load LIBRARIES
 	   echo "GOOD LUCK!"
         fi
     else
-	echo "No valid machine configuration specified"
-	exit
+	if [ -r $DIR/cmake/machines/${machine}.cmake ]
+	then
+	    cp $DIR/cmake/machines/${machine}.cmake config.cmake
+	else
+	    echo "No valid machine configuration specified"
+	    exit
+	fi
     fi
 }
 

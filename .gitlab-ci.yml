@@ -5,8 +5,8 @@ build-gfortran:
      paths:
        - build
   script:
-    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
-    - cd /builds/fleur/fleur; ./configure.sh AUTO; cd build; make 
+    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen libopenmpi-dev libscalapack-mpi-dev
+    - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make 
 test-gfortran:
   image: ubuntu:16.10
   stage: test
@@ -14,7 +14,7 @@ test-gfortran:
      paths:
        - build
   script:
-    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev doxygen
+    - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev libopenmpi-dev libscalapack-mpi-dev
     - ulimit -s unlimited ;cd /builds/fleur/fleur/build;ctest
 
 
