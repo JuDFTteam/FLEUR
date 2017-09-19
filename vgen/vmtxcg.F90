@@ -67,7 +67,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL vx(dimension%nspd,dimension%jspd),vxc(dimension%nspd,dimension%jspd),exc(dimension%nspd),rx(3,dimension%nspd)
-!    REAL vxl(dimension%nspd,dimension%jspd),vxcl(dimension%nspd,dimension%jspd),excl(dimension%nspd),divi
+    REAL vxcl(DIMENSION%nspd,DIMENSION%jspd),excl(DIMENSION%nspd),divi
+    TYPE(t_xcpot)::xcpot_tmp
     REAL wt(dimension%nspd),rr2(atoms%jmtd),thet(dimension%nspd)
     REAL agr(dimension%nspd),agru(dimension%nspd),agrd(dimension%nspd),g2r(dimension%nspd),g2ru(dimension%nspd)
     REAL g2rd(dimension%nspd),gggr(dimension%nspd),gggru(dimension%nspd),gggrd(dimension%nspd)
@@ -150,7 +151,10 @@ CONTAINS
             &       chlhdr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),chlhdrr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd))
 
     DO 200 n = n_start,atoms%ntype,n_stride
-
+       IF (xcpot%lda_atom(n))THEN
+          IF((.NOT.xcpot%is_name("pw91"))) CALL judft_error("Using locally LDA only possible with pw91 functional")
+          CALL xcpot_tmp%init("l91",.FALSE.)
+       ENDIF
        nat=sum(atoms%neq(:n-1))+1
        nd = atoms%ntypsy(nat)
 
@@ -191,12 +195,12 @@ CONTAINS
        !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg,l_gga) &
        !$OMP& SHARED(dimension,mpi,sphhar,atoms,rho,xcpot,input,sym,obsolete)&
        !$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
-       !$OMP& SHARED(rx,wt,rr2,thet) &
+       !$OMP& SHARED(rx,wt,rr2,thet,xcpot_tmp) &
        !$OMP& SHARED(ylh,ylht,ylhtt,ylhf,ylhff,ylhtf) &
        !$OMP& SHARED(chlh,chlhdr,chlhdrr) &
        !$OMP& SHARED(ierr,n_start,n_stride) &
        !$OMP& PRIVATE(js,k,lh,i,rhmnm,elh,vlh) &
-       !$OMP& PRIVATE(vx,vxc,exc) &
+       !$OMP& PRIVATE(vx,vxc,exc,excl,vxcl,divi) &
        !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,grgru,grgrd,gzgr) &
        !$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
        ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
@@ -303,8 +307,20 @@ CONTAINS
           CALL vxcallg(&
                &                 xcpot,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-               &                 vx,vxc)!keep
+               &                 vx,vxc)
 
+          IF (xcpot%lda_atom(n)) THEN
+             ! Use local part of pw91 for this atom
+             CALL vxcallg(&
+                  xcpot_tmp,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
+                  g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
+                  vx,vxcl)
+             !Mix the potentials
+             divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
+             vxc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     vxc(:,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+          ENDIF
+ 
 
           IF (mpi%irank == 0) THEN
           IF (mod(jr,1000).eq.0)&
@@ -366,13 +382,19 @@ CONTAINS
              !
              !           calculate the ex.-cor energy density
              !
-          
-
              CALL excallg(xcpot,lwbc,input%jspins,nsp,&
-                  &                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
-                  &                   gggr,gggru,gggrd,gzgr,&
-                  &                   exc)!keep
-
+                  ch,agr,agru,agrd,g2r,g2ru,g2rd,&
+                  gggr,gggru,gggrd,gzgr, exc)
+             
+             IF (xcpot%lda_atom(n)) THEN
+             ! Use local part of pw91 for this atom
+                CALL excallg(xcpot_tmp,lwbc,input%jspins,nsp,&
+                     ch,agr,agru,agrd,g2r,g2ru,g2rd,&
+                     gggr,gggru,gggrd,gzgr, excl)
+                !Mix the potentials
+                exc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     exc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+             ENDIF
              IF (mpi%irank == 0) THEN
              IF (mod(jr,10000).EQ.0)&
                   &        WRITE (6,'(/'' 999exc''/(10d15.7))') (exc(k),k=1,nsp)

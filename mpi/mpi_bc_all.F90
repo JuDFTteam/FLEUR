@@ -42,6 +42,7 @@ CONTAINS
     INTEGER i(39),ierr(3)
     REAL    r(30)
     LOGICAL l(43)
+    CHARACTER(len=4)::namex
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -52,7 +53,7 @@ CONTAINS
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
-       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = xcpot%icorr ; i(26) = 0!xcpot%igrd
+       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = 0 ; i(26) = 0!xcpot%igrd
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
        i(35)=hybrid%bands1 ; i(36)=1 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
@@ -84,12 +85,12 @@ CONTAINS
     hybrid%bands1=i(35) ;  input%imix=i(37)
     input%gw=i(31) ; input%gw_neigd=i(32) ; hybrid%ewaldlambda=i(33) ; hybrid%lexp=i(34)
     vacuum%nstars=i(27) ; vacuum%nstm=i(28) ; oneD%odd%nq2=i(29) ; oneD%odd%nop=i(30)
-    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) ; xcpot%icorr=i(25) !; xcpot%igrd=i(26)
+    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) 
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
      atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38)
-     input%coretail_lmax=i(2) ; xcpot%krla=i(4) ; input%kcrel=i(39)
+     input%coretail_lmax=i(2) ; input%kcrel=i(39)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     input%minDistance=r(29) ; obsolete%chng=r(30)
@@ -267,9 +268,16 @@ CONTAINS
     END IF
     !--- HF>
 
-    CALL MPI_BCAST(atoms%relcor,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%icorr,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%krla,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    IF (mpi%irank==0) THEN
+       namex=xcpot%get_name()
+       
+    ENDIF
+    CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
+    IF (mpi%irank>0) THEN
+       call xcpot%init(namex,i(4)==1)
+       allocate(xcpot%lda_atom(atoms%ntype))
+    ENDIF
+    CALL MPI_BCAST(xcpot%lda_atom,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
        n = dimension%nstd*atoms%ntype

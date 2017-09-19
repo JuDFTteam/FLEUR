@@ -525,6 +525,7 @@ MODULE m_types
      LOGICAL, ALLOCATABLE :: soc_opt(:)
      REAL                 :: theta
      REAL                 :: phi
+     REAL,ALLOCATABLE     :: socscale(:)
   END TYPE t_noco
 
   TYPE t_input

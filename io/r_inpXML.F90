@@ -133,10 +133,9 @@ SUBROUTINE r_inpXML(&
   CHARACTER(LEN=11)  :: latticeType
   CHARACTER(LEN=50)  :: versionString
 
-  CHARACTER(LEN=4)   :: namexSpecies
-  LOGICAL            :: relcorSpecies
-  INTEGER            :: icorrSpecies, igrdSpecies, krlaSpecies
-
+  LOGICAL            :: ldaSpecies
+  REAL               :: socscaleSpecies
+  
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
   INTEGER, ALLOCATABLE :: speciesNLO(:)
@@ -225,7 +224,8 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%igrd(atoms%ntype))
   ALLOCATE(atoms%krla(atoms%ntype))
   ALLOCATE(atoms%relcor(atoms%ntype))
-
+  ALLOCATE(xcpot%lda_atom(atoms%ntype))
+  
   atoms%namex = ''
   atoms%icorr = -99
 
@@ -236,7 +236,8 @@ SUBROUTINE r_inpXML(&
 
   ALLOCATE(noco%soc_opt(atoms%ntype+2),noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
   ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
-
+  ALLOCATE(noco%socscale(atoms%ntype))
+  
   ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
   ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
 
@@ -1310,21 +1311,13 @@ SUBROUTINE r_inpXML(&
         SELECT(4)=evaluateFirstIntOnly(xPathA)
      ENDIF
         
-     ! Explicitely provided xc functional
-
-     WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/xcFunctional'
-     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
-     namexSpecies = ''
-     relcorSpecies = .FALSE.
-     icorrSpecies = -99
-     igrdSpecies = 0
-     krlaSpecies = 0
-     IF (numberNodes.EQ.1) THEN
-        namexSpecies = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
-        relcorSpecies = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@relativisticCorrections'))
-        !CALL getXCParameters(namexSpecies,relcorSpecies,icorrSpecies,krlaSpecies,ldummy)
-     END IF
-
+     ! Special switches for species
+     
+     ldaspecies=.FALSE.
+     socscalespecies=1.0
+     !WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
+     !ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
+     !socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
      ! Explicitely provided core configurations
 
      coreConfigPresent = .FALSE.
@@ -1513,10 +1506,8 @@ SUBROUTINE r_inpXML(&
               hybrid%select1(:,iType)=SELECT
            ENDIF
            ! Explicit xc functional
-           atoms%namex(iType) = namexSpecies
-           atoms%relcor(iType) = relcorSpecies
-           atoms%icorr(iType) = icorrSpecies
-           atoms%krla(iType) = krlaSpecies
+           xcpot%lda_atom(iType)=ldaSpecies
+           noco%socscale(iType)=socscaleSpecies
         END IF
      END DO
      DEALLOCATE(loOrderList)
