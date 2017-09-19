@@ -100,10 +100,8 @@ CONTAINS
           CALL timestart("Plotting")
           IF (input%strho)  CALL juDFT_error("strho = T and iplot=T",calledby&
                &        ="optional")
-          WRITE(*,*) 'optional - a'
           CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                        input,sym,cell,sliceplot,noco)
-          WRITE(*,*) 'optional - b'
           CALL timestop("Plotting")
        END IF
     ENDIF ! mpi%irank == 0
