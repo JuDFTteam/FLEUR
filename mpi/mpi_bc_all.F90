@@ -13,7 +13,6 @@ CONTAINS
         xcpot,hybrid)
     !
     !**********************************************************************
-    USE m_hybridmix
     USE m_types
     IMPLICIT NONE
     INCLUDE 'mpif.h'
@@ -44,7 +43,8 @@ CONTAINS
     REAL    r(30)
     LOGICAL l(43)
     !     ..
-    !     .. External Subroutines.. 
+    !     .. External Subroutines..
+#ifdef CPP_MPI    
     EXTERNAL MPI_BCAST
 
     IF (mpi%irank.EQ.0) THEN
@@ -52,7 +52,7 @@ CONTAINS
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
-       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = xcpot%icorr ; i(26) = xcpot%igrd
+       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = xcpot%icorr ; i(26) = 0!xcpot%igrd
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
        i(35)=hybrid%bands1 ; i(36)=1 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
@@ -64,7 +64,8 @@ CONTAINS
        r(15)=input%efield%sigma ; r(16)=input%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
-       r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance ; r(30)=obsolete%chng
+       r(27)=0.0 ; r(28)=0.0!r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
+       r(29)=input%minDistance ; r(30)=obsolete%chng
 
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
@@ -83,7 +84,7 @@ CONTAINS
     hybrid%bands1=i(35) ;  input%imix=i(37)
     input%gw=i(31) ; input%gw_neigd=i(32) ; hybrid%ewaldlambda=i(33) ; hybrid%lexp=i(34)
     vacuum%nstars=i(27) ; vacuum%nstm=i(28) ; oneD%odd%nq2=i(29) ; oneD%odd%nop=i(30)
-    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) ; xcpot%icorr=i(25) ; xcpot%igrd=i(26)
+    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) ; xcpot%icorr=i(25) !; xcpot%igrd=i(26)
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
@@ -91,7 +92,6 @@ CONTAINS
      input%coretail_lmax=i(2) ; xcpot%krla=i(4) ; input%kcrel=i(39)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
     input%minDistance=r(29) ; obsolete%chng=r(30)
     input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
     cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) 
@@ -269,7 +269,6 @@ CONTAINS
 
     CALL MPI_BCAST(atoms%relcor,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%icorr,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%igrd,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%krla,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
@@ -285,5 +284,6 @@ CONTAINS
     END IF
  
     RETURN
+#endif
   END SUBROUTINE mpi_bc_all
 END MODULE m_mpi_bc_all

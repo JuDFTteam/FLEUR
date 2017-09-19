@@ -22,7 +22,11 @@ MODULE m_types_xcpot
        
   INTEGER,PARAMETER:: ILLEGAL_XCPOT=0
   TYPE t_xcpot
+#ifdef CPP_MPI     
+     INTEGER             :: icorr !not private to allow bcasting it around
+#else
      INTEGER,PRIVATE     :: icorr
+#endif
      INTEGER,ALLOCATABLE :: icorr_mt(:)
      REAL                :: gmaxxc
      INTEGER             :: krla !relativistic corrections
@@ -31,7 +35,7 @@ MODULE m_types_xcpot
      PROCEDURE        :: is_gga=>xcpot_is_gga
      PROCEDURE,NOPASS :: from_name=>xcpot_from_name
      PROCEDURE        :: init=>xcpot_init
-     PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
+     PROCEDURE        :: is_hybrid=>xcpot_is_hybrid 
      PROCEDURE        :: is_name=>xcpot_is_name
      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
   END TYPE t_xcpot
