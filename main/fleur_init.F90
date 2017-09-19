@@ -339,6 +339,9 @@
                 banddos%l_orb = .FALSE.
                 banddos%orbCompAtom = 0
 
+                ALLOCATE(xcpot%lda_atom(atoms%ntype))
+                xcpot%lda_atom(:) = .FALSE.
+
                 IF(juDFT_was_argument("-toXML")) THEN
                    WRITE(*,*) ''
                    WRITE(*,*) 'Please note:'
