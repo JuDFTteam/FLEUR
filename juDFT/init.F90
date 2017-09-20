@@ -6,7 +6,7 @@
 
       MODULE m_juDFT_init
 
-      USE m_judft_time 
+      USE m_judft_time
       USE m_judft_sysinfo
       USE m_judft_stop
 
@@ -28,13 +28,18 @@
       EXTERNAL intel_signal_handler
       result=signal(SIGTERM,intel_signal_handler,-1)
       result=signal(SIGSEGV,intel_signal_handler,-1)
-
 #endif
       END SUBROUTINE signal_handler
+
       END MODULE m_juDFT_init
 
+      ! NOTE: The intel_signal_handler has to be outside the module
+      !       as the OS has to have it under a certain name that
+      !       would be changed if it would be defined in the module.
 #ifdef __INTEL_COMPILER
       FUNCTION intel_signal_handler(signal)
+      USE m_judft_time
+      USE m_judft_stop
       IMPLICIT NONE
       INTEGER :: signal
       INTEGER :: intel_signal_handler
@@ -47,7 +52,7 @@
 #else
       WRITE(*,*) "Signal detected:",signal
 #endif
-      WRITE(*,*) "This is might be due to either:"
+      WRITE(*,*) "This might be due to either:"
       WRITE(*,*) " - A bug in FLEUR"
       WRITE(*,*) " - Your job running out of memory"
       WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
