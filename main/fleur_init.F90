@@ -340,7 +340,9 @@
                 banddos%orbCompAtom = 0
 
                 ALLOCATE(xcpot%lda_atom(atoms%ntype))
+                ALLOCATE(noco%socscale(atoms%ntype))
                 xcpot%lda_atom(:) = .FALSE.
+                noco%socscale(:) = 1.0
 
                 IF(juDFT_was_argument("-toXML")) THEN
                    WRITE(*,*) ''
