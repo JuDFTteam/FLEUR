@@ -407,10 +407,10 @@ MODULE m_types
   END TYPE t_oneD
 
   TYPE t_hybrid
-     LOGICAL               ::  l_hybrid
-     LOGICAL               ::  l_subvxc
-     LOGICAL               ::  l_calhf
-     LOGICAL               ::  l_addhf
+     LOGICAL               ::  l_hybrid=.false.
+     LOGICAL               ::  l_subvxc=.false.
+     LOGICAL               ::  l_calhf=.false.
+     LOGICAL               ::  l_addhf=.false.
      INTEGER               ::  ewaldlambda
      INTEGER               ::  lexp
      INTEGER               ::  bands1 !Only read in
