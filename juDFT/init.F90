@@ -5,9 +5,11 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_juDFT_init
+
       USE m_judft_time 
-      USE  m_judft_sysinfo
-      
+      USE m_judft_sysinfo
+      USE m_judft_stop
+
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
@@ -33,8 +35,6 @@
 
 #ifdef __INTEL_COMPILER
       FUNCTION intel_signal_handler(signal)
-      USE m_judft_time
-      USE m_judft_stop
       IMPLICIT NONE
       INTEGER :: signal
       INTEGER :: intel_signal_handler
