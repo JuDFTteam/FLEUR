@@ -42,7 +42,6 @@ CONTAINS
     INTEGER i(39),ierr(3)
     REAL    r(30)
     LOGICAL l(43)
-    CHARACTER(len=4)::namex
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -268,16 +267,12 @@ CONTAINS
     END IF
     !--- HF>
 
-    IF (mpi%irank==0) THEN
-       namex=xcpot%get_name()
-       
-    ENDIF
-    CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
     IF (mpi%irank>0) THEN
-       call xcpot%init(namex,i(4)==1)
-       allocate(xcpot%lda_atom(atoms%ntype))
+       ALLOCATE(xcpot%lda_atom(atoms%ntype))
+       ALLOCATE(noco%socscale(atoms%ntype))
     ENDIF
     CALL MPI_BCAST(xcpot%lda_atom,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(noco%socscale,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
        n = dimension%nstd*atoms%ntype

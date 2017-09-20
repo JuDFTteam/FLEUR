@@ -78,7 +78,7 @@
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: scale, dtild, phi_add
-          LOGICAL                       :: l_found, l_kpts, l_exist
+          LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -298,23 +298,20 @@
              !+t3e
              IF (mpi%irank.EQ.0) THEN
                 !-t3e
-                CALL inped( &
-                     &           atoms,obsolete,vacuum,&
-                     &           input,banddos,xcpot,sym,&
-                     &           cell,sliceplot,noco,&
-                     &           stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
+                CALL inped(atoms,obsolete,vacuum,&
+                           input,banddos,xcpot,sym,&
+                           cell,sliceplot,noco,&
+                           stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
                 !
                 IF (xcpot%is_gga()) THEN
                    ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
-                   !-odim
                    ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-                        &             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-                        &             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
+                             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
+                             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
                 ELSE
                    ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-                   !-odim
                    ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-                        &             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
+                             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
                 ENDIF
                 oneD%odd%nq2 = oneD%odd%n2d
                 oneD%odi%nq2 = oneD%odd%nq2
@@ -326,12 +323,24 @@
                 IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
                      &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
                 !
+
+                namex=xcpot%get_name()
+                l_krla = xcpot%krla.EQ.1
              END IF ! mpi%irank.eq.0
-                CALL setup(&
-                     &     mpi,atoms,kpts,DIMENSION,sphhar,&
-                     &     obsolete,sym,stars,oneD,input,noco,&
-                     &     vacuum,cell,xcpot,&
-                     &     sliceplot,enpara,l_opti)
+
+#ifdef CPP_MPI
+             CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
+             CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+#endif
+             IF (mpi%irank.NE.0) THEN
+                CALL xcpot%init(namex,l_krla)
+             END IF
+
+             CALL setup(mpi,atoms,kpts,DIMENSION,sphhar,&
+                        obsolete,sym,stars,oneD,input,noco,&
+                        vacuum,cell,xcpot,&
+                        sliceplot,enpara,l_opti)
+
              IF (mpi%irank.EQ.0) THEN
                 !
                 stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
