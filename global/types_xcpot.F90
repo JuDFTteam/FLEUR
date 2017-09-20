@@ -1,20 +1,20 @@
 MODULE m_types_xcpot
   IMPLICIT NONE
   PRIVATE
-  CHARACTER(len=4),PARAMETER:: xc_names(19)=[&
+  CHARACTER(len=4),PARAMETER:: xc_names(20)=[&
        'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &  
        'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', & 
-       'hse ','vhse','lhse','exx ','hf  '] 
+       'pbe0','hse ','vhse','lhse','exx ','hf  '] 
   
-  LOGICAL,PARAMETER:: priv_gga(19)=[&
+  LOGICAL,PARAMETER:: priv_gga(20)=[&
        .TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
        .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
-       .TRUE.,.TRUE.,.TRUE.,.FALSE.,.FALSE.]
+       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.FALSE.]
 
-  LOGICAL,PARAMETER:: priv_hybrid(19)=[&
+  LOGICAL,PARAMETER:: priv_hybrid(20)=[&
        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
-       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.]
+       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.]
 
   REAL, PARAMETER       ::  amix_pbe0 = 0.25
   REAL, PARAMETER       ::  amix_hse  = 0.25
