@@ -1315,9 +1315,12 @@ SUBROUTINE r_inpXML(&
      
      ldaspecies=.FALSE.
      socscalespecies=1.0
-     !WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
-     !ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
-     !socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
+     WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
+     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+     IF (numberNodes==1) THEN
+        ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
+        socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
+     ENDIF
      ! Explicitely provided core configurations
 
      coreConfigPresent = .FALSE.
