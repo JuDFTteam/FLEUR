@@ -54,7 +54,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER i,j,nk,jspin ,iter ,n ,l
     INTEGER n_loc,n_plus,i_plus,n_end,nsz,nmat
-    LOGICAL l_all,l_file,l_socvec
+    LOGICAL l_file,l_socvec   !,l_all
     INTEGER wannierspin
     TYPE(t_enpara) :: enpara
     TYPE(t_usdus):: usdus
@@ -192,16 +192,16 @@ CONTAINS
  
 
     IF (mpi%irank==0) THEN
-       IF (noco%soc_opt(atoms%ntype+1) .OR. l_all) THEN
-          IF (l_all) THEN
-             WRITE (6,fmt='(A)') 'Only SOC contribution of certain'&
-                  //' atom types included in Hamiltonian.'
-          ELSE 
+       IF (noco%soc_opt(atoms%ntype+1)) THEN ! .OR. l_all) THEN
+!          IF (l_all) THEN
+!             WRITE (6,fmt='(A)') 'Only SOC contribution of certain'&
+!                  //' atom types included in Hamiltonian.'
+!          ELSE 
              WRITE (chntype,'(i3)') atoms%ntype
              WRITE (6,fmt='(A,2x,'//chntype//'l1)') 'SOC contributi'&
                   //'on of certain atom types included in Hamiltonian:',&
                   (noco%soc_opt(n),n=1,atoms%ntype)
-          ENDIF
+!          ENDIF
        ELSE
           WRITE(6,fmt='(A,1x,A)') 'SOC contribution of all atom'//&
                ' types inculded in Hamiltonian.'
