@@ -1,0 +1,14 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/inp",$workdir);
+jt::copyfile("files/kpts",$workdir);
+jt::copyfile("files/enpara",$workdir);
+	
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_fileexists("$workdir/out.xml");
+$result+=jt::test_grepnumber("$workdir/out.xml","totalEnergy","value=. *(..........)",-1272.4266,0.0003);
+$result+=jt::test_grepnumber("$workdir/out.xml","overallChargeDensity","distance=. *(.....)",5.934,0.001);
+jt::stageresult($workdir,$result,"2");
