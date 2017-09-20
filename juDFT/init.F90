@@ -7,6 +7,7 @@
       MODULE m_juDFT_init
       USE m_judft_time 
       USE  m_judft_sysinfo
+      
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
@@ -33,6 +34,7 @@
 #ifdef __INTEL_COMPILER
       FUNCTION intel_signal_handler(signal)
       USE m_judft_time
+      USE m_judft_stop
       IMPLICIT NONE
       INTEGER :: signal
       INTEGER :: intel_signal_handler
@@ -49,9 +51,10 @@
       WRITE(*,*) " - A bug in FLEUR"
       WRITE(*,*) " - Your job running out of memory"
       WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(*,*) " - ...."
+      WRITE(*,*) " - ...." 
       WRITE(*,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
+      CALL PRINT_memory_info()
       STOP "Signal"
       intel_signal_handler=0
       END FUNCTION intel_signal_handler

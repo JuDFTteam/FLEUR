@@ -33,7 +33,7 @@
       USE m_judft_time
       IMPLICIT NONE
       PRIVATE
-      PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
+      PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable,print_memory_info
       CONTAINS
 
         SUBROUTINE judfT_file_readable(filename,warning)
@@ -167,7 +167,7 @@
       WRITE(0,*) "  ",message
       WRITE(0,*) "*****************************************"
       CALL writetimes()
-      CALL priv_memory_info()
+      CALL print_memory_info()
 #ifdef CPP_MPI
       IF(PRESENT(irank)) THEN
          CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -195,14 +195,15 @@
 #ifdef CPP_MPI
       INTEGER :: ierr
 #endif
-      error = 1
+      error = 0
 
       IF(PRESENT(errorCode)) THEN
          error = errorCode
       END IF
       !try to print times
-      !call writelocation()
-      !CALL writetimes(.true.)
+      call writelocation()
+      CALL writetimes(.TRUE.)
+      CALL print_memory_info()
       INQUIRE(FILE="JUDFT_TRACE",EXIST=calltrace)
       IF (error.EQ.1) calltrace = .TRUE.
       IF (calltrace) THEN
@@ -227,7 +228,7 @@
       STOP 'juDFT-STOPPED'
       END SUBROUTINE juDFT_stop
 
-      SUBROUTINE priv_memory_info()
+      SUBROUTINE print_memory_info()
       IMPLICIT NONE
 
       CHARACTER(LEN=1024):: line
@@ -238,7 +239,7 @@
          WRITE(6,*) trim(line)
       ENDDO
  999  CLOSE(99,IOSTAT=err)
-      END SUBROUTINE priv_memory_info
+    END SUBROUTINE print_memory_info
 
 
       END MODULE m_juDFT_stop
