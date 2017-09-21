@@ -6,6 +6,8 @@
 
       MODULE m_kptgen_hybrid
 
+      USE m_juDFT
+
       CONTAINS
       
 ! this programm generates an aequdistant kpoint set including the
@@ -277,7 +279,9 @@ c     function modulo1 maps kpoint into first BZ
         WRITE(*,*) help
         WRITE(6,'(A,F5.3,2('','',F5.3),A)') 'modulo1: argument (',
      &           kpoint,') is not an element of the k-point set.'
-        STOP 'modulo1: argument not an element of k-point set.'
+        CALL juDFT_error(
+     +     'modulo1: argument not an element of k-point set.', 
+     +     calledby = 'kptgen_hybrid:modulo1')
       END IF
       modulo1 = modulo(help,nkpt3)*1d0/nkpt3
 
