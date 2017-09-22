@@ -265,10 +265,13 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,208) kpts%nkpt,kptGamma
       END IF
 
-   ELSE !(kpts%specificationType.EQ.2)
+   ELSE IF (kpts%specificationType.EQ.2) THEN
 !            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
       210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
       WRITE (fileNum,210) div(1),div(2),div(3),kptGamma
+   ELSE !(kpts%specificationType.EQ.4)
+      212 FORMAT('         <kPointDensity denX="',f0.6,'" denY="',f0.6,'" denZ="',f0.6,'" gamma="',l1,'"/>')
+      WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
    END IF
    WRITE (fileNum,'(a)') '      </bzIntegration>'
 

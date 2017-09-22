@@ -282,6 +282,7 @@ MODULE m_types
      REAL,ALLOCATABLE ::wtkpt(:)
      INTEGER               ::  nkptf !<k-vectors in full BZ
      INTEGER               ::  nkpt3(3)
+     REAL                  ::  kPointDensity(3) ! only used if k point set is defined as density
      REAL   ,ALLOCATABLE   ::  bkf(:,:)
      INTEGER,ALLOCATABLE   ::  bkp(:)
      INTEGER,ALLOCATABLE   ::  bksym(:)

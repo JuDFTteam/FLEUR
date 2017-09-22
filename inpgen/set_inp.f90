@@ -52,6 +52,7 @@
  
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
+      REAL    recVecLength
       LOGICAL l_test,l_gga,l_exists, l_explicit
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
@@ -336,7 +337,7 @@
 !
       CALL lapw_input(&
      &                infh,nline,xl_buffer,bfh,buffer,&
-     &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,&
+     &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                vacuum%dvac,dtild,input%tkb,namex,relcor)
 !
@@ -363,10 +364,27 @@
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
       ENDIF
-      IF((div(1).EQ.0).OR.(div(2).EQ.0)) THEN
-         kpts%specificationType = 1
-      ELSE
+
+      IF((ANY(div(:).NE.0)).AND.(ANY(kpts%kPointDensity(:).NE.0.0))) THEN
+         CALL juDFT_error('Double specification of k point set', calledby = 'set_inp')
+      END IF
+      IF (ANY(div(:).NE.0)) THEN
          kpts%specificationType = 2
+      ELSE IF (ANY(kpts%kPointDensity(:).NE.0.0)) THEN
+         kpts%specificationType = 4
+      ELSE
+         kpts%specificationType = 1
+      END IF
+      IF (kpts%specificationType.EQ.4) THEN
+         DO i = 1, 3
+            IF (kpts%kPointDensity(i).LE.0.0) THEN
+               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'set_inp')
+            END IF
+            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
+            kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
+         END DO
+         kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+         div(:) = kpts%nkpt3(:)
       END IF
 
       IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
