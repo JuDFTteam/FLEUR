@@ -39,7 +39,7 @@
 #ifdef __INTEL_COMPILER
       FUNCTION intel_signal_handler(signal)
       USE m_judft_time
-      USE m_judft_stop
+      USE m_judft_sysinfo
       IMPLICIT NONE
       INTEGER :: signal
       INTEGER :: intel_signal_handler
