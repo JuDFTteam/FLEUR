@@ -419,7 +419,9 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       IF(any(abs(help-modulo1).gt.1d-10)) THEN
         WRITE(6,'(A,F5.3,2('','',F5.3),A)')'modulo1: argument (',kpoint,
      +                         ') is not an element of the k-point set.'
-        STOP 'modulo1: argument not an element of k-point set.'
+        CALL juDFT_error(
+     +     'modulo1: argument not an element of k-point set.', 
+     +     calledby = 'util:modulo1')
       END IF
       modulo1 = modulo(help,nkpt3)*1d0/nkpt3
 
