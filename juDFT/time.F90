@@ -148,6 +148,7 @@ CONTAINS
 
   !>
   SUBROUTINE priv_debug_output(startstop,name)
+    USE m_judft_sysinfo
     IMPLICIT NONE
     CHARACTER(LEN=*),INTENT(IN):: startstop,name
 #ifdef CPP_MPI
@@ -157,9 +158,9 @@ CONTAINS
     IF (.NOT.l_debug) RETURN
 #ifdef CPP_MPI
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
-    WRITE(*,"(i3,3a,f20.3)") irank,startstop,name," at:",cputime()
+    WRITE(*,"(i3,3a,f20.2,5x,a)") irank,startstop,name," at:",cputime(),memory_usage_string()
 #else
-    WRITE(*,"(3a,f20.3)") startstop,name," at:",cputime()
+    WRITE(*,"(3a,f20.2,5x,a)") startstop,name," at:",cputime(),memory_usage_string()
 #endif      
   END SUBROUTINE priv_debug_output
 
