@@ -1083,7 +1083,6 @@ SUBROUTINE r_inpXML(&
         kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
      END DO
      kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
-     kpts%specificationType = 2
   END IF
 
   ! Construction of missing symmetry information
