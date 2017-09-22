@@ -121,7 +121,7 @@ SUBROUTINE r_inpXML(&
   LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
-  REAL               :: weightScale, eParamUp, eParamDown, recVecLength
+  REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
   INTEGER            :: lcutm,lcutwf,select(4)
@@ -1071,18 +1071,6 @@ SUBROUTINE r_inpXML(&
            CALL juDFT_error("area = 0",calledby ="r_inpXML")
         END IF
      END IF
-  END IF
-
-  ! Construction of k point mesh if kPointDensity is provided
-  IF (kpts%specificationType.EQ.4) THEN
-     DO i = 1, 3
-        IF (kpts%kPointDensity(i).LE.0.0) THEN
-           CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'r_inpXML')
-        END IF
-        recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
-        kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
-     END DO
-     kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
   END IF
 
   ! Construction of missing symmetry information

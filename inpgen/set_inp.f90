@@ -28,8 +28,7 @@
       USE m_winpXML
       USE m_types
       USE m_juDFT_init
-      USE m_julia
-      USE m_od_kptsgen
+      USE m_kpoints
       USE m_inv3
 
       IMPLICIT NONE
@@ -53,7 +52,7 @@
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       REAL    recVecLength
-      LOGICAL l_test,l_gga,l_exists, l_explicit
+      LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
@@ -365,6 +364,7 @@
         ENDIF
       ENDIF
 
+      kpts%specificationType = 0
       IF((ANY(div(:).NE.0)).AND.(ANY(kpts%kPointDensity(:).NE.0.0))) THEN
          CALL juDFT_error('Double specification of k point set', calledby = 'set_inp')
       END IF
@@ -375,17 +375,7 @@
       ELSE
          kpts%specificationType = 1
       END IF
-      IF (kpts%specificationType.EQ.4) THEN
-         DO i = 1, 3
-            IF (kpts%kPointDensity(i).LE.0.0) THEN
-               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'set_inp')
-            END IF
-            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
-            kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
-         END DO
-         kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
-         div(:) = kpts%nkpt3(:)
-      END IF
+      l_kpts = .FALSE.
 
       IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
          sym%symSpecType = 1
@@ -446,27 +436,8 @@
             kpts%l_gamma = l_gamma
             kpts%specificationType = 3
             sym%symSpecType = 3
-            IF (.NOT.oneD%odd%d1) THEN
-               IF (jij%l_J) THEN
-                  n1=sym%nop
-                  n2=sym%nop2
-                  sym%nop=1
-                  sym%nop2=1
-                  CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-                  sym%nop=n1
-                  sym%nop2=n2
-               ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-                  STOP 'Error: No kpoint set generation for gamma=T yet!'
-                  !CALL kptgen_hybrid(kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3),&
-                  !                   kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                  !                   sym%mrot,sym%tau)
-               ELSE
-                  CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-               END IF
-            ELSE
-               STOP 'Error: No kpoint set generation for 1D systems yet!'
-               CALL od_kptsgen (kpts%nkpt)
-            END IF
+
+            CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
 
             !set latnam to any
             cell%latnam = 'any'
@@ -517,6 +488,10 @@
          WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
          WRITE(*,*) 'Use inp.xml file instead!'
       ELSE IF (juDFT_was_argument("-old")) THEN
+         IF (kpts%specificationType.EQ.4) THEN
+            CALL juDFT_error('No k point set specification by density supported for old inp file',&
+                             calledby = 'set_inp')
+         END IF
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
