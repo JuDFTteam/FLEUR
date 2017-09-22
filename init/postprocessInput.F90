@@ -498,7 +498,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      END IF
 
      !Calculate kpoint in the full BZ
-     IF (kpts%specificationType==2) THEN
+     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
         CALL gen_bz(kpts,sym)
      ELSE
         kpts%nkptf=0
