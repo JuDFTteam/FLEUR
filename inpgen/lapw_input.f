@@ -26,7 +26,7 @@
       CHARACTER(len=xl_buffer)       :: buffer
       
       INTEGER iflag,div1,div2,div3,nline,nbuffer,ios
-      REAL denX, denY, denZ
+      REAL den, denX, denY, denZ
       LOGICAL h_film,h_comp,h_exco,h_kpt,fatalerror,relxc
       CHARACTER(len=4) :: xctyp
 
@@ -35,7 +35,7 @@
      &                  gmax, gmaxxc, kmax
       NAMELIST /exco/   xctyp, relxc 
       NAMELIST /film/   dvac, dtild
-      NAMELIST /kpt/    nkpt,div1,div2,div3,tkb,tria,denX,denY,denZ
+      NAMELIST /kpt/    nkpt,div1,div2,div3,tkb,tria,den,denX,denY,denZ
 
 
       h_film=.false. ; h_comp=.false.
@@ -124,10 +124,16 @@
 
         div1 = 0 ; div2 = 0 ; div3 = 0
         denX = 0.0 ; denY = 0.0 ; denZ = 0.0
+        den = 0.0
 
         READ (bfh,kpt,err=912, end=912, iostat=ios)
         h_kpt=.true.
         div(1) = div1 ; div(2) = div2 ; div(3) = div3
+        IF (den.NE.0.0) THEN
+           IF (denX.EQ.0.0) denX = den
+           IF (denY.EQ.0.0) denY = den
+           IF (denZ.EQ.0.0) denZ = den
+        END IF
         kPointDensity(1) = denX
         kPointDensity(2) = denY
         kPointDensity(3) = denZ
