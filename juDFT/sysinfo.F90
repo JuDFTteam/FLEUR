@@ -34,7 +34,8 @@
     FUNCTION memory_usage_string()
       IMPLICIT NONE
       CHARACTER(len=10):: memory_usage_string
-      INTEGER:: fid=543,idum
+      INTEGER:: fid=543
+      INTEGER*8:: idum
       LOGICAL:: firstcall=.TRUE.
       LOGICAL:: available=.FALSE.
       
@@ -46,7 +47,7 @@
       IF (available) THEN
          REWIND(fid)
          READ(fid,*) idum
-         WRITE(memory_usage_string,"(f8.3,a)") idum*CPP_PAGESIZE/(1024.*1024.*1024.),"GB"
+         WRITE(memory_usage_string,"(f8.3,a)") (CPP_PAGESIZE/(1024.*1024.*1024.))*idum,"GB"
       ELSE
          memory_usage_string=""
       ENDIF
