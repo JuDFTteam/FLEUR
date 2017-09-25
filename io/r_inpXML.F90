@@ -1675,6 +1675,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+     input%l_eels = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eels'))
      input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
@@ -1779,6 +1780,19 @@ SUBROUTINE r_inpXML(&
         banddos%ndir = -4
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
+
+     ! Read in optional EELS input parameters
+
+     xPathA = '/fleurInput/output/eels'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((input%l_eels).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("eels is true but eels parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     IF (numberNodes.EQ.1) THEN
+        CALL juDFT_error("Reading in eels input not yet implemented!", calledby = "r_inpXML")
+     END IF
 
      ! Read in optional Wannier functions parameters
 
