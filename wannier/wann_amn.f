@@ -8,7 +8,7 @@
       use m_juDFT
       contains
       subroutine wann_amn(
-     >               nslibd,nwfsd,ntypd,nlod,llod,llo,nlo,
+     >               chi,nslibd,nwfsd,ntypd,nlod,llod,llo,nlo,
      >               lmaxd,jmtd,lmd,neq,natd,ikpt,nbnd,
      >               rmsh,rmt,jri,dx,lmax,
      >               us,dus,uds,duds,flo,
@@ -82,6 +82,7 @@ c*********************************************************************
       logical, intent (inout) :: l_amn2_in
       complex, intent (inout) :: amn(nbnd,nwfsd)
       real,intent(in),optional:: bkpt(3)
+      complex, intent (in)    :: chi
 c...local
       integer          :: nwf,nwfs,nat,j,ntyp,ne,l,m,lm,iatom,i,mp,lo
       integer          :: ind(nwfsd),ntp(natd),banddummy
@@ -273,6 +274,8 @@ c...sum by wfs, each of them is localized at a certain mt
          else
            factor=1.0
          endif
+         factor = factor*chi
+
          nat = ind(nwf)
          ntyp = ntp(nat)
 c...sum by bands
@@ -302,7 +305,7 @@ c..constructing the radial part, therefore, we do it anyway
                   lm = l*(l+1) + m
                   amn(ne,nwf) = amn(ne,nwf) +
      +               tlmwft(l,m,nwf)*conjg(( acof(ne,lm,nat)*vl + 
-     +                          bcof(ne,lm,nat)*vld )*(ci)**l)*factor
+     +                        bcof(ne,lm,nat)*vld )*(ci)**l)*factor
      
                enddo
             enddo

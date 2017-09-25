@@ -5,18 +5,19 @@ c     excepbe - easypbe
 c.....------------------------------------------------------------------
       CONTAINS
       SUBROUTINE excepbe(
-     >                   icorr,jspins,mirm,irmx,
+     >                   xcpot,jspins,mirm,irmx,
      >                   rh,agr,agru,agrd,
      +                   g2ru,g2rd,gggr,gggru,gggrd,
      <                   exc)
 
       USE m_easypbe
-      USE m_icorrkeys
+      USE m_types
 
       IMPLICIT NONE
 
-      ! .. Arguments ..
-      INTEGER, INTENT (IN) :: icorr,irmx,jspins,mirm
+! .. Arguments ..
+      TYPE(t_xcpot),INTENT(IN)::xcpot
+      INTEGER, INTENT (IN) :: irmx,jspins,mirm
       REAL,    INTENT (IN) :: rh(mirm,jspins)
       REAL,    INTENT (IN) :: agr(mirm),agru(mirm),agrd(mirm)
       REAL,    INTENT (IN) :: g2ru(mirm),g2rd(mirm),gggr(mirm)
@@ -37,7 +38,7 @@ c.....------------------------------------------------------------------
       REAL, PARAMETER :: smlc = 2.01e-14
 
 !$OMP parallel do default(private)
-!$OMP& SHARED(icorr,jspins,mirm,irmx)
+!$OMP& SHARED(xcpot,jspins,mirm,irmx)
 !$OMP& SHARED(rh,agr,agru,agrd)
 !$OMP& SHARED(g2ru,g2rd,gggr,gggru,gggrd)
 !$OMP& SHARED(exc)
@@ -80,7 +81,7 @@ c.....
           agrt=agr(i)
           delgrt=gggr(i)
 
-          CALL easypbe (icorr,
+          CALL easypbe (xcpot,
      &           up,agrup,delgrup,uplap,dn,agrdn,delgrdn,dnlap,
      1           agrt,delgrt,lcor,lpot,
      1           exlsd,vxuplsd,vxdnlsd,eclsd,vcuplsd,vcdnlsd,
@@ -95,7 +96,7 @@ c.....
         ENDIF ! ro > smlc
 
 
-        IF( icorr .EQ. icorr_pbe0 ) THEN
+        IF( xcpot%is_name("pbe0") ) THEN
           !pbe0: weight exchange energy with factor 0.75
           xced = (0.75*xedl+cedl+0.75*xedg+cedg)
         ELSE

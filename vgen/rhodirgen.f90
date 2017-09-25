@@ -116,13 +116,13 @@ CONTAINS
     ENDIF
 
     !---> reload the density matrix from file rhomat_inp
-    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_NOCO_const,CDN_INPUT_DEN_const,&
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_NOCO_const,CDN_INPUT_DEN_const,&
                      0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     CALL qfix(&
          &          stars,atoms,sym,vacuum,&
          &          sphhar,input,cell,oneD,&
-         &          qpw,rhtxy,rho,rht,.FALSE.,&
+         &          qpw,rhtxy,rho,rht,.FALSE.,.FALSE.,&
          &          fix)
 
     !---> fouriertransform the diagonal part of the density matrix
@@ -400,7 +400,7 @@ CONTAINS
     !---> write spin-up and -down density on file cdn
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                      0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      0,-1.0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,&
          &            ris,fftwork,rz,rho,rht)

@@ -81,6 +81,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(dimension%neigd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%nv2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%msh,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(dimension%nspd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -92,6 +93,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(vacuum%nmzd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%k3,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%M,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(oneD%odd%mb,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%n2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%nop,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -99,10 +101,14 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(jij%nqptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    IF (mpi%irank.NE.0) THEN
+      IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
+      IF(ALLOCATED(atoms%volmts)) DEALLOCATE(atoms%volmts)
+      IF(ALLOCATED(atoms%taual)) DEALLOCATE(atoms%taual)
+      IF(ALLOCATED(atoms%rmt)) DEALLOCATE(atoms%rmt)
       ALLOCATE(atoms%nz(atoms%ntype),atoms%zatom(atoms%ntype)) !nz and zatom have the same content!
       ALLOCATE(atoms%jri(atoms%ntype),atoms%dx(atoms%ntype),atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype),atoms%nlo(atoms%ntype),atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(atoms%ntype))
+      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype),atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat))
@@ -168,6 +174,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
       ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
       ALLOCATE(stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
+      IF(ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
       ALLOCATE(stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
       ALLOCATE(results%force(3,atoms%ntype,dimension%jspd))
@@ -181,10 +188,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       ALLOCATE(hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-      ALLOCATE(hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-      ALLOCATE(hybrid%ddist(dimension%jspd))
+      ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
-      IF (xcpot%igrd.NE.0) THEN
+      IF (xcpot%is_gga()) THEN
          ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                    oneD%pgft1xy(0:oneD%odd%nn2d-1),&
@@ -194,6 +200,14 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
          ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
                    oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
       END IF
+
+      ! Explicit atom-dependent xc functional
+      ALLOCATE(atoms%namex(atoms%ntype))
+      ALLOCATE(atoms%relcor(atoms%ntype))
+      ALLOCATE(atoms%icorr(atoms%ntype))
+      ALLOCATE(atoms%krla(atoms%ntype))
+      atoms%namex = ''
+      atoms%icorr = -99
 
       oneD%odd%nq2 = oneD%odd%n2d
       atoms%vr0(:)         = 0.0
@@ -205,7 +219,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       jij%nmagn=1
       jij%mtypes=1
       jij%phnd=1
-      hybrid%ddist     = 1.0
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0
    END IF

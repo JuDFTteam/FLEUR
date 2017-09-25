@@ -13,7 +13,7 @@ MODULE m_apws
   !*********************************************************************
 CONTAINS
   SUBROUTINE apws(dimension,input,noco,kpts,&
-       nk,cell,l_zref,n_size,jspin, bkpt,lapw,matind,nred)
+       nk,cell,l_zref,n_size,jspin,bkpt,lapw,matind,nred)
 
     USE m_types
     USE m_sort
@@ -49,14 +49,21 @@ CONTAINS
     REAL,    ALLOCATABLE :: rk_help(:)
     INTEGER, ALLOCATABLE :: k_help(:,:) ,pos(:)
 #endif
+    IF (.not.allocated(lapw%k1)) THEN
+       ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),&
+            lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
+    ENDIF
+    lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0 ;lapw%nv=0
     !     ..
     !     ..
     !---> in a spin-spiral calculation different basis sets are used for
     !---> the two spin directions, because the cutoff radius is defined
     !---> by |G + k +/- qss/2| < rkmax.
-
-    bkpt(:) = kpts%bk(:,nk)
-
+    IF (nk>kpts%nkpt) THEN
+       bkpt(:)=kpts%bkf(:,nk)
+    ELSE
+       bkpt(:) = kpts%bk(:,nk)
+    ENDIF
     !---> Determine rkmax box of size mk1, mk2, mk3,
     !     for which |G(mk1,mk2,mk3) + (k1,k2,k3)| < rkmax
     !     arltv(i) length of reciprical lattice vector along direction (i)

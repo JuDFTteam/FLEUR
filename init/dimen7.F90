@@ -28,7 +28,6 @@
       USE m_strgndim
       USE m_convndim
       USE m_inpeigdim
-      USE m_kptgen_hybrid
       USE m_ylm
       IMPLICIT NONE
 !
@@ -94,7 +93,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nmop,jij%nqpt,nmopq)
+                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,jij%nqpt,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
@@ -109,7 +108,7 @@
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype),&
      & jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype),noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
-     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),&
+     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
      & hybrid%lcutwf(atoms%ntype), STAT=ok)
 !
 !---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and 
@@ -164,9 +163,9 @@
       ENDDO
       CALL ylmnorm_init(atoms%lmaxd)
 !      IF (mod(lmaxd,2).NE.0) lmaxd = lmaxd + 1
-      IF (2*dimension%neigd.LT.input%zelec) THEN
+      IF (2*DIMENSION%neigd.LT.MAX(5.0,input%zelec)) THEN
         WRITE(6,*) dimension%neigd,' states estimated in dimen7 ...'
-        dimension%neigd = NINT(0.75*input%zelec)
+        DIMENSION%neigd = MAX(5,NINT(0.75*input%zelec))
         WRITE(6,*) 'changed dimension%neigd to ',dimension%neigd
       ENDIF
       IF (noco%l_soc .and. (.not. noco%l_noco)) dimension%neigd=2*dimension%neigd 
@@ -330,10 +329,8 @@
      &              kpts,.false.,.FALSE.)
          sym%nop=n1
          sym%nop2=n2
-         ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
-         CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                            kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                            sym%mrot,sym%tau)
+      ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
+         call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
          CALL julia(&
      &              sym,cell,input,noco,banddos,&
@@ -371,7 +368,7 @@
 ! Using the k-point generator also for creation of q-points for the
 ! J-constants calculation:
       IF(.not.l_qpts)THEN
-        kpts%nmop=nmopq
+        kpts%nkpt3=nmopq
         l_tmp=(/noco%l_ss,noco%l_soc/)
         noco%l_ss=.false.
         noco%l_soc=.false.
@@ -402,7 +399,7 @@
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
      & vacuum%izlay,atoms%ncst,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%soc_opt,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,jij%l_magn,jij%M,noco%b_con,sphhar%clnu,sphhar%nlh,&
-     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,hybrid%select2,hybrid%lcutm2,&
+     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,&
      & hybrid%lcutwf)
 !
       RETURN

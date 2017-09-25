@@ -23,12 +23,11 @@ CONTAINS
     USE m_brysh2
     USE m_metric
     USE m_qfix
-    USE m_icorrkeys
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_hybrid),INTENT(INOUT):: hybrid !ddist is modified here
+    TYPE(t_hybrid),INTENT(IN)   :: hybrid 
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -182,7 +181,7 @@ CONTAINS
     END IF
 
     !---> reload densities of current iteration
-    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
@@ -194,7 +193,7 @@ CONTAINS
          intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp(-3,-3,1,1,1), nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
 
     !     load output charge density
-    CALL readDensity(stars,vacuum,atoms,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_OUTPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
@@ -211,11 +210,17 @@ CONTAINS
     !
     ! open files for broyden
     !
-    irecl=(2*nmap+1)*8
+    irecl=(nmap+1)*8
     IF (input%imix.GE.3) THEN
-       OPEN (57,file='broyd',form='unformatted',status='unknown')
-       OPEN (59,file='broyd.'//CHAR(input%imix+48),access='direct',&
-            recl=irecl,form='unformatted',status='unknown')
+       IF (hybrid%l_calhf) THEN
+          OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
+          OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
+               recl=irecl,form='unformatted',status='unknown')
+       ELSE
+          OPEN (57,file='broyd',form='unformatted',status='unknown')
+          OPEN (59,file='broyd.'//CHAR(input%imix+48),access='direct',&
+               recl=irecl,form='unformatted',status='unknown')
+       ENDIF
     END IF
     !
     !----->  mixing of the densities
@@ -250,8 +255,6 @@ CONTAINS
     END IF
     DO js = 1,input%jspins
        dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, sm(nmaph*(js-1)+1),1)
-
-       hybrid%ddist(js) = 1000*SQRT(ABS(dist(js)/cell%vol))
 
        attributes = ''
        WRITE(attributes(1),'(i0)') js
@@ -302,10 +305,10 @@ CONTAINS
     !
     !     ---> fix the new density
     CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
-                   qpw,rhtxy,rho,rht,.FALSE., fix)
+                   qpw,rhtxy,rho,rht,.FALSE.,.false., fix)
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                      1,results%ef,.TRUE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      1,results%last_distance,results%ef,.TRUE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     DEALLOCATE ( cdom,cdomvz,cdomvxy )
     IF ( atoms%n_u > 0 ) THEN

@@ -6,7 +6,6 @@
 
       MODULE m_wann_plot
       use m_juDFT
-c    last update: 27.10.06 by FF
 !     +++++++++++++++++++++++++++++++++++++++++++++++++
 !     plots the periodic part of the wavefunction at the given k-point
 !       and specified bands. Needed for real-space
@@ -38,33 +37,48 @@ c    last update: 27.10.06 by FF
 !       written to the file kk.nnne.real.jsp.xsf and kk.nnne.imag.jsp.xsf
 !     +++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
-      SUBROUTINE wann_plot(nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
+      SUBROUTINE wann_plot(
+     >     DIMENSION,oneD,vacuum,stars,cell,atoms,
+     >     nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
      >     ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
      >     nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
      >     invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
      >     lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,nnne,kk,
      >     nvd,nlod,llod,nv,lmd,bkpt,omtil,nlo,llo,k1,k2,k3,evac,vz,
-     >     nslibd,nbasfcn,neigd,ff,gg,flo,acof,bcof,ccof,z)
+     >     nslibd,nbasfcn,neigd,ff,gg,flo,acof,bcof,ccof,zMat,
+     >     k1d,k2d,k3d,ig,ig2,sk2,phi2,l_noco,l_ss,qss,addnoco,
+     >     index_kq,l_sgwf)
 !    *****************************************************
-      USE m_constants, ONLY : pimach
-      USE m_od_types, ONLY : od_inp, od_sym
+      USE m_constants
+      USE m_types
       USE m_wann_real
       USE m_xsf_io
-      USE m_dotir
       USE m_wann_plot_vac
       USE m_wann_2dvacabcof
+      USE m_wann_plot_od_vac
+      USE m_wann_1dvacabcof
 
       IMPLICIT NONE
-!     ..
+
+      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      TYPE(t_oneD),INTENT(IN)        :: oneD
+      TYPE(t_vacuum),INTENT(IN)      :: vacuum
+      TYPE(t_stars),INTENT(IN)       :: stars
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_zMat),INTENT(IN)        :: zMat
+
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,ikpt,jspin,nv2d
       INTEGER, INTENT (IN) :: lmaxd,jmtd,ntypd,natd,nmzd
       INTEGER, INTENT (IN) :: nq3,nvac,nmz,nmzxy,nq2,nop,nop2,ntype
       INTEGER, INTENT (IN) :: nvd,nv,lmd,llod,nlod
       INTEGER, INTENT (IN) :: nslibd,nbasfcn,neigd
-      INTEGER, INTENT (IN) :: nnne,kk
+      INTEGER, INTENT (IN) :: nnne,kk,addnoco,index_kq
       LOGICAL, INTENT (IN) :: symor,invs,slice,invs2,film
+      LOGICAL, INTENT (IN) :: l_noco,l_ss,l_sgwf
       REAL,    INTENT (IN) :: z1,delz,volint,omtil
+      REAL,    INTENT (IN) :: qss(3)
       real,    intent (in) :: vz(nmzd,2)
 !     ..
 !     .. Array Arguments ..
@@ -80,13 +94,12 @@ c    last update: 27.10.06 by FF
       COMPLEX, INTENT (IN) :: ccof(-llod:llod,nslibd,nlod,natd)
       COMPLEX, INTENT (IN) :: acof(nslibd,0:lmd,natd)
       COMPLEX, INTENT (IN) :: bcof(nslibd,0:lmd,natd)
+      integer, intent (in) :: k1d,k2d,k3d,ig2(n3d)
+      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      real,    intent (in) :: sk2(n2d),phi2(n2d)
       TYPE (od_inp), INTENT (IN) :: odi
       TYPE (od_sym), INTENT (IN) :: ods
-#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
-      COMPLEX, INTENT (IN) :: z(nbasfcn,neigd)
-#else
-      REAL, INTENT (IN) :: z(nbasfcn,neigd)
-#endif
+
 !     ..
 !     .. Local Scalars ..
       integer n2,k,j,l
@@ -110,8 +123,10 @@ c    last update: 27.10.06 by FF
       CHARACTER*8      :: name(10)
 c     ..basis wavefunctions in the vacuum
       complex, allocatable :: ac(:,:,:),bc(:,:,:)
+      complex, allocatable :: ac_1(:,:,:),bc_1(:,:,:)
       real,    allocatable :: u(:,:,:),ue(:,:,:)
- 
+      real,    allocatable :: u_1(:,:,:),ue_1(:,:,:)
+
       integer ik,nv2,ivac,jvac
       complex factor
       real fas
@@ -130,6 +145,12 @@ c      real dotirp  !module now
         nbmax = nslibd
       ENDIF
 
+      !write(*,*)'in wann_plot'
+      !write(*,*)'jspin:',jspin
+      !write(*,*)'addnoco:',addnoco
+      !write(*,*)'l_noco,l_ss: ',l_noco,l_ss
+      !write(*,*)'qss:',qss
+
       INQUIRE(file ="plot_inp",exist= twodim)
       IF (.NOT.twodim) THEN !no input file exists, create a template and
                             !exit
@@ -143,7 +164,7 @@ c         WRITE(20,*) "  filename='plot1' /"
          WRITE(20,*) "  vec2(1)=0.0 vec2(2)=1.0 vec2(3)=0.0 "
          WRITE(20,*) "  vec3(1)=0.0 vec3(2)=0.0 vec3(3)=1.0 "
          WRITE(20,*) "  grid(1)=30  grid(2)=30  grid(3)=30  "
-c         WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.5 "
+         WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.0 "
          WRITE(20,*) "  filename ='plot2' /"
          CLOSE(20)
          WRITE(*,*) "No plot_inp file found. Created a template"
@@ -153,16 +174,31 @@ c         WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.5 "
 
 c make preparations for plotting in vacuum
 
-      if(film)then
+      if(film.and..not.odi%d1)then
          allocate ( ac(nv2d,nslibd,2),bc(nv2d,nslibd,2),
      +         u(nmzd,nv2d,nvac),ue(nmzd,nv2d,nvac))
          call wann_2dvacabcof(
      >         nv2d,nslibd,nvac,nmzd,nmz,omtil,vz,nv,bkpt,z1,
-     >         nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,z,
-     <         ac,bc,u,ue)
-
+     >         nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,zMat,
+     <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
       endif
-      
+
+      if (odi%d1)then
+         allocate ( ac_1(nv2d,-odi%mb:odi%mb,nslibd),
+     &              bc_1(nv2d,-odi%mb:odi%mb,nslibd),
+     &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
+     &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
+         call wann_1dvacabcof(
+     >         DIMENSION,oneD,vacuum,stars,cell,
+     >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:),
+     >         nv,bkpt,z1,odi,ods,
+     >         nvd,k1,k2,k3,evac,
+     >         bbmat,delz,bmat,nbasfcn,neigd,zMat,
+     >         n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,phi2,k1d,k2d,k3d,
+     <         ac_1,bc_1,u_1,ue_1,addnoco,l_ss,qss,jspin)
+      endif !preparations for vacuum   
+
+
 
       !<-- Open the plot_inp file for input
       OPEN (18,file='plot_inp')
@@ -206,17 +242,11 @@ c..loop by the bands
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(
-     >                        55,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(55,atoms,film,odi%d1,amat)
             OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(
-     >                        56,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(56,atoms,film,odi%d1,amat)
             OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(
-     >                        57,film,odi%d1,amat,neq(:ntype),
-     >                        zatom(:ntype),pos)
+            CALL xsf_WRITE_atoms(57,atoms,film,odi%d1,amat)
             CALL xsf_WRITE_header(55,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)
@@ -229,12 +259,27 @@ c..loop by the bands
          ELSE
             IF (nbn.EQ.nbmin) THEN
                WRITE (vandername,201) ikpt,jspin
-  201          FORMAT ('UNK',i5.5,'.',i1)            
+               IF(l_noco) WRITE(vandername,202)ikpt,jspin
+               IF(l_sgwf) WRITE(vandername,202)index_kq,jspin
+  201          FORMAT ('UNK',i5.5,'.',i1)
+  202          FORMAT ('RNK',i5.5,'.',i1)
                OPEN(55,file=vandername)
-               WRITE (55,7) grid(1),grid(2),grid(3),ikpt,nslibd
+               IF(.NOT.l_sgwf) THEN
+                  WRITE(55,7) grid(1),grid(2),grid(3),ikpt,nslibd
+               ELSE
+                  WRITE(55,7) grid(1),grid(2),grid(3),index_kq,nslibd
+               ENDIF
     7          FORMAT (5i4)
             ENDIF
          ENDIF
+
+         if(film.and..not.odi%d1)then
+           fas=-bkpt(3)*bmat(3,3)*z1
+           factor=cmplx(cos(fas),sin(fas))
+         else
+           factor=cmplx(1.0,0.0)
+         endif   
+
          DO iz = 0,grid(3)-1
           DO iy = 0,grid(2)-1
            xloop:DO ix = 0,grid(1)-1
@@ -242,12 +287,7 @@ c..loop by the bands
      $                 /grid(2)
             IF (.NOT.twodim) point = point+vec3*REAL(iz)/grid(3)
 !Check if the point is in MT-sphere
-            if(film)then
-               fas=-bkpt(3)*bmat(3,3)*z1
-               factor=cmplx(cos(fas),sin(fas))
-             else
-                factor=cmplx(1.0,0.0)
-             endif   
+
              ii1 = 3
              ii2 = 3
              ii3 = 3
@@ -266,15 +306,15 @@ c..loop by the bands
                   s  = SQRT(dot_PRODUCT(pos(:,na)-pt,pos(:,na)-pt))
                   IF (s<rmsh(jri(nt),nt)) THEN
                     CALL wann_real(
-     >                   pt,nt,na,0,1,bkpt,
+     >                   pt,nt,na,0,1,bkpt,nbn,
      >                   n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >                   omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >                   ccof(:,nbn,:,:),z(:,nbn),
-     >                   nv,k1,k2,k3,lmd,nbasfcn,
+     >                   ccof(:,nbn,:,:),zMat,
+     >                   nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <                   xdnout)
                     xdnout=xdnout*factor
                    IF (xsf) THEN
@@ -299,7 +339,7 @@ c..loop by the bands
                 if(nvac==1)jvac=1
                 call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
      >            nmz,delz,bmat,bbmat,evac,bkpt,vz,jspin,k1,k2,k3,nvd, 
-     >            nbasfcn,neigd,z(:,nbn),nv,omtil,nslibd,ac(:,nbn,ivac),
+     >            nbasfcn,neigd,nv,omtil,nslibd,ac(:,nbn,ivac),
      &             bc(:,nbn,ivac),
      &            u(:,:,jvac),ue(:,:,jvac),xdnout)
                 xdnout=xdnout*factor
@@ -331,17 +371,10 @@ c     <              xdnout)
             
              IF (odi%d1) THEN
               IF (SQRT((pt(1))**2 + (pt(2))**2)>=z1) THEN
-                CALL wann_real(
-     >               pt,0,0,1,0,bkpt,
-     >               n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
-     >               natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
-     >               nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
-     >               lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >               omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
-     >               ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >               ccof(:,nbn,:,:),z(:,nbn),
-     >               nv,k1,k2,k3,lmd,nbasfcn,
-     <               xdnout)
+               call wann_plot_od_vac(point,z1,nmzd,nv2d,odi,
+     >            nmz,delz,bmat,bkpt,nvd,nv,omtil,k3,
+     >            ac_1(:,:,nbn),bc_1(:,:,nbn),u_1,ue_1,
+     <            xdnout)
                 xdnout=xdnout*factor
                IF (xsf) THEN
                   WRITE(55,*) real(xdnout)
@@ -354,15 +387,15 @@ c     <              xdnout)
               END IF
              END IF
              CALL wann_real(
-     >             point,0,0,0,2,bkpt,
+     >             point,0,0,0,2,bkpt,nbn,
      >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
      >             omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >             ccof(:,nbn,:,:),z(:,nbn),
-     >             nv,k1,k2,k3,lmd,nbasfcn,
+     >             ccof(:,nbn,:,:),zMat,
+     >             nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <             xdnout)
              xdnout=xdnout*factor
              IF (xsf) THEN
@@ -388,7 +421,7 @@ c..end of the loop by the bands
       CLOSE(18)
       IF (.not.xsf) CLOSE(55)
     8 FORMAT (f20.12,1x,f20.12)
-      if (film) then
+      if (film.and..not.odi%d1) then
       deallocate ( ac,bc,u,ue)
       endif
 

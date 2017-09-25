@@ -5,12 +5,13 @@
 !********************************************************************
       CONTAINS
       SUBROUTINE struct_input( 
-     >                        infh,errfh,bfh,warnfh,symfh,symfn,
+     >                        infh,errfh,warnfh,symfh,symfn,bfh,
      >                        natmax,nop48,
      X                        nline,xl_buffer,buffer,
      <                        title,film,cal_symm,checkinp,symor,
      <                    cartesian,oldfleur,a1,a2,a3,dvac,aa,scale,i_c,
      <                       factor,natin,atomid,atompos,ngen,mmrot,ttr,
+     <                       atomLabel,
      <                        l_hyb,l_soc,l_ss,theta,phi,qss,inistop)
 
       use m_calculator
@@ -20,7 +21,7 @@
       IMPLICIT NONE
 
 !===> Arguments
-      INTEGER, INTENT (IN)    :: infh, errfh, bfh, warnfh, symfh
+      INTEGER, INTENT (IN)    :: infh, errfh,  warnfh, symfh,bfh
       INTEGER, INTENT (IN)    :: natmax, nop48, xl_buffer
       INTEGER, INTENT (INOUT)  :: nline
       CHARACTER(len=xl_buffer) :: buffer
@@ -39,6 +40,7 @@
       REAL,    INTENT (OUT)   :: ttr(3,nop48)
       CHARACTER(len=80), INTENT (OUT) :: title
       CHARACTER(len=7),  INTENT (IN)  :: symfn
+      CHARACTER(LEN=20), INTENT (OUT) :: atomLabel(natmax)
 
 !===> data
       REAL,             PARAMETER :: eps=1.e-7
@@ -104,7 +106,7 @@
 !===> start reading input
 
       CALL read_record(
-     >                 infh,xl_buffer,
+     >                 infh,xl_buffer,bfh,
      X                 nline,
      <                 nbuffer,buffer,ios )
 
@@ -113,13 +115,14 @@
       IF ( buffer(1:1) == '&' ) THEN         ! already read some input
         title = 'unnamed project'
       ELSE   
-        CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios )
+        CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       ENDIF
 
+      oldfleurset = .FALSE.
+      l_hyb = .FALSE.
       IF ( buffer(1:6)=='&input' ) THEN      ! get namelist 'input'
         READ (bfh,input)
         l_hyb       = hybrid
-        oldfleurset = .false.
         IF ( index(buffer,'oldfleur')>0 ) oldfleurset = .true.
         op = 0 
         IF ( op > 0 ) THEN
@@ -133,7 +136,7 @@
 !dbg-
         ENDIF
 
-        CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios )
+        CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       ENDIF
 
       IF ( buffer(1:1) == '&' ) THEN
@@ -195,12 +198,12 @@
          a1(1)=evaluatefirst(buffer)
          a1(2)=evaluatefirst(buffer)
          a1(3)=evaluatefirst(buffer)
-         CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+         CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
          !READ (buffer,*) a2
          a2(1)=evaluatefirst(buffer)
          a2(2)=evaluatefirst(buffer)
          a2(3)=evaluatefirst(buffer)
-         CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+         CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
          !READ (buffer,*, err=811,end=811, iostat=ios) a3, dvac
          a3(1)=evaluatefirst(buffer)
          a3(2)=evaluatefirst(buffer)
@@ -216,13 +219,13 @@
 
 !--->    read in overall lattice constant
 
-         CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+         CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
          !READ (buffer,*) aa
          aa=evaluatefirst(buffer)
 
 !--->    read in scale
          scale = 0.00
-         CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+         CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
          !READ (buffer,*) scale
          scale(1)=evaluatefirst(buffer)
          scale(2)=evaluatefirst(buffer)
@@ -252,7 +255,7 @@
 
 !--->    read in number of atoms or types
 
-      CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios )
+      CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       !READ (buffer,*) natin
       natin=evaluatefirst(buffer)
 !--->    read in atomic positions
@@ -261,15 +264,20 @@
 !--->    (atomid is used later as default for atom Z value (zatom)
 
       DO n = 1, abs(natin)
-        CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+        CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
         !READ (buffer,*) atomid(n), atompos(:,n)
         atomid(n)=evaluatefirst(buffer)
         atompos(1,n)=evaluatefirst(buffer)
         atompos(2,n)=evaluatefirst(buffer)
         atompos(3,n)=evaluatefirst(buffer)
+        IF(TRIM(ADJUSTL(buffer)).NE.'') THEN
+           atomLabel(n) = TRIM(ADJUSTL(buffer))
+        ELSE
+           WRITE(atomLabel(n),'(i0)') n
+        END IF
       ENDDO
 
-      CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios )
+      CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
 
       IF ( buffer(1:6)=='&shift') then
         buffer = buffer(7:len_trim(buffer)-1)
@@ -283,7 +291,7 @@
           atompos(n,1:abs(natin)) = atompos(n,1:abs(natin))+shift(n)
         ENDDO
         
-        CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+        CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       ENDIF
 
       IF ( buffer(1:7)=='&factor') THEN
@@ -298,7 +306,7 @@
           atompos(n,1:abs(natin)) = atompos(n,1:abs(natin))/factor(n)
         ENDDO
         
-        CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+        CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       ENDIF
 
       IF ( buffer(1:1).NE.'&') THEN
@@ -374,7 +382,7 @@
 
         cal_symm = .false.
 
-        CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+        CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
 
         ENDIF ! &gen or &sym
 
@@ -384,7 +392,7 @@
          buffer  = ADJUSTL(buffer(5:nbuffer))
          nbuffer = LEN_TRIM(buffer)
          READ (buffer,*,err=913, end=913, iostat=ios) theta,phi
-         CALL read_record( infh, xl_buffer, nline, nbuffer, buffer, ios)
+         CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
       ENDIF
       IF ( buffer(1:4)=='&qss' ) THEN
          l_ss=.true.

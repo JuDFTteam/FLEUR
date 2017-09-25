@@ -19,8 +19,7 @@
 !*********************************************************************
       USE m_calculator
       USE m_types
-      USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
-
+  
       IMPLICIT NONE
 ! ..
 ! ..   Arguments ..
@@ -55,7 +54,7 @@
 
 !+lda+u
       REAL    u,j
-      INTEGER l
+      INTEGER l, i_u
       LOGICAL l_amf
       CHARACTER(len=3) ch_test
       NAMELIST /ldaU/ l,u,j,l_amf
@@ -97,7 +96,9 @@
       IF (ch_rw.eq.'r') THEN
 !--------------------------------------------------------------------
       OPEN (5,file='inp',form='formatted',status='old')
-
+      
+      !default not read in in old inp-file
+      input%qfix=2
 !
       a1(:) = 0
       a2(:) = 0
@@ -289,37 +290,21 @@
      &    (namex.EQ.'Rpbe').OR.(namex.EQ.'wc')  .OR.&
      &    (namex.EQ.'pbe0').OR.(namex.EQ.'hse ').OR.&
      &    (namex.EQ.'lhse').OR.(namex.EQ.'vhse')) THEN                    ! some defaults
-        xcpot%igrd=1 ; obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
+         obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
       ENDIF
       ! set mixing and screening for variable HSE functional
-      IF (namex.EQ.'vhse') THEN
-        ! overwrite if sane input
-        IF ( aMix > 0 .and. aMix <= 1 ) THEN
-          aMix = aMix_VHSE( aMix )
-        ELSE
-          aMix = aMix_VHSE()
-        END IF
-        ! overwrite if sane input
-        IF ( omega > 0 ) THEN
-          omega = omega_VHSE( omega )
-        ELSE
-          omega = omega_VHSE()
-        END IF
-        WRITE (6,9041) namex,relcor,aMix,omega
-      ELSE
-        WRITE (6,9040) namex,relcor
-      END IF
-!
+      WRITE (6,9040) namex,relcor
+     
 ! look what comes in the next two lines
 !
       READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
       IF (ch_test.EQ.'igr') THEN                          ! GGA input
          BACKSPACE (5)
          READ (UNIT=5,FMT=7121,END=99,ERR=99)&
-     &                   xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+     &                   idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
          IF (idsprs.ne.0)&
      &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
-         WRITE (6,9121) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+         WRITE (6,9121) idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
  7121    FORMAT (5x,i1,5x,l1,8x,i1,8x,i1,6x,d10.3)
 
          READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
@@ -373,6 +358,7 @@
       na = 0
       READ (UNIT=5,FMT=7110,END=99,ERR=99)
       WRITE (6,9060)
+      atoms%n_u = 0
       DO n=1,atoms%ntype
 !
          READ (UNIT=5,FMT=7140,END=99,ERR=99) noel(n),atoms%nz(n),&
@@ -385,16 +371,17 @@
          READ (UNIT=5,FMT=7180,END=199,ERR=199) ch_test
  7180    FORMAT (a3)
          IF (ch_test.EQ.'&ld') THEN
-           l=0 ; u=0.0 ; j=0.0 ; l_amf = .false.
-           BACKSPACE (5)
-           READ (5,ldaU)
-           atoms%lda_u(n)%l = l ; atoms%lda_u(n)%u = u ; atoms%lda_u(n)%j = j
-           atoms%lda_u(n)%l_amf= l_amf
-           WRITE (6,8180) l,u,j,l_amf
-         ELSE
-            WRITE (6,*) '   '
-            atoms%lda_u(n)%l = -1
-         ENDIF
+            l=0 ; u=0.0 ; j=0.0 ; l_amf = .false.
+            BACKSPACE (5)
+            READ (5,ldaU)
+            atoms%n_u = atoms%n_u + 1
+            atoms%lda_u(atoms%n_u)%l = l
+            atoms%lda_u(atoms%n_u)%u = u
+            atoms%lda_u(atoms%n_u)%j = j
+            atoms%lda_u(atoms%n_u)%l_amf = l_amf
+            atoms%lda_u(atoms%n_u)%atomType = n
+            WRITE (6,8180) l,u,j,l_amf
+         END IF
  199     CONTINUE
 !-lda+u
 !
@@ -458,6 +445,7 @@
 !
       READ (UNIT=5,FMT=7210,END=99,ERR=99) stars%gmax,xcpot%gmaxxc
       WRITE (6,9110) stars%gmax,xcpot%gmaxxc
+      stars%gmaxInit = stars%gmax
  7210 FORMAT (2f10.6)
 !
       INQUIRE(file='fl7para',exist=ldum)  ! fl7para must not exist for input%gw=2
@@ -503,8 +491,8 @@
       WRITE (chntype,'(i4)') 2*atoms%ntype
       chform = '('//chntype//'i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99) &
-     &                (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
-      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
+     &                (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
+      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
  6010 FORMAT (25i3)
 !
       READ (UNIT=5,FMT=6010,END=99,ERR=99) nw,obsolete%lepr
@@ -688,41 +676,52 @@
       banddos%sig_dos=1e-4
       READ (UNIT=5,FMT='(9x,f10.5,10x,f10.5,9x,f10.5)',&
      &     END=98,ERR=98) banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
-      
+
+      kpts%posScale = 1.0
  
 ! added for exact-exchange or hybrid functional calculations:
 ! read in the number of k-points and nx,ny and nz given in the last line
 ! of the input file,
 ! we demand that the values given there are consistent with the kpts-file
 
-      IF(namex=='hf  ' .OR. namex=='pbe0' .OR. namex=='exx ' &
-     &  .OR. namex=='hse ' .OR. namex=='vhse' .OR.&
-     & ( banddos%dos .AND. banddos%ndir == -3 ) ) THEN
-        READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',&
-     &       END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3) 
+      IF(namex=='hf  '.OR.namex=='pbe0'.OR.namex=='exx '.OR.namex=='hse '.OR.namex=='vhse'.OR.&
+         (banddos%dos.AND.(banddos%ndir == -3))) THEN
+         READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3)
+
+         IF(idum.EQ.0) THEN
+            WRITE(*,*) ''
+            WRITE(*,*) 'nkpt is set to 0.'
+            WRITE(*,*) 'For this fleur mode it has to be larger than 0!'
+            WRITE(*,*) ''
+            CALL juDFT_error("Invalid declaration of k-point set (1)",calledby="rw_inp")
+         END IF
       
-        IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum )&
-     &    STOP 'rw_inp: error k-point set'
+         IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum ) THEN
+            WRITE(*,*) ''
+            WRITE(*,*) 'nx*ny*nz is not equal to nkpt.'
+            WRITE(*,*) 'For this fleur mode this is required!'
+            WRITE(*,*) ''
+            CALL juDFT_error("Invalid declaration of k-point set (2)",calledby="rw_inp")
+         END IF
       END IF
 
 ! for a exx calcuation a second mixed basis set is needed to
 ! represent the response function, its parameters are read in here
 
       IF(namex=='exx ') THEN
-        READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',&
-     &       END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
+         CALL judft_error("No EXX calculations in this FLEUR version")
+        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
 
-        DO i=1,atoms%ntype
-          READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
-     &       END=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
-     &                  hybrid%select2(3,i),hybrid%select2(4,i)
-        END DO
+        !DO i=1,atoms%ntype
+          !READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
+            !END IF=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
+            !           hybrid%select2(3,i),hybrid%select2(4,i)
+        !END DO
         
-        ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
-        DO i=1,atoms%ntype
-          READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98) &
-     &        (hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
-        END DO
+        !ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
+        !DO i=1,atoms%ntype
+   !       READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98)(hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
+       ! END DO
       END IF
 
  98   CONTINUE
@@ -802,7 +801,7 @@
       IF ((namex.EQ.'pw91').OR.(namex.EQ.'l91').OR.&
      &    (namex.eq.'pbe').OR.(namex.eq.'rpbe').OR.&
    &    (namex.EQ.'Rpbe').OR.(namex.eq.'wc') ) THEN
-        WRITE (5,FMT=9121) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
+        WRITE (5,FMT=9121) idum,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
  9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1,&
      &           ',chng=',d10.3)
       ENDIF
@@ -829,18 +828,26 @@
       na = 0
       WRITE (5,9060)
  9060 FORMAT ('**********************************')
+      i_u = 1
       DO n=1,atoms%ntype
          WRITE (5,9070) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),&
      &                       atoms%rmt(n),atoms%dx(n)
  9070    FORMAT (a3,i3,3i5,2f10.6)
 !+lda_u
-         IF (atoms%lda_u(n)%l.GE.0) THEN
-           WRITE (5,8180) atoms%lda_u(n)%l,atoms%lda_u(n)%u,atoms%lda_u(n)%j,&
-     &                                               atoms%lda_u(n)%l_amf
- 8180      FORMAT ('&ldaU l=',i1,',u=',f4.2,',j=',f4.2,',l_amf=',l1,'/')
+         IF (i_u.LE.atoms%n_u) THEN
+            DO WHILE (atoms%lda_u(i_u)%atomType.LT.n)
+               i_u = i_u + 1
+               IF (i_u.GE.atoms%n_u) EXIT
+            END DO
+            IF (atoms%lda_u(i_u)%atomType.EQ.n) THEN
+               WRITE (5,8180) atoms%lda_u(i_u)%l,atoms%lda_u(i_u)%u,atoms%lda_u(i_u)%j,atoms%lda_u(i_u)%l_amf
+ 8180          FORMAT ('&ldaU l=',i1,',u=',f4.2,',j=',f4.2,',l_amf=',l1,'/')
+            ELSE
+               WRITE (5,*) '   '
+            ENDIF
          ELSE
             WRITE (5,*) '   '
-         ENDIF
+         END IF
 !-lda_u
         IF ( l_hyb ) THEN
           WRITE (5,9090) atoms%neq(n),atoms%l_geo(n),hybrid%lcutm1(n),hybrid%select1(1,n),&
@@ -855,30 +862,27 @@
         END IF
          DO ieq=1,atoms%neq(n)
             na = na + 1
-            DO i = 2,9
-              rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
-     &             + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
-              IF (.not.input%film) THEN
-                rest = rest + ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
-              END IF
-              IF (rest.LT.(i*0.000001)) EXIT
-            ENDDO
+
             scpos = 1.0
+            DO i = 2,9
+               rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
+                    + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
+               IF (rest.LT.(i*0.000001)) EXIT
+            ENDDO
             IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
-!            IF (.not.film) THEN           ! now check z-coordinate
-!              DO i = 2,9
-!                rest = ABS(i*scpos*taual(3,na) -
-!     +                NINT(i*scpos*taual(3,na)) )
-!                IF (rest.LT.(i*scpos*0.000001)) THEN
-!                  scpos = i*scpos
-!                  EXIT
-!                ENDIF
-!              ENDDO
-!            ENDIF
+            IF (.NOT.input%film) THEN           ! now check z-coordinate
+              DO i = 2,9
+                rest = ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
+                IF (rest.LT.(i*scpos*0.000001)) THEN
+                  scpos = i*scpos
+                  EXIT
+                ENDIF
+              ENDDO
+            ENDIF
             DO i = 1,2
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO
-            IF (.not.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
+            IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
             IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/scale
 !+odim in 1D case all the coordinates are given in cartesian YM
             IF (oneD%odd%d1) THEN

@@ -22,9 +22,14 @@ math/sphbes.f
 math/sphpts.f
 math/util.F
 math/ylm4.f
+math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}
 math/differentiate.f90
 math/fft2d.F90
 math/fft3d.f90
+math/fft_interface.F90
 )
+if (FLEUR_USE_FFTMKL)
+   set(fleur_F90 ${fleur_F90} math/mkl_dfti.f90)
+endif()

@@ -2,28 +2,23 @@
 #init/compile_descr.F90 to determine the programm version and
 #some compilation environment description
 
-set(compile_host $ENV{HOSTNAME})
+cmake_host_system_information(RESULT compile_host QUERY HOSTNAME)
 set(compile_user $ENV{USER})
 string(TIMESTAMP compile_time)
 set(git_hash unkown)
-
+set(git_describe unkown)
+set(git_branch unkown)
 if (EXISTS ${CMAKE_SOURCE_DIR}/.git)
   execute_process(COMMAND git describe --tags WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_describe)
-  if (${git_describe})
-	message("GIT DESCRIBE:${git_describe}")
-  else()
-     set(git_describe unkown)
-  endif()
+  execute_process(COMMAND git rev-parse --abbrev-ref HEAD  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_branch)
   execute_process(COMMAND git rev-parse  HEAD WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_hash)
 elseif (EXISTS ${CMAKE_SOURCE_DIR}/version)
   file(READ ${CMAKE_SOURCE_DIR}/version git_describe)
-else()
-  set(git_describe unknown)
 endif()
 
 #normalize the strings
 string(STRIP  ${git_hash} git_hash)
 string(STRIP ${git_describe} git_describe)
+string(STRIP ${git_branch} git_branch)
 
-
-file(GENERATE OUTPUT ${CMAKE_SOURCE_DIR}/init/compileinfo.h CONTENT "gitdesc=\"${git_describe}\"\ncompile_date=\"${compile_time}\"\ncompile_user=\"${compile_user}\"\ncompile_host=\"${compile_host}\"\ngithash=\"${git_hash}\"\n")
+file(GENERATE OUTPUT ${CMAKE_SOURCE_DIR}/init/compileinfo.h CONTENT "gitdesc=\"${git_describe}\"\ncompile_date=\"${compile_time}\"\ncompile_user=\"${compile_user}\"\ncompile_host=\"${compile_host}\"\ngitbranch=\"${git_branch}\"\ngithash=\"${git_hash}\"\n")

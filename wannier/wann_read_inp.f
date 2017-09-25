@@ -102,10 +102,15 @@ c-----some defaults
       wann%l_lapw_kpts=.false.
       wann%l_lapw_gfleur=.false.
       wann%l_unformatted=.false.
+      wann%l_finishnocoplot=.false.
+      wann%l_finishgwf=.false.
+      wann%l_skipkov=.false.
+      wann%l_matrixuHu=.false.
+      wann%l_matrixuHu_dmi=.false.
       wann%ikptstart=1
       wann%band_min(1:2)=-1
       wann%band_max(1:2)=-1
-      wann%wan90version=1
+      wann%wan90version=2 ! Set the standard to Wannier90-1.2
 
 c-----read the input file 'wann_inp'
       l_file=.false.
@@ -286,6 +291,16 @@ c-----read the input file 'wann_inp'
             wann%l_ldauwan=.true.
          elseif(trim(task).eq.'byenergy')then
             wann%l_byenergy=.true.
+         elseif(trim(task).eq.'finishnocoplot') then
+            wann%l_finishnocoplot=.true.
+         elseif(trim(task).eq.'finishgwf') then
+            wann%l_finishgwf=.true.
+         elseif(trim(task).eq.'skipkov') then
+            wann%l_skipkov=.true.
+         elseif(trim(task).eq.'matrixuhu') then
+            wann%l_matrixuHu=.true.
+         elseif(trim(task).eq.'matrixuhu-dmi') then
+            wann%l_matrixuHu_dmi=.true.
          elseif(trim(task).eq.'wan90version')then
             backspace(916)
             read(916,*,iostat=ios)task,version_real

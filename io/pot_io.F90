@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -19,6 +19,7 @@ MODULE m_pot_io
    USE m_loddop
    USE m_wrtdop
    USE m_cdnpot_io_hdf
+   USE m_cdnpot_io_common
 #ifdef CPP_HDF
    USE hdf5
 #endif
@@ -66,7 +67,7 @@ MODULE m_pot_io
       INTEGER(HID_T)    :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: potentialType
       CHARACTER(LEN=30) :: archiveName
 
@@ -76,7 +77,8 @@ MODULE m_pot_io
 #ifdef CPP_HDF
          INQUIRE(FILE='pot.hdf',EXIST=l_exist)
          IF (l_exist) THEN
-            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                             currentStructureIndex,currentStepfunctionIndex)
 
             archiveName = 'illegalPotentialArchive'
             IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
@@ -97,7 +99,8 @@ MODULE m_pot_io
          END IF
 
          IF(l_exist) THEN
-            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+            CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                             currentStructureIndex,currentStepfunctionIndex)
 
             CALL readPotentialHDF(fileID, archiveName, potentialType,&
                                   iter,fr,fpw,fz,fzxy)
@@ -150,8 +153,8 @@ MODULE m_pot_io
 
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
                      iUnit,iter,fr,fpw,fz,fzxy)
-         CLOSE(iUnit)
 
+         CLOSE(iUnit)
       END IF
 
    END SUBROUTINE readPotential
@@ -184,32 +187,23 @@ MODULE m_pot_io
       INTEGER(HID_T)    :: fileID
 #endif
       INTEGER           :: currentStarsIndex,currentLatharmsIndex
-      INTEGER           :: currentStructureIndex
+      INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: potentialType
       CHARACTER(LEN=30) :: archiveName
+
+      REAL              :: fzTemp(vacuum%nmzd,2,input%jspins)
+      COMPLEX           :: fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
 
       CALL getMode(mode)
 
       IF(mode.EQ.POT_HDF5_MODE) THEN
 #ifdef CPP_HDF
-         CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex)
+         CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
+                          currentStructureIndex,currentStepfunctionIndex)
 
-         l_storeIndices = .FALSE.
-         IF (currentStarsIndex.EQ.0) THEN
-            currentStarsIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, stars)
-         END IF
-         IF (currentLatharmsIndex.EQ.0) THEN
-            currentLatharmsIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, sphhar)
-         END IF
-         IF(currentStructureIndex.EQ.0) THEN
-            currentStructureIndex = 1
-            l_storeIndices = .TRUE.
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, currentStructureIndex)
-         END IF
+         CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, sphhar, sym,&
+                                       currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                       currentStepfunctionIndex,l_storeIndices)
 
          archiveName = 'illegalPotentialArchive'
          IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
@@ -224,13 +218,23 @@ MODULE m_pot_io
 
          potentialType = POTENTIAL_TYPE_IN_const
 
+         fzTemp(:,:,:) = fz(:,:,:)
+         fzxyTemp(:,:,:,:) = fzxy(:,:,:,:)
+         IF(vacuum%nvac.EQ.1) THEN
+            fzTemp(:,2,:)=fzTemp(:,1,:)
+            IF (sym%invs) THEN
+               fzxyTemp(:,:,2,:) = CONJG(fzxyTemp(:,:,1,:))
+            ELSE
+               fzxyTemp(:,:,2,:) = fzxyTemp(:,:,1,:)
+            END IF
+         END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                iter,fr,fpw,fz,fzxy)
+                                currentStepfunctionIndex,iter,fr,fpw,fzTemp,fzxyTemp)
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
-                                    currentStructureIndex)
+                                    currentStructureIndex,currentStepfunctionIndex)
          END IF
 
          CALL closeCDNPOT_HDF(fileID)
@@ -265,12 +269,12 @@ MODULE m_pot_io
 
       mode = POT_DIRECT_MODE
       IF (juDFT_was_argument("-stream_cdn")) mode=POT_STREAM_MODE
-      IF (juDFT_was_argument("-hdf_cdn")) THEN
+      IF (.NOT.juDFT_was_argument("-no_cdn_hdf")) THEN !juDFT_was_argument("-hdf_cdn")) THEN
 #ifdef CPP_HDF
          mode=POT_HDF5_MODE
 #else
-         WRITE(*,*) 'Code not compiled with HDF5 support.'
-         WRITE(*,*) 'Falling back to direct access.'
+!         WRITE(*,*) 'Code not compiled with HDF5 support.'
+!         WRITE(*,*) 'Falling back to direct access.'
 #endif
       END IF
    END SUBROUTINE getMode

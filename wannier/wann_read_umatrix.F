@@ -53,14 +53,17 @@ c**************************************************************
       write(6,*)"read in chk"
       l_chk=.false.
       inquire (file=spin12(jspin)//'.chk',exist=l_chk)
-      IF(.NOT.l_chk)  CALL juDFT_error("file chk not found",calledby
+      IF(.NOT.l_chk)  then
+         write(*,*)spin12(jspin)//'.chk'
+         CALL juDFT_error("file chk not found",calledby
      +     ="wann_read_umatrix")
+      ENDIF
 
       chk_unit=152
       open(chk_unit,file=spin12(jspin)//'.chk',status='old',
      &     form='unformatted')
 
-
+      !write(*,*)'wan90version',wan90version
       if(wan90version.eq.1)then !wannier90 version 1.1
         ! Read comment line
         read(chk_unit) header
@@ -106,17 +109,9 @@ c**************************************************************
 
       allocate(tmp_kpt_latt(3,fullnkpts))  
       read(chk_unit) ((tmp_kpt_latt(i,nkp),i=1,3),nkp=1,fullnkpts)
-c      do nkp=1,fullnkpts
-c       do i=1,3
-c          if (abs(tmp_kpt_latt(i,nkp)-kpoints(i,nkp)).gt.1.0e-6) 
-!     &   CALL juDFT_error("mismatch of k-point lattice",calledby
-!     ="wann_read_umatrix")
-c       enddo
-c      enddo
       deallocate(tmp_kpt_latt)
 
-      read(chk_unit) ntmp                ! nntot
-c      if (ntmp.ne.nntot)  CALL juDFT_error("mismatch in nntot",calledby="wann_read_umatrix")
+      read(chk_unit) nntot                ! nntot
       read(chk_unit) ntmp                ! num_wann
       IF (ntmp/=num_wann)  CALL juDFT_error("mismatch in num_wann"
      +     ,calledby ="wann_read_umatrix")
@@ -170,19 +165,18 @@ c      if (ntmp.ne.nntot)  CALL juDFT_error("mismatch in nntot",calledby="wann_r
 c****************************************************************
 c                     read in _um.dat (old version of wannier90)
 c****************************************************************
-      l_umdat=.false.
-      inquire (file=spin12(jspin)//'_um.dat',exist=l_umdat)
-      IF(.NOT.l_umdat) CALL juDFT_error("where is your um_dat?",calledby
-     +     ="wann_read_umatrix")
+        l_umdat=.false.
+        inquire (file=spin12(jspin)//'_um.dat',exist=l_umdat)
+      IF(.NOT.l_umdat)  CALL juDFT_error("where is your um_dat?",
+     +     calledby ="wann_read_umatrix")
 
-
-      open(111,file=spin12(jspin)//'_um.dat',form='unformatted')
-      write(6,*)"read in um_data"
-      read(111)header
-      read(111)tmp_omi
-      read(111) ntmp,num_kpts,num_nnmax
-      IF(ntmp/=num_wann)CALL judft_error("mismatch in num_wann",calledby
-     +     ="wann_read_umatrix")
+        open(111,file=spin12(jspin)//'_um.dat',form='unformatted')
+        write(6,*)"read in um_data"
+        read(111)header
+        read(111)tmp_omi
+        read(111) ntmp,num_kpts,num_nnmax
+      IF(ntmp/=num_wann)  CALL judft_error("mismatch in num_wann",
+     +     calledby ="wann_read_umatrix")
 
         read(111)(((u_matrix_tmp(i,j,k),i=1,num_wann),j=1,num_wann),
      &    k=1,num_kpts)

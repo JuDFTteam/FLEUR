@@ -37,7 +37,7 @@
       CONTAINS
 !***********************************************************************
       SUBROUTINE vxcall(
-     >                  iofile,icorr,krla,jspins,
+     >                  iofile,xcpot,jspins,
      >                  mgrid,ngrid,rh,
      <                  vx,vxc)
 !***********************************************************************
@@ -47,11 +47,12 @@
       USE m_xcbh,  ONLY : vxcbh
       USE m_xcvwn, ONLY : vxcvwn
       USE m_xcpz,  ONLY : vxcpz
-      USE m_icorrkeys
+      USE m_types
 !
 !     .. Scalar Arguments ..
-      INTEGER, INTENT (IN) :: iofile              ! file number for read and write
-      INTEGER, INTENT (IN) :: icorr,krla,jspins   ! run mode parameters
+      INTEGER, INTENT (IN) :: iofile ! file number for read and write
+      TYPE(t_xcpot),INTENT(IN)::xcpot
+      INTEGER, INTENT (IN) :: jspins   ! run mode parameters
       INTEGER, INTENT (IN) :: ngrid,mgrid         ! mesh,number of mesh points
 !
 !     .. Array Arguments ..
@@ -63,46 +64,45 @@
 !
       INTEGER :: ir
 
-      IF (icorr.EQ.0)  THEN   ! X-alpha method
+      IF (xcpot%is_name("x-a"))  THEN   ! X-alpha method
          CALL vxcxal(
-     >               krla,jspins,
+     >               xcpot%krla,jspins,
      >               mgrid,ngrid,rh,
      <               vx,vxc)
 
-      ELSEIF (icorr.EQ.1) THEN    ! Wigner interpolation formula
+      ELSEIF (xcpot%is_name("wign")) THEN    ! Wigner interpolation formula
          CALL vxcwgn(
-     >               krla,jspins,
+     >               xcpot%krla,jspins,
      >               mgrid,ngrid,rh,
      <               vx,vxc)
-      ELSEIF ((icorr.EQ.2).or.(icorr.EQ.3)) THEN ! von Barth,Hedin correlation
+      ELSEIF (xcpot%is_name("mjw").or.xcpot%is_name("bh")) THEN ! von Barth,Hedin correlation
         CALL vxcbh(
-     >             iofile,icorr,krla,jspins,
+     >             iofile,xcpot,jspins,
      >             mgrid,ngrid,rh,
      <             vx,vxc)
 
-      ELSEIF (icorr.EQ.4) THEN     ! Vosko,Wilk,Nusair correlation
+      ELSEIF (xcpot%is_name("vwn")) THEN     ! Vosko,Wilk,Nusair correlation
         CALL vxcvwn(
-     >              iofile,krla,jspins,
+     >              iofile,xcpot%krla,jspins,
      >              mgrid,ngrid,rh,
      <              vx,vxc)
-      ELSEIF (icorr.EQ.5) THEN     ! Perdew,Zunger correlation
+      ELSEIF (xcpot%is_name("pz")) THEN     ! Perdew,Zunger correlation
         CALL vxcpz(                     
-     >             iofile,krla,jspins,
+     >             iofile,xcpot%krla,jspins,
      >             mgrid,ngrid,rh,
      <             vx,vxc)
-      ELSEIF (icorr.EQ.icorr_hf) THEN
+      ELSEIF (xcpot%is_name("hf")) THEN
       ! Hartree-Fock  calculation: X-alpha potential is added to generate a rational local potential,
       !                            later it is subtracted again
         CALL vxcxal(
-     >               krla,jspins,
+     >               xcpot%krla,jspins,
      >               mgrid,ngrid,rh,
      <               vx,vxc)
 !         vxc=0
-      ELSEIF (icorr.EQ. icorr_exx) THEN
+      ELSEIF (xcpot%is_name("exx")) THEN
         ! if exact exchange calculation do nothing
         vxc = 0
       ELSE
-         WRITE (iofile,FMT=9000) icorr
           CALL juDFT_error("vxcall",calledby="xcall")
  9000    FORMAT (13x,'set key for exchange-correlation potential',i2)
       ENDIF
@@ -133,7 +133,7 @@
 
 !***********************************************************************
       SUBROUTINE  excall(
-     >                   iofile,icorr,krla,jspins,
+     >                   iofile,xcpot,jspins,
      >                   mgrid,ngrid,rh,
      <                   exc)
 !***********************************************************************
@@ -143,11 +143,12 @@
       USE m_xcbh,  ONLY : excbh
       USE m_xcvwn, ONLY : excvwn
       USE m_xcpz,  ONLY : excpz
-      USE m_icorrkeys
+      USE m_types
 !
 !     .. Scalar Arguments ..
-      INTEGER, INTENT (IN) :: iofile              ! file number for read and write
-      INTEGER, INTENT (IN) :: icorr,krla,jspins   ! run mode parameters
+      type(t_xcpot), INTENT (IN) :: xcpot
+      INTEGER, INTENT (IN) :: iofile                    ! file number for read and write
+      INTEGER, INTENT (IN) :: jspins   ! run mode parameters
       INTEGER, INTENT (IN) :: ngrid,mgrid         ! mesh,number of mesh points
 !
 !     .. Array Arguments ..
@@ -158,34 +159,34 @@
 !
 !--> Determine exchange correlation energy density
 !
-      IF (icorr.EQ.0)  THEN   ! X-alpha method
+      IF (xcpot%is_name("x-a"))  THEN   ! X-alpha method
          CALL excxal(
-     >               iofile,krla,jspins,
+     >               iofile,xcpot%krla,jspins,
      >               mgrid,ngrid,rh,
      <               exc)
  
-      ELSEIF (icorr.EQ.1) THEN    ! Wigner interpolation formula
+      ELSEIF (xcpot%is_name("wign")) THEN    ! Wigner interpolation formula
          CALL excwgn(
-     >               iofile,krla,jspins,
+     >               iofile,xcpot%krla,jspins,
      >               mgrid,ngrid,rh,
      <               exc)
-      ELSEIF ((icorr.EQ.2).or.(icorr.EQ.3)) THEN ! von Barth,Hedin correlation
+      ELSEIF (xcpot%is_name("mjw").or.xcpot%is_name("bh")) THEN ! von Barth,Hedin correlation
         CALL excbh(
-     >             iofile,icorr,krla,jspins,
+     >             iofile,xcpot,jspins,
      >             mgrid,ngrid,rh,
      <             exc)
 
-      ELSEIF (icorr.EQ.4) THEN     ! Vosko,Wilk,Nusair correlation
+      ELSEIF (xcpot%is_name("vwn")) THEN     ! Vosko,Wilk,Nusair correlation
         CALL excvwn(
-     >              iofile,krla,jspins,
+     >              iofile,xcpot%krla,jspins,
      >              mgrid,ngrid,rh,
      <              exc)
-      ELSEIF (icorr.EQ.5) THEN     ! Perdew,Zunger correlation
+      ELSEIF (xcpot%is_name("pz")) THEN     ! Perdew,Zunger correlation
          CALL excpz(                      
-     >              iofile,krla,jspins,
+     >              iofile,xcpot%krla,jspins,
      >              mgrid,ngrid,rh,
      <              exc)
-      ELSEIF (icorr.EQ.icorr_exx .or. icorr .EQ.icorr_hf) THEN
+      ELSEIF (xcpot%is_name("hf") .or. xcpot%is_name("exx")) THEN
         exc=0
       ELSE
          WRITE (iofile,FMT=9001)

@@ -9,8 +9,8 @@
       subroutine wann_write_mmnk(
      >               mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,
      >               maptopair,pair_to_do,nbnd,bpt,gb,
-     >               isize,irank,
-     <               mmnk)
+     >               isize,irank,fending,
+     <               mmnk,l_unformatted)
 c**********************************************************
 c     MPI-Version: Collect the contributions to the matrix
 c     M^{k,b}_{mn} from the various processors.
@@ -25,7 +25,7 @@ c**********************************************************
       use m_juDFT
       implicit none
       integer, intent(in)     :: jspin2,mpi_comm
-      logical, intent(in)     :: l_p0
+      logical, intent(in)     :: l_p0,l_unformatted
       integer, intent(in)     :: fullnkpts
       integer, intent(in)     :: nntot
       type(t_wann),intent(in) :: wann
@@ -37,6 +37,8 @@ c**********************************************************
       integer, intent(in)     :: gb(:,:,:)
 
       integer, intent(in)     :: isize,irank
+      
+      CHARACTER(len=12), INTENT(IN) :: fending  !for file ending !QPOINTS
 
       complex, intent(inout)  :: mmnk(:,:,:,:) !mmnk(nbnd,nbnd,nntot,fullnkpts)
 
@@ -119,7 +121,8 @@ c******************************************************
 c     Write mmnk matrix to file.
 c******************************************************
       if (l_p0) then
-       open (305,file=spin12(jspin2)//'.mmn')
+       if(.not.l_unformatted) then
+       open (305,file=spin12(jspin2)//trim(fending)//'.mmn')
        write (305,*) 'Overlaps of the wavefunct. the k- and b-points'
        write (305,'(3i5)') nbnd,fullnkpts,nntot
        do ikpt = 1,fullnkpts
@@ -136,6 +139,14 @@ c           write (305,'(2f18.12)')
         enddo
        enddo !ikpt
        close (305)
+       else
+       open (305,file=spin12(jspin2)//trim(fending)//'.mmn',
+     >       form='unformatted')
+       write (305) nbnd,fullnkpts,nntot
+       write (305) bpt,gb
+       write (305) conjg(mmnk)
+       close (305)
+       endif
       endif !l_p0
 
       end subroutine wann_write_mmnk

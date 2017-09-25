@@ -13,10 +13,10 @@
 !---------------------------------------------------------------------
       CONTAINS
       SUBROUTINE set_inp(&
-     &                   infh,nline,xl_buffer,buffer,l_hyb,&
+     &                   infh,nline,xl_buffer,bfh,buffer,l_hyb,&
      &                   atoms,sym,cell,title,idlist,&
      &                   input,vacuum,noco,&
-     &                   atomTypeSpecies,speciesRepAtomType,&
+     &                   atomTypeSpecies,speciesRepAtomType,numSpecies,&
      &                   a1,a2,a3)
 
       USE iso_c_binding
@@ -28,9 +28,7 @@
       USE m_winpXML
       USE m_types
       USE m_juDFT_init
-      USE m_julia
-      USE m_kptgen_hybrid
-      USE m_od_kptsgen
+      USE m_kpoints
       USE m_inv3
 
       IMPLICIT NONE
@@ -41,7 +39,7 @@
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
-      INTEGER, INTENT (IN) :: infh,xl_buffer
+      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh,numSpecies
       INTEGER, INTENT (INOUT) :: nline
       INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
       INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
@@ -53,7 +51,8 @@
  
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
-      LOGICAL l_test,l_gga,l_exists, l_explicit
+      REAL    recVecLength
+      LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
@@ -66,7 +65,7 @@
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
       INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus, numSpecies
+      INTEGER  n ,iostat, errorStatus
       REAL    scale,scpos ,zc
 
       TYPE(t_banddos)::banddos
@@ -190,7 +189,6 @@
         IF (atoms%nz(n).EQ.68) atoms%bmu(n) = 3.1
         IF (atoms%nz(n).EQ.69) atoms%bmu(n) = 2.1
       ENDDO
-      IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
       input%delgau = input%tkb ; atoms%ntype = atoms%ntype ; atoms%nat = atoms%nat
       DO i = 1, 10
@@ -211,20 +209,12 @@
       stars%gmax = 3.0 * kmax ; xcpot%gmaxxc = 2.5 * kmax ; input%rkmax = kmax
       atoms%lnonsph(:) = min( max( (atoms%lmax(:)-2),3 ), 8 )
 
-      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%evac0(2,input%jspins))
-      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%lchg_v(2,input%jspins))
-      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
-      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%enmix(input%jspins))
-
       CALL atom_input(&
-     &                infh,xl_buffer,buffer,&
-     &                input%jspins,input%film,idlist,xmlCoreRefOccs,&
+     &                infh,xl_buffer,bfh,buffer,&
+     &                input,idlist,xmlCoreRefOccs,&
      &                nline,&
      &                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+     &                atomTypeSpecies,numSpecies,&
      &                nel,atoms,enpara)
 
       DO n = 1, atoms%ntype
@@ -303,8 +293,6 @@
 !HF   added for HF and hybrid functionals
       gcutm       = input%rkmax - 0.5
       tolerance   = 1e-4
-      hybrid%gcutm2      = input%rkmax - 0.5
-      hybrid%tolerance2  = 1e-4
       taual_hyb   = atoms%taual
       selct(1,:)  = 4
       selct(2,:)  = 0
@@ -315,13 +303,11 @@
       selct2(2,:) = 0
       selct2(3,:) = 4
       selct2(4,:) = 2
-      ALLOCATE(hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-      hybrid%lcutm2      = 4
+      ALLOCATE(hybrid%lcutwf(atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
       hybrid%lexp        = 16
       bands       = max( nint(input%zelec)*10, 60 )
-      hybrid%bands2      = max( nint(input%zelec)*10, 60 )
       nkpt3       = (/ 4, 4, 4 /)
       l_gamma     = .false.
       IF ( l_hyb ) THEN
@@ -341,7 +327,6 @@
       input%rkmax  = real(NINT( input%rkmax  * 10  ) / 10.)
       xcpot%gmaxxc  = real(NINT( xcpot%gmaxxc  * 10  ) / 10.)
       gcutm   = real(INT( gcutm   * 10  ) / 10.)
-      hybrid%gcutm2  = real(NINT( hybrid%gcutm2  * 10  ) / 10.)
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)
@@ -350,20 +335,23 @@
 ! read some lapw input
 !
       CALL lapw_input(&
-     &                infh,nline,xl_buffer,buffer,&
-     &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,&
+     &                infh,nline,xl_buffer,bfh,buffer,&
+     &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
-     &                xcpot%igrd,vacuum%dvac,dtild,input%tkb,namex,relcor)
+     &                vacuum%dvac,dtild,input%tkb,namex,relcor)
 !
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
       CLOSE (6)
-      inquire(file="inp",exist=l_exists)
+      INQUIRE(file="inp",exist=l_exists)
       IF (l_exists) THEN
-         CALL juDFT_error("Cannot overwrite existing inp-file ",calledby&
-     &        ="set_inp")
+         CALL juDFT_error("inp-file exists. Cannot write another input file in this directory.",calledby="set_inp")
       ENDIF
-      
+      INQUIRE(file="inp.xml",exist=l_exists)
+      IF (l_exists) THEN
+         CALL juDFT_error("inp.xml-file exists. Cannot write another input file in this directory.",calledby="set_inp")
+      ENDIF
+
       nu = 8 
       input%gw = 0
 
@@ -376,6 +364,25 @@
         ENDIF
       ENDIF
 
+      kpts%specificationType = 0
+      IF((ANY(div(:).NE.0)).AND.(ANY(kpts%kPointDensity(:).NE.0.0))) THEN
+         CALL juDFT_error('Double specification of k point set', calledby = 'set_inp')
+      END IF
+      IF (ANY(div(:).NE.0)) THEN
+         kpts%specificationType = 2
+      ELSE IF (ANY(kpts%kPointDensity(:).NE.0.0)) THEN
+         kpts%specificationType = 4
+      ELSE
+         kpts%specificationType = 1
+      END IF
+      l_kpts = .FALSE.
+
+      IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
+         sym%symSpecType = 1
+      ELSE
+         sym%symSpecType = 2
+      END IF
+
       ! set vacuum%nvac
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
@@ -387,7 +394,7 @@
       ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
       ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
 
-      noco%l_ss = .FALSE.
+      IF (noco%l_ss) input%ctail = .FALSE.
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
       Jij%l_disp = .FALSE.
@@ -412,7 +419,7 @@
       Jij%phnd=1
 
 
-      IF(.NOT.juDFT_was_argument("-noXML")) THEN
+      IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
 
@@ -425,29 +432,12 @@
             ! kpts generation
             CALL inv3(cell%amat,cell%bmat,cell%omtil)
             cell%bmat=tpi_const*cell%bmat
-            kpts%nmop(:) = div(:)
+            kpts%nkpt3(:) = div(:)
             kpts%l_gamma = l_gamma
-            IF (.NOT.oneD%odd%d1) THEN
-               IF (jij%l_J) THEN
-                  n1=sym%nop
-                  n2=sym%nop2
-                  sym%nop=1
-                  sym%nop2=1
-                  CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-                  sym%nop=n1
-                  sym%nop2=n2
-               ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-                  STOP 'Error: No kpoint set generation for gamma=T yet!'
-                  CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                                     kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                                     sym%mrot,sym%tau)
-               ELSE
-                  CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-               END IF
-            ELSE
-               STOP 'Error: No kpoint set generation for 1D systems yet!'
-               CALL od_kptsgen (kpts%nkpt)
-            END IF
+            kpts%specificationType = 3
+            sym%symSpecType = 3
+
+            CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
 
             !set latnam to any
             cell%latnam = 'any'
@@ -463,7 +453,6 @@
             STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
          filename = 'inp.xml'
-         numSpecies = atoms%nat
 
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
@@ -498,7 +487,11 @@
       IF (atoms%ntype.GT.999) THEN
          WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
          WRITE(*,*) 'Use inp.xml file instead!'
-      ELSE
+      ELSE IF (juDFT_was_argument("-old")) THEN
+         IF (kpts%specificationType.EQ.4) THEN
+            CALL juDFT_error('No k point set specification by density supported for old inp file',&
+                             calledby = 'set_inp')
+         END IF
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
@@ -547,7 +540,7 @@
         CLOSE (iofile)
       END IF ! l_hyb
 
-      DEALLOCATE(hybrid%lcutm2,hybrid%lcutwf)
+      DEALLOCATE(hybrid%lcutwf)
 !HF
       END SUBROUTINE set_inp
       END MODULE m_setinp

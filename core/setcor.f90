@@ -23,7 +23,7 @@ CONTAINS
     REAL,INTENT (OUT)    :: occ(:,:)
     !     ..
     !     .. Local Scalars ..
-    INTEGER iz,jz,jz0,k,n,m,i,jspin,tempInt
+    INTEGER iz,jz,jz0,k,n,m,i,tempInt
     INTEGER k_h(2),n_h(2)
     REAL fj,l,bmu_l,o_h(2), fac(2),tempReal
     LOGICAL l_clf
@@ -53,8 +53,6 @@ CONTAINS
        ENDDO
        CLOSE (61)
        RETURN
-    ELSE
-       jspin=1
     ENDIF
 
     IF (atoms%zatom(itype)>92.01e0)  CALL juDFT_error(" z > 92",calledby ="setcor"&
@@ -214,6 +212,9 @@ CONTAINS
     ! modify default electron configuration according to explicitely provided setting in inp.xml
     IF(input%l_inpXML) THEN
        nst = max(nst,atoms%numStatesProvided(itype))
+       IF (atoms%numStatesProvided(itype).NE.0) THEN
+          IF (bmu.LT.0.001) bmu = 999.0
+       END IF
        DO n = 1, atoms%numStatesProvided(itype)
           IF((nprnc(n).NE.atoms%coreStateNprnc(n,itype)).OR.(kappa(n).NE.atoms%coreStateKappa(n,itype))) THEN
              m = 0

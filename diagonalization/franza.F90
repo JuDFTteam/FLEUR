@@ -76,7 +76,6 @@ CONTAINS
 
     !to select real/complex data
     LOGICAL:: l_real
-
     l_real=zMat%l_real
 !    IF (l_real.AND.PRESENT(a_c)) CALL juDFT_error("BUG in franza, call either with real OR complex data")
     IF (l_real) THEN
@@ -161,7 +160,6 @@ CONTAINS
              ENDIF
           ENDDO
           nsize=nred
-
        ENDIF
        !-gu
        ! --> start with Cholesky factorization of b ( so that b = l * l^t)
@@ -220,6 +218,15 @@ CONTAINS
           ENDIF
           DEALLOCATE ( cwork )
        ENDIF
+       IF((info.EQ.0).AND.(ne.NE.iu)) THEN
+          WRITE(*,*) ''
+          WRITE(*,*) 'Call to LAPACK routine sspevx/dspevx/chpevx/zhpevx resulted in problem:'
+          WRITE(*,*) 'The library does not report an error but the number of found eigenvalues'
+          WRITE(*,*) 'does not agree with the target number of eigenvalues to be calculated.'
+          WRITE(*,*) 'This is a bug in either fleur or the linked LAPACK library.'
+          WRITE(*,*) ''
+          CALL juDFT_error("sspevx/dspevx/chpevx/zhpevx failed without explicit errorcode.",calledby="franza")
+       END IF
        IF(addstate) THEN ! cut topmost subspace of degenerate states to avoid symmetry breaking (CF)
           iu = ne
           ne = ne - 1
@@ -228,9 +235,9 @@ CONTAINS
           ENDDO
        ENDIF
        IF (l_real) THEN
-          zMat%z_r = zz_r(:,:ne)
+          zMat%z_r(:,:ne) = zz_r(:,:ne)
        ELSE
-          zMat%z_c = zz_c(:,:ne)
+          zMat%z_c(:,:ne) = zz_c(:,:ne)
        END IF
        !
        IF (ne.GT.neigd) THEN

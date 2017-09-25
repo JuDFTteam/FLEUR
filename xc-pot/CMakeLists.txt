@@ -11,16 +11,13 @@ xc-pot/excwb91.f
 xc-pot/gaunt.f
 xc-pot/grdchlh.f
 xc-pot/mkgl0.f
-xc-pot/olap.F
 xc-pot/pbecor2.f
 xc-pot/potl0.f
 xc-pot/relcor.f
-xc-pot/trafo.F
 xc-pot/vxcepbe.f
 xc-pot/vxcl91.f
 xc-pot/vxcpw91.f
 xc-pot/vxcwb91.f
-xc-pot/wrapper.F
 xc-pot/xcall.f
 xc-pot/xcallg.f
 xc-pot/xcbh.f
@@ -30,7 +27,4 @@ xc-pot/xcvwn.f
 xc-pot/xcwgn.f
 xc-pot/xcxal.f
 )
-set(fleur_F90 ${fleur_F90}
-xc-pot/exponential_integral.f90
-xc-pot/hsefunctional.F90
-)
+

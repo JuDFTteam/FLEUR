@@ -9,8 +9,8 @@
       subroutine wann_write_amn(
      >               mpi_comm,l_p0,filename,title,
      >               nbnd,fullnkpts,nwfs,
-     >               irank,isize,l_freeformat,l_unformatted,
-     <               amn)
+     >               irank,isize,l_freeformat,
+     <               amn,l_unformatted)
 c**********************************************************
 c     This subroutine is used to write several matrices to 
 c     files: WF1.mmn, WF1.amn, etc. The corresponding 
@@ -27,7 +27,7 @@ c     Frank Freimuth
 c**********************************************************
       implicit none
       integer, intent(in)    :: mpi_comm
-      logical, intent(in)    :: l_p0
+      logical, intent(in)    :: l_p0,l_unformatted
       character, intent(in)  :: filename*(*)
       character, intent(in)  :: title*(*)
 
@@ -37,7 +37,6 @@ c**********************************************************
 
       integer, intent(in)    :: irank,isize
       logical, intent(in)    :: l_freeformat
-      logical, intent(in)    :: l_unformatted	
 
       complex, intent(inout) :: amn(:,:,:)
 
@@ -78,19 +77,22 @@ c******************************************************
        enddo !ikpt 
       endif !isize
 #endif
+
       if(l_p0)then
        if(l_unformatted)then
-	open(305,file=trim(filename)//'_unf',form='unformatted')
-	write(305)nbnd,fullnkpts,nwfs
-	write(305)amn(1:nbnd,1:nwfs,1:fullnkpts)	
-       else
-        if(l_freeformat)then
+          open (305,file=filename,form='unformatted')
+       elseif(l_freeformat)then
           open(305,file=filename,recl=1000)
-        else
+       else
           open (305,file=filename)
-        endif   
+       endif
+       
+       if(l_unformatted)then
+        write(305)nbnd,fullnkpts,nwfs
+        write(305)amn
+       else
         write (305,*)title
-        write (305,'(3i5)') nbnd,fullnkpts,nwfs
+        write (305,'(i5,i7,i5)') nbnd,fullnkpts,nwfs
         if(l_freeformat)then
          do ikpt = 1,fullnkpts
           do nwf = 1,nwfs
@@ -104,13 +106,13 @@ c******************************************************
          do ikpt = 1,fullnkpts
           do nwf = 1,nwfs
            do i = 1,nbnd
-            write (305,'(3i5,3x,2f18.12)') i,nwf,ikpt,
+            write (305,'(i5,i5,i7,3x,2f18.12)') i,nwf,ikpt,
      &              real(amn(i,nwf,ikpt)),aimag(amn(i,nwf,ikpt))
            enddo !i
           enddo !nwf
          enddo !ikpt
-        endif !l_freeformat
-       endif !l_unformatted	 
+        endif 
+       endif
        close(305)
       endif
 

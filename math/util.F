@@ -10,6 +10,10 @@ c     return type of the pure intgrf function
         INTEGER :: ierror   ! error code
       END TYPE intgrf_out
 
+      INTERFACE derivative
+        MODULE PROCEDURE derivative_t,derivative_nt
+      END INTERFACE
+      
       CONTAINS
 
 
@@ -213,7 +217,7 @@ c     Initializes fast numerical integration intgrf (see below).
       INTEGER, INTENT(IN)   :: ntype,jmtd
       INTEGER, INTENT(IN)   :: jri(ntype)
       REAL,    INTENT(IN)   :: dx(ntype),rmsh(jmtd,ntype)
-      REAL,    ALLOCATABLE  :: gridf(:,:)
+      REAL, INTENT(OUT), ALLOCATABLE  :: gridf(:,:)
 
 c     - local -
       INTEGER              :: i,j,itype
@@ -415,7 +419,9 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       IF(any(abs(help-modulo1).gt.1d-10)) THEN
         WRITE(6,'(A,F5.3,2('','',F5.3),A)')'modulo1: argument (',kpoint,
      +                         ') is not an element of the k-point set.'
-        STOP 'modulo1: argument not an element of k-point set.'
+        CALL juDFT_error(
+     +     'modulo1: argument not an element of k-point set.', 
+     +     calledby = 'util:modulo1')
       END IF
       modulo1 = modulo(help,nkpt3)*1d0/nkpt3
 
@@ -427,7 +433,19 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 c     Returns derivative of f in df.
 
-      SUBROUTINE derivative(df,f,jmtd,jri,dx,rmsh,ntype,itype)
+      SUBROUTINE derivative_t(df,f,atoms,itype)
+      USE m_types
+      IMPLICIT NONE
+      REAL,   INTENT(IN)   ::   f(:)
+      REAL,   INTENT(OUT)  ::   df(:)
+      TYPE(t_atoms),INTENT(IN)::atoms
+      INTEGER,INTENT(IN)   ::   itype
+
+      call derivative_nt(df,f,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,
+     +     atoms%ntype,itype)
+      END SUBROUTINE
+      
+      SUBROUTINE derivative_nt(df,f,jmtd,jri,dx,rmsh,ntype,itype)
 
       IMPLICIT NONE
 
@@ -481,7 +499,7 @@ c     Returns derivative of f in df.
      &          - d41*d42 / (d31*d32*d43)         * f(n-1) 
      &          + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
 
-      END SUBROUTINE derivative
+      END SUBROUTINE derivative_nt
 
 
 c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

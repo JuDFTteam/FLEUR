@@ -29,6 +29,7 @@ init/tetcon.f
 )
 set(fleur_F90 ${fleur_F90}
 init/compile_descr.F90
+init/kpoints.f90
 init/apws_dim.f90
 init/checks.F90
 init/dimen7.F90
@@ -52,5 +53,6 @@ init/setup.f90
 init/stepf.F90
 init/strgn.f90
 init/brzone2.f90
+init/postprocessInput.F90
 init/initParallelProcesses.F90
 )

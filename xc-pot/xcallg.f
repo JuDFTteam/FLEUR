@@ -16,28 +16,10 @@ c          minority for jspins=2.
 c  outputs the effective exch-corr energy density due to this electron
 c  density in hartree units.
 c
-c  depending on the variable icorr, igrd and lwbc
+c  depending on the variable xcpot
 c  the contribution of exchange and correlation is determined in
 c  different subroutines.
 c
-c
-c   icorr=(0 to 6) : using different exchange-correlation functionals.
-c               -1 : l91. igrd=0, dsprs=1.d-19, with pw91.
-c                0 : xalpha-method
-c                1 : wigner correlation
-c                2 : moruzzi,janak,williams correlat.
-c                3 : von barth,hedin correlation
-c                4 : vosko,wilk,nusair correlation
-c                5 : perdew,zunger correlation
-c                6 : pw91
-c                7 : pbe.
-c                8 : rev_pbe.
-c                9 : Rev_pbe.
-c               10 : Wu & Cohen (PBE-variant)
-c               11 : pbesol
-c     icorr_pbe0   : pbe0
-c     icorr_hse    : hse
-c     icorr_hseloc : local part of HSE
 c
 c     krla=1 means : relativistic correction of exchange energy
 c                    density related to dirac kinetic energy, according
@@ -47,12 +29,9 @@ c
 c     based on a subroutine from s.bluegel
 c     r.pentcheva, 22.01.96
 
-c     igrd=0: no gradient correction.
-c          1: pw91.
-
       CONTAINS
 c***********************************************************************
-      SUBROUTINE vxcallg(icorr,lwbc,jspins,mfftwk,nfftwk,rh,
+      SUBROUTINE vxcallg(xcpot,lwbc,jspins,mfftwk,nfftwk,rh,
      +                  agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,
      +                  gzgr,
      +                  vx,vxc)
@@ -62,13 +41,12 @@ c
       USE m_vxcwb91
       USE m_vxcpw91
       USE m_vxcepbe
-      USE m_icorrkeys
-
+      USE m_types
       IMPLICIT NONE
 c
 c---> running mode parameters
 c
-      INTEGER, INTENT (IN) :: icorr
+      TYPE(t_xcpot),INTENT(IN) :: xcpot
       INTEGER, INTENT (IN) :: mfftwk,nfftwk ! radial mesh,number of mesh points
       INTEGER, INTENT (IN) :: jspins
       LOGICAL, INTENT (IN) :: lwbc          ! l-white-bird-current (ta)
@@ -102,7 +80,7 @@ c
       vx (:,:) = 0.0
       vxc(:,:) = 0.0
 
-      IF (icorr.EQ.-1) THEN    ! local pw91
+      IF (xcpot%is_name("l91")) THEN    ! local pw91
 
        CALL vxcl91(
      >             jspins,mfftwk,nfftwk,rh,agr,agru,agrd,
@@ -110,7 +88,7 @@ c
      <             vx,vxc,
      >             isprsv,sprsv)
 
-      ELSEIF (icorr.EQ.6) THEN  ! pw91
+      ELSEIF (xcpot%is_name("pw91")) THEN  ! pw91
 
        IF (lwbc) THEN
           CALL vxcwb91(
@@ -128,20 +106,13 @@ c
 
        ENDIF
 
-      ELSEIF( ( icorr >= 7 .AND. icorr <= 11) .OR. icorr == icorr_hseloc
-     &        .OR. icorr.EQ.icorr_pbe0 .OR. icorr.EQ.icorr_hse .OR.
-     &        icorr.EQ.icorr_vhse ) THEN  ! pbe or similar
+      ELSE  ! pbe or similar
 
         CALL vxcepbe(
-     >               icorr,jspins,mfftwk,nfftwk,rh,
+     >               xcpot,jspins,mfftwk,nfftwk,rh,
      >               agr,agru,agrd,g2ru,g2rd,gggr,gggru,gggrd,
      <               vx,vxc)
 
-      ELSE
-
-        WRITE (6,*) '             set correct key for x-c potential'
-        CALL juDFT_error("set correct key for x-c potential",calledby
-     +       ="xcallg")
 
       ENDIF
 
@@ -171,7 +142,7 @@ c
       END SUBROUTINE vxcallg
 !*********************************************************************
       SUBROUTINE excallg(
-     >                  icorr,lwbc,jspins,nfftwk,
+     >                  xcpot,lwbc,jspins,nfftwk,
      >                  rh,agr,agru,agrd,
      >                  g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,
      <                  exc)
@@ -181,13 +152,13 @@ c
       USE m_excwb91
       USE m_excpw91
       USE m_excepbe
-      USE m_icorrkeys
-
+      USE m_types
+   
       IMPLICIT NONE
 c
 c---> running mode parameters
 c
-      INTEGER, INTENT (IN) :: icorr
+      TYPE(t_xcpot),INTENT(IN) :: xcpot
       LOGICAL, INTENT (IN) :: lwbc          ! l-white-bird-current (ta)
       INTEGER, INTENT (IN) :: nfftwk ! radial mesh,number of mesh points
       INTEGER, INTENT (IN) :: jspins
@@ -218,7 +189,7 @@ c
 c     write(6,'(/'' icorr,krla,igrd,jspins,lwbc,='',5i5,l2)')
 c    &  icorr,krla,igrd,jspins,lwbc
 
-      IF (icorr == -1) THEN  ! local pw91
+      IF (xcpot%is_name("l91")) THEN  ! local pw91
 
         CALL excl91(
      >              jspins,size(rh,1),nfftwk,rh,agr,agru,agrd,
@@ -226,7 +197,7 @@ c    &  icorr,krla,igrd,jspins,lwbc
      <              exc,
      >              isprsv,sprsv)
 
-      ELSEIF (icorr.eq.6) THEN     ! pw91
+      ELSEIF (xcpot%is_name("pw91")) THEN     ! pw91
 
         IF (lwbc) THEN
           CALL excwb91(
@@ -245,20 +216,11 @@ c    &  icorr,krla,igrd,jspins,lwbc
 
          ENDIF
 
-      ELSEIF ((icorr >= 7) .OR. (icorr <= 10) .OR. icorr == icorr_hseloc
-     &        .OR. icorr.EQ.icorr_pbe0 .OR. icorr.EQ.icorr_hse .OR.
-     &        icorr.EQ.icorr_vhse ) THEN  ! pbe or similar
-
+      ELSE
         CALL excepbe(
-     >               icorr,jspins,size(rh,1),nfftwk,
+     >               xcpot,jspins,size(rh,1),nfftwk,
      >               rh,agr,agru,agrd,g2ru,g2rd,gggr,gggru,gggrd,
      <               exc)
-
-      ELSE
-
-        WRITE (6,*) '            set correct key for x-c energy density'
-        CALL juDFT_error("set correct key for x-c energy density",
-     +       calledby="xcallg")
 
       ENDIF
 c

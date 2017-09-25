@@ -196,12 +196,16 @@ FUNCTION xmlGetAttributeValue(xPath)
       WRITE(*,*) TRIM(ADJUSTL(xPath))
       CALL juDFT_error("Attribute value could not be obtained.",calledby="xmlGetAttributeValue")
    END IF
-   DO i=1, 255
-     value(i:i) = valueFromC(i)
-   END DO
-   length = LEN_TRIM(value(1:INDEX(value, CHAR(0))))
 
-   xmlGetAttributeValue = value(1:length-1)
+   value = ''
+   i = 1
+   DO WHILE ((valueFromC(i).NE.C_NULL_CHAR).AND.(i.LE.255))
+      value(i:i) = valueFromC(i)
+      i = i + 1
+   END DO
+   length = i-1
+
+   xmlGetAttributeValue = value(1:length)
 
 END FUNCTION xmlGetAttributeValue
 

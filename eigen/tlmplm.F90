@@ -14,7 +14,7 @@ MODULE m_tlmplm
   !*********************************************************************
   CONTAINS
   SUBROUTINE tlmplm(sphhar,atoms,dimension,enpara,&
-       jspin,jsp,mpi, vr,gwc,lh0,input, td,ud)
+       jspin,jsp,mpi, vr,lh0,input, td,ud)
 
     USE m_intgr, ONLY : intgr3
     USE m_radflo
@@ -34,7 +34,7 @@ MODULE m_tlmplm
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: gwc,lh0 ! normally lh0 = 1; for
+    INTEGER, INTENT (IN) :: lh0 ! normally lh0 = 1; for
     INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
     !     ..
     !     .. Array Arguments ..
@@ -76,27 +76,23 @@ MODULE m_tlmplm
     !--->    generate the wavefunctions for each l
     !
     l_write=mpi%irank==0
-    !!$    l_write=.false.
-    !!$    call gaunt2(atoms%lmaxd)
-    !!$OMP PARALLEL DO DEFAULT(NONE)&
-    !!$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
-    !!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
-    !!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
-    !!$OMP PRIVATE(nodeu,nsym,na)&
-    !!$OMP SHARED(dimension,atoms,gwc,lh0,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
+    !$    l_write=.false.
+    !$    call gaunt2(atoms%lmaxd)
+    !$OMP PARALLEL DO DEFAULT(NONE)&
+    !$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
+    !$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
+    !$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
+    !$OMP PRIVATE(nodeu,nsym,na)&
+    !$OMP SHARED(dimension,atoms,lh0,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
     DO  n = 1,atoms%ntype
        na=sum(atoms%neq(:n-1))+1
 
        IF (l_write) WRITE (6,FMT=8000) n
-       IF (gwc==2) WRITE (14) atoms%rmsh(1:atoms%jri(n),n),atoms%lmax(n)
        DO l = 0,atoms%lmax(n)
           CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,0,n),atoms,&
-               f(1,1,l),g(1,1,l),ud,nodeu,noded,wronk)
+               f(1,1,l),g(1,1,l),ud,nodeu,noded,wronk) ! (in)out:f,g,ud,node(u/d),wronk
           IF (l_write) WRITE (6,FMT=8010) l,enpara%el0(l,n,jspin),ud%us(l,n,jspin),&
                ud%dus(l,n,jspin),nodeu,ud%uds(l,n,jspin),ud%duds(l,n,jspin),noded,ud%ddn(l,n,jspin),wronk
-          IF (gwc==2) WRITE (14) f(1:atoms%jri(n),1,l),g(1:atoms%jri(n),1,l),&
-               f(1:atoms%jri(n),2,l),g(1:atoms%jri(n),2,l), ud%us(l,n,jspin),&
-               ud%dus(l,n,jspin),ud%uds(l,n,jspin),ud%duds(l,n,jspin), enpara%el0(l,n,jspin)
        END DO
 8000   FORMAT (1x,/,/,' wavefunction parameters for atom type',i3,':',&
                       /,t32,'radial function',t79,'energy derivative',/,t3,&
@@ -111,12 +107,6 @@ MODULE m_tlmplm
        IF (atoms%nlo(n).GE.1) THEN
           CALL radflo(atoms,n,jspin,enpara%ello0(1,1,jspin), vr(:,0,n), f,g,mpi,&
                ud, uuilon,duilon,ulouilopn,flo)
-          IF (gwc==2) THEN
-             DO i=1,atoms%nlo(n)
-                WRITE (14) flo(1:atoms%jri(n),1,i),&
-                     flo(1:atoms%jri(n),2,i), ud%ulos(i,n,jspin),ud%dulos(i,n,jspin),enpara%ello0(i,n,jspin)
-             ENDDO
-          ENDIF
        END IF
 
        nsym = atoms%ntypsy(na)
@@ -250,7 +240,7 @@ MODULE m_tlmplm
        ENDIF
 
     ENDDO
-    !!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
 
   END SUBROUTINE tlmplm

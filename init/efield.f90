@@ -1,5 +1,6 @@
       MODULE m_efield
-      use m_juDFT
+      USE m_juDFT
+      USE m_constants
       IMPLICIT NONE
       PRIVATE
       PUBLIC :: efield
@@ -256,9 +257,6 @@
         INTEGER, INTENT(IN) :: k1d, k2d, nvac
         REAL, INTENT(IN) :: area
 
-        ! htr -> electron Volt
-        REAL, PARAMETER :: htr_eV   = 27.21138386 ! eV
-
         REAL :: zsigma, sig_b(2), tmp
         INTEGER, PARAMETER :: iou = 33
         INTEGER :: ios
@@ -307,8 +305,8 @@
         CLOSE (iou)
 
         IF (eV) THEN
-          E%sig_b(:) = E%sig_b/htr_eV
-          E%sigEF(:,:,:) = E%sigEF/htr_eV
+          E%sig_b(:) = E%sig_b/hartree_to_ev_const
+          E%sigEF(:,:,:) = E%sigEF/hartree_to_ev_const
         END IF
         ! Save average sigEF potential in sig_b and remove it from
         ! sigEF to avoid double counting; i.e. make g_|| = 0 of sigEF == 0.
@@ -706,10 +704,10 @@
           IF (ALLOCATED(E%sigEF))&
      &      WRITE (unit,'(3x,a)') 'Average potential:'
           WRITE (unit, '(3x,a,f12.5,a, f12.5,a)') 'on sheet 1: ',&
-     &           E%sig_b(1),' htr = ',E%sig_b(1)*htr_eV,' V'
+     &       E%sig_b(1),' htr = ',E%sig_b(1)*hartree_to_ev_const,' V'
           IF (nvac > 1) THEN
             WRITE (unit, '(3x,a,f12.5,a, f12.5,a)') 'on sheet 2: ',&
-     &             E%sig_b(2),' htr = ',E%sig_b(2)*htr_eV,' V'
+     &         E%sig_b(2),' htr = ',E%sig_b(2)*hartree_to_ev_const,' V'
 
             WRITE (unit,'(3x,a,f14.5,a)')&
      &            'Average field (plate to plate):',&
@@ -781,7 +779,7 @@
      &                E%sigEF(i,j,ivac)&
      &                + E%sig_b(ivac),&
      &                (E%sigEF(i,j,ivac)&
-     &                + E%sig_b(ivac))*htr_eV
+     &                + E%sig_b(ivac))*hartree_to_ev_const
                   ELSE ! Neumann
                     WRITE (748, '(4f12.5,2g16.5)')&
      &                pt_abs(1:2), pt_rel(1:2),&

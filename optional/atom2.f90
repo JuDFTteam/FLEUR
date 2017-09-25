@@ -73,6 +73,9 @@
       enddo
       rn = rad(n)
       bmu_l = atoms%bmu(ntyp)
+      IF (bmu_l>0.001.AND.atoms%numStatesProvided(ntyp).NE.0) CALL &
+           judft_warn("You specified both: inital moment and occupation numbers.", &
+           hint="The inital moment will be ignored, set magMom=0.0",calledby="atom2.f90")
       CALL setcor(ntyp,input%jspins,atoms,input,bmu_l, nst,kappa,nprnc,occ)
 
 !
@@ -175,7 +178,7 @@
                               &f(kk/2))
 
                  ENDDO
-!                 write(*,*) (27.21*2*f(kk),kk=0,l)
+!                 write(*,*) (hartree_to_ev_const*2*f(kk),kk=0,l)
               ENDIF
 !-ldau
               eig(k,ispin) = e
@@ -216,18 +219,15 @@
              rhoss(i,ispin) = rhoss(i,ispin) / (fpi_const*rad(i)**2)
            ENDDO
          ENDDO
-         IF ((xcpot%igrd.EQ.0).AND.(xcpot%icorr.NE.-1)) THEN
-!
-           CALL  vxcall(6,xcpot%icorr,input%krla,input%jspins,&
-     &                   size(vx,1),jrc,rhoss,&
-     &                   vx,vxc)
-!
-         ELSEIF ((xcpot%igrd.GT.0).OR.(xcpot%icorr.EQ.-1)) THEN
-!
-           CALL potl0(&
-     &                dimension%msh,dimension%jspd,input%jspins,xcpot%icorr,n,atoms%dx(ntyp),rad,rhoss,&
-     &                vxc)
-!
+         IF (xcpot%is_gga()) THEN
+            CALL potl0(&
+                 xcpot,DIMENSION%msh,DIMENSION%jspd,input%jspins,n,&
+                 atoms%dx(ntyp),rad,rhoss, vxc)
+         ELSE
+            CALL  vxcall(6,xcpot,input%jspins,&
+                 SIZE(vx,1),jrc,rhoss,&
+                 vx,vxc)
+            
          ENDIF
          DO ispin = 1, input%jspins
            DO i = 1,n

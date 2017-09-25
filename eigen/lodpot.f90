@@ -60,7 +60,7 @@ CONTAINS
        e=1.0
        ch(0:9) = (/'s','p','d','f','g','h','i','j','k','l'/)
        DO jsp = 1,input%jspins
-          IF( input%jspins .GT. 1 ) WRITE(6,'(A,i3)') ' Spin: ',jsp
+          !IF( input%jspins .GT. 1 ) WRITE(6,'(A,i3)') ' Spin: ',jsp
 !$OMP PARALLEL DO DEFAULT(none) &
 !$OMP SHARED(atoms,enpara,jsp,l_done,mpi,vr,c,el,ch,lo_done,ello) &
 !$OMP PRIVATE(n,nqn,nqn_lo,d,rn,msh,f,vrd,j,t1,t2,rr,l,node,nodeu,e,start,us,dus,e_lo,e_up) &

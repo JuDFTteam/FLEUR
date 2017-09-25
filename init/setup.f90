@@ -1,7 +1,7 @@
       MODULE m_setup
       USE m_juDFT
       CONTAINS
-        SUBROUTINE setup(atoms,kpts,DIMENSION,sphhar,&
+        SUBROUTINE setup(mpi,atoms,kpts,DIMENSION,sphhar,&
                   obsolete,sym,stars,oneD, input,noco,vacuum,cell,xcpot, sliceplot,enpara,l_opti)
           !
           !----------------------------------------
@@ -39,6 +39,7 @@
           USE m_dwigner
           USE m_strgn
           USE m_stepf
+          USE m_cdn_io
           USE m_mapatom
           USE m_writegw
           USE m_convn
@@ -54,6 +55,7 @@
           IMPLICIT NONE
           !     ..
           !     .. Scalars Arguments ..
+          TYPE(t_mpi),INTENT(IN)         :: mpi
           TYPE(t_atoms),INTENT(INOUT)    :: atoms
           TYPE(t_kpts),INTENT(INOUT)     :: kpts
           TYPE(t_dimension),INTENT(INOUT):: DIMENSION
@@ -76,6 +78,7 @@
           INTEGER    :: ntp1,ii,i,j,n1,n2,na,np1,n
           INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
           !
+        IF ( mpi%irank == 0 ) THEN
           IF (sym%namgrp.EQ.'any ') THEN
              CALL rw_symfile('R',94,'sym.out',sym%nop,cell%bmat, sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
           ELSE
@@ -136,6 +139,10 @@
              CALL od_mapatom(oneD,atoms,sym,cell)
           END IF
 
+          ! Store structure data
+
+          CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+
           !+odim
           IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
              CALL strgn1(stars,sym,atoms, vacuum,sphhar, input,cell,xcpot)
@@ -168,16 +175,18 @@
          
           CALL  prp_xcfft(stars,input, cell, xcpot)
           !
+        ENDIF ! (mpi%irank == 0)
           IF (.NOT.sliceplot%iplot) THEN
              !
-             CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum)
+             CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
              !
-             CALL convn(DIMENSION,atoms,stars)
-             !
-             !--->    set up electric field parameters (if needed) 
-             !
-             CALL efield(atoms, DIMENSION, stars, sym, vacuum, cell, input)
-
+             IF ( mpi%irank == 0 ) THEN
+                CALL convn(DIMENSION,atoms,stars)
+                !
+                !--->    set up electric field parameters (if needed) 
+                !
+                CALL efield(atoms, DIMENSION, stars, sym, vacuum, cell, input)
+             ENDIF
           ENDIF
 
         END SUBROUTINE setup

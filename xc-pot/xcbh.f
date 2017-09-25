@@ -45,14 +45,15 @@
       CONTAINS
 !************************************************************************
       SUBROUTINE vxcbh
-     >                (iofile,icorr,krla,jspins,
+     >                (iofile,xcpot,jspins,
      >                 mgrid,ngrid,rh,
      <                 vx,vxc)
 !************************************************************************
-!
+      USE m_types
+!     
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
-      INTEGER, INTENT (IN) :: icorr,krla  !  run mode parameters
+      TYPE(t_xcpot), INTENT (IN) :: xcpot  !  run mode parameters
       INTEGER, INTENT (IN) :: iofile      !  file number for read and write
       INTEGER, INTENT (IN) :: mgrid,ngrid !  mesh points
 !
@@ -78,20 +79,20 @@
 ! 
       ALLOCATE ( psi(ngrid) )
       CALL relcor(
-     >            mgrid,ngrid,jspins,krla,.true.,rh,
+     >            mgrid,ngrid,jspins,xcpot%krla,.true.,rh,
      <            psi)
 !
 !-----> select exchange correlation potential
 !
-      IF (icorr.EQ.2) THEN
+      IF (xcpot%is_name("mjw")) THEN
          cp = cpmjw ; cf = cfmjw
          rp = rpmjw ; rf = rfmjw
-      ELSEIF (icorr.EQ.3) THEN
+      ELSEIF (xcpot%is_name("bh")) THEN
          cp = cpvbh ; cf = cfvbh
          rp = rpvbh ; rf = rfvbh
       ELSE
          WRITE (iofile,FMT=2000)
-          CALL juDFT_error("vxcbh",calledby="xcbh")
+          CALL juDFT_error("BUG:vxcbh",calledby="xcbh")
       END IF
  2000 FORMAT (13x,'set key for exchange-correlation potential')
 !
@@ -153,14 +154,15 @@
       END SUBROUTINE vxcbh
 C***********************************************************************
       SUBROUTINE excbh
-     >                (iofile,icorr,krla,jspins,
+     >                (iofile,xcpot,jspins,
      >                 mgrid,ngrid,rh,
      <                 exc)
 C***********************************************************************
-!
+      USE m_types
+!     
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
-      INTEGER, INTENT (IN) :: icorr,krla  !  run mode parameters
+      TYPE(t_xcpot), INTENT (IN) :: xcpot !  run mode parameters
       INTEGER, INTENT (IN) :: iofile      !  file number for read and write
       INTEGER, INTENT (IN) :: mgrid,ngrid !  mesh points
 !
@@ -185,15 +187,15 @@ C***********************************************************************
 
       ALLOCATE ( phi(ngrid) )
       CALL relcor(
-     >            mgrid,ngrid,jspins,krla,.false.,rh,
+     >            mgrid,ngrid,jspins,xcpot%krla,.false.,rh,
      <            phi)
 !
 !-----> select exchange correlation potential
 !
-      IF (icorr.EQ.2) THEN
+      IF (xcpot%is_name("mjw")) THEN
          cp = cpmjw ; cf = cfmjw
          rp = rpmjw ; rf = rfmjw
-      ELSEIF (icorr.EQ.3) THEN
+      ELSEIF (xcpot%is_name("bh")) THEN
          cp = cpvbh ; cf = cfvbh
          rp = rpvbh ; rf = rfvbh
       ELSE

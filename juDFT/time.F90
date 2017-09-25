@@ -60,6 +60,7 @@ CONTAINS
     t%time=0.0
     t%name=name
     t%n_subtimers=0
+    t%parenttimer=>null()
     ALLOCATE(t%subtimer(max_subtimer))
 
     IF (ASSOCIATED(current_timer)) THEN
@@ -147,6 +148,7 @@ CONTAINS
 
   !>
   SUBROUTINE priv_debug_output(startstop,name)
+    USE m_judft_sysinfo
     IMPLICIT NONE
     CHARACTER(LEN=*),INTENT(IN):: startstop,name
 #ifdef CPP_MPI
@@ -156,9 +158,9 @@ CONTAINS
     IF (.NOT.l_debug) RETURN
 #ifdef CPP_MPI
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
-    WRITE(*,"(i3,3a,f10.3)") irank,startstop,name," at:",cputime()
+    WRITE(*,"(i3,3a,f20.2,5x,a)") irank,startstop,name," at:",cputime(),memory_usage_string()
 #else
-    WRITE(*,"(3a,f10.3)") startstop,name," at:",cputime()
+    WRITE(*,"(3a,f20.2,5x,a)") startstop,name," at:",cputime(),memory_usage_string()
 #endif      
   END SUBROUTINE priv_debug_output
 

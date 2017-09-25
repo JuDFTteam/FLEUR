@@ -7,12 +7,7 @@
       module m_wann_optional
       use m_juDFT
       contains
-      subroutine wann_optional(
-     >               jspins,ntype,neq,natd,zatom,
-     >               nop,mrot,bmat,amat,tau,
-     >               taual,film,
-     >               l_onedimens,l_soc,l_noco,
-     >               omtil,pos)
+      subroutine wann_optional(input,atoms,sym,cell,oneD,noco,wann)
 c**************************************************
 c     Make preparations for the calculation of 
 c     Wannier functions.
@@ -30,28 +25,19 @@ c**************************************************
       use m_wann_dipole
 
       implicit none
-      integer, intent(in) :: jspins
-      integer, intent(in) :: ntype
-      integer, intent(in) :: neq(ntype)
-      integer, intent(in) :: natd
-      real,intent(in)     :: zatom(ntype)
-      integer,intent(in)  :: nop
-      integer,intent(in)  :: mrot(3,3,nop)
-      real,intent(in)     :: bmat(3,3),amat(3,3)
-      real,intent(in)     :: tau(3,nop)
-      real,intent(in)     :: taual(3,natd)
-      logical,intent(in)  :: film
-      logical,intent(in)  :: l_onedimens
-      logical,intent(in)  :: l_soc
-      logical,intent(in)  :: l_noco
-      real,intent(in)     :: omtil
-      real,intent(in)     :: pos(3,natd)
 
-      type(t_wann)  :: wann
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_wann),      INTENT(INOUT) :: wann
+
       integer       :: num_wann(2)
       logical       :: l_nocosoc
 
-      l_nocosoc=l_noco.or.l_soc
+      l_nocosoc=noco%l_noco.or.noco%l_soc
 
 c-----read the input file to determine what to do
       call wann_read_inp(
@@ -60,7 +46,7 @@ c-----read the input file to determine what to do
 c-----generate projection-definition-file
       if(wann%l_projgen) then
          call wann_projgen(
-     >       ntype,neq,natd,zatom,l_nocosoc, wann)
+     >      atoms%ntype,atoms%neq,atoms%nat,atoms%zatom,l_nocosoc,wann)
          wann%l_stopopt=.true.
       endif
 
@@ -77,8 +63,8 @@ c-----generate k-point-files
 c-----find Wannier-irreducible part of BZ
       if(wann%l_kptsreduc)then
          call wann_kptsreduc(
-     >            nop,mrot,bmat,tau,film,
-     >            l_onedimens,(l_soc.or.l_noco))
+     >            sym%nop,sym%mrot,cell%bmat,sym%tau,input%film,
+     >            oneD%odi%d1,l_nocosoc)
          wann%l_stopopt=.true.
       endif
 
@@ -86,17 +72,19 @@ c-----find Wannier-irreducible part of BZ
       if(wann%l_kptsreduc2)then
          call wann_kptsreduc2(
      >            wann%mhp,
-     >            nop,mrot,bmat,tau,film,
-     >            l_onedimens,(l_soc.or.l_noco))
+     >            sym%nop,sym%mrot,cell%bmat,sym%tau,input%film,
+     >            oneD%odi%d1,l_nocosoc)
          wann%l_stopopt=.true.
       endif
 
 c-----generate WF1.win and bkpts
       if(wann%l_prepwan90)then
          call wann_wan90prep(
-     >            jspins,amat,bmat,
-     >            natd,taual,zatom,ntype,
-     >            ntype,neq,wann%l_bzsym,film,l_onedimens)
+     >            input%jspins,cell%amat,cell%bmat,
+     >            atoms%nat,atoms%taual,atoms%zatom,atoms%ntype,
+     >            atoms%ntype,atoms%neq,wann%l_bzsym,input%film,
+     >            oneD%odi%d1,wann%l_ms,wann%l_sgwf,wann%l_socgwf,
+     >            wann%aux_latt_const,wann%param_file,wann%l_dim)
       endif
 
 c-----calculate polarization, if not wannierize
@@ -105,9 +93,9 @@ c-----if wannierize, then calculate polarization later (after wannierize)
          num_wann(1)=wann%band_max(1)-wann%band_min(1)+1
          num_wann(2)=wann%band_max(2)-wann%band_min(2)+1
          call wann_dipole3(
-     >            jspins,omtil,natd,pos,
-     >            amat,bmat,taual,num_wann,
-     >            ntype,neq,zatom,(l_soc.or.l_noco))
+     >            input%jspins,cell%omtil,atoms%nat,atoms%pos,
+     >            cell%amat,cell%bmat,atoms%taual,num_wann,
+     >            atoms%ntype,atoms%neq,atoms%zatom,l_nocosoc)
          wann%l_stopopt=.true.
       endif
 
@@ -115,8 +103,8 @@ c-----calculate polarization, if not wannierize
 c-----if wannierize, then calculate polarization later (after wannierize)
       if(wann%l_dipole.and..not.wann%l_wannierize)then
          call wann_dipole(
-     >            jspins,omtil,natd,pos,
-     >            amat,ntype,neq,zatom)
+     >            input%jspins,cell%omtil,atoms%nat,atoms%pos,
+     >            cell%amat,atoms%ntype,atoms%neq,atoms%zatom)
          wann%l_stopopt=.true.
       endif
 

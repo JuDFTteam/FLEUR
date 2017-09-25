@@ -1,4 +1,3 @@
-!--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -67,12 +66,12 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu
-    INTEGER ilo,ilop
+    INTEGER ilo,ilop,i
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
     !     ..
     !     .. Local Arrays ..
-    REAL qmtl(0:atoms%lmaxd),qmtllo(0:atoms%lmaxd)
+    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd)
     CHARACTER(LEN=20) :: attributes(6)
 
     !     ..
@@ -80,8 +79,10 @@ CONTAINS
     REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
     COMPLEX, ALLOCATABLE :: rho21(:,:,:)
     !
+
+    CALL timestart("cdnmt")
+
     IF (noco%l_mperp) THEN
-       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
        ALLOCATE ( usdus%us(0:atoms%lmaxd,atoms%ntype,jspd),usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd) )
        ALLOCATE ( usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd) )
        ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jspd) )
@@ -90,22 +91,35 @@ CONTAINS
           rho21(:,:,:) = cmplx(0.0,0.0)
        ENDIF
     ELSE
-       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
-       ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
        ALLOCATE (   usdus%us(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE (  usdus%uds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
        ALLOCATE (  usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ENDIF
-    WRITE (6,FMT=8000)
-    WRITE (16,FMT=8000)
-8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
-         &     t33,'d',t42,'f',t51,'total')
-    CALL timestart("cdnmt")
 
-    na = 1
+    !$OMP PARALLEL DEFAULT(none) &
+
+    !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
+    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
+    !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,orbl,orblo,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
+    !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
+    !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
+    IF (noco%l_mperp) THEN
+       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
+    ELSE
+       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
+       ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
+    ENDIF
+
+    qmtl = 0
+    
+    !$OMP DO
     DO itype = 1,atoms%ntype
+       na = 1
+       DO i = 1, itype - 1
+          na = na + atoms%neq(i)
+       ENDDO
        !--->    spherical component
        DO ispin = jsp_start,jsp_end
           DO l = 0,atoms%lmax(itype)
@@ -126,7 +140,6 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-
           CALL rhosphnlo(itype,atoms,sphhar,&
                uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
                usdus%uulon(1,itype,ispin),ello(1,itype,ispin),&
@@ -138,26 +151,13 @@ CONTAINS
 
 
           !--->       l-decomposed density for each atom type
-          qmtt = 0.
+          qmtt = 0.0
           DO l = 0,atoms%lmax(itype)
-             qmtl(l) = ( uu(l,itype,ispin)+dd(l,itype,ispin)&
+             qmtl(l,ispin,itype) = ( uu(l,itype,ispin)+dd(l,itype,ispin)&
                   &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
-             qmtt = qmtt + qmtl(l)
+             qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
           chmom(itype,ispin) = qmtt
-          WRITE (6,FMT=8100) itype, (qmtl(l),l=0,3),qmtt
-          WRITE (16,FMT=8100) itype, (qmtl(l),l=0,3),qmtt
-8100      FORMAT (' -->',i3,2x,4f9.5,2x,f9.5)
-
-          attributes = ''
-          WRITE(attributes(1),'(i0)') itype
-          WRITE(attributes(2),'(f12.7)') qmtt
-          WRITE(attributes(3),'(f12.7)') qmtl(0)
-          WRITE(attributes(4),'(f12.7)') qmtl(1)
-          WRITE(attributes(5),'(f12.7)') qmtl(2)
-          WRITE(attributes(6),'(f12.7)') qmtl(3)
-          CALL writeXMLElementForm('mtCharge',(/'atomType','total   ','s       ','p       ','d       ','f       '/),attributes,&
-                                   reshape((/8,5,1,1,1,1,6,12,12,12,12,12/),(/6,2/)))
 
           !+soc
           !--->       spherical angular component
@@ -254,9 +254,35 @@ CONTAINS
           ENDIF ! l_fmpl
        ENDIF ! noco%l_mperp
 
-       na = na + atoms%neq(itype)
     ENDDO ! end of loop over atom types
+    !$OMP END DO
+    DEALLOCATE ( f,g)
+    !$OMP END PARALLEL
+
+    WRITE (6,FMT=8000)
+    WRITE (16,FMT=8000)
+8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
+         &     t33,'d',t42,'f',t51,'total')
+
+    DO itype = 1,atoms%ntype
+       DO ispin = jsp_start,jsp_end
+          WRITE ( 6,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),chmom(itype,ispin)
+          WRITE (16,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),chmom(itype,ispin)
+8100      FORMAT (' -->',i3,2x,4f9.5,2x,f9.5)
+          attributes = ''
+          WRITE(attributes(1),'(i0)') itype
+          WRITE(attributes(2),'(f12.7)') chmom(itype,ispin)
+          WRITE(attributes(3),'(f12.7)') qmtl(0,ispin,itype)
+          WRITE(attributes(4),'(f12.7)') qmtl(1,ispin,itype)
+          WRITE(attributes(5),'(f12.7)') qmtl(2,ispin,itype)
+          WRITE(attributes(6),'(f12.7)') qmtl(3,ispin,itype)
+          CALL writeXMLElementForm('mtCharge',(/'atomType','total   ','s       ','p       ','d       ','f       '/),attributes,&
+                                   reshape((/8,5,1,1,1,1,6,12,12,12,12,12/),(/6,2/)))
+       ENDDO
+    ENDDO
+
     CALL timestop("cdnmt")
+
     !---> for testing: to plot the offdiag. part of the density matrix it
     !---> is written to the file rhomt21. This file can read in pldngen.
     IF (l_fmpl) THEN
@@ -266,8 +292,6 @@ CONTAINS
        DEALLOCATE ( rho21 )
     ENDIF
     !---> end of test output
-
-    DEALLOCATE ( f,g)
 
   END SUBROUTINE cdnmt
 END MODULE m_cdnmt

@@ -30,7 +30,7 @@ CONTAINS
     !
     !----------------------------------------------------
     !
-!#include"cpp_arch.h"
+    !#include"cpp_arch.h"
 #include"cpp_double.h"
     USE m_juDFT
     USE m_types
@@ -45,7 +45,7 @@ CONTAINS
     REAL,    INTENT   (OUT) :: eig(neigd)
     TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
     TYPE(t_zMat),INTENT(INOUT)    :: zMat
- 
+
     !...  Local variables
     !
     INTEGER nc,ic,ir,n_sym,jsym,num_j,icm,n_bound
@@ -79,7 +79,7 @@ CONTAINS
     EXTERNAL CPP_LAPACK_slamch, descinit
     EXTERNAL blacs_pinfo, blacs_gridinit
     EXTERNAL MPI_COMM_DUP
-    
+
     !
     ! determine actual number of columns of input matrices A and B
     ! nc is number of columns the local processor will get, must be <=n
@@ -293,52 +293,52 @@ CONTAINS
     !     Compute size of workspace
     !
     if (hamovlp%l_real) THEN
-    uplo='U'
-    CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
-         0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
-         desceigv,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
-    IF ( work2_r(1).GT.lwork2) THEN
-       lwork2 = work2_r(1)
-       DEALLOCATE (work2_r)
-       ALLOCATE ( work2_r(lwork2+20*m), stat=err ) ! Allocate even more in case of clusters
-       IF (err.NE.0) THEN
-          WRITE (*,*) 'work2  :',err,lwork2
-          CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
+       uplo='U'
+       CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
+            0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
+            desceigv,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
+       IF ( work2_r(1).GT.lwork2) THEN
+          lwork2 = work2_r(1)
+          DEALLOCATE (work2_r)
+          ALLOCATE ( work2_r(lwork2+20*m), stat=err ) ! Allocate even more in case of clusters
+          IF (err.NE.0) THEN
+             WRITE (*,*) 'work2  :',err,lwork2
+             CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
+          ENDIF
        ENDIF
-    ENDIF
-else
-    lrwork=4*m+MAX(5*nn,np0*mq0)+ iceil(neigd,nprow*npcol)*nn
-    ! Allocate more in case of clusters
-    ALLOCATE(rwork(lrwork+10*m), stat=ierr)
-    IF (err /= 0) THEN
-       WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed'
-       CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
-    ENDIF
-
-    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca_c,1,1,desca,bsca_c,1,1, desca,&
-         0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
-         desceigv,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
-         gap,ierr)
-    IF (ABS(work2_c(1)).GT.lwork2) THEN
-       lwork2=work2_c(1)
-       DEALLOCATE (work2_c)
-       ALLOCATE (work2_c(lwork2), stat=err)
+    else
+       lrwork=4*m+MAX(5*nn,np0*mq0)+ iceil(neigd,nprow*npcol)*nn
+       ! Allocate more in case of clusters
+       ALLOCATE(rwork(lrwork+10*m), stat=ierr)
        IF (err /= 0) THEN
-          WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed:',lwork2
-          CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
-       ENDIF
-    ENDIF
-    IF (rwork(1).GT.lrwork) THEN
-       lrwork=rwork(1)
-       DEALLOCATE(rwork)
-       ! Allocate even more in case of clusters
-       ALLOCATE (rwork(lrwork+20*m), stat=err)
-       IF (err /= 0) THEN
-          WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed: ', lrwork+20*m
+          WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed'
           CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
        ENDIF
-    ENDIF
-endif
+
+       CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca_c,1,1,desca,bsca_c,1,1, desca,&
+            0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
+            desceigv,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
+            gap,ierr)
+       IF (ABS(work2_c(1)).GT.lwork2) THEN
+          lwork2=work2_c(1)
+          DEALLOCATE (work2_c)
+          ALLOCATE (work2_c(lwork2), stat=err)
+          IF (err /= 0) THEN
+             WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed:',lwork2
+             CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
+          ENDIF
+       ENDIF
+       IF (rwork(1).GT.lrwork) THEN
+          lrwork=rwork(1)
+          DEALLOCATE(rwork)
+          ! Allocate even more in case of clusters
+          ALLOCATE (rwork(lrwork+20*m), stat=err)
+          IF (err /= 0) THEN
+             WRITE (*,*) 'ERROR: chani.F: Allocating rwork failed: ', lrwork+20*m
+             CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
+          ENDIF
+       ENDIF
+    endif
     IF (iwork(1) .GT. liwork) THEN
        liwork = iwork(1)
        DEALLOCATE (iwork)
@@ -351,18 +351,20 @@ endif
     !
     !     Now solve generalized eigenvalue problem
     !
-if (hamovlp%l_real) THEN
-    CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
-         1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
-         desceigv,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
-         gap,ierr)
-else
-    CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca_c,1,1,desca,bsca_c,1,1, desca,&
-         1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
-         desceigv,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
-         ifail,iclustr,gap,ierr)
-    DEALLOCATE(rwork)
-endif
+    CALL timestart("SCALAPACK call")
+    if (hamovlp%l_real) THEN
+       CALL CPP_LAPACK_pdsygvx(1,'V','I','U',m,asca_r,1,1,desca,bsca_r,1,1, desca,&
+            1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
+            desceigv,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
+            gap,ierr)
+    else
+       CALL CPP_LAPACK_pzhegvx(1,'V','I','U',m,asca_c,1,1,desca,bsca_c,1,1, desca,&
+            1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
+            desceigv,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
+            ifail,iclustr,gap,ierr)
+       DEALLOCATE(rwork)
+    endif
+    CALL timestop("SCALAPACK call")
     IF (ierr .NE. 0) THEN
        IF (ierr /= 2) WRITE (6,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
        IF (ierr <= 0) WRITE (6,*) myid,' illegal input argument'
@@ -383,11 +385,11 @@ endif
        ENDIF
        IF (MOD(ierr/8,2).NE.0) THEN
           WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
-          !CALL CPP_flush(6)
+          CALL judft_error("SCALAPACK failed to solve eigenvalue problem",calledby="chani.F90")
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
           WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
-          !CALL CPP_flush(6)
+          CALL judft_error("SCALAPACK failed: B was not positive definite",calledby="chani.F90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN
@@ -426,7 +428,7 @@ endif
     !
     if (hamovlp%l_real) THEN
        CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,zmat%z_r,eigvec_r)
-       ELSE
+    ELSE
        CALL subredist2(m,num2,myrowssca,SUB_COMM,nprow,npcol, myid,ierr,nb,achi_c=zmat%z_c,asca_c=eigvec_c)
     end if
     !

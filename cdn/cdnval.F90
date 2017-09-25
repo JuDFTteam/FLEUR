@@ -3,7 +3,7 @@ MODULE m_cdnval
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
        vacuum,dimension, sphhar, sym,obsolete, igq_fft,vr, vz, oneD, n_mmp,results, qpw,rhtxy,&
-       rho,rht,cdom,cdomvz,cdomvxy,qa21, chmom,clmom)
+       rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
@@ -84,6 +84,9 @@ CONTAINS
     USE m_doswrite
     USE m_cylpts
     USE m_cdnread, ONLY : cdn_read0, cdn_read
+    USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
+    USE m_corespec_io, only : corespec_init
+    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
 #ifdef CPP_MPI
     USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
@@ -123,6 +126,8 @@ CONTAINS
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: rht(vacuum%nmzd,2,dimension%jspd)
+    REAL, INTENT (INOUT) :: qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd)
+    REAL, INTENT (INOUT) :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
     COMPLEX, INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u)
 
 #ifdef CPP_MPI
@@ -158,7 +163,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: volintsl(:)
     REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:)
     REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
-    REAL,    ALLOCATABLE :: qis(:,:,:),qvac(:,:,:,:),qvlay(:,:,:,:,:)
+    REAL,    ALLOCATABLE :: qis(:,:,:)
     !-new_sl
     !-dw
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
@@ -322,6 +327,12 @@ CONTAINS
        ALLOCATE ( m_mcd(1,1,1,1),mcd(1,1,1) )
     ENDIF
 
+! calculation of core spectra (EELS) initializations -start-
+    CALL corespec_init(atoms)
+    IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
+    IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
+! calculation of core spectra (EELS) initializations -end-
+
     ALLOCATE ( kveclo(atoms%nlotot) )
 
     IF (mpi%irank==0) THEN
@@ -349,10 +360,7 @@ CONTAINS
     aclo(:,:,:) = 0.0 ; bclo(:,:,:) = 0.0 ; ccnmt(:,:,:,:,:) = 0.0
     acnmt(:,:,:,:,:)=0.0 ; bcnmt(:,:,:,:,:)=0.0 ; cclo(:,:,:,:)=0.0
 
-    ALLOCATE ( qis(dimension%neigd,kpts%nkpt,dimension%jspd), &
-         qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd), &
-         qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd) )
-    qvac(:,:,:,:)=0.0 ;  qvlay(:,:,:,:,:)=0.0
+    ALLOCATE ( qis(dimension%neigd,kpts%nkpt,dimension%jspd))
 
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
@@ -362,7 +370,7 @@ CONTAINS
     ncored = 0
 
     ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
-    DO  n = 1,atoms%ntype
+    DO n = 1,atoms%ntype
        IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8001) n
        DO  l = 0,atoms%lmax(n)
           DO ispin = jsp_start,jsp_end
@@ -389,6 +397,11 @@ CONTAINS
                ncore,e_mcd,m_mcd)
           ncored = max(ncore(n),ncored)
        END IF
+
+       IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
+                                  input%jspins,jspin,results%ef,&
+                                  dimension%msh,vr(:,0,:,:),f,g)
+
        !
        !--->   generate the extra wavefunctions for the local orbitals,
        !--->   if there are any.
@@ -540,8 +553,10 @@ CONTAINS
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
                lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
-
-
+#ifdef CPP_MPI
+          ! Sinchronizes the RMA operations
+          if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
           !ENDIF
@@ -801,6 +816,13 @@ CONTAINS
                 DEALLOCATE (acoflo,bcoflo,cveccof)
                 CALL timestop("cdnval: force_a12/21")
              END IF
+
+             IF(l_cs) THEN
+                CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,&
+                                  dimension%neigd,noccbd,results%ef,banddos%sig_dos,&
+                                  eig,we,acof(1,0,1,ispin),bcof(1,0,1,ispin),&
+                                  ccof(-atoms%llod,1,1,1,ispin))
+             END IF
           END DO !--->    end loop over ispin
 
           IF (noco%l_mperp) THEN
@@ -871,6 +893,9 @@ CONTAINS
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
+
+    IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
+
     IF (((jspin.eq.input%jspins).OR.noco%l_mperp) .AND. (banddos%dos.or.banddos%vacdos.or.input%cdinf) ) THEN
        CALL timestart("cdnval: dos")
        IF (mpi%irank==0) THEN
@@ -917,6 +942,7 @@ CONTAINS
                   ener(0,1,ispin),sqal(0,1,ispin),&
                   enerlo(1,1,ispin),&
                   sqlo(1,1,ispin))
+
              CALL w_enpara(&
                   atoms,jspin,input%film,&
                   enpara,16)

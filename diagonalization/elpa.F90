@@ -26,7 +26,11 @@ CONTAINS
 #define CPP_transpose pdtran
 #define CPP_ONE 1.0
 #define CPP_ZERO 0.0
+#ifdef CPP_ELPA_201605004
+#define CPP_mult elpa_mult_at_b_real
+#else
 #define CPP_mult mult_at_b_real
+#endif
 #define CPP_REAL
   SUBROUTINE elpa_r(m, SUB_COMM, a,b, z,eig,num)
     ! 
@@ -63,7 +67,11 @@ CONTAINS
 #define CPP_transpose pztranc
 #define CPP_ONE cmplx(1.,0.)
 #define CPP_ZERO cmplx(0.,0.)
+#ifdef CPP_ELPA_201605004
 #define CPP_mult mult_ah_b_complex
+#else
+#define CPP_mult mult_ah_b_complex
+#endif
 #undef CPP_REAL
  SUBROUTINE elpa_c(m, SUB_COMM, a,b, z,eig,num)
     ! 
@@ -192,7 +200,7 @@ CONTAINS
 
     !Create communicators for ELPA
     !print *,"creating ELPA comms"
-#if (defined CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
+#if defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
     ierr=get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
 #else
     CALL get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)

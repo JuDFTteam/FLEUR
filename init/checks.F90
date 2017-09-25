@@ -29,11 +29,13 @@ MODULE m_checks
       !Check for IO options not available in parallel
 #ifdef CPP_MPI
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,irank,ierr)
-      IF (isize>1) THEN
-         IF (juDFT_was_argument("-mem")) CALL judft_error(&
-              "-mem cannot be used in parallel mode for Eigenvector IO",hint="Use -mpi or -hdf instead")
-         IF (juDFT_was_argument("-da")) CALL judft_error(&
-              "-da cannot be used in parallel mode for Eigenvector IO",hint="Use -mpi or -hdf instead")
+      IF (irank.EQ.0) THEN
+         IF (isize>1) THEN
+            IF (juDFT_was_argument("-mem")) CALL judft_error(&
+                "-mem cannot be used in parallel mode for Eigenvector IO",hint="Use -mpi or -hdf instead")
+            IF (juDFT_was_argument("-da")) CALL judft_error(&
+                "-da cannot be used in parallel mode for Eigenvector IO",hint="Use -mpi or -hdf instead")
+         END IF
       END IF
 #endif
     END SUBROUTINE check_command_line
