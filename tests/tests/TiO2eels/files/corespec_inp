@@ -1,6 +1,6 @@
 &csinp
   csi%verb = 1
-  csi%type = 1
+  csi%atomType = 1
   csi%edge = 'L'
   csi%edgeidx = 3
   csi%lx = 2

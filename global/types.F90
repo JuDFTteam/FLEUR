@@ -757,10 +757,20 @@ MODULE m_types
      COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
   END TYPE t_hamOvlp
 
+  ! type for the input to the calculation of the core spectrum (EELS)
+  TYPE t_coreSpecInput
+     integer :: verb  ! output verbosity
+     integer :: atomType  ! atomic type used for calculation of core spectra
+     character(LEN=1) :: edge  ! edge character (K,L,M,N,O,P)
+     integer :: edgeidx(11)  ! l-j edges
+     integer :: lx  ! maximum lmax considered in spectra calculation
+     real :: ek0  ! kinetic energy of incoming electrons
+     real :: emn  ! energy spectrum lower bound
+     real :: emx  ! energy spectrum upper bound
+     real :: ein  ! energy spectrum increment
+  END TYPE t_coreSpecInput
 
-  !
   ! type for wannier-functions
-  !
   TYPE t_wann
      INTEGER :: wan90version
      INTEGER :: oc_num_orbs
