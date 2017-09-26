@@ -566,7 +566,7 @@ MODULE m_types
      LOGICAL:: tria
      LOGICAL:: integ
      LOGICAL:: pallst
-     LOGICAL:: l_eels
+     LOGICAL:: l_coreSpec
      LOGICAL:: l_wann
      LOGICAL:: secvar
      LOGICAL:: evonly(2)

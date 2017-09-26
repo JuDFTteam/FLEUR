@@ -1675,7 +1675,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
-     input%l_eels = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eels'))
+     input%l_coreSpec = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
      input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
@@ -1781,13 +1781,13 @@ SUBROUTINE r_inpXML(&
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
 
-     ! Read in optional EELS input parameters
+     ! Read in optional core spectrum (EELS) input parameters
 
-     xPathA = '/fleurInput/output/eels'
+     xPathA = '/fleurInput/output/coreSpectrum'
      numberNodes = xmlGetNumberOfNodes(xPathA)
 
-     IF ((input%l_eels).AND.(numberNodes.EQ.0)) THEN
-        CALL juDFT_error("eels is true but eels parameters are not set!", calledby = "r_inpXML")
+     IF ((input%l_coreSpec).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("coreSpec is true but coreSpectrum parameters are not set!", calledby = "r_inpXML")
      END IF
 
      IF (numberNodes.EQ.1) THEN
