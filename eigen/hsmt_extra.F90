@@ -202,11 +202,11 @@ CONTAINS
                    CALL ylm4(atoms%lnonsph(n),vmult,ylm)
                    IF (.NOT.enough) THEN
                       l_lo1=.FALSE. 
-                      IF ((lapw%rk(k,iintsp).LT.eps).AND.(.NOT.noco%l_ss)) THEN
-                         l_lo1=.TRUE.
-                      ELSE
-                         l_lo1=.FALSE. 
-                      ENDIF
+                     ! IF ((lapw%rk(k,iintsp).LT.eps).AND.(.NOT.noco%l_ss)) THEN
+                     !    l_lo1=.TRUE.
+                     ! ELSE
+                     !    l_lo1=.FALSE. 
+                     ! ENDIF
                       CALL abccoflo(&
                            atoms,con1, rph(k,iintsp),cph(k,iintsp),ylm,n,&
                            na,k,lapw%nv(iintsp),l_lo1,alo1,blo1,clo1,&
