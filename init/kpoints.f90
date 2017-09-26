@@ -7,10 +7,11 @@
 module m_kpoints
 contains
   subroutine kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
-    use m_types
-    use m_julia
-    use m_kptgen_hybrid
-    use m_od_kptsgen
+    USE m_juDFT
+    USE m_types
+    USE m_julia
+    USE m_kptgen_hybrid
+    USE m_od_kptsgen
   
     implicit none
     TYPE(t_input),INTENT(IN)   :: input
@@ -23,31 +24,44 @@ contains
     TYPE(t_kpts),INTENT(INOUT)  :: kpts
     LOGICAL,INTENT(IN)          :: l_kpts
 
-    TYPE(t_sym):: sym_hlp
-    
-    if (.not.l_kpts) THEN
-     IF (.NOT.oneD%odd%d1) THEN
-        IF (jij%l_J) THEN
-           sym_hlp=sym
-           sym_hlp%nop=1
-           sym_hlp%nop2=1
-           CALL julia(sym_hlp,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-        ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-           CALL kptgen_hybrid(kpts,sym%invs,noco%l_soc,sym%nop,sym%mrot,sym%tau)
-        ELSE
-           CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-        END IF
-     ELSE
-        STOP 'Error: No kpoint set generation for 1D systems yet!'
-        CALL od_kptsgen (kpts%nkpt)
-     END IF
-  endif
-  !Rescale weights and kpoints
-  
-  kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
-  kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
-  kpts%posScale = 1.0
-  IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
+    TYPE(t_sym) :: sym_hlp
+    INTEGER     :: i
+    REAL        :: recVecLength
+
+    IF (kpts%specificationType.EQ.4) THEN
+       DO i = 1, 3
+          IF (kpts%kPointDensity(i).LE.0.0) THEN
+             CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'kpoints')
+          END IF
+          recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
+          kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
+       END DO
+       kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+    END IF
+
+    IF (.NOT.l_kpts) THEN
+       IF (.NOT.oneD%odd%d1) THEN
+          IF (jij%l_J) THEN
+             sym_hlp=sym
+             sym_hlp%nop=1
+             sym_hlp%nop2=1
+             CALL julia(sym_hlp,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
+          ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
+             CALL kptgen_hybrid(kpts,sym%invs,noco%l_soc,sym%nop,sym%mrot,sym%tau)
+          ELSE
+             CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
+          END IF
+       ELSE
+          STOP 'Error: No kpoint set generation for 1D systems yet!'
+          CALL od_kptsgen (kpts%nkpt)
+       END IF
+    END IF
+    !Rescale weights and kpoints
+
+    kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
+    kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
+    kpts%posScale = 1.0
+    IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
 
   
   

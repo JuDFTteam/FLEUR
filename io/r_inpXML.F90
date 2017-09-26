@@ -116,12 +116,12 @@ SUBROUTINE r_inpXML(&
   INTEGER            :: speciesEParams(0:3)
   INTEGER            :: mrotTemp(3,3,48)
   REAL               :: tauTemp(3,48)
-  REAL               :: bk(3), kPointDensity(3)
+  REAL               :: bk(3)
   LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
   LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
-  REAL               :: weightScale, eParamUp, eParamDown, recVecLength
+  REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
   INTEGER            :: lcutm,lcutwf,select(4)
@@ -406,13 +406,14 @@ SUBROUTINE r_inpXML(&
   END IF
 
   ! Option kPointDensity
+  kpts%kPointDensity(:) = 0.0
   xPathA = '/fleurInput/calculationSetup/bzIntegration/kPointDensity'
   numberNodes = xmlGetNumberOfNodes(xPathA)
   IF (numberNodes.EQ.1) THEN
      l_kpts = .FALSE.
-     kPointDensity(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denX'))
-     kPointDensity(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denY'))
-     kPointDensity(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denZ'))
+     kpts%kPointDensity(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denX'))
+     kpts%kPointDensity(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denY'))
+     kpts%kPointDensity(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denZ'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
      kpts%specificationType = 4
   END IF
@@ -1072,19 +1073,6 @@ SUBROUTINE r_inpXML(&
      END IF
   END IF
 
-  ! Construction of k point mesh if kPointDensity is provided
-  IF (kpts%specificationType.EQ.4) THEN
-     DO i = 1, 3
-        IF (kPointDensity(i).LE.0.0) THEN
-           CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'r_inpXML')
-        END IF
-        recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
-        kpts%nkpt3(i) = CEILING(kPointDensity(i) * recVecLength)
-     END DO
-     kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
-     kpts%specificationType = 2
-  END IF
-
   ! Construction of missing symmetry information
   IF ((symmetryDef.EQ.2).OR.(symmetryDef.EQ.3)) THEN
      nop48 = 48
@@ -1687,6 +1675,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+     input%l_eels = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eels'))
      input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
@@ -1791,6 +1780,19 @@ SUBROUTINE r_inpXML(&
         banddos%ndir = -4
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
+
+     ! Read in optional EELS input parameters
+
+     xPathA = '/fleurInput/output/eels'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((input%l_eels).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("eels is true but eels parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     IF (numberNodes.EQ.1) THEN
+        CALL juDFT_error("Reading in eels input not yet implemented!", calledby = "r_inpXML")
+     END IF
 
      ! Read in optional Wannier functions parameters
 

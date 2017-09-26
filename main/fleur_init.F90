@@ -284,7 +284,7 @@
              ! HF/hybrid functionals/EXX
              ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
            
-         
+             kpts%specificationType = 0
              atoms%numStatesProvided(:) = 0
 
              jij%M(:)             = 0.0
