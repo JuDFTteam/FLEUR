@@ -4,7 +4,7 @@ set(SerialParallelTests CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML
 Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML
 GaAsMultiUForceXML SiFilmSlicePlotXML)
 
-set(SerialOnlyTests Fe_bct_LO Fe_bct_LOXML Fe_fcc Fe_fccXML TiO2eels)
+set(SerialOnlyTests Fe_bct_LO Fe_bct_LOXML Fe_fcc Fe_fccXML TiO2eels TiO2eelsXML)
 
 set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
 set(ParTestdirs ${SerialParallelTests})
