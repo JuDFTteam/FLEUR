@@ -41,7 +41,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER i(39),ierr(3)
     REAL    r(30)
-    LOGICAL l(43)
+    LOGICAL l(44)
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -77,7 +77,7 @@ CONTAINS
        l(34)=banddos%l_mcd ; l(35)=input%sso_opt(1)
        l(36)=input%sso_opt(2) ; l(37)=obsolete%pot8; l(38)=input%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=input%efield%dirichlet
-       l(43)=input%efield%l_dirichlet_coeff
+       l(43)=input%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -114,7 +114,7 @@ CONTAINS
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     input%efield%l_segmented = l(38) ; sym%symor=l(39); input%efield%dirichlet = l(40)
-    input%efield%l_dirichlet_coeff = l(41)
+    input%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44)
     !
     ! -> Broadcast the arrays:
     IF (input%efield%l_segmented) THEN
