@@ -78,7 +78,7 @@ CONTAINS
     ELSE
        callstop = .TRUE.
     ENDIF
-
+    
     IF (.NOT.warn) THEN
        WRITE(text(1),*) PE,"**************juDFT-Error*****************"
     ELSE
@@ -115,9 +115,11 @@ CONTAINS
           linenr=linenr+1
           WRITE(text(linenr),'(a)')"Warnings not ignored. Touch 'JUDFT_WARN_ONLY' to make the warning nonfatal"
        ENDIF
-       write(0,"(10(a,/))") (trim(text(n)),n=1,linenr)
+       WRITE(0,*)
+       WRITE(0,"(10(a,/))") (TRIM(text(n)),n=1,linenr)
        CALL juDFT_STOP()
     ENDIF
+    WRITE(0,*)
     write(0,"(10(a,/))") (trim(text(n)),n=1,linenr)
   END SUBROUTINE juDFT_error
 
@@ -161,7 +163,7 @@ CONTAINS
           CALL endXMLOutput()
        END IF
     END IF
-
+    WRITE(0,*)
     WRITE(0,*) "*****************************************"
     WRITE(0,*) "Run finished successfully"
     WRITE(0,*) "Stop message:"
