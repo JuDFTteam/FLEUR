@@ -20,11 +20,13 @@ MODULE m_corespec_io
 !
 !-------------------------------------------------------------------------------
 !
-  SUBROUTINE corespec_init(atoms)
+  SUBROUTINE corespec_init(input,atoms,coreSpecInput)
 
     IMPLICIT NONE
 
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_input),INTENT(IN)         :: input
+    TYPE(t_atoms),INTENT(IN)         :: atoms
+    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
 
     INTEGER                    :: ui,i
     LOGICAL                    :: lexist
@@ -53,6 +55,8 @@ MODULE m_corespec_io
       open(ui,file="corespec_inp",status='old')
       read(ui,nml=csinp)
       close(ui)
+    else if(input%l_coreSpec) THEN
+      csi = coreSpecInput
     else
       return
     endif

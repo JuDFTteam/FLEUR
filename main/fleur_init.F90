@@ -9,7 +9,7 @@
         SUBROUTINE fleur_init(mpi,&
              input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-             oneD,wann,l_opti)
+             oneD,coreSpecInput,wann,l_opti)
           USE m_judft
           USE m_juDFT_init
           USE m_types
@@ -60,6 +60,7 @@
           TYPE(t_kpts)     ,INTENT(OUT):: kpts
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
           TYPE(t_oneD)     ,INTENT(OUT):: oneD
+          TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
           TYPE(t_wann)     ,INTENT(OUT):: wann
           LOGICAL,          INTENT(OUT):: l_opti
 
@@ -160,7 +161,7 @@
                 scale = 1.0
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
-                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,wann,&
+                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
@@ -286,6 +287,7 @@
            
              kpts%specificationType = 0
              atoms%numStatesProvided(:) = 0
+             input%l_coreSpec = .FALSE.
 
              jij%M(:)             = 0.0
              jij%l_magn(:)        =.FALSE.

@@ -97,6 +97,7 @@ CONTAINS
     TYPE(t_hybrid)   :: hybrid
     TYPE(t_oneD)     :: oneD
     TYPE(t_mpi)      :: mpi
+    TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
     TYPE(t_potden)   :: v,vx
 
@@ -120,8 +121,8 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-         sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-         oneD,wann,l_opti)
+                    sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+                    oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
 
@@ -130,11 +131,11 @@ CONTAINS
        IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
           IF (noco%l_noco) THEN
              CALL pldngen(sym,stars,atoms,sphhar,vacuum,&
-                  cell,input,noco,oneD,sliceplot)
+                          cell,input,noco,oneD,sliceplot)
           ENDIF
        ENDIF
        CALL OPTIONAL(mpi,atoms,sphhar,vacuum,DIMENSION,&
-            stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
+                     stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
     ENDIF
     !
     IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
@@ -197,7 +198,7 @@ CONTAINS
                 IF (noco%l_noco) THEN
                    CALL timestart("gen. spin-up and -down density")
                    CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
-                        vacuum,22,cell,input,oneD)
+                                  vacuum,22,cell,input,oneD)
                    CALL timestop("gen. spin-up and -down density")
                 ENDIF
                 !---> pk non-collinear
@@ -243,7 +244,7 @@ CONTAINS
 
              !HF
              IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                  cell,vacuum,oneD,banddos,results,sym,xcpot,v,it  )
+                                                    cell,vacuum,oneD,banddos,results,sym,xcpot,v,it)
              !#endif
 
              DO pc = 1, wann%nparampts
@@ -532,8 +533,8 @@ CONTAINS
              CALL timestart("generation of new charge density (total)")
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* New Charge "
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                  DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-                  enpara,cell,noco,jij,results,oneD)
+                         DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
+                         enpara,cell,noco,jij,results,oneD,coreSpecInput)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e

@@ -15,7 +15,7 @@ MODULE m_rinpXML
 CONTAINS
 SUBROUTINE r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,wann,&
+                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
@@ -55,6 +55,7 @@ SUBROUTINE r_inpXML(&
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
+  TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
   TYPE(t_wann)   ,INTENT(INOUT)  :: wann
   LOGICAL, INTENT(OUT)           :: l_kpts
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
@@ -111,7 +112,7 @@ SUBROUTINE r_inpXML(&
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
   INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
-  INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
+  INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
   INTEGER            :: ldau_l(4), numVac, numU
   INTEGER            :: speciesEParams(0:3)
   INTEGER            :: mrotTemp(3,3,48)
@@ -1653,6 +1654,8 @@ SUBROUTINE r_inpXML(&
   banddos%band = .FALSE.
   banddos%vacdos = .FALSE.
   sliceplot%slice = .FALSE.
+  input%l_coreSpec = .FALSE.
+  input%l_wann = .FALSE.
 
   input%vchk = .FALSE.
   input%cdinf = .FALSE.
@@ -1791,7 +1794,16 @@ SUBROUTINE r_inpXML(&
      END IF
 
      IF (numberNodes.EQ.1) THEN
-        CALL juDFT_error("Reading in eels input not yet implemented!", calledby = "r_inpXML")
+        coreSpecInput%verb = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@verbose'))
+        coreSpecInput%ek0 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eKin'))
+        coreSpecInput%atomType = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomType'))
+        coreSpecInput%lx = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lmax'))
+        coreSpecInput%edge = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeType')))
+        coreSpecInput%edgeidx = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeIndex'))
+        coreSpecInput%emn = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMin'))
+        coreSpecInput%emx = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMax'))
+        tempInt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numPoints'))
+        coreSpecInput%ein = (coreSpecInput%emx - coreSpecInput%emn) / (tempInt - 1.0)
      END IF
 
      ! Read in optional Wannier functions parameters

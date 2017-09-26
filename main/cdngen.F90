@@ -6,9 +6,9 @@
       MODULE m_cdngen
       use m_juDFT
       CONTAINS
-      SUBROUTINE cdngen(eig_id, mpi,input, banddos,sliceplot,vacuum,&
-           dimension,kpts, atoms,sphhar,stars,sym,obsolete,&
-           enpara, cell, noco,jij, results, oneD)
+      SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
+                        dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
+                        enpara,cell,noco,jij,results,oneD,coreSpecInput)
 !
 !     *****************************************************
 !     Charge density generator
@@ -55,6 +55,7 @@
       TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: eig_id
@@ -181,7 +182,7 @@
             CALL timestart("cdngen: cdnval")
             CALL cdnval(eig_id,&
                         mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
-                        sphhar, sym,obsolete, igq_fft, vr,vz(:,:,jspin), oneD,&
+                        sphhar,sym,obsolete,igq_fft,vr,vz(:,:,jspin),oneD,coreSpecInput,&
                         n_mmp(-3:,-3:,:,jspin),results, qpw,rhtxy,rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
             CALL timestop("cdngen: cdnval")
 !-fo
