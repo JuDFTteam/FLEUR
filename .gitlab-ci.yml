@@ -16,20 +16,29 @@ test-gfortran:
   script:
     - apt-get update -qq && apt-get install -y -qq build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev libopenmpi-dev libscalapack-mpi-dev
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
-
+  artifacts:
+     paths:
+       - build/fleur
+       - build/fleur_MPI
+       - build/inpgen
+    
 
 pages:
-  stage: deploy:doc
+  image: ubuntu:16.10
+  stage: deploy
+  cache:
+     paths:
+       - build
   script:
-    - apt-get update -qq && apt-get install doxygen cmake
+    - apt-get update -qq && apt-get install build-essential gfortran gfortran-6 g++-6 gcc-6 binutils-gold git cmake libxml2-dev liblapack-dev libblas-dev libopenmpi-dev libscalapack-mpi-dev doxygen
     - cd /builds/fleur/fleur/build ; make doc
     - mv docs/html/ ../public/
   artifacts:
     paths:
       - public
   # only publish a new site if commits are pushed to the master branch -> stable release
-  only:
-    - release
+  #only:
+  #  - release
 
 
 #build-pgi:
