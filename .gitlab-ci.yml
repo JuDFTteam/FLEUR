@@ -18,6 +18,20 @@ test-gfortran:
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
 
 
+pages:
+  stage: deploy:doc
+  script:
+    - apt-get update -qq && apt-get install doxygen cmake
+    - cd /builds/fleur/fleur/build ; make doc
+    - mv docs/html/ ../public/
+  artifacts:
+    paths:
+      - public
+  # only publish a new site if commits are pushed to the master branch -> stable release
+  only:
+    - release
+
+
 #build-pgi:
 #  image: hopobcn/pgi-ce
 #  stage: build
