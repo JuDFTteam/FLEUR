@@ -1,9 +1,9 @@
 stages:
-   -build
-   -test
-   -deploy
-   -build-pgi
-   -test-pgi
+   - build
+   - test
+   - deploy
+   - build-pgi
+   - test-pgi
 
 build-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -62,4 +62,4 @@ test-pgi:
     - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
     - cd /builds/fleur/fleur/build.debug;ctest
   only:
-     -schedules
+     - schedules
