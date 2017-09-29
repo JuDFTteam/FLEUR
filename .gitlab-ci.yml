@@ -1,3 +1,10 @@
+stages:
+   -build
+   -test
+   -deploy
+   -build-pgi
+   -test-pgi
+
 build-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
@@ -14,13 +21,8 @@ test-gfortran:
        - build
   script:
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
-  artifacts:
-     paths:
-       - build/fleur
-       - build/fleur_MPI
-       - build/inpgen
-    
 
+  
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: deploy
@@ -33,26 +35,31 @@ pages:
   artifacts:
     paths:
       - public
-  # only publish a new site if commits are pushed to the master branch -> stable release
-  #only:
-  #  - release
+      - build/fleur
+      - build/fleur_MPI
+      - build/inpgen
+ 
 
-
-#build-pgi:
-#  image: hopobcn/pgi-ce
-#  stage: build
-#  cache: 
-#     paths:
-#       - build.debug
-#  script:
-#    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev
-#    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
-#test-pgi:
-#  image: hopobcn/pgi-ce
-#  stage: test
-#  cache:
-#     paths:
-#       - build.debug
-#  script:
-#    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
-#    - cd /builds/fleur/fleur/build.debug;ctest
+build-pgi:
+  image: hopobcn/pgi-ce
+  stage: build-pgi
+  cache: 
+     paths:
+       - build.debug
+  script:
+    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev
+    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
+  only:
+    - schedules
+    
+test-pgi:
+  image: hopobcn/pgi-ce
+  stage: test-pgi
+  cache:
+     paths:
+       - build.debug
+  script:
+    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
+    - cd /builds/fleur/fleur/build.debug;ctest
+  only:
+     -schedules
