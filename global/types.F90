@@ -906,7 +906,7 @@ MODULE m_types
      COMPLEX, ALLOCATABLE :: cdomvxy(:,:,:)
 
      ! For density matrix and associated potential matrix
-     COMPLEX, ALLOCATABLE :: mmp_Mat(:,:,:,:)
+     COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
 
      !this type contains two init routines that should be used to allocate
      !memory. You can either specify the datatypes or give the dimensions as integers

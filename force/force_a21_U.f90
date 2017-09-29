@@ -1,6 +1,6 @@
 MODULE m_forcea21U
 CONTAINS
-  SUBROUTINE force_a21_U(nobd,atoms,lmaxb,i_u,itype,isp,we,ne,&
+  SUBROUTINE force_a21_U(nobd,atoms,i_u,itype,isp,we,ne,&
        usdus,v_mmp, acof,bcof,ccof,aveccof,bveccof,cveccof, a21)
     !
     !***********************************************************************
@@ -9,6 +9,7 @@ CONTAINS
     ! Comp.Phys.Comm. 179 (2008) 784-790
     !***********************************************************************
     !
+    USE m_constants
     USE m_types
     IMPLICIT NONE
 
@@ -17,13 +18,13 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)    :: nobd   
-    INTEGER, INTENT (IN)    :: itype,isp,ne,lmaxb
+    INTEGER, INTENT (IN)    :: itype,isp,ne
     INTEGER, INTENT (INOUT) :: i_u ! on input: index for the first U for atom type "itype or higher"
                                    ! on exit: index for the first U for atom type "itype+1 or higher"
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(nobd) 
-    COMPLEX, INTENT (IN) :: v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u)
+    COMPLEX, INTENT (IN) :: v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)

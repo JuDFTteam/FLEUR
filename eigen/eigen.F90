@@ -17,7 +17,7 @@ CONTAINS
     ! nmat, nbasfcn                                   including LO's
     !        g. bihlmayer '96
     !**********************************************************************
-    USE m_constants, ONLY : pi_const,sfp_const
+    USE m_constants
     USE m_types
     USE m_lodpot
     USE m_tlmplm
@@ -83,13 +83,11 @@ CONTAINS
     
     !     ..
     !     .. Local Arrays ..
-    INTEGER, PARAMETER :: lmaxb=3
     INTEGER, ALLOCATABLE :: matind(:,:),kveclo(:)
     INTEGER, ALLOCATABLE :: nv2(:)
     REAL,    ALLOCATABLE :: bkpt(:)
     REAL,    ALLOCATABLE :: eig(:)
 
-    COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
     TYPE(t_tlmplm)  :: td
     TYPE(t_usdus)   :: ud
     TYPE(t_lapw)    :: lapw
@@ -203,7 +201,10 @@ CONTAINS
           matsize = ((DIMENSION%nbasfcn+1)/2)*DIMENSION%nbasfcn
        ENDIF
     ENDIF
-    IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
+    IF (matsize<2) THEN
+       CALL judft_error("Wrong size of matrix",calledby="eigen",&
+                        hint="Your basis might be too large or the parallelization fail or ??")
+    END IF
     ne = DIMENSION%neigd
 
     eig_id=open_eig(&
@@ -248,10 +249,10 @@ CONTAINS
     !  ..
     !  LDA+U
     IF ((atoms%n_u.GT.0)) THEN
-       ALLOCATE( vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins) )
-       CALL u_setup(sym,atoms,lmaxb,sphhar,input, enpara%el0(0:,:,:),v%mt,mpi, vs_mmp,results)
+       ALLOCATE( v%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins) )
+       CALL u_setup(sym,atoms,sphhar,input, enpara%el0(0:,:,:),v,mpi,results)
     ELSE
-       ALLOCATE( vs_mmp(-lmaxb:-lmaxb,-lmaxb:-lmaxb,1,2) )
+       ALLOCATE( v%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2) )
     ENDIF
     !
     !--->    loop over k-points: each can be a separate task
@@ -281,7 +282,7 @@ CONTAINS
        ENDIF
        lh0=1
        CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, v%mt(1,0,1,jsp),lh0,input, td,ud)
-       IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
+       IF (input%l_f) CALL write_tlmplm(td,v%mmpMat,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
 
        !---> pk non-collinear
@@ -292,7 +293,7 @@ CONTAINS
           isp = 2
           CALL timestart("tlmplm")
           CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud)
-          IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,2,2,input%jspins)
+          IF (input%l_f) CALL write_tlmplm(td,v%mmpMat,atoms%n_u>0,2,2,input%jspins)
           CALL timestop("tlmplm")
        ENDIF
        !
@@ -331,7 +332,7 @@ CONTAINS
           IF (.NOT.l_wu) THEN
              CALL timestart("MT Hamiltonian&Overlap")
              CALL hsmt(DIMENSION,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
-                  lmaxb, noco,cell, lapw, bkpt,v%mt, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
+                  lmaxU_const, noco,cell, lapw, bkpt,v%mt,v%mmpMat, oneD,ud, kveclo,td,l_real,hamOvlp)
              CALL timestop("MT Hamiltonian&Overlap")
           ENDIF
           !
@@ -422,7 +423,7 @@ ENDIF
        DEALLOCATE (td%ind,td%tuulo,td%tdulo)
        DEALLOCATE (td%tuloulo)
     END DO ! spin loop ends
-    DEALLOCATE( vs_mmp )
+    DEALLOCATE(v%mmpMat)
     DEALLOCATE (matind)
     IF (l_real) THEN
        DEALLOCATE(hamOvlp%a_r,hamOvlp%b_r)
