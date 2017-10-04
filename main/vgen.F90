@@ -69,8 +69,11 @@ CONTAINS
     TYPE(t_potden),INTENT(OUT)      :: v,vx
     !     ..
     !     .. Scalar Arguments ..
-    LOGICAL, INTENT (IN) :: reap       
-    !     ..
+    LOGICAL, INTENT (IN) :: reap
+
+
+    !     .. Local type instances ..
+    TYPE(t_potden)    :: den
     !     .. Local Scalars ..
     COMPLEX vintcza,xint,rhobar
     INTEGER i,i3,irec2,irec3,ivac,j,js,k,k3,lh,n,nzst1
@@ -90,12 +93,6 @@ CONTAINS
     REAL,    ALLOCATABLE :: vbar(:),af1(:),bf1(:),xp(:,:)
     REAL,    ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
     REAL,    ALLOCATABLE :: tec(:,:), qintc(:,:)
-    !.....density
-    REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
-    COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-    ! ff
-    COMPLEX, ALLOCATABLE :: cdom(:)
-    COMPLEX, ALLOCATABLE :: cdomvz(:,:),cdomvxy(:,:,:)
     !.....potential
     REAL,    ALLOCATABLE :: vr_exx(:,:,:,:)
     REAL,    ALLOCATABLE :: veffr(:,:,:,:)
@@ -125,19 +122,17 @@ CONTAINS
     CALL v%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
     ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
          vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),xp(3,dimension%nspd),&
-         rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd),&
-         qpw(stars%ng3,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd),&
          vpw_exx(stars%ng3,dimension%jspd),vpw_wexx(stars%ng3,dimension%jspd),&
          excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
          vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
-
     CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.false.)
-  
+
+    CALL den%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
     IF (noco%l_noco) THEN
-       ALLOCATE ( cdom(stars%ng3), cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
+       ALLOCATE ( den%cdom(stars%ng3), den%cdomvz(vacuum%nmzd,2),den%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2) )
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
-       ALLOCATE ( cdom(1),cdomvz(1,1),cdomvxy(1,1,1) )
+       ALLOCATE ( den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1) )
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
     !
@@ -152,21 +147,21 @@ CONTAINS
              CALL juDFT_error("vgen:1",calledby ="vgen")
           ENDIF
           CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_OUTPUT_DEN_const,&
-                           0,fermiEnergyTemp,l_qfix,v%iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           0,fermiEnergyTemp,l_qfix,v%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
        ELSE
           CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           0,fermiEnergyTemp,l_qfix,v%iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           0,fermiEnergyTemp,l_qfix,v%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
        END IF
 
        IF (.NOT.l_xyav) THEN
           CALL timestart("Qfix")
-          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.FALSE.,.false., fix)
+          CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, den%pw,den%vacxy,den%mt,den%vacz,.FALSE.,.false., fix)
           CALL timestop("Qfix")
        ENDIF
 
        IF (input%total.OR.reap) THEN
           CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                            0,-1.0,0.0,.FALSE.,v%iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                            0,-1.0,0.0,.FALSE.,v%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
        END IF
 
        WRITE (6,FMT=8000)
@@ -175,11 +170,11 @@ CONTAINS
        !     ---> perform spin summation of charge densities
        !     ---> for the calculation of the coulomb potentials
        IF ( (input%jspins.EQ.2).AND.(.NOT.l_xyav) ) THEN
-          rho(:,0:,:,1)=rho(:,0:,:,1)+rho(:,0:,:,2)
-          qpw(:,1)=qpw(:,1)+qpw(:,2)
+          den%mt(:,0:,:,1)=den%mt(:,0:,:,1)+den%mt(:,0:,:,2)
+          den%pw(:,1)=den%pw(:,1)+den%pw(:,2)
           IF (input%film) THEN
-             rhtxy(:,:,:,1)=rhtxy(:,:,:,1)+rhtxy(:,:,:,2)
-             rht(:,:,1) = rht(:,:,1) + rht(:,:,2)
+             den%vacxy(:,:,:,1)=den%vacxy(:,:,:,1)+den%vacxy(:,:,:,2)
+             den%vacz(:,:,1) = den%vacz(:,:,1) + den%vacz(:,:,2)
           END IF
        END IF
        !
@@ -194,17 +189,17 @@ CONTAINS
     ENDIF ! (mpi%irank == 0)
 
 #ifdef CPP_MPI
-       CALL MPI_BCAST(rho,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
 
     CALL timestart("psqpw")      
     CALL psqpw(mpi, atoms,sphhar,stars,vacuum, dimension,cell,input,sym,oneD,&
-         qpw,rho,rht,l_xyav, psq)
+         den%pw,den%mt,den%vacz,l_xyav, psq)
     CALL timestop("psqpw")
     IF (mpi%irank == 0) THEN
 
        IF (l_xyav) THEN        ! write out xy-averaged density & stop
-          CALL xy_av_den(stars,vacuum, cell,psq,rht)
+          CALL xy_av_den(stars,vacuum, cell,psq,den%vacz)
           CALL juDFT_error("xy-averaged density calculated", calledby ="vgen")
        ENDIF
 
@@ -214,7 +209,7 @@ CONTAINS
           CALL timestart("coulomb potential")
 
           !---> generates the m=0,gz=0 component of the vacuum potential
-          CALL od_vvac(stars,vacuum,cell, psq,rht, v%vacz)
+          CALL od_vvac(stars,vacuum,cell, psq,den%vacz, v%vacz)
 
           !---> generation of the vacuum warped potential components and
           !---> interstitial pw potential
@@ -222,7 +217,7 @@ CONTAINS
 
           CALL od_vvacis(oneD%odi%n2d,dimension,vacuum,oneD%odi%nq2,&
                oneD%odi%kv,cell,oneD%odi%M,stars,oneD%odi%nst2,&
-               oneD, rht,rhtxy,psq,v%vacz,sym, v%vacxy,v%pw)
+               oneD, den%vacz,den%vacxy,psq,v%vacz,sym, v%vacxy,v%pw)
           CALL timestop("coulomb potential")
 
           !+odim
@@ -230,10 +225,10 @@ CONTAINS
           !     ----> potential in the  vacuum  region
           !       
           CALL timestart("p vac") 
-          CALL vvac(vacuum,stars, cell,sym,input, psq,rht, v%vacz,rhobar,sig1dh,vz1dh)
+          CALL vvac(vacuum,stars, cell,sym,input, psq,den%vacz, v%vacz,rhobar,sig1dh,vz1dh)
           CALL vvacis(stars,vacuum, sym,cell, psq, input, v%vacxy)
 
-          CALL vvacxy(stars,vacuum,cell,sym,input, rhtxy, v%vacxy, alphm)
+          CALL vvacxy(stars,vacuum,cell,sym,input, den%vacxy, v%vacxy, alphm)
           CALL timestop("p vac")
        END IF
        !     ------------------------------------------
@@ -301,7 +296,7 @@ CONTAINS
     !     ---> potential in the muffin-tin spheres
 
     CALL timestart("p vmts")
-    CALL vmts(mpi, stars,sphhar,atoms, sym,cell,oneD, v%pw,rho, v%mt)
+    CALL vmts(mpi, stars,sphhar,atoms, sym,cell,oneD, v%pw,den%mt, v%mt)
     !     --------------------------------------------
     CALL timestop("p vmts")
     IF (mpi%irank == 0) THEN
@@ -378,7 +373,7 @@ CONTAINS
           !
           results%te_vcoul = 0.0
           CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
-               qpw,vpw_w, rhtxy,v%vacxy, rht,v%vacz, rho,v%mt, results%te_vcoul)
+               den%pw,vpw_w, den%vacxy,v%vacxy, den%vacz,v%vacz, den%mt,v%mt, results%te_vcoul)
 
           WRITE (6,FMT=8030) results%te_vcoul
           WRITE (16,FMT=8030) results%te_vcoul
@@ -392,7 +387,7 @@ CONTAINS
              CALL timestart("fleur_vdW")
              ! calculate vdW contribution to potential
              CALL fleur_vdW(mpi,atoms,sphhar,stars, input,dimension,&
-                  cell,sym,oneD,vacuum, qpw(:,1),rho(:,:,:,1), vpw_w(:,1),v%mt(:,:,:,:))
+                  cell,sym,oneD,vacuum, den%pw(:,1),den%mt(:,:,:,1), vpw_w(:,1),v%mt(:,:,:,:))
              CALL timestop("fleur_vdW")
 
           ENDIF
@@ -405,7 +400,7 @@ CONTAINS
        !
        IF (input%jspins.EQ.2) THEN
           CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           0,fermiEnergyTemp,l_qfix,v%iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                           0,fermiEnergyTemp,l_qfix,v%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
           v%mt(:,0:,:,2) = v%mt(:,0:,:,1)
           v%pw(:,2) = v%pw(:,1)
           IF (input%film) THEN
@@ -464,14 +459,14 @@ CONTAINS
              IF (.NOT.oneD%odi%d1) THEN
 
                 CALL vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,&
-                     rhtxy,rht,cdomvxy,cdomvz, v%vacxy,v%vacz, excxy,excz)
+                     den%vacxy,den%vacz,den%cdomvxy,den%cdomvz, v%vacxy,v%vacz, excxy,excz)
 
              ELSE
                 CALL judft_error("OneD broken")
                 !           CALL vvacxc(&
                 !     &                 stars,oneD%M,vacuum,odi%n2d,dimension,ifftd2,&
                 !     &                 xcpot,input,odi%nq2,&
-                !     &                 odi%nst2,rhtxy,rht,cdomvxy,cdomvz,noco,&
+                !     &                 odi%nst2,den%vacxy,den%vacz,den%cdomvxy,den%cdomvz,noco,&
                 !     &                 odi%kimax2%igf,odl%pgf,&
                 !     &                 v%vacxy,v%vacz,&
                 !     &                 excxy,excz)
@@ -485,12 +480,12 @@ CONTAINS
 
                 CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
                      cell,xcpot,input,obsolete, ichsmrg,&
-                     rhtxy,rht,cdomvxy,cdomvz, v%vacxy,v%vacz,rhmn, excxy,excz)
+                     den%vacxy,den%vacz,den%cdomvxy,den%cdomvz, v%vacxy,v%vacz,rhmn, excxy,excz)
 
              ELSE
                 CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
                      cell,xcpot,input,obsolete, ichsmrg,&
-                     rhtxy,rht,cdomvxy,cdomvz, v%vacxy,v%vacz,rhmn, excxy,excz)
+                     den%vacxy,den%vacz,den%cdomvxy,den%cdomvz, v%vacxy,v%vacz,rhmn, excxy,excz)
 
              END IF
 
@@ -512,12 +507,12 @@ CONTAINS
           IF ( .NOT.xcpot%is_gga() ) THEN
              ! LDA
 
-             CALL visxc(ifftd,stars,noco,xcpot,input, qpw,cdom,&
+             CALL visxc(ifftd,stars,noco,xcpot,input, den%pw,den%cdom,&
                   v%pw,vpw_w,vx%pw,vxpw_w, excpw)
 
           ELSE ! GGA
 
-             CALL visxcg(ifftd,stars,sym, ifftxc3d, cell, qpw,cdom, xcpot,input,&
+             CALL visxcg(ifftd,stars,sym, ifftxc3d, cell, den%pw,den%cdom, xcpot,input,&
                   obsolete,noco, rhmn,ichsmrg, v%pw,vpw_w,vx%pw,vxpw_w, excpw)
 
           END IF
@@ -529,7 +524,7 @@ CONTAINS
              "visxcwb needs to be reprogrammed according to visxcg.f"
           CALL juDFT_error("visxcwb",calledby ="vgen")
           !sb       CALL visxcwb(
-          !sb  >                 qpw,kimax,igfft,pgfft,ufft,
+          !sb  >                 den%pw,kimax,igfft,pgfft,ufft,
           !sb  >                 icorr,total,krla,
           !sb  >                 igrd,ndvgrd,idsprs,isprsv,
           !sb  >                 idsprsi,chng,sprsv,lwb,rhmn,ichsmrg,
@@ -589,16 +584,16 @@ CONTAINS
 #ifdef CPP_MPI
        CALL MPI_BCAST(atoms%vr0,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(input%efield%vslope,1,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(rho,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(v%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(rhmn,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(ichsmrg,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 #endif
        IF (xcpot%is_gga()) THEN
-          CALL vmtxcg(dimension,mpi,sphhar,atoms, rho,xcpot,input,sym,&
+          CALL vmtxcg(dimension,mpi,sphhar,atoms, den%mt,xcpot,input,sym,&
                obsolete, vx%mt,v%mt,rhmn,ichsmrg, excr)
        ELSE
-          CALL vmtxc(DIMENSION,sphhar,atoms, rho,xcpot,input,sym, v%mt, excr,vx%mt)
+          CALL vmtxc(DIMENSION,sphhar,atoms, den%mt,xcpot,input,sym, v%mt, excr,vx%mt)
        ENDIF
 
 
@@ -676,9 +671,9 @@ CONTAINS
        !
        IF (input%total) THEN
 
-          IF (noco%l_noco) THEN ! load qpw,rht,rhtxy from 'cdn'-file
+          IF (noco%l_noco) THEN ! load den%pw,den%vacz,den%vacxyxy from 'cdn'-file
              CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                              0,fermiEnergyTemp,l_qfix,v%iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                              0,fermiEnergyTemp,l_qfix,v%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
           ENDIF
           !
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2
@@ -710,8 +705,8 @@ CONTAINS
 8050         FORMAT (/,10x,'density-effective potential integrals for spin ',i2,/)
 
              CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
-                  qpw(:,js),veffpw_w(:,js), rhtxy(:,:,:,js),v%vacxy(:,:,:,js),&
-                  rht(:,:,js),v%vacz(:,:,js), rho(1,0,1,js),veffr(1,0,1,js), results%te_veff)
+                  den%pw(:,js),veffpw_w(:,js), den%vacxy(:,:,:,js),v%vacxy(:,:,:,js),&
+                  den%vacz(:,:,js),v%vacz(:,:,js), den%mt(1,0,1,js),veffr(1,0,1,js), results%te_veff)
 
              !HF
              IF (hybrid%l_addhf.and.( xcpot%is_hybrid()  )  ) THEN
@@ -745,17 +740,17 @@ CONTAINS
              IF (input%jspins.EQ.2) THEN
                 nat = 1
                 DO n = 1,atoms%ntype
-                   rho(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) = rho(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) + rho(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,input%jspins)
+                   den%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) = den%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) + den%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,input%jspins)
 
                    nat = nat + atoms%neq(n)
                 ENDDO
-                qpw(:stars%ng3,1) = qpw(:stars%ng3,1) + qpw(:stars%ng3,input%jspins)
+                den%pw(:stars%ng3,1) = den%pw(:stars%ng3,1) + den%pw(:stars%ng3,input%jspins)
                 IF (input%film) THEN
-                   rhtxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,1) = &
-                        rhtxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,1) + &
-                        rhtxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,input%jspins)
-                   rht(:vacuum%nmz,:vacuum%nvac,1) = rht(:vacuum%nmz,:vacuum%nvac,1) +&
-                        rht(:vacuum%nmz,:vacuum%nvac,input%jspins)
+                   den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,1) = &
+                        den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,1) + &
+                        den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,input%jspins)
+                   den%vacz(:vacuum%nmz,:vacuum%nvac,1) = den%vacz(:vacuum%nmz,:vacuum%nvac,1) +&
+                        den%vacz(:vacuum%nmz,:vacuum%nvac,input%jspins)
                 END IF
              END IF
              WRITE (6,FMT=8070)
@@ -764,7 +759,7 @@ CONTAINS
 
              results%te_exc = 0.0
              CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
-                  qpw(:,1),excpw(1), rhtxy,excxy, rht,excz, rho,excr, results%te_exc)
+                  den%pw(:,1),excpw(1), den%vacxy,excxy, den%vacz,excz, den%mt,excr, results%te_exc)
              WRITE (6,FMT=8080) results%te_exc
              WRITE (16,FMT=8080) results%te_exc
 
