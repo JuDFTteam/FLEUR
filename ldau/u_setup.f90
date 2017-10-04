@@ -24,6 +24,7 @@ CONTAINS
     USE m_vmmp
     USE m_types
     USE m_constants
+    USE m_cdn_io
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -38,7 +39,7 @@ CONTAINS
     INTEGER itype,ispin,j,k,l,jspin,urec,i_u
     INTEGER noded,nodeu,ios,lty(atoms%n_u)
     REAL wronk
-    LOGICAL n_mmp_exist,n_exist
+    LOGICAL n_mmp_exist,n_exist, l_error
     CHARACTER*8 l_type*2,l_form*9
     CHARACTER*12 ::filename
     REAL f(atoms%jmtd,2),g(atoms%jmtd,2),theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
@@ -48,9 +49,7 @@ CONTAINS
     !
     ! look, whether density matrix exists already:
     !
-    filename="n_mmp_mat"
-    INQUIRE (file=filename,exist=n_mmp_exist)
-    IF (n_mmp_exist.AND.atoms%n_u>0) THEN
+    IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
        !
        ! calculate slater integrals from u and j
        !
@@ -74,10 +73,8 @@ CONTAINS
        ! read density matrix
        !
        ALLOCATE (ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-       OPEN (69,file=filename,status='unknown',form='formatted')
-       READ (69,9000) ns_mmp
-9000   FORMAT(7f20.13)
-       CLOSE (69)
+       CALL readDensityMatrix(input,atoms,ns_mmp,l_error)
+       IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='u_setup')
        !
        ! check for possible rotation of n_mmp
        !

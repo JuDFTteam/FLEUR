@@ -20,6 +20,7 @@ MODULE m_cdn_io
    USE m_wrtdop
    USE m_cdnpot_io_hdf
    USE m_cdnpot_io_common
+   USE m_constants
 #ifdef CPP_HDF
    USE hdf5
 #endif
@@ -29,7 +30,9 @@ MODULE m_cdn_io
    PUBLIC printDensityFileInfo
    PUBLIC readDensity, writeDensity
    PUBLIC isDensityFilePresent, isCoreDensityPresent
+   PUBLIC isDensityMatrixPresent
    PUBLIC readCoreDensity, writeCoreDensity
+   PUBLIC readDensityMatrix
    PUBLIC readStars, writeStars
    PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
@@ -1154,6 +1157,60 @@ MODULE m_cdn_io
 
    END SUBROUTINE readStepfunction
 
+   SUBROUTINE readDensityMatrix(input, atoms, n_mmp, l_error)
+
+      TYPE(t_input), INTENT(IN)  :: input
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      COMPLEX, INTENT(OUT)       :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                          -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                          atoms%n_u,input%jspins)
+      LOGICAL, INTENT(OUT)       :: l_error
+
+      INTEGER                    :: mode, ioStatus
+      LOGICAL                    :: l_exist
+      CHARACTER(LEN=30)          :: filename
+
+      l_error = .FALSE.
+      ioStatus = 0
+      CALL getMode(mode)
+
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+         l_exist = .FALSE.
+         IF(.NOT.l_exist) THEN
+            mode = CDN_STREAM_MODE
+         END IF
+      END IF
+
+      IF(mode.EQ.CDN_STREAM_MODE) THEN
+         INQUIRE(FILE='cdn.str',EXIST=l_exist)
+         IF (l_exist) THEN
+            STOP 'cdn.str code path not yet implemented!'
+         END IF
+         IF (.NOT.l_exist) THEN
+            mode = CDN_DIRECT_MODE
+         END IF
+      END IF
+
+      IF (mode.EQ.CDN_DIRECT_MODE) THEN
+         filename = 'n_mmp_mat'
+         INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+         IF(.NOT.l_exist) THEN
+            l_error = .TRUE.
+            RETURN
+         END IF
+
+         OPEN (69,file=TRIM(ADJUSTL(filename)),status='unknown',form='formatted')
+         READ (69,'(7f20.13)',IOSTAT=ioStatus) n_mmp
+         CLOSE(69)
+!         IF (ioStatus.NE.0) THEN
+!            l_error = .TRUE.
+!            RETURN
+!         END IF
+
+      END IF
+   
+   END SUBROUTINE readDensityMatrix
+
    SUBROUTINE setStartingDensity(l_noco)
 
       LOGICAL,INTENT(IN) :: l_noco
@@ -1431,5 +1488,38 @@ MODULE m_cdn_io
       isCoreDensityPresent = .FALSE.
    END FUNCTION isCoreDensityPresent
 
+   LOGICAL FUNCTION isDensityMatrixPresent()
+
+      LOGICAL             :: l_exist
+      INTEGER             :: mode
+      CHARACTER(LEN=12)   :: filename
+
+      CALL getMode(mode)
+
+      filename="n_mmp_mat"
+      INQUIRE (file=filename,exist=l_exist)
+      IF(l_exist) THEN
+         isDensityMatrixPresent = l_exist
+         RETURN
+      END IF
+
+!      IF (mode.EQ.CDN_STREAM_MODE) THEN
+!         STOP 'Not yet implemented! (CDN_STREAM_MODE in isDensityMatrixPresent)'
+!      END IF
+
+      IF (mode.EQ.CDN_HDF5_MODE) THEN
+!#ifdef CPP_HDF
+!         STOP 'Not yet implemented (uncomment line)!'
+!         l_exist = isDensityMatrixPresentHDF()
+!         IF(l_exist) THEN
+!            isDensityMatrixPresent = l_exist
+!            RETURN
+!         END IF
+!#endif
+      END IF
+
+      isDensityMatrixPresent = .FALSE.
+
+   END FUNCTION isDensityMatrixPresent
 
 END MODULE m_cdn_io
