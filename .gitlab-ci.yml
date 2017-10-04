@@ -41,7 +41,7 @@ pages:
  
 
 build-pgi:
-  image: hopobcn/pgi-ce
+  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
   stage: build-pgi
   cache: 
      paths:
@@ -51,9 +51,12 @@ build-pgi:
     - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
   only:
     - schedules
+    - triggers
+    - web
+ 
     
 test-pgi:
-  image: hopobcn/pgi-ce
+  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
   stage: test-pgi
   cache:
      paths:
@@ -63,3 +66,5 @@ test-pgi:
     - cd /builds/fleur/fleur/build.debug;ctest
   only:
      - schedules
+     - web
+     - triggers
