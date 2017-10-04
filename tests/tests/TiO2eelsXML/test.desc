@@ -1,0 +1,9 @@
+$test_name="Fleur TiO2 EELS spectrum XML";
+$test_code="Fleur";
+$test_stages=2;
+$test_desc=<<EOF
+Simple test of Fleur with two steps:
+1.Generate a starting density and run a single iteration
+2.Generate EELS spectrum and compare some values
+EOF
+;

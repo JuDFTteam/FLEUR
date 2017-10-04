@@ -119,7 +119,7 @@ SUBROUTINE r_inpXML(&
   REAL               :: tauTemp(3,48)
   REAL               :: bk(3)
   LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-  LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
+  LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
   REAL               :: weightScale, eParamUp, eParamDown
@@ -1794,12 +1794,15 @@ SUBROUTINE r_inpXML(&
      END IF
 
      IF (numberNodes.EQ.1) THEN
-        coreSpecInput%verb = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@verbose'))
+        coreSpecInput%verb = 0
+        tempBool = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@verbose'))
+        IF(tempBool) coreSpecInput%verb = 1
         coreSpecInput%ek0 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eKin'))
         coreSpecInput%atomType = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomType'))
         coreSpecInput%lx = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lmax'))
         coreSpecInput%edge = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeType')))
-        coreSpecInput%edgeidx = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeIndex'))
+        coreSpecInput%edgeidx(:) = 0
+        coreSpecInput%edgeidx(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeIndex'))
         coreSpecInput%emn = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMin'))
         coreSpecInput%emx = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMax'))
         tempInt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numPoints'))

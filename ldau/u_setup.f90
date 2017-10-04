@@ -17,12 +17,13 @@ MODULE m_usetup
   !     Extension to multiple U per atom type  G.M. 2017              |
   !-------------------------------------------------------------------+
 CONTAINS
-  SUBROUTINE u_setup(sym,atoms,lmaxb,sphhar, input,el,vr,mpi, vs_mmp,results,number)
+  SUBROUTINE u_setup(sym,atoms,sphhar, input,el,pot,mpi,results)
     USE m_umtx
     USE m_uj2f
     USE m_nmat_rot
     USE m_vmmp
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -30,14 +31,9 @@ CONTAINS
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(INOUT)     :: atoms !n_u might be modified if no density matrix is found
+    TYPE(t_potden),INTENT(INOUT)    :: pot
 
-    ! ... Arguments ...
-    INTEGER, INTENT (IN) :: lmaxb  
-
-    REAL,    INTENT (IN) :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
-    REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,ntype,jspd)
-    COMPLEX,INTENT (OUT)::vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins)
-    INTEGER,INTENT(IN),OPTIONAL::number
+    REAL,    INTENT(IN)           :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
     ! ... Local Variables ...
     INTEGER itype,ispin,j,k,l,jspin,urec,i_u
     INTEGER noded,nodeu,ios,lty(atoms%n_u)
@@ -53,9 +49,6 @@ CONTAINS
     ! look, whether density matrix exists already:
     !
     filename="n_mmp_mat"
-    IF (PRESENT(number)) THEN
-       WRITE(filename,"('n_mmp_mat.',i0)") number
-    ENDIF
     INQUIRE (file=filename,exist=n_mmp_exist)
     IF (n_mmp_exist.AND.atoms%n_u>0) THEN
        !
@@ -66,21 +59,21 @@ CONTAINS
        !
        ! set up e-e- interaction matrix
        !
-       ALLOCATE ( u(-lmaxb:lmaxb,-lmaxb:lmaxb,&
-            -lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins) )
+       ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                   -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
        DO ispin = 1, 1 ! input%jspins
           f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
           f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
           f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
           f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-          CALL umtx(atoms,lmaxb,f0(1,ispin),&
+          CALL umtx(atoms,f0(1,ispin),&
                     f2(1,ispin),f4(1,ispin),f6(1,ispin),&
-                    u(-lmaxb,-lmaxb,-lmaxb,-lmaxb,1,ispin) )
+                    u(-lmaxU_const,-lmaxU_const,-lmaxU_const,-lmaxU_const,1,ispin) )
        END DO
        !
        ! read density matrix
        !
-       ALLOCATE (ns_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,input%jspins))
+       ALLOCATE (ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
        OPEN (69,file=filename,status='unknown',form='formatted')
        READ (69,9000) ns_mmp
 9000   FORMAT(7f20.13)
@@ -110,8 +103,8 @@ CONTAINS
        !
        ! calculate potential matrix and total energy correction
        !
-       CALL v_mmp(sym,atoms,input%jspins,lmaxb,ns_mmp,u,f0,f2,&
-                  vs_mmp,results)
+       CALL v_mmp(sym,atoms,input%jspins,ns_mmp,u,f0,f2,&
+                  pot%mmpMat,results)
        IF (mpi%irank.EQ.0) THEN
           DO jspin = 1,input%jspins
              WRITE (6,'(a7,i3)') 'spin #',jspin
@@ -128,7 +121,7 @@ CONTAINS
                 ELSE
                    WRITE (6,*) 'using the atomic limit of LDA+U '
                 ENDIF
-                WRITE (6,l_form) ((vs_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                WRITE (6,l_form) ((pot%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
              END DO
           END DO
           WRITE (6,*) results%e_ldau
@@ -139,9 +132,8 @@ CONTAINS
           WRITE (*,*) 'no density matrix found ... skipping LDA+U'
           WRITE(*,*) "File:",filename
        ENDIF
-       vs_mmp(:,:,:,:) = CMPLX(0.0,0.0)
+       pot%mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
        results%e_ldau = 0.0
-       atoms%n_u = 0
     ENDIF
 
     RETURN

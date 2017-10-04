@@ -262,7 +262,7 @@ MODULE m_types
      INTEGER,          ALLOCATABLE :: igrd(:)
      INTEGER,          ALLOCATABLE :: krla(:)
      LOGICAL,          ALLOCATABLE :: relcor(:)
-     !lda_u information(ntype)
+     !lda_u information(size: atoms%n_u)
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
@@ -893,11 +893,21 @@ MODULE m_types
 
 
   TYPE t_potden
+     ! General variables and arrays
      INTEGER             :: iter
      COMPLEX,ALLOCATABLE :: pw(:,:)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
      REAL,ALLOCATABLE    :: vacz(:,:,:)
      COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
+
+     ! For density only (noco case)
+     COMPLEX, ALLOCATABLE :: cdom(:)
+     COMPLEX, ALLOCATABLE :: cdomvz(:,:)
+     COMPLEX, ALLOCATABLE :: cdomvxy(:,:,:)
+
+     ! For density matrix and associated potential matrix
+     COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
+
      !this type contains two init routines that should be used to allocate
      !memory. You can either specify the datatypes or give the dimensions as integers
      !See implementation below!
