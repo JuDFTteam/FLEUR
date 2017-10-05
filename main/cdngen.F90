@@ -8,7 +8,8 @@
       CONTAINS
       SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                         dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
-                        enpara,cell,noco,jij,results,oneD,coreSpecInput)
+                        enpara,cell,noco,jij,results,oneD,coreSpecInput,&
+                        outDen)
 !
 !     *****************************************************
 !     Charge density generator
@@ -16,7 +17,7 @@
 !         core routines for the core contribution
 !     *****************************************************
 !
-      USE m_constants, ONLY : pi_const,sfp_const
+      USE m_constants
       USE m_umix
       USE m_prpqfftmap
       USE m_cdnval
@@ -56,6 +57,7 @@
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
+      TYPE(t_potden),INTENT(INOUT) :: outDen
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: eig_id
@@ -80,7 +82,6 @@
       REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
       COMPLEX,ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
       COMPLEX,ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-      COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
       CHARACTER(LEN=20)   :: attributes(4)
 !---> pk non-collinear
       REAL    rhoint,momint,alphdiff(atoms%ntype)
@@ -108,6 +109,9 @@
 #endif
 
       DEALLOCATE ( vpw,vzxy )
+
+      CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
+
       ALLOCATE ( qpw(stars%ng3,dimension%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd) )
       ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd),rht(vacuum%nmzd,2,dimension%jspd) )
 !
@@ -126,7 +130,8 @@
          INQUIRE(file='enpara',exist=l_enpara)
          IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
       ENDIF
-      ALLOCATE (cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+      ALLOCATE (outDen%cdom(stars%ng3),outDen%cdomvz(vacuum%nmzd,2))
+      ALLOCATE (outDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
       ALLOCATE (qa21(atoms%ntype))
       ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
       ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
@@ -138,15 +143,16 @@
          qa21(:) = cmplx(0.0,0.0)
          qvac(:,:,:,:) = 0.0 
          qvlay(:,:,:,:,:) = 0.0
-         rho(:,:,:,:) = 0.0
-         qpw(:,:) = cmplx(0.0,0.0)
-         cdom(:) =  cmplx(0.0,0.0)
+         outDen%mt(:,:,:,:) = 0.0
+         outDen%pw(:,:) = cmplx(0.0,0.0)
+         outDen%cdom(:) =  cmplx(0.0,0.0)
          IF (input%film) THEN
-            rht(:,:,:) = 0.0
-            cdomvz(:,:) = cmplx(0.0,0.0)
-            rhtxy(:,:,:,:) = cmplx(0.0,0.0)
-            cdomvxy(:,:,:) = cmplx(0.0,0.0)
+            outDen%vacz(:,:,:) = 0.0
+            outDen%cdomvz(:,:) = cmplx(0.0,0.0)
+            outDen%vacxy(:,:,:,:) = cmplx(0.0,0.0)
+            outDen%cdomvxy(:,:,:) = cmplx(0.0,0.0)
          END IF
+         outDen%iter = iter
         
 !--->    Set up pointer for backtransformation of from g-vector in
 !        positive domain fof carge density fftibox into stars
@@ -160,12 +166,11 @@
 !--->    LDA+U: initialise density-matrix if needed
 !
          IF (atoms%n_u.GT.0) THEN
-            ALLOCATE (n_mmp(-3:3,-3:3,atoms%n_u,input%jspins))
-            n_mmp(:,:,:,:) = cmplx(0.0,0.0)
+            ALLOCATE (outDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
          ELSE
-            ALLOCATE (n_mmp(-3:-3,-3:-3,1,input%jspins))
+            ALLOCATE (outDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,input%jspins))
          ENDIF
-         n_mmp = CMPLX(0.0,0.0)
+         outDen%mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
 
 !
 !--->    in a non-collinear calcuation where the off-diagonal part of
@@ -183,20 +188,20 @@
             CALL cdnval(eig_id,&
                         mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
                         sphhar,sym,obsolete,igq_fft,vr,vz(:,:,jspin),oneD,coreSpecInput,&
-                        n_mmp(-3:,-3:,:,jspin),results, qpw,rhtxy,rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
+                        outDen%mmpMat(-lmaxU_const:,-lmaxU_const:,:,jspin),results, outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,&
+                        outDen%cdom,outDen%cdomvz,outDen%cdomvxy,qvac,qvlay,qa21, chmom,clmom)
             CALL timestop("cdngen: cdnval")
 !-fo
          END DO
 !-lda+U
-      IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,n_mmp)
-      DEALLOCATE (n_mmp)
+      IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,outDen%mmpMat)
 !-lda-U
 !+t3e
       IF (mpi%irank.EQ.0) THEN
 !-t3e
          IF (l_enpara) CLOSE (40)
 
-         CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, qpw,rho,rht,.TRUE., qtot,dummy)
+         CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, outDen%pw,outDen%mt,outDen%vacz,.TRUE., qtot,dummy)
          CALL closeXMLElement('valenceDensity')
 !
 !---> changes
@@ -228,7 +233,7 @@
          DO jspin = 1,input%jspins
             IF ((input%jspins.EQ.2).AND.(mpi%irank.EQ.0)) THEN
                DO n = 1,atoms%ntype
-                  svdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+                  svdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
                END DO
             END IF
 !
@@ -236,16 +241,16 @@
             IF (.NOT.sliceplot%slice) THEN
 !     ---> add in core density
                IF (mpi%irank.EQ.0) THEN
-                  CALL cored(input,jspin,atoms, rho,dimension, sphhar, vr(:,0,:,jspin), qint,rh,tec,seig)
+                  CALL cored(input,jspin,atoms, outDen%mt,dimension, sphhar, vr(:,0,:,jspin), qint,rh,tec,seig)
                   rhTemp(:,:,jspin) = rh(:,:,jspin)
                   results%seigc = results%seigc + seig
                   IF (input%jspins.EQ.2) THEN
                      DO  n = 1,atoms%ntype
-                        stdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+                        stdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
                      END DO
                   END IF
                END IF  ! mpi%irank = 0
-!     ---> add core tail charge to qpw
+!     ---> add core tail charge to outDen%pw
                IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
 !--->             pk non-collinear
 !--->             add the coretail-charge to the constant interstitial
@@ -256,22 +261,23 @@
                         rhoint  = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
                         momint  = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
 !--->                   rho_11
-                        qpw(1,1) = qpw(1,1) + rhoint + momint*cos(noco%beta(ityp))
+                        outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(ityp))
 !--->                   rho_22
-                        qpw(1,2) = qpw(1,2) + rhoint - momint*cos(noco%beta(ityp))
+                        outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(ityp))
 !--->                   real part rho_21
-                        cdom(1) = cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
+                        outDen%cdom(1) = outDen%cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
 !--->                   imaginary part rho_21
-                        cdom(1) = cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
+                        outDen%cdom(1) = outDen%cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
                      END DO
                   END IF
 !--->          pk non-collinear
                ELSE IF (input%ctail) THEN
-                  CALL cdnovlp(mpi,&
-                     sphhar,stars,atoms,sym, dimension,vacuum, cell, input,oneD,l_st, jspin,rh(:,:,jspin), qpw,rhtxy,rho,rht)
+                  CALL cdnovlp(mpi,sphhar,stars,atoms,sym, dimension,vacuum,&
+                               cell, input,oneD,l_st, jspin,rh(:,:,jspin),&
+                               outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
                ELSE IF (mpi%irank.EQ.0) THEN
                   DO ityp = 1,atoms%ntype
-                     qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
+                     outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
                   END DO
                END IF
 !     block 1 unnecessary for slicing: end
@@ -288,7 +294,7 @@
          IF ((input%jspins.EQ.2).AND.(mpi%irank.EQ.0)) THEN
             DO jspin = 1,input%jspins
                DO n = 1,atoms%ntype
-                  svdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+                  svdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
                END DO
             END DO
          END IF
@@ -297,12 +303,12 @@
          IF (.NOT.sliceplot%slice) THEN
 !     ---> add in core density
            IF (mpi%irank.EQ.0) THEN
-            CALL coredr(input,atoms,seig, rho,dimension,sphhar,vr(:,0,:,:),qint,rh)
+            CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vr(:,0,:,:),qint,rh)
             results%seigc = results%seigc + seig
             IF (input%jspins.EQ.2) THEN
                DO jspin = 1,input%jspins
                   DO n = 1,atoms%ntype
-                     stdn(n,jspin) = rho(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+                     stdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
                   END DO
                END DO
             END IF
@@ -317,13 +323,13 @@
                   rhoint  = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
                   momint  = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
 !--->             rho_11
-                  qpw(1,1) = qpw(1,1) + rhoint + momint*cos(noco%beta(ityp))
+                  outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(ityp))
 !--->             rho_22
-                  qpw(1,2) = qpw(1,2) + rhoint - momint*cos(noco%beta(ityp))
+                  outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(ityp))
 !--->             real part rho_21
-                  cdom(1) = cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
+                  outDen%cdom(1) = outDen%cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
 !--->             imaginary part rho_21
-                  cdom(1) = cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
+                  outDen%cdom(1) = outDen%cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
                ENDDO
 !---> pk non-collinear
             ELSE
@@ -331,10 +337,10 @@
                   IF (input%ctail) THEN
 !+gu hope this works as well
                      CALL cdnovlp(mpi, sphhar,stars,atoms,sym,&
-                          dimension,vacuum, cell, input,oneD,l_st, jspin,rh(1,1,jspin), qpw,rhtxy,rho,rht)
+                          dimension,vacuum, cell, input,oneD,l_st, jspin,rh(1,1,jspin), outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
                   ELSEIF (mpi%irank.EQ.0) THEN
                      DO ityp = 1,atoms%ntype
-                        qpw(1,jspin) = qpw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
+                        outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
                      ENDDO
                   END IF
                END DO
@@ -347,15 +353,15 @@
 !     block 2 unnecessary for slicing: begin
       IF (.NOT.sliceplot%slice) THEN
          CALL openXMLElementNoAttributes('allElectronCharges')
-         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, qpw,rhtxy,rho,rht,.TRUE.,.true., fix)
+         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD, outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,.TRUE.,.true., fix)
          CALL closeXMLElement('allElectronCharges')
 !---> pk non-collinear
          IF (noco%l_noco) THEN
             !--->    fix also the off-diagonal part of the density matrix
-            cdom(:stars%ng3) = fix*cdom(:stars%ng3)
+            outDen%cdom(:stars%ng3) = fix*outDen%cdom(:stars%ng3)
          IF (input%film) THEN
-            cdomvz(:,:) = fix*cdomvz(:,:)
-            cdomvxy(:,:,:) = fix*cdomvxy(:,:,:)
+            outDen%cdomvz(:,:) = fix*outDen%cdomvz(:,:)
+            outDen%cdomvxy(:,:,:) = fix*outDen%cdomvxy(:,:,:)
          END IF
          ENDIF
 !---> pk non-collinear
@@ -496,12 +502,12 @@
 !
       IF (sliceplot%slice) THEN
          OPEN (20,file='cdn_slice',form='unformatted',status='unknown')
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, iter,rho,qpw,rht,rhtxy)
+         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy)
          IF (noco%l_noco) THEN
-            WRITE (20) (cdom(k),k=1,stars%ng3)
+            WRITE (20) (outDen%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
-               WRITE (20) ((cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
-               WRITE (20) (((cdomvxy(j,k-1,ivac),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
+               WRITE (20) ((outDen%cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
+               WRITE (20) (((outDen%cdomvxy(j,k-1,ivac),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
             ENDIF
          ENDIF
          CLOSE(20) 
@@ -510,10 +516,10 @@
 
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                         CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,iter,&
-                        rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                        outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy,outDen%cdom,outDen%cdomvz,outDen%cdomvxy)
       ENDIF
 
-      DEALLOCATE (cdom,cdomvz,cdomvxy,qvac,qvlay,qa21)
+      DEALLOCATE (qvac,qvlay,qa21)
       DEALLOCATE (qpw,rhtxy,rho,rht,igq_fft)
 
       IF (sliceplot%slice) CALL juDFT_end("sliceplot%slice OK",mpi%irank)

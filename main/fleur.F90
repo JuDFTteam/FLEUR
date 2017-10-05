@@ -571,7 +571,8 @@ CONTAINS
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* New Charge "
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-                         enpara,cell,noco,jij,results,oneD,coreSpecInput)
+                         enpara,cell,noco,jij,results,oneD,coreSpecInput,&
+                         outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e
