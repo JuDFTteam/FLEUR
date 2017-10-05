@@ -9,7 +9,7 @@ MODULE m_eigen
 CONTAINS
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
        sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
-       it,eig_id,results,v,vx)
+       it,eig_id,inDen,results,v,vx)
     !*********************************************************************
     !     sets up and solves the eigenvalue problem for a basis of lapws.
     !
@@ -61,8 +61,9 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_atoms),INTENT(INOUT)  :: atoms!in u_setup n_u might be modified
+    TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(INOUT) :: v,vx
+    TYPE(t_potden),INTENT(INOUT) :: inDen ! inDen%mmpMat is modified in u_setup
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
@@ -250,7 +251,7 @@ CONTAINS
     !  LDA+U
     IF ((atoms%n_u.GT.0)) THEN
        ALLOCATE( v%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins) )
-       CALL u_setup(sym,atoms,sphhar,input, enpara%el0(0:,:,:),v,mpi,results)
+       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,v,mpi,results)
     ELSE
        ALLOCATE( v%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2) )
     ENDIF

@@ -17,7 +17,7 @@ MODULE m_usetup
   !     Extension to multiple U per atom type  G.M. 2017              |
   !-------------------------------------------------------------------+
 CONTAINS
-  SUBROUTINE u_setup(sym,atoms,sphhar, input,el,pot,mpi,results)
+  SUBROUTINE u_setup(sym,atoms,sphhar, input,el,inDen,pot,mpi,results)
     USE m_umtx
     USE m_uj2f
     USE m_nmat_rot
@@ -31,7 +31,8 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
-    TYPE(t_atoms),INTENT(INOUT)     :: atoms !n_u might be modified if no density matrix is found
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_potden),INTENT(INOUT)    :: inDen
     TYPE(t_potden),INTENT(INOUT)    :: pot
 
     REAL,    INTENT(IN)           :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
@@ -39,13 +40,12 @@ CONTAINS
     INTEGER itype,ispin,j,k,l,jspin,urec,i_u
     INTEGER noded,nodeu,ios,lty(atoms%n_u)
     REAL wronk
-    LOGICAL n_mmp_exist,n_exist, l_error
+    LOGICAL n_mmp_exist,n_exist
     CHARACTER*8 l_type*2,l_form*9
     CHARACTER*12 ::filename
     REAL f(atoms%jmtd,2),g(atoms%jmtd,2),theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
     REAL f0(atoms%n_u,input%jspins),f2(atoms%n_u,input%jspins),f4(atoms%n_u,input%jspins),f6(atoms%n_u,input%jspins)
     REAL, ALLOCATABLE :: u(:,:,:,:,:,:)
-    COMPLEX, ALLOCATABLE :: ns_mmp(:,:,:,:)
     !
     ! look, whether density matrix exists already:
     !
@@ -70,12 +70,6 @@ CONTAINS
                     u(-lmaxU_const,-lmaxU_const,-lmaxU_const,-lmaxU_const,1,ispin) )
        END DO
        !
-       ! read density matrix
-       !
-       ALLOCATE (ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-       CALL readDensityMatrix(input,atoms,ns_mmp,l_error)
-       IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='u_setup')
-       !
        ! check for possible rotation of n_mmp
        !
        INQUIRE (file='n_mmp_rot',exist=n_exist)
@@ -95,12 +89,12 @@ CONTAINS
           END DO
           CLOSE (68)
           zero = 0.0
-          CALL nmat_rot(phi,theta,zero,3,atoms%n_u,input%jspins,lty,ns_mmp)
+          CALL nmat_rot(phi,theta,zero,3,atoms%n_u,input%jspins,lty,inDen%mmpMat)
        ENDIF
        !
        ! calculate potential matrix and total energy correction
        !
-       CALL v_mmp(sym,atoms,input%jspins,ns_mmp,u,f0,f2,&
+       CALL v_mmp(sym,atoms,input%jspins,inDen%mmpMat,u,f0,f2,&
                   pot%mmpMat,results)
        IF (mpi%irank.EQ.0) THEN
           DO jspin = 1,input%jspins
@@ -111,7 +105,7 @@ CONTAINS
                 WRITE (l_type,'(i2)') 2*(2*l+1)
                 l_form = '('//l_type//'f12.7)'
                 WRITE (6,'(a20,i3)') 'n-matrix for atom # ',itype
-                WRITE (6,l_form) ((ns_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                WRITE (6,l_form) ((inDen%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
                 WRITE (6,'(a20,i3)') 'V-matrix for atom # ',itype
                 IF (atoms%lda_u(i_u)%l_amf) THEN
                    WRITE (6,*) 'using the around-mean-field limit '
@@ -123,7 +117,7 @@ CONTAINS
           END DO
           WRITE (6,*) results%e_ldau
        ENDIF
-       DEALLOCATE ( u,ns_mmp )
+       DEALLOCATE (u)
     ELSE
        IF (mpi%irank.EQ.0) THEN
           WRITE (*,*) 'no density matrix found ... skipping LDA+U'

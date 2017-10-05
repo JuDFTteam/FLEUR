@@ -108,7 +108,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
     INTEGER:: n,it,ithf,pc
-    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix
+    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix, l_error
     REAL   :: fermiEnergyTemp, fix
     !--- J<
     INTEGER             :: phn
@@ -249,6 +249,11 @@ CONTAINS
              CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                                0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
                                inDen%cdomvz,inDen%cdomvxy)
+             IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
+                ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
+                CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
+                IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
+             END IF
           END IF
 #ifdef CPP_MPI
           CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
@@ -370,7 +375,7 @@ CONTAINS
                                IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Eigenvalue problem "
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
-                                    it,eig_id, results,v,vx)
+                                    it,eig_id,inDen,results,v,vx)
                                eig_idList(pc) = eig_id
                                CALL timestop("eigen")
                                !

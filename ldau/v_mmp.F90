@@ -29,13 +29,13 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms
     !
     ! ..  Arguments ..
-    INTEGER, INTENT(IN)  :: jspins 
-    REAL,    INTENT(IN)  :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                              -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    REAL,    INTENT(IN)  :: f0(atoms%n_u),f2(atoms%n_u)
-    COMPLEX, INTENT(OUT) :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
+    INTEGER, INTENT(IN)    :: jspins 
+    REAL,    INTENT(IN)    :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
+    REAL,    INTENT(IN)    :: f0(atoms%n_u),f2(atoms%n_u)
+    COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
 
-    COMPLEX              :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
+    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
 
     ! ..  Local Variables ..
     INTEGER ispin,jspin,l ,mp,p,q,itype,m,i_u
