@@ -966,6 +966,14 @@ CONTAINS
 
     err=0
     pd%iter=0
+    IF(ALLOCATED(pd%pw)) DEALLOCATE(pd%pw)
+    IF(ALLOCATED(pd%mt)) DEALLOCATE(pd%mt)
+    IF(ALLOCATED(pd%vacz)) DEALLOCATE(pd%vacz)
+    IF(ALLOCATED(pd%vacxy)) DEALLOCATE(pd%vacxy)
+    IF(ALLOCATED(pd%cdom)) DEALLOCATE(pd%cdom)
+    IF(ALLOCATED(pd%cdomvz)) DEALLOCATE(pd%cdomvz)
+    IF(ALLOCATED(pd%cdomvxy)) DEALLOCATE(pd%cdomvxy)
+    IF(ALLOCATED(pd%mmpMat)) DEALLOCATE(pd%mmpMat)
     ALLOCATE(pd%pw(ng3,jsp),stat=err(1))
     ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
     IF (PRESENT(nmzd)) THEN

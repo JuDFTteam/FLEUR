@@ -41,6 +41,8 @@ CONTAINS
     USE m_fleur_init
     USE m_pldngen
     USE m_optional
+    USE m_cdn_io
+    USE m_qfix
     USE m_vgen
     USE m_rhodirgen
     USE m_writexcstuff
@@ -70,6 +72,7 @@ CONTAINS
     USE m_ylm
 #ifdef CPP_MPI
     USE m_mpi_bc_all,  ONLY : mpi_bc_all
+    USE m_mpi_bc_potden
 #endif
     USE m_eig66_io,   ONLY : open_eig, close_eig
     IMPLICIT NONE
@@ -100,11 +103,13 @@ CONTAINS
     TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
     TYPE(t_potden)   :: v,vx
+    TYPE(t_potden)   :: inDen, outDen
 
     !     .. Local Scalars ..
-    INTEGER:: eig_id
+    INTEGER:: eig_id, archiveType
     INTEGER:: n,it,ithf,pc
-    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
+    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix
+    REAL   :: fermiEnergyTemp, fix
     !--- J<
     INTEGER             :: phn
     REAL, PARAMETER     :: tol = 1.e-8
@@ -223,6 +228,33 @@ CONTAINS
              END IF
           END IF
 
+          ! Initialize and load inDen density (start)
+          CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
+          IF (noco%l_noco) THEN
+             ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
+             ALLOCATE (inDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+             archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+          ELSE
+             ALLOCATE (inDen%cdom(1),inDen%cdomvz(1,1),inDen%cdomvxy(1,1,1))
+             archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+          END IF
+          IF(mpi%irank.EQ.0) THEN
+             CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                              0,fermiEnergyTemp,l_qfix,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,&
+                              inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
+             CALL timestart("Qfix")
+             CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,&
+                       .FALSE.,.false.,fix)
+             CALL timestop("Qfix")
+             CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                               0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
+                               inDen%cdomvz,inDen%cdomvxy)
+          END IF
+#ifdef CPP_MPI
+          CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
+#endif
+          ! Initialize and load inDen density (end)
+
           DO qcount=1,jij%nqpt
              IF (jij%l_J) THEN
                 noco%qss(:)=jij%qj(:,qcount)
@@ -263,7 +295,7 @@ CONTAINS
                    CALL timestart("generation of potential")
                    IF (mpi%irank==0) WRITE(*,"(a)",advance="no") " * Potential generation "
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,v,vx)
+                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,v,vx)
                    CALL timestop("generation of potential")
 
                    IF (mpi%irank.EQ.0) THEN
@@ -567,9 +599,32 @@ CONTAINS
                 IF (obsolete%disp) THEN
                    reap = .FALSE.
                    input%total = .FALSE.
+
+                   ! Initialize and load outDen density (start)
+                   CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
+                   IF (noco%l_noco) THEN
+                      ALLOCATE (outDen%cdom(stars%ng3),outDen%cdomvz(vacuum%nmzd,2))
+                      ALLOCATE (outDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+                   ELSE
+                      ALLOCATE (outDen%cdom(1),outDen%cdomvz(1,1),outDen%cdomvxy(1,1,1))
+                   END IF
+                   IF(mpi%irank.EQ.0) THEN
+                      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_OUTPUT_DEN_const,&
+                                       0,fermiEnergyTemp,l_qfix,outDen%iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy,&
+                                       outDen%cdom,outDen%cdomvz,outDen%cdomvxy)
+                      CALL timestart("Qfix")
+                      CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,&
+                               .FALSE.,.false.,fix)
+                      CALL timestop("Qfix")
+                   END IF
+#ifdef CPP_MPI
+                   CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
+#endif
+                   ! Initialize and load outDen density (end)
+
                    CALL timestart("generation of potential (total)")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi, results,noco,v,vx)
+                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,v,vx)
                    CALL timestop("generation of potential (total)")
 
                    CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
