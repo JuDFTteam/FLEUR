@@ -47,7 +47,6 @@ build-pgi:
      paths:
        - build.debug
   script:
-    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev
     - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
   only:
     - schedules
@@ -62,7 +61,6 @@ test-pgi:
      paths:
        - build.debug
   script:
-    - apt-get update -qq && apt-get install -y -qq cmake libxml2-dev 
     - cd /builds/fleur/fleur/build.debug;ctest
   only:
      - schedules
