@@ -62,8 +62,8 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_potden),INTENT(IN)    :: inDen
     TYPE(t_potden),INTENT(INOUT) :: v,vx
-    TYPE(t_potden),INTENT(INOUT) :: inDen ! inDen%mmpMat is modified in u_setup
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
