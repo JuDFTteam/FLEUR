@@ -9,7 +9,7 @@ jt::testrun($executable,$workdir);
 #now test output
 $result=jt::test_fileexists("$workdir/plot.xsf");
 # unit cell
-$result+=jt::test_grepexists("$workdir/plot.xsf",".0000000 .0000000 11.36143");
+$result+=jt::test_grepexists("$workdir/plot.xsf",".0000000 11.36143");
 $result+=jt::test_grepexists("$workdir/plot.xsf","1.93419");
 # atom positions
 $result+=jt::test_grepexists("$workdir/plot.xsf","3.35012");
