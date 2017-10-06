@@ -13,9 +13,11 @@ MODULE m_mix
   !    IMIX = 7 : GENERALIZED ANDERSEN METHOD                       
   !************************************************************************
 CONTAINS
-  SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym, cell, it, noco, oneD,hybrid,results)
+  SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,&
+                 hybrid,inDen,outDen,results)
     !
 #include"cpp_double.h"
+    USE m_constants
     USE m_cdn_io
     USE m_brysh1
     USE m_stmix
@@ -36,12 +38,15 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(INOUT) :: atoms !n_u is modified temporarily
+    TYPE(t_potden),INTENT(IN)   :: inDen, outDen
     TYPE(t_results),INTENT(INOUT)::results
     !     ..
     !     .. Scalar Arguments ..
     INTEGER :: nrhomfile=26
     INTEGER, INTENT (IN) :: it    
 
+    ! Local type instances
+    TYPE(t_potden) :: mixDen
 
     !     ..
     !     .. Local Scalars ..
@@ -54,13 +59,9 @@ CONTAINS
 
     !     ..
     !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-    REAL, ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
     REAL dist(6)
     REAL, ALLOCATABLE :: sm(:),fsm(:) 
     !---> off-diagonal part of the density matrix
-    COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
-    COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:,:)
     CHARACTER(LEN=20)    :: attributes(2)
     !     ..
     !     .. Intrinsic Functions ..
@@ -115,42 +116,26 @@ CONTAINS
           IF (iofl < 0) EXIT
           i = i + 1
        ENDDO
+       CLOSE (69)
        IF ( MOD(i,14*input%jspins) == 1 ) THEN    ! was already mixed in u_mix
           atoms%n_u = 0
-          ALLOCATE ( n_mmp(-3:-3,-3:-3,1,1,2) )
        ELSEIF ( MOD(i,28*input%jspins)== 0 ) THEN ! mix here 
           atoms%n_u = i / (28 * input%jspins )    ! atoms%n_u atoms have lda+u applied
           mmap = mmap + 7 * i / 2     ! add 7*7 complex numbers per atoms%n_u
-          REWIND (69)
-          ALLOCATE ( n_mmp(-3:3,-3:3,atoms%n_u,input%jspins,2) )
-          READ (69,'(7f20.13)') n_mmp(:,:,:,:,:)
        ELSE
           CALL juDFT_error("strange n_mmp_mat-file...",calledby ="mix")
        ENDIF
-       CLOSE (69)
     ELSE
        atoms%n_u=0
-       ALLOCATE ( n_mmp(-3:-3,-3:-3,1,1,2) )
     ENDIF
     !
     ALLOCATE (sm(mmap),fsm(mmap))
 
-    ALLOCATE (qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
-                   rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins) )
-
     IF (noco%l_noco) THEN
-       ALLOCATE (cdom(stars%ng3),cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
-       ALLOCATE (cdom(1),cdomvz(1,1),cdomvxy(1,1,1))
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     ENDIF
-    !---> initialize arrays for the off-diagonal part of the density matrix
-    cdom(:) = CMPLX(0.0,0.0)
-    IF (input%film) THEN
-       cdomvz(:,:) = CMPLX(0.0,0.0)
-       cdomvxy(:,:,:) = CMPLX(0.0,0.0)
-    END IF
 
     !
     INQUIRE (file='broyd.'//CHAR(input%imix+48),exist=lexist)
@@ -181,8 +166,8 @@ CONTAINS
     END IF
 
     !---> reload densities of current iteration
-    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+!    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+!                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
     !--->  put input charge density into arrays sm 
@@ -190,17 +175,28 @@ CONTAINS
     !      spin up and spin down densities
 
     CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-         intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp(-3,-3,1,1,1), nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
+                intfac,vacfac,inDen%pw,inDen%mt,inDen%vacz,inDen%vacxy,inDen%cdom,&
+                inDen%cdomvz,inDen%cdomvxy,inDen%mmpMat(-lmaxU_const,-lmaxU_const,1,1),&
+                nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
+
+!    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
+!         intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp(-3,-3,1,1,1), nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
 
     !     load output charge density
-    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_OUTPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+!    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+!                     CDN_OUTPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
     !
     !--->  put output charge density into arrays fsm 
     !
-    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD, intfac,vacfac,qpw,rho,rht,rhtxy,cdom,&
-         cdomvz,cdomvxy,n_mmp(-3,-3,1,1,2), nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
+
+    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
+                intfac,vacfac,outDen%pw,outDen%mt,outDen%vacz,outDen%vacxy,outDen%cdom,&
+                outDen%cdomvz,outDen%cdomvxy,outDen%mmpMat(-lmaxU_const,-lmaxU_const,1,1),&
+                nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
+
+!    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD, intfac,vacfac,qpw,rho,rht,rhtxy,cdom,&
+!         cdomvz,cdomvxy,n_mmp(-3,-3,1,1,2), nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
     !
     ! --> store fsm - sm the difference on fsm
     !
@@ -234,8 +230,28 @@ CONTAINS
     !     call timestamp(-3)
     !----->  load output densities
     !
-    CALL brysh2(input,stars,atoms,sphhar, noco,vacuum, sym,sm, n_mmp,oneD,&
-         qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy) 
+
+    CALL mixDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.)
+    IF (noco%l_noco) THEN
+       ALLOCATE (mixDen%cdom(stars%ng3),mixDen%cdomvz(vacuum%nmzd,2))
+       ALLOCATE (mixDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+    ELSE
+       ALLOCATE (mixDen%cdom(1),mixDen%cdomvz(1,1),mixDen%cdomvxy(1,1,1))
+    ENDIF
+    IF (atoms%n_u.GT.0) THEN
+       ALLOCATE (mixDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
+    ELSE
+       ALLOCATE (mixDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,input%jspins))
+    END IF
+    mixDen%cdom = CMPLX(0.0,0.0)
+    mixDen%cdomvz = CMPLX(0.0,0.0)
+    mixDen%cdomvxy = CMPLX(0.0,0.0)
+    mixDen%mmpMat = CMPLX(0.0,0.0)
+
+
+    CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,mixDen%mmpMat,oneD,&
+                mixDen%pw,mixDen%mt,mixDen%vacz,mixDen%vacxy,mixDen%cdom,&
+                mixDen%cdomvz,mixDen%cdomvxy) 
 
     !
     !----->  calculate the distance of charge densities
@@ -253,6 +269,7 @@ CONTAINS
     ELSE
        CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
     END IF
+    iter = inDen%iter
     DO js = 1,input%jspins
        dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, sm(nmaph*(js-1)+1),1)
 
@@ -305,18 +322,17 @@ CONTAINS
     !
     !     ---> fix the new density
     CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
-                   qpw,rhtxy,rho,rht,.FALSE.,.false., fix)
+              mixDen%pw,mixDen%vacxy,mixDen%mt,mixDen%vacz,.FALSE.,.false., fix)
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                      1,results%last_distance,results%ef,.TRUE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      1,results%last_distance,results%ef,.TRUE.,iter,mixDen%mt,mixDen%pw,mixDen%vacz,&
+                      mixDen%vacxy,mixDen%cdom,mixDen%cdomvz,mixDen%cdomvxy)
 
-    DEALLOCATE ( cdom,cdomvz,cdomvxy )
     IF ( atoms%n_u > 0 ) THEN
        OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
-       WRITE (69,'(7f20.13)') n_mmp(:,:,:,:,1)
+       WRITE (69,'(7f20.13)') mixDen%mmpMat(:,:,:,:)
        CLOSE (69)
     ENDIF
-    DEALLOCATE (n_mmp)
 
     IF (input%imix.GT.0) THEN
        CLOSE (57)
@@ -331,7 +347,6 @@ CONTAINS
 8020 FORMAT (4d25.14)
 8030 FORMAT (10i10)
 
-    DEALLOCATE (qpw,rhtxy,rho,rht)
     atoms%n_u=n_u_keep
   END SUBROUTINE mix
 END MODULE m_mix
