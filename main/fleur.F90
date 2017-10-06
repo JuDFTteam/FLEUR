@@ -655,7 +655,7 @@ CONTAINS
              !
              CALL timestart("mixing")
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Mixing distance: "
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,hybrid,inDen,outDen,results)
+             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,inDen,outDen,results)
              !
              CALL timestop("mixing")
              WRITE (6,FMT=8130) it
