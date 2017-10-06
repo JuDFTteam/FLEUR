@@ -572,7 +572,7 @@ CONTAINS
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                          enpara,cell,noco,jij,results,oneD,coreSpecInput,&
-                         outDen)
+                         inDen%iter,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e
@@ -601,33 +601,10 @@ CONTAINS
                    CALL juDFT_end("NDIR",mpi%irank)
                 END IF
 
-                !          ----> output potential and potential difference
+                !----> output potential and potential difference
                 IF (obsolete%disp) THEN
                    reap = .FALSE.
                    input%total = .FALSE.
-
-                   ! Initialize and load outDen density (start)
-                   CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
-                   IF (noco%l_noco) THEN
-                      ALLOCATE (outDen%cdom(stars%ng3),outDen%cdomvz(vacuum%nmzd,2))
-                      ALLOCATE (outDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-                   ELSE
-                      ALLOCATE (outDen%cdom(1),outDen%cdomvz(1,1),outDen%cdomvxy(1,1,1))
-                   END IF
-                   IF(mpi%irank.EQ.0) THEN
-                      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_OUTPUT_DEN_const,&
-                                       0,fermiEnergyTemp,l_qfix,outDen%iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy,&
-                                       outDen%cdom,outDen%cdomvz,outDen%cdomvxy)
-                      CALL timestart("Qfix")
-                      CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,&
-                               .FALSE.,.false.,fix)
-                      CALL timestop("Qfix")
-                   END IF
-#ifdef CPP_MPI
-                   CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
-#endif
-                   ! Initialize and load outDen density (end)
-
                    CALL timestart("generation of potential (total)")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
                         obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,v,vx)
@@ -635,17 +612,13 @@ CONTAINS
 
                    CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
                 END IF
-                !
-                !i         ----> total energy
-                !
 
-
+                !----> total energy
                 CALL timestart('determination of total energy')
                 CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
                      sym,input,noco,cell,oneD,xcpot,hybrid,it,results)
 
                 CALL timestop('determination of total energy')
-
 
                 ! in case of parallel processing, the total energy calculation is done
                 ! only for irank.eq.0, since no parallelization is required here. once
