@@ -47,7 +47,7 @@ build-pgi:
      paths:
        - build.debug
   script:
-    - cd /builds/fleur/fleur; ./configure.sh AUTO debug; cd build.debug; make 
+    - cd /builds/fleur/fleur; ./configure.sh -d AUTO ; cd build.debug; make 
   only:
     - schedules
     - triggers
