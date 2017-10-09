@@ -1486,6 +1486,8 @@ SUBROUTINE r_inpXML(&
            atoms%numStatesProvided(iType) = providedStates
            IF (coreConfigPresent) THEN
               IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
+                 WRITE(6,*) " providedCoreStates:",providedCoreStates
+                 WRITE(6,*) "atoms%ncst(iType)  :",atoms%ncst(iType)
                  STOP 'Wrong number of core states provided!'
               END IF
               DO k = 1, providedStates !atoms%ncst(iType)
