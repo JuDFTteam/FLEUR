@@ -15,7 +15,34 @@ MODULE m_xmlIntWrapFort
 
 USE m_juDFT
 
+
+PRIVATE :: init_from_command_line
 CONTAINS
+
+SUBROUTINE init_from_command_line()
+  IMPLICIT NONE
+  CHARACTER(len=1000)::xpath
+  INTEGER:: i,ii
+  
+  IF (judft_was_argument("-xmlXPath")) THEN
+     xpath=judft_string_for_argument("-xmlXPath")
+     DO WHILE(INDEX(xpath,"=")>0)
+        i=INDEX(xpath,"=")
+        ii=INDEX(xpath,":")
+        IF (ii==0) ii=LEN(TRIM(xpath))+1
+        IF (i>100.OR.ii-i>100) CALL judft_error("Too long xmlXPath argument",calledby="xmlIntWarpFort.f90")
+        CALL xmlSetAttributeValue(xpath(:i-1),xpath(i+1:ii-1))
+        WRITE(*,*) "Set from command line:",TRIM(xpath(:i-1)),"=",TRIM(xpath(i+1:ii-1))
+        IF (ii+1<len(xpath))THEN
+           xpath=xpath(ii+1:)
+        ELSE
+           xpath=""
+        ENDIF
+     END DO
+  END IF
+END SUBROUTINE init_from_command_line
+     
+
 SUBROUTINE xmlInitInterface()
 
    USE iso_c_binding
@@ -139,7 +166,7 @@ SUBROUTINE xmlInitXPath()
    IF(errorStatus.NE.0) THEN
       CALL juDFT_error("Could not initialize XPath.",calledby="xmlInitXPath")
    END IF
-
+   CALL init_from_command_line()
 END SUBROUTINE xmlInitXPath
 
 FUNCTION xmlGetNumberOfNodes(xPath)
@@ -188,6 +215,8 @@ FUNCTION xmlGetAttributeValue(xPath)
       end function getXMLAttributeValue
    end interface
 
+  
+
    c_string = getXMLAttributeValue(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
    CALL C_F_POINTER(c_string, valueFromC, [ 255 ])
@@ -208,6 +237,38 @@ FUNCTION xmlGetAttributeValue(xPath)
    xmlGetAttributeValue = value(1:length)
 
 END FUNCTION xmlGetAttributeValue
+
+
+SUBROUTINE xmlSetAttributeValue(xPath,VALUE)
+
+   USE iso_c_binding
+   USE m_types
+
+   IMPLICIT NONE
+  
+   CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
+   CHARACTER(len=*, KIND=c_char), INTENT(IN) :: value
+
+   INTEGER :: errorStatus
+
+   INTERFACE
+      FUNCTION setXMLAttributeValue(xPathExpression,valueExpression) BIND(C, name="setXMLAttributeValue")
+         use iso_c_binding
+         CHARACTER(KIND=c_char) :: xPathExpression(*)
+         CHARACTER(KIND=c_char) :: valueExpression(*)
+         INTEGER(c_int) :: setXMLAttributeValue
+       END FUNCTION setXMLAttributeValue
+    END INTERFACE
+
+    errorStatus = setXMLAttributeValue(TRIM(ADJUSTL(xPath))//C_NULL_CHAR,TRIM(ADJUSTL(VALUE))//C_NULL_CHAR)
+    IF (errorStatus.ne.0) THEN
+      WRITE(*,*) 'Error in trying to setting attribute value from XPath:'
+      WRITE(*,*) TRIM(ADJUSTL(xPath))
+      WRITE(*,*) TRIM(ADJUSTL(VALUE))
+      CALL juDFT_error("Attribute value could not be set.",calledby="xmlSetAttributeValue")
+   END IF
+
+ END SUBROUTINE xmlSetAttributeValue
 
 SUBROUTINE xmlFreeResources()
 
