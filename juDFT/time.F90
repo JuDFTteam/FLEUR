@@ -399,7 +399,7 @@ CONTAINS
     IMPLICIT NONE
     INTEGER,INTENT(IN)     :: it
     LOGICAL,INTENT(INOUT)  :: l_cont
-    CHARACTER(len=20)::wtime_string
+    CHARACTER(len=1000)::wtime_string
     INTEGER          :: wtime,time_used,time_per_iter
     INTEGER:: irank=0
 #ifdef CPP_MPI

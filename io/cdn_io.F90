@@ -1223,7 +1223,7 @@ MODULE m_cdn_io
       INTEGER           :: readDensityIndex, lastDensityIndex
       INTEGER           :: sdIndex, ioStatus, mode
       INTEGER           :: densityType
-      CHARACTER(LEN=20) :: numberString
+      CHARACTER(LEN=1000) :: numberString
       CHARACTER(LEN=30) :: archiveName
       LOGICAL           :: l_exist
 
@@ -1284,7 +1284,7 @@ MODULE m_cdn_io
       INTEGER           :: readDensityIndex, lastDensityIndex
       INTEGER           :: ioStatus, mode, i
       INTEGER           :: startNumber, endNumber, separatorIndex
-      CHARACTER(LEN=20) :: ddString
+      CHARACTER(LEN=1000) :: ddString
       CHARACTER(LEN=30) :: archiveName
       LOGICAL           :: l_exist, l_deleted
 

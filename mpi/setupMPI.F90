@@ -91,7 +91,7 @@ CONTAINS
     !
     !-------------------------------------------------------------------------------------------
     INTEGER:: n_members,n_size_min
-    CHARACTER(len=20)::txt
+    CHARACTER(len=1000)::txt
 
     n_members = MIN(nkpt,mpi%isize)
     IF (judft_was_argument("-n_size_min")) THEN

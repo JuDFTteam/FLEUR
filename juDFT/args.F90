@@ -38,7 +38,7 @@ CONTAINS
 FUNCTION juDFT_string_for_argument(arg) RESULT(argstring)
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)::arg
-    CHARACTER(len=20)::argstring
+    CHARACTER(len=1000)::argstring
 
     INTEGER:: i
     CHARACTER(LEN=30)::str
