@@ -147,6 +147,8 @@
       <plotting iplot="F" score="F" plplot="F"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
-      <coreSpectrum eKin="300.0" atomType="1" lmax="2" edgeType="L" edgeIndex="3" eMin="-1.0" eMax="15.0" numPoints="17" verbose="T" />
+      <coreSpectrum eKin="300.0" atomType="1" lmax="2" edgeType="L" eMin="-1.0" eMax="15.0" numPoints="17" verbose="T">
+         <edgeIndices> 3 </edgeIndices>
+      </coreSpectrum>
    </output>
 </fleurInput>

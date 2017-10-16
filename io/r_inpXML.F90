@@ -1803,12 +1803,21 @@ SUBROUTINE r_inpXML(&
         coreSpecInput%atomType = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomType'))
         coreSpecInput%lx = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lmax'))
         coreSpecInput%edge = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeType')))
-        coreSpecInput%edgeidx(:) = 0
-        coreSpecInput%edgeidx(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeIndex'))
         coreSpecInput%emn = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMin'))
         coreSpecInput%emx = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMax'))
         tempInt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numPoints'))
         coreSpecInput%ein = (coreSpecInput%emx - coreSpecInput%emn) / (tempInt - 1.0)
+        xPathB = TRIM(ADJUSTL(xPathA))//'/edgeIndices'
+        xPathB = TRIM(ADJUSTL(xPathB))//'/text()'
+        valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
+        numTokens = countStringTokens(valueString)
+        coreSpecInput%edgeidx(:) = 0
+        IF(numTokens.GT.SIZE(coreSpecInput%edgeidx)) THEN
+           CALL juDFT_error('More EELS edge indices provided than allowed.',calledby='r_inpXML')
+        END IF
+        DO i = 1, MAX(numTokens,SIZE(coreSpecInput%edgeidx))
+           coreSpecInput%edgeidx(i) = evaluateFirstIntOnly(popFirstStringToken(valueString))
+        END DO
      END IF
 
      ! Read in optional Wannier functions parameters
