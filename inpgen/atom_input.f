@@ -494,7 +494,9 @@ c           the total spin is maximized
               ELSE
                 up = coreocc(i,n)
                 dn = 0
-              END IF
+             END IF
+             upreal=up
+             dnreal=dn
 
 c           in s and p states equal occupation of up and down states
 
