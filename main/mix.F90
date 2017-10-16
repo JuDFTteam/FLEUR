@@ -158,15 +158,14 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
       WRITE(6,'(''WARNING : for QUASI-NEWTON METHODS SPINF=1'')')
    END IF
 
-   !put input charge density into arrays sm 
-   !in the spin polarized case the arrays consist of 
-   !spin up and spin down densities
+   !put input charge density into array sm
+   !(in the spin polarized case the arrays sm and fsm consist of spin up and spin down densities)
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
                intfac,vacfac,inDen%pw,inDen%mt,inDen%vacz,inDen%vacxy,inDen%cdom,&
                inDen%cdomvz,inDen%cdomvxy,inDen%mmpMat(-lmaxU_const,-lmaxU_const,1,1),&
                nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
 
-   !put output charge density into arrays fsm 
+   !put output charge density into array fsm
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
                intfac,vacfac,outDen%pw,outDen%mt,outDen%vacz,outDen%vacxy,outDen%cdom,&
                outDen%cdomvz,outDen%cdomvxy,outDen%mmpMat(-lmaxU_const,-lmaxU_const,1,1),&
