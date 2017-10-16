@@ -159,6 +159,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    END IF
 
    !put input charge density into array sm
+
    !(in the spin polarized case the arrays sm and fsm consist of spin up and spin down densities)
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
                intfac,vacfac,inDen%pw,inDen%mt,inDen%vacz,inDen%vacxy,inDen%cdom,&
