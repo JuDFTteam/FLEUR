@@ -253,6 +253,9 @@ CONTAINS
                 ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
                 CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
                 IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
+             ELSE
+                ALLOCATE (inDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,input%jspins))
+                inDen%mmpMat = CMPLX(0.0,0.0)
              END IF
           END IF
 #ifdef CPP_MPI
