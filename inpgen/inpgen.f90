@@ -75,6 +75,9 @@ PROGRAM inpgen
       bfh = 93
 
       input%l_inpXML = .FALSE.
+      IF (.NOT.juDFT_was_argument("-old")) THEN
+         input%l_inpXML = .TRUE.
+      END IF
 
       ALLOCATE ( mmrot(3,3,nop48), ttr(3,nop48) )
       ALLOCATE ( atompos(3,natmax),atomid(natmax) )
