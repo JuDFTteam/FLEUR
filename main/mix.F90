@@ -16,7 +16,7 @@ MODULE m_mix
 CONTAINS
 
 SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
-               hybrid,inDen,outDen,results,mixDen)
+               hybrid,archiveType,inDen,outDen,results,mixDen)
 
 #include"cpp_double.h"
 
@@ -47,12 +47,13 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_potden),INTENT(IN)     :: inDen, outDen
    TYPE(t_results),INTENT(INOUT) :: results
    TYPE(t_potden),INTENT(INOUT)  :: mixDen
+   INTEGER, INTENT(IN)           :: archiveType
 
    !Local Scalars
    REAL fix,intfac,vacfac
    INTEGER i,iter,imap,js,mit,irecl
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
-   INTEGER iofl,archiveType,n_u_keep
+   INTEGER iofl,n_u_keep
    LOGICAL lexist,l_ldaU
 
    !Local Arrays
