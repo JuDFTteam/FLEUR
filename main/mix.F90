@@ -46,7 +46,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_atoms),INTENT(INOUT)   :: atoms !n_u is modified temporarily
    TYPE(t_potden),INTENT(IN)     :: inDen, outDen
    TYPE(t_results),INTENT(INOUT) :: results
-   TYPE(t_potden),INTENT(OUT)    :: mixDen
+   TYPE(t_potden),INTENT(INOUT)  :: mixDen
 
    !Local Scalars
    REAL fix,intfac,vacfac
@@ -198,20 +198,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
-   CALL mixDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.)
-   IF (noco%l_noco) THEN
-      ALLOCATE (mixDen%cdom(stars%ng3),mixDen%cdomvz(vacuum%nmzd,2))
-      ALLOCATE (mixDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-      archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-   ELSE
-      ALLOCATE (mixDen%cdom(1),mixDen%cdomvz(1,1),mixDen%cdomvxy(1,1,1))
-      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-   ENDIF
-   IF (atoms%n_u.GT.0) THEN
-      ALLOCATE (mixDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-   ELSE
-      ALLOCATE (mixDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,input%jspins))
-   END IF
    mixDen%cdom = CMPLX(0.0,0.0)
    mixDen%cdomvz = CMPLX(0.0,0.0)
    mixDen%cdomvxy = CMPLX(0.0,0.0)
@@ -291,6 +277,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      1,results%last_distance,results%ef,.TRUE.,iter,mixDen%mt,mixDen%pw,mixDen%vacz,&
                      mixDen%vacxy,mixDen%cdom,mixDen%cdomvz,mixDen%cdomvxy)
+   mixDen%iter = inDen%iter + 1
 
    IF (atoms%n_u > 0) THEN
       OPEN (69,file='n_mmp_mat',status='replace',form='formatted')

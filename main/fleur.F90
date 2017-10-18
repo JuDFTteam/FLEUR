@@ -193,7 +193,21 @@ CONTAINS
                          0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
                          inDen%cdomvz,inDen%cdomvxy)
     END IF
+    ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     ! Initialize and load inDen density without density matrix(end)
+
+    ! Initialize mixDen density (start)
+    CALL mixDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.)
+    IF (noco%l_noco) THEN
+       ALLOCATE (mixDen%cdom(stars%ng3),mixDen%cdomvz(vacuum%nmzd,2))
+       ALLOCATE (mixDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    ELSE
+       ALLOCATE (mixDen%cdom(1),mixDen%cdomvz(1,1),mixDen%cdomvxy(1,1,1))
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    ENDIF
+    ALLOCATE (mixDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+    ! Initialize mixDen density (end)
 
     DO WHILE (l_cont)
 
@@ -253,19 +267,14 @@ CONTAINS
           END IF
 
           ! Initialize and load inDen density matrix and broadcast inDen(start)
-          WRITE(*,*) 'test-1'
-          IF (ALLOCATED(inDen%mmpMat)) DEALLOCATE (inDen%mmpMat)
           IF(mpi%irank.EQ.0) THEN
              IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
-                ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
                 CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
                 IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
              ELSE
-                ALLOCATE (inDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,input%jspins))
                 inDen%mmpMat = CMPLX(0.0,0.0)
              END IF
           END IF
-          WRITE(*,*) 'test-2'
 #ifdef CPP_MPI
           CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
