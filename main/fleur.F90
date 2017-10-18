@@ -103,7 +103,7 @@ CONTAINS
     TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
     TYPE(t_potden)   :: v,vx
-    TYPE(t_potden)   :: inDen, outDen
+    TYPE(t_potden)   :: inDen, outDen, mixDen
 
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
@@ -171,6 +171,30 @@ CONTAINS
     results%last_distance = -1.0
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
+    ! Initialize and load inDen density without density matrix(start)
+    CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
+    IF (noco%l_noco) THEN
+       ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
+       ALLOCATE (inDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    ELSE
+       ALLOCATE (inDen%cdom(1),inDen%cdomvz(1,1),inDen%cdomvxy(1,1,1))
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    END IF
+    IF(mpi%irank.EQ.0) THEN
+       CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                        0,fermiEnergyTemp,l_qfix,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,&
+                        inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
+       CALL timestart("Qfix")
+       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,&
+                 .FALSE.,.false.,fix)
+       CALL timestop("Qfix")
+       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                         0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
+                         inDen%cdomvz,inDen%cdomvxy)
+    END IF
+    ! Initialize and load inDen density without density matrix(end)
+
     DO WHILE (l_cont)
 
        it = it + 1
@@ -228,27 +252,10 @@ CONTAINS
              END IF
           END IF
 
-          ! Initialize and load inDen density (start)
-          CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
-          IF (noco%l_noco) THEN
-             ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
-             ALLOCATE (inDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-             archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-          ELSE
-             ALLOCATE (inDen%cdom(1),inDen%cdomvz(1,1),inDen%cdomvxy(1,1,1))
-             archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-          END IF
+          ! Initialize and load inDen density matrix and broadcast inDen(start)
+          WRITE(*,*) 'test-1'
+          IF (ALLOCATED(inDen%mmpMat)) DEALLOCATE (inDen%mmpMat)
           IF(mpi%irank.EQ.0) THEN
-             CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                              0,fermiEnergyTemp,l_qfix,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,&
-                              inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
-             CALL timestart("Qfix")
-             CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,&
-                       .FALSE.,.false.,fix)
-             CALL timestop("Qfix")
-             CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                               0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
-                               inDen%cdomvz,inDen%cdomvxy)
              IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
                 ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
                 CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
@@ -258,10 +265,11 @@ CONTAINS
                 inDen%mmpMat = CMPLX(0.0,0.0)
              END IF
           END IF
+          WRITE(*,*) 'test-2'
 #ifdef CPP_MPI
           CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
-          ! Initialize and load inDen density (end)
+          ! Initialize and load inDen density matrix and broadcast inDen(end)
 
           DO qcount=1,jij%nqpt
              IF (jij%l_J) THEN
@@ -658,7 +666,8 @@ CONTAINS
              !
              CALL timestart("mixing")
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Mixing distance: "
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,inDen,outDen,results)
+             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,inDen,outDen,results,mixDen)
+             inDen = mixDen
              !
              CALL timestop("mixing")
              WRITE (6,FMT=8130) it
