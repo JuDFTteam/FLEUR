@@ -82,15 +82,10 @@ CONTAINS
     !.....density
     REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
     COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-    !.....potential
-    REAL,    ALLOCATABLE :: vr(:,:,:,:),vz(:,:,:)
-    COMPLEX, ALLOCATABLE :: vpw(:,:),vxy(:,:,:,:)
-    !     ..
-    ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins),&
-         qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
-         vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmzd,2,input%jspins),&
-         vpw(stars%ng3,input%jspins),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins) )
-    !
+
+    ALLOCATE (rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins),&
+              qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins))
+
     WRITE (6,FMT=8000)
     WRITE (16,FMT=8000)
 8000 FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
@@ -271,7 +266,7 @@ CONTAINS
                /,' ----> HF input%total electron energy=',t40,f20.10,' htr')
 8090 FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
 
-    DEALLOCATE ( rho,rht,qpw,rhtxy,vr,vz,vpw,vxy )
+    DEALLOCATE (rho,rht,qpw,rhtxy)
 
   END SUBROUTINE totale
 END MODULE m_totale
