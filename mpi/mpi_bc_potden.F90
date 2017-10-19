@@ -24,18 +24,21 @@ CONTAINS
    TYPE(t_potden),INTENT(INOUT)  :: potden
 
    INTEGER :: n, ierr(3)
-   LOGICAL :: l_nocoAlloc, l_denMatAlloc
+   LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc
 
    CALL MPI_BCAST(potden%iter,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    l_nocoAlloc = .FALSE.
    l_denMatAlloc = .FALSE.
+   l_vaczAlloc = .FALSE.
    IF(mpi%irank.EQ.0) THEN
       IF (ALLOCATED(potden%cdom)) l_nocoAlloc = .TRUE.
       IF (ALLOCATED(potden%mmpMat)) l_denMatAlloc = .TRUE.
+      IF (ALLOCATED(potden%vacz)) l_vaczAlloc = .TRUE.
    END IF
    CALL MPI_BCAST(l_nocoAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(l_denMatAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(l_vaczAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    IF((mpi%irank.NE.0).AND.l_nocoAlloc) THEN
       IF (noco%l_noco) THEN
          IF(.NOT.ALLOCATED(potden%cdom)) ALLOCATE (potden%cdom(stars%ng3))
@@ -65,11 +68,13 @@ CONTAINS
    n = atoms%jmtd * (sphhar%nlhd+1) * atoms%ntype * input%jspins
    CALL MPI_BCAST(potden%mt,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
 
-   n = vacuum%nmzd * 2 * SIZE(potden%vacz,3)
-   CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
+   IF (l_vaczAlloc) THEN
+      n = vacuum%nmzd * 2 * SIZE(potden%vacz,3)
+      CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
 
-   n = vacuum%nmzxyd * (stars%ng2-1) * 2 * input%jspins
-   CALL MPI_BCAST(potden%vacxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+      n = vacuum%nmzxyd * (stars%ng2-1) * 2 * input%jspins
+      CALL MPI_BCAST(potden%vacxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+   END IF
 
    IF (l_nocoAlloc) THEN
       n = SIZE(potden%cdom,1)

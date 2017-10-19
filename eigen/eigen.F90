@@ -38,9 +38,6 @@ CONTAINS
     !USE m_icorrkeys
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
     USE m_xmlOutput
-#ifdef CPP_MPI
-    USE m_mpi_bc_pot
-#endif
 
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
@@ -154,10 +151,6 @@ CONTAINS
     !   CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
     !                      v%iter,v%mt,v%pw,v%vacz,v%vacxy)
     !END IF
-#ifdef CPP_MPI
-    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
-                    v%iter,v%mt,v%pw,v%vacz,v%vacxy)
-#endif
 
 999 CONTINUE
     IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&

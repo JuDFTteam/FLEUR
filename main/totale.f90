@@ -6,7 +6,7 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(atoms,sphhar,stars,vacuum,dimension, &
-       sym,input,noco,cell,oneD, xcpot,hybrid, it,results)
+       sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy 
@@ -64,6 +64,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_dimension),INTENT(IN)    :: dimension
+    TYPE(t_potden),INTENT(IN)       :: vTot,vCoul
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: it      
@@ -149,26 +150,15 @@ CONTAINS
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
 
-    !+for
-    !     ---> reload the COULOMB potential
-    !
-    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
-                       iter,vr,vpw,vz,vxy)
-    !
-    !     CLASSICAL HELLMAN-FEYNMAN FORCE
-    !
-    CALL force_a3(atoms,sphhar, input, rho,vr, results%force)
-    !
-    IF (input%l_f) THEN
-       !
-       !       core contribution to force: needs TOTAL POTENTIAL and core charge
-       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                          iter,vr,vpw,vz,vxy)
 
-       CALL force_a4(atoms,sphhar,input,dimension, vr, results%force)
-       !
+    ! CLASSICAL HELLMAN-FEYNMAN FORCE
+    CALL force_a3(atoms,sphhar, input, rho,vCoul%mt, results%force)
+
+    IF (input%l_f) THEN
+       ! core contribution to force: needs TOTAL POTENTIAL and core charge
+       CALL force_a4(atoms,sphhar,input,dimension, vTot%mt, results%force)
+
     ENDIF
-    !
 
     !-for
     !     ---> add spin-up and spin-down charge density for lh=0

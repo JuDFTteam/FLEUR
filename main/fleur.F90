@@ -102,7 +102,7 @@ CONTAINS
     TYPE(t_mpi)      :: mpi
     TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
-    TYPE(t_potden)   :: v,vx
+    TYPE(t_potden)   :: vTot,vx,vCoul
     TYPE(t_potden)   :: inDen, outDen, mixDen
 
     !     .. Local Scalars ..
@@ -301,7 +301,7 @@ CONTAINS
 
              !HF
              IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                                                    cell,vacuum,oneD,banddos,results,sym,xcpot,v,it)
+                                                    cell,vacuum,oneD,banddos,results,sym,xcpot,vTot,it)
              !#endif
 
              DO pc = 1, wann%nparampts
@@ -320,7 +320,7 @@ CONTAINS
                    CALL timestart("generation of potential")
                    IF (mpi%irank==0) WRITE(*,"(a)",advance="no") " * Potential generation "
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,v,vx)
+                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,vTot,vx,vCoul)
                    CALL timestop("generation of potential")
 
                    IF (mpi%irank.EQ.0) THEN
@@ -395,7 +395,7 @@ CONTAINS
                                IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Eigenvalue problem "
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
-                                    it,eig_id,inDen,results,v,vx)
+                                    it,eig_id,inDen,results,vTot,vx)
                                eig_idList(pc) = eig_id
                                CALL timestop("eigen")
                                !
@@ -627,7 +627,7 @@ CONTAINS
                    input%total = .FALSE.
                    CALL timestart("generation of potential (total)")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,v,vx)
+                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,vTot,vx,vCoul)
                    CALL timestop("generation of potential (total)")
 
                    CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
@@ -636,7 +636,7 @@ CONTAINS
                 !----> total energy
                 CALL timestart('determination of total energy')
                 CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
-                     sym,input,noco,cell,oneD,xcpot,hybrid,it,results)
+                     sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,results)
 
                 CALL timestop('determination of total energy')
 
