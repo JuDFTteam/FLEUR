@@ -9,7 +9,7 @@
       CONTAINS
       SUBROUTINE wannier(
      >      DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,
-     >      wann,noco,cell,enpara,banddos,sliceplot,results,
+     >      wann,noco,cell,enpara,banddos,sliceplot,vTot,results,
      >      eig_idList,l_real,nkpt)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     Makes necessary for the construction of the wannier functions
@@ -64,7 +64,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       use m_radfun
       use m_radflo
       use m_cdnread
-      use m_loddop
       use m_constants
       use m_wann_mmk0_od_vac
       use m_wann_mmkb_od_vac
@@ -130,6 +129,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       TYPE(t_enpara),    INTENT(IN) :: enpara
       TYPE(t_banddos),   INTENT(IN) :: banddos
       TYPE(t_sliceplot), INTENT(IN) :: sliceplot
+      TYPE(t_potden),    INTENT(IN) :: vTot
       TYPE(t_results),   INTENT(IN) :: results
       TYPE(t_wann),      INTENT(INOUT) :: wann
 
@@ -168,9 +168,9 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the parameters for the number of wfs
       integer :: nwfs
 !!! the potential in the spheres and the vacuum
-      real, allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
+      real, allocatable :: vr(:,:,:),vz(:,:,:)
 !!! auxiliary potentials
-      complex, allocatable :: vpw(:,:),vzxy(:,:,:,:)
+      complex, allocatable :: vpw(:,:)
 !!! bkpts data
       integer nntot,ikpt_help
       integer, allocatable :: gb(:,:,:),bpt(:,:)
@@ -402,7 +402,7 @@ c-----input file for orbital decomposition
 
       if(wann%l_updown)then            
          call wann_updown(
-     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,
+     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
      >      enpara,eig_idList(1),l_real,
      >      mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,
      >      atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,
@@ -443,7 +443,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          wannTemp = wann
          call wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,wannTemp,eig_idList,
+     >      oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -486,7 +486,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          wannTemp = wann
          call wann_uHu_dmi(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,wannTemp,eig_idList,
+     >      oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -703,27 +703,16 @@ c*********************************************************
 cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
-      allocate ( vpw(stars%ng3,DIMENSION%jspd) )
-      allocate ( vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd) )
       allocate ( vz(vacuum%nmzd,2,4) )
-      allocate ( vrf(atoms%jmtd,0:sphhar%nlhd,
-     +               atoms%ntype,DIMENSION%jspd) )
       allocate ( vr(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )
       allocate ( vso(atoms%jmtd,atoms%nat,2) )
 
-      open (8,file='pottot',form='unformatted',status='old')
-      rewind (8)
-
-      call loddop(stars,vacuum,atoms,sphhar,input,sym,
-     >            8,
-     <            iter,vrf,vpw,vz,vzxy)
-
-      close (8)
+      vz = vTot%vacz
 
       do jspin = 1,input%jspins
         do n = 1, atoms%ntype
           do j = 1,atoms%jri(n)
-            vr(j,n,jspin) = vrf(j,0,n,jspin)
+            vr(j,n,jspin) = vTot%mt(j,0,n,jspin)
           enddo
         enddo
       enddo
@@ -731,9 +720,6 @@ c*********************************************************
       if(wann%l_soctomom)then
         CALL vsoc(input,atoms,vr,epar,.TRUE., vso)
       endif
-
-      deallocate ( vpw,vzxy )
-      deallocate(vrf)
 
       if(noco%l_noco.and.input%film)then
          npotmatfile=25
@@ -2844,7 +2830,7 @@ c************************************************c
 
       call wann_postproc(
      >         DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >         lapw,oneD,noco,cell,eig_id,l_real,                !eig_id is used here after closing the files?!
+     >         lapw,oneD,noco,cell,vTot,eig_id,l_real,                !eig_id is used here after closing the files?!
      >         mpi%mpi_comm,wann,l_p0,input%film,input%jspins,stars%ng2,
      >         atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,
      >         atoms%neq,atoms%zatom,cell%omtil,noco%l_soc,noco%l_noco,

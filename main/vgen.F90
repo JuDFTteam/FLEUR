@@ -843,9 +843,9 @@ CONTAINS
        ENDIF ! mpi%irank == 0
 
 #ifdef CPP_MPI
-    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,vCoul%iter,vCoul%mt,vCoul%pw,vCoul%vacz,vCoul%vacxy)
-    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
+       CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
+       CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,vCoul%iter,vCoul%mt,vCoul%pw,vCoul%vacz,vCoul%vacxy)
+       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
 
      END SUBROUTINE vgen
