@@ -34,7 +34,6 @@ CONTAINS
     USE m_checkdop
     USE m_wrtdop
     USE m_cdn_io
-    USE m_pot_io
     USE m_qfix
     USE m_types
     USE m_od_vvac
@@ -824,19 +823,13 @@ CONTAINS
                    vTot%vacxy(:,:,2,:)=vTot%vacxy(:,:,1,:)
                 ENDIF
              ENDIF
-             CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,&
-                                 vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
 
              DO js=1,input%jspins
                 DO i=1,stars%ng3
                    vx%pw(i,js)=vxpw_w(i,js)/stars%nstr(i)
                 ENDDO
              ENDDO
-
              vx%iter = vTot%iter
-
-             CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,&
-                                 vx%iter,vx%mt,vx%pw,vTot%vacz,vTot%vacxy)
           END IF
 
        ENDIF ! mpi%irank == 0

@@ -4,7 +4,6 @@ if (${FLEUR_USE_MPI})
    set(fleur_F90 ${fleur_F90}
    mpi/mingeselle.F90
    mpi/mpi_bc_all.F90
-   mpi/mpi_bc_pot.F90
    mpi/mpi_bc_potden.F90
    mpi/mpi_bc_coreDen.F90
    mpi/mpi_bc_st.F90

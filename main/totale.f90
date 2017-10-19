@@ -45,7 +45,6 @@ CONTAINS
     USE m_force_a4
     USE m_force_a3
     USE m_forcew
-    USE m_pot_io
     USE m_cdn_io
     USE m_types
     USE m_xmlOutput
