@@ -50,7 +50,6 @@ CONTAINS
     USE m_points
     USE m_fleur_vdw
 #ifdef CPP_MPI
-    USE m_mpi_bc_pot
     USE m_mpi_bc_potden
 #endif
     IMPLICIT NONE
@@ -842,9 +841,10 @@ CONTAINS
 
        ENDIF ! mpi%irank == 0
 
+       ! broadcast potentials
 #ifdef CPP_MPI
-       CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-       CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,vCoul%iter,vCoul%mt,vCoul%pw,vCoul%vacz,vCoul%vacxy)
+       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
+       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
 

@@ -11,7 +11,7 @@ CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
-                  enpara,cell,noco,jij,results,oneD,coreSpecInput,&
+                  enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
                   inIter,outDen)
 
    !*****************************************************
@@ -25,7 +25,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_prpqfftmap
    USE m_cdnval
    USE m_cdn_io
-   USE m_pot_io
    USE m_wrtdop
    USE m_cdntot
    USE m_cdnovlp
@@ -37,7 +36,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_types
    USE m_xmlOutput
 #ifdef CPP_MPI
-   USE m_mpi_bc_pot
    USE m_mpi_bc_potden
    USE m_mpi_bc_coreden
 #endif
@@ -64,6 +62,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_sphhar),INTENT(IN)        :: sphhar
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
+   TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_potden),INTENT(INOUT)     :: outDen
 
    !Scalar Arguments
@@ -87,9 +86,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL tec(atoms%ntype,DIMENSION%jspd),rhTemp(dimension%msh,atoms%ntype,dimension%jspd)
    REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
    INTEGER,ALLOCATABLE :: igq_fft(:)
-   REAL   ,ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
    REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
-   COMPLEX,ALLOCATABLE :: vpw(:,:),vzxy(:,:,:,:)
    CHARACTER(LEN=20)   :: attributes(4)
 
    !pk non-collinear (start)
@@ -97,19 +94,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
    COMPLEX,ALLOCATABLE :: qa21(:)
    !pk non-collinear (end)
-
-   !Read Potential and keep only vr(:,0,:,:) and vz
-   ALLOCATE(vpw(stars%ng3,dimension%jspd),vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd))
-   ALLOCATE(vz(vacuum%nmzd,2,dimension%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd))
-   IF (mpi%irank.EQ.0) THEN
-      CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                         iter,vr,vpw,vz,vzxy)
-   END IF
-#ifdef CPP_MPI
-   CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
-                   iter,vr,vpw,vz,vzxy)
-#endif
-   DEALLOCATE ( vpw,vzxy )
 
    iter = inIter
    CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
@@ -170,7 +154,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL timestart("cdngen: cdnval")
       CALL cdnval(eig_id,&
                   mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
-                  sphhar,sym,obsolete,igq_fft,vr,vz(:,:,jspin),oneD,coreSpecInput,&
+                  sphhar,sym,obsolete,igq_fft,vTot%mt,vTot%vacz(:,:,jspin),oneD,coreSpecInput,&
                   outDen%mmpMat(-lmaxU_const:,-lmaxU_const:,:,jspin),results, outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,&
                   outDen%cdom,outDen%cdomvz,outDen%cdomvxy,qvac,qvlay,qa21, chmom,clmom)
       CALL timestop("cdngen: cdnval")
@@ -221,7 +205,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
             !add in core density
             IF (mpi%irank.EQ.0) THEN
-               CALL cored(input,jspin,atoms, outDen%mt,dimension, sphhar, vr(:,0,:,jspin), qint,rh,tec,seig)
+               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh,tec,seig)
                rhTemp(:,:,jspin) = rh(:,:,jspin)
                results%seigc = results%seigc + seig
                IF (input%jspins.EQ.2) THEN
@@ -284,7 +268,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (.NOT.sliceplot%slice) THEN
          !add in core density
          IF (mpi%irank.EQ.0) THEN
-            CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vr(:,0,:,:),qint,rh)
+            CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vTot%mt(:,0,:,:),qint,rh)
             results%seigc = results%seigc + seig
             IF (input%jspins.EQ.2) THEN
                DO jspin = 1,input%jspins
@@ -396,7 +380,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   !calculate the perpendicular part of the local moment
                   !and relax the angle of the local moment or calculate
                   !the constraint B-field.
-                  CALL m_perp(atoms,n,noco_new,vr(:,0,:,:),chmom,qa21,alphdiff)
+                  CALL m_perp(atoms,n,noco_new,vTot%mt(:,0,:,:),chmom,qa21,alphdiff)
                END IF
             END DO
             CALL closeXMLElement('magneticMomentsInMTSpheres')

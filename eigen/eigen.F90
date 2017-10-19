@@ -9,7 +9,7 @@ MODULE m_eigen
 CONTAINS
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
        sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
-       it,eig_id,inDen,results,v,vx)
+       it,eig_id,inDen,results,vTot,vx)
     !*********************************************************************
     !     sets up and solves the eigenvalue problem for a basis of lapws.
     !
@@ -28,7 +28,6 @@ CONTAINS
     USE m_hsvac
     USE m_od_hsvac
     USE m_usetup
-    USE m_pot_io
     USE m_eigen_diag
     USE m_add_vnonlocal
     USE m_subvxc
@@ -60,7 +59,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: inDen
-    TYPE(t_potden),INTENT(INOUT) :: v,vx
+    TYPE(t_potden),INTENT(INOUT) :: vTot,vx
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
@@ -146,14 +145,9 @@ CONTAINS
 8120   FORMAT (' IT=',i4,'  ISEC1=',i4,' reduced diagonalization')
        l_wu = .TRUE.
     END IF
-   
-    !IF (mpi%irank.EQ.0) THEN
-    !   CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-    !                      v%iter,v%mt,v%pw,v%vacz,v%vacxy)
-    !END IF
 
 999 CONTINUE
-    IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
+    IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,vTot%iter/),&
                                                     RESHAPE((/19,13,5,5/),(/2,2/)))
 
    
@@ -161,7 +155,7 @@ CONTAINS
     ! set energy parameters (normally to that, what we read in)
     !
     CALL lodpot(mpi,atoms,sphhar,obsolete,vacuum,&
-            input, v%mt,v%vacz, enpara_in, enpara)
+            input, vTot%mt,vTot%vacz, enpara_in, enpara)
     !
 
 
@@ -243,10 +237,10 @@ CONTAINS
     !  ..
     !  LDA+U
     IF ((atoms%n_u.GT.0)) THEN
-       ALLOCATE( v%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins) )
-       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,v,mpi,results)
+       ALLOCATE( vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins) )
+       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     ELSE
-       ALLOCATE( v%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2) )
+       ALLOCATE( vTot%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2) )
     ENDIF
     !
     !--->    loop over k-points: each can be a separate task
@@ -275,8 +269,8 @@ CONTAINS
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
        lh0=1
-       CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, v%mt(1,0,1,jsp),lh0,input, td,ud)
-       IF (input%l_f) CALL write_tlmplm(td,v%mmpMat,atoms%n_u>0,1,jsp,input%jspins)
+       CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, vTot%mt(1,0,1,jsp),lh0,input, td,ud)
+       IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
 
        !---> pk non-collinear
@@ -286,8 +280,8 @@ CONTAINS
        IF (noco%l_noco) THEN
           isp = 2
           CALL timestart("tlmplm")
-          CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud)
-          IF (input%l_f) CALL write_tlmplm(td,v%mmpMat,atoms%n_u>0,2,2,input%jspins)
+          CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, vTot%mt(1,0,1,isp),lh0,input, td,ud)
+          IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u>0,2,2,input%jspins)
           CALL timestop("tlmplm")
        ENDIF
        !
@@ -317,7 +311,7 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           CALL timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(input,noco,jij,stars, v%pw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
+          CALL hsint(input,noco,jij,stars, vTot%pw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
 
           CALL timestop("Interstitial Hamiltonian&Overlap")
           !
@@ -326,7 +320,7 @@ CONTAINS
           IF (.NOT.l_wu) THEN
              CALL timestart("MT Hamiltonian&Overlap")
              CALL hsmt(DIMENSION,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
-                  lmaxU_const, noco,cell, lapw, bkpt,v%mt,v%mmpMat, oneD,ud, kveclo,td,l_real,hamOvlp)
+                  lmaxU_const, noco,cell, lapw, bkpt,vTot%mt,vTot%mmpMat, oneD,ud, kveclo,td,l_real,hamOvlp)
              CALL timestop("MT Hamiltonian&Overlap")
           ENDIF
           !
@@ -340,7 +334,7 @@ CONTAINS
              
              
              IF( hybrid%l_subvxc ) THEN
-                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,vTot%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
                      sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
                      oneD,  hamovlp,vx)
              END IF
@@ -351,10 +345,10 @@ CONTAINS
           !
           CALL timestart("Vacuum Hamiltonian&Overlap")
           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             CALL hsvac(vacuum,stars,DIMENSION, atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz,enpara%evac0,cell, &
+             CALL hsvac(vacuum,stars,DIMENSION, atoms, jsp,input,vTot%vacxy(1,1,1,jsp),vTot%vacz,enpara%evac0,cell, &
                   bkpt,lapw,sym, noco,jij, mpi%n_size,mpi%n_rank,nv2,l_real,hamOvlp)
           ELSEIF (oneD%odi%d1) THEN
-             CALL od_hsvac(vacuum,stars,DIMENSION, oneD,atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz, &
+             CALL od_hsvac(vacuum,stars,DIMENSION, oneD,atoms, jsp,input,vTot%vacxy(1,1,1,jsp),vTot%vacz, &
                   enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
                   mpi%n_size,mpi%n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
           END IF
@@ -417,7 +411,7 @@ ENDIF
        DEALLOCATE (td%ind,td%tuulo,td%tdulo)
        DEALLOCATE (td%tuloulo)
     END DO ! spin loop ends
-    DEALLOCATE(v%mmpMat)
+    DEALLOCATE(vTot%mmpMat)
     DEALLOCATE (matind)
     IF (l_real) THEN
        DEALLOCATE(hamOvlp%a_r,hamOvlp%b_r)

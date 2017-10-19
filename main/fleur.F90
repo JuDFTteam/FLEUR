@@ -428,7 +428,7 @@ CONTAINS
                                ENDIF
                                ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
                                CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                                    obsolete,sym,cell,noco,input,kpts, oneD)
+                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot)
                                IF(noco%l_soc.AND.input%gw.EQ.2) THEN
                                   CLOSE(4649)
                                   INQUIRE(1014,opened=l_endit)
@@ -591,7 +591,7 @@ CONTAINS
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* New Charge "
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-                         enpara,cell,noco,jij,results,oneD,coreSpecInput,&
+                         enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
                          inDen%iter,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
