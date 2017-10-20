@@ -60,6 +60,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    REAL dist(6)
    REAL, ALLOCATABLE :: sm(:), fsm(:)
    CHARACTER(LEN=20) :: attributes(2)
+   COMPLEX           :: n_mmpTemp(-3:3,-3:3,atoms%n_u,input%jspins)
 
    !External functions
    REAL CPP_BLAS_sdot
@@ -100,6 +101,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
              2*vacuum%nmzd*vacuum%nvac
    END IF
 
+   n_mmpTemp = inDen%mmpMat
    n_u_keep=atoms%n_u
    INQUIRE (file='n_mmp_mat',exist=l_ldaU) 
    IF (l_ldaU) THEN
@@ -118,8 +120,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
       IF ( MOD(i,14*input%jspins) == 1 ) THEN     ! was already mixed in u_mix
          atoms%n_u = 0
       ELSE IF ( MOD(i,28*input%jspins)== 0 ) THEN ! mix here 
-         atoms%n_u = i / (28 * input%jspins ) ! calculate number of U parameters
-         mmap = mmap + 7 * i / 2   ! add 7*7 complex numbers per atoms%n_u
+         mmap = mmap + 7 * 7 * 2 * atoms%n_u * input%jspins ! add 7*7 complex numbers per atoms%n_u and spin
       ELSE
          CALL juDFT_error("strange n_mmp_mat-file...",calledby ="mix")
       END IF
@@ -289,6 +290,10 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    IF (input%imix.GT.0) THEN
       CLOSE (57)
       CLOSE (59)
+   END IF
+
+   IF(atoms%n_u.NE.n_u_keep) THEN
+      inDen%mmpMat = n_mmpTemp
    END IF
 
    atoms%n_u=n_u_keep

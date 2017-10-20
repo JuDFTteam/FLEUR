@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
                   enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                  inIter,outDen)
+                  inIter,inDen,outDen)
 
    !*****************************************************
    !    Charge density generator
@@ -63,7 +63,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
-   TYPE(t_potden),INTENT(INOUT)     :: outDen
+   TYPE(t_potden),INTENT(INOUT)     :: inDen,outDen
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id
@@ -162,7 +162,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END DO
 
    ! lda+u
-   IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,outDen%mmpMat)
+   IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,inDen%mmpMat,outDen%mmpMat)
 
 !+t3e
    IF (mpi%irank.EQ.0) THEN

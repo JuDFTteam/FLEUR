@@ -171,7 +171,7 @@ CONTAINS
     results%last_distance = -1.0
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
-    ! Initialize and load inDen density without density matrix(start)
+    ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
     IF (noco%l_noco) THEN
        ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
@@ -181,6 +181,7 @@ CONTAINS
        ALLOCATE (inDen%cdom(1),inDen%cdomvz(1,1),inDen%cdomvxy(1,1,1))
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
+    ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,fermiEnergyTemp,l_qfix,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,&
@@ -192,9 +193,14 @@ CONTAINS
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
                          inDen%cdomvz,inDen%cdomvxy)
+       IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
+          CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
+          IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
+       ELSE
+          inDen%mmpMat = CMPLX(0.0,0.0)
+       END IF
     END IF
-    ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-    ! Initialize and load inDen density without density matrix(end)
+    ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
     CALL vTot%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
@@ -267,15 +273,6 @@ CONTAINS
              END IF
           END IF
 
-          ! Initialize and load inDen density matrix and broadcast inDen(start)
-          IF(mpi%irank.EQ.0) THEN
-             IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
-                CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
-                IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
-             ELSE
-                inDen%mmpMat = CMPLX(0.0,0.0)
-             END IF
-          END IF
 #ifdef CPP_MPI
           CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
@@ -595,7 +592,7 @@ CONTAINS
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                          enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                         inDen%iter,outDen)
+                         inDen%iter,inDen,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e

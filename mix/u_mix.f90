@@ -12,7 +12,7 @@ MODULE m_umix
   ! --------------------------------------------------------
   ! Extension to multiple U per atom type by G.M. 2017
 CONTAINS
-  SUBROUTINE u_mix(atoms,jspins,n_mmp_new)
+  SUBROUTINE u_mix(atoms,jspins,n_mmp_in,n_mmp_out)
 
     USE m_types
     USE m_nmat_rot
@@ -23,7 +23,8 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms
     INTEGER, INTENT (IN)       :: jspins 
-    COMPLEX, INTENT (INOUT)    :: n_mmp_new(-3:3,-3:3,atoms%n_u,jspins)
+    COMPLEX, INTENT (INOUT)    :: n_mmp_out(-3:3,-3:3,atoms%n_u,jspins)
+    COMPLEX, INTENT (INOUT)    :: n_mmp_in (-3:3,-3:3,atoms%n_u,jspins)
     !
     ! ... Locals ...
     INTEGER j,k,iofl,l,itype,ios,i_u,jsp,lty(atoms%n_u)
@@ -31,7 +32,7 @@ CONTAINS
     REAL    theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
     LOGICAL n_exist
     CHARACTER(LEN=20)   :: attributes(6)
-    COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:),n_mmp_old(:,:,:,:)
+    COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
     !
     ! check for possible rotation of n_mmp
     !
@@ -51,10 +52,10 @@ CONTAINS
        END DO
        CLOSE (68)
        zero = 0.0
-       CALL nmat_rot(zero,-theta,-phi,3,atoms%n_u,jspins,lty,n_mmp_new)
+       CALL nmat_rot(zero,-theta,-phi,3,atoms%n_u,jspins,lty,n_mmp_out)
     END IF
 
-    ! Write out n_mmp_new to out.xml file
+    ! Write out n_mmp_out to out.xml file
 
     CALL openXMLElementNoAttributes('ldaUDensityMatrix')
     DO jsp = 1, jspins
@@ -72,7 +73,7 @@ CONTAINS
           WRITE(attributes(6),'(f15.8)') jParam
           CALL writeXMLElementMatrixPoly('densityMatrixFor',&
                                          (/'spin    ','atomType','uIndex  ','l       ','U       ','J       '/),&
-                                         attributes,n_mmp_new(-l:l,-l:l,i_u,jsp))
+                                         attributes,n_mmp_out(-l:l,-l:l,i_u,jsp))
        END DO
     END DO
     CALL closeXMLElement('ldaUDensityMatrix')
@@ -85,9 +86,9 @@ CONTAINS
 
 
     IF (n_exist) THEN
-       ALLOCATE (n_mmp_old(-3:3,-3:3,atoms%n_u,jspins))
-       ALLOCATE (    n_mmp(-3:3,-3:3,atoms%n_u,jspins))
-       READ (69,9000) n_mmp_old(:,:,:,:)
+       ALLOCATE (   n_mmp(-3:3,-3:3,atoms%n_u,jspins))
+       READ (69,9000) n_mmp(:,:,:,:)
+       n_mmp = CMPLX(0.0,0.0)
 
        READ (69,'(2(6x,f5.3))',IOSTAT=iofl) alpha,spinf
        IF ( iofl == 0 ) THEN
@@ -100,8 +101,8 @@ CONTAINS
              DO i_u = 1, atoms%n_u
                 DO j = -3,3
                    DO k = -3,3
-                      sum1 = sum1 + ABS(n_mmp_new(k,j,i_u,1) - n_mmp_old(k,j,i_u,1))
-                      n_mmp(k,j,i_u,1) = alpha * n_mmp_new(k,j,i_u,1) + (1.0-alpha) * n_mmp_old(k,j,i_u,1)
+                      sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
+                      n_mmp(k,j,i_u,1) = alpha * n_mmp_out(k,j,i_u,1) + (1.0-alpha) * n_mmp_in(k,j,i_u,1)
                    END DO
                 END DO
              END DO
@@ -113,18 +114,18 @@ CONTAINS
              DO i_u = 1,atoms%n_u
                 DO j = -3,3
                    DO k = -3,3
-                      sum1 = sum1 + ABS(n_mmp_new(k,j,i_u,1) - n_mmp_old(k,j,i_u,1))
-                      sum2 = sum2 + ABS(n_mmp_new(k,j,i_u,2) - n_mmp_old(k,j,i_u,2))
+                      sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
+                      sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
 
-                      n_mmp(k,j,i_u,1) =       gam * n_mmp_new(k,j,i_u,1) + &
-                                         (1.0-gam) * n_mmp_old(k,j,i_u,1) + &
-                                               del * n_mmp_new(k,j,i_u,2) - &
-                                               del * n_mmp_old(k,j,i_u,2)
+                      n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
+                                         (1.0-gam) * n_mmp_in (k,j,i_u,1) + &
+                                               del * n_mmp_out(k,j,i_u,2) - &
+                                               del * n_mmp_in (k,j,i_u,2)
 
-                      n_mmp(k,j,i_u,2) =       gam * n_mmp_new(k,j,i_u,2) + &
-                                         (1.0-gam) * n_mmp_old(k,j,i_u,2) + &
-                                               del * n_mmp_new(k,j,i_u,1) - &
-                                               del * n_mmp_old(k,j,i_u,1)
+                      n_mmp(k,j,i_u,2) =       gam * n_mmp_out(k,j,i_u,2) + &
+                                         (1.0-gam) * n_mmp_in (k,j,i_u,2) + &
+                                               del * n_mmp_out(k,j,i_u,1) - &
+                                               del * n_mmp_in (k,j,i_u,1)
                    END DO
                 END DO
              END DO
@@ -133,6 +134,7 @@ CONTAINS
           ENDIF
           WRITE (69,9000) n_mmp
           WRITE (69,'(2(a6,f5.3))') 'alpha=',alpha,'spinf=',spinf
+          n_mmp_in = n_mmp
 
        ELSEIF (iofl > 0 ) THEN
           !
@@ -149,7 +151,7 @@ CONTAINS
           DO i_u = 1, atoms%n_u
              DO j = -3,3
                 DO k = -3,3
-                   sum1 = sum1 + ABS(n_mmp_new(k,j,i_u,1) - n_mmp_old(k,j,i_u,1))
+                   sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
                 END DO
              END DO
           END DO
@@ -161,30 +163,31 @@ CONTAINS
              DO i_u = 1, atoms%n_u
                 DO j = -3,3
                    DO k = -3,3
-                      sum2 = sum2 + ABS(n_mmp_new(k,j,i_u,2) - n_mmp_old(k,j,i_u,2))
+                      sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
                    END DO
                 END DO
              END DO
              DO j=-3,3
-                WRITE(6,'(14f12.6)') (n_mmp_old(k,j,1,2),k=-3,3)
+                WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
              END DO
              WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
              DO j=-3,3
-                WRITE(6,'(14f12.6)') (n_mmp_new(k,j,1,2),k=-3,3)
+                WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
              END DO
           END IF
           REWIND(69)
-          WRITE (69,9000) n_mmp_old
-          WRITE (69,9000) n_mmp_new
+          WRITE (69,9000) n_mmp_in
+          WRITE (69,9000) n_mmp_out
        END IF !  iofl == 0 
 
-       DEALLOCATE ( n_mmp_old,n_mmp )
+       DEALLOCATE (n_mmp)
     ELSE
        !
        ! first time with lda+u; write new n_mmp  
        !
-       WRITE (69,9000) n_mmp_new
+       WRITE (69,9000) n_mmp_out
        WRITE (69,'(2(a6,f5.3))') 'alpha=',0.05,'spinf=',1.0
+       n_mmp_in = n_mmp_out
     END IF
 
 9000 FORMAT(7f20.13)
