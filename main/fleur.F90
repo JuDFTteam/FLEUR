@@ -102,8 +102,8 @@ CONTAINS
     TYPE(t_mpi)      :: mpi
     TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
-    TYPE(t_potden)   :: vTot,vx,vCoul
-    TYPE(t_potden)   :: inDen, outDen, mixDen
+    TYPE(t_potden)   :: vTot,vx,vCoul,vTemp
+    TYPE(t_potden)   :: inDen, outDen
 
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
@@ -196,18 +196,19 @@ CONTAINS
     ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     ! Initialize and load inDen density without density matrix(end)
 
-    ! Initialize mixDen density (start)
-    CALL mixDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.)
-    IF (noco%l_noco) THEN
-       ALLOCATE (mixDen%cdom(stars%ng3),mixDen%cdomvz(vacuum%nmzd,2))
-       ALLOCATE (mixDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    ! Initialize potentials (start)
+    CALL vTot%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
+    CALL vCoul%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
+    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.)
+    CALL vTemp%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
+    IF ((atoms%n_u.GT.0)) THEN
+       ALLOCATE(vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
+       ALLOCATE(vTemp%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
     ELSE
-       ALLOCATE (mixDen%cdom(1),mixDen%cdomvz(1,1),mixDen%cdomvxy(1,1,1))
-       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+       ALLOCATE(vTot%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2))
+       ALLOCATE(vTemp%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2))
     ENDIF
-    ALLOCATE (mixDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-    ! Initialize mixDen density (end)
+    ! Initialize potentials (end)
 
     DO WHILE (l_cont)
 
@@ -393,9 +394,11 @@ CONTAINS
                                ! WRITE(6,fmt='(A)') 'Starting 1st variation ...'
                                CALL timestart("eigen")
                                IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Eigenvalue problem "
+                               vTemp = vTot
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
-                                    it,eig_id,inDen,results,vTot,vx)
+                                    it,eig_id,inDen,results,vTemp,vx)
+                               vTot%mmpMat = vTemp%mmpMat
                                eig_idList(pc) = eig_id
                                CALL timestop("eigen")
                                !
@@ -675,8 +678,7 @@ CONTAINS
              !
              CALL timestart("mixing")
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Mixing distance: "
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results,mixDen)
-             inDen = mixDen
+             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
              CALL timestop("mixing")
 
              WRITE (6,FMT=8130) it

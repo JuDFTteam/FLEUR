@@ -69,7 +69,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(INOUT)     :: atoms !vr0 is updated
     TYPE(t_potden), INTENT(IN)      :: den
-    TYPE(t_potden),INTENT(OUT)      :: vTot,vx,vCoul
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,vx,vCoul
     !     ..
     !     .. Scalar Arguments ..
     LOGICAL, INTENT (IN) :: reap
@@ -122,14 +122,12 @@ CONTAINS
     !     ivac=1: upper (positive z) vacuum
     !     units: hartrees
     !
-    CALL vTot%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
-    CALL vCoul%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
+
     ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
          vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),xp(3,dimension%nspd),&
          vpw_exx(stars%ng3,dimension%jspd),vpw_wexx(stars%ng3,dimension%jspd),&
          excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
          vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
-    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.)
     vTot%iter = den%iter
 
     CALL workDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)

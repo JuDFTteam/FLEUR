@@ -233,18 +233,13 @@ CONTAINS
     !--->    loop over spins
     nspins = input%jspins
     IF (noco%l_noco) nspins = 1
-    !
-    !  ..
-    !  LDA+U
-    IF ((atoms%n_u.GT.0)) THEN
-       ALLOCATE( vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins) )
-       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
-    ELSE
-       ALLOCATE( vTot%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2) )
-    ENDIF
-    !
-    !--->    loop over k-points: each can be a separate task
 
+    ! LDA+U
+    IF ((atoms%n_u.GT.0)) THEN
+       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
+    END IF
+
+    !--->    loop over k-points: each can be a separate task
     DO jsp = 1,nspins
        
 
@@ -411,7 +406,6 @@ ENDIF
        DEALLOCATE (td%ind,td%tuulo,td%tdulo)
        DEALLOCATE (td%tuloulo)
     END DO ! spin loop ends
-    DEALLOCATE(vTot%mmpMat)
     DEALLOCATE (matind)
     IF (l_real) THEN
        DEALLOCATE(hamOvlp%a_r,hamOvlp%b_r)

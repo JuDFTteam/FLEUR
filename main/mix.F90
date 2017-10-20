@@ -16,7 +16,7 @@ MODULE m_mix
 CONTAINS
 
 SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
-               hybrid,archiveType,inDen,outDen,results,mixDen)
+               hybrid,archiveType,inDen,outDen,results)
 
 #include"cpp_double.h"
 
@@ -44,9 +44,9 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_sphhar),INTENT(IN)     :: sphhar
    TYPE(t_atoms),INTENT(INOUT)   :: atoms !n_u is modified temporarily
-   TYPE(t_potden),INTENT(IN)     :: inDen, outDen
+   TYPE(t_potden),INTENT(IN)     :: outDen
    TYPE(t_results),INTENT(INOUT) :: results
-   TYPE(t_potden),INTENT(INOUT)  :: mixDen
+   TYPE(t_potden),INTENT(INOUT)  :: inDen
    INTEGER, INTENT(IN)           :: archiveType
 
    !Local Scalars
@@ -199,14 +199,14 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
-   mixDen%cdom = CMPLX(0.0,0.0)
-   mixDen%cdomvz = CMPLX(0.0,0.0)
-   mixDen%cdomvxy = CMPLX(0.0,0.0)
-   mixDen%mmpMat = CMPLX(0.0,0.0)
+   inDen%cdom = CMPLX(0.0,0.0)
+   inDen%cdomvz = CMPLX(0.0,0.0)
+   inDen%cdomvxy = CMPLX(0.0,0.0)
+   inDen%mmpMat = CMPLX(0.0,0.0)
 
-   CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,mixDen%mmpMat,oneD,&
-               mixDen%pw,mixDen%mt,mixDen%vacz,mixDen%vacxy,mixDen%cdom,&
-               mixDen%cdomvz,mixDen%cdomvxy) 
+   CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,inDen%mmpMat,oneD,&
+               inDen%pw,inDen%mt,inDen%vacz,inDen%vacxy,inDen%cdom,&
+               inDen%cdomvz,inDen%cdomvxy) 
 
    !calculate the distance of charge densities...
 
@@ -272,17 +272,17 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !fix charge of the new density
    CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
-             mixDen%pw,mixDen%vacxy,mixDen%mt,mixDen%vacz,.FALSE.,.false., fix)
+             inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,.FALSE.,.false., fix)
 
    !write out mixed density
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     1,results%last_distance,results%ef,.TRUE.,iter,mixDen%mt,mixDen%pw,mixDen%vacz,&
-                     mixDen%vacxy,mixDen%cdom,mixDen%cdomvz,mixDen%cdomvxy)
-   mixDen%iter = inDen%iter + 1
+                     1,results%last_distance,results%ef,.TRUE.,iter,inDen%mt,inDen%pw,inDen%vacz,&
+                     inDen%vacxy,inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
+   inDen%iter = inDen%iter + 1
 
    IF (atoms%n_u > 0) THEN
       OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
-      WRITE (69,'(7f20.13)') mixDen%mmpMat(:,:,:,:)
+      WRITE (69,'(7f20.13)') inDen%mmpMat(:,:,:,:)
       CLOSE (69)
    ENDIF
 
