@@ -582,6 +582,9 @@ MODULE m_types
      TYPE(t_efield)::efield
      LOGICAL :: l_core_confpot
      LOGICAL :: l_useapw
+     LOGICAL :: ldauLinMix
+     REAL    :: ldauMixParam
+     REAL    :: ldauSpinf
   END TYPE t_input
 
   TYPE t_sliceplot

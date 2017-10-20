@@ -196,10 +196,18 @@ CONTAINS
        IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
           CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
           IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
-       ELSE
+       ELSE IF (atoms%n_u>0) THEN
+          IF(input%ldauLinMix) THEN
+             input%ldauMixParam = 0.05
+             input%ldauSpinf = 1.0
+          END IF
           inDen%mmpMat = CMPLX(0.0,0.0)
        END IF
     END IF
+#ifdef CPP_MPI
+    CALL MPI_BCAST(input%ldauMixParam,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%ldauSpinf,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+#endif
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)

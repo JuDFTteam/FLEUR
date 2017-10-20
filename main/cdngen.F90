@@ -162,7 +162,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END DO
 
    ! lda+u
-   IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(atoms,input%jspins,inDen%mmpMat,outDen%mmpMat)
+   IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
 
 !+t3e
    IF (mpi%irank.EQ.0) THEN

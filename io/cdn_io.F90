@@ -1159,16 +1159,17 @@ MODULE m_cdn_io
 
    SUBROUTINE readDensityMatrix(input, atoms, n_mmp, l_error)
 
-      TYPE(t_input), INTENT(IN)  :: input
-      TYPE(t_atoms), INTENT(IN)  :: atoms
-      COMPLEX, INTENT(OUT)       :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                          -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                          atoms%n_u,input%jspins)
-      LOGICAL, INTENT(OUT)       :: l_error
+      TYPE(t_input), INTENT(INOUT) :: input
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      COMPLEX, INTENT(OUT)         :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                            -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                            atoms%n_u,input%jspins)
+      LOGICAL, INTENT(OUT)         :: l_error
 
-      INTEGER                    :: mode, ioStatus
-      LOGICAL                    :: l_exist
-      CHARACTER(LEN=30)          :: filename
+      INTEGER                      :: mode, ioStatus, numLines, iofl, i
+      LOGICAL                      :: l_exist
+      CHARACTER(LEN=30)            :: filename
+      REAL                         :: alpha, spinf
 
       l_error = .FALSE.
       ioStatus = 0
@@ -1201,7 +1202,30 @@ MODULE m_cdn_io
 
          OPEN (69,file=TRIM(ADJUSTL(filename)),status='unknown',form='formatted')
          READ (69,'(7f20.13)',IOSTAT=ioStatus) n_mmp
+         REWIND(69)
+         numLines = 0 
+         DO
+            READ (69,*,iostat=iofl)
+            IF (iofl < 0) EXIT
+            numLines = numLines + 1
+         END DO
+         IF (MOD(numLines,14*input%jspins) == 1) THEN !read in alpha, spinf in this case
+            REWIND(69)
+            DO i = 1, numLines-1
+               READ (69,*,iostat=iofl)
+            END DO
+            READ (69,'(2(6x,f5.3))',IOSTAT=ioStatus) alpha, spinf
+            IF(input%ldauLinMix.AND.(input%ldauMixParam.LT.0.0)) THEN
+               input%ldauMixParam = alpha
+               input%ldauSpinf = spinf
+            END IF
+         ELSE IF (MOD(numLines,14*input%jspins).NE.0) THEN
+            CALL juDFT_error("strange n_mmp_mat-file...",calledby ="readDensityMatrix")
+         ELSE IF(input%ldauMixParam.LT.0.0) THEN
+            input%ldauLinMix = .FALSE.
+         END IF
          CLOSE(69)
+
 !         IF (ioStatus.NE.0) THEN
 !            l_error = .TRUE.
 !            RETURN

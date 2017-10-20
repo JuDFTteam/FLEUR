@@ -143,6 +143,9 @@
           CALL initWannierDefaults(wann)
 
           input%minDistance = 0.0
+          input%ldauLinMix = .TRUE.
+          input%ldauMixParam = -1.0
+          input%ldauSpinf = 1.0
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
           IF (input%l_inpXML) THEN

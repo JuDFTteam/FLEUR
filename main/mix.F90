@@ -101,32 +101,21 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
              2*vacuum%nmzd*vacuum%nvac
    END IF
 
+   ! LDA+U (start)
    n_mmpTemp = inDen%mmpMat
    n_u_keep=atoms%n_u
-   INQUIRE (file='n_mmp_mat',exist=l_ldaU) 
-   IF (l_ldaU) THEN
+   IF (isDensityMatrixPresent()) THEN
       !In an LDA+U caclulation, also the density matrix is included in the
-      !supervectors (sm,fsm) if no mixing factors are in the n_mmp_mat-file
-
-      OPEN (69,file='n_mmp_mat',status='old',form='formatted')
-      i = 0 
-      DO
-         READ (69,*,iostat=iofl)
-         IF (iofl < 0) EXIT
-         i = i + 1
-      END DO
-      CLOSE (69)
-
-      IF ( MOD(i,14*input%jspins) == 1 ) THEN     ! was already mixed in u_mix
+      !supervectors (sm,fsm) if no linear mixing is performed on it.
+      IF(input%ldauLinMix) THEN
          atoms%n_u = 0
-      ELSE IF ( MOD(i,28*input%jspins)== 0 ) THEN ! mix here 
-         mmap = mmap + 7 * 7 * 2 * atoms%n_u * input%jspins ! add 7*7 complex numbers per atoms%n_u and spin
       ELSE
-         CALL juDFT_error("strange n_mmp_mat-file...",calledby ="mix")
+         mmap = mmap + 7 * 7 * 2 * atoms%n_u * input%jspins ! add 7*7 complex numbers per atoms%n_u and spin
       END IF
    ELSE
-      atoms%n_u=0
-   END IF ! l_ldaU
+      atoms%n_u = 0
+   END IF
+   ! LDA+U (end)
 
    ALLOCATE (sm(mmap),fsm(mmap))
 

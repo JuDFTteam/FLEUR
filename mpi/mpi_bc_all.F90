@@ -40,8 +40,8 @@ CONTAINS
     REAL rdum
     !     .. Local Arrays ..
     INTEGER i(39),ierr(3)
-    REAL    r(30)
-    LOGICAL l(44)
+    REAL    r(32)
+    LOGICAL l(45)
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -65,7 +65,7 @@ CONTAINS
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
        r(27)=0.0 ; r(28)=0.0!r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
-       r(29)=input%minDistance ; r(30)=obsolete%chng
+       r(29)=input%minDistance ; r(30)=obsolete%chng ; r(31)=input%ldauMixParam ; r(32)=input%ldauSpinf
 
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
@@ -77,7 +77,7 @@ CONTAINS
        l(34)=banddos%l_mcd ; l(35)=input%sso_opt(1)
        l(36)=input%sso_opt(2) ; l(37)=obsolete%pot8; l(38)=input%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=input%efield%dirichlet
-       l(43)=input%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec
+       l(43)=input%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -99,6 +99,7 @@ CONTAINS
     vacuum%locx(1)=r(11); vacuum%locx(2)=r(12); vacuum%locy(1)=r(13); vacuum%locy(2)=r(14)
     sliceplot%e1s=r(6) ; sliceplot%e2s=r(7) ; noco%theta=r(8) ; noco%phi=r(9) ; vacuum%tworkf=r(10)
     cell%omtil=r(1) ; cell%area=r(2) ; vacuum%delz=r(3) ; cell%z1=r(4) ; input%alpha=r(5)
+    input%ldauMixParam=r(31) ; input%ldauSpinf=r(32)
     !
     CALL MPI_BCAST(l,SIZE(l),MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     input%efield%l_dirichlet_coeff = l(43) ; input%l_useapw=l(2)
@@ -114,7 +115,7 @@ CONTAINS
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     input%efield%l_segmented = l(38) ; sym%symor=l(39); input%efield%dirichlet = l(40)
-    input%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44)
+    input%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
     !
     ! -> Broadcast the arrays:
     IF (input%efield%l_segmented) THEN
