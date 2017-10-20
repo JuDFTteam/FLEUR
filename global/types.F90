@@ -895,6 +895,7 @@ MODULE m_types
   TYPE t_potden
      ! General variables and arrays
      INTEGER             :: iter
+     INTEGER             :: potdenType
      COMPLEX,ALLOCATABLE :: pw(:,:)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
      REAL,ALLOCATABLE    :: vacz(:,:,:)
@@ -940,7 +941,7 @@ CONTAINS
 
   END SUBROUTINE usdus_init
 
-  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,oneD,jsp,l_noco)
+  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,oneD,jsp,l_noco,potden_type)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd
@@ -949,16 +950,16 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN):: sphhar
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_oneD),INTENT(IN)  :: oneD
-    INTEGER,INTENT(IN)       :: jsp
+    INTEGER,INTENT(IN)       :: jsp, potden_type
     LOGICAL,INTENT(IN)       :: l_noco
-    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,l_noco,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
+    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,l_noco,potden_type,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,l_noco,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,l_noco,potden_type,nmzd,nmzxyd,n2d)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,jsp
+    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,jsp,potden_type
     LOGICAL,INTENT(IN)          :: l_noco
     INTEGER,INTENT(IN),OPTIONAL :: nmzd,nmzxyd,n2d
 
@@ -966,6 +967,7 @@ CONTAINS
 
     err=0
     pd%iter=0
+    pd%potdenType=potden_type
     IF(ALLOCATED(pd%pw)) DEALLOCATE(pd%pw)
     IF(ALLOCATED(pd%mt)) DEALLOCATE(pd%mt)
     IF(ALLOCATED(pd%vacz)) DEALLOCATE(pd%vacz)

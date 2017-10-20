@@ -130,7 +130,7 @@ CONTAINS
          vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
     vTot%iter = den%iter
 
-    CALL workDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
+    CALL workDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
     IF (noco%l_noco) THEN
        ALLOCATE (workDen%cdom(stars%ng3),workDen%cdomvz(vacuum%nmzd,2))
        ALLOCATE (workDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))

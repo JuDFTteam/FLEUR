@@ -172,7 +172,7 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density without density matrix(start)
-    CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.)
+    CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
     IF (noco%l_noco) THEN
        ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
        ALLOCATE (inDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
@@ -197,10 +197,10 @@ CONTAINS
     ! Initialize and load inDen density without density matrix(end)
 
     ! Initialize potentials (start)
-    CALL vTot%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
-    CALL vCoul%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
-    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.)
-    CALL vTemp%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco)
+    CALL vTot%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vCoul%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
+    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTX)
+    CALL vTemp%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     IF ((atoms%n_u.GT.0)) THEN
        ALLOCATE(vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
        ALLOCATE(vTemp%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
