@@ -32,6 +32,7 @@ MODULE m_juDFT_stop
   !-----------------------------------------------
   USE m_judft_time
   USE m_judft_sysinfo
+  USE m_judft_args
   IMPLICIT NONE
   PRIVATE
   PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
@@ -73,8 +74,13 @@ CONTAINS
     IF (PRESENT(warning)) warn = warning
     IF (warn) THEN
        !check if we stop nevertheless
-       INQUIRE(FILE ="JUDFT_WARN_ONLY",EXIST= callstop)
-       callstop  = .NOT.callstop
+       IF (judft_was_argument("-warn_only")) THEN
+          callstop=.false.
+       ELSE
+          INQUIRE(FILE ="JUDFT_WARN_ONLY",EXIST= callstop)
+
+          callstop  = .NOT.callstop
+       ENDIF
     ELSE
        callstop = .TRUE.
     ENDIF
@@ -208,6 +214,7 @@ CONTAINS
     CALL writetimes(.TRUE.)
     CALL print_memory_info()
     INQUIRE(FILE="JUDFT_TRACE",EXIST=calltrace)
+    IF (judft_was_argument("-trace")) calltrace=.TRUE.
     IF (error.EQ.1) calltrace = .TRUE.
     IF (calltrace) THEN
 #ifdef __INTEL_COMPILER
