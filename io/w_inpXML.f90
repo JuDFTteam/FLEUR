@@ -234,7 +234,7 @@ SUBROUTINE w_inpXML(&
    END IF
 
 !      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
-   195 FORMAT('      <ldaU l_linMix="',i0,'" mixParam="',l1,'" spinf="',i0,'"/>')
+   195 FORMAT('      <ldaU l_linMix="',l1,'" mixParam="',f0.6,'" spinf="',f0.6,'"/>')
    WRITE (fileNum,195) input%ldauLinMix,input%ldauMixParam,input%ldauSpinf
 
 !      <bzIntegration valenceElectrons="8.00000" mode="hist" fermiSmearingEnergy="0.00100">
