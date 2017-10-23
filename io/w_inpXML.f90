@@ -154,7 +154,7 @@ SUBROUTINE w_inpXML(&
       REWIND (fileNum)
 
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.28">'
+      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.29">'
    END IF
 
    IF(PRESENT(name_opt)) THEN
@@ -232,6 +232,11 @@ SUBROUTINE w_inpXML(&
    ELSE IF(input%tria) THEN
       bzIntMode = 'tria'
    END IF
+
+!      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
+   195 FORMAT('      <ldaU l_linMix="',i0,'" mixParam="',l1,'" spinf="',i0,'"/>')
+   WRITE (fileNum,195) input%ldauLinMix,input%ldauMixParam,input%ldauSpinf
+
 !      <bzIntegration valenceElectrons="8.00000" mode="hist" fermiSmearingEnergy="0.00100">
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
