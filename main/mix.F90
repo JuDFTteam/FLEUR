@@ -264,28 +264,32 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
              inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,.FALSE.,.false., fix)
 
-   !write out mixed density
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     1,results%last_distance,results%ef,.TRUE.,iter,inDen%mt,inDen%pw,inDen%vacz,&
-                     inDen%vacxy,inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
-   inDen%iter = inDen%iter + 1
-
-   IF (atoms%n_u > 0) THEN
-      OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
-      WRITE (69,'(7f20.13)') inDen%mmpMat(:,:,:,:)
-      CLOSE (69)
-   ENDIF
-
-   IF (input%imix.GT.0) THEN
-      CLOSE (57)
-      CLOSE (59)
-   END IF
-
    IF(atoms%n_u.NE.n_u_keep) THEN
       inDen%mmpMat = n_mmpTemp
    END IF
 
    atoms%n_u=n_u_keep
+
+   !write out mixed density
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                     1,results%last_distance,results%ef,.TRUE.,iter,inDen%mt,inDen%pw,inDen%vacz,&
+                     inDen%vacxy,inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
+
+   IF (atoms%n_u > 0) THEN
+      OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
+      WRITE (69,'(7f20.13)') inDen%mmpMat(:,:,:,:)
+      IF (input%ldauLinMix) THEN
+         WRITE (69,'(2(a6,f5.3))') 'alpha=',input%ldauMixParam,'spinf=',input%ldauSpinf
+      END IF
+      CLOSE (69)
+   ENDIF
+
+   inDen%iter = inDen%iter + 1
+
+   IF (input%imix.GT.0) THEN
+      CLOSE (57)
+      CLOSE (59)
+   END IF
 
    7900 FORMAT (/,'---->    distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
    7901 FORMAT (/,'----> HF distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')

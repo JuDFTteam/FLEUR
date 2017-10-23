@@ -79,104 +79,92 @@ CONTAINS
     END DO
     CALL closeXMLElement('ldaUDensityMatrix')
 
-    ! Check whether density matrix is present and open density-matrix - file
-    n_exist = isDensityMatrixPresent()
-    OPEN (69,file='n_mmp_mat',status='unknown',form='formatted')
+    ! exit subroutine if density matrix does nbot exist
+    IF(.NOT.isDensityMatrixPresent()) THEN
+       n_mmp_in = n_mmp_out
+       RETURN
+    END IF
 
-    IF (n_exist) THEN
-       IF (input%ldauLinMix) THEN
+    IF (input%ldauLinMix) THEN
 
-          ! mix here straight with given mixing factors
+       ! mix here straight with given mixing factors
 
-          ALLOCATE (n_mmp(-3:3,-3:3,atoms%n_u,input%jspins))
+       ALLOCATE (n_mmp(-3:3,-3:3,atoms%n_u,input%jspins))
 
-          alpha = input%ldauMixParam
-          spinf = input%ldauSpinf
+       alpha = input%ldauMixParam
+       spinf = input%ldauSpinf
 
-          sum1 = 0.0
-          IF (input%jspins.EQ.1) THEN
-             DO i_u = 1, atoms%n_u
-                DO j = -3,3
-                   DO k = -3,3
-                      sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
-                      n_mmp(k,j,i_u,1) = alpha * n_mmp_out(k,j,i_u,1) + (1.0-alpha) * n_mmp_in(k,j,i_u,1)
-                   END DO
-                END DO
-             END DO
-             WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
-          ELSE
-             sum2 = 0.0
-             gam = 0.5 * alpha * (1.0 + spinf)
-             del = 0.5 * alpha * (1.0 - spinf)
-             DO i_u = 1,atoms%n_u
-                DO j = -3,3
-                   DO k = -3,3
-                      sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
-                      sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
-
-                      n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
-                                         (1.0-gam) * n_mmp_in (k,j,i_u,1) + &
-                                               del * n_mmp_out(k,j,i_u,2) - &
-                                               del * n_mmp_in (k,j,i_u,2)
-
-                      n_mmp(k,j,i_u,2) =       gam * n_mmp_out(k,j,i_u,2) + &
-                                         (1.0-gam) * n_mmp_in (k,j,i_u,2) + &
-                                               del * n_mmp_out(k,j,i_u,1) - &
-                                               del * n_mmp_in (k,j,i_u,1)
-                   END DO
-                END DO
-             END DO
-             WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
-             WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
-          ENDIF
-          WRITE (69,9000) n_mmp
-          WRITE (69,'(2(a6,f5.3))') 'alpha=',alpha,'spinf=',spinf
-          n_mmp_in = n_mmp
-          DEALLOCATE (n_mmp)
-       ELSE ! input%ldauLinMix
-
-          ! calculate distance and write new n_mmp to mix in broyden.F
-
-          sum1 = 0.0
+       sum1 = 0.0
+       IF (input%jspins.EQ.1) THEN
           DO i_u = 1, atoms%n_u
              DO j = -3,3
                 DO k = -3,3
                    sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
+                   n_mmp(k,j,i_u,1) = alpha * n_mmp_out(k,j,i_u,1) + (1.0-alpha) * n_mmp_in(k,j,i_u,1)
                 END DO
              END DO
           END DO
-          IF (input%jspins.EQ.1) THEN
-             WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
-          ELSE
-             sum2 = 0.0
-             WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
-             DO i_u = 1, atoms%n_u
-                DO j = -3,3
-                   DO k = -3,3
-                      sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
-                   END DO
+          WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
+       ELSE
+          sum2 = 0.0
+          gam = 0.5 * alpha * (1.0 + spinf)
+          del = 0.5 * alpha * (1.0 - spinf)
+          DO i_u = 1,atoms%n_u
+             DO j = -3,3
+                DO k = -3,3
+                   sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
+                   sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
+
+                   n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
+                                      (1.0-gam) * n_mmp_in (k,j,i_u,1) + &
+                                            del * n_mmp_out(k,j,i_u,2) - &
+                                            del * n_mmp_in (k,j,i_u,2)
+
+                   n_mmp(k,j,i_u,2) =       gam * n_mmp_out(k,j,i_u,2) + &
+                                      (1.0-gam) * n_mmp_in (k,j,i_u,2) + &
+                                            del * n_mmp_out(k,j,i_u,1) - &
+                                            del * n_mmp_in (k,j,i_u,1)
                 END DO
              END DO
-             DO j=-3,3
-                WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
-             END DO
-             WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
-             DO j=-3,3
-                WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
-             END DO
-          END IF
-          WRITE (69,9000) n_mmp_in
-          WRITE (69,9000) n_mmp_out
-       END IF ! input%ldauLinMix
-    ELSE ! isDensityMatrixPresent()
-       ! first time with lda+u; write new n_mmp  
-       WRITE (69,9000) n_mmp_out
-       WRITE (69,'(2(a6,f5.3))') 'alpha=',input%ldauMixParam,'spinf=',input%ldauSpinf
-       n_mmp_in = n_mmp_out
-    END IF ! isDensityMatrixPresent()
+          END DO
+          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
+          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
+       ENDIF
+       n_mmp_in = n_mmp
+       DEALLOCATE (n_mmp)
+    ELSE ! input%ldauLinMix
 
-9000 FORMAT(7f20.13)
+       ! only calculate distance
 
-    CLOSE (69)
+       sum1 = 0.0
+       DO i_u = 1, atoms%n_u
+          DO j = -3,3
+             DO k = -3,3
+                sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
+             END DO
+          END DO
+       END DO
+       IF (input%jspins.EQ.1) THEN
+          WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
+       ELSE
+          sum2 = 0.0
+          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
+          DO i_u = 1, atoms%n_u
+             DO j = -3,3
+                DO k = -3,3
+                   sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
+                END DO
+             END DO
+          END DO
+          DO j=-3,3
+             WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
+          END DO
+          WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
+          DO j=-3,3
+             WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
+          END DO
+       END IF
+    END IF ! input%ldauLinMix
+
   END SUBROUTINE u_mix
 END MODULE m_umix
