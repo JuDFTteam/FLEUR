@@ -133,11 +133,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL prp_qfft_map(stars,sym, input, igq2_fft,igq_fft)
 
    !LDA+U: initialise density-matrix if needed
-   IF (atoms%n_u.GT.0) THEN
-      ALLOCATE (outDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-   ELSE
-      ALLOCATE (outDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,input%jspins))
-   END IF
+   ALLOCATE (outDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
    outDen%mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
 
 

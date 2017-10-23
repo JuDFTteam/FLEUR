@@ -60,7 +60,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    REAL dist(6)
    REAL, ALLOCATABLE :: sm(:), fsm(:)
    CHARACTER(LEN=20) :: attributes(2)
-   COMPLEX           :: n_mmpTemp(-3:3,-3:3,atoms%n_u,input%jspins)
+   COMPLEX           :: n_mmpTemp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins)
 
    !External functions
    REAL CPP_BLAS_sdot
