@@ -479,7 +479,7 @@ SUBROUTINE r_inpXML(&
      l_kpts = .TRUE.
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint')
      kpts%nkpt = numberNodes
-     kpts%nkpt = numberNodes
+     kpts%l_gamma = .FALSE.
      ALLOCATE(kpts%bk(3,kpts%nkpt))
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
