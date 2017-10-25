@@ -53,18 +53,14 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 !  .. Local Scalars ..
    REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
    INTEGER       :: i,j,ix,iy,iz,jsp,na,nplo,iv,iflag,nfile
-   INTEGER       :: nplot,nt,jm,jspin,iter,numInFiles,numOutFiles
+   INTEGER       :: nplot,nt,jm,jspin,numInFiles,numOutFiles
    LOGICAL       :: twodim,oldform,newform,l_qfix
    LOGICAL       :: cartesian,xsf,unwind,polar
 
 !  .. Local Arrays ..
-   COMPLEX, ALLOCATABLE :: qpw(:,:,:)
-   COMPLEX, ALLOCATABLE :: rhtxy(:,:,:,:,:)
-   REAL, ALLOCATABLE    :: rho(:,:,:,:,:)
-   REAL, ALLOCATABLE    :: rht(:,:,:,:)
+   TYPE(t_potden), ALLOCATABLE :: den(:)
    REAL, ALLOCATABLE    :: xdnout(:)
    REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
-   COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
    INTEGER :: grid(3)
    REAL    :: rhocc(atoms%jmtd)
    REAL    :: point(3)
@@ -117,11 +113,8 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
          numOutFiles = 1
       END IF
    END IF
+   ALLOCATE(den(numInFiles))
    ALLOCATE(cdnFilenames(numInFiles))
-   ALLOCATE(qpw(stars%ng3,input%jspins,numInFiles))
-   ALLOCATE(rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins,numInFiles))
-   ALLOCATE(rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins,numInFiles))
-   ALLOCATE(rht(vacuum%nmzd,2,input%jspins,numInFiles))
    IF(PRESENT(cdnfname)) THEN
       cdnFilenames(1) = cdnfname
    ELSE
@@ -141,18 +134,22 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Read in charge/potential
    DO i = 1, numInFiles
+      CALL den(i)%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
+      ALLOCATE (den(i)%cdom(1),den(i)%cdomvz(1,1),den(i)%cdomvxy(1,1,1))
+      ALLOCATE (den(i)%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+      den(i)%mmpMat = CMPLX(0.0,0.0)
       IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho(:,0:,:,:,i),qpw(:,:,i),&
-                          rht(:,:,:,i),rhtxy(:,:,:,:,i),cdom,cdomvz,cdomvxy)
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i)%iter,den(i)%mt,den(i)%pw,&
+                          den(i)%vacz,den(i)%vacxy,den(i)%cdom,den(i)%cdomvz,den(i)%cdomvxy)
       ELSE IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho(:,0:,:,:,i),qpw(:,:,i),&
-                          rht(:,:,:,i),rhtxy(:,:,:,:,i),cdom,cdomvz,cdomvxy)
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i)%iter,den(i)%mt,den(i)%pw,&
+                          den(i)%vacz,den(i)%vacxy,den(i)%cdom,den(i)%cdomvz,den(i)%cdomvxy)
       ELSE
          OPEN(20,file = cdnFilenames(i),form='unformatted',status='old')
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&
-                     iter,rho(:,0:,:,:,i),qpw(:,:,i),rht(:,:,:,i),rhtxy(:,:,:,:,i))
+                     den(i)%iter,den(i)%mt,den(i)%pw,den(i)%vacz,den(i)%vacxy)
          CLOSE(20)
       END IF
 
@@ -165,12 +162,12 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                jm = atoms%jri(nt)
                READ (17) (rhocc(j),j=1,jm)
                DO j = 1, atoms%jri(nt)
-                  rho(j,0,nt,jspin,i) = rho(j,0,nt,jspin,i) - rhocc(j)/2.0/SQRT(pi_const)
+                  den(i)%mt(j,0,nt,jspin) = den(i)%mt(j,0,nt,jspin) - rhocc(j)/2.0/SQRT(pi_const)
                END DO
                READ (17) tec
             END DO
             READ (17) qint
-            qpw(1,jspin,i) = qpw(1,jspin,i) - qint/cell%volint
+            den(i)%pw(1,jspin) = den(i)%pw(1,jspin) - qint/cell%volint
          END DO
          CLOSE (17)
       ELSE IF (input%score) THEN
@@ -295,8 +292,8 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                   DO i = 1, numInFiles
                      CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 qpw(:,:,i),rhtxy(:,:,:,:,i),rho(:,0:,:,:,i),&
-                                 rht(:,:,:,i),xdnout(i))
+                                 den(i)%pw,den(i)%vacxy,den(i)%mt,&
+                                 den(i)%vacz,xdnout(i))
                   END DO
 
                   IF (na.NE.0) THEN
@@ -394,7 +391,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       END DO
    END IF
 
-   DEALLOCATE(rho, qpw, rhtxy, rht, xdnout, cdnFilenames, outFilenames)
+   DEALLOCATE(xdnout, cdnFilenames, outFilenames)
 
    END SUBROUTINE plotdop
 

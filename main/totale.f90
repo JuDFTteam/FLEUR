@@ -41,7 +41,7 @@ CONTAINS
     !     ***************************************************
     !
     USE m_intgr    , ONLY : intgr3 
-    USE m_constants, ONLY : sfp_const
+    USE m_constants
     USE m_force_a4
     USE m_force_a3
     USE m_forcew
@@ -67,23 +67,24 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: it      
-    !     ..
+
+    ! Local type instances
+    TYPE(t_potden) :: den
+
     !     .. Local Scalars ..
     REAL rhs,totz, eigSum, fermiEnergyTemp
-    INTEGER n,j,nt,iter,i, archiveType
+    INTEGER n,j,nt,i, archiveType
     LOGICAL l_qfix
 
     !     .. Local Arrays ..
     REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
     REAL dpj(atoms%jmtd)
-    COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
     CHARACTER(LEN=20) :: attributes(3)
-    !.....density
-    REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
-    COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
 
-    ALLOCATE (rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins),&
-              qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins))
+    CALL den%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
+    ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
+    ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+    den%mmpMat = CMPLX(0.0,0.0)
 
     WRITE (6,FMT=8000)
     WRITE (16,FMT=8000)
@@ -142,11 +143,11 @@ CONTAINS
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
 
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
 
 
     ! CLASSICAL HELLMAN-FEYNMAN FORCE
-    CALL force_a3(atoms,sphhar, input, rho,vCoul%mt, results%force)
+    CALL force_a3(atoms,sphhar, input, den%mt,vCoul%mt, results%force)
 
     IF (input%l_f) THEN
        ! core contribution to force: needs TOTAL POTENTIAL and core charge
@@ -160,7 +161,7 @@ CONTAINS
     IF (input%jspins.EQ.2) THEN
        DO  n = 1,atoms%ntype
           DO  i = 1,atoms%jri(n)
-             rho(i,0,n,1) = rho(i,0,n,1) + rho(i,0,n,input%jspins)
+             den%mt(i,0,n,1) = den%mt(i,0,n,1) + den%mt(i,0,n,input%jspins)
           ENDDO
        ENDDO
     END IF
@@ -169,7 +170,7 @@ CONTAINS
     !
     DO  n = 1,atoms%ntype
        DO  j = 1,atoms%jri(n)
-          dpj(j) = rho(j,0,n,1)/atoms%rmsh(j,n)
+          dpj(j) = den%mt(j,0,n,1)/atoms%rmsh(j,n)
        ENDDO
        CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),rhs)
        !
@@ -178,7 +179,7 @@ CONTAINS
        zintn_r(n) = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
        WRITE (6,FMT=8045) zintn_r(n)
        WRITE (16,FMT=8045) zintn_r(n)
-       CALL intgr3(rho(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
+       CALL intgr3(den%mt(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
        vmd(n) = atoms%rmt(n)*atoms%vr0(n)/sfp_const + atoms%zatom(n) - totz*sfp_const
        vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
        WRITE (6,FMT=8050) n,vmd(n)
@@ -264,8 +265,6 @@ CONTAINS
 8081 FORMAT (/,/,'      extrapolation for T->0',&
                /,' ----> HF input%total electron energy=',t40,f20.10,' htr')
 8090 FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
-
-    DEALLOCATE (rho,rht,qpw,rhtxy)
 
   END SUBROUTINE totale
 END MODULE m_totale
