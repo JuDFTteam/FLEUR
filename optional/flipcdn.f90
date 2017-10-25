@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_flipcdn
+MODULE m_flipcdn
 !     *******************************************************
 !     this subroutine reads the charge density and flips the 
 !     magnetic moment within the m.t.sphere for each atom 
@@ -17,170 +17,164 @@
 !
 !     Extension to multiple U per atom type by G.M. 2017
 !     *******************************************************
-      CONTAINS
-        SUBROUTINE flipcdn(&
-             &                   atoms,input,vacuum,sphhar,&
-             &                   stars,sym,oneD,cell,&
-             &                   l_noco)
-          USE m_cdn_io
-          USE m_types
-          IMPLICIT NONE
-          TYPE(t_stars),INTENT(IN)  :: stars
-          TYPE(t_vacuum),INTENT(IN) :: vacuum
-          TYPE(t_atoms),INTENT(IN)  :: atoms
-          TYPE(t_sphhar),INTENT(IN) :: sphhar
-          TYPE(t_input),INTENT(IN)  :: input
-          TYPE(t_sym),INTENT(IN)    :: sym
-          TYPE(t_oneD),INTENT(IN)     :: oneD
-          TYPE(t_cell),INTENT(IN)   :: cell
-          LOGICAL,INTENT(IN)        :: l_noco
+CONTAINS
 
-          !     .. Local Scalars ..
-          REAL    rhodummy,rhodumms,fermiEnergyTemp
-          INTEGER i,iter,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
-          INTEGER archiveType
-            
-          CHARACTER(len=8) iop,dop
-          LOGICAL n_exist,l_qfix
-          !     ..
-          !     .. Local Arrays ..
-          COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:),qpw(:,:),rhtxy(:,:,:,:)
-          REAL   , ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
-          COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
-          CHARACTER(len=80), ALLOCATABLE :: clines(:)
-          CHARACTER(len=8) name(10)
-          !     ..
-          !atoms%jmtd = MAXVAL(atoms%jri(:))
-          !sphhar%nlhd = MAXVAL(sphhar%nlh(:))
-          ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),qpw(stars%ng3,input%jspins) )
-          ALLOCATE ( rhtxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins),rht(vacuum%nmz,2,input%jspins) )
-          archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-          IF (l_noco) THEN
-             ALLOCATE( cdom(stars%ng3) )
-             ALLOCATE( cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxy,stars%ng2-1,2) )
-             archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-          ENDIF
+SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
+                   stars,sym,oneD,cell,l_noco)
 
-          !     ---> read the charge density 
-          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+   USE m_constants
+   USE m_cdn_io
+   USE m_types
 
-          !     ---> flip cdn for each atom with nflip=-1
-          !
-          na = 1
-          DO itype = 1, atoms%ntype
-             IF (atoms%nflip(itype).EQ.-1) THEN
-                !     ---> spherical and non-spherical m.t. charge density
-                DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
-                   DO j = 1,atoms%jri(itype)
-                      rhodummy = rho(j,lh,itype,1)
-                      rho(j,lh,itype,1) = rho(j,lh,itype,input%jspins)
-                      rho(j,lh,itype,input%jspins) = rhodummy
-                   END DO
-                END DO
-             ELSE IF (atoms%nflip(itype).EQ.-2) THEN
-                DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
-                   DO j = 1,atoms%jri(itype)
-                      rhodummy = rho(j,lh,itype,1) + rho(j,lh,itype,input%jspins)
-                      rhodumms = rho(j,lh,itype,1) - rho(j,lh,itype,input%jspins)
-                      rho(j,lh,itype,1) = 0.5 * (rhodummy + atoms%bmu(itype)*rhodumms)
-                      rho(j,lh,itype,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype)*rhodumms )
-                   END DO
-                END DO
-             END IF
-             na = na + atoms%neq(itype)
-          ENDDO
-          !     ----> write the spin-polarized density
-          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                            0,-1.0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
-          !
-          ! for lda+U: flip n-matrix 
-          !
-          IF (atoms%n_u.GT.0) THEN
-             INQUIRE (file='n_mmp_mat',exist=n_exist)
-             IF (n_exist) THEN
-                OPEN (69,file='n_mmp_mat',status='old',form='formatted')
-                ALLOCATE (n_mmp(-3:3,-3:3,atoms%n_u,2))
+   IMPLICIT NONE
 
-                READ (69,9000) n_mmp
-                !   flip    ...
-                DO i_u = 1, atoms%n_u
-                   itype = atoms%lda_u(i_u)%atomType
-                   IF (atoms%nflip(itype).EQ.-1) THEN
-                      DO m = -3,3
-                         DO mp = -3,3
-                            rhodummy = n_mmp(m,mp,i_u,1)
-                            n_mmp(m,mp,i_u,1) = n_mmp(m,mp,i_u,input%jspins)
-                            n_mmp(m,mp,i_u,input%jspins) = rhodummy
-                         END DO
-                      END DO
-                   ELSE IF (atoms%nflip(itype).EQ.-2) THEN
-                      DO m = -3,3
-                         DO mp = -3,3
-                            rhodummy = n_mmp(m,mp,i_u,1) + n_mmp(m,mp,i_u,input%jspins)
-                            rhodumms = n_mmp(m,mp,i_u,1) - n_mmp(m,mp,i_u,input%jspins)
-                            n_mmp(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
-                            n_mmp(m,mp,i_u,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype) * rhodumms)
-                         END DO
-                      END DO
-                   END IF
-                END DO
-                !   flip    ...
-                REWIND (69)
-                WRITE (69,9000) n_mmp
-9000            FORMAT(7f20.13)
-                !
-                DEALLOCATE ( n_mmp )
-             ENDIF
-          ENDIF
-          !-lda+U
-          !
-          !--->   read enpara and  flip lines
-          !
-          INQUIRE(file='enpara',exist=n_exist)
-          IF (n_exist) THEN
-             OPEN(40,file ='enpara',status='old',form='formatted')
+   TYPE(t_stars),INTENT(IN)    :: stars
+   TYPE(t_vacuum),INTENT(IN)   :: vacuum
+   TYPE(t_atoms),INTENT(IN)    :: atoms
+   TYPE(t_sphhar),INTENT(IN)   :: sphhar
+   TYPE(t_input),INTENT(INOUT) :: input
+   TYPE(t_sym),INTENT(IN)      :: sym
+   TYPE(t_oneD),INTENT(IN)     :: oneD
+   TYPE(t_cell),INTENT(IN)     :: cell
+   LOGICAL,INTENT(IN)          :: l_noco
 
-             j = 2
-             DO itype = 1, atoms%ntype
-                j = j + 1
-                IF (atoms%nlo(itype)>0) j = j + 2
-             ENDDO
-             IF (input%film) j = j + 1
-             ALLOCATE (clines(2*j))
-             DO i = 1, 2*j
-                READ (40,'(a)') clines(i)
-             ENDDO
+   ! Local type instance
+   TYPE(t_potden)            :: den
 
-             REWIND 40
-             i = 0 
-             DO ispin = 1,input%jspins
-                i = i + 2
-                WRITE (40,'(a)') TRIM(clines(i-1))
-                WRITE (40,'(a)') TRIM(clines(i))
-                DO itype = 1, atoms%ntype
-                   i = i + 1
-                   m = i
-                   IF (atoms%nflip(itype)==-1) m = MOD(i+j,2*j)
-                   IF (m==0) m = 2*j
-                   WRITE (40,'(a)') TRIM(clines(m))
-                   IF (atoms%nlo(itype)>0) THEN
-                      WRITE (40,'(a)') TRIM(clines(m+1))
-                      WRITE (40,'(a)') TRIM(clines(m+2))
-                      i = i + 2
-                   ENDIF
-                ENDDO
-                IF (input%film) THEN
-                   i = i + 1
-                   WRITE (40,'(a)') TRIM(clines(i))
-                ENDIF
-             ENDDO
+   ! Local Scalars
+   REAL                      :: rhodummy,rhodumms,fermiEnergyTemp
+   INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
+   INTEGER                   :: archiveType
+   LOGICAL                   :: n_exist,l_qfix,l_error
 
-             DEALLOCATE (clines,rho,qpw,rhtxy,rht)
-             IF (l_noco) THEN
-                DEALLOCATE (cdom,cdomvz,cdomvxy)
-             ENDIF
-             CLOSE(40)
-          ENDIF
-        END SUBROUTINE flipcdn
-      END MODULE m_flipcdn
+   ! Local Arrays
+   CHARACTER(len=80), ALLOCATABLE :: clines(:)
+
+   CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   IF(l_noco) THEN
+      ALLOCATE(den%cdom(stars%ng3))
+      ALLOCATE(den%cdomvz(vacuum%nmz,2),den%cdomvxy(vacuum%nmzxy,stars%ng2-1,2))
+      archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+   ELSE
+      ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
+      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+   END IF
+   ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+   den%mmpMat = CMPLX(0.0,0.0)
+
+   ! read the charge density 
+   CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+                    CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den%iter,den%mt,den%pw,&
+                    den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+
+   ! flip cdn for each atom with nflip=-1
+   na = 1
+   DO itype = 1, atoms%ntype
+      IF (atoms%nflip(itype).EQ.-1) THEN
+         ! spherical and non-spherical m.t. charge density
+         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
+            DO j = 1,atoms%jri(itype)
+               rhodummy = den%mt(j,lh,itype,1)
+               den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
+               den%mt(j,lh,itype,input%jspins) = rhodummy
+            END DO
+         END DO
+      ELSE IF (atoms%nflip(itype).EQ.-2) THEN
+         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
+            DO j = 1,atoms%jri(itype)
+               rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
+               rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)
+               den%mt(j,lh,itype,1) = 0.5 * (rhodummy + atoms%bmu(itype)*rhodumms)
+               den%mt(j,lh,itype,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype)*rhodumms )
+            END DO
+         END DO
+      END IF
+         na = na + atoms%neq(itype)
+   END DO
+
+   ! for LDA+U: flip density matrix
+   IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
+      CALL readDensityMatrix(input,atoms,den%mmpMat,l_error)
+      DO i_u = 1, atoms%n_u
+         itype = atoms%lda_u(i_u)%atomType
+         IF (atoms%nflip(itype).EQ.-1) THEN
+            DO m = -3,3
+               DO mp = -3,3
+                  rhodummy = den%mmpMat(m,mp,i_u,1)
+                  den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
+                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
+               END DO
+            END DO
+         ELSE IF (atoms%nflip(itype).EQ.-2) THEN
+            DO m = -3,3
+               DO mp = -3,3
+                  rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
+                  rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
+                  den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
+                  den%mmpMat(m,mp,i_u,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype) * rhodumms)
+               END DO
+            END DO
+         END IF
+      END DO
+   END IF
+
+   ! write the spin-polarized density
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+
+   ! write density matrix for LDA+U
+   IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
+      OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
+      WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
+      IF (input%ldauLinMix) THEN
+         WRITE (69,'(2(a6,f5.3))') 'alpha=',input%ldauMixParam,'spinf=',input%ldauSpinf
+      END IF
+      CLOSE (69)
+   END IF
+
+   ! read enpara and  flip lines
+   INQUIRE(file='enpara',exist=n_exist)
+   IF (n_exist) THEN
+      OPEN(40,file ='enpara',status='old',form='formatted')
+
+      j = 2
+      DO itype = 1, atoms%ntype
+         j = j + 1
+         IF (atoms%nlo(itype)>0) j = j + 2
+      END DO
+      IF (input%film) j = j + 1
+      ALLOCATE (clines(2*j))
+      DO i = 1, 2*j
+         READ (40,'(a)') clines(i)
+      END DO
+
+      REWIND 40
+      i = 0 
+      DO ispin = 1,input%jspins
+         i = i + 2
+         WRITE (40,'(a)') TRIM(clines(i-1))
+         WRITE (40,'(a)') TRIM(clines(i))
+         DO itype = 1, atoms%ntype
+            i = i + 1
+            m = i
+            IF (atoms%nflip(itype)==-1) m = MOD(i+j,2*j)
+            IF (m==0) m = 2*j
+            WRITE (40,'(a)') TRIM(clines(m))
+            IF (atoms%nlo(itype)>0) THEN
+               WRITE (40,'(a)') TRIM(clines(m+1))
+               WRITE (40,'(a)') TRIM(clines(m+2))
+               i = i + 2
+            END IF
+         END DO
+         IF (input%film) THEN
+            i = i + 1
+            WRITE (40,'(a)') TRIM(clines(i))
+         END IF
+      END DO
+      DEALLOCATE (clines)
+      CLOSE(40)
+   END IF
+
+END SUBROUTINE flipcdn
+
+END MODULE m_flipcdn
