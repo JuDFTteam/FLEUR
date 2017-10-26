@@ -54,7 +54,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    INTEGER i,imap,js,mit,irecl
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
    INTEGER iofl,n_u_keep
-   LOGICAL lexist,l_ldaU
+   LOGICAL l_exist,l_ldaU
 
    !Local Arrays
    REAL dist(6)
@@ -119,7 +119,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    ALLOCATE (sm(mmap),fsm(mmap))
 
-   INQUIRE (file='broyd.'//CHAR(input%imix+48),exist=lexist)
+   INQUIRE (file='broyd.'//CHAR(input%imix+48),exist=l_exist)
    DO i = 1,6
       dist(i) = 0.0
    END DO
@@ -131,13 +131,13 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    IF (input%imix.EQ.0) THEN
       WRITE (16,FMT='(a,2f10.5)') 'STRAIGHT MIXING',input%alpha
    ELSE IF (input%imix.EQ.3) THEN
-      IF ( .NOT.lexist) mit = 1
+      IF ( .NOT.l_exist) mit = 1
       WRITE (16,FMT='(a,f10.5)') 'BROYDEN FIRST MIXING',input%alpha
    ELSE IF (input%imix.EQ.5) THEN
-      IF (.NOT.lexist) mit = 1
+      IF (.NOT.l_exist) mit = 1
       WRITE (16,FMT='(a,f10.5)') 'BROYDEN SECOND MIXING',input%alpha
    ELSE IF (input%imix.EQ.7) THEN
-      IF (.NOT.lexist) mit = 1
+      IF (.NOT.l_exist) mit = 1
       WRITE (16,FMT='(a,f10.5)') 'ANDERSON GENERALIZED',input%alpha
    ELSE
       CALL juDFT_error("mix: input%imix =/= 0,3,5,7 ",calledby ="mix")
@@ -275,6 +275,18 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
                      1,results%last_distance,results%ef,.TRUE.,inDen)
 
    IF (atoms%n_u > 0) THEN
+      IF (.NOT.isDensityMatrixPresent()) THEN
+         INQUIRE(file='broyd',exist=l_exist)
+         IF (l_exist) THEN
+            CALL system('rm broyd')
+            PRINT *,"broyd file deleted because new density matrix is created."
+         ENDIF
+         INQUIRE(file='broyd.7',exist=l_exist)
+         IF (l_exist) THEN
+            CALL system('rm broyd.7')
+            PRINT *,"broyd.7 file deleted because new density matrix is created."
+         ENDIF
+      END IF
       OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
       WRITE (69,'(7f20.13)') inDen%mmpMat(:,:,:,:)
       IF (input%ldauLinMix) THEN
