@@ -986,11 +986,11 @@ CONTAINS
        ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
     ENDIF
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
-    pd%pw=0.0
+    pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
     IF (PRESENT(nmzd)) THEN
        pd%vacz=0.0
-       pd%vacxy=0.0
+       pd%vacxy=CMPLX(0.0,0.0)
     ENDIF
   END SUBROUTINE init_potden_simple
 

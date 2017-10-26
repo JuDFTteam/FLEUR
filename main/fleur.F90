@@ -215,13 +215,8 @@ CONTAINS
     CALL vCoul%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
     CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTX)
     CALL vTemp%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
-    IF ((atoms%n_u.GT.0)) THEN
-       ALLOCATE(vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-       ALLOCATE(vTemp%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-    ELSE
-       ALLOCATE(vTot%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2))
-       ALLOCATE(vTemp%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2))
-    ENDIF
+    ALLOCATE(vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+    ALLOCATE(vTemp%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     ! Initialize potentials (end)
 
     DO WHILE (l_cont)

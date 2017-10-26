@@ -89,7 +89,8 @@ CONTAINS
 
        ! mix here straight with given mixing factors
 
-       ALLOCATE (n_mmp(-3:3,-3:3,atoms%n_u,input%jspins))
+       ALLOCATE (n_mmp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins))
+       n_mmp = CMPLX(0.0,0.0)
 
        alpha = input%ldauMixParam
        spinf = input%ldauSpinf

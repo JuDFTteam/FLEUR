@@ -51,15 +51,9 @@ CONTAINS
       END IF
    END IF
    IF((mpi%irank.NE.0).AND.l_denMatAlloc) THEN
-      IF ((atoms%n_u.GT.0)) THEN
-         IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
-            ALLOCATE(potDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,input%jspins))
-         END IF
-      ELSE
-         IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
-            ALLOCATE(potDen%mmpMat(-lmaxU_const:-lmaxU_const,-lmaxU_const:-lmaxU_const,1,2))
-         END IF
-      ENDIF
+      IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
+         ALLOCATE(potDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+      END IF
    END IF
 
    n = stars%ng3 * input%jspins

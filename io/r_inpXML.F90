@@ -183,7 +183,8 @@ SUBROUTINE r_inpXML(&
 
   ! Check version of inp.xml
   versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-  IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28')) THEN
+  IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
+     (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
      STOP 'version number of inp.xml file is not compatible with this fleur version'
   END IF
 
@@ -478,7 +479,7 @@ SUBROUTINE r_inpXML(&
      l_kpts = .TRUE.
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint')
      kpts%nkpt = numberNodes
-     kpts%nkpt = numberNodes
+     kpts%l_gamma = .FALSE.
      ALLOCATE(kpts%bk(3,kpts%nkpt))
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
@@ -636,6 +637,18 @@ SUBROUTINE r_inpXML(&
         IF (l_qfix) THEN
            input%qfix = 2
         END IF
+     END IF
+  END IF
+
+  ! Read in optional general LDA+U parameters
+
+  IF (TRIM(ADJUSTL(versionString)).EQ.'0.29') THEN
+     xPathA = '/fleurInput/calculationSetup/ldaU'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+     IF (numberNodes.EQ.1) THEN
+        input%ldauLinMix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
+        input%ldauMixParam = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
+        input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
      END IF
   END IF
 
