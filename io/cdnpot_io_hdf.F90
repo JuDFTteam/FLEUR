@@ -46,7 +46,7 @@ MODULE m_cdnpot_io_hdf
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_IN_const = 1
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_OUT_const = 2
 
-   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 28
+   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 29
 
    CONTAINS
 
@@ -86,7 +86,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
 
          CALL h5gclose_f(generalGroupID, hdfError)
-         IF(fileFormatVersion.NE.FILE_FORMAT_VERSION_const) THEN
+         IF(fileFormatVersion.GT.FILE_FORMAT_VERSION_const) THEN
             WRITE(*,'(a,i4)') 'cdn.hdf has file format version ', fileFormatVersion
             CALL juDFT_error('cdn.hdf file format not readable.' ,calledby ="openCDN_HDF")
          END IF
@@ -954,11 +954,19 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_sym),INTENT(IN)     :: sym
 
       INTEGER(HID_T)            :: groupID
-      INTEGER                   :: hdfError
+      INTEGER                   :: hdfError, i
       CHARACTER(LEN=30)         :: groupName
       INTEGER(HSIZE_T)          :: dims(7)
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
+
+      !LDA+U arrays (start)
+      INTEGER                   :: ldau_AtomType(MAX(1,atoms%n_u))
+      INTEGER                   :: ldau_l(MAX(1,atoms%n_u))
+      INTEGER                   :: ldau_l_amf(MAX(1,atoms%n_u)) ! 1 = true, 0 = false
+      REAL                      :: ldau_U(MAX(1,atoms%n_u))
+      REAL                      :: ldau_J(MAX(1,atoms%n_u))
+      !LDA+U arrays (end)
 
       INTEGER(HID_T)                   :: amatSpaceID, amatSetID
       INTEGER(HID_T)                   :: nzSpaceID, nzSetID
@@ -979,6 +987,14 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: mrotSpaceID, mrotSetID
       INTEGER(HID_T)                   :: tauSpaceID, tauSetID
 
+      !LDA+U IDs (start)
+      INTEGER(HID_T)                   :: ldau_AtomTypeSpaceID, ldau_AtomTypeSetID
+      INTEGER(HID_T)                   :: ldau_lSpaceID, ldau_lSetID
+      INTEGER(HID_T)                   :: ldau_l_amfSpaceID, ldau_l_amfSetID
+      INTEGER(HID_T)                   :: ldau_USpaceID, ldau_USetID
+      INTEGER(HID_T)                   :: ldau_JSpaceID, ldau_JSetID
+      !LDA+U IDs (end)
+
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -989,11 +1005,12 @@ MODULE m_cdnpot_io_hdf
 
       INQUIRE(FILE='broyd',EXIST=l_exist)
       IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
-      IF (l_exist) CALL juDFT_warn('Structure change but broyden files detected!')
+      IF (l_exist) CALL juDFT_warn('Structure / parameter change but broyden files detected!')
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
       CALL io_write_attlog0(groupID,'l_film',input%film)
+      CALL io_write_attlog0(groupID,'ldauLinMix',input%ldauLinMix)
 
       CALL io_write_attreal0(groupID,'omtil',cell%omtil)
       CALL io_write_attreal0(groupID,'area',cell%area)
@@ -1005,6 +1022,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'nat',atoms%nat)
       CALL io_write_attint0(groupID,'lmaxd',atoms%lmaxd)
       CALL io_write_attint0(groupID,'jmtd',atoms%jmtd)
+      CALL io_write_attint0(groupID,'n_u',atoms%n_u)
 
       CALL io_write_attint0(groupID,'nmz',vacuum%nmz)
       CALL io_write_attint0(groupID,'nmzd',vacuum%nmzd)
@@ -1173,6 +1191,59 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_real2(tauSetID,(/1,1/),dimsInt(:2),sym%tau)
       CALL h5dclose_f(tauSetID, hdfError)
 
+      !LDA+U data (start)
+      IF(atoms%n_u.GT.0) THEN
+         ldau_l_amf = 0
+         DO i = 1, atoms%n_u
+            ldau_AtomType(i) = atoms%lda_u(i)%atomType
+            ldau_l(i) = atoms%lda_u(i)%l
+            ldau_U(i) = atoms%lda_u(i)%u
+            ldau_J(i) = atoms%lda_u(i)%j
+            IF(atoms%lda_u(i)%l_amf) ldau_l_amf(i) = 1
+         END DO
+
+         dims(:1)=(/atoms%n_u/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),ldau_AtomTypeSpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "ldau_AtomType", H5T_NATIVE_INTEGER, ldau_AtomTypeSpaceID, ldau_AtomTypeSetID, hdfError)
+         CALL h5sclose_f(ldau_AtomTypeSpaceID,hdfError)
+         CALL io_write_integer1(ldau_AtomTypeSetID,(/1/),dimsInt(:1),ldau_AtomType(:atoms%n_u))
+         CALL h5dclose_f(ldau_AtomTypeSetID, hdfError)
+
+         dims(:1)=(/atoms%n_u/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),ldau_lSpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "ldau_l", H5T_NATIVE_INTEGER, ldau_lSpaceID, ldau_lSetID, hdfError)
+         CALL h5sclose_f(ldau_lSpaceID,hdfError)
+         CALL io_write_integer1(ldau_lSetID,(/1/),dimsInt(:1),ldau_l(:atoms%n_u))
+         CALL h5dclose_f(ldau_lSetID, hdfError)
+
+         dims(:1)=(/atoms%n_u/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),ldau_l_amfSpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "ldau_l_amf", H5T_NATIVE_INTEGER, ldau_l_amfSpaceID, ldau_l_amfSetID, hdfError)
+         CALL h5sclose_f(ldau_l_amfSpaceID,hdfError)
+         CALL io_write_integer1(ldau_l_amfSetID,(/1/),dimsInt(:1),ldau_l_amf(:atoms%n_u))
+         CALL h5dclose_f(ldau_l_amfSetID, hdfError)
+
+         dims(:1)=(/atoms%n_u/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),ldau_USpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "ldau_U", H5T_NATIVE_DOUBLE, ldau_USpaceID, ldau_USetID, hdfError)
+         CALL h5sclose_f(ldau_USpaceID,hdfError)
+         CALL io_write_real1(ldau_USetID,(/1/),dimsInt(:1),ldau_U(:atoms%n_u))
+         CALL h5dclose_f(ldau_USetID, hdfError)
+
+         dims(:1)=(/atoms%n_u/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),ldau_JSpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "ldau_J", H5T_NATIVE_DOUBLE, ldau_JSpaceID, ldau_JSetID, hdfError)
+         CALL h5sclose_f(ldau_JSpaceID,hdfError)
+         CALL io_write_real1(ldau_JSetID,(/1/),dimsInt(:1),ldau_J(:atoms%n_u))
+         CALL h5dclose_f(ldau_JSetID, hdfError)
+      END IF
+      !LDA+U data (end)
+
       CALL h5gclose_f(groupID, hdfError)
 
    END SUBROUTINE writeStructureHDF
@@ -1188,11 +1259,18 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_oneD),INTENT(INOUT)    :: oneD
       TYPE(t_sym),INTENT(INOUT)     :: sym
 
-      INTEGER(HID_T)            :: groupID
-      INTEGER                   :: hdfError
+      INTEGER(HID_T)            :: groupID, generalGroupID
+      INTEGER                   :: hdfError, fileFormatVersion, i
       CHARACTER(LEN=30)         :: groupName
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
+
+      !LDA+U arrays (start)
+      INTEGER, ALLOCATABLE             :: ldau_AtomType(:)
+      INTEGER, ALLOCATABLE             :: ldau_l(:)
+      INTEGER, ALLOCATABLE             :: ldau_l_amf(:) ! 1 = true, 0 = false
+      REAL, ALLOCATABLE                :: ldau_U(:)
+      REAL, ALLOCATABLE                :: ldau_J(:)
 
       INTEGER(HID_T)                   :: amatSetID
       INTEGER(HID_T)                   :: nzSetID
@@ -1212,6 +1290,18 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: taualSetID
       INTEGER(HID_T)                   :: mrotSetID
       INTEGER(HID_T)                   :: tauSetID
+
+      !LDA+U IDs (start)
+      INTEGER(HID_T)                   :: ldau_AtomTypeSetID
+      INTEGER(HID_T)                   :: ldau_lSetID
+      INTEGER(HID_T)                   :: ldau_l_amfSetID
+      INTEGER(HID_T)                   :: ldau_USetID
+      INTEGER(HID_T)                   :: ldau_JSetID
+      !LDA+U IDs (end)
+
+      CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
+      ! read in file format version from the header '/general'
+      CALL io_read_attint0(generalGroupID,'fileFormatVersion',fileFormatVersion)
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
 
@@ -1258,6 +1348,13 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'nop2',sym%nop2)
       CALL io_read_attchar0(groupID,'latnam',sym%latnam)
       CALL io_read_attchar0(groupID,'namgrp',sym%namgrp)
+
+      IF(fileFormatVersion.GE.29) THEN
+         CALL io_read_attlog0(groupID,'ldauLinMix',input%ldauLinMix)
+         CALL io_read_attint0(groupID,'n_u',atoms%n_u)
+         IF(ALLOCATED(atoms%lda_u)) DEALLOCATE(atoms%lda_u)
+         ALLOCATE(atoms%lda_u(atoms%n_u))
+      END IF
 
       IF(ALLOCATED(atoms%nz)) DEALLOCATE(atoms%nz)
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
@@ -1384,6 +1481,51 @@ MODULE m_cdnpot_io_hdf
       CALL h5dopen_f(groupID, 'tau', tauSetID, hdfError)
       CALL io_read_real2(tauSetID,(/1,1/),dimsInt(:2),sym%tau)
       CALL h5dclose_f(tauSetID, hdfError)
+
+      !LDA+U data (start)
+      IF((fileFormatVersion.GE.29).AND.(atoms%n_u.GT.0)) THEN
+         ALLOCATE(ldau_AtomType(MAX(1,atoms%n_u)))
+         ALLOCATE(ldau_l(MAX(1,atoms%n_u)))
+         ALLOCATE(ldau_l_amf(MAX(1,atoms%n_u)))
+         ALLOCATE(ldau_U(MAX(1,atoms%n_u)))
+         ALLOCATE(ldau_J(MAX(1,atoms%n_u)))
+
+         dimsInt(:1)=(/atoms%n_u/)
+         CALL h5dopen_f(groupID, 'ldau_AtomType', ldau_AtomTypeSetID, hdfError)
+         CALL io_read_integer1(ldau_AtomTypeSetID,(/1/),dimsInt(:1),ldau_AtomType)
+         CALL h5dclose_f(ldau_AtomTypeSetID, hdfError)
+
+         dimsInt(:1)=(/atoms%n_u/)
+         CALL h5dopen_f(groupID, 'ldau_l', ldau_lSetID, hdfError)
+         CALL io_read_integer1(ldau_lSetID,(/1/),dimsInt(:1),ldau_l)
+         CALL h5dclose_f(ldau_lSetID, hdfError)
+
+         dimsInt(:1)=(/atoms%n_u/)
+         CALL h5dopen_f(groupID, 'ldau_l_amf', ldau_l_amfSetID, hdfError)
+         CALL io_read_integer1(ldau_l_amfSetID,(/1/),dimsInt(:1),ldau_l_amf)
+         CALL h5dclose_f(ldau_l_amfSetID, hdfError)
+
+         dimsInt(:1)=(/atoms%n_u/)
+         CALL h5dopen_f(groupID, 'ldau_U', ldau_USetID, hdfError)
+         CALL io_read_real1(ldau_USetID,(/1/),dimsInt(:1),ldau_U)
+         CALL h5dclose_f(ldau_USetID, hdfError)
+
+         dimsInt(:1)=(/atoms%n_u/)
+         CALL h5dopen_f(groupID, 'ldau_J', ldau_JSetID, hdfError)
+         CALL io_read_real1(ldau_JSetID,(/1/),dimsInt(:1),ldau_J)
+         CALL h5dclose_f(ldau_JSetID, hdfError)
+
+         DO i = 1, atoms%n_u
+            atoms%lda_u(i)%atomType = ldau_AtomType(i)
+            atoms%lda_u(i)%l = ldau_l(i)
+            atoms%lda_u(i)%u = ldau_U(i)
+            atoms%lda_u(i)%j = ldau_J(i)
+            atoms%lda_u(i)%l_amf = .FALSE.
+            IF(ldau_l_amf(i).EQ.1) atoms%lda_u(i)%l_amf = .TRUE.
+         END DO
+         DEALLOCATE(ldau_AtomType,ldau_l,ldau_U,ldau_J,ldau_l_amf)
+      END IF
+      !LDA+U data (end)
 
       CALL h5gclose_f(groupID, hdfError)
 
