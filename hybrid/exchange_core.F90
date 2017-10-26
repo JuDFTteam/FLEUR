@@ -335,8 +335,8 @@ CONTAINS
                             parr(:M)    = parr2
                             DEALLOCATE ( fprod2,larr2,parr2 )
                          END IF
-                         fprod(:,n) = ( hybdat%core1(:,p1,l1,itype) *hybdat%bas1 (:,p2,l2,itype) &
-                              +hybdat%core2(:,p1,l1,itype) *hybdat%bas2 (:,p2,l2,itype) )/ atoms%rmsh(:,itype)
+                         fprod(:atoms%jri(itype),n) = ( hybdat%core1(:atoms%jri(itype),p1,l1,itype) *hybdat%bas1 (:atoms%jri(itype),p2,l2,itype) &
+                              +hybdat%core2(:atoms%jri(itype),p1,l1,itype) *hybdat%bas2 (:atoms%jri(itype),p2,l2,itype) )/ atoms%rmsh(:atoms%jri(itype),itype)
                          larr(n)    = l2
                          parr(n)    = p2
                       END DO
@@ -508,8 +508,8 @@ CONTAINS
 
                          DO n = 1,hybdat%nindxc(l,itype)
                             DO n2 = 1,hybdat%nindxc(l2,itype)
-                               rprod(:) = ( hybdat%core1(:,n,l,itype)*hybdat%core1(:,n2,l2,itype)&
-                                    +hybdat%core2(:,n,l,itype)*hybdat%core2(:,n2,l2,itype) ) / atoms%rmsh(:,itype)
+                               rprod(:atoms%jri(itype)) = ( hybdat%core1(:atoms%jri(itype),n,l,itype)*hybdat%core1(:atoms%jri(itype),n2,l2,itype)&
+                                    +hybdat%core2(:atoms%jri(itype),n,l,itype)*hybdat%core2(:atoms%jri(itype),n2,l2,itype) ) / atoms%rmsh(:atoms%jri(itype),itype)
 
                                CALL primitivef(primf1,rprod(:)*atoms%rmsh(:,itype)**(ll+1) ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd, itype,atoms%ntype)
                                CALL primitivef(primf2,rprod(:)/atoms%rmsh(:,itype)**ll ,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd,-itype,atoms%ntype)  ! -itype is to enforce inward integration
@@ -520,8 +520,8 @@ CONTAINS
 
                                DO n1 = 1,hybdat%nindxc(l1,itype)
 
-                                  rprod(:) = ( hybdat%core1(:,n,l,itype)*hybdat%core1(:,n1,l1,itype)&
-                                       +hybdat%core2(:,n,l,itype)*hybdat%core2(:,n1,l1,itype) ) / atoms%rmsh(:,itype)
+                                  rprod(:atoms%jri(itype)) = ( hybdat%core1(:atoms%jri(itype),n,l,itype)*hybdat%core1(:atoms%jri(itype),n1,l1,itype)&
+                                       +hybdat%core2(:atoms%jri(itype),n,l,itype)*hybdat%core2(:atoms%jri(itype),n1,l1,itype) ) / atoms%rmsh(:atoms%jri(itype),itype)
 
                                   integrand     = rprod * (primf1 + primf2)
 

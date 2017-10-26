@@ -426,10 +426,10 @@ CONTAINS
                    CALL primitivef(primf1,hybrid%basm1(:,n2,l,itype)&
                         *atoms%rmsh(:,itype)**(l+1),atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd,itype,atoms%ntype)
                    ! -itype is to enforce inward integration
-                   CALL primitivef(primf2,hybrid%basm1(:,n2,l,itype)&
-                        /atoms%rmsh(:,itype)**l,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd,-itype,atoms%ntype)
+                   CALL primitivef(primf2,hybrid%basm1(:atoms%jri(itype),n2,l,itype)&
+                        /atoms%rmsh(:atoms%jri(itype),itype)**l,atoms%rmsh,atoms%dx,atoms%jri,atoms%jmtd,-itype,atoms%ntype)
 
-                   primf1 = primf1 / atoms%rmsh(:,itype)**l
+                   primf1(:atoms%jri(itype)) = primf1(:atoms%jri(itype)) / atoms%rmsh(:atoms%jri(itype),itype)**l
                    primf2 = primf2 * atoms%rmsh(:,itype)**(l+1)
 
                    DO n1=1,n2
