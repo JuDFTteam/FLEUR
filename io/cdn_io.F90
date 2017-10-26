@@ -221,7 +221,7 @@ MODULE m_cdn_io
 
             IF(l_DimChange) THEN
                CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           1,-1.0,fermiEnergy,l_qfix,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                           1,-1.0,fermiEnergy,l_qfix,den)
             END IF
          ELSE
             WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
@@ -311,7 +311,7 @@ MODULE m_cdn_io
    END SUBROUTINE readDensity
 
    SUBROUTINE writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           relCdnIndex,distance,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                           relCdnIndex,distance,fermiEnergy,l_qfix,den)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -321,17 +321,13 @@ MODULE m_cdn_io
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_potden),INTENT(IN) :: den
 
       INTEGER, INTENT (IN)      :: inOrOutCDN
-      INTEGER, INTENT (IN)      :: relCdnIndex, iter
+      INTEGER, INTENT (IN)      :: relCdnIndex
       INTEGER, INTENT (IN)      :: archiveType
       REAL,    INTENT (IN)      :: fermiEnergy, distance
       LOGICAL, INTENT (IN)      :: l_qfix
-      !     ..
-      !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-      COMPLEX, INTENT (IN) :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
-      REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       TYPE(t_stars)        :: starsTemp
       TYPE(t_vacuum)       :: vacuumTemp
@@ -431,8 +427,8 @@ MODULE m_cdn_io
 
          ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
          ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
-         fzTemp(:,:,:) = fz(:,:,:)
-         fzxyTemp(:,:,:,:) = fzxy(:,:,:,:)
+         fzTemp(:,:,:) = den%vacz(:,:,:)
+         fzxyTemp(:,:,:,:) = den%vacxy(:,:,:,:)
          IF(vacuum%nvac.EQ.1) THEN
             fzTemp(:,2,:)=fzTemp(:,1,:)
             IF (sym%invs) THEN
@@ -444,8 +440,8 @@ MODULE m_cdn_io
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,iter+relCdnIndex,&
-                              fr,fpw,fzTemp,fzxyTemp,cdom,cdomvz,cdomvxy)
+                              currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,den%iter+relCdnIndex,&
+                              den%mt,den%pw,fzTemp,fzxyTemp,den%cdom,den%cdomvz,den%cdomvxy)
 
          DEALLOCATE(fzTemp,fzxyTemp)
 
@@ -469,7 +465,7 @@ MODULE m_cdn_io
             filename = 'cdn'
          END IF
 
-         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(iter.EQ.0)) THEN
+         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(den%iter.EQ.0)) THEN
             INQUIRE(file=TRIM(ADJUSTL(filename)),EXIST=l_exist)
             IF(l_exist) THEN
                CALL juDFT_error("Trying to generate starting density while a density exists.",calledby ="writeDensity")
@@ -479,7 +475,7 @@ MODULE m_cdn_io
          iUnit = 93
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),FORM='unformatted',STATUS='unknown')
 
-         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(iter.GE.1)) THEN
+         IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(den%iter.GE.1)) THEN
             inputTemp%jspins = input%jspins
             vacuumTemp%nmzxyd = vacuum%nmzxyd
             atomsTemp%jmtd = atoms%jmtd
@@ -516,8 +512,8 @@ MODULE m_cdn_io
             ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
             !--->    generate name of file to hold the results of this iteration
-            d1 = MOD(iter,10)
-            d10 = MOD(INT((iter+0.5)/10),10)
+            d1 = MOD(den%iter,10)
+            d10 = MOD(INT((den%iter+0.5)/10),10)
             asciioffset = IACHAR('1')-1
             IF ( d10.GE.10 ) asciioffset = IACHAR('7')
             cdnfile = 'cdn'//ACHAR(d10+asciioffset)//ACHAR(d1+IACHAR('1')-1)
@@ -586,14 +582,14 @@ MODULE m_cdn_io
 
          ! Write the density
          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                     iUnit,iter+relCdnIndex,fr,fpw,fz,fzxy)
+                     iUnit,den%iter+relCdnIndex,den%mt,den%pw,den%vacz,den%vacxy)
 
          ! Write additional data if l_noco
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
-            WRITE (iUnit) (cdom(k),k=1,stars%ng3)
+            WRITE (iUnit) (den%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
-               WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-               WRITE (iUnit) (((cdomvxy(i,j-1,iVac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+               WRITE (iUnit) ((den%cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
+               WRITE (iUnit) (((den%cdomvxy(i,j-1,iVac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
             END IF
          END IF
 

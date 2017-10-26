@@ -220,7 +220,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
       ! Write superposed density onto density file
       den%iter = 0
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
-                        1,-1.0,0.0,.TRUE.,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                        1,-1.0,0.0,.TRUE.,den)
 
       ! Check continuity
       IF (input%vchk) THEN

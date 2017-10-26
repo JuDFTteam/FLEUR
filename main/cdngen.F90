@@ -465,7 +465,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
       IF (sliceplot%slice) THEN
          OPEN (20,file='cdn_slice',form='unformatted',status='unknown')
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy)
+         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, outDen%iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy)
          IF (noco%l_noco) THEN
             WRITE (20) (outDen%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
@@ -478,8 +478,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       END IF
 
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                        CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,iter,&
-                        outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy,outDen%cdom,outDen%cdomvz,outDen%cdomvxy)
+                        CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,outDen)
    ENDIF ! mpi%irank.EQ.0
 
 #ifdef CPP_MPI

@@ -317,7 +317,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    den%mmpMat = CMPLX(0.0,0.0)
 
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                     0,-1.0,0.0,.FALSE.,den)
 
    !---> save mx to file mdnx
    OPEN (72,FILE='mdnx',FORM='unformatted',STATUS='unknown')

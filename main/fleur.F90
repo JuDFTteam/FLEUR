@@ -190,8 +190,7 @@ CONTAINS
                  .FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                         0,-1.0,0.0,.FALSE.,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,inDen%cdom,&
-                         inDen%cdomvz,inDen%cdomvxy)
+                         0,-1.0,0.0,.FALSE.,inDen)
        IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
           CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
           IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')

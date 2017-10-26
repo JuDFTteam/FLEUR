@@ -51,7 +51,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !Local Scalars
    REAL fix,intfac,vacfac
-   INTEGER i,iter,imap,js,mit,irecl
+   INTEGER i,imap,js,mit,irecl
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
    INTEGER iofl,n_u_keep
    LOGICAL lexist,l_ldaU
@@ -210,7 +210,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    ELSE
       CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
    END IF
-   iter = inDen%iter
+
    DO js = 1,input%jspins
       dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, sm(nmaph*(js-1)+1),1)
 
@@ -219,15 +219,15 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
       WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/cell%vol))
       CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
       IF( hybrid%l_calhf ) THEN
-         WRITE (16,FMT=7901) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
-         WRITE ( 6,FMT=7901) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
+         WRITE (16,FMT=7901) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
+         WRITE ( 6,FMT=7901) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
       ELSE
-         WRITE (16,FMT=7900) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
-         WRITE ( 6,FMT=7900) js,iter,1000*SQRT(ABS(dist(js)/cell%vol))
+         WRITE (16,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
+         WRITE ( 6,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
       END IF
    END DO
    IF (noco%l_noco) dist(6) = CPP_BLAS_sdot((nmap-2*nmaph), fsm(nmaph*2+1),1,sm(nmaph*2+1),1)
-   IF (noco%l_noco) WRITE (6,FMT=7900) 3,iter,1000*SQRT(ABS(dist(6)/cell%vol))
+   IF (noco%l_noco) WRITE (6,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/cell%vol))
 
    !calculate the distance of total charge and spin density
    !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
@@ -241,15 +241,15 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
       CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&
                                    (/1000*SQRT(ABS(dist(5)/cell%vol))/),reshape((/19,20/),(/1,2/)))
       IF( hybrid%l_calhf ) THEN
-         WRITE (16,FMT=8001) iter,1000*SQRT(ABS(dist(4)/cell%vol))
-         WRITE (16,FMT=8011) iter,1000*SQRT(ABS(dist(5)/cell%vol))
-         WRITE ( 6,FMT=8001) iter,1000*SQRT(ABS(dist(4)/cell%vol))
-         WRITE ( 6,FMT=8011) iter,1000*SQRT(ABS(dist(5)/cell%vol))
+         WRITE (16,FMT=8001) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
+         WRITE (16,FMT=8011) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
+         WRITE ( 6,FMT=8001) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
+         WRITE ( 6,FMT=8011) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
       ELSE
-         WRITE (16,FMT=8000) iter,1000*SQRT(ABS(dist(4)/cell%vol))
-         WRITE (16,FMT=8010) iter,1000*SQRT(ABS(dist(5)/cell%vol))
-         WRITE ( 6,FMT=8000) iter,1000*SQRT(ABS(dist(4)/cell%vol))
-         WRITE ( 6,FMT=8010) iter,1000*SQRT(ABS(dist(5)/cell%vol))
+         WRITE (16,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
+         WRITE (16,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
+         WRITE ( 6,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
+         WRITE ( 6,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
       END IF
 
       !dist/vol should always be >= 0 ,
@@ -272,8 +272,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !write out mixed density
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     1,results%last_distance,results%ef,.TRUE.,iter,inDen%mt,inDen%pw,inDen%vacz,&
-                     inDen%vacxy,inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
+                     1,results%last_distance,results%ef,.TRUE.,inDen)
 
    IF (atoms%n_u > 0) THEN
       OPEN (69,file='n_mmp_mat',status='replace',form='formatted')

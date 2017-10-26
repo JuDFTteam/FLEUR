@@ -367,7 +367,7 @@ CONTAINS
     !---> write spin-up and -down density on file cdn
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                      0,-1.0,0.0,.FALSE.,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                      0,-1.0,0.0,.FALSE.,den)
 
     DEALLOCATE (ris,fftwork,rz)
     IF (input%film) DEALLOCATE(rvacxy)

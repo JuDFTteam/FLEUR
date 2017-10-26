@@ -119,7 +119,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
 
    ! write the spin-polarized density
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                     0,-1.0,0.0,.FALSE.,den)
 
    ! write density matrix for LDA+U
    IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
