@@ -140,12 +140,10 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       den(i)%mmpMat = CMPLX(0.0,0.0)
       IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i)%iter,den(i)%mt,den(i)%pw,&
-                          den(i)%vacz,den(i)%vacxy,den(i)%cdom,den(i)%cdomvz,den(i)%cdomvxy)
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
       ELSE IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i)%iter,den(i)%mt,den(i)%pw,&
-                          den(i)%vacz,den(i)%vacxy,den(i)%cdom,den(i)%cdomvz,den(i)%cdomvxy)
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
       ELSE
          OPEN(20,file = cdnFilenames(i),form='unformatted',status='old')
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&

@@ -184,8 +184,7 @@ CONTAINS
     ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                        0,fermiEnergyTemp,l_qfix,inDen%iter,inDen%mt,inDen%pw,inDen%vacz,inDen%vacxy,&
-                        inDen%cdom,inDen%cdomvz,inDen%cdomvxy)
+                        0,fermiEnergyTemp,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,&
                  .FALSE.,.false.,fix)

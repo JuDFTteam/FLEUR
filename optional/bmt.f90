@@ -53,7 +53,7 @@ contains
     den%mmpMat = CMPLX(0.0,0.0)
 
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
     IF ( typmag < atoms%ntype ) THEN 
        DO type= typmag+1,atoms%ntype 

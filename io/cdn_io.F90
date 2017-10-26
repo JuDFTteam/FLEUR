@@ -134,29 +134,23 @@ MODULE m_cdn_io
 
 
    SUBROUTINE readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                          relCdnIndex,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                          relCdnIndex,fermiEnergy,l_qfix,den)
 
-      TYPE(t_stars),INTENT(IN)  :: stars
-      TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_atoms),INTENT(IN)  :: atoms
-      TYPE(t_cell), INTENT(IN)  :: cell
-      TYPE(t_sphhar),INTENT(IN) :: sphhar
-      TYPE(t_input),INTENT(IN)  :: input
-      TYPE(t_sym),INTENT(IN)    :: sym
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_cell), INTENT(IN)     :: cell
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_potden),INTENT(INOUT) :: den
 
       INTEGER, INTENT (IN)      :: inOrOutCDN
       INTEGER, INTENT (IN)      :: relCdnIndex
-      INTEGER, INTENT (OUT)     :: iter
       INTEGER, INTENT (IN)      :: archiveType
       REAL,    INTENT (OUT)     :: fermiEnergy
       LOGICAL, INTENT (OUT)     :: l_qfix
-
-      !     ..
-      !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-      COMPLEX, INTENT (OUT) :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
-      REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
       INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l
@@ -221,13 +215,13 @@ MODULE m_cdn_io
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
-                                fermiEnergy,l_qfix,l_DimChange,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                                fermiEnergy,l_qfix,l_DimChange,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
 
             CALL closeCDNPOT_HDF(fileID)
 
             IF(l_DimChange) THEN
                CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           1,-1.0,fermiEnergy,l_qfix,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                           1,-1.0,fermiEnergy,l_qfix,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
             END IF
          ELSE
             WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
@@ -276,20 +270,20 @@ MODULE m_cdn_io
          IF ((inOrOutCDN.EQ.CDN_OUTPUT_DEN_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const)) THEN
             ! call loddop to move the file position to the output density
             CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-                        iUnit,iter,fr,fpw,fz,fzxy)
+                        iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy)
          END IF
 
          ! read in the density
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,fr,fpw,fz,fzxy)
+                     iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy)
 
          ! read in additional data if l_noco and data is present
          IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
-            READ (iUnit,iostat=datend) (cdom(k),k=1,stars%ng3)
+            READ (iUnit,iostat=datend) (den%cdom(k),k=1,stars%ng3)
             IF (datend == 0) THEN
                IF (input%film) THEN
-                  READ (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-                  READ (iUnit) (((cdomvxy(i,j-1,iVac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+                  READ (iUnit) ((den%cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
+                  READ (iUnit) (((den%cdomvxy(i,j-1,iVac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
                END IF
             ELSE
                ! (datend < 0)  =>  no off-diagonal magnetisation stored
@@ -298,17 +292,17 @@ MODULE m_cdn_io
                   WRITE(*,*) 'datend = ', datend
                   CALL juDFT_error("density file has illegal state.",calledby ="readDensity")
                END IF
-               cdom = CMPLX(0.0,0.0)
+               den%cdom = CMPLX(0.0,0.0)
                IF (input%film) THEN
-                  cdomvz = CMPLX(0.0,0.0)
-                  cdomvxy = CMPLX(0.0,0.0)
+                  den%cdomvz = CMPLX(0.0,0.0)
+                  den%cdomvxy = CMPLX(0.0,0.0)
                END IF
             END IF
          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
-            cdom = CMPLX(0.0,0.0)
+            den%cdom = CMPLX(0.0,0.0)
             IF (input%film) THEN
-               cdomvz = CMPLX(0.0,0.0)
-               cdomvxy = CMPLX(0.0,0.0)
+               den%cdomvz = CMPLX(0.0,0.0)
+               den%cdomvxy = CMPLX(0.0,0.0)
             END IF
          END IF
          CLOSE(iUnit)
@@ -604,6 +598,13 @@ MODULE m_cdn_io
          END IF
 
          CLOSE(iUnit)
+
+         !write density matrix to n_mmp_mat file
+         IF((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(relCdnIndex.EQ.1)) THEN
+            IF(atoms%n_u.GT.0) THEN
+            END IF
+         END IF
+
       END IF
 
    END SUBROUTINE writeDensity

@@ -117,7 +117,7 @@ CONTAINS
 
     !---> reload the density matrix from file rhomat_inp
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_NOCO_const,CDN_INPUT_DEN_const,&
-                     0,fermiEnergyTemp,l_qfix,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                     0,fermiEnergyTemp,l_qfix,den)
 
     CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
               den%pw,den%vacxy,den%mt,den%vacz,.FALSE.,.FALSE.,fix)

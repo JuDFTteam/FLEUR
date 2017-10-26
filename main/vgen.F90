@@ -663,8 +663,7 @@ CONTAINS
 
           IF (noco%l_noco) THEN ! load workDen%pw,workDen%vacz,workDen%vacxyxy from 'cdn'-file
              CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                              0,fermiEnergyTemp,l_qfix,workDen%iter,workDen%mt,workDen%pw,workDen%vacz,workDen%vacxy,&
-                              workDen%cdom,workDen%cdomvz,workDen%cdomvxy)
+                              0,fermiEnergyTemp,l_qfix,workDen)
           ENDIF
           !
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2

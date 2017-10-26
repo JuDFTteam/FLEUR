@@ -64,8 +64,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
 
    ! read the charge density 
    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                    CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den%iter,den%mt,den%pw,&
-                    den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                    CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
    ! flip cdn for each atom with nflip=-1
    na = 1

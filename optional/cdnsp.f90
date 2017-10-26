@@ -63,8 +63,7 @@
           input%jspins=1
           CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
           CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den%iter,den%mt,den%pw,den%vacz,&
-                           den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
           input%jspins=2
 
           qval = 0.
