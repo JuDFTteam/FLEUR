@@ -96,7 +96,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !pk non-collinear (end)
 
    iter = inIter
-   CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
+   CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
    IF(noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
 

@@ -71,7 +71,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    IF (input%jspins > DIMENSION%jspd) CALL juDFT_error("input%jspins > dimension%jspd", calledby = "stden")
 
-   CALL den%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
    ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
    ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
    den%mmpMat = CMPLX(0.0,0.0)

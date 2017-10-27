@@ -955,7 +955,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)  :: oneD
     INTEGER,INTENT(IN)       :: jsp, potden_type
     LOGICAL,INTENT(IN)       :: l_noco
-    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,l_noco,potden_type,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
+    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,l_noco,potden_type,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
   SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,l_noco,potden_type,nmzd,nmzxyd,n2d)
@@ -982,7 +982,7 @@ CONTAINS
     ALLOCATE(pd%pw(ng3,jsp),stat=err(1))
     ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
     IF (PRESENT(nmzd)) THEN
-       ALLOCATE(pd%vacz(nmzd,2,MERGE(jsp,4,l_noco)),stat=err(3))
+       ALLOCATE(pd%vacz(nmzd,2,MERGE(4,jsp,l_noco)),stat=err(3))
        ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
     ENDIF
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")

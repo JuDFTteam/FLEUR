@@ -313,15 +313,15 @@ MODULE m_cdn_io
    SUBROUTINE writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
                            relCdnIndex,distance,fermiEnergy,l_qfix,den)
 
-      TYPE(t_stars),INTENT(IN)  :: stars
-      TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_atoms),INTENT(IN)  :: atoms
-      TYPE(t_cell), INTENT(IN)  :: cell
-      TYPE(t_sphhar),INTENT(IN) :: sphhar
-      TYPE(t_input),INTENT(IN)  :: input
-      TYPE(t_sym),INTENT(IN)    :: sym
-      TYPE(t_oneD),INTENT(IN)   :: oneD
-      TYPE(t_potden),INTENT(IN) :: den
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_cell), INTENT(IN)     :: cell
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_potden),INTENT(INOUT) :: den
 
       INTEGER, INTENT (IN)      :: inOrOutCDN
       INTEGER, INTENT (IN)      :: relCdnIndex
@@ -425,25 +425,19 @@ MODULE m_cdn_io
             END IF
          END IF
 
-         ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
-         ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
-         fzTemp(:,:,:) = den%vacz(:,:,:)
-         fzxyTemp(:,:,:,:) = den%vacxy(:,:,:,:)
          IF(vacuum%nvac.EQ.1) THEN
-            fzTemp(:,2,:)=fzTemp(:,1,:)
+            den%vacz(:,2,:)=den%vacz(:,1,:)
             IF (sym%invs) THEN
-               fzxyTemp(:,:,2,:) = CONJG(fzxyTemp(:,:,1,:))
+               den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
             ELSE
-               fzxyTemp(:,:,2,:) = fzxyTemp(:,:,1,:)
+               den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
             END IF
          END IF
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
                               currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,den%iter+relCdnIndex,&
-                              den%mt,den%pw,fzTemp,fzxyTemp,den%cdom,den%cdomvz,den%cdomvxy)
-
-         DEALLOCATE(fzTemp,fzxyTemp)
+                              den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
 
          IF(l_storeIndices) THEN
             CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
