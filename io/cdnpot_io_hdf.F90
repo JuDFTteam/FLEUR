@@ -1533,10 +1533,10 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,l_qfix,iter,&
-                              fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                              date,time,distance,fermiEnergy,l_qfix,iter,den)
 
       TYPE(t_input),    INTENT(IN) :: input
+      TYPE(t_potden),   INTENT(IN) :: den
       INTEGER(HID_T),   INTENT(IN) :: fileID
       INTEGER,          INTENT(IN) :: densityType, previousDensityIndex
       INTEGER,          INTENT(IN) :: starsIndex, latharmsIndex, structureIndex
@@ -1546,12 +1546,6 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT (IN)         :: date, time, iter
       REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
-
-      REAL,    INTENT (IN)         :: fr(:,:,:,:)
-      REAL,    INTENT (IN)         :: fz(:,:,:)
-      COMPLEX, INTENT (IN)         :: fpw(:,:)
-      COMPLEX, INTENT (IN)         :: fzxy(:,:,:,:)
-      COMPLEX, INTENT (IN)         :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
 
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz, nvac, od_nq2, nmzxy
@@ -1676,23 +1670,23 @@ MODULE m_cdnpot_io_hdf
 
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
             CALL h5dclose_f(frSetID, hdfError)
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
             CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
-            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpw)
+            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw)
             CALL h5dclose_f(fpwSetID, hdfError)
 
             IF (l_film) THEN
                dimsInt(:3)=(/nmzd,2,input%jspins/)
                CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
-               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz)
                CALL h5dclose_f(fzSetID, hdfError)
 
                dimsInt(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
                CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
-               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy)
                CALL h5dclose_f(fzxySetID, hdfError)
             END IF
 
@@ -1701,18 +1695,18 @@ MODULE m_cdnpot_io_hdf
 
                dimsInt(:2)=(/2,ng3/)
                CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
-               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdom)
+               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%cdom)
                CALL h5dclose_f(cdomSetID, hdfError)
 
                IF (l_film) THEN
                   dimsInt(:3)=(/2,nmz,nvac/)
                   CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
-                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
+                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),den%cdomvz)
                   CALL h5dclose_f(cdomvzSetID, hdfError)
 
                   dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
                   CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
-                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxy)
+                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%cdomvxy)
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
             END IF
@@ -1729,7 +1723,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
             CALL h5sclose_f(frSpaceID,hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
             CALL h5dclose_f(frSetID, hdfError)
 
             dims(:3)=(/2,ng3,input%jspins/)
@@ -1737,7 +1731,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
             CALL h5sclose_f(fpwSpaceID,hdfError)
-            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpw)
+            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw)
             CALL h5dclose_f(fpwSetID, hdfError)
 
             IF (l_film) THEN
@@ -1746,7 +1740,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(3,dims(:3),fzSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "fz", H5T_NATIVE_DOUBLE, fzSpaceID, fzSetID, hdfError)
                CALL h5sclose_f(fzSpaceID,hdfError)
-               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz)
                CALL h5dclose_f(fzSetID, hdfError)
 
                dims(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
@@ -1754,7 +1748,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(5,dims(:5),fzxySpaceID,hdfError)
                CALL h5dcreate_f(groupID, "fzxy", H5T_NATIVE_DOUBLE, fzxySpaceID, fzxySetID, hdfError)
                CALL h5sclose_f(fzxySpaceID,hdfError)
-               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy)
                CALL h5dclose_f(fzxySetID, hdfError)
             END IF
 
@@ -1766,7 +1760,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(2,dims(:2),cdomSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdom", H5T_NATIVE_DOUBLE, cdomSpaceID, cdomSetID, hdfError)
                CALL h5sclose_f(cdomSpaceID,hdfError)
-               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdom)
+               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%cdom)
                CALL h5dclose_f(cdomSetID, hdfError)
 
                IF (l_film) THEN
@@ -1775,7 +1769,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5screate_simple_f(3,dims(:3),cdomvzSpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "cdomvz", H5T_NATIVE_DOUBLE, cdomvzSpaceID, cdomvzSetID, hdfError)
                   CALL h5sclose_f(cdomvzSpaceID,hdfError)
-                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
+                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),den%cdomvz)
                   CALL h5dclose_f(cdomvzSetID, hdfError)
 
                   dims(:4)=(/2,nmzxy,od_nq2-1,nvac/)
@@ -1783,7 +1777,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5screate_simple_f(4,dims(:4),cdomvxySpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "cdomvxy", H5T_NATIVE_DOUBLE, cdomvxySpaceID, cdomvxySetID, hdfError)
                   CALL h5sclose_f(cdomvxySpaceID,hdfError)
-                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxy)
+                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%cdomvxy)
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
             END IF
@@ -1816,7 +1810,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
          CALL h5sclose_f(frSpaceID,hdfError)
-         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
          CALL h5dclose_f(frSetID, hdfError)
 
          dims(:3)=(/2,ng3,input%jspins/)
@@ -1824,7 +1818,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
          CALL h5sclose_f(fpwSpaceID,hdfError)
-         CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpw)
+         CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw)
          CALL h5dclose_f(fpwSetID, hdfError)
 
          IF (l_film) THEN
@@ -1833,7 +1827,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(3,dims(:3),fzSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fz", H5T_NATIVE_DOUBLE, fzSpaceID, fzSetID, hdfError)
             CALL h5sclose_f(fzSpaceID,hdfError)
-            CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+            CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz)
             CALL h5dclose_f(fzSetID, hdfError)
 
             dims(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
@@ -1841,7 +1835,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(5,dims(:5),fzxySpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fzxy", H5T_NATIVE_DOUBLE, fzxySpaceID, fzxySetID, hdfError)
             CALL h5sclose_f(fzxySpaceID,hdfError)
-            CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+            CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy)
             CALL h5dclose_f(fzxySetID, hdfError)
          END IF
 
@@ -1853,7 +1847,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(2,dims(:2),cdomSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "cdom", H5T_NATIVE_DOUBLE, cdomSpaceID, cdomSetID, hdfError)
             CALL h5sclose_f(cdomSpaceID,hdfError)
-            CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdom)
+            CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%cdom)
             CALL h5dclose_f(cdomSetID, hdfError)
 
             IF (l_film) THEN
@@ -1862,7 +1856,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(3,dims(:3),cdomvzSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdomvz", H5T_NATIVE_DOUBLE, cdomvzSpaceID, cdomvzSetID, hdfError)
                CALL h5sclose_f(cdomvzSpaceID,hdfError)
-               CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
+               CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),den%cdomvz)
                CALL h5dclose_f(cdomvzSetID, hdfError)
 
                dims(:4)=(/2,nmzxy,od_nq2-1,nvac/)
@@ -1870,7 +1864,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(4,dims(:4),cdomvxySpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdomvxy", H5T_NATIVE_DOUBLE, cdomvxySpaceID, cdomvxySetID, hdfError)
                CALL h5sclose_f(cdomvxySpaceID,hdfError)
-               CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxy)
+               CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%cdomvxy)
                CALL h5dclose_f(cdomvxySetID, hdfError)
             END IF
          END IF
@@ -2124,29 +2118,22 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
-                             archiveName, densityType,&
-                             fermiEnergy,l_qfix,l_DimChange,iter,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                             archiveName, densityType,fermiEnergy,l_qfix,l_DimChange,den)
 
-      TYPE(t_input),INTENT(IN)  :: input
-      TYPE(t_stars),INTENT(IN)  :: stars
-      TYPE(t_sphhar),INTENT(IN) :: latharms
-      TYPE(t_atoms),INTENT(IN)  :: atoms
-      TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_sphhar),INTENT(IN)    :: latharms
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_potden),INTENT(INOUT) :: den
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT (OUT)        :: iter
       REAL,    INTENT (OUT)        :: fermiEnergy
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
-
-      REAL,    INTENT (OUT)        :: fr(:,:,:,:)
-      REAL,    INTENT (OUT)        :: fz(:,:,:)
-      COMPLEX, INTENT (OUT)        :: fpw(:,:)
-      COMPLEX, INTENT (OUT)        :: fzxy(:,:,:,:)
-      COMPLEX, INTENT (OUT)        :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER               :: previousDensityIndex, jspins
@@ -2175,9 +2162,9 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, ALLOCATABLE  :: fzxyTemp(:,:,:,:)
       COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
 
-      cdom = CMPLX(0.0,0.0)
-      cdomvz = CMPLX(0.0,0.0)
-      cdomvxy = CMPLX(0.0,0.0)
+      den%cdom = CMPLX(0.0,0.0)
+      den%cdomvz = CMPLX(0.0,0.0)
+      den%cdomvxy = CMPLX(0.0,0.0)
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -2227,7 +2214,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
       CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
       CALL io_read_attint0(archiveID,'spins',jspins)
-      CALL io_read_attint0(archiveID,'iter',iter)
+      CALL io_read_attint0(archiveID,'iter',den%iter)
 
       WRITE(groupBName,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupBName)))
@@ -2295,42 +2282,42 @@ MODULE m_cdnpot_io_hdf
       IF(vacuum%nmzxy.NE.nmzxy) l_DimChange = .TRUE.
       IF(input%jspins.NE.jspins) l_DimChange = .TRUE.
 
-      fr = 0.0
+      den%mt = 0.0
       ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,jspins))
       dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
       CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
       CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp)
       CALL h5dclose_f(frSetID, hdfError)
-      fr(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut) =&
+      den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
          frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
       DEALLOCATE(frTemp)
 
-      fpw = CMPLX(0.0,0.0)
+      den%pw = CMPLX(0.0,0.0)
       ALLOCATE(fpwTemp(ng3,jspins))
       dimsInt(:3)=(/2,ng3,jspins/)
       CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
       CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpwTemp)
       CALL h5dclose_f(fpwSetID, hdfError)
-      fpw(1:ng3Out,1:jspinsOut) = fpwTemp(1:ng3Out,1:jspinsOut)
+      den%pw(1:ng3Out,1:jspinsOut) = fpwTemp(1:ng3Out,1:jspinsOut)
       DEALLOCATE(fpwTemp)
 
       IF (l_film) THEN
-         fz = 0.0
+         den%vacz = 0.0
          ALLOCATE(fzTemp(nmzd,2,jspins))
          dimsInt(:3)=(/nmzd,2,jspins/)
          CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
          CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fzTemp)
          CALL h5dclose_f(fzSetID, hdfError)
-         fz(1:nmzdOut,1:2,1:jspinsOut) = fzTemp(1:nmzdOut,1:2,1:jspinsOut)
+         den%vacz(1:nmzdOut,1:2,1:jspinsOut) = fzTemp(1:nmzdOut,1:2,1:jspinsOut)
          DEALLOCATE(fzTemp)
 
-         fzxy = CMPLX(0.0,0.0)
+         den%vacxy = CMPLX(0.0,0.0)
          ALLOCATE(fzxyTemp(nmzxyd,ng2-1,2,jspins))
          dimsInt(:5)=(/2,nmzxyd,ng2-1,2,jspins/)
          CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
          CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxyTemp)
          CALL h5dclose_f(fzxySetID, hdfError)
-         fzxy(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut) =&
+         den%vacxy(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut) =&
             fzxyTemp(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut)
          DEALLOCATE(fzxyTemp)
       END IF
@@ -2338,33 +2325,33 @@ MODULE m_cdnpot_io_hdf
       IF((localDensityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
          (localDensityType.EQ.DENSITY_TYPE_NOCO_OUT_const)) THEN
 
-         cdom = CMPLX(0.0,0.0)
+         den%cdom = CMPLX(0.0,0.0)
          ALLOCATE(cdomTemp(ng3))
          dimsInt(:2)=(/2,ng3/)
          CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
          CALL io_read_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdomTemp)
          CALL h5dclose_f(cdomSetID, hdfError)
-         cdom(1:ng3Out) = cdomTemp(1:ng3Out)
+         den%cdom(1:ng3Out) = cdomTemp(1:ng3Out)
          DEALLOCATE(cdomTemp)
 
          IF (l_film) THEN
-            cdomvz = CMPLX(0.0,0.0)
+            den%cdomvz = CMPLX(0.0,0.0)
             ALLOCATE(cdomvzTemp(nmz,nvac))
             dimsInt(:3)=(/2,nmz,nvac/)
             CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
             CALL io_read_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvzTemp)
             CALL h5dclose_f(cdomvzSetID, hdfError)
-            cdomvz(1:nmzOut,1:nvacOut) = cdomvzTemp(1:nmzOut,1:nvacOut)
+            den%cdomvz(1:nmzOut,1:nvacOut) = cdomvzTemp(1:nmzOut,1:nvacOut)
             DEALLOCATE(cdomvzTemp)
 
-            cdomvxy = CMPLX(0.0,0.0)
+            den%cdomvxy = CMPLX(0.0,0.0)
             ! No change in od_nq2 allowed at the moment!
             ALLOCATE(cdomvxyTemp(nmzxy,od_nq2-1,nvac))
             dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
             CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
             CALL io_read_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxyTemp)
             CALL h5dclose_f(cdomvxySetID, hdfError)
-            cdomvxy(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut) =&
+            den%cdomvxy(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut) =&
                cdomvxyTemp(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut)
             DEALLOCATE(cdomvxyTemp)
          END IF

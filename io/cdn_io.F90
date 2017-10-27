@@ -215,7 +215,7 @@ MODULE m_cdn_io
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
-                                fermiEnergy,l_qfix,l_DimChange,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                                fermiEnergy,l_qfix,l_DimChange,den)
 
             CALL closeCDNPOT_HDF(fileID)
 
@@ -436,8 +436,8 @@ MODULE m_cdn_io
 
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                              currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,den%iter+relCdnIndex,&
-                              den%mt,den%pw,den%vacz,den%vacxy,den%cdom,den%cdomvz,den%cdomvxy)
+                              currentStepfunctionIndex,date,time,distance,fermiEnergy,l_qfix,&
+                              den%iter+relCdnIndex,den)
 
          IF(l_storeIndices) THEN
             CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
