@@ -824,15 +824,12 @@ CONTAINS
           IF (vacuum%nvac==1) THEN
              vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
              vCoul%vacz(:,2,:) = vCoul%vacz(:,1,:)
-             vx%vacz(:,2,:)    = vx%vacz(:,1,:)
              IF (sym%invs) THEN
                 vTot%vacxy(:,:,2,:)  = cmplx(vTot%vacxy(:,:,1,:))
                 vCoul%vacxy(:,:,2,:) = cmplx(vCoul%vacxy(:,:,1,:))
-                vx%vacxy(:,:,2,:)    = cmplx(vx%vacxy(:,:,1,:))
              ELSE
                 vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
                 vCoul%vacxy(:,:,2,:) = vCoul%vacxy(:,:,1,:)
-                vx%vacxy(:,:,2,:)    = vx%vacxy(:,:,1,:)
              ENDIF
           ENDIF
        ENDIF ! mpi%irank == 0
