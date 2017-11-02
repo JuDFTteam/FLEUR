@@ -2174,9 +2174,9 @@ MODULE m_cdnpot_io_hdf
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER               :: previousDensityIndex, jspins
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
-      INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u
+      INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
-      LOGICAL               :: l_film, l_exist, ldauLinMix
+      LOGICAL               :: l_film, l_exist, ldauLinMix, l_mmpMatDimEquals
       INTEGER(HID_T)        :: archiveID, groupID, groupBID, generalGroupID
       INTEGER               :: hdfError, fileFormatVersion
       CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
@@ -2196,6 +2196,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)        :: ldau_l_amfSetID
       INTEGER(HID_T)        :: ldau_USetID
       INTEGER(HID_T)        :: ldau_JSetID
+      INTEGER(HID_T)        :: mmpMatSetID
 
       INTEGER, ALLOCATABLE  :: ldau_AtomType(:), ldau_l(:), ldau_l_amf(:)
       REAL,    ALLOCATABLE  :: ldau_U(:), ldau_J(:)
@@ -2204,6 +2205,7 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, ALLOCATABLE  :: fpwTemp(:,:)
       COMPLEX, ALLOCATABLE  :: fzxyTemp(:,:,:,:)
       COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
+      COMPLEX, ALLOCATABLE  :: mmpMatTemp(:,:,:,:)
 
       den%cdom = CMPLX(0.0,0.0)
       den%cdomvz = CMPLX(0.0,0.0)
@@ -2362,6 +2364,24 @@ MODULE m_cdnpot_io_hdf
       IF(vacuum%nmzxy.NE.nmzxy) l_DimChange = .TRUE.
       IF(input%jspins.NE.jspins) l_DimChange = .TRUE.
 
+      l_mmpMatDimEquals = .TRUE.
+      IF(fileFormatVersion.GE.29) THEN
+         IF(input%ldauLinMix.NE.ldauLinMix) l_DimChange = .TRUE. ! Am I sure about this? parameter change => dim change?
+         IF(atoms%n_u.NE.n_u) THEN
+            l_DimChange = .TRUE.
+            l_mmpMatDimEquals = .FALSE.
+         ELSE
+            DO i = 1, n_u
+               IF (atoms%lda_u(i)%atomType.NE.ldau_AtomType(i)) l_mmpMatDimEquals = .FALSE.
+               IF (atoms%lda_u(i)%l.NE.ldau_l(i)) l_mmpMatDimEquals = .FALSE.
+               IF (atoms%lda_u(i)%l_amf.NE.ldau_l_amf(i)) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
+               IF (ABS(atoms%lda_u(i)%u-ldau_U(i)).GT.1.0e-10) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
+               IF (ABS(atoms%lda_u(i)%j-ldau_J(i)).GT.1.0e-10) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
+            END DO
+            IF (.NOT.l_mmpMatDimEquals) l_DimChange = .TRUE.
+         END IF
+      END IF
+
       den%mt = 0.0
       ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,jspins))
       dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
@@ -2435,6 +2455,29 @@ MODULE m_cdnpot_io_hdf
                cdomvxyTemp(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut)
             DEALLOCATE(cdomvxyTemp)
          END IF
+      END IF
+
+      IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
+         ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins))
+         dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,jspins/)
+         CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
+         CALL io_read_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),mmpMatTemp)
+         CALL h5dclose_f(mmpMatSetID, hdfError)
+
+         den%mmpMat = CMPLX(0.0,0.0)
+         IF(l_mmpMatDimEquals) THEN
+            den%mmpMat(:,:,:,1:jspinsOut) = mmpMatTemp(:,:,:,1:jspinsOut)
+         ELSE
+            DO i = 1, n_u
+               DO j = 1, atoms%n_u
+                  IF (atoms%lda_u(j)%atomType.NE.ldau_AtomType(i)) CYCLE
+                  IF (atoms%lda_u(j)%l.NE.ldau_l(i)) CYCLE
+                  den%mmpMat(:,:,j,1:jspinsOut) = mmpMatTemp(:,:,i,1:jspinsOut)
+               END DO
+            END DO
+         END IF
+
+         DEALLOCATE (mmpMatTemp)
       END IF
 
       CALL h5gclose_f(groupID, hdfError)
