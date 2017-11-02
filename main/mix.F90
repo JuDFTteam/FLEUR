@@ -270,6 +270,15 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    atoms%n_u=n_u_keep
 
+   IF(vacuum%nvac.EQ.1) THEN
+      inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
+      IF (sym%invs) THEN
+         inDen%vacxy(:,:,2,:) = CONJG(inDen%vacxy(:,:,1,:))
+      ELSE
+         inDen%vacxy(:,:,2,:) = inDen%vacxy(:,:,1,:)
+      END IF
+   END IF
+
    !write out mixed density
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      1,results%last_distance,results%ef,.TRUE.,inDen)

@@ -477,6 +477,15 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL juDFT_end("slice OK")
       END IF
 
+      IF(vacuum%nvac.EQ.1) THEN
+         outDen%vacz(:,2,:) = outDen%vacz(:,1,:)
+         IF (sym%invs) THEN
+            outDen%vacxy(:,:,2,:) = CONJG(outDen%vacxy(:,:,1,:))
+         ELSE
+            outDen%vacxy(:,:,2,:) = outDen%vacxy(:,:,1,:)
+         END IF
+      END IF
+
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                         CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,outDen)
    ENDIF ! mpi%irank.EQ.0
