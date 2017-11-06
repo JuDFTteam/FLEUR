@@ -86,8 +86,6 @@
           INTEGER ierr(3)
           CALL MPI_COMM_RANK (mpi%mpi_comm,mpi%irank,ierr)
           CALL MPI_COMM_SIZE (mpi%mpi_comm,mpi%isize,ierr)
-
-          sliceplot%iplot=.FALSE.
 #else
           mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
@@ -146,8 +144,17 @@
           input%ldauLinMix = .FALSE.
           input%ldauMixParam = 0.05
           input%ldauSpinf = 1.0
+          input%pallst = .FALSE.
+
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
+
+          sliceplot%iplot=.FALSE.
+          sliceplot%kk = 0
+          sliceplot%e1s = 0.0
+          sliceplot%e2s = 0.0
+          sliceplot%nnne = 0
+
           IF (input%l_inpXML) THEN
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
