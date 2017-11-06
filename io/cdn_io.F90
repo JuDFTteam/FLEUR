@@ -606,7 +606,7 @@ MODULE m_cdn_io
       END IF
 
       !write density matrix to n_mmp_mat_out file
-      IF((densityType.EQ.DENSITY_TYPE_IN_const).AND.(relCdnIndex.EQ.1).AND.&
+      IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
          ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
          IF(atoms%n_u.GT.0) THEN
             OPEN (69,file='n_mmp_mat_out',status='replace',form='formatted')
