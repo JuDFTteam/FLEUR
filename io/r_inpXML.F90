@@ -642,14 +642,12 @@ SUBROUTINE r_inpXML(&
 
   ! Read in optional general LDA+U parameters
 
-  IF (TRIM(ADJUSTL(versionString)).EQ.'0.29') THEN
-     xPathA = '/fleurInput/calculationSetup/ldaU'
-     numberNodes = xmlGetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        input%ldauLinMix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
-        input%ldauMixParam = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
-        input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
-     END IF
+  xPathA = '/fleurInput/calculationSetup/ldaU'
+  numberNodes = xmlGetNumberOfNodes(xPathA)
+  IF (numberNodes.EQ.1) THEN
+     input%ldauLinMix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
+     input%ldauMixParam = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
+     input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
   END IF
 
   ! Read in optional q point mesh for spin spirals
