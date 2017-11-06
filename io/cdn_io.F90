@@ -318,6 +318,10 @@ MODULE m_cdn_io
             numLines = numLines + 1
          END DO
          IF (MOD(numLines,14*input%jspins).NE.0) THEN
+            WRITE(*,*) 'The n_mmp_mat file could not be read.'
+            WRITE(*,*) 'Was it an old style file with linear mixing parameter specification'
+            WRITE(*,*) 'in the last line? Linear mixing for the density matrix can now be'
+            WRITE(*,*) 'activated and specified in the inp.xml file.'
             CALL juDFT_error("strange n_mmp_mat-file...", calledby = "readDensity")
          END IF
          CLOSE(69)
