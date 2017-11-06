@@ -92,8 +92,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
    END DO
 
    ! for LDA+U: flip density matrix
-   IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
-      CALL readDensityMatrix(input,atoms,den%mmpMat,l_error)
+   IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
       DO i_u = 1, atoms%n_u
          itype = atoms%lda_u(i_u)%atomType
          IF (atoms%nflip(itype).EQ.-1) THEN
@@ -120,16 +119,6 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
    ! write the spin-polarized density
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      0,-1.0,0.0,.FALSE.,den)
-
-   ! write density matrix for LDA+U
-   IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
-      OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
-      WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
-      IF (input%ldauLinMix) THEN
-         WRITE (69,'(2(a6,f5.3))') 'alpha=',input%ldauMixParam,'spinf=',input%ldauSpinf
-      END IF
-      CLOSE (69)
-   END IF
 
    ! read enpara and  flip lines
    INQUIRE(file='enpara',exist=n_exist)

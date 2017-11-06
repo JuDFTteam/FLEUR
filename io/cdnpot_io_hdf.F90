@@ -1011,7 +1011,6 @@ MODULE m_cdnpot_io_hdf
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
       CALL io_write_attlog0(groupID,'l_film',input%film)
-      CALL io_write_attlog0(groupID,'ldauLinMix',input%ldauLinMix)
 
       CALL io_write_attreal0(groupID,'omtil',cell%omtil)
       CALL io_write_attreal0(groupID,'area',cell%area)
@@ -1351,7 +1350,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attchar0(groupID,'namgrp',sym%namgrp)
 
       IF(fileFormatVersion.GE.29) THEN
-         CALL io_read_attlog0(groupID,'ldauLinMix',input%ldauLinMix)
          CALL io_read_attint0(groupID,'n_u',atoms%n_u)
          IF(ALLOCATED(atoms%lda_u)) DEALLOCATE(atoms%lda_u)
          ALLOCATE(atoms%lda_u(atoms%n_u))
@@ -2176,7 +2174,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
-      LOGICAL               :: l_film, l_exist, ldauLinMix, l_mmpMatDimEquals
+      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals
       INTEGER(HID_T)        :: archiveID, groupID, groupBID, generalGroupID
       INTEGER               :: hdfError, fileFormatVersion
       CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
@@ -2282,7 +2280,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupBID,'od_nq2',od_nq2)
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupBID,'n_u',n_u)
-         CALL io_read_attlog0(groupBID,'ldauLinMix',ldauLinMix)
          IF(n_u.GT.0) THEN
             ALLOCATE(ldau_AtomType(n_u), ldau_l(n_u), ldau_l_amf(n_u))
             ALLOCATE(ldau_U(n_u), ldau_J(n_u))
@@ -2366,7 +2363,6 @@ MODULE m_cdnpot_io_hdf
 
       l_mmpMatDimEquals = .TRUE.
       IF(fileFormatVersion.GE.29) THEN
-         IF(input%ldauLinMix.NE.ldauLinMix) l_DimChange = .TRUE. ! Am I sure about this? parameter change => dim change?
          IF(atoms%n_u.NE.n_u) THEN
             l_DimChange = .TRUE.
             l_mmpMatDimEquals = .FALSE.

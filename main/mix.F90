@@ -54,7 +54,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    INTEGER i,imap,js,mit,irecl
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
    INTEGER iofl,n_u_keep
-   LOGICAL l_exist,l_ldaU
+   LOGICAL l_exist,l_ldaU, l_densityMatrixPresent
 
    !Local Arrays
    REAL dist(6)
@@ -72,6 +72,8 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    !     ELSE
    !        vol = omtil
    !     ENDIF
+
+   l_densityMatrixPresent = ANY(inDen%mmpMat(:,:,:,:).NE.0.0)
 
    !In systems without inversions symmetry the interstitial star-
    !coefficients are complex. Thus twice as many numbers have to be
@@ -104,7 +106,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    ! LDA+U (start)
    n_mmpTemp = inDen%mmpMat
    n_u_keep=atoms%n_u
-   IF (isDensityMatrixPresent()) THEN
+   IF (l_densityMatrixPresent) THEN
       !In an LDA+U caclulation, also the density matrix is included in the
       !supervectors (sm,fsm) if no linear mixing is performed on it.
       IF(input%ldauLinMix) THEN
@@ -279,12 +281,9 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
       END IF
    END IF
 
-   !write out mixed density
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                     1,results%last_distance,results%ef,.TRUE.,inDen)
-
    IF (atoms%n_u > 0) THEN
-      IF (.NOT.isDensityMatrixPresent()) THEN
+      IF (.NOT.l_densityMatrixPresent) THEN
+         inDen%mmpMat(:,:,:,:) = outDen%mmpMat(:,:,:,:)
          INQUIRE(file='broyd',exist=l_exist)
          IF (l_exist) THEN
             CALL system('rm broyd')
@@ -296,13 +295,11 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
             PRINT *,"broyd.7 file deleted because new density matrix is created."
          ENDIF
       END IF
-      OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
-      WRITE (69,'(7f20.13)') inDen%mmpMat(:,:,:,:)
-      IF (input%ldauLinMix) THEN
-         WRITE (69,'(2(a6,f5.3))') 'alpha=',input%ldauMixParam,'spinf=',input%ldauSpinf
-      END IF
-      CLOSE (69)
    ENDIF
+
+   !write out mixed density
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                     1,results%last_distance,results%ef,.TRUE.,inDen)
 
    inDen%iter = inDen%iter + 1
 

@@ -143,8 +143,8 @@
           CALL initWannierDefaults(wann)
 
           input%minDistance = 0.0
-          input%ldauLinMix = .TRUE.
-          input%ldauMixParam = -1.0
+          input%ldauLinMix = .FALSE.
+          input%ldauMixParam = 0.05
           input%ldauSpinf = 1.0
           kpts%ntet = 1
           kpts%numSpecialPoints = 1

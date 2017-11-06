@@ -30,9 +30,7 @@ MODULE m_cdn_io
    PUBLIC printDensityFileInfo
    PUBLIC readDensity, writeDensity
    PUBLIC isDensityFilePresent, isCoreDensityPresent
-   PUBLIC isDensityMatrixPresent
    PUBLIC readCoreDensity, writeCoreDensity
-   PUBLIC readDensityMatrix
    PUBLIC readStars, writeStars
    PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
@@ -153,7 +151,7 @@ MODULE m_cdn_io
       LOGICAL, INTENT (OUT)     :: l_qfix
 
       ! local variables
-      INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l
+      INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l, numLines, ioStatus, iofl
       LOGICAL            :: l_exist, l_rhomatFile, l_DimChange
       CHARACTER(LEN=30)  :: filename
 
@@ -306,6 +304,23 @@ MODULE m_cdn_io
             END IF
          END IF
          CLOSE(iUnit)
+      END IF
+
+      INQUIRE(FILE='n_mmp_mat',EXIST=l_exist)
+      IF(l_exist.AND.atoms%n_u.GT.0) THEN
+         OPEN (69,file='n_mmp_mat',status='unknown',form='formatted')
+         READ (69,'(7f20.13)',IOSTAT=ioStatus) den%mmpMat
+         REWIND(69)
+         numLines = 0
+         DO
+            READ (69,*,iostat=iofl)
+            IF (iofl < 0) EXIT
+            numLines = numLines + 1
+         END DO
+         IF (MOD(numLines,14*input%jspins).NE.0) THEN
+            CALL juDFT_error("strange n_mmp_mat-file...", calledby = "readDensity")
+         END IF
+         CLOSE(69)
       END IF
 
    END SUBROUTINE readDensity
@@ -588,13 +603,28 @@ MODULE m_cdn_io
          END IF
 
          CLOSE(iUnit)
+      END IF
 
-         !write density matrix to n_mmp_mat file
-         IF((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(relCdnIndex.EQ.1)) THEN
-            IF(atoms%n_u.GT.0) THEN
+      !write density matrix to n_mmp_mat_out file
+      IF((densityType.EQ.DENSITY_TYPE_IN_const).AND.(relCdnIndex.EQ.1).AND.&
+         ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
+         IF(atoms%n_u.GT.0) THEN
+            OPEN (69,file='n_mmp_mat_out',status='replace',form='formatted')
+            WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
+            CLOSE (69)
+
+            IF ((mode.EQ.CDN_HDF5_MODE).AND..NOT.(input%ldauLinMix.AND.(input%ldauMixParam.EQ.0.0))) THEN
+               INQUIRE(file='n_mmp_mat',exist=l_exist)
+               IF(l_exist) THEN
+                  CALL system('mv n_mmp_mat n_mmp_mat_old')
+                  PRINT *,"n_mmp_mat moved to n_mmp_mat_old"
+               END IF
+            ELSE
+               OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
+               WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
+               CLOSE (69)
             END IF
          END IF
-
       END IF
 
    END SUBROUTINE writeDensity
@@ -808,7 +838,7 @@ MODULE m_cdn_io
             l_writeStructure = .TRUE.
          ELSE
             CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
-            CALL compareStructure(atoms, vacuum, cell, sym, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
+            CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
             IF(.NOT.l_same) THEN
                currentStructureIndex = currentStructureIndex + 1
                l_writeStructure = .TRUE.
@@ -1148,84 +1178,6 @@ MODULE m_cdn_io
 
    END SUBROUTINE readStepfunction
 
-   SUBROUTINE readDensityMatrix(input, atoms, n_mmp, l_error)
-
-      TYPE(t_input), INTENT(INOUT) :: input
-      TYPE(t_atoms), INTENT(IN)    :: atoms
-      COMPLEX, INTENT(OUT)         :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                            -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                            atoms%n_u,input%jspins)
-      LOGICAL, INTENT(OUT)         :: l_error
-
-      INTEGER                      :: mode, ioStatus, numLines, iofl, i
-      LOGICAL                      :: l_exist
-      CHARACTER(LEN=30)            :: filename
-      REAL                         :: alpha, spinf
-
-      l_error = .FALSE.
-      ioStatus = 0
-      CALL getMode(mode)
-
-      IF(mode.EQ.CDN_HDF5_MODE) THEN
-         l_exist = .FALSE.
-         IF(.NOT.l_exist) THEN
-            mode = CDN_STREAM_MODE
-         END IF
-      END IF
-
-      IF(mode.EQ.CDN_STREAM_MODE) THEN
-         INQUIRE(FILE='cdn.str',EXIST=l_exist)
-         IF (l_exist) THEN
-            STOP 'cdn.str code path not yet implemented!'
-         END IF
-         IF (.NOT.l_exist) THEN
-            mode = CDN_DIRECT_MODE
-         END IF
-      END IF
-
-      IF (mode.EQ.CDN_DIRECT_MODE) THEN
-         filename = 'n_mmp_mat'
-         INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
-         IF(.NOT.l_exist) THEN
-            l_error = .TRUE.
-            RETURN
-         END IF
-
-         OPEN (69,file=TRIM(ADJUSTL(filename)),status='unknown',form='formatted')
-         READ (69,'(7f20.13)',IOSTAT=ioStatus) n_mmp
-         REWIND(69)
-         numLines = 0 
-         DO
-            READ (69,*,iostat=iofl)
-            IF (iofl < 0) EXIT
-            numLines = numLines + 1
-         END DO
-         IF (MOD(numLines,14*input%jspins) == 1) THEN !read in alpha, spinf in this case
-            REWIND(69)
-            DO i = 1, numLines-1
-               READ (69,*,iostat=iofl)
-            END DO
-            READ (69,'(2(6x,f5.3))',IOSTAT=ioStatus) alpha, spinf
-            IF(input%ldauLinMix.AND.(input%ldauMixParam.LT.0.0)) THEN
-               input%ldauMixParam = alpha
-               input%ldauSpinf = spinf
-            END IF
-         ELSE IF (MOD(numLines,14*input%jspins).NE.0) THEN
-            CALL juDFT_error("strange n_mmp_mat-file...",calledby ="readDensityMatrix")
-         ELSE IF(input%ldauMixParam.LT.0.0) THEN
-            input%ldauLinMix = .FALSE.
-         END IF
-         CLOSE(69)
-
-!         IF (ioStatus.NE.0) THEN
-!            l_error = .TRUE.
-!            RETURN
-!         END IF
-
-      END IF
-   
-   END SUBROUTINE readDensityMatrix
-
    SUBROUTINE setStartingDensity(l_noco)
 
       LOGICAL,INTENT(IN) :: l_noco
@@ -1502,39 +1454,5 @@ MODULE m_cdn_io
       END IF
       isCoreDensityPresent = .FALSE.
    END FUNCTION isCoreDensityPresent
-
-   LOGICAL FUNCTION isDensityMatrixPresent()
-
-      LOGICAL             :: l_exist
-      INTEGER             :: mode
-      CHARACTER(LEN=12)   :: filename
-
-      CALL getMode(mode)
-
-      filename="n_mmp_mat"
-      INQUIRE (file=filename,exist=l_exist)
-      IF(l_exist) THEN
-         isDensityMatrixPresent = l_exist
-         RETURN
-      END IF
-
-!      IF (mode.EQ.CDN_STREAM_MODE) THEN
-!         STOP 'Not yet implemented! (CDN_STREAM_MODE in isDensityMatrixPresent)'
-!      END IF
-
-      IF (mode.EQ.CDN_HDF5_MODE) THEN
-!#ifdef CPP_HDF
-!         STOP 'Not yet implemented (uncomment line)!'
-!         l_exist = isDensityMatrixPresentHDF()
-!         IF(l_exist) THEN
-!            isDensityMatrixPresent = l_exist
-!            RETURN
-!         END IF
-!#endif
-      END IF
-
-      isDensityMatrixPresent = .FALSE.
-
-   END FUNCTION isDensityMatrixPresent
 
 END MODULE m_cdn_io

@@ -182,6 +182,7 @@ CONTAINS
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
     ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+    inDen%mmpMat = CMPLX(0.0,0.0)
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,fermiEnergyTemp,l_qfix,inDen)
@@ -191,21 +192,7 @@ CONTAINS
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,0.0,.FALSE.,inDen)
-       IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
-          CALL readDensityMatrix(input,atoms,inDen%mmpMat,l_error)
-          IF(l_error) CALL juDFT_error('Error in reading density matrix!',calledby='fleur')
-       ELSE IF (atoms%n_u>0) THEN
-          IF(input%ldauLinMix) THEN
-             input%ldauMixParam = 0.05
-             input%ldauSpinf = 1.0
-          END IF
-          inDen%mmpMat = CMPLX(0.0,0.0)
-       END IF
     END IF
-#ifdef CPP_MPI
-    CALL MPI_BCAST(input%ldauMixParam,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%ldauSpinf,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-#endif
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)

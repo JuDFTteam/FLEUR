@@ -79,9 +79,8 @@ CONTAINS
     END DO
     CALL closeXMLElement('ldaUDensityMatrix')
 
-    ! exit subroutine if density matrix does nbot exist
-    IF(.NOT.isDensityMatrixPresent()) THEN
-       n_mmp_in = n_mmp_out
+    ! exit subroutine if density matrix does not exist
+    IF(.NOT.ANY(n_mmp_in(:,:,:,:).NE.0.0)) THEN
        RETURN
     END IF
 

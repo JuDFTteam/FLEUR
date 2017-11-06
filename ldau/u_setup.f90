@@ -42,7 +42,6 @@ CONTAINS
     REAL wronk
     LOGICAL n_exist
     CHARACTER*8 l_type*2,l_form*9
-    CHARACTER*12 ::filename
     REAL f(atoms%jmtd,2),g(atoms%jmtd,2),theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
     REAL f0(atoms%n_u,input%jspins),f2(atoms%n_u,input%jspins),f4(atoms%n_u,input%jspins),f6(atoms%n_u,input%jspins)
     REAL, ALLOCATABLE :: u(:,:,:,:,:,:)
@@ -50,7 +49,7 @@ CONTAINS
     !
     ! look, whether density matrix exists already:
     !
-    IF (isDensityMatrixPresent().AND.atoms%n_u>0) THEN
+    IF (ANY(inDen%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
 
        ! calculate slater integrals from u and j
        CALL uj2f(input%jspins,atoms,f0,f2,f4,f6)
@@ -118,7 +117,6 @@ CONTAINS
     ELSE
        IF (mpi%irank.EQ.0) THEN
           WRITE (*,*) 'no density matrix found ... skipping LDA+U'
-          WRITE(*,*) "File:",filename
        ENDIF
        pot%mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
        results%e_ldau = 0.0

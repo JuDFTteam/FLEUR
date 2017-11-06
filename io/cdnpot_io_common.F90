@@ -22,6 +22,8 @@ MODULE m_cdnpot_io_common
    USE hdf5
 #endif
 
+   IMPLICIT NONE
+
    CONTAINS
 
    SUBROUTINE compareStars(stars, refStars, l_same)
@@ -58,9 +60,10 @@ MODULE m_cdnpot_io_common
 
    END SUBROUTINE compareStepfunctions
 
-   SUBROUTINE compareStructure(atoms, vacuum, cell, sym, refAtoms, refVacuum,&
+   SUBROUTINE compareStructure(input, atoms, vacuum, cell, sym, refInput, refAtoms, refVacuum,&
                                refCell, refSym, l_same)
 
+      TYPE(t_input),INTENT(IN)  :: input, refInput
       TYPE(t_atoms),INTENT(IN)  :: atoms, refAtoms
       TYPE(t_vacuum),INTENT(IN) :: vacuum, refVacuum
       TYPE(t_cell),INTENT(IN)   :: cell, refCell
@@ -68,15 +71,25 @@ MODULE m_cdnpot_io_common
 
       LOGICAL,      INTENT(OUT) :: l_same
 
+      INTEGER                   :: i
+
       l_same = .TRUE.
 
       IF(atoms%ntype.NE.refAtoms%ntype) l_same = .FALSE.
       IF(atoms%nat.NE.refAtoms%nat) l_same = .FALSE.
       IF(atoms%lmaxd.NE.refAtoms%lmaxd) l_same = .FALSE.
       IF(atoms%jmtd.NE.refAtoms%jmtd) l_same = .FALSE.
+      IF(atoms%n_u.NE.refAtoms%n_u) l_same = .FALSE.
       IF(vacuum%dvac.NE.refVacuum%dvac) l_same = .FALSE.
       IF(sym%nop.NE.refSym%nop) l_same = .FALSE.
       IF(sym%nop2.NE.refSym%nop2) l_same = .FALSE.
+
+      IF(atoms%n_u.EQ.refAtoms%n_u) THEN
+         DO i = 1, atoms%n_u
+            IF (atoms%lda_u(i)%atomType.NE.refAtoms%lda_u(i)%atomType) l_same = .FALSE.
+            IF (atoms%lda_u(i)%l.NE.refAtoms%lda_u(i)%l) l_same = .FALSE.
+         END DO
+      END IF
 
       IF(ANY(ABS(cell%amat(:,:)-refCell%amat(:,:)).GT.1e-10)) l_same = .FALSE.
       IF(l_same) THEN
@@ -138,7 +151,7 @@ MODULE m_cdnpot_io_common
       TYPE(t_sym)          :: symTemp
 
       INTEGER                    :: starsIndexTemp, structureIndexTemp
-      LOGICAL                    :: l_same, l_writeAll
+      LOGICAL                    :: l_same, l_writeAll, l_exist
 
       l_storeIndices = .FALSE.
       l_writeAll = .FALSE.
@@ -149,7 +162,7 @@ MODULE m_cdnpot_io_common
          CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
       ELSE
          CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
-         CALL compareStructure(atoms, vacuum, cell, sym, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
+         CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
 
          IF(.NOT.l_same) THEN
             currentStructureIndex = currentStructureIndex + 1
