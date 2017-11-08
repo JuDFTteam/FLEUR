@@ -8,7 +8,7 @@ MODULE m_brysh1
   !******************************************************
 CONTAINS
   SUBROUTINE brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-       intfac,vacfac,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy,n_mmp, nmap,nmaph,mapmt,mapvac,mapvac2,sout) 
+                    intfac,vacfac,den,nmap,nmaph,mapmt,mapvac,mapvac2,sout) 
 
     USE m_types
     IMPLICIT NONE
@@ -20,25 +20,18 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)   :: stars
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
-    !     .. Scalar Arguments ..
-    REAL,    INTENT (IN) :: intfac,vacfac
-    INTEGER, INTENT (OUT):: mapmt,mapvac,mapvac2,nmap,nmaph
-    !     ..
-    !     .. Array Arguments ..
-    !-odim
-    !+odim
-    COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins)
-    COMPLEX, INTENT (IN) :: cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxy,oneD%odi%n2d-1,2)
-    COMPLEX, INTENT (IN) :: cdom(stars%ng3),rhtxy(vacuum%nmzxy,oneD%odi%n2d-1,2,input%jspins)
-    COMPLEX, INTENT (IN) :: n_mmp(-3:3,-3:3,atoms%n_u,input%jspins)
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,    INTENT (IN) :: rht(vacuum%nmz,2,input%jspins)
-    REAL,    INTENT (OUT):: sout(:)
-    !     ..
-    !     .. Local Scalars ..
+    TYPE(t_potden),INTENT(IN)  :: den
+
+    ! Scalar Arguments
+    REAL,    INTENT (IN)  :: intfac,vacfac
+    INTEGER, INTENT (OUT) :: mapmt,mapvac,mapvac2,nmap,nmaph
+
+    ! Array Arguments
+    REAL,    INTENT (OUT) :: sout(:)
+
+    ! Local Scalars
     INTEGER i,iv,j,js,k,l,n,nall,na,nvaccoeff,nvaccoeff2,mapmtd
-    !
+
     !--->  put input into arrays sout 
     !      in the spin polarized case the arrays consist of 
     !      spin up and spin down densities
@@ -47,12 +40,12 @@ CONTAINS
     DO  js = 1,input%jspins
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = REAL(qpw(i,js))
+          sout(j) = REAL(den%pw(i,js))
        END DO
        IF (.NOT.sym%invs) THEN
           DO i = 1,stars%ng3
              j = j + 1
-             sout(j) = AIMAG(qpw(i,js))
+             sout(j) = AIMAG(den%pw(i,js))
           END DO
        ENDIF
        mapmt=0
@@ -62,7 +55,7 @@ CONTAINS
              DO i = 1,atoms%jri(n)
                 mapmt = mapmt +1
                 j = j + 1
-                sout(j) = rho(i,l,n,js)
+                sout(j) = den%mt(i,l,n,js)
              END DO
           END DO
           na = na + atoms%neq(n)
@@ -73,13 +66,13 @@ CONTAINS
              DO k = 1,vacuum%nmz
                 mapvac = mapvac + 1
                 j = j + 1
-                sout(j) = rht(k,iv,js)
+                sout(j) = den%vacz(k,iv,js)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    mapvac = mapvac + 1
                    j = j + 1
-                   sout(j) =  REAL(rhtxy(i,k,iv,js))
+                   sout(j) =  REAL(den%vacxy(i,k,iv,js))
                 END DO
              END DO
              IF (.NOT.sym%invs2) THEN
@@ -87,7 +80,7 @@ CONTAINS
                    DO i = 1,vacuum%nmzxy
                       mapvac = mapvac + 1
                       j = j + 1
-                      sout(j) =  AIMAG(rhtxy(i,k,iv,js))
+                      sout(j) =  AIMAG(den%vacxy(i,k,iv,js))
                    END DO
                 END DO
              END IF
@@ -101,24 +94,24 @@ CONTAINS
        !--->    off-diagonal part of the density matrix
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = REAL(cdom(i))
+          sout(j) = REAL(den%cdom(i))
        END DO
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = AIMAG(cdom(i))
+          sout(j) = AIMAG(den%cdom(i))
        END DO
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 mapvac2 = mapvac2 + 1
                 j = j + 1
-                sout(j) = REAL(cdomvz(k,iv))
+                sout(j) = REAL(den%cdomvz(k,iv))
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    mapvac2 = mapvac2 + 1
                    j = j + 1
-                   sout(j) =  REAL(cdomvxy(i,k,iv))
+                   sout(j) =  REAL(den%cdomvxy(i,k,iv))
                 END DO
              END DO
           END DO
@@ -126,13 +119,13 @@ CONTAINS
              DO k = 1,vacuum%nmz
                 mapvac2 = mapvac2 + 1
                 j = j + 1
-                sout(j) = AIMAG(cdomvz(k,iv))
+                sout(j) = AIMAG(den%cdomvz(k,iv))
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    mapvac2 = mapvac2 + 1
                    j = j + 1
-                   sout(j) =  AIMAG(cdomvxy(i,k,iv))
+                   sout(j) =  AIMAG(den%cdomvxy(i,k,iv))
                 END DO
              END DO
           END DO
@@ -154,9 +147,9 @@ CONTAINS
              DO k = -3, 3
                 DO i = -3, 3
                    j = j + 1 
-                   sout(j) = REAL(n_mmp(i,k,n,js))
+                   sout(j) = REAL(den%mmpMat(i,k,n,js))
                    j = j + 1 
-                   sout(j) = AIMAG(n_mmp(i,k,n,js))
+                   sout(j) = AIMAG(den%mmpMat(i,k,n,js))
                 ENDDO
              ENDDO
           ENDDO

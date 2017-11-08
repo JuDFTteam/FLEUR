@@ -153,15 +153,11 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !(in the spin polarized case the arrays sm and fsm consist of spin up and spin down densities)
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-               intfac,vacfac,inDen%pw,inDen%mt,inDen%vacz,inDen%vacxy,inDen%cdom,&
-               inDen%cdomvz,inDen%cdomvxy,inDen%mmpMat(-lmaxU_const,-lmaxU_const,1,1),&
-               nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
+               intfac,vacfac,inDen,nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
 
    !put output charge density into array fsm
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
-               intfac,vacfac,outDen%pw,outDen%mt,outDen%vacz,outDen%vacxy,outDen%cdom,&
-               outDen%cdomvz,outDen%cdomvxy,outDen%mmpMat(-lmaxU_const,-lmaxU_const,1,1),&
-               nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
+               intfac,vacfac,outDen,nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
 
    !store fsm - sm the difference on fsm
    DO imap = 1,nmap
@@ -196,9 +192,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    inDen%cdomvxy = CMPLX(0.0,0.0)
    inDen%mmpMat = CMPLX(0.0,0.0)
 
-   CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,inDen%mmpMat,oneD,&
-               inDen%pw,inDen%mt,inDen%vacz,inDen%vacxy,inDen%cdom,&
-               inDen%cdomvz,inDen%cdomvxy) 
+   CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,oneD,inDen) 
 
    !calculate the distance of charge densities...
 
