@@ -51,15 +51,10 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
    IF(noco%l_noco) THEN
-      ALLOCATE(den%cdom(stars%ng3))
-      ALLOCATE(den%cdomvz(vacuum%nmz,2),den%cdomvxy(vacuum%nmzxy,stars%ng2-1,2))
       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
    ELSE
-      ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
    END IF
-   ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-   den%mmpMat = CMPLX(0.0,0.0)
 
    ! read the charge density 
    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&

@@ -52,14 +52,9 @@
           sfp = 2 * SQRT(pi_const)
           !sphhar%nlhd = MAXVAL(sphhar%nlh(:))
 
-          IF (input%jspins/=2)  CALL juDFT_error&
-               &     ("cdnsp: set jspins = 2 and remove fl7para!",calledby&
-               &     ="cdnsp")
+          IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2 and remove fl7para!", calledby ="cdnsp")
 
           CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-          ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
-          ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-          den%mmpMat = CMPLX(0.0,0.0)
 
           input%jspins=1
           CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)

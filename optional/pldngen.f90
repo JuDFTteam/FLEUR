@@ -304,8 +304,6 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    inp%jspins=1
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,inp%jspins,.FALSE.,POTDEN_TYPE_DEN)
-   ALLOCATE (den%cdom(stars%ng3),den%cdomvz(vacuum%nmzd,2),den%cdomvxy(vacuum%nmzxyd,stars%ng2-1,2))
-   ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
    den%iter = iter
    den%mt(:,0:,1:,1:1) = rho(:,0:,1:,1:1)
    den%pw(1:,1:1) = qpw(1:,1:1)
@@ -314,7 +312,6 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    den%cdom = cdom
    den%cdomvz = cdomvz
    den%cdomvxy = cdomvxy
-   den%mmpMat = CMPLX(0.0,0.0)
 
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                      0,-1.0,0.0,.FALSE.,den)

@@ -174,15 +174,10 @@ CONTAINS
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
     IF (noco%l_noco) THEN
-       ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
-       ALLOCATE (inDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE
-       ALLOCATE (inDen%cdom(1),inDen%cdomvz(1,1),inDen%cdomvxy(1,1,1))
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
-    ALLOCATE (inDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-    inDen%mmpMat = CMPLX(0.0,0.0)
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,fermiEnergyTemp,l_qfix,inDen)
@@ -198,10 +193,8 @@ CONTAINS
     ! Initialize potentials (start)
     CALL vTot%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     CALL vCoul%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
-    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTX)
+    CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,noco%l_noco,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTX)
     CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
-    ALLOCATE(vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-    ALLOCATE(vTemp%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     ! Initialize potentials (end)
 
     DO WHILE (l_cont)

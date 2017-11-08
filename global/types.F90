@@ -956,15 +956,19 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)  :: oneD
     INTEGER,INTENT(IN)       :: jsp, potden_type
     LOGICAL,INTENT(IN)       :: nocoExtraDim
-    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,nocoExtraDim,potden_type,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+
+    CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
+                            atoms%n_u,noco%l_noco,jsp,nocoExtraDim,potden_type,&
+                            vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,nocoExtraDim,potden_type,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,l_noco,jsp,nocoExtraDim,potden_type,nmzd,nmzxyd,n2d)
+    USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,jsp,potden_type
-    LOGICAL,INTENT(IN)          :: nocoExtraDim
+    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jsp,potden_type
+    LOGICAL,INTENT(IN)          :: l_noco,nocoExtraDim
     INTEGER,INTENT(IN),OPTIONAL :: nmzd,nmzxyd,n2d
 
     INTEGER:: err(4)
@@ -985,7 +989,24 @@ CONTAINS
     IF (PRESENT(nmzd)) THEN
        ALLOCATE(pd%vacz(nmzd,2,MERGE(4,jsp,nocoExtraDim)),stat=err(3))
        ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
-    ENDIF
+       IF (l_noco) THEN
+          ALLOCATE (pd%cdomvz(nmzd,2))
+          ALLOCATE (pd%cdomvxy(nmzxyd,n2d-1,2))
+       ELSE
+          ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
+       END IF
+    ELSE
+       ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
+    END IF
+
+    IF (l_noco) THEN
+       ALLOCATE (pd%cdom(ng3))
+    ELSE
+       ALLOCATE (pd%cdom(1))
+    END IF
+
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jsp))
+
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
@@ -993,6 +1014,10 @@ CONTAINS
        pd%vacz=0.0
        pd%vacxy=CMPLX(0.0,0.0)
     ENDIF
+    pd%cdom = CMPLX(0.0,0.0)
+    pd%cdomvz = CMPLX(0.0,0.0)
+    pd%cdomvxy = CMPLX(0.0,0.0)
+    pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 
  

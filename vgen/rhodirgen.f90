@@ -88,9 +88,6 @@ CONTAINS
     eps = 1.0e-20
   
     CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-    ALLOCATE(den%cdom(stars%ng3),den%cdomvz(vacuum%nmz,2),den%cdomvxy(vacuum%nmzxy,stars%ng2-1,2))
-    ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-    den%mmpMat = CMPLX(0.0,0.0)
 
     ALLOCATE (ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
               rz(vacuum%nmzd,2,2))

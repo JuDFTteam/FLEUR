@@ -102,8 +102,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       INQUIRE(file='enpara',exist=l_enpara)
       IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
    ENDIF
-   ALLOCATE (outDen%cdom(stars%ng3),outDen%cdomvz(vacuum%nmzd,2))
-   ALLOCATE (outDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
    ALLOCATE (qa21(atoms%ntype))
    ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
    ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
@@ -113,15 +111,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    qa21(:) = cmplx(0.0,0.0)
    qvac(:,:,:,:) = 0.0 
    qvlay(:,:,:,:,:) = 0.0
-   outDen%mt(:,:,:,:) = 0.0
-   outDen%pw(:,:) = cmplx(0.0,0.0)
-   outDen%cdom(:) =  cmplx(0.0,0.0)
-   IF (input%film) THEN
-      outDen%vacz(:,:,:) = 0.0
-      outDen%cdomvz(:,:) = cmplx(0.0,0.0)
-      outDen%vacxy(:,:,:,:) = cmplx(0.0,0.0)
-      outDen%cdomvxy(:,:,:) = cmplx(0.0,0.0)
-   END IF
+
    outDen%iter = iter
         
    !Set up pointer for backtransformation of from g-vector in
@@ -129,11 +119,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !In principle this can also be done in main program once.
    !It is done here to save memory.
    CALL prp_qfft_map(stars,sym, input, igq2_fft,igq_fft)
-
-   !LDA+U: initialise density-matrix if needed
-   ALLOCATE (outDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-   outDen%mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
-
 
    !in a non-collinear calcuation where the off-diagonal part of
    !density matrix in the muffin-tins is calculated, the a- and

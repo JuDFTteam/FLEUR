@@ -131,13 +131,6 @@ CONTAINS
     vTot%iter = den%iter
 
     CALL workDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-    IF (noco%l_noco) THEN
-       ALLOCATE (workDen%cdom(stars%ng3),workDen%cdomvz(vacuum%nmzd,2))
-       ALLOCATE (workDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-    ELSE
-       ALLOCATE (workDen%cdom(1),workDen%cdomvz(1,1),workDen%cdomvxy(1,1,1))
-    END IF
-    !
 
     workDen = den
     IF (mpi%irank == 0) THEN
@@ -176,7 +169,7 @@ CONTAINS
     ENDIF ! (mpi%irank == 0)
 
 #ifdef CPP_MPI
-       CALL MPI_BCAST(workDen%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(workDen%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
 
     CALL timestart("psqpw")      
@@ -730,7 +723,9 @@ CONTAINS
              IF (input%jspins.EQ.2) THEN
                 nat = 1
                 DO n = 1,atoms%ntype
-                   workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) = workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) + workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,input%jspins)
+                   workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) = &
+                      workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) + &
+                      workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,input%jspins)
 
                    nat = nat + atoms%neq(n)
                 ENDDO

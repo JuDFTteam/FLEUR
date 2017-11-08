@@ -71,14 +71,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    EXTERNAL CPP_BLAS_sdot
 
    CALL diffDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-   IF (noco%l_noco) THEN
-      ALLOCATE (diffDen%cdom(stars%ng3),diffDen%cdomvz(vacuum%nmzd,2))
-      ALLOCATE (diffDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-   ELSE
-      ALLOCATE (diffDen%cdom(1),diffDen%cdomvz(1,1),diffDen%cdomvxy(1,1,1))
-   END IF
-   ALLOCATE (diffDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-   diffDen%mmpMat = CMPLX(0.0,0.0)
 
    ! YM: I have exported 'vol' from outside, be aware
    !     IF (film) THEN
