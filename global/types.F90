@@ -969,40 +969,32 @@ CONTAINS
     CLASS(t_potden),INTENT(OUT) :: pd
     INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jsp,potden_type
     LOGICAL,INTENT(IN)          :: l_noco,nocoExtraDim
-    INTEGER,INTENT(IN),OPTIONAL :: nmzd,nmzxyd,n2d
+    INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
 
     INTEGER:: err(4)
 
     err=0
     pd%iter=0
     pd%potdenType=potden_type
-    IF(ALLOCATED(pd%pw)) DEALLOCATE(pd%pw)
-    IF(ALLOCATED(pd%mt)) DEALLOCATE(pd%mt)
-    IF(ALLOCATED(pd%vacz)) DEALLOCATE(pd%vacz)
-    IF(ALLOCATED(pd%vacxy)) DEALLOCATE(pd%vacxy)
-    IF(ALLOCATED(pd%cdom)) DEALLOCATE(pd%cdom)
-    IF(ALLOCATED(pd%cdomvz)) DEALLOCATE(pd%cdomvz)
-    IF(ALLOCATED(pd%cdomvxy)) DEALLOCATE(pd%cdomvxy)
-    IF(ALLOCATED(pd%mmpMat)) DEALLOCATE(pd%mmpMat)
-    ALLOCATE(pd%pw(ng3,jsp),stat=err(1))
-    ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
-    IF (PRESENT(nmzd)) THEN
-       ALLOCATE(pd%vacz(nmzd,2,MERGE(4,jsp,nocoExtraDim)),stat=err(3))
-       ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
-       IF (l_noco) THEN
-          ALLOCATE (pd%cdomvz(nmzd,2))
-          ALLOCATE (pd%cdomvxy(nmzxyd,n2d-1,2))
-       ELSE
-          ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
-       END IF
-    ELSE
-       ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
-    END IF
-
+    IF(ALLOCATED(pd%pw)) DEALLOCATE (pd%pw)
+    IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
+    IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
+    IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
+    IF(ALLOCATED(pd%cdom)) DEALLOCATE (pd%cdom)
+    IF(ALLOCATED(pd%cdomvz)) DEALLOCATE (pd%cdomvz)
+    IF(ALLOCATED(pd%cdomvxy)) DEALLOCATE (pd%cdomvxy)
+    IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
+    ALLOCATE (pd%pw(ng3,jsp),stat=err(1))
+    ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
+    ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jsp,nocoExtraDim)),stat=err(3))
+    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
     IF (l_noco) THEN
        ALLOCATE (pd%cdom(ng3))
+       ALLOCATE (pd%cdomvz(nmzd,2))
+       ALLOCATE (pd%cdomvxy(nmzxyd,n2d-1,2))
     ELSE
        ALLOCATE (pd%cdom(1))
+       ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
     END IF
 
     ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jsp))
@@ -1010,10 +1002,8 @@ CONTAINS
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
-    IF (PRESENT(nmzd)) THEN
-       pd%vacz=0.0
-       pd%vacxy=CMPLX(0.0,0.0)
-    ENDIF
+    pd%vacz=0.0
+    pd%vacxy=CMPLX(0.0,0.0)
     pd%cdom = CMPLX(0.0,0.0)
     pd%cdomvz = CMPLX(0.0,0.0)
     pd%cdomvxy = CMPLX(0.0,0.0)

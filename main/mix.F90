@@ -160,6 +160,15 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
                intfac,vacfac,outDen,nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
 
    !store fsm - sm the difference on fsm
+   diffDen%mt = outDen%mt - inDen%mt
+   diffDen%pw = outDen%pw - inDen%pw
+   diffDen%vacz = outDen%vacz - inDen%vacz
+   diffDen%vacxy = outDen%vacxy - inDen%vacxy
+   diffDen%cdom = outDen%cdom - inDen%cdom
+   diffDen%cdomvz = outDen%cdomvz - inDen%cdomvz
+   diffDen%cdomvxy = outDen%cdomvxy - inDen%cdomvxy
+   diffDen%mmpMat = outDen%mmpMat - inDen%mmpMat
+
    DO imap = 1,nmap
       fsm(imap) = fsm(imap) - sm(imap)
    END DO
