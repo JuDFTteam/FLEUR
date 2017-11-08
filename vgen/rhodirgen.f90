@@ -26,7 +26,7 @@ MODULE m_rhodirgen
   !**********************************************************************
 CONTAINS
   SUBROUTINE rhodirgen(DIMENSION,sym,stars,atoms,sphhar,vacuum,&
-                       ndomfile,cell,input,oneD)
+                       ndomfile,cell,input,noco,oneD)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -50,6 +50,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
@@ -86,7 +87,7 @@ CONTAINS
     zero = 0.0 ; czero = CMPLX(0.0,0.0) 
     eps = 1.0e-20
   
-    CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
     ALLOCATE(den%cdom(stars%ng3),den%cdomvz(vacuum%nmz,2),den%cdomvxy(vacuum%nmzxy,stars%ng2-1,2))
     ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     den%mmpMat = CMPLX(0.0,0.0)

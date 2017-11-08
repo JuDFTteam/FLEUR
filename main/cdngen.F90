@@ -96,7 +96,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !pk non-collinear (end)
 
    iter = inIter
-   CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
 
    IF (mpi%irank.EQ.0) THEN
       INQUIRE(file='enpara',exist=l_enpara)

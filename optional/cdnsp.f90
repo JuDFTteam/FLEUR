@@ -15,7 +15,7 @@
       CONTAINS
         SUBROUTINE cdnsp(&
              &                 atoms,input,vacuum,sphhar,&
-             &                 stars,sym,oneD,cell,DIMENSION)
+             &                 stars,sym,noco,oneD,cell,DIMENSION)
 
           USE m_intgr, ONLY : intgr3
           USE m_constants
@@ -29,6 +29,7 @@
           TYPE(t_sphhar),INTENT(IN)    :: sphhar
           TYPE(t_input),INTENT(INOUT)  :: input
           TYPE(t_sym),INTENT(IN)       :: sym
+          TYPE(t_noco),INTENT(IN)      :: noco
           TYPE(t_oneD),INTENT(IN)      :: oneD
           TYPE(t_cell),INTENT(IN)      :: cell
           TYPE(t_dimension),INTENT(IN) :: DIMENSION
@@ -55,7 +56,7 @@
                &     ("cdnsp: set jspins = 2 and remove fl7para!",calledby&
                &     ="cdnsp")
 
-          CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+          CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
           ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
           ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
           den%mmpMat = CMPLX(0.0,0.0)

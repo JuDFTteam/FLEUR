@@ -19,8 +19,7 @@ MODULE m_flipcdn
 !     *******************************************************
 CONTAINS
 
-SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
-                   stars,sym,oneD,cell,l_noco)
+SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 
    USE m_constants
    USE m_cdn_io
@@ -34,9 +33,9 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
    TYPE(t_input),INTENT(INOUT) :: input
    TYPE(t_sym),INTENT(IN)      :: sym
+   TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_oneD),INTENT(IN)     :: oneD
    TYPE(t_cell),INTENT(IN)     :: cell
-   LOGICAL,INTENT(IN)          :: l_noco
 
    ! Local type instance
    TYPE(t_potden)            :: den
@@ -50,8 +49,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,&
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
-   CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-   IF(l_noco) THEN
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   IF(noco%l_noco) THEN
       ALLOCATE(den%cdom(stars%ng3))
       ALLOCATE(den%cdomvz(vacuum%nmz,2),den%cdomvxy(vacuum%nmzxy,stars%ng2-1,2))
       archiveType = CDN_ARCHIVE_TYPE_NOCO_const

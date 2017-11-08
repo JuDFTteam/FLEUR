@@ -172,7 +172,7 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
-    CALL inDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
     IF (noco%l_noco) THEN
        ALLOCATE (inDen%cdom(stars%ng3),inDen%cdomvz(vacuum%nmzd,2))
        ALLOCATE (inDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
@@ -196,10 +196,10 @@ CONTAINS
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
-    CALL vTot%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
-    CALL vCoul%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
+    CALL vTot%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vCoul%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
     CALL vx%init(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTX)
-    CALL vTemp%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     ALLOCATE(vTot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     ALLOCATE(vTemp%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
     ! Initialize potentials (end)
@@ -236,7 +236,7 @@ CONTAINS
                 IF (noco%l_noco) THEN
                    CALL timestart("gen. spin-up and -down density")
                    CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
-                                  vacuum,22,cell,input,oneD)
+                                  vacuum,22,cell,input,noco,oneD)
                    CALL timestop("gen. spin-up and -down density")
                 ENDIF
                 !---> pk non-collinear

@@ -40,7 +40,7 @@ contains
     !atoms%jmtd = maxval(atoms%jri(:))
     !sphhar%nlhd = maxval(sphhar%nlh(:))
 
-    CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
     IF(noco%l_noco) THEN
        ALLOCATE(den%cdom(stars%ng3))
        ALLOCATE(den%cdomvz(vacuum%nmz,2),den%cdomvxy(vacuum%nmzxy,stars%ng2-1,2))

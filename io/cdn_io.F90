@@ -535,11 +535,6 @@ MODULE m_cdn_io
             OPEN (iUnitTemp,file=cdnfile,form='unformatted',status='unknown')
             REWIND iUnitTemp
 
-
-            CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-                        iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
-            CALL wrtdop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-                        iUnitTemp,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
             CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
                         iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
             CALL wrtdop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&

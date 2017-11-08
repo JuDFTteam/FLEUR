@@ -134,7 +134,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Read in charge/potential
    DO i = 1, numInFiles
-      CALL den(i)%init(stars,atoms,sphhar,vacuum,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
+      CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
       ALLOCATE (den(i)%cdom(1),den(i)%cdomvz(1,1),den(i)%cdomvxy(1,1,1))
       ALLOCATE (den(i)%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
       den(i)%mmpMat = CMPLX(0.0,0.0)

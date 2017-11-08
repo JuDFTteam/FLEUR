@@ -13,7 +13,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
-                 input,cell,xcpot,obsolete,oneD)
+                 input,cell,xcpot,obsolete,noco,oneD)
 
    USE m_sphpts
    USE m_constants
@@ -39,6 +39,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    TYPE(t_obsolete),INTENT(IN) :: obsolete
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_stars),INTENT(IN)    :: stars
+   TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_oneD),INTENT(IN)     :: oneD
    TYPE(t_input),INTENT(IN)    :: input
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
@@ -71,7 +72,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    IF (input%jspins > DIMENSION%jspd) CALL juDFT_error("input%jspins > dimension%jspd", calledby = "stden")
 
-   CALL den%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
    ALLOCATE (den%cdom(1),den%cdomvz(1,1),den%cdomvxy(1,1,1))
    ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
    den%mmpMat = CMPLX(0.0,0.0)

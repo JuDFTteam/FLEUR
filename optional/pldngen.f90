@@ -303,7 +303,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    inp=input
    inp%jspins=1
 
-   CALL den%init(stars,atoms,sphhar,vacuum,oneD,inp%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,inp%jspins,.FALSE.,POTDEN_TYPE_DEN)
    ALLOCATE (den%cdom(stars%ng3),den%cdomvz(vacuum%nmzd,2),den%cdomvxy(vacuum%nmzxyd,stars%ng2-1,2))
    ALLOCATE (den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
    den%iter = iter

@@ -49,6 +49,10 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_potden),INTENT(INOUT)  :: inDen
    INTEGER, INTENT(IN)           :: archiveType
 
+   !Local type instances
+
+   TYPE(t_potden)                :: diffDen
+
    !Local Scalars
    REAL fix,intfac,vacfac
    INTEGER i,imap,js,mit,irecl
@@ -66,6 +70,16 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    REAL CPP_BLAS_sdot
    EXTERNAL CPP_BLAS_sdot
 
+   CALL diffDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   IF (noco%l_noco) THEN
+      ALLOCATE (diffDen%cdom(stars%ng3),diffDen%cdomvz(vacuum%nmzd,2))
+      ALLOCATE (diffDen%cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
+   ELSE
+      ALLOCATE (diffDen%cdom(1),diffDen%cdomvz(1,1),diffDen%cdomvxy(1,1,1))
+   END IF
+   ALLOCATE (diffDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
+   diffDen%mmpMat = CMPLX(0.0,0.0)
+
    ! YM: I have exported 'vol' from outside, be aware
    !     IF (film) THEN
    !        vol = 2.0 * z1 * area
@@ -78,19 +92,13 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    !In systems without inversions symmetry the interstitial star-
    !coefficients are complex. Thus twice as many numbers have to be
    !stored.
-   IF (sym%invs) THEN
-      intfac = 1.0
-   ELSE
-      intfac = 2.0
-   END IF
+   intfac = 2.0
+   IF (sym%invs) intfac = 1.0
 
    !The corresponding is true for the coeff. of the warping vacuum
    !density depending on the two dimensional inversion.
-   IF (sym%invs2) THEN
-      vacfac = 1.0
-   ELSE
-      vacfac = 2.0
-   END IF
+   vacfac = 2.0
+   IF (sym%invs2) vacfac = 1.0
 
    mmaph = intfac*stars%ng3 + atoms%ntype*(sphhar%nlhd+1)*atoms%jmtd +&
            vacfac*vacuum%nmzxyd*(oneD%odi%n2d-1)*vacuum%nvac + vacuum%nmzd*vacuum%nvac
