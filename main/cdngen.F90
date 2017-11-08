@@ -76,7 +76,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL fix,qtot,scor,seig,smom,stot,sval,dummy
    REAL slmom,slxmom,slymom,sum,thetai,phii,fermiEnergyTemp
    INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
-   INTEGER  ityp,ilayer,urec,itype,iatom,archiveType
+   INTEGER  ityp,ilayer,urec,itype,iatom
    LOGICAL l_relax_any,exst,n_exist,l_qfix, l_enpara
    LOGICAL, PARAMETER :: l_st=.FALSE.
 
@@ -97,8 +97,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    iter = inIter
    CALL outDen%init(stars,atoms,sphhar,vacuum,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-   archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-   IF(noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
 
    IF (mpi%irank.EQ.0) THEN
       INQUIRE(file='enpara',exist=l_enpara)
@@ -486,8 +484,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          END IF
       END IF
 
-      CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                        CDN_OUTPUT_DEN_const,0,results%last_distance,results%ef,.FALSE.,outDen)
    ENDIF ! mpi%irank.EQ.0
 
 #ifdef CPP_MPI
