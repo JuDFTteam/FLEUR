@@ -66,3 +66,32 @@ test-pgi:
      - schedules
      - web
      - triggers
+     
+build-intel:
+  image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
+  stage: build-intel
+  cache: 
+     paths:
+       - build.intel
+  script:
+    - set +e && source compilervars.sh intel64 && set -e
+    - cd /builds/fleur/fleur; ./configure.sh -l intel AUTO ; cd build.intel; make 
+  only:
+    - schedules
+    - triggers
+    - web
+ 
+    
+test-intel:
+  image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
+  stage: test-intel
+  cache:
+     paths:
+       - build.intel
+  script:
+    - set +e && source compilervars.sh intel64 && set -e
+    - cd /builds/fleur/fleur/build.intel;ctest
+  only:
+     - schedules
+     - web
+     - triggers
