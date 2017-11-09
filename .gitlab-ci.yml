@@ -77,7 +77,7 @@ build-intel:
        - build.intel
   script:
     - set +e && source compilervars.sh intel64 && set -e
-    - cd /builds/fleur/fleur; ./configure.sh -l intel AUTO ; cd build.intel; make 
+    - cd /builds/fleur/fleur; FC=mpiifort ./configure.sh -l intel AUTO ; cd build.intel; make 
   only:
     - schedules
     - triggers
