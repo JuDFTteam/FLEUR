@@ -4,6 +4,8 @@ stages:
    - deploy
    - build-pgi
    - test-pgi
+   - build-intel
+   - test-intel
 
 build-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
