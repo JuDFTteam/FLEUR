@@ -113,6 +113,7 @@ CONTAINS
           READ (59,rec=(it-1)*2-1) (ui(i),i=1,nmap)
           READ (59,rec=(it-1)*2)   (vi(i),i=1,nmap),dfivi
           am(it) = CPP_BLAS_sdot(nmap,vi,1,fm1,1)
+          ! calculate um(:) = -am(it)*ui(:) + um
           CALL CPP_BLAS_saxpy(nmap,-am(it),ui,1,um,1)
           WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
        END DO
@@ -135,6 +136,7 @@ CONTAINS
              READ (59,rec=2*(it-1)-1) (ui(i),i=1,nmap)
              READ (59,rec=2*(it-1))   (vi(i),i=1,nmap), dfivi
              bm = CPP_BLAS_sdot(nmap,ui,1,fm1,1)
+             ! calculate vm(:) = -bm*vi(:) + vm
              CALL CPP_BLAS_saxpy(nmap,-bm,vi,1,vm,1)
              !write(6,FMT='(5x,"<ui|w|Fm> for it",i2,5x,f10.6)') it, bm 
           END DO
@@ -170,14 +172,15 @@ CONTAINS
                       mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
 
           DO it = 2,iread
-             READ (59,rec=2*(it-1)-1) (ui(i),i=1,nmap)
-             READ (59,rec=2*(it-1))   (vi(i),i=1,nmap), dfivi
+             READ (59,rec=2*(it-1)) (vi(i),i=1,nmap), dfivi
+             ! calculate vm(:) = -am(it)*dfivi*vi(:) + vm
              CALL CPP_BLAS_saxpy(nmap,-am(it)*dfivi,vi,1,vm,1)
           END DO
 
           vmnorm = CPP_BLAS_sdot(nmap,fm1,1,vm,1)
           ! if (vmnorm.lt.tol_10) stop
 
+          ! calculate vm(:) = (1.0/vmnorm)*vm(:)
           CALL CPP_BLAS_sscal(nmap,one/vmnorm,vm,1)
 
           ! save dfivi(mit) for next iteration
@@ -196,6 +199,7 @@ CONTAINS
        ! update rho(m+1)
        ! calculate <fm|w|vm>
        fmvm = CPP_BLAS_sdot(nmap,vm,1,fm,1)
+       ! calculate sm(:) = (1.0-fmvm)*ui(:) + sm
        CALL CPP_BLAS_saxpy(nmap,one-fmvm,um,1,sm,1)
     END IF
 

@@ -136,8 +136,8 @@ CONTAINS
        END DO
     END IF
 
-    ! Interstitial region (metric here = step function)
-    ! multiplicate the metric with the vector in real space
+    ! Apply metric to interstitial region (metric here = step function)
+    ! + multiply metric g with s_in for MT and vacuum contributions (store in sout)
     DO js = 1, input%jspins
        ! map s_in on a complex help array ag3
        IF (sym%invs) THEN
@@ -153,17 +153,21 @@ CONTAINS
        CALL convol(stars,fg3,ag3,stars%ufft)
 
        IF (sym%invs) THEN
+          ! interstitial
           DO imap = 1, stars%ng3
              sout(imap+nmaph*(js-1)) = cell%omtil * REAL(fg3(imap))
           END DO
+          ! MT + vacuum
           DO imap = stars%ng3+1, nmaph
              sout(imap+nmaph*(js-1)) = g(imap) * s_in(imap+nmaph*(js-1))
           END DO
        ELSE
+          ! interstitial
           DO imap = 1, stars%ng3
              sout(imap+nmaph*(js-1))           = cell%omtil * REAL(fg3(imap))
              sout(imap+stars%ng3+nmaph*(js-1)) = cell%omtil * AIMAG(fg3(imap))
           END DO
+          ! MT + vacuum
           DO imap = 2 * stars%ng3 + 1, nmaph
              sout(imap+nmaph*(js-1)) = g(imap) * s_in(imap+nmaph*(js-1))
           END DO

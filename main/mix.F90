@@ -49,10 +49,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_potden),INTENT(INOUT)  :: inDen
    INTEGER, INTENT(IN)           :: archiveType
 
-   !Local type instances
-
-   TYPE(t_potden)                :: diffDen
-
    !Local Scalars
    REAL fix,intfac,vacfac
    INTEGER i,imap,js,mit,irecl
@@ -69,8 +65,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    !External functions
    REAL CPP_BLAS_sdot
    EXTERNAL CPP_BLAS_sdot
-
-   CALL diffDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
 
    ! YM: I have exported 'vol' from outside, be aware
    !     IF (film) THEN
@@ -159,19 +153,8 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
                intfac,vacfac,outDen,nmap,nmaph,mapmt,mapvac,mapvac2,fsm)
 
-   !store fsm - sm the difference on fsm
-   diffDen%mt = outDen%mt - inDen%mt
-   diffDen%pw = outDen%pw - inDen%pw
-   diffDen%vacz = outDen%vacz - inDen%vacz
-   diffDen%vacxy = outDen%vacxy - inDen%vacxy
-   diffDen%cdom = outDen%cdom - inDen%cdom
-   diffDen%cdomvz = outDen%cdomvz - inDen%cdomvz
-   diffDen%cdomvxy = outDen%cdomvxy - inDen%cdomvxy
-   diffDen%mmpMat = outDen%mmpMat - inDen%mmpMat
-
-   DO imap = 1,nmap
-      fsm(imap) = fsm(imap) - sm(imap)
-   END DO
+   !store the difference fsm - sm in fsm
+   fsm(:nmap) = fsm(:nmap) - sm(:nmap)
 
    ! open files for broyden
    irecl=(nmap+1)*8
