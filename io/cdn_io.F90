@@ -35,6 +35,7 @@ MODULE m_cdn_io
    PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
    PUBLIC storeStructureIfNew
+   PUBLIC getIOMode
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN_const
@@ -76,7 +77,7 @@ MODULE m_cdn_io
       CHARACTER(LEN=19) :: timeStampString
       CHARACTER(LEN=15) :: distanceString
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       WRITE(*,*) 'Available densities info:'
       WRITE(*,*)
@@ -168,7 +169,7 @@ MODULE m_cdn_io
       fermiEnergy = 0.0
       l_qfix = .FALSE.
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -385,7 +386,7 @@ MODULE m_cdn_io
       CHARACTER(LEN=10) :: timeString
       CHARACTER(LEN=10) :: zone
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
       CALL DATE_AND_TIME(dateString,timeString,zone)
       READ(dateString,'(i8)') date
       READ(timeString,'(i6)') time
@@ -648,7 +649,7 @@ MODULE m_cdn_io
       LOGICAL           :: l_qfix, l_exist
       CHARACTER(LEN=30) :: archiveName
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       eFermiPrev = 0.0
       l_error = .FALSE.
@@ -702,7 +703,7 @@ MODULE m_cdn_io
       INTEGER        :: currentStructureIndex,currentStepfunctionIndex
       INTEGER        :: readDensityIndex, lastDensityIndex
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -773,7 +774,7 @@ MODULE m_cdn_io
       INTEGER        :: currentStructureIndex,currentStepfunctionIndex
       INTEGER        :: readDensityIndex, lastDensityIndex
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -824,7 +825,7 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -881,7 +882,7 @@ MODULE m_cdn_io
       izmax = 0
       igz = 0
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -953,7 +954,7 @@ MODULE m_cdn_io
       izmax = 0
       igz = 0
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
@@ -1058,7 +1059,7 @@ MODULE m_cdn_io
 
       ifftd=size(stars%ufft)
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -1117,7 +1118,7 @@ MODULE m_cdn_io
       ioStatus = 0
       ifftd = 27*stars%mx1*stars%mx2*stars%mx3
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
@@ -1208,7 +1209,7 @@ MODULE m_cdn_io
 
       WRITE(*,'(a,i0,a)') 'Using density ', sdIndex, ' as starting density.'
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
@@ -1266,7 +1267,7 @@ MODULE m_cdn_io
       startNumber = -1
       endNumber = -1
       IF (TRIM(ADJUSTL(ddString)).EQ.'allbutlast') THEN
-         CALL getMode(mode)
+         CALL getIOMode(mode)
 
          IF(mode.EQ.CDN_HDF5_MODE) THEN
             INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
@@ -1300,7 +1301,7 @@ MODULE m_cdn_io
          END IF
       END IF
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF(mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
@@ -1348,7 +1349,7 @@ MODULE m_cdn_io
       
    END SUBROUTINE deleteDensities
 
-   SUBROUTINE getMode(mode)
+   SUBROUTINE getIOMode(mode)
       INTEGER, INTENT(OUT) :: mode
 
       mode = CDN_DIRECT_MODE
@@ -1363,7 +1364,7 @@ MODULE m_cdn_io
 !         WRITE(*,*) 'Falling back to direct access.'
 #endif
       END IF
-   END SUBROUTINE getMode
+   END SUBROUTINE getIOMode
 
    LOGICAL FUNCTION isDensityFilePresent(archiveType)
 
@@ -1378,7 +1379,7 @@ MODULE m_cdn_io
       INTEGER(HID_T) :: fileID
 #endif
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF (mode.EQ.CDN_HDF5_MODE) THEN
          INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
@@ -1425,7 +1426,7 @@ MODULE m_cdn_io
       LOGICAL             :: l_exist
       INTEGER             :: mode
 
-      CALL getMode(mode)
+      CALL getIOMode(mode)
 
       IF (mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF

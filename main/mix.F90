@@ -23,6 +23,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    USE m_juDFT
    USE m_constants
    USE m_cdn_io
+   USE m_broyd_io
    USE m_brysh1
    USE m_stmix
    USE m_broyden
@@ -51,7 +52,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !Local Scalars
    REAL fix,intfac,vacfac
-   INTEGER i,imap,js,mit,irecl
+   INTEGER i,imap,js
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
    INTEGER iofl,n_u_keep
    LOGICAL l_exist,l_ldaU, l_densityMatrixPresent
@@ -114,26 +115,18 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    ! LDA+U (end)
 
    ALLOCATE (sm(mmap),fsm(mmap))
-
-   INQUIRE (file='broyd.'//CHAR(input%imix+48),exist=l_exist)
-   DO i = 1,6
-      dist(i) = 0.0
-   END DO
+   dist(:) = 0.0
 
    !determine type of mixing:
    !imix=0:straight, imix=o broyden first, imix=5:broyden second
    !imix=:generalozed anderson mixing
-   mit = 0
    IF (input%imix.EQ.0) THEN
       WRITE (16,FMT='(a,2f10.5)') 'STRAIGHT MIXING',input%alpha
    ELSE IF (input%imix.EQ.3) THEN
-      IF ( .NOT.l_exist) mit = 1
       WRITE (16,FMT='(a,f10.5)') 'BROYDEN FIRST MIXING',input%alpha
    ELSE IF (input%imix.EQ.5) THEN
-      IF (.NOT.l_exist) mit = 1
       WRITE (16,FMT='(a,f10.5)') 'BROYDEN SECOND MIXING',input%alpha
    ELSE IF (input%imix.EQ.7) THEN
-      IF (.NOT.l_exist) mit = 1
       WRITE (16,FMT='(a,f10.5)') 'ANDERSON GENERALIZED',input%alpha
    ELSE
       CALL juDFT_error("mix: input%imix =/= 0,3,5,7 ",calledby ="mix")
@@ -156,26 +149,12 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    !store the difference fsm - sm in fsm
    fsm(:nmap) = fsm(:nmap) - sm(:nmap)
 
-   ! open files for broyden
-   irecl=(nmap+1)*8
-   IF (input%imix.GE.3) THEN
-      IF (hybrid%l_calhf) THEN
-         OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
-         OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
-               recl=irecl,form='unformatted',status='unknown')
-      ELSE
-         OPEN (57,file='broyd',form='unformatted',status='unknown')
-         OPEN (59,file='broyd.'//CHAR(input%imix+48),access='direct',&
-               recl=irecl,form='unformatted',status='unknown')
-      ENDIF
-   END IF
-
    !mixing of the densities
    IF (input%imix.EQ.0) THEN
       CALL stmix(atoms,input,noco, nmap,nmaph,fsm, sm)
    ELSE
       CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-                   mmap,nmaph,mapmt,mapvac2,nmap,fsm,mit,sm)
+                   hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
@@ -288,11 +267,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
                      1,results%last_distance,results%ef,.TRUE.,inDen)
 
    inDen%iter = inDen%iter + 1
-
-   IF (input%imix.GT.0) THEN
-      CLOSE (57)
-      CLOSE (59)
-   END IF
 
    7900 FORMAT (/,'---->    distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
    7901 FORMAT (/,'----> HF distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')

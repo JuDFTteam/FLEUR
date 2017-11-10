@@ -12,12 +12,13 @@ MODULE m_broyden
   !################################################################
 CONTAINS
   SUBROUTINE broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-                     mmap,nmaph,mapmt,mapvac2,nmap,fm,mit,sm,lpot)
+                     hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fm,sm,lpot)
 
 #include"cpp_double.h"
 
     USE m_metric
     USE m_types
+    USE m_broyd_io
 
     IMPLICIT NONE
 
@@ -30,11 +31,11 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)    :: cell
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_hybrid),INTENT(IN)  :: hybrid
 
     ! Scalar Arguments
     INTEGER, INTENT (IN)        :: mmap,nmap
-    INTEGER, INTENT (IN)        :: mapmt,mapvac2    
-    INTEGER, INTENT (INOUT)     :: mit
+    INTEGER, INTENT (IN)        :: mapmt,mapvac2
     LOGICAL,OPTIONAL,INTENT(IN) :: lpot
 
     ! Array Arguments
@@ -42,9 +43,9 @@ CONTAINS
     REAL,    INTENT (INOUT) :: sm(nmap)
 
     ! Local Scalars
-    INTEGER         :: i,it,k,nit,npos,iread,nmaph
+    INTEGER         :: i,it,k,nit,npos,iread,nmaph, mit
     REAL            :: bm,dfivi,fmvm,smnorm,vmnorm,alphan
-    LOGICAL         :: l_pot
+    LOGICAL         :: l_pot, l_exist
     REAL, PARAMETER :: one=1.0, zero=0.0
 
     ! Local Arrays
@@ -74,12 +75,15 @@ CONTAINS
     vm  = 0.0
     am  = 0.0
 
+    mit = 0
+    l_exist = initBroydenHistory(input,hybrid,nmap) ! returns true if there already exists a Broyden history
+    IF(.NOT.l_exist) mit = 1
+
     IF (mit.NE.1) THEN
        ! load input charge density (sm1) and difference of 
        ! in and out charge densities (fm1) from previous iteration (m-1)
 
-       REWIND 57
-       READ (57) mit, alphan, (fm1(i),i=1,nmap), (sm1(i),i=1,nmap)
+       CALL readLastIterInAndDiffDen(hybrid,nmap,mit,alphan,sm1(:nmap),fm1(:nmap))
        IF (ABS(input%alpha-alphan) > 0.0001) THEN
           WRITE (6,*) 'mixing parameter has been changed; reset'
           WRITE (6,*) 'broyden algorithm or set alpha to',alphan
@@ -93,10 +97,9 @@ CONTAINS
     END IF
 
     ! save F_m and rho_m for next iteration
-    REWIND 57
     nit = mit +1
     IF (nit > input%maxiter+1) nit = 1
-    WRITE (57) nit,input%alpha,fm,sm
+    CALL writeLastIterInAndDiffDen(hybrid,nmap,nit,input%alpha,sm,fm)
 
     IF (mit.EQ.1) THEN 
        !     update for rho for mit=1 is straight mixing
@@ -110,8 +113,9 @@ CONTAINS
        END DO
        iread = MIN(mit-1,input%maxiter+1)
        DO it = 2, iread
-          READ (59,rec=(it-1)*2-1) (ui(i),i=1,nmap)
-          READ (59,rec=(it-1)*2)   (vi(i),i=1,nmap),dfivi
+          CALL readUVec(input,hybrid,nmap,it-mit,mit,ui)
+          CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi)
+
           am(it) = CPP_BLAS_sdot(nmap,vi,1,fm1,1)
           ! calculate um(:) = -am(it)*ui(:) + um
           CALL CPP_BLAS_saxpy(nmap,-am(it),ui,1,um,1)
@@ -133,8 +137,8 @@ CONTAINS
           ! generate vm = alpha*sm1  - \sum <ui|w|sm1> vi
           vm(:) = input%alpha * fm1(:)
           DO it = 2,iread
-             READ (59,rec=2*(it-1)-1) (ui(i),i=1,nmap)
-             READ (59,rec=2*(it-1))   (vi(i),i=1,nmap), dfivi
+             CALL readUVec(input,hybrid,nmap,it-mit,mit,ui)
+             CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi)
              bm = CPP_BLAS_sdot(nmap,ui,1,fm1,1)
              ! calculate vm(:) = -bm*vi(:) + vm
              CALL CPP_BLAS_saxpy(nmap,-bm,vi,1,vm,1)
@@ -172,7 +176,7 @@ CONTAINS
                       mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
 
           DO it = 2,iread
-             READ (59,rec=2*(it-1)) (vi(i),i=1,nmap), dfivi
+             CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi)
              ! calculate vm(:) = -am(it)*dfivi*vi(:) + vm
              CALL CPP_BLAS_saxpy(nmap,-am(it)*dfivi,vi,1,vm,1)
           END DO
@@ -193,8 +197,8 @@ CONTAINS
        npos=mit-1
        IF (mit.GT.input%maxiter+1) npos = MOD(mit-2,input%maxiter)+1
 
-       WRITE (59,rec=2*npos-1) (um(i),i=1,nmap)
-       WRITE (59,rec=2*npos)   (vm(i),i=1,nmap), dfivi
+       CALL writeUVec(input,hybrid,nmap,mit,um)
+       CALL writeVVec(input,hybrid,nmap,mit,dfivi,vm)
 
        ! update rho(m+1)
        ! calculate <fm|w|vm>
@@ -203,7 +207,6 @@ CONTAINS
        CALL CPP_BLAS_saxpy(nmap,one-fmvm,um,1,sm,1)
     END IF
 
-    mit = mit + 1
     DEALLOCATE (fm1,sm1,ui,um,vi,vm,am)
 
   END SUBROUTINE broyden
