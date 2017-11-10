@@ -4,14 +4,11 @@ set(fleur_F90 ${fleur_F90}
 eigen/apws.F90
 eigen/eigen.F90
 eigen/hlomat.F90
-eigen/hsint.F90
-eigen/hsmt.F90
+eigen/hs_int.F90
 eigen/hsmt_extra.F90
 eigen/hsmt_fjgj.F90
-eigen/hsmt_overlap.F90
+eigen/hsmt_blas.F90
 eigen/hsmt_hlptomat.F90
-eigen/hsmt_nonsph.F90
-eigen/hsmt_hamil.F90
 eigen/hsmt_simple.F90
 eigen/hsmt_ab.f90
 eigen/hsmt_soc_init.F90

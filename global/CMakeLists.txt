@@ -29,5 +29,8 @@ global/radflo.F90
 global/types.F90
 global/types_rcmat.F90
 global/types_xcpot.F90
+global/types_mpi.F90
+global/types_lapw.F90
+global/types_tlmplm.F90
 global/utility.F90
 )

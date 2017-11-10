@@ -39,7 +39,6 @@ MODULE m_eigen_diag
   INTEGER,PARAMETER:: diag_magma=-6
 #endif
   INTEGER,PARAMETER:: diag_lapack=4
-  INTEGER,PARAMETER:: diag_lapack2=5
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
 
@@ -47,13 +46,12 @@ CONTAINS
     parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
   END FUNCTION parallel_solver_available
 
-  SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
-       sym,l_zref,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
-    USE m_zsymsecloc
+  SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
+       sym,l_zref,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,smat,hmat,zMat)
+    USE m_lapack_diag
     USE m_aline
     USE m_alinemuff
     USE m_types
-    USE m_franza
 #ifdef CPP_MAGMA
     USE m_magma
 #endif
@@ -80,9 +78,9 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(INOUT)    :: lapw !might be modified in aline
-    TYPE(t_hamOvlp),INTENT(INOUT) :: hamOvlp
+    TYPE(t_lapwmat),INTENT(INOUT) :: hmat,smat
     TYPE(t_zMat),INTENT(INOUT)    :: zMat
-    INTEGER, INTENT(IN) :: jsp,eig_id,it,matsize 
+    INTEGER, INTENT(IN) :: jsp,eig_id,it 
     INTEGER, INTENT(IN) :: n_rank,n_size  ,nk   ,nred,sub_comm
     INTEGER, INTENT(IN) :: matind(dimension%nbasfcn,2),kveclo(atoms%nlotot)
     INTEGER,INTENT(IN)  :: ne
@@ -95,39 +93,15 @@ CONTAINS
 
     REAL,INTENT(OUT) :: eig(:)
 
-    LOGICAL,OPTIONAL,INTENT(IN) :: realdata
-
     !Locals
     INTEGER :: ndim,err,n,nn,i,ndim1
     LOGICAL :: parallel
     CHARACTER(len=20)::f
     LOGICAL :: l_real
 
-    l_real=hamOvlp%l_real
-    if (present(realdata)) l_real=realdata
+    l_real=smat%l_real
 
-#if 1==2
-    !This is only needed for debugging
-    print *,n_rank,lapw%nmat
-    print *,"SR:",n_size,n_rank
-    print *,mpi
-    write(f,'(a,i0)') "a.",n_rank
-    open(99,file=f)
-    write(f,'(a,i0)') "b.",n_rank
-    open(98,file=f)
-    i=0
-    DO n=n_rank+1,lapw%nmat,n_size
-       DO nn=1,n
-          i=i+1
-          write(99,'(2(i10,1x),4(f15.8,1x))') n,nn,hamOvlp%a_c(i)
-          write(98,'(2(i10,1x),4(f15.8,1x))') n,nn,hamOvlp%b_c(i)
-       ENDDO
-    ENDDO
-    CALL MPI_BARRIER(MPI_COMM_WORLD,err)
-    close(99)
-     close(98)
-#endif
-    
+
     !
     !  The array z will contain the eigenvectors and is allocated now
     !
@@ -169,26 +143,24 @@ CONTAINS
 #ifdef CPP_ELPA
        CASE (diag_elpa)
           CALL MPI_COMM_RANK(sub_comm,n,err)
-          write(*,*) "DIAG:",mpi%irank,sub_comm,n
-          write(*,*) "ELPA:",mpi%irank,lapw%nmat,ne_found,size(eig),ndim,ndim1
-          IF (hamovlp%l_real) THEN
-              CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,eig,ne_found)
+          IF (smat%l_real) THEN
+              CALL elpa_diag(lapw%nmat,SUB_COMM,hmat%data_r,smat%data_r,zMat%z_r,eig,ne_found)
           ELSE
-              CALL elpa_diag(lapw%nmat,SUB_COMM,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c,eig,ne_found)
+              CALL elpa_diag(lapw%nmat,SUB_COMM,hmat%data_c,smat%data_c,zMat%z_c,eig,ne_found)
           ENDIF
 #endif
 #ifdef CPP_ELEMENTAL
        CASE (diag_elemental)
           IF (it==1) THEN !switch between direct solver and iterative solver
-             CALL elemental(lapw%nmat,dimension%nbasfcn/n_size,SUB_COMM,eig,ne_found,1,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+             CALL ELEMENTAL(lapw%nmat,DIMENSION%nbasfcn/n_size,SUB_COMM,eig,ne_found,1,smat,hmat,zMat)
           ELSE
-             CALL elemental(lapw%nmat,,dimension%nbasfcn/n_size,SUB_COMM,eig,ne_found,0,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
+             CALL ELEMENTAL(lapw%nmat,DIMENSION%nbasfcn/n_size,SUB_COMM,eig,ne_found,0,smat,hmat,zMat)
           ENDIF
 
 #endif
 #ifdef CPP_SCALAPACK
        CASE (diag_scalapack)
-          CALL chani(lapw%nmat,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,hamOvlp,zMat)
+          CALL chani(lapw%nmat,ndim, n_rank,n_size,SUB_COMM,mpi%mpi_comm,eig,ne_found,smat,hmat,zMat)
 #endif
 #ifdef CPP_MAGMA
        CASE (diag_magma)
@@ -196,24 +168,11 @@ CONTAINS
              call juDFT_error("REAL diagonalization not implemented in magma.F90")
           else
              print *,"Start magma_diag"
-             CALL magma_diag(lapw%nmat,eig,ne_found,a_c=hamOvlp%a_c,b_c=hamOvlp%b_c,z_c=zMat%z_c)
+             CALL magma_diag(lapw%nmat,eig,ne_found,a_c=hmat%data_c,b_c=smat%data_c,z_c=zMat%z_c)
           endif
 #endif
-       CASE (diag_lapack2)
-          if (noco%l_ss) call juDFT_error("zsymsecloc not tested with noco%l_ss")
-          if (input%gw>1) call juDFT_error("zsymsecloc not tested with input%gw>1")
-          IF (l_real) THEN
-#ifndef __PGI
-          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
-                jij,matind,nred,eig,ne_found,hamOvlp%a_r,hamOvlp%b_r,zMat%z_r)
-       else
-          CALL zsymsecloc(jsp,input,lapw,bkpt,atoms,kveclo, sym,l_zref,cell, dimension,matsize,ndim,&
-               jij,matind,nred,eig,ne_found,hamOvlp%a_c,hamOvlp%b_c,zMat%z_c)
-#endif
-       endif
        CASE (diag_lapack)
-          CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(l_zref.AND.(atoms%nlotot.EQ.0)),&
-                      jij%l_j,matind,nred,input%gw,eig,ne_found,hamOvlp,zMat)
+          CALL lapack_diag(hmat,smat,eig,zmat)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
           print*, "You selected a diagonalization scheme without compiling for it"
@@ -224,7 +183,7 @@ CONTAINS
     ELSE
        call timestart("aline")
        CALL aline(eig_id,nk,atoms,dimension,sym,cell,input,jsp,el,&
-            ud,lapw,td,noco,oneD,bkpt,eig,ne_found,zMat,hamOvlp%a_r,hamOvlp%b_r,hamOvlp%a_c,hamOvlp%b_c)
+            ud,lapw,td,noco,oneD,bkpt,eig,ne_found,zMat,hmat,smat)
        call timestop("aline")
     ENDIF
     !--->         SECOND VARIATION STEP
@@ -233,7 +192,7 @@ CONTAINS
        !--->           hamiltonian
        call timestart("second variation diagonalization")
 
-       CALL aline_muff(atoms,dimension,sym, cell, jsp,ne_found, ud,td, bkpt,lapw,eig,zMat%z_r,zMat%z_c,realdata)
+       CALL aline_muff(atoms,dimension,sym, cell, jsp,ne_found, ud,td, bkpt,lapw,eig,zMat%z_r,zMat%z_c,l_real)
        call timestop("second variation diagonalization")
     END IF
   END SUBROUTINE eigen_diag
@@ -263,11 +222,10 @@ CONTAINS
     IF (juDFT_was_argument("-scalapack")) diag_solver=diag_scalapack
     IF (juDFT_was_argument("-elemental")) diag_solver=diag_elemental
     IF (juDFT_was_argument("-lapack")) diag_solver=diag_lapack
-    IF (juDFT_was_argument("-lapack2")) diag_solver=diag_lapack2
     IF (juDFT_was_argument("-magma")) diag_solver=diag_magma
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)
-    if (any((/diag_lapack,diag_lapack2/)==diag_solver).and.parallel) call priv_solver_error(diag_solver,parallel)
+    IF (ANY((/diag_lapack,diag_magma/)==diag_solver).AND.parallel) CALL priv_solver_error(diag_solver,parallel)
     if (any((/diag_elpa,diag_elemental,diag_scalapack/)==diag_solver).and..not.parallel) call priv_solver_error(diag_solver,parallel)
 
   END FUNCTION priv_select_solver
@@ -301,10 +259,6 @@ CONTAINS
        IF (parallel) THEN
           CALL juDFT_error("The LAPACK solver can not be used in parallel")
        ENDIF
-    CASE (diag_lapack2)
-       IF (parallel) THEN
-          CALL juDFT_error("The LAPACK2 solver can not be used in parallel")
-       ENDIF  
     CASE (diag_magma)
        CALL juDFT_error("You have not compiled with MAGMA support")
     CASE DEFAULT

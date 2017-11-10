@@ -7,12 +7,11 @@ MODULE m_hsmt_simple
   use m_juDFT
   implicit none
 CONTAINS
-  SUBROUTINE hsmt_simple(jspin,jspins,bkpt,dimension,input,sym,cell,atoms,lapw,td,usdus,enpara,hamOvlp)
+  SUBROUTINE hsmt_simple(jspin,bkpt,DIMENSION,input,sym,cell,atoms,lapw,td,noco,usdus,enpara,hmat,smat)
     use m_types
     use m_hsmt_fjgj
-    use m_hsmt_overlap
-    use m_hsmt_hamil
-    TYPE(t_dimension),INTENT(IN)  :: dimension
+    USE m_hsmt_blas
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -20,9 +19,10 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)     :: enpara
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
+    TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_tlmplm),INTENT(IN)     :: td
-    TYPE(t_hamovlp),INTENT(INOUT) :: hamovlp
-    INTEGER,INTENT(IN)            :: jspin,jspins
+    TYPE(t_lapwmat),INTENT(INOUT) :: smat,hmat
+    INTEGER,INTENT(IN)            :: jspin
     REAL,    INTENT (IN)          :: bkpt(3) 
 
     integer::k,jsp,n,nn,i
@@ -32,12 +32,9 @@ CONTAINS
      REAL, PARAMETER      :: eps = 1.0e-30
 
 
-    hamovlp%l_real=.false.
-    allocate(hamovlp%h_c(dimension%nbasfcn,dimension%nbasfcn))
-    allocate(hamovlp%s_c(dimension%nbasfcn,dimension%nbasfcn))
-
-    ALLOCATE(fj(dimension%nbasfcn,0:atoms%lmaxd,atoms%ntype,jspins))
-    ALLOCATE(gj(dimension%nbasfcn,0:atoms%lmaxd,atoms%ntype,jspins))
+    
+    ALLOCATE(fj(dimension%nbasfcn,0:atoms%lmaxd,atoms%ntype,input%jspins))
+    ALLOCATE(gj(dimension%nbasfcn,0:atoms%lmaxd,atoms%ntype,input%jspins))
     DO jsp=jspin,jspin
 
        !Set up the k+G+qss vectors
@@ -52,29 +49,13 @@ CONTAINS
 
        CALL hsmt_fjgj(input,atoms,jsp,cell,lapw,usdus,fj,gj)
        
-       CALL timestart("hsmt_overlap")
-       CALL  hsmt_overlap(sym,atoms,jsp,cell,lapw,usdus,gk,vk,fj,gj,hamovlp)
-       CALL timestop("hsmt_overlap")
+       CALL timestart("hsmt_blas")
+       CALL  hsmt_blas(sym,atoms,jsp,noco,cell,lapw,td,usdus,gk,vk,fj,gj,smat,hmat)
+       CALL timestop("hsmt_blas")
        
-       CALL timestart("hsmt_hamil")
-       CALL  hsmt_hamil(sym,atoms,jsp,cell,lapw,td,gk,vk,fj,gj,hamovlp)
-       CALL timestop("hsmt_hamil")
-    enddo
+    ENDDO
 
-    diff_h=0.0
-    diff_s=0.0
-    i=0
-    DO n=1,lapw%nv(1)
-       DO nn=1,n
-          i=i+1
-          diff_h=max(diff_h,abs(hamovlp%b_c(i)-hamovlp%s_c(nn,n)))
-          diff_s=max(diff_s,abs(hamovlp%a_c(i)-hamovlp%h_c(nn,n)))
-         ! hamovlp%b_c(i)=hamovlp%s_c(nn,n)
-          hamovlp%a_c(i)=hamovlp%h_c(nn,n)
-       ENDDO
-    enddo
-    print *,"Diff_h:",diff_h
-    print *,"Diff_s:",diff_s
-    deallocate(hamovlp%h_c,hamovlp%s_c)    
+    !CALL hsmt_lo()
+
   end SUBROUTINE hsmt_simple
 end MODULE m_hsmt_simple

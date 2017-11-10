@@ -20,11 +20,11 @@ CONTAINS
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
     USE m_lodpot
-    USE m_tlmplm
+    USE m_tlmplm_cholesky
     USE m_tlmplm_store
     USE m_apws
-    USE m_hsmt
-    USE m_hsint
+    USE m_hsmt_simple
+    USE m_hs_int
     USE m_hsvac
     USE m_od_hsvac
     USE m_usetup
@@ -76,7 +76,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER jsp,nk,nred,ne_all,n_u_in,ne_found
-    INTEGER ne,matsize  ,nrec,lh0
+    INTEGER ne  ,nrec,lh0
     INTEGER nspins,isp,i,j,err
     INTEGER mlotot,mlolotot
     LOGICAL l_wu,l_file,l_real,l_zref
@@ -95,7 +95,7 @@ CONTAINS
     TYPE(t_lapw)    :: lapw
     TYPE(t_enpara)  :: enpara
     TYPE(t_zMat)    :: zMat
-    TYPE(t_hamOvlp) :: hamOvlp
+    TYPE(t_lapwmat) :: hmat,smat
     TYPE(T_mat)     :: olap
     !
     INTEGER fh,nn,n
@@ -189,21 +189,6 @@ CONTAINS
        !n_stride = 1
     END IF
 #endif
-    !Count number of matrix columns on this PE
-    n=0
-    DO i=1+mpi%n_rank,DIMENSION%nbasfcn,mpi%n_size
-       n=n+1
-    ENDDO
-    IF (mpi%n_size>1) THEN
-       matsize = DIMENSION%nbasfcn * n
-    ELSE
-       IF (MOD(DIMENSION%nbasfcn,2)==0 ) THEN !same formula, division by 2 different to avail int overflow
-          matsize = (DIMENSION%nbasfcn+1)*(DIMENSION%nbasfcn/2)
-       ELSE
-          matsize = ((DIMENSION%nbasfcn+1)/2)*DIMENSION%nbasfcn
-       ENDIF
-    ENDIF
-    IF (matsize<2) CALL judft_error("Wrong size of matrix",calledby="eigen",hint="Your basis might be too large or the parallelization fail or ??")
     ne = DIMENSION%neigd
 
     eig_id=open_eig(&
@@ -212,33 +197,9 @@ CONTAINS
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-    IF (l_real) THEN
-       ALLOCATE ( hamOvlp%a_r(matsize), stat = err )
-    ELSE
-       ALLOCATE ( hamOvlp%a_c(matsize), stat = err )
-    ENDIF
-    IF (err.NE.0) THEN
-       WRITE (*,*) 'eigen: an error occured during allocation of'
-       WRITE (*,*) 'the Hamilton Matrix: ',err,'  size: ',matsize
-       CALL juDFT_error("eigen: Error during allocation of Hamilton" //"matrix",calledby ="eigen")
-    ENDIF
-    IF (l_real) THEN 
-       ALLOCATE ( hamOvlp%b_c(0))
-       ALLOCATE ( hamOvlp%b_r(matsize), stat = err )
-    ELSE   
-       ALLOCATE ( hamOvlp%b_r(0))
-       ALLOCATE ( hamOvlp%b_c(matsize), stat = err )
-    ENDIF
 
-    IF (err.NE.0) THEN
-       WRITE (*,*) 'eigen: an error occured during allocation of'
-       WRITE (*,*) 'the overlap Matrix: ',err,'  size: ',matsize
-       CALL juDFT_error("eigen: Error during allocation of overlap " //"matrix",calledby ="eigen")
-    ENDIF
-
-    hamOvlp%l_real = l_real
-    hamOvlp%matsize = matsize
-
+    
+   
     ALLOCATE (  matind(DIMENSION%nbasfcn,2) )
     !
     !--->    loop over spins
@@ -275,13 +236,14 @@ CONTAINS
        ALLOCATE(td%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlotot,j),stat=err)
        ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),j), stat=err)
        ALLOCATE(td%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,j),stat=err )
+       ALLOCATE(td%h_loc(0:2*atoms%lmaxd*(atoms%lmaxd+2)+1,0:2*atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype,j))
        IF (err.NE.0) THEN
           WRITE (*,*) 'eigen: an error occured during allocation of'
           WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
           CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="eigen")
        ENDIF
        lh0=1
-       CALL tlmplm(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi, v%mt(1,0,1,jsp),lh0,input, td,ud)
+       CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,v%mt(:,0,1,jsp),input,vs_mmp, td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
        CALL timestop("tlmplm")
 
@@ -292,7 +254,7 @@ CONTAINS
        IF (noco%l_noco) THEN
           isp = 2
           CALL timestart("tlmplm")
-          CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud)
+          !CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud)
           IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,2,2,input%jspins)
           CALL timestop("tlmplm")
        ENDIF
@@ -312,7 +274,10 @@ CONTAINS
           CALL timestart("Setup of LAPW")
 
           CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,matind,nred)
-
+          lapw%nmat=lapw%nv(jsp)+atoms%nlotot
+          CALL hmat%init(lapw,mpi,atoms%nlotot,noco%l_noco,input%jspins,l_real)
+          CALL smat%init(lapw,mpi,atoms%nlotot,noco%l_noco,input%jspins,l_real)
+          
           CALL timestop("Setup of LAPW")
           IF (noco%l_noco) THEN
              !--->         the file potmat contains the 2x2 matrix-potential in
@@ -323,7 +288,9 @@ CONTAINS
           !--->         set up interstitial hamiltonian and overlap matrices
           !
           CALL timestart("Interstitial Hamiltonian&Overlap")
-          CALL hsint(input,noco,jij,stars, v%pw(:,jsp),lapw,jsp, mpi%n_size,mpi%n_rank,kpts%bk(:,nk),cell,atoms,l_real,hamOvlp)
+          CALL hs_int(input,noco,stars,lapw,mpi,cell,jsp,kpts%bk(:,nk),v%pw,smat,hmat)
+
+          
 
           CALL timestop("Interstitial Hamiltonian&Overlap")
           !
@@ -331,24 +298,27 @@ CONTAINS
           !
           IF (.NOT.l_wu) THEN
              CALL timestart("MT Hamiltonian&Overlap")
-             CALL hsmt(DIMENSION,atoms,sphhar,sym,enpara, mpi%SUB_COMM,mpi%n_size,mpi%n_rank,jsp,input,mpi,&
-                  lmaxb, noco,cell, lapw, bkpt,v%mt, vs_mmp, oneD,ud, kveclo,td,l_real,hamOvlp)
+             CALL hsmt_simple(jsp,kpts%bk(:,nk),DIMENSION,input,sym,cell,atoms,lapw,td,noco,ud,enpara,hmat,smat)
              CALL timestop("MT Hamiltonian&Overlap")
           ENDIF
           !
+
+          PRINT *,'hs_mt-h',hmat%data_c(1,1),hmat%DATA_c(1,2),hmat%data_c(2,2)
+          PRINT *,'hs_mt-s',smat%data_c(1,1),smat%DATA_c(1,2),smat%data_c(2,2)
+
           IF( hybrid%l_hybrid ) THEN
              !write overlap matrix b to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"
-             call olap%from_packed(l_real,dimension%nbasfcn,hamovlp%b_r,hamovlp%b_c)
-             call write_olap(olap,nrec)
+             !call write_olap(smat,nrec)
+             STOP "TODO"
              PRINT *,"BASIS:",lapw%nv(jsp),atoms%nlotot
-             if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
+             !if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
              
              
              IF( hybrid%l_subvxc ) THEN
-                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
-                     sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
-                     oneD,  hamovlp,vx)
+                !CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                 !    sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
+                 !    oneD,  hamovlp,vx)
              END IF
 
           END IF ! hybrid%l_hybrid
@@ -357,12 +327,12 @@ CONTAINS
           !
           CALL timestart("Vacuum Hamiltonian&Overlap")
           IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             CALL hsvac(vacuum,stars,DIMENSION, atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz,enpara%evac0,cell, &
-                  bkpt,lapw,sym, noco,jij, mpi%n_size,mpi%n_rank,nv2,l_real,hamOvlp)
+             CALL hsvac(vacuum,stars,DIMENSION, atoms, jsp,input,v%vacxy,v%vacz,enpara%evac0,cell, &
+                  bkpt,lapw,sym, noco,jij, mpi%n_size,mpi%n_rank,nv2,l_real,hmat,smat)
           ELSEIF (oneD%odi%d1) THEN
-             CALL od_hsvac(vacuum,stars,DIMENSION, oneD,atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz, &
-                  enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
-                  mpi%n_size,mpi%n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
+        !     CALL od_hsvac(vacuum,stars,DIMENSION, oneD,atoms, jsp,input,v%vacxy(1,1,1,jsp),v%vacz, &
+        !          enpara%evac0,cell, bkpt,lapw, oneD%odi%M,oneD%odi%mb,oneD%odi%m_cyl,oneD%odi%n2d, &
+        !          mpi%n_size,mpi%n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
           END IF
           CALL timestop("Vacuum Hamiltonian&Overlap")
 
@@ -371,9 +341,9 @@ CONTAINS
          
           
           
-          CALL eigen_diag(jsp,eig_id,it,atoms,DIMENSION,matsize,mpi, mpi%n_rank,mpi%n_size,ne,nk,lapw,input,&
+          CALL eigen_diag(jsp,eig_id,it,atoms,DIMENSION,mpi, mpi%n_rank,mpi%n_size,ne,nk,lapw,input,&
                nred,mpi%sub_comm, sym,l_zref,matind,kveclo, noco,cell,bkpt,enpara%el0,jij,l_wu,&
-               oneD,td,ud, eig,ne_found,hamOvlp,zMat)
+               oneD,td,ud, eig,ne_found,smat,hmat,zMat)
           
           !
           !--->         output results
@@ -425,11 +395,6 @@ ENDIF
     END DO ! spin loop ends
     DEALLOCATE( vs_mmp )
     DEALLOCATE (matind)
-    IF (l_real) THEN
-       DEALLOCATE(hamOvlp%a_r,hamOvlp%b_r)
-    ELSE
-       DEALLOCATE(hamOvlp%a_c,hamOvlp%b_c)
-    ENDIF
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     IF ( hybrid%l_calhf ) DEALLOCATE (nkpt_EIBZ)
 #endif

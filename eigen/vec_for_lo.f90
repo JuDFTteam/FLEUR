@@ -35,7 +35,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: gk(:,:,:)!(dimension%nvd,3,nintsp)
     REAL,    INTENT (IN) :: vk(:,:,:)!(dimension%nvd,3,nintsp)
-    INTEGER, INTENT (OUT):: kvec(2*(2*atoms%llod+1),atoms%nlod),nkvec(atoms%nlod,nintsp)
+    INTEGER, INTENT (INOUT):: kvec(2*(2*atoms%llod+1),atoms%nlod),nkvec(atoms%nlod,nintsp)
     !     ..
     !     .. Local Scalars ..
     COMPLEX term1 

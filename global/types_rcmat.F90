@@ -1,7 +1,7 @@
-module m_types_rcmat
+MODULE m_types_rcmat
   use m_judft
     IMPLICIT NONE
-    TYPE t_mat
+    TYPE :: t_mat
      LOGICAL :: l_real
      INTEGER :: matsize1=-1
      INTEGER :: matsize2=-1
@@ -16,6 +16,13 @@ module m_types_rcmat
      PROCEDURE        :: to_packed=>t_mat_to_packed
    END type t_mat
 
+   TYPE,EXTENDS(t_mat) :: t_lapwmat
+      INTEGER,ALLOCATABLE :: local_rk_map(:,:) !<Maps a global k+g value to a local one in MPI case
+      INTEGER             :: matsize_half      !<Half of matrix in noco case
+    CONTAINS
+      PROCEDURE,PASS :: init => t_lapwmat_init
+   END TYPE t_lapwmat
+   
  CONTAINS
   SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2,init)
     CLASS(t_mat) :: mat
@@ -164,5 +171,48 @@ module m_types_rcmat
        if(info.ne.0) call judft_error("Failed to invert matrix: dpotrf failed.")
     end if
   end subroutine t_mat_inverse
-     
-end module m_types_rcmat
+
+
+  SUBROUTINE   t_lapwmat_init(mat,lapw,mpi,nlotot,l_noco,jspin,l_real)
+    USE m_types_lapw
+    USE m_types_mpi
+    IMPLICIT NONE
+    CLASS(t_lapwmat),INTENT(OUT):: mat
+    TYPE(t_lapw),INTENT(in)     :: lapw
+    TYPE(t_mpi),INTENT(IN)      :: mpi
+    LOGICAL,INTENT(IN)          :: l_noco
+    INTEGER,INTENT(IN)          :: nlotot
+    INTEGER,INTENT(IN)          :: jspin
+    LOGICAL,INTENT(IN)          :: l_real
+
+    INTEGER :: matsize,i,n
+    !Fist calculate size of matrix
+    IF (l_noco) THEN
+       matsize=SUM(lapw%nv)+2*nlotot
+       mat%matsize_half=lapw%nv(1)+nlotot
+    ELSE
+       matsize=lapw%nv(jspin)+nlotot
+       mat%matsize_half=0
+    ENDIF
+    !Calculate Matrix distribution
+    IF (ALLOCATED(mat%local_rk_map)) DEALLOCATE(mat%local_rk_map)
+    ALLOCATE(mat%local_rk_map(MAXVAL(lapw%nv)+nlotot,2))
+    mat%local_rk_map=0
+    i=0
+    DO n=mpi%n_rank+1, lapw%nv(jspin)+nlotot, mpi%n_size
+       i=i+1
+       mat%local_rk_map(n,1)=i
+    ENDDO
+    IF (l_noco) THEN ! In noco case do it again
+       DO n=mpi%n_rank+1, lapw%nv(2)+nlotot, mpi%n_size
+          i=i+1
+          mat%local_rk_map(n,2)=i
+       ENDDO
+    ELSE
+       mat%local_rk_map(:,2)=mat%local_rk_map(:,1)
+    ENDIF
+    
+    !Allocate space
+    CALL mat%alloc(l_real,matsize,i)
+  END SUBROUTINE t_lapwmat_init
+END MODULE m_types_rcmat

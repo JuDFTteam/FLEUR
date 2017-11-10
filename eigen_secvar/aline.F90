@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,DIMENSION,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD, bkpt,eig,ne,zMat,a_r,b_r,a_c,b_c)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD, bkpt,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -55,8 +55,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
-    REAL,OPTIONAL,    INTENT (IN)  :: a_r(:),b_r(:)!(matsize)
-    COMPLEX,OPTIONAL, INTENT (IN)  :: a_c(:),b_c(:)!(matsize)
+    TYPE(t_lapwmat),INTENT(IN):: hmat,smat
 
     !     ..
     !     .. Local Scalars ..
@@ -100,30 +99,30 @@ CONTAINS
     !
     DO i = 1,ne
        IF (l_real) THEN
-          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,a_r,zMat%z_r(1,i),1,0.0,help_r,1)
+          help_r=MATMUL(hmat%data_r,zmat%z_r(:,i))
        ELSE
-          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,a_c,zMat%z_c(1,i),1,zro_c,help_c,1)
+          help_c=MATMUL(hmat%data_c,zmat%z_c(:,i))
        ENDIF
        DO j = i,ne
           IF (l_real) THEN
-             h_r(j,i) = CPP_BLAS_sdot(lapw%nmat,zMat%z_r(1,j),1,help_r,1)
+             h_r(j,i)=dot_PRODUCT(zmat%z_r(:,j),help_r)
           ELSE
-             h_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,zMat%z_c(1,j),1,help_c,1)
+             h_c(j,i)=dot_PRODUCT(zmat%z_c(:,j),help_c)
           ENDIF
        END DO
     END DO
 
     DO i = 1,ne
        IF (l_real) THEN
-          CALL CPP_BLAS_sspmv('U',lapw%nmat,1.0,b_r,zMat%z_r(1,i),1,0.0,help_r,1)
+          help_r=MATMUL(smat%data_r,zmat%z_r(:,i))
        ELSE
-          CALL CPP_BLAS_chpmv('U',lapw%nmat,one_c,b_c,zMat%z_c(1,i),1,zro_c,help_c,1)
+          help_c=MATMUL(smat%data_c,zmat%z_c(:,i))
        ENDIF
        DO j = i,ne
           IF (l_real) THEN
-             s_r(j,i) = CPP_BLAS_sdot(lapw%nmat,zMat%z_r(1,j),1,help_r,1)
+             s_r(j,i) = dot_product(zmat%z_r(:,j),help_r)
           ELSE
-             s_c(j,i) = CPP_BLAS_cdotc(lapw%nmat,zMat%z_c(1,j),1,help_c,1)
+             s_c(j,i) =dot_PRODUCT(zmat%z_c(:,j),help_c)
           ENDIF
        END DO
     END DO

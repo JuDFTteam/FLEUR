@@ -7,6 +7,9 @@
 MODULE m_types
   USE m_types_rcmat
   USE m_types_xcpot
+  USE m_types_lapw
+  USE m_types_mpi
+  USE m_types_tlmplm
   !*************************************************************
   !     This module contains definitions for all kind of types
   !*************************************************************
@@ -45,33 +48,8 @@ MODULE m_types
      REAL :: z
      COMPLEX :: p,m
   END TYPE t_orblo
-  TYPE t_lapw
-     INTEGER :: nv(2)
-     INTEGER :: nv_tot
-     INTEGER :: nmat
-     INTEGER,ALLOCATABLE:: k1(:,:)
-     INTEGER,ALLOCATABLE:: k2(:,:)
-     INTEGER,ALLOCATABLE:: k3(:,:)
-     INTEGER,ALLOCATABLE:: kp(:,:)
-     REAL,ALLOCATABLE::rk(:,:)
-  END TYPE t_lapw
+  
 
-  TYPE t_tlmplm
-     COMPLEX,ALLOCATABLE :: tdd(:,:,:)
-     COMPLEX,ALLOCATABLE :: tdu(:,:,:)
-     !(0:lmplmd,ntypd,tspin)
-     COMPLEX,ALLOCATABLE :: tud(:,:,:)
-     COMPLEX,ALLOCATABLE :: tuu(:,:,:)
-     !(0:lmplmd,ntypd,tspin)
-     INTEGER,ALLOCATABLE :: ind(:,:,:,:)
-     !(0:lmd,0:lmd,ntypd,tspin)
-     COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:)
-     !(0:lmd,-llod:llod,mlotot,tspin)
-     COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:)
-     !(0:lmd,-llod:llod,mlotot,tspin)
-     COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:)
-     !(-llod:llod,-llod:llod,mlolotot,tspin)
-  END TYPE t_tlmplm
 
   TYPE t_usdus
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: us
@@ -729,18 +707,7 @@ MODULE m_types
   END TYPE t_results
 
 
-  TYPE t_mpi
-     INTEGER :: mpi_comm !< replaces MPI_COMM_WORLD
-     INTEGER :: irank    !< rank of task in mpi_comm
-     INTEGER :: isize    !< no of tasks in mpi_comm
-     INTEGER :: n_start  !< no of first k-point to calculate on this PE
-     INTEGER :: n_stride !< stride for k-loops
-     INTEGER :: n_size   !< PE per kpoint, i.e. "isize" for eigenvalue parallelization
-     INTEGER :: n_groups !< No of k-loops per PE
-     INTEGER :: sub_comm !< Sub-Communicator for eigenvalue parallelization (all PE working on same k-point)
-     INTEGER :: n_rank   !< rank in sub_comm
-  END TYPE t_mpi
-
+ 
   TYPE t_zMat
      LOGICAL              :: l_real
      INTEGER              :: nbasfcn

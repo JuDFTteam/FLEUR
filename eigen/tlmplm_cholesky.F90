@@ -8,7 +8,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
   CONTAINS
     SUBROUTINE tlmplm_cholesky(sphhar,atoms,dimension,enpara,&
-         jspin,jsp,mpi, vr,input, td,ud)
+         jspin,jsp,mpi, vr,input,vs_mmp, td,ud)
 
       USE m_intgr, ONLY : intgr3
       USE m_radflo
@@ -23,6 +23,7 @@ MODULE m_tlmplm_cholesky
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
       TYPE(t_atoms),INTENT(IN)    :: atoms
       TYPE(t_enpara),INTENT(IN)   :: enpara
+      COMPLEX,INTENT(IN)          :: vs_mmp(:,:,:,:)
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
@@ -38,7 +39,7 @@ MODULE m_tlmplm_cholesky
       COMPLEX cil
       COMPLEX,PARAMETER::ci=cmplx(0.,1.)
       REAL temp,wronk
-      INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
+      INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in,i_u
       INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,noded,nodeu ,na,m,nsym,s
       LOGICAL l_write,ok
       !     ..
@@ -270,8 +271,25 @@ MODULE m_tlmplm_cholesky
                 td%h_loc(lmp+s,lmp,n,jsp)=0.5+td%h_loc(lmp+s,lmp,n,jsp)
                 td%h_loc(lmp+s,lmp+s,n,jsp)=(enpara%el0(lp,n,jsp)+td%e_shift)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
              END DO
-          END DO   
+          END DO
 
+          !Include contribution from LDA+U
+          DO i_u=1,SIZE(atoms%lda_u)
+             IF (n.NE.atoms%lda_u(i_u)%atomtype) CYCLE
+             !Found a "U" for this atom type
+             l=atoms%lda_u(i_u)%l
+             lp=atoms%lda_u(i_u)%l
+             DO m = -l,l
+                lm = l* (l+1) + m
+                DO mp = -lp,lp
+                   lmp = lp* (lp+1) + mp
+                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + vs_mmp(l,lp,i_u,jsp)
+                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ vs_mmp(l,lp,i_u,jsp)*ud%ddn(lp,n,jsp)
+                ENDDO
+             ENDDO
+          ENDDO
+
+          
           !Perform cholesky decomposition
           CALL zpotrf("L",2*s,td%h_loc(:,:,n,jsp),size(td%h_loc,1),info)
           !Generate full matrix
@@ -282,7 +300,7 @@ MODULE m_tlmplm_cholesky
           ENDDO
           IF (info.ne.0) THEN
              td%e_shift=td%e_shift*2.0
-             print *,"Potential shift to small, increasing the value to:",td%e_shift
+              print *,"Potential shift to small, increasing the value to:",td%e_shift
              if (td%e_shift>e_shift_max) call judft_error("Potential shift at maximum")
              OK=.false.
           ENDIF
