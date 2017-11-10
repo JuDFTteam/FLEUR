@@ -98,7 +98,7 @@ MODULE m_add_vnonlocal
        IF( hybrid%l_calhf ) THEN
           WRITE(6,'(A)') new_line('n')//new_line('n')//' ###     '// '        diagonal HF exchange elements (eV)              ###'
           
-          WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band       tail      pole     total(valence+core)'
+          WRITE(6,'(A)') new_line('n') // '         k-point      '// 'band          tail           pole       total(valence+core)'
           
        END IF
 
@@ -128,7 +128,7 @@ MODULE m_add_vnonlocal
              results%te_hfex%valence = results%te_hfex%valence -a_ex*results%w_iks(iband,nk,jsp)*exch(iband,iband)
           END IF
           IF(hybrid%l_calhf) THEN
-             WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F10.5)')&
+             WRITE(6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)')&
                   &  kpts%bkf(:,nk),iband, (REAL(exch(iband,iband))-hybrid%div_vv(iband,nk,jsp))*(-27.211608),&
                   &  hybrid%div_vv(iband,nk,jsp)*(-27.211608),REAL(exch(iband,iband))*(-27.211608)
           END IF

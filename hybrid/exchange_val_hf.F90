@@ -183,9 +183,8 @@
      
      
       IF( initialize ) THEN !it .eq. 1 .and. nk .eq. 1) THEN
-         print *,divergence
-         print *,Cell%omtil,kpts%nkpt3,kpts%nkptf
          call calc_divergence(cell,kpts,divergence)
+         PRINT *,"Divergence:",divergence
          initialize = .false.
       END IF
    

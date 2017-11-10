@@ -55,6 +55,7 @@ CONTAINS
     !Allocate the storage for the DATA always read/write
     ALLOCATE(d%el_s(0:lmax,ntype),d%ello_s(nlo,ntype),d%evac_s(2))
     ALLOCATE(d%kvec_s(nmat,3),d%kveclo_s(nlotot))
+    d%kvec_s=0;d%kveclo_s=0
     !Calculate the record length
     INQUIRE(IOLENGTH=recl_eig) d%el_s,d%evac_s,d%ello_s,r3,r1,i1,i1,d%kvec_s,d%kveclo_s
     d%recl_bas=recl_eig

@@ -101,7 +101,7 @@ module m_types_rcmat
     COMPLEX,INTENT(IN)               :: packed_c(:)
 
     INTEGER:: n,nn,i
-    call mat1%alloc(l_real,matsize,matsize)
+    CALL mat1%alloc(l_real,matsize,matsize,0.0)
     i=1
     DO n=1,matsize
        DO nn=1,n

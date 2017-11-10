@@ -680,7 +680,6 @@ CONTAINS
              IF(j.LE. hybrid%nbasp) coulomb(M,ikpt) = coulmat(j,i)
           END DO
        END DO
-
     END DO
 
     DEALLOCATE( coulmat,olap,integral )
@@ -766,7 +765,6 @@ CONTAINS
        END DO
 
     END DO
-
     !     (3b) r,r' in different MT
 
     DO ikpt=ikptmin,ikptmax!1,kpts%nkpt
@@ -866,7 +864,6 @@ CONTAINS
        END DO
        DEALLOCATE( carr2,carr2a,carr2b,structconst1 )
     END DO !ikpt
-
     !     Add corrections from higher orders in (3b) to coulomb(:,1)
     ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
     rdum = (4*pi_const)**(1.5d0)/cell%vol**2 * gmat(1,1)
@@ -914,7 +911,6 @@ CONTAINS
           END DO
        END DO
     END DO
-
     ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
     iy = hybrid%nbasp + 1
     DO igpt0 = 1,hybrid%ngptm1(1)
@@ -941,7 +937,6 @@ CONTAINS
           END DO
        END DO
     END DO
-
     ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
     iy   = hybrid%nbasp + 1
     ix   = hybrid%nbasp + 1
@@ -957,8 +952,7 @@ CONTAINS
           END DO
        END DO
     END DO
-
-
+  
     !     (3c) r,r' in same MT
 
     ! Calculate sphbesintegral
@@ -1029,7 +1023,6 @@ CONTAINS
        END DO
 
     END DO
-
     DEALLOCATE( carr2 )
 
     IF ( mpi%irank == 0 ) THEN
@@ -1105,7 +1098,6 @@ CONTAINS
        END DO ! igpt0
     END DO ! ikpt
     DEALLOCATE ( carr2,iarr,hybrid%pgptm1 )
-
     IF ( mpi%irank == 0 ) THEN
        WRITE(6,'(2X,A)',advance='no') 'done'
        CALL cpu_TIME(time2)
@@ -1124,7 +1116,7 @@ CONTAINS
 #     endif
 
 1   DEALLOCATE (qnrm,pqnrm)
-
+   
     CALL cpu_TIME(time1)
     IF ( xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
        !
@@ -1190,7 +1182,7 @@ CONTAINS
        !         END IF
 
        !unpack matrix coulomb
-       call coulhlp%from_packed(sym%invs,nbasm1(ikpt),real(coulomb(:,ikpt)),coulomb(:,ikpt))
+       CALL coulhlp%from_packed(sym%invs,nbasm1(ikpt),REAL(coulomb(:,ikpt)),coulomb(:,ikpt))
        
        if (olapm%l_real) THEN
           !multiply with inverse olap from right hand side
@@ -1203,7 +1195,7 @@ CONTAINS
           !multiply with inverse olap from left side
           coulhlp%data_c(hybrid%nbasp+1:,:) = MATMUL(olapm%data_c,coulhlp%data_c(hybrid%nbasp+1:,:))
        end if
-       coulomb(:nbasm1(ikpt)*(nbasm1(ikpt)+1)/2,ikpt) = coulhlp%to_packed()
+       coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt)+1))/2,ikpt) = coulhlp%to_packed()
           
     END DO
 
@@ -1231,6 +1223,7 @@ CONTAINS
        ALLOCATE( coulomb_mt3_r(hybrid%maxindxm1-1,atoms%nat,atoms%nat,1) )
 #     ifdef CPP_IRCOULOMBAPPROX
        ALLOCATE( coulomb_mtir_r(ic,ic+hybrid%maxgptm,1) )
+       coulomb_mtir_r=0
        ALLOCATE( coulombp_mtir_r(0,0) )
 #     else
        ALLOCATE( coulomb_mtir_r(ic+hybrid%maxgptm,ic+hybrid%maxgptm,1) )
@@ -1558,12 +1551,11 @@ CONTAINS
       !COMPLEX , ALLOCATABLE :: constfunc(:)  !can also be real in inversion case
       COMPLEX      :: coeff(nbasm1(1)),cderiv(nbasm1(1),-1:1), claplace(nbasm1(1))
 
-      call olap%alloc(sym%invs,hybrid%ngptm(1),hybrid%ngptm(1))
+      CALL olap%alloc(sym%invs,hybrid%ngptm(1),hybrid%ngptm(1),0.)
 
       n  = nbasm1(1)
       nn = n*(n+1)/2
-
-      CALL olap_pw ( olap,hybrid%pgptm(:hybrid%ngptm(1),1),hybrid%ngptm(1),atoms,cell )
+      CALL olap_pw ( olap,hybrid%gptm(:,hybrid%pgptm(:hybrid%ngptm(1),1)),hybrid%ngptm(1),atoms,cell )
 
       ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
       coeff    = 0
@@ -1598,11 +1590,11 @@ CONTAINS
             END DO
          END DO
       END DO
-      if (olap%l_real) THEN
+      IF (olap%l_real) THEN
          coeff(hybrid%nbasp+1:n) = olap%data_r(1,1:n-hybrid%nbasp)
       else
          coeff(hybrid%nbasp+1:n) = olap%data_c(1,1:n-hybrid%nbasp)
-      end if
+      END IF
       IF (sym%invs) THEN
          CALL symmetrize(coeff,       1,nbasm1(1),2,.FALSE.,&
               atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
