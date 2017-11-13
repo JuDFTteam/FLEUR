@@ -192,6 +192,31 @@ SUBROUTINE writeVVec(input,hybrid,vecLen,currentIter,dfivi,vVec)
 
 END SUBROUTINE writeVVec
 
+SUBROUTINE resetBroydenHistory()
+
+   INTEGER           :: i
+   LOGICAL           :: l_exist
+   CHARACTER(LEN=20) :: filename
+   INQUIRE(file='broyd',exist=l_exist)
+   IF (l_exist) THEN
+      CALL system('rm broyd')
+      PRINT *,"Broyden history has been reset."
+   END IF
+   DO i = 1, 9
+      filename = 'broyd.'//CHAR(i+48)
+      INQUIRE(file=TRIM(ADJUSTL(filename)),exist=l_exist)
+      IF (l_exist) THEN
+         CALL system('rm '//TRIM(ADJUSTL(filename)))
+      END IF
+      filename = 'hf_broyd.'//CHAR(i+48)
+      INQUIRE(file=TRIM(ADJUSTL(filename)),exist=l_exist)
+      IF (l_exist) THEN
+         CALL system('rm '//TRIM(ADJUSTL(filename)))
+      END IF
+   END DO
+
+END SUBROUTINE resetBroydenHistory
+
 LOGICAL FUNCTION initBroydenHistory(input,hybrid, vecLen)
 ! Initializes a Broyden history
 ! returns true if there already exists a Broyden history

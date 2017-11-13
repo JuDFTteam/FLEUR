@@ -42,6 +42,7 @@ CONTAINS
     USE m_pldngen
     USE m_optional
     USE m_cdn_io
+    USE m_broyd_io
     USE m_qfix
     USE m_vgen
     USE m_rhodirgen
@@ -730,16 +731,7 @@ CONTAINS
             CLOSE(2)
             PRINT *,"qfix set to F"
          ENDIF
-         INQUIRE(file='broyd',exist=l_exist)
-         IF (l_exist) THEN
-            CALL system('rm broyd')
-            PRINT *,"broyd file deleted"
-         ENDIF
-         INQUIRE(file='broyd.7',exist=l_exist)
-         IF (l_exist) THEN
-            CALL system('rm broyd.7')
-            PRINT *,"broyd.7 file deleted"
-         ENDIF
+         CALL resetBroydenHistory()
       ENDIF
       CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
     END SUBROUTINE priv_geo_end

@@ -249,16 +249,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    IF (atoms%n_u > 0) THEN
       IF (.NOT.l_densityMatrixPresent) THEN
          inDen%mmpMat(:,:,:,:) = outDen%mmpMat(:,:,:,:)
-         INQUIRE(file='broyd',exist=l_exist)
-         IF (l_exist) THEN
-            CALL system('rm broyd')
-            PRINT *,"broyd file deleted because new density matrix is created."
-         ENDIF
-         INQUIRE(file='broyd.7',exist=l_exist)
-         IF (l_exist) THEN
-            CALL system('rm broyd.7')
-            PRINT *,"broyd.7 file deleted because new density matrix is created."
-         ENDIF
+         CALL resetBroydenHistory()
       END IF
    ENDIF
 
