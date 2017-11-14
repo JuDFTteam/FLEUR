@@ -27,6 +27,7 @@ io/r_inpXML.F90
 io/writeOutHeader.F90
 io/wrtdop.f90
 io/w_inpXML.f90
+io/writeOutParameters.f90
 io/xsf_io.f90
 io/xmlIntWrapFort.f90
 io/xmlOutput.F90

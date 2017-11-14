@@ -108,9 +108,7 @@ CONTAINS
     ELSE
        !     |vi> = w|vi> 
        !     loop to generate um : um = sm1 + alpha*fm1 - \sum <fm1|w|vi> ui
-       DO k = 1, nmap
-          um(k) = input%alpha * fm1(k) + sm1(k)
-       END DO
+       um(:nmap) = input%alpha * fm1(:nmap) + sm1(:nmap)
        iread = MIN(mit-1,input%maxiter+1)
        DO it = 2, iread
           CALL readUVec(input,hybrid,nmap,it-mit,mit,ui)

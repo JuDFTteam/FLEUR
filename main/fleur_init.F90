@@ -27,6 +27,7 @@
           USE m_xmlOutput
           USE m_constants
           USE m_winpXML
+          USE m_writeOutParameters
           USE m_setupMPI
           USE m_cdn_io
           USE m_fleur_info
@@ -749,6 +750,9 @@
           END IF
  
           IF (mpi%irank.EQ.0) THEN
+             CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+                                     oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                                     noco,dimension,enpara,sphhar)
              CALL fleur_info(kpts)
              CALL deleteDensities()
           END IF
