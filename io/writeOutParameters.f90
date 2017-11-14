@@ -40,18 +40,18 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    WRITE(attributes(3),'(i0)') atoms%jmtd
    WRITE(attributes(4),'(i0)') atoms%n_u
    CALL writeXMLElementFormPoly('atomsInCell',(/'nat  ','ntype','jmtd ','n_u  '/),&
-                                attributes(:4),reshape((/3,5,4,3,8,8,8,8/),(/4,2/)))
+                                attributes(:4),reshape((/3,6,6,6,8,8,8,8/),(/4,2/)))
 
    WRITE(attributes(1),'(i0)') dimension%nvd
    WRITE(attributes(2),'(i0)') atoms%lmaxd
    WRITE(attributes(3),'(i0)') atoms%nlotot
    CALL writeXMLElementFormPoly('basis',(/'nvd   ','lmaxd ','nlotot'/),&
-                                attributes(:3),reshape((/3,5,6,8,8,8/),(/3,2/)))
+                                attributes(:3),reshape((/9,6,6,8,8,8/),(/3,2/)))
 
    WRITE(attributes(1),'(i0)') stars%ng3
    WRITE(attributes(2),'(i0)') stars%ng2
    CALL writeXMLElementFormPoly('density',(/'ng3','ng2'/),&
-                                attributes(:2),reshape((/3,3,8,8/),(/2,2/)))
+                                attributes(:2),reshape((/7,6,8,8/),(/2,2/)))
 
    CALL closeXMLElement('numericalParameters')
 
