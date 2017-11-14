@@ -122,16 +122,14 @@
           !-t3e
           IF (mpi%irank.EQ.0) THEN
              CALL startXMLOutput()
-#ifndef __TOS_BGQ__
-             !Do not open out-file on BlueGene
              IF (judft_was_argument("-info")) THEN
                   CLOSE(6)
                   OPEN (6,status='SCRATCH')
              ELSE
+                  IF (.not.judft_was_argument("-no_out")) &
                   OPEN (6,file='out',form='formatted',status='unknown')
              ENDIF
              CALL writeOutHeader()
-#endif
              IF (judft_was_argument("-info")) THEN
                 OPEN (16,status='SCRATCH')
              ELSE

@@ -326,7 +326,7 @@ SUBROUTINE r_inpXML(&
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
   SELECT CASE (valueString)
   CASE ('straight')
-     input%imix = 1
+     input%imix = 0
   CASE ('Broyden1')
      input%imix = 3
   CASE ('Broyden2')

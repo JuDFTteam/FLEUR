@@ -19,15 +19,24 @@
     !Dump status file into out file (should be done only at end of run)
     SUBROUTINE print_memory_info()
       IMPLICIT NONE
-
       CHARACTER(LEN=1024):: line
-      INTEGER            :: err
-      OPEN(99,FILE="/proc/self/status",ERR=999)
-      DO
-         READ(99,"(a)",ERR=999,END=999) line
-         WRITE(6,*) trim(line)
-      ENDDO
- 999  CLOSE(99,IOSTAT=err)
+      INTEGER            :: err,irank
+#ifdef CPP_MPI
+      INCLUDE 'mpif.h'
+      CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+#else
+      irank=0
+#endif
+      IF (irank==0) THEN
+         OPEN(99,FILE="/proc/self/status",ERR=999)
+         DO
+            READ(99,"(a)",ERR=999,END=999) line
+            WRITE(6,*) TRIM(line)
+         ENDDO
+999      CLOSE(99,IOSTAT=err)
+      ELSE
+         WRITE(6,"(a,i0,a,a)") "Rank:",irank," used ",memory_usage_string()
+      END IF
     END SUBROUTINE print_memory_info
 
     !Read mstat to find out current memory usage
