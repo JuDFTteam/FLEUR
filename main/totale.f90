@@ -243,7 +243,7 @@ CONTAINS
        CALL closeXMLElement('atomTypeDependentContributions')
     END DO
     IF (atoms%n_u.GT.0) THEN
-       CALL writeXMLElementFormPoly('dft+uCorrection',(/'value'/),(/results%e_ldau/),reshape((/32,20/),(/1,2/)))
+       CALL writeXMLElementFormPoly('dftUCorrection',(/'value'/),(/results%e_ldau/),reshape((/32,20/),(/1,2/)))
     END IF
     CALL writeXMLElementFormPoly('tkbTimesEntropy',(/'value'/),(/results%ts/),reshape((/33,20/),(/1,2/)))
     CALL writeXMLElementFormPoly('freeEnergy',(/'value'/),(/results%tote-results%ts/),reshape((/38,20/),(/1,2/)))
