@@ -26,11 +26,11 @@ IMPLICIT NONE
     abstol=2*dlamch('S')
     IF (hmat%l_real) THEN
        ALLOCATE(iwork(5*hmat%matsize1),ifail(hmat%matsize1))
-       CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_c,SIZE(hmat%data_r,1),smat%data_c,SIZE(smat%data_r,1),&
+       CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),&
             0.0,0.0,1,zmat%nbands,abstol,m,eig,zmat%z_r,SIZE(zmat%z_r,1),dumrwork,-1, iwork, ifail, info)
        lwork=dumrwork(1)
        ALLOCATE(rwork(lwork))
-       CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_c,SIZE(hmat%data_r,1),smat%data_c,SIZE(smat%data_r,1),&
+       CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),&
             0.0,0.0,1,zmat%nbands,abstol,m,eig,zmat%z_r,SIZE(zmat%z_r,1),rwork, lwork, iwork, ifail, info)
     ELSE
        ALLOCATE(rwork(7*hmat%matsize1),iwork(5*hmat%matsize1),ifail(hmat%matsize1))
