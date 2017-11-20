@@ -303,9 +303,7 @@ CONTAINS
           ENDIF
           !
 
-          PRINT *,'hs_mt-h',hmat%data_c(1,1),hmat%DATA_c(1,2),hmat%data_c(2,2)
-          PRINT *,'hs_mt-s',smat%data_c(1,1),smat%DATA_c(1,2),smat%data_c(2,2)
-
+         
           IF( hybrid%l_hybrid ) THEN
              !write overlap matrix b to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"
