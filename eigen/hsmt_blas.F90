@@ -35,7 +35,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE:: ab(:,:),tmpdata(:,:),tmp_s(:,:),tmp_h(:,:),ab1(:,:)
 
 
-    ALLOCATE(ab(lapw%nv(isp),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(isp),atoms%lmaxd*(atoms%lmaxd+2)+1))
+    ALLOCATE(ab(lapw%nv(isp),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(isp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     
     ALLOCATE(tmp_s(smat%matsize1,smat%matsize2),tmp_h(smat%matsize1,smat%matsize2))
     tmp_s=0.0;tmp_h=0.0;ab=0.0;ab1=0.0
@@ -46,8 +46,10 @@ CONTAINS
           IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
              
              !--->   Calculate Overlapp matrix
+             CALL timestart("ab-coefficients")
              CALL hsmt_ab(sym,atoms,isp,n,na,cell,lapw,gk,vk,fj,gj,ab,aboffset)
-             PRINT *,"aboffset",n,na,aboffset,atoms%lmax(n)
+             CALL timestop("ab-coefficients")
+             CALL timestart("Overlapp")
              CALL ZHERK("U","N",lapw%nv(isp),aboffset,1.,ab,SIZE(ab,1),1.0,tmp_s,SIZE(tmp_s,1))
              DO l=0,atoms%lmax(n)
                 ll=l*(l+1)
@@ -56,10 +58,14 @@ CONTAINS
                 ENDDO
              ENDDO
              CALL ZHERK("U","N",lapw%nv(isp),aboffset,1.,ab1,SIZE(ab,1),1.0,tmp_s,SIZE(tmp_s,1))
-
+             CALL timestop("Overlapp")
+             CALL timestart("Hamiltonian")
+         
              !Calculate Hamiltonian
-             CALL zgemm("N","N",SIZE(ab,1),SIZE(ab,2),SIZE(ab,2),CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab,SIZE(ab,1))
-             CALL ZHERK("U","N",lapw%nv(isp),2*aboffset,1.,ab,SIZE(ab,1),1.0,tmp_h,SIZE(tmp_h,1))
+             CALL zgemm("N","N",SIZE(ab,1),2*aboffset,2*aboffset,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab,1))
+!             CALL zgemm("N","C",lapw%nv(isp),lapw%nv(isp),2*aboffset,CMPLX(1.0,0.0),ab,SIZE(ab,1),ab1,SIZE(ab,1),CMPLX(1.0,0),tmp_h,SIZE(tmp_h,1))
+             CALL ZHERK("U","N",lapw%nv(isp),2*aboffset,1.,ab1,SIZE(ab,1),1.0,tmp_h,SIZE(tmp_h,1))
+             CALL timestop("Hamiltonian")
           ENDIF
        END DO
     END DO ntyploop
@@ -73,5 +79,44 @@ CONTAINS
     ENDIF
   END SUBROUTINE hsmt_blas
 
+#if 1==2
+    !this version uses zherk for Hamiltonian
+    ntyploop: DO n=1,atoms%ntype
+       DO nn = 1,atoms%neq(n)
+          na = SUM(atoms%neq(:n-1))+nn
+          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+             
+             !--->   Calculate Overlapp matrix
+             CALL timestart("ab-coefficients")
+             CALL hsmt_ab(sym,atoms,isp,n,na,cell,lapw,gk,vk,fj,gj,ab,aboffset)
+             CALL timestop("ab-coefficients")
+             CALL timestart("Overlapp")
+             CALL ZHERK("U","N",lapw%nv(isp),aboffset,1.,ab,SIZE(ab,1),1.0,tmp_s,SIZE(tmp_s,1))
+             DO l=0,atoms%lmax(n)
+                ll=l*(l+1)
+                DO m=-l,l
+                   ab1(:,1+ll+m)=SQRT(ud%ddn(l,n,isp))*ab(:,aboffset+1+ll+m)
+                ENDDO
+             ENDDO
+             CALL ZHERK("U","N",lapw%nv(isp),aboffset,1.,ab1,SIZE(ab,1),1.0,tmp_s,SIZE(tmp_s,1))
+             CALL timestop("Overlapp")
+             CALL timestart("Hamiltonian")
+         
+             !Calculate Hamiltonian
+             CALL zgemm("N","N",SIZE(ab,1),2*aboffset,2*aboffset,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab,1))
+             CALL ZHERK("U","N",lapw%nv(isp),2*aboffset,1.,ab1,SIZE(ab,1),1.0,tmp_h,SIZE(tmp_h,1))
+             CALL timestop("Hamiltonian")
+          ENDIF
+       END DO
+    END DO ntyploop
+    !Copy tmp array back
+    IF (smat%l_real) THEN
+       smat%data_r=smat%data_r+tmp_s
+       hmat%data_r=hmat%data_r+tmp_h-td%e_shift*tmp_s
+    ELSE
+       smat%data_c=smat%data_c+tmp_s
+       hmat%data_c=hmat%data_c+tmp_h-td%e_shift*tmp_s
+    ENDIF
+#endif
   
 END MODULE m_hsmt_blas

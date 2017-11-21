@@ -55,7 +55,7 @@ MODULE m_tlmplm_cholesky
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
       INTEGER:: indt(0:dimension%lmplmd)
 
-    REAL,PARAMETER:: e_shift_min=64.0
+    REAL,PARAMETER:: e_shift_min=3.0
     REAL,PARAMETER:: e_shift_max=20000000.0
     
     vr0=vr
