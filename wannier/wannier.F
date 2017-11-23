@@ -1224,19 +1224,23 @@ c****************************************************************
       zzMat%nbasfcn = DIMENSION%nbasfcn
       zzMat%nbands = DIMENSION%neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+	    IF(.not.ALLOCATED(zzMat%z_r))
+     >    ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+	    IF(.not.ALLOCATED(zzMat%z_c))
+     >    ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
       END IF
 
       zMat%l_real = zzMat%l_real
       zMat%nbasfcn = zzMat%nbasfcn
       zMat%nbands = zzMat%nbands
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+	    IF(.not.ALLOCATED(zMat%z_r))
+     >    ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
          zMat%z_r = 0.0
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+	    IF(.not.ALLOCATED(zMat%z_c))
+     >    ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
          zMat%z_c = CMPLX(0.0,0.0)
       END IF
 
@@ -1244,10 +1248,12 @@ c****************************************************************
       zMat_b%nbasfcn = zzMat%nbasfcn
       zMat_b%nbands = zzMat%nbands
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
+	    IF(.not.ALLOCATED(zMat_b%z_r))
+     >    ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
          zMat_b%z_r = 0.0
       ELSE
-         ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
+	    IF(.not.ALLOCATED(zMat_b%z_c))
+     >    ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
          zMat_b%z_c = CMPLX(0.0,0.0)
       END IF
 

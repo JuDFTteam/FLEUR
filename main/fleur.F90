@@ -564,7 +564,7 @@ CONTAINS
              IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
                 CALL wannier(DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,&
                      wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
-                     eig_idList,(sym%invs).AND.(.NOT.noco%l_noco),kpts%nkpt)
+                     eig_idList,(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
              END IF
              IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
              !-Wannier
