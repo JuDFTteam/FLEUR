@@ -717,10 +717,12 @@ c****************************************************************
       zzMat(jspin)%nbasfcn = nbasfcn
       zzMat(jspin)%nbands = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
+	    IF(.not.allocated(zzmat(jspin)%z_r))
+     +   ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
      +                              zzMat(jspin)%nbands))
       ELSE
-         ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
+	    IF(.not.allocated(zzmat(jspin)%z_c))
+     +   ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
      +                              zzMat(jspin)%nbands))
       END IF
 
@@ -746,11 +748,13 @@ c...we work only within the energy window
          zMat(jspin)%nbasfcn = zzMat(jspin)%nbasfcn
          zMat(jspin)%nbands = zzMat(jspin)%nbands
          IF (zzMat(jspin)%l_real) THEN
-            ALLOCATE (zMat(jspin)%z_r(zMat(jspin)%nbasfcn,
+	       IF(.not.allocated(zmat(jspin)%z_r))
+     +      ALLOCATE (zMat(jspin)%z_r(zMat(jspin)%nbasfcn,
      +                                zMat(jspin)%nbands))
             zMat(jspin)%z_r = 0.0
          ELSE
-            ALLOCATE (zMat(jspin)%z_c(zMat(jspin)%nbasfcn,
+	       IF(.not.allocated(zMat(jspin)%z_c))
+     +      ALLOCATE (zMat(jspin)%z_c(zMat(jspin)%nbasfcn,
      +                                zMat(jspin)%nbands))
             zMat(jspin)%z_c = CMPLX(0.0,0.0)
          END IF

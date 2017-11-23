@@ -53,14 +53,18 @@ c************************************************************
       complex           :: suma,sumb,sumc,sumd
       complex           :: suma12(2,2),sumb12(2,2)
       complex           :: sumc12(2,2),sumd12(2,2)
-      real, allocatable :: qlo(:,:,:,:,:)
-      real, allocatable :: qaclo(:,:,:,:),qbclo(:,:,:,:)
+      complex, allocatable :: qlo(:,:,:,:,:)
+      complex, allocatable :: qaclo(:,:,:,:),qbclo(:,:,:,:)
+      complex, allocatable :: qcloa(:,:,:,:),qclob(:,:,:,:)
       COMPLEX           :: ccchi(2,2),ci
 
       ci = cmplx(0.0,1.0)
       allocate (qlo(noccbd,noccbd,nlod,nlod,ntypd), 
      +          qaclo(noccbd,noccbd,nlod,ntypd),
-     +          qbclo(noccbd,noccbd,nlod,ntypd) )
+     +          qbclo(noccbd,noccbd,nlod,ntypd),
+     +          qcloa(noccbd,noccbd,nlod,ntypd),
+     +          qclob(noccbd,noccbd,nlod,ntypd))
+ 
 c---> performs summations of the overlaps of the wavefunctions
       do i = 1,noccbd            
        do j = 1,noccbd
@@ -152,6 +156,9 @@ c---> initialize qlo arrays
       qlo(:,:,:,:,:) = 0.0
       qaclo(:,:,:,:) = 0.0
       qbclo(:,:,:,:) = 0.0
+      qcloa(:,:,:,:) = 0.0
+      qclob(:,:,:,:) = 0.0
+
 c---> prepare the coefficients
       natom = 0
       do ntyp = 1,ntype
@@ -162,14 +169,21 @@ c---> prepare the coefficients
                ll1 = l* (l+1)
                do m = -l,l
                   lm = ll1 + m
-                  do i = 1,noccbd
-                   do j = 1,noccbd
-                     qbclo(i,j,lo,ntyp) = qbclo(i,j,lo,ntyp) + real(
-     +                  bcof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2)) +
-     +                  ccof(m,i,lo,natom,1)*conjg(bcof(j,lm,natom,2)) )
-                     qaclo(i,j,lo,ntyp) = qaclo(i,j,lo,ntyp) + real(
-     +                  acof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2)) +
-     +                  ccof(m,i,lo,natom,1)*conjg(acof(j,lm,natom,2)) )
+                  do j = 1,noccbd
+                   do i = 1,noccbd
+                     qbclo(i,j,lo,ntyp) = qbclo(i,j,lo,ntyp) +
+     +                  bcof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2)) 
+c     +                +ccof(m,i,lo,natom,1)*conjg(bcof(j,lm,natom,2)) 
+                     qaclo(i,j,lo,ntyp) = qaclo(i,j,lo,ntyp) +
+     +                  acof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2)) 
+c     +                 +ccof(m,i,lo,natom,1)*conjg(acof(j,lm,natom,2))
+
+                     qclob(i,j,lo,ntyp) = qclob(i,j,lo,ntyp)
+c     +                bcof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2)) 
+     +                +ccof(m,i,lo,natom,1)*conjg(bcof(j,lm,natom,2)) 
+                     qcloa(i,j,lo,ntyp) = qcloa(i,j,lo,ntyp) 
+c     +                acof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2))+ 
+     +                +ccof(m,i,lo,natom,1)*conjg(acof(j,lm,natom,2))
                    enddo
                   enddo
                enddo
@@ -178,9 +192,9 @@ c---> prepare the coefficients
                    do m = -l,l
                      do i = 1,noccbd
                       do j = 1,noccbd
-                       qlo(i,j,lop,lo,ntyp) = qlo(i,j,lop,lo,ntyp) + 
-     +                        real(conjg(ccof(m,j,lop,natom,2))
-     *                                  *ccof(m,i,lo,natom,1))
+                       qlo(i,j,lo,lop,ntyp) = qlo(i,j,lo,lop,ntyp) + 
+     +                        conjg(ccof(m,j,lop,natom,2))
+     *                                  *ccof(m,i,lo,natom,1)
                       enddo
                      enddo
                    enddo
@@ -193,28 +207,33 @@ c---> perform summation of the coefficients with the integrals
 c---> of the radial basis functions
       do ntyp = 1,ntype
          do lo = 1,nlo(ntyp)
-            stop 'not yet finished'
             l = llo(lo,ntyp)
-            do i = 1,noccbd
-             do j = 1,noccbd
+            do j = 1,noccbd
+             do i = 1,noccbd
                mmn(i,j)= mmn(i,j)  + 
-     +                      ( qaclo(i,j,lo,ntyp)*uulon(lo,ntyp,2)     +
-     +                        qbclo(i,j,lo,ntyp)*dulon(lo,ntyp,2)     )
+     +    qaclo(i,j,lo,ntyp)*radial1_flo(1,2,l,lo,ntyp)     
+     +                      +
+     +    qbclo(i,j,lo,ntyp)*radial1_glo(1,2,l,lo,ntyp)
+     +                      +
+     +    qcloa(i,j,lo,ntyp)*radial1_lof(1,2,lo,l,ntyp)     
+     +                      +
+     +    qclob(i,j,lo,ntyp)*radial1_log(1,2,lo,l,ntyp)  
              enddo
             enddo 
             do lop = 1,nlo(ntyp)
                if (llo(lop,ntyp).eq.l) then
-               do i = 1,noccbd
-                do j = 1,noccbd
+               do j = 1,noccbd
+                do i = 1,noccbd
                  mmn(i,j) = mmn(i,j)  + 
-     +                      qlo(i,j,lop,lo,ntyp)*uloulopn(lop,lo,ntyp,2)
+     +   qlo(i,j,lop,lo,ntyp)*radial1_lolo(1,2,lop,lo,ntyp)
                 enddo
                enddo
                endif
             enddo
          enddo 
       enddo 
-      deallocate ( qlo,qaclo,qbclo )
+      deallocate ( qlo,qaclo,qbclo,qcloa,qclob )
 
       END SUBROUTINE wann_mmk0_updown_sph
       END MODULE m_wann_mmk0_updown_sph
+
