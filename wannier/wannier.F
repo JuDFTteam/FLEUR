@@ -1611,8 +1611,8 @@ c---> spherical contribution to mmn0-matrix
 
        call wann_mmk0_sph(
      >           atoms%llod,noccbd,atoms%nlod,atoms%nat,atoms%ntype,
-     >           atoms%lmaxd,lmd,atoms%ntype,atoms%neq,atoms%nlo,
-     >           atoms%llo,acof(1:noccbd,:,:),
+     >           atoms%lmaxd,atoms%lmax,lmd,atoms%ntype,atoms%neq,
+     >           atoms%nlo,atoms%llo,acof(1:noccbd,:,:),
      >           bcof(1:noccbd,:,:),ccof(:,1:noccbd,:,:),
      >           usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),
      >           usdus%dulon(:,:,jspin),usdus%uloulopn,
