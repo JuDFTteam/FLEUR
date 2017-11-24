@@ -4,15 +4,16 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_wann_postproc_setup
+      MODULE m_wann_postproc_setup2
 #ifdef CPP_WANN
       CONTAINS
-      SUBROUTINE wann_postproc_setup(
+      SUBROUTINE wann_postproc_setup2(
      >           natd,nkpts,kpoints,amat,bmat,
      >           num,num_bands,ntype,neq,
      >           zatom,taual,namat,seed,bkpts_filename)
 c******************************************************
 c     Call the Wannier90 setup routine.
+c     interface corresponding to wannier version 2.0
 c     Purpose: get the file of nearest-neighbor kpoints
 c     Frank Freimuth
 c******************************************************
@@ -57,7 +58,7 @@ c******************************************************
       real                :: pos(3,natd)
 
 
-      ! Taken from wannier90-1.2/src/wannier_lib.F90
+      ! Taken from wannier90-2.0/src/wannier_lib.F90
       interface
         subroutine wannier_setup(seed__name, mp_grid_loc, num_kpts_loc,
      +    real_lattice_loc, recip_lattice_loc, kpt_latt_loc,
@@ -65,7 +66,8 @@ c******************************************************
      +    atoms_cart_loc, gamma_only_loc, spinors_loc, nntot_loc,
      +    nnlist_loc, nncell_loc, num_bands_loc, num_wann_loc,
      +    proj_site_loc, proj_l_loc, proj_m_loc, proj_radial_loc,
-     +    proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc)
+     +    proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc,
+     +    proj_s_loc,proj_s_qaxis_loc)
 
          implicit none
          integer, parameter :: dp = selected_real_kind(15,300)
@@ -107,6 +109,10 @@ c******************************************************
      +      proj_zona_loc
          integer, dimension(num_bands_tot), intent(out) ::
      +      exclude_bands_loc
+         integer, dimension(num_bands_tot), optional, intent(out) ::
+     +      proj_s_loc
+         real(kind=dp), dimension(3,num_bands_tot), optional,
+     +      intent(out) :: proj_s_qaxis_loc
         end subroutine wannier_setup
       end interface
 
@@ -159,6 +165,6 @@ c     &     ikpt,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
       close(202)
 
 
-      END SUBROUTINE wann_postproc_setup
+      END SUBROUTINE wann_postproc_setup2
 #endif
-      END MODULE m_wann_postproc_setup
+      END MODULE m_wann_postproc_setup2

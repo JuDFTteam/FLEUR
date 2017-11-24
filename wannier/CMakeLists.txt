@@ -67,6 +67,7 @@ wannier/wann_postproc.F
 wannier/wann_postproc_setup4.F
 wannier/wann_postproc_setup5.F
 wannier/wann_postproc_setup.F
+wannier/wann_postproc_setup2.F
 wannier/wann_projgen.F
 wannier/wann_projmethod.F
 wannier/wann_radovlp_integrals.F
