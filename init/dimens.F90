@@ -194,14 +194,10 @@ CONTAINS
        IF (l_kpts) WRITE (6,*) ' No fl7para-file found, '
        WRITE (6,*) ' invoking dimen7... '
        !call first_glance to generate k-points
-       CALL first_glance(&
-            &                    n1,n2,n3,n5,n6,input%itmax,&
-            &                    l_kpts,l_qpts,ldum,n7,n8,n9,n10)
-       CALL dimen7(&
-            &              input,sym,stars,atoms,sphhar,&
-            &              dimension,vacuum,obsolete,kpts,&
-            &              oneD,hybrid,Jij,cell)
+       CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n9,n10)
 
+       CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,&
+                   oneD,hybrid,Jij,cell)
     ENDIF
     !     in case of a parallel calculation we have to broadcast
 #ifdef CPP_MPI

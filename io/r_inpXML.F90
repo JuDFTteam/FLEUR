@@ -16,7 +16,7 @@ CONTAINS
 SUBROUTINE r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
                      cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
-                     noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+                     noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
 
@@ -67,7 +67,7 @@ SUBROUTINE r_inpXML(&
   CHARACTER(len=4), INTENT(OUT)  :: namex
   CHARACTER(len=12), INTENT(OUT) :: relcor
   REAL, INTENT(OUT)              :: a1(3),a2(3),a3(3)
-  REAL, INTENT(OUT)              :: scale, dtild
+  REAL, INTENT(OUT)              :: dtild
   
   CHARACTER(len=8) :: name(10)
   
@@ -739,7 +739,7 @@ SUBROUTINE r_inpXML(&
 
   IF (numberNodes.EQ.1) THEN
      latticeScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@scale'))
-     scale = latticeScale
+     input%scaleCell = latticeScale
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@latnam')))
      READ(valueString,*) cell%latnam
 
@@ -774,14 +774,20 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a1')
      IF (numberNodes.EQ.1) THEN
         latticeDef = 1
+        input%scaleA1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a1/@scale'))
         a1(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a1'))
+        a1(1) = a1(1) * input%scaleA1
         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a2')
         IF (numberNodes.EQ.1) THEN
            latticeDef = 2
+           input%scaleA2 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a2/@scale'))
            a2(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a2'))
+           a2(2) = a2(2) * input%scaleA2
         END IF
         IF(.NOT.input%film) THEN
+           input%scaleC = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c/@scale'))
            a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c'))
+           a3(3) = a3(3) * input%scaleC
         END IF
      END IF
 
@@ -795,7 +801,9 @@ SUBROUTINE r_inpXML(&
         a2(1) = evaluateFirst(valueString)
         a2(2) = evaluateFirst(valueString)
         IF(.NOT.input%film) THEN
+           input%scaleC = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c/@scale'))
            a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c'))
+           a3(3) = a3(3) * input%scaleC
         END IF
      END IF
 

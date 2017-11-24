@@ -66,7 +66,7 @@
       INTEGER  nu,iofile
       INTEGER  iggachk
       INTEGER  n ,iostat, errorStatus
-      REAL    scale,scpos ,zc
+      REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
@@ -160,7 +160,8 @@
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
-      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; scale = 1.0 ; scpos = 1.0 
+      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
+      input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
@@ -459,7 +460,7 @@
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
-     &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,scale,dtild,input%comment,&
+     &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
      &                 l_explicit,numSpecies,enpara)
@@ -497,7 +498,7 @@
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &               noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
+     &               noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
 
          iofile = 6
@@ -534,7 +535,7 @@
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
+     &                  noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
         IF ( ALL(div /= 0) ) nkpt3 = div
         WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma

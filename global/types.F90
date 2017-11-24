@@ -556,7 +556,6 @@ MODULE m_types
      REAL    :: tkb
      LOGICAL :: gauss
      LOGICAL :: l_bmt
-     !INTEGER:: scale
      INTEGER:: jspins
      INTEGER:: kcrel
      LOGICAL:: frcor
@@ -574,6 +573,10 @@ MODULE m_types
      LOGICAL:: sso_opt(2)
      LOGICAL:: total
      LOGICAL:: l_inpXML
+     REAL :: scaleCell
+     REAL :: scaleA1
+     REAL :: scaleA2
+     REAL :: scaleC
      REAL :: ellow
      REAL :: elup
      REAL :: rkmax
