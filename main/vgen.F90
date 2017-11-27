@@ -123,6 +123,10 @@ CONTAINS
     !     units: hartrees
     !
 
+    CALL vTot%resetPotDen()
+    CALL vCoul%resetPotDen()
+    CALL vx%resetPotDen()
+
     ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
          vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),xp(3,dimension%nspd),&
          vpw_exx(stars%ng3,dimension%jspd),vpw_wexx(stars%ng3,dimension%jspd),&

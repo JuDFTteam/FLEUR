@@ -922,6 +922,7 @@ MODULE m_types
      PROCEDURE :: init_potden_types
      PROCEDURE :: init_potden_simple
      GENERIC   :: init=>init_potden_types,init_potden_simple
+     PROCEDURE :: resetPotDen
   END TYPE t_potden
 CONTAINS
   SUBROUTINE usdus_init(ud,atoms,jsp)
@@ -1012,6 +1013,22 @@ CONTAINS
     pd%cdomvxy = CMPLX(0.0,0.0)
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
+
+  SUBROUTINE resetPotDen(pd)
+
+    IMPLICIT NONE
+
+    CLASS(t_potden),INTENT(INOUT) :: pd
+
+    pd%pw=CMPLX(0.0,0.0)
+    pd%mt=0.0
+    pd%vacz=0.0
+    pd%vacxy=CMPLX(0.0,0.0)
+    pd%cdom = CMPLX(0.0,0.0)
+    pd%cdomvz = CMPLX(0.0,0.0)
+    pd%cdomvxy = CMPLX(0.0,0.0)
+    pd%mmpMat = CMPLX(0.0,0.0)
+  END SUBROUTINE resetPotDen
 
  
 END MODULE m_types
