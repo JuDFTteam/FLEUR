@@ -26,11 +26,9 @@
 !     *******************************************************
 !
       CONTAINS
-        SUBROUTINE inped( &
-             & atoms,obsolete,vacuum,&
-             & input,banddos,xcpot,sym,&
-             & cell,sliceplot,noco,&
-             & stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
+        SUBROUTINE inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
+                         cell,sliceplot,noco,&
+                         stars,oneD,jij,hybrid,kpts,a1,a2,a3,namex,relcor)
           USE m_rwinp
           USE m_chkmt
           USE m_inpnoco
@@ -56,7 +54,6 @@
           TYPE(t_jij),       INTENT(INOUT) :: jij
           TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
-          REAL,              INTENT(OUT)   :: scale
           REAL,              INTENT(OUT)   :: a1(3)
           REAL,              INTENT(OUT)   :: a2(3)
           REAL,              INTENT(OUT)   :: a3(3)
@@ -88,7 +85,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,scale)
+               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -139,9 +136,9 @@
              CALL juDFT_error("latnam",calledby ="inped")
           ENDIF
           dtild=a3(3)
-          IF (scale.EQ.0.) scale = 1.
-          vacuum%dvac = scale*vacuum%dvac
-          dtild = scale*dtild
+          IF (input%scaleCell.EQ.0.0) input%scaleCell = 1.0
+          vacuum%dvac = input%scaleCell*vacuum%dvac
+          dtild = input%scaleCell*dtild
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
              IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
@@ -164,11 +161,11 @@
           IF (vacuum%nmz>vacuum%nmzd)  CALL juDFT_error("nmzd",calledby ="inped")
           vacuum%nmzxy = vacuum%nmzxyd
           IF (vacuum%nmzxy>vacuum%nmzxyd)  CALL juDFT_error("nmzxyd",calledby ="inped")
-          a1(:) = scale*a1(:)
-          a2(:) = scale*a2(:)
-          a3(:) = scale*a3(:)
-          WRITE (6,FMT=8050) scale
-          WRITE (16,FMT=8050) scale
+          a1(:) = input%scaleCell*a1(:)
+          a2(:) = input%scaleCell*a2(:)
+          a3(:) = input%scaleCell*a3(:)
+          WRITE (6,FMT=8050) input%scaleCell
+          WRITE (16,FMT=8050) input%scaleCell
 8050      FORMAT (' unit cell scaled by    ',f10.6)
           WRITE (6,FMT=8060) cell%z1
           WRITE (16,FMT=8060) cell%z1
@@ -349,7 +346,7 @@
                 !
                 !--->   for films, the z-coordinates are given in absolute values:
                 !
-                IF (input%film) atoms%taual(3,na) = scale*atoms%taual(3,na)/a3(3)
+                IF (input%film) atoms%taual(3,na) = input%scaleCell*atoms%taual(3,na)/a3(3)
                 !
                 ! Transform intern coordinates to cartesian:
                 !

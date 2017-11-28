@@ -79,7 +79,7 @@
           CHARACTER(len=12)             :: relcor, tempNumberString
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
-          REAL                          :: scale, dtild, phi_add
+          REAL                          :: dtild, phi_add
           LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
 
 #ifdef CPP_MPI
@@ -144,6 +144,10 @@
           input%ldauMixParam = 0.05
           input%ldauSpinf = 1.0
           input%pallst = .FALSE.
+          input%scaleCell = 1.0
+          input%scaleA1 = 1.0
+          input%scaleA2 = 1.0
+          input%scaleC = 1.0
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
@@ -167,11 +171,10 @@
                 a1 = 0.0
                 a2 = 0.0
                 a3 = 0.0
-                scale = 1.0
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
                      cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
-                     noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+                     noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
 
@@ -190,7 +193,7 @@
                 CALL w_inpXML(&
                               atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
                               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-                              noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
+                              noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
                              .TRUE.,numSpecies,enpara)
@@ -220,14 +223,8 @@
              jij%phnd=1
              !--- J>
 
-             CALL dimens(&
-                  &            mpi,input,&
-                  &            sym,stars,&
-                  &            atoms,sphhar,&
-                  &            DIMENSION,vacuum,&
-                  &            obsolete,kpts,&
-                  &            oneD,hybrid,Jij)
-
+             CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
+                         obsolete,kpts,oneD,hybrid,Jij)
 
              DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
              DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
@@ -309,10 +306,9 @@
              !+t3e
              IF (mpi%irank.EQ.0) THEN
                 !-t3e
-                CALL inped(atoms,obsolete,vacuum,&
-                           input,banddos,xcpot,sym,&
+                CALL inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
                            cell,sliceplot,noco,&
-                           stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
+                           stars,oneD,jij,hybrid,kpts,a1,a2,a3,namex,relcor)
                 !
                 IF (xcpot%is_gga()) THEN
                    ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
@@ -396,15 +392,15 @@
                       WRITE(tempNumberString,'(i0)') i
                       atoms%speciesName(i) = TRIM(ADJUSTL(noel(speciesRepAtomType(i)))) // '-' // TRIM(ADJUSTL(tempNumberString))
                    END DO
-                   a1(:) = a1(:) / scale
-                   a2(:) = a2(:) / scale
-                   a3(:) = a3(:) / scale
+                   a1(:) = a1(:) / input%scaleCell
+                   a2(:) = a2(:) / input%scaleCell
+                   a3(:) = a3(:) / input%scaleCell
                    kpts%specificationType = 3
                    sym%symSpecType = 3
                    CALL w_inpXML(&
                                  atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
                                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-                                 noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment,&
+                                 noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                                  xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                                  atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
                                  .TRUE.,numSpecies,enpara)
