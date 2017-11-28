@@ -707,7 +707,8 @@ c*********************************************************
       allocate ( vr(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )
       allocate ( vso(atoms%jmtd,atoms%nat,2) )
 
-      vz = vTot%vacz
+      vz = 0.0
+      vz(:,:,:SIZE(vTot%vacz,3)) = vTot%vacz(:,:,:)
 
       do jspin = 1,input%jspins
         do n = 1, atoms%ntype
