@@ -15,9 +15,10 @@ c**********************************************************
       SUBROUTINE wann_wan90prep(
      >      jspins,amat,bmat,natd,taual_inp,zatom,ntype,
      >      ntypd,neq,l_bzsym,film,l_onedimens,l_ms,l_sgwf,l_socgwf,
-     >      aux_latt_const,param_file,l_dim)
+     >      aux_latt_const,param_file,l_dim,wan90version)
 
       USE m_wann_postproc_setup
+      USE m_wann_postproc_setup2
       USE m_wann_postproc_setup4
       USE m_wann_postproc_setup5
       use m_wann_get_mp
@@ -40,6 +41,8 @@ c**********************************************************
       real,intent(in)     :: zatom(ntype)
       integer,intent(in)  :: neq(ntypd)
       logical,intent(in)  :: l_onedimens
+      integer,intent(in)  :: wan90version
+
 
       character(len=20),intent(in) :: param_file
 
@@ -200,10 +203,17 @@ c******************************************************
 c     call wannier90 routines to get bkpts
 c******************************************************
 #ifdef CPP_WANN
-      call wann_postproc_setup(
+      IF(wan90version.le.2)then !wanversion 1.1 and 1.2
+        call wann_postproc_setup(
      >         natd,nkpts,kpoints,amat_ang,bmat_ang,
      >         num,num_bands,ntype,neq,
      >         zatom,taual,namat,win_filename,'bkpts')
+	  else !wanversion 2.0
+        call wann_postproc_setup2(
+     >         natd,nkpts,kpoints,amat_ang,bmat_ang,
+     >         num,num_bands,ntype,neq,
+     >         zatom,taual,namat,win_filename,'bkpts')
+	  endif
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier setup'
       WRITE(*,*) 'but the Wannier90 library is not linked.'
@@ -234,10 +244,17 @@ c******************************************************
      >      qpoints,zatom,taual_q,namat,3)
 
 #ifdef CPP_WANN
-      call wann_postproc_setup(
+      if(wan90version.le.2)then !wanversion 1.1 and 1.2
+        call wann_postproc_setup(
      >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
      >         numq,num_bands,ntype,neq,
      >         zatom,taual_q,namat,'WF1_q','bqpts')
+	  else !wanversion 2.0
+        call wann_postproc_setup2(
+     >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
+     >         numq,num_bands,ntype,neq,
+     >         zatom,taual_q,namat,'WF1_q','bqpts')
+	  endif
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier setup'
       WRITE(*,*) 'but the Wannier90 library is not linked.'

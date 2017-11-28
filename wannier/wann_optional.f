@@ -84,7 +84,8 @@ c-----generate WF1.win and bkpts
      >            atoms%nat,atoms%taual,atoms%zatom,atoms%ntype,
      >            atoms%ntype,atoms%neq,wann%l_bzsym,input%film,
      >            oneD%odi%d1,wann%l_ms,wann%l_sgwf,wann%l_socgwf,
-     >            wann%aux_latt_const,wann%param_file,wann%l_dim)
+     >            wann%aux_latt_const,wann%param_file,wann%l_dim,
+     >            wann%wan90version)
       endif
 
 c-----calculate polarization, if not wannierize
