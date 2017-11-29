@@ -87,7 +87,7 @@ CONTAINS
     !     read from eigenvalue and -vector file
     !
 
-    l_real=sym%invs.and..not.noco%l_noco
+    l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
     zmat%l_real=l_real
     zmat%nbasfcn=dimension%nbasfcn
     zmat%nbands=dimension%neigd
