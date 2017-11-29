@@ -126,7 +126,7 @@ CONTAINS
     ALLOCATE ( kveclo(atoms%nlotot) )
     !     ..
     
-    l_real=sym%invs.AND..NOT.noco%l_noco
+    l_real=sym%invs.AND..NOT.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
     IF (noco%l_soc.AND.l_real.AND.hybrid%l_hybrid ) THEN
        CALL juDFT_error('hybrid functional + SOC + inv.symmetry is not tested', calledby='eigen')
     END IF
