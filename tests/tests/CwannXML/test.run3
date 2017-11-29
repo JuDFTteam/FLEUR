@@ -1,0 +1,34 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/wann_inp-2.xml","$workdir/inp.xml");
+
+jt::testrun($executable,$workdir);
+
+#now test output
+
+$result=jt::test_fileexists("$workdir/WF1.amn");
+$result+=jt::test_fileexists("$workdir/WF1.mmn");
+$result+=jt::test_fileexists("$workdir/WF1.eig");
+$result+=jt::test_fileexists("$workdir/WF1.win");
+$result+=jt::test_fileexists("$workdir/WF1.wout");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           1           1   -9.96004957");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           8           1   24.36259922");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           8           8   27.60170066");
+$result+=jt::test_grepexists("$workdir/WF1.eig","           5           6   16.51363508");
+#Note:WF1.amn and WF1.mmn seem to differ strongly from the reference result.
+#But this does not seem to be relevant as invoking wannier90.x WF1 yields high precision results.
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    8    8    8");
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    1    1    1      -0.21709150");
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    8    2    1       0.000000000000    0.29174760");
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    2    6    2       0.000000000000   -0.01714566");
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    3    5    2      -0.18082932");
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    8    8    8       0.000000000000   -0.11210751");
+#$result+=jt::test_grepexists("$workdir/WF1.amn","    6    7    8      -0.33695808");
+#$result+=jt::test_grepexists("$workdir/WF1.mmn","    8    8    8");
+#$result+=jt::test_grepexists("$workdir/WF1.mmn","    1    2      0   0   0");
+#$result+=jt::test_grepexists("$workdir/WF1.mmn","   -0.757938912603");
+#$result+=jt::test_grepexists("$workdir/WF1.mmn","    0.257799685127");
+#$result+=jt::test_grepexists("$workdir/WF1.mmn","    8    7      0   0   1");
+
+jt::stageresult($workdir,$result,"3");

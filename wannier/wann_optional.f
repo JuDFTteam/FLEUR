@@ -7,7 +7,7 @@
       module m_wann_optional
       use m_juDFT
       contains
-      subroutine wann_optional(input,atoms,sym,cell,oneD,noco,wann)
+      subroutine wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
 c**************************************************
 c     Make preparations for the calculation of 
 c     Wannier functions.
@@ -27,6 +27,7 @@ c**************************************************
       implicit none
 
       TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_kpts),      INTENT(IN)    :: kpts
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
@@ -40,8 +41,7 @@ c**************************************************
       l_nocosoc=noco%l_noco.or.noco%l_soc
 
 c-----read the input file to determine what to do
-      call wann_read_inp(
-     >         .true.,wann)
+      call wann_read_inp(input,.true.,wann)
 
 c-----generate projection-definition-file
       if(wann%l_projgen) then
@@ -79,7 +79,7 @@ c-----find Wannier-irreducible part of BZ
 
 c-----generate WF1.win and bkpts
       if(wann%l_prepwan90)then
-         call wann_wan90prep(
+         call wann_wan90prep(input,kpts,
      >            input%jspins,cell%amat,cell%bmat,
      >            atoms%nat,atoms%taual,atoms%zatom,atoms%ntype,
      >            atoms%ntype,atoms%neq,wann%l_bzsym,input%film,

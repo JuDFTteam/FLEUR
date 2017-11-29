@@ -1877,13 +1877,14 @@ SUBROUTINE r_inpXML(&
         ELSE
            wann%band_max(2) = wann%band_max(1)
         END IF
+        wann%l_byindex = .TRUE.
      END IF
 
      xPathA = '/fleurInput/output/wannier/jobList'
      numberNodes = xmlGetNumberOfNodes(xPathA)
 
      IF (numberNodes.EQ.1) THEN
-        xPathA = 'normalize-space(/fleurInput/output/wannier/jobList/text())[1]'
+        xPathA = '/fleurInput/output/wannier/jobList/text()'
 
         ! Note: At the moment only 255 characters for the text in this node. Maybe this is not enough.
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))

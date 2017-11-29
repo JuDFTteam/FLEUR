@@ -292,9 +292,7 @@ c-----initializations
       nkpts = nkpt
 
 c-----read the input file to determine what to do
-      call wann_read_inp(
-     >         l_p0,
-     <         wann)
+      call wann_read_inp(input,l_p0,wann)
 
       IF(wann%l_byenergy.AND.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wann_updown")

@@ -109,7 +109,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
     INTEGER:: n,it,ithf,pc
-    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix, l_error
+    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix, l_error, l_wann_inp
     REAL   :: fermiEnergyTemp, fix
     !--- J<
     INTEGER             :: phn
@@ -152,11 +152,11 @@ CONTAINS
 
 
     !+Wannier
-    input%l_wann = .FALSE.
-    INQUIRE (file='wann_inp',exist=input%l_wann)
+    INQUIRE (file='wann_inp',exist=l_wann_inp)
+    input%l_wann = input%l_wann.OR.l_wann_inp
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-       CALL wann_optional(input,atoms,sym,cell,oneD,noco,wann)
+       CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
     IF (wann%l_gwf) input%itmax = 1
     
@@ -559,10 +559,8 @@ CONTAINS
              !        ----> charge density
              !
              !+Wannier functions
-             input%l_wann = .FALSE.
-             INQUIRE (file='wann_inp',exist=input%l_wann)
              IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
-                CALL wannier(DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,&
+                CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
                      wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
                      eig_idList,(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
              END IF

@@ -73,7 +73,6 @@ wannier/wann_projmethod.F
 wannier/wann_radovlp_integrals.F
 wannier/wann_rad_twf.f
 wannier/wann_readcenters.f
-wannier/wann_read_inp.f
 wannier/wann_read_umatrix.F
 wannier/wann_real.F
 wannier/wann_rmat.f
@@ -99,4 +98,5 @@ wannier/bs_comfort.F
 )
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
+wannier/wann_read_inp.f90
 )

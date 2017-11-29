@@ -137,6 +137,7 @@
              ENDIF
           ENDIF
 
+          input%l_wann = .FALSE.
           CALL initWannierDefaults(wann)
 
           input%minDistance = 0.0
@@ -574,17 +575,8 @@
           END IF
 
           ! Initializations for Wannier functions (start)
-          wann%l_ms=.false.
-          wann%l_sgwf=.false.
-          wann%l_socgwf=.false.
-          wann%l_gwf=.false.
-          wann%l_bs_comf=.false. !.true.
-          wann%scale_param = 1.0
-          wann%aux_latt_const = 8.0!5.5!5.45886450 !5.98136400 !8.0725882513951497 !5.4170 !1.0
-          wann%param_file='qpts'
-          wann%l_dim=.false.
           IF (mpi%irank.EQ.0) THEN
-#ifdef CPP_WANN             
+#ifdef CPP_WANN
              INQUIRE(FILE='plotbscomf',EXIST=wann%l_bs_comf)
              WRITE(*,*)'l_bs_comf=',wann%l_bs_comf
              WRITE(*,*) 'Logical variables for wannier functions to be read in!!'

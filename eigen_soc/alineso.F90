@@ -59,7 +59,7 @@ CONTAINS
     INTEGER   i,i1 ,j,jsp,jsp1,k,ne,nn,nn1,nrec,info
     INTEGER   idim_c,idim_r,jsp2,nbas,j1
     CHARACTER vectors 
-    LOGICAL   l_file,l_socvec,l_qsgw,l_open,l_real
+    LOGICAL   l_socvec,l_qsgw,l_open,l_real
     INTEGER   irec,irecl_qsgw
     COMPLEX   cdum
     !     ..
@@ -316,14 +316,13 @@ else
        !          i                      +
        ! reorder new e.w.  in 2x2 spin space : zhelp(,1),zhelp(,2)
        !
-       INQUIRE (file='wann_inp',exist=l_file)
 
        DO i1 = 1,2
 
           jsp = i1
           jsp2= i1
           IF (input%jspins.EQ.1) jsp = 1
-          IF (input%jspins.EQ.1 .AND..NOT.(l_file.OR.l_socvec)) jsp2=1
+          IF (input%jspins.EQ.1 .AND..NOT.(input%l_wann.OR.l_socvec)) jsp2=1
           IF (i1.EQ.1) nn = 0
           IF (i1.EQ.2) nn = nsz(1)
 

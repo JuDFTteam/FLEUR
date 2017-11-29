@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wannier(
-     >      DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,
+     >      DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,
      >      wann,noco,cell,enpara,banddos,sliceplot,vTot,results,
      >      eig_idList,l_real,nkpt)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -118,6 +118,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       TYPE(t_dimension), INTENT(IN) :: DIMENSION
       TYPE(t_mpi),       INTENT(IN) :: mpi
       TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),       INTENT(IN) :: sym
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_stars),     INTENT(IN) :: stars
@@ -374,9 +375,8 @@ c-----initializations
 c-----read the input file to determine what to do
       wann%atomlist_num=atoms%nat
       wann%oc_num_orbs=atoms%nat
-      call wann_read_inp(
-     >         l_p0,
-     <         wann)
+
+      CALL wann_read_inp(input,l_p0,wann)
 
 
 c-----input file for orbital decomposition
@@ -442,8 +442,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       if(wann%l_matrixuHu)then
          wannTemp = wann
          call wann_uHu(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,vTot,wannTemp,eig_idList,
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -485,8 +485,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       if(wann%l_matrixuHu_dmi)then
          wannTemp = wann
          call wann_uHu_dmi(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,vTot,wannTemp,eig_idList,
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -678,7 +678,7 @@ c********************************************************
          call cpu_time(delta)
          allocate(maptopair(3,fullnkpts,nntot))
          allocate(pair_to_do(fullnkpts,nntot))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
      >     irreduc,mapkoper,l_p0,input%film,sym%nop,sym%invtab,sym%mrot,
      >     oneD%odi%d1,sym%tau,
@@ -691,7 +691,7 @@ c********************************************************
       if(wann%l_matrixmmn.AND.l_gwf)then 
          allocate(maptopair_q(3,fullnqpts,nntot_q))
          allocate(pair_to_do_q(fullnqpts,nntot_q))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
      >     irreduc_q,mapqoper,l_p0,.false.,1,sym%invtab(1),
      >     sym%mrot(:,:,1),.false.,sym%tau,
@@ -2836,7 +2836,7 @@ c************************************************c
       write(*,*)'time_total wannier=',time_total
 
       call wann_postproc(
-     >         DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >         DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
      >         lapw,oneD,noco,cell,vTot,eig_id,l_real,                !eig_id is used here after closing the files?!
      >         mpi%mpi_comm,wann,l_p0,input%film,input%jspins,stars%ng2,
      >         atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,

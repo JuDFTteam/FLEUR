@@ -19,8 +19,8 @@ c*******************************************c
       USE m_juDFT
       CONTAINS
       SUBROUTINE wann_uHu_dmi(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,vTot,wann,
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      banddos,oneD,noco,cell,vTot,wann,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -77,6 +77,7 @@ c*******************************************c
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_banddos),INTENT(IN)   :: banddos
@@ -287,9 +288,7 @@ c     ..initializations..
       
 
 c-----read the input file to determine what to do
-      call wann_read_inp(
-     >         l_p0,
-     <         wann)
+      call wann_read_inp(input,l_p0,wann)
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wannier")
@@ -442,7 +441,7 @@ c      find symmetry-related elements in mmkb
 c********************************************************
          allocate(maptopair(3,fullnkpts,nntot))
          allocate(pair_to_do(fullnkpts,nntot))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
      >     irreduc,mapkoper,l_p0,film,nop,invtab,mrot,odi%d1,
      >     tau,
@@ -452,7 +451,7 @@ c********************************************************
       if(l_gwf)then 
          allocate(maptopair_q(3,fullnqpts,nntot_q))
          allocate(pair_to_do_q(fullnqpts,nntot_q))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
      >     irreduc_q,mapqoper,l_p0,.false.,1,invtab(1),mrot(:,:,1),
      >     .false.,tau,

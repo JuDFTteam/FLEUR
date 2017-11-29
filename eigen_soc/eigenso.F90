@@ -51,7 +51,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER i,j,nk,jspin,n ,l
     INTEGER n_loc,n_plus,i_plus,n_end,nsz,nmat
-    LOGICAL l_file,l_socvec   !,l_all
+    LOGICAL l_socvec   !,l_all
     INTEGER wannierspin
     TYPE(t_enpara) :: enpara
     TYPE(t_usdus):: usdus
@@ -90,8 +90,7 @@ CONTAINS
          enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
          enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
 
-    INQUIRE (file='wann_inp',exist=l_file)
-    IF (l_file.OR.l_socvec) THEN
+    IF (input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
     ELSE
        wannierspin = input%jspins

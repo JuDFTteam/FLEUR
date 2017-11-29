@@ -6,13 +6,14 @@
 
       MODULE m_wann_wan90prep
       use m_juDFT
+      USE m_types
 c**********************************************************
 c         prepares WF//spin12(jspin)//.win for 
 c         input to wannier90 and creates bkpts file
 c                FF, September 2006
 c**********************************************************
       CONTAINS
-      SUBROUTINE wann_wan90prep(
+      SUBROUTINE wann_wan90prep(input,kpts,
      >      jspins,amat,bmat,natd,taual_inp,zatom,ntype,
      >      ntypd,neq,l_bzsym,film,l_onedimens,l_ms,l_sgwf,l_socgwf,
      >      aux_latt_const,param_file,l_dim,wan90version)
@@ -29,6 +30,9 @@ c**********************************************************
 
       IMPLICIT NONE
 
+
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_kpts), INTENT(IN)  :: kpts
       integer,intent(in)  :: jspins
       integer,intent(in)  :: ntype
       integer,intent(in)  :: ntypd
@@ -101,11 +105,11 @@ c**********************************************************
 c**********************************************************
 c     Read in kpoints from kpts/w90kpts file.
 c**********************************************************
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         l_bzsym,film,l_onedimens,.false.,
      <         nkpts,kpoints)
       allocate(kpoints(3,nkpts))
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         l_bzsym,film,l_onedimens,.true.,
      <         nkpts,kpoints)
 

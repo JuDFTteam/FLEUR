@@ -17,8 +17,8 @@ endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
 if (${FLEUR_USE_WANN})
-    set(Testdirs ${Testdirs} Cwann)
-    set(ParTestdirs ${ParTestdirs} Cwann)
+    set(Testdirs ${Testdirs} Cwann CwannXML)
+    set(ParTestdirs ${ParTestdirs} Cwann CwannXML)
 endif()
 
 #The serial tests

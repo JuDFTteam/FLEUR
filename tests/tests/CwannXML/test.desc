@@ -1,0 +1,11 @@
+$test_name="C: simple test for the Wannier code with inp.xml";
+$test_code="Fleur";
+$test_stages=3;
+$test_desc=<<EOF
+Simple test of Fleur with three steps:
+1.Generate a starting density and run 1 iteration
+2.Generate projections for Wannier functions
+3.Generate input for Wannier90 code
+Uses: Wannier
+EOF
+;

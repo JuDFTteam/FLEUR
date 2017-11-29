@@ -7,7 +7,7 @@
       module m_wann_postproc
       contains 
       subroutine wann_postproc(
-     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
      >          lapw,oneD,noco,cell,vTot,eig_id,l_real,
      >          mpi_comm,wann,l_p0,film,jspins,n2d,
      >          natd,pos,amat,bmat,ntype,neq,zatom,
@@ -72,6 +72,7 @@ c***********************************************
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_lapw),INTENT(IN)      :: lapw
@@ -135,7 +136,7 @@ c***********************************************
 c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 
       character(len=12) :: fending
-      integer :: i,kpts,ikpt,nkqpts,iqpt
+      integer :: i,nkpts,ikpt,nkqpts,iqpt
       real(4) :: delta3,time_lapw_expand,delta2,time_lapw_plot
       logical :: l_need_fft,l_file
       integer :: hopmin_z,hopmax_z
@@ -156,16 +157,16 @@ c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 c***************************************************
 c     Read in the kpoints from w90kpts or kpts.
 c***************************************************      
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         wann%l_bzsym,film,odi%d1,.false.,
-     <         kpts,kpoints)
-      if (kpts /= fullnkpts)
+     <         nkpts,kpoints)
+      if (nkpts /= fullnkpts)
      +  CALL juDFT_error ('mismatch in number of kpoints',
      +                  calledby="wann_postproc")
 
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         wann%l_bzsym,film,odi%d1,.true.,
-     <         kpts,kpoints)
+     <         nkpts,kpoints)
 c*********************************************************
 c     Find out the structure of k-point set.
 c*********************************************************

@@ -6,8 +6,9 @@
 
       module m_wann_get_kpts
       use m_juDFT
+      USE m_types
       contains
-      subroutine wann_get_kpts(
+      subroutine wann_get_kpts(input,kpts,
      >               l_bzsym,film,l_onedimens,l_readkpts,
      <               nkpts,kpoints)
 c********************************************************
@@ -16,6 +17,8 @@ c
 c     Frank Freimuth
 c********************************************************
       implicit none
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_kpts), INTENT(IN)  :: kpts
       logical,intent(in)  :: l_bzsym,film
       logical,intent(in)  :: l_onedimens,l_readkpts
       integer,intent(out) :: nkpts
@@ -41,28 +44,39 @@ c********************************************************
             do iter=1,nkpts
                read(987,*)kpoints(:,iter)
             enddo
-         endif   
+         endif
+         close(987)
       else
-         inquire(file='kpts',exist=l_file)
-         IF(.NOT.l_file) CALL juDFT_error("where is kpts?",calledby
-     +        ="wann_get_kpts")
-         open(987,file='kpts',status='old',form='formatted')
-         read(987,*)nkpts,scale
-         write(6,*)"wann_get_kpts: nkpts=",nkpts
-         if(l_readkpts)then
-            IF(SIZE(kpoints,1)/=3) CALL juDFT_error("wann_get_kpts: 1"
-     +           ,calledby ="wann_get_kpts")
-            IF(SIZE(kpoints,2)/=nkpts)CALL juDFT_error("wann_get_kpts:2"
-     +           ,calledby ="wann_get_kpts")
-            do iter=1,nkpts
-               read(987,*)kpoints(:,iter)
-            enddo
-         endif   
+         IF(.NOT.input%l_inpXML) THEN
+            inquire(file='kpts',exist=l_file)
+            IF(.NOT.l_file) CALL juDFT_error("where is kpts?",calledby
+     +           ="wann_get_kpts")
+            open(987,file='kpts',status='old',form='formatted')
+            read(987,*)nkpts,scale
+            write(6,*)"wann_get_kpts: nkpts=",nkpts
+            if(l_readkpts)then
+               IF(SIZE(kpoints,1)/=3) 
+     +            CALL juDFT_error("wann_get_kpts: 1",
+     +                             calledby ="wann_get_kpts")
+               IF(SIZE(kpoints,2)/=nkpts)
+     +            CALL juDFT_error("wann_get_kpts:2",
+     +                             calledby ="wann_get_kpts")
+               do iter=1,nkpts
+                  read(987,*)kpoints(:,iter)
+               enddo
+            endif
+            close(987)
+         ELSE
+            nkpts = kpts%nkpt
+            if(l_readkpts)then
+               do iter=1,nkpts
+                  kpoints(:,iter) = kpts%bk(:,iter)
+               enddo
+            endif
+         END IF
       endif
 
-      close(987)
-
-      if(l_readkpts)then
+      if(l_readkpts.AND..NOT.input%l_inpXML)then
          kpoints=kpoints/scale
          if(film.and..not.l_onedimens)then 
             kpoints(3,:)=0.0
