@@ -68,6 +68,7 @@ c********************************************************
             close(987)
          ELSE
             nkpts = kpts%nkpt
+            write(6,*)"wann_get_kpts: nkpts=",nkpts
             if(l_readkpts)then
                do iter=1,nkpts
                   kpoints(:,iter) = kpts%bk(:,iter)
@@ -80,11 +81,13 @@ c********************************************************
          kpoints=kpoints/scale
          if(film.and..not.l_onedimens)then 
             kpoints(3,:)=0.0
-         endif   
+         endif
+      endif
+      IF (l_readkpts) THEN
          do iter=1,nkpts
             write(6,*)kpoints(:,iter)
          enddo
-      endif
+      END IF
 
       end subroutine wann_get_kpts
       end module m_wann_get_kpts

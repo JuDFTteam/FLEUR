@@ -575,6 +575,13 @@ subroutine wann_read_inp(input,l_p0,wann)
          endif
       enddo
 
+      IF (wann%l_byindex) THEN
+         if(l_p0)write(6,*)"band_min1=",wann%band_min(1)
+         if(l_p0)write(6,*)"band_max1=",wann%band_max(1)
+         if(l_p0)write(6,*)"band_min2=",wann%band_min(2)
+         if(l_p0)write(6,*)"band_max2=",wann%band_max(2)
+      END IF
+
    END IF ! l_file
 
 

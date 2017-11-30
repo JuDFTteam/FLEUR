@@ -1878,6 +1878,11 @@ SUBROUTINE r_inpXML(&
            wann%band_max(2) = wann%band_max(1)
         END IF
         wann%l_byindex = .TRUE.
+        IF(input%l_wann) THEN
+           IF (dimension%neigd.LT.MAX(wann%band_max(1),wann%band_max(2))) THEN
+              dimension%neigd = MAX(wann%band_max(1),wann%band_max(2))
+           END IF
+        END IF
      END IF
 
      xPathA = '/fleurInput/output/wannier/jobList'
