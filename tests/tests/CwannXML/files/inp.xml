@@ -4,7 +4,7 @@
       unnamed project                                                                 
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="4.00000000" Gmax="13.79155315" GmaxXC="11.60000000" numbands="0"/>
+      <cutoffs Kmax="4.00000000" Gmax="13.90" GmaxXC="11.60000000" numbands="8"/>
       <scfLoop itmax="1" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
       <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
