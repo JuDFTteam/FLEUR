@@ -18,6 +18,7 @@ c******************************************************************
       subroutine wannier_to_lapw(
      >      mpi_comm,eig_id,l_real,
      >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
+     >      vTot,
      >      l_soc,unigrid,sortrule,band_min,band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -36,7 +37,6 @@ c******************************************************************
       use m_radflo
       use m_cdnread, only : cdn_read0
       use m_types
-      use m_loddop
       use m_constants
       use m_wann_real
       use m_xsf_io
@@ -57,6 +57,7 @@ c******************************************************************
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_sphhar),INTENT(IN) :: sphhar
+      TYPE(t_potden),INTENT(IN) :: vTot
 
 #ifdef CPP_MPI
       include 'mpif.h'
@@ -130,9 +131,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the parameters for the number of wfs
       integer :: nwfs
 !!! the potential in the spheres and the vacuum
-      real, allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
-!!! auxiliary potentials
-      complex, allocatable :: vpw(:,:),vzxy(:,:,:,:)
+      real, allocatable :: vr(:,:,:)
 !!! bkpts data
       integer nntot,ikpt_help
       integer, allocatable :: gb(:,:,:),bpt(:,:)
@@ -235,28 +234,15 @@ c specify number of unit-cells that are calculated
 
 cccccccccccccccc   initialize the potential   cccccccccccc
 
-      allocate ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd) )
-      allocate ( vz(nmzd,2,jspd),vrf(jmtd,0:nlhd,ntypd,jspd) )
-      allocate ( vr(jmtd,ntypd,jspd) )
-
-      open (8,file='pottot',form='unformatted',status='old')
-      rewind (8)
-
-      call loddop(stars,vacuum,atoms,sphhar,input,sym,
-     >            8,
-     <            iter,vrf,vpw,vz,vzxy)
-
-      close (8)
+      allocate (vr(jmtd,ntypd,jspd))
 
       do jspin = 1,jspins
         do n = 1, ntype
           do j = 1,jri(n)
-            vr(j,n,jspin) = vrf(j,0,n,jspin)
+            vr(j,n,jspin) = vTot%mt(j,0,n,jspin)
           enddo
         enddo
       enddo
-
-      deallocate ( vpw,vzxy,vrf )
  
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
@@ -718,7 +704,7 @@ c****************************************************************
 110   continue ! end of cycle by spins
 
 
-      deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,kveclo,nv,k1,k2,k3 )
       deallocate ( ff,gg)
  
 #ifdef CPP_MPI

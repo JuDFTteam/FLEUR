@@ -5,45 +5,37 @@ MODULE m_brysh2
   !     proper component of interstitial, m.t. and vacuum density
   !******************************************************
 CONTAINS 
-  SUBROUTINE brysh2(&
-       &                  input,stars,atoms,sphhar,&
-       &                  noco,vacuum,&
-       &                  sym,s_in,&
-       &                  n_mmp,oneD,qpw,rho,rht,rhtxy,cdom,cdomvz,cdomvxy)
+  SUBROUTINE brysh2(input,stars,atoms,sphhar,noco,vacuum,&
+                    sym,s_in,oneD,den)
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_oneD),INTENT(IN)   :: oneD
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_sym),INTENT(IN)   :: sym
-    TYPE(t_stars),INTENT(IN)   :: stars
-    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
+    TYPE(t_oneD),INTENT(IN)      :: oneD
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_sym),INTENT(IN)       :: sym
+    TYPE(t_stars),INTENT(IN)     :: stars
+    TYPE(t_sphhar),INTENT(IN)    :: sphhar
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_potden),INTENT(INOUT) :: den
+
     REAL,    INTENT (IN) :: s_in(:)
-    REAL,    INTENT (OUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT) :: rht(vacuum%nmz,2,input%jspins)
-    COMPLEX, INTENT (OUT) :: qpw(stars%ng3,input%jspins),cdom(stars%ng3),cdomvz(vacuum%nmz,2)
-    COMPLEX, INTENT (OUT) :: rhtxy(vacuum%nmzxy,oneD%odi%n2d-1,2,input%jspins)
-    COMPLEX, INTENT (OUT) :: cdomvxy(vacuum%nmzxy,oneD%odi%n2d-1,2)
-    COMPLEX, INTENT (OUT) :: n_mmp(-3:3,-3:3,atoms%n_u,input%jspins)
-    !     ..
-    !     .. Local Scalars ..
+
+    ! Local Scalars
     INTEGER i,iv,j,js,k,l,n,na
-    !
+
     j=0
     DO  js = 1,input%jspins
        IF (sym%invs) THEN
           DO i = 1,stars%ng3
              j = j + 1
-             qpw(i,js) = CMPLX(s_in(j),0.0)
+             den%pw(i,js) = CMPLX(s_in(j),0.0)
           END DO
        ELSE
           DO i = 1,stars%ng3
              j = j + 1
-             qpw(i,js) = CMPLX(s_in(j),s_in(j+stars%ng3))
+             den%pw(i,js) = CMPLX(s_in(j),s_in(j+stars%ng3))
           END DO
           j = j + stars%ng3
        ENDIF
@@ -52,7 +44,7 @@ CONTAINS
           DO l = 0,sphhar%nlh(atoms%ntypsy(na))
              DO i = 1,atoms%jri(n)
                 j = j + 1
-                rho(i,l,n,js) = s_in(j)
+                den%mt(i,l,n,js) = s_in(j)
              END DO
           END DO
           na = na + atoms%neq(n)
@@ -61,19 +53,19 @@ CONTAINS
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                rht(k,iv,js) = s_in(j)
+                den%vacz(k,iv,js) = s_in(j)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   rhtxy(i,k,iv,js) = CMPLX(s_in(j),0.0)
+                   den%vacxy(i,k,iv,js) = CMPLX(s_in(j),0.0)
                 END DO
              END DO
              IF (.NOT.sym%invs2) THEN
                 DO k = 1,oneD%odi%nq2-1
                    DO i = 1,vacuum%nmzxy
                       j = j + 1
-                      rhtxy(i,k,iv,js) = rhtxy(i,k,iv,js) +CMPLX(0.0,s_in(j))
+                      den%vacxy(i,k,iv,js) = den%vacxy(i,k,iv,js) + CMPLX(0.0,s_in(j))
                    END DO
                 END DO
              END IF
@@ -85,34 +77,34 @@ CONTAINS
        !--->    off-diagonal part of the density matrix
        DO i = 1,stars%ng3
           j = j + 1
-          cdom(i) = CMPLX(s_in(j),0.0)
+          den%cdom(i) = CMPLX(s_in(j),0.0)
        END DO
        DO i = 1,stars%ng3
           j = j + 1
-          cdom(i) = cdom(i) + CMPLX(0.0,s_in(j))
+          den%cdom(i) = den%cdom(i) + CMPLX(0.0,s_in(j))
        END DO
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                cdomvz(k,iv) = CMPLX(s_in(j),0.0)
+                den%cdomvz(k,iv) = CMPLX(s_in(j),0.0)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   cdomvxy(i,k,iv) = CMPLX(s_in(j),0.0)
+                   den%cdomvxy(i,k,iv) = CMPLX(s_in(j),0.0)
                 END DO
              END DO
           END DO
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                cdomvz(k,iv) = cdomvz(k,iv) + CMPLX(0.0,s_in(j))
+                den%cdomvz(k,iv) = den%cdomvz(k,iv) + CMPLX(0.0,s_in(j))
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   cdomvxy(i,k,iv) = cdomvxy(i,k,iv)+ CMPLX(0.0,s_in(j))
+                   den%cdomvxy(i,k,iv) = den%cdomvxy(i,k,iv)+ CMPLX(0.0,s_in(j))
                 END DO
              END DO
           END DO
@@ -125,7 +117,7 @@ CONTAINS
              DO k = -3, 3
                 DO i = -3, 3
                    j = j + 1
-                   n_mmp(i,k,n,js) = CMPLX(s_in(j),s_in(j+1))
+                   den%mmpMat(i,k,n,js) = CMPLX(s_in(j),s_in(j+1))
                    j = j + 1
                 ENDDO
              ENDDO

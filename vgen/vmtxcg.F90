@@ -67,7 +67,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL vx(dimension%nspd,dimension%jspd),vxc(dimension%nspd,dimension%jspd),exc(dimension%nspd),rx(3,dimension%nspd)
-!    REAL vxl(dimension%nspd,dimension%jspd),vxcl(dimension%nspd,dimension%jspd),excl(dimension%nspd),divi
+    REAL vxcl(DIMENSION%nspd,DIMENSION%jspd),excl(DIMENSION%nspd),divi
+    TYPE(t_xcpot)::xcpot_tmp
     REAL wt(dimension%nspd),rr2(atoms%jmtd),thet(dimension%nspd)
     REAL agr(dimension%nspd),agru(dimension%nspd),agrd(dimension%nspd),g2r(dimension%nspd),g2ru(dimension%nspd)
     REAL g2rd(dimension%nspd),gggr(dimension%nspd),gggru(dimension%nspd),gggrd(dimension%nspd)
@@ -92,9 +93,10 @@ CONTAINS
     !     ..
     !     .. Intrinsic Functions ..
     INTRINSIC max,mod,min
+    LOGICAL l_gga
     !ta+
     !.....------------------------------------------------------------------
-
+    l_gga=xcpot%is_gga()
 
 #ifdef CPP_MPI
     CALL MPI_BCAST(obsolete%ndvgrd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -149,7 +151,10 @@ CONTAINS
             &       chlhdr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),chlhdrr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd))
 
     DO 200 n = n_start,atoms%ntype,n_stride
-
+       IF (xcpot%lda_atom(n))THEN
+          IF((.NOT.xcpot%is_name("pw91"))) CALL judft_error("Using locally LDA only possible with pw91 functional")
+          CALL xcpot_tmp%init("l91",.FALSE.)
+       ENDIF
        nat=sum(atoms%neq(:n-1))+1
        nd = atoms%ntypsy(nat)
 
@@ -170,7 +175,7 @@ CONTAINS
                 chlh(jr,lh,js) = rho(jr,lh,n,js)*rr2(jr)
              ENDDO
 
-             IF (xcpot%igrd.GT.0) THEN 
+             IF (l_gga) THEN 
                 CALL grdchlh(&
                      &                     ixpm,ist,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
                      &                     chlh(1,lh,js),obsolete%ndvgrd,&
@@ -185,17 +190,17 @@ CONTAINS
        !
        !$OMP PARALLEL DEFAULT(none) &
 #ifdef CPP_MPI
-       !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local, rhmn_reduced) &
+       !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local) &
 #endif
-       !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg) &
+       !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg,l_gga) &
        !$OMP& SHARED(dimension,mpi,sphhar,atoms,rho,xcpot,input,sym,obsolete)&
        !$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
-       !$OMP& SHARED(rx,wt,rr2,thet) &
+       !$OMP& SHARED(rx,wt,rr2,thet,xcpot_tmp) &
        !$OMP& SHARED(ylh,ylht,ylhtt,ylhf,ylhff,ylhtf) &
        !$OMP& SHARED(chlh,chlhdr,chlhdrr) &
        !$OMP& SHARED(ierr,n_start,n_stride) &
        !$OMP& PRIVATE(js,k,lh,i,rhmnm,elh,vlh) &
-       !$OMP& PRIVATE(vx,vxc,exc) &
+       !$OMP& PRIVATE(vx,vxc,exc,excl,vxcl,divi) &
        !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,grgru,grgrd,gzgr) &
        !$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
        ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
@@ -228,7 +233,7 @@ CONTAINS
                    ch(k,js) = ch(k,js) + ylh(k,lh,nd)*chlh(jr,lh,js)
                 ENDDO
 
-                IF (xcpot%igrd.GT.0) THEN
+                IF (l_gga) THEN
                    ! 
                    DO k = 1,nsp
                       chdr(k,js) =chdr(k,js)+ ylh(k,lh,nd)*chlhdr(jr,lh,js)
@@ -251,7 +256,7 @@ CONTAINS
              ENDDO ! lh
           ENDDO   ! js
 
-          IF (xcpot%igrd.GT.0) THEN
+          IF (l_gga) THEN
              CALL mkgylm(&
                   &                  input%jspins,atoms%rmsh(jr,n),thet,nsp,dimension%nspd,dimension%jspd,ch,chdr,&
                   &                  chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,&
@@ -298,18 +303,24 @@ CONTAINS
           !
           !         calculate the ex.-cor. potential
 
-          IF (mpi%irank == 0) THEN
-             IF (mod(jr,1000).eq.0)&
-                  &      WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp,iwb='',5i5,l3/&
-                  &            '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
-                  &            nsp,lwbc,((ch(k,js),k=1,nsp),js=1,input%jspins)
-          ENDIF !irank==0
-
+         
           CALL vxcallg(&
-               &                 xcpot%icorr,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
+               &                 xcpot,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-               &                 vx,vxc)!keep
+               &                 vx,vxc)
 
+          IF (xcpot%lda_atom(n)) THEN
+             ! Use local part of pw91 for this atom
+             CALL vxcallg(&
+                  xcpot_tmp,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
+                  g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
+                  vx,vxcl)
+             !Mix the potentials
+             divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
+             vxc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     vxc(:,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+          ENDIF
+ 
 
           IF (mpi%irank == 0) THEN
           IF (mod(jr,1000).eq.0)&
@@ -371,18 +382,19 @@ CONTAINS
              !
              !           calculate the ex.-cor energy density
              !
-             IF (mpi%irank == 0) THEN
-             IF (mod(jr,2500).EQ.0)&
-                  &        WRITE (6,'(/'' 9999ic,kr,stars%ig,js,nsp='',5i5/&
-                  &               '' ch''/(10d15.7))') xcpot%icorr,input%krla,xcpot%igrd,input%jspins,&
-                  &               nsp,((ch(k,js),k=1,nsp),js=1,input%jspins)
-             ENDIF !irank==0
-
-             CALL excallg(xcpot%icorr,lwbc,input%jspins,nsp,&
-                  &                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
-                  &                   gggr,gggru,gggrd,gzgr,&
-                  &                   exc)!keep
-
+             CALL excallg(xcpot,lwbc,input%jspins,nsp,&
+                  ch,agr,agru,agrd,g2r,g2ru,g2rd,&
+                  gggr,gggru,gggrd,gzgr, exc)
+             
+             IF (xcpot%lda_atom(n)) THEN
+             ! Use local part of pw91 for this atom
+                CALL excallg(xcpot_tmp,lwbc,input%jspins,nsp,&
+                     ch,agr,agru,agrd,g2r,g2ru,g2rd,&
+                     gggr,gggru,gggrd,gzgr, excl)
+                !Mix the potentials
+                exc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     exc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+             ENDIF
              IF (mpi%irank == 0) THEN
              IF (mod(jr,10000).EQ.0)&
                   &        WRITE (6,'(/'' 999exc''/(10d15.7))') (exc(k),k=1,nsp)
@@ -434,7 +446,7 @@ CONTAINS
     CALL MPI_ALLREDUCE(vr_local,vxr_local,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
     vr = vr + vxr_local
     CALL MPI_ALLREDUCE(excr_local,excr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
-     CALL MPI_ALLREDUCE(rhmn_local,rhmn_reduced,1,MPI_INTEGER,MPI_MIN,mpi%mpi_comm,ierr)
+     CALL MPI_ALLREDUCE(rhmn_local,rhmn_reduced,1,CPP_MPI_REAL,MPI_MIN,mpi%mpi_comm,ierr)
      IF (rhmn_reduced.LT.rhmn) THEN
              rhmn = rhmn_reduced
              ichsmrg = 1

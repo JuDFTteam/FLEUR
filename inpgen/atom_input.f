@@ -404,9 +404,11 @@
            d1  = mod(nint(atoms%zatom(n)),10)
            d10 = int( (nint(atoms%zatom(n)) + 0.5)/10 )
           aoff = iachar('1')-1
-          fname = 'corelevels.'//achar(d10+aoff)//achar(d1+aoff)
-          OPEN (27,file=fname,form='formatted')
-          write(27,'(i3)') natomst
+          IF(.NOT.input%l_inpXML) THEN
+             fname = 'corelevels.'//achar(d10+aoff)//achar(d1+aoff)
+             OPEN (27,file=fname,form='formatted')
+             write(27,'(i3)') natomst
+          END IF
 
           WRITE (6,*) '----------'
           electronsOnAtom = 0
@@ -417,7 +419,9 @@
             IF (coreocc(i,n) > 2*j) THEN
               j = - coreocc(i,n)
             ENDIF
-            write(27,'(4i3)') coreqn(1,i,n),coreqn(2,i,n),j,j
+            IF(.NOT.input%l_inpXML) THEN
+               write(27,'(4i3)') coreqn(1,i,n),coreqn(2,i,n),j,j
+            END IF
             xmlCoreStateNumber = 0
             SELECT CASE(coreqn(1,i,n))
                CASE (1)
@@ -494,7 +498,9 @@ c           the total spin is maximized
               ELSE
                 up = coreocc(i,n)
                 dn = 0
-              END IF
+             END IF
+             upreal=up
+             dnreal=dn
 
 c           in s and p states equal occupation of up and down states
 
@@ -508,8 +514,10 @@ c           in s and p states equal occupation of up and down states
               upReal = coreocc(i,n) / 2.0
               dnReal = coreocc(i,n) / 2.0
             END IF
-            WRITE(27,'(4i3,i4,a1)') coreqn(1,i,n),coreqn(2,i,n),up,dn,
-     &                      coreqn(1,i,n),lotype(lval(i,n))
+            IF(.NOT.input%l_inpXML) THEN
+               WRITE(27,'(4i3,i4,a1)') coreqn(1,i,n),coreqn(2,i,n),
+     &                             up,dn,coreqn(1,i,n),lotype(lval(i,n))
+            END IF
             xmlCoreStateNumber = 0
             SELECT CASE(coreqn(1,i,n))
                CASE (1)
@@ -575,7 +583,7 @@ c           in s and p states equal occupation of up and down states
              WRITE(6,5392) n, atoms%zatom(n), electronsOnAtom
           END IF
 
-          CLOSE(27)
+          IF(.NOT.input%l_inpXML) CLOSE(27)
 
           DO i = natomst,1,-1                    ! determine valence states
             IF (enpara%el0(lval(i,n),n,1) < -9999.8) THEN ! not processed already

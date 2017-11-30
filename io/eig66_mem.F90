@@ -63,7 +63,7 @@ CONTAINS
     !d%eig_eig
     length=jspins
     IF (l_noco) length=1
-    ALLOCATE(d%eig_eig(neig,jspins*nkpts))
+    ALLOCATE(d%eig_eig(neig,2,jspins*nkpts)) !additional dimension for w_iks
     !d%eig_vec
     if (l_real.and..not.l_soc) THEN
        ALLOCATE(d%eig_vecr(nmat*neig,length*nkpts))
@@ -94,7 +94,7 @@ CONTAINS
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(nmat),k2(nmat),k3(nmat),kveclo(nlotot)
-      REAL    :: eig(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(neig),w_iks(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
       TYPE(t_zmat):: zmat
 
       zmat%l_real=l_real
@@ -107,8 +107,8 @@ CONTAINS
       CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
-            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,zmat=zmat)
-            CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,zmat=zmat)
+            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
+            CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
          ENDDO
       ENDDO
       CALL close_eig_IO(tmp_id)
@@ -142,7 +142,7 @@ CONTAINS
       INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
       INTEGER :: k1(d%nmat),k2(d%nmat),k3(d%nmat),kveclo(SIZE(d%eig_int,1)-3-3*d%nmat)
-      REAL    :: eig(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(SIZE(d%eig_eig,1)),w_iks(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
       zmat%nbasfcn=d%nmat
@@ -153,8 +153,8 @@ CONTAINS
       CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
-               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,el,ello,evac,kveclo,zmat=zmat)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,el,ello,evac,nlotot,kveclo,zmat=zmat)
+               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
            ENDDO
       ENDDO
       CALL close_eig_DA(tmp_id)
@@ -225,13 +225,13 @@ CONTAINS
   END SUBROUTINE read_dos
 
 
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,el,&
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,w_iks,el,&
        ello,evac,kveclo,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
-    REAL,    INTENT(OUT),OPTIONAL  :: eig(:)
+    REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
@@ -267,8 +267,13 @@ CONTAINS
     !data from d%eig_eig
     IF (PRESENT(eig)) THEN
        eig=0.0
-       eig=d%eig_eig(:SIZE(eig),nrec)
+       eig=d%eig_eig(:SIZE(eig),1,nrec)
     ENDIF
+    IF (PRESENT(w_iks)) THEN
+       w_iks=0.0
+       w_iks=d%eig_eig(:SIZE(w_iks),2,nrec)
+    ENDIF
+    
     !data from d%eig_vec
 
     IF (PRESENT(zmat)) THEN
@@ -289,14 +294,14 @@ CONTAINS
 
 
   SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk, &
-       eig,el,ello,evac,                     &
+       eig,w_iks,el,ello,evac,                     &
        nlotot,kveclo,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total,nv,nmat,nlotot
     INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
-    REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:)
+    REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
     TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
     INTEGER::nrec
@@ -332,7 +337,10 @@ CONTAINS
     IF (PRESENT(ello)) d%eig_real(SIZE(d%eig_real,1)-SIZE(ello)+1:,nrec)=RESHAPE(ello,(/SIZE(ello)/))
     !data from d%eig_eig
     IF (PRESENT(eig)) THEN
-       d%eig_eig(:SIZE(eig),nrec)=eig
+       d%eig_eig(:SIZE(eig),1,nrec)=eig
+    ENDIF
+    IF (PRESENT(w_iks)) THEN
+       d%eig_eig(:SIZE(w_iks),2,nrec)=w_iks
     ENDIF
     !data from d%eig_vec
     IF (PRESENT(zmat)) THEN

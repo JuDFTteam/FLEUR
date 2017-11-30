@@ -28,7 +28,6 @@
       USE m_strgndim
       USE m_convndim
       USE m_inpeigdim
-      USE m_kptgen_hybrid
       USE m_ylm
       IMPLICIT NONE
 !
@@ -58,7 +57,7 @@
 !-------------------------------------------------------------------
 ! ..  Local Scalars ..
       REAL   :: thetad,xa,epsdisp,epsforce ,rmtmax,arltv1,arltv2,arltv3   
-      REAL   :: s,r,d ,idsprs,scale
+      REAL   :: s,r,d ,idsprs
       INTEGER :: ok,ilo,n,nstate,i,j,na,n1,n2,jrc,nopd,symfh
       INTEGER :: nmopq(3)
       
@@ -94,7 +93,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nmop,jij%nqpt,nmopq)
+                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,jij%nqpt,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
@@ -109,7 +108,7 @@
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype),&
      & jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype),noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
-     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),&
+     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
      & hybrid%lcutwf(atoms%ntype), STAT=ok)
 !
 !---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and 
@@ -117,7 +116,7 @@
       CALL rw_inp('r',&
      &            atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale)
+     &                  noel,namex,relcor,a1,a2,a3)
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp
@@ -192,9 +191,9 @@
 !
 ! ---> now, set the lattice harmonics, determine nlhd
 !
-      cell%amat(:,1) = a1(:)*scale
-      cell%amat(:,2) = a2(:)*scale
-      cell%amat(:,3) = a3(:)*scale
+      cell%amat(:,1) = a1(:)*input%scaleCell
+      cell%amat(:,2) = a2(:)*input%scaleCell
+      cell%amat(:,3) = a3(:)*input%scaleCell
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       IF (input%film) cell%omtil = cell%omtil/cell%amat(3,3)*vacuum%dvac
 !-odim
@@ -260,17 +259,14 @@
         CALL soc_sym(sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,error)
         IF ( ANY(error(:)) ) THEN
           WRITE(*,fmt='(1x)')
-          WRITE(*,fmt='(A)')&
-     &     'Symmetry incompatible with SOC spin-quantization axis ,'  
-          WRITE(*,fmt='(A)')&
-     &     'do not perform self-consistent calculations !'    
+          WRITE(*,fmt='(A)') 'Symmetry incompatible with SOC spin-quantization axis ,'  
+          WRITE(*,fmt='(A)') 'do not perform self-consistent calculations !'    
           WRITE(*,fmt='(1x)')
           IF ( input%eonly .or. (noco%l_soc.and.noco%l_ss) .or. input%gw.ne.0 ) THEN  ! .or. .
             CONTINUE 
           ELSE 
             IF (input%itmax>1) THEN
-               CALL juDFT_error("symmetry & SOC",calledby&
-     &              ="dimen7")
+               CALL juDFT_error("symmetry & SOC",calledby ="dimen7")
             ENDIF 
           ENDIF 
         ENDIF           
@@ -282,8 +278,7 @@
       IF (noco%l_ss) THEN  ! test symmetry for spin-spiral
         ALLOCATE ( error(sym%nop) )
         CALL ss_sym(sym%nop,sym%mrot,noco%qss,error)
-        IF ( ANY(error(:)) )  CALL juDFT_error("symmetry & SSDW",&
-     &       calledby="dimen7")
+        IF ( ANY(error(:)) )  CALL juDFT_error("symmetry & SSDW", calledby="dimen7")
         DEALLOCATE ( error )
       ENDIF
 !--- J<
@@ -307,10 +302,8 @@
       ENDIF
 
       IF ( xcpot%gmaxxc .le. 10.0**(-6) ) THEN
-         WRITE (6,'(" xcpot%gmaxxc=0 : xcpot%gmaxxc=stars%gmax choosen as default",&
-     &              " value")')
-         WRITE (6,'(" concerning memory, you may want to choose",&
-     &              " a smaller value for stars%gmax")')
+         WRITE (6,'(" xcpot%gmaxxc=0 : xcpot%gmaxxc=stars%gmax choosen as default value")')
+         WRITE (6,'(" concerning memory, you may want to choose a smaller value for stars%gmax")')
          xcpot%gmaxxc=stars%gmax
       END IF
 
@@ -325,19 +318,13 @@
          n2=sym%nop2
          sym%nop=1
          sym%nop2=1
-         CALL julia(&
-     &              sym,cell,input,noco,banddos,&
-     &              kpts,.false.,.FALSE.)
+         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
          sym%nop=n1
          sym%nop2=n2
-         ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
-         CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                            kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                            sym%mrot,sym%tau)
+      ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
+         call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
-         CALL julia(&
-     &              sym,cell,input,noco,banddos,&
-     &              kpts,.false.,.FALSE.)
+         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
          ENDIF
        ELSE
         CALL od_kptsgen (kpts%nkpt)
@@ -346,17 +333,15 @@
         IF(input%gw.eq.2) THEN
           INQUIRE(file='QGpsi',exist=l_kpts) ! Use QGpsi if it exists ot
           IF(l_kpts) THEN
-            WRITE(6,*)&
-     &        'QGpsi exists and will be used to generate kpts-file'
-            OPEN (15,file='QGpsi',form='unformatted',status='old',&
-     &        action='read')
+            WRITE(6,*) 'QGpsi exists and will be used to generate kpts-file'
+            OPEN (15,file='QGpsi',form='unformatted',status='old',action='read')
             OPEN (41,file='kpts',form='formatted',status='unknown')
             REWIND(41)
             READ (15) kpts%nkpt
             WRITE (41,'(i5,f20.10)') kpts%nkpt,1.0
             DO n = 1, kpts%nkpt
               READ (15) q
-              WRITE (41,'(4f10.5)') MATMUL(TRANSPOSE(cell%amat),q)/scale,1.0
+              WRITE (41,'(4f10.5)') MATMUL(TRANSPOSE(cell%amat),q)/input%scaleCell,1.0
               READ (15)
             ENDDO
             CLOSE (15)
@@ -371,21 +356,18 @@
 ! Using the k-point generator also for creation of q-points for the
 ! J-constants calculation:
       IF(.not.l_qpts)THEN
-        kpts%nmop=nmopq
+        kpts%nkpt3=nmopq
         l_tmp=(/noco%l_ss,noco%l_soc/)
         noco%l_ss=.false.
         noco%l_soc=.false.
-        CALL julia(&
-     &             sym,cell,input,noco,banddos,&
-     &             kpts,.true.,.FALSE.)
+        CALL julia(sym,cell,input,noco,banddos,kpts,.true.,.FALSE.)
         noco%l_ss=l_tmp(1); noco%l_soc=l_tmp(2)
       ENDIF
 
 !
 ! now proceed as usual
 !
-      CALL inpeig_dim(input,obsolete,cell,noco,oneD,jij,&
-     &                kpts,dimension,stars)
+      CALL inpeig_dim(input,obsolete,cell,noco,oneD,jij,kpts,dimension,stars)
       vacuum%layerd = max(vacuum%layerd,1)
       dimension%nstd = max(dimension%nstd,30)
       atoms%ntype = atoms%ntype
@@ -393,18 +375,15 @@
 
       atoms%nlod = max(atoms%nlod,2) ! for chkmt
       dimension%jspd=input%jspins
-      CALL parawrite(&
-     &               sym,stars,atoms,sphhar,dimension,vacuum,obsolete,&
-     &               kpts,oneD)
+      CALL parawrite(sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,oneD)
 
-!
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
      & vacuum%izlay,atoms%ncst,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%soc_opt,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,jij%l_magn,jij%M,noco%b_con,sphhar%clnu,sphhar%nlh,&
-     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,hybrid%select2,hybrid%lcutm2,&
+     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,&
      & hybrid%lcutwf)
-!
+
       RETURN
       END SUBROUTINE dimen7
       END MODULE m_dimen7

@@ -6,18 +6,20 @@
 
       MODULE m_wann_wan90prep
       use m_juDFT
+      USE m_types
 c**********************************************************
 c         prepares WF//spin12(jspin)//.win for 
 c         input to wannier90 and creates bkpts file
 c                FF, September 2006
 c**********************************************************
       CONTAINS
-      SUBROUTINE wann_wan90prep(
+      SUBROUTINE wann_wan90prep(input,kpts,
      >      jspins,amat,bmat,natd,taual_inp,zatom,ntype,
      >      ntypd,neq,l_bzsym,film,l_onedimens,l_ms,l_sgwf,l_socgwf,
-     >      aux_latt_const,param_file,l_dim)
+     >      aux_latt_const,param_file,l_dim,wan90version)
 
       USE m_wann_postproc_setup
+      USE m_wann_postproc_setup2
       USE m_wann_postproc_setup4
       USE m_wann_postproc_setup5
       use m_wann_get_mp
@@ -28,6 +30,9 @@ c**********************************************************
 
       IMPLICIT NONE
 
+
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_kpts), INTENT(IN)  :: kpts
       integer,intent(in)  :: jspins
       integer,intent(in)  :: ntype
       integer,intent(in)  :: ntypd
@@ -40,6 +45,8 @@ c**********************************************************
       real,intent(in)     :: zatom(ntype)
       integer,intent(in)  :: neq(ntypd)
       logical,intent(in)  :: l_onedimens
+      integer,intent(in)  :: wan90version
+
 
       character(len=20),intent(in) :: param_file
 
@@ -98,11 +105,11 @@ c**********************************************************
 c**********************************************************
 c     Read in kpoints from kpts/w90kpts file.
 c**********************************************************
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         l_bzsym,film,l_onedimens,.false.,
      <         nkpts,kpoints)
       allocate(kpoints(3,nkpts))
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         l_bzsym,film,l_onedimens,.true.,
      <         nkpts,kpoints)
 
@@ -200,10 +207,17 @@ c******************************************************
 c     call wannier90 routines to get bkpts
 c******************************************************
 #ifdef CPP_WANN
-      call wann_postproc_setup(
+      IF(wan90version.le.2)then !wanversion 1.1 and 1.2
+        call wann_postproc_setup(
      >         natd,nkpts,kpoints,amat_ang,bmat_ang,
      >         num,num_bands,ntype,neq,
      >         zatom,taual,namat,win_filename,'bkpts')
+	  else !wanversion 2.0
+        call wann_postproc_setup2(
+     >         natd,nkpts,kpoints,amat_ang,bmat_ang,
+     >         num,num_bands,ntype,neq,
+     >         zatom,taual,namat,win_filename,'bkpts')
+	  endif
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier setup'
       WRITE(*,*) 'but the Wannier90 library is not linked.'
@@ -234,10 +248,17 @@ c******************************************************
      >      qpoints,zatom,taual_q,namat,3)
 
 #ifdef CPP_WANN
-      call wann_postproc_setup(
+      if(wan90version.le.2)then !wanversion 1.1 and 1.2
+        call wann_postproc_setup(
      >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
      >         numq,num_bands,ntype,neq,
      >         zatom,taual_q,namat,'WF1_q','bqpts')
+	  else !wanversion 2.0
+        call wann_postproc_setup2(
+     >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
+     >         numq,num_bands,ntype,neq,
+     >         zatom,taual_q,namat,'WF1_q','bqpts')
+	  endif
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier setup'
       WRITE(*,*) 'but the Wannier90 library is not linked.'

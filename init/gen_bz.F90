@@ -31,6 +31,7 @@ SUBROUTINE gen_bz( kpts,sym)
    USE m_juDFT
    USE m_util, ONLY: modulo1
    USE m_types
+   USE m_closure
 
    IMPLICIT NONE
 
@@ -43,40 +44,41 @@ SUBROUTINE gen_bz( kpts,sym)
       
 !  - local arrays - 
    INTEGER,ALLOCATABLE     ::  iarr(:)
-   REAL                    ::  rrot(3,3,sym%nsym),rotkpt(3)
+   REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
    REAL,ALLOCATABLE        ::  rarr1(:,:)
 
-   ALLOCATE (kpts%bkf(3,sym%nsym*kpts%nkpt))
-   ALLOCATE (kpts%bkp(sym%nsym*kpts%nkpt))
-   ALLOCATE (kpts%bksym(sym%nsym*kpts%nkpt))
+   INTEGER:: nsym,ID_mat(3,3)
+
+   !As we might be early in init process, the inverse operation might not be available in sym. Hence
+   !we calculate it here
+   INTEGER                 :: inv_op(sym%nop),optype(sym%nop)
+   INTEGER                 :: multtab(sym%nop,sym%nop)
+
+   CALL check_close(sym%nop,sym%mrot,sym%tau,multtab,inv_op,optype)
+   
+   nsym=sym%nop
+   if (.not.sym%invs) nsym=2*sym%nop
+   
+   ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
+   ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
+   ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
       
    ! Generate symmetry operations in reciprocal space
-
-   DO iop=1,sym%nsym
+   DO iop=1,nsym
       IF( iop .le. sym%nop ) THEN
-         rrot(:,:,iop) = transpose( sym%mrot(:,:,sym%invtab(iop)) )
+         rrot(:,:,iop) = TRANSPOSE( sym%mrot(:,:,inv_op(iop)) )
       ELSE
          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
       END IF
    END DO
-
-   ! Set target number for k points in full BZ
-
-   kpts%nkptf = kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
-   IF(kpts%l_gamma) THEN
-      IF (ANY(MODULO(kpts%nkpt3(:),2).EQ.0)) THEN
-         kpts%nkptf = kpts%nkptf + 1
-      END IF
-   END IF
-
-   ! Apply symmetrie operations to all k-points of IBZ, test whether
-   ! generated k-point already is in the full BZ set of k-points, and
-   ! add it if it is not yet in this set.
-
-   kpts%bkf = 0
-   ic = 0
-      
-   DO iop=1,sym%nsym
+  
+   !Add existing vectors to list of full vectors
+   id_mat=0
+   ID_mat(1,1)=1;ID_mat(2,2)=1;ID_mat(3,3)=1
+   IF (ANY(sym%mrot(:,:,1).NE.ID_mat)) CALL judft_error("Identity must be first symmetry operation",calledby="gen_bz")
+   
+   ic=0
+   DO iop=1,nsym
       DO ikpt=1,kpts%nkpt
          l_found = .FALSE.
          rotkpt = MATMUL(rrot(:,:,iop), kpts%bk(:,ikpt))
@@ -98,21 +100,7 @@ SUBROUTINE gen_bz( kpts,sym)
       END DO
    END DO
 
-   IF (kpts%nkptf /= ic) THEN
-      WRITE(*,*) ''
-      WRITE(*,*) 'Generation of full Brilloun zone from IBZ failed.'
-      WRITE(*,*) 'Number of generated k points in full BZ does not'
-      WRITE(*,*) 'agree with target.'
-      WRITE(*,*) 'Number of generated k points in full BZ: ', ic
-      WRITE(*,*) 'Target: ', kpts%nkptf
-      WRITE(*,*) ''
-
-!      DO ikpt=1,kpts%nkptf
-!         WRITE(*,*) kpts%bkf(:,ikpt)
-!      END DO
-
-      CALL juDFT_error("gen_bz: error kpts/symmetry",calledby="gen_bz")
-   END IF
+   kpts%nkptf = ic
 
    ! Reallocate bkf, bkp, bksym
    ALLOCATE (iarr(kpts%nkptf))

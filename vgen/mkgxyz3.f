@@ -8,13 +8,13 @@ cc    energy.
 c.....------------------------------------------------------------------
       CONTAINS
       SUBROUTINE mkgxyz3(
-     >                   igrd,ndm,jsdm,ng3,jspins,vl,
+     >                   ndm,jsdm,ng3,jspins,vl,
      >                   dvx,dvy,dvz,dvxx,dvyy,dvzz,dvyz,dvzx,dvxy,
      <                   agrt,agru,agrd, g2rt,g2ru,g2rd, 
      <                   gggrt,gggru,gggrd,gzgr)
 
       IMPLICIT NONE
-      INTEGER, INTENT (IN) :: ndm,ng3,igrd,jsdm,jspins
+      INTEGER, INTENT (IN) :: ndm,ng3,jsdm,jspins
       REAL,    INTENT (IN) :: vl(ndm,jsdm)
       REAL,    INTENT (IN) :: dvx(ndm,jsdm),dvy(ndm,jsdm),dvz(ndm,jsdm)
       REAL, INTENT (IN) :: dvxx(ndm,jsdm),dvyy(ndm,jsdm),dvzz(ndm,jsdm)
@@ -47,7 +47,6 @@ c.....------------------------------------------------------------------
           g2rd(i) = 0.0
       ENDDO
 
-      IF (igrd.GT.0) THEN
       IF (jspins.eq.1) THEN
 
         DO 10 i = 1,ng3
@@ -207,7 +206,6 @@ c         g2r: grad(grad(ro))
   20    ENDDO
 
       ENDIF
-      ENDIF ! igrd.GT.0
-
+    
       END SUBROUTINE mkgxyz3
       END MODULE m_mkgxyz3

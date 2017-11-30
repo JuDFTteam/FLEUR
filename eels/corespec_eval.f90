@@ -144,7 +144,7 @@ MODULE m_corespec_eval
 
     smeno = "corespec_rme"
 
-    if(itype.ne.csi%type) return
+    if(itype.ne.csi%atomType) return
 
     write(*,'(/,a)') trim(smeno)//ssep
 
@@ -220,7 +220,7 @@ MODULE m_corespec_eval
       write(*,'(a,i5,3f8.4)') "ui",0,sum1,sum2,sum1+sum2
 
       write(60,*) ""
-      csv%occ(iljc) = dble(occ((nc-1)**2+csi%edgeidx(iljc),jspin))
+      csv%occ(iljc) = dble(occ((csv%nc-1)**2+csi%edgeidx(iljc),jspin))
       write(*,"(a,2(a,i2),a,f3.1,2(a,i2),a,f16.8,a)") trim(smeno)//ssep,&
            &"core state: iljc = ",iljc,&
            &", nc = ",nint(nc),&
@@ -393,7 +393,7 @@ MODULE m_corespec_eval
     lmx = lx*(lx+2)
     nen = csv%nen
     nex = csv%nex
-    iatom = atoms%neq(csi%type)
+    iatom = atoms%neq(csi%atomType)
     sigma = sqrt(2.d0)*sig_dos*hartree_to_ev_const
     sigma = sig_dos*hartree_to_ev_const
     eigos(1:noccbd) = (eig(1:noccbd)-efermi)*hartree_to_ev_const/dble(sigma)
@@ -424,7 +424,7 @@ MODULE m_corespec_eval
           csv%dosb(2,1,lm1,lm1,iband) = dble(bcof(iband,lm1,iatom)*&
                &conjg(acof(iband,lm1,iatom)))
           csv%dosb(2,2,lm1,lm1,iband) = dble(bcof(iband,lm1,iatom)*&
-               &conjg(bcof(iband,lm1,iatom)))*we(1)*usdus%ddn(l1,csi%type,ispin)
+               &conjg(bcof(iband,lm1,iatom)))*we(1)*usdus%ddn(l1,csi%atomType,ispin)
 !!!!! this has to be checked: is >> ddn << factor necessary !!!!!
 !!$        enddo
 !!$        enddo

@@ -7,7 +7,7 @@ c easypbe is a driver for the pbe subroutines, using simple inputs
 c k. burke, may 14, 1996.
 c----------------------------------------------------------------------
       CONTAINS
-      SUBROUTINE easypbe(icorr,
+      SUBROUTINE easypbe(xcpot,
      >                   up,agrup,delgrup,uplap,
      >                   dn,agrdn,delgrdn,dnlap,
      >                   agr,delgr,lcor,lpot,
@@ -19,10 +19,11 @@ c----------------------------------------------------------------------
 
       USE m_exchpbe
       USE m_corpbe
+      USE m_types
       IMPLICIT NONE
 
-      ! .. Arguments ..
-      INTEGER, INTENT (IN) :: icorr    ! selects different X-enhancement in exchpbe
+! .. Arguments ..
+      type(t_xcpot),intent(in)::xcpot
       INTEGER, INTENT (IN) :: lcor     ! flag to do correlation(=0=>don't)
       INTEGER, INTENT (IN) :: lpot     ! flag to do potential  (=0=>don't)
       REAL,    INTENT (IN) :: up,dn    ! density (spin up & down)
@@ -85,8 +86,8 @@ c----------------------------------------------------------------------
           u = 4.e0*delgrup/ (rho2*rho2* (2.e0*fk)**3)
           v = 2.e0*uplap/ (rho2* (2.e0*fk)**2)
 
-          CALL exchpbe(icorr,rho2,s,u,v,0,lpot,exuplsd,vxuplsd,rdum)
-          CALL exchpbe(icorr,rho2,s,u,v,1,lpot,exuppbe,vxuppbe,vxupsr)
+          CALL exchpbe(xcpot,rho2,s,u,v,0,lpot,exuplsd,vxuplsd,rdum)
+          CALL exchpbe(xcpot,rho2,s,u,v,1,lpot,exuppbe,vxuppbe,vxupsr)
 
       ELSE
 
@@ -108,8 +109,8 @@ c repeat for down
           u = 4.e0*delgrdn/ (rho2*rho2* (2.e0*fk)**3)
           v = 2.e0*dnlap/ (rho2* (2.e0*fk)**2)
 
-          CALL exchpbe(icorr,rho2,s,u,v,0,lpot,exdnlsd,vxdnlsd,rdum)
-          CALL exchpbe(icorr,rho2,s,u,v,1,lpot,exdnpbe,vxdnpbe,vxdnsr)
+          CALL exchpbe(xcpot,rho2,s,u,v,0,lpot,exdnlsd,vxdnlsd,rdum)
+          CALL exchpbe(xcpot,rho2,s,u,v,1,lpot,exdnpbe,vxdnpbe,vxdnsr)
 
       ELSE
 
@@ -157,7 +158,7 @@ c9999-
       ww = (agrup**2-agrdn**2-zet*agr**2)/ (rho*rho*twoksg**2)
 
       CALL corpbe(
-     >            icorr,rs,zet,t,uu,vv,ww,1,lpot,
+     >            xcpot,rs,zet,t,uu,vv,ww,1,lpot,
      <            ec,vcup,vcdn,h,dvcup,dvcdn)
 
       eclsd = ec

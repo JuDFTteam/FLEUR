@@ -191,7 +191,7 @@ CONTAINS
 
     ENDIF
 
-    IF (xcpot%igrd.EQ.0) GOTO 100  
+    IF (.not.xcpot%is_gga()) GOTO 100  
 
     ! In collinear calculations all derivatives are calculated in g-spce,
     ! in non-collinear calculations the derivatives of |m| are calculated in real space. 
@@ -325,7 +325,7 @@ CONTAINS
     !     evaluating the gradient contributions to potential and energy.
     !
     CALL mkgxyz3&
-         &            (xcpot%igrd,ifftxc3d,input%jspins,ifftxc3,input%jspins,rho,&
+         &            (ifftxc3d,input%jspins,ifftxc3,input%jspins,rho,&
          &             rhd1(0,1,1),rhd1(0,1,2),rhd1(0,1,3),&
          &             rhd2(0,1,1),rhd2(0,1,3),rhd2(0,1,6),&
          &             rhd2(0,1,5),rhd2(0,1,4),rhd2(0,1,2),&
@@ -362,7 +362,7 @@ CONTAINS
        !          CALL juDFT_error("visxcg: rhmn.lt.chng",calledby="visxcg")
     ENDIF
 
-    CALL vxcallg(xcpot%icorr,lwbc,input%jspins,SIZE(agr),nt,rho,&
+    CALL vxcallg(xcpot,lwbc,input%jspins,SIZE(agr),nt,rho,&
          &              agr,agru,agrd,g2r,g2ru,g2rd,&
          &              gggr,gggru,gggrd,gzgr,&
          &              vx,vxc)
@@ -475,7 +475,7 @@ CONTAINS
     !
     IF (input%total) THEN
        ALLOCATE ( exc(0:ifftxc3d-1) )
-       CALL excallg(xcpot%icorr,lwbc,input%jspins,nt,rho,&
+       CALL excallg(xcpot,lwbc,input%jspins,nt,rho,&
             &               agr,agru,agrd,g2r,g2ru,g2rd,&
             &               gggr,gggru,gggrd,gzgr,&
             &               exc)

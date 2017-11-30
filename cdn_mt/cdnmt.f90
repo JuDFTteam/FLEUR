@@ -99,6 +99,7 @@ CONTAINS
     ENDIF
 
     !$OMP PARALLEL DEFAULT(none) &
+
     !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
     !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,orbl,orblo,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&

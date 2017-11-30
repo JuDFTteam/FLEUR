@@ -26,18 +26,15 @@
 !     *******************************************************
 !
       CONTAINS
-        SUBROUTINE inped( &
-             & atoms,obsolete,vacuum,&
-             & input,banddos,xcpot,sym,&
-             & cell,sliceplot,noco,&
-             & stars,oneD,jij,hybrid,kpts,scale,a1,a2,a3,namex,relcor)
+        SUBROUTINE inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
+                         cell,sliceplot,noco,&
+                         stars,oneD,jij,hybrid,kpts,a1,a2,a3,namex,relcor)
           USE m_rwinp
           USE m_chkmt
           USE m_inpnoco
           USE m_constants
           USE m_types
           USE m_inv3
-          USE m_icorrkeys
           USE m_setlomap
           IMPLICIT NONE
           !     ..
@@ -57,7 +54,6 @@
           TYPE(t_jij),       INTENT(INOUT) :: jij
           TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
-          REAL,              INTENT(OUT)   :: scale
           REAL,              INTENT(OUT)   :: a1(3)
           REAL,              INTENT(OUT)   :: a2(3)
           REAL,              INTENT(OUT)   :: a3(3)
@@ -89,7 +85,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,scale)
+               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -140,9 +136,9 @@
              CALL juDFT_error("latnam",calledby ="inped")
           ENDIF
           dtild=a3(3)
-          IF (scale.EQ.0.) scale = 1.
-          vacuum%dvac = scale*vacuum%dvac
-          dtild = scale*dtild
+          IF (input%scaleCell.EQ.0.0) input%scaleCell = 1.0
+          vacuum%dvac = input%scaleCell*vacuum%dvac
+          dtild = input%scaleCell*dtild
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
              IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
@@ -165,11 +161,11 @@
           IF (vacuum%nmz>vacuum%nmzd)  CALL juDFT_error("nmzd",calledby ="inped")
           vacuum%nmzxy = vacuum%nmzxyd
           IF (vacuum%nmzxy>vacuum%nmzxyd)  CALL juDFT_error("nmzxyd",calledby ="inped")
-          a1(:) = scale*a1(:)
-          a2(:) = scale*a2(:)
-          a3(:) = scale*a3(:)
-          WRITE (6,FMT=8050) scale
-          WRITE (16,FMT=8050) scale
+          a1(:) = input%scaleCell*a1(:)
+          a2(:) = input%scaleCell*a2(:)
+          a3(:) = input%scaleCell*a3(:)
+          WRITE (6,FMT=8050) input%scaleCell
+          WRITE (16,FMT=8050) input%scaleCell
 8050      FORMAT (' unit cell scaled by    ',f10.6)
           WRITE (6,FMT=8060) cell%z1
           WRITE (16,FMT=8060) cell%z1
@@ -218,70 +214,60 @@
                f12.6,/,2x, 'the area of the two-dimensional unit cell=',f12.6)
           WRITE (6,FMT=8120) namex,relcor
 8120      FORMAT (1x,'exchange-correlation: ',a4,2x,a12,1x,'correction')
-          xcpot%icorr = -99
 
-          !     l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
-          IF (namex.EQ.'exx ') xcpot%icorr = icorr_exx
-          IF (namex.EQ.'hf  ') xcpot%icorr = icorr_hf
-          IF (namex.EQ.'l91 ') xcpot%icorr = -1
-          IF (namex.EQ.'x-a ') xcpot%icorr =  0
-          IF (namex.EQ.'wign') xcpot%icorr =  1
-          IF (namex.EQ.'mjw')  xcpot%icorr =  2
-          IF (namex.EQ.'hl')   xcpot%icorr =  3
-          IF (namex.EQ.'bh')   xcpot%icorr =  3
-          IF (namex.EQ.'vwn')  xcpot%icorr =  4
-          IF (namex.EQ.'pz')   xcpot%icorr =  5
-          IF (namex.EQ.'pw91') xcpot%icorr =  6
-          !     pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
-          !     rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
-          !     Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
-          IF (namex.EQ.'pbe')  xcpot%icorr =  7
-          IF (namex.EQ.'rpbe') xcpot%icorr =  8
-          IF (namex.EQ.'Rpbe') xcpot%icorr =  9
-          IF (namex.EQ.'wc')   xcpot%icorr = 10
-          !     wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
-          IF (namex.EQ.'PBEs') xcpot%icorr = 11
-          !     PBEs: PBE for solids ( arXiv:0711.0156v2 )
-          IF (namex.EQ.'pbe0') xcpot%icorr = icorr_pbe0
-          !     hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
-          IF (namex.EQ.'hse ') xcpot%icorr = icorr_hse
-          IF (namex.EQ.'vhse') xcpot%icorr = icorr_vhse
-          ! local part of HSE
-          IF (namex.EQ.'lhse') xcpot%icorr = icorr_hseloc
+          CALL xcpot%init(namex,relcor.EQ.'relativistic')
+!!$          xcpot%icorr = -99
+!!$
+!!$          !     l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
+!!$          IF (namex.EQ.'exx ') xcpot%icorr = icorr_exx
+!!$          IF (namex.EQ.'hf  ') xcpot%icorr = icorr_hf
+!!$          IF (namex.EQ.'l91 ') xcpot%icorr = -1
+!!$          IF (namex.EQ.'x-a ') xcpot%icorr =  0
+!!$          IF (namex.EQ.'wign') xcpot%icorr =  1
+!!$          IF (namex.EQ.'mjw')  xcpot%icorr =  2
+!!$          IF (namex.EQ.'hl')   xcpot%icorr =  3
+!!$          IF (namex.EQ.'bh')   xcpot%icorr =  3
+!!$          IF (namex.EQ.'vwn')  xcpot%icorr =  4
+!!$          IF (namex.EQ.'pz')   xcpot%icorr =  5
+!!$          IF (namex.EQ.'pw91') xcpot%icorr =  6
+!!$          !     pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
+!!$          !     rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
+!!$          !     Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
+!!$          IF (namex.EQ.'pbe')  xcpot%icorr =  7
+!!$          IF (namex.EQ.'rpbe') xcpot%icorr =  8
+!!$          IF (namex.EQ.'Rpbe') xcpot%icorr =  9
+!!$          IF (namex.EQ.'wc')   xcpot%icorr = 10
+!!$          !     wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
+!!$          IF (namex.EQ.'PBEs') xcpot%icorr = 11
+!!$          !     PBEs: PBE for solids ( arXiv:0711.0156v2 )
+!!$          IF (namex.EQ.'pbe0') xcpot%icorr = icorr_pbe0
+!!$          !     hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
+!!$          IF (namex.EQ.'hse ') xcpot%icorr = icorr_hse
+!!$          IF (namex.EQ.'vhse') xcpot%icorr = icorr_vhse
+!!$          ! local part of HSE
+!!$          IF (namex.EQ.'lhse') xcpot%icorr = icorr_hseloc
+!!$
+!!$          IF (xcpot%icorr == -99) THEN
+!!$             WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
+!!$             WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
+!!$             CALL juDFT_error("Wrong name of XC-potential!",calledby="inped")
+!!$          ENDIF
+!!$          xcpot%krla = 0
+!!$          IF (relcor.EQ.'relativistic') THEN
+!!$             xcpot%krla = 1
+!!$           
+!!$          ENDIF
 
-          IF (xcpot%icorr == -99) THEN
-             WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
-             WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,wc,PBEs,pbe0,hf,hse,lhse'
-             CALL juDFT_error("Wrong name of XC-potential!",calledby="inped")
-          ENDIF
-          xcpot%igrd = 0
-          IF (xcpot%icorr.GE.6) xcpot%igrd = 1
-          input%krla = 0
-          IF (relcor.EQ.'relativistic') THEN
-             input%krla = 1
-             IF (xcpot%igrd.EQ.1) THEN
-                WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
-                WRITE(6,*) 'only without relativistic corrections !'
-                CALL juDFT_error ("relativistic corrections + GGA not implemented" ,calledby ="inped")
-             ENDIF
-          ENDIF
+!!$          IF (xcpot%icorr.EQ.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
+!!$          IF (xcpot%icorr.EQ.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
+!!$          IF ((xcpot%icorr.EQ.2).AND.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
+!!$
+!!$          !+guta
+!!$          IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
 
-          IF (xcpot%icorr.EQ.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
-          IF (xcpot%icorr.EQ.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
-          IF ((xcpot%icorr.EQ.2).AND.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
-
-          !+guta
-          IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
-
-
+          IF (xcpot%is_gga()) THEN
              obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
-             IF ((xcpot%igrd.NE.0).AND.(xcpot%igrd.NE.1)) THEN
-                WRITE (6,*) 'selecting l91 or pw91 as XC-Potental you should'
-                WRITE (6,*) ' have 2 lines like this in your inp-file:'
-                WRITE (6,*) 'igrd=1,lwb=F,ndvgrd=4,idsprs=0,chng= 1.000E-16'
-                WRITE (6,*) 'iggachk=1,idsprs0=1,idsprsl=1,idsprsi=1,idsprsv=1'
-                CALL juDFT_error("igrd =/= 0 or 1",calledby ="inped")
-             ENDIF
+            
 
              !        iggachk: removed; triggered via idsprs (see below)
              !                 idsprs-0(mt,l=0),-l(nmt),-i(interstitial),-v(vacuum)
@@ -289,9 +275,9 @@
              !                 idsprs set to be zero.
 
 
-             WRITE (16,FMT=8122) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
+             WRITE (16,FMT=8122) 1,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
              WRITE (16,'(/)')
-             WRITE (6,FMT=8122) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
+             WRITE (6,FMT=8122) 1,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
              WRITE (6,'(/)')
 8122         FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1, ',chng=',d10.3)
 
@@ -360,7 +346,7 @@
                 !
                 !--->   for films, the z-coordinates are given in absolute values:
                 !
-                IF (input%film) atoms%taual(3,na) = scale*atoms%taual(3,na)/a3(3)
+                IF (input%film) atoms%taual(3,na) = input%scaleCell*atoms%taual(3,na)/a3(3)
                 !
                 ! Transform intern coordinates to cartesian:
                 !
@@ -378,10 +364,9 @@
           !
           !  check muffin tin radii
           !
-          l_gga = .FALSE.
-          IF (xcpot%icorr.GE.6) l_gga = .TRUE.
+          l_gga= xcpot%is_gga()
           l_test = .TRUE.                  ! only checking, dont use new parameters
-          CALL chkmt(atoms,input,vacuum,cell,oneD, l_gga,noel,l_test, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
+          CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
 
           WRITE (6,FMT=8180) cell%volint
 8180      FORMAT (13x,' volume of interstitial region=',f12.6)

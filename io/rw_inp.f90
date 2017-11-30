@@ -10,7 +10,7 @@
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild_opt,name_opt)
+     &                  noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt)
 
 !*********************************************************************
 !* This subroutine reads or writes an inp - file on unit iofile      *
@@ -19,8 +19,7 @@
 !*********************************************************************
       USE m_calculator
       USE m_types
-      USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
-
+  
       IMPLICIT NONE
 ! ..
 ! ..   Arguments ..
@@ -42,7 +41,7 @@
       TYPE(t_xcpot),INTENT(INOUT)    :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
-      REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3),scale
+      REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3)
       CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
@@ -249,6 +248,10 @@
          a2(2) = -a1(2)
       END IF
 
+      input%scaleA1 = 1.0
+      input%scaleA2 = 1.0
+      input%scaleC  = 1.0
+
       IF (sym%namgrp.EQ.'any ') THEN
         INQUIRE (file='sym.out',exist=l_sym)
         IF (.not.l_sym)&
@@ -258,28 +261,27 @@
       ENDIF
       IF (cell%latnam.EQ.'any') THEN
 !        CALL juDFT_error("please specify lattice type (squ,p-r,c-r,hex,hx3,obl)",calledby="rw_inp")
-        READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),&
-     &                                            vacuum%dvac,scale
+        READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
         IF (ierr /= 0) THEN
            BACKSPACE(5)
            READ (UNIT = 5,FMT ="(a)",END = 99,ERR = 99) line
-           a3(1)      = evaluatefirst(line)
-           a3(2)      = evaluatefirst(line)
-           a3(3)      = evaluatefirst(line)
-           vacuum%dvac       = evaluatefirst(line)
-           scale      = evaluatefirst(line)
+           a3(1)           = evaluatefirst(line)
+           a3(2)           = evaluatefirst(line)
+           a3(3)           = evaluatefirst(line)
+           vacuum%dvac     = evaluatefirst(line)
+           input%scaleCell = evaluatefirst(line)
         ENDIF
-        WRITE (6,9031) a3(1),a3(2),a3(3),vacuum%dvac,scale
+        WRITE (6,9031) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
       ELSE
-         READ (UNIT = 5,FMT =*,iostat= ierr) vacuum%dvac,dtild,scale
+         READ (UNIT = 5,FMT =*,iostat= ierr) vacuum%dvac,dtild,input%scaleCell
          IF (ierr /= 0) THEN
             BACKSPACE(5)
             READ (UNIT = 5,FMT ="(a)",END = 99,ERR = 99) line
-            vacuum%dvac        = evaluatefirst(line)
-            dtild       = evaluatefirst(line)
-            scale        = evaluatefirst(line)
+            vacuum%dvac     = evaluatefirst(line)
+            dtild           = evaluatefirst(line)
+            input%scaleCell = evaluatefirst(line)
         ENDIF
-        WRITE (6,9030) vacuum%dvac,dtild,scale
+        WRITE (6,9030) vacuum%dvac,dtild,input%scaleCell
         a3(3) = dtild
       ENDIF
 !
@@ -291,37 +293,21 @@
      &    (namex.EQ.'Rpbe').OR.(namex.EQ.'wc')  .OR.&
      &    (namex.EQ.'pbe0').OR.(namex.EQ.'hse ').OR.&
      &    (namex.EQ.'lhse').OR.(namex.EQ.'vhse')) THEN                    ! some defaults
-        xcpot%igrd=1 ; obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
+         obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
       ENDIF
       ! set mixing and screening for variable HSE functional
-      IF (namex.EQ.'vhse') THEN
-        ! overwrite if sane input
-        IF ( aMix > 0 .and. aMix <= 1 ) THEN
-          aMix = aMix_VHSE( aMix )
-        ELSE
-          aMix = aMix_VHSE()
-        END IF
-        ! overwrite if sane input
-        IF ( omega > 0 ) THEN
-          omega = omega_VHSE( omega )
-        ELSE
-          omega = omega_VHSE()
-        END IF
-        WRITE (6,9041) namex,relcor,aMix,omega
-      ELSE
-        WRITE (6,9040) namex,relcor
-      END IF
-!
+      WRITE (6,9040) namex,relcor
+     
 ! look what comes in the next two lines
 !
       READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
       IF (ch_test.EQ.'igr') THEN                          ! GGA input
          BACKSPACE (5)
          READ (UNIT=5,FMT=7121,END=99,ERR=99)&
-     &                   xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+     &                   idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
          IF (idsprs.ne.0)&
      &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
-         WRITE (6,9121) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+         WRITE (6,9121) idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
  7121    FORMAT (5x,i1,5x,l1,8x,i1,8x,i1,6x,d10.3)
 
          READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
@@ -508,8 +494,8 @@
       WRITE (chntype,'(i4)') 2*atoms%ntype
       chform = '('//chntype//'i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99) &
-     &                (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
-      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
+     &                (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
+      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
  6010 FORMAT (25i3)
 !
       READ (UNIT=5,FMT=6010,END=99,ERR=99) nw,obsolete%lepr
@@ -726,20 +712,19 @@
 ! represent the response function, its parameters are read in here
 
       IF(namex=='exx ') THEN
-        READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',&
-     &       END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
+         CALL judft_error("No EXX calculations in this FLEUR version")
+        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
 
-        DO i=1,atoms%ntype
-          READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
-     &       END=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
-     &                  hybrid%select2(3,i),hybrid%select2(4,i)
-        END DO
+        !DO i=1,atoms%ntype
+          !READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
+            !END IF=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
+            !           hybrid%select2(3,i),hybrid%select2(4,i)
+        !END DO
         
-        ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
-        DO i=1,atoms%ntype
-          READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98) &
-     &        (hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
-        END DO
+        !ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
+        !DO i=1,atoms%ntype
+   !       READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98)(hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
+       ! END DO
       END IF
 
  98   CONTINUE
@@ -801,11 +786,11 @@
       ENDIF
 !
       IF (cell%latnam.EQ.'any') THEN
-        WRITE (5,9031)  a3(1),a3(2),a3(3),vacuum%dvac,scale
+        WRITE (5,9031)  a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
         dtild = a3(3)
       ELSE
-        WRITE (5,9030) vacuum%dvac,dtild,scale
-        a3(3) = scale * dtild
+        WRITE (5,9030) vacuum%dvac,dtild,input%scaleCell
+        a3(3) = input%scaleCell * dtild
       ENDIF
  9030 FORMAT (3f15.8)
  9031 FORMAT (5f15.8)
@@ -819,7 +804,7 @@
       IF ((namex.EQ.'pw91').OR.(namex.EQ.'l91').OR.&
      &    (namex.eq.'pbe').OR.(namex.eq.'rpbe').OR.&
    &    (namex.EQ.'Rpbe').OR.(namex.eq.'wc') ) THEN
-        WRITE (5,FMT=9121) xcpot%igrd,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
+        WRITE (5,FMT=9121) idum,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
  9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1,&
      &           ',chng=',d10.3)
       ENDIF
@@ -901,7 +886,7 @@
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO
             IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
-            IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/scale
+            IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/input%scaleCell
 !+odim in 1D case all the coordinates are given in cartesian YM
             IF (oneD%odd%d1) THEN
                atoms%taual(1,na) = atoms%taual(1,na)*a1(1)

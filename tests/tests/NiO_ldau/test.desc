@@ -1,9 +1,0 @@
-$test_name="NiO with LDA+U";
-$test_code="Fleur";
-%test_requirements=("SOC",0,"complex",1);
-$test_stages=1;
-$test_desc=<<EOF
-Simple test of Fleur with one steps:
-1.Generate a starting density and run 9 iterations and compare convergence, fermi-energy & total energy
-EOF
-;

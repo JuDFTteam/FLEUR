@@ -42,8 +42,8 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: tlmplm
 
     LOGICAL,INTENT(IN)      :: l_real
-    REAL,    OPTIONAL,INTENT (INOUT) :: aa_r(:)!(matsize)
-    COMPLEX, OPTIONAL,INTENT (INOUT) :: aa_c(:)
+    REAL,  ALLOCATABLE,  OPTIONAL,INTENT (INOUT) :: aa_r(:)!(matsize)
+    COMPLEX,ALLOCATABLE, OPTIONAL,INTENT (INOUT) :: aa_c(:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX axx,bxx,cxx,dtd,dtu,dtulo,ulotd,ulotu,ulotulo,utd,utu, utulo,chihlp

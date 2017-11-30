@@ -1,11 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_postprocessInput
 
 CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
                             oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                            noco,dimension,enpara,sphhar,l_opti,noel,l_kpts,&
-                            l_gga)
+                            noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -32,7 +37,9 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   USE m_od_mapatom
   USE m_kptgen_hybrid
   USE m_od_kptsgen
+  USE m_gen_bz
   USE m_nocoInputCheck
+  USE m_kpoints
 
   IMPLICIT NONE
 
@@ -57,7 +64,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
-  LOGICAL,          INTENT   (IN) :: l_gga
   CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
 
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt, iqpt
@@ -66,7 +72,8 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   REAL                 :: sumWeight, rmtmax, zp, radius, dr
   REAL                 :: kmax1, dtild1, dvac1
   REAL                 :: bk(3)
-  LOGICAL              :: l_vca, l_test
+  LOGICAL              :: l_vca, l_test,l_gga, l_krla
+  CHARACTER(len=4)     :: namex
 
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
@@ -91,14 +98,14 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      DO iType = 1, atoms%ntype
         IF (atoms%nlo(iType).GE.1) THEN
            IF (input%secvar) THEN
-              CALL juDFT_error("LO + sevcar not implemented",calledby ="r_inpXML")
+              CALL juDFT_error("LO + sevcar not implemented",calledby ="postprocessInput")
            END IF
            IF (input%isec1<input%itmax) THEN
-              CALL juDFT_error("LO + Wu not implemented",calledby ="r_inpXML")
+              CALL juDFT_error("LO + Wu not implemented",calledby ="postprocessInput")
            END IF
            IF (atoms%nlo(iType).GT.atoms%nlod) THEN
               WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
-              CALL juDFT_error("nlo(n)>nlod",calledby ="r_inpXML")
+              CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
            END IF
            DO j=1,atoms%nlo(iType)
               IF (.NOT.input%l_useapw) THEN
@@ -109,7 +116,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
               ENDIF
               IF ( (atoms%llo(j,iType).GT.atoms%llod).OR.(mod(-atoms%llod,10)-1).GT.atoms%llod ) THEN
                  WRITE (6,*) 'llo(j,n) =',atoms%llo(j,iType),' > llod =',atoms%llod
-                 CALL juDFT_error("llo(j,n)>llod",calledby ="r_inpXML")
+                 CALL juDFT_error("llo(j,n)>llod",calledby ="postprocessInput")
               END IF
            END DO
 
@@ -131,7 +138,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
                  END IF
               endif
               WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,iType),'. derivative of l =',atoms%llo(ilo,iType)
-              IF (atoms%llo(ilo,iType)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="r_inpXML")
+              IF (atoms%llo(ilo,iType)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
               l = atoms%llo(ilo,iType)
               IF (ilo.EQ.1) THEN
                  atoms%lo1l(l,iType) = ilo
@@ -164,42 +171,42 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      END DO
 
      IF (atoms%n_u.GT.0) THEN
-        IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="r_inpXML")
-        IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="r_inpXML")
-        IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="r_inpXML")
+        IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
+        IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="postprocessInput")
+        IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
      ! Check DOS related stuff (from inped)
 
      IF ((banddos%ndir.LT.0).AND..NOT.banddos%dos) THEN
         CALL juDFT_error('STOP banddos: the inbuild dos-program  <0'//&
-             ' can only be used if dos = true',calledby ="r_inpXML")
+             ' can only be used if dos = true',calledby ="postprocessInput")
      END IF
 
      IF ((banddos%ndir.LT.0).AND.banddos%dos) THEN
         IF (banddos%e1_dos-banddos%e2_dos.LT.1e-3) THEN
            CALL juDFT_error("STOP banddos: no valid energy window for "//&
-                "internal dos-program",calledby ="r_inpXML")
+                "internal dos-program",calledby ="postprocessInput")
         END IF
         IF (banddos%sig_dos.LT.0) THEN
            CALL juDFT_error("STOP DOS: no valid broadening (sig_dos) for "//&
-                "internal dos-PROGRAM",calledby ="r_inpXML")
+                "internal dos-PROGRAM",calledby ="postprocessInput")
         END IF
      END IF
 
      IF (banddos%vacdos) THEN
         IF (.NOT.banddos%dos) THEN
-           CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="r_inpXML")
+           CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="postprocessInput")
         END IF
         IF (.NOT.vacuum%starcoeff.AND.(vacuum%nstars.NE.1))THEN
-           CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="r_inpXML")
+           CALL juDFT_error("STOP banddos: if stars = f set vacuum=1",calledby ="postprocessInput")
         END IF
         IF (vacuum%layers.LT.1) THEN
-           CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="r_inpXML")
+           CALL juDFT_error("STOP DOS: specify layers if vacdos = true",calledby ="postprocessInput")
         END IF
         DO i=1,vacuum%layers
            IF (vacuum%izlay(i,1).LT.1) THEN
-              CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="r_inpXML")
+              CALL juDFT_error("STOP DOS: all layers must be at z>0",calledby ="postprocessInput")
            END IF
         END DO
      END IF
@@ -226,53 +233,16 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         END IF
      ELSE
         IF (noco%l_ss) THEN
-           WRITE(*,*) "l_noco=F and l_ss=T is meaningless. Setting l_ss to F."
+           CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
            noco%l_ss = .FALSE.
-           WRITE(*,*) "Note: Actually this should be fixed by leaving l_ss=T"
-           WRITE(*,*) "      and adapting including (l_noco=.TRUE.).AND. in the"
-           WRITE(*,*) "      respective IF clauses all over the code"
         END IF
      END IF
 
      ! Calculate missing kpts parameters
-
-     IF (.not.l_kpts) THEN
-        IF (.NOT.oneD%odd%d1) THEN
-           IF (jij%l_J) THEN
-              n1=sym%nop
-              n2=sym%nop2
-              sym%nop=1
-              sym%nop2=1
-              CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-              sym%nop=n1
-              sym%nop2=n2
-           ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
-              STOP 'Error: No kpoint set generation for gamma=T yet!'
-              CALL kptgen_hybrid(kpts%nmop(1),kpts%nmop(2),kpts%nmop(3),&
-                   kpts%nkpt,sym%invs,noco%l_soc,sym%nop,&
-                   sym%mrot,sym%tau)
-           ELSE
-              CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-           END IF
-        ELSE
-           STOP 'Error: No kpoint set generation for 1D systems yet!'
-           CALL od_kptsgen (kpts%nkpt)
-        END IF
-     END IF
-     sumWeight = 0.0
-     DO i = 1, kpts%nkpt
-        sumWeight = sumWeight + kpts%wtkpt(i)
-        kpts%bk(:,i) = kpts%bk(:,i) / kpts%posScale
-     END DO
-     kpts%posScale = 1.0
-     DO i = 1, kpts%nkpt
-        kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
-     END DO
-     kpts%nkpt3(:) = kpts%nmop(:)
-     IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
-
+     CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+    
      ! Generate missing general parameters
-
+     
      minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
@@ -284,7 +254,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         dimension%neigd = minNeigd
      END IF
 
-     kpts%nkpt = kpts%nkpt
      dimension%nvd = 0 ; dimension%nv2d = 0
      stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
      obsolete%l_u2f = .FALSE.
@@ -306,7 +275,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
            END DO
            !IF (input%film .OR.oneD%odd%d1) THEN
            !   WRITE(*,*) 'There might be additional work required for the k points here!'
-           !   WRITE(*,*) '...in r_inpXML. See inpeig_dim for comparison!'
+           !   WRITE(*,*) '...in postprocessInput. See inpeig_dim for comparison!'
            !END IF
            CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
            stars%kq1_fft = max(kq1,stars%kq1_fft)
@@ -340,7 +309,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         l_vca = .FALSE.
         INQUIRE (file="vca.in", exist=l_vca)
         IF (l_vca) THEN
-           WRITE(*,*) 'Note: Implementation for virtual crystal approximation should be changed in r_inpXML!'
+           WRITE(*,*) 'Note: Implementation for virtual crystal approximation should be changed in postprocessInput!'
            WRITE(*,*) 'I am not sure whether the implementation actually makes any sense. It is from inped.'
            WRITE(*,*) 'We have to get rid of the file vca.in!'
            OPEN (17,file='vca.in',form='formatted')
@@ -380,6 +349,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
      ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
      l_test = .TRUE. ! only checking, dont use new parameters
+     l_gga=xcpot%is_gga()
      CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
                 kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
      DEALLOCATE (jri1,lmax1,rmt1,dx1)
@@ -481,11 +451,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ! Initialize missing hybrid functionals arrays
 
      ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
-     ALLOCATE (hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-     ALLOCATE (hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-     ALLOCATE (hybrid%ddist(dimension%jspd))
-     hybrid%ddist = 1.0
-
+   
      ! Generate lattice harmonics
 
      IF (.NOT.oneD%odd%d1) THEN
@@ -537,8 +503,15 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         CALL od_mapatom(oneD,atoms,sym,cell)
      END IF
 
+     !Calculate kpoint in the full BZ
+     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
+        CALL gen_bz(kpts,sym)
+     ELSE
+        kpts%nkptf=0
+     ENDIF
+
      ! Missing xc functionals initializations
-     IF (xcpot%igrd.NE.0) THEN
+     IF (xcpot%is_gga()) THEN
         ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
         ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                   oneD%pgft1xy(0:oneD%odd%nn2d-1),&
@@ -592,19 +565,30 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 
      CALL prp_xcfft(stars,input,cell,xcpot)
 
+     namex = xcpot%get_name()
+     l_krla = xcpot%krla.EQ.1
+
   END IF !(mpi%irank.EQ.0)
 
 #ifdef CPP_MPI
+  CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
+  CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
+  IF (mpi%irank.NE.0) THEN
+     CALL xcpot%init(namex,l_krla)
+  END IF
+
   IF (.NOT.sliceplot%iplot) THEN
-        CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
      END IF !(mpi%irank.EQ.0)
   END IF
+
+  ! 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of input postprocessing (calculate missing parameters)

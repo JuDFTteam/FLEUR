@@ -76,7 +76,7 @@ CONTAINS
     CALL setabc1locdn1(jspin, atoms,lapw, sym,usdus,kveclo,enough,nkvec,kvec,&
          nbasf0,alo1,blo1,clo1)
 
-
+    nvmax=lapw%nv(jspin)
     !---> loop over lapws
     DO  k = 1,nvmax
        !calculate k+G

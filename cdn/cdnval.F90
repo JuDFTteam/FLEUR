@@ -2,7 +2,7 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-       vacuum,dimension, sphhar, sym,obsolete, igq_fft,vr, vz, oneD, n_mmp,results, qpw,rhtxy,&
+       vacuum,dimension,sphhar,sym,obsolete,igq_fft,vr,vz,oneD,coreSpecInput,n_mmp,results, qpw,rhtxy,&
        rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
@@ -110,6 +110,8 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)   :: kpts
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
+
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id,jspin
 
@@ -328,7 +330,7 @@ CONTAINS
     ENDIF
 
 ! calculation of core spectra (EELS) initializations -start-
-    CALL corespec_init(atoms)
+    CALL corespec_init(input,atoms,coreSpecInput)
     IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
     IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
 ! calculation of core spectra (EELS) initializations -end-

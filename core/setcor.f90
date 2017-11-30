@@ -55,9 +55,6 @@ CONTAINS
        RETURN
     ENDIF
 
-    IF (atoms%zatom(itype)>92.01e0)  CALL juDFT_error(" z > 92",calledby ="setcor"&
-         &     )
-
     jz0 = atoms%zatom(itype) + 0.01e0
     jz = jz0
     k = 0
@@ -238,6 +235,9 @@ CONTAINS
              occ(n,2) = atoms%coreStateOccs(n,2,itype)
           END IF
        END DO
+    ELSE
+       IF (atoms%zatom(itype)>92.01e0)  CALL juDFT_error(" z > 92",calledby ="setcor")
+
     END IF
 
   END SUBROUTINE setcor

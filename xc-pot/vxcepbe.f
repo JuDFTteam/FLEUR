@@ -5,18 +5,19 @@ c     vxcepbe - easypbe
 c.....------------------------------------------------------------------
       CONTAINS
       SUBROUTINE vxcepbe(
-     >                   icorr,jspins,mirm,irmx,
+     >                   xcpot,jspins,mirm,irmx,
      >                   rh,agr,agru,agrd,
      +                   g2ru,g2rd,gggr,gggru,gggrd,
      <                   vx,vxc)
       
       Use m_easypbe
-      USE m_icorrkeys
+      USE m_types
 
       IMPLICIT NONE
 
-      ! .. Arguments ..
-      INTEGER, INTENT (IN) :: icorr,irmx,jspins,mirm
+! .. Arguments ..
+      TYPE(t_xcpot),INTENT(IN)::xcpot
+      INTEGER, INTENT (IN) :: irmx,jspins,mirm
       REAL,    INTENT (IN) :: rh(mirm,jspins)
       REAL,    INTENT (IN) :: agr(mirm),agru(mirm),agrd(mirm)
       REAL,    INTENT (IN) :: g2ru(mirm),g2rd(mirm),gggr(mirm)
@@ -35,9 +36,12 @@ c.....------------------------------------------------------------------
 
       REAL, PARAMETER :: sml = 1.e-14
       REAL, PARAMETER :: smlc = 2.01e-14
+      LOGICAL         :: l_hse
+      l_hse=(xcpot%is_name("hse").or.xcpot%is_name("vhse").or.
+     +       xcpot%is_name("lhse"))
 
 !$OMP PARALLEL DEFAULT(none)
-!$OMP+ SHARED(irmx,rh,icorr,jspins)
+!$OMP+ SHARED(irmx,rh,xcpot,jspins,l_hse)
 !$OMP+ SHARED(agr,agru,agrd,g2ru,g2rd,gggr,gggru,gggrd)
 !$OMP+ SHARED(vx,vxc)
 !$OMP+ PRIVATE(rou,rod,vxlu,vclu,vxld,vcld,vxgu,vcgu,vxgd,vcgd)
@@ -96,7 +100,7 @@ c.....
           agrt    = agr(i)
           delgrt  = gggr(i)
 
-          CALL easypbe(icorr,
+          CALL easypbe(xcpot,
      >           up,agrup,delgrup,uplap,dn,agrdn,delgrdn,dnlap,
      >           agrt,delgrt,lcor,lpot,
      <           exlsd,vxuplsd,vxdnlsd,eclsd,vcuplsd,vcdnlsd,
@@ -118,8 +122,7 @@ c.....
         xcptu = vxlu + vclu + vxgu + vcgu
         xcptd = vxld + vcld + vxgd + vcgd
 
-        IF ( icorr.EQ.icorr_hse .OR. icorr.EQ.icorr_hseloc .OR.
-     +       icorr.EQ.icorr_vhse ) THEN
+        IF (l_hse)then
           vx(i,1)       = vxupsr * 2
           vx(i,jspins)  = vxdnsr * 2
         ELSE

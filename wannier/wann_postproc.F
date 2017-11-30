@@ -7,8 +7,8 @@
       module m_wann_postproc
       contains 
       subroutine wann_postproc(
-     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,cell,eig_id,l_real,
+     >          DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >          lapw,oneD,noco,cell,vTot,eig_id,l_real,
      >          mpi_comm,wann,l_p0,film,jspins,n2d,
      >          natd,pos,amat,bmat,ntype,neq,zatom,
      >          omtil,l_soc,l_noco,neigd,fullnkpts,
@@ -72,12 +72,14 @@ c***********************************************
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_lapw),INTENT(IN)      :: lapw
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: vTot
 
       type(t_wann), intent(in) :: wann
       logical,      intent(in) :: l_p0
@@ -134,7 +136,7 @@ c***********************************************
 c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 
       character(len=12) :: fending
-      integer :: i,kpts,ikpt,nkqpts,iqpt
+      integer :: i,nkpts,ikpt,nkqpts,iqpt
       real(4) :: delta3,time_lapw_expand,delta2,time_lapw_plot
       logical :: l_need_fft,l_file
       integer :: hopmin_z,hopmax_z
@@ -155,16 +157,16 @@ c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 c***************************************************
 c     Read in the kpoints from w90kpts or kpts.
 c***************************************************      
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         wann%l_bzsym,film,odi%d1,.false.,
-     <         kpts,kpoints)
-      if (kpts /= fullnkpts)
+     <         nkpts,kpoints)
+      if (nkpts /= fullnkpts)
      +  CALL juDFT_error ('mismatch in number of kpoints',
      +                  calledby="wann_postproc")
 
-      call wann_get_kpts(
+      call wann_get_kpts(input,kpts,
      >         wann%l_bzsym,film,odi%d1,.true.,
-     <         kpts,kpoints)
+     <         nkpts,kpoints)
 c*********************************************************
 c     Find out the structure of k-point set.
 c*********************************************************
@@ -445,7 +447,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       if(wann%l_plot_umdat)then
          call wann_plot_um_dat(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >      lapw,oneD,noco,cell,eig_id,l_real,
+     >      lapw,oneD,noco,cell,vTot,eig_id,l_real,
      >      mpi_comm,i,wann%band_min,wann%band_max,l_soc,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -466,6 +468,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
          call wannier_to_lapw(
      >      mpi_comm,eig_id,l_real,
      >      input,lapw,oneD,noco,sym,cell,atoms,stars,vacuum,sphhar,
+     >      vTot,
      >      l_soc,wann%unigrid,i,wann%band_min,wann%band_max,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,

@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,
+     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -40,7 +40,6 @@ c****************************************************************************
       use m_radfun
       use m_radflo
       use m_cdnread, only : cdn_read0, cdn_read
-      use m_loddop
       use m_constants, only : pimach
 !      use m_wann_mmk0_od_vac
       use m_wann_mmk0_vac
@@ -83,6 +82,7 @@ c****************************************************************************
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_potden),INTENT(IN) :: vTot
       TYPE(t_enpara),INTENT(IN) :: enpara
 
       logical, intent (in) :: invs,invs2,film,slice,symor,l_real
@@ -153,9 +153,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the parameters for the number of wfs
       integer :: nwfs
 !!! the potential in the spheres and the vacuum
-      real, allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
-!!! auxiliary potentials
-      complex, allocatable :: vpw(:,:),vzxy(:,:,:,:)
+      real, allocatable :: vr(:,:,:),vz(:,:,:)
 !!! bkpts data
       integer nntot,ikpt_help
       integer, allocatable :: gb(:,:,:),bpt(:,:)
@@ -294,9 +292,7 @@ c-----initializations
       nkpts = nkpt
 
 c-----read the input file to determine what to do
-      call wann_read_inp(
-     >         l_p0,
-     <         wann)
+      call wann_read_inp(input,l_p0,wann)
 
       IF(wann%l_byenergy.AND.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wann_updown")
@@ -368,28 +364,18 @@ c*********************************************************
 cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
-      allocate ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd) )
-      allocate ( vz(nmzd,2,jspd),vrf(jmtd,0:nlhd,ntypd,jspd) )
-      allocate ( vr(jmtd,ntypd,jspd) )
+      allocate (vz(nmzd,2,jspd))
+      allocate (vr(jmtd,ntypd,jspd))
 
-      open (8,file='pottot',form='unformatted',status='old')
-      rewind (8)
-
-      call loddop(stars,vacuum,atoms,sphhar,input,sym,
-     >            8,
-     <            iter,vrf,vpw,vz,vzxy)
-
-      close (8)
+      vz = vTot%vacz
 
       do jspin = 1,jspins
         do n = 1, ntype
           do j = 1,jri(n)
-            vr(j,n,jspin) = vrf(j,0,n,jspin)
+            vr(j,n,jspin) = vTot%mt(j,0,n,jspin)
           enddo
         enddo
       enddo
-
-      deallocate ( vpw,vzxy )
     
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
@@ -729,10 +715,12 @@ c****************************************************************
       zzMat(jspin)%nbasfcn = nbasfcn
       zzMat(jspin)%nbands = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
+	    IF(.not.allocated(zzmat(jspin)%z_r))
+     +   ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
      +                              zzMat(jspin)%nbands))
       ELSE
-         ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
+	    IF(.not.allocated(zzmat(jspin)%z_c))
+     +   ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
      +                              zzMat(jspin)%nbands))
       END IF
 
@@ -758,11 +746,13 @@ c...we work only within the energy window
          zMat(jspin)%nbasfcn = zzMat(jspin)%nbasfcn
          zMat(jspin)%nbands = zzMat(jspin)%nbands
          IF (zzMat(jspin)%l_real) THEN
-            ALLOCATE (zMat(jspin)%z_r(zMat(jspin)%nbasfcn,
+	       IF(.not.allocated(zmat(jspin)%z_r))
+     +      ALLOCATE (zMat(jspin)%z_r(zMat(jspin)%nbasfcn,
      +                                zMat(jspin)%nbands))
             zMat(jspin)%z_r = 0.0
          ELSE
-            ALLOCATE (zMat(jspin)%z_c(zMat(jspin)%nbasfcn,
+	       IF(.not.allocated(zMat(jspin)%z_c))
+     +      ALLOCATE (zMat(jspin)%z_c(zMat(jspin)%nbasfcn,
      +                                zMat(jspin)%nbands))
             zMat(jspin)%z_c = CMPLX(0.0,0.0)
          END IF
@@ -881,7 +871,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       llod,jmtd,jspd,nlhd,soc_opt,neq,
      >       ntype,theta,phi,jspins,irank,
      >       jri,lmax,dx,rmsh,epar,ello,nlo,llo,
-     >       l_dulo,ulo_der,vrf,
+     >       l_dulo,ulo_der,vTot%mt,
      >       acof,bcof,ccof,
      <       hsomtx(:,:,:,:,ikpt))
       endif

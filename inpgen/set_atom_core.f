@@ -381,14 +381,12 @@
       REAL,          INTENT(INOUT) :: coreo(nstd)
 
       INTEGER            :: naddst,n,o
-      CHARACTER(LEN=10)  :: buf
       CHARACTER(LEN=1)   :: l
 
       naddst=0
       n=inn
       l=inl
       o=ino
-      buf=ADJUSTL(buf)
 
       SELECT CASE (TRIM(l))
 ! --- s-states
@@ -412,7 +410,7 @@
      +           calledby="set_atom_core")
           ENDIF
           IF ( n.LT.2 ) THEN 
-            WRITE(*,'(2A)') "*** There's nothing like ",TRIM(buf)
+            WRITE(*,'(a,i0,a)') "*** There's nothing like ",n,"p"
             CALL juDFT_error("storeconfig: invalid specifier",
      +                      calledby="set_atom_core")
           ENDIF
@@ -438,7 +436,7 @@
      +           calledby="set_atom_core")
           ENDIF
           IF ( n.LT.3 ) THEN
-            WRITE(*,'(2A)') "**** There's nothing like ",TRIM(buf)
+            WRITE(*,'(a,i0,a)') "**** There's nothing like ",n,"d"
             CALL juDFT_error("storeconfig: invalid specifier",calledby
      +           ="set_atom_core")
           ENDIF
@@ -475,7 +473,7 @@ c
      +           calledby="set_atom_core")
           ENDIF
           IF ( n.LT.4 ) THEN
-            WRITE(*,'(2A)') "*** There's nothing like ",TRIM(buf)
+            WRITE(*,'(a,i0,a)') "*** There's nothing like ",n,"f"
             CALL juDFT_error("storeconfig: invalid specifier",calledby
      +           ="set_atom_core")
           ENDIF

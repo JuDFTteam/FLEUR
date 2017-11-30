@@ -14,7 +14,7 @@ c                                Y.Mokrousov 15.6.06
 c***********************************************************************
       CONTAINS
       SUBROUTINE wann_mmk0_sph(
-     >                  llod,noccbd,nlod,natd,ntypd,lmaxd,lmd,
+     >                  llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
      >                  ntype,neq,nlo,llo,acof,bcof,ccof,
      >                  ddn,uulon,dulon,uloulopn,
      =                  mmn)
@@ -23,6 +23,7 @@ c     .. scalar arguments ..
       integer, intent (in) :: llod,nlod,natd,ntypd,lmaxd,lmd
       integer, intent (in) :: ntype,noccbd
 c     .. array arguments ..
+      integer, intent (in)  :: lmax(:) !(ntypd)
       integer, intent (in)  :: neq(ntypd)
       integer, intent (in)  :: nlo(ntypd),llo(nlod,ntypd)
       real,    intent (in)  :: ddn(0:lmaxd,ntypd)
@@ -52,7 +53,7 @@ c---> performs summations of the overlaps of the wavefunctions
          nt1 = 1
          do 130 n = 1,ntype
             nt2 = nt1 + neq(n) - 1
-            do 120 l = 0,lmaxd
+            do 120 l = 0,lmax(n)
                suma = cmplx(0.,0.)
                sumb = cmplx(0.,0.)
                ll1 = l* (l+1)

@@ -99,7 +99,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(oneD%odd%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    !CALL MPI_BCAST(obsolete%nwdd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(jij%nqptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(xcpot%igrd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    IF (mpi%irank.NE.0) THEN
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
@@ -189,10 +188,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       ALLOCATE(hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
-      ALLOCATE(hybrid%select2(4,atoms%ntype),hybrid%lcutm2(atoms%ntype),hybrid%lcutwf(atoms%ntype))
-      ALLOCATE(hybrid%ddist(dimension%jspd))
+      ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
-      IF (xcpot%igrd.NE.0) THEN
+      IF (xcpot%is_gga()) THEN
          ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                    oneD%pgft1xy(0:oneD%odd%nn2d-1),&
@@ -202,6 +200,14 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
          ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
                    oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
       END IF
+
+      ! Explicit atom-dependent xc functional
+      ALLOCATE(atoms%namex(atoms%ntype))
+      ALLOCATE(atoms%relcor(atoms%ntype))
+      ALLOCATE(atoms%icorr(atoms%ntype))
+      ALLOCATE(atoms%krla(atoms%ntype))
+      atoms%namex = ''
+      atoms%icorr = -99
 
       oneD%odd%nq2 = oneD%odd%n2d
       atoms%vr0(:)         = 0.0
@@ -213,7 +219,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       jij%nmagn=1
       jij%mtypes=1
       jij%phnd=1
-      hybrid%ddist     = 1.0
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0
    END IF

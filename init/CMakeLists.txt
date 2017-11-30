@@ -29,6 +29,7 @@ init/tetcon.f
 )
 set(fleur_F90 ${fleur_F90}
 init/compile_descr.F90
+init/kpoints.f90
 init/apws_dim.f90
 init/checks.F90
 init/dimen7.F90

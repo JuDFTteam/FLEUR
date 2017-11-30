@@ -106,7 +106,7 @@ CONTAINS
           !         calculate the exchange-correlation potential in  real space
           !
           CALL vxcall&
-               &               (6,xcpot%icorr,input%krla,input%jspins,&
+               &               (6,xcpot,input%jspins,&
                &                ifftd2,nt,af2,&
                &                vx,vxc)   
 
@@ -138,7 +138,7 @@ CONTAINS
           !
           IF (input%total) THEN   
              CALL excall&
-                  &                 (6,xcpot%icorr,input%krla,input%jspins,&
+                  &                 (6,xcpot,input%jspins,&
                   &                  ifftd2,nt,af2,&
                   &                  exc)   
              !
@@ -180,7 +180,7 @@ CONTAINS
        ENDDO
 
        CALL vxcall&
-            &              (6,xcpot%icorr,input%krla,input%jspins,&
+            &              (6,xcpot,input%jspins,&
             &               vacuum%nmzd,nmzdiff,af2,&
             &               vxz,vxcz)
        !+gu
@@ -198,7 +198,7 @@ CONTAINS
        !
        IF (input%total) THEN
           CALL excall&
-               &                   (6,xcpot%icorr,input%krla,input%jspins,&
+               &                   (6,xcpot,input%jspins,&
                &                    vacuum%nmzd,nmzdiff,af2,&
                &                    excz(vacuum%nmzxy+1,ivac))
        END IF

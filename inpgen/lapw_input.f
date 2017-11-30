@@ -8,24 +8,25 @@
       CONTAINS
       SUBROUTINE lapw_input(
      >                      infh,nline,xl_buffer,bfh,buffer,
-     <                      jspins,kcrel,ndvgrd,nkpt,div,
+     <                      jspins,kcrel,ndvgrd,nkpt,div,kPointDensity,
      <                      frcor,ctail,chng,tria,kmax,gmax,gmaxxc,
-     <                      igrd,dvac,dtild,tkb,namex,relcor)
+     <                      dvac,dtild,tkb,namex,relcor)
      
       USE m_readrecord
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: xl_buffer,infh,bfh
       INTEGER, INTENT (OUT) :: jspins,kcrel,ndvgrd,nkpt,div(3)
-      INTEGER, INTENT (OUT) :: igrd
       LOGICAL, INTENT (OUT) :: frcor,ctail,tria
       REAL,    INTENT (OUT) :: kmax,gmax,gmaxxc,tkb,chng
+      REAL,    INTENT (OUT) :: kPointDensity(3)
       REAL,    INTENT (INOUT) :: dvac,dtild
       CHARACTER(len=4), INTENT (OUT) :: namex
       CHARACTER(len=12),INTENT (OUT) :: relcor
       CHARACTER(len=xl_buffer)       :: buffer
       
       INTEGER iflag,div1,div2,div3,nline,nbuffer,ios
+      REAL den, denX, denY, denZ
       LOGICAL h_film,h_comp,h_exco,h_kpt,fatalerror,relxc
       CHARACTER(len=4) :: xctyp
 
@@ -34,22 +35,23 @@
      &                  gmax, gmaxxc, kmax
       NAMELIST /exco/   xctyp, relxc 
       NAMELIST /film/   dvac, dtild
-      NAMELIST /kpt/    nkpt, div1, div2, div3, tkb, tria
+      NAMELIST /kpt/    nkpt,div1,div2,div3,tkb,tria,den,denX,denY,denZ
 
 
       h_film=.false. ; h_comp=.false.
       h_exco=.false. ; h_kpt=.false.
       fatalerror=.false.
-                          ! jspins, gmax, gmaxxc, kmax were set before
-        frcor  = .false.  ! no frozen core
-        ctail  = .true.   ! always core-tail correction
-        kcrel = 0         ! no fully-magnetic dirac core
+                        ! jspins, gmax, gmaxxc, kmax were set before
+      frcor  = .false.  ! no frozen core
+      ctail  = .true.   ! always core-tail correction
+      kcrel = 0         ! no fully-magnetic dirac core
 
-        relcor = 'non-relativi'
-        namex = 'pbe '
-        igrd = 1 ; ndvgrd = 6 ; chng= -1.0e-12 
-        nkpt = 0 ; div = 0 
-        tkb = 0.001 ; tria = .false.
+      relcor = 'non-relativi'
+      namex = 'pbe '
+      ndvgrd = 6 ; chng= -1.0e-12 
+      nkpt = 0 ; div = 0 
+      tkb = 0.001 ; tria = .false.
+      kPointDensity = 0.0
  
 
 !===> read input
@@ -105,7 +107,7 @@
 
         IF (iflag==2) THEN
         ELSE
-         igrd = 0 ; ndvgrd = 0 ; chng= 0.0
+          ndvgrd = 0 ; chng= 0.0
         ENDIF
 
 !===> film
@@ -121,11 +123,21 @@
       ELSEIF (buffer(1:4)=='&kpt') THEN
         IF (h_kpt) CALL err(1)
 
-        div1 = 1 ; div2 = 1 ; div3 = 1
+        div1 = 0 ; div2 = 0 ; div3 = 0
+        denX = 0.0 ; denY = 0.0 ; denZ = 0.0
+        den = 0.0
 
         READ (bfh,kpt,err=912, end=912, iostat=ios)
         h_kpt=.true.
-        div(1) = div1 ; div(2) = div2 ; div(3) = div3 
+        div(1) = div1 ; div(2) = div2 ; div(3) = div3
+        IF (den.NE.0.0) THEN
+           IF (denX.EQ.0.0) denX = den
+           IF (denY.EQ.0.0) denY = den
+           IF (denZ.EQ.0.0) denZ = den
+        END IF
+        kPointDensity(1) = denX
+        kPointDensity(2) = denY
+        kPointDensity(3) = denZ
 
 !===> end
       ELSEIF (buffer(1:4)=='&end') THEN

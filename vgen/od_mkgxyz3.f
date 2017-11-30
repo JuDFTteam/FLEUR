@@ -7,7 +7,7 @@
       MODULE m_od_mkgxyz3
       CONTAINS
       SUBROUTINE od_mkgxyz3(
-     >     igrd,ndm,jsdm,ng3,jspins,vl,r,
+     >     ndm,jsdm,ng3,jspins,vl,r,
      >     dvz,dvp,dvr,dvzz,dvpp,dvrr,dvpr,dvrz,dvzp,
      <     agrt,agru,agrd, g2rt,g2ru,g2rd, gggrt,gggru,gggrd,
      <     gzgr)
@@ -22,7 +22,7 @@ c     Y.Mokrousov, 15-16 october 2002
 
       IMPLICIT NONE
 
-      integer, intent (in) ::  ndm,ng3,igrd,jsdm,jspins
+      integer, intent (in) ::  ndm,ng3,jsdm,jspins
       real,    intent (in) ::  vl(ndm,jsdm),r
       real,    intent (in) ::  dvz(ndm,jsdm),dvp(ndm,jsdm)
       real,    intent (in) ::  dvr(ndm,jsdm),dvzz(ndm,jsdm)
@@ -79,7 +79,6 @@ c                  --->  grad(zeta)*grad(rho(total))
           g2rd(i) = 0.0
       end do
 
-      if (igrd.GT.0) then
          if (jspins.eq.1) then
             
             
@@ -245,7 +244,6 @@ c     g2r: laplasian(rho)
  20         end do
             
          end if
-      end if                    ! igrd.GT.0
       
       END SUBROUTINE od_mkgxyz3
       END MODULE m_od_mkgxyz3

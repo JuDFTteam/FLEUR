@@ -27,9 +27,9 @@
       USE m_bandstr1
       use m_types
       IMPLICIT NONE
-      TYPE(t_sym),INTENT(INOUT)   :: sym
+      TYPE(t_sym),INTENT(IN)      :: sym
       TYPE(t_cell),INTENT(IN)     :: cell
-      TYPE(t_input),INTENT(INOUT) :: input
+      TYPE(t_input),INTENT(IN)    :: input
       TYPE(t_noco),INTENT(IN)     :: noco
       TYPE(t_banddos),INTENT(IN)  :: banddos
       TYPE(t_kpts),INTENT(INOUT)  :: kpts
@@ -78,9 +78,9 @@
       INTEGER ikzero   ! 0 no shift of k-points;
                        ! 1 shift of k-points for better use of sym in irrBZ
       REAL    kzero(3)           ! shifting vector to bring one k-point to or 
-                                 ! away from (0,0,0) (for even/odd nmop)
+                                 ! away from (0,0,0) (for even/odd nkpt3)
 
-      INTEGER i,j,k,l,idiv,mkpt,addSym
+      INTEGER i,j,k,l,idiv,mkpt,addSym,nsym
       INTEGER iofile,iokpt,kpri,ktest,kmidtet
       INTEGER idivis(3)
       LOGICAL random,trias
@@ -112,8 +112,9 @@
 !------------------------------------------------------------
 
       IF(l_q) THEN
-       trias=input%tria
-       input%tria=.false.
+         trias=input%tria
+         if (input%tria) call judft_error("tria=T not implemented for q-point generator",calledby='julia')
+         !input%tria=.false.
       ENDIF
        
       IF (cell%latnam.EQ.'squ') THEN
@@ -147,8 +148,8 @@
      &               cell%amat,&
      &               idsyst,idtype) 
       ENDIF
-      sym%nsym = sym%nop
-      IF (input%film) sym%nsym = sym%nop2        
+      nsym = sym%nop
+      IF (input%film) nsym = sym%nop2        
 !
 !-------------------- Want to make a Bandstructure ? --------
 !
@@ -188,14 +189,14 @@
           bltv(j,k) = cell%amat(k,j)
           binv(j,k) = cell%bmat(k,j)/tpi_const
           rltv(j,k) = cell%bmat(k,j)
-          DO i = 1,sym%nsym
+          DO i = 1,nsym
             rlsymr(k,j,i) = real( sym%mrot(j,k,i) )
           ENDDO
         ENDDO
       ENDDO
 
       ccr = 0.0
-      DO i = 1,sym%nsym
+      DO i = 1,nsym
         DO j = 1,3
           talfa(j,i) = 0.0
           DO k = 1,3
@@ -215,7 +216,7 @@
 !      write (*,'(3f12.6)') ((ccr(j,k,i),j=1,3),k=1,3)
 !      write (*,*)
       ENDDO
-      DO i = 1,sym%nsym
+      DO i = 1,nsym
         rlsymr1(:,:) = rlsymr(:,:,i)
            ccr1(:,:) =    ccr(:,:,i)
         DO j = 1,3
@@ -226,7 +227,7 @@
         ENDDO
       ENDDO
 
-      IF ((.not.noco%l_ss).AND.(.not.noco%l_soc).AND.(2*sym%nsym<nop48)) THEN
+      IF ((.not.noco%l_ss).AND.(.not.noco%l_soc).AND.(2*nsym<nop48)) THEN
 
         IF ( (input%film.AND.(.not.sym%invs2)).OR.&
      &     ((.not.input%film).AND.(.not.sym%invs)) ) THEN
@@ -235,15 +236,15 @@
            !       to exploit time reversal symmetry. However, if the new
            !       symmetry operation is the identity matrix it is excluded.
            !       This is the case iff it is (-Id) + a translation vector.
-           DO i = 1, sym%nsym
+           DO i = 1, nsym
               ! This test assumes that ccr(:,:,1) is the identity matrix.
               IF(.NOT.ALL(ABS(ccr(:,:,1)+ccr(:,:,i)).LT.10e-10) ) THEN
-                 ccr(:,:,sym%nsym+addSym+1 ) = -ccr(:,:,i)
-                 rlsymr(:,:,sym%nsym+addSym+1 ) = -rlsymr(:,:,i)
+                 ccr(:,:,nsym+addSym+1 ) = -ccr(:,:,i)
+                 rlsymr(:,:,nsym+addSym+1 ) = -rlsymr(:,:,i)
                  addSym = addSym + 1
               END IF
            END DO
-           sym%nsym = sym%nsym + addSym
+           nsym = nsym + addSym
         ENDIF
 
       ENDIF
@@ -258,12 +259,12 @@
 ! interchangable. GM, 2016.
 
 !      CALL brzone(&
-!     &            rltv,sym%nsym,ccr,mface,nbsz,nv48,&
+!     &            rltv,nsym,ccr,mface,nbsz,nv48,&
 !     &            cpoint,&
 !     &            xvec,ncorn,nedge,nface,fnorm,fdist)
 
       CALL brzone2(&
-     &            rltv,sym%nsym,ccr,mface,nbsz,nv48,&
+     &            rltv,nsym,ccr,mface,nbsz,nv48,&
      &            cpoint,&
      &            xvec,ncorn,nedge,nface,fnorm,fdist)
 
@@ -281,7 +282,7 @@
      &              iofile,ibfile,iokpt,&
      &              kpri,ktest,kmidtet,mkpt,ndiv3,&
      &              nreg,nfulst,rltv,cell%omtil,&
-     &              sym%nsym,ccr,mdir,mface,&
+     &              nsym,ccr,mdir,mface,&
      &              ncorn,nface,fdist,fnorm,cpoint,&
      &              voltet,ntetra,ntet,vktet,&
      &              kpts%nkpt,&
@@ -289,39 +290,39 @@
       ELSE
 !
 !       If just the total number of k-points is given, determine 
-!       the divisions in each direction (nmop):
+!       the divisions in each direction (nkpt3):
 !
 !        IF (tria) THEN
 !            nkpt = nkpt/4
-!            nmop(:) = nmop(:) / 2
+!            nkpt3(:) = nkpt3(:) / 2
 !        ENDIF
-        IF (sum(kpts%nmop).EQ.0) THEN
+        IF (sum(kpts%nkpt3).EQ.0) THEN
           CALL divi(&
      &              kpts%nkpt,cell%bmat,input%film,sym%nop,sym%nop2,&
-     &              kpts%nmop)
+     &              kpts%nkpt3)
         ENDIF
 
 !
 !       Now calculate Monkhorst-Pack k-points:
 !
-        IF (kpts%nmop(2).EQ.0) kpts%nmop(2) = kpts%nmop(1)
-        IF ((.not.input%film).AND.(kpts%nmop(3).EQ.0)) kpts%nmop(3) = kpts%nmop(2)
+        IF (kpts%nkpt3(2).EQ.0) kpts%nkpt3(2) = kpts%nkpt3(1)
+        IF ((.not.input%film).AND.(kpts%nkpt3(3).EQ.0)) kpts%nkpt3(3) = kpts%nkpt3(2)
         IF (nbound.EQ.1) THEN
-           mkpt = (2*kpts%nmop(1)+1)*(2*kpts%nmop(2)+1)
-           IF (.not.input%film) mkpt = mkpt*(2*kpts%nmop(3)+1)
+           mkpt = (2*kpts%nkpt3(1)+1)*(2*kpts%nkpt3(2)+1)
+           IF (.not.input%film) mkpt = mkpt*(2*kpts%nkpt3(3)+1)
         ELSE
-           mkpt = kpts%nmop(1)*kpts%nmop(2)
-           IF (.not.input%film) mkpt = mkpt*kpts%nmop(3)
+           mkpt = kpts%nkpt3(1)*kpts%nkpt3(2)
+           IF (.not.input%film) mkpt = mkpt*kpts%nkpt3(3)
         ENDIF
         ALLOCATE (vkxyz(3,mkpt),wghtkp(mkpt) )
         vkxyz = 0.0
 
         CALL kptmop(&
      &              iofile,iokpt,kpri,ktest,&
-     &              idsyst,idtype,kpts%nmop,ikzero,kzero,&
+     &              idsyst,idtype,kpts%nkpt3,ikzero,kzero,&
      &              rltv,bltv,nreg,nfulst,nbound,idimens,&
      &              xvec,fnorm,fdist,ncorn,nface,nedge,cpoint,&
-     &              sym%nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
+     &              nsym,ccr,rlsymr,talfa,mkpt,mface,mdir,&
      &              kpts%nkpt,divis,vkxyz,nkstar,wghtkp)
 
       ENDIF
@@ -360,7 +361,7 @@
            WRITE (113,FMT=8050) (vkxyz(i,j)/real(idiv),i=1,3)
         ENDDO
         CLOSE(113)
-        input%tria=trias
+        !input%tria=trias
         RETURN
       ENDIF
  8050 FORMAT (2(f14.10,1x),f14.10)

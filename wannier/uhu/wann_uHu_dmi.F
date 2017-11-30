@@ -19,8 +19,8 @@ c*******************************************c
       USE m_juDFT
       CONTAINS
       SUBROUTINE wann_uHu_dmi(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,wann,
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      banddos,oneD,noco,cell,vTot,wann,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -44,7 +44,6 @@ c*******************************************c
       use m_radflo
       use m_cdnread
       use m_types
-      use m_loddop
       use m_constants, only : pimach
       use m_wann_projmethod
       use m_wann_abinv
@@ -78,12 +77,14 @@ c*******************************************c
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_banddos),INTENT(IN)   :: banddos
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_wann),INTENT(INOUT)   :: wann
 
 c     ..scalar arguments..
@@ -148,7 +149,7 @@ c     ..allocatable arrays..
       INTEGER, ALLOCATABLE :: innerEig_idList(:)
       real,    allocatable :: we(:),we_b(:),we_b2(:)
       real,    allocatable :: eigg(:)
-      real,    allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
+      real,    allocatable :: vr(:,:,:),vz(:,:,:)
       real,    allocatable :: flo(:,:,:,:,:)
       real,    allocatable :: ff(:,:,:,:,:),gg(:,:,:,:,:)
       real,    allocatable :: us(:,:,:),uds(:,:,:),ulos(:,:,:)
@@ -287,9 +288,7 @@ c     ..initializations..
       
 
 c-----read the input file to determine what to do
-      call wann_read_inp(
-     >         l_p0,
-     <         wann)
+      call wann_read_inp(input,l_p0,wann)
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wannier")
@@ -442,7 +441,7 @@ c      find symmetry-related elements in mmkb
 c********************************************************
          allocate(maptopair(3,fullnkpts,nntot))
          allocate(pair_to_do(fullnkpts,nntot))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
      >     irreduc,mapkoper,l_p0,film,nop,invtab,mrot,odi%d1,
      >     tau,
@@ -452,7 +451,7 @@ c********************************************************
       if(l_gwf)then 
          allocate(maptopair_q(3,fullnqpts,nntot_q))
          allocate(pair_to_do_q(fullnqpts,nntot_q))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
      >     irreduc_q,mapqoper,l_p0,.false.,1,invtab(1),mrot(:,:,1),
      >     .false.,tau,
@@ -474,28 +473,26 @@ c*********************************************************
        allocate ( vpw(n3d,4),vzxy(nmzxyd,odi%n2d-1,2,4) )
       endif
 
-      allocate ( vz(nmzd,2,4) )
-      allocate ( vrf(jmtd,0:nlhd,ntypd,jspd) )
-      allocate ( vr(jmtd,ntypd,jspd) )
+      allocate (vz(nmzd,2,4))
+      allocate (vr(jmtd,ntypd,jspd))
 
-      open (8,file='pottot',form='unformatted',status='old')
-      rewind (8)
- 
-      call loddop(stars,vacuum,atoms,sphhar,input,sym,
-     >            8,
-     <            iter,vrf,vpw,vz,vzxy)
-
-      close (8)
+      vpw(:,1:SIZE(vTot%pw,2)) = vTot%pw(:,1:SIZE(vTot%pw,2))
+      IF(film) THEN
+         vz(:,:,1:SIZE(vTot%vacz,3)) =
+     &      vTot%vacz(:,:,1:SIZE(vTot%vacz,3))
+         vzxy(:,:,:,1:SIZE(vTot%vacxy,4)) =
+     &      vTot%vacxy(:,:,:,1:SIZE(vTot%vacxy,4))
+      END IF
 
       do jspin = 1,jspins
         do n = 1, ntype
           do j = 1,jri(n)
-            vr(j,n,jspin) = vrf(j,0,n,jspin)
+            vr(j,n,jspin) = vTot%mt(j,0,n,jspin)
           enddo
         enddo
       enddo
 
-      if(.not. film) deallocate(vz,vzxy)
+      if(.not.film) deallocate(vz,vzxy)
 
       if(l_noco)then
          npotmatfile=25
@@ -850,7 +847,7 @@ c       na = na + neq(n)
      >        memd,nlhd,ntypsd,ntypd,jmtd,lmaxd,jspd,ntype,dx,
      >        rmsh,jri,lmax,ntypsy,natd,lnonsph,lmd,lmplmd,clnu,
      >        mlh,nmem,llh,nlh,neq,irank,mlotot,mlolotot,
-     >        vrf(:,:,:,jspin3),nlod,llod,loplod,ello(1,1,jspin3),
+     >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,ello(1,1,jspin3),
      >        llo,nlo,lo1l,l_dulo,ulo_der,ff(:,:,:,:,jspin),
      >        gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >        ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),
@@ -1448,7 +1445,7 @@ c************************************************c
       if(allocated(vpw)) deallocate(vpw)
       if(allocated(vzxy)) deallocate(vzxy)
       if(allocated(vz)) deallocate(vz)
-      deallocate(vrf,vr)
+      deallocate(vr)
       deallocate(tdd,tdu,tud,tuu)
       deallocate(tdd_soc,tdu_soc,tud_soc,tuu_soc)
       deallocate(tdulo,tuulo)

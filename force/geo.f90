@@ -85,8 +85,9 @@ CONTAINS
     TYPE(t_kpts)                  :: kpts_temp
     TYPE(t_hybrid)                :: hybrid_temp
     TYPE(t_oneD)                  :: oneD_temp
+    TYPE(t_coreSpecInput)         :: coreSpecInput_temp
     TYPE(t_wann)                  :: wann_temp
-    LOGICAL                       :: l_kpts_temp, l_gga_temp
+    LOGICAL                       :: l_kpts_temp
     INTEGER                       :: numSpecies
     INTEGER                       :: div(3)
     INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
@@ -209,11 +210,11 @@ CONTAINS
 
           ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
           ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))
-          ALLOCATE (hybrid_temp%select2(4,atoms%ntype),hybrid_temp%lcutm2(atoms%ntype),hybrid_temp%lcutwf(atoms%ntype))
+          ALLOCATE (hybrid_temp%lcutwf(atoms%ntype))
 
           CALL rw_inp('r',atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                       banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,&
+                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,&
                       input_temp%comment)
           input_temp%l_f = input%l_f
           input_temp%tkb = input%tkb
@@ -223,7 +224,7 @@ CONTAINS
           vacuum_temp = vacuum
           CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
+               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,a3_temp(3),&
                input_temp%comment)
     
        ELSE
@@ -234,19 +235,19 @@ CONTAINS
           ALLOCATE(xmlCoreOccs(1,1,1))
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
-                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,wann_temp,noel_temp,&
-                        namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,xmlElectronStates,&
-                        xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp,l_gga_temp)
+                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
+                        namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,xmlElectronStates,&
+                        xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
           numSpecies = SIZE(speciesRepAtomType)
           filename = 'inp_new.xml'
           input_temp%l_f = input%l_f
           input_temp%gw_neigd = dimension_temp%neigd
-          div(:) = MIN(kpts_temp%nmop(:),1)
+          div(:) = MIN(kpts_temp%nkpt3(:),1)
           stars_temp%gmax = stars_temp%gmaxInit
           CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
-                        kpts_temp,kpts_temp%nmop,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
-                        scale_temp,dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+                        kpts_temp,kpts_temp%nkpt3,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
+                        dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                         atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,.TRUE.,numSpecies,enpara_temp)
           DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)

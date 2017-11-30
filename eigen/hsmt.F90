@@ -3,7 +3,7 @@ MODULE m_hsmt
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt(DIMENSION,atoms,sphhar,sym,enpara,SUB_COMM,n_size,n_rank,&
-       jsp,input,mpi,lmaxb,gwc,noco,cell,&
+       jsp,input,mpi,lmaxb,noco,cell,&
        lapw, bkpt, vr,vs_mmp, oneD,usdus, kveclo,tlmplm,l_real,hamOvlp)
     !=====================================================================
     !     redesign of old hssphn into hsmt
@@ -92,7 +92,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: SUB_COMM,n_size,n_rank 
     INTEGER, INTENT (IN) :: jsp  
     INTEGER, INTENT (IN) :: lmaxb
-    INTEGER, INTENT (IN) :: gwc
 
     !     ..
     !     .. Array Arguments ..
@@ -231,7 +230,7 @@ CONTAINS
           CALL timestart("hsmt extra")
           IF (ANY(atoms%nlo>0).OR.(atoms%n_u.GT.0)) &
                CALL hsmt_extra(DIMENSION,atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
-               hlpmsize,lmaxb,gwc,noco,l_socfirst,lapw,cell,enpara%el0,&
+               hlpmsize,lmaxb,noco,l_socfirst,lapw,cell,enpara%el0,&
                fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
                kveclo,l_real,hamOvlp%a_r,hamOvlp%b_r,hamOvlp%a_c,hamOvlp%b_c) !out/in
           CALL timestop("hsmt extra")

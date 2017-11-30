@@ -19,6 +19,7 @@ MODULE m_juDFT_time
   INTEGER,PARAMETER         :: max_subtimer=5 ! blocks of subtimers are allocated in this size
   REAL                      :: min_time=0.02 ! minimal time to display in output (part of total)
   LOGICAL                   :: l_debug  !write out each start& stop of timer
+  REAL                      :: debugtimestart=-1.0
   TYPE t_p
      TYPE(t_timer),POINTER:: p
   END TYPE t_p
@@ -148,6 +149,7 @@ CONTAINS
 
   !>
   SUBROUTINE priv_debug_output(startstop,name)
+    USE m_judft_sysinfo
     IMPLICIT NONE
     CHARACTER(LEN=*),INTENT(IN):: startstop,name
 #ifdef CPP_MPI
@@ -155,11 +157,12 @@ CONTAINS
     INCLUDE 'mpif.h'
 #endif
     IF (.NOT.l_debug) RETURN
+    if (debugtimestart<0) debugtimestart=cputime()
 #ifdef CPP_MPI
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
-    WRITE(*,"(i3,3a,f20.3)") irank,startstop,name," at:",cputime()
+    WRITE(*,"(i3,3a,f20.2,5x,a)") irank,startstop,name," at:",cputime()-debugtimestart,memory_usage_string()
 #else
-    WRITE(*,"(3a,f20.3)") startstop,name," at:",cputime()
+    WRITE(*,"(3a,f20.2,5x,a)") startstop,name," at:",cputime()-debugtimestart,memory_usage_string()
 #endif      
   END SUBROUTINE priv_debug_output
 
@@ -398,7 +401,7 @@ CONTAINS
     IMPLICIT NONE
     INTEGER,INTENT(IN)     :: it
     LOGICAL,INTENT(INOUT)  :: l_cont
-    CHARACTER(len=20)::wtime_string
+    CHARACTER(len=1000)::wtime_string
     INTEGER          :: wtime,time_used,time_per_iter
     INTEGER:: irank=0
 #ifdef CPP_MPI

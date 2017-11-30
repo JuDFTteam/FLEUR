@@ -13,7 +13,6 @@ CONTAINS
         xcpot,hybrid)
     !
     !**********************************************************************
-    USE m_hybridmix
     USE m_types
     IMPLICIT NONE
     INCLUDE 'mpif.h'
@@ -41,34 +40,36 @@ CONTAINS
     REAL rdum
     !     .. Local Arrays ..
     INTEGER i(39),ierr(3)
-    REAL    r(30)
-    LOGICAL l(43)
+    REAL    r(32)
+    LOGICAL l(45)
     !     ..
-    !     .. External Subroutines.. 
+    !     .. External Subroutines..
+#ifdef CPP_MPI    
     EXTERNAL MPI_BCAST
 
     IF (mpi%irank.EQ.0) THEN
-       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype ; i(4)=input%krla ; i(5)=1 ; i(6)=input%isec1
+       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype ; i(4)=xcpot%krla ; i(5)=1 ; i(6)=input%isec1
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
-       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = xcpot%icorr ; i(26) = xcpot%igrd
+       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = 0 ; i(26) = 0!xcpot%igrd
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
-       i(35)=hybrid%bands1 ; i(36)=hybrid%bands2 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
+       i(35)=hybrid%bands1 ; i(36)=1 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
        i(39)=input%kcrel
 
        r(1)=cell%omtil ; r(2)=cell%area ; r(3)=vacuum%delz ; r(4)=cell%z1 ; r(5)=input%alpha
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta ; r(9)=noco%phi ; r(10)=vacuum%tworkf 
        r(11)=vacuum%locx(1) ; r(12)=vacuum%locx(2); r(13)=vacuum%locy(1) ; r(14)=vacuum%locy(2)
        r(15)=input%efield%sigma ; r(16)=input%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
-       r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=hybrid%gcutm2
-       r(23)=hybrid%tolerance2 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
-       r(27)=aMix_VHSE() ; r(28)=omega_VHSE() ; r(29)=input%minDistance ; r(30)=obsolete%chng
+       r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
+       r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=input%efield%vslope
+       r(27)=0.0 ; r(28)=0.0!r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
+       r(29)=input%minDistance ; r(30)=obsolete%chng ; r(31)=input%ldauMixParam ; r(32)=input%ldauSpinf
 
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
-       l(11)=banddos%dos ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
+       l(11)=banddos%dos ; l(12) = hybrid%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ ; l(15)=sliceplot%iplot
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip ; l(19)=obsolete%l_f2u ; l(20)=obsolete%l_u2f
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
@@ -76,29 +77,29 @@ CONTAINS
        l(34)=banddos%l_mcd ; l(35)=input%sso_opt(1)
        l(36)=input%sso_opt(2) ; l(37)=obsolete%pot8; l(38)=input%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=input%efield%dirichlet
-       l(43)=input%efield%l_dirichlet_coeff
+       l(43)=input%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    hybrid%bands1=i(35) ; hybrid%bands2=i(36) ; input%imix=i(37)
+    hybrid%bands1=i(35) ;  input%imix=i(37)
     input%gw=i(31) ; input%gw_neigd=i(32) ; hybrid%ewaldlambda=i(33) ; hybrid%lexp=i(34)
     vacuum%nstars=i(27) ; vacuum%nstm=i(28) ; oneD%odd%nq2=i(29) ; oneD%odd%nop=i(30)
-    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) ; xcpot%icorr=i(25) ; xcpot%igrd=i(26)
+    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) 
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
      atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38)
-     input%coretail_lmax=i(2) ; input%krla=i(4) ; input%kcrel=i(39)
+     input%coretail_lmax=i(2) ; input%kcrel=i(39)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    rdum=aMix_VHSE( r(27) ); rdum=omega_VHSE( r(28) )
     input%minDistance=r(29) ; obsolete%chng=r(30)
-    hybrid%tolerance2=r(23) ; input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
-    cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) ; hybrid%gcutm2=r(22)
+    input%delgau=r(24) ; input%tkb=r(25) ; input%efield%vslope=r(26)
+    cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) 
     input%efield%sigma=r(15) ; input%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);
     vacuum%locx(1)=r(11); vacuum%locx(2)=r(12); vacuum%locy(1)=r(13); vacuum%locy(2)=r(14)
     sliceplot%e1s=r(6) ; sliceplot%e2s=r(7) ; noco%theta=r(8) ; noco%phi=r(9) ; vacuum%tworkf=r(10)
     cell%omtil=r(1) ; cell%area=r(2) ; vacuum%delz=r(3) ; cell%z1=r(4) ; input%alpha=r(5)
+    input%ldauMixParam=r(31) ; input%ldauSpinf=r(32)
     !
     CALL MPI_BCAST(l,SIZE(l),MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     input%efield%l_dirichlet_coeff = l(43) ; input%l_useapw=l(2)
@@ -109,12 +110,12 @@ CONTAINS
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
     input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18) ; obsolete%l_f2u=l(19) ; obsolete%l_u2f=l(20)
-    banddos%dos=l(11) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
+    banddos%dos=l(11) ; hybrid%l_hybrid=l(12) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
     input%integ=l(14) ; sliceplot%iplot=l(15)
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     input%efield%l_segmented = l(38) ; sym%symor=l(39); input%efield%dirichlet = l(40)
-    input%efield%l_dirichlet_coeff = l(41)
+    input%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
     !
     ! -> Broadcast the arrays:
     IF (input%efield%l_segmented) THEN
@@ -259,13 +260,20 @@ CONTAINS
     ENDIF
     !--- J>
     !--- HF<
-    CALL MPI_BCAST(hybrid%lcutwf,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%nkpt3,3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%select2,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(hybrid%lcutm2,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    IF(hybrid%l_hybrid) THEN
+       CALL MPI_BCAST(hybrid%lcutwf,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    END IF
     !--- HF>
+
+    IF (mpi%irank>0) THEN
+       ALLOCATE(xcpot%lda_atom(atoms%ntype))
+       ALLOCATE(noco%socscale(atoms%ntype))
+    ENDIF
+    CALL MPI_BCAST(xcpot%lda_atom,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(noco%socscale,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
        n = dimension%nstd*atoms%ntype
@@ -280,5 +288,6 @@ CONTAINS
     END IF
  
     RETURN
+#endif
   END SUBROUTINE mpi_bc_all
 END MODULE m_mpi_bc_all

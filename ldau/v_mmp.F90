@@ -19,7 +19,7 @@ MODULE m_vmmp
   !     Extension to multiple U per atom type  G.M. 2017
   !     ************************************************************
 CONTAINS
-  SUBROUTINE v_mmp(sym,atoms,jspins,lmaxb,ns_mmp,u,f0,f2, vs_mmp,results)
+  SUBROUTINE v_mmp(sym,atoms,jspins,ns_mmp,u,f0,f2, vs_mmp,results)
 
     USE m_types
     USE m_constants
@@ -29,13 +29,14 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms
     !
     ! ..  Arguments ..
-    INTEGER, INTENT (IN) :: lmaxb,jspins 
-    REAL,    INTENT (IN) :: u(-lmaxb:lmaxb,-lmaxb:lmaxb, -lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u)
-    REAL,    INTENT (IN) :: f0(atoms%n_u),f2(atoms%n_u)
+    INTEGER, INTENT(IN)    :: jspins 
+    REAL,    INTENT(IN)    :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
+    REAL,    INTENT(IN)    :: f0(atoms%n_u),f2(atoms%n_u)
+    COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
 
-    COMPLEX           :: ns_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,jspins)
-    COMPLEX,INTENT(OUT)::vs_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u,jspins)
-    !
+    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
+
     ! ..  Local Variables ..
     INTEGER ispin,jspin,l ,mp,p,q,itype,m,i_u
     REAL rho_tot,u_htr,j_htr,e_ee,ns_sum,spin_deg,e_dc,e_dcc
@@ -92,16 +93,16 @@ CONTAINS
        !--------------------------------------------------------------------------------------------+     
        ! initialise vs_mmp
        !
-       IF (sym%invs) THEN
-          vs_mmp(:,:,i_u,:) = ns_mmp(:,:,i_u,:)
-          DO ispin = 1,jspins
-             DO m = -l,l
-                DO mp = -l,l
-                   ns_mmp(m,mp,i_u,ispin) = vs_mmp(-m,-mp,i_u,ispin)
-                END DO
-             END DO
-          END DO
-       END IF
+       !IF (sym%invs) THEN
+       !   vs_mmp(:,:,i_u,:) = ns_mmp(:,:,i_u,:)
+       !   DO ispin = 1,jspins
+       !      DO m = -l,l
+       !         DO mp = -l,l
+       !            ns_mmp(m,mp,i_u,ispin) = vs_mmp(-m,-mp,i_u,ispin)
+       !         END DO
+       !      END DO
+       !   END DO
+       !END IF
        vs_mmp(:,:,i_u,:) = CMPLX(0.0,0.0)
        !
        ! outer spin loop - set up v_mmp

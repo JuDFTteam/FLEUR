@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_rinpXML
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!
 !!! The routine r_inpXML reads in the inp.xml file
@@ -16,10 +15,10 @@ MODULE m_rinpXML
 CONTAINS
 SUBROUTINE r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
-                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,wann,&
-                     noel,namex,relcor,a1,a2,a3,scale,dtild,xmlElectronStates,&
+                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
+                     noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
-                     l_kpts,l_gga)
+                     l_kpts)
 
   USE iso_c_binding
   USE m_juDFT
@@ -32,9 +31,7 @@ SUBROUTINE r_inpXML(&
   USE m_closure, ONLY : check_close
   USE m_symproperties
   USE m_calculator
-  USE m_icorrkeys
   USE m_constants
-  USE m_hybridmix, ONLY : aMix_VHSE, omega_VHSE
   USE m_inpeig
   USE m_sort
   USE m_enpara,    ONLY : r_enpara
@@ -58,8 +55,9 @@ SUBROUTINE r_inpXML(&
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
+  TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
   TYPE(t_wann)   ,INTENT(INOUT)  :: wann
-  LOGICAL, INTENT(OUT)           :: l_kpts, l_gga
+  LOGICAL, INTENT(OUT)           :: l_kpts
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
   INTEGER,          ALLOCATABLE, INTENT(INOUT) :: speciesRepAtomType(:)
@@ -69,7 +67,7 @@ SUBROUTINE r_inpXML(&
   CHARACTER(len=4), INTENT(OUT)  :: namex
   CHARACTER(len=12), INTENT(OUT) :: relcor
   REAL, INTENT(OUT)              :: a1(3),a2(3),a3(3)
-  REAL, INTENT(OUT)              :: scale, dtild
+  REAL, INTENT(OUT)              :: dtild
   
   CHARACTER(len=8) :: name(10)
   
@@ -94,16 +92,11 @@ SUBROUTINE r_inpXML(&
   CHARACTER(len= 41) :: chform
   CHARACTER(len=100) :: line
   
-  !     added for HF and hybrid functionals
-  REAL                  ::  aMix,omega
-  INTEGER               :: idum
-  CHARACTER (len=1)     ::  check
-
   CHARACTER(len=20) :: tempNumberString
   CHARACTER(len=150) :: format
   CHARACTER(len=20) :: mixingScheme
   CHARACTER(len=10) :: loType
-  LOGICAL :: kptGamma, l_relcor
+  LOGICAL :: kptGamma, l_relcor,ldummy
   INTEGER :: iAtomType, startCoreStates, endCoreStates
   CHARACTER(len=100) :: xPosString, yPosString, zPosString
   CHARACTER(len=200) :: coreStatesString
@@ -119,20 +112,20 @@ SUBROUTINE r_inpXML(&
   INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
   INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
   INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
-  INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp
+  INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
   INTEGER            :: ldau_l(4), numVac, numU
   INTEGER            :: speciesEParams(0:3)
   INTEGER            :: mrotTemp(3,3,48)
   REAL               :: tauTemp(3,48)
   REAL               :: bk(3)
   LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-  LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp
+  LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool
   REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
   REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
   REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-
+  INTEGER            :: lcutm,lcutwf,select(4)
 
 
   CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
@@ -141,6 +134,9 @@ SUBROUTINE r_inpXML(&
   CHARACTER(LEN=11)  :: latticeType
   CHARACTER(LEN=50)  :: versionString
 
+  LOGICAL            :: ldaSpecies
+  REAL               :: socscaleSpecies
+  
   INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
   INTEGER, ALLOCATABLE :: loOrderList(:)
   INTEGER, ALLOCATABLE :: speciesNLO(:)
@@ -187,7 +183,8 @@ SUBROUTINE r_inpXML(&
 
   ! Check version of inp.xml
   versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-  IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28')) THEN
+  IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
+     (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
      STOP 'version number of inp.xml file is not compatible with this fleur version'
   END IF
 
@@ -224,6 +221,15 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%pos(3,atoms%nat))
   ALLOCATE(atoms%rmt(atoms%ntype))
   ALLOCATE(atoms%numStatesProvided(atoms%ntype))
+  ALLOCATE(atoms%namex(atoms%ntype))
+  ALLOCATE(atoms%icorr(atoms%ntype))
+  ALLOCATE(atoms%igrd(atoms%ntype))
+  ALLOCATE(atoms%krla(atoms%ntype))
+  ALLOCATE(atoms%relcor(atoms%ntype))
+  ALLOCATE(xcpot%lda_atom(atoms%ntype))
+  
+  atoms%namex = ''
+  atoms%icorr = -99
 
   ALLOCATE(atoms%ncv(atoms%ntype)) ! For what is this?
   ALLOCATE(atoms%ngopr(atoms%nat)) ! For what is this?
@@ -232,7 +238,8 @@ SUBROUTINE r_inpXML(&
 
   ALLOCATE(noco%soc_opt(atoms%ntype+2),noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
   ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
-
+  ALLOCATE(noco%socscale(atoms%ntype))
+  
   ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
   ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
 
@@ -319,7 +326,7 @@ SUBROUTINE r_inpXML(&
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
   SELECT CASE (valueString)
   CASE ('straight')
-     input%imix = 1
+     input%imix = 0
   CASE ('Broyden1')
      input%imix = 3
   CASE ('Broyden2')
@@ -357,7 +364,6 @@ SUBROUTINE r_inpXML(&
   ! Read in Brillouin zone integration parameters
 
   kpts%nkpt3 = 0
-  kpts%nmop = 0
   l_kpts = .FALSE.
 
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
@@ -401,6 +407,19 @@ SUBROUTINE r_inpXML(&
      STOP 'Error: Optionality of valence electrons in input file not yet implemented!'
   END IF
 
+  ! Option kPointDensity
+  kpts%kPointDensity(:) = 0.0
+  xPathA = '/fleurInput/calculationSetup/bzIntegration/kPointDensity'
+  numberNodes = xmlGetNumberOfNodes(xPathA)
+  IF (numberNodes.EQ.1) THEN
+     l_kpts = .FALSE.
+     kpts%kPointDensity(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denX'))
+     kpts%kPointDensity(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denY'))
+     kpts%kPointDensity(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denZ'))
+     kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
+     kpts%specificationType = 4
+  END IF
+
   ! Option kPointMesh
   xPathA = '/fleurInput/calculationSetup/bzIntegration/kPointMesh'
   numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -410,9 +429,6 @@ SUBROUTINE r_inpXML(&
      kpts%nkpt3(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ny'))
      kpts%nkpt3(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
      kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-     kpts%nmop(1) = kpts%nkpt3(1)
-     kpts%nmop(2) = kpts%nkpt3(2)
-     kpts%nmop(3) = kpts%nkpt3(3)
      kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
      kpts%specificationType = 2
   END IF
@@ -463,7 +479,7 @@ SUBROUTINE r_inpXML(&
      l_kpts = .TRUE.
      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint')
      kpts%nkpt = numberNodes
-     kpts%nkpt = numberNodes
+     kpts%l_gamma = .FALSE.
      ALLOCATE(kpts%bk(3,kpts%nkpt))
      ALLOCATE(kpts%wtkpt(kpts%nkpt))
      kpts%bk = 0.0
@@ -624,6 +640,16 @@ SUBROUTINE r_inpXML(&
      END IF
   END IF
 
+  ! Read in optional general LDA+U parameters
+
+  xPathA = '/fleurInput/calculationSetup/ldaU'
+  numberNodes = xmlGetNumberOfNodes(xPathA)
+  IF (numberNodes.EQ.1) THEN
+     input%ldauLinMix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
+     input%ldauMixParam = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
+     input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
+  END IF
+
   ! Read in optional q point mesh for spin spirals
 
   xPathA = '/fleurInput/calculationSetup/spinSpiralQPointMesh'
@@ -713,7 +739,7 @@ SUBROUTINE r_inpXML(&
 
   IF (numberNodes.EQ.1) THEN
      latticeScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@scale'))
-     scale = latticeScale
+     input%scaleCell = latticeScale
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@latnam')))
      READ(valueString,*) cell%latnam
 
@@ -748,14 +774,20 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a1')
      IF (numberNodes.EQ.1) THEN
         latticeDef = 1
+        input%scaleA1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a1/@scale'))
         a1(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a1'))
+        a1(1) = a1(1) * input%scaleA1
         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a2')
         IF (numberNodes.EQ.1) THEN
            latticeDef = 2
+           input%scaleA2 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a2/@scale'))
            a2(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a2'))
+           a2(2) = a2(2) * input%scaleA2
         END IF
         IF(.NOT.input%film) THEN
+           input%scaleC = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c/@scale'))
            a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c'))
+           a3(3) = a3(3) * input%scaleC
         END IF
      END IF
 
@@ -769,7 +801,9 @@ SUBROUTINE r_inpXML(&
         a2(1) = evaluateFirst(valueString)
         a2(2) = evaluateFirst(valueString)
         IF(.NOT.input%film) THEN
+           input%scaleC = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c/@scale'))
            a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c'))
+           a3(3) = a3(3) * input%scaleC
         END IF
      END IF
 
@@ -929,13 +963,9 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/symOp')
      sym%nop = numberNodes
 
-     IF (ALLOCATED(sym%mrot)) THEN
-        DEALLOCATE(sym%mrot)
-     END IF
+     IF (ALLOCATED(sym%mrot)) DEALLOCATE(sym%mrot)
      ALLOCATE(sym%mrot(3,3,sym%nop))
-     IF (ALLOCATED(sym%tau)) THEN
-        DEALLOCATE(sym%tau)
-     END IF
+     IF (ALLOCATED(sym%tau)) DEALLOCATE(sym%tau)
      ALLOCATE(sym%tau(3,sym%nop))
      sym%symor = .TRUE.
      DO i = 1, sym%nop
@@ -1124,102 +1154,38 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  xcpot%icorr = -99
-  !  l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
-  IF (namex.EQ.'exx ') xcpot%icorr = icorr_exx
-  IF (namex.EQ.'hf  ') xcpot%icorr = icorr_hf
-  IF (namex.EQ.'l91 ') xcpot%icorr = -1
-  IF (namex.EQ.'x-a ') xcpot%icorr =  0
-  IF (namex.EQ.'wign') xcpot%icorr =  1
-  IF (namex.EQ.'mjw')  xcpot%icorr =  2
-  IF (namex.EQ.'hl')   xcpot%icorr =  3
-  IF (namex.EQ.'bh')   xcpot%icorr =  3
-  IF (namex.EQ.'vwn')  xcpot%icorr =  4
-  IF (namex.EQ.'pz')   xcpot%icorr =  5
-  IF (namex.EQ.'pw91') xcpot%icorr =  6
-  !  pbe: easy_pbe [Phys.Rev.Lett. 77, 3865 (1996)]
-  !  rpbe: rev_pbe [Phys.Rev.Lett. 80, 890 (1998)]
-  !  Rpbe: Rev_pbe [Phys.Rev.B 59, 7413 (1999)]
-  IF (namex.eq.'pbe')  xcpot%icorr =  7
-  IF (namex.eq.'rpbe') xcpot%icorr =  8
-  IF (namex.eq.'Rpbe') xcpot%icorr =  9
-  IF (namex.eq.'wc')   xcpot%icorr = 10
-  !  wc: Wu & Cohen, [Phys.Rev.B 73, 235116 (2006)]
-  IF (namex.eq.'PBEs') xcpot%icorr = 11
-  !  PBEs: PBE for solids ( arXiv:0711.0156v2 )
-  IF (namex.eq.'pbe0') xcpot%icorr = icorr_pbe0
-  !  hse: Heyd, Scuseria, Ernzerhof, JChemPhys 118, 8207 (2003)
-  IF (namex.eq.'hse ') xcpot%icorr = icorr_hse
-  IF (namex.eq.'vhse') xcpot%icorr = icorr_vhse
-  ! local part of HSE
-  IF (namex.eq.'lhse') xcpot%icorr = icorr_hseloc
+  CALL getXCParameters(namex,l_relcor,xcpot,hybrid%l_hybrid)
 
-  IF (xcpot%icorr == -99) THEN
-     WRITE(6,*) 'Name of XC-potential not recognized. Use one of:'
-     WRITE(6,*) 'x-a,wign,mjw,hl,bh,vwn,pz,l91,pw91,pbe,rpbe,Rpbe,'//&
-          &                'wc,PBEs,pbe0,hf,hse,lhse'
-     CALL juDFT_error("Wrong name of XC-potential!", calledby="r_inpXML")
-  END IF
-  xcpot%igrd = 0
+  IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
+
   obsolete%lwb=.FALSE.
-  IF (xcpot%icorr.GE.6) THEN
-     xcpot%igrd = 1
-     ! Am I sure about the following 2 lines? They were included in a similar section in rw_inp
+  IF (xcpot%is_gga()) THEN
      obsolete%ndvgrd=6
      obsolete%chng=-0.1e-11
   END IF
-  input%krla = 0
-  IF (l_relcor) THEN 
-     input%krla = 1    
-     IF (xcpot%igrd.EQ.1) THEN
-        WRITE(6,'(18a,a4)') 'Use XC-potential: ',namex
-        WRITE(6,*) 'only without relativistic corrections !'
-        CALL juDFT_error("relativistic corrections + GGA not implemented",&
-             &                         calledby ="r_inpXML")
-     END IF
-  END IF
 
-  IF (xcpot%icorr.eq.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
-  IF (xcpot%icorr.eq.1) WRITE(6,*) 'INFO   : using Wigner  for XC!'
-  IF ((xcpot%icorr.eq.2).and.(namex.NE.'mjw')) WRITE(6,*) 'CAUTION: using MJW(BH) for XC!'
-
-  IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
+  IF (xcpot%is_gga()) THEN
      obsolete%ndvgrd = max(obsolete%ndvgrd,3)
-     IF ((xcpot%igrd.NE.0).AND.(xcpot%igrd.NE.1)) THEN 
-        WRITE (6,*) 'selecting l91 or pw91 as XC-Potental you should'
-        WRITE (6,*) ' have 2 lines like this in your inp-file:'
-        WRITE (6,*) 'igrd=1,lwb=F,ndvgrd=4,idsprs=0,chng= 1.000E-16'
-        WRITE (6,*) 'iggachk=1,idsprs0=1,idsprsl=1,idsprsi=1,idsprsv=1'
-        CALL juDFT_error("igrd =/= 0 or 1",calledby ="inped")
-     END IF
   END IF
 
-  ! WRITE(*,*) 'Note: hybrid functionals input has to be realized at some point!'
-  IF (namex.EQ.'vhse') THEN
-     ! overwrite if sane input
-     IF (aMix > 0 .and. aMix <= 1) THEN
-        aMix = aMix_VHSE( aMix )
-     ELSE
-        aMix = aMix_VHSE()
-     END IF
-     ! overwrite if sane input
-     IF (omega > 0) THEN
-        omega = omega_VHSE(omega)
-     ELSE
-        omega = omega_VHSE()
-     END IF
-     !       WRITE (6,9041) namex,relcor,aMix,omega
+
+  !!! Hybrid stuff
+  numberNodes = xmlGetNumberOfNodes('/fleurInput/xcFunctional/hybridFunctional')
+  IF (numberNodes==0) THEN
+     IF (hybrid%l_hybrid) CALL judft_error("Hybrid input missing in inp.xml")
   ELSE
-     !       WRITE (6,9040) namex,relcor
-  END IF
-
-  l_gga = .FALSE.
-  IF (xcpot%icorr.GE.6) l_gga = .TRUE.
+     IF (.NOT.hybrid%l_hybrid) CALL judft_error("Hybrid parameters specified but no hybrid functional used")
+     hybrid%gcutm1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@gcutm'))
+     hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@tolerance'))
+     hybrid%ewaldlambda=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@ewaldlambda'))
+     hybrid%lexp=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@lexp'))
+     hybrid%bands1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@bands'))
+  ENDIF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of XC functional section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of species section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1364,6 +1330,30 @@ SUBROUTINE r_inpXML(&
      speciesEParams(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@d'))
      speciesEParams(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@f'))
 
+     ! Parameters for hybrid functionals
+     IF (hybrid%l_hybrid) THEN
+        WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/prodBasis'
+        numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+        IF (numberNodes.NE.1) CALL judft_error("Parameters for mixed basis are missing for some specified")
+        lcutm =evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutm'))
+        lcutwf=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutwf'))
+        xPathA=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@select')
+        SELECT(1)=evaluateFirstIntOnly(xPathA)
+        SELECT(2)=evaluateFirstIntOnly(xPathA)
+        SELECT(3)=evaluateFirstIntOnly(xPathA)
+        SELECT(4)=evaluateFirstIntOnly(xPathA)
+     ENDIF
+        
+     ! Special switches for species
+     
+     ldaspecies=.FALSE.
+     socscalespecies=1.0
+     WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
+     numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+     IF (numberNodes==1) THEN
+        ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
+        socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
+     ENDIF
      ! Explicitely provided core configurations
 
      coreConfigPresent = .FALSE.
@@ -1515,6 +1505,8 @@ SUBROUTINE r_inpXML(&
            atoms%numStatesProvided(iType) = providedStates
            IF (coreConfigPresent) THEN
               IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
+                 WRITE(6,*) " providedCoreStates:",providedCoreStates
+                 WRITE(6,*) "atoms%ncst(iType)  :",atoms%ncst(iType)
                  STOP 'Wrong number of core states provided!'
               END IF
               DO k = 1, providedStates !atoms%ncst(iType)
@@ -1545,6 +1537,15 @@ SUBROUTINE r_inpXML(&
                  enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)
               END DO
            END DO
+           !Hybrid functional stuff
+           IF (hybrid%l_hybrid) THEN
+              hybrid%lcutm1(iType)=lcutm
+              hybrid%lcutwf(iType)=lcutwf
+              hybrid%select1(:,iType)=SELECT
+           ENDIF
+           ! Explicit xc functional
+           xcpot%lda_atom(iType)=ldaSpecies
+           noco%socscale(iType)=socscaleSpecies
         END IF
      END DO
      DEALLOCATE(loOrderList)
@@ -1674,6 +1675,8 @@ SUBROUTINE r_inpXML(&
   banddos%band = .FALSE.
   banddos%vacdos = .FALSE.
   sliceplot%slice = .FALSE.
+  input%l_coreSpec = .FALSE.
+  input%l_wann = .FALSE.
 
   input%vchk = .FALSE.
   input%cdinf = .FALSE.
@@ -1696,6 +1699,7 @@ SUBROUTINE r_inpXML(&
      banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
      banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+     input%l_coreSpec = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
      input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
 
      ! Read in optional switches for checks
@@ -1801,6 +1805,40 @@ SUBROUTINE r_inpXML(&
         WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
      ENDIF
 
+     ! Read in optional core spectrum (EELS) input parameters
+
+     xPathA = '/fleurInput/output/coreSpectrum'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((input%l_coreSpec).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("coreSpec is true but coreSpectrum parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     IF (numberNodes.EQ.1) THEN
+        coreSpecInput%verb = 0
+        tempBool = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@verbose'))
+        IF(tempBool) coreSpecInput%verb = 1
+        coreSpecInput%ek0 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eKin'))
+        coreSpecInput%atomType = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomType'))
+        coreSpecInput%lx = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lmax'))
+        coreSpecInput%edge = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@edgeType')))
+        coreSpecInput%emn = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMin'))
+        coreSpecInput%emx = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMax'))
+        tempInt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numPoints'))
+        coreSpecInput%ein = (coreSpecInput%emx - coreSpecInput%emn) / (tempInt - 1.0)
+        xPathB = TRIM(ADJUSTL(xPathA))//'/edgeIndices'
+        xPathB = TRIM(ADJUSTL(xPathB))//'/text()'
+        valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
+        numTokens = countStringTokens(valueString)
+        coreSpecInput%edgeidx(:) = 0
+        IF(numTokens.GT.SIZE(coreSpecInput%edgeidx)) THEN
+           CALL juDFT_error('More EELS edge indices provided than allowed.',calledby='r_inpXML')
+        END IF
+        DO i = 1, MAX(numTokens,SIZE(coreSpecInput%edgeidx))
+           coreSpecInput%edgeidx(i) = evaluateFirstIntOnly(popFirstStringToken(valueString))
+        END DO
+     END IF
+
      ! Read in optional Wannier functions parameters
 
      xPathA = '/fleurInput/output/wannier'
@@ -1823,21 +1861,27 @@ SUBROUTINE r_inpXML(&
 
      IF (numberNodes.EQ.1) THEN
         wann%l_byindex=.TRUE.
-        wann%band_min(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
-        wann%band_max(1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
+        wann%band_min(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minSpinUp'))
+        wann%band_max(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxSpinUp'))
         xPathA = '/fleurInput/output/wannier/bandSelection/@minSpinDown'
         numberNodes = xmlGetNumberOfNodes(xPathA)
         IF (numberNodes.EQ.1) THEN
-           wann%band_min(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+           wann%band_min(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
         ELSE
            wann%band_min(2) = wann%band_min(1)
         END IF
         xPathA = '/fleurInput/output/wannier/bandSelection/@maxSpinDown'
         numberNodes = xmlGetNumberOfNodes(xPathA)
         IF (numberNodes.EQ.1) THEN
-           wann%band_max(2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
+           wann%band_max(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))))
         ELSE
            wann%band_max(2) = wann%band_max(1)
+        END IF
+        wann%l_byindex = .TRUE.
+        IF(input%l_wann) THEN
+           IF (dimension%neigd.LT.MAX(wann%band_max(1),wann%band_max(2))) THEN
+              dimension%neigd = MAX(wann%band_max(1),wann%band_max(2))
+           END IF
         END IF
      END IF
 
@@ -1845,7 +1889,7 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(xPathA)
 
      IF (numberNodes.EQ.1) THEN
-        xPathA = 'normalize-space(/fleurInput/output/wannier/jobList/text())[1]'
+        xPathA = '/fleurInput/output/wannier/jobList/text()'
 
         ! Note: At the moment only 255 characters for the text in this node. Maybe this is not enough.
         valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))
@@ -1914,6 +1958,25 @@ SUBROUTINE r_inpXML(&
   DEALLOCATE(speciesNLO)
 
 END SUBROUTINE r_inpXML
+
+SUBROUTINE getXCParameters(namex,relcor,xcpot,l_hybrid)
+
+   USE m_juDFT
+   USE m_types
+
+   IMPLICIT NONE
+
+   CHARACTER(LEN=4),     INTENT(IN)  :: namex
+   LOGICAL,              INTENT(IN)  :: relcor
+   TYPE(t_xcpot),INTENT(INOUT)       :: xcpot
+   LOGICAL,              INTENT(OUT) :: l_hybrid
+
+   CALL xcpot%init(namex,relcor)
+   l_hybrid=xcpot%is_hybrid()
+  
+  
+ 
+END SUBROUTINE getXCParameters
 
 SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
 

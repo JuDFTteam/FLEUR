@@ -8,8 +8,8 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wannier(
-     >      DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,
-     >      wann,noco,cell,enpara,banddos,sliceplot,results,
+     >      DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,
+     >      wann,noco,cell,enpara,banddos,sliceplot,vTot,results,
      >      eig_idList,l_real,nkpt)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     Makes necessary for the construction of the wannier functions
@@ -64,7 +64,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       use m_radfun
       use m_radflo
       use m_cdnread
-      use m_loddop
       use m_constants
       use m_wann_mmk0_od_vac
       use m_wann_mmkb_od_vac
@@ -119,6 +118,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       TYPE(t_dimension), INTENT(IN) :: DIMENSION
       TYPE(t_mpi),       INTENT(IN) :: mpi
       TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),       INTENT(IN) :: sym
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_stars),     INTENT(IN) :: stars
@@ -130,6 +130,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       TYPE(t_enpara),    INTENT(IN) :: enpara
       TYPE(t_banddos),   INTENT(IN) :: banddos
       TYPE(t_sliceplot), INTENT(IN) :: sliceplot
+      TYPE(t_potden),    INTENT(IN) :: vTot
       TYPE(t_results),   INTENT(IN) :: results
       TYPE(t_wann),      INTENT(INOUT) :: wann
 
@@ -168,9 +169,9 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the parameters for the number of wfs
       integer :: nwfs
 !!! the potential in the spheres and the vacuum
-      real, allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
+      real, allocatable :: vr(:,:,:),vz(:,:,:)
 !!! auxiliary potentials
-      complex, allocatable :: vpw(:,:),vzxy(:,:,:,:)
+      complex, allocatable :: vpw(:,:)
 !!! bkpts data
       integer nntot,ikpt_help
       integer, allocatable :: gb(:,:,:),bpt(:,:)
@@ -374,9 +375,8 @@ c-----initializations
 c-----read the input file to determine what to do
       wann%atomlist_num=atoms%nat
       wann%oc_num_orbs=atoms%nat
-      call wann_read_inp(
-     >         l_p0,
-     <         wann)
+
+      CALL wann_read_inp(input,l_p0,wann)
 
 
 c-----input file for orbital decomposition
@@ -402,7 +402,7 @@ c-----input file for orbital decomposition
 
       if(wann%l_updown)then            
          call wann_updown(
-     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,
+     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
      >      enpara,eig_idList(1),l_real,
      >      mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,
      >      atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,
@@ -442,8 +442,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       if(wann%l_matrixuHu)then
          wannTemp = wann
          call wann_uHu(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,wannTemp,eig_idList,
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -485,8 +485,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       if(wann%l_matrixuHu_dmi)then
          wannTemp = wann
          call wann_uHu_dmi(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,banddos,
-     >      oneD,noco,cell,wannTemp,eig_idList,
+     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
      >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
@@ -678,7 +678,7 @@ c********************************************************
          call cpu_time(delta)
          allocate(maptopair(3,fullnkpts,nntot))
          allocate(pair_to_do(fullnkpts,nntot))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
      >     irreduc,mapkoper,l_p0,input%film,sym%nop,sym%invtab,sym%mrot,
      >     oneD%odi%d1,sym%tau,
@@ -691,7 +691,7 @@ c********************************************************
       if(wann%l_matrixmmn.AND.l_gwf)then 
          allocate(maptopair_q(3,fullnqpts,nntot_q))
          allocate(pair_to_do_q(fullnqpts,nntot_q))
-         call wann_mmnk_symm(
+         call wann_mmnk_symm(input,kpts,
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
      >     irreduc_q,mapqoper,l_p0,.false.,1,sym%invtab(1),
      >     sym%mrot(:,:,1),.false.,sym%tau,
@@ -703,27 +703,17 @@ c*********************************************************
 cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
-      allocate ( vpw(stars%ng3,DIMENSION%jspd) )
-      allocate ( vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd) )
       allocate ( vz(vacuum%nmzd,2,4) )
-      allocate ( vrf(atoms%jmtd,0:sphhar%nlhd,
-     +               atoms%ntype,DIMENSION%jspd) )
       allocate ( vr(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )
       allocate ( vso(atoms%jmtd,atoms%nat,2) )
 
-      open (8,file='pottot',form='unformatted',status='old')
-      rewind (8)
-
-      call loddop(stars,vacuum,atoms,sphhar,input,sym,
-     >            8,
-     <            iter,vrf,vpw,vz,vzxy)
-
-      close (8)
+      vz = 0.0
+      vz(:,:,:SIZE(vTot%vacz,3)) = vTot%vacz(:,:,:)
 
       do jspin = 1,input%jspins
         do n = 1, atoms%ntype
           do j = 1,atoms%jri(n)
-            vr(j,n,jspin) = vrf(j,0,n,jspin)
+            vr(j,n,jspin) = vTot%mt(j,0,n,jspin)
           enddo
         enddo
       enddo
@@ -731,9 +721,6 @@ c*********************************************************
       if(wann%l_soctomom)then
         CALL vsoc(input,atoms,vr,epar,.TRUE., vso)
       endif
-
-      deallocate ( vpw,vzxy )
-      deallocate(vrf)
 
       if(noco%l_noco.and.input%film)then
          npotmatfile=25
@@ -1238,19 +1225,23 @@ c****************************************************************
       zzMat%nbasfcn = DIMENSION%nbasfcn
       zzMat%nbands = DIMENSION%neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+	    IF(.not.ALLOCATED(zzMat%z_r))
+     >    ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+	    IF(.not.ALLOCATED(zzMat%z_c))
+     >    ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
       END IF
 
       zMat%l_real = zzMat%l_real
       zMat%nbasfcn = zzMat%nbasfcn
       zMat%nbands = zzMat%nbands
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+	    IF(.not.ALLOCATED(zMat%z_r))
+     >    ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
          zMat%z_r = 0.0
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+	    IF(.not.ALLOCATED(zMat%z_c))
+     >    ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
          zMat%z_c = CMPLX(0.0,0.0)
       END IF
 
@@ -1258,10 +1249,12 @@ c****************************************************************
       zMat_b%nbasfcn = zzMat%nbasfcn
       zMat_b%nbands = zzMat%nbands
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
+	    IF(.not.ALLOCATED(zMat_b%z_r))
+     >    ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
          zMat_b%z_r = 0.0
       ELSE
-         ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
+	    IF(.not.ALLOCATED(zMat_b%z_c))
+     >    ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
          zMat_b%z_c = CMPLX(0.0,0.0)
       END IF
 
@@ -1619,8 +1612,8 @@ c---> spherical contribution to mmn0-matrix
 
        call wann_mmk0_sph(
      >           atoms%llod,noccbd,atoms%nlod,atoms%nat,atoms%ntype,
-     >           atoms%lmaxd,lmd,atoms%ntype,atoms%neq,atoms%nlo,
-     >           atoms%llo,acof(1:noccbd,:,:),
+     >           atoms%lmaxd,atoms%lmax,lmd,atoms%ntype,atoms%neq,
+     >           atoms%nlo,atoms%llo,acof(1:noccbd,:,:),
      >           bcof(1:noccbd,:,:),ccof(:,1:noccbd,:,:),
      >           usdus%ddn(:,:,jspin),usdus%uulon(:,:,jspin),
      >           usdus%dulon(:,:,jspin),usdus%uloulopn,
@@ -2843,8 +2836,8 @@ c************************************************c
       write(*,*)'time_total wannier=',time_total
 
       call wann_postproc(
-     >         DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >         lapw,oneD,noco,cell,eig_id,l_real,                !eig_id is used here after closing the files?!
+     >         DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >         lapw,oneD,noco,cell,vTot,eig_id,l_real,                !eig_id is used here after closing the files?!
      >         mpi%mpi_comm,wann,l_p0,input%film,input%jspins,stars%ng2,
      >         atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,
      >         atoms%neq,atoms%zatom,cell%omtil,noco%l_soc,noco%l_noco,

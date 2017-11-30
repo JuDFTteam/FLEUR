@@ -6,7 +6,7 @@ MODULE m_umtx
   !* Extension to multiple U per atom type by G.M. 2017                *
   !*********************************************************************
 CONTAINS
-  SUBROUTINE umtx(atoms,lmaxb,f0,f2,f4,f6,&
+  SUBROUTINE umtx(atoms,f0,f2,f4,f6,&
                   u)
 
     USE m_constants
@@ -14,16 +14,17 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    INTEGER, PARAMETER   :: lmaxw=3,lmmaxw1=(2*lmaxw+2)**2
-    TYPE(t_atoms),  INTENT(IN)  :: atoms
-    INTEGER, INTENT (IN) :: lmaxb
-    REAL,    INTENT (IN) :: f0(atoms%n_u),f2(atoms%n_u),f4(atoms%n_u),f6(atoms%n_u)
-    REAL,    INTENT (OUT) :: u(-lmaxb:lmaxb,-lmaxb:lmaxb,-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u)
+    TYPE(t_atoms), INTENT(IN)  :: atoms
+    REAL,          INTENT(IN)  :: f0(atoms%n_u),f2(atoms%n_u),f4(atoms%n_u),f6(atoms%n_u)
+    REAL,          INTENT(OUT) :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                                    -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
+
+    INTEGER, PARAMETER         :: lmaxw=3,lmmaxw1=(2*lmaxw+2)**2
 
     INTEGER i,j,k,l,m,mk,nfk,itype,i_u
     INTEGER m1,m2,m3,m4,lm1,lm2,lm3,lm4,kf
     REAL    uk,uq,avu,avj,cgk1,cgk2,tol
-    REAL    fk(lmaxb+1,atoms%n_u)
+    REAL    fk(lmaxU_const+1,atoms%n_u)
     REAL,   ALLOCATABLE :: c(:,:,:)
     !
     tol = 1.0e-14
@@ -54,7 +55,7 @@ CONTAINS
        END DO
     END DO
 
-    CALL sgaunt(lmaxw,lmmaxw1,lmaxb,c)
+    CALL sgaunt(lmaxw,lmmaxw1,lmaxU_const,c)
 
     DO i_u = 1, atoms%n_u                     !!! over U parameters
        l = atoms%lda_u(i_u)%l
