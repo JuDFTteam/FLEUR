@@ -609,18 +609,19 @@ MODULE m_cdn_io
       IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
          ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
          IF(atoms%n_u.GT.0) THEN
-            OPEN (69,file='n_mmp_mat_out',status='replace',form='formatted')
-            WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
-            CLOSE (69)
-
-            IF ((mode.EQ.CDN_HDF5_MODE).AND..NOT.(input%ldauLinMix.AND.(input%ldauMixParam.EQ.0.0))) THEN
-               INQUIRE(file='n_mmp_mat',exist=l_exist)
-               IF(l_exist) THEN
-                  CALL system('mv n_mmp_mat n_mmp_mat_old')
-                  PRINT *,"n_mmp_mat moved to n_mmp_mat_old"
+            filename = 'n_mmp_mat'
+            IF (mode.EQ.CDN_HDF5_MODE) THEN
+               filename = 'n_mmp_mat_out'
+            END IF
+            IF(ANY(den%mmpMat(:,:,:,:).NE.0.0)) THEN
+               IF ((mode.EQ.CDN_HDF5_MODE).AND..NOT.(input%ldauLinMix.AND.(input%ldauMixParam.EQ.0.0))) THEN
+                  INQUIRE(file='n_mmp_mat',exist=l_exist)
+                  IF(l_exist) THEN
+                     CALL system('mv n_mmp_mat n_mmp_mat_old')
+                     PRINT *,"n_mmp_mat moved to n_mmp_mat_old"
+                  END IF
                END IF
-            ELSE
-               OPEN (69,file='n_mmp_mat',status='replace',form='formatted')
+               OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
                WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
                CLOSE (69)
             END IF
