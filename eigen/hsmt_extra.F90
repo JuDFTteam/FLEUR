@@ -64,7 +64,7 @@ CONTAINS
 
     COMPLEX chi11,chi21,chi22
     INTEGER k,i,spin2,l,ll1,lo,jd
-    INTEGER m,n,na,nn,np,i_u
+    INTEGER m,n,na,nn,np,i_u,i_u_save
     INTEGER iiloh,iilos,nkvecprevath,nkvecprevats,iintsp,jintsp
     INTEGER nc,locolh,locols,nkvecprevatu,iilou,locolu
     INTEGER nkvecprevatuTemp,iilouTemp,locoluTemp
@@ -143,7 +143,7 @@ CONTAINS
              IF (oneD%odi%d1) THEN
                 np = oneD%ods%ngopr(na)
              END IF
-             CALL vec_for_lo(atoms,nintsp,sym,na, n,np,noco, lapw,cell, gk,vk, nkvec,kvec)
+             CALL vec_for_lo(atoms,nintsp,sym,l_real,na, n,np,noco, lapw,cell, gk,vk, nkvec,kvec)
              DO lo = 1,atoms%nlo(n)
                 kveclo(nkvec_sv+1:nkvec_sv+nkvec(lo,1)) = kvec(1:nkvec(lo,1),lo)
                 nkvec_sv = nkvec_sv+nkvec(lo,1)
@@ -275,6 +275,7 @@ CONTAINS
                 nkvecprevatuTemp = nkvecprevatu
                 iilouTemp = iilou
                 locoluTemp = locolu
+                i_u_save = i_u
                 DO WHILE (i_u.LE.atoms%n_u)
                    IF (atoms%lda_u(i_u)%atomType.GT.n) EXIT
                    nkvecprevatuTemp = nkvecprevatu
@@ -309,6 +310,9 @@ CONTAINS
              END IF
 
           ENDIF                                ! atoms%invsat(na) = 0 or 1
+          IF (nn.NE.atoms%neq(n)) THEN
+             i_u = i_u_save
+          ENDIF
           !--->    end loop over equivalent atoms
        END DO
        IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa_c,bbhlp,bb_c)

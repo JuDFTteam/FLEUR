@@ -15,7 +15,7 @@ MODULE m_vecforlo
   !                           eig-file, for later use in charge-density part.
   !----------------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vec_for_lo(atoms,nintsp,sym,na,&
+  SUBROUTINE vec_for_lo(atoms,nintsp,sym,l_real,na,&
        n,np,noco, lapw,cell, gk,vk, nkvec,kvec)
     USE m_constants,ONLY: tpi_const,fpi_const
     USE m_orthoglo
@@ -31,6 +31,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nintsp ,na,n,np 
+    LOGICAL, INTENT (IN) :: l_real
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: gk(:,:,:)!(dimension%nvd,3,nintsp)
@@ -40,7 +41,7 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX term1 
     REAL th,con1
-    INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m
+    INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m,k_start
     LOGICAL linind,enough,l_lo1
     !     ..
     !     .. Local Arrays ..
@@ -89,14 +90,42 @@ CONTAINS
     nkvec(:,:) = 0
     cwork(:,:,:,:) = CMPLX(0.0,0.0)
     enough=.FALSE.
-    DO k = 1,MIN(lapw%nv(1),lapw%nv(nintsp))
-       IF (ANY(lapw%rk(k,:nintsp).LT.eps)) CYCLE
+
+    IF (noco%l_ss) THEN
+       k_start = 2  ! avoid k=1 !!! GB16
+    ELSE
+       k_start = 1
+    ENDIF
+
+    DO k = k_start,MIN(lapw%nv(1),lapw%nv(nintsp))
+!       IF (ANY(lapw%rk(k,:nintsp).LT.eps)) CYCLE
        IF (.NOT.enough) THEN
           DO iintsp = 1,nintsp
 
              !-->        generate spherical harmonics
              vmult(:) =  gkrot(k,:,iintsp)
              CALL ylm4(atoms%lnonsph(ntyp),vmult, ylm)
+           l_lo1=.false.
+            IF ((lapw%rk(k,iintsp).LT.eps).AND.(.not.noco%l_ss)) THEN
+                l_lo1=.true.
+            ELSE
+                l_lo1=.false.
+            ENDIF
+! --> here comes a part of abccoflo()
+            IF ( l_lo1) THEN
+              DO lo = 1,atoms%nlo(ntyp)
+               IF ((nkvec(lo,iintsp).EQ.0).AND.(atoms%llo(lo,ntyp).EQ.0)) THEN
+                 enough = .false.
+                 nkvec(lo,iintsp) = 1
+                 kvec(nkvec(lo,iintsp),lo) = k
+                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)
+                 cwork(0,1,lo,iintsp) = term1 / sqrt(2*tpi_const)
+                 IF((atoms%invsat(na).EQ.1).OR.(atoms%invsat(na).EQ.2)) THEN
+                    cwork(1,1,lo,iintsp) = conjg(term1) / sqrt(2*tpi_const)
+                 ENDIF
+               ENDIF
+              ENDDO
+            ELSE
                 enough = .TRUE.
                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)* CMPLX(rph(k,iintsp),cph(k,iintsp))
                 DO lo = 1,atoms%nlo(ntyp)
@@ -111,7 +140,7 @@ CONTAINS
                             cwork(m,nkvec(lo,iintsp),lo,iintsp) = term1*ylm(lm)
                          END DO
                          CALL orthoglo(&
-                              sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                              l_real,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
                             kvec(nkvec(lo,iintsp),lo) = k
                          ELSE
@@ -134,7 +163,7 @@ CONTAINS
                                cwork(mind,nkvec(lo,iintsp),lo,iintsp) = ((-1)** (l+m))*CONJG(term1*ylm(lmp))
                             END DO
                             CALL orthoglo(&
-                                 sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                                 l_real,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
                                kvec(nkvec(lo,iintsp),lo) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '
@@ -153,6 +182,7 @@ CONTAINS
                    WRITE(*,*) na,k,lapw%nv 
                    CALL juDFT_error("not enough lin. indep. clo-vectors" ,calledby ="vec_for_lo")
                 END IF
+             ENDIF
              ! -- >        end of abccoflo-part           
           ENDDO
        ENDIF

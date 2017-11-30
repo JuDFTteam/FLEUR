@@ -316,6 +316,14 @@ CONTAINS
                    CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
                         rn,d,msh,vrd, e, f(:,1),f(:,2),ierr)
                    ello(ilo,n,jsp) = e
+                   IF (l > 0) THEN
+                     e  = (e_up+e_lo)/2
+                     fn = real(nqn_lo(ilo)) ; fl = real(l) ; fj = fl-0.5
+                     CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
+                          rn,d,msh,vrd, e, f(:,1),f(:,2),ierr)
+                     e = (2.0*ello(ilo,n,jsp) + e ) / 3.0
+                     ello(ilo,n,jsp) = e
+                  ENDIF
 
                    IF (mpi%irank == 0) THEN
                       attributes = ''

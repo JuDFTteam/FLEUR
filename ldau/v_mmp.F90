@@ -93,16 +93,16 @@ CONTAINS
        !--------------------------------------------------------------------------------------------+     
        ! initialise vs_mmp
        !
-       IF (sym%invs) THEN
-          vs_mmp(:,:,i_u,:) = ns_mmp(:,:,i_u,:)
-          DO ispin = 1,jspins
-             DO m = -l,l
-                DO mp = -l,l
-                   ns_mmp(m,mp,i_u,ispin) = vs_mmp(-m,-mp,i_u,ispin)
-                END DO
-             END DO
-          END DO
-       END IF
+       !IF (sym%invs) THEN
+       !   vs_mmp(:,:,i_u,:) = ns_mmp(:,:,i_u,:)
+       !   DO ispin = 1,jspins
+       !      DO m = -l,l
+       !         DO mp = -l,l
+       !            ns_mmp(m,mp,i_u,ispin) = vs_mmp(-m,-mp,i_u,ispin)
+       !         END DO
+       !      END DO
+       !   END DO
+       !END IF
        vs_mmp(:,:,i_u,:) = CMPLX(0.0,0.0)
        !
        ! outer spin loop - set up v_mmp
