@@ -200,7 +200,7 @@ CONTAINS
     TYPE (t_lo21), ALLOCATABLE :: lo21(:,:)
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
-    integer :: nkpt_extended
+    INTEGER :: nkpt_extended
 
     zmat%l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
     !     ..
