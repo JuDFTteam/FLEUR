@@ -437,10 +437,11 @@
             cell%bmat=tpi_const*cell%bmat
             kpts%nkpt3(:) = div(:)
             kpts%l_gamma = l_gamma
-            kpts%specificationType = 3
             sym%symSpecType = 3
 
             CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+
+            kpts%specificationType = 3
 
             !set latnam to any
             cell%latnam = 'any'
