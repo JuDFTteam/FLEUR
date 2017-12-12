@@ -51,7 +51,7 @@
  
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
-      REAL    recVecLength
+      REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
@@ -345,7 +345,6 @@
 !
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
-      CLOSE (6)
       INQUIRE(file="inp",exist=l_exists)
       IF (l_exists) THEN
          CALL juDFT_error("inp-file exists. Cannot write another input file in this directory.",calledby="set_inp")
@@ -421,6 +420,20 @@
       Jij%mtypes=1
       Jij%phnd=1
 
+      CALL inv3(cell%amat,cell%bmat,cell%omtil)
+      cell%bmat=tpi_const*cell%bmat
+      kpts%nkpt3(:) = div(:)
+
+      IF (kpts%specificationType.EQ.4) THEN
+         DO i = 1, 3
+            IF (kpts%kPointDensity(i).LE.0.0) THEN
+               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'kpoints')
+            END IF
+            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
+            kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
+         END DO
+         kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+      END IF
 
       IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
@@ -431,11 +444,9 @@
          a1Temp(:) = a1(:)
          a2Temp(:) = a2(:)
          a3Temp(:) = a3(:)
+
          IF(l_explicit) THEN
             ! kpts generation
-            CALL inv3(cell%amat,cell%bmat,cell%omtil)
-            cell%bmat=tpi_const*cell%bmat
-            kpts%nkpt3(:) = div(:)
             kpts%l_gamma = l_gamma
             sym%symSpecType = 3
 
@@ -468,7 +479,8 @@
 
          IF(juDFT_was_argument("-explicit")) THEN
             sumWeight = 0.0
-            WRITE(*,*) 'nkpt: ', kpts%nkpt
+            WRITE(6,*) ''
+            WRITE(6,'(a,(a3,i10))') 'k-point count:','', kpts%nkpt
             DO i = 1, kpts%nkpt
                sumWeight = sumWeight + kpts%wtkpt(i)
             END DO
@@ -487,6 +499,22 @@
       DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)
+
+      IF (ANY(kpts%nkpt3(:).NE.0)) THEN
+         DO i = 1, 3
+            IF (kpts%kPointDensity(i).LE.0.0) THEN
+               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'kpoints')
+            END IF
+            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
+            kPointDen(i) = kpts%nkpt3(i) / recVecLength
+         END DO
+         WRITE(6,*) ''
+         WRITE(6,'(a,3(a4,i10))')   'k-point mesh:'   , '', kpts%nkpt3(1),'', kpts%nkpt3(2),'', kpts%nkpt3(3)
+         WRITE(6,'(a,3(a4,f10.6))') 'k-point density:', '', kPointDen(1),'', kPointDen(2),'', kPointDen(3)
+         WRITE(6,*) ''
+      END IF
+
+      CLOSE (6)
 
       IF (atoms%ntype.GT.999) THEN
          WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
