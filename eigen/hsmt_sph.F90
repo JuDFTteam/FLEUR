@@ -255,7 +255,7 @@ CONTAINS
                 DO nn = n0,n1
                    tnn = tpi_const*atoms%taual(:,nn)
                    !--->             set up phase factors
-                   !$OMP SIMD PRIVATE(tmp1,tmp2,tmp3,tmp) 
+                   !!$OMP SIMD PRIVATE(tmp1,tmp2,tmp3,tmp) 
                    DO kj = 1,kjmax
                       !rph(kj,1) = rph(kj,1) +&
                       !     COS(DOT_PRODUCT(ski-(/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj,tnn))
@@ -268,7 +268,7 @@ CONTAINS
                    IF (.NOT.sym%invs) THEN
                       !--->                if the system does not posses inversion symmetry
                       !--->                the complex part of the exponential is needed.
-                      !$OMP SIMD PRIVATE(tmp1,tmp2,tmp3,tmp) 
+                      !!$OMP SIMD PRIVATE(tmp1,tmp2,tmp3,tmp) 
                       DO kj = 1,kjmax
                       !   cph(kj,1) = cph(kj,1) +&
                       !        SIN(DOT_PRODUCT((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
