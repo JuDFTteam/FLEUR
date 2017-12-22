@@ -21,6 +21,7 @@ MODULE m_types_rcmat
       INTEGER             :: matsize_half      !<Half of matrix in noco case
     CONTAINS
       PROCEDURE,PASS :: init => t_lapwmat_init
+      PROCEDURE,PASS :: clear => t_lapwmat_clear
    END TYPE t_lapwmat
    
  CONTAINS
@@ -44,10 +45,12 @@ MODULE m_types_rcmat
     IF (mat%l_real) THEN
        ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2),STAT=err)
        ALLOCATE(mat%data_c(0,0))
+       mat%data_r=0.0
        if (present(init)) mat%data_r=init
     ELSE
        ALLOCATE(mat%data_r(0,0))
        ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2),STAT=err)
+       mat%data_c=0.0
        IF (PRESENT(init)) mat%data_c=init
     ENDIF
 
@@ -215,4 +218,15 @@ MODULE m_types_rcmat
     !Allocate space
     CALL mat%alloc(l_real,matsize,i)
   END SUBROUTINE t_lapwmat_init
+
+  SUBROUTINE t_lapwmat_clear(mat)
+    IMPLICIT NONE
+    CLASS(t_lapwmat),INTENT(INOUT):: mat
+
+    IF (mat%l_real) THEN
+       mat%data_r=0.0
+    ELSE
+       mat%data_c=0.0
+    ENDIF
+  END SUBROUTINE t_lapwmat_clear
 END MODULE m_types_rcmat

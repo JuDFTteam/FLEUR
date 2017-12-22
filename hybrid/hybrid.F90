@@ -38,7 +38,6 @@ CONTAINS
     INTEGER,SAVE   :: nohf_it=99      !Do not rely on a converged density
     INTEGER        ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
     LOGICAL        :: l_restart=.FALSE.,l_zref
-    INTEGER, ALLOCATABLE :: matind(:,:)
     REAL,    ALLOCATABLE    ::  eig_irr(:,:)
     real               :: bkpt(3)
 
@@ -97,8 +96,6 @@ CONTAINS
 
     l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco) 
     
-    ALLOCATE (  matind(DIMENSION%nbasfcn,2) )
-
     
     CALL timestart("generation of non-local HF potential")
     CALL timestart("Preparation for Hybrid functionals")
@@ -132,7 +129,7 @@ CONTAINS
             hybdat,irank2,it,sym%invs,v%mt(:,0,:,:),eig_irr)  
        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
-          CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,matind,nred)
+          CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
   
           CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,&
                sym,cell,noco,results,it,MAXVAL(hybrid%nobd),xcpot,&

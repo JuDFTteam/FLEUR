@@ -11,7 +11,7 @@ CONTAINS
 
   !The spinors are calculated both in hssphn_sph & hssphn_nonsph, hence this is a
   !common subroutine
-  SUBROUTINE hsmt_spinor(isp,n, noco,input,chi, chi11, chi21, chi22,l_socfirst,&
+  SUBROUTINE hsmt_spinor(isp,n, noco,input,chi, chi_mat,l_socfirst,&
        isigma,isigma_x,isigma_y,isigma_z,chi11so,chi21so,chi22so,angso,chj,cross_k)
     USE m_types
     IMPLICIT NONE
@@ -21,7 +21,7 @@ CONTAINS
     INTEGER,INTENT(IN)  :: isp, n
 
     COMPLEX,INTENT(OUT) :: chi(2,2)
-    COMPLEX,INTENT(OUT) :: chi11,chi21,chi22
+    COMPLEX,INTENT(OUT) :: chi_mat(2,2)
 
     LOGICAL,INTENT(IN),OPTIONAL:: l_socfirst
     COMPLEX,INTENT(IN),OPTIONAL:: isigma(:,:,:)
@@ -42,9 +42,10 @@ CONTAINS
     chi(2,2) =  exp(ci*noco%alph(n)/2)*cos(noco%beta(n)/2)
     !--->       and determine the prefactors for the Hamitonian- and
     !--->       overlapp-matrix elements
-    chi11 = chi(1,isp)*conjg(chi(1,isp))
-    chi21 = chi(2,isp)*conjg(chi(1,isp))
-    chi22 = chi(2,isp)*conjg(chi(2,isp))
+    chi_mat(1,1) = chi(1,isp)*CONJG(chi(1,isp))
+    chi_mat(2,1) = chi(2,isp)*CONJG(chi(1,isp))
+    chi_mat(2,2) = chi(2,isp)*CONJG(chi(2,isp))
+    chi_mat(1,2) = chi(1,isp)*CONJG(chi(2,isp))
 
     IF (.NOT.present(chj)) RETURN
     IF (noco%l_constr) THEN

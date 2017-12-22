@@ -29,8 +29,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
-    TYPE(t_atoms),INTENT(INOUT)     :: atoms !n_u might be modified if no density matrix is found
-
+    TYPE(t_atoms),INTENT(IN)        :: atoms
     ! ... Arguments ...
     INTEGER, INTENT (IN) :: lmaxb  
 
@@ -141,7 +140,7 @@ CONTAINS
        ENDIF
        vs_mmp(:,:,:,:) = CMPLX(0.0,0.0)
        results%e_ldau = 0.0
-       atoms%n_u = 0
+       !atoms%n_u = 0
     ENDIF
 
     RETURN

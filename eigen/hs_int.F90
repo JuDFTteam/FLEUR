@@ -20,59 +20,65 @@ CONTAINS
     INTEGER,INTENT(IN)            :: isp
     REAL,INTENT(IN)               :: bkpt(3)
     COMPLEX,INTENT(IN)            :: vpw(:,:)
-    TYPE(t_lapwmat),INTENT(INOUT) :: smat,hmat
+    TYPE(t_lapwmat),INTENT(INOUT) :: smat(:,:),hmat(:,:)
 
 
-    INTEGER :: sb,ispin,jspin,vpw_spin !spin indices
-    INTEGER :: i,j,ii,jj               !loop over k+g, offset in noco case
-    INTEGER :: i1,i2,i3,in,i0
+    INTEGER :: ispin,jspin,vpw_spin !spin indices
+    INTEGER :: i,j,ii(3),iispin,jjspin
+    INTEGER :: in
     COMPLEX :: th,ts,phase
     REAL    :: b1(3),b2(3),r2
 
-    DO sb=1,MERGE(3,1,noco%l_noco) !loop over three possible spin-blocks (UpUp,DownDown,DownUp)
-       CALL lapw%spinblock(noco%l_noco,sb,isp,ispin,jspin,ii,jj,vpw_spin) !determine offsets and spin indices in noco case
-
-       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-       !$OMP SHARED(mpi,lapw,stars,input,bkpt,cell,vpw) &
-       !$OMP SHARED(ii,jj,ispin,jspin,vpw_spin)&
-       !$OMP SHARED(hmat,smat,sb)&
-       !$OMP PRIVATE(i,j,i1,i2,i3,in,phase,b1,b2,r2,th,ts)
-       DO  i0 = 1,smat%matsize2
-          i=smat%local_rk_map(i0,ispin)
-          if (i<0) CYCLE !this is an LO
-          !--->    loop over (k+g)
-          DO  j = 1,MERGE(lapw%nv(1),i,sb==3)  
-             !-->     determine index and phase factor
-             i1 = lapw%k1(i,ispin) - lapw%k1(j,jspin)
-             i2 = lapw%k2(i,ispin) - lapw%k2(j,jspin)
-             i3 = lapw%k3(i,ispin) - lapw%k3(j,jspin)
-             in = stars%ig(i1,i2,i3)
-             IF (in.EQ.0) CYCLE
-             phase = stars%rgphs(i1,i2,i3)
-             !+APW_LO
-             IF (input%l_useapw) THEN
-                b1(1) = bkpt(1)+lapw%k1(i,ispin) ; b2(1) = bkpt(1)+lapw%k1(j,jspin)
-                b1(2) = bkpt(2)+lapw%k2(i,ispin) ; b2(2) = bkpt(2)+lapw%k2(j,jspin)
-                b1(3) = bkpt(3)+lapw%k3(i,ispin) ; b2(3) = bkpt(3)+lapw%k3(j,jspin)
-                r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
-
-                th = phase*(0.5*r2*stars%ustep(in)+vpw(in,vpw_spin))
-             ELSE
-                th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,vpw_spin))
-             ENDIF
-             !-APW_LO
-             !--->    determine matrix element and store
-             ts = phase*stars%ustep(in)
-             if (hmat%l_real) THEN
-                hmat%data_r(jj+j,ii+i0) = REAL(th)
-                smat%data_r(jj+j,ii+i0) = REAL(ts)
-             else
-                hmat%data_c(jj+j,ii+i0) = th
-                smat%data_c(jj+j,ii+i0) = ts
-             endif
+    IF (noco%l_noco.AND.isp==2) RETURN !was done already
+    DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
+       iispin=MAX(ispin,SIZE(smat,1))
+       DO jspin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
+          jjspin=MAX(jspin,SIZE(smat,1))
+          IF (jspin==ispin) THEN
+             vpw_spin=ispin
+          ELSE
+             vpw_spin=3
+          ENDIF
+          !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
+          !$OMP SHARED(mpi,lapw,stars,input,bkpt,cell,vpw) &
+          !$OMP SHARED(jjspin,iispin,ispin,jspin,vpw_spin)&
+          !$OMP SHARED(hmat,smat)&
+          !$OMP PRIVATE(ii,i,j,in,phase,b1,b2,r2,th,ts)
+          DO  i = mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
+             !--->    loop over (k+g)
+             DO  j = 1,i  
+                !-->     determine index and phase factor
+                ii = lapw%gvec(:,i,ispin) - lapw%gvec(:,j,jspin)
+                in = stars%ig(ii(1),ii(2),ii(3))
+                IF (in.EQ.0) CYCLE
+                phase = stars%rgphs(ii(1),ii(2),ii(3))
+                !+APW_LO
+                IF (input%l_useapw) THEN
+                   b1=bkpt+lapw%gvec(:,i,ispin)
+                   b2=bkpt+lapw%gvec(:,j,jspin)
+                   r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
+                   th = phase*(0.5*r2*stars%ustep(in)+vpw(in,vpw_spin))
+                ELSE
+                   IF (vpw_spin==3.AND.jspin==2) THEN
+                      th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + CONJG(vpw(in,vpw_spin)))
+                   ELSE
+                      th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,vpw_spin))
+                   ENDIF
+                ENDIF
+                !-APW_LO
+                !--->    determine matrix element and store
+                ts = phase*stars%ustep(in)
+                IF (hmat(1,1)%l_real) THEN
+                   hmat(jjspin,iispin)%data_r(j,i) = REAL(th)
+                   smat(jjspin,iispin)%data_r(j,i) = REAL(ts)
+                else
+                   hmat(jjspin,iispin)%data_c(j,i) = th
+                   smat(jjspin,iispin)%data_c(j,i) = ts
+                endif
+             ENDDO
           ENDDO
+          !$OMP END PARALLEL DO
        ENDDO
-       !$OMP END PARALLEL DO
-    ENDDO !Spinblock in noco case
+    ENDDO
   END SUBROUTINE hs_int
 END MODULE m_hs_int

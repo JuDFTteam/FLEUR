@@ -106,7 +106,6 @@
    
 
 !     local arrays for apws
-      INTEGER                 ::  matind(dimension%nbasfcn,2)
       REAL                    :: bkpt(3) 
 
       INTEGER                 ::  irecl_cmt,irecl_z
@@ -134,7 +133,7 @@
       DO ikpt=1,kpts%nkptf
         CALL apws(dimension,input,noco,&
      &            kpts,ikpt,cell,sym%zrfs,&
-     &            1,jsp,bkpt,lapw(ikpt),matind,nred)
+     &            1,jsp,bkpt,lapw(ikpt),nred)
 
       END DO
 

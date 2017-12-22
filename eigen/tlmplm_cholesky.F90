@@ -8,7 +8,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
   CONTAINS
     SUBROUTINE tlmplm_cholesky(sphhar,atoms,dimension,enpara,&
-         jspin,jsp,mpi, vr,input,vs_mmp, td,ud)
+         jspin,jsp,mpi, vr,input, td,ud)
 
       USE m_intgr, ONLY : intgr3
       USE m_radflo
@@ -23,7 +23,6 @@ MODULE m_tlmplm_cholesky
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
       TYPE(t_atoms),INTENT(IN)    :: atoms
       TYPE(t_enpara),INTENT(IN)   :: enpara
-      COMPLEX,INTENT(IN)          :: vs_mmp(:,:,:,:)
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
@@ -39,7 +38,7 @@ MODULE m_tlmplm_cholesky
       COMPLEX cil
       COMPLEX,PARAMETER::ci=cmplx(0.,1.)
       REAL temp,wronk
-      INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in,i_u
+      INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
       INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,noded,nodeu ,na,m,nsym,s
       LOGICAL l_write,ok
       !     ..
@@ -55,15 +54,15 @@ MODULE m_tlmplm_cholesky
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
       INTEGER:: indt(0:dimension%lmplmd)
 
-    REAL,PARAMETER:: e_shift_min=3.0
-    REAL,PARAMETER:: e_shift_max=20000000.0
+    REAL,PARAMETER:: e_shift_min=2.0
+    REAL,PARAMETER:: e_shift_max=65.0
     
     vr0=vr
     vr0(:,0,:)=0.0
     !     ..e_shift
-    td%e_shift=e_shift_min
+    td%e_shift(jsp)=e_shift_min
     OK=.false.
-    DO WHILE(.not.OK)
+    cholesky_loop:DO WHILE(.NOT.OK)
        td%h_loc=0.0
        OK=.true.
        td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
@@ -155,12 +154,12 @@ MODULE m_tlmplm_cholesky
              END DO
           END DO
           
-          td%tuu(:,n,jsp) = cmplx(0.0,0.0)
-          td%tdd(:,n,jsp) = cmplx(0.0,0.0)
-          td%tud(:,n,jsp) = cmplx(0.0,0.0)
-          td%tdu(:,n,jsp) = cmplx(0.0,0.0)
+          td%tuu(0:,n,jsp) = cmplx(0.0,0.0)
+          td%tdd(0:,n,jsp) = cmplx(0.0,0.0)
+          td%tud(0:,n,jsp) = cmplx(0.0,0.0)
+          td%tdu(0:,n,jsp) = cmplx(0.0,0.0)
           indt=0
-          s=atoms%lmax(n)*(atoms%lmax(n)+2)+1
+          s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
           !--->    generate the various t(l'm',lm) matrices for l'm'.ge.lm
           !--->    loop over l'm'
           DO lp = 0,atoms%lmax(n)
@@ -169,7 +168,7 @@ MODULE m_tlmplm_cholesky
                 lmp = lp* (lp+1) + mp
                 lmpl = (lmp* (lmp+1))/2
                 !--->    loop over lattice harmonics
-                DO lh = 0, nh
+                DO lh = 1, nh
                    lamda = sphhar%llh(lh,nsym)
                    lmin0 = abs(lp-lamda)
                    IF (lmin0.GT.lp) CYCLE
@@ -227,12 +226,12 @@ MODULE m_tlmplm_cholesky
           ENDDO
           
           !Setup local hamiltonian
-          DO lmp=0,atoms%lmax(n)*(atoms%lmax(n)+2)
+          DO lmp=0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
              lp=FLOOR(SQRT(1.0*lmp))
              mp=lmp-lp*(lp+1)
              IF (lp>atoms%lmax(n).OR.ABS(mp)>lp) STOP "BUG"
              !--->             loop over l,m
-             DO l = 0,atoms%lmax(n)
+             DO l = 0,atoms%lnonsph(n)
                 DO m = -l,l
                    lm = l* (l+1) + m
                    in = td%ind(lmp,lm,n,jsp)
@@ -254,55 +253,34 @@ MODULE m_tlmplm_cholesky
                 END DO
              END DO
           ENDDO
-          !DO lp = 0,atoms%lmax(n)
-          !   lp1 = (lp* (lp+1))/2+lp
-          !   uvu(lp1,0)=uvu(lp1,0)+enpara%el0(lp,n,jsp)+td%e_shift
-          !   uvd(lp1,0)=uvd(lp1,0)+0.5
-          !   dvu(lp1,0)=dvu(lp1,0)+0.5
-          !   dvd(lp1,0)=dvd(lp1,0)+(enpara%el0(lp,n,jsp)+td%e_shift)*ud%ddn(lp,n,jsp)
-          !ENDDO
-   
-          !--->    include diagonal terms from muffin-tin hamiltonian
-          DO lp = 0,atoms%lmax(n)
-             DO mp = -lp,lp
-                lmp = lp* (lp+1) + mp
-                td%h_loc(lmp,lmp,n,jsp)=(td%e_shift+enpara%el0(lp,n,jsp))+td%h_loc(lmp,lmp,n,jsp)
-                td%h_loc(lmp,lmp+s,n,jsp)=0.5+td%h_loc(lmp,lmp+s,n,jsp)
-                td%h_loc(lmp+s,lmp,n,jsp)=0.5+td%h_loc(lmp+s,lmp,n,jsp)
-                td%h_loc(lmp+s,lmp+s,n,jsp)=(enpara%el0(lp,n,jsp)+td%e_shift)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
-             END DO
-          END DO
-
-          !Include contribution from LDA+U
-          DO i_u=1,SIZE(atoms%lda_u)
-             IF (n.NE.atoms%lda_u(i_u)%atomtype) CYCLE
-             !Found a "U" for this atom type
-             l=atoms%lda_u(i_u)%l
-             lp=atoms%lda_u(i_u)%l
-             DO m = -l,l
-                lm = l* (l+1) + m
-                DO mp = -lp,lp
-                   lmp = lp* (lp+1) + mp
-                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + vs_mmp(l,lp,i_u,jsp)
-                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ vs_mmp(l,lp,i_u,jsp)*ud%ddn(lp,n,jsp)
-                ENDDO
-             ENDDO
-          ENDDO
 
           
+   
+          !--->    Add diagonal terms to make matrix positive definite
+          DO lp = 0,atoms%lnonsph(n)
+             DO mp = -lp,lp
+                lmp = lp* (lp+1) + mp
+                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(jsp)                      !+td%h_loc(lmp,lmp,n,jsp)
+                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(jsp)*ud%ddn(lp,n,jsp) !+td%h_loc(lmp+s,lmp+s,n,jsp)
+             END DO
+          END DO
+          IF (lmp+1.ne.s) call judft_error("BUG in tlmpln_cholesky")
           !Perform cholesky decomposition
-          CALL zpotrf("L",2*s,td%h_loc(:,:,n,jsp),size(td%h_loc,1),info)
+          CALL zpotrf("U",2*s,td%h_loc(:,:,n,jsp),size(td%h_loc,1),info)
           !Generate full matrix
           DO lm=0,size(td%h_loc,1)-1
              DO lmp=lm+1,size(td%h_loc,1)-1
-                td%h_loc(lm,lmp,n,jsp)=0.0!td%h_loc(lm,lmp,n,jsp)
+                td%h_loc(lmp,lm,n,jsp)=0.0!td%h_loc(lm,lmp,n,jsp)
              ENDDO
           ENDDO
           IF (info.ne.0) THEN
-             td%e_shift=td%e_shift*2.0
-              print *,"Potential shift to small, increasing the value to:",td%e_shift
-             if (td%e_shift>e_shift_max) call judft_error("Potential shift at maximum")
-             OK=.false.
+             td%e_shift(jsp)=td%e_shift(jsp)*2.0
+             PRINT *,"Potential shift to small, increasing the value to:",td%e_shift(jsp)
+             IF (td%e_shift(jsp)>e_shift_max) THEN
+                 CALL judft_error("Potential shift at maximum")
+              ENDIF
+              OK=.FALSE.
+              CYCLE cholesky_loop
           ENDIF
 
           !
@@ -316,7 +294,7 @@ MODULE m_tlmplm_cholesky
           
        ENDDO
 !!$OMP END PARALLEL DO
-    enddo
+    ENDDO cholesky_loop
   END SUBROUTINE tlmplm_cholesky
 
 END MODULE m_tlmplm_cholesky

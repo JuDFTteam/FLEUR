@@ -55,7 +55,6 @@
 
       ! -local arrays -
       INTEGER                 ::  iarr(2),gpt(3)
-      INTEGER                 ::  matind(dimension%nbasfcn,2)  
       INTEGER , ALLOCATABLE   ::  olapcv_loc(:,:,:,:,:)
 
       REAL                    ::  sphbes(0:atoms%lmaxd)
@@ -259,7 +258,7 @@
             CALL apws(dimension,input,noco,&
      &                kpts,ikpt,cell,&
      &                sym%zrfs,1,jsp,bkpt,lapw,&
-     &                matind,nred)
+     &                nred)
 
             ! PW part
             DO igpt = 1,lapw%nv(jsp)

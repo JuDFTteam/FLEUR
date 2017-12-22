@@ -47,7 +47,7 @@ CONTAINS
   END FUNCTION parallel_solver_available
 
   SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
-       sym,l_zref,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,smat,hmat,zMat)
+       sym,l_zref, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,smat,hmat,zMat)
     USE m_lapack_diag
     USE m_aline
     USE m_alinemuff
@@ -82,7 +82,7 @@ CONTAINS
     TYPE(t_zMat),INTENT(INOUT)    :: zMat
     INTEGER, INTENT(IN) :: jsp,eig_id,it 
     INTEGER, INTENT(IN) :: n_rank,n_size  ,nk   ,nred,sub_comm
-    INTEGER, INTENT(IN) :: matind(dimension%nbasfcn,2),kveclo(atoms%nlotot)
+    !INTEGER, INTENT(IN) :: matind(dimension%nbasfcn,2),kveclo(atoms%nlotot)
     INTEGER,INTENT(IN)  :: ne
     INTEGER,INTENT(OUT) :: ne_found
     REAL,INTENT(IN)     :: el(:,:,:)

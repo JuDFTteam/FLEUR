@@ -13,7 +13,7 @@ MODULE m_apws
   !*********************************************************************
 CONTAINS
   SUBROUTINE apws(dimension,input,noco,kpts,&
-       nk,cell,l_zref,n_size,jspin,bkpt,lapw,matind,nred)
+       nk,cell,l_zref,n_size,jspin,bkpt,lapw,nred)
 
     USE m_types
     USE m_sort
@@ -33,7 +33,6 @@ CONTAINS
     LOGICAL, INTENT (IN)  :: l_zref
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (OUT) :: matind(dimension%nbasfcn,2)
     REAL,    INTENT (OUT) :: bkpt(3)
     !     ..
     !     .. Local Scalars ..
@@ -52,6 +51,9 @@ CONTAINS
     IF (.not.allocated(lapw%k1)) THEN
        ALLOCATE ( lapw%k1(DIMENSION%nvd,DIMENSION%jspd),lapw%k2(DIMENSION%nvd,DIMENSION%jspd),&
             lapw%k3(DIMENSION%nvd,DIMENSION%jspd),lapw%rk(DIMENSION%nvd,DIMENSION%jspd) )
+       ALLOCATE(lapw%gvec(3,DIMENSION%nvd,DIMENSION%jspd))
+       ALLOCATE(lapw%vk(3,DIMENSION%nvd,DIMENSION%jspd))
+       ALLOCATE(lapw%gk(3,DIMENSION%nvd,DIMENSION%jspd))
     ENDIF
     lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0 ;lapw%nv=0
     !     ..
@@ -168,8 +170,8 @@ CONTAINS
                      (lapw%k2(i,ispin).EQ.lapw%k2(j,ispin))).AND.&
                      (lapw%k3(i,ispin).EQ.-lapw%k3(j,ispin))) THEN
                    n=n+1 
-                   matind(n,1)=i
-                   matind(n,2)=j
+                   lapw%matind(n,1)=i
+                   lapw%matind(n,2)=j
                 ENDIF
              ENDDO
           ENDDO
@@ -196,16 +198,16 @@ CONTAINS
              i = 1
              j = 1
              DO n = 1, nred 
-                IF (matind(n,1).EQ.matind(n,2)) THEN
-                   pos(matind(n,1)) = n_inner + i
+                IF (lapw%matind(n,1).EQ.lapw%matind(n,2)) THEN
+                   pos(lapw%matind(n,1)) = n_inner + i
                    i = i + 1
                 ELSE
-                   pos(matind(n,1)) = j
-                   pos(matind(n,2)) = j + n_bound
+                   pos(lapw%matind(n,1)) = j
+                   pos(lapw%matind(n,2)) = j + n_bound
                    j = j + 1
                 ENDIF
              ENDDO
-             !--->          resort the rk,k1,k2,k3 and matind arrays:
+             !--->          resort the rk,k1,k2,k3 and lapw%matind arrays:
              ALLOCATE (rk_help(lapw%nv(ispin)),k_help(3,lapw%nv(ispin)))
              DO n = 1, lapw%nv(ispin)
                 rk_help(n)  = lapw%rk(n,ispin)
@@ -275,6 +277,18 @@ CONTAINS
        !     +      k1(i,jspd),k2(i,jspd),k3(i,jspd),rk(i,1),rk(i,jspd),rkq(i)
        !         ENDDO
     ENDIF
+    lapw%gvec(1,:,:)=lapw%k1
+    lapw%gvec(2,:,:)=lapw%k2
+    lapw%gvec(3,:,:)=lapw%k3
 
+    DO ispin=1,SIZE(lapw%vk,3)
+       DO k=1,lapw%nv(ispin)
+          lapw%vk(:,k,ispin)=bkpt+lapw%gvec(:,k,ispin)+(ispin-1.5)*noco%qss
+          lapw%gk(:,k,ispin)=MATMUL(TRANSPOSE(cell%bmat),lapw%vk(:,k,ispin))/MAX (lapw%rk(k,ispin),1.0e-30)
+       ENDDO
+    END DO
+
+    lapw%num_local_cols=lapw%nv
+    
   END SUBROUTINE apws
 END MODULE m_apws

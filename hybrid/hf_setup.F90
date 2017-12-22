@@ -38,7 +38,7 @@ CONTAINS
     REAL,    ALLOCATABLE    ::  basprod(:)
     REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),bk(3)
     INTEGER                 ::  degenerat(DIMENSION%neigd2+1,kpts%nkpt)
-    INTEGER                 :: matind(DIMENSION%nbasfcn,2),nred
+    INTEGER                 :: nred
     TYPE(t_lapw)            :: lapw
   
     LOGICAL :: skip_kpt(kpts%nkpt)
@@ -233,7 +233,7 @@ CONTAINS
        hybdat%pntgptd = 0
        DO nk = 1,kpts%nkptf
           CALL apws(DIMENSION,input,noco, kpts,nk,cell,sym%zrfs,&
-               &                    1,jsp, bk,lapw,matind,nred)
+               &                    1,jsp, bk,lapw,nred)
           hybdat%pntgptd(1) = MAXVAL( (/ ( ABS(lapw%k1(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(1) /) )
           hybdat%pntgptd(2) = MAXVAL( (/ ( ABS(lapw%k2(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(2) /) )
           hybdat%pntgptd(3) = MAXVAL( (/ ( ABS(lapw%k3(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(3) /) )
@@ -245,7 +245,7 @@ CONTAINS
        hybdat%pntgpt = 0
        DO nk = 1,kpts%nkptf
           CALL apws( DIMENSION,input,noco, kpts,nk,cell,sym%zrfs,&
-               &                     1,jsp, bk,lapw,matind,nred)
+               &                     1,jsp, bk,lapw,nred)
           DO i = 1,lapw%nv(jsp)
              g = (/ lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp) /)
              hybdat%pntgpt(g(1),g(2),g(3),nk) = i

@@ -60,7 +60,6 @@
 !      - local arrays -
       INTEGER                 ::  iarr(lapw%nv(jsp))
       INTEGER                 ::  g(3),ghelp(3),lmstart(0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::  matind(dimension%nbasfcn,2)          
       INTEGER                 ::  gpthlp(3,dimension%nvd),nvhlp(dimension%jspd)
       INTEGER                 ::  gpt_nk(3,lapw%nv(jsp))
       INTEGER                 ::  g_t(3)
@@ -1301,7 +1300,6 @@
       ! - local arrays -
       INTEGER                 ::    g(3),g_t(3)
       INTEGER                 ::    lmstart (0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::    matind(dimension%nbasfcn,2)
       INTEGER, ALLOCATABLE    ::    gpt0(:,:)
       INTEGER, ALLOCATABLE    ::    pointer(:,:,:)
 
@@ -1358,7 +1356,7 @@
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
       CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
-           1,jsp,bkpt,lapw_nkqpt,matind,nred)
+           1,jsp,bkpt,lapw_nkqpt,nred)
 
 
       ! read in z at k-point nk and nkqpt
@@ -2320,7 +2318,6 @@
 !      - local arrays -
       INTEGER                 ::  g(3),g_t(3)
       INTEGER                 ::  lmstart(0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::  matind(dimension%nbasfcn,2)
       INTEGER, ALLOCATABLE    ::  gpt0(:,:)
       INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
       
@@ -2373,7 +2370,7 @@
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
       CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
-               1,jsp,bkpt,lapw_nkqpt,matind,nred)
+               1,jsp,bkpt,lapw_nkqpt,nred)
 
       ! read in z at k-point nk and nkqpt
 

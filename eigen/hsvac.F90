@@ -12,7 +12,7 @@ CONTAINS
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
        vacuum,stars,DIMENSION, atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw,sym, noco,jij, n_size,n_rank,nv2,l_real,hmat,smat)
+       bkpt,lapw,sym, noco,jij, n_size,n_rank,l_real,hmat,smat)
  
 
     USE m_vacfun
@@ -34,9 +34,9 @@ CONTAINS
     INTEGER, INTENT (IN) :: jsp   ,n_size,n_rank
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: vxy(:,:,:,:)!(vacuum%nmzxyd,stars%ng2-1,2,:)
-    INTEGER, INTENT (OUT):: nv2(DIMENSION%jspd)
-    REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
+    COMPLEX, INTENT (IN) :: vxy(:,:,:,:)!(vacuum%nmzxyd,stars%ng2-1,2,:)
+    INTEGER:: nv2(DIMENSION%jspd)
+    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4)
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     REAL,    INTENT (IN) :: bkpt(3)
 
@@ -90,10 +90,12 @@ CONTAINS
     !--->    loop over the two vacuua (1: upper; 2: lower)
     DO ivac = 1,2
        sign = 3. - 2.*ivac !+/- 1
-       DO sb = 1,MERGE(3,1,noco%l_noco) !loop over different (spin)-blocks of the potential
+       DO jspin1=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco)
+          DO jspin2=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco)
+             ipot=3
+             IF (jspin1==jspin2) ipot=jspin1
           !--->       get the wavefunctions and set up the tuuv, etc matrices          
-          CALL lapw%spinblock(noco%l_noco,sb,jsp,jspin1,jspin2,ii,jj,ipot)
-          jspin=jsp
+             jspin=jsp
           CALL vacfun(&
                vacuum,DIMENSION,stars,&
                jsp,input,noco,sb,&
@@ -185,7 +187,7 @@ CONTAINS
 
        !---> end of loop over vacua
     ENDDO
-
+ ENDDO
 
   END SUBROUTINE hsvac
 END MODULE m_hsvac

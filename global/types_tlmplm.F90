@@ -5,6 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_tlmplm
+  IMPLICIT NONE
+  PRIVATE
     TYPE t_tlmplm
      COMPLEX,ALLOCATABLE :: tdd(:,:,:)
      COMPLEX,ALLOCATABLE :: tdu(:,:,:)
@@ -21,6 +23,38 @@ MODULE m_types_tlmplm
      COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:)
      !(-llod:llod,-llod:llod,mlolotot,tspin)
      COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:)
-     REAL                :: e_shift
+     REAL,ALLOCATABLE    :: e_shift(:)
+   CONTAINS
+     PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm
+  PUBLIC t_tlmplm
+CONTAINS
+  SUBROUTINE tlmplm_init(td,lmplmd,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins)
+    USE m_judft
+    CLASS(t_tlmplm),INTENT(INOUT):: td
+    INTEGER,INTENT(in)           :: lmplmd,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins
+
+    INTEGER :: err
+
+    IF (ALLOCATED(td%tuu)) &
+         DEALLOCATE(td%tuu,td%tud,td%tdd,td%tdu,td%tdulo,td%tuulo,&
+         td%tuloulo,td%ind,td%h_loc,td%e_shift)
+    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
+    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
+    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
+    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
+    ALLOCATE(td%tdulo(0:lmd,-llod:llod,mlotot,jspins),stat=err)
+    ALLOCATE(td%tuulo(0:lmd,-llod:llod,mlotot,jspins),stat=err)
+    ALLOCATE(td%tuloulo(-llod:llod,-llod:llod,MAX(mlolotot,1),jspins), stat=err)
+    ALLOCATE(td%ind(0:lmd,0:lmd,ntype,jspins),stat=err )
+    ALLOCATE(td%h_loc(0:2*lmaxd*(lmaxd+2)+1,0:2*lmaxd*(lmaxd+2)+1,ntype,jspins))
+    ALLOCATE(td%e_shift(jspins))
+    
+    IF (err.NE.0) THEN
+       WRITE (*,*) 'an error occured during allocation of'
+       WRITE (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
+       CALL juDFT_error("eigen: Error during allocation of tlmplm, tdd  etc.",calledby ="types_tlmplm")
+    ENDIF
+  END SUBROUTINE tlmplm_init
+    
 END MODULE m_types_tlmplm

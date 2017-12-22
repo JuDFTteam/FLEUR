@@ -6,15 +6,19 @@
 
 MODULE m_types_lapw
   TYPE t_lapw
-     INTEGER :: nv(2)
+     INTEGER :: nv(2),num_local_cols(2)
      INTEGER :: nv_tot
      INTEGER :: nmat
      INTEGER :: nlotot
      INTEGER,ALLOCATABLE:: k1(:,:)
      INTEGER,ALLOCATABLE:: k2(:,:)
      INTEGER,ALLOCATABLE:: k3(:,:)
+     INTEGER,ALLOCATABLE:: gvec(:,:,:) !replaces k1,k2,k3
      INTEGER,ALLOCATABLE:: kp(:,:)
      REAL,ALLOCATABLE::rk(:,:)
+     REAL,ALLOCATABLE::gk(:,:,:)
+     REAL,ALLOCATABLE::vk(:,:,:)
+     INTEGER,ALLOCATABLE::matind(:,:)
    CONTAINS
      PROCEDURE,PASS :: spinblock =>lapw_spinblock
   END TYPE t_lapw
