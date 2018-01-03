@@ -10,7 +10,10 @@
 #ifdef CPP_ELPA2
     USE elpa2
 #endif
-    IMPLICIT NONE
+#ifdef CPP_ELPA_201705003    
+    USE elpa
+#endif
+IMPLICIT NONE
     INCLUDE 'mpif.h'
 
     INTEGER, INTENT (IN)                  :: m
@@ -37,10 +40,33 @@
     CPP_REALCOMPLEX, ALLOCATABLE :: asca(:,:), bsca(:,:),tmp2(:,:)
     CPP_REALCOMPLEX, ALLOCATABLE :: eigvec(:,:)
     INTEGER, EXTERNAL :: numroc, indxl2g  !SCALAPACK functions
+#ifdef CPP_ELPA_201705003    
+    CLASS(elpa_t),pointer :: elpa_obj
 
+    err = elpa_init(20170403)
+    elpa_obj => elpa_allocate()
+#endif
 
+    num2=num
     CALL priv_create_blacsgrid(sub_comm,m, np,nb,myid,npcol,nprow,mycol,myrow,myrowssca,mycolssca,&
          ictextblacs,sc_desc,mpi_comm_rows,mpi_comm_cols)
+#ifdef CPP_ELPA_201705003    
+    CALL elpa_obj%set("na", m, err)
+    CALL elpa_obj%set("nev", num2, err)
+    CALL elpa_obj%set("local_nrows", myrowssca, err)
+    CALL elpa_obj%set("local_ncols", mycolssca, err)
+    CALL elpa_obj%set("nblk", nb, err)
+    CALL elpa_obj%set("mpi_comm_parent", sub_comm, err)
+    CALL elpa_obj%set("process_row", myrow, err)
+    CALL elpa_obj%set("process_col", mycol, err)
+#ifdef CPP_ELPA2
+    CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
+#else
+    CALL elpa_obj%set("solver", ELPA_SOLVER_1STAGE)
+#endif
+    err = elpa_obj%setup()
+#endif
+
 
     !     Number of columns the local process gets in ScaLAPACK distribution
     ALLOCATE ( asca(myrowssca,mycolssca), stat=err )
@@ -84,7 +110,11 @@
     ! Please note: cholesky_complex/invert_trm_complex are not trimmed for speed.
     ! The only reason having them is that the Scalapack counterpart
     ! PDPOTRF very often fails on higher processor numbers for unknown reasons!
-#if defined(CPP_ELPA_201605003) || defined(CPP_ELPA_201605004)
+
+#if defined(CPP_ELPA_201705003)
+    CALL elpa_obj%cholesky(bsca, err)
+    CALL elpa_obj%invert_triangular(bsca, err)
+#elif defined(CPP_ELPA_201605003) || defined(CPP_ELPA_201605004)
     ok=CPP_CHOLESKY (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)
     ok=CPP_invert_trm(m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)
 #elif defined CPP_ELPA_NEW
@@ -109,29 +139,34 @@
        n_row = numroc (n_col, nb, myrow, 0, nprow)
        asca(n_row+1:myrowssca,i) = eigvec(n_row+1:myrowssca,i)
     ENDDO
-#ifdef CPP_ELPA_201605004
+
+#if defined (CPP_ELPA_201705003)
+    CALL elpa_obj%hermitian_multiply('U','L', m, bsca, asca, myrowssca, mycolssca, eigvec, myrowssca, mycolssca, err)
+#elif defined (CPP_ELPA_201605004)
     ok=CPP_mult ('U', 'L',m, m,bsca,myrowssca,mycolssca,asca,SIZE(asca,1),SIZE(asca,2),nb,&
          mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca,mycolssca)
-#elif CPP_ELPA_201605003
+#elif defined (CPP_ELPA_201605003)
     ok=CPP_mult ('U', 'L',m, m,bsca,myrowssca,asca,SIZE(asca,1),nb, mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca)
 #else
     CALL CPP_mult ('U', 'L',m, m,bsca,myrowssca,asca,SIZE(asca,1),nb, mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca)
 #endif
+
     ! 2b. tmp2 = eigvec**T
     CALL CPP_transpose(m,m,CPP_ONE,eigvec,1,1,sc_desc,CPP_ZERO,tmp2,1,1,sc_desc)
 
     ! 2c. A =  U**-T * tmp2 ( = U**-T * Aorig * U**-1 )
-#ifdef CPP_ELPA_201605004
+#if defined (CPP_ELPA_201705003)
+    CALL elpa_obj%hermitian_multiply('U','U', m, bsca, tmp2, myrowssca, mycolssca, asca, myrowssca, mycolssca, err)
+#elif defined (CPP_ELPA_201605004)
     ok=CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1),SIZE(bsca,2), tmp2,&
          SIZE(tmp2,1),SIZE(tmp2,2),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1),SIZE(asca,2))
-#elif CPP_ELPA_201605003
+#elif defined (CPP_ELPA_201605003)
     ok=CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1), tmp2,&
          SIZE(tmp2,1),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
 #else
     CALL CPP_mult ('U', 'U', m, m, bsca, SIZE(bsca,1), tmp2,&
          SIZE(tmp2,1),nb, mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
 #endif
-
 
     ! A is only set in the upper half, solve_evp_real needs a full matrix
     ! Set lower half from upper half
@@ -149,8 +184,9 @@
 
     ! 3. Calculate eigenvalues/eigenvectors of U**-T * A * U**-1
     !    Eigenvectors go to eigvec
-    num2=num
-#if defined(CPP_ELPA_201605003) || defined(CPP_ELPA_201605004)
+#if defined (CPP_ELPA_201705003)
+    CALL elpa_obj%eigenvectors(asca, eig2, eigvec, err)
+#elif defined(CPP_ELPA_201605003) || defined(CPP_ELPA_201605004)
 #ifdef CPP_ELPA2
     ok=CPP_solve_evp_2stage(m,num2,asca,SIZE(asca,1),&
          eig2,eigvec,SIZE(asca,1), nb,mycolssca, mpi_comm_rows, mpi_comm_cols,sub_comm)
@@ -181,7 +217,9 @@
     ! mult_ah_b_complex needs the transpose of U**-1, thus tmp2 = (U**-1)**T
     CALL CPP_transpose(m,m,CPP_ONE,bsca,1,1,sc_desc,CPP_ZERO,tmp2,1,1,sc_desc)
 
-#ifdef CPP_ELPA_201605004
+#if defined (CPP_ELPA_201705003)
+    CALL elpa_obj%hermitian_multiply('L','N', num2, tmp2, eigvec, myrowssca, mycolssca, asca, myrowssca, mycolssca, err)
+#elif defined (CPP_ELPA_201605004)
     ok= CPP_mult ('L', 'N',m, num2, tmp2, SIZE(asca,1),SIZE(asca,2),&
          eigvec, SIZE(asca,1),SIZE(asca,2),nb,mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1),SIZE(asca,2))
 #elif CPP_ELPA_201605003
@@ -191,10 +229,17 @@
     CALL CPP_mult ('L', 'N',m, num2, tmp2, SIZE(asca,1),&
          eigvec, SIZE(asca,1),nb,mpi_comm_rows, mpi_comm_cols, asca, SIZE(asca,1))
 #endif
+
+#if defined (CPP_ELPA_201705003)
+    CALL elpa_deallocate(elpa_obj)
+    CALL elpa_uninit()
+#endif
     ! END of ELPA stuff
     CALL BLACS_GRIDEXIT(ictextblacs,ierr)
+#if ( !defined (CPP_ELPA_201705003))
     CALL MPI_COMM_FREE(mpi_comm_rows,ierr)
     CALL MPI_COMM_FREE(mpi_comm_cols,ierr)
+#endif
     !print *,"elpa done"
 
     !
@@ -226,4 +271,4 @@
     DEALLOCATE ( asca )
     DEALLOCATE ( bsca )
     DEALLOCATE (eigvec, tmp2, eig2)
-
+ 
