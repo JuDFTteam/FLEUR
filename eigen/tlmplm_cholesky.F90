@@ -54,7 +54,7 @@ MODULE m_tlmplm_cholesky
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
       INTEGER:: indt(0:dimension%lmplmd)
 
-    REAL,PARAMETER:: e_shift_min=2.0
+    REAL,PARAMETER:: e_shift_min=0.2
     REAL,PARAMETER:: e_shift_max=65.0
     
     vr0=vr
@@ -237,43 +237,42 @@ MODULE m_tlmplm_cholesky
                    in = td%ind(lmp,lm,n,jsp)
                    IF (in/=-9999) THEN
                       IF (in>=0) THEN
-                         td%h_loc(lm,lmp,n,jsp) =CONJG(td%tuu(in,n,jsp))
-                         td%h_loc(lm+s,lmp,n,jsp) =CONJG(td%tud(in,n,jsp))
-                         td%h_loc(lm,lmp+s,n,jsp) =CONJG(td%tdu(in,n,jsp))
-                         td%h_loc(lm+s,lmp+s,n,jsp) =CONJG(td%tdd(in,n,jsp))
+                         td%h_loc(lm,lmp,n,jsp)    = CONJG(td%tuu(in,n,jsp))
+                         td%h_loc(lm+s,lmp,n,jsp)  = CONJG(td%tud(in,n,jsp))
+                         td%h_loc(lm,lmp+s,n,jsp)  = CONJG(td%tdu(in,n,jsp))
+                         td%h_loc(lm+s,lmp+s,n,jsp)= CONJG(td%tdd(in,n,jsp))
                       ELSE
-                         td%h_loc(lm,lmp,n,jsp) =td%tuu(-in,n,jsp)
-                         td%h_loc(lm+s,lmp,n,jsp) =td%tdu(-in,n,jsp)
-                         td%h_loc(lm,lmp+s,n,jsp) =td%tud(-in,n,jsp)
-                         td%h_loc(lm+s,lmp+s,n,jsp) =td%tdd(-in,n,jsp)
+                         td%h_loc(lm,lmp,n,jsp)    = td%tuu(-in,n,jsp)
+                         td%h_loc(lm+s,lmp,n,jsp)  = td%tdu(-in,n,jsp)
+                         td%h_loc(lm,lmp+s,n,jsp)  = td%tud(-in,n,jsp)
+                         td%h_loc(lm+s,lmp+s,n,jsp)= td%tdd(-in,n,jsp)
                       END IF
-                      !--->    update ax, bx
-                      
                    END IF
                 END DO
              END DO
           ENDDO
 
-          
-   
           !--->    Add diagonal terms to make matrix positive definite
           DO lp = 0,atoms%lnonsph(n)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(jsp)                      !+td%h_loc(lmp,lmp,n,jsp)
-                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(jsp)*ud%ddn(lp,n,jsp) !+td%h_loc(lmp+s,lmp+s,n,jsp)
+                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(jsp)+td%h_loc(lmp,lmp,n,jsp)
+                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
              END DO
           END DO
           IF (lmp+1.ne.s) call judft_error("BUG in tlmpln_cholesky")
           !Perform cholesky decomposition
-          CALL zpotrf("U",2*s,td%h_loc(:,:,n,jsp),size(td%h_loc,1),info)
-          !Generate full matrix
-          DO lm=0,size(td%h_loc,1)-1
-             DO lmp=lm+1,size(td%h_loc,1)-1
-                td%h_loc(lmp,lm,n,jsp)=0.0!td%h_loc(lm,lmp,n,jsp)
+          info=0
+          CALL zpotrf("L",2*s,td%h_loc(:,:,n,jsp),SIZE(td%h_loc,1),info)
+
+          !Upper part to zero
+          DO l=0,2*s-1
+             DO lp=0,l-1
+                td%h_loc(lp,l,n,jsp)=0.0
              ENDDO
           ENDDO
-          IF (info.ne.0) THEN
+         
+          IF (info.NE.0) THEN
              td%e_shift(jsp)=td%e_shift(jsp)*2.0
              PRINT *,"Potential shift to small, increasing the value to:",td%e_shift(jsp)
              IF (td%e_shift(jsp)>e_shift_max) THEN
