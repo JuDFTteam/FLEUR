@@ -65,6 +65,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=9)  :: flags(11)
       CHARACTER(LEN=20) :: structureSpecifiers(11)
       CHARACTER(LEN=50) :: gitdesc,githash,gitbranch,compile_date,compile_user,compile_host
+      CHARACTER(LEN=50) :: compile_flags,link_flags
       
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
@@ -82,8 +83,8 @@ MODULE m_xmlOutput
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
-      CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host)
-      CALL writeXMLElement('compilationInfo',(/'date','user','host'/),(/compile_date,compile_user,compile_host/))
+      CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host,compile_flags,link_flags)
+      CALL writeXMLElement('compilationInfo',(/'date','user','host','flag','link'/),(/compile_date,compile_user,compile_host,compile_flags,link_flags/))
       CALL writeXMLElement('gitInfo',(/'version       ','branch        ','lastCommitHash'/),(/gitdesc,gitbranch,githash/))
       CALL getComputerArchitectures(flags, numFlags)
       IF (numFlags.EQ.0) THEN
