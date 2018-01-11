@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_broyd_io
 
 USE m_types
@@ -191,6 +197,247 @@ SUBROUTINE writeVVec(input,hybrid,vecLen,currentIter,dfivi,vVec)
    CLOSE(59)
 
 END SUBROUTINE writeVVec
+
+
+
+
+
+
+
+
+
+SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
+
+   TYPE(t_input),  INTENT(IN)  :: input
+   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
+   REAL,           INTENT(OUT) :: deltaNVec(vecLen)
+
+   INTEGER             :: mode, npos
+   INTEGER*8           :: recLen
+
+   CALL getIOMode(mode)
+
+   ! At the moment broyden IO is mode independent
+
+   recLen=(vecLen+1)*8
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   npos=currentIter+relIter-1
+   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+
+   READ(59,rec=npos) deltaNVec(:vecLen)
+
+   CLOSE(59)
+
+END SUBROUTINE readDeltaNVec
+
+SUBROUTINE writeDeltaNVec(input,hybrid,vecLen,currentIter,deltaNVec)
+
+   TYPE(t_input),  INTENT(IN) :: input
+   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   INTEGER,        INTENT(IN) :: vecLen, currentIter
+   REAL,           INTENT(IN) :: deltaNVec(vecLen)
+
+   INTEGER             :: mode, npos
+   INTEGER*8           :: recLen
+
+   CALL getIOMode(mode)
+
+   ! At the moment broyden IO is mode independent
+
+   recLen=(vecLen+1)*8
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   npos=currentIter-1
+   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+
+   WRITE(59,rec=npos) deltaNVec(:vecLen)
+
+   CLOSE(59)
+
+END SUBROUTINE writeDeltaNVec
+
+SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
+
+   TYPE(t_input),  INTENT(IN)  :: input
+   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
+   REAL,           INTENT(OUT) :: deltaFVec(vecLen)
+
+   INTEGER             :: mode, npos
+   INTEGER*8           :: recLen
+
+   CALL getIOMode(mode)
+
+   ! At the moment broyden IO is mode independent
+
+   recLen=(vecLen+1)*8
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   npos=currentIter+relIter-1
+   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+
+   READ(59,rec=npos) deltaFVec(:vecLen)
+
+   CLOSE(59)
+
+END SUBROUTINE readDeltaFVec
+
+SUBROUTINE writeDeltaFVec(input,hybrid,vecLen,currentIter,deltaFVec)
+
+   TYPE(t_input),  INTENT(IN) :: input
+   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   INTEGER,        INTENT(IN) :: vecLen, currentIter
+   REAL,           INTENT(IN) :: deltaFVec(vecLen)
+
+   INTEGER             :: mode, npos
+   INTEGER*8           :: recLen
+
+   CALL getIOMode(mode)
+
+   ! At the moment broyden IO is mode independent
+
+   recLen=(vecLen+1)*8
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   npos=currentIter-1
+   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+
+   WRITE(59,rec=npos) deltaFVec(:vecLen)
+
+   CLOSE(59)
+
+END SUBROUTINE writeDeltaFVec
+
+
+SUBROUTINE writeBroydenOverlapExt(input,hybrid,currentIter,historyLength,&
+                                  dNdNLast,dFdFLast,dNdFLast,dFdNLast)
+
+   TYPE(t_input),  INTENT(IN) :: input
+   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   INTEGER,        INTENT(IN) :: currentIter, historyLength
+   REAL,           INTENT(IN) :: dNdNLast(input%maxIter)
+   REAL,           INTENT(IN) :: dFdFLast(input%maxIter)
+   REAL,           INTENT(IN) :: dNdFLast(input%maxIter)
+   REAL,           INTENT(IN) :: dFdNLast(input%maxIter)
+
+   INTEGER                    :: recLen, npos
+
+   recLen = 8*4*input%maxIter    ! sizeOfReal*numberOfVectors*vectorLength
+   recLen = recLen + 2*8         ! storage for currentIter, historyLength
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broydOvlp',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broydOvlp',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   npos=currentIter-1
+   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+
+   WRITE(59,rec=npos) currentIter, historyLength,&
+                      dNdNLast(:input%maxIter), dFdFLast(:input%maxIter), &
+                      dNdFLast(:input%maxIter), dFdNLast(:input%maxIter)
+
+   CLOSE(59)
+
+END SUBROUTINE writeBroydenOverlapExt
+
+SUBROUTINE readBroydenOverlaps(input,hybrid,currentIter,historyLength,&
+                               dNdNMat,dFdFMat,dNdFMat,dFdNMat)
+
+   TYPE(t_input),  INTENT(IN)    :: input
+   TYPE(t_hybrid), INTENT(IN)    :: hybrid
+   INTEGER,        INTENT(IN)    :: currentIter, historyLength
+   REAL,           INTENT(INOUT) :: dNdNMat(historyLength,historyLength)
+   REAL,           INTENT(INOUT) :: dFdFMat(historyLength,historyLength)
+   REAL,           INTENT(INOUT) :: dNdFMat(historyLength,historyLength)
+   REAL,           INTENT(INOUT) :: dFdNMat(historyLength,historyLength)
+
+   INTEGER                    :: i, j
+   INTEGER                    :: recLen, npos, iter
+   INTEGER                    :: recIter, recHistLen
+
+   REAL                       :: dNdNLast(input%maxIter)
+   REAL                       :: dFdFLast(input%maxIter)
+   REAL                       :: dNdFLast(input%maxIter)
+   REAL                       :: dFdNLast(input%maxIter)
+
+   recLen = 8*4*input%maxIter    ! sizeOfReal*numberOfVectors*vectorLength
+   recLen = recLen + 2*8         ! storage for currentIter, historyLength
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broydOvlp',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broydOvlp',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   dNdNMat = 0.0
+   dFdFMat = 0.0
+   dNdFMat = 0.0
+   dFdNMat = 0.0
+
+   DO i = 1, historyLength
+
+      iter = currentIter - historyLength + i
+      npos=iter-1
+      IF (iter.GT.input%maxiter+1) npos = MOD(iter-2,input%maxiter)+1
+
+      READ(59,rec=npos) recIter, recHistLen,&
+                        dNdNLast(:input%maxIter), dFdFLast(:input%maxIter), &
+                        dNdFLast(:input%maxIter), dFdNLast(:input%maxIter)
+
+      DO j = 1, recHistLen
+         IF ((j-recHistLen+i).LE.0) CYCLE
+         dNdNMat(j-recHistLen+i,i) = dNdNLast(j)
+         dFdFMat(j-recHistLen+i,i) = dFdFLast(j)
+         dNdFMat(j-recHistLen+i,i) = dNdFLast(j)
+         dFdNMat(j-recHistLen+i,i) = dFdNLast(j)
+      END DO
+   END DO
+
+   CLOSE(59)
+
+END SUBROUTINE readBroydenOverlaps
+
+
+
+
+
+
 
 SUBROUTINE resetBroydenHistory()
 

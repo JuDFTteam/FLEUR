@@ -135,6 +135,7 @@ CONTAINS
        ENDIF
        DO nn = 1,atoms%neq(n)
           na = na + 1
+          i_u_save = i_u
           IF (atoms%lnonsph(n).LT.0) CYCLE ntype_loop
           IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
              IF (atoms%invsat(na).EQ.0) invsfct = 1
@@ -270,12 +271,10 @@ CONTAINS
                 ENDIF
              END IF
 
-
              IF (atoms%n_u.GT.0) THEN
                 nkvecprevatuTemp = nkvecprevatu
                 iilouTemp = iilou
                 locoluTemp = locolu
-                i_u_save = i_u
                 DO WHILE (i_u.LE.atoms%n_u)
                    IF (atoms%lda_u(i_u)%atomType.GT.n) EXIT
                    nkvecprevatuTemp = nkvecprevatu

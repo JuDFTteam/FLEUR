@@ -3,6 +3,7 @@ mix/metr_z0.f
 )
 set(fleur_F90 ${fleur_F90}
 mix/broyden.F90
+mix/broyden2.F90
 mix/brysh1.f90
 mix/brysh2.f90
 mix/metric.f90

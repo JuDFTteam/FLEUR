@@ -27,6 +27,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    USE m_brysh1
    USE m_stmix
    USE m_broyden
+   USE m_broyden2
    USE m_brysh2
    USE m_metric
    USE m_qfix
@@ -155,6 +156,8 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    ELSE
       CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
                    hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
+!      CALL broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
+!                    hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
