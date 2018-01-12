@@ -129,7 +129,7 @@ CONTAINS
             hybdat,irank2,it,sym%invs,v%mt(:,0,:,:),eig_irr)  
        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
-          CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
+          CALL apws(DIMENSION,input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
   
           CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,&
                sym,cell,noco,results,it,MAXVAL(hybrid%nobd),xcpot,&

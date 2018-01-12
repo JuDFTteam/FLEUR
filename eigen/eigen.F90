@@ -158,7 +158,7 @@ CONTAINS
           !
           !--->         set up lapw list
         
-          CALL apws(DIMENSION,input,noco, kpts,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
+          CALL apws(DIMENSION,input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
 
           CALL eigen_hssetup(jsp,mpi,DIMENSION,oned,hybrid,enpara,input,vacuum,noco,jij,sym,&
                stars,cell,kpts,sphhar,atoms,ud,td,v,bkpt,lapw,smat,hmat)

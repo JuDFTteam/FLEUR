@@ -19,6 +19,8 @@ MODULE m_types_lapw
      REAL,ALLOCATABLE::gk(:,:,:)
      REAL,ALLOCATABLE::vk(:,:,:)
      INTEGER,ALLOCATABLE::matind(:,:)
+     INTEGER,ALLOCATABLE::index_lo(:,:)
+     INTEGER,ALLOCATABLE::kvec(:,:,:)
    CONTAINS
      PROCEDURE,PASS :: spinblock =>lapw_spinblock
   END TYPE t_lapw

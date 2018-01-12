@@ -256,7 +256,7 @@
 
             ! calculate k1,k2,k3
             CALL apws(dimension,input,noco,&
-     &                kpts,ikpt,cell,&
+     &                kpts,atoms,sym,ikpt,cell,&
      &                sym%zrfs,1,jsp,bkpt,lapw,&
      &                nred)
 

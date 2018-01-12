@@ -1355,7 +1355,7 @@
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
-      CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
+      CALL apws(DIMENSION,input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs,&
            1,jsp,bkpt,lapw_nkqpt,nred)
 
 
@@ -2369,7 +2369,7 @@
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
-      CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
+      CALL apws(DIMENSION,input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs,&
                1,jsp,bkpt,lapw_nkqpt,nred)
 
       ! read in z at k-point nk and nkqpt

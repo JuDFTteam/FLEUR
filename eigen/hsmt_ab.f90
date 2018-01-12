@@ -7,11 +7,12 @@ MODULE m_hsmt_ab
   use m_juDFT
   implicit none
 CONTAINS
-  SUBROUTINE hsmt_ab(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph)
+  SUBROUTINE hsmt_ab(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
+    USE m_apws
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -27,8 +28,11 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,INTENT(IN)       :: fj(:,0:,:),gj(:,0:,:)
     COMPLEX, INTENT (OUT) :: ab(:,:)
+    !Optional arguments if abc coef for LOs are needed
+    COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
+    REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
     
-    INTEGER:: np,k,l,ll1,m,lmax
+    INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
     complex:: term
     real   :: th,v(3),bmrot(3,3),vmult(3)
     complex,allocatable:: c_ph(:,:),ylm(:)
@@ -46,10 +50,7 @@ CONTAINS
     
     np = sym%invtab(atoms%ngopr(na))
     !--->          set up phase factors
-    DO k = 1,lapw%nv(iintsp)
-       th= DOT_PRODUCT(lapw%gvec(:,k,iintsp)+(iintsp-1.5)*noco%qss,atoms%taual(:,na))
-       c_ph(k,iintsp) = CMPLX(COS(tpi_const*th),-SIN(tpi_const*th))
-    END DO
+    CALL lapw_phase_factors(lapw,iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
     
     IF (np==1) THEN
        gkrot(:, 1:lapw%nv(iintsp)) = lapw%gk(:, 1:lapw%nv(iintsp),iintsp)
@@ -76,6 +77,26 @@ CONTAINS
              ab(k,ll1+m+1+ab_size) = gj(k,l,ispin)*term
           END DO
        END DO
+       IF (PRESENT(abclo)) THEN
+          !determine also the abc coeffs for LOs
+          invsfct=MERGE(1,2,atoms%invsat(na).EQ.0)
+          term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
+          DO lo = 1,atoms%nlo(n)
+             l = atoms%llo(lo,n)
+             DO nkvec=1,invsfct*(2*l+1)
+                IF (lapw%kvec(nkvec,lo,n)==k) THEN !This k-vector is used in LO
+                   ll1 = l*(l+1) + 1
+                   DO m = -l,l
+                      lm = ll1 + m
+                      abclo(1,m,nkvec,lo) = term*ylm(lm)*alo1(lo)
+                      abclo(2,m,nkvec,lo) = term*ylm(lm)*blo1(lo)
+                      abclo(3,m,nkvec,lo) = term*ylm(lm)*clo1(lo)
+                   END DO
+                END IF
+             ENDDO
+          ENDDO
+       ENDIF
+       
     ENDDO !k-loop
     IF (.NOT.l_apw) ab_size=ab_size*2
     

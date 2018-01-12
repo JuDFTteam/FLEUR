@@ -15,41 +15,38 @@ MODULE m_vecforlo
   !                           eig-file, for later use in charge-density part.
   !----------------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vec_for_lo(atoms,nintsp,sym,na,&
-       n,np,noco, lapw,cell, gk,vk, nkvec,kvec)
+  SUBROUTINE vec_for_lo(atoms,sym,na,&
+       n,np,noco, lapw,cell, nkvec)
     USE m_constants,ONLY: tpi_const,fpi_const
     USE m_orthoglo
     USE m_ylm
-
     USE m_types
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_lapw),INTENT(IN)   :: lapw
+    TYPE(t_lapw),INTENT(INOUT):: lapw
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nintsp ,na,n,np 
+    INTEGER, INTENT (IN) :: na,n,np 
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: gk(:,:,:)!(dimension%nvd,3,nintsp)
-    REAL,    INTENT (IN) :: vk(:,:,:)!(dimension%nvd,3,nintsp)
-    INTEGER, INTENT (INOUT):: kvec(2*(2*atoms%llod+1),atoms%nlod),nkvec(atoms%nlod,nintsp)
+    INTEGER, INTENT (INOUT):: nkvec(atoms%nlod,2)
     !     ..
     !     .. Local Scalars ..
     COMPLEX term1 
     REAL th,con1
-    INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m
+    INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m,nintsp
     LOGICAL linind,enough,l_lo1
     !     ..
     !     .. Local Arrays ..
     REAL qssbti(3),bmrot(3,3),v(3),vmult(3)
-    REAL :: gkrot(SIZE(gk,1),3,nintsp)
-    REAL :: rph(SIZE(gk,1),nintsp)
-    REAL :: cph(SIZE(gk,1),nintsp)
+    REAL :: gkrot(3,SIZE(lapw%gk,2),2)
+    REAL :: rph(SIZE(lapw%gk,2),2)
+    REAL :: cph(SIZE(lapw%gk,2),2)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
-    COMPLEX cwork(-2*atoms%llod:2*atoms%llod+1,2*(2*atoms%llod+1),atoms%nlod ,nintsp)
+    COMPLEX cwork(-2*atoms%llod:2*atoms%llod+1,2*(2*atoms%llod+1),atoms%nlod ,2)
     !     ..
     !     .. Data statements ..
     REAL, PARAMETER :: eps = 1.0E-30
@@ -57,6 +54,7 @@ CONTAINS
 
     con1=fpi_const/SQRT(cell%omtil)
     ntyp = n
+    nintsp=MERGE(2,1,noco%l_ss)
     DO iintsp = 1,nintsp
        IF (iintsp.EQ.1) THEN
           qssbti = - noco%qss/2
@@ -72,15 +70,15 @@ CONTAINS
        END DO
 
        IF (np.EQ.1) THEN
-          gkrot(:,:,iintsp)=gk(:,:,iintsp)
+          gkrot(:,:,iintsp)=lapw%gk(:,:,iintsp)
        ELSE
           bmrot=MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
           DO k = 1,lapw%nv(iintsp)
              !-->           apply the rotation that brings this atom into the
              !-->           representative (this is the definition of ngopr(na))
              !-->           and transform to cartesian coordinates
-             v(:) = vk(k,:,iintsp)
-             gkrot(k,:,iintsp) = MATMUL(v,bmrot)
+             v(:) = lapw%vk(:,k,iintsp)
+             gkrot(:,k,iintsp) = MATMUL(v,bmrot)
           END DO
        END IF
        !--->   end loop over interstitial spin
@@ -95,7 +93,7 @@ CONTAINS
           DO iintsp = 1,nintsp
 
              !-->        generate spherical harmonics
-             vmult(:) =  gkrot(k,:,iintsp)
+             vmult(:) =  gkrot(:,k,iintsp)
              CALL ylm4(atoms%lnonsph(ntyp),vmult, ylm)
                 enough = .TRUE.
                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)* CMPLX(rph(k,iintsp),cph(k,iintsp))
@@ -113,7 +111,7 @@ CONTAINS
                          CALL orthoglo(&
                               sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
-                            kvec(nkvec(lo,iintsp),lo) = k
+                            lapw%kvec(nkvec(lo,iintsp),lo,ntyp) = k
                          ELSE
                             nkvec(lo,iintsp) = nkvec(lo,iintsp) - 1
                          ENDIF
@@ -136,7 +134,7 @@ CONTAINS
                             CALL orthoglo(&
                                  sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
-                               kvec(nkvec(lo,iintsp),lo) = k
+                               lapw%kvec(nkvec(lo,iintsp),lo,ntyp) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '
                             ELSE
                                nkvec(lo,iintsp) = nkvec(lo,iintsp) - 1
@@ -146,7 +144,7 @@ CONTAINS
                    END IF
                 END DO
                 IF ((k.EQ.lapw%nv(iintsp)) .AND. (.NOT.enough)) THEN
-                   WRITE (6,FMT=*) 'abccoflo did not find enough linearly independent'
+                   WRITE (6,FMT=*) 'vec_for_lo did not find enough linearly independent'
                    WRITE (6,FMT=*) 'clo coefficient-vectors. the linear independence'
                    WRITE (6,FMT=*) 'quality, linindq, is set: ',linindq
                    WRITE (6,FMT=*) 'this value might be to large.'

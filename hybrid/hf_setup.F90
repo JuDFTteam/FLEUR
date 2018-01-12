@@ -232,7 +232,7 @@ CONTAINS
        ALLOCATE(hybdat%pntgptd(3))
        hybdat%pntgptd = 0
        DO nk = 1,kpts%nkptf
-          CALL apws(DIMENSION,input,noco, kpts,nk,cell,sym%zrfs,&
+          CALL apws(DIMENSION,input,noco, kpts,atoms,sym,nk,cell,sym%zrfs,&
                &                    1,jsp, bk,lapw,nred)
           hybdat%pntgptd(1) = MAXVAL( (/ ( ABS(lapw%k1(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(1) /) )
           hybdat%pntgptd(2) = MAXVAL( (/ ( ABS(lapw%k2(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(2) /) )
@@ -244,7 +244,7 @@ CONTAINS
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation pntgpt'
        hybdat%pntgpt = 0
        DO nk = 1,kpts%nkptf
-          CALL apws( DIMENSION,input,noco, kpts,nk,cell,sym%zrfs,&
+          CALL apws( DIMENSION,input,noco, kpts,atoms,sym,nk,cell,sym%zrfs,&
                &                     1,jsp, bk,lapw,nred)
           DO i = 1,lapw%nv(jsp)
              g = (/ lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp) /)

@@ -6,6 +6,7 @@ CONTAINS
        jsp,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
     USE m_hsmt_nonsph
     USE m_hsmt_sph
+    use m_hsmt_lo
     USE m_hsmt_distspins
     USE m_types
     USE m_hsmt_fjgj
@@ -30,7 +31,7 @@ CONTAINS
     !locals
     REAL, ALLOCATABLE    :: fj(:,:,:),gj(:,:,:)
 
-    INTEGER :: iintsp,jintsp,ispin,n
+    INTEGER :: iintsp,jintsp,ispin,n,i,ii
     LOGICAL :: l_socfirst
     COMPLEX :: chi(2,2),chi0(2,2),chi_one
 
@@ -54,7 +55,14 @@ CONTAINS
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,&
                   enpara%el0,td%e_shift,usdus,fj,gj,smat(1,1),hmat(1,1))
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat(1,1))
-             !CALL hsmt_lo()
+             hmat(1,1)%data_c=0.0
+             CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat(1,1),smat(1,1))
+             DO i=1,SIZE(smat(1,1)%data_c,1)
+                DO ii=1,i
+                   WRITE(998,*) ii,i,hmat(1,1)%data_c(ii,i)
+                ENDDO
+             ENDDO
+             STOP
           ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
              CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
              CALL hmat_tmp%clear();CALL smat_tmp%clear()

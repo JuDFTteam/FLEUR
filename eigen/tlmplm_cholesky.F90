@@ -252,6 +252,21 @@ MODULE m_tlmplm_cholesky
              END DO
           ENDDO
 
+
+          !Now add diagonal contribution to matrices
+          DO l = 0,atoms%lmax(n)
+             DO  m = -l,l
+                lm = l* (l+1) + m
+                lmplm = (lm* (lm+3))/2
+                td%tuu(lmplm,n,jsp)=td%tuu(lmplm,n,jsp) + enpara%el0(l,n,jsp)
+                td%tdd(lmplm,n,jsp)=td%tdd(lmplm,n,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
+                td%tud(lmplm,n,jsp)=td%tud(lmplm,n,jsp) + 0.5
+                td%tdu(lmplm,n,jsp)=td%tdu(lmplm,n,jsp) + 0.5
+             ENDDO
+          ENDDO
+          
+          !Create Cholesky decomposition of local hamiltonian
+          
           !--->    Add diagonal terms to make matrix positive definite
           DO lp = 0,atoms%lnonsph(n)
              DO mp = -lp,lp

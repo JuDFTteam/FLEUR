@@ -132,7 +132,7 @@
       ! for all k-points
       DO ikpt=1,kpts%nkptf
         CALL apws(dimension,input,noco,&
-     &            kpts,ikpt,cell,sym%zrfs,&
+     &            kpts,atoms,sym,ikpt,cell,sym%zrfs,&
      &            1,jsp,bkpt,lapw(ikpt),nred)
 
       END DO

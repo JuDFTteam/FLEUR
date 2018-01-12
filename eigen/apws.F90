@@ -12,7 +12,7 @@ MODULE m_apws
   !        s.bluegel, IFF, 18.Nov.97
   !*********************************************************************
 CONTAINS
-  SUBROUTINE apws(dimension,input,noco,kpts,&
+  SUBROUTINE apws(DIMENSION,input,noco,kpts,atoms,sym,&
        nk,cell,l_zref,n_size,jspin,bkpt,lapw,nred)
 
     USE m_types
@@ -24,6 +24,8 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_cell),INTENT(IN)        :: cell
+    TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_lapw),INTENT(INOUT)     :: lapw
     !     .. 
@@ -54,6 +56,7 @@ CONTAINS
        ALLOCATE(lapw%gvec(3,DIMENSION%nvd,DIMENSION%jspd))
        ALLOCATE(lapw%vk(3,DIMENSION%nvd,DIMENSION%jspd))
        ALLOCATE(lapw%gk(3,DIMENSION%nvd,DIMENSION%jspd))
+       ALLOCATE(lapw%matind(DIMENSION%nvd,2))
     ENDIF
     lapw%rk = 0 ; lapw%k1 = 0 ; lapw%k2 = 0 ; lapw%k3 = 0 ;lapw%nv=0
     !     ..
@@ -288,7 +291,62 @@ CONTAINS
        ENDDO
     END DO
 
-    lapw%num_local_cols=lapw%nv
+    lapw%num_local_cols=lapw%nv+atoms%nlotot
+    !TODO needs to be adjusted in MPI case
+
+    IF (ANY(atoms%nlo>0)) CALL lo_basis_setup(lapw,atoms,sym,noco,cell)
     
   END SUBROUTINE apws
+
+
+  SUBROUTINE lo_basis_setup(lapw,atoms,sym,noco,cell)
+    USE m_types
+    USE m_vecforlo
+    IMPLICIT NONE
+    TYPE(t_lapw),INTENT(INOUT):: lapw
+    TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_sym),INTENT(IN)    :: sym
+    TYPE(t_cell),INTENT(IN)   :: cell
+    TYPE(t_noco),INTENT(IN)   :: noco
+   
+    
+    INTEGER:: n,na,nn,np,lo,nkvec_sv,nkvec(atoms%nlod,2),iindex
+    IF (.NOT.ALLOCATED(lapw%kvec)) THEN
+       ALLOCATE(lapw%kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%ntype))
+       ALLOCATE(lapw%index_lo(atoms%nlod,atoms%ntype))
+    ENDIF
+    iindex=0
+    na=0
+    nkvec_sv=0
+    DO n=1,atoms%ntype
+       DO nn=1,atoms%neq(n)
+          na=na+1
+          !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
+          np=sym%invtab(atoms%ngopr(na))
+          CALL vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell,nkvec)
+          DO lo = 1,atoms%nlo(n)
+             lapw%index_lo(lo,n)=iindex
+             iindex=iindex+nkvec(lo,1)
+             !kveclo(iindex+1:iindex+nkvec(lo,1)) = kvec(1:nkvec(lo,1),lo)
+          ENDDO
+       ENDDO
+    ENDDO
+  END SUBROUTINE lo_basis_setup
+
+  SUBROUTINE lapw_phase_factors(lapw,iintsp,tau,qss,cph)
+    USE m_types
+    USE m_constants
+    IMPLICIT NONE
+    TYPE(t_lapw),INTENT(in):: lapw
+    INTEGER,INTENT(IN)     :: iintsp
+    REAL,INTENT(in)        :: tau(3),qss(3)
+    COMPLEX,INTENT(out)    :: cph(:)
+
+    INTEGER:: k
+    REAL:: th
+    DO k = 1,lapw%nv(iintsp)
+       th= DOT_PRODUCT(lapw%gvec(:,k,iintsp)+(iintsp-1.5)*qss,tau)
+       cph(k) = CMPLX(COS(tpi_const*th),-SIN(tpi_const*th))
+    END DO
+  END SUBROUTINE lapw_phase_factors
 END MODULE m_apws
