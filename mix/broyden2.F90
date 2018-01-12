@@ -29,7 +29,7 @@ MODULE m_broyden2
   !################################################################
 CONTAINS
   SUBROUTINE broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-                      hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fm,sm,lpot)
+                      hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fm,sm,fmMet,smMet,lpot)
 
 #include"cpp_double.h"
 
@@ -58,6 +58,8 @@ CONTAINS
     ! Array Arguments
     REAL,    INTENT (IN)    :: fm(nmap) 
     REAL,    INTENT (INOUT) :: sm(nmap)
+    REAL,    INTENT (IN)    :: fmMet(nmap) 
+    REAL,    INTENT (INOUT) :: smMet(nmap)
 
     ! Local Scalars
     INTEGER         :: i,j,it,k,nit,iread,nmaph, mit, historyLength
@@ -65,7 +67,8 @@ CONTAINS
     LOGICAL         :: l_pot, l_exist
 
     ! Local Arrays
-    REAL, ALLOCATABLE :: fm1(:),sm1(:),uVec(:),vVec(:)
+    REAL, ALLOCATABLE :: fmLast(:),smLast(:),fmLastMet(:),smLastMet(:)
+    REAL, ALLOCATABLE :: uVec(:),vVec(:)
     REAL, ALLOCATABLE :: dNVec(:),dFVec(:),dNMet(:), dFMet(:), FMet(:)
     REAL, ALLOCATABLE :: deltaN_i(:), deltaF_i(:)
     REAL, ALLOCATABLE :: dNdNMat(:,:), dNdFMat(:,:), dFdNMat(:,:), dFdFMat(:,:)
@@ -83,15 +86,16 @@ CONTAINS
     l_pot = .FALSE.
     IF (PRESENT(lpot)) l_pot = lpot
 
-    ALLOCATE (fm1(mmap),sm1(mmap),dNVec(mmap),dFVec(mmap),uVec(mmap),vVec(mmap))
+    ALLOCATE (fmLast(mmap),smLast(mmap),fmLastMet(mmap),smLastMet(mmap))
+    ALLOCATE (dNVec(mmap),dFVec(mmap),uVec(mmap),vVec(mmap))
     ALLOCATE (deltaN_i(mmap),deltaF_i(mmap))
     ALLOCATE (dNdNLast(input%maxiter),dFdFLast(input%maxiter))
     ALLOCATE (dNdFLast(input%maxiter),dFdNLast(input%maxiter))
 
-    ALLOCATE (dnMet(mmap), dFMet(mmap), FMet(mmap))
+    ALLOCATE (dNMet(mmap), dFMet(mmap), FMet(mmap))
 
-    fm1 = 0.0
-    sm1 = 0.0
+    fmLast = 0.0
+    smLast = 0.0
     dNVec = 0.0
     dFVec = 0.0
     vVec  = 0.0
@@ -103,26 +107,29 @@ CONTAINS
     IF(.NOT.l_exist) mit = 1
 
     IF (mit.NE.1) THEN
-       ! load input charge density (sm1) and difference of 
-       ! in and out charge densities (fm1) from previous iteration (m-1)
+       ! load input charge density (smLast) and difference of 
+       ! in and out charge densities (fmLast) from previous iteration (m-1)
 
-       CALL readLastIterInAndDiffDen(hybrid,nmap,mit,alphan,sm1(:nmap),fm1(:nmap))
+       CALL readLastIterInAndDiffDen(hybrid,nmap,mit,alphan,smLast(:nmap),fmLast(:nmap),smLastMet(:nmap),fmLastMet(:nmap))
        IF (ABS(input%alpha-alphan) > 0.0001) THEN
           WRITE (6,*) 'mixing parameter has been changed; reset'
           WRITE (6,*) 'broyden algorithm or set alpha to',alphan
           CALL juDFT_error("mixing parameter (input) changed", calledby ="broyden")
        END IF
 
-       ! generate F_m   - F_(m-1)  ... sm1
-       !      and rho_m - rho_(m-1) .. fm1
-       dNVec(1:nmap) = sm(1:nmap) - sm1(1:nmap)
-       dFVec(1:nmap) = fm(1:nmap) - fm1(1:nmap)
+       ! generate F_m   - F_(m-1)  ... smLast
+       !      and rho_m - rho_(m-1) .. fmLast
+       dNVec(1:nmap) = sm(1:nmap) - smLast(1:nmap)
+       dFVec(1:nmap) = fm(1:nmap) - fmLast(1:nmap)
+
+       dNMet(1:nmap) = smMet(1:nmap) - smLastMet(1:nmap)
+       dFMet(1:nmap) = fmMet(1:nmap) - fmLastMet(1:nmap)
     END IF
 
     ! save F_m and rho_m for next iteration
     nit = mit +1
     IF (nit > input%maxiter+1) nit = 1
-    CALL writeLastIterInAndDiffDen(hybrid,nmap,nit,input%alpha,sm,fm)
+    CALL writeLastIterInAndDiffDen(hybrid,nmap,nit,input%alpha,sm,fm,smMet,fmMet)
 
     IF (mit.EQ.1) THEN 
        !     update for rho for mit=1 is straight mixing
@@ -134,12 +141,12 @@ CONTAINS
        CALL writeDeltaFVec(input,hybrid,nmap,mit,dFVec)
 
        ! Apply metric w to dNVec and store in dNMet:  w |dNVec>  
-       CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-                   mmap,nmaph,mapmt,mapvac2,dNVec,dNMet,l_pot)
+!       CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+!                   mmap,nmaph,mapmt,mapvac2,dNVec,dNMet,l_pot)
 
        ! Apply metric w to dFVec and store in dFMet:  w |dFVec>  
-       CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-                   mmap,nmaph,mapmt,mapvac2,dFVec,dFMet,l_pot)
+!       CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+!                   mmap,nmaph,mapmt,mapvac2,dFVec,dFMet,l_pot)
 
        ! Extend overlap matrices <delta n(i) | delta n(j)>, <delta F(i) | delta F(j)>,
        !                         <delta n(i) | delta F(j)>, <delta F(i) | delta n(j)> -start-
@@ -339,17 +346,17 @@ CONTAINS
        ! Construct the final uVec and vVec -end-
 
        ! Apply metric w to dFVec and store in FMet:  w |dFVec>
-       CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-                   mmap,nmaph,mapmt,mapvac2,fm,FMet,l_pot)
+!       CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+!                   mmap,nmaph,mapmt,mapvac2,fm,FMet,l_pot)
 
-       vFMetProd = CPP_BLAS_sdot(nmap,vVec,1,FMet,1)
+       vFMetProd = CPP_BLAS_sdot(nmap,vVec,1,fmMet,1)
 
        ! update rho(m+1)
        ! calculate sm(:) = (1.0-vFMetProd)*uVec(:) + sm
        CALL CPP_BLAS_saxpy(nmap,1.0-vFMetProd,uVec,1,sm,1)
     END IF
 
-    DEALLOCATE (fm1,sm1,dNVec,dFVec,vVec)
+    DEALLOCATE (fmLast,smLast,fmLastMet,smLastMet,dNVec,dFVec,vVec)
 
   END SUBROUTINE broyden2
 END MODULE m_broyden2

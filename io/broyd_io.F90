@@ -13,13 +13,14 @@ IMPLICIT NONE
 
 CONTAINS
 
-SUBROUTINE readLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDenVec)
+SUBROUTINE readLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDenVec,inDenVecMet,diffDenVecMet)
 
    TYPE(t_hybrid), INTENT(IN)  :: hybrid
    INTEGER,        INTENT(IN)  :: vecLen
    INTEGER,        INTENT(OUT) :: nextIter
    REAL,           INTENT(OUT) :: alpha
    REAL,           INTENT(OUT) :: inDenVec(vecLen), diffDenVec(vecLen)
+   REAL,OPTIONAL,  INTENT(OUT) :: inDenVecMet(vecLen), diffDenVecMet(vecLen)
 
    INTEGER             :: mode
 
@@ -33,18 +34,23 @@ SUBROUTINE readLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDe
       OPEN (57,file='broyd',form='unformatted',status='unknown')
    ENDIF
 
-   READ(57) nextIter,alpha,diffDenVec,inDenVec
+   IF(PRESENT(inDenVecMet)) THEN
+      READ(57) nextIter,alpha,diffDenVec,inDenVec,inDenVecMet,diffDenVecMet
+   ELSE
+      READ(57) nextIter,alpha,diffDenVec,inDenVec
+   END IF
 
    CLOSE(57)
 
 END SUBROUTINE readLastIterInAndDiffDen
 
-SUBROUTINE writeLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDenVec)
+SUBROUTINE writeLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDenVec,inDenVecMet,diffDenVecMet)
 
    TYPE(t_hybrid), INTENT(IN) :: hybrid
    INTEGER,        INTENT(IN) :: nextIter,vecLen
    REAL,           INTENT(IN) :: alpha
    REAL,           INTENT(IN) :: inDenVec(vecLen), diffDenVec(vecLen)
+   REAL,OPTIONAL,  INTENT(IN) :: inDenVecMet(vecLen), diffDenVecMet(vecLen)
 
    INTEGER             :: mode
 
@@ -58,7 +64,11 @@ SUBROUTINE writeLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffD
       OPEN (57,file='broyd',form='unformatted',status='unknown')
    ENDIF
 
-   WRITE(57) nextIter,alpha,diffDenVec,inDenVec
+   IF(PRESENT(inDenVecMet)) THEN
+      WRITE(57) nextIter,alpha,diffDenVec,inDenVec,inDenVecMet,diffDenVecMet
+   ELSE
+      WRITE(57) nextIter,alpha,diffDenVec,inDenVec
+   END IF
 
    CLOSE(57)
 
