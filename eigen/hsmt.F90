@@ -50,11 +50,17 @@ CONTAINS
     iintsp=1;jintsp=1;chi_one=1.0 !Defaults in non-noco case
     DO ispin=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !spin-loop over mt-spin
        DO n=1,atoms%ntype
+          CALL timestart("fjgj coefficients")
           CALL hsmt_fjgj(input,atoms,cell,lapw,noco,usdus,n,ispin,fj,gj)
+          CALL timestop("fjgj coefficients")
           IF (.NOT.noco%l_noco) THEN
+             CALL timestart("spherical setup")
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,&
                   enpara%el0,td%e_shift,usdus,fj,gj,smat(1,1),hmat(1,1))
+             CALL timestop("spherical setup")
+             CALL timestart("non-spherical setup")
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat(1,1))
+             CALL timestop("non-spherical setup")
              hmat(1,1)%data_c=0.0
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat(1,1),smat(1,1))
              DO i=1,SIZE(smat(1,1)%data_c,1)
