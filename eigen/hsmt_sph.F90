@@ -170,6 +170,7 @@ CONTAINS
     !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,ij,apw1)&
     !$OMP PRIVATE(cross_k,dplegend,chi,chi11,chi21,chi22,nsp,chj)&
     !$OMP PRIVATE(isigma_x,isigma_y,isigma_z,j1,j2,chi11so,chi21so,chi22so)&
+    !$OMP PRIVATE(tmp1,tmp2,tmp3,tmp)&
     !$OMP PRIVATE(aawa,bbwa,capw1,ii) IF (.not.l_socfirst)
     !$     IF (l_socfirst) WRITE(*,*) "WARNING: first variation SOC does not work with OPENMP in hsmt_sph"
     !$     IF (l_socfirst) WRITE(*,*) "         switching off openmp parallelization"
