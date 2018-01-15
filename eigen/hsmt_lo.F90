@@ -41,7 +41,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
 
-    na = 0
+    na = sum(atoms%neq(:n-1))
     DO nn = 1,atoms%neq(n)
        na = na + 1
        IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
