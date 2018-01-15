@@ -27,6 +27,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    USE m_brysh1
    USE m_stmix
    USE m_broyden
+   USE m_broyden2
    USE m_brysh2
    USE m_metric
    USE m_qfix
@@ -55,11 +56,11 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    INTEGER i,imap,js
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
    INTEGER iofl,n_u_keep
-   LOGICAL l_exist,l_ldaU, l_densityMatrixPresent
+   LOGICAL l_exist,l_ldaU, l_densityMatrixPresent, l_pot
 
    !Local Arrays
    REAL dist(6)
-   REAL, ALLOCATABLE :: sm(:), fsm(:)
+   REAL, ALLOCATABLE :: sm(:), fsm(:), fmMet(:), smMet(:)
    CHARACTER(LEN=20) :: attributes(2)
    COMPLEX           :: n_mmpTemp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins)
 
@@ -115,6 +116,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    ! LDA+U (end)
 
    ALLOCATE (sm(mmap),fsm(mmap))
+   ALLOCATE (smMet(mmap),fmMet(mmap))
    dist(:) = 0.0
 
    !determine type of mixing:
@@ -149,12 +151,26 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    !store the difference fsm - sm in fsm
    fsm(:nmap) = fsm(:nmap) - sm(:nmap)
 
+   l_pot = .FALSE.
+   ! Apply metric w to fsm and store in fmMet:  w |fsm>
+   CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+               mmap,nmaph,mapmt,mapvac2,fsm,fmMet,l_pot)
+
    !mixing of the densities
    IF (input%imix.EQ.0) THEN
       CALL stmix(atoms,input,noco, nmap,nmaph,fsm, sm)
    ELSE
       CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
                    hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
+
+!     Replace the broyden call above by the commented metric and broyden2 calls
+!     below to switch on the continuous restart of the Broyden method.
+!      ! Apply metric w to sm and store in smMet:  w |sm>
+!      CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+!                  mmap,nmaph,mapmt,mapvac2,sm,smMet,l_pot)
+!
+!      CALL broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
+!                    hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm,fmMet,smMet)
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
@@ -168,8 +184,8 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    !calculate the distance of charge densities...
 
    !induce metric in fsm use sm as an output array: |sm> = w |fsm>
-   CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-               mmap,nmaph,mapmt,mapvac2,fsm, sm)
+!   CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+!               mmap,nmaph,mapmt,mapvac2,fsm, sm)
 
    !calculate the charge density distance for each spin
    IF(hybrid%l_calhf) THEN
@@ -179,7 +195,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    END IF
 
    DO js = 1,input%jspins
-      dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, sm(nmaph*(js-1)+1),1)
+      dist(js) = CPP_BLAS_sdot(nmaph,fsm(nmaph*(js-1)+1),1, fmMet(nmaph*(js-1)+1),1)
 
       attributes = ''
       WRITE(attributes(1),'(i0)') js
@@ -193,14 +209,14 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
          WRITE ( 6,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
       END IF
    END DO
-   IF (noco%l_noco) dist(6) = CPP_BLAS_sdot((nmap-2*nmaph), fsm(nmaph*2+1),1,sm(nmaph*2+1),1)
+   IF (noco%l_noco) dist(6) = CPP_BLAS_sdot((nmap-2*nmaph), fsm(nmaph*2+1),1,fmMet(nmaph*2+1),1)
    IF (noco%l_noco) WRITE (6,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/cell%vol))
 
    !calculate the distance of total charge and spin density
    !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
    !                        +/_2<rh2(o) -rh2(i)|rh1(o) -rh1(i)>
    IF (input%jspins.EQ.2) THEN
-      dist(3) = CPP_BLAS_sdot(nmaph,fsm,1,sm(nmaph+1),1)
+      dist(3) = CPP_BLAS_sdot(nmaph,fsm,1,fmMet(nmaph+1),1)
       dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
       dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
       CALL writeXMLElementFormPoly('overallChargeDensity',(/'distance'/),&
@@ -224,7 +240,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
       !(e.g. when calculating non-magnetic systems with jspins=2).
    END IF
    results%last_distance=maxval(1000*SQRT(ABS(dist/cell%vol)))
-   DEALLOCATE (sm,fsm)
+   DEALLOCATE (sm,fsm,smMet,fmMet)
    CALL closeXMLElement('densityConvergence')
 
    !fix charge of the new density
