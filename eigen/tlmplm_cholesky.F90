@@ -1,4 +1,5 @@
 MODULE m_tlmplm_cholesky
+
   IMPLICIT NONE
   !*********************************************************************
   !     sets up the local Hamiltonian, i.e. the Hamiltonian in the
@@ -301,7 +302,7 @@ MODULE m_tlmplm_cholesky
           !--->   set up the t-matrices for the local orbitals,
           !--->   if there are any
           IF (atoms%nlo(n).GE.1) THEN
-             CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,0,input,vr(1,0,n),&
+             CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,vr(1,0,n),&
                   na,flo,f,g,ud, uuilon,duilon,ulouilopn, td)
              
           ENDIF
