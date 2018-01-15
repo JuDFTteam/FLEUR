@@ -117,7 +117,7 @@ CONTAINS
                       !--->                   conjugates of the a,b...-coefficients
                       DO kp = 1,lapw%nv(jintsp)
                          ax(kp) = ax(kp) + ab(kp,lmp)*utu + ab(kp,ab_size/2+lmp)*dtu
-                         bx(kp) = bx(kp) + ab(kp,ab_size/2+lmp)*utd + ab(kp,ab_size/2+lmp)*dtd
+                         bx(kp) = bx(kp) + ab(kp,lmp)*utd + ab(kp,ab_size/2+lmp)*dtd
                          cx(kp) = cx(kp) + ab(kp,lmp)*utulo + ab(kp,ab_size/2+lmp)*dtulo
                       END DO
                    END IF
