@@ -41,6 +41,7 @@ IMPLICIT NONE
     CPP_REALCOMPLEX, ALLOCATABLE :: eigvec(:,:)
     INTEGER, EXTERNAL :: numroc, indxl2g  !SCALAPACK functions
 #ifdef CPP_ELPA_201705003    
+    INTEGER :: kernel
     CLASS(elpa_t),pointer :: elpa_obj
 
     err = elpa_init(20170403)
@@ -65,6 +66,10 @@ IMPLICIT NONE
     CALL elpa_obj%set("solver", ELPA_SOLVER_1STAGE)
 #endif
     err = elpa_obj%setup()
+    if (myid == 0) then
+       call elpa_obj%get("complex_kernel", kernel)
+       print *, "elpa uses " // elpa_int_value_to_string("complex_kernel", kernel) // " kernel"
+    endif
 #endif
 
 
