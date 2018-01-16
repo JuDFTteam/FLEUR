@@ -63,7 +63,6 @@ CONTAINS
     INTEGER i,info,j 
     !     ..
     !     .. Local Arrays ..
-    INTEGER kveclo(atoms%nlotot)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
 
     REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:) 
@@ -81,7 +80,7 @@ CONTAINS
 
 
     lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
-    CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,kveclo=kveclo,zmat=zmat)
+    CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,zmat=zmat)
     IF (l_real) THEN
        ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
        h_r = 0.0 ; s_r=0.0
@@ -135,7 +134,7 @@ CONTAINS
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,DIMENSION%neigd,sym,cell, bkpt,lapw,ne,&
-         usdus,noco,1,kveclo,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
+         usdus,noco,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 
     !

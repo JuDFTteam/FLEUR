@@ -158,7 +158,7 @@ CONTAINS
           !
           !--->         set up lapw list
         
-          CALL apws(DIMENSION,input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
+          CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
 
           CALL eigen_hssetup(jsp,mpi,DIMENSION,oned,hybrid,enpara,input,vacuum,noco,jij,sym,&
                stars,cell,kpts,sphhar,atoms,ud,td,v,bkpt,lapw,smat,hmat)
@@ -206,12 +206,10 @@ CONTAINS
           ENDIF
 	  zmat%nbands=ne_found
           CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
-                  lapw%k1(:lapw%nv(jsp),jsp),lapw%k2 (:lapw%nv(jsp),jsp),lapw%k3(:lapw%nv(jsp),jsp),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),el=enpara%el0(0:,:,jsp),ello=enpara%ello0(:,:,jsp),evac=enpara%evac0(:,jsp),&
                   nlotot=atoms%nlotot,n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
           IF (noco%l_noco) THEN
              CALL write_eig(eig_id, nk,2,ne_found,ne_all,lapw%nv(2),lapw%nmat,&
-                  lapw%k1(:lapw%nv(2),2),lapw%k2 (:lapw%nv(2),2),lapw%k3(:lapw%nv(2),2),&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),el=enpara%el0(0:,:,2),ello= enpara%ello0(:,:,2),evac=enpara%evac0(:,2),&
                   nlotot=atoms%nlotot)
           ENDIF

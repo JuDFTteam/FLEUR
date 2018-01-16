@@ -22,7 +22,6 @@
       ! nkpti      ::     number of irreducible k-points
       ! nkpt       ::     number of all k-points 
 
-      USE m_apws
       USE m_radfun
       USE m_radflo
       USE m_abcof
@@ -68,8 +67,7 @@
       INTEGER                 ::  ilo,idum ,m
       COMPLEX                 ::  cdum
       TYPE(t_mat)             :: zhlp
-!     local scalars for apws
-      INTEGER                 ::  nred
+
       INTEGER                 ::  ikpt0,ikpt,itype,iop,ispin,ieq,indx,iatom
       INTEGER                 ::  i,j,l ,ll,lm,ng,ok
       COMPLEX                 ::  img=(0d0,1d0)
@@ -131,9 +129,7 @@
       ! generate G-vectors, which fulfill |k+G|<rkmax
       ! for all k-points
       DO ikpt=1,kpts%nkptf
-        CALL apws(dimension,input,noco,&
-     &            kpts,atoms,sym,ikpt,cell,sym%zrfs,&
-     &            1,jsp,bkpt,lapw(ikpt),nred)
+         CALL lapw(ikpt)%init(input,noco, kpts,atoms,sym,ikpt,cell,sym%zrfs)
 
       END DO
 
@@ -269,7 +265,7 @@
         lapw(ikpt0)%nmat=lapw(ikpt0)%nv(jsp)+atoms%nlotot
         CALL abcof(&
               input,atoms,hybrid%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw(ikpt0), &
-              hybrid%nbands(ikpt0),usdus,noco,jsp,hybdat%kveclo_eig(:,ikpt0),&
+              hybrid%nbands(ikpt0),usdus,noco,jsp,&!hybdat%kveclo_eig(:,ikpt0),&
               oneD,acof(: hybrid%nbands(ikpt0),:,:),bcof(: hybrid%nbands(ikpt0),:,:),ccof(:,: hybrid%nbands(ikpt0),:,:),&
               zmat(ikpt0))
         

@@ -18,7 +18,7 @@ MODULE m_setabc1locdn1
   !***********************************************************************
 CONTAINS
   SUBROUTINE setabc1locdn1(jsp,atoms,lapw,sym,usdus,&
-       kveclo, enough,nkvec,kvec,nbasf0, alo1,blo1,clo1)
+        enough,nkvec,kvec,nbasf0, alo1,blo1,clo1)
     !
     !*************** ABBREVIATIONS *****************************************
     ! nbasf   : total number of basisfunctions (apw + lo)
@@ -37,7 +37,6 @@ CONTAINS
     !     ..
     INTEGER,INTENT(IN)         :: jsp
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: kveclo(atoms%nlotot)
     INTEGER, INTENT (OUT) :: nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
     INTEGER, INTENT (OUT) :: kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat  )
     REAL,    INTENT (OUT) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
@@ -132,7 +131,7 @@ CONTAINS
                 m = ( atoms%invsat(natom) +1 ) * ( 2 * atoms%llo(lo,ntyp) + 1 )
                 DO l = 1, m
                    lm = lm + 1
-                   kvec(l,lo,natom) =  kveclo(lm)
+                   kvec(l,lo,natom) =  lapw%kveclo(lm)
                 ENDDO
              ENDDO
           ENDIF

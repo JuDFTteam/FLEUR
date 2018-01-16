@@ -2,7 +2,7 @@ MODULE m_eig66_mem
 #include "juDFT_env.h"
   ! Do the IO of the eig-file into memory
   ! The eig-file is split into four arrays:
-  ! eig_int contains the basis-set information/integers (nv,nmat,ne,k1,k2,k3,kveclo)
+  ! eig_int contains the basis-set information/integers (nv,nmat,ne)
   ! eig_real contains the basis-set information/real (el,evac,ello,bkpt,wtkpt)
   ! eig_eig contains the eigenvalues
   ! eig_vec contains the eigenvectors
@@ -50,8 +50,6 @@ CONTAINS
 
     !d%eig_int
     length=3 !nv+nmat+ne
-    length=length+nmat*3 !k1,k2,k3
-    length=length+nlotot !kveclo
 
     ALLOCATE(d%eig_int(length,jspins*nkpts))
 
@@ -93,7 +91,6 @@ CONTAINS
       USE m_eig66_da,ONLY:open_eig_IO=>open_eig,read_eig_IO=>read_eig,close_eig_IO=>close_eig
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      INTEGER :: k1(nmat),k2(nmat),k3(nmat),kveclo(nlotot)
       REAL    :: eig(neig),w_iks(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
       TYPE(t_zmat):: zmat
 
@@ -107,8 +104,8 @@ CONTAINS
       CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
-            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
-            CALL write_eig(id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
+            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+            CALL write_eig(id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
          ENDDO
       ENDDO
       CALL close_eig_IO(tmp_id)
@@ -141,7 +138,6 @@ CONTAINS
 
       INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      INTEGER :: k1(d%nmat),k2(d%nmat),k3(d%nmat),kveclo(SIZE(d%eig_int,1)-3-3*d%nmat)
       REAL    :: eig(SIZE(d%eig_eig,1)),w_iks(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
@@ -153,8 +149,8 @@ CONTAINS
       CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
-               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
+               CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
            ENDDO
       ENDDO
       CALL close_eig_DA(tmp_id)
@@ -225,14 +221,13 @@ CONTAINS
   END SUBROUTINE read_dos
 
 
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,w_iks,el,&
-       ello,evac,kveclo,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk,wk,neig,eig,w_iks,el,&
+       ello,evac,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
@@ -249,14 +244,7 @@ CONTAINS
     IF (PRESENT(neig)) THEN
        neig=d%eig_int(3,nrec)
     ENDIF
-    IF (PRESENT(k1)) THEN
-       IF (.NOT.PRESENT(k2).OR..NOT.PRESENT(k3)) CALL juDFT_error("BUG: always read k1,k2,k3")
-       k1=d%eig_int(3+1:3+size(k1),nrec)
-       k2=d%eig_int(3+d%nmat+1:3+d%nmat+size(k1),nrec)
-       k3=d%eig_int(3+2*d%nmat+1:3+2*d%nmat+size(k1),nrec)
-    ENDIF
-    IF (PRESENT(kveclo)) kveclo=d%eig_int(4+3*d%nmat:3+3*d%nmat+SIZE(kveclo),nrec)
-
+  
     !data from d%eig_real
     IF (PRESENT(bk)) bk=d%eig_real(1:3,nrec)
     IF (PRESENT(wk)) wk=d%eig_real(4,nrec)
@@ -293,14 +281,13 @@ CONTAINS
   END SUBROUTINE read_eig
 
 
-  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk, &
+  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk,wk, &
        eig,w_iks,el,ello,evac,                     &
-       nlotot,kveclo,n_size,n_rank,zmat)
+       nlotot,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total,nv,nmat,nlotot
-    INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
     TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
@@ -321,14 +308,7 @@ CONTAINS
        ENDIF
     ENDIF
 
-    IF (PRESENT(k1)) THEN
-       IF (.NOT.PRESENT(k2).OR..NOT.PRESENT(k3)) CALL juDFT_error("BUG: always write k1,k2,k3")
-       d%eig_int(3+1:3+size(k1),nrec)=k1
-       d%eig_int(3+d%nmat+1:3+d%nmat+size(k1),nrec)=k2
-       d%eig_int(3+2*d%nmat+1:3+2*d%nmat+size(k1),nrec)=k3
-    ENDIF
-    IF (PRESENT(kveclo)) d%eig_int(4+3*d%nmat:3+3*d%nmat+SIZE(kveclo),nrec)=kveclo
-
+  
     !data from d%eig_real
     IF (PRESENT(bk)) d%eig_real(1:3,nrec)=bk
     IF (PRESENT(wk)) d%eig_real(4,nrec)=wk

@@ -152,8 +152,8 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real    :: efermi
       logical :: l_p0,l_bkpts,l_proj,l_amn,l_mmn
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
-      integer, allocatable :: kveclo_b(:),nv_b(:)
+      integer, allocatable :: nv(:)
+      integer, allocatable :: nv_b(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
       INTEGER, ALLOCATABLE :: innerEig_idList(:)
@@ -270,7 +270,7 @@ c---->gwf
       integer,allocatable :: maptopair_q(:,:,:)              
       integer,allocatable :: gb_q(:,:,:),bpt_q(:,:)         
       integer,allocatable :: k1_qb(:,:),k2_qb(:,:),k3_qb(:,:)
-      integer,allocatable :: kveclo_qb(:),nv_qb(:)
+      integer,allocatable :: nv_qb(:)
 
       integer :: nntot_q = 1                               
       integer :: fullnqpts = 1                                
@@ -779,9 +779,9 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=DIMENSION%jspd
       if(noco%l_soc) wannierspin=2
      
-      allocate ( kveclo(nlotot),nv(wannierspin) )
-      allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
-      IF(l_gwf) allocate ( kveclo_qb(nlotot),nv_qb(wannierspin) )
+      allocate ( nv(wannierspin) )
+      allocate ( nv_b(wannierspin) )
+      IF(l_gwf) allocate ( nv_qb(wannierspin) )
       allocate ( k1(DIMENSION%nvd,wannierspin) )
       allocate ( k2(DIMENSION%nvd,wannierspin) )
       allocate ( k3(DIMENSION%nvd,wannierspin) )
@@ -964,10 +964,10 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
        if(.not.noco%l_noco) nrec5 = (jspin5-1)*nkpts
-
-       call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,DIMENSION%jspd, !wannierspin instead of DIMENSION%jspd?
-     >                noco%l_noco,
-     <                ello,evac,epar,bkpt,wk,n_bands,n_size)
+       CALL judft_error("cdn_read in wannier")
+!       call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,DIMENSION%jspd, !wannierspin instead of DIMENSION%jspd?
+!     >                noco%l_noco,
+!     <                ello,evac,epar,wk,n_bands,n_size)
 
        enddo
 !       call cpu_time(tt3)
@@ -1291,13 +1291,13 @@ c****************************************************************
 ! stored in the eig file on unit 66. the lattice respectively
 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
 
-      CALL cdn_read(
-     >              eig_id,
-     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
-     >              kptibz,jspin,DIMENSION%nbasfcn,
-     >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
+!      CALL cdn_read(
+!     >              eig_id,
+!     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+!     >              kptibz,jspin,DIMENSION%nbasfcn,
+!     >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+!     <              nmat,nv,ello,evdu,epar,
+!     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
 
 !      call cpu_time(tt4)
       !if(l_p0) write(*,*)'cdn_read=',tt4-tt3
@@ -1350,7 +1350,7 @@ c***********************************************************
      >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
      >            noco%l_noco,noco%l_soc,
      >            atoms%ntype,atoms%neq,nlotot,
-     >            kveclo,jspin,
+     >            jspin,
      >            oper,sym%nop,sym%mrot,DIMENSION%nvd,nv,
      >            shiftkpt(:,ikpt),
      >            sym%tau,
@@ -1392,7 +1392,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       ! I think the other variables of lapw are not needed here.
 
       CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     >           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
+     >           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
       DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
 
@@ -1723,13 +1723,13 @@ c        print*,"something to do"
           n_start=1
           n_end=DIMENSION%neigd
 
-      CALL cdn_read(
-     >              eig_id,
-     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
-     >              kptibz_b,jspin,DIMENSION%nbasfcn,
-     >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
+!      CALL cdn_read(
+!     >              eig_id,
+!     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+!     >              kptibz_b,jspin,DIMENSION%nbasfcn,
+!     >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+!     <              nmat_b,nv_b,ello,evdu,epar,
+!     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
 
 !        call cpu_time(tt4)
         !if(l_p0) write(*,*)'read_eig=',tt4-tt3
@@ -1777,7 +1777,7 @@ c***********************************************************
      >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
      >            noco%l_noco,noco%l_soc,
      >            atoms%ntype,atoms%neq,nlotot,
-     >            kveclo_b,jspin,
+     >            jspin,
      >            oper_b,sym%nop,sym%mrot,DIMENSION%nvd,
      >            nv_b,
      >            shiftkpt(:,bpt(ikpt_b,ikpt)),
@@ -1822,7 +1822,7 @@ cccccccccccc  Spherical Contributions         ccccccccccccc
       ! I think the other variables of lapw are not needed here.
 
       CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
-     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
+     +           noccbd_b,usdus,noco,jspin,oneD,
      +           acof_b,bcof_b,ccof_b,zMat_b)
 
       DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
@@ -1998,15 +1998,15 @@ c*******************************************c
 ! moreover, the plane-wave vectors G(k,q+b) are stored
 ! in (k1_qb,k2_qb,k3_qb) for later use.
 
-       CALL cdn_read(
-     >               innerEig_idList(iqpt_b),
-     >               DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd? !kptibz_b2?
-     >               kptibz,jspin_b,DIMENSION%nbasfcn,
-     >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
-     >               n_end,
-     <               nmat_qb,nv_qb,ello,evdu,epar,kveclo_qb,
-     <               k1_qb,k2_qb,k3_qb,bkpt,wqb,nbands_qb,eigg,   !we_qb instead of wqb?
-     <               zzMat)
+!       CALL cdn_read(
+!     >               innerEig_idList(iqpt_b),
+!     >               DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd? !kptibz_b2?
+!     >               kptibz,jspin_b,DIMENSION%nbasfcn,
+!     >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
+!     >               n_end,
+!     <               nmat_qb,nv_qb,ello,evdu,epar,
+!     <               k1_qb,k2_qb,k3_qb,bkpt,wqb,nbands_qb,eigg,   !we_qb instead of wqb?
+!     <               zzMat)
 
 !        call cpu_time(tt4)
         !if(l_p0) write(*,*)'read_eig=',tt4-tt3
@@ -2103,7 +2103,7 @@ c*******************************************c
       ! I think the other variables of lapw are not needed here.
 
         CALL abcof(input,atoms,noccbd_qb,sym,cell,bkpt,lapw_qb,
-     +             noccbd_qb,usdus,noco,jspin_b,kveclo_qb,oneD,
+     +             noccbd_qb,usdus,noco,jspin_b,oneD,
      +             acof_qb,bcof_qb,ccof_qb,zMat_qb)
 
       DEALLOCATE(lapw_qb%k1,lapw_qb%k2,lapw_qb%k3)
@@ -2784,11 +2784,11 @@ c************************************************c
 
       if(allocated(pair_to_do))deallocate(pair_to_do,maptopair)
 
-      deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg )
-      if (wann%l_matrixmmn) deallocate ( kveclo_b,nv_b,k1_b,k2_b,k3_b )
+      if (wann%l_matrixmmn) deallocate ( nv_b,k1_b,k2_b,k3_b )
       if (wann%l_matrixmmn.AND.l_gwf) 
-     >     deallocate ( kveclo_qb,nv_qb,k1_qb,k2_qb,k3_qb ) 
+     >     deallocate ( nv_qb,k1_qb,k2_qb,k3_qb ) 
       if (wann%l_bzsym)  deallocate(irreduc,mapkoper)
       if (wann%l_bzsym.AND.l_gwf)  deallocate(irreduc_q,mapqoper)
       if(allocated(pair_to_do_q))

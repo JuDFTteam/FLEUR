@@ -414,9 +414,9 @@ CONTAINS
      END SUBROUTINE write_dos
 
 
-     SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk,&
+     SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk,wk,&
           &                  eig,w_iks,el,ello,evac,&
-          &                  nlotot,kveclo,n_size,n_rank,zmat)
+          &                  nlotot,n_size,n_rank,zmat)
 
        !*****************************************************************
        !     writes all eignevecs for the nk-th kpoint
@@ -427,7 +427,6 @@ CONTAINS
        INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
        REAL,    INTENT(IN),OPTIONAL :: wk
        INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
-       INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
        REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
        REAL,    INTENT(IN),OPTIONAL :: evac(2),ello(:,:)
        TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
@@ -475,30 +474,6 @@ CONTAINS
        IF (PRESENT(nmat)) CALL io_write_integer0(&
             &                       d%nmatsetid,(/nk,jspin/),(/1,1/),nmat)
 
-       IF (PRESENT(k1)) CALL io_write_integer1(&
-            &              d%ksetid,(/1,1,nk,jspin/),&
-            &     (/MIN(nv_local,SIZE(k1)),1,1,1/),k1(:MIN(nv_local,SIZE(k1))))
-
-       IF (PRESENT(k2)) CALL io_write_integer1(&
-            &              d%ksetid,(/1,2,nk,jspin/),&
-            &     (/MIN(nv_local,SIZE(k2)),1,1,1/),k2(:MIN(nv_local,SIZE(k2))))
-
-       IF (PRESENT(k3)) CALL io_write_integer1(&
-            &              d%ksetid,(/1,3,nk,jspin/),&
-            &     (/MIN(nv_local,SIZE(k3)),1,1,1/),k3(:MIN(nv_local,SIZE(k3))))
-
-       IF (PRESENT(kveclo).AND.PRESENT(nlotot).AND.&
-            &      PRESENT(k1).AND.PRESENT(k2).AND.PRESENT(k3)) THEN
-
-          WRITE(*,*) kveclo,nlotot
-          DO k = 1, nlotot
-             CALL io_write_integer0(&
-                  &        d%ksetid,(/nv+k,1,nk,jspin/),(/1,1,1,1/),k1(kveclo(k)))
-             CALL io_write_integer0(&
-                  &        d%ksetid,(/nv+k,2,nk,jspin/),(/1,1,1,1/),k2(kveclo(k)))
-             CALL io_write_integer0(&
-                  &        d%ksetid,(/nv+k,3,nk,jspin/),(/1,1,1,1/),k3(kveclo(k)))
-          ENDDO
        ENDIF
        !
        !write eigenvalues
@@ -598,21 +573,20 @@ CONTAINS
 
 #endif
 
-     SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,w_iks,el,&
-          &            ello,evac,kveclo,n_start,n_end,zMat)
+     SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk,wk,neig,eig,w_iks,el,&
+          &            ello,evac,n_start,n_end,zMat)
        IMPLICIT NONE
        INTEGER, INTENT(IN)            :: id,nk,jspin
        INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
        INTEGER, INTENT(OUT),OPTIONAL  :: neig
        REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-       INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
        REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
        REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
        INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
        TYPE(t_zMat),OPTIONAL  :: zmat
 
 #ifdef CPP_HDF
-       INTEGER:: n1,n,k,k1_t,k2_t,k3_t
+       INTEGER:: n1,n,k
        TYPE(t_data_HDF),POINTER::d
        CALL priv_find_data(id,d)
 
@@ -634,28 +608,6 @@ CONTAINS
        ENDIF
 
      
-       IF (PRESENT(k1)) THEN
-          IF (.NOT.(PRESENT(k2).AND.PRESENT(k3).AND.PRESENT(kveclo)))&
-               &    CALL juDFT_error("BUG1 in calling read_eig")
-
-          CALL io_read_integer0(d%nvsetid,(/nk,jspin/),(/1,1/),n1)
-          IF (n1>SIZE(k1))  CALL juDFT_error("eig66_hdf$read_basis",&
-               &     calledby="eig66_hdf")
-          !read basis
-          CALL io_read_integer1(d%ksetid,(/1,1,nk,jspin/),(/n1,1,1,1/),k1(:n1))
-          CALL io_read_integer1(d%ksetid,(/1,2,nk,jspin/),(/n1,1,1,1/),k2(:n1))
-          CALL io_read_integer1(d%ksetid,(/1,3,nk,jspin/),(/n1,1,1,1/),k3(:n1))
-          DO k = 1, SIZE(kveclo)
-             CALL io_read_integer0(d%ksetid,(/n1+k,1,nk,jspin/),(/1,1,1,1/),k1_t)
-             CALL io_read_integer0(d%ksetid,(/n1+k,2,nk,jspin/),(/1,1,1,1/),k2_t)
-             CALL io_read_integer0(d%ksetid,(/n1+k,3,nk,jspin/),(/1,1,1,1/),k3_t)
-             DO n = 1, n1
-                IF (( (k1_t == k1(n)).AND.(k2_t == k2(n)) ).AND.(k3_t == k3(n)) ) THEN
-                   kveclo(k) = n
-                   CYCLE
-                ENDIF
-             ENDDO
-          ENDDO
           IF (PRESENT(nv)) nv=n1
        ELSE
           IF (PRESENT(nv)) CALL io_read_integer0(d%nvsetid,(/nk,jspin/),(/1,1/),nv)

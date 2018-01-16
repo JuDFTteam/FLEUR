@@ -1,7 +1,7 @@
 MODULE m_abcof3
 CONTAINS
   SUBROUTINE abcof3(input,atoms,sym,jspin, cell, bkpt,lapw,&
-       usdus, kveclo,oneD,a,b,bascof_lo)
+       usdus,oneD,a,b,bascof_lo)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -28,7 +28,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin 
 
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)
     COMPLEX, INTENT (OUT):: a(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: b(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
@@ -73,7 +72,7 @@ CONTAINS
     !
     iintsp = 1
  
-    CALL setabc1locdn1(jspin, atoms,lapw, sym,usdus,kveclo,enough,nkvec,kvec,&
+    CALL setabc1locdn1(jspin, atoms,lapw, sym,usdus,enough,nkvec,kvec,&
          nbasf0,alo1,blo1,clo1)
 
     nvmax=lapw%nv(jspin)

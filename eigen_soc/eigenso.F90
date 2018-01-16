@@ -62,7 +62,6 @@ CONTAINS
     !     .. Local Arrays..
     CHARACTER*3 chntype
 
-    INTEGER, ALLOCATABLE :: kveclo(:)
     REAL,    ALLOCATABLE :: rsopdp(:,:,:,:),rsopdpd(:,:,:,:)
     REAL,    ALLOCATABLE :: rsopp(:,:,:,:),rsoppd(:,:,:,:) 
     REAL,    ALLOCATABLE :: eig_so(:) 
@@ -104,7 +103,7 @@ CONTAINS
 
     ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
-         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),kveclo(atoms%nlotot),&
+         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
          usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
          enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
@@ -233,12 +232,12 @@ CONTAINS
 
        CALL timestart("eigenso: alineso")
        CALL alineso(eig_id,&
-            mpi,DIMENSION,atoms,sym,&
+            mpi,DIMENSION,atoms,sym,kpts,&
             input,noco,cell,oneD,&
             rsopp,rsoppd,rsopdp,rsopdpd,nk,&
             rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
             usdus,soangl,&
-            kveclo,enpara%ello0,nsz,nmat,&
+            enpara%ello0,nsz,nmat,&
             eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN

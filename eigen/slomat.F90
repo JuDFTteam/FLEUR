@@ -56,7 +56,7 @@ CONTAINS
     COMPLEX,   ALLOCATABLE  :: cph(:,:)
     ALLOCATE(cph(MAXVAL(lapw%nv),2))
     DO i=MIN(iintsp,jintsp),MAX(iintsp,jintsp)
-       CALL lapw_phase_factors(lapw,i,atoms%taual(:,na),noco%qss,cph(:,i))
+       CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
     ENDDO
 
     IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN

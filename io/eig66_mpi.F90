@@ -192,7 +192,6 @@ CONTAINS
       USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,read_eig_DA=>read_eig,close_eig_da=>close_eig
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      INTEGER :: k1(nmat),k2(nmat),k3(nmat),kveclo(nlotot)
       REAL    :: eig(neig),w_iks(neig),ello(nlo,ntype),el(lmax,ntype)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
@@ -206,8 +205,8 @@ CONTAINS
          CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,d%l_real,l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
-                  CALL read_eig_DA(tmp_id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
-                  CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
+                  CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+                  CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
               ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -233,7 +232,6 @@ CONTAINS
 
       INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      INTEGER :: k1(d%nmat),k2(d%nmat),k3(d%nmat),kveclo(d%nlotot)
       REAL    :: eig(d%neig),w_iks(d%neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
@@ -248,8 +246,8 @@ CONTAINS
          CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,d%jspins
             DO nk=1,d%nkpts
-               CALL read_eig(id,nk,jspin,nv,i,k1,k2,k3,bk3,wk,ii,eig,w_iks,el,ello,evac,kveclo,zmat=zmat)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,k1,k2,k3,bk3,wk,eig,w_iks,el,ello,evac,nlotot,kveclo,zmat=zmat)
+               CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
             ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -259,14 +257,13 @@ CONTAINS
 
   END SUBROUTINE close_eig
 
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk3,wk,neig,eig,w_iks,el,&
-       ello,evac,kveclo,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk3,wk,neig,eig,w_iks,el,&
+       ello,evac,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk3(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
@@ -291,9 +288,8 @@ CONTAINS
 
     ENDIF
     !read the integer values
-    IF (ANY((/PRESENT(nv),PRESENT(nmat),PRESENT(k1),PRESENT(k2),PRESENT(k3),PRESENT(kveclo)/))) THEN
+    IF (ANY((/PRESENT(nv),PRESENT(nmat)/))) THEN
        tmp_size=4+3*d%size_k
-       IF (PRESENT(kveclo)) tmp_size=tmp_size+SIZE(kveclo)
        ALLOCATE(tmp_int(tmp_size))
        CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%int_handle,e)
        ! Get current values
@@ -302,11 +298,7 @@ CONTAINS
        !IF (present(neig)) neig=tmp_int(1)
        IF (PRESENT(nv))   nv=tmp_int(2)
        IF (PRESENT(nmat)) nmat=tmp_int(3)
-       IF (PRESENT(k1))   k1=tmp_int(4+1:4+SIZE(k1))
-       IF (PRESENT(k2))   k2=tmp_int(4+d%size_k+1:4+d%size_k+SIZE(k2))
-       IF (PRESENT(k3))   k3=tmp_int(4+2*d%size_k+1:4+2*d%size_k+SIZE(k3))
-       IF (PRESENT(kveclo)) kveclo=tmp_int(4+3*d%size_k+1:4+3*d%size_k+SIZE(kveclo))
-
+    
     ENDIF
     !read the real-values
     IF (ANY((/PRESENT(wk),PRESENT(bk3),PRESENT(el),PRESENT(ello),PRESENT(evac)/))) THEN
@@ -384,14 +376,13 @@ CONTAINS
 #endif
   END SUBROUTINE read_eig
 
-  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk3,wk, &
+  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk3,wk, &
        eig,w_iks,el,ello,evac,                     &
-       nlotot,kveclo,n_size,n_rank,zmat)
+       nlotot,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
-    INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(IN),OPTIONAL :: bk3(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
     TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
@@ -420,19 +411,14 @@ CONTAINS
        DEALLOCATE(tmp_int)
     ENDIF
 
-    IF (ANY((/PRESENT(nv),PRESENT(nmat),PRESENT(nlotot),PRESENT(k1),PRESENT(k2),PRESENT(k3),PRESENT(kveclo)/))) THEN
+    IF (ANY((/PRESENT(nv),PRESENT(nmat),PRESENT(nlotot)/))) THEN
        tmp_size=5+3*d%size_k
-       IF (PRESENT(kveclo)) tmp_size=tmp_size+SIZE(kveclo)
        ALLOCATE(tmp_int(tmp_size))
        tmp_int=9999999
        tmp_int(1)=0
        IF (PRESENT(nv))   tmp_int(2)=nv
        IF (PRESENT(nmat)) tmp_int(3)=nmat
        IF (PRESENT(nlotot)) tmp_int(4)=nlotot
-       IF (PRESENT(k1))   tmp_int(4+1:4+SIZE(k1))=k1
-       IF (PRESENT(k2))   tmp_int(4+d%size_k+1:4+d%size_k+SIZE(k2))=k2
-       IF (PRESENT(k3))   tmp_int(4+2*d%size_k+1:4+2*d%size_k+SIZE(k3))=k3
-       IF (PRESENT(kveclo)) tmp_int(4+3*d%size_k+1:4+3*d%size_k+SIZE(kveclo))=kveclo
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%int_handle,e)
        CALL MPI_ACCUMULATE(tmp_int,tmp_size,MPI_INTEGER,pe,slot,tmp_size,MPI_INTEGER,MPI_MIN,d%int_handle,e)
        CALL MPI_WIN_UNLOCK(pe,d%int_handle,e)

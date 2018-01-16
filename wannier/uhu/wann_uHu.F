@@ -129,9 +129,9 @@ c     ..array arguments..
       complex, intent (in) :: clnu(memd,0:nlhd,ntypsd)
 
 c     ..allocatable arrays..
-      integer, allocatable :: kveclo(:)   , nv(:)
-      integer, allocatable :: kveclo_b(:) , nv_b(:)
-      integer, allocatable :: kveclo_b2(:), nv_b2(:)
+      integer, allocatable :: nv(:)
+      integer, allocatable :: nv_b(:)
+      integer, allocatable :: nv_b2(:)
       integer, allocatable :: k1(:,:)   , k2(:,:)   , k3(:,:)
       integer, allocatable :: k1_b(:,:) , k2_b(:,:) , k3_b(:,:)
       integer, allocatable :: k1_b2(:,:), k2_b2(:,:), k3_b2(:,:)
@@ -561,9 +561,9 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       allocate ( dulon(nlod,ntypd,2) )
       allocate ( uloulopn(nlod,nlod,ntypd,2) )
 
-      allocate ( kveclo(nlotot),nv(wannierspin) )
-      allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
-      allocate ( kveclo_b2(nlotot),nv_b2(wannierspin) )
+      allocate ( nv(wannierspin) )
+      allocate ( nv_b(wannierspin) )
+      allocate ( nv_b2(wannierspin) )
       allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
      &           k3(nvd,wannierspin) )
       allocate ( k1_b(nvd,wannierspin),k2_b(nvd,wannierspin),
@@ -791,7 +791,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
 
        call cdn_read0(eig_id,irank,isize,jspin5,wannierspin,l_noco,
-     <                ello,evac,epar,bkpt,wk,n_bands,n_size)
+     <                ello,evac,epar,wk,n_bands,n_size)
 
        enddo
 
@@ -967,13 +967,14 @@ c      if (mod(i_rec-1,isize).eq.irank) then
          ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
       END IF
 
-      CALL cdn_read(
-     >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
-     >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
-
+!      CALL cdn_read(
+!     >              eig_id,
+!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
+!     >              l_ss,l_noco,neigd,n_start,n_end,
+!     <              nmat,nv,ello,evdu,epar,
+!     <              lapw,wk,nbands,eigg,zzMat)
+      !Attention more cdn_read below
+      CALL judft_error("BUG: cdn_read to be reimplemeted in wann_uHU") 
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
@@ -1007,12 +1008,12 @@ c      if (mod(i_rec-1,isize).eq.irank) then
         eigg = 0.
         call cpu_time(t0)
 
-        CALL cdn_read(
-     >                eig_id,
-     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
-     >                l_ss,l_noco,neigd,n_start,n_end,
-     <                nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-     <                k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
+!        CALL cdn_read(
+!     >                eig_id,
+!     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
+!     >                l_ss,l_noco,neigd,n_start,n_end,
+!     <                nmat_b,nv_b,ello,evdu,epar,
+!     <                k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
 
         nslibd_b = 0
 
@@ -1063,7 +1064,7 @@ c***********************************************************
      >            ntypd,nlo,llo,invsat,
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
-     >            kveclo_b,jspin,
+     >            jspin,
      >            oper_b,nop,mrot,nvd,
      >            nv_b,
      >            shiftkpt(:,bpt(ikpt_b,ikpt)),
@@ -1099,7 +1100,7 @@ c***********************************************************
       ! I think the other variables of lapw are not needed here.
 
       CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
-     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
+     +           noccbd_b,usdus,noco,jspin,oneD,
      +           acof_b,bcof_b,ccof_b,zMat_b)
 
       DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
@@ -1126,13 +1127,13 @@ c***********************************************************
           WRITE(*,*) 'Here probably the wrong record is read in'
           WRITE(*,*) 'Should eig_id not be dependent on iqpt_b?'
           WRITE(*,*) '(in wann_uHu)'
-          CALL cdn_read(
-     >                  eig_id,
-     >                  nvd,jspd,irank,isize,kptibz_b2,jspin,nbasfcn, !wannierspin instead of jspd?
-     >                  l_ss,l_noco,neigd,n_start,n_end,
-     <                  nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
-     <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
-     <                  eigg,zzMat)
+    !      CALL cdn_read(
+    ! >                  eig_id,
+    ! >                  nvd,jspd,irank,isize,kptibz_b2,jspin,nbasfcn, !wannierspin instead of jspd!?
+ !    >                  l_ss,l_noco,neigd,n_start,n_end,
+ !    <                  nmat_b2,nv_b2,ello,evdu,epar,
+ !    <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
+ !    <                  eigg,zzMat)
 
         nslibd_b2 = 0
 
@@ -1183,7 +1184,7 @@ c***********************************************************
      >            ntypd,nlo,llo,invsat,
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
-     >            kveclo_b2,jspin_b,
+     >            jspin_b,
      >            oper_b2,nop,mrot,nvd,
      >            nv_b2,
      >            shiftkpt(:,bpt(ikpt_b2,ikpt)),
@@ -1220,7 +1221,7 @@ c***********************************************************
       ! I think the other variables of lapw are not needed here.
 
       CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
-     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
+     +           noccbd_b2,usdus,noco,jspin_b,oneD,
      +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
       DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
@@ -1459,12 +1460,12 @@ c               END Q LOOP                       c
 c************************************************c
 
 
-      deallocate ( kveclo,nv,k1,k2,k3 )
+      deallocate ( nv,k1,k2,k3 )
       deallocate(flo)
       deallocate ( ff,gg,us,dus,duds,uds,ddn)
       deallocate ( ulos,dulos,uulon,dulon,uloulopn )
-      if (allocated(nv_b))deallocate(kveclo_b,nv_b,k1_b,k2_b,k3_b)
-      if (allocated(nv_b2))deallocate(kveclo_b2,nv_b2,k1_b2,k2_b2,k3_b2)
+      if (allocated(nv_b))deallocate(nv_b,k1_b,k2_b,k3_b)
+      if (allocated(nv_b2))deallocate(nv_b2,k1_b2,k2_b2,k3_b2)
       if (wann%l_bzsym)deallocate(irreduc,mapkoper,shiftkpt)
       if (wann%l_bzsym.AND.l_gwf)deallocate(irreduc_q,mapqoper,shiftqpt)
       if (allocated(pair_to_do)) deallocate(pair_to_do,maptopair)

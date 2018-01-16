@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_kptsrotate
+      use m_judft
 c****************************************
 c     Rotate the wave function.
 c     Frank Freimuth
@@ -15,7 +16,7 @@ c****************************************
      >               ntypd,nlo,llo,invsat,
      >               l_noco,l_soc,
      >               ntype,neq,nlotot,
-     >               kveclo,jspin_in,
+     >               jspin_in,
      >               oper,nop,mrot,nvd,
      >               nv,shiftkpt,
      >               tau,
@@ -37,7 +38,6 @@ c****************************************
       integer,intent(in)    :: ntype
       integer,intent(in)    :: neq(ntype)
       integer,intent(in)    :: nlotot
-      integer,intent(in)    :: kveclo(nlotot)
       integer,intent(in)    :: jspin_in
       integer,intent(in)    :: oper
       integer,intent(in)    :: nop
@@ -141,7 +141,8 @@ c      print*,testmat
         enddo    
         jj=jj+nv(jspin)
         do ilo=1,nlotot
-         j=kveclo(ilo)
+           call judft_error("BUG in wann_kptsrotate:LOs missing")
+         !j=kveclo(ilo)
          phase = k1(j,jspin) * shiftnonsymm(1)
      +         + k2(j,jspin) * shiftnonsymm(2)
      +         + k3(j,jspin) * shiftnonsymm(3)

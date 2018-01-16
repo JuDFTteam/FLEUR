@@ -7,12 +7,12 @@ MODULE m_alineso
   !----------------------------------------------------------------------
 CONTAINS
   SUBROUTINE alineso(eig_id,&
-       mpi,DIMENSION,atoms,sym,&
+       mpi,DIMENSION,atoms,sym,kpts,&
        input,noco,cell,oneD,&
        rsopp,rsoppd,rsopdp,rsopdpd,nk,&
        rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
        usdus,soangl,&
-       kveclo,ello,nsize,nmat,&
+       ello,nsize,nmat,&
        eig_so,zso)
 
 #include"cpp_double.h"
@@ -29,6 +29,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_usdus),INTENT(IN)       :: usdus
     !     ..
     !     .. Scalar Arguments ..
@@ -49,7 +50,6 @@ CONTAINS
     COMPLEX, INTENT (IN) :: soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2)
     COMPLEX, INTENT (OUT) :: zso(:,:,:)!(dimension%nbasfcn,2*dimension%neigd,wannierspin)
     REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd),ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)
-    INTEGER, INTENT (OUT) :: kveclo(atoms%nlotot)
     !-odim
     !+odim
     !     ..
@@ -111,17 +111,12 @@ CONTAINS
     endif
     zso(:,:,:)= CMPLX(0.,0.)
 
-    ALLOCATE(lapw%k1(DIMENSION%nvd,input%jspins))
-    ALLOCATE(lapw%k2(DIMENSION%nvd,input%jspins))
-    ALLOCATE(lapw%k3(DIMENSION%nvd,input%jspins))
-    ALLOCATE(lapw%rk(DIMENSION%nvd,input%jspins))
-
+    CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
     DO jsp = 1,input%jspins
        CALL read_eig(&
             eig_id,nk,jsp,&
             bk=bkdu,el=epar,ello=ello(:,:,jsp),&
-            evac=evac,neig=ne,eig=eig(:,jsp),&
-            nmat=lapw%nmat,nv=lapw%nv(jsp),k1=lapw%k1(:,jsp),k2=lapw%k2(:,jsp),k3=lapw%k3(:,jsp),kveclo=kveclo)
+            evac=evac,neig=ne,eig=eig(:,jsp))
        CALL read_eig(&
                eig_id,nk,jsp,&
                n_start=1,n_end=ne,&
@@ -171,7 +166,6 @@ CONTAINS
          &             cell,bkpt,&
          &             zmat,usdus,&
          &             zso,noco,oneD,&
-         &             kveclo,&
          &             ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -help") 
     !

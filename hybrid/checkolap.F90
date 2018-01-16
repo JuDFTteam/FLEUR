@@ -10,7 +10,6 @@
      &                  cell,lapw,jsp)
       USE m_util     , ONLY: intgrf,intgrf_init,chr,sphbessel,harmonicsr
       USE m_constants
-      USE m_apws
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
@@ -255,10 +254,9 @@
             carr1 = 0; carr2 = 0; carr3 = 0
 
             ! calculate k1,k2,k3
-            CALL apws(dimension,input,noco,&
+            CALL lapw%init(input,noco,&
      &                kpts,atoms,sym,ikpt,cell,&
-     &                sym%zrfs,1,jsp,bkpt,lapw,&
-     &                nred)
+     &                sym%zrfs)
 
             ! PW part
             DO igpt = 1,lapw%nv(jsp)

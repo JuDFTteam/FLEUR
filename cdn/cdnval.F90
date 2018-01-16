@@ -166,7 +166,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: qis(:,:,:)
     !-new_sl
     !-dw
-    INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
+    INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
 
     REAL,    ALLOCATABLE :: aclo(:,:,:),acnmt(:,:,:,:,:)
@@ -333,8 +333,7 @@ CONTAINS
     IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
 ! calculation of core spectra (EELS) initializations -end-
 
-    ALLOCATE ( kveclo(atoms%nlotot) )
-
+  
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
        WRITE (16,FMT=8000) jspin
@@ -346,7 +345,7 @@ CONTAINS
          eig_id,&
          mpi%irank,mpi%isize,jspin,dimension%jspd,&
          noco%l_noco,&
-         ello,evac,epar,bkpt,wk,n_bands,n_size)!keep
+         ello,evac,epar,wk,n_bands,n_size)
 
     !+lo
     !---> if local orbitals are used, the eigenvector has a higher
@@ -551,8 +550,9 @@ CONTAINS
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
-               lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
+               lapw%nmat,lapw%nv,ello,evdu,epar,&
+               lapw,wk,nbands,eig,zMat)
+          CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
 #ifdef CPP_MPI
           ! Sinchronizes the RMA operations
           if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
@@ -709,13 +709,13 @@ CONTAINS
                      bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat) )
                 CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt,noccbd,eig,usdus,&
-                        kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                        ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                         e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
-                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,kveclo,oneD,&
+                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,oneD,&
                      acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat)
                 CALL timestop("cdnval: abcof")
 

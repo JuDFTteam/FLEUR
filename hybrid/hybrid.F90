@@ -9,7 +9,6 @@ CONTAINS
     USE m_hf_setup
     USE m_hsfock
     USE m_eig66_io
-    USE m_apws
     USE m_io_hybrid
     IMPLICIT NONE
     TYPE(t_xcpot),INTENT(IN)     :: xcpot
@@ -129,7 +128,7 @@ CONTAINS
             hybdat,irank2,it,sym%invs,v%mt(:,0,:,:),eig_irr)  
        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
-          CALL apws(DIMENSION,input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi%n_size,jsp, bkpt,lapw,nred)
+          CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref)
   
           CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,&
                sym,cell,noco,results,it,MAXVAL(hybrid%nobd),xcpot,&

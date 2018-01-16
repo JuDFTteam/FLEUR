@@ -6,7 +6,7 @@ MODULE m_topulay
 CONTAINS
   SUBROUTINE to_pulay(&
        input,atoms,nobd,sym,lapw,noco,cell,bkpt,ne,eig,&
-       usdus,kveclo,jspin,oneD,&
+       usdus,jspin,oneD,&
        acof,bcof,e1cof,e2cof,aveccof,bveccof,&
        ccof,acoflo,bcoflo,cveccof,zMat)
     !
@@ -34,7 +34,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin 
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: eig(:)!(dimension%neigd)
     COMPLEX, INTENT (OUT)::      acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
@@ -106,7 +105,7 @@ CONTAINS
        IF (noco%l_ss) nvmax = lapw%nv(iintsp)
        !
        CALL setabc1locdn(jspin,atoms,lapw,ne,noco,iintsp,&
-            sym,usdus, kveclo, enough,nkvec,kvec,nbasf0,ccof,&
+            sym,usdus,enough,nkvec,kvec,nbasf0,ccof,&
             alo1,blo1,clo1)
        !
        IF (iintsp .EQ. 1) THEN

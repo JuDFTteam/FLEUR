@@ -50,7 +50,7 @@ CONTAINS
     
     np = sym%invtab(atoms%ngopr(na))
     !--->          set up phase factors
-    CALL lapw_phase_factors(lapw,iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
+    CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
     
     IF (np==1) THEN
        gkrot(:, 1:lapw%nv(iintsp)) = lapw%gk(:, 1:lapw%nv(iintsp),iintsp)

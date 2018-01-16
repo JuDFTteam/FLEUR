@@ -1,7 +1,7 @@
 MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,nobd,sym, cell, bkpt,lapw,ne,usdus,&
-       noco,jspin,kveclo,oneD, acof,bcof,ccof,zMat)
+       noco,jspin,oneD, acof,bcof,ccof,zMat)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -32,7 +32,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)
     COMPLEX, INTENT (OUT):: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
@@ -91,7 +90,7 @@ CONTAINS
        nvmax=lapw%nv(jspin)
        IF (noco%l_ss) nvmax=lapw%nv(iintsp)
        CALL setabc1locdn(jspin, atoms,lapw,ne,noco,iintsp, sym,usdus,&
-            kveclo, enough,nkvec,kvec,nbasf0,ccof, alo1,blo1,clo1)
+             enough,nkvec,kvec,nbasf0,ccof, alo1,blo1,clo1)
        !
        IF (iintsp .EQ. 1) THEN
           qss1= - noco%qss(1)/2

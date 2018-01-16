@@ -17,7 +17,7 @@ MODULE m_hsohelp
   !
 CONTAINS
   SUBROUTINE hsohelp(DIMENSION,atoms,sym,input,lapw,nsz, cell,bkpt,&
-       zmat,usdus, zso,noco,oneD, kveclo, ahelp,bhelp,chelp)
+       zmat,usdus, zso,noco,oneD, ahelp,bhelp,chelp)
     !
     USE m_abcof
     USE m_types
@@ -36,7 +36,6 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(DIMENSION%jspd)  
-    INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
     REAL,    INTENT (IN) :: bkpt(3)  
     COMPLEX, INTENT (INOUT) :: zso(DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
@@ -83,7 +82,7 @@ CONTAINS
           ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
           zMat_local%z_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
           CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+               usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%z_c)
           !
           !
@@ -109,7 +108,7 @@ CONTAINS
           ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
           zMat_local%z_c(:,:) = zmat(ispin)%z_c(:,:)
           CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,kveclo,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+               usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%z_c)
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham

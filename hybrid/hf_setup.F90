@@ -6,7 +6,6 @@ CONTAINS
     USE m_types
     USE m_eig66_io
     USE m_util
-    USE m_apws
     USE m_checkolap
     USE m_read_core
     USE m_gen_wavf
@@ -85,7 +84,8 @@ CONTAINS
              ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
              ALLOCATE(zmat(nk)%z_r(0,0))
           endif
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),kveclo=hybdat%kveclo_eig(:,nk),zmat=zmat(nk))
+          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),&!kveclo=hybdat%kveclo_eig(:,nk),
+               zmat=zmat(nk))
      
        END DO
        !Allocate further space
@@ -232,8 +232,7 @@ CONTAINS
        ALLOCATE(hybdat%pntgptd(3))
        hybdat%pntgptd = 0
        DO nk = 1,kpts%nkptf
-          CALL apws(DIMENSION,input,noco, kpts,atoms,sym,nk,cell,sym%zrfs,&
-               &                    1,jsp, bk,lapw,nred)
+          CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,sym%zrfs)
           hybdat%pntgptd(1) = MAXVAL( (/ ( ABS(lapw%k1(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(1) /) )
           hybdat%pntgptd(2) = MAXVAL( (/ ( ABS(lapw%k2(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(2) /) )
           hybdat%pntgptd(3) = MAXVAL( (/ ( ABS(lapw%k3(i,jsp)),i=1,lapw%nv(jsp)), hybdat%pntgptd(3) /) )
@@ -244,8 +243,7 @@ CONTAINS
        IF( ok .NE. 0 ) STOP 'eigen_hf: failure allocation pntgpt'
        hybdat%pntgpt = 0
        DO nk = 1,kpts%nkptf
-          CALL apws( DIMENSION,input,noco, kpts,atoms,sym,nk,cell,sym%zrfs,&
-               &                     1,jsp, bk,lapw,nred)
+          CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,sym%zrfs)
           DO i = 1,lapw%nv(jsp)
              g = (/ lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp) /)
              hybdat%pntgpt(g(1),g(2),g(3),nk) = i

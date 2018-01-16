@@ -56,7 +56,6 @@ c****************************************************************
       integer          :: nkbnd,i
       REAL             :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL             :: epar(0:lmaxd,ntypd,jspd)
-      INTEGER          :: kveclo(nlotot)
       integer          :: n_start,n_end,co
       integer          :: bnd1,bnd2,kpt
       complex, allocatable :: paulimat(:,:,:,:) 
@@ -138,7 +137,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
@@ -186,7 +185,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
@@ -212,10 +211,10 @@ c*****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
-
+      USE m_judft
       USE m_types
       use m_cdnread, only:cdn_read
       implicit none
@@ -229,7 +228,7 @@ c*****************************************************************
       REAL,    INTENT (OUT) :: wk
 
       INTEGER, INTENT (OUT) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      INTEGER, INTENT (OUT) :: nv(jspd),kveclo(nlotot)
+      INTEGER, INTENT (OUT) :: nv(jspd)
       REAL,    INTENT (OUT) :: bkpt(3),eig(neigd)
       REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
@@ -241,12 +240,12 @@ c*****************************************************************
       n_start=1
       n_end=neigd
 
-      CALL cdn_read(
-     >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
-     >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat)
-
+!      CALL cdn_read(
+!     >              eig_id,
+!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
+!     >              l_ss,l_noco,neigd,n_start,n_end,
+!     <              nmat,nv,ello,evdu,epar,
+!     <              bkpt,wk,nbands,eig,zMat)
+      CALL judft_error("BUG: wann_read in wann_rw_eig not implemented")
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig
