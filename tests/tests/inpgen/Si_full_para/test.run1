@@ -1,0 +1,11 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp_Si_para",$workdir);
+
+jt::testrun("$executable < inp_Si_para",$workdir);
+
+#now test output
+$result=jt::test_fileexists("$workdir/inp.xml");
+
+jt::stageresult($workdir,$result,"1");
+
