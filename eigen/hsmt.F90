@@ -61,14 +61,7 @@ CONTAINS
              CALL timestart("non-spherical setup")
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat(1,1))
              CALL timestop("non-spherical setup")
-             hmat(1,1)%data_c=0.0
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat(1,1),smat(1,1))
-             DO i=1,SIZE(smat(1,1)%data_c,1)
-                DO ii=1,i
-                   WRITE(998,*) ii,i,hmat(1,1)%data_c(ii,i)
-                ENDDO
-             ENDDO
-             STOP
           ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
              CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
              CALL hmat_tmp%clear();CALL smat_tmp%clear()

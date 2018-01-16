@@ -244,7 +244,6 @@ CONTAINS
     ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( lapw%k1(dimension%nvd,dimension%jspd),lapw%k2(dimension%nvd,dimension%jspd),lapw%k3(dimension%nvd,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
     ALLOCATE (  usdus%ulos(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )

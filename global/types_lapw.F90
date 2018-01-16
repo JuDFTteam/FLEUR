@@ -99,15 +99,16 @@ CONTAINS
           RETURN !
        ELSE
           DEALLOCATE(lapw%rk,lapw%gvec,lapw%vk,lapw%gk,lapw%matind)
+          DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
        ENDIF
     ENDIF
     ALLOCATE(lapw%rk(nv,input%jspins) )
     ALLOCATE(lapw%gvec(3,nv,input%jspins))
     ALLOCATE(lapw%vk(3,nv,input%jspins))
     ALLOCATE(lapw%gk(3,nv,input%jspins))
-    ALLOCATE(lapw%k1(nv,2)) !shpuld be removed
-    ALLOCATE(lapw%k2(nv,2)) !
-    ALLOCATE(lapw%k3(nv,2)) !
+    ALLOCATE(lapw%k1(nv,input%jspins)) !shpuld be removed
+    ALLOCATE(lapw%k2(nv,input%jspins)) !
+    ALLOCATE(lapw%k3(nv,input%jspins)) !
     ALLOCATE(lapw%matind(nv,2))
 
     lapw%rk = 0 ; lapw%gvec = 0 ;lapw%nv=0
@@ -178,7 +179,6 @@ CONTAINS
     rk2 = input%rkmax*input%rkmax
     !---> if too many basis functions, reduce rkmax
     spinloop:DO ispin = 1,input%jspins
-       rk2 = rkm*rkm
        !--->    obtain vectors
        n = 0
        DO  j1 = -mk1,mk1
