@@ -471,6 +471,20 @@ SUBROUTINE resetBroydenHistory()
          CALL system('rm '//TRIM(ADJUSTL(filename)))
       END IF
    END DO
+   INQUIRE(file='broydOvlp',exist=l_exist)
+   IF (l_exist) CALL system('rm broydOvlp')
+   INQUIRE(file='hf_broydOvlp',exist=l_exist)
+   IF (l_exist) CALL system('rm hf_broydOvlp')
+
+   INQUIRE(file='broyd_DF',exist=l_exist)
+   IF (l_exist) CALL system('rm broyd_DF')
+   INQUIRE(file='hf_broyd_DF',exist=l_exist)
+   IF (l_exist) CALL system('rm hf_broyd_DF')
+
+   INQUIRE(file='broyd_DN',exist=l_exist)
+   IF (l_exist) CALL system('rm broyd_DN')
+   INQUIRE(file='hf_broyd_DN',exist=l_exist)
+   IF (l_exist) CALL system('rm hf_broyd_DN')
 
 END SUBROUTINE resetBroydenHistory
 
@@ -502,5 +516,39 @@ LOGICAL FUNCTION initBroydenHistory(input,hybrid, vecLen)
    initBroydenHistory = l_exist
 
 END FUNCTION initBroydenHistory
+
+LOGICAL FUNCTION initBroydenHistory2(input,hybrid, vecLen)
+! Initializes a Broyden history
+! returns true if there already exists a Broyden history
+
+   TYPE(t_input),  INTENT(IN) :: input
+   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   INTEGER,        INTENT(IN) :: vecLen
+
+   INTEGER*8                  :: recLen
+   LOGICAL                    :: l_exist
+
+   INQUIRE (file='broyd_DF',exist=l_exist)
+
+   recLen=(vecLen+1)*8
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+      OPEN (60,file='hf_broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+      OPEN (60,file='broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   CLOSE(59)
+   CLOSE(60)
+
+   initBroydenHistory2 = l_exist
+
+END FUNCTION initBroydenHistory2
 
 END MODULE m_broyd_io

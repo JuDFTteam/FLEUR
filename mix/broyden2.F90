@@ -103,7 +103,7 @@ CONTAINS
     dFMet = 0.0
 
     mit = 0
-    l_exist = initBroydenHistory(input,hybrid,nmap) ! returns true if there already exists a Broyden history
+    l_exist = initBroydenHistory2(input,hybrid,nmap) ! returns true if there already exists a Broyden history
     IF(.NOT.l_exist) mit = 1
 
     IF (mit.NE.1) THEN

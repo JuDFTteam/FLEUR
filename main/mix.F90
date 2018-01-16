@@ -160,17 +160,17 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    IF (input%imix.EQ.0) THEN
       CALL stmix(atoms,input,noco, nmap,nmaph,fsm, sm)
    ELSE
-      CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-                   hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
+!      CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
+!                   hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
 
 !     Replace the broyden call above by the commented metric and broyden2 calls
 !     below to switch on the continuous restart of the Broyden method.
-!      ! Apply metric w to sm and store in smMet:  w |sm>
-!      CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-!                  mmap,nmaph,mapmt,mapvac2,sm,smMet,l_pot)
-!
-!      CALL broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-!                    hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm,fmMet,smMet)
+      ! Apply metric w to sm and store in smMet:  w |sm>
+      CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+                  mmap,nmaph,mapmt,mapvac2,sm,smMet,l_pot)
+
+      CALL broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
+                    hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm,fmMet,smMet)
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
