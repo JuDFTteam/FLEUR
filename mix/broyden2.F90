@@ -128,7 +128,6 @@ CONTAINS
 
     ! save F_m and rho_m for next iteration
     nit = mit +1
-    IF (nit > input%maxiter+1) nit = 1
     CALL writeLastIterInAndDiffDen(hybrid,nmap,nit,input%alpha,sm,fm,smMet,fmMet)
 
     IF (mit.EQ.1) THEN 
@@ -151,7 +150,7 @@ CONTAINS
        ! Extend overlap matrices <delta n(i) | delta n(j)>, <delta F(i) | delta F(j)>,
        !                         <delta n(i) | delta F(j)>, <delta F(i) | delta n(j)> -start-
 
-       iread = MIN(mit-1,input%maxiter+1)
+       iread = MIN(mit-1,input%maxiter)
        historyLength = iread
 
        dNdNLast = 0.0
@@ -159,9 +158,18 @@ CONTAINS
        dNdFLast = 0.0
        dFdNLast = 0.0
 
+!       WRITE(1400,*) '========================================'
+!       WRITE(1400,*) '========================================'
+!       WRITE(1400,*) '========================================'
+!       WRITE(1400,*) 'mit: ', mit
+!       WRITE(1400,*) 'iread, historyLength: ', iread, historyLength
        DO it = 2, iread
-          CALL readDeltaNVec(input,hybrid,nmap,it-mit,mit,deltaN_i)
-          CALL readDeltaFVec(input,hybrid,nmap,it-mit,mit,deltaF_i)
+          CALL readDeltaNVec(input,hybrid,nmap,it-iread-1,mit,deltaN_i)
+          CALL readDeltaFVec(input,hybrid,nmap,it-iread-1,mit,deltaF_i)
+
+!          WRITE(1400,'(4i7)') it,mit,it-iread-1,mit+(it-iread-1)
+!          WRITE(1400,'(a,5f15.8)') 'deltaN_i: ', deltaN_i(1), deltaN_i(2), deltaN_i(3), deltaN_i(4), deltaN_i(5)
+!          WRITE(1400,'(a,5f15.8)') 'deltaF_i: ', deltaF_i(1), deltaF_i(2), deltaF_i(3), deltaF_i(4), deltaF_i(5)
 
           dNdNLast(it-1) = CPP_BLAS_sdot(nmap,deltaN_i,1,dNMet,1)
           dFdFLast(it-1) = CPP_BLAS_sdot(nmap,deltaF_i,1,dFMet,1)
@@ -174,6 +182,11 @@ CONTAINS
        dNdFLast(historyLength) = CPP_BLAS_sdot(nmap,dNVec,1,dFMet,1)
        dFdNLast(historyLength) = CPP_BLAS_sdot(nmap,dFVec,1,dNMet,1)
 
+!       WRITE(1400,*) 'last overlaps:'
+!       DO i = 1, historyLength
+!          WRITE(1400,'(i7,4f20.13)') i,dNdNLast(i),dFdFLast(i),dNdFLast(i),dFdNLast(i)
+!       END DO
+
        CALL writeBroydenOverlapExt(input,hybrid,mit,historyLength,&
                                    dNdNLast,dFdFLast,dNdFLast,dFdNLast)
 
@@ -184,6 +197,14 @@ CONTAINS
 
        CALL readBroydenOverlaps(input,hybrid,mit,historyLength,&
                                 dNdNMat,dFdFMat,dNdFMat,dFdNMat)
+
+!       WRITE(1400,*) 'all overlaps'
+!       DO i = 1, historyLength
+!          DO j = 1, historyLength
+!             WRITE(1400,'(2i7,4f20.13)') i,j,dNdNMat(j,i),dFdFMat(j,i),dNdFMat(j,i),dFdNMat(j,i)
+!          END DO
+!       END DO
+!       WRITE(1400,*) '-----------------------------'
 
        ! Extend overlap matrices <delta n(i) | delta n(j)>, <delta F(i) | delta F(j)>,
        !                         <delta n(i) | delta F(j)>, <delta F(i) | delta n(j)> -end-
@@ -326,8 +347,8 @@ CONTAINS
        vVec = 0.0
 
        DO it = 2, iread
-          CALL readDeltaNVec(input,hybrid,nmap,it-mit,mit,deltaN_i)
-          CALL readDeltaFVec(input,hybrid,nmap,it-mit,mit,deltaF_i)
+          CALL readDeltaNVec(input,hybrid,nmap,it-iread-1,mit,deltaN_i)
+          CALL readDeltaFVec(input,hybrid,nmap,it-iread-1,mit,deltaF_i)
 
           DO k = 1, nmap
              uVec(k) = uVec(k) + uDNTableau(it-1,historyLength)*deltaN_i(k)

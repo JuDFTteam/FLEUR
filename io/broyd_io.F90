@@ -223,7 +223,7 @@ SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: deltaNVec(vecLen)
 
-   INTEGER             :: mode, npos
+   INTEGER             :: mode, npos, iter
    INTEGER*8           :: recLen
 
    CALL getIOMode(mode)
@@ -240,8 +240,11 @@ SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
             recl=recLen,form='unformatted',status='unknown')
    ENDIF
 
-   npos=currentIter+relIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   iter = currentIter+relIter
+   npos=iter-1
+   IF (iter.GT.1) npos = MOD(iter-2,input%maxiter)+1
+
+!   WRITE(1400,*) 'readDeltaNVec: iter,npos: ', iter, npos
 
    READ(59,rec=npos) deltaNVec(:vecLen)
 
@@ -274,7 +277,9 @@ SUBROUTINE writeDeltaNVec(input,hybrid,vecLen,currentIter,deltaNVec)
    ENDIF
 
    npos=currentIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   IF (currentIter.GT.1) npos = MOD(currentIter-2,input%maxiter)+1
+
+!   WRITE(1500,*) 'writeDeltaNVec: iter,npos: ', currentIter, npos
 
    WRITE(59,rec=npos) deltaNVec(:vecLen)
 
@@ -289,7 +294,7 @@ SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: deltaFVec(vecLen)
 
-   INTEGER             :: mode, npos
+   INTEGER             :: mode, npos, iter
    INTEGER*8           :: recLen
 
    CALL getIOMode(mode)
@@ -306,8 +311,11 @@ SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
             recl=recLen,form='unformatted',status='unknown')
    ENDIF
 
-   npos=currentIter+relIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   iter = currentIter+relIter
+   npos=iter-1
+   IF (iter.GT.1) npos = MOD(iter-2,input%maxiter)+1
+
+!   WRITE(1400,*) 'readDeltaFVec: iter,npos: ', iter, npos
 
    READ(59,rec=npos) deltaFVec(:vecLen)
 
@@ -340,7 +348,9 @@ SUBROUTINE writeDeltaFVec(input,hybrid,vecLen,currentIter,deltaFVec)
    ENDIF
 
    npos=currentIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   IF (currentIter.GT.1) npos = MOD(currentIter-2,input%maxiter)+1
+
+!   WRITE(1500,*) 'writeDeltaFVec: iter,npos: ', currentIter, npos
 
    WRITE(59,rec=npos) deltaFVec(:vecLen)
 
@@ -374,7 +384,9 @@ SUBROUTINE writeBroydenOverlapExt(input,hybrid,currentIter,historyLength,&
    ENDIF
 
    npos=currentIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   IF (currentIter.GT.1) npos = MOD(currentIter-2,input%maxiter)+1
+
+!   WRITE(1500,*) 'writeBroydenOverlapExt: iter, npos: ', currentIter, npos
 
    WRITE(59,rec=npos) currentIter, historyLength,&
                       dNdNLast(:input%maxIter), dFdFLast(:input%maxIter), &
@@ -424,7 +436,9 @@ SUBROUTINE readBroydenOverlaps(input,hybrid,currentIter,historyLength,&
 
       iter = currentIter - historyLength + i
       npos=iter-1
-      IF (iter.GT.input%maxiter+1) npos = MOD(iter-2,input%maxiter)+1
+      IF (iter.GT.1) npos = MOD(iter-2,input%maxiter)+1
+
+!      WRITE(1400,*) 'readBroydenOverlaps: iter,npos: ', iter, npos
 
       READ(59,rec=npos) recIter, recHistLen,&
                         dNdNLast(:input%maxIter), dFdFLast(:input%maxIter), &
