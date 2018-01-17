@@ -630,7 +630,7 @@ c...generation of the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions 
       ngopr1(:)=1
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
+      CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
      >           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
       call wann_abinv(

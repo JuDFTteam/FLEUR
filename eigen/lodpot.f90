@@ -55,7 +55,7 @@ CONTAINS
     el(:,:,:) = 0.0 ; evac(:,:) = 0.0 ; ello(:,:,:) = 0.0
     l_done = .FALSE.
     c=c_light(1.0)
-    !IF (mpi%irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
+    IF (mpi%irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
     IF ( obsolete%lepr == 0 ) THEN ! not for floating energy parameters
        e=1.0
        ch(0:9) = (/'s','p','d','f','g','h','i','j','k','l'/)
@@ -149,9 +149,9 @@ CONTAINS
                       WRITE(attributes(4),'(f8.2)') e_lo
                       WRITE(attributes(5),'(f8.2)') e_up
                       WRITE(attributes(6),'(f16.10)') e
-                      !CALL writeXMLElementForm('atomicEP',(/'atomType     ','spin         ','branch       ',&
-                      !                                      'branchLowest ','branchHighest','value        '/),&
-                      !                         attributes,reshape((/12,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
+                      CALL writeXMLElementForm('atomicEP',(/'atomType     ','spin         ','branch       ',&
+                                                            'branchLowest ','branchHighest','value        '/),&
+                                               attributes,reshape((/12,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn(l),ch(l),' branch from',&
                                                                          e_lo, ' to',e_up,' htr. ; e_l =',e
                    ENDIF
@@ -250,9 +250,9 @@ CONTAINS
                       WRITE(attributes(3),'(i0,a1)') ABS(nqn(l)), ch(l)
                       WRITE(attributes(4),'(f16.10)') ldmt
                       WRITE(attributes(5),'(f16.10)') e
-                      !CALL writeXMLElementForm('heAtomicEP',(/'atomType      ','spin          ','branch        ',&
-                      !                                        'logDerivMT    ','value         '/),&
-                      !                         attributes(1:5),reshape((/10,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
+                      CALL writeXMLElementForm('heAtomicEP',(/'atomType      ','spin          ','branch        ',&
+                                                              'logDerivMT    ','value         '/),&
+                                               attributes(1:5),reshape((/10,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
                       WRITE (6,'(a7,i3,i2,a1,a12,f7.2,a4,f7.2,a5)') "  Atom ",n,nqn(l),ch(l)," branch, D = ",&
                                                                     ldmt, " at ",e," htr."
                    ENDIF
@@ -316,6 +316,14 @@ CONTAINS
                    CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
                         rn,d,msh,vrd, e, f(:,1),f(:,2),ierr)
                    ello(ilo,n,jsp) = e
+                   IF (l > 0) THEN
+                     e  = (e_up+e_lo)/2
+                     fn = real(nqn_lo(ilo)) ; fl = real(l) ; fj = fl-0.5
+                     CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
+                          rn,d,msh,vrd, e, f(:,1),f(:,2),ierr)
+                     e = (2.0*ello(ilo,n,jsp) + e ) / 3.0
+                     ello(ilo,n,jsp) = e
+                  ENDIF
 
                    IF (mpi%irank == 0) THEN
                       attributes = ''
@@ -325,9 +333,9 @@ CONTAINS
                       WRITE(attributes(4),'(f8.2)') e_lo
                       WRITE(attributes(5),'(f8.2)') e_up
                       WRITE(attributes(6),'(f16.10)') e
-                      !CALL writeXMLElementForm('loAtomicEP',(/'atomType     ','spin         ','branch       ',&
-                      !                                        'branchLowest ','branchHighest','value        '/),&
-                      !                         attributes,reshape((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
+                      CALL writeXMLElementForm('loAtomicEP',(/'atomType     ','spin         ','branch       ',&
+                                                              'branchLowest ','branchHighest','value        '/),&
+                                               attributes,reshape((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
                       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn_lo(ilo),ch(l),' branch from',&
                                                                          e_lo,' to',e_up,' htr. ; e_l =',e
                    ENDIF
@@ -421,9 +429,9 @@ CONTAINS
                       WRITE(attributes(3),'(i0,a1)') ABS(nqn_lo(ilo)), ch(l)
                       WRITE(attributes(4),'(f16.10)') ldmt
                       WRITE(attributes(5),'(f16.10)') e
-                      !CALL writeXMLElementForm('heloAtomicEP',(/'atomType      ','spin          ','branch        ',&
-                      !                                        'logDerivMT    ','value         '/),&
-                      !                         attributes(1:5),reshape((/8,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
+                      CALL writeXMLElementForm('heloAtomicEP',(/'atomType      ','spin          ','branch        ',&
+                                                              'logDerivMT    ','value         '/),&
+                                               attributes(1:5),reshape((/8,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
                       WRITE (6,'(a6,i3,i2,a1,a12,f6.2,a4,f6.2,a5)') '  Atom',n,ABS(nqn_lo(ilo)),ch(l),&
                                                                     ' branch, D = ',ldmt,' at ',e,' htr.'
                    ENDIF
@@ -515,8 +523,8 @@ CONTAINS
                 WRITE(attributes(3),'(f16.10)') vz(1,ivac,jsp)
                 WRITE(attributes(4),'(f16.10)') vz(vacuum%nmz,ivac,jsp)
                 WRITE(attributes(5),'(f16.10)') evac(ivac,jsp)
-                !CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
-                !                         attributes(1:5),reshape((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
+                CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
+                                         attributes(1:5),reshape((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
              END IF
           ENDDO
           IF (vacuum%nvac.EQ.1) THEN
@@ -528,7 +536,7 @@ CONTAINS
     enpara_new%el0=el
     enpara_new%ello0=ello
     enpara_new%evac0=evac
-    !IF (mpi%irank  == 0) CALL closeXMLElement('energyParameters')
+    IF (mpi%irank  == 0) CALL closeXMLElement('energyParameters')
     
   END SUBROUTINE lodpot
 END MODULE m_lodpot

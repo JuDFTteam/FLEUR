@@ -133,7 +133,7 @@ CONTAINS
     IF (.NOT.l_real) zMat%z_c = CONJG(zMat%z_c)
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
-    CALL abcof(input,atoms,DIMENSION%neigd,sym,cell, bkpt,lapw,ne,&
+    CALL abcof(input,atoms,sym,cell,lapw,ne,&
          usdus,noco,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 

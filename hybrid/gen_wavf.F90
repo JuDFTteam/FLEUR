@@ -264,7 +264,7 @@
         ! stored in acof,bcof,ccof
         lapw(ikpt0)%nmat=lapw(ikpt0)%nv(jsp)+atoms%nlotot
         CALL abcof(&
-              input,atoms,hybrid%nbands(ikpt0),sym, cell, Kpts%bk(:,ikpt0), lapw(ikpt0), &
+              input,atoms,sym, cell, lapw(ikpt0), &
               hybrid%nbands(ikpt0),usdus,noco,jsp,&!hybdat%kveclo_eig(:,ikpt0),&
               oneD,acof(: hybrid%nbands(ikpt0),:,:),bcof(: hybrid%nbands(ikpt0),:,:),ccof(:,: hybrid%nbands(ikpt0),:,:),&
               zmat(ikpt0))

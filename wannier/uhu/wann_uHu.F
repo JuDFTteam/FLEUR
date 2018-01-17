@@ -1099,7 +1099,7 @@ c***********************************************************
       lapw_b%nv = nv_b
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
+      CALL abcof(input,atoms,sym,cell,lapw_b,
      +           noccbd_b,usdus,noco,jspin,oneD,
      +           acof_b,bcof_b,ccof_b,zMat_b)
 
@@ -1220,7 +1220,7 @@ c***********************************************************
       lapw_b2%nv = nv_b2
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
+      CALL abcof(input,atoms,sym,cell,lapw_b2,
      +           noccbd_b2,usdus,noco,jspin_b,oneD,
      +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
 

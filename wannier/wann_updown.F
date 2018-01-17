@@ -856,7 +856,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       call cpu_time(delta)
       do jspin=1,wannierspin
 
-         CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
      +              noco,jspin,oneD,acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))

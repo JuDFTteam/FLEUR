@@ -39,6 +39,7 @@ MODULE m_eigen_diag
   INTEGER,PARAMETER:: diag_magma=-6
 #endif
   INTEGER,PARAMETER:: diag_lapack=4
+  INTEGER,PARAMETER:: diag_debugout=99
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
 
@@ -46,7 +47,7 @@ CONTAINS
     parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
   END FUNCTION parallel_solver_available
 
-  SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
+  SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,DIMENSION,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
        sym,l_zref, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,smat,hmat,zMat)
     USE m_lapack_diag
     USE m_aline
@@ -173,6 +174,8 @@ CONTAINS
 #endif
        CASE (diag_lapack)
           CALL lapack_diag(hmat,smat,eig,zmat)
+       CASE (diag_debugout)
+          CALL priv_debug_out(smat,hmat)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
           print*, "You selected a diagonalization scheme without compiling for it"
@@ -196,7 +199,30 @@ CONTAINS
        call timestop("second variation diagonalization")
     END IF
   END SUBROUTINE eigen_diag
-
+  SUBROUTINE priv_debug_out(smat,hmat)
+    USE m_types
+    use m_judft
+    IMPLICIT NONE
+    TYPE(t_lapwmat),INTENT(INOUT) :: hmat,smat
+    !small subroutine that does only wite the matrix to a file
+    INTEGER:: i,ii
+    OPEN(999,file="hmat")
+    OPEN(998,file="smat")
+    DO i=1,hmat%matsize1
+       DO ii=1,i
+          IF (hmat%l_real) THEN
+             WRITE(999,"(2i6,f15.6)") ii,i,hmat%data_r(ii,i)
+             WRITE(998,"(2i6,f15.6)") ii,i,smat%data_r(ii,i)
+          ELSE
+             WRITE(999,"(2i6,2f15.6)") ii,i,hmat%data_c(ii,i)
+             WRITE(998,"(2i6,2f15.6)") ii,i,smat%data_c(ii,i)
+          ENDIF
+       END DO
+    ENDDO
+    CLOSE(999)
+    CLOSE(998)
+    CALL judft_error("STOP in eigen_diag:debug_diag")
+  END SUBROUTINE priv_debug_out
   FUNCTION priv_select_solver(parallel) result(diag_solver)
     LOGICAL,INTENT(IN):: parallel
     INTEGER           :: diag_solver
@@ -223,6 +249,8 @@ CONTAINS
     IF (juDFT_was_argument("-elemental")) diag_solver=diag_elemental
     IF (juDFT_was_argument("-lapack")) diag_solver=diag_lapack
     IF (juDFT_was_argument("-magma")) diag_solver=diag_magma
+    IF (juDFT_was_argument("-debugdiag")) diag_solver=diag_debugout
+    
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)
     IF (ANY((/diag_lapack,diag_magma/)==diag_solver).AND.parallel) CALL priv_solver_error(diag_solver,parallel)

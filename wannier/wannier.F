@@ -1391,7 +1391,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       lapw%nv = nv
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
+      CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
      >           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
       DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
@@ -1821,7 +1821,7 @@ cccccccccccc  Spherical Contributions         ccccccccccccc
       lapw_b%nv = nv_b
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
+      CALL abcof(input,atoms,sym,cell,lapw_b,
      +           noccbd_b,usdus,noco,jspin,oneD,
      +           acof_b,bcof_b,ccof_b,zMat_b)
 
@@ -2102,7 +2102,7 @@ c*******************************************c
       lapw_qb%nv = nv_qb
       ! I think the other variables of lapw are not needed here.
 
-        CALL abcof(input,atoms,noccbd_qb,sym,cell,bkpt,lapw_qb,
+        CALL abcof(input,atoms,sym,cell,lapw_qb,
      +             noccbd_qb,usdus,noco,jspin_b,oneD,
      +             acof_qb,bcof_qb,ccof_qb,zMat_qb)
 

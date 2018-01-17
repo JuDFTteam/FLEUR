@@ -81,7 +81,7 @@ CONTAINS
           zMat_local%nbands = DIMENSION%neigd
           ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
           zMat_local%z_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
-          CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
+          CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
                usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%z_c)
           !
@@ -107,7 +107,7 @@ CONTAINS
           zMat_local%nbands = DIMENSION%neigd
           ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
           zMat_local%z_c(:,:) = zmat(ispin)%z_c(:,:)
-          CALL abcof(input,atoms_local,DIMENSION%neigd,sym,cell, bkpt,lapw,nsz(ispin),&
+          CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
                usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%z_c)
           !

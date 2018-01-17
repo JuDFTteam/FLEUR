@@ -146,7 +146,7 @@ CONTAINS
     LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
-    REAL    cartk(3),bkpt(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
+    REAL    cartk(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
     REAL    ello(atoms%nlod,atoms%ntype,dimension%jspd),evac(2,dimension%jspd)
     REAL    epar(0:atoms%lmaxd,atoms%ntype,dimension%jspd),evdu(2,dimension%jspd)
     REAL    eig(dimension%neigd)
@@ -648,7 +648,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,zMat)
+                  jspin,lapw,noccbd,igq_fft,we, eig,qpw,cdom,qis,results%force,f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -669,7 +669,7 @@ CONTAINS
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,bkpt,lapw, evac,eig,&
+                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,lapw, evac,eig,&
                         rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
@@ -707,14 +707,14 @@ CONTAINS
                      aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat) )
-                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt,noccbd,eig,usdus,&
+                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,noccbd,eig,usdus,&
                         ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                         e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
-                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,oneD,&
+                CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
                      acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat)
                 CALL timestop("cdnval: abcof")
 
@@ -848,9 +848,9 @@ CONTAINS
              !        write data to direct access file first, write to formated file later by PE 0 only!
              !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
              !
-             cartk=matmul(bkpt,cell%bmat)
+             cartk=matmul(lapw%bkpt,cell%bmat)
              IF (banddos%ndir.GT.0) THEN
-                CALL sympsi(bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
+                CALL sympsi(lapw%bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
                      lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
              END IF
              !

@@ -24,7 +24,7 @@ MODULE m_types_lapw
      INTEGER,ALLOCATABLE::matind(:,:)
      INTEGER,ALLOCATABLE::index_lo(:,:)
      INTEGER,ALLOCATABLE::kvec(:,:,:)
-     INTEGER,ALLOCATABLE::kveclo(:)
+     INTEGER,ALLOCATABLE::nkvec(:,:)
      REAL   :: bkpt(3)
    CONTAINS
      PROCEDURE,PASS :: init =>lapw_init
@@ -328,9 +328,9 @@ CONTAINS
 
     INTEGER:: n,na,nn,np,lo,nkvec_sv,nkvec(atoms%nlod,2),iindex
     IF (.NOT.ALLOCATED(lapw%kvec)) THEN
-       ALLOCATE(lapw%kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%ntype))
-       ALLOCATE(lapw%index_lo(atoms%nlod,atoms%ntype))
-       ALLOCATE(lapw%kveclo(atoms%nlotot))
+       ALLOCATE(lapw%kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat))
+       ALLOCATE(lapw%nkvec(atoms%nlod,atoms%nat))
+       ALLOCATE(lapw%index_lo(atoms%nlod,atoms%nat))
     ENDIF
     iindex=0
     na=0
@@ -340,11 +340,10 @@ CONTAINS
           na=na+1
           !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
           np=sym%invtab(atoms%ngopr(na))
-          CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell,nkvec)
+          CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
           DO lo = 1,atoms%nlo(n)
-             lapw%index_lo(lo,n)=iindex
-             iindex=iindex+nkvec(lo,1)
-             lapw%kveclo(iindex+1:iindex+nkvec(lo,1)) = lapw%kvec(1:nkvec(lo,1),lo,n)
+             lapw%index_lo(lo,na)=iindex
+             iindex=iindex+lapw%nkvec(lo,na)
           ENDDO
        ENDDO
     ENDDO
@@ -371,7 +370,7 @@ CONTAINS
 
   
   SUBROUTINE priv_vec_for_lo(atoms,sym,na,&
-       n,np,noco, lapw,cell, nkvec)
+       n,np,noco, lapw,cell)
     USE m_constants,ONLY: tpi_const,fpi_const
     USE m_orthoglo
     USE m_ylm
@@ -387,7 +386,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: na,n,np 
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (INOUT):: nkvec(atoms%nlod,2)
     !     ..
     !     .. Local Scalars ..
     COMPLEX term1 
@@ -396,6 +394,7 @@ CONTAINS
     LOGICAL linind,enough,l_lo1
     !     ..
     !     .. Local Arrays ..
+    INTEGER :: nkvec(atoms%nlod,2)
     REAL qssbti(3),bmrot(3,3),v(3),vmult(3)
     REAL :: gkrot(3,SIZE(lapw%gk,2),2)
     REAL :: rph(SIZE(lapw%gk,2),2)
@@ -530,11 +529,7 @@ CONTAINS
           ENDIF
        ENDDO
        IF ( enough ) THEN
-          !           DO  lo = 1,nlo(ntyp)
-          !             DO l = 1, nkvec(lo,1)
-          !              write(*,*) lo,l,kvec(l,lo)
-          !             ENDDO
-          !           ENDDO
+          lapw%nkvec(:atoms%nlo(ntyp),ntyp)=nkvec(:atoms%nlo(ntyp),1)
           RETURN
        ENDIF
     ENDDO
