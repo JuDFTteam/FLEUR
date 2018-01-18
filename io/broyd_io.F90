@@ -223,7 +223,7 @@ SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: deltaNVec(vecLen)
 
-   INTEGER             :: mode, npos
+   INTEGER             :: mode, npos, iter
    INTEGER*8           :: recLen
 
    CALL getIOMode(mode)
@@ -240,8 +240,11 @@ SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
             recl=recLen,form='unformatted',status='unknown')
    ENDIF
 
-   npos=currentIter+relIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   iter = currentIter+relIter
+   npos=iter-1
+   IF (iter.GT.1) npos = MOD(iter-2,input%maxiter)+1
+
+!   WRITE(1400,*) 'readDeltaNVec: iter,npos: ', iter, npos
 
    READ(59,rec=npos) deltaNVec(:vecLen)
 
@@ -274,7 +277,9 @@ SUBROUTINE writeDeltaNVec(input,hybrid,vecLen,currentIter,deltaNVec)
    ENDIF
 
    npos=currentIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   IF (currentIter.GT.1) npos = MOD(currentIter-2,input%maxiter)+1
+
+!   WRITE(1500,*) 'writeDeltaNVec: iter,npos: ', currentIter, npos
 
    WRITE(59,rec=npos) deltaNVec(:vecLen)
 
@@ -289,7 +294,7 @@ SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: deltaFVec(vecLen)
 
-   INTEGER             :: mode, npos
+   INTEGER             :: mode, npos, iter
    INTEGER*8           :: recLen
 
    CALL getIOMode(mode)
@@ -306,8 +311,11 @@ SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
             recl=recLen,form='unformatted',status='unknown')
    ENDIF
 
-   npos=currentIter+relIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   iter = currentIter+relIter
+   npos=iter-1
+   IF (iter.GT.1) npos = MOD(iter-2,input%maxiter)+1
+
+!   WRITE(1400,*) 'readDeltaFVec: iter,npos: ', iter, npos
 
    READ(59,rec=npos) deltaFVec(:vecLen)
 
@@ -340,7 +348,9 @@ SUBROUTINE writeDeltaFVec(input,hybrid,vecLen,currentIter,deltaFVec)
    ENDIF
 
    npos=currentIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   IF (currentIter.GT.1) npos = MOD(currentIter-2,input%maxiter)+1
+
+!   WRITE(1500,*) 'writeDeltaFVec: iter,npos: ', currentIter, npos
 
    WRITE(59,rec=npos) deltaFVec(:vecLen)
 
@@ -374,7 +384,9 @@ SUBROUTINE writeBroydenOverlapExt(input,hybrid,currentIter,historyLength,&
    ENDIF
 
    npos=currentIter-1
-   IF (currentIter.GT.input%maxiter+1) npos = MOD(currentIter-2,input%maxiter)+1
+   IF (currentIter.GT.1) npos = MOD(currentIter-2,input%maxiter)+1
+
+!   WRITE(1500,*) 'writeBroydenOverlapExt: iter, npos: ', currentIter, npos
 
    WRITE(59,rec=npos) currentIter, historyLength,&
                       dNdNLast(:input%maxIter), dFdFLast(:input%maxIter), &
@@ -424,7 +436,9 @@ SUBROUTINE readBroydenOverlaps(input,hybrid,currentIter,historyLength,&
 
       iter = currentIter - historyLength + i
       npos=iter-1
-      IF (iter.GT.input%maxiter+1) npos = MOD(iter-2,input%maxiter)+1
+      IF (iter.GT.1) npos = MOD(iter-2,input%maxiter)+1
+
+!      WRITE(1400,*) 'readBroydenOverlaps: iter,npos: ', iter, npos
 
       READ(59,rec=npos) recIter, recHistLen,&
                         dNdNLast(:input%maxIter), dFdFLast(:input%maxIter), &
@@ -471,6 +485,20 @@ SUBROUTINE resetBroydenHistory()
          CALL system('rm '//TRIM(ADJUSTL(filename)))
       END IF
    END DO
+   INQUIRE(file='broydOvlp',exist=l_exist)
+   IF (l_exist) CALL system('rm broydOvlp')
+   INQUIRE(file='hf_broydOvlp',exist=l_exist)
+   IF (l_exist) CALL system('rm hf_broydOvlp')
+
+   INQUIRE(file='broyd_DF',exist=l_exist)
+   IF (l_exist) CALL system('rm broyd_DF')
+   INQUIRE(file='hf_broyd_DF',exist=l_exist)
+   IF (l_exist) CALL system('rm hf_broyd_DF')
+
+   INQUIRE(file='broyd_DN',exist=l_exist)
+   IF (l_exist) CALL system('rm broyd_DN')
+   INQUIRE(file='hf_broyd_DN',exist=l_exist)
+   IF (l_exist) CALL system('rm hf_broyd_DN')
 
 END SUBROUTINE resetBroydenHistory
 
@@ -502,5 +530,39 @@ LOGICAL FUNCTION initBroydenHistory(input,hybrid, vecLen)
    initBroydenHistory = l_exist
 
 END FUNCTION initBroydenHistory
+
+LOGICAL FUNCTION initBroydenHistory2(input,hybrid, vecLen)
+! Initializes a Broyden history
+! returns true if there already exists a Broyden history
+
+   TYPE(t_input),  INTENT(IN) :: input
+   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   INTEGER,        INTENT(IN) :: vecLen
+
+   INTEGER*8                  :: recLen
+   LOGICAL                    :: l_exist
+
+   INQUIRE (file='broyd_DF',exist=l_exist)
+
+   recLen=(vecLen+1)*8
+
+   IF (hybrid%l_calhf) THEN
+      OPEN (59,file='hf_broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+      OPEN (60,file='hf_broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ELSE
+      OPEN (59,file='broyd_DF',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+      OPEN (60,file='broyd_DN',access='direct',&
+            recl=recLen,form='unformatted',status='unknown')
+   ENDIF
+
+   CLOSE(59)
+   CLOSE(60)
+
+   initBroydenHistory2 = l_exist
+
+END FUNCTION initBroydenHistory2
 
 END MODULE m_broyd_io

@@ -427,7 +427,7 @@
       IF (kpts%specificationType.EQ.4) THEN
          DO i = 1, 3
             IF (kpts%kPointDensity(i).LE.0.0) THEN
-               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'kpoints')
+               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'set_inp')
             END IF
             recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
             kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
@@ -502,9 +502,6 @@
 
       IF (ANY(kpts%nkpt3(:).NE.0)) THEN
          DO i = 1, 3
-            IF (kpts%kPointDensity(i).LE.0.0) THEN
-               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'kpoints')
-            END IF
             recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
             kPointDen(i) = kpts%nkpt3(i) / recVecLength
          END DO
