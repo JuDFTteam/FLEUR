@@ -236,8 +236,8 @@ MODULE m_xmlOutput
       CHARACTER(LEN=200), ALLOCATABLE :: contentLineList(:)
       INTEGER, ALLOCATABLE            :: bigLengths(:,:)
       INTEGER :: i, j, contentLineLength, contentLineListSize
-      CHARACTER(LEN=70)               :: format
-      CHARACTER(LEN=200)              :: outputString
+      CHARACTER(LEN=150)               :: format
+      CHARACTER(LEN=1000)              :: outputString
       INTEGER                         :: contentListSize, overallListSize, numContentLineChars
       INTEGER                         :: lengthsShape(2)
 
