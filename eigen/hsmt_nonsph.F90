@@ -59,8 +59,8 @@ CONTAINS
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           IF (iintsp==jintsp) THEN
              IF (mpi%n_size==1) THEN
-                CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,SIZE(ab1,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
-                !CALL zgemm("N","C",lapw%nv(iintsp),lapw%nv(iintsp),ab_size,CMPLX(rchi,0.),ab,SIZE(ab,1),ab1,SIZE(ab1,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+                CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,conjg(ab1),SIZE(ab1,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
+                !hmat%data_c=hmat%data_c+conjg(MATMUL(ab1(:,:ab_size),transpose(CONJG(ab1(:,:ab_size)))))
              ELSE
                 stop "TODO" !Parallelization
              ENDIF
