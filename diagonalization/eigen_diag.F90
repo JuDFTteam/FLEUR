@@ -40,6 +40,7 @@ MODULE m_eigen_diag
 #endif
   INTEGER,PARAMETER:: diag_lapack=4
   INTEGER,PARAMETER:: diag_lapack2=5
+   INTEGER,PARAMETER:: diag_debugout=99
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
 
@@ -47,7 +48,7 @@ CONTAINS
     parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
   END FUNCTION parallel_solver_available
 
-  SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,dimension,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
+  SUBROUTINE eigen_diag(jsp,eig_id,it,atoms,DIMENSION,matsize,mpi, n_rank,n_size,ne,nk,lapw,input,nred,sub_comm,&
        sym,l_zref,matind,kveclo, noco,cell,bkpt,el,jij,l_wu,oneD,td,ud, eig,ne_found,hamOvlp,zMat,realdata)
     USE m_zsymsecloc
     USE m_aline
@@ -213,7 +214,9 @@ CONTAINS
        endif
        CASE (diag_lapack)
           CALL franza(dimension%nbasfcn,ndim, lapw%nmat,(l_zref.AND.(atoms%nlotot.EQ.0)),&
-                      jij%l_j,matind,nred,input%gw,eig,ne_found,hamOvlp,zMat)
+               jij%l_j,matind,nred,input%gw,eig,ne_found,hamOvlp,zMat)
+           CASE (diag_debugout)
+          CALL priv_debug_out(hamovlp)
        CASE DEFAULT
           !This should only happen if you select a solver by hand which was not compiled against
           print*, "You selected a diagonalization scheme without compiling for it"
@@ -237,6 +240,31 @@ CONTAINS
        call timestop("second variation diagonalization")
     END IF
   END SUBROUTINE eigen_diag
+
+  SUBROUTINE priv_debug_out(hamovlp)
+    USE m_types
+    use m_judft
+    IMPLICIT NONE
+    TYPE(t_hamovlp),INTENT(INOUT) :: hamovlp
+    !small subroutine that does only wite the matrix to a file
+    INTEGER:: i,ii
+    OPEN(999,file="hmat")
+    OPEN(998,file="smat")
+    IF (hamovlp%l_real) THEN
+       DO i=1,SIZE(hamovlp%a_r)
+          WRITE(999,"(i6,f15.6)")  i,hamovlp%a_r(i)
+          WRITE(998,"(i6,f15.6)")  i,hamovlp%b_r(i)
+       END DO
+       ELSE
+       DO i=1,SIZE(hamovlp%a_c)
+          WRITE(999,"(i6,2f15.6)") i,hamovlp%a_c(i)
+          WRITE(998,"(i6,2f15.6)") i,hamovlp%b_c(i)
+       ENDDO
+    ENDIF
+    CLOSE(999)
+    CLOSE(998)
+    CALL judft_error("STOP in eigen_diag:debug_diag")
+  END SUBROUTINE priv_debug_out
 
   FUNCTION priv_select_solver(parallel) result(diag_solver)
     LOGICAL,INTENT(IN):: parallel
@@ -265,6 +293,7 @@ CONTAINS
     IF (juDFT_was_argument("-lapack")) diag_solver=diag_lapack
     IF (juDFT_was_argument("-lapack2")) diag_solver=diag_lapack2
     IF (juDFT_was_argument("-magma")) diag_solver=diag_magma
+     IF (juDFT_was_argument("-debugdiag")) diag_solver=diag_debugout
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)
     if (any((/diag_lapack,diag_lapack2/)==diag_solver).and.parallel) call priv_solver_error(diag_solver,parallel)
