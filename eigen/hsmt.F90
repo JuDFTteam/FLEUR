@@ -3,7 +3,7 @@ MODULE m_hsmt
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt(atoms,sphhar,sym,enpara,&
-       jsp,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
+       ispin,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
     USE m_hsmt_nonsph
     USE m_hsmt_sph
     use m_hsmt_lo
@@ -26,12 +26,12 @@ CONTAINS
     TYPE(t_lapwmat),INTENT(INOUT) :: smat(:,:),hmat(:,:)
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jsp  
+    INTEGER, INTENT (IN) :: ispin  
     
     !locals
     REAL, ALLOCATABLE    :: fj(:,:,:),gj(:,:,:)
 
-    INTEGER :: iintsp,jintsp,ispin,n,i,ii
+    INTEGER :: iintsp,jintsp,n,i,ii
     LOGICAL :: l_socfirst
     COMPLEX :: chi(2,2),chi0(2,2),chi_one
 
@@ -48,7 +48,6 @@ CONTAINS
     ALLOCATE(gj(MAXVAL(lapw%nv),0:atoms%lmaxd,MERGE(2,1,noco%l_noco)))
 
     iintsp=1;jintsp=1;chi_one=1.0 !Defaults in non-noco case
-    DO ispin=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !spin-loop over mt-spin
        DO n=1,atoms%ntype
           CALL timestart("fjgj coefficients")
           CALL hsmt_fjgj(input,atoms,cell,lapw,noco,usdus,n,ispin,fj,gj)
@@ -67,7 +66,7 @@ CONTAINS
              CALL hmat_tmp%clear();CALL smat_tmp%clear()
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat_tmp,hmat_tmp)
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat_tmp)
-             !CALL hsmt_lo()
+             CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
           ELSE !l_ss
@@ -82,7 +81,6 @@ CONTAINS
              stop "offdiag"
              !CALL hsmt_offdiag()
           ENDIF
-       END DO
     END DO
 
     

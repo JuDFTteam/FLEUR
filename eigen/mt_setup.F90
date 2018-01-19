@@ -43,7 +43,7 @@ CONTAINS
     CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),dot_PRODUCT(atoms%nlo,atoms%nlo+1)/2,MERGE(2,1,noco%l_noco))
 
     !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,v%mt(:,0,1,jsp),input,vs_mmp, td,ud)
-    CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,v%mt(:,0,1,jsp),input, td,ud)
+    CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,jsp,mpi,v%mt(:,0,1,jsp),input, td,ud)
     IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
     CALL timestop("tlmplm")
     
@@ -54,7 +54,8 @@ CONTAINS
     IF (noco%l_noco) THEN
        isp = 2
        CALL timestart("tlmplm")
-       !CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud)
+       !CALL tlmplm(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi, v%mt(1,0,1,isp),lh0,input, td,ud) 
+       CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara,isp,isp,mpi,v%mt(:,0,1,isp),input, td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,2,2,input%jspins)
        CALL timestop("tlmplm")
     ENDIF

@@ -64,7 +64,7 @@ MODULE m_tlmplm_cholesky
     td%e_shift(jsp)=e_shift_min
     OK=.false.
     cholesky_loop:DO WHILE(.NOT.OK)
-       td%h_loc=0.0
+       td%h_loc(:,:,:,jsp)=0.0
        OK=.true.
        td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
        td%tuulo(:,:,:,jsp) = cmplx(0.0,0.0)

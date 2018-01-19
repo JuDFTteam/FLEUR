@@ -31,9 +31,9 @@ CONTAINS
 
     IF (noco%l_noco.AND.isp==2) RETURN !was done already
     DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-       iispin=MAX(ispin,SIZE(smat,1))
+       iispin=MIN(ispin,SIZE(smat,1))
        DO jspin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-          jjspin=MAX(jspin,SIZE(smat,1))
+          jjspin=MIN(jspin,SIZE(smat,1))
           IF (jspin==ispin) THEN
              vpw_spin=ispin
           ELSE
@@ -60,7 +60,9 @@ CONTAINS
                    th = phase*(0.5*r2*stars%ustep(in)+vpw(in,vpw_spin))
                 ELSE
                    IF (vpw_spin==3.AND.jspin==2) THEN
-                      th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + CONJG(vpw(in,vpw_spin)))
+                      th = vpw(in,vpw_spin)
+                   ELSEIF(vpw_spin==3) THEN
+                      th = CONJG(vpw(in,vpw_spin))
                    ELSE
                       th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,vpw_spin))
                    ENDIF
