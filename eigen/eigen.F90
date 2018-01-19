@@ -159,10 +159,11 @@ CONTAINS
           !--->         set up lapw list
         
           CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
-
+          call timestart("Setup of H&S matrices")
           CALL eigen_hssetup(jsp,mpi,DIMENSION,oned,hybrid,enpara,input,vacuum,noco,jij,sym,&
                stars,cell,kpts,sphhar,atoms,ud,td,v,bkpt,lapw,smat,hmat)
-
+          CALL timestop("Setup of H&S matrices")
+        
           IF( hybrid%l_hybrid ) THEN
              !write overlap matrix b to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"

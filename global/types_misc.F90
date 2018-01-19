@@ -907,10 +907,10 @@ CONTAINS
 
     err=0
     pd%iter=0
-    ALLOCATE(pd%pw(ng3,jsp),stat=err(1))
+    ALLOCATE(pd%pw(ng3,MERGE(3,jsp,l_noco)),stat=err(1))
     ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
     IF (PRESENT(nmzd)) THEN
-       ALLOCATE(pd%vacz(nmzd,2,MERGE(jsp,4,l_noco)),stat=err(3))
+       ALLOCATE(pd%vacz(nmzd,2,MERGE(4,jsp,l_noco)),stat=err(3))
        ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
     ENDIF
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")

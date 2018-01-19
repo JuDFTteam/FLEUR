@@ -57,15 +57,18 @@ CONTAINS
        CALL smat(1,1)%alloc(smat_final%l_real,lapw%nv(1)+atoms%nlotot,lapw%num_local_cols(1))
        CALL hmat(1,1)%alloc(smat_final%l_real,lapw%nv(1)+atoms%nlotot,lapw%num_local_cols(1))
     ENDIF
-
+    CALL timestart("Interstitial part")
     !Generate interstitial part of Hamiltonian
     CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,bkpt,v%pw,smat,hmat)
+    CALL timestop("Interstitial part")
 
-    !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms
+    CALL timestart("MT part")
+      !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms
     DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
        CALL hsmt(atoms,sphhar,sym,enpara,ispin,input,mpi,noco,cell,lapw,ud,td,smat,hmat)
     ENDDO
-
+    CALL timestop("MT part")
+  
     !Vacuum contributions
     IF (input%film) THEN
     !   CALL hsvac(vacuum,stars,DIMENSION, atoms, isp,input,v%vacxy,v%vacz,enpara%evac0,cell,&
@@ -87,8 +90,8 @@ CONTAINS
              CALL move_ALLOC(smat(1,1)%data_c,smat_final%data_c)
           ENDIF
        ELSE
-          CALL smat_final%alloc(.FALSE.,lapw%nv_tot+2*atoms%nlotot)
-          CALL hmat_final%alloc(.FALSE.,lapw%nv_tot+2*atoms%nlotot)
+          CALL smat_final%alloc(.FALSE.,lapw%nv_tot+2*atoms%nlotot,lapw%nv_tot+2*atoms%nlotot)
+          CALL hmat_final%alloc(.FALSE.,lapw%nv_tot+2*atoms%nlotot,lapw%nv_tot+2*atoms%nlotot)
           !up-up
           smat_final%data_c(:lapw%nv(1)+atoms%nlotot,:lapw%nv(1)+atoms%nlotot)=smat(1,1)%data_c
           hmat_final%data_c(:lapw%nv(1)+atoms%nlotot,:lapw%nv(1)+atoms%nlotot)=hmat(1,1)%data_c
@@ -96,8 +99,14 @@ CONTAINS
           smat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,lapw%nv(1)+atoms%nlotot+1:)=smat(2,2)%data_c
           hmat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,lapw%nv(1)+atoms%nlotot+1:)=hmat(2,2)%data_c
           !off-diag
-          smat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,:lapw%nv(1)+atoms%nlotot)=smat(2,1)%data_c+TRANSPOSE(smat(2,1)%data_c)
-          hmat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,:lapw%nv(1)+atoms%nlotot)=hmat(2,1)%data_c+TRANSPOSE(hmat(2,1)%data_c)
+          DO i=1,smat(2,1)%matsize1 !First map U-part of smat&hmat(2,1) into smat(1,2)
+             DO j=i+1,smat(2,1)%matsize2
+                smat(1,2)%data_c(j,i)=CONJG(smat(2,1)%data_c(i,j))
+                hmat(1,2)%data_c(j,i)=CONJG(hmat(2,1)%data_c(i,j))
+             ENDDO
+          ENDDO
+          smat_final%data_c(:lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot+1:)=smat(1,2)%data_c
+          hmat_final%data_c(:lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot+1:)=hmat(1,2)%data_c
        ENDIF
     ELSE
        !CALL eigen_redist_matrix(mpi,lapw,atoms,noco,smat_final,smat)

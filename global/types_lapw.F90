@@ -314,6 +314,9 @@ CONTAINS
 
     IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
 
+    lapw%nv_tot=lapw%nv(1)
+    IF (noco%l_noco) lapw%nv_tot=lapw%nv_tot+lapw%nv(2)
+
   CONTAINS
 
   SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)

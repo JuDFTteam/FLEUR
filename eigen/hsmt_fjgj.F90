@@ -43,7 +43,7 @@ CONTAINS
     DO lo = 1,atoms%nlo(n)
        IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .TRUE.
     ENDDO
-    DO intspin=1,MERGE(2,1,noco%l_ss)
+    DO intspin=1,MERGE(2,1,noco%l_noco)
        !$OMP PARALLEL DO DEFAULT(NONE) &
        !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg)&
        !$OMP SHARED(lapw,atoms,con1,usdus)&

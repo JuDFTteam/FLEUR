@@ -131,7 +131,7 @@ CONTAINS
                 m = ( atoms%invsat(natom) +1 ) * ( 2 * atoms%llo(lo,ntyp) + 1 )
                 DO l = 1, m
                    lm = lm + 1
-                   kvec(l,lo,natom) =  lapw%kveclo(lm)
+                   kvec(l,lo,natom) =  lapw%kvec(l,lo,natom)
                 ENDDO
              ENDDO
           ENDIF
