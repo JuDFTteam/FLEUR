@@ -39,8 +39,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: phase
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
-    REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (IN) :: alo1(:),blo1(:),clo1(:)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
     COMPLEX, INTENT (IN) :: ccchi(2)
     COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
@@ -77,9 +76,9 @@ CONTAINS
                 ctmp = zMat%z_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
              ENDIF
           ENDIF
-          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo,ntyp)
-          bcof(i,lm,na) = bcof(i,lm,na) +ctmp*blo1(lo,ntyp)
-          ccof(m,i,lo,na) = ccof(m,i,lo,na) +ctmp*clo1(lo,ntyp)
+          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo)
+          bcof(i,lm,na) = bcof(i,lm,na) +ctmp*blo1(lo)
+          ccof(m,i,lo,na) = ccof(m,i,lo,na) +ctmp*clo1(lo)
        END DO
     END DO
  
