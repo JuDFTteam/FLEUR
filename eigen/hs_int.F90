@@ -53,23 +53,25 @@ CONTAINS
                 IF (in.EQ.0) CYCLE
                 phase = stars%rgphs(ii(1),ii(2),ii(3))
                 !+APW_LO
+                ts = phase*stars%ustep(in)
                 IF (input%l_useapw) THEN
                    b1=bkpt+lapw%gvec(:,i,ispin)
                    b2=bkpt+lapw%gvec(:,j,jspin)
                    r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
                    th = phase*(0.5*r2*stars%ustep(in)+vpw(in,vpw_spin))
                 ELSE
-                   IF (vpw_spin==3.AND.jspin==2) THEN
-                      th = vpw(in,vpw_spin)
+                   IF (vpw_spin==3.AND.jspin==2) THEN !The off-diagonal part is only due
+                      th = vpw(in,vpw_spin)           !to potential
+                      ts=0.0
                    ELSEIF(vpw_spin==3) THEN
                       th = CONJG(vpw(in,vpw_spin))
+                      ts=0.0
                    ELSE
                       th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,vpw_spin))
                    ENDIF
                 ENDIF
                 !-APW_LO
                 !--->    determine matrix element and store
-                ts = phase*stars%ustep(in)
                 IF (hmat(1,1)%l_real) THEN
                    hmat(jjspin,iispin)%data_r(j,i) = REAL(th)
                    smat(jjspin,iispin)%data_r(j,i) = REAL(ts)
