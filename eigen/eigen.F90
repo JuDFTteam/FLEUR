@@ -73,7 +73,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER jsp,nk,nred,ne_all,ne_found
     INTEGER ne  ,lh0
-    INTEGER nspins,isp,i,j,err
+    INTEGER isp,i,j,err
     LOGICAL l_wu,l_file,l_real,l_zref
     
     !     ..
@@ -135,24 +135,15 @@ CONTAINS
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-    !
-    !---> set up and solve the eigenvalue problem
-    !--->    loop over spins
-    nspins = input%jspins
-    IF (noco%l_noco) nspins = 1
-    !
-    !  ..
-    !  LDA+U
-  
-    !
-    !--->    loop over k-points: each can be a separate task
-
-    DO jsp = 1,nspins
-       !
-       !--->       set up k-point independent t(l'm',lm) matrices
-       !
+     !
+     !---> set up and solve the eigenvalue problem
+     !--->    loop over spins
+     !--->       set up k-point independent t(l'm',lm) matrices
+     !
+     CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,v,mpi,results,DIMENSION,td,ud)
+   
+    DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        smat%l_real=l_real;hmat%l_real=l_real
-       CALL mt_setup(jsp,atoms,sym,sphhar,input,noco,enpara,v,mpi,results,DIMENSION,td,ud)
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
           !
