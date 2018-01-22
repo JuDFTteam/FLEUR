@@ -73,8 +73,8 @@ CONTAINS
           ll1 = l* (l+1)
           DO m = -l,l               
              term = c_ph(k,iintsp)*ylm(ll1+m+1)
-             ab(k,ll1+m+1)         = fj(k,l,ispin)*term
-             ab(k,ll1+m+1+ab_size) = gj(k,l,ispin)*term
+             ab(k,ll1+m+1)         = fj(k,l,iintsp)*term
+             ab(k,ll1+m+1+ab_size) = gj(k,l,iintsp)*term
           END DO
        END DO
        IF (PRESENT(abclo)) THEN

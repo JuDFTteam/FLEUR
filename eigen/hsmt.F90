@@ -44,8 +44,8 @@ CONTAINS
        CALL hmat_tmp%alloc(smat(1,1)%l_real,smat(1,1)%matsize1,smat(1,1)%matsize2)
     ENDIF
     
-    ALLOCATE(fj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins))
-    ALLOCATE(gj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins))
+    ALLOCATE(fj(MAXVAL(lapw%nv),0:atoms%lmaxd,MERGE(2,1,noco%l_noco)))
+    ALLOCATE(gj(MAXVAL(lapw%nv),0:atoms%lmaxd,MERGE(2,1,noco%l_noco)))
 
     iintsp=1;jintsp=1;chi_one=1.0 !Defaults in non-noco case
        DO n=1,atoms%ntype
