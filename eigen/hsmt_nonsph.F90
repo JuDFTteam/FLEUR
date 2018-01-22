@@ -4,10 +4,38 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_nonsph
-  use m_juDFT
-  implicit none
+  USE m_juDFT
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC hsmt_nonsph
 CONTAINS
   SUBROUTINE hsmt_nonsph(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+    USE m_types
+    IMPLICIT NONE
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_tlmplm),INTENT(IN)     :: td
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN)          :: n,isp,iintsp,jintsp
+    COMPLEX,INTENT(IN)            :: chi
+    !     .. Array Arguments ..
+    REAL,INTENT(IN)               :: fj(:,0:,:),gj(:,0:,:)
+    TYPE(t_lapwmat),INTENT(INOUT) ::hmat
+
+    IF (mpi%n_size==1) THEN
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+    ELSE
+       CALL judft_error("MPI not yet implemeted")
+       !CALL priv_MPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+    ENDIF
+
+  END SUBROUTINE hsmt_nonsph
+
+  SUBROUTINE priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
 !Calculate overlap matrix
     USE m_hsmt_ab
     USE m_constants, ONLY : fpi_const,tpi_const
@@ -46,7 +74,6 @@ CONTAINS
        ENDIF
        hmat%data_c=0.0
     ENDIF
-
     
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
@@ -58,18 +85,16 @@ CONTAINS
           CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           IF (iintsp==jintsp) THEN
-             IF (mpi%n_size==1) THEN
-                CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,conjg(ab1),SIZE(ab1,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
-                !hmat%data_c=hmat%data_c+conjg(MATMUL(ab1(:,:ab_size),transpose(CONJG(ab1(:,:ab_size)))))
-             ELSE
-                stop "TODO" !Parallelization
-             ENDIF
-          ELSE  !here the l_ss part starts
-             STOP "TODO"
+             CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,CONJG(ab1),SIZE(ab1,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
+          ELSE  !here the l_ss off-diagonal part starts
+             !First set of AB
+             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+             CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+             !Second set of AB
              CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
-             !Calculate Hamiltonian
-             CALL zgemm("N","N",SIZE(ab,1),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab,1))
-             CALL zgemm("N","N",SIZE(ab,1),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab,1))
+             CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab2,1))
+             !Multiply for Hamiltonian
+             CALL zgemm("N","C",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,CMPLX(1.0,0.0),ab1,SIZE(ab1,1),ab2,SIZE(ab2,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
           ENDIF
        ENDIF
     END DO
@@ -77,7 +102,7 @@ CONTAINS
        hmat%data_r=hmat%data_r+REAL(hmat%data_c)
     ENDIF
     
-  END SUBROUTINE hsmt_nonsph
+  END SUBROUTINE priv_noMPI
 
   
 END MODULE m_hsmt_nonsph
