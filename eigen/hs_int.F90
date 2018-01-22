@@ -24,7 +24,7 @@ CONTAINS
 
 
     INTEGER :: ispin,jspin,vpw_spin !spin indices
-    INTEGER :: i,j,ii(3),iispin,jjspin
+    INTEGER :: i,j,ii(3),iispin,jjspin,i0
     INTEGER :: in
     COMPLEX :: th,ts,phase
     REAL    :: b1(3),b2(3),r2
@@ -43,8 +43,9 @@ CONTAINS
           !$OMP SHARED(mpi,lapw,stars,input,bkpt,cell,vpw) &
           !$OMP SHARED(jjspin,iispin,ispin,jspin,vpw_spin)&
           !$OMP SHARED(hmat,smat)&
-          !$OMP PRIVATE(ii,i,j,in,phase,b1,b2,r2,th,ts)
+          !$OMP PRIVATE(ii,i0,i,j,in,phase,b1,b2,r2,th,ts)
           DO  i = mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
+             i0=(i-1)/mpi%n_size+1
              !--->    loop over (k+g)
              DO  j = 1,i  
                 !-->     determine index and phase factor
@@ -73,11 +74,11 @@ CONTAINS
                 !-APW_LO
                 !--->    determine matrix element and store
                 IF (hmat(1,1)%l_real) THEN
-                   hmat(jjspin,iispin)%data_r(j,i) = REAL(th)
-                   smat(jjspin,iispin)%data_r(j,i) = REAL(ts)
+                   hmat(jjspin,iispin)%data_r(j,i0) = REAL(th)
+                   smat(jjspin,iispin)%data_r(j,i0) = REAL(ts)
                 else
-                   hmat(jjspin,iispin)%data_c(j,i) = th
-                   smat(jjspin,iispin)%data_c(j,i) = ts
+                   hmat(jjspin,iispin)%data_c(j,i0) = th
+                   smat(jjspin,iispin)%data_c(j,i0) = ts
                 endif
              ENDDO
           ENDDO

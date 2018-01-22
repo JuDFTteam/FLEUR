@@ -71,9 +71,10 @@ CONTAINS
   
     !Vacuum contributions
     IF (input%film) THEN
-    !   CALL hsvac(vacuum,stars,DIMENSION, atoms, isp,input,v%vacxy,v%vacz,enpara%evac0,cell,&
-    !     bkpt,lapw,sym, noco,jij,mpi%n_size,mpi%n_rank,smat_final%l_real,hmat,smat)
-       STOP "vacuum"
+       CALL timestart("Vacuum part")
+       CALL hsvac(vacuum,stars,DIMENSION, atoms,mpi,isp,input,v,enpara%evac0,cell,&
+            lapw,sym, noco,jij,hmat,smat)
+       CALL timestop("Vacuum part")
     ENDIF
     !Now copy the data into final matrix
     IF (mpi%n_size==1) THEN
