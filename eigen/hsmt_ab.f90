@@ -39,7 +39,7 @@ CONTAINS
     real,allocatable   :: gkrot(:,:)
     LOGICAL :: l_apw
     
-    ALLOCATE(c_ph(lapw%nv(1),1),ylm((atoms%lmaxd+1)**2))
+    ALLOCATE(c_ph(lapw%nv(1),MERGE(2,1,noco%l_ss)),ylm((atoms%lmaxd+1)**2))
     ALLOCATE(gkrot(3,lapw%nv(1)))
 
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
