@@ -70,10 +70,11 @@ CONTAINS
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
           ELSE !l_ss
+             CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
              DO iintsp=1,2
                 DO jintsp=1,2
                    CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,iintsp,jintsp,chi(iintsp,jintsp),lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat(iintsp,jintsp),hmat(iintsp,jintsp))
-                   CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,lapw,td,fj,gj,hmat(1,1))
+                   CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,lapw,td,fj,gj,hmat(iintsp,jintsp))
                 ENDDO
              ENDDO
           ENDIF

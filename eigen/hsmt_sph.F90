@@ -126,7 +126,7 @@ CONTAINS
 
                 smat%data_c(kj,ki)=smat%data_c(kj,ki) + cph(kj)*fct
                 hmat%data_c(kj,ki)=hmat%data_c(kj,ki) + cph(kj) * ( fct*elall &
-                     + plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,jintsp) + gjkiln*fj(kj,l,jintsp) ) )
+                     + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,jintsp) + gjkiln*fj(kj,l,jintsp) ) )
 
                 IF (input%l_useapw) THEN
                    capw1 = cph(kj)*plegend(kj,l)&

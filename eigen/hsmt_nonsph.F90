@@ -91,7 +91,7 @@ CONTAINS
              CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
              CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab2,1))
              !Multiply for Hamiltonian
-             CALL zgemm("N","C",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,CMPLX(1.0,0.0),ab1,SIZE(ab1,1),ab2,SIZE(ab2,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+             CALL zgemm("N","C",lapw%nv(jintsp),lapw%nv(iintsp),ab_size,chi,ab2,SIZE(ab2,1),ab1,SIZE(ab1,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
           ENDIF
        ENDIF
     END DO
