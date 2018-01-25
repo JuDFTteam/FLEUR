@@ -138,8 +138,8 @@ CONTAINS
     !     .. Array Arguments ..
     !     ..
     !     .. Local Scalars ..
-    REAL arltv1,arltv2,arltv3,r2,rk2,rkm,r2q,gla,eps
-    INTEGER i,j,j1,j2,j3,k,l ,mk1,mk2,mk3,n,ispin,gmi,m,nred,n_inner,n_bound
+    REAL arltv1,arltv2,arltv3,r2,rk2,rkm,r2q,gla,eps,t
+    INTEGER i,j,j1,j2,j3,k,l ,mk1,mk2,mk3,n,ispin,gmi,m,nred,n_inner,n_bound,itt(3)
     !     ..
     !     .. Local Arrays ..
     REAL                :: s(3),sq(3)
@@ -200,12 +200,43 @@ CONTAINS
        lapw%nv(ispin) = n
 
        !Sort according to k+g
-       CALL sort(lapw%nv(ispin),rkq,index3)
-       DO n=1,lapw%nv(ispin)
-          lapw%gvec(:,n,ispin) = gvec(:,index3(n))
-          lapw%rk(n,ispin)     = rk(index3(n))
-       ENDDO
-
+!       CALL sort(lapw%nv(ispin),rkq,index3)
+!       DO n=1,lapw%nv(ispin)
+!          lapw%gvec(:,n,ispin) = gvec(:,index3(n))
+!          lapw%rk(n,ispin)     = rk(index3(n))
+!       ENDDO
+       !
+       !--->    sort by shell-metzner
+       !
+       ! (for spin-spirals & LO's we have to sort according to the k+G's (rkq), not
+       !  the k+G+q's (rk). Otherwise we might couple an LO to k+G1+q and k+G2-q !)
+       !                 gb01
+       lapw%gvec(:,:,ispin)=gvec
+       lapw%rk(:,ispin)=rk
+       m = lapw%nv(ispin)
+80     m = m/2
+       IF (m.LE.0) GO TO 130
+       k = n - m
+       j = 1
+90     i = j
+100    l = i + m
+       IF (rkq(i).GT.rkq(l)) GO TO 120
+110    j = j + 1
+       IF (j.GT.k) GO TO 80
+       GO TO 90
+120    t = rkq(i)
+       rkq(i) = rkq(l)
+       rkq(l) = t
+       t = lapw%rk(i,ispin)
+       lapw%rk(i,ispin) = lapw%rk(l,ispin)
+       lapw%rk(l,ispin) = t
+       itt = lapw%gvec(:,i,ispin)
+       lapw%gvec(:,i,ispin) = lapw%gvec(:,l,ispin)
+       lapw%gvec(:,l,ispin) = itt
+       i = i - m
+       IF (i.LT.1) GO TO 110
+       GO TO 100
+130    CONTINUE
        !+gu
        !--->    determine pairs of K-vectors, where K_z = K'_-z to use 
        !--->    z-reflection
