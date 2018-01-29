@@ -24,7 +24,11 @@ endif()
 #The serial tests
 if (${FLEUR_USE_SERIAL})
    foreach(test ${Testdirs})
-    add_test("FLEUR:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
+   add_test("FLEUR:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
+   if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/LABELS")
+       file(READ "${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/LABELS" testlabels)
+       set_tests_properties("FLEUR:${test}" PROPERTIES LABELS "${testlabels}")
+   endif()
    endforeach(test)
 endif()
 

@@ -258,7 +258,7 @@ CONTAINS
     INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
     REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
-    TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
+    TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
     INTEGER:: nrec,r_len
     INTEGER:: nv_s,nmat_s
@@ -316,13 +316,13 @@ CONTAINS
     !Now the IO of the eigenvalues/vectors
     IF (PRESENT(zmat)) THEN
        IF (zmat%l_real) THEN
-          INQUIRE(IOLENGTH=r_len) neig,eig,REAL(zmat%z_r)
+          INQUIRE(IOLENGTH=r_len) neig,eig,REAL(zmat%data_r)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(zmat%z_r)
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(zmat%data_r)
        ELSE
-          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(zmat%z_c)
+          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(zmat%data_c)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%z_c)
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%data_c)
        ENDIF
        print *,"W:",nrec,nk,neig
     ELSE

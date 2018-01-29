@@ -154,7 +154,7 @@ CONTAINS
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total,nv,nmat,nlotot,n_start,n_end
     REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),evac(2),ello(:,:),w_iks(:)
-    TYPE(t_zMat),INTENT(IN),OPTIONAL :: zmat
+    TYPE(t_Mat),INTENT(IN),OPTIONAL :: zmat
     CALL timestart("IO (write)")
     SELECT CASE (eig66_data_mode(id))
     CASE (da_mode)

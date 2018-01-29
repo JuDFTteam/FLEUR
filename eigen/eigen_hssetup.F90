@@ -13,6 +13,7 @@ CONTAINS
     USE m_od_hsvac
     USE m_hsmt
     USE m_types
+    USE m_types_mpimat
     IMPLICIT NONE
     INTEGER,INTENT(IN)           :: isp
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -34,29 +35,35 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(IN)    :: td
     TYPE(t_lapw),INTENT(IN)      :: lapw
     TYPE(t_potden),INTENT(IN)    :: v
-    TYPE(t_lapwmat),INTENT(INOUT)  :: smat_final,hmat_final
+    TYPE(t_mat),INTENT(INOUT)    :: smat_final,hmat_final
     REAL,INTENT(IN)              :: bkpt(3)
     
 
     
-    TYPE(t_lapwmat),ALLOCATABLE :: smat(:,:),hmat(:,:)
-    INTEGER :: i,j,ispin
+    CLASS(t_mat),ALLOCATABLE :: smat(:,:),hmat(:,:)
+    INTEGER :: i,j,ispin,nspins
     
     !Matrices for Hamiltonian and Overlapp
     !In noco case we need 4-matrices for each spin channel
-    IF (noco%l_noco) THEN
-       ALLOCATE(smat(2,2),hmat(2,2))
-       DO i=1,2
-          DO j=1,2
+    nspins=MERGE(2,1,noco%l_noco)
+    IF (mpi%n_size==1) THEN
+       ALLOCATE(t_mat::smat(nspins,nspins),hmat(nspins,nspins))
+       DO i=1,nspins
+          DO j=1,nspins
              CALL smat(i,j)%ALLOC(.FALSE.,lapw%nv(i)+atoms%nlotot,lapw%num_local_cols(j))
              CALL hmat(i,j)%ALLOC(.FALSE.,lapw%nv(i)+atoms%nlotot,lapw%num_local_cols(j))
           ENDDO
        ENDDO
     ELSE
-       ALLOCATE(smat(1,1),hmat(1,1))
-       CALL smat(1,1)%alloc(smat_final%l_real,lapw%nv(1)+atoms%nlotot,lapw%num_local_cols(1))
-       CALL hmat(1,1)%alloc(smat_final%l_real,lapw%nv(1)+atoms%nlotot,lapw%num_local_cols(1))
-    ENDIF
+       ALLOCATE(t_mpimat::smat(nspins,nspins),hmat(nspins,nspins))
+       DO i=1,nspins
+          DO j=1,nspins
+             ! CALL smat(i,j)%ALLOC(.FALSE.,lapw%nv(i)+atoms%nlotot,lapw%num_local_cols(j))
+             ! CALL hmat(i,j)%ALLOC(.FALSE.,lapw%nv(i)+atoms%nlotot,lapw%num_local_cols(j))
+          ENDDO
+       ENDDO
+    END IF
+    
     CALL timestart("Interstitial part")
     !Generate interstitial part of Hamiltonian
     CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,bkpt,v%pw,smat,hmat)

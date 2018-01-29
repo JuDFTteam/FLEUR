@@ -20,7 +20,7 @@ CONTAINS
     INTEGER,INTENT(IN)            :: isp
     REAL,INTENT(IN)               :: bkpt(3)
     COMPLEX,INTENT(IN)            :: vpw(:,:)
-    TYPE(t_lapwmat),INTENT(INOUT) :: smat(:,:),hmat(:,:)
+    TYPE(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
 
 
     INTEGER :: ispin,jspin,vpw_spin !spin indices

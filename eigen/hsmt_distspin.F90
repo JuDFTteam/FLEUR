@@ -10,8 +10,8 @@ CONTAINS
   SUBROUTINE hsmt_distspins(chi,mat_tmp,mat)
     USE m_types
     COMPLEX,INTENT(in)::chi(2,2)
-    TYPE(t_lapwmat),INTENT(IN)::mat_tmp
-    TYPE(t_lapwmat),INTENT(INOUT)::mat(2,2)
+    TYPE(t_mat),INTENT(IN)::mat_tmp
+    TYPE(t_mat),INTENT(INOUT)::mat(2,2)
 
     INTEGER:: iintsp,jintsp
 

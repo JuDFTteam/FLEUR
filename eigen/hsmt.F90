@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw 
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_usdus),INTENT(IN)      :: usdus
-    TYPE(t_lapwmat),INTENT(INOUT) :: smat(:,:),hmat(:,:)
+    TYPE(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin  
@@ -35,7 +35,7 @@ CONTAINS
     LOGICAL :: l_socfirst
     COMPLEX :: chi(2,2),chi0(2,2),chi_one
 
-    TYPE(t_lapwmat)::smat_tmp,hmat_tmp
+    TYPE(t_mat)::smat_tmp,hmat_tmp
 
     !
     l_socfirst= noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)

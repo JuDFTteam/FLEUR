@@ -205,8 +205,9 @@ CONTAINS
          CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,d%l_real,l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
-                  CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-                  CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
+               CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+               STOP "code no longer works"
+                 ! CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
               ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -247,7 +248,8 @@ CONTAINS
          DO jspin=1,d%jspins
             DO nk=1,d%nkpts
                CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
+               stop "CODE no longer working"
+               !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
             ENDDO
          ENDDO
          CALL close_eig_DA(tmp_id)
@@ -385,7 +387,7 @@ CONTAINS
     INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
     REAL,    INTENT(IN),OPTIONAL :: bk3(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
-    TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
+    TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
 #ifdef CPP_MPI
     INTEGER                   :: pe,tmp_size,e
@@ -469,10 +471,10 @@ CONTAINS
        DEALLOCATE(tmp_real)
     ENDIF
     IF (PRESENT(zmat)) THEN
-       tmp_size=zmat%nbasfcn
+       tmp_size=zmat%matsize1
        ALLOCATE(tmp_real(tmp_size))
        ALLOCATE(tmp_cmplx(tmp_size))
-       DO n=1,zmat%nbands
+       DO n=1,zmat%matsize2
           n1=n-1
           IF (PRESENT(n_size)) n1=n_size*n1
           IF (PRESENT(n_rank)) n1=n1+n_rank
@@ -482,19 +484,19 @@ CONTAINS
           !print *, "PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
           IF (zmat%l_real) THEN
              if (.not.d%l_real) THEN
-                tmp_cmplx=zmat%z_r(:,n)
+                tmp_cmplx=zmat%data_r(:,n)
                 CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%zc_handle,e)
                 CALL MPI_PUT(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
              else
-                tmp_real=zmat%z_r(:,n)
+                tmp_real=zmat%data_r(:,n)
                 CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%zr_handle,e)
                 CALL MPI_PUT(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
              endif
           ELSE
              if (d%l_real) CALL juDFT_error("Could not write complex data to file prepared for real data",calledby="eig66_mpi%write_eig")
-             tmp_cmplx=zmat%z_c(:,n)
+             tmp_cmplx=zmat%data_c(:,n)
              CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%zc_handle,e)
              CALL MPI_PUT(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
              CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)

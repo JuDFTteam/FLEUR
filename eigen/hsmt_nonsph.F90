@@ -24,7 +24,7 @@ CONTAINS
     COMPLEX,INTENT(IN)            :: chi
     !     .. Array Arguments ..
     REAL,INTENT(IN)               :: fj(:,0:,:),gj(:,0:,:)
-    TYPE(t_lapwmat),INTENT(INOUT) ::hmat
+    TYPE(t_mat),INTENT(INOUT)     ::hmat
 
     IF (mpi%n_size==1) THEN
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
@@ -56,7 +56,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,INTENT(IN) :: fj(:,0:,:),gj(:,0:,:)
-    TYPE(t_lapwmat),INTENT(INOUT)::hmat
+    TYPE(t_mat),INTENT(INOUT)::hmat
 
     
     INTEGER:: nn,na,ab_size,l,ll,m
@@ -123,7 +123,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,INTENT(IN) :: fj(:,0:,:),gj(:,0:,:)
-    TYPE(t_lapwmat),INTENT(INOUT)::hmat
+    TYPE(t_mat),INTENT(INOUT)::hmat
 
     
     INTEGER:: nn,na,ab_size,l,ll,m

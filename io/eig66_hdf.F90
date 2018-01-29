@@ -429,7 +429,7 @@ CONTAINS
        INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
        REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
        REAL,    INTENT(IN),OPTIONAL :: evac(2),ello(:,:)
-       TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
+       TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
        INTEGER i,j,k,nv_local,n1,n2,ne
        TYPE(t_data_HDF),POINTER::d
@@ -510,14 +510,14 @@ CONTAINS
           IF (zmat%l_real) THEN
              CALL io_write_real2s(&
                   &                     d%evsetid,(/1,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),REAL(zmat%z_r(:nmat,:neig)),(/1,1,n1,1,1/))
+                  &           (/1,nmat,neig,1,1/),REAL(zmat%data_r(:nmat,:neig)),(/1,1,n1,1,1/))
           ELSE
              CALL io_write_real2s(&
                   &                     d%evsetid,(/1,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),REAL(zmat%z_c(:nmat,:neig)),(/1,1,n1,1,1/))
+                  &           (/1,nmat,neig,1,1/),REAL(zmat%data_c(:nmat,:neig)),(/1,1,n1,1,1/))
              CALL io_write_real2s(&
                   &                     d%evsetid,(/2,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),AIMAG(zmat%z_c(:nmat,:neig)),&
+                  &           (/1,nmat,neig,1,1/),AIMAG(zmat%data_c(:nmat,:neig)),&
                   &           (/1,1,n1,1,1/))
           ENDIF
        ENDIF

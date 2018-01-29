@@ -55,7 +55,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
-    TYPE(t_lapwmat),INTENT(IN):: hmat,smat
+    TYPE(t_mat),INTENT(IN):: hmat,smat
 
     !     ..
     !     .. Local Scalars ..

@@ -87,8 +87,8 @@ CONTAINS
     TYPE(t_usdus)   :: ud
     TYPE(t_lapw)    :: lapw
     TYPE(t_enpara)  :: enpara
-    TYPE(t_zMat)    :: zMat
-    TYPE(t_lapwmat) :: hmat,smat
+    CLASS(t_Mat),ALLOCATABLE    :: zMat
+    CLASS(t_mat),ALLOCATABLE    :: hmat,smat
     TYPE(T_mat)     :: olap
     !
     INTEGER nn,n
@@ -173,16 +173,14 @@ CONTAINS
           END IF ! hybrid%l_hybrid
           lapw%nmat=lapw%nv(1)+atoms%nlotot
           IF (noco%l_noco) lapw%nmat=lapw%nmat+lapw%nv(2)+atoms%nlotot
-          l_wu=.false.
-          CALL eigen_diag(jsp,eig_id,it,atoms,DIMENSION,mpi, mpi%n_rank,mpi%n_size, DIMENSION%neigd,nk,lapw,input,&
-               nred,mpi%sub_comm, sym,l_zref, noco,cell,bkpt,enpara%el0,jij,l_wu,&
-               oneD,td,ud, eig,ne_found,smat,hmat,zMat)
+          l_wu=.FALSE.
+          ne_all=DIMENSION%neigd
+          CALL eigen_diag(smat,hmat,ne_all,eig,zMat)
           
           !
           !--->         output results
           !
           CALL timestart("EV output")
-          ne_all=ne_found
 #if defined(CPP_MPI)
           !Collect number of all eigenvalues
           CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
@@ -191,13 +189,12 @@ CONTAINS
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           IF (.NOT.l_real) THEN
              IF (.NOT.jij%l_J) THEN
-                zMat%z_c(:lapw%nmat,:ne_found) = CONJG(zMat%z_c(:lapw%nmat,:ne_found))
+                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
              ELSE
-                zMat%z_c(:lapw%nmat,:ne_found) = CMPLX(0.0,0.0)
+                zMat%data_c(:lapw%nmat,:ne_found) = CMPLX(0.0,0.0)
              ENDIF
           ENDIF
-	  zmat%nbands=ne_found
-          CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
+	  CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),el=enpara%el0(0:,:,jsp),ello=enpara%ello0(:,:,jsp),evac=enpara%evac0(:,jsp),&
                   nlotot=atoms%nlotot,n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
           IF (noco%l_noco) THEN
@@ -211,12 +208,6 @@ CONTAINS
 #endif
 
           CALL timestop("EV output")
-          !#ifdef CPP_MPI
-          IF (l_real) THEN
-             DEALLOCATE ( zMat%z_r )
-          ELSE
-             DEALLOCATE ( zMat%z_c )
-          ENDIF
           !
        END DO  k_loop
 

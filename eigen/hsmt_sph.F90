@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
-    TYPE(t_lapwmat),INTENT(INOUT) :: smat,hmat
+    TYPE(t_mat),INTENT(INOUT)     :: smat,hmat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp

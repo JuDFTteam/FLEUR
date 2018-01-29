@@ -14,15 +14,15 @@ MODULE m_types_rcmat
      PROCEDURE        :: from_packed=>t_mat_from_packed
      PROCEDURE        :: inverse =>t_mat_inverse
      PROCEDURE        :: to_packed=>t_mat_to_packed
+    PROCEDURE         :: clear => t_mat_clear
    END type t_mat
 
-   TYPE,EXTENDS(t_mat) :: t_lapwmat
+   TYPE,EXTENDS(t_mat) :: t_lllapwmat
       INTEGER,ALLOCATABLE :: local_rk_map(:,:) !<Maps a global k+g value to a local one in MPI case
       INTEGER             :: matsize_half      !<Half of matrix in noco case
     CONTAINS
-      PROCEDURE,PASS :: init => t_lapwmat_init
-      PROCEDURE,PASS :: clear => t_lapwmat_clear
-   END TYPE t_lapwmat
+      !PROCEDURE,PASS :: init => t_lapwmat_init
+   END TYPE t_lllapwmat
    
  CONTAINS
   SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2,init)
@@ -180,7 +180,7 @@ MODULE m_types_rcmat
     USE m_types_lapw
     USE m_types_mpi
     IMPLICIT NONE
-    CLASS(t_lapwmat),INTENT(OUT):: mat
+    CLASS(t_lllapwmat),INTENT(OUT):: mat
     TYPE(t_lapw),INTENT(in)     :: lapw
     TYPE(t_mpi),INTENT(IN)      :: mpi
     LOGICAL,INTENT(IN)          :: l_noco
@@ -219,14 +219,14 @@ MODULE m_types_rcmat
     CALL mat%alloc(l_real,matsize,i)
   END SUBROUTINE t_lapwmat_init
 
-  SUBROUTINE t_lapwmat_clear(mat)
+  SUBROUTINE t_mat_clear(mat)
     IMPLICIT NONE
-    CLASS(t_lapwmat),INTENT(INOUT):: mat
+    CLASS(t_mat),INTENT(INOUT):: mat
 
     IF (mat%l_real) THEN
        mat%data_r=0.0
     ELSE
        mat%data_c=0.0
     ENDIF
-  END SUBROUTINE t_lapwmat_clear
+  END SUBROUTINE t_mat_clear
 END MODULE m_types_rcmat

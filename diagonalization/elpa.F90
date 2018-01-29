@@ -5,10 +5,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_elpa
   PRIVATE
-#ifdef CPP_ELPA  
-  interface elpa_diag
-     module procedure elpa_r,elpa_c
-  end interface elpa_diag
   
   !Module to call elpa library for parallel diagonalization
   !uses ssubredist1/2 for redistribution
@@ -16,6 +12,7 @@ MODULE m_elpa
   PUBLIC elpa_diag
 
 CONTAINS
+#ifdef CPP_ELPA
   ! First the real version of the code
 #define CPP_CHOLESKY cholesky_real
 #define CPP_invert_trm invert_trm_real
@@ -212,8 +209,6 @@ CONTAINS
     IF (ierr /=0 ) CALL juDFT_error('descinit1 failed',calledby='elpa')
 
   END SUBROUTINE priv_create_blacsgrid
-#else
-  LOGICAL :: elpa_used=.false.
 #endif
 end MODULE m_elpa
 

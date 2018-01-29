@@ -24,7 +24,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     
-    TYPE(t_lapwmat),INTENT(INOUT)::hmat,smat
+    TYPE(t_mat),INTENT(INOUT)::hmat,smat
     
     !     ..
     !     .. Scalar Arguments ..
