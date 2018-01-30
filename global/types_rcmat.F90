@@ -14,15 +14,10 @@ MODULE m_types_rcmat
      PROCEDURE        :: from_packed=>t_mat_from_packed
      PROCEDURE        :: inverse =>t_mat_inverse
      PROCEDURE        :: to_packed=>t_mat_to_packed
-    PROCEDURE         :: clear => t_mat_clear
+     PROCEDURE        :: clear => t_mat_clear
+     PROCEDURE        :: copy => t_mat_copy
    END type t_mat
 
-   TYPE,EXTENDS(t_mat) :: t_lllapwmat
-      INTEGER,ALLOCATABLE :: local_rk_map(:,:) !<Maps a global k+g value to a local one in MPI case
-      INTEGER             :: matsize_half      !<Half of matrix in noco case
-    CONTAINS
-      !PROCEDURE,PASS :: init => t_lapwmat_init
-   END TYPE t_lllapwmat
    
  CONTAINS
   SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2,init)
@@ -175,50 +170,38 @@ MODULE m_types_rcmat
     end if
   end subroutine t_mat_inverse
 
-
-  SUBROUTINE   t_lapwmat_init(mat,lapw,mpi,nlotot,l_noco,jspin,l_real)
-    USE m_types_lapw
-    USE m_types_mpi
+  SUBROUTINE t_mat_copy(mat,mat1,n1,n2)
     IMPLICIT NONE
-    CLASS(t_lllapwmat),INTENT(OUT):: mat
-    TYPE(t_lapw),INTENT(in)     :: lapw
-    TYPE(t_mpi),INTENT(IN)      :: mpi
-    LOGICAL,INTENT(IN)          :: l_noco
-    INTEGER,INTENT(IN)          :: nlotot
-    INTEGER,INTENT(IN)          :: jspin
-    LOGICAL,INTENT(IN)          :: l_real
+    CLASS(t_mat),INTENT(INOUT):: mat
+    CLASS(t_mat),INTENT(INOUT) :: mat1
+    INTEGER,INTENT(IN)        :: n1,n2
 
-    INTEGER :: matsize,i,n
-    !Fist calculate size of matrix
-    IF (l_noco) THEN
-       matsize=SUM(lapw%nv)+2*nlotot
-       mat%matsize_half=lapw%nv(1)+nlotot
+    INTEGER:: i1,i2
+
+ 
+    IF (n1==1.AND.n2==1.AND.mat%matsize1==mat1%matsize1.AND.mat%matsize2==mat1%matsize2) THEN
+       !Special case, the full matrix is copied. Then use move alloc
+       IF (mat%l_real) THEN
+          CALL move_ALLOC(mat1%data_r,mat%data_r)
+       ELSE
+          CALL move_ALLOC(mat1%data_c,mat%data_c)
+       END IF
+    END IF
+
+    i1=mat%matsize1-n1+1  !space available for first dimension
+    i2=mat%matsize2-n1+1
+    i1=MIN(i1,mat1%matsize1)
+    i2=MIN(i2,mat1%matsize2)
+    IF (mat%l_real) THEN
+       mat%data_r(n1:i1,n2:i2)=mat1%data_r(:i1,:i2)
     ELSE
-       matsize=lapw%nv(jspin)+nlotot
-       mat%matsize_half=0
-    ENDIF
-    !Calculate Matrix distribution
-    IF (ALLOCATED(mat%local_rk_map)) DEALLOCATE(mat%local_rk_map)
-    ALLOCATE(mat%local_rk_map(MAXVAL(lapw%nv)+nlotot,2))
-    mat%local_rk_map=0
-    i=0
-    DO n=mpi%n_rank+1, lapw%nv(jspin)+nlotot, mpi%n_size
-       i=i+1
-       mat%local_rk_map(n,1)=i
-    ENDDO
-    IF (l_noco) THEN ! In noco case do it again
-       DO n=mpi%n_rank+1, lapw%nv(2)+nlotot, mpi%n_size
-          i=i+1
-          mat%local_rk_map(n,2)=i
-       ENDDO
-    ELSE
-       mat%local_rk_map(:,2)=mat%local_rk_map(:,1)
-    ENDIF
+       mat%data_c(n1:i1,n2:i2)=mat1%data_c(:i1,:i2)
+    END IF
+       
     
-    !Allocate space
-    CALL mat%alloc(l_real,matsize,i)
-  END SUBROUTINE t_lapwmat_init
-
+    
+  END SUBROUTINE t_mat_copy
+ 
   SUBROUTINE t_mat_clear(mat)
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT):: mat

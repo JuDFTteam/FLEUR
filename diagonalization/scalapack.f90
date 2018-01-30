@@ -40,9 +40,10 @@ CONTAINS
     INTEGER,INTENT(INOUT)         :: ne
     
     
-#ifdef CPP_SCALAPACK    
+#ifdef CPP_SCALAPACK
+#ifdef CPP_MPI    
     INCLUDE 'mpif.h'
-
+#endif
     !...  Local variables
     !
     INTEGER nc,ic,ir,n_sym,jsym,num_j,icm,n_bound
@@ -62,26 +63,35 @@ CONTAINS
     !
     !  ScaLAPACK things
     CHARACTER (len=1)    :: uplo
-    INTEGER              :: num1,num2,liwork,lwork2,np0,mq0
+    INTEGER              :: num,num1,num2,liwork,lwork2,np0,mq0,np,myid
     INTEGER              :: iceil, numroc, nn, nb
     INTEGER, ALLOCATABLE :: ifail(:), iclustr(:)
     REAL                 :: abstol,orfac=1.E-4,CPP_LAPACK_slamch
     REAL,ALLOCATABLE     :: eig2(:), gap(:)
-    REAL,    ALLOCATABLE :: smat%data_r(:,:),work2_r(:)
-    COMPLEX, ALLOCATABLE :: smat%data_c(:,:),work2_c(:)
+    REAL,    ALLOCATABLE :: work2_r(:)
+    COMPLEX, ALLOCATABLE :: work2_c(:)
 
+    TYPE(t_mpimat):: ev_dist
+    
     EXTERNAL iceil, numroc
-
+    EXTERNAL CPP_LAPACK_slamch
+    
+    
     SELECT TYPE(hmat)
     TYPE IS (t_mpimat)
     SELECT TYPE(smat)
     TYPE IS (t_mpimat)
     SELECT TYPE(ev)
     TYPE IS (t_mpimat)
+
+    CALL MPI_COMM_RANK(hmat%mpi_com,myid,ierr)
+    CALL MPI_COMM_SIZE(hmat%mpi_com,np,ierr)
+
+    num=ne !no of states solved for
     
     abstol=2.0*CPP_LAPACK_slamch('S') ! PDLAMCH gave an error on ZAMpano
 
-    CALL ev_dist%init(hmat%mpi_com,hmat%global_size1,mat%global_size2,hmat%l_real,.TRUE.)
+    CALL ev_dist%init(hmat%mpi_com,hmat%global_size1,hmat%global_size2,hmat%l_real,.TRUE.)
 
     nb=hmat%blacs_desc(5)! Blocking factor
     IF (nb.NE.hmat%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
@@ -90,8 +100,8 @@ CONTAINS
     nn=MAX(MAX(hmat%global_size1,nb),2)
     np0=numroc(nn,nb,0,0,hmat%nprow)
     mq0=numroc(MAX(MAX(ne,nb),2),nb,0,0,hmat%npcol)
-    IF (hamovlp%l_real) THEN
-       lwork2=5*hmat%global_size1+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(neigd,hmat%nprow*hmat%npcol)*nn
+    IF (hmat%l_real) THEN
+       lwork2=5*hmat%global_size1+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(ne,hmat%nprow*hmat%npcol)*nn
        ALLOCATE ( work2_r(lwork2+10*hmat%global_size1), stat=err ) ! Allocate more in case of clusters
     ELSE
        lwork2=hmat%global_size1+MAX(nb*(np0+1),3)
@@ -126,7 +136,7 @@ CONTAINS
     !
     !     Compute size of workspace
     !
-    IF (hamovlp%l_real) THEN
+    IF (hmat%l_real) THEN
        uplo='U'
        CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,&
             hmat%blacs_desc,smat%data_r,1,1,smat%blacs_desc,&
@@ -142,7 +152,7 @@ CONTAINS
           ENDIF
        ENDIF
     ELSE
-       lrwork=4*hmat%global_size1+MAX(5*nn,np0*mq0)+ iceil(neigd,hmat%nprow*hmat%npcol)*nn
+       lrwork=4*hmat%global_size1+MAX(5*nn,np0*mq0)+ iceil(ne,hmat%nprow*hmat%npcol)*nn
        ! Allocate more in case of clusters
        ALLOCATE(rwork(lrwork+10*hmat%global_size1), stat=ierr)
        IF (err /= 0) THEN
@@ -188,7 +198,7 @@ CONTAINS
     !     Now solve generalized eigenvalue problem
     !
     CALL timestart("SCALAPACK call")
-    if (hamovlp%l_real) THEN
+    if (hmat%l_real) THEN
        CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacs_desc,smat%data_r,1,1, hmat%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
             ev_dist%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
@@ -202,13 +212,13 @@ CONTAINS
     endif
     CALL timestop("SCALAPACK call")
     IF (ierr .NE. 0) THEN
-       IF (ierr /= 2) WRITE (6,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
-       IF (ierr <= 0) WRITE (6,*) myid,' illegal input argument'
+       !IF (ierr /= 2) WRITE (6,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
+       !IF (ierr <= 0) WRITE (6,*) myid,' illegal input argument'
        IF (MOD(ierr,2) /= 0) THEN
-          WRITE (6,*) myid,'some eigenvectors failed to converge'
-          eigs: DO i = 1, neigd
+          !WRITE (6,*) myid,'some eigenvectors failed to converge'
+          eigs: DO i = 1, ne
              IF (ifail(i) /= 0) THEN
-                WRITE (6,*) myid,' eigenvector',ifail(i), 'failed to converge'
+                !WRITE (6,*) myid,' eigenvector',ifail(i), 'failed to converge'
              ELSE
                 EXIT eigs
              ENDIF
@@ -216,25 +226,25 @@ CONTAINS
           !CALL CPP_flush(6)
        ENDIF
        IF (MOD(ierr/4,2).NE.0) THEN
-          WRITE(6,*) myid,' only',num2,' eigenvectors converged'
+          !WRITE(6,*) myid,' only',num2,' eigenvectors converged'
           !CALL CPP_flush(6)
        ENDIF
        IF (MOD(ierr/8,2).NE.0) THEN
-          WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
+          !WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
           CALL judft_error("SCALAPACK failed to solve eigenvalue problem",calledby="scalapack.f90")
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
-          WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
+          !WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
           CALL judft_error("SCALAPACK failed: B was not positive definite",calledby="scalapack.f90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN
-       IF (myid ==0) THEN
+       !IF (myid ==0) THEN
           WRITE(6,*) 'Not all eigenvalues wanted are found'
           WRITE(6,*) 'number of eigenvalues/vectors wanted',num1
           WRITE(6,*) 'number of eigenvalues/vectors found',num2
           !CALL CPP_flush(6)
-       ENDIF
+       !ENDIF
     ENDIF
     !
     !     Put those eigenvalues expected by chani to eig, i.e. for
@@ -246,7 +256,7 @@ CONTAINS
     ne=0
     DO i=myid+1,num2,np
        ne=ne+1
-       eig(k=ne)=eig2(i)
+       eig(ne)=eig2(i)
     ENDDO
     DEALLOCATE(eig2)
     !

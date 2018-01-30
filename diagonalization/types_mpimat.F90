@@ -21,6 +21,7 @@ MODULE m_types_mpimat
    CONTAINS
      PROCEDURE,PASS   :: init =>mpimat_init
      PROCEDURE,NOPASS :: create_blacsgrid => mpimat_create_blacsgrid
+     PROCEDURE,PASS   :: copy => mpimat_copy
 #ifdef CPP_F03
      FINAL            :: free => mpimat_free
 #else
@@ -32,6 +33,25 @@ MODULE m_types_mpimat
 
 CONTAINS
 
+  SUBROUTINE mpimat_copy(mat,mat1,n1,n2)
+    IMPLICIT NONE
+    CLASS(t_mpimat),INTENT(INOUT)::mat
+    CLASS(t_mat),INTENT(INOUT)   ::mat1
+    INTEGER,INTENT(IN) ::n1,n2
+#ifdef CPP_SCALAPACK
+    SELECT TYPE(mat1)
+    TYPE IS(t_mpimat)
+       IF (mat%l_real) THEN
+          CALL pdgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
+       ELSE
+          CALL pzgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
+       END IF
+    CLASS DEFAULT
+       CALL judft_error("Wrong datatype in copy")
+    END SELECT
+#endif    
+  END SUBROUTINE mpimat_copy
+  
   SUBROUTINE mpimat_free(mat)
     IMPLICIT NONE
     CLASS(t_mpimat) :: mat
