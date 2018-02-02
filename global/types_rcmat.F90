@@ -178,14 +178,14 @@ MODULE m_types_rcmat
 
     INTEGER:: i1,i2
 
- 
-    IF (n1==1.AND.n2==1.AND.mat%matsize1==mat1%matsize1.AND.mat%matsize2==mat1%matsize2) THEN
+    IF (n1==1.AND.n2==1.AND.mat%matsize1==mat1%matsize1.AND.mat%matsize2==mat1%matsize2) THEN       
        !Special case, the full matrix is copied. Then use move alloc
        IF (mat%l_real) THEN
           CALL move_ALLOC(mat1%data_r,mat%data_r)
        ELSE
           CALL move_ALLOC(mat1%data_c,mat%data_c)
        END IF
+       RETURN
     END IF
 
     i1=mat%matsize1-n1+1  !space available for first dimension
@@ -198,8 +198,6 @@ MODULE m_types_rcmat
        mat%data_c(n1:i1,n2:i2)=mat1%data_c(:i1,:i2)
     END IF
        
-    
-    
   END SUBROUTINE t_mat_copy
  
   SUBROUTINE t_mat_clear(mat)
