@@ -13,7 +13,7 @@ IMPLICIT NONE
     IMPLICIT NONE
     TYPE(t_mat),INTENT(INOUT)  :: hmat,smat
     INTEGER,INTENT(INOUT)      :: ne
-    TYPE(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
+    CLASS(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
     REAL,INTENT(OUT)           :: eig(:)
 
     INTEGER            :: lwork,info,m

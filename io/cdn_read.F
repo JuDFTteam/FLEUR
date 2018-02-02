@@ -105,7 +105,7 @@ c
       CALL timestart("cdn_read")
       IF (l_ss) THEN
         CALL read_eig(eig_id,ikpt,1,
-     <                bk=lapw%bkpt,wk=wk,neig=nbands)
+     <                wk=wk,neig=nbands)
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
      <                 eig=eig,nmat=nmat,zmat=zmat)
@@ -115,7 +115,7 @@ c
       ELSEIF (l_noco) THEN
         CALL read_eig(
      >                eig_id,ikpt,1,
-     <                bk=lapw%bkpt,wk=wk,neig=nbands,
+     <                wk=wk,neig=nbands,
      <                  nmat=nmat,nv=lapw%nv(1))
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
@@ -137,7 +137,7 @@ c
      
       CALL read_eig(
      >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
-     <                  bk=lapw%bkpt,wk=wk,
+     <                  wk=wk,
      <                 neig=nbands,eig=eig,
      <                   nv=nv(jspin),
      <                  zmat=zmat)
