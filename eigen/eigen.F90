@@ -143,7 +143,6 @@ CONTAINS
      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,v,mpi,results,DIMENSION,td,ud)
    
     DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
-       smat%l_real=l_real;hmat%l_real=l_real
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
           !
@@ -151,8 +150,8 @@ CONTAINS
         
           CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
           call timestart("Setup of H&S matrices")
-          CALL eigen_hssetup(jsp,mpi,DIMENSION,oned,hybrid,enpara,input,vacuum,noco,jij,sym,&
-               stars,cell,kpts,sphhar,atoms,ud,td,v,bkpt,lapw,smat,hmat)
+          CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,jij,sym,&
+               stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
           CALL timestop("Setup of H&S matrices")
         
           IF( hybrid%l_hybrid ) THEN
@@ -175,17 +174,21 @@ CONTAINS
           IF (noco%l_noco) lapw%nmat=lapw%nmat+lapw%nv(2)+atoms%nlotot
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
-          CALL eigen_diag(smat,hmat,ne_all,eig,zMat)
-          
+          if (allocated(zmat)) deallocate(zmat)
+          CALL eigen_diag(hmat,smat,ne_all,eig,zMat)
+          DEALLOCATE(hmat,smat)
           !
           !--->         output results
           !
           CALL timestart("EV output")
 #if defined(CPP_MPI)
           !Collect number of all eigenvalues
+          ne_found=ne_all
           CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
           ne_all=MIN(DIMENSION%neigd,ne_all)
-#endif
+#else
+          ne_found=ne_all
+#endif          
           !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           IF (.NOT.l_real) THEN
              IF (.NOT.jij%l_J) THEN

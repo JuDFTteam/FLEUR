@@ -49,14 +49,14 @@ CONTAINS
 #ifdef CPP_MPI    
     include 'mpif.h'
 #endif
-    CLASS(t_mat),INTENT(INOUT) :: smat,hmat
-    CLASS(t_mat),INTENT(OUT)   :: ev
+    CLASS(t_mat),INTENT(INOUT)             :: smat,hmat
+    CLASS(t_mat),ALLOCATABLE,INTENT(OUT)   :: ev
     INTEGER,INTENT(INOUT)      :: ne
     REAL,INTENT(OUT)           :: eig(:)
 
     !Locals
     LOGICAL :: parallel
-   
+    PRINT *,"UUPSit"
     SELECT TYPE(smat)
     CLASS IS (t_mpimat)
        parallel=.TRUE.
@@ -131,12 +131,12 @@ CONTAINS
     ENDIF
 
     !check if a special solver was requested
-    IF (juDFT_was_argument("-elpa")) diag_solver=diag_elpa
-    IF (juDFT_was_argument("-scalapack")) diag_solver=diag_scalapack
-    IF (juDFT_was_argument("-elemental")) diag_solver=diag_elemental
-    IF (juDFT_was_argument("-lapack")) diag_solver=diag_lapack
-    IF (juDFT_was_argument("-magma")) diag_solver=diag_magma
-    IF (juDFT_was_argument("-debugdiag")) diag_solver=diag_debugout
+    IF (juDFT_was_argument("-diag:elpa"))      diag_solver=diag_elpa
+    IF (juDFT_was_argument("-diag:scalapack")) diag_solver=diag_scalapack
+    IF (juDFT_was_argument("-diag:elemental")) diag_solver=diag_elemental
+    IF (juDFT_was_argument("-diag:lapack"))    diag_solver=diag_lapack
+    IF (juDFT_was_argument("-diag:magma"))     diag_solver=diag_magma
+    IF (juDFT_was_argument("-diag:debugout"))  diag_solver=diag_debugout
     
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)

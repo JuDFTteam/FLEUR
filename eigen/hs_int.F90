@@ -7,7 +7,7 @@
 MODULE m_hs_int
 CONTAINS
   !Subroutine to construct the interstitial Hamiltonian and overlap matrix
-  SUBROUTINE hs_int(input,noco,stars,lapw,mpi,cell,isp,bkpt,vpw,&
+  SUBROUTINE hs_int(input,noco,stars,lapw,mpi,cell,isp,vpw,&
        smat,hmat)
     USE m_types
     IMPLICIT NONE
@@ -18,7 +18,6 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_mpi),INTENT(IN)        :: mpi
     INTEGER,INTENT(IN)            :: isp
-    REAL,INTENT(IN)               :: bkpt(3)
     COMPLEX,INTENT(IN)            :: vpw(:,:)
     TYPE(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
 
@@ -40,7 +39,7 @@ CONTAINS
              vpw_spin=3
           ENDIF
           !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-          !$OMP SHARED(mpi,lapw,stars,input,bkpt,cell,vpw) &
+          !$OMP SHARED(mpi,lapw,stars,input,cell,vpw) &
           !$OMP SHARED(jjspin,iispin,ispin,jspin,vpw_spin)&
           !$OMP SHARED(hmat,smat)&
           !$OMP PRIVATE(ii,i0,i,j,in,phase,b1,b2,r2,th,ts)
@@ -56,8 +55,8 @@ CONTAINS
                 !+APW_LO
                 ts = phase*stars%ustep(in)
                 IF (input%l_useapw) THEN
-                   b1=bkpt+lapw%gvec(:,i,ispin)
-                   b2=bkpt+lapw%gvec(:,j,jspin)
+                   b1=lapw%bkpt+lapw%gvec(:,i,ispin)
+                   b2=lapw%bkpt+lapw%gvec(:,j,jspin)
                    r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
                    th = phase*(0.5*r2*stars%ustep(in)+vpw(in,vpw_spin))
                 ELSE

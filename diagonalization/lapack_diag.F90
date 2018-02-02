@@ -13,7 +13,7 @@ IMPLICIT NONE
     IMPLICIT NONE
     TYPE(t_mat),INTENT(INOUT)  :: hmat,smat
     INTEGER,INTENT(INOUT)      :: ne
-    TYPE(t_mat),INTENT(OUT)    :: zmat
+    TYPE(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
     REAL,INTENT(OUT)           :: eig(:)
 
     INTEGER            :: lwork,info,m
@@ -24,6 +24,7 @@ IMPLICIT NONE
     COMPLEX            :: dumwork(1)
     REAL,external      :: dlamch
 
+    ALLOCATE(t_mat::zmat)
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
     abstol=2*dlamch('S')
     IF (hmat%l_real) THEN

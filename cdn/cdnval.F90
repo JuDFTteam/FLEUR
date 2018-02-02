@@ -493,6 +493,7 @@ CONTAINS
           !
           ! -> Gu test: distribute ev's among the processors...
           !
+          CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
           skip_t = skip_tt
           IF (l_evp.AND.(mpi%isize.GT.1)) THEN
              IF (banddos%dos) THEN
@@ -530,28 +531,27 @@ CONTAINS
                 n_end    = noccbd
              END IF
           END IF
+          zMat%nbasfcn=lapw%nv(1)+atoms%nlotot
+          IF (noco%l_noco) zMat%nbasfcn=zMat%nbasfcn+lapw%nv(2)+atoms%nlotot
           IF (zmat%l_real) THEN
              IF (.NOT.ALLOCATED(zMat%z_r)) THEN
-                ALLOCATE (zMat%z_r(dimension%nbasfcn,dimension%neigd))
-                zMat%nbasfcn = dimension%nbasfcn
+                ALLOCATE (zMat%z_r(zmat%nbasfcn,dimension%neigd))
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_r = 0
           ELSE
              IF (.NOT.ALLOCATED(zMat%z_c)) THEN
-                ALLOCATE (zMat%z_c(dimension%nbasfcn,dimension%neigd))
-                zMat%nbasfcn = dimension%nbasfcn
+                ALLOCATE (zMat%z_c(zmat%nbasfcn,dimension%neigd))
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_c = 0
           endif
           CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-               ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
+               ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                lapw%nmat,lapw%nv,ello,evdu,epar,&
                lapw,wk,nbands,eig,zMat)
-          CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
 #ifdef CPP_MPI
           ! Sinchronizes the RMA operations
           if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
