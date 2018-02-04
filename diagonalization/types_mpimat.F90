@@ -17,17 +17,14 @@ MODULE m_types_mpimat
      INTEGER:: blacs_ctext
      INTEGER:: global_size1,global_size2
      INTEGER:: npcol,nprow
-
    CONTAINS
-     PROCEDURE,PASS   :: init =>mpimat_init
-     PROCEDURE,NOPASS :: create_blacsgrid => mpimat_create_blacsgrid
-     PROCEDURE,PASS   :: copy => mpimat_copy
-#ifdef CPP_F03
-     FINAL            :: free => mpimat_free
-#else
-     PROCEDURE        :: free => mpimat_free
-#endif     
+     PROCEDURE,PASS   :: copy => mpimat_copy !overwrites from t_mat
+     PROCEDURE,PASS   :: free => mpimat_free 
   END TYPE t_mpimat
+
+  INTERFACE t_mpimat
+     MODULE PROCEDURE mpimat_init
+  END INTERFACE t_mpimat
   
   PUBLIC t_mpimat
 
@@ -63,23 +60,23 @@ CONTAINS
 #endif    
   END SUBROUTINE mpimat_free
   
-  SUBROUTINE mpimat_init(mat,mpi_subcom,m1,m2,l_real,l_2d)
+  FUNCTION mpimat_init(mpi_subcom,m1,m2,l_real,l_2d) RESULT(mat)
     IMPLICIT NONE
-    CLASS(t_mpimat),INTENT(OUT):: mat
-    INTEGER,INTENT(IN)         :: m1,m2,mpi_subcom
-    LOGICAL,INTENT(IN)         :: l_real,l_2d
+    TYPE(t_mpimat)            :: mat
+    INTEGER,INTENT(IN)        :: m1,m2,mpi_subcom
+    LOGICAL,INTENT(IN)        :: l_real,l_2d
     mat%global_size1=m1
     mat%global_size2=m2
     mat%mpi_com=mpi_subcom
-    CALL mpimat_create_blacsgrid(mat%mpi_com,l_2d,m1,m2,DEFAULT_BLOCKSIZE,&
+    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,m1,m2,DEFAULT_BLOCKSIZE,&
          mat%blacs_ctext,mat%blacs_desc,&
          mat%matsize1,mat%matsize2,&
          mat%npcol,mat%nprow)
     CALL mat%alloc(l_real,m1,m2)
     
-  END SUBROUTINE mpimat_init
+  END FUNCTION mpimat_init
 
-  SUBROUTINE mpimat_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nb,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
+  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nb,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom
     INTEGER,INTENT(IN) :: m1,m2,nb
