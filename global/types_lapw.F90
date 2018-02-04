@@ -346,7 +346,9 @@ CONTAINS
     IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
 
     lapw%nv_tot=lapw%nv(1)
+    lapw%nmat=lapw%nv(1)+atoms%nlotot
     IF (noco%l_noco) lapw%nv_tot=lapw%nv_tot+lapw%nv(2)
+    IF (noco%l_noco) lapw%nmat=lapw%nv_tot+2*atoms%nlotot
 
   CONTAINS
 

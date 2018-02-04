@@ -550,7 +550,7 @@ CONTAINS
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
-               lapw%nmat,lapw%nv,ello,evdu,epar,&
+               ello,evdu,epar,&
                lapw,wk,nbands,eig,zMat)
 #ifdef CPP_MPI
           ! Sinchronizes the RMA operations

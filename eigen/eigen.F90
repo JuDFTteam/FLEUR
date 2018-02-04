@@ -170,8 +170,6 @@ CONTAINS
              END IF
 
           END IF ! hybrid%l_hybrid
-          lapw%nmat=lapw%nv(1)+atoms%nlotot
-          IF (noco%l_noco) lapw%nmat=lapw%nmat+lapw%nv(2)+atoms%nlotot
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
@@ -197,6 +195,7 @@ CONTAINS
                 zMat%data_c(:lapw%nmat,:ne_found) = CMPLX(0.0,0.0)
              ENDIF
           ENDIF
+          PRINT *,"Basis set size:",lapw%nmat
 	  CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,lapw%nv(jsp),lapw%nmat,&
                   bkpt, kpts%wtkpt(nk),eig(:ne_found),el=enpara%el0(0:,:,jsp),ello=enpara%ello0(:,:,jsp),evac=enpara%evac0(:,jsp),&
                   nlotot=atoms%nlotot,n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)

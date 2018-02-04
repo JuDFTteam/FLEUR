@@ -67,7 +67,7 @@ c
      >                    eig_id,nvd,jspd,irank,isize,
      >                    ikpt,jspin,nbasfcn,l_ss,l_noco,
      >                    noccbd,n_start,n_end,
-     <                    nmat,nv,ello,evdu,epar,
+     <                    ello,evdu,epar,
      <                    lapw,wk,nbands,eig,zmat)
 
       USE m_eig66_io, ONLY : read_eig
@@ -81,10 +81,9 @@ c
       INTEGER, INTENT (IN) :: nvd,jspd,jspin
       INTEGER, INTENT (IN) :: noccbd,n_start,n_end
       LOGICAL, INTENT (IN) :: l_ss,l_noco
-      INTEGER, INTENT (OUT) :: nbands,nmat
+      INTEGER, INTENT (OUT) :: nbands
       REAL,    INTENT (OUT) :: wk
 
-      INTEGER, INTENT (OUT) :: nv(:) !nv(jspd),kveclo(nlotot)
       REAL,    INTENT (OUT) :: eig(:) !bkpt(3),eig(neigd)
       REAL,    INTENT (INOUT) :: ello(:,:,:),evdu(:,:) !ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (INOUT) :: epar(0:,:,:) !epar(0:lmaxd,ntypd,jspd)
@@ -108,26 +107,22 @@ c
      <                wk=wk,neig=nbands)
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,nmat=nmat,zmat=zmat)
+     <                 eig=eig,zmat=zmat)
 !
 ! For Non-Collinear, but no Spin-Spirals
 !
       ELSEIF (l_noco) THEN
         CALL read_eig(
      >                eig_id,ikpt,1,
-     <                wk=wk,neig=nbands,
-     <                  nmat=nmat,nv=lapw%nv(1))
+     <                wk=wk,neig=nbands)
+     
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,nmat=nmat,zmat=zmat)
-         lapw%nv(jspd) = lapw%nv(1)
+     <                 eig=eig,zmat=zmat)
 !
 ! For Collinear
 !
       ELSE
-         CALL read_eig(eig_id,ikpt,jspin,
-     <                   nmat=nmat)
-
          IF (zmat%l_real) THEN
             zmat%z_r=0
          ELSE
@@ -139,18 +134,10 @@ c
      >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
      <                  wk=wk,
      <                 neig=nbands,eig=eig,
-     <                   nv=nv(jspin),
      <                  zmat=zmat)
 
-      ENDIF
       CALL timestop("cdn_read")
       
-!      IF (nbands>neigd)   CALL juDFT_error("nbands.GT.neigd",calledby
-!     +     ="cdn_read")
-      IF (nv(jspin)>nvd)  CALL juDFT_error("nv.GT.nvd",calledby
-     +     ="cdn_read")
-      IF (nmat>nbasfcn)   CALL juDFT_error("nmat.GT.nbasfcn",calledby
-     +     ="cdn_read")
-
+      ENDIF
       END SUBROUTINE cdn_read
       END MODULE m_cdnread
