@@ -135,9 +135,9 @@ c
      <                  wk=wk,
      <                 neig=nbands,eig=eig,
      <                  zmat=zmat)
-
-      CALL timestop("cdn_read")
       
       ENDIF
+      
+      CALL timestop("cdn_read")
       END SUBROUTINE cdn_read
       END MODULE m_cdnread
