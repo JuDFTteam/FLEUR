@@ -14,6 +14,7 @@ CONTAINS
     USE m_hsmt
     USE m_types
     USE m_types_mpimat
+    USE m_eigen_redist_matrix
     IMPLICIT NONE
     INTEGER,INTENT(IN)           :: isp
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -88,8 +89,8 @@ CONTAINS
        CALL smat_final%copy(smat(1,1),1,1)
        CALL hmat_final%copy(hmat(1,1),1,1)
     ELSE
-       !CALL eigen_redist_matrix(mpi,lapw,atoms,noco,smat_final,smat)
-       !CALL eigen_redist_matrix(mpi,lapw,atoms,noco,hmat_final,hmat)
+       CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
+       CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final)
     ENDIF
     
   END SUBROUTINE eigen_hssetup
