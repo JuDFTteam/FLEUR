@@ -175,5 +175,5 @@ CONTAINS
     CALL descinit(sc_desc,m1,m2,nb,nb,0,0,ictextblacs,myrowssca,ierr)
     IF (ierr /=0 ) call judft_error('Creation of BLACS descriptor failed')
 #endif
-  END SUBROUTINE mpimat_create_blacsgrid
+  END SUBROUTINE priv_create_blacsgrid
 END MODULE m_types_mpimat
