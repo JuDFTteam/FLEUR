@@ -16,7 +16,7 @@ MODULE m_hsohelp
   !*********************************************************************
   !
 CONTAINS
-  SUBROUTINE hsohelp(DIMENSION,atoms,sym,input,lapw,nsz, cell,bkpt,&
+  SUBROUTINE hsohelp(DIMENSION,atoms,sym,input,lapw,nsz, cell,&
        zmat,usdus, zso,noco,oneD, ahelp,bhelp,chelp)
     !
     USE m_abcof
@@ -36,8 +36,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(DIMENSION%jspd)  
-    REAL,    INTENT (IN) :: bkpt(3)  
-    COMPLEX, INTENT (INOUT) :: zso(DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)
+    COMPLEX, INTENT (INOUT) :: zso(:,:,:)!DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%nat, DIMENSION%jspd)
@@ -77,9 +76,9 @@ CONTAINS
        IF (zmat(1)%l_real.AND.noco%l_soc) THEN
           zso(:,1:DIMENSION%neigd,ispin) = CMPLX(zmat(ispin)%z_r(:,1:DIMENSION%neigd),0.0)
           zMat_local%l_real = .FALSE.
-          zMat_local%nbasfcn = DIMENSION%nbasfcn
+          zMat_local%nbasfcn = zmat(1)%nbasfcn
           zMat_local%nbands = DIMENSION%neigd
-          ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
+          ALLOCATE(zMat_local%z_c(zmat(1)%nbasfcn,DIMENSION%neigd))
           zMat_local%z_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
           CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
                usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
@@ -103,9 +102,9 @@ CONTAINS
           chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
        ELSE
           zMat_local%l_real = zmat(1)%l_real
-          zMat_local%nbasfcn = DIMENSION%nbasfcn
+          zMat_local%nbasfcn = zmat(1)%nbasfcn
           zMat_local%nbands = DIMENSION%neigd
-          ALLOCATE(zMat_local%z_c(DIMENSION%nbasfcn,DIMENSION%neigd))
+          ALLOCATE(zMat_local%z_c(zmat(1)%nbasfcn,DIMENSION%neigd))
           zMat_local%z_c(:,:) = zmat(ispin)%z_c(:,:)
           CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
                usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)

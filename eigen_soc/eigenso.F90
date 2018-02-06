@@ -73,6 +73,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
     COMPLEX, ALLOCATABLE :: vzxy(:,:,:,:),vpw(:,:)
     TYPE(t_mat)::zmat
+    TYPE(t_lapw)::lapw
 
     INTEGER :: ierr
     
@@ -213,8 +214,7 @@ CONTAINS
 
 
 
-    ALLOCATE( zso(DIMENSION%nbasfcn,2*DIMENSION%neigd,wannierspin),eig_so(2*DIMENSION%neigd) )
-    zso(:,:,:) = CMPLX(0.0,0.0)
+    ALLOCATE( eig_so(2*DIMENSION%neigd) )
     soangl(:,:,:,:,:,:) = CONJG(soangl(:,:,:,:,:,:))
     CALL timestop("eigenso: spnorb")
     !
@@ -229,9 +229,11 @@ CONTAINS
     !--->  start loop k-pts
     !
     DO  nk = mpi%irank+1,n_end,mpi%isize
-
+       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
+       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
+       zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,&
+       CALL alineso(eig_id,lapw,&
             mpi,DIMENSION,atoms,sym,kpts,&
             input,noco,cell,oneD,&
             rsopp,rsoppd,rsopdp,rsopdpd,nk,&
@@ -265,9 +267,9 @@ CONTAINS
              CALL timestop("eigenso: write_eig")  
           ENDDO
        ENDIF ! (input%eonly) ELSE
-
+       deallocate(zso)
     ENDDO ! DO nk 
-    DEALLOCATE (zso,eig_so,rsoploplop,rsopplo,rsopdplo,rsoplopd)
+    DEALLOCATE (eig_so,rsoploplop,rsopplo,rsopdplo,rsoplopd)
     DEALLOCATE (rsoplop,rsopdp,rsopdpd,rsopp,rsoppd,soangl)
 
 
