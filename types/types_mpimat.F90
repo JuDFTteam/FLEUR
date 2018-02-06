@@ -10,6 +10,13 @@ MODULE m_types_mpimat
   PRIVATE
   INTEGER,PARAMETER    :: DEFAULT_BLOCKSIZE=64
   INTEGER, PARAMETER   :: dlen_=9
+
+  !<This data-type extends the basic t_mat for distributed matrices.
+  !<
+  !<It stores the additional mpi_communicator and sets up a blacs grid for the matrix.
+  !<This can be used to perform scalapack calls on the matrix with little additional input.
+  !<The copy procedure is overwritten from t_mat to enable also redistribution of the matrix.
+  
   
   TYPE,EXTENDS(t_mat):: t_mpimat
      INTEGER:: mpi_com
@@ -18,17 +25,52 @@ MODULE m_types_mpimat
      INTEGER:: global_size1,global_size2
      INTEGER:: npcol,nprow
    CONTAINS
-     PROCEDURE,PASS   :: copy => mpimat_copy !overwrites from t_mat
-     PROCEDURE,PASS   :: free => mpimat_free 
+     PROCEDURE,PASS   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
+     PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
+     PROCEDURE,PASS   :: init => mpimat_init     !<overwriten from t_mat, also calls alloc in t_mat
+     PROCEDURE,PASS   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
   END TYPE t_mpimat
-
-  INTERFACE t_mpimat
-     MODULE PROCEDURE mpimat_init
-  END INTERFACE t_mpimat
   
   PUBLIC t_mpimat
 
 CONTAINS
+
+  SUBROUTINE mpimat_add_transpose(mat,mat1)
+    CLASS(t_mpimat),INTENT(INOUT) ::mat
+    CLASS(t_mat),INTENT(INOUT) ::mat1
+
+    INTEGER:: i,ii,n_size,n_rank
+
+    SELECT TYPE(mat1)
+    TYPE IS (t_mpimat)
+    
+       IF (mat%l_real) THEN
+#ifdef CPP_SCALAPACK          
+
+       CALL pdgeadd('t',mat1%global_size1,mat1%global_size2,1.0,mat1%data_r,1,1,mat1%blacs_desc,1.0,mat%data_r,1,1,mat%blacs_desc)
+    ELSE
+       CALL pzgeadd('t',mat1%global_size1,mat1%global_size2,CMPLX(1.0,0.0),mat1%data_c,1,1,mat1%blacs_desc,CMPLX(1.0,0.0),mat%data_c,1,1,mat%blacs_desc)
+#endif
+    END IF
+    !Now multiply the diagonal of the matrix by 1/2
+#ifdef CPP_MPI    
+    CALL MPI_COMM_RANK(mat%mpi_com,n_rank,i)
+    CALL MPI_COMM_SIZE(mat%mpi_com,n_size,i)
+#endif
+    ii=0
+    DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
+       ii=ii+1
+       IF (mat%l_real) THEN
+          mat%data_r(i,ii)=mat%data_r(i,ii)/2
+       ELSE
+          mat%data_c(i,ii)=mat%data_c(i,ii)/2
+       END IF
+    ENDDO
+    CLASS default
+       CALL judft_error("Inconsistent types in t_mpimat_add_transpose")
+    END SELECT
+    
+  END SUBROUTINE mpimat_add_transpose
 
   SUBROUTINE mpimat_copy(mat,mat1,n1,n2)
     IMPLICIT NONE
@@ -51,7 +93,7 @@ CONTAINS
   
   SUBROUTINE mpimat_free(mat)
     IMPLICIT NONE
-    CLASS(t_mpimat) :: mat
+    CLASS(t_mpimat),INTENT(INOUT) :: mat
     INTEGER :: ierr
     IF (ALLOCATED(mat%data_r)) DEALLOCATE(mat%data_r)
     IF (ALLOCATED(mat%data_c)) DEALLOCATE(mat%data_c)
@@ -60,22 +102,24 @@ CONTAINS
 #endif    
   END SUBROUTINE mpimat_free
   
-  FUNCTION mpimat_init(mpi_subcom,m1,m2,l_real,l_2d) RESULT(mat)
+  SUBROUTINE mpimat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d)
     IMPLICIT NONE
-    TYPE(t_mpimat)            :: mat
-    INTEGER,INTENT(IN)        :: m1,m2,mpi_subcom
-    LOGICAL,INTENT(IN)        :: l_real,l_2d
-    mat%global_size1=m1
-    mat%global_size2=m2
+    CLASS(t_mpimat)             :: mat
+    INTEGER,INTENT(IN),OPTIONAL :: matsize1,matsize2,mpi_subcom
+    LOGICAL,INTENT(IN),OPTIONAL :: l_real,l_2d
+
+    IF (.NOT.(PRESENT(matsize1).AND.PRESENT(matsize2).AND.PRESENT(mpi_subcom).AND.PRESENT(l_real).AND.PRESENT(l_2d)))&
+         CALL judft_error("Optional arguments must be present in mpimat_init")
+    mat%global_size1=matsize1
+    mat%global_size2=matsize2
     mat%mpi_com=mpi_subcom
-    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,m1,m2,DEFAULT_BLOCKSIZE,&
+    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,DEFAULT_BLOCKSIZE,&
          mat%blacs_ctext,mat%blacs_desc,&
          mat%matsize1,mat%matsize2,&
          mat%npcol,mat%nprow)
-    CALL mat%alloc(l_real,m1,m2)
+    CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
+  END SUBROUTINE mpimat_init
     
-  END FUNCTION mpimat_init
-
   SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nb,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom

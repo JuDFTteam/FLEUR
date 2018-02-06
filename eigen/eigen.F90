@@ -3,20 +3,23 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+!<@brief
+!<The eigen routine sets up and solves the generalized eigenvalue problem
+!More description at end of file
 MODULE m_eigen
   USE m_juDFT
 CONTAINS
+  !>The eigenvalue problem is constructed and solved in this routine. The following steps are performed:
+  !> 1. Preparation: generate energy parameters, open eig-file
+  !> 2. CALL to mt_setup() : this constructs the local Hamiltonian (i.e. the Hamiltonian in the \f$ u,\dot u, u_{lo} \f$ basis) LDA+U is also added here
+  !> 3. within the (collinear)spin and k-point loop: CALL to eigen_hssetup() to generate the matrices, CALL to eigen_diag() to perform diagonalization 
+  !> 4. writing (saving) of eigenvectors
+  !>
+  !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
+  !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
        sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
        it,eig_id,results,v,vx)
-    !*********************************************************************
-    !     sets up and solves the eigenvalue problem for a basis of lapws.
-    !
-    ! nv,   nvd     ... actual length & dimension of EV without LO's
-    ! nmat, nbasfcn                                   including LO's
-    !        g. bihlmayer '96
-    !**********************************************************************
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
     USE m_lodpot
@@ -230,3 +233,4 @@ CONTAINS
     enpara_in%epara_min = MIN(MINVAL(enpara%ello0),enpara_in%epara_min)
   END SUBROUTINE eigen
 END MODULE m_eigen
+

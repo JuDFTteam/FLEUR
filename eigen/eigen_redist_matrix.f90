@@ -16,26 +16,52 @@ CONTAINS
     CLASS(t_mat),INTENT(INOUT):: mat(:,:)
     CLASS(t_mat),INTENT(INOUT):: mat_final
 
-    INTEGER:: i,j,m
+    INTEGER:: m
 
-    SELECT TYPE(mat_final)
-    TYPE IS (t_mat)
-       m=mat(1,1)%matsize1+mat(2,2)%matsize1
-       CALL mat_final%alloc(.FALSE.,m,m)
-       !up-up
-       mat_final%data_c(:lapw%nv(1)+atoms%nlotot,:lapw%nv(1)+atoms%nlotot)=mat(1,1)%data_c
-       !down-down
-       mat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,lapw%nv(1)+atoms%nlotot+1:)=mat(2,2)%data_c
-       !off-diag
-       DO i=1,mat(1,2)%matsize1 !First map U-part of smat&hmat(2,1) into smat(1,2)
-          DO j=i+1,mat(1,2)%matsize2
-             mat(2,1)%data_c(j,i)=CONJG(mat(1,2)%data_c(i,j))
-          ENDDO
-       ENDDO
-       mat_final%data_c(:lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot+1:)=mat(2,1)%data_c
-    TYPE IS (t_mpimat)
-       STOP "ERROR"
-!!$       
+    !determine final matrix size and allocate the final matrix
+    m=lapw%nv(1)+atoms%nlotot
+    IF (SIZE(mat)>1) m=m+lapw%nv(2)+atoms%nlotot
+    CALL mat_final%init(mat(1,1)%l_real,m,m)
+    
+    !up-up component
+    CALL mat_final%copy(mat(1,1),1,1)
+    CALL mat(1,1)%free()
+    IF (SIZE(mat)==1) RETURN
+
+    !down-down component
+    CALL mat_final%copy(mat(2,2),lapw%nv(1)+atoms%nlotot+1,lapw%nv(1)+atoms%nlotot+1)
+    CALL mat(2,2)%free()
+
+    !Now collect off-diagonal parts
+    CALL mat(2,1)%add_transpose(mat(1,2))
+    CALL mat_final%copy(mat(2,1),1,lapw%nv(1)+atoms%nlotot+1)
+    CALL mat(1,2)%free()
+    CALL mat(2,1)%free()
+    
+  END SUBROUTINE eigen_redist_matrix
+END MODULE m_eigen_redist_matrix
+
+
+
+!!$    
+!!$    SELECT TYPE(mat_final)
+!!$    TYPE IS (t_mat)
+!!$       m=mat(1,1)%matsize1+mat(2,2)%matsize1
+!!$       CALL mat_final%alloc(.FALSE.,m,m)
+!!$       !up-up
+!!$       mat_final%data_c(:lapw%nv(1)+atoms%nlotot,:lapw%nv(1)+atoms%nlotot)=mat(1,1)%data_c
+!!$       !down-down
+!!$       mat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,:)=mat(2,2)%data_c
+!!$       !off-diag
+!!$       DO i=1,mat(1,2)%matsize1 !First map U-part of smat&hmat(2,1) into smat(1,2)
+!!$          DO j=i+1,mat(1,2)%matsize2
+!!$             mat(2,1)%data_c(j,i)=CONJG(mat(1,2)%data_c(i,j))
+!!$          ENDDO
+!!$       ENDDO
+!!$       mat_final%data_c(:lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot+1:)=mat(2,1)%data_c
+!!$    TYPE IS (t_mpimat)
+!!$       STOP "ERROR"
+       
 !!$    !UP/UP spin (or only spin in collinear case)
 !!$    m1=mat(1,1)%matsize
 !!$    CALL mat_final%create_blacsgrid(mpi%subcom,.FALSE.,m1,m2,1,desc)
@@ -63,6 +89,4 @@ CONTAINS
 !!$    ENDDO
 !!$    !Communicate
 !!$    CALL pdgemr2d(m2,m1,mat(2,1)%data_r,1,1,desc,mat_final%data_r,1,m1+1,mat_final%blacs_desc,mat_final%blacs_ctext)
-    END SELECT
-  END SUBROUTINE eigen_redist_matrix
-END MODULE m_eigen_redist_matrix
+!!    END SELECT

@@ -1,6 +1,6 @@
-MODULE m_types_rcmat
-  use m_judft
-    IMPLICIT NONE
+MODULE m_types_mat
+  USE m_judft
+  IMPLICIT NONE
     TYPE :: t_mat
      LOGICAL :: l_real
      INTEGER :: matsize1=-1
@@ -16,10 +16,52 @@ MODULE m_types_rcmat
      PROCEDURE        :: to_packed=>t_mat_to_packed
      PROCEDURE        :: clear => t_mat_clear
      PROCEDURE        :: copy => t_mat_copy
+     PROCEDURE        :: init => t_mat_init
+     PROCEDURE        :: free => t_mat_free
+     PROCEDURE        :: add_transpose => t_mat_add_transpose
    END type t_mat
-
    
  CONTAINS
+   
+   SUBROUTINE t_mat_free(mat)
+     CLASS(t_mat),INTENT(INOUT)::mat
+     IF (ALLOCATED(mat%data_c)) DEALLOCATE(mat%data_c)
+     IF (ALLOCATED(mat%data_r)) DEALLOCATE(mat%data_r)
+   END SUBROUTINE t_mat_free
+   
+   SUBROUTINE t_mat_add_transpose(mat,mat1)
+    CLASS(t_mat),INTENT(INOUT)::mat,mat1
+    INTEGER::i,j
+    IF (mat%l_real.AND.mat1%l_real) THEN
+       DO i=1,mat%matsize1
+          DO j=i+1,mat%matsize2
+             mat%data_r(j,i)=mat1%data_r(i,j)
+          ENDDO
+       ENDDO
+    ELSEIF((.NOT.mat%l_real).AND.(.NOT.mat1%l_real)) THEN
+       DO i=1,mat%matsize1
+          DO j=i+1,mat%matsize2
+             mat%data_c(j,i)=CONJG(mat1%data_c(i,j))
+          ENDDO
+       ENDDO
+    ELSE
+       call judft_error("Inconsistency between data types in m_mat")
+    END IF
+  END SUBROUTINE t_mat_add_transpose
+
+  
+   
+   SUBROUTINE t_mat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d)
+     CLASS(t_mat) :: mat
+     LOGICAL,INTENT(IN),OPTIONAL:: l_real
+     INTEGER,INTENT(IN),OPTIONAL:: matsize1,matsize2
+     INTEGER,INTENT(IN),OPTIONAL:: mpi_subcom !not needed here, only for allowing overloading this in t_mpimat
+     LOGICAL,INTENT(IN),OPTIONAL:: l_2d       !not needed here either
+
+     CALL mat%alloc(l_real,matsize1,matsize2)
+   END SUBROUTINE t_mat_init
+
+     
   SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2,init)
     CLASS(t_mat) :: mat
     LOGICAL,INTENT(IN),OPTIONAL:: l_real
@@ -210,4 +252,8 @@ MODULE m_types_rcmat
        mat%data_c=0.0
     ENDIF
   END SUBROUTINE t_mat_clear
+END MODULE m_types_mat
+
+MODULE m_types_rcmat
+  USE m_types_mat
 END MODULE m_types_rcmat

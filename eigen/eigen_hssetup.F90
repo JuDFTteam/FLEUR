@@ -52,8 +52,8 @@ CONTAINS
     ENDIF
     DO i=1,nspins
        DO j=1,nspins
-          CALL smat(i,j)%ALLOC(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot)
-          CALL hmat(i,j)%ALLOC(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot)
+          CALL smat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot)
+          CALL hmat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot)
        ENDDO
     ENDDO
 
@@ -83,15 +83,8 @@ CONTAINS
        ALLOCATE(t_mpimat::smat_final,hmat_final)
     ENDIF
     
-    IF (nspins==1) THEN
-       CALL smat_final%alloc(l_real,lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot)
-       CALL hmat_final%alloc(l_real,lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot)       
-       CALL smat_final%copy(smat(1,1),1,1)
-       CALL hmat_final%copy(hmat(1,1),1,1)
-    ELSE
-       CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
-       CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final)
-    ENDIF
+    CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
+    CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final)
     
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup
