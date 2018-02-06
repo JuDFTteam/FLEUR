@@ -235,9 +235,9 @@ MODULE m_types_mat
     i1=MIN(i1,mat1%matsize1)
     i2=MIN(i2,mat1%matsize2)
     IF (mat%l_real) THEN
-       mat%data_r(n1:i1,n2:i2)=mat1%data_r(:i1,:i2)
+       mat%data_r(n1:n1+i1-1,n2:n2+i2-1)=mat1%data_r(:i1,:i2)
     ELSE
-       mat%data_c(n1:i1,n2:i2)=mat1%data_c(:i1,:i2)
+       mat%data_c(n1:n1+i1-1,n2:n2+i2-1)=mat1%data_c(:i1,:i2)
     END IF
        
   END SUBROUTINE t_mat_copy
