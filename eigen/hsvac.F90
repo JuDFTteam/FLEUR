@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_potden),INTENT(IN)     :: v
-    TYPE(t_mat),INTENT(INOUT)     :: hmat(:,:),smat(:,:)
+    CLASS(t_mat),INTENT(INOUT)     :: hmat(:,:),smat(:,:)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp

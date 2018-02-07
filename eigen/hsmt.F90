@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw 
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_usdus),INTENT(IN)      :: usdus
-    TYPE(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
+    CLASS(t_mat),INTENT(INOUT)    :: smat(:,:),hmat(:,:)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin  

@@ -56,7 +56,6 @@ CONTAINS
 
     !Locals
     LOGICAL :: parallel
-    PRINT *,"UUPSit"
     SELECT TYPE(smat)
     CLASS IS (t_mpimat)
        parallel=.TRUE.
@@ -89,13 +88,22 @@ CONTAINS
     USE m_types
     use m_judft
     IMPLICIT NONE
-    TYPE(t_mat),INTENT(IN) :: hmat,smat
+    CLASS(t_mat),INTENT(INOUT) :: hmat,smat
     !small subroutine that does only wite the matrix to a file
-    INTEGER:: i,ii
-    OPEN(999,file="hmat")
-    OPEN(998,file="smat")
-    DO i=1,hmat%matsize1
-       DO ii=1,i
+    INTEGER:: i,ii,irank,ierr
+    CHARACTER(len=20)::filename
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+#else
+    irank=0
+#endif
+    WRITE(filename,"(a,i0)") "hmat",irank
+    OPEN(999,file=TRIM(filename))
+    WRITE(filename,"(a,i0)") "smat",irank
+    OPEN(998,file=TRIM(filename))
+    DO i=1,hmat%matsize2
+       DO ii=1,hmat%matsize1
           IF (hmat%l_real) THEN
              WRITE(999,"(2i6,f15.6)") ii,i,hmat%data_r(ii,i)
              WRITE(998,"(2i6,f15.6)") ii,i,smat%data_r(ii,i)
@@ -107,6 +115,9 @@ CONTAINS
     ENDDO
     CLOSE(999)
     CLOSE(998)
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+#endif
     CALL judft_error("STOP in eigen_diag:debug_diag")
   END SUBROUTINE priv_debug_out
 

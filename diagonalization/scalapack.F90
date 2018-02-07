@@ -139,9 +139,9 @@ CONTAINS
     IF (hmat%l_real) THEN
        uplo='U'
        CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,&
-            hmat%blacs_desc,smat%data_r,1,1,smat%blacs_desc,&
+            hmat%blacs_desc,smat%data_r,1,1,hmat%blacs_desc,&
             0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
-            ev_dist%blacs_desc,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
+            hmat%blacs_desc,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
        IF ( work2_r(1).GT.lwork2) THEN
           lwork2 = work2_r(1)
           DEALLOCATE (work2_r)
@@ -163,7 +163,7 @@ CONTAINS
        CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,&
             hmat%blacs_desc,smat%data_c,1,1, hmat%blacs_desc,&
             0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
-            ev_dist%blacs_desc,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
+            hmat%blacs_desc,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
             gap,ierr)
        IF (ABS(work2_c(1)).GT.lwork2) THEN
           lwork2=work2_c(1)
@@ -201,12 +201,12 @@ CONTAINS
     if (hmat%l_real) THEN
        CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacs_desc,smat%data_r,1,1, hmat%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
-            ev_dist%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
+            hmat%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
             gap,ierr)
     else
        CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,hmat%blacs_desc,smat%data_c,1,1, hmat%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
-            ev_dist%blacs_desc,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
+            hmat%blacs_desc,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
             ifail,iclustr,gap,ierr)
        DEALLOCATE(rwork)
     endif
@@ -251,7 +251,6 @@ CONTAINS
     !     process i these are eigenvalues i+1, np+i+1, 2*np+i+1...
     !     Only num=num2/np eigenvalues per process
     !
-    PRINT *,"PE:",myid,num,num1,num2
     num=FLOOR(REAL(num2)/np)
     IF (myid.LT.num2-(num2/np)*np) num=num+1
     ne=0
