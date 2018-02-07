@@ -35,7 +35,7 @@ CONTAINS
     REAL apw_lo1,apw_lo2,apw1,w1
 
     COMPLEX capw1
-    INTEGER ki,kj,l,nn
+    INTEGER kii,ki,kj,l,nn
 
     !     ..
     !     .. Local Arrays ..
@@ -55,7 +55,7 @@ CONTAINS
        fl2p1bt(l) = fl2p1(l)*0.5
     END DO
     !$OMP PARALLEL DEFAULT(SHARED)&
-    !$OMP PRIVATE(ki,ski,kj,plegend,l)&
+    !$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
     !$OMP PRIVATE(cph,nn,tnn,fjkiln,gjkiln)&
     !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,apw1)&
     !$OMP PRIVATE(capw1) 
@@ -67,6 +67,7 @@ CONTAINS
     qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
     !$OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  mpi%n_rank+1, lapw%nv(iintsp), mpi%n_size
+       kii=(ki-1)/mpi%n_size+1
        ski = lapw%gvec(:,ki,iintsp) + qssbti
        !--->       legendre polynomials
        DO kj = 1,ki
@@ -107,15 +108,15 @@ CONTAINS
              DO kj = 1,ki
                 fct  = plegend(kj,l)*fl2p1(l)*&
                      ( fjkiln*fj(kj,l,jintsp) + gjkiln*gj(kj,l,jintsp)*ddnln )
-                smat%data_r(kj,ki)=smat%data_r(kj,ki)+REAL(cph(kj))*fct
-                hmat%data_r(kj,ki)=hmat%data_r(kj,ki) + REAL(cph(kj)) * &
+                smat%data_r(kj,kii)=smat%data_r(kj,kii)+REAL(cph(kj))*fct
+                hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + REAL(cph(kj)) * &
                      ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
                      ( fjkiln*gj(kj,l,jintsp) + gjkiln*fj(kj,l,jintsp) ) )
                 !+APW
                 IF (input%l_useapw) THEN
                    apw1 = REAL(cph(kj)) * plegend(kj,l)  * &
                         ( apw_lo1 * fj(kj,l,iintsp) + apw_lo2 * gj(kj,l,iintsp) )
-                   hmat%data_r(kj,ki)=hmat%data_r(kj,ki) + apw1
+                   hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + apw1
                 ENDIF
                 !-APW
              ENDDO
@@ -124,14 +125,14 @@ CONTAINS
                 fct  = chi*plegend(kj,l)*fl2p1(l)*&
                      ( fjkiln*fj(kj,l,jintsp) + gjkiln*gj(kj,l,jintsp)*ddnln )
 
-                smat%data_c(kj,ki)=smat%data_c(kj,ki) + cph(kj)*fct
-                hmat%data_c(kj,ki)=hmat%data_c(kj,ki) + cph(kj) * ( fct*elall &
+                smat%data_c(kj,kii)=smat%data_c(kj,kii) + cph(kj)*fct
+                hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + cph(kj) * ( fct*elall &
                      + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,jintsp) + gjkiln*fj(kj,l,jintsp) ) )
 
                 IF (input%l_useapw) THEN
                    capw1 = cph(kj)*plegend(kj,l)&
                         * ( apw_lo1 * fj(kj,l,iintsp) + apw_lo2 * gj(kj,l,iintsp) )
-                   hmat%data_c(kj,ki)=hmat%data_c(kj,ki) + capw1
+                   hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + capw1
                 ENDIF
              END DO
           ENDIF

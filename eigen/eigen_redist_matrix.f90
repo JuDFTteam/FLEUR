@@ -21,7 +21,7 @@ CONTAINS
     !determine final matrix size and allocate the final matrix
     m=lapw%nv(1)+atoms%nlotot
     IF (SIZE(mat)>1) m=m+lapw%nv(2)+atoms%nlotot
-    CALL mat_final%init(mat(1,1)%l_real,m,m)
+    CALL mat_final%init(mat(1,1)%l_real,m,m,mpi%sub_comm,.true.)
     
     !up-up component
     CALL mat_final%copy(mat(1,1),1,1)

@@ -107,23 +107,28 @@ CONTAINS
     CLASS(t_mpimat)             :: mat
     INTEGER,INTENT(IN),OPTIONAL :: matsize1,matsize2,mpi_subcom
     LOGICAL,INTENT(IN),OPTIONAL :: l_real,l_2d
-
+    
+    INTEGER::nb
+    nb=DEFAULT_BLOCKSIZE
     IF (.NOT.(PRESENT(matsize1).AND.PRESENT(matsize2).AND.PRESENT(mpi_subcom).AND.PRESENT(l_real).AND.PRESENT(l_2d)))&
          CALL judft_error("Optional arguments must be present in mpimat_init")
     mat%global_size1=matsize1
     mat%global_size2=matsize2
     mat%mpi_com=mpi_subcom
-    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,DEFAULT_BLOCKSIZE,&
+    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,nb,&
          mat%blacs_ctext,mat%blacs_desc,&
          mat%matsize1,mat%matsize2,&
          mat%npcol,mat%nprow)
+    print *,"mat:",mat%matsize1,mat%matsize2 
+    print *,"pe:",mat%npcol,mat%nprow 
     CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
   END SUBROUTINE mpimat_init
     
   SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nb,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom
-    INTEGER,INTENT(IN) :: m1,m2,nb
+    INTEGER,INTENT(IN) :: m1,m2
+    INTEGER,INTENT(INOUT)::nb
     LOGICAL,INTENT(IN) :: l_2d
     INTEGER,INTENT(OUT):: ictextblacs,sc_desc(:)
     INTEGER,INTENT(OUT):: local_size1,local_size2
@@ -158,6 +163,7 @@ CONTAINS
           ENDIF
        ENDDO distloop
     ELSE
+       nb=1
        npcol=np
        nprow=1
     ENDIF
@@ -218,6 +224,8 @@ CONTAINS
     !Create the descriptors
     CALL descinit(sc_desc,m1,m2,nb,nb,0,0,ictextblacs,myrowssca,ierr)
     IF (ierr /=0 ) call judft_error('Creation of BLACS descriptor failed')
+    local_size1=myrowssca
+    local_size2=mycolssca
 #endif
   END SUBROUTINE priv_create_blacsgrid
 END MODULE m_types_mpimat

@@ -29,7 +29,6 @@ CONTAINS
     IF (mpi%n_size==1) THEN
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
     ELSE
-       CALL judft_error("MPI not yet implemeted")
        !CALL priv_MPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
     ENDIF
 

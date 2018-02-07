@@ -35,7 +35,8 @@ CONTAINS
     USE m_types_mpimat
     USE m_types
     IMPLICIT NONE
-    CLASS(t_mat),INTENT(INOUT)    :: hmat,smat,ev
+    CLASS(t_mat),INTENT(INOUT)    :: hmat,smat
+    CLASS(t_mat),ALLOCATABLE,INTENT(OUT)::ev
     REAL,INTENT(out)              :: eig(:)
     INTEGER,INTENT(INOUT)         :: ne
     
@@ -55,8 +56,6 @@ CONTAINS
     INTEGER, ALLOCATABLE :: iwork(:),iusermap(:,:)
     INTEGER, ALLOCATABLE :: iblacsnums(:),ihelp(:)
     REAL,    ALLOCATABLE :: dwork(:)
-    REAL,    ALLOCATABLE :: eigvec_r(:,:)
-    COMPLEX, ALLOCATABLE :: eigvec_c(:,:)
     REAL,    ALLOCATABLE :: rwork(:)
     INTEGER              :: lrwork
 
@@ -81,8 +80,9 @@ CONTAINS
     TYPE IS (t_mpimat)
     SELECT TYPE(smat)
     TYPE IS (t_mpimat)
-    SELECT TYPE(ev)
-    TYPE IS (t_mpimat)
+
+    ALLOCATE(eig2(hmat%global_size1))
+
 
     CALL MPI_COMM_RANK(hmat%mpi_com,myid,ierr)
     CALL MPI_COMM_SIZE(hmat%mpi_com,np,ierr)
@@ -91,7 +91,7 @@ CONTAINS
     
     abstol=2.0*CPP_LAPACK_slamch('S') ! PDLAMCH gave an error on ZAMpano
 
-    CALL ev_dist%init(hmat%mpi_com,hmat%global_size1,hmat%global_size2,hmat%l_real,.TRUE.)
+    CALL ev_dist%init(hmat%l_real,hmat%global_size1,hmat%global_size2,hmat%mpi_com,.TRUE.)
 
     nb=hmat%blacs_desc(5)! Blocking factor
     IF (nb.NE.hmat%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
@@ -162,7 +162,7 @@ CONTAINS
        
        CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,&
             hmat%blacs_desc,smat%data_c,1,1, hmat%blacs_desc,&
-            0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
+            0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
             ev_dist%blacs_desc,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
             gap,ierr)
        IF (ABS(work2_c(1)).GT.lwork2) THEN
@@ -200,12 +200,12 @@ CONTAINS
     CALL timestart("SCALAPACK call")
     if (hmat%l_real) THEN
        CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacs_desc,smat%data_r,1,1, hmat%blacs_desc,&
-            1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_r,1,1,&
+            1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
             ev_dist%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
             gap,ierr)
     else
        CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,hmat%blacs_desc,smat%data_c,1,1, hmat%blacs_desc,&
-            1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,eigvec_c,1,1,&
+            1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
             ev_dist%blacs_desc,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
             ifail,iclustr,gap,ierr)
        DEALLOCATE(rwork)
@@ -231,11 +231,11 @@ CONTAINS
        ENDIF
        IF (MOD(ierr/8,2).NE.0) THEN
           !WRITE(6,*) myid,' PDSTEBZ failed to compute eigenvalues'
-          CALL judft_error("SCALAPACK failed to solve eigenvalue problem",calledby="scalapack.f90")
+          CALL judft_warn("SCALAPACK failed to solve eigenvalue problem",calledby="scalapack.f90")
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
           !WRITE(6,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
-          CALL judft_error("SCALAPACK failed: B was not positive definite",calledby="scalapack.f90")
+          CALL judft_warn("SCALAPACK failed: B was not positive definite",calledby="scalapack.f90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN
@@ -251,6 +251,7 @@ CONTAINS
     !     process i these are eigenvalues i+1, np+i+1, 2*np+i+1...
     !     Only num=num2/np eigenvalues per process
     !
+    PRINT *,"PE:",myid,num,num1,num2
     num=FLOOR(REAL(num2)/np)
     IF (myid.LT.num2-(num2/np)*np) num=num+1
     ne=0
@@ -263,15 +264,14 @@ CONTAINS
     !     Redistribute eigvec from ScaLAPACK distribution to each process
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
+    ALLOCATE(t_mpimat::ev)
+    CALL ev%init(ev_dist%l_real,ev_dist%global_size1,ev_dist%global_size1,ev_dist%mpi_com,.FALSE.)
     CALL ev%copy(ev_dist,1,1)
     CLASS DEFAULT
       call judft_error("Wrong type (1) in scalapack")
     END SELECT
     CLASS DEFAULT
       call judft_error("Wrong type (2) in scalapack")
-    END SELECT
-    CLASS DEFAULT
-      call judft_error("Wrong type (3) in scalapack")
     END SELECT
 #endif
   END SUBROUTINE scalapack
