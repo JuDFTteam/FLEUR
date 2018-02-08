@@ -2,6 +2,19 @@ MODULE m_hsmt
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
+  !> Setup of MT-part of the Hamiltonian and the overlap matrix
+  !!
+  !! Here the MT-components are added to the matrices.
+  !! 1. The spherical part in hsmt_sph()
+  !! 2. The non-spherical part in hsmt_nonsph()
+  !! 3. The lo-part in hsmt_lo()
+  !!
+  !! - In the case of a noco-calculation (but not spin-spiral), first a temporary matrix is set-up
+  !! for each atom in its local spin-frame and this matrix is the rotated into the global frame and added to the full matrix
+  !! - In the spin-spiral case, a loop over the global spin is performed and the four parts of the matrix are calculated one-by-one
+  !! @todo
+  !! The off-diagonal contribution in first-variation soc and constraint calculations is still missing
+  
   SUBROUTINE hsmt(atoms,sphhar,sym,enpara,&
        ispin,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
     USE m_hsmt_nonsph

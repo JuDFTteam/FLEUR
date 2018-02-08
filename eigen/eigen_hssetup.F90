@@ -6,6 +6,15 @@
 
 MODULE m_eigen_hssetup
 CONTAINS
+  !> The setup of the Hamiltonian and Overlap matrices are performed here
+  !!
+  !! The following steps are executed:
+  !! 1. The matrices are a allocated (in the noco-case these are 2x2-arrays of matrices)
+  !! 2. The Interstitial contribution is calculated (in hs_int())
+  !! 3. The MT-part is calculated (in hsmt() )
+  !! 4. The vacuum part is added (in hsvac())
+  !! 5. The matrices are copied to the final matrix, in the noco-case the full matrix is constructed from the 4-parts.
+  
   SUBROUTINE eigen_hssetup(isp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,jij,sym,&
        stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat_final,hmat_final)
     USE m_hs_int
@@ -82,45 +91,12 @@ CONTAINS
     ELSE
        ALLOCATE(t_mpimat::smat_final,hmat_final)
     ENDIF
-    
+    ! Collect the four noco parts into a single matrix
+    ! In collinear case only a copy is done
+    ! In the parallel case also a redistribution happens
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
     CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final)
     
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup
-
-#if 1==2
-IF (mpi%n_size==1) THEN
-       IF (.NOT.noco%l_noco) THEN
-          smat_final%matsize1=smat(1,1)%matsize1
-          smat_final%matsize2=smat(1,1)%matsize2
-          hmat_final%matsize1=smat(1,1)%matsize1
-          hmat_final%matsize2=smat(1,1)%matsize2
-          IF(l_real) THEN
-             CALL move_ALLOC(hmat(1,1)%data_r,hmat_final%data_r)
-             CALL move_ALLOC(smat(1,1)%data_r,smat_final%data_r)
-          ELSE
-             CALL move_ALLOC(hmat(1,1)%data_c,hmat_final%data_c)
-             CALL move_ALLOC(smat(1,1)%data_c,smat_final%data_c)
-          ENDIF
-       ELSE
-          CALL smat_final%alloc(.FALSE.,lapw%nv_tot+2*atoms%nlotot,lapw%nv_tot+2*atoms%nlotot)
-          CALL hmat_final%alloc(.FALSE.,lapw%nv_tot+2*atoms%nlotot,lapw%nv_tot+2*atoms%nlotot)
-          !up-up
-          smat_final%data_c(:lapw%nv(1)+atoms%nlotot,:lapw%nv(1)+atoms%nlotot)=smat(1,1)%data_c
-          hmat_final%data_c(:lapw%nv(1)+atoms%nlotot,:lapw%nv(1)+atoms%nlotot)=hmat(1,1)%data_c
-          !down-down
-          smat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,lapw%nv(1)+atoms%nlotot+1:)=smat(2,2)%data_c
-          hmat_final%data_c(lapw%nv(1)+atoms%nlotot+1:,lapw%nv(1)+atoms%nlotot+1:)=hmat(2,2)%data_c
-          !off-diag
-          DO i=1,smat(1,2)%matsize1 !First map U-part of smat&hmat(2,1) into smat(1,2)
-             DO j=i+1,smat(1,2)%matsize2
-                smat(2,1)%data_c(j,i)=CONJG(smat(1,2)%data_c(i,j))
-                hmat(2,1)%data_c(j,i)=CONJG(hmat(1,2)%data_c(i,j))
-             ENDDO
-          ENDDO
-          smat_final%data_c(:lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot+1:)=smat(2,1)%data_c
-          hmat_final%data_c(:lapw%nv(1)+atoms%nlotot,lapw%nv(1)+atoms%nlotot+1:)=hmat(2,1)%data_c
-       ENDIF
-#endif
        

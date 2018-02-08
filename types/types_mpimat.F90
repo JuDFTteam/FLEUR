@@ -19,11 +19,11 @@ MODULE m_types_mpimat
   
   
   TYPE,EXTENDS(t_mat):: t_mpimat
-     INTEGER:: mpi_com
-     INTEGER:: blacs_desc(dlen_)
-     INTEGER:: blacs_ctext
-     INTEGER:: global_size1,global_size2
-     INTEGER:: npcol,nprow
+     INTEGER:: mpi_com                          !> mpi-communiator over which matrix is distributed
+     INTEGER:: blacs_desc(dlen_)                !> blacs descriptor
+     INTEGER:: blacs_ctext                      !> blacs context
+     INTEGER:: global_size1,global_size2        !> this is the size of the full-matrix
+     INTEGER:: npcol,nprow                      !> the number of columns/rows in the processor grid
    CONTAINS
      PROCEDURE,PASS   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
      PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
@@ -101,7 +101,13 @@ CONTAINS
     CALL BLACS_GRIDEXIT(mat%blacs_ctext,ierr)
 #endif    
   END SUBROUTINE mpimat_free
-  
+
+  !>Initialization of the distributed matrix.
+  !!
+  !! The argument l_2d controls the kind of distribution used:
+  !!  - TRUE: the matrix is a Scalapack BLOCK-CYCLIC distribution
+  !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
+  !! as used in the parallel matrix setup of FLEUR
   SUBROUTINE mpimat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d)
     IMPLICIT NONE
     CLASS(t_mpimat)             :: mat

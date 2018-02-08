@@ -1,24 +1,31 @@
 MODULE m_types_mat
   USE m_judft
   IMPLICIT NONE
-    TYPE :: t_mat
-     LOGICAL :: l_real
-     INTEGER :: matsize1=-1
-     INTEGER :: matsize2=-1
+
+  !<This is the basic type to store and manipulate real/complex rank-2 matrices
+  !!
+  !! In its simple implementation here, it contains a fields for the matrix-size and
+  !! a real and complex array for the data
+  !! This data-type will be overwritten for distributed matrixes by t_mpimat as defined in types_mpimat.F90
+  
+   TYPE :: t_mat
+     LOGICAL :: l_real                     !>Store either real or complex data
+     INTEGER :: matsize1=-1                !> matsize1=size(data_?,1),i.e. no of rows
+     INTEGER :: matsize2=-1                !> matsize2=size(data_?,2),i.e. no of columns
      REAL,ALLOCATABLE    :: data_r(:,:)
      COMPLEX,ALLOCATABLE :: data_c(:,:)
    CONTAINS
-     PROCEDURE        :: alloc => t_mat_alloc
-     PROCEDURE        :: multiply=>t_mat_multiply
-     PROCEDURE        :: transpose=>t_mat_transpose
-     PROCEDURE        :: from_packed=>t_mat_from_packed
-     PROCEDURE        :: inverse =>t_mat_inverse
-     PROCEDURE        :: to_packed=>t_mat_to_packed
-     PROCEDURE        :: clear => t_mat_clear
-     PROCEDURE        :: copy => t_mat_copy
-     PROCEDURE        :: init => t_mat_init
-     PROCEDURE        :: free => t_mat_free
-     PROCEDURE        :: add_transpose => t_mat_add_transpose
+     PROCEDURE        :: alloc => t_mat_alloc                !> allocate the data-arrays
+     PROCEDURE        :: multiply=>t_mat_multiply            !> do a matrix-matrix multiply
+     PROCEDURE        :: transpose=>t_mat_transpose          !> transpose the matrix
+     PROCEDURE        :: from_packed=>t_mat_from_packed      !> initialized from a packed-storage matrix
+     PROCEDURE        :: inverse =>t_mat_inverse             !> invert the matrix
+     PROCEDURE        :: to_packed=>t_mat_to_packed          !> convert to packed-storage matrix
+     PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
+     PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
+     PROCEDURE        :: init => t_mat_init                  !> initalize the matrix(overloaded for t_mpimat)
+     PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
+     PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
    END type t_mat
    
  CONTAINS
