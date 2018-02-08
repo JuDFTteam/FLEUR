@@ -45,6 +45,7 @@ MODULE m_types
      REAL :: z
      COMPLEX :: p,m
   END TYPE t_orblo
+
   TYPE t_lapw
      INTEGER :: nv(2)
      INTEGER :: nv_tot
