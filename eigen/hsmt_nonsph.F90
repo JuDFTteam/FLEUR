@@ -94,6 +94,7 @@ CONTAINS
           ENDIF
        ENDIF
     END DO
+    
     IF (hmat%l_real) THEN
        hmat%data_r=hmat%data_r+REAL(hmat%data_c)
     ENDIF
@@ -125,7 +126,7 @@ CONTAINS
     CLASS(t_mat),INTENT(INOUT)::hmat
 
     
-    INTEGER:: nn,na,ab_size,l,ll,m
+    INTEGER:: nn,na,ab_size,l,ll,m,i,ii
     COMPLEX,ALLOCATABLE:: ab(:,:),ab1(:,:),ab_select1(:,:),ab_select(:,:)
     real :: rchi
 
@@ -153,17 +154,23 @@ CONTAINS
           IF (iintsp==jintsp) THEN
              !Cut out of ab1 only the needed elements here
              ab_select=ab1(mpi%n_rank+1:lapw%nv(iintsp):mpi%n_size,:)
-             CALL zgemm("N","C",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,CMPLX(1.0,0.0),ab1,SIZE(ab1,1),ab_select,lapw%num_local_cols(jintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+             CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,CMPLX(1.0,0.0),CONJG(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(jintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
           ELSE
              !Second set of ab is needed
              CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
              ab_select1=ab(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
              CALL zgemm("N","N",lapw%num_local_cols(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_select1,SIZE(ab_select1,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab_select,SIZE(ab_select,1))
              !Multiply for Hamiltonian
-             CALL zgemm("N","C",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,CMPLX(1.0,0.0),ab1,SIZE(ab1,1),ab_select,SIZE(ab_select,1)*mpi%n_size,CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
+             CALL zgemm("N","t",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,CMPLX(1.0,0.0),CONJG(ab1),SIZE(ab1,1),ab_select,SIZE(ab_select,1)*mpi%n_size,CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
           ENDIF
        ENDIF
     END DO
+    !delete lower part of matrix
+    !i=0
+    !DO ii=mpi%n_rank+1,lapw%nv(iintsp),mpi%n_size
+    !   i=i+1
+    !   hmat%data_c(ii+1:,i)=0.0
+    !ENDDO
     IF (hmat%l_real) THEN
        hmat%data_r=hmat%data_r+REAL(hmat%data_c)
     ENDIF
