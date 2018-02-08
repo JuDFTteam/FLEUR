@@ -39,7 +39,7 @@ CONTAINS
     REAL, INTENT (IN) :: alo1(:),blo1(:),clo1(:)
     REAL,INTENT(IN)      :: fj(:,0:,:),gj(:,0:,:)
 
-    TYPE(t_mat),INTENT (INOUT) :: hmat
+    CLASS(t_mat),INTENT (INOUT) :: hmat
     !     ..
     !     .. Local Scalars ..
     COMPLEX axx,bxx,cxx,dtd,dtu,dtulo,ulotd,ulotu,ulotulo,utd,utu, utulo

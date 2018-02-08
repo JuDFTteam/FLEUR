@@ -340,8 +340,13 @@ CONTAINS
     lapw%k2=lapw%gvec(2,:,:)
     lapw%k3=lapw%gvec(3,:,:)
 
-    lapw%num_local_cols=lapw%nv+atoms%nlotot
-    !TODO needs to be adjusted in MPI case
+    !Count No of lapw distributed to this PE
+    lapw%num_local_cols=0
+    DO ispin=1,input%jspins
+       DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
+          lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
+       ENDDO
+    ENDDO
 
     IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
 

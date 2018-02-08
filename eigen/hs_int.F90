@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)        :: mpi
     INTEGER,INTENT(IN)            :: isp
     COMPLEX,INTENT(IN)            :: vpw(:,:)
-    TYPE(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
+    CLASS(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
 
 
     INTEGER :: ispin,jspin,vpw_spin !spin indices

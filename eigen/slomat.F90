@@ -43,7 +43,7 @@ CONTAINS
     REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
     REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     TYPE(t_usdus),INTENT(IN)  :: ud
-    TYPE(t_mat),INTENT(INOUT) :: smat
+    CLASS(t_mat),INTENT(INOUT) :: smat
     
     !     ..
     !     .. Local Scalars ..

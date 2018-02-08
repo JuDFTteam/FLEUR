@@ -49,7 +49,7 @@ CONTAINS
 
        CALL pdgeadd('t',mat1%global_size1,mat1%global_size2,1.0,mat1%data_r,1,1,mat1%blacs_desc,1.0,mat%data_r,1,1,mat%blacs_desc)
     ELSE
-       CALL pzgeadd('t',mat1%global_size1,mat1%global_size2,CMPLX(1.0,0.0),mat1%data_c,1,1,mat1%blacs_desc,CMPLX(1.0,0.0),mat%data_c,1,1,mat%blacs_desc)
+       CALL pzgeadd('c',mat1%global_size1,mat1%global_size2,CMPLX(1.0,0.0),mat1%data_c,1,1,mat1%blacs_desc,CMPLX(1.0,0.0),mat%data_c,1,1,mat1%blacs_desc)
 #endif
     END IF
     !Now multiply the diagonal of the matrix by 1/2
@@ -81,9 +81,9 @@ CONTAINS
     SELECT TYPE(mat1)
     TYPE IS(t_mpimat)
        IF (mat%l_real) THEN
-          CALL pdgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
+          CALL pdgemr2d(mat1%global_size1,mat1%global_size2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
        ELSE
-          CALL pzgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
+          CALL pzgemr2d(mat1%global_size1,mat1%global_size2,mat1%data_c,1,1,mat1%blacs_desc,mat%data_c,n1,n2,mat%blacs_desc,mat%blacs_ctext)
        END IF
     CLASS DEFAULT
        CALL judft_error("Wrong datatype in copy")
@@ -125,8 +125,6 @@ CONTAINS
          mat%blacs_ctext,mat%blacs_desc,&
          mat%matsize1,mat%matsize2,&
          mat%npcol,mat%nprow)
-    print *,"mat:",mat%matsize1,mat%matsize2 
-    print *,"pe:",mat%npcol,mat%nprow 
     CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
   END SUBROUTINE mpimat_init
     
@@ -197,7 +195,6 @@ CONTAINS
     iblacsnums=-2
     ihelp=-2
     ihelp(myid+1)=iamblacs ! Get the Blacs id corresponding to the MPI id
-    !print *,"ALLREDUCE:",mpi_subcom
     CALL MPI_ALLREDUCE(ihelp, iblacsnums, np,MPI_INTEGER,MPI_MAX,mpi_subcom,ierr)
     IF (ierr.NE.0) STOP 'Error in allreduce for BLACS nums' 
 
