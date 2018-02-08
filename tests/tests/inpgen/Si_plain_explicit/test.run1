@@ -2,7 +2,7 @@
 
 jt::copyfile("files/inp_Si_plain",$workdir);
 
-jt::testrun("$executable -explicit < inp_Si_plain &>outshell ; cat outshell",$workdir);
+jt::testrun("$executable -explicit < inp_Si_plain 2>&1 >outshell ; cat outshell",$workdir);
 
 # test for errors and warnings
 $result=jt::test_grep_error("$workdir/outshell");
