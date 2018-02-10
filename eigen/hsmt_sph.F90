@@ -46,7 +46,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: cph(:)
     LOGICAL apw(0:atoms%lmaxd)
 
-
+    CALL timestart("spherical setup")
 
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
@@ -145,7 +145,7 @@ CONTAINS
     DEALLOCATE(plegend)
     DEALLOCATE(cph)
     !$OMP END PARALLEL
-
+    CALL timestop("spherical setup")
 
     RETURN
   END SUBROUTINE hsmt_sph

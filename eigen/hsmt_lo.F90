@@ -40,7 +40,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
-
+    CALL timestart("LO setup")
+       
     na = sum(atoms%neq(:n-1))
     DO nn = 1,atoms%neq(n)
        na = na + 1
@@ -66,6 +67,8 @@ CONTAINS
     END IF
     !--->    end loop over equivalent atoms
  END DO
+ CALL timestop("LO setup")
+   
  RETURN
 END SUBROUTINE hsmt_lo
 END MODULE m_hsmt_lo

@@ -25,13 +25,13 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,INTENT(IN)               :: fj(:,0:,:),gj(:,0:,:)
     CLASS(t_mat),INTENT(INOUT)     ::hmat
-
+    CALL timestart("non-spherical setup")
     IF (mpi%n_size==1) THEN
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
     ELSE
        CALL priv_MPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
     ENDIF
-
+    CALL timestop("non-spherical setup")
   END SUBROUTINE hsmt_nonsph
 
   SUBROUTINE priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)

@@ -8,8 +8,8 @@ MODULE m_tlmplm_cholesky
   !     and does a cholesky decomposition
   !*********************************************************************
   CONTAINS
-    SUBROUTINE tlmplm_cholesky(sphhar,atoms,dimension,enpara,&
-         jspin,jsp,mpi, vr,input, td,ud)
+    SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
+         jspin,jsp,mpi,vr,input, vs_mmp,td,ud)
 
       USE m_intgr, ONLY : intgr3
       USE m_radflo
@@ -17,9 +17,11 @@ MODULE m_tlmplm_cholesky
       USE m_tlo
       USE m_gaunt, ONLY: gaunt1,gaunt2
       USE m_types
+      USE m_radovlp
+      USE m_hsmt_socinit
       IMPLICIT NONE
       TYPE(t_mpi),INTENT(IN)      :: mpi
-      TYPE(t_dimension),INTENT(IN):: dimension
+      TYPE(t_noco),INTENT(IN)     :: noco
       TYPE(t_input),INTENT(IN)    :: input
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
       TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -29,8 +31,8 @@ MODULE m_tlmplm_cholesky
       INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
       !     ..
       !     .. Array Arguments ..
-      
-      REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)   ! this is for the
+      COMPLEX,INTENT(IN)          :: vs_mmp(:,:,:,:)
+      REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)   ! this is for the
       TYPE(t_tlmplm),INTENT(INOUT) :: td
       TYPE(t_usdus),INTENT(INOUT)  :: ud
       
@@ -40,7 +42,7 @@ MODULE m_tlmplm_cholesky
       COMPLEX,PARAMETER::ci=cmplx(0.,1.)
       REAL temp,wronk
       INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
-      INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,noded,nodeu ,na,m,nsym,s
+      INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,noded,nodeu ,na,m,nsym,s,i_u
       LOGICAL l_write,ok
       !     ..
       !     .. Local Arrays ..
@@ -53,18 +55,35 @@ MODULE m_tlmplm_cholesky
       REAL flo(atoms%jmtd,2,atoms%nlod)
       REAL uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
-      INTEGER:: indt(0:dimension%lmplmd)
+      INTEGER:: indt(0:SIZE(td%tuu,1)-1)
 
-    REAL,PARAMETER:: e_shift_min=0.2
-    REAL,PARAMETER:: e_shift_max=65.0
+      !for first variation soc and constraint
+      TYPE(t_rsoc):: rsoc
+      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
+      COMPLEX :: c
+      
+      REAL,PARAMETER:: e_shift_min=0.2
+      REAL,PARAMETER:: e_shift_max=65.0
     
-    vr0=vr
+    vr0=vr(:,:,:,jsp)
     vr0(:,0,:)=0.0
     !     ..e_shift
     td%e_shift(jsp)=e_shift_min
-    OK=.false.
+    OK=.FALSE.
+
+    IF (noco%l_noco.AND.noco%l_soc) THEN
+       CALL hsmt_socinit(mpi,atoms,sphhar,enpara,input,vr,noco,ud,rsoc)
+    ENDIF
+
+     IF (noco%l_constr) THEN
+       ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
+            dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
+       CALL rad_ovlp(atoms,ud,input,vr,enpara%el0, uun21,udn21,dun21,ddn21)
+    ENDIF
+    
     cholesky_loop:DO WHILE(.NOT.OK)
        td%h_loc(:,:,:,jsp)=0.0
+       td%h_off=0.0
        OK=.true.
        td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
        td%tuulo(:,:,:,jsp) = cmplx(0.0,0.0)
@@ -81,13 +100,13 @@ MODULE m_tlmplm_cholesky
 !!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
 !!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
 !!$OMP PRIVATE(nodeu,nsym,na)&
-!!$OMP SHARED(dimension,atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
+!!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
        DO  n = 1,atoms%ntype
           na=sum(atoms%neq(:n-1))+1
           
           IF (l_write) WRITE (6,FMT=8000) n
           DO l = 0,atoms%lmax(n)
-             CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,0,n),atoms,&
+             CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,0,n,jsp),atoms,&
                   f(1,1,l),g(1,1,l),ud,nodeu,noded,wronk)
              IF (l_write) WRITE (6,FMT=8010) l,enpara%el0(l,n,jspin),ud%us(l,n,jspin),&
                   ud%dus(l,n,jspin),nodeu,ud%uds(l,n,jspin),ud%duds(l,n,jspin),noded,ud%ddn(l,n,jspin),wronk
@@ -103,7 +122,7 @@ MODULE m_tlmplm_cholesky
           !--->   if there are any.
           !
           IF (atoms%nlo(n).GE.1) THEN
-             CALL radflo(atoms,n,jspin,enpara%ello0(1,1,jspin), vr(:,0,n), f,g,mpi,&
+             CALL radflo(atoms,n,jspin,enpara%ello0(1,1,jspin), vr(:,0,n,jsp), f,g,mpi,&
                   ud, uuilon,duilon,ulouilopn,flo)
           END IF
           
@@ -253,7 +272,34 @@ MODULE m_tlmplm_cholesky
              END DO
           ENDDO
 
-
+          !If we do noco&soc we add SOC here
+          IF (noco%l_noco.AND.noco%l_soc) THEN
+             DO l = 0,atoms%lnonsph(n)
+                DO  m = -l,l
+                   lm = l* (l+1) + m
+                   td%h_loc(lm  ,lm  ,n,jsp)     =td%h_loc(lm  ,lm  ,n,jsp) + rsoc%rsopp(n,l,jsp,jsp)
+                   td%h_loc(lm  ,lm+s,n,jsp)     =td%h_loc(lm  ,lm+s,n,jsp) + rsoc%rsopdp(n,l,jsp,jsp)
+                   td%h_loc(lm+s,lm  ,n,jsp)     =td%h_loc(lm+s,lm  ,n,jsp) + rsoc%rsoppd(n,l,jsp,jsp)
+                   td%h_loc(lm+s,lm+s,n,jsp)     =td%h_loc(lm+s,lm+s,n,jsp) + rsoc%rsopdpd(n,l,jsp,jsp)
+                ENDDO
+             ENDDO
+          END IF
+          
+          !Include contribution from LDA+U
+          DO i_u=1,SIZE(atoms%lda_u)
+             IF (n.NE.atoms%lda_u(i_u)%atomtype) CYCLE
+             !Found a "U" for this atom type
+             l=atoms%lda_u(i_u)%l
+             lp=atoms%lda_u(i_u)%l
+             DO m = -l,l
+                lm = l* (l+1) + m
+                DO mp = -lp,lp
+                   lmp = lp* (lp+1) + mp
+                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + vs_mmp(l,lp,i_u,jsp)
+                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ vs_mmp(l,lp,i_u,jsp)*ud%ddn(lp,n,jsp)
+                ENDDO
+             ENDDO
+          END DO
           !Now add diagonal contribution to matrices
           DO l = 0,atoms%lmax(n)
              DO  m = -l,l
@@ -302,14 +348,61 @@ MODULE m_tlmplm_cholesky
           !--->   set up the t-matrices for the local orbitals,
           !--->   if there are any
           IF (atoms%nlo(n).GE.1) THEN
-             CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,vr(1,0,n),&
+             CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,vr(1,0,n,jsp),&
                   na,flo,f,g,ud, uuilon,duilon,ulouilopn, td)
              
           ENDIF
+
+          !If we do first variation soc or a constraint calculation, we have to calculate the
+          !local spin off-diagonal contributions
+
+          !first ispin=2,jspin=1 case
+          IF (noco%l_noco.AND.noco%l_soc) THEN
+             DO l = 0,atoms%lnonsph(n)
+                td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + rsoc%rsopp(n,l,2,1)
+                td%h_loc(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + rsoc%rsopdp(n,l,2,1)
+                td%h_loc(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + rsoc%rsoppd(n,l,2,1)
+                td%h_loc(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + rsoc%rsopdpd(n,l,2,1)
+             ENDDO
+          END IF
+          IF (noco%l_constr) THEN
+             DO l=0,atoms%lnonsph(n)
+                c=(-0.5)*CMPLX(noco%b_con(1,n),noco%b_con(2,n))
+                td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + uun21(l,n)*c
+                td%h_loc(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + udn21(l,n)*c
+                td%h_loc(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + dun21(l,n)*c
+                td%h_loc(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + ddn21(l,n)*c
+             ENDDO
+          ENDIF
+          
+          
+          !first ispin=2,jspin=1 case
+          IF (noco%l_noco.AND.noco%l_soc) THEN
+             DO l = 0,atoms%lnonsph(n)
+                td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + rsoc%rsopp(n,l,1,2)
+                td%h_loc(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + rsoc%rsopdp(n,l,1,2)
+                td%h_loc(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + rsoc%rsoppd(n,l,1,2)
+                td%h_loc(l+s,l+s,n,2)     =td%h_off(l+s,l+s,n,2) + rsoc%rsopdpd(n,l,1,2)
+             ENDDO
+          END IF
+          IF (noco%l_constr) THEN
+             DO l=0,atoms%lnonsph(n)
+                c=(-0.5)*CMPLX(noco%b_con(1,n),-noco%b_con(2,n))
+                td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + uun21(l,n)*c
+                td%h_loc(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + udn21(l,n)*c
+                td%h_loc(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + dun21(l,n)*c
+                td%h_loc(l+s,l+s,n,2)     =td%h_off(l+s,l+s,n,2) + ddn21(l,n)*c
+             ENDDO
+          ENDIF
+          
           
        ENDDO
 !!$OMP END PARALLEL DO
     ENDDO cholesky_loop
   END SUBROUTINE tlmplm_cholesky
 
+
+   
+  
+  
 END MODULE m_tlmplm_cholesky

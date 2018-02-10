@@ -74,7 +74,7 @@ CONTAINS
     CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms
     DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-       CALL hsmt(atoms,sphhar,sym,enpara,ispin,input,mpi,noco,cell,lapw,ud,td,smat,hmat)
+       CALL hsmt(atoms,sym,enpara,ispin,input,mpi,noco,cell,lapw,ud,td,smat,hmat)
     ENDDO
     CALL timestop("MT part")
    

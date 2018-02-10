@@ -15,7 +15,7 @@ CONTAINS
   !! @todo
   !! The off-diagonal contribution in first-variation soc and constraint calculations is still missing
   
-  SUBROUTINE hsmt(atoms,sphhar,sym,enpara,&
+  SUBROUTINE hsmt(atoms,sym,enpara,&
        ispin,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
     USE m_hsmt_nonsph
     USE m_hsmt_sph
@@ -30,7 +30,6 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
-    TYPE(t_sphhar),INTENT(IN)     :: sphhar
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_enpara),INTENT(IN)     :: enpara
     TYPE(t_lapw),INTENT(IN)       :: lapw 
@@ -44,14 +43,12 @@ CONTAINS
     !locals
     REAL, ALLOCATABLE    :: fj(:,:,:),gj(:,:,:)
 
-    INTEGER :: iintsp,jintsp,n,i,ii
-    LOGICAL :: l_socfirst
+    INTEGER :: iintsp,jintsp,n
     COMPLEX :: chi(2,2),chi0(2,2),chi_one
 
     TYPE(t_mat)::smat_tmp,hmat_tmp
 
     !
-    l_socfirst= noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)
     IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
        CALL smat_tmp%alloc(smat(1,1)%l_real,smat(1,1)%matsize1,smat(1,1)%matsize2)
        CALL hmat_tmp%alloc(smat(1,1)%l_real,smat(1,1)%matsize1,smat(1,1)%matsize2)
@@ -66,23 +63,31 @@ CONTAINS
           CALL hsmt_fjgj(input,atoms,cell,lapw,noco,usdus,n,ispin,fj,gj)
           CALL timestop("fjgj coefficients")
           IF (.NOT.noco%l_noco) THEN
-             CALL timestart("spherical setup")
+             !This is for collinear calculations: the (1,1) element of the matrices is all
+             !that is needed and allocated
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,&
                   enpara%el0,td%e_shift,usdus,fj,gj,smat(1,1),hmat(1,1))
-             CALL timestop("spherical setup")
-             CALL timestart("non-spherical setup")
+             
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat(1,1))
-             CALL timestop("non-spherical setup")
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat(1,1),smat(1,1))
           ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
-             CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
+             !The NOCO but non-spinspiral setup follows:
+             !The Matrix-elements are first calculated in the local frame of the atom and
+             !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
+             !global spin-matrices.
              CALL hmat_tmp%clear();CALL smat_tmp%clear()
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat_tmp,hmat_tmp)
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat_tmp)
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
+             CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
-          ELSE !l_ss
+             !Add off-diagonal contributions to Hamiltonian if needed
+             IF (noco%l_constr.OR.noco%l_soc) CALL judft_error("NOT IMPLEMNTED")
+                  !CALL hsmt_offdiag(n,atoms,mpi,ispin,input,noco,cell,chi,lapw,enpara%el0,td,usdus,fj,gj,hmat)
+          ELSE
+             !In the spin-spiral case the loop over the interstitial=global spin has to
+             !be performed explicitely
              CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
              DO iintsp=1,2
                 DO jintsp=1,2
@@ -91,10 +96,7 @@ CONTAINS
                 ENDDO
              ENDDO
           ENDIF
-          IF (noco%l_constr.OR.l_socfirst) THEN
-             stop "offdiag"
-             !CALL hsmt_offdiag()
-          ENDIF
+          
     END DO
 
     

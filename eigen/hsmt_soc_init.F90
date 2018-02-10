@@ -16,7 +16,7 @@ MODULE m_hsmt_socinit
 
 CONTAINS
   SUBROUTINE hsmt_socinit(mpi,atoms,sphhar,enpara,input,vr,noco,& !in
-       rsoc,usdus,isigma) !out
+       usdus,rsoc) !out
     !Initialized the radial-spin-orbit elements in rsoc and the pauli matrix
     !needed in hssphn for first variation SOC
     USE m_soinit
@@ -35,8 +35,7 @@ CONTAINS
     REAL,    INTENT (IN) :: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
     TYPE(t_usdus),INTENT(INOUT):: usdus
     TYPE(t_rsoc),INTENT(OUT) :: rsoc
-    COMPLEX, INTENT (OUT)    :: isigma(2,2,3)
-
+    
     !     ..
     !     .. Local Scalars ..
     INTEGER l,n
@@ -54,15 +53,7 @@ CONTAINS
     ALLOCATE(rsoc%rsopdplo(atoms%ntype,atoms%nlod,2,2),rsoc%rsopplo (atoms%ntype,atoms%nlod,2,2))
     ALLOCATE(rsoc%rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2))
 
-    !     isigma= -i * sigma, where sigma is Pauli matrix
-    isigma=CMPLX(0.0,0.0)
-    isigma(1,2,1)=CMPLX(0.0,-1.0)
-    isigma(2,1,1)=CMPLX(0.0,-1.0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)
-    isigma(2,1,2)=CMPLX(1.0,0.0)
-    isigma(1,1,3)=CMPLX(0.0,-1.0)
-    isigma(2,2,3)=CMPLX(0.0,1.0)
-
+  
     CALL soinit(atoms,input,enpara,vr,noco%soc_opt(atoms%ntype+2),&
          rsoc%rsopp,rsoc%rsoppd,rsoc%rsopdp,rsoc%rsopdpd,usdus,&
          rsoc%rsoplop,rsoc%rsoplopd,rsoc%rsopdplo,rsoc%rsopplo,rsoc%rsoploplop)

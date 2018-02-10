@@ -39,11 +39,13 @@ CONTAINS
     ENDIF
 
     CALL timestart("tlmplm")
-    CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,input%jspins)
+    CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&
+         DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,input%jspins,&
+         (noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr)!l_offdiag
 
     DO jsp=1,input%jspins
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,v%mt(:,0,1,jsp),input,vs_mmp, td,ud)
-       CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,jsp,mpi,v%mt(:,0,1,jsp),input, td,ud)
+       CALL tlmplm_cholesky(sphhar,atoms,noco,enpara, jsp,jsp,mpi,v%mt,input,vs_mmp, td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vs_mmp,atoms%n_u>0,1,jsp,input%jspins)
     END DO
     CALL timestop("tlmplm")
