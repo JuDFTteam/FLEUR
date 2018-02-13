@@ -51,7 +51,7 @@ CONTAINS
     ALLOCATE(td%h_loc(0:2*lmaxd*(lmaxd+2)+1,0:2*lmaxd*(lmaxd+2)+1,ntype,jspins))
     ALLOCATE(td%e_shift(jspins))
     IF (l_offdiag) THEN
-       ALLOCATE(td%h_off(0:lmaxd,0:lmaxd,ntype,2))
+       ALLOCATE(td%h_off(0:2*lmaxd+1,0:2*lmaxd+1,ntype,2))
     ELSE
        ALLOCATE(td%h_off(1,1,1,1))
     END IF

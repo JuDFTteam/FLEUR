@@ -8,46 +8,48 @@ MODULE m_hsmt_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_offdiag(n,atoms,mpi,isp,input,noco,cell,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+  SUBROUTINE hsmt_offdiag(n,atoms,mpi,isp,noco,lapw,td,usdus,fj,gj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
+    USE m_hsmt_spinor
     IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_noco),INTENT(IN)       :: noco
-    TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
-    CLASS(t_mat),INTENT(INOUT)     :: smat,hmat
+    TYPE(t_tlmplm),INTENT(IN)     :: td
+    CLASS(t_mat),INTENT(INOUT)    :: hmat(2,2)
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
-    COMPLEX, INTENT(IN)  :: chi
+    INTEGER, INTENT (IN) :: n,isp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    REAL,    INTENT (IN) :: e_shift(input%jspins)
     REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
-    REAL tnn(3), elall,fct,fjkiln,gjkiln,ddnln,ski(3)
-    REAL apw_lo1,apw_lo2,apw1,w1
-
-    COMPLEX capw1
-    INTEGER kii,ki,kj,l,nn
-
+    REAL tnn(3),ski(3)
+    INTEGER kii,ki,kj,l,nn,iintsp,jintsp,s
+    COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
     REAL fl2p1bt(0:atoms%lmaxd)
     REAL qssbti(3),qssbtj(3)
+    COMPLEX:: chi0(2,2),chi(2,2)
     REAL, ALLOCATABLE :: plegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
-    LOGICAL apw(0:atoms%lmaxd)
 
     CALL timestart("offdiagonal setup")
 
+    CALL hsmt_spinor(isp,n,noco,chi0,chi)
+
+    IF (isp==1) THEN
+       iintsp=2;jintsp=1
+    ELSE
+       iintsp=1;jintsp=2
+    ENDIF
+    
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
@@ -56,9 +58,8 @@ CONTAINS
     END DO
     !$OMP PARALLEL DEFAULT(SHARED)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
-    !$OMP PRIVATE(cph,nn,tnn,fjkiln,gjkiln)&
-    !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,apw1)&
-    !$OMP PRIVATE(capw1) 
+    !$OMP PRIVATE(cph,nn,tnn)&
+    !$OMP PRIVATE(fct,s)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     plegend=0.0
@@ -90,17 +91,16 @@ CONTAINS
        !--->          update overlap and l-diagonal hamiltonian matrix
        s=atoms%lnonsph(n)+1
        DO  l = 0,atoms%lnonsph(n)
-          ddnln =  usdus%ddn(l,n,isp)
           DO kj = 1,ki
              fct  =cph(kj) * plegend(kj,l)*fl2p1(l)*(&
                   fj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l,l,n,isp) + &
                   fj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l,l+s,n,isp) + &
                   gj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l+s,l,n,isp) + &
-                  gj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l+s,l+s,n,isp)*ddnln)
-             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_r(kj,kii) + chi(1,1)*fct 
-             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_r(kj,kii) + chi(1,2)*fct 
-             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_r(kj,kii) + chi(2,1)*fct 
-             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_r(kj,kii) + chi(2,2)*fct 
+                  gj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l+s,l+s,n,isp)* usdus%ddn(l,n,isp))
+             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1)*fct 
+             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2)*fct 
+             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1)*fct 
+             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2)*fct 
           ENDDO
           !--->          end loop over l
        ENDDO

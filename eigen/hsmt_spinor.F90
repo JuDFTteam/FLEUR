@@ -5,34 +5,23 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_hsmt_spinor
-#include "juDFT_env.h"
   IMPLICIT NONE
 CONTAINS
 
   !The spinors are calculated both in hssphn_sph & hssphn_nonsph, hence this is a
   !common subroutine
-  SUBROUTINE hsmt_spinor(isp,n, noco,input,chi, chi_mat,l_socfirst,&
-       isigma,isigma_x,isigma_y,isigma_z,chi11so,chi21so,chi22so,angso,chj,cross_k)
+  SUBROUTINE hsmt_spinor(isp,n,noco,chi_mat,chi_so)
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_noco),INTENT(IN)    :: noco
-    INTEGER,INTENT(IN)  :: isp, n
-
-    COMPLEX,INTENT(OUT) :: chi(2,2)
-    COMPLEX,INTENT(OUT) :: chi_mat(2,2)
-
-    LOGICAL,INTENT(IN),OPTIONAL:: l_socfirst
-    COMPLEX,INTENT(IN),OPTIONAL:: isigma(:,:,:)
-    REAL,INTENT(IN),OPTIONAL,ALLOCATABLE   :: cross_k(:,:)
-    COMPLEX,INTENT(OUT),OPTIONAL:: chj(:,:,:,:)
-    COMPLEX,INTENT(OUT),OPTIONAL :: isigma_x(:,:),isigma_y(:,:),isigma_z(:,:)
-    COMPLEX,INTENT(OUT),OPTIONAL :: chi11so(:,:),chi21so(:,:),chi22so(:,:)
-    COMPLEX,INTENT(OUT),OPTIONAL :: angso(:,:,:)
-
-    INTEGER           :: nsp,j1,j2,kj
-    COMPLEX,PARAMETER :: ci=cmplx(0.0,1.0)
+    TYPE(t_noco),INTENT(IN)      :: noco
+    INTEGER,INTENT(IN)           :: isp, n
+    COMPLEX,INTENT(OUT)          :: chi_mat(2,2)
+    COMPLEX,INTENT(OUT),OPTIONAL :: chi_so(2,2)
+   
+    INTEGER           :: isp1,isp2
+    COMPLEX,PARAMETER :: ci=CMPLX(0.0,1.0)
+    COMPLEX           :: chi(2,2)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
@@ -47,29 +36,19 @@ CONTAINS
     chi_mat(2,2) = chi(2,isp)*CONJG(chi(2,isp))
     chi_mat(1,2) = chi(1,isp)*CONJG(chi(2,isp))
 
-    IF (.NOT.present(chj)) RETURN
-    IF (noco%l_constr) THEN
-       nsp = 3 - isp
-       chj(isp,1,1,n) = chi(1,nsp)*conjg(chi(1,isp))
-       chj(isp,2,1,n) = chi(2,nsp)*conjg(chi(1,isp))
-       chj(isp,2,2,n) = chi(2,nsp)*conjg(chi(2,isp))
-    ENDIF
-    IF ((isp.EQ.2).AND.l_socfirst) THEN
-       isigma_x=MATMUL(conjg(TRANSPOSE(chi)), MATMUL(isigma(:,:,1),chi))
-       isigma_y=MATMUL(conjg(TRANSPOSE(chi)), MATMUL(isigma(:,:,2),chi))
-       isigma_z=MATMUL(conjg(TRANSPOSE(chi)), MATMUL(isigma(:,:,3),chi))
-       DO j1=1,input%jspins
-          DO j2=1,input%jspins
-             chi11so(j1,j2)=chi(1,j1)*conjg(chi(1,j2))
-             chi21so(j1,j2)=chi(2,j1)*conjg(chi(1,j2))
-             chi22so(j1,j2)=chi(2,j1)*conjg(chi(2,j2))
-             DO kj = 1,size(angso,1)
-                angso(kj,j1,j2)= isigma_x(j1,j2)*cross_k(kj,1)+&
-                     isigma_y(j1,j2)*cross_k(kj,2)+ isigma_z(j1,j2)*cross_k(kj,3)
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDIF
+    IF (.not.PRESENT(chi_so)) RETURN
+    !In the first variation SOC case the off-diagonal spinors are needed
+    IF (isp==1) THEN
+       isp1=2;isp2=1
+    ELSE
+       isp1=1;isp2=2
+    END IF
+
+    chi_so(1,1) = chi(1,isp1)*CONJG(chi(1,isp2))
+    chi_so(2,1) = chi(2,isp1)*CONJG(chi(1,isp2))
+    chi_so(2,2) = chi(2,isp1)*CONJG(chi(2,isp2))
+    chi_so(1,2) = chi(1,isp1)*CONJG(chi(2,isp2))
+
   END SUBROUTINE hsmt_spinor
 
 

@@ -71,7 +71,7 @@ MODULE m_tlmplm_cholesky
     td%e_shift(jsp)=e_shift_min
     OK=.FALSE.
 
-    IF (noco%l_noco.AND.noco%l_soc) THEN
+    IF (noco%l_noco.AND.noco%l_soc.and..not.noco%l_ss) THEN
        CALL hsmt_socinit(mpi,atoms,sphhar,enpara,input,vr,noco,ud,rsoc)
     ENDIF
 
@@ -179,7 +179,6 @@ MODULE m_tlmplm_cholesky
           td%tud(0:,n,jsp) = cmplx(0.0,0.0)
           td%tdu(0:,n,jsp) = cmplx(0.0,0.0)
           indt=0
-          s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
           !--->    generate the various t(l'm',lm) matrices for l'm'.ge.lm
           !--->    loop over l'm'
           DO lp = 0,atoms%lmax(n)
@@ -244,7 +243,8 @@ MODULE m_tlmplm_cholesky
                 END DO
              END DO
           ENDDO
-          
+
+          s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
           !Setup local hamiltonian
           DO lmp=0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
              lp=FLOOR(SQRT(1.0*lmp))
@@ -273,8 +273,8 @@ MODULE m_tlmplm_cholesky
           ENDDO
 
           !If we do noco&soc we add SOC here
-          IF (noco%l_noco.AND.noco%l_soc) THEN
-             DO l = 0,atoms%lnonsph(n)
+          IF (noco%l_noco.AND.noco%l_soc.and..not.noco%l_ss) THEN
+             DO l = 1,atoms%lnonsph(n)
                 DO  m = -l,l
                    lm = l* (l+1) + m
                    td%h_loc(lm  ,lm  ,n,jsp)     =td%h_loc(lm  ,lm  ,n,jsp) + rsoc%rsopp(n,l,jsp,jsp)
@@ -355,10 +355,10 @@ MODULE m_tlmplm_cholesky
 
           !If we do first variation soc or a constraint calculation, we have to calculate the
           !local spin off-diagonal contributions
-
+          s=atoms%lnonsph(n)+1
           !first ispin=2,jspin=1 case
           IF (noco%l_noco.AND.noco%l_soc) THEN
-             DO l = 0,atoms%lnonsph(n)
+             DO l = 1,atoms%lnonsph(n)
                 td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + rsoc%rsopp(n,l,2,1)
                 td%h_loc(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + rsoc%rsopdp(n,l,2,1)
                 td%h_loc(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + rsoc%rsoppd(n,l,2,1)
@@ -376,9 +376,9 @@ MODULE m_tlmplm_cholesky
           ENDIF
           
           
-          !first ispin=2,jspin=1 case
+          !then ispin=2,jspin=1 case
           IF (noco%l_noco.AND.noco%l_soc) THEN
-             DO l = 0,atoms%lnonsph(n)
+             DO l = 1,atoms%lnonsph(n)
                 td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + rsoc%rsopp(n,l,1,2)
                 td%h_loc(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + rsoc%rsopdp(n,l,1,2)
                 td%h_loc(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + rsoc%rsoppd(n,l,1,2)

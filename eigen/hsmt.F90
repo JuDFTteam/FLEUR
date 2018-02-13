@@ -23,7 +23,8 @@ CONTAINS
     USE m_hsmt_distspins
     USE m_types
     USE m_hsmt_fjgj
-    use m_hsmt_spinor
+    USE m_hsmt_spinor
+    USE m_hsmt_offdiag
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_input),INTENT(IN)      :: input
@@ -44,7 +45,7 @@ CONTAINS
     REAL, ALLOCATABLE    :: fj(:,:,:),gj(:,:,:)
 
     INTEGER :: iintsp,jintsp,n
-    COMPLEX :: chi(2,2),chi0(2,2),chi_one
+    COMPLEX :: chi(2,2),chi_one
 
     TYPE(t_mat)::smat_tmp,hmat_tmp
 
@@ -79,16 +80,16 @@ CONTAINS
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat_tmp,hmat_tmp)
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat_tmp)
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
-             CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
+             CALL hsmt_spinor(ispin,n,noco,chi)
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
              !Add off-diagonal contributions to Hamiltonian if needed
-             IF (noco%l_constr.OR.noco%l_soc) CALL judft_error("NOT IMPLEMNTED")
-                  !CALL hsmt_offdiag(n,atoms,mpi,ispin,input,noco,cell,chi,lapw,enpara%el0,td,usdus,fj,gj,hmat)
+             IF (noco%l_constr.OR.noco%l_soc) &
+                  CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj,gj,hmat)
           ELSE
              !In the spin-spiral case the loop over the interstitial=global spin has to
              !be performed explicitely
-             CALL hsmt_spinor(ispin,n,noco,input,chi0,chi)
+             CALL hsmt_spinor(ispin,n,noco,chi)
              DO iintsp=1,2
                 DO jintsp=1,2
                    CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,iintsp,jintsp,chi(iintsp,jintsp),lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat(iintsp,jintsp),hmat(iintsp,jintsp))
