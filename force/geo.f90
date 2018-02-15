@@ -41,6 +41,7 @@ CONTAINS
     USE m_constants
     USE m_rinpXML
     USE m_winpXML
+    USE m_init_wannier_defaults
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -234,6 +235,7 @@ CONTAINS
           ALLOCATE(noel_temp(1),atomTypeSpecies(1),speciesRepAtomType(1))
           ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
           ALLOCATE(xmlCoreOccs(1,1,1))
+          CALL initWannierDefaults(wann_temp)
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
