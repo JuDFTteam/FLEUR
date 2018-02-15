@@ -228,6 +228,7 @@ CONTAINS
                input_temp%comment)
     
        ELSE
+          kpts_temp%ntet = 1
           kpts_temp%numSpecialPoints = 1
           ALLOCATE(kpts_temp%specialPoints(3,kpts_temp%numSpecialPoints))
           ALLOCATE(noel_temp(1),atomTypeSpecies(1),speciesRepAtomType(1))
@@ -240,7 +241,8 @@ CONTAINS
                         xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
           numSpecies = SIZE(speciesRepAtomType)
           filename = 'inp_new.xml'
-          input_temp%l_f = input%l_f
+          input_temp = input
+          !input_temp%l_f = input%l_f
           input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nkpt3(:),1)
           stars_temp%gmax = stars_temp%gmaxInit
