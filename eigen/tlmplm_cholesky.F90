@@ -18,7 +18,6 @@ MODULE m_tlmplm_cholesky
       USE m_gaunt, ONLY: gaunt1,gaunt2
       USE m_types
       USE m_radovlp
-      USE m_hsmt_socinit
       IMPLICIT NONE
       TYPE(t_mpi),INTENT(IN)      :: mpi
       TYPE(t_noco),INTENT(IN)     :: noco
@@ -57,8 +56,7 @@ MODULE m_tlmplm_cholesky
       REAL ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
       INTEGER:: indt(0:SIZE(td%tuu,1)-1)
 
-      !for first variation soc and constraint
-      TYPE(t_rsoc):: rsoc
+      !for constraint
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       COMPLEX :: c
       
@@ -71,10 +69,7 @@ MODULE m_tlmplm_cholesky
     td%e_shift(jsp)=e_shift_min
     OK=.FALSE.
 
-    IF (noco%l_noco.AND.noco%l_soc.and..not.noco%l_ss) THEN
-       CALL hsmt_socinit(mpi,atoms,sphhar,enpara,input,vr,noco,ud,rsoc)
-    ENDIF
-
+   
      IF (noco%l_constr) THEN
        ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
             dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
@@ -272,18 +267,6 @@ MODULE m_tlmplm_cholesky
              END DO
           ENDDO
 
-          !If we do noco&soc we add SOC here
-          IF (noco%l_noco.AND.noco%l_soc.and..not.noco%l_ss) THEN
-             DO l = 1,atoms%lnonsph(n)
-                DO  m = -l,l
-                   lm = l* (l+1) + m
-                   td%h_loc(lm  ,lm  ,n,jsp)     =td%h_loc(lm  ,lm  ,n,jsp) + rsoc%rsopp(n,l,jsp,jsp)
-                   td%h_loc(lm  ,lm+s,n,jsp)     =td%h_loc(lm  ,lm+s,n,jsp) + rsoc%rsopdp(n,l,jsp,jsp)
-                   td%h_loc(lm+s,lm  ,n,jsp)     =td%h_loc(lm+s,lm  ,n,jsp) + rsoc%rsoppd(n,l,jsp,jsp)
-                   td%h_loc(lm+s,lm+s,n,jsp)     =td%h_loc(lm+s,lm+s,n,jsp) + rsoc%rsopdpd(n,l,jsp,jsp)
-                ENDDO
-             ENDDO
-          END IF
           
           !Include contribution from LDA+U
           DO i_u=1,SIZE(atoms%lda_u)
@@ -353,18 +336,10 @@ MODULE m_tlmplm_cholesky
              
           ENDIF
 
-          !If we do first variation soc or a constraint calculation, we have to calculate the
+          !If we do  a constraint calculation, we have to calculate the
           !local spin off-diagonal contributions
           s=atoms%lnonsph(n)+1
           !first ispin=2,jspin=1 case
-          IF (noco%l_noco.AND.noco%l_soc) THEN
-             DO l = 1,atoms%lnonsph(n)
-                td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + rsoc%rsopp(n,l,2,1)
-                td%h_loc(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + rsoc%rsopdp(n,l,2,1)
-                td%h_loc(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + rsoc%rsoppd(n,l,2,1)
-                td%h_loc(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + rsoc%rsopdpd(n,l,2,1)
-             ENDDO
-          END IF
           IF (noco%l_constr) THEN
              DO l=0,atoms%lnonsph(n)
                 c=(-0.5)*CMPLX(noco%b_con(1,n),noco%b_con(2,n))
@@ -377,14 +352,6 @@ MODULE m_tlmplm_cholesky
           
           
           !then ispin=2,jspin=1 case
-          IF (noco%l_noco.AND.noco%l_soc) THEN
-             DO l = 1,atoms%lnonsph(n)
-                td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + rsoc%rsopp(n,l,1,2)
-                td%h_loc(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + rsoc%rsopdp(n,l,1,2)
-                td%h_loc(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + rsoc%rsoppd(n,l,1,2)
-                td%h_loc(l+s,l+s,n,2)     =td%h_off(l+s,l+s,n,2) + rsoc%rsopdpd(n,l,1,2)
-             ENDDO
-          END IF
           IF (noco%l_constr) THEN
              DO l=0,atoms%lnonsph(n)
                 c=(-0.5)*CMPLX(noco%b_con(1,n),-noco%b_con(2,n))

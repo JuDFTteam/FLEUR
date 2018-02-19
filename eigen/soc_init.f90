@@ -113,4 +113,4 @@ CONTAINS
 
     RETURN
   END SUBROUTINE socinit
-END MODULE m_hsmt_socinit
+END MODULE m_socinit

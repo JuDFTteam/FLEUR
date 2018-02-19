@@ -7,12 +7,13 @@ eigen/hlomat.F90
 eigen/hs_int.F90
 eigen/hsmt_fjgj.F90
 eigen/hsmt_ab.f90
-eigen/hsmt_soc_init.F90
+eigen/soc_init.F90
 eigen/hsmt_sph.F90
 eigen/hsmt_nonsph.F90
 eigen/hsmt_spinor.F90
 eigen/hsmt_distspin.F90
 eigen/hsmt_offdiag.F90
+eigen/hsmt_soc_offdiag.F90
 eigen/hsmt_lo.F90
 eigen/mt_setup.F90
 eigen/eigen_hssetup.F90

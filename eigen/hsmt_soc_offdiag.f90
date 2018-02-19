@@ -4,11 +4,11 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_hsmt_offdiag
+MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_offdiag(n,atoms,mpi,isp,noco,lapw,td,usdus,fj,gj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj,gj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
@@ -22,33 +22,26 @@ CONTAINS
     CLASS(t_mat),INTENT(INOUT)    :: hmat(2,2)
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: n,isp
+    INTEGER, INTENT (IN) :: n
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER kii,ki,kj,l,nn,iintsp,jintsp,s
+    INTEGER kii,ki,kj,l,nn,iintsp,jintsp,s,j1,j2
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
     REAL fl2p1bt(0:atoms%lmaxd)
     REAL qssbti(3),qssbtj(3)
-    COMPLEX:: chi(2,2,2,2)
-    REAL, ALLOCATABLE :: plegend(:,:)
+    COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
+    REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
-
-    CALL timestart("offdiagonal setup")
-
-    CALL hsmt_spinor_soc(n,1,noco,lapw,chi)
-
-    IF (isp==1) THEN
-       iintsp=2;jintsp=1
-    ELSE
-       iintsp=1;jintsp=2
-    ENDIF
+  
+    
+    CALL timestart("offdiagonal soc-setup")
     
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
@@ -56,14 +49,18 @@ CONTAINS
        fl2p1(l) = REAL(l+l+1)/fpi_const
        fl2p1bt(l) = fl2p1(l)*0.5
     END DO
+
     !$OMP PARALLEL DEFAULT(SHARED)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
     !$OMP PRIVATE(cph,nn,tnn)&
     !$OMP PRIVATE(fct,s)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
+    ALLOCATE(dplegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     plegend=0.0
     plegend(:,0)=1.0
+    dplegend(:,0)=0.e0
+    dplegend(:,1)=1.e0
     qssbti=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
     qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
     !$OMP  DO SCHEDULE(DYNAMIC,1)
@@ -75,6 +72,7 @@ CONTAINS
        END DO
        DO l = 1,atoms%lmax(n) - 1
           plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
+          dplegend(:,l+1)=REAL(l+1)*plegend(:,l)+ plegend(:,1)*dplegend(:,l)
        END DO
        !--->             set up phase factors
        cph = 0.0
@@ -87,20 +85,27 @@ CONTAINS
                   SIN(DOT_PRODUCT(lapw%gvec(:,kj,jintsp)+qssbtj-ski,tnn)))
           END DO
        END DO
+       !Set up spinors...
+       CALL hsmt_spinor_soc(n,ki,noco,lapw,chi,angso)
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        s=atoms%lnonsph(n)+1
        DO  l = 0,atoms%lnonsph(n)
-          DO kj = 1,ki
-             fct  =cph(kj) * plegend(kj,l)*fl2p1(l)*(&
-                  fj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l,l,n,isp) + &
-                  fj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l,l+s,n,isp) + &
-                  gj(ki,l,iintsp)*fj(kj,l,jintsp) *td%h_off(l+s,l,n,isp) + &
-                  gj(ki,l,iintsp)*gj(kj,l,jintsp) *td%h_off(l+s,l+s,n,isp)* usdus%ddn(l,n,isp))
-             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,iintsp,jintsp)*fct 
-             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,iintsp,jintsp)*fct 
-             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,iintsp,jintsp)*fct 
-             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,iintsp,jintsp)*fct 
+          DO j1=1,2
+             DO j2=1,2
+                DO kj = 1,ki
+                   fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
+                        fj(ki,l,j1)*fj(kj,l,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
+                        fj(ki,l,j1)*gj(kj,l,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        gj(ki,l,j1)*fj(kj,l,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        gj(ki,l,j1)*gj(kj,l,j2) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                        * angso(kj,j1,j2)
+                   hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,j1,j2)*fct 
+                   hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,j1,j2)*fct 
+                   hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,j1,j2)*fct 
+                   hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,j1,j2)*fct
+                ENDDO
+             ENDDO
           ENDDO
           !--->          end loop over l
        ENDDO
@@ -111,8 +116,8 @@ CONTAINS
     DEALLOCATE(plegend)
     DEALLOCATE(cph)
     !$OMP END PARALLEL
-    CALL timestop("offdiagonal setup")
+    CALL timestop("offdiagonal soc-setup")
 
     RETURN
-  END SUBROUTINE hsmt_offdiag
-END MODULE m_hsmt_offdiag
+  END SUBROUTINE hsmt_soc_offdiag
+END MODULE m_hsmt_soc_offdiag

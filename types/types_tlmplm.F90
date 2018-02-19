@@ -7,6 +7,12 @@
 MODULE m_types_tlmplm
   IMPLICIT NONE
   PRIVATE
+  TYPE t_rsoc
+     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsopp,rsoppd,rsopdp,rsopdpd     !(atoms%ntype,atoms%lmaxd,2,2)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsoplop,rsoplopd,rsopdplo,rsopplo!(atoms%ntype,atoms%nlod,2,2)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:,:,:) :: rsoploplop !(atoms%ntype,atoms%nlod,nlod,2,2)
+  END TYPE t_rsoc
+
     TYPE t_tlmplm
      COMPLEX,ALLOCATABLE :: tdd(:,:,:)
      COMPLEX,ALLOCATABLE :: tdu(:,:,:)
@@ -25,10 +31,11 @@ MODULE m_types_tlmplm
      COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:)
      COMPLEX,ALLOCATABLE :: h_off(:,:,:,:)
      REAL,ALLOCATABLE    :: e_shift(:)
+     TYPE(t_rsoc)        :: rsoc
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm
-  PUBLIC t_tlmplm
+  PUBLIC t_tlmplm,t_rsoc
 CONTAINS
   SUBROUTINE tlmplm_init(td,lmplmd,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins,l_offdiag)
     USE m_judft

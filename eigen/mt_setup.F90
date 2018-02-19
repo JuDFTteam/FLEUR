@@ -12,6 +12,7 @@ CONTAINS
     USE m_tlmplm_cholesky
     USE m_tlmplm_store
     USE m_types
+    USE m_socinit
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -50,6 +51,11 @@ CONTAINS
     END DO
     CALL timestop("tlmplm")
 
+    !Setup of soc parameters for first-variation SOC
+    IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) &
+         CALL socinit(mpi,atoms,sphhar,enpara,input,v%mt,noco,ud,td%rsoc)
+  
+    
 
   END SUBROUTINE mt_setup
 END MODULE m_mt_setup

@@ -24,6 +24,7 @@ CONTAINS
     USE m_types
     USE m_hsmt_fjgj
     USE m_hsmt_spinor
+    USE m_hsmt_soc_offdiag
     USE m_hsmt_offdiag
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
@@ -84,7 +85,9 @@ CONTAINS
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
              !Add off-diagonal contributions to Hamiltonian if needed
-             IF (noco%l_constr.OR.noco%l_soc) &
+             IF (noco%l_constr) &
+                  CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj,gj,hmat)
+             IF (noco%l_constr) &
                   CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj,gj,hmat)
           ELSE
              !In the spin-spiral case the loop over the interstitial=global spin has to
