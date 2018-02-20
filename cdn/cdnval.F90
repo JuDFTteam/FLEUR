@@ -381,7 +381,7 @@ CONTAINS
     DO n = 1,atoms%ntype
        IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8001) n
        DO  l = 0,atoms%lmax(n)
-          DO ispin = jsp_start,jsp_end
+          DO ispin =jsp_start,jsp_end
              CALL radfun(&
                   l,n,ispin,epar(l,n,ispin),vr(1,0,n,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus,&
@@ -1022,7 +1022,7 @@ CONTAINS
           !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) THEN
              CALL timestart("cdnval: force_a8")
-             CALL force_a8(input,atoms,sphhar, ispin, vr,rho,&
+             CALL force_a8(input,atoms,sphhar, ispin, vr(:,:,:,ispin),rho,&
                   f_a12,f_a21,f_b4,f_b8,results%force)
              CALL timestop("cdnval: force_a8")
           END IF
