@@ -152,7 +152,7 @@ CONTAINS
 
     DO 200 n = n_start,atoms%ntype,n_stride
        IF (xcpot%lda_atom(n))THEN
-          IF((.NOT.xcpot%is_name("pw91"))) CALL judft_error("Using locally LDA only possible with pw91 functional")
+          IF((.NOT.xcpot%is_name("pw91"))) CALL judft_warn("Using locally LDA only possible with pw91 functional")
           CALL xcpot_tmp%init("l91",.FALSE.)
        ENDIF
        nat=sum(atoms%neq(:n-1))+1
