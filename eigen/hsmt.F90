@@ -85,7 +85,7 @@ CONTAINS
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
              !Add off-diagonal contributions to Hamiltonian if needed
-             IF (noco%l_constr) &
+             IF (ispin==1.and.noco%l_soc) &
                   CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj,gj,hmat)
              IF (noco%l_constr) &
                   CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj,gj,hmat)

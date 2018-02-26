@@ -269,7 +269,7 @@ MODULE m_tlmplm_cholesky
 
           
           !Include contribution from LDA+U
-          DO i_u=1,SIZE(atoms%lda_u)
+          DO i_u=1,atoms%n_u
              IF (n.NE.atoms%lda_u(i_u)%atomtype) CYCLE
              !Found a "U" for this atom type
              l=atoms%lda_u(i_u)%l

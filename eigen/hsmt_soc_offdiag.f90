@@ -29,13 +29,12 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER kii,ki,kj,l,nn,iintsp,jintsp,s,j1,j2
+    INTEGER kii,ki,kj,l,nn,s,j1,j2
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
     REAL fl2p1bt(0:atoms%lmaxd)
-    REAL qssbti(3),qssbtj(3)
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
@@ -61,28 +60,26 @@ CONTAINS
     plegend(:,0)=1.0
     dplegend(:,0)=0.e0
     dplegend(:,1)=1.e0
-    qssbti=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
-    qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
     !$OMP  DO SCHEDULE(DYNAMIC,1)
-    DO  ki =  mpi%n_rank+1, lapw%nv(iintsp), mpi%n_size
+    DO  ki =  mpi%n_rank+1, lapw%nv(1), mpi%n_size
        kii=(ki-1)/mpi%n_size+1
        !--->       legendre polynomials
        DO kj = 1,ki
-          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,jintsp),lapw%gk(:,ki,iintsp))
+          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,ki,1))
        END DO
        DO l = 1,atoms%lmax(n) - 1
           plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
-          dplegend(:,l+1)=REAL(l+1)*plegend(:,l)+ plegend(:,1)*dplegend(:,l)
+          dplegend(:ki,l+1)=REAL(l+1)*plegend(:ki,l)+plegend(:ki,1)*dplegend(:ki,l)
        END DO
        !--->             set up phase factors
        cph = 0.0
-       ski = lapw%gvec(:,ki,iintsp) + qssbti
+       ski = lapw%gvec(:,ki,1) 
        DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
           tnn = tpi_const*atoms%taual(:,nn)
           DO kj = 1,ki
              cph(kj) = cph(kj) +&
-                  CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,jintsp)+qssbtj,tnn)),&
-                  SIN(DOT_PRODUCT(lapw%gvec(:,kj,jintsp)+qssbtj-ski,tnn)))
+                  CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,1),tnn)),&
+                  SIN(DOT_PRODUCT(lapw%gvec(:,kj,1)-ski,tnn)))
           END DO
        END DO
        !Set up spinors...
@@ -90,7 +87,7 @@ CONTAINS
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        s=atoms%lnonsph(n)+1
-       DO  l = 0,atoms%lnonsph(n)
+       DO  l = 1,atoms%lnonsph(n)
           DO j1=1,2
              DO j2=1,2
                 DO kj = 1,ki
