@@ -4,21 +4,18 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_hsmt_socinit
+MODULE m_socinit
   USE m_juDFT
   IMPLICIT NONE
-  TYPE t_rsoc
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsopp,rsoppd,rsopdp,rsopdpd     !(atoms%ntype,atoms%lmaxd,2,2)
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsoplop,rsoplopd,rsopdplo,rsopplo!(atoms%ntype,atoms%nlod,2,2)
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:,:) :: rsoploplop !(atoms%ntype,atoms%nlod,nlod,2,2)
-  END TYPE t_rsoc
 
 
 CONTAINS
-  SUBROUTINE hsmt_socinit(mpi,atoms,sphhar,enpara,input,vr,noco,& !in
-       rsoc,usdus,isigma) !out
-    !Initialized the radial-spin-orbit elements in rsoc and the pauli matrix
-    !needed in hssphn for first variation SOC
+  !>Initialization of SOC matrix elements used in first variation SOC
+  !!
+  SUBROUTINE socinit(mpi,atoms,sphhar,enpara,input,vr,noco,& !in
+       usdus,rsoc) !out
+    !Initialized the radial-spin-orbit elements in rsoc 
+    !needed for first variation SOC
     USE m_soinit
     USE m_types
     IMPLICIT NONE
@@ -35,8 +32,7 @@ CONTAINS
     REAL,    INTENT (IN) :: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
     TYPE(t_usdus),INTENT(INOUT):: usdus
     TYPE(t_rsoc),INTENT(OUT) :: rsoc
-    COMPLEX, INTENT (OUT)    :: isigma(2,2,3)
-
+    
     !     ..
     !     .. Local Scalars ..
     INTEGER l,n
@@ -54,15 +50,7 @@ CONTAINS
     ALLOCATE(rsoc%rsopdplo(atoms%ntype,atoms%nlod,2,2),rsoc%rsopplo (atoms%ntype,atoms%nlod,2,2))
     ALLOCATE(rsoc%rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2))
 
-    !     isigma= -i * sigma, where sigma is Pauli matrix
-    isigma=CMPLX(0.0,0.0)
-    isigma(1,2,1)=CMPLX(0.0,-1.0)
-    isigma(2,1,1)=CMPLX(0.0,-1.0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)
-    isigma(2,1,2)=CMPLX(1.0,0.0)
-    isigma(1,1,3)=CMPLX(0.0,-1.0)
-    isigma(2,2,3)=CMPLX(0.0,1.0)
-
+  
     CALL soinit(atoms,input,enpara,vr,noco%soc_opt(atoms%ntype+2),&
          rsoc%rsopp,rsoc%rsoppd,rsoc%rsopdp,rsoc%rsopdpd,usdus,&
          rsoc%rsoplop,rsoc%rsoplopd,rsoc%rsopdplo,rsoc%rsopplo,rsoc%rsoploplop)
@@ -124,5 +112,5 @@ CONTAINS
 
 
     RETURN
-  END SUBROUTINE hsmt_socinit
+  END SUBROUTINE socinit
 END MODULE m_hsmt_socinit

@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne, igq_fft,we,eig,bkpt, qpw,cdom, qis,forces,f_b8,zMat)
+       ikpt,jspin,lapw,ne, igq_fft,we,eig, qpw,cdom, qis,forces,f_b8,zMat)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -96,7 +96,6 @@ CONTAINS
     INTEGER, INTENT (IN)        :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL,INTENT(IN)   :: we(:) !(nobd) 
     REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
-    REAL,INTENT(IN)   :: bkpt(3)
     !----->  BASIS FUNCTION INFORMATION
     INTEGER,INTENT(IN):: ne
     !----->  CHARGE DENSITY INFORMATION
@@ -121,7 +120,7 @@ CONTAINS
     INTEGER,PARAMETER::  ist(-1:1)=(/1,0,0/)
     REAL,PARAMETER:: zero   = 0.00,  tol_3=1.0e-3 
     !
-    INTEGER  iv1d(SIZE(lapw%k1,1),input%jspins)
+    INTEGER  iv1d(SIZE(lapw%gvec,2),input%jspins)
     REAL wtf(ne),wsave(stars%kq3_fft+15)
     REAL,    ALLOCATABLE :: psir(:),psii(:),rhon(:)
     REAL,    ALLOCATABLE :: psi1r(:),psi1i(:),psi2r(:),psi2i(:)
@@ -284,9 +283,9 @@ CONTAINS
           !                                              -k1d <= L <= k1d
           !                                              -k2d <= M <= k2d
           !                                              -k3d <= N <= k3d
-          il = lapw%k1(iv,ispin)
-          im = lapw%k2(iv,ispin)
-          in = lapw%k3(iv,ispin)
+          il = lapw%gvec(1,iv,ispin)
+          im = lapw%gvec(2,iv,ispin)
+          in = lapw%gvec(3,iv,ispin)
           !
           !------>  L,M,N LATTICE POINTS OF G-VECTOR IN POSITIVE DOMAIN
           !         (since charge density box = two times charge density box
@@ -382,9 +381,7 @@ CONTAINS
                    kpsir(ifftq3d:)=0.0
                    kpsir(-ifftq2d:ifftq3d)=0.0
                    DO iv = 1 , lapw%nv(jspin)
-                      xk(1)=lapw%k1(iv,jspin)+bkpt(1)
-                      xk(2)=lapw%k2(iv,jspin)+bkpt(2)
-                      xk(3)=lapw%k3(iv,jspin)+bkpt(3)
+                      xk=lapw%gvec(:,iv,jspin)+lapw%bkpt
                       s = 0.0
                       DO i = 1,3
                          s = s + xk(i)*cell%bmat(i,j)
@@ -427,9 +424,7 @@ CONTAINS
                    kpsir=0.0
                    kpsii=0.0
                    DO iv = 1 , lapw%nv(jspin)
-                      xk(1)=lapw%k1(iv,jspin)+bkpt(1)
-                      xk(2)=lapw%k2(iv,jspin)+bkpt(2)
-                      xk(3)=lapw%k3(iv,jspin)+bkpt(3)
+                      xk=lapw%gvec(:,iv,jspin)+lapw%bkpt
                       s = 0.0
                       DO i = 1,3
                          s = s + xk(i)*cell%bmat(i,j)

@@ -10,7 +10,7 @@ CONTAINS
        kpts,input,cell,atoms,noco,banddos,&
        gvac1,gvac2,&
        we,ikpt,jspin,vz,vz0,&
-       ne,bkpt,lapw,&
+       ne,lapw,&
        evac,eig,rhtxy,rht,qvac,qvlay,&
        stcoeff,cdomvz,cdomvxy,zMat)
 
@@ -72,7 +72,6 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
     COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
     REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
@@ -204,16 +203,16 @@ CONTAINS
           n2 = 0
           k_loop2:DO  k = 1,lapw%nv(ispin)
              DO  j = 1,n2
-                IF ( lapw%k1(k,ispin).EQ.kvac1(j,ispin) .AND.&
-                     lapw%k2(k,ispin).EQ.kvac2(j,ispin) ) THEN
+                IF ( lapw%gvec(1,k,ispin).EQ.kvac1(j,ispin) .AND.&
+                     lapw%gvec(2,k,ispin).EQ.kvac2(j,ispin) ) THEN
                    map2(k,ispin) = j
                    CYCLE k_loop2
                 END IF
              ENDDO
              n2 = n2 + 1
              IF (n2>DIMENSION%nv2d)  CALL juDFT_error("vacden0","vacden")
-             kvac1(n2,ispin) = lapw%k1(k,ispin)
-             kvac2(n2,ispin) = lapw%k2(k,ispin)
+             kvac1(n2,ispin) = lapw%gvec(1,k,ispin)
+             kvac2(n2,ispin) = lapw%gvec(2,k,ispin)
              map2(k,ispin) = n2
           ENDDO k_loop2
           nv2(ispin) = n2
@@ -302,7 +301,7 @@ CONTAINS
                      cell,vacuum,DIMENSION,stars,&
                      oneD,qssbti(3,ispin),&
                      oneD%odi%n2d,&
-                     wronk,evacp,bkpt,oneD%odi%M,oneD%odi%mb,&
+                     wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
                      vz(1,ispin),kvac3(1,ispin),nv2(ispin),&
                      t_1(1,-oneD%odi%mb),dt_1(1,-oneD%odi%mb),u_1(1,1,-oneD%odi%mb,ispin),&
                      te_1(1,-oneD%odi%mb),dte_1(1,-oneD%odi%mb),&
@@ -311,7 +310,7 @@ CONTAINS
                 DO k = 1,lapw%nv(ispin)
                    kspin = (lapw%nv(1)+atoms%nlotot)*(ispin-1) + k
                    l = map1(k,ispin) 
-                   irec3 = stars%ig(lapw%k1(k,ispin),lapw%k2(k,ispin),lapw%k3(k,ispin))
+                   irec3 = stars%ig(lapw%gvec(1,k,ispin),lapw%gvec(2,k,ispin),lapw%gvec(3,k,ispin))
                    IF (irec3.NE.0) THEN
                       irec2 = stars%ig2(irec3)
                       zks = stars%sk2(irec2)*cell%z1
@@ -343,8 +342,8 @@ CONTAINS
                 vz0(ispin) = vz(vacuum%nmz,ispin)
                 evacp = evac(ivac,ispin)
                 DO ik = 1,nv2(ispin)
-                   v(1) = bkpt(1) + kvac1(ik,ispin) + qssbti(1,ispin)
-                   v(2) = bkpt(2) + kvac2(ik,ispin) + qssbti(2,ispin)
+                   v(1) = lapw%bkpt(1) + kvac1(ik,ispin) + qssbti(1,ispin)
+                   v(2) = lapw%bkpt(2) + kvac2(ik,ispin) + qssbti(2,ispin)
                    v(3) = 0.
                    ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
                    CALL vacuz(ev,vz(1,ispin),vz0(ispin),vacuum%nmz,vacuum%delz,t(ik),&
@@ -404,7 +403,7 @@ CONTAINS
                   &           cell,vacuum,DIMENSION,stars,&
                   &           oneD,qssbtii,&
                   &           oneD%odi%n2d,&
-                  &           wronk,evacp,bkpt,oneD%odi%M,oneD%odi%mb,&
+                  &           wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
                   &           vz(1,ivac),kvac3(1,jspin),nv2(jspin),&
                   &           t_1(1,-oneD%odi%mb),dt_1(1,-oneD%odi%mb),u_1(1,1,-oneD%odi%mb,jspin),&
                   &           te_1(1,-oneD%odi%mb),dte_1(1,-oneD%odi%mb),&
@@ -412,7 +411,7 @@ CONTAINS
                   &           ue_1(1,1,-oneD%odi%mb,jspin))
              DO k = 1,lapw%nv(jspin)
                 l = map1(k,jspin)
-                irec3 = stars%ig(lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin))
+                irec3 = stars%ig(lapw%gvec(1,k,jspin),lapw%gvec(2,k,jspin),lapw%gvec(3,k,jspin))
                 IF (irec3.NE.0) THEN
                    irec2 = stars%ig2(irec3)
                    zks = stars%sk2(irec2)*cell%z1
@@ -442,8 +441,8 @@ CONTAINS
           ELSE     !oneD%odi%d1
              evacp = evac(ivac,jspin)
              DO ik = 1,nv2(jspin)
-                v(1) = bkpt(1) + kvac1(ik,jspin)
-                v(2) = bkpt(2) + kvac2(ik,jspin)
+                v(1) = lapw%bkpt(1) + kvac1(ik,jspin)
+                v(2) = lapw%bkpt(2) + kvac2(ik,jspin)
                 v(3) = 0.
                 ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
                 CALL vacuz(ev,vz(1,ivac),vz0(ivac),vacuum%nmz,vacuum%delz,t(ik),dt(ik),u(1,ik,jspin))
@@ -519,7 +518,7 @@ CONTAINS
           DO n = 1, ne
              IF (ABS(eig(n)-vacuum%tworkf).LE.emax) i=i+1
           END DO
-          WRITE (87,FMT=990) bkpt(1), bkpt(2), i, n2max
+          WRITE (87,FMT=990) lapw%bkpt(1),lapw%bkpt(2), i, n2max
           DO n = 1, ne
              IF (ABS(eig(n)-vacuum%tworkf).LE.emax) THEN
                 WRITE (87,FMT=1000) eig(n)

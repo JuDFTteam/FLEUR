@@ -5,8 +5,8 @@ MODULE m_topulay
 !     ************************************************************
 CONTAINS
   SUBROUTINE to_pulay(&
-       input,atoms,nobd,sym,lapw,noco,cell,bkpt,ne,eig,&
-       usdus,kveclo,jspin,oneD,&
+       input,atoms,nobd,sym,lapw,noco,cell,ne,eig,&
+       usdus,jspin,oneD,&
        acof,bcof,e1cof,e2cof,aveccof,bveccof,&
        ccof,acoflo,bcoflo,cveccof,zMat)
     !
@@ -34,8 +34,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin 
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
-    REAL,    INTENT (IN) :: bkpt(3)  
     REAL,    INTENT (IN) :: eig(:)!(dimension%neigd)
     COMPLEX, INTENT (OUT)::      acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT)::      bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
@@ -52,13 +50,12 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     COMPLEX phase,c_0,c_1,c_2
-    REAL const,df,r1,s,tmk,wronk,s2h,s2h_e,qss1,qss2,qss3
+    REAL const,df,r1,s,tmk,wronk,s2h,s2h_e,qss(3)
     REAL t1,t2,t3
     INTEGER i,ie,j,k,l,lm ,n,natom,nn,ll1,iatom,jatom,lmp,ilo,m
     INTEGER inv_f,lo,nintsp,iintsp,nvmax,kspin,nap,inap
     !     ..
     !     .. Local Arrays ..
-    INTEGER kvec(2*(2*atoms%llod+1) ,atoms%nlod,atoms%nat )
     INTEGER nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
     REAL alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype),clo1(atoms%nlod,atoms%ntype)
     REAL dfj(0:atoms%lmaxd),fg(3),fgp(3),fgr(3),fj(0:atoms%lmaxd),fk(3), fkp(3),fkr(3)
@@ -106,17 +103,13 @@ CONTAINS
        IF (noco%l_ss) nvmax = lapw%nv(iintsp)
        !
        CALL setabc1locdn(jspin,atoms,lapw,ne,noco,iintsp,&
-            sym,usdus, kveclo, enough,nkvec,kvec,nbasf0,ccof,&
+            sym,usdus,enough,nbasf0,ccof,&
             alo1,blo1,clo1)
        !
        IF (iintsp .EQ. 1) THEN
-          qss1= - noco%qss(1)/2
-          qss2= - noco%qss(2)/2
-          qss3= - noco%qss(3)/2
+          qss= - noco%qss/2
        ELSE
-          qss1= + noco%qss(1)/2
-          qss2= + noco%qss(2)/2
-          qss3= + noco%qss(3)/2
+          qss= + noco%qss/2
        ENDIF
        !
        !     ----> loop over lapws
@@ -134,17 +127,11 @@ CONTAINS
 
           ENDIF
           IF (noco%l_ss) THEN
-             fg(1) = lapw%k1(k,iintsp) + qss1
-             fg(2) = lapw%k2(k,iintsp) + qss2
-             fg(3) = lapw%k3(k,iintsp) + qss3
+             fg=lapw%gvec(:,k,iintsp)+qss
           ELSE
-             fg(1) = lapw%k1(k,jspin) + qss1
-             fg(2) = lapw%k2(k,jspin) + qss2
-             fg(3) = lapw%k3(k,jspin) + qss3
+             fg=lapw%gvec(:,k,jspin)+qss
           ENDIF
-          DO i = 1,3
-             fk(i) = bkpt(i) + fg(i)
-          END DO
+          fk = lapw%bkpt + fg
           !-gu
           s=DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
           s2h = 0.5*s
@@ -322,7 +309,7 @@ CONTAINS
                    END DO
                    IF (.NOT.enough(natom)) THEN
                       CALL abclocdn_pulay(atoms, sym, noco,ccchi(1,jspin),kspin, iintsp,const,phase,ylm,n,natom,&
-                           k,fgp,s,nvmax,ne,nbasf0, alo1,blo1,clo1,kvec(1,1,natom), nkvec,&
+                           k,fgp,s,nvmax,ne,nbasf0, alo1,blo1,clo1,lapw%kvec(:,:,natom),&
                            enough,acof,bcof,ccof, acoflo,bcoflo,aveccof,bveccof,cveccof,zMat)
                    END IF
                    !-inv

@@ -6,13 +6,13 @@ MODULE m_alineso
   ! Eigenvalues and vectors (eig_so and zso) are returned 
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE alineso(eig_id,&
-       mpi,DIMENSION,atoms,sym,&
+  SUBROUTINE alineso(eig_id,lapw,&
+       mpi,DIMENSION,atoms,sym,kpts,&
        input,noco,cell,oneD,&
        rsopp,rsoppd,rsopdp,rsopdpd,nk,&
        rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
        usdus,soangl,&
-       kveclo,ello,nsize,nmat,&
+       ello,nsize,nmat,&
        eig_so,zso)
 
 #include"cpp_double.h"
@@ -22,6 +22,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_lapw),INTENT(IN)        :: lapw
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
@@ -29,6 +30,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_usdus),INTENT(IN)       :: usdus
     !     ..
     !     .. Scalar Arguments ..
@@ -49,12 +51,10 @@ CONTAINS
     COMPLEX, INTENT (IN) :: soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2)
     COMPLEX, INTENT (OUT) :: zso(:,:,:)!(dimension%nbasfcn,2*dimension%neigd,wannierspin)
     REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd),ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)
-    INTEGER, INTENT (OUT) :: kveclo(atoms%nlotot)
     !-odim
     !+odim
     !     ..
     !     .. Local Scalars ..
-    TYPE(t_lapw)       :: lapw
     REAL      r2
     INTEGER   i,i1 ,j,jsp,jsp1,k,ne,nn,nn1,nrec,info
     INTEGER   idim_c,idim_r,jsp2,nbas,j1
@@ -65,7 +65,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER :: nsz(2)
-    REAL    :: bkdu(3),eig(DIMENSION%neigd,DIMENSION%jspd),s(3),bkpt(3)
+    REAL    :: eig(DIMENSION%neigd,DIMENSION%jspd),s(3),bkpt(3)
     REAL    :: epar(0:atoms%lmaxd,atoms%ntype),evac(2)
     REAL,   ALLOCATABLE :: rwork(:)
     COMPLEX,ALLOCATABLE :: cwork(:),chelp(:,:,:,:,:)
@@ -89,39 +89,33 @@ CONTAINS
 
     l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
     zmat%l_real=l_real
-    zmat%nbasfcn=dimension%nbasfcn
+    zMat%nbasfcn=lapw%nv+atoms%nlotot
     zmat%nbands=dimension%neigd
    
     INQUIRE (4649,opened=l_socvec)
     INQUIRE (file='fleur.qsgw',exist=l_qsgw)
     if (l_real) THEN
-       ALLOCATE (zmat(1)%z_r(DIMENSION%nbasfcn,DIMENSION%neigd) )
+       ALLOCATE (zmat(1)%z_r(zmat(1)%nbasfcn,DIMENSION%neigd) )
        zmat(1)%z_r(:,:)= 0.  
        if (size(zmat)==2)THEN
-          ALLOCATE(zmat(2)%z_r(DIMENSION%nbasfcn,DIMENSION%neigd) )
+          ALLOCATE(zmat(2)%z_r(zmat(2)%nbasfcn,DIMENSION%neigd) )
           zmat(2)%z_r=0.0
        ENDIF
     else
-       ALLOCATE (zmat(1)%z_c(DIMENSION%nbasfcn,DIMENSION%neigd) )
+       ALLOCATE (zmat(1)%z_c(zmat(1)%nbasfcn,DIMENSION%neigd) )
        zmat(1)%z_c(:,:)= 0.  
        if (size(zmat)==2)THEN
-          ALLOCATE(zmat(2)%z_c(DIMENSION%nbasfcn,DIMENSION%neigd) )
+          ALLOCATE(zmat(2)%z_c(zmat(2)%nbasfcn,DIMENSION%neigd) )
           zmat(2)%z_c=0.0
        ENDIF  
     endif
     zso(:,:,:)= CMPLX(0.,0.)
 
-    ALLOCATE(lapw%k1(DIMENSION%nvd,input%jspins))
-    ALLOCATE(lapw%k2(DIMENSION%nvd,input%jspins))
-    ALLOCATE(lapw%k3(DIMENSION%nvd,input%jspins))
-    ALLOCATE(lapw%rk(DIMENSION%nvd,input%jspins))
-
     DO jsp = 1,input%jspins
        CALL read_eig(&
             eig_id,nk,jsp,&
-            bk=bkdu,el=epar,ello=ello(:,:,jsp),&
-            evac=evac,neig=ne,eig=eig(:,jsp),&
-            nmat=lapw%nmat,nv=lapw%nv(jsp),k1=lapw%k1(:,jsp),k2=lapw%k2(:,jsp),k3=lapw%k3(:,jsp),kveclo=kveclo)
+            el=epar,ello=ello(:,:,jsp),&
+            evac=evac,neig=ne,eig=eig(:,jsp))
        CALL read_eig(&
                eig_id,nk,jsp,&
                n_start=1,n_end=ne,&
@@ -131,14 +125,11 @@ CONTAINS
 
        ! write(*,*) 'process',irank,' reads ',nk
 
-       bkpt(:) = bkdu(:)
-       DO i = 1, lapw%nv(1)
-          s(1) = bkpt(1) + lapw%k1(i,1)
-          s(2) = bkpt(2) + lapw%k2(i,1)
-          s(3) = bkpt(3) + lapw%k3(i,1)
-          r2 = DOT_PRODUCT(s,MATMUL(s,cell%bbmat))
-          lapw%rk(i,1) = SQRT(r2)
-       ENDDO
+!!$       DO i = 1, lapw%nv(1)
+!!$          s = lapw%bkpt +lapw%gvec(:,i,1)
+!!$          r2 = DOT_PRODUCT(s,MATMUL(s,cell%bbmat))
+!!$          lapw%rk(i,1) = SQRT(r2)
+!!$       ENDDO
 
        IF (ne.GT.DIMENSION%neigd) THEN
           WRITE (6,'(a13,i4,a8,i4)') 'alineso: ne=',ne,' > dimension%neigd=',DIMENSION%neigd
@@ -168,10 +159,9 @@ CONTAINS
     CALL hsohelp(&
          &             DIMENSION,atoms,sym,&
          &             input,lapw,nsz,&
-         &             cell,bkpt,&
+         &             cell,&
          &             zmat,usdus,&
          &             zso,noco,oneD,&
-         &             kveclo,&
          &             ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -help") 
     !
@@ -334,11 +324,11 @@ else
           ENDDO  ! j
 
           if (l_real) THEN
-             CALL CPP_BLAS_cgemm("N","N",DIMENSION%nbasfcn,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(zmat(jsp)%z_r(:,:)),&
-                  DIMENSION%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(1,1,jsp2),DIMENSION%nbasfcn)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%nbasfcn,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(zmat(jsp)%z_r(:,:)),&
+                  zmat(1)%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(1,1,jsp2),zmat(1)%nbasfcn)
           else
-             CALL CPP_BLAS_cgemm("N","N",DIMENSION%nbasfcn,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),zmat(jsp)%z_c(:,:),&
-                  DIMENSION%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(:,:,jsp2),DIMENSION%nbasfcn)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%nbasfcn,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),zmat(jsp)%z_c(:,:),&
+                  zmat(1)%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(:,:,jsp2),zmat(1)%nbasfcn)
           endif
 
        ENDDO    !isp

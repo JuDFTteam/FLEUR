@@ -119,7 +119,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real eig(neigd),cp_time(9)
       logical l_p0,l_bkpts,l_proj,l_amn,l_mmn,l_eig,wann,wann_plott
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
+      integer, allocatable :: nv(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       real,    allocatable :: we(:)
 
@@ -325,7 +325,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspins
       if(l_soc) wannierspin=2
 
-      allocate ( kveclo(nlotot),nv(wannierspin) )
+      allocate ( nv(wannierspin) )
       allocate ( k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd) )
@@ -475,7 +475,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
       if (irank.eq.0) l_p0 = .true.
 
       call cdn_read0(eig_id,irank,isize,jspin,wannierspin,l_noco,
-     <               ello,evac,epar,bkpt,wk,n_bands,n_size)
+     <               ello,evac,epar,wk,n_bands,n_size)
 
 
       allocate ( flo(ntypd,jmtd,2,nlod) )
@@ -540,7 +540,7 @@ c******************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat,
      >              .false.,1)
 
@@ -593,7 +593,7 @@ c***********************************************************
      >            ntypd,nlo,llo,invsat,
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
-     >            kveclo,jspin,
+     >            jspin,
      >            oper,nop,mrot,nvd,nv,
      >            shiftkpt(:,ikpt),
      >            tau,
@@ -618,8 +618,8 @@ c...generation of the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions 
       ngopr1(:)=1
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     >           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
+      CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
+     >           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
       call wann_abinv(
      >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -1027,7 +1027,7 @@ c*****************************************************************
 110   continue ! end of cycle by spins
 
 
-      deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg)
  
 #ifdef CPP_MPI

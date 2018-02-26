@@ -12,61 +12,52 @@ MODULE m_slomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE slomat(&
-       input,atoms, ntyp,na,lapw,con1,n_size,n_rank,&
-       gk,rph,cph,f,g,kvec,usp,ud, alo1,blo1,clo1,noco,&
-       ab_dim,iintsp,jintsp,chi11,chi22,chi21, iilo,locol,nkvecprevat,l_real,bb_r,bb_c)
+       input,atoms,mpi,lapw,cell,noco,ntyp,na,&
+       isp,ud, alo1,blo1,clo1,fj,gj,&
+       iintsp,jintsp,chi,smat)
     !***********************************************************************
-    ! iilo is the starting position for the LO-contribution of atom 'na'
-    !      in the Hamilton-matrix minus 1 (starting from (nv+1)*nv/2)
-    ! nkvecprevat gives the number of G-vectors already processed on other
-    !             atoms (each l-LO gives (2l+1)*invsfact G-vectors)
-    ! nkvecprevlo gives the number of G-vectors already processed on this
-    !             atoms due to other lo's (appears in hlomat only)
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
     !       done on this node                                          gb00
     !
     ! function legpol() at end of module
     !***********************************************************************
-#include"cpp_double.h" 
     USE m_constants,ONLY: fpi_const
     USE m_types
+    USE m_apws
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
-    TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_lapw),INTENT(IN)   :: lapw
+    TYPE(t_mpi),INTENT(IN)    :: mpi
+    TYPE(t_cell),INTENT(IN)   :: cell
+    TYPE(t_noco),INTENT(IN)   :: noco
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: na,ntyp,n_size,n_rank 
-    INTEGER, INTENT (IN) :: ab_dim,iintsp,jintsp
-    COMPLEX, INTENT (IN) :: chi11,chi22,chi21
-    REAL,    INTENT (IN) :: con1
-    INTEGER, INTENT (INOUT) :: iilo,nkvecprevat,locol
-    INTEGER, INTENT(IN)  :: usp
+    INTEGER, INTENT (IN)      :: na,ntyp 
+    INTEGER, INTENT (IN)      :: iintsp,jintsp
+    COMPLEX, INTENT (IN)      :: chi
+    INTEGER, INTENT(IN)       :: isp
     !     ..
     !     .. Array Arguments ..
-    INTEGER,INTENT (IN) :: kvec(:,:)!(2*llod_1),nlod  )
-    REAL,   INTENT (IN) :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod) 
-    REAL,   INTENT (IN) :: gk(:,:,:)!(dimension%nvd,3,ab_dim)
-    REAL,   INTENT (IN) :: rph(:,:),cph(:,:)!(nvd,ab_dim)
-    REAL,   INTENT (IN) :: f(:,0:,:,:)!(dimension%nvd,0:atoms%lmaxd,atoms%ntype,ab_dim)
-    REAL,   INTENT (IN) :: g(:,0:,:,:)!(dimension%nvd,0:atoms%lmaxd,atoms%ntype,ab_dim)
-    TYPE(t_usdus),INTENT(IN):: ud
-    REAL,  ALLOCATABLE,  OPTIONAL,INTENT (INOUT) :: bb_r(:)!(matsize)
-    COMPLEX,ALLOCATABLE, OPTIONAL,INTENT (INOUT) :: bb_c(:)!(matsize)
-    LOGICAL,INTENT(IN)                  :: l_real
+    REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
+    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
+    TYPE(t_usdus),INTENT(IN)  :: ud
+    CLASS(t_mat),INTENT(INOUT) :: smat
+    
     !     ..
     !     .. Local Scalars ..
     REAL con,dotp,fact1,fact2,fact3,fl2p1
-    INTEGER invsfct,k ,l,l2p1,lo,lop,lp,nkvec,nkvecat,nkvecp,kp
-    INTEGER iilo_s,locol_s,nkvecprevat_s,ic,ii,ij,n
-    COMPLEX chihlp
+    INTEGER invsfct,k ,l,lo,lop,lp,nkvec,nkvecp,kp,i
+    INTEGER locol,lorow
     !     ..
-    !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: bhelp(:)
     !     ..
-    !$OMP MASTER
+
+    COMPLEX,   ALLOCATABLE  :: cph(:,:)
+    ALLOCATE(cph(MAXVAL(lapw%nv),2))
+    DO i=MIN(iintsp,jintsp),MAX(iintsp,jintsp)
+       CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
+    ENDDO
 
     IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
@@ -77,226 +68,98 @@ CONTAINS
        !--->    (2*(2*l+1)) k-vectors (compare abccoflo and comments there).
        IF (atoms%invsat(na).EQ.0) invsfct = 1
        IF (atoms%invsat(na).EQ.1) invsfct = 2
-       !+noco
-       IF (noco%l_ss) THEN
-          iilo_s = iilo
-          locol_s = locol
-          nkvecprevat_s = nkvecprevat ! save for other interstitial spin loops
-          ic = 0                                        ! update b-matrix
-          DO lo = 1,atoms%nlo(ntyp)
-             ic = ic + invsfct* (2*atoms%llo(lo,ntyp)+1)
-          ENDDO
-          k = ic*(lapw%nv(jintsp)+nkvecprevat) + (ic+1)*ic/2
-          ALLOCATE ( bhelp(k) )       ! initialize help-array 
-          bhelp=CMPLX(0.,0.)
-          iilo = 0
-       ENDIF
-       !-noco
-       con = con1* ((atoms%rmt(ntyp))**2)/2.0
-       nkvecat = 0
-       DO lo = 1,atoms%nlo(ntyp)
+   
+       con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
+
+       DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
           l = atoms%llo(lo,ntyp)
-          l2p1 = 2*l + 1
-          fl2p1 = l2p1/fpi_const
-          IF (input%l_useapw) THEN
-             fact1 = (con**2)* fl2p1 * (&
-                  alo1(lo)* (  alo1(lo) + &
-                  2*clo1(lo)*   ud%uulon(lo,ntyp,usp) ) +&
-                  blo1(lo)* (  blo1(lo)*     ud%ddn(l,ntyp,usp) +&
-                  2*clo1(lo)*   ud%dulon(lo,ntyp,usp) ) +&
-                  clo1(lo)*    clo1(lo)*ud%uloulopn(lo,lo,ntyp,usp) )
-          ELSE
-             fact1 = (con**2)* fl2p1 * (&
-                  alo1(lo)* (  alo1(lo) + &
-                  2*clo1(lo) * ud%uulon(lo,ntyp,usp) ) +&
-                  blo1(lo)* (  blo1(lo) * ud%ddn(l, ntyp,usp) +&
-                  2*clo1(lo) * ud%dulon(lo,ntyp,usp) ) +&
-                  clo1(lo)*    clo1(lo) )
-          ENDIF
-          DO nkvec = 1,invsfct* (2*l+1)
+          fl2p1 = (2*l+1)/fpi_const
+          fact1 = (con**2)* fl2p1 * (&
+               alo1(lo)* (  alo1(lo) + &
+               2*clo1(lo) * ud%uulon(lo,ntyp,isp) ) +&
+               blo1(lo)* (  blo1(lo) * ud%ddn(l, ntyp,isp) +&
+               2*clo1(lo) * ud%dulon(lo,ntyp,isp) ) +&
+               clo1(lo)*    clo1(lo) )
+          DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
              !+t3e
-             locol = locol + 1
-             IF (MOD(locol-1,n_size).EQ.n_rank) THEN
+             locol = lapw%nv(iintsp)+lapw%index_lo(lo,ntyp)+nkvec !this is the column of the matrix
+             IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
+                locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
-                k = kvec(nkvec,lo)
+                k = lapw%kvec(nkvec,lo,ntyp)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions
                 DO kp = 1,lapw%nv(jintsp)
-                   iilo = iilo + 1
                    fact2 = con * fl2p1 * (&
-                        f(kp,l,ntyp,jintsp)* ( alo1(lo) + &
-                        clo1(lo)*ud%uulon(lo,ntyp,usp))+&
-                        g(kp,l,ntyp,jintsp)* ( blo1(lo) * ud%ddn(l,ntyp,usp)+&
-                        clo1(lo)*ud%dulon(lo,ntyp,usp)))
-                   dotp = gk(k,1,iintsp) * gk(kp,1,jintsp) + &
-                        gk(k,2,iintsp) * gk(kp,2,jintsp) +&
-                        gk(k,3,iintsp) * gk(kp,3,jintsp)
-                   IF (l_real) THEN
-                      bb_r(iilo) = bb_r(iilo) + invsfct*fact2 * legpol(l,dotp) *&
-                           ( rph(k,iintsp)*rph(kp,jintsp) +&
-                           cph(k,iintsp)*cph(kp,jintsp) )
+                        fj(kp,l,jintsp)* ( alo1(lo) + &
+                        clo1(lo)*ud%uulon(lo,ntyp,isp))+&
+                        gj(kp,l,jintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
+                        clo1(lo)*ud%dulon(lo,ntyp,isp)))
+                   dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
+                   IF (smat%l_real) THEN
+                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
+                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
                    ELSE
-                      IF (.NOT.noco%l_ss) THEN
-                         bb_c(iilo) = bb_c(iilo) + invsfct*fact2 * legpol(l,dotp) *&
-                              CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
-                              cph(k,iintsp)*cph(kp,jintsp) ) ,&
-                              ( cph(k,iintsp)*rph(kp,jintsp) -&
-                              rph(k,iintsp)*cph(kp,jintsp) ) )
-                      ELSE 
-                         bhelp(iilo) = invsfct*fact2*legpol(l,dotp) *&
-                              CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
-                              cph(k,iintsp)*cph(kp,jintsp) ) ,&
-                              ( cph(k,iintsp)*rph(kp,jintsp) -&
-                              rph(k,iintsp)*cph(kp,jintsp) ) )
-                      ENDIF
+                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
+                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
                    ENDIF
                 END DO
                 !--->          calculate the overlap matrix elements with other local
                 !--->          orbitals at the same atom, if they have the same l
-                iilo = iilo + nkvecprevat
                 DO lop = 1, (lo-1)
                    lp = atoms%llo(lop,ntyp)
                    IF (l.EQ.lp) THEN
                       fact3 = con**2 * fl2p1 * (&
                            alo1(lop)*(alo1(lo) + &
-                           clo1(lo)*ud%uulon(lo,ntyp,usp))+&
-                           blo1(lop)*(blo1(lo)*ud%ddn(l,ntyp,usp) +&
-                           clo1(lo)*ud%dulon(lo,ntyp,usp))+&
-                           clo1(lop)*(alo1(lo)*ud%uulon(lop,ntyp,usp)+&
-                           blo1(lo)*ud%dulon(lop,ntyp,usp)+&
-                           clo1(lo)*ud%uloulopn(lop,lo,ntyp,usp)))
+                           clo1(lo)*ud%uulon(lo,ntyp,isp))+&
+                           blo1(lop)*(blo1(lo)*ud%ddn(l,ntyp,isp) +&
+                           clo1(lo)*ud%dulon(lo,ntyp,isp))+&
+                           clo1(lop)*(alo1(lo)*ud%uulon(lop,ntyp,isp)+&
+                           blo1(lo)*ud%dulon(lop,ntyp,isp)+&
+                           clo1(lo)*ud%uloulopn(lop,lo,ntyp,isp)))
                       DO nkvecp = 1,invsfct* (2*lp+1)
-                         iilo = iilo + 1
-                         kp = kvec(nkvecp,lop) !
-                         dotp = gk(k,1,iintsp) * gk(kp,1,jintsp) +&
-                              gk(k,2,iintsp) * gk(kp,2,jintsp) +&
-                              gk(k,3,iintsp) * gk(kp,3,jintsp)
-                         IF (l_real) THEN
-                            bb_r(iilo) =bb_r(iilo)+invsfct*fact3*legpol(l,dotp)* &
-                                 ( rph(k,iintsp)*rph(kp,jintsp) +&
-                                 cph(k,iintsp)*cph(kp,jintsp) )
+                         kp = lapw%kvec(nkvecp,lop,ntyp)
+                         lorow=lapw%nv(jintsp)+lapw%index_lo(lop,ntyp)+nkvecp
+                         dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
+                         IF (smat%l_real) THEN
+                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)* &
+                                 cph(k,iintsp)*conjg(cph(kp,jintsp))
                          ELSE
-                            IF (.NOT.noco%l_ss) THEN
-                               bb_c(iilo) =bb_c(iilo)+invsfct*fact3*legpol(l,dotp)*&
-                                    CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
-                                    cph(k,iintsp)*cph(kp,jintsp) ) ,&
-                                    ( cph(k,iintsp)*rph(kp,jintsp) -&
-                                    rph(k,iintsp)*cph(kp,jintsp) ) )
-                            ELSE 
-                               bhelp(iilo) = invsfct*fact3*legpol(l,dotp)*&
-                                    CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
-                                    cph(k,iintsp)*cph(kp,jintsp) ) ,&
-                                    ( cph(k,iintsp)*rph(kp,jintsp) -&
-                                    rph(k,iintsp)*cph(kp,jintsp) ) )
-                            ENDIF
+                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)*&
+                                 cph(k,iintsp)*CONJG(cph(kp,jintsp)) 
                          ENDIF
                       END DO
                    ELSE
-                      iilo = iilo + invsfct* (2*lp+1)
                    END IF
                 END DO
                 !--->          calculate the overlap matrix elements of one local
                 !--->          orbital with itself
                 DO nkvecp = 1,nkvec
-                   iilo = iilo + 1
-                   kp = kvec(nkvecp,lo)
-                   dotp = gk(k,1,iintsp) * gk(kp,1,jintsp) +&
-                        gk(k,2,iintsp) * gk(kp,2,jintsp) +&
-                        gk(k,3,iintsp) * gk(kp,3,jintsp)
-                   IF (l_real) THEN
-                      bb_r(iilo) = bb_r(iilo) + invsfct*fact1*legpol(l,dotp) *&
-                           ( rph(k,iintsp)*rph(kp,jintsp) +&
-                           cph(k,iintsp)*cph(kp,jintsp) )
+                   kp = lapw%kvec(nkvecp,lo,ntyp)
+                   lorow=lapw%nv(jintsp)+lapw%index_lo(lo,ntyp)+nkvecp
+                   dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
+                   IF (smat%l_real) THEN
+                      smat%data_r(lorow,locol) = smat%data_r(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp) *&
+                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
                    ELSE
-                      IF (.NOT.noco%l_ss) THEN
-                         bb_c(iilo) = bb_c(iilo) + invsfct*fact1*legpol(l,dotp)*&
-                              CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
-                              cph(k,iintsp)*cph(kp,jintsp) ) ,&
-                              ( cph(k,iintsp)*rph(kp,jintsp) -&
-                              rph(k,iintsp)*cph(kp,jintsp) ) )
-                      ELSE 
-                         bhelp(iilo) = invsfct*fact1*legpol(l,dotp)*&
-                              CMPLX( ( rph(k,iintsp)*rph(kp,jintsp) +&
-                              cph(k,iintsp)*cph(kp,jintsp) ) ,&
-                              ( cph(k,iintsp)*rph(kp,jintsp) -&
-                              rph(k,iintsp)*cph(kp,jintsp) ) )
-                      ENDIF
+                      smat%data_c(lorow,locol) = smat%data_c(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp)*&
+                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
                    ENDIF
                 END DO
              ENDIF ! mod(locol-1,n_size) = nrank 
              !-t3e
           END DO
-          nkvecat = nkvecat + invsfct* (2*l+1)
        END DO
-       nkvecprevat = nkvecprevat + nkvecat
-       !+noco
-       IF (noco%l_ss) THEN
-          IF ( iintsp.EQ.1 .AND. jintsp.EQ.1 ) THEN     !---> spin-up spin-up part
-             chihlp = chi11
-             n = lapw%nv(1) + nkvecprevat_s
-             ij = (n+1)*n/2
-          ELSEIF ( iintsp.EQ.2 .AND. jintsp.EQ.2 ) THEN !---> spin-down spin-down part
-             chihlp = chi22
-             n = lapw%nv(1) + lapw%nv(iintsp) + atoms%nlotot + nkvecprevat_s
-             ij = (n+1)*n/2 + lapw%nv(1) + atoms%nlotot
-          ELSE                                          !---> spin-down spin-up part
-             chihlp = chi21
-             n = lapw%nv(1) + lapw%nv(iintsp) + atoms%nlotot + nkvecprevat_s
-             ij = (n+1)*n/2 
-          ENDIF
-
-          ic = 0                                        ! update b-matrix
-          DO lo = 1,atoms%nlo(ntyp)
-             ic = ic + invsfct* (2*atoms%llo(lo,ntyp)+1)
-          ENDDO
-          IF (.NOT.( iintsp.EQ.1 .AND. jintsp.EQ.2 )) THEN
-             ii = 0
-             DO k = 1, ic
-                n = k + lapw%nv(jintsp) + nkvecprevat_s
-                bb_c(ij+1:ij+n-1)=bb_c(ij+1:ij+n-1)+chihlp*bhelp(ii+1:ii+n-1)
-                IF (.NOT.(iintsp.EQ.2 .AND. jintsp.EQ.1 )) THEN
-                   bb_c(ij+n)=bb_c(ij+n)+chihlp*bhelp(ii+n)
-                ENDIF
-                ii = ii + n
-                ij = ij + n + (lapw%nv(3-jintsp)+atoms%nlotot)*(iintsp-1)
-             ENDDO
-          ELSE                                         ! special treatment for up-down:
-             n = lapw%nv(1) + atoms%nlotot
-             ii = 0
-             DO k = 1, ic
-                ij = (n+1)*n/2 + lapw%nv(1) + k + nkvecprevat_s
-                DO kp = 1, k + lapw%nv(jintsp) + nkvecprevat_s
-                   ii = ii + 1
-                   bb_c(ij) = bb_c(ij) +  chihlp *CONJG( bhelp(ii) )
-                   ij = ij + lapw%nv(1) + kp + atoms%nlotot
-                ENDDO
-             ENDDO
-          ENDIF
-          !          n1=nv(jintsp)+1
-          !          n2=n1+nv(jintsp)+2
-          !          n3=n2+nv(jintsp)+3
-          !          do n = 1,nv(jintsp)+(nlotot/2)
-          !           write(4,'(8f15.8)') bhelp(n),bhelp(n1+n),bhelp(n2+n),bhelp(n3+n)
-          !          enddo
-          DEALLOCATE ( bhelp )
-          IF (.NOT.( iintsp.EQ.2 .AND. jintsp.EQ.2 )) THEN
-             iilo = iilo_s
-             locol = locol_s             ! restore for other loops
-             nkvecprevat = nkvecprevat_s
-          ENDIF
-       ENDIF ! noco%l_ss
-       !-noco
     END IF
-    !$OMP END MASTER
   END SUBROUTINE slomat
   !===========================================================================
-  REAL FUNCTION legpol(l,arg)
+  PURE REAL FUNCTION legpol(l,arg)
     !
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
-    REAL arg
-    INTEGER l
+    REAL,INTENT(IN)   :: arg
+    INTEGER,INTENT(IN):: l
     !     ..
     !     .. Local Scalars ..
     INTEGER lp

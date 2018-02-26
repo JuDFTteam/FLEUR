@@ -1,7 +1,7 @@
 MODULE m_abcof
 CONTAINS
-  SUBROUTINE abcof(input,atoms,nobd,sym, cell, bkpt,lapw,ne,usdus,&
-       noco,jspin,kveclo,oneD, acof,bcof,ccof,zMat)
+  SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
+       noco,jspin,oneD, acof,bcof,ccof,zMat)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -9,7 +9,7 @@ CONTAINS
 #include "cpp_double.h"
 
     USE m_constants, ONLY : tpi_const
-    USE m_setabc1locdn
+    USE m_setabc1lo
     USE m_sphbes
     USE m_dsphbs
     USE m_abclocdn
@@ -27,28 +27,24 @@ CONTAINS
     TYPE(t_zMat),INTENT(IN)   :: zMat
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd
     INTEGER, INTENT (IN) :: ne
     INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kveclo(atoms%nlotot)
-    REAL,    INTENT (IN) :: bkpt(3)
     COMPLEX, INTENT (OUT):: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX cexp,phase,c_0,c_1,c_2,ci
-    REAL const,df,r1,s,tmk,wronk,qss1,qss2,qss3
-    INTEGER i,j,k,l,ll1,lm ,n,nap,natom,nn,iatom,jatom,lmp,m
+    REAL const,df,r1,s,tmk,wronk,qss(3)
+    INTEGER i,j,k,l,ll1,lm ,n,nap,natom,nn,iatom,jatom,lmp,m,nkvec
     INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap
     !     ..
     !     .. Local Arrays ..
-    INTEGER kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat  )
-    INTEGER nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
+    INTEGER nbasf0(atoms%nlod,atoms%nat)
     REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fk(3),fkp(3),fkr(3)
-    REAL alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype),clo1(atoms%nlod,atoms%ntype)
+    REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     COMPLEX ccchi(2,2)
     LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
@@ -67,6 +63,7 @@ CONTAINS
     !
     acof(:,:,:) = CMPLX(0.0,0.0)
     bcof(:,:,:) = CMPLX(0.0,0.0)
+    ccof(:,:,:,:)=CMPLX(0.,0.)
     !     ..
     !+APW_LO
     DO n = 1, atoms%ntype
@@ -90,30 +87,25 @@ CONTAINS
        !
        nvmax=lapw%nv(jspin)
        IF (noco%l_ss) nvmax=lapw%nv(iintsp)
-       CALL setabc1locdn(jspin, atoms,lapw,ne,noco,iintsp, sym,usdus,&
-            kveclo, enough,nkvec,kvec,nbasf0,ccof, alo1,blo1,clo1)
-       !
        IF (iintsp .EQ. 1) THEN
-          qss1= - noco%qss(1)/2
-          qss2= - noco%qss(2)/2
-          qss3= - noco%qss(3)/2
+          qss= - noco%qss/2
        ELSE
-          qss1= + noco%qss(1)/2
-          qss2= + noco%qss(2)/2
-          qss3= + noco%qss(3)/2
+          qss= + noco%qss/2
        ENDIF
 
        !---> loop over atom types
        !$OMP PARALLEL DO &
        !$OMP& DEFAULT(none)&
        !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
-       !$OMP& inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
+       !$OMP& alo1,blo1,clo1,inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
        !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,&
-       !$OMP& jspin,bkpt,qss1,qss2,qss3,&
-       !$OMP& apw,const,nobd,&
-       !$OMP& alo1,blo1,clo1,kvec,nbasf0,nkvec,enough,&
+       !$OMP& jspin,qss,&
+       !$OMP& apw,const,&
+       !$OMP& nbasf0,enough,&
        !$OMP& acof,bcof,ccof)
        DO n = 1,atoms%ntype
+          CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
+          
           !  ----> loop over equivalent atoms
           DO nn = 1,atoms%neq(n)
              natom = 0
@@ -124,9 +116,9 @@ CONTAINS
              IF ((atoms%invsat(natom).EQ.0) .OR. (atoms%invsat(natom).EQ.1)) THEN
                 !--->        loop over lapws
                 IF (zmat%l_real) THEN
-                   ALLOCATE ( work_r(nobd) )
+                   ALLOCATE ( work_r(ne) )
                 ELSE
-                   ALLOCATE ( work_c(nobd) )
+                   ALLOCATE ( work_c(ne) )
                 ENDIF
                 DO k = 1,nvmax
                    IF (.NOT.noco%l_noco) THEN
@@ -162,13 +154,9 @@ CONTAINS
                       ENDIF
                    ENDIF ! (noco%l_noco)
                    IF (noco%l_ss) THEN
-                      fk(1) = bkpt(1) + lapw%k1(k,iintsp) + qss1
-                      fk(2) = bkpt(2) + lapw%k2(k,iintsp) + qss2
-                      fk(3) = bkpt(3) + lapw%k3(k,iintsp) + qss3
+                      fk = lapw%bkpt + lapw%gvec(:,k,iintsp) + qss
                    ELSE
-                      fk(1) = bkpt(1) + lapw%k1(k,jspin) + qss1
-                      fk(2) = bkpt(2) + lapw%k2(k,jspin) + qss2
-                      fk(3) = bkpt(3) + lapw%k3(k,jspin) + qss3
+                      fk = lapw%bkpt + lapw%gvec(:,k,jspin) + qss
                    ENDIF ! (noco%l_ss)
                    s=  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
                    s = SQRT(s)
@@ -241,10 +229,14 @@ CONTAINS
                          ENDIF
                       ENDDO ! loop over m
                    ENDDO ! loop over l
-                   IF (.NOT.enough(natom)) THEN
-                      CALL abclocdn(atoms,sym, noco,ccchi(1,jspin),kspin,iintsp,const,phase,ylm,n,natom,k,&
-                           s,nvmax,ne,nbasf0,alo1,blo1,clo1,kvec(1,1,natom),nkvec,enough(natom),acof,bcof,ccof,zMat)
-                   ENDIF
+                   DO lo=1,atoms%nlo(n)
+                      DO nkvec=1,lapw%nkvec(lo,natom)
+                         IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
+                            CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
+                                 n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat)
+                         ENDIF
+                      ENDDO
+                   END DO
                 ENDDO ! loop over LAPWs
                 IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)
@@ -279,7 +271,7 @@ CONTAINS
              IF (atoms%invsat(iatom).EQ.1) THEN
                 jatom = sym%invsatnr(iatom)
                 cexp = EXP(tpi_const*ci*DOT_PRODUCT(atoms%taual(:,jatom)&
-                     &             + atoms%taual(:,iatom),(/bkpt(1),bkpt(2),bkpt(3)/)))
+                     &             + atoms%taual(:,iatom),lapw%bkpt))
                 DO ilo = 1,atoms%nlo(n)
                    l = atoms%llo(ilo,n)
                    DO m = -l,l

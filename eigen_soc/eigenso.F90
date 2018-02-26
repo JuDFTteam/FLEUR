@@ -27,6 +27,9 @@ CONTAINS
     USE m_spnorb 
     USE m_alineso
     USE m_types
+#ifdef CPP_MPI
+    USE m_mpi_bc_pot
+#endif
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -59,7 +62,6 @@ CONTAINS
     !     .. Local Arrays..
     CHARACTER*3 chntype
 
-    INTEGER, ALLOCATABLE :: kveclo(:)
     REAL,    ALLOCATABLE :: rsopdp(:,:,:,:),rsopdpd(:,:,:,:)
     REAL,    ALLOCATABLE :: rsopp(:,:,:,:),rsoppd(:,:,:,:) 
     REAL,    ALLOCATABLE :: eig_so(:) 
@@ -68,7 +70,8 @@ CONTAINS
     REAL,    ALLOCATABLE :: rsopplo(:,:,:,:),rsoploplop(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: zso(:,:,:),soangl(:,:,:,:,:,:)
 
-    TYPE(t_zmat)::zmat
+    TYPE(t_mat)::zmat
+    TYPE(t_lapw)::lapw
 
     INTEGER :: ierr
     
@@ -84,7 +87,7 @@ CONTAINS
 
     ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
-         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),kveclo(atoms%nlotot),&
+         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
          usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
          enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
@@ -193,8 +196,7 @@ CONTAINS
 
 
 
-    ALLOCATE( zso(DIMENSION%nbasfcn,2*DIMENSION%neigd,wannierspin),eig_so(2*DIMENSION%neigd) )
-    zso(:,:,:) = CMPLX(0.0,0.0)
+    ALLOCATE( eig_so(2*DIMENSION%neigd) )
     soangl(:,:,:,:,:,:) = CONJG(soangl(:,:,:,:,:,:))
     CALL timestop("eigenso: spnorb")
     !
@@ -209,15 +211,17 @@ CONTAINS
     !--->  start loop k-pts
     !
     DO  nk = mpi%irank+1,n_end,mpi%isize
-
+       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
+       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
+       zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,&
-            mpi,DIMENSION,atoms,sym,&
+       CALL alineso(eig_id,lapw,&
+            mpi,DIMENSION,atoms,sym,kpts,&
             input,noco,cell,oneD,&
             rsopp,rsoppd,rsopdp,rsopdpd,nk,&
             rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
             usdus,soangl,&
-            kveclo,enpara%ello0,nsz,nmat,&
+            enpara%ello0,nsz,nmat,&
             eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
@@ -233,25 +237,21 @@ CONTAINS
                nk,jspin,neig=nsz,neig_total=nsz,nmat=SIZE(zso,1),&
                eig=eig_so(:nsz))
 
-       ELSE
-          zmat%nbasfcn=size(zso,1)
-          allocate(zmat%z_c(zmat%nbasfcn,nsz))
-          zmat%l_real=.false.
-          zmat%nbands=nsz        
+       ELSE          
+          CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
           DO jspin = 1,wannierspin
              CALL timestart("eigenso: write_eig")  
-             zmat%z_c=zso(:,:nsz,jspin)
+             zmat%data_c=zso(:,:nsz,jspin)
              CALL write_eig(eig_id,&
                   nk,jspin,neig=nsz,neig_total=nsz,nmat=nmat,&
                   eig=eig_so(:nsz),zmat=zmat)
 
              CALL timestop("eigenso: write_eig")  
           ENDDO
-          deallocate(zmat%z_c)
        ENDIF ! (input%eonly) ELSE
-
+       deallocate(zso)
     ENDDO ! DO nk 
-    DEALLOCATE (zso,eig_so,rsoploplop,rsopplo,rsopdplo,rsoplopd)
+    DEALLOCATE (eig_so,rsoploplop,rsopplo,rsopdplo,rsoplopd)
     DEALLOCATE (rsoplop,rsopdp,rsopdpd,rsopp,rsoppd,soangl)
 
 

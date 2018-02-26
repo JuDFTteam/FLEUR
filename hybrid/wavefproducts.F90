@@ -49,7 +49,7 @@
       INTEGER                 ::  k,ic1,ioffset,ibando
       INTEGER                 ::  q,idum,m
       INTEGER                 ::  nbasm_ir
-      INTEGER                 ::  nbasmmt,nred
+      INTEGER                 ::  nbasmmt
       INTEGER                 ::  ok
       REAL                    ::  rdum,svol,s2,pi
       REAL                    ::  mtthr= 0
@@ -60,7 +60,6 @@
 !      - local arrays -
       INTEGER                 ::  iarr(lapw%nv(jsp))
       INTEGER                 ::  g(3),ghelp(3),lmstart(0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::  matind(dimension%nbasfcn,2)          
       INTEGER                 ::  gpthlp(3,dimension%nvd),nvhlp(dimension%jspd)
       INTEGER                 ::  gpt_nk(3,lapw%nv(jsp))
       INTEGER                 ::  g_t(3)
@@ -1246,7 +1245,6 @@
       USE m_olap     , ONLY : gptnorm
       USE m_wrapper
       USE m_constants
-      USE m_apws
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
@@ -1286,7 +1284,7 @@
       INTEGER                 ::    lm,lm1,lm2,lm_0,lm_00,lm1_0,lm2_0, lmp1,lmp2,lmp3,lmp4,lp1,lp2
       INTEGER                 ::    j,ll,m
       INTEGER                 ::    nbasm_ir,ngpt0
-      INTEGER                 ::    nred,n1,n2
+      INTEGER                 ::    n1,n2
       REAL                    ::    svol,sr2
       REAL                    ::    rdum,rfac,rfac1,rfac2,rdum1,rdum2
       REAL                    ::    sin1,sin2,cos1,cos2,add1,add2
@@ -1301,7 +1299,6 @@
       ! - local arrays -
       INTEGER                 ::    g(3),g_t(3)
       INTEGER                 ::    lmstart (0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::    matind(dimension%nbasfcn,2)
       INTEGER, ALLOCATABLE    ::    gpt0(:,:)
       INTEGER, ALLOCATABLE    ::    pointer(:,:,:)
 
@@ -1357,8 +1354,7 @@
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
-      CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
-           1,jsp,bkpt,lapw_nkqpt,matind,nred)
+      CALL lapw_nkqpt%init(input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs)
 
 
       ! read in z at k-point nk and nkqpt
@@ -2266,7 +2262,6 @@
 
 
       USE m_constants
-      USE m_apws     , ONLY : apws
       USE m_util     , ONLY : modulo1
       USE m_olap     , ONLY : gptnorm
       USE m_trafo
@@ -2305,7 +2300,7 @@
       INTEGER                 ::  igptm,iigptm   
       INTEGER                 ::  q,idum
       INTEGER                 :: nbasm_ir,ngpt0
-      INTEGER                 ::  nbasmmt,nred
+      INTEGER                 ::  nbasmmt
       INTEGER                 ::  ok,m
       
       REAL                    ::  rdum,svol,s2
@@ -2320,7 +2315,6 @@
 !      - local arrays -
       INTEGER                 ::  g(3),g_t(3)
       INTEGER                 ::  lmstart(0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::  matind(dimension%nbasfcn,2)
       INTEGER, ALLOCATABLE    ::  gpt0(:,:)
       INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
       
@@ -2372,8 +2366,7 @@
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
-      CALL apws(dimension,input,noco,kpts,nkqpt,cell,sym%zrfs,&
-               1,jsp,bkpt,lapw_nkqpt,matind,nred)
+      CALL lapw_nkqpt%init(input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs)
 
       ! read in z at k-point nk and nkqpt
 

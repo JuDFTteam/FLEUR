@@ -39,7 +39,6 @@ c****************************************************************
       integer          :: nkbnd,i
       REAL             :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL             :: epar(0:lmaxd,ntypd,jspd)
-      INTEGER          :: kveclo(nlotot)
       integer          :: n_start,n_end,co
       integer          :: num_bands
 
@@ -67,7 +66,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
      >              l_gwf,iqpt)
 

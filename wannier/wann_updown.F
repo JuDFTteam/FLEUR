@@ -139,8 +139,8 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real    :: eig(neigd),cp_time(9),efermi
       logical :: l_p0,l_bkpts,l_proj,l_amn,l_mmn
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
-      integer, allocatable :: kveclo_b(:),nv_b(:)
+      integer, allocatable :: nv(:)
+      integer, allocatable :: nv_b(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
 
@@ -381,7 +381,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
 
-      allocate ( kveclo(nlotot),nv(wannierspin) )
+      allocate ( nv(wannierspin) )
       allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
      &           k3(nvd,wannierspin) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
@@ -434,7 +434,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 
        do jspin=1,jspins
          call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
-     <                  ello,evac,epar,bkpt,wk,n_bands,n_size)
+     <                  ello,evac,epar,wk,n_bands,n_size)
        enddo
 
        jspin=1
@@ -715,22 +715,20 @@ c****************************************************************
       zzMat(jspin)%nbasfcn = nbasfcn
       zzMat(jspin)%nbands = neigd
       IF(l_real) THEN
-	    IF(.not.allocated(zzmat(jspin)%z_r))
-     +   ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
+         ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
      +                              zzMat(jspin)%nbands))
       ELSE
-	    IF(.not.allocated(zzmat(jspin)%z_c))
-     +   ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
+         ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
      +                              zzMat(jspin)%nbands))
       END IF
 
-         CALL cdn_read(
-     >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
-     >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),zzMat(jspin))
-
+!         CALL cdn_read(
+!     >              eig_id,
+!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
+!     >              l_ss,l_noco,neigd,n_start,n_end,
+!     <              nmat,nv,ello,evdu,epar,
+!     <              k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),zzMat(jspin))
+      call judft_error("cdn_read in wann_updown")
          nrec=0
       enddo !jspin
       call cpu_time(delta1)
@@ -805,7 +803,7 @@ c***********************************************************
      >            ntypd,nlo,llo,invsat,
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
-     >            kveclo,jspin,
+     >            jspin,
      >            oper,nop,mrot,nvd,nv,
      >            shiftkpt(:,ikpt),
      >            tau,
@@ -846,8 +844,8 @@ c...for the lapws and local orbitals, summed by the basis functions
       call cpu_time(delta)
       do jspin=1,wannierspin
 
-         CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     +              noco,jspin,kveclo,oneD,acof(1:,0:,1:,jspin),
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
+     +              noco,jspin,oneD,acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
 
@@ -1142,7 +1140,7 @@ c******************************************************
 
       deallocate(flo)
  
-      deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg )
       if (wann%l_bzsym)  deallocate(irreduc,mapkoper)
 

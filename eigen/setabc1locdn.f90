@@ -20,7 +20,7 @@ MODULE m_setabc1locdn
       CONTAINS
       SUBROUTINE setabc1locdn(&
                              jspin,atoms,lapw, ne,noco,iintsp, sym,usdus,&
-                             kveclo, enough,nkvec,kvec,nbasf0,ccof, alo1,blo1,clo1)
+                             enough,nbasf0,ccof, alo1,blo1,clo1)
 !
 !*************** ABBREVIATIONS *****************************************
 ! nbasf   : total number of basisfunctions (apw + lo)
@@ -40,9 +40,7 @@ MODULE m_setabc1locdn
       INTEGER, INTENT (IN) :: ne,iintsp,jspin
 !     ..
 !     .. Array Arguments ..
-      INTEGER, INTENT (IN)  :: kveclo(atoms%nlotot)
-      INTEGER, INTENT (OUT) :: nbasf0(atoms%nlod,atoms%nat),nkvec(atoms%nlod,atoms%nat)
-      INTEGER, INTENT (OUT) :: kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat )
+      INTEGER, INTENT (OUT) :: nbasf0(atoms%nlod,atoms%nat)
       REAL,    INTENT (OUT) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
       REAL,    INTENT (OUT) :: clo1(atoms%nlod,atoms%ntype)
       COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
@@ -104,7 +102,6 @@ MODULE m_setabc1locdn
             natom = natom + 1
             DO lo = 1,atoms%nlo(ntyp)
                enough(natom) = .false.
-               nkvec(lo,natom) = 0
                l = atoms%llo(lo,ntyp)
                IF (atoms%invsat(natom).EQ.0) THEN
                   nbasf0(lo,natom) = nbasf
@@ -130,25 +127,7 @@ MODULE m_setabc1locdn
            CALL juDFT_error("number of bas.-fcn.","setabc1locdn")
         ENDIF
       ENDIF
-!
-!--> sort the k-vectors used for the LO's according to atom & lo:
-!
-      natom = 0
-      lm = 0
-      DO ntyp = 1, atoms%ntype
-        DO nn = 1, atoms%neq(ntyp)
-          natom = natom + 1
-          IF ((atoms%invsat(natom).EQ.0) .OR. (atoms%invsat(natom).EQ.1)) THEN
-            DO lo = 1,atoms%nlo(ntyp)
-              m = ( atoms%invsat(natom) +1 ) * ( 2 * atoms%llo(lo,ntyp) + 1 )
-              DO l = 1, m
-                lm = lm + 1
-                kvec(l,lo,natom) =  kveclo(lm)
-              ENDDO
-            ENDDO
-          ENDIF
-        ENDDO
-      ENDDO
+
 
       END SUBROUTINE setabc1locdn
       END MODULE m_setabc1locdn

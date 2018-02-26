@@ -12,7 +12,7 @@ MODULE m_eig66_da
   ! eig.vec contains the eigenvalues and the eigenvectors
   ! The record number is given by nrec=nk+(jspin-1)*nkpts
   ! each record contains:
-  ! eig.bas: el,evac,ello,bkpt,wtkpt,nv,nmat,k1,k2,k3,kveclo
+  ! eig.bas: el,evac,ello,bkpt,wtkpt,nv,nmat
   ! eig.vec: ne,eig,z**
   !**: real or complex depending on calculation type
   USE m_eig66_data
@@ -55,7 +55,6 @@ CONTAINS
     !Allocate the storage for the DATA always read/write
     ALLOCATE(d%el_s(0:lmax,ntype),d%ello_s(nlo,ntype),d%evac_s(2))
     ALLOCATE(d%kvec_s(nmat,3),d%kveclo_s(nlotot))
-    d%kvec_s=0;d%kveclo_s=0
     !Calculate the record length
     INQUIRE(IOLENGTH=recl_eig) d%el_s,d%evac_s,d%ello_s,r3,r1,i1,i1,d%kvec_s,d%kveclo_s
     d%recl_bas=recl_eig
@@ -166,13 +165,12 @@ CONTAINS
     d%fname="eig"
     CALL eig66_remove_data(id)
   END SUBROUTINE close_eig
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,k1,k2,k3,bk,wk,neig,eig,w_iks,el,ello,evac,kveclo,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk,wk,neig,eig,w_iks,el,ello,evac,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(OUT),OPTIONAL  :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
     REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
@@ -196,8 +194,7 @@ CONTAINS
 
     nrec=nk+(jspin-1)*d%nkpts
     IF (PRESENT(el).OR.PRESENT(ello).OR.PRESENT(evac).OR.PRESENT(bk).OR.PRESENT(wk).OR.&
-         PRESENT(nv).OR.PRESENT(nmat).OR.PRESENT(k1).OR.PRESENT(k2).OR.PRESENT(k3).OR.&
-         PRESENT(kveclo)) THEN
+         PRESENT(nv).OR.PRESENT(nmat)) THEN
        !IO of basis-set information
        READ(d%file_io_id_bas,REC=nrec) nmat_s,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s,d%kveclo_s
        IF (PRESENT(el)) el=d%el_s
@@ -207,10 +204,6 @@ CONTAINS
        IF (PRESENT(wk)) wk=wtkpt
        IF (PRESENT(nv)) nv=nv_s
        IF (PRESENT(nmat)) nmat=nmat_s
-       IF (PRESENT(k1)) k1=d%kvec_s(:size(k1),1)
-       IF (PRESENT(k2)) k2=d%kvec_s(:size(k1),2)
-       IF (PRESENT(k3)) k3=d%kvec_s(:size(k1),3)
-       IF (PRESENT(kveclo)) kveclo=d%kveclo_s
     ENDIF
 
     IF (PRESENT(w_iks)) THEN
@@ -257,16 +250,15 @@ CONTAINS
    
   END SUBROUTINE read_eig
 
-  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,k1,k2,k3,bk,wk, &
-       eig,w_iks,el,ello,evac,nlotot,kveclo,n_size,n_rank,zmat)
+  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk,wk, &
+       eig,w_iks,el,ello,evac,nlotot,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
     REAL,    INTENT(IN),OPTIONAL :: wk
     INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
-    INTEGER, INTENT(IN),OPTIONAL :: k1(:),k2(:),k3(:),kveclo(:)
     REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
     REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
-    TYPE(t_zmat),INTENT(IN),OPTIONAL :: zmat
+    TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
     INTEGER:: nrec,r_len
     INTEGER:: nv_s,nmat_s
@@ -288,29 +280,26 @@ CONTAINS
     nrec=nk+(jspin-1)*d%nkpts
     IF (PRESENT(nmat).AND..NOT.PRESENT(el)) THEN
        !IO of basis-set information
-       READ(d%file_io_id_bas,REC=nrec,ERR=88) nmat_s,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s,d%kveclo_s
-88     WRITE(d%file_io_id_bas,REC=nrec)       nmat  ,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s,d%kveclo_s
+       READ(d%file_io_id_bas,REC=nrec,ERR=88) nmat_s,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s
+88     WRITE(d%file_io_id_bas,REC=nrec)       nmat  ,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s
        IF (PRESENT(wk).OR.PRESENT(nv).OR.PRESENT(nlotot) &
-            .OR.PRESENT(k1).OR.PRESENT(k2).OR.PRESENT(k3).OR.PRESENT(kveclo).OR.&
+            .OR.&
             PRESENT(bk).OR.PRESENT(ello).OR.PRESENT(evac)) THEN
           CALL juDFT_error("BUG:Direct access IO of eig-file only with all scalar data")
        ENDIF
     ELSE IF (PRESENT(el)) THEN
        IF (.NOT.(PRESENT(wk).AND.PRESENT(nv).AND.PRESENT(nmat).AND.PRESENT(nlotot) &
-            .AND.PRESENT(k1).AND.PRESENT(k2).AND.PRESENT(k3).AND.PRESENT(kveclo).AND.&
+            .AND.&
             PRESENT(bk).AND.PRESENT(el).AND.PRESENT(ello).AND.PRESENT(evac))) THEN
           CALL juDFT_error("BUG:Direct access IO of eig-file only with all data")
        ENDIF
-       d%kvec_s(:size(k1),1)=k1
-       d%kvec_s(:size(k1),2)=k2
-       d%kvec_s(:size(k1),3)=k3
        IF ((SIZE(el).NE.SIZE(d%el_s)).OR.(SIZE(ello).NE.SIZE(d%ello_s).OR.(SIZE(evac).NE.SIZE(d%evac_s)))) THEN
           WRITE(*,*) SHAPE(el),SHAPE(d%el_s)
           WRITE(*,*) SHAPE(ello),SHAPE(d%ello_s)
           WRITE(*,*) SHAPE(evac),SHAPE(d%evac_s)
           CALL juDFT_error("Mismatch of sizes")
        ENDIF
-       WRITE(d%file_io_id_bas,REC=nrec) nmat,el,evac,ello,bk,wk,nv,d%kvec_s,kveclo
+       WRITE(d%file_io_id_bas,REC=nrec) nmat,el,evac,ello,bk,wk,nv,d%kvec_s
     ENDIF
     IF (PRESENT(neig).AND.PRESENT(neig_total)) THEN
        IF (neig.NE.neig_total) THEN
@@ -327,13 +316,13 @@ CONTAINS
     !Now the IO of the eigenvalues/vectors
     IF (PRESENT(zmat)) THEN
        IF (zmat%l_real) THEN
-          INQUIRE(IOLENGTH=r_len) neig,eig,REAL(zmat%z_r)
+          INQUIRE(IOLENGTH=r_len) neig,eig,REAL(zmat%data_r)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(zmat%z_r)
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig,REAL(zmat%data_r)
        ELSE
-          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(zmat%z_c)
+          INQUIRE(IOLENGTH=r_len) neig,eig(:neig),CMPLX(zmat%data_c)
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
-          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%z_c)
+          WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%data_c)
        ENDIF
        print *,"W:",nrec,nk,neig
     ELSE

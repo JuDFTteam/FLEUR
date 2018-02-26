@@ -115,7 +115,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real eig(neigd),cp_time(9)
       logical l_p0,l_bkpts,l_proj,l_amn,l_mmn,l_eig,wann,wann_plott
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
+      integer, allocatable :: nv(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       real,    allocatable :: we(:)
 
@@ -248,7 +248,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
 
-      allocate ( kveclo(nlotot),nv(jspd) )
+      allocate ( nv(jspd) )
       allocate ( k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd) )
@@ -463,7 +463,7 @@ c******************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat,
      >              .false.,1)
 
@@ -547,8 +547,8 @@ c******************************************************************
 c...generation of the A,B,C coefficients in the spheres 
 c...for the lapws and local orbitals, summed by the basis functions 
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     +           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
+      CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
+     +           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
       call abcrot(
      >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -704,7 +704,7 @@ c****************************************************************
 110   continue ! end of cycle by spins
 
 
-      deallocate ( vr,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg)
  
 #ifdef CPP_MPI

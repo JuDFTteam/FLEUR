@@ -64,7 +64,11 @@ CONTAINS
 
     COMPLEX chi11,chi21,chi22
     INTEGER k,i,spin2,l,ll1,lo,jd
+<<<<<<< HEAD
     INTEGER m,n,na,nn,np,i_u,i_u_save
+=======
+    INTEGER m,n,na,nn,np,i_u
+>>>>>>> hsmt_simple
     INTEGER iiloh,iilos,nkvecprevath,nkvecprevats,iintsp,jintsp
     INTEGER nc,locolh,locols,nkvecprevatu,iilou,locolu
     INTEGER nkvecprevatuTemp,iilouTemp,locoluTemp
@@ -271,6 +275,10 @@ CONTAINS
                 ENDIF
              END IF
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> hsmt_simple
              IF (atoms%n_u.GT.0) THEN
                 nkvecprevatuTemp = nkvecprevatu
                 iilouTemp = iilou

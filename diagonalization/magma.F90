@@ -13,7 +13,6 @@ MODULE m_magma
   !**********************************************************
 CONTAINS
   SUBROUTINE magma_diag(nsize,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
-    use m_packed_to_full
 #ifdef CPP_MAGMA
     use magma
 #endif    

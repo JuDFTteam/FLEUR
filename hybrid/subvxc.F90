@@ -1,7 +1,7 @@
 MODULE m_subvxc
 CONTAINS
   SUBROUTINE subvxc(lapw,bk, DIMENSION,input,jsp,vr0, atoms,usdus, hybrid, el,ello,sym,&
-       nlot_d,kveclo, cell, sphhar, stars,xcpot,mpi,oneD,hamovlp,vx)
+       cell, sphhar, stars,xcpot,mpi,oneD,hamovlp,vx)
 
 
     USE m_intgr,     ONLY : intgr3
@@ -31,14 +31,10 @@ CONTAINS
     !     .. Scalar Arguments ..
 
     INTEGER, INTENT (IN) :: jsp 
-    INTEGER, INTENT (IN) :: nlot_d
-
 
 
 
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kveclo(nlot_d)
-
     REAL,    INTENT (IN) :: vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd)               ! just for radial functions
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (IN) :: ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)
@@ -154,7 +150,7 @@ CONTAINS
     IF( ok .NE. 0 ) STOP 'subvxc: error in allocation of ahlp/bhlp'
 
     CALL abcof3( input,atoms,sym,jsp,cell, bk,lapw,&
-         usdus, kveclo,oneD,ahlp,bhlp,bascof_lo)
+         usdus,oneD,ahlp,bhlp,bascof_lo)
 
     ALLOCATE( bascof(DIMENSION%nvd,2*(DIMENSION%lmd+1),atoms%nat), stat=ok )
     IF( ok .NE. 0 ) STOP 'subvxc: error in allocation of bascof'

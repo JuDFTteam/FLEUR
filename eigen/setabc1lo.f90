@@ -34,11 +34,9 @@ MODULE m_setabc1lo
 !     ..
 !     ..
 ! look, whether 'ntyp' is a APW atom; then set apw_at=.true.
-!
-      apw_at = .false.
-      DO lo = 1,atoms%nlo(ntyp)
-         IF (atoms%l_dulo(lo,ntyp)) apw_at = .true.
-      ENDDO
+      !
+      apw_at=ANY(atoms%l_dulo(:atoms%nlo(ntyp),ntyp))
+      
       DO lo = 1,atoms%nlo(ntyp)
          l = atoms%llo(lo,ntyp)
          IF (apw_at) THEN

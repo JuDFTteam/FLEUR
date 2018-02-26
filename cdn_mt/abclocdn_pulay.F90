@@ -12,7 +12,7 @@ CONTAINS
        &                          noco,ccchi,kspin,iintsp,&
        &                          con1,phase,ylm,ntyp,na,k,fgp,&
        &                          s,nv,ne,nbasf0,alo1,blo1,clo1,&
-       &                          kvec,nkvec,enough,acof,bcof,ccof,&
+       &                          kvec,enough,acof,bcof,ccof,&
        &                          acoflo,bcoflo,aveccof,bveccof,cveccof,zMat)
     !
     !*********************************************************************
@@ -48,7 +48,7 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (INOUT) :: cveccof(:,-atoms%llod:,:,:,:)!(3,-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
     LOGICAL, INTENT (OUT) :: enough(atoms%nat)
-    INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)
+    INTEGER :: nkvec(atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
@@ -59,6 +59,7 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX clotmp(-atoms%llod:atoms%llod)
     !     ..
+    nkvec=0
     enough(na) = .TRUE.
     term1 = con1* ((atoms%rmt(ntyp)**2)/2)*phase
     !

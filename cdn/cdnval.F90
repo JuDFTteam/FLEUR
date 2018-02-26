@@ -149,7 +149,7 @@ CONTAINS
     LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
-    REAL    cartk(3),bkpt(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
+    REAL    cartk(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
     REAL    ello(atoms%nlod,atoms%ntype,dimension%jspd),evac(2,dimension%jspd)
     REAL    epar(0:atoms%lmaxd,atoms%ntype,dimension%jspd),evdu(2,dimension%jspd)
     REAL    eig(dimension%neigd)
@@ -169,7 +169,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: qis(:,:,:)
     !-new_sl
     !-dw
-    INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:) ,kveclo(:)
+    INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
 
     REAL,    ALLOCATABLE :: aclo(:,:,:),acnmt(:,:,:,:,:)
@@ -248,7 +248,6 @@ CONTAINS
     ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( lapw%k1(dimension%nvd,dimension%jspd),lapw%k2(dimension%nvd,dimension%jspd),lapw%k3(dimension%nvd,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
     ALLOCATE (  usdus%ulos(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
@@ -339,6 +338,7 @@ CONTAINS
 
     ALLOCATE ( kveclo(atoms%nlotot) )
 
+  
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
        WRITE (16,FMT=8000) jspin
@@ -350,7 +350,7 @@ CONTAINS
          eig_id,&
          mpi%irank,mpi%isize,jspin,dimension%jspd,&
          noco%l_noco,&
-         ello,evac,epar,bkpt,wk,n_bands,n_size)!keep
+         ello,evac,epar,wk,n_bands,n_size)
 #ifdef CPP_MPI
     ! Sinchronizes the RMA operations
     CALL MPI_BARRIER(mpi%mpi_comm,ie) 
@@ -512,6 +512,7 @@ CONTAINS
           !
           ! -> Gu test: distribute ev's among the processors...
           !
+          CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
           skip_t = skip_tt
           IF (l_evp.AND.(mpi%isize.GT.1)) THEN
              IF (banddos%dos) THEN
@@ -549,31 +550,30 @@ CONTAINS
                 n_end    = noccbd
              END IF
           END IF
+          zMat%nbasfcn=lapw%nv(1)+atoms%nlotot
+          IF (noco%l_noco) zMat%nbasfcn=zMat%nbasfcn+lapw%nv(2)+atoms%nlotot
           IF (zmat%l_real) THEN
              IF (.NOT.ALLOCATED(zMat%z_r)) THEN
-                ALLOCATE (zMat%z_r(dimension%nbasfcn,dimension%neigd))
-                zMat%nbasfcn = dimension%nbasfcn
+                ALLOCATE (zMat%z_r(zmat%nbasfcn,dimension%neigd))
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_r = 0
           ELSE
              IF (.NOT.ALLOCATED(zMat%z_c)) THEN
-                ALLOCATE (zMat%z_c(dimension%nbasfcn,dimension%neigd))
-                zMat%nbasfcn = dimension%nbasfcn
+                ALLOCATE (zMat%z_c(zmat%nbasfcn,dimension%neigd))
                 zMat%nbands = dimension%neigd
              END IF
              zMat%z_c = 0
           endif
           CALL cdn_read(&
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-               ikpt,jspin,dimension%nbasfcn,noco%l_ss,noco%l_noco,&
+               ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
-               lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
-               lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
+               ello,evdu,epar,&
+               lapw,wk,nbands,eig,zMat)
 #ifdef CPP_MPI
-          ! Synchronizes the RMA operations
-          !if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
-          CALL MPI_BARRIER(mpi%mpi_comm,ie)
+          ! Sinchronizes the RMA operations
+          if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
@@ -667,7 +667,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,igq_fft,we, eig,bkpt,qpw,cdom,qis,results%force,f_b8,zMat)
+                  jspin,lapw,noccbd,igq_fft,we, eig,qpw,cdom,qis,results%force,f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -688,7 +688,7 @@ CONTAINS
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,bkpt,lapw, evac,eig,&
+                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,lapw, evac,eig,&
                         rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
@@ -726,14 +726,14 @@ CONTAINS
                      aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat) )
-                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,bkpt,noccbd,eig,usdus,&
-                        kveclo,ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,noccbd,eig,usdus,&
+                        ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
                         e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE
                 CALL timestart("cdnval: abcof")
-                CALL abcof(input,atoms,noccbd,sym, cell, bkpt,lapw,noccbd,usdus, noco,ispin,kveclo,oneD,&
+                CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
                      acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat)
                 CALL timestop("cdnval: abcof")
 
@@ -867,9 +867,9 @@ CONTAINS
              !        write data to direct access file first, write to formated file later by PE 0 only!
              !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
              !
-             cartk=matmul(bkpt,cell%bmat)
+             cartk=matmul(lapw%bkpt,cell%bmat)
              IF (banddos%ndir.GT.0) THEN
-                CALL sympsi(bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
+                CALL sympsi(lapw%bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
                      lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
              END IF
              !
