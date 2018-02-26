@@ -214,6 +214,7 @@
          sym%invsatnr(na) = 0
       END DO
 
+      IF (.not.(noco%l_soc.and.atoms%n_u>0)) THEN
       IF (sym%invs) THEN
          WRITE (6,FMT=*)
          nat1 = 1
@@ -251,6 +252,7 @@
       WRITE (6,FMT=*) atoms%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3,&
      &       ' via 3d inversion')
+      END IF
       END IF
  
       END  SUBROUTINE mapatom

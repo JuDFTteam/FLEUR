@@ -1,5 +1,4 @@
 set(fleur_F77 ${fleur_F77}
-global/constants.f
 global/differ.f
 global/fitchk.f
 global/nmat_rot.f
@@ -19,6 +18,7 @@ global/abcrot.f
 global/savewigner.f
 )
 set(fleur_F90 ${fleur_F90}
+global/constants.f90
 global/checkdop.F90
 global/chkmt.f90
 global/convn.f90

@@ -6,6 +6,7 @@
 
       module m_wann_mmnk_symm
       use m_juDFT
+      USE m_types
       private
       public:: wann_mmnk_symm
       contains
@@ -15,13 +16,16 @@ c     calculated; map symmetry-related k-point-pairs to this
 c     minimal set.
 c     Frank Freimuth
 c******************************************************************      
-      subroutine wann_mmnk_symm(
+      subroutine wann_mmnk_symm(input,kpts,
      >               fullnkpts,nntot,bpt,gb,l_bzsym,
      >               irreduc,mapkoper,l_p0,film,nop,
      >               invtab,mrot,l_onedimens,tau,
      <               pair_to_do,maptopair,kdiff,l_q,param_file)
 
       implicit none
+
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_kpts),INTENT(IN)      :: kpts
       integer,intent(in) :: nop
       integer,intent(in) :: mrot(3,3,nop)
       integer,intent(in) :: invtab(nop)
@@ -240,16 +244,28 @@ c*****************************************************************
          close(412)
       else   
             IF(.not.l_q)THEN
-              open(412,file='kpts',form='formatted')
-              read(412,*)fullnkpts_tmp,scale
+              IF(.NOT.input%l_inpXML) THEN
+                 open(412,file='kpts',form='formatted')
+                 read(412,*)fullnkpts_tmp,scale
+                 do k=1,fullnkpts
+                    read(412,*)kpoints(:,k)
+                 enddo   
+                 kpoints(:,:)=kpoints/scale
+              ELSE
+                 fullnkpts_tmp = kpts%nkpt
+                 do k=1,fullnkpts
+                    kpoints(:,k) = kpts%bk(:,k)
+                 enddo   
+              END IF
             ELSE
               open(412,file=param_file,form='formatted')
               read(412,*)fullnkpts_tmp,scale
+              do k=1,fullnkpts
+                 read(412,*)kpoints(:,k)
+              enddo   
+              kpoints(:,:)=kpoints/scale
             ENDIF
-            do k=1,fullnkpts
-               read(412,*)kpoints(:,k)
-            enddo   
-            kpoints(:,:)=kpoints/scale
+
             if (film.and..not.l_onedimens) kpoints(3,:)=0.0
             close(412)
       endif

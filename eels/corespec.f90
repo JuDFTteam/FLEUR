@@ -6,6 +6,8 @@
 
 module m_corespec
 
+  USE m_types
+
   implicit none
 
 ! PARAMETERS
@@ -34,21 +36,6 @@ module m_corespec
   character(len=64), parameter :: csmsgsfs = fsb//",a,f8.3,"//fse
   character(len=64), parameter :: csmsgses = fsb//",a,es12.3,"//fse
 
-! INPUT PARAMETERS
-
-  type csitype
-     sequence
-     integer :: verb  ! output verbosity
-     integer :: type  ! atomic type used for calculation of core spectra
-     character(len=1) :: edge  ! edge character (K,L,M,N,O,P)
-     integer :: edgeidx(11)  ! l-j edges
-     integer :: lx  ! maximum lmax considered in spectra calculation
-     real :: ek0  ! kinetic energy of incoming electrons
-     real :: emn  ! energy spectrum lower bound
-     real :: emx  ! energy spectrum upper bound
-     real :: ein  ! energy spectrum increment
-  end type csitype
-
 ! VARIABLES
 
   logical :: l_cs
@@ -59,7 +46,7 @@ module m_corespec
 
   character(len=32) :: smeno
 
-  type (csitype) :: csi
+  type (t_coreSpecInput) :: csi
 
   type csvtype
      sequence

@@ -49,7 +49,7 @@ CONTAINS
     hybrid%l_subvxc = ( hybrid%l_hybrid.AND..not.xcpot%is_name("exx") )
     !If this is the first iteration loop we can not calculate a new
     !non-local potential
-    IF (.NOT.ALLOCATED(v%pw)) THEN
+    IF (it<2) THEN
        hybrid%l_calhf=.FALSE.
        if (hybrid%l_addhf) INQUIRE(file="cdnc",exist=hybrid%l_addhf)
        hybrid%l_subvxc = ( hybrid%l_subvxc .AND. hybrid%l_addhf)

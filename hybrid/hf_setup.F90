@@ -37,7 +37,6 @@ CONTAINS
     REAL,    ALLOCATABLE    ::  basprod(:)
     REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),bk(3)
     INTEGER                 ::  degenerat(DIMENSION%neigd2+1,kpts%nkpt)
-    INTEGER                 :: nred
     TYPE(t_lapw)            :: lapw
   
     LOGICAL :: skip_kpt(kpts%nkpt)

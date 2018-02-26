@@ -170,6 +170,32 @@ extern const unsigned char* getXMLAttributeValue(const unsigned char* xPathExpre
 
 }
 
+int setXMLAttributeValue(const unsigned char* xPathExpression,const unsigned char * value)
+{
+   if (xPathCtxt == NULL) 
+   {
+      fprintf(stderr, "Error: xPathCtxt is null in getAttributeValue(...)");
+      return 1;
+   }
+   xPathObj = xmlXPathEvalExpression(xPathExpression, xPathCtxt);
+   if (xPathObj == NULL)
+   {
+      fprintf(stderr, "Error: xPathObj is null in getAttributeValue(...)");
+      return 1;
+   }
+   xmlNodeSetPtr nodes = xPathObj->nodesetval;
+   if (nodes == NULL)
+   {
+      fprintf(stderr, "Error: nodes is null in getAttributeValue(...)");
+      return 1;
+   }
+
+//   return NULL;
+   xmlNodeSetContent(nodes->nodeTab[0],value);
+   return 0;
+
+}
+
 int freeXMLResources()
 {
    xmlCleanupParser();

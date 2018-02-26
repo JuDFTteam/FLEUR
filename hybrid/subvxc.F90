@@ -35,7 +35,6 @@ CONTAINS
 
 
     !     .. Array Arguments ..
- 
     REAL,    INTENT (IN) :: vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd)               ! just for radial functions
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
     REAL,    INTENT (IN) :: ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)

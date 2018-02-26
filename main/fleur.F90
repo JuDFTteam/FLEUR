@@ -41,6 +41,9 @@ CONTAINS
     USE m_fleur_init
     USE m_pldngen
     USE m_optional
+    USE m_cdn_io
+    USE m_broyd_io
+    USE m_qfix
     USE m_vgen
     USE m_rhodirgen
     USE m_writexcstuff
@@ -70,6 +73,7 @@ CONTAINS
     USE m_ylm
 #ifdef CPP_MPI
     USE m_mpi_bc_all,  ONLY : mpi_bc_all
+    USE m_mpi_bc_potden
 #endif
     USE m_eig66_io,   ONLY : open_eig, close_eig
     IMPLICIT NONE
@@ -97,13 +101,16 @@ CONTAINS
     TYPE(t_hybrid)   :: hybrid
     TYPE(t_oneD)     :: oneD
     TYPE(t_mpi)      :: mpi
+    TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
-    TYPE(t_potden)   :: v,vx
+    TYPE(t_potden)   :: vTot,vx,vCoul,vTemp
+    TYPE(t_potden)   :: inDen, outDen
 
     !     .. Local Scalars ..
-    INTEGER:: eig_id
+    INTEGER:: eig_id, archiveType
     INTEGER:: n,it,ithf,pc
-    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont
+    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix, l_error, l_wann_inp
+    REAL   :: fermiEnergyTemp, fix
     !--- J<
     INTEGER             :: phn
     REAL, PARAMETER     :: tol = 1.e-8
@@ -120,8 +127,8 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-         sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-         oneD,wann,l_opti)
+                    sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+                    oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
 
@@ -130,11 +137,11 @@ CONTAINS
        IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
           IF (noco%l_noco) THEN
              CALL pldngen(sym,stars,atoms,sphhar,vacuum,&
-                  cell,input,noco,oneD,sliceplot)
+                          cell,input,noco,oneD,sliceplot)
           ENDIF
        ENDIF
        CALL OPTIONAL(mpi,atoms,sphhar,vacuum,DIMENSION,&
-            stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
+                     stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
     ENDIF
     !
     IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
@@ -145,11 +152,11 @@ CONTAINS
 
 
     !+Wannier
-    input%l_wann = .FALSE.
-    INQUIRE (file='wann_inp',exist=input%l_wann)
+    INQUIRE (file='wann_inp',exist=l_wann_inp)
+    input%l_wann = input%l_wann.OR.l_wann_inp
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-       CALL wann_optional(input,atoms,sym,cell,oneD,noco,wann)
+       CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
     IF (wann%l_gwf) input%itmax = 1
     
@@ -164,6 +171,32 @@ CONTAINS
     l_cont = ( it < input%itmax )
     results%last_distance = -1.0
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
+
+    ! Initialize and load inDen density (start)
+    CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    IF (noco%l_noco) THEN
+       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    ELSE
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    END IF
+    IF(mpi%irank.EQ.0) THEN
+       CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                        0,fermiEnergyTemp,l_qfix,inDen)
+       CALL timestart("Qfix")
+       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,&
+                 .FALSE.,.false.,fix)
+       CALL timestop("Qfix")
+       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                         0,-1.0,0.0,.FALSE.,inDen)
+    END IF
+    ! Initialize and load inDen density (end)
+
+    ! Initialize potentials (start)
+    CALL vTot%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vCoul%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
+    CALL vx%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTCOUL)
+    CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    ! Initialize potentials (end)
 
     DO WHILE (l_cont)
 
@@ -197,7 +230,7 @@ CONTAINS
                 IF (noco%l_noco) THEN
                    CALL timestart("gen. spin-up and -down density")
                    CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
-                        vacuum,22,cell,input,oneD)
+                                  vacuum,22,cell,input,noco,oneD)
                    CALL timestop("gen. spin-up and -down density")
                 ENDIF
                 !---> pk non-collinear
@@ -222,6 +255,11 @@ CONTAINS
              END IF
           END IF
 
+#ifdef CPP_MPI
+          CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
+#endif
+          ! Initialize and load inDen density matrix and broadcast inDen(end)
+
           DO qcount=1,jij%nqpt
              IF (jij%l_J) THEN
                 noco%qss(:)=jij%qj(:,qcount)
@@ -243,7 +281,7 @@ CONTAINS
 
              !HF
              IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                  cell,vacuum,oneD,banddos,results,sym,xcpot,v,it  )
+                                                    cell,vacuum,oneD,banddos,results,sym,xcpot,vTot,it)
              !#endif
 
              DO pc = 1, wann%nparampts
@@ -262,7 +300,7 @@ CONTAINS
                    CALL timestart("generation of potential")
                    IF (mpi%irank==0) WRITE(*,"(a)",advance="no") " * Potential generation "
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,v,vx)
+                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,vTot,vx,vCoul)
                    CALL timestop("generation of potential")
 
                    IF (mpi%irank.EQ.0) THEN
@@ -335,9 +373,11 @@ CONTAINS
                                ! WRITE(6,fmt='(A)') 'Starting 1st variation ...'
                                CALL timestart("eigen")
                                IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Eigenvalue problem "
+                               vTemp = vTot
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
-                                    it,eig_id, results,v,vx)
+                                    it,eig_id,inDen,results,vTemp,vx)
+                               vTot%mmpMat = vTemp%mmpMat
                                eig_idList(pc) = eig_id
                                CALL timestop("eigen")
                                !
@@ -370,7 +410,7 @@ CONTAINS
                                ENDIF
                                ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
                                CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                                    obsolete,sym,cell,noco,input,kpts, oneD)
+                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot)
                                IF(noco%l_soc.AND.input%gw.EQ.2) THEN
                                   CLOSE(4649)
                                   INQUIRE(1014,opened=l_endit)
@@ -519,12 +559,10 @@ CONTAINS
              !        ----> charge density
              !
              !+Wannier functions
-             input%l_wann = .FALSE.
-             INQUIRE (file='wann_inp',exist=input%l_wann)
              IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
-                CALL wannier(DIMENSION,mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,&
-                     wann,noco,cell,enpara,banddos,sliceplot,results,&
-                     eig_idList,(sym%invs).AND.(.NOT.noco%l_noco),kpts%nkpt)
+                CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
+                     wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
+                     eig_idList,(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
              END IF
              IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
              !-Wannier
@@ -532,8 +570,9 @@ CONTAINS
              CALL timestart("generation of new charge density (total)")
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* New Charge "
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                  DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-                  enpara,cell,noco,jij,results,oneD)
+                         DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
+                         enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
+                         inDen%iter,inDen,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e
@@ -562,28 +601,24 @@ CONTAINS
                    CALL juDFT_end("NDIR",mpi%irank)
                 END IF
 
-                !          ----> output potential and potential difference
+                !----> output potential and potential difference
                 IF (obsolete%disp) THEN
                    reap = .FALSE.
                    input%total = .FALSE.
                    CALL timestart("generation of potential (total)")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi, results,noco,v,vx)
+                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,vTot,vx,vCoul)
                    CALL timestop("generation of potential (total)")
 
                    CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
                 END IF
-                !
-                !i         ----> total energy
-                !
 
-
+                !----> total energy
                 CALL timestart('determination of total energy')
                 CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
-                     sym,input,noco,cell,oneD,xcpot,hybrid,it,results)
+                     sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,results)
 
                 CALL timestop('determination of total energy')
-
 
                 ! in case of parallel processing, the total energy calculation is done
                 ! only for irank.eq.0, since no parallelization is required here. once
@@ -620,9 +655,9 @@ CONTAINS
              !
              CALL timestart("mixing")
              IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Mixing distance: "
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,it,noco,oneD,hybrid,results)
-             !
+             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
              CALL timestop("mixing")
+
              WRITE (6,FMT=8130) it
              WRITE (16,FMT=8130) it
              IF (mpi%irank==0) THEN
@@ -694,16 +729,7 @@ CONTAINS
             CLOSE(2)
             PRINT *,"qfix set to F"
          ENDIF
-         INQUIRE(file='broyd',exist=l_exist)
-         IF (l_exist) THEN
-            CALL system('rm broyd')
-            PRINT *,"broyd file deleted"
-         ENDIF
-         INQUIRE(file='broyd.7',exist=l_exist)
-         IF (l_exist) THEN
-            CALL system('rm broyd.7')
-            PRINT *,"broyd.7 file deleted"
-         ENDIF
+         CALL resetBroydenHistory()
       ENDIF
       CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
     END SUBROUTINE priv_geo_end

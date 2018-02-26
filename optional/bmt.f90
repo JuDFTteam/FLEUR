@@ -3,9 +3,10 @@ contains
   SUBROUTINE bmt(&
        & stars,input,noco,atoms,sphhar,vacuum,&
        & cell,sym,oneD)
-    !
-    use m_types
-    use m_juDFT
+
+    USE m_constants
+    USE m_types
+    USE m_juDFT
     USE m_cdn_io
     USE m_wrtdop
     IMPLICIT NONE
@@ -19,18 +20,14 @@ contains
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    INTEGER k,i,ivac  ,it 
+
+    TYPE(t_potden) :: den
+
+    INTEGER k,i,ivac
     INTEGER type,typmag, archiveType
     REAL fermiEnergyTemp
     LOGICAL l_qfix
-    CHARACTER(len=8) filename 
-    COMPLEX, ALLOCATABLE :: fpw(:,:),fzxy(:,:,:,:)
-    REAL,    ALLOCATABLE :: fz(:,:,:),fr(:,:,:,:)
-    COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
-
-    !     ..
-    !     ..
-
+    CHARACTER(len=8) filename
 
     typmag= atoms%ntype 
     ! only muffin-tins with type <= typmag remain magnetic  
@@ -43,42 +40,41 @@ contains
     !atoms%jmtd = maxval(atoms%jri(:))
     !sphhar%nlhd = maxval(sphhar%nlh(:))
 
-    ALLOCATE(fpw(stars%ng3,input%jspins),fzxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins))
-    ALLOCATE(fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),fz(vacuum%nmz,2,input%jspins))
-    ALLOCATE(cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2))
-
-    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-    IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    IF(noco%l_noco) THEN
+       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+    ELSE
+       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    END IF
 
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,it,fr,fpw,fz,fzxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
     IF ( typmag < atoms%ntype ) THEN 
        DO type= typmag+1,atoms%ntype 
           DO k= 0,sphhar%nlhd
              DO i= 1,atoms%jmtd
-                fr(i,k,type,1)= ( fr(i,k,type,1) + fr(i,k,type,2) )/2. 
-                fr(i,k,type,2)= fr(i,k,type,1) 
+                den%mt(i,k,type,1)= (den%mt(i,k,type,1) + den%mt(i,k,type,2))/2. 
+                den%mt(i,k,type,2)= den%mt(i,k,type,1) 
              ENDDO
           ENDDO
        ENDDO
     ENDIF
 
     DO k= 1,stars%ng3
-       fpw(k,1)= ( fpw(k,1) + fpw(k,2) )/2.
-       fpw(k,2)= fpw(k,1)
+       den%pw(k,1)= (den%pw(k,1) + den%pw(k,2))/2.0
+       den%pw(k,2)= den%pw(k,1)
     ENDDO
     IF (input%film) THEN
        DO ivac= 1,vacuum%nvac
           DO i= 1,vacuum%nmz
-             fz(i,ivac,1)= ( fz(i,ivac,1) + fz(i,ivac,2) )/2.  
-             fz(i,ivac,2)= fz(i,ivac,1)
+             den%vacz(i,ivac,1)= (den%vacz(i,ivac,1) + den%vacz(i,ivac,2))/2.0
+             den%vacz(i,ivac,2)= den%vacz(i,ivac,1)
           ENDDO
           DO k= 2,stars%ng2
              DO i= 1,vacuum%nmzxy
-                fzxy(i,k-1,ivac,1)= &
-                     &         ( fzxy(i,k-1,ivac,1) + fzxy(i,k-1,ivac,2) )/2. 
-                fzxy(i,k-1,ivac,2)= fzxy(i,k-1,ivac,1)
+                den%vacxy(i,k-1,ivac,1)= (den%vacxy(i,k-1,ivac,1) + den%vacxy(i,k-1,ivac,2))/2.0
+                den%vacxy(i,k-1,ivac,2)= den%vacxy(i,k-1,ivac,1)
              ENDDO
           ENDDO
        ENDDO
@@ -95,11 +91,8 @@ contains
     CALL wrtdop(&
          & stars,vacuum,atoms,sphhar,input,sym,&
          & 98,&
-         & it,fr,fpw,fz,fzxy)
+         & den%iter,den%mt,den%pw,den%vacz,den%vacxy)
     CLOSE(98) 
-
-    DEALLOCATE(cdom,cdomvz,cdomvxy)
-    DEALLOCATE(fpw,fzxy,fr,fz)
 
   END SUBROUTINE bmt
 END MODULE m_bmt

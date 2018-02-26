@@ -41,6 +41,7 @@ CONTAINS
     USE m_constants
     USE m_rinpXML
     USE m_winpXML
+    USE m_init_wannier_defaults
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -85,6 +86,7 @@ CONTAINS
     TYPE(t_kpts)                  :: kpts_temp
     TYPE(t_hybrid)                :: hybrid_temp
     TYPE(t_oneD)                  :: oneD_temp
+    TYPE(t_coreSpecInput)         :: coreSpecInput_temp
     TYPE(t_wann)                  :: wann_temp
     LOGICAL                       :: l_kpts_temp
     INTEGER                       :: numSpecies
@@ -213,7 +215,7 @@ CONTAINS
 
           CALL rw_inp('r',atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                       banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,&
+                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,&
                       input_temp%comment)
           input_temp%l_f = input%l_f
           input_temp%tkb = input%tkb
@@ -223,30 +225,33 @@ CONTAINS
           vacuum_temp = vacuum
           CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,a3_temp(3),&
+               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,a3_temp(3),&
                input_temp%comment)
     
        ELSE
+          kpts_temp%ntet = 1
           kpts_temp%numSpecialPoints = 1
           ALLOCATE(kpts_temp%specialPoints(3,kpts_temp%numSpecialPoints))
           ALLOCATE(noel_temp(1),atomTypeSpecies(1),speciesRepAtomType(1))
           ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
           ALLOCATE(xmlCoreOccs(1,1,1))
+          CALL initWannierDefaults(wann_temp)
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
-                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,wann_temp,noel_temp,&
-                        namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,scale_temp,dtild_temp,xmlElectronStates,&
+                        oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
+                        namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,xmlElectronStates,&
                         xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
           numSpecies = SIZE(speciesRepAtomType)
           filename = 'inp_new.xml'
-          input_temp%l_f = input%l_f
+          input_temp = input
+          !input_temp%l_f = input%l_f
           input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nkpt3(:),1)
           stars_temp%gmax = stars_temp%gmaxInit
           CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nkpt3,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
-                        scale_temp,dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
+                        dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                         atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,.TRUE.,numSpecies,enpara_temp)
           DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
           DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)

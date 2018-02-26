@@ -98,8 +98,7 @@ CONTAINS
 10     IF (sliceplot%plpot) input%score = .FALSE.
        IF (sliceplot%iplot) THEN
           CALL timestart("Plotting")
-          IF (input%strho)  CALL juDFT_error("strho = T and iplot=T",calledby&
-               &        ="optional")
+          IF (input%strho) CALL juDFT_error("strho = T and iplot=T",calledby = "optional")
           CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                        input,sym,cell,sliceplot,noco)
           CALL timestop("Plotting")
@@ -126,14 +125,8 @@ CONTAINS
        input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
-       CALL stden(mpi,&
-            &              sphhar,stars,atoms,sym,&
-            &              DIMENSION,vacuum,&
-            &              input,&
-            &              cell,&
-            &              xcpot,&
-            &              obsolete,&
-            &              oneD)
+       CALL stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
+                  input,cell,xcpot,obsolete,noco,oneD)
        !
        input%total=strho
        CALL timestop("generation of start-density")
@@ -144,9 +137,7 @@ CONTAINS
        !
        IF (input%swsp) THEN
           CALL timestart("optional: spin polarized density")
-          CALL cdnsp(&
-               &              atoms,input,vacuum,sphhar,&
-               &              stars,sym,oneD,cell,dimension)
+          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dimension)
           !
           CALL timestop("optional: spin polarized density")
        END IF
@@ -156,9 +147,7 @@ CONTAINS
        IF (input%lflip) THEN
 
           CALL timestart('optional: flip magnetic moments')
-          CALL flipcdn(&
-               &                atoms,input,vacuum,sphhar,&
-               &                stars,sym,oneD,cell,noco%l_noco)
+          CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
           !
           CALL timestop('optional: flip magnetic moments')
        END IF
@@ -166,9 +155,7 @@ CONTAINS
        IF (obsolete%l_u2f) THEN
 
           CALL timestart('optional: conversion to formatted')
-          CALL u2f(&
-               &           stars,input,atoms,sphhar,vacuum,&
-               &           cell,sym,noco%l_noco)
+          CALL u2f(stars,input,atoms,sphhar,vacuum,cell,sym,noco%l_noco)
           !
           CALL timestop('optional: conversion to formatted')
        ENDIF
@@ -176,17 +163,13 @@ CONTAINS
        IF (obsolete%l_f2u) THEN
 
           CALL timestart('optional: conversion to unformatted')
-          CALL f2u(&
-               &           stars,input,atoms,sphhar,vacuum,&
-               &           cell,sym,noco%l_noco)
+          CALL f2u(stars,input,atoms,sphhar,vacuum,cell,sym,noco%l_noco)
           !
           CALL timestop('optional: conversion to unformatted')
        ENDIF
 
        IF (input%l_bmt) THEN
-          CALL bmt(&
-               &           stars,input,noco,atoms,sphhar,vacuum,&
-               &           cell,sym,oneD)
+          CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF
 
     ENDIF ! mpi%irank == 0

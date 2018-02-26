@@ -5,15 +5,12 @@
 #to overwrite previous settings
 
 if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
-   set_source_files_properties(io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -O0)
-   set_source_files_properties(cdn/pwden.F90 PROPERTIES COMPILE_FLAGS -O0)
-   set_source_files_properties(eigen/apws.F90 PROPERTIES COMPILE_FLAGS -O0)
-   set_source_files_properties(init/lhcal.f PROPERTIES COMPILE_FLAGS -O0)
+   #set_source_files_properties(io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -O0)
+   #set_source_files_properties(cdn/pwden.F90 PROPERTIES COMPILE_FLAGS -O0)
+   #set_source_files_properties(eigen/apws.F90 PROPERTIES COMPILE_FLAGS -O0)
+   #set_source_files_properties(init/lhcal.f PROPERTIES COMPILE_FLAGS -O0)
    if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "14.1.0.0")
       set_source_files_properties(vgen/vmtxcg.F90 PROPERTIES COMPILE_FLAGS -no-openmp)
    endif()
-endif()
-if (${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
-     set_source_files_properties(vgen/vmts.F90 -O0)
 endif()
 

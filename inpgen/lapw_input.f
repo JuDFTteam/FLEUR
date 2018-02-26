@@ -41,16 +41,17 @@
       h_film=.false. ; h_comp=.false.
       h_exco=.false. ; h_kpt=.false.
       fatalerror=.false.
-                          ! jspins, gmax, gmaxxc, kmax were set before
-        frcor  = .false.  ! no frozen core
-        ctail  = .true.   ! always core-tail correction
-        kcrel = 0         ! no fully-magnetic dirac core
+                        ! jspins, gmax, gmaxxc, kmax were set before
+      frcor  = .false.  ! no frozen core
+      ctail  = .true.   ! always core-tail correction
+      kcrel = 0         ! no fully-magnetic dirac core
 
-        relcor = 'non-relativi'
-        namex = 'pbe '
-        ndvgrd = 6 ; chng= -1.0e-12 
-        nkpt = 0 ; div = 0 
-        tkb = 0.001 ; tria = .false.
+      relcor = 'non-relativi'
+      namex = 'pbe '
+      ndvgrd = 6 ; chng= -1.0e-12 
+      nkpt = 0 ; div = 0 
+      tkb = 0.001 ; tria = .false.
+      kPointDensity = 0.0
  
 
 !===> read input

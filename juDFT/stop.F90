@@ -32,6 +32,7 @@ MODULE m_juDFT_stop
   !-----------------------------------------------
   USE m_judft_time
   USE m_judft_sysinfo
+  USE m_judft_args
   IMPLICIT NONE
   PRIVATE
   PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
@@ -73,12 +74,17 @@ CONTAINS
     IF (PRESENT(warning)) warn = warning
     IF (warn) THEN
        !check if we stop nevertheless
-       INQUIRE(FILE ="JUDFT_WARN_ONLY",EXIST= callstop)
-       callstop  = .NOT.callstop
+       IF (judft_was_argument("-warn_only")) THEN
+          callstop=.false.
+       ELSE
+          INQUIRE(FILE ="JUDFT_WARN_ONLY",EXIST= callstop)
+
+          callstop  = .NOT.callstop
+       ENDIF
     ELSE
        callstop = .TRUE.
     ENDIF
-
+    
     IF (.NOT.warn) THEN
        WRITE(text(1),*) PE,"**************juDFT-Error*****************"
     ELSE
@@ -115,9 +121,11 @@ CONTAINS
           linenr=linenr+1
           WRITE(text(linenr),'(a)')"Warnings not ignored. Touch 'JUDFT_WARN_ONLY' to make the warning nonfatal"
        ENDIF
-       write(0,"(10(a,/))") (trim(text(n)),n=1,linenr)
+       WRITE(0,*)
+       WRITE(0,"(10(a,/))") (TRIM(text(n)),n=1,linenr)
        CALL juDFT_STOP()
     ENDIF
+    WRITE(0,*)
     write(0,"(10(a,/))") (trim(text(n)),n=1,linenr)
   END SUBROUTINE juDFT_error
 
@@ -161,7 +169,7 @@ CONTAINS
           CALL endXMLOutput()
        END IF
     END IF
-
+    WRITE(0,*)
     WRITE(0,*) "*****************************************"
     WRITE(0,*) "Run finished successfully"
     WRITE(0,*) "Stop message:"
@@ -206,6 +214,7 @@ CONTAINS
     CALL writetimes(.TRUE.)
     CALL print_memory_info()
     INQUIRE(FILE="JUDFT_TRACE",EXIST=calltrace)
+    IF (judft_was_argument("-trace")) calltrace=.TRUE.
     IF (error.EQ.1) calltrace = .TRUE.
     IF (calltrace) THEN
 #ifdef __INTEL_COMPILER

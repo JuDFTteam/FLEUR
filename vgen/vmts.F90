@@ -78,10 +78,10 @@ CONTAINS
        ENDDO
     ENDIF
     !           ----> g.ne.0 components
-#ifndef __PGI
+    ! I commented out the OMP parallelization for the following loop since
+    ! it produced wrong results with the ifort 18 compiler.
     !!$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(cp,pylm,nat,n,sbf,nd,lh,&
     !!$OMP& sm,jm,m,lm,l) REDUCTION(+:vtl)
-#endif
     DO k = mpi%irank+2, stars%ng3, mpi%isize
        cp = vpw(k,1)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
@@ -91,7 +91,7 @@ CONTAINS
                &                  pylm)
        ELSE
           !-odim
-         CALL od_phasy(&
+CALL od_phasy(&
                &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &           pylm)
@@ -115,9 +115,7 @@ CONTAINS
           nat = nat + atoms%neq(n)
        ENDDO
     ENDDO
-#ifndef __PGI
     !!$OMP END PARALLEL DO
-#endif
 #ifdef CPP_MPI
     n1 = (sphhar%nlhd+1)*atoms%ntype
     ALLOCATE(c_b(n1))

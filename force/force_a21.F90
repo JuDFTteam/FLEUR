@@ -54,7 +54,6 @@ CONTAINS
     COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
-    INTEGER, PARAMETER :: lmaxb=3
     COMPLEX dtd,dtu,utd,utu
     INTEGER lo, mlotot, mlolotot, mlot_d, mlolot_d
     INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
@@ -88,7 +87,7 @@ CONTAINS
          a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
     !
     IF(atoms%n_u.GT.0) THEN
-       ALLOCATE(v_mmp(-lmaxb:lmaxb,-lmaxb:lmaxb,atoms%n_u))
+       ALLOCATE(v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u))
        v_mmp = CMPLX(0.0,0.0)
        CALL read_tlmplm_vs_mmp(jsp,atoms%n_u,v_mmp)
     END IF
@@ -197,7 +196,7 @@ CONTAINS
                cveccof, tlmplm,usdus, a21)
 
           IF ((atoms%n_u.GT.0).AND.(i_u.LE.atoms%n_u)) THEN
-             CALL force_a21_U(nobd,atoms,lmaxb,i_u,n,jsp,we,ne,&
+             CALL force_a21_U(nobd,atoms,i_u,n,jsp,we,ne,&
                               usdus,v_mmp,acof,bcof,ccof,&
                               aveccof,bveccof,cveccof, a21)
           END IF

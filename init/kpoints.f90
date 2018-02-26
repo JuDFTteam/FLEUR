@@ -25,37 +25,36 @@ contains
     LOGICAL,INTENT(IN)          :: l_kpts
 
     TYPE(t_sym) :: sym_hlp
-    INTEGER     :: i
-    REAL        :: recVecLength
 
-    IF (kpts%specificationType.EQ.4) THEN
-       DO i = 1, 3
-          IF (kpts%kPointDensity(i).LE.0.0) THEN
-             CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'kpoints')
-          END IF
-          recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
-          kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
-       END DO
-       kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+    IF (input%l_wann) THEN
+       IF (kpts%specificationType.NE.2) THEN
+          CALL juDFT_error('l_wann only with kPointMesh', calledby = 'kpoints')
+       END IF
     END IF
 
     IF (.NOT.l_kpts) THEN
        IF (.NOT.oneD%odd%d1) THEN
-          IF (jij%l_J) THEN
+          IF (input%l_wann) THEN
+             sym_hlp=sym
+             sym_hlp%nop=1
+             sym_hlp%nop2=1
+             CALL kptgen_hybrid(kpts,sym_hlp%invs,noco%l_soc,sym_hlp%nop,sym_hlp%mrot,sym_hlp%tau)
+          ELSE IF ((jij%l_J)) THEN
              sym_hlp=sym
              sym_hlp%nop=1
              sym_hlp%nop2=1
              CALL julia(sym_hlp,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
-          ELSE IF(kpts%l_gamma .and. banddos%ndir .eq. 0) THEN
+          ELSE IF (kpts%l_gamma.and.(banddos%ndir.eq.0)) THEN
              CALL kptgen_hybrid(kpts,sym%invs,noco%l_soc,sym%nop,sym%mrot,sym%tau)
           ELSE
              CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
           END IF
        ELSE
-          STOP 'Error: No kpoint set generation for 1D systems yet!'
+          CALL juDFT_error('Error: No kpoint set generation for 1D systems yet!', calledby = 'kpoints')
           CALL od_kptsgen (kpts%nkpt)
        END IF
     END IF
+
     !Rescale weights and kpoints
 
     kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
@@ -63,7 +62,5 @@ contains
     kpts%posScale = 1.0
     IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
 
-  
-  
 end subroutine kpoints
 end module m_kpoints

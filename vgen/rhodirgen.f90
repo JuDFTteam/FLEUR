@@ -25,11 +25,8 @@ MODULE m_rhodirgen
   !     Philipp Kurz 99/11/01
   !**********************************************************************
 CONTAINS
-  SUBROUTINE rhodirgen(&
-       &                     DIMENSION,sym,stars,&
-       &                     atoms,sphhar,vacuum,&
-       &                     ndomfile,&
-       &                     cell,input,oneD)
+  SUBROUTINE rhodirgen(DIMENSION,sym,stars,atoms,sphhar,vacuum,&
+                       ndomfile,cell,input,noco,oneD)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -53,6 +50,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
@@ -68,9 +66,13 @@ CONTAINS
     !     ..
     !-odim
     !+odim
+
+    ! Local type instances
+    TYPE(t_potden) :: den
+
     !     .. Local Scalars ..
     INTEGER iden,jspin,ivac,ifft2,ifft3
-    INTEGER imz,ityp,iri,ilh,imesh,iq2,iq3,iter
+    INTEGER imz,ityp,iri,ilh,imesh,iq2,iq3
     REAL   zero,rho_11,rho_22,rho_21r,rho_21i,rhotot,magmom,phi
     REAL rho_up,rho_down,mx,my,mz,eps,pi,fix,vz_r,vz_i,rziw,theta
     REAL fermiEnergyTemp
@@ -79,28 +81,24 @@ CONTAINS
     LOGICAL l_qfix
     !     ..
     !     .. Local Arrays ..
-    !---> off-diagonal part of the density matrix
-    COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
-    COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-    REAL,    ALLOCATABLE :: rht(:,:,:),rho(:,:,:,:),rz(:,:,:)
+    REAL,    ALLOCATABLE :: rz(:,:,:)
     REAL,    ALLOCATABLE :: rvacxy(:,:,:,:),ris(:,:),fftwork(:)
     !     ..
     zero = 0.0 ; czero = CMPLX(0.0,0.0) 
     eps = 1.0e-20
   
-    ALLOCATE (qpw(stars%ng3,DIMENSION%jspd),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),&
-         &          cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         &     ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
-         &     rz(vacuum%nmzd,2,2),&
-         &     rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),rht(vacuum%nmzd,2,DIMENSION%jspd) )
+    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+
+    ALLOCATE (ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
+              rz(vacuum%nmzd,2,2))
     !
     !---> initialize arrays for the density matrix
     !
-    rho(:,:,:,:) = zero ; qpw(:,:) = czero ; cdom(:) = czero
+    den%cdom(:) = czero
+    den%cdomvz(:,:) = czero
+    den%cdomvxy(:,:,:) = czero
     IF (input%film) THEN
-       rht(:,:,:) = zero   ; rz(:,:,:) = zero
-       cdomvz(:,:) = czero ; rhtxy(:,:,:,:) = czero
-       cdomvxy(:,:,:) = czero
+       rz(:,:,:) = zero
     ENDIF
 
     ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
@@ -117,29 +115,18 @@ CONTAINS
 
     !---> reload the density matrix from file rhomat_inp
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_NOCO_const,CDN_INPUT_DEN_const,&
-                     0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     0,fermiEnergyTemp,l_qfix,den)
 
-    CALL qfix(&
-         &          stars,atoms,sym,vacuum,&
-         &          sphhar,input,cell,oneD,&
-         &          qpw,rhtxy,rho,rht,.FALSE.,.FALSE.,&
-         &          fix)
+    CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+              den%pw,den%vacxy,den%mt,den%vacz,.FALSE.,.FALSE.,fix)
 
     !---> fouriertransform the diagonal part of the density matrix
-    !---> in the interstitial, qpw, to real space (ris)
+    !---> in the interstitial, den%pw, to real space (ris)
     DO iden = 1,2
-       CALL fft3d(&
-            &               ris(0,iden),fftwork,&
-            &               qpw(1,iden),&
-            &               stars,&
-            &               +1)
+       CALL fft3d(ris(0,iden),fftwork,den%pw(1,iden),stars,+1)
     ENDDO
     !---> fouriertransform the off-diagonal part of the density matrix
-    CALL fft3d(&
-         &           ris(0,3),ris(0,4),&
-         &           cdom(1),&
-         &           stars,&
-         &           +1)
+    CALL fft3d(ris(0,3),ris(0,4),den%cdom(1),stars,+1)
 
     !test
     !      DO iden=1,4
@@ -204,11 +191,7 @@ CONTAINS
     !---> Fouriertransform the density matrix back to reciprocal space
     DO jspin = 1,input%jspins
        fftwork=0.0
-       CALL fft3d(&
-            &               ris(0,jspin),fftwork,&
-            &               qpw(1,jspin),&
-            &               stars,&
-            &               -1)
+       CALL fft3d(ris(0,jspin),fftwork,den%pw(1,jspin),stars,-1)
     ENDDO
 
     !---> fouriertransform the diagonal part of the density matrix
@@ -220,18 +203,14 @@ CONTAINS
                 rziw = 0.0
                 IF (oneD%odi%d1) THEN
                    call judft_error("oneD not implemented",calledby="rhodirgen")
-                   !CALL fft2d(&
-                   !     &                 oneD%k3,odi%M,odi%n2d,&
-                   !     &                 rvacxy(0,imz,ivac,iden),fftwork,&
-                   !     &                 rht(imz,ivac,iden),rziw,rhtxy(imz,1,ivac,iden),&
-                   !     &                 vacuum,odi%nq2,odi%kimax2,1,&
+                   !CALL fft2d(oneD%k3,odi%M,odi%n2d,rvacxy(0,imz,ivac,iden),fftwork,&
+                   !           den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,1,ivac,iden),&
+                   !           vacuum,odi%nq2,odi%kimax2,1,&
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
-                   CALL fft2d(&
-                        &                 stars,&
-                        &                 rvacxy(0,imz,ivac,iden),fftwork,&
-                        &                 rht(imz,ivac,iden),rziw,rhtxy(imz,1,ivac,iden),&
-                        &                 vacuum%nmzxyd,1)
+                   CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,&
+                              den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,1,ivac,iden),&
+                              vacuum%nmzxyd,1)
                 ENDIF
              ENDDO
           ENDDO
@@ -240,24 +219,18 @@ CONTAINS
        DO ivac = 1,vacuum%nvac
           DO imz = 1,vacuum%nmzxyd
              rziw = 0.0
-             vz_r = REAL(cdomvz(imz,ivac))
-             vz_i = AIMAG(cdomvz(imz,ivac))
+             vz_r = REAL(den%cdomvz(imz,ivac))
+             vz_i = AIMAG(den%cdomvz(imz,ivac))
              IF (oneD%odi%d1) THEN
                    call judft_error("oneD not implemented",calledby="rhodirgen")
-                !CALL fft2d(&
-                !     &              oneD%k3,odi%M,odi%n2d,&
-                !     &              rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
-                !     &              vz_r,vz_i,&
-                !     &              cdomvxy(imz,1,ivac),&
-                !     &              vacuum,odi%nq2,odi%kimax2,1,&
+                !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
+                !           rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
+                !           vz_r,vz_i,den%cdomvxy(imz,1,ivac),&
+                !           vacuum,odi%nq2,odi%kimax2,1,&
                 !     &               %igf,odl%pgf,odi%nst2)
              ELSE
-                CALL fft2d(&
-                     &              stars,&
-                     &              rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
-                     &              vz_r,vz_i,&
-                     &              cdomvxy(imz,1,ivac),&
-                     &              vacuum%nmzxyd,1)
+                CALL fft2d(stars,rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
+                           vz_r,vz_i,den%cdomvxy(imz,1,ivac),vacuum%nmzxyd,1)
              ENDIF
           ENDDO
        ENDDO
@@ -312,10 +285,10 @@ CONTAINS
              ENDDO
           ENDDO
           DO imz = vacuum%nmzxyd+1,vacuum%nmzd
-             rho_11  = rht(imz,ivac,1)
-             rho_22  = rht(imz,ivac,2)
-             rho_21r = REAL(cdomvz(imz,ivac))
-             rho_21i = AIMAG(cdomvz(imz,ivac))
+             rho_11  = den%vacz(imz,ivac,1)
+             rho_22  = den%vacz(imz,ivac,2)
+             rho_21r = REAL(den%cdomvz(imz,ivac))
+             rho_21i = AIMAG(den%cdomvz(imz,ivac))
              mx      =  2*rho_21r
              my      = -2*rho_21i
              mz      = (rho_11-rho_22)
@@ -350,8 +323,8 @@ CONTAINS
                 ENDIF
              ENDIF
 
-             rht(imz,ivac,1) = rho_up
-             rht(imz,ivac,2) = rho_down
+             den%vacz(imz,ivac,1) = rho_up
+             den%vacz(imz,ivac,2) = rho_down
              rz(imz,ivac,1) = theta
              rz(imz,ivac,2) = phi
           ENDDO
@@ -363,47 +336,38 @@ CONTAINS
                 fftwork=0.0
                 IF (oneD%odi%d1) THEN
                    call judft_error("oneD not implemented",calledby="rhodirgen")
-                   !CALL fft2d(&
-                   !     &                 oneD%k3,odi%M,odi%n2d,&
-                   !     &                 rvacxy(0,imz,ivac,jspin),fftwork,&
-                   !     &                 rht(imz,ivac,jspin),rziw,rhtxy(imz,1,ivac,jspin),&
-                   !     &                 vacuum,odi%nq2,odi%kimax2,-1,&
+                   !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
+                   !           rvacxy(0,imz,ivac,jspin),fftwork,&
+                   !           den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,1,ivac,jspin),&
+                   !           vacuum,odi%nq2,odi%kimax2,-1,&
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
-                   CALL fft2d(&
-                        &                 stars,&
-                        &                 rvacxy(0,imz,ivac,jspin),fftwork,&
-                        &                 rht(imz,ivac,jspin),rziw,rhtxy(imz,1,ivac,jspin),&
-                        &                 vacuum%nmzxyd,-1)
+                   CALL fft2d(stars,rvacxy(0,imz,ivac,jspin),fftwork,&
+                              den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,1,ivac,jspin),&
+                              vacuum%nmzxyd,-1)
                 END IF
              ENDDO
           ENDDO
        ENDDO
     ENDIF
     !---> ndomfile is the dirofmag-file
-    OPEN (ndomfile,FILE='dirofmag',FORM='unformatted',&
-         &     STATUS='unknown')
+    OPEN (ndomfile,FILE='dirofmag',FORM='unformatted',STATUS='unknown')
     WRITE (ndomfile) (ris(imesh,3),imesh=0,ifft3-1)
     WRITE (ndomfile) (ris(imesh,4),imesh=0,ifft3-1)
     IF (input%film) THEN
-       WRITE (ndomfile) ((rz(imz,ivac,1),imz=vacuum%nmzxyd+1,vacuum%nmzd),&
-            &        ivac=1,vacuum%nvac)
-       WRITE (ndomfile) ((rz(imz,ivac,2),imz=vacuum%nmzxyd+1,vacuum%nmzd),&
-            &        ivac=1,vacuum%nvac)
-       WRITE (ndomfile) (((rvacxy(imesh,imz,ivac,3),&
-            &        imesh=0,ifft2-1),imz=1,vacuum%nmzxyd),ivac=1,vacuum%nvac)
-       WRITE (ndomfile) (((rvacxy(imesh,imz,ivac,4),&
-            &        imesh=0,ifft2-1),imz=1,vacuum%nmzxyd),ivac=1,vacuum%nvac)
+       WRITE (ndomfile) ((rz(imz,ivac,1),imz=vacuum%nmzxyd+1,vacuum%nmzd),ivac=1,vacuum%nvac)
+       WRITE (ndomfile) ((rz(imz,ivac,2),imz=vacuum%nmzxyd+1,vacuum%nmzd),ivac=1,vacuum%nvac)
+       WRITE (ndomfile) (((rvacxy(imesh,imz,ivac,3),imesh=0,ifft2-1),imz=1,vacuum%nmzxyd),ivac=1,vacuum%nvac)
+       WRITE (ndomfile) (((rvacxy(imesh,imz,ivac,4),imesh=0,ifft2-1),imz=1,vacuum%nmzxyd),ivac=1,vacuum%nvac)
     ENDIF
     CLOSE (ndomfile)
 
     !---> write spin-up and -down density on file cdn
 
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                      0,-1.0,0.0,.FALSE.,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                      0,-1.0,0.0,.FALSE.,den)
 
-    DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,&
-         &            ris,fftwork,rz,rho,rht)
+    DEALLOCATE (ris,fftwork,rz)
     IF (input%film) DEALLOCATE(rvacxy)
     RETURN
   END SUBROUTINE rhodirgen

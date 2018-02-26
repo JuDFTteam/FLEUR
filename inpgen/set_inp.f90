@@ -51,7 +51,7 @@
  
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
-      REAL    recVecLength
+      REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
@@ -66,7 +66,7 @@
       INTEGER  nu,iofile
       INTEGER  iggachk
       INTEGER  n ,iostat, errorStatus
-      REAL    scale,scpos ,zc
+      REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
@@ -160,8 +160,11 @@
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
-      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; scale = 1.0 ; scpos = 1.0 
+      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
+      input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
+      kpts%numSpecialPoints = 0
+      input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -342,7 +345,6 @@
 !
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
-      CLOSE (6)
       INQUIRE(file="inp",exist=l_exists)
       IF (l_exists) THEN
          CALL juDFT_error("inp-file exists. Cannot write another input file in this directory.",calledby="set_inp")
@@ -418,6 +420,20 @@
       Jij%mtypes=1
       Jij%phnd=1
 
+      CALL inv3(cell%amat,cell%bmat,cell%omtil)
+      cell%bmat=tpi_const*cell%bmat
+      kpts%nkpt3(:) = div(:)
+
+      IF (kpts%specificationType.EQ.4) THEN
+         DO i = 1, 3
+            IF (kpts%kPointDensity(i).LE.0.0) THEN
+               CALL juDFT_error('Error: Nonpositive kpointDensity provided', calledby = 'set_inp')
+            END IF
+            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
+            kpts%nkpt3(i) = CEILING(kpts%kPointDensity(i) * recVecLength)
+         END DO
+         kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
+      END IF
 
       IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
@@ -428,16 +444,15 @@
          a1Temp(:) = a1(:)
          a2Temp(:) = a2(:)
          a3Temp(:) = a3(:)
+
          IF(l_explicit) THEN
             ! kpts generation
-            CALL inv3(cell%amat,cell%bmat,cell%omtil)
-            cell%bmat=tpi_const*cell%bmat
-            kpts%nkpt3(:) = div(:)
             kpts%l_gamma = l_gamma
-            kpts%specificationType = 3
             sym%symSpecType = 3
 
             CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+
+            kpts%specificationType = 3
 
             !set latnam to any
             cell%latnam = 'any'
@@ -457,14 +472,15 @@
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
-     &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,scale,dtild,input%comment,&
+     &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
      &                 l_explicit,numSpecies,enpara)
 
          IF(juDFT_was_argument("-explicit")) THEN
             sumWeight = 0.0
-            WRITE(*,*) 'nkpt: ', kpts%nkpt
+            WRITE(6,*) ''
+            WRITE(6,'(a,(a3,i10))') 'k-point count:','', kpts%nkpt
             DO i = 1, kpts%nkpt
                sumWeight = sumWeight + kpts%wtkpt(i)
             END DO
@@ -484,6 +500,19 @@
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)
 
+      IF (ANY(kpts%nkpt3(:).NE.0)) THEN
+         DO i = 1, 3
+            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
+            kPointDen(i) = kpts%nkpt3(i) / recVecLength
+         END DO
+         WRITE(6,*) ''
+         WRITE(6,'(a,3(a4,i10))')   'k-point mesh:'   , '', kpts%nkpt3(1),'', kpts%nkpt3(2),'', kpts%nkpt3(3)
+         WRITE(6,'(a,3(a4,f10.6))') 'k-point density:', '', kPointDen(1),'', kPointDen(2),'', kPointDen(3)
+         WRITE(6,*) ''
+      END IF
+
+      CLOSE (6)
+
       IF (atoms%ntype.GT.999) THEN
          WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
          WRITE(*,*) 'Use inp.xml file instead!'
@@ -495,7 +524,7 @@
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &               noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
+     &               noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
 
          iofile = 6
@@ -532,7 +561,7 @@
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,scale,dtild,input%comment)
+     &                  noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
         IF ( ALL(div /= 0) ) nkpt3 = div
         WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma

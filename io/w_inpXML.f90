@@ -19,7 +19,7 @@ CONTAINS
 SUBROUTINE w_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
 &                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
-&                   noel,namex,relcor,a1,a2,a3,scale,dtild_opt,name_opt,&
+&                   noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
 &                   l_explicitIn,numSpecies,enpara)
@@ -54,7 +54,7 @@ SUBROUTINE w_inpXML(&
    INTEGER, INTENT (IN)        :: atomTypeSpecies(atoms%ntype)
    INTEGER, INTENT (IN)        :: speciesRepAtomType(numSpecies)
    LOGICAL, INTENT (IN)        :: l_gamma, l_outFile, l_explicitIn
-   REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3),scale
+   REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3)
    REAL, INTENT (IN)     :: xmlCoreOccs(2,29,atoms%ntype)
    INTEGER, INTENT (IN)  :: xmlElectronStates(29,atoms%ntype)
    LOGICAL, INTENT (IN)  :: xmlPrintCoreStates(29,atoms%ntype)
@@ -154,7 +154,7 @@ SUBROUTINE w_inpXML(&
       REWIND (fileNum)
 
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.28">'
+      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.29">'
    END IF
 
    IF(PRESENT(name_opt)) THEN
@@ -232,6 +232,11 @@ SUBROUTINE w_inpXML(&
    ELSE IF(input%tria) THEN
       bzIntMode = 'tria'
    END IF
+
+!      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
+   195 FORMAT('      <ldaU l_linMix="',l1,'" mixParam="',f0.6,'" spinf="',f0.6,'"/>')
+   WRITE (fileNum,195) input%ldauLinMix,input%ldauMixParam,input%ldauSpinf
+
 !      <bzIntegration valenceElectrons="8.00000" mode="hist" fermiSmearingEnergy="0.00100">
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
@@ -324,7 +329,7 @@ SUBROUTINE w_inpXML(&
 !      <xsd:attribute name="dTilda" type="xsd:double" use="required"/>
 !      <filmLattice ...>
       241 FORMAT('      <filmLattice scale="',f0.8,'" latnam="',a,'" dVac="',f0.8,'" dTilda="',f0.8,'">')
-      WRITE(fileNum,241) scale, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
+      WRITE(fileNum,241) input%scaleCell, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
       IF (cell%latnam.EQ.'any') THEN
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
          255 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
@@ -338,12 +343,12 @@ SUBROUTINE w_inpXML(&
          IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
      &       (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
      &       (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            256 FORMAT('         <a1>',f0.10,'</a1>')
-            WRITE (fileNum,256) a1Temp(1)
+            256 FORMAT('         <a1 scale="',f0.10,'">',f0.10,'</a1>')
+            WRITE (fileNum,256) input%scaleA1, a1Temp(1) / input%scaleA1
          END IF
          IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            266 FORMAT('         <a2>',f0.10,'</a2>')
-            WRITE (fileNum,266) a2Temp(2)
+            266 FORMAT('         <a2 scale="',f0.10,'">',f0.10,'</a2>')
+            WRITE (fileNum,266) input%scaleA2, a2Temp(2) / input%scaleA2
          END IF
 
          IF (cell%latnam.EQ.'obl') THEN
@@ -363,11 +368,11 @@ SUBROUTINE w_inpXML(&
    ELSE
 
       242 FORMAT('      <bulkLattice scale="',f0.10,'" latnam="',a,'">')
-      WRITE (fileNum,242) scale, TRIM(ADJUSTL(cell%latnam))
+      WRITE (fileNum,242) input%scaleCell, TRIM(ADJUSTL(cell%latnam))
 
       IF (cell%latnam.EQ.'any') THEN
 
-!         <bravaisMatrix scale="1.0000000">
+!         <bravaisMatrix>
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
 
 !            <row-1>0.00000 5.13000 5.13000</row-1>
@@ -386,16 +391,16 @@ SUBROUTINE w_inpXML(&
       IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
      &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
      &    (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-         252 FORMAT('         <a1>',f0.10,'</a1>')
-         WRITE (fileNum,252) a1Temp(1)
+         252 FORMAT('         <a1 scale="',f0.10,'">',f0.10,'</a1>')
+         WRITE (fileNum,252) input%scaleA1, a1Temp(1) / input%scaleA1
 
          IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            262 FORMAT('         <a2>',f0.10,'</a2>')
-            WRITE (fileNum,262) a2Temp(2)
+            262 FORMAT('         <a2 scale="',f0.10,'">',f0.10,'</a2>')
+            WRITE (fileNum,262) input%scaleA2, a2Temp(2) / input%scaleA2
          END IF
 
-         272 FORMAT('         <c>',f0.10,'</c>')
-         WRITE (fileNum,272) a3Temp(3)
+         272 FORMAT('         <c scale="',f0.10,'">',f0.10,'</c>')
+         WRITE (fileNum,272) input%scaleC, a3Temp(3) / input%scaleC
       END IF
 
       IF (cell%latnam.EQ.'obl') THEN
@@ -405,8 +410,8 @@ SUBROUTINE w_inpXML(&
          264 FORMAT('         <row-2>',f0.10,' ',f0.10,'</row-2>')
          WRITE (fileNum,264) a2Temp(1), a2Temp(2)
 
-         274 FORMAT('         <c>',f0.10,'</c>')
-         WRITE (fileNum,274) a3Temp(3)
+         274 FORMAT('         <c scale="',f0.10,'">',f0.10,'</c>')
+         WRITE (fileNum,274) input%scaleC, a3Temp(3) / input%scaleC
       END IF
 
       WRITE (fileNum,'(a)') '      </bulkLattice>'
@@ -569,7 +574,7 @@ SUBROUTINE w_inpXML(&
          END DO
          IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos(3)
          IF (input%film) THEN
-            tempTaual(3,na) = dtild*tempTaual(3,na)/scale
+            tempTaual(3,na) = dtild*tempTaual(3,na)/input%scaleCell
          END IF
 !+odim in 1D case all the coordinates are given in cartesian YM
          IF (oneD%odd%d1) THEN

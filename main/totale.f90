@@ -6,7 +6,7 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(atoms,sphhar,stars,vacuum,dimension, &
-       sym,input,noco,cell,oneD, xcpot,hybrid, it,results)
+       sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy 
@@ -41,11 +41,10 @@ CONTAINS
     !     ***************************************************
     !
     USE m_intgr    , ONLY : intgr3 
-    USE m_constants, ONLY : sfp_const
+    USE m_constants
     USE m_force_a4
     USE m_force_a3
     USE m_forcew
-    USE m_pot_io
     USE m_cdn_io
     USE m_types
     USE m_xmlOutput
@@ -64,32 +63,26 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_dimension),INTENT(IN)    :: dimension
+    TYPE(t_potden),INTENT(IN)       :: vTot,vCoul
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: it      
-    !     ..
+
+    ! Local type instances
+    TYPE(t_potden) :: den
+
     !     .. Local Scalars ..
     REAL rhs,totz, eigSum, fermiEnergyTemp
-    INTEGER n,j,nt,iter,i, archiveType
+    INTEGER n,j,nt,i, archiveType
     LOGICAL l_qfix
 
     !     .. Local Arrays ..
     REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
     REAL dpj(atoms%jmtd)
-    COMPLEX :: cdom(1),cdomvz(1,1),cdomvxy(1,1,1)
     CHARACTER(LEN=20) :: attributes(3)
-    !.....density
-    REAL,    ALLOCATABLE :: rho(:,:,:,:),rht(:,:,:)
-    COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-    !.....potential
-    REAL,    ALLOCATABLE :: vr(:,:,:,:),vz(:,:,:)
-    COMPLEX, ALLOCATABLE :: vpw(:,:),vxy(:,:,:,:)
-    !     ..
-    ALLOCATE ( rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),rht(vacuum%nmzd,2,input%jspins),&
-         qpw(stars%ng3,input%jspins),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins),&
-         vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmzd,2,input%jspins),&
-         vpw(stars%ng3,input%jspins),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins) )
-    !
+
+    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+
     WRITE (6,FMT=8000)
     WRITE (16,FMT=8000)
 8000 FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
@@ -147,28 +140,17 @@ CONTAINS
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
 
     CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,iter,rho,qpw,rht,rhtxy,cdom,cdomvz,cdomvxy)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
-    !+for
-    !     ---> reload the COULOMB potential
-    !
-    CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_COUL_const,&
-                       iter,vr,vpw,vz,vxy)
-    !
-    !     CLASSICAL HELLMAN-FEYNMAN FORCE
-    !
-    CALL force_a3(atoms,sphhar, input, rho,vr, results%force)
-    !
+
+    ! CLASSICAL HELLMAN-FEYNMAN FORCE
+    CALL force_a3(atoms,sphhar, input, den%mt,vCoul%mt, results%force)
+
     IF (input%l_f) THEN
-       !
-       !       core contribution to force: needs TOTAL POTENTIAL and core charge
-       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                          iter,vr,vpw,vz,vxy)
+       ! core contribution to force: needs TOTAL POTENTIAL and core charge
+       CALL force_a4(atoms,sphhar,input,dimension, vTot%mt, results%force)
 
-       CALL force_a4(atoms,sphhar,input,dimension, vr, results%force)
-       !
     ENDIF
-    !
 
     !-for
     !     ---> add spin-up and spin-down charge density for lh=0
@@ -176,7 +158,7 @@ CONTAINS
     IF (input%jspins.EQ.2) THEN
        DO  n = 1,atoms%ntype
           DO  i = 1,atoms%jri(n)
-             rho(i,0,n,1) = rho(i,0,n,1) + rho(i,0,n,input%jspins)
+             den%mt(i,0,n,1) = den%mt(i,0,n,1) + den%mt(i,0,n,input%jspins)
           ENDDO
        ENDDO
     END IF
@@ -185,7 +167,7 @@ CONTAINS
     !
     DO  n = 1,atoms%ntype
        DO  j = 1,atoms%jri(n)
-          dpj(j) = rho(j,0,n,1)/atoms%rmsh(j,n)
+          dpj(j) = den%mt(j,0,n,1)/atoms%rmsh(j,n)
        ENDDO
        CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),rhs)
        !
@@ -194,7 +176,7 @@ CONTAINS
        zintn_r(n) = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
        WRITE (6,FMT=8045) zintn_r(n)
        WRITE (16,FMT=8045) zintn_r(n)
-       CALL intgr3(rho(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
+       CALL intgr3(den%mt(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
        vmd(n) = atoms%rmt(n)*atoms%vr0(n)/sfp_const + atoms%zatom(n) - totz*sfp_const
        vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
        WRITE (6,FMT=8050) n,vmd(n)
@@ -261,7 +243,7 @@ CONTAINS
        CALL closeXMLElement('atomTypeDependentContributions')
     END DO
     IF (atoms%n_u.GT.0) THEN
-       CALL writeXMLElementFormPoly('dft+uCorrection',(/'value'/),(/results%e_ldau/),reshape((/32,20/),(/1,2/)))
+       CALL writeXMLElementFormPoly('dftUCorrection',(/'value'/),(/results%e_ldau/),reshape((/34,20/),(/1,2/)))
     END IF
     CALL writeXMLElementFormPoly('tkbTimesEntropy',(/'value'/),(/results%ts/),reshape((/33,20/),(/1,2/)))
     CALL writeXMLElementFormPoly('freeEnergy',(/'value'/),(/results%tote-results%ts/),reshape((/38,20/),(/1,2/)))
@@ -280,8 +262,6 @@ CONTAINS
 8081 FORMAT (/,/,'      extrapolation for T->0',&
                /,' ----> HF input%total electron energy=',t40,f20.10,' htr')
 8090 FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
-
-    DEALLOCATE ( rho,rht,qpw,rhtxy,vr,vz,vpw,vxy )
 
   END SUBROUTINE totale
 END MODULE m_totale

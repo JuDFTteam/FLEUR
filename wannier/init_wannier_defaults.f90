@@ -143,11 +143,10 @@ SUBROUTINE initWannierDefaults(wann)
    wann%fn_eig = ''
    wann%param_file = ''
 
-!        REAL,ALLOCATABLE :: param_vec(:,:)
-!        REAL,ALLOCATABLE :: param_alpha(:,:)
-
-!        CHARACTER(LEN=20), ALLOCATABLE :: jobList(:)
-   
+   wann%scale_param = 1.0
+   wann%aux_latt_const = 8.0!5.5!5.45886450 !5.98136400 !8.0725882513951497 !5.4170 !1.0
+   wann%param_file='qpts'
+   wann%l_dim=.false.
 
 END SUBROUTINE initWannierDefaults
 

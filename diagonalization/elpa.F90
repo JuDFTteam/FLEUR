@@ -5,6 +5,10 @@
 !--------------------------------------------------------------------------------
 MODULE m_elpa
   PRIVATE
+#ifdef CPP_ELPA  
+  interface elpa_diag
+     module procedure elpa_r,elpa_c
+  end interface elpa_diag
   
   !Module to call elpa library for parallel diagonalization
   !uses ssubredist1/2 for redistribution
@@ -12,7 +16,6 @@ MODULE m_elpa
   PUBLIC elpa_diag
 
 CONTAINS
-#ifdef CPP_ELPA
   ! First the real version of the code
 #define CPP_CHOLESKY cholesky_real
 #define CPP_invert_trm invert_trm_real
@@ -125,9 +128,9 @@ CONTAINS
     !print *,"priv_create_blacsgrid"
     ! determine block size
     !
-    nb = 20
-    IF (m.GT.2048)   nb = 30 !2
-    IF (m.GT.8*2048) nb = 60 !4
+    nb = 64
+    !IF (m.GT.2048)   nb = 30 !2
+    !IF (m.GT.8*2048) nb = 60 !4
 
     ! compute processor grid, as square as possible
     ! If not square with more rows than columns
@@ -197,7 +200,10 @@ CONTAINS
 
     !Create communicators for ELPA
     !print *,"creating ELPA comms"
-#if defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
+#if defined (CPP_ELPA_201705003)
+    mpi_comm_rows = -1
+    mpi_comm_cols = -1
+#elif defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
     ierr=get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
 #else
     CALL get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
@@ -209,6 +215,8 @@ CONTAINS
     IF (ierr /=0 ) CALL juDFT_error('descinit1 failed',calledby='elpa')
 
   END SUBROUTINE priv_create_blacsgrid
+#else
+  LOGICAL :: elpa_used=.false.
 #endif
 end MODULE m_elpa
 

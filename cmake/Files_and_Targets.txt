@@ -38,7 +38,7 @@ include(wannier/CMakeLists.txt)
 include(wannier/uhu/CMakeLists.txt)
 
 set(inpgen_F77 
-global/constants.f inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f
+inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f
 inpgen/atom_sym.f inpgen/generator.f inpgen/read_record.f inpgen/soc_or_ssdw.f inpgen/symproperties.f
 inpgen/bravais_symm.f  inpgen/set_atom_core.f inpgen/spg_gen.f global/triang.f
 inpgen/closure.f inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f

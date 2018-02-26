@@ -67,7 +67,6 @@
       INTEGER                 ::  ilo,idum ,m
       COMPLEX                 ::  cdum
       TYPE(t_mat)             :: zhlp
-
       INTEGER                 ::  ikpt0,ikpt,itype,iop,ispin,ieq,indx,iatom
       INTEGER                 ::  i,j,l ,ll,lm,ng,ok
       COMPLEX                 ::  img=(0d0,1d0)

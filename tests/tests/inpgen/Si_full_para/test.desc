@@ -1,0 +1,9 @@
+$test_name="Inpgen Si Bulk full given para";
+$test_code="Inpgen";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Inpgen with one steps:
+1.Generate input files where most namelists are given & compare with expected files
+EOF
+;

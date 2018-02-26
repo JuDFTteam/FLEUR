@@ -20,11 +20,13 @@ MODULE m_corespec_io
 !
 !-------------------------------------------------------------------------------
 !
-  SUBROUTINE corespec_init(atoms)
+  SUBROUTINE corespec_init(input,atoms,coreSpecInput)
 
     IMPLICIT NONE
 
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_input),INTENT(IN)         :: input
+    TYPE(t_atoms),INTENT(IN)         :: atoms
+    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
 
     INTEGER                    :: ui,i
     LOGICAL                    :: lexist
@@ -36,7 +38,7 @@ MODULE m_corespec_io
 ! initialization of input parameters: type csi
 
     csi%verb = 1
-    csi%type = 0
+    csi%atomType = 0
     csi%edge = ""
     csi%edgeidx = 0
     csi%lx = -1
@@ -53,6 +55,8 @@ MODULE m_corespec_io
       open(ui,file="corespec_inp",status='old')
       read(ui,nml=csinp)
       close(ui)
+    else if(input%l_coreSpec) THEN
+      csi = coreSpecInput
     else
       return
     endif
@@ -72,15 +76,15 @@ MODULE m_corespec_io
 ! unit conversion if necessary
 ! if csi%verb = 1, detailed information is written to stdout
 
-! csi%type
-    if(csi%type.le.0) then
-      write(*,csmsgs)  trim(smeno),"found csi%type <= 0 !"//csmsgerr ; stop
+! csi%atomType
+    if(csi%atomType.le.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%atomType <= 0 !"//csmsgerr ; stop
     endif
-    if(csi%type.gt.atoms%ntype) then
-      write(*,csmsgs)  trim(smeno),"found csi%type > atoms%ntype!"//csmsgerr ; stop
+    if(csi%atomType.gt.atoms%ntype) then
+      write(*,csmsgs)  trim(smeno),"found csi%atomType > atoms%ntype!"//csmsgerr ; stop
     endif
     if(csi%verb.eq.1) write(*,csmsgsis)  trim(smeno),&
-           &"atomic type: ","csi%type = ",csi%type,"will be used"
+           &"atomic type: ","csi%atomType = ",csi%atomType,"will be used"
 
 ! csi%edge -> csv%nc
     csv%nc = 0
@@ -106,9 +110,9 @@ MODULE m_corespec_io
       write(*,csmsgs) trim(smeno),&
          &"found more than 2*csv%nc-1 of csi%edgeidx > 0 !"//csmsgerr ; stop
     endif
-    if((csv%nc-1)**2+maxval(csi%edgeidx).gt.atoms%ncst(csi%type)) then
+    if((csv%nc-1)**2+maxval(csi%edgeidx).gt.atoms%ncst(csi%atomType)) then
       write(*,csmsgs) trim(smeno),&
-         &"found (csv%nc-1)^2+maxval(csi%edgeidx) > atoms%ncst(csi%type)!"//csmsgerr
+         &"found (csv%nc-1)^2+maxval(csi%edgeidx) > atoms%ncst(csi%atomType)!"//csmsgerr
       stop
     endif
     csv%nljc = count(csi%edgeidx.gt.0)
@@ -122,9 +126,9 @@ MODULE m_corespec_io
     if(csi%lx.lt.0) then
       write(*,csmsgs)  trim(smeno),"found csi%lx < 0 !"//csmsgerr ; stop
     endif
-    if(csi%lx.gt.atoms%lmax(csi%type)) then
+    if(csi%lx.gt.atoms%lmax(csi%atomType)) then
       write(*,csmsgs)  trim(smeno),&
-           &"found csi%lx > atoms%lmax(csi%type)!"//csmsgerr ; stop
+           &"found csi%lx > atoms%lmax(csi%atomType)!"//csmsgerr ; stop
     endif
     if(csi%verb.eq.1) write(*,csmsgsis)  trim(smeno),&
            &"maximum l: ","csi%lx = ",csi%lx,"will be used"

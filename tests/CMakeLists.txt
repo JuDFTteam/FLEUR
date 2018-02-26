@@ -4,31 +4,36 @@ set(SerialParallelTests CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML
 Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML
 GaAsMultiUForceXML SiFilmSlicePlotXML)
 
-set(SerialOnlyTests Fe_bct_LO Fe_bct_LOXML Fe_fcc Fe_fccXML TiO2eels)
+set(SerialOnlyTests Fe_bct_LO Fe_bct_LOXML Fe_fcc Fe_fccXML TiO2eels TiO2eelsXML)
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
 
 set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
 set(ParTestdirs ${SerialParallelTests})
+set(InpTestdirs ${InpgenTests})
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
-    set(Testdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldau NiO_ldauXML)
-    set(ParTestdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldau NiO_ldauXML)
+    set(Testdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
+    set(ParTestdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
 endif()
+
+#The inpgen tests
+#if (${INPGEN})
+foreach(test ${InpTestdirs})
+ add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen")
+endforeach(test)
+#endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
 if (${FLEUR_USE_WANN})
-    set(Testdirs ${Testdirs} Cwann)
-    set(ParTestdirs ${ParTestdirs} Cwann)
+    set(Testdirs ${Testdirs} Cwann CwannXML)
+    set(ParTestdirs ${ParTestdirs} Cwann CwannXML)
 endif()
 
 #The serial tests
 if (${FLEUR_USE_SERIAL})
    foreach(test ${Testdirs})
-   add_test("FLEUR:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
-   if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/LABELS")
-       file(READ "${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/LABELS" testlabels)
-       set_tests_properties("FLEUR:${test}" PROPERTIES LABELS "${testlabels}")
-   endif()
+    add_test("FLEUR:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur")
    endforeach(test)
 endif()
 

@@ -1,0 +1,22 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp_Si_plain",$workdir);
+
+jt::testrun("$executable < inp_Si_plain 2>&1 >outshell ;cat outshell",$workdir);
+$result=jt::test_grep_error("$workdir/outshell");
+
+
+#now test if inp.xml file was produced and if it contains certain features.
+$result+=jt::test_fileexists("$workdir/inp.xml");
+$result+=jt::test_grepexists("$workdir/inp.xml","sym.out");
+$result+=jt::test_grepexists("$workdir/inp.xml","relPos label=");
+
+#test interface, that all files are there. This lst should be complete
+# notice there is per default no inp file also no kpts file and no enpara file
+# also developers should be made aware if the interface is changed.
+$result+=jt::test_fileexists("$workdir/out");
+$result+=jt::test_fileexists("$workdir/FleurInputSchema.xsd");
+$result+=jt::test_fileexists("$workdir/sym.out");
+
+jt::stageresult($workdir,$result,"1");
+

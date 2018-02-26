@@ -39,7 +39,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     COMPLEX utulo,dtulo,cutulo,cdtulo,ulotulo
-    INTEGER lo,lop,l,lp ,mp,lm,lmp,iatom,ie,i,lolop,loplo,in,m
+    INTEGER lo,lop,l,lp ,mp,lm,lmp,iatom,ie,i,lolop,loplo,in,m,lo1
     !     ..
     !     ..
     !*************** ABBREVIATIONS *****************************************
@@ -52,6 +52,7 @@ CONTAINS
     !***********************************************************************
 
     DO lo = 1,atoms%nlo(itype)
+       lo1=SUM(atoms%nlo(:itype-1))+lo
        l = atoms%llo(lo,itype)
        DO m = -l,l
           lm = l* (l+1) + m
@@ -65,10 +66,10 @@ CONTAINS
                    !
                    in = tlmplm%ind(lmp,lm,itype,1)
                    IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
-                      utulo = tlmplm%tuulo(lmp,m,lo,1)
-                      dtulo = tlmplm%tdulo(lmp,m,lo,1)
-                      cutulo = conjg(tlmplm%tuulo(lmp,m,lo,1))
-                      cdtulo = conjg(tlmplm%tdulo(lmp,m,lo,1))
+                      utulo = tlmplm%tuulo(lmp,m,lo1,1)
+                      dtulo = tlmplm%tdulo(lmp,m,lo1,1)
+                      cutulo = conjg(tlmplm%tuulo(lmp,m,lo1,1))
+                      cdtulo = conjg(tlmplm%tdulo(lmp,m,lo1,1))
                       DO ie = 1,ne
                          DO i = 1,3
                             a21(i,iatom)=a21(i,iatom)+2.0*aimag(&
@@ -95,11 +96,12 @@ CONTAINS
                 DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                    in = tlmplm%ind(lmp,lm,itype,1)
                    IF ((in.NE.-9999).OR.(lmp.EQ.lm)) THEN
+                      lolop=DOT_PRODUCT(atoms%nlo(:itype-1),atoms%nlo(:itype-1)+1)/2
                       IF (lo.GE.lop) THEN
-                         lolop = (lo-1)*lo/2 + lop
+                         lolop = (lo-1)*lo/2 + lop + lolop
                          ulotulo = tlmplm%tuloulo(m,mp,lolop,1)
                       ELSE
-                         loplo = (lop-1)*lop/2 + lo
+                         loplo = (lop-1)*lop/2 + lo +lolop
                          ulotulo = conjg(tlmplm%tuloulo(mp,m,loplo,1))
                       ENDIF
                       DO ie = 1,ne

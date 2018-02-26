@@ -20,13 +20,12 @@ MODULE m_eigenso
   !**********************************************************************
   !
 CONTAINS
-  SUBROUTINE eigenso(eig_id, mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-       obsolete,sym,cell,noco, input,kpts, oneD)
-    !
+  SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
+                     obsolete,sym,cell,noco,input,kpts,oneD,vTot)
+
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb 
     USE m_alineso
-    USE m_pot_io
     USE m_types
 #ifdef CPP_MPI
     USE m_mpi_bc_pot
@@ -46,15 +45,16 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_potden),INTENT(IN)    :: vTot
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id       
     !     ..
     !     ..
     !     .. Local Scalars ..
-    INTEGER i,j,nk,jspin ,iter ,n ,l
+    INTEGER i,j,nk,jspin,n ,l
     INTEGER n_loc,n_plus,i_plus,n_end,nsz,nmat
-    LOGICAL l_file,l_socvec   !,l_all
+    LOGICAL l_socvec   !,l_all
     INTEGER wannierspin
     TYPE(t_enpara) :: enpara
     TYPE(t_usdus):: usdus
@@ -70,8 +70,6 @@ CONTAINS
     REAL,    ALLOCATABLE :: rsopplo(:,:,:,:),rsoploplop(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: zso(:,:,:),soangl(:,:,:,:,:,:)
 
-    REAL,    ALLOCATABLE :: vz(:,:,:),vr(:,:,:,:)
-    COMPLEX, ALLOCATABLE :: vzxy(:,:,:,:),vpw(:,:)
     TYPE(t_mat)::zmat
     TYPE(t_lapw)::lapw
 
@@ -86,21 +84,6 @@ CONTAINS
     !noco%phi=   noco%phi+pi_const
     ! now the definition of rotation matrices
     ! is equivalent to the def in the noco-routines
-    !
-    ! load potential by calling readPotential.
-    !
-    ALLOCATE ( vz(vacuum%nmzd,2,DIMENSION%jspd),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),&
-         vzxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd),vpw(stars%ng3,DIMENSION%jspd) )
-
-    IF (mpi%irank.EQ.0) THEN
-       CALL readPotential(stars,vacuum,atoms,sphhar,input,sym,POT_ARCHIVE_TYPE_TOT_const,&
-                          iter,vr,vpw,vz,vzxy)
-    END IF
-#ifdef CPP_MPI
-    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,iter,vr,vpw,vz,vzxy)
-#endif
-
-    DEALLOCATE ( vz,vzxy,vpw )
 
     ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
@@ -110,8 +93,7 @@ CONTAINS
          enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
          enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
 
-    INQUIRE (file='wann_inp',exist=l_file)
-    IF (l_file.OR.l_socvec) THEN
+    IF (input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
     ELSE
        wannierspin = input%jspins
@@ -142,7 +124,7 @@ CONTAINS
          soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2) )
 
     soangl(:,:,:,:,:,:) = CMPLX(0.0,0.0)
-    CALL spnorb( atoms,noco,input,mpi, enpara,vr, rsopp,rsoppd,rsopdp,rsopdpd,usdus,&
+    CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt, rsopp,rsoppd,rsopdp,rsopdpd,usdus,&
          rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop, soangl)
     !
     !Check if SOC is to be scaled for some atom
@@ -273,7 +255,7 @@ CONTAINS
     DEALLOCATE (rsoplop,rsopdp,rsopdpd,rsopp,rsoppd,soangl)
 
 
-    DEALLOCATE ( vr,usdus%us,usdus%dus,usdus%uds,usdus%duds,usdus%ulos,usdus%dulos,usdus%uulon,usdus%dulon,usdus%ddn )
+    DEALLOCATE (usdus%us,usdus%dus,usdus%uds,usdus%duds,usdus%ulos,usdus%dulos,usdus%uulon,usdus%dulon,usdus%ddn)
     RETURN
   END SUBROUTINE eigenso
 END MODULE m_eigenso
