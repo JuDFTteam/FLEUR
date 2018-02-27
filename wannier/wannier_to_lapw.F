@@ -704,7 +704,7 @@ c****************************************************************
 110   continue ! end of cycle by spins
 
 
-      deallocate ( vr,vz,nv,k1,k2,k3 )
+      deallocate ( vr,nv,k1,k2,k3 )
       deallocate ( ff,gg)
  
 #ifdef CPP_MPI

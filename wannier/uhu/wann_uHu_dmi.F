@@ -767,7 +767,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
 
        call cdn_read0(eig_id,irank,isize,jspin5,jspd,l_noco, !wannierspin instead of jspd?
-     <                ello,evac,epar,bkpt,wk,n_bands,n_size)
+     <                ello,evac,epar,wk,n_bands,n_size)
 
        enddo
 
@@ -937,12 +937,12 @@ c      if (mod(i_rec-1,isize).eq.irank) then
          ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
       END IF
 
-      CALL cdn_read(
-     >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
-     >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
+!      CALL cdn_read(
+!     >              eig_id,
+!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn, !wannierspin instead of jspd?
+!     >              l_ss,l_noco,neigd,n_start,n_end,
+!     <              nmat,nv,ello,evdu,epar,kveclo,
+!     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
 
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
@@ -977,12 +977,12 @@ c      if (mod(i_rec-1,isize).eq.irank) then
         eigg = 0.
         call cpu_time(t0)
 
-      CALL cdn_read(
-     >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
-     >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
+!      CALL cdn_read(
+!     >              eig_id,
+!     >              nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
+!     >              l_ss,l_noco,neigd,n_start,n_end,
+!     <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
+!     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
 
         nslibd_b = 0
 
@@ -1028,19 +1028,19 @@ c***********************************************************
 c              Rotate the wavefunction of next neighbor.
 c***********************************************************
       if (wann%l_bzsym .and. (oper_b.ne.1)  ) then
-         call wann_kptsrotate(
-     >            natd,nlod,llod,
-     >            ntypd,nlo,llo,invsat,
-     >            l_noco,l_soc,
-     >            ntype,neq,nlotot,
-     >            kveclo_b,jspin,
-     >            oper_b,nop,mrot,nvd,
-     >            nv_b,
-     >            shiftkpt(:,bpt(ikpt_b,ikpt)),
-     >            tau,
-     x            bkpt_b,k1_b(:,:),
-     x            k2_b(:,:),k3_b(:,:),
-     x            zMat_b,nsfactor_b)
+!         call wann_kptsrotate(
+!     >            natd,nlod,llod,
+!     >            ntypd,nlo,llo,invsat,
+!     >            l_noco,l_soc,
+!     >            ntype,neq,nlotot,
+!     >            kveclo_b,jspin,
+!     >            oper_b,nop,mrot,nvd,
+!     >            nv_b,
+!     >            shiftkpt(:,bpt(ikpt_b,ikpt)),
+!     >            tau,
+!     x            bkpt_b,k1_b(:,:),
+!     x            k2_b(:,:),k3_b(:,:),
+!     x            zMat_b,nsfactor_b)
       else
          nsfactor_b=cmplx(1.0,0.0)
       endif
@@ -1068,9 +1068,9 @@ c***********************************************************
       lapw_b%nv = nv_b
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
-     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
-     +           acof_b,bcof_b,ccof_b,zMat_b)
+!      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
+!     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
+!     +           acof_b,bcof_b,ccof_b,zMat_b)
 
       DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
@@ -1102,13 +1102,13 @@ c***********************************************************
           call cpu_time(t0)
 
         WRITE(*,*) 'Do I read out the right record here? (wann_uHu_dmi)'
-          CALL cdn_read(
-     >                  innerEig_idList(iqpt_b),
-     >                  nvd,jspd,irank,isize,kptibz,jspin_b,nbasfcn, !wannierspin instead of jspd? !kptibz_b2?
-     >                  l_ss,l_noco,neigd,n_start,n_end,
-     <                  nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
-     <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,eigg,
-     <                  zzMat)
+!          CALL cdn_read(
+!     >                  innerEig_idList(iqpt_b),
+!     >                  nvd,jspd,irank,isize,kptibz,jspin_b,nbasfcn, !wannierspin instead of jspd? !kptibz_b2?
+!     >                  l_ss,l_noco,neigd,n_start,n_end,
+!     <                  nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
+!     <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,eigg,
+!     <                  zzMat)
 !#if(!defined(CPP_HDF) && defined(CPP_MPI))
 !        !if(l_p0) write(*,*)'wann_read_eig for qptibz_b=',qptibz_b
 !        call wann_read_eig(
@@ -1200,9 +1200,9 @@ c***********************************************************
       lapw_b2%nv = nv_b2
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
-     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
-     +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
+!      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
+!     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
+!     +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
       DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 

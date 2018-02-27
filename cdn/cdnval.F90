@@ -336,8 +336,6 @@ CONTAINS
     IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
 ! calculation of core spectra (EELS) initializations -end-
 
-    ALLOCATE ( kveclo(atoms%nlotot) )
-
   
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
@@ -570,7 +568,7 @@ CONTAINS
                ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
                ello,evdu,epar,&
-               lapw,wk,nbands,eig,zMat)
+               wk,nbands,eig,zMat)
 #ifdef CPP_MPI
           ! Sinchronizes the RMA operations
           if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)

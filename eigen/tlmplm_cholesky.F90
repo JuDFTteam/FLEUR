@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
   CONTAINS
     SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
-         jspin,jsp,mpi,vr,input, vs_mmp,td,ud)
+         jspin,jsp,mpi,v,input,td,ud)
 
       USE m_intgr, ONLY : intgr3
       USE m_radflo
@@ -29,9 +29,7 @@ MODULE m_tlmplm_cholesky
       !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
       !     ..
-      !     .. Array Arguments ..
-      COMPLEX,INTENT(IN)          :: vs_mmp(:,:,:,:)
-      REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)   ! this is for the
+      TYPE(t_potden),INTENT(IN)   :: v
       TYPE(t_tlmplm),INTENT(INOUT) :: td
       TYPE(t_usdus),INTENT(INOUT)  :: ud
       
@@ -45,7 +43,7 @@ MODULE m_tlmplm_cholesky
       LOGICAL l_write,ok
       !     ..
       !     .. Local Arrays ..
-      REAL vr0(size(vr,1),0:size(vr,2)-1,size(vr,3))
+      REAL vr0(size(v%mt,1),0:size(v%mt,2)-1,size(v%mt,3))
       REAL dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
       REAL dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
       REAL uvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
@@ -63,7 +61,7 @@ MODULE m_tlmplm_cholesky
       REAL,PARAMETER:: e_shift_min=0.2
       REAL,PARAMETER:: e_shift_max=65.0
     
-    vr0=vr(:,:,:,jsp)
+    vr0=v%mt(:,:,:,jsp)
     vr0(:,0,:)=0.0
     !     ..e_shift
     td%e_shift(jsp)=e_shift_min
@@ -73,7 +71,7 @@ MODULE m_tlmplm_cholesky
      IF (noco%l_constr) THEN
        ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
             dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
-       CALL rad_ovlp(atoms,ud,input,vr,enpara%el0, uun21,udn21,dun21,ddn21)
+       CALL rad_ovlp(atoms,ud,input,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
     ENDIF
     
     cholesky_loop:DO WHILE(.NOT.OK)
@@ -95,13 +93,13 @@ MODULE m_tlmplm_cholesky
 !!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
 !!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
 !!$OMP PRIVATE(nodeu,nsym,na)&
-!!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,vr,mpi,input)
+!!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,v,mpi,input)
        DO  n = 1,atoms%ntype
           na=sum(atoms%neq(:n-1))+1
           
           IF (l_write) WRITE (6,FMT=8000) n
           DO l = 0,atoms%lmax(n)
-             CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,0,n,jsp),atoms,&
+             CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),v%mt(:,0,n,jsp),atoms,&
                   f(1,1,l),g(1,1,l),ud,nodeu,noded,wronk)
              IF (l_write) WRITE (6,FMT=8010) l,enpara%el0(l,n,jspin),ud%us(l,n,jspin),&
                   ud%dus(l,n,jspin),nodeu,ud%uds(l,n,jspin),ud%duds(l,n,jspin),noded,ud%ddn(l,n,jspin),wronk
@@ -117,7 +115,7 @@ MODULE m_tlmplm_cholesky
           !--->   if there are any.
           !
           IF (atoms%nlo(n).GE.1) THEN
-             CALL radflo(atoms,n,jspin,enpara%ello0(1,1,jspin), vr(:,0,n,jsp), f,g,mpi,&
+             CALL radflo(atoms,n,jspin,enpara%ello0(1,1,jspin), v%mt(:,0,n,jsp), f,g,mpi,&
                   ud, uuilon,duilon,ulouilopn,flo)
           END IF
           
@@ -278,8 +276,8 @@ MODULE m_tlmplm_cholesky
                 lm = l* (l+1) + m
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
-                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + vs_mmp(l,lp,i_u,jsp)
-                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ vs_mmp(l,lp,i_u,jsp)*ud%ddn(lp,n,jsp)
+                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + v%mmpMat(l,lp,i_u,jsp)
+                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ v%mmpMat(l,lp,i_u,jsp)*ud%ddn(lp,n,jsp)
                 ENDDO
              ENDDO
           END DO
@@ -331,7 +329,7 @@ MODULE m_tlmplm_cholesky
           !--->   set up the t-matrices for the local orbitals,
           !--->   if there are any
           IF (atoms%nlo(n).GE.1) THEN
-             CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,vr(1,0,n,jsp),&
+             CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
                   na,flo,f,g,ud, uuilon,duilon,ulouilopn, td)
              
           ENDIF

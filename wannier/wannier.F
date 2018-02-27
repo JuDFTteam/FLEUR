@@ -954,7 +954,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 
        call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,DIMENSION%jspd, !wannierspin instead of DIMENSION%jspd?
      >                noco%l_noco,
-     <                ello,evac,epar,bkpt,wk,n_bands,n_size)
+     <                ello,evac,epar,wk,n_bands,n_size)
 
        enddo
 !       call cpu_time(tt3)
@@ -1289,8 +1289,8 @@ c****************************************************************
      >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      >              kptibz,jspin,DIMENSION%nbasfcn,
      >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat)
+     <              ello,evdu,epar,
+     <              wk,nbands,eigg,zzMat)
 
 !      call cpu_time(tt4)
       !if(l_p0) write(*,*)'cdn_read=',tt4-tt3
@@ -1338,17 +1338,17 @@ c***********************************************************
 c              rotate the wavefunction
 c***********************************************************
       if (wann%l_bzsym.and.oper.ne.1) then  !rotate bkpt
-         call wann_kptsrotate(
-     >            atoms%nat,atoms%nlod,atoms%llod,
-     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
-     >            noco%l_noco,noco%l_soc,
-     >            atoms%ntype,atoms%neq,nlotot,
-     >            kveclo,jspin,
-     >            oper,sym%nop,sym%mrot,DIMENSION%nvd,nv,
-     >            shiftkpt(:,ikpt),
-     >            sym%tau,
-     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
-     x            zMat,nsfactor)
+!         call wann_kptsrotate(
+!     >            atoms%nat,atoms%nlod,atoms%llod,
+!     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
+!     >            noco%l_noco,noco%l_soc,
+!     >            atoms%ntype,atoms%neq,nlotot,
+!     >            kveclo,jspin,
+!     >            oper,sym%nop,sym%mrot,DIMENSION%nvd,nv,
+!     >            shiftkpt(:,ikpt),
+!     >            sym%tau,
+!     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
+!     x            zMat,nsfactor)
       else
          nsfactor=cmplx(1.0,0.0)
       endif
@@ -1384,8 +1384,8 @@ c...for the lapws and local orbitals, summed by the basis functions
       lapw%nv = nv
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     >           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
+!      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
+!     >           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
 
       DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
 
@@ -1721,8 +1721,8 @@ c        print*,"something to do"
      >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      >              kptibz_b,jspin,DIMENSION%nbasfcn,
      >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     <              nmat_b,nv_b,ello,evdu,epar,kveclo_b,
-     <              k1_b,k2_b,k3_b,bkpt_b,wk_b,nbands_b,eigg,zzMat)
+     <              ello,evdu,epar,
+     <              wk_b,nbands_b,eigg,zzMat)
 
 !        call cpu_time(tt4)
         !if(l_p0) write(*,*)'read_eig=',tt4-tt3
@@ -1765,19 +1765,19 @@ c***********************************************************
 c              Rotate the wavefunction of next neighbor.
 c***********************************************************
       if (wann%l_bzsym .and. (oper_b.ne.1)  ) then
-         call wann_kptsrotate(
-     >            atoms%nat,atoms%nlod,atoms%llod,
-     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
-     >            noco%l_noco,noco%l_soc,
-     >            atoms%ntype,atoms%neq,nlotot,
-     >            kveclo_b,jspin,
-     >            oper_b,sym%nop,sym%mrot,DIMENSION%nvd,
-     >            nv_b,
-     >            shiftkpt(:,bpt(ikpt_b,ikpt)),
-     >            sym%tau,
-     x            bkpt_b,k1_b(:,:),
-     x            k2_b(:,:),k3_b(:,:),
-     x            zMat_b,nsfactor_b)
+!         call wann_kptsrotate(
+!     >            atoms%nat,atoms%nlod,atoms%llod,
+!     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
+!     >            noco%l_noco,noco%l_soc,
+!     >            atoms%ntype,atoms%neq,nlotot,
+!     >            kveclo_b,jspin,
+!     >            oper_b,sym%nop,sym%mrot,DIMENSION%nvd,
+!     >            nv_b,
+!     >            shiftkpt(:,bpt(ikpt_b,ikpt)),
+!     >            sym%tau,
+!     x            bkpt_b,k1_b(:,:),
+!     x            k2_b(:,:),k3_b(:,:),
+!     x            zMat_b,nsfactor_b)
       else
          nsfactor_b=cmplx(1.0,0.0)
       endif
@@ -1814,9 +1814,9 @@ cccccccccccc  Spherical Contributions         ccccccccccccc
       lapw_b%nv = nv_b
       ! I think the other variables of lapw are not needed here.
 
-      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
-     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
-     +           acof_b,bcof_b,ccof_b,zMat_b)
+!      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
+!     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
+!     +           acof_b,bcof_b,ccof_b,zMat_b)
 
       DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
@@ -1997,8 +1997,8 @@ c*******************************************c
      >               kptibz,jspin_b,DIMENSION%nbasfcn,
      >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
      >               n_end,
-     <               nmat_qb,nv_qb,ello,evdu,epar,kveclo_qb,
-     <               k1_qb,k2_qb,k3_qb,bkpt,wqb,nbands_qb,eigg,   !we_qb instead of wqb?
+     <               ello,evdu,epar,
+     <               wqb,nbands_qb,eigg,   !we_qb instead of wqb?
      <               zzMat)
 
 !        call cpu_time(tt4)
@@ -2095,9 +2095,9 @@ c*******************************************c
       lapw_qb%nv = nv_qb
       ! I think the other variables of lapw are not needed here.
 
-        CALL abcof(input,atoms,noccbd_qb,sym,cell,bkpt,lapw_qb,
-     +             noccbd_qb,usdus,noco,jspin_b,kveclo_qb,oneD,
-     +             acof_qb,bcof_qb,ccof_qb,zMat_qb)
+!        CALL abcof(input,atoms,noccbd_qb,sym,cell,bkpt,lapw_qb,
+!     +             noccbd_qb,usdus,noco,jspin_b,kveclo_qb,oneD,
+!     +             acof_qb,bcof_qb,ccof_qb,zMat_qb)
 
       DEALLOCATE(lapw_qb%k1,lapw_qb%k2,lapw_qb%k3)
 

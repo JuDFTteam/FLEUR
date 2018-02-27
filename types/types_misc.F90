@@ -539,6 +539,7 @@ MODULE m_types_misc
      LOGICAL:: tria
      LOGICAL:: integ
      LOGICAL:: pallst
+     LOGICAL:: l_coreSpec
      LOGICAL:: l_wann
      LOGICAL:: secvar
      LOGICAL:: evonly(2)
@@ -546,6 +547,10 @@ MODULE m_types_misc
      LOGICAL:: sso_opt(2)
      LOGICAL:: total
      LOGICAL:: l_inpXML
+     REAL :: scaleCell
+     REAL :: scaleA1
+     REAL :: scaleA2
+     REAL :: scaleC
      REAL :: ellow
      REAL :: elup
      REAL :: rkmax
@@ -553,7 +558,10 @@ MODULE m_types_misc
      CHARACTER(LEN=8) :: comment(10)
      TYPE(t_efield)::efield
      LOGICAL :: l_core_confpot
-     LOGICAL :: l_useapw
+     LOGICAL :: l_useapw  
+     LOGICAL :: ldauLinMix
+     REAL    :: ldauMixParam
+     REAL    :: ldauSpinf
   END TYPE t_input
 
   TYPE t_sliceplot
@@ -717,6 +725,18 @@ MODULE m_types_misc
      REAL,    ALLOCATABLE :: a_r(:), b_r(:)
      COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
   END TYPE t_hamOvlp
+ ! type for the input to the calculation of the core spectrum (EELS)
+  TYPE t_coreSpecInput
+     integer :: verb  ! output verbosity
+     integer :: atomType  ! atomic type used for calculation of core spectra
+     character(LEN=1) :: edge  ! edge character (K,L,M,N,O,P)
+     integer :: edgeidx(11)  ! l-j edges
+     integer :: lx  ! maximum lmax considered in spectra calculation
+     real :: ek0  ! kinetic energy of incoming electrons
+     real :: emn  ! energy spectrum lower bound
+     real :: emx  ! energy spectrum upper bound
+     real :: ein  ! energy spectrum increment
+  END TYPE t_coreSpecInput
 
 
   !
@@ -844,17 +864,27 @@ MODULE m_types_misc
 
 
   TYPE t_potden
-     INTEGER             :: iter
+     INTEGER             :: iter  
+     INTEGER             :: potdenType
      COMPLEX,ALLOCATABLE :: pw(:,:)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
      REAL,ALLOCATABLE    :: vacz(:,:,:)
      COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
+     ! For density only (noco case)
+     COMPLEX, ALLOCATABLE :: cdom(:)
+     COMPLEX, ALLOCATABLE :: cdomvz(:,:)
+     COMPLEX, ALLOCATABLE :: cdomvxy(:,:,:)
+
+     ! For density matrix and associated potential matrix
+     COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
+
      !this type contains two init routines that should be used to allocate
      !memory. You can either specify the datatypes or give the dimensions as integers
      !See implementation below!
    CONTAINS
      PROCEDURE :: init_potden_types
      PROCEDURE :: init_potden_simple
+     PROCEDURE :: resetpotden
      GENERIC   :: init=>init_potden_types,init_potden_simple
   END TYPE t_potden
 CONTAINS
@@ -880,8 +910,7 @@ CONTAINS
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating usdus datatype")
 
   END SUBROUTINE usdus_init
-
-  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,oneD,jsp,l_noco)
+  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,oneD,jsp,nocoExtraDim,potden_type)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd
@@ -889,38 +918,78 @@ CONTAINS
     TYPE(t_stars),INTENT(IN) :: stars
     TYPE(t_sphhar),INTENT(IN):: sphhar
     TYPE(t_vacuum),INTENT(IN):: vacuum
+    TYPE(t_noco),INTENT(IN)  :: noco
     TYPE(t_oneD),INTENT(IN)  :: oneD
-    INTEGER,INTENT(IN)       :: jsp
-    LOGICAL,INTENT(IN)       :: l_noco
-    CALL  init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,jsp,l_noco,vacuum%nmzd,vacuum%nmzxyd,oneD%odi%n2d)
+    INTEGER,INTENT(IN)       :: jsp, potden_type
+    LOGICAL,INTENT(IN)       :: nocoExtraDim
+
+    CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
+                            atoms%n_u,noco%l_noco,jsp,nocoExtraDim,potden_type,&
+                            vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,jsp,l_noco,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,l_noco,jsp,nocoExtraDim,potden_type,nmzd,nmzxyd,n2d)
+    USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,jsp
-    LOGICAL,INTENT(IN)          :: l_noco
-    INTEGER,INTENT(IN),OPTIONAL :: nmzd,nmzxyd,n2d
+    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jsp,potden_type
+    LOGICAL,INTENT(IN)          :: l_noco,nocoExtraDim
+    INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
 
     INTEGER:: err(4)
 
     err=0
     pd%iter=0
-    ALLOCATE(pd%pw(ng3,MERGE(3,jsp,l_noco)),stat=err(1))
-    ALLOCATE(pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
-    IF (PRESENT(nmzd)) THEN
-       ALLOCATE(pd%vacz(nmzd,2,MERGE(4,jsp,l_noco)),stat=err(3))
-       ALLOCATE(pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
-    ENDIF
+    pd%potdenType=potden_type
+    IF(ALLOCATED(pd%pw)) DEALLOCATE (pd%pw)
+    IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
+    IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
+    IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
+    IF(ALLOCATED(pd%cdom)) DEALLOCATE (pd%cdom)
+    IF(ALLOCATED(pd%cdomvz)) DEALLOCATE (pd%cdomvz)
+    IF(ALLOCATED(pd%cdomvxy)) DEALLOCATE (pd%cdomvxy)
+    IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
+    ALLOCATE (pd%pw(ng3,jsp),stat=err(1))
+    ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
+    ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jsp,nocoExtraDim)),stat=err(3))
+    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
+    IF (l_noco) THEN
+       ALLOCATE (pd%cdom(ng3))
+       ALLOCATE (pd%cdomvz(nmzd,2))
+       ALLOCATE (pd%cdomvxy(nmzxyd,n2d-1,2))
+    ELSE
+       ALLOCATE (pd%cdom(1))
+       ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
+    END IF
+
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jsp))
+
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
-    pd%pw=0.0
+    pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
-    IF (PRESENT(nmzd)) THEN
-       pd%vacz=0.0
-       pd%vacxy=0.0
-    ENDIF
+    pd%vacz=0.0
+    pd%vacxy=CMPLX(0.0,0.0)
+    pd%cdom = CMPLX(0.0,0.0)
+    pd%cdomvz = CMPLX(0.0,0.0)
+    pd%cdomvxy = CMPLX(0.0,0.0)
+    pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 
+  SUBROUTINE resetPotDen(pd)
+
+    IMPLICIT NONE
+
+    CLASS(t_potden),INTENT(INOUT) :: pd
+
+    pd%pw=CMPLX(0.0,0.0)
+    pd%mt=0.0
+    pd%vacz=0.0
+    pd%vacxy=CMPLX(0.0,0.0)
+    pd%cdom = CMPLX(0.0,0.0)
+    pd%cdomvz = CMPLX(0.0,0.0)
+    pd%cdomvxy = CMPLX(0.0,0.0)
+    pd%mmpMat = CMPLX(0.0,0.0)
+  END SUBROUTINE resetPotDen
  
 END MODULE m_types_misc

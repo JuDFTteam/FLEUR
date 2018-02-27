@@ -376,7 +376,7 @@ CONTAINS
                                vTemp = vTot
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
-                                    it,eig_id,inDen,results,vTemp,vx)
+                                    it,eig_id,results,inDen,vTemp,vx)
                                vTot%mmpMat = vTemp%mmpMat
                                eig_idList(pc) = eig_id
                                CALL timestop("eigen")

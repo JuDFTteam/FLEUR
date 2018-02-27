@@ -19,7 +19,7 @@ CONTAINS
   !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
        sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
-       it,eig_id,results,v,vx)
+       it,eig_id,results,inden,v,vx)
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
     USE m_lodpot
@@ -61,6 +61,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(INOUT)  :: atoms!in u_setup n_u might be modified
+    TYPE(t_potden),INTENT(IN)    :: inden
     TYPE(t_potden),INTENT(INOUT) :: v,vx
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -143,7 +144,7 @@ CONTAINS
      !--->    loop over spins
      !--->       set up k-point independent t(l'm',lm) matrices
      !
-     CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,v,mpi,results,DIMENSION,td,ud)
+     CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
    
     DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
