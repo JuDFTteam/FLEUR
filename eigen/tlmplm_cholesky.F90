@@ -276,8 +276,8 @@ MODULE m_tlmplm_cholesky
                 lm = l* (l+1) + m
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
-                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + v%mmpMat(l,lp,i_u,jsp)
-                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ v%mmpMat(l,lp,i_u,jsp)*ud%ddn(lp,n,jsp)
+                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + v%mmpMat(m,mp,i_u,jsp)
+                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ v%mmpMat(m,mp,i_u,jsp)*ud%ddn(lp,n,jsp)
                 ENDDO
              ENDDO
           END DO
