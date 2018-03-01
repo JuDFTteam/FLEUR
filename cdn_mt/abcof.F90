@@ -1,7 +1,8 @@
 MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-       noco,jspin,oneD, acof,bcof,ccof,zMat)
+       noco,jspin,oneD, acof,bcof,ccof,zMat,&
+       eig,acoflo,bcoflo,e1cof,e2cof,aveccof,bveccof,cveccof)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -31,19 +32,28 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT):: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (OUT):: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (OUT):: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+    REAL,    OPTIONAL, INTENT (IN)  :: eig(:)!(dimension%neigd)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: acoflo(-atoms%llod:,:,:,:)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: bcoflo(-atoms%llod:,:,:,:)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: e1cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: e2cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, OPTIONAL, INTENT (OUT) :: cveccof(:,-atoms%llod:,:,:,:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX cexp,phase,c_0,c_1,c_2,ci
     REAL const,df,r1,s,tmk,wronk,qss(3)
+    REAL s2h, s2h_e(ne)
     INTEGER i,j,k,l,ll1,lm ,n,nap,natom,nn,iatom,jatom,lmp,m,nkvec
     INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap
     !     ..
     !     .. Local Arrays ..
     INTEGER nbasf0(atoms%nlod,atoms%nat)
-    REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fk(3),fkp(3),fkr(3)
+    REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
     REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
     COMPLEX ccchi(2,2)
@@ -61,9 +71,18 @@ CONTAINS
     ci = CMPLX(0.0,1.0)
     const = 2 * tpi_const/SQRT(cell%omtil)
     !
-    acof(:,:,:) = CMPLX(0.0,0.0)
-    bcof(:,:,:) = CMPLX(0.0,0.0)
-    ccof(:,:,:,:)=CMPLX(0.,0.)
+    acof(:,:,:)   = CMPLX(0.0,0.0)
+    bcof(:,:,:)   = CMPLX(0.0,0.0)
+    ccof(:,:,:,:) = CMPLX(0.0,0.0)
+    IF(PRESENT(eig)) THEN
+       acoflo(:,:,:,:)    = CMPLX(0.0,0.0)
+       bcoflo(:,:,:,:)    = CMPLX(0.0,0.0)
+       e1cof(:,:,:)       = CMPLX(0.0,0.0)
+       e2cof(:,:,:)       = CMPLX(0.0,0.0)
+       aveccof(:,:,:,:)   = CMPLX(0.0,0.0)
+       bveccof(:,:,:,:)   = CMPLX(0.0,0.0)
+       cveccof(:,:,:,:,:) = CMPLX(0.0,0.0)
+    END IF
     !     ..
     !+APW_LO
     DO n = 1, atoms%ntype
@@ -96,13 +115,13 @@ CONTAINS
        !---> loop over atom types
        !$OMP PARALLEL DO &
        !$OMP& DEFAULT(none)&
-       !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
-       !$OMP& alo1,blo1,clo1,inap,nap,j,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
-       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,&
+       !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,&
+       !$OMP& alo1,blo1,clo1,inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
+       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,&
        !$OMP& jspin,qss,&
        !$OMP& apw,const,&
        !$OMP& nbasf0,enough,&
-       !$OMP& acof,bcof,ccof)
+       !$OMP& acof,bcof,ccof,e1cof,e2cof,acoflo,bcoflo,aveccof,bveccof,cveccof)
        DO n = 1,atoms%ntype
           CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
           
@@ -154,11 +173,16 @@ CONTAINS
                       ENDIF
                    ENDIF ! (noco%l_noco)
                    IF (noco%l_ss) THEN
-                      fk = lapw%bkpt + lapw%gvec(:,k,iintsp) + qss
+                      fg = lapw%gvec(:,k,iintsp) + qss
                    ELSE
-                      fk = lapw%bkpt + lapw%gvec(:,k,jspin) + qss
+                      fg = lapw%gvec(:,k,jspin) + qss
                    ENDIF ! (noco%l_ss)
-                   s=  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
+                   fk = lapw%bkpt + fg
+                   s =  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
+                   IF(PRESENT(eig)) THEN
+                      s2h = 0.5*s
+                      s2h_e(:ne) = s2h-eig(:ne)
+                   END IF
                    s = SQRT(s)
                    r1 = atoms%rmt(n)*s
                    CALL sphbes(atoms%lmax(n),r1,fj)
@@ -176,8 +200,8 @@ CONTAINS
                       ENDIF
                    ENDDO ! loop over l
                    tmk = tpi_const* (fk(1)*atoms%taual(1,natom)+&
-                        &                     fk(2)*atoms%taual(2,natom)+&
-                        &                     fk(3)*atoms%taual(3,natom))
+                                     fk(2)*atoms%taual(2,natom)+&
+                                     fk(3)*atoms%taual(3,natom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
                    IF (oneD%odi%d1) THEN
                       inap = oneD%ods%ngopr(natom)
@@ -186,16 +210,20 @@ CONTAINS
                       inap = sym%invtab(nap)
                    END IF
                    DO j = 1,3
-                      fkr(j) = 0.
+                      fkr(j) = 0.0
+                      fgr(j) = 0.0
                       DO i = 1,3
                          IF (oneD%odi%d1) THEN
                             fkr(j) = fkr(j) + fk(i)*oneD%ods%mrot(i,j,inap)
+                            fgr(j) = fgr(j) + fg(i)*oneD%ods%mrot(i,j,inap)
                          ELSE
                             fkr(j) = fkr(j) + fk(i)*sym%mrot(i,j,inap)
+                            fgr(j) = fgr(j) + fg(i)*sym%mrot(i,j,inap)
                          END IF
-                      ENDDO
-                   ENDDO
-                   fkp=MATMUL(fkr,cell%bmat)
+                      END DO
+                   END DO
+                   fkp = MATMUL(fkr,cell%bmat)
+                   fgp = MATMUL(fgr,cell%bmat)
                    !     ----> generate spherical harmonics
                    CALL ylm4(atoms%lmax(n),fkp,ylm)
                    !     ----> loop over l
@@ -225,6 +253,14 @@ CONTAINS
                                c_2 =  CONJG(c_2) * inv_f
                                CALL CPP_BLAS_caxpy(ne,c_1,work_c,1, acof(1,lmp,jatom),1)
                                CALL CPP_BLAS_caxpy(ne,c_2,work_c,1, bcof(1,lmp,jatom),1)
+                               IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
+                                  CALL CPP_BLAS_caxpy(ne,c_1,work_c*s2h_e,1, e1cof(1,lmp,jatom),1)
+                                  CALL CPP_BLAS_caxpy(ne,c_2,work_c*s2h_e,1, e2cof(1,lmp,jatom),1)
+                                  DO i = 1,3
+                                     CALL CPP_BLAS_caxpy(ne,c_1,work_c*fgp(i),1, aveccof(i,1,lmp,jatom),3)
+                                     CALL CPP_BLAS_caxpy(ne,c_2,work_c*fgp(i),1, bveccof(i,1,lmp,jatom),3)
+                                  END DO
+                               END IF
                             ENDIF
                          ENDIF
                       ENDDO ! loop over m
@@ -233,7 +269,8 @@ CONTAINS
                       DO nkvec=1,lapw%nkvec(lo,natom)
                          IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
                             CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
-                                 n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat)
+                                 n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,&
+                                 fgp,acoflo,bcoflo,aveccof,bveccof,cveccof)
                          ENDIF
                       ENDDO
                    END DO
@@ -277,7 +314,14 @@ CONTAINS
                    DO m = -l,l
                       inv_f = (-1.0)**(m+l)
                       DO ie = 1,ne
-                         ccof(m,ie,ilo,jatom) = inv_f * cexp *CONJG(  ccof(-m,ie,ilo,iatom))
+                         ccof(m,ie,ilo,jatom) = inv_f * cexp * CONJG(  ccof(-m,ie,ilo,iatom))
+                         IF(PRESENT(eig)) THEN
+                            acoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(acoflo(-m,ie,ilo,iatom))
+                            bcoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(bcoflo(-m,ie,ilo,iatom))
+                            DO i = 1,3
+                               cveccof(i,m,ie,ilo,jatom) = -inv_f * cexp * CONJG(cveccof(i,-m,ie,ilo,iatom))
+                            END DO
+                         END IF
                       ENDDO
                    ENDDO
                 ENDDO
@@ -289,10 +333,18 @@ CONTAINS
                       inv_f = (-1.0)**(m+l)
                       DO ie = 1,ne
                          acof(ie,lm,jatom) = inv_f * cexp * CONJG(acof(ie,lmp,iatom))
-                      ENDDO
-                      DO ie = 1,ne
                          bcof(ie,lm,jatom) = inv_f * cexp * CONJG(bcof(ie,lmp,iatom))
-                      ENDDO
+                      END DO
+                      IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
+                         DO ie = 1,ne
+                            e1cof(ie,lm,jatom) = inv_f * cexp * CONJG(e1cof(ie,lmp,iatom))
+                            e2cof(ie,lm,jatom) = inv_f * cexp * CONJG(e2cof(ie,lmp,iatom))
+                            DO i = 1,3
+                               aveccof(i,ie,lm,jatom) = -inv_f * cexp * CONJG(aveccof(i,ie,lmp,iatom))
+                               bveccof(i,ie,lm,jatom) = -inv_f * cexp * CONJG(bveccof(i,ie,lmp,iatom))
+                            END DO
+                         END DO
+                      END IF
                    ENDDO
                 ENDDO
              ENDIF

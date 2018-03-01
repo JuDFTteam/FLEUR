@@ -724,9 +724,12 @@ CONTAINS
                      aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),&
                      cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat) )
-                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,noccbd,eig,usdus,&
-                        ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
+                CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
+                     acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat,&
+                     eig,acoflo,bcoflo,e1cof,e2cof,aveccof,bveccof,cveccof)
+!                CALL to_pulay(input,atoms,noccbd,sym, lapw, noco,cell,noccbd,eig,usdus,&
+!                        ispin,oneD, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+!                        e1cof,e2cof,aveccof,bveccof, ccof(-atoms%llod,1,1,1,ispin),acoflo,bcoflo,cveccof,zMat)
                 CALL timestop("cdnval: to_pulay")
 
              ELSE

@@ -21,17 +21,20 @@ MODULE m_abclocdn
   !*********************************************************************
 CONTAINS
   SUBROUTINE abclocdn(atoms,sym,noco,lapw,cell,ccchi,iintsp,phase,ylm,&
-       ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat)
-    !
+       ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,&
+       fgp,acoflo,bcoflo,aveccof,bveccof,cveccof)
+
     USE m_types
     USE m_constants
+
     IMPLICIT NONE
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_sym),INTENT(IN)    :: sym
-    TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_zMat),INTENT(IN)   :: zMat
+
+    TYPE(t_noco),  INTENT(IN) :: noco
+    TYPE(t_sym),   INTENT(IN) :: sym
+    TYPE(t_atoms), INTENT(IN) :: atoms
+    TYPE(t_lapw),  INTENT(IN) :: lapw
+    TYPE(t_cell),  INTENT(IN) :: cell
+    TYPE(t_zMat),  INTENT(IN) :: zMat
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: iintsp
@@ -45,10 +48,16 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    REAL,    OPTIONAL, INTENT (IN)    :: fgp(3)
+    COMPLEX, OPTIONAL, INTENT (INOUT) :: acoflo(-atoms%llod:,:,:,:)
+    COMPLEX, OPTIONAL, INTENT (INOUT) :: bcoflo(-atoms%llod:,:,:,:)
+    COMPLEX, OPTIONAL, INTENT (INOUT) :: aveccof(:,:,0:,:)
+    COMPLEX, OPTIONAL, INTENT (INOUT) :: bveccof(:,:,0:,:)
+    COMPLEX, OPTIONAL, INTENT (INOUT) :: cveccof(:,-atoms%llod:,:,:,:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
-    INTEGER i,l,ll1,lm,nbasf,m
+    INTEGER i,j,l,ll1,lm,nbasf,m
     !     ..
     !     ..
     term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(ntyp)**2)/2) * phase
@@ -76,12 +85,20 @@ CONTAINS
                 ctmp = zMat%z_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
              ENDIF
           ENDIF
-          acof(i,lm,na) = acof(i,lm,na) +ctmp*alo1(lo)
-          bcof(i,lm,na) = bcof(i,lm,na) +ctmp*blo1(lo)
-          ccof(m,i,lo,na) = ccof(m,i,lo,na) +ctmp*clo1(lo)
+          acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
+          bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
+          ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
+          IF (PRESENT(aveccof)) THEN
+             acoflo(m,i,lo,na) = acoflo(m,i,lo,na) + ctmp*alo1(lo)
+             bcoflo(m,i,lo,na) = bcoflo(m,i,lo,na) + ctmp*blo1(lo)
+             DO j = 1,3
+                aveccof(j,i,lm,na)   = aveccof(j,i,lm,na)   + fgp(j)*ctmp*alo1(lo)
+                bveccof(j,i,lm,na)   = bveccof(j,i,lm,na)   + fgp(j)*ctmp*blo1(lo)
+                cveccof(j,m,i,lo,na) = cveccof(j,m,i,lo,na) + fgp(j)*ctmp*clo1(lo)
+             END DO
+          END IF
        END DO
-    END DO
- 
+    END DO 
   
   END SUBROUTINE abclocdn
 END MODULE m_abclocdn
