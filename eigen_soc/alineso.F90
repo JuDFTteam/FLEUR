@@ -89,7 +89,7 @@ CONTAINS
 
     l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
     zmat%l_real=l_real
-    zMat%nbasfcn=lapw%nv+atoms%nlotot
+    zMat(1:dimension%jspd)%nbasfcn=lapw%nv(1:dimension%jspd)+atoms%nlotot
     zmat%nbands=dimension%neigd
    
     INQUIRE (4649,opened=l_socvec)
