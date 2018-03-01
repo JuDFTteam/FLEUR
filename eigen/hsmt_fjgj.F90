@@ -52,7 +52,7 @@ CONTAINS
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
           CALL dsphbs(atoms%lmax(n),gs,fb, gb)
-          !$OMP SIMD PRIVATE(ws,ff,gg)
+!          !$OMP SIMD PRIVATE(ws,ff,gg)
           DO l = 0,atoms%lmax(n)
              !---> set up wronskians for the matching conditions for each ntype
              ws = con1/(usdus%uds(l,n,ispin)*usdus%dus(l,n,ispin)&
@@ -68,7 +68,7 @@ CONTAINS
                 !ENDIF
              ENDIF
           ENDDO
-          !$OMP END SIMD
+!          !$OMP END SIMD
        ENDDO ! k = 1, lapw%nv
        !$OMP END PARALLEL DO
     ENDDO
