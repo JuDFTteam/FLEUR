@@ -212,7 +212,6 @@ CONTAINS
           CALL resetIterationDependentTimers()
           CALL timestart("Iteration")
           IF (mpi%irank.EQ.0) THEN
-             WRITE(*,"(a,i3)",advance="no") "Iteration:",it
              !-t3e
              WRITE (6,FMT=8100) it
              WRITE (16,FMT=8100) it
@@ -298,7 +297,6 @@ CONTAINS
 
                 IF (.NOT.obsolete%pot8) THEN
                    CALL timestart("generation of potential")
-                   IF (mpi%irank==0) WRITE(*,"(a)",advance="no") " * Potential generation "
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
                         sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,vTot,vx,vCoul)
                    CALL timestop("generation of potential")
@@ -372,7 +370,6 @@ CONTAINS
 
                                ! WRITE(6,fmt='(A)') 'Starting 1st variation ...'
                                CALL timestart("eigen")
-                               IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Eigenvalue problem "
                                vTemp = vTot
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
@@ -439,7 +436,6 @@ CONTAINS
                          !
                          !              ----> fermi level and occupancies
                          !
-                         IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Fermi-energy "
                          IF ( input%eigvar(3) .AND. ( .NOT.(noco%l_soc .AND. noco%l_ss) ) ) THEN
                             IF (jij%l_J) THEN
                                CALL timestart("determination of fermi energy")
@@ -568,7 +564,6 @@ CONTAINS
              !-Wannier
 
              CALL timestart("generation of new charge density (total)")
-             IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* New Charge "
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                          enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
@@ -654,16 +649,11 @@ CONTAINS
              !          ----> mix input and output densities
              !
              CALL timestart("mixing")
-             IF (mpi%irank==0) WRITE(*,"(a)",advance="no") "* Mixing distance: "
              CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
              CALL timestop("mixing")
 
              WRITE (6,FMT=8130) it
              WRITE (16,FMT=8130) it
-             IF (mpi%irank==0) THEN
-                WRITE(*,"(f11.7)",advance='no') results%last_distance
-                WRITE(*,*)
-             ENDIF
 8130         FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
              WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
              CALL timestop("Iteration")
