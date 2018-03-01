@@ -7,7 +7,7 @@ jt::testrun($executable,$workdir);
 
 #now test output
 
-$result=jt::test_grepexists("$workdir/forces.dat","energy =    -4204.7823603");
+$result=jt::test_grepexists("$workdir/forces.dat","energy =    -4204.782360");
 $result+=jt::test_grepexists("$workdir/forces.dat","1.3806");
 $result+=jt::test_grepexists("$workdir/forces.dat","0.009423");
 
