@@ -11,4 +11,5 @@ MODULE m_types
   USE m_types_mpi
   USE m_types_tlmplm
   USE m_types_misc
+  USE m_types_potden
 END MODULE m_types

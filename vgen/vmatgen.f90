@@ -23,11 +23,7 @@ MODULE m_vmatgen
   !     Philipp Kurz 99/11/01
   !**********************************************************************
 CONTAINS
-  SUBROUTINE vmatgen(&
-       &                   stars,&
-       &                   atoms,sphhar,vacuum,&
-       &                   sym,input,oneD,&
-       &                   nu,ndomfile,npotmatfile)
+  SUBROUTINE vmatgen(stars, atoms,sphhar,vacuum, sym,input,oneD, den,v)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -41,7 +37,6 @@ CONTAINS
     !                all stored on real space mesh
     !**********************************************************************
 
-    USE m_loddop
     USE m_fft2d
     USE m_fft3d
     USE m_types
@@ -53,102 +48,39 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_potden),INTENT(IN) :: den
+    TYPE(t_potden),INTENT(INOUT):: v
 
-    !     .. Scalar Arguments ..    
-    INTEGER, INTENT (IN) :: nu,ndomfile,npotmatfile  
-
+ 
     !     ..
     !     .. Local Scalars ..
     INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter
-    REAL    vup,vdown,veff,beff  ,zero,vziw,theta,phi
-    LOGICAL l_domfexst
+    REAL    vup,vdown,veff,beff,vziw,theta,phi
     !     ..
     !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: vpw(:,:),vxy(:,:,:,:)
-    REAL,    ALLOCATABLE :: vr(:,:,:,:),vz(:,:,:)
     REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:)
 
-    zero = 0.0
     ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
-    ifft2 = 9*stars%mx1*stars%mx2
-    IF (oneD%odi%d1) ifft2 = 9*stars%mx3*oneD%odi%M
-    IF (input%film) ALLOCATE(vvacxy(0:ifft2-1,vacuum%nmzxyd,2,4))
-
-    IF (input%jspins .NE. 2) THEN
-       WRITE (6,*) 'This is the non-collinear version of the flapw-'
-       WRITE (6,*) 'program. It can only perform spin-polarized'
-       WRITE (6,*) 'calculations.'
-       CALL juDFT_error("jspins not equal 2",calledby="vmatgen")
-    ENDIF
-
-    ALLOCATE ( vpw(stars%ng3,3),vis(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),&
-         &           vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,3),vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),&
-         &           vz(vacuum%nmzd,2,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
-
-    !---> reload the spin up and down potential
-    !      OPEN (nu,file='pottot',form='unformatted',status='old')
-    OPEN (nu,file='nrp',form='unformatted',status='old')
-    CALL loddop(stars,vacuum,atoms,sphhar,&
-         &            input,sym,&
-         &            nu,&
-         &            iter,vr,vpw(1,1),vz(1,1,1),vxy(1,1,1,1))
-    CLOSE(nu)
-
-    !---> check, whether the direction of magnetic field file exists
-    INQUIRE (FILE='dirofmag',EXIST=l_domfexst)
-    IF (l_domfexst) THEN
-       !--->    if it does, read the theta and phi values
-       OPEN (ndomfile,FILE='dirofmag',FORM='unformatted',&
-            &        STATUS='unknown')
-       READ (ndomfile) (vis(imeshpt,3),imeshpt=0,ifft3-1)
-       READ (ndomfile) (vis(imeshpt,4),imeshpt=0,ifft3-1)
-       IF (input%film) THEN
-          READ (ndomfile) ((vz(imz,ivac,3),imz=vacuum%nmzxyd+1,vacuum%nmzd),&
-               &                       ivac=1,vacuum%nvac)
-          READ (ndomfile) ((vz(imz,ivac,4),imz=vacuum%nmzxyd+1,vacuum%nmzd),&
-               &                       ivac=1,vacuum%nvac)
-          READ (ndomfile) (((vvacxy(imeshpt,imz,ivac,3),&
-               &                   imeshpt=0,ifft2-1),imz=1,vacuum%nmzxyd),ivac=1,vacuum%nvac)
-          READ (ndomfile) (((vvacxy(imeshpt,imz,ivac,4),&
-               &                   imeshpt=0,ifft2-1),imz=1,vacuum%nmzxyd),ivac=1,vacuum%nvac)
-       ENDIF
-       CLOSE (ndomfile)
-    ELSE
-       !--->    if it doesn't, set all angles to zero
-       vis(:,3:4)=0.0
-       IF (input%film) THEN
-          DO ivac = 1,2
-             DO imz = vacuum%nmzxyd+1,vacuum%nmzd
-                vz(imz,ivac,3) = 0.0
-                vz(imz,ivac,4) = 0.0
-             ENDDO
-             DO imz = 1,vacuum%nmzxyd
-                DO imeshpt = 0,ifft2-1
-                   vvacxy(imeshpt,imz,ivac,3) = 0.0
-                   vvacxy(imeshpt,imz,ivac,4) = 0.0
-                ENDDO
-             ENDDO
-          ENDDO
-       ENDIF
-    ENDIF
-
+    IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
+    ifft2 = SIZE(den%phi_vacxy,1) 
+    
+    
+    ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
+      
+    
     !---> fouriertransform the spin up and down potential
     !---> in the interstitial, vpw, to real space (vis)
     DO jspin = 1,input%jspins
-       CALL fft3d(&
-            &               vis(0,jspin),fftwork,&
-            &               vpw(1,jspin),&
-            &               stars,+1)
+       CALL fft3d(vis(:,jspin),fftwork, v%pw(:,jspin), stars,+1)
     ENDDO
 
     !---> calculate the four components of the matrix potential on
     !---> real space mesh
-    DO imeshpt = 0,ifft3-1
+    DO imeshpt = 1,ifft3
        vup   = vis(imeshpt,1)
        vdown = vis(imeshpt,2)
-       theta = vis(imeshpt,3)
-       phi   = vis(imeshpt,4)
-       !         write (35,'(i4,4f12.6)') mod(imeshpt,33),vup,vdown,theta,phi
+       theta = den%theta_pw(imeshpt)
+       phi   = den%phi_pw(imeshpt)
        !--->    at first determine the effective potential and magnetic field
        veff  = (vup + vdown)/2.0
        beff  = (vup - vdown)/2.0
@@ -162,6 +94,7 @@ CONTAINS
        vis(imeshpt,3) = beff*SIN(theta)*COS(phi)
        !--->    and the imaginary part of V_21
        vis(imeshpt,4) = beff*SIN(theta)*SIN(phi)
+       PRINT *,"TODO: check if convolution with step-function is needed in vmatgen"
        DO ipot = 1,4
           vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt)
        ENDDO
@@ -170,17 +103,18 @@ CONTAINS
     !---> Fouriertransform the matrix potential back to reciprocal space
     DO ipot = 1,2
        fftwork=0.0
-       CALL fft3d(&
-            &               vis(0,ipot),fftwork,&
-            &               vpw(1,ipot),&
-            &               stars,-1)
+       CALL fft3d(vis(:,ipot),fftwork, v%pw(1,ipot), stars,-1)
     ENDDO
-    CALL fft3d(&
-         &           vis(0,3),vis(0,4),&
-         &           vpw(1,3),&
-         &           stars,-1)
+    CALL fft3d(vis(:,3),vis(:,4), v%pw(1,3), stars,-1)
 
-    IF (input%film) THEN
+    IF (.NOT. input%film) RETURN
+
+    !Now the vacuum part starts
+
+ 
+    ALLOCATE(vvacxy(0:ifft2-1,vacuum%nmzxyd,2,4))
+
+    
        !--->    fouriertransform the spin up and down potential
        !--->    in the vacuum, vz & vxy, to real space (vvacxy)
        DO jspin = 1,input%jspins
@@ -197,11 +131,8 @@ CONTAINS
                    !     &                 vacuum,odi%nq2,odi%kimax2,1,&
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
-                   CALL fft2d(&
-                        &                 stars,&
-                        &                 vvacxy(0,imz,ivac,jspin),fftwork,&
-                        &                 vz(imz,ivac,jspin),vziw,vxy(imz,1,ivac,jspin),&
-                        &                 vacuum%nmzxyd,1)
+                   CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
+                        v%vacz(imz,ivac,jspin),vziw,v%vacxy(imz,1,ivac,jspin), vacuum%nmzxyd,1)
                 ENDIF
              ENDDO
           ENDDO
@@ -211,11 +142,11 @@ CONTAINS
        !--->    real space mesh
        DO ivac = 1,vacuum%nvac
           DO imz = 1,vacuum%nmzxyd
-             DO imeshpt = 0,ifft2-1
+             DO imeshpt = 1,ifft2
                 vup   = vvacxy(imeshpt,imz,ivac,1)
                 vdown = vvacxy(imeshpt,imz,ivac,2)
-                theta = vvacxy(imeshpt,imz,ivac,3)
-                phi   = vvacxy(imeshpt,imz,ivac,4)
+                theta = den%theta_vacxy(imeshpt,imz,ivac)
+                phi   = den%phi_vacxy(imeshpt,imz,ivac)
                 veff  = (vup + vdown)/2.0
                 beff  = (vup - vdown)/2.0
                 vvacxy(imeshpt,imz,ivac,1) = veff + beff*COS(theta)
@@ -225,16 +156,16 @@ CONTAINS
              ENDDO
           ENDDO
           DO imz = vacuum%nmzxyd+1,vacuum%nmzd
-             vup   = vz(imz,ivac,1)
-             vdown = vz(imz,ivac,2)
-             theta = vz(imz,ivac,3)
-             phi   = vz(imz,ivac,4)
+             vup   = v%vacz(imz,ivac,1)
+             vdown = v%vacz(imz,ivac,2)
+             theta = den%theta_vacz(imz,ivac)
+             phi   = den%phi_vacz(imz,ivac)
              veff  = (vup + vdown)/2.0
              beff  = (vup - vdown)/2.0
-             vz(imz,ivac,1) = veff + beff*COS(theta)
-             vz(imz,ivac,2) = veff - beff*COS(theta)
-             vz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
-             vz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
+             v%vacz(imz,ivac,1) = veff + beff*COS(theta)
+             v%vacz(imz,ivac,2) = veff - beff*COS(theta)
+             v%vacz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
+             v%vacz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
           ENDDO
        ENDDO
 
@@ -253,11 +184,8 @@ CONTAINS
                    !     &                 vacuum,odi%nq2,odi%kimax2,-1,&
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
-                   CALL fft2d(&
-                        &                 stars,&
-                        &                 vvacxy(0,imz,ivac,ipot),fftwork,&
-                        &                 vz(imz,ivac,ipot),vziw,vxy(imz,1,ivac,ipot),&
-                        &                 vacuum%nmzxyd,-1)
+                   CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
+                        v%vacz(imz,ivac,ipot),vziw,v%vacxy(imz,:,ivac,ipot), vacuum%nmzxyd,-1)
                 END IF
              ENDDO
           ENDDO
@@ -275,38 +203,12 @@ CONTAINS
                 !   &              vacuum,odi%nq2,odi%kimax2,-1,&
                 !   &               %igf,odl%pgf,odi%nst2)
              ELSE
-                CALL fft2d(&
-                     &              stars,&
-                     &              vvacxy(0,imz,ivac,3),vvacxy(0,imz,ivac,4),&
-                     &              vz(imz,ivac,3),vz(imz,ivac,4),vxy(imz,1,ivac,3),&
-                     &              vacuum%nmzxyd,-1)
+                CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
+                     v%vacz(imz,ivac,3),v%vacz(imz,ivac,4),v%vacxy(imz,:,ivac,3), vacuum%nmzxyd,-1)
              END IF
           ENDDO
        ENDDO
 
-    ENDIF
-    !
-    !---> save matrix potential to file potmat
-    !
-    OPEN (npotmatfile,FILE='potmat',FORM='unformatted',&
-         &     STATUS='unknown')
-    DO ipot = 1,3
-       WRITE (npotmatfile) (vpw(ig3,ipot),ig3=1,stars%ng3)
-    ENDDO
-    IF (input%film) THEN
-       DO ivac = 1,vacuum%nvac
-          WRITE (npotmatfile)((vz(imz,ivac,ipot),imz=1,vacuum%nmzd),ipot=1,4)
-          DO ipot = 1,3
-             WRITE (npotmatfile)((vxy(imz,ig2,ivac,ipot),&
-                  &                      imz=1,vacuum%nmzxyd),ig2=1,oneD%odi%nq2-1)
-          ENDDO
-       ENDDO
-    ENDIF
-8000 FORMAT(6f16.10)
-    CLOSE (npotmatfile)
-
-    DEALLOCATE ( vpw,vis,vxy,vr,vz,fftwork)
-    IF (input%film) DEALLOCATE (vvacxy)
     RETURN
   END SUBROUTINE vmatgen
 END MODULE m_vmatgen

@@ -9,4 +9,5 @@ types/types_lapw.F90
 types/types_tlmplm.F90
 types/types_misc.F90
 types/types_mpimat.F90
+types/types_potden.f90
 )

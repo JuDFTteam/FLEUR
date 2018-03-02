@@ -229,7 +229,7 @@ CONTAINS
                 IF (noco%l_noco) THEN
                    CALL timestart("gen. spin-up and -down density")
                    CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
-                                  vacuum,22,cell,input,noco,oneD)
+                                  vacuum,cell,input,noco,oneD,inDen)
                    CALL timestop("gen. spin-up and -down density")
                 ENDIF
                 !---> pk non-collinear
@@ -307,7 +307,7 @@ CONTAINS
                       !--->          and down potentials and direction of the magnetic field
                       IF (noco%l_noco) THEN
                          CALL timestart("generation of potential-matrix")
-                         CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,8,22,26)
+                         CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,inDen,vTot)
                          CALL timestop("generation of potential-matrix")
                       ENDIF
                       !---> end pk non-collinear
