@@ -244,6 +244,24 @@ CONTAINS
                             bcof(:ne,lm,natom) = bcof(:ne,lm,natom) +  c_2 * work_c(:ne)
                          END IF
 
+                         IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
+                            IF (zmat%l_real) THEN
+                               e1cof(:ne,lm,natom) = e1cof(:ne,lm,natom) + c_1 * work_r(:ne) * s2h_e(:ne)
+                               e2cof(:ne,lm,natom) = e2cof(:ne,lm,natom) + c_2 * work_r(:ne) * s2h_e(:ne)
+                               DO i = 1,3
+                                  aveccof(i,:ne,lm,natom) = aveccof(i,:ne,lm,natom) + c_1 * work_r(:ne) * fgp(i)
+                                  bveccof(i,:ne,lm,natom) = bveccof(i,:ne,lm,natom) + c_2 * work_r(:ne) * fgp(i)
+                               END DO
+                            ELSE
+                               e1cof(:ne,lm,natom) = e1cof(:ne,lm,natom) + c_1 * work_c(:ne) * s2h_e(:ne)
+                               e2cof(:ne,lm,natom) = e2cof(:ne,lm,natom) + c_2 * work_c(:ne) * s2h_e(:ne)
+                               DO i = 1,3
+                                  aveccof(i,:ne,lm,natom) = aveccof(i,:ne,lm,natom) + c_1 * work_c(:ne) * fgp(i)
+                                  bveccof(i,:ne,lm,natom) = bveccof(i,:ne,lm,natom) + c_2 * work_c(:ne) * fgp(i)
+                               END DO
+                            END IF
+                         ENDIF
+
                          IF (noco%l_soc.AND.sym%invs) THEN
                             IF (atoms%invsat(natom).EQ.1) THEN
                                jatom = sym%invsatnr(natom)
