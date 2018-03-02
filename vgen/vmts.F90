@@ -43,6 +43,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     COMPLEX vtl(0:sphhar%nlhd,atoms%ntype)
+    !$ COMPLEX vtl_loc(0:sphhar%nlhd,atoms%ntype)
     COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntype )
     REAL    f1r(atoms%jmtd),f2r(atoms%jmtd),x1r(atoms%jmtd),x2r(atoms%jmtd)
     REAL    sbf(0:atoms%lmaxd),rrl(atoms%jmtd),rrl1(atoms%jmtd)
@@ -54,6 +55,7 @@ CONTAINS
     ! ..  External Subroutines
     EXTERNAL MPI_REDUCE
 #endif
+    integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
     !     ..
     !     ..
     !     ----> calculate lattice harmonics expansion coefficients of the
@@ -78,10 +80,12 @@ CONTAINS
        ENDDO
     ENDIF
     !           ----> g.ne.0 components
-    ! I commented out the OMP parallelization for the following loop since
-    ! it produced wrong results with the ifort 18 compiler.
-    !!$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(cp,pylm,nat,n,sbf,nd,lh,&
-    !!$OMP& sm,jm,m,lm,l) REDUCTION(+:vtl)
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP& SHARED(mpi,stars,vpw,oneD,atoms,sym,cell,sphhar,vtl) &
+    !$OMP& PRIVATE(k,cp,pylm,nat,n,sbf,nd,lh,sm,jm,m,lm,l)&
+    !$OMP& PRIVATE(vtl_loc) 
+    !$ vtl_loc(:,:) = CMPLX(0.d0,0.d0)
+    !$OMP DO
     DO k = mpi%irank+2, stars%ng3, mpi%isize
        cp = vpw(k,1)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
@@ -91,13 +95,13 @@ CONTAINS
                &                  pylm)
        ELSE
           !-odim
-CALL od_phasy(&
+          CALL od_phasy(&
                &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
                &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
                &           pylm)
           !+odim
        END IF
-       !
+       
        nat = 1
        DO n = 1,atoms%ntype
           CALL sphbes(atoms%lmax(n),stars%sk3(k)*atoms%rmt(n),sbf)
@@ -110,12 +114,20 @@ CALL od_phasy(&
                 lm = l*(l+1) + m + 1 
                 sm = sm + CONJG(sphhar%clnu(jm,lh,nd))*pylm(lm,n)
              ENDDO
+             !$ IF (.false.) THEN
              vtl(lh,n) = vtl(lh,n) + cp*sbf(l)*sm
+             !$ ENDIF
+             vtl_loc(lh,n) = vtl_loc(lh,n) + cp*sbf(l)*sm
           ENDDO
           nat = nat + atoms%neq(n)
        ENDDO
     ENDDO
-    !!$OMP END PARALLEL DO
+    !$OMP END DO
+
+    !$OMP CRITICAL
+    !$ vtl = vtl + vtl_loc
+    !$OMP END CRITICAL
+    !$OMP END PARALLEL
 #ifdef CPP_MPI
     n1 = (sphhar%nlhd+1)*atoms%ntype
     ALLOCATE(c_b(n1))
