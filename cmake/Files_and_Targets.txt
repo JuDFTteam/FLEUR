@@ -49,7 +49,7 @@ init/tetcon.f init/kvecon.f init/boxdim.f math/ylm4.f
 )
 
 set(inpgen_F90  global/constants.f90 io/xsf_io.f90
-types/types.F90 types/types_mat.F90 eigen/vec_for_lo.f90 eigen/orthoglo.F90 
+types/types_potden.f90 types/types.F90 types/types_mat.F90 eigen/vec_for_lo.f90 eigen/orthoglo.F90 
 types/types_xcpot.F90 types/types_mpi.F90 types/types_lapw.F90
 types/types_tlmplm.F90
 types/types_misc.F90 global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90
