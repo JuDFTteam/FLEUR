@@ -165,10 +165,18 @@ CONTAINS
                       !   END l2 loop
                    END DO
                    !+gu 20.11.97
-                   utu = epar(l1,n)-eig(ie)
-                   utd = 0.5
-                   dtu = 0.5
-                   dtd = utu*usdus%ddn(l1,n,jsp)
+                   in = tlmplm%ind(lm1,lm1,n,1)
+                   IF (in.NE.-9999) THEN
+                      utu = -eig(ie)
+                      utd = 0.0
+                      dtu = 0.0
+                      dtd = utu*usdus%ddn(l1,n,jsp)
+                   ELSE
+                      utu = epar(l1,n)-eig(ie)
+                      utd = 0.5
+                      dtu = 0.5
+                      dtd = utu*usdus%ddn(l1,n,jsp)
+                   END IF
                    DO i = 1,3
                       DO natrun = natom,natom + atoms%neq(n) - 1
                          a21(i,natrun) = a21(i,natrun) + 2.0*&
