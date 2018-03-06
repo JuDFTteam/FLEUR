@@ -81,10 +81,10 @@ CONTAINS
     IF(ALLOCATED(pd%cdomvz)) DEALLOCATE (pd%cdomvz)
     IF(ALLOCATED(pd%cdomvxy)) DEALLOCATE (pd%cdomvxy)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
-    ALLOCATE (pd%pw(ng3,jsp),stat=err(1))
+    ALLOCATE (pd%pw(ng3,MERGE(3,jsp,nocoExtraDim)),stat=err(1))
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jsp,nocoExtraDim)),stat=err(3))
-    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,jsp),stat=err(4))
+    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jsp,nocoExtraDim)),stat=err(4))
     IF (l_noco) THEN
        ALLOCATE (pd%cdom(ng3))
        ALLOCATE (pd%cdomvz(nmzd,2))
