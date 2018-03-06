@@ -611,7 +611,7 @@ CONTAINS
                 !----> total energy
                 CALL timestart('determination of total energy')
                 CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
-                     sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,results)
+                     sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,inDen,results)
 
                 CALL timestop('determination of total energy')
 

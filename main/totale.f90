@@ -6,7 +6,7 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(atoms,sphhar,stars,vacuum,dimension, &
-       sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,results)
+       sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy 
@@ -64,12 +64,12 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_dimension),INTENT(IN)    :: dimension
     TYPE(t_potden),INTENT(IN)       :: vTot,vCoul
+    TYPE(t_potden),INTENT(IN)       :: den
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: it      
 
     ! Local type instances
-    TYPE(t_potden) :: den
 
     !     .. Local Scalars ..
     REAL rhs,totz, eigSum, fermiEnergyTemp
@@ -78,10 +78,10 @@ CONTAINS
 
     !     .. Local Arrays ..
     REAL vmd(atoms%ntype),zintn_r(atoms%ntype)
-    REAL dpj(atoms%jmtd)
+    REAL dpj(atoms%jmtd),mt(atoms%jmtd,atoms%ntype)
     CHARACTER(LEN=20) :: attributes(3)
 
-    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    !CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
 
     WRITE (6,FMT=8000)
     WRITE (16,FMT=8000)
@@ -136,11 +136,11 @@ CONTAINS
     !     ----> VM terms
     !     ---> reload the density
     !
-    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-    IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
+    !archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    !IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
 
-    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
+    !CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+    !                 CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
 
     ! CLASSICAL HELLMAN-FEYNMAN FORCE
@@ -155,19 +155,19 @@ CONTAINS
     !-for
     !     ---> add spin-up and spin-down charge density for lh=0
     !
-    IF (input%jspins.EQ.2) THEN
-       DO  n = 1,atoms%ntype
-          DO  i = 1,atoms%jri(n)
-             den%mt(i,0,n,1) = den%mt(i,0,n,1) + den%mt(i,0,n,input%jspins)
-          ENDDO
+    DO  n = 1,atoms%ntype
+       DO  i = 1,atoms%jri(n)
+          mt(i,n) = den%mt(i,0,n,1) + den%mt(i,0,n,input%jspins)
        ENDDO
-    END IF
+    ENDDO
+    IF (input%jspins.EQ.1) mt=mt/2 !we just added the same value twice
+    
     !
     ! ----> coulomb interaction between electrons and nuclei of different m.t.s
     !
     DO  n = 1,atoms%ntype
        DO  j = 1,atoms%jri(n)
-          dpj(j) = den%mt(j,0,n,1)/atoms%rmsh(j,n)
+          dpj(j) = mt(j,n)/atoms%rmsh(j,n)
        ENDDO
        CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),rhs)
        !
@@ -176,7 +176,7 @@ CONTAINS
        zintn_r(n) = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
        WRITE (6,FMT=8045) zintn_r(n)
        WRITE (16,FMT=8045) zintn_r(n)
-       CALL intgr3(den%mt(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
+       CALL intgr3(mt(1,n),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
        vmd(n) = atoms%rmt(n)*atoms%vr0(n)/sfp_const + atoms%zatom(n) - totz*sfp_const
        vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
        WRITE (6,FMT=8050) n,vmd(n)
