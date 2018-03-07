@@ -474,7 +474,6 @@ CONTAINS
        IF (PRESENT(nmat)) CALL io_write_integer0(&
             &                       d%nmatsetid,(/nk,jspin/),(/1,1/),nmat)
 
-       ENDIF
        !
        !write eigenvalues
        !
@@ -608,11 +607,8 @@ CONTAINS
        ENDIF
 
      
-          IF (PRESENT(nv)) nv=n1
-       ELSE
-          IF (PRESENT(nv)) CALL io_read_integer0(d%nvsetid,(/nk,jspin/),(/1,1/),nv)
+       IF (PRESENT(nv)) CALL io_read_integer0(d%nvsetid,(/nk,jspin/),(/1,1/),nv)
 
-       ENDIF
        IF (PRESENT(nmat)) &
             & CALL io_read_integer0(d%nmatsetid,(/nk,jspin/),(/1,1/),nmat)
        IF (PRESENT(el)) CALL io_read_real2(d%esetid,(/1,1,nk,jspin/),&
