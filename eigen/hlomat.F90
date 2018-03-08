@@ -125,7 +125,7 @@ CONTAINS
              END DO
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
-               locol= lapw%nv(iintsp)+lapw%index_lo(lo,ntyp)+nkvec !this is the column of the matrix
+               locol= lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
                 IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
                    locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                    !-t3e
@@ -172,7 +172,7 @@ CONTAINS
           !--->       calculate the hamiltonian matrix elements with other
           !--->       local orbitals at the same atom and with itself
           DO nkvec = 1,invsfct* (2*l+1)
-             locol = lapw%nv(iintsp)+lapw%index_lo(lo,ntyp)+nkvec !this is the column of the matrix
+             locol = lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
              IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
@@ -181,7 +181,7 @@ CONTAINS
                 DO lop = 1, (lo-1)
                    lp = atoms%llo(lop,ntyp)
                    DO nkvecp = 1,invsfct* (2*lp+1)
-                      lorow=lapw%nv(jintsp)+lapw%index_lo(lop,ntyp)+nkvecp
+                      lorow=lapw%nv(jintsp)+lapw%index_lo(lop,na)+nkvecp
                       DO m = -l,l
                          lm = l* (l+1) + m
                          DO mp = -lp,lp
@@ -239,7 +239,7 @@ CONTAINS
                 !--->          calculate the hamiltonian matrix elements of one local
                 !--->          orbital with itself
                 DO nkvecp = 1,nkvec
-                   lorow=lapw%nv(jintsp)+lapw%index_lo(lop,ntyp)+nkvecp
+                   lorow=lapw%nv(jintsp)+lapw%index_lo(lop,na)+nkvecp
                    DO m = -l,l
                       lm = l* (l+1) + m
                       DO mp = -l,l
