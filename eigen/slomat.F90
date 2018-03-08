@@ -82,7 +82,7 @@ CONTAINS
                clo1(lo)*    clo1(lo) )
           DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
              !+t3e
-             locol = lapw%nv(iintsp)+lapw%index_lo(lo,ntyp)+nkvec !this is the column of the matrix
+             locol = lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
              IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
@@ -119,7 +119,7 @@ CONTAINS
                            clo1(lo)*ud%uloulopn(lop,lo,ntyp,isp)))
                       DO nkvecp = 1,invsfct* (2*lp+1)
                          kp = lapw%kvec(nkvecp,lop,ntyp)
-                         lorow=lapw%nv(jintsp)+lapw%index_lo(lop,ntyp)+nkvecp
+                         lorow=lapw%nv(jintsp)+lapw%index_lo(lop,na)+nkvecp
                          dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
                          IF (smat%l_real) THEN
                             smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)* &
@@ -136,7 +136,7 @@ CONTAINS
                 !--->          orbital with itself
                 DO nkvecp = 1,nkvec
                    kp = lapw%kvec(nkvecp,lo,ntyp)
-                   lorow=lapw%nv(jintsp)+lapw%index_lo(lo,ntyp)+nkvecp
+                   lorow=lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvecp
                    dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
                    IF (smat%l_real) THEN
                       smat%data_r(lorow,locol) = smat%data_r(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp) *&
