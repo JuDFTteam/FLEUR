@@ -506,7 +506,7 @@ CONTAINS
                          CALL orthoglo(&
                               sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
-                            lapw%kvec(nkvec(lo,iintsp),lo,ntyp) = k
+                            lapw%kvec(nkvec(lo,iintsp),lo,na) = k
                          ELSE
                             nkvec(lo,iintsp) = nkvec(lo,iintsp) - 1
                          ENDIF
@@ -529,7 +529,7 @@ CONTAINS
                             CALL orthoglo(&
                                  sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
-                               lapw%kvec(nkvec(lo,iintsp),lo,ntyp) = k
+                               lapw%kvec(nkvec(lo,iintsp),lo,na) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '
                             ELSE
                                nkvec(lo,iintsp) = nkvec(lo,iintsp) - 1
@@ -570,7 +570,7 @@ CONTAINS
           ENDIF
        ENDDO
        IF ( enough ) THEN
-          lapw%nkvec(:atoms%nlo(ntyp),ntyp)=nkvec(:atoms%nlo(ntyp),1)
+          lapw%nkvec(:atoms%nlo(ntyp),na)=nkvec(:atoms%nlo(ntyp),1)
           RETURN
        ENDIF
     ENDDO
