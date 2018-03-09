@@ -61,7 +61,7 @@
 
       INTEGER  itria(3,2*kpts%nkpt),nevk(kpts%nkpt),itetra(4,6*kpts%nkpt)
       INTEGER, ALLOCATABLE :: ksym(:),jsym(:)
-      REAL     vk(3,kpts%nkpt),wt(kpts%nkpt),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
+      REAL     wt(kpts%nkpt),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
       REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:),qal_tmp(:,:,:),qis(:),qvlay(:,:,:)
@@ -164,7 +164,7 @@
             ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat),qintsl(nsld,dimension%neigd))
             ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%nat),qvac(dimension%neigd,2))
             ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
-            CALL read_eig(eig_id,k,jspin,bk=vk(:,k),wk=wt(k),neig=nevk(k),eig=ev(:,k))
+            CALL read_eig(eig_id,k,jspin,wk=wt(k),neig=nevk(k),eig=ev(:,k))
             CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(qal_tmp,(/lmax*atoms%ntype,size(qal_tmp,3)/))
@@ -249,7 +249,7 @@
          IF ( jspin.EQ.1 ) THEN
            l_tria=.true.
            IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             CALL triang(vk,kpts%nkpt,itria,ntria,atr,as,l_tria)
+             CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
              IF (sym%invs) THEN
                IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
              ELSE
@@ -283,7 +283,7 @@
              l_tria=.true.
              GOTO 67
  66          CONTINUE                       ! no tetrahedron-information of file
-             CALL triang(vk,kpts%nkpt,itria,ntria,atr,as,l_tria)
+             CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
              l_tria=.true.
 ! YM: tetrahedrons is not the way in 1D
              IF (oneD%odi%d1) as = 0.0         
@@ -294,7 +294,7 @@
              ENDIF
 
              IF (l_tria) THEN
-               CALL make_tetra(kpts%nkpt,vk,ntria,itria,atr,&
+               CALL make_tetra(kpts%nkpt,kpts%bk,ntria,itria,atr,&
                     ntetra,itetra,voltet)
              ELSE
                WRITE (6,*) 'no tetrahedron method with these k-points!'
@@ -487,10 +487,10 @@
             OPEN (18,FILE='bands'//spin12(jspin))
             ntb = minval(nevk(:))    
             kx(1) = 0.0
-            vkr(:,1)=matmul(vk(:,1),cell%bmat)
+            vkr(:,1)=matmul(kpts%bk(:,1),cell%bmat)
             DO k = 2, kpts%nkpt
               
-               vkr(:,k)=matmul(vk(:,k),cell%bmat)
+               vkr(:,k)=matmul(kpts%bk(:,k),cell%bmat)
                dk = (vkr(1,k)-vkr(1,k-1))**2 + (vkr(2,k)-vkr(2,k-1) )**2 + &
                     (vkr(3,k)-vkr(3,k-1))**2
                kx(k) = kx(k-1) + sqrt(dk)
