@@ -43,7 +43,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: ispin  
     
     !locals
-    REAL, ALLOCATABLE    :: fj(:,:,:),gj(:,:,:)
+    REAL, ALLOCATABLE    :: fj(:,:,:,:),gj(:,:,:,:)
 
     INTEGER :: iintsp,jintsp,n
     COMPLEX :: chi(2,2),chi_one
@@ -56,8 +56,8 @@ CONTAINS
        CALL hmat_tmp%alloc(smat(1,1)%l_real,smat(1,1)%matsize1,smat(1,1)%matsize2)
     ENDIF
     
-    ALLOCATE(fj(MAXVAL(lapw%nv),0:atoms%lmaxd,MERGE(2,1,noco%l_noco)))
-    ALLOCATE(gj(MAXVAL(lapw%nv),0:atoms%lmaxd,MERGE(2,1,noco%l_noco)))
+    ALLOCATE(fj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins,MERGE(2,1,noco%l_noco)))
+    ALLOCATE(gj(MAXVAL(lapw%nv),0:atoms%lmaxd,input%jspins,MERGE(2,1,noco%l_noco)))
 
     iintsp=1;jintsp=1;chi_one=1.0 !Defaults in non-noco case
        DO n=1,atoms%ntype
@@ -67,36 +67,43 @@ CONTAINS
           IF (.NOT.noco%l_noco) THEN
              !This is for collinear calculations: the (1,1) element of the matrices is all
              !that is needed and allocated
-             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,&
-                  enpara%el0,td%e_shift,usdus,fj,gj,smat(1,1),hmat(1,1))
-             
-             CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat(1,1))
-             CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat(1,1),smat(1,1))
+             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,&
+                           td%e_shift,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat(1,1),hmat(1,1))
+             CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
+                              fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(1,1))
+             CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
+                          n,chi_one,ispin,iintsp,jintsp,hmat(1,1),smat(1,1))
           ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
              !The NOCO but non-spinspiral setup follows:
              !The Matrix-elements are first calculated in the local frame of the atom and
              !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
              !global spin-matrices.
              CALL hmat_tmp%clear();CALL smat_tmp%clear()
-             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat_tmp,hmat_tmp)
-             CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,fj,gj,hmat_tmp)
-             CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj,gj,n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
+             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift,&
+                           usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat_tmp,hmat_tmp)
+             CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
+                              fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat_tmp)
+             CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
+                          n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
              CALL hsmt_spinor(ispin,n,noco,chi)
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
              !Add off-diagonal contributions to Hamiltonian if needed
              IF (ispin==1.and.noco%l_soc) &
-                  CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj,gj,hmat)
+                  CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj(:,0:,:,iintsp),gj(:,0:,:,iintsp),hmat)
              IF (noco%l_constr) &
-                  CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj,gj,hmat)
+                  CALL hsmt_offdiag(n,atoms,mpi,ispin,noco,lapw,td,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat)
           ELSE
              !In the spin-spiral case the loop over the interstitial=global spin has to
              !be performed explicitely
              CALL hsmt_spinor(ispin,n,noco,chi)
              DO iintsp=1,2
                 DO jintsp=1,2
-                   CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,iintsp,jintsp,chi(iintsp,jintsp),lapw,enpara%el0,td%e_shift,usdus,fj,gj,smat(iintsp,jintsp),hmat(iintsp,jintsp))
-                   CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,lapw,td,fj,gj,hmat(iintsp,jintsp))
+                   CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,iintsp,jintsp,chi(iintsp,jintsp),&
+                                 lapw,enpara%el0,td%e_shift,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
+                                 smat(iintsp,jintsp),hmat(iintsp,jintsp))
+                   CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,&
+                                    lapw,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(iintsp,jintsp))
                 ENDDO
              ENDDO
           ENDIF

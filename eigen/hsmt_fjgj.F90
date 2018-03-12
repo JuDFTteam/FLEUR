@@ -25,16 +25,18 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n
   
-    REAL,INTENT(OUT)     :: fj(:,0:,:),gj(:,0:,:)
+    REAL,INTENT(OUT)     :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     ..
     !     .. Local Scalars ..
     REAL con1,ff,gg,gs,ws
 
-    INTEGER k,l,lo,intspin
+    INTEGER k,l,lo,intspin,jspin
+    LOGICAL l_socfirst
     !     .. Local Arrays ..
     REAL gb(0:atoms%lmaxd), fb(0:atoms%lmaxd)
     LOGICAL apw(0:atoms%lmaxd)
     !     ..
+    l_socfirst = noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)
     con1 = fpi_const/SQRT(cell%omtil)
     DO l = 0,atoms%lmax(n)
        apw(l)=ANY(atoms%l_dulo(:atoms%nlo(n),n))
@@ -46,7 +48,7 @@ CONTAINS
     DO intspin=1,MERGE(2,1,noco%l_noco)
        !$OMP PARALLEL DO DEFAULT(NONE) &
        !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg)&
-       !$OMP SHARED(lapw,atoms,con1,usdus)&
+       !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
        !$OMP SHARED(fj,gj,intspin,n,ispin,apw)
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
@@ -60,12 +62,18 @@ CONTAINS
              ff = fb(l)
              gg = lapw%rk(k,intspin)*gb(l)
              IF ( apw(l) ) THEN
-                fj(k,l,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
-                gj(k,l,intspin) = 0.0d0
+                fj(k,l,ispin,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
+                gj(k,l,ispin,intspin) = 0.0d0
              ELSE
-                fj(k,l,intspin) = ws * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
-                gj(k,l,intspin) = ws * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
-                !ENDIF
+                IF (noco%l_constr.or.l_socfirst) THEN
+                   DO jspin = 1, input%jspins
+                      fj(k,l,jspin,intspin) = ws * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
+                      gj(k,l,jspin,intspin) = ws * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
+                   END DO
+                ELSE
+                   fj(k,l,ispin,intspin) = ws * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
+                   gj(k,l,ispin,intspin) = ws * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
+                ENDIF
              ENDIF
           ENDDO
 !          !$OMP END SIMD
