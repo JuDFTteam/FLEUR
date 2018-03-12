@@ -29,12 +29,11 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER kii,ki,kj,l,nn,s,j1,j2
+    INTEGER kii,ki,kj,l,nn,j1,j2
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
-    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
-    REAL fl2p1bt(0:atoms%lmaxd)
+    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
@@ -46,13 +45,12 @@ CONTAINS
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
-       fl2p1bt(l) = fl2p1(l)*0.5
     END DO
 
-    !$OMP PARALLEL DEFAULT(SHARED)&
-    !$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
-    !$OMP PRIVATE(cph,nn,tnn)&
-    !$OMP PRIVATE(fct,s)
+    !$OMP PARALLEL DEFAULT(NONE)&
+    !$OMP SHARED(n,lapw,atoms,td,fj,gj,noco,fl2p1,fleg1,fleg2,hmat,mpi)&
+    !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
+    !$OMP PRIVATE(cph,nn,tnn,fct)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     ALLOCATE(dplegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
@@ -86,8 +84,7 @@ CONTAINS
        CALL hsmt_spinor_soc(n,ki,noco,lapw,chi,angso)
 
        !--->          update overlap and l-diagonal hamiltonian matrix
-       s=atoms%lnonsph(n)+1
-       DO  l = 1,atoms%lnonsph(n)
+       DO  l = 1,atoms%lmax(n)
           DO j1=1,2
              DO j2=1,2
                 DO kj = 1,ki
