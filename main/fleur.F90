@@ -304,7 +304,7 @@ CONTAINS
                 IF (.NOT.obsolete%pot8) THEN
                    CALL timestart("generation of potential")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDenRot,vTot,vx,vCoul)
+                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
                    CALL timestop("generation of potential")
 
                    IF (mpi%irank.EQ.0) THEN
@@ -608,7 +608,7 @@ CONTAINS
                    input%total = .FALSE.
                    CALL timestart("generation of potential (total)")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,vTot,vx,vCoul)
+                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
                    CALL timestop("generation of potential (total)")
 
                    CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)

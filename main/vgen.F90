@@ -7,7 +7,7 @@ MODULE m_vgen
   USE m_juDFT
 CONTAINS
   SUBROUTINE vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,&
-       vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco,den,vTot,vx,vCoul)
+       vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco,den,denRot,vTot,vx,vCoul)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -68,7 +68,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(INOUT)     :: atoms !vr0 is updated
-    TYPE(t_potden), INTENT(IN)      :: den
+    TYPE(t_potden), INTENT(IN)      :: den, denRot
     TYPE(t_potden),INTENT(INOUT)    :: vTot,vx,vCoul
     !     ..
     !     .. Scalar Arguments ..
@@ -662,6 +662,7 @@ CONTAINS
              PRINT *,"TODO: check that read is not needed in vgen"
 !             CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
 !                              0,fermiEnergyTemp,l_qfix,workDen)
+             workDen = denRot
           ENDIF
           !
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2
