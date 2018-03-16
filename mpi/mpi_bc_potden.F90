@@ -32,20 +32,12 @@ CONTAINS
    l_denMatAlloc = .FALSE.
    l_vaczAlloc = .FALSE.
    IF(mpi%irank.EQ.0) THEN
-      IF (ALLOCATED(potden%cdom)) l_nocoAlloc = .TRUE.
       IF (ALLOCATED(potden%mmpMat)) l_denMatAlloc = .TRUE.
       IF (ALLOCATED(potden%vacz)) l_vaczAlloc = .TRUE.
    END IF
    CALL MPI_BCAST(l_nocoAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(l_denMatAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(l_vaczAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-   IF((mpi%irank.NE.0).AND.l_nocoAlloc) THEN
-      IF (noco%l_noco) THEN
-         IF(.NOT.ALLOCATED(potden%cdom)) ALLOCATE (potden%cdom(stars%ng3))
-      ELSE
-         IF(.NOT.ALLOCATED(potden%cdom)) ALLOCATE (potden%cdom(1))
-      END IF
-   END IF
    IF((mpi%irank.NE.0).AND.l_denMatAlloc) THEN
       IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
          ALLOCATE(potDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
@@ -64,11 +56,6 @@ CONTAINS
 
       n = vacuum%nmzxyd * (stars%ng2-1) * 2 * SIZE(potden%vacxy,4)
       CALL MPI_BCAST(potden%vacxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-   END IF
-
-   IF (l_nocoAlloc) THEN
-      n = SIZE(potden%cdom,1)
-      CALL MPI_BCAST(potden%cdom,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
    END IF
 
    IF (l_denMatAlloc) THEN

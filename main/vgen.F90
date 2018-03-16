@@ -494,12 +494,12 @@ CONTAINS
           IF ( .NOT.xcpot%is_gga() ) THEN
              ! LDA
 
-             CALL visxc(ifftd,stars,noco,xcpot,input, workDen%pw,workDen%cdom,&
+             CALL visxc(ifftd,stars,noco,xcpot,input,workDen,&
                   vTot%pw,vpw_w,vx%pw,vxpw_w, excpw)
 
           ELSE ! GGA
 
-             CALL visxcg(ifftd,stars,sym, ifftxc3d, cell, workDen%pw,workDen%cdom, xcpot,input,&
+             CALL visxcg(ifftd,stars,sym,ifftxc3d,cell,workDen,xcpot,input,&
                   obsolete,noco, rhmn,ichsmrg, vTot%pw,vpw_w,vx%pw,vxpw_w, excpw)
 
           END IF

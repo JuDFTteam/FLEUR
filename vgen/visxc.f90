@@ -6,7 +6,7 @@
       CONTAINS
       SUBROUTINE visxc(&
      &                 ifftd,stars,noco,xcpot,input,&
-     &                 qpw,cdom,&
+     &                 den,&
      &                 vpw,vpw_w,vxpw,vxpw_w,&
      &                 excpw)
 
@@ -24,15 +24,15 @@
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
-      INTEGER, INTENT (IN)     :: ifftd
-      TYPE(t_stars),INTENT(IN) :: stars
-      TYPE(t_noco),INTENT(IN)  :: noco
-      TYPE(t_xcpot),INTENT(IN) :: xcpot
-      TYPE(t_input),INTENT(IN) :: input
+      INTEGER, INTENT (IN)         :: ifftd
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_xcpot),INTENT(IN)     :: xcpot
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_potden),INTENT(IN)    :: den
            
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins),cdom(stars%ng3)  
       COMPLEX, INTENT (OUT) :: excpw(stars%ng3)
       COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins)
       COMPLEX, INTENT (INOUT) ::vxpw(stars%ng3,input%jspins),vxpw_w(stars%ng3,input%jspins)
@@ -59,7 +59,7 @@
       DO js = 1,input%jspins
          CALL fft3d(&
      &              af3(0,js),bf3,&
-     &              qpw(1,js),&
+     &              den%pw(1,js),&
      &              stars,+1)
       ENDDO
 
@@ -69,7 +69,7 @@
 
         CALL fft3d(&
      &             mx,my,&
-     &             cdom,&
+     &             den%pw(:,3),&
      &             stars,+1)
         DO i=0,27*stars%mx1*stars%mx2*stars%mx3-1
           chdens= (af3(i,1)+af3(i,2))/2.

@@ -29,7 +29,6 @@ CONTAINS
     den%mt = 0.0
     den%vacz = 0.0
     den%vacxy = CMPLX(0.0,0.0)
-    den%cdom = CMPLX(0.0,0.0)
 
     j=0
     DO  js = 1,input%jspins
@@ -83,11 +82,11 @@ CONTAINS
        !--->    off-diagonal part of the density matrix
        DO i = 1,stars%ng3
           j = j + 1
-          den%cdom(i) = CMPLX(s_in(j),0.0)
+          den%pw(i,3) = CMPLX(s_in(j),0.0)
        END DO
        DO i = 1,stars%ng3
           j = j + 1
-          den%cdom(i) = den%cdom(i) + CMPLX(0.0,s_in(j))
+          den%pw(i,3) = den%pw(i,3) + CMPLX(0.0,s_in(j))
        END DO
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac

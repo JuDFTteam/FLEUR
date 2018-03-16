@@ -9,8 +9,7 @@ CONTAINS
   SUBROUTINE visxcg(&
        &                  ifftd,stars,sym,&
        &                  ifftxc3d,&
-       &                  cell,&
-       &                  qpw,cdom,&
+       &                  cell,den,&
        &                  xcpot,input,&
        &                  obsolete,noco,&
        &                  rhmn,ichsmrg,&
@@ -45,6 +44,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_potden),INTENT(IN)     :: den
     !     ..
     !     .. Scalar Arguments ..
     !     ..
@@ -64,9 +64,8 @@ CONTAINS
     !
     !-----> charge density, potential and energy density
     !
-    COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins)
     COMPLEX, INTENT (OUT) :: excpw(stars%ng3)
-    COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins),cdom(stars%ng3)
+    COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins)
     COMPLEX, INTENT (INOUT) ::vxpw(stars%ng3,input%jspins),vxpw_w(stars%ng3,input%jspins)
     !     ..
     !     .. Local Scalars ..
@@ -96,7 +95,7 @@ CONTAINS
     !------->          abbreviations
     !
     !     ph_wrk: work array containing phase * g_x,gy...... 
-    !     qpw   : charge density stored as stars
+    !     den%pw: charge density stored as stars
     !     rho   : charge density stored in real space
     !     vxc   : exchange-correlation potential in real space
     !     exc   : exchange-correlation energy density in real space
@@ -165,7 +164,7 @@ CONTAINS
     DO js=1,input%jspins
        CALL fft3dxc(&
             &              rho(0:,js),bf3,&
-            &              qpw(:,js),&
+            &              den%pw(:,js),&
             &              stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
             &              stars%nxc3_fft,stars%kmxxc_fft,+1,&
             &              stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
@@ -176,7 +175,7 @@ CONTAINS
        !       for off-diagonal parts the same
        CALL fft3dxc(&
             &               mx,my,&
-            &               cdom,&
+            &               den%pw(:,3),&
             &               stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
             &               stars%nxc3_fft,stars%kmxxc_fft,+1,&
             &               stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
@@ -204,7 +203,7 @@ CONTAINS
 
     DO js= 1,input%jspins
        DO i = 1,stars%ng3
-          cqpw(i,js)= ci*qpw(i,js)
+          cqpw(i,js)= ci*den%pw(i,js)
        END DO
     END DO
 
@@ -248,7 +247,7 @@ CONTAINS
 
     DO i = 1,stars%ng3
        DO js=1,input%jspins 
-          cqpw(i,js)= -qpw(i,js)
+          cqpw(i,js)= -den%pw(i,js)
        END DO
     END DO
 

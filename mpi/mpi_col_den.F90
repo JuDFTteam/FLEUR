@@ -350,9 +350,9 @@ CONTAINS
 
        n = stars%ng3
        ALLOCATE(c_b(n))
-       CALL MPI_REDUCE(den%cdom,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%pw(:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, den%cdom, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%pw(:,3), 1)
        ENDIF
        DEALLOCATE (c_b)
        !

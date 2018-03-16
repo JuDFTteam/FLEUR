@@ -1705,7 +1705,7 @@ MODULE m_cdnpot_io_hdf
 
                dimsInt(:2)=(/2,ng3/)
                CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
-               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%cdom)
+               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%pw(:,3))
                CALL h5dclose_f(cdomSetID, hdfError)
 
                IF (l_film) THEN
@@ -1784,7 +1784,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(2,dims(:2),cdomSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdom", H5T_NATIVE_DOUBLE, cdomSpaceID, cdomSetID, hdfError)
                CALL h5sclose_f(cdomSpaceID,hdfError)
-               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%cdom)
+               CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%pw(:,3))
                CALL h5dclose_f(cdomSetID, hdfError)
 
                IF (l_film) THEN
@@ -1888,7 +1888,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(2,dims(:2),cdomSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "cdom", H5T_NATIVE_DOUBLE, cdomSpaceID, cdomSetID, hdfError)
             CALL h5sclose_f(cdomSpaceID,hdfError)
-            CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%cdom)
+            CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),den%pw(:,3))
             CALL h5dclose_f(cdomSetID, hdfError)
 
             IF (l_film) THEN
@@ -2447,13 +2447,13 @@ MODULE m_cdnpot_io_hdf
       IF((localDensityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
          (localDensityType.EQ.DENSITY_TYPE_NOCO_OUT_const)) THEN
 
-         den%cdom = CMPLX(0.0,0.0)
+         den%pw(:,3) = CMPLX(0.0,0.0)
          ALLOCATE(cdomTemp(ng3))
          dimsInt(:2)=(/2,ng3/)
          CALL h5dopen_f(groupID, 'cdom', cdomSetID, hdfError)
          CALL io_read_complex1(cdomSetID,(/-1,1/),dimsInt(:2),cdomTemp)
          CALL h5dclose_f(cdomSetID, hdfError)
-         den%cdom(1:ng3Out) = cdomTemp(1:ng3Out)
+         den%pw(1:ng3Out,3) = cdomTemp(1:ng3Out)
          DEALLOCATE(cdomTemp)
 
          IF (l_film) THEN

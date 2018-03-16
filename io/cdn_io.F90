@@ -280,7 +280,7 @@ MODULE m_cdn_io
 
          ! read in additional data if l_noco and data is present
          IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
-            READ (iUnit,iostat=datend) (den%cdom(k),k=1,stars%ng3)
+            READ (iUnit,iostat=datend) (den%pw(k,3),k=1,stars%ng3)
             IF (datend == 0) THEN
                IF (input%film) THEN
                   ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
@@ -301,14 +301,14 @@ MODULE m_cdn_io
                   WRITE(*,*) 'datend = ', datend
                   CALL juDFT_error("density file has illegal state.",calledby ="readDensity")
                END IF
-               den%cdom = CMPLX(0.0,0.0)
+               den%pw(:,3) = CMPLX(0.0,0.0)
                IF (input%film) THEN
                   den%vacz(:,:,3:4) = 0.0
                   den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
                END IF
             END IF
          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
-            den%cdom = CMPLX(0.0,0.0)
+            den%pw(:,3) = CMPLX(0.0,0.0)
             IF (input%film) THEN
                den%vacz(:,:,3:4) = 0.0
                den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
@@ -607,7 +607,7 @@ MODULE m_cdn_io
 
          ! Write additional data if l_noco
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
-            WRITE (iUnit) (den%cdom(k),k=1,stars%ng3)
+            WRITE (iUnit) (den%pw(k,3),k=1,stars%ng3)
             IF (input%film) THEN
                ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
                DO iVac = 1, vacuum%nvac

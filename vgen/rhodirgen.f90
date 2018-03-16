@@ -101,7 +101,7 @@ CONTAINS
        CALL fft3d(ris(:,iden),fftwork,den%pw(:,iden),stars,+1)
     ENDDO
     !---> fouriertransform the off-diagonal part of the density matrix
-    CALL fft3d(ris(:,3),ris(:,4),den%cdom(:),stars,+1)
+    CALL fft3d(ris(:,3),ris(:,4),den%pw(:,3),stars,+1)
 
     !test
     !      DO iden=1,4

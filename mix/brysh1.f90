@@ -94,11 +94,11 @@ CONTAINS
        !--->    off-diagonal part of the density matrix
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = REAL(den%cdom(i))
+          sout(j) = REAL(den%pw(i,3))
        END DO
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = AIMAG(den%cdom(i))
+          sout(j) = AIMAG(den%pw(i,3))
        END DO
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac

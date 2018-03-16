@@ -64,7 +64,7 @@ CONTAINS
     !     matrix. This subroutine generates this density matrix in the 
     !     interstitial region. The diagonal elements of this matrix 
     !     (n_11 & n_22) are stored in den%pw, while the real and imaginary part
-    !     of the off-diagonal element are store in den%cdom. 
+    !     of the off-diagonal element are store in den%pw(:,3). 
     !
     !     Philipp Kurz 99/07
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -690,12 +690,12 @@ CONTAINS
        ELSE IF (idens.EQ.3) THEN
           !--->       add to off-diag. part of density matrix (only non-collinear)
           DO istr = 1 , stars%ng3_fft
-             den%cdom(istr) = den%cdom(istr) + cwk(istr)
+             den%pw(istr,3) = den%pw(istr,3) + cwk(istr)
           ENDDO
        ELSE
           !--->       add to off-diag. part of density matrix (only non-collinear)
           DO istr = 1 , stars%ng3_fft
-             den%cdom(istr) = den%cdom(istr) + CMPLX(0.0,1.0)*cwk(istr)
+             den%pw(istr,3) = den%pw(istr,3) + CMPLX(0.0,1.0)*cwk(istr)
           ENDDO
        ENDIF
 

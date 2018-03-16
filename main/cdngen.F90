@@ -208,9 +208,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                      !rho_22
                      outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(ityp))
                      !real part rho_21
-                     outDen%cdom(1) = outDen%cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
+                     outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
                      !imaginary part rho_21
-                     outDen%cdom(1) = outDen%cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
+                     outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
                   END DO
                END IF
                !pk non-collinear (end)
@@ -270,9 +270,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                !rho_22
                outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(ityp))
                !real part rho_21
-               outDen%cdom(1) = outDen%cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
+               outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
                !imaginary part rho_21
-               outDen%cdom(1) = outDen%cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
+               outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
             END DO
             !pk non-collinear (end)
          ELSE
@@ -304,7 +304,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          !pk non-collinear (start)
          IF (noco%l_noco) THEN
             !fix also the off-diagonal part of the density matrix
-            outDen%cdom(:stars%ng3) = fix*outDen%cdom(:stars%ng3)
+            outDen%pw(:stars%ng3,3) = fix*outDen%pw(:stars%ng3,3)
             IF (input%film) THEN
                outDen%vacz(:,:,3:4) = fix*outDen%vacz(:,:,3:4)
                outDen%vacxy(:,:,:,3) = fix*outDen%vacxy(:,:,:,3)
@@ -449,7 +449,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          OPEN (20,file='cdn_slice',form='unformatted',status='unknown')
          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, outDen%iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy)
          IF (noco%l_noco) THEN
-            WRITE (20) (outDen%cdom(k),k=1,stars%ng3)
+            WRITE (20) (outDen%pw(k,3),k=1,stars%ng3)
             IF (input%film) THEN
                ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
                DO ivac = 1, vacuum%nvac

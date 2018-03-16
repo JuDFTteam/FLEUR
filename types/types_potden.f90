@@ -13,8 +13,6 @@ MODULE m_types_potden
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
      REAL,ALLOCATABLE    :: vacz(:,:,:)
      COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
-     ! For density only (noco case)
-     COMPLEX, ALLOCATABLE :: cdom(:)
      !For angles of density/potential in noco case
      REAL,ALLOCATABLE  :: theta_pw(:)
      REAL,ALLOCATABLE  :: phi_pw(:)
@@ -75,17 +73,11 @@ CONTAINS
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
     IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
     IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
-    IF(ALLOCATED(pd%cdom)) DEALLOCATE (pd%cdom)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
     ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,jspins),stat=err(2))
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
-    IF (l_noco) THEN
-       ALLOCATE (pd%cdom(ng3))
-    ELSE
-       ALLOCATE (pd%cdom(1))
-    END IF
 
     ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jspins))
 
@@ -94,7 +86,6 @@ CONTAINS
     pd%mt=0.0
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
-    pd%cdom = CMPLX(0.0,0.0)
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 
@@ -108,7 +99,6 @@ CONTAINS
     pd%mt=0.0
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
-    pd%cdom = CMPLX(0.0,0.0)
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE resetPotDen
 END MODULE m_types_potden
