@@ -35,6 +35,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_m_perp
    USE m_types
    USE m_xmlOutput
+   USE m_orbMagMoms
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
    USE m_mpi_bc_coreden
@@ -74,7 +75,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    !Local Scalars
    REAL fix,qtot,scor,seig,smom,stot,sval,dummy
-   REAL slmom,slxmom,slymom,sum,thetai,phii,fermiEnergyTemp
+   REAL sum,fermiEnergyTemp
    INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
    INTEGER  ityp,ilayer,urec,itype,iatom
    LOGICAL l_relax_any,exst,n_exist,l_qfix, l_enpara
@@ -394,49 +395,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                CLOSE (24)
             END IF
 
-            IF (noco%l_soc) THEN
-               thetai = noco%theta
-               phii   = noco%phi
-               WRITE (6,FMT=9020)
-               WRITE (16,FMT=9020)
-               CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
-               DO n = 1, atoms%ntype
-                  IF (noco%l_noco) THEN
-                     thetai = noco%beta(n)
-                     phii =   noco%alph(n)
-                  END IF
-
-                  ! magn. moment(-)
-                  slxmom = clmom(1,n,1)+clmom(1,n,2)
-                  slymom = clmom(2,n,1)+clmom(2,n,2)
-                  slmom =  clmom(3,n,1)+clmom(3,n,2)
-
-                  ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
-                  slmom   = cos(thetai)*slmom + sin(thetai)* (cos(phii)*slxmom + sin(phii)*slymom)
-                  clmom(3,n,1) = cos(thetai)*clmom(3,n,1) + &
-                                 sin(thetai)*(cos(phii)*clmom(1,n,1) + sin(phii)*clmom(2,n,1))
-                  clmom(3,n,2) = cos(thetai)*clmom(3,n,2) + &
-                                 sin(thetai)*(cos(phii)*clmom(1,n,2) + sin(phii)*clmom(2,n,2))
-
-                  WRITE (6,FMT=8030) n,slmom,(clmom(3,n,j),j=1,2)
-                  WRITE (16,FMT=8030) n,slmom,(clmom(3,n,j),j=1,2)
-                  attributes = ''
-                  WRITE(attributes(1),'(i0)') n
-                  WRITE(attributes(2),'(f15.10)') slmom
-                  WRITE(attributes(3),'(f15.10)') clmom(3,n,1)
-                  WRITE(attributes(4),'(f15.10)') clmom(3,n,2)
-                  CALL writeXMLElementFormPoly('orbMagMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
-                                                                'spinDownCharge'/),&
-                                               attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
-               END DO
-               CALL closeXMLElement('orbitalMagneticMomentsInMTSpheres')
-            END IF
+            IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,clmom)
          END IF
       !block 2 unnecessary for slicing: end
       END IF ! .NOT.sliceplot%slice
 
-      9020 FORMAT (/,/,10x,'orb. magnetic moments in the spheres:',/,10x,&
-                   'type',t22,'moment',t33,'spin-up',t43,'spin-down')
       8000 FORMAT (/,/,10x,'spin density at the nucleus:',/,10x,'type',t25,&
                    'input%total',t42,'valence',t65,'core',t90,&
                    'majority valence and input%total density',/)
