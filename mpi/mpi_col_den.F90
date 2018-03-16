@@ -13,10 +13,11 @@ CONTAINS
        input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,ener,&
        sqal,results,svac,pvac,uu,dd,du,uunmt,ddnmt,udnmt,dunmt,sqlo,&
        aclo,bclo,cclo,acnmt,bcnmt,ccnmt,enerlo,orb,orbl,orblo,mt21,lo21,uloulop21,&
-       uunmt21,ddnmt21,udnmt21,dunmt21,cdom,cdomvz,cdomvxy,n_mmp)
+       uunmt21,ddnmt21,udnmt21,dunmt21,den,n_mmp)
     !
 #include"cpp_double.h"
     USE m_types
+    USE m_constants
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -28,6 +29,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)     :: stars 
     TYPE(t_sphhar),INTENT(IN)    :: sphhar 
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_potden),INTENT(INOUT) :: den
     INCLUDE 'mpif.h'
     ! ..
     ! ..  Scalar Arguments ..
@@ -58,8 +60,7 @@ CONTAINS
     COMPLEX,INTENT(INOUT) :: udnmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
-    COMPLEX,INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u),cdomvz(vacuum%nmzd,2)
-    COMPLEX,INTENT(INOUT) :: cdom(stars%ng3),cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
+    COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype)
     TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
     TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
@@ -349,9 +350,9 @@ CONTAINS
 
        n = stars%ng3
        ALLOCATE(c_b(n))
-       CALL MPI_REDUCE(cdom,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%cdom,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, cdom, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%cdom, 1)
        ENDIF
        DEALLOCATE (c_b)
        !
@@ -359,17 +360,17 @@ CONTAINS
 
           n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
           ALLOCATE(c_b(n))
-          CALL MPI_REDUCE(cdomvxy,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(den%vacxy(:,:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, cdomvxy, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, den%vacxy(:,:,:,3), 1)
           ENDIF
           DEALLOCATE (c_b)
           !
           n = vacuum%nmzd*2
           ALLOCATE(c_b(n))
-          CALL MPI_REDUCE(cdomvz,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(den%cdomvz,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, cdomvz, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, den%cdomvz, 1)
           ENDIF
           DEALLOCATE (c_b)
 

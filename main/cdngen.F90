@@ -96,7 +96,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !pk non-collinear (end)
 
    iter = inIter
-   CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
    IF (mpi%irank.EQ.0) THEN
       INQUIRE(file='enpara',exist=l_enpara)
@@ -134,8 +134,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,&
                   mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
                   sphhar,sym,obsolete,igq_fft,vTot%mt,vTot%vacz(:,:,jspin),oneD,coreSpecInput,&
-                  outDen%mmpMat(-lmaxU_const:,-lmaxU_const:,:,jspin),results, outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,&
-                  outDen%cdom,outDen%cdomvz,outDen%cdomvxy,qvac,qvlay,qa21, chmom,clmom)
+                  outDen,results,qvac,qvlay,qa21, chmom,clmom)
       CALL timestop("cdngen: cdnval")
 !-fo
    END DO
@@ -308,7 +307,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             outDen%cdom(:stars%ng3) = fix*outDen%cdom(:stars%ng3)
             IF (input%film) THEN
                outDen%cdomvz(:,:) = fix*outDen%cdomvz(:,:)
-               outDen%cdomvxy(:,:,:) = fix*outDen%cdomvxy(:,:,:)
+               outDen%vacxy(:,:,:,3) = fix*outDen%vacxy(:,:,:,3)
             END IF
          END IF
          !pk non-collinear (end)
@@ -453,7 +452,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             WRITE (20) (outDen%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
                WRITE (20) ((outDen%cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
-               WRITE (20) (((outDen%cdomvxy(j,k-1,ivac),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
+               WRITE (20) (((outDen%vacxy(j,k-1,ivac,3),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
             END IF
          END IF
          CLOSE(20) 

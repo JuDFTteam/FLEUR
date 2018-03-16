@@ -25,6 +25,13 @@ CONTAINS
     ! Local Scalars
     INTEGER i,iv,j,js,k,l,n,na
 
+    den%pw = CMPLX(0.0,0.0)
+    den%mt = 0.0
+    den%vacz = 0.0
+    den%vacxy = CMPLX(0.0,0.0)
+    den%cdom = CMPLX(0.0,0.0)
+    den%cdomvz = 0.0
+
     j=0
     DO  js = 1,input%jspins
        IF (sym%invs) THEN
@@ -92,7 +99,7 @@ CONTAINS
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   den%cdomvxy(i,k,iv) = CMPLX(s_in(j),0.0)
+                   den%vacxy(i,k,iv,3) = CMPLX(s_in(j),0.0)
                 END DO
              END DO
           END DO
@@ -104,7 +111,7 @@ CONTAINS
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   den%cdomvxy(i,k,iv) = den%cdomvxy(i,k,iv)+ CMPLX(0.0,s_in(j))
+                   den%vacxy(i,k,iv,3) = den%vacxy(i,k,iv,3)+ CMPLX(0.0,s_in(j))
                 END DO
              END DO
           END DO

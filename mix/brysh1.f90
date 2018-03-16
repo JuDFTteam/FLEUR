@@ -111,7 +111,7 @@ CONTAINS
                 DO i = 1,vacuum%nmzxy
                    mapvac2 = mapvac2 + 1
                    j = j + 1
-                   sout(j) =  REAL(den%cdomvxy(i,k,iv))
+                   sout(j) =  REAL(den%vacxy(i,k,iv,3))
                 END DO
              END DO
           END DO
@@ -125,7 +125,7 @@ CONTAINS
                 DO i = 1,vacuum%nmzxy
                    mapvac2 = mapvac2 + 1
                    j = j + 1
-                   sout(j) =  AIMAG(den%cdomvxy(i,k,iv))
+                   sout(j) =  AIMAG(den%vacxy(i,k,iv,3))
                 END DO
              END DO
           END DO

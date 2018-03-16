@@ -134,7 +134,7 @@ CONTAINS
          vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
     vTot%iter = den%iter
 
-    CALL workDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    CALL workDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
     workDen = den
     IF (mpi%irank == 0) THEN
@@ -445,15 +445,15 @@ CONTAINS
 
              IF (.NOT.oneD%odi%d1) THEN
 
-                CALL vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,&
-                     workDen%vacxy,workDen%vacz,workDen%cdomvxy,workDen%cdomvz, vTot%vacxy,vTot%vacz, excxy,excz)
+                CALL vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,workDen,&
+                            vTot%vacxy,vTot%vacz, excxy,excz)
 
              ELSE
                 CALL judft_error("OneD broken")
                 !           CALL vvacxc(&
                 !     &                 stars,oneD%M,vacuum,odi%n2d,dimension,ifftd2,&
                 !     &                 xcpot,input,odi%nq2,&
-                !     &                 odi%nst2,workDen%vacxy,workDen%vacz,workDen%cdomvxy,workDen%cdomvz,noco,&
+                !     &                 odi%nst2,den,noco,&
                 !     &                 odi%kimax2%igf,odl%pgf,&
                 !     &                 vTot%vacxy,vTot%vacz,&
                 !     &                 excxy,excz)
@@ -466,13 +466,13 @@ CONTAINS
                 CALL judft_error("OneD broken")
 
                 CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                     cell,xcpot,input,obsolete, ichsmrg,&
-                     workDen%vacxy,workDen%vacz,workDen%cdomvxy,workDen%cdomvz, vTot%vacxy,vTot%vacz,rhmn, excxy,excz)
+                     cell,xcpot,input,obsolete,workDen, ichsmrg,&
+                     vTot%vacxy,vTot%vacz,rhmn, excxy,excz)
 
              ELSE
                 CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                     cell,xcpot,input,obsolete, ichsmrg,&
-                     workDen%vacxy,workDen%vacz,workDen%cdomvxy,workDen%cdomvz, vTot%vacxy,vTot%vacz,rhmn, excxy,excz)
+                     cell,xcpot,input,obsolete,workDen, ichsmrg,&
+                     vTot%vacxy,vTot%vacz,rhmn, excxy,excz)
 
              END IF
 

@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne, igq_fft,we,eig, qpw,cdom, qis,forces,f_b8,zMat)
+       ikpt,jspin,lapw,ne, igq_fft,we,eig,den,qis,forces,f_b8,zMat)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -31,24 +31,24 @@ CONTAINS
     !               Brillouine zone sampling
     !               FFT information
     !
-    !     OUTPUT:   qpw(s)
+    !     OUTPUT:   den%pw(s)
     !               1) using FFT
     !
     !                2) traditional method
     !
     !                             -1             ef
-    !                qpw  (g) = vol * sum{ sum{ sum{ sum{ w(k) * f(nu) *
+    !               den%pw(g) = vol * sum{ sum{ sum{ sum{ w(k) * f(nu) *
     !                                  sp   k    nu   g'
     !                                     *
     !                                    c(g'-g,nu,k) * c(g',nu,k) } } } }
     !                or :
     !                             -1             ef
-    !                qpw  (g) = vol * sum{ sum{ sum{ sum{ w(k) * f(nu) *
+    !               den%pw(g) = vol * sum{ sum{ sum{ sum{ w(k) * f(nu) *
     !                                  sp   k    nu   g'
     !                                     *
     !                                    c(g',nu,k) * c(g'+g,nu,k) } } } }
     !
-    !                qpw(g) are actuall 
+    !                den%pw(g) are actuall 
     ! 
     !                the weights w(k) are normalized: sum{w(k)} = 1
     !                                                  k                -6
@@ -63,8 +63,8 @@ CONTAINS
     !     In non-collinear calculations the density becomes a hermitian 2x2
     !     matrix. This subroutine generates this density matrix in the 
     !     interstitial region. The diagonal elements of this matrix 
-    !     (n_11 & n_22) are stored in qpw, while the real and imaginary part
-    !     of the off-diagonal element are store in cdom. 
+    !     (n_11 & n_22) are stored in den%pw, while the real and imaginary part
+    !     of the off-diagonal element are store in den%cdom. 
     !
     !     Philipp Kurz 99/07
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -80,18 +80,19 @@ CONTAINS
     USE m_types
     USE m_fft_interface
     IMPLICIT NONE
-    TYPE(t_lapw),INTENT(IN)     :: lapw
-    TYPE(t_mpi),INTENT(IN)      :: mpi
-    TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_banddos),INTENT(IN)  :: banddos
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_stars),INTENT(IN)    :: stars
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_kpts),INTENT(IN)     :: kpts
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_zMat),INTENT(IN)     :: zMat
+    TYPE(t_lapw),INTENT(IN)      :: lapw
+    TYPE(t_mpi),INTENT(IN)       :: mpi
+    TYPE(t_oneD),INTENT(IN)      :: oneD
+    TYPE(t_banddos),INTENT(IN)   :: banddos
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_sym),INTENT(IN)       :: sym
+    TYPE(t_stars),INTENT(IN)     :: stars
+    TYPE(t_cell),INTENT(IN)      :: cell
+    TYPE(t_kpts),INTENT(IN)      :: kpts
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_zMat),INTENT(IN)      :: zMat
+    TYPE(t_potden),INTENT(INOUT) :: den
 
     INTEGER, INTENT (IN)        :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL,INTENT(IN)   :: we(:) !(nobd) 
@@ -100,8 +101,6 @@ CONTAINS
     INTEGER,INTENT(IN):: ne
     !----->  CHARGE DENSITY INFORMATION
     INTEGER,INTENT(IN)    :: ikpt,jspin 
-    COMPLEX,INTENT(INOUT) :: qpw(:,:) !(stars%ng3,dimension%jspd)
-    COMPLEX,INTENT(INOUT) :: cdom(:)!(stars%ng3)
     REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
     COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntype)
     REAL,    INTENT (INOUT) :: forces(:,:,:) !(3,atoms%ntype,dimension%jspd)
@@ -148,7 +147,7 @@ CONTAINS
     !     cv=z  : wavefunction in g-space (reciprocal space)
     !     psir   : wavefunction in r-space (real-space)
     !     cwk   : complex work array: charge density in g-space (as stars)
-    !     qpw   : charge density stored as stars
+    !     den%pw : charge density stored as stars
     !     trdchg: logical key, determines the mode of charge density
     !             calculation: false (default) : fft
     !                          true            : double sum over stars
@@ -686,17 +685,17 @@ CONTAINS
           ispin = jspin
           IF (noco%l_noco) ispin = idens
           DO istr = 1 , stars%ng3_fft
-             qpw(istr,ispin) = qpw(istr,ispin) + cwk(istr)
+             den%pw(istr,ispin) = den%pw(istr,ispin) + cwk(istr)
           ENDDO
        ELSE IF (idens.EQ.3) THEN
           !--->       add to off-diag. part of density matrix (only non-collinear)
           DO istr = 1 , stars%ng3_fft
-             cdom(istr) = cdom(istr) + cwk(istr)
+             den%cdom(istr) = den%cdom(istr) + cwk(istr)
           ENDDO
        ELSE
           !--->       add to off-diag. part of density matrix (only non-collinear)
           DO istr = 1 , stars%ng3_fft
-             cdom(istr) = cdom(istr) + CMPLX(0.0,1.0)*cwk(istr)
+             den%cdom(istr) = den%cdom(istr) + CMPLX(0.0,1.0)*cwk(istr)
           ENDDO
        ENDIF
 

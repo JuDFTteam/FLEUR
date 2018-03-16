@@ -303,15 +303,17 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    inp=input
    inp%jspins=1
 
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,inp%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,inp%jspins,noco%l_noco,POTDEN_TYPE_DEN)
    den%iter = iter
    den%mt(:,0:,1:,1:1) = rho(:,0:,1:,1:1)
    den%pw(1:,1:1) = qpw(1:,1:1)
    den%vacz(1:,1:,1:1) = rht(1:,1:,1:1)
    den%vacxy(1:,1:,1:,1:1) = rhtxy(1:,1:,1:,1:1)
-   den%cdom = cdom
-   den%cdomvz = cdomvz
-   den%cdomvxy = cdomvxy
+   IF(noco%l_noco) THEN
+      den%cdom = cdom
+      den%cdomvz = cdomvz
+      den%vacxy(:,:,:,3) = cdomvxy
+   END IF
 
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                      0,-1.0,0.0,.FALSE.,den)

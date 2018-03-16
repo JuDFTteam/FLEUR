@@ -174,9 +174,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    END IF
 
    !initiatlize mixed density and extract it with brysh2 call
-   inDen%cdom = CMPLX(0.0,0.0)
-   inDen%cdomvz = CMPLX(0.0,0.0)
-   inDen%cdomvxy = CMPLX(0.0,0.0)
    inDen%mmpMat = CMPLX(0.0,0.0)
 
    CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,oneD,inDen) 

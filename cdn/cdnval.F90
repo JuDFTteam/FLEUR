@@ -2,8 +2,8 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-       vacuum,dimension,sphhar,sym,obsolete,igq_fft,vr,vz,oneD,coreSpecInput,n_mmp,results, qpw,rhtxy,&
-       rho,rht,cdom,cdomvz,cdomvxy,qvac,qvlay,qa21, chmom,clmom)
+       vacuum,dimension,sphhar,sym,obsolete,igq_fft,vr,vz,oneD,coreSpecInput,den,results,&
+       qvac,qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
@@ -44,6 +44,7 @@ CONTAINS
     !                and bands
     !***********************************************************************
     !
+    USE m_constants
     USE m_eig66_io,ONLY: write_dos
     USE m_radfun
     USE m_radflo
@@ -111,26 +112,19 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
     TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
+    TYPE(t_potden),INTENT(INOUT)     :: den
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id,jspin
 
     !     .. Array Arguments ..
-    COMPLEX, INTENT(INOUT) :: qpw(stars%ng3,dimension%jspd)
-    COMPLEX, INTENT(INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
-    COMPLEX, INTENT(INOUT) :: cdom(stars%ng3)
-    COMPLEX, INTENT(INOUT) :: cdomvz(vacuum%nmzd,2)
-    COMPLEX, INTENT(INOUT) :: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
     INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL, INTENT    (IN) :: vz(vacuum%nmzd,2)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-    REAL, INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    REAL, INTENT (INOUT) :: rht(vacuum%nmzd,2,dimension%jspd)
     REAL, INTENT (INOUT) :: qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd)
     REAL, INTENT (INOUT) :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
-    COMPLEX, INTENT(INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -665,7 +659,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,igq_fft,we, eig,qpw,cdom,qis,results%force,f_b8,zMat)
+                  jspin,lapw,noccbd,igq_fft,we, eig,den,qis,results%force,f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -687,7 +681,7 @@ CONTAINS
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
                         gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,lapw, evac,eig,&
-                        rhtxy,rht,qvac,qvlay, qstars,cdomvz,cdomvxy,zMat)
+                        den,qvac,qvlay, qstars,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -742,7 +736,7 @@ CONTAINS
 
              IF (atoms%n_u.GT.0) THEN
                 CALL n_mat(atoms,sym,noccbd,usdus,ispin,we, acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                     ccof(-atoms%llod:,:,:,:,ispin), n_mmp)
+                     ccof(-atoms%llod:,:,:,:,ispin), den%mmpMat(:,:,:,jspin))
              END IF
              !
              !--->       perform Brillouin zone integration and summation over the
@@ -904,8 +898,8 @@ CONTAINS
     CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
        CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-            input,noco,l_fmpl,ispin,llpd, rhtxy(1,1,1,ispin),&
-            rht(1,1,ispin),qpw(1,ispin), ener(0,1,ispin),sqal(0,1,ispin),&
+            input,noco,l_fmpl,ispin,llpd, den%vacxy(1,1,1,ispin),&
+            den%vacz(1,1,ispin),den%pw(1,ispin), ener(0,1,ispin),sqal(0,1,ispin),&
             results,svac(1,ispin),pvac(1,ispin),uu(0,1,ispin),&
             dd(0,1,ispin),du(0,1,ispin),uunmt(0,1,1,ispin),ddnmt(0,1,1,ispin),&
             udnmt(0,1,1,ispin),dunmt(0,1,1,ispin),sqlo(1,1,ispin),&
@@ -914,7 +908,7 @@ CONTAINS
             ccnmt(1,1,1,1,ispin),enerlo(1,1,ispin),&
             orb(0,-atoms%lmaxd,1,ispin),orbl(1,-atoms%llod,1,ispin),&
             orblo(1,1,-atoms%llod,1,ispin),mt21,lo21,uloulop21,&
-            uunmt21,ddnmt21,udnmt21,dunmt21,cdom,cdomvz,cdomvxy,n_mmp)
+            uunmt21,ddnmt21,udnmt21,dunmt21,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
@@ -954,7 +948,7 @@ CONTAINS
             orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
             uunmt21,ddnmt21,udnmt21,dunmt21,&
             chmom,clmom,&
-            qa21,rho)
+            qa21,den%mt)
 
        DO ispin = jsp_start,jsp_end
           WRITE (6,*) 'Energy Parameters for spin:',ispin
@@ -992,7 +986,7 @@ CONTAINS
                         xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
                         sphhar,stars,sym,&
                         vacuum,cell,oneD,&
-                        qpw,rho,rhtxy,rht)
+                        den%pw,den%mt,den%vacxy,den%vacz)
                 END DO
              ELSE IF (oneD%odi%d1) THEN
                 !-odim
@@ -1002,7 +996,7 @@ CONTAINS
                      xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
                      sphhar,stars,sym,&
                      vacuum,cell,oneD,&
-                     qpw,rho,rhtxy,rht)
+                     den%pw,den%mt,den%vacxy,den%vacz)
                 !+odim
              END IF
              !--->          m.t. boundaries
@@ -1013,7 +1007,7 @@ CONTAINS
                      xp,dimension%nspd,n,nat,0,-1,ispin,.true.,&
                      dimension,atoms,sphhar,stars,sym,&
                      vacuum,cell,oneD,&
-                     qpw,rho,rhtxy,rht)
+                     den%pw,den%mt,den%vacxy,den%vacz)
                 nat = nat + atoms%neq(n)
              END DO
              CALL timestop("cdnval: cdninf-stuff")
@@ -1023,7 +1017,7 @@ CONTAINS
           !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) THEN
              CALL timestart("cdnval: force_a8")
-             CALL force_a8(input,atoms,sphhar, ispin, vr(:,:,:,ispin),rho,&
+             CALL force_a8(input,atoms,sphhar, ispin, vr(:,:,:,ispin),den%mt,&
                   f_a12,f_a21,f_b4,f_b8,results%force)
              CALL timestop("cdnval: force_a8")
           END IF

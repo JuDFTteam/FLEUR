@@ -6,8 +6,7 @@ MODULE m_vvacxc
   !     ********************************************************************
 CONTAINS
   SUBROUTINE vvacxc(&
-       &                  ifftd2,stars,vacuum,xcpot,input,noco,&
-       &                  rhtxy,rht,cdomvxy,cdomvz,&
+       &                  ifftd2,stars,vacuum,xcpot,input,noco,den,&
        &                  vxy,vz,&
        &                  excxy,excz)
 
@@ -24,20 +23,17 @@ CONTAINS
     USE m_fft2d
     USE m_types
     IMPLICIT NONE
-    TYPE(t_xcpot),INTENT(IN)   :: xcpot
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_vacuum),INTENT(IN)  :: vacuum
-    TYPE(t_noco),INTENT(IN)    :: noco
-    TYPE(t_stars),INTENT(IN)   :: stars
+    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_stars),INTENT(IN)     :: stars
+    TYPE(t_potden),INTENT(INOUT) :: den
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: cdomvz(vacuum%nmzd,2) 
-    COMPLEX, INTENT (INOUT) :: cdomvxy(vacuum%nmzxyd,stars%ng2-1,2) 
     REAL,    INTENT (OUT) :: excz(vacuum%nmzd,2)
     COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxyd,stars%ng2-1,2)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
@@ -80,7 +76,7 @@ CONTAINS
              CALL fft2d(&
                   &               stars,&
                   &               af2(0,js),bf2,&
-                  &               rht(ip,ivac,js),rhti,rhtxy(ip,1,ivac,js),&
+                  &               den%vacz(ip,ivac,js),rhti,den%vacxy(ip,1,ivac,js),&
                   &               vacuum%nmzxyd,+1)
           END DO
 
@@ -89,8 +85,8 @@ CONTAINS
              CALL fft2d(&
                   &               stars,&
                   &               mx,my, &
-                  &               REAL(cdomvz(ip,ivac)),AIMAG(cdomvz(ip,ivac)),&
-                  &               cdomvxy(ip,1,ivac),&
+                  &               REAL(den%cdomvz(ip,ivac)),AIMAG(den%cdomvz(ip,ivac)),&
+                  &               den%vacxy(ip,1,ivac,3),&
                   &               vacuum%nmzxyd,1)
              DO i=0,9*stars%mx1*stars%mx2-1 
                 chdens= (af2(i,1)+af2(i,2))/2.  
@@ -161,13 +157,13 @@ CONTAINS
        DO k=1,nmzdiff
 
           DO js=1,input%jspins
-             af2(k-1,js) = rht(vacuum%nmzxy+k,ivac,js)
+             af2(k-1,js) = den%vacz(vacuum%nmzxy+k,ivac,js)
           ENDDO
 
           IF (noco%l_noco) THEN
 
-             mx(0)= REAL(cdomvz(vacuum%nmzxy+k,ivac))
-             my(0)= AIMAG(cdomvz(vacuum%nmzxy+k,ivac))
+             mx(0)= REAL(den%cdomvz(vacuum%nmzxy+k,ivac))
+             my(0)= AIMAG(den%cdomvz(vacuum%nmzxy+k,ivac))
              chdens= (af2(k-1,1)+af2(k-1,2))/2.
              magmom= mx(0)**2 + my(0)**2 +&
                   &               ((af2(k-1,1)-af2(k-1,2))/2.)**2

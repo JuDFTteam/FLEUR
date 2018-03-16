@@ -282,7 +282,7 @@ MODULE m_cdn_io
             IF (datend == 0) THEN
                IF (input%film) THEN
                   READ (iUnit) ((den%cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-                  READ (iUnit) (((den%cdomvxy(i,j-1,iVac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+                  READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
                END IF
             ELSE
                ! (datend < 0)  =>  no off-diagonal magnetisation stored
@@ -294,14 +294,14 @@ MODULE m_cdn_io
                den%cdom = CMPLX(0.0,0.0)
                IF (input%film) THEN
                   den%cdomvz = CMPLX(0.0,0.0)
-                  den%cdomvxy = CMPLX(0.0,0.0)
+                  den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
                END IF
             END IF
          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
             den%cdom = CMPLX(0.0,0.0)
             IF (input%film) THEN
                den%cdomvz = CMPLX(0.0,0.0)
-               den%cdomvxy = CMPLX(0.0,0.0)
+               den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
             END IF
          END IF
          CLOSE(iUnit)
@@ -598,7 +598,7 @@ MODULE m_cdn_io
             WRITE (iUnit) (den%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
                WRITE (iUnit) ((den%cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-               WRITE (iUnit) (((den%cdomvxy(i,j-1,iVac),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+               WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
             END IF
          END IF
 

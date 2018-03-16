@@ -200,12 +200,12 @@ CONTAINS
              CALL judft_error("oneD not implemented",calledby="rhodirgen")
              !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
              !           rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
-             !           vz_r,vz_i,den%cdomvxy(imz,1,ivac),&
+             !           vz_r,vz_i,den%vacxy(imz,1,ivac,3),&
              !           vacuum,odi%nq2,odi%kimax2,1,&
              !     &               %igf,odl%pgf,odi%nst2)
           ELSE
              CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
-                  vz_r,vz_i,den%cdomvxy(imz,1,ivac),vacuum%nmzxyd,1)
+                  vz_r,vz_i,den%vacxy(imz,1,ivac,3),vacuum%nmzxyd,1)
           ENDIF
        ENDDO
     ENDDO

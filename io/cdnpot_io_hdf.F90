@@ -1682,18 +1682,18 @@ MODULE m_cdnpot_io_hdf
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
             CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
-            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw)
+            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw(:,:input%jspins))
             CALL h5dclose_f(fpwSetID, hdfError)
 
             IF (l_film) THEN
                dimsInt(:3)=(/nmzd,2,input%jspins/)
                CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
-               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz)
+               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz(:,:,:input%jspins))
                CALL h5dclose_f(fzSetID, hdfError)
 
                dimsInt(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
                CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
-               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy)
+               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy(:,:,:,:input%jspins))
                CALL h5dclose_f(fzxySetID, hdfError)
             END IF
 
@@ -1713,7 +1713,7 @@ MODULE m_cdnpot_io_hdf
 
                   dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
                   CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
-                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%cdomvxy)
+                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:,3))
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
             END IF
@@ -1745,7 +1745,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
             CALL h5sclose_f(fpwSpaceID,hdfError)
-            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw)
+            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw(:,:input%jspins))
             CALL h5dclose_f(fpwSetID, hdfError)
 
             IF (l_film) THEN
@@ -1754,7 +1754,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(3,dims(:3),fzSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "fz", H5T_NATIVE_DOUBLE, fzSpaceID, fzSetID, hdfError)
                CALL h5sclose_f(fzSpaceID,hdfError)
-               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz)
+               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz(:,:,:input%jspins))
                CALL h5dclose_f(fzSetID, hdfError)
 
                dims(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
@@ -1762,7 +1762,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(5,dims(:5),fzxySpaceID,hdfError)
                CALL h5dcreate_f(groupID, "fzxy", H5T_NATIVE_DOUBLE, fzxySpaceID, fzxySetID, hdfError)
                CALL h5sclose_f(fzxySpaceID,hdfError)
-               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy)
+               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy(:,:,:,:input%jspins))
                CALL h5dclose_f(fzxySetID, hdfError)
             END IF
 
@@ -1791,7 +1791,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5screate_simple_f(4,dims(:4),cdomvxySpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "cdomvxy", H5T_NATIVE_DOUBLE, cdomvxySpaceID, cdomvxySetID, hdfError)
                   CALL h5sclose_f(cdomvxySpaceID,hdfError)
-                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%cdomvxy)
+                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:,3))
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
             END IF
@@ -1842,7 +1842,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
          CALL h5sclose_f(fpwSpaceID,hdfError)
-         CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw)
+         CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),den%pw(:,:input%jspins))
          CALL h5dclose_f(fpwSetID, hdfError)
 
          IF (l_film) THEN
@@ -1851,7 +1851,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(3,dims(:3),fzSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fz", H5T_NATIVE_DOUBLE, fzSpaceID, fzSetID, hdfError)
             CALL h5sclose_f(fzSpaceID,hdfError)
-            CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz)
+            CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),den%vacz(:,:,:input%jspins))
             CALL h5dclose_f(fzSetID, hdfError)
 
             dims(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
@@ -1859,7 +1859,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(5,dims(:5),fzxySpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fzxy", H5T_NATIVE_DOUBLE, fzxySpaceID, fzxySetID, hdfError)
             CALL h5sclose_f(fzxySpaceID,hdfError)
-            CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy)
+            CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),den%vacxy(:,:,:,:input%jspins))
             CALL h5dclose_f(fzxySetID, hdfError)
          END IF
 
@@ -1888,7 +1888,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(4,dims(:4),cdomvxySpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdomvxy", H5T_NATIVE_DOUBLE, cdomvxySpaceID, cdomvxySetID, hdfError)
                CALL h5sclose_f(cdomvxySpaceID,hdfError)
-               CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%cdomvxy)
+               CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:,3))
                CALL h5dclose_f(cdomvxySetID, hdfError)
             END IF
          END IF
@@ -2205,9 +2205,9 @@ MODULE m_cdnpot_io_hdf
       COMPLEX, ALLOCATABLE  :: cdomTemp(:), cdomvzTemp(:,:), cdomvxyTemp(:,:,:)
       COMPLEX, ALLOCATABLE  :: mmpMatTemp(:,:,:,:)
 
-      den%cdom = CMPLX(0.0,0.0)
-      den%cdomvz = CMPLX(0.0,0.0)
-      den%cdomvxy = CMPLX(0.0,0.0)
+      den%pw = CMPLX(0.0,0.0)
+      den%vacz = CMPLX(0.0,0.0)
+      den%vacxy = CMPLX(0.0,0.0)
 
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
@@ -2394,7 +2394,7 @@ MODULE m_cdnpot_io_hdf
       ALLOCATE(fpwTemp(ng3,jspins))
       dimsInt(:3)=(/2,ng3,jspins/)
       CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
-      CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpwTemp)
+      CALL io_read_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),fpwTemp(:,:jspins))
       CALL h5dclose_f(fpwSetID, hdfError)
       den%pw(1:ng3Out,1:jspinsOut) = fpwTemp(1:ng3Out,1:jspinsOut)
       DEALLOCATE(fpwTemp)
@@ -2404,7 +2404,7 @@ MODULE m_cdnpot_io_hdf
          ALLOCATE(fzTemp(nmzd,2,jspins))
          dimsInt(:3)=(/nmzd,2,jspins/)
          CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
-         CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fzTemp)
+         CALL io_read_real3(fzSetID,(/1,1,1/),dimsInt(:3),fzTemp(:,:,:jspins))
          CALL h5dclose_f(fzSetID, hdfError)
          den%vacz(1:nmzdOut,1:2,1:jspinsOut) = fzTemp(1:nmzdOut,1:2,1:jspinsOut)
          DEALLOCATE(fzTemp)
@@ -2413,7 +2413,7 @@ MODULE m_cdnpot_io_hdf
          ALLOCATE(fzxyTemp(nmzxyd,ng2-1,2,jspins))
          dimsInt(:5)=(/2,nmzxyd,ng2-1,2,jspins/)
          CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
-         CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxyTemp)
+         CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxyTemp(:,:,:,:jspins))
          CALL h5dclose_f(fzxySetID, hdfError)
          den%vacxy(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut) =&
             fzxyTemp(1:nmzxydOut,1:ng2Out-1,1:2,1:jspinsOut)
@@ -2442,14 +2442,14 @@ MODULE m_cdnpot_io_hdf
             den%cdomvz(1:nmzOut,1:nvacOut) = cdomvzTemp(1:nmzOut,1:nvacOut)
             DEALLOCATE(cdomvzTemp)
 
-            den%cdomvxy = CMPLX(0.0,0.0)
+            den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
             ! No change in od_nq2 allowed at the moment!
             ALLOCATE(cdomvxyTemp(nmzxy,od_nq2-1,nvac))
             dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
             CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
             CALL io_read_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),cdomvxyTemp)
             CALL h5dclose_f(cdomvxySetID, hdfError)
-            den%cdomvxy(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut) =&
+            den%vacxy(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut,3) =&
                cdomvxyTemp(1:nmzxyOut,1:od_nq2Out-1,1:nvacOut)
             DEALLOCATE(cdomvxyTemp)
          END IF

@@ -174,8 +174,8 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
-    CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
-    CALL inDenRot%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+    CALL inDenRot%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
     IF (noco%l_noco) THEN
        archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     ELSE

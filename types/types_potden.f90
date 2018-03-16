@@ -16,7 +16,6 @@ MODULE m_types_potden
      ! For density only (noco case)
      COMPLEX, ALLOCATABLE :: cdom(:)
      COMPLEX, ALLOCATABLE :: cdomvz(:,:)
-     COMPLEX, ALLOCATABLE :: cdomvxy(:,:,:)
      !For angles of density/potential in noco case
      REAL,ALLOCATABLE  :: theta_pw(:)
      REAL,ALLOCATABLE  :: phi_pw(:)
@@ -40,7 +39,7 @@ MODULE m_types_potden
   END TYPE t_potden
 
 CONTAINS
-  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,oneD,jsp,nocoExtraDim,potden_type)
+  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,oneD,jspins,nocoExtraDim,potden_type)
     USE m_judft
     USE m_types_misc
     IMPLICIT NONE
@@ -51,20 +50,20 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_noco),INTENT(IN)  :: noco
     TYPE(t_oneD),INTENT(IN)  :: oneD
-    INTEGER,INTENT(IN)       :: jsp, potden_type
+    INTEGER,INTENT(IN)       :: jspins, potden_type
     LOGICAL,INTENT(IN)       :: nocoExtraDim
 
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-                            atoms%n_u,noco%l_noco,jsp,nocoExtraDim,potden_type,&
+                            atoms%n_u,noco%l_noco,jspins,nocoExtraDim,potden_type,&
                             vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,l_noco,jsp,nocoExtraDim,potden_type,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,l_noco,jspins,nocoExtraDim,potden_type,nmzd,nmzxyd,n2d)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jsp,potden_type
+    INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jspins,potden_type
     LOGICAL,INTENT(IN)          :: l_noco,nocoExtraDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
 
@@ -79,22 +78,20 @@ CONTAINS
     IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
     IF(ALLOCATED(pd%cdom)) DEALLOCATE (pd%cdom)
     IF(ALLOCATED(pd%cdomvz)) DEALLOCATE (pd%cdomvz)
-    IF(ALLOCATED(pd%cdomvxy)) DEALLOCATE (pd%cdomvxy)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
-    ALLOCATE (pd%pw(ng3,MERGE(3,jsp,nocoExtraDim)),stat=err(1))
-    ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,jsp),stat=err(2))
-    ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jsp,nocoExtraDim)),stat=err(3))
-    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jsp,nocoExtraDim)),stat=err(4))
+    ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
+    ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,jspins),stat=err(2))
+    ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
+    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
     IF (l_noco) THEN
        ALLOCATE (pd%cdom(ng3))
        ALLOCATE (pd%cdomvz(nmzd,2))
-       ALLOCATE (pd%cdomvxy(nmzxyd,n2d-1,2))
     ELSE
        ALLOCATE (pd%cdom(1))
-       ALLOCATE (pd%cdomvz(1,1),pd%cdomvxy(1,1,1))
+       ALLOCATE (pd%cdomvz(1,1))
     END IF
 
-    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jsp))
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jspins))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
@@ -103,7 +100,6 @@ CONTAINS
     pd%vacxy=CMPLX(0.0,0.0)
     pd%cdom = CMPLX(0.0,0.0)
     pd%cdomvz = CMPLX(0.0,0.0)
-    pd%cdomvxy = CMPLX(0.0,0.0)
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 
@@ -119,7 +115,6 @@ CONTAINS
     pd%vacxy=CMPLX(0.0,0.0)
     pd%cdom = CMPLX(0.0,0.0)
     pd%cdomvz = CMPLX(0.0,0.0)
-    pd%cdomvxy = CMPLX(0.0,0.0)
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE resetPotDen
 END MODULE m_types_potden

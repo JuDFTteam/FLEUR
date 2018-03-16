@@ -9,9 +9,8 @@ MODULE m_vvacxcg
 CONTAINS
   SUBROUTINE vvacxcg(&
        &           ifftd2,stars,vacuum,noco,oneD,&
-       &           cell,xcpot,input,obsolete,&
+       &           cell,xcpot,input,obsolete,den,&
        &           ichsmrg,&
-       &           rhtxy,rht,cdomvxy,cdomvz,&
        &           vxy,vz,rhmn,&
        &           excxy,excz)
 
@@ -41,6 +40,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
+    TYPE(t_potden),INTENT(INOUT) :: den
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
@@ -50,10 +50,6 @@ CONTAINS
     !+odim
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
-    COMPLEX, INTENT (IN) :: cdomvz(vacuum%nmzd,2)
-    COMPLEX, INTENT (IN) :: cdomvxy(vacuum%nmzxy,stars%ng2-1,2)
     REAL,    INTENT (OUT) :: excz(vacuum%nmzd,2)
     COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxy,stars%ng2-1,2)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
@@ -137,14 +133,14 @@ CONTAINS
                 CALL fft2d(&
                      &                   stars,&
                      &                   af2noco(0,ip,js),bf2,&
-                     &                   rht(ip,ivac,js),0.,rhtxy(ip,1,ivac,js),&
+                     &                   den%vacz(ip,ivac,js),0.,den%vacxy(ip,1,ivac,js),&
                      &                   vacuum%nmzxy,+1)
              END DO
              CALL fft2d(&
                   &                 stars,&
                   &                 mx,my,&
-                  &                 REAL(cdomvz(ip,ivac)),AIMAG(cdomvz(ip,ivac)),&
-                  &                 cdomvxy(ip,1,ivac),&
+                  &                 REAL(den%cdomvz(ip,ivac)),AIMAG(den%cdomvz(ip,ivac)),&
+                  &                 den%vacxy(ip,1,ivac,3),&
                   &                 vacuum%nmzxy,+1)
 
              DO i=0,9*stars%mx1*stars%mx2-1
@@ -166,11 +162,11 @@ CONTAINS
        IF (xcpot%is_gga()) THEN
           DO js=1,input%jspins
              !
-             ! calculate first (rhtdz) & second (rhtdzz) derivative of rht(1:nmz)
+             ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
              !
              ALLOCATE ( dummy(vacuum%nmz) )
              CALL grdchlh(&
-                  &                   0,1,vacuum%nmz,vacuum%delz,dummy,rht(1,ivac,js),obsolete%ndvgrd,&
+                  &                   0,1,vacuum%nmz,vacuum%delz,dummy,den%vacz(1,ivac,js),obsolete%ndvgrd,&
                   &                   rhtdz(1,js),rhtdzz(1,js))
              DEALLOCATE ( dummy )
              ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy),dummy(vacuum%nmzxy) )
@@ -179,17 +175,17 @@ CONTAINS
 
              DO iq = 1, stars%ng2-1
                 !
-                ! calculate first (rxydz) & second (rxydzz) derivative of rhtxy:
+                ! calculate first (rxydz) & second (rxydzz) derivative of den%vacxy:
                 !
                 DO ip=1,vacuum%nmzxy
-                   rhtxyr(ip)=rhtxy(ip,iq,ivac,js)
+                   rhtxyr(ip)=den%vacxy(ip,iq,ivac,js)
                 ENDDO
                 CALL grdchlh(&
                      &                     0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,obsolete%ndvgrd,&
                      &                     rxydzr,rxydzzr) 
 
                 DO ip=1,vacuum%nmzxy
-                   rhtxyi(ip)=aimag(rhtxy(ip,iq,ivac,js))
+                   rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
                 ENDDO
                 CALL grdchlh(&
                      &                     0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyi,obsolete%ndvgrd,&
@@ -257,7 +253,7 @@ CONTAINS
                 CALL fft2d(&
                      &               stars,&
                      &               af2(0,js),bf2,&
-                     &               rht(ip,ivac,js),0.,rhtxy(ip,1,ivac,js),&
+                     &               den%vacz(ip,ivac,js),0.,den%vacxy(ip,1,ivac,js),&
                      &               vacuum%nmzxyd,+1)
              END DO
 
@@ -277,12 +273,12 @@ CONTAINS
              DO js = 1,input%jspins
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=ci*rhtxy(ip,iq,ivac,js)
+                   cqpw(iq)=ci*den%vacxy(ip,iq,ivac,js)
                 ENDDO
 
-                rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*rhtxy
-                ! (rht is set to zero and gx is included in 
-                !    dn/atoms =  FFT(0,i*gx*rhtxy)
+                rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
+                ! (den%vacz is set to zero and gx is included in 
+                !    dn/atoms =  FFT(0,i*gx*den%vacxy)
 
               
 
@@ -294,7 +290,7 @@ CONTAINS
                 !TODO    &                 pgft2x) 
 
                 rhti = 0.0
-                CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*rhtxy)&
+                CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
                      & stars,&
                      & rhdy(0,js),bf2,&
                      & zro,rhti,cqpw,&
@@ -309,18 +305,18 @@ CONTAINS
 
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=-rhtxy(ip,iq,ivac,js)
+                   cqpw(iq)=-den%vacxy(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0
-                CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*rhtxy)&
+                CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*den%vacxy)&
                      &  stars,&
                      &  rhdxx(0,js),bf2,&
                      &  zro,rhti,cqpw,&
                      &  1,+1,stars%ft2_gfx*stars%ft2_gfx)
 
                 rhti = 0.0
-                CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*rhtxy)&
+                CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*den%vacxy)&
                      & stars,&
                      & rhdyy(0,js),bf2,&
                      & zro,rhti,cqpw,&
@@ -353,11 +349,11 @@ CONTAINS
                      &  1,+1,stars%ft2_gfx)
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=-rhtxy(ip,iq,ivac,js)
+                   cqpw(iq)=-den%vacxy(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0
-                CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*rhtxy)&
+                CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*den%vacxy)&
                      & stars,&
                      & rhdxy(0,js),bf2,&
                      & zro,rhti,cqpw,&
@@ -553,13 +549,13 @@ CONTAINS
        DO ip=nmz0,vacuum%nmz 
           IF (.not. noco%l_noco) THEN
              DO js=1,input%jspins 
-                rhtz(ip,js)= rht(ip,ivac,js)
+                rhtz(ip,js)= den%vacz(ip,ivac,js)
              END DO
           ELSE
-             af2(0,1) = rht(ip,ivac,1)
-             af2(0,2) = rht(ip,ivac,2)
-             mx(0)= REAL(cdomvz(ip,ivac))
-             my(0)= AIMAG(cdomvz(ip,ivac))
+             af2(0,1) = den%vacz(ip,ivac,1)
+             af2(0,2) = den%vacz(ip,ivac,2)
+             mx(0)= REAL(den%cdomvz(ip,ivac))
+             my(0)= AIMAG(den%cdomvz(ip,ivac))
              chdens= (af2(0,1)+af2(0,2))/2.
              magmom(0,1)= mx(0)**2 + my(0)**2 +&
                   &                   ((af2(0,1)-af2(0,2))/2.)**2

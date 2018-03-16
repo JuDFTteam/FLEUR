@@ -18,6 +18,7 @@ CONTAINS
     !
 
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(IN)   :: usdus
     TYPE(t_sym),INTENT(IN)     :: sym
@@ -31,7 +32,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(lmaxd+2) ,natd)
     COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(lmaxd+2) ,natd)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: n_mmp(-3:3,-3:3,atoms%n_u)
+    COMPLEX, INTENT (INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     !     ..
     !     .. Local Scalars ..
     COMPLEX c_0

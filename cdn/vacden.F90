@@ -11,8 +11,8 @@ CONTAINS
        gvac1,gvac2,&
        we,ikpt,jspin,vz,vz0,&
        ne,lapw,&
-       evac,eig,rhtxy,rht,qvac,qvlay,&
-       stcoeff,cdomvz,cdomvxy,zMat)
+       evac,eig,den,qvac,qvlay,&
+       stcoeff,zMat)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -21,8 +21,8 @@ CONTAINS
     !     In non-collinear calculations the density becomes a hermitian 2x2
     !     matrix. This subroutine generates this density matrix in the 
     !     vacuum region. The diagonal elements of this matrix (n_11 & n_22)
-    !     are store in rht and rhtxy, while the real and imaginary part
-    !     of the off-diagonal element are store in cdomvz and cdomvxy. 
+    !     are store in den%vacz and den%vacxy, while the real and imaginary part
+    !     of the off-diagonal element are store in den%cdomvz and den%vacxy(:,:,:,3). 
     !
     !     Philipp Kurz 99/07
     !***********************************************************************
@@ -33,13 +33,13 @@ CONTAINS
     !     vz       : non-warping part of the vacuum potential (matrix)
     !                collinear    : 2. index = ivac (# of vaccum)
     !                non-collinear: 2. index = ipot (comp. of pot. matr.)
-    !     rht      : non-warping part of the vacuum density matrix,
+    !     den%vacz : non-warping part of the vacuum density matrix,
     !                diagonal elements n_11 and n_22
-    !     rhtxy    : warping part of the vacuum density matrix,
+    !     den%vacxy: warping part of the vacuum density matrix,
     !                diagonal elements n_11 and n_22
-    !     cdomvz   : non-warping part of the vacuum density matrix,
+    !     den%cdomvz: non-warping part of the vacuum density matrix,
     !                off-diagonal elements n_21
-    !     cdomvxy  : warping part of the vacuum density matrix,
+    !     den%vacxy(:,:,:,3): warping part of the vacuum density matrix,
     !                off-diagonal elements n_21
     !***********************************************************************
     !
@@ -65,6 +65,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_potden),INTENT(INOUT)  :: den
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin      
     INTEGER, INTENT (IN) :: ne    
@@ -73,12 +74,8 @@ CONTAINS
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
-    COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
-    REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
     REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
     REAL qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
-    COMPLEX, INTENT (INOUT):: cdomvz(vacuum%nmzd,2)
-    COMPLEX, INTENT (INOUT):: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
     !
     !     STM-Arguments
     REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
@@ -574,7 +571,7 @@ CONTAINS
                 uei = ue(jz,l,jspin)
                 ddui = ddu(jz,l) 
                 dduei = ddue(jz,l)
-                rht(jz,ivac,jspin) = rht(jz,ivac,jspin) +&
+                den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +&
                      REAL(aaee*ui*ui+bbee*uei*uei+&
                      (abee+baee)*ui*uei+aa*ddui*ddui+&
                      bb*dduei*dduei+(ab+ba)*ddui*dduei+&
@@ -612,7 +609,7 @@ CONTAINS
                          DO  jz = 1,vacuum%nmz
                             ui = u_1(jz,l,m,ispin)
                             uei = ue_1(jz,l,m,ispin)
-                            rht(jz,ivac,ispin) = rht(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                            den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                          END DO
                       END DO
                    END DO
@@ -633,7 +630,7 @@ CONTAINS
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
                          uei = ue(jz,l,ispin)
-                         rht(jz,ivac,ispin) = rht(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                       ENDDO
                    ENDDO
                 END IF ! one-dimensional
@@ -658,7 +655,7 @@ CONTAINS
                       DO  jz = 1,vacuum%nmz
                          ui = u_1(jz,l,m,jspin)
                          uei = ue_1(jz,l,m,jspin)
-                         rht(jz,ivac,jspin) = rht(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                       END DO
                    END DO
                 END DO
@@ -679,7 +676,7 @@ CONTAINS
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)
                       uei = ue(jz,l,jspin)
-                      rht(jz,ivac,jspin) = rht(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                      den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                    ENDDO
                 END DO
              END IF ! D1
@@ -906,8 +903,8 @@ CONTAINS
                         + abe*(ui*dduej+uj*dduei)+bae*(ddui*uej+dduj*uei)&
                         + aa*ddui*dduj+bb*dduei*dduej+ba*ddui*dduej&
                         + ab*dduei*dduj  
-                   rhtxy(jz,ind2-1,ivac,jspin) = rhtxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
-                   rhtxy(jz,ind2p-1,ivac,jspin)=rhtxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                   den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
+                   den%vacxy(jz,ind2p-1,ivac,jspin)= den%vacxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                 ENDDO
              ENDDO
           END DO
@@ -951,10 +948,10 @@ CONTAINS
                                      uej = ue_1(jz,l1,m1,ispin)
                                      t1 = aa*ui*uj + bb*uei*uej + ba*ui*uej + ab*uei*uj
                                      IF (ind1.NE.0) THEN
-                                        rhtxy(jz,ind1-1,ivac,ispin) = rhtxy(jz,ind1-1,ivac,ispin) + t1/ oneD%odi%nst2(ind1)
+                                        den%vacxy(jz,ind1-1,ivac,ispin) = den%vacxy(jz,ind1-1,ivac,ispin) + t1/ oneD%odi%nst2(ind1)
                                      END IF
                                      IF (ind1p.NE.0) THEN
-                                        rhtxy(jz,ind1p-1,ivac,ispin) = rhtxy(jz,ind1p-1,ivac,ispin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
+                                        den%vacxy(jz,ind1p-1,ivac,ispin) = den%vacxy(jz,ind1p-1,ivac,ispin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
                                      END IF
 
                                   END DO xys1
@@ -994,8 +991,8 @@ CONTAINS
                             uei = ue(jz,l,ispin)
                             uej = ue(jz,l1,ispin)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            rhtxy(jz,ind2-1,ivac,ispin) = rhtxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
-                            rhtxy(jz,ind2p-1,ivac,ispin) = rhtxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                            den%vacxy(jz,ind2-1,ivac,ispin) = den%vacxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
+                            den%vacxy(jz,ind2p-1,ivac,ispin) = den%vacxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                          ENDDO
                       ENDDO
                    ENDDO
@@ -1029,7 +1026,7 @@ CONTAINS
                                      uj = u_1(jz,l1,m1,2)
                                      uei = ue_1(jz,l,m,1)
                                      uej = ue_1(jz,l1,m1,2)
-                                     cdomvz(jz,ivac) = cdomvz(jz,ivac) + aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                                     den%cdomvz(jz,ivac) = den%cdomvz(jz,ivac) + aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                                   END DO xys3
                                ELSE ! the warped part (ind1 > 1)
                                   aa = CMPLX(0.,0.)
@@ -1048,7 +1045,7 @@ CONTAINS
                                      uei = ue_1(jz,l,m,1)
                                      uej = ue_1(jz,l1,m1,2)
                                      t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                                     cdomvxy(jz,ind1-1,ivac) = cdomvxy(jz,ind1-1,ivac) + t1/oneD%odi%nst2(ind1)
+                                     den%vacxy(jz,ind1-1,ivac,3) = den%vacxy(jz,ind1-1,ivac,3) + t1/oneD%odi%nst2(ind1)
                                   END DO xys2
                                END IF  ! the non-warped (ind1 = 1)
                             END IF   ! ind1.ne.0
@@ -1086,7 +1083,7 @@ CONTAINS
                             ui2 = u(jz,l1,2)
                             uei = ue(jz,l,1)
                             uei2 = ue(jz,l1,2)
-                            cdomvz(jz,ivac) = cdomvz(jz,ivac) + aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
+                            den%cdomvz(jz,ivac) = den%cdomvz(jz,ivac) + aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
                          ENDDO
                       ELSE
                          !--->                warping part
@@ -1106,7 +1103,7 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uej = ue(jz,l1,2)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            cdomvxy(jz,ind2-1,ivac) = cdomvxy(jz, ind2-1,ivac) + t1*phs/stars%nstr2(ind2)
+                            den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + t1*phs/stars%nstr2(ind2)
                          ENDDO
                       ENDIF
                    ENDDO
@@ -1144,10 +1141,10 @@ CONTAINS
                                   uej = ue_1(jz,l1,m1,jspin)
                                   t1 = aa*ui*uj + bb*uei*uej + ba*ui*uej + ab*uei*uj
                                   IF (ind1.NE.0) THEN
-                                     rhtxy(jz,ind1-1,ivac,jspin) = rhtxy(jz,ind1-1,ivac,jspin) + t1/ oneD%odi%nst2(ind1)
+                                     den%vacxy(jz,ind1-1,ivac,jspin) = den%vacxy(jz,ind1-1,ivac,jspin) + t1/ oneD%odi%nst2(ind1)
                                   END IF
                                   IF (ind1p.NE.0) THEN
-                                     rhtxy(jz,ind1p-1,ivac,jspin) = rhtxy(jz,ind1p-1,ivac,jspin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
+                                     den%vacxy(jz,ind1p-1,ivac,jspin) = den%vacxy(jz,ind1p-1,ivac,jspin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
                                   END IF
 
                                END DO xys
@@ -1189,8 +1186,8 @@ CONTAINS
                          uei = ue(jz,l,jspin)
                          uej = ue(jz,l1,jspin)
                          t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                         rhtxy(jz,ind2-1,ivac,jspin) = rhtxy(jz,ind2-1, ivac,jspin) + t1*phs/stars%nstr2(ind2)
-                         rhtxy(jz,ind2p-1,ivac,jspin) = rhtxy(jz,ind2p-1, ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                         den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1, ivac,jspin) + t1*phs/stars%nstr2(ind2)
+                         den%vacxy(jz,ind2p-1,ivac,jspin) = den%vacxy(jz,ind2p-1, ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                       ENDDO
                    ENDDO
                 END DO
