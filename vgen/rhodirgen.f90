@@ -194,8 +194,8 @@ CONTAINS
     DO ivac = 1,vacuum%nvac
        DO imz = 1,vacuum%nmzxyd
           rziw = 0.0
-          vz_r = REAL(den%cdomvz(imz,ivac))
-          vz_i = AIMAG(den%cdomvz(imz,ivac))
+          vz_r = den%vacz(imz,ivac,3)
+          vz_i = den%vacz(imz,ivac,4)
           IF (oneD%odi%d1) THEN
              CALL judft_error("oneD not implemented",calledby="rhodirgen")
              !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
@@ -262,8 +262,8 @@ CONTAINS
        DO imz = vacuum%nmzxyd+1,vacuum%nmzd
           rho_11  = den%vacz(imz,ivac,1)
           rho_22  = den%vacz(imz,ivac,2)
-          rho_21r = REAL(den%cdomvz(imz,ivac))
-          rho_21i = AIMAG(den%cdomvz(imz,ivac))
+          rho_21r = den%vacz(imz,ivac,3)
+          rho_21i = den%vacz(imz,ivac,4)
           mx      =  2*rho_21r
           my      = -2*rho_21i
           mz      = (rho_11-rho_22)

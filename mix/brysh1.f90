@@ -105,7 +105,7 @@ CONTAINS
              DO k = 1,vacuum%nmz
                 mapvac2 = mapvac2 + 1
                 j = j + 1
-                sout(j) = REAL(den%cdomvz(k,iv))
+                sout(j) = den%vacz(k,iv,3)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
@@ -119,7 +119,7 @@ CONTAINS
              DO k = 1,vacuum%nmz
                 mapvac2 = mapvac2 + 1
                 j = j + 1
-                sout(j) = AIMAG(den%cdomvz(k,iv))
+                sout(j) = den%vacz(k,iv,4)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy

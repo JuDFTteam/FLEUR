@@ -1543,6 +1543,7 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
 
+      INTEGER                      :: i, iVac
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz,nvac,od_nq2,nmzxy,n_u
       INTEGER                      :: hdfError, fileFormatVersion
@@ -1563,6 +1564,8 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)               :: cdomvzSpaceID, cdomvzSetID
       INTEGER(HID_T)               :: cdomvxySpaceID, cdomvxySetID
       INTEGER(HID_T)               :: mmpMatSpaceID, mmpMatSetID
+
+      COMPLEX, ALLOCATABLE         :: cdomvz(:,:)
 
 
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
@@ -1706,10 +1709,17 @@ MODULE m_cdnpot_io_hdf
                CALL h5dclose_f(cdomSetID, hdfError)
 
                IF (l_film) THEN
+                  ALLOCATE(cdomvz(nmz,nvac))
+                  DO iVac = 1, nvac
+                     DO i = 1, nmz
+                        cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
+                     END DO
+                  END DO
                   dimsInt(:3)=(/2,nmz,nvac/)
                   CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
-                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),den%cdomvz)
+                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
                   CALL h5dclose_f(cdomvzSetID, hdfError)
+                  DEALLOCATE(cdomvz)
 
                   dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
                   CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
@@ -1778,13 +1788,20 @@ MODULE m_cdnpot_io_hdf
                CALL h5dclose_f(cdomSetID, hdfError)
 
                IF (l_film) THEN
+                  ALLOCATE(cdomvz(nmz,nvac))
+                  DO iVac = 1, nvac
+                     DO i = 1, nmz
+                        cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
+                     END DO
+                  END DO
                   dims(:3)=(/2,nmz,nvac/)
                   dimsInt = dims
                   CALL h5screate_simple_f(3,dims(:3),cdomvzSpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "cdomvz", H5T_NATIVE_DOUBLE, cdomvzSpaceID, cdomvzSetID, hdfError)
                   CALL h5sclose_f(cdomvzSpaceID,hdfError)
-                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),den%cdomvz)
+                  CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
                   CALL h5dclose_f(cdomvzSetID, hdfError)
+                  DEALLOCATE(cdomvz)
 
                   dims(:4)=(/2,nmzxy,od_nq2-1,nvac/)
                   dimsInt = dims
@@ -1875,13 +1892,20 @@ MODULE m_cdnpot_io_hdf
             CALL h5dclose_f(cdomSetID, hdfError)
 
             IF (l_film) THEN
+               ALLOCATE(cdomvz(nmz,nvac))
+               DO iVac = 1, nvac
+                  DO i = 1, nmz
+                     cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
+                  END DO
+               END DO
                dims(:3)=(/2,nmz,nvac/)
                dimsInt = dims
                CALL h5screate_simple_f(3,dims(:3),cdomvzSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdomvz", H5T_NATIVE_DOUBLE, cdomvzSpaceID, cdomvzSetID, hdfError)
                CALL h5sclose_f(cdomvzSpaceID,hdfError)
-               CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),den%cdomvz)
+               CALL io_write_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvz)
                CALL h5dclose_f(cdomvzSetID, hdfError)
+               DEALLOCATE(cdomvz)
 
                dims(:4)=(/2,nmzxy,od_nq2-1,nvac/)
                dimsInt = dims
@@ -2433,13 +2457,14 @@ MODULE m_cdnpot_io_hdf
          DEALLOCATE(cdomTemp)
 
          IF (l_film) THEN
-            den%cdomvz = CMPLX(0.0,0.0)
+            den%vacz(:,:,3:4) = 0.0
             ALLOCATE(cdomvzTemp(nmz,nvac))
             dimsInt(:3)=(/2,nmz,nvac/)
             CALL h5dopen_f(groupID, 'cdomvz', cdomvzSetID, hdfError)
             CALL io_read_complex2(cdomvzSetID,(/-1,1,1/),dimsInt(:3),cdomvzTemp)
             CALL h5dclose_f(cdomvzSetID, hdfError)
-            den%cdomvz(1:nmzOut,1:nvacOut) = cdomvzTemp(1:nmzOut,1:nvacOut)
+            den%vacz(1:nmzOut,1:nvacOut,3) = REAL(cdomvzTemp(1:nmzOut,1:nvacOut))
+            den%vacz(1:nmzOut,1:nvacOut,4) = AIMAG(cdomvzTemp(1:nmzOut,1:nvacOut))
             DEALLOCATE(cdomvzTemp)
 
             den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)

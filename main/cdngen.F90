@@ -92,7 +92,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !pk non-collinear (start)
    REAL    rhoint,momint,alphdiff(atoms%ntype)
    INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
-   COMPLEX,ALLOCATABLE :: qa21(:)
+   COMPLEX,ALLOCATABLE :: qa21(:), cdomvz(:,:)
    !pk non-collinear (end)
 
    iter = inIter
@@ -306,7 +306,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             !fix also the off-diagonal part of the density matrix
             outDen%cdom(:stars%ng3) = fix*outDen%cdom(:stars%ng3)
             IF (input%film) THEN
-               outDen%cdomvz(:,:) = fix*outDen%cdomvz(:,:)
+               outDen%vacz(:,:,3:4) = fix*outDen%vacz(:,:,3:4)
                outDen%vacxy(:,:,:,3) = fix*outDen%vacxy(:,:,:,3)
             END IF
          END IF
@@ -451,8 +451,15 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          IF (noco%l_noco) THEN
             WRITE (20) (outDen%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
-               WRITE (20) ((outDen%cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
+               ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
+               DO ivac = 1, vacuum%nvac
+                  DO j = 1, vacuum%nmz
+                     cdomvz(j,ivac) = CMPLX(outDen%vacz(j,ivac,3),outDen%vacz(j,ivac,4))
+                  END DO
+               END DO
+               WRITE (20) ((cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
                WRITE (20) (((outDen%vacxy(j,k-1,ivac,3),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
+               DEALLOCATE(cdomvz)
             END IF
          END IF
          CLOSE(20) 

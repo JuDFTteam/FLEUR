@@ -42,10 +42,8 @@ CONTAINS
    IF((mpi%irank.NE.0).AND.l_nocoAlloc) THEN
       IF (noco%l_noco) THEN
          IF(.NOT.ALLOCATED(potden%cdom)) ALLOCATE (potden%cdom(stars%ng3))
-         IF(.NOT.ALLOCATED(potden%cdomvz)) ALLOCATE (potden%cdomvz(vacuum%nmzd,2))
       ELSE
          IF(.NOT.ALLOCATED(potden%cdom)) ALLOCATE (potden%cdom(1))
-         IF(.NOT.ALLOCATED(potden%cdomvz)) ALLOCATE (potden%cdomvz(1,1))
       END IF
    END IF
    IF((mpi%irank.NE.0).AND.l_denMatAlloc) THEN
@@ -71,9 +69,6 @@ CONTAINS
    IF (l_nocoAlloc) THEN
       n = SIZE(potden%cdom,1)
       CALL MPI_BCAST(potden%cdom,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-
-      n = SIZE(potden%cdomvz,1) * SIZE(potden%cdomvz,2)
-      CALL MPI_BCAST(potden%cdomvz,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
    END IF
 
    IF (l_denMatAlloc) THEN

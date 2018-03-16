@@ -311,7 +311,8 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    den%vacxy(1:,1:,1:,1:1) = rhtxy(1:,1:,1:,1:1)
    IF(noco%l_noco) THEN
       den%cdom = cdom
-      den%cdomvz = cdomvz
+      den%vacz(:,:,3) = REAL(cdomvz(:,:))
+      den%vacz(:,:,4) = AIMAG(cdomvz(:,:))
       den%vacxy(:,:,:,3) = cdomvxy
    END IF
 

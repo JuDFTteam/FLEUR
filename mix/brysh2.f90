@@ -30,7 +30,6 @@ CONTAINS
     den%vacz = 0.0
     den%vacxy = CMPLX(0.0,0.0)
     den%cdom = CMPLX(0.0,0.0)
-    den%cdomvz = 0.0
 
     j=0
     DO  js = 1,input%jspins
@@ -94,7 +93,7 @@ CONTAINS
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                den%cdomvz(k,iv) = CMPLX(s_in(j),0.0)
+                den%vacz(k,iv,3) = s_in(j)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy
@@ -106,7 +105,7 @@ CONTAINS
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                den%cdomvz(k,iv) = den%cdomvz(k,iv) + CMPLX(0.0,s_in(j))
+                den%vacz(k,iv,4) = s_in(j)
              END DO
              DO k = 1,oneD%odi%nq2-1
                 DO i = 1,vacuum%nmzxy

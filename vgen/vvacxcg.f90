@@ -139,7 +139,7 @@ CONTAINS
              CALL fft2d(&
                   &                 stars,&
                   &                 mx,my,&
-                  &                 REAL(den%cdomvz(ip,ivac)),AIMAG(den%cdomvz(ip,ivac)),&
+                  &                 den%vacz(ip,ivac,3),den%vacz(ip,ivac,4),&
                   &                 den%vacxy(ip,1,ivac,3),&
                   &                 vacuum%nmzxy,+1)
 
@@ -554,8 +554,8 @@ CONTAINS
           ELSE
              af2(0,1) = den%vacz(ip,ivac,1)
              af2(0,2) = den%vacz(ip,ivac,2)
-             mx(0)= REAL(den%cdomvz(ip,ivac))
-             my(0)= AIMAG(den%cdomvz(ip,ivac))
+             mx(0) = den%vacz(ip,ivac,3)
+             my(0) = den%vacz(ip,ivac,4)
              chdens= (af2(0,1)+af2(0,2))/2.
              magmom(0,1)= mx(0)**2 + my(0)**2 +&
                   &                   ((af2(0,1)-af2(0,2))/2.)**2

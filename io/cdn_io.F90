@@ -166,6 +166,8 @@ MODULE m_cdn_io
       CHARACTER(LEN=30) :: archiveName
       TYPE(t_cell)      :: cellTemp
 
+      COMPLEX, ALLOCATABLE :: cdomvz(:,:)
+
       fermiEnergy = 0.0
       l_qfix = .FALSE.
 
@@ -281,7 +283,15 @@ MODULE m_cdn_io
             READ (iUnit,iostat=datend) (den%cdom(k),k=1,stars%ng3)
             IF (datend == 0) THEN
                IF (input%film) THEN
-                  READ (iUnit) ((den%cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
+                  ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
+                  READ (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
+                  DO iVac = 1, vacuum%nvac
+                     DO i = 1, vacuum%nmz
+                        den%vacz(i,iVac,3) = REAL(cdomvz(i,iVac))
+                        den%vacz(i,iVac,4) = AIMAG(cdomvz(i,iVac))
+                     END DO
+                  END DO
+                  DEALLOCATE(cdomvz)
                   READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
                END IF
             ELSE
@@ -293,14 +303,14 @@ MODULE m_cdn_io
                END IF
                den%cdom = CMPLX(0.0,0.0)
                IF (input%film) THEN
-                  den%cdomvz = CMPLX(0.0,0.0)
+                  den%vacz(:,:,3:4) = 0.0
                   den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
                END IF
             END IF
          ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
             den%cdom = CMPLX(0.0,0.0)
             IF (input%film) THEN
-               den%cdomvz = CMPLX(0.0,0.0)
+               den%vacz(:,:,3:4) = 0.0
                den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
             END IF
          END IF
@@ -385,6 +395,8 @@ MODULE m_cdn_io
       CHARACTER(LEN=8)  :: dateString
       CHARACTER(LEN=10) :: timeString
       CHARACTER(LEN=10) :: zone
+
+      COMPLEX, ALLOCATABLE :: cdomvz(:,:)
 
       CALL getIOMode(mode)
       CALL DATE_AND_TIME(dateString,timeString,zone)
@@ -597,8 +609,15 @@ MODULE m_cdn_io
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
             WRITE (iUnit) (den%cdom(k),k=1,stars%ng3)
             IF (input%film) THEN
-               WRITE (iUnit) ((den%cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
+               ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
+               DO iVac = 1, vacuum%nvac
+                  DO i = 1, vacuum%nmz
+                     cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
+                  END DO
+               END DO
+               WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
                WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+               DEALLOCATE(cdomvz)
             END IF
          END IF
 

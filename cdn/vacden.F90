@@ -22,7 +22,7 @@ CONTAINS
     !     matrix. This subroutine generates this density matrix in the 
     !     vacuum region. The diagonal elements of this matrix (n_11 & n_22)
     !     are store in den%vacz and den%vacxy, while the real and imaginary part
-    !     of the off-diagonal element are store in den%cdomvz and den%vacxy(:,:,:,3). 
+    !     of the off-diagonal element are stored in den%vacz(:,:,3:4) and den%vacxy(:,:,:,3). 
     !
     !     Philipp Kurz 99/07
     !***********************************************************************
@@ -37,8 +37,8 @@ CONTAINS
     !                diagonal elements n_11 and n_22
     !     den%vacxy: warping part of the vacuum density matrix,
     !                diagonal elements n_11 and n_22
-    !     den%cdomvz: non-warping part of the vacuum density matrix,
-    !                off-diagonal elements n_21
+    !     den%vacz(:,:,3:4): non-warping part of the vacuum density matrix,
+    !                off-diagonal elements n_21 (real part in (:,:,3), imaginary part in (:,:,4))
     !     den%vacxy(:,:,:,3): warping part of the vacuum density matrix,
     !                off-diagonal elements n_21
     !***********************************************************************
@@ -89,7 +89,7 @@ CONTAINS
     INTEGER mapg2k(DIMENSION%nv2d)
     !     .. Local Scalars ..
     COMPLEX aa,ab,av,ba,bb,bv,t1,aae,bbe,abe,bae,aaee,bbee,abee,baee,&
-         &     factorx,factory,c_1,aa_1,ab_1,ba_1,bb_1,ic,av_1,bv_1,d 
+         &     factorx,factory,c_1,aa_1,ab_1,ba_1,bb_1,ic,av_1,bv_1,d,tempCmplx
 
     REAL arg,const,ddui,dduj,dduei,dduej,eps,ev,evacp,phs,phsp,qout,&
          &     scale,sign,uei,uej,ui,uj,wronk,zks,RESULT(1),ui2,uei2,&
@@ -1026,7 +1026,9 @@ CONTAINS
                                      uj = u_1(jz,l1,m1,2)
                                      uei = ue_1(jz,l,m,1)
                                      uej = ue_1(jz,l1,m1,2)
-                                     den%cdomvz(jz,ivac) = den%cdomvz(jz,ivac) + aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                                     tempCmplx = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                                     den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
+                                     den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) + AIMAG(tempCmplx)
                                   END DO xys3
                                ELSE ! the warped part (ind1 > 1)
                                   aa = CMPLX(0.,0.)
@@ -1083,7 +1085,9 @@ CONTAINS
                             ui2 = u(jz,l1,2)
                             uei = ue(jz,l,1)
                             uei2 = ue(jz,l1,2)
-                            den%cdomvz(jz,ivac) = den%cdomvz(jz,ivac) + aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
+                            tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
+                            den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
+                            den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) + AIMAG(tempCmplx)
                          ENDDO
                       ELSE
                          !--->                warping part
