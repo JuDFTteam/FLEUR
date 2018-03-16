@@ -91,7 +91,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
 
    !pk non-collinear (start)
-   REAL    rhoint,momint,alphdiff(atoms%ntype)
+   REAL    rhoint,momint,alphdiff
    INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
    COMPLEX,ALLOCATABLE :: qa21(:), cdomvz(:,:)
    !pk non-collinear (end)
@@ -326,24 +326,17 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                WRITE (16,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
             END DO
 
+            noco_new = noco
+
             CALL magMoms(dimension,input,atoms,chmom)
 
-            noco_new = noco
             IF (noco%l_mperp) THEN
-               ! angles in nocoinp file are (alph-alphdiff)
                iatom = 1
                DO n = 1,atoms%ntype
-                  IF (noco%l_ss) THEN
-                     alphdiff(n)= 2.*pi_const*(noco%qss(1)*atoms%taual(1,iatom) + &
-                                               noco%qss(2)*atoms%taual(2,iatom) + &
-                                               noco%qss(3)*atoms%taual(3,iatom) )
-                  ELSE
-                     alphdiff(n)= 0.
-                  END IF
                   !calculate the perpendicular part of the local moment
                   !and relax the angle of the local moment or calculate
                   !the constraint B-field.
-                  CALL m_perp(atoms,n,noco_new,vTot%mt(:,0,:,:),chmom,qa21,alphdiff)
+                  CALL m_perp(atoms,n,iatom,noco_new,vTot%mt(:,0,:,:),chmom,qa21)
                   iatom= iatom + atoms%neq(n)
                END DO
             END IF
@@ -351,7 +344,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             !save the new nocoinp file if the dierctions of the local
             !moments are relaxed or a constraint B-field is calculated.
             l_relax_any = .false.
-            iatom = 1
             DO itype = 1,atoms%ntype
                l_relax_any = l_relax_any.OR.noco%l_relax(itype)
             END DO
@@ -359,9 +351,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                IF (.not. noco%l_mperp) THEN
                   CALL juDFT_error ("(l_relax_any.OR.noco).AND.(.NOT. )" ,calledby ="cdngen")
                END IF
+               iatom = 1
                DO itype = 1, atoms%ntype
                   IF (noco%l_ss) THEN
-                     noco_new%alph(itype) = noco%alph(itype) - alphdiff(itype)
+                     alphdiff = 2.0*pi_const*(noco%qss(1)*atoms%taual(1,iatom) + &
+                                              noco%qss(2)*atoms%taual(2,iatom) + &
+                                              noco%qss(3)*atoms%taual(3,iatom) )
+                     noco_new%alph(itype) = noco%alph(itype) - alphdiff
                      DO WHILE (noco_new%alph(n) > +pi_const)
                         noco_new%alph(n)= noco_new%alph(n) - 2.*pi_const
                      END DO
@@ -371,6 +367,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   ELSE
                      noco_new%alph(itype) = noco%alph(itype)
                   END IF
+                  iatom= iatom + atoms%neq(n)
                END DO
 
                OPEN (24,file='nocoinp',form='formatted', status='old')
