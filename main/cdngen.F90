@@ -35,6 +35,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_m_perp
    USE m_types
    USE m_xmlOutput
+   USE m_magMoms
    USE m_orbMagMoms
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -74,7 +75,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco) :: noco_new
 
    !Local Scalars
-   REAL fix,qtot,scor,seig,smom,stot,sval,dummy
+   REAL fix,qtot,scor,seig,stot,sval,dummy
    REAL sum,fermiEnergyTemp
    INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
    INTEGER  ityp,ilayer,urec,itype,iatom
@@ -88,7 +89,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
    INTEGER,ALLOCATABLE :: igq_fft(:)
    REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
-   CHARACTER(LEN=20)   :: attributes(4)
 
    !pk non-collinear (start)
    REAL    rhoint,momint,alphdiff(atoms%ntype)
@@ -325,6 +325,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                WRITE (6,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
                WRITE (16,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
             END DO
+
+            CALL magMoms(dimension,input,atoms,chmom)
+
+            noco_new = noco
             IF (noco%l_mperp) THEN
                ! angles in nocoinp file are (alph-alphdiff)
                iatom = 1
@@ -336,33 +340,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   ELSE
                      alphdiff(n)= 0.
                   END IF
-                  iatom= iatom + atoms%neq(n)
-               END DO
-            END IF
-            WRITE (6,FMT=8020)
-            WRITE (16,FMT=8020)
-            noco_new = noco
-            CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
-            DO n = 1, atoms%ntype
-               smom = chmom(n,1) - chmom(n,input%jspins)
-               WRITE (6,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
-               WRITE (16,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
-               attributes = ''
-               WRITE(attributes(1),'(i0)') n
-               WRITE(attributes(2),'(f15.10)') smom
-               WRITE(attributes(3),'(f15.10)') chmom(n,1)
-               WRITE(attributes(4),'(f15.10)') chmom(n,2)
-               CALL writeXMLElementFormPoly('magneticMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
-                                                               'spinDownCharge'/),&
-                                            attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
-               IF (noco%l_mperp) THEN
                   !calculate the perpendicular part of the local moment
                   !and relax the angle of the local moment or calculate
                   !the constraint B-field.
                   CALL m_perp(atoms,n,noco_new,vTot%mt(:,0,:,:),chmom,qa21,alphdiff)
-               END IF
-            END DO
-            CALL closeXMLElement('magneticMomentsInMTSpheres')
+                  iatom= iatom + atoms%neq(n)
+               END DO
+            END IF
 
             !save the new nocoinp file if the dierctions of the local
             !moments are relaxed or a constraint B-field is calculated.
@@ -404,9 +388,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                    'input%total',t42,'valence',t65,'core',t90,&
                    'majority valence and input%total density',/)
       8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
-      8020 FORMAT (/,/,2x,'-->  magnetic moments in the spheres:',/,2x,&
-                   'mm -->   type',t22,'moment',t33,'spin-up',t43,'spin-down')
-      8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
 
       IF (sliceplot%slice) THEN
          OPEN (20,file='cdn_slice',form='unformatted',status='unknown')
