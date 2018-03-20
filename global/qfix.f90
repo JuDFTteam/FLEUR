@@ -16,6 +16,7 @@ CONTAINS
 
     USE m_types
     USE m_cdntot
+    USE m_xmlOutput
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
@@ -56,7 +57,7 @@ CONTAINS
     ! In this case do nothing except when forced to fix!
     
     CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
-         qpw,rho,rht,.FALSE., qtot,qis)
+         qpw,rho,rht,.TRUE., qtot,qis)
 
     !The total nucleii charge
     zc=SUM(atoms%neq(:)*atoms%zatom(:))
@@ -81,17 +82,20 @@ CONTAINS
        END IF
        WRITE (6,FMT=8000) zc,fix
        IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
+       CALL openXMLElementNoAttributes('fixedCharges')
        CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
             qpw,rho,rht,l_printData, qtot,qis)
+       CALL closeXMLElement('fixedCharges')
        !+roa 
     ELSE
        fix = (zc - qtot) / qis + 1.
        qpw(:stars%ng3,:) = fix*qpw(:stars%ng3,:)
        WRITE (6,FMT=8001) zc,fix
        IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
+       CALL openXMLElementNoAttributes('fixedCharges')
        CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
             qpw,rho,rht,l_printData, qtot,qis)
-
+       CALL closeXMLElement('fixedCharges')
     ENDIF
 
     IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")
