@@ -32,7 +32,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_rwnoco
    USE m_cored
    USE m_coredr
-   USE m_m_perp
    USE m_types
    USE m_xmlOutput
    USE m_magMoms
@@ -328,18 +327,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
             noco_new = noco
 
-            CALL magMoms(dimension,input,atoms,chmom)
-
-            IF (noco%l_mperp) THEN
-               iatom = 1
-               DO n = 1,atoms%ntype
-                  !calculate the perpendicular part of the local moment
-                  !and relax the angle of the local moment or calculate
-                  !the constraint B-field.
-                  CALL m_perp(atoms,n,iatom,noco_new,vTot%mt(:,0,:,:),chmom,qa21)
-                  iatom= iatom + atoms%neq(n)
-               END DO
-            END IF
+            CALL magMoms(dimension,input,atoms,noco_new,vTot,chmom,qa21)
 
             !save the new nocoinp file if the dierctions of the local
             !moments are relaxed or a constraint B-field is calculated.
