@@ -93,6 +93,9 @@ CONTAINS
 
     CALL ev_dist%init(hmat%l_real,hmat%global_size1,hmat%global_size2,hmat%mpi_com,.TRUE.)
 
+    smat%blacs_desc(2) = hmat%blacs_desc(2)
+    ev_dist%blacs_desc(2) = hmat%blacs_desc(2)
+
     nb=hmat%blacs_desc(5)! Blocking factor
     IF (nb.NE.hmat%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
   
