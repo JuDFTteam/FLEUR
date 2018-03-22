@@ -27,7 +27,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    REAL,    INTENT (IN) :: e_shift(input%jspins)
+    REAL,    INTENT (IN) :: e_shift!(atoms%ntype,input%jspins)
     REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
@@ -103,7 +103,7 @@ CONTAINS
           ENDIF
           ddnln =  usdus%ddn(l,n,isp)
           elall = el(l,n,isp)
-          IF (l<=atoms%lnonsph(n)) elall=elall-e_shift(isp)
+          IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
           IF (smat%l_real) THEN
              DO kj = 1,ki
                 fct  = plegend(kj,l)*fl2p1(l)*&

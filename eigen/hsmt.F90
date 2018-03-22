@@ -68,7 +68,7 @@ CONTAINS
              !This is for collinear calculations: the (1,1) element of the matrices is all
              !that is needed and allocated
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,&
-                           td%e_shift,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat(1,1),hmat(1,1))
+                           td%e_shift(n,ispin),usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat(1,1),hmat(1,1))
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
                               fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(1,1))
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
@@ -79,7 +79,7 @@ CONTAINS
              !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
              !global spin-matrices.
              CALL hmat_tmp%clear();CALL smat_tmp%clear()
-             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift,&
+             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),&
                            usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat_tmp,hmat_tmp)
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
                               fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat_tmp)
@@ -100,7 +100,7 @@ CONTAINS
              DO iintsp=1,2
                 DO jintsp=1,2
                    CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,iintsp,jintsp,chi(iintsp,jintsp),&
-                                 lapw,enpara%el0,td%e_shift,usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
+                                 lapw,enpara%el0,td%e_shift(n,ispin),usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
                                  smat(iintsp,jintsp),hmat(iintsp,jintsp))
                    CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,&
                                     lapw,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(iintsp,jintsp))

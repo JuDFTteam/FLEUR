@@ -64,7 +64,7 @@ MODULE m_tlmplm_cholesky
     vr0=v%mt(:,:,:,jsp)
     vr0(:,0,:)=0.0
     !     ..e_shift
-    td%e_shift(jsp)=e_shift_min
+    td%e_shift(:,jsp)=e_shift_min
     OK=.FALSE.
 
    
@@ -85,7 +85,7 @@ MODULE m_tlmplm_cholesky
        !
        !--->    generate the wavefunctions for each l
        !
-       l_write=mpi%irank==0
+       l_write = mpi%irank==0
 !!$    l_write=.false.
 !!$    call gaunt2(atoms%lmaxd)
 !!$OMP PARALLEL DO DEFAULT(NONE)&
@@ -93,7 +93,7 @@ MODULE m_tlmplm_cholesky
 !!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
 !!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
 !!$OMP PRIVATE(nodeu,nsym,na)&
-!!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,v,mpi,input)
+!!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,v,mpi,input)
        DO  n = 1,atoms%ntype
           na=sum(atoms%neq(:n-1))+1
           
@@ -299,8 +299,8 @@ MODULE m_tlmplm_cholesky
           DO lp = 0,atoms%lnonsph(n)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(jsp)+td%h_loc(lmp,lmp,n,jsp)
-                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
+                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(n,jsp)+td%h_loc(lmp,lmp,n,jsp)
+                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
              END DO
           END DO
           IF (lmp+1.ne.s) call judft_error("BUG in tlmpln_cholesky")
@@ -316,13 +316,13 @@ MODULE m_tlmplm_cholesky
           ENDDO
          
           IF (info.NE.0) THEN
-             td%e_shift(jsp)=td%e_shift(jsp)*2.0
-             PRINT *,"Potential shift to small, increasing the value to:",td%e_shift(jsp)
-             IF (td%e_shift(jsp)>e_shift_max) THEN
+             td%e_shift(n,jsp)=td%e_shift(n,jsp)*2.0
+             PRINT *,"Potential shift to small, increasing the value to:",td%e_shift(n,jsp)
+             IF (td%e_shift(n,jsp)>e_shift_max) THEN
                  CALL judft_error("Potential shift at maximum")
-              ENDIF
-              OK=.FALSE.
-              CYCLE cholesky_loop
+             ENDIF
+             OK=.FALSE.
+             CYCLE cholesky_loop
           ENDIF
 
           !

@@ -30,7 +30,7 @@ MODULE m_types_tlmplm
      !(-llod:llod,-llod:llod,mlolotot,tspin)
      COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:)
      COMPLEX,ALLOCATABLE :: h_off(:,:,:,:)
-     REAL,ALLOCATABLE    :: e_shift(:)
+     REAL,ALLOCATABLE    :: e_shift(:,:)
      TYPE(t_rsoc)        :: rsoc
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
@@ -56,7 +56,7 @@ CONTAINS
     ALLOCATE(td%tuloulo(-llod:llod,-llod:llod,MAX(mlolotot,1),jspins), stat=err)
     ALLOCATE(td%ind(0:lmd,0:lmd,ntype,jspins),stat=err )
     ALLOCATE(td%h_loc(0:2*lmaxd*(lmaxd+2)+1,0:2*lmaxd*(lmaxd+2)+1,ntype,jspins))
-    ALLOCATE(td%e_shift(jspins))
+    ALLOCATE(td%e_shift(ntype,jspins))
     IF (l_offdiag) THEN
        ALLOCATE(td%h_off(0:2*lmaxd+1,0:2*lmaxd+1,ntype,2))
     ELSE
