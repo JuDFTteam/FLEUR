@@ -64,6 +64,10 @@ CONTAINS
           gkrot(:,k) = MATMUL(TRANSPOSE(bmrot),v)
        END DO
     END IF
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fj,gj,abclo,cell,atoms) &
+    !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n) &
+    !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
     DO k = 1,lapw%nv(1)
        !-->    generate spherical harmonics
        vmult(:) =  gkrot(:,k)
@@ -98,6 +102,7 @@ CONTAINS
        ENDIF
        
     ENDDO !k-loop
+    !$OMP END PARALLEL DO
     IF (.NOT.l_apw) ab_size=ab_size*2
     
   END SUBROUTINE hsmt_ab
