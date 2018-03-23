@@ -35,11 +35,12 @@ CONTAINS
     INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
     complex:: term
     real   :: th,v(3),bmrot(3,3),vmult(3)
-    complex,allocatable:: c_ph(:,:),ylm(:)
+    COMPLEX :: ylm((atoms%lmaxd+1)**2)
+    complex,allocatable:: c_ph(:,:)
     real,allocatable   :: gkrot(:,:)
     LOGICAL :: l_apw
     
-    ALLOCATE(c_ph(lapw%nv(1),MERGE(2,1,noco%l_ss)),ylm((atoms%lmaxd+1)**2))
+    ALLOCATE(c_ph(lapw%nv(1),MERGE(2,1,noco%l_ss)))
     ALLOCATE(gkrot(3,lapw%nv(1)))
 
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
