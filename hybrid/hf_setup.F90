@@ -76,15 +76,16 @@ CONTAINS
           nrec1 = kpts%nkpt*(jsp-1) + nk
           zmat(nk)%nbasfcn=dimension%nbasfcn
           zmat(nk)%nbands=dimension%neigd2
-          if (l_real) THEN
+          IF (l_real) THEN
              ALLOCATE(zmat(nk)%z_r(dimension%nbasfcn,dimension%neigd2))
              ALLOCATE(zmat(nk)%z_c(0,0))
           else
              ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
              ALLOCATE(zmat(nk)%z_r(0,0))
-          endif
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),&!kveclo=hybdat%kveclo_eig(:,nk),
-               zmat=zmat(nk))
+          ENDIF
+          CALL judft_error("TODO,hs_setup")
+          !CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),&!kveclo=hybdat%kveclo_eig(:,nk),
+          !     zmat=zmat(nk))
      
        END DO
        !Allocate further space
@@ -301,7 +302,8 @@ CONTAINS
        ! Reading the eig file
        !DO nk = n_start,kpts%nkpt,n_stride
        DO nk = 1,kpts%nkpt,1
-          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybrid%ne_eig(nk),w_iks=results%w_iks(:,nk,jsp))
+          CALL judft_error("TODO,hs_setup")
+!          CALL read_eig(eig_id_hf,nk,jsp,el=el_eig, ello=ello_eig,neig=hybrid%ne_eig(nk),w_iks=results%w_iks(:,nk,jsp))
           hybrid%nobd(nk) = COUNT(results%w_iks(:hybrid%ne_eig(nk),nk,jsp) > 0.0 )
        END DO
     

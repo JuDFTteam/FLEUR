@@ -48,8 +48,6 @@ CONTAINS
           d%neig_data=0
           d%eig_data=1E99
           d%w_iks_data=1E99
-          d%int_data=9999999
-          d%real_data=1E99
           if (d%l_real.and..not.l_soc) THEN
              d%zr_data=0.0
           else
@@ -83,19 +81,6 @@ CONTAINS
     slot_size=1
     CALL priv_create_memory(1,local_slots,d%neig_handle,d%neig_data)
     d%neig_data=0
-
-    !The integer values
-    d%size_k=nmat
-    slot_size=(5+3*d%size_k+1+nlotot)
-    CALL priv_create_memory(slot_size,local_slots,d%int_handle,d%int_data)
-    d%int_data=9999999
-
-    !The real values
-    d%size_el=(1+lmax)*ntype
-    d%size_ello=nlo*ntype
-    slot_size=(6+d%size_el+d%size_ello)
-    CALL priv_create_memory(slot_size,local_slots,d%real_handle,real_data_ptr=d%real_data)
-    d%real_data=1E99
 
     !The eigenvalues
     d%size_eig=neig
@@ -205,7 +190,7 @@ CONTAINS
          CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,d%l_real,l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
-               CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+               !CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
                STOP "code no longer works"
                  ! CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
               ENDDO
@@ -247,7 +232,7 @@ CONTAINS
          CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
          DO jspin=1,d%jspins
             DO nk=1,d%nkpts
-               CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
+               !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
                stop "CODE no longer working"
                !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
             ENDDO
@@ -259,15 +244,11 @@ CONTAINS
 
   END SUBROUTINE close_eig
 
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk3,wk,neig,eig,w_iks,el,&
-       ello,evac,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
-    INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
-    REAL,    INTENT(OUT),OPTIONAL  :: bk3(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
     TYPE(t_zmat),OPTIONAL  :: zmat
 
@@ -288,34 +269,6 @@ CONTAINS
        CALL  MPI_GET(neig,1,MPI_INTEGER,pe,slot,1,MPI_INTEGER,d%neig_handle,e)
        CALL MPI_WIN_UNLOCK(pe,d%neig_handle,e)
 
-    ENDIF
-    !read the integer values
-    IF (ANY((/PRESENT(nv),PRESENT(nmat)/))) THEN
-       tmp_size=4+3*d%size_k
-       ALLOCATE(tmp_int(tmp_size))
-       CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%int_handle,e)
-       ! Get current values
-       CALL  MPI_GET(tmp_int,tmp_size,MPI_INTEGER,pe,slot,tmp_size,MPI_INTEGER,d%int_handle,e)
-       CALL MPI_WIN_UNLOCK(pe,d%int_handle,e)
-       !IF (present(neig)) neig=tmp_int(1)
-       IF (PRESENT(nv))   nv=tmp_int(2)
-       IF (PRESENT(nmat)) nmat=tmp_int(3)
-    
-    ENDIF
-    !read the real-values
-    IF (ANY((/PRESENT(wk),PRESENT(bk3),PRESENT(el),PRESENT(ello),PRESENT(evac)/))) THEN
-       tmp_size=6+d%size_el+d%size_ello
-       ALLOCATE(tmp_real(tmp_size))
-       CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%real_handle,e)
-       ! Get current values
-       CALL  MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%real_handle,e)
-       CALL MPI_WIN_UNLOCK(pe,d%real_handle,e)
-       IF (PRESENT(wk))   wk=tmp_real(1)
-       IF (PRESENT(bk3))  bk3=tmp_real(2:4)
-       IF (PRESENT(evac)) evac=tmp_real(5:6)
-       IF (PRESENT(el))   el=RESHAPE(tmp_real(6+1:6+SIZE(el)),SHAPE(el))
-       IF (PRESENT(ello)) ello=RESHAPE(tmp_real(6+d%size_el+1:6+d%size_el+SIZE(ello)),SHAPE(ello))
-       DEALLOCATE(tmp_real)
     ENDIF
     IF (PRESENT(eig).or.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
@@ -378,15 +331,11 @@ CONTAINS
 #endif
   END SUBROUTINE read_eig
 
-  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk3,wk, &
-       eig,w_iks,el,ello,evac,                     &
-       nlotot,n_size,n_rank,zmat)
+  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
-    REAL,    INTENT(IN),OPTIONAL :: wk
-    INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
-    REAL,    INTENT(IN),OPTIONAL :: bk3(3),eig(:),el(:,:),w_iks(:)
-    REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
+    INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total
+    REAL,    INTENT(IN),OPTIONAL :: eig(:),w_iks(:)
     TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
 #ifdef CPP_MPI
@@ -413,34 +362,6 @@ CONTAINS
        DEALLOCATE(tmp_int)
     ENDIF
 
-    IF (ANY((/PRESENT(nv),PRESENT(nmat),PRESENT(nlotot)/))) THEN
-       tmp_size=5+3*d%size_k
-       ALLOCATE(tmp_int(tmp_size))
-       tmp_int=9999999
-       tmp_int(1)=0
-       IF (PRESENT(nv))   tmp_int(2)=nv
-       IF (PRESENT(nmat)) tmp_int(3)=nmat
-       IF (PRESENT(nlotot)) tmp_int(4)=nlotot
-       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%int_handle,e)
-       CALL MPI_ACCUMULATE(tmp_int,tmp_size,MPI_INTEGER,pe,slot,tmp_size,MPI_INTEGER,MPI_MIN,d%int_handle,e)
-       CALL MPI_WIN_UNLOCK(pe,d%int_handle,e)
-    ENDIF
-    !write the real-values
-    IF (ANY((/PRESENT(wk),PRESENT(bk3),PRESENT(el),PRESENT(ello),PRESENT(evac)/))) THEN
-       tmp_size=6+d%size_el+d%size_ello
-       ALLOCATE(tmp_real(tmp_size))
-       tmp_real=1E99
-       IF (PRESENT(wk))   tmp_real(1)=wk
-       IF (PRESENT(bk3))  tmp_real(2:4)=bk3
-       IF (PRESENT(evac)) tmp_real(5:6)=evac
-       IF (PRESENT(el))   tmp_real(6+1:6+SIZE(el))=RESHAPE(el,(/SIZE(el)/))
-       IF (PRESENT(ello)) tmp_real(6+d%size_el+1:6+d%size_el+SIZE(ello))=RESHAPE(ello,(/SIZE(ello)/))
-
-       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%real_handle,e)
-       CALL MPI_ACCUMULATE(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,MPI_MIN,d%real_handle,e)
-       CALL MPI_WIN_UNLOCK(pe,d%real_handle,e)
-       DEALLOCATE(tmp_real)
-    ENDIF
     IF (PRESENT(eig).OR.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
        tmp_real=1E99

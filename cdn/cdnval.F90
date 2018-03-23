@@ -133,7 +133,7 @@ CONTAINS
     !     .. Local Scalars ..
     TYPE(t_lapw):: lapw
     INTEGER :: llpd
-    REAL wk,wronk,sign,emcd_lo,emcd_up
+    REAL wronk,sign,emcd_lo,emcd_up
     INTEGER i,ie,iv,ivac,j,k,l,l1,lh ,n,ilo,isp,nat,&
          nbands,noded,nodeu,noccbd,nslibd,na,&
          ikpt,npd ,jsp_start,jsp_end,ispin
@@ -144,8 +144,6 @@ CONTAINS
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
     REAL    cartk(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
-    REAL    ello(atoms%nlod,atoms%ntype,dimension%jspd),evac(2,dimension%jspd)
-    REAL    epar(0:atoms%lmaxd,atoms%ntype,dimension%jspd),evdu(2,dimension%jspd)
     REAL    eig(dimension%neigd)
     REAL    vz0(2)
     REAL    uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
@@ -342,7 +340,7 @@ CONTAINS
          eig_id,&
          mpi%irank,mpi%isize,jspin,dimension%jspd,&
          noco%l_noco,&
-         ello,evac,epar,wk,n_bands,n_size)
+         n_bands,n_size)
 #ifdef CPP_MPI
     ! Sinchronizes the RMA operations
     CALL MPI_BARRIER(mpi%mpi_comm,ie) 
@@ -375,11 +373,11 @@ CONTAINS
        DO  l = 0,atoms%lmax(n)
           DO ispin =jsp_start,jsp_end
              CALL radfun(&
-                  l,n,ispin,epar(l,n,ispin),vr(1,0,n,ispin),atoms,&
+                  l,n,ispin,enpara%el0(l,n,ispin),vr(1,0,n,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus,&
                   nodeu,noded,wronk)
              IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8002) l,&
-                  epar(l,n,ispin),usdus%us(l,n,ispin),usdus%dus(l,n,ispin),nodeu,&
+                  enpara%el0(l,n,ispin),usdus%us(l,n,ispin),usdus%dus(l,n,ispin),nodeu,&
                   usdus%uds(l,n,ispin),usdus%duds(l,n,ispin),noded,usdus%ddn(l,n,ispin),&
                   wronk
           END DO
@@ -408,7 +406,7 @@ CONTAINS
        !
        IF ( atoms%nlo(n) > 0 ) THEN
           DO ispin = jsp_start,jsp_end
-             CALL radflo(atoms,n,ispin, ello(1,1,ispin),vr(:,0,n,ispin), f(1,1,0,ispin),&
+             CALL radflo(atoms,n,ispin, enpara%ello0(1,1,ispin),vr(:,0,n,ispin), f(1,1,0,ispin),&
                   g(1,1,0,ispin),mpi, usdus, uuilon,duilon,ulouilopn, flo(:,:,:,ispin))
           END DO
        END IF
@@ -561,8 +559,7 @@ CONTAINS
                eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                noccbd,n_start,n_end,&
-               ello,evdu,epar,&
-               wk,nbands,eig,zMat)
+               nbands,eig,zMat)
 #ifdef CPP_MPI
           ! Sinchronizes the RMA operations
           if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
@@ -575,8 +572,8 @@ CONTAINS
              CALL nstm3(&
                   sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),&
                   input,jspin,kpts,&
-                  cell,wk,lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                  evac(1,jspin),vz,vz0,&
+                  cell,kpts%wtkpt(ikpt),lapw%k1(:,jspin),lapw%k2(:,jspin),&
+                  enpara%evac0(1,jspin),vz,vz0,&
                   gvac1d,gvac2d)
           END IF
 
@@ -591,7 +588,7 @@ CONTAINS
              IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
              IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
              nslibd = 0
-             IF (input%pallst) we(:nbands) = wk
+             IF (input%pallst) we(:nbands) = kpts%wtkpt(ikpt)
              IF (sliceplot%kk.EQ.0) THEN
                 IF (mpi%irank==0) THEN
                    WRITE (16,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
@@ -680,7 +677,7 @@ CONTAINS
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,lapw, evac,eig,&
+                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,lapw, enpara%evac0,eig,&
                         den,qvac,qvlay, qstars,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
@@ -821,7 +818,7 @@ CONTAINS
                         bcof(:,0:,:,ispin),e1cof,e2cof, acoflo,bcoflo, results,f_a12)
                 ENDIF
                 CALL force_a21(input,atoms,dimension,noccbd,sym,&
-                     oneD,cell,we,ispin,epar(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
+                     oneD,cell,we,ispin,enpara%el0(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
                      bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin), aveccof,bveccof,cveccof,&
                      results,f_a21,f_b4)
 
@@ -943,7 +940,7 @@ CONTAINS
        CALL cdnmt(&
             dimension%jspd,atoms,sphhar,llpd,&
             noco,l_fmpl,jsp_start,jsp_end,&
-            epar,ello,vr(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
+            enpara%el0,enpara%ello0,vr(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
             usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
             orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
             uunmt21,ddnmt21,udnmt21,dunmt21,&

@@ -32,7 +32,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays
     INTEGER  norb(23),iqsl(nsld),iqvacpc(2)
-    REAL     bkpt(3),qvact(2)
+    REAL     qvact(2)
     REAL, ALLOCATABLE :: eig(:),qvac(:,:,:,:),orbcomp(:,:,:,:,:)
     REAL, ALLOCATABLE :: qal(:,:,:),qis(:),qvlay(:,:,:)
     COMPLEX,ALLOCATABLE::qstars(:,:,:,:)
@@ -84,12 +84,12 @@ CONTAINS
        !==============================================================
        DO ikpt=1,kpts%nkpt
           !                
-          call read_eig(eig_id,ikpt,kspin,bk=bkpt,neig=nbands,eig=eig)
+          call read_eig(eig_id,ikpt,kspin,neig=nbands,eig=eig)
           call read_dos(eig_id,ikpt,kspin,qal,qvac(:,:,ikpt,kspin),qis,qvlay,qstars,ksym,jsym,&
                qintsl=qintsl(:,:,ikpt,kspin),qmtsl= qmtsl(:,:,ikpt,kspin),qmtp=qmtp(:,:,ikpt,kspin),orbcomp=orbcomp(:,:,:,ikpt,kspin))
           !            write(*,*) kspin,nkpt,qmtp(1,:,ikpt,kspin)
           !
-          WRITE (130,FMT=8000) (bkpt(i),i=1,3)
+          WRITE (130,FMT=8000) (kpts%bk(i,ikpt),i=1,3)
 8000      FORMAT (/,3x,'  k =',3f10.5,/)
           !
           DO iband = 1,nbands

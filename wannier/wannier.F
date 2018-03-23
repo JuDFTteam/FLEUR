@@ -147,7 +147,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer :: i1,i2,i3,in,lda
       integer :: n_bands(0:DIMENSION%neigd),nslibd,nslibd_b
       character(len=8) :: dop,iop,name(10)
-      real    :: bkpt(3),bkpt_b(3),sfp,tpi,wronk,wk,wk_b,phase
+      real    :: bkpt(3),bkpt_b(3),sfp,tpi,wronk,phase
       complex :: c_phase
       real    :: eig(DIMENSION%neigd),eig_b(DIMENSION%neigd),cp_time(9)
       real    :: efermi
@@ -182,12 +182,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real     :: uuilon(atoms%nlod,atoms%ntype)
       real     :: duilon(atoms%nlod,atoms%ntype)
       real     :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
-!!! energy parameters
-      real    :: ello(atoms%nlod,atoms%ntype,max(2,DIMENSION%jspd))
-      real    :: evac(2,max(2,DIMENSION%jspd))
-      real    :: epar(0:atoms%lmaxd,atoms%ntype,max(2,DIMENSION%jspd))
-      real    :: evdu(2,max(DIMENSION%jspd,2))
-!!! the Mmn matrices
+   !!! the Mmn matrices
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)           
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)        
       complex, allocatable :: soctomom(:,:,:,:)
@@ -257,7 +252,7 @@ c---->gwf
       real :: beta_i(atoms%ntype),betab_i(atoms%ntype)
       real :: theta_i, thetab_i, phi_i, phib_i
       real :: dalph,db1,db2,coph,siph
-      real :: zero_taual(3,atoms%nat),bqpt(3),wqb
+      real :: zero_taual(3,atoms%nat),bqpt(3)
       real :: tt1,tt2,tt3,tt4,tt5,tt6,t_it,t_kov,t_qov
       real :: eig_qb(DIMENSION%neigd)
 
@@ -719,7 +714,7 @@ c*********************************************************
       enddo
 
       if(wann%l_soctomom)then
-        CALL vsoc(input,atoms,vr,epar,.TRUE., vso)
+        CALL vsoc(input,atoms,vr,enpara%el0,.TRUE., vso)
       endif
 
       if(noco%l_noco.and.input%film)then
@@ -954,7 +949,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 
        call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,DIMENSION%jspd, !wannierspin instead of DIMENSION%jspd?
      >                noco%l_noco,
-     <                ello,evac,epar,wk,n_bands,n_size)
+     <                n_bands,n_size)
 
        enddo
 !       call cpu_time(tt3)
@@ -1097,7 +1092,7 @@ c##################################################################
 c...compute the l-dependent, k-independent radial MT- basis functions
 
          call radfun(
-     >              l,n,jspin4,epar(l,n,jspin3),vr(1,n,jspin3),atoms,
+     >           l,n,jspin4,enpara%el0(l,n,jspin3),vr(1,n,jspin3),atoms,
      <              ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
      <              nodeu,noded,wronk)
 
@@ -1106,7 +1101,7 @@ c...and the local orbital radial functions
        do ilo = 1, atoms%nlo(n)
 
          call radflo(
-     >             atoms,n,jspin4,ello(:,:,jspin3),vr(1,n,jspin3),
+     >           atoms,n,jspin4,enpara%ello0(:,:,jspin3),vr(1,n,jspin3),
      >             ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
      <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
 
@@ -1289,8 +1284,7 @@ c****************************************************************
      >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      >              kptibz,jspin,DIMENSION%nbasfcn,
      >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     <              ello,evdu,epar,
-     <              wk,nbands,eigg,zzMat)
+     <              nbands,eigg,zzMat)
 
 !      call cpu_time(tt4)
       !if(l_p0) write(*,*)'cdn_read=',tt4-tt3
@@ -1501,7 +1495,7 @@ c     >        surfcurr(:,:,:,ikpt))
      >          cell%z1,vacuum%nmzd,DIMENSION%nv2d,
      >          stars%mx1,stars%mx2,stars%mx3,
      >          stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,
-     >          stars%ig2,cell%area,cell%bmat,cell%bbmat,evac(:,jspin),
+     >   stars%ig2,cell%area,cell%bmat,cell%bbmat,enpara%evac0(:,jspin),
      >          bkpt,vz(:,:,jspin2),nslibd,jspin,k1,k2,k3,wannierspin,
      >          DIMENSION%nvd,DIMENSION%nbasfcn,DIMENSION%neigd,z,nv,
      >          cell%omtil,
@@ -1628,7 +1622,7 @@ c---> vacuum contribution to mmn0-matrix
      >           stars%mx1,stars%mx2,stars%mx3,
      >           stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,
      >           stars%ig2,cell%area,cell%bmat,
-     >           cell%bbmat,evac(:,jspin),bkpt,vz(:,:,jspin2),
+     >           cell%bbmat,enpara%evac0(:,jspin),bkpt,vz(:,:,jspin2),
      >           nslibd,jspin,k1,k2,k3,wannierspin,DIMENSION%nvd,
      >           DIMENSION%nbasfcn,DIMENSION%neigd,zMat,nv,cell%omtil,
      <           mmn(:,:,ikpt))
@@ -1640,7 +1634,7 @@ c---> vacuum contribution to mmn0-matrix
      >           cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,
-     >           oneD%odi%n2d,cell%bbmat,evac(1,jspin),bkpt,oneD%odi%M,
+     >    oneD%odi%n2d,cell%bbmat,enpara%evac0(1,jspin),bkpt,oneD%odi%M,
      >           oneD%odi%mb,vz(:,1,jspin2),oneD%odi,
      >           nslibd,jspin,k1,k2,k3,wannierspin,DIMENSION%nvd,
      >           cell%area,DIMENSION%nbasfcn,DIMENSION%neigd,zMat,nv,
@@ -1721,8 +1715,7 @@ c        print*,"something to do"
      >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      >              kptibz_b,jspin,DIMENSION%nbasfcn,
      >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     <              ello,evdu,epar,
-     <              wk_b,nbands_b,eigg,zzMat)
+     <              nbands_b,eigg,zzMat)
 
 !        call cpu_time(tt4)
         !if(l_p0) write(*,*)'read_eig=',tt4-tt3
@@ -1898,7 +1891,8 @@ c...vacuum contributions
      >              stars%mx1,stars%mx2,stars%mx3,
      >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
      >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
-     >              cell%bbmat,evac(:,jspin),evac(:,jspin_b),
+     >          cell%bbmat,enpara%evac0(:,jspin),
+     >          enpara%evac0(:,jspin_b),
      >              bkpt,bkpt_b,vz(:,:,jspin2),vz(:,:,jspin2_b),
      >              nslibd,nslibd_b,jspin,jspin_b,
      >              k1,k2,k3,k1_b,k2_b,k3_b,
@@ -1916,7 +1910,7 @@ c...vacuum contributions
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,
      >           vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,
-     >           cell%bbmat,evac(1,jspin),evac(1,jspin_b),
+     >         cell%bbmat,enpara%evac0(1,jspin),enpara%evac0(1,jspin_b),
      >           bkpt,bkpt_b,oneD%odi%M,oneD%odi%mb,
      >           vz(:,1,jspin2),vz(:,1,jspin2_b),oneD%odi,
      >           nslibd,nslibd_b,jspin,jspin_b,k1,k2,k3,k1_b,k2_b,k3_b,
@@ -1997,8 +1991,7 @@ c*******************************************c
      >               kptibz,jspin_b,DIMENSION%nbasfcn,
      >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
      >               n_end,
-     <               ello,evdu,epar,
-     <               wqb,nbands_qb,eigg,   !we_qb instead of wqb?
+     <               nbands_qb,eigg,   
      <               zzMat)
 
 !        call cpu_time(tt4)
@@ -2269,7 +2262,7 @@ c*******************************************c
      >              stars%mx1,stars%mx2,stars%mx3,
      >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
      >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
-     >              cell%bbmat,evac(:,jspin),evac(:,jspin_b),
+     >         cell%bbmat,enpara%evac0(:,jspin),enpara%evac0(:,jspin_b),
      >              sign_q*qpt_i/2.,
      >              sign_q*qptb_i/2.,
      >              vz(:,:,jspin2),vz(:,:,jspin2_b),
@@ -2286,7 +2279,7 @@ c*******************************************c
      >              stars%mx1,stars%mx2,stars%mx3,
      >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
      >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
-     >              cell%bbmat,evac(:,jspin),evac(:,jspin_b),
+     >         cell%bbmat,enpara%evac0(:,jspin),enpara%evac0(:,jspin_b),
      >              bqpt,bqpt,
      >              vz(:,:,jspin2),vz(:,:,jspin2_b),
      >              nslibd,nslibd_qb,jspin,jspin_b,
@@ -2311,7 +2304,7 @@ c*******************************************c
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,
      >           vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,
-     >           cell%bbmat,evac(1,jspin),evac(1,jspin_b),
+     >        cell%bbmat,enpara%evac0(1,jspin),enpara%evac0(1,jspin_b),
      >           sign_q*qpt_i/2.,sign_q*qptb_i/2.,
      >           oneD%odi%M,oneD%odi%mb,
      >           vz(:,1,jspin2),vz(:,1,jspin2_b),oneD%odi,
@@ -2330,7 +2323,7 @@ c*******************************************c
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,
      >           vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,
-     >           cell%bbmat,evac(1,jspin),evac(1,jspin_b),
+     >         cell%bbmat,enpara%evac0(1,jspin),enpara%evac0(1,jspin_b),
      >           bqpt,bqpt,
      >           oneD%odi%M,oneD%odi%mb,
      >           vz(:,1,jspin2),vz(:,1,jspin2_b),oneD%odi,
@@ -2397,7 +2390,7 @@ c$$$  3     continue !goto jump no longer needed?
      >        cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,
      >        sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,
      >        nv(jspin),lmd,bkpt,cell%omtil,atoms%nlo,atoms%llo,
-     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
+     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
      >        vz(:,:,jspin2),
      >        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,
      >        ff(:,:,:,:,jspin),
@@ -2424,7 +2417,7 @@ c$$$  3     continue !goto jump no longer needed?
      >        cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,
      >        sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,
      >        nv(jspin),lmd,bkpt,cell%omtil,atoms%nlo,atoms%llo,
-     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
+     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
      >         vz(:,:,jspin2),
      >        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,
      >        ff(:,:,:,:,jspin),
@@ -2837,7 +2830,7 @@ c************************************************c
 
       call wann_postproc(
      >         DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
-     >         lapw,oneD,noco,cell,vTot,eig_id,l_real,                !eig_id is used here after closing the files?!
+     >         lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,                !eig_id is used here after closing the files?!
      >         mpi%mpi_comm,wann,l_p0,input%film,input%jspins,stars%ng2,
      >         atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,
      >         atoms%neq,atoms%zatom,cell%omtil,noco%l_soc,noco%l_noco,

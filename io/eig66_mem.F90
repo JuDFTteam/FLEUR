@@ -2,8 +2,7 @@ MODULE m_eig66_mem
 #include "juDFT_env.h"
   ! Do the IO of the eig-file into memory
   ! The eig-file is split into four arrays:
-  ! eig_int contains the basis-set information/integers (nv,nmat,ne)
-  ! eig_real contains the basis-set information/real (el,evac,ello,bkpt,wtkpt)
+  ! eig_int contains the basis-set information/integers (ne)
   ! eig_eig contains the eigenvalues
   ! eig_vec contains the eigenvectors
   ! The record number is given by nrec=nk+(jspin-1)*nkpts
@@ -49,15 +48,8 @@ CONTAINS
     CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
 
     !d%eig_int
-    length=3 !nv+nmat+ne
+    ALLOCATE(d%eig_int(jspins*nkpts))
 
-    ALLOCATE(d%eig_int(length,jspins*nkpts))
-
-    !d%eig_real
-    length=3+1+2 !bk,wk,evac
-    length=length+(lmax+1)*ntype !el
-    length=length+nlo*ntype  !ello
-    ALLOCATE(d%eig_real(length,jspins*nkpts))
     !d%eig_eig
     length=jspins
     IF (l_noco) length=1
@@ -104,9 +96,8 @@ CONTAINS
       CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
-            CALL read_eig_IO(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-            STOP "CODE NO LONGER WORKING"
-            !CALL write_eig(id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
+            CALL read_eig_IO(tmp_id,nk,jspin,i,eig,w_iks,zmat=zmat)
+            !CALL write_eig(id,nk,jspin,i,i,eig,w_iks,zmat=zmat)
          ENDDO
       ENDDO
       CALL close_eig_IO(tmp_id)
@@ -126,7 +117,6 @@ CONTAINS
     IF (PRESENT(delete)) THEN
        IF (delete) THEN
           IF (ALLOCATED(d%eig_int)) DEALLOCATE(d%eig_int)
-          IF (ALLOCATED(d%eig_real)) DEALLOCATE(d%eig_real)
           IF (ALLOCATED(d%eig_eig)) DEALLOCATE(d%eig_eig)
           IF (ALLOCATED(d%eig_vecr)) DEALLOCATE(d%eig_vecr)
           IF (ALLOCATED(d%eig_vecc)) DEALLOCATE(d%eig_vecc)
@@ -153,7 +143,7 @@ CONTAINS
             !TODO this code is no longer working
             STOP "BUG"
                !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-               CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
+               !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
            ENDDO
       ENDDO
       CALL close_eig_DA(tmp_id)
@@ -224,15 +214,11 @@ CONTAINS
   END SUBROUTINE read_dos
 
 
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk,wk,neig,eig,w_iks,el,&
-       ello,evac,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
-    INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
-    REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
     TYPE(t_zMAT),OPTIONAL  :: zmat
 
@@ -242,19 +228,10 @@ CONTAINS
 
     nrec=nk+(jspin-1)*d%nkpts
     ! data from d%eig_int
-    IF (PRESENT(nv)) nv=d%eig_int(1,nrec)
-    IF (PRESENT(nmat)) nmat=d%eig_int(2,nrec)
     IF (PRESENT(neig)) THEN
-       neig=d%eig_int(3,nrec)
+       neig=d%eig_int(nrec)
     ENDIF
   
-    !data from d%eig_real
-    IF (PRESENT(bk)) bk=d%eig_real(1:3,nrec)
-    IF (PRESENT(wk)) wk=d%eig_real(4,nrec)
-    IF (PRESENT(evac)) evac=d%eig_real(5:6,nrec)
-    IF (PRESENT(el)) el=RESHAPE(d%eig_real(7:7+SIZE(el)-1,nrec),SHAPE(el))
-    IF (PRESENT(ello)) ello=RESHAPE(d%eig_real(SIZE(d%eig_real,1)-SIZE(ello)+1:,nrec),SHAPE(ello))
-
     !data from d%eig_eig
     IF (PRESENT(eig)) THEN
        eig=0.0
@@ -284,15 +261,11 @@ CONTAINS
   END SUBROUTINE read_eig
 
 
-  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk,wk, &
-       eig,w_iks,el,ello,evac,                     &
-       nlotot,n_size,n_rank,zmat)
+  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
-    REAL,    INTENT(IN),OPTIONAL :: wk
-    INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total,nv,nmat,nlotot
-    REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
-    REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
+    INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total
+    REAL,    INTENT(IN),OPTIONAL :: eig(:),w_iks(:)
     TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
     INTEGER::nrec
     TYPE(t_data_mem),POINTER:: d
@@ -300,24 +273,16 @@ CONTAINS
 
     nrec=nk+(jspin-1)*d%nkpts
     ! data from d%eig_int
-    IF (PRESENT(nv)) d%eig_int(1,nrec)=nv
-    IF (PRESENT(nmat)) d%eig_int(2,nrec)=nmat
     IF (PRESENT(neig)) THEN
        IF (PRESENT(neig_total)) THEN
           IF (neig.NE.neig_total) STOP "BUG in eig_mem"
-          d%eig_int(3,nrec)=neig_total
+          d%eig_int(nrec)=neig_total
        ELSE
           STOP "BUG2 in eig_mem"
        ENDIF
     ENDIF
 
   
-    !data from d%eig_real
-    IF (PRESENT(bk)) d%eig_real(1:3,nrec)=bk
-    IF (PRESENT(wk)) d%eig_real(4,nrec)=wk
-    IF (PRESENT(evac)) d%eig_real(5:6,nrec)=evac
-    IF (PRESENT(el)) d%eig_real(7:7+SIZE(el)-1,nrec)=RESHAPE(el,(/SIZE(el)/))
-    IF (PRESENT(ello)) d%eig_real(SIZE(d%eig_real,1)-SIZE(ello)+1:,nrec)=RESHAPE(ello,(/SIZE(ello)/))
     !data from d%eig_eig
     IF (PRESENT(eig)) THEN
        d%eig_eig(:SIZE(eig),1,nrec)=eig

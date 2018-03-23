@@ -18,24 +18,22 @@ module m_eig66_data
     END TYPE
 
     TYPE,EXTENDS(t_data):: t_data_DA
-        REAL,   ALLOCATABLE:: el_s(:,:),ello_s(:,:),evac_s(:)
-        INTEGER,ALLOCATABLE:: kvec_s(:,:),kveclo_s(:)
-        INTEGER            :: recl_bas=0,recl_vec=0,recl_dos,recl_wiks
+        INTEGER            :: recl_vec=0,recl_dos,recl_wiks
         CHARACTER(LEN=20)  :: fname="eig"
-        INTEGER            :: file_io_id_bas,file_io_id_vec,file_io_id_dos,file_io_id_wiks
+        INTEGER            :: file_io_id_vec,file_io_id_dos,file_io_id_wiks
     END TYPE
 
     TYPE,extends(t_data):: t_data_MPI
        INTEGER             :: n_size=1
        INTEGER             :: size_k,size_el,size_ello,size_eig
-       INTEGER             :: int_handle,real_handle,eig_handle,zr_handle,zc_handle,neig_handle,w_iks_handle
+       INTEGER             :: eig_handle,zr_handle,zc_handle,neig_handle,w_iks_handle
        INTEGER             :: qal_handle,qvac_handle,qis_handle,qvlay_handle,qintsl_handle,qmtsl_handle
        INTEGER             :: qmtp_handle,orbcomp_handle,qstars_handle,mcd_handle,jsym_handle,ksym_handle
        INTEGER,ALLOCATABLE :: pe_basis(:,:),slot_basis(:,:)
        INTEGER,ALLOCATABLE :: pe_ev(:,:,:),slot_ev(:,:,:)
        INTEGER             :: irank
-       INTEGER,POINTER     :: neig_data(:),int_data(:)
-       REAL,POINTER        :: eig_data(:),zr_data(:),real_data(:), w_iks_data(:)
+       INTEGER,POINTER     :: neig_data(:)
+       REAL,POINTER        :: eig_data(:),zr_data(:), w_iks_data(:)
        REAL,POINTER        :: qal_data(:),qvac_data(:),qis_data(:),qvlay_data(:)
        REAL,POINTER        :: qintsl_data(:),qmtsl_data(:),qmtp_data(:),orbcomp_data(:),mcd_data(:)
        COMPLEX,POINTER     :: qstars_data(:)
@@ -45,9 +43,7 @@ module m_eig66_data
     TYPE,EXTENDS(t_data):: t_data_hdf
 #ifdef CPP_HDF
          INTEGER(HID_T) :: fid
-         INTEGER(HID_T) :: esetid,evacsetid,ellosetid
-         INTEGER(HID_T) :: bksetid,wksetid,ksetid
-         INTEGER(HID_T) :: neigsetid,nvsetid,nmatsetid
+         INTEGER(HID_T) :: neigsetid
          INTEGER(HID_T) :: energysetid,wikssetid,evsetid
          INTEGER(HID_T) :: qalsetid,qvacsetid,qissetid,qvlaysetid
          INTEGER(HID_T) :: qstarssetid,ksymsetid,jsymsetid,mcdsetid
@@ -57,8 +53,7 @@ module m_eig66_data
       END TYPE
 
    TYPE,EXTENDS(t_data):: t_data_mem
-        INTEGER,ALLOCATABLE :: eig_int(:,:)
-        REAL,ALLOCATABLE    :: eig_real(:,:)
+        INTEGER,ALLOCATABLE :: eig_int(:)
         REAL,ALLOCATABLE    :: eig_eig(:,:,:)
         REAL,ALLOCATABLE    :: eig_vecr(:,:)
         COMPLEX,ALLOCATABLE :: eig_vecc(:,:)

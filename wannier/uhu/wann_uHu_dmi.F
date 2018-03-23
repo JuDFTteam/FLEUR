@@ -765,9 +765,9 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
-
-       call cdn_read0(eig_id,irank,isize,jspin5,jspd,l_noco, !wannierspin instead of jspd?
-     <                ello,evac,epar,wk,n_bands,n_size)
+       call judft_error("TODO:wann_uHU_dmi")
+!       call cdn_read0(eig_id,irank,isize,jspin5,jspd,l_noco, !wannierspin instead of jspd?
+!     <                ello,evac,epar,wk,n_bands,n_size)
 
        enddo
 

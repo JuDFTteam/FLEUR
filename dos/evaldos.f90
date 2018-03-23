@@ -164,7 +164,7 @@
             ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat),qintsl(nsld,dimension%neigd))
             ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%nat),qvac(dimension%neigd,2))
             ALLOCATE( qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
-            CALL read_eig(eig_id,k,jspin,wk=wt(k),neig=nevk(k),eig=ev(:,k))
+            CALL read_eig(eig_id,k,jspin,neig=nevk(k),eig=ev(:,k))
             CALL read_dos(eig_id,k,jspin,qal_tmp,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(qal_tmp,(/lmax*atoms%ntype,size(qal_tmp,3)/))
@@ -337,7 +337,7 @@
                  nevk,wt,ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 nevk(1:kpts%nkpt),wt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
+                 nevk(1:kpts%nkpt),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !

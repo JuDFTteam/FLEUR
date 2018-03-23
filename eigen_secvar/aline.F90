@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,DIMENSION,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD, bkpt,eig,ne,zMat,hmat,smat)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -54,7 +54,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (OUT) :: eig(DIMENSION%neigd),bkpt(3)
+    REAL,    INTENT (OUT) :: eig(DIMENSION%neigd)
     TYPE(t_mat),INTENT(IN):: hmat,smat
 
     !     ..
@@ -80,7 +80,7 @@ CONTAINS
 
 
     lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
-    CALL read_eig(eig_id,nk,jsp,bk=bkpt,neig=ne,nv=lapw%nv(jsp),nmat=lapw%nmat, eig=eig,zmat=zmat)
+    CALL read_eig(eig_id,nk,jsp,neig=ne, eig=eig,zmat=zmat)
     IF (l_real) THEN
        ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
        h_r = 0.0 ; s_r=0.0

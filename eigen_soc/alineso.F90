@@ -12,7 +12,7 @@ CONTAINS
        rsopp,rsoppd,rsopdp,rsopdpd,nk,&
        rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
        usdus,soangl,&
-       ello,nsize,nmat,&
+       nsize,nmat,&
        eig_so,zso)
 
 #include"cpp_double.h"
@@ -50,7 +50,7 @@ CONTAINS
     REAL,    INTENT (IN) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     COMPLEX, INTENT (IN) :: soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2)
     COMPLEX, INTENT (OUT) :: zso(:,:,:)!(dimension%nbasfcn,2*dimension%neigd,wannierspin)
-    REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd),ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd)
     !-odim
     !+odim
     !     ..
@@ -65,8 +65,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER :: nsz(2)
-    REAL    :: eig(DIMENSION%neigd,DIMENSION%jspd),s(3),bkpt(3)
-    REAL    :: epar(0:atoms%lmaxd,atoms%ntype),evac(2)
+    REAL    :: eig(DIMENSION%neigd,DIMENSION%jspd),s(3)
     REAL,   ALLOCATABLE :: rwork(:)
     COMPLEX,ALLOCATABLE :: cwork(:),chelp(:,:,:,:,:)
     COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:,:),bhelp(:,:,:,:,:)
@@ -113,9 +112,7 @@ CONTAINS
 
     DO jsp = 1,input%jspins
        CALL read_eig(&
-            eig_id,nk,jsp,&
-            el=epar,ello=ello(:,:,jsp),&
-            evac=evac,neig=ne,eig=eig(:,jsp))
+            eig_id,nk,jsp, neig=ne,eig=eig(:,jsp))
        CALL read_eig(&
                eig_id,nk,jsp,&
                n_start=1,n_end=ne,&

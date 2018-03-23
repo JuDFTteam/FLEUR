@@ -413,7 +413,7 @@ CONTAINS
                                ENDIF
                                ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
                                CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot)
+                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara)
                                IF(noco%l_soc.AND.input%gw.EQ.2) THEN
                                   CLOSE(4649)
                                   INQUIRE(1014,opened=l_endit)

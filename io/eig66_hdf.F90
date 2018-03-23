@@ -115,36 +115,12 @@ CONTAINS
        dims(:2)=(/nkpts,jspins/)
        CALL h5screate_simple_f(2,dims(:2),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "neig", H5T_NATIVE_INTEGER, spaceid, d%neigsetid, hdferr)
-       CALL h5dcreate_f(d%fid, "wk", H5T_NATIVE_DOUBLE,spaceid, d%wksetid, hdferr)
-       CALL h5dcreate_f(d%fid, "nv", H5T_NATIVE_INTEGER, spaceid, d%nvsetid, hdferr)
-       CALL h5dcreate_f(d%fid, "nmat", H5T_NATIVE_INTEGER, spaceid, d%nmatsetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
-       !   vectors
-       dims(1:3)=(/two,nkpts,jspins/)
-       CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-       CALL h5dcreate_f(d%fid, "evac", H5T_NATIVE_DOUBLE, spaceid, d%evacsetid, hdferr)
-       CALL h5sclose_f(spaceid,hdferr)
-       dims(:3)=(/three,nkpts,jspins/)
-       CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-       CALL h5dcreate_f(d%fid, "bk", H5T_NATIVE_DOUBLE, spaceid, d%bksetid, hdferr)
-       CALL h5sclose_f(spaceid,hdferr)
-       dims(:3)=(/neig,nkpts,jspins/)
-       CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
        !     ew
        CALL h5dcreate_f(d%fid, "energy", H5T_NATIVE_DOUBLE, spaceid, d%energysetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !     w_iks
        CALL h5dcreate_f(d%fid, "w_iks", H5T_NATIVE_DOUBLE, spaceid, d%wikssetid, hdferr)
-       CALL h5sclose_f(spaceid,hdferr)
-       !     enparas
-       dims(1:4)=(/lmax+1,ntype,nkpts,jspins/)
-       CALL h5screate_simple_f(4,dims(1:4),spaceid,hdferr)
-       CALL h5dcreate_f(d%fid, "el", H5T_NATIVE_DOUBLE, spaceid, d%esetid, hdferr)
-       CALL h5sclose_f(spaceid,hdferr)
-
-       dims(:4)=(/nlo,ntype,nkpts,jspins/)
-       CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-       CALL h5dcreate_f(d%fid, "ello", H5T_NATIVE_DOUBLE, spaceid, d%ellosetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !     ev
        if ( l_real .and..not.l_soc ) THEN
@@ -154,11 +130,6 @@ CONTAINS
        endif
        CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "ev", H5T_NATIVE_DOUBLE, spaceid, d%evsetid, hdferr)
-       CALL h5sclose_f(spaceid,hdferr)
-       !      basis
-       dims(:4)=(/nmat,three,nkpts,jspins/)
-       CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-       CALL h5dcreate_f(d%fid, "k", H5T_NATIVE_INTEGER, spaceid, d%ksetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !stuff for dos etc
        IF (d%l_dos) THEN
@@ -414,9 +385,7 @@ CONTAINS
      END SUBROUTINE write_dos
 
 
-     SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk,wk,&
-          &                  eig,w_iks,el,ello,evac,&
-          &                  nlotot,n_size,n_rank,zmat)
+     SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)
 
        !*****************************************************************
        !     writes all eignevecs for the nk-th kpoint
@@ -425,10 +394,8 @@ CONTAINS
 
        INTEGER, INTENT(IN)          :: id,nk,jspin
        INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
-       REAL,    INTENT(IN),OPTIONAL :: wk
-       INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
-       REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
-       REAL,    INTENT(IN),OPTIONAL :: evac(2),ello(:,:)
+       INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total
+       REAL,    INTENT(IN),OPTIONAL :: eig(:),w_iks(:)
        TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
        INTEGER i,j,k,nv_local,n1,n2,ne
@@ -440,39 +407,6 @@ CONTAINS
        !write enparas
        !
        nv_local=HUGE(1)
-
-       IF (PRESENT(el))&
-            &   CALL io_write_real2(&
-            &                    d%esetid,(/1,1,nk,jspin/),&
-            &                    (/SIZE(el,1),SIZE(el,2),1,1/),el)
-
-       IF (PRESENT(ello))&
-            & CALL io_write_real2(&
-            &                    d%ellosetid,(/1,1,nk,jspin/),&
-            &                    (/SIZE(ello,1),SIZE(ello,2),1,1/),ello)
-
-       IF (PRESENT(evac)) CALL io_write_real1(&
-            &                    d%evacsetid,(/1,nk,jspin/),(/2,1,1/),evac)
-       !
-       !write kpts
-       !
-
-       IF (PRESENT(bk)) CALL io_write_real1(&
-            &                    d%bksetid,(/1,nk,jspin/),(/3,1,1/),bk)
-
-       IF (PRESENT(wk)) CALL io_write_real0(&
-            &                    d%wksetid,(/nk,jspin/),(/1,1/),wk)
-       !
-       !write basis
-       !
-
-       IF (PRESENT(nv)) THEN
-          nv_local=nv
-          CALL io_write_integer0(d%nvsetid,(/nk,jspin/),(/1,1/),nv)
-       ENDIF
-
-       IF (PRESENT(nmat)) CALL io_write_integer0(&
-            &                       d%nmatsetid,(/nk,jspin/),(/1,1/),nmat)
 
        !
        !write eigenvalues
@@ -572,15 +506,11 @@ CONTAINS
 
 #endif
 
-     SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk,wk,neig,eig,w_iks,el,&
-          &            ello,evac,n_start,n_end,zMat)
+     SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zMat)
        IMPLICIT NONE
        INTEGER, INTENT(IN)            :: id,nk,jspin
-       INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
        INTEGER, INTENT(OUT),OPTIONAL  :: neig
        REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-       REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
-       REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
        INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
        TYPE(t_zMat),OPTIONAL  :: zmat
 
@@ -605,23 +535,6 @@ CONTAINS
              CALL io_read_real1(d%wikssetid,(/1,nk,jspin/),(/size(w_iks),1,1/),w_iks)
           ENDIF
        ENDIF
-
-     
-       IF (PRESENT(nv)) CALL io_read_integer0(d%nvsetid,(/nk,jspin/),(/1,1/),nv)
-
-       IF (PRESENT(nmat)) &
-            & CALL io_read_integer0(d%nmatsetid,(/nk,jspin/),(/1,1/),nmat)
-       IF (PRESENT(el)) CALL io_read_real2(d%esetid,(/1,1,nk,jspin/),&
-            &                   (/SIZE(el,1),SIZE(el,2),1,1/),el(:,:))
-       IF (PRESENT(ello)) CALL io_read_real2(d%ellosetid,(/1,1,nk,jspin/),&
-            &                   (/SIZE(ello,1),SIZE(ello,2),1,1/),ello(:,:))
-       IF (PRESENT(evac)) CALL io_read_real1(d%evacsetid,(/1,nk,jspin/),&
-            &                 (/2,1,1/),evac)
-
-       IF (PRESENT(bk)) CALL&
-            io_read_real1(d%bksetid,(/1,nk,jspin/),(/3,1,1/),bk)
-       IF (PRESENT(wk)) CALL&
-            io_read_real0(d%wksetid,(/nk,jspin/),(/1,1/),wk)
 
        IF (PRESENT(n_start)) THEN
           IF (.NOT.PRESENT(n_end)) CALL juDFT_error("BUG3 in read_eig")

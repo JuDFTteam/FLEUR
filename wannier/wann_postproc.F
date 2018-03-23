@@ -8,7 +8,7 @@
       contains 
       subroutine wann_postproc(
      >          DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
-     >          lapw,oneD,noco,cell,vTot,eig_id,l_real,
+     >          lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,wann,l_p0,film,jspins,n2d,
      >          natd,pos,amat,bmat,ntype,neq,zatom,
      >          omtil,l_soc,l_noco,neigd,fullnkpts,
@@ -80,6 +80,7 @@ c***********************************************
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
+      TYPE(t_enpara),INTENT(IN)    :: enpara
 
       type(t_wann), intent(in) :: wann
       logical,      intent(in) :: l_p0
@@ -447,7 +448,7 @@ c     >      volint,symor,pos,ef,wann%l_bzsym,irecl)
       if(wann%l_plot_umdat)then
          call wann_plot_um_dat(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >      lapw,oneD,noco,cell,vTot,eig_id,l_real,
+     >      lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,
      >      mpi_comm,i,wann%band_min,wann%band_max,l_soc,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,

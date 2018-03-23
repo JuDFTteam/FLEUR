@@ -14,7 +14,7 @@ c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
      >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,cell,vTot,eig_id,l_real,
+     >          lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
@@ -70,6 +70,7 @@ c******************************************************************
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
+      TYPE(t_enpara),INTENT(IN)    :: enpara
 
       integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
       logical, intent (in) :: l_soc,l_real
@@ -144,8 +145,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real     :: uuilon(nlod,ntypd),duilon(nlod,ntypd)
       real     :: ulouilopn(nlod,nlod,ntypd)
 !!! energy parameters
-      real     :: ello(nlod,ntypd,max(2,jspd)),evac(2,max(2,jspd))
-      real     :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(2,jspd))
       character(len=3) :: spin12(2)
       data spin12/'WF1' , 'WF2'/
       character(len=2)::spinspin12(2)
@@ -475,7 +474,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
       if (irank.eq.0) l_p0 = .true.
 
       call cdn_read0(eig_id,irank,isize,jspin,wannierspin,l_noco,
-     <               ello,evac,epar,wk,n_bands,n_size)
+     <               n_bands,n_size)
 
 
       allocate ( flo(ntypd,jmtd,2,nlod) )
@@ -485,14 +484,14 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        do 30 l = 0,lmax(n)
 c...compute the l-dependent, k-independent radial MT- basis functions
          call radfun(
-     >              l,n,jspin,epar(l,n,jspin),vr(1,n,jspin2),atoms,
+     >             l,n,jspin,enpara%el0(l,n,jspin),vr(1,n,jspin2),atoms,
      <              ff(n,:,:,l),gg(n,:,:,l),usdus,
      <              nodeu,noded,wronk)
    30  continue
 c...and the local orbital radial functions
 c       do ilo = 1, nlo(n)
          call radflo(
-     >             atoms,n,jspin,ello(:,:,jspin),vr(1,n,jspin2),
+     >             atoms,n,jspin,enpara%ello0(:,:,jspin),vr(1,n,jspin2),
      >             ff(n,1:,1:,0:),gg(n,1:,1:,0:),mpi,
      <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:))
 c       enddo
@@ -534,15 +533,10 @@ c******************************************************************
       ELSE
          ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
       END IF
-
-      call wann_read_eig(
-     >              eig_id,
-     >              lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat,
-     >              .false.,1)
+      CALL judft_error("TODO:adjust in wann_plot_um_dat")
+!      call wann_read_eig(eig_id, lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
+!     >     irank,isize,kptibz,jspin,nbasfcn,nlotot, l_ss,l_noco,nrec,
+!     <     nmat,nv, k1,k2,k3,bkpt,wk,nbands,eigg,zzMat, .false.,1)
 
       zMat%l_real = zzMat%l_real
       zMat%nbasfcn = zzMat%nbasfcn
@@ -636,7 +630,7 @@ c***********************************************************************
          call wann_2dvacabcof(
      >         nv2d,nslibd,nvac,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,
-     >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
+     >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
      >         bbmat,delz,bmat,nbasfcn,
      >         neigd,zMat,
      <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
@@ -650,7 +644,7 @@ c***********************************************************************
      >         DIMENSION,oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,odi,ods,
-     >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
+     >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
      >         bbmat,delz,bmat,nbasfcn,neigd,zMat,
      >         n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,phi2,k1d,k2d,k3d,
      <         ac_1,bc_1,u_1,ue_1,addnoco,l_ss,qss,jspin)
@@ -727,7 +721,7 @@ c**************************************************************************
                 jvac=ivac
                 if(nvac==1)jvac=1
                 call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
-     >            nmz,delz,bmat,bbmat,evac(:,jspin),bkpt,vz,jspin,
+     >         nmz,delz,bmat,bbmat,enpara%evac0(:,jspin),bkpt,vz,jspin,
      >            k1(:,jspin),k2(:,jspin),k3(:,jspin),nvd, 
      >            nbasfcn,neigd,nv(jspin),omtil,nslibd,
      >            ac(:,nbn,ivac),

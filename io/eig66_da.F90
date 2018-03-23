@@ -52,17 +52,10 @@ CONTAINS
     IF (PRESENT(filename)) d%fname=filename
     CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
 
-    !Allocate the storage for the DATA always read/write
-    ALLOCATE(d%el_s(0:lmax,ntype),d%ello_s(nlo,ntype),d%evac_s(2))
-    ALLOCATE(d%kvec_s(nmat,3),d%kveclo_s(nlotot))
     !Calculate the record length
-    INQUIRE(IOLENGTH=recl_eig) d%el_s,d%evac_s,d%ello_s,r3,r1,i1,i1,d%kvec_s,d%kveclo_s
-    d%recl_bas=recl_eig
-    INQUIRE(IOLENGTH=recl_eig) r1
 
+    INQUIRE(IOLENGTH=recl_eig) r1
     d%recl_wiks=recl_eig*neig
-    
-    print *,lmax,ntype,nlo,nlotot,nmat,neig
     
     recl_eig=recl_eig*(neig+2) ! add a 2 for integer 'neig'
     if (l_real.and..not.l_soc ) THEN
@@ -73,8 +66,6 @@ CONTAINS
     recl_z=recl_z*nmat*neig
     
     d%recl_vec=recl_eig+recl_z
-    print *,l_real,l_soc
-    print *,"reclen:",d%recl_vec,nmat,neig,recl_z,recl_eig
 
     IF (d%l_dos) THEN
        IF (.NOT.(PRESENT(layers).AND.PRESENT(nstars).AND.PRESENT(ncored).AND.PRESENT(nsld).AND.PRESENT(nat))) &
@@ -99,16 +90,14 @@ CONTAINS
 
 
     IF (create) THEN
-       d%file_io_id_bas=priv_free_uid()
-       INQUIRE(file=TRIM(d%fname)//".bas",opened=l_file)
+       INQUIRE(file=TRIM(d%fname),opened=l_file)
        DO WHILE(l_file)
           write(*,*) "eig66_open_da:",d%fname," in use"
           d%fname=TRIM(d%fname)//"6"
-          INQUIRE(file=TRIM(d%fname)//".bas",opened=l_file)
+          INQUIRE(file=TRIM(d%fname),opened=l_file)
        ENDDO
-       OPEN(d%file_io_id_bas,FILE=TRIM(d%fname)//".bas",ACCESS='direct',FORM='unformatted',RECL=d%recl_bas,STATUS='unknown')
        d%file_io_id_vec=priv_free_uid()
-       OPEN(d%file_io_id_vec,FILE=TRIM(d%fname)//".vec",ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='unknown')
+       OPEN(d%file_io_id_vec,FILE=TRIM(d%fname),ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='unknown')
        d%file_io_id_wiks=priv_free_uid()
        OPEN(d%file_io_id_wiks,FILE=TRIM(d%fname)//".wiks",ACCESS='direct',FORM='unformatted',RECL=d%recl_wiks,STATUS='unknown')
        IF(d%recl_dos>0) THEN
@@ -117,10 +106,8 @@ CONTAINS
        ENDIF
 
     ELSE
-       d%file_io_id_bas=priv_free_uid()
-       OPEN(d%file_io_id_bas,FILE=TRIM(d%fname)//".bas",ACCESS='direct',FORM='unformatted',RECL=d%recl_bas,STATUS='old')
        d%file_io_id_vec=priv_free_uid()
-       OPEN(d%file_io_id_vec,FILE=TRIM(d%fname)//".vec",ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='old')
+       OPEN(d%file_io_id_vec,FILE=TRIM(d%fname),ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='old')
        d%file_io_id_wiks=priv_free_uid()
        OPEN(d%file_io_id_wiks,FILE=TRIM(d%fname)//".wiks",ACCESS='direct',FORM='unformatted',RECL=d%recl_wiks,STATUS='old')
        IF(d%recl_dos>0) THEN
@@ -147,32 +134,25 @@ CONTAINS
 
     CALL priv_find_data(id,d)
 
-    DEALLOCATE(d%el_s,d%ello_s,d%evac_s,d%kvec_s,d%kveclo_s)
-    CLOSE(d%file_io_id_bas)
     CLOSE(d%file_io_id_vec)
     CLOSE(d%file_io_id_wiks)
     d%recl_vec=0
-    d%recl_bas=0
     d%recl_wiks=0
 
     !If a filename was given and the name is not the current filename then rename
     IF (PRESENT(filename)) THEN
        IF (filename.NE.d%fname) THEN
-          CALL system("mv "//TRIM(d%fname)//".bas "//TRIM(filename)//".bas")
-          CALL system("mv "//TRIM(d%fname)//".vec "//TRIM(filename)//".vec")
+          CALL system("mv "//TRIM(d%fname)//" "//TRIM(filename))
        ENDIF
     ENDIF
     d%fname="eig"
     CALL eig66_remove_data(id)
   END SUBROUTINE close_eig
-  SUBROUTINE read_eig(id,nk,jspin,nv,nmat,bk,wk,neig,eig,w_iks,el,ello,evac,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
-    INTEGER, INTENT(OUT),OPTIONAL  :: nv,nmat
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    REAL,    INTENT(OUT),OPTIONAL  :: evac(:),ello(:,:),el(:,:)
-    REAL,    INTENT(OUT),OPTIONAL  :: bk(:),wk
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
     TYPE(t_zmat),OPTIONAL  :: zmat
 
@@ -193,29 +173,16 @@ CONTAINS
     ENDIF
 
     nrec=nk+(jspin-1)*d%nkpts
-    IF (PRESENT(el).OR.PRESENT(ello).OR.PRESENT(evac).OR.PRESENT(bk).OR.PRESENT(wk).OR.&
-         PRESENT(nv).OR.PRESENT(nmat)) THEN
-       !IO of basis-set information
-       READ(d%file_io_id_bas,REC=nrec) nmat_s,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s,d%kveclo_s
-       IF (PRESENT(el)) el=d%el_s
-       IF (PRESENT(evac)) evac=d%evac_s
-       IF (PRESENT(ello)) ello=d%ello_s
-       IF (PRESENT(bk)) bk=bkpt
-       IF (PRESENT(wk)) wk=wtkpt
-       IF (PRESENT(nv)) nv=nv_s
-       IF (PRESENT(nmat)) nmat=nmat_s
-    ENDIF
-
+  
     IF (PRESENT(w_iks)) THEN
        print *, "R:w_iks:",nrec
         read(d%file_io_id_wiks,REC=nrec) w_iks
     ENDIF
-      
+  
     
     IF (.NOT.(PRESENT(eig).OR.PRESENT(neig).OR.PRESENT(zmat))) RETURN
     READ(d%file_io_id_vec,REC=nrec) neig_s
     IF (PRESENT(neig)) THEN
-       print *,"R:",neig_s
        neig=neig_s
     ENDIF
     IF (.NOT.(PRESENT(eig).OR.PRESENT(zmat))) RETURN
@@ -224,23 +191,16 @@ CONTAINS
        IF (zmat%l_real) THEN
           INQUIRE(IOLENGTH=n) neig_s,eig_s,REAL(zmat%z_r)
           IF (n>d%recl_vec) THEN
-             print *,n,d%recl_vec
-             print *,size(eig_s)
-             print *,size(zmat%z_r)
              CALL juDFT_error("BUG: Too long record")
           END IF
           READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_r
        ELSE
           INQUIRE(IOLENGTH=n) neig_s,eig_s,CMPLX(zmat%z_c)
           IF (n>d%recl_vec) THEN
-             print *,n,d%recl_vec
-             print *,size(eig_s)
-             print *,size(zmat%z_c)
              CALL juDFT_error("BUG: Too long record")
           END IF
           READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_c
        ENDIF
-       print *,"R:",nrec,nk,neig_s
     ELSE
        INQUIRE(IOLENGTH=n) neig_s,eig_s
        IF (n>d%recl_vec) CALL juDFT_error("BUG: Too long record")
@@ -250,14 +210,11 @@ CONTAINS
    
   END SUBROUTINE read_eig
 
-  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,nv,nmat,bk,wk, &
-       eig,w_iks,el,ello,evac,nlotot,n_size,n_rank,zmat)
+  SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)
     INTEGER, INTENT(IN)          :: id,nk,jspin
     INTEGER, INTENT(IN),OPTIONAL :: n_size,n_rank
-    REAL,    INTENT(IN),OPTIONAL :: wk
-    INTEGER, INTENT(IN),OPTIONAL :: neig,nv,nmat,nlotot,neig_total
-    REAL,    INTENT(IN),OPTIONAL :: bk(3),eig(:),el(:,:),w_iks(:)
-    REAL,    INTENT(IN),OPTIONAL :: evac(:),ello(:,:)
+    INTEGER, INTENT(IN),OPTIONAL :: neig,neig_total
+    REAL,    INTENT(IN),OPTIONAL :: eig(:),w_iks(:)
     TYPE(t_mat),INTENT(IN),OPTIONAL :: zmat
 
     INTEGER:: nrec,r_len
@@ -278,36 +235,12 @@ CONTAINS
 
     !Now it is time for the IO :-)
     nrec=nk+(jspin-1)*d%nkpts
-    IF (PRESENT(nmat).AND..NOT.PRESENT(el)) THEN
-       !IO of basis-set information
-       READ(d%file_io_id_bas,REC=nrec,ERR=88) nmat_s,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s
-88     WRITE(d%file_io_id_bas,REC=nrec)       nmat  ,d%el_s,d%evac_s,d%ello_s,bkpt,wtkpt,nv_s,d%kvec_s
-       IF (PRESENT(wk).OR.PRESENT(nv).OR.PRESENT(nlotot) &
-            .OR.&
-            PRESENT(bk).OR.PRESENT(ello).OR.PRESENT(evac)) THEN
-          CALL juDFT_error("BUG:Direct access IO of eig-file only with all scalar data")
-       ENDIF
-    ELSE IF (PRESENT(el)) THEN
-       IF (.NOT.(PRESENT(wk).AND.PRESENT(nv).AND.PRESENT(nmat).AND.PRESENT(nlotot) &
-            .AND.&
-            PRESENT(bk).AND.PRESENT(el).AND.PRESENT(ello).AND.PRESENT(evac))) THEN
-          CALL juDFT_error("BUG:Direct access IO of eig-file only with all data")
-       ENDIF
-       IF ((SIZE(el).NE.SIZE(d%el_s)).OR.(SIZE(ello).NE.SIZE(d%ello_s).OR.(SIZE(evac).NE.SIZE(d%evac_s)))) THEN
-          WRITE(*,*) SHAPE(el),SHAPE(d%el_s)
-          WRITE(*,*) SHAPE(ello),SHAPE(d%ello_s)
-          WRITE(*,*) SHAPE(evac),SHAPE(d%evac_s)
-          CALL juDFT_error("Mismatch of sizes")
-       ENDIF
-       WRITE(d%file_io_id_bas,REC=nrec) nmat,el,evac,ello,bk,wk,nv,d%kvec_s
-    ENDIF
     IF (PRESENT(neig).AND.PRESENT(neig_total)) THEN
        IF (neig.NE.neig_total) THEN
           CALL juDFT_error("Neig and neig_total have to be equal in DA mode",calledby="eig66_da")
        ENDIF
     ENDIF
     IF (PRESENT(w_iks)) THEN
-       print *, "W:w_iks:",nrec
        write(d%file_io_id_wiks,REC=nrec) w_iks
     ENDIF
  
@@ -324,7 +257,6 @@ CONTAINS
           IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")
           WRITE(d%file_io_id_vec,REC=nrec) neig,eig(:neig),CMPLX(zmat%data_c)
        ENDIF
-       print *,"W:",nrec,nk,neig
     ELSE
        INQUIRE(IOLENGTH=r_len) neig,eig
        IF (r_len>d%recl_vec) CALL juDFT_error("BUG: too long record")

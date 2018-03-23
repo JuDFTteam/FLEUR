@@ -21,7 +21,7 @@ MODULE m_eigenso
   !
 CONTAINS
   SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                     obsolete,sym,cell,noco,input,kpts,oneD,vTot)
+                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara)
 
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb 
@@ -46,6 +46,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: vTot
+    TYPE(t_enpara),INTENT(IN)    :: enpara
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id       
@@ -56,7 +57,6 @@ CONTAINS
     INTEGER n_loc,n_plus,i_plus,n_end,nsz,nmat
     LOGICAL l_socvec   !,l_all
     INTEGER wannierspin
-    TYPE(t_enpara) :: enpara
     TYPE(t_usdus):: usdus
     !     ..
     !     .. Local Arrays..
@@ -89,10 +89,8 @@ CONTAINS
          usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
          usdus%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
-         usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
-         enpara%evac0(2,DIMENSION%jspd),enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
-         enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
-
+         usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd))
+   
     IF (input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
     ELSE
@@ -101,15 +99,8 @@ CONTAINS
 
     !
     !---> set up and solve the eigenvalue problem
+    ! --->    radial k-idp s-o matrix elements calc. and storage
     !
-    !--->    radial k-idp s-o matrix elements calc. and storage
-    !
-    DO jspin = 1, input%jspins
-       CALL read_eig(eig_id,&
-            1,jspin,&
-            el=enpara%el0(:,:,jspin),&
-            ello=enpara%ello0(:,:,jspin),evac=enpara%evac0(:,jspin))
-    ENDDO
 #if defined(CPP_MPI)
     !RMA synchronization
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
@@ -215,14 +206,10 @@ CONTAINS
        ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,lapw,&
-            mpi,DIMENSION,atoms,sym,kpts,&
-            input,noco,cell,oneD,&
-            rsopp,rsoppd,rsopdp,rsopdpd,nk,&
+       CALL alineso(eig_id,lapw, mpi,DIMENSION,atoms,sym,kpts,&
+            input,noco,cell,oneD, rsopp,rsoppd,rsopdp,rsopdpd,nk,&
             rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
-            usdus,soangl,&
-            enpara%ello0,nsz,nmat,&
-            eig_so,zso)
+            usdus,soangl, nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
           WRITE (16,FMT=8010) nk,nsz
@@ -233,18 +220,14 @@ CONTAINS
 8020   FORMAT (5x,5f12.6)
 
        IF (input%eonly) THEN
-          CALL write_eig(eig_id,&
-               nk,jspin,neig=nsz,neig_total=nsz,nmat=SIZE(zso,1),&
-               eig=eig_so(:nsz))
+          CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
 
        ELSE          
           CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
           DO jspin = 1,wannierspin
              CALL timestart("eigenso: write_eig")  
              zmat%data_c=zso(:,:nsz,jspin)
-             CALL write_eig(eig_id,&
-                  nk,jspin,neig=nsz,neig_total=nsz,nmat=nmat,&
-                  eig=eig_so(:nsz),zmat=zmat)
+             CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
 
              CALL timestop("eigenso: write_eig")  
           ENDDO

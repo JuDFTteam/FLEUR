@@ -106,7 +106,7 @@ CONTAINS
 
           DO ikpt=1,kpts%nkpt
              call read_eig(eig_id,ikpt,kspin,&
-                                 bk=bkpt,wk=wk,neig=ne,eig=eig)
+                                 neig=ne,eig=eig)
              call read_dos(eig_id,ikpt,kspin,&
                   &              qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
                   &              qis(:,ikpt,kspin),&
@@ -114,8 +114,8 @@ CONTAINS
 
              CALL cdninf(&
                   &              input,sym,noco,kspin,atoms,&
-                  &              vacuum,sliceplot,banddos,ikpt,bkpt,&
-                  &              wk,cell,kpts,&
+                  &              vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
+                  &              kpts%wtkpt(ikpt),cell,kpts,&
                   &              ne,eig,qal(0:,:,:,kspin),qis,qvac,&
                   &              qvlay(:,:,:),&
                   &              qstars,ksym,jsym)

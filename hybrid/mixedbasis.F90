@@ -198,7 +198,8 @@ CONTAINS
 
 
     DO jsp=1,DIMENSION%jspd
-       CALL read_eig(eig_id,1,jsp,el=el(:,:,jsp),ello=ello(:,:,jsp))
+       CALL judft_error("TODO,mixedbasis")
+!       CALL read_eig(eig_id,1,jsp,el=el(:,:,jsp),ello=ello(:,:,jsp))
     ENDDO
 
     ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )

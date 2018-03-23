@@ -17,7 +17,7 @@
      >                     eig_id,
      >                     irank,isize,jspin,jspins,
      >                     l_noco,
-     <                     ello,evac,epar,wk,n_bands,n_size)
+     <                     n_bands,n_size)
       USE m_eig66_io, ONLY : read_eig
       IMPLICIT NONE
 !
@@ -29,27 +29,17 @@
 
 
       INTEGER, INTENT (OUT) :: n_size
-      REAL,    INTENT (INOUT) :: wk
-
+ 
       INTEGER, INTENT (OUT) :: n_bands(0:) !n_bands(0:neigd)
-      REAL,    INTENT (INOUT) :: ello(:,:,:),evac(:,:) !ello(nlod,ntypd,jspd),evac(2,jspd)
-      REAL,    INTENT (INOUT) :: epar(0:,:,:) !epar(0:lmaxd,ntypd,jspd)
-
+ 
       INTEGER isp
 
       IF (l_noco) THEN
          CALL read_eig(eig_id,1,1,
      <                 neig=n_bands(1))
-         DO isp = 1, jspins
-           CALL read_eig(eig_id,1,isp,
-     <             el=epar(:,:,isp),ello=ello(:,:,isp),evac=evac(:,isp))
-         ENDDO
-
       ELSE
          CALL read_eig(eig_id,1,jspin,
-     <                 neig=n_bands(1),el=epar(:,:,jspin),
-     <                 ello=ello(:,:,jspin),evac=evac(:,jspin))
-
+     <                 neig=n_bands(1))
       ENDIF
 c
 c n_size is the number of records per k-point,
@@ -67,8 +57,7 @@ c
      >                    eig_id,nvd,jspd,irank,isize,
      >                    ikpt,jspin,nbasfcn,l_ss,l_noco,
      >                    noccbd,n_start,n_end,
-     <                    ello,evdu,epar,
-     <                    wk,nbands,eig,zmat)
+     <                    nbands,eig,zmat)
 
       USE m_eig66_io, ONLY : read_eig
       USE m_types
@@ -82,12 +71,9 @@ c
       INTEGER, INTENT (IN) :: noccbd,n_start,n_end
       LOGICAL, INTENT (IN) :: l_ss,l_noco
       INTEGER, INTENT (OUT) :: nbands
-      REAL,    INTENT (OUT) :: wk
-
+   
       REAL,    INTENT (OUT) :: eig(:) !bkpt(3),eig(neigd)
-      REAL,    INTENT (INOUT) :: ello(:,:,:),evdu(:,:) !ello(nlod,ntypd,jspd),evdu(2,jspd)
-      REAL,    INTENT (INOUT) :: epar(0:,:,:) !epar(0:lmaxd,ntypd,jspd)
-
+   
       TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
 !
 ! Local variables ...
@@ -103,34 +89,23 @@ c
 !
       CALL timestart("cdn_read")
       IF (l_ss) THEN
-        CALL read_eig(eig_id,ikpt,1,
-     <                wk=wk,neig=nbands)
-        DO isp = jspd,1,-1
-          CALL read_eig(eig_id,ikpt,isp,
-     <                    nmat=nmat)
-!         write(*,*) kveclo
-        ENDDO
-        CALL read_eig(
-     >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,nmat=nmat,zmat=zmat)
+         CALL read_eig(eig_id,ikpt,1, neig=nbands)
+         CALL read_eig(eig_id,ikpt,1,n_start=n_start,n_end=n_end,
+     <                 eig=eig,zmat=zmat)
 !
 ! For Non-Collinear, but no Spin-Spirals
 !
       ELSEIF (l_noco) THEN
-        CALL read_eig(
-     >                eig_id,ikpt,1,
-     <                wk=wk,neig=nbands,
-     <                  nmat=nmat)
+            CALL read_eig(
+     >        eig_id,ikpt,1, neig=nbands)
         CALL read_eig(
      >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,nmat=nmat,zmat=zmat)
+     <                 eig=eig,zmat=zmat)
   !
 ! For Collinear
 !
       ELSE
-         CALL read_eig(eig_id,ikpt,jspin,
-     <                   nmat=nmat)
-
+ 
          IF (zmat%l_real) THEN
             zmat%z_r=0
          ELSE
@@ -140,7 +115,6 @@ c
      
       CALL read_eig(
      >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
-     <                  wk=wk,
      <                  neig=nbands,eig=eig,
      <                  zmat=zmat)
 
@@ -149,8 +123,6 @@ c
       
 !      IF (nbands>neigd)   CALL juDFT_error("nbands.GT.neigd",calledby
 !     +     ="cdn_read")
-      IF (nmat>nbasfcn)   CALL juDFT_error("nmat.GT.nbasfcn",calledby
-     +     ="cdn_read")
-
+    
       END SUBROUTINE cdn_read
       END MODULE m_cdnread

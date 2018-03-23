@@ -2,7 +2,7 @@ This directory and its subdirectories contain the automatic tests for FLEUR.
 
 They can be executed after compiling by running "ctest".
 
-The following changes have to me made to create a new test:
+The following changes have to be made to create a new test:
 
 A) Create the test scripts. Follow for example the files in tests/tests/CuBulk
 1. create a sub-directory under tests/tests/TESTNAME containing your testcase
@@ -10,4 +10,18 @@ A) Create the test scripts. Follow for example the files in tests/tests/CuBulk
 3. in TESTNAME directory create one or more test.run1, test.run2... etc files that will be executed
 4. in TESTNAME/file put files you need 
  
-B) Add the test to tests/CMakeLists.txt by including the testdirectory into the list of tests.
+B) Create a file called 'LABELS' in TESTNAME directory containing a list of labels for cmake
+The following labels should be specified if appropriate
+FLEUR : test for FLEUR
+INPGEN: test for inpgen
+MPI   : test also in MPI mode, otherwise only serial tests are performed
+QUICK : test runs fast (less than approx. 60s)
+WANNIER:use Wannier library
+
+in addition, you should add labels describing features that are tested:
+bulk,film,xml,collinear,soc,lo,ldau,non-collinear,spinspiral,inversion,forces,...
+
+For example the file might look like this:
+FLEUR;MPI;bulk;lo
+
+
