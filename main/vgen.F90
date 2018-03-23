@@ -399,7 +399,7 @@ CONTAINS
           ENDDO
           vCoul%iter = vTot%iter
           vCoul%mt = vTot%mt
-          vCoul%pw(:,1:2) = vpw_w(:,1:2)
+          vCoul%pw(:,1:input%jspins) = vpw_w(:,1:input%jspins)
           vCoul%vacz = vTot%vacz
           vCoul%vacxy = vTot%vacxy
 
