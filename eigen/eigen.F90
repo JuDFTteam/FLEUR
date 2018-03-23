@@ -8,6 +8,7 @@
 !More description at end of file
 MODULE m_eigen
   USE m_juDFT
+  IMPLICIT NONE
 CONTAINS
   !>The eigenvalue problem is constructed and solved in this routine. The following steps are performed:
   !> 1. Preparation: generate energy parameters, open eig-file
