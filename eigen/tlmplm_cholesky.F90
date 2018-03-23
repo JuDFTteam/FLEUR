@@ -40,7 +40,7 @@ MODULE m_tlmplm_cholesky
       REAL temp,wronk
       INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
       INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,noded,nodeu ,na,m,nsym,s,i_u
-      LOGICAL l_write,ok
+      LOGICAL l_write,OK
       !     ..
       !     .. Local Arrays ..
       REAL vr0(size(v%mt,1),0:size(v%mt,2)-1,size(v%mt,3))
@@ -58,14 +58,13 @@ MODULE m_tlmplm_cholesky
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       COMPLEX :: c
       
-      REAL,PARAMETER:: e_shift_min=0.2
+      REAL,PARAMETER:: e_shift_min=0.02
       REAL,PARAMETER:: e_shift_max=65.0
     
     vr0=v%mt(:,:,:,jsp)
     vr0(:,0,:)=0.0
     !     ..e_shift
-    td%e_shift(jsp)=e_shift_min
-    OK=.FALSE.
+    td%e_shift(:,jsp)=e_shift_min
 
    
      IF (noco%l_constr) THEN
@@ -74,29 +73,32 @@ MODULE m_tlmplm_cholesky
        CALL rad_ovlp(atoms,ud,input,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
     ENDIF
     
-    cholesky_loop:DO WHILE(.NOT.OK)
-       td%h_loc(:,:,:,jsp)=0.0
-       td%h_off=0.0
-       OK=.true.
-       td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
-       td%tuulo(:,:,:,jsp) = cmplx(0.0,0.0)
-       td%tuloulo(:,:,:,jsp) = cmplx(0.0,0.0)
+    l_write = mpi%irank==0
 
-       !
-       !--->    generate the wavefunctions for each l
-       !
-       l_write=mpi%irank==0
-!!$    l_write=.false.
-!!$    call gaunt2(atoms%lmaxd)
-!!$OMP PARALLEL DO DEFAULT(NONE)&
-!!$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
-!!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
-!!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
-!!$OMP PRIVATE(nodeu,nsym,na)&
-!!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,ci,v,mpi,input)
-       DO  n = 1,atoms%ntype
-          na=sum(atoms%neq(:n-1))+1
-          
+    td%tdulo(:,:,:,jsp) = cmplx(0.0,0.0)
+    td%tuulo(:,:,:,jsp) = cmplx(0.0,0.0)
+    td%tuloulo(:,:,:,jsp) = cmplx(0.0,0.0)
+
+    td%h_off=0.0
+!$    l_write=.false.
+!$    call gaunt2(atoms%lmaxd)
+!$OMP PARALLEL DO DEFAULT(NONE)&
+!$OMP PRIVATE(indt,dvd,dvu,uvd,uvu,f,g,x,flo,uuilon,duilon,ulouilopn)&
+!$OMP PRIVATE(cil,temp,wronk,i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl)&
+!$OMP PRIVATE(lmplm,lmx,lmxx,lp,lp1,lpl,m,mem,mems,mp,mu,n,nh,noded)&
+!$OMP PRIVATE(nodeu,nsym,na,OK,s,in,info,c)&
+!$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,l_write,v,mpi,input,vr0)&
+!$OMP SHARED(noco,uun21,udn21,dun21,ddn21)
+    DO  n = 1,atoms%ntype
+       na=sum(atoms%neq(:n-1))+1
+       OK=.FALSE.
+
+       cholesky_loop:DO WHILE(.NOT.OK)
+          td%h_loc(:,:,n,jsp)=0.0
+          OK=.TRUE.
+          !
+          !--->    generate the wavefunctions for each l
+          !
           IF (l_write) WRITE (6,FMT=8000) n
           DO l = 0,atoms%lmax(n)
              CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),v%mt(:,0,n,jsp),atoms,&
@@ -123,7 +125,7 @@ MODULE m_tlmplm_cholesky
           nh = sphhar%nlh(nsym)
           !
           !--->    generate the irreducible integrals (u(l'):v(lamda,nu:u(l))
-          !--->    for l' .ge. l, but only thos that will contribute
+          !--->    for l' .ge. l, but only those that will contribute
           !
           DO lp = 0,atoms%lmax(n)
              lp1 = (lp* (lp+1))/2
@@ -299,8 +301,8 @@ MODULE m_tlmplm_cholesky
           DO lp = 0,atoms%lnonsph(n)
              DO mp = -lp,lp
                 lmp = lp* (lp+1) + mp
-                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(jsp)+td%h_loc(lmp,lmp,n,jsp)
-                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
+                td%h_loc(lmp,lmp,n,jsp)=td%e_shift(n,jsp)+td%h_loc(lmp,lmp,n,jsp)
+                td%h_loc(lmp+s,lmp+s,n,jsp)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc(lmp+s,lmp+s,n,jsp)
              END DO
           END DO
           IF (lmp+1.ne.s) call judft_error("BUG in tlmpln_cholesky")
@@ -316,13 +318,13 @@ MODULE m_tlmplm_cholesky
           ENDDO
          
           IF (info.NE.0) THEN
-             td%e_shift(jsp)=td%e_shift(jsp)*2.0
-             PRINT *,"Potential shift to small, increasing the value to:",td%e_shift(jsp)
-             IF (td%e_shift(jsp)>e_shift_max) THEN
+             td%e_shift(n,jsp)=td%e_shift(n,jsp)*2.0
+             PRINT *,"Potential shift to small, increasing the value to:",td%e_shift(n,jsp)
+             IF (td%e_shift(n,jsp)>e_shift_max) THEN
                  CALL judft_error("Potential shift at maximum")
-              ENDIF
-              OK=.FALSE.
-              CYCLE cholesky_loop
+             ENDIF
+             OK=.FALSE.
+             CYCLE cholesky_loop
           ENDIF
 
           !
@@ -361,9 +363,10 @@ MODULE m_tlmplm_cholesky
           ENDIF
           
           
-       ENDDO
-!!$OMP END PARALLEL DO
-    ENDDO cholesky_loop
+       ENDDO cholesky_loop
+    ENDDO
+!$OMP END PARALLEL DO
+
   END SUBROUTINE tlmplm_cholesky
 
 
