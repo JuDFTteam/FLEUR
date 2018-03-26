@@ -58,7 +58,7 @@ MODULE m_tlmplm_cholesky
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       COMPLEX :: c
       
-      REAL,PARAMETER:: e_shift_min=0.02
+      REAL,PARAMETER:: e_shift_min=0.5
       REAL,PARAMETER:: e_shift_max=65.0
     
     vr0=v%mt(:,:,:,jsp)
