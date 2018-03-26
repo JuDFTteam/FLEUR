@@ -94,6 +94,10 @@ CONTAINS
        vis(imeshpt,3) = beff*SIN(theta)*COS(phi)
        !--->    and the imaginary part of V_21
        vis(imeshpt,4) = beff*SIN(theta)*SIN(phi)
+
+       DO ipot = 1,4
+          vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
+       ENDDO
     ENDDO
 
     !---> Fouriertransform the matrix potential back to reciprocal space
