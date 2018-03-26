@@ -61,7 +61,7 @@
 
       INTEGER  itria(3,2*kpts%nkpt),nevk(kpts%nkpt),itetra(4,6*kpts%nkpt)
       INTEGER, ALLOCATABLE :: ksym(:),jsym(:)
-      REAL     wt(kpts%nkpt),voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
+      REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
       REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:),qal_tmp(:,:,:),qis(:),qvlay(:,:,:)
@@ -334,7 +334,7 @@
 !
             IF ( .not.l_mcd ) THEN
             CALL dos_bin(input%jspins,qdim,ned,emin,emax,dimension%neigd,kpts%nkpt,&
-                 nevk,wt,ev,qal, g)
+                 nevk,kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
                  nevk(1:kpts%nkpt),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)

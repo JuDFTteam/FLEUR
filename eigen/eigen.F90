@@ -19,7 +19,7 @@ CONTAINS
   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
   !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-       sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,banddos, noco,jij, oneD,hybrid,&
+       sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,enpara,banddos, noco,jij, oneD,hybrid,&
        it,eig_id,results,inden,v,vx)
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
@@ -49,7 +49,7 @@ CONTAINS
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
-    TYPE(t_enpara),INTENT(INOUT) :: enpara_in
+    TYPE(t_enpara),INTENT(INOUT) :: enpara_in,enpara
     TYPE(t_obsolete),INTENT(IN)  :: obsolete
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -91,7 +91,6 @@ CONTAINS
     TYPE(t_tlmplm)  :: td
     TYPE(t_usdus)   :: ud
     TYPE(t_lapw)    :: lapw
-    TYPE(t_enpara)  :: enpara
     CLASS(t_Mat),ALLOCATABLE    :: zMat
     CLASS(t_mat),ALLOCATABLE    :: hmat,smat
     TYPE(T_mat)     :: olap

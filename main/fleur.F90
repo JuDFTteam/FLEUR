@@ -93,7 +93,7 @@ CONTAINS
     TYPE(t_sliceplot):: sliceplot
     TYPE(t_banddos)  :: banddos
     TYPE(t_obsolete) :: obsolete
-    TYPE(t_enpara)   :: enpara
+    TYPE(t_enpara)   :: enpara,enpara_out
     TYPE(t_xcpot)    :: xcpot
     TYPE(t_results)  :: results
     TYPE(t_jij)      :: jij
@@ -378,7 +378,7 @@ CONTAINS
                                CALL timestart("eigen")
                                vTemp = vTot
                                CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-                                    sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,jij,oneD,hybrid,&
+                                    sym,kpts,DIMENSION,vacuum,input,cell,enpara,enpara_out,banddos,noco,jij,oneD,hybrid,&
                                     it,eig_id,results,inDenRot,vTemp,vx)
                                vTot%mmpMat = vTemp%mmpMat
                                eig_idList(pc) = eig_id
@@ -413,7 +413,7 @@ CONTAINS
                                ENDIF
                                ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
                                CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara)
+                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara_out)
                                IF(noco%l_soc.AND.input%gw.EQ.2) THEN
                                   CLOSE(4649)
                                   INQUIRE(1014,opened=l_endit)
@@ -572,7 +572,7 @@ CONTAINS
              CALL timestart("generation of new charge density (total)")
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-                         enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
+                         enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
                          inDen%iter,inDen,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
