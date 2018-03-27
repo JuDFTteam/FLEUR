@@ -2,7 +2,7 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-       vacuum,dimension,sphhar,sym,obsolete,igq_fft,vr,vz,oneD,coreSpecInput,den,results,&
+       vacuum,dimension,sphhar,sym,obsolete,igq_fft,vTot,oneD,coreSpecInput,den,results,&
        qvac,qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
@@ -91,24 +91,25 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_mpi),INTENT(IN)   :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
-    TYPE(t_oneD),INTENT(IN)   :: oneD
-    TYPE(t_enpara),INTENT(INOUT)   :: enpara
-    TYPE(t_obsolete),INTENT(IN)   :: obsolete
-    TYPE(t_banddos),INTENT(IN)   :: banddos
-    TYPE(t_sliceplot),INTENT(IN)   :: sliceplot
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_sym),INTENT(IN)   :: sym
-    TYPE(t_stars),INTENT(IN)   :: stars
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_kpts),INTENT(IN)   :: kpts
-    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_results),INTENT(INOUT)    :: results
+    TYPE(t_mpi),INTENT(IN)           :: mpi
+    TYPE(t_dimension),INTENT(IN)     :: dimension
+    TYPE(t_oneD),INTENT(IN)          :: oneD
+    TYPE(t_enpara),INTENT(INOUT)     :: enpara
+    TYPE(t_obsolete),INTENT(IN)      :: obsolete
+    TYPE(t_banddos),INTENT(IN)       :: banddos
+    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
+    TYPE(t_input),INTENT(IN)         :: input
+    TYPE(t_vacuum),INTENT(IN)        :: vacuum
+    TYPE(t_noco),INTENT(IN)          :: noco
+    TYPE(t_sym),INTENT(IN)           :: sym
+    TYPE(t_stars),INTENT(IN)         :: stars
+    TYPE(t_cell),INTENT(IN)          :: cell
+    TYPE(t_kpts),INTENT(IN)          :: kpts
+    TYPE(t_sphhar),INTENT(IN)        :: sphhar
+    TYPE(t_atoms),INTENT(IN)         :: atoms
     TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
+    TYPE(t_potden),INTENT(IN)        :: vTot
     TYPE(t_potden),INTENT(INOUT)     :: den
 
     !     .. Scalar Arguments ..
@@ -117,8 +118,6 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
     INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
-    REAL, INTENT    (IN) :: vz(vacuum%nmzd,2)
-    REAL, INTENT    (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd)
     REAL, INTENT (INOUT) :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
@@ -370,7 +369,7 @@ CONTAINS
        DO  l = 0,atoms%lmax(n)
           DO ispin =jsp_start,jsp_end
              CALL radfun(&
-                  l,n,ispin,enpara%el0(l,n,ispin),vr(1,0,n,ispin),atoms,&
+                  l,n,ispin,enpara%el0(l,n,ispin),vTot%mt(1,0,n,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus,&
                   nodeu,noded,wronk)
              IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8002) l,&
@@ -388,14 +387,14 @@ CONTAINS
        IF (l_mcd) THEN
           CALL mcd_init(&
                atoms,input,dimension,&
-               vr(:,0,:,:),g,f,emcd_up,emcd_lo,n,jspin,&
+               vTot%mt(:,0,:,:),g,f,emcd_up,emcd_lo,n,jspin,&
                ncore,e_mcd,m_mcd)
           ncored = max(ncore(n),ncored)
        END IF
 
        IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
                                   input%jspins,jspin,results%ef,&
-                                  dimension%msh,vr(:,0,:,:),f,g)
+                                  dimension%msh,vTot%mt(:,0,:,:),f,g)
 
        !
        !--->   generate the extra wavefunctions for the local orbitals,
@@ -403,7 +402,7 @@ CONTAINS
        !
        IF ( atoms%nlo(n) > 0 ) THEN
           DO ispin = jsp_start,jsp_end
-             CALL radflo(atoms,n,ispin, enpara%ello0(1,1,ispin),vr(:,0,n,ispin), f(1,1,0,ispin),&
+             CALL radflo(atoms,n,ispin, enpara%ello0(1,1,ispin),vTot%mt(:,0,n,ispin), f(1,1,0,ispin),&
                   g(1,1,0,ispin),mpi, usdus, uuilon,duilon,ulouilopn, flo(:,:,:,ispin))
           END DO
        END IF
@@ -427,7 +426,7 @@ CONTAINS
          'wronskian')
 8002 FORMAT (i3,f10.5,2 (5x,1p,2e16.7,i5),1p,2e16.7)
 
-    IF (input%film) vz0(:) = vz(vacuum%nmz,:)
+    IF (input%film) vz0(:) = vTot%vacz(vacuum%nmz,:,jspin)
     nsld=1
     !+q_sl
     IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
@@ -570,7 +569,7 @@ CONTAINS
                   sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),&
                   input,jspin,kpts,&
                   cell,kpts%wtkpt(ikpt),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                  enpara%evac0(1,jspin),vz,vz0,&
+                  enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),vz0,&
                   gvac1d,gvac2d)
           END IF
 
@@ -674,7 +673,7 @@ CONTAINS
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                        gvac1d,gvac2d, we,ikpt,jspin,vz,vz0, noccbd,lapw, enpara%evac0,eig,&
+                        gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),vz0, noccbd,lapw, enpara%evac0,eig,&
                         den,qvac,qvlay, qstars,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
@@ -937,7 +936,7 @@ CONTAINS
        CALL cdnmt(&
             dimension%jspd,atoms,sphhar,llpd,&
             noco,l_fmpl,jsp_start,jsp_end,&
-            enpara%el0,enpara%ello0,vr(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
+            enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
             usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
             orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
             uunmt21,ddnmt21,udnmt21,dunmt21,&
@@ -950,7 +949,7 @@ CONTAINS
              CALL mix_enpara(&
                   ispin,atoms,vacuum,obsolete,input,&
                   enpara,&
-                  vr(:,0,:,:),vz,pvac(1,ispin),&
+                  vTot%mt(:,0,:,:),vTot%vacz(:,:,jspin),pvac(1,ispin),&
                   svac(1,ispin),&
                   ener(0,1,ispin),sqal(0,1,ispin),&
                   enerlo(1,1,ispin),&
@@ -974,7 +973,7 @@ CONTAINS
           !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) THEN
              CALL timestart("cdnval: force_a8")
-             CALL force_a8(input,atoms,sphhar, ispin, vr(:,:,:,ispin),den%mt,&
+             CALL force_a8(input,atoms,sphhar, ispin, vTot%mt(:,:,:,ispin),den%mt,&
                   f_a12,f_a21,f_b4,f_b8,results%force)
              CALL timestop("cdnval: force_a8")
           END IF

@@ -127,7 +127,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL timestart("cdngen: cdnval")
       CALL cdnval(eig_id,&
                   mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
-                  sphhar,sym,obsolete,igq_fft,vTot%mt,vTot%vacz(:,:,jspin),oneD,coreSpecInput,&
+                  sphhar,sym,obsolete,igq_fft,vTot,oneD,coreSpecInput,&
                   outDen,results,qvac,qvlay,qa21, chmom,clmom)
       CALL timestop("cdngen: cdnval")
 !-fo
