@@ -7,7 +7,7 @@ MODULE m_vgen
   USE m_juDFT
 CONTAINS
   SUBROUTINE vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,&
-       vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco,den,denRot,vTot,vx,vCoul,vNRP)
+       vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco,den,denRot,vTot,vx,vCoul)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -69,7 +69,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(INOUT)     :: atoms !vr0 is updated
     TYPE(t_potden), INTENT(IN)      :: den, denRot
-    TYPE(t_potden),INTENT(INOUT)    :: vTot,vx,vCoul,vNRP
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,vx,vCoul
     !     ..
     !     .. Scalar Arguments ..
     LOGICAL, INTENT (IN) :: reap
@@ -805,17 +805,17 @@ CONTAINS
              CLOSE(9)
           ENDIF
 
-          vNRP = vTot !store non-reanalyzed potential in vNRP
-
           !     **************** reanalyze vpw *************************
           !                        call cpu_time(cp0)
 
           IF (input%total) THEN
-             DO js=1,input%jspins
-                DO i=1,stars%ng3
-                   vTot%pw(i,js)=vpw_w(i,js)/stars%nstr(i)
+             IF (.NOT.noco%l_noco) THEN ! In the noco case this is done in vmatgen...
+                DO js=1,input%jspins
+                   DO i=1,stars%ng3
+                      vTot%pw(i,js)=vpw_w(i,js)/stars%nstr(i)
+                   ENDDO
                 ENDDO
-             ENDDO
+             END IF
 
              DO js=1,input%jspins
                 DO i=1,stars%ng3
@@ -843,7 +843,6 @@ CONTAINS
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
-       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vNRP)
 #endif
 
      END SUBROUTINE vgen
