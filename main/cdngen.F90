@@ -29,7 +29,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdntot
    USE m_cdnovlp
    USE m_qfix
-   USE m_rwnoco
+   USE m_genNewNocoInp
    USE m_types
    USE m_xmlOutput
    USE m_magMoms
@@ -73,9 +73,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    !Local Scalars
    REAL fix,qtot,scor,stot,sval,dummy
-   INTEGER iter,ivac,j,jspin,jspmax,k,n
-   INTEGER itype,iatom
-   LOGICAL l_relax_any,exst, l_enpara
+   INTEGER iter,ivac,j,jspin,jspmax,k,iType
+   LOGICAL l_enpara
 
    !Local Arrays
    REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd),alpha_l(atoms%ntype)
@@ -84,7 +83,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
 
    !pk non-collinear (start)
-   REAL    alphdiff
    INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
    COMPLEX,ALLOCATABLE :: qa21(:), cdomvz(:,:)
    !pk non-collinear (end)
@@ -130,19 +128,15 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,obsolete,igq_fft,vTot,oneD,coreSpecInput,&
                   outDen,results,qvac,qvlay,qa21, chmom,clmom)
       CALL timestop("cdngen: cdnval")
-!-fo
    END DO
 
    ! lda+u
    IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
 
-!+t3e
    IF (mpi%irank.EQ.0) THEN
-!-t3e
       IF (l_enpara) CLOSE (40)
       CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, outDen%pw,outDen%mt,outDen%vacz,.TRUE., qtot,dummy)
       CALL closeXMLElement('valenceDensity')
-!---> changes
    END IF ! mpi%irank = 0
 
    CALL cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
@@ -171,51 +165,22 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          IF (input%jspins.EQ.2) THEN
             WRITE (6,FMT=8000)
             WRITE (16,FMT=8000)
-            DO n = 1,atoms%ntype
-               sval = svdn(n,1) - svdn(n,input%jspins)
-               stot = stdn(n,1) - stdn(n,input%jspins)
+            DO iType = 1,atoms%ntype
+               sval = svdn(iType,1) - svdn(iType,input%jspins)
+               stot = stdn(iType,1) - stdn(iType,input%jspins)
                scor = stot - sval
-               WRITE (6,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
-               WRITE (16,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
+               WRITE (6,FMT=8010) iType,stot,sval,scor,svdn(iType,1),stdn(iType,1)
+               WRITE (16,FMT=8010) iType,stot,sval,scor,svdn(iType,1),stdn(iType,1)
             END DO
 
             noco_new = noco
 
             CALL magMoms(dimension,input,atoms,noco_new,vTot,chmom,qa21)
 
-            !save the new nocoinp file if the dierctions of the local
+            !Generate and save the new nocoinp file if the directions of the local
             !moments are relaxed or a constraint B-field is calculated.
-            l_relax_any = .false.
-            DO itype = 1,atoms%ntype
-               l_relax_any = l_relax_any.OR.noco%l_relax(itype)
-            END DO
-            IF (l_relax_any.OR.noco%l_constr) THEN
-               IF (.not. noco%l_mperp) THEN
-                  CALL juDFT_error ("(l_relax_any.OR.noco).AND.(.NOT. )" ,calledby ="cdngen")
-               END IF
-               iatom = 1
-               DO itype = 1, atoms%ntype
-                  IF (noco%l_ss) THEN
-                     alphdiff = 2.0*pi_const*(noco%qss(1)*atoms%taual(1,iatom) + &
-                                              noco%qss(2)*atoms%taual(2,iatom) + &
-                                              noco%qss(3)*atoms%taual(3,iatom) )
-                     noco_new%alph(itype) = noco%alph(itype) - alphdiff
-                     DO WHILE (noco_new%alph(n) > +pi_const)
-                        noco_new%alph(n)= noco_new%alph(n) - 2.*pi_const
-                     END DO
-                     DO WHILE (noco_new%alph(n) < -pi_const)
-                        noco_new%alph(n)= noco_new%alph(n) + 2.*pi_const
-                     END DO
-                  ELSE
-                     noco_new%alph(itype) = noco%alph(itype)
-                  END IF
-                  iatom= iatom + atoms%neq(n)
-               END DO
-
-               OPEN (24,file='nocoinp',form='formatted', status='old')
-               REWIND (24)
-               CALL rw_noco_write(atoms,jij,noco_new, input)
-               CLOSE (24)
+            IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
+               CALL genNewNocoInp(input,atoms,jij,noco,noco_new)
             END IF
 
             IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,clmom)
