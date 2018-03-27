@@ -20,12 +20,11 @@ MODULE m_constants
    REAL,             PARAMETER :: eVac0Default_const = -0.25
    CHARACTER(len=9), PARAMETER :: version_const = 'fleur 27'
 
-   INTEGER,          PARAMETER :: POTDEN_TYPE_OTHER   =    0
-   INTEGER,          PARAMETER :: POTDEN_TYPE_POTTOT  =    1
+   INTEGER,          PARAMETER :: POTDEN_TYPE_OTHER   =    0 ! POTDEN_TYPE <= 0 ==> undefined
+   INTEGER,          PARAMETER :: POTDEN_TYPE_POTTOT  =    1 ! 0 < POTDEN_TYPE <= 1000 ==> potential
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTCOUL =    2
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTX    =    3
-   INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001
-
+   INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001 ! 1000 < POTDEN_TYPE ==> density
 
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
         'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&

@@ -31,22 +31,19 @@ CONTAINS
     USE m_vvacis
     USE m_vvacxy
     USE m_vintcz
-    USE m_checkdop
+    USE m_checkdopall
     USE m_wrtdop
     USE m_cdn_io
     USE m_qfix
     USE m_types
     USE m_od_vvac
     USE m_od_vvacis
-    USE m_cylpts
     USE m_convol
     USE m_xyavden
     USE m_psqpw
     USE m_potmod
     USE m_intgr,         ONLY : intgr3
     USE m_cfft
-    USE m_sphpts
-    USE m_points
     USE m_fleur_vdw
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
@@ -80,11 +77,11 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX vintcza,xint,rhobar
     INTEGER i,i3,irec2,irec3,ivac,j,js,k,k3,lh,n,nzst1
-    INTEGER imz,imzxy,ichsmrg,ivfft,npd 
+    INTEGER imz,imzxy,ichsmrg,ivfft
     INTEGER ifftd,ifftd2, ifftxc3d,datend
     INTEGER itypsym,itype,jsp,l,nat
     !      INTEGER i_sm,n_sm,i_sta,i_end
-    REAL ani,g3,signum,z,rhmn,mfie,fermiEnergyTemp
+    REAL ani,g3,z,rhmn,mfie,fermiEnergyTemp
     REAL sig1dh,vz1dh,zat_l(atoms%ntype),rdum,dpdot ! ,delta,deltb,corr
     LOGICAL l_pottot,l_vdw,l_qfix
     LOGICAL exi
@@ -93,7 +90,7 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: alphm(:,:)
     COMPLEX, ALLOCATABLE :: excpw(:),excxy(:,:,:),vpw_w(:,:),psq(:)
-    REAL,    ALLOCATABLE :: vbar(:),af1(:),bf1(:),xp(:,:)
+    REAL,    ALLOCATABLE :: vbar(:),af1(:),bf1(:)
     REAL,    ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
     REAL,    ALLOCATABLE :: tec(:,:), qintc(:,:)
     !.....potential
@@ -128,7 +125,7 @@ CONTAINS
     CALL vx%resetPotDen()
 
     ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),xp(3,dimension%nspd),&
+         vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),&
          vpw_exx(stars%ng3,dimension%jspd),vpw_wexx(stars%ng3,dimension%jspd),&
          excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
          vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
@@ -288,36 +285,8 @@ CONTAINS
 
        IF (input%vchk) THEN
           CALL timestart("checking")
-          !           ----> vacuum boundaries
-          IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             npd = MIN(dimension%nspd,25)
-             CALL points(xp,npd)
-             DO ivac = 1,vacuum%nvac
-                signum = 3. - 2.*ivac
-                xp(3,:npd) = signum*cell%z1/cell%amat(3,3)
-                CALL checkdop(xp,npd,0,0,ivac,1,1,.FALSE.,dimension,atoms, sphhar,stars,sym,&
-                     vacuum,cell,oneD, vTot%pw,vTot%mt,vTot%vacxy,vTot%vacz)
-             ENDDO
-          ELSEIF (oneD%odi%d1) THEN
-             !-odim
-             npd = MIN(dimension%nspd,25)
-             CALL cylpts(xp,npd,cell%z1)
-             !           DO j = 1,npd
-             !              xp(1,j) = xp(1,j)/amat(1,1)
-             !              xp(2,j) = xp(2,j)/amat(2,2)
-             !           ENDDO
-             CALL checkdop(xp,npd,0,0,vacuum%nvac,1,1,.FALSE.,dimension,atoms,&
-                  sphhar,stars,sym, vacuum,cell,oneD, vTot%pw,vTot%mt,vTot%vacxy,vTot%vacz)
-             !+odim
-          END IF
-          !           ----> m.t. boundaries
-          nat = 1
-          DO  n = 1,atoms%ntype
-             CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,nat))
-             CALL checkdop(xp,dimension%nspd,n,nat,0,-1,1,.FALSE.,dimension,atoms,&
-                  sphhar,stars,sym, vacuum,cell,oneD, vTot%pw,vTot%mt,vTot%vacxy,vTot%vacz)
-             nat = nat + atoms%neq(n)
-          ENDDO
+          CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+                           cell,vTot,1)
           CALL timestop("checking")
        END IF
        !
@@ -619,38 +588,9 @@ CONTAINS
        !     ---> check continuity of total potential
 
        IF (input%vchk) THEN
-          !           ----> vacuum boundaries
-          IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-             npd = MIN(dimension%nspd,25)
-             CALL points(xp,npd)
-             DO ivac = 1,vacuum%nvac
-                signum = 3. - 2.*ivac
-                xp(3,:npd) = signum*cell%z1/cell%amat(3,3)
-                CALL checkdop(xp,npd,0,0,ivac,1,1,.FALSE.,dimension,atoms, sphhar,stars,sym,&
-                     vacuum,cell,oneD, vTot%pw,vTot%mt,vTot%vacxy,vTot%vacz)
-             ENDDO ! ivac = 1,vacuum%nvac
-          ELSEIF (oneD%odi%d1) THEN
-             !-odim
-             npd = MIN(dimension%nspd,25)
-             CALL cylpts(xp,npd,cell%z1)
-             !           DO j = 1,npd
-             !              xp(1,j) = xp(1,j)/amat(1,1)
-             !              xp(2,j) = xp(2,j)/amat(2,2)
-             !           ENDDO
-             CALL checkdop(xp,npd,0,0,vacuum%nvac,1,1,.FALSE.,dimension,atoms,&
-                  sphhar,stars,sym, vacuum,cell,oneD, vTot%pw,vTot%mt,vTot%vacxy,vTot%vacz)
-             !+odim
-          END IF
-          !           ----> m.t. boundaries
-          nat = 1
-          DO n = 1, atoms%ntype
-             CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,nat))
-             CALL checkdop(xp,dimension%nspd,n,nat,0,-1,1,.FALSE.,dimension,&
-                  atoms,sphhar,stars,sym, vacuum,cell,oneD, vTot%pw,vTot%mt,vTot%vacxy,vTot%vacz)
-             nat = nat + atoms%neq(n)
-          ENDDO ! n = 1, atoms%ntype
+          CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+                           cell,vTot,1)
        END IF
-
 
        CALL pot_mod(atoms,sphhar,vacuum,stars, input, vTot%mt,vTot%vacxy,vTot%vacz,vTot%pw,vpw_w)
        !

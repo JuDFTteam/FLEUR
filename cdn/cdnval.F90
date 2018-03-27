@@ -53,8 +53,6 @@ CONTAINS
     USE m_rhomtlo
     USE m_rhonmtlo
     USE m_mcdinit
-    USE m_sphpts
-    USE m_points
     USE m_sympsi
     USE m_enpara, ONLY : w_enpara,mix_enpara
     USE m_eparas      ! energy parameters and partial charges
@@ -68,7 +66,7 @@ CONTAINS
     USE m_forcea8
     USE m_forcea12
     USE m_forcea21
-    USE m_checkdop    ! check continuity of density on MT radius R
+    USE m_checkdopall
     USE m_int21       ! integrate (spin) off-diagonal radial functions
     USE m_int21lo     ! -"- for u_lo
     USE m_rhomt21     ! calculate (spin) off-diagonal MT-density coeff's
@@ -83,7 +81,6 @@ CONTAINS
     USE m_Ekwritesl   ! and write to file.
     USE m_abcrot2
     USE m_doswrite
-    USE m_cylpts
     USE m_cdnread, ONLY : cdn_read0, cdn_read
     USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
     USE m_corespec_io, only : corespec_init
@@ -133,17 +130,17 @@ CONTAINS
     !     .. Local Scalars ..
     TYPE(t_lapw):: lapw
     INTEGER :: llpd
-    REAL wronk,sign,emcd_lo,emcd_up
+    REAL wronk,emcd_lo,emcd_up
     INTEGER i,ie,iv,ivac,j,k,l,l1,lh ,n,ilo,isp,nat,&
          nbands,noded,nodeu,noccbd,nslibd,na,&
-         ikpt,npd ,jsp_start,jsp_end,ispin
+         ikpt,jsp_start,jsp_end,ispin
     INTEGER  skip_t,skip_tt
     INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l
     COMPLEX,parameter:: czero=(0.0,0.0)
     LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
-    REAL    cartk(3),xp(3,dimension%nspd),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
+    REAL    cartk(3),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
     REAL    eig(dimension%neigd)
     REAL    vz0(2)
     REAL    uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
@@ -967,48 +964,11 @@ CONTAINS
           !--->      check continuity of charge density
           IF (input%cdinf) THEN
              CALL timestart("cdnval: cdninf-stuff")
-
              WRITE (6,FMT=8210) ispin
 8210         FORMAT (/,5x,'check continuity of cdn for spin=',i2)
-             IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-                !--->             vacuum boundaries
-                npd = min(dimension%nspd,25)
-                CALL points(xp,npd)
-                DO ivac = 1,vacuum%nvac
-                   sign = 3. - 2.*ivac
-                   DO j = 1,npd
-                      xp(3,j) = sign*cell%z1/cell%amat(3,3)
-                   END DO
-                   CALL checkdop(&
-                        xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
-                        sphhar,stars,sym,&
-                        vacuum,cell,oneD,&
-                        den%pw,den%mt,den%vacxy,den%vacz)
-                END DO
-             ELSE IF (oneD%odi%d1) THEN
-                !-odim
-                npd = min(dimension%nspd,25)
-                CALL cylpts(xp,npd,cell%z1)
-                CALL checkdop(&
-                     xp,npd,0,0,ivac,1,ispin,.true.,dimension,atoms,&
-                     sphhar,stars,sym,&
-                     vacuum,cell,oneD,&
-                     den%pw,den%mt,den%vacxy,den%vacz)
-                !+odim
-             END IF
-             !--->          m.t. boundaries
-             nat = 1
-             DO n = 1, atoms%ntype
-                CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,atoms%nat))
-                CALL checkdop(&
-                     xp,dimension%nspd,n,nat,0,-1,ispin,.true.,&
-                     dimension,atoms,sphhar,stars,sym,&
-                     vacuum,cell,oneD,&
-                     den%pw,den%mt,den%vacxy,den%vacz)
-                nat = nat + atoms%neq(n)
-             END DO
+             CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+                              cell,den,ispin)
              CALL timestop("cdnval: cdninf-stuff")
-
           END IF
           !+for
           !--->      forces of equ. A8 of Yu et al.
