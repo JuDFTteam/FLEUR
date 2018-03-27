@@ -147,8 +147,28 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    WRITE(6,*)'Assuming collinear magnetization.'
    150 CLOSE (nrhomfile)
    IF (.NOT. sliceplot%slice) THEN 
-      CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-                qpw,rhtxy,rho,rht,.FALSE.,.true.,fix)
+      CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,inp%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+      den%iter = iter
+      den%mt(:,0:,1:,:input%jspins) = rho(:,0:,1:,:input%jspins)
+      den%pw(1:,:input%jspins) = qpw(1:,:input%jspins)
+      den%vacz(1:,1:,:input%jspins) = rht(1:,1:,:input%jspins)
+      den%vacxy(1:,1:,1:,:input%jspins) = rhtxy(1:,1:,1:,:input%jspins)
+      IF(noco%l_noco) THEN
+         den%pw(:,3) = cdom
+         den%vacz(:,:,3) = REAL(cdomvz(:,:))
+         den%vacz(:,:,4) = AIMAG(cdomvz(:,:))
+         den%vacxy(:,:,:,3) = cdomvxy
+      END IF
+      CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.true.,fix)
+      rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
+      qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
+      rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
+      rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
+      IF(noco%l_noco) THEN
+         cdom = den%pw(:,3)
+         cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
+         cdomvxy = den%vacxy(:,:,:,3)
+      END IF
    END IF
 
    !---> for testing: read offdiag. output density matrix

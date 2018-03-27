@@ -146,8 +146,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       !block 2 unnecessary for slicing: begin
       IF (.NOT.sliceplot%slice) THEN
          CALL openXMLElementNoAttributes('allElectronCharges')
-         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
-                   outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,.TRUE.,.true.,fix)
+         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,outDen,.TRUE.,.true.,fix)
          CALL closeXMLElement('allElectronCharges')
          !pk non-collinear (start)
          IF (noco%l_noco) THEN
