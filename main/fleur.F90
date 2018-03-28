@@ -176,11 +176,10 @@ CONTAINS
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
     CALL inDenRot%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-    IF (noco%l_noco) THEN
-       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-    ELSE
-       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-    END IF
+
+    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+    IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,fermiEnergyTemp,l_qfix,inDen)
@@ -569,10 +568,12 @@ CONTAINS
              !-Wannier
 
              CALL timestart("generation of new charge density (total)")
+             CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+             outDen%iter = inDen%iter
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                          enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                         inDen,outDen)
+                         archiveType,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e

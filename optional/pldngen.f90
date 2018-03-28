@@ -69,9 +69,9 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
 
    ! Local Scalars
    INTEGER :: nrhomfile=26   
-   INTEGER iden,ivac,ifft2,ifft3
+   INTEGER iden,ivac,ifft2,ifft3,archiveType
    INTEGER imz,ityp,iri,ilh,imesh,lh,iq2,iq3,iter
-   REAL cdnup,cdndown,chden,mgden,theta,phi,zero,rho_11,rziw
+   REAL cdnup,cdndown,chden,mgden,theta,phi,zero,rho_11,rziw,fermiEnergyTemp
    REAL rho_22,rho_21r,rho_21i,rhotot,mx,my,mz,fix,vz_r,vz_i
    COMPLEX czero
    CHARACTER*8 dop,iop,name(10)
@@ -86,9 +86,9 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    !---> for testing: output of offdiag. output density matrix. to plot the
    !---> offdiag. part of the output density matrix, that part has to be
    !---> written the file rhomt21 in cdnmt.
-   LOGICAL :: l_fmpl2
-   REAL    :: cdn11, cdn22  
-   COMPLEX :: cdn21 
+   LOGICAL :: l_fmpl2, l_qfix
+   REAL    :: cdn11, cdn22
+   COMPLEX :: cdn21
    COMPLEX, ALLOCATABLE :: rho21(:,:,:)
    !---> end of test part
 
@@ -120,34 +120,28 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    END IF
 
    !---> reload the density matrix from file rhomat_inp
-   IF (.NOT. sliceplot%slice) THEN  
-      OPEN (nrhomfile,FILE='rhomat_inp',FORM='unformatted',STATUS='unknown')
+   archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+   IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   IF (.NOT.sliceplot%slice) THEN
+      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                       0,fermiEnergyTemp,l_qfix,den)
    ELSE
-      OPEN (nrhomfile,FILE='cdn_slice',FORM='unformatted',STATUS='unknown')
+      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                       0,fermiEnergyTemp,l_qfix,den,'cdn_slice')
    END IF
-   !---> first the diagonal elements of the density matrix
-   CALL loddop(stars,vacuum,atoms,sphhar,input,sym,nrhomfile,&
-               iter,rho,qpw,rht,rhtxy)
-   !---> and then the off-diagonal part
-   READ (nrhomfile,END=100,ERR=50) (cdom(iq3),iq3=1,stars%ng3)
-   IF (input%film) THEN
-      READ (nrhomfile,END=75,ERR=50) ((cdomvz(imz,ivac),imz=1,vacuum%nmz),ivac=1,vacuum%nvac)
-      READ (nrhomfile,END=75,ERR=50) (((cdomvxy(imz,iq2-1,ivac),imz=1,vacuum%nmzxy),iq2=2,stars%ng2),ivac=1,vacuum%nvac)
+   rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
+   qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
+   rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
+   rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
+   IF(noco%l_noco) THEN
+      cdom = den%pw(:,3)
+      cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
+      cdomvxy = den%vacxy(:,:,:,3)
    END IF
-   GOTO 150
-   50 WRITE(6,*)'rhodirgen: ERROR: Problems while reading density'
-   WRITE(6,*)'matrix from file rhomat_inp.'
-   CALL juDFT_error("rhomatdir: ERROR while reading file rhomat_inp",calledby ="pldngen")
-   75 WRITE(6,*)'rhomatdir: ERROR: reached end of file rhomat_inp'
-   WRITE(6,*)'while reading the vacuum part of the off-diagonal'
-   WRITE(6,*)'element of the desity matrix.'
-   CALL juDFT_error("rhomatdir: ERROR while reading file rhomat_inp",calledby ="pldngen")
-   100 WRITE(6,*)'rhodirgen: WARNING: The file rhomat_inp does not'
-   WRITE(6,*)'contain off-diagonal part of the density matrix.'
-   WRITE(6,*)'Assuming collinear magnetization.'
-   150 CLOSE (nrhomfile)
-   IF (.NOT. sliceplot%slice) THEN 
-      CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,inp%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+
+   IF (.NOT. sliceplot%slice) THEN
+      CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
       den%iter = iter
       den%mt(:,0:,1:,:input%jspins) = rho(:,0:,1:,:input%jspins)
       den%pw(1:,:input%jspins) = qpw(1:,:input%jspins)
@@ -340,25 +334,28 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
                      0,-1.0,0.0,.FALSE.,den)
 
    !---> save mx to file mdnx
-   OPEN (72,FILE='mdnx',FORM='unformatted',STATUS='unknown')
-   CALL wrtdop(stars,vacuum,atoms,sphhar,&
-               inp,sym,72,iter,rho(:,0:,1:,2:2),qpw(1:,2:2),rht(1:,1:,2:2),&
-               rhtxy(1:,1:,1:,2:2))
-   CLOSE (72)
+   den%mt(:,0:,1:,1) = rho(:,0:,1:,2)
+   den%pw(1:,1) = qpw(1:,2)
+   den%vacz(1:,1:,1) = rht(1:,1:,2)
+   den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den,'mdnx')
 
    !---> save my to file mdny
-   OPEN (72,FILE='mdny',FORM='unformatted',STATUS='unknown')
-   CALL wrtdop(stars,vacuum,atoms,sphhar,&
-               inp,sym,72,iter,rho(:,0:,1:,3:3),qpw(1:,3:3),rht(1:,1:,3:3),&
-               rhtxy(1:,1:,1:,3:3))
-   CLOSE (72)
+   den%mt(:,0:,1:,1) = rho(:,0:,1:,3)
+   den%pw(1:,1) = qpw(1:,3)
+   den%vacz(1:,1:,1) = rht(1:,1:,3)
+   den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den,'mdny')
 
    !---> save mz to file mdnz
-   OPEN (72,FILE='mdnz',FORM='unformatted',STATUS='unknown')
-   CALL wrtdop(stars,vacuum,atoms,sphhar,&
-               inp,sym,72,iter,rho(:,0:,1:,4:4),qpw(1:,4:4),rht(1:,1:,4:4),&
-               rhtxy(1:,1:,1:,4:4))
-   CLOSE (72)
+   den%mt(:,0:,1:,1) = rho(:,0:,1:,4)
+   den%pw(1:,1) = qpw(1:,4)
+   den%vacz(1:,1:,1) = rht(1:,1:,4)
+   den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den,'mdnz')
 
    DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,ris,fftwork,rvacxy,rho,rht)
 

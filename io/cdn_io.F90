@@ -133,7 +133,7 @@ MODULE m_cdn_io
 
 
    SUBROUTINE readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                          relCdnIndex,fermiEnergy,l_qfix,den)
+                          relCdnIndex,fermiEnergy,l_qfix,den,inFilename)
 
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -150,6 +150,8 @@ MODULE m_cdn_io
       INTEGER, INTENT (IN)      :: archiveType
       REAL,    INTENT (OUT)     :: fermiEnergy
       LOGICAL, INTENT (OUT)     :: l_qfix
+
+      CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
       ! local variables
       INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l, numLines, ioStatus, iofl
@@ -179,10 +181,13 @@ MODULE m_cdn_io
          densityType = 0
          archiveName = ''
 
-         INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+         filename = 'cdn.hdf'
+         IF(PRESENT(inFilename)) filename = TRIM(ADJUSTL(inFilename))//'.hdf'
+
+         INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
             IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
                archiveName = 'cdn'
@@ -213,7 +218,7 @@ MODULE m_cdn_io
 
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+                             currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
                                 fermiEnergy,l_qfix,l_DimChange,den)
@@ -225,8 +230,8 @@ MODULE m_cdn_io
                            1,-1.0,fermiEnergy,l_qfix,den)
             END IF
          ELSE
-            WRITE(*,*) 'cdn.hdf file or relevant density entry not found.'
-            WRITE(*,*) 'Falling back to stream access file cdn.str.'
+            WRITE(*,*) TRIM(ADJUSTL(filename))//' file or relevant density entry not found.'
+            WRITE(*,*) 'Falling back to stream access.'
             mode = CDN_STREAM_MODE
          END IF
 #endif
@@ -259,6 +264,8 @@ MODULE m_cdn_io
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
             filename = 'cdn'
          END IF
+
+         IF(PRESENT(inFilename)) filename = inFilename
 
          INQUIRE(file=TRIM(ADJUSTL(filename)),EXIST=l_exist)
          IF(.NOT.l_exist) THEN
@@ -341,7 +348,7 @@ MODULE m_cdn_io
    END SUBROUTINE readDensity
 
    SUBROUTINE writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-                           relCdnIndex,distance,fermiEnergy,l_qfix,den)
+                           relCdnIndex,distance,fermiEnergy,l_qfix,den,inFilename)
 
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -358,6 +365,8 @@ MODULE m_cdn_io
       INTEGER, INTENT (IN)      :: archiveType
       REAL,    INTENT (IN)      :: fermiEnergy, distance
       LOGICAL, INTENT (IN)      :: l_qfix
+
+      CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
       TYPE(t_stars)        :: starsTemp
       TYPE(t_vacuum)       :: vacuumTemp
@@ -406,7 +415,7 @@ MODULE m_cdn_io
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
          CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, sphhar, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -490,6 +499,8 @@ MODULE m_cdn_io
          IF (archiveType.EQ.CDN_ARCHIVE_TYPE_CDN_const) THEN
             filename = 'cdn'
          END IF
+
+         IF(PRESENT(inFilename)) filename = inFilename
 
          IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(den%iter.EQ.0)) THEN
             INQUIRE(file=TRIM(ADJUSTL(filename)),EXIST=l_exist)

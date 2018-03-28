@@ -54,15 +54,18 @@ MODULE m_cdnpot_io_hdf
 #ifdef CPP_HDF
 
    SUBROUTINE openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+                          currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
       INTEGER(HID_T), INTENT(OUT) :: fileID
       INTEGER, INTENT(OUT) :: currentStarsIndex,currentLatharmsIndex,currentStructureIndex
       INTEGER, INTENT(OUT) :: currentStepfunctionIndex, readDensityIndex,lastDensityIndex
 
+      CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
+
       INTEGER(HID_T) :: generalGroupID
       INTEGER        :: hdfError, fileFormatVersion
       LOGICAL        :: l_exist
+      CHARACTER(LEN=30) :: filename
 
       currentStarsIndex = 0
       currentLatharmsIndex = 0
@@ -72,9 +75,12 @@ MODULE m_cdnpot_io_hdf
       lastDensityIndex = 0
       fileFormatVersion = 0
 
-      INQUIRE(FILE='cdn.hdf',EXIST=l_exist)
+      filename = 'cdn.hdf'
+      IF(PRESENT(inFilename)) filename = TRIM(ADJUSTL(inFilename))//'.hdf'
+
+      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
       IF(l_exist) THEN ! only open file
-         CALL h5fopen_f('cdn.hdf', H5F_ACC_RDWR_F, fileID, hdfError, H5P_DEFAULT_F)
+         CALL h5fopen_f(TRIM(ADJUSTL(filename)), H5F_ACC_RDWR_F, fileID, hdfError, H5P_DEFAULT_F)
 
          CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
          ! read in primary attributes from the header '/general'
@@ -88,11 +94,11 @@ MODULE m_cdnpot_io_hdf
 
          CALL h5gclose_f(generalGroupID, hdfError)
          IF(fileFormatVersion.GT.FILE_FORMAT_VERSION_const) THEN
-            WRITE(*,'(a,i4)') 'cdn.hdf has file format version ', fileFormatVersion
-            CALL juDFT_error('cdn.hdf file format not readable.' ,calledby ="openCDN_HDF")
+            WRITE(*,'(a,i4)') TRIM(ADJUSTL(filename))//' has file format version ', fileFormatVersion
+            CALL juDFT_error(TRIM(ADJUSTL(filename))//' file format not readable.' ,calledby ="openCDN_HDF")
          END IF
       ELSE ! create file
-         CALL h5fcreate_f('cdn.hdf', H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
+         CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
          CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
          ! write initial values to primary attributes in the header '/general'

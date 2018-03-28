@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
                   enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                  inDen,outDen)
+                  archiveType,outDen)
 
    !*****************************************************
    !    Charge density generator
@@ -61,10 +61,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
-   TYPE(t_potden),INTENT(INOUT)     :: inDen,outDen
+   TYPE(t_potden),INTENT(INOUT)     :: outDen
 
    !Scalar Arguments
-   INTEGER, INTENT (IN)             :: eig_id
+   INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
    TYPE(t_noco) :: noco_new
@@ -85,8 +85,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    COMPLEX,ALLOCATABLE :: qa21(:), cdomvz(:,:)
    !pk non-collinear (end)
 
-   CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-
    IF (mpi%irank.EQ.0) THEN
       INQUIRE(file='enpara',exist=l_enpara)
       IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
@@ -101,8 +99,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    qvac(:,:,:,:) = 0.0 
    qvlay(:,:,:,:,:) = 0.0
 
-   outDen%iter = inDen%iter
-        
    !Set up pointer for backtransformation of from g-vector in
    !positive domain fof carge density fftibox into stars
    !In principle this can also be done in main program once.
@@ -186,27 +182,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                    'majority valence and input%total density',/)
       8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
-      IF (sliceplot%slice) THEN
-         OPEN (20,file='cdn_slice',form='unformatted',status='unknown')
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, outDen%iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy)
-         IF (noco%l_noco) THEN
-            WRITE (20) (outDen%pw(k,3),k=1,stars%ng3)
-            IF (input%film) THEN
-               ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
-               DO ivac = 1, vacuum%nvac
-                  DO j = 1, vacuum%nmz
-                     cdomvz(j,ivac) = CMPLX(outDen%vacz(j,ivac,3),outDen%vacz(j,ivac,4))
-                  END DO
-               END DO
-               WRITE (20) ((cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
-               WRITE (20) (((outDen%vacxy(j,k-1,ivac,3),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
-               DEALLOCATE(cdomvz)
-            END IF
-         END IF
-         CLOSE(20) 
-         CALL juDFT_end("slice OK")
-      END IF
-
       IF(vacuum%nvac.EQ.1) THEN
          outDen%vacz(:,2,:) = outDen%vacz(:,1,:)
          IF (sym%invs) THEN
@@ -216,7 +191,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          END IF
       END IF
 
+      IF (sliceplot%slice) THEN
+         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                           1,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
+      END IF
+
    ENDIF ! mpi%irank.EQ.0
+
+   IF (sliceplot%slice) CALL juDFT_end("slice OK",mpi%irank)
 
 #ifdef CPP_MPI
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
@@ -224,8 +206,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    DEALLOCATE (qvac,qvlay,qa21)
    DEALLOCATE (igq_fft)
-
-   IF (sliceplot%slice) CALL juDFT_end("sliceplot%slice OK",mpi%irank)
 
    RETURN
 
