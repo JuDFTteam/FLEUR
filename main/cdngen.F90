@@ -71,11 +71,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    !Local Scalars
    REAL fix,qtot,dummy
-   INTEGER ivac,j,jspin,jspmax,k,iType
+   INTEGER jspin,jspmax
    LOGICAL l_enpara
 
    !Local Arrays
-   REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd),alpha_l(atoms%ntype)
+   REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd)
    REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
    INTEGER,ALLOCATABLE :: igq_fft(:)
    REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
@@ -117,42 +117,32 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL timestart("cdngen: cdnval")
       CALL cdnval(eig_id,&
-                  mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
+                  mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,obsolete,igq_fft,vTot,oneD,coreSpecInput,&
-                  outDen,results,qvac,qvlay,qa21, chmom,clmom)
+                  outDen,results,qvac,qvlay,qa21,chmom,clmom)
       CALL timestop("cdngen: cdnval")
    END DO
 
    IF (mpi%irank.EQ.0) THEN
       IF (l_enpara) CLOSE (40)
-      CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, outDen%pw,outDen%mt,outDen%vacz,.TRUE., qtot,dummy)
+      CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
    CALL cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
                 stars,cell,sphhar,atoms,vTot,outDen,stdn,svdn)
 
-   IF (mpi%irank.EQ.0) THEN
-      IF(vacuum%nvac.EQ.1) THEN
-         outDen%vacz(:,2,:) = outDen%vacz(:,1,:)
-         IF (sym%invs) THEN
-            outDen%vacxy(:,:,2,:) = CONJG(outDen%vacxy(:,:,1,:))
-         ELSE
-            outDen%vacxy(:,:,2,:) = outDen%vacxy(:,:,1,:)
-         END IF
-      END IF
-
-      IF (sliceplot%slice) THEN
+   IF (sliceplot%slice) THEN
+      IF (mpi%irank.EQ.0) THEN
          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                            1,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
+      CALL juDFT_end("slice OK",mpi%irank)
    END IF
-
-   IF (sliceplot%slice) CALL juDFT_end("slice OK",mpi%irank)
 
    IF (mpi%irank.EQ.0) THEN
       CALL openXMLElementNoAttributes('allElectronCharges')
-      CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
+      CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
       CALL closeXMLElement('allElectronCharges')
 
       IF (input%jspins.EQ.2) THEN

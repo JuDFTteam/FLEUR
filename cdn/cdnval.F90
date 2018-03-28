@@ -980,6 +980,16 @@ CONTAINS
           !-for
        END DO ! end of loop ispin = jsp_start,jsp_end
        CALL closeXMLElement('mtCharges')
+
+       IF(vacuum%nvac.EQ.1) THEN
+          den%vacz(:,2,:) = den%vacz(:,1,:)
+          IF (sym%invs) THEN
+             den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+          ELSE
+             den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+          END IF
+       END IF
+
     END IF ! end of (mpi%irank==0)
     !+t3e
     !Note: no deallocation anymore, we rely on Fortran08 :-)
@@ -988,5 +998,6 @@ CONTAINS
        IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK",mpi%irank)
        IF (vacuum%nstm.EQ.3)  CALL juDFT_end("VACWAVE OK",mpi%irank)
     END IF
+
   END SUBROUTINE cdnval
 END MODULE m_cdnval
