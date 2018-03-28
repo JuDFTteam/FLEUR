@@ -74,8 +74,8 @@ CONTAINS
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
        l(29)=oneD%odd%d1 ; l(30)=jij%l_J ; l(31)=jij%l_disp ; l(32)=input%ctail ; l(33)=banddos%l_orb
-       l(34)=banddos%l_mcd ; l(35)=input%sso_opt(1)
-       l(36)=input%sso_opt(2) ; l(37)=obsolete%pot8; l(38)=input%efield%l_segmented
+       l(34)=banddos%l_mcd 
+       l(37)=obsolete%pot8; l(38)=input%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=input%efield%dirichlet
        l(43)=input%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
     ENDIF
@@ -104,8 +104,7 @@ CONTAINS
     CALL MPI_BCAST(l,SIZE(l),MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     input%efield%l_dirichlet_coeff = l(43) ; input%l_useapw=l(2)
     sym%symor=l(39) ; input%frcor=l(40) ; input%tria=l(41) ; input%efield%dirichlet = l(42)
-    input%sso_opt(2)=l(36) ; obsolete%pot8=l(37) ; input%efield%l_segmented=l(38)
-     input%sso_opt(1)=l(35)
+     obsolete%pot8=l(37) ; input%efield%l_segmented=l(38)
     oneD%odd%d1=l(29) ; jij%l_J=l(30) ; jij%l_disp=l(31) ; input%ctail=l(32)
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
@@ -221,7 +220,6 @@ CONTAINS
     CALL MPI_BCAST(noco%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%l_geo,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(noco%soc_opt,atoms%ntype+2,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%n_u,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

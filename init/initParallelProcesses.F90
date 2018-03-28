@@ -128,7 +128,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
       ALLOCATE(sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd))
 
-      ALLOCATE(noco%soc_opt(atoms%ntype+2),noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
+      ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
 
       ALLOCATE(Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
