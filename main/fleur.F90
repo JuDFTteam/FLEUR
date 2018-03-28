@@ -185,8 +185,7 @@ CONTAINS
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,fermiEnergyTemp,l_qfix,inDen)
        CALL timestart("Qfix")
-       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen%pw,inDen%vacxy,inDen%mt,inDen%vacz,&
-                 .FALSE.,.false.,fix)
+       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,0.0,.FALSE.,inDen)
@@ -304,7 +303,7 @@ CONTAINS
                 IF (.NOT.obsolete%pot8) THEN
                    CALL timestart("generation of potential")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul,vTemp)
+                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
                    CALL timestop("generation of potential")
 
                    IF (mpi%irank.EQ.0) THEN
@@ -313,7 +312,7 @@ CONTAINS
                       !--->          and down potentials and direction of the magnetic field
                       IF (noco%l_noco) THEN
                          CALL timestart("generation of potential-matrix")
-                         CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,inDenRot,vTemp)
+                         CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,inDenRot,vTot)
                          CALL timestop("generation of potential-matrix")
                       ENDIF
                       !---> end pk non-collinear
@@ -573,7 +572,7 @@ CONTAINS
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                          enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                         inDen%iter,inDen,outDen)
+                         inDen,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e
@@ -608,7 +607,7 @@ CONTAINS
                    input%total = .FALSE.
                    CALL timestart("generation of potential (total)")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul,vTemp)
+                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
                    CALL timestop("generation of potential (total)")
 
                    CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)

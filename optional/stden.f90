@@ -15,19 +15,16 @@ CONTAINS
 SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                  input,cell,xcpot,obsolete,noco,oneD)
 
-   USE m_sphpts
    USE m_constants
    USE m_enpara,    ONLY : w_enpara
    USE m_xcall,     ONLY : vxcall
    USE m_qsf
-   USE m_checkdop
+   USE m_checkdopall
    USE m_cdnovlp
    USE m_cdn_io
    USE m_qfix
    USE m_atom2
    USE m_types
-   USE m_cylpts
-   USE m_points
    USE m_juDFT_init
 
    IMPLICIT NONE
@@ -52,14 +49,14 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    TYPE(t_xcpot)    :: xcpot_dummy
 
    ! Local Scalars
-   REAL d,del,fix,h,r,rnot,sign,z,bm,qdel
+   REAL d,del,fix,h,r,rnot,z,bm,qdel
    REAL denz1(1),vacxpot(1),vacpot(1) 
-   INTEGER i,ivac,iza,j,jr,k,n,n1,npd,ispin 
+   INTEGER i,ivac,iza,j,jr,k,n,n1,ispin 
    INTEGER nw,ilo,natot,nat 
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)
-   REAL,    ALLOCATABLE :: xp(:,:),rat(:,:),eig(:,:,:),sigm(:)
+   REAL,    ALLOCATABLE :: rat(:,:),eig(:,:,:),sigm(:)
    REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
    REAL,    ALLOCATABLE :: vacpar(:)
    INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
@@ -74,7 +71,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
-   ALLOCATE ( xp(3,DIMENSION%nspd),rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
+   ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
    ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntype,DIMENSION%jspd) )
    ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,input%jspins),vacpar(2) )
    ALLOCATE ( enpara%el0(0:3,atoms%ntype,input%jspins))   
@@ -207,8 +204,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    IF (mpi%irank == 0) THEN
 
       ! Check the normalization of total density
-      CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-                den%pw,den%vacxy,den%mt,den%vacz,.FALSE.,.true.,fix)
+      CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.true.,fix)
       z=SUM(atoms%neq(:)*atoms%zatom(:))
       IF (ABS(fix*z-z)>0.5) THEN
          CALL judft_warn("Starting density not charge neutral",hint= &
@@ -224,36 +220,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins
             WRITE (6,'(a8,i2)') 'spin No.',ispin
-            IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-               ! vacuum boundaries
-               npd = MIN(DIMENSION%nspd,25)
-               CALL points(xp,npd)
-               DO ivac = 1,vacuum%nvac
-                  sign = 3. - 2.*ivac
-                  DO j = 1,npd
-                     xp(3,j) = sign*cell%z1/cell%amat(3,3)
-                  END DO
-                  CALL checkdop(xp,npd,0,0,ivac,1,ispin,.TRUE.,DIMENSION,atoms,&
-                                sphhar,stars,sym,vacuum,cell,oneD,&
-                                den%pw,den%mt,den%vacxy,den%vacz)
-               END DO
-            ELSE IF (oneD%odi%d1) THEN
-               !-odim
-               npd = MIN(DIMENSION%nspd,25)
-               CALL cylpts(xp,npd,cell%z1)
-               CALL checkdop(xp,npd,0,0,vacuum%nvac,1,ispin,.TRUE.,DIMENSION,atoms,&
-                             sphhar,stars,sym,vacuum,cell,oneD,den%pw,den%mt,den%vacxy,den%vacz)
-               !+odim
-            END IF
-            ! m.t. boundaries
-            nat = 1
-            DO n = 1,atoms%ntype
-               CALL sphpts(xp,DIMENSION%nspd,atoms%rmt(n),atoms%pos(1,nat))
-               CALL checkdop(xp,DIMENSION%nspd,n,nat,0,-1,ispin,.TRUE.,&
-                             dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,&
-                             den%pw,den%mt,den%vacxy,den%vacz)
-               nat = nat + atoms%neq(n)
-            END DO
+            CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+                           cell,den,ispin)
          END DO ! ispin = 1, input%jspins
       END IF ! input%vchk
 
@@ -376,7 +344,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
          CLOSE (40) ! enpara file
       END IF
-      DEALLOCATE (xp,rat,eig,rh,rh1)
+      DEALLOCATE (rat,eig,rh,rh1)
       DEALLOCATE (rhoss,vacpar,vbar,sigm)
       DEALLOCATE (enpara%ello0,enpara%el0,enpara%lchange)
       DEALLOCATE (enpara%skiplo,enpara%llochg,enpara%enmix,enpara%evac0)

@@ -25,4 +25,5 @@ cdn/qpw_to_nmt.f90
 cdn/slab_dim.f90
 cdn/slabgeom.f90
 cdn/vacden.F90
+cdn/genNewNocoInp.f90
 )

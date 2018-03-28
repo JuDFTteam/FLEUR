@@ -12,31 +12,26 @@ MODULE m_qfix
 
 CONTAINS
   SUBROUTINE qfix( stars,atoms,sym,vacuum,&
-       sphhar,input,cell,oneD,qpw,rhtxy,rho,rht,l_printData,force_fix,fix)
+       sphhar,input,cell,oneD,den,l_printData,force_fix,fix)
 
     USE m_types
     USE m_cdntot
     USE m_xmlOutput
     IMPLICIT NONE
-    !     ..
+
     !     .. Scalar Arguments ..
-    TYPE(t_stars),INTENT(IN) :: stars
-    TYPE(t_atoms),INTENT(IN) :: atoms
-    TYPE(t_sym),INTENT(IN)   :: sym
-    TYPE(t_vacuum),INTENT(IN):: vacuum
-    TYPE(t_sphhar),INTENT(IN):: sphhar
-    TYPE(t_input),INTENT(IN) :: input
-    TYPE(t_oneD),INTENT(IN)  :: oneD
-    TYPE(t_cell),INTENT(IN)  :: cell
-    LOGICAL,INTENT(IN)       :: l_printData,force_fix
-    REAL,    INTENT (OUT)    :: fix
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
-    COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
-    REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
-    !     ..
+    TYPE(t_stars),INTENT(IN)     :: stars
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_sym),INTENT(IN)       :: sym
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    TYPE(t_sphhar),INTENT(IN)    :: sphhar
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_oneD),INTENT(IN)      :: oneD
+    TYPE(t_cell),INTENT(IN)      :: cell
+    TYPE(t_potden),INTENT(INOUT) :: den
+    LOGICAL,INTENT(IN)           :: l_printData,force_fix
+    REAL,    INTENT (OUT)        :: fix
+
     !     .. Local Scalars ..
     LOGICAL :: l_qfixfile,fixtotal
     LOGICAL :: l_firstcall=.true.
@@ -57,7 +52,7 @@ CONTAINS
     ! In this case do nothing except when forced to fix!
     
     CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
-         qpw,rho,rht,.TRUE., qtot,qis)
+         den%pw,den%mt,den%vacz,.TRUE., qtot,qis)
 
     !The total nucleii charge
     zc=SUM(atoms%neq(:)*atoms%zatom(:))
@@ -71,30 +66,30 @@ CONTAINS
        DO n = 1,atoms%ntype
           lh = sphhar%nlh(atoms%ntypsy(na))
           jm = atoms%jri(n)
-          rho(:jm,0:lh,n,:) = fix*rho(:jm,0:lh,n,:)
+          den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
           na = na + atoms%neq(n)
        ENDDO
-       qpw(:stars%ng3,:) = fix*qpw(:stars%ng3,:)
+       den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
        IF (input%film) THEN
-          rht(:vacuum%nmz,:vacuum%nvac,:) = fix*rht(:vacuum%nmz,:vacuum%nvac,:)
-          rhtxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:) = fix*&
-               rhtxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:)
+          den%vacz(:vacuum%nmz,:vacuum%nvac,:) = fix*den%vacz(:vacuum%nmz,:vacuum%nvac,:)
+          den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:) = fix*&
+             den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:)
        END IF
        WRITE (6,FMT=8000) zc,fix
        IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
        CALL openXMLElementNoAttributes('fixedCharges')
        CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
-            qpw,rho,rht,l_printData, qtot,qis)
+            den%pw,den%mt,den%vacz,l_printData, qtot,qis)
        CALL closeXMLElement('fixedCharges')
        !+roa 
     ELSE
        fix = (zc - qtot) / qis + 1.
-       qpw(:stars%ng3,:) = fix*qpw(:stars%ng3,:)
+       den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
        WRITE (6,FMT=8001) zc,fix
        IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
        CALL openXMLElementNoAttributes('fixedCharges')
        CALL cdntot( stars,atoms,sym, vacuum,input,cell,oneD,&
-            qpw,rho,rht,l_printData, qtot,qis)
+            den%pw,den%mt,den%vacz,l_printData, qtot,qis)
        CALL closeXMLElement('fixedCharges')
     ENDIF
 
