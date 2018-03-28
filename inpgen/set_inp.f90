@@ -140,8 +140,6 @@
       sym%namgrp= 'any ' 
       banddos%dos   = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
-      obsolete%pot8 = .false. 
-      obsolete%l_u2f= .false. ; obsolete%l_f2u = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ; obsolete%disp  = .false. ; input%swsp  = .false.
@@ -553,7 +551,6 @@
         ! Changes for hybrid functionals
         input%strho = .false. ; input%isec1 = 999
         namex = 'hse '
-        obsolete%pot8  = .true.
         input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
         input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
       CALL rw_inp(&

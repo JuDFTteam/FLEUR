@@ -61,8 +61,6 @@ CONTAINS
     USE m_cdnsp
     USE m_flipcdn
     USE m_cdn_io
-    USE m_f2u
-    USE m_u2f
     USE m_types
     IMPLICIT NONE
     !     ..
@@ -108,7 +106,7 @@ CONTAINS
     !     --->generate starting charge density
     !
     strho=input%strho
-    IF (.NOT.(strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
+    IF (.NOT.(strho.OR.sliceplot%iplot)) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -152,22 +150,8 @@ CONTAINS
           CALL timestop('optional: flip magnetic moments')
        END IF
 
-       IF (obsolete%l_u2f) THEN
-
-          CALL timestart('optional: conversion to formatted')
-          CALL u2f(stars,input,atoms,sphhar,vacuum,cell,sym,noco%l_noco)
-          !
-          CALL timestop('optional: conversion to formatted')
-       ENDIF
-
-       IF (obsolete%l_f2u) THEN
-
-          CALL timestart('optional: conversion to unformatted')
-          CALL f2u(stars,input,atoms,sphhar,vacuum,cell,sym,noco%l_noco)
-          !
-          CALL timestop('optional: conversion to unformatted')
-       ENDIF
-
+ 
+ 
        IF (input%l_bmt) THEN
           CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF

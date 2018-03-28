@@ -208,7 +208,6 @@ CONTAINS
        IF (input%alpha.LT.10.0) THEN
 
           IF (it.GT.1) THEN
-             obsolete%pot8 = .FALSE.
              input%alpha = input%alpha - NINT(input%alpha)
           END IF
 
@@ -220,8 +219,7 @@ CONTAINS
              WRITE (16,FMT=8100) it
 8100         FORMAT (/,10x,'   it=    ',i5)
 
-             IF (.NOT.obsolete%pot8) THEN
-
+         
                 !      ----> potential generator
                 !
                 !---> pk non-collinear
@@ -239,7 +237,6 @@ CONTAINS
 
                 reap=.NOT.obsolete%disp
                 input%total = .TRUE.
-             ENDIF!(obsolete%pot8)
           ENDIF !mpi%irank.eq.0
 #ifdef CPP_MPI
           CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
@@ -299,7 +296,6 @@ CONTAINS
                 END IF
                 !---< gwf
 
-                IF (.NOT.obsolete%pot8) THEN
                    CALL timestart("generation of potential")
                    CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
                         sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
@@ -324,8 +320,7 @@ CONTAINS
 
                    !
                    !+t3e
-                ENDIF ! .not.obsolete%pot8
-
+             
 
 
 #ifdef CPP_MPI

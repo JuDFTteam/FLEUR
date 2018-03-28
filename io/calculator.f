@@ -711,23 +711,24 @@
       END FUNCTION
       !> 
       
-      FUNCTION evaluateList(s)result(array)
+      SUBROUTINE evaluateList(array,s)
       IMPLICIT NONE
-      REAL,ALLOCATABLE ::array(:)
-      CHARACTER(len=*),INTENT(inout)::s
+      REAL,ALLOCATABLE,INTENT(INOUT) ::array(:)
+      CHARACTER(len=*),INTENT(inout) ::s
       
       REAL    :: tmp(10)
       INTEGER :: n
       n=0
-      DO WHILE(LEN(s)>1)
+      DO WHILE(LEN_TRIM(ADJUSTL(s))>1)
          n=n+1
          if (n>10) call judft_error("List too long",
      +        calledby="calculator")
          tmp(n)=evaluatefirst(s)
       END DO
+      if (allocated(array)) deallocate(array)
       ALLOCATE(array(n))
       array=tmp(:n)
-      END FUNCTION 
+      END SUBROUTINE
      
    
       !<-- F: evaluateFirst(string)

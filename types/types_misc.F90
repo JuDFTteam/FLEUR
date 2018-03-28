@@ -592,9 +592,6 @@ MODULE m_types_misc
      INTEGER:: ndvgrd
      REAL   :: chng
      LOGICAL :: lwb
-     LOGICAL:: l_u2f
-     LOGICAL:: l_f2u
-     LOGICAL :: pot8
   END TYPE t_obsolete
 
 

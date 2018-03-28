@@ -10,7 +10,6 @@
                   &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
                   &                    calledby ="fleur")
 
-             IF (.NOT. obsolete%pot8) STOP 'Choose pot8=T'
              !calculate whole Brilloun zone
              CALL gen_bz(kpts,sym)
              CALL gen_map(&

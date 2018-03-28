@@ -459,29 +459,26 @@
       ENDIF                               !
       input%gw = 0
       READ (UNIT=5,FMT=7220,END=99,ERR=7215)&
-     &                                       input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
- 7215 IF(input%strho) input%gw=0
+           &                                       input%vchk,input%cdinf,ldum,input%gw,input%gw_neigd
+      if (ldum) call judft_error("pot8 not longer supported")
+7215  IF(input%strho) input%gw=0
+      if (ldum) call judft_error("pot8 not longer supported")
       IF(input%gw.eq.2 .OR. l_hyb) THEN
          IF(ldum)  CALL juDFT_error&
      &        ("Remove fl7para before run with gw = 2!",calledby&
      &        ="rw_inp")
          IF(input%gw_neigd==0)  CALL juDFT_error("No numbands-value given."&
      &        ,calledby ="rw_inp")
-         IF(.not.obsolete%pot8)  CALL juDFT_error("pot8 must be set if gw = 2!"&
-     &        ,calledby ="rw_inp")
       ELSE
         INQUIRE(file='QGpsi',exist=ldum)
         IF(ldum)           CALL juDFT_error&
      &       ("QGpsi exists but gw /= 2 in inp.",calledby ="rw_inp")
       ENDIF
-      IF(input%gw.eq.3) THEN
-        IF(.not.obsolete%pot8) CALL juDFT_error("pot8 must be set if gw = 3!"&
-     &        ,calledby ="rw_inp")
-      END IF
-
+  
       BACKSPACE(5)                                         ! Make sure that input%vchk,input%cdinf,obsolete%pot8 are all given.
-      READ (UNIT=5,FMT=7220,END=99,ERR=99) input%vchk,input%cdinf,obsolete%pot8 !
-      WRITE (6,9120) input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
+      READ (UNIT=5,FMT=7220,END=99,ERR=99) input%vchk,input%cdinf,ldum
+      if (ldum) call judft_error("pot8 not longer supported")
+      WRITE (6,9120) input%vchk,input%cdinf,.false.,input%gw,input%gw_neigd
  7220 FORMAT (5x,l1,1x,6x,l1,1x,5x,l1,1x,3x,i1,1x,9x,i4)
 !
       DO i=1,100 ; line(i:i)=' ' ; ENDDO
@@ -526,17 +523,17 @@
       READ(5,fmt='(A)',END=99,ERR=99) line
       BACKSPACE(5)
       IF (line(9:10)=='pi') THEN
-        READ(5,fmt='(f8.4)') noco%theta
+        READ(5,fmt='(f8.4)') noco%theta(1)
         noco%theta= noco%theta*4.*ATAN(1.)
       ELSE
-        READ(5,fmt='(f10.6)',END=99,ERR=99) noco%theta
+        READ(5,fmt='(f10.6)',END=99,ERR=99) noco%theta(1)
       ENDIF
       BACKSPACE(5)
       IF (line(19:20)=='pi') THEN
-        READ(5,fmt='(10x,f8.4)',END=99,ERR=99) noco%phi
+        READ(5,fmt='(10x,f8.4)',END=99,ERR=99) noco%phi(1)
         noco%phi= noco%phi*4.*ATAN(1.)
       ELSE
-        READ(5,fmt='(10x,f10.6)',END=99,ERR=99) noco%phi
+        READ(5,fmt='(10x,f10.6)',END=99,ERR=99) noco%phi(1)
       ENDIF
       IF ( line(30:34)=='spav=' ) THEN
         BACKSPACE(5)
@@ -544,21 +541,19 @@
       ELSE
         noco%l_spav= .false.
       ENDIF
-      IF ( line(37:40)=='off=' ) THEN
-        BACKSPACE(5)
-        chform= '(40x,l1,1x,'//chntype//'a1)'
-        CALL judft_error("soc_opt no longer supported")
-      ENDIF
+!!$      IF ( line(37:40)=='off=' ) THEN
+!!$        BACKSPACE(5)
+!!$        chform= '(40x,l1,1x,'//chntype//'a1)'
+!!$        CALL judft_error("soc_opt no longer supported")
+!!$      ENDIF
     
-      obsolete%l_u2f=.false.
-      obsolete%l_f2u=.false.
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
-     &                 input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u
+     &                 input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel
       input%coretail_lmax=99
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
-      WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u,input%l_bmt
+      WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel
  8050 FORMAT (6x,l1,7x,l1,7x,l1,6x,l1,7x,i1,5x,l1,5x,l1)
       
       ! check if itmax consists of 2 or 3 digits
@@ -876,7 +871,7 @@
       IF ((xcpot%gmaxxc.LE.0).OR.(xcpot%gmaxxc.GT.stars%gmax)) xcpot%gmaxxc=stars%gmax
       WRITE (5,9110) stars%gmax,xcpot%gmaxxc
  9110 FORMAT (2f10.6)
-      WRITE (5,9120) input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
+      WRITE (5,9120) input%vchk,input%cdinf,.false.,input%gw,input%gw_neigd
  9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
      &        ',numbands=',i4)
       WRITE (5,9130) 0,.false.,input%l_f,input%eonly
@@ -901,7 +896,7 @@
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
       WRITE (5,9160) input%gauss,input%delgau,input%tria
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
-      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u,input%l_bmt
+      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel
  9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1,',disp=',&
      &        l1,',kcrel=',i1,',u2f=',l1,',f2u=',l1,',bmt=',l1)
       WRITE (5,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf

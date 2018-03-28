@@ -160,6 +160,8 @@
           sliceplot%nnne = 0
 
           IF (input%l_inpXML) THEN
+              ALLOCATE(noco%theta(1),noco%phi(1))
+            
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
@@ -222,6 +224,7 @@
              jij%nmagn=1
              jij%mtypes=1
              jij%phnd=1
+             ALLOCATE(noco%theta(1),noco%phi(1))
              !--- J>
 
              CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
@@ -328,7 +331,7 @@
                 IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
                 l_opti=.NOT.l_opti
                 IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-                     &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
+                     &    (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
                 !
 
                 namex=xcpot%get_name()
@@ -682,7 +685,6 @@
 !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
 !                  &                    calledby ="fleur")
 
-!             IF (.NOT. obsolete%pot8) STOP 'Choose pot8=T'
              !calculate whole Brilloun zone
              !CALL gen_bz(kpts,sym)
              CALL gen_map(&

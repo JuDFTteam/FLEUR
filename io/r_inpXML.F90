@@ -509,9 +509,9 @@ SUBROUTINE r_inpXML(&
  
   IF (numberNodes.EQ.1) THEN
      valueString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta')
-     noco%theta=evaluateList(valueString)
+     CALL evaluateList(noco%theta,valueString)
      valueString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi')
-     noco%phi=evaluateList(valueString)
+     CALL evaluateList(noco%phi,valueString)
      noco%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
      noco%l_spav = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
      IF (SIZE(noco%theta).NE.SIZE(noco%phi)) CALL judft_error("Inequal length of list for soc-angles")
@@ -604,13 +604,11 @@ SUBROUTINE r_inpXML(&
   numberNodes = xmlGetNumberOfNodes(xPathA)
 
   input%gw = 0
-  obsolete%pot8 = .FALSE.
   input%isec1 = 999999
   input%secvar = .FALSE.
 
   IF (numberNodes.EQ.1) THEN
      input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
-     obsolete%pot8 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@pot8'))
      input%isec1 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isec1'))
      input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
   END IF

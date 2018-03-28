@@ -256,8 +256,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 
      dimension%nvd = 0 ; dimension%nv2d = 0
      stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
-     obsolete%l_u2f = .FALSE.
-     obsolete%l_f2u = .FALSE.
      !cell%aamat=matmul(transpose(cell%amat),cell%amat)
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
      jij%nqpt=1
@@ -547,7 +545,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
      l_opti=.not.l_opti
      IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-         (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
+         (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
 
      IF (.NOT.l_opti) THEN
         !      The following call to inpeig should not be required.
