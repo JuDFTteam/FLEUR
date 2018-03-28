@@ -11,5 +11,4 @@ eigen_soc/sointg.f90
 eigen_soc/sorad.f90
 eigen_soc/spnorb.f90
 eigen_soc/vso.f90
-eigen_soc/ssomat.F90
 )
