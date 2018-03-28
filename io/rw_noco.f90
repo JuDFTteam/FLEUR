@@ -94,13 +94,13 @@
           BACKSPACE (24)
           inpchar= 'XXXXXXXX' 
           READ (24,fmt='(37x,a8)',ERR=200) inpchar(1:8)
-          IF ( (inpchar(1:8)=='sso_opt=') .OR. (noco%l_ss .AND. noco%l_soc) ) THEN
-             BACKSPACE (24)
-             READ (24,fmt='(45x,2l1)') input%sso_opt(1),input%sso_opt(2)
-          ELSE
-             input%sso_opt(1)= .FALSE. 
-             input%sso_opt(2)= .FALSE.
-          ENDIF
+!!$          IF ( (inpchar(1:8)=='sso_opt=') .OR. (noco%l_ss .AND. noco%l_soc) ) THEN
+!!$             BACKSPACE (24)
+!!$             READ (24,fmt='(45x,2l1)') input%sso_opt(1),input%sso_opt(2)
+!!$          ELSE
+!!$             input%sso_opt(1)= .FALSE. 
+!!$             input%sso_opt(2)= .FALSE.
+!!$          ENDIF
 200       IF (jij%l_J) THEN
              READ (24,8045) noco%mix_b,jij%thetaJ,jij%nsh
           ELSE
@@ -130,7 +130,7 @@
           ENDIF
           WRITE (6,fmt='(5(A,l1),l1)') &
                & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',noco%l_constr,&
-               & ',l_disp=',jij%l_disp,',sso_opt=',input%sso_opt(1),input%sso_opt(2)
+               & ',l_disp=',jij%l_disp
           WRITE (6,8040) noco%mix_b,jij%thetaJ
 8030      FORMAT ('l_ss=',l1,',l_mperp=',l1,',l_constr=',l1,',l_disp=',l1)
 8035      FORMAT (5x,l1,9x,l1,10x,l1,8x,l1)
@@ -192,7 +192,7 @@
       WRITE (24,*) '-- logical parameters --'
       WRITE (24,fmt='(5(A,l1),l1)') &
      & 'l_ss=',noco%l_ss,',l_mperp=',noco%l_mperp,',l_constr=',noco%l_constr,&
-     & ',l_disp=',jij%l_disp,',sso_opt=',input%sso_opt(1),input%sso_opt(2)
+     & ',l_disp=',jij%l_disp
       WRITE (24,8040) noco%mix_b,jij%thetaJ,jij%nsh
 
       IF (noco%l_ss) THEN

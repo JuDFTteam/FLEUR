@@ -32,7 +32,7 @@ c*******************************************c
      >      z1,nv2d,nmzxy,nmz,delz,zrfs,ig2,area,tau,zatom,nq2,kv2,nop2,
      >      volint,symor,pos,ef,l_soc,
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt,
+     >      theta,phi,
      >      l_ms,l_sgwf,l_socgwf,aux_latt_const,
      >      param_file,param_vec,nparampts,param_alpha,l_dim)
 
@@ -102,11 +102,11 @@ c     ..scalar arguments..
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
       integer, intent (in) :: memd,lmplmd,nparampts
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
-      real,    intent (in) :: ef,theta,phi,aux_latt_const
+      real,    intent (in) :: ef,theta(:),phi(:),aux_latt_const
 
 c     ..array arguments..
       logical, intent (in) :: l_dulo(nlod,ntypd)
-      logical, intent (in) :: soc_opt(ntype+2),l_dim(3)
+      logical, intent (in) :: l_dim(3)
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: nlh(ntypsd),jri(ntypd),ntypsy(natd)
       integer, intent (in) :: nlo(ntypd),llo(nlod,ntypd),lapw_l(ntypd)
@@ -652,8 +652,8 @@ c*****************************************************************c
        qpt_i = qss
        alph_i = alph
        beta_i = beta
-       theta_i = theta
-       phi_i = phi
+       theta_i = theta(1)
+       phi_i = phi(1)
        if(l_sgwf.or.l_ms) then
           qpt_i(:) = param_vec(:,qptibz)
           alph_i(:) = param_alpha(:,qptibz)

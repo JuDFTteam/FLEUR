@@ -9,7 +9,7 @@
       subroutine wann_socmat(
      >               mpi,enpara,input,noco,atoms,
      >               lmaxd,ntypd,nlod,natd,neigd,
-     >               llod,jmtd,jspd,nlhd,soc_opt,neq,
+     >               llod,jmtd,jspd,nlhd,neq,
      >               ntype,theta_in,phi_in,jspins,irank,
      >               jri,lmax,dx,rmsh,el,ello,nlo,llo,
      >               l_dulo,ulo_der,vr,
@@ -45,7 +45,6 @@ c***********************************************************************
       integer, intent(in) :: jmtd
       integer, intent(in) :: jspd
       integer, intent(in) :: nlhd
-      LOGICAL, INTENT (IN):: soc_opt(:) !(ntypd+2)
       integer, intent(in) :: neq(:) !ntype
 
       integer, intent(in) :: ntype
@@ -93,13 +92,7 @@ c***********************************************************************
       COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:,:)
       complex,allocatable :: bhelp(:,:,:,:,:)
 
-      REAL,    ALLOCATABLE :: rsopdp(:,:,:,:),rsopdpd(:,:,:,:)
-      REAL,    ALLOCATABLE :: rsopp(:,:,:,:),rsoppd(:,:,:,:)
-      REAL,    ALLOCATABLE :: rsoplop(:,:,:,:)
-      REAL,    ALLOCATABLE :: rsoplopd(:,:,:,:),rsopdplo(:,:,:,:)
-      REAL,    ALLOCATABLE :: rsopplo(:,:,:,:),rsoploplop(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: soangl(:,:,:,:,:,:)
-
+      TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
 
       nwdd=1
@@ -135,13 +128,6 @@ c***********************************************************************
        ENDDO !ie
       enddo !ispin
 
-      ALLOCATE( rsopdp(ntypd,lmaxd,2,2),rsopdpd(ntypd,lmaxd,2,2),
-     +          rsopp(ntypd,lmaxd,2,2),rsoppd(ntypd,lmaxd,2,2),
-     +          rsoplop(ntypd,nlod,2,2),rsoplopd(ntypd,nlod,2,2),
-     +          rsopdplo(ntypd,nlod,2,2),rsopplo(ntypd,nlod,2,2),
-     +          rsoploplop(ntypd,nlod,nlod,2,2),
-     +          soangl(lmaxd,-lmaxd:lmaxd,2,lmaxd,-lmaxd:lmaxd,2) )
-
       ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,jspd), 
      +         usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),
      +         usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd),
@@ -158,41 +144,13 @@ c***********************************************************************
      +          ulos(nlod,ntypd,jspd),dulos(nlod,ntypd,jspd),
      +          uulon(nlod,ntypd,jspd),dulon(nlod,ntypd,jspd))
 
-      soangl(:,:,:,:,:,:) = cmplx(0.0,0.0)
       CALL spnorb(
      >         atoms,noco,input,mpi, enpara,
-     >         vr,rsopp,rsoppd,rsopdp,rsopdpd,usdus,
-     <         rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,soangl)
+     >         vr,usdus,rsoc,.true.)
+      
+      rsoc%soangl= conjg(rsoc%soangl)
 
-      l_all=.false.
-      IF (irank==0) THEN
-           IF ( soc_opt(ntype+1).or.l_all ) THEN
-             IF (l_all) THEN
-               WRITE (6,fmt='(A)') 'Only SOC contribution of certain'
-     &          //' atom types included in Hamiltonian.'
-             ELSE 
-               WRITE (chntype,'(i3)') ntype
-               WRITE (6,fmt='(A,2x,'//chntype//'l1)') 'SOC contributi'
-     &          //'on of certain atom types included in Hamiltonian:',
-     &          (soc_opt(n),n=1,ntype)
-             ENDIF
-           ELSE
-             WRITE(6,fmt='(A,1x,A)') 'SOC contribution of all atom'//
-     &        ' types inculded in Hamiltonian.'
-           ENDIF
-           IF (soc_opt(ntype+2)) THEN
-             WRITE(6,fmt='(A)')
-     &        'SOC Hamiltonian is constructed by neglecting B_xc.'
-           ENDIF
-      ENDIF
-      soangl(:,:,:,:,:,:) = conjg(soangl(:,:,:,:,:,:))
-
-      CALL hsoham(
-     >    atoms,noco,input,
-     >    nsz,chelp,
-     >    rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,
-     >    ahelp,bhelp,rsopp,rsoppd,rsopdp,rsopdpd,soangl,
-     <    hsomtx)
+      CALL hsoham(atoms,noco,input,nsz,chelp, rsoc, ahelp,bhelp, hsomtx)
  
       end subroutine wann_socmat
       end module m_wann_socmat

@@ -540,41 +540,16 @@
       ENDIF
       IF ( line(30:34)=='spav=' ) THEN
         BACKSPACE(5)
-        READ(5,fmt='(34x,l1)',END=99,ERR=99) noco%soc_opt(atoms%ntype+2)
+        READ(5,fmt='(34x,l1)',END=99,ERR=99) noco%l_spav
       ELSE
-        noco%soc_opt(atoms%ntype+2)= .false.
+        noco%l_spav= .false.
       ENDIF
       IF ( line(37:40)=='off=' ) THEN
         BACKSPACE(5)
         chform= '(40x,l1,1x,'//chntype//'a1)'
-        READ(5,fmt=chform,END=99,ERR=99)&
-     &   noco%soc_opt(atoms%ntype+1),(helpchar(i),i=1,atoms%ntype)
-        DO i= 1,atoms%ntype
-          noco%soc_opt(i)= (helpchar(i)=='1')
-        ENDDO
-      ELSE
-        DO i= 1,atoms%ntype+1
-          noco%soc_opt(i)= .false.
-        ENDDO
+        CALL judft_error("soc_opt no longer supported")
       ENDIF
-      IF (noco%soc_opt(atoms%ntype+1)) THEN
-        DO i= 1,atoms%ntype
-          IF (noco%soc_opt(i)) THEN
-            helpchar(i)= '1'
-          ELSE
-            helpchar(i)= '0'
-          ENDIF
-        ENDDO
-        chform= '(2f10.6,a7,l1,a6,l1,a5,l1,a1,'//chntype//'a1)'
-        WRITE(6,fmt=chform)&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1),',',(helpchar(i),i=1,atoms%ntype)
-      ELSE
-        WRITE(6,fmt='(2f10.6,a7,l1,a6,l1,a5,l1)')&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1)
-      ENDIF
-!
+    
       obsolete%l_u2f=.false.
       obsolete%l_f2u=.false.
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
@@ -926,23 +901,6 @@
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
       WRITE (5,9160) input%gauss,input%delgau,input%tria
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
-      IF (noco%soc_opt(atoms%ntype+1)) THEN
-        DO i= 1,atoms%ntype
-          IF (noco%soc_opt(i)) THEN
-            helpchar(i)= '1'
-          ELSE
-            helpchar(i)= '0'
-          ENDIF
-        ENDDO
-        chform= '(2f10.6,a7,l1,a6,l1,a5,l1,a1,'//chntype//'a1)'
-        WRITE(5,fmt=chform)&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1),',',(helpchar(i),i=1,atoms%ntype)
-      ELSE
-        WRITE(5,fmt='(2f10.6,a7,l1,a6,l1,a5,l1)')&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1)
-      ENDIF
       WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u,input%l_bmt
  9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1,',disp=',&
      &        l1,',kcrel=',i1,',u2f=',l1,',f2u=',l1,',bmt=',l1)

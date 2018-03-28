@@ -98,7 +98,6 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=  4) :: chntype
    CHARACTER(len= 41) :: chform
    CHARACTER(len=100) :: line
-   CHARACTER(len=3)   :: sso_optString
 
 !     added for HF and hybrid functionals
    REAL                  ::  aMix,omega
@@ -194,16 +193,25 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,140) input%jspins,noco%l_noco,jij%l_J,input%swsp,input%lflip
 
 !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
-   150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'" off="',l1,'"/>')
-   WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%soc_opt(atoms%ntype+2),noco%soc_opt(atoms%ntype+1)
+150 FORMAT('      <soc theta="')
+151 FORMAT('" phi="')
+152 FORMAT('" l_soc="',l1,'" spav="',l1'"/>')
+   WRITE (fileNum,150,advance="NO")
+   DO i=1,SIZE(noco%theta)
+      WRITE(fileNum,"(f0.8)",advance="NO") noco%theta(i)
+      IF (i<size(noco%theta)) WRITE(fileNum,"(a1)",advance="NO") " "
+   ENDDO
+   WRITE (fileNum,151,advance="NO")
+   DO i=1,SIZE(noco%phi)
+      WRITE(fileNum,"(f0.8)",advance="NO") noco%phi(i)
+      IF (i<size(noco%theta)) WRITE(fileNum,"(a1)",advance="NO") " "
+   ENDDO
+   WRITE (fileNum,152) noco%l_soc,noco%l_spav
 
    IF (l_nocoOpt.OR.l_explicit) THEN
-      160 FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,'" sso_opt="',a3,&
-                 '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
-      sso_optString='FFF'
-      IF(input%sso_opt(1)) sso_optString(1:1) = 'T'
-      IF(input%sso_opt(2)) sso_optString(2:2) = 'T'
-      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, Jij%l_disp, sso_optString, noco%mix_b, Jij%thetaJ, Jij%nsh
+160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,&
+           '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, Jij%l_disp, noco%mix_b, Jij%thetaJ, Jij%nsh
       162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'

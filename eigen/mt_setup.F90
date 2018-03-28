@@ -12,7 +12,7 @@ CONTAINS
     USE m_tlmplm_cholesky
     USE m_tlmplm_store
     USE m_types
-    USE m_socinit
+    USE m_spnorb
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -48,7 +48,7 @@ CONTAINS
 
     !Setup of soc parameters for first-variation SOC
     IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-       CALL socinit(mpi,atoms,sphhar,enpara,input,vTot%mt,noco,ud,td%rsoc)
+       CALL spnorb(atoms,noco,input,mpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.)
     END IF
 
   END SUBROUTINE mt_setup

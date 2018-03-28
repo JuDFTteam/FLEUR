@@ -277,7 +277,6 @@
              ALLOCATE ( noco%b_con(2,atoms%ntype),atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
              ALLOCATE ( enpara%enmix(DIMENSION%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
              ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
-             ALLOCATE ( noco%soc_opt(atoms%ntype+2) )
              ALLOCATE ( atoms%numStatesProvided(atoms%ntype))
              ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
              !+odim

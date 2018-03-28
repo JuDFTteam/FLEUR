@@ -7,7 +7,6 @@ eigen/hlomat.F90
 eigen/hs_int.F90
 eigen/hsmt_fjgj.F90
 eigen/hsmt_ab.f90
-eigen/soc_init.f90
 eigen/hsmt_sph.F90
 eigen/hsmt_nonsph.F90
 eigen/hsmt_spinor.F90

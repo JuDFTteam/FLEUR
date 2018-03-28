@@ -21,7 +21,7 @@
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
      >      volint,symor,pos,ef,l_soc,
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt)
+     >      theta,phi)
 c****************************************************************************
 c     Calculate spin-up-spin-down matrix elements.
 c     Useful in the case of spin-orbit coupling and noncollinear magnetism.
@@ -122,8 +122,7 @@ c****************************************************************************
       type (od_inp), intent (in) :: odi
       type (od_sym), intent (in) :: ods
       real, intent(in) :: theta,phi
-      logical,intent(in) :: soc_opt(:)
-
+     
 cccccccccccccccccc   local variables   cccccccccccccccccccc
       type(t_wann) :: wann
       integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
@@ -867,7 +866,7 @@ c...for the lapws and local orbitals, summed by the basis functions
          call wann_socmat(
      >       mpi,enpara,input,noco,atoms,
      >       lmaxd,ntypd,nlod,natd,noccbd,
-     >       llod,jmtd,jspd,nlhd,soc_opt,neq,
+     >       llod,jmtd,jspd,nlhd,neq,
      >       ntype,theta,phi,jspins,irank,
      >       jri,lmax,dx,rmsh,epar,ello,nlo,llo,
      >       l_dulo,ulo_der,vTot%mt,

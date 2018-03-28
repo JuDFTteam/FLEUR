@@ -7,32 +7,22 @@ MODULE m_hsoham
 CONTAINS
   SUBROUTINE hsoham(&
        atoms,noco,input,nsz,chelp,&
-       rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
-       ahelp,bhelp,rsopp,rsoppd,rsopdp,rsopdpd,soangl,&
+       rsoc,ahelp,bhelp,&
        hsomtx)
     USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_noco),INTENT(IN)    :: noco
     TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_rsoc),INTENT(IN)    :: rsoc
     !     ..
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(:)!(dimension%jspd)  
-    REAL,    INTENT (IN) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     COMPLEX, INTENT (IN) :: ahelp(-atoms%lmaxd:,:,:,:,:)!(-lmaxd:lmaxd,lmaxd,atoms%nat,dimension%neigd,dimension%jspd)
     COMPLEX, INTENT (IN) :: bhelp(-atoms%lmaxd:,:,:,:,:)!(-lmaxd:lmaxd,lmaxd,atoms%nat,dimension%neigd,dimension%jspd)
     COMPLEX, INTENT (IN) :: chelp(-atoms%llod :,:,:,:,:)!(-llod:llod ,dimension%neigd,atoms%nlod,atoms%nat ,dimension%jspd)
-    COMPLEX, INTENT (IN) :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)!(lmaxd,-lmaxd:lmaxd,2,lmaxd,-lmaxd:lmaxd,2)
     COMPLEX, INTENT (OUT):: hsomtx(:,:,:,:)!(2,2,dimension%neigd,neigd)
     !     ..
     !     .. Local Scalars ..
@@ -64,10 +54,9 @@ CONTAINS
           !$OMP PARALLEL DEFAULT(none)&
           !$OMP PRIVATE(j,na,n,nn,l,m,m1,ilo,i,lwn,ilop)& 
           !$OMP PRIVATE(c_a,c_b,c_c,c_1,c_2,c_3,c_4,c_5) &
-          !$OMP SHARED(hsomtx,i1,jsp,j1,jsp1,nsz,atoms,soangl)& 
+          !$OMP SHARED(hsomtx,i1,jsp,j1,jsp1,nsz,atoms)& 
           !$OMP SHARED(ahelp,bhelp,chelp,noco)&
-          !$OMP SHARED(rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop)&
-          !$OMP SHARED(rsopp,rsoppd,rsopdp,rsopdpd)
+          !$OMP SHARED(rsoc)
 
           ALLOCATE ( c_b(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat),&
                c_a(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat),&
@@ -89,9 +78,9 @@ CONTAINS
                          c_a(m,l,na) = CMPLX(0.,0.)
                          c_b(m,l,na) = CMPLX(0.,0.)
                          DO m1 = -l,l
-                            c_a(m,l,na) = c_a(m,l,na) + soangl(l,m,i1,l,m1,j1)&
+                            c_a(m,l,na) = c_a(m,l,na) + rsoc%soangl(l,m,i1,l,m1,j1,1)&
                                  *CONJG(ahelp(m1,l,na,j,jsp1))
-                            c_b(m,l,na) = c_b(m,l,na) + soangl(l,m,i1,l,m1,j1)&
+                            c_b(m,l,na) = c_b(m,l,na) + rsoc%soangl(l,m,i1,l,m1,j1,1)&
                                  *CONJG(bhelp(m1,l,na,j,jsp1))
                          ENDDO
                       ENDDO
@@ -104,7 +93,7 @@ CONTAINS
                             c_c(m,ilo,na) = CMPLX(0.,0.)
                             DO m1 = -l,l
                                c_c(m,ilo,na) = c_c(m,ilo,na) + CONJG(&
-                                    chelp(m1,j,ilo,na,jsp1))*soangl(l,m,i1,l,m1,j1)
+                                    chelp(m1,j,ilo,na,jsp1))*rsoc%soangl(l,m,i1,l,m1,j1,1)
                             ENDDO
                          ENDDO
                       ENDIF
@@ -122,8 +111,6 @@ CONTAINS
                 !--->    loop over each atom type
                 !
                 DO n = 1,atoms%ntype
-                   IF ( (.NOT. noco%soc_opt(atoms%ntype+1)) .OR. noco%soc_opt(n) ) THEN 
-
                       lwn = atoms%lmax(n)
                       !
                       !--->    loop over equivalent atoms
@@ -133,10 +120,10 @@ CONTAINS
                          DO l = 1,lwn
                             ! 
                             DO m = -l,l
-                               c_1 =   rsopp(n,l,i1,j1) * ahelp(m,l,na,i,jsp) +&
-                                    rsopdp(n,l,i1,j1) * bhelp(m,l,na,i,jsp)
-                               c_2 =  rsoppd(n,l,i1,j1) * ahelp(m,l,na,i,jsp) +&
-                                    rsopdpd(n,l,i1,j1) * bhelp(m,l,na,i,jsp)
+                               c_1 =   rsoc%rsopp(n,l,i1,j1) * ahelp(m,l,na,i,jsp) +&
+                                    rsoc%rsopdp(n,l,i1,j1) * bhelp(m,l,na,i,jsp)
+                               c_2 =  rsoc%rsoppd(n,l,i1,j1) * ahelp(m,l,na,i,jsp) +&
+                                    rsoc%rsopdpd(n,l,i1,j1) * bhelp(m,l,na,i,jsp)
                                hsomtx(i1,j1,i,j) = hsomtx(i1,j1,i,j) +&
                                     c_1*c_a(m,l,na) + c_2*c_b(m,l,na)  
                             ENDDO
@@ -147,10 +134,10 @@ CONTAINS
                             l = atoms%llo(ilo,n)
                             IF (l.GT.0) THEN
                                DO m = -l,l
-                                  c_3 = rsopplo(n,ilo,i1,j1) *ahelp(m,l,na,i,jsp) +&
-                                       rsopdplo(n,ilo,i1,j1) *bhelp(m,l,na,i,jsp)
-                                  c_4 = rsoplop(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
-                                  c_5 =rsoplopd(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
+                                  c_3 = rsoc%rsopplo(n,ilo,i1,j1) *ahelp(m,l,na,i,jsp) +&
+                                       rsoc%rsopdplo(n,ilo,i1,j1) *bhelp(m,l,na,i,jsp)
+                                  c_4 = rsoc%rsoplop(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
+                                  c_5 =rsoc%rsoplopd(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
                                   hsomtx(i1,j1,i,j) = hsomtx(i1,j1,i,j) + &
                                        c_4*c_a(m,l,na) + c_5*c_b(m,l,na) +&
                                        c_3*c_c(m,ilo,na)
@@ -159,7 +146,7 @@ CONTAINS
                                   IF (atoms%llo(ilop,n).EQ.l) THEN
                                      DO m = -l,l
                                         hsomtx(i1,j1,i,j) = hsomtx(i1,j1,i,j) + &
-                                             rsoploplop(n,ilop,ilo,i1,j1) * &
+                                             rsoc%rsoploplop(n,ilop,ilo,i1,j1) * &
                                              chelp(m,i,ilop,na,jsp) * c_c(m,ilo,na)
                                      ENDDO
                                   ENDIF
@@ -169,12 +156,7 @@ CONTAINS
                          ! end lo's
                       ENDDO
 
-                   ELSE
-
-                      na = na + atoms%neq(n) 
-
-                   ENDIF
-                ENDDO
+                   ENDDO
                 !
              ENDDO
              !!i

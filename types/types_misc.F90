@@ -495,11 +495,12 @@ MODULE m_types_misc
      REAL, ALLOCATABLE :: alph(:)
      REAL, ALLOCATABLE :: beta(:)
      REAL, ALLOCATABLE :: b_con(:,:)
-     LOGICAL              :: l_soc
-     LOGICAL, ALLOCATABLE :: soc_opt(:)
-     REAL                 :: theta
-     REAL                 :: phi
-     REAL,ALLOCATABLE     :: socscale(:)
+     LOGICAL           :: l_soc
+     LOGICAL           :: l_spav
+     !LOGICAL, ALLOCATABLE :: soc_opt(:)
+     REAL, ALLOCATABLE :: theta(:)
+     REAL, ALLOCATABLE :: phi(:)
+     REAL,ALLOCATABLE  :: socscale(:)
   END TYPE t_noco
 
   TYPE t_input
@@ -544,7 +545,6 @@ MODULE m_types_misc
      LOGICAL:: secvar
      LOGICAL:: evonly(2)
      LOGICAL:: eigvar(3)
-     LOGICAL:: sso_opt(2)
      LOGICAL:: total
      LOGICAL:: l_inpXML
      REAL :: scaleCell

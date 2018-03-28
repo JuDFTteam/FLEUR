@@ -172,62 +172,7 @@ CONTAINS
        input%l_f = .FALSE.
 
        IF(.NOT.input%l_inpXML) THEN
-          ALLOCATE(atoms_temp%nz(atoms%ntype))
-          ALLOCATE(atoms_temp%zatom(atoms%ntype))
-          ALLOCATE(atoms_temp%jri(atoms%ntype))
-          ALLOCATE(atoms_temp%dx(atoms%ntype))
-          ALLOCATE(atoms_temp%lmax(atoms%ntype))
-          ALLOCATE(atoms_temp%nlo(atoms%ntype))
-          ALLOCATE(atoms_temp%ncst(atoms%ntype))
-          ALLOCATE(atoms_temp%lnonsph(atoms%ntype))
-          ALLOCATE(atoms_temp%nflip(atoms%ntype))
-          ALLOCATE(atoms_temp%l_geo(atoms%ntype))
-          ALLOCATE(atoms_temp%lda_u(atoms%ntype))
-          ALLOCATE(atoms_temp%bmu(atoms%ntype))
-          ALLOCATE(atoms_temp%relax(3,atoms%ntype))
-          ALLOCATE(atoms_temp%neq(atoms%ntype))
-          ALLOCATE(atoms_temp%taual(3,atoms%nat))
-          ALLOCATE(atoms_temp%pos(3,atoms%nat))
-          ALLOCATE(atoms_temp%rmt(atoms%ntype))
-
-          ALLOCATE(atoms_temp%ncv(atoms%ntype))
-          ALLOCATE(atoms_temp%ngopr(atoms%nat))
-          ALLOCATE(atoms_temp%lapw_l(atoms%ntype))
-          ALLOCATE(atoms_temp%invsat(atoms%nat))
-
-          ALLOCATE(noco_temp%soc_opt(atoms%ntype+2),noco_temp%l_relax(atoms%ntype),noco_temp%b_con(2,atoms%ntype))
-          ALLOCATE(noco_temp%alph(atoms%ntype),noco_temp%beta(atoms%ntype))
-
-          ALLOCATE (Jij_temp%alph1(atoms%ntype),Jij_temp%l_magn(atoms%ntype),Jij_temp%M(atoms%ntype))
-          ALLOCATE (Jij_temp%magtype(atoms%ntype),Jij_temp%nmagtype(atoms%ntype))
-
-          ALLOCATE(atoms_temp%llo(atoms%nlod,atoms%ntype))
-          ALLOCATE(atoms_temp%ulo_der(atoms%nlod,atoms%ntype))
-          ALLOCATE(atoms_temp%l_dulo(atoms%nlod,atoms%ntype))
-
-          ALLOCATE(vacuum_temp%izlay(vacuum%layerd,2))
-          atoms_temp%ntype = atoms%ntype
-          ALLOCATE(noel_temp(atoms%ntype))
-
-          ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
-          ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))
-          ALLOCATE (hybrid_temp%lcutwf(atoms%ntype))
-
-          CALL rw_inp('r',atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                      banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,&
-                      input_temp%comment)
-          input_temp%l_f = input%l_f
-          input_temp%tkb = input%tkb
-          input_temp%delgau = input%tkb
-          cell_temp = cell
-          sym_temp = sym
-          vacuum_temp = vacuum
-          CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-               banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,a3_temp(3),&
-               input_temp%comment)
-    
+          CALL judft_error("Relaxation no longer supported with old inp-file") 
        ELSE
           kpts_temp%ntet = 1
           kpts_temp%numSpecialPoints = 1

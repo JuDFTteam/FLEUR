@@ -89,7 +89,7 @@ PROGRAM inpgen
       OPEN (bfh,file='bfh.txt',form='formatted',status='unknown')
 
       noco%l_ss = .FALSE.
-
+      ALLOCATE(noco%theta(1),noco%phi(1)) !here we support only a single set of angles
       CALL struct_input(&
      &                  infh,errfh,warnfh,symfh,symfn,bfh,&
      &                  natmax,nop48,&
@@ -97,7 +97,7 @@ PROGRAM inpgen
      &                  title,input%film,cal_symm,checkinp,sym%symor,&
      &                  cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,i_c,&
      &                 factor,natin,atomid,atompos,ngen,mmrot,ttr,atomLabel,&
-     &                  l_hyb,noco%l_soc,noco%l_ss,noco%theta,noco%phi,noco%qss,inistop)!keep
+     &                  l_hyb,noco%l_soc,noco%l_ss,noco%theta(1),noco%phi(1),noco%qss,inistop)!keep
 
 !      CLOSE (5)
 
@@ -126,7 +126,7 @@ PROGRAM inpgen
          WRITE (6,'(3i5,f8.3)') (mmrot(2,j,i),j=1,3),ttr(2,i)
          WRITE (6,'(3i5,f8.3)') (mmrot(3,j,i),j=1,3),ttr(3,i)
       ENDDO
-      IF (noco%l_soc) WRITE(6,'(a4,2f10.5)') 'soc:',noco%theta,noco%phi
+      IF (noco%l_soc) WRITE(6,'(a4,2f10.5)') 'soc:',noco%theta(1),noco%phi(1)
       IF (noco%l_ss)  WRITE(6,'(a4,3f10.5)') 'qss:',noco%qss(:)
 !
 ! --> generate symmetry from input (atomic positions, generators or whatever)
@@ -143,7 +143,7 @@ PROGRAM inpgen
 
       IF (noco%l_ss.OR.noco%l_soc)  THEN
          CALL soc_or_ssdw(&
-     &                    noco%l_soc,noco%l_ss,noco%theta,noco%phi,noco%qss,cell%amat,&
+     &                    noco%l_soc,noco%l_ss,noco%theta(1),noco%phi(1),noco%qss,cell%amat,&
      &                    sym%mrot,sym%tau,sym%nop,sym%nop2,atoms%nat,atomid,atompos,&
      &                    mmrot,ttr,no3,no2,atoms%ntype,atoms%neq,natmap,&
      &                    ntyrep,natype,natrep,atoms%zatom,atoms%pos)

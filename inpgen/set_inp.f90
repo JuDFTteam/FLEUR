@@ -128,8 +128,7 @@
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
-      ALLOCATE(noco%soc_opt(atoms%ntype+2))
-
+      
       atoms%nz(:) = NINT(atoms%zatom(:))
       DO i = 1, atoms%ntype
        noel(i) = namat_const(atoms%nz(i))
@@ -150,7 +149,7 @@
       sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
-      noco%l_noco = noco%l_ss ; jij%l_J = .false. ; noco%soc_opt(:) = .false. ; input%jspins = 1
+      noco%l_noco = noco%l_ss ; jij%l_J = .false. ;  input%jspins = 1
       input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 ; input%minDistance = 0.0
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
@@ -400,7 +399,6 @@
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
       Jij%l_disp = .FALSE.
-      input%sso_opt = .FALSE.
       noco%mix_b = 0.0
       Jij%thetaJ = 0.0
       Jij%nmagn=1

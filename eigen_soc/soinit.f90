@@ -1,14 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_soinit
   !
   !**********************************************************************
-  !     1. generates radial spin-orbit matrix elements:sorad
-  !     2. generates spin-angular spin-orbit matrix   :soorb (not implemented)
+  !     generates radial spin-orbit matrix elements:sorad
   !**********************************************************************
   !
 CONTAINS
-  SUBROUTINE soinit(atoms,input,enpara, vr,spav,&
-       rsopp,rsoppd,rsopdp,rsopdpd,usdus,&
-       rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop)
+  SUBROUTINE soinit(atoms,input,enpara, vr,spav,rsoc,usdus)
 
     USE m_sorad
     USE m_types
@@ -16,7 +18,8 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)  :: enpara
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_usdus),INTENT(INOUT)   :: usdus
+    TYPE(t_usdus),INTENT(INOUT):: usdus
+    TYPE(t_rsoc),INTENT(INOUT) :: rsoc
     !
     !     .. Scalar Arguments ..
     !     ..
@@ -25,15 +28,6 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT (OUT) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (OUT) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (OUT) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,jspin,n
@@ -41,7 +35,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL  vr0(atoms%jmtd,size(vr,4))
     !     ..
-    rsopp  =0.0
+    rsoc%rsopp  =0.0
     rsoppd =0.0
     rsopdp =0.0
     rsopdpd=0.0

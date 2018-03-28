@@ -25,8 +25,9 @@ SUBROUTINE orbMagMoms(dimension,atoms,noco,clmom)
    REAL                          :: thetai, phii, slmom, slxmom, slymom
    CHARACTER(LEN=20)             :: attributes(4)
 
-   thetai = noco%theta
-   phii   = noco%phi
+   
+   thetai = noco%theta(1) !only single spin-qant-axis supported here
+   phii   = noco%phi(1)
    WRITE (6,FMT=9020)
    WRITE (16,FMT=9020)
    CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))

@@ -27,6 +27,7 @@ CONTAINS
     USE m_spnorb 
     USE m_alineso
     USE m_types
+    USE m_judft
 #ifdef CPP_MPI
     USE m_mpi_bc_pot
 #endif
@@ -62,13 +63,9 @@ CONTAINS
     !     .. Local Arrays..
     CHARACTER*3 chntype
 
-    REAL,    ALLOCATABLE :: rsopdp(:,:,:,:),rsopdpd(:,:,:,:)
-    REAL,    ALLOCATABLE :: rsopp(:,:,:,:),rsoppd(:,:,:,:) 
+    TYPE(t_rsoc) :: rsoc
     REAL,    ALLOCATABLE :: eig_so(:) 
-    REAL,    ALLOCATABLE :: rsoplop(:,:,:,:)
-    REAL,    ALLOCATABLE :: rsoplopd(:,:,:,:),rsopdplo(:,:,:,:)
-    REAL,    ALLOCATABLE :: rsopplo(:,:,:,:),rsoploplop(:,:,:,:,:)
-    COMPLEX, ALLOCATABLE :: zso(:,:,:),soangl(:,:,:,:,:,:)
+    COMPLEX, ALLOCATABLE :: zso(:,:,:)
 
     TYPE(t_mat)::zmat
     TYPE(t_lapw)::lapw
@@ -107,88 +104,15 @@ CONTAINS
 #endif
     CALL timestart("eigenso: spnorb")
     !  ..
-    ALLOCATE( rsopdp(atoms%ntype,atoms%lmaxd,2,2),rsopdpd(atoms%ntype,atoms%lmaxd,2,2),&
-         rsopp(atoms%ntype,atoms%lmaxd,2,2),rsoppd(atoms%ntype,atoms%lmaxd,2,2),&
-         rsoplop(atoms%ntype,atoms%nlod,2,2),rsoplopd(atoms%ntype,atoms%nlod,2,2),&
-         rsopdplo(atoms%ntype,atoms%nlod,2,2),rsopplo(atoms%ntype,atoms%nlod,2,2),&
-         rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2),&
-         soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2) )
 
-    soangl(:,:,:,:,:,:) = CMPLX(0.0,0.0)
-    CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt, rsopp,rsoppd,rsopdp,rsopdpd,usdus,&
-         rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop, soangl)
+    IF (SIZE(noco%theta)>1) CALL judft_warn("only first SOC-angle used in second variation")
+    !Get spin-orbit coupling matrix elements
+    CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.)
     !
-    !Check if SOC is to be scaled for some atom
-    DO n=1,atoms%ntype
-       IF (ABS(noco%socscale(n)-1.0)>1.E-7) THEN
-          IF (mpi%irank==0) WRITE(6,*) "SOC scaled by ",noco%socscale(n)," for atom ",n
-          rsopp(n,:,:,:)    =  rsopp(n,:,:,:) * noco%socscale(n)
-          rsopdp(n,:,:,:)   =  rsopdp(n,:,:,:)* noco%socscale(n)
-          rsoppd(n,:,:,:)   =  rsoppd(n,:,:,:)* noco%socscale(n)
-          rsopdpd(n,:,:,:)  =  rsopdpd(n,:,:,:)* noco%socscale(n)
-          rsoplop(n,:,:,:)  =  rsoplop(n,:,:,:)* noco%socscale(n)
-          rsoplopd(n,:,:,:) =  rsoplopd(n,:,:,:)* noco%socscale(n)
-          rsopdplo(n,:,:,:) =  rsopdplo(n,:,:,:)* noco%socscale(n)
-          rsopplo(n,:,:,:)  =  rsopplo(n,:,:,:)* noco%socscale(n)
-          rsoploplop(n,:,:,:,:) = rsoploplop(n,:,:,:,:)* noco%socscale(n)
-       ENDIF
-    ENDDO
-
-    IF (mpi%irank==0) THEN
-       DO n = 1,atoms%ntype
-          WRITE (6,FMT=8000)
-          WRITE (6,FMT=9000)
-          WRITE (6,FMT=8001) (2*rsopp(n,l,1,1),l=1,3)
-          WRITE (6,FMT=8001) (2*rsopp(n,l,2,2),l=1,3)
-          WRITE (6,FMT=8001) (2*rsopp(n,l,2,1),l=1,3)
-          WRITE (6,FMT=8000)
-          WRITE (6,FMT=9000)
-          WRITE (6,FMT=8001) (2*rsoppd(n,l,1,1),l=1,3)
-          WRITE (6,FMT=8001) (2*rsoppd(n,l,2,2),l=1,3)
-          WRITE (6,FMT=8001) (2*rsoppd(n,l,2,1),l=1,3)
-          WRITE (6,FMT=8000)
-          WRITE (6,FMT=9000)
-          WRITE (6,FMT=8001) (2*rsopdp(n,l,1,1),l=1,3)
-          WRITE (6,FMT=8001) (2*rsopdp(n,l,2,2),l=1,3)
-          WRITE (6,FMT=8001) (2*rsopdp(n,l,2,1),l=1,3)
-          WRITE (6,FMT=8000)
-          WRITE (6,FMT=9000)
-          WRITE (6,FMT=8001) (2*rsopdpd(n,l,1,1),l=1,3)
-          WRITE (6,FMT=8001) (2*rsopdpd(n,l,2,2),l=1,3)
-          WRITE (6,FMT=8001) (2*rsopdpd(n,l,2,1),l=1,3)
-       ENDDO
-    ENDIF
-8000 FORMAT (' spin - orbit parameter HR  ')
-8001 FORMAT (8f8.4)
-9000 FORMAT (5x,' p ',5x,' d ', 5x, ' f ')
-    
- 
-
-    IF (mpi%irank==0) THEN
-       IF (noco%soc_opt(atoms%ntype+1)) THEN ! .OR. l_all) THEN
-!          IF (l_all) THEN
-!             WRITE (6,fmt='(A)') 'Only SOC contribution of certain'&
-!                  //' atom types included in Hamiltonian.'
-!          ELSE 
-             WRITE (chntype,'(i3)') atoms%ntype
-             WRITE (6,fmt='(A,2x,'//chntype//'l1)') 'SOC contributi'&
-                  //'on of certain atom types included in Hamiltonian:',&
-                  (noco%soc_opt(n),n=1,atoms%ntype)
-!          ENDIF
-       ELSE
-          WRITE(6,fmt='(A,1x,A)') 'SOC contribution of all atom'//&
-               ' types inculded in Hamiltonian.'
-       ENDIF
-       IF (noco%soc_opt(atoms%ntype+2)) THEN
-          WRITE(6,fmt='(A)')&
-               'SOC Hamiltonian is constructed by neglecting B_xc.'
-       ENDIF
-    ENDIF
-
 
 
     ALLOCATE( eig_so(2*DIMENSION%neigd) )
-    soangl(:,:,:,:,:,:) = CONJG(soangl(:,:,:,:,:,:))
+    rsoc%soangl(:,:,:,:,:,:,1) = CONJG(rsoc%soangl(:,:,:,:,:,:,1))
     CALL timestop("eigenso: spnorb")
     !
     !--->    loop over k-points: each can be a separate task
@@ -207,9 +131,7 @@ CONTAINS
        zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
        CALL alineso(eig_id,lapw, mpi,DIMENSION,atoms,sym,kpts,&
-            input,noco,cell,oneD, rsopp,rsoppd,rsopdp,rsopdpd,nk,&
-            rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
-            usdus,soangl, nsz,nmat, eig_so,zso)
+            input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
           WRITE (16,FMT=8010) nk,nsz
@@ -234,11 +156,6 @@ CONTAINS
        ENDIF ! (input%eonly) ELSE
        deallocate(zso)
     ENDDO ! DO nk 
-    DEALLOCATE (eig_so,rsoploplop,rsopplo,rsopdplo,rsoplopd)
-    DEALLOCATE (rsoplop,rsopdp,rsopdpd,rsopp,rsoppd,soangl)
-
-
-    DEALLOCATE (usdus%us,usdus%dus,usdus%uds,usdus%duds,usdus%ulos,usdus%dulos,usdus%uulon,usdus%dulon,usdus%ddn)
     RETURN
   END SUBROUTINE eigenso
 END MODULE m_eigenso

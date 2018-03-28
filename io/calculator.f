@@ -13,7 +13,8 @@
       IMPLICIT NONE
 
       PRIVATE
-      PUBLIC :: evaluate,ASSIGN_var,delete_vars,evaluatefirst,
+      PUBLIC :: evaluateList,evaluate,ASSIGN_var,delete_vars,
+     $     evaluatefirst,
      $          makenumberstring,show,evaluateFirstOnly,
      $          evaluateFirstIntOnly,evaluateFirstBoolOnly
 
@@ -709,7 +710,26 @@
       str = ADJUSTL(str)
       END FUNCTION
       !> 
-
+      
+      FUNCTION evaluateList(s)result(array)
+      IMPLICIT NONE
+      REAL,ALLOCATABLE ::array(:)
+      CHARACTER(len=*),INTENT(inout)::s
+      
+      REAL    :: tmp(10)
+      INTEGER :: n
+      n=0
+      DO WHILE(LEN(s)>1)
+         n=n+1
+         if (n>10) call judft_error("List too long",
+     +        calledby="calculator")
+         tmp(n)=evaluatefirst(s)
+      END DO
+      ALLOCATE(array(n))
+      array=tmp(:n)
+      END FUNCTION 
+     
+   
       !<-- F: evaluateFirst(string)
       FUNCTION evaluateFirst(s,n)result(number)
 !-----------------------------------------------

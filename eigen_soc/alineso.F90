@@ -8,12 +8,8 @@ MODULE m_alineso
 CONTAINS
   SUBROUTINE alineso(eig_id,lapw,&
        mpi,DIMENSION,atoms,sym,kpts,&
-       input,noco,cell,oneD,&
-       rsopp,rsoppd,rsopdp,rsopdpd,nk,&
-       rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
-       usdus,soangl,&
-       nsize,nmat,&
-       eig_so,zso)
+       input,noco,cell,oneD, nk, usdus,rsoc,&
+       nsize,nmat, eig_so,zso)
 
 #include"cpp_double.h"
     USE m_hsohelp
@@ -32,6 +28,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_usdus),INTENT(IN)       :: usdus
+    TYPE(t_rsoc),INTENT(IN)        :: rsoc
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
@@ -39,16 +36,6 @@ CONTAINS
     INTEGER, INTENT (OUT):: nsize,nmat
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (IN) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (IN) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
-    COMPLEX, INTENT (IN) :: soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2)
     COMPLEX, INTENT (OUT) :: zso(:,:,:)!(dimension%nbasfcn,2*dimension%neigd,wannierspin)
     REAL,    INTENT (OUT) :: eig_so(2*DIMENSION%neigd)
     !-odim
@@ -167,11 +154,7 @@ CONTAINS
 
     CALL timestart("alineso SOC: -ham") 
     ALLOCATE ( hsomtx(2,2,DIMENSION%neigd,DIMENSION%neigd) )
-    CALL hsoham(&
-         &            atoms,noco,input,nsz,chelp,&
-         &            rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop,&
-         &            ahelp,bhelp,rsopp,rsoppd,rsopdp,rsopdpd,soangl,&
-         &            hsomtx)
+    CALL hsoham(atoms,noco,input,nsz,chelp, rsoc,ahelp,bhelp, hsomtx)
     DEALLOCATE ( ahelp,bhelp,chelp )
     CALL timestop("alineso SOC: -ham") 
     !

@@ -236,7 +236,7 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%lapw_l(atoms%ntype)) ! Where do I put this?
   ALLOCATE(atoms%invsat(atoms%nat)) ! Where do I put this?
 
-  ALLOCATE(noco%soc_opt(atoms%ntype+2),noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
+  ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
   ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
   ALLOCATE(noco%socscale(atoms%ntype))
   
@@ -506,15 +506,15 @@ SUBROUTINE r_inpXML(&
   noco%l_soc = .FALSE.
   noco%theta = 0.0
   noco%phi = 0.0
-  noco%soc_opt(atoms%ntype+2) = .FALSE.
-  noco%soc_opt(atoms%ntype+1) = .FALSE.
-
+ 
   IF (numberNodes.EQ.1) THEN
-     noco%theta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta'))
-     noco%phi = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi'))
+     valueString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta')
+     noco%theta=evaluateList(valueString)
+     valueString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi')
+     noco%phi=evaluateList(valueString)
      noco%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
-     noco%soc_opt(atoms%ntype+2) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
-     noco%soc_opt(atoms%ntype+1) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@off'))
+     noco%l_spav = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
+     IF (SIZE(noco%theta).NE.SIZE(noco%phi)) CALL judft_error("Inequal length of list for soc-angles")
   END IF
 
   ! Read in optional noco parameters if present
@@ -526,7 +526,6 @@ SUBROUTINE r_inpXML(&
   noco%l_mperp = .FALSE.
   noco%l_constr = .FALSE.
   Jij%l_disp = .FALSE.
-  input%sso_opt = .FALSE.
   noco%mix_b = 0.0
   Jij%thetaJ = 0.0
   Jij%nmagn=1
@@ -556,9 +555,8 @@ SUBROUTINE r_inpXML(&
      noco%l_constr = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
      Jij%l_disp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_disp'))
 
-     valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sso_opt')))
-     READ(valueString,'(2l1)') input%sso_opt(1),input%sso_opt(2)
-
+     noco%l_spav= evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spav'))
+   
      noco%mix_b = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
      Jij%thetaJ = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@thetaJ'))
      Jij%nsh = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nsh'))
@@ -579,6 +577,8 @@ SUBROUTINE r_inpXML(&
         !WRITE(*,*) '(no problem for users)'
      END IF
   END IF
+
+  IF (SIZE(noco%theta)>1.AND..NOT.(noco%l_ss.AND.noco%l_soc)) CALL judft_warn("Multiple soc-angles only for l_soc&l_ss implemented")
 
   ! Read in optional 1D parameters if present
 

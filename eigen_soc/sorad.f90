@@ -1,13 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_sorad
   USE m_juDFT
   !*********************************************************************
-  !     1. generates radial spin-orbit matrix elements
-  !     based on m.weinert's radsra and radsrd subroutines
+  !     generates radial spin-orbit matrix elements
   !*********************************************************************
 CONTAINS
-  SUBROUTINE sorad(atoms,input,ntyp,vr,enpara,spav,&
-       rsopp,rsopdpd,rsoppd,rsopdp,usdus,&
-       rsoplop,rsoplopd,rsopdplo,rsopplo,rsoploplop)
+  SUBROUTINE sorad(atoms,input,ntyp,vr,enpara,spav,rsoc,usdus)
 
     USE m_constants, ONLY : c_light
     USE m_intgr,     ONLY : intgr0
@@ -18,9 +20,10 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_enpara),INTENT(IN)   :: enpara
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_usdus),INTENT(INOUT)   :: usdus
+    TYPE(t_input),INTENT(IN)    :: input
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_usdus),INTENT(INOUT) :: usdus
+    TYPE(t_rsoc),INTENT(INOUT)  :: rsoc
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ntyp
@@ -28,15 +31,6 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(:,:)!(atoms%jmtd,dimension%jspd),
-    REAL,    INTENT (INOUT) :: rsopp  (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsoppd (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsopdp (atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsopdpd(atoms%ntype,atoms%lmaxd,2,2)
-    REAL,    INTENT (INOUT) :: rsoplop (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsoplopd(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsopdplo(atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsopplo (atoms%ntype,atoms%nlod,2,2)
-    REAL,    INTENT (INOUT) :: rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2)
     !     ..
     !     .. Local Scalars ..
     REAL ddn1,e ,ulops,dulops,duds1
@@ -113,10 +107,10 @@ CONTAINS
        IF (l.GT.0) THEN ! there is no spin-orbit for s-states
           DO i = 1, 2
              DO j = 1, 2
-                rsopp(ntyp,l,i,j) = radso( p(:atoms%jri(ntyp),i), p(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsopdp(ntyp,l,i,j) = radso(pd(:atoms%jri(ntyp),i), p(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsoppd(ntyp,l,i,j) = radso( p(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsopdpd(ntyp,l,i,j) = radso(pd(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsoc%rsopp(ntyp,l,i,j) = radso( p(:atoms%jri(ntyp),i), p(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsoc%rsopdp(ntyp,l,i,j) = radso(pd(:atoms%jri(ntyp),i), p(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsoc%rsoppd(ntyp,l,i,j) = radso( p(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                rsoc%rsopdpd(ntyp,l,i,j) = radso(pd(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
              ENDDO
           ENDDO
        ENDIF ! l>0
@@ -171,10 +165,10 @@ CONTAINS
 
              DO i = 1, 2
                 DO j = 1, 2
-                   rsoplop (ntyp,ilo,i,j) = radso(plo(:atoms%jri(ntyp),i),p (:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                   rsoplopd(ntyp,ilo,i,j) = radso(plo(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
-                   rsopplo (ntyp,ilo,i,j) = radso(p (:atoms%jri(ntyp),i),plo(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
-                   rsopdplo(ntyp,ilo,i,j) = radso(pd(:atoms%jri(ntyp),i),plo(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsoplop (ntyp,ilo,i,j) = radso(plo(:atoms%jri(ntyp),i),p (:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                   rsoc%rsoplopd(ntyp,ilo,i,j) = radso(plo(:atoms%jri(ntyp),i),pd(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsopplo (ntyp,ilo,i,j) = radso(p (:atoms%jri(ntyp),i),plo(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsopdplo(ntyp,ilo,i,j) = radso(pd(:atoms%jri(ntyp),i),plo(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
                 ENDDO
              ENDDO
 
@@ -227,7 +221,7 @@ CONTAINS
 
                    DO i = 1, 2
                       DO j = 1, 2
-                         rsoploplop(ntyp,ilo,ilop,i,j) =&
+                         rsoc%rsoploplop(ntyp,ilo,ilop,i,j) =&
                               radso(plo(:atoms%jri(ntyp),i),plop(:atoms%jri(ntyp),j),vso(:atoms%jri(ntyp),i),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
                       ENDDO
                    ENDDO
