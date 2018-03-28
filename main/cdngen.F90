@@ -182,12 +182,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                    'majority valence and input%total density',/)
       8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
-      IF (sliceplot%slice) THEN
-         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           1,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
-         CALL juDFT_end("slice OK")
-      END IF
-
       IF(vacuum%nvac.EQ.1) THEN
          outDen%vacz(:,2,:) = outDen%vacz(:,1,:)
          IF (sym%invs) THEN
@@ -197,7 +191,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          END IF
       END IF
 
+      IF (sliceplot%slice) THEN
+         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                           1,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
+      END IF
+
    ENDIF ! mpi%irank.EQ.0
+
+   IF (sliceplot%slice) CALL juDFT_end("slice OK",mpi%irank)
 
 #ifdef CPP_MPI
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
@@ -205,8 +206,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    DEALLOCATE (qvac,qvlay,qa21)
    DEALLOCATE (igq_fft)
-
-   IF (sliceplot%slice) CALL juDFT_end("sliceplot%slice OK",mpi%irank)
 
    RETURN
 
