@@ -4,11 +4,8 @@
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
       CONTAINS
-      SUBROUTINE cdntot(&
-     &                  stars,atoms,sym,&
-     &                  vacuum,input,cell,oneD,&
-     &                  qpw,rho,rht,l_printData,&
-     &                  qtot,qistot)
+      SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
+                        den,l_printData,qtot,qistot)
 
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -19,27 +16,20 @@
       USE m_convol
       USE m_xmlOutput
       IMPLICIT NONE
-!     ..
+
 !     .. Scalar Arguments ..
-      TYPE(t_stars),INTENT(IN) :: stars
-      TYPE(t_atoms),INTENT(IN) :: atoms
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_vacuum),INTENT(IN):: vacuum
-      TYPE(t_input),INTENT(IN) :: input
-      TYPE(t_oneD),INTENT(IN)  :: oneD
-      TYPE(t_cell),INTENT(IN)  :: cell
-      LOGICAL,INTENT(IN)       :: l_printData
-      REAL,    INTENT (OUT):: qtot,qistot
-!     ..
-!     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(stars%ng3,input%jspins)
-      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-      REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins)
-!-odim
-!+odim
-!     ..
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_potden),INTENT(IN) :: den
+      LOGICAL,INTENT(IN)        :: l_printData
+      REAL,INTENT(OUT)          :: qtot,qistot
+
 !     .. Local Scalars ..
-    ! COMPLEX x
       COMPLEX x(stars%ng3)
       REAL q,qis,w,mtCharge
       INTEGER i,ivac,j,jspin,n,nz
@@ -66,7 +56,7 @@
 !     -----mt charge
          CALL timestart("MT")
          DO 10 n = 1,atoms%ntype
-            CALL intgr3(rho(:,0,n,jspin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
+            CALL intgr3(den%mt(:,0,n,jspin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
             qmt(n) = w*sfp_const
             q = q + atoms%neq(n)*qmt(n)
    10    CONTINUE
@@ -77,9 +67,9 @@
                DO nz = 1,vacuum%nmz
                   IF (oneD%odi%d1) THEN
                      rht1(nz,ivac,jspin) = (cell%z1+(nz-1)*vacuum%delz)*&
-     &                    rht(nz,ivac,jspin)
+     &                    den%vacz(nz,ivac,jspin)
                   ELSE
-                     rht1(nz,ivac,jspin) =  rht(nz,ivac,jspin)
+                     rht1(nz,ivac,jspin) =  den%vacz(nz,ivac,jspin)
                   END IF
                END DO
                CALL qsf(vacuum%delz,rht1(1,ivac,jspin),q2,vacuum%nmz,0)
@@ -93,7 +83,7 @@
          END IF
 !     -----is region
          IF (.not.judft_was_Argument("-oldfix")) THEN
-            CALL convol(stars,x,qpw(:,jspin),stars%ufft)
+            CALL convol(stars,x,den%pw(:,jspin),stars%ufft)
             qis = x(1)*cell%omtil
          ELSE
           qis = 0.
@@ -104,14 +94,14 @@
 !     >                 symor,tau,mrot,rmt,sk3,bmat,ig2,ig,
 !     >                 kv3(1,j),
 !     <                 x)
-!            qis = qis + qpw(j,jspin)*x*nstr(j)
+!            qis = qis + den%pw(j,jspin)*x*nstr(j)
 !   30    CONTINUE
          CALL pwint_all(&
      &                 stars,atoms,sym,oneD,&
      &                 cell,&
      &                 x)
          DO j = 1,stars%ng3
-             qis = qis + qpw(j,jspin)*x(j)*stars%nstr(j)
+             qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
          ENDDO
          endif
          qistot = qistot + qis

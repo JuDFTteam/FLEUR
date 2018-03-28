@@ -243,7 +243,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    CALL closeXMLElement('densityConvergence')
 
    !fix charge of the new density
-   CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,.FALSE.,.false., fix)
+   CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false., fix)
 
    IF(atoms%n_u.NE.n_u_keep) THEN
       inDen%mmpMat = n_mmpTemp

@@ -184,7 +184,7 @@ CONTAINS
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,fermiEnergyTemp,l_qfix,inDen)
        CALL timestart("Qfix")
-       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,.FALSE.,.false.,fix)
+       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,0.0,.FALSE.,inDen)

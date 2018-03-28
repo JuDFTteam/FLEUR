@@ -8,7 +8,7 @@ MODULE m_magMoms
 
 CONTAINS
 
-SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,chmom,qa21)
+SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,stdn,svdn,chmom,qa21)
 
    USE m_types
    USE m_xmlOutput
@@ -24,10 +24,27 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,chmom,qa21)
 
    REAL, INTENT(INOUT)           :: chmom(atoms%ntype,dimension%jspd)
    COMPLEX, INTENT(IN)           :: qa21(atoms%ntype)
+   REAL, INTENT(IN)              :: stdn(atoms%ntype,dimension%jspd)
+   REAL, INTENT(IN)              :: svdn(atoms%ntype,dimension%jspd)
 
    INTEGER                       :: iType, j, iRepAtom
-   REAL                          :: smom
+   REAL                          :: sval,stot,scor,smom
    CHARACTER(LEN=20)             :: attributes(4)
+
+   WRITE (6,FMT=8000)
+   WRITE (16,FMT=8000)
+   DO iType = 1,atoms%ntype
+      sval = svdn(iType,1) - svdn(iType,input%jspins)
+      stot = stdn(iType,1) - stdn(iType,input%jspins)
+      scor = stot - sval
+      WRITE (6,FMT=8010) iType,stot,sval,scor,svdn(iType,1),stdn(iType,1)
+      WRITE (16,FMT=8010) iType,stot,sval,scor,svdn(iType,1),stdn(iType,1)
+   END DO
+
+   8000 FORMAT (/,/,10x,'spin density at the nucleus:',/,10x,'type',t25,&
+                'input%total',t42,'valence',t65,'core',t90,&
+                'majority valence and input%total density',/)
+   8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
    WRITE (6,FMT=8020)
    WRITE (16,FMT=8020)
