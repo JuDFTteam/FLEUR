@@ -460,10 +460,10 @@ MODULE m_types_misc
   END TYPE t_dimension
 
   TYPE t_Jij
-     LOGICAL :: l_J
-     INTEGER :: nqpt
-     INTEGER :: nqptd
-     INTEGER ::phnd
+     LOGICAL :: l_J   !
+     INTEGER :: nqpt  !
+     INTEGER :: nqptd !
+     INTEGER ::phnd   
      INTEGER ::nsh
      INTEGER ::mtypes
      INTEGER :: nmopq(3)
@@ -471,7 +471,7 @@ MODULE m_types_misc
      REAL    :: qn
      INTEGER :: nmagn
      INTEGER :: nkpt_l
-     LOGICAL :: l_disp
+     LOGICAL :: l_disp !
      LOGICAL :: l_wr
      LOGICAL :: l_jenerg
      REAL, ALLOCATABLE :: qj(:,:)
@@ -588,10 +588,10 @@ MODULE m_types_misc
 
   TYPE t_obsolete
      INTEGER:: lepr !floating energy parameters...
-     LOGICAL:: disp
-     INTEGER:: ndvgrd
-     REAL   :: chng
-     LOGICAL :: lwb
+     LOGICAL:: disp   !remove ->potmix
+     INTEGER:: ndvgrd !remove
+     REAL   :: chng   !remove
+     LOGICAL :: lwb   !remove
   END TYPE t_obsolete
 
 
