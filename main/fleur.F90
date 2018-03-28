@@ -572,7 +572,7 @@ CONTAINS
              CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                          DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                          enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                         inDen%iter,inDen,outDen)
+                         inDen,outDen)
 
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
              !+t3e

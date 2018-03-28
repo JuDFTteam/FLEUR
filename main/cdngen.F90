@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
                   enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                  inIter,inDen,outDen)
+                  inDen,outDen)
 
    !*****************************************************
    !    Charge density generator
@@ -21,7 +21,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !*****************************************************
 
    USE m_constants
-   USE m_umix
    USE m_prpqfftmap
    USE m_cdnval
    USE m_cdn_io
@@ -66,14 +65,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id
-   INTEGER, INTENT (IN)             :: inIter
 
    ! Local type instances
    TYPE(t_noco) :: noco_new
 
    !Local Scalars
    REAL fix,qtot,scor,stot,sval,dummy
-   INTEGER iter,ivac,j,jspin,jspmax,k,iType
+   INTEGER ivac,j,jspin,jspmax,k,iType
    LOGICAL l_enpara
 
    !Local Arrays
@@ -87,7 +85,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    COMPLEX,ALLOCATABLE :: qa21(:), cdomvz(:,:)
    !pk non-collinear (end)
 
-   iter = inIter
    CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
    IF (mpi%irank.EQ.0) THEN
@@ -104,7 +101,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    qvac(:,:,:,:) = 0.0 
    qvlay(:,:,:,:,:) = 0.0
 
-   outDen%iter = iter
+   outDen%iter = inDen%iter
         
    !Set up pointer for backtransformation of from g-vector in
    !positive domain fof carge density fftibox into stars
@@ -129,9 +126,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   outDen,results,qvac,qvlay,qa21, chmom,clmom)
       CALL timestop("cdngen: cdnval")
    END DO
-
-   ! lda+u
-   IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
 
    IF (mpi%irank.EQ.0) THEN
       IF (l_enpara) CLOSE (40)

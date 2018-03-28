@@ -33,6 +33,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    USE m_qfix
    USE m_types
    USE m_xmlOutput
+   USE m_umix
 
    IMPLICIT NONE
 
@@ -46,7 +47,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_sphhar),INTENT(IN)     :: sphhar
    TYPE(t_atoms),INTENT(INOUT)   :: atoms !n_u is modified temporarily
-   TYPE(t_potden),INTENT(IN)     :: outDen
+   TYPE(t_potden),INTENT(INOUT)  :: outDen
    TYPE(t_results),INTENT(INOUT) :: results
    TYPE(t_potden),INTENT(INOUT)  :: inDen
    INTEGER, INTENT(IN)           :: archiveType
@@ -102,10 +103,11 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    ! LDA+U (start)
    n_mmpTemp = inDen%mmpMat
    n_u_keep=atoms%n_u
+   IF (atoms%n_u.GT.0) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
    IF (l_densityMatrixPresent) THEN
       !In an LDA+U caclulation, also the density matrix is included in the
       !supervectors (sm,fsm) if no linear mixing is performed on it.
-      IF(input%ldauLinMix) THEN
+      IF (input%ldauLinMix) THEN
          atoms%n_u = 0
       ELSE
          mmap = mmap + 7 * 7 * 2 * atoms%n_u * input%jspins ! add 7*7 complex numbers per atoms%n_u and spin
