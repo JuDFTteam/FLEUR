@@ -77,13 +77,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !Local Arrays
    REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd)
    REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-   INTEGER,ALLOCATABLE :: igq_fft(:)
    REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
-
-   !pk non-collinear (start)
-   INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
    COMPLEX,ALLOCATABLE :: qa21(:)
-   !pk non-collinear (end)
 
    IF (mpi%irank.EQ.0) THEN
       INQUIRE(file='enpara',exist=l_enpara)
@@ -92,40 +87,32 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ALLOCATE (qa21(atoms%ntype))
    ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
    ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
-   ALLOCATE (igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
 
    !initialize density arrays with zero
    qa21(:) = cmplx(0.0,0.0)
    qvac(:,:,:,:) = 0.0 
    qvlay(:,:,:,:,:) = 0.0
 
-   !Set up pointer for backtransformation of from g-vector in
-   !positive domain fof carge density fftibox into stars
-   !In principle this can also be done in main program once.
-   !It is done here to save memory.
-   CALL prp_qfft_map(stars,sym, input, igq2_fft,igq_fft)
-
-   !in a non-collinear calcuation where the off-diagonal part of
-   !density matrix in the muffin-tins is calculated, the a- and
-   !b-coef. for both spins are needed at once. Thus, cdnval is only
-   !called once and both spin directions are calculated in a single
-   !go.
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
+   !In a non-collinear calcuation where the off-diagonal part of the
+   !density matrix in the muffin-tins is calculated, the a- and
+   !b-coef. for both spins are needed at once. Thus, cdnval is only
+   !called once and both spin directions are calculated in a single run.
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL timestart("cdngen: cdnval")
       CALL cdnval(eig_id,&
                   mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,igq_fft,vTot,oneD,coreSpecInput,&
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,&
                   outDen,results,qvac,qvlay,qa21,chmom,clmom)
       CALL timestop("cdngen: cdnval")
    END DO
 
    IF (mpi%irank.EQ.0) THEN
       IF (l_enpara) CLOSE (40)
-      CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
+      CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
@@ -166,7 +153,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #endif
 
    DEALLOCATE (qvac,qvlay,qa21)
-   DEALLOCATE (igq_fft)
 
 END SUBROUTINE cdngen
 

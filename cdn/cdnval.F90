@@ -2,7 +2,7 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-       vacuum,dimension,sphhar,sym,obsolete,igq_fft,vTot,oneD,coreSpecInput,den,results,&
+       vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,results,&
        qvac,qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
@@ -117,7 +117,6 @@ CONTAINS
 
     !     .. Array Arguments ..
     COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
-    INTEGER, INTENT (IN) :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
     REAL, INTENT (INOUT) :: qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd)
     REAL, INTENT (INOUT) :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
@@ -651,8 +650,8 @@ CONTAINS
           !     ----> valence density in the interstitial region
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
-             CALL pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym,ikpt,&
-                  jspin,lapw,noccbd,igq_fft,we, eig,den,qis,results%force,f_b8,zMat)
+             CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
+                  jspin,lapw,noccbd,we,eig,den,qis,results%force,f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new

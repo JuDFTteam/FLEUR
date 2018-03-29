@@ -312,6 +312,8 @@ MODULE m_types_misc
      INTEGER :: kq2_fft
      INTEGER :: kq3_fft
      INTEGER :: kmxq_fft !no of g-vectors in sphere
+     INTEGER, ALLOCATABLE :: igq_fft(:)
+     INTEGER, ALLOCATABLE :: igq2_fft(:)
 
      !fft box for xc-pot
      INTEGER :: kxc1_fft
