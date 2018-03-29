@@ -26,24 +26,6 @@ MODULE m_types_misc
      COMPLEX :: uulo,dulo,ulou,ulod     ! values
   END TYPE t_lo21
 
-  TYPE t_orb                           ! 'normal' contributions
-     SEQUENCE
-     REAL :: uu,dd                      ! z   component
-     COMPLEX :: uup,uum,ddp,ddm         ! +/- component
-  END TYPE t_orb
-
-  TYPE t_orbl                          ! local orbitals & (u,d)
-     SEQUENCE
-     REAL :: uulo,dulo
-     COMPLEX :: uulop,uulom,dulop,dulom
-  END TYPE t_orbl
-
-  TYPE t_orblo                         ! lo,lo' contributions
-     SEQUENCE
-     REAL :: z
-     COMPLEX :: p,m
-  END TYPE t_orblo
-  
   !
   ! Type for the HF total energy
   !
