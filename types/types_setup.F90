@@ -204,8 +204,7 @@ MODULE m_types_setup
      REAL::volint
      REAL:: c
   END TYPE t_cell
-
-  !The stars
+!The stars
   TYPE t_stars
      !max-length of star
      REAL :: gmax
@@ -228,6 +227,8 @@ MODULE m_types_setup
      INTEGER :: kq2_fft
      INTEGER :: kq3_fft
      INTEGER :: kmxq_fft !no of g-vectors in sphere
+     INTEGER, ALLOCATABLE :: igq_fft(:)
+     INTEGER, ALLOCATABLE :: igq2_fft(:)
 
      !fft box for xc-pot
      INTEGER :: kxc1_fft
@@ -272,6 +273,8 @@ MODULE m_types_setup
      COMPLEX, ALLOCATABLE :: ustep(:)
      REAL, ALLOCATABLE    :: ufft(:)
   END TYPE t_stars
+
+
 
   TYPE t_oneD
      TYPE (od_dim) :: odd
