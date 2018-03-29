@@ -58,7 +58,6 @@ CONTAINS
     USE m_eparas      ! energy parameters and partial charges
     USE m_qal21       ! off-diagonal part of partial charges
     USE m_abcof
-    USE m_topulay
     USE m_nmat        ! calculate density matrix for LDA + U
     USE m_vacden
     USE m_nstm3
@@ -230,18 +229,8 @@ CONTAINS
     !
     ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )      ! Deallocation before mpi_col_den
     ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
-    ALLOCATE (   usdus%us(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE (  usdus%uds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
-    ALLOCATE (  usdus%ulos(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%dulos(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%uulon(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%dulon(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( usdus%uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( uu(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( dd(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ALLOCATE ( du(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
@@ -260,6 +249,9 @@ CONTAINS
     !
     ! --> Initializations
     !
+
+    CALL usdus%init(atoms,jsp_end)
+
     uu(:,:,:) = 0.0 ; dd(:,:,:) = 0.0 ; du(:,:,:) = 0.0
     IF (noco%l_mperp) THEN
        mt21(:,:)%uu = czero ; mt21(:,:)%ud = czero
@@ -863,7 +855,7 @@ CONTAINS
         END IF
        END IF ! --> end "IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN"
     END DO !---> end of k-point loop
-    DEALLOCATE (we,f,g,usdus%us,usdus%dus,usdus%duds,usdus%uds,usdus%ddn)
+    DEALLOCATE (we,f,g)
     !+t3e
 #ifdef CPP_MPI
     CALL timestart("cdnval: mpi_col_den")
