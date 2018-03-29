@@ -12,7 +12,7 @@ CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
        input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,ener,&
        sqal,results,svac,pvac,uu,dd,du,uunmt,ddnmt,udnmt,dunmt,sqlo,&
-       aclo,bclo,cclo,acnmt,bcnmt,ccnmt,enerlo,orb,orbl,orblo,mt21,lo21,uloulop21,&
+       aclo,bclo,cclo,acnmt,bcnmt,ccnmt,enerlo,orb,mt21,lo21,uloulop21,&
        uunmt21,ddnmt21,udnmt21,dunmt21,den,n_mmp)
     !
 #include"cpp_double.h"
@@ -61,9 +61,7 @@ CONTAINS
     COMPLEX,INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2  )
     COMPLEX,INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype)
-    TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
-    TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
+    TYPE (t_orb),  INTENT (INOUT) :: orb
     TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntype)
     TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntype)
     ! ..
@@ -260,84 +258,82 @@ CONTAINS
        ! orb
        n=(atoms%lmaxd+1)*(2*atoms%lmaxd+1)*atoms%ntype
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(orb(:,:,:)%uu,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%uu(:,:,:,jspin),r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, orb(:,:,:)%uu, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, orb%uu(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orb(:,:,:)%dd,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%dd(:,:,:,jspin),r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, orb(:,:,:)%dd, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, orb%dd(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
        ALLOCATE (c_b(n))
-       CALL MPI_REDUCE(orb(:,:,:)%uup,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%uup(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orb(:,:,:)%uup, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%uup(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orb(:,:,:)%ddp,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%ddp(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orb(:,:,:)%ddp, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%ddp(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orb(:,:,:)%uum,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%uum(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orb(:,:,:)%uum, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%uum(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orb(:,:,:)%ddm,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%ddm(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orb(:,:,:)%ddm, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%ddm(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (c_b)
-       ! orbl
-       !
+
        n = atoms%nlod * (2*atoms%llod+1) * atoms%ntype
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(orbl(:,:,:)%uulo,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%uulo(:,:,:,jspin),r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, orbl(:,:,:)%uulo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, orb%uulo(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orbl(:,:,:)%dulo,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%dulo(:,:,:,jspin),r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, orbl(:,:,:)%dulo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, orb%dulo(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
        ALLOCATE (c_b(n))
-       CALL MPI_REDUCE(orbl(:,:,:)%uulop,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%uulop(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orbl(:,:,:)%uulop, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%uulop(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orbl(:,:,:)%dulop,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%dulop(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orbl(:,:,:)%dulop, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%dulop(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orbl(:,:,:)%uulom,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%uulom(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orbl(:,:,:)%uulom, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%uulom(:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orbl(:,:,:)%dulom,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%dulom(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orbl(:,:,:)%dulom, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%dulom(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (c_b)
-       ! orblo
-       !
+
        n = atoms%nlod * atoms%nlod * (2*atoms%llod+1) * atoms%ntype
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(orblo(:,:,:,:)%z,r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%z(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, orblo(:,:,:,:)%z, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, orb%z(:,:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
        ALLOCATE (c_b(n))
-       CALL MPI_REDUCE(orblo(:,:,:,:)%p,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%p(:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orblo(:,:,:,:)%p, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%p(:,:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(orblo(:,:,:,:)%m,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(orb%m(:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, orblo(:,:,:,:)%m, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, orb%m(:,:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (c_b)
 

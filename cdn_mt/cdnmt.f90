@@ -12,7 +12,7 @@ MODULE m_cdnmt
 CONTAINS
   SUBROUTINE cdnmt(jspd,atoms,sphhar,llpd, noco,l_fmpl,jsp_start,jsp_end, epar,&
        ello,vr,uu,du,dd,uunmt,udnmt,dunmt,ddnmt, usdus,uloulopn,aclo,bclo,cclo,&
-       acnmt,bcnmt,ccnmt, orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21, uunmt21,&
+       acnmt,bcnmt,ccnmt,orb,mt21,lo21,uloulopn21,uloulop21, uunmt21,&
        ddnmt21,udnmt21,dunmt21, chmom,clmom, qa21,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -58,9 +58,7 @@ CONTAINS
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,jspd),clmom(3,atoms%ntype,jspd)
     REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
     COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
-    TYPE (t_orb),  INTENT (IN) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end)
-    TYPE (t_orbl), INTENT (IN) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype,jsp_start:jsp_end)
-    TYPE (t_orblo),INTENT (IN) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype,jsp_start:jsp_end)
+    TYPE (t_orb),  INTENT (IN) :: orb
     TYPE (t_mt21), INTENT (IN) :: mt21(0:atoms%lmaxd,atoms%ntype)
     TYPE (t_lo21), INTENT (IN) :: lo21(atoms%nlod,atoms%ntype)
     !     ..
@@ -102,7 +100,7 @@ CONTAINS
 
     !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
-    !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,orbl,orblo,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
+    !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
     !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
@@ -162,13 +160,9 @@ CONTAINS
           !+soc
           !--->       spherical angular component
           IF (noco%l_soc) THEN
-             CALL orbmom2(&
-                  atoms,itype,&
-                  usdus%ddn(0,itype,ispin),&
-                  orb(0,-atoms%lmaxd,itype,ispin),usdus%uulon(1,itype,ispin),&
-                  usdus%dulon(1,itype,ispin),uloulopn(1,1,itype,ispin),&
-                  orbl(1,-atoms%llod,itype,ispin),orblo(1,1,-atoms%llod,itype,ispin),&
-                  clmom(1,itype,ispin))!keep
+             CALL orbmom2(atoms,itype,ispin,usdus%ddn(0,itype,ispin),&
+                          orb,usdus%uulon(1,itype,ispin),usdus%dulon(1,itype,ispin),&
+                          uloulopn(1,1,itype,ispin),clmom(1,itype,ispin))!keep
           ENDIF
           !-soc
           !--->       non-spherical components

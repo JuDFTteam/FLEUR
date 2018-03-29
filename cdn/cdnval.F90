@@ -180,9 +180,9 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: uunmt21(:,:,:),ddnmt21(:,:,:)
     COMPLEX, ALLOCATABLE :: dunmt21(:,:,:),udnmt21(:,:,:)
     COMPLEX, ALLOCATABLE :: qstars(:,:,:,:),m_mcd(:,:,:,:)
-    TYPE (t_orb),  ALLOCATABLE :: orb(:,:,:,:)
-    TYPE (t_orbl), ALLOCATABLE :: orbl(:,:,:,:)
-    TYPE (t_orblo),ALLOCATABLE :: orblo(:,:,:,:,:)
+
+    TYPE (t_orb)         :: orb
+
     TYPE (t_mt21), ALLOCATABLE :: mt21(:,:)
     TYPE (t_lo21), ALLOCATABLE :: lo21(:,:)
     TYPE (t_usdus)             :: usdus
@@ -278,23 +278,7 @@ CONTAINS
     svac(:,:) = 0.0 ; pvac(:,:) = 0.0
     sqal(:,:,:) = 0.0 ; ener(:,:,:) = 0.0
     !+soc
-    IF (noco%l_soc) THEN
-       ALLOCATE ( orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-       ALLOCATE ( orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype,jsp_start:jsp_end)     )
-       ALLOCATE ( orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype,jsp_start:jsp_end))
-       orb(:,:,:,:)%uu = 0.0 ; orb(:,:,:,:)%dd = 0.0
-       orb(:,:,:,:)%uum = czero ; orb(:,:,:,:)%uup = czero
-       orb(:,:,:,:)%ddm = czero ; orb(:,:,:,:)%ddp = czero
-       orbl(:,:,:,:)%uulo = 0.0 ; orbl(:,:,:,:)%dulo = 0.0
-       orbl(:,:,:,:)%uulom = czero ; orbl(:,:,:,:)%uulop = czero
-       orbl(:,:,:,:)%dulom = czero ; orbl(:,:,:,:)%dulop = czero
-       orblo(:,:,:,:,:)%z = 0.0
-       orblo(:,:,:,:,:)%p = czero ; orblo(:,:,:,:,:)%m = czero
-    ELSE
-       ALLOCATE ( orb(0:0,-atoms%lmaxd:-atoms%lmaxd,1,jsp_start:jsp_end) )
-       ALLOCATE ( orbl(1,-atoms%llod:-atoms%llod,1,jsp_start:jsp_end) )
-       ALLOCATE ( orblo(1,1,-atoms%llod:-atoms%llod,1,jsp_start:jsp_end) )
-    ENDIF
+    CALL orb%init(atoms,noco,jsp_start,jsp_end)
     !+for
     IF (input%l_f) THEN
        ALLOCATE ( f_a12(3,atoms%ntype),f_a21(3,atoms%ntype) )
@@ -777,9 +761,8 @@ CONTAINS
              CALL timestop("cdnval: rhomt")
              !+soc
              IF (noco%l_soc) THEN
-                CALL orbmom(atoms,noccbd, we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                     ccof(-atoms%llod:,:,:,:,ispin), orb(0:,-atoms%lmaxd:,:,ispin),orbl(:,-atoms%llod:,:,ispin),&
-                     orblo(:,:,-atoms%llod:,:,ispin) )
+                CALL orbmom(atoms,noccbd, we,ispin,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
+                     ccof(-atoms%llod:,:,:,:,ispin),orb)
              END IF
              !     -soc
              !--->          non-spherical m.t. density
@@ -898,8 +881,7 @@ CONTAINS
             aclo(1,1,ispin),bclo(1,1,ispin),cclo(1,1,1,ispin),&
             acnmt(0,1,1,1,ispin),bcnmt(0,1,1,1,ispin),&
             ccnmt(1,1,1,1,ispin),enerlo(1,1,ispin),&
-            orb(0,-atoms%lmaxd,1,ispin),orbl(1,-atoms%llod,1,ispin),&
-            orblo(1,1,-atoms%llod,1,ispin),mt21,lo21,uloulop21,&
+            orb,mt21,lo21,uloulop21,&
             uunmt21,ddnmt21,udnmt21,dunmt21,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
@@ -937,7 +919,7 @@ CONTAINS
             noco,l_fmpl,jsp_start,jsp_end,&
             enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
             usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
-            orb,orbl,orblo,mt21,lo21,uloulopn21,uloulop21,&
+            orb,mt21,lo21,uloulopn21,uloulop21,&
             uunmt21,ddnmt21,udnmt21,dunmt21,&
             chmom,clmom,&
             qa21,den%mt)
