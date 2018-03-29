@@ -39,7 +39,6 @@ CONTAINS
     USE m_types
     USE m_constants
     USE m_fleur_init
-    USE m_pldngen
     USE m_optional
     USE m_cdn_io
     USE m_broyd_io
@@ -59,17 +58,11 @@ CONTAINS
     USE m_xmlOutput
     USE m_juDFT_time
     USE m_calc_hybrid
-    !          USE m_jcoff
-    !          USE m_jcoff2
-    !          USE m_ssomat
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
-
     USE m_gen_map
     USE m_dwigner
-    !          USE m_generate_pntgpt
-    !          USE m_rotate_eig
     USE m_ylm
 #ifdef CPP_MPI
     USE m_mpi_bc_all,  ONLY : mpi_bc_all
@@ -105,52 +98,33 @@ CONTAINS
     TYPE(t_wann)     :: wann
     TYPE(t_potden)   :: vTot,vx,vCoul,vTemp
     TYPE(t_potden)   :: inDen, outDen, inDenRot
+    CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
 
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
-    INTEGER:: n,it,ithf,pc
-    LOGICAL:: stop80,reap,l_endit,l_opti,l_cont,l_qfix, l_error, l_wann_inp
+    INTEGER:: n,it,ithf
+    LOGICAL:: reap,l_opti,l_cont,l_qfix, l_wann_inp
     REAL   :: fermiEnergyTemp, fix
-    !--- J<
-    INTEGER             :: phn
-    REAL, PARAMETER     :: tol = 1.e-8
-    INTEGER             :: qcount ,imt,i_J,j_J
-    !--- J>
-    !     HF/hybrid-functionals/EXX
-    LOGICAL               ::  l_restart
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER:: ierr(2)
 #endif
-    INTEGER, ALLOCATABLE :: eig_idList(:)
 
     mpi%mpi_comm = mpi_comm
+    ALLOCATE(t_forcetheo::forcetheo) !default (no force theorem calculation
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-                    sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
-                    oneD,coreSpecInput,wann,l_opti)
+         sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+         oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
 
 
-    IF (l_opti) THEN
-       IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
-          IF (noco%l_noco) THEN
-             CALL pldngen(sym,stars,atoms,sphhar,vacuum,&
-                          cell,input,noco,oneD,sliceplot)
-          ENDIF
-       ENDIF
-       CALL OPTIONAL(mpi,atoms,sphhar,vacuum,DIMENSION,&
-                     stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
-    ENDIF
-    !
-    IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
-    IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
-    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
-    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
-    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
-
+    IF (l_opti) &
+         CALL OPTIONAL(mpi,atoms,sphhar,vacuum,DIMENSION,&
+         stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
+ 
 
     !+Wannier
     INQUIRE (file='wann_inp',exist=l_wann_inp)
@@ -160,12 +134,9 @@ CONTAINS
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
     IF (wann%l_gwf) input%itmax = 1
-    
+
     !-Wannier
 
-    ALLOCATE (eig_idList(wann%nparampts))
-
-    l_restart = .TRUE.
 
     it     = 0
     ithf   = 0
@@ -182,12 +153,12 @@ CONTAINS
 
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                        0,fermiEnergyTemp,l_qfix,inDen)
+            0,fermiEnergyTemp,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                         0,-1.0,0.0,.FALSE.,inDen)
+            0,-1.0,0.0,.FALSE.,inDen)
     END IF
     ! Initialize and load inDen density (end)
 
@@ -198,492 +169,377 @@ CONTAINS
     CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
-    DO WHILE (l_cont)
+    scfloop:DO WHILE (l_cont)
 
        it = it + 1
 
        inDenRot = inDen
 
-       !+t3e
-       IF (input%alpha.LT.10.0) THEN
+!!$       !+t3e
+!!$       IF (input%alpha.LT.10.0) THEN
+!!$
+!!$          IF (it.GT.1) THEN
+!!$             input%alpha = input%alpha - NINT(input%alpha)
+!!$          END IF
 
-          IF (it.GT.1) THEN
-             input%alpha = input%alpha - NINT(input%alpha)
-          END IF
+       CALL resetIterationDependentTimers()
+       CALL timestart("Iteration")
+       IF (mpi%irank.EQ.0) THEN
+          !-t3e
+          WRITE (6,FMT=8100) it
+          WRITE (16,FMT=8100) it
+8100      FORMAT (/,10x,'   it=    ',i5)
 
-          CALL resetIterationDependentTimers()
-          CALL timestart("Iteration")
-          IF (mpi%irank.EQ.0) THEN
-             !-t3e
-             WRITE (6,FMT=8100) it
-             WRITE (16,FMT=8100) it
-8100         FORMAT (/,10x,'   it=    ',i5)
 
-         
-                !      ----> potential generator
-                !
-                !---> pk non-collinear
-                !--->        reload the density matrix from file rhomat_in
-                !--->        calculate spin-up and -down density for USE in the
-                !--->        potential generator and store the direction of
-                !--->        magnetization on file dirofmag
-                IF (noco%l_noco) THEN
-                   CALL timestart("gen. spin-up and -down density")
-                   CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
-                                  vacuum,cell,input,noco,oneD,inDenRot)
-                   CALL timestop("gen. spin-up and -down density")
-                ENDIF
-                !---> pk non-collinear
+          !      ----> potential generator
+          !
+          !---> pk non-collinear
+          !--->        reload the density matrix from file rhomat_in
+          !--->        calculate spin-up and -down density for USE in the
+          !--->        potential generator and store the direction of
+          !--->        magnetization on file dirofmag
+          IF (noco%l_noco) THEN
+             CALL timestart("gen. spin-up and -down density")
+             CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
+                  vacuum,cell,input,noco,oneD,inDenRot)
+             CALL timestop("gen. spin-up and -down density")
+          ENDIF
+          !---> pk non-collinear
 
-                reap=.NOT.obsolete%disp
-                input%total = .TRUE.
-          ENDIF !mpi%irank.eq.0
+          reap=.NOT.obsolete%disp
+          input%total = .TRUE.
+       ENDIF !mpi%irank.eq.0
 #ifdef CPP_MPI
-          CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
-          !--- J<
-          IF(jij%l_jenerg) GOTO 234
-
-          jij%alph1(:)=noco%alph(:)
-          stop80= .FALSE.
-          IF ((noco%l_soc.AND.noco%l_ss)) THEN
-             IF ((.NOT.wann%l_gwf).AND.&
-                  ((jij%l_J).OR.(jij%nqpt/=1).OR.(jij%nmagn/=1).OR.(jij%phnd/=1))) THEN
-                CALL juDFT_error("fleur: J-loop with ss+soc", calledby ="fleur")
-             END IF
-          END IF
+!!$          jij%alph1(:)=noco%alph(:)
 
 #ifdef CPP_MPI
-          CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
-          CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDenRot)
+       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
+       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDenRot)
 #endif
-          ! Initialize and load inDen density matrix and broadcast inDen(end)
 
-          DO qcount=1,jij%nqpt
-             IF (jij%l_J) THEN
-                noco%qss(:)=jij%qj(:,qcount)
-                jij%qn = ( noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2 )
-             END IF
-             IF ((input%l_wann.OR.jij%l_J).AND.(mpi%irank.EQ.0)) THEN
-                WRITE(6,*) 'qss=(',noco%qss(1),',',noco%qss(2),',',noco%qss(3),')'
-                CALL timestart("Q-point for J_ij(total)")
+!!$          DO qcount=1,jij%nqpt
+!!$             IF (jij%l_J) THEN
+!!$                noco%qss(:)=jij%qj(:,qcount)
+!!$                jij%qn = ( noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2 )
+!!$             END IF
+!!$             IF ((input%l_wann.OR.jij%l_J).AND.(mpi%irank.EQ.0)) THEN
+!!$                WRITE(6,*) 'qss=(',noco%qss(1),',',noco%qss(2),',',noco%qss(3),')'
+!!$                CALL timestart("Q-point for J_ij(total)")
+!!$
+!!$             ENDIF
 
-             ENDIF
+
+       IF ( noco%l_soc ) THEN
+          dimension%neigd2 = dimension%neigd*2
+       ELSE
+          dimension%neigd2 = dimension%neigd
+       END IF
 
 
-             IF ( noco%l_soc ) THEN
-                dimension%neigd2 = dimension%neigd*2
+       !HF
+       IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
+            cell,vacuum,oneD,banddos,results,sym,xcpot,vTot,it)
+       !#endif
+
+!!$             DO pc = 1, wann%nparampts
+!!$                !---> gwf
+!!$                IF (wann%l_sgwf.OR.wann%l_ms) THEN
+!!$                   noco%qss(:) = wann%param_vec(:,pc)
+!!$                   jij%qn = (noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2)
+!!$                   noco%alph(:) = wann%param_alpha(:,pc)
+!!$                ELSE IF (wann%l_socgwf) THEN
+!!$                   IF(wann%l_dim(2)) noco%phi   = tpi_const * wann%param_vec(2,pc)
+!!$                   IF(wann%l_dim(3)) noco%theta = tpi_const * wann%param_vec(3,pc)
+!!$                END IF
+       !---< gwf
+
+       CALL timestart("generation of potential")
+       CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
+            sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
+       CALL timestop("generation of potential")
+
+       IF (mpi%irank.EQ.0) THEN
+          !---> pk non-collinear
+          !--->          generate the four component matrix potential from spin up
+          !--->          and down potentials and direction of the magnetic field
+          IF (noco%l_noco) THEN
+             CALL timestart("generation of potential-matrix")
+             CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,inDenRot,vTot)
+             CALL timestop("generation of potential-matrix")
+          ENDIF
+          !
+       ENDIF ! mpi%irank.eq.0
+
+
+
+#ifdef CPP_MPI
+       CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
+
+       CALL forcetheo%start()
+
+       forcetheoloop:DO WHILE(forcetheo%next_job())
+
+!!$                   !
+!!$                   !          ----> eigenvalues and eigenfunctions
+!!$                   !
+!!$                   !--- J<
+!!$                   IF(jij%l_disp)THEN
+!!$                      jij%mtypes=1
+!!$                      jij%nmagn=1
+!!$                      jij%phnd=1
+!!$                   ENDIF
+!!$                   i_J=1
+!!$                   DO imt=1,jij%mtypes
+!!$                      DO j_J=i_J,jij%nmagn
+!!$                         DO phn=1,jij%phnd
+!!$
+!!$
+!!$                            input%eigvar(1)= .TRUE.
+!!$                            input%eigvar(2)= .TRUE.
+!!$                            input%eigvar(3)= .TRUE.
+!!$
+!!$                            input%eigvar(2)= input%eigvar(2) .AND. ( noco%l_soc .AND. (.NOT.noco%l_noco) )
+!!$                            ! eigvar(1/2)= 1st/2nd var. ; eigvar(3)= calc density,etc
+!!$
+!!$                            IF ( noco%l_soc .AND. (.NOT.noco%l_noco) ) THEN
+!!$                               input%evonly(1)= .FALSE.
+!!$                               input%evonly(2)= input%eonly
+!!$                            ELSE
+!!$                               input%evonly(1)= input%eonly
+!!$                               input%evonly(2)= .FALSE.
+!!$                            ENDIF
+!!$
+!!$                            IF ( input%eigvar(1).OR.input%eigvar(2) ) THEN
+!!$                               IF (jij%l_J) THEN
+!!$                                  input%tkb=0.
+!!$#ifdef CPP_NEVER
+!!$                                  CALL jcoff(i_J,j_J,phn,mpi,atoms,atoms, noco,jij)
+!!$#endif
+!!$                               ENDIF
+!!$                               IF (input%eigvar(1)) THEN
+          CALL timestart("generation of hamiltonian and diagonalization (total)")
+          CALL timestart("eigen")
+          vTemp = vTot
+          CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
+               sym,kpts,DIMENSION,vacuum,input,cell,enpara,enpara_out,banddos,noco,jij,oneD,hybrid,&
+               it,eig_id,results,inDenRot,vTemp,vx)
+          vTot%mmpMat = vTemp%mmpMat
+!!$          eig_idList(pc) = eig_id
+          CALL timestop("eigen")
+          !
+          !                   add all contributions to total energy
+          !
+#ifdef CPP_MPI
+          ! send all result of local total energies to the r
+          IF (mpi%irank==0) THEN
+             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,&
+                  1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,&
+                  1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+          ELSE
+             CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,&
+                  1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+             CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,&
+                  1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+          ENDIF
+          !                                  END IF
+#endif
+
+
+
+          ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
+          IF (noco%l_soc.AND..NOT.noco%l_noco) &
+               CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
+               obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara_out)
+          CALL timestop("generation of hamiltonian and diagonalization (total)")
+
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
+
+          !
+          !              ----> fermi level and occupancies
+
+          IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd = 2*DIMENSION%neigd
+          IF( .NOT. ALLOCATED(results%w_iks) )&
+               ALLOCATE ( results%w_iks(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd) )
+          IF ( (mpi%irank.EQ.0)) THEN
+             CALL timestart("determination of fermi energy")
+
+             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) THEN
+                input%zelec = input%zelec*2
+                CALL fermie(eig_id,mpi,kpts,obsolete,&
+                     input,noco,enpara%epara_min,jij,cell,results)
+                results%seigscv = results%seigscv/2
+                results%ts = results%ts/2
+                input%zelec = input%zelec/2
              ELSE
-                dimension%neigd2 = dimension%neigd
-             END IF
+                CALL fermie(eig_id,mpi,kpts,obsolete,&
+                     input,noco,enpara%epara_min,jij,cell,results)
+             ENDIF
+             CALL timestop("determination of fermi energy")
+!!$             
+!!$          !+Wannier
+!!$          IF(wann%l_bs_comf)THEN
+!!$             IF(pc.EQ.1) THEN
+!!$                OPEN(777,file='out_eig.1')
+!!$                OPEN(778,file='out_eig.2')
+!!$                OPEN(779,file='out_eig.1_diag')
+!!$                OPEN(780,file='out_eig.2_diag')
+!!$             END IF
+!!$
+!!$             CALL bs_comfort(eig_id,DIMENSION,input,noco,kpts%nkpt,pc)
+!!$
+!!$             IF(pc.EQ.wann%nparampts)THEN
+!!$                CLOSE(777)
+!!$                CLOSE(778)
+!!$                CLOSE(779)
+!!$                CLOSE(780)
+!!$             END IF
+!!$          END IF
+!!$          !-Wannier
+          ENDIF
+#ifdef CPP_MPI
+          CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+#endif
+
+#ifdef CPP_NEVER
+          CALL ssomat(eig_id, mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
+               sym,cell,noco,input,obsolete,kpts,oneD,MPI_DOUBLE_PRECISION )
+#endif
+
+          IF (forcetheo%eval()) CYCLE forcetheoloop
+!!$          IF(jij%l_J) THEN
+!!$             IF (((i_J.EQ.j_J)).OR.(sym%invs.AND.(jij%qn.GT.tol))) GOTO 33
+!!$          ENDIF
+!!$       ENDDO  !phn
+!!$ i_J=i_J+jij%nmagtype(imt)
+!!$ENDDO !imt
+!!$IF ((mpi%irank.EQ.0).AND.(input%l_wann.OR.jij%l_J)) THEN
+!!$CALL timestop("Q-point for J_ij(total)")
+!!$ENDIF
+!!$ENDDO forcetheoloop ! force-theorem loop
+!!$ENDDO !qcount
+!!$
+!!$234 CONTINUE
+!!$
+!!$IF (mpi%irank.EQ.0) THEN
+!!$IF(jij%l_J) THEN
+!!$IF(.NOT.jij%l_disp)THEN
+!!$REWIND(113)
+!!$REWIND(114)
+!!$#ifdef CPP_NEVER
+!!$CALL jcoff2(atoms,sym,cell,jij,input)
+!!$#endif
+!!$ENDIF
+!!$CLOSE(113)
+!!$CLOSE(114)
+!!$ENDIF
+!!$ENDIF
 
 
-             !HF
-             IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                                                    cell,vacuum,oneD,banddos,results,sym,xcpot,vTot,it)
-             !#endif
+          CALL force_0(results)!        ----> initialise force_old
+          !        ----> charge density
+          
+!!$          !+Wannier functions
+!!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
+!!$             CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
+!!$                  wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
+!!$                  eig_idList,(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
+!!$          END IF
+!!$          IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
+!!$          !-Wannier
 
-             DO pc = 1, wann%nparampts
-                !---> gwf
-                IF (wann%l_sgwf.OR.wann%l_ms) THEN
-                   noco%qss(:) = wann%param_vec(:,pc)
-                   jij%qn = (noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2)
-                   noco%alph(:) = wann%param_alpha(:,pc)
-                ELSE IF (wann%l_socgwf) THEN
-                   IF(wann%l_dim(2)) noco%phi   = tpi_const * wann%param_vec(2,pc)
-                   IF(wann%l_dim(3)) noco%theta = tpi_const * wann%param_vec(3,pc)
-                END IF
-                !---< gwf
+          CALL timestart("generation of new charge density (total)")
+          CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+          outDen%iter = inDen%iter
+          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
+               DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
+               enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
+               archiveType,outDen)
 
-                   CALL timestart("generation of potential")
-                   CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-                        sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
-                   CALL timestop("generation of potential")
-
-                   IF (mpi%irank.EQ.0) THEN
-                      !---> pk non-collinear
-                      !--->          generate the four component matrix potential from spin up
-                      !--->          and down potentials and direction of the magnetic field
-                      IF (noco%l_noco) THEN
-                         CALL timestart("generation of potential-matrix")
-                         CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,inDenRot,vTot)
-                         CALL timestop("generation of potential-matrix")
-                      ENDIF
-                      !---> end pk non-collinear
-                      !---> do some output for the tddft calculations:
-                      IF (input%gw /= 0) THEN
-                         CALL write_xcstuff(sphhar,atoms,DIMENSION,sym, stars,vacuum,input)
-                      ENDIF
-                      !
-                   ENDIF ! mpi%irank.eq.0
-
-                   !
-                   !+t3e
+          IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
+          !+t3e
+#ifdef CPP_MPI
+          CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+          
+          IF (noco%l_noco) THEN
+             DO n= 1,atoms%ntype
+                IF (noco%l_relax(n)) THEN
+                   CALL MPI_BCAST(noco%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                   CALL MPI_BCAST(noco%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+                ENDIF
+             ENDDO
+             IF (noco%l_constr) THEN
+                CALL MPI_BCAST(noco%b_con,SIZE(noco%b_con),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+             ENDIF
+          ENDIF
+#endif
+          CALL timestop("generation of new charge density (total)")
+          IF (mpi%irank.EQ.0) THEN
+             !-t3e
              
+!!$             !----> output potential and potential difference
+!!$             IF (obsolete%disp) THEN
+!!$                reap = .FALSE.
+!!$                input%total = .FALSE.
+!!$                CALL timestart("generation of potential (total)")
+!!$                CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
+!!$                     obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
+!!$                CALL timestop("generation of potential (total)")
+!!$
+!!$                CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
+!!$             END IF
+             
+             !----> total energy
+             CALL timestart('determination of total energy')
+             CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
+                  sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,inDen,results)
 
-
-#ifdef CPP_MPI
-                CALL MPI_BARRIER(mpi%mpi_comm,ierr)
-#endif
-
-                !
-                !          ----> eigenvalues and eigenfunctions
-                !
-                !--- J<
-                IF(jij%l_disp)THEN
-                   jij%mtypes=1
-                   jij%nmagn=1
-                   jij%phnd=1
-                ENDIF
-                i_J=1
-                DO imt=1,jij%mtypes
-                   DO j_J=i_J,jij%nmagn
-                      DO phn=1,jij%phnd
-
-
-                         input%eigvar(1)= .TRUE.
-                         input%eigvar(2)= .TRUE.
-                         input%eigvar(3)= .TRUE.
-
-                         input%eigvar(2)= input%eigvar(2) .AND. ( noco%l_soc .AND. (.NOT.noco%l_noco) )
-                         ! eigvar(1/2)= 1st/2nd var. ; eigvar(3)= calc density,etc
-
-                         IF ( noco%l_soc .AND. (.NOT.noco%l_noco) ) THEN
-                            input%evonly(1)= .FALSE.
-                            input%evonly(2)= input%eonly
-                         ELSE
-                            input%evonly(1)= input%eonly
-                            input%evonly(2)= .FALSE.
-                         ENDIF
-
-                         IF ( input%eigvar(1).OR.input%eigvar(2) ) THEN
-                            IF (jij%l_J) THEN
-                               input%tkb=0.
-#ifdef CPP_NEVER
-                               CALL jcoff(i_J,j_J,phn,mpi,atoms,atoms, noco,jij)
-#endif
-                            ENDIF
-                            IF (input%eigvar(1)) THEN
-                               CALL timestart("generation of hamiltonian and diagonalization (total)")
-
-                               ! WRITE(6,fmt='(A)') 'Starting 1st variation ...'
-                               CALL timestart("eigen")
-                               vTemp = vTot
-                               CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-                                    sym,kpts,DIMENSION,vacuum,input,cell,enpara,enpara_out,banddos,noco,jij,oneD,hybrid,&
-                                    it,eig_id,results,inDenRot,vTemp,vx)
-                               vTot%mmpMat = vTemp%mmpMat
-                               eig_idList(pc) = eig_id
-                               CALL timestop("eigen")
-                               !
-                               !                   add all contributions to total energy
-                               !
-#ifdef CPP_MPI
-                               ! send all result of local total energies to the r
-                               IF (mpi%irank==0) THEN
-                                  CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,&
-                                       1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-                                  CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,&
-                                       1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-                               ELSE
-                                  CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,&
-                                       1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-                                  CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,&
-                                       1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-                               ENDIF
-                               !                                  END IF
-#endif
-
-
-
-                            ENDIF
-                            IF (input%eigvar(2)) THEN
-                               ! RS: open unit for SOC vectors for GW
-                               IF(noco%l_soc.AND.input%gw.EQ.2) THEN
-                                  WRITE(6,'(A)') 'RS: open SOCVEC unit 4649'
-                                  OPEN(4649,file='SOCVEC',form='unformatted')
-                               ENDIF
-                               ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
-                               CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                                    obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara_out)
-                               IF(noco%l_soc.AND.input%gw.EQ.2) THEN
-                                  CLOSE(4649)
-                                  INQUIRE(1014,opened=l_endit)
-                                  IF(l_endit) CLOSE(1014)
-                                  INQUIRE(667,opened=l_endit)
-                                  IF(l_endit) CLOSE(667)
-                                  CALL juDFT_end("GW+SOC finished",mpi%irank)
-                               ENDIF
-                            ENDIF
-                            CALL timestop("generation of hamiltonian and diagonalization (total)")
-
-#ifdef CPP_MPI
-                            CALL MPI_BARRIER(mpi%mpi_comm,ierr)
-#endif
-
-                         ENDIF ! ( input%eigvar(1) .OR. input%eigvar(2) )
-
-                         IF ( input%eigvar(3) .AND. noco%l_soc .AND. noco%l_ss ) THEN
-#ifdef CPP_NEVER
-                            CALL ssomat(eig_id, mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                                 sym,cell,noco,input,obsolete,kpts,oneD,MPI_DOUBLE_PRECISION )
-#endif
-                            stop80= .TRUE.
-                         ENDIF
-                         !-t3e
-                         !
-                         !              ----> fermi level and occupancies
-                         !
-                         IF ( input%eigvar(3) .AND. ( .NOT.(noco%l_soc .AND. noco%l_ss) ) ) THEN
-                            IF (jij%l_J) THEN
-                               CALL timestart("determination of fermi energy")
-                               ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkpt,dimension%jspd) )
-                               CALL fermie(eig_id, mpi,kpts,obsolete,input,&
-                                    noco,enpara%epara_min,jij,cell,results)
-                               DEALLOCATE ( results%w_iks )
-                               CALL timestop("determination of fermi energy")
-                            ENDIF
-                            IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd = 2*dimension%neigd
-                            IF( .NOT. ALLOCATED(results%w_iks) )&
-                                 ALLOCATE ( results%w_iks(dimension%neigd,kpts%nkpt,dimension%jspd) )
-                            IF ( (mpi%irank.EQ.0).AND.(.NOT.jij%l_J) ) THEN
-                               CALL timestart("determination of fermi energy")
-
-                               IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) THEN
-                                  input%zelec = input%zelec*2
-                                  CALL fermie(eig_id,mpi,kpts,obsolete,&
-                                       input,noco,enpara%epara_min,jij,cell,results)
-                                  results%seigscv = results%seigscv/2
-                                  results%ts = results%ts/2
-                                  input%zelec = input%zelec/2
-                               ELSE
-                                  CALL fermie(eig_id,mpi,kpts,obsolete,&
-                                       input,noco,enpara%epara_min,jij,cell,results)
-                               ENDIF
-                               CALL timestop("determination of fermi energy")
-                               !+Wannier
-                            IF(wann%l_bs_comf)THEN
-                               IF(pc.EQ.1) THEN
-                                  OPEN(777,file='out_eig.1')
-                                  OPEN(778,file='out_eig.2')
-                                  OPEN(779,file='out_eig.1_diag')
-                                  OPEN(780,file='out_eig.2_diag')
-                               END IF
-
-                               CALL bs_comfort(eig_id,DIMENSION,input,noco,kpts%nkpt,pc)
-
-                               IF(pc.EQ.wann%nparampts)THEN
-                                  CLOSE(777)
-                                  CLOSE(778)
-                                  CLOSE(779)
-                                  CLOSE(780)
-                               END IF
-                            END IF
-                            !-Wannier
-                            ENDIF
-
-                            IF (input%eonly) THEN
-                               CALL close_eig(eig_id)
-
-                               IF (.NOT. jij%l_J) THEN
-                                  DEALLOCATE( results%w_iks )
-#ifdef CPP_MPI
-                                  CALL MPI_BARRIER(mpi%mpi_comm,ierr)
-#endif
-                                  IF (mpi%irank==0) THEN
-                                     WRITE (*,fmt='(A)') 'eigenvalues written, program stops'
-                                  ENDIF
-                                  stop80= .TRUE.
-                               ENDIF
-                            ENDIF ! input%eonly
-
-                         ENDIF ! ( input%eigvar(3) .and. .not.(noco%l_soc .and. noco%l_ss) )
-                         !--- J<
-                         IF(jij%l_J) THEN
-                            IF (.NOT. input%eonly) THEN
-                               DEALLOCATE ( results%w_iks )
-                            ENDIF
-                            IF (((i_J.EQ.j_J)).OR.(sym%invs.AND.(jij%qn.GT.tol))) GOTO 33
-                         ENDIF
-                      ENDDO !phn
-33                    CONTINUE
-                   ENDDO !j_J
-                   i_J=i_J+jij%nmagtype(imt)
-                ENDDO !imt
-                IF ((mpi%irank.EQ.0).AND.(input%l_wann.OR.jij%l_J)) THEN
-                   CALL timestop("Q-point for J_ij(total)")
-                ENDIF
-             END DO !pc
-          ENDDO !qcount
-          IF (stop80) THEN
-             IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
-                CALL closeXMLElement('iteration')
-             END IF
-             EXIT ! it
-          ENDIF
-
-234       CONTINUE
-
-          IF (mpi%irank.EQ.0) THEN
-             IF(jij%l_J) THEN
-                IF(.NOT.jij%l_disp)THEN
-                   REWIND(113)
-                   REWIND(114)
-#ifdef CPP_NEVER
-                   CALL jcoff2(atoms,sym,cell,jij,input)
-#endif
-                ENDIF
-                CLOSE(113)
-                CLOSE(114)
-             ENDIF
-          ENDIF
-
-          IF (.NOT.jij%l_J) THEN
-             !--- J>
-#ifdef CPP_MPI
-             CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-             CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-#endif
-             !-t3e
-             !
-             !        ----> initialise force_old
-             !
-             CALL force_0(results)
-             !
-             !        ----> charge density
-             !
-             !+Wannier functions
-             IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
-                CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
-                     wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
-                     eig_idList,(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
-             END IF
-             IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
-             !-Wannier
-
-             CALL timestart("generation of new charge density (total)")
-             CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-             outDen%iter = inDen%iter
-             CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                         DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-                         enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                         archiveType,outDen)
-
-             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) dimension%neigd=dimension%neigd/2
-             !+t3e
-#ifdef CPP_MPI
-             CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-             CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-             CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-
-             IF (noco%l_noco) THEN
-                DO n= 1,atoms%ntype
-                   IF (noco%l_relax(n)) THEN
-                      CALL MPI_BCAST(noco%alph(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                      CALL MPI_BCAST(noco%beta(n),1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                   ENDIF
-                ENDDO
-                IF (noco%l_constr) THEN
-                   CALL MPI_BCAST(noco%b_con,SIZE(noco%b_con),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-                ENDIF
-             ENDIF
-#endif
-             CALL timestop("generation of new charge density (total)")
-             IF (mpi%irank.EQ.0) THEN
-                !-t3e
-
-                IF (banddos%ndir.GT.0) THEN
-                   CALL juDFT_end("NDIR",mpi%irank)
-                END IF
-
-                !----> output potential and potential difference
-                IF (obsolete%disp) THEN
-                   reap = .FALSE.
-                   input%total = .FALSE.
-                   CALL timestart("generation of potential (total)")
-                   CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
-                   CALL timestop("generation of potential (total)")
-
-                   CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
-                END IF
-
-                !----> total energy
-                CALL timestart('determination of total energy')
-                CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
-                     sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,inDen,results)
-
-                CALL timestop('determination of total energy')
-
-                ! in case of parallel processing, the total energy calculation is done
-                ! only for irank.eq.0, since no parallelization is required here. once
-                ! a force calculation is applied, however, the irank.eq.0 process is
-                ! led into a MPI_FINALIZE after convergence, while the other processes
-                ! are not, resulting in fleur not terminating despite having finished
-                ! the calculation. the next 7 lines correct that issue.
-                ! (other files subject to this correction: geo.F, force_w.F)
-                ! Schlipf/Klueppelberg Jun 2012
-#ifdef CPP_MPI
-             ELSEIF (input%l_f) THEN ! forces, but mpi%irank.ne.0
-                !This does not work, you can not call MPI_BCAST within a
-                !else part of irank==0 as PE=0 will not call this!
-                !CALL MPI_BCAST(lconv,1,MPI_LOGICAL,0,mpi_comm,ierr)
-                !IF (lconv) THEN
-                !  CALL MPI_FINALIZE(ierr)
-                !END IF
-#endif
-
-             ENDIF ! mpi%irank.EQ.0
-             !Close file if not a hybrid calculation
-             IF ( hybrid%l_hybrid ) CALL close_eig(eig_id)
-
-          ENDIF !(if not jij%l_J)
-       ELSE
-          input%alpha = input%alpha - 10.
-       END IF !(if input%alpha <10.)
-       IF (.NOT.jij%l_J) THEN
-
-          IF (mpi%irank.EQ.0) THEN
-             !-t3e
-             !
-             !          ----> mix input and output densities
-             !
-             CALL timestart("mixing")
-             CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
-             CALL timestop("mixing")
-
-             WRITE (6,FMT=8130) it
-             WRITE (16,FMT=8130) it
-8130         FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
-             WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
-             CALL timestop("Iteration")
-             !+t3e
+             CALL timestop('determination of total energy')
           ENDIF ! mpi%irank.EQ.0
+          IF ( hybrid%l_hybrid ) CALL close_eig(eig_id)
 
-          !--- J<
-       ELSE
-       ENDIF !(if not jij%l_J)
-       !--- J>
+       END DO forcetheoloop
 
+       CALL forcetheo%postprocess()
+       
+       IF (mpi%irank.EQ.0) THEN
+          !          ----> mix input and output densities
+          CALL timestart("mixing")
+          CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
+          CALL timestop("mixing")
+          
+          WRITE (6,FMT=8130) it
+          WRITE (16,FMT=8130) it
+8130      FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
+          WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
+          CALL timestop("Iteration")
+          !+t3e
+       ENDIF ! mpi%irank.EQ.0
+       
+          
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
-       !-t3e
-
-       !+fo
        CALL priv_geo_end(mpi)
 
-       !-fo
-       IF ( hybrid%l_calhf ) ithf = ithf + 1
-       IF ( hybrid%l_subvxc ) THEN
-          l_cont = ( ithf < input%itmax )
-          results%te_hfex%core    = 0
-          results%te_hfex%valence = 0
-       ELSE
-          l_cont = ( it < input%itmax )
-       END IF
+!!$       IF ( hybrid%l_calhf ) ithf = ithf + 1
+!!$    IF ( hybrid%l_subvxc ) THEN
+!!$       l_cont = ( ithf < input%itmax )
+!!$       results%te_hfex%core    = 0
+!!$       results%te_hfex%valence = 0
+!!$    ELSE
+       l_cont = ( it < input%itmax )
+!!$    END IF
        CALL writeTimesXML()
        CALL check_time_for_next_iteration(it,l_cont)
 
@@ -693,11 +549,11 @@ CONTAINS
           CALL closeXMLElement('iteration')
        END IF
 
-    END DO ! DO WHILE (l_cont)
+    END DO scfloop ! DO WHILE (l_cont)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
     CALL juDFT_end("all done",mpi%irank)
-
+    
   CONTAINS
     SUBROUTINE priv_geo_end(mpi)
       TYPE(t_mpi),INTENT(IN)::mpi
@@ -724,6 +580,6 @@ CONTAINS
       ENDIF
       CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
     END SUBROUTINE priv_geo_end
-
+    
   END SUBROUTINE fleur_execute
 END MODULE m_fleur
