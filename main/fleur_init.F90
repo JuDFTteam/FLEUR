@@ -213,6 +213,7 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,jij,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,results,obsolete)
+             CALL mpi_dist_forcetheorem(mpi,forcetheo)
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
