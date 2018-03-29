@@ -89,7 +89,7 @@ CONTAINS
     CHARACTER(LEN=12):: attributes(3)
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_MAE')
-    CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this.evsum)/))
+    CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this%evsum)/))
     DO n=1,SIZE(this%evsum)
        WRITE(attributes(1),'(f12.7)') this%theta(n)
        WRITE(attributes(2),'(f12.7)') this%phi(n)

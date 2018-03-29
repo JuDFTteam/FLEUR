@@ -102,7 +102,7 @@ c     ..scalar arguments..
       integer, intent (in) :: irank,isize,nv2d,nmzxy,nmz
       integer, intent (in) :: memd,lmplmd,nparampts
       real,    intent (in) :: omtil,e1s,e2s,delz,area,z1,volint
-      real,    intent (in) :: ef,theta(:),phi(:),aux_latt_const
+      real,    intent (in) :: ef,theta,phi,aux_latt_const
 
 c     ..array arguments..
       logical, intent (in) :: l_dulo(nlod,ntypd)
@@ -652,8 +652,8 @@ c*****************************************************************c
        qpt_i = qss
        alph_i = alph
        beta_i = beta
-       theta_i = theta(1)
-       phi_i = phi(1)
+       theta_i = theta
+       phi_i = phi
        if(l_sgwf.or.l_ms) then
           qpt_i(:) = param_vec(:,qptibz)
           alph_i(:) = param_alpha(:,qptibz)

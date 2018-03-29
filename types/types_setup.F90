@@ -394,8 +394,8 @@ MODULE m_types_setup
      REAL, ALLOCATABLE :: b_con(:,:)
      LOGICAL           :: l_soc
      LOGICAL           :: l_spav
-     REAL, ALLOCATABLE :: theta(:)
-     REAL, ALLOCATABLE :: phi(:)
+     REAL              :: theta
+     REAL              :: phi
      REAL,ALLOCATABLE  :: socscale(:)
   END TYPE t_noco
 

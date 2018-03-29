@@ -78,9 +78,9 @@ CONTAINS
                          c_a(m,l,na) = CMPLX(0.,0.)
                          c_b(m,l,na) = CMPLX(0.,0.)
                          DO m1 = -l,l
-                            c_a(m,l,na) = c_a(m,l,na) + rsoc%soangl(l,m,i1,l,m1,j1,1)&
+                            c_a(m,l,na) = c_a(m,l,na) + rsoc%soangl(l,m,i1,l,m1,j1)&
                                  *CONJG(ahelp(m1,l,na,j,jsp1))
-                            c_b(m,l,na) = c_b(m,l,na) + rsoc%soangl(l,m,i1,l,m1,j1,1)&
+                            c_b(m,l,na) = c_b(m,l,na) + rsoc%soangl(l,m,i1,l,m1,j1)&
                                  *CONJG(bhelp(m1,l,na,j,jsp1))
                          ENDDO
                       ENDDO
@@ -93,7 +93,7 @@ CONTAINS
                             c_c(m,ilo,na) = CMPLX(0.,0.)
                             DO m1 = -l,l
                                c_c(m,ilo,na) = c_c(m,ilo,na) + CONJG(&
-                                    chelp(m1,j,ilo,na,jsp1))*rsoc%soangl(l,m,i1,l,m1,j1,1)
+                                    chelp(m1,j,ilo,na,jsp1))*rsoc%soangl(l,m,i1,l,m1,j1)
                             ENDDO
                          ENDDO
                       ENDIF

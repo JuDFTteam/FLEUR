@@ -509,13 +509,10 @@ SUBROUTINE r_inpXML(&
   noco%phi = 0.0
  
   IF (numberNodes.EQ.1) THEN
-     valueString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta')
-     CALL evaluateList(noco%theta,valueString)
-     valueString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi')
-     CALL evaluateList(noco%phi,valueString)
+     noco%theta=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta'))
+     noco%phi=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi'))
      noco%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
      noco%l_spav = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
-     IF (SIZE(noco%theta).NE.SIZE(noco%phi)) CALL judft_error("Inequal length of list for soc-angles")
   END IF
 
   ! Read in optional noco parameters if present
@@ -576,8 +573,6 @@ SUBROUTINE r_inpXML(&
         !WRITE(*,*) '(no problem for users)'
      END IF
   END IF
-
-  IF (SIZE(noco%theta)>1.AND..NOT.(noco%l_ss.AND.noco%l_soc)) CALL judft_warn("Multiple soc-angles only for l_soc&l_ss implemented")
 
   ! Read in optional 1D parameters if present
 

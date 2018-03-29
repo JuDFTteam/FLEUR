@@ -421,7 +421,7 @@ c-----input file for orbital decomposition
      >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
      >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
      >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
-     >      noco%theta(1),noco%phi(1))
+     >      noco%theta,noco%phi)
 
          DO pc = 1, wann%nparampts
             CALL close_eig(eig_idList(pc))
@@ -818,8 +818,8 @@ c*****************************************************************c
        qpt_i = noco%qss
        alph_i = noco%alph
        beta_i = noco%beta
-       theta_i = noco%theta(1)
-       phi_i = noco%phi(1)
+       theta_i = noco%theta
+       phi_i = noco%phi
        if(wann%l_sgwf.or.wann%l_ms) then
           qpt_i(:) = wann%param_vec(:,qptibz)
           alph_i(:) = wann%param_alpha(:,qptibz)
@@ -1962,8 +1962,8 @@ c*******************************************c
         qptb_i = noco%qss
         alphb_i = noco%alph
         betab_i = noco%beta
-        thetab_i = noco%theta(1)
-        phib_i = noco%phi(1)
+        thetab_i = noco%theta
+        phib_i = noco%phi
         if(wann%l_sgwf) then
            qptb_i(:) = wann%param_vec(:,qptibz_b)
            alphb_i(:) = wann%param_alpha(:,qptibz_b)

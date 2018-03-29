@@ -11,7 +11,7 @@ MODULE m_types_tlmplm
      REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsopp,rsoppd,rsopdp,rsopdpd     !(atoms%ntype,atoms%lmaxd,2,2)
      REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsoplop,rsoplopd,rsopdplo,rsopplo!(atoms%ntype,atoms%nlod,2,2)
      REAL,ALLOCATABLE,DIMENSION(:,:,:,:,:) :: rsoploplop !(atoms%ntype,atoms%nlod,nlod,2,2)
-     COMPLEX,ALLOCATABLE,DIMENSION(:,:,:,:,:,:,:)::soangl
+     COMPLEX,ALLOCATABLE,DIMENSION(:,:,:,:,:,:)::soangl
   END TYPE t_rsoc
 
     TYPE t_tlmplm

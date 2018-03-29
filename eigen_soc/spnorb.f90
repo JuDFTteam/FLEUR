@@ -34,7 +34,7 @@ CONTAINS
     REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n,nr
+    INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n
     LOGICAL, SAVE :: first_k = .TRUE.
     !     ..
     !     .. Local Arrays ..
@@ -54,7 +54,7 @@ CONTAINS
     ALLOCATE(rsoc%rsopplo (atoms%ntype,atoms%nlod,2,2));rsoc%rsopplo=0.0
     ALLOCATE(rsoc%rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2));rsoc%rsoploplop=0.0
     IF (l_angles) ALLOCATE(rsoc%soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
-         atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,SIZE(noco%theta)))
+         atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2))
 
     !Calculate radial soc-matrix elements
     DO n = 1,atoms%ntype
@@ -99,13 +99,12 @@ CONTAINS
 
     IF (.NOT.l_angles) RETURN
 
-    DO nr=1,SIZE(noco%theta)
     
-       IF ((ABS(noco%theta(nr)).LT.0.00001).AND.(ABS(noco%phi(nr)).LT.0.00001)) THEN
-          !
-          !       TEST for real function sgml(l1,m1,is1,l2,m2,is2)
-          !
-          DO l1 = 1,atoms%lmaxd
+    IF ((ABS(noco%theta).LT.0.00001).AND.(ABS(noco%phi).LT.0.00001)) THEN
+       !
+       !       TEST for real function sgml(l1,m1,is1,l2,m2,is2)
+       !
+       DO l1 = 1,atoms%lmaxd
           DO l2 = 1,atoms%lmaxd
              DO jspin1 = 1,2
                 DO jspin2 = 1,2
@@ -113,7 +112,7 @@ CONTAINS
                    is2=ispjsp(jspin2)
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
-                         rsoc%soangl(l1,m1,jspin1,l2,m2,jspin2,nr) =&
+                         rsoc%soangl(l1,m1,jspin1,l2,m2,jspin2) =&
                               CMPLX(sgml(l1,m1,is1,l2,m2,is2),0.0)
                       ENDDO
                    ENDDO
@@ -121,7 +120,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
-
+       
     ELSE
        !
        !       TEST for complex function anglso(teta,phi,l1,m1,is1,l2,m2,is2)
@@ -135,8 +134,8 @@ CONTAINS
                    !
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
-                         rsoc%soangl(l1,m1,jspin1,l2,m2,jspin2,nr) =&
-                              anglso(noco%theta(nr),noco%phi(nr),l1,m1,is1,l2,m2,is2)
+                         rsoc%soangl(l1,m1,jspin1,l2,m2,jspin2) =&
+                              anglso(noco%theta,noco%phi,l1,m1,is1,l2,m2,is2)
                       ENDDO
                    ENDDO
                    !
@@ -146,20 +145,19 @@ CONTAINS
        ENDDO
        !
     ENDIF
-
+    
     IF (mpi%irank.EQ.0) THEN
-       WRITE (6,FMT=8002) nr
+       WRITE (6,FMT=8002) 
        DO jspin1 = 1,2
           DO jspin2 = 1,2
              WRITE (6,FMT=*) 'd-states:is1=',jspin1,',is2=',jspin2
              WRITE (6,FMT='(7x,7i8)') (m1,m1=-3,3,1)
-             WRITE (6,FMT=8003) (m2, (rsoc%soangl(3,m1,jspin1,3,m2,jspin2,nr),&
+             WRITE (6,FMT=8003) (m2, (rsoc%soangl(3,m1,jspin1,3,m2,jspin2),&
                   m1=-3,3,1),m2=-3,3,1)
           ENDDO
        ENDDO
     ENDIF
- ENDDO
-8002 FORMAT (' so - angular matrix elements for config No:',i0)
+8002 FORMAT (' so - angular matrix elements')
 8003 FORMAT (i8,14f8.4)
 
   END SUBROUTINE spnorb

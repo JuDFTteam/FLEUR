@@ -105,14 +105,13 @@ CONTAINS
     CALL timestart("eigenso: spnorb")
     !  ..
 
-    IF (SIZE(noco%theta)>1) CALL judft_warn("only first SOC-angle used in second variation")
     !Get spin-orbit coupling matrix elements
     CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.)
     !
 
 
     ALLOCATE( eig_so(2*DIMENSION%neigd) )
-    rsoc%soangl(:,:,:,:,:,:,1) = CONJG(rsoc%soangl(:,:,:,:,:,:,1))
+    rsoc%soangl(:,:,:,:,:,:) = CONJG(rsoc%soangl(:,:,:,:,:,:))
     CALL timestop("eigenso: spnorb")
     !
     !--->    loop over k-points: each can be a separate task

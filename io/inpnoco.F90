@@ -56,7 +56,7 @@
          iatom = 1
          DO itype = 1,atoms%ntype
             noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,iatom))
-            noco%alph(itype) = noco%alph(itype) + noco%phi(1)
+            noco%alph(itype) = noco%alph(itype) + noco%phi
             iatom = iatom + atoms%neq(itype)
          ENDDO
       ENDIF

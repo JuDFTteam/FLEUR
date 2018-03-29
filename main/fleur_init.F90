@@ -162,7 +162,6 @@
           sliceplot%nnne = 0
 
           IF (input%l_inpXML) THEN
-              ALLOCATE(noco%theta(1),noco%phi(1))
             
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
@@ -226,7 +225,6 @@
              jij%nmagn=1
              jij%mtypes=1
              jij%phnd=1
-             ALLOCATE(noco%theta(1),noco%phi(1))
              !--- J>
 
              CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&

@@ -58,7 +58,7 @@
     
       IF (noco%l_soc) THEN  ! check once more here...
         CALL soc_sym(&
-     &               sym%nop,sym%mrot,noco%theta(1),noco%phi(1),cell%amat,&
+     &               sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,&
      &               error)
       ELSE
         error(:) = .false.

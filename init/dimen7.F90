@@ -104,7 +104,7 @@
      & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%ncst(atoms%ntype),atoms%lnonsph(atoms%ntype),&
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
-     & atoms%l_geo(atoms%ntype),noco%theta(1),noco%phi(1),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
+     & atoms%l_geo(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype),&
      & jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype),noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
@@ -256,7 +256,7 @@
       IF (noco%l_soc .and. (.not.noco%l_noco)) THEN  
         ! test symmetry for spin-orbit coupling
         ALLOCATE ( error(sym%nop) )
-        CALL soc_sym(sym%nop,sym%mrot,noco%theta(1),noco%phi(1),cell%amat,error)
+        CALL soc_sym(sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,error)
         IF ( ANY(error(:)) ) THEN
           WRITE(*,fmt='(1x)')
           WRITE(*,fmt='(A)') 'Symmetry incompatible with SOC spin-quantization axis ,'  
