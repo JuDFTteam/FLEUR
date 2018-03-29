@@ -26,6 +26,7 @@ CONTAINS
     ENDIF   
     CALL MPI_BCAST(t,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     IF (mpi%irank.NE.0) THEN
+       DEALLOCATE(forcetheo)
        SELECT CASE (t)
        CASE (1)
           ALLOCATE(t_forcetheo::forcetheo)
