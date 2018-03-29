@@ -17,7 +17,8 @@ MODULE m_types_mae
      PROCEDURE :: next_job=>mae_next_job 
      PROCEDURE :: eval    =>mae_eval
      PROCEDURE :: postprocess => mae_postprocess
-     PROCEDURE :: init   => mae_init
+     PROCEDURE :: init   => mae_init !not overloaded
+     PROCEDURE :: dist   => mae_dist !not overloaded
   END TYPE t_forcetheo_mae
 
 CONTAINS
@@ -99,4 +100,21 @@ CONTAINS
     END DO
     CALL closeXMLElement('Forcetheorem_MAE')
   END SUBROUTINE mae_postprocess
+
+  SUBROUTINE mae_dist(this,mpi)
+    USE m_types_mpi
+    IMPLICIT NONE
+    CLASS(t_forcetheo_mae),INTENT(INOUT):: this
+    TYPE(t_mpi),INTENT(in):: mpi
+
+    INTEGER:: i,ierr
+#ifdef CPP_MPI    
+    INCLUDE 'mpif.h'
+    IF (mpi%irank==0) i=SIZE(this%theta)
+    call MPI_BCAST(i,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    IF (mpi%irank.NE.0) ALLOCATE(this%phi(i),this%theta(i),this%evsum(i));this%evsum=0.0
+    CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+#endif    
+  END SUBROUTINE mae_dist
 END MODULE m_types_mae

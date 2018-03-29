@@ -36,6 +36,7 @@
           USE m_writeOutHeader
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
+          USE m_mpi_dist_forcetheorem
 #endif
 #ifdef CPP_HDF
           USE m_hdf_tools
@@ -341,6 +342,9 @@
 #ifdef CPP_MPI
              CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
              CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+
+             CALL mpi_dist_forcetheorem(mpi,forcetheo)
+             
 #endif
              IF (mpi%irank.NE.0) THEN
                 CALL xcpot%init(namex,l_krla)
