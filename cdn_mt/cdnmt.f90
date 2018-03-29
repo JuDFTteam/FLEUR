@@ -81,19 +81,10 @@ CONTAINS
     CALL timestart("cdnmt")
 
     IF (noco%l_mperp) THEN
-       ALLOCATE ( usdus%us(0:atoms%lmaxd,atoms%ntype,jspd),usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd) )
-       ALLOCATE ( usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd) )
-       ALLOCATE ( usdus%ddn(0:atoms%lmaxd,atoms%ntype,jspd) )
        IF (l_fmpl) THEN
           ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
           rho21(:,:,:) = cmplx(0.0,0.0)
        ENDIF
-    ELSE
-       ALLOCATE (   usdus%us(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-       ALLOCATE (  usdus%uds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-       ALLOCATE (  usdus%dus(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-       ALLOCATE ( usdus%duds(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
-       ALLOCATE (  usdus%ddn(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end) )
     ENDIF
 
     !$OMP PARALLEL DEFAULT(none) &

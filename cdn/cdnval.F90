@@ -250,7 +250,7 @@ CONTAINS
     ! --> Initializations
     !
 
-    CALL usdus%init(atoms,jsp_end)
+    CALL usdus%init(atoms,input%jspins)
 
     uu(:,:,:) = 0.0 ; dd(:,:,:) = 0.0 ; du(:,:,:) = 0.0
     IF (noco%l_mperp) THEN
