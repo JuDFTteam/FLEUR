@@ -36,6 +36,7 @@ include(eels/CMakeLists.txt)
 include(types/CMakeLists.txt)
 include(wannier/CMakeLists.txt)
 include(wannier/uhu/CMakeLists.txt)
+include(forcetheorem/CMakeLists.txt)
 
 set(inpgen_F77 
 inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f
@@ -48,11 +49,9 @@ init/kptmop.f init/kpttet.f init/bandstr1.F init/ordstar.f init/fulstar.f init/k
 init/tetcon.f init/kvecon.f init/boxdim.f math/ylm4.f
 )
 
-set(inpgen_F90  global/constants.f90 io/xsf_io.f90
-types/types_potden.f90 types/types.F90 types/types_mat.F90 eigen/vec_for_lo.f90 eigen/orthoglo.F90 
-types/types_xcpot.F90 types/types_mpi.F90 types/types_lapw.F90
-types/types_tlmplm.F90
-types/types_misc.F90 global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90
+set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
+eigen/vec_for_lo.f90 eigen/orthoglo.F90 
+global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90 types/types_setup.F90
 juDFT/info.F90 juDFT/stop.F90 juDFT/args.F90 juDFT/time.F90 juDFT/init.F90 juDFT/sysinfo.F90 io/w_inpXML.f90 init/julia.f90 global/utility.F90 
 init/compile_descr.F90 init/kpoints.f90 io/xmlOutput.F90 init/brzone2.f90)
 

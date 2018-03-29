@@ -7,7 +7,7 @@
       IMPLICIT NONE
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
-             input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+             input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
           USE m_judft
@@ -63,6 +63,7 @@
           TYPE(t_oneD)     ,INTENT(OUT):: oneD
           TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
           TYPE(t_wann)     ,INTENT(OUT):: wann
+          CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
           LOGICAL,          INTENT(OUT):: l_opti
 
 
@@ -175,7 +176,7 @@
                 a2 = 0.0
                 a3 = 0.0
                 CALL r_inpXML(&
-                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
                      cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
@@ -194,7 +195,7 @@
                 filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
-                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+                              atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
@@ -214,7 +215,7 @@
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
-
+             ALLOCATE(t_forcetheo::forcetheo) !default no forcetheorem type
              namex = '    '
              relcor = '            '
 
@@ -401,7 +402,7 @@
                    kpts%specificationType = 3
                    sym%symSpecType = 3
                    CALL w_inpXML(&
-                                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+                                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                                  noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                                  xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&

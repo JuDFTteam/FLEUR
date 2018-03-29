@@ -11,4 +11,25 @@ types/types_misc.F90
 types/types_mpimat.F90
 types/types_potden.f90
 types/types_forcetheo.F90
+types/types_kpts.f90
+types/types_enpara.F90
+types/types_setup.F90
+types/types_usdus.F90
+)
+
+set(inpgen_F90 ${inpgen_F90}
+types/types.F90
+types/types_mat.F90
+types/types_xcpot.F90
+types/types_mpi.F90
+types/types_lapw.F90
+types/types_tlmplm.F90
+types/types_misc.F90
+types/types_mpimat.F90
+types/types_potden.f90
+types/types_forcetheo.F90
+types/types_kpts.f90
+types/types_enpara.F90
+types/types_setup.F90
+types/types_usdus.F90
 )

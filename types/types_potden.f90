@@ -38,7 +38,7 @@ MODULE m_types_potden
 CONTAINS
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,oneD,jspins,nocoExtraDim,potden_type)
     USE m_judft
-    USE m_types_misc
+    USE m_types_setup
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd
     TYPE(t_atoms),INTENT(IN) :: atoms

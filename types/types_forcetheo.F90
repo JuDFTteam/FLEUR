@@ -37,22 +37,30 @@ CONTAINS
     this%firstloop=.TRUE.
   END SUBROUTINE forcetheo_start
 
-  LOGICAL FUNCTION forcetheo_next_job(this)
+  LOGICAL FUNCTION forcetheo_next_job(this,lastiter,noco)
+    USE m_types_setup
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
+     LOGICAL,INTENT(IN)                  :: lastiter
+    !Stuff that might be modified...
+    TYPE(t_noco),INTENT(INOUT) :: noco
     forcetheo_next_job=this%firstloop
     this%firstloop=.FALSE.
   END FUNCTION forcetheo_next_job
 
-  LOGICAL FUNCTION forcetheo_eval(this)
+  FUNCTION forcetheo_eval(this,results)RESULT(skip)
+    USE m_types_misc
     IMPLICIT NONE
-    CLASS(t_forcetheo),INTENT(IN):: this
-    forcetheo_eval=.FALSE.
+    CLASS(t_forcetheo),INTENT(INOUT):: this
+    LOGICAL :: skip
+    !Stuff that might be used...
+    TYPE(t_results),INTENT(IN) :: results
+    skip=.FALSE.
   END FUNCTION forcetheo_eval
 
   SUBROUTINE forcetheo_postprocess(this)
     IMPLICIT NONE
-    CLASS(t_forcetheo),INTENT(IN):: this
+    CLASS(t_forcetheo),INTENT(INOUT):: this
   END SUBROUTINE forcetheo_postprocess
 
   

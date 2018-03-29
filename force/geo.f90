@@ -102,7 +102,7 @@ CONTAINS
     CHARACTER(LEN=20)             :: filename
     REAL                          :: a1_temp(3),a2_temp(3),a3_temp(3)
     REAL                          :: scale_temp, dtild_temp
-
+    CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
     input=input_in
     atoms_new=atoms
 
@@ -182,7 +182,7 @@ CONTAINS
           ALLOCATE(xmlCoreOccs(1,1,1))
           CALL initWannierDefaults(wann_temp)
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                        banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
+                        banddos_temp,dimension_temp,forcetheo,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,xmlElectronStates,&
                         xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
@@ -193,7 +193,7 @@ CONTAINS
           input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nkpt3(:),1)
           stars_temp%gmax = stars_temp%gmaxInit
-          CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+          CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,forcetheo,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nkpt3,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
                         dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&

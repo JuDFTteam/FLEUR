@@ -14,7 +14,7 @@ MODULE m_rinpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE r_inpXML(&
-                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,dimension,&
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
                      cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
@@ -55,6 +55,7 @@ SUBROUTINE r_inpXML(&
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
+  CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT):: forcetheo
   TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
   TYPE(t_wann)   ,INTENT(INOUT)  :: wann
   LOGICAL, INTENT(OUT)           :: l_kpts
@@ -1663,6 +1664,33 @@ SUBROUTINE r_inpXML(&
 !!! End of atomGroup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Start of force-theorem section
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  xPathA = '/fleurInput/forcetheorem'
+  numberNodes = xmlGetNumberOfNodes(xPathA)
+  IF (numberNodes.EQ.1) THEN
+     xPathA = '/fleurInput/forcetheorem/mae'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+     IF (numberNodes.EQ.1) THEN
+        lString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'theta')
+        nString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'phi')
+        ALLOCATE(t_forcetheo_mae::forcetheo)
+        SELECT TYPE(forcetheo)
+        TYPE IS(t_forcetheo_mae) !this is ok, we just allocated the type...
+           CALL forcetheo%init(lString,nString)
+        END SELECT
+     ENDIF
+  ELSE
+     ALLOCATE(t_forcetheo::forcetheo) !default no forcetheorem type
+  ENDIF
+        
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! End of force-theorem section
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of output section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

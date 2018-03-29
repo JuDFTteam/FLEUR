@@ -111,10 +111,9 @@ CONTAINS
 #endif
 
     mpi%mpi_comm = mpi_comm
-    ALLOCATE(t_forcetheo::forcetheo) !default (no force theorem calculation
-
+ 
     CALL timestart("Initialization")
-    CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+    CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
          sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
          oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
@@ -281,7 +280,7 @@ CONTAINS
 
        CALL forcetheo%start()
 
-       forcetheoloop:DO WHILE(forcetheo%next_job())
+       forcetheoloop:DO WHILE(forcetheo%next_job(it==input%itmax,noco))
 
 !!$                   !
 !!$                   !          ----> eigenvalues and eigenfunctions
@@ -413,7 +412,7 @@ CONTAINS
                sym,cell,noco,input,obsolete,kpts,oneD,MPI_DOUBLE_PRECISION )
 #endif
 
-          IF (forcetheo%eval()) CYCLE forcetheoloop
+          IF (forcetheo%eval(results)) CYCLE forcetheoloop
 !!$          IF(jij%l_J) THEN
 !!$             IF (((i_J.EQ.j_J)).OR.(sym%invs.AND.(jij%qn.GT.tol))) GOTO 33
 !!$          ENDIF

@@ -17,7 +17,7 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE w_inpXML(&
-&                   atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+&                   atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
 &                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
 &                   noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
@@ -49,6 +49,7 @@ SUBROUTINE w_inpXML(&
    TYPE(t_xcpot),INTENT(IN)    :: xcpot
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
+   CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
    INTEGER, INTENT (IN)        :: numSpecies
    INTEGER, INTENT (IN)        :: div(3)
    INTEGER, INTENT (IN)        :: atomTypeSpecies(atoms%ntype)

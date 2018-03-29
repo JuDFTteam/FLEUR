@@ -78,6 +78,7 @@
       TYPE(t_xcpot)::xcpot
       TYPE(t_kpts)::kpts
       TYPE(t_enpara)::enpara
+      CLASS(t_forcetheo),allocatable::forcetheo
 
     !-odim
 !+odim
@@ -466,7 +467,7 @@
          filename = 'inp.xml'
 
          CALL w_inpXML(&
-     &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
      &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
