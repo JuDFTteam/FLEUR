@@ -78,7 +78,7 @@
       TYPE(t_xcpot)::xcpot
       TYPE(t_kpts)::kpts
       TYPE(t_enpara)::enpara
-      CLASS(t_forcetheo),allocatable::forcetheo
+      TYPE(t_forcetheo)::forcetheo
 
     !-odim
 !+odim
