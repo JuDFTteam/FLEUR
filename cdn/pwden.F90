@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne, igq_fft,we,eig,den,qis,forces,f_b8,zMat)
+       ikpt,jspin,lapw,ne,we,eig,den,qis,forces,f_b8,zMat)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -94,7 +94,6 @@ CONTAINS
     TYPE(t_zMat),INTENT(IN)      :: zMat
     TYPE(t_potden),INTENT(INOUT) :: den
 
-    INTEGER, INTENT (IN)        :: igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     REAL,INTENT(IN)   :: we(:) !(nobd) 
     REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
     !----->  BASIS FUNCTION INFORMATION
@@ -491,7 +490,7 @@ CONTAINS
              cwk=0.0
              DO ik = 0 , stars%kmxq_fft - 1
                 cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
-                     CMPLX(psi1r(igq_fft(ik)),psi1i(igq_fft(ik)))
+                     CMPLX(psi1r(stars%igq_fft(ik)),psi1i(stars%igq_fft(ik)))
              ENDDO
              DO istr = 1,stars%ng3_fft
                 CALL pwint(stars,atoms,sym, oneD,cell,stars%kv3(1,istr),x)
@@ -500,7 +499,8 @@ CONTAINS
 
              cwk=0.0
              DO ik = 0 , stars%kmxq_fft - 1
-                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(psi2r(igq_fft(ik)),psi2i(igq_fft(ik)))
+                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
+                                                              CMPLX(psi2r(stars%igq_fft(ik)),psi2i(stars%igq_fft(ik)))
              ENDDO
              DO istr = 1,stars%ng3_fft
                 CALL pwint(stars,atoms,sym, oneD,cell, stars%kv3(1,istr), x)
@@ -608,27 +608,32 @@ CONTAINS
        ecwk=0.0
        IF (noco%l_noco) THEN
           DO ik = 0 , stars%kmxq_fft - 1
-             cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(rhomat(igq_fft(ik),idens),psi1r(igq_fft(ik)))
+             cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
+                                                           CMPLX(rhomat(stars%igq_fft(ik),idens),psi1r(stars%igq_fft(ik)))
           ENDDO
        ELSE
           IF (zmat%l_real) THEN
              DO ik = 0 , stars%kmxq_fft - 1
-                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(rhon(igq_fft(ik)),zero)
+                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
+                                                              CMPLX(rhon(stars%igq_fft(ik)),zero)
              ENDDO
           ELSE
              DO ik = 0 , stars%kmxq_fft - 1
-                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(rhon(igq_fft(ik)),psir(igq_fft(ik)))
+                cwk(stars%igfft(ik,1))=cwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
+                                                              CMPLX(rhon(stars%igq_fft(ik)),psir(stars%igq_fft(ik)))
              ENDDO
           ENDIF
           !+apw
           IF (input%l_f) THEN 
              IF (zmat%l_real) THEN
                 DO ik = 0 , stars%kmxq_fft - 1
-                   ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(ekin(igq_fft(ik)),zero)
+                   ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
+                                                                   CMPLX(ekin(stars%igq_fft(ik)),zero)
                 ENDDO
              ELSE
                 DO ik = 0 , stars%kmxq_fft - 1
-                   ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))* CMPLX(ekin(igq_fft(ik)),psii(igq_fft(ik)))
+                   ecwk(stars%igfft(ik,1))=ecwk(stars%igfft(ik,1))+CONJG(stars%pgfft(ik))*&
+                                                                   CMPLX(ekin(stars%igq_fft(ik)),psii(stars%igq_fft(ik)))
                 ENDDO
              ENDIF
           ENDIF

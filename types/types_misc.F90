@@ -52,7 +52,6 @@ MODULE m_types_misc
      REAL :: core
   END TYPE t_energy_hf
 
-  
   TYPE prodtype
      INTEGER :: l1,l2,n1,n2
   END TYPE prodtype
