@@ -543,8 +543,7 @@ MODULE m_types_misc
      LOGICAL:: l_coreSpec
      LOGICAL:: l_wann
      LOGICAL:: secvar
-     LOGICAL:: evonly(2)
-     LOGICAL:: eigvar(3)
+     LOGICAL:: evonly
      LOGICAL:: total
      LOGICAL:: l_inpXML
      REAL :: scaleCell

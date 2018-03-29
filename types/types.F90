@@ -12,4 +12,5 @@ MODULE m_types
   USE m_types_tlmplm
   USE m_types_misc
   USE m_types_potden
+  USE m_types_forcetheo
 END MODULE m_types
