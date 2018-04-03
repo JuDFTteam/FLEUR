@@ -11,7 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(jspd,atoms,sphhar,llpd, noco,l_fmpl,jsp_start,jsp_end, epar,&
-       ello,vr,uu,du,dd,uunmt,udnmt,dunmt,ddnmt, usdus,uloulopn,aclo,bclo,cclo,&
+       ello,vr,uu,du,dd,uunmt,udnmt,dunmt,ddnmt, usdus,aclo,bclo,cclo,&
        acnmt,bcnmt,ccnmt,orb,mt21,lo21,uloulopn21,uloulop21, uunmt21,&
        ddnmt21,udnmt21,dunmt21, chmom,clmom, qa21,rho)
     use m_constants,only: sfp_const
@@ -35,7 +35,6 @@ CONTAINS
     REAL, INTENT    (IN) :: epar(0:atoms%lmaxd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: ello(atoms%nlod,atoms%ntype,jspd)
-    REAL, INTENT    (IN) :: uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end)
     REAL, INTENT    (IN) :: aclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end)
     REAL, INTENT    (IN) :: bclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end)
     REAL, INTENT    (IN) :: cclo(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end)
@@ -90,7 +89,7 @@ CONTAINS
     !$OMP PARALLEL DEFAULT(none) &
 
     !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,uloulopn,ello,aclo,bclo,cclo) &
+    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,ello,aclo,bclo,cclo) &
     !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
     !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
@@ -130,7 +129,7 @@ CONTAINS
           END DO
 
           CALL rhosphnlo(itype,atoms,sphhar,&
-               uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
+               usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
                usdus%uulon(1,itype,ispin),ello(1,itype,ispin),&
                vr(1,itype,ispin),aclo(1,itype,ispin),bclo(1,itype,ispin),&
                cclo(1,1,itype,ispin),acnmt(0,1,1,itype,ispin),&
@@ -153,7 +152,7 @@ CONTAINS
           IF (noco%l_soc) THEN
              CALL orbmom2(atoms,itype,ispin,usdus%ddn(0,itype,ispin),&
                           orb,usdus%uulon(1,itype,ispin),usdus%dulon(1,itype,ispin),&
-                          uloulopn(1,1,itype,ispin),clmom(1,itype,ispin))!keep
+                          usdus%uloulopn(1,1,itype,ispin),clmom(1,itype,ispin))!keep
           ENDIF
           !-soc
           !--->       non-spherical components

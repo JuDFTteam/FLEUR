@@ -906,7 +906,7 @@ CONTAINS
             dimension%jspd,atoms,sphhar,llpd,&
             noco,l_fmpl,jsp_start,jsp_end,&
             enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),uu,du,dd,uunmt,udnmt,dunmt,ddnmt,&
-            usdus,usdus%uloulopn,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
+            usdus,aclo,bclo,cclo,acnmt,bcnmt,ccnmt,&
             orb,mt21,lo21,uloulopn21,uloulop21,&
             uunmt21,ddnmt21,udnmt21,dunmt21,&
             chmom,clmom,&
