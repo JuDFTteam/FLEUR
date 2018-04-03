@@ -271,6 +271,7 @@ CONTAINS
 
   ! writes all times to file
   SUBROUTINE writetimes(stdout)
+    USE m_judft_usage
     IMPLICIT NONE
     LOGICAL,INTENT(IN),OPTIONAL::stdout
     INTEGER :: fn,irank=0
@@ -297,6 +298,7 @@ CONTAINS
        globaltimer%starttime=-1
     ENDIF
     WRITE(fn,"('Total execution time: ',i0,'sec')") INT(globaltimer%time)
+    CALL add_usage_data("Runtime",INT(globaltimer%time))
     CALL priv_writetimes_longest(globaltimer,fid=fn)
 
     WRITE(fn,"('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &

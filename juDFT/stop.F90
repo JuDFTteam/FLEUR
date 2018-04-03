@@ -49,6 +49,7 @@ CONTAINS
   END SUBROUTINE judfT_file_readable
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
+    USE m_judft_usage
     IMPLICIT NONE
     CHARACTER*(*),INTENT(IN)          :: message
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
@@ -123,6 +124,10 @@ CONTAINS
        ENDIF
        WRITE(0,*)
        WRITE(0,"(10(a,/))") (TRIM(text(n)),n=1,linenr)
+
+       CALL add_usage_data("Error",message)
+       CALL send_usage_data()
+       
        CALL juDFT_STOP()
     ENDIF
     WRITE(0,*)
@@ -145,6 +150,7 @@ CONTAINS
     ! If irank is present every mpi process has to call this routine.
     ! Otherwise only a single mpi process is allowed to call the routine.
     USE m_xmlOutput
+    USE m_judft_usage
     IMPLICIT NONE
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -177,6 +183,7 @@ CONTAINS
     WRITE(0,*) "*****************************************"
     CALL writetimes()
     CALL print_memory_info()
+    CALL send_usage_data()
 #ifdef CPP_MPI
     IF(PRESENT(irank)) THEN
        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)

@@ -24,14 +24,15 @@ CONTAINS
        WRITE(*,*) "--------------------------------------------------------"
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
-       !$ write(*,*) "Number of OMP-threads:",omp
-#else
-       if (omp==-1) THEN
-          write(*,*) "No OpenMP version of FLEUR."
-       else
-          write(*,*) "Number of OMP-threads:",omp
-       endif
+       CALL add_usage_data("MPI-PE",mpi%isize)     
 #endif
+       IF (omp==-1) THEN
+          write(*,*) "No OpenMP version of FLEUR."
+          CALL add_usage_data("OMP",0)
+       ELSE
+          WRITE(*,*) "Number of OMP-threads:",omp
+          CALL add_usage_data("OMP",omp)
+       ENDIF
     endif
     IF (mpi%isize==1) THEN
        !give some info on available parallelisation

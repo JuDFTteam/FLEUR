@@ -12,6 +12,7 @@ juDFT/hdf_tools_rw_var.F90
 juDFT/hdf_tools_stride.F90)
 endif()
 set(fleur_F90 ${fleur_F90}
+juDFT/usage_data.F90
 juDFT/info.F90
 juDFT/init.F90
 juDFT/juDFT.F90

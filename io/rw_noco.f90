@@ -62,8 +62,6 @@
 
           READ (24,*)
           READ (24,8036) noco%l_ss,noco%l_mperp,noco%l_constr
-          BACKSPACE (24)
-          inpchar= 'XXXXXXXX' 
 !!$          IF ( (inpchar(1:8)=='sso_opt=') .OR. (noco%l_ss .AND. noco%l_soc) ) THEN
 !!$             BACKSPACE (24)
 !!$             READ (24,fmt='(45x,2l1)') input%sso_opt(1),input%sso_opt(2)

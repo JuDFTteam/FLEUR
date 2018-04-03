@@ -4,10 +4,11 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_juDFT
-      USE m_juDFT_stop
-      USE m_juDFT_time
-      USE m_juDFT_init
-      USE m_judft_args
-      USE m_judft_info
-      END MODULE m_juDFT
+MODULE m_juDFT
+  USE m_juDFT_stop
+  USE m_juDFT_time
+  USE m_juDFT_init
+  USE m_judft_args
+  USE m_judft_info
+  USE m_judft_usage
+END MODULE m_juDFT
