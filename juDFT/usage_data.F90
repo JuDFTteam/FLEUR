@@ -66,8 +66,8 @@ CONTAINS
          dt(2) * 31_8 * 24 * 60 * 60 * 1000 + &
          dt(3) * 24_8 * 60 * 60  * 1000 + dt(5) * 60 * 60 * 1000 + &
          dt(6) * 60 * 1000 + dt(7) * 1000 + dt(8)
-    pid = GETPID()
-    r=r*1000+pid
+    !pid = GETPID()
+    !r=r*1000+pid
     
     !First write a json file
     OPEN(unit=961,file="usage.json",status='replace')
