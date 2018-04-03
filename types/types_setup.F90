@@ -356,30 +356,6 @@ MODULE m_types_setup
      INTEGER :: nbasfcn
   END TYPE t_dimension
 
-  TYPE t_Jij
-     LOGICAL :: l_J   !
-     INTEGER :: nqpt  !
-     INTEGER :: nqptd !
-     INTEGER ::phnd   
-     INTEGER ::nsh
-     INTEGER ::mtypes
-     INTEGER :: nmopq(3)
-     REAL    :: thetaJ
-     REAL    :: qn
-     INTEGER :: nmagn
-     INTEGER :: nkpt_l
-     LOGICAL :: l_disp !
-     LOGICAL :: l_wr
-     LOGICAL :: l_jenerg
-     REAL, ALLOCATABLE :: qj(:,:)
-     LOGICAL, ALLOCATABLE:: l_magn(:)
-     REAL, ALLOCATABLE   :: M(:)
-     INTEGER, ALLOCATABLE:: magtype(:)
-     INTEGER, ALLOCATABLE::nmagtype(:)
-     REAL, ALLOCATABLE :: eig_l(:,:)
-     REAL, ALLOCATABLE :: alph1(:)
-  END TYPE t_Jij
-
   TYPE t_noco
      LOGICAL:: l_noco
      LOGICAL:: l_ss

@@ -89,7 +89,6 @@ CONTAINS
     TYPE(t_enpara)   :: enpara,enpara_out
     TYPE(t_xcpot)    :: xcpot
     TYPE(t_results)  :: results
-    TYPE(t_jij)      :: jij
     TYPE(t_kpts)     :: kpts
     TYPE(t_hybrid)   :: hybrid
     TYPE(t_oneD)     :: oneD
@@ -114,7 +113,7 @@ CONTAINS
  
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-         sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+         sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
          oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
@@ -212,23 +211,10 @@ CONTAINS
        CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
-!!$          jij%alph1(:)=noco%alph(:)
-
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDenRot)
 #endif
-
-!!$          DO qcount=1,jij%nqpt
-!!$             IF (jij%l_J) THEN
-!!$                noco%qss(:)=jij%qj(:,qcount)
-!!$                jij%qn = ( noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2 )
-!!$             END IF
-!!$             IF ((input%l_wann.OR.jij%l_J).AND.(mpi%irank.EQ.0)) THEN
-!!$                WRITE(6,*) 'qss=(',noco%qss(1),',',noco%qss(2),',',noco%qss(3),')'
-!!$                CALL timestart("Q-point for J_ij(total)")
-!!$
-!!$             ENDIF
 
 
        IF ( noco%l_soc ) THEN
@@ -247,7 +233,6 @@ CONTAINS
 !!$                !---> gwf
 !!$                IF (wann%l_sgwf.OR.wann%l_ms) THEN
 !!$                   noco%qss(:) = wann%param_vec(:,pc)
-!!$                   jij%qn = (noco%qss(1)**2 + noco%qss(2)**2 + noco%qss(3)**2)
 !!$                   noco%alph(:) = wann%param_alpha(:,pc)
 !!$                ELSE IF (wann%l_socgwf) THEN
 !!$                   IF(wann%l_dim(2)) noco%phi   = tpi_const * wann%param_vec(2,pc)
@@ -282,49 +267,12 @@ CONTAINS
 
        forcetheoloop:DO WHILE(forcetheo%next_job(it==input%itmax,noco))
 
-!!$                   !
-!!$                   !          ----> eigenvalues and eigenfunctions
-!!$                   !
-!!$                   !--- J<
-!!$                   IF(jij%l_disp)THEN
-!!$                      jij%mtypes=1
-!!$                      jij%nmagn=1
-!!$                      jij%phnd=1
-!!$                   ENDIF
-!!$                   i_J=1
-!!$                   DO imt=1,jij%mtypes
-!!$                      DO j_J=i_J,jij%nmagn
-!!$                         DO phn=1,jij%phnd
-!!$
-!!$
-!!$                            input%eigvar(1)= .TRUE.
-!!$                            input%eigvar(2)= .TRUE.
-!!$                            input%eigvar(3)= .TRUE.
-!!$
-!!$                            input%eigvar(2)= input%eigvar(2) .AND. ( noco%l_soc .AND. (.NOT.noco%l_noco) )
-!!$                            ! eigvar(1/2)= 1st/2nd var. ; eigvar(3)= calc density,etc
-!!$
-!!$                            IF ( noco%l_soc .AND. (.NOT.noco%l_noco) ) THEN
-!!$                               input%evonly(1)= .FALSE.
-!!$                               input%evonly(2)= input%eonly
-!!$                            ELSE
-!!$                               input%evonly(1)= input%eonly
-!!$                               input%evonly(2)= .FALSE.
-!!$                            ENDIF
-!!$
-!!$                            IF ( input%eigvar(1).OR.input%eigvar(2) ) THEN
-!!$                               IF (jij%l_J) THEN
-!!$                                  input%tkb=0.
-!!$#ifdef CPP_NEVER
-!!$                                  CALL jcoff(i_J,j_J,phn,mpi,atoms,atoms, noco,jij)
-!!$#endif
-!!$                               ENDIF
-!!$                               IF (input%eigvar(1)) THEN
+
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
           vTemp = vTot
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-               sym,kpts,DIMENSION,vacuum,input,cell,enpara,enpara_out,banddos,noco,jij,oneD,hybrid,&
+               sym,kpts,DIMENSION,vacuum,input,cell,enpara,enpara_out,banddos,noco,oneD,hybrid,&
                it,eig_id,results,inDenRot,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -372,13 +320,13 @@ CONTAINS
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) THEN
                 input%zelec = input%zelec*2
                 CALL fermie(eig_id,mpi,kpts,obsolete,&
-                     input,noco,enpara%epara_min,jij,cell,results)
+                     input,noco,enpara%epara_min,cell,results)
                 results%seigscv = results%seigscv/2
                 results%ts = results%ts/2
                 input%zelec = input%zelec/2
              ELSE
                 CALL fermie(eig_id,mpi,kpts,obsolete,&
-                     input,noco,enpara%epara_min,jij,cell,results)
+                     input,noco,enpara%epara_min,cell,results)
              ENDIF
              CALL timestop("determination of fermi energy")
 !!$             
@@ -407,39 +355,10 @@ CONTAINS
           CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
 
-#ifdef CPP_NEVER
-          CALL ssomat(eig_id, mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-               sym,cell,noco,input,obsolete,kpts,oneD,MPI_DOUBLE_PRECISION )
-#endif
 
-          IF (forcetheo%eval(results)) CYCLE forcetheoloop
-!!$          IF(jij%l_J) THEN
-!!$             IF (((i_J.EQ.j_J)).OR.(sym%invs.AND.(jij%qn.GT.tol))) GOTO 33
-!!$          ENDIF
-!!$       ENDDO  !phn
-!!$ i_J=i_J+jij%nmagtype(imt)
-!!$ENDDO !imt
-!!$IF ((mpi%irank.EQ.0).AND.(input%l_wann.OR.jij%l_J)) THEN
-!!$CALL timestop("Q-point for J_ij(total)")
-!!$ENDIF
-!!$ENDDO forcetheoloop ! force-theorem loop
-!!$ENDDO !qcount
-!!$
-!!$234 CONTINUE
-!!$
-!!$IF (mpi%irank.EQ.0) THEN
-!!$IF(jij%l_J) THEN
-!!$IF(.NOT.jij%l_disp)THEN
-!!$REWIND(113)
-!!$REWIND(114)
-!!$#ifdef CPP_NEVER
-!!$CALL jcoff2(atoms,sym,cell,jij,input)
-!!$#endif
-!!$ENDIF
-!!$CLOSE(113)
-!!$CLOSE(114)
-!!$ENDIF
-!!$ENDIF
+          IF (forcetheo%eval(eig_id,DIMENSION,atoms,kpts,sym,&
+               cell,noco, input,mpi, oneD,enpara,vToT,results)) CYCLE forcetheoloop
+
 
 
           CALL force_0(results)!        ----> initialise force_old
@@ -459,7 +378,7 @@ CONTAINS
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-               enpara_out,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
+               enpara_out,cell,noco,vTot,results,oneD,coreSpecInput,&
                archiveType,outDen)
 
           IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2

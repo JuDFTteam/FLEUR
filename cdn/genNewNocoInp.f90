@@ -8,7 +8,7 @@ MODULE m_genNewNocoInp
 
 CONTAINS
 
-SUBROUTINE genNewNocoInp(input,atoms,jij,noco,noco_new)
+SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
 
    USE m_juDFT
    USE m_types
@@ -19,7 +19,6 @@ SUBROUTINE genNewNocoInp(input,atoms,jij,noco,noco_new)
 
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_atoms),INTENT(IN)         :: atoms
-   TYPE(t_jij),INTENT(IN)           :: jij
    TYPE(t_noco),INTENT(IN)          :: noco
    TYPE(t_noco),INTENT(INOUT)       :: noco_new
 
@@ -50,7 +49,7 @@ SUBROUTINE genNewNocoInp(input,atoms,jij,noco,noco_new)
 
    OPEN (24,file='nocoinp',form='formatted', status='old')
    REWIND (24)
-   CALL rw_noco_write(atoms,jij,noco_new, input)
+   CALL rw_noco_write(atoms,noco_new, input)
    CLOSE (24)
 
 END SUBROUTINE genNewNocoInp

@@ -72,7 +72,6 @@
       TYPE(t_obsolete)::obsolete
       TYPE(t_sliceplot)::sliceplot
       TYPE(t_oneD)::oneD
-      TYPE(t_jij)::Jij
       TYPE(t_stars)::stars
       TYPE(t_hybrid)::hybrid
       TYPE(t_xcpot)::xcpot
@@ -148,7 +147,7 @@
       sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
-      noco%l_noco = noco%l_ss ; jij%l_J = .false. ;  input%jspins = 1
+      noco%l_noco = noco%l_ss ;   input%jspins = 1
       input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 ; input%minDistance = 0.0
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
@@ -388,20 +387,14 @@
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
       
-      ! Set defaults for noco and Jij types
+      ! Set defaults for noco  types
       ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
-      ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
-      ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
-
+   
       IF (noco%l_ss) input%ctail = .FALSE.
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
-      Jij%l_disp = .FALSE.
       noco%mix_b = 0.0
-      Jij%thetaJ = 0.0
-      Jij%nmagn=1
-      Jij%nsh = 0
       noco%qss = 0.0
 
       noco%l_relax(:) = .FALSE.
@@ -410,13 +403,7 @@
       noco%beta(:) = 0.0
       noco%b_con(:,:) = 0.0
 
-      Jij%M(:) = 0.0
-      Jij%l_magn(:) = .FALSE.
-      Jij%l_wr=.TRUE.
-      Jij%nqptd=1
-      Jij%mtypes=1
-      Jij%phnd=1
-
+     
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       cell%bmat=tpi_const*cell%bmat
       kpts%nkpt3(:) = div(:)
@@ -447,7 +434,7 @@
             kpts%l_gamma = l_gamma
             sym%symSpecType = 3
 
-            CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+            CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
 
             kpts%specificationType = 3
 
@@ -468,7 +455,7 @@
 
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-     &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
+     &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
@@ -492,7 +479,6 @@
       END IF !xml output
 
       DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
-      DEALLOCATE (Jij%alph1,Jij%l_magn,Jij%M,Jij%magtype,Jij%nmagtype)
       DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
       DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)
@@ -520,7 +506,7 @@
          END IF
          CALL rw_inp(&
      &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+     &               cell,sym,xcpot,noco,oneD,hybrid,kpts,&
      &               noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
 
@@ -556,7 +542,7 @@
         input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
       CALL rw_inp(&
      &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
         IF ( ALL(div /= 0) ) nkpt3 = div

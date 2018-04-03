@@ -5,7 +5,7 @@
 !                  m. weinert   jan. 1987
 !*********************************************************************
       CONTAINS
-      SUBROUTINE inpeig_dim(input,obsolete,cell,noco, oneD,jij,kpts,dimension,stars)
+      SUBROUTINE inpeig_dim(input,obsolete,cell,noco, oneD,kpts,dimension,stars)
 
       USE m_constants, ONLY : pi_const,tpi_const
       USE m_types
@@ -19,10 +19,7 @@
       TYPE(t_dimension),INTENT(INOUT) :: dimension
       TYPE(t_kpts),INTENT(INOUT)      :: kpts
       TYPE(t_oneD),INTENT(INOUT)      :: oneD
-      TYPE(t_Jij),INTENT(INOUT)       :: Jij
-!-odim
-!-odim
-      INTEGER nk,nq,i,nv,nv2,j,kq1,kq2,kq3
+      INTEGER nk,i,nv,nv2,j,kq1,kq2,kq3
       REAL  s1,s2,scale,bk(3)
       LOGICAL xyu
    !     ..
@@ -31,11 +28,6 @@
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
-      jij%nqpt=1
-      IF (jij%l_J) THEN
-        OPEN (113,file='qpts',form='formatted',status='old')
-        READ (113,*) jij%nqpt
-      ENDIF
       OPEN (41,file='kpts',form='formatted',status='old')
 
 !--->    k-mesh: given in units of the reciprocal lattice basis vectors
@@ -56,12 +48,7 @@
          kpts%nkpt = max(kpts%nkpt,kpts%nkpt)
  8060    FORMAT (i5,f20.10)
          IF (scale.EQ.0.0) scale = 1.0
-         DO nq=1,jij%nqpt
-           IF(jij%l_J) THEN
-             READ (113,fmt=8070) noco%qss(1),noco%qss(2),noco%qss(3)
- 8070        FORMAT(2(f14.10,1x),f14.10)
-           ENDIF
-
+      
            DO nk = 1,kpts%nkpt
              IF(input%film.and..not.oneD%odd%d1) THEN
                 READ (41,fmt=8080) (bk(i),i=1,2)
@@ -110,11 +97,7 @@
            ENDDO ! k=pts
            REWIND(41)
            READ (41,*)
-        ENDDO   ! q-pts
-
-      IF (jij%l_J) THEN
-       CLOSE(113)
-      ENDIF
+  
       CLOSE (41)
 
       END SUBROUTINE inpeig_dim

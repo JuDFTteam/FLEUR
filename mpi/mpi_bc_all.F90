@@ -8,7 +8,7 @@ MODULE m_mpi_bc_all
 CONTAINS
   SUBROUTINE mpi_bc_all(&
        mpi,stars,sphhar,atoms,obsolete,sym,&
-       kpts,jij,dimension,input,banddos,sliceplot,&
+       kpts,dimension,input,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
         xcpot,hybrid)
     !
@@ -28,7 +28,6 @@ CONTAINS
     TYPE(t_input),INTENT(INOUT)      :: input
     TYPE(t_vacuum),INTENT(INOUT)     :: vacuum
     TYPE(t_noco),INTENT(INOUT)       :: noco
-    TYPE(t_jij),INTENT(INOUT)        :: jij
     TYPE(t_sym),INTENT(INOUT)        :: sym
     TYPE(t_stars),INTENT(INOUT)      :: stars
     TYPE(t_cell),INTENT(INOUT)       :: cell
@@ -73,7 +72,7 @@ CONTAINS
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip 
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
-       l(29)=oneD%odd%d1 ; l(30)=jij%l_J ; l(31)=jij%l_disp ; l(32)=input%ctail ; l(33)=banddos%l_orb
+       l(29)=oneD%odd%d1 ; l(32)=input%ctail ; l(33)=banddos%l_orb
        l(34)=banddos%l_mcd 
        l(38)=input%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=input%efield%dirichlet
@@ -105,7 +104,7 @@ CONTAINS
     input%efield%l_dirichlet_coeff = l(43) ; input%l_useapw=l(2)
     sym%symor=l(39) ; input%frcor=l(40) ; input%tria=l(41) ; input%efield%dirichlet = l(42)
      input%efield%l_segmented=l(38)
-    oneD%odd%d1=l(29) ; jij%l_J=l(30) ; jij%l_disp=l(31) ; input%ctail=l(32)
+    oneD%odd%d1=l(29) ; input%ctail=l(32)
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
     input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18)  
@@ -246,17 +245,6 @@ CONTAINS
        CALL MPI_BCAST(oneD%invtab1,oneD%odd%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(oneD%multab1,2*oneD%odd%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     ENDIF
-    !--- J<
-    IF (jij%l_J) THEN
-       CALL MPI_BCAST(jij%nmagn,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(jij%mtypes,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(jij%thetaJ,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(jij%qj,3*jij%nqptd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(jij%l_magn,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(jij%magtype,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(jij%nmagtype,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    ENDIF
-    !--- J>
     !--- HF<
     CALL MPI_BCAST(kpts%nkpt3,3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     IF(hybrid%l_hybrid) THEN

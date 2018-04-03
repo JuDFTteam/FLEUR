@@ -8,7 +8,7 @@ MODULE m_fermie
   !----------------------------------------------------------------------
 CONTAINS
   SUBROUTINE fermie(eig_id, mpi,kpts,obsolete,&
-       input, noco,e_min,jij,cell,results)
+       input, noco,e_min,cell,results)
 
     !---------------------------------------------------f--------------------
     !
@@ -44,7 +44,6 @@ CONTAINS
     TYPE(t_obsolete),INTENT(IN)   :: obsolete
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_jij),INTENT(IN)   :: jij
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_kpts),INTENT(IN)   :: kpts
     !     ..
@@ -102,18 +101,6 @@ CONTAINS
 
     ! initiliaze e
     e = 0
-    !
-    IF (jij%l_J) THEN
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-       CALL mpi_col_eigJ(mpi%mpi_comm,mpi%irank,mpi%isize,kpts%nkpt,SIZE(results%w_iks,1),kpts%nkpt,&
-            &                       jij%nkpt_l,jij%eig_l,&
-            &                    kpts%bk,kpts%wtkpt,ne(1,1),eig)
-       IF (mpi%irank.NE.0) THEN
-          DEALLOCATE( idxeig,idxjsp,idxkpt,index,e,eig,we )
-          RETURN
-       ENDIF
-#endif
-    ENDIF
 
 
     IF ( mpi%irank == 0 ) WRITE (6,FMT=8000)
@@ -223,7 +210,7 @@ CONTAINS
        IF (noco%l_noco) nspins = 1
        tkb_1 = input%tkb
        CALL ferhis(input,kpts,mpi,results,index,idxeig,idxkpt,idxjsp, n,&
-            nstef,ws,spindg,weight,e,ne,we, noco,jij,cell)
+            nstef,ws,spindg,weight,e,ne,we, noco,cell)
     END IF
     !     7.12.95 r.pentcheva seigscv must be calculated outside if (gauss)
     results%seigscv = results%seigsc + results%seigv

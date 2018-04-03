@@ -28,7 +28,7 @@
       CONTAINS
         SUBROUTINE inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,jij,hybrid,kpts,a1,a2,a3,namex,relcor)
+                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
           USE m_rwinp
           USE m_chkmt
           USE m_inpnoco
@@ -51,7 +51,6 @@
           TYPE(t_noco),      INTENT(INOUT) :: noco
           TYPE(t_stars),     INTENT(INOUT) :: stars
           TYPE(t_oneD),      INTENT(INOUT) :: oneD
-          TYPE(t_jij),       INTENT(INOUT) :: jij
           TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
           REAL,              INTENT(OUT)   :: a1(3)
@@ -85,7 +84,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
+               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -99,16 +98,13 @@
           !---> read the angle information from nocoinf
           noco%qss(:) = 0.0
           IF (noco%l_noco) THEN
-             CALL inpnoco(atoms,input,vacuum,jij,noco)
+             CALL inpnoco(atoms,input,vacuum,noco)
           ELSE
              noco%l_ss = .FALSE.
              noco%l_mperp = .FALSE.
              noco%l_constr = .FALSE.
              noco%mix_b = 0.0
-             jij%thetaJ = 0.0
-             jij%nmagn=1
              noco%l_relax(:) = .FALSE.
-             jij%l_magn(:) = .FALSE.
              noco%alph(:) = 0.0
              noco%beta(:) = 0.0
              noco%b_con(:,:) = 0.0

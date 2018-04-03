@@ -61,6 +61,7 @@ CONTAINS
        !OK, now we start the MAE-loop
        this%directions_done=this%directions_done+1
        mae_next_job=(this%directions_done<=SIZE(this%phi)) !still angles to do
+       IF (.NOT.mae_next_job) RETURN
 
        noco%theta=this%theta(this%directions_done)
        noco%phi=this%phi(this%directions_done)
@@ -68,14 +69,27 @@ CONTAINS
        CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
   END FUNCTION mae_next_job
 
-  FUNCTION mae_eval(this,results)RESULT(skip)
-    USE m_types_misc
+  FUNCTION mae_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+       cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
+    USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_results),INTENT(IN) :: results
-       
+    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_oneD),INTENT(IN)        :: oneD
+    TYPE(t_input),INTENT(IN)       :: input
+    TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_sym),INTENT(IN)         :: sym
+    TYPE(t_cell),INTENT(IN)        :: cell
+    TYPE(t_kpts),INTENT(IN)        :: kpts
+    TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_enpara),INTENT(IN)      :: enpara
+    TYPE(t_potden),INTENT(IN)      :: v
+    TYPE(t_results),INTENT(IN)     :: results
+    INTEGER,INTENT(IN)             :: eig_id
+ 
     this%evsum(this%directions_done)=results%seigv
     skip=.TRUE.
   END FUNCTION  mae_eval

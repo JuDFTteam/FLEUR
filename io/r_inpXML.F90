@@ -15,7 +15,7 @@ MODULE m_rinpXML
 CONTAINS
 SUBROUTINE r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
-                     cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
+                     cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
@@ -23,6 +23,7 @@ SUBROUTINE r_inpXML(&
   USE iso_c_binding
   USE m_juDFT
   USE m_types
+  USE m_types_forcetheo_extended
   USE m_symdata , ONLY : nammap, ord2, l_c2
   USE m_rwsymfile
   USE m_xmlIntWrapFort
@@ -47,7 +48,6 @@ SUBROUTINE r_inpXML(&
   TYPE(t_kpts),INTENT(INOUT)     :: kpts
   TYPE(t_oneD),INTENT(INOUT)     :: oneD
   TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-  TYPE(t_Jij),INTENT(INOUT)      :: Jij
   TYPE(t_cell),INTENT(INOUT)     :: cell
   TYPE(t_banddos),INTENT(INOUT)  :: banddos
   TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
@@ -83,7 +83,7 @@ SUBROUTINE r_inpXML(&
   ! ..  Local Variables
   REAL     :: scpos  ,zc   
   INTEGER ieq,i,k,na,n,ii
-  REAL s3,ah,a,hs2,rest
+  REAL s3,ah,a,hs2,rest,thetaj
   LOGICAL l_hyb,l_sym,ldum
   INTEGER :: ierr
   ! ..
@@ -241,9 +241,6 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
   ALLOCATE(noco%socscale(atoms%ntype))
   
-  ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
-  ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
-
   DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
   ALLOCATE(atomTypeSpecies(atoms%ntype))
   ALLOCATE(speciesRepAtomType(numSpecies))
@@ -356,7 +353,6 @@ SUBROUTINE r_inpXML(&
 
   input%jspins = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
   noco%l_noco = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
-  Jij%l_J = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_J'))
   input%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
   input%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
 
@@ -523,11 +519,7 @@ SUBROUTINE r_inpXML(&
   noco%l_ss = .FALSE.
   noco%l_mperp = .FALSE.
   noco%l_constr = .FALSE.
-  Jij%l_disp = .FALSE.
   noco%mix_b = 0.0
-  Jij%thetaJ = 0.0
-  Jij%nmagn=1
-  Jij%nsh = 0
   noco%qss = 0.0
 
   noco%l_relax(:) = .FALSE.
@@ -536,12 +528,6 @@ SUBROUTINE r_inpXML(&
   noco%beta(:) = 0.0
   noco%b_con(:,:) = 0.0
 
-  Jij%M(:) = 0.0
-  Jij%l_magn(:) = .FALSE.
-  Jij%l_wr=.TRUE.
-  Jij%nqptd=1
-  Jij%mtypes=1
-  Jij%phnd=1
 
   IF ((noco%l_noco).AND.(numberNodes.EQ.0)) THEN
      STOP 'Error: l_noco is true but no noco parameters set in xml input file!'
@@ -551,12 +537,9 @@ SUBROUTINE r_inpXML(&
      noco%l_ss = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
      noco%l_mperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
      noco%l_constr = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
-     Jij%l_disp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_disp'))
    
      noco%mix_b = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
-     Jij%thetaJ = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@thetaJ'))
-     Jij%nsh = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nsh'))
-
+  
      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
      READ(valueString,*) noco%qss(1), noco%qss(2), noco%qss(3)
 
@@ -651,12 +634,6 @@ SUBROUTINE r_inpXML(&
   !      STOP 'Error: l_ss is true but no q point mesh set in xml input file!'
   !   END IF
 
-  Jij%nmopq = 0
-  IF (numberNodes.EQ.1) THEN
-     Jij%nmopq(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qx'))
-     Jij%nmopq(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qy'))
-     Jij%nmopq(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qz'))
-  END IF
 
   ! Read in optional E-Field parameters
 
@@ -1645,8 +1622,6 @@ SUBROUTINE r_inpXML(&
      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB)))
      IF (numberNodes.GE.1) THEN
         noco%l_relax(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relax'))
-        Jij%l_magn(iType) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_magn'))
-        Jij%M(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@M'))
         noco%alphInit(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
         noco%alph(iType) = noco%alphInit(iType)
         noco%beta(iType) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
@@ -1666,6 +1641,7 @@ SUBROUTINE r_inpXML(&
   xPathA = '/fleurInput/forcetheorem'
   numberNodes = xmlGetNumberOfNodes(xPathA)
   IF (numberNodes.EQ.1) THEN
+     !Magnetic anisotropy...
      xPathA = '/fleurInput/forcetheorem/mae'
      numberNodes = xmlGetNumberOfNodes(xPathA)
      IF (numberNodes.EQ.1) THEN
@@ -1677,6 +1653,40 @@ SUBROUTINE r_inpXML(&
            CALL forcetheo%init(lString,nString)
         END SELECT
      ENDIF
+     !spin-spiral dispersion
+     xPathA = '/fleurInput/forcetheorem/ssdisp'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+     IF (numberNodes.EQ.1) THEN
+        ALLOCATE(t_forcetheo_ssdisp::forcetheo)
+        SELECT TYPE(forcetheo)
+        TYPE IS(t_forcetheo_ssdisp) !this is ok, we just allocated the type...
+           CALL forcetheo%init(priv_read_q_list(xPathA))
+        END SELECT
+     ENDIF
+     !dmi
+     xPathA = '/fleurInput/forcetheorem/dmi'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+     IF (numberNodes.EQ.1) THEN
+        lString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'theta')
+        nString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'phi')
+        ALLOCATE(t_forcetheo_dmi::forcetheo)
+        SELECT TYPE(forcetheo)
+        TYPE IS(t_forcetheo_dmi) !this is ok, we just allocated the type...
+           CALL forcetheo%init(priv_read_q_list(xPathA),lstring,nstring)
+        END SELECT
+     ENDIF
+     !jij
+     xPathA = '/fleurInput/forcetheorem/jij'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+     IF (numberNodes.EQ.1) THEN
+        thetaj=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'thetaj'))
+        ALLOCATE(t_forcetheo_jij::forcetheo)
+        SELECT TYPE(forcetheo)
+        TYPE IS(t_forcetheo_jij) !this is ok, we just allocated the type...
+           CALL forcetheo%init(priv_read_q_list(xPathA),thetaj,atoms)
+        END SELECT
+     ENDIF
+     
   ELSE
      ALLOCATE(t_forcetheo::forcetheo) !default no forcetheorem type
   ENDIF
@@ -2135,6 +2145,24 @@ FUNCTION countStringTokens(line) RESULT(tokenCount)
       tokenCount = tokenCount + 1
    END DO
 
-END FUNCTION countStringTokens
+ END FUNCTION countStringTokens
 
+ FUNCTION priv_read_q_list(path)RESULT(q)
+   USE m_xmlIntWrapFort
+   USE m_calculator
+   IMPLICIT NONE
+   CHARACTER(len=*),INTENT(in):: path
+   REAL,ALLOCATABLE::q(:,:)
+
+   INTEGER:: n,i
+   CHARACTER(len=256):: xpatha,valueString
+
+   n=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(path))//'qPoints/@count'))
+   ALLOCATE(q(3,n))
+   DO i = 1, n
+      WRITE(xPathA,*) path//'/qPoints/q[',i,']'
+      valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+      READ(valueString,*) q(1,i),q(2,i),q(3,i)
+   END DO
+ END FUNCTION priv_read_q_list
 END MODULE m_rinpXML

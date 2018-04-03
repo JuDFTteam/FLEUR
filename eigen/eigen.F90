@@ -19,7 +19,7 @@ CONTAINS
   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
   !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-       sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,enpara,banddos, noco,jij, oneD,hybrid,&
+       sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,enpara,banddos, noco, oneD,hybrid,&
        it,eig_id,results,inden,v,vx)
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
@@ -55,7 +55,6 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_banddos),INTENT(IN)   :: banddos
-    TYPE(t_jij),INTENT(IN)       :: jij
     TYPE(t_sym),INTENT(IN)       :: sym  
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
@@ -154,7 +153,7 @@ CONTAINS
         
           CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
           call timestart("Setup of H&S matrices")
-          CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,jij,sym,&
+          CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
                stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
           CALL timestop("Setup of H&S matrices")
         
@@ -191,13 +190,8 @@ CONTAINS
 #else
           ne_found=ne_all
 #endif          
-          !jij%eig_l = 0.0 ! need not be used, if hdf-file is present
           IF (.NOT.l_real) THEN
-             IF (.NOT.jij%l_J) THEN
                 zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
-             ELSE
-                zMat%data_c(:lapw%nmat,:ne_found) = CMPLX(0.0,0.0)
-             ENDIF
           ENDIF
     	  CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                   eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)

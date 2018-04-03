@@ -11,7 +11,7 @@ CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
-                  enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
+                  enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                   archiveType,outDen)
 
    !*****************************************************
@@ -52,7 +52,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
    TYPE(t_noco),INTENT(IN)          :: noco
-   TYPE(t_jij),INTENT(IN)           :: jij
    TYPE(t_sym),INTENT(IN)           :: sym
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
@@ -141,7 +140,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
          IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
-            CALL genNewNocoInp(input,atoms,jij,noco,noco_new)
+            CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
 
          IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,clmom)

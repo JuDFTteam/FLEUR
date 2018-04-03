@@ -4,7 +4,7 @@
       SUBROUTINE dimen7(&
      &                  input,sym,stars,&
      &                  atoms,sphhar,dimension,vacuum,&
-     &                  obsolete,kpts,oneD,hybrid,Jij,cell)
+     &                  obsolete,kpts,oneD,hybrid,cell)
 
 !
 ! This program reads the input files of the flapw-programm (inp & kpts)
@@ -44,7 +44,6 @@
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-      TYPE(t_Jij),INTENT(INOUT)      :: Jij
       TYPE(t_cell),INTENT(INOUT)     :: cell
  
       TYPE(t_noco)      :: noco
@@ -93,7 +92,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,jij%nqpt,nmopq)
+                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
@@ -105,8 +104,8 @@
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
      & atoms%l_geo(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
-     & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype),&
-     & jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype),noco%b_con(2,atoms%ntype),&
+     & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),&
+     & noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
      & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
      & hybrid%lcutwf(atoms%ntype), STAT=ok)
@@ -115,7 +114,7 @@
 !
       CALL rw_inp('r',&
      &            atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3)
 
 !---> pk non-collinear
@@ -123,11 +122,7 @@
       noco%qss = 0.0
       noco%l_ss = .false.
       IF (noco%l_noco) THEN 
-        IF (.not.jij%l_J) THEN
-         CALL inpnoco(atoms,input,vacuum,jij,noco)
-        ELSE
-         noco%l_ss= .true.
-        ENDIF
+         CALL inpnoco(atoms,input,vacuum,noco)
       ENDIF
 
       vacuum%nvacd = 2
@@ -272,18 +267,12 @@
         ENDIF           
         DEALLOCATE ( error )
       ENDIF
-!--- J<
-      IF(.not.jij%l_J) THEN
-!--- J>
       IF (noco%l_ss) THEN  ! test symmetry for spin-spiral
         ALLOCATE ( error(sym%nop) )
         CALL ss_sym(sym%nop,sym%mrot,noco%qss,error)
         IF ( ANY(error(:)) )  CALL juDFT_error("symmetry & SSDW", calledby="dimen7")
         DEALLOCATE ( error )
       ENDIF
-!--- J<
-      ENDIF
-!--- J>
 !
 ! Dimensioning of the stars
 !
@@ -313,15 +302,7 @@
 !
       IF (.not.l_kpts) THEN
        IF (.NOT.oneD%odd%d1) THEN
-         IF (jij%l_J) THEN
-         n1=sym%nop
-         n2=sym%nop2
-         sym%nop=1
-         sym%nop2=1
-         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
-         sym%nop=n1
-         sym%nop2=n2
-      ELSE IF(l_gamma .and. banddos%ndir .eq. 0) THEN
+          IF(l_gamma .AND. banddos%ndir .EQ. 0) THEN
          call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
          CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
@@ -367,7 +348,7 @@
 !
 ! now proceed as usual
 !
-      CALL inpeig_dim(input,obsolete,cell,noco,oneD,jij,kpts,dimension,stars)
+      CALL inpeig_dim(input,obsolete,cell,noco,oneD,kpts,dimension,stars)
       vacuum%layerd = max(vacuum%layerd,1)
       dimension%nstd = max(dimension%nstd,30)
       atoms%ntype = atoms%ntype
@@ -380,8 +361,8 @@
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
      & vacuum%izlay,atoms%ncst,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
-     & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,jij%l_magn,jij%M,noco%b_con,sphhar%clnu,sphhar%nlh,&
-     & sphhar%llh,sphhar%nmem,sphhar%mlh,jij%magtype,jij%nmagtype,hybrid%select1,hybrid%lcutm1,&
+     & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,noco%b_con,sphhar%clnu,sphhar%nlh,&
+     & sphhar%llh,sphhar%nmem,sphhar%mlh,hybrid%select1,hybrid%lcutm1,&
      & hybrid%lcutwf)
 
       RETURN

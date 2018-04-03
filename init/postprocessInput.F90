@@ -9,7 +9,7 @@ MODULE m_postprocessInput
 CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                            oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                            oneD,hybrid,cell,banddos,sliceplot,xcpot,&
                             noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
   USE m_juDFT
@@ -53,7 +53,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
   TYPE(t_oneD),     INTENT(INOUT) :: oneD
   TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
-  TYPE(t_Jij),      INTENT(INOUT) :: jij
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
@@ -66,7 +65,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   LOGICAL,          INTENT   (IN) :: l_kpts
   CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
 
-  INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt, iqpt
+  INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
   INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
   INTEGER              :: ios, ntst, ierr
   REAL                 :: sumWeight, rmtmax, zp, radius, dr
@@ -214,9 +213,9 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ! Check noco stuff and calculate missing noco parameters
 
      IF (noco%l_noco) THEN
-        CALL nocoInputCheck(atoms,input,vacuum,jij,noco)
+        CALL nocoInputCheck(atoms,input,vacuum,noco)
 
-        IF (.not.jij%l_j.and.noco%l_ss) THEN
+        IF (noco%l_ss) THEN
 
            !--->    the angle beta is relative to the spiral in a spin-spiral
            !--->    calculation, i.e. if beta = 0 for all atoms in the unit cell
@@ -239,7 +238,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      END IF
 
      ! Calculate missing kpts parameters
-     CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+     CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
     
      ! Generate missing general parameters
      
@@ -258,32 +257,23 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
      !cell%aamat=matmul(transpose(cell%amat),cell%amat)
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
-     jij%nqpt=1
-     IF (jij%l_J) THEN
-        WRITE(*,*) 'jij%nqpt has to be corrected. Not yet done!'
-     END IF
-
-     DO iqpt=1,jij%nqpt
-        IF(jij%l_J) THEN
-           WRITE(*,*) 'select noco%qss here. ...not yet implemented'
-        END IF
-        DO ikpt = 1,kpts%nkpt
-           DO i = 1, 3
-              bk(i) = kpts%bk(i,ikpt)
-           END DO
-           !IF (input%film .OR.oneD%odd%d1) THEN
-           !   WRITE(*,*) 'There might be additional work required for the k points here!'
-           !   WRITE(*,*) '...in postprocessInput. See inpeig_dim for comparison!'
-           !END IF
-           CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
-           stars%kq1_fft = max(kq1,stars%kq1_fft)
-           stars%kq2_fft = max(kq2,stars%kq2_fft)
-           stars%kq3_fft = max(kq3,stars%kq3_fft)
-           dimension%nvd = max(dimension%nvd,nv)
-           dimension%nv2d = max(dimension%nv2d,nv2)
-        END DO ! k-pts
-     END DO ! q-pts
-
+  
+     DO ikpt = 1,kpts%nkpt
+        DO i = 1, 3
+           bk(i) = kpts%bk(i,ikpt)
+        END DO
+        !IF (input%film .OR.oneD%odd%d1) THEN
+        !   WRITE(*,*) 'There might be additional work required for the k points here!'
+        !   WRITE(*,*) '...in postprocessInput. See inpeig_dim for comparison!'
+        !END IF
+        CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
+        stars%kq1_fft = MAX(kq1,stars%kq1_fft)
+        stars%kq2_fft = MAX(kq2,stars%kq2_fft)
+        stars%kq3_fft = MAX(kq3,stars%kq3_fft)
+        DIMENSION%nvd = MAX(DIMENSION%nvd,nv)
+        DIMENSION%nv2d = MAX(DIMENSION%nv2d,nv2)
+     END DO ! k-pts
+        
      obsolete%lepr = 0
 
      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd

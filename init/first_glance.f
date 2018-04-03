@@ -6,21 +6,21 @@ c
       CONTAINS
       SUBROUTINE first_glance(
      <                        ntype,nop,nat,nlod,layerd,itmax,
-     <                        l_kpts,l_qpts,l_gamma,nkpt,nmop,nqpt,
+     <                        l_kpts,l_qpts,l_gamma,nkpt,nmop,
      <                        nmopq)
 
       USE m_symdata , ONLY : nammap,ord2,l_c2
       IMPLICIT NONE
 
       INTEGER,INTENT (OUT) :: ntype,nop,nat,nlod,layerd,itmax
-      INTEGER,INTENT (OUT) :: nkpt,nmop(3),nqpt,nmopq(3)
+      INTEGER,INTENT (OUT) :: nkpt,nmop(3),nmopq(3)
       LOGICAL,INTENT (OUT) :: l_kpts,l_qpts,l_gamma
 
 !mod: INTEGER ord2(25)               ! Number of 2D symmetry operations
 !mod: LOGICAL l_c2(25)               ! whether plane group contains the c_2
 !mod: CHARACTER(len=4) :: nammap(20) ! names as in the inp-file
 
-      INTEGER neq,n,na,nlo,line,i,n2spg
+      INTEGER neq,n,na,nlo,line,i,n2spg,nqpt
       CHARACTER*4 namgrp,namex
       CHARACTER*3 latnam
       LOGICAL invs,zrfs,l_J

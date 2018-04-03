@@ -12,7 +12,7 @@ CONTAINS
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
        vacuum,stars,DIMENSION, atoms,mpi,jsp,input,v,evac,cell,&
-       lapw,sym, noco,jij,hmat,smat)
+       lapw,sym, noco,hmat,smat)
  
 
     USE m_vacfun
@@ -22,7 +22,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
-    TYPE(t_jij),INTENT(IN)        :: jij
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -57,13 +56,10 @@ CONTAINS
     REAL ddnv(DIMENSION%nv2d,DIMENSION%jspd),dudz(DIMENSION%nv2d,DIMENSION%jspd)
     REAL duz(DIMENSION%nv2d,DIMENSION%jspd), udz(DIMENSION%nv2d,DIMENSION%jspd)
     REAL uz(DIMENSION%nv2d,DIMENSION%jspd)
-    ! l_J auxiliary potential array
-    COMPLEX, ALLOCATABLE :: vxy1(:,:,:)
     !     ..
 
     d2 = SQRT(cell%omtil/cell%area)
 
-    IF (jij%l_J) ALLOCATE (vxy1(vacuum%nmzxyd,stars%ng2-1,2))
 
     !--->    set up mapping function from 3d-->2d lapws
 

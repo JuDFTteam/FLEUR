@@ -17,7 +17,7 @@ CONTAINS
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                                 dimension,cell,sym,xcpot,noco,jij,oneD,hybrid,&
+                                 dimension,cell,sym,xcpot,noco,oneD,hybrid,&
                                  kpts,enpara,sphhar,mpi,results,obsolete)
 
    USE m_types
@@ -33,7 +33,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_kpts),     INTENT(INOUT) :: kpts
    TYPE(t_oneD),     INTENT(INOUT) :: oneD
    TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
-   TYPE(t_Jij),      INTENT(INOUT) :: Jij
    TYPE(t_cell),     INTENT(INOUT) :: cell
    TYPE(t_banddos),  INTENT(INOUT) :: banddos
    TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
@@ -98,7 +97,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(oneD%odd%nop,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    !CALL MPI_BCAST(obsolete%nwdd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(jij%nqptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    IF (mpi%irank.NE.0) THEN
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
@@ -131,9 +129,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
 
-      ALLOCATE(Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
-      ALLOCATE(Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
-
+  
       ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
       ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
       ALLOCATE(kpts%bk(3,kpts%nkpt))
@@ -211,14 +207,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       oneD%odd%nq2 = oneD%odd%n2d
       atoms%vr0(:)         = 0.0
-      jij%M(:)             = 0.0
-      jij%l_magn(:)        =.FALSE.
       results%force(:,:,:) = 0.0
-      jij%l_wr=.TRUE.
-      jij%nqptd=1
-      jij%nmagn=1
-      jij%mtypes=1
-      jij%phnd=1
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0
    END IF

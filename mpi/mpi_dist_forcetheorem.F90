@@ -8,6 +8,7 @@ MODULE m_mpi_dist_forcetheorem
 CONTAINS
   SUBROUTINE mpi_dist_forcetheorem(mpi,forcetheo)
     USE m_types
+    USE m_types_forcetheo_extended
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(INOUT)::forcetheo

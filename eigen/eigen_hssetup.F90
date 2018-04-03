@@ -15,7 +15,7 @@ CONTAINS
   !! 4. The vacuum part is added (in hsvac())
   !! 5. The matrices are copied to the final matrix, in the noco-case the full matrix is constructed from the 4-parts.
   
-  SUBROUTINE eigen_hssetup(isp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,jij,sym,&
+  SUBROUTINE eigen_hssetup(isp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
        stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat_final,hmat_final)
     USE m_hs_int
     USE m_hsvac
@@ -33,7 +33,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_jij),INTENT(IN)       :: jij
     TYPE(t_sym),INTENT(IN)       :: sym  
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
@@ -82,7 +81,7 @@ CONTAINS
     IF (input%film) THEN
        CALL timestart("Vacuum part")
        CALL hsvac(vacuum,stars,DIMENSION, atoms,mpi,isp,input,v,enpara%evac0,cell,&
-            lapw,sym, noco,jij,hmat,smat)
+            lapw,sym, noco,hmat,smat)
        CALL timestop("Vacuum part")
     ENDIF
     !Now copy the data into final matrix

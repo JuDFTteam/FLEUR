@@ -13,9 +13,6 @@ MODULE m_spnorb
   !*********************************************************************
 CONTAINS
   SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, usdus, rsoc,l_angles)
-
-    USE m_anglso
-    USE m_sgml
     USE m_sorad 
     USE m_types
     IMPLICIT NONE
@@ -37,12 +34,7 @@ CONTAINS
     INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n
     LOGICAL, SAVE :: first_k = .TRUE.
     !     ..
-    !     .. Local Arrays ..
-    INTEGER ispjsp(2)
-    !     ..
-    !     ..
-    DATA ispjsp/1,-1/
-
+  
     !Allocate space for SOC matrix elements; set to zero at the same time
     ALLOCATE(rsoc%rsopp  (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopp =0.0
     ALLOCATE(rsoc%rsoppd (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsoppd=0.0
@@ -97,10 +89,34 @@ CONTAINS
 9000 FORMAT (5x,' p ',5x,' d ', 5x, ' f ')
     !
 
-    IF (.NOT.l_angles) RETURN
+    !Calculate angular matrix elements if requested
+    IF (l_angles) &
+         CALL spnorb_angles(atoms,mpi,noco%theta,noco%phi,rsoc%soangl)
+  END SUBROUTINE spnorb
 
-    
-    IF ((ABS(noco%theta).LT.0.00001).AND.(ABS(noco%phi).LT.0.00001)) THEN
+  SUBROUTINE spnorb_angles(atoms,mpi,theta,phi,soangl)
+    USE m_anglso
+    USE m_sgml
+    USE m_sorad 
+    USE m_types
+    IMPLICIT NONE
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_mpi),INTENT(IN)      :: mpi
+    REAL,INTENT(IN)             :: theta,phi
+    COMPLEX,INTENT(INOUT)       :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)
+    !     ..
+    !     ..
+    !     .. Local Scalars ..
+    INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n
+    !     ..
+    !     .. Local Arrays ..
+    INTEGER ispjsp(2)
+    !     ..
+    !     ..
+    DATA ispjsp/1,-1/
+
+  
+    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)) THEN
        !
        !       TEST for real function sgml(l1,m1,is1,l2,m2,is2)
        !
@@ -112,7 +128,7 @@ CONTAINS
                    is2=ispjsp(jspin2)
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
-                         rsoc%soangl(l1,m1,jspin1,l2,m2,jspin2) =&
+                         soangl(l1,m1,jspin1,l2,m2,jspin2) =&
                               CMPLX(sgml(l1,m1,is1,l2,m2,is2),0.0)
                       ENDDO
                    ENDDO
@@ -134,8 +150,8 @@ CONTAINS
                    !
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
-                         rsoc%soangl(l1,m1,jspin1,l2,m2,jspin2) =&
-                              anglso(noco%theta,noco%phi,l1,m1,is1,l2,m2,is2)
+                         soangl(l1,m1,jspin1,l2,m2,jspin2) =&
+                              anglso(theta,phi,l1,m1,is1,l2,m2,is2)
                       ENDDO
                    ENDDO
                    !
@@ -152,7 +168,7 @@ CONTAINS
           DO jspin2 = 1,2
              WRITE (6,FMT=*) 'd-states:is1=',jspin1,',is2=',jspin2
              WRITE (6,FMT='(7x,7i8)') (m1,m1=-3,3,1)
-             WRITE (6,FMT=8003) (m2, (rsoc%soangl(3,m1,jspin1,3,m2,jspin2),&
+             WRITE (6,FMT=8003) (m2, (soangl(3,m1,jspin1,3,m2,jspin2),&
                   m1=-3,3,1),m2=-3,3,1)
           ENDDO
        ENDDO
@@ -160,5 +176,5 @@ CONTAINS
 8002 FORMAT (' so - angular matrix elements')
 8003 FORMAT (i8,14f8.4)
 
-  END SUBROUTINE spnorb
+  END SUBROUTINE spnorb_angles
 END MODULE m_spnorb

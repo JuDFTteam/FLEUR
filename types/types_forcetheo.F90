@@ -48,13 +48,32 @@ CONTAINS
     this%firstloop=.FALSE.
   END FUNCTION forcetheo_next_job
 
-  FUNCTION forcetheo_eval(this,results)RESULT(skip)
+  FUNCTION forcetheo_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+       cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
+    USE m_types_setup
+    USE m_types_mpi
+    USE m_types_potden
     USE m_types_misc
+    USE m_types_kpts
+    USE m_types_enpara
+    
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
-    TYPE(t_results),INTENT(IN) :: results
+    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_oneD),INTENT(IN)        :: oneD
+    TYPE(t_input),INTENT(IN)       :: input
+    TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_sym),INTENT(IN)         :: sym
+    TYPE(t_cell),INTENT(IN)        :: cell
+    TYPE(t_kpts),INTENT(IN)        :: kpts
+    TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_enpara),INTENT(IN)      :: enpara
+    TYPE(t_potden),INTENT(IN)      :: v
+    TYPE(t_results),INTENT(IN)     :: results
+    INTEGER,INTENT(IN)             :: eig_id
     skip=.FALSE.
   END FUNCTION forcetheo_eval
 
@@ -66,28 +85,3 @@ CONTAINS
   
 END MODULE m_types_forcetheo
 
-
-!!$MODULE t_extends
-!!$  USE m_types_forcetheo
-!!$  TYPE,EXTENDS(t_forcetheo):: t_jij
-!!$   CONTAINS
-!!$     PROCEDURE :: next_job=>jij_next_job
-!!$  END TYPE t_jij
-!!$
-!!$  TYPE,EXTENDS(t_forcetheo):: t_dmi
-!!$   CONTAINS
-!!$     PROCEDURE :: next_job=>dmi_next_job
-!!$  END TYPE t_dmi
-!!$CONTAINS
-!!$  LOGICAL FUNCTION jij_next_job(this,mpi)
-!!$    IMPLICIT NONE
-!!$    CLASS(t_jij),INTENT(INOUT):: this
-!!$    INTEGER :: mpi
-!!$  END FUNCTION jij_next_job
-!!$
-!!$  LOGICAL FUNCTION dmi_next_job(this,mpi)
-!!$    IMPLICIT NONE
-!!$    CLASS(t_dmi),INTENT(INOUT):: this
-!!$    INTEGER :: mpi
-!!$  END FUNCTION dmi_next_job
-!!$END MODULE t_extends

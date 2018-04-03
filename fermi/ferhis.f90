@@ -7,7 +7,7 @@
 MODULE m_ferhis
 CONTAINS
   SUBROUTINE ferhis(input,kpts,mpi,results, index,idxeig,idxkpt,idxjsp,n,&
-       nstef,ws,spindg,weight, e,ne,we, noco,jij,cell)
+       nstef,ws,spindg,weight, e,ne,we, noco,cell)
     !***********************************************************************
     !
     !     This subroutine determines the fermi energy and the sum of the
@@ -60,7 +60,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_kpts),INTENT(IN)         :: kpts
     TYPE(t_noco),INTENT(IN),OPTIONAL         :: noco
-    TYPE(t_jij),INTENT(IN),OPTIONAL          :: jij
     TYPE(t_cell),INTENT(IN),OPTIONAL         :: cell
     !     ..
     !     .. Scalar Arguments ..
@@ -295,20 +294,6 @@ CONTAINS
        WRITE (6,FMT=8040) results%seigv
     END IF
 
-    !--- J constants
-    IF (PRESENT(jij)) THEN
-       IF (jij%l_J) THEN
-          IF (jij%l_disp) THEN
-             qc=MATMUL(noco%qss,cell%bmat)
-             WRITE (114,FMT=1001) noco%qss(1),noco%qss(2),noco%qss(3),SQRT(dot_product(qc,qc)),results%seigv
-          ELSE
-             WRITE (114,FMT=1002) noco%qss(1),noco%qss(2),noco%qss(3),results%seigv
-          ENDIF
-       ENDIF
-1001   FORMAT (4(f14.10,1x),f20.10)
-1002   FORMAT (3(f14.10,1x),f20.10)
-    ENDIF
-    !--- J constants 
 
     !
     ! 7.12.95 r.pentcheva   seigscv = seigsc + seigv   will be

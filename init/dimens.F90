@@ -13,7 +13,7 @@ CONTAINS
   SUBROUTINE dimens(&
        &                  mpi,input,sym,stars,&
        &                  atoms,sphhar,dimension,vacuum,&
-       &                  obsolete,kpts,oneD,hybrid,jij)
+       &                  obsolete,kpts,oneD,hybrid)
 
     USE m_types
     USE m_dimen7
@@ -32,8 +32,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
-    TYPE(t_Jij),INTENT(INOUT)    :: Jij
-
+ 
     TYPE(t_cell)     :: cell
 
     LOGICAL l_kpts,l_qpts,l_inpexist,ldum
@@ -167,7 +166,7 @@ CONTAINS
        WRITE (6,*)
        CALL first_glance(&
             &                    n1,n2,n3,n5,n6,input%itmax,&
-            &                    l_kpts,l_qpts,ldum,n7,n8,n9,n10)
+            &                    L_kpts,l_qpts,ldum,n7,n8,N10)
        !
        IF (n1>atoms%ntype)   CALL juDFT_error("atoms%ntype  too small in fl7para" ,calledby ="dimens")
        IF (n2.LT.24) THEN
@@ -194,10 +193,10 @@ CONTAINS
        IF (l_kpts) WRITE (6,*) ' No fl7para-file found, '
        WRITE (6,*) ' invoking dimen7... '
        !call first_glance to generate k-points
-       CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n9,n10)
+       CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 
        CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,&
-                   oneD,hybrid,Jij,cell)
+                   oneD,hybrid,cell)
     ENDIF
     !     in case of a parallel calculation we have to broadcast
 #ifdef CPP_MPI

@@ -6,7 +6,7 @@
 
 module m_kpoints
 contains
-  subroutine kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+  subroutine kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
     USE m_juDFT
     USE m_types
     USE m_julia
@@ -17,7 +17,6 @@ contains
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)     :: sym
     TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_Jij),INTENT(IN)      :: Jij
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_banddos),INTENT(IN)  :: banddos
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -39,7 +38,7 @@ contains
              sym_hlp%nop=1
              sym_hlp%nop2=1
              CALL kptgen_hybrid(kpts,sym_hlp%invs,noco%l_soc,sym_hlp%nop,sym_hlp%mrot,sym_hlp%tau)
-          ELSE IF ((jij%l_J)) THEN
+          ELSE IF (.FALSE.) THEN !this was used to generate q-points in jij case
              sym_hlp=sym
              sym_hlp%nop=1
              sym_hlp%nop2=1

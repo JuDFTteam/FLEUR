@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
 SUBROUTINE w_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
+&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
 &                   noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
@@ -42,7 +42,6 @@ SUBROUTINE w_inpXML(&
    TYPE(t_kpts),INTENT(IN)     :: kpts
    TYPE(t_oneD),INTENT(IN)     :: oneD
    TYPE(t_hybrid),INTENT(IN)   :: hybrid
-   TYPE(t_Jij),INTENT(IN)      :: Jij
    TYPE(t_cell),INTENT(IN)     :: cell
    TYPE(t_banddos),INTENT(IN)  :: banddos
    TYPE(t_sliceplot),INTENT(IN):: sliceplot
@@ -191,7 +190,7 @@ SUBROUTINE w_inpXML(&
 
 !      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
    140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" l_J="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,jij%l_J,input%swsp,input%lflip
+   WRITE (fileNum,140) input%jspins,noco%l_noco,.false.,input%swsp,input%lflip
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
@@ -201,7 +200,7 @@ SUBROUTINE w_inpXML(&
    IF (l_nocoOpt.OR.l_explicit) THEN
 160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,&
            '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
-      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, Jij%l_disp, noco%mix_b, Jij%thetaJ, Jij%nsh
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, .false., noco%mix_b
       162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'
@@ -616,9 +615,9 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,360) atoms%l_geo(iAtomType),atoms%relax(1,iAtomType),atoms%relax(2,iAtomType),atoms%relax(3,iAtomType)
 
       IF(l_nocoOpt.OR.l_explicit) THEN
-         362 FORMAT('         <nocoParams l_relax="',l1,'" l_magn="',l1,'" M="',f0.8,'" alpha="',f0.8,'" beta="',&
+         362 FORMAT('         <nocoParams l_relax="',l1,'" alpha="',f0.8,'" beta="',&
                     f0.8,'" b_cons_x="',f0.8,'" b_cons_y="',f0.8,'"/>')
-         WRITE(fileNum,362) noco%l_relax(iAtomType), Jij%l_magn(iAtomType), Jij%M(iAtomType), noco%alphInit(iAtomType),&
+         WRITE(fileNum,362) noco%l_relax(iAtomType), noco%alphInit(iAtomType),&
                             noco%beta(iAtomType),noco%b_con(1,iAtomType),noco%b_con(2,iAtomType)
       END IF
 
