@@ -56,7 +56,7 @@ CONTAINS
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 
-    CALL MPI_IRANK(MPI_COMM_WORLD,i,ierr)
+    CALL MPI_COMM_RANK(MPI_COMM_WORLD,i,ierr)
     IF (i.NE.0) RETURN
 #endif
 
