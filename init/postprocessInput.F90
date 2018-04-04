@@ -151,10 +151,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
            WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(iType)
         END IF
 
-        enpara%skiplo(iType,:) = 0
-        DO j = 1, atoms%nlo(iType)
-           enpara%skiplo(iType,:) = enpara%skiplo(iType,1) + (2*atoms%llo(j,iType)+1)
-        END DO
      END DO
 
      ! Check lda+u stuff (from inped)

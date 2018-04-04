@@ -23,7 +23,6 @@ global/checkdop.F90
 global/checkdopall.f90
 global/chkmt.f90
 global/convn.f90
-global/enpara.f90
 global/phasy1.f90
 global/qfix.f90
 global/radflo.F90

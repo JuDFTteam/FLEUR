@@ -44,10 +44,10 @@ CONTAINS
     COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN)  :: m_mcd(:,:,:,:)!(dimension%nstd,(3+1)**2,3*ntypd ,2)
-    REAL,    INTENT (OUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
-    REAL,    INTENT (OUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
-    REAL,    INTENT (OUT) :: qal(0:,:,:)!(0:3,atoms%ntype,dimension%neigd)
-    REAL,    INTENT (OUT) :: mcd(:,:,:)!(3*atoms%ntype,dimension%nstd,dimension%neigd)
+    REAL,    INTENT (INOUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
+    REAL,    INTENT (INOUT) :: qal(0:,:,:)!(0:3,atoms%ntype,dimension%neigd)
+    REAL,    INTENT (INOUT) :: mcd(:,:,:)!(3*atoms%ntype,dimension%nstd,dimension%neigd)
 
     !     ..
     !     .. Local Scalars ..

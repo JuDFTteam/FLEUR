@@ -35,8 +35,6 @@ SUBROUTINE r_inpXML(&
   USE m_constants
   USE m_inpeig
   USE m_sort
-  USE m_enpara,    ONLY : r_enpara
-
   IMPLICIT NONE
 
   TYPE(t_input),INTENT(INOUT)   :: input
@@ -673,12 +671,8 @@ SUBROUTINE r_inpXML(&
 !!! End of calculationSetup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ALLOCATE(enpara%evac0(2,input%jspins))
-  ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntype,input%jspins))
-  ALLOCATE(enpara%enmix(input%jspins))
-
-  enpara%lchg_v = .FALSE.
-
+  
+ 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of cell section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1271,22 +1265,16 @@ SUBROUTINE r_inpXML(&
   atoms%nlod = max(atoms%nlod,2) ! for chkmt
   ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
   ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
-  ALLOCATE(enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-  ALLOCATE(enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-  ALLOCATE(enpara%el0(0:atoms%lmaxd,atoms%ntype,input%jspins))
-  ALLOCATE(enpara%lchange(0:atoms%lmaxd,atoms%ntype,input%jspins))
   ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
 
-  enpara%el0 = 0.0
-  enpara%ello0 = 0.0
-  enpara%lchange = .FALSE.
-  enpara%llochg = .FALSE.
   dimension%nstd = 29
 
   ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
   ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
   ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
 
+  CALL enpara%init(atoms,input%jspins)
+  
   DO iSpecies = 1, numSpecies
      ALLOCATE(speciesLLO(speciesNLO(iSpecies)))
      ALLOCATE(speciesLOeParams(speciesNLO(iSpecies)))
@@ -1969,11 +1957,7 @@ SUBROUTINE r_inpXML(&
   l_enpara = .FALSE.
   INQUIRE (file ='enpara',exist= l_enpara)
   IF (l_enpara) THEN
-     OPEN (40,file ='enpara',form='formatted',status='old')
-     DO jsp = 1,input%jspins
-        CALL r_enpara(atoms,input,jsp,enpara)
-     END DO !dimension%jspd
-     CLOSE (40)
+     CALL enpara%READ(atoms,input%jspins,input%film,.FALSE.) 
   END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

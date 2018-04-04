@@ -16,7 +16,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                  input,cell,xcpot,obsolete,noco,oneD)
 
    USE m_constants
-   USE m_enpara,    ONLY : w_enpara
    USE m_xcall,     ONLY : vxcall
    USE m_qsf
    USE m_checkdopall
@@ -73,18 +72,9 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
    ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntype,DIMENSION%jspd) )
-   ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,input%jspins),vacpar(2) )
-   ALLOCATE ( enpara%el0(0:3,atoms%ntype,input%jspins))   
-   ALLOCATE ( enpara%lchange(0:3,atoms%ntype,input%jspins))
-   ALLOCATE ( enpara%skiplo(atoms%ntype,input%jspins))
-   ALLOCATE ( enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-   ALLOCATE ( enpara%enmix(input%jspins))
-   ALLOCATE ( enpara%evac0(2,dimension%jspd))
-   ALLOCATE ( enpara%lchg_v(2,dimension%jspd))
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
    ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
 
-   enpara%enmix=1.0
 
    IF (mpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms
@@ -231,7 +221,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
       ! set up parameters for enpara-file
       IF ((juDFT_was_argument("-genEnpara")).AND..NOT.l_enpara) THEN
-         OPEN (40,file='enpara',form='formatted',status='unknown')
+         CALL enpara%init(atoms,input%jspins)
+
          enpara%lchange = .TRUE.
          enpara%llochg = .TRUE.
                 
@@ -337,17 +328,12 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                enpara%enmix = 1.0
             END IF
 
-            ! write enpara-file
+            
             enpara%evac0(:,ispin)=vacpar(:SIZE(enpara%evac0,1))
-            CALL w_enpara(atoms,ispin,input%film,enpara,16)
+           
          END DO ! ispin
-
-         CLOSE (40) ! enpara file
+         CALL enpara%WRITE(atoms,input%jspins,input%film)
       END IF
-      DEALLOCATE (rat,eig,rh,rh1)
-      DEALLOCATE (rhoss,vacpar,vbar,sigm)
-      DEALLOCATE (enpara%ello0,enpara%el0,enpara%lchange)
-      DEALLOCATE (enpara%skiplo,enpara%llochg,enpara%enmix,enpara%evac0)
    END IF ! mpi%irank == 0
 
 END SUBROUTINE stden

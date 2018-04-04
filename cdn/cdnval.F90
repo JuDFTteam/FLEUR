@@ -54,7 +54,6 @@ CONTAINS
     USE m_rhonmtlo
     USE m_mcdinit
     USE m_sympsi
-    USE m_enpara, ONLY : w_enpara,mix_enpara
     USE m_eparas      ! energy parameters and partial charges
     USE m_qal21       ! off-diagonal part of partial charges
     USE m_abcof
@@ -913,20 +912,12 @@ CONTAINS
             qa21,den%mt)
 
        DO ispin = jsp_start,jsp_end
-          WRITE (6,*) 'Energy Parameters for spin:',ispin
-          IF (.not.sliceplot%slice) THEN
-             CALL mix_enpara(&
-                  ispin,atoms,vacuum,obsolete,input,&
-                  enpara,&
-                  vTot%mt(:,0,:,:),vTot%vacz(:,:,jspin),pvac(1,ispin),&
-                  svac(1,ispin),&
-                  ener(0,1,ispin),sqal(0,1,ispin),&
-                  enerlo(1,1,ispin),&
-                  sqlo(1,1,ispin))
-
-             CALL w_enpara(&
-                  atoms,jspin,input%film,&
-                  enpara,16)
+          IF (.NOT.sliceplot%slice) THEN
+             DO n=1,atoms%ntype
+             enpara%el1(0:3,n,ispin)=ener(0:3,n,ispin)/sqal(0:3,n,ispin)
+             enpara%ello1(:,n,ispin)=enerlo(:,n,ispin)/sqlo(:,n,ispin)
+          ENDDO
+             enpara%evac1(:,ispin)=pvac(:,ispin)/svac(:,ispin)
           END IF
 
           !--->      check continuity of charge density
@@ -967,6 +958,8 @@ CONTAINS
        IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK",mpi%irank)
        IF (vacuum%nstm.EQ.3)  CALL juDFT_end("VACWAVE OK",mpi%irank)
     END IF
+
+  
 
   END SUBROUTINE cdnval
 END MODULE m_cdnval

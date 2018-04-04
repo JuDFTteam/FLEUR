@@ -19,12 +19,10 @@ CONTAINS
   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
   !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-       sym,kpts,DIMENSION, vacuum, input, cell, enpara_in,enpara,banddos, noco, oneD,hybrid,&
+       sym,kpts,DIMENSION, vacuum, input, cell, enpara,banddos, noco, oneD,hybrid,&
        it,eig_id,results,inden,v,vx)
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
-    USE m_lodpot
-  
     USE m_apws
     USE m_eigen_hssetup
     USE m_pot_io
@@ -49,7 +47,7 @@ CONTAINS
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
-    TYPE(t_enpara),INTENT(INOUT) :: enpara_in,enpara
+    TYPE(t_enpara),INTENT(INOUT) :: enpara
     TYPE(t_obsolete),INTENT(IN)  :: obsolete
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -108,7 +106,10 @@ CONTAINS
     !
     call ud%init(atoms,DIMENSION%jspd)
     ALLOCATE ( eig(DIMENSION%neigd),bkpt(3) )
-   
+
+    PRINT *,enpara%el0(:,1,1)
+    PRINT *,enpara%el0(:,2,1)
+    
     !
     ! --> some parameters first
     
@@ -124,13 +125,6 @@ CONTAINS
 #endif
     IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
                                                     RESHAPE((/19,13,5,5/),(/2,2/)))
-   
-    !
-    ! set energy parameters (normally to that, what we read in)
-    !
-    CALL lodpot(mpi,atoms,sphhar,obsolete,vacuum,&
-            input, v%mt,v%vacz, enpara_in, enpara)
-    !
     
      eig_id=open_eig(&
           mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
@@ -217,8 +211,8 @@ CONTAINS
        results%te_hfex%valence = 2*results%te_hfex%valence
        results%te_hfex%core    = 2*results%te_hfex%core
     END IF
-    enpara_in%epara_min = MINVAL(enpara%el0)
-    enpara_in%epara_min = MIN(MINVAL(enpara%ello0),enpara_in%epara_min)
+    enpara%epara_min = MINVAL(enpara%el0)
+    enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
   END SUBROUTINE eigen
 END MODULE m_eigen
 

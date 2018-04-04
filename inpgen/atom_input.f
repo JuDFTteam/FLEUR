@@ -28,12 +28,11 @@
       USE m_readrecord
       USE m_setatomcore, ONLY : setatom_bystr, setcore_bystr
       USE m_constants
-      USE m_enpara,      ONLY : w_enpara,default_enpara
-
+    
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(INOUT)    :: input
-      TYPE(t_enpara),INTENT(INOUT)   :: enpara
+      TYPE(t_enpara),INTENT(OUT)     :: enpara
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
 ! ... Arguments ...
@@ -373,18 +372,7 @@
 
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
-      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%evac0(2,input%jspins))
-      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%lchg_v(2,input%jspins))
-      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
-      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%enmix(input%jspins))
-
-      enpara%el0 = -9999.9
-      enpara%ello0 = -9999.9
-      enpara%evac0 = eVac0Default_const
+      call enpara%init(atoms,input%jspins)
       DO n = 1, atoms%ntype
 
         CALL setcore_bystr(
@@ -672,10 +660,6 @@ c           in s and p states equal occupation of up and down states
 
       ENDDO
 
-      DO j = 1, input%jspins
-         CALL default_enpara(j,atoms,enpara)
-      END DO
-
       DO n = 1, atoms%ntype
 ! correct valence charge
          DO i = 1,atoms%nlo(n)
@@ -702,13 +686,7 @@ c           in s and p states equal occupation of up and down states
       IF(juDFT_was_argument("-genEnpara")) THEN
          lmaxdTemp = atoms%lmaxd
          atoms%lmaxd = 3
-         OPEN (40,file='enpara',form='formatted',status='unknown') ! write out an enpara-file
-         DO j = 1, input%jspins
-            OPEN (42)
-            CALL w_enpara(atoms,j,input%film,enpara,42)
-            CLOSE (42,status='delete')
-         ENDDO
-         CLOSE (40)
+         CALL enpara%write(atoms,input%jspins,input%film)
          atoms%lmaxd = lmaxdTemp
       END IF
 

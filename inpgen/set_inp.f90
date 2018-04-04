@@ -479,8 +479,6 @@
       END IF !xml output
 
       DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
-      DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
-      DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)
 
       IF (ANY(kpts%nkpt3(:).NE.0)) THEN

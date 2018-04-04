@@ -46,8 +46,9 @@ inpgen/closure.f inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.
 io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
 global/sort.f init/kptgen_hybrid.f init/od_kptsgen.f init/bravais.f init/divi.f init/brzone.f
 init/kptmop.f init/kpttet.f init/bandstr1.F init/ordstar.f init/fulstar.f init/kprep.f
-init/tetcon.f init/kvecon.f init/boxdim.f math/ylm4.f
-)
+init/tetcon.f init/kvecon.f init/boxdim.f math/ylm4.f global/radsra.F math/intgr.F global/differ.f math/inwint.f
+ math/outint.f
+ )
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
 eigen/vec_for_lo.f90 eigen/orthoglo.F90 juDFT/usage_data.F90

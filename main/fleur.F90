@@ -86,7 +86,7 @@ CONTAINS
     TYPE(t_sliceplot):: sliceplot
     TYPE(t_banddos)  :: banddos
     TYPE(t_obsolete) :: obsolete
-    TYPE(t_enpara)   :: enpara,enpara_out
+    TYPE(t_enpara)   :: enpara
     TYPE(t_xcpot)    :: xcpot
     TYPE(t_results)  :: results
     TYPE(t_kpts)     :: kpts
@@ -271,8 +271,9 @@ CONTAINS
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
           vTemp = vTot
+          CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-               sym,kpts,DIMENSION,vacuum,input,cell,enpara,enpara_out,banddos,noco,oneD,hybrid,&
+               sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,oneD,hybrid,&
                it,eig_id,results,inDenRot,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -301,7 +302,7 @@ CONTAINS
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
                CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-               obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara_out)
+               obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara)
           CALL timestop("generation of hamiltonian and diagonalization (total)")
 
 #ifdef CPP_MPI
@@ -378,7 +379,7 @@ CONTAINS
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
-               enpara_out,cell,noco,vTot,results,oneD,coreSpecInput,&
+               enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                archiveType,outDen)
 
           IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
@@ -432,6 +433,7 @@ CONTAINS
        IF (mpi%irank.EQ.0) THEN
           !          ----> mix input and output densities
           CALL timestart("mixing")
+          CALL enpara%mix(atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
           CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
           CALL timestop("mixing")
           
