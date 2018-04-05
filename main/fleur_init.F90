@@ -278,7 +278,6 @@
              ALLOCATE ( oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1) )
              stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
              !-odim
-
              ! HF/hybrid functionals/EXX
              ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
            
@@ -406,7 +405,8 @@
 
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
-          !-odim
+          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,dimension%jspd)
+                   !-odim
           oneD%odd%nq2 = oneD%odd%n2d
           oneD%odd%kimax2 = oneD%odd%nq2 - 1
           oneD%odd%nat = atoms%nat

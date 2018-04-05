@@ -137,9 +137,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(kpts%ntetra(4,kpts%ntet))
       ALLOCATE(kpts%voltet(kpts%ntet))
 
-      ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntype,input%jspins))
-      ALLOCATE(enpara%enmix(input%jspins))
-
+    
       ALLOCATE(sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
       ALLOCATE(sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat))
       ALLOCATE(sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop))
@@ -147,10 +145,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
-      ALLOCATE(enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE(enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE(enpara%el0(0:atoms%lmaxd,atoms%ntype,input%jspins))
-      ALLOCATE(enpara%lchange(0:atoms%lmaxd,atoms%ntype,input%jspins))
       ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
       ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
       ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
