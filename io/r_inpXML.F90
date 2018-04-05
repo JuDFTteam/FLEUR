@@ -1263,7 +1263,7 @@ SUBROUTINE r_inpXML(&
      atoms%nlod = max(atoms%nlod,atoms%nlo(iType))
   END DO
   atoms%nlod = max(atoms%nlod,2) ! for chkmt
-  ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
+  ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype));atoms%llo=-1
   ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
   ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
 
@@ -1483,12 +1483,25 @@ SUBROUTINE r_inpXML(&
               atoms%llod = max(abs(atoms%llo(iLLO,iType)),atoms%llod)
               DO jsp = 1, input%jspins
                  enpara%ello0(iLLO,iType,jsp) = speciesLOeParams(loOrderList(iLLO))
+                 IF (enpara%ello0(iLLO,iType,jsp)==NINT(enpara%ello0(iLLO,iType,jsp))) THEN
+                    enpara%qn_ello(iLLO,iType,jsp)=NINT(enpara%ello0(iLLO,iType,jsp))
+                    enpara%ello0(iLLO,iType,jsp)=0
+                 ELSE
+                    enpara%qn_ello(iLLO,iType,jsp)=0
+                 ENDIF
+                 enpara%skiplo(iType,jsp)=enpara%skiplo(iType,jsp)+(2*atoms%llo(iLLO,itype)+1)
               END DO
            END DO
            ! Energy parameters
            DO jsp = 1, input%jspins
               DO l = 0, 3
                  enpara%el0(l,iType,jsp) = speciesEParams(l)
+                 IF (enpara%el0(l,iType,jsp)==NINT(enpara%el0(l,iType,jsp))) THEN
+                    enpara%qn_el(l,iType,jsp)=nint(enpara%el0(l,iType,jsp))
+                    enpara%el0(l,iType,jsp)=0
+                 ELSE
+                    enpara%qn_el(l,iType,jsp)=0
+                 ENDIF
               END DO
               DO l = 4,atoms%lmax(iType)
                  enpara%el0(l,iType,jsp) = enpara%el0(3,iType,jsp)

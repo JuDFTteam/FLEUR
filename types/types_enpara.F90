@@ -33,7 +33,7 @@ MODULE m_types_enpara
      PROCEDURE :: mix
   END TYPE t_enpara
 
-  CHARACTER(len=1),PARAMETER,dimension(0:9):: ch=(/'s','p','d','f','g','h','i','j','k','l'/)
+
 
   PUBLIC:: t_enpara
 
@@ -45,7 +45,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(IN)           :: jspins
 
-    INTEGER :: n,i,jsp
+    INTEGER :: n,i,jsp,l
 
     ALLOCATE(this%el0(0:atoms%lmaxd,atoms%ntype,jspins),this%el1(0:atoms%lmaxd,atoms%ntype,jspins))
     ALLOCATE(this%ello0(atoms%nlod,atoms%ntype,jspins),this%ello1(atoms%nlod,atoms%ntype,jspins))
@@ -97,8 +97,15 @@ CONTAINS
           ENDIF
           
           DO i = 1, atoms%nlo(n)
-             this%qn_ello(i,n,jsp) = this%qn_el(atoms%llo(i,n),n,jsp) - 1
-             this%skiplo(n,jsp) = this%skiplo(n,jsp) + (2*atoms%llo(i,n)+1)
+             IF (atoms%llo(i,n)<0) THEN
+                !llo might not be initialized
+                !in this case defaults broken
+                this%qn_ello(i,n,jsp) = 0
+                this%skiplo(n,jsp) = 0
+             ELSE
+                this%qn_ello(i,n,jsp) = this%qn_el(atoms%llo(i,n),n,jsp) - 1
+                this%skiplo(n,jsp) = this%skiplo(n,jsp) + (2*atoms%llo(i,n)+1)
+             ENDIF
           ENDDO
           this%evac0=eVac0Default_const
        ENDDO
@@ -114,6 +121,7 @@ CONTAINS
     USE m_types_mpi
     USE m_xmlOutput
     USE m_types_potden
+    USE m_find_enpara
     CLASS(t_enpara),INTENT(inout):: enpara
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -139,16 +147,9 @@ CONTAINS
        !! l_done stores the index of those energy parameter updated
        DO n = 1, atoms%ntype
           DO l = 0,3
-             IF( enpara%qn_el(l,n,jsp) >0)THEN 
+             IF( enpara%qn_el(l,n,jsp).ne.0)THEN 
                 l_done(l,n,jsp) = .TRUE.
-                enpara%el0(l,n,jsp)=priv_method1(.FALSE.,l,n,enpara%qn_el(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
-                IF( l .EQ. 3 ) THEN
-                   enpara%el0(4:,n,jsp) = enpara%el0(3,n,jsp)
-                   l_done(4:,n,jsp) = .TRUE.
-                END IF
-             ELSE IF( enpara%qn_el(l,n,jsp)<0 ) THEN
-                l_done(l,n,jsp) = .TRUE.
-                enpara%el0(l,n,jsp)=priv_method2(.FALSE.,l,n,enpara%qn_el(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
+                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
                 IF( l .EQ. 3 ) THEN
                    enpara%el0(4:,n,jsp) = enpara%el0(3,n,jsp)
                    l_done(4:,n,jsp) = .TRUE.
@@ -160,12 +161,9 @@ CONTAINS
           ! Now for the lo's
           DO ilo = 1, atoms%nlo(n)
              l = atoms%llo(ilo,n)
-             IF( enpara%qn_ello(ilo,n,jsp) >0) THEN
+             IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp)=priv_method1(.TRUE.,l,n,enpara%qn_ello(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
-             ELSE IF(enpara%qn_ello(ilo,n,jsp)<0) THEN
-                lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp) = priv_method2(.TRUE.,l,n,enpara%qn_ello(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))                
+                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
              ELSE
                 lo_done(ilo,n,jsp) = .FALSE.
              ENDIF
@@ -246,256 +244,6 @@ CONTAINS
     
     IF (mpi%irank  == 0) CALL closeXMLElement('energyParameters')
   END SUBROUTINE update
-
-  REAL FUNCTION priv_method1(lo,l,n,nqn,atoms,mpi,vr)RESULT(e)
-    USE m_types_setup
-    USE m_types_mpi
-    USE m_radsra
-    USE m_differ
-    USE m_xmlOutput
-    USE m_constants
-    IMPLICIT NONE
-    LOGICAL,INTENT(IN):: lo
-    INTEGER,INTENT(IN):: l,n,nqn
-    TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
-    REAL,INTENT(IN):: vr(:)
-
-
-    INTEGER jsp,j,ilo,i
-    INTEGER nodeu,node,ierr,msh
-    REAL   e_up,e_lo,lnd
-    REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
-    LOGICAL start
-    !     ..
-    !     .. Local Arrays .. 
-    REAL, ALLOCATABLE :: f(:,:),vrd(:)
-    CHARACTER(LEN=20)    :: attributes(6)
-    c=c_light(1.0)
-
-    !Core potential setup done for each n,l now 
-    d = EXP(atoms%dx(n))
-    ! set up core-mesh
-    rn = atoms%rmt(n)
-    msh = atoms%jri(n)
-    DO WHILE (rn < atoms%rmt(n) + 20.0)
-       msh = msh + 1
-       rn = rn*d
-    ENDDO
-    rn = atoms%rmsh(1,n)*( d**(msh-1) )
-    ALLOCATE ( f(msh,2),vrd(msh) )
-    ! extend core potential (linear with slope t1 / a.u.)
-    vrd(:atoms%jri(n))=vr(:atoms%jri(n))
-    t1=0.125
-    t2 = vrd(atoms%jri(n))/atoms%rmt(n) - atoms%rmt(n)*t1
-    rr = atoms%rmt(n)
-    DO j = atoms%jri(n) + 1, msh
-       rr = d*rr
-       vrd(j) = rr*( t2 + rr*t1 )
-    ENDDO
-
-    node = nqn - (l+1)
-    e = 0.0 
-    ! determine upper edge
-    nodeu = -1 ; start = .TRUE.
-    DO WHILE ( nodeu <= node ) 
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-       IF  ( ( nodeu > node ) .AND. start ) THEN
-          e = e - 1.0
-          nodeu = -1
-       ELSE
-          e = e + 0.01
-          start = .FALSE.
-       ENDIF
-    ENDDO
-
-    e_up = e
-    IF (node /= 0) THEN
-       ! determine lower edge
-       nodeu = node + 1
-       DO WHILE ( nodeu >= node ) 
-          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-          e = e - 0.01
-       ENDDO
-       e_lo = e
-    ELSE
-       e_lo = -9.99 
-    ENDIF
-    ! calculate core
-    e  = (e_up+e_lo)/2
-    fn = REAL(nqn) ; fl = REAL(l) ; fj = fl + 0.5
-    CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
-         rn,d,msh,vrd, e, f(:,1),f(:,2),ierr)
-    IF (mpi%irank  == 0) THEN
-       attributes = ''
-       WRITE(attributes(1),'(i0)') n
-       WRITE(attributes(2),'(i0)') jsp
-       WRITE(attributes(3),'(i0,a1)') nqn, ch(l)
-       WRITE(attributes(4),'(f8.2)') e_lo
-       WRITE(attributes(5),'(f8.2)') e_up
-       WRITE(attributes(6),'(f16.10)') e
-       IF (lo) THEN
-          CALL writeXMLElementForm('loAtomicEP',(/'atomType     ','spin         ','branch       ',&
-               'branchLowest ','branchHighest','value        '/),&
-               attributes,RESHAPE((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
-       ELSE
-          CALL writeXMLElementForm('atomicEP',(/'atomType     ','spin         ','branch       ',&
-               'branchLowest ','branchHighest','value        '/),&
-               attributes,RESHAPE((/12,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
-       ENDIF
-       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
-            e_lo, ' to',e_up,' htr. ; e_l =',e
-    ENDIF
-  END FUNCTION priv_method1
-
-  REAL FUNCTION priv_method2(lo,l,n,nqn,atoms,mpi,vr)RESULT(e)
-    USE m_types_setup
-    USE m_types_mpi
-    USE m_radsra
-    USE m_differ
-    USE m_xmlOutput
-    USE m_constants
-    IMPLICIT NONE
-    LOGICAL,INTENT(IN):: lo
-    INTEGER,INTENT(IN):: l,n,nqn
-    TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
-    REAL,INTENT(IN):: vr(:)
-
-    INTEGER jsp,j,ilo,i
-    INTEGER nodeu,node,ierr,msh
-    REAL   e_up,e_lo,lnd,e_up_temp,e_lo_temp,large_e_step
-    REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
-    LOGICAL start
-    !     ..
-    !     .. Local Arrays .. 
-
-    REAL, ALLOCATABLE :: f(:,:),vrd(:)
-    CHARACTER(LEN=20)    :: attributes(6)
-    
-    c=c_light(1.0)
-
-    !Core potential setup done for each n,l now 
-    d = EXP(atoms%dx(n))
-    ! set up core-mesh
-    rn = atoms%rmt(n)
-    msh = atoms%jri(n)
-    DO WHILE (rn < atoms%rmt(n) + 20.0)
-       msh = msh + 1
-       rn = rn*d
-    ENDDO
-    rn = atoms%rmsh(1,n)*( d**(msh-1) )
-    ALLOCATE ( f(msh,2),vrd(msh) )
-    ! extend core potential (linear with slope t1 / a.u.)
-    vrd(:atoms%jri(n))=vr(:atoms%jri(n))
-    t1=0.125
-    t2 = vrd(atoms%jri(n))/atoms%rmt(n) - atoms%rmt(n)*t1
-    rr = atoms%rmt(n)
-    DO j = atoms%jri(n) + 1, msh
-       rr = d*rr
-       vrd(j) = rr*( t2 + rr*t1 )
-    ENDDO
-    ! search for branches
-    node = ABS(nqn) - (l+1)
-    e = 0.0 ! The initial value of e is arbitrary.
-    large_e_step = 5.0 ! 5.0 Htr steps for coarse energy searches
-
-    ! determine upper band edge
-    ! Step 1: Coarse search for the band edge
-    CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-         atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-    DO WHILE ( nodeu > node )
-       e = e - large_e_step
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-    END DO
-    DO WHILE ( nodeu <= node )
-       e = e + large_e_step
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-    END DO
-    e_up_temp = e
-    e_lo_temp = e - large_e_step
-    ! Step 2: Fine band edge determination by bisection search
-    DO WHILE ((e_up_temp - e_lo_temp) > 1e-2)
-       e = (e_up_temp + e_lo_temp) / 2.0
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-       IF (nodeu > node) THEN
-          e_up_temp = e
-       ELSE
-          e_lo_temp = e
-       END IF
-    END DO
-    e_up = (e_up_temp + e_lo_temp) / 2.0
-    e    = e_up
-
-    ! determine lower band edge
-    IF (node == 0) THEN
-       e_lo = -49.99
-    ELSE
-       ! Step 1: Coarse search for the band edge
-       nodeu = node
-       DO WHILE ( nodeu >= node )
-          e = e - large_e_step
-          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-       ENDDO
-       e_up_temp = e + large_e_step
-       e_lo_temp = e
-       ! Step 2: Fine band edge determination by bisection search
-       DO WHILE ((e_up_temp - e_lo_temp) > 1e-2)
-          e = (e_up_temp + e_lo_temp) / 2.0
-          CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-               atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-          IF (nodeu < node) THEN
-             e_lo_temp = e
-          ELSE
-             e_up_temp = e
-          END IF
-       END DO
-       e_lo = (e_up_temp + e_lo_temp) / 2.0
-    END IF
-
-
-    ! determince notches by intersection
-    ldmt= -99.0 !ldmt = logarithmic derivative @ MT boundary
-    lnd = -l-1
-    DO WHILE ( ABS(ldmt-lnd) .GE. 1E-07) 
-       e = (e_up+e_lo)/2
-       CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
-            atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-       ldmt = dus/us
-       IF( ldmt .GT. lnd) THEN
-          e_lo = e
-       ELSE IF( ldmt .LT. lnd ) THEN
-          e_up = e
-          e_lo = e_lo
-       END IF
-    END DO
-
-    IF (mpi%irank == 0) THEN
-       attributes = ''
-       WRITE(attributes(1),'(i0)') n
-       WRITE(attributes(2),'(i0)') jsp
-       WRITE(attributes(3),'(i0,a1)') ABS(nqn), ch(l)
-       WRITE(attributes(4),'(f16.10)') ldmt
-       WRITE(attributes(5),'(f16.10)') e
-       IF (lo) THEN
-          CALL writeXMLElementForm('heloAtomicEP',(/'atomType      ','spin          ','branch        ',&
-               'logDerivMT    ','value         '/),&
-               attributes(1:5),reshape((/8,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
-       ELSE
-          CALL writeXMLElementForm('heAtomicEP',(/'atomType      ','spin          ','branch        ',&
-               'logDerivMT    ','value         '/),&
-               attributes(1:5),reshape((/10,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
-       ENDIF
-       WRITE (6,'(a7,i3,i2,a1,a12,f7.2,a4,f7.2,a5)') "  Atom ",n,nqn,ch(l)," branch, D = ",&
-            ldmt, " at ",e," htr."
-    ENDIF
-  END FUNCTION priv_method2
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
     USE m_types_setup

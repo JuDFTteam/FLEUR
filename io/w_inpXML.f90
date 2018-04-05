@@ -445,11 +445,10 @@ SUBROUTINE w_inpXML(&
       320 FORMAT('         <atomicCutoffs lmax="',i0,'" lnonsphr="',i0,'"/>')
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
-      IF (ALL((enpara%el0(0:3,iAtomType,1)-INT(enpara%el0(0:3,iAtomType,1))).LE.0.00000001)) THEN
+      IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
 !         <energyParameters s="3" p="3" d="3" f="4"/>
          321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
-         WRITE (fileNum,321) INT(enpara%el0(0,iAtomType,1)),INT(enpara%el0(1,iAtomType,1)),&
-                             INT(enpara%el0(2,iAtomType,1)),INT(enpara%el0(3,iAtomType,1))
+         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
       END IF
 
       IF(ANY(xmlElectronStates(:,iAtomType).NE.noState_const)) THEN

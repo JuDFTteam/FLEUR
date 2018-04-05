@@ -915,9 +915,9 @@ CONTAINS
           IF (.NOT.sliceplot%slice) THEN
              DO n=1,atoms%ntype
              enpara%el1(0:3,n,ispin)=ener(0:3,n,ispin)/sqal(0:3,n,ispin)
-             enpara%ello1(:,n,ispin)=enerlo(:,n,ispin)/sqlo(:,n,ispin)
+             IF (atoms%nlo(n)>0) enpara%ello1(:atoms%nlo(n),n,ispin)=enerlo(:atoms%nlo(n),n,ispin)/sqlo(:atoms%nlo(n),n,ispin)
           ENDDO
-             enpara%evac1(:,ispin)=pvac(:,ispin)/svac(:,ispin)
+          IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=pvac(:vacuum%nvac,ispin)/svac(:vacuum%nvac,ispin)
           END IF
 
           !--->      check continuity of charge density
