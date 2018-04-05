@@ -137,7 +137,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(kpts%ntetra(4,kpts%ntet))
       ALLOCATE(kpts%voltet(kpts%ntet))
 
-      ALLOCATE(enpara%evac0(2,input%jspins))
       ALLOCATE(enpara%lchg_v(2,input%jspins),enpara%skiplo(atoms%ntype,input%jspins))
       ALLOCATE(enpara%enmix(input%jspins))
 
