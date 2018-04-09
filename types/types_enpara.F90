@@ -38,12 +38,13 @@ MODULE m_types_enpara
   PUBLIC:: t_enpara
 
 CONTAINS
-  SUBROUTINE init(this,atoms,jspins)
+  SUBROUTINE init(this,atoms,jspins,l_defaults)
     USE m_types_setup
     USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(IN)           :: jspins
+    LOGICAL,INTENT(IN),OPTIONAL  :: l_defaults
 
     INTEGER :: n,i,jsp,l
 
@@ -69,6 +70,9 @@ CONTAINS
     ALLOCATE(this%qn_el(0:3,atoms%ntype,jspins))
     ALLOCATE(this%qn_ello(atoms%nlod,atoms%ntype,jspins))
 
+    IF (PRESENT(l_defaults)) THEN
+       IF (.NOT.l_defaults) RETURN
+    ENDIF
     !Set most simple defaults
     DO jsp=1,jspins
        DO n = 1,atoms%ntype
