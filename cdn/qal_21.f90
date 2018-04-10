@@ -5,7 +5,7 @@ MODULE m_qal21
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(atoms, input,noccbd,we,ccof, noco,acof,bcof,mt21,lo21,uloulopn21, qal,qmat)
+  SUBROUTINE qal_21(atoms,input,noccbd,we,ccof,noco,acof,bcof,denCoeffsOffdiag,qal,qmat)
 
     USE m_rotdenmat
     USE m_types
@@ -19,13 +19,11 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (INout)  :: we(noccbd),qal(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,input%jspins)
-    REAL,    INTENT (IN)  :: uloulopn21(atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins)
     COMPLEX, INTENT (IN)  :: acof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%nat,input%jspins)
     COMPLEX, INTENT (IN)  :: bcof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%nat,input%jspins)
     REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,4)
-    TYPE (t_mt21), INTENT (IN) :: mt21(0:atoms%lmaxd,atoms%ntype)
-    TYPE (t_lo21), INTENT (IN) :: lo21(0:atoms%lmaxd,atoms%ntype)
+    TYPE (t_denCoeffsOffdiag), INTENT (IN) :: denCoeffsOffdiag
 
     !     ..
     !     .. Local Scalars ..
@@ -67,8 +65,8 @@ CONTAINS
                    sumab = sumab + bcof(i,lm,natom,1) * CONJG(acof(i,lm,natom,input%jspins))
                 ENDDO atoms_loop
              ENDDO ms
-             qal21(l,n,i) = sumaa * mt21(l,n)%uun + sumbb * mt21(l,n)%ddn +&
-                  sumba * mt21(l,n)%dun + sumab * mt21(l,n)%udn 
+             qal21(l,n,i) = sumaa * denCoeffsOffdiag%uu21n(l,n) + sumbb * denCoeffsOffdiag%dd21n(l,n) +&
+                            sumba * denCoeffsOffdiag%du21n(l,n) + sumab * denCoeffsOffdiag%ud21n(l,n) 
           ENDDO ls
           nt1 = nt1 + atoms%neq(n)
        ENDDO types_loop
@@ -126,16 +124,16 @@ CONTAINS
           l = atoms%llo(lo,ntyp)
           DO i = 1, noccbd
              qal21(l,ntyp,i)= qal21(l,ntyp,i)  + &
-                  qaclo(i,lo,ntyp)*lo21(lo,ntyp)%uulon +&
-                  qcloa(i,lo,ntyp)*lo21(lo,ntyp)%uloun +&
-                  qclob(i,lo,ntyp)*lo21(lo,ntyp)%ulodn +&
-                  qbclo(i,lo,ntyp)*lo21(lo,ntyp)%dulon 
+                  qaclo(i,lo,ntyp)*denCoeffsOffdiag%uulo21n(lo,ntyp) +&
+                  qcloa(i,lo,ntyp)*denCoeffsOffdiag%ulou21n(lo,ntyp) +&
+                  qclob(i,lo,ntyp)*denCoeffsOffdiag%ulod21n(lo,ntyp) +&
+                  qbclo(i,lo,ntyp)*denCoeffsOffdiag%dulo21n(lo,ntyp)
           END DO
           DO lop = 1,atoms%nlo(ntyp)
              IF (atoms%llo(lop,ntyp).EQ.l) THEN
                 DO i = 1, noccbd
                    qal21(l,ntyp,i)= qal21(l,ntyp,i)  + &
-                        qlo(i,lop,lo,ntyp)*uloulopn21(lop,lo,ntyp)
+                        qlo(i,lop,lo,ntyp)*denCoeffsOffdiag%uloulop21n(lop,lo,ntyp)
                 ENDDO
              ENDIF
           ENDDO

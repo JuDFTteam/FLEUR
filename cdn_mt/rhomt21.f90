@@ -7,7 +7,7 @@ MODULE m_rhomt21
   !     FF
   !     ***************************************************************
 CONTAINS
-  SUBROUTINE rhomt21(atoms, we,ne,acof,bcof, ccof,mt21,lo21,uloulop21)
+  SUBROUTINE rhomt21(atoms, we,ne,acof,bcof, ccof,denCoeffsOffdiag)
 
     USE m_types
     IMPLICIT NONE
@@ -21,9 +21,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: bcof(:,0:,:,:)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:,:) !(-llod:llod,nobd,nlod,natd,jspd)
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntype)
-    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntype)
-    COMPLEX,       INTENT (INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
+    TYPE (t_denCoeffsOffdiag), INTENT (INOUT) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
     INTEGER   i,l,lm ,itype,na,natom,lo,lop,m
@@ -39,10 +37,10 @@ CONTAINS
                 lm = l* (l+1) + m
                 !--->           sum over occupied bands
                 DO i = 1,ne
-                   mt21(l,itype)%uu = mt21(l,itype)%uu + we(i)* CONJG(acof(i,lm,natom,2))*acof(i,lm,natom,1)
-                   mt21(l,itype)%ud = mt21(l,itype)%ud + we(i)* CONJG(acof(i,lm,natom,2))*bcof(i,lm,natom,1)
-                   mt21(l,itype)%du = mt21(l,itype)%du + we(i)* CONJG(bcof(i,lm,natom,2))*acof(i,lm,natom,1)
-                   mt21(l,itype)%dd = mt21(l,itype)%dd + we(i)* CONJG(bcof(i,lm,natom,2))*bcof(i,lm,natom,1)
+                   denCoeffsOffdiag%uu21(l,itype) = denCoeffsOffdiag%uu21(l,itype) + we(i)* CONJG(acof(i,lm,natom,2))*acof(i,lm,natom,1)
+                   denCoeffsOffdiag%ud21(l,itype) = denCoeffsOffdiag%ud21(l,itype) + we(i)* CONJG(acof(i,lm,natom,2))*bcof(i,lm,natom,1)
+                   denCoeffsOffdiag%du21(l,itype) = denCoeffsOffdiag%du21(l,itype) + we(i)* CONJG(bcof(i,lm,natom,2))*acof(i,lm,natom,1)
+                   denCoeffsOffdiag%dd21(l,itype) = denCoeffsOffdiag%dd21(l,itype) + we(i)* CONJG(bcof(i,lm,natom,2))*bcof(i,lm,natom,1)
                 ENDDO ! i = 1,ne
              ENDDO   ! m = -l,l
           ENDDO     ! l
@@ -55,10 +53,10 @@ CONTAINS
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO i = 1,ne
-                   lo21(lo,itype)%uulo = lo21(lo,itype)%uulo + we(i)* CONJG(acof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
-                   lo21(lo,itype)%dulo = lo21(lo,itype)%dulo + we(i)* CONJG(bcof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
-                   lo21(lo,itype)%ulou = lo21(lo,itype)%ulou + we(i)* CONJG(acof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
-                   lo21(lo,itype)%ulod = lo21(lo,itype)%ulod + we(i)* CONJG(bcof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
+                   denCoeffsOffdiag%uulo21(lo,itype) = denCoeffsOffdiag%uulo21(lo,itype) + we(i)* CONJG(acof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
+                   denCoeffsOffdiag%dulo21(lo,itype) = denCoeffsOffdiag%dulo21(lo,itype) + we(i)* CONJG(bcof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
+                   denCoeffsOffdiag%ulou21(lo,itype) = denCoeffsOffdiag%ulou21(lo,itype) + we(i)* CONJG(acof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
+                   denCoeffsOffdiag%ulod21(lo,itype) = denCoeffsOffdiag%ulod21(lo,itype) + we(i)* CONJG(bcof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
                 ENDDO
              ENDDO
              !--->         contribution of local orbital - local orbital terms
@@ -67,7 +65,7 @@ CONTAINS
                 IF (atoms%llo(lop,itype).EQ.l) THEN
                    DO m = -l,l
                       DO i = 1,ne
-                         uloulop21(lop,lo,itype) = uloulop21(lop,lo,itype)+&
+                         denCoeffsOffdiag%uloulop21(lop,lo,itype) = denCoeffsOffdiag%uloulop21(lop,lo,itype)+&
                               we(i)*CONJG(ccof(m,i,lop,natom,2))*ccof(m,i,lo, natom,1)
                       ENDDO ! i = 1,ne
                    ENDDO   ! m = -l,l

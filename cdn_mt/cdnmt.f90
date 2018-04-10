@@ -11,9 +11,9 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(jspd,atoms,sphhar,llpd, noco,l_fmpl,jsp_start,jsp_end, epar,&
-       ello,vr,uu,du,dd,uunmt,udnmt,dunmt,ddnmt, usdus,aclo,bclo,cclo,&
-       acnmt,bcnmt,ccnmt,orb,mt21,lo21,uloulopn21,uloulop21, uunmt21,&
-       ddnmt21,udnmt21,dunmt21, chmom,clmom, qa21,rho)
+       ello,vr,denCoeffs,usdus,&
+       orb,denCoeffsOffdiag,&
+       chmom,clmom, qa21,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -35,31 +35,12 @@ CONTAINS
     REAL, INTENT    (IN) :: epar(0:atoms%lmaxd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: ello(atoms%nlod,atoms%ntype,jspd)
-    REAL, INTENT    (IN) :: aclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: bclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: cclo(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: uu(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: du(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: dd(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: uunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: udnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: dunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: ddnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end)
-    REAL, INTENT    (IN) :: uloulopn21(atoms%nlod,atoms%nlod,atoms%ntype)
-    COMPLEX, INTENT (IN) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
-    COMPLEX, INTENT (IN) :: ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)  
-    COMPLEX, INTENT (IN) :: dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)  
-    COMPLEX, INTENT (IN) :: udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)  
-    COMPLEX, INTENT (IN) :: uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype)  
     REAL, INTENT   (OUT) :: chmom(atoms%ntype,jspd),clmom(3,atoms%ntype,jspd)
     REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
     COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
-    TYPE (t_orb),  INTENT (IN) :: orb
-    TYPE (t_mt21), INTENT (IN) :: mt21(0:atoms%lmaxd,atoms%ntype)
-    TYPE (t_lo21), INTENT (IN) :: lo21(atoms%nlod,atoms%ntype)
+    TYPE (t_orb),              INTENT(IN) :: orb
+    TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
+    TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu
@@ -89,9 +70,8 @@ CONTAINS
     !$OMP PARALLEL DEFAULT(none) &
 
     !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,uu,dd,du,sphhar,ello,aclo,bclo,cclo) &
-    !$OMP SHARED(acnmt,bcnmt,ccnmt,orb,ddnmt,udnmt,dunmt,uunmt,mt21,lo21,uloulop21)&
-    !$OMP SHARED(uloulopn21,noco,l_fmpl,uunmt21,ddnmt21,dunmt21,udnmt21,jspd)&
+    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,denCoeffs,sphhar,ello)&
+    !$OMP SHARED(orb,noco,l_fmpl,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
@@ -114,9 +94,9 @@ CONTAINS
              CALL radfun(l,itype,ispin,epar(l,itype,ispin),vr(1,itype,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
              DO j = 1,atoms%jri(itype)
-                s = uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
-                     +   dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&
-                     + 2*du(l,itype,ispin)*( f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin) )
+                s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
+                     +   denCoeffs%dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&
+                     + 2*denCoeffs%du(l,itype,ispin)*( f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin) )
                 rho(j,0,itype,ispin) = rho(j,0,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
              ENDDO
           ENDDO
@@ -131,9 +111,9 @@ CONTAINS
           CALL rhosphnlo(itype,atoms,sphhar,&
                usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
                usdus%uulon(1,itype,ispin),ello(1,itype,ispin),&
-               vr(1,itype,ispin),aclo(1,itype,ispin),bclo(1,itype,ispin),&
-               cclo(1,1,itype,ispin),acnmt(0,1,1,itype,ispin),&
-               bcnmt(0,1,1,itype,ispin),ccnmt(1,1,1,itype,ispin),&
+               vr(1,itype,ispin),denCoeffs%aclo(1,itype,ispin),denCoeffs%bclo(1,itype,ispin),&
+               denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
+               denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
                f(1,1,0,ispin),g(1,1,0,ispin),&
                rho(:,0:,itype,ispin),qmtllo)
 
@@ -141,7 +121,7 @@ CONTAINS
           !--->       l-decomposed density for each atom type
           qmtt = 0.0
           DO l = 0,atoms%lmax(itype)
-             qmtl(l,ispin,itype) = ( uu(l,itype,ispin)+dd(l,itype,ispin)&
+             qmtl(l,ispin,itype) = ( denCoeffs%uu(l,itype,ispin)+denCoeffs%dd(l,itype,ispin)&
                   &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
@@ -162,13 +142,13 @@ CONTAINS
                 DO lp = 0,l
                    llp = (l* (l+1))/2 + lp
                    DO j = 1,atoms%jri(itype)
-                      s = uunmt(llp,lh,itype,ispin)*( &
+                      s = denCoeffs%uunmt(llp,lh,itype,ispin)*( &
                            f(j,1,l,ispin)*f(j,1,lp,ispin)+ f(j,2,l,ispin)*f(j,2,lp,ispin) )&
-                           + ddnmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*g(j,1,lp,ispin)&
+                           + denCoeffs%ddnmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*g(j,1,lp,ispin)&
                            + g(j,2,l,ispin)*g(j,2,lp,ispin) )&
-                           + udnmt(llp,lh,itype,ispin)*(f(j,1,l,ispin)*g(j,1,lp,ispin)&
+                           + denCoeffs%udnmt(llp,lh,itype,ispin)*(f(j,1,l,ispin)*g(j,1,lp,ispin)&
                            + f(j,2,l,ispin)*g(j,2,lp,ispin) )&
-                           + dunmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*f(j,1,lp,ispin)&
+                           + denCoeffs%dunmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*f(j,1,lp,ispin)&
                            + g(j,2,l,ispin)*f(j,2,lp,ispin) )
                       rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
                    ENDDO
@@ -182,22 +162,22 @@ CONTAINS
           !--->      calculate off-diagonal integrated density
           DO l = 0,atoms%lmax(itype)
              qa21(itype) = qa21(itype) + conjg(&
-                  mt21(l,itype)%uu * mt21(l,itype)%uun +&
-                  mt21(l,itype)%ud * mt21(l,itype)%udn +&
-                  mt21(l,itype)%du * mt21(l,itype)%dun +&
-                  mt21(l,itype)%dd * mt21(l,itype)%ddn )/atoms%neq(itype)
+                  denCoeffsOffdiag%uu21(l,itype) * denCoeffsOffdiag%uu21n(l,itype) +&
+                  denCoeffsOffdiag%ud21(l,itype) * denCoeffsOffdiag%ud21n(l,itype) +&
+                  denCoeffsOffdiag%du21(l,itype) * denCoeffsOffdiag%du21n(l,itype) +&
+                  denCoeffsOffdiag%dd21(l,itype) * denCoeffsOffdiag%dd21n(l,itype) )/atoms%neq(itype)
           ENDDO
           DO ilo = 1, atoms%nlo(itype)
              qa21(itype) = qa21(itype) + conjg(&
-                  lo21(ilo,itype)%ulou * lo21(ilo,itype)%uloun +&
-                  lo21(ilo,itype)%ulod * lo21(ilo,itype)%ulodn +&
-                  lo21(ilo,itype)%uulo * lo21(ilo,itype)%uulon +&
-                  lo21(ilo,itype)%dulo * lo21(ilo,itype)%dulon )/&
+                  denCoeffsOffdiag%ulou21(ilo,itype) * denCoeffsOffdiag%ulou21n(ilo,itype) +&
+                  denCoeffsOffdiag%ulod21(ilo,itype) * denCoeffsOffdiag%ulod21n(ilo,itype) +&
+                  denCoeffsOffdiag%uulo21(ilo,itype) * denCoeffsOffdiag%uulo21n(ilo,itype) +&
+                  denCoeffsOffdiag%dulo21(ilo,itype) * denCoeffsOffdiag%dulo21n(ilo,itype) )/&
                   atoms%neq(itype)
              DO ilop = 1, atoms%nlo(itype)
                 qa21(itype) = qa21(itype) + conjg(&
-                     uloulop21(ilo,ilop,itype) *&
-                     uloulopn21(ilo,ilop,itype) )/atoms%neq(itype)
+                     denCoeffsOffdiag%uloulop21(ilo,ilop,itype) *&
+                     denCoeffsOffdiag%uloulop21n(ilo,ilop,itype) )/atoms%neq(itype)
              ENDDO
           ENDDO
 
@@ -209,10 +189,10 @@ CONTAINS
              !--->        spherical component
              DO l = 0,atoms%lmax(itype)
                 DO j = 1,atoms%jri(itype)
-                   cs = mt21(l,itype)%uu*( f(j,1,l,2)*f(j,1,l,1) +f(j,2,l,2)*f(j,2,l,1) )&
-                        + mt21(l,itype)%ud*( f(j,1,l,2)*g(j,1,l,1) +f(j,2,l,2)*g(j,2,l,1) )&
-                        + mt21(l,itype)%du*( g(j,1,l,2)*f(j,1,l,1) +g(j,2,l,2)*f(j,2,l,1) )&
-                        + mt21(l,itype)%dd*( g(j,1,l,2)*g(j,1,l,1) +g(j,2,l,2)*g(j,2,l,1) )
+                   cs = denCoeffsOffdiag%uu21(l,itype)*( f(j,1,l,2)*f(j,1,l,1) +f(j,2,l,2)*f(j,2,l,1) )&
+                        + denCoeffsOffdiag%ud21(l,itype)*( f(j,1,l,2)*g(j,1,l,1) +f(j,2,l,2)*g(j,2,l,1) )&
+                        + denCoeffsOffdiag%du21(l,itype)*( g(j,1,l,2)*f(j,1,l,1) +g(j,2,l,2)*f(j,2,l,1) )&
+                        + denCoeffsOffdiag%dd21(l,itype)*( g(j,1,l,2)*g(j,1,l,1) +g(j,2,l,2)*g(j,2,l,1) )
                    rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
                 ENDDO
              ENDDO
@@ -224,10 +204,10 @@ CONTAINS
                    DO lp = 0,atoms%lmax(itype)
                       llp = lp*(atoms%lmax(itype)+1)+l+1
                       DO j = 1,atoms%jri(itype)
-                         cs = uunmt21(llp,lh,itype)*(f(j,1,lp,2)*f(j,1,l,1)&
-                              + f(j,2,lp,2)*f(j,2,l,1) )+ udnmt21(llp,lh,itype)*(f(j,1,lp,2)*g(j,1,l,1)&
-                              + f(j,2,lp,2)*g(j,2,l,1) )+ dunmt21(llp,lh,itype)*(g(j,1,lp,2)*f(j,1,l,1)&
-                              + g(j,2,lp,2)*f(j,2,l,1) )+ ddnmt21(llp,lh,itype)*(g(j,1,lp,2)*g(j,1,l,1)&
+                         cs = denCoeffsOffdiag%uunmt21(llp,lh,itype)*(f(j,1,lp,2)*f(j,1,l,1)&
+                              + f(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%udnmt21(llp,lh,itype)*(f(j,1,lp,2)*g(j,1,l,1)&
+                              + f(j,2,lp,2)*g(j,2,l,1) )+ denCoeffsOffdiag%dunmt21(llp,lh,itype)*(g(j,1,lp,2)*f(j,1,l,1)&
+                              + g(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%ddnmt21(llp,lh,itype)*(g(j,1,lp,2)*g(j,1,l,1)&
                               + g(j,2,lp,2)*g(j,2,l,1) )
                          rho21(j,lh,itype)= rho21(j,lh,itype)+ conjg(cs)/atoms%neq(itype)
                       ENDDO

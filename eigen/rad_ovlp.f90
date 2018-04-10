@@ -44,7 +44,7 @@ MODULE m_radovlp
              CALL radfun(l,itype,ispin,epar(l,itype,ispin),vr(:,0,itype,ispin), atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
           ENDDO
-          CALL int_21(f,g,atoms,itype,l, uun21(l,itype),udn21(l,itype), dun21(l,itype),ddn21(l,itype))
+          CALL int_21_arrays(f,g,atoms,itype,l,uun21,udn21,dun21,ddn21)
        ENDDO
     ENDDO
 
