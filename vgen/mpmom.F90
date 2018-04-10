@@ -208,7 +208,7 @@ CONTAINS
        ENDDO                    ! n = 1, atoms%ntype
     ENDDO                       ! k = 2, stars%ng3
     !$OMP END PARALLEL DO
-#ifdef CPP_MPII
+#ifdef CPP_MPI
     PRINT *,"mpi",mpi%irank,qlmp(0,0,:)
     CALL MPI_REDUCE(qlmp,qlmp_out,SIZE(qlmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi%mpi_comm,ierr)
 #else
