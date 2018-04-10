@@ -13,7 +13,7 @@ MODULE m_judft_usage
   INTEGER           :: no_keys=0
 
   INTERFACE add_usage_data
-     MODULE PROCEDURE::add_usage_data_s,add_usage_data_i,add_usage_data_l
+     MODULE PROCEDURE  add_usage_data_s,add_usage_data_i,add_usage_data_l
   END INTERFACE add_usage_data
 
   PUBLIC :: add_usage_data,send_usage_data

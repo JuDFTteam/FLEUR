@@ -106,9 +106,6 @@ CONTAINS
     !
     call ud%init(atoms,DIMENSION%jspd)
     ALLOCATE ( eig(DIMENSION%neigd),bkpt(3) )
-
-    PRINT *,enpara%el0(:,1,1)
-    PRINT *,enpara%el0(:,2,1)
     
     !
     ! --> some parameters first
