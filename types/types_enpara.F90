@@ -243,7 +243,7 @@ CONTAINS
        END IF
     END DO
 
-    enpara%ready=(ALL(enpara%el0>-1E99).AND.ALL(enpara%ello0>-1E99))
+!    enpara%ready=(ALL(enpara%el0>-1E99).AND.ALL(enpara%ello0>-1E99))
     enpara%epara_min=MIN(MINVAL(enpara%el0),MINVAL(enpara%ello0))
     
     IF (mpi%irank  == 0) CALL closeXMLElement('energyParameters')
@@ -405,11 +405,13 @@ CONTAINS
 
 
 
-  SUBROUTINE mix(enpara,atoms,vacuum,input,vr,vz)
+  SUBROUTINE mix(enpara,mpi,atoms,vacuum,input,vr,vz)
     !------------------------------------------------------------------
     USE m_types_setup
+    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
+    TYPE(t_mpi),INTENT(IN)         :: mpi
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_input),INTENT(IN)       :: input
@@ -420,92 +422,103 @@ CONTAINS
     INTEGER ityp,j,l,lo,jsp,n
     REAL    vbar,maxdist,maxdist2
     INTEGER same(atoms%nlod)
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+    INTEGER :: ierr
+#endif    
 
-    maxdist2=0.0
-    DO jsp=1,SIZE(enpara%el0,3)
-       maxdist=0.0
-       DO ityp = 1,atoms%ntype
-          !        look for LO's energy parameters equal to the LAPW (and previous LO) ones
-          same = 0
-          DO lo = 1,atoms%nlo(ityp)
-             IF(enpara%el0(atoms%llo(lo,ityp),ityp,jsp).eq.enpara%ello0(lo,ityp,jsp)) same(lo)=-1
-             DO l = 1,lo-1
-                IF(atoms%llo(l,ityp).ne.atoms%llo(lo,ityp)) cycle
-                IF(enpara%ello0(l,ityp,jsp).eq.enpara%ello0(lo,ityp,jsp).and.same(lo).eq.0) same(lo)=l
+    IF (mpi%irank==0) THEN
+       maxdist2=0.0
+       DO jsp=1,SIZE(enpara%el0,3)
+          maxdist=0.0
+          DO ityp = 1,atoms%ntype
+             !        look for LO's energy parameters equal to the LAPW (and previous LO) ones
+             same = 0
+             DO lo = 1,atoms%nlo(ityp)
+                IF(enpara%el0(atoms%llo(lo,ityp),ityp,jsp).EQ.enpara%ello0(lo,ityp,jsp)) same(lo)=-1
+                DO l = 1,lo-1
+                   IF(atoms%llo(l,ityp).NE.atoms%llo(lo,ityp)) CYCLE
+                   IF(enpara%ello0(l,ityp,jsp).EQ.enpara%ello0(lo,ityp,jsp).AND.same(lo).EQ.0) same(lo)=l
+                ENDDO
              ENDDO
-          ENDDO
-          !
-          !--->   change energy parameters
-          !
-          DO l = 0,3
-             WRITE(6,*) 'Type:',ityp,' l:',l
-             WRITE(6,FMT=777) enpara%el0(l,ityp,jsp),enpara%el1(l,ityp,jsp),&
-                  ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp))
-             maxdist=MAX(maxdist,ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp)))
-             IF ( enpara%lchange(l,ityp,jsp) ) THEN
-                maxdist2=MAX(maxdist2,ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp)))
-                enpara%el0(l,ityp,jsp) =(1.0-enpara%enmix(jsp))*enpara%el0(l,ityp,jsp) + &
-                     enpara%enmix(jsp)*enpara%el1(0,ityp,jsp)
-             ENDIF
-          ENDDO
-          IF ( enpara%lchange(3,ityp,jsp) ) enpara%el0(4:,ityp,jsp) = enpara%el0(3,ityp,jsp)
-          !
-          !--->    determine and change local orbital energy parameters
-          !
-          DO lo = 1,atoms%nlo(ityp)
-             IF (atoms%l_dulo(lo,ityp)) THEN
-                enpara%ello0(lo,ityp,jsp) =enpara%el0(atoms%llo(lo,ityp),ityp,jsp)
-             ELSE
-                IF (enpara%llochg(lo,ityp,jsp) ) THEN
-                   IF(same(lo).EQ.-1) THEN
-                      enpara%ello0(lo,ityp,jsp) = enpara%el0(atoms%llo(lo,ityp),ityp,jsp)
-                      CYCLE
-                   ELSE IF(same(lo).GT.0) THEN
-                      enpara%ello0(lo,ityp,jsp) = enpara%ello0(same(lo),ityp,jsp)
-                      CYCLE
+             !
+             !--->   change energy parameters
+             !
+             DO l = 0,3
+                WRITE(6,*) 'Type:',ityp,' l:',l
+                WRITE(6,FMT=777) enpara%el0(l,ityp,jsp),enpara%el1(l,ityp,jsp),&
+                     ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp))
+                maxdist=MAX(maxdist,ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp)))
+                IF ( enpara%lchange(l,ityp,jsp) ) THEN
+                   maxdist2=MAX(maxdist2,ABS(enpara%el0(l,ityp,jsp)-enpara%el1(l,ityp,jsp)))
+                   enpara%el0(l,ityp,jsp) =(1.0-enpara%enmix(jsp))*enpara%el0(l,ityp,jsp) + &
+                        enpara%enmix(jsp)*enpara%el1(l,ityp,jsp)
+                ENDIF
+             ENDDO
+             IF ( enpara%lchange(3,ityp,jsp) ) enpara%el0(4:,ityp,jsp) = enpara%el0(3,ityp,jsp)
+             !
+             !--->    determine and change local orbital energy parameters
+             !
+             DO lo = 1,atoms%nlo(ityp)
+                IF (atoms%l_dulo(lo,ityp)) THEN
+                   enpara%ello0(lo,ityp,jsp) =enpara%el0(atoms%llo(lo,ityp),ityp,jsp)
+                ELSE
+                   IF (enpara%llochg(lo,ityp,jsp) ) THEN
+                      IF(same(lo).EQ.-1) THEN
+                         enpara%ello0(lo,ityp,jsp) = enpara%el0(atoms%llo(lo,ityp),ityp,jsp)
+                         CYCLE
+                      ELSE IF(same(lo).GT.0) THEN
+                         enpara%ello0(lo,ityp,jsp) = enpara%ello0(same(lo),ityp,jsp)
+                         CYCLE
+                      ENDIF
                    ENDIF
-                ENDIF
-                WRITE(6,*) 'Type:',ityp,' lo:',lo
-                WRITE(6,FMT=777) enpara%ello0(lo,ityp,jsp),enpara%ello1(lo,ityp,jsp),&
-                     ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp))
-                maxdist=MAX(maxdist,ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp)))
-                IF (enpara%llochg(lo,ityp,jsp) ) THEN
-                   maxdist2=MAX(maxdist2,ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp)))
-                   enpara%ello0(lo,ityp,jsp) =(1.0-enpara%enmix(jsp))*enpara%ello0(lo,ityp,jsp)+&
-                        enpara%enmix(jsp)*enpara%ello1(lo,ityp,jsp)
-                ENDIF
-             END IF
+                   WRITE(6,*) 'Type:',ityp,' lo:',lo
+                   WRITE(6,FMT=777) enpara%ello0(lo,ityp,jsp),enpara%ello1(lo,ityp,jsp),&
+                        ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp))
+                   maxdist=MAX(maxdist,ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp)))
+                   IF (enpara%llochg(lo,ityp,jsp) ) THEN
+                      maxdist2=MAX(maxdist2,ABS(enpara%ello0(lo,ityp,jsp)-enpara%ello1(lo,ityp,jsp)))
+                      enpara%ello0(lo,ityp,jsp) =(1.0-enpara%enmix(jsp))*enpara%ello0(lo,ityp,jsp)+&
+                           enpara%enmix(jsp)*enpara%ello1(lo,ityp,jsp)
+                   ENDIF
+                END IF
+             END DO
+             !Shift if floating energy parameters are used
+             IF (enpara%floating) THEN
+                j = atoms%jri(ityp) - (LOG(4.0)/atoms%dx(ityp)+1.51)
+                vbar = vr(j,ityp,jsp)/( atoms%rmt(ityp)*EXP(atoms%dx(ityp)*(j-atoms%jri(ityp))) )
+                enpara%el0(:,n,jsp)=enpara%el0(:,n,jsp)-vbar
+             ENDIF
           END DO
-          !Shift if floating energy parameters are used
-          IF (enpara%floating) THEN
-             j = atoms%jri(ityp) - (LOG(4.0)/atoms%dx(ityp)+1.51)
-             vbar = vr(j,ityp,jsp)/( atoms%rmt(ityp)*EXP(atoms%dx(ityp)*(j-atoms%jri(ityp))) )
-             enpara%el0(:,n,jsp)=enpara%el0(:,n,jsp)-vbar
+          
+          
+          IF (input%film) THEN
+             WRITE(6,*) 'Vacuum:'
+             DO n=1,vacuum%nvac
+                WRITE(6,FMT=777) enpara%evac0(n,jsp),enpara%evac1(n,jsp),ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp))
+                maxdist=MAX(maxdist,ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp)))
+                IF (enpara%lchg_v(n,jsp) ) THEN
+                   maxdist2=MAX(maxdist2,ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp)))
+                   enpara%evac0(n,jsp) =(1.0-enpara%enmix(jsp))*enpara%evac0(n,jsp)+&
+                        enpara%enmix(jsp)*enpara%evac1(n,jsp)
+                END IF
+             END DO
+             IF (vacuum%nvac==1) enpara%evac0(2,jsp) = enpara%evac0(1,jsp)
+             IF (enpara%floating) enpara%evac0(:,jsp)=enpara%evac0(:,jsp)-vz(:,jsp)
           ENDIF
+          WRITE(6,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
        END DO
-
-
-       IF (input%film) THEN
-          WRITE(6,*) 'Vacuum:'
-          DO n=1,vacuum%nvac
-             WRITE(6,FMT=777) enpara%evac0(n,jsp),enpara%evac1(n,jsp),ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp))
-             maxdist=MAX(maxdist,ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp)))
-             IF (enpara%lchg_v(n,jsp) ) THEN
-                maxdist2=MAX(maxdist2,ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp)))
-                enpara%evac0(n,jsp) =(1.0-enpara%enmix(jsp))*enpara%evac0(n,jsp)+&
-                     enpara%enmix(jsp)*enpara%evac1(n,jsp)
-             END IF
-          END DO
-          IF (vacuum%nvac==1) enpara%evac0(2,jsp) = enpara%evac0(1,jsp)
-          IF (enpara%floating) enpara%evac0(:,jsp)=enpara%evac0(:,jsp)-vz(:,jsp)
-       ENDIF
-       WRITE(6,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
-    END DO
-    IF (maxdist2>1.0) CALL juDFT_warn&
-         ("Energy parameter mismatch too large",hint&
-         ="If any energy parameters calculated from the output "//&
-         "differ from the input by more than 1Htr, chances are "//&
-         "high that your initial setup was broken.")
+       IF (maxdist2>1.0) CALL juDFT_warn&
+            ("Energy parameter mismatch too large",hint&
+            ="If any energy parameters calculated from the output "//&
+            "differ from the input by more than 1Htr, chances are "//&
+            "high that your initial setup was broken.")
+    ENDIF
+#ifdef CPP_MPI
+    CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+#endif    
     RETURN
 777 FORMAT('Old:',f8.5,' new:',f8.5,' diff:',f8.5)
 

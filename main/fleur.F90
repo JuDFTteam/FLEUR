@@ -430,10 +430,10 @@ CONTAINS
 
        CALL forcetheo%postprocess()
        
+       CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        IF (mpi%irank.EQ.0) THEN
           !          ----> mix input and output densities
           CALL timestart("mixing")
-          CALL enpara%mix(atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
           CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
           CALL timestop("mixing")
           
