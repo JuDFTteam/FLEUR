@@ -2,7 +2,7 @@ MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
        noco,jspin,oneD, acof,bcof,ccof,zMat,&
-       eig,acoflo,bcoflo,e1cof,e2cof,aveccof,bveccof,cveccof)
+       eig,force)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -26,6 +26,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_zMat),INTENT(IN)   :: zMat
+    TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ne
@@ -36,13 +37,6 @@ CONTAINS
     COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
     REAL,    OPTIONAL, INTENT (IN)  :: eig(:)!(dimension%neigd)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: acoflo(-atoms%llod:,:,:,:)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: bcoflo(-atoms%llod:,:,:,:)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: e1cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: e2cof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, OPTIONAL, INTENT (OUT) :: cveccof(:,-atoms%llod:,:,:,:)
     !     ..
     !     .. Local Scalars ..
     COMPLEX cexp,phase,c_0,c_1,c_2,ci
@@ -75,13 +69,13 @@ CONTAINS
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
     IF(PRESENT(eig)) THEN
-       acoflo(:,:,:,:)    = CMPLX(0.0,0.0)
-       bcoflo(:,:,:,:)    = CMPLX(0.0,0.0)
-       e1cof(:,:,:)       = CMPLX(0.0,0.0)
-       e2cof(:,:,:)       = CMPLX(0.0,0.0)
-       aveccof(:,:,:,:)   = CMPLX(0.0,0.0)
-       bveccof(:,:,:,:)   = CMPLX(0.0,0.0)
-       cveccof(:,:,:,:,:) = CMPLX(0.0,0.0)
+       force%acoflo  = CMPLX(0.0,0.0)
+       force%bcoflo  = CMPLX(0.0,0.0)
+       force%e1cof   = CMPLX(0.0,0.0)
+       force%e2cof   = CMPLX(0.0,0.0)
+       force%aveccof = CMPLX(0.0,0.0)
+       force%bveccof = CMPLX(0.0,0.0)
+       force%cveccof = CMPLX(0.0,0.0)
     END IF
     !     ..
     !+APW_LO
@@ -121,7 +115,7 @@ CONTAINS
        !$OMP& jspin,qss,&
        !$OMP& apw,const,&
        !$OMP& nbasf0,enough,&
-       !$OMP& acof,bcof,ccof,e1cof,e2cof,acoflo,bcoflo,aveccof,bveccof,cveccof)
+       !$OMP& acof,bcof,ccof,force)
        DO n = 1,atoms%ntype
           CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
           
@@ -246,18 +240,18 @@ CONTAINS
 
                          IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
                             IF (zmat%l_real) THEN
-                               e1cof(:ne,lm,natom) = e1cof(:ne,lm,natom) + c_1 * work_r(:ne) * s2h_e(:ne)
-                               e2cof(:ne,lm,natom) = e2cof(:ne,lm,natom) + c_2 * work_r(:ne) * s2h_e(:ne)
+                               force%e1cof(:ne,lm,natom) = force%e1cof(:ne,lm,natom) + c_1 * work_r(:ne) * s2h_e(:ne)
+                               force%e2cof(:ne,lm,natom) = force%e2cof(:ne,lm,natom) + c_2 * work_r(:ne) * s2h_e(:ne)
                                DO i = 1,3
-                                  aveccof(i,:ne,lm,natom) = aveccof(i,:ne,lm,natom) + c_1 * work_r(:ne) * fgp(i)
-                                  bveccof(i,:ne,lm,natom) = bveccof(i,:ne,lm,natom) + c_2 * work_r(:ne) * fgp(i)
+                                  force%aveccof(i,:ne,lm,natom) = force%aveccof(i,:ne,lm,natom) + c_1 * work_r(:ne) * fgp(i)
+                                  force%bveccof(i,:ne,lm,natom) = force%bveccof(i,:ne,lm,natom) + c_2 * work_r(:ne) * fgp(i)
                                END DO
                             ELSE
-                               e1cof(:ne,lm,natom) = e1cof(:ne,lm,natom) + c_1 * work_c(:ne) * s2h_e(:ne)
-                               e2cof(:ne,lm,natom) = e2cof(:ne,lm,natom) + c_2 * work_c(:ne) * s2h_e(:ne)
+                               force%e1cof(:ne,lm,natom) = force%e1cof(:ne,lm,natom) + c_1 * work_c(:ne) * s2h_e(:ne)
+                               force%e2cof(:ne,lm,natom) = force%e2cof(:ne,lm,natom) + c_2 * work_c(:ne) * s2h_e(:ne)
                                DO i = 1,3
-                                  aveccof(i,:ne,lm,natom) = aveccof(i,:ne,lm,natom) + c_1 * work_c(:ne) * fgp(i)
-                                  bveccof(i,:ne,lm,natom) = bveccof(i,:ne,lm,natom) + c_2 * work_c(:ne) * fgp(i)
+                                  force%aveccof(i,:ne,lm,natom) = force%aveccof(i,:ne,lm,natom) + c_1 * work_c(:ne) * fgp(i)
+                                  force%bveccof(i,:ne,lm,natom) = force%bveccof(i,:ne,lm,natom) + c_2 * work_c(:ne) * fgp(i)
                                END DO
                             END IF
                          ENDIF
@@ -272,11 +266,11 @@ CONTAINS
                                CALL CPP_BLAS_caxpy(ne,c_1,work_c,1, acof(1,lmp,jatom),1)
                                CALL CPP_BLAS_caxpy(ne,c_2,work_c,1, bcof(1,lmp,jatom),1)
                                IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
-                                  CALL CPP_BLAS_caxpy(ne,c_1,work_c*s2h_e,1, e1cof(1,lmp,jatom),1)
-                                  CALL CPP_BLAS_caxpy(ne,c_2,work_c*s2h_e,1, e2cof(1,lmp,jatom),1)
+                                  CALL CPP_BLAS_caxpy(ne,c_1,work_c*s2h_e,1, force%e1cof(1,lmp,jatom),1)
+                                  CALL CPP_BLAS_caxpy(ne,c_2,work_c*s2h_e,1, force%e2cof(1,lmp,jatom),1)
                                   DO i = 1,3
-                                     CALL CPP_BLAS_caxpy(ne,c_1,work_c*fgp(i),1, aveccof(i,1,lmp,jatom),3)
-                                     CALL CPP_BLAS_caxpy(ne,c_2,work_c*fgp(i),1, bveccof(i,1,lmp,jatom),3)
+                                     CALL CPP_BLAS_caxpy(ne,c_1,work_c*fgp(i),1, force%aveccof(i,1,lmp,jatom),3)
+                                     CALL CPP_BLAS_caxpy(ne,c_2,work_c*fgp(i),1, force%bveccof(i,1,lmp,jatom),3)
                                   END DO
                                END IF
                             ENDIF
@@ -288,7 +282,7 @@ CONTAINS
                          IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
                             CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
                                  n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,&
-                                 fgp,acoflo,bcoflo,aveccof,bveccof,cveccof)
+                                 fgp,force%acoflo,force%bcoflo,force%aveccof,force%bveccof,force%cveccof)
                          ENDIF
                       ENDDO
                    END DO
@@ -334,10 +328,10 @@ CONTAINS
                       DO ie = 1,ne
                          ccof(m,ie,ilo,jatom) = inv_f * cexp * CONJG(  ccof(-m,ie,ilo,iatom))
                          IF(PRESENT(eig)) THEN
-                            acoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(acoflo(-m,ie,ilo,iatom))
-                            bcoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(bcoflo(-m,ie,ilo,iatom))
+                            force%acoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(force%acoflo(-m,ie,ilo,iatom))
+                            force%bcoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(force%bcoflo(-m,ie,ilo,iatom))
                             DO i = 1,3
-                               cveccof(i,m,ie,ilo,jatom) = -inv_f * cexp * CONJG(cveccof(i,-m,ie,ilo,iatom))
+                               force%cveccof(i,m,ie,ilo,jatom) = -inv_f * cexp * CONJG(force%cveccof(i,-m,ie,ilo,iatom))
                             END DO
                          END IF
                       ENDDO
@@ -355,11 +349,11 @@ CONTAINS
                       END DO
                       IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
                          DO ie = 1,ne
-                            e1cof(ie,lm,jatom) = inv_f * cexp * CONJG(e1cof(ie,lmp,iatom))
-                            e2cof(ie,lm,jatom) = inv_f * cexp * CONJG(e2cof(ie,lmp,iatom))
+                            force%e1cof(ie,lm,jatom) = inv_f * cexp * CONJG(force%e1cof(ie,lmp,iatom))
+                            force%e2cof(ie,lm,jatom) = inv_f * cexp * CONJG(force%e2cof(ie,lmp,iatom))
                             DO i = 1,3
-                               aveccof(i,ie,lm,jatom) = -inv_f * cexp * CONJG(aveccof(i,ie,lmp,iatom))
-                               bveccof(i,ie,lm,jatom) = -inv_f * cexp * CONJG(bveccof(i,ie,lmp,iatom))
+                               force%aveccof(i,ie,lm,jatom) = -inv_f * cexp * CONJG(force%aveccof(i,ie,lmp,iatom))
+                               force%bveccof(i,ie,lm,jatom) = -inv_f * cexp * CONJG(force%bveccof(i,ie,lmp,iatom))
                             END DO
                          END DO
                       END IF

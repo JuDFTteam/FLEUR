@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne,we,eig,den,qis,forces,f_b8,zMat)
+       ikpt,jspin,lapw,ne,we,eig,den,qis,results,f_b8,zMat)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -93,6 +93,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_zMat),INTENT(IN)      :: zMat
     TYPE(t_potden),INTENT(INOUT) :: den
+    TYPE(t_results),INTENT(INOUT) :: results
 
     REAL,INTENT(IN)   :: we(:) !(nobd) 
     REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
@@ -102,7 +103,6 @@ CONTAINS
     INTEGER,INTENT(IN)    :: ikpt,jspin 
     REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
     COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntype)
-    REAL,    INTENT (INOUT) :: forces(:,:,:) !(3,atoms%ntype,dimension%jspd)
     !
     !-----> LOCAL VARIABLES
     !
@@ -650,7 +650,7 @@ CONTAINS
              DO istr = 1 , stars%ng3_fft
                 ecwk(istr) = scale * ecwk(istr) / REAL( stars%nstr(istr) )
              ENDDO
-             CALL force_b8(atoms,ecwk,stars, sym,cell, jspin, forces,f_b8)
+             CALL force_b8(atoms,ecwk,stars, sym,cell, jspin, results%force,f_b8)
           ENDIF
        ENDIF
        !
