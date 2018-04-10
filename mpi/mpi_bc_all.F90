@@ -172,8 +172,8 @@ CONTAINS
     CALL MPI_BCAST(enpara%el0,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     n = atoms%nlod*atoms%ntype*dimension%jspd
     CALL MPI_BCAST(enpara%ello0,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%qn_el,SIZE(enpara%qn_el),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%qn_ello,SIZE(enpara%qn_ello),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%qn_el,SIZE(enpara%qn_el),MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%qn_ello,SIZE(enpara%qn_ello),MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
 
     CALL MPI_BCAST(atoms%rmsh,atoms%jmtd*atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
