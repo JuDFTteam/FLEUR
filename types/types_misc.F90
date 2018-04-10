@@ -9,24 +9,6 @@ MODULE m_types_misc
   !     This module contains definitions for all kind of types
   !*************************************************************
   !
-  ! Types for orbital moment calculation:
-  !
-  !
-  ! Types for spin-off-diagonal charge density:
-  !
-  TYPE t_mt21                          ! 'normal' contributions
-     SEQUENCE
-     REAL ::  uun,udn,dun,ddn           ! normes of radial overlaps
-     COMPLEX :: uu,ud,du,dd             ! values
-  END TYPE t_mt21
-
-  TYPE t_lo21                          ! ocal orbitals & (u,d)
-     SEQUENCE
-     REAL ::  uulon,dulon,uloun,ulodn   ! normes of radial overlaps
-     COMPLEX :: uulo,dulo,ulou,ulod     ! values
-  END TYPE t_lo21
-
-  !
   ! Type for the HF total energy
   !
   TYPE t_energy_hf
