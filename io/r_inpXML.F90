@@ -1269,7 +1269,7 @@ SUBROUTINE r_inpXML(&
 
   dimension%nstd = 29
 
-  ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
+  ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype));atoms%coreStateOccs=0.0
   ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
   ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
 

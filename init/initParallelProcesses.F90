@@ -149,7 +149,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
       ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
 
-      ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype))
+      ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype));atoms%coreStateOccs=0.0
       ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
       ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
 

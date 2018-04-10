@@ -16,7 +16,6 @@ CONTAINS
        &                 qpw,rho,&
        &                 qlm)
 
-#include"cpp_double.h"
     USE m_types
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)         :: mpi
@@ -131,7 +130,7 @@ CONTAINS
 
   SUBROUTINE pw_moments(mpi,stars,atoms,cell,&
        &                      sym,oneD,&
-       &                      qpw,qlmp)
+       &                      qpw_in,qlmp_out)
     !multipole moments of plane wave charge inside the spheres (q_{lm}^{Ii})
     USE m_phasy1
     USE m_sphbes
@@ -145,20 +144,23 @@ CONTAINS
     TYPE(t_stars),INTENT(IN) :: stars
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_atoms),INTENT(IN) :: atoms
-    COMPLEX,INTENT(IN) :: qpw(:)
-    COMPLEX,INTENT(OUT):: qlmp(-atoms%lmaxd:,0:,:)
+    COMPLEX,INTENT(IN) :: qpw_in(:)
+    COMPLEX,INTENT(OUT):: qlmp_out(-atoms%lmaxd:,0:,:)
     !locals
     INTEGER:: n,k,l,ll1 ,lm,ierr(3),m
     COMPLEX sk3i,cil,nqpw
     COMPLEX pylm( (MAXVAL(atoms%lmax)+1)**2 ,atoms%ntype )
     REAL::sk3r,rl3
     REAL aj(0:MAXVAL(atoms%lmax)+1)
-    COMPLEX, ALLOCATABLE :: c_b(:)
+    COMPLEX, ALLOCATABLE :: qpw(:)
     LOGICAL :: od
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    EXTERNAL MPI_REDUCE
 #endif
+    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+
+    ALLOCATE(qpw(stars%ng3))
+    qpw=qpw_in(:stars%ng3)
     qlmp= 0.0
     IF (mpi%irank==0) THEN
        !g eq 0 term : \sqrt{4 \pi}/3 R_i^3 \rho_I(0) \delta_{l,0}
@@ -168,8 +170,7 @@ CONTAINS
        ENDDO
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(qpw,SIZE(qpw),CPP_MPI_COMPLEX,0,&
-         &                          mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(qpw,SIZE(qpw),MPI_DOUBLE_COMPLEX,0, mpi%mpi_comm,ierr)
 #endif
     !      g ne 0 terms : \sum_{K \= 0} 4 \pi i^l \rho_I(K) R_i^{l+3} \times
     !      j_{l+1} (KR_i) / KR_i \exp{iK\xi_i} Y^*_{lm} (K)
@@ -199,7 +200,7 @@ CONTAINS
              cil = aj(l+1)*sk3i*rl3
              ll1 = l*(l+1) + 1
              DO m = -l,l
-                lm = ll1 + m 
+                lm = ll1 + m
                 qlmp(m,l,n) = qlmp(m,l,n) + cil*pylm(lm,n)
              ENDDO
              rl3 = rl3*atoms%rmt(n)
@@ -207,15 +208,11 @@ CONTAINS
        ENDDO                    ! n = 1, atoms%ntype
     ENDDO                       ! k = 2, stars%ng3
     !$OMP END PARALLEL DO
-#ifdef CPP_MPI
-    n = SIZE(qlmp)
-    ALLOCATE(c_b(n))
-    CALL MPI_REDUCE(qlmp,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0,&
-         &                                   mpi%mpi_comm,ierr)
-    IF (mpi%irank.EQ.0) THEN
-       qlmp=RESHAPE(c_b,(/SIZE(qlmp,1),SIZE(qlmp,2),SIZE(qlmp,3)/))
-    ENDIF
-    DEALLOCATE (c_b)
+#ifdef CPP_MPII
+    PRINT *,"mpi",mpi%irank,qlmp(0,0,:)
+    CALL MPI_REDUCE(qlmp,qlmp_out,SIZE(qlmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi%mpi_comm,ierr)
+#else
+    qlmp_out=qlmp
 #endif
 
   END SUBROUTINE pw_moments

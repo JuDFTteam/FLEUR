@@ -37,14 +37,6 @@
 
       IF (lmax.GT.lmaxd) THEN
          CALL juDFT_error("lmaxd too small in ylm4")
-!$OMP MASTER
-!        WRITE(6,*) ' calling ylmnorm, lmax=',lmax,lmaxd
-!-->     first deallocate the array if it exists
-         IF ( allocated(ynorm) ) DEALLOCATE(ynorm)
-         ALLOCATE ( ynorm( (lmax+1)**2 ) )   ! allocate array
-         lmaxd = lmax
-         !CALL ylmnorm
-!$OMP END MASTER
       ENDIF
 
 !--->    calculate sin and cos of theta and phi
