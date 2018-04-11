@@ -281,8 +281,7 @@ CONTAINS
                       DO nkvec=1,lapw%nkvec(lo,natom)
                          IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
                             CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
-                                 n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,&
-                                 fgp,force%acoflo,force%bcoflo,force%aveccof,force%bveccof,force%cveccof)
+                                          n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,fgp,force)
                          ENDIF
                       ENDDO
                    END DO
