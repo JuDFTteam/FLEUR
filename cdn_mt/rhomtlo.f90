@@ -14,23 +14,19 @@ MODULE m_rhomtlo
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE rhomtlo(atoms, ne,we,acof,bcof,ccof,denCoeffs,ispin)
+  SUBROUTINE rhomtlo(atoms,ne,we,eigVecCoeffs,denCoeffs,ispin)
 
     USE m_types
     IMPLICIT NONE
-    TYPE(t_atoms),INTENT(IN)      :: atoms
-    TYPE(t_denCoeffs),INTENT(INOUT)   :: denCoeffs
+    TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
     INTEGER, INTENT (IN) :: ne, ispin
 
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
 
     INTEGER i,l,lm,lo,lop ,natom,nn,ntyp,m
-    !     ..
-
 
     natom = 0
     !---> loop over atoms
@@ -45,9 +41,9 @@ CONTAINS
                 lm = l* (l+1) + m
                 DO i = 1,ne
                    denCoeffs%aclo(lo,ntyp,ispin) = denCoeffs%aclo(lo,ntyp,ispin) + we(i)*2*&
-                        real(conjg(acof(i,lm,natom))*ccof(m,i,lo,natom))
+                        real(conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                    denCoeffs%bclo(lo,ntyp,ispin) = denCoeffs%bclo(lo,ntyp,ispin) + we(i)*2*&
-                        real(conjg(bcof(i,lm,natom))*ccof(m,i,lo,natom))
+                        real(conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                 END DO
              END DO
              !--->       contribution of local orbital - local orbital terms
@@ -57,7 +53,7 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1,ne
                          denCoeffs%cclo(lop,lo,ntyp,ispin) = denCoeffs%cclo(lop,lo,ntyp,ispin) + we(i)*&
-                              real(conjg(ccof(m,i,lop,natom))*ccof(m,i,lo ,natom))
+                              real(conjg(eigVecCoeffs%ccof(m,i,lop,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                       END DO
                    END DO
                 END IF

@@ -1,6 +1,6 @@
 MODULE m_rhonmt
 CONTAINS
-  SUBROUTINE rhonmt(atoms,sphhar,we,ne,sym, acof,bcof,denCoeffs,ispin)
+  SUBROUTINE rhonmt(atoms,sphhar,we,ne,sym,eigVecCoeffs,denCoeffs,ispin)
     !     *************************************************************
     !     subroutine sets up the coefficients of non-sphereical
     !     muffin-tin density                          c.l.fu
@@ -8,15 +8,14 @@ CONTAINS
     USE m_gaunt,ONLY:gaunt1
     USE m_types
     IMPLICIT NONE
-    TYPE(t_sym),       INTENT(IN)    :: sym
-    TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-    TYPE(t_atoms),     INTENT(IN)    :: atoms
-    TYPE(t_denCoeffs), INTENT(INOUT) :: denCoeffs
+    TYPE(t_sym),          INTENT(IN)    :: sym
+    TYPE(t_sphhar),       INTENT(IN)    :: sphhar
+    TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
     INTEGER,           INTENT(IN)    :: ne, ispin
 
-    COMPLEX, INTENT(IN) :: acof(:,0:,:)!(nobd,0:lmaxd* (lmaxd+2),natd)
-    COMPLEX, INTENT(IN) :: bcof(:,0:,:)
     REAL,    INTENT(IN) :: we(:)!(nobd)
 
     !     ..
@@ -75,13 +74,13 @@ CONTAINS
                                IF (atoms%ntypsy(nt).EQ.ns) THEN
                                   DO nb = 1,ne
                                      denCoeffs%uunmt(llp,lh,nn,ispin) = denCoeffs%uunmt(llp,lh,nn,ispin)&
-                                          +we(nb)*real(cconst*acof(nb,lm,nt)*conjg(acof(nb,lmp,nt)))
+                                          +we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))
                                      denCoeffs%ddnmt(llp,lh,nn,ispin) = denCoeffs%ddnmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*bcof(nb,lm,nt)*conjg(bcof(nb,lmp,nt)))
+                                          we(nb)*real(cconst*eigVecCoeffs%bcof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%bcof(nb,lmp,nt,ispin)))
                                      denCoeffs%udnmt(llp,lh,nn,ispin) = denCoeffs%udnmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*acof(nb,lm,nt)*conjg(bcof(nb,lmp,nt)))
+                                          we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%bcof(nb,lmp,nt,ispin)))
                                      denCoeffs%dunmt(llp,lh,nn,ispin) = denCoeffs%dunmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*bcof(nb,lm,nt)*conjg(acof(nb,lmp,nt)))
+                                          we(nb)*real(cconst*eigVecCoeffs%bcof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))
                                   ENDDO
                                ENDIF
                             ENDDO

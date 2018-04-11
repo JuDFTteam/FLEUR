@@ -8,21 +8,17 @@ CONTAINS
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ikpt,ne,ccof, skip_t,noccbd,acof,bcof,usdus,slab)
+  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
     USE m_types
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)    :: usdus
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_slab), INTENT(INOUT) :: slab
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
+    TYPE(t_slab), INTENT(INOUT)     :: slab
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd,jsp      
     INTEGER, INTENT (IN) :: ne,ikpt ,skip_t,noccbd
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lo ,natom,nn,ntyp,nt1,nt2,m
@@ -58,8 +54,8 @@ CONTAINS
              DO m = -l,l
                 lm = ll1 + m
                 DO natom = nt1,nt2
-                   suma = suma + acof(i,lm,natom)*CONJG(acof(i,lm,natom))
-                   sumb = sumb + bcof(i,lm,natom)*CONJG(bcof(i,lm,natom))
+                   suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                   sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                 ENDDO
              enddo
              ss = suma + sumb*usdus%ddn(l,n,jsp)
@@ -89,13 +85,13 @@ CONTAINS
                 DO m = -l,l
                    lm = ll1 + m
                    qlo(i,lo,ntyp) = qlo(i,lo,ntyp) +&
-                        ccof(m,i,lo,natom)*CONJG(ccof(m,i,lo,natom))
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +&
-                        bcof(i,lm,natom)*CONJG(ccof(m,i,lo,natom)) +&
-                        ccof(m,i,lo,natom)*CONJG(bcof(i,lm,natom))
+                        eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +&
-                        acof(i,lm,natom)*CONJG(ccof(m,i,lo,natom)) +&
-                        ccof(m,i,lo,natom)*CONJG(acof(i,lm,natom))
+                        eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
                 ENDDO
              ENDDO
           ENDDO

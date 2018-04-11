@@ -133,7 +133,16 @@ PRIVATE
          PROCEDURE,PASS :: init => slab_init
    END TYPE t_slab
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab
+   TYPE t_eigVecCoeffs
+      COMPLEX, ALLOCATABLE :: acof(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: bcof(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => eigVecCoeffs_init
+   END TYPE t_eigVecCoeffs
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs
 
 CONTAINS
 
@@ -490,5 +499,39 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
    thisSlab%nsld = nsld
 
 END SUBROUTINE slab_init
+
+
+SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_eigVecCoeffs), INTENT(INOUT) :: thisEigVecCoeffs
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_noco),          INTENT(IN)    :: noco
+
+   INTEGER,               INTENT(IN)    :: jspin, noccbd
+
+   IF(ALLOCATED(thisEigVecCoeffs%acof)) DEALLOCATE(thisEigVecCoeffs%acof)
+   IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
+   IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
+
+   IF (noco%l_mperp) THEN
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd))
+      ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,dimension%jspd))
+   ELSE
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
+   END IF
+
+   thisEigVecCoeffs%acof = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%bcof = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
+
+END SUBROUTINE eigVecCoeffs_init
 
 END MODULE m_types_cdnval

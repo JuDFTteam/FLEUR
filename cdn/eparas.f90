@@ -23,13 +23,14 @@ MODULE m_eparas
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,ccof, skip_t,l_evp,acof,bcof,&
+  SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
        usdus, ncore,l_mcd,m_mcd, enerlo,sqlo,ener,sqal,qal,mcd)
     USE m_types
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)   :: usdus
-    TYPE(t_mpi),INTENT(IN)     :: mpi
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_mpi),INTENT(IN)          :: mpi
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,jsp     
@@ -40,9 +41,6 @@ CONTAINS
     INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
     REAL,    INTENT (IN)  :: eig(:)!(dimension%neigd),
     REAL,    INTENT (IN)  :: we(noccbd) 
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN)  :: m_mcd(:,:,:,:)!(dimension%nstd,(3+1)**2,3*ntypd ,2)
     REAL,    INTENT (INOUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
     REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
@@ -91,17 +89,17 @@ CONTAINS
                 lm = ll1 + m
                 IF ( .NOT.l_mcd ) THEN
                    DO natom = nt1,nt2
-                      suma = suma + acof(i,lm,natom)*CONJG(acof(i,lm,natom))
-                      sumb = sumb + bcof(i,lm,natom)*CONJG(bcof(i,lm,natom))
+                      suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                      sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                    ENDDO
                 ELSE
                    suma = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.) 
                    sumb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
                    DO natom = nt1,nt2
-                      suma = suma + acof(i,lm,natom)*CONJG(acof(i,lm,natom))
-                      sumb = sumb + bcof(i,lm,natom)*CONJG(bcof(i,lm,natom))
-                      sumab= sumab + acof(i,lm,natom) *CONJG(bcof(i,lm,natom))
-                      sumba= sumba + bcof(i,lm,natom) *CONJG(acof(i,lm,natom))
+                      suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                      sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+                      sumab= sumab + eigVecCoeffs%acof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+                      sumba= sumba + eigVecCoeffs%bcof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
                    ENDDO
                    DO icore = 1, ncore(n)
                       DO ipol = 1, 3
@@ -153,9 +151,11 @@ CONTAINS
                 lm = ll1 + m
                 DO i = 1,ne
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +REAL(&
-                        bcof(i,lm,natom)*CONJG(ccof(m,i,lo,natom))+ccof(m,i,lo,natom)*CONJG(bcof(i,lm,natom)) )
+                        eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp)) )
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) + REAL(&
-                        acof(i,lm,natom)*CONJG(ccof(m,i,lo,natom))+ccof(m,i,lo,natom)*CONJG(acof(i,lm,natom)) )
+                        eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp)) )
                 ENDDO
              ENDDO
              DO lop = 1,atoms%nlo(ntyp)
@@ -163,7 +163,7 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1,ne
                          qlo(i,lop,lo,ntyp) = qlo(i,lop,lo,ntyp) +  REAL(&
-                              CONJG(ccof(m,i,lop,natom))*ccof(m,i,lo,natom))
+                              CONJG(eigVecCoeffs%ccof(m,i,lop,natom,jsp))*eigVecCoeffs%ccof(m,i,lo,natom,jsp))
                       ENDDO
                    ENDDO
                 ENDIF

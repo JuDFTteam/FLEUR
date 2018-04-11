@@ -5,23 +5,21 @@ MODULE m_qal21
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(atoms,input,noccbd,we,ccof,noco,acof,bcof,denCoeffsOffdiag,qal,qmat)
+  SUBROUTINE qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,qal,qmat)
 
     USE m_rotdenmat
     USE m_types
     IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_noco),INTENT(IN)    :: noco
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_input),INTENT(IN)        :: input
+    TYPE(t_noco),INTENT(IN)         :: noco
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd 
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (INout)  :: we(noccbd),qal(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,input%jspins)
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%nat,input%jspins)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:,:)!(noccbd,0:DIMENSION%lmd,atoms%nat,input%jspins)
     REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,4)
     TYPE (t_denCoeffsOffdiag), INTENT (IN) :: denCoeffsOffdiag
 
@@ -59,10 +57,10 @@ CONTAINS
              ms : DO m = -l,l
                 lm = ll1 + m
                 atoms_loop : DO natom = nt1,nt2
-                   sumaa = sumaa + acof(i,lm,natom,1)* CONJG(acof(i,lm,natom,input%jspins))
-                   sumbb = sumbb + bcof(i,lm,natom,1)* CONJG(bcof(i,lm,natom,input%jspins))
-                   sumba = sumba + acof(i,lm,natom,1) * CONJG(bcof(i,lm,natom,input%jspins))
-                   sumab = sumab + bcof(i,lm,natom,1) * CONJG(acof(i,lm,natom,input%jspins))
+                   sumaa = sumaa + eigVecCoeffs%acof(i,lm,natom,1)* CONJG(eigVecCoeffs%acof(i,lm,natom,input%jspins))
+                   sumbb = sumbb + eigVecCoeffs%bcof(i,lm,natom,1)* CONJG(eigVecCoeffs%bcof(i,lm,natom,input%jspins))
+                   sumba = sumba + eigVecCoeffs%acof(i,lm,natom,1) * CONJG(eigVecCoeffs%bcof(i,lm,natom,input%jspins))
+                   sumab = sumab + eigVecCoeffs%bcof(i,lm,natom,1) * CONJG(eigVecCoeffs%acof(i,lm,natom,input%jspins))
                 ENDDO atoms_loop
              ENDDO ms
              qal21(l,n,i) = sumaa * denCoeffsOffdiag%uu21n(l,n) + sumbb * denCoeffsOffdiag%dd21n(l,n) +&
@@ -93,13 +91,13 @@ CONTAINS
                 lm = ll1 + m
                 DO i = 1, noccbd
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +      &
-                        bcof(i,lm,natom,1)*CONJG(ccof(m,i,lo,natom,input%jspins)) 
+                        eigVecCoeffs%bcof(i,lm,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins)) 
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +      &
-                        ccof(m,i,lo,natom,1)*CONJG(bcof(i,lm,natom,input%jspins)) 
+                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%bcof(i,lm,natom,input%jspins)) 
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +       &
-                        acof(i,lm,natom,1)*CONJG(ccof(m,i,lo,natom,input%jspins)) 
+                        eigVecCoeffs%acof(i,lm,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins)) 
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +       &
-                        ccof(m,i,lo,natom,1)*CONJG(acof(i,lm,natom,input%jspins)) 
+                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%acof(i,lm,natom,input%jspins)) 
                 ENDDO
              ENDDO
              DO lop = 1,atoms%nlo(ntyp)
@@ -107,8 +105,8 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1, noccbd
                          qlo(i,lop,lo,ntyp) = qlo(i,lop,lo,ntyp) +  &
-                              CONJG(ccof(m,i,lop,natom,input%jspins))*ccof(m,i,lo,natom,1) +&
-                              CONJG(ccof(m,i,lo,natom,input%jspins))*ccof(m,i,lop,natom,1)
+                              CONJG(eigVecCoeffs%ccof(m,i,lop,natom,input%jspins))*eigVecCoeffs%ccof(m,i,lo,natom,1) +&
+                              CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))*eigVecCoeffs%ccof(m,i,lop,natom,1)
                       ENDDO
                    ENDDO
                 ENDIF

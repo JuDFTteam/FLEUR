@@ -1,6 +1,6 @@
 MODULE m_orbcomp
 CONTAINS
-  SUBROUTINE orb_comp(jspin,nobd,atoms,ne,usdus, acof,bcof,ccof, orbcomp,qmtp)
+  SUBROUTINE orb_comp(jspin,nobd,atoms,ne,usdus,eigVecCoeffs,orbcomp,qmtp)
     !***********************************************************************
     !     Calculates an orbital composition of eigen states
     !     
@@ -33,16 +33,14 @@ CONTAINS
     !-----------------------------------------------------------------------
     USE m_types
     IMPLICIT NONE
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_usdus),INTENT(IN)   :: usdus
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !	..
     !	..Scalar Argument
     INTEGER, INTENT  (IN) :: nobd,ne,jspin
     !	..
     !	..Array Arguments
-    COMPLEX, INTENT  (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT  (IN) :: bcof(:,0:,:) !nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT  (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
     REAL,    INTENT (OUT) :: orbcomp(:,:,:)!(dimension%neigd,23,atoms%nat) 
     REAL,    INTENT (OUT) :: qmtp(:,:)!(dimension%neigd,atoms%nat) 
     !	..
@@ -81,73 +79,81 @@ CONTAINS
           mt=mt+1
           DO  n=1,ne
              !
-             ! acof
+             ! eigVecCoeffs%acof
              !   s-states
-             ca00 = acof(n,0,mt)
+             ca00 = eigVecCoeffs%acof(n,0,mt,jspin)
              !   p-states
-             ca01 = acof(n,1,mt) - acof(n,3,mt)
-             ca02 = acof(n,1,mt) + acof(n,3,mt)
-             ca03 = acof(n,2,mt)
+             ca01 = eigVecCoeffs%acof(n,1,mt,jspin) - eigVecCoeffs%acof(n,3,mt,jspin)
+             ca02 = eigVecCoeffs%acof(n,1,mt,jspin) + eigVecCoeffs%acof(n,3,mt,jspin)
+             ca03 = eigVecCoeffs%acof(n,2,mt,jspin)
              !   d-states
-             ca04 = acof(n,4,mt) - acof(n,8,mt)
-             ca05 = acof(n,5,mt) + acof(n,7,mt)
-             ca06 = acof(n,5,mt) - acof(n,7,mt)
-             ca07 = acof(n,4,mt) + acof(n,8,mt)
-             ca08 = acof(n,6,mt)
+             ca04 = eigVecCoeffs%acof(n,4,mt,jspin) - eigVecCoeffs%acof(n,8,mt,jspin)
+             ca05 = eigVecCoeffs%acof(n,5,mt,jspin) + eigVecCoeffs%acof(n,7,mt,jspin)
+             ca06 = eigVecCoeffs%acof(n,5,mt,jspin) - eigVecCoeffs%acof(n,7,mt,jspin)
+             ca07 = eigVecCoeffs%acof(n,4,mt,jspin) + eigVecCoeffs%acof(n,8,mt,jspin)
+             ca08 = eigVecCoeffs%acof(n,6,mt,jspin)
              !
              !   f-states: a cubic set (cub) 
              ! 
-             ca09 = ( acof(n,9,mt)  - acof(n,15,mt) )*SQRT(5.0) - ( acof(n,11,mt) - acof(n,13,mt) )*SQRT(3.0)
-             ca10 = ( acof(n,9,mt)  + acof(n,15,mt) )*SQRT(5.0) + ( acof(n,11,mt) + acof(n,13,mt) )*SQRT(3.0) 
-             ca11 =   acof(n,12,mt)
-             ca12 = ( acof(n,9,mt)  + acof(n,15,mt) )*SQRT(3.0) - ( acof(n,11,mt) + acof(n,13,mt) )*SQRT(5.0) 
-             ca13 =   acof(n,10,mt) + acof(n,14,mt)
-             ca14 = ( acof(n,9,mt)  - acof(n,15,mt) )*SQRT(3.0) + ( acof(n,11,mt) - acof(n,13,mt) )*SQRT(5.0) 
-             ca15 =   acof(n,10,mt) - acof(n,14,mt) 
+             ca09 = ( eigVecCoeffs%acof(n,9,mt,jspin)  - eigVecCoeffs%acof(n,15,mt,jspin) )*SQRT(5.0) -&
+                    ( eigVecCoeffs%acof(n,11,mt,jspin) - eigVecCoeffs%acof(n,13,mt,jspin) )*SQRT(3.0)
+             ca10 = ( eigVecCoeffs%acof(n,9,mt,jspin)  + eigVecCoeffs%acof(n,15,mt,jspin) )*SQRT(5.0) +&
+                    ( eigVecCoeffs%acof(n,11,mt,jspin) + eigVecCoeffs%acof(n,13,mt,jspin) )*SQRT(3.0) 
+             ca11 =   eigVecCoeffs%acof(n,12,mt,jspin)
+             ca12 = ( eigVecCoeffs%acof(n,9,mt,jspin)  + eigVecCoeffs%acof(n,15,mt,jspin) )*SQRT(3.0) -&
+                    ( eigVecCoeffs%acof(n,11,mt,jspin) + eigVecCoeffs%acof(n,13,mt,jspin) )*SQRT(5.0) 
+             ca13 =   eigVecCoeffs%acof(n,10,mt,jspin) + eigVecCoeffs%acof(n,14,mt,jspin)
+             ca14 = ( eigVecCoeffs%acof(n,9,mt,jspin)  - eigVecCoeffs%acof(n,15,mt,jspin) )*SQRT(3.0) +&
+                    ( eigVecCoeffs%acof(n,11,mt,jspin) - eigVecCoeffs%acof(n,13,mt,jspin) )*SQRT(5.0) 
+             ca15 =   eigVecCoeffs%acof(n,10,mt,jspin) - eigVecCoeffs%acof(n,14,mt,jspin) 
              !
              !   f-states:	a low symmetry set (lss)
              !
-             ca16 =  acof(n,11,mt) - acof(n,13,mt)
-             ca17 =  acof(n,11,mt) + acof(n,13,mt)
-             ca18 =  acof(n,12,mt)
-             ca19 =  acof(n,10,mt) - acof(n,14,mt)
-             ca20 =  acof(n,10,mt) + acof(n,14,mt)
-             ca21 =  acof(n,9,mt)  - acof(n,15,mt)
-             ca22 =  acof(n,9,mt)  + acof(n,15,mt)
+             ca16 =  eigVecCoeffs%acof(n,11,mt,jspin) - eigVecCoeffs%acof(n,13,mt,jspin)
+             ca17 =  eigVecCoeffs%acof(n,11,mt,jspin) + eigVecCoeffs%acof(n,13,mt,jspin)
+             ca18 =  eigVecCoeffs%acof(n,12,mt,jspin)
+             ca19 =  eigVecCoeffs%acof(n,10,mt,jspin) - eigVecCoeffs%acof(n,14,mt,jspin)
+             ca20 =  eigVecCoeffs%acof(n,10,mt,jspin) + eigVecCoeffs%acof(n,14,mt,jspin)
+             ca21 =  eigVecCoeffs%acof(n,9,mt,jspin)  - eigVecCoeffs%acof(n,15,mt,jspin)
+             ca22 =  eigVecCoeffs%acof(n,9,mt,jspin)  + eigVecCoeffs%acof(n,15,mt,jspin)
              !
-             ! bcof
+             ! eigVecCoeffs%bcof
              !   s-states
-             cb00 =  bcof(n,0,mt)
+             cb00 =  eigVecCoeffs%bcof(n,0,mt,jspin)
              !   p-states
-             cb01 =  bcof(n,1,mt) - bcof(n,3,mt) 
-             cb02 =  bcof(n,1,mt) + bcof(n,3,mt) 
-             cb03 =  bcof(n,2,mt)
+             cb01 =  eigVecCoeffs%bcof(n,1,mt,jspin) - eigVecCoeffs%bcof(n,3,mt,jspin) 
+             cb02 =  eigVecCoeffs%bcof(n,1,mt,jspin) + eigVecCoeffs%bcof(n,3,mt,jspin) 
+             cb03 =  eigVecCoeffs%bcof(n,2,mt,jspin)
              !   d-states
-             cb04 =  bcof(n,4,mt) - bcof(n,8,mt) 
-             cb05 =  bcof(n,5,mt) + bcof(n,7,mt) 
-             cb06 =  bcof(n,5,mt) - bcof(n,7,mt) 
-             cb07 =  bcof(n,4,mt) + bcof(n,8,mt) 
-             cb08 =  bcof(n,6,mt)
+             cb04 =  eigVecCoeffs%bcof(n,4,mt,jspin) - eigVecCoeffs%bcof(n,8,mt,jspin) 
+             cb05 =  eigVecCoeffs%bcof(n,5,mt,jspin) + eigVecCoeffs%bcof(n,7,mt,jspin) 
+             cb06 =  eigVecCoeffs%bcof(n,5,mt,jspin) - eigVecCoeffs%bcof(n,7,mt,jspin) 
+             cb07 =  eigVecCoeffs%bcof(n,4,mt,jspin) + eigVecCoeffs%bcof(n,8,mt,jspin) 
+             cb08 =  eigVecCoeffs%bcof(n,6,mt,jspin)
              !
              !   f-states: a cubic set (cub)
              !
-             cb09 = ( bcof(n,9,mt)  - bcof(n,15,mt) )*SQRT(5.0) - ( bcof(n,11,mt) - bcof(n,13,mt) )*SQRT(3.0)
-             cb10 = ( bcof(n,9,mt)  + bcof(n,15,mt) )*SQRT(5.0) + ( bcof(n,11,mt) + bcof(n,13,mt) )*SQRT(3.0) 
-             cb11 =   bcof(n,12,mt)
-             cb12 = ( bcof(n,9,mt)  + bcof(n,15,mt) )*SQRT(3.0) - ( bcof(n,11,mt) + bcof(n,13,mt) )*SQRT(5.0) 
-             cb13 =   bcof(n,10,mt) + bcof(n,14,mt)
-             cb14 = ( bcof(n,9,mt)  - bcof(n,15,mt) )*SQRT(3.0) + ( bcof(n,11,mt) - bcof(n,13,mt) )*SQRT(5.0)
-             cb15 =   bcof(n,10,mt) - bcof(n,14,mt) 
+             cb09 = ( eigVecCoeffs%bcof(n,9,mt,jspin)  - eigVecCoeffs%bcof(n,15,mt,jspin) )*SQRT(5.0) -&
+                    ( eigVecCoeffs%bcof(n,11,mt,jspin) - eigVecCoeffs%bcof(n,13,mt,jspin) )*SQRT(3.0)
+             cb10 = ( eigVecCoeffs%bcof(n,9,mt,jspin)  + eigVecCoeffs%bcof(n,15,mt,jspin) )*SQRT(5.0) +&
+                    ( eigVecCoeffs%bcof(n,11,mt,jspin) + eigVecCoeffs%bcof(n,13,mt,jspin) )*SQRT(3.0) 
+             cb11 =   eigVecCoeffs%bcof(n,12,mt,jspin)
+             cb12 = ( eigVecCoeffs%bcof(n,9,mt,jspin)  + eigVecCoeffs%bcof(n,15,mt,jspin) )*SQRT(3.0) -&
+                    ( eigVecCoeffs%bcof(n,11,mt,jspin) + eigVecCoeffs%bcof(n,13,mt,jspin) )*SQRT(5.0) 
+             cb13 =   eigVecCoeffs%bcof(n,10,mt,jspin) + eigVecCoeffs%bcof(n,14,mt,jspin)
+             cb14 = ( eigVecCoeffs%bcof(n,9,mt,jspin)  - eigVecCoeffs%bcof(n,15,mt,jspin) )*SQRT(3.0) +&
+                    ( eigVecCoeffs%bcof(n,11,mt,jspin) - eigVecCoeffs%bcof(n,13,mt,jspin) )*SQRT(5.0)
+             cb15 =   eigVecCoeffs%bcof(n,10,mt,jspin) - eigVecCoeffs%bcof(n,14,mt,jspin) 
              !
              !   f-states:	a low symmetry set (lss)
              !
-             cb16 =  bcof(n,11,mt) - bcof(n,13,mt)
-             cb17 =  bcof(n,11,mt) + bcof(n,13,mt)
-             cb18 =  bcof(n,12,mt)
-             cb19 =  bcof(n,10,mt) - bcof(n,14,mt)
-             cb20 =  bcof(n,10,mt) + bcof(n,14,mt)
-             cb21 =  bcof(n,9,mt)  - bcof(n,15,mt)
-             cb22 =  bcof(n,9,mt)  + bcof(n,15,mt)
+             cb16 =  eigVecCoeffs%bcof(n,11,mt,jspin) - eigVecCoeffs%bcof(n,13,mt,jspin)
+             cb17 =  eigVecCoeffs%bcof(n,11,mt,jspin) + eigVecCoeffs%bcof(n,13,mt,jspin)
+             cb18 =  eigVecCoeffs%bcof(n,12,mt,jspin)
+             cb19 =  eigVecCoeffs%bcof(n,10,mt,jspin) - eigVecCoeffs%bcof(n,14,mt,jspin)
+             cb20 =  eigVecCoeffs%bcof(n,10,mt,jspin) + eigVecCoeffs%bcof(n,14,mt,jspin)
+             cb21 =  eigVecCoeffs%bcof(n,9,mt,jspin)  - eigVecCoeffs%bcof(n,15,mt,jspin)
+             cb22 =  eigVecCoeffs%bcof(n,9,mt,jspin)  + eigVecCoeffs%bcof(n,15,mt,jspin)
              !------------------------------------------------------------------
              !  s
              comp(1)  =   ca00*CONJG(ca00) + cb00*CONJG(cb00)*ddn0 
@@ -184,7 +190,7 @@ CONTAINS
                 l = atoms%llo(lo,ityp)
                 ! lo-s
                 IF ( l.EQ.0 )  THEN
-	           cc00 = ccof(0,n,lo,mt)
+	           cc00 = eigVecCoeffs%ccof(0,n,lo,mt,jspin)
                    ck00 = CONJG(cc00)
 
                    comp(1)  =  comp(1)  +&
@@ -194,9 +200,9 @@ CONTAINS
                 ENDIF
                 ! lo-p
                 IF ( l.EQ.1 )  THEN
-	           cc01 = ccof(-1,n,lo,mt) - ccof(1,n,lo,mt)
-	           cc02 = ccof(-1,n,lo,mt) + ccof(1,n,lo,mt)
-	           cc03 = ccof( 0,n,lo,mt)
+	           cc01 = eigVecCoeffs%ccof(-1,n,lo,mt,jspin) - eigVecCoeffs%ccof(1,n,lo,mt,jspin)
+	           cc02 = eigVecCoeffs%ccof(-1,n,lo,mt,jspin) + eigVecCoeffs%ccof(1,n,lo,mt,jspin)
+	           cc03 = eigVecCoeffs%ccof( 0,n,lo,mt,jspin)
 
                    ck01 = CONJG(cc01) 
                    ck02 = CONJG(cc02) 
@@ -212,11 +218,11 @@ CONTAINS
                 ENDIF
                 ! lo-d
                 IF ( l.EQ.2 )  THEN
-	           cc04 = ccof(-2,n,lo,mt) - ccof(2,n,lo,mt)
-	           cc05 = ccof(-1,n,lo,mt) + ccof(1,n,lo,mt)
-	           cc06 = ccof(-1,n,lo,mt) - ccof(1,n,lo,mt)
-	           cc07 = ccof(-2,n,lo,mt) + ccof(2,n,lo,mt)
-	           cc08 = ccof( 0,n,lo,mt)
+	           cc04 = eigVecCoeffs%ccof(-2,n,lo,mt,jspin) - eigVecCoeffs%ccof(2,n,lo,mt,jspin)
+	           cc05 = eigVecCoeffs%ccof(-1,n,lo,mt,jspin) + eigVecCoeffs%ccof(1,n,lo,mt,jspin)
+	           cc06 = eigVecCoeffs%ccof(-1,n,lo,mt,jspin) - eigVecCoeffs%ccof(1,n,lo,mt,jspin)
+	           cc07 = eigVecCoeffs%ccof(-2,n,lo,mt,jspin) + eigVecCoeffs%ccof(2,n,lo,mt,jspin)
+	           cc08 = eigVecCoeffs%ccof( 0,n,lo,mt,jspin)
 
                    ck04 = CONJG(cc04)
                    ck05 = CONJG(cc05)
@@ -241,13 +247,17 @@ CONTAINS
                    !
                    !  a cubic set (cub)
                    !
-	           cc09 = ( ccof(-3,n,lo,mt) - ccof(3,n,lo,mt) )*SQRT(5.0) - ( ccof(-1,n,lo,mt) - ccof(1,n,lo,mt) )*SQRT(3.0) 
-	           cc10 = ( ccof(-3,n,lo,mt) + ccof(3,n,lo,mt) )*SQRT(5.0) + ( ccof(-1,n,lo,mt) + ccof(1,n,lo,mt) )*SQRT(3.0) 
-	           cc11 =   ccof( 0,n,lo,mt)
-	           cc12 = ( ccof(-3,n,lo,mt) + ccof(3,n,lo,mt) )*SQRT(3.0) - ( ccof(-1,n,lo,mt) + ccof(1,n,lo,mt) )*SQRT(5.0) 
-	           cc13 =   ccof(-2,n,lo,mt) + ccof(2,n,lo,mt) 
-	           cc14 = ( ccof(-3,n,lo,mt) - ccof(3,n,lo,mt) )*SQRT(3.0) + ( ccof(-1,n,lo,mt) - ccof(1,n,lo,mt) )*SQRT(5.0)
-	           cc15 =   ccof(-2,n,lo,mt) - ccof(2,n,lo,mt)
+	           cc09 = ( eigVecCoeffs%ccof(-3,n,lo,mt,jspin) - eigVecCoeffs%ccof(3,n,lo,mt,jspin) )*SQRT(5.0) -&
+                          ( eigVecCoeffs%ccof(-1,n,lo,mt,jspin) - eigVecCoeffs%ccof(1,n,lo,mt,jspin) )*SQRT(3.0) 
+	           cc10 = ( eigVecCoeffs%ccof(-3,n,lo,mt,jspin) + eigVecCoeffs%ccof(3,n,lo,mt,jspin) )*SQRT(5.0) +&
+                          ( eigVecCoeffs%ccof(-1,n,lo,mt,jspin) + eigVecCoeffs%ccof(1,n,lo,mt,jspin) )*SQRT(3.0) 
+	           cc11 =   eigVecCoeffs%ccof( 0,n,lo,mt,jspin)
+	           cc12 = ( eigVecCoeffs%ccof(-3,n,lo,mt,jspin) + eigVecCoeffs%ccof(3,n,lo,mt,jspin) )*SQRT(3.0) -&
+                          ( eigVecCoeffs%ccof(-1,n,lo,mt,jspin) + eigVecCoeffs%ccof(1,n,lo,mt,jspin) )*SQRT(5.0) 
+	           cc13 =   eigVecCoeffs%ccof(-2,n,lo,mt,jspin) + eigVecCoeffs%ccof(2,n,lo,mt,jspin) 
+	           cc14 = ( eigVecCoeffs%ccof(-3,n,lo,mt,jspin) - eigVecCoeffs%ccof(3,n,lo,mt,jspin) )*SQRT(3.0) +&
+                          ( eigVecCoeffs%ccof(-1,n,lo,mt,jspin) - eigVecCoeffs%ccof(1,n,lo,mt,jspin) )*SQRT(5.0)
+	           cc15 =   eigVecCoeffs%ccof(-2,n,lo,mt,jspin) - eigVecCoeffs%ccof(2,n,lo,mt,jspin)
             !
                    ck09 = CONJG(cc09)
                    ck10 = CONJG(cc10)
@@ -274,13 +284,13 @@ CONTAINS
           !
           !  a low symmetry set (lss)
           !
-	           cc16 = ccof(-1,n,lo,mt) - ccof(1,n,lo,mt)
-	           cc17 = ccof(-1,n,lo,mt) + ccof(1,n,lo,mt)
-	           cc18 = ccof( 0,n,lo,mt)
-	           cc19 = ccof(-2,n,lo,mt) - ccof(2,n,lo,mt)
-	           cc20 = ccof(-2,n,lo,mt) + ccof(2,n,lo,mt)
-	           cc21 = ccof(-3,n,lo,mt) - ccof(3,n,lo,mt)
-	           cc22 = ccof(-3,n,lo,mt) + ccof(3,n,lo,mt)
+	           cc16 = eigVecCoeffs%ccof(-1,n,lo,mt,jspin) - eigVecCoeffs%ccof(1,n,lo,mt,jspin)
+	           cc17 = eigVecCoeffs%ccof(-1,n,lo,mt,jspin) + eigVecCoeffs%ccof(1,n,lo,mt,jspin)
+	           cc18 = eigVecCoeffs%ccof( 0,n,lo,mt,jspin)
+	           cc19 = eigVecCoeffs%ccof(-2,n,lo,mt,jspin) - eigVecCoeffs%ccof(2,n,lo,mt,jspin)
+	           cc20 = eigVecCoeffs%ccof(-2,n,lo,mt,jspin) + eigVecCoeffs%ccof(2,n,lo,mt,jspin)
+	           cc21 = eigVecCoeffs%ccof(-3,n,lo,mt,jspin) - eigVecCoeffs%ccof(3,n,lo,mt,jspin)
+	           cc22 = eigVecCoeffs%ccof(-3,n,lo,mt,jspin) + eigVecCoeffs%ccof(3,n,lo,mt,jspin)
             !
                    ck16 = CONJG(cc16)
                    ck17 = CONJG(cc17)

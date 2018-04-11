@@ -157,8 +157,6 @@ CONTAINS
     REAL,    ALLOCATABLE :: svac(:,:),pvac(:,:),mcd(:,:,:)
     REAL,    ALLOCATABLE :: enerlo(:,:,:),qmat(:,:,:,:)
 
-    COMPLEX, ALLOCATABLE :: acof(:,:,:,:),bcof(:,:,:,:),ccof(:,:,:,:,:)
-
     COMPLEX, ALLOCATABLE :: qstars(:,:,:,:),m_mcd(:,:,:,:)
 
     TYPE (t_orb)              :: orb
@@ -166,6 +164,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag) :: denCoeffsOffdiag
     TYPE (t_force)            :: force
     TYPE (t_slab)             :: slab
+    TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
 
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
@@ -562,53 +561,41 @@ CONTAINS
           END IF
 
           !--->    valence density in the atomic spheres
-          !--->    construct a(tilta) and b(tilta)
-          IF (noco%l_mperp) THEN
-             ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd),&
-                                ! Deallocated before call to sympsi
-                  bcof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd),                &
-                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,dimension%jspd) )
-          ELSE
-             ALLOCATE ( acof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin),&
-                  bcof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin),&
-                  ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin) )
-          END IF
+          CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
 
           DO ispin = jsp_start,jsp_end
              IF (input%l_f) THEN
                 CALL timestart("cdnval: to_pulay")
                 CALL force%init2(noccbd,input,atoms)
                 CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
-                           acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat,&
-                           eig,force)
+                           eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
+                           eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
                 CALL timestop("cdnval: to_pulay")
              ELSE
                 CALL timestart("cdnval: abcof")
                 CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
-                           acof(:,0:,:,ispin),bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),zMat)
+                           eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
+                           eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat)
                 CALL timestop("cdnval: abcof")
 
              END IF
 
              IF (atoms%n_u.GT.0) THEN
-                CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                           ccof(-atoms%llod:,:,:,:,ispin),den%mmpMat(:,:,:,jspin))
+                CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
              END IF
-             !
+
              !--->       perform Brillouin zone integration and summation over the
              !--->       bands in order to determine the energy parameters for each
              !--->       atom and angular momentum
-             !
              IF (.not.sliceplot%slice) THEN
-                CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,ccof,&
-                            skip_t,l_evp,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
+                CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
+                            skip_t,l_evp,eigVecCoeffs,usdus,&
                             ncore,l_mcd,m_mcd,enerlo(1,1,ispin),sqlo(1,1,ispin),&
                             ener(0,1,ispin),sqal(0,1,ispin),&
                             qal(0:,:,:,ispin),mcd)
 
                 IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
-                   CALL qal_21(atoms,input,noccbd,we,ccof,&
-                               noco,acof,bcof,denCoeffsOffdiag,qal,qmat)
+                   CALL qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,qal,qmat)
                 END IF
              END IF
              !
@@ -617,75 +604,64 @@ CONTAINS
              !--->    from the mt-sphere region of the film
              !
              IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
-                CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,ccof(-atoms%llod,1,1,1,ispin),&
-                             skip_t,noccbd,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,slab)
+                CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
                 INQUIRE (file='orbcomprot',exist=l_orbcomprot)
                 IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
-                   CALL abcrot2(atoms,noccbd,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                                ccof(-atoms%llod:,:,:,:,ispin))
+                   CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin)
                 END IF
 
-                CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,acof(1:,0:,1:,ispin),bcof(1:,0:,1:,ispin),&
-                              ccof(-atoms%llod:,1:,1:,1:,ispin),orbcomp,qmtp)
+                CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp,qmtp)
              END IF
              !-new
              !--->          set up coefficients for the spherical and
              CALL timestart("cdnval: rhomt")
-             CALL rhomt(atoms,we,noccbd,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),denCoeffs,ispin)
+             CALL rhomt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin)
              CALL timestop("cdnval: rhomt")
-             !+soc
-             IF (noco%l_soc) THEN
-                CALL orbmom(atoms,noccbd, we,ispin,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                            ccof(-atoms%llod:,:,:,:,ispin),orb)
-             END IF
-             !     -soc
+
+             IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
              !--->          non-spherical m.t. density
              CALL timestart("cdnval: rhonmt")
-             CALL rhonmt(atoms,sphhar,we,noccbd,sym,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),denCoeffs,ispin)
+             CALL rhonmt(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffs,ispin)
              CALL timestop("cdnval: rhonmt")
 
              !--->          set up coefficients of the local orbitals and the
              !--->          flapw - lo cross terms for the spherical and
              !--->          non-spherical mt density
              CALL timestart("cdnval: rho(n)mtlo")
-             CALL rhomtlo(atoms,noccbd,we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                          ccof(-atoms%llod:,:,:,:,ispin),denCoeffs,ispin)
+             CALL rhomtlo(atoms,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
 
-             CALL rhonmtlo(atoms,sphhar,noccbd,we,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),&
-                           ccof(-atoms%llod:,:,:,:,ispin),denCoeffs,ispin)
+             CALL rhonmtlo(atoms,sphhar,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
              CALL timestop("cdnval: rho(n)mtlo")
 
              IF (input%l_f) THEN
                 CALL timestart("cdnval: force_a12/21")
                 IF (.not.input%l_useapw) THEN
                    CALL force_a12(atoms,noccbd,sym, dimension,cell,oneD,&
-                                  we,ispin,noccbd,usdus,acof(:,0:,:,ispin),&
-                                  bcof(:,0:,:,ispin),force,results)
+                                  we,ispin,noccbd,usdus,eigVecCoeffs%acof(:,0:,:,ispin),&
+                                  eigVecCoeffs%bcof(:,0:,:,ispin),force,results)
                 ENDIF
                 CALL force_a21(input,atoms,dimension,noccbd,sym,&
-                               oneD,cell,we,ispin,enpara%el0(0:,:,ispin),noccbd,eig,usdus,acof(:,0:,:,ispin),&
-                               bcof(:,0:,:,ispin),ccof(-atoms%llod:,:,:,:,ispin),force,results)
+                               oneD,cell,we,ispin,enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs%acof(:,0:,:,ispin),&
+                               eigVecCoeffs%bcof(:,0:,:,ispin),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),force,results)
                 CALL timestop("cdnval: force_a12/21")
              END IF
 
              IF(l_cs) THEN
                 CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,&
                                   dimension%neigd,noccbd,results%ef,banddos%sig_dos,&
-                                  eig,we,acof(1,0,1,ispin),bcof(1,0,1,ispin),&
-                                  ccof(-atoms%llod,1,1,1,ispin))
+                                  eig,we,eigVecCoeffs%acof(1,0,1,ispin),eigVecCoeffs%bcof(1,0,1,ispin),&
+                                  eigVecCoeffs%ccof(-atoms%llod,1,1,1,ispin))
              END IF
           END DO !--->    end loop over ispin
 
           IF (noco%l_mperp) THEN
-             CALL rhomt21(atoms,we,noccbd,acof,bcof,ccof,denCoeffsOffdiag)
+             CALL rhomt21(atoms,we,noccbd,eigVecCoeffs%acof,eigVecCoeffs%bcof,eigVecCoeffs%ccof,denCoeffsOffdiag)
              IF (l_fmpl) THEN
-                CALL rhonmt21(atoms,llpd,sphhar,we,noccbd,sym,acof,bcof,denCoeffsOffdiag)
+                CALL rhonmt21(atoms,llpd,sphhar,we,noccbd,sym,eigVecCoeffs%acof,eigVecCoeffs%bcof,denCoeffsOffdiag)
              END IF
           END IF
 
-          DEALLOCATE (acof,bcof,ccof)
-          !
 199       CONTINUE
           IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
              CALL timestart("cdnval: write_info")

@@ -15,23 +15,21 @@ MODULE m_rhonmtlo
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE rhonmtlo(atoms,sphhar, ne,we,acof,bcof,ccof,denCoeffs,ispin)
+  SUBROUTINE rhonmtlo(atoms,sphhar,ne,we,eigVecCoeffs,denCoeffs,ispin)
     USE m_gaunt,ONLY:gaunt1
     USE m_types
 
     IMPLICIT NONE
 
-    TYPE(t_sphhar),   INTENT(IN)    :: sphhar
-    TYPE(t_atoms),    INTENT(IN)    :: atoms
-    TYPE(t_denCoeffs),INTENT(INOUT) :: denCoeffs
+    TYPE(t_sphhar),       INTENT(IN)    :: sphhar
+    TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
     INTEGER, INTENT (IN) :: ne, ispin
 
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    !     ..
+
     !     .. Local Scalars ..
     COMPLEX ci,cmv,fact,cf1
     INTEGER i,jmem,l,lh,lmp,lo,lop,lp,lpmax,lpmax0,lpmin,lpmin0,m,lpp ,mp,mpp,na,neqat0,nn,ntyp
@@ -84,9 +82,11 @@ CONTAINS
                       DO nn = 1,atoms%neq(ntyp)
                          na = na + 1
                          DO i = 1,ne
-                            cf1 = fact *  ccof(m,i,lo,na)
-                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * CONJG(acof(i,lmp,na)) )
-                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * CONJG(bcof(i,lmp,na)) )
+                            cf1 = fact *  eigVecCoeffs%ccof(m,i,lo,na,ispin)
+                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%acof(i,lmp,na,ispin)) )
+                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%bcof(i,lmp,na,ispin)) )
                          END DO
                       END DO
                    END DO
@@ -104,9 +104,11 @@ CONTAINS
                       DO nn = 1,atoms%neq(ntyp)
                          na = na + 1
                          DO i = 1,ne
-                            cf1 = fact * CONJG(ccof(m,i,lo,na))
-                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * acof(i,lmp,na) )
-                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * bcof(i,lmp,na) )
+                            cf1 = fact * CONJG(eigVecCoeffs%ccof(m,i,lo,na,ispin))
+                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * eigVecCoeffs%acof(i,lmp,na,ispin) )
+                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * eigVecCoeffs%bcof(i,lmp,na,ispin) )
                          END DO
                       END DO
                    END DO
@@ -124,7 +126,8 @@ CONTAINS
                             na = na + 1
                             DO i = 1,ne
                                denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) =&
-                                  denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) + we(i) * REAL(fact * CONJG(ccof(mp,i,lop,na))*ccof(m ,i,lo ,na))
+                                  denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) +&
+                                  we(i) * REAL(fact * CONJG(eigVecCoeffs%ccof(mp,i,lop,na,ispin))*eigVecCoeffs%ccof(m,i,lo,na,ispin))
                             END DO
                          END DO
                       END IF
