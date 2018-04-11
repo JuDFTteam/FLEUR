@@ -73,8 +73,6 @@ CONTAINS
     USE m_orbmom      ! coeffd for orbital moments
     USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
     USE m_qintsl      ! (slabs) and intergate the DOS in these vacuum%layers
-    USE m_slabdim     ! (mt + interstitial)
-    USE m_slabgeom    ! (written by Yu.Koroteev, 2003/2004)
     USE m_orbcomp     ! calculate corbital composition (like p_x,p_y,p_z)
     USE m_Ekwritesl   ! and write to file.
     USE m_abcrot2
@@ -127,49 +125,47 @@ CONTAINS
     TYPE(t_lapw):: lapw
     INTEGER :: llpd
     REAL wronk,emcd_lo,emcd_up
-    INTEGER i,ie,iv,ivac,j,k,l,l1,lh ,n,ilo,isp,nat,&
+    INTEGER i,ie,iv,ivac,j,k,l,n,ilo,isp,&
          nbands,noded,nodeu,noccbd,nslibd,na,&
          ikpt,jsp_start,jsp_end,ispin
     INTEGER  skip_t,skip_tt
     INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l
-    COMPLEX,parameter:: czero=(0.0,0.0)
     LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
-    REAL    cartk(3),e_mcd(atoms%ntype,input%jspins,dimension%nstd)
+    REAL    e_mcd(atoms%ntype,input%jspins,dimension%nstd)
     REAL    eig(dimension%neigd)
     REAL    vz0(2)
     REAL    uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
     REAL    ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 
-    INTEGER, PARAMETER :: n2max_nstm3=13
-
-    INTEGER nsld,nsl
-    !
-    INTEGER, ALLOCATABLE :: nmtsl(:,:),nslat(:,:)
-    REAL,    ALLOCATABLE :: zsl(:,:),volsl(:)
-    REAL,    ALLOCATABLE :: volintsl(:)
-    REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:)
+    !orbcomp
     REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
+
     REAL,    ALLOCATABLE :: qis(:,:,:)
-    !-new_sl
     !-dw
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
 
     REAL,    ALLOCATABLE :: we(:)
+
+    ! radial functions
     REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:)
+
     REAL,    ALLOCATABLE :: sqlo(:,:,:)
     REAL,    ALLOCATABLE :: qal(:,:,:,:),sqal(:,:,:),ener(:,:,:)
     REAL,    ALLOCATABLE :: svac(:,:),pvac(:,:),mcd(:,:,:)
     REAL,    ALLOCATABLE :: enerlo(:,:,:),qmat(:,:,:,:)
+
     COMPLEX, ALLOCATABLE :: acof(:,:,:,:),bcof(:,:,:,:),ccof(:,:,:,:,:)
+
     COMPLEX, ALLOCATABLE :: qstars(:,:,:,:),m_mcd(:,:,:,:)
 
     TYPE (t_orb)              :: orb
     TYPE (t_denCoeffs)        :: denCoeffs
     TYPE (t_denCoeffsOffdiag) :: denCoeffsOffdiag
     TYPE (t_force)            :: force
+    TYPE (t_slab)             :: slab
 
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
@@ -322,30 +318,20 @@ CONTAINS
 8002 FORMAT (i3,f10.5,2 (5x,1p,2e16.7,i5),1p,2e16.7)
 
     IF (input%film) vz0(:) = vTot%vacz(vacuum%nmz,:,jspin)
-    nsld=1
-    !+q_sl
+
+    CALL slab%init(banddos,dimension,atoms,cell)
+
     IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
        IF (oneD%odi%d1)  CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
-       CALL slab_dim(atoms, nsld)
-       ALLOCATE ( nmtsl(atoms%ntype,nsld),nslat(atoms%nat,nsld) )
-       ALLOCATE ( zsl(2,nsld),volsl(nsld) )
-       ALLOCATE ( volintsl(nsld) )
-       CALL slabgeom(atoms,cell,nsld,&
-                     nsl,zsl,nmtsl,nslat,volsl,volintsl)
 
-       ALLOCATE ( qintsl(nsld,dimension%neigd))
-       ALLOCATE ( qmtsl(nsld,dimension%neigd))
        ALLOCATE ( orbcomp(dimension%neigd,23,atoms%nat) )
        ALLOCATE ( qmtp(dimension%neigd,atoms%nat) )
        IF (.NOT.input%film) qvac(:,:,:,jspin) = 0.0
     ELSE
-       ALLOCATE(nmtsl(1,1),nslat(1,1),zsl(1,1),volsl(1),volintsl(1))
-       ALLOCATE(qintsl(1,1),qmtsl(1,1),orbcomp(1,1,1),qmtp(1,1))
+       ALLOCATE(orbcomp(1,1,1),qmtp(1,1))
     END IF
-    !-q_sl
-    !
+
     !-->   loop over k-points: each can be a separate task
-    !
     IF (kpts%nkpt < mpi%isize) THEN
        l_evp = .true.
        IF (l_mcd) THEN
@@ -552,8 +538,7 @@ CONTAINS
           !
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-                CALL q_int_sl(jspin,stars,atoms,sym, volsl,volintsl,&
-                              cell,noccbd,lapw, nsl,zsl,nmtsl,oneD, qintsl(:,:),zMat)
+                CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
              END IF
           END IF
           !-new c
@@ -632,9 +617,8 @@ CONTAINS
              !--->    from the mt-sphere region of the film
              !
              IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
-                CALL q_mt_sl(ispin,atoms,noccbd,nsld,ikpt,noccbd,ccof(-atoms%llod,1,1,1,ispin),&
-                             skip_t,noccbd,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,&
-                             nmtsl,nsl,qmtsl(:,:))
+                CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,ccof(-atoms%llod,1,1,1,ispin),&
+                             skip_t,noccbd,acof(:,0:,:,ispin),bcof(:,0:,:,ispin),usdus,slab)
 
                 INQUIRE (file='orbcomprot',exist=l_orbcomprot)
                 IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
@@ -705,27 +689,23 @@ CONTAINS
 199       CONTINUE
           IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
              CALL timestart("cdnval: write_info")
-             !
              !--->    calculate charge distribution of each state (l-character ...)
              !--->    and write the information to the files dosinp and vacdos
              !--->    for dos and bandstructure plots
-             !
 
              !--dw    parallel writing of vacdos,dosinp....
              !        write data to direct access file first, write to formated file later by PE 0 only!
              !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
-             !
-             cartk=matmul(lapw%bkpt,cell%bmat)
+
              IF (banddos%ndir.GT.0) THEN
                 CALL sympsi(lapw%bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
                             lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
              END IF
-             !
+
              !--dw   now write k-point data to tmp_dos
-             !
              CALL write_dos(eig_id,ikpt,jspin,qal(:,:,:,jspin),qvac(:,:,ikpt,jspin),qis(:,ikpt,jspin),&
-                            qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd,qintsl,&
-                            qmtsl(:,:),qmtp(:,:),orbcomp)
+                            qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd,slab%qintsl,&
+                            slab%qmtsl(:,:),qmtp(:,:),orbcomp)
 
              CALL timestop("cdnval: write_info")
              !-new_sl
@@ -767,10 +747,9 @@ CONTAINS
        IF (mpi%irank==0) THEN
           CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
                         sliceplot,noco,sym,cell,l_mcd,ncored,ncore,e_mcd,&
-                        results%ef,results%bandgap,nsld,oneD)
+                        results%ef,results%bandgap,slab%nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
-             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,&
-                              nsld,input,jspin,sym,cell,nsl,nslat)
+             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
           END IF
        END IF
 #ifdef CPP_MPI                

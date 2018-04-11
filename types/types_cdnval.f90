@@ -118,7 +118,22 @@ PRIVATE
          PROCEDURE,PASS :: init2 => force_init2
    END TYPE t_force
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force
+   TYPE t_slab
+      INTEGER              :: nsld, nsl
+
+      INTEGER, ALLOCATABLE :: nmtsl(:,:)
+      INTEGER, ALLOCATABLE :: nslat(:,:)
+      REAL,    ALLOCATABLE :: zsl(:,:)
+      REAL,    ALLOCATABLE :: volsl(:)
+      REAL,    ALLOCATABLE :: volintsl(:)
+      REAL,    ALLOCATABLE :: qintsl(:,:)
+      REAL,    ALLOCATABLE :: qmtsl(:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => slab_init
+   END TYPE t_slab
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab
 
 CONTAINS
 
@@ -433,5 +448,47 @@ SUBROUTINE force_init2(thisForce,noccbd,input,atoms)
    thisForce%cveccof = CMPLX(0.0,0.0)
 
 END SUBROUTINE force_init2
+
+SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
+
+   USE m_types_setup
+   USE m_slabdim
+   USE m_slabgeom
+
+   IMPLICIT NONE
+
+   CLASS(t_slab),      INTENT(INOUT) :: thisSlab
+   TYPE(t_banddos),    INTENT(IN)    :: banddos
+   TYPE(t_dimension),  INTENT(IN)    :: dimension
+   TYPE(t_atoms),      INTENT(IN)    :: atoms
+   TYPE(t_cell),       INTENT(IN)    :: cell
+
+   INTEGER :: nsld
+
+   nsld=1
+
+   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
+      CALL slab_dim(atoms, nsld)
+      ALLOCATE (thisSlab%nmtsl(atoms%ntype,nsld))
+      ALLOCATE (thisSlab%nslat(atoms%nat,nsld))
+      ALLOCATE (thisSlab%zsl(2,nsld))
+      ALLOCATE (thisSlab%volsl(nsld))
+      ALLOCATE (thisSlab%volintsl(nsld))
+      ALLOCATE (thisSlab%qintsl(nsld,dimension%neigd))
+      ALLOCATE (thisSlab%qmtsl(nsld,dimension%neigd))
+      CALL slabgeom(atoms,cell,nsld,thisSlab%nsl,thisSlab%zsl,thisSlab%nmtsl,&
+                    thisSlab%nslat,thisSlab%volsl,thisSlab%volintsl)
+   ELSE
+      ALLOCATE (thisSlab%nmtsl(1,1))
+      ALLOCATE (thisSlab%nslat(1,1))
+      ALLOCATE (thisSlab%zsl(1,1))
+      ALLOCATE (thisSlab%volsl(1))
+      ALLOCATE (thisSlab%volintsl(1))
+      ALLOCATE (thisSlab%qintsl(1,1))
+      ALLOCATE (thisSlab%qmtsl(1,1))
+   END IF
+   thisSlab%nsld = nsld
+
+END SUBROUTINE slab_init
 
 END MODULE m_types_cdnval

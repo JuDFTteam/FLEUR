@@ -1,8 +1,7 @@
 MODULE m_Ekwritesl
   use m_juDFT
 CONTAINS
-  SUBROUTINE Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,nsld,&
-       input,jspin, sym,cell, nsl,nslat)
+  SUBROUTINE Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
     !-----------------------------------------------------------------
     !-- now write E(k) for all kpts if on T3E
     !-- now read data from tmp_dos and write of E(k) in  ek_orbcomp
@@ -17,13 +16,11 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_slab),INTENT(IN)        :: slab
     !	..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nsld,eig_id
-    INTEGER, INTENT (IN) :: nsl ,jspin 
-    !     ..
-    !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nslat(atoms%nat,nsld)
+    INTEGER, INTENT (IN) :: eig_id
+    INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Local Scalars
     INTEGER :: nbands,ikpt,kspin,j,i,n,it ,na,iband,mt,l
@@ -31,7 +28,7 @@ CONTAINS
     REAL    :: wk
     !     ..
     !     .. Local Arrays
-    INTEGER  norb(23),iqsl(nsld),iqvacpc(2)
+    INTEGER  norb(23),iqsl(slab%nsld),iqvacpc(2)
     REAL     qvact(2)
     REAL, ALLOCATABLE :: eig(:),qvac(:,:,:,:),orbcomp(:,:,:,:,:)
     REAL, ALLOCATABLE :: qal(:,:,:),qis(:),qvlay(:,:,:)
@@ -41,12 +38,12 @@ CONTAINS
     CHARACTER (len=2) :: chntype
     CHARACTER (len=99) :: chform
     !     ..
-    IF (nsl.GT.nsld)  THEN
+    IF (slab%nsl.GT.slab%nsld)  THEN
        CALL juDFT_error("nsl.GT.nsld",calledby="Ek_write_sl")
     ENDIF
     ALLOCATE(eig(dimension%neigd),orbcomp(dimension%neigd,23,atoms%nat,kpts%nkpt,dimension%jspd))
-    ALLOCATE(qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd),qintsl(nsld,dimension%neigd,kpts%nkpt,dimension%jspd))
-    ALLOCATE(qmtsl(nsld,dimension%neigd,kpts%nkpt,dimension%jspd),qmtp(dimension%neigd,atoms%nat,kpts%nkpt,dimension%jspd))
+    ALLOCATE(qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd),qintsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd))
+    ALLOCATE(qmtsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd),qmtp(dimension%neigd,atoms%nat,kpts%nkpt,dimension%jspd))
     ALLOCATE(qal(4,atoms%ntype,dimension%neigd),qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
     ALLOCATE(qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
     ALLOCATE(ksym(dimension%neigd),jsym(dimension%neigd))
@@ -59,17 +56,17 @@ CONTAINS
     !
     ! ----->       write bandstructure to ek_orbcomp - file
     ! 
-    WRITE (chntype,'(i2)') nsl
+    WRITE (chntype,'(i2)') slab%nsl
     chform = "('E',i3,'= ',f10.4,4x,'vac ( vacuum%layers ) vac = ',i3,' ('&
          &        ,"//chntype//"(i3,2x),')',i3))"
     WRITE (130,FMT=901) 
     WRITE (130,FMT=902) 
     WRITE (130,FMT=901) 
-    WRITE (130,FMT=903) nsl,vacuum%nvac,kpts%nkpt
+    WRITE (130,FMT=903) slab%nsl,vacuum%nvac,kpts%nkpt
     WRITE (130,FMT=904) atoms%ntype,(atoms%neq(n),n=1,atoms%ntype) 
     WRITE (130,FMT=805)  
-    DO j=1,nsl
-       WRITE (130,FMT=806) j,(nslat(i,j),i=1,atoms%nat)
+    DO j=1,slab%nsl
+       WRITE (130,FMT=806) j,(slab%nslat(i,j),i=1,atoms%nat)
     ENDDO
     DO kspin = 1,input%jspins
        WRITE (130,FMT=907)  kspin,input%jspins
@@ -99,21 +96,21 @@ CONTAINS
              ENDDO
              IF (sym%invs .OR. sym%zrfs)    qvact(2) = qvact(1)
              iqvacpc(:) = nint(qvact(:)*100.0)
-             DO j = 1,nsl
+             DO j = 1,slab%nsl
                 iqsl(j) = nint( ( qintsl(j,iband,ikpt,kspin) + &
                      &                               qmtsl(j,iband,ikpt,kspin) )*100.0 ) 
              ENDDO
              WRITE (130,FMT=chform) iband,eig(iband),iqvacpc(2),&
-                  &                               (iqsl(l),l=1,nsl),iqvacpc(1)
+                  &                               (iqsl(l),l=1,slab%nsl),iqvacpc(1)
              WRITE(130,FMT=9) 
              WRITE(130,FMT=8)
              WRITE(130,FMT=9) 
-             DO n = 1,nsl
+             DO n = 1,slab%nsl
                 mt=0 
                 DO  it=1,atoms%ntype
                    DO  m=1,atoms%neq(it)
                       mt=mt+1	
-                      na = nslat(mt,n) 
+                      na = slab%nslat(mt,n) 
                       IF (na.EQ.1) THEN
                          DO  j=1,23
                             norb(j) = &

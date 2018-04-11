@@ -8,24 +8,21 @@ CONTAINS
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,nobd,nsld, ikpt,ne,ccof, skip_t,noccbd,acof,bcof,usdus, &
-       nmtsl,nsl, qmtslk)
+  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ikpt,ne,ccof, skip_t,noccbd,acof,bcof,usdus,slab)
     USE m_types
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)   :: usdus
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),INTENT(IN)    :: usdus
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_slab), INTENT(INOUT) :: slab
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd,jsp      
     INTEGER, INTENT (IN) :: ne,ikpt ,skip_t,noccbd
-    INTEGER, INTENT (IN) :: nsl,nsld
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
     COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    INTEGER, INTENT (IN)  :: nmtsl(atoms%ntype,atoms%nat)
-    REAL,    INTENT (OUT) :: qmtslk(:,:)!(nsl,dimension%neigd)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lo ,natom,nn,ntyp,nt1,nt2,m
@@ -41,9 +38,9 @@ CONTAINS
     INTRINSIC conjg,cmplx
 
 
-    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntype),qmt(atoms%ntype,SIZE(qmtslk,2)) )
+    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntype),qmt(atoms%ntype,SIZE(slab%qmtsl,2)) )
     ALLOCATE ( qaclo(nobd,atoms%nlod,atoms%ntype),qbclo(nobd,atoms%nlod,atoms%ntype) )
-    ALLOCATE ( qmttot(atoms%ntype,SIZE(qmtslk,2)),qmtlo(atoms%ntype,SIZE(qmtslk,2)) )
+    ALLOCATE ( qmttot(atoms%ntype,SIZE(slab%qmtsl,2)),qmtlo(atoms%ntype,SIZE(slab%qmtsl,2)) )
     !
     !--->    l-decomposed density for each valence state
     !
@@ -136,12 +133,12 @@ CONTAINS
     ENDDO
     !
     DO i = 1,ne
-       DO nl = 1,nsl
+       DO nl = 1,slab%nsl
           qq = 0.0
           DO ntyp = 1,atoms%ntype
-             qq = qq + qmttot(ntyp,i)*nmtsl(ntyp,nl)
+             qq = qq + qmttot(ntyp,i)*slab%nmtsl(ntyp,nl)
           ENDDO
-          qmtslk(nl,i) = qq
+          slab%qmtsl(nl,i) = qq
        ENDDO
     ENDDO
     !        DO ntyp = 1,ntype
