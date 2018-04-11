@@ -11,9 +11,9 @@ MODULE m_mpi_col_den
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
        input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,ener,&
-       sqal,results,svac,pvac,uu,dd,du,uunmt,ddnmt,udnmt,dunmt,sqlo,&
-       aclo,bclo,cclo,acnmt,bcnmt,ccnmt,enerlo,orb,mt21,lo21,uloulop21,&
-       uunmt21,ddnmt21,udnmt21,dunmt21,den,n_mmp)
+       sqal,results,svac,pvac,denCoeffs,sqlo,&
+       enerlo,orb,&
+       denCoeffsOffdiag,den,n_mmp)
     !
 #include"cpp_double.h"
     USE m_types
@@ -42,28 +42,11 @@ CONTAINS
     REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2) 
     REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
     REAL,    INTENT (INOUT) :: svac(2),pvac(2)
-    REAL,  INTENT (INOUT) :: dd(0:atoms%lmaxd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: du(0:atoms%lmaxd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: uu(0:atoms%lmaxd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: ddnmt(0:llpd,sphhar%nlhd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: dunmt(0:llpd,sphhar%nlhd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: udnmt(0:llpd,sphhar%nlhd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: uunmt(0:llpd,sphhar%nlhd,atoms%ntype)
     REAL,  INTENT (INOUT) :: sqlo(atoms%nlod,atoms%ntype),enerlo(atoms%nlod,atoms%ntype)
-    REAL,  INTENT (INOUT) :: aclo(atoms%nlod,atoms%ntype),bclo(atoms%nlod,atoms%ntype)
-    REAL,  INTENT (INOUT) :: cclo(atoms%nlod,atoms%nlod,atoms%ntype)
-    REAL,  INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    REAL,  INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    COMPLEX,INTENT(INOUT) :: ddnmt21((atoms%lmaxd+1)**2  )
-    COMPLEX,INTENT(INOUT) :: dunmt21((atoms%lmaxd+1)**2  )
-    COMPLEX,INTENT(INOUT) :: udnmt21((atoms%lmaxd+1)**2  )
-    COMPLEX,INTENT(INOUT) :: uunmt21((atoms%lmaxd+1)**2  )
-    COMPLEX,INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    TYPE (t_orb),  INTENT (INOUT) :: orb
-    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntype)
-    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntype)
+    TYPE (t_orb),              INTENT(INOUT) :: orb
+    TYPE (t_denCoeffs),        INTENT(INOUT) :: denCoeffs
+    TYPE (t_denCoeffsOffdiag), INTENT(INOUT) :: denCoeffsOffdiag
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n
@@ -115,17 +98,17 @@ CONTAINS
     !
     n = (atoms%lmaxd+1)*atoms%ntype
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(uu,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%uu(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, uu, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%uu(0:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(du,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%du(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, du, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%du(0:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(dd,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%dd(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, dd, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%dd(0:,:,jspin), 1)
     ENDIF
     DEALLOCATE (r_b)
     !
@@ -133,21 +116,21 @@ CONTAINS
     !
     n = (llpd+1)*sphhar%nlhd*atoms%ntype
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(uunmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%uunmt(0:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, uunmt, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%uunmt(0:,:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(udnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%udnmt(0:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, udnmt, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%udnmt(0:,:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(dunmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%dunmt(0:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, dunmt, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%dunmt(0:,:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(ddnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(denCoeffs%ddnmt(0:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, ddnmt, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%ddnmt(0:,:,:,jspin), 1)
     ENDIF
     DEALLOCATE (r_b)
     !
@@ -203,13 +186,13 @@ CONTAINS
 
        n=atoms%nlod*atoms%ntype 
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(aclo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(denCoeffs%aclo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, aclo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%aclo(:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(bclo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(denCoeffs%bclo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, bclo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%bclo(:,:,jspin), 1)
        ENDIF
        CALL MPI_REDUCE(enerlo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
@@ -223,29 +206,29 @@ CONTAINS
 
        n = atoms%nlod * atoms%nlod * atoms%ntype
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(cclo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(denCoeffs%cclo(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, cclo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%cclo(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
        n = (atoms%lmaxd+1) * atoms%ntype * atoms%nlod * sphhar%nlhd
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(acnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(denCoeffs%acnmt(0:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, acnmt, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%acnmt(0:,:,:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(bcnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(denCoeffs%bcnmt(0:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, bcnmt, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%bcnmt(0:,:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
        n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
        ALLOCATE (r_b(n))
-       CALL MPI_REDUCE(ccnmt,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(denCoeffs%ccnmt(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, ccnmt, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%ccnmt(:,:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
@@ -379,21 +362,21 @@ CONTAINS
           !
           n = (atoms%lmaxd+1) * atoms%ntype
           ALLOCATE(c_b(n))
-          CALL MPI_REDUCE(mt21(:,:)%uu,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%uu21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, mt21(:,:)%uu, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%uu21(:,:), 1)
           ENDIF
-          CALL MPI_REDUCE(mt21(:,:)%ud,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%ud21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, mt21(:,:)%ud, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%ud21(:,:), 1)
           ENDIF
-          CALL MPI_REDUCE(mt21(:,:)%du,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%du21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, mt21(:,:)%du, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%du21(:,:), 1)
           ENDIF
-          CALL MPI_REDUCE(mt21(:,:)%dd,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%dd21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, mt21(:,:)%dd, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%dd21(:,:), 1)
           ENDIF
           DEALLOCATE (c_b)
           !
@@ -401,21 +384,21 @@ CONTAINS
           !
           n = atoms%nlod * atoms%ntype
           ALLOCATE(c_b(n))
-          CALL MPI_REDUCE(lo21(:,:)%uulo,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%uulo21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, lo21(:,:)%uulo, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%uulo21(:,:), 1)
           ENDIF
-          CALL MPI_REDUCE(lo21(:,:)%ulou,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%ulou21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, lo21(:,:)%ulou, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%ulou21(:,:), 1)
           ENDIF
-          CALL MPI_REDUCE(lo21(:,:)%dulo,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%dulo21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, lo21(:,:)%dulo, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%dulo21(:,:), 1)
           ENDIF
-          CALL MPI_REDUCE(lo21(:,:)%ulod,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%ulod21(:,:),c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, lo21(:,:)%ulod, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%ulod21(:,:), 1)
           ENDIF
           DEALLOCATE (c_b)
           !
@@ -423,9 +406,9 @@ CONTAINS
           !
           n = atoms%nlod*atoms%nlod*atoms%ntype
           ALLOCATE(c_b(n))
-          CALL MPI_REDUCE(uloulop21,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          CALL MPI_REDUCE(denCoeffsOffdiag%uloulop21,c_b,n,CPP_MPI_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
-             CALL CPP_BLAS_ccopy(n, c_b, 1, uloulop21, 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%uloulop21, 1)
           ENDIF
           DEALLOCATE (c_b)
 
@@ -435,21 +418,21 @@ CONTAINS
              !
              n = (atoms%lmaxd+1)**2 *sphhar%nlhd*atoms%ntype
              ALLOCATE(c_b(n))
-             CALL MPI_REDUCE(uunmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
+             CALL MPI_REDUCE(denCoeffsOffdiag%uunmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
              IF (mpi%irank.EQ.0) THEN
-                CALL CPP_BLAS_ccopy(n, c_b, 1, uunmt21, 1)
+                CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%uunmt21, 1)
              ENDIF
-             CALL MPI_REDUCE(udnmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
+             CALL MPI_REDUCE(denCoeffsOffdiag%udnmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
              IF (mpi%irank.EQ.0) THEN
-                CALL CPP_BLAS_ccopy(n, c_b, 1, udnmt21, 1)
+                CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%udnmt21, 1)
              ENDIF
-             CALL MPI_REDUCE(dunmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
+             CALL MPI_REDUCE(denCoeffsOffdiag%dunmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
              IF (mpi%irank.EQ.0) THEN
-                CALL CPP_BLAS_ccopy(n, c_b, 1, dunmt21, 1)
+                CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%dunmt21, 1)
              ENDIF
-             CALL MPI_REDUCE(ddnmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
+             CALL MPI_REDUCE(denCoeffsOffdiag%ddnmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0 ,MPI_COMM_WORLD,ierr)
              IF (mpi%irank.EQ.0) THEN
-                CALL CPP_BLAS_ccopy(n, c_b, 1, ddnmt21, 1)
+                CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%ddnmt21, 1)
              ENDIF
              DEALLOCATE (c_b)
 

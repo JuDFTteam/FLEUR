@@ -7,12 +7,12 @@ MODULE m_forcea12
 CONTAINS
   SUBROUTINE force_a12(&
        atoms,nobd,sym, DIMENSION, cell,oneD,&
-       we,jsp,ne,usdus,acof,bcof,e1cof,e2cof,&
-       acoflo,bcoflo, results,f_a12)
+       we,jsp,ne,usdus,acof,bcof,force,results)
     USE m_types
     USE m_constants
     IMPLICIT NONE
 
+    TYPE(t_force),INTENT(INOUT)     :: force
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_dimension),INTENT(IN)    :: DIMENSION
     TYPE(t_oneD),INTENT(IN)         :: oneD
@@ -29,11 +29,6 @@ CONTAINS
     REAL,    INTENT (IN) :: we(nobd) 
     COMPLEX, INTENT (IN) ::  acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
     COMPLEX, INTENT (IN) ::  bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: e1cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: e2cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: acoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: f_a12(3,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX a12,cil1,cil2
@@ -97,8 +92,8 @@ CONTAINS
                 DO m1 = -l1,l1
                    lm1 = l1* (l1+1) + m1
                    DO ie = 1,ne
-                      acof_flapw(ie,lm1) = acof_flapw(ie,lm1) - acoflo(m1,ie,ilo,natrun)
-                      bcof_flapw(ie,lm1) = bcof_flapw(ie,lm1) - bcoflo(m1,ie,ilo,natrun)
+                      acof_flapw(ie,lm1) = acof_flapw(ie,lm1) - force%acoflo(m1,ie,ilo,natrun)
+                      bcof_flapw(ie,lm1) = bcof_flapw(ie,lm1) - force%bcoflo(m1,ie,ilo,natrun)
                    ENDDO
                 ENDDO
              ENDDO
@@ -116,8 +111,8 @@ CONTAINS
                          DO ie = 1,ne
                             !
                             a12 = a12 + CONJG(cil1*&
-                                 ( acof_flapw(ie,lm1)*usdus%us(l1,n,jsp) + bcof_flapw(ie,lm1)*usdus%uds(l1,n,jsp) ))*cil2*&
-                                 ( e1cof(ie,lm2,natrun)*usdus%us(l2,n,jsp)+ e2cof(ie,lm2,natrun)*usdus%uds(l2,n,jsp))*we(ie)
+                                 (acof_flapw(ie,lm1)*usdus%us(l1,n,jsp) + bcof_flapw(ie,lm1)*usdus%uds(l1,n,jsp) ))*cil2*&
+                                 (force%e1cof(ie,lm2,natrun)*usdus%us(l2,n,jsp)+ force%e2cof(ie,lm2,natrun)*usdus%uds(l2,n,jsp))*we(ie)
 
                          END DO
                          aaa(1) = alpha(l1,m1)*krondel(l2,l1-1)* krondel(m2,m1+1)
@@ -234,7 +229,7 @@ CONTAINS
           !  is also a solution of Schr. equ. if psi is one.
           DO i = 1,3
              results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a12(i))
-             f_a12(i,n)     = f_a12(i,n)     + forc_a12(i)
+             force%f_a12(i,n) = force%f_a12(i,n) + forc_a12(i)
           END DO
           !
           !     write result moved to force_a8

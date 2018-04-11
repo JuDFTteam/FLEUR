@@ -4,9 +4,7 @@ MODULE m_forcea8
   !
   ! ************************************************************
 CONTAINS
-  SUBROUTINE force_a8(input,atoms,sphhar,&
-       jsp, vr,rho, f_a12,f_a21,f_b4,f_b8,&
-       force)
+  SUBROUTINE force_a8(input,atoms,sphhar,jsp,vr,rho,force,results)
     !
     USE m_intgr, ONLY : intgr3
     USE m_constants,ONLY: pi_const,sfp_const
@@ -17,16 +15,15 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_force),INTENT(IN)       :: force
+    TYPE(t_results),INTENT(INOUT)  :: results
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp 
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: f_a12(3,atoms%ntype),f_a21(3,atoms%ntype)
-    COMPLEX, INTENT (IN) :: f_b4(3,atoms%ntype),f_b8(3,atoms%ntype)
     REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (INOUT) :: force(:,:,:) !(3,ntypd,jspd)
     !     ..
     !     .. Local Scalars ..
     COMPLEX aaa,bbb,ccc,ddd,eee,fff
@@ -240,7 +237,7 @@ CONTAINS
           !     sum to existing forces
           !
           DO i = 1,3
-             force(i,n,jsp) = force(i,n,jsp) + REAL(forc_a8(i))
+             results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a8(i))
           END DO
           !
           !     write result
@@ -267,8 +264,8 @@ CONTAINS
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8030) n
              WRITE (16,FMT=8030) n
-             WRITE  (6,FMT=8040) (f_a12(i,n),i=1,3)
-             WRITE (16,FMT=8040) (f_a12(i,n),i=1,3)
+             WRITE  (6,FMT=8040) (force%f_a12(i,n),i=1,3)
+             WRITE (16,FMT=8040) (force%f_a12(i,n),i=1,3)
           ENDIF
 8030      FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
 8040      FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
@@ -280,8 +277,8 @@ CONTAINS
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8070) n
              WRITE (16,FMT=8070) n
-             WRITE  (6,FMT=8080) (f_b4(i,n),i=1,3)
-             WRITE (16,FMT=8080) (f_b4(i,n),i=1,3)
+             WRITE  (6,FMT=8080) (force%f_b4(i,n),i=1,3)
+             WRITE (16,FMT=8080) (force%f_b4(i,n),i=1,3)
           ENDIF
 8070      FORMAT (' FORCES: EQUATION B4 FOR ATOM TYPE',i4)
 8080      FORMAT (' FX_B4=',2f10.6,' FY_B4=',2f10.6,' FZ_B4=',2f10.6)
@@ -292,8 +289,8 @@ CONTAINS
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8090) n
              WRITE (16,FMT=8090) n
-             WRITE  (6,FMT=8100) (f_b8(i,n),i=1,3)
-             WRITE (16,FMT=8100) (f_b8(i,n),i=1,3)
+             WRITE  (6,FMT=8100) (force%f_b8(i,n),i=1,3)
+             WRITE (16,FMT=8100) (force%f_b8(i,n),i=1,3)
           ENDIF
 8090      FORMAT (' FORCES: EQUATION B8 FOR ATOM TYPE',i4)
 8100      FORMAT (' FX_B8=',2f10.6,' FY_B8=',2f10.6,' FZ_B8=',2f10.6)
@@ -305,8 +302,8 @@ CONTAINS
        IF (atoms%l_geo(n)) THEN
           WRITE  (6,FMT=8050) n
           WRITE (16,FMT=8050) n
-          WRITE  (6,FMT=8060) (f_a21(i,n),i=1,3)
-          WRITE (16,FMT=8060) (f_a21(i,n),i=1,3)
+          WRITE  (6,FMT=8060) (force%f_a21(i,n),i=1,3)
+          WRITE (16,FMT=8060) (force%f_a21(i,n),i=1,3)
        ENDIF
 8050   FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060   FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)

@@ -15,24 +15,22 @@ MODULE m_rhonmtlo
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE rhonmtlo(atoms,sphhar, ne,we,acof,bcof,ccof, acnmt,bcnmt,ccnmt)
+  SUBROUTINE rhonmtlo(atoms,sphhar, ne,we,acof,bcof,ccof,denCoeffs,ispin)
     USE m_gaunt,ONLY:gaunt1
     USE m_types
+
     IMPLICIT NONE
-    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne   
-    !     ..
-    !     .. Array Arguments ..
+
+    TYPE(t_sphhar),   INTENT(IN)    :: sphhar
+    TYPE(t_atoms),    INTENT(IN)    :: atoms
+    TYPE(t_denCoeffs),INTENT(INOUT) :: denCoeffs
+
+    INTEGER, INTENT (IN) :: ne, ispin
+
     REAL,    INTENT (IN) :: we(:)!(nobd)
     COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX ci,cmv,fact,cf1
@@ -87,8 +85,8 @@ CONTAINS
                          na = na + 1
                          DO i = 1,ne
                             cf1 = fact *  ccof(m,i,lo,na)
-                            acnmt(lp,lo,lh,ntyp) =acnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * CONJG(acof(i,lmp,na)) )
-                            bcnmt(lp,lo,lh,ntyp) =bcnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * CONJG(bcof(i,lmp,na)) )
+                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * CONJG(acof(i,lmp,na)) )
+                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * CONJG(bcof(i,lmp,na)) )
                          END DO
                       END DO
                    END DO
@@ -107,8 +105,8 @@ CONTAINS
                          na = na + 1
                          DO i = 1,ne
                             cf1 = fact * CONJG(ccof(m,i,lo,na))
-                            acnmt(lp,lo,lh,ntyp) = acnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * acof(i,lmp,na) )
-                            bcnmt(lp,lo,lh,ntyp) = bcnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * bcof(i,lmp,na) )
+                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * acof(i,lmp,na) )
+                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) + we(i) * REAL(cf1 * bcof(i,lmp,na) )
                          END DO
                       END DO
                    END DO
@@ -125,8 +123,8 @@ CONTAINS
                          DO nn = 1,atoms%neq(ntyp)
                             na = na + 1
                             DO i = 1,ne
-                               ccnmt(lop,lo,lh,ntyp) =&
-                                    ccnmt(lop,lo,lh,ntyp) + we(i) * REAL(fact * CONJG(ccof(mp,i,lop,na))*ccof(m ,i,lo ,na))
+                               denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) =&
+                                  denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) + we(i) * REAL(fact * CONJG(ccof(mp,i,lop,na))*ccof(m ,i,lo ,na))
                             END DO
                          END DO
                       END IF

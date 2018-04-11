@@ -33,7 +33,92 @@ PRIVATE
          PROCEDURE,PASS :: init => orb_init
    END TYPE t_orb
 
-PUBLIC t_orb
+   TYPE t_denCoeffs
+      ! spherical
+      REAL, ALLOCATABLE    :: uu(:,:,:)
+      REAL, ALLOCATABLE    :: dd(:,:,:)
+      REAL, ALLOCATABLE    :: du(:,:,:)
+
+      ! nonspherical
+      REAL, ALLOCATABLE    :: uunmt(:,:,:,:)
+      REAL, ALLOCATABLE    :: ddnmt(:,:,:,:)
+      REAL, ALLOCATABLE    :: dunmt(:,:,:,:)
+      REAL, ALLOCATABLE    :: udnmt(:,:,:,:)
+
+      ! spherical - LOs
+      REAL, ALLOCATABLE    :: aclo(:,:,:)
+      REAL, ALLOCATABLE    :: bclo(:,:,:)
+      REAL, ALLOCATABLE    :: cclo(:,:,:,:)
+
+      ! nonspherical - LOs
+      REAL, ALLOCATABLE    :: acnmt(:,:,:,:,:)
+      REAL, ALLOCATABLE    :: bcnmt(:,:,:,:,:)
+      REAL, ALLOCATABLE    :: ccnmt(:,:,:,:,:)
+
+
+      CONTAINS
+      PROCEDURE,PASS :: init => denCoeffs_init
+   END TYPE t_denCoeffs
+
+   TYPE t_denCoeffsOffdiag
+      ! spherical
+      COMPLEX, ALLOCATABLE :: uu21(:,:)
+      COMPLEX, ALLOCATABLE :: dd21(:,:)
+      COMPLEX, ALLOCATABLE :: du21(:,:)
+      COMPLEX, ALLOCATABLE :: ud21(:,:)
+
+      ! nonspherical
+      COMPLEX, ALLOCATABLE :: uunmt21(:,:,:)
+      COMPLEX, ALLOCATABLE :: ddnmt21(:,:,:)
+      COMPLEX, ALLOCATABLE :: dunmt21(:,:,:)
+      COMPLEX, ALLOCATABLE :: udnmt21(:,:,:)
+
+      ! spherical - LOs
+      COMPLEX, ALLOCATABLE :: uulo21(:,:)
+      COMPLEX, ALLOCATABLE :: dulo21(:,:)
+      COMPLEX, ALLOCATABLE :: ulou21(:,:)
+      COMPLEX, ALLOCATABLE :: ulod21(:,:)
+
+      COMPLEX, ALLOCATABLE :: uloulop21(:,:,:)
+
+      ! norms
+      REAL, ALLOCATABLE     :: uu21n(:,:)
+      REAL, ALLOCATABLE     :: ud21n(:,:)
+      REAL, ALLOCATABLE     :: du21n(:,:)
+      REAL, ALLOCATABLE     :: dd21n(:,:)
+
+      REAL, ALLOCATABLE     :: uulo21n(:,:)
+      REAL, ALLOCATABLE     :: dulo21n(:,:)
+      REAL, ALLOCATABLE     :: ulou21n(:,:)
+      REAL, ALLOCATABLE     :: ulod21n(:,:)
+
+      REAL, ALLOCATABLE     :: uloulop21n(:,:,:)
+
+      CONTAINS
+      PROCEDURE,PASS :: init => denCoeffsOffdiag_init
+   END TYPE t_denCoeffsOffdiag
+
+   TYPE t_force
+      COMPLEX, ALLOCATABLE :: f_a12(:,:)
+      COMPLEX, ALLOCATABLE :: f_a21(:,:)
+      COMPLEX, ALLOCATABLE :: f_b4(:,:)
+      COMPLEX, ALLOCATABLE :: f_b8(:,:)
+
+      COMPLEX, ALLOCATABLE :: e1cof(:,:,:)
+      COMPLEX, ALLOCATABLE :: e2cof(:,:,:)
+      COMPLEX, ALLOCATABLE :: aveccof(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: bveccof(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: cveccof(:,:,:,:,:)
+
+      COMPLEX, ALLOCATABLE :: acoflo(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: bcoflo(:,:,:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init1 => force_init1
+         PROCEDURE,PASS :: init2 => force_init2
+   END TYPE t_force
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force
 
 CONTAINS
 
@@ -115,5 +200,238 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
    thisOrb%m = CMPLX(0.0,0.0)
 
 END SUBROUTINE orb_init
+
+SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_denCoeffs), INTENT(INOUT) :: thisDenCoeffs
+   TYPE(t_atoms),      INTENT(IN)    :: atoms
+   TYPE(t_sphhar),     INTENT(IN)    :: sphhar
+   INTEGER,            INTENT(IN)    :: jsp_start
+   INTEGER,            INTENT(IN)    :: jsp_end
+
+   INTEGER                           :: llpd
+
+   llpd = (atoms%lmaxd*(atoms%lmaxd+3)) / 2
+
+   ALLOCATE (thisDenCoeffs%uu(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%dd(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%du(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end))
+
+   ALLOCATE (thisDenCoeffs%uunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%ddnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%dunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%udnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+
+   ALLOCATE (thisDenCoeffs%aclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%bclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%cclo(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end))
+
+   ALLOCATE (thisDenCoeffs%acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE (thisDenCoeffs%ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
+
+   thisDenCoeffs%uu = 0.0
+   thisDenCoeffs%dd = 0.0
+   thisDenCoeffs%du = 0.0
+
+   thisDenCoeffs%uunmt = 0.0
+   thisDenCoeffs%ddnmt = 0.0
+   thisDenCoeffs%dunmt = 0.0
+   thisDenCoeffs%udnmt = 0.0
+
+   thisDenCoeffs%aclo = 0.0
+   thisDenCoeffs%bclo = 0.0
+   thisDenCoeffs%cclo = 0.0
+
+   thisDenCoeffs%acnmt = 0.0
+   thisDenCoeffs%bcnmt = 0.0
+   thisDenCoeffs%ccnmt = 0.0
+
+END SUBROUTINE denCoeffs_init
+
+SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fmpl)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_denCoeffsOffdiag), INTENT(INOUT) :: thisDenCoeffsOffdiag
+   TYPE(t_atoms),      INTENT(IN)    :: atoms
+   TYPE(t_noco),       INTENT(IN)    :: noco
+   TYPE(t_sphhar),     INTENT(IN)    :: sphhar
+   LOGICAL,            INTENT(IN)    :: l_fmpl
+
+   IF (noco%l_mperp) THEN
+      ALLOCATE (thisDenCoeffsOffdiag%uu21(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ud21(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%du21(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%dd21(0:atoms%lmaxd,atoms%ntype))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uulo21(atoms%nlod,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%dulo21(atoms%nlod,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ulou21(atoms%nlod,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ulod21(atoms%nlod,atoms%ntype))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uloulop21(atoms%nlod,atoms%nlod,atoms%ntype))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uu21n(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ud21n(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%du21n(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%dd21n(0:atoms%lmaxd,atoms%ntype))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uulo21n(atoms%nlod,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%dulo21n(atoms%nlod,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ulou21n(atoms%nlod,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ulod21n(atoms%nlod,atoms%ntype))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uloulop21n(atoms%nlod,atoms%nlod,atoms%ntype))
+   ELSE
+      ALLOCATE (thisDenCoeffsOffdiag%uu21(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ud21(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%du21(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%dd21(1,1))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uulo21(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%dulo21(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ulou21(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ulod21(1,1))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uloulop21(1,1,1))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uu21n(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ud21n(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%du21n(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%dd21n(1,1))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uulo21n(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%dulo21n(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ulou21n(1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ulod21n(1,1))
+
+      ALLOCATE (thisDenCoeffsOffdiag%uloulop21n(1,1,1))
+   END IF
+
+   IF (noco%l_mperp.AND.l_fmpl) THEN
+      ALLOCATE (thisDenCoeffsOffdiag%uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
+      ALLOCATE (thisDenCoeffsOffdiag%ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
+   ELSE
+      ALLOCATE (thisDenCoeffsOffdiag%uunmt21(1,1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%udnmt21(1,1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%dunmt21(1,1,1))
+      ALLOCATE (thisDenCoeffsOffdiag%ddnmt21(1,1,1))
+   END IF
+
+   thisDenCoeffsOffdiag%uu21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%ud21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%du21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%dd21 = CMPLX(0.0,0.0)
+
+   thisDenCoeffsOffdiag%uulo21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%dulo21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%ulou21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%ulod21 = CMPLX(0.0,0.0)
+
+   thisDenCoeffsOffdiag%uloulop21 = CMPLX(0.0,0.0)
+
+   thisDenCoeffsOffdiag%uu21n = 0.0
+   thisDenCoeffsOffdiag%ud21n = 0.0
+   thisDenCoeffsOffdiag%du21n = 0.0
+   thisDenCoeffsOffdiag%dd21n = 0.0
+
+   thisDenCoeffsOffdiag%uulo21n = 0.0
+   thisDenCoeffsOffdiag%dulo21n = 0.0
+   thisDenCoeffsOffdiag%ulou21n = 0.0
+   thisDenCoeffsOffdiag%ulod21n = 0.0
+
+   thisDenCoeffsOffdiag%uloulop21n = 0.0
+
+   thisDenCoeffsOffdiag%uunmt21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%udnmt21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%dunmt21 = CMPLX(0.0,0.0)
+   thisDenCoeffsOffdiag%ddnmt21 = CMPLX(0.0,0.0)
+
+END SUBROUTINE denCoeffsOffdiag_init
+
+SUBROUTINE force_init1(thisForce,input,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_force),     INTENT(INOUT) :: thisForce
+   TYPE(t_input),      INTENT(IN)    :: input
+   TYPE(t_atoms),      INTENT(IN)    :: atoms
+
+   IF (input%l_f) THEN
+      ALLOCATE (thisForce%f_a12(3,atoms%ntype))
+      ALLOCATE (thisForce%f_a21(3,atoms%ntype))
+      ALLOCATE (thisForce%f_b4(3,atoms%ntype))
+      ALLOCATE (thisForce%f_b8(3,atoms%ntype))
+   ELSE
+      ALLOCATE (thisForce%f_a12(1,1))
+      ALLOCATE (thisForce%f_a21(1,1))
+      ALLOCATE (thisForce%f_b4(1,1))
+      ALLOCATE (thisForce%f_b8(1,1))
+   END IF
+
+   thisForce%f_a12 = CMPLX(0.0,0.0)
+   thisForce%f_a21 = CMPLX(0.0,0.0)
+   thisForce%f_b4 = CMPLX(0.0,0.0)
+   thisForce%f_b8 = CMPLX(0.0,0.0)
+
+END SUBROUTINE force_init1
+
+SUBROUTINE force_init2(thisForce,noccbd,input,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_force),     INTENT(INOUT) :: thisForce
+   TYPE(t_input),      INTENT(IN)    :: input
+   TYPE(t_atoms),      INTENT(IN)    :: atoms
+   INTEGER,            INTENT(IN)    :: noccbd
+
+   IF (ALLOCATED(thisForce%e1cof)) DEALLOCATE(thisForce%e1cof)
+   IF (ALLOCATED(thisForce%e2cof)) DEALLOCATE(thisForce%e2cof)
+   IF (ALLOCATED(thisForce%acoflo)) DEALLOCATE(thisForce%acoflo)
+   IF (ALLOCATED(thisForce%bcoflo)) DEALLOCATE(thisForce%bcoflo)
+   IF (ALLOCATED(thisForce%aveccof)) DEALLOCATE(thisForce%aveccof)
+   IF (ALLOCATED(thisForce%bveccof)) DEALLOCATE(thisForce%bveccof)
+   IF (ALLOCATED(thisForce%cveccof)) DEALLOCATE(thisForce%cveccof)
+
+   IF (input%l_f) THEN
+      ALLOCATE (thisForce%e1cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
+      ALLOCATE (thisForce%e2cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
+      ALLOCATE (thisForce%acoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
+      ALLOCATE (thisForce%bcoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
+      ALLOCATE (thisForce%aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
+      ALLOCATE (thisForce%bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
+      ALLOCATE (thisForce%cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
+   ELSE
+      ALLOCATE (thisForce%e1cof(1,1,1))
+      ALLOCATE (thisForce%e2cof(1,1,1))
+      ALLOCATE (thisForce%acoflo(1,1,1,1))
+      ALLOCATE (thisForce%bcoflo(1,1,1,1))
+      ALLOCATE (thisForce%aveccof(1,1,1,1))
+      ALLOCATE (thisForce%bveccof(1,1,1,1))
+      ALLOCATE (thisForce%cveccof(1,1,1,1,1))
+   END IF
+
+   thisForce%e1cof = CMPLX(0.0,0.0)
+   thisForce%e2cof = CMPLX(0.0,0.0)
+   thisForce%acoflo = CMPLX(0.0,0.0)
+   thisForce%bcoflo = CMPLX(0.0,0.0)
+   thisForce%aveccof = CMPLX(0.0,0.0)
+   thisForce%bveccof = CMPLX(0.0,0.0)
+   thisForce%cveccof = CMPLX(0.0,0.0)
+
+END SUBROUTINE force_init2
 
 END MODULE m_types_cdnval
