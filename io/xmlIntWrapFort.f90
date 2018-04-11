@@ -140,7 +140,12 @@ SUBROUTINE xmlValidateDoc()
    errorStatus = 0
    errorStatus = validateXMLDocument()
    IF(errorStatus.NE.0) THEN
-      CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xmlValidateDoc")
+      IF (judft_was_argument("-noXMLvalidate")) THEN
+         PRINT *,"WARNING, inp.xml did not validate, but you decided to try anyway..."
+         PRINT *,"You will get what you deserve!"
+      ELSE
+         CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xmlValidateDoc")
+      END IF
    END IF
 
 END SUBROUTINE xmlValidateDoc

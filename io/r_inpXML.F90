@@ -1639,15 +1639,15 @@ SUBROUTINE r_inpXML(&
 !!! Start of force-theorem section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  xPathA = '/fleurInput/forcetheorem'
+  xPathA = '/fleurInput/Forcetheorem'
   numberNodes = xmlGetNumberOfNodes(xPathA)
   IF (numberNodes.EQ.1) THEN
      !Magnetic anisotropy...
-     xPathA = '/fleurInput/forcetheorem/mae'
+     xPathA = '/fleurInput/Forcetheorem/MAE'
      numberNodes = xmlGetNumberOfNodes(xPathA)
      IF (numberNodes.EQ.1) THEN
-        lString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'theta')
-        nString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'phi')
+        lString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta')
+        nString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi')
         ALLOCATE(t_forcetheo_mae::forcetheo)
         SELECT TYPE(forcetheo)
         TYPE IS(t_forcetheo_mae) !this is ok, we just allocated the type...
@@ -1655,7 +1655,7 @@ SUBROUTINE r_inpXML(&
         END SELECT
      ENDIF
      !spin-spiral dispersion
-     xPathA = '/fleurInput/forcetheorem/ssdisp'
+     xPathA = '/fleurInput/Forcetheorem/SpinSpiralDispersion'
      numberNodes = xmlGetNumberOfNodes(xPathA)
      IF (numberNodes.EQ.1) THEN
         ALLOCATE(t_forcetheo_ssdisp::forcetheo)
@@ -1665,26 +1665,26 @@ SUBROUTINE r_inpXML(&
         END SELECT
      ENDIF
      !dmi
-     xPathA = '/fleurInput/forcetheorem/dmi'
+     xPathA = '/fleurInput/forcetheorem/DMI'
      numberNodes = xmlGetNumberOfNodes(xPathA)
      IF (numberNodes.EQ.1) THEN
-        lString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'theta')
-        nString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'phi')
+        lString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta')
+        nString=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi')
         ALLOCATE(t_forcetheo_dmi::forcetheo)
         SELECT TYPE(forcetheo)
         TYPE IS(t_forcetheo_dmi) !this is ok, we just allocated the type...
-           CALL forcetheo%init(priv_read_q_list(xPathA),lstring,nstring)
+           CALL forcetheo%init(priv_read_q_list(xPathA//'/QVectors'),lstring,nstring)
         END SELECT
      ENDIF
      !jij
-     xPathA = '/fleurInput/forcetheorem/jij'
+     xPathA = '/fleurInput/forcetheorem/Jij'
      numberNodes = xmlGetNumberOfNodes(xPathA)
      IF (numberNodes.EQ.1) THEN
-        thetaj=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'thetaj'))
+        thetaj=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@thetaj'))
         ALLOCATE(t_forcetheo_jij::forcetheo)
         SELECT TYPE(forcetheo)
         TYPE IS(t_forcetheo_jij) !this is ok, we just allocated the type...
-           CALL forcetheo%init(priv_read_q_list(xPathA),thetaj,atoms)
+           CALL forcetheo%init(priv_read_q_list(xPathA//'/QVectors'),thetaj,atoms)
         END SELECT
      ENDIF
      
@@ -2154,10 +2154,10 @@ FUNCTION countStringTokens(line) RESULT(tokenCount)
    INTEGER:: n,i
    CHARACTER(len=256):: xpatha,valueString
 
-   n=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(path))//'qPoints/@count'))
+   n=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(path))//'/@count'))
    ALLOCATE(q(3,n))
    DO i = 1, n
-      WRITE(xPathA,*) path//'/qPoints/q[',i,']'
+      WRITE(xPathA,*) path//'/q[',i,']'
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
       READ(valueString,*) q(1,i),q(2,i),q(3,i)
    END DO
