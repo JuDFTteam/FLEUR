@@ -129,8 +129,8 @@ CONTAINS
          nbands,noded,nodeu,noccbd,nslibd,na,&
          ikpt,jsp_start,jsp_end,ispin
     INTEGER  skip_t,skip_tt
-    INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l
-    LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot
+    INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
+    LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot,l_real
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
     REAL    e_mcd(atoms%ntype,input%jspins,dimension%nstd)
@@ -170,6 +170,7 @@ CONTAINS
     TYPE (t_zMat)              :: zMat
     INTEGER :: nkpt_extended
 
+    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
     zmat%l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
     !     ..
     !     ..
@@ -415,21 +416,9 @@ CONTAINS
                 n_end    = noccbd
              END IF
           END IF
-          zMat%nbasfcn=lapw%nv(1)+atoms%nlotot
-          IF (noco%l_noco) zMat%nbasfcn=zMat%nbasfcn+lapw%nv(2)+atoms%nlotot
-          IF (zmat%l_real) THEN
-             IF (.NOT.ALLOCATED(zMat%z_r)) THEN
-                ALLOCATE (zMat%z_r(zmat%nbasfcn,dimension%neigd))
-                zMat%nbands = dimension%neigd
-             END IF
-             zMat%z_r = 0
-          ELSE
-             IF (.NOT.ALLOCATED(zMat%z_c)) THEN
-                ALLOCATE (zMat%z_c(zmat%nbasfcn,dimension%neigd))
-                zMat%nbands = dimension%neigd
-             END IF
-             zMat%z_c = 0
-          endif
+
+          nbasfcn = MERGE(zMat%nbasfcn+lapw%nv(2),lapw%nv(1),noco%l_noco)+atoms%nlotot
+          CALL zMat%init(l_real,nbasfcn,dimension%neigd)
           CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                         ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                         noccbd,n_start,n_end,nbands,eig,zMat)
@@ -684,11 +673,6 @@ CONTAINS
           END IF
 
           !--->  end of loop over PE's
-          IF (zmat%l_real) THEN
-             DEALLOCATE (zMat%z_r)
-          ELSE
-             DEALLOCATE (zMat%z_c)
-          END IF
         ELSE !(ikpt < nkpt + 1)
 #ifdef CPP_MPI
           ! Synchronizes the RMA operations

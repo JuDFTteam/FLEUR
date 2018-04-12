@@ -5,12 +5,14 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_misc
+
+IMPLICIT NONE
+
   !*************************************************************
   !     This module contains definitions for all kind of types
   !*************************************************************
-  !
+
   ! Type for the HF total energy
-  !
   TYPE t_energy_hf
      REAL :: valence
      REAL :: core
@@ -19,6 +21,7 @@ MODULE m_types_misc
   TYPE prodtype
      INTEGER :: l1,l2,n1,n2
   END TYPE prodtype
+
   TYPE t_hybdat
      INTEGER              :: lmaxcd,maxindxc
      REAL,  ALLOCATABLE   ::  gridf(:,:)                                    !alloc in util.F
@@ -60,8 +63,6 @@ MODULE m_types_misc
      REAL              ::  te_hfex_loc(2)
      REAL, ALLOCATABLE :: w_iks(:,:,:)
   END TYPE t_results
-
-
  
   TYPE t_zMat
      LOGICAL              :: l_real
@@ -69,6 +70,9 @@ MODULE m_types_misc
      INTEGER              :: nbands
      REAL,    ALLOCATABLE :: z_r(:,:) ! z_r(nbasfcn,nbands)
      COMPLEX, ALLOCATABLE :: z_c(:,:) ! z_c(nbasfcn,nbands)
+
+     CONTAINS
+        PROCEDURE,PASS :: init => zMat_init
   END TYPE t_zMat
 
   TYPE t_hamOvlp
@@ -77,6 +81,31 @@ MODULE m_types_misc
      REAL,    ALLOCATABLE :: a_r(:), b_r(:)
      COMPLEX, ALLOCATABLE :: a_c(:), b_c(:)
   END TYPE t_hamOvlp
- 
+
+CONTAINS
+
+SUBROUTINE zMat_init(thisZMat,l_real,nbasfcn,nbands)
+
+   IMPLICIT NONE
+
+   CLASS(t_zMat),      INTENT(INOUT) :: thisZMat
+   LOGICAL,            INTENT(IN)    :: l_real
+   INTEGER,            INTENT(IN)    :: nbasfcn,nbands
+
+   thisZMat%l_real = l_real
+   thisZMat%nbasfcn = nbasfcn
+   thisZMat%nbands = nbands
+
+   IF (ALLOCATED(thisZMat%z_r)) DEALLOCATE(thisZMat%z_r)
+   IF (ALLOCATED(thisZMat%z_c)) DEALLOCATE(thisZMat%z_c)
+   IF (l_real) THEN
+      ALLOCATE(thisZMat%z_r(nbasfcn,nbands))
+      thisZMat%z_r = 0.0
+   ELSE
+      ALLOCATE(thisZMat%z_c(nbasfcn,nbands))
+      thisZMat%z_c = CMPLX(0.0,0.0)
+   END IF
+
+END SUBROUTINE zMat_init
  
 END MODULE m_types_misc
