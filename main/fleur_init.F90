@@ -186,7 +186,7 @@
              END IF
 
              CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                   oneD,hybrid,cell,banddos,sliceplot,xcpot,&
+                                   oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
              IF (mpi%irank.EQ.0) THEN

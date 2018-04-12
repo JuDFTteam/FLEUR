@@ -120,8 +120,8 @@ CONTAINS
     CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
                     v%iter,v%mt,v%pw,v%vacz,v%vacxy)
 #endif
-    IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
-                                                    RESHAPE((/19,13,5,5/),(/2,2/)))
+    !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
+    !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
     
      eig_id=open_eig(&
           mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&

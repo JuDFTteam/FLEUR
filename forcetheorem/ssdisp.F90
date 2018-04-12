@@ -74,6 +74,7 @@ CONTAINS
     !Locals
     INTEGER:: n,q
     CHARACTER(LEN=12):: attributes(4)
+    IF (this%q_done==0) RETURN
     !Now output the results
     CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
     CALL openXMLElementPoly('Forcetheorem_SSDISP',(/'qvectors'/),(/SIZE(this%evsum)/))
@@ -84,6 +85,7 @@ CONTAINS
             RESHAPE((/1,6,5,12/),(/2,2/)))
     ENDDO
     CALL closeXMLElement('Forcetheorem_SSDISP')
+    CALL judft_end("Forcetheorem:SpinSpiralDispersion")
   END SUBROUTINE ssdisp_postprocess
 
   SUBROUTINE ssdisp_dist(this,mpi)
@@ -123,7 +125,9 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)      :: v
     TYPE(t_results),INTENT(IN)     :: results
     INTEGER,INTENT(IN)             :: eig_id
-
+    skip=.FALSE.
+    IF (this%q_done==0) RETURN
+  
     this%evsum(this%q_done)=results%seigv
     skip=.TRUE.
   END FUNCTION  ssdisp_eval

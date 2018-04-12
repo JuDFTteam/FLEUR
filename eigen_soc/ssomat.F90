@@ -56,7 +56,6 @@ CONTAINS
   
     TYPE(t_rsoc):: rsoc
     TYPE(t_zmat):: zmat
-    TYPE(t_noco):: noco_tmp
     TYPE(t_usdus):: usdus
     TYPE(t_lapw) :: lapw
 
@@ -84,7 +83,7 @@ CONTAINS
 
     !Calculate radial and angular matrix elements of SOC
     !many directions of SOC at once...
-    CALL spnorb(atoms,noco_tmp,input,mpi, enpara, v%mt, usdus, rsoc,.FALSE.)
+    CALL spnorb(atoms,noco,input,mpi, enpara, v%mt, usdus, rsoc,.FALSE.)
 
     ALLOCATE(soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,SIZE(theta)))

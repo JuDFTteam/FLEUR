@@ -88,6 +88,8 @@ CONTAINS
     !Locals
     INTEGER:: n,q
     CHARACTER(LEN=12):: attributes(4)
+    IF (this%q_done==0) RETURN
+  
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_DMI')
     CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,2)/))
@@ -148,7 +150,9 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)      :: v
     TYPE(t_results),INTENT(IN)     :: results
     INTEGER,INTENT(IN)             :: eig_id
-
+    skip=.FALSE.
+    IF (this%q_done==0) RETURN
+  
     this%evsum(0,this%q_done)=results%seigv
     CALL ssomat(this%evsum(1:,this%q_done),this%theta,this%phi,eig_id,DIMENSION,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results) 

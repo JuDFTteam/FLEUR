@@ -154,6 +154,9 @@ CONTAINS
     !Locals
     INTEGER:: n
     CHARACTER(LEN=18):: attributes(6)
+
+    IF (this%loopindex==0) RETURN
+  
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_JIJ')
     CALL openXMLElementPoly('Forcetheorem_JIJ',(/'Configs'/),(/this%no_loops/))
@@ -192,7 +195,9 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)      :: v
     TYPE(t_results),INTENT(IN)     :: results
     INTEGER,INTENT(IN)             :: eig_id
-
+    skip=.FALSE.
+    IF (this%loopindex==0) RETURN
+  
     this%evsum(this%loopindex)=results%seigv
     skip=.TRUE.
   END FUNCTION  jij_eval

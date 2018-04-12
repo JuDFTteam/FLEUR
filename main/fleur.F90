@@ -1,3 +1,4 @@
+
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -139,6 +140,7 @@ CONTAINS
     it     = 0
     ithf   = 0
     l_cont = ( it < input%itmax )
+    
     results%last_distance = -1.0
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
@@ -170,7 +172,8 @@ CONTAINS
     scfloop:DO WHILE (l_cont)
 
        it = it + 1
-
+       IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/)&
+            ,(/it,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
        inDenRot = inDen
 
 !!$       !+t3e
@@ -358,8 +361,10 @@ CONTAINS
 
 
           IF (forcetheo%eval(eig_id,DIMENSION,atoms,kpts,sym,&
-               cell,noco, input,mpi, oneD,enpara,vToT,results)) CYCLE forcetheoloop
-
+               cell,noco, input,mpi, oneD,enpara,vToT,results)) THEN
+             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
+             CYCLE forcetheoloop
+          ENDIF
 
 
           CALL force_0(results)!        ----> initialise force_old

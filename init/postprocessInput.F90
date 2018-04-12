@@ -9,14 +9,14 @@ MODULE m_postprocessInput
 CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                            oneD,hybrid,cell,banddos,sliceplot,xcpot,&
-                            noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
+     oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
+     noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
 
   USE m_juDFT
   USE m_types
   USE m_constants
   USE m_julia
-  USE m_apwsdim
+  USE m_lapwdim
   USE m_ylm
   USE m_convndim
   USE m_chkmt
@@ -44,6 +44,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
+  CLASS(t_forcetheo),INTENT(IN)   :: forcetheo
   TYPE(t_input),    INTENT(INOUT) :: input
   TYPE(t_sym),      INTENT(INOUT) :: sym
   TYPE(t_stars),    INTENT(INOUT) :: stars 
@@ -249,26 +250,14 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         dimension%neigd = minNeigd
      END IF
 
-     dimension%nvd = 0 ; dimension%nv2d = 0
-     stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
+   
      !cell%aamat=matmul(transpose(cell%amat),cell%amat)
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
-  
-     DO ikpt = 1,kpts%nkpt
-        DO i = 1, 3
-           bk(i) = kpts%bk(i,ikpt)
-        END DO
-        !IF (input%film .OR.oneD%odd%d1) THEN
-        !   WRITE(*,*) 'There might be additional work required for the k points here!'
-        !   WRITE(*,*) '...in postprocessInput. See inpeig_dim for comparison!'
-        !END IF
-        CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
-        stars%kq1_fft = MAX(kq1,stars%kq1_fft)
-        stars%kq2_fft = MAX(kq2,stars%kq2_fft)
-        stars%kq3_fft = MAX(kq3,stars%kq3_fft)
-        DIMENSION%nvd = MAX(DIMENSION%nvd,nv)
-        DIMENSION%nv2d = MAX(DIMENSION%nv2d,nv2)
-     END DO ! k-pts
+
+     CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
+
+     CALL lapw_fft_dim(cell,input,noco,stars)
+     
         
      obsolete%lepr = 0
 

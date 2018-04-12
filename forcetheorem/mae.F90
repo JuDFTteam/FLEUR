@@ -65,6 +65,7 @@ CONTAINS
 
        noco%theta=this%theta(this%directions_done)
        noco%phi=this%phi(this%directions_done)
+       noco%l_soc=.true.
        IF (this%directions_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_MAE')
        CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
   END FUNCTION mae_next_job
@@ -89,7 +90,10 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)      :: v
     TYPE(t_results),INTENT(IN)     :: results
     INTEGER,INTENT(IN)             :: eig_id
- 
+    IF (this%directions_done==0) THEN
+       skip=.FALSE.
+       RETURN
+    ENDIF
     this%evsum(this%directions_done)=results%seigv
     skip=.TRUE.
   END FUNCTION  mae_eval
@@ -102,6 +106,10 @@ CONTAINS
     !Locals
     INTEGER:: n
     CHARACTER(LEN=12):: attributes(3)
+    IF (this%directions_done==0) THEN
+       RETURN
+    ENDIF
+    
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_MAE')
     CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this%evsum)/))
@@ -113,6 +121,7 @@ CONTAINS
                                    reshape((/5,3,6,12,12,12/),(/3,2/)))
     END DO
     CALL closeXMLElement('Forcetheorem_MAE')
+    CALL judft_end("Forcetheorem MAE")
   END SUBROUTINE mae_postprocess
 
   SUBROUTINE mae_dist(this,mpi)
