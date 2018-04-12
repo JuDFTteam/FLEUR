@@ -1,7 +1,6 @@
 MODULE m_forcea21U
 CONTAINS
-  SUBROUTINE force_a21_U(nobd,atoms,i_u,itype,isp,we,ne,&
-       usdus,v_mmp, acof,bcof,ccof,aveccof,bveccof,cveccof, a21)
+  SUBROUTINE force_a21_U(nobd,atoms,i_u,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,force,a21)
     !
     !***********************************************************************
     ! This subroutine calculates the lda+U contribution to the HF forces, 
@@ -13,8 +12,10 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_usdus),INTENT(IN)   :: usdus
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
+    TYPE(t_force),INTENT(IN)        :: force
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)    :: nobd   
@@ -25,12 +26,6 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(nobd) 
     COMPLEX, INTENT (IN) :: v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
     REAL, INTENT (INOUT) :: a21(3,atoms%nat)
     !     ..
     !     .. Local Scalars ..
@@ -64,8 +59,8 @@ CONTAINS
              DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                 DO ie = 1,ne
                    DO i = 1,3
-                      p1 = (CONJG(acof(ie,lm,iatom)) * v_a) * aveccof(i,ie,lmp,iatom)
-                      p2 = (CONJG(bcof(ie,lm,iatom)) * v_b) * bveccof(i,ie,lmp,iatom) 
+                      p1 = (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * v_a) * force%aveccof(i,ie,lmp,iatom)
+                      p2 = (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * v_b) * force%bveccof(i,ie,lmp,iatom) 
                       a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2) * we(ie)/atoms%neq(itype)
                    END DO
                 END DO
@@ -89,11 +84,11 @@ CONTAINS
                    DO iatom =  sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                       DO ie = 1,ne
                          DO i = 1,3
-                            p1 = v_a * (CONJG(ccof(m,ie,lo,iatom)) * cveccof(i,mp,ie,lo,iatom))
-                            p2 = v_b * (CONJG(acof(ie,lm,iatom)) * cveccof(i,mp,ie,lo,iatom) + &
-                                        CONJG(ccof(m,ie,lo,iatom)) * aveccof(i,ie,lmp,iatom))
-                            p3 = v_c * (CONJG(bcof(ie,lm,iatom)) * cveccof(i,mp,ie,lo,iatom) + &
-                                        CONJG(ccof(m,ie,lo,iatom)) * bveccof(i,ie,lmp,iatom))
+                            p1 = v_a * (CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * force%cveccof(i,mp,ie,lo,iatom))
+                            p2 = v_b * (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * force%cveccof(i,mp,ie,lo,iatom) + &
+                                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * force%aveccof(i,ie,lmp,iatom))
+                            p3 = v_c * (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * force%cveccof(i,mp,ie,lo,iatom) + &
+                                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * force%bveccof(i,ie,lmp,iatom))
                             a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2 + p3)*we(ie)/atoms%neq(itype)
                          END DO
                       END DO

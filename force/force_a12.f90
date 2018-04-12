@@ -5,9 +5,8 @@ MODULE m_forcea12
 ! ************************************************************
 !
 CONTAINS
-  SUBROUTINE force_a12(&
-       atoms,nobd,sym, DIMENSION, cell,oneD,&
-       we,jsp,ne,usdus,acof,bcof,force,results)
+  SUBROUTINE force_a12(atoms,nobd,sym, DIMENSION, cell,oneD,&
+                       we,jsp,ne,usdus,eigVecCoeffs,force,results)
     USE m_types
     USE m_constants
     IMPLICIT NONE
@@ -20,15 +19,14 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd    
     INTEGER, INTENT (IN) :: ne ,jsp 
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd) 
-    COMPLEX, INTENT (IN) ::  acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) ::  bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
+    REAL,    INTENT (IN) :: we(nobd)
     !     ..
     !     .. Local Scalars ..
     COMPLEX a12,cil1,cil2
@@ -82,8 +80,8 @@ CONTAINS
                 DO m1 = -l1,l1
                    lm1 = l1* (l1+1) + m1
                    DO ie = 1,ne
-                      acof_flapw(ie,lm1) = acof(ie,lm1,natrun)
-                      bcof_flapw(ie,lm1) = bcof(ie,lm1,natrun)
+                      acof_flapw(ie,lm1) = eigVecCoeffs%acof(ie,lm1,natrun,jsp)
+                      bcof_flapw(ie,lm1) = eigVecCoeffs%bcof(ie,lm1,natrun,jsp)
                    ENDDO
                 ENDDO
              ENDDO

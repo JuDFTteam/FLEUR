@@ -7,22 +7,20 @@ MODULE m_rhomt21
   !     FF
   !     ***************************************************************
 CONTAINS
-  SUBROUTINE rhomt21(atoms, we,ne,acof,bcof, ccof,denCoeffsOffdiag)
+  SUBROUTINE rhomt21(atoms,we,ne,eigVecCoeffs,denCoeffsOffdiag)
 
     USE m_types
     IMPLICIT NONE
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
+    TYPE(t_atoms),INTENT(IN)               :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN)        :: eigVecCoeffs
+    TYPE(t_denCoeffsOffdiag),INTENT(INOUT) :: denCoeffsOffdiag
+
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ne 
-    !     ..
+
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: acof(:,0:,:,:)!(nobd,0:lmaxd* (lmaxd+2),natd,jspd)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:,:)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:,:) !(-llod:llod,nobd,nlod,natd,jspd)
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    TYPE (t_denCoeffsOffdiag), INTENT (INOUT) :: denCoeffsOffdiag
-    !     ..
+
     !     .. Local Scalars ..
     INTEGER   i,l,lm ,itype,na,natom,lo,lop,m
     natom = 0
@@ -37,10 +35,14 @@ CONTAINS
                 lm = l* (l+1) + m
                 !--->           sum over occupied bands
                 DO i = 1,ne
-                   denCoeffsOffdiag%uu21(l,itype) = denCoeffsOffdiag%uu21(l,itype) + we(i)* CONJG(acof(i,lm,natom,2))*acof(i,lm,natom,1)
-                   denCoeffsOffdiag%ud21(l,itype) = denCoeffsOffdiag%ud21(l,itype) + we(i)* CONJG(acof(i,lm,natom,2))*bcof(i,lm,natom,1)
-                   denCoeffsOffdiag%du21(l,itype) = denCoeffsOffdiag%du21(l,itype) + we(i)* CONJG(bcof(i,lm,natom,2))*acof(i,lm,natom,1)
-                   denCoeffsOffdiag%dd21(l,itype) = denCoeffsOffdiag%dd21(l,itype) + we(i)* CONJG(bcof(i,lm,natom,2))*bcof(i,lm,natom,1)
+                   denCoeffsOffdiag%uu21(l,itype) = denCoeffsOffdiag%uu21(l,itype) +&
+                                                    we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%acof(i,lm,natom,1)
+                   denCoeffsOffdiag%ud21(l,itype) = denCoeffsOffdiag%ud21(l,itype) +&
+                                                    we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%bcof(i,lm,natom,1)
+                   denCoeffsOffdiag%du21(l,itype) = denCoeffsOffdiag%du21(l,itype) +&
+                                                    we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%acof(i,lm,natom,1)
+                   denCoeffsOffdiag%dd21(l,itype) = denCoeffsOffdiag%dd21(l,itype) +&
+                                                    we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%bcof(i,lm,natom,1)
                 ENDDO ! i = 1,ne
              ENDDO   ! m = -l,l
           ENDDO     ! l
@@ -53,10 +55,14 @@ CONTAINS
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO i = 1,ne
-                   denCoeffsOffdiag%uulo21(lo,itype) = denCoeffsOffdiag%uulo21(lo,itype) + we(i)* CONJG(acof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
-                   denCoeffsOffdiag%dulo21(lo,itype) = denCoeffsOffdiag%dulo21(lo,itype) + we(i)* CONJG(bcof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
-                   denCoeffsOffdiag%ulou21(lo,itype) = denCoeffsOffdiag%ulou21(lo,itype) + we(i)* CONJG(acof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
-                   denCoeffsOffdiag%ulod21(lo,itype) = denCoeffsOffdiag%ulod21(lo,itype) + we(i)* CONJG(bcof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
+                   denCoeffsOffdiag%uulo21(lo,itype) = denCoeffsOffdiag%uulo21(lo,itype) +&
+                                                       we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   denCoeffsOffdiag%dulo21(lo,itype) = denCoeffsOffdiag%dulo21(lo,itype) +&
+                                                       we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   denCoeffsOffdiag%ulou21(lo,itype) = denCoeffsOffdiag%ulou21(lo,itype) +&
+                                                       we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
+                   denCoeffsOffdiag%ulod21(lo,itype) = denCoeffsOffdiag%ulod21(lo,itype) +&
+                                                       we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
                 ENDDO
              ENDDO
              !--->         contribution of local orbital - local orbital terms
@@ -66,7 +72,7 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1,ne
                          denCoeffsOffdiag%uloulop21(lop,lo,itype) = denCoeffsOffdiag%uloulop21(lop,lo,itype)+&
-                              we(i)*CONJG(ccof(m,i,lop,natom,2))*ccof(m,i,lo, natom,1)
+                              we(i)*CONJG(eigVecCoeffs%ccof(m,i,lop,natom,2))*eigVecCoeffs%ccof(m,i,lo, natom,1)
                       ENDDO ! i = 1,ne
                    ENDDO   ! m = -l,l
                 ENDIF

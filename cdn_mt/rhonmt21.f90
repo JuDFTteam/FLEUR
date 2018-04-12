@@ -11,25 +11,25 @@ MODULE m_rhonmt21
   !                                                 pk`00 ff`01 gb`02
   !     *************************************************************
 CONTAINS
-  SUBROUTINE rhonmt21(atoms,llpd,sphhar, we,ne,sym,&
-       acof,bcof,denCoeffsOffdiag)
+  SUBROUTINE rhonmt21(atoms,sphhar,we,ne,sym,eigVecCoeffs,denCoeffsOffdiag)
+
     USE m_gaunt,ONLY:gaunt1
     USE m_types
+
     IMPLICIT NONE
+
     TYPE(t_sym),INTENT(IN)                 :: sym
     TYPE(t_sphhar),INTENT(IN)              :: sphhar
     TYPE(t_atoms),INTENT(IN)               :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN)        :: eigVecCoeffs
     TYPE(t_denCoeffsOffdiag),INTENT(INOUT) :: denCoeffsOffdiag
-    !     ..
+
     !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN) :: llpd    
     INTEGER,INTENT(IN) :: ne   
-    !     ..
+
     !     .. Array Arguments ..
-    COMPLEX, INTENT(IN) :: acof(:,0:,:,:)!(nobd,0:lmaxd* (lmaxd+2),natd,jspd)
-    COMPLEX, INTENT(IN) :: bcof(:,0:,:,:)
     REAL,    INTENT(IN) :: we(:)!(nobd)
-    !     ..
+
     !     .. Local Scalars ..
     COMPLEX coef, cconst, cil, coef1
     COMPLEX, PARAMETER :: mi = (0.0,-1.0)
@@ -66,13 +66,13 @@ CONTAINS
                                         DO nb = 1,ne
                                            cconst= we(nb) * coef
                                            denCoeffsOffdiag%uunmt21(llp,lh,nn) = denCoeffsOffdiag%uunmt21(llp,lh,nn)+ &
-                                                cconst * acof(nb,lm,nt,1)*CONJG(acof(nb,lmp,nt,2))
+                                                cconst * eigVecCoeffs%acof(nb,lm,nt,1)*CONJG(eigVecCoeffs%acof(nb,lmp,nt,2))
                                            denCoeffsOffdiag%udnmt21(llp,lh,nn) = denCoeffsOffdiag%udnmt21(llp,lh,nn)+&
-                                                cconst * bcof(nb,lm,nt,1)*CONJG(acof(nb,lmp,nt,2))
+                                                cconst * eigVecCoeffs%bcof(nb,lm,nt,1)*CONJG(eigVecCoeffs%acof(nb,lmp,nt,2))
                                            denCoeffsOffdiag%dunmt21(llp,lh,nn) = denCoeffsOffdiag%dunmt21(llp,lh,nn)+&
-                                                cconst * acof(nb,lm,nt,1)*CONJG(bcof(nb,lmp,nt,2))
+                                                cconst * eigVecCoeffs%acof(nb,lm,nt,1)*CONJG(eigVecCoeffs%bcof(nb,lmp,nt,2))
                                            denCoeffsOffdiag%ddnmt21(llp,lh,nn) = denCoeffsOffdiag%ddnmt21(llp,lh,nn)+&
-                                                cconst * bcof(nb,lm,nt,1)*CONJG(bcof(nb,lmp,nt,2))
+                                                cconst * eigVecCoeffs%bcof(nb,lm,nt,1)*CONJG(eigVecCoeffs%bcof(nb,lmp,nt,2))
                                         ENDDO ! nb
                                      ENDIF ! (coef >= 0)
 

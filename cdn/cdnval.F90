@@ -637,28 +637,24 @@ CONTAINS
              IF (input%l_f) THEN
                 CALL timestart("cdnval: force_a12/21")
                 IF (.not.input%l_useapw) THEN
-                   CALL force_a12(atoms,noccbd,sym, dimension,cell,oneD,&
-                                  we,ispin,noccbd,usdus,eigVecCoeffs%acof(:,0:,:,ispin),&
-                                  eigVecCoeffs%bcof(:,0:,:,ispin),force,results)
+                   CALL force_a12(atoms,noccbd,sym,dimension,cell,oneD,&
+                                  we,ispin,noccbd,usdus,eigVecCoeffs,force,results)
                 ENDIF
-                CALL force_a21(input,atoms,dimension,noccbd,sym,&
-                               oneD,cell,we,ispin,enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs%acof(:,0:,:,ispin),&
-                               eigVecCoeffs%bcof(:,0:,:,ispin),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),force,results)
+                CALL force_a21(input,atoms,dimension,noccbd,sym,oneD,cell,we,ispin,&
+                               enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs,force,results)
                 CALL timestop("cdnval: force_a12/21")
              END IF
 
              IF(l_cs) THEN
-                CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,&
-                                  dimension%neigd,noccbd,results%ef,banddos%sig_dos,&
-                                  eig,we,eigVecCoeffs%acof(1,0,1,ispin),eigVecCoeffs%bcof(1,0,1,ispin),&
-                                  eigVecCoeffs%ccof(-atoms%llod,1,1,1,ispin))
+                CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
+                                  noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
              END IF
           END DO !--->    end loop over ispin
 
           IF (noco%l_mperp) THEN
-             CALL rhomt21(atoms,we,noccbd,eigVecCoeffs%acof,eigVecCoeffs%bcof,eigVecCoeffs%ccof,denCoeffsOffdiag)
+             CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,denCoeffsOffdiag)
              IF (l_fmpl) THEN
-                CALL rhonmt21(atoms,llpd,sphhar,we,noccbd,sym,eigVecCoeffs%acof,eigVecCoeffs%bcof,denCoeffsOffdiag)
+                CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
              END IF
           END IF
 

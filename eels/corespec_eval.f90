@@ -362,14 +362,13 @@ MODULE m_corespec_eval
 !-------------------------------------------------------------------------------
 !
   subroutine corespec_dos(atoms,usdus,ispin,lmd,nkpt,ikpt,&
-                          neigd,noccbd,efermi,sig_dos,&
-                          eig,we,acof,bcof,&
-                          ccof)
+                          neigd,noccbd,efermi,sig_dos,eig,we,eigVecCoeffs)
 
     IMPLICIT NONE
 
-    TYPE (t_atoms), INTENT(IN)   :: atoms
-    TYPE (t_usdus), INTENT(IN)   :: usdus
+    TYPE (t_atoms), INTENT(IN)      :: atoms
+    TYPE (t_usdus), INTENT(IN)      :: usdus
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
 
 !     .. Scalar Arguments ..
     integer, intent(in) :: ispin,lmd,nkpt,ikpt
@@ -377,9 +376,6 @@ MODULE m_corespec_eval
     real, intent(in) :: efermi,sig_dos
 !     .. Array Arguments ..
     real, intent (in) :: eig(neigd),we(noccbd)
-    complex, intent (in) :: acof(noccbd,0:lmd,atoms%nat)
-    complex, intent (in) :: bcof(noccbd,0:lmd,atoms%nat)
-    complex, intent (in) :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat)
 
 ! local variables
     integer :: lx,lmx,nen,nex
@@ -417,14 +413,14 @@ MODULE m_corespec_eval
 !!$          do l2 = 0,lx
 !!$            do m2 = -l2,l2
 !!$              lm2 = l2*(l2+1)+m2
-          csv%dosb(1,1,lm1,lm1,iband) = dble(acof(iband,lm1,iatom)*&
-               &conjg(acof(iband,lm1,iatom)))*we(1)
-          csv%dosb(1,2,lm1,lm1,iband) = dble(acof(iband,lm1,iatom)*&
-               &conjg(bcof(iband,lm1,iatom)))
-          csv%dosb(2,1,lm1,lm1,iband) = dble(bcof(iband,lm1,iatom)*&
-               &conjg(acof(iband,lm1,iatom)))
-          csv%dosb(2,2,lm1,lm1,iband) = dble(bcof(iband,lm1,iatom)*&
-               &conjg(bcof(iband,lm1,iatom)))*we(1)*usdus%ddn(l1,csi%atomType,ispin)
+          csv%dosb(1,1,lm1,lm1,iband) = dble(eigVecCoeffs%acof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))*we(1)
+          csv%dosb(1,2,lm1,lm1,iband) = dble(eigVecCoeffs%acof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))
+          csv%dosb(2,1,lm1,lm1,iband) = dble(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))
+          csv%dosb(2,2,lm1,lm1,iband) = dble(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))*we(1)*usdus%ddn(l1,csi%atomType,ispin)
 !!!!! this has to be checked: is >> ddn << factor necessary !!!!!
 !!$        enddo
 !!$        enddo
