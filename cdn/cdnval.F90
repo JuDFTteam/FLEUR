@@ -171,9 +171,7 @@ CONTAINS
     INTEGER :: nkpt_extended
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
-    zmat%l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
-    !     ..
-    !     ..
+
     llpd=(atoms%lmaxd*(atoms%lmaxd+3))/2
     !---> l_fmpl is meant as a switch to to a plot of the full magnet.
     !---> density without the atomic sphere approximation for the magnet.
@@ -417,7 +415,7 @@ CONTAINS
              END IF
           END IF
 
-          nbasfcn = MERGE(zMat%nbasfcn+lapw%nv(2),lapw%nv(1),noco%l_noco)+atoms%nlotot
+          nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
           CALL zMat%init(l_real,nbasfcn,dimension%neigd)
           CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                         ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
