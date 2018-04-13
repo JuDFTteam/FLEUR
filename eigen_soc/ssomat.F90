@@ -73,10 +73,7 @@ CONTAINS
 
     ALLOCATE( matel(neigf,DIMENSION%neigd,0:atoms%ntype) )
 
-    zMat%nbasfcn=lapw%nv(1)+atoms%nlotot
-    zmat%nbands=DIMENSION%neigd
-    zmat%l_real=.FALSE.
-    ALLOCATE(zmat%z_c(zMat%nbasfcn,zmat%nbands))
+  
 
     CALL usdus%init(atoms,2)
 
@@ -93,8 +90,14 @@ CONTAINS
     
     DO nk=mpi%irank+1,kpts%nkpt,mpi%isize
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false., mpi)
+       zMat%nbasfcn=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
+       zmat%nbands=DIMENSION%neigd
+       zmat%l_real=.FALSE.
+       IF (ALLOCATED(zmat%z_c)) DEALLOCATE(zmat%z_c)
+       ALLOCATE(zmat%z_c(zMat%nbasfcn,zmat%nbands))
+       CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,nk,1),zmat=zmat)
        DO jsloc= 1,2 
-          CALL read_eig(eig_id,nk,jsloc,neig=ne,zmat=zmat)
+          eig_shift(:,nk,1)=0.0 !not needed
           CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,jsloc,oneD, &
                acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
        ENDDO
@@ -401,8 +404,10 @@ CONTAINS
              ELSE
                 bandf= 1 
              ENDIF
-             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-15) &
-                  CALL judft_error('Stop in ssomatel:  diagonal matrix element not real')
+             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-10) THEN
+                PRINT *,bandf,band2,n,AIMAG(matel(bandf,band2,n))
+                CALL judft_error('Stop in ssomatel:  diagonal matrix element not real')
+             ENDIF
           ENDDO
        ENDDO
     ENDIF
