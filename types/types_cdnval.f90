@@ -571,6 +571,7 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
       ALLOCATE (thisMCD%mcd(1,1,1))
    ENDIF
 
+   thisMCD%ncore = 0
    thisMCD%e_mcd = 0.0
    thisMCD%mcd = 0.0
    thisMCD%m_mcd = CMPLX(0.0,0.0)
