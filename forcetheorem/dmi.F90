@@ -92,7 +92,7 @@ CONTAINS
   
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_DMI')
-    CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,2)/))
+    CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,1)/))
     DO q=1,SIZE(this%evsum,2)
        WRITE(attributes(1),'(i5)') q
        WRITE(attributes(2),'(f12.7)') this%evsum(0,q) 
@@ -107,6 +107,7 @@ CONTAINS
        END DO
     ENDDO
     CALL closeXMLElement('Forcetheorem_DMI')
+    CALL judft_end("Forcetheorem DMI")
   END SUBROUTINE dmi_postprocess
 
   SUBROUTINE dmi_dist(this,mpi)
