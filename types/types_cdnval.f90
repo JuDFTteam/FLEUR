@@ -142,7 +142,19 @@ PRIVATE
          PROCEDURE,PASS :: init => eigVecCoeffs_init
    END TYPE t_eigVecCoeffs
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs
+   TYPE t_mcd
+      REAL                 :: emcd_lo, emcd_up
+
+      INTEGER, ALLOCATABLE :: ncore(:)
+      REAL,    ALLOCATABLE :: e_mcd(:,:,:)
+      REAL,    ALLOCATABLE :: mcd(:,:,:)
+      COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init1 => mcd_init1
+   END TYPE t_mcd
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs, t_mcd
 
 CONTAINS
 
@@ -533,5 +545,37 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
 
 END SUBROUTINE eigVecCoeffs_init
+
+SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_mcd),          INTENT(INOUT) :: thisMCD
+   TYPE(t_banddos),       INTENT(IN)    :: banddos
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   ALLOCATE (thisMCD%ncore(atoms%ntype))
+   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
+   IF (banddos%l_mcd) THEN
+      thisMCD%emcd_lo = banddos%e_mcd_lo
+      thisMCD%emcd_up = banddos%e_mcd_up
+      ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
+      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
+      IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
+   ELSE
+      ALLOCATE (thisMCD%m_mcd(1,1,1,1))
+      ALLOCATE (thisMCD%mcd(1,1,1))
+   ENDIF
+
+   thisMCD%e_mcd = 0.0
+   thisMCD%mcd = 0.0
+   thisMCD%m_mcd = CMPLX(0.0,0.0)
+
+END SUBROUTINE mcd_init1
+
 
 END MODULE m_types_cdnval

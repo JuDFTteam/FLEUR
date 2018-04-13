@@ -124,7 +124,7 @@ CONTAINS
     !     .. Local Scalars ..
     TYPE(t_lapw):: lapw
     INTEGER :: llpd
-    REAL wronk,emcd_lo,emcd_up
+    REAL wronk
     INTEGER i,ie,iv,ivac,j,k,l,n,ilo,isp,&
          nbands,noded,nodeu,noccbd,nslibd,na,&
          ikpt,jsp_start,jsp_end,ispin
@@ -132,8 +132,7 @@ CONTAINS
     INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
     LOGICAL l_fmpl,l_evp,l_orbcomprot,l_real
     !     ...Local Arrays ..
-    INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
-    REAL    e_mcd(atoms%ntype,input%jspins,dimension%nstd)
+    INTEGER n_bands(0:dimension%neigd)
     REAL    eig(dimension%neigd)
     REAL    vz0(2)
     REAL    uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
@@ -154,10 +153,10 @@ CONTAINS
 
     REAL,    ALLOCATABLE :: sqlo(:,:,:)
     REAL,    ALLOCATABLE :: qal(:,:,:,:),sqal(:,:,:),ener(:,:,:)
-    REAL,    ALLOCATABLE :: svac(:,:),pvac(:,:),mcd(:,:,:)
+    REAL,    ALLOCATABLE :: svac(:,:),pvac(:,:)
     REAL,    ALLOCATABLE :: enerlo(:,:,:),qmat(:,:,:,:)
 
-    COMPLEX, ALLOCATABLE :: qstars(:,:,:,:),m_mcd(:,:,:,:)
+    COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
 
     TYPE (t_orb)              :: orb
     TYPE (t_denCoeffs)        :: denCoeffs
@@ -165,6 +164,7 @@ CONTAINS
     TYPE (t_force)            :: force
     TYPE (t_slab)             :: slab
     TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
+    TYPE (t_mcd)              :: mcd
 
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
@@ -219,15 +219,7 @@ CONTAINS
 
     CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
-    IF (banddos%l_mcd) THEN
-       emcd_lo = banddos%e_mcd_lo
-       emcd_up = banddos%e_mcd_up
-       ALLOCATE ( m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2) )
-       ALLOCATE ( mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
-       IF (.not.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
-    ELSE
-       ALLOCATE ( m_mcd(1,1,1,1),mcd(1,1,1) )
-    ENDIF
+    CALL mcd%init1(banddos,dimension,input,atoms)
 
 ! calculation of core spectra (EELS) initializations -start-
     CALL corespec_init(input,atoms,coreSpecInput)
@@ -276,20 +268,16 @@ CONTAINS
           END IF
        END DO
        IF (banddos%l_mcd) THEN
-          CALL mcd_init(atoms,input,dimension,&
-                        vTot%mt(:,0,:,:),g,f,emcd_up,emcd_lo,n,jspin,&
-                        ncore,e_mcd,m_mcd)
-          ncored = max(ncore(n),ncored)
+          CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,n,jspin)
+          ncored = max(mcd%ncore(n),ncored)
        END IF
 
        IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
                                   input%jspins,jspin,results%ef,&
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
 
-       !
        !--->   generate the extra wavefunctions for the local orbitals,
        !--->   if there are any.
-       !
        IF ( atoms%nlo(n) > 0 ) THEN
           DO ispin = jsp_start,jsp_end
              CALL radflo(atoms,n,ispin, enpara%ello0(1,1,ispin),vTot%mt(:,0,n,ispin), f(1,1,0,ispin),&
@@ -330,9 +318,6 @@ CONTAINS
     !-->   loop over k-points: each can be a separate task
     IF (kpts%nkpt < mpi%isize) THEN
        l_evp = .true.
-       IF (banddos%l_mcd) THEN
-          mcd(:,:,:) = 0.0
-       ENDIF
        ener(:,:,:) = 0.0
        sqal(:,:,:) = 0.0
        qal(:,:,:,:) = 0.0
@@ -574,10 +559,10 @@ CONTAINS
              !--->       atom and angular momentum
              IF (.not.sliceplot%slice) THEN
                 CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                            skip_t,l_evp,eigVecCoeffs,usdus,&
-                            ncore,banddos%l_mcd,m_mcd,enerlo(1,1,ispin),sqlo(1,1,ispin),&
+                            skip_t,l_evp,eigVecCoeffs,usdus,mcd,&
+                            banddos%l_mcd,enerlo(1,1,ispin),sqlo(1,1,ispin),&
                             ener(0,1,ispin),sqal(0,1,ispin),&
-                            qal(0:,:,:,ispin),mcd)
+                            qal(0:,:,:,ispin))
 
                 IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
                    CALL qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,qal,qmat)
@@ -661,7 +646,7 @@ CONTAINS
 
              !--dw   now write k-point data to tmp_dos
              CALL write_dos(eig_id,ikpt,jspin,qal(:,:,:,jspin),qvac(:,:,ikpt,jspin),qis(:,ikpt,jspin),&
-                            qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd,slab%qintsl,&
+                            qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
                             slab%qmtsl(:,:),qmtp(:,:),orbcomp)
 
              CALL timestop("cdnval: write_info")
@@ -698,8 +683,7 @@ CONTAINS
        CALL timestart("cdnval: dos")
        IF (mpi%irank==0) THEN
           CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
-                        sliceplot,noco,sym,cell,banddos%l_mcd,ncored,ncore,e_mcd,&
-                        results%ef,results%bandgap,slab%nsld,oneD)
+                        sliceplot,noco,sym,cell,mcd,ncored,results,slab%nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
           END IF

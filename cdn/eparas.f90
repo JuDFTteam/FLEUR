@@ -24,13 +24,14 @@ MODULE m_eparas
   !
 CONTAINS
   SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
-       usdus, ncore,l_mcd,m_mcd, enerlo,sqlo,ener,sqal,qal,mcd)
+       usdus,mcd,l_mcd,enerlo,sqlo,ener,sqal,qal)
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(IN)        :: usdus
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
+    TYPE(t_mcd),INTENT(INOUT)       :: mcd
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,jsp     
@@ -38,14 +39,11 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_mcd,l_evp
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
     REAL,    INTENT (IN)  :: eig(:)!(dimension%neigd),
     REAL,    INTENT (IN)  :: we(noccbd) 
-    COMPLEX, INTENT (IN)  :: m_mcd(:,:,:,:)!(dimension%nstd,(3+1)**2,3*ntypd ,2)
     REAL,    INTENT (INOUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
     REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
     REAL,    INTENT (INOUT) :: qal(0:,:,:)!(0:3,atoms%ntype,dimension%neigd)
-    REAL,    INTENT (INOUT) :: mcd(:,:,:)!(3*atoms%ntype,dimension%nstd,dimension%neigd)
 
     !     ..
     !     .. Local Scalars ..
@@ -64,7 +62,7 @@ CONTAINS
 
     IF ((ikpt.LE.mpi%isize).AND..NOT.l_evp) THEN
        IF (l_mcd) THEN
-          mcd(:,:,:) = 0.0
+          mcd%mcd(:,:,:) = 0.0
        ENDIF
        ener(:,:) = 0.0
        sqal(:,:) = 0.0
@@ -101,14 +99,14 @@ CONTAINS
                       sumab= sumab + eigVecCoeffs%acof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                       sumba= sumba + eigVecCoeffs%bcof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
                    ENDDO
-                   DO icore = 1, ncore(n)
+                   DO icore = 1, mcd%ncore(n)
                       DO ipol = 1, 3
                          index = 3*(n-1) + ipol
-                         mcd(index,icore,i)=mcd(index,icore,i) + fac*(&
-                              suma * CONJG(m_mcd(icore,lm+1,index,1))*m_mcd(icore,lm+1,index,1)  +&
-                              sumb * CONJG(m_mcd(icore,lm+1,index,2))*m_mcd(icore,lm+1,index,2)  +&
-                              sumab* CONJG(m_mcd(icore,lm+1,index,2))*m_mcd(icore,lm+1,index,1)  +&
-                              sumba* CONJG(m_mcd(icore,lm+1,index,1))*m_mcd(icore,lm+1,index,2)  ) 
+                         mcd%mcd(index,icore,i)=mcd%mcd(index,icore,i) + fac*(&
+                              suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
+                              sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
+                              sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&
+                              sumba* CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2)  ) 
                       ENDDO
                    ENDDO
                 ENDIF     ! end MCD

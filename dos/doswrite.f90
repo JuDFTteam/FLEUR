@@ -11,13 +11,8 @@ MODULE m_doswrite
   !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
   !
 CONTAINS
-  SUBROUTINE doswrite(&
-       &                   eig_id,DIMENSION,kpts,atoms,vacuum,&
-       &                   input,banddos,&
-       &                   sliceplot,noco,sym,&
-       &                   cell,&
-       &                   l_mcd,ncored,ncore,e_mcd,&
-       &                   efermi,bandgap,nsld,oneD)
+  SUBROUTINE doswrite(eig_id,DIMENSION,kpts,atoms,vacuum,input,banddos,&
+                      sliceplot,noco,sym,cell,mcd,ncored,results,nsld,oneD)
     USE m_eig66_io,ONLY:read_dos,read_eig
     USE m_evaldos
     USE m_cdninf
@@ -35,19 +30,13 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_mcd),INTENT(IN)       :: mcd
+    TYPE(t_results),INTENT(IN)   :: results
 
     !     .. Scalar Arguments ..
     INTEGER,PARAMETER :: n2max=13 
     INTEGER, INTENT (IN) :: nsld,eig_id 
     INTEGER, INTENT (IN) :: ncored
-    REAL,    INTENT (IN) :: efermi, bandgap
-    LOGICAL, INTENT (IN) :: l_mcd
-    !     ..
-    !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
-    REAL, INTENT(IN)      :: e_mcd(atoms%ntype,input%jspins,ncored)
-    !-odim
-    !+odim
 
     !    locals
     INTEGER :: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
@@ -105,20 +94,13 @@ CONTAINS
           ENDIF
 
           DO ikpt=1,kpts%nkpt
-             call read_eig(eig_id,ikpt,kspin,&
-                                 neig=ne,eig=eig)
-             call read_dos(eig_id,ikpt,kspin,&
-                  &              qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
-                  &              qis(:,ikpt,kspin),&
-                  &              qvlay(:,:,:),qstars,ksym,jsym)
+             call read_eig(eig_id,ikpt,kspin,neig=ne,eig=eig)
+             call read_dos(eig_id,ikpt,kspin,qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
+                           qis(:,ikpt,kspin),qvlay(:,:,:),qstars,ksym,jsym)
 
-             CALL cdninf(&
-                  &              input,sym,noco,kspin,atoms,&
-                  &              vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
-                  &              kpts%wtkpt(ikpt),cell,kpts,&
-                  &              ne,eig,qal(0:,:,:,kspin),qis,qvac,&
-                  &              qvlay(:,:,:),&
-                  &              qstars,ksym,jsym)
+             CALL cdninf(input,sym,noco,kspin,atoms,vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
+                         kpts%wtkpt(ikpt),cell,kpts,ne,eig,qal(0:,:,:,kspin),qis,qvac,&
+                         qvlay(:,:,:),qstars,ksym,jsym)
           ENDDO
 
        ENDDO                  ! end spin loop (kspin = 1,input%jspins)
@@ -135,10 +117,9 @@ CONTAINS
     !
     !     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
-       CALL evaldos(&
-            &                eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-            &                DIMENSION,efermi,bandgap,&
-            &                l_mcd,ncored,ncore,e_mcd,nsld)
+       CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
+                    DIMENSION,results%ef,results%bandgap,&
+                    banddos%l_mcd,ncored,mcd%ncore,mcd%e_mcd,nsld)
     ENDIF
     !
     !      Now write to vacwave if nstm=3 
