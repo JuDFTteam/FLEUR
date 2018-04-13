@@ -159,8 +159,11 @@
           sliceplot%e2s = 0.0
           sliceplot%nnne = 0
 
-          IF (input%l_inpXML) THEN
-            
+          banddos%l_mcd = .FALSE.
+          banddos%e_mcd_lo = 0.0
+          banddos%e_mcd_up = 0.0
+
+          IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
@@ -274,9 +277,11 @@
                    CLOSE (111)
                 END IF
              END IF
-             INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
+             INQUIRE(file='mcd_inp',exist=l_found)
+             IF(l_found) THEN
+                CALL judft_error("setup of mcd calculation is only supported in the inp.xml file",calledby="fleur_init")
+             END IF
           END IF
-
 
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
@@ -284,8 +289,6 @@
                &           sym,kpts,DIMENSION,input,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
                &           noco,oneD,xcpot,hybrid)
-          ! initialize record length of the eig file
-
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive 

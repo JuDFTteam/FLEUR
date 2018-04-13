@@ -1731,6 +1731,7 @@ SUBROUTINE r_inpXML(&
      sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
      input%l_coreSpec = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
      input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
+     banddos%l_mcd = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mcd'))
 
      ! Read in optional switches for checks
 
@@ -1928,6 +1929,21 @@ SUBROUTINE r_inpXML(&
         DO i = 1, numTokens
            wann%jobList(i) = popFirstStringToken(valueString)
         END DO
+     END IF
+
+     ! Read in optional magnetic circular dichroism parameters
+     xPathA = '/fleurInput/output/magneticCircularDichroism'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF ((banddos%l_mcd).AND.(numberNodes.EQ.0)) THEN
+        CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
+     END IF
+
+     banddos%e_mcd_lo = 0.0
+     banddos%e_mcd_up = 0.0
+     IF (numberNodes.EQ.1) THEN
+        banddos%e_mcd_lo = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyLo'))
+        banddos%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
      END IF
 
   END IF
@@ -2154,7 +2170,7 @@ FUNCTION countStringTokens(line) RESULT(tokenCount)
    INTEGER:: n,i
    CHARACTER(len=256):: xpatha,valueString
 
-   n=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(path))//'/@count'))
+   n=xmlGetNumberOfNodes(TRIM(ADJUSTL(path))//'/q')
    ALLOCATE(q(3,n))
    DO i = 1, n
       PRINT *, path,'/q[',i,']'

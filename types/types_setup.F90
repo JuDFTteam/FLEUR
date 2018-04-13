@@ -444,6 +444,7 @@ MODULE m_types_setup
      REAL    :: e1s
      REAL    :: e2s
   END TYPE t_sliceplot
+
   TYPE t_banddos
      LOGICAL :: dos
      LOGICAL :: band
@@ -455,6 +456,8 @@ MODULE m_types_setup
      REAL    :: e1_dos
      REAL    :: e2_dos
      REAL    :: sig_dos
+     REAL    :: e_mcd_lo
+     REAL    :: e_mcd_up
   END TYPE t_banddos
 
   TYPE t_obsolete

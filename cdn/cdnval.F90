@@ -130,7 +130,7 @@ CONTAINS
          ikpt,jsp_start,jsp_end,ispin
     INTEGER  skip_t,skip_tt
     INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
-    LOGICAL l_fmpl,l_mcd,l_evp,l_orbcomprot,l_real
+    LOGICAL l_fmpl,l_evp,l_orbcomprot,l_real
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd),ncore(atoms%ntype)
     REAL    e_mcd(atoms%ntype,input%jspins,dimension%nstd)
@@ -219,11 +219,9 @@ CONTAINS
 
     CALL orb%init(atoms,noco,jsp_start,jsp_end)
 
-    INQUIRE (file='mcd_inp',exist=l_mcd)
-    IF (l_mcd) THEN
-       OPEN (23,file='mcd_inp',STATUS='old',FORM='formatted')
-       READ (23,*) emcd_lo,emcd_up
-       CLOSE (23)
+    IF (banddos%l_mcd) THEN
+       emcd_lo = banddos%e_mcd_lo
+       emcd_up = banddos%e_mcd_up
        ALLOCATE ( m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2) )
        ALLOCATE ( mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
        IF (.not.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
@@ -277,7 +275,7 @@ CONTAINS
              CALL int_21(f,g,atoms,n,l,denCoeffsOffdiag)
           END IF
        END DO
-       IF (l_mcd) THEN
+       IF (banddos%l_mcd) THEN
           CALL mcd_init(atoms,input,dimension,&
                         vTot%mt(:,0,:,:),g,f,emcd_up,emcd_lo,n,jspin,&
                         ncore,e_mcd,m_mcd)
@@ -332,7 +330,7 @@ CONTAINS
     !-->   loop over k-points: each can be a separate task
     IF (kpts%nkpt < mpi%isize) THEN
        l_evp = .true.
-       IF (l_mcd) THEN
+       IF (banddos%l_mcd) THEN
           mcd(:,:,:) = 0.0
        ENDIF
        ener(:,:,:) = 0.0
@@ -577,7 +575,7 @@ CONTAINS
              IF (.not.sliceplot%slice) THEN
                 CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
                             skip_t,l_evp,eigVecCoeffs,usdus,&
-                            ncore,l_mcd,m_mcd,enerlo(1,1,ispin),sqlo(1,1,ispin),&
+                            ncore,banddos%l_mcd,m_mcd,enerlo(1,1,ispin),sqlo(1,1,ispin),&
                             ener(0,1,ispin),sqal(0,1,ispin),&
                             qal(0:,:,:,ispin),mcd)
 
@@ -700,7 +698,7 @@ CONTAINS
        CALL timestart("cdnval: dos")
        IF (mpi%irank==0) THEN
           CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
-                        sliceplot,noco,sym,cell,l_mcd,ncored,ncore,e_mcd,&
+                        sliceplot,noco,sym,cell,banddos%l_mcd,ncored,ncore,e_mcd,&
                         results%ef,results%bandgap,slab%nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
