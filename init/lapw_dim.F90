@@ -66,7 +66,7 @@ CONTAINS
     TYPE IS (t_forcetheo_jij)
        ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
        q_vectors=forcetheo%qvec
-    TYPE IS (t_forcetheo) ! DEFAULT
+    CLASS IS (t_forcetheo) ! DEFAULT
        ALLOCATE(q_vectors(3,1))
        q_vectors(:,1)=noco%qss
     END SELECT

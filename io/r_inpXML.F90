@@ -2154,7 +2154,7 @@ FUNCTION countStringTokens(line) RESULT(tokenCount)
    INTEGER:: n,i
    CHARACTER(len=256):: xpatha,valueString
 
-   n=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(path))//'/@count'))
+   n=xmlGetNumberOfNodes(TRIM(ADJUSTL(path))//'/q')
    ALLOCATE(q(3,n))
    DO i = 1, n
       PRINT *, path,'/q[',i,']'
