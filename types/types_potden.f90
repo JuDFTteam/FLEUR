@@ -9,7 +9,7 @@ MODULE m_types_potden
    TYPE t_potden
      INTEGER             :: iter  
      INTEGER             :: potdenType
-     COMPLEX,ALLOCATABLE :: pw(:,:)
+     COMPLEX,ALLOCATABLE :: pw(:,:),pw_w(:,:)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
      REAL,ALLOCATABLE    :: vacz(:,:,:)
      COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
@@ -33,9 +33,24 @@ MODULE m_types_potden
      PROCEDURE :: init_potden_simple
      PROCEDURE :: resetpotden
      GENERIC   :: init=>init_potden_types,init_potden_simple
+     PROCEDURE :: copy_both_spin
   END TYPE t_potden
 
 CONTAINS
+  SUBROUTINE copy_both_spin(this,that)
+    IMPLICIT NONE
+    CLASS(t_potden),INTENT(IN)   :: this
+    TYPE(t_potden),INTENT(INOUT) :: that
+
+    IF (SIZE(that%mt,4)==2) THEN
+       that%mt(:,0:,:,2)=this%mt(:,0:,:,1)
+       that%pw(:,2)=this%pw(:,1)
+       that%vacz(:,:,2)=this%vacz(:,:,1)
+       that%vacxy(:,:,:,2)=this%vacxy(:,:,:,1)
+       IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2)=this%pw_w(:,1)
+    END IF
+  END SUBROUTINE copy_both_spin
+  
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,oneD,jspins,nocoExtraDim,potden_type)
     USE m_judft
     USE m_types_setup

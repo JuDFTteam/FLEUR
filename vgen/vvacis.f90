@@ -24,7 +24,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: psq(stars%ng3)
-    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2)
     !     ..
     !     .. Local Scalars ..
     COMPLEX arg,ci
@@ -40,7 +40,7 @@ CONTAINS
     !     ..
     ci = CMPLX(0.0,1.0)
 
-    vxy(:,:,:,1) = CMPLX(0.,0.)
+    vxy(:,:,:) = CMPLX(0.,0.)
     dh = cell%z1
     m0 = -stars%mx3
     IF (sym%zrfs) m0 = 0
@@ -105,7 +105,7 @@ CONTAINS
              ELSE ! NEUMANN
                 e_m = exp_save( -g*z  )
              END IF
-             vxy(imz,nrec2-1,ivac,1) = vxy(imz,nrec2-1,ivac,1) +&
+             vxy(imz,nrec2-1,ivac) = vxy(imz,nrec2-1,ivac) +&
                   &                                   vcons*sumr(ivac)*e_m
              z = z + vacuum%delz
           ENDDO  ! imz 

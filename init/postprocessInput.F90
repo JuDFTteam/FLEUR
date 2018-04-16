@@ -275,8 +275,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      dimension%msh = 0
      ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
      ALLOCATE(atoms%volmts(atoms%ntype))
-     ALLOCATE(atoms%vr0(atoms%ntype))  ! This should actually not be in the atoms type!
-     atoms%vr0(:) = 0.0
      na = 0
      DO iType = 1, atoms%ntype
         l_vca = .FALSE.

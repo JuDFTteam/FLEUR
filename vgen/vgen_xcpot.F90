@@ -34,7 +34,8 @@ CONTAINS
     USE m_checkdopall
     USE m_wrtdop
     USE m_cdn_io
-    USE m_qfix
+    USE m_qfixend
+    
     USE m_types
     USE m_od_vvac
     USE m_od_vvacis
@@ -120,10 +121,6 @@ CONTAINS
     !     units: hartrees
     !
 
-    WRITE (6,FMT=8000)
-8000 FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-
-    
     CALL vTot%resetPotDen()
     CALL vCoul%resetPotDen()
     CALL vx%resetPotDen()
@@ -139,7 +136,18 @@ CONTAINS
 
     workDen = den
     IF (mpi%irank == 0) THEN
-     
+       !
+       ! --  total = .false. and reap = .false. means, that we now calculate
+       !     the potential from the output density
+       !
+       IF ((.NOT.input%total).AND.(.NOT.reap)) THEN
+          IF (noco%l_noco) THEN
+             CALL juDFT_error("vgen:1",calledby ="vgen")
+          ENDIF
+       END IF
+
+       WRITE (6,FMT=8000)
+8000   FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
        vxpw_w = CMPLX(0.,0.)
        !     ---> perform spin summation of charge densities
        !     ---> for the calculation of the coulomb potentials
@@ -153,14 +161,231 @@ CONTAINS
        END IF
        !
        !     ************** coulomb potential ***********************
+       IF (l_xyav) THEN
+          zat_l(:) = 0.          ! for xy-averaged densities do not
+       ELSE                     ! include nuclear charge
+          zat_l(:) = atoms%zatom(:)
+       ENDIF
 
        !     ----> create pesudo-charge density coefficients
     ENDIF ! (mpi%irank == 0)
 
-    CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,vacuum,sym,stars,cell,sphhar,atoms,den,vCoul,results)
+#ifdef CPP_MPI
+    CALL MPI_BCAST(workDen%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+#endif
 
-    CALL vCoul%copy_both_spin(vTot)
-    
+    CALL timestart("psqpw")      
+    CALL psqpw(mpi, atoms,sphhar,stars,vacuum, dimension,cell,input,sym,oneD,&
+         workDen%pw,workDen%mt,workDen%vacz,l_xyav, psq)
+    CALL timestop("psqpw")
+    IF (mpi%irank == 0) THEN
+
+       IF (l_xyav) THEN        ! write out xy-averaged density & stop
+          CALL xy_av_den(stars,vacuum, cell,psq,workDen%vacz)
+          CALL juDFT_error("xy-averaged density calculated", calledby ="vgen")
+       ENDIF
+
+       !     ------------------------------------------
+       IF (oneD%odi%d1) THEN
+          !-odim
+          CALL timestart("coulomb potential")
+
+          !---> generates the m=0,gz=0 component of the vacuum potential
+          CALL od_vvac(stars,vacuum,cell, psq,workDen%vacz, vTot%vacz)
+
+          !---> generation of the vacuum warped potential components and
+          !---> interstitial pw potential
+          !---> vvacxy_5.F is a symmetrized potential generator
+
+          CALL od_vvacis(oneD%odi%n2d,dimension,vacuum,oneD%odi%nq2,&
+               oneD%odi%kv,cell,oneD%odi%M,stars,oneD%odi%nst2,&
+               oneD, workDen%vacz,workDen%vacxy,psq,vTot%vacz,sym, vTot%vacxy,vTot%pw)
+          CALL timestop("coulomb potential")
+
+          !+odim
+       ELSEIF (input%film .AND. .NOT.oneD%odi%d1) THEN
+          !     ----> potential in the  vacuum  region
+          !       
+          CALL timestart("p vac") 
+          CALL vvac(vacuum,stars, cell,sym,input, psq,workDen%vacz, vTot%vacz,rhobar,sig1dh,vz1dh)
+          CALL vvacis(stars,vacuum, sym,cell, psq, input, vTot%vacxy)
+
+          CALL vvacxy(stars,vacuum,cell,sym,input, workDen%vacxy, vTot%vacxy, alphm)
+          CALL timestop("p vac")
+       END IF
+       !     ------------------------------------------
+       !     ----> potential in the  interstitial  region
+       CALL timestart("p int")
+       WRITE (6,FMT=8010)
+8010   FORMAT (/,5x,'coulomb potential in the interstitial region:')
+       IF (input%film .AND. .NOT.oneD%odi%d1) THEN
+          !           -----> create v(z) for each 2-d reciprocal vector
+          ivfft =  3*stars%mx3 
+          !         ivfft = 2*mx3 - 1
+          ani = 1.0/REAL(ivfft)
+          DO  irec2 = 1,stars%ng2
+             i = 0
+             DO i3 = 0,ivfft - 1
+                i = i + 1
+                z = cell%amat(3,3)*i3*ani
+                IF (z.GT.cell%amat(3,3)/2.) z = z - cell%amat(3,3)
+                vintcza = vintcz(stars,vacuum,cell,sym,input,&
+                     z,irec2, psq,vTot%vacxy,vTot%vacz,rhobar,sig1dh,vz1dh,alphm)
+                af1(i) = REAL(vintcza)
+                bf1(i) = AIMAG(vintcza)
+             ENDDO
+             !                z = (i_sm-1)*ani
+             !                IF (z > 0.5) z = z - 1.0
+             !                af1(i_sm) = af1(i_sm) + z * delta
+             !                bf1(i_sm) = bf1(i_sm) + z * deltb
+             !              ENDDO
+             !            ENDIF
+             !        --> 1-d fourier transform and store the coefficients in vTot%pw( ,1)
+             CALL cfft(af1,bf1,ivfft,ivfft,ivfft,-1)
+             !            delta = ivfft * delta * 2 / fpi ! * amat(3,3)**2 * ani
+             i = 0
+             DO  i3 = 0,ivfft - 1
+                k3 = i3
+                IF (k3 > FLOOR(ivfft/2.) ) k3 = k3 - ivfft
+                i = i + 1
+                IF ((k3.GE.-stars%mx3).AND.(k3.LE.stars%mx3)) THEN
+                   irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),k3)
+
+                   !                 IF ( (irec2 == 1).AND.(i3 > 0) ) THEN                 ! smooth potential
+                   !                   corr = 2.0*mod(abs(k3),2) - 1.0
+                   !                   bf1(i) = bf1(i) + delta * corr / k3
+                   !                 ENDIF
+
+                   !       ----> only stars within g_max sphere (shz oct.97)
+                   IF (irec3.NE.0) THEN
+                      !
+                      xint = CMPLX(af1(i),bf1(i))*ani
+                      nzst1 = stars%nstr(irec3)/stars%nstr2(irec2)
+                      vTot%pw(irec3,1) = vTot%pw(irec3,1) + xint/nzst1
+                   END IF
+                ENDIF
+             ENDDO
+          ENDDO
+       ELSEIF (.NOT.input%film) THEN
+          vTot%pw(1,1) = CMPLX(0.0,0.0)
+          vTot%pw(2:stars%ng3,1)=fpi_const*psq(2:stars%ng3)/(stars%sk3(2:stars%ng3)*stars%sk3(2:stars%ng3))       
+       END IF
+
+       CALL timestop("p int")
+
+    ENDIF ! mpi%irank == 0
+    !     --------------------------------------------
+    !     ---> potential in the muffin-tin spheres
+
+    CALL timestart("p vmts")
+    CALL vmts(mpi, stars,sphhar,atoms, sym,cell,oneD, vTot%pw,workDen%mt, vTot%mt)
+    !     --------------------------------------------
+    CALL timestop("p vmts")
+    IF (mpi%irank == 0) THEN
+       !     ---> check continuity of coulomb potential
+
+       IF (input%vchk) THEN
+          CALL timestart("checking")
+          CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+                           cell,vTot,1)
+          CALL timestop("checking")
+       END IF
+       !
+       !========TOTAL==============================================
+       !
+       !      IF (l_xyav) THEN        ! write out xy-averaged potential & stop
+       !        CALL xy_av_den(
+       !     >                 n3d,k3d,nq3,nmzd,nmz,dvac,delz,
+       !     >                 area,ig2,kv3,amat,vTot%pw,vTot%vacz(1,1,1))
+       !         CALL juDFT_error("xy-averaged potential calculated",calledby="vgen")
+       !      ENDIF
+
+       IF (input%total) THEN
+          CALL timestart("int_nv")
+
+          !
+          !      ---> AVERAGE COULOMB POTENTIAL ON THE SPHERE 
+          !          FOR CALCULATING THE MADELUNG TERM in totale.f
+          !           r=Rmt
+          DO n=1,atoms%ntype
+             atoms%vr0(n)=vTot%mt(atoms%jri(n),0,n,1)
+          ENDDO
+          !
+          !     CALCULATE THE INTEGRAL OF n*Vcoulomb
+          !
+          WRITE (6,FMT=8020)
+          WRITE (16,FMT=8020)
+8020      FORMAT (/,10x,'density-coulomb potential integrals',/)
+          !
+          !       interstitial first
+          !
+          !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
+          !
+          CALL convol(stars, vpw_w, vTot%pw, stars%ufft)
+          !
+          IF (input%jspins.EQ.2) CALL CPP_BLAS_ccopy(stars%ng3,vpw_w(1,1),1,vpw_w(1,input%jspins),1)
+          !
+          results%te_vcoul = 0.0
+          CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
+               workDen%pw,vpw_w, workDen%vacxy,vTot%vacxy, workDen%vacz,vTot%vacz, workDen%mt,vTot%mt, results%te_vcoul)
+
+          WRITE (6,FMT=8030) results%te_vcoul
+          WRITE (16,FMT=8030) results%te_vcoul
+8030      FORMAT (/,10x,'total density-coulomb potential integral :', t40,f20.10)
+
+          CALL timestop("int_nv")
+
+          INQUIRE(file='vdW_kernel_table',exist=l_vdw)
+          IF (l_vdw) THEN
+
+             CALL timestart("fleur_vdW")
+             ! calculate vdW contribution to potential
+             CALL fleur_vdW(mpi,atoms,sphhar,stars, input,dimension,&
+                  cell,sym,oneD,vacuum, workDen%pw(:,1),workDen%mt(:,:,:,1), vpw_w(:,1),vTot%mt(:,:,:,:))
+             CALL timestop("fleur_vdW")
+
+          ENDIF
+
+       END IF
+       !
+       !==========END TOTAL===================================================
+       !
+       !     ----> reload the density for calculating vxc (for spin-pol. case)
+       !
+       IF (input%jspins.EQ.2) THEN
+          workDen = den
+          vTot%mt(:,0:,:,2) = vTot%mt(:,0:,:,1)
+          vTot%pw(:,2) = vTot%pw(:,1)
+          IF (input%film) THEN
+             vTot%vacxy(:,:,:,2) = vTot%vacxy(:,:,:,1)
+             vTot%vacz(:,:,2)=vTot%vacz(:,:,1)
+          END IF
+       END IF
+       IF (input%total) THEN
+          DO js = 1,input%jspins
+             ! to enable a GW calculation,
+             vpw_w(1:stars%ng3,js)=vpw_w(1:stars%ng3,js)/stars%nstr(1:stars%ng3)     ! the PW-coulomb part is not
+             ! used otherwise anyway.
+          ENDDO
+          vCoul%iter = vTot%iter
+          vCoul%mt = vTot%mt
+          vCoul%pw(:,1:input%jspins) = vpw_w(:,1:input%jspins)
+          vCoul%vacz = vTot%vacz
+          vCoul%vacxy = vTot%vacxy
+
+          DO js = 1,input%jspins
+             DO i = 1,stars%ng3
+                vpw_w(i,js)=vpw_w(i,js)*stars%nstr(i)
+             ENDDO
+          ENDDO
+       END IF
+       IF (sliceplot%plpot) THEN
+          OPEN (11,file='potcoul_pl',form='unformatted',status='unknown')
+          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
+               11, vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
+          CLOSE(11)
+       END IF
+    ENDIF !irank==0
 
        !     ******** exchange correlation potential******************
        !+ta

@@ -30,9 +30,9 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)    :: oneD
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: vpw(:,:)!(stars%ng3,input%jspins)
-    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+    COMPLEX, INTENT (IN) :: vpw(:)!(stars%ng3,input%jspins)
+    REAL,    INTENT (IN) :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    REAL,    INTENT (OUT):: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     !-odim
     !+odim
     !     ..
@@ -76,7 +76,7 @@ CONTAINS
     !           ----> g=0 component
     IF (mpi%irank == 0) THEN
        DO n = 1,atoms%ntype
-          vtl(0,n) = sfp_const*vpw(1,1)
+          vtl(0,n) = sfp_const*vpw(1)
        ENDDO
     ENDIF
     !           ----> g.ne.0 components
@@ -87,7 +87,7 @@ CONTAINS
     !$ vtl_loc(:,:) = CMPLX(0.d0,0.d0)
     !$OMP DO
     DO k = mpi%irank+2, stars%ng3, mpi%isize
-       cp = vpw(k,1)*stars%nstr(k)
+       cp = vpw(k)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
           CALL phasy1(&
                &                  atoms,stars,sym,&
@@ -149,8 +149,8 @@ CONTAINS
           DO i = 1,atoms%jri(n)
              rrl(i) = atoms%rmsh(i,n)**l
              rrl1(i) = 1./( rrl(i) * atoms%rmsh(i,n) )
-             x1r(i) = rrl(i)*rho(i,lh,n,1)
-             x2r(i) = rrl1(i)*rho(i,lh,n,1)
+             x1r(i) = rrl(i)*rho(i,lh,n)
+             x2r(i) = rrl1(i)*rho(i,lh,n)
           ENDDO
           CALL intgr2(x1r,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),f1r)
           CALL intgr2(x2r,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),f2r)
@@ -159,7 +159,7 @@ CONTAINS
           DO  i = 1,atoms%jri(n)
              rrlr = rrl(i)*rmt2l
              ror = rrl(i)*rmtl
-             vr(i,lh,n,1) = fpl21 * (rrl1(i)*f1r(i)-rrlr*f1r(atoms%jri(n))+&
+             vr(i,lh,n) = fpl21 * (rrl1(i)*f1r(i)-rrlr*f1r(atoms%jri(n))+&
                   &                   rrl(i) * (f2r(atoms%jri(n))-f2r(i))) + ror*vtl(lh,n)
           ENDDO
        ENDDO
@@ -168,7 +168,7 @@ CONTAINS
     DO  n = 1,atoms%ntype
        DO  i = 1,atoms%jri(n)
           rr = atoms%rmsh(i,n)/atoms%rmt(n)
-          vr(i,0,n,1) = vr(i,0,n,1)-sfp_const*(1.-rr)/atoms%rmsh(i,n)*atoms%zatom(n)
+          vr(i,0,n) = vr(i,0,n)-sfp_const*(1.-rr)/atoms%rmsh(i,n)*atoms%zatom(n)
        ENDDO
     ENDDO
   END SUBROUTINE vmts

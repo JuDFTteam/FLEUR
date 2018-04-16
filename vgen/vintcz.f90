@@ -25,9 +25,9 @@ CONTAINS
     REAL,    INTENT (IN) :: sig1dh,vz1dh  ,z
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2,jspins)
+    COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
     COMPLEX, INTENT (IN) :: alphm(stars%ng2,2)
-    REAL,    INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,jspins)  
+    REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)  
     !     ..
     !     .. Local Scalars ..
     COMPLEX, PARAMETER :: ci = (0.0,1.0)
@@ -55,14 +55,14 @@ CONTAINS
        im = zf
        q = zf - im
        IF (nrec2.EQ.1) THEN
-          fit = 0.5* (q-1.)* (q-2.)*vz(im,ivac,1) -&
-               &            q* (q-2.)*vz(im+1,ivac,1) +&
-               &            0.5*q* (q-1.)*vz(im+2,ivac,1)
+          fit = 0.5* (q-1.)* (q-2.)*vz(im,ivac) -&
+               &            q* (q-2.)*vz(im+1,ivac) +&
+               &            0.5*q* (q-1.)*vz(im+2,ivac)
           vintcz = CMPLX(fit,0.0)
        ELSE IF (im+2.LE.vacuum%nmzxy) THEN
-          vintcz = 0.5* (q-1.)* (q-2.)*vxy(im,nrec2-1,ivac,1) -&
-               &               q* (q-2.)*vxy(im+1,nrec2-1,ivac,1) +&
-               &               0.5*q* (q-1.)*vxy(im+2,nrec2-1,ivac,1)
+          vintcz = 0.5* (q-1.)* (q-2.)*vxy(im,nrec2-1,ivac) -&
+               &               q* (q-2.)*vxy(im+1,nrec2-1,ivac) +&
+               &               0.5*q* (q-1.)*vxy(im+2,nrec2-1,ivac)
           IF ((sym%invs.AND. (.NOT.sym%zrfs)) .AND.&
                &          z.LT.0) vintcz = CONJG(vintcz)
        END IF

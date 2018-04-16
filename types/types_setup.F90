@@ -180,7 +180,6 @@ MODULE m_types_setup
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
-     REAL,ALLOCATABLE:: vr0(:) !< Average Coulomb potential for atoms
   END TYPE t_atoms
 
   TYPE t_cell

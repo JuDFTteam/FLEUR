@@ -25,6 +25,7 @@ vgen/mpmom.F90
 vgen/od_vvac.f90
 vgen/od_vvacis.f90
 vgen/pot_mod.f90
+vgen/vgen_coulomb.F90
 vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
 vgen/rhodirgen.f90

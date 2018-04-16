@@ -27,8 +27,8 @@ CONTAINS
     !     ..
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN)    :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+    COMPLEX, INTENT (IN)    :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2)
+    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%ng2-1,2)
     COMPLEX, INTENT (OUT)   :: alphm(stars%ng2,2)
     !     ..
     !     .. Local Scalars ..
@@ -73,12 +73,12 @@ CONTAINS
        ! ********** DIRICHLET ************************************
        IF (input%efield%dirichlet) THEN
           IF (ALLOCATED (input%efield%rhoEF)) THEN
-             vxy(ncsh:vacuum%nmzxy,irec2-1,1,1) = input%efield%rhoEF(irec2-1, 1)
+             vxy(ncsh:vacuum%nmzxy,irec2-1,1) = input%efield%rhoEF(irec2-1, 1)
              IF (vacuum%nvac == 2) THEN
-                vxy(ncsh:vacuum%nmzxy,irec2-1,2,1) = input%efield%rhoEF(irec2-1, 2)
+                vxy(ncsh:vacuum%nmzxy,irec2-1,2) = input%efield%rhoEF(irec2-1, 2)
              END IF
           ELSE
-             vxy(ncsh:vacuum%nmzxy,irec2-1,1:vacuum%nvac,1) = 0.0
+             vxy(ncsh:vacuum%nmzxy,irec2-1,1:vacuum%nvac) = 0.0
           END IF
 
           vcons = 2.0*vcons/SINH(g*2.0*(input%efield%zsigma+cell%z1))
@@ -90,10 +90,10 @@ CONTAINS
                 ! for both ivac -- but the integral bounds are reversed
                 e_m = SINH(g*(input%efield%zsigma+cell%z1-z))
                 e_p = SINH(g*(z+input%efield%zsigma+cell%z1))
-                fra(ncsh-imz) = REAL(rhtxy(imz,irec2-1,ivac,1))* e_m
-                fia(ncsh-imz) = AIMAG(rhtxy(imz,irec2-1,ivac,1))*e_m
-                frb(imz) = REAL(rhtxy(imz,irec2-1,ivac,1))* e_p
-                fib(imz) = AIMAG(rhtxy(imz,irec2-1,ivac,1))*e_p
+                fra(ncsh-imz) = REAL(rhtxy(imz,irec2-1,ivac))* e_m
+                fia(ncsh-imz) = AIMAG(rhtxy(imz,irec2-1,ivac))*e_m
+                frb(imz) = REAL(rhtxy(imz,irec2-1,ivac))* e_p
+                fib(imz) = AIMAG(rhtxy(imz,irec2-1,ivac))*e_p
                 z = z + vacuum%delz
              END DO imz_loop1
              CALL intgz1(fra,vacuum%delz,ncsh-1,alpha(1,ivac,1),tail=.FALSE.)
@@ -132,17 +132,17 @@ CONTAINS
                 e_p = SINH(g*(z+input%efield%zsigma+cell%z1))
                 test = e_m*(alph0+betaz) + e_p*alphaz
                 IF ( 2.0 * test == test ) test = CMPLX(0.0,0.0)
-                vxy(imz,irec2-1,ivac,1) = vxy(imz,irec2-1,ivac,1)&
+                vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac)&
                      &                  +  vcons * test
                 IF (ALLOCATED (input%efield%C1)) THEN
                    e_m = exp_save( -g*z  )
                    e_p = exp_save( g*z  )
                    IF (ivac == 1) THEN ! z > 0
-                      vxy(imz,irec2-1,ivac,1) = vxy(imz,irec2-1,ivac,1)&
+                      vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac)&
                            &                                       + input%efield%C1(irec2-1)*e_p&
                            &                                       + input%efield%C2(irec2-1)*e_m
                    ELSE ! z < 0
-                      vxy(imz,irec2-1,ivac,1) = vxy(imz,irec2-1,ivac,1)&
+                      vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac)&
                            &                                       + input%efield%C1(irec2-1)*e_m&
                            &                                       + input%efield%C2(irec2-1)*e_p
                    END IF
@@ -160,10 +160,10 @@ CONTAINS
              imz_loop3: DO imz = 1,vacuum%nmzxy
                 e_m = exp_save( -g*z )
                 e_p = exp_save( g*z )
-                fra(ip-imz) = REAL(rhtxy(imz,irec2-1,ivac,1))* e_m
-                fia(ip-imz) = AIMAG(rhtxy(imz,irec2-1,ivac,1))*e_m
-                frb(imz) = REAL(rhtxy(imz,irec2-1,ivac,1))* e_p
-                fib(imz) = AIMAG(rhtxy(imz,irec2-1,ivac,1))*e_p
+                fra(ip-imz) = REAL(rhtxy(imz,irec2-1,ivac))* e_m
+                fia(ip-imz) = AIMAG(rhtxy(imz,irec2-1,ivac))*e_m
+                frb(imz) = REAL(rhtxy(imz,irec2-1,ivac))* e_p
+                fib(imz) = AIMAG(rhtxy(imz,irec2-1,ivac))*e_p
                 z = z + vacuum%delz
              END DO imz_loop3
 
@@ -212,7 +212,7 @@ CONTAINS
                 e_p = exp_save( g*z  )
                 test = e_m*(alph0+betaz) + e_p*alphaz
                 IF ( 2.0 * test == test ) test = CMPLX(0.0,0.0)
-                vxy(imz,irec2-1,ivac,1) = vxy(imz,irec2-1,ivac,1) +&
+                vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac) +&
                      &                    vcons * test
                 z = z + vacuum%delz
              END DO imz_loop4
