@@ -21,6 +21,7 @@ set(fleur_F90 ${fleur_F90}
 global/constants.f90
 global/checkdop.F90
 global/checkdopall.f90
+global/genMTBasis.f90
 global/chkmt.f90
 global/convn.f90
 global/phasy1.f90

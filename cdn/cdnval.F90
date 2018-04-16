@@ -46,8 +46,7 @@ CONTAINS
     !
     USE m_constants
     USE m_eig66_io,ONLY: write_dos
-    USE m_radfun
-    USE m_radflo
+    USE m_genMTBasis
     USE m_rhomt
     USE m_rhonmt
     USE m_rhomtlo
@@ -124,19 +123,16 @@ CONTAINS
     !     .. Local Scalars ..
     TYPE(t_lapw):: lapw
     INTEGER :: llpd
-    REAL wronk
     INTEGER i,ie,iv,ivac,j,k,l,n,ilo,isp,&
-         nbands,noded,nodeu,noccbd,nslibd,na,&
+         nbands,noccbd,nslibd,na,&
          ikpt,jsp_start,jsp_end,ispin
     INTEGER  skip_t,skip_tt
     INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
-    LOGICAL l_fmpl,l_evp,l_orbcomprot,l_real
+    LOGICAL l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
     INTEGER n_bands(0:dimension%neigd)
     REAL    eig(dimension%neigd)
     REAL    vz0(2)
-    REAL    uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
-    REAL    ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 
     !orbcomp
     REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
@@ -251,22 +247,24 @@ CONTAINS
     na = 1
     ncored = 0
 
+    l_write = input%cdinf.AND.mpi%irank==0
+
     ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
     DO n = 1,atoms%ntype
-       IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8001) n
-       DO  l = 0,atoms%lmax(n)
-          DO ispin =jsp_start,jsp_end
-             CALL radfun(l,n,ispin,enpara%el0(l,n,ispin),vTot%mt(1,0,n,ispin),atoms,&
-                         f(1,1,l,ispin),g(1,1,l,ispin),usdus,nodeu,noded,wronk)
-             IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8002) l,&
-                  enpara%el0(l,n,ispin),usdus%us(l,n,ispin),usdus%dus(l,n,ispin),nodeu,&
-                  usdus%uds(l,n,ispin),usdus%duds(l,n,ispin),noded,usdus%ddn(l,n,ispin),&
-                  wronk
-          END DO
-          IF (noco%l_mperp) THEN
-             CALL int_21(f,g,atoms,n,l,denCoeffsOffdiag)
-          END IF
+
+       DO ispin = jsp_start, jsp_end
+          CALL genMTBasis(atoms,enpara,vTot,mpi,n,ispin,l_write,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
        END DO
+
+       IF (noco%l_mperp) THEN
+          DO l = 0,atoms%lmax(n)
+             CALL int_21(f,g,atoms,n,l,denCoeffsOffdiag)
+          END DO
+          DO ilo = 1, atoms%nlo(n)
+             CALL int_21lo(f,g,atoms,n,flo,ilo,denCoeffsOffdiag)
+          END DO
+       END IF
+
        IF (banddos%l_mcd) THEN
           CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,n,jspin)
           ncored = max(mcd%ncore(n),ncored)
@@ -276,30 +274,9 @@ CONTAINS
                                   input%jspins,jspin,results%ef,&
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
 
-       !--->   generate the extra wavefunctions for the local orbitals,
-       !--->   if there are any.
-       IF ( atoms%nlo(n) > 0 ) THEN
-          DO ispin = jsp_start,jsp_end
-             CALL radflo(atoms,n,ispin, enpara%ello0(1,1,ispin),vTot%mt(:,0,n,ispin), f(1,1,0,ispin),&
-                         g(1,1,0,ispin),mpi, usdus, uuilon,duilon,ulouilopn, flo(:,:,:,ispin))
-          END DO
-       END IF
-
-       DO ilo = 1, atoms%nlo(n)
-          IF (noco%l_mperp) THEN
-             CALL int_21lo(f,g,atoms,n,flo,ilo,denCoeffsOffdiag)
-          END IF
-       END DO
-
        na = na + atoms%neq(n)
     END DO
     DEALLOCATE (flo)
-8001 FORMAT (1x,/,/,' wavefunction parameters for atom type',i3,':',/,&
-         t32,'radial function',t79,'energy derivative',/,t3,'l',t8,&
-         'energy',t26,'value',t39,'derivative',t53,'nodes',t68,&
-         'value',t81,'derivative',t95,'nodes',t107,'norm',t119,&
-         'wronskian')
-8002 FORMAT (i3,f10.5,2 (5x,1p,2e16.7,i5),1p,2e16.7)
 
     IF (input%film) vz0(:) = vTot%vacz(vacuum%nmz,:,jspin)
 
