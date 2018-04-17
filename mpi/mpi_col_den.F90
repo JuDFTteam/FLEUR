@@ -134,13 +134,13 @@ CONTAINS
     !
     n=4*atoms%ntype
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(regCharges%ener(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(regCharges%ener(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%ener(0:,:,jspin), 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%ener(:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(regCharges%sqal(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(regCharges%sqal(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqal(0:,:,jspin), 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqal(:,:,jspin), 1)
     ENDIF
     DEALLOCATE (r_b)
     !
