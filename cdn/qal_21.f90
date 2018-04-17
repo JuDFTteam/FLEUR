@@ -5,7 +5,7 @@ MODULE m_qal21
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges,qmat)
+  SUBROUTINE qal_21(atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges,qmat)
 
     USE m_rotdenmat
     USE m_types
@@ -16,14 +16,12 @@ CONTAINS
     TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
     TYPE (t_denCoeffsOffdiag), INTENT(IN)    :: denCoeffsOffdiag
     TYPE(t_regionCharges),     INTENT(INOUT) :: regCharges
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: noccbd 
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (INout)  :: we(noccbd)
-    REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,4)
 
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: noccbd
+
+    !     .. Array Arguments ..
+    REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,4)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lo,lop ,natom,nn,ntyp

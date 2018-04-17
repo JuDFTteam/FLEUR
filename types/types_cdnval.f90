@@ -168,6 +168,7 @@ PRIVATE
       REAL,    ALLOCATABLE :: qvac(:,:,:,:)
       REAL,    ALLOCATABLE :: svac(:,:)
       REAL,    ALLOCATABLE :: pvac(:,:)
+      REAL,    ALLOCATABLE :: qvlay(:,:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => regionCharges_init
@@ -598,7 +599,7 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
 
 END SUBROUTINE mcd_init1
 
-SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,jsp_start,jsp_end)
+SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,vacuum,jsp_start,jsp_end)
 
    USE m_types_setup
    USE m_types_kpts
@@ -609,6 +610,7 @@ SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,jsp_start,jsp_
    TYPE(t_atoms),          INTENT(IN)    :: atoms
    TYPE(t_dimension),      INTENT(IN)    :: dimension
    TYPE(t_kpts),           INTENT(IN)    :: kpts
+   TYPE(t_vacuum),         INTENT(IN)    :: vacuum
    INTEGER,                INTENT(IN)    :: jsp_start
    INTEGER,                INTENT(IN)    :: jsp_end
 
@@ -624,6 +626,7 @@ SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,jsp_start,jsp_
    ALLOCATE(thisRegCharges%qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
    ALLOCATE(thisRegCharges%svac(2,jsp_start:jsp_end))
    ALLOCATE(thisRegCharges%pvac(2,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
 
    thisRegCharges%qis = 0.0
 
@@ -637,6 +640,7 @@ SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,jsp_start,jsp_
    thisRegCharges%qvac = 0.0
    thisRegCharges%svac = 0.0
    thisRegCharges%pvac = 0.0
+   thisRegCharges%qvlay = 0.0
 
 END SUBROUTINE regionCharges_init
 

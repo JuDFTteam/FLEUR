@@ -13,7 +13,7 @@ CONTAINS
        &                 sym,atoms,vacuum,stars,ikpt,nv,&
        &                 input,jspin,kpts,&
        &                 cell,wk,k1,k2,&
-       &                 evac,vz,vz0,&
+       &                 evac,vz,&
        &                 gvac1d,gvac2d)
     !
     USE m_sort
@@ -37,7 +37,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: k1(:),k2(:)
     REAL,    INTENT (IN) :: evac(2)
     REAL,    INTENT (IN) :: vz(:,:)!(vacuum%nmzd,2)
-    REAL,    INTENT (IN) :: vz0(2) 
     INTEGER, INTENT (OUT) :: gvac1d(:),gvac2d(:) !(dimension%nv2d)
     !     ..
     !     .. Local Scalars
@@ -103,7 +102,7 @@ CONTAINS
        END IF
        WRITE (87,'(i1,1x,i1)') jspin, vacuum%nvac
        WRITE (87,'(2(e16.8,1x))') (evac(i), i=1,vacuum%nvac)
-       WRITE (87,'(2(e16.8,1x))') (vz0(i), i=1,vacuum%nvac)
+       WRITE (87,'(2(e16.8,1x))') (vz(vacuum%nmz,i), i=1,vacuum%nvac)
        dz0=0.0
        DO i=1, atoms%nat
           IF (ABS(atoms%taual(3,i)).GT.dz0) dz0=ABS(atoms%taual(3,i))

@@ -9,7 +9,7 @@ CONTAINS
        vacuum,DIMENSION,stars,oneD,&
        kpts,input,cell,atoms,noco,banddos,&
        gvac1,gvac2,&
-       we,ikpt,jspin,vz,vz0,&
+       we,ikpt,jspin,vz,&
        ne,lapw,&
        evac,eig,den,qvac,qvlay,&
        stcoeff,zMat)
@@ -73,10 +73,11 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
-    REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
-    !
+    REAL,    INTENT(IN)    :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT(OUT)   :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT(INOUT) :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT(IN)    :: we(DIMENSION%neigd)
+    REAL                   :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
     REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
     INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
@@ -101,7 +102,7 @@ CONTAINS
          &        ind1,ind1p,irec2,irec3,m
     !
     !     .. Local Arrays ..
-    REAL qssbti(3,2),qssbtii
+    REAL qssbti(3,2),qssbtii,vz0(2)
     REAL bess(-oneD%odi%mb:oneD%odi%mb),dbss(-oneD%odi%mb:oneD%odi%mb)
     COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:)
     REAL,    ALLOCATABLE :: dt(:),dte(:),du(:),ddu(:,:),due(:)
@@ -165,6 +166,7 @@ CONTAINS
     END IF ! oneD%odi%d1
     !
 
+    vz0(:) = vz(vacuum%nmz,:)
     eps=0.01
     ic = CMPLX(0.,1.)
     !    ------------------

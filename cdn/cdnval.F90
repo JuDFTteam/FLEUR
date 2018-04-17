@@ -2,8 +2,8 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-       vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,results,&
-       qvlay,qa21, chmom,clmom)
+                    vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,results,&
+                    qa21,chmom,clmom)
     !
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
@@ -114,7 +114,6 @@ CONTAINS
     COMPLEX, INTENT(INOUT)           :: qa21(atoms%ntype)
     REAL, INTENT(OUT)                :: chmom(atoms%ntype,dimension%jspd)
     REAL, INTENT(OUT)                :: clmom(3,atoms%ntype,dimension%jspd)
-    REAL, INTENT(INOUT)              :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -129,7 +128,6 @@ CONTAINS
     !     ...Local Arrays ..
     INTEGER :: n_bands(0:dimension%neigd)
     REAL    :: eig(dimension%neigd)
-    REAL    :: vz0(2)
 
     REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:) ! orbcomp
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
@@ -186,7 +184,7 @@ CONTAINS
     CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
     CALL denCoeffsOffdiag%init(atoms,noco,sphhar,l_fmpl)
     CALL force%init1(input,atoms)
-    CALL regCharges%init(atoms,dimension,kpts,jsp_start,jsp_end)
+    CALL regCharges%init(atoms,dimension,kpts,vacuum,jsp_start,jsp_end)
     CALL orb%init(atoms,noco,jsp_start,jsp_end)
     CALL mcd%init1(banddos,dimension,input,atoms)
 
@@ -246,8 +244,6 @@ CONTAINS
        na = na + atoms%neq(n)
     END DO
     DEALLOCATE (f,g,flo)
-
-    IF (input%film) vz0(:) = vTot%vacz(vacuum%nmz,:,jspin)
 
     CALL slab%init(banddos,dimension,atoms,cell)
 
@@ -352,11 +348,9 @@ CONTAINS
           !ENDIF
           !
           IF (vacuum%nstm.EQ.3.AND.input%film) THEN
-             CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),&
-                        input,jspin,kpts,&
+             CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),input,jspin,kpts,&
                         cell,kpts%wtkpt(ikpt),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                        enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),vz0,&
-                        gvac1d,gvac2d)
+                        enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
           END IF
 
           IF (noccbd.EQ.0) GO TO 199
@@ -456,8 +450,8 @@ CONTAINS
              IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                            gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),vz0, noccbd,lapw, enpara%evac0,eig,&
-                            den,regCharges%qvac,qvlay, qstars,zMat)
+                            gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
+                            den,regCharges%qvac,regCharges%qvlay,qstars,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -502,14 +496,12 @@ CONTAINS
                             skip_t,l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
 
                 IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
-                   CALL qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges,qmat)
+                   CALL qal_21(atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges,qmat)
                 END IF
              END IF
-             !
-             !+new
+
              !--->    layer charge of each valence state in this k-point of the SBZ
              !--->    from the mt-sphere region of the film
-             !
              IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
                 CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
@@ -581,7 +573,7 @@ CONTAINS
 
              !--dw   now write k-point data to tmp_dos
              CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
-                            qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
+                            regCharges%qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
                             slab%qmtsl(:,:),qmtp(:,:),orbcomp)
 
              CALL timestop("cdnval: write_info")
