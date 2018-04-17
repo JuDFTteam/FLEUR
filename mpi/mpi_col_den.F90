@@ -10,11 +10,9 @@ MODULE m_mpi_col_den
   !
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-       input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,ener,&
-       sqal,results,svac,pvac,denCoeffs,sqlo,&
-       enerlo,orb,&
-       denCoeffsOffdiag,den,n_mmp)
-    !
+       input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,regCharges,&
+       results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
+
 #include"cpp_double.h"
     USE m_types
     USE m_constants
@@ -39,14 +37,12 @@ CONTAINS
     ! ..  Array Arguments ..
     COMPLEX, INTENT (INOUT) :: qpw(stars%ng3)
     COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2) 
-    REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
-    REAL,    INTENT (INOUT) :: svac(2),pvac(2)
-    REAL,  INTENT (INOUT) :: sqlo(atoms%nlod,atoms%ntype),enerlo(atoms%nlod,atoms%ntype)
+    REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2)
     COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     TYPE (t_orb),              INTENT(INOUT) :: orb
     TYPE (t_denCoeffs),        INTENT(INOUT) :: denCoeffs
     TYPE (t_denCoeffsOffdiag), INTENT(INOUT) :: denCoeffsOffdiag
+    TYPE (t_regionCharges),    INTENT(INOUT) :: regCharges
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n
@@ -138,13 +134,13 @@ CONTAINS
     !
     n=4*atoms%ntype
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(ener,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(regCharges%ener(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, ener, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%ener(0:,:,jspin), 1)
     ENDIF
-    CALL MPI_REDUCE(sqal,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(regCharges%sqal(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_scopy(n, r_b, 1, sqal, 1)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqal(0:,:,jspin), 1)
     ENDIF
     DEALLOCATE (r_b)
     !
@@ -154,13 +150,13 @@ CONTAINS
 
        n=2
        ALLOCATE(r_b(n))
-       CALL MPI_REDUCE(svac,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(regCharges%svac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, svac, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(pvac,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(regCharges%pvac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, pvac, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%pvac(:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
@@ -194,13 +190,13 @@ CONTAINS
        IF (mpi%irank.EQ.0) THEN
           CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%bclo(:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(enerlo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(regCharges%enerlo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, enerlo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
        ENDIF
-       CALL MPI_REDUCE(sqlo,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(regCharges%sqlo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, sqlo, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqlo(:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 

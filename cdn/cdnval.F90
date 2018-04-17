@@ -3,7 +3,7 @@ MODULE m_cdnval
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
        vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,results,&
-       qvac,qvlay,qa21, chmom,clmom)
+       qvlay,qa21, chmom,clmom)
     !
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
@@ -108,52 +108,38 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT)     :: den
 
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: eig_id,jspin
+    INTEGER, INTENT(IN)              :: eig_id,jspin
 
     !     .. Array Arguments ..
-    COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
-    REAL, INTENT   (OUT) :: chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-    REAL, INTENT (INOUT) :: qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd)
-    REAL, INTENT (INOUT) :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
+    COMPLEX, INTENT(INOUT)           :: qa21(atoms%ntype)
+    REAL, INTENT(OUT)                :: chmom(atoms%ntype,dimension%jspd)
+    REAL, INTENT(OUT)                :: clmom(3,atoms%ntype,dimension%jspd)
+    REAL, INTENT(INOUT)              :: qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    logical :: mpi_flag, mpi_status
+    LOGICAL :: mpi_flag, mpi_status
 #endif
     !     .. Local Scalars ..
-    TYPE(t_lapw):: lapw
-    INTEGER :: llpd
-    INTEGER i,ie,iv,ivac,j,k,l,n,ilo,isp,&
-         nbands,noccbd,nslibd,na,&
-         ikpt,jsp_start,jsp_end,ispin
-    INTEGER  skip_t,skip_tt
-    INTEGER n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
-    LOGICAL l_fmpl,l_evp,l_orbcomprot,l_real, l_write
+    INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin
+    INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd,na
+    INTEGER :: skip_t,skip_tt, nkpt_extended
+    INTEGER :: n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
+    LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
-    INTEGER n_bands(0:dimension%neigd)
-    REAL    eig(dimension%neigd)
-    REAL    vz0(2)
+    INTEGER :: n_bands(0:dimension%neigd)
+    REAL    :: eig(dimension%neigd)
+    REAL    :: vz0(2)
 
-    !orbcomp
-    REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:)
-
-    REAL,    ALLOCATABLE :: qis(:,:,:)
-    !-dw
+    REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:) ! orbcomp
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
-
     REAL,    ALLOCATABLE :: we(:)
-
-    ! radial functions
-    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:)
-
-    REAL,    ALLOCATABLE :: sqlo(:,:,:)
-    REAL,    ALLOCATABLE :: qal(:,:,:,:),sqal(:,:,:),ener(:,:,:)
-    REAL,    ALLOCATABLE :: svac(:,:),pvac(:,:)
-    REAL,    ALLOCATABLE :: enerlo(:,:,:),qmat(:,:,:,:)
-
+    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
+    REAL,    ALLOCATABLE :: qmat(:,:,:,:)
     COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
 
+    TYPE (t_lapw)             :: lapw
     TYPE (t_orb)              :: orb
     TYPE (t_denCoeffs)        :: denCoeffs
     TYPE (t_denCoeffsOffdiag) :: denCoeffsOffdiag
@@ -161,10 +147,9 @@ CONTAINS
     TYPE (t_slab)             :: slab
     TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
     TYPE (t_mcd)              :: mcd
-
-    TYPE (t_usdus)             :: usdus
-    TYPE (t_zMat)              :: zMat
-    INTEGER :: nkpt_extended
+    TYPE (t_regionCharges)    :: regCharges
+    TYPE (t_usdus)            :: usdus
+    TYPE (t_zMat)             :: zMat
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
@@ -190,15 +175,9 @@ CONTAINS
     !---> at a time, otherwise for both spins:
     ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )      ! Deallocation before mpi_col_den
     ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
+    ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
-    ALLOCATE ( qal(0:3,atoms%ntype,dimension%neigd,jsp_start:jsp_end) )
-    ALLOCATE ( sqal(0:3,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( ener(0:3,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE (   sqlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( enerlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end) )
-    ALLOCATE ( svac(2,jsp_start:jsp_end) )
-    ALLOCATE ( pvac(2,jsp_start:jsp_end) )
     ALLOCATE ( qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2) )
 
     ! --> Initializations
@@ -207,22 +186,17 @@ CONTAINS
     CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
     CALL denCoeffsOffdiag%init(atoms,noco,sphhar,l_fmpl)
     CALL force%init1(input,atoms)
+    CALL regCharges%init(atoms,dimension,kpts,jsp_start,jsp_end)
+    CALL orb%init(atoms,noco,jsp_start,jsp_end)
+    CALL mcd%init1(banddos,dimension,input,atoms)
 
     IF ((l_fmpl).AND.(.not.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
-
-    svac(:,:) = 0.0 ; pvac(:,:) = 0.0
-    sqal(:,:,:) = 0.0 ; ener(:,:,:) = 0.0
-
-    CALL orb%init(atoms,noco,jsp_start,jsp_end)
-
-    CALL mcd%init1(banddos,dimension,input,atoms)
 
 ! calculation of core spectra (EELS) initializations -start-
     CALL corespec_init(input,atoms,coreSpecInput)
     IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
     IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
 ! calculation of core spectra (EELS) initializations -end-
-
   
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
@@ -231,25 +205,20 @@ CONTAINS
     END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-    CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin,dimension%jspd,&
-                   noco%l_noco,n_bands,n_size)
+    CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin,dimension%jspd,noco%l_noco,n_bands,n_size)
 #ifdef CPP_MPI
     ! Sinchronizes the RMA operations
     CALL MPI_BARRIER(mpi%mpi_comm,ie) 
 #endif
 
-    ALLOCATE ( qis(dimension%neigd,kpts%nkpt,dimension%jspd))
-
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
-    !-lo
-    !---> set up l-dependent m.t. wavefunctions
+
     na = 1
     ncored = 0
 
     l_write = input%cdinf.AND.mpi%irank==0
 
-    ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
     DO n = 1,atoms%ntype
 
        DO ispin = jsp_start, jsp_end
@@ -276,7 +245,7 @@ CONTAINS
 
        na = na + atoms%neq(n)
     END DO
-    DEALLOCATE (flo)
+    DEALLOCATE (f,g,flo)
 
     IF (input%film) vz0(:) = vTot%vacz(vacuum%nmz,:,jspin)
 
@@ -287,7 +256,6 @@ CONTAINS
 
        ALLOCATE ( orbcomp(dimension%neigd,23,atoms%nat) )
        ALLOCATE ( qmtp(dimension%neigd,atoms%nat) )
-       IF (.NOT.input%film) qvac(:,:,:,jspin) = 0.0
     ELSE
        ALLOCATE(orbcomp(1,1,1),qmtp(1,1))
     END IF
@@ -295,11 +263,6 @@ CONTAINS
     !-->   loop over k-points: each can be a separate task
     IF (kpts%nkpt < mpi%isize) THEN
        l_evp = .true.
-       ener(:,:,:) = 0.0
-       sqal(:,:,:) = 0.0
-       qal(:,:,:,:) = 0.0
-       enerlo(:,:,:) = 0.0
-       sqlo(:,:,:) = 0.0
     ELSE
        l_evp = .false.
     END IF
@@ -475,7 +438,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: pwden")
              CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                        jspin,lapw,noccbd,we,eig,den,qis,results,force%f_b8,zMat)
+                        jspin,lapw,noccbd,we,eig,den,regCharges%qis,results,force%f_b8,zMat)
              CALL timestop("cdnval: pwden")
           END IF
           !+new
@@ -494,15 +457,15 @@ CONTAINS
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
                             gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),vz0, noccbd,lapw, enpara%evac0,eig,&
-                            den,qvac,qvlay, qstars,zMat)
+                            den,regCharges%qvac,qvlay, qstars,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
              !--->       bands in order to determine the vacuum energy parameters.
              DO ispin = jsp_start,jsp_end
                 DO ivac = 1,vacuum%nvac
-                   pvac(ivac,ispin)=pvac(ivac,ispin)+dot_product(eig(:noccbd)*qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
-                   svac(ivac,ispin)=svac(ivac,ispin)+dot_product(qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+                   regCharges%pvac(ivac,ispin)=regCharges%pvac(ivac,ispin)+dot_product(eig(:noccbd)*regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+                   regCharges%svac(ivac,ispin)=regCharges%svac(ivac,ispin)+dot_product(regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
                 END DO
              END DO
           END IF
@@ -536,13 +499,10 @@ CONTAINS
              !--->       atom and angular momentum
              IF (.not.sliceplot%slice) THEN
                 CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                            skip_t,l_evp,eigVecCoeffs,usdus,mcd,&
-                            banddos%l_mcd,enerlo(1,1,ispin),sqlo(1,1,ispin),&
-                            ener(0,1,ispin),sqal(0,1,ispin),&
-                            qal(0:,:,:,ispin))
+                            skip_t,l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
 
                 IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
-                   CALL qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,qal,qmat)
+                   CALL qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges,qmat)
                 END IF
              END IF
              !
@@ -600,9 +560,7 @@ CONTAINS
 
           IF (noco%l_mperp) THEN
              CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,denCoeffsOffdiag)
-             IF (l_fmpl) THEN
-                CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
-             END IF
+             IF (l_fmpl) CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
           END IF
 
 199       CONTINUE
@@ -622,7 +580,7 @@ CONTAINS
              END IF
 
              !--dw   now write k-point data to tmp_dos
-             CALL write_dos(eig_id,ikpt,jspin,qal(:,:,:,jspin),qvac(:,:,ikpt,jspin),qis(:,ikpt,jspin),&
+             CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
                             qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
                             slab%qmtsl(:,:),qmtp(:,:),orbcomp)
 
@@ -639,17 +597,15 @@ CONTAINS
         END IF
        END IF ! --> end "IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN"
     END DO !---> end of k-point loop
-    DEALLOCATE (we,f,g)
+    DEALLOCATE (we)
     !+t3e
 #ifdef CPP_MPI
     CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
        CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
                         input,noco,l_fmpl,ispin,llpd, den%vacxy(1,1,1,ispin),&
-                        den%vacz(1,1,ispin),den%pw(1,ispin), ener(0,1,ispin),sqal(0,1,ispin),&
-                        results,svac(1,ispin),pvac(1,ispin),denCoeffs,&
-                        sqlo(1,1,ispin),enerlo(1,1,ispin),orb,&
-                        denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
+                        den%vacz(1,1,ispin),den%pw(1,ispin),regCharges,&
+                        results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
@@ -675,16 +631,15 @@ CONTAINS
        CALL cdnmt(dimension%jspd,atoms,sphhar,llpd,&
                   noco,l_fmpl,jsp_start,jsp_end,&
                   enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),denCoeffs,&
-                  usdus,orb,denCoeffsOffdiag,&
-                  chmom,clmom,qa21,den%mt)
+                  usdus,orb,denCoeffsOffdiag,chmom,clmom,qa21,den%mt)
 
        DO ispin = jsp_start,jsp_end
           IF (.NOT.sliceplot%slice) THEN
              DO n=1,atoms%ntype
-                enpara%el1(0:3,n,ispin)=ener(0:3,n,ispin)/sqal(0:3,n,ispin)
-                IF (atoms%nlo(n)>0) enpara%ello1(:atoms%nlo(n),n,ispin)=enerlo(:atoms%nlo(n),n,ispin)/sqlo(:atoms%nlo(n),n,ispin)
+                enpara%el1(0:3,n,ispin)=regCharges%ener(0:3,n,ispin)/regCharges%sqal(0:3,n,ispin)
+                IF (atoms%nlo(n)>0) enpara%ello1(:atoms%nlo(n),n,ispin)=regCharges%enerlo(:atoms%nlo(n),n,ispin)/regCharges%sqlo(:atoms%nlo(n),n,ispin)
              END DO
-             IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=pvac(:vacuum%nvac,ispin)/svac(:vacuum%nvac,ispin)
+             IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
           END IF
 
           !--->      check continuity of charge density
@@ -717,8 +672,6 @@ CONTAINS
        END IF
 
     END IF ! end of (mpi%irank==0)
-    !+t3e
-    !Note: no deallocation anymore, we rely on Fortran08 :-)
 
     IF ((jsp_end.EQ.input%jspins)) THEN
        IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK",mpi%irank)

@@ -24,14 +24,15 @@ MODULE m_eparas
   !
 CONTAINS
   SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
-       usdus,mcd,l_mcd,enerlo,sqlo,ener,sqal,qal)
+                    usdus,regCharges,mcd,l_mcd)
     USE m_types
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)        :: usdus
-    TYPE(t_mpi),INTENT(IN)          :: mpi
-    TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
-    TYPE(t_mcd),INTENT(INOUT)       :: mcd
+    TYPE(t_usdus),         INTENT(IN)    :: usdus
+    TYPE(t_mpi),           INTENT(IN)    :: mpi
+    TYPE(t_atoms),         INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
+    TYPE(t_mcd),           INTENT(INOUT) :: mcd
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,jsp     
@@ -41,9 +42,6 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: eig(:)!(dimension%neigd),
     REAL,    INTENT (IN)  :: we(noccbd) 
-    REAL,    INTENT (INOUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
-    REAL,    INTENT (INOUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
-    REAL,    INTENT (INOUT) :: qal(0:,:,:)!(0:3,atoms%ntype,dimension%neigd)
 
     !     ..
     !     .. Local Scalars ..
@@ -64,11 +62,11 @@ CONTAINS
        IF (l_mcd) THEN
           mcd%mcd(:,:,:) = 0.0
        ENDIF
-       ener(:,:) = 0.0
-       sqal(:,:) = 0.0
-       qal(:,:,:) = 0.0
-       enerlo(:,:) = 0.0
-       sqlo(:,:) = 0.0
+       regCharges%ener(:,:,jsp) = 0.0
+       regCharges%sqal(:,:,jsp) = 0.0
+       regCharges%qal(:,:,:,jsp) = 0.0
+       regCharges%enerlo(:,:,jsp) = 0.0
+       regCharges%sqlo(:,:,jsp) = 0.0
     END IF
     !
     !--->    l-decomposed density for each occupied state
@@ -111,7 +109,7 @@ CONTAINS
                    ENDDO
                 ENDIF     ! end MCD
              ENDDO
-             qal(l,n,i) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
+             regCharges%qal(l,n,i,jsp) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
           ENDDO
           nt1 = nt1 + atoms%neq(n)
        ENDDO
@@ -124,8 +122,8 @@ CONTAINS
     DO l = 0,3
        DO n = 1,atoms%ntype
           DO i = (skip_t+1),noccbd
-             ener(l,n) = ener(l,n) + qal(l,n,i)*we(i)*eig(i)
-             sqal(l,n) = sqal(l,n) + qal(l,n,i)*we(i)
+             regCharges%ener(l,n,jsp) = regCharges%ener(l,n,jsp) + regCharges%qal(l,n,i,jsp)*we(i)*eig(i)
+             regCharges%sqal(l,n,jsp) = regCharges%sqal(l,n,jsp) + regCharges%qal(l,n,i,jsp)*we(i)
           ENDDO
        ENDDO
     ENDDO
@@ -178,15 +176,15 @@ CONTAINS
           ! llo > 3 used for unoccupied states only
           IF( l .GT. 3 ) CYCLE
           DO i = 1,ne
-             qal(l,ntyp,i)= qal(l,ntyp,i)  + ( 1.0/atoms%neq(ntyp) )* (&
+             regCharges%qal(l,ntyp,i,jsp)= regCharges%qal(l,ntyp,i,jsp)  + ( 1.0/atoms%neq(ntyp) )* (&
                   qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)     )
           END DO
           DO lop = 1,atoms%nlo(ntyp)
              IF (atoms%llo(lop,ntyp).EQ.l) THEN
                 DO i = 1,ne
-                   enerlo(lo,ntyp) = enerlo(lo,ntyp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
-                   sqlo(lo,ntyp) = sqlo(lo,ntyp) + qlo(i,lop,lo,ntyp)*we(i)
-                   qal(l,ntyp,i)= qal(l,ntyp,i)  + ( 1.0/atoms%neq(ntyp) ) *&
+                   regCharges%enerlo(lo,ntyp,jsp) = regCharges%enerlo(lo,ntyp,jsp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
+                   regCharges%sqlo(lo,ntyp,jsp) = regCharges%sqlo(lo,ntyp,jsp) + qlo(i,lop,lo,ntyp)*we(i)
+                   regCharges%qal(l,ntyp,i,jsp)= regCharges%qal(l,ntyp,i,jsp)  + ( 1.0/atoms%neq(ntyp) ) *&
                         qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
                 ENDDO
              ENDIF

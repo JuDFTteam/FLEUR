@@ -76,7 +76,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !Local Arrays
    REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd)
    REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-   REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
+   REAL   ,ALLOCATABLE :: qvlay(:,:,:,:,:)
    COMPLEX,ALLOCATABLE :: qa21(:)
 
    IF (mpi%irank.EQ.0) THEN
@@ -84,12 +84,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
    ENDIF
    ALLOCATE (qa21(atoms%ntype))
-   ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
    ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
 
    !initialize density arrays with zero
    qa21(:) = cmplx(0.0,0.0)
-   qvac(:,:,:,:) = 0.0 
    qvlay(:,:,:,:,:) = 0.0
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
@@ -105,7 +103,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,&
                   mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,obsolete,vTot,oneD,coreSpecInput,&
-                  outDen,results,qvac,qvlay,qa21,chmom,clmom)
+                  outDen,results,qvlay,qa21,chmom,clmom)
       CALL timestop("cdngen: cdnval")
    END DO
 
@@ -151,7 +149,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
 
-   DEALLOCATE (qvac,qvlay,qa21)
+   DEALLOCATE (qvlay,qa21)
 
 END SUBROUTINE cdngen
 

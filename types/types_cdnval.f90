@@ -154,7 +154,27 @@ PRIVATE
          PROCEDURE,PASS :: init1 => mcd_init1
    END TYPE t_mcd
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs, t_mcd
+   TYPE t_regionCharges
+
+      REAL,    ALLOCATABLE :: qis(:,:,:)
+
+      REAL,    ALLOCATABLE :: qal(:,:,:,:)
+      REAL,    ALLOCATABLE :: sqal(:,:,:)
+      REAL,    ALLOCATABLE :: ener(:,:,:)
+
+      REAL,    ALLOCATABLE :: sqlo(:,:,:)
+      REAL,    ALLOCATABLE :: enerlo(:,:,:)
+
+      REAL,    ALLOCATABLE :: qvac(:,:,:,:)
+      REAL,    ALLOCATABLE :: svac(:,:)
+      REAL,    ALLOCATABLE :: pvac(:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => regionCharges_init
+   END TYPE t_regionCharges
+
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs, t_mcd, t_regionCharges
 
 CONTAINS
 
@@ -578,5 +598,46 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
 
 END SUBROUTINE mcd_init1
 
+SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,jsp_start,jsp_end)
+
+   USE m_types_setup
+   USE m_types_kpts
+
+   IMPLICIT NONE
+
+   CLASS(t_regionCharges), INTENT(INOUT) :: thisRegCharges
+   TYPE(t_atoms),          INTENT(IN)    :: atoms
+   TYPE(t_dimension),      INTENT(IN)    :: dimension
+   TYPE(t_kpts),           INTENT(IN)    :: kpts
+   INTEGER,                INTENT(IN)    :: jsp_start
+   INTEGER,                INTENT(IN)    :: jsp_end
+
+   ALLOCATE(thisRegCharges%qis(dimension%neigd,kpts%nkpt,dimension%jspd))
+
+   ALLOCATE(thisRegCharges%qal(0:3,atoms%ntype,dimension%neigd,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%sqal(0:3,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%ener(0:3,atoms%ntype,jsp_start:jsp_end))
+
+   ALLOCATE(thisRegCharges%sqlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%enerlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
+
+   ALLOCATE(thisRegCharges%qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
+   ALLOCATE(thisRegCharges%svac(2,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%pvac(2,jsp_start:jsp_end))
+
+   thisRegCharges%qis = 0.0
+
+   thisRegCharges%qal = 0.0
+   thisRegCharges%sqal = 0.0
+   thisRegCharges%ener = 0.0
+
+   thisRegCharges%sqlo = 0.0
+   thisRegCharges%enerlo = 0.0
+
+   thisRegCharges%qvac = 0.0
+   thisRegCharges%svac = 0.0
+   thisRegCharges%pvac = 0.0
+
+END SUBROUTINE regionCharges_init
 
 END MODULE m_types_cdnval
