@@ -71,7 +71,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !Local Scalars
    REAL fix,qtot,dummy
    INTEGER jspin,jspmax
-   LOGICAL l_enpara
 
    !Local Arrays
    REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd)
@@ -79,10 +78,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL   ,ALLOCATABLE :: qvlay(:,:,:,:,:)
    COMPLEX,ALLOCATABLE :: qa21(:)
 
-   IF (mpi%irank.EQ.0) THEN
-      INQUIRE(file='enpara',exist=l_enpara)
-      IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
-   ENDIF
    ALLOCATE (qa21(atoms%ntype))
    ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
 
@@ -108,7 +103,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END DO
 
    IF (mpi%irank.EQ.0) THEN
-      IF (l_enpara) CLOSE (40)
       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
