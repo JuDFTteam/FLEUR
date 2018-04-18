@@ -599,7 +599,7 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
 
 END SUBROUTINE mcd_init1
 
-SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,vacuum,jsp_start,jsp_end)
+SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
 
    USE m_types_setup
    USE m_types_kpts
@@ -607,26 +607,25 @@ SUBROUTINE regionCharges_init(thisRegCharges,atoms,dimension,kpts,vacuum,jsp_sta
    IMPLICIT NONE
 
    CLASS(t_regionCharges), INTENT(INOUT) :: thisRegCharges
+   TYPE(t_input),          INTENT(IN)    :: input
    TYPE(t_atoms),          INTENT(IN)    :: atoms
    TYPE(t_dimension),      INTENT(IN)    :: dimension
    TYPE(t_kpts),           INTENT(IN)    :: kpts
    TYPE(t_vacuum),         INTENT(IN)    :: vacuum
-   INTEGER,                INTENT(IN)    :: jsp_start
-   INTEGER,                INTENT(IN)    :: jsp_end
 
-   ALLOCATE(thisRegCharges%qis(dimension%neigd,kpts%nkpt,dimension%jspd))
+   ALLOCATE(thisRegCharges%qis(dimension%neigd,kpts%nkpt,input%jspins))
 
-   ALLOCATE(thisRegCharges%qal(0:3,atoms%ntype,dimension%neigd,jsp_start:jsp_end))
-   ALLOCATE(thisRegCharges%sqal(0:3,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE(thisRegCharges%ener(0:3,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%qal(0:3,atoms%ntype,dimension%neigd,input%jspins))
+   ALLOCATE(thisRegCharges%sqal(0:3,atoms%ntype,input%jspins))
+   ALLOCATE(thisRegCharges%ener(0:3,atoms%ntype,input%jspins))
 
-   ALLOCATE(thisRegCharges%sqlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE(thisRegCharges%enerlo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
+   ALLOCATE(thisRegCharges%sqlo(atoms%nlod,atoms%ntype,input%jspins))
+   ALLOCATE(thisRegCharges%enerlo(atoms%nlod,atoms%ntype,input%jspins))
 
-   ALLOCATE(thisRegCharges%qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
-   ALLOCATE(thisRegCharges%svac(2,jsp_start:jsp_end))
-   ALLOCATE(thisRegCharges%pvac(2,jsp_start:jsp_end))
-   ALLOCATE(thisRegCharges%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
+   ALLOCATE(thisRegCharges%qvac(dimension%neigd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisRegCharges%svac(2,input%jspins))
+   ALLOCATE(thisRegCharges%pvac(2,input%jspins))
+   ALLOCATE(thisRegCharges%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
 
    thisRegCharges%qis = 0.0
 

@@ -67,6 +67,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    ! Local type instances
    TYPE(t_noco) :: noco_new
+   TYPE(t_regionCharges)    :: regCharges
 
    !Local Scalars
    REAL fix,qtot,dummy
@@ -84,6 +85,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
+   CALL regCharges%init(input,atoms,dimension,kpts,vacuum)
+
    !In a non-collinear calcuation where the off-diagonal part of the
    !density matrix in the muffin-tins is calculated, the a- and
    !b-coef. for both spins are needed at once. Thus, cdnval is only
@@ -95,7 +98,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,&
                   mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,obsolete,vTot,oneD,coreSpecInput,&
-                  outDen,results,qa21,chmom,clmom)
+                  outDen,regCharges,results,qa21,chmom,clmom)
       CALL timestop("cdngen: cdnval")
    END DO
 

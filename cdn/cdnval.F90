@@ -2,7 +2,7 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-                    vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,results,&
+                    vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,regCharges,results,&
                     qa21,chmom,clmom)
     !
     !     ***********************************************************
@@ -106,6 +106,7 @@ CONTAINS
     TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
     TYPE(t_potden),INTENT(IN)        :: vTot
     TYPE(t_potden),INTENT(INOUT)     :: den
+    TYPE(t_regionCharges),INTENT(INOUT) :: regCharges
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT(IN)              :: eig_id,jspin
@@ -134,7 +135,6 @@ CONTAINS
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
     REAL,    ALLOCATABLE :: we(:)
     REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-    REAL,    ALLOCATABLE :: qmat(:,:,:,:)
     COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
 
     TYPE (t_lapw)             :: lapw
@@ -145,7 +145,6 @@ CONTAINS
     TYPE (t_slab)             :: slab
     TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
     TYPE (t_mcd)              :: mcd
-    TYPE (t_regionCharges)    :: regCharges
     TYPE (t_usdus)            :: usdus
     TYPE (t_zMat)             :: zMat
 
@@ -163,11 +162,9 @@ CONTAINS
        !--->    added. if l_mperp = F, these loops run only from jspin - jspin.
        jsp_start = 1
        jsp_end   = 2
-       ALLOCATE ( qmat(0:3,atoms%ntype,dimension%neigd,4) )
     ELSE
        jsp_start = jspin
        jsp_end   = jspin
-       ALLOCATE (qmat(1,1,1,1) )
     ENDIF
     !---> if l_mperp = F, these variables are only needed for one spin
     !---> at a time, otherwise for both spins:
@@ -184,7 +181,6 @@ CONTAINS
     CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
     CALL denCoeffsOffdiag%init(atoms,noco,sphhar,l_fmpl)
     CALL force%init1(input,atoms)
-    CALL regCharges%init(atoms,dimension,kpts,vacuum,jsp_start,jsp_end)
     CALL orb%init(atoms,noco,jsp_start,jsp_end)
     CALL mcd%init1(banddos,dimension,input,atoms)
 
@@ -496,7 +492,7 @@ CONTAINS
                             skip_t,l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
 
                 IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
-                   CALL qal_21(atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges,qmat)
+                   CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges)
                 END IF
              END IF
 
