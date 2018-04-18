@@ -66,26 +66,18 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_noco) :: noco_new
-   TYPE(t_regionCharges)    :: regCharges
+   TYPE(t_noco)          :: noco_new
+   TYPE(t_regionCharges) :: regCharges
+   TYPE(t_moments)       :: moments
 
    !Local Scalars
-   REAL fix,qtot,dummy
-   INTEGER jspin,jspmax
-
-   !Local Arrays
-   REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd)
-   REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-   COMPLEX,ALLOCATABLE :: qa21(:)
-
-   ALLOCATE (qa21(atoms%ntype))
-
-   !initialize density arrays with zero
-   qa21(:) = cmplx(0.0,0.0)
-
-   IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
+   REAL                  :: fix, qtot, dummy
+   INTEGER               :: jspin, jspmax
 
    CALL regCharges%init(input,atoms,dimension,kpts,vacuum)
+   CALL moments%init(input,atoms)
+
+   IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
    !In a non-collinear calcuation where the off-diagonal part of the
    !density matrix in the muffin-tins is calculated, the a- and
@@ -95,10 +87,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL timestart("cdngen: cdnval")
-      CALL cdnval(eig_id,&
-                  mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,&
-                  outDen,regCharges,results,qa21,chmom,clmom)
+      CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,outDen,regCharges,results,moments)
       CALL timestop("cdngen: cdnval")
    END DO
 
@@ -108,7 +98,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END IF ! mpi%irank = 0
 
    CALL cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,stdn,svdn)
+                stars,cell,sphhar,atoms,vTot,outDen,moments)
 
    IF (sliceplot%slice) THEN
       IF (mpi%irank.EQ.0) THEN
@@ -127,7 +117,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          noco_new = noco
 
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         CALL magMoms(dimension,input,atoms,noco_new,vTot,stdn,svdn,chmom,qa21)
+         CALL magMoms(dimension,input,atoms,noco_new,vTot,moments)
 
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
@@ -135,15 +125,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
 
-         IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,clmom)
+         IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,moments%clmom)
       END IF
    END IF ! mpi%irank.EQ.0
 
 #ifdef CPP_MPI
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
-
-   DEALLOCATE (qa21)
 
 END SUBROUTINE cdngen
 

@@ -11,9 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(jspd,atoms,sphhar,llpd, noco,l_fmpl,jsp_start,jsp_end, epar,&
-       ello,vr,denCoeffs,usdus,&
-       orb,denCoeffsOffdiag,&
-       chmom,clmom, qa21,rho)
+                   ello,vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -21,10 +19,11 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(INOUT):: usdus !in fact only the lo part is intent(in)
-    TYPE(t_noco),INTENT(IN)    :: noco
-    TYPE(t_sphhar),INTENT(IN)  :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),   INTENT(INOUT) :: usdus !in fact only the lo part is intent(in)
+    TYPE(t_noco),    INTENT(IN)    :: noco
+    TYPE(t_sphhar),  INTENT(IN)    :: sphhar
+    TYPE(t_atoms),   INTENT(IN)    :: atoms
+    TYPE(t_moments), INTENT(INOUT) :: moments
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: llpd 
@@ -35,9 +34,7 @@ CONTAINS
     REAL, INTENT    (IN) :: epar(0:atoms%lmaxd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: ello(atoms%nlod,atoms%ntype,jspd)
-    REAL, INTENT   (OUT) :: chmom(atoms%ntype,jspd),clmom(3,atoms%ntype,jspd)
     REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
-    COMPLEX, INTENT(INOUT) :: qa21(atoms%ntype)
     TYPE (t_orb),              INTENT(IN) :: orb
     TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
@@ -69,7 +66,7 @@ CONTAINS
 
     !$OMP PARALLEL DEFAULT(none) &
 
-    !$OMP SHARED(usdus,rho,chmom,clmom,qa21,rho21,qmtl) &
+    !$OMP SHARED(usdus,rho,moments,rho21,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,denCoeffs,sphhar,ello)&
     !$OMP SHARED(orb,noco,l_fmpl,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
@@ -125,14 +122,14 @@ CONTAINS
                   &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
-          chmom(itype,ispin) = qmtt
+          moments%chmom(itype,ispin) = qmtt
 
           !+soc
           !--->       spherical angular component
           IF (noco%l_soc) THEN
              CALL orbmom2(atoms,itype,ispin,usdus%ddn(0,itype,ispin),&
                           orb,usdus%uulon(1,itype,ispin),usdus%dulon(1,itype,ispin),&
-                          usdus%uloulopn(1,1,itype,ispin),clmom(1,itype,ispin))!keep
+                          usdus%uloulopn(1,1,itype,ispin),moments%clmom(1,itype,ispin))!keep
           ENDIF
           !-soc
           !--->       non-spherical components
@@ -161,21 +158,21 @@ CONTAINS
 
           !--->      calculate off-diagonal integrated density
           DO l = 0,atoms%lmax(itype)
-             qa21(itype) = qa21(itype) + conjg(&
+             moments%qa21(itype) = moments%qa21(itype) + conjg(&
                   denCoeffsOffdiag%uu21(l,itype) * denCoeffsOffdiag%uu21n(l,itype) +&
                   denCoeffsOffdiag%ud21(l,itype) * denCoeffsOffdiag%ud21n(l,itype) +&
                   denCoeffsOffdiag%du21(l,itype) * denCoeffsOffdiag%du21n(l,itype) +&
                   denCoeffsOffdiag%dd21(l,itype) * denCoeffsOffdiag%dd21n(l,itype) )/atoms%neq(itype)
           ENDDO
           DO ilo = 1, atoms%nlo(itype)
-             qa21(itype) = qa21(itype) + conjg(&
+             moments%qa21(itype) = moments%qa21(itype) + conjg(&
                   denCoeffsOffdiag%ulou21(ilo,itype) * denCoeffsOffdiag%ulou21n(ilo,itype) +&
                   denCoeffsOffdiag%ulod21(ilo,itype) * denCoeffsOffdiag%ulod21n(ilo,itype) +&
                   denCoeffsOffdiag%uulo21(ilo,itype) * denCoeffsOffdiag%uulo21n(ilo,itype) +&
                   denCoeffsOffdiag%dulo21(ilo,itype) * denCoeffsOffdiag%dulo21n(ilo,itype) )/&
                   atoms%neq(itype)
              DO ilop = 1, atoms%nlo(itype)
-                qa21(itype) = qa21(itype) + conjg(&
+                moments%qa21(itype) = moments%qa21(itype) + conjg(&
                      denCoeffsOffdiag%uloulop21(ilo,ilop,itype) *&
                      denCoeffsOffdiag%uloulop21n(ilo,ilop,itype) )/atoms%neq(itype)
              ENDDO
@@ -230,12 +227,12 @@ CONTAINS
 
     DO itype = 1,atoms%ntype
        DO ispin = jsp_start,jsp_end
-          WRITE ( 6,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),chmom(itype,ispin)
-          WRITE (16,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),chmom(itype,ispin)
+          WRITE ( 6,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),moments%chmom(itype,ispin)
+          WRITE (16,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),moments%chmom(itype,ispin)
 8100      FORMAT (' -->',i3,2x,4f9.5,2x,f9.5)
           attributes = ''
           WRITE(attributes(1),'(i0)') itype
-          WRITE(attributes(2),'(f12.7)') chmom(itype,ispin)
+          WRITE(attributes(2),'(f12.7)') moments%chmom(itype,ispin)
           WRITE(attributes(3),'(f12.7)') qmtl(0,ispin,itype)
           WRITE(attributes(4),'(f12.7)') qmtl(1,ispin,itype)
           WRITE(attributes(5),'(f12.7)') qmtl(2,ispin,itype)

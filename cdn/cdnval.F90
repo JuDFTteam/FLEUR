@@ -3,7 +3,7 @@ MODULE m_cdnval
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
                     vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,regCharges,results,&
-                    qa21,chmom,clmom)
+                    moments)
     !
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
@@ -86,35 +86,31 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT)    :: results
-    TYPE(t_mpi),INTENT(IN)           :: mpi
-    TYPE(t_dimension),INTENT(IN)     :: dimension
-    TYPE(t_oneD),INTENT(IN)          :: oneD
-    TYPE(t_enpara),INTENT(INOUT)     :: enpara
-    TYPE(t_obsolete),INTENT(IN)      :: obsolete
-    TYPE(t_banddos),INTENT(IN)       :: banddos
-    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
-    TYPE(t_input),INTENT(IN)         :: input
-    TYPE(t_vacuum),INTENT(IN)        :: vacuum
-    TYPE(t_noco),INTENT(IN)          :: noco
-    TYPE(t_sym),INTENT(IN)           :: sym
-    TYPE(t_stars),INTENT(IN)         :: stars
-    TYPE(t_cell),INTENT(IN)          :: cell
-    TYPE(t_kpts),INTENT(IN)          :: kpts
-    TYPE(t_sphhar),INTENT(IN)        :: sphhar
-    TYPE(t_atoms),INTENT(IN)         :: atoms
-    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
-    TYPE(t_potden),INTENT(IN)        :: vTot
-    TYPE(t_potden),INTENT(INOUT)     :: den
-    TYPE(t_regionCharges),INTENT(INOUT) :: regCharges
+    TYPE(t_results),       INTENT(INOUT) :: results
+    TYPE(t_mpi),           INTENT(IN)    :: mpi
+    TYPE(t_dimension),     INTENT(IN)    :: dimension
+    TYPE(t_oneD),          INTENT(IN)    :: oneD
+    TYPE(t_enpara),        INTENT(INOUT) :: enpara
+    TYPE(t_obsolete),      INTENT(IN)    :: obsolete
+    TYPE(t_banddos),       INTENT(IN)    :: banddos
+    TYPE(t_sliceplot),     INTENT(IN)    :: sliceplot
+    TYPE(t_input),         INTENT(IN)    :: input
+    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
+    TYPE(t_noco),          INTENT(IN)    :: noco
+    TYPE(t_sym),           INTENT(IN)    :: sym
+    TYPE(t_stars),         INTENT(IN)    :: stars
+    TYPE(t_cell),          INTENT(IN)    :: cell
+    TYPE(t_kpts),          INTENT(IN)    :: kpts
+    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
+    TYPE(t_atoms),         INTENT(IN)    :: atoms
+    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
+    TYPE(t_potden),        INTENT(IN)    :: vTot
+    TYPE(t_potden),        INTENT(INOUT) :: den
+    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
+    TYPE(t_moments),       INTENT(INOUT) :: moments
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT(IN)              :: eig_id,jspin
-
-    !     .. Array Arguments ..
-    COMPLEX, INTENT(INOUT)           :: qa21(atoms%ntype)
-    REAL, INTENT(OUT)                :: chmom(atoms%ntype,dimension%jspd)
-    REAL, INTENT(OUT)                :: clmom(3,atoms%ntype,dimension%jspd)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -616,10 +612,9 @@ CONTAINS
     END IF
 
     IF (mpi%irank==0) THEN
-       CALL cdnmt(dimension%jspd,atoms,sphhar,llpd,&
-                  noco,l_fmpl,jsp_start,jsp_end,&
+       CALL cdnmt(dimension%jspd,atoms,sphhar,llpd,noco,l_fmpl,jsp_start,jsp_end,&
                   enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),denCoeffs,&
-                  usdus,orb,denCoeffsOffdiag,chmom,clmom,qa21,den%mt)
+                  usdus,orb,denCoeffsOffdiag,moments,den%mt)
 
        DO ispin = jsp_start,jsp_end
           IF (.NOT.sliceplot%slice) THEN

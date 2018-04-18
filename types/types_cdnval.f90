@@ -174,8 +174,20 @@ PRIVATE
          PROCEDURE,PASS :: init => regionCharges_init
    END TYPE t_regionCharges
 
+   TYPE t_moments
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs, t_mcd, t_regionCharges
+      REAL, ALLOCATABLE    :: chmom(:,:)
+      REAL, ALLOCATABLE    :: clmom(:,:,:)
+      COMPLEX, ALLOCATABLE :: qa21(:)
+
+      REAL, ALLOCATABLE    :: stdn(:,:)
+      REAL, ALLOCATABLE    :: svdn(:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => moments_init
+   END TYPE t_moments
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs, t_mcd, t_regionCharges, t_moments
 
 CONTAINS
 
@@ -642,5 +654,31 @@ SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
    thisRegCharges%qvlay = 0.0
 
 END SUBROUTINE regionCharges_init
+
+SUBROUTINE moments_init(thisMoments,input,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_moments),      INTENT(INOUT) :: thisMoments
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   ALLOCATE(thisMoments%chmom(atoms%ntype,input%jspins))
+   ALLOCATE(thisMoments%clmom(3,atoms%ntype,input%jspins))
+   ALLOCATE(thisMoments%qa21(atoms%ntype))
+
+   ALLOCATE(thisMoments%stdn(atoms%ntype,input%jspins))
+   ALLOCATE(thisMoments%svdn(atoms%ntype,input%jspins))
+
+   thisMoments%chmom = 0.0
+   thisMoments%clmom = 0.0
+   thisMoments%qa21 = CMPLX(0.0,0.0)
+
+   thisMoments%stdn = 0.0
+   thisMoments%svdn = 0.0
+
+END SUBROUTINE moments_init
 
 END MODULE m_types_cdnval
