@@ -181,6 +181,7 @@ CONTAINS
     CALL orbcomp%init(banddos,dimension,atoms)
 
     IF ((l_fmpl).AND.(.not.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
+    IF ((banddos%ndir.EQ.-3).AND.banddos%dos.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
 
 ! calculation of core spectra (EELS) initializations -start-
     CALL corespec_init(input,atoms,coreSpecInput)
@@ -228,11 +229,6 @@ CONTAINS
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
     END DO
     DEALLOCATE (f,g,flo)
-
-    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-       IF (oneD%odi%d1)  CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
-
-    END IF
 
     !-->   loop over k-points: each can be a separate task
     IF (kpts%nkpt < mpi%isize) THEN
@@ -332,7 +328,7 @@ CONTAINS
           END IF
 
           IF (noccbd.EQ.0) GO TO 199
-          !
+
           !--->    if slice, only a certain bands are taken into account
           !--->    in order to do this the coresponding eigenvalues, eigenvectors
           !--->    and weights have to be copied to the beginning of the arrays
@@ -447,20 +443,13 @@ CONTAINS
 
           DO ispin = jsp_start,jsp_end
              IF (input%l_f) THEN
-                CALL timestart("cdnval: to_pulay")
                 CALL force%init2(noccbd,input,atoms)
-                CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
-                           eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
-                           eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
-                CALL timestop("cdnval: to_pulay")
-             ELSE
-                CALL timestart("cdnval: abcof")
-                CALL abcof(input,atoms,sym, cell,lapw,noccbd,usdus, noco,ispin,oneD,&
-                           eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
-                           eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat)
-                CALL timestop("cdnval: abcof")
-
              END IF
+             CALL timestart("cdnval: abcof")
+             CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
+                        eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
+                        eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
+             CALL timestop("cdnval: abcof")
 
              IF (atoms%n_u.GT.0) THEN
                 CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
