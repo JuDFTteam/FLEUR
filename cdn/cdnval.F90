@@ -119,7 +119,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin
     INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd
-    INTEGER :: skip_t,skip_tt, nkpt_extended
+    INTEGER :: skip_t,skip_tt, nkpt_extended, ikptStart, ikptIncrement
     INTEGER :: n_size,i_rec,n_rank,n_start,n_end,noccbd_l,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
@@ -188,7 +188,7 @@ CONTAINS
     IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
     IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
 ! calculation of core spectra (EELS) initializations -end-
-  
+
     IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000) jspin
        WRITE (16,FMT=8000) jspin
@@ -198,7 +198,7 @@ CONTAINS
 
     CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin,dimension%jspd,noco%l_noco,n_bands,n_size)
 #ifdef CPP_MPI
-    ! Sinchronizes the RMA operations
+    ! Synchronizes the RMA operations
     CALL MPI_BARRIER(mpi%mpi_comm,ie) 
 #endif
 
@@ -230,26 +230,26 @@ CONTAINS
     END DO
     DEALLOCATE (f,g,flo)
 
-    !-->   loop over k-points: each can be a separate task
-    IF (kpts%nkpt < mpi%isize) THEN
-       l_evp = .true.
-    ELSE
-       l_evp = .false.
-    END IF
-    ALLOCATE ( we(dimension%neigd) )
-    i_rec = 0 ; n_rank = 0
+    ALLOCATE (we(dimension%neigd))
+    n_rank = 0
 
-    ! For k-point paralelization: 
-    ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
-    if (l_evp) then
+    ! For k-point paralelization:
+    l_evp = .FALSE.
+    IF (kpts%nkpt < mpi%isize) THEN
+       l_evp = .TRUE.
        nkpt_extended = kpts%nkpt
-    else
+       ikptStart = 1
+       ikptIncrement = 1
+    ELSE
+       ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
        nkpt_extended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
-    endif
-    DO ikpt = 1,nkpt_extended
-       i_rec = i_rec + 1
-       IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN
-        IF ( ikpt < kpts%nkpt + 1) THEN
+       ikptStart = mpi%irank + 1
+       ikptIncrement = mpi%isize
+    END IF
+
+    DO ikpt = ikptStart, nkpt_extended, ikptIncrement
+       i_rec = ikpt
+       IF (ikpt.LE.kpts%nkpt) THEN
           !-t3e
           we=0.0
           !--->    determine number of occupied bands and set weights (we)
@@ -283,15 +283,10 @@ CONTAINS
              ELSE
                 we(1:noccbd) = we(n_start:n_end)
              END IF
-             IF (n_start > skip_tt) THEN
-                skip_t  = 0
-             END IF
-             IF (n_end <= skip_tt) THEN
-                skip_t  = noccbd
-             END IF
-             IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) THEN
-                skip_t  = mod(skip_tt,noccbd)
-             END IF
+
+             IF (n_start > skip_tt) skip_t  = 0
+             IF (n_end <= skip_tt) skip_t = noccbd
+             IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) skip_t = mod(skip_tt,noccbd)
           ELSE
              n_start = 1
              IF (banddos%dos) THEN
@@ -310,7 +305,7 @@ CONTAINS
                         ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                         noccbd,n_start,n_end,nbands,eig,zMat)
 #ifdef CPP_MPI
-          ! Sinchronizes the RMA operations
+          ! Synchronizes the RMA operations
           CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
@@ -544,13 +539,12 @@ CONTAINS
           END IF
 
           !--->  end of loop over PE's
-        ELSE !(ikpt < nkpt + 1)
+        ELSE !(ikpt.LE.nkpt)
 #ifdef CPP_MPI
           ! Synchronizes the RMA operations
           CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
-        END IF
-       END IF ! --> end "IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN"
+       END IF
     END DO !---> end of k-point loop
     DEALLOCATE (we)
     !+t3e
@@ -601,8 +595,7 @@ CONTAINS
              CALL timestart("cdnval: cdninf-stuff")
              WRITE (6,FMT=8210) ispin
 8210         FORMAT (/,5x,'check continuity of cdn for spin=',i2)
-             CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
-                              cell,den,ispin)
+             CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
              CALL timestop("cdnval: cdninf-stuff")
           END IF
           !+for
