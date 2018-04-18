@@ -248,93 +248,124 @@ CONTAINS
     END IF
 
     DO ikpt = ikptStart, nkpt_extended, ikptIncrement
-       i_rec = ikpt
-       IF (ikpt.LE.kpts%nkpt) THEN
-          !-t3e
-          we=0.0
-          !--->    determine number of occupied bands and set weights (we)
-          noccbd = 0
-          DO i = 1,dimension%neigd ! nbands
-             we(i) = results%w_iks(n_bands(n_rank)+i,ikpt,jspin)
-             IF (noco%l_noco) we(i) = results%w_iks(i,ikpt,1)
-             IF ((we(i).GE.1.e-8).OR.input%pallst) THEN
-                noccbd = noccbd + 1
-             ELSE
-                we(i)=0.0
-             END IF
-          END DO
-          ! uncomment this so that cdinf plots works for all states
-          ! noccbd = neigd
-
-          !
-          ! -> Gu test: distribute ev's among the processors...
-          !
-          CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
-          skip_t = skip_tt
-          IF (l_evp.AND.(mpi%isize.GT.1)) THEN
-             noccbd = MERGE(n_bands(1),noccbd,banddos%dos)
-             noccbd_l = CEILING(real(noccbd) / mpi%isize)
-             n_start = mpi%irank*noccbd_l + 1
-             n_end   = min( (mpi%irank+1)*noccbd_l , noccbd )
-
-             noccbd = n_end - n_start + 1
-             IF (noccbd<1) THEN
-                noccbd=0
-             ELSE
-                we(1:noccbd) = we(n_start:n_end)
-             END IF
-
-             IF (n_start > skip_tt) skip_t  = 0
-             IF (n_end <= skip_tt) skip_t = noccbd
-             IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) skip_t = mod(skip_tt,noccbd)
-          ELSE
-             n_start = 1
-             IF (banddos%dos) THEN
-                noccbd_l = n_bands(1)
-                n_end    = n_bands(1)
-                noccbd   = n_bands(1)
-             ELSE
-                noccbd_l = noccbd
-                n_end    = noccbd
-             END IF
-          END IF
-
-          nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
-          CALL zMat%init(l_real,nbasfcn,dimension%neigd)
-          CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-                        ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
-                        noccbd,n_start,n_end,nbands,eig,zMat)
+       IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
           ! Synchronizes the RMA operations
           CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
-          !IF (l_evp.AND.(isize.GT.1)) THEN
-          !  eig(1:noccbd) = eig(n_start:n_end)
-          !ENDIF
-          !
-          IF (vacuum%nstm.EQ.3.AND.input%film) THEN
-             CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),input,jspin,kpts,&
-                        cell,kpts%wtkpt(ikpt),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                        enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
+          EXIT
+       END IF
+
+       i_rec = ikpt
+       we=0.0
+       !--->    determine number of occupied bands and set weights (we)
+       noccbd = 0
+       DO i = 1,dimension%neigd ! nbands
+          we(i) = results%w_iks(n_bands(n_rank)+i,ikpt,jspin)
+          IF (noco%l_noco) we(i) = results%w_iks(i,ikpt,1)
+          IF ((we(i).GE.1.e-8).OR.input%pallst) THEN
+             noccbd = noccbd + 1
+          ELSE
+             we(i)=0.0
+          END IF
+       END DO
+       ! uncomment this so that cdinf plots works for all states
+       ! noccbd = neigd
+
+       ! -> Gu test: distribute ev's among the processors...
+       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
+       skip_t = skip_tt
+       IF (l_evp.AND.(mpi%isize.GT.1)) THEN
+          noccbd = MERGE(n_bands(1),noccbd,banddos%dos)
+          noccbd_l = CEILING(real(noccbd) / mpi%isize)
+          n_start = mpi%irank*noccbd_l + 1
+          n_end   = min( (mpi%irank+1)*noccbd_l , noccbd )
+
+          noccbd = n_end - n_start + 1
+          IF (noccbd<1) THEN
+             noccbd=0
+          ELSE
+             we(1:noccbd) = we(n_start:n_end)
           END IF
 
-          IF (noccbd.EQ.0) GO TO 199
+          IF (n_start > skip_tt) skip_t  = 0
+          IF (n_end <= skip_tt) skip_t = noccbd
+          IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) skip_t = mod(skip_tt,noccbd)
+       ELSE
+          n_start = 1
+          IF (banddos%dos) THEN
+             noccbd_l = n_bands(1)
+             n_end    = n_bands(1)
+             noccbd   = n_bands(1)
+          ELSE
+             noccbd_l = noccbd
+             n_end    = noccbd
+          END IF
+       END IF
 
-          !--->    if slice, only a certain bands are taken into account
-          !--->    in order to do this the coresponding eigenvalues, eigenvectors
-          !--->    and weights have to be copied to the beginning of the arrays
-          !--->    eig, z and we and the number of occupied bands (noccbd) has to
-          !--->    changed
-          IF (sliceplot%slice) THEN
-             IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
-             IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
-             nslibd = 0
-             IF (input%pallst) we(:nbands) = kpts%wtkpt(ikpt)
-             IF (sliceplot%kk.EQ.0) THEN
-                IF (mpi%irank==0) THEN
-                   WRITE (16,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
-                   WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+       CALL zMat%init(l_real,nbasfcn,dimension%neigd)
+       CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
+                     ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
+                     noccbd,n_start,n_end,nbands,eig,zMat)
+#ifdef CPP_MPI
+       ! Synchronizes the RMA operations
+       CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
+       !IF (l_evp.AND.(isize.GT.1)) THEN
+       !  eig(1:noccbd) = eig(n_start:n_end)
+       !ENDIF
+
+       IF (vacuum%nstm.EQ.3.AND.input%film) THEN
+          CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),input,jspin,kpts,&
+                     cell,kpts%wtkpt(ikpt),lapw%k1(:,jspin),lapw%k2(:,jspin),&
+                     enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
+       END IF
+
+       IF (noccbd.EQ.0) GO TO 199
+
+       !--->    if slice, only a certain bands are taken into account
+       !--->    in order to do this the coresponding eigenvalues, eigenvectors
+       !--->    and weights have to be copied to the beginning of the arrays
+       !--->    eig, z and we and the number of occupied bands (noccbd) has to
+       !--->    changed
+       IF (sliceplot%slice) THEN
+          IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
+          IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
+          nslibd = 0
+          IF (input%pallst) we(:nbands) = kpts%wtkpt(ikpt)
+          IF (sliceplot%kk.EQ.0) THEN
+             IF (mpi%irank==0) THEN
+                WRITE (16,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
+                WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+             END IF
+             DO i = 1,nbands
+                IF (eig(i).GE.sliceplot%e1s .AND. eig(i).LE.sliceplot%e2s) THEN
+                   nslibd = nslibd + 1
+                   eig(nslibd) = eig(i)
+                   we(nslibd) = we(i)
+                   if (zmat%l_real) THEN
+                      zMat%z_r(:,nslibd) = zMat%z_r(:,i)
+                   else
+                      zMat%z_c(:,nslibd) = zMat%z_c(:,i)
+                   endif
                 END IF
+             END DO
+             IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:',nslibd
+          ELSE IF (sliceplot%kk.EQ.ikpt) THEN
+             IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+             IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
+                IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
+                     sliceplot%nnne,eig(sliceplot%nnne)
+                nslibd = nslibd + 1
+                eig(nslibd) = eig(sliceplot%nnne)
+                we(nslibd) = we(sliceplot%nnne)
+                if (zmat%l_real) Then
+                   zMat%z_r(:,nslibd) = zMat%z_r(:,sliceplot%nnne)
+                else
+                   zMat%z_c(:,nslibd) = zMat%z_c(:,sliceplot%nnne)
+                endif
+             ELSE
                 DO i = 1,nbands
                    IF (eig(i).GE.sliceplot%e1s .AND. eig(i).LE.sliceplot%e2s) THEN
                       nslibd = nslibd + 1
@@ -347,203 +378,167 @@ CONTAINS
                       endif
                    END IF
                 END DO
-                IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:',nslibd
-             ELSE IF (sliceplot%kk.EQ.ikpt) THEN
-                IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
-                IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
-                   IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
-                        sliceplot%nnne,eig(sliceplot%nnne)
-                   nslibd = nslibd + 1
-                   eig(nslibd) = eig(sliceplot%nnne)
-                   we(nslibd) = we(sliceplot%nnne)
-                   if (zmat%l_real) Then
-                      zMat%z_r(:,nslibd) = zMat%z_r(:,sliceplot%nnne)
-                   else
-                      zMat%z_c(:,nslibd) = zMat%z_c(:,sliceplot%nnne)
-                   endif
-                ELSE
-                   DO i = 1,nbands
-                      IF (eig(i).GE.sliceplot%e1s .AND. eig(i).LE.sliceplot%e2s) THEN
-                         nslibd = nslibd + 1
-                         eig(nslibd) = eig(i)
-                         we(nslibd) = we(i)
-                         if (zmat%l_real) THEN
-                            zMat%z_r(:,nslibd) = zMat%z_r(:,i)
-                         else
-                            zMat%z_c(:,nslibd) = zMat%z_c(:,i)
-                         endif
-                      END IF
-                   END DO
-                   IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
-                END IF
+                IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
              END IF
-             noccbd = nslibd
-             IF (nslibd.EQ.0) GO TO 199 !200
-          END IF ! sliceplot%slice
-
-          !--->    in normal iterations the charge density of the unoccupied
-          !--->    does not need to be calculated (in pwden, vacden and abcof)
-          IF (banddos%dos.AND. .NOT.(l_evp.AND.(mpi%isize.GT.1)) ) THEN
-             noccbd=nbands
           END IF
-          !     ----> add in spin-doubling factor
-          we(:noccbd) = 2.0 * we(:noccbd) / input%jspins
+          noccbd = nslibd
+          IF (nslibd.EQ.0) GO TO 199 !200
+       END IF ! sliceplot%slice
 
-          !---> pk non-collinear
-          !--->    valence density in the interstitial and vacuum region
-          !--->    has to be called only once (if jspin=1) in the non-collinear
-          !--->    case
-          !     ----> valence density in the interstitial region
+       !--->    in normal iterations the charge density of the unoccupied
+       !--->    does not need to be calculated (in pwden, vacden and abcof)
+       IF (banddos%dos.AND. .NOT.(l_evp.AND.(mpi%isize.GT.1)) ) THEN
+          noccbd=nbands
+       END IF
+       !     ----> add in spin-doubling factor
+       we(:noccbd) = 2.0 * we(:noccbd) / input%jspins
+
+       !---> pk non-collinear
+       !--->    valence density in the interstitial and vacuum region
+       !--->    has to be called only once (if jspin=1) in the non-collinear
+       !--->    case
+       !     ----> valence density in the interstitial region
+       IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
+          CALL timestart("cdnval: pwden")
+          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
+                     jspin,lapw,noccbd,we,eig,den,regCharges%qis,results,force%f_b8,zMat)
+          CALL timestop("cdnval: pwden")
+       END IF
+       !+new
+       !--->    charge of each valence state in this k-point of the SBZ
+       !--->    in the layer interstitial region of the film
+       IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-             CALL timestart("cdnval: pwden")
-             CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                        jspin,lapw,noccbd,we,eig,den,regCharges%qis,results,force%f_b8,zMat)
-             CALL timestop("cdnval: pwden")
+             CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
           END IF
-          !+new
-          !--->    charge of each valence state in this k-point of the SBZ
-          !--->    in the layer interstitial region of the film
-          !
-          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
-             IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-                CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
-             END IF
+       END IF
+       !-new c
+       !--->    valence density in the vacuum region
+       IF (input%film) THEN
+          IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
+             CALL timestart("cdnval: vacden")
+             CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
+                         gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
+                         den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
+             CALL timestop("cdnval: vacden")
           END IF
-          !-new c
-          !--->    valence density in the vacuum region
-          IF (input%film) THEN
-             IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-                CALL timestart("cdnval: vacden")
-                CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                            gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
-                            den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
-                CALL timestop("cdnval: vacden")
-             END IF
-             !--->       perform Brillouin zone integration and summation over the
-             !--->       bands in order to determine the vacuum energy parameters.
-             DO ispin = jsp_start,jsp_end
-                DO ivac = 1,vacuum%nvac
-                   regCharges%pvac(ivac,ispin)=regCharges%pvac(ivac,ispin)+dot_product(eig(:noccbd)*regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
-                   regCharges%svac(ivac,ispin)=regCharges%svac(ivac,ispin)+dot_product(regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
-                END DO
-             END DO
-          END IF
-
-          !--->    valence density in the atomic spheres
-          CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
-
+          !--->       perform Brillouin zone integration and summation over the
+          !--->       bands in order to determine the vacuum energy parameters.
           DO ispin = jsp_start,jsp_end
-             IF (input%l_f) THEN
-                CALL force%init2(noccbd,input,atoms)
-             END IF
-             CALL timestart("cdnval: abcof")
-             CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
-                        eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
-                        eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
-             CALL timestop("cdnval: abcof")
+             DO ivac = 1,vacuum%nvac
+                regCharges%pvac(ivac,ispin)=regCharges%pvac(ivac,ispin)+dot_product(eig(:noccbd)*regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+                regCharges%svac(ivac,ispin)=regCharges%svac(ivac,ispin)+dot_product(regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+             END DO
+          END DO
+       END IF
 
-             IF (atoms%n_u.GT.0) THEN
-                CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
-             END IF
+       !--->    valence density in the atomic spheres
+       CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
 
-             !--->       perform Brillouin zone integration and summation over the
-             !--->       bands in order to determine the energy parameters for each
-             !--->       atom and angular momentum
-             IF (.not.sliceplot%slice) THEN
-                CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                            skip_t,l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
+       DO ispin = jsp_start,jsp_end
+          IF (input%l_f) THEN
+             CALL force%init2(noccbd,input,atoms)
+          END IF
+          CALL timestart("cdnval: abcof")
+          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
+                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
+                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
+          CALL timestop("cdnval: abcof")
 
-                IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
-                   CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges)
-                END IF
-             END IF
-
-             !--->    layer charge of each valence state in this k-point of the SBZ
-             !--->    from the mt-sphere region of the film
-             IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
-                CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
-
-                INQUIRE (file='orbcomprot',exist=l_orbcomprot)
-                IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
-                   CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin)
-                END IF
-
-                CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
-             END IF
-             !-new
-             !--->          set up coefficients for the spherical and
-             CALL timestart("cdnval: rhomt")
-             CALL rhomt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin)
-             CALL timestop("cdnval: rhomt")
-
-             IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
-             !--->          non-spherical m.t. density
-             CALL timestart("cdnval: rhonmt")
-             CALL rhonmt(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffs,ispin)
-             CALL timestop("cdnval: rhonmt")
-
-             !--->          set up coefficients of the local orbitals and the
-             !--->          flapw - lo cross terms for the spherical and
-             !--->          non-spherical mt density
-             CALL timestart("cdnval: rho(n)mtlo")
-             CALL rhomtlo(atoms,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
-
-             CALL rhonmtlo(atoms,sphhar,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
-             CALL timestop("cdnval: rho(n)mtlo")
-
-             IF (input%l_f) THEN
-                CALL timestart("cdnval: force_a12/21")
-                IF (.not.input%l_useapw) THEN
-                   CALL force_a12(atoms,noccbd,sym,dimension,cell,oneD,&
-                                  we,ispin,noccbd,usdus,eigVecCoeffs,force,results)
-                ENDIF
-                CALL force_a21(input,atoms,dimension,noccbd,sym,oneD,cell,we,ispin,&
-                               enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs,force,results)
-                CALL timestop("cdnval: force_a12/21")
-             END IF
-
-             IF(l_cs) THEN
-                CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
-                                  noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
-             END IF
-          END DO !--->    end loop over ispin
-
-          IF (noco%l_mperp) THEN
-             CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,denCoeffsOffdiag)
-             IF (l_fmpl) CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
+          IF (atoms%n_u.GT.0) THEN
+             CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
           END IF
 
-199       CONTINUE
-          IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
-             CALL timestart("cdnval: write_info")
-             !--->    calculate charge distribution of each state (l-character ...)
-             !--->    and write the information to the files dosinp and vacdos
-             !--->    for dos and bandstructure plots
+          !--->       perform Brillouin zone integration and summation over the
+          !--->       bands in order to determine the energy parameters for each
+          !--->       atom and angular momentum
+          IF (.not.sliceplot%slice) THEN
+             CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
+                         skip_t,l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
 
-             !--dw    parallel writing of vacdos,dosinp....
-             !        write data to direct access file first, write to formated file later by PE 0 only!
-             !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
-
-             IF (banddos%ndir.GT.0) THEN
-                CALL sympsi(lapw%bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                            lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
+             IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
+                CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges)
              END IF
-
-             !--dw   now write k-point data to tmp_dos
-             CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
-                            regCharges%qvlay(:,:,:,ikpt,jspin),regCharges%qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
-                            slab%qmtsl(:,:),orbcomp%qmtp(:,:),orbcomp%comp)
-
-             CALL timestop("cdnval: write_info")
-             !-new_sl
           END IF
 
-          !--->  end of loop over PE's
-        ELSE !(ikpt.LE.nkpt)
-#ifdef CPP_MPI
-          ! Synchronizes the RMA operations
-          CALL MPI_BARRIER(mpi%mpi_comm,ie)
-#endif
+          !--->    layer charge of each valence state in this k-point of the SBZ
+          !--->    from the mt-sphere region of the film
+          IF (banddos%dos.AND.(banddos%ndir.EQ.-3))  THEN
+             CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+
+             INQUIRE (file='orbcomprot',exist=l_orbcomprot)
+             IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
+                CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin)
+             END IF
+
+             CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+          END IF
+          !-new
+          !--->          set up coefficients for the spherical and
+          CALL timestart("cdnval: rhomt")
+          CALL rhomt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin)
+          CALL timestop("cdnval: rhomt")
+
+          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
+          !--->          non-spherical m.t. density
+          CALL timestart("cdnval: rhonmt")
+          CALL rhonmt(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffs,ispin)
+          CALL timestop("cdnval: rhonmt")
+
+          !--->          set up coefficients of the local orbitals and the
+          !--->          flapw - lo cross terms for the spherical and
+          !--->          non-spherical mt density
+          CALL timestart("cdnval: rho(n)mtlo")
+          CALL rhomtlo(atoms,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
+
+          CALL rhonmtlo(atoms,sphhar,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
+          CALL timestop("cdnval: rho(n)mtlo")
+
+          IF (input%l_f) THEN
+             CALL timestart("cdnval: force_a12/21")
+             IF (.not.input%l_useapw) THEN
+                CALL force_a12(atoms,noccbd,sym,dimension,cell,oneD,&
+                               we,ispin,noccbd,usdus,eigVecCoeffs,force,results)
+             ENDIF
+             CALL force_a21(input,atoms,dimension,noccbd,sym,oneD,cell,we,ispin,&
+                            enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs,force,results)
+             CALL timestop("cdnval: force_a12/21")
+          END IF
+
+          IF(l_cs) THEN
+             CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
+                               noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
+          END IF
+       END DO !--->    end loop over ispin
+
+       IF (noco%l_mperp) THEN
+          CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,denCoeffsOffdiag)
+          IF (l_fmpl) CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
+       END IF
+
+199    CONTINUE
+       IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
+          CALL timestart("cdnval: write_info")
+          !--->    calculate charge distribution of each state (l-character ...)
+          !--->    and write the information to the files dosinp and vacdos
+          !--->    for dos and bandstructure plots
+
+          !--dw    parallel writing of vacdos,dosinp....
+          !        write data to direct access file first, write to formated file later by PE 0 only!
+          !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
+
+          IF (banddos%ndir.GT.0) THEN
+             CALL sympsi(lapw%bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
+                         lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
+          END IF
+
+          !--dw   now write k-point data to tmp_dos
+          CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
+                         regCharges%qvlay(:,:,:,ikpt,jspin),regCharges%qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
+                         slab%qmtsl(:,:),orbcomp%qmtp(:,:),orbcomp%comp)
+
+          CALL timestop("cdnval: write_info")
+          !-new_sl
        END IF
     END DO !---> end of k-point loop
     DEALLOCATE (we)
