@@ -188,7 +188,17 @@ PRIVATE
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs, t_mcd, t_regionCharges, t_moments
+   TYPE t_orbcomp
+
+      REAL, ALLOCATABLE    :: comp(:,:,:)
+      REAL, ALLOCATABLE    :: qmtp(:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => orbcomp_init
+   END TYPE t_orbcomp
+
+PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs
+PUBLIC t_mcd, t_regionCharges, t_moments, t_orbcomp
 
 CONTAINS
 
@@ -683,5 +693,29 @@ SUBROUTINE moments_init(thisMoments,input,atoms)
    thisMoments%svdn = 0.0
 
 END SUBROUTINE moments_init
+
+SUBROUTINE orbcomp_init(thisOrbcomp,banddos,dimension,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
+   TYPE(t_banddos),       INTENT(IN)    :: banddos
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
+      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat))
+      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat))
+   ELSE
+      ALLOCATE(thisOrbcomp%comp(1,1,1))
+      ALLOCATE(thisOrbcomp%qmtp(1,1))
+   END IF
+
+   thisOrbcomp%comp = 0.0
+   thisOrbcomp%qmtp = 0.0
+
+END SUBROUTINE orbcomp_init
 
 END MODULE m_types_cdnval

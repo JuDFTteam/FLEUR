@@ -118,7 +118,7 @@ CONTAINS
 #endif
     !     .. Local Scalars ..
     INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin
-    INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd,na
+    INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd
     INTEGER :: skip_t,skip_tt, nkpt_extended
     INTEGER :: n_size,i_rec,n_rank,n_start,n_end,noccbd_l,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
@@ -126,7 +126,6 @@ CONTAINS
     INTEGER :: n_bands(0:dimension%neigd)
     REAL    :: eig(dimension%neigd)
 
-    REAL,    ALLOCATABLE :: orbcomp(:,:,:),qmtp(:,:) ! orbcomp
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
     REAL,    ALLOCATABLE :: we(:)
@@ -142,6 +141,7 @@ CONTAINS
     TYPE (t_mcd)              :: mcd
     TYPE (t_usdus)            :: usdus
     TYPE (t_zMat)             :: zMat
+    TYPE (t_orbcomp)          :: orbcomp
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
@@ -177,6 +177,8 @@ CONTAINS
     CALL force%init1(input,atoms)
     CALL orb%init(atoms,noco,jsp_start,jsp_end)
     CALL mcd%init1(banddos,dimension,input,atoms)
+    CALL slab%init(banddos,dimension,atoms,cell)
+    CALL orbcomp%init(banddos,dimension,atoms)
 
     IF ((l_fmpl).AND.(.not.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
 
@@ -202,8 +204,6 @@ CONTAINS
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
 
-    na = 1
-
     l_write = input%cdinf.AND.mpi%irank==0
 
     DO n = 1,atoms%ntype
@@ -226,20 +226,12 @@ CONTAINS
        IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
                                   input%jspins,jspin,results%ef,&
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
-
-       na = na + atoms%neq(n)
     END DO
     DEALLOCATE (f,g,flo)
-
-    CALL slab%init(banddos,dimension,atoms,cell)
 
     IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
        IF (oneD%odi%d1)  CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
 
-       ALLOCATE ( orbcomp(dimension%neigd,23,atoms%nat) )
-       ALLOCATE ( qmtp(dimension%neigd,atoms%nat) )
-    ELSE
-       ALLOCATE(orbcomp(1,1,1),qmtp(1,1))
     END IF
 
     !-->   loop over k-points: each can be a separate task
@@ -496,7 +488,7 @@ CONTAINS
                    CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin)
                 END IF
 
-                CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp,qmtp)
+                CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
              END IF
              !-new
              !--->          set up coefficients for the spherical and
@@ -560,7 +552,7 @@ CONTAINS
              !--dw   now write k-point data to tmp_dos
              CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
                             regCharges%qvlay(:,:,:,ikpt,jspin),regCharges%qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
-                            slab%qmtsl(:,:),qmtp(:,:),orbcomp)
+                            slab%qmtsl(:,:),orbcomp%qmtp(:,:),orbcomp%comp)
 
              CALL timestop("cdnval: write_info")
              !-new_sl
