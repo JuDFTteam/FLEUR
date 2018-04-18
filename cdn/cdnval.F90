@@ -272,15 +272,11 @@ CONTAINS
           CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
           skip_t = skip_tt
           IF (l_evp.AND.(mpi%isize.GT.1)) THEN
-             IF (banddos%dos) THEN
-                noccbd_l = CEILING( real(n_bands(1)) / mpi%isize )
-                n_start = mpi%irank*noccbd_l + 1
-                n_end   = min( (mpi%irank+1)*noccbd_l , n_bands(1) )
-             ELSE
-                noccbd_l = CEILING( real(noccbd) / mpi%isize )
-                n_start = mpi%irank*noccbd_l + 1
-                n_end   = min( (mpi%irank+1)*noccbd_l , noccbd )
-             END IF
+             noccbd = MERGE(n_bands(1),noccbd,banddos%dos)
+             noccbd_l = CEILING(real(noccbd) / mpi%isize)
+             n_start = mpi%irank*noccbd_l + 1
+             n_end   = min( (mpi%irank+1)*noccbd_l , noccbd )
+
              noccbd = n_end - n_start + 1
              IF (noccbd<1) THEN
                 noccbd=0

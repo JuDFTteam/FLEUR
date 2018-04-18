@@ -21,7 +21,7 @@ MODULE m_abclocdn
   !*********************************************************************
 CONTAINS
   SUBROUTINE abclocdn(atoms,sym,noco,lapw,cell,ccchi,iintsp,phase,ylm,&
-       ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,fgp,force)
+       ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force)
 
     USE m_types
     USE m_constants
@@ -40,6 +40,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: iintsp
     INTEGER, INTENT (IN) :: k,na,ne,ntyp,nkvec,lo
     COMPLEX, INTENT (IN) :: phase
+    LOGICAL, INTENT (IN) :: l_force
 
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: alo1(:),blo1(:),clo1(:)
@@ -83,7 +84,7 @@ CONTAINS
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
-          IF (PRESENT(force)) THEN
+          IF (l_force) THEN
              force%acoflo(m,i,lo,na) = force%acoflo(m,i,lo,na) + ctmp*alo1(lo)
              force%bcoflo(m,i,lo,na) = force%bcoflo(m,i,lo,na) + ctmp*blo1(lo)
              DO j = 1,3
