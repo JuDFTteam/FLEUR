@@ -169,6 +169,7 @@ PRIVATE
       REAL,    ALLOCATABLE :: svac(:,:)
       REAL,    ALLOCATABLE :: pvac(:,:)
       REAL,    ALLOCATABLE :: qvlay(:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => regionCharges_init
@@ -638,6 +639,7 @@ SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
    ALLOCATE(thisRegCharges%svac(2,input%jspins))
    ALLOCATE(thisRegCharges%pvac(2,input%jspins))
    ALLOCATE(thisRegCharges%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisRegCharges%qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
 
    thisRegCharges%qis = 0.0
 
@@ -652,6 +654,7 @@ SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
    thisRegCharges%svac = 0.0
    thisRegCharges%pvac = 0.0
    thisRegCharges%qvlay = 0.0
+   thisRegCharges%qstars = CMPLX(0.0,0.0)
 
 END SUBROUTINE regionCharges_init
 

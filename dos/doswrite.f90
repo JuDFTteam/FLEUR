@@ -12,7 +12,7 @@ MODULE m_doswrite
   !
 CONTAINS
   SUBROUTINE doswrite(eig_id,DIMENSION,kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,mcd,ncored,results,nsld,oneD)
+                      sliceplot,noco,sym,cell,mcd,results,nsld,oneD)
     USE m_eig66_io,ONLY:read_dos,read_eig
     USE m_evaldos
     USE m_cdninf
@@ -35,8 +35,7 @@ CONTAINS
 
     !     .. Scalar Arguments ..
     INTEGER,PARAMETER :: n2max=13 
-    INTEGER, INTENT (IN) :: nsld,eig_id 
-    INTEGER, INTENT (IN) :: ncored
+    INTEGER, INTENT (IN) :: nsld,eig_id
 
     !    locals
     INTEGER :: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
@@ -119,7 +118,7 @@ CONTAINS
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
                     DIMENSION,results%ef,results%bandgap,&
-                    banddos%l_mcd,ncored,mcd%ncore,mcd%e_mcd,nsld)
+                    banddos%l_mcd,mcd%ncore,mcd%e_mcd,nsld)
     ENDIF
     !
     !      Now write to vacwave if nstm=3 

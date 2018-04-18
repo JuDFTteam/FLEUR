@@ -120,7 +120,7 @@ CONTAINS
     INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin
     INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd,na
     INTEGER :: skip_t,skip_tt, nkpt_extended
-    INTEGER :: n_size,i_rec,n_rank ,ncored,n_start,n_end,noccbd_l,nbasfcn
+    INTEGER :: n_size,i_rec,n_rank,n_start,n_end,noccbd_l,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
     INTEGER :: n_bands(0:dimension%neigd)
@@ -131,7 +131,6 @@ CONTAINS
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
     REAL,    ALLOCATABLE :: we(:)
     REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-    COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
 
     TYPE (t_lapw)             :: lapw
     TYPE (t_orb)              :: orb
@@ -169,7 +168,6 @@ CONTAINS
     ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
     ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
-    ALLOCATE ( qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2) )
 
     ! --> Initializations
 
@@ -205,7 +203,6 @@ CONTAINS
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
 
     na = 1
-    ncored = 0
 
     l_write = input%cdinf.AND.mpi%irank==0
 
@@ -224,10 +221,7 @@ CONTAINS
           END DO
        END IF
 
-       IF (banddos%l_mcd) THEN
-          CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,n,jspin)
-          ncored = max(mcd%ncore(n),ncored)
-       END IF
+       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,n,jspin)
 
        IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
                                   input%jspins,jspin,results%ef,&
@@ -443,7 +437,7 @@ CONTAINS
                 CALL timestart("cdnval: vacden")
                 CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
                             gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
-                            den,regCharges%qvac,regCharges%qvlay,qstars,zMat)
+                            den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
                 CALL timestop("cdnval: vacden")
              END IF
              !--->       perform Brillouin zone integration and summation over the
@@ -565,7 +559,7 @@ CONTAINS
 
              !--dw   now write k-point data to tmp_dos
              CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
-                            regCharges%qvlay(:,:,:,ikpt,jspin),qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
+                            regCharges%qvlay(:,:,:,ikpt,jspin),regCharges%qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
                             slab%qmtsl(:,:),qmtp(:,:),orbcomp)
 
              CALL timestop("cdnval: write_info")
@@ -600,7 +594,7 @@ CONTAINS
        CALL timestart("cdnval: dos")
        IF (mpi%irank==0) THEN
           CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
-                        sliceplot,noco,sym,cell,mcd,ncored,results,slab%nsld,oneD)
+                        sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
           IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
              CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
           END IF
