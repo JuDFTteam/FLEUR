@@ -195,11 +195,6 @@ CONTAINS
     END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-#ifdef CPP_MPI
-    ! Synchronizes the RMA operations
-    CALL MPI_BARRIER(mpi%mpi_comm,ie) 
-#endif
-
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
 
@@ -311,14 +306,12 @@ CONTAINS
                      enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
        END IF
 
-       IF (noccbd.EQ.0) GO TO 199
-
        !--->    if slice, only a certain bands are taken into account
        !--->    in order to do this the coresponding eigenvalues, eigenvectors
        !--->    and weights have to be copied to the beginning of the arrays
        !--->    eig, z and we and the number of occupied bands (noccbd) has to
        !--->    changed
-       IF (sliceplot%slice) THEN
+       IF (sliceplot%slice.AND.noccbd.GT.0) THEN
           IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
           IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
           nslibd = 0
@@ -371,8 +364,9 @@ CONTAINS
              END IF
           END IF
           noccbd = nslibd
-          IF (nslibd.EQ.0) GO TO 199 !200
        END IF ! sliceplot%slice
+
+       IF (noccbd.EQ.0) GO TO 199
 
        !--->    in normal iterations the charge density of the unoccupied
        !--->    does not need to be calculated (in pwden, vacden and abcof)
@@ -382,10 +376,9 @@ CONTAINS
        !     ----> add in spin-doubling factor
        we(:noccbd) = 2.0 * we(:noccbd) / input%jspins
 
-       !---> pk non-collinear
        !--->    valence density in the interstitial and vacuum region
-       !--->    has to be called only once (if jspin=1) in the non-collinear
-       !--->    case
+       !--->    has to be called only once (if jspin=1) in the non-collinear case
+
        !     ----> valence density in the interstitial region
        IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
           CALL timestart("cdnval: pwden")
@@ -393,7 +386,7 @@ CONTAINS
                      jspin,lapw,noccbd,we,eig,den,regCharges%qis,results,force%f_b8,zMat)
           CALL timestop("cdnval: pwden")
        END IF
-       !+new
+
        !--->    charge of each valence state in this k-point of the SBZ
        !--->    in the layer interstitial region of the film
        IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
@@ -401,7 +394,7 @@ CONTAINS
              CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
           END IF
        END IF
-       !-new c
+
        !--->    valence density in the vacuum region
        IF (input%film) THEN
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
@@ -541,29 +534,25 @@ CONTAINS
                         results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
+    CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
-
-    IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
-
-    IF (((jspin.eq.input%jspins).OR.noco%l_mperp) .AND. (banddos%dos.or.banddos%vacdos.or.input%cdinf) ) THEN
-       CALL timestart("cdnval: dos")
-       IF (mpi%irank==0) THEN
-          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
-                        sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
-          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
-             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
-          END IF
-       END IF
-#ifdef CPP_MPI                
-       CALL MPI_BARRIER(mpi%mpi_comm,ie)
-#endif
-       CALL timestop("cdnval: dos")
-    END IF
 
     IF (mpi%irank==0) THEN
        CALL cdnmt(dimension%jspd,atoms,sphhar,llpd,noco,l_fmpl,jsp_start,jsp_end,&
                   enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),denCoeffs,&
                   usdus,orb,denCoeffsOffdiag,moments,den%mt)
+
+       IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
+
+       IF (((jspin.eq.input%jspins).OR.noco%l_mperp) .AND. (banddos%dos.or.banddos%vacdos.or.input%cdinf) ) THEN
+          CALL timestart("cdnval: dos")
+          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
+                        sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
+          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
+             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
+          END IF
+          CALL timestop("cdnval: dos")
+       END IF
 
        DO ispin = jsp_start,jsp_end
           IF (.NOT.sliceplot%slice) THEN
@@ -603,6 +592,9 @@ CONTAINS
        END IF
 
     END IF ! end of (mpi%irank==0)
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
 
     IF ((jsp_end.EQ.input%jspins)) THEN
        IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK",mpi%irank)
