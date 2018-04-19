@@ -120,10 +120,9 @@ CONTAINS
     INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin
     INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd
     INTEGER :: skip_t,skip_tt, nkpt_extended, ikptStart, ikptIncrement
-    INTEGER :: n_size,i_rec,n_rank,n_start,n_end,noccbd_l,nbasfcn
+    INTEGER :: n_start,n_end,noccbd_l,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
-    INTEGER :: n_bands(0:dimension%neigd)
     REAL    :: eig(dimension%neigd)
 
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
@@ -196,7 +195,6 @@ CONTAINS
     END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-    CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin,dimension%jspd,noco%l_noco,n_bands,n_size)
 #ifdef CPP_MPI
     ! Synchronizes the RMA operations
     CALL MPI_BARRIER(mpi%mpi_comm,ie) 
@@ -231,7 +229,6 @@ CONTAINS
     DEALLOCATE (f,g,flo)
 
     ALLOCATE (we(dimension%neigd))
-    n_rank = 0
 
     ! For k-point paralelization:
     l_evp = .FALSE.
@@ -256,13 +253,11 @@ CONTAINS
           EXIT
        END IF
 
-       i_rec = ikpt
        we=0.0
        !--->    determine number of occupied bands and set weights (we)
        noccbd = 0
        DO i = 1,dimension%neigd ! nbands
-          we(i) = results%w_iks(n_bands(n_rank)+i,ikpt,jspin)
-          IF (noco%l_noco) we(i) = results%w_iks(i,ikpt,1)
+          we(i) = MERGE(results%w_iks(i,ikpt,1),results%w_iks(i,ikpt,jspin),noco%l_noco)
           IF ((we(i).GE.1.e-8).OR.input%pallst) THEN
              noccbd = noccbd + 1
           ELSE
@@ -275,8 +270,8 @@ CONTAINS
        ! -> Gu test: distribute ev's among the processors...
        CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
        skip_t = skip_tt
+       IF (banddos%dos) noccbd = dimension%neigd
        IF (l_evp.AND.(mpi%isize.GT.1)) THEN
-          noccbd = MERGE(n_bands(1),noccbd,banddos%dos)
           noccbd_l = CEILING(real(noccbd) / mpi%isize)
           n_start = mpi%irank*noccbd_l + 1
           n_end   = min( (mpi%irank+1)*noccbd_l , noccbd )
@@ -288,19 +283,13 @@ CONTAINS
              we(1:noccbd) = we(n_start:n_end)
           END IF
 
-          IF (n_start > skip_tt) skip_t  = 0
+          IF (n_start > skip_tt) skip_t = 0
           IF (n_end <= skip_tt) skip_t = noccbd
           IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) skip_t = mod(skip_tt,noccbd)
        ELSE
           n_start = 1
-          IF (banddos%dos) THEN
-             noccbd_l = n_bands(1)
-             n_end    = n_bands(1)
-             noccbd   = n_bands(1)
-          ELSE
-             noccbd_l = noccbd
-             n_end    = noccbd
-          END IF
+          noccbd_l = noccbd
+          n_end    = noccbd
        END IF
 
        nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
