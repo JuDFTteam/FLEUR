@@ -94,6 +94,7 @@ CONTAINS
     !
     INTEGER nn,n
     INTEGER ierr(3)
+    INTEGER intBuffer(kpts%nkpt,input%jspins)
 
 
     !     .. variables for HF or hybrid functional calculation ..
@@ -135,7 +136,10 @@ CONTAINS
      !--->       set up k-point independent t(l'm',lm) matrices
      !
      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
-   
+
+    intBuffer = 0
+    results%neig = 0
+
     DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
@@ -182,27 +186,26 @@ CONTAINS
           ne_found=ne_all
 #endif          
           IF (.NOT.l_real) THEN
-                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
+             zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
           ENDIF
-    	  CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                  eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
+          CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
+                         eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
+          intBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
           !RMA synchronization
           CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
-
           CALL timestop("EV output")
-          !
        END DO  k_loop
-
     END DO ! spin loop ends
 
-  
 #ifdef CPP_MPI
+    CALL MPI_ALLREDUCE(intBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%sub_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#else
+    results%neig(:,:) = intBuffer(:,:)
 #endif
     !IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id)
-  
 
     IF( input%jspins .EQ. 1 .AND. hybrid%l_hybrid ) THEN
        results%te_hfex%valence = 2*results%te_hfex%valence
