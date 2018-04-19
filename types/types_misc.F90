@@ -112,7 +112,7 @@ SUBROUTINE zMat_init(thisZMat,l_real,nbasfcn,nbands)
 
 END SUBROUTINE zMat_init
 
-SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts)
+SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts,noco)
 
    USE m_types_setup
    USE m_types_kpts
@@ -124,6 +124,9 @@ SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts)
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_kpts),          INTENT(IN)    :: kpts
+   TYPE(t_noco),          INTENT(IN)    :: noco
+
+   INTEGER                              :: neigd2
 
    thisResults%seigc           = 0.0
    thisResults%seigsc          = 0.0
@@ -144,9 +147,12 @@ SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts)
    thisResults%bandgap         = 0.0
    thisResults%ef              = 0.0
 
+   neigd2 = dimension%neigd
+   IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*DIMENSION%neigd
+
    ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins))
    ALLOCATE (thisResults%force_old(3,atoms%ntype))
-   ALLOCATE (thisResults%w_iks(dimension%neigd,kpts%nkpt,input%jspins))
+   ALLOCATE (thisResults%w_iks(neigd2,kpts%nkpt,input%jspins))
    ALLOCATE (thisResults%neig(kpts%nkpt,input%jspins))
 
    thisResults%force = 0.0

@@ -507,7 +507,7 @@
           CALL add_usage_data("LOs",atoms%nlotot)
           CALL add_usage_data("Iterations",input%itmax)
           
-          CALL results%init(dimension,input,atoms,kpts)
+          CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
              CALL setStartingDensity(noco%l_noco)
