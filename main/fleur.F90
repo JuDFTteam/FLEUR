@@ -118,11 +118,8 @@ CONTAINS
          oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
-
-
-    IF (l_opti) &
-         CALL OPTIONAL(mpi,atoms,sphhar,vacuum,DIMENSION,&
-         stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
+    IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
+                              stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
  
 
     !+Wannier
@@ -141,7 +138,6 @@ CONTAINS
     ithf   = 0
     l_cont = ( it < input%itmax )
     
-    results%last_distance = -1.0
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
@@ -316,8 +312,6 @@ CONTAINS
           !              ----> fermi level and occupancies
 
           IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd = 2*DIMENSION%neigd
-          IF( .NOT. ALLOCATED(results%w_iks) )&
-               ALLOCATE ( results%w_iks(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd) )
           IF ( (mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 

@@ -44,24 +44,28 @@ IMPLICIT NONE
 
 
   TYPE t_results
-     REAL, ALLOCATABLE :: force(:,:,:)   !< Forces calculated on all atoms (for each spin)
-     REAL, ALLOCATABLE :: force_old(:,:) !< Forces on all atoms from last iteration
-     REAL              :: ef        !<Fermie energy
-     REAL              :: seigc     !<sum of the core eigenvalues
-     REAL              :: seigsc    !<weighted sum of the semi-core eigenvalues
-     REAL              :: seigv     !<weighted sum of the occupied valence eigenvalues
-     REAL              :: seigscv   !<sum of seigv and seigsc
-     REAL              :: ts        !<entropy contribution to the free energy
-     REAL              :: te_vcoul  !<charge density-coulomb potential integral
-     REAL              :: te_veff   !<charge density-effective potential integral
-     REAL              :: te_exc    !<charge density-ex-corr.energy density integral
-     REAL              :: e_ldau    !<total energy contribution of LDA+U
-     REAL              :: tote
-     REAL              :: last_distance
-     REAL              :: bandgap
-     TYPE(t_energy_hf) ::  te_hfex
-     REAL              ::  te_hfex_loc(2)
-     REAL, ALLOCATABLE :: w_iks(:,:,:)
+     REAL, ALLOCATABLE    :: force(:,:,:)   !< Forces calculated on all atoms (for each spin)
+     REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
+     REAL                 :: ef        !<Fermie energy
+     REAL                 :: seigc     !<sum of the core eigenvalues
+     REAL                 :: seigsc    !<weighted sum of the semi-core eigenvalues
+     REAL                 :: seigv     !<weighted sum of the occupied valence eigenvalues
+     REAL                 :: seigscv   !<sum of seigv and seigsc
+     REAL                 :: ts        !<entropy contribution to the free energy
+     REAL                 :: te_vcoul  !<charge density-coulomb potential integral
+     REAL                 :: te_veff   !<charge density-effective potential integral
+     REAL                 :: te_exc    !<charge density-ex-corr.energy density integral
+     REAL                 :: e_ldau    !<total energy contribution of LDA+U
+     REAL                 :: tote
+     REAL                 :: last_distance
+     REAL                 :: bandgap
+     TYPE(t_energy_hf)    ::  te_hfex
+     REAL                 ::  te_hfex_loc(2)
+     REAL, ALLOCATABLE    :: w_iks(:,:,:)
+     INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
+
+     CONTAINS
+        PROCEDURE,PASS :: init => results_init
   END TYPE t_results
  
   TYPE t_zMat
@@ -107,5 +111,49 @@ SUBROUTINE zMat_init(thisZMat,l_real,nbasfcn,nbands)
    END IF
 
 END SUBROUTINE zMat_init
+
+SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts)
+
+   USE m_types_setup
+   USE m_types_kpts
+
+   IMPLICIT NONE
+
+   CLASS(t_results),      INTENT(INOUT) :: thisResults
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
+
+   thisResults%seigc           = 0.0
+   thisResults%seigsc          = 0.0
+   thisResults%seigv           = 0.0
+   thisResults%seigscv         = 0.0
+   thisResults%e_ldau          = 0.0
+   thisResults%ts              = 0.0
+
+   thisResults%te_vcoul        = 0.0
+   thisResults%te_veff         = 0.0
+   thisResults%te_exc          = 0.0
+   thisResults%te_hfex%valence = 0.0
+   thisResults%te_hfex%core    = 0.0
+   thisResults%te_hfex_loc     = 0.0
+
+   thisResults%tote            = 0.0
+   thisResults%last_distance   = -1.0
+   thisResults%bandgap         = 0.0
+   thisResults%ef              = 0.0
+
+   ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins))
+   ALLOCATE (thisResults%force_old(3,atoms%ntype))
+   ALLOCATE (thisResults%w_iks(dimension%neigd,kpts%nkpt,input%jspins))
+   ALLOCATE (thisResults%neig(kpts%nkpt,input%jspins))
+
+   thisResults%force = 0.0
+   thisResults%force_old = 0.0
+   thisResults%w_iks = 0.0
+   thisResults%neig = 0
+
+END SUBROUTINE results_init
  
 END MODULE m_types_misc

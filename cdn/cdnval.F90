@@ -534,7 +534,6 @@ CONTAINS
                         results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
-    CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
 
     IF (mpi%irank==0) THEN
