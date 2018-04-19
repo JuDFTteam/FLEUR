@@ -123,6 +123,9 @@ CONTAINS
     INTEGER :: n_start,n_end,noccbd_l,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
+    INTEGER :: noccbd_in(kpts%nkpt)
+    INTEGER :: nStart_in(kpts%nkpt)
+    INTEGER :: nEnd_in(kpts%nkpt)
     REAL    :: eig(dimension%neigd)
 
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
@@ -239,6 +242,29 @@ CONTAINS
        ikptIncrement = mpi%isize
     END IF
 
+    ! determine bands to be used for each k point, MPI process
+    DO ikpt = ikptStart, kpts%nkpt, ikptIncrement
+       noccbd_in(ikpt) = 0
+       DO i = 1,MERGE(results%neig(ikpt,1),results%neig(ikpt,jspin),noco%l_noco)
+          we(i) = MERGE(results%w_iks(i,ikpt,1),results%w_iks(i,ikpt,jspin),noco%l_noco)
+          IF ((we(i).GE.1.e-8).OR.input%pallst) THEN
+             noccbd_in(ikpt) = noccbd_in(ikpt) + 1
+          END IF
+       END DO
+       IF (banddos%dos) noccbd_in(ikpt) = MERGE(results%neig(ikpt,1),results%neig(ikpt,jspin),noco%l_noco)
+       IF (l_evp) THEN
+          noccbd_l = CEILING(real(noccbd_in(ikpt)) / mpi%isize)
+          nStart_in(ikpt) = mpi%irank*noccbd_l + 1
+          nEnd_in(ikpt)   = min((mpi%irank+1)*noccbd_l, noccbd_in(ikpt))
+
+          noccbd_in(ikpt) = nEnd_in(ikpt) - nStart_in(ikpt) + 1
+          IF (noccbd_in(ikpt).LT.1) noccbd_in(ikpt) = 0
+       ELSE
+          nStart_in(ikpt) = 1
+          nEnd_in(ikpt)   = noccbd_in(ikpt)
+       END IF
+    END DO
+
     DO ikpt = ikptStart, nkpt_extended, ikptIncrement
        IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
@@ -250,14 +276,9 @@ CONTAINS
 
        we=0.0
        !--->    determine number of occupied bands and set weights (we)
-       noccbd = 0
-       DO i = 1,dimension%neigd ! nbands
+       DO i = nStart_in(ikpt),nEnd_in(ikpt)
           we(i) = MERGE(results%w_iks(i,ikpt,1),results%w_iks(i,ikpt,jspin),noco%l_noco)
-          IF ((we(i).GE.1.e-8).OR.input%pallst) THEN
-             noccbd = noccbd + 1
-          ELSE
-             we(i)=0.0
-          END IF
+          IF (.NOT.((we(i).GE.1.e-8).OR.input%pallst)) we(i)=0.0
        END DO
        ! uncomment this so that cdinf plots works for all states
        ! noccbd = neigd
@@ -265,30 +286,21 @@ CONTAINS
        ! -> Gu test: distribute ev's among the processors...
        CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
        skip_t = skip_tt
-       IF (banddos%dos) noccbd = dimension%neigd
-       IF (l_evp.AND.(mpi%isize.GT.1)) THEN
-          noccbd_l = CEILING(real(noccbd) / mpi%isize)
-          n_start = mpi%irank*noccbd_l + 1
-          n_end   = min( (mpi%irank+1)*noccbd_l , noccbd )
-
-          noccbd = n_end - n_start + 1
-          IF (noccbd<1) THEN
-             noccbd=0
-          ELSE
-             we(1:noccbd) = we(n_start:n_end)
+       noccbd = noccbd_in(ikpt)
+       n_start = nStart_in(ikpt)
+       n_end = nEnd_in(ikpt)
+       IF (l_evp) THEN
+          IF(noccbd.GT.0) THEN
+             we(1:noccbd) = we(nStart_in(ikpt):nEnd_in(ikpt))
           END IF
 
           IF (n_start > skip_tt) skip_t = 0
           IF (n_end <= skip_tt) skip_t = noccbd
           IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) skip_t = mod(skip_tt,noccbd)
-       ELSE
-          n_start = 1
-          noccbd_l = noccbd
-          n_end    = noccbd
        END IF
 
        nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
-       CALL zMat%init(l_real,nbasfcn,dimension%neigd)
+       CALL zMat%init(l_real,nbasfcn,noccbd)
        CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                      ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
                      noccbd,n_start,n_end,nbands,eig,zMat)
