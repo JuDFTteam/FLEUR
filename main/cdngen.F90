@@ -103,7 +103,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF (sliceplot%slice) THEN
       IF (mpi%irank.EQ.0) THEN
          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           1,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
+                           0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
       CALL juDFT_end("slice OK",mpi%irank)
    END IF

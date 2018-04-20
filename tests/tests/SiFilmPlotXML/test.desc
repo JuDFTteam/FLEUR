@@ -1,10 +1,9 @@
 $test_name="Fleur Si film slice plot";
 $test_code="Fleur";
-$test_stages=3;
+$test_stages=2;
 $test_desc=<<EOF
-Simple test of Fleur with three steps:
+Simple test of Fleur with two steps:
 1.Generate a starting density and perform a single iteration.
-2.Generate a charge density slice.
-3.Generate a plot from the slice.
+2.Generate a slice plot.
 EOF
 ;
