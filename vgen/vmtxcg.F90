@@ -1,10 +1,11 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vmtxcg
   !.....------------------------------------------------------------------
-  !     fit spherical-harmonics expansion of exchange-correlation
-  !     potential inside muffint-tin spheres and add it to coulomb
-  !     potential
-  !                                     c.l.fu and r.podloucky           *
-  !     for the gradient correction. t.a. 1996.
+  !     Calculate the GGA xc-potential in the MT-spheres
   !.....------------------------------------------------------------------
   !     instead of vmtxcor.f: the different exchange-correlation
   !     potentials defined through the key icorr are called through
@@ -23,10 +24,9 @@ MODULE m_vmtxcg
 CONTAINS
   SUBROUTINE vmtxcg(&
        &                dimension,mpi,sphhar,atoms,&
-       &                rho,xcpot,input,sym,&
+       &                den,xcpot,input,sym,&
        &                obsolete,&
-       &                vxr,vr,rhmn,ichsmrg,&
-       &                excr)
+       &                vxc,vx,exc)
 
 #include"cpp_double.h"
     USE m_lhglptg
@@ -46,19 +46,11 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_potden),INTENT(IN)      :: den
+    TYPE(t_potden),INTENT(INOUT)   :: vxc,vx,exc
 #ifdef CPP_MPI
     include "mpif.h"
 #endif
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT(INOUT):: ichsmrg
-    REAL,    INTENT(INOUT):: rhmn
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT (OUT):: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT (INOUT):: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     INTEGER jr,js,k,lh,n,nd,ist,nsp,ixpm ,i,nat
@@ -66,7 +58,7 @@ CONTAINS
     LOGICAL lwbc              ! if true, white-bird trick
     !     ..
     !     .. Local Arrays ..
-    REAL vx(dimension%nspd,dimension%jspd),vxc(dimension%nspd,dimension%jspd),exc(dimension%nspd),rx(3,dimension%nspd)
+    REAL v_x(dimension%nspd,dimension%jspd),v_xc(dimension%nspd,dimension%jspd),e_xc(dimension%nspd),rx(3,dimension%nspd)
     REAL vxcl(DIMENSION%nspd,DIMENSION%jspd),excl(DIMENSION%nspd),divi
     TYPE(t_xcpot)::xcpot_tmp
     REAL wt(dimension%nspd),rr2(atoms%jmtd),thet(dimension%nspd)
@@ -87,8 +79,6 @@ CONTAINS
     REAL :: vr_local(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
     REAL :: vxr_local(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)  
     REAL :: excr_local(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    INTEGER :: ichsmrg_local
-    REAL :: rhmn_local, rhmn_reduced
 #endif    
     !     ..
     !     .. Intrinsic Functions ..
@@ -103,10 +93,8 @@ CONTAINS
     vr_local = 0.d0
     vxr_local = 0.d0
     excr_local = 0.d0
-    rhmn_local = rhmn
 #endif
-    vxr = 0.d0
-
+  
     lwbc=.false.
 
     d_15 = 1.e-15
@@ -172,7 +160,7 @@ CONTAINS
           DO js = 1,input%jspins
 
              DO jr = 1,atoms%jri(n)
-                chlh(jr,lh,js) = rho(jr,lh,n,js)*rr2(jr)
+                chlh(jr,lh,js) = den%mt(jr,lh,n,js)*rr2(jr)
              ENDDO
 
              IF (l_gga) THEN 
@@ -190,17 +178,17 @@ CONTAINS
        !
        !$OMP PARALLEL DEFAULT(none) &
 #ifdef CPP_MPI
-       !$OMP& SHARED(vr_local,vxr_local,excr_local,ichsmrg_local,rhmn_local) &
+       !$OMP& SHARED(vr_local,vxr_local,excr_local) &
 #endif
-       !$OMP& SHARED(vr,vxr,excr,rhmn,ichsmrg,l_gga) &
-       !$OMP& SHARED(dimension,mpi,sphhar,atoms,rho,xcpot,input,sym,obsolete)&
+       !$OMP& SHARED(vxc,vx,exc,l_gga) &
+       !$OMP& SHARED(dimension,mpi,sphhar,atoms,den,xcpot,input,sym,obsolete)&
        !$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
        !$OMP& SHARED(rx,wt,rr2,thet,xcpot_tmp) &
        !$OMP& SHARED(ylh,ylht,ylhtt,ylhf,ylhff,ylhtf) &
        !$OMP& SHARED(chlh,chlhdr,chlhdrr) &
        !$OMP& SHARED(ierr,n_start,n_stride) &
        !$OMP& PRIVATE(js,k,lh,i,rhmnm,elh,vlh) &
-       !$OMP& PRIVATE(vx,vxc,exc,excl,vxcl,divi) &
+       !$OMP& PRIVATE(v_x,v_xc,e_xc,excl,vxcl,divi) &
        !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,grgru,grgrd,gzgr) &
        !$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
        ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
@@ -281,22 +269,10 @@ CONTAINS
              ENDDO
           ENDDO
 
-#ifdef CPP_MPI 
-          IF (rhmnm.LT.rhmn_local) THEN
-             !$OMP ATOMIC WRITE
-             rhmn_local = rhmnm
-          ENDIF
-#else
-          IF (rhmnm.LT.rhmn) THEN
-             !$OMP ATOMIC WRITE
-             rhmn = rhmnm
-             ichsmrg = 1
-          ENDIF
-#endif
 
-          IF (rhmn.LT.obsolete%chng) THEN
+          IF (rhmnm.LT.obsolete%chng) THEN
              WRITE (6,'(/'' rhmn.lt.obsolete%chng in vmtxc. rhmn,obsolete%chng='',&
-                  &        2d9.2)') rhmn,obsolete%chng
+                  &        2d9.2)') rhmnm,obsolete%chng
              !             CALL juDFT_error("vmtxcg: rhmn.lt.chng",calledby="vmtxcg")
           ENDIF
 
@@ -307,25 +283,25 @@ CONTAINS
           CALL vxcallg(&
                &                 xcpot,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-               &                 vx,vxc)
+               &                 v_x,v_xc)
 
           IF (xcpot%lda_atom(n)) THEN
              ! Use local part of pw91 for this atom
              CALL vxcallg(&
                   xcpot_tmp,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
                   g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-                  vx,vxcl)
+                  v_x,vxcl)
              !Mix the potentials
              divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
-             vxc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
-                     vxc(:,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+             v_xc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     v_xc(:,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
           ENDIF
  
 
           IF (mpi%irank == 0) THEN
           IF (mod(jr,1000).eq.0)&
                &              WRITE (6,'(/'' 999vxc''/(10d15.7))')&
-               &                    ((vxc(k,js),k=1,nsp),js=1,input%jspins)
+               &                    ((v_xc(k,js),k=1,nsp),js=1,input%jspins)
           ENDIF !irank==0
 
 
@@ -336,15 +312,15 @@ CONTAINS
              !           multiplicate vx/vxc with the weights of the k-points
              !
              DO k = 1,nsp
-                vx (k,js) = vx (k,js)*wt(k)
-                vxc(k,js) = vxc(k,js)*wt(k)
+                v_x (k,js) = v_x (k,js)*wt(k)
+                v_xc(k,js) = v_xc(k,js)*wt(k)
              ENDDO
 
              IF (mpi%irank == 0) THEN
                 IF (mod(jr,1500).EQ.0)&
                      &        WRITE (6,'('' 999wt''/(10d15.7))') (wt(k),k=1,nsp)
                 IF (mod(jr,1500).EQ.0)&
-                     &        WRITE (6,'('' 999vxc''/(10d15.7))') (vxc(k,js),k=1,nsp)
+                     &        WRITE (6,'('' 999vxc''/(10d15.7))') (v_xc(k,js),k=1,nsp)
              ENDIF !irank==0
 
              DO lh = 0,sphhar%nlh(nd)
@@ -352,11 +328,11 @@ CONTAINS
                 ! --->        determine the corresponding potential number
                 !c            through gauss integration
                 !
-                vlh=dot_product(vxc(:nsp,js),ylh(:nsp,lh,nd))
+                vlh=dot_product(v_xc(:nsp,js),ylh(:nsp,lh,nd))
 #ifdef CPP_MPI             
                 vr_local(jr,lh,n,js) = vr_local(jr,lh,n,js) + vlh
 #else
-                vr(jr,lh,n,js) = vr(jr,lh,n,js) + vlh
+                vxc%mt(jr,lh,n,js) = vxc%mt(jr,lh,n,js) + vlh
 #endif
 
                 ! --->        add to the given potential
@@ -367,12 +343,12 @@ CONTAINS
                    WRITE(6,'('' 9ylh''/(10d15.7))') (ylh(k,lh,nd),k=1,nsp)
                 ENDIF
 
-                vlh=dot_product(vx(:nsp,js),ylh(:nsp,lh,nd))
+                vlh=dot_product(v_x(:nsp,js),ylh(:nsp,lh,nd))
 
 #ifdef CPP_MPI             
                 vxr_local(jr,lh,n,js) = vxr_local(jr,lh,n,js) + vlh
 #else
-                vxr(jr,lh,n,js) = vxr(jr,lh,n,js) + vlh
+                vx%mt(jr,lh,n,js) = vx%mt(jr,lh,n,js) + vlh
 #endif
 
              ENDDO ! lh
@@ -384,7 +360,7 @@ CONTAINS
              !
              CALL excallg(xcpot,lwbc,input%jspins,nsp,&
                   ch,agr,agru,agrd,g2r,g2ru,g2rd,&
-                  gggr,gggru,gggrd,gzgr, exc)
+                  gggr,gggru,gggrd,gzgr, e_xc)
              
              IF (xcpot%lda_atom(n)) THEN
              ! Use local part of pw91 for this atom
@@ -392,12 +368,12 @@ CONTAINS
                      ch,agr,agru,agrd,g2r,g2ru,g2rd,&
                      gggr,gggru,gggrd,gzgr, excl)
                 !Mix the potentials
-                exc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
-                     exc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+                e_xc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     e_xc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
              ENDIF
              IF (mpi%irank == 0) THEN
              IF (mod(jr,10000).EQ.0)&
-                  &        WRITE (6,'(/'' 999exc''/(10d15.7))') (exc(k),k=1,nsp)
+                  &        WRITE (6,'(/'' 999exc''/(10d15.7))') (e_xc(k),k=1,nsp)
              ENDIF !irank==0
 
           ENDIF
@@ -407,7 +383,7 @@ CONTAINS
           !         multiplicate exc with the weights of the k-points
           !
           DO k = 1,nsp
-             exc(k) = exc(k)*wt(k)
+             e_xc(k) = e_xc(k)*wt(k)
           ENDDO
 
           DO lh = 0,sphhar%nlh(nd)
@@ -417,12 +393,12 @@ CONTAINS
              !
              elh = 0.0
              DO k = 1,nsp
-                elh = elh + exc(k)*ylh(k,lh,nd)
+                elh = elh + e_xc(k)*ylh(k,lh,nd)
              ENDDO
 #ifdef CPP_MPI
              excr_local(jr,lh,n) =  elh
 #else
-             excr(jr,lh,n) =  elh
+             exc%mt(jr,lh,n,1) =  elh
 #endif
 
           ENDDO
@@ -441,16 +417,11 @@ CONTAINS
     DEALLOCATE (chlh,chlhdr,chlhdrr)
 
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(vxr_local,vxr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
+    CALL MPI_ALLREDUCE(vxr_local,vx%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
     !using vxr_local as a temporal buffer
     CALL MPI_ALLREDUCE(vr_local,vxr_local,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
-    vr = vr + vxr_local
-    CALL MPI_ALLREDUCE(excr_local,excr,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
-     CALL MPI_ALLREDUCE(rhmn_local,rhmn_reduced,1,CPP_MPI_REAL,MPI_MIN,mpi%mpi_comm,ierr)
-     IF (rhmn_reduced.LT.rhmn) THEN
-             rhmn = rhmn_reduced
-             ichsmrg = 1
-     ENDIF
+    vxc%mt = vxc%mt + vxr_local
+    CALL MPI_ALLREDUCE(excr_local,exc%mt(:,:,:,1),atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
 #endif
     !
 

@@ -6,7 +6,7 @@
       CONTAINS
       SUBROUTINE vvac(&
      &                vacuum,stars,&
-     &                cell,sym,input,&
+     &                cell,sym,input,field,&
      &                psq,rht,&
      &                vz,rhobar,sig1dh,vz1dh)
 
@@ -23,7 +23,8 @@
 
       COMPLEX, INTENT (OUT):: rhobar
       REAL,    INTENT (OUT):: sig1dh,vz1dh
-      TYPE(t_input), INTENT(INOUT) :: input !efield is modified here
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_field),INTENT(INOUT) :: field !efield is modified here
 !     ..
 !     .. Array Arguments ..
       REAL,    INTENT (IN) :: rht(vacuum%nmzd,2) 
@@ -49,9 +50,9 @@
 
       ! obtain mesh point (ncsh) of charge sheet for external electric field
       !                                                 (X.Nie, IFF, 10/97)
-      ncsh = input%efield%zsigma/vacuum%delz + 1.01
-      sigmaa(1) = (input%efield%sigma+input%efield%sig_b(1))/cell%area
-      sigmaa(2) = (input%efield%sigma+input%efield%sig_b(2))/cell%area
+      ncsh = field%efield%zsigma/vacuum%delz + 1.01
+      sigmaa(1) = (field%efield%sigma+field%efield%sig_b(1))/cell%area
+      sigmaa(2) = (field%efield%sigma+field%efield%sig_b(2))/cell%area
 
       ! g=0 vacuum potential due to neutral charge density
       ! inside slab and zero charge density outside
@@ -84,8 +85,8 @@
       ivac = 1     ! upper vacuum
 
       ! =================== DIRICHLET ==============================
-      IF (input%efield%dirichlet) THEN
-        vz(ncsh+1:vacuum%nmz,ivac) = input%efield%sig_b(1)
+      IF (field%efield%dirichlet) THEN
+        vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
 
         CALL qsf(vacuum%delz,rht(1,ivac),sig,ncsh,1)
         sig(1:ncsh) = sig(ncsh)- sig(1:ncsh)
@@ -93,7 +94,7 @@
 
         DO imz = 1,ncsh
           vz(imz,ivac) = -fpi_const* (vtemp(ncsh)-vtemp(imz))&
-     &                     + input%efield%sig_b(1)
+     &                     + field%efield%sig_b(1)
         ENDDO
 
         sig1dh = sig(1)
@@ -117,18 +118,18 @@
         END DO
 
         ! Force matching on the other side
-        input%efield%vslope = (input%efield%sig_b(2)-vz(ncsh,1)) / (2*vacuum%delz*(ncsh+1)+vacuum%dvac)
+        field%efield%vslope = (field%efield%sig_b(2)-vz(ncsh,1)) / (2*vacuum%delz*(ncsh+1)+vacuum%dvac)
         ivac = 1
         DO imz = 1,ncsh
-          vz(imz,ivac) = vz(imz,ivac) + input%efield%vslope*vacuum%delz*(ncsh-imz+1)
+          vz(imz,ivac) = vz(imz,ivac) + field%efield%vslope*vacuum%delz*(ncsh-imz+1)
         END DO
         ivac = 2
         DO imz = 1,ncsh
           vz(imz,ivac) = vz(imz,ivac)&
-     &                    + input%efield%vslope*(vacuum%dvac+vacuum%delz*imz+vacuum%delz*ncsh)
+     &                    + field%efield%vslope*(vacuum%dvac+vacuum%delz*imz+vacuum%delz*ncsh)
         END DO
 
-        vz(ncsh+1:vacuum%nmz,ivac) = input%efield%sig_b(2)
+        vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
 
       ! =================== NEUMANN ==============================
       ELSE ! Neumann

@@ -16,11 +16,13 @@ types/types_enpara.F90
 types/types_setup.F90
 types/types_usdus.F90
 types/types_cdnval.f90
+types/types_field.F90
 )
 
 set(inpgen_F90 ${inpgen_F90}
 types/types.F90
 types/types_mat.F90
+types/types_field.F90
 types/types_xcpot.F90
 types/types_mpi.F90
 types/types_lapw.F90

@@ -8,7 +8,7 @@ MODULE m_postprocessInput
 
 CONTAINS
 
-SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
      noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
 
@@ -62,6 +62,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   TYPE(t_dimension),INTENT(INOUT) :: dimension
   TYPE(t_enpara)   ,INTENT(INOUT) :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
+  TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
   CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
@@ -555,7 +556,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
-        CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
+        CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
      END IF !(mpi%irank.EQ.0)
   END IF
 

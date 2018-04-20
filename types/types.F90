@@ -20,4 +20,5 @@ MODULE m_types
   USE m_types_potden
   USE m_types_forcetheo
   USE m_types_cdnval
+  USE m_types_field
 END MODULE m_types

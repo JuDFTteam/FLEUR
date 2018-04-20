@@ -6,7 +6,7 @@
 MODULE m_vgen_coulomb
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen_coulomb(ispin,mpi,DIMENSION,oneD,input,vacuum,sym,stars,cell,sphhar,atoms,den,vCoul,results)
+  SUBROUTINE vgen_coulomb(ispin,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,den,vCoul,results)
     !     ***********************************************************
     !     FLAPW potential generator                           
     !     ***********************************************************
@@ -33,7 +33,8 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_dimension),INTENT(IN)    :: dimension
     TYPE(t_oneD),INTENT(IN)         :: oneD
-    TYPE(t_input),INTENT(IN)        :: input  
+    TYPE(t_input),INTENT(IN)        :: input
+    TYPE(t_field),INTENT(INOUT)     :: field
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_stars),INTENT(IN)        :: stars
@@ -54,7 +55,7 @@ CONTAINS
     REAL ani,g3,z,sig1dh,vz1dh
     !     ..
     !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: alphm(:,:)
+    COMPLEX, ALLOCATABLE :: alphm(:,:),psq(:)
     REAL,    ALLOCATABLE :: af1(:),bf1(:)
 
 #ifdef CPP_MPI
@@ -62,7 +63,7 @@ CONTAINS
     integer:: ierr
 #endif
 
-    ALLOCATE ( alphm(stars%ng2,2),af1(3*stars%mx3),bf1(3*stars%mx3)    )
+    ALLOCATE ( alphm(stars%ng2,2),af1(3*stars%mx3),bf1(3*stars%mx3),psq(stars%ng3)  )
 
 
     vCoul%iter = den%iter
@@ -103,10 +104,10 @@ CONTAINS
           !     ----> potential in the  vacuum  region
           !       
           CALL timestart("Vacuum") 
-          CALL vvac(vacuum,stars, cell,sym,input, psq,den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin),rhobar,sig1dh,vz1dh)
-          CALL vvacis(stars,vacuum, sym,cell, psq, input, vCoul%vacxy(:,:,:,ispin))
+          CALL vvac(vacuum,stars, cell,sym,input,field, psq,den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin),rhobar,sig1dh,vz1dh)
+          CALL vvacis(stars,vacuum, sym,cell, psq, input,field, vCoul%vacxy(:,:,:,ispin))
 
-          CALL vvacxy(stars,vacuum,cell,sym,input, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm)
+          CALL vvacxy(stars,vacuum,cell,sym,input,field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm)
           CALL timestop("Vacuum")
        END IF
        !     ------------------------------------------
@@ -125,7 +126,7 @@ CONTAINS
                 i = i + 1
                 z = cell%amat(3,3)*i3*ani
                 IF (z.GT.cell%amat(3,3)/2.) z = z - cell%amat(3,3)
-                vintcza = vintcz(stars,vacuum,cell,sym,input,&
+                vintcza = vintcz(stars,vacuum,cell,sym,input,field,&
                      z,irec2, psq,vCoul%vacxy(:,:,:,ispin),vCoul%vacz(:,:,ispin),rhobar,sig1dh,vz1dh,alphm)
                 af1(i) = REAL(vintcza)
                 bf1(i) = AIMAG(vintcza)

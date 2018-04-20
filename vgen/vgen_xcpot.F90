@@ -3,11 +3,11 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_vgen
+MODULE m_vgen_xcpot
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,&
-       vacuum,sym, obsolete,cell,oneD,sliceplot,mpi, results,noco,den,denRot,vTot,vx,vCoul)
+  SUBROUTINE vgen_xcpot(hybrid,input,xcpot,DIMENSION, atoms,sphhar,stars,&
+       vacuum,sym, obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -17,9 +17,7 @@ CONTAINS
     !     TE_VEFF:   charge density-effective potential integral
     !     TE_EXC :   charge density-ex-corr.energy density integral
     !     ***********************************************************
-#include"cpp_double.h"
     USE m_constants
-    USE m_vmts
     USE m_intnv
     USE m_vmtxcg
     USE m_vmtxc
@@ -27,30 +25,12 @@ CONTAINS
     USE m_vvacxcg
     USE m_visxc
     USE m_visxcg
-    USE m_vvac
-    USE m_vvacis
-    USE m_vvacxy
-    USE m_vintcz
     USE m_checkdopall
-    USE m_wrtdop
-    USE m_cdn_io
-    USE m_qfixend
-    
+    USE m_cdn_io 
     USE m_types
-    USE m_od_vvac
-    USE m_od_vvacis
-    USE m_convol
-    USE m_xyavden
-    USE m_psqpw
     USE m_potmod
-    USE m_intgr,         ONLY : intgr3
-    USE m_cfft
-    USE m_fleur_vdw
-#ifdef CPP_MPI
-    USE m_mpi_bc_potden
-#endif
+
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_xcpot),INTENT(IN)        :: xcpot
     TYPE(t_hybrid),INTENT(IN)       :: hybrid
     TYPE(t_mpi),INTENT(IN)          :: mpi
@@ -58,351 +38,40 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)         :: oneD
     TYPE(t_obsolete),INTENT(IN)     :: obsolete
     TYPE(t_sliceplot),INTENT(IN)    :: sliceplot
-    TYPE(t_input),INTENT(INOUT)     :: input  !efield can be modified
+    TYPE(t_input),INTENT(IN)        :: input  
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_stars),INTENT(IN)        :: stars
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
-    TYPE(t_atoms),INTENT(INOUT)     :: atoms !vr0 is updated
+    TYPE(t_atoms),INTENT(IN)        :: atoms 
     TYPE(t_potden), INTENT(IN)      :: den, denRot
-    TYPE(t_potden),INTENT(INOUT)    :: vTot,vx,vCoul
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,vx
+    TYPE(t_results),INTENT(INOUT),OPTIONAL   :: results
     !     ..
-    !     .. Scalar Arguments ..
-    LOGICAL, INTENT (IN) :: reap
 
 
     !     .. Local type instances ..
-    TYPE(t_potden)    :: workDen
+    TYPE(t_potden)    :: workDen,exc,veff
     !     .. Local Scalars ..
-    COMPLEX vintcza,xint,rhobar
     INTEGER i,i3,irec2,irec3,ivac,j,js,k,k3,lh,n,nzst1
-    INTEGER imz,imzxy,ichsmrg,ivfft
-    INTEGER ifftd,ifftd2, ifftxc3d,datend
-    INTEGER itypsym,itype,jsp,l,nat
-    !      INTEGER i_sm,n_sm,i_sta,i_end
-    REAL ani,g3,z,rhmn,mfie,fermiEnergyTemp
-    REAL sig1dh,vz1dh,zat_l(atoms%ntype),rdum,dpdot ! ,delta,deltb,corr
-    LOGICAL l_pottot,l_vdw,l_qfix
-    LOGICAL exi
-    LOGICAL, PARAMETER :: l_xyav=.FALSE.
-    !     ..
-    !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: alphm(:,:)
-    COMPLEX, ALLOCATABLE :: excpw(:),excxy(:,:,:),vpw_w(:,:),psq(:)
-    REAL,    ALLOCATABLE :: vbar(:),af1(:),bf1(:)
-    REAL,    ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
-    REAL,    ALLOCATABLE :: tec(:,:), qintc(:,:)
-    !.....potential
-    REAL,    ALLOCATABLE :: vr_exx(:,:,:,:)
-    REAL,    ALLOCATABLE :: veffr(:,:,:,:)
-    COMPLEX, ALLOCATABLE :: vpw_exx(:,:),vpw_wexx(:,:)
-    COMPLEX, ALLOCATABLE :: vxpw_w(:,:),veffpw_w(:,:)
-
-    !.....energy density
-    REAL,    ALLOCATABLE :: excz(:,:),excr(:,:,:)
+    INTEGER ifftd,ifftd2, ifftxc3d
+    INTEGER jsp,l
 #ifdef CPP_MPI
     include 'mpif.h'
     integer:: ierr
 #endif
-    !
-    ! if you want to calculate potential gradients
-    !
-    !pg      COMPLEX vlm(-lmaxd:lmaxd,0:lmaxd,ntypd)
-    !pg      REAL fint,f(jmtd)
-    !pg      INTEGER ns, nl, l, jm, m, mb
-    !     ..
-    !     ..
-    !     ..
-    !     ----> note the following conventions:
-    !     ivac=2: lower (negative z) vacuum
-    !     ivac=1: upper (positive z) vacuum
-    !     units: hartrees
-    !
 
-    CALL vTot%resetPotDen()
-    CALL vCoul%resetPotDen()
-    CALL vx%resetPotDen()
+    CALL exc%init_potden_types(stars,atoms,sphhar,vacuum,1,.false.,1) !one spin only
+    CALL vx%init(stars,atoms,sphhar,vacuum,input%jspins,.false.,1)
+    if (present(results)) CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.false.,1)
 
-    ALLOCATE ( alphm(stars%ng2,2),excpw(stars%ng3),excxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         vbar(dimension%jspd),af1(3*stars%mx3),bf1(3*stars%mx3),&
-         vpw_exx(stars%ng3,dimension%jspd),vpw_wexx(stars%ng3,dimension%jspd),&
-         excz(vacuum%nmzd,2),excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),&
-         vpw_w(stars%ng3,dimension%jspd),vxpw_w(stars%ng3,dimension%jspd),psq(stars%ng3) )
-    vTot%iter = den%iter
 
-    CALL workDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+    !     ******** exchange correlation potential******************
 
-    workDen = den
-    IF (mpi%irank == 0) THEN
-       !
-       ! --  total = .false. and reap = .false. means, that we now calculate
-       !     the potential from the output density
-       !
-       IF ((.NOT.input%total).AND.(.NOT.reap)) THEN
-          IF (noco%l_noco) THEN
-             CALL juDFT_error("vgen:1",calledby ="vgen")
-          ENDIF
-       END IF
 
-       WRITE (6,FMT=8000)
-8000   FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-       vxpw_w = CMPLX(0.,0.)
-       !     ---> perform spin summation of charge densities
-       !     ---> for the calculation of the coulomb potentials
-       IF ( (input%jspins.EQ.2).AND.(.NOT.l_xyav) ) THEN
-          workDen%mt(:,0:,:,1)=workDen%mt(:,0:,:,1)+workDen%mt(:,0:,:,2)
-          workDen%pw(:,1)=workDen%pw(:,1)+workDen%pw(:,2)
-          IF (input%film) THEN
-             workDen%vacxy(:,:,:,1)=workDen%vacxy(:,:,:,1)+workDen%vacxy(:,:,:,2)
-             workDen%vacz(:,:,1) = workDen%vacz(:,:,1) + workDen%vacz(:,:,2)
-          END IF
-       END IF
-       !
-       !     ************** coulomb potential ***********************
-       IF (l_xyav) THEN
-          zat_l(:) = 0.          ! for xy-averaged densities do not
-       ELSE                     ! include nuclear charge
-          zat_l(:) = atoms%zatom(:)
-       ENDIF
-
-       !     ----> create pesudo-charge density coefficients
-    ENDIF ! (mpi%irank == 0)
-
-#ifdef CPP_MPI
-    CALL MPI_BCAST(workDen%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-#endif
-
-    CALL timestart("psqpw")      
-    CALL psqpw(mpi, atoms,sphhar,stars,vacuum, dimension,cell,input,sym,oneD,&
-         workDen%pw,workDen%mt,workDen%vacz,l_xyav, psq)
-    CALL timestop("psqpw")
-    IF (mpi%irank == 0) THEN
-
-       IF (l_xyav) THEN        ! write out xy-averaged density & stop
-          CALL xy_av_den(stars,vacuum, cell,psq,workDen%vacz)
-          CALL juDFT_error("xy-averaged density calculated", calledby ="vgen")
-       ENDIF
-
-       !     ------------------------------------------
-       IF (oneD%odi%d1) THEN
-          !-odim
-          CALL timestart("coulomb potential")
-
-          !---> generates the m=0,gz=0 component of the vacuum potential
-          CALL od_vvac(stars,vacuum,cell, psq,workDen%vacz, vTot%vacz)
-
-          !---> generation of the vacuum warped potential components and
-          !---> interstitial pw potential
-          !---> vvacxy_5.F is a symmetrized potential generator
-
-          CALL od_vvacis(oneD%odi%n2d,dimension,vacuum,oneD%odi%nq2,&
-               oneD%odi%kv,cell,oneD%odi%M,stars,oneD%odi%nst2,&
-               oneD, workDen%vacz,workDen%vacxy,psq,vTot%vacz,sym, vTot%vacxy,vTot%pw)
-          CALL timestop("coulomb potential")
-
-          !+odim
-       ELSEIF (input%film .AND. .NOT.oneD%odi%d1) THEN
-          !     ----> potential in the  vacuum  region
-          !       
-          CALL timestart("p vac") 
-          CALL vvac(vacuum,stars, cell,sym,input, psq,workDen%vacz, vTot%vacz,rhobar,sig1dh,vz1dh)
-          CALL vvacis(stars,vacuum, sym,cell, psq, input, vTot%vacxy)
-
-          CALL vvacxy(stars,vacuum,cell,sym,input, workDen%vacxy, vTot%vacxy, alphm)
-          CALL timestop("p vac")
-       END IF
-       !     ------------------------------------------
-       !     ----> potential in the  interstitial  region
-       CALL timestart("p int")
-       WRITE (6,FMT=8010)
-8010   FORMAT (/,5x,'coulomb potential in the interstitial region:')
-       IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-          !           -----> create v(z) for each 2-d reciprocal vector
-          ivfft =  3*stars%mx3 
-          !         ivfft = 2*mx3 - 1
-          ani = 1.0/REAL(ivfft)
-          DO  irec2 = 1,stars%ng2
-             i = 0
-             DO i3 = 0,ivfft - 1
-                i = i + 1
-                z = cell%amat(3,3)*i3*ani
-                IF (z.GT.cell%amat(3,3)/2.) z = z - cell%amat(3,3)
-                vintcza = vintcz(stars,vacuum,cell,sym,input,&
-                     z,irec2, psq,vTot%vacxy,vTot%vacz,rhobar,sig1dh,vz1dh,alphm)
-                af1(i) = REAL(vintcza)
-                bf1(i) = AIMAG(vintcza)
-             ENDDO
-             !                z = (i_sm-1)*ani
-             !                IF (z > 0.5) z = z - 1.0
-             !                af1(i_sm) = af1(i_sm) + z * delta
-             !                bf1(i_sm) = bf1(i_sm) + z * deltb
-             !              ENDDO
-             !            ENDIF
-             !        --> 1-d fourier transform and store the coefficients in vTot%pw( ,1)
-             CALL cfft(af1,bf1,ivfft,ivfft,ivfft,-1)
-             !            delta = ivfft * delta * 2 / fpi ! * amat(3,3)**2 * ani
-             i = 0
-             DO  i3 = 0,ivfft - 1
-                k3 = i3
-                IF (k3 > FLOOR(ivfft/2.) ) k3 = k3 - ivfft
-                i = i + 1
-                IF ((k3.GE.-stars%mx3).AND.(k3.LE.stars%mx3)) THEN
-                   irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),k3)
-
-                   !                 IF ( (irec2 == 1).AND.(i3 > 0) ) THEN                 ! smooth potential
-                   !                   corr = 2.0*mod(abs(k3),2) - 1.0
-                   !                   bf1(i) = bf1(i) + delta * corr / k3
-                   !                 ENDIF
-
-                   !       ----> only stars within g_max sphere (shz oct.97)
-                   IF (irec3.NE.0) THEN
-                      !
-                      xint = CMPLX(af1(i),bf1(i))*ani
-                      nzst1 = stars%nstr(irec3)/stars%nstr2(irec2)
-                      vTot%pw(irec3,1) = vTot%pw(irec3,1) + xint/nzst1
-                   END IF
-                ENDIF
-             ENDDO
-          ENDDO
-       ELSEIF (.NOT.input%film) THEN
-          vTot%pw(1,1) = CMPLX(0.0,0.0)
-          vTot%pw(2:stars%ng3,1)=fpi_const*psq(2:stars%ng3)/(stars%sk3(2:stars%ng3)*stars%sk3(2:stars%ng3))       
-       END IF
-
-       CALL timestop("p int")
-
-    ENDIF ! mpi%irank == 0
-    !     --------------------------------------------
-    !     ---> potential in the muffin-tin spheres
-
-    CALL timestart("p vmts")
-    CALL vmts(mpi, stars,sphhar,atoms, sym,cell,oneD, vTot%pw,workDen%mt, vTot%mt)
-    !     --------------------------------------------
-    CALL timestop("p vmts")
-    IF (mpi%irank == 0) THEN
-       !     ---> check continuity of coulomb potential
-
-       IF (input%vchk) THEN
-          CALL timestart("checking")
-          CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
-                           cell,vTot,1)
-          CALL timestop("checking")
-       END IF
-       !
-       !========TOTAL==============================================
-       !
-       !      IF (l_xyav) THEN        ! write out xy-averaged potential & stop
-       !        CALL xy_av_den(
-       !     >                 n3d,k3d,nq3,nmzd,nmz,dvac,delz,
-       !     >                 area,ig2,kv3,amat,vTot%pw,vTot%vacz(1,1,1))
-       !         CALL juDFT_error("xy-averaged potential calculated",calledby="vgen")
-       !      ENDIF
-
-       IF (input%total) THEN
-          CALL timestart("int_nv")
-
-          !
-          !      ---> AVERAGE COULOMB POTENTIAL ON THE SPHERE 
-          !          FOR CALCULATING THE MADELUNG TERM in totale.f
-          !           r=Rmt
-          DO n=1,atoms%ntype
-             atoms%vr0(n)=vTot%mt(atoms%jri(n),0,n,1)
-          ENDDO
-          !
-          !     CALCULATE THE INTEGRAL OF n*Vcoulomb
-          !
-          WRITE (6,FMT=8020)
-          WRITE (16,FMT=8020)
-8020      FORMAT (/,10x,'density-coulomb potential integrals',/)
-          !
-          !       interstitial first
-          !
-          !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
-          !
-          CALL convol(stars, vpw_w, vTot%pw, stars%ufft)
-          !
-          IF (input%jspins.EQ.2) CALL CPP_BLAS_ccopy(stars%ng3,vpw_w(1,1),1,vpw_w(1,input%jspins),1)
-          !
-          results%te_vcoul = 0.0
-          CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
-               workDen%pw,vpw_w, workDen%vacxy,vTot%vacxy, workDen%vacz,vTot%vacz, workDen%mt,vTot%mt, results%te_vcoul)
-
-          WRITE (6,FMT=8030) results%te_vcoul
-          WRITE (16,FMT=8030) results%te_vcoul
-8030      FORMAT (/,10x,'total density-coulomb potential integral :', t40,f20.10)
-
-          CALL timestop("int_nv")
-
-          INQUIRE(file='vdW_kernel_table',exist=l_vdw)
-          IF (l_vdw) THEN
-
-             CALL timestart("fleur_vdW")
-             ! calculate vdW contribution to potential
-             CALL fleur_vdW(mpi,atoms,sphhar,stars, input,dimension,&
-                  cell,sym,oneD,vacuum, workDen%pw(:,1),workDen%mt(:,:,:,1), vpw_w(:,1),vTot%mt(:,:,:,:))
-             CALL timestop("fleur_vdW")
-
-          ENDIF
-
-       END IF
-       !
-       !==========END TOTAL===================================================
-       !
-       !     ----> reload the density for calculating vxc (for spin-pol. case)
-       !
-       IF (input%jspins.EQ.2) THEN
-          workDen = den
-          vTot%mt(:,0:,:,2) = vTot%mt(:,0:,:,1)
-          vTot%pw(:,2) = vTot%pw(:,1)
-          IF (input%film) THEN
-             vTot%vacxy(:,:,:,2) = vTot%vacxy(:,:,:,1)
-             vTot%vacz(:,:,2)=vTot%vacz(:,:,1)
-          END IF
-       END IF
-       IF (input%total) THEN
-          DO js = 1,input%jspins
-             ! to enable a GW calculation,
-             vpw_w(1:stars%ng3,js)=vpw_w(1:stars%ng3,js)/stars%nstr(1:stars%ng3)     ! the PW-coulomb part is not
-             ! used otherwise anyway.
-          ENDDO
-          vCoul%iter = vTot%iter
-          vCoul%mt = vTot%mt
-          vCoul%pw(:,1:input%jspins) = vpw_w(:,1:input%jspins)
-          vCoul%vacz = vTot%vacz
-          vCoul%vacxy = vTot%vacxy
-
-          DO js = 1,input%jspins
-             DO i = 1,stars%ng3
-                vpw_w(i,js)=vpw_w(i,js)*stars%nstr(i)
-             ENDDO
-          ENDDO
-       END IF
-       IF (sliceplot%plpot) THEN
-          OPEN (11,file='potcoul_pl',form='unformatted',status='unknown')
-          CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-               11, vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-          CLOSE(11)
-       END IF
-    ENDIF !irank==0
-
-       !     ******** exchange correlation potential******************
-       !+ta
-       !     rhmn: rho-min.
-       !     ichsmrg: i-charge-small-region.
-       !          0(not watched)
-       !          1(in muffin-tin), 2(interstitial), 3(warped-vac),4(vacuum)
-
-       ichsmrg=0
-       rhmn=1.e+10
-       !-ta
-       excpw(:) = CMPLX(0.,0.)
-       excz(:,:) = 0.0
-       excxy(:,:,:) = CMPLX(0.,0.)
-       excr(:,:,:) = 0.0
-
-       !     ---> vacuum region
+    !     ---> vacuum region
     IF (mpi%irank == 0) THEN
        IF (input%film) THEN
 
@@ -415,8 +84,8 @@ CONTAINS
 
              IF (.NOT.oneD%odi%d1) THEN
 
-                CALL vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,workDen,&
-                            vTot%vacxy,vTot%vacz, excxy,excz)
+                CALL vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,Den,&
+                     vTot,exc)
 
              ELSE
                 CALL judft_error("OneD broken")
@@ -435,14 +104,14 @@ CONTAINS
              IF (oneD%odi%d1) THEN
                 CALL judft_error("OneD broken")
 
-                CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                     cell,xcpot,input,obsolete,workDen, ichsmrg,&
-                     vTot%vacxy,vTot%vacz,rhmn, excxy,excz)
+                !CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
+                !     cell,xcpot,input,obsolete,workDen, ichsmrg,&
+                !     vTot%vacxy,vTot%vacz,rhmn, exc%vacxy,exc%vacz)
 
              ELSE
                 CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                     cell,xcpot,input,obsolete,workDen, ichsmrg,&
-                     vTot%vacxy,vTot%vacz,rhmn, excxy,excz)
+                     cell,xcpot,input,obsolete,workDen, &
+                     vTot, exc)
 
              END IF
 
@@ -464,13 +133,12 @@ CONTAINS
           IF ( .NOT.xcpot%is_gga() ) THEN
              ! LDA
 
-             CALL visxc(ifftd,stars,noco,xcpot,input,workDen,&
-                  vTot%pw,vpw_w,vx%pw,vxpw_w, excpw)
+             CALL visxc(ifftd,stars,noco,xcpot,input,den,vTot,vx,exc)
 
           ELSE ! GGA
 
              CALL visxcg(ifftd,stars,sym,ifftxc3d,cell,workDen,xcpot,input,&
-                  obsolete,noco, rhmn,ichsmrg, vTot%pw,vpw_w,vx%pw,vxpw_w, excpw)
+                  obsolete,noco,vTot,vx,exc)
 
           END IF
 
@@ -478,313 +146,101 @@ CONTAINS
           ! White-Bird-trick
 
           WRITE(6,'(a)') "W+B trick cancelled out. visxcwb uses at present common block cpgft3.",&
-             "visxcwb needs to be reprogrammed according to visxcg.f"
+               "visxcwb needs to be reprogrammed according to visxcg.f"
           CALL juDFT_error("visxcwb",calledby ="vgen")
-          !sb       CALL visxcwb(
-          !sb  >                 workDen%pw,kimax,igfft,pgfft,ufft,
-          !sb  >                 icorr,total,krla,
-          !sb  >                 igrd,ndvgrd,idsprs,isprsv,
-          !sb  >                 idsprsi,chng,sprsv,lwb,rhmn,ichsmrg,
-          !sb  =                 vTot%pw,vpw_w,
-          !sb  <                 excpw)
+
 
        END IF
        !
-       ! --> on output vpw_w contains the warped effective potential and
-       !               excpw the warped XC-energy density
-       !
 
-       !
-       !     add IR EXX potential to vpw_w
-       !
-       INQUIRE(file='vpw_wexx',exist=exi)
-       IF( exi ) THEN 
-          WRITE(*,*) 'Read in vpw_wexx...'
-          OPEN (351,file='vpw_wexx',form='formatted')
-          DO js = 1,input%jspins
-             DO i = 1,stars%ng3
-                READ(351,'(2f30.15)') vpw_wexx(i,js) 
-                vpw_w(i,js) = vpw_w(i,js) + vpw_wexx(i,js)*stars%nstr(i)
-             END DO
-          END DO
-          CLOSE(351)
-       END IF
 
-       INQUIRE(file='vpw_exx',exist=exi)
-       IF( exi ) THEN 
-          WRITE(*,*) 'Read in vpw_exx...'
-          OPEN (351,file='vpw_exx',form='formatted')
-          DO js = 1,input%jspins
-             DO i = 1,stars%ng3
-                READ(351,'(2f30.15)') vpw_exx(i,js) 
-                vTot%pw(i,js) = vTot%pw(i,js) + vpw_exx(i,js)
-             END DO
-          END DO
-          CLOSE(351)
-       END IF
+
        CALL timestop("Vxc in interstitial")
 
-       !      ---> evaluate the interstitial average potential
-       vbar(:) = vpw_w(1,:)*cell%omtil/cell%volint
-       !-gu
-       WRITE (6,FMT=8040) (vbar(js),js=1,input%jspins)
-       WRITE (16,FMT=8040) (vbar(js),js=1,input%jspins)
-8040   FORMAT (/,5x,'interstitial potential average (vbar) =',2f10.6)
     ENDIF !irank==0
-       !
-       !     ------------------------------------------
-       !     ----> muffin tin spheres region
+    !
+    !     ------------------------------------------
+    !     ----> muffin tin spheres region
 
     IF (mpi%irank == 0) THEN
        CALL timestart ("Vxc in MT")
     END IF
 #ifdef CPP_MPI
-       CALL MPI_BCAST(atoms%vr0,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(input%efield%vslope,1,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(workDen%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(vTot%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(rhmn,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(ichsmrg,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%efield%vslope,1,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
-       IF (xcpot%is_gga()) THEN
-          CALL vmtxcg(dimension,mpi,sphhar,atoms, workDen%mt,xcpot,input,sym,&
-               obsolete, vx%mt,vTot%mt,rhmn,ichsmrg, excr)
-       ELSE
-          CALL vmtxc(DIMENSION,sphhar,atoms, workDen%mt,xcpot,input,sym, vTot%mt, excr,vx%mt)
-       ENDIF
+    IF (xcpot%is_gga()) THEN
+       CALL vmtxcg(dimension,mpi,sphhar,atoms, den,xcpot,input,sym,&
+            obsolete, vTot,vx,exc)
+    ELSE
+       CALL vmtxc(DIMENSION,sphhar,atoms, den,xcpot,input,sym, vTot,exc,vx)
+    ENDIF
 
 
-       !
-       ! add MT EXX potential to vr
-       !
+    !
+    ! add MT EXX potential to vr
+    !
 
     IF (mpi%irank == 0) THEN
-       INQUIRE(file='vr_exx',exist=exi)
-       IF( exi ) THEN
-          ALLOCATE( vr_exx(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
-          OPEN (350,file='vr_exx',form='formatted')
-          DO jsp = 1,dimension%jspd
-             DO  itype = 1,atoms%ntype
-                itypsym = atoms%ntypsy( SUM(atoms%neq(:itype-1)) + 1 )
-                DO lh = 0,sphhar%nlh(itypsym)
-                   l = sphhar%llh(lh,itypsym)
-                   DO i = 1,atoms%jmtd
-                      READ(350,'(f30.15)') vr_exx(i,lh,itype,jsp)
-                   END DO
 
-                   IF( l .EQ. 0 ) THEN
-                      vr_exx(:,lh,itype,jsp) = vr_exx(:,lh,itype,jsp)*sfp_const/atoms%rmsh(:,itype)
-                   END IF
-
-                END DO
-             END DO
-          END DO
-          CLOSE(350)
-
-          vTot%mt = vTot%mt + vr_exx
-
-       END IF
        CALL timestop ("Vxc in MT")
        !     ------------------------------------------
        !     ---> check continuity of total potential
 
        IF (input%vchk) THEN
           CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
-                           cell,vTot,1)
+               cell,vTot,1)
        END IF
 
-       CALL pot_mod(atoms,sphhar,vacuum,stars, input, vTot%mt,vTot%vacxy,vTot%vacz,vTot%pw,vpw_w)
        !
        !============TOTAL======================================
        !
-       IF (input%total) THEN
-
-          IF (noco%l_noco) THEN ! load workDen%pw,workDen%vacz,workDen%vacxyxy from 'cdn'-file
-             PRINT *,"TODO: check that read is not needed in vgen"
-!             CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-!                              0,fermiEnergyTemp,l_qfix,workDen)
-             workDen = denRot
-          ENDIF
+       IF (PRESENT(results)) THEN
           !
           !     CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2
           !     Veff = Vcoulomb + Vxc
           !
-          ALLOCATE( veffpw_w(stars%ng3,dimension%jspd) )
-          ALLOCATE( veffr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd) )
-          IF( xcpot%is_hybrid() ) THEN
-             veffpw_w = vpw_w - xcpot%get_exchange_weight() * vxpw_w
-             veffr    = vTot%mt    - xcpot%get_exchange_weight() * vx%mt
+          IF (noco%l_noco) THEN 
+             workDen = denRot
           ELSE
-             veffpw_w = vpw_w
-             veffr    = vTot%mt
-          END IF
+             workden=den
+          ENDIF
 
-          !HF     kinetic energy correction for core states
-          IF ( hybrid%l_addhf.AND.(xcpot%is_hybrid()  )  ) THEN
-             ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,DIMENSION%jspd), rhoc_vx(atoms%jmtd))
-             ALLOCATE(tec(atoms%ntype,DIMENSION%jspd),qintc(atoms%ntype,DIMENSION%jspd))
-             CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
-             DEALLOCATE(tec,qintc)
+          veff=vTot
+          IF( xcpot%is_hybrid() ) THEN
+             veff%pw   = vTot%pw   -xcpot%get_exchange_weight()  * vx%pw
+             veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight() * vx%pw_w
+             veff%mt   = vTot%mt   - xcpot%get_exchange_weight() * vx%mt
           END IF
-          !HF
 
           results%te_veff = 0.0
-          DO 370 js = 1,input%jspins
+          DO  js = 1,input%jspins
              WRITE (6,FMT=8050) js
-             WRITE (16,FMT=8050) js
 8050         FORMAT (/,10x,'density-effective potential integrals for spin ',i2,/)
-
-             CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
-                  workDen%pw(:,js),veffpw_w(:,js), workDen%vacxy(:,:,:,js),vTot%vacxy(:,:,:,js),&
-                  workDen%vacz(:,:,js),vTot%vacz(:,:,js), workDen%mt(1,0,1,js),veffr(1,0,1,js), results%te_veff)
-
-             !HF
-             IF (hybrid%l_addhf.and.( xcpot%is_hybrid()  )  ) THEN
-                nat = 1
-                DO n = 1,atoms%ntype
-                   DO j = 1, atoms%jri(n)
-                      rhoc_vx(j) = rhoc(j,n,js) * vx%mt(j,0,n,js) / sfp_const
-                   END DO
-                   CALL intgr3(rhoc_vx,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),dpdot)
-                   IF( xcpot%is_hybrid() ) THEN
-                      results%te_veff = results%te_veff + xcpot%get_exchange_weight() * dpdot*atoms%neq(n)
-                   END IF
-                   nat     = nat + atoms%neq(n)
-                END DO
-                !           Skip over parts in cdnc not used
-             END IF
-             !HF
-
-370          CONTINUE
-
-          
-             DEALLOCATE( veffpw_w,veffr )
-             WRITE (6,FMT=8060) results%te_veff
-             WRITE (16,FMT=8060) results%te_veff
-8060         FORMAT (/,10x,'total density-effective potential integral :', t40,f20.10)
-             !
-             !     CALCULATE THE INTEGRAL OF n*exc
-             !
-             !     ---> perform spin summation of charge densities
-             !     ---> for the calculation of Exc
-             IF (input%jspins.EQ.2) THEN
-                nat = 1
-                DO n = 1,atoms%ntype
-                   workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) = &
-                      workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,1) + &
-                      workDen%mt(:atoms%jri(n),0:sphhar%nlh(atoms%ntypsy(nat)),n,input%jspins)
-
-                   nat = nat + atoms%neq(n)
-                ENDDO
-                workDen%pw(:stars%ng3,1) = workDen%pw(:stars%ng3,1) + workDen%pw(:stars%ng3,input%jspins)
-                IF (input%film) THEN
-                   workDen%vacxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,1) = &
-                        workDen%vacxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,1) + &
-                        workDen%vacxy(:vacuum%nmzxy,:oneD%odi%nq2 - 1,:vacuum%nvac,input%jspins)
-                   workDen%vacz(:vacuum%nmz,:vacuum%nvac,1) = workDen%vacz(:vacuum%nmz,:vacuum%nvac,1) +&
-                        workDen%vacz(:vacuum%nmz,:vacuum%nvac,input%jspins)
-                END IF
-             END IF
-             WRITE (6,FMT=8070)
-             WRITE (16,FMT=8070)
-8070         FORMAT (/,10x,'charge density-energy density integrals',/)
-
-             results%te_exc = 0.0
-             CALL int_nv(stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
-                  workDen%pw(:,1),excpw(1), workDen%vacxy,excxy, workDen%vacz,excz, workDen%mt,excr, results%te_exc)
-             WRITE (6,FMT=8080) results%te_exc
-             WRITE (16,FMT=8080) results%te_exc
-
-8080         FORMAT (/,10x,'total charge density-energy density integral :', t40,f20.10)
-
-          END IF
+             CALL int_nv(js,stars,vacuum,atoms,sphhar, cell,sym,input,oneD,veff,workden,results%te_veff)
+          ENDDO
+          WRITE (6,FMT=8060) results%te_veff
+8060      FORMAT (/,10x,'total density-effective potential integral :', t40,f20.10)
           !
-          !==========END TOTAL============================================
+          !     CALCULATE THE INTEGRAL OF n*exc
           !
-          !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
+          !     ---> perform spin summation of charge densities
+          !     ---> for the calculation of Exc
+          CALL  workden%sum_both_spin()
 
-          DO js = 1,input%jspins
+          WRITE (6,FMT=8070)
+8070      FORMAT (/,10x,'charge density-energy density integrals',/)
 
-             l_pottot = .FALSE.                  ! adds a B-field, if file
-             IF (dimension%jspd.EQ.2) THEN                       !   mfee is present
-                INQUIRE (file='mfee',exist=l_pottot)
-                IF (l_pottot) THEN
-                   OPEN (88,file='mfee',form='formatted',status='unknown')
-                   REWIND 88
-                   DO n=1,atoms%ntype
-                      READ (88,*) i,mfie
-                      WRITE (*,*) 'type,field:',i,mfie
-                      IF (i/=n)  CALL juDFT_error("wrong types in mfee", calledby="vgen")
-                      IF (js.EQ.1) THEN
-                         vTot%mt(:atoms%jri(n),0,n,js) = vTot%mt(:atoms%jri(n),0,n,js) - mfie/2.
-                      ELSE
-                         vTot%mt(:atoms%jri(n),0,n,js) = vTot%mt(:atoms%jri(n),0,n,js) + mfie/2.
-                      ENDIF
-                   ENDDO
-                   CLOSE (88)
-                ENDIF
-             ENDIF
+          results%te_exc = 0.0
+          CALL int_nv(1,stars,vacuum,atoms,sphhar, cell,sym,input,oneD,&
+               exc,workDen, results%te_exc)
+          WRITE (6,FMT=8080) results%te_exc
 
+8080      FORMAT (/,10x,'total charge density-energy density integral :', t40,f20.10)
 
+       END IF
 
-             DO n = 1,atoms%ntype
-                vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
-                vx%mt(:atoms%jri(n),0,n,js) = atoms%rmsh(:atoms%jri(n),n)*vx%mt(:atoms%jri(n),0,n,js)/sfp_const
-             ENDDO
+    ENDIF ! mpi%irank == 0
 
-          ENDDO     ! js =1,input%jspins
-
-
-          IF ((.NOT.reap).OR.(noco%l_noco)) THEN
-             IF (input%total) THEN
-                OPEN (9,file='nrp',form='unformatted',status='unknown')
-             ELSE
-                OPEN (9,file='nrp',form='unformatted',position='append')
-             ENDIF
-             CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-                  9, vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-             CLOSE(9)
-          ENDIF
-
-          !     **************** reanalyze vpw *************************
-          !                        call cpu_time(cp0)
-
-          IF (input%total) THEN
-             IF (.NOT.noco%l_noco) THEN ! In the noco case this is done in vmatgen...
-                DO js=1,input%jspins
-                   DO i=1,stars%ng3
-                      vTot%pw(i,js)=vpw_w(i,js)/stars%nstr(i)
-                   ENDDO
-                ENDDO
-             END IF
-
-             DO js=1,input%jspins
-                DO i=1,stars%ng3
-                   vx%pw(i,js)=vxpw_w(i,js)/stars%nstr(i)
-                ENDDO
-             ENDDO
-             vx%iter = vTot%iter
-          END IF
-
-          IF (vacuum%nvac==1) THEN
-             vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
-             vCoul%vacz(:,2,:) = vCoul%vacz(:,1,:)
-             IF (sym%invs) THEN
-                vTot%vacxy(:,:,2,:)  = cmplx(vTot%vacxy(:,:,1,:))
-                vCoul%vacxy(:,:,2,:) = cmplx(vCoul%vacxy(:,:,1,:))
-             ELSE
-                vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
-                vCoul%vacxy(:,:,2,:) = vCoul%vacxy(:,:,1,:)
-             ENDIF
-          ENDIF
-       ENDIF ! mpi%irank == 0
-
-       ! broadcast potentials
-#ifdef CPP_MPI
-       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
-       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
-       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
-#endif
-
-     END SUBROUTINE vgen
-   END MODULE m_vgen
+  END SUBROUTINE vgen_xcpot
+END MODULE m_vgen_xcpot

@@ -4,11 +4,7 @@
 !     in the interstitial region    c.l.fu
 !     ******************************************************
       CONTAINS
-      SUBROUTINE visxc(&
-     &                 ifftd,stars,noco,xcpot,input,&
-     &                 den,&
-     &                 vpw,vpw_w,vxpw,vxpw_w,&
-     &                 excpw)
+      SUBROUTINE visxc(ifftd,stars,noco,xcpot,input,den,vxc,vx,exc)
 
 !     ******************************************************
 !     instead of visxcor.f: the different exchange-correlation 
@@ -30,12 +26,9 @@
       TYPE(t_xcpot),INTENT(IN)     :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_potden),INTENT(IN)    :: den
+      TYPE(t_potden),INTENT(INOUT) :: vxc,exc,vx
+      
            
-!     ..
-!     .. Array Arguments ..
-      COMPLEX, INTENT (OUT) :: excpw(stars%ng3)
-      COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins)
-      COMPLEX, INTENT (INOUT) ::vxpw(stars%ng3,input%jspins),vxpw_w(stars%ng3,input%jspins)
 !     ..
 !     .. Local Scalars ..
       INTEGER i,k,js,nt
@@ -44,15 +37,15 @@
 !     .. Local Arrays
       COMPLEX fg3(stars%ng3)
       REAL, ALLOCATABLE :: mx(:),my(:)
-      REAL, ALLOCATABLE :: exc(:),vcon(:),vxc(:,:),vx(:,:)
+      REAL, ALLOCATABLE :: e_xc(:),vcon(:),v_xc(:,:),v_x(:,:)
       REAL, ALLOCATABLE :: af3(:,:),bf3(:)
 !
 !     ---> allocate arrays
 !
-      ALLOCATE ( exc(0:ifftd-1),vcon(0:ifftd-1),vxc(0:ifftd-1,input%jspins),&
+      ALLOCATE ( e_xc(0:ifftd-1),vcon(0:ifftd-1),v_xc(0:ifftd-1,input%jspins),&
      &    af3(0:ifftd-1,input%jspins),bf3(0:ifftd-1) )
 
-      ALLOCATE( vx(0:ifftd-1,input%jspins) )
+      ALLOCATE( v_x(0:ifftd-1,input%jspins) )
 !
 !     transform charge density to real space
 !
@@ -90,7 +83,7 @@
        CALL vxcall&
      &            (6,xcpot,input%jspins,&
      &             ifftd,nt,af3,&
-     &             vx,vxc)
+     &             v_x,v_xc)
       
 !
 !     ---> back fft to g space and add to coulomb potential for file nrp
@@ -101,7 +94,7 @@
          DO js = 1,input%jspins
 
            DO i=0,ifftd-1
-             vcon(i)=stars%ufft(i)*vxc(i,js)
+             vcon(i)=stars%ufft(i)*v_xc(i,js)
              bf3(i)=0.0
            ENDDO
            CALL fft3d(&
@@ -111,11 +104,11 @@
            fg3=fg3*stars%nstr
 
            DO k = 1,stars%ng3
-              vpw_w(k,js) = vpw_w(k,js) + fg3(k)
+              vxc%pw_w(k,js) = vxc%pw_w(k,js) + fg3(k)
            ENDDO   
 
            DO i=0,ifftd-1
-             vcon(i)=stars%ufft(i)*vx(i,js)
+             vcon(i)=stars%ufft(i)*v_x(i,js)
              bf3(i)=0.0
            ENDDO
            CALL fft3d(&
@@ -125,7 +118,7 @@
            fg3=fg3*stars%nstr
 
            DO k = 1,stars%ng3
-              vxpw_w(k,js) = vxpw_w(k,js) + fg3(k)
+              vx%pw_w(k,js) = vx%pw_w(k,js) + fg3(k)
            ENDDO   
 
          ENDDO
@@ -135,10 +128,10 @@
                 CALL excall&
      &               (6,xcpot,input%jspins,&
      &                ifftd,nt,af3,&
-     &                exc)
+     &                e_xc)
 
          DO i=0,ifftd-1
-           vcon(i)=stars%ufft(i)*exc(i)
+           vcon(i)=stars%ufft(i)*e_xc(i)
            bf3(i)=0.0
          ENDDO
 !
@@ -146,33 +139,31 @@
 !
          CALL fft3d(&
      &              vcon,bf3,&
-     &              excpw,&
+     &              exc%pw(:,1),&
      &              stars,-1)
-         excpw=excpw*stars%nstr
+         exc%pw(:,1)=exc%pw(:,1)*stars%nstr
 !
       END IF ! input%total
 
       DO js = 1,input%jspins
          bf3(0:ifftd-1)=0.0
          CALL fft3d(&
-     &              vxc(0,js),bf3,&
+     &              v_xc(0,js),bf3,&
      &              fg3,&
      &              stars,-1)
          DO k = 1,stars%ng3
-            vpw(k,js) = vpw(k,js) + fg3(k)
+            vxc%pw(k,js) = vxc%pw(k,js) + fg3(k)
          ENDDO
          
          CALL fft3d(&
-     &              vx(0,js),bf3,&
+     &              v_x(0,js),bf3,&
      &              fg3,&
      &              stars,-1)
          DO k = 1,stars%ng3
-            vxpw(k,js) = vxpw(k,js) + fg3(k)
+            vx%pw(k,js) = vx%pw(k,js) + fg3(k)
          ENDDO      
       
       ENDDO
-
-      DEALLOCATE ( exc,vcon,vx,vxc,af3,bf3 )
 
       END SUBROUTINE visxc
       END MODULE m_visxc

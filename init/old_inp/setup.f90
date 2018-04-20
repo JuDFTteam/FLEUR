@@ -185,7 +185,7 @@
                 !
                 !--->    set up electric field parameters (if needed) 
                 !
-                CALL efield(atoms, DIMENSION, stars, sym, vacuum, cell, input)
+                ! CALL e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,field)
              ENDIF
           ENDIF
 

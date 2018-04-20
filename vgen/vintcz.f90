@@ -7,7 +7,7 @@ MODULE m_vintcz
   !---------------------------------------------------------------
 CONTAINS
   COMPLEX FUNCTION vintcz(&
-       &                        stars,vacuum,cell,sym,input,&
+       &                        stars,vacuum,cell,sym,input,field,&
        &                        z,nrec2,psq,vxy,vz,rhobar,sig1dh,vz1dh,alphm)
 
     USE m_constants
@@ -20,6 +20,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_input),INTENT(IN)  :: input
+    TYPE(t_field),INTENT(IN)  :: field
     INTEGER, INTENT (IN) :: nrec2
     COMPLEX, INTENT (IN) :: rhobar
     REAL,    INTENT (IN) :: sig1dh,vz1dh  ,z
@@ -98,8 +99,8 @@ CONTAINS
        !           -----> v2(z)
        vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
             &            (sig1dh-rhobar/2.* (dh-z))
-       IF (input%efield%dirichlet .AND. input%efield%vslope /= 0.0) THEN
-          vintcz = vintcz + input%efield%vslope * (dh-z)
+       IF (field%efield%dirichlet .AND. field%efield%vslope /= 0.0) THEN
+          vintcz = vintcz + field%efield%vslope * (dh-z)
        END IF
        !     ---->    (g.ne.0)  coefficients
     ELSE
@@ -118,26 +119,26 @@ CONTAINS
              vcons1 = fpi_const*psq(ig3n)/ (g3*g3)
              nz = 1
              IF (sym%zrfs) nz = stars%nstr(ig3n)/stars%nstr2(nrec2)
-             IF (input%efield%dirichlet) THEN
+             IF (field%efield%dirichlet) THEN
                 e_m = 0.0
                 e_p = 0.0
-                vcons1  = vcons1/(g*SINH(g*2*(dh+input%efield%zsigma)))
+                vcons1  = vcons1/(g*SINH(g*2*(dh+field%efield%zsigma)))
                 loop_vacua: DO nrz = 1,nz
                    signz = 3. - 2.*nrz
                    q = signz*q
-                   e_m = e_m - EXP(-ci*q*dh)*(g*COSH(g*(-input%efield%zsigma))&
-                        &                                  +ci*q*SINH(g*(-input%efield%zsigma)))
-                   e_p = e_p + EXP(ci*q*dh)*(-g*COSH(g*(-input%efield%zsigma))&
-                        &                                  +ci*q*SINH(g*(-input%efield%zsigma)))
+                   e_m = e_m - EXP(-ci*q*dh)*(g*COSH(g*(-field%efield%zsigma))&
+                        &                                  +ci*q*SINH(g*(-field%efield%zsigma)))
+                   e_p = e_p + EXP(ci*q*dh)*(-g*COSH(g*(-field%efield%zsigma))&
+                        &                                  +ci*q*SINH(g*(-field%efield%zsigma)))
                    sumrr = EXP(ci*q*z)
-                   e_m = e_m + sumrr*(g*COSH(g*(z+dh+input%efield%zsigma))&
-                        &                              -ci*q*SINH(g*(z+dh+input%efield%zsigma)))
-                   e_p = e_p + sumrr*(g*COSH(g*(z-dh-input%efield%zsigma))&
-                        &                              -ci*q*SINH(g*(z-dh-input%efield%zsigma)))
+                   e_m = e_m + sumrr*(g*COSH(g*(z+dh+field%efield%zsigma))&
+                        &                              -ci*q*SINH(g*(z+dh+field%efield%zsigma)))
+                   e_p = e_p + sumrr*(g*COSH(g*(z-dh-field%efield%zsigma))&
+                        &                              -ci*q*SINH(g*(z-dh-field%efield%zsigma)))
                 END DO loop_vacua
                 vintcz = vintcz&
-                     &             + vcons1*(e_m*SINH(g*(input%efield%zsigma+dh-z))&
-                     &                       +e_p*SINH(g*(input%efield%zsigma+dh+z)))
+                     &             + vcons1*(e_m*SINH(g*(field%efield%zsigma+dh-z))&
+                     &                       +e_p*SINH(g*(field%efield%zsigma+dh+z)))
              ELSE
                 sumrr = (0.0,0.0)
                 vcons2 = - 1.0 / (2.*g)
@@ -158,19 +159,19 @@ CONTAINS
           END IF ! ig3d /= 0
        ENDDO
        !  ----> v4(z)
-       IF (input%efield%dirichlet) THEN
-          e_m = SINH(g*(input%efield%zsigma+dh - z))
-          e_p = SINH(g*(input%efield%zsigma+dh + z))
+       IF (field%efield%dirichlet) THEN
+          e_m = SINH(g*(field%efield%zsigma+dh - z))
+          e_p = SINH(g*(field%efield%zsigma+dh + z))
           test = e_m*alphm(nrec2-1,2) + e_p*alphm(nrec2-1,1)
-          test = fpi_const/(g*SINH(g*2*(input%efield%zsigma+dh))) * test
+          test = fpi_const/(g*SINH(g*2*(field%efield%zsigma+dh))) * test
           IF ( 2.0 * test == test ) test = CMPLX(0.0,0.0)
           vintcz = vintcz + test
-          IF (ALLOCATED (input%efield%C1)) THEN
+          IF (ALLOCATED (field%efield%C1)) THEN
              g = stars%sk2(nrec2)
              e_m = exp_save (-g*z)
              e_p = exp_save ( g*z)
-             vintcz = vintcz + input%efield%C1(nrec2-1)*e_m&
-                  &                       + input%efield%C2(nrec2-1)*e_p
+             vintcz = vintcz + field%efield%C1(nrec2-1)*e_m&
+                  &                       + field%efield%C2(nrec2-1)*e_p
           END IF
        ELSE ! Neumann
           e_m = exp_save( -g*z  )

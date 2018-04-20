@@ -208,7 +208,7 @@ CONTAINS
              q2(1) = q2(1)*cell%area
              qvac = qvac + q2(1)*2./REAL(vacuum%nvac)
           ENDDO
-          qvac = qvac - 2*input%efield%sigma
+          qvac = qvac - 2*input%sigma
        ELSE
           !-odim
           qvac = 0.0

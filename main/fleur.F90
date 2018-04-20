@@ -76,6 +76,7 @@ CONTAINS
 
     !     Types, these variables contain a lot of data!
     TYPE(t_input)    :: input
+    TYPE(t_field)    :: field
     TYPE(t_dimension):: DIMENSION
     TYPE(t_atoms)    :: atoms
     TYPE(t_sphhar)   :: sphhar
@@ -113,7 +114,7 @@ CONTAINS
     mpi%mpi_comm = mpi_comm
  
     CALL timestart("Initialization")
-    CALL fleur_init(mpi,input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+    CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
          sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
          oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
@@ -145,8 +146,8 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
-    CALL inDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-    CALL inDenRot%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+    CALL inDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+    CALL inDenRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -163,10 +164,10 @@ CONTAINS
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
-    CALL vTot%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
-    CALL vCoul%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
-    CALL vx%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTCOUL)
-    CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vTot%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vCoul%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
+    CALL vx%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTCOUL)
+    CALL vTemp%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
     scfloop:DO WHILE (l_cont)
@@ -244,7 +245,7 @@ CONTAINS
        !---< gwf
 
        CALL timestart("generation of potential")
-       CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
+       CALL vgen(hybrid,field,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
             sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
@@ -380,7 +381,7 @@ CONTAINS
 !!$          !-Wannier
 
           CALL timestart("generation of new charge density (total)")
-          CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+          CALL outDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&

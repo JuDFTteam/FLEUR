@@ -7,7 +7,7 @@
       IMPLICIT NONE
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
-             input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+             input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
           USE m_judft
@@ -43,6 +43,7 @@
           !     Types, these variables contain a lot of data!
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
           TYPE(t_input)    ,INTENT(OUT):: input
+          TYPE(t_field),    INTENT(OUT) :: field
           TYPE(t_dimension),INTENT(OUT):: DIMENSION
           TYPE(t_atoms)    ,INTENT(OUT):: atoms
           TYPE(t_sphhar)   ,INTENT(OUT):: sphhar
@@ -185,7 +186,7 @@
                 results%force(:,:,:) = 0.0
              END IF
 
-             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+             CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 

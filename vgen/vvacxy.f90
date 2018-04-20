@@ -9,7 +9,7 @@ MODULE m_vvacxy
   !---------------------------------------------------------------
 CONTAINS
   SUBROUTINE vvacxy(&
-       &                  stars,vacuum,cell,sym,input,&
+       &                  stars,vacuum,cell,sym,input,field,&
        &                  rhtxy,&
        &                  vxy,&
        &                  alphm)
@@ -20,6 +20,7 @@ CONTAINS
     USE m_qsf
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)       :: input
+    TYPE(t_field),INTENT(IN)       :: field
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_stars),INTENT(IN)       :: stars
@@ -45,8 +46,8 @@ CONTAINS
     !     .. Intrinsic Functions ..
     INTRINSIC aimag,cmplx,conjg,exp,REAL
     !     ..
-    IF (ALLOCATED (input%efield%rhoEF) .OR. input%efield%dirichlet) THEN
-       ncsh = input%efield%zsigma/vacuum%delz + 1.01
+    IF (ALLOCATED (field%efield%rhoEF) .OR. field%efield%dirichlet) THEN
+       ncsh = field%efield%zsigma/vacuum%delz + 1.01
        ! If nmzxy < ncsh, the inhomogenous field cannot be represented.
        ! If nmzxy > ncsh, the boundary condition is wrong - and the
        ! potential is very wavy - try it yourself, if you don't believe.
@@ -71,25 +72,25 @@ CONTAINS
        vcons = tpi_const/g
 
        ! ********** DIRICHLET ************************************
-       IF (input%efield%dirichlet) THEN
-          IF (ALLOCATED (input%efield%rhoEF)) THEN
-             vxy(ncsh:vacuum%nmzxy,irec2-1,1) = input%efield%rhoEF(irec2-1, 1)
+       IF (field%efield%dirichlet) THEN
+          IF (ALLOCATED (field%efield%rhoEF)) THEN
+             vxy(ncsh:vacuum%nmzxy,irec2-1,1) = field%efield%rhoEF(irec2-1, 1)
              IF (vacuum%nvac == 2) THEN
-                vxy(ncsh:vacuum%nmzxy,irec2-1,2) = input%efield%rhoEF(irec2-1, 2)
+                vxy(ncsh:vacuum%nmzxy,irec2-1,2) = field%efield%rhoEF(irec2-1, 2)
              END IF
           ELSE
              vxy(ncsh:vacuum%nmzxy,irec2-1,1:vacuum%nvac) = 0.0
           END IF
 
-          vcons = 2.0*vcons/SINH(g*2.0*(input%efield%zsigma+cell%z1))
+          vcons = 2.0*vcons/SINH(g*2.0*(field%efield%zsigma+cell%z1))
 
           ivac_loop1: DO ivac = 1,vacuum%nvac
              z = cell%z1
              imz_loop1: DO imz = 1,ncsh-1
                 ! As "z" > 0 in this subroutine, the integrand is the same
                 ! for both ivac -- but the integral bounds are reversed
-                e_m = SINH(g*(input%efield%zsigma+cell%z1-z))
-                e_p = SINH(g*(z+input%efield%zsigma+cell%z1))
+                e_m = SINH(g*(field%efield%zsigma+cell%z1-z))
+                e_p = SINH(g*(z+field%efield%zsigma+cell%z1))
                 fra(ncsh-imz) = REAL(rhtxy(imz,irec2-1,ivac))* e_m
                 fia(ncsh-imz) = AIMAG(rhtxy(imz,irec2-1,ivac))*e_m
                 frb(imz) = REAL(rhtxy(imz,irec2-1,ivac))* e_p
@@ -128,23 +129,23 @@ CONTAINS
                 betaz = CMPLX(beta(imz,ivac,1),beta(imz,ivac,2))
                 alphaz = CMPLX(alpha(ncsh-imz,ivac,1),&
                      &                        alpha(ncsh-imz,ivac,2))
-                e_m = SINH(g*(input%efield%zsigma+cell%z1-z))
-                e_p = SINH(g*(z+input%efield%zsigma+cell%z1))
+                e_m = SINH(g*(field%efield%zsigma+cell%z1-z))
+                e_p = SINH(g*(z+field%efield%zsigma+cell%z1))
                 test = e_m*(alph0+betaz) + e_p*alphaz
                 IF ( 2.0 * test == test ) test = CMPLX(0.0,0.0)
                 vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac)&
                      &                  +  vcons * test
-                IF (ALLOCATED (input%efield%C1)) THEN
+                IF (ALLOCATED (field%efield%C1)) THEN
                    e_m = exp_save( -g*z  )
                    e_p = exp_save( g*z  )
                    IF (ivac == 1) THEN ! z > 0
                       vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac)&
-                           &                                       + input%efield%C1(irec2-1)*e_p&
-                           &                                       + input%efield%C2(irec2-1)*e_m
+                           &                                       + field%efield%C1(irec2-1)*e_p&
+                           &                                       + field%efield%C2(irec2-1)*e_m
                    ELSE ! z < 0
                       vxy(imz,irec2-1,ivac) = vxy(imz,irec2-1,ivac)&
-                           &                                       + input%efield%C1(irec2-1)*e_m&
-                           &                                       + input%efield%C2(irec2-1)*e_p
+                           &                                       + field%efield%C1(irec2-1)*e_m&
+                           &                                       + field%efield%C2(irec2-1)*e_p
                    END IF
                 END IF
                 z = z + vacuum%delz
@@ -168,8 +169,8 @@ CONTAINS
              END DO imz_loop3
 
              ! Add external field, if segmented
-             IF (ALLOCATED (input%efield%rhoEF)) THEN
-                z = cell%z1 + input%efield%zsigma
+             IF (ALLOCATED (field%efield%rhoEF)) THEN
+                z = cell%z1 + field%efield%zsigma
                 e_m = exp_save( -g*z )
                 e_p = exp_save( g*z )
 
@@ -177,13 +178,13 @@ CONTAINS
                 ! (a positive number representing a negative charge) while rhoEF
                 ! specifies the charges in terms of the (positive) elementary charge "e".
                 fra(ip-ncsh) = fra(ip-ncsh)&
-                     &                        - REAL (input%efield%rhoEF(irec2-1, ivac))*e_m
+                     &                        - REAL (field%efield%rhoEF(irec2-1, ivac))*e_m
                 fia(ip-ncsh) = fia(ip-ncsh)&
-                     &                        - AIMAG (input%efield%rhoEF(irec2-1, ivac))*e_m
+                     &                        - AIMAG (field%efield%rhoEF(irec2-1, ivac))*e_m
                 frb(ncsh)    = frb(ncsh)&
-                     &                       - REAL (input%efield%rhoEF(irec2-1, ivac))*e_p
+                     &                       - REAL (field%efield%rhoEF(irec2-1, ivac))*e_p
                 fib(ncsh)    = fib(ncsh)&
-                     &                       - AIMAG (input%efield%rhoEF(irec2-1, ivac))*e_p
+                     &                       - AIMAG (field%efield%rhoEF(irec2-1, ivac))*e_p
              END IF
              CALL intgz1(fra,vacuum%delz,vacuum%nmzxy,alpha(1,ivac,1),tail=.TRUE.)
              CALL intgz1(fia,vacuum%delz,vacuum%nmzxy,alpha(1,ivac,2),tail=.TRUE.)
