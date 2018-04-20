@@ -493,7 +493,7 @@ CONTAINS
        !         ---> back fft to g space
        !
        bf3=0.0
-       CALL fft3d(vcon,bf3,exc%pw(:,1),&
+       CALL fft3d(vcon,bf3,exc%pw_w(:,1),&
             &             stars,-1,.FALSE.)
        DEALLOCATE ( vcon )
        !

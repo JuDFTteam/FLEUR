@@ -139,9 +139,9 @@
 !
          CALL fft3d(&
      &              vcon,bf3,&
-     &              exc%pw(:,1),&
+     &              exc%pw_w(:,1),&
      &              stars,-1)
-         exc%pw(:,1)=exc%pw(:,1)*stars%nstr
+         exc%pw_w(:,1)=exc%pw_w(:,1)*stars%nstr
 !
       END IF ! input%total
 

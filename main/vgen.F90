@@ -64,7 +64,7 @@ CONTAINS
     !sum up both spins in den into workden
     CALL den%sum_both_spin(workden)
     
-    CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,den,vCoul,results)
+    CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
 
     CALL vCoul%copy_both_spin(vTot)
     

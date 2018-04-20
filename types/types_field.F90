@@ -42,7 +42,8 @@ CONTAINS
     IMPLICIT NONE
     CLASS(t_field),INTENT(INOUT)::this
     TYPE(t_input),INTENT(INOUT) ::input
-    input%sigma => this%efield%sigma
+    input%sigma => sigma
     this%efield%sigma=>sigma
+    PRINT *,"Sigma OK"
   END SUBROUTINE init_field
 END MODULE m_types_field

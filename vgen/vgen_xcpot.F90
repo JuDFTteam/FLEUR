@@ -66,7 +66,7 @@ CONTAINS
     ALLOCATE(exc%pw_w(stars%ng3,1))
     IF (PRESENT(results)) THEN
        CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.FALSE.,1)
-       ALLOCATE(veff%pw_w,mold=veff%pw_w)
+       ALLOCATE(veff%pw_w,mold=veff%pw)
     ENDIF
 
     !     ******** exchange correlation potential******************
@@ -111,7 +111,7 @@ CONTAINS
 
              ELSE
                 CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                     cell,xcpot,input,obsolete,workDen, &
+                     cell,xcpot,input,obsolete,Den, &
                      vTot, exc)
 
              END IF

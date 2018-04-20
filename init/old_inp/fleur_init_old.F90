@@ -74,7 +74,6 @@ CONTAINS
 
     CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
          obsolete,kpts,oneD,hybrid)
-
     DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
     DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
     !-odim

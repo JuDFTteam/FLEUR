@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_potden),INTENT(INOUT) :: den
+    TYPE(t_potden),INTENT(IN)    :: den
     TYPE(t_potden),INTENT(INOUT) :: vxc
     TYPE(t_potden),INTENT(INOUT) :: exc
     !     ..

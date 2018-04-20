@@ -110,6 +110,8 @@
 #ifdef CPP_HDF
           CALL hdf_init()
 #endif
+          CALL field%init(input)
+  
           results%seigscv         = 0.0
           results%te_vcoul        = 0.0
           results%te_veff         = 0.0
@@ -221,7 +223,8 @@
                   oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
-          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,DIMENSION%jspd,.false.)
+  
+          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,DIMENSION%jspd,.FALSE.)
                    !-odim
           oneD%odd%nq2 = oneD%odd%n2d
           oneD%odd%kimax2 = oneD%odd%nq2 - 1
