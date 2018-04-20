@@ -62,6 +62,7 @@ IMPLICIT NONE
      TYPE(t_energy_hf)    ::  te_hfex
      REAL                 ::  te_hfex_loc(2)
      REAL, ALLOCATABLE    :: w_iks(:,:,:)
+     REAL, ALLOCATABLE    :: eig(:,:,:)
      INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
 
      CONTAINS
@@ -147,18 +148,21 @@ SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts,noco)
    thisResults%bandgap         = 0.0
    thisResults%ef              = 0.0
 
-   neigd2 = dimension%neigd
-   IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*DIMENSION%neigd
+   neigd2 = MIN(dimension%neigd,dimension%nbasfcn)
+!   neigd2 = dimension%neigd
+   IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*neigd2
 
    ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins))
    ALLOCATE (thisResults%force_old(3,atoms%ntype))
    ALLOCATE (thisResults%w_iks(neigd2,kpts%nkpt,input%jspins))
    ALLOCATE (thisResults%neig(kpts%nkpt,input%jspins))
+   ALLOCATE (thisResults%eig(neigd2,kpts%nkpt,input%jspins))
 
    thisResults%force = 0.0
    thisResults%force_old = 0.0
    thisResults%w_iks = 0.0
    thisResults%neig = 0
+   thisResults%eig = 0.0
 
 END SUBROUTINE results_init
  

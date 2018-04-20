@@ -94,22 +94,13 @@ CONTAINS
     !
     INTEGER nn,n
     INTEGER ierr(3)
-    INTEGER intBuffer(kpts%nkpt,input%jspins)
-
+    INTEGER :: neigBuffer(kpts%nkpt,input%jspins)
 
     !     .. variables for HF or hybrid functional calculation ..
-    !
     INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
     
-    !
-    !
-    ! --> Allocate
-    !
     call ud%init(atoms,DIMENSION%jspd)
-    ALLOCATE ( eig(DIMENSION%neigd),bkpt(3) )
-    
-    !
-    ! --> some parameters first
+    ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
     
     l_real=sym%invs.AND..NOT.noco%l_noco
     !check if z-reflection trick can be used
@@ -137,8 +128,9 @@ CONTAINS
      !
      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
 
-    intBuffer = 0
+    neigBuffer = 0
     results%neig = 0
+    results%eig = 1.0e300
 
     DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
@@ -190,7 +182,7 @@ CONTAINS
           ENDIF
           CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                          eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
-          intBuffer(nk,jsp) = ne_found
+          neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
           !RMA synchronization
           CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
@@ -200,11 +192,24 @@ CONTAINS
     END DO ! spin loop ends
 
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(intBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%sub_comm,ierr)
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%sub_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
-    results%neig(:,:) = intBuffer(:,:)
+    results%neig(:,:) = neigBuffer(:,:)
 #endif
+
+    ! Sorry for the following strange workaround to fill the results%eig array.
+    ! At some point someone should have a closer look at how the eigenvalues are
+    ! distributed and fill the array without using the eigenvalue-IO.
+    DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+       DO nk = 1,kpts%nkpt
+          CALL read_eig(eig_id,nk,jsp,results%neig(nk,jsp),results%eig(:,nk,jsp))
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#endif
+       END DO
+    END DO
+
     !IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id)
 
     IF( input%jspins .EQ. 1 .AND. hybrid%l_hybrid ) THEN

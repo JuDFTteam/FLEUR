@@ -308,9 +308,12 @@ CONTAINS
        ! Synchronizes the RMA operations
        CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
-       !IF (l_evp.AND.(isize.GT.1)) THEN
-       !  eig(1:noccbd) = eig(n_start:n_end)
-       !ENDIF
+
+       IF (noco%l_noco) THEN
+          eig(1:noccbd) = results%eig(n_start:n_end,ikpt,1)
+       ELSE
+          eig(1:noccbd) = results%eig(n_start:n_end,ikpt,jspin)
+       END IF
 
        IF (vacuum%nstm.EQ.3.AND.input%film) THEN
           CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),input,jspin,kpts,&
@@ -351,13 +354,13 @@ CONTAINS
              IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
                 IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
                      sliceplot%nnne,eig(sliceplot%nnne)
-                nslibd = nslibd + 1
-                eig(nslibd) = eig(sliceplot%nnne)
-                we(nslibd) = we(sliceplot%nnne)
+                nslibd = 1
+                eig(1) = eig(sliceplot%nnne)
+                we(1) = we(sliceplot%nnne)
                 if (zmat%l_real) Then
-                   zMat%z_r(:,nslibd) = zMat%z_r(:,sliceplot%nnne)
+                   zMat%z_r(:,1) = zMat%z_r(:,sliceplot%nnne)
                 else
-                   zMat%z_c(:,nslibd) = zMat%z_c(:,sliceplot%nnne)
+                   zMat%z_c(:,1) = zMat%z_c(:,sliceplot%nnne)
                 endif
              ELSE
                 DO i = 1,nbands
