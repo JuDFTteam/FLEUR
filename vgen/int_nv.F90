@@ -41,7 +41,7 @@ CONTAINS
     !
     !  -> warping has been moved to vgen and visxc resp. ...gustav
     !
-    tis = cell%omtil * REAL( DOT_PRODUCT(vpot%pw_w(:,ispin),den%pw(:,ispin)))
+    tis = cell%omtil * REAL( DOT_PRODUCT(vpot%pw_w(:stars%ng3,ispin),den%pw(:stars%ng3,ispin)))
 
     WRITE (6,FMT=8020) tis
     WRITE (16,FMT=8020) tis

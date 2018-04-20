@@ -206,7 +206,6 @@ CONTAINS
              !
              !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
              !
-             ALLOCATE(vCoul%pw_w,MOLD=vCoul%pw)
              CALL convol(stars, vCoul%pw_w(:,ispin), vCoul%pw(:,ispin), stars%ufft)
              !
              results%te_vcoul = 0.0

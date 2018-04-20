@@ -56,6 +56,8 @@ CONTAINS
     CALL vTot%resetPotDen()
     CALL vCoul%resetPotDen()
     CALL vx%resetPotDen()
+    ALLOCATE(vx%pw_w,vTot%pw_w,mold=vTot%pw)
+    ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
 
     CALL workDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
 
@@ -71,7 +73,9 @@ CONTAINS
 
     !ToDo, check if this is needed for more potentials as well...
     CALL vgen_finalize(atoms,stars,vacuum,sym,noco,vTot)
+    DEALLOCATE(vcoul%pw_w,vx%pw_w)
 
+    
     CALL bfield(input,noco,atoms,field,vTot)
     
     ! broadcast potentials

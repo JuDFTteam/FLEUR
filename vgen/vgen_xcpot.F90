@@ -28,8 +28,7 @@ CONTAINS
     USE m_checkdopall
     USE m_cdn_io 
     USE m_types
-    USE m_potmod
-
+   
     IMPLICIT NONE
     TYPE(t_xcpot),INTENT(IN)        :: xcpot
     TYPE(t_hybrid),INTENT(IN)       :: hybrid
@@ -64,9 +63,11 @@ CONTAINS
 #endif
 
     CALL exc%init_potden_types(stars,atoms,sphhar,vacuum,1,.false.,1) !one spin only
-    CALL vx%init(stars,atoms,sphhar,vacuum,input%jspins,.false.,1)
-    if (present(results)) CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.false.,1)
-
+    ALLOCATE(exc%pw_w(stars%ng3,1))
+    IF (PRESENT(results)) THEN
+       CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.FALSE.,1)
+       ALLOCATE(veff%pw_w,mold=veff%pw_w)
+    ENDIF
 
     !     ******** exchange correlation potential******************
 
