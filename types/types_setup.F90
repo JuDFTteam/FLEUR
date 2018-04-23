@@ -444,7 +444,6 @@ MODULE m_types_setup
 
   TYPE t_obsolete
      INTEGER:: lepr !floating energy parameters...
-     LOGICAL:: disp   !remove ->potmix
      INTEGER:: ndvgrd !remove
      REAL   :: chng   !remove
      LOGICAL :: lwb   !remove

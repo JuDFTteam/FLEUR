@@ -103,7 +103,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
     INTEGER:: n,it,ithf
-    LOGICAL:: reap,l_opti,l_cont,l_qfix, l_wann_inp
+    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp
     REAL   :: fermiEnergyTemp, fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -192,7 +192,6 @@ CONTAINS
 
           !      ----> potential generator
           !
-          reap=.NOT.obsolete%disp
           input%total = .TRUE.
        ENDIF !mpi%irank.eq.0
 #ifdef CPP_MPI

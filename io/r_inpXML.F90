@@ -1710,7 +1710,6 @@ SUBROUTINE r_inpXML(&
 
   input%vchk = .FALSE.
   input%cdinf = .FALSE.
-  obsolete%disp = .FALSE.
 
   sliceplot%iplot = .FALSE.
   input%score = .FALSE.
@@ -1740,7 +1739,7 @@ SUBROUTINE r_inpXML(&
      IF (numberNodes.EQ.1) THEN
         input%vchk = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vchk'))
         input%cdinf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@cdinf'))
-        obsolete%disp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disp'))
+       
      END IF
 
      ! Read in optional plotting parameters

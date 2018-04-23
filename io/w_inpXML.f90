@@ -629,8 +629,8 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,368) banddos%dos,band,banddos%vacdos,sliceplot%slice
 
 !      <checks vchk="F" cdinf="F" disp="F"/>
-   370 FORMAT('      <checks vchk="',l1,'" cdinf="',l1,'" disp="',l1,'"/>')
-   WRITE (fileNum,370) input%vchk,input%cdinf,obsolete%disp
+   370 FORMAT('      <checks vchk="',l1,'" cdinf="',l1,'"/>')
+   WRITE (fileNum,370) input%vchk,input%cdinf
 
 !      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>  
    380 FORMAT('      <densityOfStates ndir="',i0,'" minEnergy="',f0.8,'" maxEnergy="',f0.8,'" sigma="',f0.8,'"/>')

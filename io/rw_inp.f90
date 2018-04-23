@@ -547,12 +547,13 @@
 !!$      ENDIF
     
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
-     &                 input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel
+     &                 input%frcor,sliceplot%slice,input%ctail
       input%coretail_lmax=99
+      input%kcrel=.false.
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
-      WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel
+      WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail
  8050 FORMAT (6x,l1,7x,l1,7x,l1,6x,l1,7x,i1,5x,l1,5x,l1)
       
       ! check if itmax consists of 2 or 3 digits
@@ -895,9 +896,8 @@
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
       WRITE (5,9160) input%gauss,input%delgau,input%tria
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
-      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel
- 9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1,',disp=',&
-     &        l1,',kcrel=',i1,',u2f=',l1,',f2u=',l1,',bmt=',l1)
+      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail
+ 9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1)
       WRITE (5,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  9180 FORMAT ('itmax=',i3,',maxiter=',i3,',imix=',i2,',alpha=',&
      &        f6.2,',spinf=',f6.2)
