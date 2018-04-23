@@ -9,7 +9,7 @@ MODULE m_cdncore
 CONTAINS
 
 SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,stdn,svdn)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments)
 
    USE m_constants
    USE m_cdn_io
@@ -41,8 +41,7 @@ SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_potden),INTENT(INOUT)     :: outDen
-   REAL, INTENT(INOUT)              :: stdn(atoms%ntype,dimension%jspd)
-   REAL, INTENT(INOUT)              :: svdn(atoms%ntype,dimension%jspd)
+   TYPE(t_moments),INTENT(INOUT)    :: moments
 
    INTEGER                          :: jspin, n, iType
    REAL                             :: seig, rhoint, momint
@@ -57,7 +56,7 @@ SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
    IF (mpi%irank.EQ.0) THEN
       DO jspin = 1,input%jspins
          DO n = 1,atoms%ntype
-            svdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+            moments%svdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
          END DO
       END DO
    END IF
@@ -99,7 +98,7 @@ SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
       DO jspin = 1,input%jspins
          IF (mpi%irank.EQ.0) THEN
             DO n = 1,atoms%ntype
-               stdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+               moments%stdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
             END DO
          END IF
          IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN

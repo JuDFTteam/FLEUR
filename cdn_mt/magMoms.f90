@@ -8,7 +8,7 @@ MODULE m_magMoms
 
 CONTAINS
 
-SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,stdn,svdn,chmom,qa21)
+SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
 
    USE m_types
    USE m_xmlOutput
@@ -21,11 +21,7 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,stdn,svdn,chmom,qa21)
    TYPE(t_atoms), INTENT(IN)     :: atoms
    TYPE(t_noco), INTENT(INOUT)   :: noco
    TYPE(t_potden),INTENT(IN)     :: vTot
-
-   REAL, INTENT(INOUT)           :: chmom(atoms%ntype,dimension%jspd)
-   COMPLEX, INTENT(IN)           :: qa21(atoms%ntype)
-   REAL, INTENT(IN)              :: stdn(atoms%ntype,dimension%jspd)
-   REAL, INTENT(IN)              :: svdn(atoms%ntype,dimension%jspd)
+   TYPE(t_moments),INTENT(IN)    :: moments
 
    INTEGER                       :: iType, j, iRepAtom
    REAL                          :: sval,stot,scor,smom
@@ -34,11 +30,11 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,stdn,svdn,chmom,qa21)
    WRITE (6,FMT=8000)
    WRITE (16,FMT=8000)
    DO iType = 1,atoms%ntype
-      sval = svdn(iType,1) - svdn(iType,input%jspins)
-      stot = stdn(iType,1) - stdn(iType,input%jspins)
+      sval = moments%svdn(iType,1) - moments%svdn(iType,input%jspins)
+      stot = moments%stdn(iType,1) - moments%stdn(iType,input%jspins)
       scor = stot - sval
-      WRITE (6,FMT=8010) iType,stot,sval,scor,svdn(iType,1),stdn(iType,1)
-      WRITE (16,FMT=8010) iType,stot,sval,scor,svdn(iType,1),stdn(iType,1)
+      WRITE (6,FMT=8010) iType,stot,sval,scor,moments%svdn(iType,1),moments%stdn(iType,1)
+      WRITE (16,FMT=8010) iType,stot,sval,scor,moments%svdn(iType,1),moments%stdn(iType,1)
    END DO
 
    8000 FORMAT (/,/,10x,'spin density at the nucleus:',/,10x,'type',t25,&
@@ -52,14 +48,14 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,stdn,svdn,chmom,qa21)
    CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    iRepAtom = 1
    DO iType = 1, atoms%ntype
-      smom = chmom(iType,1) - chmom(iType,input%jspins)
-      WRITE (6,FMT=8030) iType,smom, (chmom(iType,j),j=1,input%jspins)
-      WRITE (16,FMT=8030) iType,smom, (chmom(iType,j),j=1,input%jspins)
+      smom = moments%chmom(iType,1) - moments%chmom(iType,input%jspins)
+      WRITE (6,FMT=8030) iType,smom, (moments%chmom(iType,j),j=1,input%jspins)
+      WRITE (16,FMT=8030) iType,smom, (moments%chmom(iType,j),j=1,input%jspins)
       attributes = ''
       WRITE(attributes(1),'(i0)') iType
       WRITE(attributes(2),'(f15.10)') smom
-      WRITE(attributes(3),'(f15.10)') chmom(iType,1)
-      WRITE(attributes(4),'(f15.10)') chmom(iType,2)
+      WRITE(attributes(3),'(f15.10)') moments%chmom(iType,1)
+      WRITE(attributes(4),'(f15.10)') moments%chmom(iType,2)
       CALL writeXMLElementFormPoly('magneticMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
                                                       'spinDownCharge'/),&
                                    attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
@@ -68,7 +64,7 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,stdn,svdn,chmom,qa21)
          !calculate the perpendicular part of the local moment
          !and relax the angle of the local moment or calculate
          !the constraint B-field.
-         CALL m_perp(atoms,iType,iRepAtom,noco,vTot%mt(:,0,:,:),chmom,qa21)
+         CALL m_perp(atoms,iType,iRepAtom,noco,vTot%mt(:,0,:,:),moments%chmom,moments%qa21)
       END IF
       iRepAtom= iRepAtom + atoms%neq(iType)
    END DO

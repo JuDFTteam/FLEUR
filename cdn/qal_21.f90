@@ -5,25 +5,22 @@ MODULE m_qal21
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(atoms,input,noccbd,we,noco,eigVecCoeffs,denCoeffsOffdiag,qal,qmat)
+  SUBROUTINE qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges)
 
     USE m_rotdenmat
     USE m_types
     IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)        :: input
-    TYPE(t_noco),INTENT(IN)         :: noco
-    TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: noccbd 
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (INout)  :: we(noccbd),qal(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,input%jspins)
-    REAL,    INTENT (OUT) :: qmat(0:,:,:,:)!(0:3,atoms%ntype,DIMENSION%neigd,4)
-    TYPE (t_denCoeffsOffdiag), INTENT (IN) :: denCoeffsOffdiag
+    TYPE(t_dimension),         INTENT(IN)    :: dimension
+    TYPE(t_input),             INTENT(IN)    :: input
+    TYPE(t_noco),              INTENT(IN)    :: noco
+    TYPE(t_atoms),             INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffsOffdiag),  INTENT(IN)    :: denCoeffsOffdiag
+    TYPE(t_regionCharges),     INTENT(INOUT) :: regCharges
 
-    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: noccbd
+
     !     .. Local Scalars ..
     INTEGER i,l,lo,lop ,natom,nn,ntyp
     INTEGER nt1,nt2,lm,n,ll1,ipol,icore,index,m
@@ -31,19 +28,18 @@ CONTAINS
     COMPLEX sumaa,sumbb,sumab,sumba
     COMPLEX, PARAMETER :: ci = (0.0,1.0)
 
-    !     ..
     !     .. Local Arrays ..
     COMPLEX qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX qaclo(noccbd,atoms%nlod,atoms%ntype),qbclo(noccbd,atoms%nlod,atoms%ntype)
     COMPLEX qcloa(noccbd,atoms%nlod,atoms%ntype),qclob(noccbd,atoms%nlod,atoms%ntype)
-    COMPLEX qal21(0:3,atoms%ntype,size(qmat,3))
+    COMPLEX qal21(0:3,atoms%ntype,dimension%neigd)
     COMPLEX q_loc(2,2),q_hlp(2,2),chi(2,2)
-    !     ..
+    REAL    qmat(0:3,atoms%ntype,dimension%neigd,4)
+
     !     .. Intrinsic Functions ..
     INTRINSIC conjg
-    !
+
     !--->    l-decomposed density for each occupied state
-    !
     states : DO i = 1, noccbd
        nt1 = 1
        types_loop : DO n = 1 ,atoms%ntype
@@ -153,11 +149,11 @@ CONTAINS
        state : DO i = 1, noccbd
           lls : DO l = 0,3
              CALL rot_den_mat(noco%alph(n),noco%beta(n),&
-                  qal(l,n,i,1),qal(l,n,i,2),qal21(l,n,i))
+                  regCharges%qal(l,n,i,1),regCharges%qal(l,n,i,2),qal21(l,n,i))
              IF (.FALSE.) THEN
                 IF (n==1) WRITE(*,'(3i3,4f10.5)') l,n,i,qal21(l,n,i),&
-                     qal(l,n,i,:)
-                q_loc(1,1) = qal(l,n,i,1); q_loc(2,2) = qal(l,n,i,2)
+                     regCharges%qal(l,n,i,:)
+                q_loc(1,1) = regCharges%qal(l,n,i,1); q_loc(2,2) = regCharges%qal(l,n,i,2)
                 q_loc(1,2) = qal21(l,n,i); q_loc(2,1) = CONJG(q_loc(1,2))
                 q_hlp = MATMUL( TRANSPOSE( CONJG(chi) ) ,q_loc)
                 q_loc = MATMUL(q_hlp,chi)

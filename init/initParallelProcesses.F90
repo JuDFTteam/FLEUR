@@ -18,7 +18,7 @@ CONTAINS
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                                  dimension,cell,sym,xcpot,noco,oneD,hybrid,&
-                                 kpts,enpara,sphhar,mpi,results,obsolete)
+                                 kpts,enpara,sphhar,mpi,obsolete)
 
    USE m_types
 
@@ -41,7 +41,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_dimension),INTENT(INOUT) :: dimension
    TYPE(t_enpara),   INTENT(INOUT) :: enpara
    TYPE(t_sphhar),   INTENT(INOUT) :: sphhar
-   TYPE(t_results),  INTENT(INOUT) :: results
    TYPE(t_obsolete), INTENT(INOUT) :: obsolete
 #ifdef CPP_MPI
    INCLUDE 'mpif.h'
@@ -165,9 +164,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       IF(ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
       ALLOCATE(stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
-      ALLOCATE(results%force(3,atoms%ntype,dimension%jspd))
-      ALLOCATE(results%force_old(3,atoms%ntype))
-
       ALLOCATE(oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
       ALLOCATE(oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
       ALLOCATE(oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
@@ -198,7 +194,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       atoms%icorr = -99
 
       oneD%odd%nq2 = oneD%odd%n2d
-      results%force(:,:,:) = 0.0
+
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0
    END IF

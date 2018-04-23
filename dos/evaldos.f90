@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-           dimension,efermiarg,bandgap,l_mcd,ncored,ncore,e_mcd,nsld)
+           dimension,efermiarg,bandgap,l_mcd,ncore,e_mcd,nsld)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -42,19 +42,18 @@
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
-      INTEGER, INTENT(IN) :: ncored 
       INTEGER, INTENT(IN) :: nsld
       REAL,    INTENT(IN) :: efermiarg, bandgap
       LOGICAL, INTENT(IN) :: l_mcd 
 
-      INTEGER, INTENT(IN) :: ncore(:)!(ntype)
-      REAL,    INTENT(IN) :: e_mcd(atoms%ntype,input%jspins,ncored) 
+      INTEGER, INTENT(IN) :: ncore(atoms%ntype)!(ntype)
+      REAL,    INTENT(IN) :: e_mcd(atoms%ntype,input%jspins,dimension%nstd) 
 !-odim
 !+odim 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
-      INTEGER  icore,qdim,n_orb
+      INTEGER  icore,qdim,n_orb,ncored
       REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
       LOGICAL  l_tria,l_orbcomp,l_error
@@ -72,7 +71,8 @@
       CHARACTER(len=8) :: chntype*2,chform*19
       DATA spin12/'.1' , '.2'/
       DATA ch_mcd/'.+' , '.-' , '.0'/
-!
+
+      ncored =  MAX(0,MAXVAL(ncore))
       qdim = lmax*atoms%ntype+3
       l_orbcomp = banddos%l_orb
       IF (banddos%ndir.EQ.-3) THEN

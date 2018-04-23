@@ -9,7 +9,7 @@ CONTAINS
   !> Collection of code for old-style inp-file treatment
   SUBROUTINE fleur_init_old(mpi,&
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-       sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
+       sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
        oneD,coreSpecInput,l_opti)
     USE m_judft
     USE m_types
@@ -39,7 +39,6 @@ CONTAINS
     TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete 
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
     TYPE(t_xcpot)    ,INTENT(OUT)  :: xcpot
-    TYPE(t_results)  ,INTENT(INOUT):: results
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
@@ -107,8 +106,6 @@ CONTAINS
     ALLOCATE ( stars%phi2(stars%ng2) )
     ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
     ALLOCATE ( stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
-    ALLOCATE ( results%force(3,atoms%ntype,DIMENSION%jspd) )
-    ALLOCATE ( results%force_old(3,atoms%ntype) )
     ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
     ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
     ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
@@ -139,7 +136,7 @@ CONTAINS
     input%l_coreSpec = .FALSE.
 
 
-    results%force(:,:,:) = 0.0
+
 
     IF(.NOT.juDFT_was_argument("-toXML")) THEN
        PRINT *,"--------------WARNING----------------------"

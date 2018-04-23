@@ -66,31 +66,16 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_noco) :: noco_new
+   TYPE(t_noco)          :: noco_new
+   TYPE(t_regionCharges) :: regCharges
+   TYPE(t_moments)       :: moments
 
    !Local Scalars
-   REAL fix,qtot,dummy
-   INTEGER jspin,jspmax
-   LOGICAL l_enpara
+   REAL                  :: fix, qtot, dummy
+   INTEGER               :: jspin, jspmax
 
-   !Local Arrays
-   REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd)
-   REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-   REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
-   COMPLEX,ALLOCATABLE :: qa21(:)
-
-   IF (mpi%irank.EQ.0) THEN
-      INQUIRE(file='enpara',exist=l_enpara)
-      IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
-   ENDIF
-   ALLOCATE (qa21(atoms%ntype))
-   ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
-   ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
-
-   !initialize density arrays with zero
-   qa21(:) = cmplx(0.0,0.0)
-   qvac(:,:,:,:) = 0.0 
-   qvlay(:,:,:,:,:) = 0.0
+   CALL regCharges%init(input,atoms,dimension,kpts,vacuum)
+   CALL moments%init(input,atoms)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -102,26 +87,23 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL timestart("cdngen: cdnval")
-      CALL cdnval(eig_id,&
-                  mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,&
-                  outDen,results,qvac,qvlay,qa21,chmom,clmom)
+      CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,outDen,regCharges,results,moments)
       CALL timestop("cdngen: cdnval")
    END DO
 
    IF (mpi%irank.EQ.0) THEN
-      IF (l_enpara) CLOSE (40)
       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
    CALL cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,stdn,svdn)
+                stars,cell,sphhar,atoms,vTot,outDen,moments)
 
    IF (sliceplot%slice) THEN
       IF (mpi%irank.EQ.0) THEN
          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                           1,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
+                           0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
@@ -135,7 +117,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          noco_new = noco
 
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         CALL magMoms(dimension,input,atoms,noco_new,vTot,stdn,svdn,chmom,qa21)
+         CALL magMoms(dimension,input,atoms,noco_new,vTot,moments)
 
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
@@ -143,15 +125,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
 
-         IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,clmom)
+         IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,moments%clmom)
       END IF
    END IF ! mpi%irank.EQ.0
 
 #ifdef CPP_MPI
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
-
-   DEALLOCATE (qvac,qvlay,qa21)
 
 END SUBROUTINE cdngen
 

@@ -1,8 +1,7 @@
 MODULE m_abcof
 CONTAINS
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-       noco,jspin,oneD, acof,bcof,ccof,zMat,&
-       eig,force)
+                   noco,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -36,7 +35,7 @@ CONTAINS
     COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    OPTIONAL, INTENT (IN)  :: eig(:)!(dimension%neigd)
+    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(dimension%neigd)
     !     ..
     !     .. Local Scalars ..
     COMPLEX cexp,phase,c_0,c_1,c_2,ci
@@ -44,6 +43,7 @@ CONTAINS
     REAL s2h, s2h_e(ne)
     INTEGER i,j,k,l,ll1,lm ,n,nap,natom,nn,iatom,jatom,lmp,m,nkvec
     INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap
+    LOGICAL l_force
     !     ..
     !     .. Local Arrays ..
     INTEGER nbasf0(atoms%nlod,atoms%nat)
@@ -55,20 +55,22 @@ CONTAINS
     REAL,    ALLOCATABLE :: work_r(:)
     COMPLEX, ALLOCATABLE :: work_c(:)
 
-    
     IF (zmat%l_real) THEN
        IF (noco%l_soc.AND.sym%invs) CALL judft_error("BUG in abcof, SOC&INVS but real?")
        IF (noco%l_noco) CALL judft_error("BUG in abcof, l_noco but real?")
     ENDIF
 
-    !     ..
     ci = CMPLX(0.0,1.0)
     const = 2 * tpi_const/SQRT(cell%omtil)
-    !
+
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
-    IF(PRESENT(eig)) THEN
+    l_force = .FALSE.
+    IF(PRESENT(eig).AND.input%l_f) THEN
+       l_force = .TRUE.
+    END IF
+    IF(l_force) THEN
        force%acoflo  = CMPLX(0.0,0.0)
        force%bcoflo  = CMPLX(0.0,0.0)
        force%e1cof   = CMPLX(0.0,0.0)
@@ -77,7 +79,7 @@ CONTAINS
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
     END IF
-    !     ..
+
     !+APW_LO
     DO n = 1, atoms%ntype
        DO l = 0,atoms%lmax(n)
@@ -111,11 +113,8 @@ CONTAINS
        !$OMP& DEFAULT(none)&
        !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
        !$OMP& alo1,blo1,clo1,inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
-       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,&
-       !$OMP& jspin,qss,&
-       !$OMP& apw,const,&
-       !$OMP& nbasf0,enough,&
-       !$OMP& acof,bcof,ccof,force)
+       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,l_force,&
+       !$OMP& jspin,qss,apw,const,nbasf0,enough,acof,bcof,ccof,force)
        DO n = 1,atoms%ntype
           CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
           
@@ -173,7 +172,7 @@ CONTAINS
                    ENDIF ! (noco%l_ss)
                    fk = lapw%bkpt + fg
                    s =  DOT_PRODUCT(fk,MATMUL(cell%bbmat,fk))
-                   IF(PRESENT(eig)) THEN
+                   IF(l_force) THEN
                       s2h = 0.5*s
                       s2h_e(:ne) = s2h-eig(:ne)
                    END IF
@@ -238,7 +237,7 @@ CONTAINS
                             bcof(:ne,lm,natom) = bcof(:ne,lm,natom) +  c_2 * work_c(:ne)
                          END IF
 
-                         IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
+                         IF (atoms%l_geo(n).AND.l_force) THEN
                             IF (zmat%l_real) THEN
                                force%e1cof(:ne,lm,natom) = force%e1cof(:ne,lm,natom) + c_1 * work_r(:ne) * s2h_e(:ne)
                                force%e2cof(:ne,lm,natom) = force%e2cof(:ne,lm,natom) + c_2 * work_r(:ne) * s2h_e(:ne)
@@ -265,7 +264,7 @@ CONTAINS
                                c_2 =  CONJG(c_2) * inv_f
                                CALL CPP_BLAS_caxpy(ne,c_1,work_c,1, acof(1,lmp,jatom),1)
                                CALL CPP_BLAS_caxpy(ne,c_2,work_c,1, bcof(1,lmp,jatom),1)
-                               IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
+                               IF (atoms%l_geo(n).AND.l_force) THEN
                                   CALL CPP_BLAS_caxpy(ne,c_1,work_c*s2h_e,1, force%e1cof(1,lmp,jatom),1)
                                   CALL CPP_BLAS_caxpy(ne,c_2,work_c*s2h_e,1, force%e2cof(1,lmp,jatom),1)
                                   DO i = 1,3
@@ -281,7 +280,7 @@ CONTAINS
                       DO nkvec=1,lapw%nkvec(lo,natom)
                          IF (k==lapw%kvec(nkvec,lo,natom)) THEN !check if this k-vector has LO attached
                             CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
-                                          n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,fgp,force)
+                                          n,natom,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force)
                          ENDIF
                       ENDDO
                    END DO
@@ -326,7 +325,7 @@ CONTAINS
                       inv_f = (-1.0)**(m+l)
                       DO ie = 1,ne
                          ccof(m,ie,ilo,jatom) = inv_f * cexp * CONJG(  ccof(-m,ie,ilo,iatom))
-                         IF(PRESENT(eig)) THEN
+                         IF(l_force) THEN
                             force%acoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(force%acoflo(-m,ie,ilo,iatom))
                             force%bcoflo(m,ie,ilo,jatom) = inv_f * cexp * CONJG(force%bcoflo(-m,ie,ilo,iatom))
                             DO i = 1,3
@@ -346,7 +345,7 @@ CONTAINS
                          acof(ie,lm,jatom) = inv_f * cexp * CONJG(acof(ie,lmp,iatom))
                          bcof(ie,lm,jatom) = inv_f * cexp * CONJG(bcof(ie,lmp,iatom))
                       END DO
-                      IF ((atoms%l_geo(n)).AND.(PRESENT(eig))) THEN
+                      IF (atoms%l_geo(n).AND.l_force) THEN
                          DO ie = 1,ne
                             force%e1cof(ie,lm,jatom) = inv_f * cexp * CONJG(force%e1cof(ie,lmp,iatom))
                             force%e2cof(ie,lm,jatom) = inv_f * cexp * CONJG(force%e2cof(ie,lmp,iatom))

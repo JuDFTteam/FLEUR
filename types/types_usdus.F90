@@ -14,8 +14,11 @@ MODULE m_types_usdus
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: ulos
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulos
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: uulon
-     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulon !(nlod,ntype,jspd)
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: uloulopn!  (nlod,nlod,ntypd,jspd)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulon     ! (nlod,ntype,jspd)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: uloulopn  ! (nlod,nlod,ntypd,jspd)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: uuilon
+     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: duilon    ! (nlod,ntype,jspd)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: ulouilopn ! (nlod,nlod,ntypd,jspd)
    CONTAINS
      PROCEDURE :: init => usdus_init
   END TYPE t_usdus
@@ -31,7 +34,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN) :: atoms
     INTEGER,INTENT(IN)       :: jsp
 
-    INTEGER :: err(10)
+    INTEGER :: err(13)
     ALLOCATE ( ud%uloulopn(atoms%nlod,atoms%nlod,atoms%ntype,jsp),stat=err(1) )
     ALLOCATE ( ud%ddn(0:atoms%lmaxd,atoms%ntype,jsp),stat=err(2) )
     ALLOCATE ( ud%us(0:atoms%lmaxd,atoms%ntype,jsp),stat=err(3))
@@ -40,8 +43,11 @@ CONTAINS
     ALLOCATE ( ud%duds(0:atoms%lmaxd,atoms%ntype,jsp),stat=err(6))
     ALLOCATE ( ud%ulos(atoms%nlod,atoms%ntype,jsp ),stat=err(7))
     ALLOCATE (ud%dulos(atoms%nlod,atoms%ntype,jsp ),stat=err(8) )
-    ALLOCATE ( ud%uulon(atoms%nlod,atoms%ntype,jsp ),stat=err(9))
+    ALLOCATE (ud%uulon(atoms%nlod,atoms%ntype,jsp ),stat=err(9))
     ALLOCATE (ud%dulon(atoms%nlod,atoms%ntype,jsp) ,stat=err(10))
+    ALLOCATE (ud%uuilon(atoms%nlod,atoms%ntype,jsp),stat=err(11))
+    ALLOCATE (ud%duilon(atoms%nlod,atoms%ntype,jsp),stat=err(12))
+    ALLOCATE (ud%ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype,jsp),stat=err(13))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating usdus datatype")
 

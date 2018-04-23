@@ -11,10 +11,7 @@ MODULE m_mpmom
   !     
   !     ***********************************************************
 CONTAINS
-  SUBROUTINE mpmom(mpi,atoms,sphhar,stars,&
-       &                 sym,cell,oneD,&
-       &                 qpw,rho,&
-       &                 qlm)
+  SUBROUTINE mpmom(mpi,atoms,sphhar,stars,sym,cell,oneD,qpw,rho,qlm)
 
     USE m_types
     IMPLICIT NONE
@@ -25,46 +22,31 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
-    !
-    !
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(:,0:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    COMPLEX, INTENT (IN) :: qpw(:)     !(stars%ng3) 
-    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    !-odim
-    !+odim
-    !     ..
-    !     .. Local Scalars ..
 
+    !     .. Array Arguments ..
+    REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%ng3) 
+    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+
+    !     .. Local Scalars ..
     INTEGER j,jm,lh ,mb,mem,mems,n,nd ,l,nat,m
 
-    !     ..
     !     .. Local Arrays ..
-
     COMPLEX qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
-
-    !
     !     multipole moments of original charge (q_{lm}^i)
-    !
     IF (mpi%irank == 0) THEN
-       CALL mt_moments(atoms,sphhar,&
-            &              rho(:,:,:),qlmo)
+       CALL mt_moments(atoms,sphhar,rho(:,:,:,1),qlmo)
     ENDIF ! mpi%irank == 0
 
-    CALL pw_moments(mpi,stars,atoms,cell,&
-         &                      sym,oneD,&
-         &                      qpw(:),qlmp)
-    !
+    CALL pw_moments(mpi,stars,atoms,cell,sym,oneD,qpw(:,1),qlmp)
+
     ! eq.(15): \tilde q_(lm}^i = q_{lm}^i - q_{lm}^{Ii}
-    !
     IF (mpi%irank == 0) THEN
        qlm=qlmo-qlmp
 
-       !
        ! Output section
-       !
        nat = 1
        DO  n = 1,atoms%ntype
           WRITE (6,FMT=8000) n
@@ -90,8 +72,7 @@ CONTAINS
   END SUBROUTINE mpmom
 
 
-  SUBROUTINE mt_moments(atoms,sphhar,&
-       &              rho,qlmo)
+  SUBROUTINE mt_moments(atoms,sphhar,rho,qlmo)
     !multipole moments of original charge (q_{lm}^i)
     USE m_intgr, ONLY : intgr3
     USE m_constants,ONLY:sfp_const
@@ -128,9 +109,7 @@ CONTAINS
   END SUBROUTINE mt_moments
 
 
-  SUBROUTINE pw_moments(mpi,stars,atoms,cell,&
-       &                      sym,oneD,&
-       &                      qpw_in,qlmp_out)
+  SUBROUTINE pw_moments(mpi,stars,atoms,cell,sym,oneD,qpw_in,qlmp_out)
     !multipole moments of plane wave charge inside the spheres (q_{lm}^{Ii})
     USE m_phasy1
     USE m_sphbes
@@ -152,14 +131,13 @@ CONTAINS
     COMPLEX pylm( (MAXVAL(atoms%lmax)+1)**2 ,atoms%ntype )
     REAL::sk3r,rl3
     REAL aj(0:MAXVAL(atoms%lmax)+1)
-    COMPLEX, ALLOCATABLE :: qpw(:)
+    COMPLEX :: qpw(stars%ng3)
     LOGICAL :: od
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
     COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
-    ALLOCATE(qpw(stars%ng3))
     qpw=qpw_in(:stars%ng3)
     qlmp= 0.0
     IF (mpi%irank==0) THEN
@@ -175,19 +153,15 @@ CONTAINS
     !      g ne 0 terms : \sum_{K \= 0} 4 \pi i^l \rho_I(K) R_i^{l+3} \times
     !      j_{l+1} (KR_i) / KR_i \exp{iK\xi_i} Y^*_{lm} (K)
     od=oneD%odi%d1
-    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(pylm,nqpw,n,sk3r,aj,rl3,sk3i,&
-    !$OMP& l,cil,ll1,m,lm) REDUCTION(+:qlmp)
+!    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(pylm,nqpw,n,sk3r,aj,rl3,sk3i,&
+!    !$OMP& l,cil,ll1,m,lm,k) REDUCTION(+:qlmp)
     DO k = mpi%irank+2, stars%ng3, mpi%isize
        IF (od) THEN
-          CALL od_phasy(&
-               &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
-               &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
-               &           pylm)
+          CALL od_phasy(atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+                        atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
+                        pylm)
        ELSE
-          CALL phasy1(&
-               &               atoms,stars,sym,&
-               &               cell,k,&
-               &               pylm)
+          CALL phasy1(atoms,stars,sym,cell,k,pylm)
        END IF
        !
        nqpw = qpw(k)*stars%nstr(k)
@@ -207,7 +181,7 @@ CONTAINS
           ENDDO                 ! l = 0, atoms%lmax(n)
        ENDDO                    ! n = 1, atoms%ntype
     ENDDO                       ! k = 2, stars%ng3
-    !$OMP END PARALLEL DO
+!    !$OMP END PARALLEL DO
 #ifdef CPP_MPI
     PRINT *,"mpi",mpi%irank,qlmp(0,0,:)
     CALL MPI_REDUCE(qlmp,qlmp_out,SIZE(qlmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi%mpi_comm,ierr)

@@ -142,7 +142,63 @@ PRIVATE
          PROCEDURE,PASS :: init => eigVecCoeffs_init
    END TYPE t_eigVecCoeffs
 
+   TYPE t_mcd
+      REAL                 :: emcd_lo, emcd_up
+
+      INTEGER, ALLOCATABLE :: ncore(:)
+      REAL,    ALLOCATABLE :: e_mcd(:,:,:)
+      REAL,    ALLOCATABLE :: mcd(:,:,:)
+      COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init1 => mcd_init1
+   END TYPE t_mcd
+
+   TYPE t_regionCharges
+
+      REAL,    ALLOCATABLE :: qis(:,:,:)
+
+      REAL,    ALLOCATABLE :: qal(:,:,:,:)
+      REAL,    ALLOCATABLE :: sqal(:,:,:)
+      REAL,    ALLOCATABLE :: ener(:,:,:)
+
+      REAL,    ALLOCATABLE :: sqlo(:,:,:)
+      REAL,    ALLOCATABLE :: enerlo(:,:,:)
+
+      REAL,    ALLOCATABLE :: qvac(:,:,:,:)
+      REAL,    ALLOCATABLE :: svac(:,:)
+      REAL,    ALLOCATABLE :: pvac(:,:)
+      REAL,    ALLOCATABLE :: qvlay(:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => regionCharges_init
+   END TYPE t_regionCharges
+
+   TYPE t_moments
+
+      REAL, ALLOCATABLE    :: chmom(:,:)
+      REAL, ALLOCATABLE    :: clmom(:,:,:)
+      COMPLEX, ALLOCATABLE :: qa21(:)
+
+      REAL, ALLOCATABLE    :: stdn(:,:)
+      REAL, ALLOCATABLE    :: svdn(:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => moments_init
+   END TYPE t_moments
+
+   TYPE t_orbcomp
+
+      REAL, ALLOCATABLE    :: comp(:,:,:)
+      REAL, ALLOCATABLE    :: qmtp(:,:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => orbcomp_init
+   END TYPE t_orbcomp
+
 PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs
+PUBLIC t_mcd, t_regionCharges, t_moments, t_orbcomp
 
 CONTAINS
 
@@ -533,5 +589,133 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
 
 END SUBROUTINE eigVecCoeffs_init
+
+SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_mcd),          INTENT(INOUT) :: thisMCD
+   TYPE(t_banddos),       INTENT(IN)    :: banddos
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   ALLOCATE (thisMCD%ncore(atoms%ntype))
+   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
+   IF (banddos%l_mcd) THEN
+      thisMCD%emcd_lo = banddos%e_mcd_lo
+      thisMCD%emcd_up = banddos%e_mcd_up
+      ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
+      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
+      IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
+   ELSE
+      ALLOCATE (thisMCD%m_mcd(1,1,1,1))
+      ALLOCATE (thisMCD%mcd(1,1,1))
+   ENDIF
+
+   thisMCD%ncore = 0
+   thisMCD%e_mcd = 0.0
+   thisMCD%mcd = 0.0
+   thisMCD%m_mcd = CMPLX(0.0,0.0)
+
+END SUBROUTINE mcd_init1
+
+SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
+
+   USE m_types_setup
+   USE m_types_kpts
+
+   IMPLICIT NONE
+
+   CLASS(t_regionCharges), INTENT(INOUT) :: thisRegCharges
+   TYPE(t_input),          INTENT(IN)    :: input
+   TYPE(t_atoms),          INTENT(IN)    :: atoms
+   TYPE(t_dimension),      INTENT(IN)    :: dimension
+   TYPE(t_kpts),           INTENT(IN)    :: kpts
+   TYPE(t_vacuum),         INTENT(IN)    :: vacuum
+
+   ALLOCATE(thisRegCharges%qis(dimension%neigd,kpts%nkpt,input%jspins))
+
+   ALLOCATE(thisRegCharges%qal(0:3,atoms%ntype,dimension%neigd,input%jspins))
+   ALLOCATE(thisRegCharges%sqal(0:3,atoms%ntype,input%jspins))
+   ALLOCATE(thisRegCharges%ener(0:3,atoms%ntype,input%jspins))
+
+   ALLOCATE(thisRegCharges%sqlo(atoms%nlod,atoms%ntype,input%jspins))
+   ALLOCATE(thisRegCharges%enerlo(atoms%nlod,atoms%ntype,input%jspins))
+
+   ALLOCATE(thisRegCharges%qvac(dimension%neigd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisRegCharges%svac(2,input%jspins))
+   ALLOCATE(thisRegCharges%pvac(2,input%jspins))
+   ALLOCATE(thisRegCharges%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisRegCharges%qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
+
+   thisRegCharges%qis = 0.0
+
+   thisRegCharges%qal = 0.0
+   thisRegCharges%sqal = 0.0
+   thisRegCharges%ener = 0.0
+
+   thisRegCharges%sqlo = 0.0
+   thisRegCharges%enerlo = 0.0
+
+   thisRegCharges%qvac = 0.0
+   thisRegCharges%svac = 0.0
+   thisRegCharges%pvac = 0.0
+   thisRegCharges%qvlay = 0.0
+   thisRegCharges%qstars = CMPLX(0.0,0.0)
+
+END SUBROUTINE regionCharges_init
+
+SUBROUTINE moments_init(thisMoments,input,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_moments),      INTENT(INOUT) :: thisMoments
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   ALLOCATE(thisMoments%chmom(atoms%ntype,input%jspins))
+   ALLOCATE(thisMoments%clmom(3,atoms%ntype,input%jspins))
+   ALLOCATE(thisMoments%qa21(atoms%ntype))
+
+   ALLOCATE(thisMoments%stdn(atoms%ntype,input%jspins))
+   ALLOCATE(thisMoments%svdn(atoms%ntype,input%jspins))
+
+   thisMoments%chmom = 0.0
+   thisMoments%clmom = 0.0
+   thisMoments%qa21 = CMPLX(0.0,0.0)
+
+   thisMoments%stdn = 0.0
+   thisMoments%svdn = 0.0
+
+END SUBROUTINE moments_init
+
+SUBROUTINE orbcomp_init(thisOrbcomp,banddos,dimension,atoms)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
+   TYPE(t_banddos),       INTENT(IN)    :: banddos
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
+      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat))
+      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat))
+   ELSE
+      ALLOCATE(thisOrbcomp%comp(1,1,1))
+      ALLOCATE(thisOrbcomp%qmtp(1,1))
+   END IF
+
+   thisOrbcomp%comp = 0.0
+   thisOrbcomp%qmtp = 0.0
+
+END SUBROUTINE orbcomp_init
 
 END MODULE m_types_cdnval

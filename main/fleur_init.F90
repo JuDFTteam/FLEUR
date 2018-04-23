@@ -104,22 +104,12 @@
              IF (.NOT.l_found) CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide either an 'inp' or an 'inp.xml' file in the working directory")
           END IF
 
-
-
           CALL check_command_line()
 #ifdef CPP_HDF
           CALL hdf_init()
 #endif
           CALL field%init(input)
-  
-          results%seigscv         = 0.0
-          results%te_vcoul        = 0.0
-          results%te_veff         = 0.0
-          results%te_exc          = 0.0
-          results%te_hfex%valence = 0.0
-          results%te_hfex%core    = 0.0
-          results%e_ldau          = 0.0
-          results%ts              = 0.0
+
           input%gw                = -1
           input%gw_neigd          =  0
           !-t3e
@@ -162,8 +152,11 @@
           sliceplot%e2s = 0.0
           sliceplot%nnne = 0
 
-          IF (input%l_inpXML) THEN
-            
+          banddos%l_mcd = .FALSE.
+          banddos%e_mcd_lo = 0.0
+          banddos%e_mcd_up = 0.0
+
+          IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
@@ -182,10 +175,6 @@
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
-
-                ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
-                ALLOCATE (results%force_old(3,atoms%ntype))
-                results%force(:,:,:) = 0.0
              END IF
 
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
@@ -212,14 +201,14 @@
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
-                  kpts,enpara,sphhar,mpi,results,obsolete)
+                  kpts,enpara,sphhar,mpi,obsolete)
              CALL mpi_dist_forcetheorem(mpi,forcetheo)
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
              CALL fleur_init_old(mpi,&
                   input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-                  sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
+                  sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
                   oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
@@ -278,9 +267,11 @@
                    CLOSE (111)
                 END IF
              END IF
-             INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
+             INQUIRE(file='mcd_inp',exist=l_found)
+             IF(l_found) THEN
+                CALL judft_error("setup of mcd calculation is only supported in the inp.xml file",calledby="fleur_init")
+             END IF
           END IF
-
 
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
@@ -288,8 +279,6 @@
                &           sym,kpts,DIMENSION,input,field,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
                &           noco,oneD,xcpot,hybrid)
-          ! initialize record length of the eig file
-
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive 
@@ -522,7 +511,7 @@
           CALL add_usage_data("LOs",atoms%nlotot)
           CALL add_usage_data("Iterations",input%itmax)
           
-          
+          CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
              CALL setStartingDensity(noco%l_noco)

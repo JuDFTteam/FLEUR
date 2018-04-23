@@ -1,6 +1,6 @@
 MODULE m_orbcomp
 CONTAINS
-  SUBROUTINE orb_comp(jspin,nobd,atoms,ne,usdus,eigVecCoeffs,orbcomp,qmtp)
+  SUBROUTINE orb_comp(jspin,nobd,atoms,ne,usdus,eigVecCoeffs,orbcomp)
     !***********************************************************************
     !     Calculates an orbital composition of eigen states
     !     
@@ -28,7 +28,7 @@ CONTAINS
     ! nlo(ntypd)            : in, 
     ! llo(nlod,ntypd)       : in,
     !-----------------------------------------------------------------------
-    ! orbcomp(nobd,16,natd) : out, an orbital composition of  states
+    ! comp(nobd,16,natd)    : out, an orbital composition of  states
     ! qmtp(nobd,natd)       : out, the portion of the state in mt-sphere
     !-----------------------------------------------------------------------
     USE m_types
@@ -36,14 +36,11 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_usdus),INTENT(IN)        :: usdus
     TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
-    !	..
+    TYPE(t_orbcomp),INTENT(INOUT)   :: orbcomp
+
     !	..Scalar Argument
     INTEGER, INTENT  (IN) :: nobd,ne,jspin
-    !	..
-    !	..Array Arguments
-    REAL,    INTENT (OUT) :: orbcomp(:,:,:)!(dimension%neigd,23,atoms%nat) 
-    REAL,    INTENT (OUT) :: qmtp(:,:)!(dimension%neigd,atoms%nat) 
-    !	..
+
     !	..Local Scalars 
     INTEGER  n,mt,ityp,imt,lm,lo
     INTEGER  l,lme,nate,lmaxe,jspe,nobc,nei
@@ -324,8 +321,8 @@ CONTAINS
                 sum = sum + comp(lm)
              ENDDO
              cf = 100.0/sum 
-             qmtp(n,mt) = sum*100.0         
-             orbcomp(n,:,mt) = comp(:)*cf
+             orbcomp%qmtp(n,mt) = sum*100.0         
+             orbcomp%comp(n,:,mt) = comp(:)*cf
              !----------------------------------------------------
           ENDDO ! bands (n)
        ENDDO    ! atoms (imt) -> mt (=atoms%nat)
