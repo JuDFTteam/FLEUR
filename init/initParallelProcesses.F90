@@ -113,8 +113,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%numStatesProvided(atoms%ntype))
       ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
       ALLOCATE(atoms%volmts(atoms%ntype))
-      ALLOCATE(atoms%vr0(atoms%ntype))  ! This should actually not be in the atoms type!
-
+   
       ALLOCATE(atoms%ncv(atoms%ntype))
       ALLOCATE(atoms%ngopr(atoms%nat))
       ALLOCATE(atoms%lapw_l(atoms%ntype))
@@ -199,7 +198,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       atoms%icorr = -99
 
       oneD%odd%nq2 = oneD%odd%n2d
-      atoms%vr0(:)         = 0.0
       results%force(:,:,:) = 0.0
       stars%sk2(:) = 0.0
       stars%phi2(:) = 0.0

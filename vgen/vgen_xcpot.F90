@@ -138,7 +138,7 @@ CONTAINS
 
           ELSE ! GGA
 
-             CALL visxcg(ifftd,stars,sym,ifftxc3d,cell,workDen,xcpot,input,&
+             CALL visxcg(ifftd,stars,sym,ifftxc3d,cell,den,xcpot,input,&
                   obsolete,noco,vTot,vx,exc)
 
           END IF

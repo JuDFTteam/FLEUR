@@ -35,7 +35,7 @@ CONTAINS
     
 
     !Copy pw_w into pw if present and rescale with number of stars
-    IF (ALLOCATED(vtot%pw_w)) THEN
+    IF (.NOT.noco%l_noco.AND.ALLOCATED(vtot%pw_w)) THEN
        DO js=1,SIZE(vtot%pw_w,2)
           DO i=1,stars%ng3
              vTot%pw(i,js)=vtot%pw_w(i,js)/stars%nstr(i)
