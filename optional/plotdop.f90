@@ -134,7 +134,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Read in charge/potential
    DO i = 1, numInFiles
-      CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_DEN)
+      CALL den(i)%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_DEN)
       IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))

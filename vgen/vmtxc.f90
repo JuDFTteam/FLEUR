@@ -1,26 +1,13 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vmtxc
 CONTAINS
-  SUBROUTINE vmtxc( DIMENSION,sphhar,atoms, rho,xcpot,input,sym, vr, excr,vxr)
+  SUBROUTINE vmtxc( DIMENSION,sphhar,atoms,den,xcpot,input,sym, vxc, exc,vx)
     !     ********************************************************************
-    !     fit spherical-harmonics expansion of exchange-correlation potential*
-    !     inside muffint-tin spheres and add it to coulomb potential         *
-    !                                       c.l.fu and r.podloucky           *
-    !     ********************************************************************
-    !     instead of vmtxcor.f: the different exchange-correlation 
-    !     potentials defined through the key icorr are called through 
-    !     the driver subroutine vxcall.f, subroutines vectorized
-    !     ** r.pentcheva 22.01.96
-    !     *********************************************************
-    !     angular mesh calculated on speacial gauss-legendre points
-    !     in order to use orthogonality of lattice harmonics and
-    !     avoid a least sqare fit
-    !     ** r.pentcheva 04.03.96
-    !     *********************************************************
-    !     In the previous version the parameter statement nspd has
-    !     been used synonymous to nsp. I have introduced the variable
-    !     nsp in order to change this. It has cause problems with
-    !     subroutine: sphglpts.f
-    !     ** s.bluegel, IFF, 30.July.97
+    !     Calculate the LDA xc-potential in the MT-spheres
     !     *********************************************************
 
     USE m_lhglpts
@@ -34,23 +21,18 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
-    !     ..
-    !     .. Scalar Arguments ..
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (INOUT):: vr (atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (OUT)  :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (INOUT),OPTIONAL:: vxr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-
+    TYPE(t_potden),INTENT(IN)      :: den
+    TYPE(t_potden),INTENT(INOUT)      :: vxc,exc
+    TYPE(t_potden),INTENT(INOUT),optional     :: vx
+    
     !     ..
     !     .. Local Scalars ..
     REAL elh,rr2,r2rho,vlh
     INTEGER jr,js,k,lh,n,nd,i,nsp,nat
     !     ..
     !     .. Local Arrays ..
-    REAL vx(DIMENSION%nspd,DIMENSION%jspd),vxc(DIMENSION%nspd,DIMENSION%jspd),pos0(3)
-    REAL rhoxc(DIMENSION%nspd,DIMENSION%jspd),exc(DIMENSION%nspd),wt(DIMENSION%nspd),rx(3,DIMENSION%nspd)
+    REAL v_x(DIMENSION%nspd,DIMENSION%jspd),v_xc(DIMENSION%nspd,DIMENSION%jspd),pos0(3)
+    REAL rhoxc(DIMENSION%nspd,DIMENSION%jspd),e_ex(DIMENSION%nspd),wt(DIMENSION%nspd),rx(3,DIMENSION%nspd)
     REAL ylh(DIMENSION%nspd,0:sphhar%nlhd,sphhar%ntypsd)
     !     ..
     !     generates nspd points on a sherical shell with radius 1.0
@@ -69,9 +51,9 @@ CONTAINS
     !     loop over topologically non-equivalent atoms
     !
     !$OMP PARALLEL DO DEFAULT(NONE)&
-    !$OMP SHARED(atoms,input,sphhar,xcpot,rho,ylh,nsp,wt,vr,vxr,excr)&
+    !$OMP SHARED(atoms,input,sphhar,xcpot,den,ylh,nsp,wt,vxc,vx,exc)&
     !$OMP PRIVATE(elh,rr2,r2rho,vlh,jr,js,k,lh,n,nd,i,nat)&
-    !$OMP PRIVATE(vx,vxc,pos0,rhoxc,exc)
+    !$OMP PRIVATE(v_x,v_xc,pos0,rhoxc,e_ex)
     DO n = 1,atoms%ntype
        nat=SUM(atoms%neq(:n-1))+1
        nd = atoms%ntypsy(nat)
@@ -83,7 +65,7 @@ CONTAINS
           DO  js = 1,input%jspins
              rhoxc(:,js) = 0.
              DO  lh = 0,sphhar%nlh(nd)
-                r2rho = rr2*rho(jr,lh,n,js)
+                r2rho = rr2*den%mt(jr,lh,n,js)
                 !
                 !     generate the densities on an angular mesh
                 !
@@ -94,36 +76,36 @@ CONTAINS
           ENDDO
           !     calculate the ex.-cor. potential
           !
-          CALL vxcall (6,xcpot,input%jspins, nsp,nsp,rhoxc, vx,vxc) 
+          CALL vxcall (6,xcpot,input%jspins, nsp,nsp,rhoxc, v_x,v_xc) 
           !     ----> now determine the corresponding potential number 
           DO js = 1,input%jspins
              !
              ! ---> multiplikate vxc with the weights of the k-points    
              !
              DO  k = 1,nsp
-                vxc(k,js) = vxc(k,js)*wt(k)
+                v_xc(k,js) = v_xc(k,js)*wt(k)
 
-                vx (k,js) = vx (k,js)*wt(k)
+                v_x (k,js) = v_x (k,js)*wt(k)
              ENDDO
              DO  lh = 0,sphhar%nlh(nd)
 
                 !
                 ! ---> determine the corresponding potential number through gauss integration
                 !
-                vlh=DOT_PRODUCT( vxc(:nsp,js),ylh(:nsp,lh,nd))
+                vlh=DOT_PRODUCT( v_xc(:nsp,js),ylh(:nsp,lh,nd))
 
                 !
                 ! ---> add to the given potential
 
-                vr(jr,lh,n,js) = vr(jr,lh,n,js) + vlh
+                vxc%mt(jr,lh,n,js) = vxc%mt(jr,lh,n,js) + vlh
 
-                IF (PRESENT(vxr) ) THEN
+                IF (PRESENT(vx) ) THEN
                    vlh = 0
                    DO  k = 1,nsp
-                      vlh = vlh + vx(k,js)*ylh(k,lh,nd)
+                      vlh = vlh + v_x(k,js)*ylh(k,lh,nd)
                    END DO
 
-                   vxr(jr,lh,n,js) = vxr(jr,lh,n,js) + vlh
+                   vx%mt(jr,lh,n,js) = vx%mt(jr,lh,n,js) + vlh
                 ENDIF
              ENDDO
           ENDDO
@@ -131,26 +113,26 @@ CONTAINS
              !
              !     calculate the ex.-cor energy density
              !
-             CALL excall(6,xcpot,input%jspins, nsp,nsp,rhoxc, exc) 
+             CALL excall(6,xcpot,input%jspins, nsp,nsp,rhoxc, e_ex) 
           END IF
           !     ----> now determine the corresponding energy density number 
           !
           ! ---> multiplikate exc with the weights of the k-points    
           !
           DO  k = 1,nsp
-             exc(k) = exc(k)*wt(k)
+             e_ex(k) = e_ex(k)*wt(k)
           ENDDO
           DO  lh = 0,sphhar%nlh(nd)
 
              !
              ! ---> determine the corresponding potential number through gauss integration
              !
-             elh=DOT_PRODUCT(exc(:nsp),ylh(:nsp,lh,nd))
+             elh=DOT_PRODUCT(e_ex(:nsp),ylh(:nsp,lh,nd))
 
              !
              ! ---> add to the given potential
 
-             excr(jr,lh,n) = elh
+             exc%mt(jr,lh,n,1) = elh
           ENDDO
 
        ENDDO

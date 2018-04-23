@@ -5,10 +5,7 @@ MODULE m_vvacxc
   !     coeffs of the coulomb potential            c.l.fu, r.podloucky     *
   !     ********************************************************************
 CONTAINS
-  SUBROUTINE vvacxc(&
-       &                  ifftd2,stars,vacuum,xcpot,input,noco,den,&
-       &                  vxy,vz,&
-       &                  excxy,excz)
+  SUBROUTINE vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,den,vxc,exc)
 
     !     ********************************************************************
     !     instead of vvacxcor.f: the different exchange-correlation 
@@ -28,16 +25,13 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
-    TYPE(t_potden),INTENT(INOUT) :: den
+    TYPE(t_potden),INTENT(IN)    :: den
+    TYPE(t_potden),INTENT(INOUT) :: vxc,exc
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
     !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (OUT) :: excz(vacuum%nmzd,2)
-    COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxyd,stars%ng2-1,2)
-    REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins) 
+ 
     !     ..
     !     .. Local Scalars ..
     INTEGER :: k,js,nt,irec2,nmzdiff,ivac,ip,i 
@@ -49,8 +43,8 @@ CONTAINS
     REAL    :: af2(0:ifftd2-1,input%jspins),bf2(0:ifftd2-1),fgz
     REAL,ALLOCATABLE :: mx(:),my(:) 
     !     warping region
-    REAL    :: vxc(0:ifftd2-1,input%jspins),exc(0:ifftd2-1)
-    REAL    :: vx (0:ifftd2-1,input%jspins)
+    REAL    :: v_xc(0:ifftd2-1,input%jspins),e_xc(0:ifftd2-1)
+    REAL    :: v_x (0:ifftd2-1,input%jspins)
     !     beyond warping region
     REAL    :: vxcz(vacuum%nmzd,input%jspins)
     REAL    :: vxz (vacuum%nmzd,input%jspins)
@@ -104,7 +98,7 @@ CONTAINS
           CALL vxcall&
                &               (6,xcpot,input%jspins,&
                &                ifftd2,nt,af2,&
-               &                vx,vxc)   
+               &                v_x,v_xc)   
 
           DO  js = 1,input%jspins
              !
@@ -113,19 +107,19 @@ CONTAINS
              bf2=0.0
              CALL fft2d(&
                   &                 stars,&
-                  &                 vxc(0,js),bf2,&
+                  &                 v_xc(0,js),bf2,&
                   &                 fgz,rhti,fgxy,&
                   &                 1,-1)
              !
              !            ----> and add vxc to coulomb potential
              !            the G||.eq.zero component is added to vz
              !
-             vz(ip,ivac,js) = fgz + vz(ip,ivac,js)
+             vxc%vacz(ip,ivac,js) = fgz + vxc%vacz(ip,ivac,js)
              !
-             !            the G||.ne.zero components are added to vxy
+             !            the G||.ne.zero components are added to vxc%vacxy
              !
              DO irec2 = 1,stars%ng2-1
-                vxy(ip,irec2,ivac,js) = vxy(ip,irec2,ivac,js) +&
+                vxc%vacxy(ip,irec2,ivac,js) = vxc%vacxy(ip,irec2,ivac,js) +&
                      &                                              fgxy(irec2)
              ENDDO
           ENDDO
@@ -136,15 +130,15 @@ CONTAINS
              CALL excall&
                   &                 (6,xcpot,input%jspins,&
                   &                  ifftd2,nt,af2,&
-                  &                  exc)   
+                  &                  e_xc)   
              !
              !     ----> 2-d back fft to g space
              !
              bf2=0.0
              CALL fft2d(&
                   &                 stars,&
-                  &                 exc,bf2,&
-                  &                 excz(ip,ivac),rhti,excxy(ip,1,ivac),&
+                  &                 e_xc,bf2,&
+                  &                 exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1),&
                   &                 vacuum%nmzxyd,-1)
           ENDIF
 
@@ -182,12 +176,12 @@ CONTAINS
        !+gu
        DO  js=1,input%jspins
           DO k=vacuum%nmzxy+1,vacuum%nmz
-             vz(k,ivac,js) = vz(k,ivac,js) + vxcz(k-vacuum%nmzxy,js)
+             vxc%vacz(k,ivac,js) = vxc%vacz(k,ivac,js) + vxcz(k-vacuum%nmzxy,js)
           ENDDO
        ENDDO
        !
-       WRITE (6,FMT=8020) ivac, (vz(vacuum%nmz,ivac,js),js=1,input%jspins)
-       WRITE (16,FMT=8020) ivac, (vz(vacuum%nmz,ivac,js),js=1,input%jspins)
+       WRITE (6,FMT=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
+       WRITE (16,FMT=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
 8020   FORMAT (/,5x,'vacuum zero for vacuum',i3,' = ',2f10.5)
        !
        !        calculate the ex.-corr. energy density now beyond warping region
@@ -196,7 +190,7 @@ CONTAINS
           CALL excall&
                &                   (6,xcpot,input%jspins,&
                &                    vacuum%nmzd,nmzdiff,af2,&
-               &                    excz(vacuum%nmzxy+1,ivac))
+               &                    exc%vacz(vacuum%nmzxy+1,ivac,1))
        END IF
     ENDDO
     IF (noco%l_noco) THEN 

@@ -142,7 +142,7 @@
       input%vchk = .false. ; input%cdinf = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
-      sliceplot%slice= .false. ; obsolete%disp  = .false. ; input%swsp  = .false.
+      sliceplot%slice= .false. ;  input%swsp  = .false.
       input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
       sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.

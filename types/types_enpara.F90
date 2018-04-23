@@ -422,6 +422,7 @@ CONTAINS
     INTEGER ityp,j,l,lo,jsp,n
     REAL    vbar,maxdist,maxdist2
     INTEGER same(atoms%nlod)
+    LOGICAL l_enpara
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr
@@ -514,6 +515,8 @@ CONTAINS
             "differ from the input by more than 1Htr, chances are "//&
             "high that your initial setup was broken.")
     ENDIF
+    INQUIRE(file='enpara',exist=l_enpara)
+    IF (mpi%irank==0.AND.l_enpara) CALL enpara%WRITE(atoms,input%jspins,input%film)
 #ifdef CPP_MPI
     CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

@@ -73,7 +73,6 @@ CONTAINS
 
     CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
          obsolete,kpts,oneD,hybrid)
-
     DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
     DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
     !-odim
@@ -110,7 +109,7 @@ CONTAINS
     ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
     ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
     ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
-    ALLOCATE ( atoms%bmu(atoms%ntype),atoms%vr0(atoms%ntype) )
+    ALLOCATE ( atoms%bmu(atoms%ntype) )
     ALLOCATE ( atoms%l_geo(atoms%ntype) )
     ALLOCATE ( atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype) )
     ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntype),atoms%nlol(0:atoms%llod,atoms%ntype),atoms%lapw_l(atoms%ntype) )
@@ -137,7 +136,7 @@ CONTAINS
     input%l_coreSpec = .FALSE.
 
 
-    atoms%vr0(:)         = 0.0
+
 
     IF(.NOT.juDFT_was_argument("-toXML")) THEN
        PRINT *,"--------------WARNING----------------------"

@@ -43,9 +43,9 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_xyav
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: qpw(stars%ng3,DIMENSION%jspd) 
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd) 
-    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
+    COMPLEX, INTENT (IN) :: qpw(stars%ng3) 
+    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
+    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2)
     COMPLEX, INTENT (OUT):: psq(stars%ng3)
     !-odim
     !+odim
@@ -108,7 +108,7 @@ CONTAINS
        s = s + atoms%neq(n)*REAL(qlm(0,0,n))
     ENDDO
     IF (mpi%irank == 0) THEN
-       psq(1) = qpw(1,1) + (sfp_const/cell%omtil)*s
+       psq(1) = qpw(1) + (sfp_const/cell%omtil)*s
     ENDIF
     !
     ! G ne 0 term (eq.28) : \tilde \rho_s (K) = 4 pi / \Omega \sum_{lmi} (-i)^l \exp{-iK\xi_i}
@@ -150,7 +150,7 @@ CONTAINS
           ENDDO
           sa = sa + atoms%neq(n)*sl
        ENDDO
-       psq(k) = qpw(k,1) + fpo*sa
+       psq(k) = qpw(k) + fpo*sa
     ENDDO
     !$OMP END PARALLEL DO
 #ifdef CPP_MPI
@@ -204,17 +204,17 @@ CONTAINS
        IF (.NOT.oneD%odi%d1) THEN
           qvac = 0.0
           DO ivac = 1,vacuum%nvac
-             CALL qsf(vacuum%delz,rht(1,ivac,1),q2,vacuum%nmz,0)
+             CALL qsf(vacuum%delz,rht(1,ivac),q2,vacuum%nmz,0)
              q2(1) = q2(1)*cell%area
              qvac = qvac + q2(1)*2./REAL(vacuum%nvac)
           ENDDO
-          qvac = qvac - 2*input%efield%sigma
+          qvac = qvac - 2*input%sigma
        ELSE
           !-odim
           qvac = 0.0
           DO nz = 1,vacuum%nmz
              rht1(nz) = (cell%z1+(nz-1)*vacuum%delz)*&
-                  &           rht(nz,vacuum%nvac,1)
+                  &           rht(nz,vacuum%nvac)
           ENDDO
           CALL qsf(vacuum%delz,rht1(1),q2,vacuum%nmz,0)
           qvac = cell%area*q2(1)

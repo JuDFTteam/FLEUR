@@ -73,21 +73,7 @@ MODULE m_types_setup
   !
   ! Type for the electric field
   !
-  TYPE t_efield
-     REAL    :: zsigma  = 10.0  ! Distance to the charged plates
-     REAL    :: sigma   =  0.0  ! charge at the plates
-     REAL    :: sig_b(2)=  0.0  ! Extra charge for the top/bottom plate
-     COMPLEX :: vslope  =  0.0  ! Dirichlet bnd. cond.: Slope
-     REAL,    ALLOCATABLE :: sigEF(:,:,:) ! (nx, ny, nvac)
-     COMPLEX, ALLOCATABLE :: rhoEF(:,:)   ! (g_||, nvac)
-     COMPLEX, ALLOCATABLE :: C1(:), C2(:) ! Coeff. for Dirichlet bnd.cond.
-     LOGICAL :: l_segmented = .FALSE.
-     LOGICAL :: plot_charge = .FALSE. ! Plot charge as inputted
-     LOGICAL :: plot_rho    = .FALSE. ! Plot Fourier-transformed charge
-     LOGICAL :: autocomp    = .TRUE.  ! Auto-compensate film charge
-     LOGICAL :: dirichlet = .FALSE. ! Dirichlet vs. Neumann boundary cond.
-     LOGICAL :: l_dirichlet_coeff = .FALSE. ! For MPI, true if C1/C2 set
-  END TYPE t_efield
+ 
 
 
   TYPE t_atoms
@@ -180,7 +166,6 @@ MODULE m_types_setup
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
-     REAL,ALLOCATABLE:: vr0(:) !< Average Coulomb potential for atoms
   END TYPE t_atoms
 
   TYPE t_cell
@@ -427,7 +412,7 @@ MODULE m_types_setup
      REAL :: rkmax
      REAL :: zelec
      CHARACTER(LEN=8) :: comment(10)
-     TYPE(t_efield)::efield
+     REAL,POINTER :: sigma !this is the difference in charge due to the electric field it points to the value stored in t_efield
      LOGICAL :: l_core_confpot
      LOGICAL :: l_useapw  
      LOGICAL :: ldauLinMix
@@ -462,7 +447,6 @@ MODULE m_types_setup
 
   TYPE t_obsolete
      INTEGER:: lepr !floating energy parameters...
-     LOGICAL:: disp   !remove ->potmix
      INTEGER:: ndvgrd !remove
      REAL   :: chng   !remove
      LOGICAL :: lwb   !remove

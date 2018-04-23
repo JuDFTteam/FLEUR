@@ -24,8 +24,8 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)       :: atoms
 
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-    COMPLEX, INTENT (IN) :: qpw(:,:)     !(stars%ng3,dimension%jspd) 
+    REAL,    INTENT (IN) :: rho(:,0:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    COMPLEX, INTENT (IN) :: qpw(:)     !(stars%ng3) 
     COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     !     .. Local Scalars ..
@@ -37,10 +37,10 @@ CONTAINS
 
     !     multipole moments of original charge (q_{lm}^i)
     IF (mpi%irank == 0) THEN
-       CALL mt_moments(atoms,sphhar,rho(:,:,:,1),qlmo)
+       CALL mt_moments(atoms,sphhar,rho(:,:,:),qlmo)
     ENDIF ! mpi%irank == 0
 
-    CALL pw_moments(mpi,stars,atoms,cell,sym,oneD,qpw(:,1),qlmp)
+    CALL pw_moments(mpi,stars,atoms,cell,sym,oneD,qpw(:),qlmp)
 
     ! eq.(15): \tilde q_(lm}^i = q_{lm}^i - q_{lm}^{Ii}
     IF (mpi%irank == 0) THEN

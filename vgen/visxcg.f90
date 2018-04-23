@@ -12,9 +12,7 @@ CONTAINS
        &                  cell,den,&
        &                  xcpot,input,&
        &                  obsolete,noco,&
-       &                  rhmn,ichsmrg,&
-       &                  vpw,vpw_w,vxpw,vxpw_w,&
-       &                  excpw)
+       &                  vxc,vx,exc)
 
     !     ******************************************************
     !     instead of visxcor.f: the different exchange-correlation
@@ -45,13 +43,14 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_potden),INTENT(IN)     :: den
+    TYPE(t_potden),INTENT(INOUT)  :: vxc,vx,exc
+    
     !     ..
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
 
-    REAL rhmn,rhmni ,d_15,sprsv
-    INTEGER ichsmrg
+    REAL rhmni ,d_15,sprsv
     !     lwb: if true, white-bird trick.
     !     lwbc: l-white-bird-current.
     LOGICAL  lwbc
@@ -60,13 +59,6 @@ CONTAINS
     !
     INTEGER, ALLOCATABLE :: igxc_fft(:)
     REAL,    ALLOCATABLE :: gxc_fft(:,:)
-
-    !
-    !-----> charge density, potential and energy density
-    !
-    COMPLEX, INTENT (OUT) :: excpw(stars%ng3)
-    COMPLEX, INTENT (INOUT) ::vpw(stars%ng3,input%jspins),vpw_w(stars%ng3,input%jspins)
-    COMPLEX, INTENT (INOUT) ::vxpw(stars%ng3,input%jspins),vxpw_w(stars%ng3,input%jspins)
     !     ..
     !     .. Local Scalars ..
     INTEGER :: i ,k,js,nt,ifftxc3,idm,jdm,ndm,ig
@@ -82,7 +74,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: mx(:),my(:)
     REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:) 
     ! 
-    REAL, ALLOCATABLE :: vx(:,:),vxc(:,:),exc(:),vcon(:) 
+    REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:),vcon(:) 
     REAL, ALLOCATABLE :: agr(:),agru(:),agrd(:)
     REAL, ALLOCATABLE :: g2r(:),g2ru(:),g2rd(:)
     REAL, ALLOCATABLE :: gggr(:),gggru(:),gggrd(:)
@@ -97,7 +89,7 @@ CONTAINS
     !     ph_wrk: work array containing phase * g_x,gy...... 
     !     den%pw: charge density stored as stars
     !     rho   : charge density stored in real space
-    !     vxc   : exchange-correlation potential in real space
+    !     v_xc   : exchange-correlation potential in real space
     !     exc   : exchange-correlation energy density in real space
     !     kxc1d  : dimension of the charge density fft box in the pos. domain
     !     kxc2d  : defined in dimens.f program (subroutine apws).1,2,3 indic
@@ -332,8 +324,8 @@ CONTAINS
          &             gzgr)
 
     DEALLOCATE ( rhd1,rhd2 )
-    ALLOCATE ( vxc(0:ifftxc3d-1,input%jspins) )
-    ALLOCATE ( vx (0:ifftxc3d-1,input%jspins) )
+    ALLOCATE ( v_xc(0:ifftxc3d-1,input%jspins) )
+    ALLOCATE ( v_x (0:ifftxc3d-1,input%jspins) )
     !
     !     calculate the exchange-correlation potential in  real space
     !
@@ -350,38 +342,34 @@ CONTAINS
        ENDDO
     ENDDO
 
-    IF (rhmni.LT.rhmn) THEN
-       rhmn=rhmni
-       ichsmrg=2
-    ENDIF
-
-    IF (rhmn.LT.obsolete%chng) THEN
+  
+    IF (rhmni.LT.obsolete%chng) THEN
        WRITE(6,'(/'' rhmn.lt.obsolete%chng in visxc. rhmn,obsolete%chng='',&
-            &     2d9.2)') rhmn,obsolete%chng
+            &     2d9.2)') rhmni,obsolete%chng
        !          CALL juDFT_error("visxcg: rhmn.lt.chng",calledby="visxcg")
     ENDIF
 
     CALL vxcallg(xcpot,lwbc,input%jspins,SIZE(agr),nt,rho,&
          &              agr,agru,agrd,g2r,g2ru,g2rd,&
          &              gggr,gggru,gggrd,gzgr,&
-         &              vx,vxc)
+         &              v_x,v_xc)
     !
     !----> back fft to g space
-    !----> perform back  fft transform: vxc(r) --> vxc(star)
+    !----> perform back  fft transform: v_xc(r) --> vxc(star)
     !
     ALLOCATE(fg3(stars%ng3))
 
     DO js = 1,input%jspins
        bf3=0.0
        CALL fft3dxc(&
-            &               vxc(0:,js),bf3,&
+            &               v_xc(0:,js),bf3,&
             &               fg3,&
             &               stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
             &               stars%nxc3_fft,stars%kmxxc_fft,-1,&
             &               stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        !
        DO k = 1,stars%nxc3_fft
-          vpw(k,js) = vpw(k,js) + fg3(k)
+          vxc%pw(k,js) = vxc%pw(k,js) + fg3(k)
        ENDDO
 
        !
@@ -389,7 +377,7 @@ CONTAINS
        !
        IF (input%total) THEN
           !
-          !----> Perform fft transform: vxc(star) --> vxc(r) 
+          !----> Perform fft transform: v_xc(star) --> vxc(r) 
           !     !Use large fft mesh for convolution
           !
           fg3(stars%nxc3_fft+1:)=0.0
@@ -414,21 +402,21 @@ CONTAINS
           !----> add to warped coulomb potential
           !
           DO k = 1,stars%ng3
-             vpw_w(k,js) = vpw_w(k,js) + fg3(k)
+             vxc%pw_w(k,js) = vxc%pw_w(k,js) + fg3(k)
           ENDDO
 
        ENDIF
 
        bf3=0.0
        CALL fft3dxc(&
-            &                 vx(0:,js),bf3,&
+            &                 v_x(0:,js),bf3,&
             &                 fg3,&
             &                 stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
             &                 stars%nxc3_fft,stars%kmxxc_fft,-1,&
             &                 stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        !
        DO k = 1,stars%nxc3_fft
-          vxpw(k,js) = vxpw(k,js) + fg3(k)
+          vx%pw(k,js) = vx%pw(k,js) + fg3(k)
        ENDDO
 
        !
@@ -436,7 +424,7 @@ CONTAINS
        !
        IF (input%total) THEN
           !
-          !---->  Perform fft transform: vxc(star) --> vxc(r) 
+          !---->  Perform fft transform: v_xc(star) --> vxc(r) 
           !       !Use large fft mesh for convolution
           !
 
@@ -462,32 +450,32 @@ CONTAINS
           !----> add to warped exchange-potential
           !
           DO k = 1,stars%ng3
-             vxpw_w(k,js) = vxpw_w(k,js) + fg3(k)
+             vx%pw_w(k,js) = vx%pw_w(k,js) + fg3(k)
           ENDDO
 
        ENDIF
 
     ENDDO
-    DEALLOCATE ( vx,vxc )
+    DEALLOCATE ( v_x,v_xc )
     !
     !     calculate the ex.-cor energy density in real space
     !
     IF (input%total) THEN
-       ALLOCATE ( exc(0:ifftxc3d-1) )
+       ALLOCATE ( e_xc(0:ifftxc3d-1) )
        CALL excallg(xcpot,lwbc,input%jspins,nt,rho,&
             &               agr,agru,agrd,g2r,g2ru,g2rd,&
             &               gggr,gggru,gggrd,gzgr,&
-            &               exc)
+            &               e_xc)
        !
        !---->   perform back  fft transform: exc(r) --> exc(star)
        !
        bf3=0.0
        CALL fft3dxc(&
-            &                exc,bf3,&
+            &                e_xc,bf3,&
             &                fg3,&
             &                stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,-1,&
             &                stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
-       DEALLOCATE ( exc )
+       DEALLOCATE ( e_xc )
        !
        !---->   Perform fft transform: exc(star) --> exc(r) 
        !        !Use large fft mesh for convolution
@@ -505,7 +493,7 @@ CONTAINS
        !         ---> back fft to g space
        !
        bf3=0.0
-       CALL fft3d(vcon,bf3,excpw,&
+       CALL fft3d(vcon,bf3,exc%pw_w(:,1),&
             &             stars,-1,.FALSE.)
        DEALLOCATE ( vcon )
        !

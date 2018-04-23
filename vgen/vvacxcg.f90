@@ -10,9 +10,7 @@ CONTAINS
   SUBROUTINE vvacxcg(&
        &           ifftd2,stars,vacuum,noco,oneD,&
        &           cell,xcpot,input,obsolete,den,&
-       &           ichsmrg,&
-       &           vxy,vz,rhmn,&
-       &           excxy,excz)
+       &           vxc,exc)
 
     !-----------------------------------------------------------------------
     !     instead of vvacxcor.f: the different exchange-correlation
@@ -40,20 +38,13 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_potden),INTENT(INOUT) :: den
+    TYPE(t_potden),INTENT(IN)    :: den
+    TYPE(t_potden),INTENT(INOUT) :: vxc
+    TYPE(t_potden),INTENT(INOUT) :: exc
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
-    INTEGER, INTENT (INOUT) :: ichsmrg
-    REAL,    INTENT (INOUT) :: rhmn
-    !-odim
-    !+odim
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (OUT) :: excz(vacuum%nmzd,2)
-    COMPLEX, INTENT (OUT) :: excxy(vacuum%nmzxy,stars%ng2-1,2)
-    REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,input%jspins)
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
+   
     !     ..
     !     .. Local Scalars ..
     INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip
@@ -67,7 +58,7 @@ CONTAINS
     REAL, ALLOCATABLE :: gzgr(:),rhdx(:,:),rhdy(:,:),rhdz(:,:)
     REAL, ALLOCATABLE :: rhdxx(:,:),rhdyy(:,:),rhtdz(:,:),rhtdzz(:,:)
     REAL, ALLOCATABLE :: rhdzz(:,:),rhdyz(:,:),rhdzx(:,:),rhdxy(:,:)
-    REAL, ALLOCATABLE :: vx(:,:),vxc(:,:),exc(:),vxz(:,:),vxcz(:,:)
+    REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:),vxz(:,:),vxcz(:,:)
     REAL, ALLOCATABLE :: rxydzr(:),rxydzi(:)
     REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
     REAL, ALLOCATABLE :: rhtxc(:,:),rhtz(:,:),dummy(:)
@@ -234,11 +225,11 @@ CONTAINS
        ALLOCATE ( agr(0:ifftd2-1),agru(0:ifftd2-1),agrd(0:ifftd2-1) )
        ALLOCATE ( g2r(0:ifftd2-1),g2ru(0:ifftd2-1),g2rd(0:ifftd2-1) )
        ALLOCATE ( gggr(0:ifftd2-1),gggru(0:ifftd2-1),gzgr(0:ifftd2-1) )
-       ALLOCATE ( vxc(0:ifftd2-1,input%jspins),exc(0:ifftd2-1) )
+       ALLOCATE ( v_xc(0:ifftd2-1,input%jspins),e_xc(0:ifftd2-1) )
        ALLOCATE ( cqpw(stars%ng2-1),af2(0:ifftd2-1,input%jspins) )
        ALLOCATE ( fgxy(stars%ng2-1),bf2(0:ifftd2-1) )
 
-       ALLOCATE( vx(0:ifftd2-1,input%jspins) )
+       ALLOCATE( v_x(0:ifftd2-1,input%jspins) )
 
  
        rd = 0.0
@@ -456,13 +447,8 @@ CONTAINS
              ENDDO
           ENDDO
 
-          IF (rhmnv.lt.rhmn) THEN
-             rhmn=rhmnv
-             ichsmrg=3
-          ENDIF
-
-          IF (rhmn.LT.obsolete%chng) THEN
-             WRITE(6,'(/'' rhmn.lt.obsolete%chng. rhmn,obsolete%chng='',2d9.2)') rhmn,obsolete%chng
+          IF (rhmnv.LT.obsolete%chng) THEN
+             WRITE(6,'(/'' rhmn.lt.obsolete%chng. rhmn,obsolete%chng='',2d9.2)') rhmnv,obsolete%chng
              !             CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
           ENDIF
 
@@ -472,7 +458,7 @@ CONTAINS
           CALL vxcallg(&
                &                 xcpot,lwbc,input%jspins,nt,nt,af2,agr,agru,agrd,&
                &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-               &                 vx,vxc)
+               &                 v_x,v_xc)
 
 
 
@@ -483,19 +469,19 @@ CONTAINS
              bf2=0.0
              CALL fft2d(&
                   &                 stars,&
-                  &                 vxc(0,js),bf2,&
+                  &                 v_xc(0,js),bf2,&
                   &                 fgz,rhti,fgxy,&
                   &                 1,-1)
 
              !            ----> and add vxc to coulomb potential
-             !                  the g||.eq.zero component is added to vz
+             !                  the g||.eq.zero component is added to vxc%vacz
              !
-             vz(ip,ivac,js) = fgz + vz(ip,ivac,js)
+             vxc%vacz(ip,ivac,js) = fgz + vxc%vacz(ip,ivac,js)
              !
-             !            the g||.ne.zero components are added to vxy
+             !            the g||.ne.zero components are added to vxc%vacxy
              !
              DO irec2 = 1,stars%ng2-1
-                vxy(ip,irec2,ivac,js)=vxy(ip,irec2,ivac,js)+fgxy(irec2)
+                vxc%vacxy(ip,irec2,ivac,js)=vxc%vacxy(ip,irec2,ivac,js)+fgxy(irec2)
              ENDDO
 
           END DO
@@ -508,15 +494,15 @@ CONTAINS
              CALL excallg(&
                   &                   xcpot,lwbc,input%jspins,nt,af2,agr,agru,agrd,&
                   &                   g2r,g2ru,g2rd, gggr,gggru,gggrd,gzgr,&
-                  &                   exc)
+                  &                   e_xc)
 
              !           ----> 2-d back fft to g space
              !
              bf2=0.0
              CALL fft2d(&
                   &                 stars,&
-                  &                 exc,bf2,&
-                  &                 excz(ip,ivac),rhti,excxy(ip,1,ivac),&
+                  &                 e_xc,bf2,&
+                  &                 exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1),&
                   &                 vacuum%nmzxyd,-1)
 
           ENDIF
@@ -621,13 +607,9 @@ CONTAINS
           ENDDO
        ENDDO
 
-       IF(rhmnv.lt.rhmn) THEN
-          rhmn=rhmnv
-          ichsmrg=4
-       ENDIF
-
-       IF (rhmn.lt.obsolete%chng) THEN
-          WRITE (6,'('' rhmn.lt.obsolete%chng. rhmn,obsolete%chng='',2d9.2)') rhmn,obsolete%chng
+   
+       IF (rhmnv.lt.obsolete%chng) THEN
+          WRITE (6,'('' rhmn.lt.obsolete%chng. rhmn,obsolete%chng='',2d9.2)') rhmnv,obsolete%chng
           !           CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
        ENDIF
 
@@ -638,13 +620,13 @@ CONTAINS
 
        DO js = 1,input%jspins
           DO ip = vacuum%nmzxy + 1,vacuum%nmz
-             vz(ip,ivac,js) = vz(ip,ivac,js) + vxcz(ip-vacuum%nmzxy,js)
+             vxc%vacz(ip,ivac,js) = vxc%vacz(ip,ivac,js) + vxcz(ip-vacuum%nmzxy,js)
           ENDDO
        ENDDO
 
        !
-       WRITE (6,fmt=8020) ivac, (vz(vacuum%nmz,ivac,js),js=1,input%jspins)
-       WRITE(16,fmt=8020) ivac, (vz(vacuum%nmz,ivac,js),js=1,input%jspins)
+       WRITE (6,fmt=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
+       WRITE(16,fmt=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
 8020   FORMAT(/,5x,'vacuum zero for vacuum',i3,' = ',2f14.10)
        !
        !     calculate the ex-corr. energy density now beyond warping region
@@ -653,7 +635,7 @@ CONTAINS
           CALL excallg(&
                &                   xcpot,lwbc,input%jspins,nmzdiff,rhtxc,agr,agru,&
                &                   agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-               &                   excz(vacuum%nmzxy+1,ivac))
+               &                   exc%vacz(vacuum%nmzxy+1,ivac,1))
        ENDIF
 
 
@@ -662,7 +644,7 @@ CONTAINS
        DEALLOCATE ( agrd,g2r )
        DEALLOCATE ( g2ru,g2rd )
        DEALLOCATE ( gggr,gggru )
-       DEALLOCATE ( gggrd,gzgr,vx,vxc,exc,vxz,vxcz,rhtz,rhtxc )
+       DEALLOCATE ( gggrd,gzgr,v_x,v_xc,e_xc,vxz,vxcz,rhtz,rhtxc )
 
     ENDDO    ! loop over vacua (ivac)
     DEALLOCATE ( rhtdz,rhtdzz,rxydz,rxydzz )

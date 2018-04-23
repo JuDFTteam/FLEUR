@@ -10,13 +10,14 @@ CONTAINS
   SUBROUTINE vvacis(&
        &                  stars,vacuum,&
        &                  sym,cell,&
-       &                  psq, input,&
+       &                  psq, input,field,&
        &                  vxy)
 
     USE m_constants
     USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
+    TYPE(t_field),INTENT(IN)   :: field
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
     TYPE(t_sym),INTENT(IN)     :: sym
     TYPE(t_stars),INTENT(IN)   :: stars
@@ -24,7 +25,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: psq(stars%ng3)
-    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2)
     !     ..
     !     .. Local Scalars ..
     COMPLEX arg,ci
@@ -40,7 +41,7 @@ CONTAINS
     !     ..
     ci = CMPLX(0.0,1.0)
 
-    vxy(:,:,:,1) = CMPLX(0.,0.)
+    vxy(:,:,:) = CMPLX(0.,0.)
     dh = cell%z1
     m0 = -stars%mx3
     IF (sym%zrfs) m0 = 0
@@ -48,9 +49,9 @@ CONTAINS
        k1 = stars%kv2(1,nrec2)
        k2 = stars%kv2(2,nrec2)
        g = stars%sk2(nrec2)
-       IF (input%efield%dirichlet) THEN
-          vcons = 2.0*tpi_const/(g*SINH(g*2.0*(input%efield%zsigma+dh)))
-          arg_r = g*(dh+input%efield%zsigma+dh)
+       IF (field%efield%dirichlet) THEN
+          vcons = 2.0*tpi_const/(g*SINH(g*2.0*(field%efield%zsigma+dh)))
+          arg_r = g*(dh+field%efield%zsigma+dh)
        ELSE ! Neumann
           vcons = tpi_const/g
           arg_r = exp_save( - 2*dh*g )
@@ -68,13 +69,13 @@ CONTAINS
                 !     ---> sum over gz-stars
                 DO  nrz = 1,nz
                    signz = 3. - 2.*nrz
-                   IF (input%efield%dirichlet) THEN
+                   IF (field%efield%dirichlet) THEN
                       ! prefactor
                       arg = EXP(-ci*signz*qz*dh)&
                            &                      /(2*(g**2 + qz**2)) * psq(ig3n)
                       IF (ivac == 1) THEN
                          sumr(ivac) = sumr(ivac) + EXP(-arg_r)*arg*(&
-                              &                     (- EXP(2*g*(input%efield%zsigma+dh))&
+                              &                     (- EXP(2*g*(field%efield%zsigma+dh))&
                               &                      + EXP(2*(ci*signz*qz*dh+arg_r)))&
                               &                     *(g-ci*signz*qz)&
                               &                    +(- EXP(2*g*dh)&
@@ -85,8 +86,8 @@ CONTAINS
                               &                     EXP(arg_r)*(g+ci*signz*qz)&
                               &                     +(g-ci*signz*qz)*EXP(-arg_r)&
                               &                     +2*EXP(2*(ci*signz*qz*dh))&
-                              &                      *(-g*COSH(g*(-input%efield%zsigma))&
-                              &                        +ci*signz*qz*SINH(g*(-input%efield%zsigma))) )
+                              &                      *(-g*COSH(g*(-field%efield%zsigma))&
+                              &                        +ci*signz*qz*SINH(g*(-field%efield%zsigma))) )
                       END IF
                    ELSE
                       arg = g + sign*ci*signz*qz
@@ -100,12 +101,12 @@ CONTAINS
           ENDDO       ! kz 
           z = 0 ! moved cell%z1 into above equations gb`06
           DO imz = 1,vacuum%nmzxy
-             IF (input%efield%dirichlet) THEN
-                e_m = SINH(g*(input%efield%zsigma-z))
+             IF (field%efield%dirichlet) THEN
+                e_m = SINH(g*(field%efield%zsigma-z))
              ELSE ! NEUMANN
                 e_m = exp_save( -g*z  )
              END IF
-             vxy(imz,nrec2-1,ivac,1) = vxy(imz,nrec2-1,ivac,1) +&
+             vxy(imz,nrec2-1,ivac) = vxy(imz,nrec2-1,ivac) +&
                   &                                   vcons*sumr(ivac)*e_m
              z = z + vacuum%delz
           ENDDO  ! imz 

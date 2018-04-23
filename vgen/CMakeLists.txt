@@ -16,6 +16,7 @@ vgen/visp5_0.f
 vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
+vgen/b_field.F90
 vgen/convol.f90
 vgen/grdrsis.f90
 vgen/int_nv.F90
@@ -24,10 +25,12 @@ vgen/lhglpts.f90
 vgen/mpmom.F90
 vgen/od_vvac.f90
 vgen/od_vvacis.f90
-vgen/pot_mod.f90
+vgen/vgen_coulomb.F90
+vgen/vgen_xcpot.F90
+vgen/vgen_finalize.F90
 vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
-vgen/rhodirgen.f90
+vgen/rotate_int_den_to_local.F90
 vgen/vintcz.f90
 vgen/visxc.f90
 vgen/visxcg.f90
@@ -40,6 +43,7 @@ vgen/vvacis.f90
 vgen/vvacxc.f90
 vgen/vvacxcg.f90
 vgen/vvacxy.f90
+vgen/b_field.F90
 vgen/write_xcstuff.f90
 vgen/xy_av_den.f90
 )

@@ -68,7 +68,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    IF (input%jspins > DIMENSION%jspd) CALL juDFT_error("input%jspins > dimension%jspd", calledby = "stden")
 
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
    ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
    ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntype,DIMENSION%jspd) )
@@ -78,14 +78,14 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    IF (mpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms
-      IF ( ABS(input%efield%sigma).LT. 1.e-6) THEN
+      IF ( ABS(input%sigma).LT. 1.e-6) THEN
          qdel = 0.0
       ELSE
          natot = 0
          DO n = 1, atoms%ntype
             IF (atoms%zatom(n).GE.1.0) natot = natot + atoms%neq(n)
          END DO
-         qdel = 2.*input%efield%sigma/natot
+         qdel = 2.*input%sigma/natot
       END IF
 
       WRITE (6,FMT=8000)

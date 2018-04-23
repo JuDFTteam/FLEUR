@@ -7,7 +7,7 @@
       IMPLICIT NONE
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
-             input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+             input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
           USE m_judft
@@ -43,6 +43,7 @@
           !     Types, these variables contain a lot of data!
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
           TYPE(t_input)    ,INTENT(OUT):: input
+          TYPE(t_field),    INTENT(OUT) :: field
           TYPE(t_dimension),INTENT(OUT):: DIMENSION
           TYPE(t_atoms)    ,INTENT(OUT):: atoms
           TYPE(t_sphhar)   ,INTENT(OUT):: sphhar
@@ -107,6 +108,8 @@
 #ifdef CPP_HDF
           CALL hdf_init()
 #endif
+          CALL field%init(input)
+
           input%gw                = -1
           input%gw_neigd          =  0
           !-t3e
@@ -174,7 +177,7 @@
                      l_kpts)
              END IF
 
-             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+             CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
@@ -209,7 +212,8 @@
                   oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
-          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,DIMENSION%jspd,.false.)
+  
+          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,DIMENSION%jspd,.FALSE.)
                    !-odim
           oneD%odd%nq2 = oneD%odd%n2d
           oneD%odd%kimax2 = oneD%odd%nq2 - 1
@@ -272,7 +276,7 @@
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
                &           mpi,stars,sphhar,atoms,obsolete,&
-               &           sym,kpts,DIMENSION,input,&
+               &           sym,kpts,DIMENSION,input,field,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
                &           noco,oneD,xcpot,hybrid)
 #endif

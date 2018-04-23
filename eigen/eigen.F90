@@ -58,9 +58,10 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_atoms),INTENT(INOUT)  :: atoms!in u_setup n_u might be modified
-    TYPE(t_potden),INTENT(IN)    :: inden
-    TYPE(t_potden),INTENT(INOUT) :: v,vx
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_potden),INTENT(IN)    :: inden,vx
+    TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
+   
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif

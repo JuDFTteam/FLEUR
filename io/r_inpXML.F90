@@ -639,22 +639,22 @@ SUBROUTINE r_inpXML(&
   numberNodes = xmlGetNumberOfNodes(xPathA)
 
   IF (numberNodes.EQ.1) THEN
-     input%efield%zsigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
-     input%efield%sig_b(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
-     input%efield%sig_b(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
-     input%efield%plot_charge = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
-     input%efield%plot_rho = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
-     input%efield%autocomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
-     input%efield%dirichlet = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
-     l_eV = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
+     !input%efield%zsigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
+     !input%efield%sig_b(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
+     !input%efield%sig_b(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
+     !input%efield%plot_charge = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
+     !input%efield%plot_rho = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
+     !input%efield%autocomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
+     !input%efield%dirichlet = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
+     !l_eV = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
 
      STOP 'Error: Reading input for E-Fields not yet implemented completely!'
      !      ALLOCATE(input%efield%sigEF(3*k1d, 3*k2d, nvac))
      !      input%efield%sigEF = 0.0
-     IF (l_eV) THEN
-        input%efield%sig_b(:) = input%efield%sig_b/hartree_to_ev_const
+     !IF (l_eV) THEN
+     !   input%efield%sig_b(:) = input%efield%sig_b/hartree_to_ev_const
         !         input%efield%sigEF(:,:,:) = input%efield%sigEF/hartree_to_ev_const
-     END IF
+     !END IF
   END IF
 
   ! Read in optional energy parameter limits
@@ -1710,7 +1710,6 @@ SUBROUTINE r_inpXML(&
 
   input%vchk = .FALSE.
   input%cdinf = .FALSE.
-  obsolete%disp = .FALSE.
 
   sliceplot%iplot = .FALSE.
   input%score = .FALSE.
@@ -1741,7 +1740,7 @@ SUBROUTINE r_inpXML(&
      IF (numberNodes.EQ.1) THEN
         input%vchk = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vchk'))
         input%cdinf = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@cdinf'))
-        obsolete%disp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disp'))
+       
      END IF
 
      ! Read in optional plotting parameters

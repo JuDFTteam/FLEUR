@@ -6,7 +6,7 @@
       CONTAINS
       SUBROUTINE vvac(&
      &                vacuum,stars,&
-     &                cell,sym,input,&
+     &                cell,sym,input,field,&
      &                psq,rht,&
      &                vz,rhobar,sig1dh,vz1dh)
 
@@ -23,12 +23,13 @@
 
       COMPLEX, INTENT (OUT):: rhobar
       REAL,    INTENT (OUT):: sig1dh,vz1dh
-      TYPE(t_input), INTENT(INOUT) :: input !efield is modified here
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_field),INTENT(INOUT) :: field !efield is modified here
 !     ..
 !     .. Array Arguments ..
-      REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,input%jspins) 
+      REAL,    INTENT (IN) :: rht(vacuum%nmzd,2) 
       COMPLEX, INTENT (IN) :: psq(stars%ng3) ! pseudo charge density (see psqpw.F)
-      REAL,    INTENT (OUT):: vz(vacuum%nmzd,2,input%jspins)
+      REAL,    INTENT (OUT):: vz(vacuum%nmzd,2)
 !     ..
 !     .. Local Scalar Parameters ..
       COMPLEX, PARAMETER :: ci = (0.0,1.0)
@@ -45,13 +46,13 @@
       INTRINSIC cos,sin
 
      
-      vz(:,1:vacuum%nvac,1) = 0.0  ! initialize potential
+      vz(:,1:vacuum%nvac) = 0.0  ! initialize potential
 
       ! obtain mesh point (ncsh) of charge sheet for external electric field
       !                                                 (X.Nie, IFF, 10/97)
-      ncsh = input%efield%zsigma/vacuum%delz + 1.01
-      sigmaa(1) = (input%efield%sigma+input%efield%sig_b(1))/cell%area
-      sigmaa(2) = (input%efield%sigma+input%efield%sig_b(2))/cell%area
+      ncsh = field%efield%zsigma/vacuum%delz + 1.01
+      sigmaa(1) = (field%efield%sigma+field%efield%sig_b(1))/cell%area
+      sigmaa(2) = (field%efield%sigma+field%efield%sig_b(2))/cell%area
 
       ! g=0 vacuum potential due to neutral charge density
       ! inside slab and zero charge density outside
@@ -75,7 +76,7 @@
 
       ivac = 2                        ! lower (ivac=2) vacuum
       IF (vacuum%nvac.EQ.2) THEN
-        vz(1:vacuum%nmz,ivac,1) = vcons*sumq
+        vz(1:vacuum%nmz,ivac) = vcons*sumq
       ENDIF
 
       ! g=0 vacuum potential due to
@@ -84,56 +85,56 @@
       ivac = 1     ! upper vacuum
 
       ! =================== DIRICHLET ==============================
-      IF (input%efield%dirichlet) THEN
-        vz(ncsh+1:vacuum%nmz,ivac,1) = input%efield%sig_b(1)
+      IF (field%efield%dirichlet) THEN
+        vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
 
-        CALL qsf(vacuum%delz,rht(1,ivac,1),sig,ncsh,1)
+        CALL qsf(vacuum%delz,rht(1,ivac),sig,ncsh,1)
         sig(1:ncsh) = sig(ncsh)- sig(1:ncsh)
         CALL qsf(vacuum%delz,sig,vtemp,ncsh,1)
 
         DO imz = 1,ncsh
-          vz(imz,ivac,1) = -fpi_const* (vtemp(ncsh)-vtemp(imz))&
-     &                     + input%efield%sig_b(1)
+          vz(imz,ivac) = -fpi_const* (vtemp(ncsh)-vtemp(imz))&
+     &                     + field%efield%sig_b(1)
         ENDDO
 
         sig1dh = sig(1)
-        vz1dh = vz(1,ivac,1)   ! potential on vacuum boundary
+        vz1dh = vz(1,ivac)   ! potential on vacuum boundary
 
         IF (vacuum%nvac == 1) RETURN
 
 
         ivac = 2     ! lower vacuum
 
-        CALL qsf(vacuum%delz,rht(1,ivac,1),sig,ncsh,1)
+        CALL qsf(vacuum%delz,rht(1,ivac),sig,ncsh,1)
 
         f(1:ncsh) = sig(1:ncsh) - rhobar*vacuum%dvac + sig1dh
 
         CALL qsf(vacuum%delz,f,vtemp,ncsh,1)
 
         DO imz = 1,ncsh
-          vz(imz,ivac,1) = -fpi_const* (vtemp(imz)+sig1dh*vacuum%dvac&
-     &                     -rhobar*vacuum%dvac*vacuum%dvac/2.) + vz(imz,ivac,1)&
+          vz(imz,ivac) = -fpi_const* (vtemp(imz)+sig1dh*vacuum%dvac&
+     &                     -rhobar*vacuum%dvac*vacuum%dvac/2.) + vz(imz,ivac)&
      &                     +vz1dh
         END DO
 
         ! Force matching on the other side
-        input%efield%vslope = (input%efield%sig_b(2)-vz(ncsh,1,1)) / (2*vacuum%delz*(ncsh+1)+vacuum%dvac)
+        field%efield%vslope = (field%efield%sig_b(2)-vz(ncsh,1)) / (2*vacuum%delz*(ncsh+1)+vacuum%dvac)
         ivac = 1
         DO imz = 1,ncsh
-          vz(imz,ivac,1) = vz(imz,ivac,1) + input%efield%vslope*vacuum%delz*(ncsh-imz+1)
+          vz(imz,ivac) = vz(imz,ivac) + field%efield%vslope*vacuum%delz*(ncsh-imz+1)
         END DO
         ivac = 2
         DO imz = 1,ncsh
-          vz(imz,ivac,1) = vz(imz,ivac,1)&
-     &                    + input%efield%vslope*(vacuum%dvac+vacuum%delz*imz+vacuum%delz*ncsh)
+          vz(imz,ivac) = vz(imz,ivac)&
+     &                    + field%efield%vslope*(vacuum%dvac+vacuum%delz*imz+vacuum%delz*ncsh)
         END DO
 
-        vz(ncsh+1:vacuum%nmz,ivac,1) = input%efield%sig_b(2)
+        vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
 
       ! =================== NEUMANN ==============================
       ELSE ! Neumann
 
-      CALL qsf(vacuum%delz,rht(1,ivac,1),sig,vacuum%nmz,1)
+      CALL qsf(vacuum%delz,rht(1,ivac),sig,vacuum%nmz,1)
 
       sig1dh = sig(vacuum%nmz) - sigmaa(1)  ! need to include contribution from
                                      ! electric field
@@ -144,20 +145,20 @@
       ! external electric field contribution (X.Nie, IFF, 10/97)
       !                                       corrected 10/99 mw
       DO imz = 1,ncsh
-         vz(imz,ivac,1) = -fpi_const* (vtemp(vacuum%nmz)-vtemp(imz)) + vz(imz,ivac,1)&
+         vz(imz,ivac) = -fpi_const* (vtemp(vacuum%nmz)-vtemp(imz)) + vz(imz,ivac)&
      &                    -fpi_const*(imz-ncsh)*vacuum%delz*sigmaa(1)
       ENDDO
       DO imz =ncsh+1,vacuum%nmz
-         vz(imz,ivac,1) = -fpi_const* (vtemp(vacuum%nmz)-vtemp(imz)) + vz(imz,ivac,1)
+         vz(imz,ivac) = -fpi_const* (vtemp(vacuum%nmz)-vtemp(imz)) + vz(imz,ivac)
       ENDDO
 
-      vz1dh = vz(1,ivac,1)   ! potential on vacuum boundary
+      vz1dh = vz(1,ivac)   ! potential on vacuum boundary
 
       IF (vacuum%nvac.EQ.1) RETURN
 
       ivac = 2     ! lower vacuum
 
-      CALL qsf(vacuum%delz,rht(1,ivac,1),sig,vacuum%nmz,1)
+      CALL qsf(vacuum%delz,rht(1,ivac),sig,vacuum%nmz,1)
 
       f(1:vacuum%nmz) = sig(1:vacuum%nmz) - rhobar*vacuum%dvac + sig1dh
 
@@ -165,12 +166,12 @@
 
       !   external electric field contribution
       DO imz = 1,ncsh
-         vz(imz,ivac,1) = -fpi_const* (vtemp(imz)+sig1dh*vacuum%dvac-&
-     &                    rhobar*vacuum%dvac*vacuum%dvac/2.) + vz1dh + vz(imz,ivac,1)
+         vz(imz,ivac) = -fpi_const* (vtemp(imz)+sig1dh*vacuum%dvac-&
+     &                    rhobar*vacuum%dvac*vacuum%dvac/2.) + vz1dh + vz(imz,ivac)
       ENDDO
       DO imz =ncsh+1,vacuum%nmz
-         vz(imz,ivac,1) = -fpi_const* (vtemp(imz)+sig1dh*vacuum%dvac-&
-     &                    rhobar*vacuum%dvac*vacuum%dvac/2.) + vz1dh + vz(imz,ivac,1)&
+         vz(imz,ivac) = -fpi_const* (vtemp(imz)+sig1dh*vacuum%dvac-&
+     &                    rhobar*vacuum%dvac*vacuum%dvac/2.) + vz1dh + vz(imz,ivac)&
      &                    +fpi_const*(imz-ncsh)*vacuum%delz*sigmaa(2)
       ENDDO
 

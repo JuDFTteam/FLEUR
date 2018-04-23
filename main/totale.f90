@@ -177,7 +177,7 @@ CONTAINS
        WRITE (6,FMT=8045) zintn_r(n)
        WRITE (16,FMT=8045) zintn_r(n)
        CALL intgr3(mt(1,n),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
-       vmd(n) = atoms%rmt(n)*atoms%vr0(n)/sfp_const + atoms%zatom(n) - totz*sfp_const
+       vmd(n) = atoms%rmt(n)*vCoul%mt(atoms%jri(n),0,n,1)/sfp_const + atoms%zatom(n) - totz*sfp_const
        vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
        WRITE (6,FMT=8050) n,vmd(n)
        WRITE (16,FMT=8050) n,vmd(n)

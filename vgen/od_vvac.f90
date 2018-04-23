@@ -29,8 +29,8 @@ CONTAINS
 
 
     COMPLEX, INTENT (IN) :: psq(stars%ng3)
-    REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
-    REAL,    INTENT (OUT) :: vz(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
+    REAL,    INTENT (IN) :: rht(:,:) !(vacuum%nmzd,2)
+    REAL,    INTENT (OUT) :: vz(:,:) !(vacuum%nmzd,2)
 
     COMPLEX  rhobar
     INTEGER  k1,k2,irec3,irec2,i,j,ivac,imz,imz1
@@ -46,7 +46,7 @@ CONTAINS
        f2(i) = 0.
        f22(i) = 0.
        DO ivac = 1,vacuum%nvac
-          vz(i,ivac,1) = 0.
+          vz(i,ivac) = 0.
        END DO
     END DO
 
@@ -71,7 +71,7 @@ CONTAINS
     !----> 1st equivalent way      
 
     DO  i=1,vacuum%nmz
-       rht1(i) = fpi_const*(cell%z1+(i-1)*vacuum%delz)*rht(i,1,1)
+       rht1(i) = fpi_const*(cell%z1+(i-1)*vacuum%delz)*rht(i,1)
     ENDDO
     CALL qsf(vacuum%delz,rht1(1),f2(1),vacuum%nmz,1)
 
@@ -89,7 +89,7 @@ CONTAINS
        ENDDO
        CALL qsf(vacuum%delz,f22(1),a,vacuum%nmz,0)
        DO  ivac =1,vacuum%nvac
-          vz(i,ivac,1) = -a(1)
+          vz(i,ivac) = -a(1)
        ENDDO
     ENDDO
     !----> 2nd equivalent way (via the Green function)
@@ -99,14 +99,14 @@ CONTAINS
        DO imz1 = 1,vacuum%nmz
           zp = cell%z1 +  (imz1-1)*vacuum%delz
           IF (imz1.LE.imz) THEN
-             rht1(imz1) = fpi_const*LOG(z)*zp*rht(imz1,1,1)
+             rht1(imz1) = fpi_const*LOG(z)*zp*rht(imz1,1)
           ELSE
-             rht1(imz1) = fpi_const*LOG(zp)*zp*rht(imz1,1,1)
+             rht1(imz1) = fpi_const*LOG(zp)*zp*rht(imz1,1)
           END IF
 
        END DO
        CALL qsf(vacuum%delz,rht1,a,vacuum%nmz,0)
-       vz(imz,1,1) = tpi_const*LOG(z)*(cell%z1*cell%z1)*rhobar - a(1)
+       vz(imz,1) = tpi_const*LOG(z)*(cell%z1*cell%z1)*rhobar - a(1)
     END DO
 
     RETURN
