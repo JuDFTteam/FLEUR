@@ -117,10 +117,10 @@ CONTAINS
     LOGICAL :: mpi_flag, mpi_status
 #endif
     !     .. Local Scalars ..
-    INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin
-    INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd,nslibd
-    INTEGER :: skip_t,skip_tt, nkpt_extended, ikptStart, ikptIncrement
-    INTEGER :: n_start,n_end,noccbd_l,nbasfcn
+    INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin,jsp
+    INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd
+    INTEGER :: skip_t,skip_tt
+    INTEGER :: nStart,nEnd,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
     !     ...Local Arrays ..
     INTEGER :: noccbd_in(kpts%nkpt)
@@ -144,6 +144,7 @@ CONTAINS
     TYPE (t_usdus)            :: usdus
     TYPE (t_zMat)             :: zMat
     TYPE (t_orbcomp)          :: orbcomp
+    TYPE (t_cdnvalKLoop)      :: cdnvalKLoop
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
@@ -228,44 +229,11 @@ CONTAINS
 
     ALLOCATE (we(dimension%neigd))
 
-    ! For k-point paralelization:
-    l_evp = .FALSE.
-    IF (kpts%nkpt < mpi%isize) THEN
-       l_evp = .TRUE.
-       nkpt_extended = kpts%nkpt
-       ikptStart = 1
-       ikptIncrement = 1
-    ELSE
-       ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
-       nkpt_extended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
-       ikptStart = mpi%irank + 1
-       ikptIncrement = mpi%isize
-    END IF
+    CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
 
-    ! determine bands to be used for each k point, MPI process
-    DO ikpt = ikptStart, kpts%nkpt, ikptIncrement
-       noccbd_in(ikpt) = 0
-       DO i = 1,MERGE(results%neig(ikpt,1),results%neig(ikpt,jspin),noco%l_noco)
-          we(i) = MERGE(results%w_iks(i,ikpt,1),results%w_iks(i,ikpt,jspin),noco%l_noco)
-          IF ((we(i).GE.1.e-8).OR.input%pallst) THEN
-             noccbd_in(ikpt) = noccbd_in(ikpt) + 1
-          END IF
-       END DO
-       IF (banddos%dos) noccbd_in(ikpt) = MERGE(results%neig(ikpt,1),results%neig(ikpt,jspin),noco%l_noco)
-       IF (l_evp) THEN
-          noccbd_l = CEILING(real(noccbd_in(ikpt)) / mpi%isize)
-          nStart_in(ikpt) = mpi%irank*noccbd_l + 1
-          nEnd_in(ikpt)   = min((mpi%irank+1)*noccbd_l, noccbd_in(ikpt))
+    jsp = MERGE(1,jspin,noco%l_noco)
 
-          noccbd_in(ikpt) = nEnd_in(ikpt) - nStart_in(ikpt) + 1
-          IF (noccbd_in(ikpt).LT.1) noccbd_in(ikpt) = 0
-       ELSE
-          nStart_in(ikpt) = 1
-          nEnd_in(ikpt)   = noccbd_in(ikpt)
-       END IF
-    END DO
-
-    DO ikpt = ikptStart, nkpt_extended, ikptIncrement
+    DO ikpt = cdnvalKLoop%ikptStart, cdnvalKLoop%nkptExtended, cdnvalKLoop%ikptIncrement
        IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
           ! Synchronizes the RMA operations
@@ -274,46 +242,41 @@ CONTAINS
           EXIT
        END IF
 
-       we=0.0
-       !--->    determine number of occupied bands and set weights (we)
-       DO i = nStart_in(ikpt),nEnd_in(ikpt)
-          we(i) = MERGE(results%w_iks(i,ikpt,1),results%w_iks(i,ikpt,jspin),noco%l_noco)
-          IF (.NOT.((we(i).GE.1.e-8).OR.input%pallst)) we(i)=0.0
-       END DO
        ! uncomment this so that cdinf plots works for all states
        ! noccbd = neigd
 
        ! -> Gu test: distribute ev's among the processors...
        CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
        skip_t = skip_tt
-       noccbd = noccbd_in(ikpt)
-       n_start = nStart_in(ikpt)
-       n_end = nEnd_in(ikpt)
-       IF (l_evp) THEN
-          IF(noccbd.GT.0) THEN
-             we(1:noccbd) = we(nStart_in(ikpt):nEnd_in(ikpt))
-          END IF
+       noccbd = cdnvalKLoop%noccbd(ikpt)
+       nStart = cdnvalKLoop%nStart(ikpt)
+       nEnd = cdnvalKLoop%nEnd(ikpt)
 
-          IF (n_start > skip_tt) skip_t = 0
-          IF (n_end <= skip_tt) skip_t = noccbd
-          IF ((n_start <= skip_tt).AND.(n_end > skip_tt)) skip_t = mod(skip_tt,noccbd)
+       we=0.0
+       IF(noccbd.GT.0) THEN
+          we(1:noccbd) = results%w_iks(nStart:nEnd,ikpt,jsp)
+       END IF
+       IF ((sliceplot%slice).AND.(input%pallst)) THEN
+          we(:) = kpts%wtkpt(ikpt)
+       END IF
+
+       IF (cdnvalKLoop%l_evp) THEN
+          IF (nStart > skip_tt) skip_t = 0
+          IF (nEnd <= skip_tt) skip_t = noccbd
+          IF ((nStart <= skip_tt).AND.(nEnd > skip_tt)) skip_t = mod(skip_tt,noccbd)
        END IF
 
        nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
        CALL zMat%init(l_real,nbasfcn,noccbd)
        CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
                      ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
-                     noccbd,n_start,n_end,nbands,eig,zMat)
+                     noccbd,nStart,nEnd,nbands,eig,zMat)
 #ifdef CPP_MPI
        ! Synchronizes the RMA operations
        CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
 
-       IF (noco%l_noco) THEN
-          eig(1:noccbd) = results%eig(n_start:n_end,ikpt,1)
-       ELSE
-          eig(1:noccbd) = results%eig(n_start:n_end,ikpt,jspin)
-       END IF
+       eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
 
        IF (vacuum%nstm.EQ.3.AND.input%film) THEN
           CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),input,jspin,kpts,&
@@ -321,73 +284,14 @@ CONTAINS
                      enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
        END IF
 
-       !--->    if slice, only a certain bands are taken into account
-       !--->    in order to do this the coresponding eigenvalues, eigenvectors
-       !--->    and weights have to be copied to the beginning of the arrays
-       !--->    eig, z and we and the number of occupied bands (noccbd) has to
-       !--->    changed
-       IF (sliceplot%slice.AND.noccbd.GT.0) THEN
-          IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
-          IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
-          nslibd = 0
-          IF (input%pallst) we(:nbands) = kpts%wtkpt(ikpt)
-          IF (sliceplot%kk.EQ.0) THEN
-             IF (mpi%irank==0) THEN
-                WRITE (16,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
-                WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
-             END IF
-             DO i = 1,nbands
-                IF (eig(i).GE.sliceplot%e1s .AND. eig(i).LE.sliceplot%e2s) THEN
-                   nslibd = nslibd + 1
-                   eig(nslibd) = eig(i)
-                   we(nslibd) = we(i)
-                   if (zmat%l_real) THEN
-                      zMat%z_r(:,nslibd) = zMat%z_r(:,i)
-                   else
-                      zMat%z_c(:,nslibd) = zMat%z_c(:,i)
-                   endif
-                END IF
-             END DO
-             IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:',nslibd
-          ELSE IF (sliceplot%kk.EQ.ikpt) THEN
-             IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
-             IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
-                IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
-                     sliceplot%nnne,eig(sliceplot%nnne)
-                nslibd = 1
-                eig(1) = eig(sliceplot%nnne)
-                we(1) = we(sliceplot%nnne)
-                if (zmat%l_real) Then
-                   zMat%z_r(:,1) = zMat%z_r(:,sliceplot%nnne)
-                else
-                   zMat%z_c(:,1) = zMat%z_c(:,sliceplot%nnne)
-                endif
-             ELSE
-                DO i = 1,nbands
-                   IF (eig(i).GE.sliceplot%e1s .AND. eig(i).LE.sliceplot%e2s) THEN
-                      nslibd = nslibd + 1
-                      eig(nslibd) = eig(i)
-                      we(nslibd) = we(i)
-                      if (zmat%l_real) THEN
-                         zMat%z_r(:,nslibd) = zMat%z_r(:,i)
-                      else
-                         zMat%z_c(:,nslibd) = zMat%z_c(:,i)
-                      endif
-                   END IF
-                END DO
-                IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
-             END IF
-          END IF
-          noccbd = nslibd
-       END IF ! sliceplot%slice
-
        IF (noccbd.EQ.0) GO TO 199
 
        !--->    in normal iterations the charge density of the unoccupied
        !--->    does not need to be calculated (in pwden, vacden and abcof)
-       IF (banddos%dos.AND. .NOT.(l_evp.AND.(mpi%isize.GT.1)) ) THEN
+       IF (banddos%dos.AND. .NOT.(cdnvalKLoop%l_evp.AND.(mpi%isize.GT.1)) ) THEN
           noccbd=nbands
        END IF
+
        !     ----> add in spin-doubling factor
        we(:noccbd) = 2.0 * we(:noccbd) / input%jspins
 
@@ -451,7 +355,7 @@ CONTAINS
           !--->       atom and angular momentum
           IF (.not.sliceplot%slice) THEN
              CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                         skip_t,l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
+                         skip_t,cdnvalKLoop%l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
 
              IF (noco%l_mperp.AND.(ispin == jsp_end)) THEN
                 CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges)

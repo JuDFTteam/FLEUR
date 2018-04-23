@@ -197,8 +197,24 @@ PRIVATE
          PROCEDURE,PASS :: init => orbcomp_init
    END TYPE t_orbcomp
 
+   TYPE t_cdnvalKLoop
+
+      INTEGER              :: ikptIncrement
+      INTEGER              :: ikptStart
+      INTEGER              :: nkptExtended
+      LOGICAL              :: l_evp
+
+      INTEGER, ALLOCATABLE :: noccbd(:)
+      INTEGER, ALLOCATABLE :: nStart(:)
+      INTEGER, ALLOCATABLE :: nEnd(:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => cdnvalKLoop_init
+   END TYPE t_cdnvalKLoop
+
+
 PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs
-PUBLIC t_mcd, t_regionCharges, t_moments, t_orbcomp
+PUBLIC t_mcd, t_regionCharges, t_moments, t_orbcomp, t_cdnvalKLoop
 
 CONTAINS
 
@@ -717,5 +733,141 @@ SUBROUTINE orbcomp_init(thisOrbcomp,banddos,dimension,atoms)
    thisOrbcomp%qmtp = 0.0
 
 END SUBROUTINE orbcomp_init
+
+SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+
+   USE m_types_setup
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_misc
+
+   IMPLICIT NONE
+
+   CLASS(t_cdnvalKLoop),           INTENT(INOUT) :: thisCdnvalKLoop
+   TYPE(t_mpi),                    INTENT(IN)    :: mpi
+   TYPE(t_input),                  INTENT(IN)    :: input
+   TYPE(t_kpts),                   INTENT(IN)    :: kpts
+   TYPE(t_banddos),                INTENT(IN)    :: banddos
+   TYPE(t_noco),                   INTENT(IN)    :: noco
+   TYPE(t_results),                INTENT(IN)    :: results
+   TYPE(t_sliceplot),    OPTIONAL, INTENT(IN)    :: sliceplot
+
+   INTEGER,                        INTENT(IN)    :: jspin
+
+   INTEGER :: jsp, iBand, ikpt, nslibd, noccbd_l
+
+   thisCdnvalKLoop%l_evp = .FALSE.
+   IF (kpts%nkpt < mpi%isize) THEN
+      thisCdnvalKLoop%l_evp = .TRUE.
+      thisCdnvalKLoop%nkptExtended = kpts%nkpt
+      thisCdnvalKLoop%ikptStart = 1
+      thisCdnvalKLoop%ikptIncrement = 1
+   ELSE
+      ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
+      thisCdnvalKLoop%nkptExtended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
+      thisCdnvalKLoop%ikptStart = mpi%irank + 1
+      thisCdnvalKLoop%ikptIncrement = mpi%isize
+   END IF
+
+   IF (ALLOCATED(thisCdnvalKLoop%noccbd)) DEALLOCATE (thisCdnvalKLoop%noccbd)
+   IF (ALLOCATED(thisCdnvalKLoop%nStart)) DEALLOCATE (thisCdnvalKLoop%nStart)
+   IF (ALLOCATED(thisCdnvalKLoop%nEnd)) DEALLOCATE (thisCdnvalKLoop%nEnd)
+
+   ALLOCATE(thisCdnvalKLoop%noccbd(kpts%nkpt))
+   ALLOCATE(thisCdnvalKLoop%nStart(kpts%nkpt))
+   ALLOCATE(thisCdnvalKLoop%nEnd(kpts%nkpt))
+
+   thisCdnvalKLoop%noccbd = 0
+   thisCdnvalKLoop%nStart = 1
+   thisCdnvalKLoop%nEnd = -1
+
+   jsp = MERGE(1,jspin,noco%l_noco)
+
+   ! determine bands to be used for each k point, MPI process
+   DO ikpt = thisCdnvalKLoop%ikptStart, kpts%nkpt, thisCdnvalKLoop%ikptIncrement
+
+      DO iBand = 1,results%neig(ikpt,jsp)
+         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst) THEN
+            thisCdnvalKLoop%noccbd(ikpt) = thisCdnvalKLoop%noccbd(ikpt) + 1
+         END IF
+      END DO
+
+      IF (banddos%dos) thisCdnvalKLoop%noccbd(ikpt) = results%neig(ikpt,jsp)
+
+      thisCdnvalKLoop%nStart(ikpt) = 1
+      thisCdnvalKLoop%nEnd(ikpt)   = thisCdnvalKLoop%noccbd(ikpt)
+
+      !--->    if slice, only certain bands are taken into account
+      IF(PRESENT(sliceplot)) THEN
+         IF (sliceplot%slice.AND.thisCdnvalKLoop%noccbd(ikpt).GT.0) THEN
+            thisCdnvalKLoop%nStart(ikpt) = 1
+            thisCdnvalKLoop%nEnd(ikpt)   = -1
+            IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
+            IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
+            nslibd = 0
+            IF (sliceplot%kk.EQ.0) THEN
+               IF (mpi%irank==0) THEN
+                  WRITE (16,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
+                  WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+               END IF
+
+               iBand = 1
+               DO WHILE (results%eig(iBand,ikpt,jsp).LT.sliceplot%e1s)
+                  iBand = iBand + 1
+                  IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
+               END DO
+               thisCdnvalKLoop%nStart(ikpt) = iBand
+               IF(iBand.LE.results%neig(ikpt,jsp)) THEN
+                  DO WHILE (results%eig(iBand,ikpt,jsp).LE.sliceplot%e2s)
+                     iBand = iBand + 1
+                     IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
+                  END DO
+                  iBand = iBand - 1
+               END IF
+               thisCdnvalKLoop%nEnd(ikpt) = iBand
+               nslibd = MAX(0,thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1)
+               IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:', nslibd
+            ELSE IF (sliceplot%kk.EQ.ikpt) THEN
+               IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+               IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
+                  IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
+                       sliceplot%nnne,results%eig(sliceplot%nnne,ikpt,jsp)
+                  nslibd = 1
+                  thisCdnvalKLoop%nStart(ikpt) = sliceplot%nnne
+                  thisCdnvalKLoop%nEnd(ikpt) = sliceplot%nnne
+               ELSE
+                  iBand = 1
+                  DO WHILE (results%eig(iBand,ikpt,jsp).LT.sliceplot%e1s)
+                     iBand = iBand + 1
+                     IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
+                  END DO
+                  thisCdnvalKLoop%nStart(ikpt) = iBand
+                  IF(iBand.LE.results%neig(ikpt,jsp)) THEN
+                     DO WHILE (results%eig(iBand,ikpt,jsp).LE.sliceplot%e2s)
+                        iBand = iBand + 1
+                        IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
+                     END DO
+                     iBand = iBand - 1
+                  END IF
+                  thisCdnvalKLoop%nEnd(ikpt) = iBand
+                  nslibd = MAX(0,thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1)
+                  IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
+               END IF
+            END IF
+            thisCdnvalKLoop%noccbd(ikpt) = nslibd
+         END IF ! sliceplot%slice
+      END IF
+
+      IF (thisCdnvalKLoop%l_evp) THEN
+         noccbd_l = CEILING(REAL(thisCdnvalKLoop%noccbd(ikpt)) / mpi%isize)
+         thisCdnvalKLoop%nStart(ikpt) = thisCdnvalKLoop%nStart(ikpt) + mpi%irank*noccbd_l
+         thisCdnvalKLoop%nEnd(ikpt)   = min(thisCdnvalKLoop%nStart(ikpt)+(mpi%irank+1)*noccbd_l, thisCdnvalKLoop%noccbd(ikpt))
+         thisCdnvalKLoop%noccbd(ikpt) = thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1
+         IF (thisCdnvalKLoop%noccbd(ikpt).LT.1) thisCdnvalKLoop%noccbd(ikpt) = 0
+      END IF
+
+   END DO
+
+END SUBROUTINE cdnvalKLoop_init
 
 END MODULE m_types_cdnval
