@@ -285,7 +285,7 @@
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
                &           mpi,stars,sphhar,atoms,obsolete,&
-               &           sym,kpts,DIMENSION,input,&
+               &           sym,kpts,DIMENSION,input,field,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
                &           noco,oneD,xcpot,hybrid)
           ! initialize record length of the eig file
