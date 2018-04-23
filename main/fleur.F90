@@ -45,7 +45,6 @@ CONTAINS
     USE m_broyd_io
     USE m_qfix
     USE m_vgen
-    USE m_rhodirgen
     USE m_writexcstuff
     USE m_vmatgen
     USE m_eigen
