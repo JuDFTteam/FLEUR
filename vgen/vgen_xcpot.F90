@@ -167,7 +167,6 @@ CONTAINS
        CALL timestart ("Vxc in MT")
     END IF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(input%efield%vslope,1,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
     IF (xcpot%is_gga()) THEN

@@ -30,7 +30,7 @@ vgen/vgen_xcpot.F90
 vgen/vgen_finalize.F90
 vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
-vgen/rhodirgen.f90
+vgen/rotate_int_den_to_local.F90
 vgen/vintcz.f90
 vgen/visxc.f90
 vgen/visxcg.f90

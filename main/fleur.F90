@@ -98,7 +98,7 @@ CONTAINS
     TYPE(t_coreSpecInput) :: coreSpecInput
     TYPE(t_wann)     :: wann
     TYPE(t_potden)   :: vTot,vx,vCoul,vTemp
-    TYPE(t_potden)   :: inDen, outDen, inDenRot
+    TYPE(t_potden)   :: inDen, outDen
     CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
 
     !     .. Local Scalars ..
@@ -147,8 +147,7 @@ CONTAINS
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-    CALL inDenRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-
+ 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
 
@@ -175,7 +174,6 @@ CONTAINS
        it = it + 1
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/)&
             ,(/it,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
-       inDenRot = inDen
 
 !!$       !+t3e
 !!$       IF (input%alpha.LT.10.0) THEN
@@ -195,19 +193,6 @@ CONTAINS
 
           !      ----> potential generator
           !
-          !---> pk non-collinear
-          !--->        reload the density matrix from file rhomat_in
-          !--->        calculate spin-up and -down density for USE in the
-          !--->        potential generator and store the direction of
-          !--->        magnetization on file dirofmag
-          IF (noco%l_noco) THEN
-             CALL timestart("gen. spin-up and -down density")
-             CALL rhodirgen(DIMENSION,sym,stars,atoms,sphhar,&
-                  vacuum,cell,input,noco,oneD,inDenRot)
-             CALL timestop("gen. spin-up and -down density")
-          ENDIF
-          !---> pk non-collinear
-
           reap=.NOT.obsolete%disp
           input%total = .TRUE.
        ENDIF !mpi%irank.eq.0
@@ -217,7 +202,6 @@ CONTAINS
 
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
-       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDenRot)
 #endif
 
 
@@ -246,20 +230,9 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-            sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,inDenRot,vTot,vx,vCoul)
+            sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
-       IF (mpi%irank.EQ.0) THEN
-          !---> pk non-collinear
-          !--->          generate the four component matrix potential from spin up
-          !--->          and down potentials and direction of the magnetic field
-          IF (noco%l_noco) THEN
-             CALL timestart("generation of potential-matrix")
-             CALL vmatgen(stars, atoms,sphhar,vacuum,sym,input,oneD,inDenRot,vTot)
-             CALL timestop("generation of potential-matrix")
-          ENDIF
-          !
-       ENDIF ! mpi%irank.eq.0
 
 
 
@@ -278,7 +251,7 @@ CONTAINS
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,oneD,hybrid,&
-               it,eig_id,results,inDenRot,vTemp,vx)
+               it,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")

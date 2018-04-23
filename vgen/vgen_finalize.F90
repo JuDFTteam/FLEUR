@@ -6,13 +6,16 @@
 MODULE m_vgen_finalize
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,vTot)
+  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
     !     some rescaling is done here
     !     ***********************************************************
+    !     in noco case vmatgen is called to generate 2x2 int-potential
+    !     **********************************************************
     USE m_constants
+    USE m_vmatgen
     USE m_types
     IMPLICIT NONE
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
@@ -20,7 +23,8 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_stars),INTENT(IN)        :: stars
     TYPE(t_atoms),INTENT(IN)        :: atoms 
-    TYPE(t_potden),INTENT(INOUT)    :: vTot
+    TYPE(t_input),INTENT(IN)        :: input
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,denRot
     !     ..
     !     .. Local Scalars ..
     INTEGER i,js,n
@@ -42,6 +46,8 @@ CONTAINS
           ENDDO
        ENDDO
        DEALLOCATE(vtot%pw_w)
+    ELSEIF(noco%l_noco) THEN
+       CALL vmatgen(stars, atoms,vacuum,sym,input, denRot,vtot)
     ENDIF
 
     !Copy first vacuum into second vacuum if this was not calculated before 

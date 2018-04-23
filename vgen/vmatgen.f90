@@ -23,7 +23,7 @@ MODULE m_vmatgen
   !     Philipp Kurz 99/11/01
   !**********************************************************************
 CONTAINS
-  SUBROUTINE vmatgen(stars, atoms,sphhar,vacuum, sym,input,oneD, den,v)
+  SUBROUTINE vmatgen(stars, atoms,vacuum, sym,input, den,v)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -41,12 +41,11 @@ CONTAINS
     USE m_fft3d
     USE m_types
     IMPLICIT NONE
-    TYPE(t_oneD),INTENT(IN)   :: oneD
+!    TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_vacuum),INTENT(IN) :: vacuum
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_stars),INTENT(IN)  :: stars
-    TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_potden),INTENT(IN) :: den
     TYPE(t_potden),INTENT(INOUT):: v
@@ -121,8 +120,8 @@ CONTAINS
           DO ivac = 1,vacuum%nvac
              DO imz = 1,vacuum%nmzxyd
                 vziw = 0.0
-                IF (oneD%odi%d1) THEN
-
+                !IF (oneD%odi%d1) THEN
+                IF (.FALSE.) THEN
                    CALL judft_error("oneD not implemented",calledby="vmatgen")
                    !                  CALL fft2d(&
                    !     &                 oneD%k3,odi%M,odi%n2d,&
@@ -174,8 +173,8 @@ CONTAINS
           DO ivac = 1,vacuum%nvac
              DO imz = 1,vacuum%nmzxyd
                 fftwork=0.0
-                IF (oneD%odi%d1) THEN
-
+                !IF (oneD%odi%d1) THEN
+                IF (.FALSE.) THEN
                    CALL judft_error("oneD not implemented",calledby="vmatgen")
                    !                CALL fft2d(&
                    !     &                 oneD%k3,odi%M,odi%n2d,&
@@ -194,8 +193,9 @@ CONTAINS
        DO ivac = 1,vacuum%nvac
           DO imz = 1,vacuum%nmzxyd
              fftwork=0.0
-             IF (oneD%odi%d1) THEN
-                CALL judft_error("oneD not implemented",calledby="vmatgen")
+             !IF (oneD%odi%d1) THEN
+             IF (.FALSE.) THEN
+             CALL judft_error("oneD not implemented",calledby="vmatgen")
                 !              CALL fft2d(&
                 !   &              oneD%k3,odi%M,odi%n2d,&
                 !   &              vvacxy(0,imz,ivac,3),vvacxy(0,imz,ivac,4),&

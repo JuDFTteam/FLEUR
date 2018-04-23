@@ -7,7 +7,7 @@ MODULE m_vgen
   USE m_juDFT
 CONTAINS
   SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION, atoms,sphhar,stars,&
-       vacuum,sym,obsolete,cell,oneD,sliceplot,mpi, results,noco,den,denRot,vTot,vx,vCoul)
+       vacuum,sym,obsolete,cell,oneD,sliceplot,mpi, results,noco,den,vTot,vx,vCoul)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -17,6 +17,7 @@ CONTAINS
     !     TE_VEFF:   charge density-effective potential integral
     !     TE_EXC :   charge density-ex-corr.energy density integral
     !     ***********************************************************
+    USE m_rotate_int_den_to_local
     USE m_bfield
     USE m_vgen_coulomb
     USE m_vgen_xcpot
@@ -43,11 +44,11 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms 
-    TYPE(t_potden), INTENT(INOUT)   :: den, denRot
+    TYPE(t_potden), INTENT(INOUT)   :: den
     TYPE(t_potden),INTENT(INOUT)    :: vTot,vx,vCoul
     !     ..
 
-    TYPE(t_potden) :: workden
+    TYPE(t_potden) :: workden,denRot
 
     WRITE (6,FMT=8000)
 8000 FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
@@ -67,12 +68,19 @@ CONTAINS
     CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
 
     CALL vCoul%copy_both_spin(vTot)
-    
+
+    IF (noco%l_noco) THEN
+       CALL denRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
+       denRot=den
+       CALL rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,cell,input,&
+            noco,oneD,denRot)
+    ENDIF
+
     call vgen_xcpot(hybrid,input,xcpot,DIMENSION, atoms,sphhar,stars,&
        vacuum,sym, obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
 
     !ToDo, check if this is needed for more potentials as well...
-    CALL vgen_finalize(atoms,stars,vacuum,sym,noco,vTot)
+    CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
     DEALLOCATE(vcoul%pw_w,vx%pw_w)
 
     
