@@ -2,7 +2,7 @@ MODULE m_cdnval
   use m_juDFT
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-                    vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,den,regCharges,results,&
+                    vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,results,&
                     moments)
     !
     !     ***********************************************************
@@ -105,6 +105,7 @@ CONTAINS
     TYPE(t_atoms),         INTENT(IN)    :: atoms
     TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
     TYPE(t_potden),        INTENT(IN)    :: vTot
+    TYPE(t_cdnvalKLoop),   INTENT(IN)    :: cdnvalKLoop
     TYPE(t_potden),        INTENT(INOUT) :: den
     TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
     TYPE(t_moments),       INTENT(INOUT) :: moments
@@ -144,7 +145,6 @@ CONTAINS
     TYPE (t_usdus)            :: usdus
     TYPE (t_zMat)             :: zMat
     TYPE (t_orbcomp)          :: orbcomp
-    TYPE (t_cdnvalKLoop)      :: cdnvalKLoop
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
@@ -199,9 +199,6 @@ CONTAINS
     END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
-    IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
-
     l_write = input%cdinf.AND.mpi%irank==0
 
     DO n = 1,atoms%ntype
@@ -227,10 +224,9 @@ CONTAINS
     END DO
     DEALLOCATE (f,g,flo)
 
-    ALLOCATE (we(dimension%neigd))
-
-    CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
-
+    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
+    IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
+    ALLOCATE (we(MAXVAL(cdnvalKLoop%noccbd(:))))
     jsp = MERGE(1,jspin,noco%l_noco)
 
     DO ikpt = cdnvalKLoop%ikptStart, cdnvalKLoop%nkptExtended, cdnvalKLoop%ikptIncrement
@@ -285,12 +281,6 @@ CONTAINS
        END IF
 
        IF (noccbd.EQ.0) GO TO 199
-
-       !--->    in normal iterations the charge density of the unoccupied
-       !--->    does not need to be calculated (in pwden, vacden and abcof)
-       IF (banddos%dos.AND. .NOT.(cdnvalKLoop%l_evp.AND.(mpi%isize.GT.1)) ) THEN
-          noccbd=nbands
-       END IF
 
        !     ----> add in spin-doubling factor
        we(:noccbd) = 2.0 * we(:noccbd) / input%jspins

@@ -254,13 +254,13 @@ CONTAINS
        IF (zmat%l_real) THEN
           IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
              IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
-             zmat%z_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_r),nrec),SHAPE(zmat%z_r)))
+             zmat%z_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_r)-1,nrec),SHAPE(zmat%z_r)))
           ELSE
-             zmat%z_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%z_r),nrec),SHAPE(zmat%z_r))
+             zmat%z_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%z_r)-1,nrec),SHAPE(zmat%z_r))
           ENDIF
        ELSE !TYPE is (COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby = "eig66_mem")
-          zmat%z_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_c),nrec),SHAPE(zmat%z_c))
+          zmat%z_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_c)-1,nrec),SHAPE(zmat%z_c))
        END IF
     ENDIF
   END SUBROUTINE read_eig

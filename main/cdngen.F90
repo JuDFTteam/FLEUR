@@ -69,6 +69,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco)          :: noco_new
    TYPE(t_regionCharges) :: regCharges
    TYPE(t_moments)       :: moments
+   TYPE(t_cdnvalKLoop)   :: cdnvalKLoop
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy
@@ -87,8 +88,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL timestart("cdngen: cdnval")
+      CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
       CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,outDen,regCharges,results,moments)
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,results,moments)
       CALL timestop("cdngen: cdnval")
    END DO
 
