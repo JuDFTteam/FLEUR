@@ -44,6 +44,5 @@ CONTAINS
     TYPE(t_input),INTENT(INOUT) ::input
     input%sigma => sigma
     this%efield%sigma=>sigma
-    PRINT *,"Sigma OK"
   END SUBROUTINE init_field
 END MODULE m_types_field

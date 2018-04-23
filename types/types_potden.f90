@@ -151,5 +151,6 @@ CONTAINS
     pd%vacz=0.0
     pd%vacxy=CMPLX(0.0,0.0)
     pd%mmpMat = CMPLX(0.0,0.0)
+    IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
 END MODULE m_types_potden

@@ -48,6 +48,7 @@ CONTAINS
        DEALLOCATE(vtot%pw_w)
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars, atoms,vacuum,sym,input, denRot,vtot)
+       IF (ALLOCATED(vtot%pw_w)) DEALLOCATE(vtot%pw_w)
     ENDIF
 
     !Copy first vacuum into second vacuum if this was not calculated before 
