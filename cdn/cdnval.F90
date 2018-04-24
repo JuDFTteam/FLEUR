@@ -55,7 +55,6 @@ CONTAINS
     USE m_abcof
     USE m_nmat        ! calculate density matrix for LDA + U
     USE m_vacden
-    USE m_nstm3
     USE m_pwden
     USE m_forcea8
     USE m_forcea12
@@ -122,7 +121,6 @@ CONTAINS
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
 
     !     ...Local Arrays ..
-    INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
     REAL,    ALLOCATABLE :: we(:)
     REAL,    ALLOCATABLE :: eig(:)
@@ -139,6 +137,7 @@ CONTAINS
     TYPE (t_usdus)            :: usdus
     TYPE (t_zMat)             :: zMat
     TYPE (t_orbcomp)          :: orbcomp
+    TYPE (t_gVacMap)          :: gVacMap
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
@@ -163,7 +162,6 @@ CONTAINS
     ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end) )
     ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,dimension%jspd) )
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
-    ALLOCATE ( gvac1d(dimension%nv2d),gvac2d(dimension%nv2d) )
 
     ! --> Initializations
 
@@ -256,10 +254,7 @@ CONTAINS
 
        eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
 
-       IF (vacuum%nstm.EQ.3.AND.input%film) THEN
-          CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
-                     cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
-       END IF
+       CALL gVacMap%init(dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
        IF (noccbd.EQ.0) GO TO 199
 
@@ -290,7 +285,7 @@ CONTAINS
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
              CALL timestart("cdnval: vacden")
              CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
-                         gvac1d,gvac2d, we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
+                         gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
                          den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
              CALL timestop("cdnval: vacden")
           END IF

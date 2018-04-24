@@ -13,7 +13,9 @@ CONTAINS
                    cell,evac,vz,gvac1d,gvac2d)
 
     USE m_sort
-    USE m_types
+    USE m_types_setup
+    USE m_types_lapw
+    USE m_types_kpts
     IMPLICIT NONE
 
     TYPE(t_input),INTENT(IN)    :: input

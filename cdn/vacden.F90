@@ -5,14 +5,9 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(&
-       vacuum,DIMENSION,stars,oneD,&
-       kpts,input,cell,atoms,noco,banddos,&
-       gvac1,gvac2,&
-       we,ikpt,jspin,vz,&
-       ne,lapw,&
-       evac,eig,den,qvac,qvlay,&
-       stcoeff,zMat)
+  SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,cell,atoms,noco,banddos,&
+                    gVacMap,we,ikpt,jspin,vz,ne,lapw,evac,eig,den,qvac,qvlay,&
+                    stcoeff,zMat)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -65,6 +60,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_gVacMap),INTENT(IN)    :: gVacMap
     TYPE(t_potden),INTENT(INOUT)  :: den
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin      
@@ -80,7 +76,6 @@ CONTAINS
     REAL                   :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
     REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
     !
     !     local STM variables
@@ -244,17 +239,14 @@ CONTAINS
        DO j=1, n2max
           mapg2k(j)=j
           DO i=1, nv2(jspin)
-             IF ( kvac1(i,jspin).EQ.gvac1(j) .AND.&
-                  &              kvac2(i,jspin).EQ.gvac2(j) ) &
-                  &              mapg2k(j)=i
+             IF (kvac1(i,jspin).EQ.gVacMap%gvac1d(j).AND.kvac2(i,jspin).EQ.gVacMap%gvac2d(j)) mapg2k(j)=i
           END DO
        END DO
     END IF
     !
     !-dw
     IF (noco%l_noco) THEN
-       OPEN (25,FILE='potmat',FORM='unformatted',&
-            &         STATUS='old')
+       OPEN (25,FILE='potmat',FORM='unformatted',STATUS='old')
        !--->    skip the four components of the interstitial potential matrix
        DO ipot = 1,3
           READ (25)

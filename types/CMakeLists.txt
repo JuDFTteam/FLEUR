@@ -17,6 +17,7 @@ types/types_setup.F90
 types/types_usdus.F90
 types/types_cdnval.f90
 types/types_field.F90
+types/types_regionCharges.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}
@@ -36,4 +37,5 @@ types/types_enpara.F90
 types/types_setup.F90
 types/types_usdus.F90
 types/types_cdnval.f90
+types/types_regionCharges.f90
 )

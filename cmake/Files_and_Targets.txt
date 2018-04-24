@@ -54,7 +54,7 @@ set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
 eigen/vec_for_lo.f90 eigen/orthoglo.F90 juDFT/usage_data.F90
 global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90 global/find_enpara.f90
 juDFT/info.F90 juDFT/stop.F90 juDFT/args.F90 juDFT/time.F90 juDFT/init.F90 juDFT/sysinfo.F90 io/w_inpXML.f90 init/julia.f90 global/utility.F90 
-init/compile_descr.F90 init/kpoints.f90 io/xmlOutput.F90 init/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90)
+init/compile_descr.F90 init/kpoints.f90 io/xmlOutput.F90 init/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 

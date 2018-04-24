@@ -530,7 +530,7 @@ CONTAINS
 
   SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
     USE m_types_setup
-    USE m_types_cdnval
+    USE m_types_regionCharges
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)    :: enpara
     TYPE(t_input),INTENT(IN)         :: input
