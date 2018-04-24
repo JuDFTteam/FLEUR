@@ -20,9 +20,8 @@
      <                     n_bands,n_size)
       USE m_eig66_io, ONLY : read_eig
       IMPLICIT NONE
-!
+
 ! Arguments ...
-!
       INTEGER, INTENT (IN) :: eig_id,irank,isize
       INTEGER, INTENT (IN) :: jspin,jspins
       LOGICAL, INTENT (IN) :: l_noco
@@ -34,20 +33,17 @@
  
       INTEGER isp
 
-      IF (l_noco) THEN
-         CALL read_eig(eig_id,1,1,
-     <                 neig=n_bands(1))
-      ELSE
-         CALL read_eig(eig_id,1,jspin,
-     <                 neig=n_bands(1))
-      ENDIF
-c
+      isp = MERGE(1,jspin,l_noco)
+
+      CALL read_eig(eig_id,1,isp,neig=n_bands(1))
+
 c n_size is the number of records per k-point,
 c n_bands(i) the number of ev's processed on n_rank=0...i-1
-c
+
       n_size = 1
 
       n_bands(0) = 0
+
       END SUBROUTINE cdn_read0
 !
 !--------------------------------------------------------------------
@@ -83,26 +79,13 @@ c
       INTEGER mpiierr
 #endif
 
-      isp = MERGE(1,jspin,l_noco.OR.l_ss)
+      isp = MERGE(1,jspin,l_noco)
 
-! For Non-Collinear, Spin-Spirals
       CALL timestart("cdn_read")
-      IF (l_ss.OR.l_noco) THEN
-         CALL read_eig(eig_id,ikpt,isp, neig=nbands)
-         CALL read_eig(eig_id,ikpt,isp,n_start=n_start,n_end=n_end,
-     <                 eig=eig,zmat=zmat)
-! For Collinear
-      ELSE
-         IF (zmat%l_real) THEN
-            zmat%z_r=0
-         ELSE
-            zmat%z_c=0
-         ENDIF
- 
-         CALL read_eig(eig_id,ikpt,isp,n_start=n_start,n_end=n_end,
-     <                 neig=nbands,eig=eig,zmat=zmat)
 
-      ENDIF
+      CALL read_eig(eig_id,ikpt,isp,n_start=n_start,n_end=n_end,
+     <              neig=nbands,eig=eig,zmat=zmat)
+
       CALL timestop("cdn_read")
       
 !      IF (nbands>neigd)   CALL juDFT_error("nbands.GT.neigd",calledby

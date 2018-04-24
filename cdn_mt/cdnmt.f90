@@ -10,7 +10,7 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(jspd,atoms,sphhar,llpd, noco,l_fmpl,jsp_start,jsp_end, epar,&
+  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end, epar,&
                    ello,vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -26,7 +26,6 @@ CONTAINS
     TYPE(t_moments), INTENT(INOUT) :: moments
 
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: llpd 
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
     LOGICAL, INTENT (IN) :: l_fmpl
     !     ..

@@ -395,30 +395,23 @@ CONTAINS
                          lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
           END IF
 
-          !--dw   now write k-point data to tmp_dos
-          CALL write_dos(eig_id,ikpt,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,ikpt,jspin),regCharges%qis(:,ikpt,jspin),&
-                         regCharges%qvlay(:,:,:,ikpt,jspin),regCharges%qstars,ksym,jsym,mcd%mcd,slab%qintsl,&
-                         slab%qmtsl(:,:),orbcomp%qmtp(:,:),orbcomp%comp)
+          CALL write_dos(eig_id,ikpt,jspin,regCharges,slab,orbcomp,ksym,jsym,mcd%mcd)
 
           CALL timestop("cdnval: write_info")
-          !-new_sl
        END IF
     END DO !---> end of k-point loop
-    DEALLOCATE (we)
-    !+t3e
+
 #ifdef CPP_MPI
     CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
-       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-                        input,noco,l_fmpl,ispin,llpd, den%vacxy(1,1,1,ispin),&
-                        den%vacz(1,1,ispin),den%pw(1,ispin),regCharges,&
+       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,l_fmpl,ispin,llpd,regCharges,&
                         results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
 
     IF (mpi%irank==0) THEN
-       CALL cdnmt(dimension%jspd,atoms,sphhar,llpd,noco,l_fmpl,jsp_start,jsp_end,&
+       CALL cdnmt(dimension%jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end,&
                   enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),denCoeffs,&
                   usdus,orb,denCoeffsOffdiag,moments,den%mt)
 
@@ -435,13 +428,6 @@ CONTAINS
        END IF
 
        DO ispin = jsp_start,jsp_end
-          IF (.NOT.sliceplot%slice) THEN
-             DO n=1,atoms%ntype
-                enpara%el1(0:3,n,ispin)=regCharges%ener(0:3,n,ispin)/regCharges%sqal(0:3,n,ispin)
-                IF (atoms%nlo(n)>0) enpara%ello1(:atoms%nlo(n),n,ispin)=regCharges%enerlo(:atoms%nlo(n),n,ispin)/regCharges%sqlo(:atoms%nlo(n),n,ispin)
-             END DO
-             IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
-          END IF
 
           !--->      check continuity of charge density
           IF (input%cdinf) THEN
@@ -451,14 +437,14 @@ CONTAINS
              CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
              CALL timestop("cdnval: cdninf-stuff")
           END IF
-          !+for
+
           !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) THEN
              CALL timestart("cdnval: force_a8")
              CALL force_a8(input,atoms,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,results)
              CALL timestop("cdnval: force_a8")
           END IF
-          !-for
+
        END DO ! end of loop ispin = jsp_start,jsp_end
        CALL closeXMLElement('mtCharges')
 

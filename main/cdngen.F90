@@ -110,6 +110,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 
+   CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
+
    IF (mpi%irank.EQ.0) THEN
       CALL openXMLElementNoAttributes('allElectronCharges')
       CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)

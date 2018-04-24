@@ -10,7 +10,7 @@ MODULE m_mpi_col_den
   !
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-       input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,regCharges,&
+       input, noco,l_fmpl,jspin,llpd,regCharges,&
        results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
@@ -35,9 +35,6 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_fmpl
     ! ..
     ! ..  Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: qpw(stars%ng3)
-    COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2)
     COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     TYPE (t_orb),              INTENT(INOUT) :: orb
     TYPE (t_denCoeffs),        INTENT(INOUT) :: denCoeffs
@@ -55,36 +52,33 @@ CONTAINS
     ! ..  External Subroutines
     EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy,MPI_REDUCE
 
-    !
-    ! -> Collect qpw()
-    !
+
+    ! -> Collect den%pw(:,jspin)
     n = stars%ng3
     ALLOCATE(c_b(n))
-    CALL MPI_REDUCE(qpw,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(den%pw(:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_ccopy(n, c_b, 1, qpw, 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, den%pw(:,jspin), 1)
     ENDIF
     DEALLOCATE (c_b)
-    !
-    ! -> Collect rhtxy()
-    !
+
+    ! -> Collect den%vacxy(:,:,:,jspin)
     IF (input%film) THEN
 
        n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
        ALLOCATE(c_b(n))
-       CALL MPI_REDUCE(rhtxy,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, rhtxy, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%vacxy(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (c_b)
-       !
-       ! -> Collect rht()
-       !
+
+       ! -> Collect den%vacz(:,:,jspin)
        n = vacuum%nmzd*2
        ALLOCATE(r_b(n))
-       CALL MPI_REDUCE(rht,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%vacz(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, rht, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, den%vacz(:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
