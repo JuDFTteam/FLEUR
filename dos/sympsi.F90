@@ -18,13 +18,14 @@ MODULE m_sympsi
   ! Jussi Enkovaara, Juelich 2004
 
 CONTAINS
-  SUBROUTINE sympsi(bkpt,nv,kx,ky,kz,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat)
+  SUBROUTINE sympsi(lapw,jspin,sym,DIMENSION,ne,cell,eig,noco, ksym,jsym,zMat)
 
     USE m_grp_k
     USE m_inv3
     USE m_types
     IMPLICIT NONE
 
+    TYPE(t_lapw),INTENT(IN)        :: lapw
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -32,11 +33,10 @@ CONTAINS
     TYPE(t_zMat),INTENT(IN)        :: zMat
     !
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nv,ne
+    INTEGER, INTENT (IN) :: ne,jspin
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: kx(:),ky(:),kz(:)!(nvd) 
-    REAL,    INTENT (IN) :: bkpt(3),eig(DIMENSION%neigd)
+    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)
 
     INTEGER, INTENT (OUT):: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
     !     ..
@@ -72,9 +72,9 @@ CONTAINS
 
     IF (soc) THEN
        ALLOCATE(su(2,2,2*sym%nop))
-       CALL grp_k(sym,mrot_k,cell,bkpt,nclass,nirr,c_table, grpname,irrname,su)
+       CALL grp_k(sym,mrot_k,cell,lapw%bkpt,nclass,nirr,c_table, grpname,irrname,su)
     ELSE
-       CALL grp_k(sym,mrot_k,cell,bkpt,nclass,nirr,c_table, grpname,irrname)
+       CALL grp_k(sym,mrot_k,cell,lapw%bkpt,nclass,nirr,c_table, grpname,irrname)
     ENDIF
     ALLOCATE(csum(ne,ne,nclass))
     ALLOCATE(chars(ne,nclass))
@@ -97,25 +97,25 @@ CONTAINS
     gmap=0
     DO c=1,nclass
        CALL inv3(mrot_k(:,:,c),mtmpinv,d)
-       kloop: DO k=1,nv
-          kv(1)=kx(k)
-          kv(2)=ky(k)
-          kv(3)=kz(k)
-          kv=kv+bkpt
+       kloop: DO k=1,lapw%nv(jspin)
+          kv(1)=lapw%k1(k,jspin)
+          kv(2)=lapw%k2(k,jspin)
+          kv(3)=lapw%k3(k,jspin)
+          kv=kv+lapw%bkpt
           kvtest=MATMUL(kv,mtmpinv)
           !         kvtest=MATMUL(kv,mrot_k(:,:,c))
-          DO i = 1,nv
-             kv(1)=kx(i)
-             kv(2)=ky(i)
-             kv(3)=kz(i)
-             kv=kv+bkpt
+          DO i = 1,lapw%nv(jspin)
+             kv(1)=lapw%k1(i,jspin)
+             kv(2)=lapw%k2(i,jspin)
+             kv(3)=lapw%k3(i,jspin)
+             kv=kv+lapw%bkpt
              IF (ABS(kvtest(1)-kv(1)).LT.small.AND.&
                   ABS(kvtest(2)-kv(2)).LT.small.AND. ABS(kvtest(3)-kv(3)).LT.small) THEN
                 gmap(k,c)=i
                 CYCLE kloop
              ENDIF
           ENDDO
-          WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for', k,kx(k),ky(k),kz(k)
+          WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for', k,lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin)
           RETURN
        ENDDO kloop
     ENDDO
@@ -124,16 +124,16 @@ CONTAINS
     DO i=1,ne
        norm(i)=0.0
        IF (soc) THEN
-          DO k=1,nv*2
+          DO k=1,lapw%nv(jspin)*2
              norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
           ENDDO
        ELSE
           IF (zmat%l_real) THEN
-             DO k=1,nv
+             DO k=1,lapw%nv(jspin)
                 norm(i)=norm(i)+ABS(zMat%z_r(k,i))**2
              ENDDO
           ELSE
-             DO k=1,nv
+             DO k=1,lapw%nv(jspin)
                 norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
              ENDDO
           ENDIF
@@ -161,21 +161,21 @@ CONTAINS
           DO n1=1,ndeg
              DO n2=1,ndeg
                 IF (zmat%l_real) THEN
-                   DO k=1,nv
+                   DO k=1,lapw%nv(jspin)
                       csum(n1,n2,c)=csum(n1,n2,c)+zMat%z_r(k,deg(n1))*&
                            zMat%z_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                    END DO
                 ELSE
                    IF (soc) THEN  
-                      DO k=1,nv
+                      DO k=1,lapw%nv(jspin)
 
                          csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(zMat%z_c(k,deg(n1)))*&
-                              (su(1,1,c)*zMat%z_c(gmap(k,c),deg(n2))+ su(1,2,c)*zMat%z_c(gmap(k,c)+nv,deg(n2)))+&
-                              CONJG(zMat%z_c(k+nv,deg(n1)))* (su(2,1,c)*zMat%z_c(gmap(k,c),deg(n2))+&
-                              su(2,2,c)*zMat%z_c(gmap(k,c)+nv,deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
+                              (su(1,1,c)*zMat%z_c(gmap(k,c),deg(n2))+ su(1,2,c)*zMat%z_c(gmap(k,c)+lapw%nv(jspin),deg(n2)))+&
+                              CONJG(zMat%z_c(k+lapw%nv(jspin),deg(n1)))* (su(2,1,c)*zMat%z_c(gmap(k,c),deg(n2))+&
+                              su(2,2,c)*zMat%z_c(gmap(k,c)+lapw%nv(jspin),deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
                       END DO
                    ELSE
-                      DO k=1,nv
+                      DO k=1,lapw%nv(jspin)
                          csum(n1,n2,c)=csum(n1,n2,c)+CONJG(zMat%z_c(k,deg(n1)))*&
                               zMat%z_c(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                       END DO
@@ -217,7 +217,7 @@ CONTAINS
     !>
 
     IF (.NOT.char_written) THEN
-       WRITE(444,124) bkpt
+       WRITE(444,124) lapw%bkpt
        WRITE(444,*) 'Group is ' ,grpname
        DO c=1,nirr
           IF (zmat%l_real)THEN

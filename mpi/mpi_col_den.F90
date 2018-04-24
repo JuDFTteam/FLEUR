@@ -10,7 +10,7 @@ MODULE m_mpi_col_den
   !
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-       input, noco,l_fmpl,jspin,llpd,regCharges,&
+       input, noco,l_fmpl,jspin,regCharges,&
        results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
@@ -31,7 +31,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     ! ..
     ! ..  Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jspin,llpd
+    INTEGER, INTENT (IN) :: jspin
     LOGICAL, INTENT (IN) :: l_fmpl
     ! ..
     ! ..  Array Arguments ..
@@ -104,7 +104,7 @@ CONTAINS
     !
     !--> Collect uunmt,udnmt,dunmt,ddnmt
     !
-    n = (llpd+1)*sphhar%nlhd*atoms%ntype
+    n = (((atoms%lmaxd*(atoms%lmaxd+3))/2)+1)*sphhar%nlhd*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(denCoeffs%uunmt(0:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN

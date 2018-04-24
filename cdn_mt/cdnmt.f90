@@ -10,8 +10,8 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end, epar,&
-                   ello,vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
+  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end,enpara,&
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -23,6 +23,7 @@ CONTAINS
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_sphhar),  INTENT(IN)    :: sphhar
     TYPE(t_atoms),   INTENT(IN)    :: atoms
+    TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
 
     !     .. Scalar Arguments ..
@@ -30,9 +31,7 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_fmpl
     !     ..
     !     .. Array Arguments ..
-    REAL, INTENT    (IN) :: epar(0:atoms%lmaxd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
-    REAL, INTENT    (IN) :: ello(atoms%nlod,atoms%ntype,jspd)
     REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
     TYPE (t_orb),              INTENT(IN) :: orb
     TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
@@ -66,7 +65,7 @@ CONTAINS
     !$OMP PARALLEL DEFAULT(none) &
 
     !$OMP SHARED(usdus,rho,moments,rho21,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,denCoeffs,sphhar,ello)&
+    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
     !$OMP SHARED(orb,noco,l_fmpl,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
@@ -87,7 +86,7 @@ CONTAINS
        !--->    spherical component
        DO ispin = jsp_start,jsp_end
           DO l = 0,atoms%lmax(itype)
-             CALL radfun(l,itype,ispin,epar(l,itype,ispin),vr(1,itype,ispin),atoms,&
+             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
              DO j = 1,atoms%jri(itype)
                 s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
@@ -106,7 +105,7 @@ CONTAINS
 
           CALL rhosphnlo(itype,atoms,sphhar,&
                usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
-               usdus%uulon(1,itype,ispin),ello(1,itype,ispin),&
+               usdus%uulon(1,itype,ispin),enpara%ello0(1,itype,ispin),&
                vr(1,itype,ispin),denCoeffs%aclo(1,itype,ispin),denCoeffs%bclo(1,itype,ispin),&
                denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
                denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&

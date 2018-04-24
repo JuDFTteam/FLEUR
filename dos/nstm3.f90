@@ -9,13 +9,9 @@ MODULE m_nstm3
   !
   !***********************************************************************
 CONTAINS
-  SUBROUTINE nstm3(&
-       &                 sym,atoms,vacuum,stars,ikpt,nv,&
-       &                 input,jspin,kpts,&
-       &                 cell,wk,k1,k2,&
-       &                 evac,vz,&
-       &                 gvac1d,gvac2d)
-    !
+  SUBROUTINE nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
+                   cell,evac,vz,gvac1d,gvac2d)
+
     USE m_sort
     USE m_types
     IMPLICIT NONE
@@ -24,17 +20,16 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
+    TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_kpts),INTENT(IN)     :: kpts
     TYPE(t_atoms),INTENT(IN)    :: atoms
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ikpt,nv      
+    INTEGER, INTENT (IN) :: ikpt   
     INTEGER, INTENT (IN) :: jspin      
-    REAL,    INTENT (IN) :: wk 
     !     ..
     !     .. Array  Arguments ..
-    INTEGER, INTENT (IN) :: k1(:),k2(:)
     REAL,    INTENT (IN) :: evac(2)
     REAL,    INTENT (IN) :: vz(:,:)!(vacuum%nmzd,2)
     INTEGER, INTENT (OUT) :: gvac1d(:),gvac2d(:) !(dimension%nv2d)
@@ -50,17 +45,17 @@ CONTAINS
     !
     IF (ikpt.EQ.1) THEN
        n2 = 0
-       k_loop: DO  k = 1,nv
+       k_loop: DO  k = 1,lapw%nv(jspin)
           DO j = 1,n2
-             IF (k1(k).EQ.gvac1(j).AND.k2(k).EQ.gvac2(j)) THEN
+             IF (lapw%k1(k,jspin).EQ.gvac1(j).AND.lapw%k2(k,jspin).EQ.gvac2(j)) THEN
                 CYCLE k_loop
              END IF
           ENDDO
           n2 = n2 + 1
-          gvac1(n2) = k1(k)
-          gvac2(n2) = k2(k)
+          gvac1(n2) = lapw%k1(k,jspin)
+          gvac2(n2) = lapw%k2(k,jspin)
           DO i=1,2
-             gvac(i)=k1(k)*cell%bmat(1,i)+k2(k)*cell%bmat(2,i)
+             gvac(i)=lapw%k1(k,jspin)*cell%bmat(1,i)+lapw%k2(k,jspin)*cell%bmat(2,i)
           END DO
           gvacl(n2) = SQRT(REAL(gvac(1)**2+gvac(2)**2))
        ENDDO k_loop
@@ -120,7 +115,7 @@ CONTAINS
     !  only write here if not on T3E
 
 
-    WRITE (87,'(i3,1x,f12.6)') ikpt,wk
+    WRITE (87,'(i3,1x,f12.6)') ikpt,kpts%wtkpt(ikpt)
 
   END SUBROUTINE nstm3
 END MODULE m_nstm3

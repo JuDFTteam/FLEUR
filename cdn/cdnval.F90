@@ -73,7 +73,7 @@ CONTAINS
     USE m_Ekwritesl   ! and write to file.
     USE m_abcrot2
     USE m_doswrite
-    USE m_cdnread, ONLY : cdn_read0, cdn_read
+    USE m_eig66_io, ONLY : read_eig
     USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
     USE m_corespec_io, only : corespec_init
     USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
@@ -112,23 +112,20 @@ CONTAINS
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    LOGICAL :: mpi_flag, mpi_status
 #endif
+
     !     .. Local Scalars ..
-    INTEGER :: llpd,ikpt,jsp_start,jsp_end,ispin,jsp
-    INTEGER :: i,ie,iv,ivac,j,k,l,n,ilo,isp,nbands,noccbd
+    INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
+    INTEGER :: i,ie,ivac,j,k,l,n,ilo,nbands,noccbd
     INTEGER :: skip_t,skip_tt
     INTEGER :: nStart,nEnd,nbasfcn
     LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
-    !     ...Local Arrays ..
-    INTEGER :: noccbd_in(kpts%nkpt)
-    INTEGER :: nStart_in(kpts%nkpt)
-    INTEGER :: nEnd_in(kpts%nkpt)
-    REAL    :: eig(dimension%neigd)
 
+    !     ...Local Arrays ..
     INTEGER, ALLOCATABLE :: gvac1d(:),gvac2d(:)
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
     REAL,    ALLOCATABLE :: we(:)
+    REAL,    ALLOCATABLE :: eig(:)
     REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
     TYPE (t_lapw)             :: lapw
@@ -145,7 +142,6 @@ CONTAINS
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
-    llpd=(atoms%lmaxd*(atoms%lmaxd+3))/2
     !---> l_fmpl is meant as a switch to to a plot of the full magnet.
     !---> density without the atomic sphere approximation for the magnet.
     !---> density. It is not completely implemented (lo's missing).
@@ -223,18 +219,18 @@ CONTAINS
     skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
     IF (noco%l_soc.OR.noco%l_noco)  skip_tt = 2 * skip_tt
     ALLOCATE (we(MAXVAL(cdnvalKLoop%noccbd(:))))
+    ALLOCATE (eig(MAXVAL(cdnvalKLoop%noccbd(:))))
     jsp = MERGE(1,jspin,noco%l_noco)
 
     DO ikpt = cdnvalKLoop%ikptStart, cdnvalKLoop%nkptExtended, cdnvalKLoop%ikptIncrement
+
        IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
-          ! Synchronizes the RMA operations
-          CALL MPI_BARRIER(mpi%mpi_comm,ie)
+          CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
 #endif
           EXIT
        END IF
 
-       ! -> Gu test: distribute ev's among the processors...
        CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
        skip_t = skip_tt
        noccbd = cdnvalKLoop%noccbd(ikpt)
@@ -242,12 +238,8 @@ CONTAINS
        nEnd = cdnvalKLoop%nEnd(ikpt)
 
        we=0.0
-       IF(noccbd.GT.0) THEN
-          we(1:noccbd) = results%w_iks(nStart:nEnd,ikpt,jsp)
-       END IF
-       IF ((sliceplot%slice).AND.(input%pallst)) THEN
-          we(:) = kpts%wtkpt(ikpt)
-       END IF
+       IF(noccbd.GT.0) we(1:noccbd) = results%w_iks(nStart:nEnd,ikpt,jsp)
+       IF ((sliceplot%slice).AND.(input%pallst)) we(:) = kpts%wtkpt(ikpt)
 
        IF (cdnvalKLoop%l_evp) THEN
           IF (nStart > skip_tt) skip_t = 0
@@ -257,20 +249,16 @@ CONTAINS
 
        nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
        CALL zMat%init(l_real,nbasfcn,noccbd)
-       CALL cdn_read(eig_id,dimension%nvd,dimension%jspd,mpi%irank,mpi%isize,&
-                     ikpt,jspin,zmat%nbasfcn,noco%l_ss,noco%l_noco,&
-                     noccbd,nStart,nEnd,nbands,eig,zMat)
+       CALL read_eig(eig_id,ikpt,jsp,n_start=nStart,n_end=nEnd,neig=nbands,zmat=zMat)
 #ifdef CPP_MPI
-       ! Synchronizes the RMA operations
-       CALL MPI_BARRIER(mpi%mpi_comm,ie)
+       CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
 #endif
 
        eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
 
        IF (vacuum%nstm.EQ.3.AND.input%film) THEN
-          CALL nstm3(sym,atoms,vacuum,stars,ikpt,lapw%nv(jspin),input,jspin,kpts,&
-                     cell,kpts%wtkpt(ikpt),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                     enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
+          CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
+                     cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),gvac1d,gvac2d)
        END IF
 
        IF (noccbd.EQ.0) GO TO 199
@@ -386,14 +374,8 @@ CONTAINS
           !--->    and write the information to the files dosinp and vacdos
           !--->    for dos and bandstructure plots
 
-          !--dw    parallel writing of vacdos,dosinp....
-          !        write data to direct access file first, write to formated file later by PE 0 only!
           !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
-
-          IF (banddos%ndir.GT.0) THEN
-             CALL sympsi(lapw%bkpt,lapw%nv(jspin),lapw%k1(:,jspin),lapw%k2(:,jspin),&
-                         lapw%k3(:,jspin),sym,dimension,nbands,cell,eig,noco, ksym,jsym,zMat)
-          END IF
+          IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,ksym,jsym,zMat)
 
           CALL write_dos(eig_id,ikpt,jspin,regCharges,slab,orbcomp,ksym,jsym,mcd%mcd)
 
@@ -404,7 +386,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
-       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,l_fmpl,ispin,llpd,regCharges,&
+       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,l_fmpl,ispin,regCharges,&
                         results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
@@ -412,8 +394,7 @@ CONTAINS
 
     IF (mpi%irank==0) THEN
        CALL cdnmt(dimension%jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end,&
-                  enpara%el0,enpara%ello0,vTot%mt(:,0,:,:),denCoeffs,&
-                  usdus,orb,denCoeffsOffdiag,moments,den%mt)
+                  enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
 
        IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
 
@@ -459,7 +440,7 @@ CONTAINS
 
     END IF ! end of (mpi%irank==0)
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ie)
+    CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
 #endif
 
     IF ((jsp_end.EQ.input%jspins)) THEN
