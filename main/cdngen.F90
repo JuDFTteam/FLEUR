@@ -34,6 +34,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_magMoms
    USE m_orbMagMoms
    USE m_cdncore
+   USE m_doswrite
+   USE m_Ekwritesl
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -69,7 +71,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco)          :: noco_new
    TYPE(t_regionCharges) :: regCharges
    TYPE(t_moments)       :: moments
+   TYPE(t_mcd)           :: mcd
+   TYPE(t_slab)          :: slab
    TYPE(t_cdnvalKLoop)   :: cdnvalKLoop
+
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy
@@ -90,9 +95,23 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL timestart("cdngen: cdnval")
       CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
       CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,results,moments)
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,results,moments,mcd,slab)
       CALL timestop("cdngen: cdnval")
    END DO
+
+   IF (mpi%irank.EQ.0) THEN
+      IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
+         CALL timestart("cdnval: dos")
+         CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
+         IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
+            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,slab)
+         END IF
+         CALL timestop("cdnval: dos")
+      END IF
+   END IF
+
+   IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
+   IF (vacuum%nstm.EQ.3) CALL juDFT_end("VACWAVE OK",mpi%irank)
 
    IF (mpi%irank.EQ.0) THEN
       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)

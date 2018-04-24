@@ -3,8 +3,8 @@ MODULE m_cdnval
 CONTAINS
   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
                     vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,results,&
-                    moments)
-    !
+                    moments,mcd,slab)
+
     !     ***********************************************************
     !         this subroutin is a modified version of cdnval.F.
     !         it calculates a layer charge distribution and an orbital
@@ -43,7 +43,7 @@ CONTAINS
     !     sqal     : l-like charge of each atom type. sum over all k-points
     !                and bands
     !***********************************************************************
-    !
+
     USE m_constants
     USE m_eig66_io,ONLY: write_dos
     USE m_genMTBasis
@@ -68,10 +68,8 @@ CONTAINS
     USE m_orbmom      ! coeffd for orbital moments
     USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
     USE m_qintsl      ! (slabs) and intergate the DOS in these vacuum%layers
-    USE m_orbcomp     ! calculate corbital composition (like p_x,p_y,p_z)
-    USE m_Ekwritesl   ! and write to file.
+    USE m_orbcomp     ! calculate orbital composition (like p_x,p_y,p_z)
     USE m_abcrot2
-    USE m_doswrite
     USE m_eig66_io, ONLY : read_eig
     USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
     USE m_corespec_io, only : corespec_init
@@ -105,6 +103,8 @@ CONTAINS
     TYPE(t_potden),        INTENT(INOUT) :: den
     TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
     TYPE(t_moments),       INTENT(INOUT) :: moments
+    TYPE(t_mcd),           INTENT(INOUT) :: mcd
+    TYPE(t_slab),          INTENT(INOUT) :: slab
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT(IN)              :: eig_id,jspin
@@ -131,9 +131,7 @@ CONTAINS
     TYPE (t_denCoeffs)        :: denCoeffs
     TYPE (t_denCoeffsOffdiag) :: denCoeffsOffdiag
     TYPE (t_force)            :: force
-    TYPE (t_slab)             :: slab
     TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
-    TYPE (t_mcd)              :: mcd
     TYPE (t_usdus)            :: usdus
     TYPE (t_zMat)             :: zMat
     TYPE (t_orbcomp)          :: orbcomp
@@ -393,16 +391,6 @@ CONTAINS
 
        IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
 
-       IF (((jspin.eq.input%jspins).OR.noco%l_mperp) .AND. (banddos%dos.or.banddos%vacdos.or.input%cdinf) ) THEN
-          CALL timestart("cdnval: dos")
-          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,&
-                        sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
-          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
-             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
-          END IF
-          CALL timestop("cdnval: dos")
-       END IF
-
        DO ispin = jsp_start,jsp_end
 
           !--->      check continuity of charge density
@@ -437,11 +425,6 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
 #endif
-
-    IF ((jsp_end.EQ.input%jspins)) THEN
-       IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2))  CALL juDFT_end("DOS OK",mpi%irank)
-       IF (vacuum%nstm.EQ.3)  CALL juDFT_end("VACWAVE OK",mpi%irank)
-    END IF
 
   END SUBROUTINE cdnval
 END MODULE m_cdnval

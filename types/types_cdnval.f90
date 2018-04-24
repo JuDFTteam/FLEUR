@@ -535,6 +535,14 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
 
    nsld=1
 
+   IF (ALLOCATED(thisSlab%nmtsl)) DEALLOCATE(thisSlab%nmtsl)
+   IF (ALLOCATED(thisSlab%nslat)) DEALLOCATE(thisSlab%nslat)
+   IF (ALLOCATED(thisSlab%zsl)) DEALLOCATE(thisSlab%zsl)
+   IF (ALLOCATED(thisSlab%volsl)) DEALLOCATE(thisSlab%volsl)
+   IF (ALLOCATED(thisSlab%volintsl)) DEALLOCATE(thisSlab%volintsl)
+   IF (ALLOCATED(thisSlab%qintsl)) DEALLOCATE(thisSlab%qintsl)
+   IF (ALLOCATED(thisSlab%qmtsl)) DEALLOCATE(thisSlab%qmtsl)
+
    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
       CALL slab_dim(atoms, nsld)
       ALLOCATE (thisSlab%nmtsl(atoms%ntype,nsld))
@@ -604,6 +612,11 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_atoms),         INTENT(IN)    :: atoms
+
+   IF (ALLOCATED(thisMCD%ncore)) DEALLOCATE(thisMCD%ncore)
+   IF (ALLOCATED(thisMCD%e_mcd)) DEALLOCATE(thisMCD%e_mcd)
+   IF (ALLOCATED(thisMCD%m_mcd)) DEALLOCATE(thisMCD%m_mcd)
+   IF (ALLOCATED(thisMCD%mcd)) DEALLOCATE(thisMCD%mcd)
 
    ALLOCATE (thisMCD%ncore(atoms%ntype))
    ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
