@@ -9,9 +9,8 @@ MODULE m_mpi_col_den
   ! collect all data calculated in cdnval on different pe's on pe 0
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-       input, noco,l_fmpl,jspin,regCharges,&
-       results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,&
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
     USE m_types
@@ -32,7 +31,6 @@ CONTAINS
     ! ..
     ! ..  Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin
-    LOGICAL, INTENT (IN) :: l_fmpl
     ! ..
     ! ..  Array Arguments ..
     COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
@@ -402,7 +400,7 @@ CONTAINS
           ENDIF
           DEALLOCATE (c_b)
 
-          IF (l_fmpl) THEN
+          IF (denCoeffsOffdiag%l_fmpl) THEN
              !
              !-->        Full magnetization plots: Collect uunmt21, etc.
              !

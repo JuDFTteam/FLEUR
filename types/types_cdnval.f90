@@ -61,6 +61,8 @@ PRIVATE
    END TYPE t_denCoeffs
 
    TYPE t_denCoeffsOffdiag
+      LOGICAL              :: l_fmpl
+
       ! spherical
       COMPLEX, ALLOCATABLE :: uu21(:,:)
       COMPLEX, ALLOCATABLE :: dd21(:,:)
@@ -347,6 +349,8 @@ SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fm
    TYPE(t_noco),       INTENT(IN)    :: noco
    TYPE(t_sphhar),     INTENT(IN)    :: sphhar
    LOGICAL,            INTENT(IN)    :: l_fmpl
+
+   thisDenCoeffsOffdiag%l_fmpl = l_fmpl
 
    IF (noco%l_mperp) THEN
       ALLOCATE (thisDenCoeffsOffdiag%uu21(0:atoms%lmaxd,atoms%ntype))

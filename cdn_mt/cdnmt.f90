@@ -10,7 +10,7 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end,enpara,&
+  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -28,8 +28,7 @@ CONTAINS
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
-    LOGICAL, INTENT (IN) :: l_fmpl
-    !     ..
+
     !     .. Array Arguments ..
     REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
     REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
@@ -56,7 +55,7 @@ CONTAINS
     CALL timestart("cdnmt")
 
     IF (noco%l_mperp) THEN
-       IF (l_fmpl) THEN
+       IF (denCoeffsOffdiag%l_fmpl) THEN
           ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
           rho21(:,:,:) = cmplx(0.0,0.0)
        ENDIF
@@ -66,7 +65,7 @@ CONTAINS
 
     !$OMP SHARED(usdus,rho,moments,rho21,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
-    !$OMP SHARED(orb,noco,l_fmpl,denCoeffsOffdiag,jspd)&
+    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
@@ -176,7 +175,7 @@ CONTAINS
              ENDDO
           ENDDO
 
-          IF (l_fmpl) THEN
+          IF (denCoeffsOffdiag%l_fmpl) THEN
              !--->        the following part can be used to calculate the full magnet.
              !--->        density without the atomic sphere approximation for the
              !--->        magnet. density, e.g. for plotting.
@@ -210,7 +209,7 @@ CONTAINS
                 ENDDO
              ENDDO
 
-          ENDIF ! l_fmpl
+          ENDIF ! denCoeffsOffdiag%l_fmpl
        ENDIF ! noco%l_mperp
 
     ENDDO ! end of loop over atom types
@@ -244,7 +243,7 @@ CONTAINS
 
     !---> for testing: to plot the offdiag. part of the density matrix it
     !---> is written to the file rhomt21. This file can read in pldngen.
-    IF (l_fmpl) THEN
+    IF (denCoeffsOffdiag%l_fmpl) THEN
        OPEN (26,file='rhomt21',form='unformatted',status='unknown')
        WRITE (26) rho21
        CLOSE (26)

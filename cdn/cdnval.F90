@@ -44,8 +44,7 @@ CONTAINS
     !                and bands
     !***********************************************************************
 
-    USE m_constants
-    USE m_eig66_io,ONLY: write_dos
+    USE m_eig66_io
     USE m_genMTBasis
     USE m_calcDenCoeffs
     USE m_mcdinit
@@ -70,7 +69,6 @@ CONTAINS
     USE m_qintsl      ! (slabs) and intergate the DOS in these vacuum%layers
     USE m_orbcomp     ! calculate orbital composition (like p_x,p_y,p_z)
     USE m_abcrot2
-    USE m_eig66_io, ONLY : read_eig
     USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
     USE m_corespec_io, only : corespec_init
     USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
@@ -118,7 +116,7 @@ CONTAINS
     INTEGER :: i,ie,ivac,j,k,l,n,ilo,nbands,noccbd
     INTEGER :: skip_t,skip_tt
     INTEGER :: nStart,nEnd,nbasfcn
-    LOGICAL :: l_fmpl,l_evp,l_orbcomprot,l_real, l_write
+    LOGICAL :: l_evp,l_orbcomprot,l_real, l_write
 
     !     ...Local Arrays ..
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
@@ -139,10 +137,6 @@ CONTAINS
 
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
-    !---> l_fmpl is meant as a switch to to a plot of the full magnet.
-    !---> density without the atomic sphere approximation for the magnet.
-    !---> density. It is not completely implemented (lo's missing).
-    l_fmpl = .false.
     IF (noco%l_mperp) THEN
        !--->    when the off-diag. part of the desinsity matrix, i.e. m_x and
        !--->    m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
@@ -165,14 +159,16 @@ CONTAINS
 
     CALL usdus%init(atoms,input%jspins)
     CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
-    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,l_fmpl)
+    !---> The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
+    !---> density without the atomic sphere approximation for the magnet. density. It is not completely implemented (lo's missing).
+    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,.FALSE.)
     CALL force%init1(input,atoms)
     CALL orb%init(atoms,noco,jsp_start,jsp_end)
     CALL mcd%init1(banddos,dimension,input,atoms)
     CALL slab%init(banddos,dimension,atoms,cell)
     CALL orbcomp%init(banddos,dimension,atoms)
 
-    IF ((l_fmpl).AND.(.not.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
+    IF ((denCoeffsOffdiag%l_fmpl).AND.(.not.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
     IF ((banddos%ndir.EQ.-3).AND.banddos%dos.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
 
 ! calculation of core spectra (EELS) initializations -start-
@@ -357,7 +353,7 @@ CONTAINS
 
        IF (noco%l_mperp) THEN
           CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,denCoeffsOffdiag)
-          IF (l_fmpl) CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
+          IF (denCoeffsOffdiag%l_fmpl) CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
        END IF
 
 199    CONTINUE
@@ -379,14 +375,14 @@ CONTAINS
 #ifdef CPP_MPI
     CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
-       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,l_fmpl,ispin,regCharges,&
+       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,&
                         results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
     CALL timestop("cdnval: mpi_col_den")
 #endif
 
     IF (mpi%irank==0) THEN
-       CALL cdnmt(dimension%jspd,atoms,sphhar,noco,l_fmpl,jsp_start,jsp_end,&
+       CALL cdnmt(dimension%jspd,atoms,sphhar,noco,jsp_start,jsp_end,&
                   enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
 
        IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
