@@ -36,10 +36,8 @@ xc-pot/exchpbe.F
 xc-pot/excl91.f
 xc-pot/excpw91.f
 xc-pot/excwb91.f
-xc-pot/gaunt.f
 xc-pot/grdchlh.f
 xc-pot/pbecor2.f
-xc-pot/potl0.f
 xc-pot/relcor.f
 xc-pot/vxcepbe.f
 xc-pot/vxcl91.f
