@@ -861,7 +861,7 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
       IF (thisCdnvalKLoop%l_evp) THEN
          noccbd_l = CEILING(REAL(thisCdnvalKLoop%noccbd(ikpt)) / mpi%isize)
          thisCdnvalKLoop%nStart(ikpt) = thisCdnvalKLoop%nStart(ikpt) + mpi%irank*noccbd_l
-         thisCdnvalKLoop%nEnd(ikpt)   = min(thisCdnvalKLoop%nStart(ikpt)+(mpi%irank+1)*noccbd_l, thisCdnvalKLoop%noccbd(ikpt))
+         thisCdnvalKLoop%nEnd(ikpt)   = min(thisCdnvalKLoop%nStart(ikpt)+(mpi%irank+1)*noccbd_l-1, thisCdnvalKLoop%noccbd(ikpt))
          thisCdnvalKLoop%noccbd(ikpt) = thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1
          IF (thisCdnvalKLoop%noccbd(ikpt).LT.1) thisCdnvalKLoop%noccbd(ikpt) = 0
       END IF
