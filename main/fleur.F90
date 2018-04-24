@@ -65,7 +65,6 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
 #ifdef CPP_MPI
-    USE m_mpi_bc_all,  ONLY : mpi_bc_all
     USE m_mpi_bc_potden
 #endif
     USE m_eig66_io,   ONLY : open_eig, close_eig

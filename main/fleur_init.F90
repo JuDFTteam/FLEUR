@@ -283,7 +283,7 @@
                &           mpi,stars,sphhar,atoms,obsolete,&
                &           sym,kpts,DIMENSION,input,field,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
-               &           noco,oneD,xcpot,hybrid)
+               &           noco,oneD,hybrid)
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive 

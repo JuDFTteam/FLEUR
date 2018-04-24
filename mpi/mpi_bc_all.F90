@@ -10,13 +10,12 @@ CONTAINS
        mpi,stars,sphhar,atoms,obsolete,sym,&
        kpts,DIMENSION,input,field,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
-        xcpot,hybrid)
+        hybrid)
     !
     !**********************************************************************
     USE m_types
     IMPLICIT NONE
     INCLUDE 'mpif.h'
-    TYPE(t_xcpot),INTENT(INOUT)      :: xcpot
     TYPE(t_mpi),INTENT(INOUT)        :: mpi
     TYPE(t_dimension),INTENT(INOUT)  :: dimension
     TYPE(t_oneD),INTENT(INOUT)       :: oneD
@@ -48,7 +47,7 @@ CONTAINS
     EXTERNAL MPI_BCAST
 
     IF (mpi%irank.EQ.0) THEN
-       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype ; i(4)=xcpot%krla ; i(5)=1 ; i(6)=input%isec1
+       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype  ; i(5)=1 ; i(6)=input%isec1
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
@@ -261,10 +260,8 @@ CONTAINS
     !--- HF>
 
     IF (mpi%irank>0) THEN
-       ALLOCATE(xcpot%lda_atom(atoms%ntype))
        ALLOCATE(noco%socscale(atoms%ntype))
     ENDIF
-    CALL MPI_BCAST(xcpot%lda_atom,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%socscale,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
