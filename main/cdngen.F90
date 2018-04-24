@@ -118,9 +118,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
-   CALL cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,moments)
-
    IF (sliceplot%slice) THEN
       IF (mpi%irank.EQ.0) THEN
          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
@@ -128,6 +125,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       END IF
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
+
+   CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
+                stars,cell,sphhar,atoms,vTot,outDen,moments)
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
