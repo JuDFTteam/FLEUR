@@ -47,10 +47,7 @@ CONTAINS
     USE m_constants
     USE m_eig66_io,ONLY: write_dos
     USE m_genMTBasis
-    USE m_rhomt
-    USE m_rhonmt
-    USE m_rhomtlo
-    USE m_rhonmtlo
+    USE m_calcDenCoeffs
     USE m_mcdinit
     USE m_sympsi
     USE m_eparas      ! energy parameters and partial charges
@@ -218,8 +215,7 @@ CONTAINS
 
        IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,n,jspin)
 
-       IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,&
-                                  input%jspins,jspin,results%ef,&
+       IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,input%jspins,jspin,results%ef,&
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
     END DO
     DEALLOCATE (f,g,flo)
@@ -237,9 +233,6 @@ CONTAINS
 #endif
           EXIT
        END IF
-
-       ! uncomment this so that cdinf plots works for all states
-       ! noccbd = neigd
 
        ! -> Gu test: distribute ev's among the processors...
        CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
@@ -327,18 +320,15 @@ CONTAINS
        CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
 
        DO ispin = jsp_start,jsp_end
-          IF (input%l_f) THEN
-             CALL force%init2(noccbd,input,atoms)
-          END IF
+          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
+
           CALL timestart("cdnval: abcof")
           CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
                      eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                      eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
           CALL timestop("cdnval: abcof")
 
-          IF (atoms%n_u.GT.0) THEN
-             CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
-          END IF
+          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
           !--->       perform Brillouin zone integration and summation over the
           !--->       bands in order to determine the energy parameters for each
@@ -358,32 +348,14 @@ CONTAINS
              CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
              INQUIRE (file='orbcomprot',exist=l_orbcomprot)
-             IF (l_orbcomprot) THEN                           ! rotate ab-coeffs
-                CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin)
-             END IF
+             IF (l_orbcomprot) CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
 
              CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
           END IF
-          !-new
-          !--->          set up coefficients for the spherical and
-          CALL timestart("cdnval: rhomt")
-          CALL rhomt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin)
-          CALL timestop("cdnval: rhomt")
+
+          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
           IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
-          !--->          non-spherical m.t. density
-          CALL timestart("cdnval: rhonmt")
-          CALL rhonmt(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffs,ispin)
-          CALL timestop("cdnval: rhonmt")
-
-          !--->          set up coefficients of the local orbitals and the
-          !--->          flapw - lo cross terms for the spherical and
-          !--->          non-spherical mt density
-          CALL timestart("cdnval: rho(n)mtlo")
-          CALL rhomtlo(atoms,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
-
-          CALL rhonmtlo(atoms,sphhar,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
-          CALL timestop("cdnval: rho(n)mtlo")
 
           IF (input%l_f) THEN
              CALL timestart("cdnval: force_a12/21")

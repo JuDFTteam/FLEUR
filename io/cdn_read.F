@@ -75,48 +75,32 @@ c
       REAL,    INTENT (OUT) :: eig(:) !bkpt(3),eig(neigd)
    
       TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
-!
+
 ! Local variables ...
-!
-      INTEGER :: iv,j,isp,nmat
+      INTEGER :: isp
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
       INTEGER mpiierr
 #endif
 
-!
-! For Spin-Spirals
-!
+      isp = MERGE(1,jspin,l_noco.OR.l_ss)
+
+! For Non-Collinear, Spin-Spirals
       CALL timestart("cdn_read")
-      IF (l_ss) THEN
-         CALL read_eig(eig_id,ikpt,1, neig=nbands)
-         CALL read_eig(eig_id,ikpt,1,n_start=n_start,n_end=n_end,
+      IF (l_ss.OR.l_noco) THEN
+         CALL read_eig(eig_id,ikpt,isp, neig=nbands)
+         CALL read_eig(eig_id,ikpt,isp,n_start=n_start,n_end=n_end,
      <                 eig=eig,zmat=zmat)
-!
-! For Non-Collinear, but no Spin-Spirals
-!
-      ELSEIF (l_noco) THEN
-            CALL read_eig(
-     >        eig_id,ikpt,1, neig=nbands)
-        CALL read_eig(
-     >                 eig_id,ikpt,1,n_start=n_start,n_end=n_end,
-     <                 eig=eig,zmat=zmat)
-  !
 ! For Collinear
-!
       ELSE
- 
          IF (zmat%l_real) THEN
             zmat%z_r=0
          ELSE
             zmat%z_c=0
          ENDIF
  
-     
-      CALL read_eig(
-     >                  eig_id,ikpt,jspin,n_start=n_start,n_end=n_end,
-     <                  neig=nbands,eig=eig,
-     <                  zmat=zmat)
+         CALL read_eig(eig_id,ikpt,isp,n_start=n_start,n_end=n_end,
+     <                 neig=nbands,eig=eig,zmat=zmat)
 
       ENDIF
       CALL timestop("cdn_read")
