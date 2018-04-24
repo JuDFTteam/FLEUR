@@ -15,7 +15,6 @@
 !     ** r.pentcheva 08.05.96
 !     ********************************************************************
       USE m_types
-      USE m_xcall, ONLY : vxcall,excall
       USE m_fft3d
       IMPLICIT NONE
 !     ..
@@ -23,7 +22,7 @@
       INTEGER, INTENT (IN)         :: ifftd
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_xcpot),INTENT(IN)     :: xcpot
+      CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_potden),INTENT(IN)    :: den
       TYPE(t_potden),INTENT(INOUT) :: vxc,exc,vx
@@ -43,27 +42,21 @@
 !     ---> allocate arrays
 !
       ALLOCATE ( e_xc(0:ifftd-1),vcon(0:ifftd-1),v_xc(0:ifftd-1,input%jspins),&
-     &    af3(0:ifftd-1,input%jspins),bf3(0:ifftd-1) )
+           af3(0:ifftd-1,input%jspins),bf3(0:ifftd-1) )
 
       ALLOCATE( v_x(0:ifftd-1,input%jspins) )
 !
 !     transform charge density to real space
 !
       DO js = 1,input%jspins
-         CALL fft3d(&
-     &              af3(0,js),bf3,&
-     &              den%pw(1,js),&
-     &              stars,+1)
+         CALL fft3d(af3(0,js),bf3, den%pw(1,js), stars,+1)
       ENDDO
 
       IF (noco%l_noco) THEN 
 
         ALLOCATE (mx(0:ifftd-1),my(0:ifftd-1))
 
-        CALL fft3d(&
-     &             mx,my,&
-     &             den%pw(:,3),&
-     &             stars,+1)
+        CALL fft3d(mx,my, den%pw(:,3), stars,+1)
         DO i=0,27*stars%mx1*stars%mx2*stars%mx3-1
           chdens= (af3(i,1)+af3(i,2))/2.
           magmom= mx(i)**2 + my(i)**2 + ((af3(i,1)-af3(i,2))/2.)**2
@@ -79,17 +72,14 @@
 !
 !     calculate the exchange-correlation potential in  real space
 !
-       nt=ifftd
-       CALL vxcall&
-     &            (6,xcpot,input%jspins,&
-     &             ifftd,nt,af3,&
-     &             v_x,v_xc)
+      nt=ifftd
+      CALL xcpot%get_vxc(input%jspins,af3,v_xc,v_x)
       
 !
 !     ---> back fft to g space and add to coulomb potential for file nrp
 !
 
-      IF (input%total) THEN
+      IF (ALLOCATED(exc%pw_w)) THEN
 
          DO js = 1,input%jspins
 
@@ -97,10 +87,7 @@
              vcon(i)=stars%ufft(i)*v_xc(i,js)
              bf3(i)=0.0
            ENDDO
-           CALL fft3d(&
-     &                vcon,bf3,&
-     &                fg3,&
-     &                stars,-1)
+           CALL fft3d(vcon,bf3, fg3, stars,-1)
            fg3=fg3*stars%nstr
 
            DO k = 1,stars%ng3
@@ -111,10 +98,7 @@
              vcon(i)=stars%ufft(i)*v_x(i,js)
              bf3(i)=0.0
            ENDDO
-           CALL fft3d(&
-     &                vcon,bf3,&
-     &                fg3,&
-     &                stars,-1)
+           CALL fft3d(vcon,bf3, fg3, stars,-1)
            fg3=fg3*stars%nstr
 
            DO k = 1,stars%ng3
@@ -124,11 +108,8 @@
          ENDDO
 !
 !     calculate the ex.-cor energy density in real space
-!
-                CALL excall&
-     &               (6,xcpot,input%jspins,&
-     &                ifftd,nt,af3,&
-     &                e_xc)
+         !
+         CALL xcpot%get_exc(input%jspins,af3,e_xc)
 
          DO i=0,ifftd-1
            vcon(i)=stars%ufft(i)*e_xc(i)
@@ -137,28 +118,19 @@
 !
 !         ---> back fft to g space
 !
-         CALL fft3d(&
-     &              vcon,bf3,&
-     &              exc%pw_w(:,1),&
-     &              stars,-1)
+         CALL fft3d(vcon,bf3, exc%pw_w(:,1), stars,-1)
          exc%pw_w(:,1)=exc%pw_w(:,1)*stars%nstr
 !
       END IF ! input%total
 
       DO js = 1,input%jspins
          bf3(0:ifftd-1)=0.0
-         CALL fft3d(&
-     &              v_xc(0,js),bf3,&
-     &              fg3,&
-     &              stars,-1)
+         CALL fft3d(v_xc(0,js),bf3, fg3, stars,-1)
          DO k = 1,stars%ng3
             vxc%pw(k,js) = vxc%pw(k,js) + fg3(k)
          ENDDO
          
-         CALL fft3d(&
-     &              v_x(0,js),bf3,&
-     &              fg3,&
-     &              stars,-1)
+         CALL fft3d(v_x(0,js),bf3, fg3, stars,-1)
          DO k = 1,stars%ng3
             vx%pw(k,js) = vx%pw(k,js) + fg3(k)
          ENDDO      

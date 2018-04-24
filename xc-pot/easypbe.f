@@ -19,12 +19,12 @@ c----------------------------------------------------------------------
 
       USE m_exchpbe
       USE m_corpbe
-      USE m_types
+      USE m_types_xcpot_data
       IMPLICIT NONE
 
 ! .. Arguments ..
-      type(t_xcpot),intent(in)::xcpot
-      INTEGER, INTENT (IN) :: lcor     ! flag to do correlation(=0=>don't)
+      TYPE(t_xcpot_data),INTENT(IN)::xcpot
+      INTEGER, INTENT (IN) :: lcor ! flag to do correlation(=0=>don't)
       INTEGER, INTENT (IN) :: lpot     ! flag to do potential  (=0=>don't)
       REAL,    INTENT (IN) :: up,dn    ! density (spin up & down)
       REAL,    INTENT (IN) :: agrup,agrdn     ! |grad up|, |grad down|
@@ -158,7 +158,7 @@ c9999-
       ww = (agrup**2-agrdn**2-zet*agr**2)/ (rho*rho*twoksg**2)
 
       CALL corpbe(
-     >            xcpot,rs,zet,t,uu,vv,ww,1,lpot,
+     >            xcpot%is_PBEs,rs,zet,t,uu,vv,ww,1,lpot,
      <            ec,vcup,vcdn,h,dvcup,dvcdn)
 
       eclsd = ec

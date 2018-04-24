@@ -16,7 +16,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                  input,cell,xcpot,obsolete,noco,oneD)
 
    USE m_constants
-   USE m_xcall,     ONLY : vxcall
    USE m_qsf
    USE m_checkdopall
    USE m_cdnovlp
@@ -24,6 +23,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    USE m_qfix
    USE m_atom2
    USE m_types
+   USE m_types_xcpot_inbuild
    USE m_juDFT_init
 
    IMPLICIT NONE
@@ -40,16 +40,16 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    TYPE(t_input),INTENT(IN)    :: input
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
    TYPE(t_cell),INTENT(IN)     :: cell
-   TYPE(t_xcpot),INTENT(IN)    :: xcpot
+   CLASS(t_xcpot),INTENT(IN)   :: xcpot
 
    ! Local type instances
    TYPE(t_potden)   :: den
    TYPE(t_enpara)   :: enpara
-   TYPE(t_xcpot)    :: xcpot_dummy
+   TYPE(t_xcpot_inbuild)    :: xcpot_dummy
 
    ! Local Scalars
    REAL d,del,fix,h,r,rnot,z,bm,qdel
-   REAL denz1(1),vacxpot(1),vacpot(1) 
+   REAL denz1(1,1),vacxpot(1,1),vacpot(1,1) 
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin 
    INTEGER nw,ilo,natot,nat 
 
@@ -308,17 +308,17 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                      sigm(i) = (i-1)*vacuum%delz*den%vacz(i,ivac,ispin)
                   END DO
                   CALL qsf(vacuum%delz,sigm,vacpar(ivac),vacuum%nmz,0)
-                  denz1(1) = den%vacz(1,ivac,ispin)          ! get estimate for potential at vacuum boundary
-                  CALL  vxcall(6,xcpot_dummy,1,1,1,denz1,vacxpot,vacpot)
+                  denz1 = den%vacz(1,ivac,ispin)          ! get estimate for potential at vacuum boundary
+                  CALL xcpot%get_vxc(1,denz1,vacpot,vacxpot)
                   ! seems to be the best choice for 1D not to substract vacpar
                   IF (.NOT.oneD%odi%d1) THEN
-                     vacpot(1) = vacpot(1) - fpi_const*vacpar(ivac)
+                     vacpot = vacpot - fpi_const*vacpar(ivac)
                   END IF
                   IF (obsolete%lepr.EQ.1) THEN
-                     vacpar(ivac) = -0.2 - vacpot(1)
+                     vacpar(ivac) = -0.2 - vacpot(1,1)
                      WRITE (6,'(" vacuum",i2," reference energy =",f12.6)') ivac,vacpot
                   ELSE
-                     vacpar(ivac) = vacpot(1)
+                     vacpar(ivac) = vacpot(1,1)
                   END IF
                END DO
                IF (vacuum%nvac.EQ.1) vacpar(2) = vacpar(1)

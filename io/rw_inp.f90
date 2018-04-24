@@ -37,7 +37,7 @@
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
       TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
-      TYPE(t_xcpot),INTENT(INOUT)    :: xcpot
+      TYPE(t_xcpot_inbuild),INTENT(INOUT)    :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
       REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3)

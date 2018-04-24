@@ -49,7 +49,7 @@
       TYPE(t_noco)      :: noco
       TYPE(t_sliceplot) :: sliceplot
       TYPE(t_banddos)   :: banddos
-      TYPE(t_xcpot)     :: xcpot
+      TYPE(t_xcpot_inbuild)     :: xcpot
 
 !
 !

@@ -16,11 +16,10 @@ CONTAINS
     !     ** r.pentcheva 08.05.96
     !     ********************************************************************
 
-    USE m_xcall, ONLY : vxcall,excall
     USE m_fft2d
     USE m_types
     IMPLICIT NONE
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)     :: xcpot
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -67,25 +66,17 @@ CONTAINS
           !         transform charge density to real space: 2-dim FFT
           !
           DO js = 1,input%jspins
-             CALL fft2d(&
-                  &               stars,&
-                  &               af2(0,js),bf2,&
-                  &               den%vacz(ip,ivac,js),rhti,den%vacxy(ip,1,ivac,js),&
-                  &               vacuum%nmzxyd,+1)
+             CALL fft2d(stars, af2(0,js),bf2, den%vacz(ip,ivac,js),rhti,&
+                  den%vacxy(ip,1,ivac,js), vacuum%nmzxyd,+1)
           END DO
 
           IF (noco%l_noco) THEN 
 
-             CALL fft2d(&
-                  &               stars,&
-                  &               mx,my, &
-                  &               den%vacz(ip,ivac,3),den%vacz(ip,ivac,4),&
-                  &               den%vacxy(ip,1,ivac,3),&
-                  &               vacuum%nmzxyd,1)
+             CALL fft2d(stars, mx,my, den%vacz(ip,ivac,3),den%vacz(ip,ivac,4),&
+                                 den%vacxy(ip,1,ivac,3), vacuum%nmzxyd,1)
              DO i=0,9*stars%mx1*stars%mx2-1 
                 chdens= (af2(i,1)+af2(i,2))/2.  
-                magmom= mx(i)**2 + my(i)**2 +&
-                     &                ((af2(i,1)-af2(i,2))/2.)**2 
+                magmom= mx(i)**2 + my(i)**2 + ((af2(i,1)-af2(i,2))/2.)**2 
                 magmom= SQRT(magmom) 
                 af2(i,1)= chdens + magmom 
                 af2(i,2)= chdens - magmom
@@ -95,21 +86,14 @@ CONTAINS
           !
           !         calculate the exchange-correlation potential in  real space
           !
-          CALL vxcall&
-               &               (6,xcpot,input%jspins,&
-               &                ifftd2,nt,af2,&
-               &                v_x,v_xc)   
+          CALL xcpot%get_vxc(input%jspins,af2,v_xc,v_x)
 
           DO  js = 1,input%jspins
              !
              !            ----> 2-d back fft to g space
              !
              bf2=0.0
-             CALL fft2d(&
-                  &                 stars,&
-                  &                 v_xc(0,js),bf2,&
-                  &                 fgz,rhti,fgxy,&
-                  &                 1,-1)
+             CALL fft2d(stars, v_xc(0,js),bf2, fgz,rhti,fgxy, 1,-1)
              !
              !            ----> and add vxc to coulomb potential
              !            the G||.eq.zero component is added to vz
@@ -119,27 +103,19 @@ CONTAINS
              !            the G||.ne.zero components are added to vxc%vacxy
              !
              DO irec2 = 1,stars%ng2-1
-                vxc%vacxy(ip,irec2,ivac,js) = vxc%vacxy(ip,irec2,ivac,js) +&
-                     &                                              fgxy(irec2)
+                vxc%vacxy(ip,irec2,ivac,js) = vxc%vacxy(ip,irec2,ivac,js) + fgxy(irec2)
              ENDDO
           ENDDO
           !
           !i        calculate the exchange-correlation energy density in  real space
           !
-          IF (input%total) THEN   
-             CALL excall&
-                  &                 (6,xcpot,input%jspins,&
-                  &                  ifftd2,nt,af2,&
-                  &                  e_xc)   
+          IF (ALLOCATED(exc%vacz)) THEN
+             call xcpot%get_exc(input%jspins,af2,e_xc)
              !
              !     ----> 2-d back fft to g space
              !
              bf2=0.0
-             CALL fft2d(&
-                  &                 stars,&
-                  &                 e_xc,bf2,&
-                  &                 exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1),&
-                  &                 vacuum%nmzxyd,-1)
+             CALL fft2d(stars, e_xc,bf2, exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1), vacuum%nmzxyd,-1)
           ENDIF
 
        ENDDO
@@ -159,8 +135,7 @@ CONTAINS
              mx(0)= den%vacz(vacuum%nmzxy+k,ivac,3)
              my(0)= den%vacz(vacuum%nmzxy+k,ivac,4)
              chdens= (af2(k-1,1)+af2(k-1,2))/2.
-             magmom= mx(0)**2 + my(0)**2 +&
-                  &               ((af2(k-1,1)-af2(k-1,2))/2.)**2
+             magmom= mx(0)**2 + my(0)**2 + ((af2(k-1,1)-af2(k-1,2))/2.)**2
              magmom= SQRT(magmom)
              af2(k-1,1)= chdens + magmom
              af2(k-1,2)= chdens - magmom
@@ -169,10 +144,8 @@ CONTAINS
 
        ENDDO
 
-       CALL vxcall&
-            &              (6,xcpot,input%jspins,&
-            &               vacuum%nmzd,nmzdiff,af2,&
-            &               vxz,vxcz)
+       CALL xcpot%get_vxc(input%jspins,af2,vxz,vxcz)
+      
        !+gu
        DO  js=1,input%jspins
           DO k=vacuum%nmzxy+1,vacuum%nmz
@@ -186,11 +159,8 @@ CONTAINS
        !
        !        calculate the ex.-corr. energy density now beyond warping region
        !
-       IF (input%total) THEN
-          CALL excall&
-               &                   (6,xcpot,input%jspins,&
-               &                    vacuum%nmzd,nmzdiff,af2,&
-               &                    exc%vacz(vacuum%nmzxy+1,ivac,1))
+       IF (ALLOCATED(exc%vacz)) THEN
+          CALL xcpot%get_exc(input%jspins,af2,exc%vacz(vacuum%nmzxy+1:,ivac,1))
        END IF
     ENDDO
     IF (noco%l_noco) THEN 

@@ -12,17 +12,16 @@ CONTAINS
 
     USE m_lhglpts
     USE m_gaussp
-    USE m_xcall, ONLY : vxcall,excall
     USE m_types
     IMPLICIT NONE
-    TYPE(t_xcpot),INTENT(IN)       :: xcpot
+    CLASS(t_xcpot),INTENT(IN)      :: xcpot
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_potden),INTENT(IN)      :: den
-    TYPE(t_potden),INTENT(INOUT)      :: vxc,exc
+    TYPE(t_potden),INTENT(INOUT)   :: vxc,exc
     TYPE(t_potden),INTENT(INOUT),optional     :: vx
     
     !     ..
@@ -76,7 +75,7 @@ CONTAINS
           ENDDO
           !     calculate the ex.-cor. potential
           !
-          CALL vxcall (6,xcpot,input%jspins, nsp,nsp,rhoxc, v_x,v_xc) 
+          CALL xcpot%get_vxc(input%jspins,rhoxc(:nsp,:), v_xc,v_x) 
           !     ----> now determine the corresponding potential number 
           DO js = 1,input%jspins
              !
@@ -109,32 +108,32 @@ CONTAINS
                 ENDIF
              ENDDO
           ENDDO
-          IF (input%total) THEN 
+          IF (ALLOCATED(exc%mt)) THEN 
              !
              !     calculate the ex.-cor energy density
              !
-             CALL excall(6,xcpot,input%jspins, nsp,nsp,rhoxc, e_ex) 
+             CALL xcpot%get_exc(input%jspins,rhoxc(:nsp,:), e_ex) 
+             !     ----> now determine the corresponding energy density number 
+             !
+             ! ---> multiplikate exc with the weights of the k-points    
+             !
+             DO  k = 1,nsp
+                e_ex(k) = e_ex(k)*wt(k)
+             ENDDO
+             DO  lh = 0,sphhar%nlh(nd)
+                
+                !
+                ! ---> determine the corresponding potential number through gauss integration
+                !
+                elh=DOT_PRODUCT(e_ex(:nsp),ylh(:nsp,lh,nd))
+                
+                !
+                ! ---> add to the given potential
+                
+                exc%mt(jr,lh,n,1) = elh
+             ENDDO
           END IF
-          !     ----> now determine the corresponding energy density number 
-          !
-          ! ---> multiplikate exc with the weights of the k-points    
-          !
-          DO  k = 1,nsp
-             e_ex(k) = e_ex(k)*wt(k)
-          ENDDO
-          DO  lh = 0,sphhar%nlh(nd)
-
-             !
-             ! ---> determine the corresponding potential number through gauss integration
-             !
-             elh=DOT_PRODUCT(e_ex(:nsp),ylh(:nsp,lh,nd))
-
-             !
-             ! ---> add to the given potential
-
-             exc%mt(jr,lh,n,1) = elh
-          ENDDO
-
+          
        ENDDO
 
     ENDDO

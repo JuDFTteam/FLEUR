@@ -35,6 +35,8 @@ SUBROUTINE r_inpXML(&
   USE m_constants
   USE m_inpeig
   USE m_sort
+  USE m_types_xcpot_inbuild
+!  USE m_types_xcpot_libxc
   IMPLICIT NONE
 
   TYPE(t_input),INTENT(INOUT)   :: input
@@ -49,7 +51,7 @@ SUBROUTINE r_inpXML(&
   TYPE(t_cell),INTENT(INOUT)     :: cell
   TYPE(t_banddos),INTENT(INOUT)  :: banddos
   TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
-  TYPE(t_xcpot),INTENT(INOUT)    :: xcpot
+  CLASS(t_xcpot),INTENT(INOUT),ALLOCATABLE :: xcpot
   TYPE(t_noco),INTENT(INOUT)     :: noco
   TYPE(t_dimension),INTENT(OUT)  :: dimension
   TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
@@ -225,7 +227,6 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%igrd(atoms%ntype))
   ALLOCATE(atoms%krla(atoms%ntype))
   ALLOCATE(atoms%relcor(atoms%ntype))
-  ALLOCATE(xcpot%lda_atom(atoms%ntype))
   
   atoms%namex = ''
   atoms%icorr = -99
@@ -293,12 +294,7 @@ SUBROUTINE r_inpXML(&
   input%rkmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
   stars%gmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
 
-  xPathA = '/fleurInput/calculationSetup/cutoffs/@GmaxXC'
-  numberNodes = xmlGetNumberOfNodes(xPathA)
-  xcpot%gmaxxc = stars%gmax
-  IF(numberNodes.EQ.1) THEN
-     xcpot%gmaxxc = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
-  END IF
+  
   stars%gmaxInit = stars%gmax
 
   xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
@@ -1109,16 +1105,24 @@ SUBROUTINE r_inpXML(&
 
   ! Read in xc functional parameters
 
-  namex = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
+  valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
   l_relcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
 
   relcor = 'non-relativi'
   IF (l_relcor) THEN
      relcor = 'relativistic'
   END IF
-
-  CALL getXCParameters(namex,l_relcor,xcpot,hybrid%l_hybrid)
-
+  !now initialize the xcpot variable
+  CALL setXCParameters(atoms,valueString,l_relcor,xcpot)
+  
+  xPathA = '/fleurInput/calculationSetup/cutoffs/@GmaxXC'
+  numberNodes = xmlGetNumberOfNodes(xPathA)
+  xcpot%gmaxxc = stars%gmax
+  IF(numberNodes.EQ.1) THEN
+     xcpot%gmaxxc = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
+  END IF
+  hybrid%l_hybrid=xcpot%is_hybrid()
+  
   IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
   obsolete%lwb=.FALSE.
@@ -1514,7 +1518,10 @@ SUBROUTINE r_inpXML(&
               hybrid%select1(:,iType)=SELECT
            ENDIF
            ! Explicit xc functional
-           xcpot%lda_atom(iType)=ldaSpecies
+           SELECT TYPE(xcpot)
+           TYPE IS(t_xcpot_inbuild)
+              xcpot%lda_atom(iType)=ldaSpecies
+           END SELECT
            noco%socscale(iType)=socscaleSpecies
         END IF
      END DO
@@ -2000,24 +2007,34 @@ SUBROUTINE r_inpXML(&
 
 END SUBROUTINE r_inpXML
 
-SUBROUTINE getXCParameters(namex,relcor,xcpot,l_hybrid)
-
+SUBROUTINE setXCParameters(atoms,namex,relcor,xcpot)
    USE m_juDFT
    USE m_types
+   USE m_types_xcpot_inbuild
+!   USE m_types_xcpot_libxc
 
    IMPLICIT NONE
-
-   CHARACTER(LEN=4),     INTENT(IN)  :: namex
+   TYPE(t_atoms),INTENT(IN)          :: atoms
+   CHARACTER(LEN=*),     INTENT(IN)  :: namex
    LOGICAL,              INTENT(IN)  :: relcor
-   TYPE(t_xcpot),INTENT(INOUT)       :: xcpot
-   LOGICAL,              INTENT(OUT) :: l_hybrid
+   CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE      :: xcpot
+ 
+   IF (namex(1:6)=='libxc:') THEN
+!      ALLOCATE(t_xcpot_libxc::xcpot)
+   ELSE
+      ALLOCATE(t_xcpot_inbuild::xcpot)
+   ENDIF
 
-   CALL xcpot%init(namex,relcor)
-   l_hybrid=xcpot%is_hybrid()
-  
+   SELECT TYPE(xcpot)
+   TYPE IS(t_xcpot_inbuild)
+      CALL xcpot%init(namex(1:4),relcor)
+      ALLOCATE(xcpot%lda_atom(atoms%ntype))
+!   TYPE IS(t_xcpot_libxc)
+!      CALL xcpot%init(namex)
+   END SELECT
   
  
-END SUBROUTINE getXCParameters
+ END SUBROUTINE setXCParameters
 
 SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
 

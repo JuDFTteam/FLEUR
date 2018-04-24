@@ -49,7 +49,7 @@ MODULE m_add_vnonlocal
       USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_results),INTENT(INOUT)   :: results
-      TYPE(t_xcpot),INTENT(IN)        :: xcpot
+      TYPE(t_xcpot_inbuild),INTENT(IN)        :: xcpot
       TYPE(t_dimension),INTENT(IN)    :: dimension
       TYPE(t_hybrid),INTENT(INOUT)    :: hybrid
       TYPE(t_kpts),INTENT(IN)         :: kpts

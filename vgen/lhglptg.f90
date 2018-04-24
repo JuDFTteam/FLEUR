@@ -16,7 +16,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_xcpot),INTENT(IN)    :: xcpot
+    CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms

@@ -30,6 +30,7 @@
       USE m_juDFT_init
       USE m_kpoints
       USE m_inv3
+      USE m_types_xcpot_inbuild
 
       IMPLICIT NONE
       TYPE(t_input),INTENT(INOUT)    :: input
@@ -74,7 +75,7 @@
       TYPE(t_oneD)::oneD
       TYPE(t_stars)::stars
       TYPE(t_hybrid)::hybrid
-      TYPE(t_xcpot)::xcpot
+      TYPE(t_xcpot_inbuild)::xcpot
       TYPE(t_kpts)::kpts
       TYPE(t_enpara)::enpara
       TYPE(t_forcetheo)::forcetheo

@@ -36,7 +36,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_cell),     INTENT(INOUT) :: cell
    TYPE(t_banddos),  INTENT(INOUT) :: banddos
    TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
-   TYPE(t_xcpot),    INTENT(INOUT) :: xcpot
+   CLASS(t_xcpot),    INTENT(INOUT) :: xcpot
    TYPE(t_noco),     INTENT(INOUT) :: noco
    TYPE(t_dimension),INTENT(INOUT) :: dimension
    TYPE(t_enpara),   INTENT(INOUT) :: enpara

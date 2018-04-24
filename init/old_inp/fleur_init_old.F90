@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_banddos)  ,INTENT(OUT)  :: banddos
     TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete 
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
-    TYPE(t_xcpot)    ,INTENT(OUT)  :: xcpot
+    TYPE(t_xcpot_inbuild)    ,INTENT(OUT)  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
@@ -180,7 +180,7 @@ CONTAINS
        !
 
        namex=xcpot%get_name()
-       l_krla = xcpot%krla.EQ.1
+       l_krla = xcpot%data%krla.EQ.1
     END IF ! mpi%irank.eq.0
 
 #ifdef CPP_MPI

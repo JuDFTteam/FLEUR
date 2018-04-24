@@ -57,7 +57,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
-  TYPE(t_xcpot),    INTENT(INOUT) :: xcpot
+  CLASS(t_xcpot),   INTENT(INOUT) :: xcpot
   TYPE(t_noco),     INTENT(INOUT) :: noco
   TYPE(t_dimension),INTENT(INOUT) :: dimension
   TYPE(t_enpara)   ,INTENT(INOUT) :: enpara
@@ -73,9 +73,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   REAL                 :: sumWeight, rmtmax, zp, radius, dr
   REAL                 :: kmax1, dtild1, dvac1
   REAL                 :: bk(3)
-  LOGICAL              :: l_vca, l_test,l_gga, l_krla
-  CHARACTER(len=4)     :: namex
-
+  LOGICAL              :: l_vca, l_test,l_gga
+ 
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
   REAL,    ALLOCATABLE :: rmt1(:), dx1(:)
@@ -536,21 +535,12 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      END IF
 
      CALL prp_xcfft(stars,input,cell,xcpot)
-
-     namex = xcpot%get_name()
-     l_krla = xcpot%krla.EQ.1
-
+ 
   END IF !(mpi%irank.EQ.0)
-
+  call xcpot%broadcast(mpi)
 #ifdef CPP_MPI
-  CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-  CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
-
-  IF (mpi%irank.NE.0) THEN
-     CALL xcpot%init(namex,l_krla)
-  END IF
 
   IF (.NOT.sliceplot%iplot) THEN
      CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)

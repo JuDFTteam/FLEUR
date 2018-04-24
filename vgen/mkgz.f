@@ -9,17 +9,14 @@ cc    energy.
 c.....------------------------------------------------------------------
       CONTAINS 
       SUBROUTINE mkgz(
-     >                nmzdf,jspins,rh1,rh2,rhdz1,rhdz2,rhdzz1,rhdzz2,
-     <          agrt,agru,agrd,g2rt,g2ru,g2rd,gggrt,gggru,gggrd,gzgr)
-
+     >     nmzdf,jspins,rh1,rh2,rhdz1,rhdz2,rhdzz1,rhdzz2,
+     <     grad)
+      USE m_types
       IMPLICIT NONE
       INTEGER, INTENT (IN) :: nmzdf,jspins
       REAL,    INTENT (IN) :: rh1(nmzdf),rhdz1(nmzdf),rhdzz1(nmzdf)
       REAL,    INTENT (IN) :: rh2(nmzdf),rhdz2(nmzdf),rhdzz2(nmzdf)
-      REAL,    INTENT (OUT) :: agrt(nmzdf),agru(nmzdf),agrd(nmzdf) 
-      REAL,    INTENT (OUT) :: g2rt(nmzdf),g2ru(nmzdf),g2rd(nmzdf)
-      REAL,    INTENT (OUT) :: gggrt(nmzdf),gggru(nmzdf),gggrd(nmzdf)
-      REAL,    INTENT (OUT) :: gzgr(nmzdf)
+      TYPE(t_gradients),INTENT(OUT)::grad
 
       INTEGER i
       REAL    vlt,dvzt,dvzzt,vlu,dvzu,dvzzu,vld,dvzd,dvzzd
@@ -27,6 +24,21 @@ c.....------------------------------------------------------------------
 
       sml = 1.e-14
 
+      IF (ALLOCATED(grad%sigma)) THEN
+         IF(jspins==1) THEN
+            DO i=1,nmzdf
+               grad%sigma(1,i)=rhdz1(i)*rhdz1(i)
+            ENDDO
+         ELSE
+             DO i=1,nmzdf
+               grad%sigma(1,i)=rhdz1(i)*rhdz1(i)
+               grad%sigma(2,i)=rhdz1(i)*rhdz2(i)
+               grad%sigma(3,i)=rhdz2(i)*rhdz2(i)
+            ENDDO
+         ENDIF
+         RETURN
+      ENDIF
+      
       IF (jspins == 1) THEN
 
         DO i = 1,nmzdf
@@ -44,17 +56,17 @@ c.....------------------------------------------------------------------
 
 c         agrt: abs(grad(ro)), u,d for up and down.
 
-          agrt(i) = max(abs(dvzt),sml)
-          agru(i) = max(abs(dvzu),sml)
-          agrd(i) = max(abs(dvzd),sml)
+          grad%agrt(i) = max(abs(dvzt),sml)
+          grad%agru(i) = max(abs(dvzu),sml)
+          grad%agrd(i) = max(abs(dvzd),sml)
 
-          dagrzt= dvzt*dvzzt/agrt(i)
-          dagrzu= dvzu*dvzzu/agru(i)
-          dagrzd= dvzd*dvzzd/agrd(i)
+          dagrzt= dvzt*dvzzt/grad%agrt(i)
+          dagrzu= dvzu*dvzzu/grad%agru(i)
+          dagrzd= dvzd*dvzzd/grad%agrd(i)
 
-          gggrt(i) = dvzt*dagrzt
-          gggru(i) = dvzu*dagrzu
-          gggrd(i) = dvzd*dagrzd
+          grad%gggrt(i) = dvzt*dagrzt
+          grad%gggru(i) = dvzu*dagrzu
+          grad%gggrd(i) = dvzd*dagrzd
 
 c         dztadz=d(zeta)/dz,..
 
@@ -62,13 +74,13 @@ c         dztadz=d(zeta)/dz,..
 
 c         gzgr=grad(zeta)*grad(ro).
 
-          gzgr(i) = dztadz*dvzt
+          grad%gzgr(i) = dztadz*dvzt
 
 c         g2rt: grad(grad(ro))
 
-          g2rt(i)  = dvzzt
-          g2ru(i)  = dvzzu
-          g2rd(i)  = dvzzd
+          grad%g2rt(i)  = dvzzt
+          grad%g2ru(i)  = dvzzu
+          grad%g2rd(i)  = dvzzd
 
         ENDDO
 
@@ -89,17 +101,17 @@ c         g2rt: grad(grad(ro))
 
 c         agrt: abs(grad(ro)), u,d for up and down.
 
-          agrt(i) = max(abs(dvzt),sml)
-          agru(i) = max(abs(dvzu),sml)
-          agrd(i) = max(abs(dvzd),sml)
+          grad%agrt(i) = max(abs(dvzt),sml)
+          grad%agru(i) = max(abs(dvzu),sml)
+          grad%agrd(i) = max(abs(dvzd),sml)
 
-          dagrzt= dvzt*dvzzt/agrt(i)
-          dagrzu= dvzu*dvzzu/agru(i)
-          dagrzd= dvzd*dvzzd/agrd(i)
+          dagrzt= dvzt*dvzzt/grad%agrt(i)
+          dagrzu= dvzu*dvzzu/grad%agru(i)
+          dagrzd= dvzd*dvzzd/grad%agrd(i)
 
-          gggrt(i) = dvzt*dagrzt
-          gggru(i) = dvzu*dagrzu
-          gggrd(i) = dvzd*dagrzd
+          grad%gggrt(i) = dvzt*dagrzt
+          grad%gggru(i) = dvzu*dagrzu
+          grad%gggrd(i) = dvzd*dagrzd
 
 c         dztadz=d(zeta)/dz,..
 
@@ -107,13 +119,13 @@ c         dztadz=d(zeta)/dz,..
 
 c         gzgr=grad(zeta)*grad(ro).
 
-          gzgr(i) = dztadz*dvzt
+          grad%gzgr(i) = dztadz*dvzt
 
 c         g2rt: grad(grad(ro))
 
-          g2rt(i)  = dvzzt
-          g2ru(i)  = dvzzu
-          g2rd(i)  = dvzzd
+          grad%g2rt(i)  = dvzzt
+          grad%g2ru(i)  = dvzzu
+          grad%g2rd(i)  = dvzzd
 
 
         ENDDO

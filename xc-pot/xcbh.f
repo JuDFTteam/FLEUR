@@ -49,11 +49,11 @@
      >                 mgrid,ngrid,rh,
      <                 vx,vxc)
 !************************************************************************
-      USE m_types
+      USE m_types_xcpot_data
 !     
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
-      TYPE(t_xcpot), INTENT (IN) :: xcpot  !  run mode parameters
+      TYPE(t_xcpot_data), INTENT (IN) :: xcpot  !  run mode parameters
       INTEGER, INTENT (IN) :: iofile      !  file number for read and write
       INTEGER, INTENT (IN) :: mgrid,ngrid !  mesh points
 !
@@ -84,10 +84,10 @@
 !
 !-----> select exchange correlation potential
 !
-      IF (xcpot%is_name("mjw")) THEN
+      IF (xcpot%is_mjw) THEN
          cp = cpmjw ; cf = cfmjw
          rp = rpmjw ; rf = rfmjw
-      ELSEIF (xcpot%is_name("bh")) THEN
+      ELSEIF (xcpot%is_bh) THEN
          cp = cpvbh ; cf = cfvbh
          rp = rpvbh ; rf = rfvbh
       ELSE
@@ -158,11 +158,11 @@ C***********************************************************************
      >                 mgrid,ngrid,rh,
      <                 exc)
 C***********************************************************************
-      USE m_types
+      USE m_types_xcpot_data
 !     
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
-      TYPE(t_xcpot), INTENT (IN) :: xcpot !  run mode parameters
+      TYPE(t_xcpot_data), INTENT (IN) :: xcpot !  run mode parameters
       INTEGER, INTENT (IN) :: iofile      !  file number for read and write
       INTEGER, INTENT (IN) :: mgrid,ngrid !  mesh points
 !
@@ -192,10 +192,10 @@ C***********************************************************************
 !
 !-----> select exchange correlation potential
 !
-      IF (xcpot%is_name("mjw")) THEN
+      IF (xcpot%is_mjw) THEN
          cp = cpmjw ; cf = cfmjw
          rp = rpmjw ; rf = rfmjw
-      ELSEIF (xcpot%is_name("bh")) THEN
+      ELSEIF (xcpot%is_bh) THEN
          cp = cpvbh ; cf = cfvbh
          rp = rpvbh ; rf = rfvbh
       ELSE

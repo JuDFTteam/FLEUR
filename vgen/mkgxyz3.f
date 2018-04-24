@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_mkgxyz3
 c.....------------------------------------------------------------------
 c     by use of cartesian x,y,z components of charge density gradients,
@@ -10,9 +15,8 @@ c.....------------------------------------------------------------------
       SUBROUTINE mkgxyz3(
      >                   ndm,jsdm,ng3,jspins,vl,
      >                   dvx,dvy,dvz,dvxx,dvyy,dvzz,dvyz,dvzx,dvxy,
-     <                   agrt,agru,agrd, g2rt,g2ru,g2rd, 
-     <                   gggrt,gggru,gggrd,gzgr)
-
+     <                   grad)
+      USE m_types
       IMPLICIT NONE
       INTEGER, INTENT (IN) :: ndm,ng3,jsdm,jspins
       REAL,    INTENT (IN) :: vl(ndm,jsdm)
@@ -20,9 +24,7 @@ c.....------------------------------------------------------------------
       REAL, INTENT (IN) :: dvxx(ndm,jsdm),dvyy(ndm,jsdm),dvzz(ndm,jsdm)
       REAL, INTENT (IN) :: dvyz(ndm,jsdm),dvzx(ndm,jsdm),dvxy(ndm,jsdm)
 
-      REAL, INTENT (OUT) :: agrt(ndm),agru(ndm),agrd(ndm)
-      REAL, INTENT (OUT) :: g2rt(ndm),g2ru(ndm),g2rd(ndm)
-      REAL, INTENT (OUT) :: gggrt(ndm),gggru(ndm),gggrd(ndm),gzgr(ndm)
+      TYPE(t_gradients),INTENT(OUT)::grad
 
       REAL vlt,dvxt,dvyt,dvzt,dvxxt,dvyyt,dvzzt,dvyzt,dvzxt,dvxyt,
      &     vlu,dvxu,dvyu,dvzu,dvxxu,dvyyu,dvzzu,dvyzu,dvzxu,dvxyu,
@@ -34,17 +36,37 @@ c.....------------------------------------------------------------------
 
       sml = 1.e-14
 
+      IF(ALLOCATED(grad%sigma)) THEN
+!Use only contracted gradients for libxc
+         if (jspins==1) THEN
+            DO i=1,ng3
+               grad%sigma(1,i)=
+     +             dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
+            ENDDO
+         ELSE
+            DO i=1,ng3
+               grad%sigma(1,i)=
+     +             dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
+               grad%sigma(2,i)=
+     +             dvx(i,1)*dvx(i,2)+dvy(i,1)*dvy(i,2)+dvz(i,1)*dvz(i,2)
+               grad%sigma(3,i)=
+     +             dvx(i,2)*dvx(i,2)+dvy(i,2)*dvy(i,2)+dvz(i,2)*dvz(i,2)
+            ENDDO
+         ENDIF            
+         RETURN
+      ENDIF
+
       DO i = 1,ndm
-          agrt(i) = 0.0
-          agru(i) = 0.0
-          agrd(i) = 0.0
-          gggrt(i) = 0.0
-          gggru(i) = 0.0
-          gggrd(i) = 0.0
-          gzgr(i) = 0.0
-          g2rt(i) = 0.0
-          g2ru(i) = 0.0
-          g2rd(i) = 0.0
+          grad%agrt(i) = 0.0
+          grad%agru(i) = 0.0
+          grad%agrd(i) = 0.0
+          grad%gggrt(i) = 0.0
+          grad%gggru(i) = 0.0
+          grad%gggrd(i) = 0.0
+          grad%gzgr(i) = 0.0
+          grad%g2rt(i) = 0.0
+          grad%g2ru(i) = 0.0
+          grad%g2rd(i) = 0.0
       ENDDO
 
       IF (jspins.eq.1) THEN
@@ -88,25 +110,25 @@ c.....------------------------------------------------------------------
 
 c         agr: abs(grad(ro)), t,u,d for total, up and down.
 
-          agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
-          agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
-          agrd(i) = max(sqrt(dvxd**2+dvyd**2+dvzd**2),sml)
+          grad%agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
+          grad%agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
+          grad%agrd(i) = max(sqrt(dvxd**2+dvyd**2+dvzd**2),sml)
 
-          dagrxt = (dvxt*dvxxt+dvyt*dvxyt+dvzt*dvzxt)/agrt(i)
-          dagrxu = (dvxu*dvxxu+dvyu*dvxyu+dvzu*dvzxu)/agru(i)
-          dagrxd = (dvxd*dvxxd+dvyd*dvxyd+dvzd*dvzxd)/agrd(i)
+          dagrxt = (dvxt*dvxxt+dvyt*dvxyt+dvzt*dvzxt)/grad%agrt(i)
+          dagrxu = (dvxu*dvxxu+dvyu*dvxyu+dvzu*dvzxu)/grad%agru(i)
+          dagrxd = (dvxd*dvxxd+dvyd*dvxyd+dvzd*dvzxd)/grad%agrd(i)
 
-          dagryt = (dvxt*dvxyt+dvyt*dvyyt+dvzt*dvyzt)/agrt(i)
-          dagryu = (dvxu*dvxyu+dvyu*dvyyu+dvzu*dvyzu)/agru(i)
-          dagryd = (dvxd*dvxyd+dvyd*dvyyd+dvzd*dvyzd)/agrd(i)
+          dagryt = (dvxt*dvxyt+dvyt*dvyyt+dvzt*dvyzt)/grad%agrt(i)
+          dagryu = (dvxu*dvxyu+dvyu*dvyyu+dvzu*dvyzu)/grad%agru(i)
+          dagryd = (dvxd*dvxyd+dvyd*dvyyd+dvzd*dvyzd)/grad%agrd(i)
 
-          dagrzt = (dvxt*dvzxt+dvyt*dvyzt+dvzt*dvzzt)/agrt(i)
-          dagrzu = (dvxu*dvzxu+dvyu*dvyzu+dvzu*dvzzu)/agru(i)
-          dagrzd = (dvxd*dvzxd+dvyd*dvyzd+dvzd*dvzzd)/agrd(i)
+          dagrzt = (dvxt*dvzxt+dvyt*dvyzt+dvzt*dvzzt)/grad%agrt(i)
+          dagrzu = (dvxu*dvzxu+dvyu*dvyzu+dvzu*dvzzu)/grad%agru(i)
+          dagrzd = (dvxd*dvzxd+dvyd*dvyzd+dvzd*dvzzd)/grad%agrd(i)
 
-          gggrt(i) = dvxt*dagrxt + dvyt*dagryt + dvzt*dagrzt
-          gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
-          gggrd(i) = dvxd*dagrxd + dvyd*dagryd + dvzd*dagrzd
+          grad%gggrt(i) = dvxt*dagrxt + dvyt*dagryt + dvzt*dagrzt
+          grad%gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
+          grad%gggrd(i) = dvxd*dagrxd + dvyd*dagryd + dvzd*dagrzd
 
 c         dzdx=d(zeta)/dx,..
 
@@ -116,13 +138,13 @@ c         dzdx=d(zeta)/dx,..
 
 c         gzgr=grad(zeta)*grad(ro).
 
-          gzgr(i) = dzdx*dvxt + dzdy*dvyt + dzdz*dvzt
+          grad%gzgr(i) = dzdx*dvxt + dzdy*dvyt + dzdz*dvzt
 
 c         g2r: grad(grad(ro))
 
-          g2rt(i) = dvxxt + dvyyt + dvzzt
-          g2ru(i) = dvxxu + dvyyu + dvzzu
-          g2rd(i) = dvxxd + dvyyd + dvzzd
+          grad%g2rt(i) = dvxxt + dvyyt + dvzzt
+          grad%g2ru(i) = dvxxu + dvyyu + dvzzu
+          grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
 
   10    ENDDO
@@ -167,25 +189,25 @@ c         g2r: grad(grad(ro))
 
 c         agr: abs(grad(ro)), t,u,d for total, up and down.
 
-          agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
-          agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
-          agrd(i) = max(sqrt(dvxd**2+dvyd**2+dvzd**2),sml)
+          grad%agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
+          grad%agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
+          grad%agrd(i) = max(sqrt(dvxd**2+dvyd**2+dvzd**2),sml)
 
-          dagrxt = (dvxt*dvxxt+dvyt*dvxyt+dvzt*dvzxt)/agrt(i)
-          dagrxu = (dvxu*dvxxu+dvyu*dvxyu+dvzu*dvzxu)/agru(i)
-          dagrxd = (dvxd*dvxxd+dvyd*dvxyd+dvzd*dvzxd)/agrd(i)
+          dagrxt = (dvxt*dvxxt+dvyt*dvxyt+dvzt*dvzxt)/grad%agrt(i)
+          dagrxu = (dvxu*dvxxu+dvyu*dvxyu+dvzu*dvzxu)/grad%agru(i)
+          dagrxd = (dvxd*dvxxd+dvyd*dvxyd+dvzd*dvzxd)/grad%agrd(i)
 
-          dagryt = (dvxt*dvxyt+dvyt*dvyyt+dvzt*dvyzt)/agrt(i)
-          dagryu = (dvxu*dvxyu+dvyu*dvyyu+dvzu*dvyzu)/agru(i)
-          dagryd = (dvxd*dvxyd+dvyd*dvyyd+dvzd*dvyzd)/agrd(i)
+          dagryt = (dvxt*dvxyt+dvyt*dvyyt+dvzt*dvyzt)/grad%agrt(i)
+          dagryu = (dvxu*dvxyu+dvyu*dvyyu+dvzu*dvyzu)/grad%agru(i)
+          dagryd = (dvxd*dvxyd+dvyd*dvyyd+dvzd*dvyzd)/grad%agrd(i)
 
-          dagrzt = (dvxt*dvzxt+dvyt*dvyzt+dvzt*dvzzt)/agrt(i)
-          dagrzu = (dvxu*dvzxu+dvyu*dvyzu+dvzu*dvzzu)/agru(i)
-          dagrzd = (dvxd*dvzxd+dvyd*dvyzd+dvzd*dvzzd)/agrd(i)
+          dagrzt = (dvxt*dvzxt+dvyt*dvyzt+dvzt*dvzzt)/grad%agrt(i)
+          dagrzu = (dvxu*dvzxu+dvyu*dvyzu+dvzu*dvzzu)/grad%agru(i)
+          dagrzd = (dvxd*dvzxd+dvyd*dvyzd+dvzd*dvzzd)/grad%agrd(i)
 
-          gggrt(i) = dvxt*dagrxt + dvyt*dagryt + dvzt*dagrzt
-          gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
-          gggrd(i) = dvxd*dagrxd + dvyd*dagryd + dvzd*dagrzd
+          grad%gggrt(i) = dvxt*dagrxt + dvyt*dagryt + dvzt*dagrzt
+          grad%gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
+          grad%gggrd(i) = dvxd*dagrxd + dvyd*dagryd + dvzd*dagrzd
 
 c         dzdx=d(zeta)/dx,..
 
@@ -195,13 +217,13 @@ c         dzdx=d(zeta)/dx,..
 
 c         gzgr=grad(zeta)*grad(ro).
 
-          gzgr(i) = dzdx*dvxt + dzdy*dvyt + dzdz*dvzt
+          grad%gzgr(i) = dzdx*dvxt + dzdy*dvyt + dzdz*dvzt
 
 c         g2r: grad(grad(ro))
 
-          g2rt(i) = dvxxt + dvyyt + dvzzt
-          g2ru(i) = dvxxu + dvyyu + dvzzu
-          g2rd(i) = dvxxd + dvyyd + dvzzd
+          grad%g2rt(i) = dvxxt + dvyyt + dvzzt
+          grad%g2ru(i) = dvxxu + dvyyu + dvzzu
+          grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
   20    ENDDO
 

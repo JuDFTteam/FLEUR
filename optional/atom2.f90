@@ -15,7 +15,6 @@
 
       USE m_intgr, ONLY : intgr1,intgr0
       USE m_constants
-      USE m_xcall, ONLY : vxcall
       USE m_potl0
       USE m_stpot1
       USE m_setcor
@@ -26,7 +25,7 @@
 !     .. Scalar Arguments ..
       TYPE(t_dimension),INTENT(IN)  :: dimension
       TYPE(t_atoms),INTENT(IN)      :: atoms
-      TYPE(t_xcpot),INTENT(IN)      :: xcpot
+      CLASS(t_xcpot),INTENT(IN)     :: xcpot
       TYPE(t_input),INTENT(IN)      :: input
       INTEGER,INTENT (IN)  :: jrc ,ntyp    
       REAL,   INTENT (IN)  :: rnot1  ,qdel
@@ -224,10 +223,7 @@
                  xcpot,DIMENSION%msh,DIMENSION%jspd,input%jspins,n,&
                  atoms%dx(ntyp),rad,rhoss, vxc)
          ELSE
-            CALL  vxcall(6,xcpot,input%jspins,&
-                 SIZE(vx,1),jrc,rhoss,&
-                 vx,vxc)
-            
+            CALL xcpot%get_vxc(input%jspins,rhoss,vxc,vx)
          ENDIF
          DO ispin = 1, input%jspins
            DO i = 1,n

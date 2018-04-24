@@ -88,7 +88,6 @@ CONTAINS
     TYPE(t_banddos)  :: banddos
     TYPE(t_obsolete) :: obsolete
     TYPE(t_enpara)   :: enpara
-    TYPE(t_xcpot)    :: xcpot
     TYPE(t_results)  :: results
     TYPE(t_kpts)     :: kpts
     TYPE(t_hybrid)   :: hybrid
@@ -98,6 +97,7 @@ CONTAINS
     TYPE(t_wann)     :: wann
     TYPE(t_potden)   :: vTot,vx,vCoul,vTemp
     TYPE(t_potden)   :: inDen, outDen
+    CLASS(t_xcpot),ALLOCATABLE    :: xcpot
     CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
 
     !     .. Local Scalars ..
@@ -207,8 +207,13 @@ CONTAINS
 
 
        !HF
-       IF (hybrid%l_hybrid) CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-            cell,vacuum,oneD,banddos,results,sym,xcpot,vTot,it)
+       IF (hybrid%l_hybrid) THEN
+          SELECT TYPE(xcpot)
+          TYPE IS(t_xcpot_inbuild)
+             CALL  calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
+                  cell,vacuum,oneD,banddos,results,sym,xcpot,vTot,it)
+          END SELECT
+       ENDIF
        !#endif
 
 !!$             DO pc = 1, wann%nparampts

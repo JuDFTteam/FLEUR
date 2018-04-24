@@ -32,6 +32,7 @@
           USE m_prpqfftmap
           USE m_writeOutHeader
           USE m_fleur_init_old
+          USE m_types_xcpot_inbuild
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
           USE m_mpi_dist_forcetheorem
@@ -56,7 +57,7 @@
           TYPE(t_banddos)  ,INTENT(OUT):: banddos
           TYPE(t_obsolete) ,INTENT(OUT):: obsolete 
           TYPE(t_enpara)   ,INTENT(OUT):: enpara
-          TYPE(t_xcpot)    ,INTENT(OUT):: xcpot
+          CLASS(t_xcpot),ALLOCATABLE,INTENT(OUT):: xcpot
           TYPE(t_results)  ,INTENT(OUT):: results
           TYPE(t_kpts)     ,INTENT(OUT):: kpts
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
@@ -206,10 +207,14 @@
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
-             CALL fleur_init_old(mpi,&
-                  input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-                  sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
-                  oneD,coreSpecInput,l_opti)
+             ALLOCATE(t_xcpot_inbuild::xcpot)
+             SELECT TYPE(xcpot)
+             TYPE IS(t_xcpot_inbuild)
+                CALL fleur_init_old(mpi,&
+                     input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+                     sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
+                     oneD,coreSpecInput,l_opti)
+             END SELECT
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
   

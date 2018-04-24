@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_visxcg
   USE m_juDFT
   !     ******************************************************
@@ -6,13 +11,8 @@ MODULE m_visxcg
   !     including gradient corrections. t.a. 1996.
   !     ******************************************************
 CONTAINS
-  SUBROUTINE visxcg(&
-       &                  ifftd,stars,sym,&
-       &                  ifftxc3d,&
-       &                  cell,den,&
-       &                  xcpot,input,&
-       &                  obsolete,noco,&
-       &                  vxc,vx,exc)
+  SUBROUTINE visxcg(ifftd,stars,sym, ifftxc3d, cell,den,&
+       xcpot,input, obsolete,noco, vxc,vx,exc)
 
     !     ******************************************************
     !     instead of visxcor.f: the different exchange-correlation
@@ -29,13 +29,12 @@ CONTAINS
     USE m_grdrsis
     USE m_prpxcfftmap
     USE m_mkgxyz3
-    USE m_xcallg, ONLY : vxcallg,excallg
     USE m_fft3d
     USE m_fft3dxc
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_xcpot),INTENT(IN)      :: xcpot
+    CLASS(t_xcpot),INTENT(IN)     :: xcpot
     TYPE(t_obsolete),INTENT(IN)   :: obsolete
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_noco),INTENT(IN)       :: noco
@@ -51,9 +50,6 @@ CONTAINS
     !     .. Array Arguments ..
 
     REAL rhmni ,d_15,sprsv
-    !     lwb: if true, white-bird trick.
-    !     lwbc: l-white-bird-current.
-    LOGICAL  lwbc
     !
     !----->  fft  information  for xc potential + energy
     !
@@ -65,6 +61,7 @@ CONTAINS
     COMPLEX :: ci
     REAL    :: rhotot
     INTEGER :: ifftd,ifftxc3d
+    TYPE(t_gradients)::grad
 
     !     ..
     !     .. Local Arrays ..
@@ -75,11 +72,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:) 
     ! 
     REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:),vcon(:) 
-    REAL, ALLOCATABLE :: agr(:),agru(:),agrd(:)
-    REAL, ALLOCATABLE :: g2r(:),g2ru(:),g2rd(:)
-    REAL, ALLOCATABLE :: gggr(:),gggru(:),gggrd(:)
-    REAL, ALLOCATABLE :: gzgr(:)
-
+  
     !     .. unused input (needed for other noco GGA-implementations) ..
 
     !ta+
@@ -122,14 +115,10 @@ CONTAINS
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     ALLOCATE ( igxc_fft(0:ifftxc3d-1),gxc_fft(0:ifftxc3d-1,3) )
-    CALL prp_xcfft_map(&
-         &                   stars,sym,&
-         &                   cell,&
-         &                   igxc_fft,gxc_fft)
+    CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
     !
     ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-    lwbc=obsolete%lwb
-
+   
     IF (stars%ng3.GT.stars%ng3) THEN
        WRITE(6,'(/'' stars%ng3.gt.stars%ng3. stars%ng3,stars%ng3='',2i6)') stars%ng3,stars%ng3
        CALL juDFT_error("ng3.gt.n3d",calledby="visxcg")
@@ -141,41 +130,30 @@ CONTAINS
     !
     ! Allocate arrays
     ! ff
-    ALLOCATE( bf3(0:ifftd-1),ph_wrk(0:ifftxc3d-1),  &
-         &          rho(0:ifftxc3d-1,input%jspins),rhd1(0:ifftxc3d-1,input%jspins,3),&
-         &          rhd2(0:ifftxc3d-1,input%jspins,6) )
+    ALLOCATE( bf3(0:ifftd-1),ph_wrk(0:ifftxc3d-1), rho(0:ifftxc3d-1,input%jspins),&
+         rhd1(0:ifftxc3d-1,input%jspins,3), rhd2(0:ifftxc3d-1,input%jspins,6) )
     IF (noco%l_noco)  THEN
        ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),&
-            &            magmom(0:ifftxc3-1),  &
-            &            dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
+            magmom(0:ifftxc3-1), dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
     END IF
 
 
     !-->     transform charge density to real space
 
     DO js=1,input%jspins
-       CALL fft3dxc(&
-            &              rho(0:,js),bf3,&
-            &              den%pw(:,js),&
-            &              stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            &              stars%nxc3_fft,stars%kmxxc_fft,+1,&
-            &              stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       CALL fft3dxc(rho(0:,js),bf3, den%pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+            stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
     END DO
 
     IF (noco%l_noco) THEN  
 
        !       for off-diagonal parts the same
-       CALL fft3dxc(&
-            &               mx,my,&
-            &               den%pw(:,3),&
-            &               stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            &               stars%nxc3_fft,stars%kmxxc_fft,+1,&
-            &               stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       CALL fft3dxc(mx,my, den%pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+            stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
 
        DO i=0,ifftxc3-1 
           rhotot= 0.5*( rho(i,1) + rho(i,2) )
-          magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 &
-               &                    + mx(i)**2 + my(i)**2 )
+          magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
           rho(i,1)= rhotot+magmom(i)
           rho(i,2)= rhotot-magmom(i)
        END DO
@@ -206,20 +184,15 @@ CONTAINS
        END DO
 
        DO js=1,input%jspins
-          CALL fft3dxc(&
-               &           rhd1(0:,js,idm),bf3,&
-               &           cqpw(:,js),&
-               &           stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1,&
-               &           stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
+          CALL fft3dxc(rhd1(0:,js,idm),bf3, cqpw(:,js), stars%kxc1_fft,stars%kxc2_fft,&
+               stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
        END DO
 
     END DO
 
     IF (noco%l_noco) THEN
 
-       CALL grdrsis(&
-            &           magmom,cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,obsolete,&
-            &           dmagmom )
+       CALL grdrsis(magmom,cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,obsolete, dmagmom )
 
        DO i=0,ifftxc3-1
           DO idm=1,3
@@ -231,8 +204,7 @@ CONTAINS
 
     END IF
 
-    IF (lwbc) GOTO 100 
-
+   
     !-->   for dd(rho)/d(xx,xy,yy,zx,yz,zz) = rhd2(:,:,idm) (idm=1,2,3,4,5,6)
     !
     !         ph_wrk: exp(i*(g_x,g_y,g_z)*tau) * g_(x,y,z) * g_(x,y,z)
@@ -253,11 +225,8 @@ CONTAINS
           ENDDO
 
           DO js=1,input%jspins
-             CALL fft3dxc(&
-                  &                rhd2(0:,js,ndm),bf3,&
-                  &                cqpw(:,js),&
-                  &                stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1,&
-                  &                stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
+             CALL fft3dxc(rhd2(0:,js,ndm),bf3, cqpw(:,js), stars%kxc1_fft,stars%kxc2_fft,&
+                  stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
           END DO
        END DO ! jdm 
     END DO   ! idm 
@@ -267,9 +236,7 @@ CONTAINS
     IF (noco%l_noco) THEN
 
        DO idm = 1,3
-          CALL grdrsis(&
-               &           dmagmom(0,idm),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,obsolete,&
-               &           ddmagmom(0,1,idm) )
+          CALL grdrsis(dmagmom(0,idm),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,obsolete, ddmagmom(0,1,idm) )
        END DO
 
        ndm= 0
@@ -279,10 +246,8 @@ CONTAINS
 
              DO i=0,ifftxc3-1
                 rhotot= rhd2(i,1,ndm)/2.+rhd2(i,2,ndm)/2.
-                rhd2(i,1,ndm)= rhotot +&
-                     &         ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
-                rhd2(i,2,ndm)= rhotot -&
-                     &         ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
+                rhd2(i,1,ndm)= rhotot + ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
+                rhd2(i,2,ndm)= rhotot - ( ddmagmom(i,jdm,idm) + ddmagmom(i,idm,jdm) )/2. 
              END DO
 
           ENDDO !jdm
@@ -306,22 +271,14 @@ CONTAINS
     bf3=0.0
     ! allocate the other arrays 
     !
-    ALLOCATE (agr(0:ifftxc3d-1),agru(0:ifftxc3d-1),agrd(0:ifftxc3d-1),&
-         &          g2r(0:ifftxc3d-1),g2ru(0:ifftxc3d-1),g2rd(0:ifftxc3d-1),&
-         &       gggr(0:ifftxc3d-1),gggru(0:ifftxc3d-1),gggrd(0:ifftxc3d-1),&
-         &       gzgr(0:ifftxc3d-1))
-
+    CALL xcpot%alloc_gradients(ifftxc3d,input%jspins,grad)
+ 
     !
     !     calculate the quantities such as abs(grad(rho)),.. used in
     !     evaluating the gradient contributions to potential and energy.
     !
-    CALL mkgxyz3&
-         &            (ifftxc3d,input%jspins,ifftxc3,input%jspins,rho,&
-         &             rhd1(0,1,1),rhd1(0,1,2),rhd1(0,1,3),&
-         &             rhd2(0,1,1),rhd2(0,1,3),rhd2(0,1,6),&
-         &             rhd2(0,1,5),rhd2(0,1,4),rhd2(0,1,2),&
-         &             agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,&
-         &             gzgr)
+    CALL mkgxyz3 (ifftxc3d,input%jspins,ifftxc3,input%jspins,rho, rhd1(0,1,1),rhd1(0,1,2),rhd1(0,1,3),&
+         rhd2(0,1,1),rhd2(0,1,3),rhd2(0,1,6), rhd2(0,1,5),rhd2(0,1,4),rhd2(0,1,2), grad)
 
     DEALLOCATE ( rhd1,rhd2 )
     ALLOCATE ( v_xc(0:ifftxc3d-1,input%jspins) )
@@ -344,15 +301,10 @@ CONTAINS
 
   
     IF (rhmni.LT.obsolete%chng) THEN
-       WRITE(6,'(/'' rhmn.lt.obsolete%chng in visxc. rhmn,obsolete%chng='',&
-            &     2d9.2)') rhmni,obsolete%chng
+       WRITE(6,'(/'' rhmn.lt.obsolete%chng in visxc. rhmn,obsolete%chng='',2d9.2)') rhmni,obsolete%chng
        !          CALL juDFT_error("visxcg: rhmn.lt.chng",calledby="visxcg")
     ENDIF
-
-    CALL vxcallg(xcpot,lwbc,input%jspins,SIZE(agr),nt,rho,&
-         &              agr,agru,agrd,g2r,g2ru,g2rd,&
-         &              gggr,gggru,gggrd,gzgr,&
-         &              v_x,v_xc)
+    CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
     !
     !----> back fft to g space
     !----> perform back  fft transform: v_xc(r) --> vxc(star)
@@ -361,12 +313,8 @@ CONTAINS
 
     DO js = 1,input%jspins
        bf3=0.0
-       CALL fft3dxc(&
-            &               v_xc(0:,js),bf3,&
-            &               fg3,&
-            &               stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            &               stars%nxc3_fft,stars%kmxxc_fft,-1,&
-            &               stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       CALL fft3dxc(v_xc(0:,js),bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+            stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        !
        DO k = 1,stars%nxc3_fft
           vxc%pw(k,js) = vxc%pw(k,js) + fg3(k)
@@ -382,10 +330,7 @@ CONTAINS
           !
           fg3(stars%nxc3_fft+1:)=0.0
           ALLOCATE ( vcon(0:ifftd-1) )
-          CALL fft3d(&
-               &                vcon(0),bf3,&
-               &                fg3,&
-               &                stars,+1)
+          CALL fft3d(vcon(0),bf3, fg3, stars,+1)
           !
           !----> Convolute with step function
           !
@@ -393,10 +338,7 @@ CONTAINS
              vcon(i)=stars%ufft(i)*vcon(i)
           ENDDO
           bf3=0.0
-          CALL fft3d(&
-               &                vcon(0),bf3,&
-               &                fg3,&
-               &                stars,-1,.FALSE.)
+          CALL fft3d(vcon(0),bf3, fg3, stars,-1,.FALSE.)
           DEALLOCATE ( vcon )
           !
           !----> add to warped coulomb potential
@@ -408,12 +350,8 @@ CONTAINS
        ENDIF
 
        bf3=0.0
-       CALL fft3dxc(&
-            &                 v_x(0:,js),bf3,&
-            &                 fg3,&
-            &                 stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            &                 stars%nxc3_fft,stars%kmxxc_fft,-1,&
-            &                 stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       CALL fft3dxc(v_x(0:,js),bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft, &
+            stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        !
        DO k = 1,stars%nxc3_fft
           vx%pw(k,js) = vx%pw(k,js) + fg3(k)
@@ -430,10 +368,7 @@ CONTAINS
 
           fg3(stars%nxc3_fft+1:)=0.0
           ALLOCATE ( vcon(0:ifftd-1) )
-          CALL fft3d(&
-               &                vcon(0),bf3,&
-               &                fg3,&
-               &                stars,+1)
+          CALL fft3d(vcon(0),bf3, fg3, stars,+1)
           !
           !----> Convolute with step function
           !
@@ -441,10 +376,7 @@ CONTAINS
              vcon(i)=stars%ufft(i)*vcon(i)
           ENDDO
           bf3=0.0
-          CALL fft3d(&
-               &                vcon(0),bf3,&
-               &                fg3,&
-               &                stars,-1,.FALSE.)
+          CALL fft3d(vcon(0),bf3, fg3, stars,-1,.FALSE.)
           DEALLOCATE ( vcon )
           !
           !----> add to warped exchange-potential
@@ -460,21 +392,15 @@ CONTAINS
     !
     !     calculate the ex.-cor energy density in real space
     !
-    IF (input%total) THEN
+    IF (ALLOCATED(exc%pw_w)) THEN
        ALLOCATE ( e_xc(0:ifftxc3d-1) )
-       CALL excallg(xcpot,lwbc,input%jspins,nt,rho,&
-            &               agr,agru,agrd,g2r,g2ru,g2rd,&
-            &               gggr,gggru,gggrd,gzgr,&
-            &               e_xc)
+       CALL xcpot%get_exc(input%jspins,rho,e_xc,grad)
        !
        !---->   perform back  fft transform: exc(r) --> exc(star)
        !
        bf3=0.0
-       CALL fft3dxc(&
-            &                e_xc,bf3,&
-            &                fg3,&
-            &                stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,-1,&
-            &                stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       CALL fft3dxc(e_xc,bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+            stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        DEALLOCATE ( e_xc )
        !
        !---->   Perform fft transform: exc(star) --> exc(r) 
@@ -483,8 +409,7 @@ CONTAINS
        fg3(stars%nxc3_fft+1:)=0.0
        bf3=0.0
        ALLOCATE ( vcon(0:ifftd-1) )
-       CALL fft3d(vcon,bf3,fg3,&
-            &             stars,+1)
+       CALL fft3d(vcon,bf3,fg3, stars,+1)
 
        DO i=0,ifftd-1
           vcon(i)=stars%ufft(i)*vcon(i)
@@ -493,16 +418,14 @@ CONTAINS
        !         ---> back fft to g space
        !
        bf3=0.0
-       CALL fft3d(vcon,bf3,exc%pw_w(:,1),&
-            &             stars,-1,.FALSE.)
+       CALL fft3d(vcon,bf3,exc%pw_w(:,1), stars,-1,.FALSE.)
        DEALLOCATE ( vcon )
        !
     ENDIF
 
     DEALLOCATE(fg3)
     DEALLOCATE ( bf3,rho,igxc_fft,gxc_fft )
-    DEALLOCATE ( agr,agru,agrd,g2r,g2ru,g2rd,&
-         &             gggr,gggru,gggrd,gzgr )
+  
 
 
 

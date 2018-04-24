@@ -18,8 +18,6 @@ xc-pot/vxcepbe.f
 xc-pot/vxcl91.f
 xc-pot/vxcpw91.f
 xc-pot/vxcwb91.f
-xc-pot/xcall.f
-xc-pot/xcallg.f
 xc-pot/xcbh.f
 xc-pot/xch91.F
 xc-pot/xcpz.f
@@ -28,3 +26,31 @@ xc-pot/xcwgn.f
 xc-pot/xcxal.f
 )
 
+set(inpgen_F77 ${inpgen_F77}
+xc-pot/corg91.F
+xc-pot/corl91.f
+xc-pot/corpbe.f
+xc-pot/easypbe.f
+xc-pot/excepbe.f
+xc-pot/exchpbe.F
+xc-pot/excl91.f
+xc-pot/excpw91.f
+xc-pot/excwb91.f
+xc-pot/gaunt.f
+xc-pot/grdchlh.f
+xc-pot/pbecor2.f
+xc-pot/potl0.f
+xc-pot/relcor.f
+xc-pot/vxcepbe.f
+xc-pot/vxcl91.f
+xc-pot/vxcpw91.f
+xc-pot/vxcwb91.f
+xc-pot/xcbh.f
+xc-pot/xch91.F
+xc-pot/xcpz.f
+xc-pot/xcvwn.f
+xc-pot/xcwgn.f
+xc-pot/xcxal.f
+)
+
+ 

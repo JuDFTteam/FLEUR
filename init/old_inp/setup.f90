@@ -68,7 +68,7 @@
           TYPE(t_noco),INTENT(INOUT)     :: noco
           TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
           TYPE(t_cell),INTENT(INOUT)     :: cell
-          TYPE(t_xcpot),INTENT(INOUT)    :: xcpot
+          CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
           TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
           TYPE(t_enpara),INTENT(INOUT)   :: enpara
           LOGICAL, INTENT (IN) :: l_opti  

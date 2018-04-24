@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
 
     !     ..
     !     ..
@@ -564,7 +564,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,s
