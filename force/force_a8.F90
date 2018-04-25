@@ -11,6 +11,7 @@ CONTAINS
     USE m_gaunt, ONLY :gaunt1
     USE m_differentiate,ONLY: difcub
     USE m_types
+    USE m_juDFT
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
@@ -41,12 +42,8 @@ CONTAINS
     !     .. Data statements ..
     COMPLEX,PARAMETER:: czero=CMPLX(0.000,0.000)
     COMPLEX,PARAMETER:: ci = CMPLX(0.0,1.0)
-    !
-    !  inline functions:
-    !
+
     ! Kronecker delta for arguments >=0 AND <0
-    !
-    !
     krondel(i,j) = MIN(ABS(i)+1,ABS(j)+1)/MAX(ABS(i)+1,ABS(j)+1)* (1+SIGN(1,i)*SIGN(1,j))/2
     alpha(l,m) = (l+1)*0.5e0*SQRT(REAL((l-m)* (l-m-1))/ REAL((2*l-1)* (2*l+1)))
     beta(l,m) = l*0.5e0*SQRT(REAL((l+m+2)* (l+m+1))/ REAL((2*l+1)* (2*l+3)))
@@ -54,10 +51,12 @@ CONTAINS
     delta(l,m) = l*0.5e0*SQRT(REAL((l-m+2)* (l-m+1))/ REAL((2*l+1)* (2*l+3)))
     epslon(l,m) = (l+1)*SQRT(REAL((l-m)* (l+m))/ REAL((2*l-1)* (2*l+1)))
     phi(l,m) = l*SQRT(REAL((l-m+1)* (l+m+1))/REAL((2*l+1)* (2*l+3)))
-    !     ..
+
+    CALL timestart("force_a8")
+
     WRITE  (6,*)
     WRITE (16,*)
-    !
+
     na = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -69,7 +68,7 @@ CONTAINS
           nd = atoms%ntypsy(na)
           !
           CALL intgr3(rho(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),qval)
-          !
+
           !     check if l=0 density is correct;
           !     note that in general also all l>0
           !     components of the density have been multiplied by r**2
@@ -77,9 +76,8 @@ CONTAINS
           !     factor sqrt(4pi) comes from Y_00 * \int d\Omega = 1/sqrt(4pi) * 4pi
           !     write(16,1616) qval*sfp
 8000      FORMAT (' FORCE_A8: valence charge=',1p,e16.8)
-          !
+
           !    PART I of FORCE_A8
-          !
           DO  lh1 = 0,sphhar%nlh(nd)
              l1 = sphhar%llh(lh1,nd)
              DO  lh2 = 0,sphhar%nlh(nd)
@@ -308,6 +306,8 @@ CONTAINS
 8050   FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060   FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
     ENDDO
+
+    CALL timestop("force_a8")
 
   END SUBROUTINE force_a8
 END MODULE m_forcea8

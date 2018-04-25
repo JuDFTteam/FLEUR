@@ -9,6 +9,7 @@ CONTAINS
                        we,jsp,ne,usdus,eigVecCoeffs,force,results)
     USE m_types
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_force),INTENT(INOUT)     :: force
@@ -43,13 +44,9 @@ CONTAINS
     !     .. Statement Functions ..
     REAL   alpha,beta,delta,epslon,gamma,phi 
     INTEGER krondel
-    !     ..
-    !     .. Statement Function definitions ..
-    !  inline functions:
-    !
+
     ! Kronecker delta for arguments >=0 AND <0
-    !
-    !
+
     krondel(i,j) = MIN(ABS(i)+1,ABS(j)+1)/MAX(ABS(i)+1,ABS(j)+1)* (1+SIGN(1,i)*SIGN(1,j))/2
     alpha(l,m) = (l+1)*0.5e0*SQRT(REAL((l-m)* (l-m-1))/ REAL((2*l-1)* (2*l+1)))
     beta(l,m) = l*0.5e0*SQRT(REAL((l+m+2)* (l+m+1))/ REAL((2*l+1)* (2*l+3)))
@@ -57,9 +54,9 @@ CONTAINS
     delta(l,m) = l*0.5e0*SQRT(REAL((l-m+2)* (l-m+1))/ REAL((2*l+1)* (2*l+3)))
     epslon(l,m) = (l+1)*SQRT(REAL((l-m)* (l+m))/ REAL((2*l-1)* (2*l+1)))
     phi(l,m) = l*SQRT(REAL((l-m+1)* (l+m+1))/REAL((2*l+1)* (2*l+3)))
-    !     ..
-    !
-    !
+
+    CALL timestart("force_a12")
+
     natom = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -235,6 +232,8 @@ CONTAINS
        ENDIF
        natom = natom + atoms%neq(n)
     ENDDO
-    !
+
+    CALL timestop("force_a12")
+
   END SUBROUTINE force_a12
 END MODULE m_forcea12

@@ -131,6 +131,8 @@ CONTAINS
     TYPE (t_orbcomp)          :: orbcomp
     TYPE (t_gVacMap)          :: gVacMap
 
+    CALL timestart("cdnval")
+
     l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
 
     IF (noco%l_mperp) THEN
@@ -183,15 +185,11 @@ CONTAINS
     l_write = input%cdinf.AND.mpi%irank==0
 
     DO iType = 1,atoms%ntype
-
        DO ispin = jsp_start, jsp_end
           CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,l_write,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
        END DO
-
        IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
-
        IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
-
        IF(l_cs) CALL corespec_rme(atoms,input,iType,dimension%nstd,input%jspins,jspin,results%ef,&
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
     END DO
@@ -249,10 +247,8 @@ CONTAINS
 
        !     ----> valence density in the interstitial region
        IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-          CALL timestart("cdnval: pwden")
           CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
                      jspin,lapw,noccbd,we,eig,den,regCharges%qis,results,force%f_b8,zMat)
-          CALL timestop("cdnval: pwden")
        END IF
 
        !--->    charge of each valence state in this k-point of the SBZ
@@ -266,11 +262,9 @@ CONTAINS
        !--->    valence density in the vacuum region
        IF (input%film) THEN
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-             CALL timestart("cdnval: vacden")
              CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
                          gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
                          den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
-             CALL timestop("cdnval: vacden")
           END IF
           !--->       perform Brillouin zone integration and summation over the
           !--->       bands in order to determine the vacuum energy parameters.
@@ -287,13 +281,9 @@ CONTAINS
 
        DO ispin = jsp_start,jsp_end
           IF (input%l_f) CALL force%init2(noccbd,input,atoms)
-
-          CALL timestart("cdnval: abcof")
           CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
                      eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                      eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
-          CALL timestop("cdnval: abcof")
-
           IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
           !--->       perform Brillouin zone integration and summation over the
@@ -324,14 +314,12 @@ CONTAINS
           IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
 
           IF (input%l_f) THEN
-             CALL timestart("cdnval: force_a12/21")
              IF (.not.input%l_useapw) THEN
                 CALL force_a12(atoms,noccbd,sym,dimension,cell,oneD,&
                                we,ispin,noccbd,usdus,eigVecCoeffs,force,results)
              ENDIF
              CALL force_a21(input,atoms,dimension,noccbd,sym,oneD,cell,we,ispin,&
                             enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs,force,results)
-             CALL timestop("cdnval: force_a12/21")
           END IF
 
           IF(l_cs) THEN
@@ -359,12 +347,10 @@ CONTAINS
     END DO !---> end of k-point loop
 
 #ifdef CPP_MPI
-    CALL timestart("cdnval: mpi_col_den")
     DO ispin = jsp_start,jsp_end
        CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,&
                         results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
     END DO
-    CALL timestop("cdnval: mpi_col_den")
 #endif
 
     IF (mpi%irank==0) THEN
@@ -377,19 +363,13 @@ CONTAINS
 
           !--->      check continuity of charge density
           IF (input%cdinf) THEN
-             CALL timestart("cdnval: cdninf-stuff")
              WRITE (6,FMT=8210) ispin
 8210         FORMAT (/,5x,'check continuity of cdn for spin=',i2)
              CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
-             CALL timestop("cdnval: cdninf-stuff")
           END IF
 
           !--->      forces of equ. A8 of Yu et al.
-          IF ((input%l_f)) THEN
-             CALL timestart("cdnval: force_a8")
-             CALL force_a8(input,atoms,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,results)
-             CALL timestop("cdnval: force_a8")
-          END IF
+          IF ((input%l_f)) CALL force_a8(input,atoms,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,results)
 
        END DO ! end of loop ispin = jsp_start,jsp_end
        CALL closeXMLElement('mtCharges')
@@ -407,6 +387,8 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
 #endif
+
+    CALL timestop("cdnval")
 
   END SUBROUTINE cdnval
 END MODULE m_cdnval

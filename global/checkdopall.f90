@@ -16,6 +16,7 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
    USE m_types
    USE m_cylpts
    USE m_points
+   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -37,6 +38,8 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
 
    REAL                         :: xp(3,dimension%nspd)
 
+   CALL timestart("checkDOPAll")
+
    IF ((input%film).AND.(.NOT.oneD%odi%d1)) THEN
       !--->             vacuum boundaries
       npd = min(dimension%nspd,25)
@@ -48,12 +51,10 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
                        sphhar,stars,sym,vacuum,cell,oneD,potden)
       END DO
    ELSE IF (oneD%odi%d1) THEN
-      !-odim
       npd = min(dimension%nspd,25)
       CALL cylpts(xp,npd,cell%z1)
       CALL checkdop(xp,npd,0,0,ivac,1,ispin,dimension,atoms,&
                     sphhar,stars,sym,vacuum,cell,oneD,potden)
-      !+odim
    END IF
 
    !--->          m.t. boundaries
@@ -64,6 +65,8 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
                     dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
       nat = nat + atoms%neq(n)
    END DO
+
+   CALL timestop("checkDOPAll")
 
 END SUBROUTINE checkDOPAll
 

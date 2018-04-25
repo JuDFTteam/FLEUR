@@ -138,7 +138,9 @@ CONTAINS
     !                 \vec{a}_1,2 are the 2D lattice vectors           
     !  
     !     **************************************************************************************************
-    ! 
+
+    CALL timestart("vacden")
+
     ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),bc(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),dt(DIMENSION%nv2d),&
          &           dte(DIMENSION%nv2d),du(vacuum%nmzd),ddu(vacuum%nmzd,DIMENSION%nv2d),due(vacuum%nmzd),&
          &           ddue(vacuum%nmzd,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
@@ -1243,6 +1245,8 @@ CONTAINS
        DEALLOCATE (ac_1,bc_1,dt_1,dte_1,du_1,ddu_1,due_1,ddue_1)
        DEALLOCATE (t_1,te_1,tei_1,u_1,ue_1)
     END IF ! oneD%odi%d1
+
+    CALL timestop("vacden")
 
   END SUBROUTINE vacden
 END MODULE m_vacden

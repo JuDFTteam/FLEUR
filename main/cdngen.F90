@@ -92,21 +92,19 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL timestart("cdngen: cdnval")
       CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
       CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,results,moments,mcd,slab)
-      CALL timestop("cdngen: cdnval")
    END DO
 
    IF (mpi%irank.EQ.0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
-         CALL timestart("cdnval: dos")
+         CALL timestart("cdngen: dos")
          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,slab)
          END IF
-         CALL timestop("cdnval: dos")
+         CALL timestop("cdngen: dos")
       END IF
    END IF
 

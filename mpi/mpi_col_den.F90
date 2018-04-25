@@ -15,6 +15,7 @@ CONTAINS
 #include"cpp_double.h"
     USE m_types
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -50,6 +51,7 @@ CONTAINS
     ! ..  External Subroutines
     EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy,MPI_REDUCE
 
+    CALL timestart("mpi_col_den")
 
     ! -> Collect den%pw(:,jspin)
     n = stars%ng3
@@ -440,6 +442,7 @@ CONTAINS
     ENDIF
     !-lda+U
 
-    RETURN
+    CALL timestop("mpi_col_den")
+
   END SUBROUTINE mpi_col_den
 END MODULE m_mpi_col_den

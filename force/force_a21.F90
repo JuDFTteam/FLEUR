@@ -26,6 +26,7 @@ CONTAINS
     USE m_tlmplm_store
     USE m_types
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_force),INTENT(INOUT)     :: force
@@ -62,8 +63,9 @@ CONTAINS
     REAL vec(3),vec2(3),vecsum(3),vecsum2(3)
 
     TYPE(t_tlmplm)::tlmplm
-    !     ..
-    !     ..
+
+    CALL timestart("force_a21")
+
     !dimension%lmplmd = (dimension%lmd* (dimension%lmd+3))/2
     mlotot = 0 ; mlolotot = 0
     DO n = 1, atoms%ntype
@@ -355,8 +357,8 @@ CONTAINS
        ENDIF                                            !  IF (atoms%l_geo(n)) ...
        natom = natom + atoms%neq(n)
     ENDDO
-    !
-    DEALLOCATE (tlmplm%tdd,tlmplm%tuu,tlmplm%tdu,tlmplm%tud,tlmplm%tuulo,tlmplm%tdulo,tlmplm%tuloulo,tlmplm%ind,a21,b4)
+
+    CALL timestop("force_a21")
 
   END SUBROUTINE force_a21
 END MODULE m_forcea21
