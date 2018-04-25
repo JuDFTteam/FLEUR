@@ -261,7 +261,7 @@ CONTAINS
        !--->    valence density in the vacuum region
        IF (input%film) THEN
           IF (.NOT.((jspin.EQ.2) .AND. noco%l_noco)) THEN
-             CALL vacden(vacuum,dimension,stars,oneD, kpts,input, cell,atoms,noco,banddos,&
+             CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
                          gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
                          den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
           END IF
@@ -346,34 +346,18 @@ CONTAINS
     IF (mpi%irank==0) THEN
        CALL cdnmt(dimension%jspd,atoms,sphhar,noco,jsp_start,jsp_end,&
                   enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
-
        IF(l_cs) CALL corespec_ddscs(jspin,input%jspins)
-
        DO ispin = jsp_start,jsp_end
-
-          !--->      check continuity of charge density
           IF (input%cdinf) THEN
              WRITE (6,FMT=8210) ispin
 8210         FORMAT (/,5x,'check continuity of cdn for spin=',i2)
              CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
           END IF
-
-          !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) CALL force_a8(input,atoms,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,results)
-
-       END DO ! end of loop ispin = jsp_start,jsp_end
+       END DO
        CALL closeXMLElement('mtCharges')
+    END IF
 
-       IF(vacuum%nvac.EQ.1) THEN
-          den%vacz(:,2,:) = den%vacz(:,1,:)
-          IF (sym%invs) THEN
-             den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
-          ELSE
-             den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
-          END IF
-       END IF
-
-    END IF ! end of (mpi%irank==0)
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif

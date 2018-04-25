@@ -5,7 +5,7 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,cell,atoms,noco,banddos,&
+  SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
                     gVacMap,we,ikpt,jspin,vz,ne,lapw,evac,eig,den,qvac,qvlay,&
                     stcoeff,zMat)
 
@@ -56,6 +56,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
@@ -1245,6 +1246,15 @@ CONTAINS
        DEALLOCATE (ac_1,bc_1,dt_1,dte_1,du_1,ddu_1,due_1,ddue_1)
        DEALLOCATE (t_1,te_1,tei_1,u_1,ue_1)
     END IF ! oneD%odi%d1
+
+    IF(vacuum%nvac.EQ.1) THEN
+       den%vacz(:,2,:) = den%vacz(:,1,:)
+       IF (sym%invs) THEN
+          den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+       ELSE
+          den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+       END IF
+    END IF
 
     CALL timestop("vacden")
 
