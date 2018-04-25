@@ -207,7 +207,6 @@ CONTAINS
        banddos%l_orb = .FALSE.
        banddos%orbCompAtom = 0
 
-       ALLOCATE(xcpot%lda_atom(atoms%ntype))
        ALLOCATE(noco%socscale(atoms%ntype))
        xcpot%lda_atom(:) = .FALSE.
        noco%socscale(:) = 1.0

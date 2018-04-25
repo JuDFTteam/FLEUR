@@ -24,7 +24,7 @@ c.....------------------------------------------------------------------
       REAL, INTENT (IN) :: dvxx(ndm,jsdm),dvyy(ndm,jsdm),dvzz(ndm,jsdm)
       REAL, INTENT (IN) :: dvyz(ndm,jsdm),dvzx(ndm,jsdm),dvxy(ndm,jsdm)
 
-      TYPE(t_gradients),INTENT(OUT)::grad
+      TYPE(t_gradients),INTENT(INOUT)::grad
 
       REAL vlt,dvxt,dvyt,dvzt,dvxxt,dvyyt,dvzzt,dvyzt,dvzxt,dvxyt,
      &     vlu,dvxu,dvyu,dvzu,dvxxu,dvyyu,dvzzu,dvyzu,dvzxu,dvxyu,

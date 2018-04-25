@@ -132,8 +132,6 @@ CONTAINS
     IF (xcpot%is_name("hf")) a_ex=amix_hf
     IF (xcpot%is_name("hse")) a_ex=amix_hse
     IF (xcpot%is_name("vhse")) a_ex=amix_hse
-
-    IF (a_ex==-1) CALL judft_error('xc functional can not be identified')
   END FUNCTION xcpot_get_exchange_weight
 
 !***********************************************************************

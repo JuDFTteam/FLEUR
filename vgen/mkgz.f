@@ -16,7 +16,7 @@ c.....------------------------------------------------------------------
       INTEGER, INTENT (IN) :: nmzdf,jspins
       REAL,    INTENT (IN) :: rh1(nmzdf),rhdz1(nmzdf),rhdzz1(nmzdf)
       REAL,    INTENT (IN) :: rh2(nmzdf),rhdz2(nmzdf),rhdzz2(nmzdf)
-      TYPE(t_gradients),INTENT(OUT)::grad
+      TYPE(t_gradients),INTENT(INOUT)::grad
 
       INTEGER i
       REAL    vlt,dvzt,dvzzt,vlu,dvzu,dvzzu,vld,dvzd,dvzzd

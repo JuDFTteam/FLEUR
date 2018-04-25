@@ -38,7 +38,7 @@ C     .. Arguments ..
       REAL,    INTENT (IN) :: rhdtt(nspd,jspd),rhdff(nspd,jspd)
       REAL,    INTENT (IN) :: rhdtf(nspd,jspd),rhdrt(nspd,jspd)
       REAL,    INTENT (IN) :: rhdrf(nspd,jspd),rhdt(nspd,jspd)
-      TYPE(t_gradients),INTENT(OUT) ::grad
+      TYPE(t_gradients),INTENT(INOUT) ::grad
       
 C     ..
 C     .. Locals ..
@@ -296,7 +296,7 @@ C     .. Locals ..
             dagrf = (rdr*rdrf*rv2+rdt*rdtf+rdf*rdff/sint2)/
      +           (grad%agrt(i)*rv3*sint1)
             
-            grad%g2rt(i)=drdr+2.0*rdr/rv1+(rdtt+rdt/tant1+rdff/sint2)/rv2
+           grad%g2rt(i)=drdr+2.0*rdr/rv1+(rdtt+rdt/tant1+rdff/sint2)/rv2
             
             dzdr = ((rdru-rdrd)*ro- (rou-rod)*rdr)/ro2
             

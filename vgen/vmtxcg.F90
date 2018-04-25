@@ -233,7 +233,7 @@ CONTAINS
              ENDDO ! lh
           ENDDO   ! js
 
-          CALL xcpot%alloc_gradients(input%jspins,nsp,grad)
+          CALL xcpot%alloc_gradients(nsp,input%jspins,grad)
           CALL mkgylm(input%jspins,atoms%rmsh(jr,n),thet,nsp,DIMENSION%nspd,DIMENSION%jspd,ch,chdr,&
                chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,grad)
           
