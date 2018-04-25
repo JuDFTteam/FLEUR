@@ -59,10 +59,6 @@ CONTAINS
     USE m_forcea12
     USE m_forcea21
     USE m_checkdopall
-    USE m_int21       ! integrate (spin) off-diagonal radial functions
-    USE m_int21lo     ! -"- for u_lo
-    USE m_rhomt21     ! calculate (spin) off-diagonal MT-density coeff's
-    USE m_rhonmt21    ! -"-                       non-MT-density coeff's
     USE m_cdnmt       ! calculate the density and orbital moments etc.
     USE m_orbmom      ! coeffd for orbital moments
     USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -82,7 +78,7 @@ CONTAINS
     TYPE(t_mpi),           INTENT(IN)    :: mpi
     TYPE(t_dimension),     INTENT(IN)    :: dimension
     TYPE(t_oneD),          INTENT(IN)    :: oneD
-    TYPE(t_enpara),        INTENT(INOUT) :: enpara
+    TYPE(t_enpara),        INTENT(IN)    :: enpara
     TYPE(t_obsolete),      INTENT(IN)    :: obsolete
     TYPE(t_banddos),       INTENT(IN)    :: banddos
     TYPE(t_sliceplot),     INTENT(IN)    :: sliceplot
@@ -113,10 +109,10 @@ CONTAINS
 
     !     .. Local Scalars ..
     INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
-    INTEGER :: i,ie,ivac,j,k,l,n,ilo,nbands,noccbd
+    INTEGER :: i,ie,ivac,j,k,l,ilo,nbands,noccbd,iType
     INTEGER :: skip_t,skip_tt
     INTEGER :: nStart,nEnd,nbasfcn
-    LOGICAL :: l_evp,l_orbcomprot,l_real, l_write
+    LOGICAL :: l_orbcomprot,l_real, l_write
 
     !     ...Local Arrays ..
     INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
@@ -186,24 +182,17 @@ CONTAINS
 
     l_write = input%cdinf.AND.mpi%irank==0
 
-    DO n = 1,atoms%ntype
+    DO iType = 1,atoms%ntype
 
        DO ispin = jsp_start, jsp_end
-          CALL genMTBasis(atoms,enpara,vTot,mpi,n,ispin,l_write,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
+          CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,l_write,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
        END DO
 
-       IF (noco%l_mperp) THEN
-          DO l = 0,atoms%lmax(n)
-             CALL int_21(f,g,atoms,n,l,denCoeffsOffdiag)
-          END DO
-          DO ilo = 1, atoms%nlo(n)
-             CALL int_21lo(f,g,atoms,n,flo,ilo,denCoeffsOffdiag)
-          END DO
-       END IF
+       IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
 
-       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,n,jspin)
+       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
 
-       IF(l_cs) CALL corespec_rme(atoms,input,n,dimension%nstd,input%jspins,jspin,results%ef,&
+       IF(l_cs) CALL corespec_rme(atoms,input,iType,dimension%nstd,input%jspins,jspin,results%ef,&
                                   dimension%msh,vTot%mt(:,0,:,:),f,g)
     END DO
     DEALLOCATE (f,g,flo)
@@ -351,10 +340,7 @@ CONTAINS
           END IF
        END DO !--->    end loop over ispin
 
-       IF (noco%l_mperp) THEN
-          CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,denCoeffsOffdiag)
-          IF (denCoeffsOffdiag%l_fmpl) CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,denCoeffsOffdiag)
-       END IF
+       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
 199    CONTINUE
        IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
