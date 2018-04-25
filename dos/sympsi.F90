@@ -23,6 +23,7 @@ CONTAINS
     USE m_grp_k
     USE m_inv3
     USE m_types
+    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)        :: lapw
@@ -70,6 +71,8 @@ CONTAINS
     ksym=0
     IF (noco%l_soc.AND.(.NOT.noco%l_noco)) RETURN
 
+    CALL timestart("sympsi")
+
     IF (soc) THEN
        ALLOCATE(su(2,2,2*sym%nop))
        CALL grp_k(sym,mrot_k,cell,lapw%bkpt,nclass,nirr,c_table, grpname,irrname,su)
@@ -116,6 +119,7 @@ CONTAINS
              ENDIF
           ENDDO
           WRITE(6,*) 'Problem in symcheck, cannot find rotated kv for', k,lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin)
+          CALL timestart("sympsi")
           RETURN
        ENDDO kloop
     ENDDO
@@ -241,6 +245,8 @@ CONTAINS
 
     DEALLOCATE(csum)
     DEALLOCATE(chars)
+
+    CALL timestop("sympsi")
 
   END SUBROUTINE sympsi
 

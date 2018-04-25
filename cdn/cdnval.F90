@@ -109,7 +109,7 @@ CONTAINS
 
     !     .. Local Scalars ..
     INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
-    INTEGER :: i,ie,ivac,j,k,l,ilo,nbands,noccbd,iType
+    INTEGER :: iErr,ivac,nbands,noccbd,iType
     INTEGER :: skip_t,skip_tt
     INTEGER :: nStart,nEnd,nbasfcn
     LOGICAL :: l_orbcomprot,l_real, l_write
@@ -154,7 +154,6 @@ CONTAINS
     ALLOCATE ( jsym(dimension%neigd),ksym(dimension%neigd) )
 
     ! --> Initializations
-
     CALL usdus%init(atoms,input%jspins)
     CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
     !---> The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
@@ -205,7 +204,7 @@ CONTAINS
 
        IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
-          CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
+          CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
           EXIT
        END IF
@@ -230,7 +229,7 @@ CONTAINS
        CALL zMat%init(l_real,nbasfcn,noccbd)
        CALL read_eig(eig_id,ikpt,jsp,n_start=nStart,n_end=nEnd,neig=nbands,zmat=zMat)
 #ifdef CPP_MPI
-       CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
+       CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
 
        eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
@@ -322,27 +321,18 @@ CONTAINS
                             enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs,force,results)
           END IF
 
-          IF(l_cs) THEN
-             CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
-                               noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
-          END IF
+          IF(l_cs) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
+                                     noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
        END DO !--->    end loop over ispin
 
        IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
 199    CONTINUE
-       IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)  ) THEN
-          CALL timestart("cdnval: write_info")
-          !--->    calculate charge distribution of each state (l-character ...)
-          !--->    and write the information to the files dosinp and vacdos
-          !--->    for dos and bandstructure plots
-
+       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
           !--dw    since z is no longer an argument of cdninf sympsi has to be called here!
           IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,ksym,jsym,zMat)
 
           CALL write_dos(eig_id,ikpt,jspin,regCharges,slab,orbcomp,ksym,jsym,mcd%mcd)
-
-          CALL timestop("cdnval: write_info")
        END IF
     END DO !---> end of k-point loop
 
@@ -385,7 +375,7 @@ CONTAINS
 
     END IF ! end of (mpi%irank==0)
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(mpi%mpi_comm,ie) ! Synchronizes the RMA operations
+    CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
 
     CALL timestop("cdnval")
