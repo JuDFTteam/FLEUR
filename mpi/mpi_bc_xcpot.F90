@@ -16,7 +16,7 @@ CONTAINS
     CHARACTER(len=4):: namex
     INTEGER         :: ierr,n
     INCLUDE 'mpif.h'
-    
+
     IF (mpi%isize==1) RETURN !nothing to be done with only one PE
     !First determine type on pe0
     IF (mpi%irank==0) THEN
@@ -41,9 +41,11 @@ CONTAINS
     !Now we can do the the type dependend bc
     SELECT TYPE(xcpot)
     TYPE IS (t_xcpot_inbuild)
-       namex=xcpot%get_name()
-       l_relcor=xcpot%data%krla==1
-       n=SIZE(xcpot%lda_atom)
+       IF (mpi%irank==0) THEN
+          namex=xcpot%get_name()
+          l_relcor=xcpot%DATA%krla==1
+          n=SIZE(xcpot%lda_atom)
+       ENDIF
        CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(l_relcor,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
