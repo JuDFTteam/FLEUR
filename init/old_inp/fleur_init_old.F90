@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_banddos)  ,INTENT(OUT)  :: banddos
     TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete 
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
-    TYPE(t_xcpot_inbuild)    ,INTENT(OUT)  :: xcpot
+    CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
@@ -68,6 +68,10 @@ CONTAINS
 #endif
 
     ALLOCATE(t_forcetheo::forcetheo) !default no forcetheorem type
+    ALLOCATE(t_xcpot_inbuild::xcpot)
+
+    SELECT TYPE(xcpot)
+    TYPE IS (t_xcpot_inbuild)
     namex = '    '
     relcor = '            '
 
@@ -186,12 +190,12 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-
+    CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL mpi_dist_forcetheorem(mpi,forcetheo)
 
 #endif
     IF (mpi%irank.NE.0) THEN
-       CALL xcpot%init(namex,l_krla)
+       CALL xcpot%init(namex,l_krla,atoms%ntype)
     END IF
 
     CALL setup(mpi,atoms,kpts,DIMENSION,sphhar,&
@@ -259,5 +263,6 @@ CONTAINS
        END IF
     END IF ! mpi%irank.eq.0
     CALL timestop("preparation:stars,lattice harmonics,+etc")
+    END SELECT
   END SUBROUTINE fleur_init_old
 END MODULE m_fleur_init_old

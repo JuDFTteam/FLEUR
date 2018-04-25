@@ -3,7 +3,14 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+!> This module defines two data-types used in the calculation of xc-potentials
+!! a) the abstract t_xcpot which should be overwritten for actual implementations
+!! b) the t_gradients that collects the gradients needed in GGAs
+!!
+!! Currently t_xcpot_inbuild implements the XC-pots directly build into FLEUR
+!! and t_xcpot_libxc provides and interface to libxc.
+!! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
+!! for additional implementations.
 MODULE m_types_xcpot
   IMPLICIT NONE
   PRIVATE
@@ -17,7 +24,6 @@ MODULE m_types_xcpot
      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
      PROCEDURE        :: get_vxc=>xcpot_get_vxc
      PROCEDURE        :: get_exc=>xcpot_get_exc
-     PROCEDURE        :: broadcast=>xcpot_broadcast
      PROCEDURE,NOPASS :: alloc_gradients=>xcpot_alloc_gradients
   END TYPE t_xcpot
 
@@ -88,12 +94,5 @@ CONTAINS
     ALLOCATE(grad%gggru(ngrid),grad%gzgr(ngrid),grad%g2rt(ngrid))
     ALLOCATE(grad%gggrd(ngrid),grad%grgru(ngrid),grad%grgrd(ngrid))
   END SUBROUTINE xcpot_alloc_gradients
-
-  SUBROUTINE xcpot_broadcast(xcpot,mpi)
-    USE m_types_mpi
-    IMPLICIT NONE
-    CLASS(t_xcpot),INTENT(INOUT) :: xcpot
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-  END SUBROUTINE xcpot_broadcast
   
 END MODULE m_types_xcpot

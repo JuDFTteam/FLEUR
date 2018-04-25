@@ -303,7 +303,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                ! generate coulomb potential by integrating inward to z1
 
                DO ivac = 1, vacuum%nvac
-                  CALL xcpot_dummy%init("vwn",.false.)
+                  CALL xcpot_dummy%init("vwn",.FALSE.,atoms%ntype)
                   DO i=1,vacuum%nmz
                      sigm(i) = (i-1)*vacuum%delz*den%vacz(i,ivac,ispin)
                   END DO

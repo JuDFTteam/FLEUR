@@ -211,7 +211,7 @@
           WRITE (6,FMT=8120) namex,relcor
 8120      FORMAT (1x,'exchange-correlation: ',a4,2x,a12,1x,'correction')
 
-          CALL xcpot%init(namex,relcor.EQ.'relativistic')
+          CALL xcpot%init(namex,relcor.EQ.'relativistic',atoms%ntype)
 !!$          xcpot%icorr = -99
 !!$
 !!$          !     l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.

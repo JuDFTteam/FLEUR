@@ -40,7 +40,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_gen_bz
   USE m_nocoInputCheck
   USE m_kpoints
-
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
@@ -537,7 +536,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      CALL prp_xcfft(stars,input,cell,xcpot)
  
   END IF !(mpi%irank.EQ.0)
-  call xcpot%broadcast(mpi)
 #ifdef CPP_MPI
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif

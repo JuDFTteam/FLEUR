@@ -2027,8 +2027,7 @@ SUBROUTINE setXCParameters(atoms,namex,relcor,xcpot)
 
    SELECT TYPE(xcpot)
    TYPE IS(t_xcpot_inbuild)
-      CALL xcpot%init(namex(1:4),relcor)
-      ALLOCATE(xcpot%lda_atom(atoms%ntype))
+      CALL xcpot%init(namex(1:4),relcor,atoms%ntype)
 !   TYPE IS(t_xcpot_libxc)
 !      CALL xcpot%init(namex)
    END SELECT

@@ -37,7 +37,7 @@ MODULE m_types_xcpot_inbuild
      INTEGER,PRIVATE     :: icorr=0
 #endif
 
-    TYPE(t_xcpot_data)   :: data
+     TYPE(t_xcpot_data)   :: DATA
      
      LOGICAL,ALLOCATABLE :: lda_atom(:)
      
@@ -63,14 +63,18 @@ CONTAINS
     xcpot_get_name=xc_names(xcpot%icorr)
   END FUNCTION xcpot_get_name
 
-  SUBROUTINE xcpot_init(xcpot,namex,relcor)
+  SUBROUTINE xcpot_init(xcpot,namex,relcor,ntype)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_xcpot_inbuild),INTENT(INOUT)    :: xcpot
     CHARACTER(len=*),INTENT(IN)  :: namex
     LOGICAL,INTENT(IN)           :: relcor
+    INTEGER,INTENT(IN)           :: ntype
     INTEGER:: n
     !Determine icorr from name
+
+    ALLOCATE(xcpot%lda_atom(ntype))
+    xcpot%lda_atom=.FALSE.
     xcpot%icorr=0
     DO n=1,SIZE(xc_names)
        IF (TRIM(ADJUSTL(namex))==TRIM(xc_names(n))) THEN
@@ -312,27 +316,6 @@ CONTAINS
       xcpot_is_name=(TRIM(xc_names(xcpot%icorr))==TRIM((name)))
     END FUNCTION xcpot_is_name
 
-    SUBROUTINE xcpot_broadcast(xcpot,mpi)
-      USE m_types_mpi
-      IMPLICIT NONE
-      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
-      TYPE(t_mpi),INTENT(IN)       :: mpi
-
-      LOGICAL         :: l_relcor
-      CHARACTER(len=4):: namex
-      INTEGER         :: ierr
-#ifdef CPP_MPI      
-      INCLUDE 'mpif.h'
-
-      IF (mpi%irank==0) THEN
-         namex=xcpot%get_name()
-         l_relcor=xcpot%krla==1
-      ENDIF
-      CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(l_relcor,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-      IF (mpi%irank.NE.0)  CALL xcpot%init(namex,l_relcor)
-#endif
-    END SUBROUTINE xcpot_broadcast
 
     
   END MODULE m_types_xcpot_inbuild

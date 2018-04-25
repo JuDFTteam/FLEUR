@@ -33,6 +33,8 @@
           USE m_writeOutHeader
           USE m_fleur_init_old
           USE m_types_xcpot_inbuild
+          USE m_mpi_bc_xcpot
+
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
           USE m_mpi_dist_forcetheorem
@@ -177,7 +179,7 @@
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
              END IF
-
+             CALL mpi_bc_xcpot(xcpot,mpi)
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
@@ -207,14 +209,10 @@
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
-             ALLOCATE(t_xcpot_inbuild::xcpot)
-             SELECT TYPE(xcpot)
-             TYPE IS(t_xcpot_inbuild)
-                CALL fleur_init_old(mpi,&
-                     input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-                     sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
-                     oneD,coreSpecInput,l_opti)
-             END SELECT
+             CALL fleur_init_old(mpi,&
+                  input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+                  sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
+                  oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
   
