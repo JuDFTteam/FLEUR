@@ -1,6 +1,6 @@
 MODULE m_forcea21U
 CONTAINS
-  SUBROUTINE force_a21_U(nobd,atoms,i_u,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,force,a21)
+  SUBROUTINE force_a21_U(atoms,i_u,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
     !
     !***********************************************************************
     ! This subroutine calculates the lda+U contribution to the HF forces, 
@@ -9,24 +9,27 @@ CONTAINS
     !***********************************************************************
     !
     USE m_constants
-    USE m_types
+    USE m_types_setup
+    USE m_types_usdus
+    USE m_types_cdnval
     IMPLICIT NONE
 
     TYPE(t_usdus),INTENT(IN)        :: usdus
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
-    TYPE(t_force),INTENT(IN)        :: force
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN)    :: nobd   
     INTEGER, INTENT (IN)    :: itype,isp,ne
     INTEGER, INTENT (INOUT) :: i_u ! on input: index for the first U for atom type "itype or higher"
                                    ! on exit: index for the first U for atom type "itype+1 or higher"
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd) 
-    COMPLEX, INTENT (IN) :: v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    REAL, INTENT (INOUT) :: a21(3,atoms%nat)
+    REAL,    INTENT(IN)    :: we(ne) 
+    COMPLEX, INTENT(IN)    :: v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
+    COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    REAL,    INTENT(INOUT) :: a21(3,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX v_a,v_b,v_c,p1,p2,p3
@@ -59,8 +62,8 @@ CONTAINS
              DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                 DO ie = 1,ne
                    DO i = 1,3
-                      p1 = (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * v_a) * force%aveccof(i,ie,lmp,iatom)
-                      p2 = (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * v_b) * force%bveccof(i,ie,lmp,iatom) 
+                      p1 = (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * v_a) * aveccof(i,ie,lmp,iatom)
+                      p2 = (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * v_b) * bveccof(i,ie,lmp,iatom) 
                       a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2) * we(ie)/atoms%neq(itype)
                    END DO
                 END DO
@@ -84,11 +87,11 @@ CONTAINS
                    DO iatom =  sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                       DO ie = 1,ne
                          DO i = 1,3
-                            p1 = v_a * (CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * force%cveccof(i,mp,ie,lo,iatom))
-                            p2 = v_b * (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * force%cveccof(i,mp,ie,lo,iatom) + &
-                                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * force%aveccof(i,ie,lmp,iatom))
-                            p3 = v_c * (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * force%cveccof(i,mp,ie,lo,iatom) + &
-                                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * force%bveccof(i,ie,lmp,iatom))
+                            p1 = v_a * (CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * cveccof(i,mp,ie,lo,iatom))
+                            p2 = v_b * (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
+                                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * aveccof(i,ie,lmp,iatom))
+                            p3 = v_c * (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
+                                        CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * bveccof(i,ie,lmp,iatom))
                             a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2 + p3)*we(ie)/atoms%neq(itype)
                          END DO
                       END DO

@@ -23,5 +23,6 @@ MODULE m_types
   USE m_types_field
   USE m_types_regionCharges
   USE m_types_denCoeffsOffdiag
+  USE m_types_force
 END MODULE m_types
 
