@@ -82,7 +82,7 @@ SUBROUTINE r_inpXML(&
   ! ..
   ! ..  Local Variables
   REAL     :: scpos  ,zc   
-  INTEGER ieq,i,k,na,n,ii
+  INTEGER ieq,i,k,na,n,ii,id_c,id_x
   REAL s3,ah,a,hs2,rest,thetaj
   LOGICAL l_hyb,l_sym,ldum
   INTEGER :: ierr
@@ -1112,8 +1112,18 @@ SUBROUTINE r_inpXML(&
   IF (l_relcor) THEN
      relcor = 'relativistic'
   END IF
+
+  !Read in libxc parameters if present
+  xPathA = '/fleurInput/xcFunctional/libXC'
+  numberNodes = xmlGetNumberOfNodes(xPathA)
+  IF (numberNodes==1) THEN
+     id_x=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/libXC/@exchange'))
+     id_c=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/libXC/@correlation'))
+  ELSE
+     id_x=0;id_c=0
+  ENDIF
   !now initialize the xcpot variable
-  CALL setXCParameters(atoms,valueString,l_relcor,xcpot)
+  CALL setXCParameters(atoms,valueString,l_relcor,input%jspins,id_x,id_c,xcpot)
   
   xPathA = '/fleurInput/calculationSetup/cutoffs/@GmaxXC'
   numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -2007,20 +2017,21 @@ SUBROUTINE r_inpXML(&
 
 END SUBROUTINE r_inpXML
 
-SUBROUTINE setXCParameters(atoms,namex,relcor,xcpot)
+SUBROUTINE setXCParameters(atoms,namex,relcor,jspins,id_x,id_c,xcpot)
    USE m_juDFT
    USE m_types
    USE m_types_xcpot_inbuild
-!   USE m_types_xcpot_libxc
+   USE m_types_xcpot_libxc
 
    IMPLICIT NONE
    TYPE(t_atoms),INTENT(IN)          :: atoms
    CHARACTER(LEN=*),     INTENT(IN)  :: namex
    LOGICAL,              INTENT(IN)  :: relcor
+   INTEGER,              INTENT(IN)  :: jspins,id_c,id_x
    CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE      :: xcpot
  
-   IF (namex(1:6)=='libxc:') THEN
-!      ALLOCATE(t_xcpot_libxc::xcpot)
+   IF (namex(1:5)=='libxc') THEN
+      ALLOCATE(t_xcpot_libxc::xcpot)
    ELSE
       ALLOCATE(t_xcpot_inbuild::xcpot)
    ENDIF
@@ -2028,8 +2039,8 @@ SUBROUTINE setXCParameters(atoms,namex,relcor,xcpot)
    SELECT TYPE(xcpot)
    TYPE IS(t_xcpot_inbuild)
       CALL xcpot%init(namex(1:4),relcor,atoms%ntype)
-!   TYPE IS(t_xcpot_libxc)
-!      CALL xcpot%init(namex)
+   TYPE IS(t_xcpot_libxc)
+      CALL xcpot%init(jspins,id_x,id_c)
    END SELECT
   
  

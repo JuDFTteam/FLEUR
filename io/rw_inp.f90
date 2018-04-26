@@ -1,3 +1,4 @@
+
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -549,7 +550,7 @@
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
      &                 input%frcor,sliceplot%slice,input%ctail
       input%coretail_lmax=99
-      input%kcrel=.false.
+      input%kcrel=0
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
