@@ -11,7 +11,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,results,&
+                  vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,dos,results,&
                   moments,mcd,slab)
 
    !************************************************************************************
@@ -76,6 +76,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE(t_cdnvalKLoop),   INTENT(IN)    :: cdnvalKLoop
    TYPE(t_potden),        INTENT(INOUT) :: den
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
+   TYPE(t_dos),           INTENT(INOUT) :: dos
    TYPE(t_moments),       INTENT(INOUT) :: moments
    TYPE(t_mcd),           INTENT(INOUT) :: mcd
    TYPE(t_slab),          INTENT(INOUT) :: slab
@@ -212,7 +213,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
 
-      IF (noccbd.LE.0) GO TO 199 ! Note: This jump has to be after the MPI_BARRIER is called
+      IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
       CALL gVacMap%init(dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
@@ -220,17 +221,17 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,we,eig,den,regCharges%qis,results,force%f_b8,zMat)
+                    jspin,lapw,noccbd,we,eig,den,dos%qis,results,force%f_b8,zMat)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
          IF (l_dosNdir) CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
                         gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
-                        den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
+                        den,dos%qvac,dos%qvlay,dos%qstars,zMat)
          END IF
       END IF
-      IF (input%film) CALL regCharges%sumBandsVac(vacuum,noccbd,ikpt,jsp_start,jsp_end,eig,we)
+      IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
@@ -244,9 +245,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                     skip_t,cdnvalKLoop%l_evp,eigVecCoeffs,usdus,regCharges,mcd,banddos%l_mcd)
+                     skip_t,cdnvalKLoop%l_evp,eigVecCoeffs,usdus,regCharges,dos,mcd,banddos%l_mcd)
 
-         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,regCharges)
+         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,dos)
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
@@ -268,12 +269,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
-199   CONTINUE
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
          IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,ksym,jsym,zMat)
 
-         CALL write_dos(eig_id,ikpt,jspin,regCharges,slab,orbcomp,ksym,jsym,mcd%mcd)
+         CALL write_dos(eig_id,ikpt,jspin,dos,slab,orbcomp,ksym,jsym,mcd%mcd)
       END IF
    END DO ! end of k-point loop
 
