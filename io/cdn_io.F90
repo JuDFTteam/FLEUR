@@ -230,7 +230,14 @@ MODULE m_cdn_io
                            1,-1.0,fermiEnergy,l_qfix,den)
             END IF
          ELSE
-            WRITE(*,*) TRIM(ADJUSTL(filename))//' file or relevant density entry not found.'
+            INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+            IF(l_exist) THEN
+               WRITE(*,*) 'densityType is ', densityType
+               WRITE(*,*) 'Relevant density entry is '//TRIM(ADJUSTL(archiveName))//'.'
+               WRITE(*,*) 'Entry not found in '//TRIM(ADJUSTL(filename))//'.'
+            ELSE
+               WRITE(*,*) TRIM(ADJUSTL(filename))//' file not found.'
+            END IF
             WRITE(*,*) 'Falling back to stream access.'
             mode = CDN_STREAM_MODE
          END IF
