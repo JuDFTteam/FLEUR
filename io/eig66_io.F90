@@ -183,20 +183,20 @@ CONTAINS
     CALL timestart("IO (dos-write)")
     SELECT CASE (eig66_data_mode(id))
     CASE (da_mode)
-       CALL write_dos_DA(id,nk,jspin,dos%qal(:,:,:,jspin),dos%qvac(:,:,nk,jspin),&
-                         dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars,&
+       CALL write_dos_DA(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                         dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                          ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (hdf_mode)
-       CALL write_dos_HDF(id,nk,jspin,dos%qal(:,:,:,jspin),dos%qvac(:,:,nk,jspin),&
-                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars,&
+       CALL write_dos_HDF(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                           ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (mem_mode)
-       CALL write_dos_Mem(id,nk,jspin,dos%qal(:,:,:,jspin),dos%qvac(:,:,nk,jspin),&
-                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars,&
+       CALL write_dos_Mem(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                           ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (MPI_mode)
-       CALL write_dos_MPI(id,nk,jspin,dos%qal(:,:,:,jspin),dos%qvac(:,:,nk,jspin),&
-                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars,&
+       CALL write_dos_MPI(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                           ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (-1)
        CALL juDFT_error("Could not write DOS to eig-file before opening", calledby = "eig66_io")
