@@ -29,7 +29,7 @@
       USE hdf5
       IMPLICIT NONE
       character(len=*),intent(in)    :: filename
-      INTEGER(HID_T),INTENT(in)      :: access_mode
+      INTEGER       ,INTENT(in)      :: access_mode
       INTEGER(HID_T),INTENT(out)     :: fid
       INTEGER,INTENT(OUT),optional   :: hdferr
       INTEGER(HID_T),INTENT(in),optional ::access_prp
@@ -47,8 +47,7 @@
 #endif
 
 
-      CALL h5fopen_f (filename,access_Mode,    &
-     &        fid, err,access_prp)
+      CALL h5fopen_f (filename,access_Mode,fid,err,access_prp)
 
       IF (present(hdferr)) hdferr=err
 

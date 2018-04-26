@@ -23,7 +23,7 @@ MODULE m_eig66_hdf
   !      writesingleeig saves data for one kpt and energy
   !
   !
-  !                          Daniel Wortmann, Tue Nov  512:07:522002
+  !                          Daniel Wortmann
   !*****************************************************************
   USE m_eig66_data
   USE m_types
@@ -189,18 +189,10 @@ CONTAINS
     ELSE
        CALL h5fopen_f (TRIM(d%fname)//'.hdf', access_Mode, d%fid, hdferr,access_prp)
        !get dataset-ids
-       CALL h5dopen_f(d%fid, 'el', d%esetid, hdferr)
-       CALL h5dopen_f(d%fid, 'evac', d%evacsetid, hdferr)
-       CALL h5dopen_f(d%fid, 'ello', d%ellosetid, hdferr)
-       CALL h5dopen_f(d%fid, 'bk', d%bksetid, hdferr)
-       CALL h5dopen_f(d%fid, 'wk', d%wksetid, hdferr)
        CALL h5dopen_f(d%fid, 'energy', d%energysetid, hdferr)
        CALL h5dopen_f(d%fid, 'w_iks', d%wikssetid, hdferr)
-       CALL h5dopen_f(d%fid, 'k', d%ksetid, hdferr)
        CALL h5dopen_f(d%fid, 'neig', d%neigsetid, hdferr)
        CALL h5dopen_f(d%fid, 'ev', d%evsetid, hdferr)
-       CALL h5dopen_f(d%fid, 'nv', d%nvsetid, hdferr)
-       CALL h5dopen_f(d%fid, 'nmat', d%nmatsetid, hdferr)
        IF (d%l_dos) THEN
           CALL h5dopen_f(d%fid, 'qal', d%qalsetid, hdferr)
           CALL h5dopen_f(d%fid, 'qvac', d%qvacsetid, hdferr)
@@ -242,18 +234,10 @@ CONTAINS
 #ifdef CPP_HDF
        CALL priv_find_data(id,d)
 
-       CALL h5dclose_f(d%esetid,hdferr)
-       CALL h5dclose_f(d%evacsetid,hdferr)
-       CALL h5dclose_f(d%ellosetid,hdferr)
-       CALL h5dclose_f(d%bksetid,hdferr)
-       CALL h5dclose_f(d%wksetid,hdferr)
        CALL h5dclose_f(d%energysetid,hdferr)
        CALL h5dclose_f(d%wikssetid,hdferr)
-       CALL h5dclose_f(d%ksetid,hdferr)
        CALL h5dclose_f(d%neigsetid,hdferr)
        CALL h5dclose_f(d%evsetid,hdferr)
-       CALL h5dclose_f(d%nvsetid,hdferr)
-       CALL h5dclose_f(d%nmatsetid,hdferr)
        IF (d%l_dos) THEN
           CALL h5dclose_f(d%qalsetid, hdferr)
           CALL h5dclose_f(d%qvacsetid, hdferr)
@@ -287,28 +271,21 @@ CONTAINS
      END SUBROUTINE close_eig
 #ifdef CPP_HDF
      !----------------------------------------------------------------------
-     SUBROUTINE priv_r_vec(d,nk,jspin,n_start,n_end,nmat,z)
+     SUBROUTINE priv_r_vec(d,nk,jspin,n_start,n_end,z)
 
        USE m_hdf_tools
        IMPLICIT NONE
        TYPE(t_data_HDF),INTENT(IN)::d
        INTEGER, INTENT(IN)  :: nk,jspin
        INTEGER, INTENT(IN)  :: n_start,n_end
-       INTEGER, INTENT(OUT) :: nmat
        REAL,    INTENT(OUT) :: z(:,:)
 
+       INTEGER :: nmat
        INTEGER i,j,neig_l
 
        neig_l = n_end - n_start + 1
 
-       ! read matrix size
-       CALL io_read_integer0(d%nmatsetid,(/nk,jspin/),(/1,1/),nmat)
-
-       IF ( nmat > SIZE(z,1) .OR. neig_l > SIZE(z,2) ) THEN
-          WRITE (6,*) nmat,SIZE(z,1),SIZE(z,2)
-          CALL juDFT_error("eig66_hdf$read_vec",calledby ="eig66_hdf")
-       ENDIF
-
+       nmat=SIZE(z,1)
        !read eigenvectors
        CALL io_read_real2(d%evsetid,(/1,1,n_start,nk,jspin/),&
             &                           (/1,nmat,neig_l,1,1/),&
@@ -443,14 +420,14 @@ CONTAINS
           IF (zmat%l_real) THEN
              CALL io_write_real2s(&
                   &                     d%evsetid,(/1,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),REAL(zmat%data_r(:nmat,:neig)),(/1,1,n1,1,1/))
+                  &           (/1,SIZE(zmat%data_r,1),neig,1,1/),REAL(zmat%data_r(:,:neig)),(/1,1,n1,1,1/))
           ELSE
              CALL io_write_real2s(&
                   &                     d%evsetid,(/1,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),REAL(zmat%data_c(:nmat,:neig)),(/1,1,n1,1,1/))
+                  &           (/1,SIZE(zmat%data_c,1),neig,1,1/),REAL(zmat%data_c(:,:neig)),(/1,1,n1,1,1/))
              CALL io_write_real2s(&
                   &                     d%evsetid,(/2,1,n2+1,nk,jspin/),&
-                  &           (/1,nmat,neig,1,1/),AIMAG(zmat%data_c(:nmat,:neig)),&
+                  &           (/1,SIZE(zmat%data_c,1),neig,1,1/),AIMAG(zmat%data_c(:,:neig)),&
                   &           (/1,1,n1,1,1/))
           ENDIF
        ENDIF
@@ -462,31 +439,22 @@ CONTAINS
 
      !----------------------------------------------------------------------
      SUBROUTINE priv_r_vecc(&
-          &                     d,nk,jspin,n_start,n_end,&
-          &                     nmat,z)
+          &                     d,nk,jspin,n_start,n_end,z)
 
        USE m_hdf_tools
        IMPLICIT NONE
        TYPE(t_data_HDF),INTENT(IN)::d
        INTEGER, INTENT(IN)  :: nk,jspin
        INTEGER, INTENT(IN)  :: n_start,n_end
-       INTEGER, INTENT(OUT) :: nmat
        COMPLEX, INTENT(OUT) :: z(:,:)
 
        REAL, ALLOCATABLE :: z1(:,:,:)
        INTEGER i,j,neig_l
-
+       INTEGER :: nmat
+    
        neig_l = n_end - n_start + 1
 
-       ! read matrix size
-       CALL io_read_integer0(&
-            &                      d%nmatsetid,(/nk,jspin/),(/1,1/),&
-            &                                                nmat)
-
-       IF ( nmat > SIZE(z,1) .OR. neig_l > SIZE(z,2) ) THEN
-          WRITE (6,*) nmat,SIZE(z,1),SIZE(z,2)
-          CALL juDFT_error("eig66_hdf$read_vec",calledby ="eig66_hdf")
-       ENDIF
+       nmat=SIZE(z,1)
 
        ! read eigenvectors
        ALLOCATE (z1(2,nmat,neig_l))
@@ -540,12 +508,11 @@ CONTAINS
           IF (.NOT.PRESENT(n_end)) CALL juDFT_error("BUG3 in read_eig")
           IF (PRESENT(zMat)) THEN
              IF (zmat%l_real) THEN
-                CALL priv_r_vec(d,nk,jspin,n_start,n_end,n1,zmat%z_r)
+                CALL priv_r_vec(d,nk,jspin,n_start,n_end,zmat%z_r)
              ELSE
-                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,n1,zmat%z_c)
+                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,zmat%z_c)
              ENDIF
           ENDIF
-          IF (PRESENT(nmat)) nmat=n1
        ENDIF
 #endif
      END SUBROUTINE read_eig
