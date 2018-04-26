@@ -89,7 +89,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
 
    ! Local Scalars
    INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
-   INTEGER :: iErr,ivac,nbands,noccbd,iType
+   INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
    LOGICAL :: l_orbcomprot, l_real, l_write, l_dosNdir
 
@@ -212,12 +212,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
 
-      IF (noccbd.LE.0) GO TO 199
+      IF (noccbd.LE.0) GO TO 199 ! Note: This jump has to be after the MPI_BARRIER is called
 
       CALL gVacMap%init(dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
-
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
@@ -231,13 +230,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
                         den,regCharges%qvac,regCharges%qvlay,regCharges%qstars,zMat)
          END IF
       END IF
-      ! perform Brillouin zone integration and summation over the bands in order to determine the vacuum energy parameters.
-      DO ispin = jsp_start, jsp_end
-         DO ivac = 1,vacuum%nvac
-            regCharges%pvac(ivac,ispin)=regCharges%pvac(ivac,ispin)+dot_product(eig(:noccbd)*regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
-            regCharges%svac(ivac,ispin)=regCharges%svac(ivac,ispin)+dot_product(regCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
-         END DO
-      END DO
+      IF (input%film) CALL regCharges%sumBandsVac(vacuum,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)

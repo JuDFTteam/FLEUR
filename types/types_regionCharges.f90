@@ -29,6 +29,7 @@ PRIVATE
 
       CONTAINS
          PROCEDURE,PASS :: init => regionCharges_init
+         PROCEDURE      :: sumBandsVac
    END TYPE t_regionCharges
 
 PUBLIC t_regionCharges
@@ -80,5 +81,33 @@ SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
    thisRegCharges%qstars = CMPLX(0.0,0.0)
 
 END SUBROUTINE regionCharges_init
+
+SUBROUTINE sumBandsVac(thisRegCharges,vacuum,noccbd,ikpt,jsp_start,jsp_end,eig,we)
+
+   USE m_types_setup
+
+   IMPLICIT NONE
+
+   CLASS(t_regionCharges), INTENT(INOUT) :: thisRegCharges
+   TYPE(t_vacuum),         INTENT(IN)    :: vacuum
+   INTEGER,                INTENT(IN)    :: noccbd
+   INTEGER,                INTENT(IN)    :: ikpt
+   INTEGER,                INTENT(IN)    :: jsp_start, jsp_end
+   REAL,                   INTENT(IN)    :: eig(noccbd)
+   REAL,                   INTENT(IN)    :: we(noccbd)
+
+   INTEGER                               :: ispin, ivac
+
+   ! perform Brillouin zone integration and summation over the bands in order to determine the vacuum energy parameters.
+   DO ispin = jsp_start, jsp_end
+      DO ivac = 1,vacuum%nvac
+         thisRegCharges%pvac(ivac,ispin) = thisRegCharges%pvac(ivac,ispin)+&
+            dot_product(eig(:noccbd)*thisRegCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+         thisRegCharges%svac(ivac,ispin)=thisRegCharges%svac(ivac,ispin)+&
+            dot_product(thisRegCharges%qvac(:noccbd,ivac,ikpt,ispin),we(:noccbd))
+      END DO
+   END DO
+
+END SUBROUTINE sumBandsVac
 
 END MODULE m_types_regionCharges
