@@ -70,6 +70,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ! Local type instances
    TYPE(t_noco)          :: noco_new
    TYPE(t_regionCharges) :: regCharges
+   TYPE(t_dos)           :: dos
    TYPE(t_moments)       :: moments
    TYPE(t_mcd)           :: mcd
    TYPE(t_slab)          :: slab
@@ -80,7 +81,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL                  :: fix, qtot, dummy
    INTEGER               :: jspin, jspmax
 
-   CALL regCharges%init(input,atoms,dimension,kpts,vacuum)
+   CALL regCharges%init(input,atoms)
+   CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
@@ -94,7 +96,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
       CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,results,moments,mcd,slab)
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,dos,results,moments,mcd,slab)
    END DO
 
    IF (mpi%irank.EQ.0) THEN

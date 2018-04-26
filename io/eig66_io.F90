@@ -167,7 +167,7 @@ CONTAINS
     CALL timestop("IO (write)")
   END SUBROUTINE write_eig
 
-  SUBROUTINE write_dos(id,nk,jspin,regCharges,slab,orbcomp,ksym,jsym,mcd)
+  SUBROUTINE write_dos(id,nk,jspin,dos,slab,orbcomp,ksym,jsym,mcd)
     USE m_eig66_hdf,ONLY:write_dos_hdf=>write_dos
     USE m_eig66_DA ,ONLY:write_dos_DA=>write_dos
     USE m_eig66_mem,ONLY:write_dos_MEM=>write_dos
@@ -175,28 +175,28 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    TYPE(t_regionCharges), INTENT(IN) :: regCharges
-    TYPE(t_orbcomp), INTENT(IN) :: orbcomp
-    TYPE(t_slab), INTENT(IN) :: slab
+    TYPE(t_dos), INTENT(IN)      :: dos
+    TYPE(t_orbcomp), INTENT(IN)  :: orbcomp
+    TYPE(t_slab), INTENT(IN)     :: slab
     INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
     REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
     CALL timestart("IO (dos-write)")
     SELECT CASE (eig66_data_mode(id))
     CASE (da_mode)
-       CALL write_dos_DA(id,nk,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,nk,jspin),&
-                         regCharges%qis(:,nk,jspin),regCharges%qvlay(:,:,:,nk,jspin),regCharges%qstars,&
+       CALL write_dos_DA(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                         dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                          ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (hdf_mode)
-       CALL write_dos_HDF(id,nk,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,nk,jspin),&
-                          regCharges%qis(:,nk,jspin),regCharges%qvlay(:,:,:,nk,jspin),regCharges%qstars,&
+       CALL write_dos_HDF(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                           ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (mem_mode)
-       CALL write_dos_Mem(id,nk,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,nk,jspin),&
-                          regCharges%qis(:,nk,jspin),regCharges%qvlay(:,:,:,nk,jspin),regCharges%qstars,&
+       CALL write_dos_Mem(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                           ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (MPI_mode)
-       CALL write_dos_MPI(id,nk,jspin,regCharges%qal(:,:,:,jspin),regCharges%qvac(:,:,nk,jspin),&
-                          regCharges%qis(:,nk,jspin),regCharges%qvlay(:,:,:,nk,jspin),regCharges%qstars,&
+       CALL write_dos_MPI(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
+                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
                           ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
     CASE (-1)
        CALL juDFT_error("Could not write DOS to eig-file before opening", calledby = "eig66_io")

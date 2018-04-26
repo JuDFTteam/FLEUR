@@ -24,7 +24,7 @@ MODULE m_eparas
   !
 CONTAINS
   SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
-                    usdus,regCharges,mcd,l_mcd)
+                    usdus,regCharges,dos,mcd,l_mcd)
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),         INTENT(IN)    :: usdus
@@ -32,6 +32,7 @@ CONTAINS
     TYPE(t_atoms),         INTENT(IN)    :: atoms
     TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
     TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
+    TYPE(t_dos),           INTENT(INOUT) :: dos
     TYPE(t_mcd),           INTENT(INOUT) :: mcd
     !     ..
     !     .. Scalar Arguments ..
@@ -64,9 +65,9 @@ CONTAINS
        ENDIF
        regCharges%ener(:,:,jsp) = 0.0
        regCharges%sqal(:,:,jsp) = 0.0
-       regCharges%qal(:,:,:,jsp) = 0.0
        regCharges%enerlo(:,:,jsp) = 0.0
        regCharges%sqlo(:,:,jsp) = 0.0
+       dos%qal(:,:,:,ikpt,jsp) = 0.0
     END IF
     !
     !--->    l-decomposed density for each occupied state
@@ -109,7 +110,7 @@ CONTAINS
                    ENDDO
                 ENDIF     ! end MCD
              ENDDO
-             regCharges%qal(l,n,i,jsp) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
+             dos%qal(l,n,i,ikpt,jsp) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
           ENDDO
           nt1 = nt1 + atoms%neq(n)
        ENDDO
@@ -122,8 +123,8 @@ CONTAINS
     DO l = 0,3
        DO n = 1,atoms%ntype
           DO i = (skip_t+1),noccbd
-             regCharges%ener(l,n,jsp) = regCharges%ener(l,n,jsp) + regCharges%qal(l,n,i,jsp)*we(i)*eig(i)
-             regCharges%sqal(l,n,jsp) = regCharges%sqal(l,n,jsp) + regCharges%qal(l,n,i,jsp)*we(i)
+             regCharges%ener(l,n,jsp) = regCharges%ener(l,n,jsp) + dos%qal(l,n,i,ikpt,jsp)*we(i)*eig(i)
+             regCharges%sqal(l,n,jsp) = regCharges%sqal(l,n,jsp) + dos%qal(l,n,i,ikpt,jsp)*we(i)
           ENDDO
        ENDDO
     ENDDO
@@ -176,7 +177,7 @@ CONTAINS
           ! llo > 3 used for unoccupied states only
           IF( l .GT. 3 ) CYCLE
           DO i = 1,ne
-             regCharges%qal(l,ntyp,i,jsp)= regCharges%qal(l,ntyp,i,jsp)  + ( 1.0/atoms%neq(ntyp) )* (&
+             dos%qal(l,ntyp,i,ikpt,jsp)= dos%qal(l,ntyp,i,ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) )* (&
                   qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)     )
           END DO
           DO lop = 1,atoms%nlo(ntyp)
@@ -184,7 +185,7 @@ CONTAINS
                 DO i = 1,ne
                    regCharges%enerlo(lo,ntyp,jsp) = regCharges%enerlo(lo,ntyp,jsp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
                    regCharges%sqlo(lo,ntyp,jsp) = regCharges%sqlo(lo,ntyp,jsp) + qlo(i,lop,lo,ntyp)*we(i)
-                   regCharges%qal(l,ntyp,i,jsp)= regCharges%qal(l,ntyp,i,jsp)  + ( 1.0/atoms%neq(ntyp) ) *&
+                   dos%qal(l,ntyp,i,ikpt,jsp)= dos%qal(l,ntyp,i,ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) ) *&
                         qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
                 ENDDO
              ENDIF

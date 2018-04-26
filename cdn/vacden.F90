@@ -70,14 +70,14 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: evac(2,DIMENSION%jspd)
-    REAL,    INTENT(OUT)   :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL,    INTENT(INOUT) :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL,    INTENT(IN)    :: we(DIMENSION%neigd)
-    REAL                   :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
+    REAL,    INTENT(IN)     :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT(OUT)    :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT(INOUT)  :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
+    REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
-    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
+    REAL,    INTENT (IN)    :: eig(DIMENSION%neigd)  
+    COMPLEX, INTENT (INOUT) :: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins)
     !
     !     local STM variables
     INTEGER nv2(DIMENSION%jspd)
@@ -169,8 +169,6 @@ CONTAINS
     ic = CMPLX(0.,1.)
     !    ------------------
     !     WRITE (16,'(a,i2)') 'nstars=',nstars
-
-    stcoeff(:,:,:,:) = CMPLX(0.0,0.0)
 
     !     -----> set up mapping arrays
     IF (noco%l_ss) THEN
@@ -1198,7 +1196,7 @@ CONTAINS
        !=============================================================
        !
        !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue 
-       !           to stcoeff(ne,layer,ivac) if starcoeff=T (the star coefficient values are written to vacdos)
+       !           to stcoeff(ne,layer,ivac,ikpt) if starcoeff=T (the star coefficient values are written to vacdos)
        !
        IF (vacuum%starcoeff .AND. banddos%vacdos) THEN
           DO  n=1,ne
@@ -1229,9 +1227,9 @@ CONTAINS
                          uej = ue(vacuum%izlay(jj,1),l1,jspin)
                          t1 = aa*ui*uj + bb*uei*uej +ba*ui*uej + ab*uei*uj
                          IF (ind2.GE.2.AND.ind2.LE.vacuum%nstars) &
-                              stcoeff(ind2-1,n,jj,ivac) = stcoeff(ind2-1,n,jj,ivac)+ t1*phs/stars%nstr2(ind2)
+                              stcoeff(ind2-1,n,jj,ivac,ikpt,jspin) = stcoeff(ind2-1,n,jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
                          IF (ind2p.GE.2.AND.ind2p.LE.vacuum%nstars) &
-                              stcoeff(ind2p-1,n,jj,ivac) = stcoeff(ind2p-1,n,jj,ivac) +CONJG(t1)*phs/stars%nstr2(ind2p)
+                              stcoeff(ind2p-1,n,jj,ivac,ikpt,jspin) = stcoeff(ind2p-1,n,jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
                       END DO
                    END IF
                 ENDDO
