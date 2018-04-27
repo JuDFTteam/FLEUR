@@ -12,7 +12,7 @@ MODULE m_doswrite
   !
 CONTAINS
   SUBROUTINE doswrite(eig_id,DIMENSION,kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,mcd,results,nsld,oneD)
+                      sliceplot,noco,sym,cell,dos,mcd,results,nsld,oneD)
     USE m_eig66_io,ONLY:read_dos,read_eig
     USE m_evaldos
     USE m_cdninf
@@ -28,6 +28,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_cell),INTENT(IN)      :: cell
+    TYPE(t_dos),INTENT(IN)      :: dos
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(IN)       :: mcd
@@ -71,13 +72,11 @@ CONTAINS
     ENDIF
 
     IF ((banddos%dos.AND.(banddos%ndir.GE.0)).OR.input%cdinf) THEN
-       !
+
        !      write bandstructure or cdn-info to output-file
-       !         
        DO kspin = 1,input%jspins
           IF (banddos%dos.AND.(banddos%ndir.GE.0)) THEN
-             !---  >       write header information to vacdos & dosinp
-             !     
+             ! write header information to vacdos & dosinp
              IF (input%film) THEN
                 WRITE (85,FMT=8080) vacuum%nvac,kpts%nkpt
              ELSE
@@ -93,47 +92,40 @@ CONTAINS
           ENDIF
 
           DO ikpt=1,kpts%nkpt
-             call read_eig(eig_id,ikpt,kspin,neig=ne,eig=eig)
-             call read_dos(eig_id,ikpt,kspin,qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
-                           qis(:,ikpt,kspin),qvlay(:,:,:),qstars,ksym,jsym)
+!             call read_eig(eig_id,ikpt,kspin,neig=ne,eig=eig)
+!             call read_dos(eig_id,ikpt,kspin,qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
+!                           qis(:,ikpt,kspin),qvlay(:,:,:),qstars,ksym,jsym)
 
              CALL cdninf(input,sym,noco,kspin,atoms,vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
-                         kpts%wtkpt(ikpt),cell,kpts,ne,eig,qal(0:,:,:,kspin),qis,qvac,&
-                         qvlay(:,:,:),qstars,ksym,jsym)
-          ENDDO
+                         kpts%wtkpt(ikpt),cell,kpts,results%neig(ikpt,kspin),results%eig(:,ikpt,kspin),dos%qal(0:,:,:,ikpt,kspin),dos%qis,dos%qvac,&
+                         dos%qvlay(:,:,:,ikpt,kspin),dos%qstars(:,:,:,:,ikpt,kspin),dos%ksym(:,ikpt,kspin),dos%jsym(:,ikpt,kspin))
+          END DO
 
-       ENDDO                  ! end spin loop (kspin = 1,input%jspins)
+       END DO ! end spin loop (kspin = 1,input%jspins)
 
-    ENDIF
+    END IF
 
     IF (banddos%dos.AND.(banddos%ndir.GE.0)) THEN
        CLOSE(85)
        RETURN
        !     ok, all done in the bandstructure/cdninf case
-    ENDIF
-    !
-    !     write DOS/VACDOS
-    !
-    !     
+    END IF
+
+    !     write DOS/VACDOS     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
-       CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-                    DIMENSION,results%ef,results%bandgap,&
-                    banddos%l_mcd,mcd%ncore,mcd%e_mcd,nsld)
-    ENDIF
-    !
-    !      Now write to vacwave if nstm=3 
-    !     all data
-    !     has been written to tmp_vacwave and must be written now
-    !     by PE=0 only!
-    !
+       CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
+                    DIMENSION,results%ef,results%bandgap,banddos%l_mcd,mcd%ncore,mcd%e_mcd,nsld)
+    END IF
+
+    !     Now write to vacwave if nstm=3 
+    !     all data has been written to tmp_vacwave and must be written now by PE=0 only!
     IF (vacuum%nstm.EQ.3) THEN
        call juDFT_error("nstm=3 not implemented in doswrite")
        !OPEN (89,file='tmp_vacwave',status='old',access='direct')!, recl=reclength_vw)
        ALLOCATE ( ac(n2max,DIMENSION%neigd),bc(n2max,DIMENSION%neigd) )
        DO ikpt = 1,kpts%nkpt
           WRITE(*,*) 'Read rec',ikpt,'from vacwave'
-          READ(89,rec=ikpt) wk,ne,bkpt(1),bkpt(2),&
-               &                 eig,ac,bc
+          READ(89,rec=ikpt) wk,ne,bkpt(1),bkpt(2),eig,ac,bc
           WRITE (87,'(i3,1x,f12.6)') ikpt,wk
           i=0
           DO n = 1, ne

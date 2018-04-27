@@ -95,7 +95,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    LOGICAL :: l_orbcomprot, l_real, l_write, l_dosNdir
 
    ! Local Arrays
-   INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
    REAL,    ALLOCATABLE :: we(:)
    REAL,    ALLOCATABLE :: eig(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
@@ -131,7 +130,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,dimension%jspd))
-   ALLOCATE (jsym(dimension%neigd),ksym(dimension%neigd))
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
@@ -271,15 +269,15 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,ksym,jsym,zMat)
+         IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
 
-         CALL write_dos(eig_id,ikpt,jspin,dos,slab,orbcomp,ksym,jsym,mcd%mcd)
+         CALL write_dos(eig_id,ikpt,jspin,dos,slab,orbcomp,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),mcd%mcd)
       END IF
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
    END DO
 #endif

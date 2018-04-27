@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
-      SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,&
-           dimension,efermiarg,bandgap,l_mcd,ncore,e_mcd,nsld)
+      SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
+                         dimension,efermiarg,bandgap,l_mcd,ncore,e_mcd,nsld)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -39,6 +39,8 @@
       TYPE(t_noco),INTENT(IN)        :: noco
       TYPE(t_sym),INTENT(IN)         :: sym
       TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_results),INTENT(IN)     :: results
+      TYPE(t_dos),INTENT(IN)         :: dos
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
