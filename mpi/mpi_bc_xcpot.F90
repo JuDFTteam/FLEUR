@@ -54,7 +54,7 @@ CONTAINS
        CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(l_relcor,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       IF (mpi%irank.NE.0)  CALL xcpot%init(namex,l_relcor,n)
+       IF (mpi%irank.NE.0)  CALL xcpot%init(namex(1:4),l_relcor,n)
        CALL MPI_BCAST(xcpot%lda_atom,n,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     TYPE IS (t_xcpot_libxc)
        IF (mpi%irank==0) THEN
