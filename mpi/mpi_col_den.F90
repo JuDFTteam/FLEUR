@@ -9,7 +9,7 @@ MODULE m_mpi_col_den
   ! collect all data calculated in cdnval on different pe's on pe 0
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,&
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,mcd,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
@@ -40,6 +40,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(INOUT) :: denCoeffsOffdiag
     TYPE (t_regionCharges),    INTENT(INOUT) :: regCharges
     TYPE (t_dos),              INTENT(INOUT) :: dos
+    TYPE (t_mcd),              INTENT(INOUT) :: mcd
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -172,6 +173,13 @@ CONTAINS
     CALL MPI_REDUCE(dos%qstars(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, dos%qstars(:,:,:,:,:,jspin), 1)
     DEALLOCATE (c_b)
+
+    ! Collect mcd%mcd
+    n = SIZE(mcd%mcd,1)*SIZE(mcd%mcd,2)*SIZE(mcd%mcd,3)*SIZE(mcd%mcd,4)
+    ALLOCATE(r_b(n))
+    CALL MPI_REDUCE(mcd%mcd(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, mcd%mcd(:,:,:,:,jspin), 1)
+    DEALLOCATE (r_b)
 
     ! -> Collect force
     IF (input%l_f) THEN

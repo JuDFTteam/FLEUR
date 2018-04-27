@@ -61,7 +61,7 @@ CONTAINS
 
     IF ((ikpt.LE.mpi%isize).AND..NOT.l_evp) THEN
        IF (l_mcd) THEN
-          mcd%mcd(:,:,:) = 0.0
+          mcd%mcd(:,:,:,ikpt,jsp) = 0.0
        ENDIF
        regCharges%ener(:,:,jsp) = 0.0
        regCharges%sqal(:,:,jsp) = 0.0
@@ -101,7 +101,7 @@ CONTAINS
                    DO icore = 1, mcd%ncore(n)
                       DO ipol = 1, 3
                          index = 3*(n-1) + ipol
-                         mcd%mcd(index,icore,i)=mcd%mcd(index,icore,i) + fac*(&
+                         mcd%mcd(index,icore,i,ikpt,jsp)=mcd%mcd(index,icore,i,ikpt,jsp) + fac*(&
                               suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
                               sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
                               sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&

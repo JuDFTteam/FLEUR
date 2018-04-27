@@ -285,10 +285,9 @@ CONTAINS
     END IF
   END SUBROUTINE write_dos
 
-  SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE read_dos(id,nk,jspin,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT),OPTIONAL  :: mcd(:,:,:)
     REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
     TYPE(t_data_DA),POINTER:: d
     INTEGER:: nrec
@@ -299,8 +298,6 @@ CONTAINS
     IF (d%l_orb.AND.PRESENT(qmtsl)) THEN
        IF (d%l_mcd) CPP_error("mcd & orbital decomposition not implemented in IO")
        READ(d%file_io_id_dos,REC=nrec) qintsl,qmtsl,qmtp,orbcomp
-    ELSEIF(d%l_mcd.AND.PRESENT(mcd)) THEN
-       READ(d%file_io_id_dos,REC=nrec) mcd
     END IF
   END SUBROUTINE read_dos
 

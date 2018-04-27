@@ -139,7 +139,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,.FALSE.)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
-   CALL mcd%init1(banddos,dimension,input,atoms)
+   CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell)
    CALL orbcomp%init(banddos,dimension,atoms)
 
@@ -271,13 +271,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          ! since z is no longer an argument of cdninf sympsi has to be called here!
          IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
 
-         CALL write_dos(eig_id,ikpt,jspin,slab,orbcomp,mcd%mcd)
+         CALL write_dos(eig_id,ikpt,jspin,slab,orbcomp,mcd%mcd(:,:,:,ikpt,jspin))
       END IF
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,mcd,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
    END DO
 #endif

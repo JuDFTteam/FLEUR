@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                         dimension,efermiarg,bandgap,l_mcd,ncore,e_mcd,nsld)
+                         dimension,efermiarg,bandgap,l_mcd,mcd,nsld)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -19,7 +19,7 @@
 !     ntb=max(nevk)
 !
 !----------------------------------------------------------------------
-      USE m_eig66_io,ONLY:read_dos,read_eig
+      USE m_eig66_io,ONLY:read_dos
       USE m_triang
       USE m_maketetra
       USE m_tetrados
@@ -41,17 +41,14 @@
       TYPE(t_cell),INTENT(IN)        :: cell
       TYPE(t_results),INTENT(IN)     :: results
       TYPE(t_dos),INTENT(IN)         :: dos
+      TYPE(t_mcd),INTENT(IN)         :: mcd
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
       INTEGER, INTENT(IN) :: nsld
       REAL,    INTENT(IN) :: efermiarg, bandgap
       LOGICAL, INTENT(IN) :: l_mcd 
-
-      INTEGER, INTENT(IN) :: ncore(atoms%ntype)!(ntype)
-      REAL,    INTENT(IN) :: e_mcd(atoms%ntype,input%jspins,dimension%nstd) 
-!-odim
-!+odim 
+ 
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
@@ -65,14 +62,14 @@
       REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
-      REAL,    ALLOCATABLE :: mcd(:,:,:),orbcomp(:,:,:),qmtp(:,:)
+      REAL,    ALLOCATABLE :: mcd_local(:,:,:),orbcomp(:,:,:),qmtp(:,:)
       REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:),qvac(:,:)
       CHARACTER(len=2) :: spin12(2),ch_mcd(3)
       CHARACTER(len=8) :: chntype*2,chform*19
       DATA spin12/'.1' , '.2'/
       DATA ch_mcd/'.+' , '.-' , '.0'/
 
-      ncored =  MAX(0,MAXVAL(ncore))
+      ncored =  MAX(0,MAXVAL(mcd%ncore))
       qdim = lmax*atoms%ntype+3
       l_orbcomp = banddos%l_orb
       IF (banddos%ndir.EQ.-3) THEN
@@ -88,9 +85,9 @@
      &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
      &          qlay(dimension%neigd,vacuum%layerd,2))
       IF (l_mcd) THEN 
-         ALLOCATE( mcd(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
+         ALLOCATE(mcd_local(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
       ELSE
-         ALLOCATE(mcd(0,0,0))
+         ALLOCATE(mcd_local(0,0,0))
       ENDIF
 !
 ! scale energies
@@ -126,9 +123,9 @@
         e_up = -9.9d+9     
         DO jspin = 1,input%jspins
           DO n = 1,atoms%ntype
-            DO icore = 1 , ncore(n)
-              e_lo = min(e_mcd(n,jspin,icore),e_lo)
-              e_up = max(e_mcd(n,jspin,icore),e_up)
+            DO icore = 1 , mcd%ncore(n)
+              e_lo = min(mcd%e_mcd(n,jspin,icore),e_lo)
+              e_up = max(mcd%e_mcd(n,jspin,icore),e_up)
             ENDDO
           ENDDO
         ENDDO
@@ -156,12 +153,13 @@
                   qval(i,n,k) = 0.
                ENDDO
             ENDDO
-!
+
 !     read data from file!
-!
+            ntb = max(ntb,results%neig(k,jspin))
             ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat),qintsl(nsld,dimension%neigd))
             ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%nat))
-            CALL read_dos(eig_id,k,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
+            CALL read_dos(eig_id,k,jspin,qintsl,qmtsl,qmtp,orbcomp)
+            IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,dimension%neigd/))
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
                qal(lmax*atoms%ntype+2,:,k)=dos%qvac(:,1,k,jspin) ! vacuum 1
@@ -183,7 +181,6 @@
                END IF
             END IF
             DEALLOCATE( orbcomp,qintsl,qmtsl,qmtp)
-            ntb = max(ntb,results%neig(k,jspin))
 !
 !     set vacuum partial charge zero, if bulk calculation
 !     otherwise, write vacuum charge in correct arrays
@@ -332,7 +329,7 @@
                  results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
+                 results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
@@ -401,18 +398,18 @@
          CLOSE (18)
 
          ELSE
-           write(*,'(4f15.8)') ((e_mcd(n,jspin,i),n=1,atoms%ntype),i=1,ncored)
+           write(*,'(4f15.8)') ((mcd%e_mcd(n,jspin,i),n=1,atoms%ntype),i=1,ncored)
            write(*,*)
            write(*,'(4f15.8)') (g(800,n),n=1,3*atoms%ntype*ncored)
            write(*,*)
-           write(*,'(4f15.8)') (mcd(n,10,8),n=1,3*atoms%ntype*ncored)
+           write(*,'(4f15.8)') (mcd_local(n,10,8),n=1,3*atoms%ntype*ncored)
            DO n = 1,atoms%ntype
              DO l = 1 , ned
-               DO icore = 1 , ncore(n)
+               DO icore = 1 , mcd%ncore(n)
                  DO i = 1 , ned-1
                    IF (e(i).GT.0) THEN     ! take unoccupied part only
-                   e_test1 = -e(i) - efermi +e_mcd(n,jspin,icore)*hartree_to_ev_const
-                   e_test2 = -e(i+1)-efermi +e_mcd(n,jspin,icore)*hartree_to_ev_const
+                   e_test1 = -e(i) - efermi +mcd%e_mcd(n,jspin,icore)*hartree_to_ev_const
+                   e_test2 = -e(i+1)-efermi +mcd%e_mcd(n,jspin,icore)*hartree_to_ev_const
                    IF ((e_test2.LE.e_grid(l)).AND. (e_test1.GT.e_grid(l))) THEN
                      fac = (e_grid(l)-e_test1)/(e_test2-e_test1)
                      DO k = 3*(n-1)+1,3*(n-1)+3
@@ -524,7 +521,7 @@
       ENDIF
 
       DEALLOCATE(qal,qval,qlay)
-      IF (l_mcd) DEALLOCATE( mcd )
+      IF (l_mcd) DEALLOCATE( mcd_local )
 99001 FORMAT (f10.5,110(1x,e10.3))
 
       END SUBROUTINE evaldos

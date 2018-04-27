@@ -89,7 +89,7 @@ PRIVATE
 
       INTEGER, ALLOCATABLE :: ncore(:)
       REAL,    ALLOCATABLE :: e_mcd(:,:,:)
-      REAL,    ALLOCATABLE :: mcd(:,:,:)
+      REAL,    ALLOCATABLE :: mcd(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
 
       CONTAINS
@@ -362,9 +362,10 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
 
 END SUBROUTINE eigVecCoeffs_init
 
-SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
+SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms,kpts)
 
    USE m_types_setup
+   USE m_types_kpts
 
    IMPLICIT NONE
 
@@ -373,6 +374,7 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
 
    IF (ALLOCATED(thisMCD%ncore)) DEALLOCATE(thisMCD%ncore)
    IF (ALLOCATED(thisMCD%e_mcd)) DEALLOCATE(thisMCD%e_mcd)
@@ -385,11 +387,11 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
       thisMCD%emcd_lo = banddos%e_mcd_lo
       thisMCD%emcd_up = banddos%e_mcd_up
       ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
+      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd,kpts%nkpt,input%jspins) )
       IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
    ELSE
       ALLOCATE (thisMCD%m_mcd(1,1,1,1))
-      ALLOCATE (thisMCD%mcd(1,1,1))
+      ALLOCATE (thisMCD%mcd(1,1,1,1,input%jspins))
    ENDIF
 
    thisMCD%ncore = 0

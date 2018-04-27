@@ -13,7 +13,6 @@ MODULE m_doswrite
 CONTAINS
   SUBROUTINE doswrite(eig_id,DIMENSION,kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,dos,mcd,results,nsld,oneD)
-    USE m_eig66_io,ONLY:read_dos,read_eig
     USE m_evaldos
     USE m_cdninf
     USE m_types
@@ -104,7 +103,7 @@ CONTAINS
     !     write DOS/VACDOS     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                    DIMENSION,results%ef,results%bandgap,banddos%l_mcd,mcd%ncore,mcd%e_mcd,nsld)
+                    DIMENSION,results%ef,results%bandgap,banddos%l_mcd,mcd,nsld)
     END IF
 
     !     Now write to vacwave if nstm=3 

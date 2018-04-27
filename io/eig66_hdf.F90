@@ -294,17 +294,13 @@ CONTAINS
      END SUBROUTINE priv_r_vec
 
 #endif
-     SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
+     SUBROUTINE read_dos(id,nk,jspin,qintsl,qmtsl,qmtp,orbcomp)
        IMPLICIT NONE
        INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(OUT),OPTIONAL     :: mcd(:,:,:)
        REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
        TYPE(t_data_HDF),POINTER      :: d
        CALL priv_find_data(id,d)
 #ifdef CPP_HDF
-       IF (d%l_mcd.AND.PRESENT(mcd)) THEN
-          CALL io_read_real3(d%mcdsetid,(/1,1,1,nk,jspin/),(/SIZE(mcd,1),SIZE(mcd,2),SIZE(mcd,3),1,1/),mcd)
-       ENDIF
        IF (d%l_orb.AND.PRESENT(qintsl)) THEN
           CALL io_read_real2(d%qintslsetid,(/1,1,nk,jspin/),(/SIZE(qintsl,1),SIZE(qintsl,2),1,1/),qintsl)
           CALL io_read_real2(d%qmtslsetid,(/1,1,nk,jspin/),(/SIZE(qmtsl,1),SIZE(qmtsl,2),1,1/),qmtsl)

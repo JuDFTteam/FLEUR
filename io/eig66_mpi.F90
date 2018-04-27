@@ -525,10 +525,9 @@ CONTAINS
 #endif
   END SUBROUTINE write_dos
 
-  SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE read_dos(id,nk,jspin,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(out),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(out),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
 #ifdef CPP_MPI
     TYPE(t_data_MPI),POINTER :: d
@@ -538,7 +537,6 @@ CONTAINS
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
 
-    IF (d%l_mcd.AND.PRESENT(mcd))  CALL priv_get_data(pe,slot,SIZE(mcd),d%mcd_handle,rdata=mcd)
     IF (d%l_orb.AND.PRESENT(qintsl)) THEN
        CALL priv_get_data(pe,slot,SIZE(qintsl),d%qintsl_handle,rdata=qintsl)
        CALL priv_get_data(pe,slot,SIZE(qmtsl),d%qmtsl_handle,rdata=qmtsl)
