@@ -32,7 +32,7 @@ CONTAINS
     INTEGER  norb(23),iqsl(slab%nsld),iqvacpc(2)
     REAL     qvact(2)
     REAL, ALLOCATABLE :: eig(:),orbcomp(:,:,:,:,:)
-    REAL, ALLOCATABLE :: qintsl(:,:,:,:),qmtsl(:,:,:,:),qmtp(:,:,:,:)
+    REAL, ALLOCATABLE :: qmtp(:,:,:,:)
     CHARACTER (len=2) :: chntype
     CHARACTER (len=99) :: chform
     !     ..
@@ -40,8 +40,7 @@ CONTAINS
        CALL juDFT_error("nsl.GT.nsld",calledby="Ek_write_sl")
     ENDIF
     ALLOCATE(eig(dimension%neigd),orbcomp(dimension%neigd,23,atoms%nat,kpts%nkpt,dimension%jspd))
-    ALLOCATE(qintsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd))
-    ALLOCATE(qmtsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd),qmtp(dimension%neigd,atoms%nat,kpts%nkpt,dimension%jspd))
+    ALLOCATE(qmtp(dimension%neigd,atoms%nat,kpts%nkpt,dimension%jspd))
     !
     !  --->     open files for a bandstucture with an orbital composition
     !  --->     in the case of the film geometry
@@ -77,8 +76,7 @@ CONTAINS
        DO ikpt=1,kpts%nkpt
           !                
           call read_eig(eig_id,ikpt,kspin,neig=nbands,eig=eig)
-          call read_dos(eig_id,ikpt,kspin,&
-               qintsl=qintsl(:,:,ikpt,kspin),qmtsl= qmtsl(:,:,ikpt,kspin),qmtp=qmtp(:,:,ikpt,kspin),orbcomp=orbcomp(:,:,:,ikpt,kspin))
+          call read_dos(eig_id,ikpt,kspin,qmtp=qmtp(:,:,ikpt,kspin),orbcomp=orbcomp(:,:,:,ikpt,kspin))
           !            write(*,*) kspin,nkpt,qmtp(1,:,ikpt,kspin)
           !
           WRITE (130,FMT=8000) (kpts%bk(i,ikpt),i=1,3)
@@ -92,11 +90,9 @@ CONTAINS
              IF (sym%invs .OR. sym%zrfs)    qvact(2) = qvact(1)
              iqvacpc(:) = nint(qvact(:)*100.0)
              DO j = 1,slab%nsl
-                iqsl(j) = nint( ( qintsl(j,iband,ikpt,kspin) + &
-                     &                               qmtsl(j,iband,ikpt,kspin) )*100.0 ) 
+                iqsl(j) = nint((slab%qintsl(j,iband,ikpt,kspin) + slab%qmtsl(j,iband,ikpt,kspin))*100.0) 
              ENDDO
-             WRITE (130,FMT=chform) iband,eig(iband),iqvacpc(2),&
-                  &                               (iqsl(l),l=1,slab%nsl),iqvacpc(1)
+             WRITE(130,FMT=chform) iband,eig(iband),iqvacpc(2),(iqsl(l),l=1,slab%nsl),iqvacpc(1)
              WRITE(130,FMT=9) 
              WRITE(130,FMT=8)
              WRITE(130,FMT=9) 
@@ -108,12 +104,9 @@ CONTAINS
                       na = slab%nslat(mt,n) 
                       IF (na.EQ.1) THEN
                          DO  j=1,23
-                            norb(j) = &
-                                 &                nint ( orbcomp(iband,j,mt,ikpt,kspin) )
+                            norb(j) = nint ( orbcomp(iband,j,mt,ikpt,kspin) )
                          ENDDO
-                         WRITE (130,FMT=5) n,it,m,&
-                              &	   		                  (norb(l),l=1,23),&
-                              &                                    qmtp(iband,mt,ikpt,kspin)
+                         WRITE (130,FMT=5) n,it,m,(norb(l),l=1,23),qmtp(iband,mt,ikpt,kspin)
                       ENDIF
                    ENDDO
                 enddo
@@ -133,7 +126,7 @@ CONTAINS
          &        7(1x,i3,1x),'|',7(1x,i3,1x),'|',f6.1,'|')
 9   FORMAT(133('-'))
     !
-    DEALLOCATE ( eig,orbcomp,qintsl,qmtsl,qmtp )
+    DEALLOCATE ( eig,orbcomp,qmtp )
 
   END SUBROUTINE Ek_write_sl
 END MODULE m_Ekwritesl

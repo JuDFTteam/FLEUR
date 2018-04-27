@@ -1,7 +1,7 @@
 MODULE m_qintsl
   USE m_juDFT
 CONTAINS
-  SUBROUTINE q_int_sl(isp,stars,atoms,sym,cell,ne,lapw,slab,oneD,zMat)          
+  SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,lapw,slab,oneD,zMat)          
     !     *******************************************************
     !     calculate the charge of the En(k) state 
     !     in the interstitial region of each leyer
@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_slab),INTENT(INOUT):: slab
     !
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne,isp
+    INTEGER, INTENT (IN) :: ne,isp,ikpt
     !     ..
     !     .. Local Scalars ..
     REAL q1,zsl1,zsl2,qi,volsli,volintsli
@@ -105,7 +105,7 @@ CONTAINS
           DO j = 1,stars%ng3
              qi = qi + z_z(j)*stfunint(j,i)
           ENDDO
-          slab%qintsl(i,n) = qi 
+          slab%qintsl(i,n,ikpt,isp) = qi 
        ENDDO    ! over vacuum%layers         
 
     ENDDO ! over states

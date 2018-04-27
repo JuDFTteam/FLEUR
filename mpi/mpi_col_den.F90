@@ -9,7 +9,7 @@ MODULE m_mpi_col_den
   ! collect all data calculated in cdnval on different pe's on pe 0
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,mcd,&
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,mcd,slab,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
@@ -20,12 +20,12 @@ CONTAINS
 
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_oneD),INTENT(IN)      :: oneD 
-    TYPE(t_input),INTENT(IN)     :: input 
-    TYPE(t_vacuum),INTENT(IN)    :: vacuum 
-    TYPE(t_noco),INTENT(IN)      :: noco 
-    TYPE(t_stars),INTENT(IN)     :: stars 
-    TYPE(t_sphhar),INTENT(IN)    :: sphhar 
+    TYPE(t_oneD),INTENT(IN)      :: oneD
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_stars),INTENT(IN)     :: stars
+    TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(INOUT) :: den
     INCLUDE 'mpif.h'
@@ -41,6 +41,7 @@ CONTAINS
     TYPE (t_regionCharges),    INTENT(INOUT) :: regCharges
     TYPE (t_dos),              INTENT(INOUT) :: dos
     TYPE (t_mcd),              INTENT(INOUT) :: mcd
+    TYPE (t_slab),             INTENT(INOUT) :: slab
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -179,6 +180,19 @@ CONTAINS
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(mcd%mcd(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, mcd%mcd(:,:,:,:,jspin), 1)
+    DEALLOCATE (r_b)
+
+    ! Collect slab - qintsl and qmtsl
+    n = SIZE(slab%qintsl,1)*SIZE(slab%qintsl,2)*SIZE(slab%qintsl,3)
+    ALLOCATE(r_b(n))
+    CALL MPI_REDUCE(slab%qintsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qintsl(:,:,:,jspin), 1)
+    DEALLOCATE (r_b)
+
+    n = SIZE(slab%qmtsl,1)*SIZE(slab%qmtsl,2)*SIZE(slab%qmtsl,3)
+    ALLOCATE(r_b(n))
+    CALL MPI_REDUCE(slab%qmtsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qmtsl(:,:,:,jspin), 1)
     DEALLOCATE (r_b)
 
     ! -> Collect force

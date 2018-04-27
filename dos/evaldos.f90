@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                         dimension,efermiarg,bandgap,l_mcd,mcd,nsld)
+                         dimension,efermiarg,bandgap,l_mcd,mcd,slab)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -42,10 +42,10 @@
       TYPE(t_results),INTENT(IN)     :: results
       TYPE(t_dos),INTENT(IN)         :: dos
       TYPE(t_mcd),INTENT(IN)         :: mcd
+      TYPE(t_slab),INTENT(IN)        :: slab
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
-      INTEGER, INTENT(IN) :: nsld
       REAL,    INTENT(IN) :: efermiarg, bandgap
       LOGICAL, INTENT(IN) :: l_mcd 
  
@@ -63,7 +63,7 @@
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
       REAL,    ALLOCATABLE :: mcd_local(:,:,:),orbcomp(:,:,:),qmtp(:,:)
-      REAL,    ALLOCATABLE :: qintsl(:,:),qmtsl(:,:),qvac(:,:)
+      REAL,    ALLOCATABLE :: qvac(:,:)
       CHARACTER(len=2) :: spin12(2),ch_mcd(3)
       CHARACTER(len=8) :: chntype*2,chform*19
       DATA spin12/'.1' , '.2'/
@@ -73,7 +73,7 @@
       qdim = lmax*atoms%ntype+3
       l_orbcomp = banddos%l_orb
       IF (banddos%ndir.EQ.-3) THEN
-        qdim = 2*nsld 
+        qdim = 2*slab%nsld 
         n_orb = 0
         IF (banddos%l_orb) THEN
            n_orb = banddos%orbCompAtom
@@ -156,9 +156,9 @@
 
 !     read data from file!
             ntb = max(ntb,results%neig(k,jspin))
-            ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat),qintsl(nsld,dimension%neigd))
-            ALLOCATE( qmtsl(nsld,dimension%neigd),qmtp(dimension%neigd,atoms%nat))
-            CALL read_dos(eig_id,k,jspin,qintsl,qmtsl,qmtp,orbcomp)
+            ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat))
+            ALLOCATE( qmtp(dimension%neigd,atoms%nat))
+            CALL read_dos(eig_id,k,jspin,qmtp,orbcomp)
             IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,dimension%neigd/))
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
@@ -167,8 +167,8 @@
                qal(lmax*atoms%ntype+1,:,k)=dos%qis(:,k,jspin)    ! interstitial
             ELSE
                IF (n_orb == 0) THEN
-                  qal(1:nsld,:,k)        = qintsl(:,:)
-                  qal(nsld+1:2*nsld,:,k) = qmtsl(:,:)
+                  qal(1:slab%nsld,:,k)             = slab%qintsl(:,:,k,jspin)
+                  qal(slab%nsld+1:2*slab%nsld,:,k) = slab%qmtsl(:,:,k,jspin)
                ELSE 
                   DO i = 1, 23
                      DO l = 1, results%neig(k,jspin)
@@ -180,7 +180,7 @@
                   END DO
                END IF
             END IF
-            DEALLOCATE( orbcomp,qintsl,qmtsl,qmtp)
+            DEALLOCATE( orbcomp,qmtp)
 !
 !     set vacuum partial charge zero, if bulk calculation
 !     otherwise, write vacuum charge in correct arrays
@@ -356,8 +356,8 @@
                ENDDO
             ENDDO
          ELSEIF (n_orb == 0) THEN
-            DO l = 1 , nsld
-               nl = nsld+l
+            DO l = 1, slab%nsld
+               nl = slab%nsld+l
                DO i = 1 , ned
                   gpart(i,l) = g(i,l) + g(i,nl)
                ENDDO
@@ -384,10 +384,10 @@
                   g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3), (gpart(i,l),l=1,atoms%ntype)
           ENDIF
        ELSEIF (n_orb == 0) THEN
-          DO nl = 1 , nsld
+          DO nl = 1, slab%nsld
              totdos = totdos + gpart(i,nl)
           ENDDO
-          WRITE (18,99001)  e(i),totdos,(gpart(i,nl),nl=1,nsld), (g(i,l),l=1,2*nsld)
+          WRITE (18,99001)  e(i),totdos,(gpart(i,nl),nl=1,slab%nsld), (g(i,l),l=1,2*slab%nsld)
            ELSE
              DO nl = 1 , 23
                 totdos = totdos + g(i,nl)

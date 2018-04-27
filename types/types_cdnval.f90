@@ -68,8 +68,8 @@ PRIVATE
       REAL,    ALLOCATABLE :: zsl(:,:)
       REAL,    ALLOCATABLE :: volsl(:)
       REAL,    ALLOCATABLE :: volintsl(:)
-      REAL,    ALLOCATABLE :: qintsl(:,:)
-      REAL,    ALLOCATABLE :: qmtsl(:,:)
+      REAL,    ALLOCATABLE :: qintsl(:,:,:,:)
+      REAL,    ALLOCATABLE :: qmtsl(:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => slab_init
@@ -278,9 +278,10 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
 END SUBROUTINE denCoeffs_init
 
-SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
+SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell,input,kpts)
 
    USE m_types_setup
+   USE m_types_kpts
    USE m_slabdim
    USE m_slabgeom
 
@@ -291,6 +292,8 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
    TYPE(t_dimension),  INTENT(IN)    :: dimension
    TYPE(t_atoms),      INTENT(IN)    :: atoms
    TYPE(t_cell),       INTENT(IN)    :: cell
+   TYPE(t_input),      INTENT(IN)    :: input
+   TYPE(t_kpts),       INTENT(IN)    :: kpts
 
    INTEGER :: nsld
 
@@ -311,8 +314,8 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
       ALLOCATE (thisSlab%zsl(2,nsld))
       ALLOCATE (thisSlab%volsl(nsld))
       ALLOCATE (thisSlab%volintsl(nsld))
-      ALLOCATE (thisSlab%qintsl(nsld,dimension%neigd))
-      ALLOCATE (thisSlab%qmtsl(nsld,dimension%neigd))
+      ALLOCATE (thisSlab%qintsl(nsld,dimension%neigd,kpts%nkpt,input%jspins))
+      ALLOCATE (thisSlab%qmtsl(nsld,dimension%neigd,kpts%nkpt,input%jspins))
       CALL slabgeom(atoms,cell,nsld,thisSlab%nsl,thisSlab%zsl,thisSlab%nmtsl,&
                     thisSlab%nslat,thisSlab%volsl,thisSlab%volintsl)
    ELSE
@@ -321,8 +324,8 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
       ALLOCATE (thisSlab%zsl(1,1))
       ALLOCATE (thisSlab%volsl(1))
       ALLOCATE (thisSlab%volintsl(1))
-      ALLOCATE (thisSlab%qintsl(1,1))
-      ALLOCATE (thisSlab%qmtsl(1,1))
+      ALLOCATE (thisSlab%qintsl(1,1,1,input%jspins))
+      ALLOCATE (thisSlab%qmtsl(1,1,1,input%jspins))
    END IF
    thisSlab%nsld = nsld
 

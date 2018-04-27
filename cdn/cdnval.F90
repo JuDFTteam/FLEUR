@@ -140,7 +140,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
-   CALL slab%init(banddos,dimension,atoms,cell)
+   CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(banddos,dimension,atoms)
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
@@ -221,7 +221,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,we,eig,den,dos%qis,results,force%f_b8,zMat)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (l_dosNdir) CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
+         IF (l_dosNdir) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
@@ -277,7 +277,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,mcd,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,mcd,slab,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
    END DO
 #endif

@@ -172,10 +172,10 @@ CONTAINS
     ENDIF
   END SUBROUTINE write_dos
 
-  SUBROUTINE read_dos(id,nk,jspin,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE read_dos(id,nk,jspin,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
+    REAL,INTENT(OUT),OPTIONAL     :: qmtp(:,:),orbcomp(:,:,:)
 
     INTEGER::nrec
     TYPE(t_data_mem),POINTER:: d
@@ -183,9 +183,7 @@ CONTAINS
 
     nrec=nk+(jspin-1)*d%nkpts
 
-    IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-       qintsl=d%qintsl(:,:,nrec)
-       qmtsl=d%qmtsl(:,:,nrec)
+    IF (d%l_orb) THEN
        qmtp=d%qmtp(:,:,nrec)
        orbcomp=d%orbcomp(:,:,:,nrec)
     ENDIF
