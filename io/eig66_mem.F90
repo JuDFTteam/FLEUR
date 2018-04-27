@@ -151,12 +151,9 @@ CONTAINS
     END SUBROUTINE priv_writetofile
   END SUBROUTINE close_eig
 
-  SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(IN)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
     REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
 
@@ -166,13 +163,6 @@ CONTAINS
 
     nrec=nk+(jspin-1)*d%nkpts
 
-    d%qal(:,:,:,nrec)=qal
-    d%qvac(:,:,nrec)=qvac
-    d%qis(:,nrec)=qis
-    d%qvlay(:,:,:,nrec)=qvlay
-    d%qstars(:,:,:,:,nrec)=qstars
-    d%ksym(:,nrec)=ksym
-    d%jsym(:,nrec)=jsym
     IF (d%l_mcd.AND.PRESENT(mcd)) d%mcd(:,:,:,nrec)=mcd
     IF (d%l_orb.AND.PRESENT(qintsl)) THEN
        d%qintsl(:,:,nrec)=qintsl
@@ -182,12 +172,9 @@ CONTAINS
     ENDIF
   END SUBROUTINE write_dos
 
-  SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(OUT)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(OUT)           :: ksym(:),jsym(:)
     REAL,INTENT(OUT),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
 
@@ -197,13 +184,6 @@ CONTAINS
 
     nrec=nk+(jspin-1)*d%nkpts
 
-    qal=d%qal(:,:,:,nrec)
-    qvac=d%qvac(:,:,nrec)
-    qis=d%qis(:,nrec)
-    qvlay=d%qvlay(:,:,:,nrec)
-    qstars=d%qstars(:,:,:,:,nrec)
-    ksym=d%ksym(:,nrec)
-    jsym=d%jsym(:,nrec)
     IF (d%l_mcd.AND.PRESENT(mcd)) mcd=d%mcd(:,:,:,nrec)
     IF (d%l_orb.AND.PRESENT(qintsl)) THEN
        qintsl=d%qintsl(:,:,nrec)

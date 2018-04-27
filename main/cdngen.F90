@@ -104,7 +104,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL timestart("cdngen: dos")
          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab%nsld,oneD)
          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
-            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,slab)
+            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab)
          END IF
          CALL timestop("cdngen: dos")
       END IF

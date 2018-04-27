@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_dos),INTENT(IN)      :: dos
+    TYPE(t_dos),INTENT(IN)       :: dos
     TYPE(t_kpts),INTENT(IN)      :: kpts
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(IN)       :: mcd
@@ -39,14 +39,8 @@ CONTAINS
     INTEGER, INTENT (IN) :: nsld,eig_id
 
     !    locals
-    INTEGER :: jsym(DIMENSION%neigd),ksym(DIMENSION%neigd)
     REAL    :: wk,bkpt(3)
-    REAL   :: eig(DIMENSION%neigd)
-    REAL   :: qal(0:3,atoms%ntype,DIMENSION%neigd,DIMENSION%jspd)
-    REAL   :: qis(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd)
-    REAL   :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL   :: qvlay(DIMENSION%neigd,vacuum%layerd,2)
-    COMPLEX :: qstars(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
+    REAL    :: eig(DIMENSION%neigd)
     INTEGER :: ne,ikpt,kspin,j,i,n
     COMPLEX, ALLOCATABLE :: ac(:,:),bc(:,:)
 
@@ -92,10 +86,6 @@ CONTAINS
           ENDIF
 
           DO ikpt=1,kpts%nkpt
-!             call read_eig(eig_id,ikpt,kspin,neig=ne,eig=eig)
-!             call read_dos(eig_id,ikpt,kspin,qal(:,:,:,kspin),qvac(:,:,ikpt,kspin),&
-!                           qis(:,ikpt,kspin),qvlay(:,:,:),qstars,ksym,jsym)
-
              CALL cdninf(input,sym,noco,kspin,atoms,vacuum,sliceplot,banddos,ikpt,kpts%bk(:,ikpt),&
                          kpts%wtkpt(ikpt),cell,kpts,results%neig(ikpt,kspin),results%eig(:,ikpt,kspin),dos%qal(0:,:,:,ikpt,kspin),dos%qis,dos%qvac,&
                          dos%qvlay(:,:,:,ikpt,kspin),dos%qstars(:,:,:,:,ikpt,kspin),dos%ksym(:,ikpt,kspin),dos%jsym(:,ikpt,kspin))

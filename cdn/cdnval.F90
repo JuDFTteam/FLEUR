@@ -271,7 +271,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          ! since z is no longer an argument of cdninf sympsi has to be called here!
          IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
 
-         CALL write_dos(eig_id,ikpt,jspin,dos,slab,orbcomp,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),mcd%mcd)
+         CALL write_dos(eig_id,ikpt,jspin,slab,orbcomp,mcd%mcd)
       END IF
    END DO ! end of k-point loop
 

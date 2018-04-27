@@ -502,12 +502,9 @@ CONTAINS
   END SUBROUTINE priv_get_data
 #endif
 
-  SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(IN)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
     REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
 #ifdef CPP_MPI
@@ -518,13 +515,6 @@ CONTAINS
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
 
-    CALL priv_put_data(pe,slot,RESHAPE(qal,(/SIZE(qal)/)),d%qal_handle)
-    CALL priv_put_data(pe,slot,RESHAPE(qvac,(/SIZE(qvac)/)),d%qvac_handle)
-    CALL priv_put_data(pe,slot,RESHAPE(qis,(/SIZE(qis)/)),d%qis_handle)
-    CALL priv_put_data(pe,slot,RESHAPE(qvlay,(/SIZE(qvlay)/)),d%qvlay_handle)
-    CALL priv_put_data(pe,slot,RESHAPE(qstars,(/SIZE(qstars)/)),d%qstars_handle)
-    CALL priv_put_data(pe,slot,RESHAPE(ksym,(/SIZE(ksym)/)),d%ksym_handle)
-    CALL priv_put_data(pe,slot,RESHAPE(jsym,(/SIZE(jsym)/)),d%jsym_handle)
     IF (d%l_mcd.AND.PRESENT(mcd))  CALL priv_put_data(pe,slot,RESHAPE(mcd,(/SIZE(mcd)/)),d%mcd_handle)
     IF (d%l_orb.AND.PRESENT(qintsl)) THEN
        CALL priv_put_data(pe,slot,RESHAPE(qintsl,(/SIZE(qintsl)/)),d%qintsl_handle)
@@ -535,12 +525,9 @@ CONTAINS
 #endif
   END SUBROUTINE write_dos
 
-  SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(out)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(out)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(out)           :: ksym(:),jsym(:)
     REAL,INTENT(out),OPTIONAL     :: mcd(:,:,:)
     REAL,INTENT(out),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
 #ifdef CPP_MPI
@@ -551,13 +538,6 @@ CONTAINS
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
 
-    CALL priv_get_data(pe,slot,SIZE(qal),d%qal_handle,rdata=qal)
-    CALL priv_get_data(pe,slot,SIZE(qvac),d%qvac_handle,rdata=qvac)
-    CALL priv_get_data(pe,slot,SIZE(qis),d%qis_handle,rdata=qis)
-    CALL priv_get_data(pe,slot,SIZE(qvlay),d%qvlay_handle,rdata=qvlay)
-    CALL priv_get_data(pe,slot,SIZE(qstars),d%qstars_handle,cdata=qstars)
-    CALL priv_get_data(pe,slot,SIZE(ksym),d%ksym_handle,idata=ksym)
-    CALL priv_get_data(pe,slot,SIZE(jsym),d%jsym_handle,idata=jsym)
     IF (d%l_mcd.AND.PRESENT(mcd))  CALL priv_get_data(pe,slot,SIZE(mcd),d%mcd_handle,rdata=mcd)
     IF (d%l_orb.AND.PRESENT(qintsl)) THEN
        CALL priv_get_data(pe,slot,SIZE(qintsl),d%qintsl_handle,rdata=qintsl)

@@ -1,7 +1,7 @@
 MODULE m_Ekwritesl
   use m_juDFT
 CONTAINS
-  SUBROUTINE Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,slab)
+  SUBROUTINE Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,dos,slab)
     !-----------------------------------------------------------------
     !-- now write E(k) for all kpts if on T3E
     !-- now read data from tmp_dos and write of E(k) in  ek_orbcomp
@@ -14,6 +14,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
+    TYPE(t_dos),INTENT(IN)         :: dos
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_slab),INTENT(IN)        :: slab
@@ -30,10 +31,7 @@ CONTAINS
     !     .. Local Arrays
     INTEGER  norb(23),iqsl(slab%nsld),iqvacpc(2)
     REAL     qvact(2)
-    REAL, ALLOCATABLE :: eig(:),qvac(:,:,:,:),orbcomp(:,:,:,:,:)
-    REAL, ALLOCATABLE :: qal(:,:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,ALLOCATABLE::qstars(:,:,:,:)
-    INTEGER,ALLOCATABLE::ksym(:),jsym(:)
+    REAL, ALLOCATABLE :: eig(:),orbcomp(:,:,:,:,:)
     REAL, ALLOCATABLE :: qintsl(:,:,:,:),qmtsl(:,:,:,:),qmtp(:,:,:,:)
     CHARACTER (len=2) :: chntype
     CHARACTER (len=99) :: chform
@@ -42,11 +40,8 @@ CONTAINS
        CALL juDFT_error("nsl.GT.nsld",calledby="Ek_write_sl")
     ENDIF
     ALLOCATE(eig(dimension%neigd),orbcomp(dimension%neigd,23,atoms%nat,kpts%nkpt,dimension%jspd))
-    ALLOCATE(qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd),qintsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd))
+    ALLOCATE(qintsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd))
     ALLOCATE(qmtsl(slab%nsld,dimension%neigd,kpts%nkpt,dimension%jspd),qmtp(dimension%neigd,atoms%nat,kpts%nkpt,dimension%jspd))
-    ALLOCATE(qal(4,atoms%ntype,dimension%neigd),qis(dimension%neigd),qvlay(dimension%neigd,vacuum%layerd,2))
-    ALLOCATE(qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
-    ALLOCATE(ksym(dimension%neigd),jsym(dimension%neigd))
     !
     !  --->     open files for a bandstucture with an orbital composition
     !  --->     in the case of the film geometry
@@ -82,7 +77,7 @@ CONTAINS
        DO ikpt=1,kpts%nkpt
           !                
           call read_eig(eig_id,ikpt,kspin,neig=nbands,eig=eig)
-          call read_dos(eig_id,ikpt,kspin,qal,qvac(:,:,ikpt,kspin),qis,qvlay,qstars,ksym,jsym,&
+          call read_dos(eig_id,ikpt,kspin,&
                qintsl=qintsl(:,:,ikpt,kspin),qmtsl= qmtsl(:,:,ikpt,kspin),qmtp=qmtp(:,:,ikpt,kspin),orbcomp=orbcomp(:,:,:,ikpt,kspin))
           !            write(*,*) kspin,nkpt,qmtp(1,:,ikpt,kspin)
           !
@@ -92,7 +87,7 @@ CONTAINS
           DO iband = 1,nbands
              qvact = 0.0
              DO ivac = 1,vacuum%nvac
-                qvact(ivac) = qvac(iband,ivac,ikpt,kspin)
+                qvact(ivac) = dos%qvac(iband,ivac,ikpt,kspin)
              ENDDO
              IF (sym%invs .OR. sym%zrfs)    qvact(2) = qvact(1)
              iqvacpc(:) = nint(qvact(:)*100.0)
@@ -138,7 +133,7 @@ CONTAINS
          &        7(1x,i3,1x),'|',7(1x,i3,1x),'|',f6.1,'|')
 9   FORMAT(133('-'))
     !
-    DEALLOCATE ( eig,qvac,orbcomp,qintsl,qmtsl,qmtp )
+    DEALLOCATE ( eig,orbcomp,qintsl,qmtsl,qmtp )
 
   END SUBROUTINE Ek_write_sl
 END MODULE m_Ekwritesl

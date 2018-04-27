@@ -266,12 +266,9 @@ CONTAINS
   END SUBROUTINE write_eig
 
 
-  SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(IN)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
     REAL,INTENT(IN),OPTIONAL  :: mcd(:,:,:)
     REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
     TYPE(t_data_DA),POINTER:: d
@@ -282,20 +279,15 @@ CONTAINS
 
     IF (d%l_orb.AND.PRESENT(qmtsl)) THEN
        IF (d%l_mcd) CPP_error("mcd & orbital decomposition not implemented in IO")
-       WRITE(d%file_io_id_dos,REC=nrec) qal,qvac,qis,qvlay,qstars,ksym,jsym,qintsl,qmtsl,qmtp,orbcomp
+       WRITE(d%file_io_id_dos,REC=nrec) qintsl,qmtsl,qmtp,orbcomp
     ELSEIF(d%l_mcd.AND.PRESENT(mcd)) THEN
-       WRITE(d%file_io_id_dos,REC=nrec) qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd
-    ELSE
-       WRITE(d%file_io_id_dos,REC=nrec) qal,qvac,qis,qvlay,qstars,ksym,jsym
+       WRITE(d%file_io_id_dos,REC=nrec) mcd
     END IF
   END SUBROUTINE write_dos
 
-  SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+  SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
     IMPLICIT NONE
     INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(OUT)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(OUT)           :: ksym(:),jsym(:)
     REAL,INTENT(OUT),OPTIONAL  :: mcd(:,:,:)
     REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
     TYPE(t_data_DA),POINTER:: d
@@ -306,11 +298,9 @@ CONTAINS
 
     IF (d%l_orb.AND.PRESENT(qmtsl)) THEN
        IF (d%l_mcd) CPP_error("mcd & orbital decomposition not implemented in IO")
-       READ(d%file_io_id_dos,REC=nrec) qal,qvac,qis,qvlay,qstars,ksym,jsym,qintsl,qmtsl,qmtp,orbcomp
+       READ(d%file_io_id_dos,REC=nrec) qintsl,qmtsl,qmtp,orbcomp
     ELSEIF(d%l_mcd.AND.PRESENT(mcd)) THEN
-       READ(d%file_io_id_dos,REC=nrec) qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd
-    ELSE
-       READ(d%file_io_id_dos,REC=nrec) qal,qvac,qis,qvlay,qstars,ksym,jsym
+       READ(d%file_io_id_dos,REC=nrec) mcd
     END IF
   END SUBROUTINE read_dos
 

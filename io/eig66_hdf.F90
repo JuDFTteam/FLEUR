@@ -294,28 +294,14 @@ CONTAINS
      END SUBROUTINE priv_r_vec
 
 #endif
-     SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+     SUBROUTINE read_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
        IMPLICIT NONE
        INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(OUT)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-       COMPLEX,INTENT(OUT)           :: qstars(:,:,:,:)
-       INTEGER,INTENT(OUT)           :: ksym(:),jsym(:)
        REAL,INTENT(OUT),OPTIONAL     :: mcd(:,:,:)
        REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
        TYPE(t_data_HDF),POINTER      :: d
-       REAL,ALLOCATABLE              :: r_tmp5(:,:,:,:,:)
        CALL priv_find_data(id,d)
 #ifdef CPP_HDF
-       CALL io_read_real3(d%qalsetid,(/1,1,1,nk,jspin/),(/SIZE(qal,1),SIZE(qal,2),SIZE(qal,3),1,1/),qal)
-       CALL io_read_real2(d%qvacsetid,(/1,1,nk,jspin/),(/SIZE(qvac,1),SIZE(qvac,2),1,1/),qvac)
-       CALL io_read_real1(d%qissetid,(/1,nk,jspin/),(/SIZE(qis,1),1,1/),qis)
-       CALL io_read_real3(d%qvlaysetid,(/1,1,1,nk,jspin/),(/SIZE(qvlay,1),SIZE(qvlay,2),SIZE(qvlay,3),1,1/),qvlay)
-       ALLOCATE(r_tmp5(2,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4)))
-       CALL io_read_real5(d%qstarssetid,(/1,1,1,1,1,nk,jspin/),(/2,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4),1,1/),r_tmp5(:,:,:,:,:))
-       qstars=CMPLX(r_tmp5(1,:,:,:,:),r_tmp5(2,:,:,:,:))
-       DEALLOCATE(r_tmp5)
-       CALL io_read_integer1(d%ksymsetid,(/1,nk,jspin/),(/SIZE(ksym,1),1,1/),ksym)
-       CALL io_read_integer1(d%jsymsetid,(/1,nk,jspin/),(/SIZE(jsym,1),1,1/),jsym)
        IF (d%l_mcd.AND.PRESENT(mcd)) THEN
           CALL io_read_real3(d%mcdsetid,(/1,1,1,nk,jspin/),(/SIZE(mcd,1),SIZE(mcd,2),SIZE(mcd,3),1,1/),mcd)
        ENDIF
@@ -329,26 +315,14 @@ CONTAINS
      END SUBROUTINE read_dos
 
 
-     SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
+     SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
        IMPLICIT NONE
        INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(IN)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-       COMPLEX,INTENT(IN)           :: qstars(:,:,:,:)
-       INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
        REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
        REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
        TYPE(t_data_HDF),POINTER      ::d
        CALL priv_find_data(id,d)
 #ifdef CPP_HDF
-       CALL io_write_real3(d%qalsetid,(/1,1,1,nk,jspin/),(/SIZE(qal,1),SIZE(qal,2),SIZE(qal,3),1,1/),qal)
-       CALL io_write_real2(d%qvacsetid,(/1,1,nk,jspin/),(/SIZE(qvac,1),SIZE(qvac,2),1,1/),qvac)
-       CALL io_write_real1(d%qissetid,(/1,nk,jspin/),(/SIZE(qis,1),1,1/),qis)
-       CALL io_write_real3(d%qvlaysetid,(/1,1,1,nk,jspin/),(/SIZE(qvlay,1),SIZE(qvlay,2),SIZE(qvlay,3),1,1/),qvlay)
-       CALL io_write_real4(d%qstarssetid,(/1,1,1,1,1,nk,jspin/),(/1,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4),1,1/),REAL(qstars))
-       CALL io_write_real4(d%qstarssetid,(/2,1,1,1,1,nk,jspin/),(/1,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4),1,1/),AIMAG(qstars))
-
-       CALL io_write_integer1(d%ksymsetid,(/1,nk,jspin/),(/SIZE(ksym,1),1,1/),ksym)
-       CALL io_write_integer1(d%jsymsetid,(/1,nk,jspin/),(/SIZE(jsym,1),1,1/),jsym)
        IF (d%l_mcd.AND.PRESENT(mcd)) THEN
           CALL io_write_real3(d%mcdsetid,(/1,1,1,nk,jspin/),(/SIZE(mcd,1),SIZE(mcd,2),SIZE(mcd,3),1,1/),mcd)
        ENDIF
