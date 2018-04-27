@@ -60,10 +60,6 @@ CONTAINS
     ELSE
        WRITE(*,*) "No Correlation functional"
     END IF
-  
-
-
-    PRINT *, "TODO: some info and output on libxc functionals"
 
 #else
     CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc",hint="Please recompile FLEUR with libxc support")
@@ -167,7 +163,6 @@ CONTAINS
           exc=exc+excc
        END IF
     ENDIF
-    PRINT *,"EX:",rh(2,:),grad%sigma(:,2),exc(2)
     
 #endif
   END SUBROUTINE xcpot_get_exc
@@ -180,6 +175,7 @@ CONTAINS
   END SUBROUTINE xcpot_alloc_gradients
 
 
+#ifdef CPP_LIBXC
   SUBROUTINE priv_write_info(xc_info)
     IMPLICIT NONE
     TYPE(xc_f03_func_info_t),INTENT(IN) :: xc_info
@@ -221,5 +217,6 @@ CONTAINS
        WRITE(*, '(a,i1,2a)') '[', i+1, '] ', TRIM(xc_f03_func_reference_get_ref(xc_f03_func_info_get_references(xc_info, i)))
     END DO
   END SUBROUTINE priv_write_info
+#endif
   
 END MODULE m_types_xcpot_libxc

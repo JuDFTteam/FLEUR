@@ -198,7 +198,6 @@ CONTAINS
             ENDIF
          ELSE  ! pbe or similar
             CALL vxcepbe(xcpot%DATA,jspins,ngrid,ngrid,rh, grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, vx,vxc)
-            PRINT *,"xc:",vxc(2,:)/2,rh(2,:),grad%agrt(2)
          ENDIF
       ELSE  !LDA potentials
          IF (xcpot%is_name("x-a"))  THEN   ! X-alpha method
@@ -307,7 +306,6 @@ CONTAINS
       ENDIF
 !c-----> hartree units
       exc= hrtr_half*exc
-      PRINT *,"EX:",rh(2,:),sqrt(grad%agrt(2)),exc(2)
    
     END SUBROUTINE xcpot_get_exc
 
