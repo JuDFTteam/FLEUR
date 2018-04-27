@@ -1,140 +1,99 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+!> This module defines two data-types used in the calculation of xc-potentials
+!! a) the abstract t_xcpot which should be overwritten for actual implementations
+!! b) the t_gradients that collects the gradients needed in GGAs
+!!
+!! Currently t_xcpot_inbuild implements the XC-pots directly build into FLEUR
+!! and t_xcpot_libxc provides and interface to libxc.
+!! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
+!! for additional implementations.
 MODULE m_types_xcpot
   IMPLICIT NONE
   PRIVATE
-  CHARACTER(len=4),PARAMETER:: xc_names(20)=[&
-       'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &  
-       'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', & 
-       'pbe0','hse ','vhse','lhse','exx ','hf  '] 
-  
-  LOGICAL,PARAMETER:: priv_gga(20)=[&
-       .TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
-       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
-       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.FALSE.]
-
-  LOGICAL,PARAMETER:: priv_hybrid(20)=[&
-       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
-       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
-       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.]
-
-  REAL, PARAMETER       ::  amix_pbe0 = 0.25
-  REAL, PARAMETER       ::  amix_hse  = 0.25
-  REAL, PARAMETER       ::  amix_hf   = 1.00
+  PUBLIC :: t_xcpot,t_gradients
        
-  TYPE t_xcpot
-#ifdef CPP_MPI     
-     INTEGER             :: icorr=0 !not private to allow bcasting it around
-#else
-     INTEGER,PRIVATE     :: icorr=0
-#endif
-
-     !in the pbe case (exchpbe.F) lots of test are made
-     !in addition some constants are set
-     !to speed up this code precalculate things in init
-     LOGICAL             :: is_rpbe !Rpbe
-     LOGICAL             :: is_wc
-     LOGICAL             :: is_hse !hse,lhse,vhse
-     REAL                :: uk,um
-     
-     LOGICAL,ALLOCATABLE :: lda_atom(:)
-     REAL                :: gmaxxc
-     INTEGER             :: krla !relativistic corrections
-     
+  TYPE,ABSTRACT :: t_xcpot
+     REAL :: gmaxxc
    CONTAINS
      PROCEDURE        :: is_gga=>xcpot_is_gga
-     PROCEDURE        :: get_name=>xcpot_get_name
-     PROCEDURE        :: init=>xcpot_init
-     PROCEDURE        :: is_hybrid=>xcpot_is_hybrid 
-     PROCEDURE        :: is_name=>xcpot_is_name
+     PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
+     PROCEDURE        :: get_vxc=>xcpot_get_vxc
+     PROCEDURE        :: get_exc=>xcpot_get_exc
+     PROCEDURE,NOPASS :: alloc_gradients=>xcpot_alloc_gradients
   END TYPE t_xcpot
-  PUBLIC t_xcpot
+
+  TYPE t_gradients
+     !Naming convention:
+     !t,u,d as last letter for total,up,down
+     !agr for absolute value of gradient
+     !g2r for laplacien of gradient
+     !+??
+     REAL,ALLOCATABLE :: agrt(:),agru(:),agrd(:) 
+     REAL,ALLOCATABLE :: g2ru(:),g2rd(:),gggrt(:)
+     REAL,ALLOCATABLE :: gggru(:),gzgr(:),g2rt(:)
+     REAL,ALLOCATABLE :: gggrd(:),grgru(:),grgrd(:)
+     !These are the contracted Gradients used in libxc
+     REAL,ALLOCATABLE :: sigma(:,:)
+  END TYPE t_gradients
+
 CONTAINS
-  CHARACTER(len=4) FUNCTION xcpot_get_name(xcpot)
-    USE m_judft
-    IMPLICIT NONE
-    CLASS(t_xcpot),INTENT(IN)    :: xcpot
-    IF (xcpot%icorr==0) CALL judft_error("xc-potential not initialized",calledby="types_xcpot.F90")
-    xcpot_get_name=xc_names(xcpot%icorr)
-  END FUNCTION xcpot_get_name
-
-  SUBROUTINE xcpot_init(xcpot,namex,relcor)
-    USE m_judft
-    IMPLICIT NONE
-    CLASS(t_xcpot),INTENT(INOUT)    :: xcpot
-    CHARACTER(len=*),INTENT(IN)  :: namex
-    LOGICAL,INTENT(IN)           :: relcor
-    INTEGER:: n
-    !Determine icorr from name
-    xcpot%icorr=0
-    DO n=1,SIZE(xc_names)
-       IF (TRIM(ADJUSTL(namex))==TRIM(xc_names(n))) THEN
-          xcpot%icorr=n
-       ENDIF
-    ENDDO
-    if (xcpot%icorr==0) CALL judft_error("Unkown xc-potential:"//namex,calledby="types_xcpot.F90")
-    xcpot%krla=MERGE(1,0,relcor)
-
-    
-    !Code from exchpbe to speed up determination of constants
-    IF (xcpot%is_name("rpbe")) THEN
-       xcpot%uk=1.2450
-    ELSE
-       xcpot%uk=0.8040
-    ENDIF
-    IF (xcpot%is_name("PBEs")) THEN     ! pbe_sol
-       xcpot%um=0.123456790123456d0
-    ELSE
-       xcpot%um=0.2195149727645171e0
-    ENDIF
-    xcpot%is_hse=xcpot%is_name("hse").OR.xcpot%is_name("lhse").OR.xcpot%is_name("vhse")
-    xcpot%is_rpbe=xcpot%is_name("Rpbe") !Rpbe
-    xcpot%is_wc=xcpot%is_name("wc")
-      
-      
-      
-  END SUBROUTINE xcpot_init
   
-  LOGICAL FUNCTION xcpot_is_name(xcpot,name)
-    CLASS(t_xcpot),INTENT(IN):: xcpot
-    CHARACTER(len=*),INTENT(IN)  :: name
-    xcpot_is_name=(trim(xc_names(xcpot%icorr))==trim((name)))
-  END FUNCTION xcpot_is_name
-
-  LOGICAL FUNCTION xcpot_is_gga(xcpot,icorr)
+  LOGICAL FUNCTION xcpot_is_gga(xcpot)
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN):: xcpot
-    INTEGER,OPTIONAL,INTENT(IN):: icorr
-    IF (PRESENT(icorr)) THEN
-       xcpot_is_gga=priv_gga(icorr)
-    ELSE
-       xcpot_is_gga=priv_gga(xcpot%icorr)
-    ENDIF
+    xcpot_is_gga=.false.
   END FUNCTION xcpot_is_gga
 
-  LOGICAL FUNCTION xcpot_is_hybrid(xcpot,icorr)
+  LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN):: xcpot
-    INTEGER,OPTIONAL,INTENT(IN):: icorr
-    IF (PRESENT(icorr)) THEN
-       xcpot_is_hybrid=priv_hybrid(icorr)
-    ELSE
-       xcpot_is_hybrid=priv_hybrid(xcpot%icorr)
-    ENDIF
+    xcpot_is_hybrid=.FALSE.
   END FUNCTION xcpot_is_hybrid
-
+  
   FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN):: xcpot
-    
     REAL:: a_ex
-
     a_ex=-1
-    IF (xcpot%is_name("pbe0")) a_ex=amix_pbe0
-    IF (xcpot%is_name("hf")) a_ex=amix_hf
-    IF (xcpot%is_name("hse")) a_ex=amix_hse
-    IF (xcpot%is_name("vhse")) a_ex=amix_hse
-
-    IF (a_ex==-1) CALL judft_error('xc functional can not be identified')
   END FUNCTION xcpot_get_exchange_weight
+
+  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad,drdsigma)
+    CLASS(t_xcpot),INTENT(IN) :: xcpot
+    INTEGER, INTENT (IN)     :: jspins
+    !--> charge density
+    REAL,INTENT (IN)         :: rh(:,:)
+    !---> xc potential
+    REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
+    TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+    REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:)
+  END SUBROUTINE xcpot_get_vxc
+
+  
+  SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
+    CLASS(t_xcpot),INTENT(IN) :: xcpot
+    INTEGER, INTENT (IN)     :: jspins
+    !--> charge density
+    REAL,INTENT (IN)         :: rh(:,:)
+    !---> xc energy density
+    REAL, INTENT (OUT)       :: exc (:)
+    TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+  END SUBROUTINE xcpot_get_exc
+
+  SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
+    INTEGER, INTENT (IN)         :: jspins,ngrid
+    TYPE(t_gradients),INTENT(OUT):: grad
+
+    !For the in-build xc-pots
+    ALLOCATE(grad%agrt(ngrid),grad%agru(ngrid),grad%agrd(ngrid))
+    ALLOCATE(grad%g2ru(ngrid),grad%g2rd(ngrid),grad%gggrt(ngrid))
+    ALLOCATE(grad%gggru(ngrid),grad%gzgr(ngrid),grad%g2rt(ngrid))
+    ALLOCATE(grad%gggrd(ngrid),grad%grgru(ngrid),grad%grgrd(ngrid))
+  END SUBROUTINE xcpot_alloc_gradients
+  
 END MODULE m_types_xcpot

@@ -45,7 +45,7 @@ SUBROUTINE w_inpXML(&
    TYPE(t_cell),INTENT(IN)     :: cell
    TYPE(t_banddos),INTENT(IN)  :: banddos
    TYPE(t_sliceplot),INTENT(IN):: sliceplot
-   TYPE(t_xcpot),INTENT(IN)    :: xcpot
+   CLASS(t_xcpot),INTENT(IN)   :: xcpot
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....

@@ -11,7 +11,7 @@ CONTAINS
     USE m_eig66_io
     USE m_io_hybrid
     IMPLICIT NONE
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    TYPE(t_xcpot_inbuild),INTENT(IN)     :: xcpot
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD

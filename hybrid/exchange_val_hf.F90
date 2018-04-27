@@ -74,7 +74,7 @@
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_results),INTENT(IN)   :: results
-      TYPE(t_xcpot),INTENT(IN)   :: xcpot
+      TYPE(t_xcpot_inbuild),INTENT(IN)   :: xcpot
       TYPE(t_mpi),INTENT(IN)   :: mpi
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid

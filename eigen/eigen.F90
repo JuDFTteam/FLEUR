@@ -42,7 +42,7 @@ CONTAINS
 
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
     TYPE(t_oneD),INTENT(IN)      :: oneD

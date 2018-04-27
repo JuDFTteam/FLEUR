@@ -11,12 +11,12 @@ c.....------------------------------------------------------------------
      <                   vx,vxc)
       
       Use m_easypbe
-      USE m_types
+      USE m_types_xcpot_data
 
       IMPLICIT NONE
 
 ! .. Arguments ..
-      TYPE(t_xcpot),INTENT(IN)::xcpot
+      TYPE(t_xcpot_data),INTENT(IN)::xcpot
       INTEGER, INTENT (IN) :: irmx,jspins,mirm
       REAL,    INTENT (IN) :: rh(mirm,jspins)
       REAL,    INTENT (IN) :: agr(mirm),agru(mirm),agrd(mirm)
@@ -37,8 +37,7 @@ c.....------------------------------------------------------------------
       REAL, PARAMETER :: sml = 1.e-14
       REAL, PARAMETER :: smlc = 2.01e-14
       LOGICAL         :: l_hse
-      l_hse=(xcpot%is_name("hse").or.xcpot%is_name("vhse").or.
-     +       xcpot%is_name("lhse"))
+      l_hse=(xcpot%is_hse)
 
 !$OMP PARALLEL DEFAULT(none)
 !$OMP+ SHARED(irmx,rh,xcpot,jspins,l_hse)

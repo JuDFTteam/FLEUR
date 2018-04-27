@@ -51,7 +51,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_xcpot),INTENT(IN)        :: xcpot
+    CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_oneD),INTENT(IN)         :: oneD
     TYPE(t_hybrid),INTENT(IN)       :: hybrid
     TYPE(t_input),INTENT(IN)        :: input
@@ -119,11 +119,11 @@ CONTAINS
     !      ---> Fock exchange contribution 
     !
     IF (xcpot%is_hybrid()) THEN
-       IF (xcpot%is_name("exx")) THEN
-          results%tote = results%tote + 0.5e0*results%te_hfex%valence
-       ELSE
+       !IF (xcpot%is_name("exx")) THEN
+       !   results%tote = results%tote + 0.5e0*results%te_hfex%valence
+       !ELSE
           results%tote = results%tote - 0.5e0*results%te_hfex%valence + 0.5e0*results%te_hfex%core
-       END IF
+       !END IF
     ENDIF
     WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
     WRITE (16,FMT=8100) 0.5e0*results%te_hfex%valence

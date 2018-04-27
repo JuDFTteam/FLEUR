@@ -80,7 +80,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_xcpot),INTENT(IN)    :: xcpot
+    CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
     !     .. Local Scalars ..

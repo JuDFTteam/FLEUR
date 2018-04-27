@@ -16,14 +16,14 @@ c----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE exchpbe(xcpot,rho,s,u,v,lgga,lpot,
      <     ex,vx,vx_sr)
-      USE m_hsefunctional, ONLY: calculateEnhancementFactor
+!      USE m_hsefunctional, ONLY: calculateEnhancementFactor
       USE m_constants,     ONLY: pi_const
-      USE m_types
+      USE m_types_xcpot_data
       USE m_judft
       IMPLICIT NONE
 
 !     .. Arguments
-      TYPE(t_xcpot), INTENT (IN)  :: xcpot
+      TYPE(t_xcpot_data), INTENT (IN)  :: xcpot
       INTEGER, INTENT (IN)  :: lgga ! =0=>don't put in gradient corrections, just lda
       INTEGER, INTENT (IN)  :: lpot ! =0=>don't get potential and don't need u and v
       REAL,    INTENT (IN)  :: rho ! density
@@ -108,9 +108,11 @@ c     -gu
 !     Calculate the enhancement factor fxhse and its derivatives 
 !     as integral over the exchange hole (cf. [d])
          kF = (3.0 * pi_const**2 * rho)**thrd
-         CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
-     &        dFx_dkF, d2Fx_dsdkF)
-         ex = exunif * (fxpbe - xcpot%get_exchange_weight() * fxhse )
+         CALL judft_error("HSE not implemented",calledby="exchpbe")
+         !This creates a depency loop
+!     CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
+!     &        dFx_dkF, d2Fx_dsdkF)
+         ex = exunif * (fxpbe - xcpot%exchange_weight * fxhse )
       ELSE
          ex = exunif*fxpbe
       END IF

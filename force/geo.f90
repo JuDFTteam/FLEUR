@@ -80,7 +80,7 @@ CONTAINS
     TYPE(t_banddos)               :: banddos_temp
     TYPE(t_obsolete)              :: obsolete_temp
     TYPE(t_enpara)                :: enpara_temp
-    TYPE(t_xcpot)                 :: xcpot_temp
+    CLASS(t_xcpot),ALLOCATABLE    :: xcpot_temp
     TYPE(t_results)               :: results_temp
     TYPE(t_kpts)                  :: kpts_temp
     TYPE(t_hybrid)                :: hybrid_temp

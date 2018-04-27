@@ -22,23 +22,19 @@ MODULE m_vmtxcg
   !     *********************************************************
 
 CONTAINS
-  SUBROUTINE vmtxcg(&
-       &                dimension,mpi,sphhar,atoms,&
-       &                den,xcpot,input,sym,&
-       &                obsolete,&
-       &                vxc,vx,exc)
+  SUBROUTINE vmtxcg(dimension,mpi,sphhar,atoms,&
+       den,xcpot,input,sym, obsolete,vxc,vx,exc)
 
 #include"cpp_double.h"
     USE m_lhglptg
     USE m_grdchlh
     USE m_mkgylm
     USE m_gaussp
-    USE m_xcallg, ONLY : vxcallg,excallg
-
+    USE m_types_xcpot_inbuild
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_xcpot),INTENT(IN)       :: xcpot
+    CLASS(t_xcpot),INTENT(IN)      :: xcpot
     TYPE(t_dimension),INTENT(IN)   :: dimension
     TYPE(t_mpi),INTENT(IN)         :: mpi
     TYPE(t_obsolete),INTENT(IN)    :: obsolete
@@ -53,6 +49,7 @@ CONTAINS
 #endif
     !     ..
     !     .. Local Scalars ..
+    TYPE(t_gradients)::grad
     INTEGER jr,js,k,lh,n,nd,ist,nsp,ixpm ,i,nat
     REAL    rhmnm,d_15,elh,vlh
     LOGICAL lwbc              ! if true, white-bird trick
@@ -60,11 +57,8 @@ CONTAINS
     !     .. Local Arrays ..
     REAL v_x(dimension%nspd,dimension%jspd),v_xc(dimension%nspd,dimension%jspd),e_xc(dimension%nspd),rx(3,dimension%nspd)
     REAL vxcl(DIMENSION%nspd,DIMENSION%jspd),excl(DIMENSION%nspd),divi
-    TYPE(t_xcpot)::xcpot_tmp
+    TYPE(t_xcpot_inbuild)::xcpot_tmp
     REAL wt(dimension%nspd),rr2(atoms%jmtd),thet(dimension%nspd)
-    REAL agr(dimension%nspd),agru(dimension%nspd),agrd(dimension%nspd),g2r(dimension%nspd),g2ru(dimension%nspd)
-    REAL g2rd(dimension%nspd),gggr(dimension%nspd),gggru(dimension%nspd),gggrd(dimension%nspd)
-    REAL grgru(dimension%nspd),grgrd(dimension%nspd),gzgr(dimension%nspd)
     REAL, ALLOCATABLE :: ylh(:,:,:),ylht(:,:,:),ylhtt(:,:,:)
     REAL, ALLOCATABLE :: ylhf(:,:,:),ylhff(:,:,:),ylhtf(:,:,:)
     REAL, ALLOCATABLE :: chlh(:,:,:),chlhdr(:,:,:),chlhdrr(:,:,:)
@@ -83,10 +77,8 @@ CONTAINS
     !     ..
     !     .. Intrinsic Functions ..
     INTRINSIC max,mod,min
-    LOGICAL l_gga
     !ta+
     !.....------------------------------------------------------------------
-    l_gga=xcpot%is_gga()
 
 #ifdef CPP_MPI
     CALL MPI_BCAST(obsolete%ndvgrd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -105,9 +97,7 @@ CONTAINS
     !     angular mesh equidistant in phi,
     !     theta are zeros of the legendre polynomials
     !
-    CALL gaussp(&
-         &            atoms%lmaxd,&
-         &            rx,wt)
+    CALL gaussp(atoms%lmaxd, rx,wt)
 
     nsp = dimension%nspd
     !
@@ -139,10 +129,15 @@ CONTAINS
             &       chlhdr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd),chlhdrr(atoms%jmtd,0:sphhar%nlhd,dimension%jspd))
 
     DO 200 n = n_start,atoms%ntype,n_stride
-       IF (xcpot%lda_atom(n))THEN
-          IF((.NOT.xcpot%is_name("pw91"))) CALL judft_warn("Using locally LDA only possible with pw91 functional")
-          CALL xcpot_tmp%init("l91",.FALSE.)
-       ENDIF
+       SELECT TYPE(xcpot)
+       TYPE IS(t_xcpot_inbuild)
+          IF (xcpot%lda_atom(n))THEN
+             IF((.NOT.xcpot%is_name("pw91"))) &
+                  CALL judft_warn("Using locally LDA only possible with pw91 functional")
+             CALL xcpot_tmp%init("l91",.FALSE.,atoms%ntype)
+          ENDIF
+       END SELECT
+       
        nat=sum(atoms%neq(:n-1))+1
        nd = atoms%ntypsy(nat)
 
@@ -163,38 +158,35 @@ CONTAINS
                 chlh(jr,lh,js) = den%mt(jr,lh,n,js)*rr2(jr)
              ENDDO
 
-             IF (l_gga) THEN 
-                CALL grdchlh(&
-                     &                     ixpm,ist,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
-                     &                     chlh(1,lh,js),obsolete%ndvgrd,&
-                     &                     chlhdr(1,lh,js),chlhdrr(1,lh,js))
-             ENDIF
-
+             CALL grdchlh(ixpm,ist,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
+                  chlh(1,lh,js),obsolete%ndvgrd, chlhdr(1,lh,js),chlhdrr(1,lh,js))
+       
           ENDDO ! js
        ENDDO   ! lh
        
        !
        !-->    loop over radial mesh 
        !
-       !$OMP PARALLEL DEFAULT(none) &
+       !!$OMP PARALLEL DEFAULT(none) &
 #ifdef CPP_MPI
-       !$OMP& SHARED(vr_local,vxr_local,excr_local) &
+       !!$OMP& SHARED(vr_local,vxr_local,excr_local) &
 #endif
-       !$OMP& SHARED(vxc,vx,exc,l_gga) &
-       !$OMP& SHARED(dimension,mpi,sphhar,atoms,den,xcpot,input,sym,obsolete)&
-       !$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
-       !$OMP& SHARED(rx,wt,rr2,thet,xcpot_tmp) &
-       !$OMP& SHARED(ylh,ylht,ylhtt,ylhf,ylhff,ylhtf) &
-       !$OMP& SHARED(chlh,chlhdr,chlhdrr) &
-       !$OMP& SHARED(ierr,n_start,n_stride) &
-       !$OMP& PRIVATE(js,k,lh,i,rhmnm,elh,vlh) &
-       !$OMP& PRIVATE(v_x,v_xc,e_xc,excl,vxcl,divi) &
-       !$OMP& PRIVATE(agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,grgru,grgrd,gzgr) &
-       !$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
-       ALLOCATE ( ch(dimension%nspd,dimension%jspd),chdr(dimension%nspd,dimension%jspd),chdt(dimension%nspd,dimension%jspd),&
-            &       chdf(dimension%nspd,dimension%jspd),chdrr(dimension%nspd,dimension%jspd),chdtt(dimension%nspd,dimension%jspd),&
-            &       chdff(dimension%nspd,dimension%jspd),chdtf(dimension%nspd,dimension%jspd),chdrt(dimension%nspd,dimension%jspd),&
-            &       chdrf(dimension%nspd,dimension%jspd))
+       !!$OMP& SHARED(vxc,vx,exc) &
+       !!$OMP& SHARED(dimension,mpi,sphhar,atoms,den,xcpot,input,sym,obsolete)&
+       !!$OMP& SHARED(n,nd,ist,ixpm,nsp,nat,d_15,lwbc) &
+       !!$OMP& SHARED(rx,wt,rr2,thet,xcpot_tmp) &
+       !!$OMP& SHARED(ylh,ylht,ylhtt,ylhf,ylhff,ylhtf) &
+       !!$OMP& SHARED(chlh,chlhdr,chlhdrr) &
+       !!$OMP& SHARED(ierr,n_start,n_stride) &
+       !!$OMP& PRIVATE(js,k,lh,i,rhmnm,elh,vlh) &
+       !!$OMP& PRIVATE(v_x,v_xc,e_xc,excl,vxcl,divi) &
+       !!$OMP& PRIVATE(grad) &
+       !!$OMP& PRIVATE(ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
+       ALLOCATE ( ch(DIMENSION%nspd,DIMENSION%jspd),chdr(DIMENSION%nspd,DIMENSION%jspd),&
+            chdt(DIMENSION%nspd,DIMENSION%jspd), chdf(DIMENSION%nspd,DIMENSION%jspd),&
+            chdrr(DIMENSION%nspd,DIMENSION%jspd),chdtt(DIMENSION%nspd,DIMENSION%jspd), &
+            chdff(DIMENSION%nspd,DIMENSION%jspd),chdtf(DIMENSION%nspd,DIMENSION%jspd),&
+            chdrt(DIMENSION%nspd,DIMENSION%jspd), chdrf(DIMENSION%nspd,DIMENSION%jspd))
        !$OMP DO 
        DO 190 jr = 1,atoms%jri(n)
           !
@@ -221,7 +213,6 @@ CONTAINS
                    ch(k,js) = ch(k,js) + ylh(k,lh,nd)*chlh(jr,lh,js)
                 ENDDO
 
-                IF (l_gga) THEN
                    ! 
                    DO k = 1,nsp
                       chdr(k,js) =chdr(k,js)+ ylh(k,lh,nd)*chlhdr(jr,lh,js)
@@ -239,24 +230,13 @@ CONTAINS
                    ENDDO
 
 
-                ENDIF
-
              ENDDO ! lh
           ENDDO   ! js
 
-          IF (l_gga) THEN
-             CALL mkgylm(&
-                  &                  input%jspins,atoms%rmsh(jr,n),thet,nsp,dimension%nspd,dimension%jspd,ch,chdr,&
-                  &                  chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,&
-                  &                  agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,&
-                  &                  grgru,grgrd,gzgr)!keep
-          ELSE
-             agr(:)   = 0.0 ; agru(:)  = 0.0 ; agrd(:)  = 0.0 
-             g2r(:)   = 0.0 ; g2ru(:)  = 0.0 ; g2rd(:)  = 0.0 
-             gggr(:)  = 0.0 ; gggru(:) = 0.0 ; gggrd(:) = 0.0 
-             grgru(:) = 0.0 ; grgrd(:) = 0.0 ; gzgr(:)  = 0.0 
-          ENDIF
-
+          CALL xcpot%alloc_gradients(nsp,input%jspins,grad)
+          CALL mkgylm(input%jspins,atoms%rmsh(jr,n),thet,nsp,DIMENSION%nspd,DIMENSION%jspd,ch,chdr,&
+               chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,grad)
+          
           !
           !         rhmnm: rho_minimum_muffin-tin..
 
@@ -279,29 +259,22 @@ CONTAINS
           !
           !         calculate the ex.-cor. potential
 
-         
-          CALL vxcallg(&
-               &                 xcpot,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
-               &                 g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-               &                 v_x,v_xc)
-
-          IF (xcpot%lda_atom(n)) THEN
-             ! Use local part of pw91 for this atom
-             CALL vxcallg(&
-                  xcpot_tmp,lwbc,input%jspins,nsp,nsp,ch,agr,agru,agrd,&
-                  g2r,g2ru,g2rd,gggr,gggru,gggrd,gzgr,&
-                  v_x,vxcl)
-             !Mix the potentials
-             divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
-             v_xc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+          CALL xcpot%get_vxc(input%jspins,ch(:nsp,:),v_xc,v_x,grad)
+          SELECT TYPE(xcpot)
+          TYPE IS (t_xcpot_inbuild)
+             IF (xcpot%lda_atom(n)) THEN
+                ! Use local part of pw91 for this atom
+                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp,:),vxcl,v_x,grad)
+                !Mix the potentials
+                divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
+                v_xc(:,:) = ( vxcl(:,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
                      v_xc(:,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
-          ENDIF
- 
+             ENDIF
+          END SELECT
 
           IF (mpi%irank == 0) THEN
-          IF (mod(jr,1000).eq.0)&
-               &              WRITE (6,'(/'' 999vxc''/(10d15.7))')&
-               &                    ((v_xc(k,js),k=1,nsp),js=1,input%jspins)
+          IF (mod(jr,1000).eq.0) WRITE (6,'(/'' 999vxc''/(10d15.7))')&
+               ((v_xc(k,js),k=1,nsp),js=1,input%jspins)
           ENDIF !irank==0
 
 
@@ -317,10 +290,8 @@ CONTAINS
              ENDDO
 
              IF (mpi%irank == 0) THEN
-                IF (mod(jr,1500).EQ.0)&
-                     &        WRITE (6,'('' 999wt''/(10d15.7))') (wt(k),k=1,nsp)
-                IF (mod(jr,1500).EQ.0)&
-                     &        WRITE (6,'('' 999vxc''/(10d15.7))') (v_xc(k,js),k=1,nsp)
+                IF (mod(jr,1500).EQ.0) WRITE (6,'('' 999wt''/(10d15.7))') (wt(k),k=1,nsp)
+                IF (mod(jr,1500).EQ.0) WRITE (6,'('' 999vxc''/(10d15.7))') (v_xc(k,js),k=1,nsp)
              ENDIF !irank==0
 
              DO lh = 0,sphhar%nlh(nd)
@@ -354,29 +325,25 @@ CONTAINS
              ENDDO ! lh
           ENDDO   ! js
 
-          IF (input%total) then
+          IF (ALLOCATED(exc%mt)) THEN
              !
              !           calculate the ex.-cor energy density
              !
-             CALL excallg(xcpot,lwbc,input%jspins,nsp,&
-                  ch,agr,agru,agrd,g2r,g2ru,g2rd,&
-                  gggr,gggru,gggrd,gzgr, e_xc)
-             
-             IF (xcpot%lda_atom(n)) THEN
-             ! Use local part of pw91 for this atom
-                CALL excallg(xcpot_tmp,lwbc,input%jspins,nsp,&
-                     ch,agr,agru,agrd,g2r,g2ru,g2rd,&
-                     gggr,gggru,gggrd,gzgr, excl)
-                !Mix the potentials
-                e_xc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
-                     e_xc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
-             ENDIF
+             CALL xcpot%get_exc(input%jspins,ch(:nsp,:),e_xc,grad)
+             SELECT TYPE(xcpot)
+             TYPE IS(t_xcpot_inbuild)
+                IF (xcpot%lda_atom(n)) THEN
+                   ! Use local part of pw91 for this atom
+                   CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp,:),excl,grad)
+                   !Mix the potentials
+                   e_xc(:) = ( excl(:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                        e_xc(:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+                ENDIF
+             END SELECT
              IF (mpi%irank == 0) THEN
-             IF (mod(jr,10000).EQ.0)&
-                  &        WRITE (6,'(/'' 999exc''/(10d15.7))') (e_xc(k),k=1,nsp)
+             IF (mod(jr,10000).EQ.0) WRITE (6,'(/'' 999exc''/(10d15.7))') (e_xc(k),k=1,nsp)
              ENDIF !irank==0
 
-          ENDIF
 
           !         now determine the corresponding energy density number
           !
@@ -402,11 +369,12 @@ CONTAINS
 #endif
 
           ENDDO
+          ENDIF
 
 190    ENDDO
-       !$OMP END DO
+       !!$OMP END DO
        DEALLOCATE (ch,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf)
-       !$OMP END PARALLEL 
+       !!$OMP END PARALLEL 
 
        !        WRITE(6,'(/'' n='',i3/'' 9999vr''/(10d15.7))') n,
        !     &   (((vr(jr,lh,n,js),jr=1,jri(n),100),lh=0,ntypsy(nat)),js=1,jspins)

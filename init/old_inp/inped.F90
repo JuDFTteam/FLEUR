@@ -44,7 +44,7 @@
           TYPE(t_vacuum),    INTENT(INOUT) :: vacuum
           TYPE(t_input),     INTENT(INOUT) :: input
           TYPE(t_banddos),   INTENT(INOUT) :: banddos
-          TYPE(t_xcpot),     INTENT(INOUT) :: xcpot
+          TYPE(t_xcpot_inbuild),     INTENT(INOUT) :: xcpot
           TYPE(t_sym),       INTENT(INOUT) :: sym
           TYPE(t_cell),      INTENT(INOUT) :: cell
           TYPE(t_sliceplot), INTENT(INOUT) :: sliceplot
@@ -211,7 +211,7 @@
           WRITE (6,FMT=8120) namex,relcor
 8120      FORMAT (1x,'exchange-correlation: ',a4,2x,a12,1x,'correction')
 
-          CALL xcpot%init(namex,relcor.EQ.'relativistic')
+          CALL xcpot%init(namex,relcor.EQ.'relativistic',atoms%ntype)
 !!$          xcpot%icorr = -99
 !!$
 !!$          !     l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.

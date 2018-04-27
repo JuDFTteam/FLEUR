@@ -11,12 +11,12 @@ c.....------------------------------------------------------------------
      <                   exc)
 
       USE m_easypbe
-      USE m_types
+      USE m_types_xcpot_data
 
       IMPLICIT NONE
 
 ! .. Arguments ..
-      TYPE(t_xcpot),INTENT(IN)::xcpot
+      TYPE(t_xcpot_data),INTENT(IN)::xcpot
       INTEGER, INTENT (IN) :: irmx,jspins,mirm
       REAL,    INTENT (IN) :: rh(mirm,jspins)
       REAL,    INTENT (IN) :: agr(mirm),agru(mirm),agrd(mirm)
@@ -96,7 +96,7 @@ c.....
         ENDIF ! ro > smlc
 
 
-        IF( xcpot%is_name("pbe0") ) THEN
+        IF( xcpot%is_pbe0 ) THEN
           !pbe0: weight exchange energy with factor 0.75
           xced = (0.75*xedl+cedl+0.75*xedg+cedg)
         ELSE

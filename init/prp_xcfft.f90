@@ -32,7 +32,7 @@
       TYPE(t_stars),INTENT(INOUT)   :: stars
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_xcpot),INTENT(INOUT)   :: xcpot
+      CLASS(t_xcpot),INTENT(INOUT)  :: xcpot
 
 !
 !---> local variables

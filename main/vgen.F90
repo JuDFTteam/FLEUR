@@ -29,7 +29,7 @@ CONTAINS
 #endif
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_xcpot),INTENT(IN)        :: xcpot
+    CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_hybrid),INTENT(IN)       :: hybrid
     TYPE(t_mpi),INTENT(IN)          :: mpi
     TYPE(t_dimension),INTENT(IN)    :: dimension

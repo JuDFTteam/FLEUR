@@ -10,11 +10,10 @@ c     ******************************************************************
 
       USE m_grdchlh
       USE m_mkgl0
-      USE m_xcallg , ONLY : vxcallg
       USE m_types
       IMPLICIT NONE
 c     ..
-      TYPE(t_xcpot),intent(in)::xcpot
+      CLASS(t_xcpot),intent(in)::xcpot
       INTEGER, INTENT (IN) :: jspins,jspd,mshd,msh
       REAL,    INTENT (IN) :: dx
       REAL,    INTENT (IN) :: rad(msh),dens(mshd,jspd)
@@ -23,23 +22,18 @@ c     ..
 c     .. previously untyped names ..
       INTEGER,PARAMETER :: ndvgrd=6
 
+      TYPE(t_gradients)::grad
+
       INTEGER i,ispin
-      REAL, ALLOCATABLE :: drr(:,:),ddrr(:,:),agrt(:),agrd(:),agru(:)
-      REAL, ALLOCATABLE :: g2rt(:),g2rd(:),g2ru(:),gggrt(:),gggrd(:)
-      REAL, ALLOCATABLE :: gggru(:),grgrd(:),grgru(:),gzgr(:)
+      REAL, ALLOCATABLE :: drr(:,:),ddrr(:,:)
       
       REAL              :: vx(mshd,jspd)
 
-      ALLOCATE ( drr(mshd,jspd),ddrr(mshd,jspd),grgru(mshd),gzgr(mshd) )
-      ALLOCATE ( agrt(mshd),agrd(mshd),agru(mshd),g2rt(mshd),g2rd(mshd),
-     +      g2ru(mshd),gggrt(mshd),gggrd(mshd),gggru(mshd),grgrd(mshd) )
-
-      agrt(:) = 0.0 ; agru(:) = 0.0 ; agrd(:) = 0.0 ; grgrd(:) = 0.0
-      g2rt(:) = 0.0 ; g2ru(:) = 0.0 ; g2rd(:) = 0.0 ; gzgr(:) = 0.0
-      gggrt(:) = 0.0 ; gggru(:) = 0.0 ; gggrd(:) = 0.0 ; grgru(:) = 0.0 
+      ALLOCATE ( drr(mshd,jspd),ddrr(mshd,jspd)) 
 !
 !-->  evaluate gradients of dens.
 !
+      CALL xcpot%alloc_gradients(msh,1,grad)
       DO ispin = 1, jspins
         CALL grdchlh(
      >               1,1,msh,dx,rad,dens(1,ispin),ndvgrd,
@@ -48,17 +42,12 @@ c     .. previously untyped names ..
 
       CALL mkgl0(
      >           mshd,msh,jspd,jspins,rad,dens,drr,ddrr,
-     <           agrt,agru,agrd,g2rt,g2ru,g2rd,
-     <           gggrt,gggru,gggrd,grgru,grgrd,gzgr)
+     <           grad)
 !
 ! --> calculate the potential.
 !
-      CALL vxcallg(
-     >             xcpot,.false.,jspins,mshd,msh,dens,
-     +             agrt,agru,agrd,g2rt,g2ru,g2rd,gggrt,gggru,gggrd,
-     +             gzgr,vx,vxc)
+      call xcpot%get_vxc(jspins,dens,vxc,vx,grad)
 
-      DEALLOCATE ( drr,ddrr,grgru,gzgr,agrt,agrd,agru,g2rt,g2rd,
-     +             g2ru,gggrt,gggrd,gggru,grgrd )
+      DEALLOCATE ( drr,ddrr )
       END SUBROUTINE potl0
       END MODULE m_potl0

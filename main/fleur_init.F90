@@ -32,6 +32,9 @@
           USE m_prpqfftmap
           USE m_writeOutHeader
           USE m_fleur_init_old
+          USE m_types_xcpot_inbuild
+          USE m_mpi_bc_xcpot
+
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
           USE m_mpi_dist_forcetheorem
@@ -56,7 +59,7 @@
           TYPE(t_banddos)  ,INTENT(OUT):: banddos
           TYPE(t_obsolete) ,INTENT(OUT):: obsolete 
           TYPE(t_enpara)   ,INTENT(OUT):: enpara
-          TYPE(t_xcpot)    ,INTENT(OUT):: xcpot
+          CLASS(t_xcpot),ALLOCATABLE,INTENT(OUT):: xcpot
           TYPE(t_results)  ,INTENT(OUT):: results
           TYPE(t_kpts)     ,INTENT(OUT):: kpts
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
@@ -176,7 +179,7 @@
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
              END IF
-
+             CALL mpi_bc_xcpot(xcpot,mpi)
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
@@ -278,7 +281,7 @@
                &           mpi,stars,sphhar,atoms,obsolete,&
                &           sym,kpts,DIMENSION,input,field,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
-               &           noco,oneD,xcpot,hybrid)
+               &           noco,oneD,hybrid)
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive 
