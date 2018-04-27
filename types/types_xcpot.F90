@@ -63,7 +63,7 @@ CONTAINS
     a_ex=-1
   END FUNCTION xcpot_get_exchange_weight
 
-  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad)
+  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad,drdsigma)
     CLASS(t_xcpot),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins
     !--> charge density
@@ -71,6 +71,7 @@ CONTAINS
     !---> xc potential
     REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
     TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+    REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:)
   END SUBROUTINE xcpot_get_vxc
 
   

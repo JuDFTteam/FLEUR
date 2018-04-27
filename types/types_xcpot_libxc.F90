@@ -53,8 +53,16 @@ CONTAINS
        IF (xcpot%func_id_c>0) CALL xc_f03_func_init(xcpot%xc_func_c, xcpot%func_id_c, XC_POLARIZED)
     END IF
     xcpot%xc_info_x=xc_f03_func_get_info(xcpot%xc_func_x)
-    IF (xcpot%func_id_c>0) xcpot%xc_info_c=xc_f03_func_get_info(xcpot%xc_func_c)
-    
+    CALL priv_write_info(xcpot%xc_info_x)
+    IF (xcpot%func_id_c>0) THEN
+       xcpot%xc_info_c=xc_f03_func_get_info(xcpot%xc_func_c)
+       CALL priv_write_info(xcpot%xc_info_c)
+    ELSE
+       WRITE(*,*) "No Correlation functional"
+    END IF
+  
+
+
     PRINT *, "TODO: some info and output on libxc functionals"
 
 #else
@@ -91,57 +99,76 @@ CONTAINS
   END FUNCTION xcpot_get_exchange_weight
 
   !***********************************************************************
-  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
+  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,drdsigma)
     !***********************************************************************
     IMPLICIT NONE
     CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins
-    REAL,INTENT (IN) :: rh(:,:)
-    REAL, INTENT (OUT) :: vx (:,:)
-    REAL, INTENT (OUT) :: vxc(:,:)
+    REAL,INTENT (IN)         :: rh(:,:)   !Dimensions here
+    REAL, INTENT (OUT)       :: vx (:,:)  !points,spin
+    REAL, INTENT (OUT  )     :: vxc(:,:)  !
     ! optional arguments for GGA
     TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+    REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:)
 #ifdef CPP_LIBXC    
     REAL,ALLOCATABLE::vxc_tmp(:,:),vx_tmp(:,:),vsigma(:)
-    vx (:,:) = 0.0  !exchange potential not calculated....
     !libxc uses the spin as a first index, hence we have to transpose....
     ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
     ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
     IF (xcpot%is_gga()) THEN
+       CALL judft_error("libxc GGA not implemented yet")
        IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-       ALLOCATE(vsigma(SIZE(grad%sigma)))
-       CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,vsigma)
-       IF (xcpot%func_id_c>0) CALL xc_f03_gga_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,vsigma)
+       ALLOCATE(drdsigma(SIZE(grad%sigma)))
+       CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,drdsigma)
+       IF (xcpot%func_id_c>0) THEN
+          ALLOCATE(vsigma(SIZE(grad%sigma)))
+          CALL xc_f03_gga_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,vsigma)
+          drdsigma=drdsigma+vsigma
+          vxc_tmp=vxc_tmp+vx_tmp
+       ENDIF
     ELSE  !LDA potentials
-       CALL xc_f03_lda_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
-       IF (xcpot%func_id_c>0) CALL xc_f03_lda_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
+       CALL xc_f03_lda_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
+       IF (xcpot%func_id_c>0) THEN
+          CALL xc_f03_lda_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
+          vxc_tmp=vxc_tmp+vx_tmp
+       ENDIF
     ENDIF
     vx=TRANSPOSE(vx_tmp) 
-    vxc_tmp=vxc_tmp+vx_tmp
     vxc=TRANSPOSE(vxc_tmp) 
     
 #endif
   END SUBROUTINE xcpot_get_vxc
 
+  
   !***********************************************************************
   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
     !***********************************************************************
     IMPLICIT NONE
     CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins
-    REAL,INTENT (IN) :: rh(:,:)
-    REAL, INTENT (OUT) :: exc(:)
+    REAL,INTENT (IN) :: rh(:,:)  !points,spin
+    REAL, INTENT (OUT) :: exc(:) !points
     ! optional arguments for GGA      
     TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+
+    REAL  :: excc(SIZE(exc))
 #ifdef CPP_LIBXC    
     IF (xcpot%is_gga()) THEN
        IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
        CALL xc_f03_gga_exc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
-       IF (xcpot%func_id_c>0) CALL xc_f03_gga_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
+       IF (xcpot%func_id_c>0) THEN
+          CALL xc_f03_gga_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
+          exc=exc+excc
+       END IF
     ELSE  !LDA potentials
        CALL xc_f03_lda_exc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
-       IF (xcpot%func_id_c>0) CALL xc_f03_lda_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), exc)
+       IF (xcpot%func_id_c>0) THEN
+          CALL xc_f03_lda_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
+          exc=exc+excc
+       END IF
     ENDIF
+    PRINT *,"EX:",rh(2,:),grad%sigma(:,2),exc(2)
+    
 #endif
   END SUBROUTINE xcpot_get_exc
 
@@ -153,4 +180,46 @@ CONTAINS
   END SUBROUTINE xcpot_alloc_gradients
 
 
+  SUBROUTINE priv_write_info(xc_info)
+    IMPLICIT NONE
+    TYPE(xc_f03_func_info_t),INTENT(IN) :: xc_info
+    INTEGER :: i
+    CHARACTER(len=120) :: kind, family
+    
+    SELECT CASE(xc_f03_func_info_get_kind(xc_info))
+    CASE (XC_EXCHANGE)
+       WRITE(kind, '(a)') 'an exchange functional'
+    CASE (XC_CORRELATION)
+       WRITE(kind, '(a)') 'a correlation functional'
+    CASE (XC_EXCHANGE_CORRELATION)
+       WRITE(kind, '(a)') 'an exchange-correlation functional'
+    CASE (XC_KINETIC)
+       WRITE(kind, '(a)') 'a kinetic energy functional'
+    CASE default
+       WRITE(kind, '(a)') 'of unknown kind'
+    END SELECT
+    SELECT CASE (xc_f03_func_info_get_family(xc_info))
+    CASE (XC_FAMILY_LDA);
+       WRITE(family,'(a)') "LDA"
+    CASE (XC_FAMILY_GGA);
+       WRITE(family,'(a)') "GGA"
+    CASE (XC_FAMILY_HYB_GGA);
+       WRITE(family,'(a)') "Hybrid GGA"
+    CASE (XC_FAMILY_MGGA);
+       WRITE(family,'(a)') "MGGA"
+    CASE (XC_FAMILY_HYB_MGGA);
+       WRITE(family,'(a)') "Hybrid MGGA"
+    CASE default;
+       WRITE(family,'(a)') "unknown"
+    END SELECT
+    
+    WRITE(*,'("The functional ''", a, "'' is ", a, ", it belongs to the ''", a, "'' family and is defined in the reference(s):")') &
+         TRIM(xc_f03_func_info_get_name(xc_info)), TRIM(kind), TRIM(family)
+    
+    i = 0
+    DO WHILE(i >= 0)
+       WRITE(*, '(a,i1,2a)') '[', i+1, '] ', TRIM(xc_f03_func_reference_get_ref(xc_f03_func_info_get_references(xc_info, i)))
+    END DO
+  END SUBROUTINE priv_write_info
+  
 END MODULE m_types_xcpot_libxc

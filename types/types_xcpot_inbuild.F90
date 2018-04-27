@@ -135,7 +135,7 @@ CONTAINS
   END FUNCTION xcpot_get_exchange_weight
 
 !***********************************************************************
-      SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
+      SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,drdsigma)
 !***********************************************************************
 !
    USE m_xcxal, ONLY : vxcxal
@@ -165,6 +165,7 @@ CONTAINS
 
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(IN),OPTIONAL::grad
+      REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:) !This will not be allocated
 !c
 !c ---> local scalars
       INTEGER :: ngrid
@@ -196,7 +197,8 @@ CONTAINS
 
             ENDIF
          ELSE  ! pbe or similar
-            CALL vxcepbe(xcpot%data,jspins,ngrid,ngrid,rh, grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, vx,vxc)
+            CALL vxcepbe(xcpot%DATA,jspins,ngrid,ngrid,rh, grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, vx,vxc)
+            PRINT *,"xc:",vxc(2,:)/2,rh(2,:),grad%agrt(2)
          ENDIF
       ELSE  !LDA potentials
          IF (xcpot%is_name("x-a"))  THEN   ! X-alpha method
@@ -305,6 +307,8 @@ CONTAINS
       ENDIF
 !c-----> hartree units
       exc= hrtr_half*exc
+      PRINT *,"EX:",rh(2,:),sqrt(grad%agrt(2)),exc(2)
+   
     END SUBROUTINE xcpot_get_exc
 
   
