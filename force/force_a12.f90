@@ -6,12 +6,15 @@ MODULE m_forcea12
 !
 CONTAINS
   SUBROUTINE force_a12(atoms,nobd,sym, DIMENSION, cell,oneD,&
-                       we,jsp,ne,usdus,eigVecCoeffs,force,results)
-    USE m_types
+                       we,jsp,ne,usdus,eigVecCoeffs,acoflo,bcoflo,e1cof,e2cof,f_a12,results)
+    USE m_types_setup
+    USE m_types_misc
+    USE m_types_usdus
+    USE m_types_cdnval
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
 
-    TYPE(t_force),INTENT(INOUT)     :: force
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_dimension),INTENT(IN)    :: DIMENSION
     TYPE(t_oneD),INTENT(IN)         :: oneD
@@ -26,7 +29,12 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne ,jsp 
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd)
+    REAL,    INTENT(IN)    :: we(nobd)
+    COMPLEX, INTENT(IN)    :: acoflo(-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT(IN)    :: bcoflo(-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT(IN)    :: e1cof(ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: e2cof(ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(INOUT) :: f_a12(3,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX a12,cil1,cil2
@@ -43,13 +51,9 @@ CONTAINS
     !     .. Statement Functions ..
     REAL   alpha,beta,delta,epslon,gamma,phi 
     INTEGER krondel
-    !     ..
-    !     .. Statement Function definitions ..
-    !  inline functions:
-    !
+
     ! Kronecker delta for arguments >=0 AND <0
-    !
-    !
+
     krondel(i,j) = MIN(ABS(i)+1,ABS(j)+1)/MAX(ABS(i)+1,ABS(j)+1)* (1+SIGN(1,i)*SIGN(1,j))/2
     alpha(l,m) = (l+1)*0.5e0*SQRT(REAL((l-m)* (l-m-1))/ REAL((2*l-1)* (2*l+1)))
     beta(l,m) = l*0.5e0*SQRT(REAL((l+m+2)* (l+m+1))/ REAL((2*l+1)* (2*l+3)))
@@ -57,9 +61,9 @@ CONTAINS
     delta(l,m) = l*0.5e0*SQRT(REAL((l-m+2)* (l-m+1))/ REAL((2*l+1)* (2*l+3)))
     epslon(l,m) = (l+1)*SQRT(REAL((l-m)* (l+m))/ REAL((2*l-1)* (2*l+1)))
     phi(l,m) = l*SQRT(REAL((l-m+1)* (l+m+1))/REAL((2*l+1)* (2*l+3)))
-    !     ..
-    !
-    !
+
+    CALL timestart("force_a12")
+
     natom = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -90,8 +94,8 @@ CONTAINS
                 DO m1 = -l1,l1
                    lm1 = l1* (l1+1) + m1
                    DO ie = 1,ne
-                      acof_flapw(ie,lm1) = acof_flapw(ie,lm1) - force%acoflo(m1,ie,ilo,natrun)
-                      bcof_flapw(ie,lm1) = bcof_flapw(ie,lm1) - force%bcoflo(m1,ie,ilo,natrun)
+                      acof_flapw(ie,lm1) = acof_flapw(ie,lm1) - acoflo(m1,ie,ilo,natrun)
+                      bcof_flapw(ie,lm1) = bcof_flapw(ie,lm1) - bcoflo(m1,ie,ilo,natrun)
                    ENDDO
                 ENDDO
              ENDDO
@@ -110,7 +114,7 @@ CONTAINS
                             !
                             a12 = a12 + CONJG(cil1*&
                                  (acof_flapw(ie,lm1)*usdus%us(l1,n,jsp) + bcof_flapw(ie,lm1)*usdus%uds(l1,n,jsp) ))*cil2*&
-                                 (force%e1cof(ie,lm2,natrun)*usdus%us(l2,n,jsp)+ force%e2cof(ie,lm2,natrun)*usdus%uds(l2,n,jsp))*we(ie)
+                                 (e1cof(ie,lm2,natrun)*usdus%us(l2,n,jsp)+ e2cof(ie,lm2,natrun)*usdus%uds(l2,n,jsp))*we(ie)
 
                          END DO
                          aaa(1) = alpha(l1,m1)*krondel(l2,l1-1)* krondel(m2,m1+1)
@@ -227,7 +231,7 @@ CONTAINS
           !  is also a solution of Schr. equ. if psi is one.
           DO i = 1,3
              results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a12(i))
-             force%f_a12(i,n) = force%f_a12(i,n) + forc_a12(i)
+             f_a12(i,n) = f_a12(i,n) + forc_a12(i)
           END DO
           !
           !     write result moved to force_a8
@@ -235,6 +239,8 @@ CONTAINS
        ENDIF
        natom = natom + atoms%neq(n)
     ENDDO
-    !
+
+    CALL timestop("force_a12")
+
   END SUBROUTINE force_a12
 END MODULE m_forcea12

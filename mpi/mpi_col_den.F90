@@ -9,13 +9,13 @@ MODULE m_mpi_col_den
   ! collect all data calculated in cdnval on different pe's on pe 0
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,&
-       input, noco,l_fmpl,jspin,llpd,rhtxy,rht,qpw,regCharges,&
-       results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,&
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
     USE m_types
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -31,13 +31,9 @@ CONTAINS
     INCLUDE 'mpif.h'
     ! ..
     ! ..  Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jspin,llpd
-    LOGICAL, INTENT (IN) :: l_fmpl
+    INTEGER, INTENT (IN) :: jspin
     ! ..
     ! ..  Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: qpw(stars%ng3)
-    COMPLEX, INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    REAL,    INTENT (INOUT) :: rht(vacuum%nmzd,2)
     COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     TYPE (t_orb),              INTENT(INOUT) :: orb
     TYPE (t_denCoeffs),        INTENT(INOUT) :: denCoeffs
@@ -55,36 +51,34 @@ CONTAINS
     ! ..  External Subroutines
     EXTERNAL CPP_BLAS_scopy,CPP_BLAS_ccopy,MPI_REDUCE
 
-    !
-    ! -> Collect qpw()
-    !
+    CALL timestart("mpi_col_den")
+
+    ! -> Collect den%pw(:,jspin)
     n = stars%ng3
     ALLOCATE(c_b(n))
-    CALL MPI_REDUCE(qpw,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(den%pw(:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
-       CALL CPP_BLAS_ccopy(n, c_b, 1, qpw, 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, den%pw(:,jspin), 1)
     ENDIF
     DEALLOCATE (c_b)
-    !
-    ! -> Collect rhtxy()
-    !
+
+    ! -> Collect den%vacxy(:,:,:,jspin)
     IF (input%film) THEN
 
        n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
        ALLOCATE(c_b(n))
-       CALL MPI_REDUCE(rhtxy,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, rhtxy, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%vacxy(:,:,:,jspin), 1)
        ENDIF
        DEALLOCATE (c_b)
-       !
-       ! -> Collect rht()
-       !
+
+       ! -> Collect den%vacz(:,:,jspin)
        n = vacuum%nmzd*2
        ALLOCATE(r_b(n))
-       CALL MPI_REDUCE(rht,r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%vacz(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, rht, 1)
+          CALL CPP_BLAS_scopy(n, r_b, 1, den%vacz(:,:,jspin), 1)
        ENDIF
        DEALLOCATE (r_b)
 
@@ -110,7 +104,7 @@ CONTAINS
     !
     !--> Collect uunmt,udnmt,dunmt,ddnmt
     !
-    n = (llpd+1)*sphhar%nlhd*atoms%ntype
+    n = (((atoms%lmaxd*(atoms%lmaxd+3))/2)+1)*sphhar%nlhd*atoms%ntype
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(denCoeffs%uunmt(0:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) THEN
@@ -408,7 +402,7 @@ CONTAINS
           ENDIF
           DEALLOCATE (c_b)
 
-          IF (l_fmpl) THEN
+          IF (denCoeffsOffdiag%l_fmpl) THEN
              !
              !-->        Full magnetization plots: Collect uunmt21, etc.
              !
@@ -448,6 +442,7 @@ CONTAINS
     ENDIF
     !-lda+U
 
-    RETURN
+    CALL timestop("mpi_col_den")
+
   END SUBROUTINE mpi_col_den
 END MODULE m_mpi_col_den

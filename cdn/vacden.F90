@@ -5,14 +5,9 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(&
-       vacuum,DIMENSION,stars,oneD,&
-       kpts,input,cell,atoms,noco,banddos,&
-       gvac1,gvac2,&
-       we,ikpt,jspin,vz,&
-       ne,lapw,&
-       evac,eig,den,qvac,qvlay,&
-       stcoeff,zMat)
+  SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
+                    gVacMap,we,ikpt,jspin,vz,ne,lapw,evac,eig,den,qvac,qvlay,&
+                    stcoeff,zMat)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -61,10 +56,12 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_gVacMap),INTENT(IN)    :: gVacMap
     TYPE(t_potden),INTENT(INOUT)  :: den
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin      
@@ -73,15 +70,14 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: evac(2,DIMENSION%jspd)
-    REAL,    INTENT(OUT)   :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL,    INTENT(INOUT) :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL,    INTENT(IN)    :: we(DIMENSION%neigd)
-    REAL                   :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
+    REAL,    INTENT(IN)     :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT(OUT)    :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT(INOUT)  :: qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
+    REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
-    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
-    COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
+    REAL,    INTENT (IN)    :: eig(DIMENSION%neigd)  
+    COMPLEX, INTENT (INOUT) :: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins)
     !
     !     local STM variables
     INTEGER nv2(DIMENSION%jspd)
@@ -143,7 +139,9 @@ CONTAINS
     !                 \vec{a}_1,2 are the 2D lattice vectors           
     !  
     !     **************************************************************************************************
-    ! 
+
+    CALL timestart("vacden")
+
     ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),bc(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),dt(DIMENSION%nv2d),&
          &           dte(DIMENSION%nv2d),du(vacuum%nmzd),ddu(vacuum%nmzd,DIMENSION%nv2d),due(vacuum%nmzd),&
          &           ddue(vacuum%nmzd,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
@@ -171,8 +169,6 @@ CONTAINS
     ic = CMPLX(0.,1.)
     !    ------------------
     !     WRITE (16,'(a,i2)') 'nstars=',nstars
-
-    stcoeff(:,:,:,:) = CMPLX(0.0,0.0)
 
     !     -----> set up mapping arrays
     IF (noco%l_ss) THEN
@@ -244,17 +240,14 @@ CONTAINS
        DO j=1, n2max
           mapg2k(j)=j
           DO i=1, nv2(jspin)
-             IF ( kvac1(i,jspin).EQ.gvac1(j) .AND.&
-                  &              kvac2(i,jspin).EQ.gvac2(j) ) &
-                  &              mapg2k(j)=i
+             IF (kvac1(i,jspin).EQ.gVacMap%gvac1d(j).AND.kvac2(i,jspin).EQ.gVacMap%gvac2d(j)) mapg2k(j)=i
           END DO
        END DO
     END IF
     !
     !-dw
     IF (noco%l_noco) THEN
-       OPEN (25,FILE='potmat',FORM='unformatted',&
-            &         STATUS='old')
+       OPEN (25,FILE='potmat',FORM='unformatted',STATUS='old')
        !--->    skip the four components of the interstitial potential matrix
        DO ipot = 1,3
           READ (25)
@@ -1203,7 +1196,7 @@ CONTAINS
        !=============================================================
        !
        !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue 
-       !           to stcoeff(ne,layer,ivac) if starcoeff=T (the star coefficient values are written to vacdos)
+       !           to stcoeff(ne,layer,ivac,ikpt) if starcoeff=T (the star coefficient values are written to vacdos)
        !
        IF (vacuum%starcoeff .AND. banddos%vacdos) THEN
           DO  n=1,ne
@@ -1234,9 +1227,9 @@ CONTAINS
                          uej = ue(vacuum%izlay(jj,1),l1,jspin)
                          t1 = aa*ui*uj + bb*uei*uej +ba*ui*uej + ab*uei*uj
                          IF (ind2.GE.2.AND.ind2.LE.vacuum%nstars) &
-                              stcoeff(ind2-1,n,jj,ivac) = stcoeff(ind2-1,n,jj,ivac)+ t1*phs/stars%nstr2(ind2)
+                              stcoeff(ind2-1,n,jj,ivac,ikpt,jspin) = stcoeff(ind2-1,n,jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
                          IF (ind2p.GE.2.AND.ind2p.LE.vacuum%nstars) &
-                              stcoeff(ind2p-1,n,jj,ivac) = stcoeff(ind2p-1,n,jj,ivac) +CONJG(t1)*phs/stars%nstr2(ind2p)
+                              stcoeff(ind2p-1,n,jj,ivac,ikpt,jspin) = stcoeff(ind2p-1,n,jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
                       END DO
                    END IF
                 ENDDO
@@ -1251,6 +1244,17 @@ CONTAINS
        DEALLOCATE (ac_1,bc_1,dt_1,dte_1,du_1,ddu_1,due_1,ddue_1)
        DEALLOCATE (t_1,te_1,tei_1,u_1,ue_1)
     END IF ! oneD%odi%d1
+
+    IF(vacuum%nvac.EQ.1) THEN
+       den%vacz(:,2,:) = den%vacz(:,1,:)
+       IF (sym%invs) THEN
+          den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+       ELSE
+          den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+       END IF
+    END IF
+
+    CALL timestop("vacden")
 
   END SUBROUTINE vacden
 END MODULE m_vacden

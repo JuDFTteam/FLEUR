@@ -10,8 +10,8 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(jspd,atoms,sphhar,llpd, noco,l_fmpl,jsp_start,jsp_end, epar,&
-                   ello,vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
+  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -23,17 +23,14 @@ CONTAINS
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_sphhar),  INTENT(IN)    :: sphhar
     TYPE(t_atoms),   INTENT(IN)    :: atoms
+    TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
 
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: llpd 
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
-    LOGICAL, INTENT (IN) :: l_fmpl
-    !     ..
+
     !     .. Array Arguments ..
-    REAL, INTENT    (IN) :: epar(0:atoms%lmaxd,atoms%ntype,jspd)
     REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
-    REAL, INTENT    (IN) :: ello(atoms%nlod,atoms%ntype,jspd)
     REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
     TYPE (t_orb),              INTENT(IN) :: orb
     TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
@@ -58,7 +55,7 @@ CONTAINS
     CALL timestart("cdnmt")
 
     IF (noco%l_mperp) THEN
-       IF (l_fmpl) THEN
+       IF (denCoeffsOffdiag%l_fmpl) THEN
           ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
           rho21(:,:,:) = cmplx(0.0,0.0)
        ENDIF
@@ -67,8 +64,8 @@ CONTAINS
     !$OMP PARALLEL DEFAULT(none) &
 
     !$OMP SHARED(usdus,rho,moments,rho21,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,epar,vr,denCoeffs,sphhar,ello)&
-    !$OMP SHARED(orb,noco,l_fmpl,denCoeffsOffdiag,jspd)&
+    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
@@ -88,7 +85,7 @@ CONTAINS
        !--->    spherical component
        DO ispin = jsp_start,jsp_end
           DO l = 0,atoms%lmax(itype)
-             CALL radfun(l,itype,ispin,epar(l,itype,ispin),vr(1,itype,ispin),atoms,&
+             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
              DO j = 1,atoms%jri(itype)
                 s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
@@ -107,7 +104,7 @@ CONTAINS
 
           CALL rhosphnlo(itype,atoms,sphhar,&
                usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
-               usdus%uulon(1,itype,ispin),ello(1,itype,ispin),&
+               usdus%uulon(1,itype,ispin),enpara%ello0(1,itype,ispin),&
                vr(1,itype,ispin),denCoeffs%aclo(1,itype,ispin),denCoeffs%bclo(1,itype,ispin),&
                denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
                denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
@@ -178,7 +175,7 @@ CONTAINS
              ENDDO
           ENDDO
 
-          IF (l_fmpl) THEN
+          IF (denCoeffsOffdiag%l_fmpl) THEN
              !--->        the following part can be used to calculate the full magnet.
              !--->        density without the atomic sphere approximation for the
              !--->        magnet. density, e.g. for plotting.
@@ -212,7 +209,7 @@ CONTAINS
                 ENDDO
              ENDDO
 
-          ENDIF ! l_fmpl
+          ENDIF ! denCoeffsOffdiag%l_fmpl
        ENDIF ! noco%l_mperp
 
     ENDDO ! end of loop over atom types
@@ -246,7 +243,7 @@ CONTAINS
 
     !---> for testing: to plot the offdiag. part of the density matrix it
     !---> is written to the file rhomt21. This file can read in pldngen.
-    IF (l_fmpl) THEN
+    IF (denCoeffsOffdiag%l_fmpl) THEN
        OPEN (26,file='rhomt21',form='unformatted',status='unknown')
        WRITE (26) rho21
        CLOSE (26)

@@ -9,7 +9,7 @@ MODULE m_tlmplm_store
 ! used to transfer the results from tlmplm&density matrix in case of lda+u from eigen
 ! into force_a21
 !      D.W 2014
-    USE m_types
+    USE m_types_tlmplm
     IMPLICIT NONE
     PRIVATE
     TYPE(t_tlmplm)            :: td_stored

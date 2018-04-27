@@ -31,6 +31,7 @@ MODULE m_types_enpara
      PROCEDURE :: read
      PROCEDURE :: write
      PROCEDURE :: mix
+     PROCEDURE :: calcOutParams
   END TYPE t_enpara
 
 
@@ -527,5 +528,25 @@ CONTAINS
 
   END SUBROUTINE mix
 
+  SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
+    USE m_types_setup
+    USE m_types_regionCharges
+    IMPLICIT NONE
+    CLASS(t_enpara),INTENT(INOUT)    :: enpara
+    TYPE(t_input),INTENT(IN)         :: input
+    TYPE(t_atoms),INTENT(IN)         :: atoms
+    TYPE(t_vacuum),INTENT(IN)        :: vacuum
+    TYPE(t_regionCharges),INTENT(IN) :: regCharges
+
+    INTEGER :: ispin, n
+
+    DO ispin = 1,input%jspins
+       DO n=1,atoms%ntype
+          enpara%el1(0:3,n,ispin)=regCharges%ener(0:3,n,ispin)/regCharges%sqal(0:3,n,ispin)
+          IF (atoms%nlo(n)>0) enpara%ello1(:atoms%nlo(n),n,ispin)=regCharges%enerlo(:atoms%nlo(n),n,ispin)/regCharges%sqlo(:atoms%nlo(n),n,ispin)
+       END DO
+       IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
+    END DO
+  END SUBROUTINE calcOutParams
 
 END MODULE m_types_enpara

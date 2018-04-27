@@ -34,6 +34,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_magMoms
    USE m_orbMagMoms
    USE m_cdncore
+   USE m_doswrite
+   USE m_Ekwritesl
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -68,14 +70,19 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ! Local type instances
    TYPE(t_noco)          :: noco_new
    TYPE(t_regionCharges) :: regCharges
+   TYPE(t_dos)           :: dos
    TYPE(t_moments)       :: moments
+   TYPE(t_mcd)           :: mcd
+   TYPE(t_slab)          :: slab
    TYPE(t_cdnvalKLoop)   :: cdnvalKLoop
+
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy
    INTEGER               :: jspin, jspmax
 
-   CALL regCharges%init(input,atoms,dimension,kpts,vacuum)
+   CALL regCharges%init(input,atoms)
+   CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
@@ -87,28 +94,42 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL timestart("cdngen: cdnval")
       CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
       CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,results,moments)
-      CALL timestop("cdngen: cdnval")
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,dos,results,moments,mcd,slab)
    END DO
+
+   IF (mpi%irank.EQ.0) THEN
+      IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
+         CALL timestart("cdngen: dos")
+         CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
+         IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
+            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,slab)
+         END IF
+         CALL timestop("cdngen: dos")
+      END IF
+   END IF
+
+   IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
+   IF (vacuum%nstm.EQ.3) CALL juDFT_end("VACWAVE OK",mpi%irank)
 
    IF (mpi%irank.EQ.0) THEN
       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
-   CALL cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,moments)
-
    IF (sliceplot%slice) THEN
       IF (mpi%irank.EQ.0) THEN
-         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
+
+   CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
+                stars,cell,sphhar,atoms,vTot,outDen,moments)
+
+   CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
    IF (mpi%irank.EQ.0) THEN
       CALL openXMLElementNoAttributes('allElectronCharges')

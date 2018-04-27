@@ -176,8 +176,8 @@ CONTAINS
     !     pgfft : contains the phases of the g-vectors of sph.     
     !     isn   : isn = +1, FFT transform for g-space to r-space
     !             isn = -1, vice versa
-    !
 
+    CALL timestart("pwden")
 
     ALLOCATE(cwk(stars%ng3),ecwk(stars%ng3))
 
@@ -714,6 +714,8 @@ CONTAINS
        DEALLOCATE ( psir,psii,rhon )
        IF (input%l_f) DEALLOCATE ( kpsir,kpsii,ekin)
     ENDIF
+
+    CALL timestop("pwden")
 
   END SUBROUTINE pwden
 END MODULE m_pwden

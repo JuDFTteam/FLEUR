@@ -15,6 +15,7 @@ CONTAINS
     USE m_abclocdn
     USE m_ylm
     USE m_types
+    USE m_juDFT
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_usdus),INTENT(IN)  :: usdus
@@ -54,6 +55,8 @@ CONTAINS
     LOGICAL enough(atoms%nat),apw(0:atoms%lmaxd,atoms%ntype)
     REAL,    ALLOCATABLE :: work_r(:)
     COMPLEX, ALLOCATABLE :: work_c(:)
+
+    CALL timestart("abcof")
 
     IF (zmat%l_real) THEN
        IF (noco%l_soc.AND.sym%invs) CALL judft_error("BUG in abcof, SOC&INVS but real?")
@@ -361,6 +364,8 @@ CONTAINS
           ENDDO
        ENDDO
     ENDIF
+
+    CALL timestop("abcof")
 
   END SUBROUTINE abcof
 END MODULE m_abcof

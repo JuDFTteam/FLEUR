@@ -8,7 +8,7 @@ MODULE m_cdncore
 
 CONTAINS
 
-SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
+SUBROUTINE cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments)
 
    USE m_constants
@@ -30,7 +30,6 @@ SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
    TYPE(t_mpi),INTENT(IN)           :: mpi
    TYPE(t_dimension),INTENT(IN)     :: dimension
    TYPE(t_oneD),INTENT(IN)          :: oneD
-   TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
    TYPE(t_noco),INTENT(IN)          :: noco
@@ -81,60 +80,58 @@ SUBROUTINE cdncore(results,mpi,dimension,oneD,sliceplot,input,vacuum,noco,sym,&
       END IF
    END IF
 
-   IF (.NOT.sliceplot%slice) THEN
-      !add in core density
-      IF (mpi%irank.EQ.0) THEN
-         IF (input%kcrel.EQ.0) THEN
-            DO jspin = 1,input%jspins
-               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh,tec,seig)
-               rhTemp(:,:,jspin) = rh(:,:,jspin)
-               results%seigc = results%seigc + seig
-            END DO
-         ELSE
-            CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vTot%mt(:,0,:,:),qint,rh)
+   !add in core density
+   IF (mpi%irank.EQ.0) THEN
+      IF (input%kcrel.EQ.0) THEN
+         DO jspin = 1,input%jspins
+            CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh,tec,seig)
+            rhTemp(:,:,jspin) = rh(:,:,jspin)
             results%seigc = results%seigc + seig
+         END DO
+      ELSE
+         CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vTot%mt(:,0,:,:),qint,rh)
+         results%seigc = results%seigc + seig
+      END IF
+   END IF
+   DO jspin = 1,input%jspins
+      IF (mpi%irank.EQ.0) THEN
+         DO n = 1,atoms%ntype
+            moments%stdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
+         END DO
+      END IF
+      IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
+         IF (jspin.EQ.2) THEN
+            !pk non-collinear (start)
+            !add the coretail-charge to the constant interstitial
+            !charge (star 0), taking into account the direction of
+            !magnetisation of this atom
+            DO iType = 1,atoms%ntype
+               rhoint = (qint(iType,1) + qint(iType,2)) /cell%volint/input%jspins/2.0
+               momint = (qint(iType,1) - qint(iType,2)) /cell%volint/input%jspins/2.0
+               !rho_11
+               outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(iType))
+               !rho_22
+               outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(iType))
+               !real part rho_21
+               outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.5*momint *cos(noco%alph(iType))*sin(noco%beta(iType)),0.0)
+               !imaginary part rho_21
+               outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.0,-0.5*momint *sin(noco%alph(iType))*sin(noco%beta(iType)))
+            END DO
+            !pk non-collinear (end)
+         END IF
+      ELSE
+         IF (input%ctail) THEN
+            !+gu hope this works as well
+            CALL cdnovlp(mpi,sphhar,stars,atoms,sym,dimension,vacuum,&
+                         cell,input,oneD,l_st,jspin,rh(:,:,jspin),&
+                         outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
+         ELSE IF (mpi%irank.EQ.0) THEN
+            DO iType = 1,atoms%ntype
+               outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin)/input%jspins/cell%volint
+            END DO
          END IF
       END IF
-      DO jspin = 1,input%jspins
-         IF (mpi%irank.EQ.0) THEN
-            DO n = 1,atoms%ntype
-               moments%stdn(n,jspin) = outDen%mt(1,0,n,jspin) / (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-            END DO
-         END IF
-         IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
-            IF (jspin.EQ.2) THEN
-               !pk non-collinear (start)
-               !add the coretail-charge to the constant interstitial
-               !charge (star 0), taking into account the direction of
-               !magnetisation of this atom
-               DO iType = 1,atoms%ntype
-                  rhoint = (qint(iType,1) + qint(iType,2)) /cell%volint/input%jspins/2.0
-                  momint = (qint(iType,1) - qint(iType,2)) /cell%volint/input%jspins/2.0
-                  !rho_11
-                  outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(iType))
-                  !rho_22
-                  outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(iType))
-                  !real part rho_21
-                  outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.5*momint *cos(noco%alph(iType))*sin(noco%beta(iType)),0.0)
-                  !imaginary part rho_21
-                  outDen%pw(1,3) = outDen%pw(1,3) + cmplx(0.0,-0.5*momint *sin(noco%alph(iType))*sin(noco%beta(iType)))
-               END DO
-               !pk non-collinear (end)
-            END IF
-         ELSE
-            IF (input%ctail) THEN
-               !+gu hope this works as well
-               CALL cdnovlp(mpi,sphhar,stars,atoms,sym,dimension,vacuum,&
-                            cell,input,oneD,l_st,jspin,rh(:,:,jspin),&
-                            outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
-            ELSE IF (mpi%irank.EQ.0) THEN
-               DO iType = 1,atoms%ntype
-                  outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin)/input%jspins/cell%volint
-               END DO
-            END IF
-         END IF
-      END DO
-   END IF
+   END DO
 
    IF (input%kcrel.EQ.0) THEN
       IF (mpi%irank.EQ.0) THEN

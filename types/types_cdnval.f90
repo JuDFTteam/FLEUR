@@ -60,64 +60,6 @@ PRIVATE
       PROCEDURE,PASS :: init => denCoeffs_init
    END TYPE t_denCoeffs
 
-   TYPE t_denCoeffsOffdiag
-      ! spherical
-      COMPLEX, ALLOCATABLE :: uu21(:,:)
-      COMPLEX, ALLOCATABLE :: dd21(:,:)
-      COMPLEX, ALLOCATABLE :: du21(:,:)
-      COMPLEX, ALLOCATABLE :: ud21(:,:)
-
-      ! nonspherical
-      COMPLEX, ALLOCATABLE :: uunmt21(:,:,:)
-      COMPLEX, ALLOCATABLE :: ddnmt21(:,:,:)
-      COMPLEX, ALLOCATABLE :: dunmt21(:,:,:)
-      COMPLEX, ALLOCATABLE :: udnmt21(:,:,:)
-
-      ! spherical - LOs
-      COMPLEX, ALLOCATABLE :: uulo21(:,:)
-      COMPLEX, ALLOCATABLE :: dulo21(:,:)
-      COMPLEX, ALLOCATABLE :: ulou21(:,:)
-      COMPLEX, ALLOCATABLE :: ulod21(:,:)
-
-      COMPLEX, ALLOCATABLE :: uloulop21(:,:,:)
-
-      ! norms
-      REAL, ALLOCATABLE     :: uu21n(:,:)
-      REAL, ALLOCATABLE     :: ud21n(:,:)
-      REAL, ALLOCATABLE     :: du21n(:,:)
-      REAL, ALLOCATABLE     :: dd21n(:,:)
-
-      REAL, ALLOCATABLE     :: uulo21n(:,:)
-      REAL, ALLOCATABLE     :: dulo21n(:,:)
-      REAL, ALLOCATABLE     :: ulou21n(:,:)
-      REAL, ALLOCATABLE     :: ulod21n(:,:)
-
-      REAL, ALLOCATABLE     :: uloulop21n(:,:,:)
-
-      CONTAINS
-      PROCEDURE,PASS :: init => denCoeffsOffdiag_init
-   END TYPE t_denCoeffsOffdiag
-
-   TYPE t_force
-      COMPLEX, ALLOCATABLE :: f_a12(:,:)
-      COMPLEX, ALLOCATABLE :: f_a21(:,:)
-      COMPLEX, ALLOCATABLE :: f_b4(:,:)
-      COMPLEX, ALLOCATABLE :: f_b8(:,:)
-
-      COMPLEX, ALLOCATABLE :: e1cof(:,:,:)
-      COMPLEX, ALLOCATABLE :: e2cof(:,:,:)
-      COMPLEX, ALLOCATABLE :: aveccof(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: bveccof(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: cveccof(:,:,:,:,:)
-
-      COMPLEX, ALLOCATABLE :: acoflo(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: bcoflo(:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init1 => force_init1
-         PROCEDURE,PASS :: init2 => force_init2
-   END TYPE t_force
-
    TYPE t_slab
       INTEGER              :: nsld, nsl
 
@@ -153,27 +95,6 @@ PRIVATE
       CONTAINS
          PROCEDURE,PASS :: init1 => mcd_init1
    END TYPE t_mcd
-
-   TYPE t_regionCharges
-
-      REAL,    ALLOCATABLE :: qis(:,:,:)
-
-      REAL,    ALLOCATABLE :: qal(:,:,:,:)
-      REAL,    ALLOCATABLE :: sqal(:,:,:)
-      REAL,    ALLOCATABLE :: ener(:,:,:)
-
-      REAL,    ALLOCATABLE :: sqlo(:,:,:)
-      REAL,    ALLOCATABLE :: enerlo(:,:,:)
-
-      REAL,    ALLOCATABLE :: qvac(:,:,:,:)
-      REAL,    ALLOCATABLE :: svac(:,:)
-      REAL,    ALLOCATABLE :: pvac(:,:)
-      REAL,    ALLOCATABLE :: qvlay(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: qstars(:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init => regionCharges_init
-   END TYPE t_regionCharges
 
    TYPE t_moments
 
@@ -212,9 +133,17 @@ PRIVATE
          PROCEDURE,PASS :: init => cdnvalKLoop_init
    END TYPE t_cdnvalKLoop
 
+   TYPE t_gVacMap
 
-PUBLIC t_orb, t_denCoeffs, t_denCoeffsOffdiag, t_force, t_slab, t_eigVecCoeffs
-PUBLIC t_mcd, t_regionCharges, t_moments, t_orbcomp, t_cdnvalKLoop
+      INTEGER, ALLOCATABLE    :: gvac1d(:)
+      INTEGER, ALLOCATABLE    :: gvac2d(:)
+
+      CONTAINS
+         PROCEDURE,PASS :: init => gVacMap_init
+   END TYPE t_gVacMap
+
+PUBLIC t_orb, t_denCoeffs, t_slab, t_eigVecCoeffs
+PUBLIC t_mcd, t_moments, t_orbcomp, t_cdnvalKLoop, t_gVacMap
 
 CONTAINS
 
@@ -349,187 +278,6 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
 END SUBROUTINE denCoeffs_init
 
-SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco, sphhar, l_fmpl)
-
-   USE m_types_setup
-
-   IMPLICIT NONE
-
-   CLASS(t_denCoeffsOffdiag), INTENT(INOUT) :: thisDenCoeffsOffdiag
-   TYPE(t_atoms),      INTENT(IN)    :: atoms
-   TYPE(t_noco),       INTENT(IN)    :: noco
-   TYPE(t_sphhar),     INTENT(IN)    :: sphhar
-   LOGICAL,            INTENT(IN)    :: l_fmpl
-
-   IF (noco%l_mperp) THEN
-      ALLOCATE (thisDenCoeffsOffdiag%uu21(0:atoms%lmaxd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ud21(0:atoms%lmaxd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%du21(0:atoms%lmaxd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%dd21(0:atoms%lmaxd,atoms%ntype))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uulo21(atoms%nlod,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%dulo21(atoms%nlod,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ulou21(atoms%nlod,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ulod21(atoms%nlod,atoms%ntype))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uloulop21(atoms%nlod,atoms%nlod,atoms%ntype))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uu21n(0:atoms%lmaxd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ud21n(0:atoms%lmaxd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%du21n(0:atoms%lmaxd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%dd21n(0:atoms%lmaxd,atoms%ntype))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uulo21n(atoms%nlod,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%dulo21n(atoms%nlod,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ulou21n(atoms%nlod,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ulod21n(atoms%nlod,atoms%ntype))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uloulop21n(atoms%nlod,atoms%nlod,atoms%ntype))
-   ELSE
-      ALLOCATE (thisDenCoeffsOffdiag%uu21(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ud21(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%du21(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%dd21(1,1))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uulo21(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%dulo21(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ulou21(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ulod21(1,1))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uloulop21(1,1,1))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uu21n(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ud21n(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%du21n(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%dd21n(1,1))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uulo21n(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%dulo21n(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ulou21n(1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ulod21n(1,1))
-
-      ALLOCATE (thisDenCoeffsOffdiag%uloulop21n(1,1,1))
-   END IF
-
-   IF (noco%l_mperp.AND.l_fmpl) THEN
-      ALLOCATE (thisDenCoeffsOffdiag%uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
-      ALLOCATE (thisDenCoeffsOffdiag%ddnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
-   ELSE
-      ALLOCATE (thisDenCoeffsOffdiag%uunmt21(1,1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%udnmt21(1,1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%dunmt21(1,1,1))
-      ALLOCATE (thisDenCoeffsOffdiag%ddnmt21(1,1,1))
-   END IF
-
-   thisDenCoeffsOffdiag%uu21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%ud21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%du21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%dd21 = CMPLX(0.0,0.0)
-
-   thisDenCoeffsOffdiag%uulo21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%dulo21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%ulou21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%ulod21 = CMPLX(0.0,0.0)
-
-   thisDenCoeffsOffdiag%uloulop21 = CMPLX(0.0,0.0)
-
-   thisDenCoeffsOffdiag%uu21n = 0.0
-   thisDenCoeffsOffdiag%ud21n = 0.0
-   thisDenCoeffsOffdiag%du21n = 0.0
-   thisDenCoeffsOffdiag%dd21n = 0.0
-
-   thisDenCoeffsOffdiag%uulo21n = 0.0
-   thisDenCoeffsOffdiag%dulo21n = 0.0
-   thisDenCoeffsOffdiag%ulou21n = 0.0
-   thisDenCoeffsOffdiag%ulod21n = 0.0
-
-   thisDenCoeffsOffdiag%uloulop21n = 0.0
-
-   thisDenCoeffsOffdiag%uunmt21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%udnmt21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%dunmt21 = CMPLX(0.0,0.0)
-   thisDenCoeffsOffdiag%ddnmt21 = CMPLX(0.0,0.0)
-
-END SUBROUTINE denCoeffsOffdiag_init
-
-SUBROUTINE force_init1(thisForce,input,atoms)
-
-   USE m_types_setup
-
-   IMPLICIT NONE
-
-   CLASS(t_force),     INTENT(INOUT) :: thisForce
-   TYPE(t_input),      INTENT(IN)    :: input
-   TYPE(t_atoms),      INTENT(IN)    :: atoms
-
-   IF (input%l_f) THEN
-      ALLOCATE (thisForce%f_a12(3,atoms%ntype))
-      ALLOCATE (thisForce%f_a21(3,atoms%ntype))
-      ALLOCATE (thisForce%f_b4(3,atoms%ntype))
-      ALLOCATE (thisForce%f_b8(3,atoms%ntype))
-   ELSE
-      ALLOCATE (thisForce%f_a12(1,1))
-      ALLOCATE (thisForce%f_a21(1,1))
-      ALLOCATE (thisForce%f_b4(1,1))
-      ALLOCATE (thisForce%f_b8(1,1))
-   END IF
-
-   thisForce%f_a12 = CMPLX(0.0,0.0)
-   thisForce%f_a21 = CMPLX(0.0,0.0)
-   thisForce%f_b4 = CMPLX(0.0,0.0)
-   thisForce%f_b8 = CMPLX(0.0,0.0)
-
-END SUBROUTINE force_init1
-
-SUBROUTINE force_init2(thisForce,noccbd,input,atoms)
-
-   USE m_types_setup
-
-   IMPLICIT NONE
-
-   CLASS(t_force),     INTENT(INOUT) :: thisForce
-   TYPE(t_input),      INTENT(IN)    :: input
-   TYPE(t_atoms),      INTENT(IN)    :: atoms
-   INTEGER,            INTENT(IN)    :: noccbd
-
-   IF (ALLOCATED(thisForce%e1cof)) DEALLOCATE(thisForce%e1cof)
-   IF (ALLOCATED(thisForce%e2cof)) DEALLOCATE(thisForce%e2cof)
-   IF (ALLOCATED(thisForce%acoflo)) DEALLOCATE(thisForce%acoflo)
-   IF (ALLOCATED(thisForce%bcoflo)) DEALLOCATE(thisForce%bcoflo)
-   IF (ALLOCATED(thisForce%aveccof)) DEALLOCATE(thisForce%aveccof)
-   IF (ALLOCATED(thisForce%bveccof)) DEALLOCATE(thisForce%bveccof)
-   IF (ALLOCATED(thisForce%cveccof)) DEALLOCATE(thisForce%cveccof)
-
-   IF (input%l_f) THEN
-      ALLOCATE (thisForce%e1cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
-      ALLOCATE (thisForce%e2cof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
-      ALLOCATE (thisForce%acoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
-      ALLOCATE (thisForce%bcoflo(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
-      ALLOCATE (thisForce%aveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
-      ALLOCATE (thisForce%bveccof(3,noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat))
-      ALLOCATE (thisForce%cveccof(3,-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat))
-   ELSE
-      ALLOCATE (thisForce%e1cof(1,1,1))
-      ALLOCATE (thisForce%e2cof(1,1,1))
-      ALLOCATE (thisForce%acoflo(1,1,1,1))
-      ALLOCATE (thisForce%bcoflo(1,1,1,1))
-      ALLOCATE (thisForce%aveccof(1,1,1,1))
-      ALLOCATE (thisForce%bveccof(1,1,1,1))
-      ALLOCATE (thisForce%cveccof(1,1,1,1,1))
-   END IF
-
-   thisForce%e1cof = CMPLX(0.0,0.0)
-   thisForce%e2cof = CMPLX(0.0,0.0)
-   thisForce%acoflo = CMPLX(0.0,0.0)
-   thisForce%bcoflo = CMPLX(0.0,0.0)
-   thisForce%aveccof = CMPLX(0.0,0.0)
-   thisForce%bveccof = CMPLX(0.0,0.0)
-   thisForce%cveccof = CMPLX(0.0,0.0)
-
-END SUBROUTINE force_init2
-
 SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
 
    USE m_types_setup
@@ -547,6 +295,14 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
    INTEGER :: nsld
 
    nsld=1
+
+   IF (ALLOCATED(thisSlab%nmtsl)) DEALLOCATE(thisSlab%nmtsl)
+   IF (ALLOCATED(thisSlab%nslat)) DEALLOCATE(thisSlab%nslat)
+   IF (ALLOCATED(thisSlab%zsl)) DEALLOCATE(thisSlab%zsl)
+   IF (ALLOCATED(thisSlab%volsl)) DEALLOCATE(thisSlab%volsl)
+   IF (ALLOCATED(thisSlab%volintsl)) DEALLOCATE(thisSlab%volintsl)
+   IF (ALLOCATED(thisSlab%qintsl)) DEALLOCATE(thisSlab%qintsl)
+   IF (ALLOCATED(thisSlab%qmtsl)) DEALLOCATE(thisSlab%qmtsl)
 
    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
       CALL slab_dim(atoms, nsld)
@@ -618,6 +374,11 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_atoms),         INTENT(IN)    :: atoms
 
+   IF (ALLOCATED(thisMCD%ncore)) DEALLOCATE(thisMCD%ncore)
+   IF (ALLOCATED(thisMCD%e_mcd)) DEALLOCATE(thisMCD%e_mcd)
+   IF (ALLOCATED(thisMCD%m_mcd)) DEALLOCATE(thisMCD%m_mcd)
+   IF (ALLOCATED(thisMCD%mcd)) DEALLOCATE(thisMCD%mcd)
+
    ALLOCATE (thisMCD%ncore(atoms%ntype))
    ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
    IF (banddos%l_mcd) THEN
@@ -637,52 +398,6 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
    thisMCD%m_mcd = CMPLX(0.0,0.0)
 
 END SUBROUTINE mcd_init1
-
-SUBROUTINE regionCharges_init(thisRegCharges,input,atoms,dimension,kpts,vacuum)
-
-   USE m_types_setup
-   USE m_types_kpts
-
-   IMPLICIT NONE
-
-   CLASS(t_regionCharges), INTENT(INOUT) :: thisRegCharges
-   TYPE(t_input),          INTENT(IN)    :: input
-   TYPE(t_atoms),          INTENT(IN)    :: atoms
-   TYPE(t_dimension),      INTENT(IN)    :: dimension
-   TYPE(t_kpts),           INTENT(IN)    :: kpts
-   TYPE(t_vacuum),         INTENT(IN)    :: vacuum
-
-   ALLOCATE(thisRegCharges%qis(dimension%neigd,kpts%nkpt,input%jspins))
-
-   ALLOCATE(thisRegCharges%qal(0:3,atoms%ntype,dimension%neigd,input%jspins))
-   ALLOCATE(thisRegCharges%sqal(0:3,atoms%ntype,input%jspins))
-   ALLOCATE(thisRegCharges%ener(0:3,atoms%ntype,input%jspins))
-
-   ALLOCATE(thisRegCharges%sqlo(atoms%nlod,atoms%ntype,input%jspins))
-   ALLOCATE(thisRegCharges%enerlo(atoms%nlod,atoms%ntype,input%jspins))
-
-   ALLOCATE(thisRegCharges%qvac(dimension%neigd,2,kpts%nkpt,input%jspins))
-   ALLOCATE(thisRegCharges%svac(2,input%jspins))
-   ALLOCATE(thisRegCharges%pvac(2,input%jspins))
-   ALLOCATE(thisRegCharges%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
-   ALLOCATE(thisRegCharges%qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2))
-
-   thisRegCharges%qis = 0.0
-
-   thisRegCharges%qal = 0.0
-   thisRegCharges%sqal = 0.0
-   thisRegCharges%ener = 0.0
-
-   thisRegCharges%sqlo = 0.0
-   thisRegCharges%enerlo = 0.0
-
-   thisRegCharges%qvac = 0.0
-   thisRegCharges%svac = 0.0
-   thisRegCharges%pvac = 0.0
-   thisRegCharges%qvlay = 0.0
-   thisRegCharges%qstars = CMPLX(0.0,0.0)
-
-END SUBROUTINE regionCharges_init
 
 SUBROUTINE moments_init(thisMoments,input,atoms)
 
@@ -861,7 +576,7 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
       IF (thisCdnvalKLoop%l_evp) THEN
          noccbd_l = CEILING(REAL(thisCdnvalKLoop%noccbd(ikpt)) / mpi%isize)
          thisCdnvalKLoop%nStart(ikpt) = thisCdnvalKLoop%nStart(ikpt) + mpi%irank*noccbd_l
-         thisCdnvalKLoop%nEnd(ikpt)   = min(thisCdnvalKLoop%nStart(ikpt)+(mpi%irank+1)*noccbd_l, thisCdnvalKLoop%noccbd(ikpt))
+         thisCdnvalKLoop%nEnd(ikpt)   = min(thisCdnvalKLoop%nStart(ikpt)+(mpi%irank+1)*noccbd_l-1, thisCdnvalKLoop%noccbd(ikpt))
          thisCdnvalKLoop%noccbd(ikpt) = thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1
          IF (thisCdnvalKLoop%noccbd(ikpt).LT.1) thisCdnvalKLoop%noccbd(ikpt) = 0
       END IF
@@ -869,5 +584,48 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
    END DO
 
 END SUBROUTINE cdnvalKLoop_init
+
+SUBROUTINE gVacMap_init(thisGVacMap,dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
+
+   USE m_types_setup
+   USE m_types_lapw
+   USE m_types_enpara
+   USE m_types_potden
+   USE m_types_kpts
+   USE m_nstm3
+
+   IMPLICIT NONE
+
+   CLASS(t_gVacMap),      INTENT(INOUT) :: thisGVacMap
+   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   TYPE(t_sym),           INTENT(IN)    :: sym
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_vacuum),        INTENT(IN)    :: vacuum
+   TYPE(t_stars),         INTENT(IN)    :: stars
+   TYPE(t_lapw),          INTENT(IN)    :: lapw
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_cell),          INTENT(IN)    :: cell
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
+   TYPE(t_enpara),        INTENT(IN)    :: enpara
+   TYPE(t_potden),        INTENT(IN)    :: vTot
+
+   INTEGER,               INTENT(IN)    :: ikpt
+   INTEGER,               INTENT(IN)    :: jspin
+
+   IF (ALLOCATED(thisGVacMap%gvac1d)) DEALLOCATE(thisGVacMap%gvac1d)
+   IF (ALLOCATED(thisGVacMap%gvac2d)) DEALLOCATE(thisGVacMap%gvac2d)
+
+   ALLOCATE(thisGVacMap%gvac1d(dimension%nv2d))
+   ALLOCATE(thisGVacMap%gvac2d(dimension%nv2d))
+
+   thisGVacMap%gvac1d = 0
+   thisGVacMap%gvac2d = 0
+
+   IF (vacuum%nstm.EQ.3.AND.input%film) THEN
+      CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
+                 cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),thisGVacMap%gvac1d,thisGVacMap%gvac2d)
+   END IF
+
+END SUBROUTINE gVacMap_init
 
 END MODULE m_types_cdnval

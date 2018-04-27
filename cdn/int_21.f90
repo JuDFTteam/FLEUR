@@ -9,25 +9,13 @@ MODULE m_int21
   !-----------------------------------------------------------
 CONTAINS
 
-  SUBROUTINE int_21(f,g,atoms,ityp,l,denCoeffsOffdiag)
-    USE m_types
-    IMPLICIT NONE
-    TYPE(t_atoms),            INTENT(IN)    :: atoms
-    TYPE(t_denCoeffsOffdiag), INTENT(INOUT) :: denCoeffsOffdiag
-    INTEGER, INTENT (IN) :: l,ityp
-    REAL,    INTENT (IN) :: f(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,dimension%jspd)
-    REAL,    INTENT (IN) :: g(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,dimension%jspd)
-
-    CALL int_21_arrays(f,g,atoms,ityp,l,denCoeffsOffdiag%uu21n,denCoeffsOffdiag%ud21n,&
-                                        denCoeffsOffdiag%du21n,denCoeffsOffdiag%dd21n)
-
-  END SUBROUTINE int_21
-
-  SUBROUTINE int_21_arrays(f,g,atoms,ityp,l,uu21n,ud21n,du21n,dd21n)
+  SUBROUTINE int_21(f,g,atoms,ityp,l,uu21n,ud21n,du21n,dd21n)
     
     USE m_intgr, ONLY : intgr3
-    USE m_types
+    USE m_types_setup
+
     IMPLICIT NONE
+
     TYPE(t_atoms),            INTENT(IN)    :: atoms
 
     INTEGER, INTENT (IN) :: l,ityp
@@ -55,5 +43,6 @@ CONTAINS
          + g(:atoms%jri(ityp),2,l,2)*g(:atoms%jri(ityp),2,l,1)
     CALL intgr3(uu_tmp,atoms%rmsh(:,ityp),atoms%dx(ityp),atoms%jri(ityp),dd21n(l,ityp))
     
-  END SUBROUTINE int_21_arrays
+  END SUBROUTINE int_21
+
 END MODULE m_int21
