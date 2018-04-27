@@ -42,7 +42,7 @@ CONTAINS
     TYPE (t_dos),              INTENT(INOUT) :: dos
     ! ..
     ! ..  Local Scalars ..
-    INTEGER :: n
+    INTEGER :: n, i
     ! ..
     ! ..  Local Arrays ..
     INTEGER :: ierr(3)
@@ -126,13 +126,21 @@ CONTAINS
     n = SIZE(dos%jsym,1)*SIZE(dos%jsym,2)
     ALLOCATE(i_b(n))
     CALL MPI_REDUCE(dos%jsym(:,:,jspin),i_b,n,MPI_INTEGER,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, i_b, 1, dos%jsym(:,:,jspin), 1)
+    IF (mpi%irank.EQ.0) THEN
+       DO i = 1, SIZE(dos%jsym,2)
+          dos%jsym(:,i,jspin) = i_b((i-1)*SIZE(dos%jsym,1)+1:i*SIZE(dos%jsym,1))
+       END DO
+    END IF
     DEALLOCATE (i_b)
 
     n = SIZE(dos%ksym,1)*SIZE(dos%ksym,2)
     ALLOCATE(i_b(n))
     CALL MPI_REDUCE(dos%ksym(:,:,jspin),i_b,n,MPI_INTEGER,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, i_b, 1, dos%ksym(:,:,jspin), 1)
+    IF (mpi%irank.EQ.0) THEN
+       DO i = 1, SIZE(dos%ksym,2)
+          dos%ksym(:,i,jspin) = i_b((i-1)*SIZE(dos%ksym,1)+1:i*SIZE(dos%ksym,1))
+       END DO
+    END IF
     DEALLOCATE (i_b)
 
     n = SIZE(dos%qis,1)*SIZE(dos%qis,2)
@@ -162,7 +170,7 @@ CONTAINS
     n = SIZE(dos%qstars,1)*SIZE(dos%qstars,2)*SIZE(dos%qstars,3)*SIZE(dos%qstars,4)*SIZE(dos%qstars,5)
     ALLOCATE(c_b(n))
     CALL MPI_REDUCE(dos%qstars(:,:,:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, c_b, 1, dos%qstars(:,:,:,:,:,jspin), 1)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, dos%qstars(:,:,:,:,:,jspin), 1)
     DEALLOCATE (c_b)
 
     ! -> Collect force
