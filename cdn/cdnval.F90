@@ -10,8 +10,8 @@ USE m_juDFT
 
 CONTAINS
 
-SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,dos,results,&
+SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
+                  vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalJob,den,regCharges,dos,results,&
                   moments,mcd,slab,orbcomp)
 
    !************************************************************************************
@@ -61,7 +61,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE(t_enpara),        INTENT(IN)    :: enpara
    TYPE(t_obsolete),      INTENT(IN)    :: obsolete
    TYPE(t_banddos),       INTENT(IN)    :: banddos
-   TYPE(t_sliceplot),     INTENT(IN)    :: sliceplot
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
    TYPE(t_noco),          INTENT(IN)    :: noco
@@ -73,7 +72,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(IN)    :: vTot
-   TYPE(t_cdnvalKLoop),   INTENT(IN)    :: cdnvalKLoop
+   TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob
    TYPE(t_potden),        INTENT(INOUT) :: den
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
    TYPE(t_dos),           INTENT(INOUT) :: dos
@@ -170,11 +169,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
 
    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
-   ALLOCATE (we(MAXVAL(cdnvalKLoop%noccbd(:))))
-   ALLOCATE (eig(MAXVAL(cdnvalKLoop%noccbd(:))))
+   ALLOCATE (we(MAXVAL(cdnvalJob%noccbd(:))))
+   ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
    jsp = MERGE(1,jspin,noco%l_noco)
 
-   DO ikpt = cdnvalKLoop%ikptStart, cdnvalKLoop%nkptExtended, cdnvalKLoop%ikptIncrement
+   DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
 
       IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
@@ -185,17 +184,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      noccbd = cdnvalKLoop%noccbd(ikpt)
-      nStart = cdnvalKLoop%nStart(ikpt)
-      nEnd = cdnvalKLoop%nEnd(ikpt)
-
-      we = 0.0
-      we(1:noccbd) = results%w_iks(nStart:nEnd,ikpt,jsp)
-      IF (sliceplot%slice.AND.input%pallst) we(:) = kpts%wtkpt(ikpt)
-      we(:noccbd) = 2.0 * we(:noccbd) / input%jspins ! add in spin-doubling factor
+      noccbd = cdnvalJob%noccbd(ikpt)
+      nStart = cdnvalJob%nStart(ikpt)
+      nEnd = cdnvalJob%nEnd(ikpt)
+      we(1:noccbd) = cdnvalJob%weights(1:noccbd,ikpt)
       eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
 
-      IF (cdnvalKLoop%l_evp) THEN
+      IF (cdnvalJob%l_evp) THEN
          IF (nStart > skip_tt) skip_t = 0
          IF (nEnd <= skip_tt) skip_t = noccbd
          IF ((nStart <= skip_tt).AND.(nEnd > skip_tt)) skip_t = mod(skip_tt,noccbd)
@@ -240,7 +235,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                     skip_t,cdnvalKLoop%l_evp,eigVecCoeffs,usdus,regCharges,dos,mcd,banddos%l_mcd)
+                     skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,mcd,banddos%l_mcd)
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 

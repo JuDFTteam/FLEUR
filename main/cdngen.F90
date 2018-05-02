@@ -75,7 +75,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_mcd)           :: mcd
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
-   TYPE(t_cdnvalKLoop)   :: cdnvalKLoop
+   TYPE(t_cdnvalJob)     :: cdnvalJob
 
 
    !Local Scalars
@@ -98,9 +98,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
-      CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,dos,results,moments,mcd,slab,orbcomp)
+      CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+      CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalJob,outDen,regCharges,dos,results,moments,mcd,slab,orbcomp)
    END DO
 
    IF (mpi%irank.EQ.0) THEN
