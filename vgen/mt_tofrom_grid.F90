@@ -8,7 +8,6 @@ MODULE m_mt_tofrom_grid
   PRIVATE
   REAL,PARAMETER    :: d_15 = 1.e-15
   INTEGER,PARAMETER :: ndvgrd=6 ! this should be consistent across GGA derivative routines
-  INTEGER           :: nsp
   REAL, ALLOCATABLE :: ylh(:,:,:),ylht(:,:,:),ylhtt(:,:,:)
   REAL, ALLOCATABLE :: ylhf(:,:,:),ylhff(:,:,:),ylhtf(:,:,:)
   REAL, ALLOCATABLE :: wt(:),rx(:,:),thet(:)
@@ -43,14 +42,14 @@ CONTAINS
     END IF
   END SUBROUTINE init_mt_grid
   
-  SUBROUTINE mt_to_grid(atoms,sphhar,den,jspins,n,l_grad,ch,grad)
+  SUBROUTINE mt_to_grid(atoms,sphhar,den,nsp,jspins,n,l_grad,ch,grad)
     USE m_grdchlh
     USE m_mkgylm
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_potden),INTENT(IN)   :: den
-    INTEGER,INTENT(IN)          :: n,jspins
+    INTEGER,INTENT(IN)          :: n,jspins,nsp
     LOGICAL,INTENT(IN)          :: l_grad
     REAL,INTENT(OUT)               :: ch(:,:)
     TYPE(t_gradients),INTENT(INOUT)::grad
@@ -89,10 +88,10 @@ CONTAINS
           
        ENDDO ! js
     ENDDO   ! lh
+    ch(:,:)    = 0.0     ! charge density (on extended grid for all jr)
     kt=0
     DO jr = 1,atoms%jri(n)
        !         following are at points on jr-th sphere.
-       ch(:,:)    = 0.0     ! charge density (on extended grid for all jr)
        !  generate the densities on an angular mesh
        DO js = 1,jspins
           DO lh = 0,sphhar%nlh(nd)
@@ -169,8 +168,8 @@ CONTAINS
              vlh=dot_PRODUCT(vpot(:),ylh(:nsp,lh,nd))
              vr(jr,lh,n,js) = vr(jr,lh,n,js) + vlh
           ENDDO ! lh
+          kt=kt+nsp
        ENDDO   ! jr
-       kt=kt+nsp
     ENDDO
 
   END SUBROUTINE mt_from_grid

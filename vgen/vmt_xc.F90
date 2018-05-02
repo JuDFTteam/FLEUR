@@ -58,9 +58,9 @@ CONTAINS
     !locals for mpi
     integer :: ierr
     integer:: n_start,n_stride
-    REAL:: v_x((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),input%jspins)
-    REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),input%jspins)
-    REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),1)
+    REAL:: v_x((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
+    REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
+    REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,1)
     REAL:: xcl(DIMENSION%nspd,DIMENSION%jspd)
     LOGICAL :: lda_atom(atoms%ntype)
     !.....------------------------------------------------------------------
@@ -91,13 +91,13 @@ CONTAINS
 #endif
 
     DO n = n_start,atoms%ntype,n_stride
-       CALL mt_to_grid(atoms,sphhar,den,input%jspins,n,xcpot%is_gga(),ch,grad)
+       CALL mt_to_grid(atoms,sphhar,den,nsp,input%jspins,n,xcpot%is_gga(),ch,grad)
        !
        !         calculate the ex.-cor. potential
-       CALL xcpot%get_vxc(input%jspins,ch(:nsp,:),v_xc,v_x,grad)
+       CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc,v_x,grad)
        IF (lda_atom(n)) THEN
           ! Use local part of pw91 for this atom
-          CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp,:),xcl,v_x,grad)
+          CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl,v_x,grad)
           !Mix the potentials
           divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
           nt=0
@@ -115,10 +115,10 @@ CONTAINS
           !
           !           calculate the ex.-cor energy density
           !
-          CALL xcpot%get_exc(input%jspins,ch(:nsp,:),e_xc(:,1),grad)
+          CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:,1),grad)
           IF (lda_atom(n)) THEN
              ! Use local part of pw91 for this atom
-             CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp,:),xcl(:,1),grad)
+             CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:,1),grad)
              !Mix the potentials
              nt=0
              DO jr=1,atoms%jri(n)
