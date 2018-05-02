@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne,we,eig,den,qis,results,f_b8,zMat)
+       ikpt,jspin,lapw,ne,we,eig,den,results,f_b8,zMat,dos)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -80,32 +80,32 @@ CONTAINS
     USE m_types
     USE m_fft_interface
     IMPLICIT NONE
-    TYPE(t_lapw),INTENT(IN)      :: lapw
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_banddos),INTENT(IN)   :: banddos
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_stars),INTENT(IN)     :: stars
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_kpts),INTENT(IN)      :: kpts
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_zMat),INTENT(IN)      :: zMat
-    TYPE(t_potden),INTENT(INOUT) :: den
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_oneD),INTENT(IN)       :: oneD
+    TYPE(t_banddos),INTENT(IN)    :: banddos
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_kpts),INTENT(IN)       :: kpts
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_potden),INTENT(INOUT)  :: den
     TYPE(t_results),INTENT(INOUT) :: results
+    TYPE(t_dos), INTENT(INOUT)    :: dos
 
     REAL,INTENT(IN)   :: we(:) !(nobd) 
     REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
     !----->  BASIS FUNCTION INFORMATION
     INTEGER,INTENT(IN):: ne
     !----->  CHARGE DENSITY INFORMATION
-    INTEGER,INTENT(IN)    :: ikpt,jspin 
-    REAL,INTENT(OUT)      :: qis(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
+    INTEGER,INTENT(IN)    :: ikpt,jspin
     COMPLEX, INTENT (INOUT) ::  f_b8(3,atoms%ntype)
-    !
+
     !-----> LOCAL VARIABLES
-    !
+
     !----->  FFT  INFORMATION
     INTEGER :: ifftq2d,ifftq3d
 
@@ -256,7 +256,7 @@ CONTAINS
     IF (noco%l_noco) THEN
        rhomat = 0.0
        IF (ikpt.LE.mpi%isize) THEN
-          qis=0.0
+          dos%qis=0.0
        ENDIF
     ELSE
        rhon=0.0
@@ -473,7 +473,7 @@ CONTAINS
           !--->             total charge does not need to be one in each spin-
           !--->             channel. Thus it has to be calculated explicitly, if
           !--->             it is needed.
-          IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf) THEN
+          IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
              DO ir = 0,ifftq3d-1
                 psi1r(ir) = (psi1r(ir)**2 + psi1i(ir)**2)
                 psi2r(ir) = (psi2r(ir)**2 + psi2i(ir)**2)
@@ -494,7 +494,7 @@ CONTAINS
              ENDDO
              DO istr = 1,stars%ng3_fft
                 CALL pwint(stars,atoms,sym, oneD,cell,stars%kv3(1,istr),x)
-                qis(nu,ikpt,1) = qis(nu,ikpt,1) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
+                dos%qis(nu,ikpt,1) = dos%qis(nu,ikpt,1) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
              ENDDO
 
              cwk=0.0
@@ -504,7 +504,7 @@ CONTAINS
              ENDDO
              DO istr = 1,stars%ng3_fft
                 CALL pwint(stars,atoms,sym, oneD,cell, stars%kv3(1,istr), x)
-                qis(nu,ikpt,input%jspins) = qis(nu,ikpt,input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
+                dos%qis(nu,ikpt,input%jspins) = dos%qis(nu,ikpt,input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
              ENDDO
           ENDIF
        ELSE

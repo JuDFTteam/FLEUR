@@ -24,7 +24,7 @@ MODULE m_eparas
   !
 CONTAINS
   SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
-                    usdus,regCharges,dos,mcd,l_mcd)
+                    usdus,regCharges,dos,l_mcd,mcd)
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),         INTENT(IN)    :: usdus
@@ -33,7 +33,7 @@ CONTAINS
     TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
     TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
     TYPE(t_dos),           INTENT(INOUT) :: dos
-    TYPE(t_mcd),           INTENT(INOUT) :: mcd
+    TYPE(t_mcd), OPTIONAL, INTENT(INOUT) :: mcd
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,jsp     

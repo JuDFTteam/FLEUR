@@ -9,8 +9,8 @@ MODULE m_mpi_col_den
   ! collect all data calculated in cdnval on different pe's on pe 0
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,mcd,slab,orbcomp,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,orbcomp,&
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp,mcd,slab)
 
 #include"cpp_double.h"
     USE m_types
@@ -40,9 +40,9 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(INOUT) :: denCoeffsOffdiag
     TYPE (t_regionCharges),    INTENT(INOUT) :: regCharges
     TYPE (t_dos),              INTENT(INOUT) :: dos
-    TYPE (t_mcd),              INTENT(INOUT) :: mcd
-    TYPE (t_slab),             INTENT(INOUT) :: slab
     TYPE (t_orbcomp),          INTENT(INOUT) :: orbcomp
+    TYPE (t_mcd),  OPTIONAL,   INTENT(INOUT) :: mcd
+    TYPE (t_slab), OPTIONAL,   INTENT(INOUT) :: slab
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -177,24 +177,28 @@ CONTAINS
     DEALLOCATE (c_b)
 
     ! Collect mcd%mcd
-    n = SIZE(mcd%mcd,1)*SIZE(mcd%mcd,2)*SIZE(mcd%mcd,3)*SIZE(mcd%mcd,4)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(mcd%mcd(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, mcd%mcd(:,:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
+    IF (PRESENT(mcd)) THEN
+       n = SIZE(mcd%mcd,1)*SIZE(mcd%mcd,2)*SIZE(mcd%mcd,3)*SIZE(mcd%mcd,4)
+       ALLOCATE(r_b(n))
+       CALL MPI_REDUCE(mcd%mcd(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, mcd%mcd(:,:,:,:,jspin), 1)
+       DEALLOCATE (r_b)
+    END IF
 
     ! Collect slab - qintsl and qmtsl
-    n = SIZE(slab%qintsl,1)*SIZE(slab%qintsl,2)*SIZE(slab%qintsl,3)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(slab%qintsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qintsl(:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
+    IF (PRESENT(slab)) THEN
+       n = SIZE(slab%qintsl,1)*SIZE(slab%qintsl,2)*SIZE(slab%qintsl,3)
+       ALLOCATE(r_b(n))
+       CALL MPI_REDUCE(slab%qintsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qintsl(:,:,:,jspin), 1)
+       DEALLOCATE (r_b)
 
-    n = SIZE(slab%qmtsl,1)*SIZE(slab%qmtsl,2)*SIZE(slab%qmtsl,3)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(slab%qmtsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qmtsl(:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
+       n = SIZE(slab%qmtsl,1)*SIZE(slab%qmtsl,2)*SIZE(slab%qmtsl,3)
+       ALLOCATE(r_b(n))
+       CALL MPI_REDUCE(slab%qmtsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qmtsl(:,:,:,jspin), 1)
+       DEALLOCATE (r_b)
+    END IF
 
     ! Collect orbcomp - comp and qmtp
 

@@ -100,7 +100,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalJob,outDen,regCharges,dos,results,moments,mcd,slab,orbcomp)
+                  sphhar,sym,obsolete,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,orbcomp,coreSpecInput,mcd,slab)
    END DO
 
    IF (mpi%irank.EQ.0) THEN
