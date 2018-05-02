@@ -151,45 +151,6 @@ CONTAINS
     END SUBROUTINE priv_writetofile
   END SUBROUTINE close_eig
 
-  SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-    REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-
-    INTEGER::nrec
-    TYPE(t_data_mem),POINTER:: d
-    CALL priv_find_data(id,d)
-
-    nrec=nk+(jspin-1)*d%nkpts
-
-    IF (d%l_mcd.AND.PRESENT(mcd)) d%mcd(:,:,:,nrec)=mcd
-    IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-       d%qintsl(:,:,nrec)=qintsl
-       d%qmtsl(:,:,nrec)=qmtsl
-       d%qmtp(:,:,nrec)=qmtp
-       d%orbcomp(:,:,:,nrec)=orbcomp
-    ENDIF
-  END SUBROUTINE write_dos
-
-  SUBROUTINE read_dos(id,nk,jspin,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT),OPTIONAL     :: qmtp(:,:),orbcomp(:,:,:)
-
-    INTEGER::nrec
-    TYPE(t_data_mem),POINTER:: d
-    CALL priv_find_data(id,d)
-
-    nrec=nk+(jspin-1)*d%nkpts
-
-    IF (d%l_orb) THEN
-       qmtp=d%qmtp(:,:,nrec)
-       orbcomp=d%orbcomp(:,:,:,nrec)
-    ENDIF
-  END SUBROUTINE read_dos
-
-
   SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin

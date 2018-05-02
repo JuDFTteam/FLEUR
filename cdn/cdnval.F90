@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,dos,results,&
-                  moments,mcd,slab)
+                  moments,mcd,slab,orbcomp)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -80,6 +80,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE(t_moments),       INTENT(INOUT) :: moments
    TYPE(t_mcd),           INTENT(INOUT) :: mcd
    TYPE(t_slab),          INTENT(INOUT) :: slab
+   TYPE(t_orbcomp),       INTENT(INOUT) :: orbcomp
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -107,7 +108,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
    TYPE (t_usdus)            :: usdus
    TYPE (t_zMat)             :: zMat
-   TYPE (t_orbcomp)          :: orbcomp
    TYPE (t_gVacMap)          :: gVacMap
 
    CALL timestart("cdnval")
@@ -139,9 +139,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,.FALSE.)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
-   CALL mcd%init1(banddos,dimension,input,atoms,kpts)
-   CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
-   CALL orbcomp%init(banddos,dimension,atoms)
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
@@ -254,7 +251,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
             INQUIRE (file='orbcomprot',exist=l_orbcomprot)
             IF (l_orbcomprot) CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
 
-            CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+            CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
          END IF
 
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
@@ -267,17 +264,15 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
-      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
+      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
-
-         CALL write_dos(eig_id,ikpt,jspin,slab,orbcomp,mcd%mcd(:,:,:,ikpt,jspin))
+         CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,mcd,slab,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,mcd,slab,orbcomp,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
    END DO
 #endif
@@ -296,10 +291,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       END DO
       CALL closeXMLElement('mtCharges')
    END IF
-
-#ifdef CPP_MPI
-   CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
-#endif
 
    CALL timestop("cdnval")
 

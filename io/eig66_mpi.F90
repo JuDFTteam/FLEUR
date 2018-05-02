@@ -7,7 +7,7 @@ MODULE m_eig66_mpi
 #endif
   IMPLICIT NONE
   PRIVATE
-  PUBLIC open_eig,read_eig,write_eig,close_eig,write_dos,read_dos
+  PUBLIC open_eig,read_eig,write_eig,close_eig
 CONTAINS
 
   SUBROUTINE priv_find_data(id,d)
@@ -501,49 +501,6 @@ CONTAINS
 
   END SUBROUTINE priv_get_data
 #endif
-
-  SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-    REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-#ifdef CPP_MPI
-    TYPE(t_data_MPI),POINTER :: d
-    INTEGER:: pe,slot
-
-    CALL priv_find_data(id,d)
-    pe=d%pe_basis(nk,jspin)
-    slot=d%slot_basis(nk,jspin)
-
-    IF (d%l_mcd.AND.PRESENT(mcd))  CALL priv_put_data(pe,slot,RESHAPE(mcd,(/SIZE(mcd)/)),d%mcd_handle)
-    IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-       CALL priv_put_data(pe,slot,RESHAPE(qintsl,(/SIZE(qintsl)/)),d%qintsl_handle)
-       CALL priv_put_data(pe,slot,RESHAPE(qmtsl,(/SIZE(qmtsl)/)),d%qmtsl_handle)
-       CALL priv_put_data(pe,slot,RESHAPE(qmtp,(/SIZE(qmtp)/)),d%qmtp_handle)
-       CALL priv_put_data(pe,slot,RESHAPE(orbcomp,(/SIZE(orbcomp)/)),d%orbcomp_handle)
-    ENDIF
-#endif
-  END SUBROUTINE write_dos
-
-  SUBROUTINE read_dos(id,nk,jspin,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(out),OPTIONAL    :: qmtp(:,:),orbcomp(:,:,:)
-#ifdef CPP_MPI
-    TYPE(t_data_MPI),POINTER :: d
-    INTEGER:: pe,slot
-
-    CALL priv_find_data(id,d)
-    pe=d%pe_basis(nk,jspin)
-    slot=d%slot_basis(nk,jspin)
-
-    IF (d%l_orb) THEN
-       CALL priv_get_data(pe,slot,SIZE(qmtp),d%qmtp_handle,rdata=qmtp)
-       CALL priv_get_data(pe,slot,SIZE(orbcomp),d%orbcomp_handle,rdata=orbcomp)
-    ENDIF
-#endif
-  END SUBROUTINE read_dos
-
 
 #ifdef CPP_MPI
   SUBROUTINE create_maps(d,isize,nkpts,jspins,neig,n_size)

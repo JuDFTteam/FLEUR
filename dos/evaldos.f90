@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                         dimension,efermiarg,bandgap,l_mcd,mcd,slab)
+                         dimension,efermiarg,bandgap,l_mcd,mcd,slab,orbcomp)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -19,7 +19,6 @@
 !     ntb=max(nevk)
 !
 !----------------------------------------------------------------------
-      USE m_eig66_io,ONLY:read_dos
       USE m_triang
       USE m_maketetra
       USE m_tetrados
@@ -43,6 +42,7 @@
       TYPE(t_dos),INTENT(IN)         :: dos
       TYPE(t_mcd),INTENT(IN)         :: mcd
       TYPE(t_slab),INTENT(IN)        :: slab
+      TYPE(t_orbcomp),INTENT(IN)     :: orbcomp
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
@@ -62,7 +62,7 @@
       REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
       REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
-      REAL,    ALLOCATABLE :: mcd_local(:,:,:),orbcomp(:,:,:),qmtp(:,:)
+      REAL,    ALLOCATABLE :: mcd_local(:,:,:)
       REAL,    ALLOCATABLE :: qvac(:,:)
       CHARACTER(len=2) :: spin12(2),ch_mcd(3)
       CHARACTER(len=8) :: chntype*2,chform*19
@@ -142,23 +142,11 @@
       DO jspin = 1,input%jspins
          ntb = 0
          DO k = 1,kpts%nkpt
-!
-!     initialize arrays
-!
-            DO n = 1,dimension%neigd
-               DO i = 1,qdim
-                  qal(i,n,k) = 0.
-               ENDDO
-               DO i = 1,vacuum%nstars*vacuum%layers*vacuum%nvac
-                  qval(i,n,k) = 0.
-               ENDDO
-            ENDDO
 
-!     read data from file!
+            qal(:,:,k) = 0.0
+            qval(:,:,k) = 0.0
+
             ntb = max(ntb,results%neig(k,jspin))
-            ALLOCATE( orbcomp(dimension%neigd,23,atoms%nat))
-            ALLOCATE( qmtp(dimension%neigd,atoms%nat))
-            CALL read_dos(eig_id,k,jspin,qmtp,orbcomp)
             IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,dimension%neigd/))
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
@@ -169,10 +157,10 @@
                IF (n_orb == 0) THEN
                   qal(1:slab%nsld,:,k)             = slab%qintsl(:,:,k,jspin)
                   qal(slab%nsld+1:2*slab%nsld,:,k) = slab%qmtsl(:,:,k,jspin)
-               ELSE 
+               ELSE
                   DO i = 1, 23
                      DO l = 1, results%neig(k,jspin)
-                        qal(i,l,k) = orbcomp(l,i,n_orb)*qmtp(l,n_orb)/10000.
+                        qal(i,l,k) = orbcomp%comp(l,i,n_orb,k,jspin)*orbcomp%qmtp(l,n_orb,k,jspin)/10000.
                      END DO
                      DO l = results%neig(k,jspin)+1, dimension%neigd
                         qal(i,l,k) = 0.0
@@ -180,7 +168,6 @@
                   END DO
                END IF
             END IF
-            DEALLOCATE( orbcomp,qmtp)
 !
 !     set vacuum partial charge zero, if bulk calculation
 !     otherwise, write vacuum charge in correct arrays

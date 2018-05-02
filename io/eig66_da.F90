@@ -265,38 +265,4 @@ CONTAINS
 
   END SUBROUTINE write_eig
 
-
-  SUBROUTINE write_dos(id,nk,jspin,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN),OPTIONAL     :: qmtp(:,:),orbcomp(:,:,:)
-    TYPE(t_data_DA),POINTER:: d
-    INTEGER:: nrec
-    CALL priv_find_data(id,d)
-
-    nrec=nk+(jspin-1)*d%nkpts
-
-    IF (d%l_orb) THEN
-       IF (d%l_mcd) CPP_error("mcd & orbital decomposition not implemented in IO")
-       WRITE(d%file_io_id_dos,REC=nrec) qmtp,orbcomp
-    END IF
-  END SUBROUTINE write_dos
-
-  SUBROUTINE read_dos(id,nk,jspin,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT),OPTIONAL     :: qmtp(:,:),orbcomp(:,:,:)
-    TYPE(t_data_DA),POINTER:: d
-    INTEGER:: nrec
-    CALL priv_find_data(id,d)
-
-    nrec=nk+(jspin-1)*d%nkpts
-
-    IF (d%l_orb) THEN
-       IF (d%l_mcd) CPP_error("mcd & orbital decomposition not implemented in IO")
-       READ(d%file_io_id_dos,REC=nrec) qmtp,orbcomp
-    END IF
-  END SUBROUTINE read_dos
-
-
 END MODULE m_eig66_da

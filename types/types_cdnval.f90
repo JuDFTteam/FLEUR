@@ -111,8 +111,8 @@ PRIVATE
 
    TYPE t_orbcomp
 
-      REAL, ALLOCATABLE    :: comp(:,:,:)
-      REAL, ALLOCATABLE    :: qmtp(:,:)
+      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
+      REAL, ALLOCATABLE    :: qmtp(:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => orbcomp_init
@@ -299,14 +299,6 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell,input,kpts)
 
    nsld=1
 
-   IF (ALLOCATED(thisSlab%nmtsl)) DEALLOCATE(thisSlab%nmtsl)
-   IF (ALLOCATED(thisSlab%nslat)) DEALLOCATE(thisSlab%nslat)
-   IF (ALLOCATED(thisSlab%zsl)) DEALLOCATE(thisSlab%zsl)
-   IF (ALLOCATED(thisSlab%volsl)) DEALLOCATE(thisSlab%volsl)
-   IF (ALLOCATED(thisSlab%volintsl)) DEALLOCATE(thisSlab%volintsl)
-   IF (ALLOCATED(thisSlab%qintsl)) DEALLOCATE(thisSlab%qintsl)
-   IF (ALLOCATED(thisSlab%qmtsl)) DEALLOCATE(thisSlab%qmtsl)
-
    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
       CALL slab_dim(atoms, nsld)
       ALLOCATE (thisSlab%nmtsl(atoms%ntype,nsld))
@@ -379,11 +371,6 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms,kpts)
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_kpts),          INTENT(IN)    :: kpts
 
-   IF (ALLOCATED(thisMCD%ncore)) DEALLOCATE(thisMCD%ncore)
-   IF (ALLOCATED(thisMCD%e_mcd)) DEALLOCATE(thisMCD%e_mcd)
-   IF (ALLOCATED(thisMCD%m_mcd)) DEALLOCATE(thisMCD%m_mcd)
-   IF (ALLOCATED(thisMCD%mcd)) DEALLOCATE(thisMCD%mcd)
-
    ALLOCATE (thisMCD%ncore(atoms%ntype))
    ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
    IF (banddos%l_mcd) THEN
@@ -430,23 +417,26 @@ SUBROUTINE moments_init(thisMoments,input,atoms)
 
 END SUBROUTINE moments_init
 
-SUBROUTINE orbcomp_init(thisOrbcomp,banddos,dimension,atoms)
+SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,dimension,atoms,kpts)
 
    USE m_types_setup
+   USE m_types_kpts
 
    IMPLICIT NONE
 
    CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
+   TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_banddos),       INTENT(IN)    :: banddos
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
 
    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat))
-      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat))
+      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat,kpts%nkpt,input%jspins))
+      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat,kpts%nkpt,input%jspins))
    ELSE
-      ALLOCATE(thisOrbcomp%comp(1,1,1))
-      ALLOCATE(thisOrbcomp%qmtp(1,1))
+      ALLOCATE(thisOrbcomp%comp(1,1,1,1,input%jspins))
+      ALLOCATE(thisOrbcomp%qmtp(1,1,1,input%jspins))
    END IF
 
    thisOrbcomp%comp = 0.0

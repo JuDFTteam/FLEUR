@@ -13,7 +13,6 @@ MODULE m_eig66_io
 
   PUBLIC open_eig,close_eig
   PUBLIC read_eig, write_eig
-  PUBLIC read_dos,write_dos
 CONTAINS
 
   FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,&
@@ -166,57 +165,5 @@ CONTAINS
     END SELECT
     CALL timestop("IO (write)")
   END SUBROUTINE write_eig
-
-  SUBROUTINE write_dos(id,nk,jspin,slab,orbcomp,mcd)
-    USE m_eig66_hdf,ONLY:write_dos_hdf=>write_dos
-    USE m_eig66_DA ,ONLY:write_dos_DA=>write_dos
-    USE m_eig66_mem,ONLY:write_dos_MEM=>write_dos
-    USE m_eig66_MPI,ONLY:write_dos_MPI=>write_dos
-    USE m_types
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    TYPE(t_orbcomp), INTENT(IN)  :: orbcomp
-    TYPE(t_slab), INTENT(IN)     :: slab
-    REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-    CALL timestart("IO (dos-write)")
-    SELECT CASE (eig66_data_mode(id))
-    CASE (da_mode)
-       CALL write_dos_DA(id,nk,jspin,orbcomp%qmtp,orbcomp%comp)
-    CASE (hdf_mode)
-       CALL write_dos_HDF(id,nk,jspin,mcd,slab%qintsl(:,:,nk,jspin),slab%qmtsl(:,:,nk,jspin),orbcomp%qmtp,orbcomp%comp)
-    CASE (mem_mode)
-       CALL write_dos_Mem(id,nk,jspin,mcd,slab%qintsl(:,:,nk,jspin),slab%qmtsl(:,:,nk,jspin),orbcomp%qmtp,orbcomp%comp)
-    CASE (MPI_mode)
-       CALL write_dos_MPI(id,nk,jspin,mcd,slab%qintsl(:,:,nk,jspin),slab%qmtsl(:,:,nk,jspin),orbcomp%qmtp,orbcomp%comp)
-    CASE (-1)
-       CALL juDFT_error("Could not write DOS to eig-file before opening", calledby = "eig66_io")
-    END SELECT
-    CALL timestop("IO (dos-write)")
-  END SUBROUTINE write_dos
-
-
-  SUBROUTINE read_dos(id,nk,jspin,qmtp,orbcomp)
-    USE m_eig66_hdf,ONLY:read_dos_hdf=>read_dos
-    USE m_eig66_DA ,ONLY:read_dos_DA=>read_dos
-    USE m_eig66_mem,ONLY:read_dos_MEM=>read_dos
-    USE m_eig66_MPI,ONLY:read_dos_MPI=>read_dos
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT),OPTIONAL    :: qmtp(:,:),orbcomp(:,:,:)
-    CALL timestart("IO (dos-read)")
-    SELECT CASE (eig66_data_mode(id))
-    CASE (da_mode)
-       CALL read_dos_DA(id,nk,jspin,qmtp,orbcomp)
-    CASE (hdf_mode)
-       CALL read_dos_HDF(id,nk,jspin,qmtp,orbcomp)
-    CASE (mem_mode)
-       CALL read_dos_Mem(id,nk,jspin,qmtp,orbcomp)
-    CASE (MPI_mode)
-       CALL read_dos_MPI(id,nk,jspin,qmtp,orbcomp)
-    CASE (-1)
-       CALL juDFT_error("Could not DOS from read eig-file before opening", calledby = "eig66_io")
-    END SELECT
-    CALL timestop("IO (dos-read)")
-  END SUBROUTINE read_dos
 
 END MODULE m_eig66_io

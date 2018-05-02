@@ -39,7 +39,7 @@ MODULE m_eig66_hdf
 
 #endif
   PUBLIC open_eig,close_eig
-  PUBLIC read_eig,read_dos,write_dos
+  PUBLIC read_eig
   PUBLIC write_eig!,writesingleeig,writeeigc,writebas
 
 CONTAINS
@@ -294,41 +294,6 @@ CONTAINS
      END SUBROUTINE priv_r_vec
 
 #endif
-     SUBROUTINE read_dos(id,nk,jspin,qmtp,orbcomp)
-       IMPLICIT NONE
-       INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(OUT),OPTIONAL    :: qmtp(:,:),orbcomp(:,:,:)
-       TYPE(t_data_HDF),POINTER     :: d
-       CALL priv_find_data(id,d)
-#ifdef CPP_HDF
-       IF (d%l_orb) THEN
-          CALL io_read_real2(d%qmtpsetid,(/1,1,nk,jspin/),(/SIZE(qmtp,1),SIZE(qmtp,2),1,1/),qmtp)
-          CALL io_read_real3(d%orbcompsetid,(/1,1,1,nk,jspin/),(/SIZE(orbcomp,1),23,SIZE(orbcomp,3),1,1/),orbcomp)
-       ENDIF
-#endif
-     END SUBROUTINE read_dos
-
-
-     SUBROUTINE write_dos(id,nk,jspin,mcd,qintsl,qmtsl,qmtp,orbcomp)
-       IMPLICIT NONE
-       INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-       REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-       TYPE(t_data_HDF),POINTER      ::d
-       CALL priv_find_data(id,d)
-#ifdef CPP_HDF
-       IF (d%l_mcd.AND.PRESENT(mcd)) THEN
-          CALL io_write_real3(d%mcdsetid,(/1,1,1,nk,jspin/),(/SIZE(mcd,1),SIZE(mcd,2),SIZE(mcd,3),1,1/),mcd)
-       ENDIF
-       IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-          CALL io_write_real2(d%qintslsetid,(/1,1,nk,jspin/),(/SIZE(qintsl,1),SIZE(qintsl,2),1,1/),qintsl)
-          CALL io_write_real2(d%qmtslsetid,(/1,1,nk,jspin/),(/SIZE(qmtsl,1),SIZE(qmtsl,2),1,1/),qmtsl)
-          CALL io_write_real2(d%qmtpsetid,(/1,1,nk,jspin/),(/SIZE(qmtp,1),SIZE(qmtp,2),1,1/),qmtp)
-          CALL io_write_real3(d%orbcompsetid,(/1,1,1,nk,jspin/),(/SIZE(orbcomp,1),23,SIZE(orbcomp,3),1,1/),orbcomp)
-       ENDIF
-#endif
-     END SUBROUTINE write_dos
-
 
      SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)
 

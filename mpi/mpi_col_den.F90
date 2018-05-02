@@ -9,7 +9,7 @@ MODULE m_mpi_col_den
   ! collect all data calculated in cdnval on different pe's on pe 0
   !
 CONTAINS
-  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,mcd,slab,&
+  SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,mcd,slab,orbcomp,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp)
 
 #include"cpp_double.h"
@@ -42,6 +42,7 @@ CONTAINS
     TYPE (t_dos),              INTENT(INOUT) :: dos
     TYPE (t_mcd),              INTENT(INOUT) :: mcd
     TYPE (t_slab),             INTENT(INOUT) :: slab
+    TYPE (t_orbcomp),          INTENT(INOUT) :: orbcomp
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -193,6 +194,20 @@ CONTAINS
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(slab%qmtsl(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
     IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, slab%qmtsl(:,:,:,jspin), 1)
+    DEALLOCATE (r_b)
+
+    ! Collect orbcomp - comp and qmtp
+
+    n = SIZE(orbcomp%comp,1)*SIZE(orbcomp%comp,2)*SIZE(orbcomp%comp,3)*SIZE(orbcomp%comp,4)
+    ALLOCATE(r_b(n))
+    CALL MPI_REDUCE(orbcomp%comp(:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, orbcomp%comp(:,:,:,:,jspin), 1)
+    DEALLOCATE (r_b)
+
+    n = SIZE(orbcomp%qmtp,1)*SIZE(orbcomp%qmtp,2)*SIZE(orbcomp%qmtp,3)
+    ALLOCATE(r_b(n))
+    CALL MPI_REDUCE(orbcomp%qmtp(:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, orbcomp%qmtp(:,:,:,jspin), 1)
     DEALLOCATE (r_b)
 
     ! -> Collect force
