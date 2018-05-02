@@ -39,6 +39,7 @@ MODULE m_types_xcpot
      REAL,ALLOCATABLE :: gggrd(:),grgru(:),grgrd(:)
      !These are the contracted Gradients used in libxc
      REAL,ALLOCATABLE :: sigma(:,:)
+     REAL,ALLOCATABLE :: gr(:,:,:)
   END TYPE t_gradients
 
 CONTAINS

@@ -172,6 +172,8 @@ CONTAINS
     TYPE(t_gradients),INTENT(OUT):: grad
     !For libxc we only need the sigma array...
     ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
+    ALLOCATE(grad%gr(3,ngrid,jspins))
+    
   END SUBROUTINE xcpot_alloc_gradients
 
 

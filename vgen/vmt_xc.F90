@@ -1,0 +1,145 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+MODULE m_vmt_xc
+  !.....------------------------------------------------------------------
+  !     Calculate the GGA xc-potential in the MT-spheres
+  !.....------------------------------------------------------------------
+  !     instead of vmtxcor.f: the different exchange-correlation
+  !     potentials defined through the key icorr are called through
+  !     the driver subroutine vxcallg.f, subroutines vectorized
+  !     ** r.pentcheva 22.01.96
+  !     *********************************************************
+  !     angular mesh calculated on speacial gauss-legendre points
+  !     in order to use orthogonality of lattice harmonics and
+  !     avoid a least square fit
+  !     ** r.pentcheva 04.03.96
+  !     *********************************************************
+  !     MPI and OpenMP parallelization
+  !             U.Alekseeva, February 2017
+  !     *********************************************************
+
+CONTAINS
+  SUBROUTINE vmt_xc(DIMENSION,mpi,sphhar,atoms,&
+       den,xcpot,input,sym, obsolete,vxc,vx,exc)
+
+#include"cpp_double.h"
+   
+    USE m_mt_tofrom_grid
+    USE m_types_xcpot_inbuild
+    USE m_types
+    IMPLICIT NONE
+
+    CLASS(t_xcpot),INTENT(IN)      :: xcpot
+    TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_obsolete),INTENT(IN)    :: obsolete
+    TYPE(t_input),INTENT(IN)       :: input
+    TYPE(t_sym),INTENT(IN)         :: sym
+    TYPE(t_sphhar),INTENT(IN)      :: sphhar
+    TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_potden),INTENT(IN)      :: den
+    TYPE(t_potden),INTENT(INOUT)   :: vxc,vx,exc
+#ifdef CPP_MPI
+    include "mpif.h"
+#endif
+    !     ..
+    !     .. Local Scalars ..
+    TYPE(t_gradients)     :: grad
+    TYPE(t_xcpot_inbuild) :: xcpot_tmp
+    REAL, ALLOCATABLE     :: ch(:,:)
+    INTEGER               :: n,nsp,nt,jr
+    REAL                  :: divi
+   
+    !     ..
+ 
+    !locals for mpi
+    integer :: ierr
+    integer:: n_start,n_stride
+    REAL:: v_x((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),input%jspins)
+    REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),input%jspins)
+    REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),1)
+    REAL:: xcl(DIMENSION%nspd,DIMENSION%jspd)
+    LOGICAL :: lda_atom(atoms%ntype)
+    !.....------------------------------------------------------------------
+    lda_atom=.FALSE.
+    SELECT TYPE(xcpot)
+    TYPE IS(t_xcpot_inbuild)
+       lda_atom=xcpot%lda_atom
+       IF (ANY(lda_atom)) THEN
+          IF((.NOT.xcpot%is_name("pw91"))) &
+               CALL judft_warn("Using locally LDA only possible with pw91 functional")
+          CALL xcpot_tmp%init("l91",.FALSE.,atoms%ntype)
+       ENDIF
+    END SELECT
+   
+    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+    ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
+    IF (xcpot%is_gga()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
+    
+    CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym,xcpot%is_gga())
+  
+
+#ifdef CPP_MPI
+    n_start=mpi%irank+1
+    n_stride=mpi%isize
+#else
+    n_start=1
+    n_stride=1
+#endif
+
+    DO n = n_start,atoms%ntype,n_stride
+       CALL mt_to_grid(atoms,sphhar,den,input%jspins,n,xcpot%is_gga(),ch,grad)
+       !
+       !         calculate the ex.-cor. potential
+       CALL xcpot%get_vxc(input%jspins,ch(:nsp,:),v_xc,v_x,grad)
+       IF (lda_atom(n)) THEN
+          ! Use local part of pw91 for this atom
+          CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp,:),xcl,v_x,grad)
+          !Mix the potentials
+          divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
+          nt=0
+          DO jr=1,atoms%jri(n)
+             v_xc(nt+1:nt+nsp,:) = ( xcl(nt+1:nt+nsp,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                  v_xc(nt+1:nt+nsp,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+             nt=nt+nsp
+          ENDDO
+       ENDIF
+       
+       CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt)
+       CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt)
+       
+       IF (ALLOCATED(exc%mt)) THEN
+          !
+          !           calculate the ex.-cor energy density
+          !
+          CALL xcpot%get_exc(input%jspins,ch(:nsp,:),e_xc(:,1),grad)
+          IF (lda_atom(n)) THEN
+             ! Use local part of pw91 for this atom
+             CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp,:),xcl(:,1),grad)
+             !Mix the potentials
+             nt=0
+             DO jr=1,atoms%jri(n)
+                e_xc(nt+1:nt+nsp,1) = ( xcl(nt+1:nt+nsp,1) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
+                     e_xc(nt+1:nt+nsp,1) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+                nt=nt+nsp
+             END DO
+          ENDIF
+          CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,e_xc,exc%mt)
+       ENDIF
+    ENDDO
+    
+#ifdef CPP_MPI
+    CALL MPI_ALLREDUCE(vxr_local,vx%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
+    !using vxr_local as a temporal buffer
+    CALL MPI_ALLREDUCE(vr_local,vxr_local,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+    vxc%mt = vxc%mt + vxr_local
+    CALL MPI_ALLREDUCE(excr_local,exc%mt(:,:,:,1),atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+#endif
+    !
+    
+    RETURN
+  END SUBROUTINE vmt_xc
+END MODULE m_vmt_xc

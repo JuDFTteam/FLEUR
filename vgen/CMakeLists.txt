@@ -19,6 +19,7 @@ set(fleur_F90 ${fleur_F90}
 vgen/b_field.F90
 vgen/convol.f90
 vgen/grdrsis.f90
+vgen/mt_tofrom_grid.F90
 vgen/int_nv.F90
 vgen/lhglptg.f90
 vgen/lhglpts.f90
@@ -36,8 +37,7 @@ vgen/visxc.f90
 vgen/visxcg.f90
 vgen/vmatgen.f90
 vgen/vmts.F90
-vgen/vmtxc.f90
-vgen/vmtxcg.F90
+vgen/vmt_xc.F90
 vgen/vvac.f90
 vgen/vvacis.f90
 vgen/vvacxc.f90

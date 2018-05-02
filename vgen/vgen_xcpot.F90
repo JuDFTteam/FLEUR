@@ -19,8 +19,7 @@ CONTAINS
     !     ***********************************************************
     USE m_constants
     USE m_intnv
-    USE m_vmtxcg
-    USE m_vmtxc
+    USE m_vmt_xc
     USE m_vvacxc
     USE m_vvacxcg
     USE m_visxc
@@ -169,13 +168,9 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
-    IF (xcpot%is_gga()) THEN
-       CALL vmtxcg(dimension,mpi,sphhar,atoms, den,xcpot,input,sym,&
-            obsolete, vTot,vx,exc)
-    ELSE
-       CALL vmtxc(DIMENSION,sphhar,atoms, den,xcpot,input,sym, vTot,exc,vx)
-    ENDIF
-
+    CALL vmt_xc(DIMENSION,mpi,sphhar,atoms, den,xcpot,input,sym,&
+         obsolete, vTot,vx,exc)
+    
 
     !
     ! add MT EXX potential to vr
