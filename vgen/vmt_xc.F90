@@ -133,11 +133,10 @@ CONTAINS
     
     CALL finish_mt_grid()
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(vxr_local,vx%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
     !using vxr_local as a temporal buffer
-    CALL MPI_ALLREDUCE(vr_local,vxr_local,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
-    vxc%mt = vxc%mt + vxr_local
-    CALL MPI_ALLREDUCE(excr_local,exc%mt(:,:,:,1),atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt(:,:,:,1),atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
 #endif
     !
     
