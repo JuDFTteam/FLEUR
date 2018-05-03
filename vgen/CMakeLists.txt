@@ -33,8 +33,8 @@ vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
 vgen/rotate_int_den_to_local.F90
 vgen/vintcz.f90
-vgen/visxc.f90
-vgen/visxcg.f90
+vgen/vis_xc.F90
+vgen/pw_tofrom_grid.F90
 vgen/vmatgen.f90
 vgen/vmts.F90
 vgen/vmt_xc.F90

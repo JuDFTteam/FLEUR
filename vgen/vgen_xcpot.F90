@@ -22,8 +22,7 @@ CONTAINS
     USE m_vmt_xc
     USE m_vvacxc
     USE m_vvacxcg
-    USE m_visxc
-    USE m_visxcg
+    USE m_vis_xc
     USE m_checkdopall
     USE m_cdn_io 
     USE m_types
@@ -54,7 +53,7 @@ CONTAINS
     TYPE(t_potden)    :: workDen,exc,veff
     !     .. Local Scalars ..
     INTEGER i,i3,irec2,irec3,ivac,j,js,k,k3,lh,n,nzst1
-    INTEGER ifftd,ifftd2, ifftxc3d
+    INTEGER ifftd2
     INTEGER jsp,l
 #ifdef CPP_MPI
     include 'mpif.h'
@@ -122,26 +121,10 @@ CONTAINS
        !     ----------------------------------------
        !     ---> interstitial region
        CALL timestart("Vxc in interstitial")
-
-       ifftd=27*stars%mx1*stars%mx2*stars%mx3
-
+       
        IF ( (.NOT. obsolete%lwb) .OR. ( .not.xcpot%is_gga() ) ) THEN
           ! no White-Bird-trick
-
-          ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-
-          IF ( .NOT.xcpot%is_gga() ) THEN
-             ! LDA
-
-             CALL visxc(ifftd,stars,noco,xcpot,input,den,vTot,vx,exc)
-
-          ELSE ! GGA
-
-             CALL visxcg(ifftd,stars,sym,ifftxc3d,cell,den,xcpot,input,&
-                  obsolete,noco,vTot,vx,exc)
-
-          END IF
-
+          CALL vis_xc(stars,sym,cell,den,xcpot,input,noco,vTot,vx,exc)
        ELSE
           ! White-Bird-trick
 
