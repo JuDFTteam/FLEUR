@@ -175,9 +175,8 @@ CONTAINS
   END SUBROUTINE mt_from_grid
     
   SUBROUTINE finish_mt_grid()
-    DEALLOCATE(ylh,ylht,ylhtt)
-    DEALLOCATE(ylhf,ylhff,ylhtf)
-    DEALLOCATE(wt,rx,thet)
+    DEALLOCATE(ylh,wt,rx,thet)
+    IF (ALLOCATED(ylht)) DEALLOCATE(ylht,ylhtt,ylhf,ylhff,ylhtf)
   END SUBROUTINE finish_mt_grid
 
 END MODULE m_mt_tofrom_grid

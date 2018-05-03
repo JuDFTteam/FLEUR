@@ -131,6 +131,7 @@ CONTAINS
        ENDIF
     ENDDO
     
+    CALL finish_mt_grid()
 #ifdef CPP_MPI
     CALL MPI_ALLREDUCE(vxr_local,vx%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
     !using vxr_local as a temporal buffer
