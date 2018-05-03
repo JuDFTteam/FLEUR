@@ -169,8 +169,9 @@ CONTAINS
 
   SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
     INTEGER, INTENT (IN)         :: jspins,ngrid
-    TYPE(t_gradients),INTENT(OUT):: grad
+    TYPE(t_gradients),INTENT(INOUT):: grad
     !For libxc we only need the sigma array...
+    IF (ALLOCATED(grad%sigma)) DEALLOCATE(grad%sigma,grad%gr)
     ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
     ALLOCATE(grad%gr(3,ngrid,jspins))
     

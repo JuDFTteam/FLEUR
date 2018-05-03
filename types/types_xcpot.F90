@@ -88,8 +88,14 @@ CONTAINS
 
   SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
     INTEGER, INTENT (IN)         :: jspins,ngrid
-    TYPE(t_gradients),INTENT(OUT):: grad
+    TYPE(t_gradients),INTENT(INOUT):: grad
 
+    IF (allocated(grad%agrt)) THEN
+       DEALLOCATE(grad%agrt,grad%agru,grad%agrd)
+       DEALLOCATE(grad%g2ru,grad%g2rd,grad%gggrt)
+       DEALLOCATE(grad%gggru,grad%gzgr,grad%g2rt)
+       DEALLOCATE(grad%gggrd,grad%grgru,grad%grgrd)
+    ENDIF
     !For the in-build xc-pots
     ALLOCATE(grad%agrt(ngrid),grad%agru(ngrid),grad%agrd(ngrid))
     ALLOCATE(grad%g2ru(ngrid),grad%g2rd(ngrid),grad%gggrt(ngrid))
