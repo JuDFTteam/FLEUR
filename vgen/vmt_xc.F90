@@ -127,7 +127,7 @@ CONTAINS
                 nt=nt+nsp
              END DO
           ENDIF
-          CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,e_xc,exc%mt)
+          CALL mt_from_grid(atoms,sphhar,nsp,n,1,e_xc,exc%mt)
        ENDIF
     ENDDO
     
