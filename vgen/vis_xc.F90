@@ -46,7 +46,7 @@ CONTAINS
     REAL, ALLOCATABLE :: rho(:,:)
     REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:) 
   
-    CALL init_pw_grid(stars,sym,cell)
+    CALL init_pw_grid(xcpot,stars,sym,cell)
 
     !Put the charge on the grid, in GGA case also calculate gradients
     CALL pw_to_grid(xcpot,input,noco,stars,cell,den,rho,grad)
@@ -55,14 +55,14 @@ CONTAINS
     CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
 
     !Put the potentials in rez. space. 
-    CALL  pw_from_grid(stars,input%total,v_xc,vxc)
-    CALL  pw_from_grid(stars,input%total,v_x,vx)
+    CALL  pw_from_grid(xcpot,stars,input%total,v_xc,vxc)
+    CALL  pw_from_grid(xcpot,stars,input%total,v_x,vx)
 
     !calculate the ex.-cor energy density 
     IF (ALLOCATED(exc%pw_w)) THEN
-       ALLOCATE ( e_xc(SIZE(rho,1),1) )
+       ALLOCATE ( e_xc(SIZE(rho,1),1) );e_xc=0.0
        CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad)
-       CALL pw_from_grid(stars,.true.,e_xc,exc)
+       CALL pw_from_grid(xcpot,stars,.TRUE.,e_xc,exc)
     ENDIF
 
     CALL finish_pw_grid()

@@ -16,14 +16,15 @@ MODULE m_pw_tofrom_grid
   
   PUBLIC :: init_pw_grid,pw_to_grid,pw_from_grid,finish_pw_grid
 CONTAINS
-  SUBROUTINE init_pw_grid(stars,sym,cell)
+  SUBROUTINE init_pw_grid(xcpot,stars,sym,cell)
     USE m_prpxcfftmap
     USE m_types
-     IMPLICIT NONE
-      TYPE(t_stars),INTENT(IN)      :: stars
-      TYPE(t_sym),INTENT(IN)        :: sym
-      TYPE(t_cell),INTENT(IN)       :: cell
-      
+    IMPLICIT NONE
+    CLASS(t_xcpot),INTENT(IN)     :: xcpot
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_cell),INTENT(IN)       :: cell
+    
     !---> set up pointer for backtransformation of from g-vector in
     !     positive domain of xc density fftbox into stars.
     !     also the x,y,z components of the g-vectors are set up to calculate
@@ -31,11 +32,13 @@ CONTAINS
     !     in principle this can also be done in main program once.
     !     it is done here to save memory.
     !
+      
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-    ALLOCATE ( igxc_fft(0:ifftxc3d-1),gxc_fft(0:ifftxc3d-1,3) )
-    CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
-    !
+    IF (xcpot%is_gga()) THEN
+       ALLOCATE ( igxc_fft(0:ifftxc3d-1),gxc_fft(0:ifftxc3d-1,3) )
+       CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
+    ENDIF
     ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
        
   END SUBROUTINE init_pw_grid
@@ -72,6 +75,7 @@ CONTAINS
     USE m_grdrsis
     USE m_mkgxyz3
     USE m_fft3dxc
+    USE m_fft3d
     USE m_types
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN)     :: xcpot
@@ -94,24 +98,37 @@ CONTAINS
     REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:) 
     
     ! Allocate arrays
-    ALLOCATE( bf3(0:ifftd-1), rho(0:ifftxc3d-1,input%jspins))
-    IF (xcpot%is_gga()) ALLOCATE( ph_wrk(0:ifftxc3d-1),rhd1(0:ifftxc3d-1,input%jspins,3), &
-         rhd2(0:ifftxc3d-1,input%jspins,6) )
+    ALLOCATE( bf3(0:ifftd-1))
+    IF (xcpot%is_gga()) THEN
+       ALLOCATE(rho(0:ifftxc3d-1,input%jspins))
+       ALLOCATE( ph_wrk(0:ifftxc3d-1),rhd1(0:ifftxc3d-1,input%jspins,3))
+        ALLOCATE( rhd2(0:ifftxc3d-1,input%jspins,6) )
+     ELSE
+        ALLOCATE(rho(0:ifftd-1,input%jspins))
+     ENDIF
     IF (noco%l_noco)  THEN
        ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
        IF (xcpot%is_gga()) ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
     END IF
     !Put den%pw on grid and store into rho(:,1:2)
     DO js=1,input%jspins
-       CALL fft3dxc(rho(0:,js),bf3, den%pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       IF (xcpot%is_gga()) THEN
+          CALL fft3dxc(rho(0:,js),bf3, den%pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+               stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       ELSE
+          CALL fft3d(rho(0,js),bf3, den%pw(1,js), stars,+1)
+       ENDIF
     END DO
 
     IF (noco%l_noco) THEN  
        !  Get mx,my on real space grid and recalculate rho and magmom
-       CALL fft3dxc(mx,my, den%pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
-       DO i=0,ifftxc3-1 
+       IF (xcpot%is_gga()) THEN
+          CALL fft3dxc(mx,my, den%pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+               stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       ELSE
+          CALL fft3d(mx,my, den%pw(1,3), stars,+1)
+       ENDIF
+       DO i=0,SIZE(rho,1)-1 
           rhotot= 0.5*( rho(i,1) + rho(i,2) )
           magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
           rho(i,1)= rhotot+magmom(i)
@@ -205,18 +222,19 @@ CONTAINS
             rhd2(0,1,1),rhd2(0,1,3),rhd2(0,1,6), rhd2(0,1,5),rhd2(0,1,4),rhd2(0,1,2), grad)
        
     ENDIF
-    rho(i,js)=MAX(rho(i,js),d_15)
+    rho(:,:)=MAX(rho(:,:),d_15)
    
   END SUBROUTINE pw_to_grid
 
 
-  SUBROUTINE pw_from_grid(stars,l_pw_w,v_in,v_out)
+  SUBROUTINE pw_from_grid(xcpot,stars,l_pw_w,v_in,v_out)
     USE m_fft3d
     USE m_fft3dxc
     USE m_types
     IMPLICIT NONE
+    CLASS(t_xcpot),INTENT(in)     :: xcpot
     TYPE(t_stars),INTENT(IN)      :: stars
-    REAL,INTENT(IN)               :: v_in(:,:)
+    REAL,INTENT(INOUT)            :: v_in(0:,:)
     LOGICAL,INTENT(in)            :: l_pw_w
     TYPE(t_potden),INTENT(INOUT)  :: v_out
     
@@ -225,21 +243,27 @@ CONTAINS
     REAL,ALLOCATABLE     :: bf3(:),vcon(:) 
     COMPLEX, ALLOCATABLE :: fg3(:)
     ALLOCATE( bf3(0:ifftd-1),fg3(stars%ng3))
+    ALLOCATE ( vcon(0:ifftd-1) )
     DO js = 1,SIZE(v_in,2)
        bf3=0.0
-       CALL fft3dxc(v_in(0:,js),bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-            stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
-       
-       DO k = 1,stars%nxc3_fft
+       IF (xcpot%is_gga()) THEN
+          CALL fft3dxc(v_in(0:,js),bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+               stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+       ELSE
+          vcon(0:)=v_in(0:,js)
+          CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
+       ENDIF
+       DO k = 1,MERGE(stars%nxc3_fft,stars%ng3,xcpot%is_gga())
           v_out%pw(k,js) = v_out%pw(k,js) + fg3(k)
        ENDDO
 
        IF (l_pw_w) THEN
-          !----> Perform fft transform: v_xc(star) --> vxc(r) 
-          !     !Use large fft mesh for convolution
-          fg3(stars%nxc3_fft+1:)=0.0
-          ALLOCATE ( vcon(0:ifftd-1) )
-          CALL fft3d(vcon(0),bf3, fg3, stars,+1)
+          IF (xcpot%is_gga()) THEN
+             !----> Perform fft transform: v_xc(star) --> vxc(r) 
+             !     !Use large fft mesh for convolution
+             fg3(stars%nxc3_fft+1:)=0.0
+             CALL fft3d(vcon(0),bf3, fg3, stars,+1)
+          ENDIF
           !
           !----> Convolute with step function
           !
@@ -247,8 +271,8 @@ CONTAINS
              vcon(i)=stars%ufft(i)*vcon(i)
           ENDDO
           bf3=0.0
-          CALL fft3d(vcon(0),bf3, fg3, stars,-1,.FALSE.)
-          DEALLOCATE ( vcon )
+          CALL fft3d(vcon(0),bf3, fg3, stars,-1)
+          fg3=fg3*stars%nstr
           !
           !----> add to warped coulomb potential
           !
@@ -261,7 +285,7 @@ CONTAINS
     
   SUBROUTINE finish_pw_grid()
     IMPLICIT NONE
-    DEALLOCATE(igxc_fft,gxc_fft)
+    IF (ALLOCATED(igxc_fft)) DEALLOCATE(igxc_fft,gxc_fft)
   END SUBROUTINE finish_pw_grid
 
 END MODULE m_pw_tofrom_grid
