@@ -10,7 +10,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                  dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
+                  dimension,kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                   archiveType,outDen)
 
@@ -48,7 +48,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_dimension),INTENT(IN)     :: dimension
    TYPE(t_oneD),INTENT(IN)          :: oneD
    TYPE(t_enpara),INTENT(INOUT)     :: enpara
-   TYPE(t_obsolete),INTENT(IN)      :: obsolete
    TYPE(t_banddos),INTENT(IN)       :: banddos
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input

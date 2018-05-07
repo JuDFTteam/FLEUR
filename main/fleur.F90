@@ -354,7 +354,7 @@ CONTAINS
           CALL outDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-               DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
+               DIMENSION,kpts,atoms,sphhar,stars,sym,&
                enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                archiveType,outDen)
 
