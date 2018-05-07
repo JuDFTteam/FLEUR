@@ -42,20 +42,20 @@ CONTAINS
     END IF
   END SUBROUTINE init_mt_grid
   
-  SUBROUTINE mt_to_grid(atoms,sphhar,den,nsp,jspins,n,l_grad,ch,grad)
+  SUBROUTINE mt_to_grid(atoms,sphhar,den_mt,nsp,jspins,n,l_grad,grad,ch)
     USE m_grdchlh
     USE m_mkgylm
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_potden),INTENT(IN)   :: den
+    REAL,INTENT(IN)             :: den_mt(:,0:,:)
     INTEGER,INTENT(IN)          :: n,jspins,nsp
     LOGICAL,INTENT(IN)          :: l_grad
-    REAL,INTENT(OUT)               :: ch(:,:)
-    TYPE(t_gradients),INTENT(INOUT)::grad
+    REAL,INTENT(OUT),OPTIONAL      :: ch(:,:)
+    TYPE(t_gradients),INTENT(INOUT):: grad
     
     REAL, ALLOCATABLE :: chlh(:,:,:),chlhdr(:,:,:),chlhdrr(:,:,:)
-    REAL, ALLOCATABLE :: chdr(:,:),chdt(:,:),chdf(:,:)
+    REAL, ALLOCATABLE :: chdr(:,:),chdt(:,:),chdf(:,:),ch_tmp(:,:)
     REAL, ALLOCATABLE :: chdrr(:,:),chdtt(:,:),chdff(:,:),chdtf(:,:)
     REAL, ALLOCATABLE :: chdrt(:,:),chdrf(:,:)
     INTEGER:: nd,lh,js,jr,kt,k
@@ -63,7 +63,7 @@ CONTAINS
     nd = atoms%ntypsy(SUM(atoms%neq(:n-1))+1)
 
     ALLOCATE ( chlh(atoms%jmtd,0:sphhar%nlhd,jspins))
-
+    ALLOCATE ( ch_tmp(nsp,jspins) )
     IF (l_grad)  THEN
        ALLOCATE(chdr(nsp,jspins),chdt(nsp,jspins),chdf(nsp,jspins),chdrr(nsp,jspins),&
             chdtt(nsp,jspins),chdff(nsp,jspins),chdtf(nsp,jspins),chdrt(nsp,jspins),&
@@ -81,22 +81,23 @@ CONTAINS
        
        DO js = 1,jspins      
           DO jr = 1,atoms%jri(n)
-             chlh(jr,lh,js) = den%mt(jr,lh,n,js)/(atoms%rmsh(jr,n)*atoms%rmsh(jr,n))
+             chlh(jr,lh,js) = den_mt(jr,lh,js)/(atoms%rmsh(jr,n)*atoms%rmsh(jr,n))
           ENDDO
           IF (l_grad) CALL grdchlh(1,1,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
                chlh(1,lh,js),ndvgrd, chlhdr(1,lh,js),chlhdrr(1,lh,js))
           
        ENDDO ! js
     ENDDO   ! lh
-    ch(:,:)    = 0.0     ! charge density (on extended grid for all jr)
+    
     kt=0
     DO jr = 1,atoms%jri(n)
+       ch_tmp(:,:)    = 0.0     ! charge density (on extended grid for all jr)
        !         following are at points on jr-th sphere.
        !  generate the densities on an angular mesh
        DO js = 1,jspins
           DO lh = 0,sphhar%nlh(nd)
              DO k = 1,nsp
-                ch(kt+k,js) = ch(kt+k,js) + ylh(k,lh,nd)*chlh(jr,lh,js)
+                ch_tmp(k,js) = ch_tmp(k,js) + ylh(k,lh,nd)*chlh(jr,lh,js)
              ENDDO
           ENDDO
        ENDDO
@@ -133,12 +134,12 @@ CONTAINS
           
        
           CALL mkgylm(jspins,atoms%rmsh(jr,n),thet,nsp,&
-               ch(kt+1:,:),chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,grad,kt)
+               ch_tmp,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,grad,kt)
        ENDIF
+       !Set charge to minimum value
+       IF (PRESENT(ch)) ch(kt+1:kt+nsp,:)=MAX(ch_tmp(:nsp,:),d_15)
        kt=kt+nsp
     END DO
-    !Set charge to minimum value
-    ch(:,:)=MAX(ch(:,:),d_15)
     
   END SUBROUTINE mt_to_grid
 
@@ -149,7 +150,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN):: sphhar
     INTEGER,INTENT(IN)       :: nsp,jspins,n
     REAL,INTENT(IN)          :: v_in(:,:)
-    REAL,INTENT(INOUT)       :: vr(:,0:,:,:)
+    REAL,INTENT(INOUT)       :: vr(:,0:,:)
     
     REAL    :: vpot(nsp),vlh
     INTEGER :: js,kt,lh,jr,nd
@@ -166,7 +167,7 @@ CONTAINS
              !c            through gauss integration
              !
              vlh=dot_PRODUCT(vpot(:),ylh(:nsp,lh,nd))
-             vr(jr,lh,n,js) = vr(jr,lh,n,js) + vlh
+             vr(jr,lh,js) = vr(jr,lh,js) + vlh
           ENDDO ! lh
           kt=kt+nsp
        ENDDO   ! jr

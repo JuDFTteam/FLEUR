@@ -7,8 +7,7 @@ MODULE m_vvacxcg
   !     for the gradient contribution.   t.a. 1996
   !-----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-       cell,xcpot,input,obsolete,den, vxc,exc)
+  SUBROUTINE vvacxcg(ifftd2,stars,vacuum,noco,oneD,cell,xcpot,input,obsolete,den, vxc,exc)
 
     !-----------------------------------------------------------------------
     !     instead of vvacxcor.f: the different exchange-correlation
@@ -26,6 +25,7 @@ CONTAINS
     USE m_od_mkgz
     USE m_fft2d
     USE m_types
+    USE m_types_xcpot_libxc
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
     TYPE(t_oneD),INTENT(IN)      :: oneD
@@ -71,6 +71,10 @@ CONTAINS
     !     .. unused input (needed for other noco GGA-implementations) ..
 
 
+    SELECT TYPE(xcpot)
+    TYPE IS (t_xcpot_libxc)
+       CALL judft_error("libxc GGA functionals not implemented in film setups")
+    END SELECT
    
 
     d_15     = 1.e-15
@@ -371,8 +375,7 @@ CONTAINS
 !!$                  &           gggr,gggru,gggrd,gzgr)
              CALL judft_error("OneD not implemented")
           ELSE
-             CALL mkgxyz3(ifftd2,input%jspins,ifftd2,input%jspins,af2,rhdx,rhdy,&
-                  rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy, grad)
+             CALL mkgxyz3(af2,rhdx,rhdy, rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy, grad)
           endif
 
           !     rhmnv: rho_minimum_vacuum.

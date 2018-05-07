@@ -39,7 +39,9 @@ MODULE m_types_xcpot
      REAL,ALLOCATABLE :: gggrd(:),grgru(:),grgrd(:)
      !These are the contracted Gradients used in libxc
      REAL,ALLOCATABLE :: sigma(:,:)
+     REAL,ALLOCATABLE :: vsigma(:,:)
      REAL,ALLOCATABLE :: gr(:,:,:)
+     REAL,ALLOCATABLE :: laplace(:,:)
   END TYPE t_gradients
 
 CONTAINS
@@ -64,15 +66,14 @@ CONTAINS
     a_ex=-1
   END FUNCTION xcpot_get_exchange_weight
 
-  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad,drdsigma)
+  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad)
     CLASS(t_xcpot),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins
     !--> charge density
     REAL,INTENT (IN)         :: rh(:,:)
     !---> xc potential
     REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
-    TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
-    REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:)
+    TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
   END SUBROUTINE xcpot_get_vxc
 
   

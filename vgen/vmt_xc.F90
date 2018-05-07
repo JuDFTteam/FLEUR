@@ -26,7 +26,7 @@ CONTAINS
        den,xcpot,input,sym, obsolete,vxc,vx,exc)
 
 #include"cpp_double.h"
-   
+    use m_libxc_postprocess_gga
     USE m_mt_tofrom_grid
     USE m_types_xcpot_inbuild
     USE m_types
@@ -62,9 +62,9 @@ CONTAINS
     REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
     REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,1)
     REAL:: xcl(DIMENSION%nspd,DIMENSION%jspd)
-    LOGICAL :: lda_atom(atoms%ntype)
+    LOGICAL :: lda_atom(atoms%ntype),l_libxc
     !.....------------------------------------------------------------------
-    lda_atom=.FALSE.
+    lda_atom=.FALSE.;l_libxc=.FALSE.
     SELECT TYPE(xcpot)
     TYPE IS(t_xcpot_inbuild)
        lda_atom=xcpot%lda_atom
@@ -73,6 +73,8 @@ CONTAINS
                CALL judft_warn("Using locally LDA only possible with pw91 functional")
           CALL xcpot_tmp%init("l91",.FALSE.,atoms%ntype)
        ENDIF
+    CLASS DEFAULT
+       l_libxc=.true. !libxc!!
     END SELECT
    
     nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
@@ -91,7 +93,7 @@ CONTAINS
 #endif
 
     DO n = n_start,atoms%ntype,n_stride
-       CALL mt_to_grid(atoms,sphhar,den,nsp,input%jspins,n,xcpot%is_gga(),ch,grad)
+       CALL mt_to_grid(atoms,sphhar,den%mt(:,0:,n,:),nsp,input%jspins,n,xcpot%is_gga(),grad,ch)
        !
        !         calculate the ex.-cor. potential
        CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc,v_x,grad)
@@ -107,9 +109,13 @@ CONTAINS
              nt=nt+nsp
           ENDDO
        ENDIF
+
+       !Add postprocessing for libxc
+       IF (l_libxc.AND.xcpot%is_gga()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
+
        
-       CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt)
-       CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt)
+       CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
        
        IF (ALLOCATED(exc%mt)) THEN
           !
@@ -127,7 +133,7 @@ CONTAINS
                 nt=nt+nsp
              END DO
           ENDIF
-          CALL mt_from_grid(atoms,sphhar,nsp,n,1,e_xc,exc%mt)
+          CALL mt_from_grid(atoms,sphhar,nsp,n,1,e_xc,exc%mt(:,0:,n,:))
        ENDIF
     ENDDO
     

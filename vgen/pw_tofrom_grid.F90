@@ -43,7 +43,7 @@ CONTAINS
        
   END SUBROUTINE init_pw_grid
   
-  SUBROUTINE pw_to_grid(xcpot,input,noco,stars,cell,den,rho,grad)
+  SUBROUTINE pw_to_grid(xcpot,jspins,l_noco,stars,cell,den_pw,grad,rho)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !
@@ -79,14 +79,14 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN)     :: xcpot
-    TYPE(t_input),INTENT(IN)      :: input
-    TYPE(t_noco),INTENT(IN)       :: noco
+    INTEGER,INTENT(IN)            :: jspins
+    LOGICAL,INTENT(IN)            :: l_noco
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
-    TYPE(t_potden),INTENT(IN)     :: den
-    REAL,ALLOCATABLE,INTENT(out)  :: rho(:,:)
-    TYPE(t_gradients),INTENT(OUT)  :: grad
-
+    COMPLEX,INTENT(IN)            :: den_pw(:,:)
+    TYPE(t_gradients),INTENT(OUT) :: grad
+    REAL,ALLOCATABLE,INTENT(out),OPTIONAL   :: rho(:,:)
+  
 
     INTEGER      :: js,i,idm,ig,ndm,jdm
     REAL         :: rhotot
@@ -100,42 +100,43 @@ CONTAINS
     ! Allocate arrays
     ALLOCATE( bf3(0:ifftd-1))
     IF (xcpot%is_gga()) THEN
-       ALLOCATE(rho(0:ifftxc3d-1,input%jspins))
-       ALLOCATE( ph_wrk(0:ifftxc3d-1),rhd1(0:ifftxc3d-1,input%jspins,3))
-        ALLOCATE( rhd2(0:ifftxc3d-1,input%jspins,6) )
+       IF (PRESENT(rho)) ALLOCATE(rho(0:ifftxc3d-1,jspins))
+       ALLOCATE( ph_wrk(0:ifftxc3d-1),rhd1(0:ifftxc3d-1,jspins,3))
+        ALLOCATE( rhd2(0:ifftxc3d-1,jspins,6) )
      ELSE
-        ALLOCATE(rho(0:ifftd-1,input%jspins))
+        IF (PRESENT(rho)) ALLOCATE(rho(0:ifftd-1,jspins))
      ENDIF
-    IF (noco%l_noco)  THEN
+    IF (l_noco)  THEN
        ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
        IF (xcpot%is_gga()) ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
     END IF
-    !Put den%pw on grid and store into rho(:,1:2)
-    DO js=1,input%jspins
-       IF (xcpot%is_gga()) THEN
-          CALL fft3dxc(rho(0:,js),bf3, den%pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-               stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
-       ELSE
-          CALL fft3d(rho(0,js),bf3, den%pw(1,js), stars,+1)
-       ENDIF
-    END DO
-
-    IF (noco%l_noco) THEN  
-       !  Get mx,my on real space grid and recalculate rho and magmom
-       IF (xcpot%is_gga()) THEN
-          CALL fft3dxc(mx,my, den%pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
-               stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
-       ELSE
-          CALL fft3d(mx,my, den%pw(1,3), stars,+1)
-       ENDIF
-       DO i=0,SIZE(rho,1)-1 
-          rhotot= 0.5*( rho(i,1) + rho(i,2) )
-          magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
-          rho(i,1)= rhotot+magmom(i)
-          rho(i,2)= rhotot-magmom(i)
+    IF (PRESENT(rho)) THEN
+    !Put den_pw on grid and store into rho(:,1:2)
+       DO js=1,jspins
+          IF (xcpot%is_gga()) THEN
+             CALL fft3dxc(rho(0:,js),bf3, den_pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+                  stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+          ELSE
+             CALL fft3d(rho(0,js),bf3, den_pw(:,js), stars,+1)
+          ENDIF
        END DO
-    ENDIF
 
+       IF (l_noco) THEN  
+          !  Get mx,my on real space grid and recalculate rho and magmom
+          IF (xcpot%is_gga()) THEN
+             CALL fft3dxc(mx,my, den_pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
+                  stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
+          ELSE
+             CALL fft3d(mx,my, den_pw(:,3), stars,+1)
+          ENDIF
+          DO i=0,SIZE(rho,1)-1 
+             rhotot= 0.5*( rho(i,1) + rho(i,2) )
+             magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
+             rho(i,1)= rhotot+magmom(i)
+             rho(i,2)= rhotot-magmom(i)
+          END DO
+       ENDIF
+    ENDIF
     IF (xcpot%is_gga()) THEN  
 
     ! In collinear calculations all derivatives are calculated in g-spce,
@@ -145,22 +146,22 @@ CONTAINS
     !
     !         ph_wrk: exp(i*(g_x,g_y,g_z)*tau) * g_(x,y,z).
 
-       ALLOCATE(cqpw(stars%ng3,input%jspins))
+       ALLOCATE(cqpw(stars%ng3,jspins))
 
-       cqpw(:,:)= ci*den%pw(:,:)
+       cqpw(:,:)= ci*den_pw(:,:)
    
        DO idm=1,3
           DO ig = 0 , stars%kmxxc_fft - 1
              ph_wrk(ig) = stars%pgfft(ig) * gxc_fft(ig,idm)
           END DO
 
-          DO js=1,input%jspins
+          DO js=1,jspins
              CALL fft3dxc(rhd1(0:,js,idm),bf3, cqpw(:,js), stars%kxc1_fft,stars%kxc2_fft,&
                   stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
           END DO
        END DO
 
-       IF (noco%l_noco) THEN
+       IF (l_noco) THEN
 
           CALL grdrsis(magmom,cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,dmagmom )
 
@@ -177,7 +178,7 @@ CONTAINS
        !
        !         ph_wrk: exp(i*(g_x,g_y,g_z)*tau) * g_(x,y,z) * g_(x,y,z)
 
-       cqpw(:,:)= -den%pw(:,:)
+       cqpw(:,:)= -den_pw(:,:)
    
        ndm = 0
        DO idm = 1,3
@@ -187,7 +188,7 @@ CONTAINS
                 ph_wrk(ig) = stars%pgfft(ig)*gxc_fft(ig,idm)*gxc_fft(ig,jdm)
              ENDDO
              
-             DO js=1,input%jspins
+             DO js=1,jspins
                 CALL fft3dxc(rhd2(0:,js,ndm),bf3, cqpw(:,js), stars%kxc1_fft,stars%kxc2_fft,&
                      stars%kxc3_fft,stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,ph_wrk,stars%nstr)
              END DO
@@ -196,7 +197,7 @@ CONTAINS
 
        DEALLOCATE(cqpw)
 
-       IF (noco%l_noco) THEN
+       IF (l_noco) THEN
           DO idm = 1,3
              CALL grdrsis(dmagmom(0,idm),cell,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,ddmagmom(0,1,idm) )
           END DO
@@ -212,22 +213,28 @@ CONTAINS
              ENDDO !jdm
           ENDDO   !idm 
        END IF
-       CALL xcpot%alloc_gradients(ifftxc3d,input%jspins,grad)
+       CALL xcpot%alloc_gradients(ifftxc3d,jspins,grad)
  
        !
        !     calculate the quantities such as abs(grad(rho)),.. used in
        !     evaluating the gradient contributions to potential and energy.
        !
-       CALL mkgxyz3 (ifftxc3d,input%jspins,ifftxc3,input%jspins,rho, rhd1(0,1,1),rhd1(0,1,2),rhd1(0,1,3),&
-            rhd2(0,1,1),rhd2(0,1,3),rhd2(0,1,6), rhd2(0,1,5),rhd2(0,1,4),rhd2(0,1,2), grad)
+       IF (PRESENT(rho)) THEN
+          CALL mkgxyz3 (rho,rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
+               rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
+       ELSE
+          !Dummy rho (only possible if grad is used for libxc mode)
+          CALL mkgxyz3 (RESHAPE((/0.0/),(/1,1/)),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
+               rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
+       END IF
        
     ENDIF
-    rho(:,:)=MAX(rho(:,:),d_15)
+    IF (PRESENT(rho)) rho(:,:)=MAX(rho(:,:),d_15)
    
   END SUBROUTINE pw_to_grid
 
 
-  SUBROUTINE pw_from_grid(xcpot,stars,l_pw_w,v_in,v_out)
+  SUBROUTINE pw_from_grid(xcpot,stars,l_pw_w,v_in,v_out_pw,v_out_pw_w)
     USE m_fft3d
     USE m_fft3dxc
     USE m_types
@@ -236,7 +243,8 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)      :: stars
     REAL,INTENT(INOUT)            :: v_in(0:,:)
     LOGICAL,INTENT(in)            :: l_pw_w
-    TYPE(t_potden),INTENT(INOUT)  :: v_out
+    COMPLEX,INTENT(INOUT)         :: v_out_pw(:,:)
+    COMPLEX,INTENT(INOUT),OPTIONAL::v_out_pw_w(:,:)
     
     
     INTEGER              :: js,k,i
@@ -254,7 +262,7 @@ CONTAINS
           CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
        ENDIF
        DO k = 1,MERGE(stars%nxc3_fft,stars%ng3,xcpot%is_gga())
-          v_out%pw(k,js) = v_out%pw(k,js) + fg3(k)
+          v_out_pw(k,js) = v_out_pw(k,js) + fg3(k)
        ENDDO
 
        IF (l_pw_w) THEN
@@ -277,7 +285,7 @@ CONTAINS
           !----> add to warped coulomb potential
           !
           DO k = 1,stars%ng3
-             v_out%pw_w(k,js) = v_out%pw_w(k,js) + fg3(k)
+             v_out_pw_w(k,js) = v_out_pw_w(k,js) + fg3(k)
           ENDDO
        ENDIF
     END DO

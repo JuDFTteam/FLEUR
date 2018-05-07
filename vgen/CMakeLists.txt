@@ -2,8 +2,6 @@ set(fleur_F77 ${fleur_F77}
 vgen/dylm3.f
 vgen/fft3dxc.f
 vgen/grdrsvac.f
-vgen/mkgxyz3.f
-vgen/mkgylm.f
 vgen/mkgz.f
 vgen/modcyli.f
 vgen/modcylk.f
@@ -17,6 +15,8 @@ vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
 vgen/b_field.F90
+vgen/mkgylm.f90
+vgen/mkgxyz3.f90
 vgen/convol.f90
 vgen/grdrsis.f90
 vgen/mt_tofrom_grid.F90

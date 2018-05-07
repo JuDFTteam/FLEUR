@@ -31,6 +31,8 @@ CONTAINS
     !     ******************************************************************
     USE m_pw_tofrom_grid
     USE m_types
+     USE m_types_xcpot_libxc
+    USE m_libxc_postprocess_gga
     IMPLICIT NONE
 
     CLASS(t_xcpot),INTENT(IN)     :: xcpot
@@ -49,20 +51,26 @@ CONTAINS
     CALL init_pw_grid(xcpot,stars,sym,cell)
 
     !Put the charge on the grid, in GGA case also calculate gradients
-    CALL pw_to_grid(xcpot,input,noco,stars,cell,den,rho,grad)
+    CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
     ALLOCATE(v_xc,v_x,mold=rho)
 
     CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
 
+    IF (xcpot%is_gga()) THEN
+       SELECT TYPE(xcpot)
+       TYPE IS (t_xcpot_libxc)
+          CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
+       END SELECT
+    ENDIF
     !Put the potentials in rez. space. 
-    CALL  pw_from_grid(xcpot,stars,input%total,v_xc,vxc)
-    CALL  pw_from_grid(xcpot,stars,input%total,v_x,vx)
+    CALL  pw_from_grid(xcpot,stars,input%total,v_xc,vxc%pw,vxc%pw_w)
+    CALL  pw_from_grid(xcpot,stars,input%total,v_x,vx%pw,vx%pw_w)
 
     !calculate the ex.-cor energy density 
     IF (ALLOCATED(exc%pw_w)) THEN
        ALLOCATE ( e_xc(SIZE(rho,1),1) );e_xc=0.0
        CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad)
-       CALL pw_from_grid(xcpot,stars,.TRUE.,e_xc,exc)
+       CALL pw_from_grid(xcpot,stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
     ENDIF
 
     CALL finish_pw_grid()
