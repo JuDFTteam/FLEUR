@@ -58,6 +58,7 @@ CONTAINS
     USE m_xmlOutput
     USE m_juDFT_time
     USE m_calc_hybrid
+    USE m_rdmft
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
@@ -356,6 +357,9 @@ CONTAINS
                DIMENSION,kpts,atoms,sphhar,stars,sym,obsolete,&
                enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                archiveType,outDen)
+
+          IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                                  sphhar,sym,vTot,oneD,noco,results)
 
           IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
           !+t3e

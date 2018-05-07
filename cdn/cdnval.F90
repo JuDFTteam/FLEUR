@@ -11,7 +11,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
+                  vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
                   moments,orbcomp,coreSpecInput,mcd,slab)
 
    !************************************************************************************
@@ -59,7 +59,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_enpara),        INTENT(IN)    :: enpara
-   TYPE(t_obsolete),      INTENT(IN)    :: obsolete
    TYPE(t_banddos),       INTENT(IN)    :: banddos
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
