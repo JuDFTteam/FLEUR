@@ -148,7 +148,7 @@ CONTAINS
 
        ALLOCATE(cqpw(stars%ng3,jspins))
 
-       cqpw(:,:)= ci*den_pw(:,:)
+       cqpw(:,:)= ci*den_pw(:,:jspins)
    
        DO idm=1,3
           DO ig = 0 , stars%kmxxc_fft - 1
@@ -178,7 +178,7 @@ CONTAINS
        !
        !         ph_wrk: exp(i*(g_x,g_y,g_z)*tau) * g_(x,y,z) * g_(x,y,z)
 
-       cqpw(:,:)= -den_pw(:,:)
+       cqpw(:,:)= -den_pw(:,:jspins)
    
        ndm = 0
        DO idm = 1,3
