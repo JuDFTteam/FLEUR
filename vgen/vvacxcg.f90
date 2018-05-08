@@ -511,7 +511,8 @@ CONTAINS
 
        !       calculate vxc for z now beyond warping region
        DEALLOCATE ( af2)
-       ALLOCATE ( rhtxc(vacuum%nmzd,input%jspins),vxcz(vacuum%nmzd,input%jspins) )
+       ALLOCATE ( rhtxc(vacuum%nmzd,input%jspins) )
+       ALLOCATE ( vxcz(vacuum%nmzd,input%jspins) )
        ALLOCATE ( vxz(vacuum%nmzd,input%jspins) )
 
        DO js=1,input%jspins
@@ -530,7 +531,7 @@ CONTAINS
           !           CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
        ENDIF
 
-       CALL xcpot%get_vxc(input%jspins,rhtxc,vxcz,vxz,grad)
+       CALL xcpot%get_vxc(input%jspins,rhtxc(:nmzdiff,:),vxcz(:nmzdiff,:),vxz(:nmzdiff,:),grad)
    
        DO js = 1,input%jspins
           DO ip = vacuum%nmzxy + 1,vacuum%nmz
@@ -546,7 +547,7 @@ CONTAINS
        !     calculate the ex-corr. energy density now beyond warping region
        !
        IF (ALLOCATED(exc%vacz)) THEN
-          CALL xcpot%get_exc(input%jspins,rhtxc,exc%vacz(vacuum%nmzxy+1:,ivac,1),grad)
+          CALL xcpot%get_exc(input%jspins,rhtxc(:nmzdiff,:),exc%vacz(vacuum%nmzxy+1:,ivac,1),grad)
        ENDIF
 
 
