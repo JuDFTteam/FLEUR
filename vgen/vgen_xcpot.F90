@@ -55,10 +55,6 @@ CONTAINS
     INTEGER i,i3,irec2,irec3,ivac,j,js,k,k3,lh,n,nzst1
     INTEGER ifftd2
     INTEGER jsp,l
-#ifdef CPP_MPI
-    include 'mpif.h'
-    integer:: ierr
-#endif
 
     CALL exc%init_potden_types(stars,atoms,sphhar,vacuum,1,.false.,1) !one spin only
     ALLOCATE(exc%pw_w(stars%ng3,1));exc%pw_w=0.0
@@ -148,9 +144,7 @@ CONTAINS
     IF (mpi%irank == 0) THEN
        CALL timestart ("Vxc in MT")
     END IF
-#ifdef CPP_MPI
-    CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-#endif
+
     CALL vmt_xc(DIMENSION,mpi,sphhar,atoms, den,xcpot,input,sym,&
          obsolete, vTot,vx,exc)
     

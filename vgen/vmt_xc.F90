@@ -87,6 +87,11 @@ CONTAINS
 #ifdef CPP_MPI
     n_start=mpi%irank+1
     n_stride=mpi%isize
+    IF (mpi%irank>0) THEN
+       vxc%mt=0.0
+       vx%mt=0.0
+       exc%mt=0.0
+    ENDIF
 #else
     n_start=1
     n_stride=1
@@ -139,13 +144,11 @@ CONTAINS
     
     CALL finish_mt_grid()
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     !ToDo:CPP_MPI_REAL?
-    !using vxr_local as a temporal buffer
-    CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*DIMENSION%jspd,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
-    CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt(:,:,:,1),atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype,CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)     
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)    
 #endif
     !
-    
     RETURN
   END SUBROUTINE vmt_xc
 END MODULE m_vmt_xc

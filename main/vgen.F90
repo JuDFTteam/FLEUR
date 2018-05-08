@@ -51,10 +51,11 @@ CONTAINS
 
     TYPE(t_potden) :: workden,denRot
 
-    WRITE (6,FMT=8000)
+    IF (mpi%irank==0) WRITE (6,FMT=8000)
 8000 FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-
-    
+#ifdef CPP_MPI
+    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,den)
+#endif
     CALL vTot%resetPotDen()
     CALL vCoul%resetPotDen()
     CALL vx%resetPotDen()
@@ -67,7 +68,7 @@ CONTAINS
     CALL den%sum_both_spin(workden)
     
     CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
-
+   
     CALL vCoul%copy_both_spin(vTot)
 
     IF (noco%l_noco) THEN
@@ -79,7 +80,7 @@ CONTAINS
 
     call vgen_xcpot(hybrid,input,xcpot,DIMENSION, atoms,sphhar,stars,&
        vacuum,sym, obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
-
+   
     !ToDo, check if this is needed for more potentials as well...
     CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
     DEALLOCATE(vcoul%pw_w,vx%pw_w)
