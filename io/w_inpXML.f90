@@ -189,8 +189,8 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel,input%coretail_lmax
 
 !      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
-   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" l_J="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,.false.,input%swsp,input%lflip
+   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
+   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
@@ -198,9 +198,9 @@ SUBROUTINE w_inpXML(&
 
 
    IF (l_nocoOpt.OR.l_explicit) THEN
-160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,&
-           '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
-      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, .false., noco%mix_b
+160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,&
+           '" mix_b="',f0.8,'">')
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%mix_b
       162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'
