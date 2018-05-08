@@ -340,6 +340,8 @@
      &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                vacuum%dvac,dtild,input%tkb,namex,relcor)
+
+      stars%gmaxInit = stars%gmax
 !
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
