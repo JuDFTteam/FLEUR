@@ -111,9 +111,7 @@ CONTAINS
     ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
     ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
     IF (xcpot%is_gga()) THEN
-       CALL judft_error("libxc GGA not implemented yet")
        IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-       ALLOCATE(grad%vsigma,mold=grad%sigma)
        CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,grad%vsigma)
        IF (xcpot%func_id_c>0) THEN
           ALLOCATE(vsigma,mold=grad%sigma)
@@ -170,10 +168,12 @@ CONTAINS
     INTEGER, INTENT (IN)         :: jspins,ngrid
     TYPE(t_gradients),INTENT(INOUT):: grad
     !For libxc we only need the sigma array...
-    IF (ALLOCATED(grad%sigma)) DEALLOCATE(grad%sigma,grad%gr)
+    IF (ALLOCATED(grad%sigma)) DEALLOCATE(grad%sigma,grad%gr,grad%laplace,grad%vsigma)
     ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
     ALLOCATE(grad%gr(3,ngrid,jspins))
-    
+    ALLOCATE(grad%laplace(ngrid,jspins))
+    ALLOCATE(grad%vsigma,mold=grad%sigma)
+
   END SUBROUTINE xcpot_alloc_gradients
 
 

@@ -25,11 +25,11 @@ CONTAINS
     
     n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !Number of contracted gradients in libxc 1 for non-spin-polarized, 3 otherwise
     nsp=SIZE(v_xc,1) !no of points
-    ALLOCATE(vsigma(nsp,n_sigma),vsigma_mt(atoms%jri(n),0:atoms%lmax(n),n_sigma))
+    ALLOCATE(vsigma(nsp,n_sigma),vsigma_mt(atoms%jri(n),0:sphhar%nlhd,n_sigma))
     vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-    CALL mt_from_grid(atoms,sphhar,nsp,n,n_sigma,vsigma,vsigma_mt)
+    CALL mt_from_grid(atoms,sphhar,nsp/atoms%jmtd,n,n_sigma,vsigma,vsigma_mt)
     ALLOCATE(grad_sigma%gr(3,nsp,n_sigma))
-    CALL mt_to_grid(atoms,sphhar,vsigma_mt,nsp,n_sigma,n,.TRUE.,grad=grad_sigma)
+    CALL mt_to_grid(atoms,sphhar,vsigma_mt,nsp/atoms%jmtd,n_sigma,n,.TRUE.,grad=grad_sigma)
     
     CALL libxc_postprocess_gga(vsigma,grad,grad_sigma,v_xc)
   END SUBROUTINE libxc_postprocess_gga_mt
@@ -56,7 +56,7 @@ CONTAINS
     CALL pw_from_grid(xcpot,stars,.FALSE.,vsigma,vsigma_g)
     
     ALLOCATE(grad_sigma%gr(3,nsp,n_sigma))
-    CALL pw_to_grid(xcpot,3,.false.,stars,cell,vsigma_g,grad_sigma)
+    CALL pw_to_grid(xcpot,n_sigma,.false.,stars,cell,vsigma_g,grad_sigma)
     
     CALL libxc_postprocess_gga(vsigma,grad,grad_sigma,v_xc)
 
@@ -72,7 +72,7 @@ CONTAINS
     INTEGER:: i
     IF (SIZE(v_xc,2)==1) THEN !Single spin
        DO i=1,SIZE(v_xc,1) !loop over points
-          v_xc(i,1)=v_xc(i,1)-dot_PRODUCT(grad_sigma%gr(:,i,1),grad%gr(:,i,1))-vsigma(i,1)*grad%laplace(i,1)
+          v_xc(i,1)=v_xc(i,1)-2*dot_PRODUCT(grad_sigma%gr(:,i,1),grad%gr(:,i,1))-2*vsigma(i,1)*grad%laplace(i,1))
        ENDDO
     ELSE  !two spins
        DO i=1,SIZE(v_xc,1) !loop over points
