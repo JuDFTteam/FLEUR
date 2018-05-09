@@ -20,6 +20,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !    core routines for the core contribution
    !*****************************************************
 
+   USE m_types
    USE m_constants
    USE m_prpqfftmap
    USE m_cdnval
@@ -29,7 +30,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdnovlp
    USE m_qfix
    USE m_genNewNocoInp
-   USE m_types
    USE m_xmlOutput
    USE m_magMoms
    USE m_orbMagMoms

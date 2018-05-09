@@ -17,11 +17,11 @@ CONTAINS
   
   SUBROUTINE hsmt(atoms,sym,enpara,&
        ispin,input,mpi,noco,cell,lapw,usdus,td,smat,hmat)
+    USE m_types
     USE m_hsmt_nonsph
     USE m_hsmt_sph
     use m_hsmt_lo
     USE m_hsmt_distspins
-    USE m_types
     USE m_hsmt_fjgj
     USE m_hsmt_spinor
     USE m_hsmt_soc_offdiag

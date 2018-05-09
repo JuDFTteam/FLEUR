@@ -24,6 +24,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    !     sqal     : l-like charge of each atom type. sum over all k-points and bands
    !************************************************************************************
 
+   USE m_types
    USE m_eig66_io
    USE m_genMTBasis
    USE m_calcDenCoeffs
@@ -46,7 +47,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
-   USE m_types
    USE m_xmlOutput
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
