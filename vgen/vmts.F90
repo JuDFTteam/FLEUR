@@ -117,7 +117,7 @@ CONTAINS
              !$ IF (.false.) THEN
              vtl(lh,n) = vtl(lh,n) + cp*sbf(l)*sm
              !$ ENDIF
-             vtl_loc(lh,n) = vtl_loc(lh,n) + cp*sbf(l)*sm
+             !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp*sbf(l)*sm
           ENDDO
           nat = nat + atoms%neq(n)
        ENDDO
