@@ -96,6 +96,7 @@ CONTAINS
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
                    in = tlmplm%ind(lmp,lm,ntyp,isp)
+                   IF (lmp==lm) in=(lm* (lm+3))/2
                    IF (in.NE.-9999) THEN
                       IF (in.GE.0) THEN
                          utu = tlmplm%tuu(in,ntyp,isp)
@@ -187,6 +188,7 @@ CONTAINS
                          DO mp = -lp,lp
                             lmp = lp* (lp+1) + mp
                             in = tlmplm%ind(lmp,lm,ntyp,isp)
+                            IF (lmp==lm) in=(lm* (lm+3))/2
                             IF (in.NE.-9999) THEN
                                IF (in.GE.0) THEN
                                   utu = tlmplm%tuu(in,ntyp,isp)
@@ -245,6 +247,7 @@ CONTAINS
                       DO mp = -l,l
                          lmp = l* (l+1) + mp
                          in = tlmplm%ind(lmp,lm,ntyp,isp)
+                         IF (lmp==lm) in=(lm* (lm+3))/2
                          IF (in.NE.-9999) THEN
                             IF (in.GE.0) THEN
                                utu = tlmplm%tuu(in,ntyp,isp)
