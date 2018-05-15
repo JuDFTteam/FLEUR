@@ -657,6 +657,7 @@ c           in s and p states equal occupation of up and down states
         ENDIF
         enpara%skiplo(n,:) = 0
         DO i = 1, atoms%nlo(n)
+          enpara%qn_ello(i,n,:) = enpara%qn_el(atoms%llo(i,n),n,:) - 1
           enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
         ENDDO
 
