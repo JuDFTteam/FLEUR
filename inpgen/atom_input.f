@@ -670,8 +670,8 @@ c           in s and p states equal occupation of up and down states
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
-            ELSE IF (enpara%ello0(i,n,1).GE.
-     &               enpara%el0(atoms%llo(i,n),n,1)) THEN
+            ELSE IF (enpara%qn_ello(i,n,1).GE.
+     &               enpara%qn_el(atoms%llo(i,n),n,1)) THEN
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
