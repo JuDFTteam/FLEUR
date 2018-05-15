@@ -23,10 +23,9 @@ c
       INTEGER neq,n,na,nlo,line,i,n2spg,nqpt
       CHARACTER*4 namgrp,namex
       CHARACTER*3 latnam
-      LOGICAL invs,zrfs,l_J
+      LOGICAL invs,zrfs
 
       l_kpts = .false.
-      l_J=.false.
       l_qpts=.true.
 
       OPEN (5,file='inp',form='formatted',status='old')
@@ -44,9 +43,9 @@ c
       line = line + 1
       READ (5,*)
       line = line + 1
-      READ (5,8010) latnam,namgrp,invs,zrfs,l_J
+      READ (5,8010) latnam,namgrp,invs,zrfs
       line = line + 1
- 8010 FORMAT (a3,1x,a4,6x,l1,6x,l1,31x,l1)
+ 8010 FORMAT (a3,1x,a4,6x,l1,6x,l1)
 
       READ (5,*)
       line = line + 1
@@ -122,15 +121,10 @@ c
       line = line + 1
       READ (5,'(16x,i2)',END=99,ERR=99) layerd
       line = line + 1
-c
-c In the case of J-constants calculation check if
-c the qpts-file is present:
-c
-      IF (l_J) INQUIRE (file='qpts',exist=l_qpts)
-c
+
 c if (.not.l_kpts) then the kpts-file is missing and we have
 c to find out how many k-points to generate...
-c
+
       INQUIRE (file='QGpsi',exist=l_kpts)
       IF (.not.l_kpts) INQUIRE (file='kpts',exist=l_kpts)
       IF (.not.l_kpts) THEN
@@ -160,33 +154,9 @@ c
         STOP
       ENDIF
  96   CONTINUE
-c
-c If (.not.l_qpts) reading in the number of q-points to be generated
-c
-      IF (.not.l_qpts) THEN
-        IF(l_kpts)THEN
-          DO line = 1,7
-            READ (5,*)
-          ENDDO
-        ENDIF
-        WRITE (6,*) 'No qpts-file exists, trying to generate it'
-        READ (5,'(5x,i5,3(4x,i2))',END=102,ERR=102)
-     +                       nqpt,nmopq(1),nmopq(2),nmopq(3)
-        GOTO 101
- 102    BACKSPACE (5)
-        READ (5,'(5x,i5,3(4x,i2))',END=103,ERR=103) nqpt
-        nmopq(1) = 0 ; nmopq(2) = 0 ; nmopq(3) = 0
-        GOTO 101
- 103    WRITE (6,*) 'Please give a q-mesh information at the end of'
-        WRITE (6,*) 'the inp-file'
-        CLOSE (6)
-        STOP
-      ENDIF
- 101  CONTINUE
 
-!
+
 ! determine the number of symmetry operations
-!
       IF (namgrp.EQ.'any ') THEN
          nop = 48
          CLOSE (5)
