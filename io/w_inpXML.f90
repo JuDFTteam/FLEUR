@@ -527,7 +527,7 @@ SUBROUTINE w_inpXML(&
       DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
          l = atoms%llo(ilo,iAtomType)
-         n = INT(enpara%ello0(ilo,iAtomType,1))
+         n = enpara%qn_ello(ilo,iAtomType,1)
          loType = 'SCLO'
          IF(n.LT.0) THEN
             loType = 'HELO'

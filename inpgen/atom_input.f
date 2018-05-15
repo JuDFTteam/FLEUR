@@ -372,6 +372,8 @@
 
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
+      lmaxdTemp = atoms%lmaxd
+      atoms%lmaxd = 3
       call enpara%init(atoms,input%jspins)
       DO n = 1, atoms%ntype
 
@@ -684,12 +686,9 @@ c           in s and p states equal occupation of up and down states
       enpara%enmix = 1.0
       enpara%lchg_v = .TRUE.
       IF(juDFT_was_argument("-genEnpara")) THEN
-         lmaxdTemp = atoms%lmaxd
-         atoms%lmaxd = 3
          CALL enpara%write(atoms,input%jspins,input%film)
-         atoms%lmaxd = lmaxdTemp
       END IF
-
+      atoms%lmaxd = lmaxdTemp
       RETURN
 
 !===> error handling
