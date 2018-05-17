@@ -21,7 +21,7 @@ MODULE m_eigenso
   !
 CONTAINS
   SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara)
+                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara,results)
 
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb 
@@ -33,21 +33,22 @@ CONTAINS
 #endif
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
-    TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_obsolete),INTENT(IN)  :: obsolete
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_stars),INTENT(IN)     :: stars
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_kpts),INTENT(IN)      :: kpts
-    TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_potden),INTENT(IN)    :: vTot
-    TYPE(t_enpara),INTENT(IN)    :: enpara
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    TYPE(t_oneD),INTENT(IN)       :: oneD
+    TYPE(t_obsolete),INTENT(IN)   :: obsolete
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_vacuum),INTENT(IN)     :: vacuum
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_kpts),INTENT(IN)       :: kpts
+    TYPE(t_sphhar),INTENT(IN)     :: sphhar
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_potden),INTENT(IN)     :: vTot
+    TYPE(t_enpara),INTENT(IN)     :: enpara
+    TYPE(t_results),INTENT(INOUT) :: results
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id       
@@ -155,6 +156,19 @@ CONTAINS
        ENDIF ! (input%eonly) ELSE
        deallocate(zso)
     ENDDO ! DO nk 
+
+    ! Sorry for the following strange workaround to fill the results%neig and results%eig arrays.
+    ! At some point someone should have a closer look at how the eigenvalues are
+    ! distributed and fill the arrays without using the eigenvalue-IO.
+    DO jspin = 1, wannierspin
+       DO nk = 1,kpts%nkpt
+          CALL read_eig(eig_id,nk,jspin,results%neig(nk,jspin),results%eig(:,nk,jspin))
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#endif
+       END DO
+    END DO
+
     RETURN
   END SUBROUTINE eigenso
 END MODULE m_eigenso

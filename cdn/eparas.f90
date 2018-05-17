@@ -60,16 +60,13 @@ CONTAINS
     !
 
     IF ((ikpt.LE.mpi%isize).AND..NOT.l_evp) THEN
-       IF (l_mcd) THEN
-          mcd%mcd(:,:,:,ikpt,jsp) = 0.0
-       ENDIF
        regCharges%ener(:,:,jsp) = 0.0
        regCharges%sqal(:,:,jsp) = 0.0
        regCharges%enerlo(:,:,jsp) = 0.0
        regCharges%sqlo(:,:,jsp) = 0.0
        dos%qal(:,:,:,ikpt,jsp) = 0.0
     END IF
-    !
+
     !--->    l-decomposed density for each occupied state
     !
     !         DO 140 i = (skip_t+1),ne    ! this I need for all states

@@ -278,7 +278,7 @@ CONTAINS
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
                CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-               obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara)
+               obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
           CALL timestop("generation of hamiltonian and diagonalization (total)")
 
 #ifdef CPP_MPI
