@@ -156,7 +156,7 @@
           sliceplot%nnne = 0
 
           banddos%l_mcd = .FALSE.
-          banddos%e_mcd_lo = 0.0
+          banddos%e_mcd_lo = -10.0
           banddos%e_mcd_up = 0.0
 
           IF (input%l_inpXML) THEN            

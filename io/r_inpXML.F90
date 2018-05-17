@@ -1955,8 +1955,6 @@ SUBROUTINE r_inpXML(&
         CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
      END IF
 
-     banddos%e_mcd_lo = 0.0
-     banddos%e_mcd_up = 0.0
      IF (numberNodes.EQ.1) THEN
         banddos%e_mcd_lo = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyLo'))
         banddos%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
