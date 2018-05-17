@@ -15,7 +15,7 @@ $result+=jt::test_grepexists("$workdir/MCD_SPEC.-","0.0071");
 $result+=jt::test_grepexists("$workdir/MCD_SPEC.-","58.005");
 $result+=jt::test_grepexists("$workdir/MCD_SPEC.-","0.0403");
 $result+=jt::test_grepexists("$workdir/MCD_SPEC.-","57.004");
-$result+=jt::test_grepexists("$workdir/MCD_SPEC.-","0.0543");
+$result+=jt::test_grepexists("$workdir/MCD_SPEC.-","0.054");
 
 $result+=jt::test_grepexists("$workdir/MCD_SPEC.+","60.002");
 $result+=jt::test_grepexists("$workdir/MCD_SPEC.+","0.0134");
