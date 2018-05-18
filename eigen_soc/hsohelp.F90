@@ -64,10 +64,13 @@ CONTAINS
     ! some praparations to match array sizes
     !
     nv1(1) = lapw%nv(1) ; nv1(DIMENSION%jspd) = lapw%nv(1)
-    ALLOCATE ( g1(DIMENSION%nvd,DIMENSION%jspd),g2(DIMENSION%nvd,DIMENSION%jspd),g3(DIMENSION%nvd,DIMENSION%jspd) )
-    g1(:,1) = lapw%k1(:,1) ; g1(:,DIMENSION%jspd) = lapw%k1(:,1)
-    g2(:,1) = lapw%k2(:,1) ; g2(:,DIMENSION%jspd) = lapw%k2(:,1)
-    g3(:,1) = lapw%k3(:,1) ; g3(:,DIMENSION%jspd) = lapw%k3(:,1)
+    ALLOCATE (g1(DIMENSION%nvd,DIMENSION%jspd))
+    ALLOCATE (g2(DIMENSION%nvd,DIMENSION%jspd))
+    ALLOCATE (g3(DIMENSION%nvd,DIMENSION%jspd))
+    g1 = 0 ; g2 = 0 ; g3 = 0
+    g1(:SIZE(lapw%k1,1),1) = lapw%k1(:SIZE(lapw%k1,1),1) ; g1(:SIZE(lapw%k1,1),DIMENSION%jspd) = lapw%k1(:SIZE(lapw%k1,1),1)
+    g2(:SIZE(lapw%k1,1),1) = lapw%k2(:SIZE(lapw%k1,1),1) ; g2(:SIZE(lapw%k1,1),DIMENSION%jspd) = lapw%k2(:SIZE(lapw%k1,1),1)
+    g3(:SIZE(lapw%k1,1),1) = lapw%k3(:SIZE(lapw%k1,1),1) ; g3(:SIZE(lapw%k1,1),DIMENSION%jspd) = lapw%k3(:SIZE(lapw%k1,1),1)
 
     chelp(:,:,:,:,input%jspins) = CMPLX(0.0,0.0)
 
