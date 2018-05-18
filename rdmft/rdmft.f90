@@ -13,6 +13,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    USE m_types
    USE m_juDFT
+   USE m_cdnval
 
    IMPLICIT NONE
 
@@ -35,7 +36,49 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    INTEGER,               INTENT(IN)    :: eig_id
 
+   INTEGER                              :: jspin, ikpt, iBand
+   LOGICAL                              :: converged
+
    CALL juDFT_error('rdmft not yet implemented!', calledby = 'rdmft')
+
+   converged = .FALSE.
+
+   ! Calculate all single state densities
+   DO jspin = 1, input%jspins
+      DO ikpt = 1, kpts%nkpt
+         DO iBand = 1, results%neig(ikpt,jspin)
+            ! Construct cdnvalJob object for this state
+
+            ! Call cdnval to construct density
+!            CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+!                        sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,orbcomp)
+
+            ! Store the density on disc (These are probably way too many densities to keep them in memory)
+         END DO
+      END DO
+   END DO
+
+   DO WHILE (.NOT.converged)
+
+      ! Calculate overall density with current occupation numbers (don't forget core electron density)
+
+      ! Calculate Coulomb potential for overall density (+including external potential)
+
+      ! For all states calculate integral over Coulomb potential times single state density
+
+      ! For all states calculate Integral over other potential contributions times single state density
+
+      ! Construct exchange matrix in the basis of eigenstates
+
+      ! Optimize occupation numbers
+
+      ! Check convergence of occupation numbers and set "converged" flag
+
+   END DO ! WHILE (.NOT.converged)
+
+   ! Calculate final overall density
+
+   ! Calculate total energy
 
 END SUBROUTINE rdmft
 
