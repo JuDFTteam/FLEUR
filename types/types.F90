@@ -18,7 +18,6 @@ MODULE m_types
   USE m_types_usdus
   USE m_types_enpara
   USE m_types_potden
-  USE m_types_forcetheo
   USE m_types_cdnval
   USE m_types_field
   USE m_types_xcpot_inbuild
@@ -26,5 +25,6 @@ MODULE m_types
   USE m_types_dos
   USE m_types_denCoeffsOffdiag
   USE m_types_force
+  USE m_types_forcetheo
 END MODULE m_types
 

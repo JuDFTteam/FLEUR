@@ -20,13 +20,13 @@
      &                   a1,a2,a3)
 
       USE iso_c_binding
+      USE m_types
       USE m_chkmt
       USE m_constants
       USE m_atominput
       USE m_lapwinput
       USE m_rwinp
       USE m_winpXML
-      USE m_types
       USE m_juDFT_init
       USE m_kpoints
       USE m_inv3
