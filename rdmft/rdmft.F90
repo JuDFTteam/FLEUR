@@ -98,8 +98,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
             filename = ''
             WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
-            CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                              0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
+            IF (mpi%irank.EQ.0) THEN
+               CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                                 0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
+            END IF
          END DO
       END DO
    END DO
