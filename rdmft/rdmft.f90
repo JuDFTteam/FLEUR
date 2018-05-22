@@ -13,8 +13,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    USE m_types
    USE m_juDFT
-   USE m_cdnval
    USE m_constants
+   USE m_cdnval
+   USE m_cdn_io
 
    IMPLICIT NONE
 
@@ -44,6 +45,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    TYPE(t_moments)                      :: moments
    INTEGER                              :: jspin, ikpt, iBand, jsp
    LOGICAL                              :: converged
+   CHARACTER(LEN=20)                    :: filename
 
    CALL juDFT_error('rdmft not yet implemented!', calledby = 'rdmft')
 
@@ -88,6 +90,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
                         sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
+            filename = ''
+            WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
+            CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                              0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
          END DO
       END DO
    END DO
