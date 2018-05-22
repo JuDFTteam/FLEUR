@@ -14,6 +14,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    USE m_types
    USE m_juDFT
    USE m_cdnval
+   USE m_constants
 
    IMPLICIT NONE
 
@@ -36,7 +37,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    INTEGER,               INTENT(IN)    :: eig_id
 
-   INTEGER                              :: jspin, ikpt, iBand
+   TYPE(t_cdnvalJob)                    :: cdnvalJob
+   TYPE(t_potden)                       :: singleStateDen
+   TYPE(t_regionCharges)                :: regCharges
+   TYPE(t_dos)                          :: dos
+   TYPE(t_moments)                      :: moments
+   INTEGER                              :: jspin, ikpt, iBand, jsp
    LOGICAL                              :: converged
 
    CALL juDFT_error('rdmft not yet implemented!', calledby = 'rdmft')
@@ -44,14 +50,42 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    converged = .FALSE.
 
    ! Calculate all single state densities
+   CALL regCharges%init(input,atoms)
+   CALL dos%init(input,atoms,dimension,kpts,vacuum)
+   CALL moments%init(input,atoms)
+   cdnvalJob%l_evp = .FALSE.
+   cdnvalJob%nkptExtended = kpts%nkpt
+   ALLOCATE(cdnvalJob%noccbd(kpts%nkpt))
+   ALLOCATE(cdnvalJob%nStart(kpts%nkpt))
+   ALLOCATE(cdnvalJob%nEnd(kpts%nkpt))
+   ALLOCATE(cdnvalJob%weights(1,kpts%nkpt))
    DO jspin = 1, input%jspins
+      jsp = MERGE(1,jspin,noco%l_noco)
       DO ikpt = 1, kpts%nkpt
-         DO iBand = 1, results%neig(ikpt,jspin)
+         DO iBand = 1, results%neig(ikpt,jsp)
             ! Construct cdnvalJob object for this state
+            ! (Reasonable parallelization is not yet done - should be placed over the loops enclosing this section)
+            cdnvalJob%ikptStart = ikpt
+            cdnvalJob%ikptIncrement = kpts%nkpt
+            IF(mpi%irank.EQ.0) THEN
+               cdnvalJob%noccbd = 1
+               cdnvalJob%nStart = iBand
+               cdnvalJob%nEnd = iBand
+               cdnvalJob%weights = 0.0
+               cdnvalJob%weights(1,ikpt) = 1.0
+            ELSE
+               cdnvalJob%noccbd = 0
+               cdnvalJob%nStart = 1
+               cdnvalJob%nEnd = 0
+               cdnvalJob%weights = 0.0
+            END IF
 
             ! Call cdnval to construct density
-!            CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-!                        sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments)
+            WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
+            WRITE(*,*) 'This is not yet implemented!'
+            CALL singleStateDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+            CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                        sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
          END DO
