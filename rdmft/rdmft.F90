@@ -16,6 +16,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    USE m_constants
    USE m_cdnval
    USE m_cdn_io
+   USE m_cdncore
+   USE m_qfix
+#ifdef CPP_MPI
+   USE m_mpi_bc_potden
+#endif
 
    IMPLICIT NONE
 
@@ -39,11 +44,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    INTEGER,               INTENT(IN)    :: eig_id
 
    TYPE(t_cdnvalJob)                    :: cdnvalJob
-   TYPE(t_potden)                       :: singleStateDen
+   TYPE(t_potden)                       :: singleStateDen, overallDen
    TYPE(t_regionCharges)                :: regCharges
    TYPE(t_dos)                          :: dos
    TYPE(t_moments)                      :: moments
-   INTEGER                              :: jspin, ikpt, iBand, jsp
+   INTEGER                              :: jspin, ikpt, iBand, jsp, jspmax
+   REAL                                 :: fix
    LOGICAL                              :: converged
    CHARACTER(LEN=20)                    :: filename
 
@@ -101,6 +107,21 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    DO WHILE (.NOT.converged)
 
       ! Calculate overall density with current occupation numbers (don't forget core electron density)
+      jspmax = input%jspins
+      IF (noco%l_mperp) jspmax = 1
+      DO jspin = 1,jspmax
+         CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin)
+         CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                     sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
+      END DO
+      CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,overallDen,moments)
+      IF (mpi%irank.EQ.0) THEN
+         CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
+      END IF
+#ifdef CPP_MPI
+      CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallDen)
+#endif
 
       ! Calculate Coulomb potential for overall density (+including external potential)
 
