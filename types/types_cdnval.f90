@@ -571,8 +571,8 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,banddos,noco,results,jspi
 
       IF (thisCdnvalJob%l_evp) THEN
          noccbd_l = CEILING(REAL(thisCdnvalJob%noccbd(ikpt)) / mpi%isize)
-         thisCdnvalJob%nStart(ikpt) = thisCdnvalJob%nStart(ikpt) + mpi%irank*noccbd_l
          thisCdnvalJob%nEnd(ikpt)   = min(thisCdnvalJob%nStart(ikpt)+(mpi%irank+1)*noccbd_l-1, thisCdnvalJob%noccbd(ikpt))
+         thisCdnvalJob%nStart(ikpt) = thisCdnvalJob%nStart(ikpt) + mpi%irank*noccbd_l
          thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1
          IF (thisCdnvalJob%noccbd(ikpt).LT.1) thisCdnvalJob%noccbd(ikpt) = 0
       END IF
