@@ -51,7 +51,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
             ! Call cdnval to construct density
 !            CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-!                        sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,orbcomp)
+!                        sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
          END DO

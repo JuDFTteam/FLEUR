@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,orbcomp,coreSpecInput,mcd,slab)
+                  moments,coreSpecInput,mcd,slab,orbcomp)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -75,10 +75,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
    TYPE(t_dos),           INTENT(INOUT) :: dos
    TYPE(t_moments),       INTENT(INOUT) :: moments
-   TYPE(t_orbcomp),       INTENT(INOUT) :: orbcomp
    TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
    TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
+   TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -249,7 +249,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
             INQUIRE (file='orbcomprot',exist=l_orbcomprot)
             IF (l_orbcomprot) CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
 
-            CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+            IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
          END IF
 
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
@@ -270,8 +270,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,orbcomp,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin),mcd,slab)
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin),mcd,slab,orbcomp)
    END DO
 #endif
 
