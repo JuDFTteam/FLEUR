@@ -1106,6 +1106,7 @@ SUBROUTINE r_inpXML(&
   ! Read in xc functional parameters
 
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
+  namex(1:4) = valueString(1:4)
   l_relcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
 
   relcor = 'non-relativi'
