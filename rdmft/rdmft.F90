@@ -40,7 +40,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_sym),           INTENT(IN)    :: sym
    TYPE(t_field),         INTENT(INOUT) :: field
-   TYPE(t_potden),        INTENT(IN)    :: vTot
+   TYPE(t_potden),        INTENT(INOUT) :: vTot
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_results),       INTENT(INOUT) :: results
@@ -62,17 +62,25 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    CALL juDFT_error('rdmft not yet implemented!', calledby = 'rdmft')
 
+   ! General initializations
    ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
    ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
 
    converged = .FALSE.
 
-   ! Calculate all single state densities
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
    CALL overallDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
    CALL overallVCoul%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_POTCOUL)
+   ALLOCATE(overallVCoul%pw_w(SIZE(overallDen%pw,1),1))
+   IF (ALLOCATED(vTot%pw_w)) DEALLOCATE (vTot%pw_w)
+   ALLOCATE(vTot%pw_w(SIZE(overallDen%pw,1),1))
+   DO jspin = 1, input%jspins
+      CALL convol(stars,vTot%pw_w(:,jspin),vTot%pw(:,jspin),stars%ufft)
+   END DO
+
+   ! Calculate all single state densities
    cdnvalJob%l_evp = .FALSE.
    cdnvalJob%nkptExtended = kpts%nkpt
    ALLOCATE(cdnvalJob%noccbd(kpts%nkpt))
@@ -146,6 +154,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallVCoul)
 #endif
 
+      overallVCoulSSDen = 0.0
+      vTotSSDen = 0.0
       DO jspin = 1, input%jspins
          jsp = MERGE(1,jspin,noco%l_noco)
          DO ikpt = 1, kpts%nkpt
@@ -162,14 +172,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
                CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,singleStateDen)
 #endif
 
-               ! For all states calculate integral over Coulomb potential times single state density
+               ! For each state calculate integral over Coulomb potential times single state density
                potDenInt = 0.0
-               CALL int_nv(1,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,&              ! Is there a problem with a second spin?!
-                           overallVCoul,singleStateDen,potDenInt)
+               CALL int_nv(1,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,overallVCoul,singleStateDen,potDenInt) ! Is there a problem with a second spin?!
                overallVCoulSSDen(iBand,ikpt,jsp) = potDenInt
 
-               ! For all states calculate Integral over other potential contributions times single state density
-
+               ! For each state calculate Integral over other potential contributions times single state density
+               potDenInt = 0.0
+               CALL int_nv(jsp,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vTot,singleStateDen,potDenInt)
+               vTotSSDen(iBand,ikpt,jsp) = potDenInt
             END DO
          END DO
       END DO
