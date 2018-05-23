@@ -359,7 +359,7 @@ CONTAINS
                archiveType,outDen)
 
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                                  sphhar,sym,vTot,oneD,noco,results)
+                                  sphhar,sym,field,vTot,oneD,noco,results)
 
           IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
           !+t3e

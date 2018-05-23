@@ -9,7 +9,7 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                 sphhar,sym,vTot,oneD,noco,results)
+                 sphhar,sym,field,vTot,oneD,noco,results)
 
    USE m_types
    USE m_juDFT
@@ -18,6 +18,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    USE m_cdn_io
    USE m_cdncore
    USE m_qfix
+   USE m_vgen_coulomb
+   USE m_convol
+   USE m_intnv
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -36,6 +39,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_sym),           INTENT(IN)    :: sym
+   TYPE(t_field),         INTENT(INOUT) :: field
    TYPE(t_potden),        INTENT(IN)    :: vTot
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(IN)    :: noco
@@ -44,16 +48,22 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    INTEGER,               INTENT(IN)    :: eig_id
 
    TYPE(t_cdnvalJob)                    :: cdnvalJob
-   TYPE(t_potden)                       :: singleStateDen, overallDen
+   TYPE(t_potden)                       :: singleStateDen, overallDen, overallVCoul
    TYPE(t_regionCharges)                :: regCharges
    TYPE(t_dos)                          :: dos
    TYPE(t_moments)                      :: moments
    INTEGER                              :: jspin, ikpt, iBand, jsp, jspmax
-   REAL                                 :: fix
-   LOGICAL                              :: converged
+   REAL                                 :: fix, potDenInt, fermiEnergyTemp
+   LOGICAL                              :: converged, l_qfix
    CHARACTER(LEN=20)                    :: filename
 
+   REAL, ALLOCATABLE                    :: overallVCoulSSDen(:,:,:)
+   REAL, ALLOCATABLE                    :: vTotSSDen(:,:,:)
+
    CALL juDFT_error('rdmft not yet implemented!', calledby = 'rdmft')
+
+   ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
+   ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
 
    converged = .FALSE.
 
@@ -61,6 +71,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
+   CALL overallDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   CALL overallVCoul%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_POTCOUL)
    cdnvalJob%l_evp = .FALSE.
    cdnvalJob%nkptExtended = kpts%nkpt
    ALLOCATE(cdnvalJob%noccbd(kpts%nkpt))
@@ -126,10 +138,38 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 #endif
 
       ! Calculate Coulomb potential for overall density (+including external potential)
+      CALL overallDen%sum_both_spin()!workden)
+      CALL overallVCoul%resetPotDen()
+      CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,overallDen,overallVCoul)
+      CALL convol(stars, overallVCoul%pw_w(:,1), overallVCoul%pw(:,1), stars%ufft)   ! Is there a problem with a second spin?!
 
-      ! For all states calculate integral over Coulomb potential times single state density
+      DO jspin = 1, input%jspins
+         jsp = MERGE(1,jspin,noco%l_noco)
+         DO ikpt = 1, kpts%nkpt
+            DO iBand = 1, results%neig(ikpt,jsp)
+               ! Read the single-state density from disc
+               filename = ''
+               WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
+               IF (mpi%irank.EQ.0) THEN
+                  CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+                                   CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
+                  CALL singleStateDen%sum_both_spin()!workden)
+               END IF
+#ifdef CPP_MPI
+               CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,singleStateDen)
+#endif
 
-      ! For all states calculate Integral over other potential contributions times single state density
+               ! For all states calculate integral over Coulomb potential times single state density
+               potDenInt = 0.0
+               CALL int_nv(1,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,&              ! Is there a problem with a second spin?!
+                           overallVCoul,singleStateDen,potDenInt)
+               overallVCoulSSDen(iBand,ikpt,jsp) = potDenInt
+
+               ! For all states calculate Integral over other potential contributions times single state density
+
+            END DO
+         END DO
+      END DO
 
       ! Construct exchange matrix in the basis of eigenstates
 
