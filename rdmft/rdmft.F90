@@ -122,9 +122,18 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
                CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                                  0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
+
+            ! For each state calculate Integral over other potential contributions times single state density
+            potDenInt = 0.0
+            CALL int_nv(jsp,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vTot,singleStateDen,potDenInt)
+            vTotSSDen(iBand,ikpt,jsp) = potDenInt
          END DO
       END DO
    END DO
+
+   ! Construct exchange matrix in the basis of eigenstates
+   ! TODO!!!!!
+
 
    DO WHILE (.NOT.converged)
 
@@ -176,16 +185,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
                potDenInt = 0.0
                CALL int_nv(1,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,overallVCoul,singleStateDen,potDenInt) ! Is there a problem with a second spin?!
                overallVCoulSSDen(iBand,ikpt,jsp) = potDenInt
-
-               ! For each state calculate Integral over other potential contributions times single state density
-               potDenInt = 0.0
-               CALL int_nv(jsp,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vTot,singleStateDen,potDenInt)
-               vTotSSDen(iBand,ikpt,jsp) = potDenInt
             END DO
          END DO
       END DO
-
-      ! Construct exchange matrix in the basis of eigenstates
 
       ! Optimize occupation numbers
 
