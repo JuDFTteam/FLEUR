@@ -66,8 +66,6 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
    ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
 
-   converged = .FALSE.
-
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
@@ -124,8 +122,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
                CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                                  0,-1.0,0.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
+#ifdef CPP_MPI
+            CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,singleStateDen)
+#endif
 
-            ! For each state calculate Integral over other potential contributions times single state density
+            ! For each state calculate Integral over KS effective potential times single state density
             potDenInt = 0.0
             CALL int_nv(jsp,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vTot,singleStateDen,potDenInt)
             vTotSSDen(iBand,ikpt,jsp) = potDenInt
@@ -136,7 +137,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    ! Construct exchange matrix in the basis of eigenstates
    ! TODO!!!!!
 
-
+   converged = .FALSE.
    DO WHILE (.NOT.converged)
 
       ! Calculate overall density with current occupation numbers (don't forget core electron density)
