@@ -80,6 +80,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       CALL convol(stars,vTot%pw_w(:,jspin),vTot%pw(:,jspin),stars%ufft)
    END DO
 
+   vTotSSDen = 0.0
+
    ! Calculate all single state densities
    cdnvalJob%l_evp = .FALSE.
    cdnvalJob%nkptExtended = kpts%nkpt
@@ -164,7 +166,6 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 #endif
 
       overallVCoulSSDen = 0.0
-      vTotSSDen = 0.0
       DO jspin = 1, input%jspins
          jsp = MERGE(1,jspin,noco%l_noco)
          DO ikpt = 1, kpts%nkpt
