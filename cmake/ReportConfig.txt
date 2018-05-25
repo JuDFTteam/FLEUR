@@ -24,6 +24,7 @@ message("${Green}  HDF5 Library found          : ${CReset}    ${FLEUR_USE_HDF5}"
 message("${Green}  Wannier90 1.2 Library found : ${CReset}    ${FLEUR_USE_WANN}")
 message("${Green}  Wannier90-4   Library found : ${CReset}    ${FLEUR_USE_WANN4}")
 message("${Green}  Wannier90-5   Library found : ${CReset}    ${FLEUR_USE_WANN5}")
+message("${Green}  ChASE Library found         : ${CReset}    ${FLEUR_USE_CHASE}")
 message("${Green}  MAGMA Library found         : ${CReset}    ${FLEUR_USE_MAGMA}")
 message("${Green}  MPI Library found           : ${CReset}    ${FLEUR_USE_MPI}")
 if (FLEUR_USE_MPI)
