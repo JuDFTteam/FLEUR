@@ -13,5 +13,5 @@ try_compile(FLEUR_USE_CHASE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/
 #   endif()
 #endif()
 
-message("ChASE found:${FLEUR_USE_CHASE}")
+message("ChASE Library found:${FLEUR_USE_CHASE}")
 

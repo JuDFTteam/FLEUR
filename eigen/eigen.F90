@@ -37,7 +37,7 @@ CONTAINS
     USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
     USE m_xmlOutput
 #ifdef CPP_MPI
-    USE m_mpi_bc_pot
+    USE m_mpi_bc_potden
 #endif
 
     IMPLICIT NONE
@@ -110,8 +110,7 @@ CONTAINS
     IF (mpi%n_size > 1) l_zref = .FALSE.
  
 #ifdef CPP_MPI
-    CALL mpi_bc_pot(mpi,stars,sphhar,atoms,input,vacuum,&
-                    v%iter,v%mt,v%pw,v%vacz,v%vacxy)
+    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,v)
 #endif
     !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
     !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
