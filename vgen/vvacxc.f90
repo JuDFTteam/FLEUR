@@ -144,7 +144,7 @@ CONTAINS
 
        ENDDO
 
-       CALL xcpot%get_vxc(input%jspins,af2,vxz,vxcz)
+       CALL xcpot%get_vxc(input%jspins,af2(0:nmzdiff-1,:),vxz,vxcz)
       
        !+gu
        DO  js=1,input%jspins
@@ -160,7 +160,7 @@ CONTAINS
        !        calculate the ex.-corr. energy density now beyond warping region
        !
        IF (ALLOCATED(exc%vacz)) THEN
-          CALL xcpot%get_exc(input%jspins,af2,exc%vacz(vacuum%nmzxy+1:,ivac,1))
+          CALL xcpot%get_exc(input%jspins,af2(0:nmzdiff-1,:),exc%vacz(vacuum%nmzxy+1:,ivac,1))
        END IF
     ENDDO
     IF (noco%l_noco) THEN 
