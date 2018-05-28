@@ -307,9 +307,16 @@
       selct2(3,:) = 4
       selct2(4,:) = 2
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
+      ALLOCATE(hybrid%lcutm1(atoms%ntype))
+      ALLOCATE(hybrid%select1(4,atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
       hybrid%lexp        = 16
+      hybrid%lcutm1 = 4
+      hybrid%select1(1,:) = 4
+      hybrid%select1(2,:) = 0
+      hybrid%select1(3,:) = 4
+      hybrid%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
       nkpt3       = (/ 4, 4, 4 /)
       l_gamma     = .false.
