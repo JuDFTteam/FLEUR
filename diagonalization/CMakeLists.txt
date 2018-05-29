@@ -6,4 +6,5 @@ diagonalization/lapack_diag.F90
 diagonalization/magma.F90
 diagonalization/elpa.F90
 diagonalization/scalapack.F90
+diagonalization/chase_diag.F90
 diagonalization/elemental.F90)
