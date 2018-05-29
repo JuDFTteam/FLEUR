@@ -19,7 +19,7 @@ CONTAINS
     USE m_od_phasy
 
     IMPLICIT NONE
-    !     ..
+
     !     .. Scalar Arguments ...
     TYPE(t_mpi),INTENT(IN)     :: mpi
     TYPE(t_stars),INTENT(IN)   :: stars
@@ -28,19 +28,17 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)     :: sym
     TYPE(t_cell),INTENT(IN)    :: cell
     TYPE(t_oneD),INTENT(IN)    :: oneD
-    !     ..
+
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: vpw(:)!(stars%ng3,input%jspins)
     REAL,    INTENT (IN) :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     REAL,    INTENT (OUT):: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    !-odim
-    !+odim
-    !     ..
+
     !     .. Local Scalars ..
     COMPLEX cp,sm
     REAL rmt2l,rmtl,ror,rr,rrlr,fpl21
     INTEGER i,jm,k,l,l21,lh ,n,nd ,lm,n1,nat,m
-    !     ..
+
     !     .. Local Arrays ..
     COMPLEX vtl(0:sphhar%nlhd,atoms%ntype)
     !$ COMPLEX vtl_loc(0:sphhar%nlhd,atoms%ntype)
@@ -51,35 +49,29 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER ierr(3)
     COMPLEX, ALLOCATABLE :: c_b(:)
-    ! ..
+
     ! ..  External Subroutines
     EXTERNAL MPI_REDUCE
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
-    !     ..
-    !     ..
-    !     ----> calculate lattice harmonics expansion coefficients of the
-    !     ----> interstitial coulomb potential on the sphere boundaries
-    nat = 1
-    DO n = 1,atoms%ntype
-       DO lh = 0,sphhar%nlh(atoms%ntypsy(nat))
-          vtl(lh,n) = 0.e0
-       ENDDO
-       nat = nat + atoms%neq(n) 
-    ENDDO
-#ifdef CPP_MPI
+
+    ! calculate lattice harmonics expansion coefficients of the
+    ! interstitial coulomb potential on the sphere boundaries
+
     vtl(:,:) = CMPLX(0.0,0.0)
-    CALL MPI_BCAST(vpw,SIZE(vpw),CPP_MPI_COMPLEX,0,&
-         &                          mpi,ierr)
+
+#ifdef CPP_MPI
+    CALL MPI_BCAST(vpw,SIZE(vpw),CPP_MPI_COMPLEX,0,mpi,ierr)
 #endif
 
-    !           ----> g=0 component
+    ! g=0 component
     IF (mpi%irank == 0) THEN
        DO n = 1,atoms%ntype
           vtl(0,n) = sfp_const*vpw(1)
        ENDDO
     ENDIF
-    !           ----> g.ne.0 components
+
+    ! g.ne.0 components
     !$OMP PARALLEL DEFAULT(NONE) &
     !$OMP& SHARED(mpi,stars,vpw,oneD,atoms,sym,cell,sphhar,vtl) &
     !$OMP& PRIVATE(k,cp,pylm,nat,n,sbf,nd,lh,sm,jm,m,lm,l)&
@@ -89,16 +81,11 @@ CONTAINS
     DO k = mpi%irank+2, stars%ng3, mpi%isize
        cp = vpw(k)*stars%nstr(k)
        IF (.NOT.oneD%odi%d1) THEN
-          CALL phasy1(&
-               &                  atoms,stars,sym,&
-               &                  cell,k,&
-               &                  pylm)
+          CALL phasy1(atoms,stars,sym,cell,k,pylm)
        ELSE
           !-odim
-          CALL od_phasy(&
-               &           atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
-               &           atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
-               &           pylm)
+          CALL od_phasy(atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
+                        atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,pylm)
           !+odim
        END IF
        
@@ -132,9 +119,7 @@ CONTAINS
     n1 = (sphhar%nlhd+1)*atoms%ntype
     ALLOCATE(c_b(n1))
     CALL MPI_REDUCE(vtl,c_b,n1,CPP_MPI_COMPLEX,MPI_SUM,0, mpi%mpi_comm,ierr)
-    IF (mpi%irank.EQ.0) THEN
-       vtl=reshape(c_b,(/sphhar%nlhd+1,atoms%ntype/))
-    ENDIF
+    IF (mpi%irank.EQ.0) vtl=reshape(c_b,(/sphhar%nlhd+1,atoms%ntype/))
     DEALLOCATE (c_b)
 #endif
 
@@ -160,7 +145,7 @@ CONTAINS
              rrlr = rrl(i)*rmt2l
              ror = rrl(i)*rmtl
              vr(i,lh,n) = fpl21 * (rrl1(i)*f1r(i)-rrlr*f1r(atoms%jri(n))+&
-                  &                   rrl(i) * (f2r(atoms%jri(n))-f2r(i))) + ror*vtl(lh,n)
+                                   rrl(i) * (f2r(atoms%jri(n))-f2r(i))) + ror*vtl(lh,n)
           ENDDO
        ENDDO
        nat = nat + atoms%neq(n)
