@@ -527,7 +527,7 @@ SUBROUTINE w_inpXML(&
       DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
          l = atoms%llo(ilo,iAtomType)
-         n = INT(enpara%ello0(ilo,iAtomType,1))
+         n = enpara%qn_ello(ilo,iAtomType,1)
          loType = 'SCLO'
          IF(n.LT.0) THEN
             loType = 'HELO'
@@ -625,8 +625,8 @@ SUBROUTINE w_inpXML(&
    END DO
    WRITE (fileNum,'(a)') '   </atomGroups>'
 
-   368 FORMAT('   <output dos="',l1,'" band="',l1,'" vacdos="',l1,'" slice="',l1,'">')
-   WRITE (fileNum,368) banddos%dos,band,banddos%vacdos,sliceplot%slice
+   368 FORMAT('   <output dos="',l1,'" band="',l1,'" vacdos="',l1,'" slice="',l1,'" mcd="',l1,'">')
+   WRITE (fileNum,368) banddos%dos,band,banddos%vacdos,sliceplot%slice,banddos%l_mcd
 
 !      <checks vchk="F" cdinf="F" disp="F"/>
    370 FORMAT('      <checks vchk="',l1,'" cdinf="',l1,'"/>')
@@ -651,6 +651,10 @@ SUBROUTINE w_inpXML(&
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
    420 FORMAT('      <specialOutput eonly="',l1,'" bmt="',l1,'"/>')
    WRITE (fileNum,420) input%eonly,input%l_bmt
+
+!      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
+   430 FORMAT('      <magneticCircularDichroism energyLo="',f0.8,'" energyUp="',f0.8,'"/>')
+   WRITE (fileNum,430) banddos%e_mcd_lo,banddos%e_mcd_up
 
    WRITE (fileNum,'(a)') '   </output>'
    IF(l_outFile) THEN

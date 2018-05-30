@@ -158,6 +158,9 @@ CONTAINS
                       !
                       xint = CMPLX(af1(i),bf1(i))*ani
                       nzst1 = stars%nstr(irec3)/stars%nstr2(irec2)
+                      IF (sym%invs.AND.(.NOT.sym%zrfs)) THEN
+                         xint = xint*stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),k3)
+                      ENDIF
                       vCoul%pw(irec3,1) = vCoul%pw(irec3,1) + xint/nzst1
                    END IF
                 ENDIF

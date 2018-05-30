@@ -372,6 +372,8 @@
 
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
+      lmaxdTemp = atoms%lmaxd
+      atoms%lmaxd = 3
       call enpara%init(atoms,input%jspins)
       DO n = 1, atoms%ntype
 
@@ -655,6 +657,7 @@ c           in s and p states equal occupation of up and down states
         ENDIF
         enpara%skiplo(n,:) = 0
         DO i = 1, atoms%nlo(n)
+          enpara%qn_ello(i,n,:) = enpara%qn_el(atoms%llo(i,n),n,:) - 1
           enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
         ENDDO
 
@@ -667,8 +670,8 @@ c           in s and p states equal occupation of up and down states
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
-            ELSE IF (enpara%ello0(i,n,1).GE.
-     &               enpara%el0(atoms%llo(i,n),n,1)) THEN
+            ELSE IF (enpara%qn_ello(i,n,1).GE.
+     &               enpara%qn_el(atoms%llo(i,n),n,1)) THEN
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
@@ -684,12 +687,9 @@ c           in s and p states equal occupation of up and down states
       enpara%enmix = 1.0
       enpara%lchg_v = .TRUE.
       IF(juDFT_was_argument("-genEnpara")) THEN
-         lmaxdTemp = atoms%lmaxd
-         atoms%lmaxd = 3
          CALL enpara%write(atoms,input%jspins,input%film)
-         atoms%lmaxd = lmaxdTemp
       END IF
-
+      atoms%lmaxd = lmaxdTemp
       RETURN
 
 !===> error handling

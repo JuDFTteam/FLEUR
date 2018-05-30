@@ -23,7 +23,7 @@ MODULE m_vmatgen
   !     Philipp Kurz 99/11/01
   !**********************************************************************
 CONTAINS
-  SUBROUTINE vmatgen(stars, atoms,vacuum, sym,input, den,v)
+  SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -48,7 +48,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_potden),INTENT(IN) :: den
-    TYPE(t_potden),INTENT(INOUT):: v
+    TYPE(t_potden),INTENT(INOUT):: vTot
 
  
     !     ..
@@ -70,7 +70,7 @@ CONTAINS
     !---> fouriertransform the spin up and down potential
     !---> in the interstitial, vpw, to real space (vis)
     DO jspin = 1,input%jspins
-       CALL fft3d(vis(:,jspin),fftwork, v%pw(:,jspin), stars,+1)
+       CALL fft3d(vis(:,jspin),fftwork, vTot%pw(:,jspin), stars,+1)
     ENDDO
 
     !---> calculate the four components of the matrix potential on
@@ -102,9 +102,9 @@ CONTAINS
     !---> Fouriertransform the matrix potential back to reciprocal space
     DO ipot = 1,2
        fftwork=0.0
-       CALL fft3d(vis(:,ipot),fftwork, v%pw(1,ipot), stars,-1)
+       CALL fft3d(vis(:,ipot),fftwork, vTot%pw_w(1,ipot), stars,-1)
     ENDDO
-    CALL fft3d(vis(:,3),vis(:,4), v%pw(1,3), stars,-1)
+    CALL fft3d(vis(:,3),vis(:,4), vTot%pw_w(1,3), stars,-1)
 
     IF (.NOT. input%film) RETURN
 
@@ -131,7 +131,7 @@ CONTAINS
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
                    CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
-                        v%vacz(imz,ivac,jspin),vziw,v%vacxy(imz,1,ivac,jspin), vacuum%nmzxyd,1)
+                        vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,1,ivac,jspin), vacuum%nmzxyd,1)
                 ENDIF
              ENDDO
           ENDDO
@@ -155,16 +155,16 @@ CONTAINS
              ENDDO
           ENDDO
           DO imz = vacuum%nmzxyd+1,vacuum%nmzd
-             vup   = v%vacz(imz,ivac,1)
-             vdown = v%vacz(imz,ivac,2)
+             vup   = vTot%vacz(imz,ivac,1)
+             vdown = vTot%vacz(imz,ivac,2)
              theta = den%theta_vacz(imz,ivac)
              phi   = den%phi_vacz(imz,ivac)
              veff  = (vup + vdown)/2.0
              beff  = (vup - vdown)/2.0
-             v%vacz(imz,ivac,1) = veff + beff*COS(theta)
-             v%vacz(imz,ivac,2) = veff - beff*COS(theta)
-             v%vacz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
-             v%vacz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
+             vTot%vacz(imz,ivac,1) = veff + beff*COS(theta)
+             vTot%vacz(imz,ivac,2) = veff - beff*COS(theta)
+             vTot%vacz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
+             vTot%vacz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
           ENDDO
        ENDDO
 
@@ -184,7 +184,7 @@ CONTAINS
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
                    CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                        v%vacz(imz,ivac,ipot),vziw,v%vacxy(imz,:,ivac,ipot), vacuum%nmzxyd,-1)
+                        vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,:,ivac,ipot), vacuum%nmzxyd,-1)
                 END IF
              ENDDO
           ENDDO
@@ -204,7 +204,7 @@ CONTAINS
                 !   &               %igf,odl%pgf,odi%nst2)
              ELSE
                 CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                     v%vacz(imz,ivac,3),v%vacz(imz,ivac,4),v%vacxy(imz,:,ivac,3), vacuum%nmzxyd,-1)
+                     vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,:,ivac,3), vacuum%nmzxyd,-1)
              END IF
           ENDDO
        ENDDO

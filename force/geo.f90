@@ -34,10 +34,10 @@ CONTAINS
     !        istepnow . steps to be done in this run
     !
     !    *********************************************************************
+    USE m_types
     USE m_rwinp
     USE m_bfgs
     USE m_bfgs0
-    USE m_types
     USE m_constants
     USE m_rinpXML
     USE m_winpXML

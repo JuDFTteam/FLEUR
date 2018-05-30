@@ -68,7 +68,7 @@ CONTAINS
     
     CALL timestart("Interstitial part")
     !Generate interstitial part of Hamiltonian
-    CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,v%pw,smat,hmat)
+    CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,v%pw_w,smat,hmat)
     CALL timestop("Interstitial part")
     CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms

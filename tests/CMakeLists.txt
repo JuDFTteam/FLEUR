@@ -1,8 +1,8 @@
 enable_testing()
 
-set(SerialParallelTests CuBulk CuBulkXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML
+set(SerialParallelTests CuBulk CuBulkXML SiLOXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML
 Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML
-GaAsMultiUForceXML SiFilmPlotXML SiFilmSlicePlotXML)
+GaAsMultiUForceXML SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML)
 
 set(SerialOnlyTests Fe_bct_LO Fe_bct_LOXML Fe_fcc Fe_fccXML TiO2eels TiO2eelsXML)
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 

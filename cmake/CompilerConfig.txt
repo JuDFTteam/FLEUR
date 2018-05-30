@@ -18,6 +18,7 @@ include("cmake/tests/test_LibXC.cmake")
 if (FLEUR_USE_MPI)
 include("cmake/tests/test_SCALAPACK.cmake")
 include("cmake/tests/test_ELPA.cmake")
+include("cmake/tests/test_ChASE.cmake")
 endif()
 
 include("cmake/compileenv.txt")

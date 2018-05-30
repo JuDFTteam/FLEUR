@@ -28,7 +28,7 @@ CONTAINS
     COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2)
     !     ..
     !     .. Local Scalars ..
-    COMPLEX arg,ci
+    COMPLEX arg,ci,c_ph
     REAL dh,g,qz,sign,signz,vcons,z,e_m
     REAL arg_r,arg_i
     INTEGER i2d,ig3n,imz,imzxy,ivac,k1,k2,kz,m0,nrec2,nrz,nz
@@ -63,6 +63,7 @@ CONTAINS
              ig3n = stars%ig(k1,k2,kz)
              !     ----> use only stars within the g_max sphere (oct.97 shz)
              IF (ig3n.NE.0) THEN
+                c_ph = stars%rgphs(k1,k2,kz)
                 nz = 1
                 IF (sym%zrfs) nz = stars%nstr(ig3n)/stars%nstr2(nrec2)
                 qz = kz*cell%bmat(3,3)
@@ -74,7 +75,7 @@ CONTAINS
                       arg = EXP(-ci*signz*qz*dh)&
                            &                      /(2*(g**2 + qz**2)) * psq(ig3n)
                       IF (ivac == 1) THEN
-                         sumr(ivac) = sumr(ivac) + EXP(-arg_r)*arg*(&
+                         sumr(ivac) = sumr(ivac) + c_ph*EXP(-arg_r)*arg*(&                           ! c_ph not tested in this case
                               &                     (- EXP(2*g*(field%efield%zsigma+dh))&
                               &                      + EXP(2*(ci*signz*qz*dh+arg_r)))&
                               &                     *(g-ci*signz*qz)&
@@ -82,7 +83,7 @@ CONTAINS
                               &                      + EXP(2*ci*signz*qz*dh))&
                               &                     *(g+ci*signz*qz) )
                       ELSE
-                         sumr(ivac) = sumr(ivac) + arg*(&
+                         sumr(ivac) = sumr(ivac) + c_ph*arg*(&
                               &                     EXP(arg_r)*(g+ci*signz*qz)&
                               &                     +(g-ci*signz*qz)*EXP(-arg_r)&
                               &                     +2*EXP(2*(ci*signz*qz*dh))&
@@ -92,7 +93,7 @@ CONTAINS
                    ELSE
                       arg = g + sign*ci*signz*qz
                       arg_i = sign*signz*qz*dh
-                      sumr(ivac) = sumr(ivac) + psq(ig3n)*(&
+                      sumr(ivac) = sumr(ivac) + c_ph*psq(ig3n)*(&
                            &                     COS(arg_i)*( 1 - arg_r ) +&
                            &                  ci*SIN(arg_i)*( 1 + arg_r ) ) / arg
                    END IF

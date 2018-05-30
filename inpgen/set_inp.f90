@@ -20,13 +20,13 @@
      &                   a1,a2,a3)
 
       USE iso_c_binding
+      USE m_types
       USE m_chkmt
       USE m_constants
       USE m_atominput
       USE m_lapwinput
       USE m_rwinp
       USE m_winpXML
-      USE m_types
       USE m_juDFT_init
       USE m_kpoints
       USE m_inv3
@@ -139,7 +139,7 @@
       atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; input%secvar = .false.
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
@@ -154,7 +154,8 @@
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
-      banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0 
+      banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
+      banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
@@ -163,6 +164,7 @@
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
+      input%l_wann = .FALSE.
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -305,9 +307,16 @@
       selct2(3,:) = 4
       selct2(4,:) = 2
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
+      ALLOCATE(hybrid%lcutm1(atoms%ntype))
+      ALLOCATE(hybrid%select1(4,atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
       hybrid%lexp        = 16
+      hybrid%lcutm1 = 4
+      hybrid%select1(1,:) = 4
+      hybrid%select1(2,:) = 0
+      hybrid%select1(3,:) = 4
+      hybrid%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
       nkpt3       = (/ 4, 4, 4 /)
       l_gamma     = .false.
