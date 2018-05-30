@@ -116,7 +116,7 @@
           REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
-          COMPLEX czero,carg,VALUE,slope,ci
+          COMPLEX czero,carg,VALUE,slope,ci,c_ph
           REAL    dif,dxx,g,gz,dtildh,&
                &        rkappa,sign,signz,tol_14,z,zero,zvac,&
                &        g2,phi,gamma,qq
@@ -300,6 +300,7 @@
                       ! ---> sum over gz-stars
                       DO 250 kz = m0,stars%mx3
                          ig3 = stars%ig(k1,k2,kz)
+                         c_ph = stars%rgphs(k1,k2,kz) ! phase factor for invs=T & zrfs=F
                          !        ----> use only stars within the g_max sphere (oct.97 shz)
                          IF (ig3.NE.0) THEN
                             nz = 1
@@ -308,8 +309,8 @@
                             DO 240 nrz = 1,nz
                                signz = 3. - 2.*nrz
                                carg = ci*sign*signz*gz
-                               VALUE = VALUE + qpwc(ig3)* EXP(carg*cell%z1)
-                               slope = slope + carg*qpwc(ig3)* EXP(carg*cell%z1)
+                               VALUE = VALUE + c_ph*qpwc(ig3)* EXP(carg*cell%z1)
+                               slope = slope + c_ph*carg*qpwc(ig3)* EXP(carg*cell%z1)
 240                         ENDDO
                          END IF
 250                   ENDDO
