@@ -90,7 +90,6 @@ IMPLICIT NONE
              hmat%data_r(j,i) = hmat%data_r(i,j)
           end do
        end do
-
 !       if(first_entry_franza) then
           call chase_r(hmat%data_r, hmat%matsize1, eigenvectors_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
 !       else
@@ -100,7 +99,7 @@ IMPLICIT NONE
        ne = nev
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-       CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,eigenvectors_r,zmat%matsize1,info)
+       CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,eigenvectors_r,zmat%matsize1,info)
        IF (info.NE.0) THEN
           WRITE (6,*) 'Error in dtrtrs: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
@@ -166,7 +165,7 @@ IMPLICIT NONE
        ne = nev
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-       CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,eigenvectors_c,zmat%matsize1,info)
+       CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,eigenvectors_c,zmat%matsize1,info)
        IF (info.NE.0) THEN
           WRITE (6,*) 'Error in ztrtrs: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
