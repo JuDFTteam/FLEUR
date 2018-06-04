@@ -228,8 +228,9 @@ CONTAINS
        !---< gwf
 
        CALL timestart("generation of potential")
-       CALL vgen(hybrid,field,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-            sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,vTot,vx,vCoul)
+       CALL vgen( hybrid, field, input, xcpot, DIMENSION, atoms, sphhar, stars, vacuum, &
+            sym, obsolete, cell, oneD, sliceplot, mpi, results, noco, .false., inDen, vTot, vx, &
+            vCoul )
        CALL timestop("generation of potential")
 
 

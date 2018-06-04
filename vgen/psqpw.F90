@@ -9,13 +9,12 @@ MODULE m_psqpw
   !
   !     parallelized 04/08 gb
   !     ***********************************************************
+
 CONTAINS
-  SUBROUTINE psqpw(mpi,&
-       &                 atoms,sphhar,stars,vacuum,&
-       &                 DIMENSION,cell,input,sym,oneD,&
-       &                 qpw,rho,rht,l_xyav,&
-       &                 psq)
-    !
+
+  SUBROUTINE psqpw( mpi, atoms, sphhar, stars, vacuum, DIMENSION, cell, input, sym, oneD, &
+       &     qpw, rho, rht, l_xyav, yukawa_residual, psq )
+
 #include"cpp_double.h"
     USE m_constants
     USE m_phasy1
@@ -25,57 +24,44 @@ CONTAINS
     USE m_od_phasy
     USE m_od_cylbes
     USE m_types
-
+    use m_DoubleFactorial
+    use m_SphBessel
     IMPLICIT NONE
-    !     ..
-    !     .. Scalar Arguments ..
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_stars),INTENT(IN)     :: stars
-    TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_oneD),INTENT(IN)      :: oneD
 
-    LOGICAL, INTENT (IN) :: l_xyav
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: qpw(stars%ng3) 
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
-    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2)
-    COMPLEX, INTENT (OUT):: psq(stars%ng3)
-    !-odim
-    !+odim
-    !     ..
-    !     .. Local Scalars ..
-    COMPLEX psint,sa,sl,sm
-    REAL f,fact,fpo,gz,p,qvac,rmtl,s,fJ,gr,g
-    INTEGER ivac,k,l ,n,n1,nc,ncvn,lm,ll1 ,nd,m,nz
-    !     ..
-    !     .. Local Arrays ..
-    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntype )
-    COMPLEX  qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    REAL q2(vacuum%nmzd),pn(0:atoms%lmaxd,atoms%ntype),aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
-    REAL rht1(vacuum%nmz)
+    TYPE(t_mpi),        INTENT(IN)  :: mpi
+    TYPE(t_atoms),      INTENT(IN)  :: atoms
+    TYPE(t_sphhar),     INTENT(IN)  :: sphhar
+    TYPE(t_stars),      INTENT(IN)  :: stars
+    TYPE(t_vacuum),     INTENT(IN)  :: vacuum
+    TYPE(t_dimension),  INTENT(IN)  :: DIMENSION
+    TYPE(t_cell),       INTENT(IN)  :: cell
+    TYPE(t_input),      INTENT(IN)  :: input
+    TYPE(t_sym),        INTENT(IN)  :: sym
+    TYPE(t_oneD),       INTENT(IN)  :: oneD
+    LOGICAL,            INTENT(IN)  :: l_xyav
+    COMPLEX,            INTENT(IN)  :: qpw(stars%ng3) 
+    REAL,               INTENT(IN)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
+    REAL,               INTENT(IN)  :: rht(vacuum%nmzd,2)
+    logical,            intent(in)  :: yukawa_residual
+    COMPLEX,            INTENT(OUT) :: psq(stars%ng3)
+
+    COMPLEX                         :: psint, sa, sl, sm
+    REAL                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
+    INTEGER                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz
+    COMPLEX                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
+    COMPLEX                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    REAL                            :: q2(vacuum%nmzd)
+    real                            :: pn(0:atoms%lmaxd,atoms%ntype)
+    real                            :: aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
+    REAL                            :: rht1(vacuum%nmz)
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER ierr(3)
-    COMPLEX, ALLOCATABLE :: c_b(:)
+    INTEGER                         :: ierr(3)
+    COMPLEX, ALLOCATABLE            :: c_b(:)
 #endif
-    !     ..
 
-
-    !
     ! Calculate multipole moments
-    !
-    CALL mpmom(mpi,&
-         &           atoms,sphhar,stars,&
-         &           sym,cell,oneD,&
-         &           qpw,rho,&
-         &           qlm)
+    CALL mpmom( mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, yukawa_residual, qlm )
 #ifdef CPP_MPI
     psq(:) = CMPLX(0.0,0.0)
     CALL MPI_BCAST(qpw,size(qpw),CPP_MPI_COMPLEX,0,mpi%mpi_comm,ierr)
@@ -234,5 +220,7 @@ CONTAINS
             &       ,5x,2f11.6)
        !
     ENDIF ! mpi%irank == 0 
+
   END SUBROUTINE psqpw
+
 END MODULE m_psqpw

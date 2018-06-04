@@ -160,7 +160,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       ! Calculate Coulomb potential for overall density (+including external potential)
       CALL overallDen%sum_both_spin()!workden)
       CALL overallVCoul%resetPotDen()
-      CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,overallDen,overallVCoul)
+      CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
+           sphhar, atoms, overallDen, .false., overallVCoul )
       CALL convol(stars, overallVCoul%pw_w(:,1), overallVCoul%pw(:,1), stars%ufft)   ! Is there a problem with a second spin?!
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallVCoul)

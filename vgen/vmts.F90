@@ -4,11 +4,10 @@ MODULE m_vmts
   !     cients of the coulomb potential for all atom types                *
   !                                c.l.fu, r.podloucky                    *
   !     *******************************************************************
+
 CONTAINS
-  SUBROUTINE vmts(mpi,stars,sphhar,atoms,&
-       &                sym,cell,oneD,&
-       &                vpw,rho,&
-       &                vr)
+
+  SUBROUTINE vmts( mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, yukawa_residual, vr )
 
 #include"cpp_double.h"
     USE m_constants
@@ -17,38 +16,33 @@ CONTAINS
     USE m_phasy1
     USE m_sphbes
     USE m_od_phasy
-
+    use m_SphBessel
     IMPLICIT NONE
 
-    !     .. Scalar Arguments ...
-    TYPE(t_mpi),INTENT(IN)     :: mpi
-    TYPE(t_stars),INTENT(IN)   :: stars
-    TYPE(t_sphhar),INTENT(IN)  :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_cell),INTENT(IN)    :: cell
-    TYPE(t_oneD),INTENT(IN)    :: oneD
+    TYPE(t_mpi),    INTENT(IN)    :: mpi
+    TYPE(t_stars),  INTENT(IN)    :: stars
+    TYPE(t_sphhar), INTENT(IN)    :: sphhar
+    TYPE(t_atoms),  INTENT(IN)    :: atoms
+    TYPE(t_sym),    INTENT(IN)    :: sym
+    TYPE(t_cell),   INTENT(IN)    :: cell
+    TYPE(t_oneD),   INTENT(IN)    :: oneD
+    COMPLEX,        INTENT(IN)    :: vpw(:)!(stars%ng3,input%jspins)
+    REAL,           INTENT(IN)    :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    logical,        intent(in)    :: yukawa_residual
+    REAL,           INTENT(OUT)   :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
 
-    !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: vpw(:)!(stars%ng3,input%jspins)
-    REAL,    INTENT (IN) :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (OUT):: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-
-    !     .. Local Scalars ..
-    COMPLEX cp,sm
-    REAL rmt2l,rmtl,ror,rr,rrlr,fpl21
-    INTEGER i,jm,k,l,l21,lh ,n,nd ,lm,n1,nat,m
-
-    !     .. Local Arrays ..
-    COMPLEX vtl(0:sphhar%nlhd,atoms%ntype)
+    COMPLEX                       :: cp, sm
+    REAL                          :: rmt2l, rmtl, ror, rr, rrlr, fpl21
+    INTEGER                       :: i, jm, k, l, l21, lh, n, nd, lm, n1, nat, m
+    COMPLEX                       :: vtl(0:sphhar%nlhd,atoms%ntype)
     !$ COMPLEX vtl_loc(0:sphhar%nlhd,atoms%ntype)
-    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntype )
-    REAL    f1r(atoms%jmtd),f2r(atoms%jmtd),x1r(atoms%jmtd),x2r(atoms%jmtd)
-    REAL    sbf(0:atoms%lmaxd),rrl(atoms%jmtd),rrl1(atoms%jmtd)
+    COMPLEX                       :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
+    REAL                          :: f1r(atoms%jmtd),f2r(atoms%jmtd),x1r(atoms%jmtd),x2r(atoms%jmtd)
+    REAL                          :: sbf(0:atoms%lmaxd),rrl(atoms%jmtd),rrl1(atoms%jmtd)
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER ierr(3)
-    COMPLEX, ALLOCATABLE :: c_b(:)
+    INTEGER                       :: ierr(3)
+    COMPLEX, ALLOCATABLE          :: c_b(:)
 
     ! ..  External Subroutines
     EXTERNAL MPI_REDUCE

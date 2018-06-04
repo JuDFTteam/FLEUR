@@ -10,37 +10,35 @@ MODULE m_mpmom
   !     qlm (m,l,n) : (output) difference of the former quantities
   !     
   !     ***********************************************************
+
 CONTAINS
-  SUBROUTINE mpmom(mpi,atoms,sphhar,stars,sym,cell,oneD,qpw,rho,qlm)
+
+  SUBROUTINE mpmom( mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, yukawa_residual, qlm )
 
     USE m_types
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_oneD),INTENT(IN)        :: oneD
-    TYPE(t_sym),INTENT(IN)         :: sym
-    TYPE(t_stars),INTENT(IN)       :: stars
-    TYPE(t_cell),INTENT(IN)        :: cell
-    TYPE(t_sphhar),INTENT(IN)      :: sphhar
-    TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_mpi),     INTENT(IN)   :: mpi
+    TYPE(t_oneD),    INTENT(IN)   :: oneD
+    TYPE(t_sym),     INTENT(IN)   :: sym
+    TYPE(t_stars),   INTENT(IN)   :: stars
+    TYPE(t_cell),    INTENT(IN)   :: cell
+    TYPE(t_sphhar),  INTENT(IN)   :: sphhar
+    TYPE(t_atoms),   INTENT(IN)   :: atoms
+    REAL,            INTENT(IN)   :: rho(:,0:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    COMPLEX,         INTENT(IN)   :: qpw(:)      !(stars%ng3)
+    logical,         intent(in)   :: yukawa_residual
+    COMPLEX,         INTENT (OUT) :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rho(:,0:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    COMPLEX, INTENT (IN) :: qpw(:)     !(stars%ng3) 
-    COMPLEX, INTENT (OUT):: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-
-    !     .. Local Scalars ..
-    INTEGER j,jm,lh ,mb,mem,mems,n,nd ,l,nat,m
-
-    !     .. Local Arrays ..
-    COMPLEX qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    INTEGER                       :: j, jm, lh, mb, mem, mems, n, nd, l, nat, m
+    COMPLEX                       :: qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    COMPLEX                       :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     !     multipole moments of original charge (q_{lm}^i)
     IF (mpi%irank == 0) THEN
-       CALL mt_moments(atoms,sphhar,rho(:,:,:),qlmo)
+       CALL mt_moments( atoms, sphhar, rho(:,:,:), yukawa_residual, qlmo )
     ENDIF ! mpi%irank == 0
 
-    CALL pw_moments(mpi,stars,atoms,cell,sym,oneD,qpw(:),qlmp)
+    CALL pw_moments( mpi, stars, atoms, cell, sym, oneD, qpw(:), yukawa_residual, qlmp )
 
     ! eq.(15): \tilde q_(lm}^i = q_{lm}^i - q_{lm}^{Ii}
     IF (mpi%irank == 0) THEN
@@ -72,20 +70,25 @@ CONTAINS
   END SUBROUTINE mpmom
 
 
-  SUBROUTINE mt_moments(atoms,sphhar,rho,qlmo)
+  SUBROUTINE mt_moments( atoms, sphhar, rho, yukawa_residual, qlmo )
     !multipole moments of original charge (q_{lm}^i)
+
     USE m_intgr, ONLY : intgr3
     USE m_constants,ONLY:sfp_const
     USE m_types
+    use m_DoubleFactorial
+    use m_SphBessel
     IMPLICIT NONE
-    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    REAL,INTENT(IN)   :: rho(: ,0:, :) 
-    COMPLEX,INTENT(OUT)::qlmo(-atoms%lmaxd:,0:,:)
 
-    INTEGER :: n,ns,jm,nl,l,j,mb ,m,nat
-    REAL    :: fint
-    REAL f(MAXVAL(atoms%jri))
+    TYPE(t_sphhar), INTENT(IN)  :: sphhar
+    TYPE(t_atoms),  INTENT(IN)  :: atoms
+    REAL,           INTENT(IN)  :: rho(: ,0:, :)
+    logical,        intent(in)  :: yukawa_residual 
+    COMPLEX,        INTENT(OUT) :: qlmo(-atoms%lmaxd:,0:,:)
+
+    INTEGER                     :: n, ns, jm, nl, l, j, mb, m, nat
+    REAL                        :: fint
+    REAL                        :: f(MAXVAL(atoms%jri))
 
     qlmo=0.0
     nat = 1
@@ -106,37 +109,43 @@ CONTAINS
        qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n)/sfp_const
        nat = nat + atoms%neq(n)
     ENDDO
+
   END SUBROUTINE mt_moments
 
 
-  SUBROUTINE pw_moments(mpi,stars,atoms,cell,sym,oneD,qpw_in,qlmp_out)
+  SUBROUTINE pw_moments( mpi, stars, atoms, cell, sym, oneD, qpw_in, yukawa_residual, qlmp_out )
     !multipole moments of plane wave charge inside the spheres (q_{lm}^{Ii})
+
     USE m_phasy1
     USE m_sphbes
     USE m_od_phasy
     USE m_constants,ONLY:sfp_const
     USE m_types
+    use m_DoubleFactorial
+    use m_SphBessel
     IMPLICIT NONE
-    TYPE(t_mpi),INTENT(IN)   :: mpi
-    TYPE(t_oneD),INTENT(IN)  :: oneD
-    TYPE(t_sym),INTENT(IN)   :: sym
-    TYPE(t_stars),INTENT(IN) :: stars
-    TYPE(t_cell),INTENT(IN)  :: cell
-    TYPE(t_atoms),INTENT(IN) :: atoms
-    COMPLEX,INTENT(IN) :: qpw_in(:)
-    COMPLEX,INTENT(OUT):: qlmp_out(-atoms%lmaxd:,0:,:)
-    !locals
-    INTEGER:: n,k,l,ll1 ,lm,ierr(3),m
-    COMPLEX sk3i,cil,nqpw
-    COMPLEX pylm( (MAXVAL(atoms%lmax)+1)**2 ,atoms%ntype )
-    REAL::sk3r,rl3
-    REAL aj(0:MAXVAL(atoms%lmax)+1)
-    COMPLEX :: qpw(stars%ng3)
-    LOGICAL :: od
+
+    TYPE(t_mpi),      INTENT(IN)   :: mpi
+    TYPE(t_oneD),     INTENT(IN)   :: oneD
+    TYPE(t_sym),      INTENT(IN)   :: sym
+    TYPE(t_stars),    INTENT(IN)   :: stars
+    TYPE(t_cell),     INTENT(IN)   :: cell
+    TYPE(t_atoms),    INTENT(IN)   :: atoms
+    COMPLEX,          INTENT(IN)   :: qpw_in(:)
+    logical,          intent(in)   :: yukawa_residual
+    COMPLEX,          INTENT(OUT)  :: qlmp_out(-atoms%lmaxd:,0:,:)
+
+    INTEGER                        :: n, k, l, ll1, lm, ierr(3), m
+    COMPLEX                        :: sk3i, cil, nqpw
+    COMPLEX                        :: pylm(( MAXVAL(atoms%lmax) + 1 ) ** 2, atoms%ntype)
+    REAL                           :: sk3r, rl3
+    REAL                           :: aj(0:MAXVAL(atoms%lmax)+1)
+    COMPLEX                        :: qpw(stars%ng3)
+    LOGICAL                        :: od
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
-    COMPLEX qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    COMPLEX                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     qpw=qpw_in(:stars%ng3)
     qlmp= 0.0
@@ -190,4 +199,5 @@ CONTAINS
 #endif
 
   END SUBROUTINE pw_moments
+
 END MODULE m_mpmom
