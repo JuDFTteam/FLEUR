@@ -899,9 +899,9 @@
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
       WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail
  9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1)
-      WRITE (5,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%preconditioning_param,input%spinf
+      WRITE (5,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  9180 FORMAT ('itmax=',i3,',maxiter=',i3,',imix=',i2,',alpha=',&
-     &        f6.2,',preconditioning_param=',f3.1,',spinf=',f6.2)
+     &        f6.2,',spinf=',f6.2)
 !+roa
       WRITE (chntype,'(i3)') atoms%ntype
       chform = '("swsp=",l1,'//chntype//'f6.2)'
