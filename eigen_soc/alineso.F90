@@ -60,7 +60,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE :: hso(:,:),hsomtx(:,:,:,:)
     COMPLEX,ALLOCATABLE :: sigma_xc_apw(:,:),sigma_xc(:,:)
    
-    TYPE(t_zMAT)::zmat(dimension%jspd)
+    TYPE(t_mat)::zmat(dimension%jspd)
     !     ..
     !     .. External Subroutines ..
     EXTERNAL CPP_LAPACK_cheev
@@ -75,24 +75,24 @@ CONTAINS
 
     l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
     zmat%l_real=l_real
-    zMat(1:dimension%jspd)%nbasfcn=lapw%nv(1:dimension%jspd)+atoms%nlotot
-    zmat%nbands=dimension%neigd
+    zMat(1:dimension%jspd)%matsize1=lapw%nv(1:dimension%jspd)+atoms%nlotot
+    zmat%matsize2=dimension%neigd
    
     INQUIRE (4649,opened=l_socvec)
     INQUIRE (file='fleur.qsgw',exist=l_qsgw)
     if (l_real) THEN
-       ALLOCATE (zmat(1)%z_r(zmat(1)%nbasfcn,DIMENSION%neigd) )
-       zmat(1)%z_r(:,:)= 0.  
+       ALLOCATE (zmat(1)%data_r(zmat(1)%matsize1,DIMENSION%neigd) )
+       zmat(1)%data_r(:,:)= 0.  
        if (size(zmat)==2)THEN
-          ALLOCATE(zmat(2)%z_r(zmat(2)%nbasfcn,DIMENSION%neigd) )
-          zmat(2)%z_r=0.0
+          ALLOCATE(zmat(2)%data_r(zmat(2)%matsize1,DIMENSION%neigd) )
+          zmat(2)%data_r=0.0
        ENDIF
     else
-       ALLOCATE (zmat(1)%z_c(zmat(1)%nbasfcn,DIMENSION%neigd) )
-       zmat(1)%z_c(:,:)= 0.  
+       ALLOCATE (zmat(1)%data_c(zmat(1)%matsize1,DIMENSION%neigd) )
+       zmat(1)%data_c(:,:)= 0.  
        if (size(zmat)==2)THEN
-          ALLOCATE(zmat(2)%z_c(zmat(2)%nbasfcn,DIMENSION%neigd) )
-          zmat(2)%z_c=0.0
+          ALLOCATE(zmat(2)%data_c(zmat(2)%matsize1,DIMENSION%neigd) )
+          zmat(2)%data_c=0.0
        ENDIF  
     endif
     zso(:,:,:)= CMPLX(0.,0.)
@@ -228,12 +228,12 @@ CONTAINS
              j  = nsz(1) * (jsp2-1) + 1 ; j1 = nsz(1) * jsp2
              if (l_real) THEN
                 sigma_xc(i:i1,j:j1) = &
-                     &        MATMUL (       TRANSPOSE(zmat(1)%z_r(:nbas,:))  ,&
-                     &        MATMUL ( sigma_xc_apw,   zmat(1)%z_r(:nbas,:) ) )
+                     &        MATMUL (       TRANSPOSE(zmat(1)%data_r(:nbas,:))  ,&
+                     &        MATMUL ( sigma_xc_apw,   zmat(1)%data_r(:nbas,:) ) )
 else
              sigma_xc(i:i1,j:j1) = &
-                  &        MATMUL ( CONJG(TRANSPOSE(zmat(1)%z_c(:nbas,:))) ,&
-                  &        MATMUL ( sigma_xc_apw,   zmat(1)%z_c(:nbas,:) ) )
+                  &        MATMUL ( CONJG(TRANSPOSE(zmat(1)%data_c(:nbas,:))) ,&
+                  &        MATMUL ( sigma_xc_apw,   zmat(1)%data_c(:nbas,:) ) )
           endif
              hso(i:i1,j:j1) = hso(i:i1,j:j1) + CONJG(sigma_xc(i:i1,j:j1))
              IF(jsp1.NE.jsp2) THEN
@@ -304,11 +304,11 @@ else
           ENDDO  ! j
 
           if (l_real) THEN
-             CALL CPP_BLAS_cgemm("N","N",zmat(1)%nbasfcn,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(zmat(jsp)%z_r(:,:)),&
-                  zmat(1)%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(1,1,jsp2),zmat(1)%nbasfcn)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(zmat(jsp)%data_r(:,:)),&
+                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(1,1,jsp2),zmat(1)%matsize1)
           else
-             CALL CPP_BLAS_cgemm("N","N",zmat(1)%nbasfcn,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),zmat(jsp)%z_c(:,:),&
-                  zmat(1)%nbasfcn, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(:,:,jsp2),zmat(1)%nbasfcn)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),zmat(jsp)%data_c(:,:),&
+                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(:,:,jsp2),zmat(1)%matsize1)
           endif
 
        ENDDO    !isp

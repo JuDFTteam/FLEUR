@@ -413,7 +413,7 @@ CONTAINS
        INTEGER, INTENT(OUT),OPTIONAL  :: neig
        REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
        INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-       TYPE(t_zMat),OPTIONAL  :: zmat
+       TYPE(t_mat),OPTIONAL  :: zmat
 
 #ifdef CPP_HDF
        INTEGER:: n1,n,k
@@ -441,9 +441,9 @@ CONTAINS
           IF (.NOT.PRESENT(n_end)) CALL juDFT_error("BUG3 in read_eig")
           IF (PRESENT(zMat)) THEN
              IF (zmat%l_real) THEN
-                CALL priv_r_vec(d,nk,jspin,n_start,n_end,zmat%z_r)
+                CALL priv_r_vec(d,nk,jspin,n_start,n_end,zmat%data_r)
              ELSE
-                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,zmat%z_c)
+                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,zmat%data_c)
              ENDIF
           ENDIF
        ENDIF

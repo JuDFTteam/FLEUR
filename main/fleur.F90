@@ -102,8 +102,8 @@ CONTAINS
 
     !     .. Local Scalars ..
     INTEGER:: eig_id,chase_eig_id, archiveType
-    INTEGER:: n,it,ithf
-    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp
+    INTEGER:: n,it,ithf,nevd,nexd
+    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp, l_real
     REAL   :: fermiEnergyTemp, fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -132,6 +132,17 @@ CONTAINS
     IF (wann%l_gwf) input%itmax = 1
 
     !-Wannier
+
+    l_real = sym%invs.AND..NOT.noco%l_noco
+    IF (juDFT_was_argument("-diag:chase")) THEN
+       nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
+       nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
+       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
+                             atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
+                             mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
+                             nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
+                             l_orb=banddos%l_orb)
+    END IF
 
 
     it     = 0

@@ -19,7 +19,7 @@ CONTAINS
   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
   !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                   cell,enpara,banddos,noco,oneD,hybrid,it,eig_id,chase_eig_id,results,inden,v,vx)
+                   cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,chase_eig_id,results,inden,v,vx)
 
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
@@ -67,7 +67,7 @@ CONTAINS
 #endif
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN)    :: it
+    INTEGER,INTENT(IN)    :: iter
     INTEGER,INTENT(INOUT) :: eig_id
     INTEGER,INTENT(INOUT) :: chase_eig_id
     !     ..
@@ -75,7 +75,7 @@ CONTAINS
     !+odim
     !     ..
     !     .. Local Scalars ..
-    INTEGER jsp,nk,nred,ne_all,ne_found,nevd,nexd
+    INTEGER jsp,nk,nred,ne_all,ne_found
     INTEGER ne,lh0
     INTEGER isp,i,j,err
     LOGICAL l_wu,l_file,l_real,l_zref
@@ -113,7 +113,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,v)
 #endif
-    !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
+    !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
     !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
     
      eig_id=open_eig(&
@@ -122,16 +122,6 @@ CONTAINS
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-
-     IF (juDFT_was_argument("-diag:chase")) THEN
-        nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
-        nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
-        chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
-                              atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
-                              mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-                              nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
-                              l_orb=banddos%l_orb)
-     END IF
 
      !---> set up and solve the eigenvalue problem
      !--->    loop over spins
@@ -173,7 +163,7 @@ CONTAINS
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
-          CALL eigen_diag(mpi,hmat,smat,nk,jsp,chase_eig_id,ne_all,eig,zMat)
+          CALL eigen_diag(mpi,hmat,smat,nk,jsp,chase_eig_id,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
           !
           !--->         output results

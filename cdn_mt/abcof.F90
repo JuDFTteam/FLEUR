@@ -25,7 +25,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_zMat),INTENT(IN)   :: zMat
+    TYPE(t_mat),INTENT(IN)    :: zMat
     TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
     !     ..
     !     .. Scalar Arguments ..
@@ -138,9 +138,9 @@ CONTAINS
                 DO k = 1,nvmax
                    IF (.NOT.noco%l_noco) THEN
                       IF (zmat%l_real) THEN
-                         work_r(:ne)=zMat%z_r(k,:ne)
+                         work_r(:ne)=zMat%data_r(k,:ne)
                       ELSE
-                         work_c(:ne)=zMat%z_c(k,:ne)
+                         work_c(:ne)=zMat%data_c(k,:ne)
                       END IF
                    ENDIF
 
@@ -155,7 +155,7 @@ CONTAINS
                          !--->              stored in the second half of the eigenvector
                          kspin = (iintsp-1)*(lapw%nv(1)+atoms%nlotot)
                          DO i = 1,ne
-                            work_c(i) = ccchi(iintsp,jspin)*zMat%z_c(kspin+k,i)
+                            work_c(i) = ccchi(iintsp,jspin)*zMat%data_c(kspin+k,i)
                          ENDDO
                       ELSE
                          !--->              perform sum over the two interstitial spin directions
@@ -163,8 +163,8 @@ CONTAINS
                          !--->              (jspin counts the local spin directions inside each MT)
                          kspin = lapw%nv(1)+atoms%nlotot
                          DO i = 1,ne
-                            work_c(i) = ccchi(1,jspin)*zMat%z_c(k,i)&
-                                 &                        + ccchi(2,jspin)*zMat%z_c(kspin+k,i)
+                            work_c(i) = ccchi(1,jspin)*zMat%data_c(k,i)&
+                                 &                        + ccchi(2,jspin)*zMat%data_c(kspin+k,i)
                          ENDDO
                       ENDIF
                    ENDIF ! (noco%l_noco)

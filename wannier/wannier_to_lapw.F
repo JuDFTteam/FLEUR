@@ -202,7 +202,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       complex,allocatable::wannz(:,:),wannz2(:,:)
       real denom
 
-      TYPE(t_zmat)  :: zzMat, zMat
+      TYPE(t_mat)   :: zzMat, zMat
       TYPE(t_usdus) :: usdus
 
       ci=cmplx(0.,1.)
@@ -450,12 +450,12 @@ c******************************************************************
       allocate (we(neigd),eigg(neigd))
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
+      zzMat%matsize1 = nbasfcn
+      zzMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
 
       call wann_read_eig(
@@ -469,14 +469,14 @@ c******************************************************************
 
 
       zMat%l_real = zzMat%l_real
-      zMat%nbasfcn = zzMat%nbasfcn
-      zMat%nbands = zzMat%nbands
+      zMat%matsize1 = zzMat%matsize1
+      zMat%matsize2 = zzMat%matsize2
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat%z_r = 0.0
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+         zMat%data_r = 0.0
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat%z_c = CMPLX(0.0,0.0)
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+         zMat%data_c = CMPLX(0.0,0.0)
       END IF
 
       nslibd = 0
@@ -497,11 +497,11 @@ c...we work only within the energy window
         we(nslibd) = we(i)
         IF(zzMat%l_real) THEN
           do j = 1,nv(jspin) + nlotot
-             zMat%z_r(j,nslibd) = zzMat%z_r(j,i)
+             zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
           end do
         ELSE
           do j = 1,nv(jspin) + nlotot
-             zMat%z_c(j,nslibd) = zzMat%z_c(j,i)
+             zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
           end do
         END IF
        endif 
@@ -591,12 +591,12 @@ c***************************************************************
        do m=1,num_wann
         IF(zMat%l_real) THEN
           do j=1, nv(jspin)
-            wannz(j,m)=wannz(j,m)+zMat%z_r(j,n)*
+            wannz(j,m)=wannz(j,m)+zMat%data_r(j,n)*
      +                            u_matrix(n,m,ikpt)/sqrt(omtil)
           enddo  
         ELSE
           do j=1, nv(jspin)
-            wannz(j,m)=wannz(j,m)+zMat%z_c(j,n)*
+            wannz(j,m)=wannz(j,m)+zMat%data_c(j,n)*
      +                            u_matrix(n,m,ikpt)/sqrt(omtil)
           enddo  
         END IF

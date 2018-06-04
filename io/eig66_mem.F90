@@ -84,12 +84,12 @@ CONTAINS
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
       REAL    :: eig(neig),w_iks(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
-      TYPE(t_zmat):: zmat
+      TYPE(t_mat):: zmat
 
       zmat%l_real=l_real
-      zmat%nbasfcn=nmat
-      zmat%nbands=neig
-      ALLOCATE(zmat%z_r(nmat,neig),zmat%z_c(nmat,neig))
+      zmat%matsize1=nmat
+      zmat%matsize2=neig
+      ALLOCATE(zmat%data_r(nmat,neig),zmat%data_c(nmat,neig))
     
       tmp_id=eig66_data_newid(DA_mode)
       IF (d%l_dos) CPP_error("Can not read DOS-data")
@@ -157,7 +157,7 @@ CONTAINS
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    TYPE(t_zMAT),OPTIONAL  :: zmat
+    TYPE(t_mat),OPTIONAL  :: zmat
 
     INTEGER::nrec, arrayStart
     TYPE(t_data_mem),POINTER:: d
@@ -183,7 +183,7 @@ CONTAINS
 
     arrayStart = 1
     IF(PRESENT(n_start)) THEN
-       arrayStart = (n_start-1)*zMat%nbasfcn+1
+       arrayStart = (n_start-1)*zMat%matsize1+1
     END IF
 
     IF (PRESENT(zmat)) THEN
@@ -191,13 +191,13 @@ CONTAINS
        IF (zmat%l_real) THEN
           IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
              IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
-             zmat%z_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_r)-1,nrec),SHAPE(zmat%z_r)))
+             zmat%data_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%data_r)-1,nrec),SHAPE(zmat%data_r)))
           ELSE
-             zmat%z_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%z_r)-1,nrec),SHAPE(zmat%z_r))
+             zmat%data_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%data_r)-1,nrec),SHAPE(zmat%data_r))
           ENDIF
        ELSE !TYPE is (COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby = "eig66_mem")
-          zmat%z_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_c)-1,nrec),SHAPE(zmat%z_c))
+          zmat%data_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%data_c)-1,nrec),SHAPE(zmat%data_c))
        END IF
     ENDIF
   END SUBROUTINE read_eig

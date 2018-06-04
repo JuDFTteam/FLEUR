@@ -8,6 +8,7 @@ CONTAINS
     USE m_eig66_io
     USE m_spnorb 
     USE m_abcof 
+    USE m_types_mat
     USE m_types_setup
     USE m_types_mpi
     USE m_types_enpara
@@ -54,8 +55,8 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:,:)
     COMPLEX,ALLOCATABLE  :: soangl(:,:,:,:,:,:,:)
   
-    TYPE(t_rsoc):: rsoc
-    TYPE(t_zmat):: zmat
+    TYPE(t_rsoc) :: rsoc
+    TYPE(t_mat)  :: zmat
     TYPE(t_usdus):: usdus
     TYPE(t_lapw) :: lapw
 
@@ -90,11 +91,11 @@ CONTAINS
     
     DO nk=mpi%irank+1,kpts%nkpt,mpi%isize
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false., mpi)
-       zMat%nbasfcn=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
-       zmat%nbands=DIMENSION%neigd
+       zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
+       zmat%matsize2=DIMENSION%neigd
        zmat%l_real=.FALSE.
-       IF (ALLOCATED(zmat%z_c)) DEALLOCATE(zmat%z_c)
-       ALLOCATE(zmat%z_c(zMat%nbasfcn,zmat%nbands))
+       IF (ALLOCATED(zmat%data_c)) DEALLOCATE(zmat%data_c)
+       ALLOCATE(zmat%data_c(zMat%matsize1,zmat%matsize2))
        CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,nk,1),zmat=zmat)
        DO jsloc= 1,2 
           eig_shift(:,nk,1)=0.0 !not needed

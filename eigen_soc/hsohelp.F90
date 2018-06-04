@@ -40,14 +40,14 @@ CONTAINS
     COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
     COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%nat, DIMENSION%jspd)
-    TYPE(t_zmat),INTENT(IN)      :: zmat(:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
+    TYPE(t_mat),INTENT(IN)      :: zmat(:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
     !-odim
     !+odim
     !     ..
     !     .. Locals ..
     TYPE(t_atoms)   :: atoms_local
     TYPE(t_noco)    :: noco_local
-    TYPE(t_zMat)    :: zMat_local
+    TYPE(t_mat)     :: zMat_local
     INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(DIMENSION%jspd),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:)
@@ -77,15 +77,15 @@ CONTAINS
     ALLOCATE ( acof(DIMENSION%neigd,0:lmd,atoms%nat),bcof(DIMENSION%neigd,0:lmd,atoms%nat) )
     DO ispin = 1, input%jspins
        IF (zmat(1)%l_real.AND.noco%l_soc) THEN
-          zso(:,1:DIMENSION%neigd,ispin) = CMPLX(zmat(ispin)%z_r(:,1:DIMENSION%neigd),0.0)
+          zso(:,1:DIMENSION%neigd,ispin) = CMPLX(zmat(ispin)%data_r(:,1:DIMENSION%neigd),0.0)
           zMat_local%l_real = .FALSE.
-          zMat_local%nbasfcn = zmat(1)%nbasfcn
-          zMat_local%nbands = DIMENSION%neigd
-          ALLOCATE(zMat_local%z_c(zmat(1)%nbasfcn,DIMENSION%neigd))
-          zMat_local%z_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
+          zMat_local%matsize1 = zmat(1)%matsize1
+          zMat_local%matsize2 = DIMENSION%neigd
+          ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,DIMENSION%neigd))
+          zMat_local%data_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
           CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
                usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
-          DEALLOCATE(zMat_local%z_c)
+          DEALLOCATE(zMat_local%data_c)
           !
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
@@ -105,13 +105,13 @@ CONTAINS
           chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
        ELSE
           zMat_local%l_real = zmat(1)%l_real
-          zMat_local%nbasfcn = zmat(1)%nbasfcn
-          zMat_local%nbands = DIMENSION%neigd
-          ALLOCATE(zMat_local%z_c(zmat(1)%nbasfcn,DIMENSION%neigd))
-          zMat_local%z_c(:,:) = zmat(ispin)%z_c(:,:)
+          zMat_local%matsize1 = zmat(1)%matsize1
+          zMat_local%matsize2 = DIMENSION%neigd
+          ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,DIMENSION%neigd))
+          zMat_local%data_c(:,:) = zmat(ispin)%data_c(:,:)
           CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
                usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
-          DEALLOCATE(zMat_local%z_c)
+          DEALLOCATE(zMat_local%data_c)
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
           !

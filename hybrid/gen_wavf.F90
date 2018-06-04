@@ -61,7 +61,7 @@
       
       REAL,INTENT(IN)         ::  el_eig(0:atoms%lmaxd,atoms%ntype)
       REAL,INTENT(IN)         ::  ello_eig(atoms%nlod,atoms%ntype)
-      TYPE(t_zmat),INTENT(IN) :: zmat(:) !for all kpoints 
+      TYPE(t_mat),INTENT(IN)  :: zmat(:) !for all kpoints 
 
   !     - - local scalars - - 
       INTEGER                 ::  ilo,idum ,m
@@ -113,7 +113,7 @@
 
       !CALL CPU_TIME(time1)
       call usdus%init(atoms,dimension%jspd)
-      call zhlp%alloc(zmat(1)%l_real,zmat(1)%nbasfcn,zmat(1)%nbands)
+      call zhlp%alloc(zmat(1)%l_real,zmat(1)%matsize1,zmat(1)%matsize2)
 
       
       ! setup rotations in reciprocal space
@@ -350,12 +350,12 @@
 
         ! write cmt at irreducible k-points in direct-access file cmt
         call write_cmt(cmt,ikpt0)
-        call zhlp%alloc(zmat(1)%l_real,zmat(1)%nbasfcn,zmat(1)%nbands)
+        call zhlp%alloc(zmat(1)%l_real,zmat(1)%matsize1,zmat(1)%matsize2)
         
         IF (zhlp%l_real) THEN
-           zhlp%data_r=zmat(ikpt0)%z_r
+           zhlp%data_r=zmat(ikpt0)%data_r
         ELSE
-           zhlp%data_c=zmat(ikpt0)%z_c
+           zhlp%data_c=zmat(ikpt0)%data_c
         end IF
         call write_z(zhlp,ikpt0)
        
@@ -367,7 +367,7 @@
           IF ( kpts%bkp(ikpt) .eq. ikpt0 .and. ikpt0 .ne. ikpt ) THEN
             iop = kpts%bksym(ikpt)
               CALL waveftrafo_genwavf( cmthlp,zhlp%data_r,zhlp%data_c,&
-     &                 cmt(:,:,:),zmat(1)%l_real,zmat(ikpt0)%z_r(:,:),zmat(ikpt0)%z_c(:,:),ikpt0,iop,atoms,&
+     &                 cmt(:,:,:),zmat(1)%l_real,zmat(ikpt0)%data_r(:,:),zmat(ikpt0)%data_c(:,:),ikpt0,iop,atoms,&
      &                 hybrid,kpts,sym,&
      &                 jsp,dimension,hybrid%nbands(ikpt0),&
      &                 cell,lapw(ikpt0),lapw(ikpt),.true.)

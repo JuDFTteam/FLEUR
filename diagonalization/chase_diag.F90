@@ -32,7 +32,7 @@ IMPLICIT NONE
 
   CONTAINS
 
-  SUBROUTINE chase_diag(mpi,hmat,smat,ikpt,jsp,chase_eig_id,ne,eig,zmat)
+  SUBROUTINE chase_diag(mpi,hmat,smat,ikpt,jsp,chase_eig_id,iter,ne,eig,zmat)
 
     USE m_types
     USE m_types_mpi
@@ -47,11 +47,12 @@ IMPLICIT NONE
     INTEGER,                   INTENT(IN)    :: ikpt
     INTEGER,                   INTENT(IN)    :: jsp
     INTEGER,                   INTENT(IN)    :: chase_eig_id
+    INTEGER,                   INTENT(IN)    :: iter
     INTEGER,                   INTENT(INOUT) :: ne
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: zmat
     REAL,                      INTENT(OUT)   :: eig(:)
 
-    INTEGER            :: i, j, nev, nex
+    INTEGER            :: i, j, nev, nex, nbands
     INTEGER            :: info
 
     CLASS(t_Mat),              ALLOCATABLE  :: zMatTemp
@@ -96,19 +97,17 @@ IMPLICIT NONE
              hmat%data_r(j,i) = hmat%data_r(i,j)
           end do
        end do
-!       if(first_entry_franza) then
+       if(iter.EQ.1) then
           call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
-!       else
-           ! load eigenvectors,...
-!          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
-!       end if
+       else
+          CALL read_eig(chase_eig_id,ikpt,jsp,n_start=mpi%n_size,n_end=mpi%n_rank,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
+          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
+       end if
 
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
                       eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
-
-       !TODO:  Store eigenvectors array to reuse it in next iteration
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMatTemp%data_r,zmat%matsize1,info)
@@ -153,11 +152,12 @@ IMPLICIT NONE
           end do
        end do
 
-!       if(first_entry_franza) then
+       if(iter.EQ.1) then
           call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
-!       else
-!          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
-!       end if
+       else
+          CALL read_eig(chase_eig_id,ikpt,jsp,n_start=mpi%n_size,n_end=mpi%n_rank,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
+          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
+       end if
 
        ne = nev
 

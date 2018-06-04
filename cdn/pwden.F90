@@ -91,7 +91,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
-    TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_mat),INTENT(IN)        :: zMat
     TYPE(t_potden),INTENT(INOUT)  :: den
     TYPE(t_results),INTENT(INOUT) :: results
     TYPE(t_dos), INTENT(INOUT)    :: dos
@@ -232,8 +232,8 @@ CONTAINS
        q0_22 = zero
        IF (.NOT.zmat%l_real ) THEN
           DO nu = 1 , ne
-             q0_11 = q0_11 + we(nu) * CPP_BLAS_cdotc(lapw%nv(1),zMat%z_c(1,nu),1,zMat%z_c(1,nu),1)
-             q0_22 = q0_22 + we(nu) * CPP_BLAS_cdotc(lapw%nv(2),zMat%z_c(lapw%nv(1)+atoms%nlotot+1,nu),1, zMat%z_c(lapw%nv(1)+atoms%nlotot+1,nu),1)
+             q0_11 = q0_11 + we(nu) * CPP_BLAS_cdotc(lapw%nv(1),zMat%data_c(1,nu),1,zMat%data_c(1,nu),1)
+             q0_22 = q0_22 + we(nu) * CPP_BLAS_cdotc(lapw%nv(2),zMat%data_c(lapw%nv(1)+atoms%nlotot+1,nu),1, zMat%data_c(lapw%nv(1)+atoms%nlotot+1,nu),1)
           ENDDO
        ENDIF
        q0_11 = q0_11/cell%omtil
@@ -241,11 +241,11 @@ CONTAINS
     ELSE
        IF (zmat%l_real) THEN
           DO nu = 1 , ne
-             q0=q0+we(nu)*CPP_BLAS_sdot(lapw%nv(jspin),zMat%z_r(1,nu),1,zMat%z_r(1,nu),1)
+             q0=q0+we(nu)*CPP_BLAS_sdot(lapw%nv(jspin),zMat%data_r(1,nu),1,zMat%data_r(1,nu),1)
           ENDDO
        ELSE
           DO nu = 1 , ne
-             q0=q0+we(nu) *REAL(CPP_BLAS_cdotc(lapw%nv(jspin),zMat%z_c(1,nu),1,zMat%z_c(1,nu),1))
+             q0=q0+we(nu) *REAL(CPP_BLAS_cdotc(lapw%nv(jspin),zMat%data_c(1,nu),1,zMat%data_c(1,nu),1))
           ENDDO
        ENDIF
        q0 = q0/cell%omtil
@@ -315,19 +315,19 @@ CONTAINS
           !------> map WF into FFTbox
           IF (noco%l_ss) THEN
              DO iv = 1 , lapw%nv(1)
-                psi1r( iv1d(iv,1) )   = REAL( zMat%z_c(iv,nu) )
-                psi1i( iv1d(iv,1) )   = AIMAG( zMat%z_c(iv,nu) )
+                psi1r( iv1d(iv,1) )   = REAL( zMat%data_c(iv,nu) )
+                psi1i( iv1d(iv,1) )   = AIMAG( zMat%data_c(iv,nu) )
              ENDDO
              DO iv = 1 , lapw%nv(2)
-                psi2r( iv1d(iv,2) ) =  REAL(zMat%z_c(lapw%nv(1)+atoms%nlotot+iv,nu))
-                psi2i( iv1d(iv,2) ) = AIMAG(zMat%z_c(lapw%nv(1)+atoms%nlotot+iv,nu))
+                psi2r( iv1d(iv,2) ) =  REAL(zMat%data_c(lapw%nv(1)+atoms%nlotot+iv,nu))
+                psi2i( iv1d(iv,2) ) = AIMAG(zMat%data_c(lapw%nv(1)+atoms%nlotot+iv,nu))
              ENDDO
           ELSE
              DO iv = 1 , lapw%nv(jspin)
-                psi1r( iv1d(iv,jspin) ) = REAL( zMat%z_c(iv,nu) )
-                psi1i( iv1d(iv,jspin) ) = AIMAG( zMat%z_c(iv,nu) )
-                psi2r(iv1d(iv,jspin))=REAL( zMat%z_c(lapw%nv(1)+atoms%nlotot+iv,nu))
-                psi2i(iv1d(iv,jspin))=AIMAG(zMat%z_c(lapw%nv(1)+atoms%nlotot+iv,nu))
+                psi1r( iv1d(iv,jspin) ) = REAL( zMat%data_c(iv,nu) )
+                psi1i( iv1d(iv,jspin) ) = AIMAG( zMat%data_c(iv,nu) )
+                psi2r(iv1d(iv,jspin))=REAL( zMat%data_c(lapw%nv(1)+atoms%nlotot+iv,nu))
+                psi2i(iv1d(iv,jspin))=AIMAG(zMat%data_c(lapw%nv(1)+atoms%nlotot+iv,nu))
              ENDDO
           ENDIF
 
@@ -337,12 +337,12 @@ CONTAINS
           !------> map WF into FFTbox
           IF (zmat%l_real) THEN
              DO iv = 1 , lapw%nv(jspin)
-                psir( iv1d(iv,jspin) ) = zMat%z_r(iv,nu)
+                psir( iv1d(iv,jspin) ) = zMat%data_r(iv,nu)
              ENDDO
           ELSE
              DO iv = 1 , lapw%nv(jspin)
-                psir( iv1d(iv,jspin) ) =  REAL(zMat%z_c(iv,nu))
-                psii( iv1d(iv,jspin) ) = AIMAG(zMat%z_c(iv,nu))
+                psir( iv1d(iv,jspin) ) =  REAL(zMat%data_c(iv,nu))
+                psii( iv1d(iv,jspin) ) = AIMAG(zMat%data_c(iv,nu))
              ENDDO
           ENDIF
        ENDIF
@@ -384,7 +384,7 @@ CONTAINS
                       DO i = 1,3
                          s = s + xk(i)*cell%bmat(i,j)
                       ENDDO
-                      kpsir( iv1d(iv,jspin) ) = s * zMat%z_r(iv,nu)
+                      kpsir( iv1d(iv,jspin) ) = s * zMat%data_r(iv,nu)
                    ENDDO
                    CALL rfft(isn,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft+1,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,&
                         nw1,nw2,nw3,wsave,kpsir(ifftq3d), kpsir(-ifftq2))
@@ -427,8 +427,8 @@ CONTAINS
                       DO i = 1,3
                          s = s + xk(i)*cell%bmat(i,j)
                       ENDDO
-                      kpsir( iv1d(iv,jspin) ) = s *  REAL(zMat%z_c(iv,nu))
-                      kpsii( iv1d(iv,jspin) ) = s * AIMAG(zMat%z_c(iv,nu))
+                      kpsir( iv1d(iv,jspin) ) = s *  REAL(zMat%data_c(iv,nu))
+                      kpsii( iv1d(iv,jspin) ) = s * AIMAG(zMat%data_c(iv,nu))
                    ENDDO
 
                    !--------------------------------
@@ -668,12 +668,12 @@ CONTAINS
              IF ( ABS( q0 - REAL(cwk(1)) )/q0 .GT. tol_3 ) THEN
                 WRITE(99,*) "XX:",ne,lapw%nv
                 IF (zmat%l_real) THEN
-                   DO istr=1,SIZE(zMat%z_r,2)
-                      WRITE(99,*) "X:",istr,zMat%z_r(:,istr)
+                   DO istr=1,SIZE(zMat%data_r,2)
+                      WRITE(99,*) "X:",istr,zMat%data_r(:,istr)
                    ENDDO
                 ELSE
-                   DO istr=1,SIZE(zMat%z_c,2)
-                      WRITE(99,*) "X:",istr,zMat%z_c(:,istr)
+                   DO istr=1,SIZE(zMat%data_c,2)
+                      WRITE(99,*) "X:",istr,zMat%data_c(:,istr)
                    ENDDO
                 ENDIF
                 WRITE ( 6,'(''bad quality of charge density'',2f13.8)')q0, REAL( cwk(1) )
