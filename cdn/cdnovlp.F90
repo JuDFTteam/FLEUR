@@ -223,7 +223,7 @@
                            &              ,calledby ="cdnovlp")
                    ENDIF
                    acoff(n) = rh(atoms%jri(n),n) * EXP( alpha(n)*atoms%rmt(n)*atoms%rmt(n) )
-                   WRITE (6,FMT=8010) alpha(n),acoff(n)
+                   !WRITE (6,FMT=8010) alpha(n),acoff(n)
                    DO j = 1,atoms%jri(n) - 1
                       rh(j,n) = acoff(n) * EXP( -alpha(n)*rat(j,n)**2 )
                    ENDDO
