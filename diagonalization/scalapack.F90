@@ -12,24 +12,16 @@ CONTAINS
     !- Parallel eigensystem solver - driver routine; gb99
     !  Uses the SCALAPACK for the actual diagonalization
     !
-    ! m ........ actual (=leading) dimension of full a & b matrices
-    !            must be probldeem size, as input a, b  are one-dimensional
-    !            and shall be redistributed to two-dimensional matrices
-    !            actual (=leading) dimension of eigenvector z(,)
-    ! n ........ number of columns of full (sub)matrix ( about n/np)
-    ! neigd..... second (=column) dimension of eigenvector matrix
-    ! myid ..... id of node (normally irank)
-    ! np ....... number of processors (normally isize)
-    ! SUB_COMM.. communicator for MPI
-    ! a,b   .... packed (sub)matrices, here expanded to non-packed
-    ! z,eig .... eigenvectors and values, output
-    ! num ...... number of ev's searched (and found) on this node
+    ! hmat ..... Hamiltonian matrix
+    ! smat ..... overlap matrix
+    ! ne ....... number of ev's searched (and found) on this node
     !            On input, overall number of ev's searched,
     !            On output, local number of ev's found
+    ! eig ...... eigenvalues, output
+    ! ev ....... eigenvectors, output
     !
     !----------------------------------------------------
     !
-    !#include"cpp_arch.h"
 #include"cpp_double.h"
     USE m_juDFT
     USE m_types_mpimat
@@ -47,15 +39,8 @@ CONTAINS
 #endif
     !...  Local variables
     !
-    INTEGER nc,ic,ir,n_sym,jsym,num_j,icm,n_bound
-    INTEGER i ,j ,k ,l, info, i_plus, i_dim
-    INTEGER nprow,npcol,myrowssca, nsq, nprow2, npcol2
-    INTEGER myrow,mycol,mycolssca, ierr, me,ierr2
-    INTEGER iamblacs,myrowblacs,mycolblacs,npblacs
-    INTEGER ictxtblacs,err
-    INTEGER, ALLOCATABLE :: iwork(:),iusermap(:,:)
-    INTEGER, ALLOCATABLE :: iblacsnums(:),ihelp(:)
-    REAL,    ALLOCATABLE :: dwork(:)
+    INTEGER i , ierr, err
+    INTEGER, ALLOCATABLE :: iwork(:)
     REAL,    ALLOCATABLE :: rwork(:)
     INTEGER              :: lrwork
 
