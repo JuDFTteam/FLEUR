@@ -101,7 +101,7 @@ CONTAINS
     CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
 
     !     .. Local Scalars ..
-    INTEGER:: eig_id, archiveType
+    INTEGER:: eig_id,chase_eig_id, archiveType
     INTEGER:: n,it,ithf
     LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp
     REAL   :: fermiEnergyTemp, fix
@@ -249,8 +249,8 @@ CONTAINS
           vTemp = vTot
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-               sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,oneD,hybrid,&
-               it,eig_id,results,inDen,vTemp,vx)
+                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,oneD,hybrid,&
+                     it,eig_id,chase_eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")

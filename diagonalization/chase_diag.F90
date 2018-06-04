@@ -32,15 +32,21 @@ IMPLICIT NONE
 
   CONTAINS
 
-  SUBROUTINE chase_diag(hmat,smat,ne,eig,zmat)
+  SUBROUTINE chase_diag(mpi,hmat,smat,ikpt,jsp,chase_eig_id,ne,eig,zmat)
 
     USE m_types
+    USE m_types_mpi
     USE m_judft
     USE iso_c_binding
+    USE m_eig66_io
 
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
+    TYPE(t_mpi),               INTENT(IN)    :: mpi
     TYPE(t_mat),               INTENT(INOUT) :: hmat,smat
+    INTEGER,                   INTENT(IN)    :: ikpt
+    INTEGER,                   INTENT(IN)    :: jsp
+    INTEGER,                   INTENT(IN)    :: chase_eig_id
     INTEGER,                   INTENT(INOUT) :: ne
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: zmat
     REAL,                      INTENT(OUT)   :: eig(:)
@@ -48,13 +54,20 @@ IMPLICIT NONE
     INTEGER            :: i, j, nev, nex
     INTEGER            :: info
 
+    CLASS(t_Mat),              ALLOCATABLE  :: zMatTemp
     REAL(c_double),            ALLOCATABLE  :: eigenvalues(:)
-
-    REAL(c_double),            ALLOCATABLE  :: eigenvectors_r(:,:)
-    COMPLEX(c_double_complex), ALLOCATABLE  :: eigenvectors_c(:,:)
 
     ALLOCATE(t_mat::zmat)
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
+
+    nev = min(ne,hmat%matsize1)
+    nex = min(max(nev/4, 45), hmat%matsize1-nev) !dimensioning for workspace
+
+    ALLOCATE(eigenvalues(nev+nex))
+    eigenvalues = 0.0
+
+    ALLOCATE(t_mat::zmatTemp)
+    CALL zMatTemp%alloc(hmat%l_real,hmat%matsize1,nev+nex)
 
     IF (hmat%l_real) THEN
 
@@ -76,14 +89,7 @@ IMPLICIT NONE
 
        ! --> solve a' * z' = eig * z' for eigenvalues eig between lb und ub
 
-       nev = min(ne,hmat%matsize1)
-
-       nex = min(max(nev/4, 45), hmat%matsize1-nev) !dimensioning for workspace
-
-       ALLOCATE(eigenvectors_r(smat%matsize1,nev+nex))
-       ALLOCATE(eigenvalues(nev+nex))
-       eigenvectors_r = 0.0
-       eigenvalues = 0.0
+       zMatTemp%data_r = 0.0
 
        do j = 1, hmat%matsize1
           do i = 1, j
@@ -91,15 +97,21 @@ IMPLICIT NONE
           end do
        end do
 !       if(first_entry_franza) then
-          call chase_r(hmat%data_r, hmat%matsize1, eigenvectors_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
+          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
 !       else
-!          call chase_r(hmat%data_r, hmat%matsize1, eigenvectors_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
+           ! load eigenvectors,...
+!          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
 !       end if
 
        ne = nev
 
+       CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
+                      eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
+
+       !TODO:  Store eigenvectors array to reuse it in next iteration
+
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-       CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,eigenvectors_r,zmat%matsize1,info)
+       CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMatTemp%data_r,zmat%matsize1,info)
        IF (info.NE.0) THEN
           WRITE (6,*) 'Error in dtrtrs: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
@@ -107,18 +119,10 @@ IMPLICIT NONE
 
        DO i = 1, ne
           DO j = 1, hmat%matsize1
-             zmat%data_r(j,i) = eigenvectors_r(j,i)
+             zmat%data_r(j,i) = zMatTemp%data_r(j,i)
           END DO
           eig(i) = eigenvalues(i)
        END DO
-
-
-       !TODO:  Store eigenvectors array to reuse it in next iteration
-
-
-
-       DEALLOCATE(eigenvalues)
-       DEALLOCATE(eigenvectors_r)
 
 
     ELSE
@@ -141,14 +145,7 @@ IMPLICIT NONE
 
        ! --> solve a' * z' = eig * z' for eigenvalues eig between lb und ub
 
-       nev = min(ne,hmat%matsize1)
-
-       nex = min(max(nev/4, 45), hmat%matsize1-nev) !dimensioning for workspace
-
-       ALLOCATE(eigenvectors_c(smat%matsize1,nev+nex))
-       ALLOCATE(eigenvalues(nev+nex))
-       eigenvectors_c = CMPLX(0.0,0.0)
-       eigenvalues = 0.0
+       zMatTemp%data_c = CMPLX(0.0,0.0)
 
        do j = 1, hmat%matsize1
           do i = 1, j
@@ -157,15 +154,18 @@ IMPLICIT NONE
        end do
 
 !       if(first_entry_franza) then
-          call chase_c(hmat%data_c, hmat%matsize1, eigenvectors_c, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
+          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
 !       else
-!          call chase_c(hmat%data_c, hmat%matsize1, eigenvectors_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
+!          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
 !       end if
 
        ne = nev
 
+       CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
+                      eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
+
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-       CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,eigenvectors_c,zmat%matsize1,info)
+       CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,zMatTemp%data_c,zmat%matsize1,info)
        IF (info.NE.0) THEN
           WRITE (6,*) 'Error in ztrtrs: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
@@ -173,18 +173,11 @@ IMPLICIT NONE
 
        DO i = 1, ne
           DO j = 1, hmat%matsize1
-             zmat%data_c(j,i) = eigenvectors_c(j,i)
+             zmat%data_c(j,i) = zMatTemp%data_c(j,i)
           END DO
           eig(i) = eigenvalues(i)
        END DO
 
-
-       !TODO:  Store eigenvectors array to reuse it in next iteration
-
-
-
-       DEALLOCATE(eigenvalues)
-       DEALLOCATE(eigenvectors_c)
     ENDIF
     IF (info.NE.0) CALL judft_error("Diagonalization via ChASE failed", calledby = 'chase_diag')
   END SUBROUTINE chase_diag
