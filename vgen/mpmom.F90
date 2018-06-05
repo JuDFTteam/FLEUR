@@ -202,7 +202,7 @@ contains
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
     od = oneD%odi%d1
-    !$omp parallel do default( shared ) private( pylm, nqpw, n, sk3r, aj, rl3, sk3i, &
+    !$omp parallel do default( shared ) private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, &
     !$omp& l, cil, ll1, m, lm, k ) reduction( +:qlmp )
     do k = mpi%irank+2, stars%ng3, mpi%isize
       if ( od ) then
