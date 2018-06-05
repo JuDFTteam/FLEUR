@@ -80,11 +80,11 @@
       <xsd:attribute name="l_ss" type="FleurBool"/>
       <xsd:attribute name="l_mperp" type="FleurBool"/>
       <xsd:attribute name="l_constr" type="FleurBool"/>
-      <xsd:attribute name="l_disp" type="FleurBool"/>
+      <xsd:attribute default="F" name="l_disp" type="FleurBool" use="optional"/>
       <xsd:attribute name="sso_opt" type="TripleFleurBool"/>
       <xsd:attribute name="mix_b" type="xsd:string"/>
-      <xsd:attribute name="thetaJ" type="xsd:string"/>
-      <xsd:attribute name="nsh" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="0.0" name="thetaJ" type="xsd:string" use="optional"/>
+      <xsd:attribute default="0" name="nsh" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OneDParamType">
@@ -417,8 +417,8 @@
 
    <xsd:complexType name="AtomicNocoParamsType">
       <xsd:attribute name="l_relax" type="FleurBool" use="required"/>
-      <xsd:attribute name="l_magn" type="FleurBool" use="required"/>
-      <xsd:attribute name="M" type="xsd:string" use="required"/>
+      <xsd:attribute default="F" name="l_magn" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0.0" name="M" type="xsd:string" use="optional"/>
       <xsd:attribute name="alpha" type="xsd:string" use="required"/>
       <xsd:attribute name="beta" type="xsd:string" use="required"/>
       <xsd:attribute name="b_cons_x" type="xsd:string" use="required"/>
@@ -530,7 +530,7 @@
       <xsd:attribute name="phi" type="xsd:string" use="required"/>
       <xsd:attribute name="l_soc" type="FleurBool" use="required"/>
       <xsd:attribute name="spav" type="FleurBool" use="required"/>
-      <xsd:attribute name="off" type="FleurBool" use="required"/>
+      <xsd:attribute default="F" name="off" type="FleurBool" use="optional"/>
       <xsd:attribute default="T" name="soc66" type="FleurBool" use="optional"/>
    </xsd:complexType>
    
