@@ -89,7 +89,7 @@ CONTAINS
           DO lo = 1,atoms%nlo(n)
              l = atoms%llo(lo,n)
              DO nkvec=1,invsfct*(2*l+1)
-                IF (lapw%kvec(nkvec,lo,n)==k) THEN !This k-vector is used in LO
+                IF (lapw%kvec(nkvec,lo,na)==k) THEN !This k-vector is used in LO
                    ll1 = l*(l+1) + 1
                    DO m = -l,l
                       lm = ll1 + m
