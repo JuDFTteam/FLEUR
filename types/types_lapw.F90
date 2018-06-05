@@ -384,6 +384,7 @@ CONTAINS
     DO n=1,atoms%ntype
        DO nn=1,atoms%neq(n)
           na=na+1
+          if (atoms%invsat(na)>1) cycle
           !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
           np=sym%invtab(atoms%ngopr(na))
           CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
