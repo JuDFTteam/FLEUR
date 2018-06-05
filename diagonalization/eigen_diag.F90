@@ -39,7 +39,7 @@ CONTAINS
     parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
   END FUNCTION parallel_solver_available
 
-  SUBROUTINE eigen_diag(mpi,hmat,smat,ikpt,jsp,chase_eig_id,iter,ne,eig,ev)
+  SUBROUTINE eigen_diag(mpi,hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     USE m_lapack_diag
     USE m_magma
     USE m_elpa
@@ -57,7 +57,6 @@ CONTAINS
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev
     INTEGER,                   INTENT(IN)    :: ikpt
     INTEGER,                   INTENT(IN)    :: jsp
-    INTEGER,                   INTENT(IN)    :: chase_eig_id
     INTEGER,                   INTENT(IN)    :: iter
     INTEGER,                   INTENT(INOUT) :: ne
     REAL,                      INTENT(OUT)   :: eig(:)
@@ -86,7 +85,7 @@ CONTAINS
        CALL lapack_diag(hmat,smat,ne,eig,ev)
     CASE (diag_chase)
 #ifdef CPP_CHASE
-       CALL chase_diag(mpi,hmat,smat,ikpt,jsp,chase_eig_id,iter,ne,eig,ev)
+       CALL chase_diag(mpi,hmat,smat,ikpt,jsp,iter,ne,eig,ev)
 #else
        CALL juDFT_error('ChASE eigensolver selected but not available', calledby = 'eigen_diag')
 #endif
