@@ -86,7 +86,7 @@ CONTAINS
              IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
-                k = lapw%kvec(nkvec,lo,ntyp)
+                k = lapw%kvec(nkvec,lo,na)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions
                 DO kp = 1,lapw%nv(jintsp)
@@ -118,7 +118,7 @@ CONTAINS
                            blo1(lo)*ud%dulon(lop,ntyp,isp)+&
                            clo1(lo)*ud%uloulopn(lop,lo,ntyp,isp)))
                       DO nkvecp = 1,invsfct* (2*lp+1)
-                         kp = lapw%kvec(nkvecp,lop,ntyp)
+                         kp = lapw%kvec(nkvecp,lop,na)
                          lorow=lapw%nv(jintsp)+lapw%index_lo(lop,na)+nkvecp
                          dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
                          IF (smat%l_real) THEN
@@ -135,7 +135,7 @@ CONTAINS
                 !--->          calculate the overlap matrix elements of one local
                 !--->          orbital with itself
                 DO nkvecp = 1,nkvec
-                   kp = lapw%kvec(nkvecp,lo,ntyp)
+                   kp = lapw%kvec(nkvecp,lo,na)
                    lorow=lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvecp
                    dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
                    IF (smat%l_real) THEN
