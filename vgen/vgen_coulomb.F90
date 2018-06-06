@@ -178,7 +178,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST( den%mt, atoms%jmtd*(1+sphhar%nlhd) * atoms%ntype * dimension%jspd, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
-    CALL vmts( mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), den%mt(:,0:,:,ispin), &
+    CALL vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), den%mt(:,0:,:,ispin), &
          yukawa_residual, vCoul%mt(:,0:,:,ispin) )
     CALL timestop( "MT-spheres" )
 
