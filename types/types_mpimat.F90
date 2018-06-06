@@ -43,7 +43,22 @@ CONTAINS
 
     SELECT TYPE(mat1)
     TYPE IS (t_mpimat)
-    
+#ifdef CPP_MPI    
+    CALL MPI_COMM_RANK(mat%mpi_com,n_rank,i)
+    CALL MPI_COMM_SIZE(mat%mpi_com,n_size,i)
+#endif
+    !Set lower part of matrix to zero...
+       ii=0
+       DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
+          ii=ii+1
+          IF (mat%l_real) THEN
+             mat%data_r(i+1:,ii)=0.0
+             mat1%data_r(i+1:,ii)=0.0
+          ELSE
+             mat%data_c(i+1:,ii)=0.0
+             mat1%data_c(i+1:,ii)=0.0
+          ENDIF
+       ENDDO
        IF (mat%l_real) THEN
 #ifdef CPP_SCALAPACK          
 
@@ -53,10 +68,7 @@ CONTAINS
 #endif
     END IF
     !Now multiply the diagonal of the matrix by 1/2
-#ifdef CPP_MPI    
-    CALL MPI_COMM_RANK(mat%mpi_com,n_rank,i)
-    CALL MPI_COMM_SIZE(mat%mpi_com,n_size,i)
-#endif
+
     ii=0
     DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
        ii=ii+1
