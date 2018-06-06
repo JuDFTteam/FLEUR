@@ -75,7 +75,7 @@ CONTAINS
 
     !     Types, these variables contain a lot of data!
     TYPE(t_input)    :: input
-    TYPE(t_field)    :: field
+    TYPE(t_field)    :: field, field2
     TYPE(t_dimension):: DIMENSION
     TYPE(t_atoms)    :: atoms
     TYPE(t_sphhar)   :: sphhar
@@ -412,9 +412,12 @@ CONTAINS
        
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        IF (mpi%irank.EQ.0) THEN
-          !          ----> mix input and output densities
+          field2 = field
+               !          ----> mix input and output densities
           CALL timestart("mixing")
-          CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
+          CALL mix( field2, xcpot, dimension, obsolete, sliceplot, mpi, &
+                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                    oneD, hybrid, archiveType, inDen, outDen, results )
           CALL timestop("mixing")
           
           WRITE (6,FMT=8130) it

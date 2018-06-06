@@ -24,7 +24,10 @@ contains
   ! The integral is split in a part where r'=r_< and a part where r'=r_> and
   ! the integral from r to R is split in \int_0^R - \int_0^r. Resulting 
   ! terms depending solely on R (not on r) are summarised in the variable 
-  ! termsR. 
+  ! termsR.
+  !
+  ! More information and equations can be found in
+  ! F. Tran, P. Blaha, Phys. Rev. B 83, 235118(2011) 
   !-------------------------------------------------------------------------
 
 #include"cpp_double.h"

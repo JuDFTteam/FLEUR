@@ -7,7 +7,7 @@ MODULE m_mix
 
   !*************************************************************************
   !  mixing of charge densities or potentials:
-  !    IMIX= 0 : linear mixing                                     
+  !    IMIX = 0 : linear mixing                                     
   !    IMIX = 3 : BROYDEN'S FIRST METHOD                            
   !    IMIX = 5 : BROYDEN'S SECOND METHOD                           
   !    IMIX = 7 : GENERALIZED ANDERSEN METHOD                       
@@ -15,8 +15,9 @@ MODULE m_mix
 
 CONTAINS
 
-SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
-               hybrid,archiveType,inDen,outDen,results)
+SUBROUTINE mix( field, xcpot, dimension, obsolete, sliceplot, mpi, &
+                stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                oneD, hybrid, archiveType, inDen, outDen, results )
 
 #include"cpp_double.h"
 
@@ -34,6 +35,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    USE m_types
    USE m_xmlOutput
    USE m_umix
+   use m_vgen
 
    IMPLICIT NONE
 
@@ -46,6 +48,12 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    TYPE(t_stars),INTENT(IN)      :: stars
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_sphhar),INTENT(IN)     :: sphhar
+   type(t_field), intent(inout)  :: field
+   class(t_xcpot), intent(in)    :: xcpot
+   type(t_dimension), intent(in) :: dimension
+   type(t_obsolete), intent(in)  :: obsolete
+   type(t_sliceplot), intent(in) :: sliceplot
+   type(t_mpi), intent(in)       :: mpi
    TYPE(t_atoms),INTENT(INOUT)   :: atoms !n_u is modified temporarily
    TYPE(t_potden),INTENT(INOUT)  :: outDen
    TYPE(t_results),INTENT(INOUT) :: results
@@ -54,7 +62,7 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !Local Scalars
    REAL fix,intfac,vacfac
-   INTEGER i,imap,js
+   INTEGER i,imap,js, n, lh
    INTEGER mmap,mmaph,nmaph,nmap,mapmt,mapvac,mapvac2
    INTEGER iofl,n_u_keep
    LOGICAL l_exist,l_ldaU, l_densityMatrixPresent, l_pot
@@ -64,6 +72,8 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    REAL, ALLOCATABLE :: sm(:), fsm(:), fmMet(:), smMet(:)
    CHARACTER(LEN=20) :: attributes(2)
    COMPLEX           :: n_mmpTemp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins)
+
+   type(t_potden) :: resDen, resChM, vYukawa, vTot, vx
 
    !External functions
    REAL CPP_BLAS_sdot
@@ -141,7 +151,6 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
    END IF
 
    !put input charge density into array sm
-
    !(in the spin polarized case the arrays sm and fsm consist of spin up and spin down densities)
    CALL brysh1(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
                intfac,vacfac,inDen,nmap,nmaph,mapmt,mapvac,mapvac2,sm) 
@@ -152,6 +161,30 @@ SUBROUTINE mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,&
 
    !store the difference fsm - sm in fsm
    fsm(:nmap) = fsm(:nmap) - sm(:nmap)
+
+   ! preconditioning section
+   if( input%preconditioning_param /= 0 ) then
+     resDen = inDen 
+     call brysh2( input, stars, atoms, sphhar, noco, vacuum, sym, fsm, oneD, resDen )   
+     if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation( resChM )
+     call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1 )
+     call vTot%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1 )
+     call vx%init( stars, atoms, sphhar, vacuum, input%jspins, .false., 1 )
+     call vgen( hybrid, field, input, xcpot, DIMENSION, atoms, sphhar, stars, vacuum, &
+              sym, obsolete, cell, oneD, sliceplot, mpi, results, noco, .false., inDen, vTot, vx, &
+              vYukawa )
+     resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
+     do n = 1, atoms%ntype
+       do lh = 0, sphhar%nlhd
+         resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
+                 - input%preconditioning_param ** 2 / fpi_const &
+                 * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
+       end do
+     end do
+     end if
+   ! end of preconditioning section
+
+   if( input%jspins == 2 ) call resChM%ChargeAndMagnetisationToSpins( resDen )
 
    l_pot = .FALSE.
    ! Apply metric w to fsm and store in fmMet:  w |fsm>

@@ -163,9 +163,14 @@ CONTAINS
                 ENDIF
              ENDDO
           ENDDO
-       ELSEIF (.NOT.input%film) THEN
-          vCoul%pw(1,ispin) = CMPLX(0.0,0.0)
-          vCoul%pw(2:stars%ng3,ispin)=fpi_const*psq(2:stars%ng3)/(stars%sk3(2:stars%ng3)*stars%sk3(2:stars%ng3))       
+        else if ( .not. input%film ) then
+          if ( yukawa_residual ) then
+            vCoul%pw(1:stars%ng3,ispin) = fpi_const * psq(1:stars%ng3) / ( stars%sk3(1:stars%ng3) ** 2 + input%preconditioning_param ** 2 )
+            if( abs( real( psq(1) ) ) * cell%omtil < 0.01 ) vCoul%pw(1,ispin) = 0.0
+          else
+            vCoul%pw(1,ispin) = cmplx(0.0,0.0)
+            vCoul%pw(2:stars%ng3,ispin) = fpi_const * psq(2:stars%ng3) / ( stars%sk3(2:stars%ng3) * stars%sk3(2:stars%ng3) )       
+          end if
        END IF
 
        CALL timestop("interstitial")
@@ -181,6 +186,8 @@ CONTAINS
     CALL vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), den%mt(:,0:,:,ispin), &
          yukawa_residual, vCoul%mt(:,0:,:,ispin) )
     CALL timestop( "MT-spheres" )
+
+    if( yukawa_residual ) return
 
     IF (mpi%irank == 0) THEN
        !     ---> check continuity of coulomb potential

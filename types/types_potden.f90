@@ -35,6 +35,8 @@ MODULE m_types_potden
      GENERIC   :: init=>init_potden_types,init_potden_simple
      PROCEDURE :: copy_both_spin
      PROCEDURE :: sum_both_spin
+     procedure :: SpinsToChargeAndMagnetisation
+     procedure :: ChargeAndMagnetisationToSpins
   END TYPE t_potden
 
 CONTAINS
@@ -88,7 +90,39 @@ CONTAINS
        IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2)=this%pw_w(:,1)
     END IF
   END SUBROUTINE copy_both_spin
-  
+
+  subroutine SpinsToChargeAndMagnetisation( spins, charge_magn )
+    implicit none
+    class(t_potden), intent(in)    :: spins
+    type(t_potden),  intent(inout) :: charge_magn
+
+    charge_magn%mt(:,0:,:,  1) = spins%mt(:,0:,:,  1) + spins%mt(:,0:,:,  2)
+    charge_magn%mt(:,0:,:,  2) = spins%mt(:,0:,:,  1) - spins%mt(:,0:,:,  2)
+    charge_magn%pw(:,       1) = spins%pw(:,       1) + spins%pw(:,       2)
+    charge_magn%pw(:,       2) = spins%pw(:,       1) - spins%pw(:,       2)
+    charge_magn%vacz(:,:,   1) = spins%vacz(:,:,   1) + spins%vacz(:,:,   2)
+    charge_magn%vacz(:,:,   2) = spins%vacz(:,:,   1) - spins%vacz(:,:,   2)
+    charge_magn%vacxy(:,:,:,1) = spins%vacxy(:,:,:,1) + spins%vacxy(:,:,:,2)
+    charge_magn%vacxy(:,:,:,2) = spins%vacxy(:,:,:,1) - spins%vacxy(:,:,:,2)
+
+  end subroutine
+
+  subroutine ChargeAndMagnetisationToSpins( charge_magn, spins )
+    implicit none
+    class(t_potden), intent(in)    :: charge_magn
+    type(t_potden),  intent(inout) :: spins
+
+    spins%mt(:,0:,:,  1) = ( charge_magn%mt(:,0:,:,  1) + charge_magn%mt(:,0:,:,  2) ) / 2
+    spins%mt(:,0:,:,  2) = ( charge_magn%mt(:,0:,:,  1) - charge_magn%mt(:,0:,:,  2) ) / 2
+    spins%pw(:,       1) = ( charge_magn%pw(:,       1) + charge_magn%pw(:,       2) ) / 2
+    spins%pw(:,       2) = ( charge_magn%pw(:,       1) - charge_magn%pw(:,       2) ) / 2
+    spins%vacz(:,:,   1) = ( charge_magn%vacz(:,:,   1) + charge_magn%vacz(:,:,   2) ) / 2
+    spins%vacz(:,:,   2) = ( charge_magn%vacz(:,:,   1) - charge_magn%vacz(:,:,   2) ) / 2
+    spins%vacxy(:,:,:,1) = ( charge_magn%vacxy(:,:,:,1) + charge_magn%vacxy(:,:,:,2) ) / 2
+    spins%vacxy(:,:,:,2) = ( charge_magn%vacxy(:,:,:,1) - charge_magn%vacxy(:,:,:,2) ) / 2
+
+  end subroutine
+
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,jspins,nocoExtraDim,potden_type)
     USE m_judft
     USE m_types_setup
