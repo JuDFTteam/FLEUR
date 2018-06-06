@@ -71,10 +71,9 @@ IMPLICIT NONE
     END IF
   END SUBROUTINE init_chase
 
-  SUBROUTINE chase_diag(mpi,hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
+  SUBROUTINE chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
 
     USE m_types
-    USE m_types_mpi
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -82,7 +81,6 @@ IMPLICIT NONE
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
 
-    TYPE(t_mpi),               INTENT(IN)    :: mpi
     TYPE(t_mat),               INTENT(INOUT) :: hmat,smat
     INTEGER,                   INTENT(IN)    :: ikpt
     INTEGER,                   INTENT(IN)    :: jsp
@@ -139,14 +137,14 @@ IMPLICIT NONE
        if(iter.EQ.1) then
           call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
        else
-          CALL read_eig(chase_eig_id,ikpt,jsp,n_start=mpi%n_size,n_end=mpi%n_rank,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
+          CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
        end if
 
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
+                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMatTemp%data_r,zmat%matsize1,info)
@@ -194,14 +192,14 @@ IMPLICIT NONE
        if(iter.EQ.1) then
           call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
        else
-          CALL read_eig(chase_eig_id,ikpt,jsp,n_start=mpi%n_size,n_end=mpi%n_rank,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
+          CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
        end if
 
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
+                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,zMatTemp%data_c,zmat%matsize1,info)

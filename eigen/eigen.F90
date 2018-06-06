@@ -162,7 +162,7 @@ CONTAINS
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
-          CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
+          CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
           !
           !--->         output results
