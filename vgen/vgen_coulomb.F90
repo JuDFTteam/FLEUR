@@ -175,7 +175,6 @@ contains
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
-#ifdef CPP_MPI
     call MPI_BCAST( den%mt, atoms%jmtd * ( 1 + sphhar%nlhd ) * atoms%ntype * dimension%jspd, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
     call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), &
