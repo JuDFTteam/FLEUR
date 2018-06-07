@@ -105,7 +105,7 @@ CONTAINS
                    CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,&
                                     lapw,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(iintsp,jintsp))
                    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
-                          n,chi_one,ispin,iintsp,jintsp,hmat(iintsp,jintsp),smat(iintsp,jintsp))
+                          n,chi(iintsp,jintsp),ispin,iintsp,jintsp,hmat(iintsp,jintsp),smat(iintsp,jintsp))
                 ENDDO
              ENDDO
           ENDIF
