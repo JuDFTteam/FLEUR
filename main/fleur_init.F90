@@ -523,8 +523,5 @@
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 
-          !check for broken feature
-          IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
-
         END SUBROUTINE fleur_init
       END MODULE m_fleur_init

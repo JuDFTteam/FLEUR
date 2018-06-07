@@ -70,7 +70,7 @@ CONTAINS
           !+gu_con
           IF (noco%l_noco) THEN
              IF (noco%l_ss) THEN
-                ctmp = term1*CONJG(ylm(ll1+m+1))*ccchi(iintsp)*zMat%data_c(lapw%nv(1)+atoms%nlotot+nbasf,i)
+                ctmp = term1*CONJG(ylm(ll1+m+1))*ccchi(iintsp)*zMat%data_c((iintsp-1)*(lapw%nv(1)+atoms%nlotot)+nbasf,i)
              ELSE
                 ctmp = term1*CONJG(ylm(ll1+m+1))*( ccchi(1)*zMat%data_c(nbasf,i)+ccchi(2)*zMat%data_c(lapw%nv(1)+atoms%nlotot+nbasf,i) )
              ENDIF
