@@ -32,7 +32,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     COMPLEX, PARAMETER :: ci = (0.0,1.0)
-    COMPLEX argr,sumrr,vcons1,test
+    COMPLEX argr,sumrr,vcons1,test,c_ph
     REAL bj0,dh,fit,g,g3,q,qdh,signz,vcons2,zf
     REAL e_m,e_p,cos_q,sin_q
     INTEGER ig3n,im,iq,ivac,k1,k2,m0,nrz,nz
@@ -112,11 +112,12 @@ CONTAINS
           ig3n = stars%ig(k1,k2,iq)
           !     ----> use only stars within the g_max sphere (oct.97 shz)
           IF (ig3n.NE.0) THEN
+             c_ph = stars%rgphs(k1,k2,iq)
              !           -----> v3(z)
              q = iq*cell%bmat(3,3)
              g = stars%sk2(nrec2)
              g3 = stars%sk3(ig3n)
-             vcons1 = fpi_const*psq(ig3n)/ (g3*g3)
+             vcons1 = fpi_const*psq(ig3n)*c_ph / (g3*g3)
              nz = 1
              IF (sym%zrfs) nz = stars%nstr(ig3n)/stars%nstr2(nrec2)
              IF (field%efield%dirichlet) THEN
@@ -138,7 +139,7 @@ CONTAINS
                 END DO loop_vacua
                 vintcz = vintcz&
                      &             + vcons1*(e_m*SINH(g*(field%efield%zsigma+dh-z))&
-                     &                       +e_p*SINH(g*(field%efield%zsigma+dh+z)))
+                     &                      +e_p*SINH(g*(field%efield%zsigma+dh+z)))
              ELSE
                 sumrr = (0.0,0.0)
                 vcons2 = - 1.0 / (2.*g)

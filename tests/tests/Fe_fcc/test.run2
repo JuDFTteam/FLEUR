@@ -9,9 +9,9 @@ jt::testrun($executable,$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it= 20  is completed");
-$result+=jt::test_grepnumber("$workdir/out","to ef",".*: *([^ ]*)",0.2740,0.001);
-$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-1272.953549,0.0001);
-$result+=jt::test_grepnumber("$workdir/out","distance of charge densities for it=   20",": *([^ ]*)",0.000274,0.01);
-$result+=jt::test_grepnumber("$workdir/out","mm       1",".*mm       1 *([^ ]*)",3.852,0.01);
+$result+=jt::test_grepnumber("$workdir/out","to ef",".*: *([^ ]*)",0.322107,0.001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-1273.0878571350,0.00001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densities for it=   20",": *([^ ]*)",0.000,0.01);
+$result+=jt::test_grepnumber("$workdir/out","mm       1",".*mm       1 *([^ ]*)",3.93316,0.001);
 
 jt::stageresult($workdir,$result,"2");

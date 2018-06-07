@@ -154,7 +154,7 @@ CONTAINS
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    TYPE(t_zmat),OPTIONAL  :: zmat
+    TYPE(t_mat),OPTIONAL  :: zmat
 
     !Local variables
     INTEGER:: nv_s,nmat_s,n,nrec,neig_s
@@ -189,17 +189,17 @@ CONTAINS
     ALLOCATE(eig_s(neig_s))
     IF (PRESENT(zmat)) THEN
        IF (zmat%l_real) THEN
-          INQUIRE(IOLENGTH=n) neig_s,eig_s,REAL(zmat%z_r)
+          INQUIRE(IOLENGTH=n) neig_s,eig_s,REAL(zmat%data_r)
           IF (n>d%recl_vec) THEN
              CALL juDFT_error("BUG: Too long record")
           END IF
-          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_r
+          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%data_r
        ELSE
-          INQUIRE(IOLENGTH=n) neig_s,eig_s,CMPLX(zmat%z_c)
+          INQUIRE(IOLENGTH=n) neig_s,eig_s,CMPLX(zmat%data_c)
           IF (n>d%recl_vec) THEN
              CALL juDFT_error("BUG: Too long record")
           END IF
-          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%z_c
+          READ(d%file_io_id_vec,REC=nrec) neig_s,eig_s,zmat%data_c
        ENDIF
     ELSE
        INQUIRE(IOLENGTH=n) neig_s,eig_s

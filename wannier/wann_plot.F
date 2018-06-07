@@ -66,7 +66,7 @@
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
       TYPE(t_atoms),INTENT(IN)       :: atoms
-      TYPE(t_zMat),INTENT(IN)        :: zMat
+      TYPE(t_mat),INTENT(IN)         :: zMat
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,ikpt,jspin,nv2d

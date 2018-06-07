@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_zMat),INTENT(IN)   :: zMat
+    TYPE(t_mat),INTENT(IN)    :: zMat
     TYPE(t_slab),INTENT(INOUT):: slab
     !
     !     .. Scalar Arguments ..
@@ -65,11 +65,11 @@ CONTAINS
        q1 = 0.0
        IF (zmat%l_real) THEN
           DO  i = 1,lapw%nv(isp)
-             q1 = q1 + zMat%z_r(i,n)*zMat%z_r(i,n)
+             q1 = q1 + zMat%data_r(i,n)*zMat%data_r(i,n)
           ENDDO
        ELSE
           DO  i = 1,lapw%nv(isp)
-             q1 = q1 + REAL(zMat%z_c(i,n)*CONJG(zMat%z_c(i,n)))
+             q1 = q1 + REAL(zMat%data_c(i,n)*CONJG(zMat%data_c(i,n)))
           ENDDO
        ENDIF
        z_z(1) = q1/cell%omtil
@@ -90,11 +90,11 @@ CONTAINS
              phase = stars%rgphs(ix1,iy1,iz1)/ (stars%nstr(ind)*cell%omtil)
              phasep = stars%rgphs(-ix1,-iy1,-iz1)/ (stars%nstr(indp)*cell%omtil)
              IF (zmat%l_real) THEN
-                z_z(ind)  = z_z(ind)  + zMat%z_r(j,n)*zMat%z_r(i,n)*REAL(phase)
-                z_z(indp) = z_z(indp) + zMat%z_r(i,n)*zMat%z_r(j,n)*REAL(phasep)
+                z_z(ind)  = z_z(ind)  + zMat%data_r(j,n)*zMat%data_r(i,n)*REAL(phase)
+                z_z(indp) = z_z(indp) + zMat%data_r(i,n)*zMat%data_r(j,n)*REAL(phasep)
              ELSE
-                z_z(ind) = z_z(ind) +zMat%z_c(j,n)*CONJG(zMat%z_c(i,n))*phase
-                z_z(indp)= z_z(indp)+zMat%z_c(i,n)*CONJG(zMat%z_c(j,n))*phasep
+                z_z(ind) = z_z(ind) +zMat%data_c(j,n)*CONJG(zMat%data_c(i,n))*phase
+                z_z(indp)= z_z(indp)+zMat%data_c(i,n)*CONJG(zMat%data_c(j,n))*phasep
              ENDIF
           ENDDO
        ENDDO

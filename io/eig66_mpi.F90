@@ -250,7 +250,7 @@ CONTAINS
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    TYPE(t_zmat),OPTIONAL  :: zmat
+    TYPE(t_mat),OPTIONAL  :: zmat
 
 #ifdef CPP_MPI
     INTEGER                   :: pe,tmp_size,e
@@ -291,10 +291,10 @@ CONTAINS
     ENDIF
 
     IF (PRESENT(zmat)) THEN
-       tmp_size=zmat%nbasfcn
+       tmp_size=zmat%matsize1
        ALLOCATE(tmp_real(tmp_size))
        ALLOCATE(tmp_cmplx(tmp_size))
-       DO n=1,zmat%nbands
+       DO n=1,zmat%matsize2
           n1=n
           IF (PRESENT(n_start)) n1=n_start+n-1
           IF (PRESENT(n_end)) THEN
@@ -309,13 +309,13 @@ CONTAINS
                 CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
-                zmat%z_r(:,n)=REAL(tmp_cmplx)
+                zmat%data_r(:,n)=REAL(tmp_cmplx)
              else
                 CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%zr_handle,e)
                 CALL MPI_GET(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zr_handle,e)
                 !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
-                zmat%z_r(:,n)=tmp_real
+                zmat%data_r(:,n)=tmp_real
              endif
           ELSE
              if (d%l_real) call judft_error("Could not read complex data, only real data is stored",calledby="eig66_mpi%read_eig")
@@ -323,7 +323,7 @@ CONTAINS
              CALL MPI_GET(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
              CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
              !print *, nk,jspin,n1,"r PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_cmplx(1)
-             zmat%z_c(:,n)=tmp_cmplx
+             zmat%data_c(:,n)=tmp_cmplx
           ENDIF
        ENDDO
     ENDIF

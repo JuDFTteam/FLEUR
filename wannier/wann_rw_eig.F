@@ -69,15 +69,15 @@ c****************************************************************
 ! END QPOINTS
       real,parameter   :: hartree=27.21138505
 
-      TYPE(t_zmat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       zMat%l_real = l_real
-      zMat%nbasfcn = nbasfcn
-      zMat%nbands = neigd
+      zMat%matsize1 = nbasfcn
+      zMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
       END IF
 
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
@@ -233,7 +233,7 @@ c*****************************************************************
       REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
 
-      TYPE(t_zMat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       integer :: n_start,n_end
 

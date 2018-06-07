@@ -18,9 +18,9 @@ CONTAINS
   !>
   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
   !>@author D. Wortmann
-  SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-       sym,kpts,DIMENSION, vacuum, input, cell, enpara,banddos, noco, oneD,hybrid,&
-       it,eig_id,results,inden,v,vx)
+  SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+                   cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,chase_eig_id,results,inden,v,vx)
+
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
     USE m_apws
@@ -67,15 +67,16 @@ CONTAINS
 #endif
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN) :: it
-    INTEGER,INTENT(INOUT):: eig_id
+    INTEGER,INTENT(IN)    :: iter
+    INTEGER,INTENT(INOUT) :: eig_id
+    INTEGER,INTENT(INOUT) :: chase_eig_id
     !     ..
     !-odim
     !+odim
     !     ..
     !     .. Local Scalars ..
     INTEGER jsp,nk,nred,ne_all,ne_found
-    INTEGER ne  ,lh0
+    INTEGER ne,lh0
     INTEGER isp,i,j,err
     LOGICAL l_wu,l_file,l_real,l_zref
     
@@ -112,7 +113,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,v)
 #endif
-    !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/it,v%iter/),&
+    !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
     !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
     
      eig_id=open_eig(&
@@ -121,11 +122,10 @@ CONTAINS
          mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
          nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
          l_orb=banddos%l_orb)
-     !
+
      !---> set up and solve the eigenvalue problem
      !--->    loop over spins
      !--->       set up k-point independent t(l'm',lm) matrices
-     !
      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
 
     neigBuffer = 0
@@ -163,7 +163,7 @@ CONTAINS
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
-          CALL eigen_diag(hmat,smat,ne_all,eig,zMat)
+          CALL eigen_diag(mpi,hmat,smat,nk,jsp,chase_eig_id,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
           !
           !--->         output results

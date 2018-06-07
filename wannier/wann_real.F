@@ -27,7 +27,7 @@ c     ********************************************************
       USE m_constants
       IMPLICIT NONE
 
-      TYPE(t_zMat),INTENT(IN)        :: zMat
+      TYPE(t_mat),INTENT(IN)        :: zMat
 
 C     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,llod,nlod,iband
@@ -107,7 +107,7 @@ c     write (6,*) 'nv,nvd=',nv,nvd
 c           write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
 c           write (6,*) 'z(k,iband)=', z(k,iband)
             arg = tpi * ((k1(k))*rcc(1)+(k2(k))*rcc(2)+(k3(k))*rcc(3))
-            xdnout = xdnout + zMat%z_r(k+addnoco,iband)*
+            xdnout = xdnout + zMat%data_r(k+addnoco,iband)*
      +                        cmplx(cos(arg),sin(arg))*const
             IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
      &    .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then
@@ -122,7 +122,7 @@ c              write (6,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
 c           write (6,*) 'k1,k2,k3=',k1(k),k2(k),k3(k)
 c           write (6,*) 'z(k,iband)=', z(k,iband)
             arg = tpi * ((k1(k))*rcc(1)+(k2(k))*rcc(2)+(k3(k))*rcc(3))
-            xdnout = xdnout + zMat%z_c(k+addnoco,iband)*
+            xdnout = xdnout + zMat%data_c(k+addnoco,iband)*
      +                        cmplx(cos(arg),sin(arg))*const
             IF (((abs(p(1)-2.2).le.0.0001).and.(abs(p(2)).le.0.0001))
      &    .or.((abs(p(2)-2.2).le.0.0001).and.(abs(p(1)).le.0.0001)))then

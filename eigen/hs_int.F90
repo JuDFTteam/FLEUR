@@ -22,7 +22,7 @@ CONTAINS
     CLASS(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
 
 
-    INTEGER :: ispin,jspin,vpw_spin !spin indices
+    INTEGER :: ispin,jspin !spin indices
     INTEGER :: i,j,ii(3),iispin,jjspin,i0
     INTEGER :: in
     COMPLEX :: th,ts,phase
@@ -33,44 +33,43 @@ CONTAINS
        iispin=MIN(ispin,SIZE(smat,1))
        DO jspin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
           jjspin=MIN(jspin,SIZE(smat,1))
-          IF (jspin==ispin) THEN
-             vpw_spin=ispin
-          ELSE
-             vpw_spin=3
-          ENDIF
+        
           !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
           !$OMP SHARED(mpi,lapw,stars,input,cell,vpw) &
-          !$OMP SHARED(jjspin,iispin,ispin,jspin,vpw_spin)&
+          !$OMP SHARED(jjspin,iispin,ispin,jspin)&
           !$OMP SHARED(hmat,smat)&
           !$OMP PRIVATE(ii,i0,i,j,in,phase,b1,b2,r2,th,ts)
           DO  i = mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
              i0=(i-1)/mpi%n_size+1
              !--->    loop over (k+g)
              DO  j = 1,i  
-                !-->     determine index and phase factor
-                ii = lapw%gvec(:,i,ispin) - lapw%gvec(:,j,jspin)
-                in = stars%ig(ii(1),ii(2),ii(3))
-                IF (in.EQ.0) CYCLE
-                phase = stars%rgphs(ii(1),ii(2),ii(3))
-                !+APW_LO
-                ts = phase*stars%ustep(in)
-                IF (input%l_useapw) THEN
-                   b1=lapw%bkpt+lapw%gvec(:,i,ispin)
-                   b2=lapw%bkpt+lapw%gvec(:,j,jspin)
-                   r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
-                   th = phase*(0.5*r2*stars%ustep(in)+vpw(in,vpw_spin))
+                ii = lapw%gvec(:,i,jspin) - lapw%gvec(:,j,ispin)
+                IF (ispin==1.AND.jspin==2) THEN
+                   in = stars%ig(ii(1),ii(2),ii(3))
+                   IF (in.EQ.0) CYCLE
+                   th = stars%rgphs(ii(1),ii(2),ii(3))*vpw(in,3)           
+                   ts=0.0
+                ELSEIF(ispin==2.and.jspin==1) THEN
+                   ii = -1*ii
+                   in = stars%ig(ii(1),ii(2),ii(3))
+                   IF (in.EQ.0) CYCLE
+                   th = stars%rgphs(ii(1),ii(2),ii(3))*CONJG(vpw(in,3))        
+                   ts=0.0
                 ELSE
-                   IF (vpw_spin==3.AND.jspin==2) THEN !The off-diagonal part is only due
-                      th = vpw(in,vpw_spin)           !to potential
-                      ts=0.0
-                   ELSEIF(vpw_spin==3) THEN
-                      th = CONJG(vpw(in,vpw_spin))
-                      ts=0.0
+                   !-->     determine index and phase factor
+                   in = stars%ig(ii(1),ii(2),ii(3))
+                   IF (in.EQ.0) CYCLE
+                   phase = stars%rgphs(ii(1),ii(2),ii(3))
+                   ts = phase*stars%ustep(in)
+                   IF (input%l_useapw) THEN
+                      b1=lapw%bkpt+lapw%gvec(:,i,ispin)
+                      b2=lapw%bkpt+lapw%gvec(:,j,jspin)
+                      r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)   
+                      th = phase*(0.5*r2*stars%ustep(in)+vpw(in,ispin))
                    ELSE
-                      th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,vpw_spin))
+                      th = phase* (0.25* (lapw%rk(i,ispin)**2+lapw%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,ispin))
                    ENDIF
                 ENDIF
-                !-APW_LO
                 !--->    determine matrix element and store
                 IF (hmat(1,1)%l_real) THEN
                    hmat(jjspin,iispin)%data_r(j,i0) = REAL(th)

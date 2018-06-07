@@ -59,7 +59,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
-    TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_mat),INTENT(IN)        :: zMat
     TYPE(t_gVacMap),INTENT(IN)    :: gVacMap
     TYPE(t_potden),INTENT(INOUT)  :: den
     TYPE(t_dos),   INTENT(INOUT)  :: dos
@@ -317,11 +317,11 @@ CONTAINS
                               t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                               ((wronk_1)*SQRT(cell%omtil))
                          IF (zmat%l_real) THEN
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*bv_1
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%data_r(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%data_r(kspin,:ne)*bv_1
                          ELSE
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*bv_1
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%data_c(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%data_c(kspin,:ne)*bv_1
                          END IF
                       END DO      ! -mb:mb
                    END IF
@@ -360,11 +360,11 @@ CONTAINS
                    bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                    !     -----> loop over basis functions
                    IF (zmat%l_real) THEN
-                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_r(kspin,:ne)*av
-                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_r(kspin,:ne)*bv
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_r(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%data_r(kspin,:ne)*bv
                    ELSE
-                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_c(kspin,:ne)*av
-                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_c(kspin,:ne)*bv
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_c(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%data_c(kspin,:ne)*bv
                    ENDIF
                 ENDDO
                 !--->       end of spin loop
@@ -417,11 +417,11 @@ CONTAINS
                            t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                            ((wronk_1)*SQRT(cell%omtil))
                       IF (zmat%l_real) THEN
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*bv_1
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%data_r(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%data_r(k,:ne)*bv_1
                       ELSE
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*bv_1
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%data_c(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%data_c(k,:ne)*bv_1
                       ENDIF
                    END DO      ! -mb:mb
                 END IF
@@ -455,11 +455,11 @@ CONTAINS
                 bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                 !     -----> loop over basis functions
                 IF (zmat%l_real) THEN
-                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_r(k,:ne)*av
-                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_r(k,:ne)*bv
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_r(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_r(k,:ne)*bv
                 ELSE
-                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_c(k,:ne)*av
-                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_c(k,:ne)*bv
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_c(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_c(k,:ne)*bv
                 ENDIF
              ENDDO
           END IF ! D1

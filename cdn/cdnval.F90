@@ -105,7 +105,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE (t_force)            :: force
    TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
    TYPE (t_usdus)            :: usdus
-   TYPE (t_zMat)             :: zMat
+   TYPE (t_mat)              :: zMat
    TYPE (t_gVacMap)          :: gVacMap
 
    CALL timestart("cdnval")

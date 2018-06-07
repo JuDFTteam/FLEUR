@@ -122,7 +122,7 @@ CONTAINS
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    TYPE(t_zMAT),INTENT(INOUT),OPTIONAL  :: zmat
+    TYPE(t_mat),INTENT(INOUT),OPTIONAL  :: zmat
     INTEGER::n
     CALL timestart("IO (read)")
     SELECT CASE (eig66_data_mode(id))

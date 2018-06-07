@@ -33,7 +33,7 @@ CONTAINS
     INTEGER :: ok,nk,nrec1,i,j,ll,l1,l2,ng,itype,n,l,n1,n2,nn
 
 
-    TYPE(t_zmat),ALLOCATABLE :: zmat(:)
+    TYPE(t_mat),ALLOCATABLE :: zmat(:)
     REAL,    ALLOCATABLE    ::  basprod(:)
     REAL                    ::  el_eig(0:atoms%lmaxd,atoms%ntype), ello_eig(atoms%nlod,atoms%ntype),bk(3)
     INTEGER                 ::  degenerat(DIMENSION%neigd2+1,kpts%nkpt)
@@ -74,14 +74,14 @@ CONTAINS
           IF ( skip_kpt(nk) ) CYCLE
 #endif
           nrec1 = kpts%nkpt*(jsp-1) + nk
-          zmat(nk)%nbasfcn=dimension%nbasfcn
-          zmat(nk)%nbands=dimension%neigd2
+          zmat(nk)%matsize1=dimension%nbasfcn
+          zmat(nk)%matsize2=dimension%neigd2
           IF (l_real) THEN
-             ALLOCATE(zmat(nk)%z_r(dimension%nbasfcn,dimension%neigd2))
-             ALLOCATE(zmat(nk)%z_c(0,0))
+             ALLOCATE(zmat(nk)%data_r(dimension%nbasfcn,dimension%neigd2))
+             ALLOCATE(zmat(nk)%data_c(0,0))
           else
-             ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
-             ALLOCATE(zmat(nk)%z_r(0,0))
+             ALLOCATE(zmat(nk)%data_c(dimension%nbasfcn,dimension%neigd2))
+             ALLOCATE(zmat(nk)%data_r(0,0))
           ENDIF
           CALL judft_error("TODO,hs_setup")
           !CALL read_eig(eig_id_hf,nk,jsp,el=el_eig,ello=ello_eig, neig=hybrid%ne_eig(nk),eig=eig_irr(:,nk), w_iks=results%w_iks(:,nk,jsp),&!kveclo=hybdat%kveclo_eig(:,nk),
@@ -90,12 +90,12 @@ CONTAINS
        END DO
        !Allocate further space
        DO nk=kpts%nkpt+1,kpts%nkptf
-          zmat(nk)%nbasfcn=dimension%nbasfcn
-          zmat(nk)%nbands=dimension%neigd2
+          zmat(nk)%matsize1=dimension%nbasfcn
+          zmat(nk)%matsize2=dimension%neigd2
           if (l_real) THEN
-             ALLOCATE(zmat(nk)%z_r(dimension%nbasfcn,dimension%neigd2))
+             ALLOCATE(zmat(nk)%data_r(dimension%nbasfcn,dimension%neigd2))
           else
-             ALLOCATE(zmat(nk)%z_c(dimension%nbasfcn,dimension%neigd2))
+             ALLOCATE(zmat(nk)%data_c(dimension%nbasfcn,dimension%neigd2))
           endif
        Enddo
        !
