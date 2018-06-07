@@ -20,7 +20,7 @@ CONTAINS
   !!     TE_EXC :   charge density-ex-corr.energy density integral
 
   SUBROUTINE vgen( hybrid, field, input, xcpot, DIMENSION, atoms, sphhar, stars, &
-             vacuum, sym, obsolete, cell, oneD, sliceplot, mpi, results, noco, yukawa_residual, &
+             vacuum, sym, obsolete, cell, oneD, sliceplot, mpi, results, noco, &
              den, vTot, vx, vCoul )
 
     USE m_rotate_int_den_to_local
@@ -51,7 +51,6 @@ CONTAINS
     TYPE(t_cell),      INTENT(IN)     :: cell
     TYPE(t_sphhar),    INTENT(IN)     :: sphhar
     TYPE(t_atoms),     INTENT(IN)     :: atoms 
-    logical,           intent(in)     :: yukawa_residual
     TYPE(t_potden),    INTENT(INOUT)  :: den
     TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
 
@@ -73,7 +72,7 @@ CONTAINS
     CALL den%sum_both_spin( workden )
     
     CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
-         sphhar, atoms, workden, yukawa_residual, vCoul, results )
+         sphhar, atoms, workden, vCoul, results )
 
     CALL vCoul%copy_both_spin( vTot )
 

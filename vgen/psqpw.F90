@@ -17,7 +17,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( mpi, atoms, sphhar, stars, vacuum, dimension, cell, input, sym, oneD, &
-       &     qpw, rho, rht, l_xyav, yukawa_residual, psq )
+       &     qpw, rho, rht, l_xyav, potdenType, psq )
 
 #include"cpp_double.h"
     use m_constants
@@ -46,7 +46,7 @@ contains
     complex,            intent(in)  :: qpw(stars%ng3) 
     real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
     real,               intent(in)  :: rht(vacuum%nmzd,2)
-    logical,            intent(in)  :: yukawa_residual
+    integer,            intent(in)  :: potdenType
     complex,            intent(out) :: psq(stars%ng3)
 
     complex                         :: psint, sa, sl, sm
@@ -67,7 +67,7 @@ contains
 #endif
 
     ! Calculate multipole moments
-    call mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, yukawa_residual, qlm )
+    call mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
 #ifdef CPP_MPI
     psq(:) = cmplx( 0.0, 0.0 )
     call MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, mpi%mpi_comm, ierr )
@@ -82,7 +82,7 @@ contains
     ! g0 is the prefactor for the q=0 component in (A13)
     pn = 0.
     do n = 1, atoms%ntype
-      if ( .not. yukawa_residual ) then
+      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
         do l = 0, min( atoms%ncv(n) - 1, atoms%lmax(n) )
           pn(l, n) = DoubleFactorial( atoms%ncv(n) + 1, l ) / ( atoms%rmt(n) ** ( atoms%ncv(n) + 1 ) )
         end do
@@ -100,7 +100,7 @@ contains
     ! q=0 term: see (A12) (Coulomb case) or (A13) (Yukawa case)
     s = 0.
     do n = 1, atoms%ntype
-      if ( .not. yukawa_residual ) then
+      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
         s = s + atoms%neq(n) * real( qlm(0,0,n) )
       else
         s = s + atoms%neq(n) * real( qlm(0,0,n) ) * g0(n)
@@ -180,9 +180,9 @@ contains
       end if
       write( 6, fmt=8000 ) psint
       write( 16, fmt=8000 ) psint
-8000   FORMAT (/,10x,'integral of pseudo charge density inside the slab='&
+8000  format (/,10x,'integral of pseudo charge density inside the slab='&
             &       ,5x,2f11.6)
-      if ( .not. input%film .or. yukawa_residual ) return
+      if ( .not. input%film .or. potdenType == POTDEN_TYPE_POTYUK ) return
 
       ! Normalized pseudo density
       if ( .not. oneD%odi%d1 ) then
@@ -206,7 +206,7 @@ contains
       psq(1) = psq(1) - fact
       write( 6, fmt=8010 ) fact * 1000
       write( 16, fmt=8010 ) fact * 1000
-8010   FORMAT (/,10x,'                     1000 * normalization const. ='&
+8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! mpi%irank == 0 
 

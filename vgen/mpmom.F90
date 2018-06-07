@@ -22,7 +22,7 @@ module m_mpmom
 
 contains
 
-  subroutine mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, yukawa_residual, qlm )
+  subroutine mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
 
     use m_types
     implicit none
@@ -37,7 +37,7 @@ contains
     type(t_atoms),   intent(in)   :: atoms
     real,            intent(in)   :: rho(:,0:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     complex,         intent(in)   :: qpw(:)      !(stars%ng3)
-    logical,         intent(in)   :: yukawa_residual
+    integer,         intent(in)   :: potdenType
     complex,         intent(out)  :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     integer                       :: j, jm, lh, mb, mem, mems, n, nd, l, nat, m
@@ -46,11 +46,11 @@ contains
 
     ! multipole moments of original charge density
     if ( mpi%irank == 0 ) then
-      call mt_moments( input, atoms, sphhar, rho(:,:,:), yukawa_residual, qlmo )
+      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw(:), yukawa_residual, qlmp )
+    call pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
 
     if ( mpi%irank == 0 ) then
       ! see (A14)
@@ -80,12 +80,12 @@ contains
   end subroutine mpmom
 
 
-  subroutine mt_moments( input, atoms, sphhar, rho, yukawa_residual, qlmo )
+  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
     use m_intgr,     only: intgr3
-    use m_constants, only: sfp_const
+    use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial
     use m_SphBessel
@@ -95,7 +95,7 @@ contains
     type(t_sphhar), intent(in)        :: sphhar
     type(t_atoms),  intent(in)        :: atoms
     real,           intent(in)        :: rho(: ,0:, :)
-    logical,        intent(in)        :: yukawa_residual 
+    integer,        intent(in)        :: potdenType
     complex,        intent(out)       :: qlmo(-atoms%lmaxd:,0:,:)
 
     integer                           :: n, ns, jm, nl, l, j, mb, m, nat, i, imax, lmax
@@ -103,7 +103,7 @@ contains
     real                              :: f( maxval( atoms%jri ) )
     real, allocatable, dimension(:,:) :: il, kl
 
-    if ( yukawa_residual ) then
+    if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
 
@@ -114,7 +114,7 @@ contains
       jm = atoms%jri(n)
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(ns), ns)
-      if ( yukawa_residual ) then
+      if ( potdenType == POTDEN_TYPE_POTYUK ) then
         do concurrent (i = 1:imax)
           call ModSphBessel( il(:, i), kl(:, i), input%preconditioning_param * atoms%rmsh(i, n), lmax )
         end do
@@ -122,14 +122,14 @@ contains
       do nl = 0, sphhar%nlh(ns)
         l = sphhar%llh(nl,ns)
         do j = 1, jm
-          if ( .not. yukawa_residual ) then
+          if ( potdenType /= POTDEN_TYPE_POTYUK ) then
             f(j) = atoms%rmsh(j,n) ** l * rho(j,nl,n)
           else
             f(j) = il(l, j) * rho(j,nl,n)
           end if
         end do
         call intgr3( f, atoms%rmsh(:,n), atoms%dx(n), jm, fint )
-        if ( yukawa_residual ) then
+        if ( potdenType == POTDEN_TYPE_POTYUK ) then
           fint = fint * DoubleFactorial( l ) / input%preconditioning_param ** l
         end if
         do mb = 1, sphhar%nmem(nl,ns)
@@ -137,7 +137,7 @@ contains
           qlmo(m,l,n) = qlmo(m,l,n) + sphhar%clnu(mb,nl,ns) * fint
         end do
       end do
-      if ( .not. yukawa_residual ) then
+      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
         qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
       end if
       nat = nat + atoms%neq(n)
@@ -146,13 +146,13 @@ contains
   end subroutine mt_moments
 
 
-  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw_in, yukawa_residual, qlmp_out )
+  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
     use m_phasy1
     use m_sphbes
     use m_od_phasy
-    use m_constants, only: sfp_const
+    use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial
     use m_SphBessel
@@ -166,7 +166,7 @@ contains
     type(t_cell),     intent(in)   :: cell
     type(t_atoms),    intent(in)   :: atoms
     complex,          intent(in)   :: qpw_in(:)
-    logical,          intent(in)   :: yukawa_residual
+    integer,          intent(in)   :: potdenType
     complex,          intent(out)  :: qlmp_out(-atoms%lmaxd:,0:,:)
 
     integer                        :: n, k, l, ll1, lm, ierr(3), m
@@ -188,7 +188,7 @@ contains
     if ( mpi%irank == 0 ) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
-        if ( .not. yukawa_residual ) then  
+        if ( potdenType /= POTDEN_TYPE_POTYUK ) then  
           qlmp(0,0,n) = qpw(1) * stars%nstr(1) * atoms%volmts(n) / sfp_const
         else
           call ModSphBessel( il(0:1), kl(0:1), input%preconditioning_param * atoms%rmt(n), 1 )
@@ -217,14 +217,14 @@ contains
         sk3r = stars%sk3(k) * atoms%rmt(n)
         call sphbes( atoms%lmax(n) + 1, sk3r, aj )
         rl2 = atoms%rmt(n) ** 2
-        if ( yukawa_residual ) then
+        if ( potdenType == POTDEN_TYPE_POTYUK ) then
           call ModSphBessel( il(0:atoms%lmax(n)+1), kl(0:atoms%lmax(n)+1), input%preconditioning_param * atoms%rmt(n), atoms%lmax(n) + 1 )
           sk3i = nqpw / ( stars%sk3(k) ** 2 + input%preconditioning_param ** 2 ) * rl2
         else
           sk3i = nqpw / stars%sk3(k)
         end if
         do l = 0, atoms%lmax(n)
-          if ( yukawa_residual ) then
+          if ( potdenType == POTDEN_TYPE_POTYUK ) then
             cil = ( stars%sk3(k) * il(l) * aj(l+1) + input%preconditioning_param * il(l+1) * aj(l) ) * ( DoubleFactorial( l ) / input%preconditioning_param ** l ) * sk3i
           else
             cil = aj(l+1) * sk3i * rl2  

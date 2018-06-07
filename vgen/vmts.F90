@@ -2,7 +2,7 @@ module m_vmts
 
 contains
 
-  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, yukawa_residual, vr )
+  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, potdenType, vr )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients 
@@ -27,7 +27,7 @@ contains
   ! termsR.
   !
   ! More information and equations can be found in
-  ! F. Tran, P. Blaha, Phys. Rev. B 83, 235118(2011) 
+  ! F. Tran, P. Blaha: Phys. Rev. B 83, 235118(2011) 
   !-------------------------------------------------------------------------
 
 #include"cpp_double.h"
@@ -50,7 +50,7 @@ contains
     type(t_oneD),   intent(in)        :: oneD
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    logical,        intent(in)        :: yukawa_residual
+    integer,        intent(in)        :: potdenType
     real,           intent(out)       :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
 
     complex                           :: cp, sm
@@ -75,12 +75,11 @@ contains
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 
 
-    !-------------------------------------------------------------------------
-    ! sphere boundary contribution to the coefficients calculated from the values
+
+    ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
 
     vtl(:,:) = cmplx( 0.0, 0.0 )
-
 #ifdef CPP_MPI
     call MPI_BCAST( vpw, size(vpw), CPP_MPI_COMPLEX, 0, mpi, ierr )
 #endif
@@ -105,7 +104,6 @@ contains
         call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &
             atoms%neq, atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm )
       end if
-       
       nat = 1
       do n = 1, atoms%ntype
         call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
@@ -136,14 +134,15 @@ contains
     allocate( c_b(n1) )
     call MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, mpi%mpi_comm, ierr )
     if ( mpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
-    deallocate (c_b)
+    deallocate( c_b )
 #endif
 
-    !-------------------------------------------------------------------------
-    ! sphere interior contribution to the coefficients calculated from the 
+
+
+    ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the 
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
-    
-    if ( yukawa_residual ) then
+
+    if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
 
@@ -152,14 +151,14 @@ contains
       nd = atoms%ntypsy(nat)
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
-      if ( yukawa_residual ) then
+      if ( potdenType == POTDEN_TYPE_POTYUK ) then
         do concurrent (i = 1:imax)
           call ModSphBessel( il(0:,i), kl(0:,i), input%preconditioning_param * atoms%rmsh(i,n), lmax )
         end do
       end if
       do lh = 0, sphhar%nlh(nd)
         l = sphhar%llh(lh,nd)
-        if ( yukawa_residual ) then
+        if ( potdenType == POTDEN_TYPE_POTYUK ) then
           green_1(1:imax) = il(l,1:imax)
           green_2(1:imax) = kl(l,1:imax)
           green_factor    = fpi_const * input%preconditioning_param
@@ -173,16 +172,18 @@ contains
         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
-        vr(1:imax,lh,n) = green_factor * ( green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
+        vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )
       end do
       nat = nat + atoms%neq(n)
     end do
-    if ( yukawa_residual ) then
+    if ( potdenType == POTDEN_TYPE_POTYUK ) then
       deallocate( il, kl )
     end if
 
-    if ( .not. yukawa_residual ) then
+    
+
+    if ( potdenType /= POTDEN_TYPE_POTYUK ) then
       do n = 1, atoms%ntype
         vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
       end do
