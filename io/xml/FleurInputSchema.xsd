@@ -44,6 +44,7 @@
          <xsd:element name="coreElectrons" type="CoreElectronsType"/>
          <xsd:element name="magnetism" type="MagnetismType"/>
          <xsd:element name="bzIntegration" type="BZIntegrationType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="soc" type="SOCType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="NocoParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="oneDParams" type="OneDParamType"/>
@@ -268,21 +269,18 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="libXC" type="XCLibXCType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="xcParams" type="XCParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ggaPrinting" type="GGAPrintingType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="hybridFunctional" type="HybFunctionalType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="XCFunctionalEnum" use="required"/>
       <xsd:attribute default="F" name="relativisticCorrections" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
-
-   <xsd:complexType name="HybFunctionalType">
-     <xsd:attribute name="gcutm" type="xsd:integer" use="required"/>
+   <xsd:complexType name="ProdBasisIRType">
+     <xsd:attribute name="gcutm" type="xsd:double" use="required"/>
      <xsd:attribute name="bands" type="xsd:integer" use="required"/>
      <xsd:attribute name="tolerance" type="xsd:double" use="optional" default="0.00001"/>
      <xsd:attribute name="lexp" type="xsd:integer" use="optional" default="16"/>
      <xsd:attribute name="ewaldlambda" type="xsd:integer" use="optional" default="3"/>
    </xsd:complexType>
-   
    
    <xsd:simpleType name="XCFunctionalEnum">
       <xsd:restriction base="xsd:string">
@@ -335,7 +333,7 @@
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="ProdBasisType">
+   <xsd:complexType name="ProdBasisMTType">
      <xsd:attribute name="lcutm" type="xsd:integer" use="required"/>
      <xsd:attribute name="lcutwf" type="xsd:integer" use="required"/>
      <xsd:attribute name="select" type="xsd:string" use="optional" default="4 0 4 2"/>
@@ -360,7 +358,7 @@
          <xsd:element name="mtSphere" type="MTSphereType"/>
          <xsd:element name="atomicCutoffs" type="AtomicCutoffsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="EnergyParametersType"/>
-	 <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisType"/>
+	      <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisMTType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="special" type="SpecialType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="electronConfig" type="ElectronConfigType"/>

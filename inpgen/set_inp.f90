@@ -85,9 +85,9 @@
 !      REAL, PARAMETER :: eps=0.00000001
 !     ..
 !HF   added for HF and hybrid functionals
-      REAL     ::  gcutm,tolerance
+      REAL     ::  gcutm
       REAL     ::  taual_hyb(3,atoms%nat)
-      INTEGER  ::  selct(4,atoms%ntype),lcutm(atoms%ntype)
+      INTEGER  ::  lcutm(atoms%ntype)
       INTEGER  ::  selct2(4,atoms%ntype) 
       INTEGER  ::  bands 
       LOGICAL  ::  l_gamma
@@ -295,12 +295,8 @@
 
 !HF   added for HF and hybrid functionals
       gcutm       = input%rkmax - 0.5
-      tolerance   = 1e-4
+      hybrid%tolerance1   = 1e-4
       taual_hyb   = atoms%taual
-      selct(1,:)  = 4
-      selct(2,:)  = 0
-      selct(3,:)  = 4
-      selct(4,:)  = 2
       lcutm       = 4
       selct2(1,:) = 4
       selct2(2,:) = 0
@@ -337,6 +333,7 @@
       input%rkmax  = real(NINT( input%rkmax  * 10  ) / 10.)
       xcpot%gmaxxc  = real(NINT( xcpot%gmaxxc  * 10  ) / 10.)
       gcutm   = real(INT( gcutm   * 10  ) / 10.)
+      hybrid%gcutm1 = gcutm
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)
