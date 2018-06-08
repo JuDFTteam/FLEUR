@@ -85,11 +85,8 @@
 !      REAL, PARAMETER :: eps=0.00000001
 !     ..
 !HF   added for HF and hybrid functionals
-      REAL     ::  gcutm
       REAL     ::  taual_hyb(3,atoms%nat)
-      INTEGER  ::  lcutm(atoms%ntype)
-      INTEGER  ::  selct2(4,atoms%ntype) 
-      INTEGER  ::  bands 
+      INTEGER  ::  bands
       LOGICAL  ::  l_gamma
       INTEGER  :: nkpt3(3)
 !HF
@@ -294,14 +291,9 @@
       ENDIF
 
 !HF   added for HF and hybrid functionals
-      gcutm       = input%rkmax - 0.5
+      hybrid%gcutm1       = input%rkmax - 0.5
       hybrid%tolerance1   = 1e-4
       taual_hyb   = atoms%taual
-      lcutm       = 4
-      selct2(1,:) = 4
-      selct2(2,:) = 0
-      selct2(3,:) = 4
-      selct2(4,:) = 2
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype))
@@ -327,13 +319,12 @@
 !HF
 
 ! rounding
-      atoms%rmt(:) = real(NINT( atoms%rmt(:) * 100 ) / 100.)
-      atoms%dx(:)   = real(NINT( atoms%dx(:)   * 1000) / 1000.)
-      stars%gmax    = real(NINT( stars%gmax    * 10  ) / 10.)
-      input%rkmax  = real(NINT( input%rkmax  * 10  ) / 10.)
-      xcpot%gmaxxc  = real(NINT( xcpot%gmaxxc  * 10  ) / 10.)
-      gcutm   = real(INT( gcutm   * 10  ) / 10.)
-      hybrid%gcutm1 = gcutm
+      atoms%rmt(:)  = real(NINT(atoms%rmt(:)  * 100 ) / 100.)
+      atoms%dx(:)   = real(NINT(atoms%dx(:)   * 1000) / 1000.)
+      stars%gmax    = real(NINT(stars%gmax    * 10  ) / 10.)
+      input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
+      xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
+      hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)
