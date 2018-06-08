@@ -306,13 +306,15 @@
       hybrid%select1(3,:) = 4
       hybrid%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
-      nkpt3       = (/ 4, 4, 4 /)
       l_gamma     = .false.
-      IF ( l_hyb ) THEN
-        input%ellow = input%ellow -  2.0
-        input%elup  = input%elup  + 10.0
-        input%gw_neigd = bands
-        l_gamma = .true.
+      IF (l_hyb) THEN
+         input%ellow = input%ellow -  2.0
+         input%elup  = input%elup  + 10.0
+         input%gw_neigd = bands
+         l_gamma = .true.
+         IF(juDFT_was_argument("-old")) THEN
+            CALL juDFT_error('No hybrid functionals input for old input file implemented', calledby='set_inp')
+         END IF
       ELSE
         input%gw_neigd = 0
       END IF
@@ -361,6 +363,7 @@
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
+        IF (l_hyb.AND.ANY(div(:).EQ.0)) div(:) = 4
       ENDIF
 
       kpts%specificationType = 0
@@ -419,6 +422,14 @@
          kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
       END IF
 
+      IF (l_hyb) THEN
+         ! Changes for hybrid functionals
+         input%isec1 = 999
+         namex = 'hse '
+         input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
+         input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
+      END IF
+
       IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
@@ -429,15 +440,18 @@
          a2Temp(:) = a2(:)
          a3Temp(:) = a3(:)
 
-         IF(l_explicit) THEN
+         IF(l_explicit.OR.l_hyb) THEN
             ! kpts generation
             kpts%l_gamma = l_gamma
-            sym%symSpecType = 3
 
             CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
 
             kpts%specificationType = 3
+            IF (l_hyb) kpts%specificationType = 2
+         END IF
 
+         IF(l_explicit) THEN
+            sym%symSpecType = 3
             !set latnam to any
             cell%latnam = 'any'
 
@@ -494,26 +508,23 @@
 
       CLOSE (6)
 
-      IF (atoms%ntype.GT.999) THEN
-         WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
-         WRITE(*,*) 'Use inp.xml file instead!'
-      ELSE IF (juDFT_was_argument("-old")) THEN
+      IF (juDFT_was_argument("-old")) THEN
+         IF (atoms%ntype.GT.999) THEN
+            CALL juDFT_error('More than 999 atom types only work with the inp.xml input file',calledby='set_inp')
+         END IF
          IF (kpts%specificationType.EQ.4) THEN
             CALL juDFT_error('No k point set specification by density supported for old inp file',&
                              calledby = 'set_inp')
          END IF
-         CALL rw_inp(&
-     &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &               cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &               noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
+         CALL rw_inp(ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+                     cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+                     noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
          iofile = 6
          OPEN (iofile,file='inp',form='formatted',status='old',position='append')
       
-         IF( l_hyb ) THEN
-            WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma 
-         ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN 
+         IF((div(1) == 0).OR.(div(2) == 0)) THEN 
             WRITE (iofile,'(a5,i5)') 'nkpt=',kpts%nkpt
          ELSE
             WRITE (iofile,'(a5,i5,3(a4,i2))') 'nkpt=',kpts%nkpt,',nx=',div(1),',ny=',div(2),',nz=',div(3)
@@ -522,34 +533,6 @@
          CLOSE (iofile)
 
       END IF
-      iofile = 6
 
-!HF   create hybrid functional input file
-      IF ( l_hyb ) THEN
-        OPEN (iofile,file='inp_hyb',form='formatted',status='new',&
-     &        iostat=iostat)
-        IF (iostat /= 0) THEN
-          STOP &
-     &      'Cannot create new file "inp_hyb". Maybe it already exists?'
-        ENDIF
-
-        ! Changes for hybrid functionals
-        input%strho = .false. ; input%isec1 = 999
-        namex = 'hse '
-        input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
-        input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
-      CALL rw_inp(&
-     &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,dtild,input%comment)
-
-        IF ( ALL(div /= 0) ) nkpt3 = div
-        WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma
-9999    FORMAT ( 'nkpt=',i5,',nx=',i2,',ny=',i2,',nz=',i2,',gamma=',l1)
-        CLOSE (iofile)
-      END IF ! l_hyb
-
-      DEALLOCATE(hybrid%lcutwf)
-!HF
       END SUBROUTINE set_inp
       END MODULE m_setinp
