@@ -307,6 +307,7 @@
       hybrid%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
       l_gamma     = .false.
+      hybrid%l_hybrid = l_hyb
       IF (l_hyb) THEN
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
@@ -426,7 +427,7 @@
          input%isec1 = 999
          namex = 'hse '
          input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
-         input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
+         input%itmax = 15 ; input%maxiter = 25!; input%imix  = 17
          IF (ANY(kpts%nkpt3(:).EQ.0)) kpts%nkpt3(:) = 4
          div(:) = kpts%nkpt3(:)
          kpts%specificationType = 2
