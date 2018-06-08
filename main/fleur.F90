@@ -118,6 +118,8 @@ CONTAINS
          oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
+    if( input%preconditioning_param /= 0 .and. input%film ) call juDFT_error('Currently no preconditioner for films', calledby = 'fleur' )
+
     IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
                               stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
  
@@ -422,22 +424,21 @@ CONTAINS
        CALL forcetheo%postprocess()
        
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
-       IF (mpi%irank.EQ.0) THEN
-          field2 = field
-               !          ----> mix input and output densities
-          CALL timestart("mixing")
-          CALL mix( field2, xcpot, dimension, obsolete, sliceplot, mpi, &
-                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                    oneD, hybrid, archiveType, inDen, outDen, results )
-          CALL timestop("mixing")
-          
-          WRITE (6,FMT=8130) it
-          WRITE (16,FMT=8130) it
-8130      FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
-          WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
-          CALL timestop("Iteration")
-          !+t3e
-       ENDIF ! mpi%irank.EQ.0
+       field2 = field
+       !          ----> mix input and output densities
+       CALL timestart("mixing")
+       CALL mix( field2, xcpot, dimension, obsolete, sliceplot, mpi, &
+                 stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                 oneD, hybrid, archiveType, inDen, outDen, results )
+       CALL timestop("mixing")
+       
+       if( mpi%irank == 0 ) then   
+         WRITE (6,FMT=8130) it
+         WRITE (16,FMT=8130) it
+8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
+         WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
+         CALL timestop("Iteration")
+       end if ! mpi%irank.EQ.0
        
           
 #ifdef CPP_MPI

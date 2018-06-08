@@ -10,7 +10,7 @@ module m_vgen_coulomb
 
 contains
 
-  subroutine vgen_coulomb( ispin, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, &
+  subroutine vgen_coulomb( ispin, mpi, dimension, oneD, input, field, vacuum, sym, stars, &
              cell, sphhar, atoms, den, vCoul, results )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator                           
@@ -96,7 +96,8 @@ contains
              oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
              vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
         call timestop( "Vacuum" )
-        !---> generation of the vacuum warped potential components and       ELSEIF (input%film .AND. .NOT.oneD%odi%d1) THEN
+        !---> generation of the vacuum warped potential components and       
+      elseif ( input%film .and. .not. oneD%odi%d1 ) then
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" ) 
         call vvac( vacuum, stars, cell, sym, input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh )
@@ -175,6 +176,7 @@ contains
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
+#ifdef CPP_MPI
     call MPI_BCAST( den%mt, atoms%jmtd * ( 1 + sphhar%nlhd ) * atoms%ntype * dimension%jspd, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
     call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), &
