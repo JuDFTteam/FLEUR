@@ -3,6 +3,7 @@ if (XXD_PROG)
   ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h
         COMMAND ${XXD_PROG} -i FleurInputSchema.xsd inputSchema.h
+        DEPENDS ${CMAKE_SOURCE_DIR}/io/xml/FleurInputSchema.xsd
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/io/xml/
         COMMENT "Putting current Schema into inputSchema.h")
 else()
