@@ -363,7 +363,6 @@
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
         ENDIF
-        IF (l_hyb.AND.ANY(div(:).EQ.0)) div(:) = 4
       ENDIF
 
       kpts%specificationType = 0
@@ -428,6 +427,9 @@
          namex = 'hse '
          input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
          input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
+         IF (ANY(kpts%nkpt3(:).EQ.0)) kpts%nkpt3(:) = 4
+         div(:) = kpts%nkpt3(:)
+         kpts%specificationType = 2
       END IF
 
       IF(.NOT.juDFT_was_argument("-old")) THEN
@@ -440,7 +442,7 @@
          a2Temp(:) = a2(:)
          a3Temp(:) = a3(:)
 
-         IF(l_explicit.OR.l_hyb) THEN
+         IF(l_explicit) THEN
             ! kpts generation
             kpts%l_gamma = l_gamma
 
