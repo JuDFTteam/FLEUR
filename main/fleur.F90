@@ -76,7 +76,7 @@ CONTAINS
 
     !     Types, these variables contain a lot of data!
     TYPE(t_input)    :: input
-    TYPE(t_field)    :: field
+    TYPE(t_field)    :: field, field2
     TYPE(t_dimension):: DIMENSION
     TYPE(t_atoms)    :: atoms
     TYPE(t_sphhar)   :: sphhar
@@ -112,12 +112,14 @@ CONTAINS
 #endif
 
     mpi%mpi_comm = mpi_comm
- 
+
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
          sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
          oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
+
+    if( input%preconditioning_param /= 0 .and. input%film ) call juDFT_error('Currently no preconditioner for films', calledby = 'fleur' )
 
     IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
                               stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
@@ -236,10 +238,10 @@ CONTAINS
        !---< gwf
 
        CALL timestart("generation of potential")
-       CALL vgen(hybrid,field,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,&
-            sym,obsolete,cell, oneD,sliceplot,mpi ,results,noco,inDen,vTot,vx,vCoul)
+       CALL vgen( hybrid, field, input, xcpot, DIMENSION, atoms, sphhar, stars, vacuum, &
+            sym, obsolete, cell, oneD, sliceplot, mpi, results, noco, inDen, vTot, vx, &
+            vCoul )
        CALL timestop("generation of potential")
-
 
 
 
@@ -250,7 +252,6 @@ CONTAINS
        CALL forcetheo%start()
 
        forcetheoloop:DO WHILE(forcetheo%next_job(it==input%itmax,noco))
-
 
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
@@ -418,19 +419,21 @@ CONTAINS
        CALL forcetheo%postprocess()
        
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
-       IF (mpi%irank.EQ.0) THEN
-          !          ----> mix input and output densities
-          CALL timestart("mixing")
-          CALL mix(stars,atoms,sphhar,vacuum,input,sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
-          CALL timestop("mixing")
-          
-          WRITE (6,FMT=8130) it
-          WRITE (16,FMT=8130) it
-8130      FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
-          WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
-          CALL timestop("Iteration")
-          !+t3e
-       ENDIF ! mpi%irank.EQ.0
+       field2 = field
+       !          ----> mix input and output densities
+       CALL timestart("mixing")
+       CALL mix( field2, xcpot, dimension, obsolete, sliceplot, mpi, &
+                 stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                 oneD, hybrid, archiveType, inDen, outDen, results )
+       CALL timestop("mixing")
+       
+       if( mpi%irank == 0 ) then   
+         WRITE (6,FMT=8130) it
+         WRITE (16,FMT=8130) it
+8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
+         WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
+         CALL timestop("Iteration")
+       end if ! mpi%irank.EQ.0
        
           
 #ifdef CPP_MPI

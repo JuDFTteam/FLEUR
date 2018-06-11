@@ -146,7 +146,8 @@
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 ; input%minDistance = 0.0
+      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
+      input%preconditioning_param = 0.0 ; input%minDistance = 0.0
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
