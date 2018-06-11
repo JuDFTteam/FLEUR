@@ -25,10 +25,9 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,filename,layers,nstars,ncored,nsld,nat)
     INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
     LOGICAL, INTENT(IN) :: l_noco,l_create,l_real,l_soc
-    LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
     !locals
@@ -45,7 +44,7 @@ CONTAINS
 
     ENDIF
 
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc)
 
     !d%eig_int
     ALLOCATE(d%eig_int(jspins*nkpts))
@@ -61,22 +60,6 @@ CONTAINS
        ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
     endif
     length=length*nkpts
-    IF (d%l_dos) THEN
-       ALLOCATE(d%qal(0:3,ntype,neig,length))
-       ALLOCATE(d%qvac(neig,2,length))
-       ALLOCATE(d%qis(neig,length))
-       ALLOCATE(d%qvlay(neig,max(layers,1),2,length))
-       ALLOCATE(d%qstars(nstars,neig,max(layers,1),2,length))
-       ALLOCATE(d%ksym(neig,length))
-       ALLOCATE(d%jsym(neig,length))
-       IF (l_mcd) ALLOCATE(d%mcd(3*ntype,ncored,neig,length))
-       IF (l_orb) THEN
-          ALLOCATE(d%qintsl(nsld,neig,length))
-          ALLOCATE(d%qmtsl(nsld,neig,length))
-          ALLOCATE(d%qmtp(neig,nat,length))
-          ALLOCATE(d%orbcomp(neig,23,nat,length))
-       ENDIF
-    ENDIF
     IF (PRESENT(filename)) CALL priv_readfromfile()
   CONTAINS
     SUBROUTINE priv_readfromfile()
@@ -92,8 +75,7 @@ CONTAINS
       ALLOCATE(zmat%data_r(nmat,neig),zmat%data_c(nmat,neig))
     
       tmp_id=eig66_data_newid(DA_mode)
-      IF (d%l_dos) CPP_error("Can not read DOS-data")
-      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
+      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,l_real,l_soc,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
             CALL read_eig_IO(tmp_id,nk,jspin,i,eig,w_iks,zmat=zmat)
@@ -136,8 +118,7 @@ CONTAINS
       zmat%matsize2=SIZE(d%eig_eig,1)
       ALLOCATE(zmat%data_r(d%nmat,SIZE(d%eig_eig,1)),zmat%data_c(d%nmat,SIZE(d%eig_eig,1)))
       tmp_id=eig66_data_newid(DA_mode)
-      IF (d%l_dos) CPP_error("Could not write DOS data")
-      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
+      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,d%l_real,d%l_soc,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
             !TODO this code is no longer working

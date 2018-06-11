@@ -25,13 +25,12 @@ CONTAINS
   END SUBROUTINE priv_find_data
 
 
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,l_noco,n_size_opt,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,l_noco,n_size_opt,filename,layers,nstars,ncored,nsld,nat)
     USE,INTRINSIC::iso_c_binding
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: id,mpi_comm,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
     LOGICAL, INTENT(IN) :: l_noco,create,l_real,l_soc
     INTEGER,INTENT(IN),OPTIONAL:: n_size_opt
-    LOGICAL,INTENT(IN),OPTIONAL ::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 #ifdef CPP_MPI
@@ -40,7 +39,7 @@ CONTAINS
     TYPE(t_data_MPI),POINTER :: d
 
     CALL priv_find_data(id,d)
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real.and..not.l_soc,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real.and..not.l_soc,l_soc)
 
     IF (PRESENT(n_size_opt)) d%n_size=n_size_opt
     IF (ALLOCATED(d%pe_ev)) THEN
@@ -53,17 +52,6 @@ CONTAINS
           else
              d%zc_data=0.0
           endif
-          d%qal_data=0.0
-          d%qvac_data=0.0
-          d%qvlay_data=0.0
-          d%qstars_data=0.0
-          d%ksym_data=0.0
-          d%jsym_data=0.0
-          d%mcd_data=0.0
-          d%qintsl_data=0.0
-          d%qmtsl_data=0.0
-          d%qmtp_data=0.0
-          d%orbcomp_data=0.0
        ENDIF
        IF (PRESENT(filename)) CALL priv_readfromfile()
        RETURN !everything already done!
@@ -99,28 +87,6 @@ CONTAINS
     else
        CALL priv_create_memory(slot_size,local_slots,d%zc_handle,cmplx_data_ptr=d%zc_data)
     endif
-    !Data for DOS etc
-    IF (d%l_dos) THEN
-       local_slots=COUNT(d%pe_basis==d%irank)
-       CALL priv_create_memory(4*ntype*neig,local_slots,d%qal_handle,real_data_ptr=d%qal_data)
-       CALL priv_create_memory(neig*2,local_slots,d%qvac_handle,real_data_ptr=d%qvac_data)
-       CALL priv_create_memory(neig,local_slots,d%qis_handle,real_data_ptr=d%qis_data)
-       CALL priv_create_memory(neig*max(1,layers)*2,local_slots,d%qvlay_handle,real_data_ptr=d%qvlay_data)
-       CALL priv_create_memory(max(1,nstars)*neig*max(1,layers)*2,local_slots,d%qstars_handle,cmplx_data_ptr=d%qstars_data)
-       CALL priv_create_memory(neig,local_slots,d%jsym_handle,d%jsym_data)
-       CALL priv_create_memory(neig,local_slots,d%ksym_handle,d%ksym_data)
-       IF (l_mcd) CALL priv_create_memory(3*ntype*mcored*neig,local_slots,d%mcd_handle,real_data_ptr=d%mcd_data)
-       IF (l_orb) THEN
-          CALL priv_create_memory(nsld*neig,local_slots,d%qintsl_handle,real_data_ptr=d%qintsl_data)
-          CALL priv_create_memory(nsld*neig,local_slots,d%qmtsl_handle,real_data_ptr=d%qmtsl_data)
-          CALL priv_create_memory(nat*neig,local_slots,d%qmtp_handle,real_data_ptr=d%qmtp_data)
-          CALL priv_create_memory(23*nat*neig,local_slots,d%orbcomp_handle,real_data_ptr=d%orbcomp_data)
-       ENDIF
-    ELSE
-       ALLOCATE(d%qal_data(1),d%qvac_data(1),d%qis_data(1),d%qvlay_data(1),d%qstars_data(1),&
-            d%jsym_data(1),d%ksym_data(1),d%mcd_data(1),d%qintsl_data(1),d%qmtsl_data(1),&
-            d%qmtp_data(1),d%orbcomp_data(1))
-    ENDIF
     IF (PRESENT(filename).AND..NOT.create) CALL priv_readfromfile()
     CALL MPI_BARRIER(MPI_COMM,e)
     CALL timestop("create data spaces in ei66_mpi")
@@ -186,8 +152,7 @@ CONTAINS
       !only do this with PE=0
       IF (d%irank==0) THEN
          tmp_id=eig66_data_newid(DA_mode)
-         IF (d%l_dos) CPP_error("Could not read DOS data")
-         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,.FALSE.,d%l_real,l_soc,.FALSE.,.FALSE.,filename)
+         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,d%l_real,l_soc,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
                !CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
@@ -228,8 +193,7 @@ CONTAINS
 
       IF (d%irank==0) THEN
          tmp_id=eig66_data_newid(DA_mode)
-         IF (d%l_dos) CPP_error("Could not write DOS data")
-         CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
+         CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,d%l_real,d%l_soc,filename)
          DO jspin=1,d%jspins
             DO nk=1,d%nkpts
                !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)

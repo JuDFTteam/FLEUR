@@ -38,7 +38,7 @@ IMPLICIT NONE
 
   CONTAINS
 
-  SUBROUTINE init_chase(mpi,dimension,input,atoms,kpts,noco,vacuum,banddos,l_real)
+  SUBROUTINE init_chase(mpi,dimension,atoms,kpts,noco,vacuum,l_real)
 
     USE m_types
     USE m_types_mpi
@@ -49,12 +49,10 @@ IMPLICIT NONE
 
     TYPE(t_mpi),               INTENT(IN)    :: mpi
     TYPE(t_dimension),         INTENT(IN)    :: dimension
-    TYPE(t_input),             INTENT(IN)    :: input
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
     TYPE(t_noco),              INTENT(IN)    :: noco
     TYPE(t_vacuum),            INTENT(IN)    :: vacuum
-    TYPE(t_banddos),           INTENT(IN)    :: banddos
 
     LOGICAL,                   INTENT(IN)    :: l_real
 
@@ -66,8 +64,7 @@ IMPLICIT NONE
        chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
                              atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
                              mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-                             nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
-                             l_orb=banddos%l_orb)
+                             nsld=atoms%nat,nat=atoms%nat)
     END IF
   END SUBROUTINE init_chase
 

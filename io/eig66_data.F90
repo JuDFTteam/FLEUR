@@ -14,30 +14,24 @@ module m_eig66_data
     TYPE :: t_data
        INTEGER:: io_mode
        INTEGER:: jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
-       LOGICAL:: l_dos,l_mcd,l_orb,l_real,l_soc
+       LOGICAL:: l_real,l_soc
     END TYPE
 
     TYPE,EXTENDS(t_data):: t_data_DA
-        INTEGER            :: recl_vec=0,recl_dos,recl_wiks
+        INTEGER            :: recl_vec=0,recl_wiks
         CHARACTER(LEN=20)  :: fname="eig"
-        INTEGER            :: file_io_id_vec,file_io_id_dos,file_io_id_wiks
+        INTEGER            :: file_io_id_vec,file_io_id_wiks
     END TYPE
 
     TYPE,extends(t_data):: t_data_MPI
        INTEGER             :: n_size=1
        INTEGER             :: size_k,size_el,size_ello,size_eig
        INTEGER             :: eig_handle,zr_handle,zc_handle,neig_handle,w_iks_handle
-       INTEGER             :: qal_handle,qvac_handle,qis_handle,qvlay_handle,qintsl_handle,qmtsl_handle
-       INTEGER             :: qmtp_handle,orbcomp_handle,qstars_handle,mcd_handle,jsym_handle,ksym_handle
        INTEGER,ALLOCATABLE :: pe_basis(:,:),slot_basis(:,:)
        INTEGER,ALLOCATABLE :: pe_ev(:,:,:),slot_ev(:,:,:)
        INTEGER             :: irank
        INTEGER,POINTER     :: neig_data(:)
        REAL,POINTER        :: eig_data(:),zr_data(:), w_iks_data(:)
-       REAL,POINTER        :: qal_data(:),qvac_data(:),qis_data(:),qvlay_data(:)
-       REAL,POINTER        :: qintsl_data(:),qmtsl_data(:),qmtp_data(:),orbcomp_data(:),mcd_data(:)
-       COMPLEX,POINTER     :: qstars_data(:)
-       INTEGER,POINTER     :: jsym_data(:),ksym_data(:)
        COMPLEX,POINTER     :: zc_data(:)
     END TYPE
     TYPE,EXTENDS(t_data):: t_data_hdf
@@ -45,9 +39,6 @@ module m_eig66_data
          INTEGER(HID_T) :: fid
          INTEGER(HID_T) :: neigsetid
          INTEGER(HID_T) :: energysetid,wikssetid,evsetid
-         INTEGER(HID_T) :: qalsetid,qvacsetid,qissetid,qvlaysetid
-         INTEGER(HID_T) :: qstarssetid,ksymsetid,jsymsetid,mcdsetid
-         INTEGER(HID_T) :: qintslsetid,qmtslsetid,qmtpsetid,orbcompsetid
          CHARACTER(LEN=20) :: fname="eig"
 #endif
       END TYPE
@@ -57,18 +48,6 @@ module m_eig66_data
         REAL,ALLOCATABLE    :: eig_eig(:,:,:)
         REAL,ALLOCATABLE    :: eig_vecr(:,:)
         COMPLEX,ALLOCATABLE :: eig_vecc(:,:)
-        REAL,ALLOCATABLE    :: qal(:,:,:,:)
-        REAL,ALLOCATABLE    :: qvac(:,:,:)
-        REAL,ALLOCATABLE    :: qis(:,:)
-        REAL,ALLOCATABLE    :: qvlay(:,:,:,:)
-        COMPLEX,ALLOCATABLE :: qstars(:,:,:,:,:)
-        INTEGER,ALLOCATABLE :: ksym(:,:)
-        INTEGER,ALLOCATABLE :: jsym(:,:)
-        REAL,ALLOCATABLE    :: mcd(:,:,:,:)
-        REAL,ALLOCATABLE    :: qintsl(:,:,:)
-        REAL,ALLOCATABLE    :: qmtsl(:,:,:)
-        REAL,ALLOCATABLE    :: qmtp(:,:,:)
-        REAL,ALLOCATABLE    :: orbcomp(:,:,:,:)
     END TYPE
 
     TYPE t_list
@@ -85,11 +64,10 @@ module m_eig66_data
 
     contains
     
-    subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc)
     CLASS(t_data)::d
     INTEGER,INTENT(IN)::jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
     LOGICAL,INTENT(IN):: l_real,l_soc
-    LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     d%jspins=jspins
     d%nkpts=nkpts
     d%nmat=nmat
@@ -100,15 +78,6 @@ module m_eig66_data
     d%ntype=ntype
     d%l_real=l_real
     d%l_soc=l_soc
-    if (present(l_dos)) THEN
-       d%l_dos=l_dos
-       d%l_mcd=l_mcd
-       d%l_orb=l_orb
-    else
-       d%l_dos=.false.
-       d%l_mcd=.false.
-       d%l_orb=.false.
-    endif
     END SUBROUTINE
 
     subroutine eig66_find_data(d,id,io_mode)
