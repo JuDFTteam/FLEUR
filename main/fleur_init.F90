@@ -250,6 +250,7 @@
           CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%n_u,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+          call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE, 0, mpi%mpi_comm, ierr )
 #endif
           CALL ylmnorm_init(atoms%lmaxd)
           !

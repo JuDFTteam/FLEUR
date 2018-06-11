@@ -59,7 +59,6 @@ CONTAINS
     if (mpi%irank==0) WRITE (6,FMT=8000)
 8000 FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
-    
     CALL vTot%resetPotDen()
     CALL vCoul%resetPotDen()
     CALL vx%resetPotDen()
@@ -70,7 +69,7 @@ CONTAINS
 
     !sum up both spins in den into workden
     CALL den%sum_both_spin( workden )
-    
+   
     CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
          sphhar, atoms, workden, vCoul, results )
 

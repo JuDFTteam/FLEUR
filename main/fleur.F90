@@ -112,7 +112,7 @@ CONTAINS
 #endif
 
     mpi%mpi_comm = mpi_comm
- 
+
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
          sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
@@ -241,7 +241,6 @@ CONTAINS
 
 
 
-
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
@@ -249,7 +248,6 @@ CONTAINS
        CALL forcetheo%start()
 
        forcetheoloop:DO WHILE(forcetheo%next_job(it==input%itmax,noco))
-
 
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
@@ -299,6 +297,7 @@ CONTAINS
           IF ( (mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 
+             write(657,*) 'before fermie'
              IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) THEN
                 input%zelec = input%zelec*2
                 CALL fermie(eig_id,mpi,kpts,obsolete,&
@@ -311,6 +310,7 @@ CONTAINS
                      input,noco,enpara%epara_min,cell,results)
              ENDIF
              CALL timestop("determination of fermi energy")
+             write(657,*) 'after fermie'
 !!$             
 !!$          !+Wannier
 !!$          IF(wann%l_bs_comf)THEN
@@ -365,9 +365,11 @@ CONTAINS
                enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                archiveType,outDen)
 
+       write(657,*) 'before rdmft'
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                                   sphhar,sym,field,vTot,oneD,noco,results)
 
+       write(657,*) 'after rdmft'
           IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
           !+t3e
 #ifdef CPP_MPI
@@ -419,6 +421,7 @@ CONTAINS
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
        !          ----> mix input and output densities
+       write(657,*) 'before mix'
        CALL timestart("mixing")
        CALL mix( field2, xcpot, dimension, obsolete, sliceplot, mpi, &
                  stars, atoms, sphhar, vacuum, input, sym, cell, noco, &

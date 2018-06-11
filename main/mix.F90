@@ -36,6 +36,9 @@ contains
     use m_xmlOutput
     use m_umix
     use m_vgen_coulomb
+#ifdef CPP_MPI
+    use m_mpi_bc_potden
+#endif
     implicit none
 
     type(t_oneD),      intent(in)    :: oneD
@@ -172,24 +175,27 @@ contains
     if( input%preconditioning_param /= 0 ) then
       call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1001 )
       call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 4 )
-      if( mpi%irank == 0 ) then 
+      MPI0_b: if( mpi%irank == 0 ) then 
         call resDen%Residual( outDen, inDen )
         if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation()
-      end if
+      end if MPI0_b
+#ifdef CPP_MPI
+      call mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
+#endif
       call vgen_coulomb( 1, mpi, dimension, oneD, input, field, vacuum, sym, stars, cell, &
                          sphhar, atoms, resDen, vYukawa )
-      resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
-      do n = 1, atoms%ntype
-        do lh = 0, sphhar%nlhd
-          resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
-                  - input%preconditioning_param ** 2 / fpi_const &
-                  * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
-        end do
-      end do
-      if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
     end if
-    MPI0_b: if( mpi%irank == 0 ) then
+    MPI0_c: if( mpi%irank == 0 ) then
       if( input%preconditioning_param /= 0 ) then
+        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
+        do n = 1, atoms%ntype
+          do lh = 0, sphhar%nlhd
+            resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
+                    - input%preconditioning_param ** 2 / fpi_const &
+                    * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
+          end do
+        end do
+        if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
         call brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
                      intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
       end if
@@ -320,7 +326,7 @@ contains
       8020 FORMAT (4d25.14)
       8030 FORMAT (10i10)
 
-    end if MPI0_b
+    end if MPI0_c
 
   end subroutine mix
 
