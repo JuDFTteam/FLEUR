@@ -135,7 +135,7 @@ CONTAINS
     !-Wannier
 
 #ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,atoms,kpts,noco,vacuum,sym%invs.AND..NOT.noco%l_noco)
+    CALL init_chase(mpi,dimension,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
 #endif
 
     it     = 0
@@ -215,7 +215,7 @@ CONTAINS
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
              CALL calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                              cell,vacuum,oneD,results,sym,xcpot,vTot,it)
+                              cell,oneD,results,sym,xcpot,vTot,it)
           END SELECT
        ENDIF
        !#endif

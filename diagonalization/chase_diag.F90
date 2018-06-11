@@ -38,7 +38,7 @@ IMPLICIT NONE
 
   CONTAINS
 
-  SUBROUTINE init_chase(mpi,dimension,atoms,kpts,noco,vacuum,l_real)
+  SUBROUTINE init_chase(mpi,dimension,atoms,kpts,noco,l_real)
 
     USE m_types
     USE m_types_mpi
@@ -52,7 +52,6 @@ IMPLICIT NONE
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
     TYPE(t_noco),              INTENT(IN)    :: noco
-    TYPE(t_vacuum),            INTENT(IN)    :: vacuum
 
     LOGICAL,                   INTENT(IN)    :: l_real
 
@@ -62,9 +61,7 @@ IMPLICIT NONE
        nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
        nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
        chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
-                             atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
-                             mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-                             nsld=atoms%nat,nat=atoms%nat)
+                             atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
     END IF
   END SUBROUTINE init_chase
 

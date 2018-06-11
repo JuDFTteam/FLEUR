@@ -25,14 +25,13 @@ CONTAINS
   END SUBROUTINE priv_find_data
 
 
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,l_noco,n_size_opt,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,l_noco,n_size_opt,filename)
     USE,INTRINSIC::iso_c_binding
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: id,mpi_comm,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
     LOGICAL, INTENT(IN) :: l_noco,create,l_real,l_soc
     INTEGER,INTENT(IN),OPTIONAL:: n_size_opt
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
-    INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 #ifdef CPP_MPI
     INTEGER:: isize,e,slot_size,local_slots
     INTEGER,PARAMETER::mcored=27 !there should not be more that 27 core states
