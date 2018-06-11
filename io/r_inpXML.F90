@@ -1148,7 +1148,12 @@ SUBROUTINE r_inpXML(&
   END IF
 
 
-  !!! Mixed product basis stuff
+  hybrid%gcutm1 = input%rkmax - 0.5
+  hybrid%tolerance1 = 1.0e-4
+  hybrid%ewaldlambda = 3
+  hybrid%lexp = 16
+  hybrid%bands1 = dimension%neigd
+
   numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
   IF (numberNodes==0) THEN
      IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
@@ -1523,6 +1528,9 @@ SUBROUTINE r_inpXML(&
               END DO
            END DO
            !Hybrid functional stuff
+           hybrid%lcutm1(iType) = 4
+           hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
+           hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
            IF (hybrid%l_hybrid) THEN
               hybrid%lcutm1(iType)=lcutm
               hybrid%lcutwf(iType)=lcutwf
