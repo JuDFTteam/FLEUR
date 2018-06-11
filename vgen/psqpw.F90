@@ -98,6 +98,7 @@ contains
     end do
 
     ! q=0 term: see (A12) (Coulomb case) or (A13) (Yukawa case)
+    if( mpi%irank == 0 ) then
     s = 0.
     do n = 1, atoms%ntype
       if ( potdenType /= POTDEN_TYPE_POTYUK ) then
@@ -106,7 +107,7 @@ contains
         s = s + atoms%neq(n) * real( qlm(0,0,n) ) * g0(n)
       end if
     end do
-    if ( mpi%irank == 0 ) then
+    !if( mpi%irank == 0 ) then
       psq(1) = qpw(1) + ( sfp_const / cell%omtil ) * s
     end if
 

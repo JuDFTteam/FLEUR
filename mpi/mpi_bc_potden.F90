@@ -27,6 +27,7 @@ CONTAINS
    LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc, l_pw_wAlloc
 
    CALL MPI_BCAST(potden%iter,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(potden%potdenType,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    l_nocoAlloc = .FALSE.
    l_denMatAlloc = .FALSE.
@@ -51,7 +52,7 @@ CONTAINS
    CALL MPI_BCAST(potden%pw,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 
    n = atoms%jmtd * (sphhar%nlhd+1) * atoms%ntype * input%jspins
-   CALL MPI_BCAST(potden%mt,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(potden%mt,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
    IF (l_pw_wAlloc) THEN
       n = stars%ng3 * SIZE(potden%pw_w,2)
@@ -60,7 +61,7 @@ CONTAINS
 
    IF (l_vaczAlloc) THEN
       n = vacuum%nmzd * 2 * SIZE(potden%vacz,3)
-      CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
       n = vacuum%nmzxyd * (stars%ng2-1) * 2 * SIZE(potden%vacxy,4)
       CALL MPI_BCAST(potden%vacxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)

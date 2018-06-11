@@ -45,7 +45,7 @@ CONTAINS
     ! reduce mt
     n = atoms%jmtd * ( sphhar%nlhd + 1 ) * atoms%ntype * input%jspins
     allocate( r_b(n) )
-    call MPI_REDUCE( potden%mt, r_b, n, MPI_DOUBLE, MPI_SUM, 0, mpi%mpi_comm, ierr )
+    call MPI_REDUCE( potden%mt, r_b, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, mpi%mpi_comm, ierr )
     if( mpi%irank == 0 ) call CPP_BLAS_scopy( n, r_b, 1, potden%mt, 1 )
     deallocate( r_b )
 
@@ -62,7 +62,7 @@ CONTAINS
     if( allocated( potden%vacz ) ) then
       n = vacuum%nmzd * 2 * size( potden%vacz, 3 )
       allocate( r_b(n) )
-      call MPI_REDUCE( potden%vacz, r_b, n, MPI_DOUBLE, MPI_SUM, 0, mpi%mpi_comm, ierr )
+      call MPI_REDUCE( potden%vacz, r_b, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, mpi%mpi_comm, ierr )
       if( mpi%irank == 0 ) call CPP_BLAS_scopy( n, r_b, 1, potden%vacz, 1 )
       deallocate( r_b )
     end if
