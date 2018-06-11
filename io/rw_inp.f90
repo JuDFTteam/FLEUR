@@ -573,7 +573,7 @@
  8061   FORMAT (6x,i3,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       END IF
       
-      
+      input%preconditioning_param = 0.0 
 
       chform = '(5x,l1,'//chntype//'f6.2)'
 !      chform = '(5x,l1,23f6.2)'
