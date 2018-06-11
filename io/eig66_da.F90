@@ -34,8 +34,8 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,create,l_real,l_soc,filename)
-    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,create,l_real,l_soc,filename)
+    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: create,l_real,l_soc
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     !locals
@@ -48,7 +48,7 @@ CONTAINS
     CALL priv_find_data(id,d)
 
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
 
     !Calculate the record length
 

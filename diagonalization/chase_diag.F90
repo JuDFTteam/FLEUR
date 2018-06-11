@@ -60,8 +60,8 @@ IMPLICIT NONE
     IF (juDFT_was_argument("-diag:chase")) THEN
        nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
        nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
-       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
-                             atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
+       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,&
+                             noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
     END IF
   END SUBROUTINE init_chase
 

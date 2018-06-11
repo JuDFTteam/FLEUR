@@ -25,8 +25,8 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,filename)
-    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,l_create,l_real,l_soc,l_noco,filename)
+    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: l_noco,l_create,l_real,l_soc
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
     !locals
@@ -43,7 +43,7 @@ CONTAINS
 
     ENDIF
 
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
 
     !d%eig_int
     ALLOCATE(d%eig_int(jspins*nkpts))
@@ -65,7 +65,7 @@ CONTAINS
       USE m_eig66_da,ONLY:open_eig_IO=>open_eig,read_eig_IO=>read_eig,close_eig_IO=>close_eig
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(neig),w_iks(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(neig),w_iks(neig)
       TYPE(t_mat):: zmat
 
       zmat%l_real=l_real
@@ -74,7 +74,7 @@ CONTAINS
       ALLOCATE(zmat%data_r(nmat,neig),zmat%data_c(nmat,neig))
     
       tmp_id=eig66_data_newid(DA_mode)
-      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,l_real,l_soc,filename)
+      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,.FALSE.,l_real,l_soc,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
             CALL read_eig_IO(tmp_id,nk,jspin,i,eig,w_iks,zmat=zmat)
@@ -108,16 +108,16 @@ CONTAINS
       USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,write_eig_DA=>write_eig,close_eig_DA=>close_eig
       IMPLICIT NONE
 
-      INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
+      INTEGER:: nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(SIZE(d%eig_eig,1)),w_iks(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(SIZE(d%eig_eig,1)),w_iks(SIZE(d%eig_eig,1))
       TYPE(t_mat)::zmat
       zmat%l_real=d%l_real
       zmat%matsize1=d%nmat
       zmat%matsize2=SIZE(d%eig_eig,1)
       ALLOCATE(zmat%data_r(d%nmat,SIZE(d%eig_eig,1)),zmat%data_c(d%nmat,SIZE(d%eig_eig,1)))
       tmp_id=eig66_data_newid(DA_mode)
-      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,d%l_real,d%l_soc,filename)
+      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,.FALSE.,d%l_real,d%l_soc,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
             !TODO this code is no longer working

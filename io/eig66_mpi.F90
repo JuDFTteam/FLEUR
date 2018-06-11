@@ -25,10 +25,10 @@ CONTAINS
   END SUBROUTINE priv_find_data
 
 
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,l_noco,n_size_opt,filename)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,create,l_real,l_soc,l_noco,n_size_opt,filename)
     USE,INTRINSIC::iso_c_binding
     IMPLICIT NONE
-    INTEGER, INTENT(IN) :: id,mpi_comm,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+    INTEGER, INTENT(IN) :: id,mpi_comm,nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: l_noco,create,l_real,l_soc
     INTEGER,INTENT(IN),OPTIONAL:: n_size_opt
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_data_MPI),POINTER :: d
 
     CALL priv_find_data(id,d)
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real.and..not.l_soc,l_soc)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real.and..not.l_soc,l_soc)
 
     IF (PRESENT(n_size_opt)) d%n_size=n_size_opt
     IF (ALLOCATED(d%pe_ev)) THEN
@@ -142,7 +142,7 @@ CONTAINS
       USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,read_eig_DA=>read_eig,close_eig_da=>close_eig
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(neig),w_iks(neig),ello(nlo,ntype),el(lmax,ntype)
+      REAL    :: eig(neig),w_iks(neig)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
       zmat%nbasfcn=nmat
@@ -151,7 +151,7 @@ CONTAINS
       !only do this with PE=0
       IF (d%irank==0) THEN
          tmp_id=eig66_data_newid(DA_mode)
-         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,.FALSE.,d%l_real,l_soc,filename)
+         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,.FALSE.,d%l_real,l_soc,filename)
          DO jspin=1,jspins
             DO nk=1,nkpts
                !CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
@@ -180,19 +180,18 @@ CONTAINS
       USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,write_eig_DA=>write_eig,close_eig_DA=>close_eig
       IMPLICIT NONE
 
-      INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
+      INTEGER:: nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(d%neig),w_iks(d%neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(d%neig),w_iks(d%neig)
       TYPE(t_zmat)::zmat
       zmat%l_real=d%l_real
       zmat%nbasfcn=d%nmat
       zmat%nbands=d%neig
       allocate(zmat%z_r(d%nmat,d%neig),zmat%z_c(d%nmat,d%neig))
-      nlotot=d%nlotot
 
       IF (d%irank==0) THEN
          tmp_id=eig66_data_newid(DA_mode)
-         CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,d%l_real,d%l_soc,filename)
+         CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,.FALSE.,d%l_real,d%l_soc,filename)
          DO jspin=1,d%jspins
             DO nk=1,d%nkpts
                !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)

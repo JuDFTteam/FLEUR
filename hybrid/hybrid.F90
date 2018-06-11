@@ -98,8 +98,8 @@ CONTAINS
     CALL timestart("Preparation for Hybrid functionals")
     CALL juDFT_WARN ("Hybrid functionals not working in this version")      
       
-    eig_id=open_eig(mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,&
-                    atoms%ntype,atoms%nlotot,noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,mpi%n_size)
+    eig_id=open_eig(mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,&
+                    noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,mpi%n_size)
     
     !construct the mixed-basis
     CALL timestart("generation of mixed basis")

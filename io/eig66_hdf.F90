@@ -57,7 +57,7 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
   !----------------------------------------------------------------------
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,readonly,filename)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,create,l_real,l_soc,readonly,filename)
 
     !*****************************************************************
     !     opens hdf-file for eigenvectors+values
@@ -65,7 +65,7 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER, INTENT(IN) :: id,mpi_comm
-    INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+    INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: create,readonly,l_real,l_soc
     CHARACTER(LEN=*),OPTIONAL :: filename
 
@@ -95,7 +95,7 @@ CONTAINS
 #endif 
     CALL priv_find_data(id,d)
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
     !set access_flags according
     IF (readonly) THEN
        access_mode=H5F_ACC_RDONLY_F

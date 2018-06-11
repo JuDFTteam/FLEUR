@@ -15,7 +15,7 @@ MODULE m_eig66_io
   PUBLIC read_eig, write_eig
 CONTAINS
 
-  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,&
+  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,&
                     l_noco,l_create,l_real,l_soc,l_readonly,n_size,mode_in,filename)&
            RESULT(id)
     USE m_eig66_hdf,ONLY:open_eig_hdf=>open_eig
@@ -23,7 +23,7 @@ CONTAINS
     USE m_eig66_mem,ONLY:open_eig_mem=>open_eig
     USE m_eig66_MPI,ONLY:open_eig_mpi=>open_eig
     IMPLICIT NONE
-    INTEGER,INTENT(IN)          :: nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,mpi_comm
+    INTEGER,INTENT(IN)          :: nmat,neig,nkpts,jspins,mpi_comm
     LOGICAL,INTENT(IN)          :: l_noco,l_readonly,l_create,l_real,l_soc
     INTEGER,INTENT(IN),OPTIONAL :: n_size,mode_in
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
@@ -70,13 +70,13 @@ CONTAINS
     CALL timestart("Open file/memory for IO of eig66")
     SELECT CASE (eig66_data_mode(id))
     CASE (DA_mode)
-       CALL open_eig_DA(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,nlotot,l_create,l_real,l_soc,filename)
+       CALL open_eig_DA(id,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,filename)
     CASE (hdf_mode)
-       CALL open_eig_HDF(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_readonly,filename)
+       CALL open_eig_HDF(id,mpi_comm,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,l_readonly,filename)
     CASE (mem_mode)
-       CALL open_eig_MEM(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,filename)
+       CALL open_eig_MEM(id,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,l_noco,filename)
     CASE (mpi_mode)
-       CALL open_eig_MPI(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,n_size,filename)
+       CALL open_eig_MPI(id,mpi_comm,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,l_noco,n_size,filename)
     CASE DEFAULT
        CALL juDFT_error("Invalid IO-mode in eig66_io")
     END SELECT

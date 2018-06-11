@@ -13,7 +13,7 @@ module m_eig66_data
 
     TYPE :: t_data
        INTEGER:: io_mode
-       INTEGER:: jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
+       INTEGER:: jspins,nkpts,nmat,neig,nlo,ntype
        LOGICAL:: l_real,l_soc
     END TYPE
 
@@ -25,7 +25,7 @@ module m_eig66_data
 
     TYPE,extends(t_data):: t_data_MPI
        INTEGER             :: n_size=1
-       INTEGER             :: size_k,size_el,size_ello,size_eig
+       INTEGER             :: size_k,size_eig
        INTEGER             :: eig_handle,zr_handle,zc_handle,neig_handle,w_iks_handle
        INTEGER,ALLOCATABLE :: pe_basis(:,:),slot_basis(:,:)
        INTEGER,ALLOCATABLE :: pe_ev(:,:,:),slot_ev(:,:,:)
@@ -64,18 +64,14 @@ module m_eig66_data
 
     contains
     
-    subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc)
+    subroutine eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
     CLASS(t_data)::d
-    INTEGER,INTENT(IN)::jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype
+    INTEGER,INTENT(IN)::jspins,nkpts,nmat,neig
     LOGICAL,INTENT(IN):: l_real,l_soc
     d%jspins=jspins
     d%nkpts=nkpts
     d%nmat=nmat
     d%neig=neig
-    d%lmax=lmax
-    d%nlotot=nlotot
-    d%nlo=nlo
-    d%ntype=ntype
     d%l_real=l_real
     d%l_soc=l_soc
     END SUBROUTINE
