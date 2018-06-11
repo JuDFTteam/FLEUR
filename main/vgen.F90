@@ -56,7 +56,7 @@ CONTAINS
 
     TYPE(t_potden)                    :: workden,denRot
 
-    WRITE (6,FMT=8000)
+    if (mpi%irank==0) WRITE (6,FMT=8000)
 8000 FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
     

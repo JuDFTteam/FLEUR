@@ -69,6 +69,7 @@ CONTAINS
     USE m_mpi_bc_potden
 #endif
     USE m_eig66_io,   ONLY : open_eig, close_eig
+    USE m_chase_diag
     IMPLICIT NONE
 
     INTEGER,INTENT(IN) :: mpi_comm
@@ -101,9 +102,9 @@ CONTAINS
     CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
 
     !     .. Local Scalars ..
-    INTEGER:: eig_id,chase_eig_id, archiveType
-    INTEGER:: n,it,ithf,nevd,nexd
-    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp, l_real
+    INTEGER:: eig_id, archiveType
+    INTEGER:: n,it,ithf
+    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp
     REAL   :: fermiEnergyTemp, fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -135,17 +136,9 @@ CONTAINS
 
     !-Wannier
 
-    l_real = sym%invs.AND..NOT.noco%l_noco
-    IF (juDFT_was_argument("-diag:chase")) THEN
-       nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
-       nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
-       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
-                             atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
-                             mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-                             nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
-                             l_orb=banddos%l_orb)
-    END IF
-
+#ifdef CPP_CHASE
+    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,vacuum,banddos,sym%invs.AND..NOT.noco%l_noco)
+#endif
 
     it     = 0
     ithf   = 0
@@ -264,7 +257,7 @@ CONTAINS
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
                      sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,oneD,hybrid,&
-                     it,eig_id,chase_eig_id,results,inDen,vTemp,vx)
+                     it,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")

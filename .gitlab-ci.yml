@@ -28,6 +28,9 @@ test-gfortran:
        - build
   script:
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
+  artifacts:
+    paths:
+      - build/Testing/test.oldlogs
 #  only:
 #    - schedules
 #    - triggers

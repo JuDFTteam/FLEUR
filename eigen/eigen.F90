@@ -19,7 +19,7 @@ CONTAINS
   !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat. 
   !>@author D. Wortmann
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                   cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,chase_eig_id,results,inden,v,vx)
+                   cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx)
 
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
@@ -69,7 +69,6 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER,INTENT(IN)    :: iter
     INTEGER,INTENT(INOUT) :: eig_id
-    INTEGER,INTENT(INOUT) :: chase_eig_id
     !     ..
     !-odim
     !+odim
@@ -163,7 +162,7 @@ CONTAINS
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
-          CALL eigen_diag(mpi,hmat,smat,nk,jsp,chase_eig_id,iter,ne_all,eig,zMat)
+          CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
           !
           !--->         output results

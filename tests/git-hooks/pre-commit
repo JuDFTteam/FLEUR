@@ -1,4 +1,8 @@
 #!/bin/sh
+if  git rev-parse -q --verify MERGE_HEAD
+then
+    echo "In merge state"
+else  
 git stash -q --keep-index
 if git diff HEAD|grep -i " STOP"|grep -q '\+' 
 then 
@@ -16,3 +20,4 @@ EOF
     exit 1
 fi
 git stash pop -q
+fi

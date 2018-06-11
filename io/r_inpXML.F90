@@ -1135,7 +1135,7 @@ SUBROUTINE r_inpXML(&
   END IF
   hybrid%l_hybrid=xcpot%is_hybrid()
   
-  IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
+  ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
   obsolete%lwb=.FALSE.
   IF (xcpot%is_gga()) THEN
@@ -1148,17 +1148,16 @@ SUBROUTINE r_inpXML(&
   END IF
 
 
-  !!! Hybrid stuff
-  numberNodes = xmlGetNumberOfNodes('/fleurInput/xcFunctional/hybridFunctional')
+  !!! Mixed product basis stuff
+  numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
   IF (numberNodes==0) THEN
-     IF (hybrid%l_hybrid) CALL judft_error("Hybrid input missing in inp.xml")
+     IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
   ELSE
-     IF (.NOT.hybrid%l_hybrid) CALL judft_error("Hybrid parameters specified but no hybrid functional used")
-     hybrid%gcutm1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@gcutm'))
-     hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@tolerance'))
-     hybrid%ewaldlambda=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@ewaldlambda'))
-     hybrid%lexp=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@lexp'))
-     hybrid%bands1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@bands'))
+     hybrid%gcutm1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
+     hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
+     hybrid%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
+     hybrid%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
+     hybrid%bands1=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
   ENDIF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

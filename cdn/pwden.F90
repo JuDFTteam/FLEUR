@@ -493,7 +493,7 @@ CONTAINS
                      CMPLX(psi1r(stars%igq_fft(ik)),psi1i(stars%igq_fft(ik)))
              ENDDO
              DO istr = 1,stars%ng3_fft
-                CALL pwint(stars,atoms,sym, oneD,cell,stars%kv3(1,istr),x)
+                CALL pwint(stars,atoms,sym, oneD,cell,istr,x)
                 dos%qis(nu,ikpt,1) = dos%qis(nu,ikpt,1) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
              ENDDO
 
@@ -503,7 +503,7 @@ CONTAINS
                                                               CMPLX(psi2r(stars%igq_fft(ik)),psi2i(stars%igq_fft(ik)))
              ENDDO
              DO istr = 1,stars%ng3_fft
-                CALL pwint(stars,atoms,sym, oneD,cell, stars%kv3(1,istr), x)
+                CALL pwint(stars,atoms,sym, oneD,cell, istr, x)
                 dos%qis(nu,ikpt,input%jspins) = dos%qis(nu,ikpt,input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
              ENDDO
           ENDIF

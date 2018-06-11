@@ -30,23 +30,60 @@ IMPLICIT NONE
     end subroutine chase_r
   end interface
 
+  PRIVATE 
+
+    INTEGER :: chase_eig_id
+
+  PUBLIC init_chase, chase_diag
+
   CONTAINS
 
-  SUBROUTINE chase_diag(mpi,hmat,smat,ikpt,jsp,chase_eig_id,iter,ne,eig,zmat)
+  SUBROUTINE init_chase(mpi,dimension,input,atoms,kpts,noco,vacuum,banddos,l_real)
 
     USE m_types
     USE m_types_mpi
+    USE m_judft
+    USE m_eig66_io
+
+    IMPLICIT NONE
+
+    TYPE(t_mpi),               INTENT(IN)    :: mpi
+    TYPE(t_dimension),         INTENT(IN)    :: dimension
+    TYPE(t_input),             INTENT(IN)    :: input
+    TYPE(t_atoms),             INTENT(IN)    :: atoms
+    TYPE(t_kpts),              INTENT(IN)    :: kpts
+    TYPE(t_noco),              INTENT(IN)    :: noco
+    TYPE(t_vacuum),            INTENT(IN)    :: vacuum
+    TYPE(t_banddos),           INTENT(IN)    :: banddos
+
+    LOGICAL,                   INTENT(IN)    :: l_real
+
+    INTEGER                                  :: nevd, nexd
+
+    IF (juDFT_was_argument("-diag:chase")) THEN
+       nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
+       nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
+       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,atoms%lmaxd,&
+                             atoms%nlod,atoms%ntype,atoms%nlotot,noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,&
+                             mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
+                             nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
+                             l_orb=banddos%l_orb)
+    END IF
+  END SUBROUTINE init_chase
+
+  SUBROUTINE chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
+
+    USE m_types
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
 
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
-    TYPE(t_mpi),               INTENT(IN)    :: mpi
+
     TYPE(t_mat),               INTENT(INOUT) :: hmat,smat
     INTEGER,                   INTENT(IN)    :: ikpt
     INTEGER,                   INTENT(IN)    :: jsp
-    INTEGER,                   INTENT(IN)    :: chase_eig_id
     INTEGER,                   INTENT(IN)    :: iter
     INTEGER,                   INTENT(INOUT) :: ne
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: zmat
@@ -100,14 +137,14 @@ IMPLICIT NONE
        if(iter.EQ.1) then
           call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
        else
-          CALL read_eig(chase_eig_id,ikpt,jsp,n_start=mpi%n_size,n_end=mpi%n_rank,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
+          CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
        end if
 
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
+                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMatTemp%data_r,zmat%matsize1,info)
@@ -155,14 +192,14 @@ IMPLICIT NONE
        if(iter.EQ.1) then
           call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
        else
-          CALL read_eig(chase_eig_id,ikpt,jsp,n_start=mpi%n_size,n_end=mpi%n_rank,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
+          CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
        end if
 
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMatTemp)
+                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,zMatTemp%data_c,zmat%matsize1,info)
