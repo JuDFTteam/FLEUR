@@ -104,7 +104,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER:: eig_id, archiveType
     INTEGER:: n,it,ithf
-    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp
+    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp, l_real
     REAL   :: fermiEnergyTemp, fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -133,10 +133,6 @@ CONTAINS
     IF (wann%l_gwf) input%itmax = 1
 
     !-Wannier
-
-#ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
-#endif
 
     it     = 0
     ithf   = 0
@@ -167,6 +163,14 @@ CONTAINS
     CALL vx%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTCOUL)
     CALL vTemp%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
+
+    l_real=sym%invs.AND..NOT.noco%l_noco
+    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,&
+                    noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
+
+#ifdef CPP_CHASE
+    CALL init_chase(mpi,dimension,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
+#endif
 
     scfloop:DO WHILE (l_cont)
 
@@ -455,6 +459,9 @@ CONTAINS
     END DO scfloop ! DO WHILE (l_cont)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
+
+    CALL close_eig(eig_id)
+
     CALL juDFT_end("all done",mpi%irank)
     
   CONTAINS

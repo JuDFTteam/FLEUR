@@ -68,7 +68,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT(IN)    :: iter
-    INTEGER,INTENT(INOUT) :: eig_id
+    INTEGER,INTENT(IN)    :: eig_id
     !     ..
     !-odim
     !+odim
@@ -115,13 +115,10 @@ CONTAINS
     !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
     !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
     
-     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,&
-                     noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
-
-     !---> set up and solve the eigenvalue problem
-     !--->    loop over spins
-     !--->       set up k-point independent t(l'm',lm) matrices
-     CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
+    !---> set up and solve the eigenvalue problem
+    !--->    loop over spins
+    !--->       set up k-point independent t(l'm',lm) matrices
+    CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
 
     neigBuffer = 0
     results%neig = 0
