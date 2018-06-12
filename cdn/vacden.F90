@@ -242,13 +242,7 @@ CONTAINS
     END IF
     !
     !-dw
-    IF (noco%l_noco) THEN
-       OPEN (25,FILE='potmat',FORM='unformatted',STATUS='old')
-       !--->    skip the four components of the interstitial potential matrix
-       DO ipot = 1,3
-          READ (25)
-       ENDDO
-    ENDIF
+   
 
     wronk = 2.0
     const = 1.0 / ( SQRT(cell%omtil)*wronk )
@@ -262,15 +256,7 @@ CONTAINS
        ac(:,:,:) = CMPLX(0.0,0.0)
        bc(:,:,:) = CMPLX(0.0,0.0)
        sign = 3. - 2.*ivac
-       IF (noco%l_noco) THEN
-          !--->       read the non-warping potential matrix, it is needed to 
-          !--->       calculate the vacuum basis functions
-          READ (25)((vz(imz,ipot),imz=1,vacuum%nmzd),ipot=1,2)
-          !--->       skip the warping potential matrix
-          DO ipot = 1,3
-             READ (25)
-          ENDDO
-       ENDIF
+      
        IF (noco%l_noco) THEN
           !--->    In a non-collinear calculation vacden is only called once.
           !--->    Thus, the vaccum wavefunctions and the A- and B-coeff. (ac bc)
@@ -1230,7 +1216,6 @@ CONTAINS
           ENDDO
        END IF
     ENDDO
-    IF (noco%l_noco) CLOSE (25)
     DEALLOCATE (ac,bc,dt,dte,du,ddu,due,ddue,t,te,tei,u,ue,v,yy )
 
     IF (oneD%odi%d1) THEN

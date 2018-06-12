@@ -111,7 +111,7 @@ CONTAINS
     !Now the vacuum part starts
 
  
-    ALLOCATE(vvacxy(0:ifft2-1,vacuum%nmzxyd,2,4))
+    ALLOCATE(vvacxy(ifft2,vacuum%nmzxyd,2,4))
 
     
        !--->    fouriertransform the spin up and down potential
@@ -184,7 +184,7 @@ CONTAINS
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
                    CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                        vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,:,ivac,ipot), vacuum%nmzxyd,-1)
+                        vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(:,:,ivac,ipot), vacuum%nmzxyd,-1)
                 END IF
              ENDDO
           ENDDO
@@ -204,7 +204,7 @@ CONTAINS
                 !   &               %igf,odl%pgf,odi%nst2)
              ELSE
                 CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                     vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,:,ivac,3), vacuum%nmzxyd,-1)
+                     vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(:,:,ivac,3), vacuum%nmzxyd,-1)
              END IF
           ENDDO
        ENDDO

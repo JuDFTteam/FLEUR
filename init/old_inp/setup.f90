@@ -47,6 +47,7 @@
           USE m_prpxcfft
           USE m_inpeig
           USE m_efield
+          USE m_ylm
           !-odim
           USE m_od_mapatom
           USE m_od_chisym
@@ -86,6 +87,7 @@
           ENDIF
           IF (input%film.AND..NOT.sym%symor) CALL juDFT_warn("Films&Symor",hint&
                &     ="Films should be symmorphic",calledby ='setup')
+          CALL ylmnorm_init(atoms%lmaxd)
           IF (.NOT.oneD%odd%d1) THEN
              CALL local_sym(&
                   atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&

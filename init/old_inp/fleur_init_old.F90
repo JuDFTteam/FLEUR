@@ -172,7 +172,7 @@ CONTAINS
           ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
                oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
        ENDIF
-       oneD%odd%nq2 = oneD%odd%n2d
+       oneD%odd%nq2 = stars%ng2!oneD%odd%n2d
        oneD%odi%nq2 = oneD%odd%nq2
        !-odim
        !+t3e

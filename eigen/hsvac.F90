@@ -124,18 +124,18 @@ CONTAINS
           IF (jspin1==jspin2) THEN
              DO  i = mpi%n_rank+1,lapw%nv(jspin1),mpi%n_size
                 i0=(i-1)/mpi%n_size+1 !local column index
-                ik = map2(i,jspin)
+                ik = map2(i,jspin1)
                 DO j = 1,i - 1 !TODO check noco case
                    !--->             overlap: only  (g-g') parallel=0       '
-                   IF (map2(j,jspin).EQ.ik) THEN
-                      sij = CONJG(a(i,jspin))*a(j,jspin) + &
-                           CONJG(b(i,jspin))*b(j,jspin)*ddnv(ik,jspin1)
+                   IF (map2(j,jspin1).EQ.ik) THEN
+                      sij = CONJG(a(i,jspin1))*a(j,jspin1) + &
+                           CONJG(b(i,jspin1))*b(j,jspin1)*ddnv(ik,jspin1)
                       !+APW_LO
                       IF (input%l_useapw) THEN
-                         apw_lo = CONJG(a(i,jspin)*  uz(ik,jspin1) + b(i,jspin)* udz(ik,jspin1) ) &
-                              * (a(j,jspin)* duz(ik,jspin1) + b(j,jspin)*dudz(ik,jspin1) )&
-                              +      (a(j,jspin)*  uz(ik,jspin1) + b(j,jspin)* udz(ik,jspin1) ) &
-                              * CONJG(a(i,jspin)* duz(ik,jspin1) + b(i,jspin)*dudz(ik,jspin1) )
+                         apw_lo = CONJG(a(i,jspin1)*  uz(ik,jspin1) + b(i,jspin1)* udz(ik,jspin1) ) &
+                              * (a(j,jspin1)* duz(ik,jspin1) + b(j,jspin1)*dudz(ik,jspin1) )&
+                              +      (a(j,jspin1)*  uz(ik,jspin1) + b(j,jspin1)* udz(ik,jspin1) ) &
+                              * CONJG(a(i,jspin1)* duz(ik,jspin1) + b(i,jspin1)*dudz(ik,jspin1) )
                          !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
                          IF (hmat(1,1)%l_real) THEN
                             hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + 0.25 * REAL(apw_lo) 
@@ -152,7 +152,7 @@ CONTAINS
                    END IF
                 ENDDO
                 !Diagonal term of Overlapp matrix, Hamiltonian later
-                sij = CONJG(a(i,jspin))*a(i,jspin) + CONJG(b(i,jspin))*b(i,jspin)*ddnv(ik,jspin1)
+                sij = CONJG(a(i,jspin1))*a(i,jspin1) + CONJG(b(i,jspin1))*b(i,jspin1)*ddnv(ik,jspin1)
                 IF (hmat(1,1)%l_real) THEN
                    smat(s1,s2)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
                 ELSE
@@ -172,7 +172,11 @@ CONTAINS
                 IF (hmat(1,1)%l_real) THEN
                    hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + REAL(hij)
                 ELSE
-                   hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + hij
+                   IF (s1==s2) THEN
+                      hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + hij
+                   ELSE
+                      hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + conjg(hij)
+                   ENDIF
                 ENDIF
              ENDDO
           ENDDO
