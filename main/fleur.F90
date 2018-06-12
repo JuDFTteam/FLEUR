@@ -1,4 +1,3 @@
-
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -72,60 +71,59 @@ CONTAINS
     USE m_chase_diag
     IMPLICIT NONE
 
-    INTEGER,INTENT(IN) :: mpi_comm
+    INTEGER, INTENT(IN)             :: mpi_comm
 
-    !     Types, these variables contain a lot of data!
-    TYPE(t_input)    :: input
-    TYPE(t_field)    :: field, field2
-    TYPE(t_dimension):: DIMENSION
-    TYPE(t_atoms)    :: atoms
-    TYPE(t_sphhar)   :: sphhar
-    TYPE(t_cell)     :: cell
-    TYPE(t_stars)    :: stars
-    TYPE(t_sym)      :: sym
-    TYPE(t_noco)     :: noco
-    TYPE(t_vacuum)   :: vacuum
-    TYPE(t_sliceplot):: sliceplot
-    TYPE(t_banddos)  :: banddos
-    TYPE(t_obsolete) :: obsolete
-    TYPE(t_enpara)   :: enpara
-    TYPE(t_results)  :: results
-    TYPE(t_kpts)     :: kpts
-    TYPE(t_hybrid)   :: hybrid
-    TYPE(t_oneD)     :: oneD
-    TYPE(t_mpi)      :: mpi
-    TYPE(t_coreSpecInput) :: coreSpecInput
-    TYPE(t_wann)     :: wann
-    TYPE(t_potden)   :: vTot,vx,vCoul,vTemp
-    TYPE(t_potden)   :: inDen, outDen
-    CLASS(t_xcpot),ALLOCATABLE    :: xcpot
-    CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
+    TYPE(t_input)                   :: input
+    TYPE(t_field)                   :: field, field2
+    TYPE(t_dimension)               :: DIMENSION
+    TYPE(t_atoms)                   :: atoms
+    TYPE(t_sphhar)                  :: sphhar
+    TYPE(t_cell)                    :: cell
+    TYPE(t_stars)                   :: stars
+    TYPE(t_sym)                     :: sym
+    TYPE(t_noco)                    :: noco
+    TYPE(t_vacuum)                  :: vacuum
+    TYPE(t_sliceplot)               :: sliceplot
+    TYPE(t_banddos)                 :: banddos
+    TYPE(t_obsolete)                :: obsolete
+    TYPE(t_enpara)                  :: enpara
+    TYPE(t_results)                 :: results
+    TYPE(t_kpts)                    :: kpts
+    TYPE(t_hybrid)                  :: hybrid
+    TYPE(t_oneD)                    :: oneD
+    TYPE(t_mpi)                     :: mpi
+    TYPE(t_coreSpecInput)           :: coreSpecInput
+    TYPE(t_wann)                    :: wann
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
+    TYPE(t_potden)                  :: inDen, outDen
+    CLASS(t_xcpot),     ALLOCATABLE :: xcpot
+    CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
-    !     .. Local Scalars ..
-    INTEGER:: eig_id, archiveType
-    INTEGER:: n,it,ithf
-    LOGICAL:: l_opti,l_cont,l_qfix, l_wann_inp, l_real
-    REAL   :: fermiEnergyTemp, fix
+    ! local scalars
+    INTEGER :: eig_id,archiveType
+    INTEGER :: n,it,ithf
+    LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real
+    REAL    :: fermiEnergyTemp,fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER:: ierr(2)
+    INTEGER :: ierr(2)
 #endif
 
     mpi%mpi_comm = mpi_comm
 
     CALL timestart("Initialization")
-    CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-         sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
-         oneD,coreSpecInput,wann,l_opti)
+    CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
+                    banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
-    if( input%preconditioning_param /= 0 .and. input%film ) call juDFT_error('Currently no preconditioner for films', calledby = 'fleur' )
+    IF((input%preconditioning_param /= 0).AND.input%film) THEN
+       CALL juDFT_error('Currently no preconditioner for films', calledby = 'fleur')
+    END IF
 
     IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
                               stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
- 
 
-    !+Wannier
+    !+Wannier (start)
     INQUIRE (file='wann_inp',exist=l_wann_inp)
     input%l_wann = input%l_wann.OR.l_wann_inp
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
@@ -133,29 +131,26 @@ CONTAINS
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
     IF (wann%l_gwf) input%itmax = 1
-
-    !-Wannier
+    !-Wannier (end)
 
     it     = 0
     ithf   = 0
-    l_cont = ( it < input%itmax )
+    l_cont = (it < input%itmax)
     
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
- 
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-            0,fermiEnergyTemp,l_qfix,inDen)
+                        0,fermiEnergyTemp,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-            0,-1.0,0.0,.FALSE.,inDen)
+                         0,-1.0,0.0,.FALSE.,inDen)
     END IF
     ! Initialize and load inDen density (end)
 
@@ -166,6 +161,7 @@ CONTAINS
     CALL vTemp%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
+    ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,&
                     noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
@@ -173,14 +169,15 @@ CONTAINS
 #ifdef CPP_CHASE
     CALL init_chase(mpi,dimension,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
 #endif
+    ! Open/allocate eigenvector storage (end)
 
     scfloop:DO WHILE (l_cont)
 
        CALL reset_eig(eig_id,noco%l_soc)
 
        it = it + 1
-       IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/)&
-            ,(/it,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
+       IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
+                                                       (/it,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
 !!$       !+t3e
 !!$       IF (input%alpha.LT.10.0) THEN
@@ -192,31 +189,18 @@ CONTAINS
        CALL resetIterationDependentTimers()
        CALL timestart("Iteration")
        IF (mpi%irank.EQ.0) THEN
-          !-t3e
           WRITE (6,FMT=8100) it
           WRITE (16,FMT=8100) it
 8100      FORMAT (/,10x,'   it=    ',i5)
-
-
-          !      ----> potential generator
-          !
-          input%total = .TRUE.
        ENDIF !mpi%irank.eq.0
-#ifdef CPP_MPI
-       CALL MPI_BCAST(input%total,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-#endif
+       input%total = .TRUE.
 
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
 
-
-       IF ( noco%l_soc ) THEN
-          dimension%neigd2 = dimension%neigd*2
-       ELSE
-          dimension%neigd2 = dimension%neigd
-       END IF
-
+       dimension%neigd2 = dimension%neigd
+       IF (noco%l_soc) dimension%neigd2 = dimension%neigd*2
 
        !HF
        IF (hybrid%l_hybrid) THEN
@@ -240,82 +224,65 @@ CONTAINS
        !---< gwf
 
        CALL timestart("generation of potential")
-       CALL vgen( hybrid, field, input, xcpot, DIMENSION, atoms, sphhar, stars, vacuum, &
-            sym, obsolete, cell, oneD, sliceplot, mpi, results, noco, inDen, vTot, vx, &
-            vCoul )
+       CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
+                 obsolete,cell,oneD,sliceplot,mpi,results,noco,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
-
-
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
        CALL forcetheo%start()
-
        forcetheoloop:DO WHILE(forcetheo%next_job(it==input%itmax,noco))
 
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
           vTemp = vTot
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
-          CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,&
-                     sym,kpts,DIMENSION,vacuum,input,cell,enpara,banddos,noco,oneD,hybrid,&
-                     it,eig_id,results,inDen,vTemp,vx)
+          CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+                     cell,enpara,banddos,noco,oneD,hybrid,it,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
-          !
-          !                   add all contributions to total energy
-          !
+
+          ! add all contributions to total energy
 #ifdef CPP_MPI
           ! send all result of local total energies to the r
           IF (mpi%irank==0) THEN
-             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,&
-                  1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,&
-                  1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
           ELSE
-             CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,&
-                  1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-             CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,&
-                  1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-          ENDIF
-          !                                  END IF
+             CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+             CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+          END IF
 #endif
-
-
 
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
-               CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-               obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
+             CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
+                          obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
           CALL timestop("generation of hamiltonian and diagonalization (total)")
 
 #ifdef CPP_MPI
           CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
-          !
-          !              ----> fermi level and occupancies
-
-          IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd = 2*DIMENSION%neigd
-          IF ( (mpi%irank.EQ.0)) THEN
+          ! fermi level and occupancies
+          IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd = 2*DIMENSION%neigd
+          IF ((mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 
-             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) THEN
+             IF (noco%l_soc.AND.(.NOT.noco%l_noco)) THEN
                 input%zelec = input%zelec*2
-                CALL fermie(eig_id,mpi,kpts,obsolete,&
-                     input,noco,enpara%epara_min,cell,results)
+                CALL fermie(eig_id,mpi,kpts,obsolete,input,noco,enpara%epara_min,cell,results)
                 results%seigscv = results%seigscv/2
                 results%ts = results%ts/2
                 input%zelec = input%zelec/2
              ELSE
-                CALL fermie(eig_id,mpi,kpts,obsolete,&
-                     input,noco,enpara%epara_min,cell,results)
+                CALL fermie(eig_id,mpi,kpts,obsolete,input,noco,enpara%epara_min,cell,results)
              ENDIF
              CALL timestop("determination of fermi energy")
-!!$             
+
 !!$          !+Wannier
 !!$          IF(wann%l_bs_comf)THEN
 !!$             IF(pc.EQ.1) THEN
@@ -335,22 +302,19 @@ CONTAINS
 !!$             END IF
 !!$          END IF
 !!$          !-Wannier
+
           ENDIF
 #ifdef CPP_MPI
           CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
 
-
-          IF (forcetheo%eval(eig_id,DIMENSION,atoms,kpts,sym,&
-               cell,noco, input,mpi, oneD,enpara,vToT,results)) THEN
-             IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
+          IF (forcetheo%eval(eig_id,DIMENSION,atoms,kpts,sym,cell,noco,input,mpi,oneD,enpara,vToT,results)) THEN
+             IF (noco%l_soc.AND.(.NOT. noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
              CYCLE forcetheoloop
           ENDIF
 
-
-          CALL force_0(results)!        ----> initialise force_old
-          !        ----> charge density
+          CALL force_0(results)! ----> initialise force_old
           
 !!$          !+Wannier functions
 !!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
@@ -361,19 +325,18 @@ CONTAINS
 !!$          IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
 !!$          !-Wannier
 
+          ! charge density generation
           CALL timestart("generation of new charge density (total)")
           CALL outDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
-          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-               DIMENSION,kpts,atoms,sphhar,stars,sym,&
-               enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-               archiveType,outDen)
+          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
 
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                                   sphhar,sym,field,vTot,oneD,noco,results)
 
-          IF ( noco%l_soc .AND. (.NOT. noco%l_noco) ) DIMENSION%neigd=DIMENSION%neigd/2
-          !+t3e
+          IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
+
 #ifdef CPP_MPI
           CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -392,8 +355,8 @@ CONTAINS
           ENDIF
 #endif
           CALL timestop("generation of new charge density (total)")
+
           IF (mpi%irank.EQ.0) THEN
-             !-t3e
              
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
@@ -407,14 +370,13 @@ CONTAINS
 !!$                CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
 !!$             END IF
              
-             !----> total energy
+             ! total energy
              CALL timestart('determination of total energy')
-             CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,&
-                  sym,input,noco,cell,oneD,xcpot,hybrid,vTot,vCoul,it,inDen,results)
-
+             CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
+                         xcpot,hybrid,vTot,vCoul,it,inDen,results)
              CALL timestop('determination of total energy')
-          ENDIF ! mpi%irank.EQ.0
-          IF ( hybrid%l_hybrid ) CALL close_eig(eig_id)
+          END IF ! mpi%irank.EQ.0
+          IF (hybrid%l_hybrid) CALL close_eig(eig_id)
 
        END DO forcetheoloop
 
@@ -422,21 +384,20 @@ CONTAINS
        
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
-       !          ----> mix input and output densities
+
+       ! mix input and output densities
        CALL timestart("mixing")
-       CALL mix( field2, xcpot, dimension, obsolete, sliceplot, mpi, &
-                 stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                 oneD, hybrid, archiveType, inDen, outDen, results )
+       CALL mix(field2,xcpot,dimension,obsolete,sliceplot,mpi,stars,atoms,sphhar,vacuum,input,&
+                sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
        CALL timestop("mixing")
        
-       if( mpi%irank == 0 ) then   
+       IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) it
          WRITE (16,FMT=8130) it
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
          CALL timestop("Iteration")
-       end if ! mpi%irank.EQ.0
-       
+       END IF ! mpi%irank.EQ.0
           
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
