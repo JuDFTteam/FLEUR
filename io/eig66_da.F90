@@ -34,15 +34,13 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,create,l_real,l_soc,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
-    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,create,l_real,l_soc,filename)
+    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: create,l_real,l_soc
-    LOGICAL,INTENT(IN),OPTIONAL ::  l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
-    INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
     !locals
     LOGICAL :: l_file
-    INTEGER :: i1,recl_z,recl_eig,recl_dos
+    INTEGER :: i1,recl_z,recl_eig
     REAL    :: r1,r3(3)
     COMPLEX :: c1
     TYPE(t_data_DA),POINTER:: d
@@ -50,7 +48,7 @@ CONTAINS
     CALL priv_find_data(id,d)
 
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
 
     !Calculate the record length
 
@@ -67,28 +65,6 @@ CONTAINS
     
     d%recl_vec=recl_eig+recl_z
 
-    IF (d%l_dos) THEN
-       IF (.NOT.(PRESENT(layers).AND.PRESENT(nstars).AND.PRESENT(ncored).AND.PRESENT(nsld).AND.PRESENT(nat))) &
-            CALL judft_error("BUG:Could not open file for DOS-data",calledby="eig66_da")
-       INQUIRE(IOLENGTH=i1) i1
-       recl_dos=i1*2*neig !ksym&jsym
-       INQUIRE(IOLENGTH=i1) r1
-       recl_dos=recl_dos+i1*3*neig !qvac&qis
-       recl_dos=recl_dos+i1*4*ntype*neig !qal
-       recl_dos=recl_dos+i1*neig*2*max(1,layers) !qvlay
-       IF (l_orb) THEN
-          recl_dos=recl_dos+i1*2*nsld*neig !qintsl,qmtsl
-          recl_dos=recl_dos+i1*24*neig*nat !qmtp,orbcomp
-       ENDIF
-       INQUIRE(IOLENGTH=i1) c1
-       recl_dos=recl_dos+i1*nstars*neig*max(1,layers)*2 !qstars
-       IF (l_mcd) recl_dos=recl_dos+i1*3*ntype*ncored*neig !mcd
-    ELSE
-       recl_dos=-1
-    ENDIF
-    d%recl_dos=recl_dos
-
-
     IF (create) THEN
        INQUIRE(file=TRIM(d%fname),opened=l_file)
        DO WHILE(l_file)
@@ -100,20 +76,11 @@ CONTAINS
        OPEN(d%file_io_id_vec,FILE=TRIM(d%fname),ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='unknown')
        d%file_io_id_wiks=priv_free_uid()
        OPEN(d%file_io_id_wiks,FILE=TRIM(d%fname)//".wiks",ACCESS='direct',FORM='unformatted',RECL=d%recl_wiks,STATUS='unknown')
-       IF(d%recl_dos>0) THEN
-          d%file_io_id_dos=priv_free_uid()
-          OPEN(d%file_io_id_dos,FILE=TRIM(d%fname)//".dos",ACCESS='direct',FORM='unformatted',RECL=d%recl_dos,STATUS='unknown')
-       ENDIF
-
     ELSE
        d%file_io_id_vec=priv_free_uid()
        OPEN(d%file_io_id_vec,FILE=TRIM(d%fname),ACCESS='direct',FORM='unformatted',RECL=d%recl_vec,STATUS='old')
        d%file_io_id_wiks=priv_free_uid()
        OPEN(d%file_io_id_wiks,FILE=TRIM(d%fname)//".wiks",ACCESS='direct',FORM='unformatted',RECL=d%recl_wiks,STATUS='old')
-       IF(d%recl_dos>0) THEN
-          d%file_io_id_dos=priv_free_uid()
-          OPEN(d%file_io_id_dos,FILE=TRIM(d%fname)//".dos",ACCESS='direct',FORM='unformatted',RECL=d%recl_dos,STATUS='old')
-       ENDIF
     ENDIF
   CONTAINS
     INTEGER FUNCTION priv_free_uid() RESULT(uid)

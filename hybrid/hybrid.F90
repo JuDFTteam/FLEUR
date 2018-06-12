@@ -1,7 +1,7 @@
 MODULE m_calc_hybrid
   USE m_judft
 CONTAINS
-  SUBROUTINE calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,vacuum,oneD,banddos,results,sym,xcpot,v,it  )
+  SUBROUTINE calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,oneD,results,sym,xcpot,v,it  )
     USE m_types
     USE m_mixedbasis
     USE m_coulombmatrix
@@ -17,9 +17,7 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
     TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_sym),INTENT(IN)       :: sym  
     TYPE(t_cell),INTENT(IN)      :: cell
@@ -100,12 +98,8 @@ CONTAINS
     CALL timestart("Preparation for Hybrid functionals")
     CALL juDFT_WARN ("Hybrid functionals not working in this version")      
       
-    eig_id=open_eig(&
-         mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,atoms%lmaxd,atoms%nlod,atoms%ntype,atoms%nlotot&
-         ,noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,&
-         mpi%n_size,layers=vacuum%layers,nstars=vacuum%nstars,ncored=DIMENSION%nstd,&
-         nsld=atoms%nat,nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,l_mcd=banddos%l_mcd,&
-         l_orb=banddos%l_orb)
+    eig_id=open_eig(mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,&
+                    noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,mpi%n_size)
     
     !construct the mixed-basis
     CALL timestart("generation of mixed basis")

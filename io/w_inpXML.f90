@@ -168,8 +168,8 @@ SUBROUTINE w_inpXML(&
    110 FORMAT('      <cutoffs Kmax="',f0.8,'" Gmax="',f0.8,'" GmaxXC="',f0.8,'" numbands="',i0,'"/>')
    WRITE (fileNum,110) input%rkmax,stars%gmaxInit,xcpot%gmaxxc,input%gw_neigd
 
-!      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" spinf="2.00"/>
-   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" spinf="',f0.8,'"/>')
+!      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" preconditioning_param="0.0" spinf="2.00"/>
+   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" preconditioning_param="',f3.1,'" spinf="',f0.8,'"/>')
    SELECT CASE (input%imix)
       CASE (1) 
          mixingScheme='straight'
@@ -182,7 +182,7 @@ SUBROUTINE w_inpXML(&
       CASE DEFAULT 
          mixingScheme='errorUnknownMixing'
    END SELECT
-   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%spinf
+   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%preconditioning_param,input%spinf
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
@@ -196,6 +196,10 @@ SUBROUTINE w_inpXML(&
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
    WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%l_spav
 
+   IF (l_explicit.OR.hybrid%l_hybrid) THEN
+      155 FORMAT('      <prodBasis gcutm="',f0.8,'" tolerance="',f0.8,'" ewaldlambda="',i0,'" lexp="',i0,'" bands="',i0,'"/>')
+      WRITE (fileNum,155) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+   END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN
 160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,&
@@ -449,6 +453,13 @@ SUBROUTINE w_inpXML(&
 !         <energyParameters s="3" p="3" d="3" f="4"/>
          321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
          WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
+      END IF
+
+      IF(l_explicit.OR.hybrid%l_hybrid) THEN
+         315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
+         line = ''
+         WRITE(line,'(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4,iAtomType)
+         WRITE (fileNum,315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
       END IF
 
       IF(ANY(xmlElectronStates(:,iAtomType).NE.noState_const)) THEN

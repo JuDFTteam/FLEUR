@@ -563,17 +563,17 @@
 
       IF( check .eq. ',' ) THEN
         READ (UNIT=5,FMT=8060,END=99,ERR=99) &
-     &                 input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
-        WRITE (6,9180)  input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+     & input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+        WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8060   FORMAT (6x,i2,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       ELSE
         READ (UNIT=5,FMT=8061,END=99,ERR=99) &
-     &                 input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
-        WRITE (6,9180)  input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+     & input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+        WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8061   FORMAT (6x,i3,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       END IF
       
-      
+      input%preconditioning_param = 0.0 
 
       chform = '(5x,l1,'//chntype//'f6.2)'
 !      chform = '(5x,l1,23f6.2)'

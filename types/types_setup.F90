@@ -383,6 +383,7 @@ MODULE m_types_setup
      INTEGER :: isec1
      REAL    :: delgau
      REAL    :: alpha
+     REAL    :: preconditioning_param
      REAL    :: spinf
      REAL    :: tkb
      LOGICAL :: gauss

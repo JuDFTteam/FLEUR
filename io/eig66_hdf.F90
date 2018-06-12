@@ -57,7 +57,7 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
   !----------------------------------------------------------------------
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,create,l_real,l_soc,readonly,filename)
 
     !*****************************************************************
     !     opens hdf-file for eigenvectors+values
@@ -65,11 +65,9 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER, INTENT(IN) :: id,mpi_comm
-    INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+    INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: create,readonly,l_real,l_soc
-    LOGICAL, INTENT(IN),OPTIONAL ::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),OPTIONAL :: filename
-    INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 
 #ifdef CPP_HDF
 
@@ -97,7 +95,7 @@ CONTAINS
 #endif 
     CALL priv_find_data(id,d)
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
     !set access_flags according
     IF (readonly) THEN
        access_mode=H5F_ACC_RDONLY_F
@@ -131,61 +129,6 @@ CONTAINS
        CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "ev", H5T_NATIVE_DOUBLE, spaceid, d%evsetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
-       !stuff for dos etc
-       IF (d%l_dos) THEN
-          dims(:5)=(/4,ntype,neig,nkpts,jspins/)
-          CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qal", H5T_NATIVE_DOUBLE, spaceid, d%qalsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:4)=(/neig,2,nkpts,jspins/)
-          CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qvac", H5T_NATIVE_DOUBLE, spaceid, d%qvacsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:3)=(/neig,nkpts,jspins/)
-          CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qis", H5T_NATIVE_DOUBLE, spaceid, d%qissetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:5)=(/neig,layers,2,nkpts,jspins/)
-          CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qvlay", H5T_NATIVE_DOUBLE, spaceid, d%qvlaysetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:7)=(/2,nstars,neig,layers,2,nkpts,jspins/)
-          CALL h5screate_simple_f(7,dims(:7),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qstars", H5T_NATIVE_DOUBLE, spaceid, d%qstarssetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:3)=(/neig,nkpts,jspins/)
-          CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "ksym", H5T_NATIVE_DOUBLE, spaceid, d%ksymsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:3)=(/neig,nkpts,jspins/)
-          CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "jsym", H5T_NATIVE_DOUBLE, spaceid, d%jsymsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          IF (d%l_mcd) THEN
-             dims(:5)=(/3*ntype,ncored,neig,nkpts,jspins/)
-             CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "mcd", H5T_NATIVE_DOUBLE, spaceid, d%mcdsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-          ENDIF
-          IF (d%l_orb) THEN
-             dims(:4)=(/nsld,neig,nkpts,jspins/)
-             CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "qintsl", H5T_NATIVE_DOUBLE, spaceid, d%qintslsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-             dims(:4)=(/nsld,neig,nkpts,jspins/)
-             CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "qmtsl", H5T_NATIVE_DOUBLE, spaceid, d%qmtslsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-             dims(:4)=(/neig,nat,nkpts,jspins/)
-             CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "qmtp", H5T_NATIVE_DOUBLE, spaceid, d%qmtpsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-             dims(:5)=(/neig,23,nat,nkpts,jspins/)
-             CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "orbcomp", H5T_NATIVE_DOUBLE, spaceid, d%orbcompsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-          ENDIF
-       ENDIF
     ELSE
        CALL h5fopen_f (TRIM(d%fname)//'.hdf', access_Mode, d%fid, hdferr,access_prp)
        !get dataset-ids
@@ -193,24 +136,6 @@ CONTAINS
        CALL h5dopen_f(d%fid, 'w_iks', d%wikssetid, hdferr)
        CALL h5dopen_f(d%fid, 'neig', d%neigsetid, hdferr)
        CALL h5dopen_f(d%fid, 'ev', d%evsetid, hdferr)
-       IF (d%l_dos) THEN
-          CALL h5dopen_f(d%fid, 'qal', d%qalsetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qvac', d%qvacsetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qis', d%qissetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qvlay', d%qvlaysetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qstars', d%qstarssetid, hdferr)
-          CALL h5dopen_f(d%fid, 'ksym', d%ksymsetid, hdferr)
-          CALL h5dopen_f(d%fid, 'jsym', d%jsymsetid, hdferr)
-          IF (d%l_mcd) THEN
-             CALL h5dopen_f(d%fid, 'mcd', d%mcdsetid, hdferr)
-          ENDIF
-          IF (d%l_orb) THEN
-             CALL h5dopen_f(d%fid, 'qintsl', d%qintslsetid, hdferr)
-             CALL h5dopen_f(d%fid, 'qmtsl', d%qmtslsetid, hdferr)
-             CALL h5dopen_f(d%fid, 'qmtp', d%qmtpsetid, hdferr)
-             CALL h5dopen_f(d%fid, 'orbcomp', d%orbcompsetid, hdferr)
-          ENDIF
-       ENDIF
     endif
     IF (.NOT.access_prp==H5P_DEFAULT_f) CALL H5Pclose_f(access_prp&
             &     ,hdferr)
@@ -238,24 +163,6 @@ CONTAINS
        CALL h5dclose_f(d%wikssetid,hdferr)
        CALL h5dclose_f(d%neigsetid,hdferr)
        CALL h5dclose_f(d%evsetid,hdferr)
-       IF (d%l_dos) THEN
-          CALL h5dclose_f(d%qalsetid, hdferr)
-          CALL h5dclose_f(d%qvacsetid, hdferr)
-          CALL h5dclose_f(d%qissetid, hdferr)
-          CALL h5dclose_f(d%qvlaysetid, hdferr)
-          CALL h5dclose_f(d%qstarssetid, hdferr)
-          CALL h5dclose_f(d%ksymsetid, hdferr)
-          CALL h5dclose_f(d%jsymsetid, hdferr)
-          IF (d%l_mcd) THEN
-             CALL h5dclose_f(d%mcdsetid, hdferr)
-          ENDIF
-          IF (d%l_orb) THEN
-             CALL h5dclose_f(d%qintslsetid, hdferr)
-             CALL h5dclose_f(d%qmtslsetid, hdferr)
-             CALL h5dclose_f(d%qmtpsetid, hdferr)
-             CALL h5dclose_f(d%orbcompsetid, hdferr)
-          ENDIF
-       ENDIF
        !close file
        CALL h5fclose_f(d%fid,hdferr)
        !If a filename was given and the name is not the current filename
