@@ -411,12 +411,15 @@ CONTAINS
 !!$       results%te_hfex%core    = 0
 !!$       results%te_hfex%valence = 0
 !!$    ELSE
-       l_cont = ( it < input%itmax )
+       l_cont = (it < input%itmax)
 !!$    END IF
        CALL writeTimesXML()
        CALL check_time_for_next_iteration(it,l_cont)
 
-       l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+       IF(.NOT.hybrid%l_hybrid) l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+       IF(hybrid%l_hybrid) THEN
+          IF(hybrid%l_calhf) l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
+       END IF
 
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
