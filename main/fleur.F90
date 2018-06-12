@@ -101,7 +101,7 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType
-    INTEGER :: n,it,ithf
+    INTEGER :: n,iter,iterHF
     LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real
     REAL    :: fermiEnergyTemp,fix
 #ifdef CPP_MPI
@@ -133,9 +133,9 @@ CONTAINS
     IF (wann%l_gwf) input%itmax = 1
     !-Wannier (end)
 
-    it     = 0
-    ithf   = 0
-    l_cont = (it < input%itmax)
+    iter     = 0
+    iterHF   = 0
+    l_cont = (iter < input%itmax)
     
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
@@ -175,23 +175,23 @@ CONTAINS
 
        CALL reset_eig(eig_id,noco%l_soc)
 
-       it = it + 1
+       iter = iter + 1
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
-                                                       (/it,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
+                                                       (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
 !!$       !+t3e
 !!$       IF (input%alpha.LT.10.0) THEN
 !!$
-!!$          IF (it.GT.1) THEN
+!!$          IF (iter.GT.1) THEN
 !!$             input%alpha = input%alpha - NINT(input%alpha)
 !!$          END IF
 
        CALL resetIterationDependentTimers()
        CALL timestart("Iteration")
        IF (mpi%irank.EQ.0) THEN
-          WRITE (6,FMT=8100) it
-          WRITE (16,FMT=8100) it
-8100      FORMAT (/,10x,'   it=    ',i5)
+          WRITE (6,FMT=8100) iter
+          WRITE (16,FMT=8100) iter
+8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
        input%total = .TRUE.
 
@@ -207,7 +207,7 @@ CONTAINS
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
              CALL calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                              cell,oneD,results,sym,xcpot,vTot,it)
+                              cell,oneD,results,sym,xcpot,vTot,iter)
           END SELECT
        ENDIF
        !#endif
@@ -233,14 +233,14 @@ CONTAINS
 #endif
 
        CALL forcetheo%start()
-       forcetheoloop:DO WHILE(forcetheo%next_job(it==input%itmax,noco))
+       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
 
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
           vTemp = vTot
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,it,eig_id,results,inDen,vTemp,vx)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -310,7 +310,7 @@ CONTAINS
 #endif
 
           IF (forcetheo%eval(eig_id,DIMENSION,atoms,kpts,sym,cell,noco,input,mpi,oneD,enpara,vToT,results)) THEN
-             IF (noco%l_soc.AND.(.NOT. noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
+             IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
              CYCLE forcetheoloop
           ENDIF
 
@@ -373,7 +373,7 @@ CONTAINS
              ! total energy
              CALL timestart('determination of total energy')
              CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
-                         xcpot,hybrid,vTot,vCoul,it,inDen,results)
+                         xcpot,hybrid,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
           END IF ! mpi%irank.EQ.0
           IF (hybrid%l_hybrid) CALL close_eig(eig_id)
@@ -392,10 +392,10 @@ CONTAINS
        CALL timestop("mixing")
        
        IF(mpi%irank == 0) THEN
-         WRITE (6,FMT=8130) it
-         WRITE (16,FMT=8130) it
+         WRITE (6,FMT=8130) iter
+         WRITE (16,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
-         WRITE(*,*) "Iteration:",it," Distance:",results%last_distance
+         WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
          CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
           
@@ -405,21 +405,24 @@ CONTAINS
 #endif
        CALL priv_geo_end(mpi)
 
-!!$       IF ( hybrid%l_calhf ) ithf = ithf + 1
-!!$    IF ( hybrid%l_subvxc ) THEN
-!!$       l_cont = ( ithf < input%itmax )
-!!$       results%te_hfex%core    = 0
-!!$       results%te_hfex%valence = 0
-!!$    ELSE
-       l_cont = (it < input%itmax)
-!!$    END IF
-       CALL writeTimesXML()
-       CALL check_time_for_next_iteration(it,l_cont)
-
-       IF(.NOT.hybrid%l_hybrid) l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
-       IF(hybrid%l_hybrid) THEN
+       l_cont = .TRUE.
+       IF (hybrid%l_calhf) THEN
+          iterHF = iterHF + 1
+          l_cont = l_cont.AND.(iterHF < input%itmax)
+!!$       IF (hybrid%l_subvxc) THEN
+!!$          results%te_hfex%core    = 0
+!!$          results%te_hfex%valence = 0
+!!$       END IF
+          l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
           IF(hybrid%l_calhf) l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
+          CALL check_time_for_next_iteration(iterHF,l_cont)
+       ELSE
+          l_cont = l_cont.AND.(iter < input%itmax)
+          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+          CALL check_time_for_next_iteration(iter,l_cont)
        END IF
+
+       CALL writeTimesXML()
 
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
