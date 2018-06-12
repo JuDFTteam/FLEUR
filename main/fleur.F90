@@ -406,16 +406,19 @@ CONTAINS
        CALL priv_geo_end(mpi)
 
        l_cont = .TRUE.
-       IF (hybrid%l_calhf) THEN
-          iterHF = iterHF + 1
-          l_cont = l_cont.AND.(iterHF < input%itmax)
+       IF (hybrid%l_hybrid) THEN
+          IF(hybrid%l_calhf) THEN
+             iterHF = iterHF + 1
+             l_cont = l_cont.AND.(iterHF < input%itmax)
+             l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
+             CALL check_time_for_next_iteration(iterHF,l_cont)
+          ELSE
+             l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
+          END IF
 !!$       IF (hybrid%l_subvxc) THEN
 !!$          results%te_hfex%core    = 0
 !!$          results%te_hfex%valence = 0
 !!$       END IF
-          l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
-          IF(hybrid%l_calhf) l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
-          CALL check_time_for_next_iteration(iterHF,l_cont)
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
