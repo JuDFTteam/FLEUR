@@ -68,7 +68,7 @@ CONTAINS
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
-    USE m_eig66_io,   ONLY : open_eig, close_eig
+    USE m_eig66_io
     USE m_chase_diag
     IMPLICIT NONE
 
@@ -175,6 +175,8 @@ CONTAINS
 #endif
 
     scfloop:DO WHILE (l_cont)
+
+       CALL reset_eig(eig_id,noco%l_soc)
 
        it = it + 1
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/)&
