@@ -93,9 +93,9 @@ CONTAINS
     SUBROUTINE priv_create_memory(slot_size,local_slots,handle,int_data_ptr,real_data_ptr,cmplx_data_ptr)
       IMPLICIT NONE
       INTEGER,INTENT(IN)           :: slot_size,local_slots
-      INTEGER,POINTER,INTENT(OUT),OPTIONAL  :: int_data_ptr(:)
-      REAL   ,POINTER,INTENT(OUT),OPTIONAL  :: real_data_ptr(:)
-      COMPLEX,POINTER,INTENT(OUT),OPTIONAL  :: cmplx_data_ptr(:)
+      INTEGER,POINTER,OPTIONAL  :: int_data_ptr(:)
+      REAL   ,POINTER,OPTIONAL  :: real_data_ptr(:)
+      COMPLEX,POINTER,OPTIONAL  :: cmplx_data_ptr(:)
       INTEGER,INTENT(OUT)          :: handle
 #ifdef CPP_MPI
       TYPE(c_ptr)::ptr
