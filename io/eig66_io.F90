@@ -11,8 +11,8 @@ MODULE m_eig66_io
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC open_eig,close_eig
-  PUBLIC read_eig, write_eig
+  PUBLIC open_eig,close_eig,reset_eig
+  PUBLIC read_eig,write_eig
 CONTAINS
 
   FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,&
@@ -162,5 +162,17 @@ CONTAINS
     END SELECT
     CALL timestop("IO (write)")
   END SUBROUTINE write_eig
+
+  SUBROUTINE reset_eig(id,l_soc)
+     USE m_eig66_MPI,ONLY:reset_eig_MPI=>reset_eig
+     INTEGER, INTENT(IN) :: id
+     LOGICAL, INTENT(IN) :: l_soc
+
+     SELECT CASE (eig66_data_mode(id))
+     CASE (MPI_mode)
+        CALL reset_eig_MPI(id,l_soc)
+     END SELECT
+
+  END SUBROUTINE reset_eig
 
 END MODULE m_eig66_io

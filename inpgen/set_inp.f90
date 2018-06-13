@@ -317,6 +317,7 @@
          IF(juDFT_was_argument("-old")) THEN
             CALL juDFT_error('No hybrid functionals input for old input file implemented', calledby='set_inp')
          END IF
+         input%minDistance = 1.0e-5
       ELSE
         input%gw_neigd = 0
       END IF

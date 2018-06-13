@@ -240,7 +240,6 @@ contains
     end do                      ! k = 2, stars%ng3
 !    !$omp end parallel do
 #ifdef CPP_MPI
-    print *, "mpi", mpi%irank, qlmp(0,0,:)
     call MPI_REDUCE( qlmp, qlmp_out, size(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, mpi%mpi_comm, ierr )
 #else
     qlmp_out = qlmp

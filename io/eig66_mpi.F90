@@ -7,7 +7,7 @@ MODULE m_eig66_mpi
 #endif
   IMPLICIT NONE
   PRIVATE
-  PUBLIC open_eig,read_eig,write_eig,close_eig
+  PUBLIC open_eig,read_eig,write_eig,close_eig,reset_eig
 CONTAINS
 
   SUBROUTINE priv_find_data(id,d)
@@ -390,6 +390,24 @@ CONTAINS
 #endif
   END SUBROUTINE write_eig
 
+  SUBROUTINE reset_eig(id,l_soc)
+    INTEGER, INTENT(IN)        :: id
+    LOGICAL, INTENT(IN)        :: l_soc
+#ifdef CPP_MPI
+    TYPE(t_data_MPI),POINTER :: d
+    CALL priv_find_data(id,d)
+
+    d%neig_data=0
+    d%eig_data=1E99
+    d%w_iks_data=1E99
+    if (d%l_real.and..not.l_soc) THEN
+       d%zr_data=0.0
+    else
+       d%zc_data=0.0
+    endif
+#endif
+  END SUBROUTINE reset_eig
+
 #ifdef CPP_MPI
   SUBROUTINE priv_put_data(pe,slot,DATA,handle)
     IMPLICIT NONE
@@ -505,7 +523,6 @@ CONTAINS
     ENDDO
 
   END SUBROUTINE create_maps
-
-
 #endif
+
 END MODULE m_eig66_mpi
