@@ -140,7 +140,8 @@ CONTAINS
              !write overlap matrix b to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"
              !call write_olap(smat,nrec)
-             STOP "TODO"
+             PRINT *,"TODO"
+!             STOP "TODO"
              PRINT *,"BASIS:",lapw%nv(jsp),atoms%nlotot
              !if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
              

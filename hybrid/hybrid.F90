@@ -10,7 +10,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-  SUBROUTINE calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,oneD,results,sym,xcpot,v,it)
+  SUBROUTINE calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,oneD,results,sym,xcpot,v,iter,iterHF)
 
     USE m_types
     USE m_mixedbasis
@@ -37,14 +37,14 @@ CONTAINS
     TYPE(t_atoms),         INTENT(IN)    :: atoms
     TYPE(t_potden),        INTENT(IN)    :: v
 
-    INTEGER,               INTENT(IN)    :: it
+    INTEGER,               INTENT(IN)    :: iter
+    INTEGER,               INTENT(INOUT) :: iterHF
 
     ! local variables
     INTEGER           :: eig_id,jsp,nk,nred
     TYPE(t_hybdat)    :: hybdat
     type(t_lapw)      :: lapw
     LOGICAL           :: init_vex=.TRUE. !In first call we have to init v_nonlocal
-    INTEGER,SAVE      :: nohf_it=99      !Do not rely on a converged density
     LOGICAL           :: l_restart=.FALSE.
     LOGICAL           :: l_zref
 
@@ -63,8 +63,8 @@ CONTAINS
     !Check if new non-local potential shall be generated
     hybrid%l_subvxc = hybrid%l_hybrid.AND.(.NOT.xcpot%is_name("exx"))
     !If this is the first iteration loop we can not calculate a new non-local potential
-    IF (it < 2) THEN
-       hybrid%l_calhf = .FALSE.
+    hybrid%l_calhf = (results%last_distance.GE.0.0).AND.(results%last_distance.LT.input%minDistance)
+    IF(.NOT.hybrid%l_calhf) THEN
        IF (hybrid%l_addhf) INQUIRE(file="cdnc",exist=hybrid%l_addhf)
        hybrid%l_subvxc = hybrid%l_subvxc.AND.hybrid%l_addhf
        RETURN
@@ -75,14 +75,6 @@ CONTAINS
     CALL judft_error("Hybrid functionals do not work in parallel version yet")
     CALL MPI_BCAST(results%last_distance .... 
 #endif
-    hybrid%l_calhf = results%last_distance < input%minDistance
-    IF (nohf_it > 50) THEN
-       hybrid%l_calhf = .TRUE.
-       nohf_it = 0
-    ELSE
-       nohf_it = nohf_it+1
-       IF (hybrid%l_calhf) nohf_it=0
-    ENDIF
     
     hybrid%l_addhf = .TRUE.
     !In first iteration allocate some memory
@@ -97,6 +89,8 @@ CONTAINS
     IF(.NOT.ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(DIMENSION%neigd2,kpts%nkpt,DIMENSION%jspd))
 
     IF (.NOT.hybrid%l_calhf) RETURN !use existing non-local potential
+
+    iterHF = iterHF + 1
 
     !Delete broyd files
     CALL system("rm broyd*")
@@ -129,13 +123,13 @@ CONTAINS
     CALL timestart("Calculation of non-local potential")
     DO jsp = 1,input%jspins
        CALL HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id,&
-                     hybdat,irank2,it,sym%invs,v%mt(:,0,:,:),eig_irr)
+                     hybdat,irank2,iterHF,sym%invs,v%mt(:,0,:,:),eig_irr)
 
        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
           CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref)
   
           CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,sym,cell,&
-                      noco,results,it,MAXVAL(hybrid%nobd),xcpot,mpi,irank2(nk),isize2(nk),comm(nk))
+                      noco,results,iterHF,MAXVAL(hybrid%nobd),xcpot,mpi,irank2(nk),isize2(nk),comm(nk))
        END DO
     END DO
     CALL timestop("Calculation of non-local potential")

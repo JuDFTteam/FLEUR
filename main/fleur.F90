@@ -207,8 +207,12 @@ CONTAINS
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
              CALL calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                              cell,oneD,results,sym,xcpot,vTot,iter)
+                              cell,oneD,results,sym,xcpot,vTot,iter,iterHF)
           END SELECT
+          IF(hybrid%l_calhf) THEN
+             CALL system("rm broyd*")
+             iter = 0
+          END IF
        ENDIF
        !#endif
 
