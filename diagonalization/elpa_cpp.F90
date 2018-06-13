@@ -137,7 +137,7 @@ IMPLICIT NONE
     ! A is only set in the upper half, solve_evp_real needs a full matrix
     ! Set lower half from upper half
     CALL CPP_transpose (m,m,CPP_ONE,asca,1,1,sc_desc, CPP_ZERO,eigvec,1,1,sc_desc)
-    DO i=1,SIZE(asca,1)
+    DO i=1,SIZE(asca,2)
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in A
        n_col = indxl2g(i,     nb, mycol, 0, npcol)
@@ -179,7 +179,7 @@ IMPLICIT NONE
     CALL CPP_transpose(m,m,CPP_ONE,asca,1,1,sc_desc, CPP_ZERO,eigvec,1,1,sc_desc)
 
 
-    DO i=1,SIZE(asca,1)
+    DO i=1,SIZE(asca,2)
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in A
        n_col = indxl2g(i,     nb, mycol, 0, npcol)
