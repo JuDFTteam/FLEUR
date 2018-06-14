@@ -39,7 +39,9 @@ CONTAINS
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
+    USE m_symmetrize_matrix
 
+    
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
@@ -156,6 +158,9 @@ CONTAINS
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
+          !Try to symmetrize matrix
+          CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
+          
           CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
           !
