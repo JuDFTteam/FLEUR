@@ -175,7 +175,7 @@ CONTAINS
 #else
           ne_found=ne_all
 #endif          
-          IF (.NOT.l_real) THEN
+          IF (.NOT.zmat%l_real) THEN
              zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
           ENDIF
           CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
