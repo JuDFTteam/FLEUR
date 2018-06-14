@@ -72,7 +72,7 @@ CONTAINS
     !Select the solver
     SELECT CASE (priv_select_solver(parallel))
     CASE (diag_elpa)
-       !CALL elpa(hmat,smat,ne,eig,ev)
+       CALL elpa_diag(hmat,smat,ne,eig,ev)
     CASE (diag_elemental)
        !CALL ELEMENTAL(hmat,smat,ne,eig,ev)
     CASE (diag_scalapack)
