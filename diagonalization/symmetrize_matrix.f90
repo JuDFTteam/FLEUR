@@ -18,9 +18,9 @@ CONTAINS
     CLASS(t_mat),INTENT(inout) :: hmat,smat
 
     !Check if we could exploit a real matrix even without inversion symmetry
-    IF (.NOT.noco%l_noco.AND..NOT.hmat%l_real) THEN
+    realcomplex:IF (.NOT.noco%l_noco.AND..NOT.hmat%l_real) THEN
        IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
-          IF (ANY(ABS(AIMAG(hmat%data_c))>1e-10)) EXIT
+          IF (ANY(ABS(AIMAG(hmat%data_c))>1e-10)) EXIT realcomplex
           
           IF (mpi%irank==0) THEN
              PRINT *,"Complex matrix made real"
@@ -39,7 +39,7 @@ CONTAINS
           DEALLOCATE(hmat%data_c)
 
        ENDIF
-    ENDIF
+    ENDIF realcomplex
 
   END SUBROUTINE symmetrize_matrix
 END MODULE m_symmetrize_matrix
