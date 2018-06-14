@@ -23,6 +23,7 @@ do
 	-all_tests) all_tests=1;;
 	-l) shift;label=$1;;
 	-m) shift;machine=$1;;
+	-cmake) shift;cmake=$1;;
         -d) debug=1;;
 	-*) error="Unkown argument";;
 	*)  break;;	# terminate while loop
@@ -174,8 +175,14 @@ echo "Machine config:$machine"
 configure_machine
 
 #run cmake
+if [ "$cmake" ]
+then
+    echo "Using provided cmake:$cmake"
+else
+    cmake="cmake"
+fi
 
-cmake -Dall_tests=$all_tests -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
+${cmake} -Dall_tests=$all_tests -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
 
 if [ -r $buildname/Makefile ]
 then
