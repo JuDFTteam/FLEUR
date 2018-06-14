@@ -28,10 +28,12 @@ CONTAINS
           END IF
              
           !We are using Gamma point, so matrix should be real
+          IF (ALLOCATED(smat%data_r)) DEALLOCATE(smat%data_r)
           ALLOCATE(smat%data_r(SIZE(smat%data_c,1),SIZE(smat%data_c,2)))
           smat%data_r=smat%data_c;smat%l_real=.TRUE.
           DEALLOCATE(smat%data_c)
 
+          IF (ALLOCATED(hmat%data_r)) DEALLOCATE(hmat%data_r)
           ALLOCATE(hmat%data_r(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
           hmat%data_r=hmat%data_c;hmat%l_real=.TRUE.
           DEALLOCATE(hmat%data_c)
