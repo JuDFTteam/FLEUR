@@ -27,6 +27,7 @@ CONTAINS
     USE m_juDFT
     USE m_types_mpimat
     USE m_types
+#ifdef CPP_ELPA  
     USE elpa1
 #ifdef CPP_ELPA2
     USE elpa2
@@ -34,7 +35,7 @@ CONTAINS
 #ifdef CPP_ELPA_201705003    
     USE elpa
 #endif
-
+#endif
     IMPLICIT NONE
 
     CLASS(t_mat),INTENT(INOUT)    :: hmat,smat
