@@ -427,8 +427,8 @@
       IF (l_hyb) THEN
          ! Changes for hybrid functionals
          input%isec1 = 999
-         namex = 'hse '
-         input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
+         namex = 'pbe0'
+         input%ctail = .false. ; atoms%l_geo = .false.! ; input%frcor = .true.
          input%itmax = 15 ; input%maxiter = 25!; input%imix  = 17
          IF (ANY(kpts%nkpt3(:).EQ.0)) kpts%nkpt3(:) = 4
          div(:) = kpts%nkpt3(:)
