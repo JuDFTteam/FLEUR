@@ -22,7 +22,7 @@ CONTAINS
        IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
           IF (ANY(ABS(AIMAG(hmat%data_c))>1e-10)) CALL judft_error("Matrix not real at Gamma-point",calledby="symmetrize_matrix")
           
-          IF (mpi%irank) THEN
+          IF (mpi%irank==0) THEN
              PRINT *,"Complex matrix made real"
              WRITE(6,*) "Complex matrix made real"
           END IF
