@@ -327,7 +327,11 @@ CONTAINS
           hmat%data_c(n_row+1:hmat%matsize1,i) = ev_dist%data_c(n_row+1:ev_dist%matsize1,i)
        ENDIF
     ENDDO
-  
+
+!print*, "matrix bfore diag" 
+!open(unit = 99+myid,file="devel_matr_"//achar(myid+48)) 
+!    write(99+myid,*) hmat%data_c
+!close(unit = 99+myid) 
 
     ! 3. Calculate eigenvalues/eigenvectors of U**-T * A * U**-1
     !    Eigenvectors go to eigvec
@@ -393,6 +397,13 @@ CONTAINS
 #endif
 #endif
 
+!print*, "eigenvalues" 
+!open(unit = 99+myid,file="devel_eigVal_"//achar(myid+48)) 
+!do i = 1, size(eig2)
+!    write(99+myid,*)i, eig2(i)
+!enddo
+!close(unit = 99+myid) 
+
 
     ! 4. Backtransform eigenvectors: Z = U**-1 * eigvec
 
@@ -415,29 +426,33 @@ CONTAINS
     ENDIF
 #elif defined (CPP_ELPA_201605004)
     IF (hmat%l_real) THEN
-       ok=elpa_mult_at_b_real('U', 'U',smat%global_size1,smat%global_size1,smat%data_r,smat%matsize1,smat%matsize2,&
-                     tmp2_r,SIZE(tmp2_r,1),SIZE(tmp2_r,2),nb,mpi_comm_rows, mpi_comm_cols,&
+       ok=elpa_mult_at_b_real('L', 'N',hmat%global_size1,num2,tmp2_r,hmat%matsize1,hmat%matsize2,&
+                     ev_dist%data_r,ev_dist%matsize1,ev_dist%matsize2,nb,mpi_comm_rows, mpi_comm_cols,&
                      hmat%data_r,hmat%matsize1,hmat%matsize2)
     ELSE
-       ok=mult_ah_b_complex('U', 'U',smat%global_size1,smat%global_size1,smat%data_c,smat%matsize1,smat%matsize2,&
-                     tmp2_c,SIZE(tmp2_c,1),SIZE(tmp2_c,2),nb,mpi_comm_rows, mpi_comm_cols,&
+       ok=mult_ah_b_complex('L', 'N',hmat%global_size1,num2,tmp2_c,hmat%matsize1,hmat%matsize2,&
+                     ev_dist%data_c,ev_dist%matsize1,ev_dist%matsize2,nb,mpi_comm_rows, mpi_comm_cols,&
                      hmat%data_c,hmat%matsize1,hmat%matsize2)
     ENDIF
 #elif defined (CPP_ELPA_201605003)
     IF (hmat%l_real) THEN
-       ok=elpa_mult_at_b_real('U', 'U',smat%global_size1,smat%global_size1,smat%data_r,smat%matsize1,&
-                     tmp2_r,SIZE(tmp2_r,1),nb,mpi_comm_rows, mpi_comm_cols,hmat%data_r,hmat%matsize1)
+       ok=elpa_mult_at_b_real('L', 'N',hmat%global_size1,num2,tmp2_r,hmat%matsize1,&
+                     ev_dist%data_r,ev_dist%matsize1,nb,mpi_comm_rows, mpi_comm_cols,&
+                     hmat%data_r,hmat%matsize1)
     ELSE
-       ok=mult_ah_b_complex('U', 'U',smat%global_size1,smat%global_size1,smat%data_c,smat%matsize1,&
-                     tmp2_c,SIZE(tmp2_c,1),,nb,mpi_comm_rows, mpi_comm_cols,hmat%data_c,hmat%matsize1)
+       ok=mult_ah_b_complex('L', 'N',hmat%global_size1,num2,tmp2_c,hmat%matsize1,&
+                     ev_dist%data_c,ev_dist%matsize1,nb,mpi_comm_rows, mpi_comm_cols,&
+                     hmat%data_c,hmat%matsize1)
     ENDIF
 #else
     IF (hmat%l_real) THEN
-       CALL mult_at_b_real('U', 'U',smat%global_size1,smat%global_size1,smat%data_r,smat%matsize1,&
-                     tmp2_r,SIZE(tmp2_r,1),nb,mpi_comm_rows, mpi_comm_cols,hmat%data_r,hmat%matsize1)
+       CALL mult_at_b_real('L', 'N',hmat%global_size1,num2,tmp2_r,hmat%matsize1,&
+                     ev_dist%data_r,ev_dist%matsize1,nb,mpi_comm_rows, mpi_comm_cols,&
+                     hmat%data_r,hmat%matsize1)
     ELSE
-       CALL mult_ah_b_complex('U', 'U',smat%global_size1,smat%global_size1,smat%data_c,smat%matsize1,&
-                     tmp2_c,SIZE(tmp2_c,1),nb,mpi_comm_rows, mpi_comm_cols,hmat%data_c,hmat%matsize1)
+       CALL mult_ah_b_complex('L', 'N',hmat%global_size1,num2,tmp2_c,hmat%matsize1,&
+                     ev_dist%data_c,ev_dist%matsize1,nb,mpi_comm_rows, mpi_comm_cols,&
+                     hmat%data_c,hmat%matsize1)
     ENDIF
 #endif
 
@@ -447,8 +462,8 @@ CONTAINS
 #endif
     ! END of ELPA stuff
 #if ( !defined (CPP_ELPA_201705003))
-    CALL MPI_COMM_FREE(mpi_comm_rows,ierr)
-    CALL MPI_COMM_FREE(mpi_comm_cols,ierr)
+    CALL MPI_COMM_FREE(mpi_comm_rows,err)
+    CALL MPI_COMM_FREE(mpi_comm_cols,err)
 #endif
     !
     !     Put those eigenvalues expected by chani to eig, i.e. for
