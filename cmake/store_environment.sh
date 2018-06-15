@@ -16,7 +16,7 @@ if [ "$CLI_LIBRARIES" ]
 then
     if [ "cmake_lib" ]
     then
-	cmake_lib="$CLI_LIBRARIES:$cmake_lib"
+	cmake_lib="$CLI_LIBRARIES;$cmake_lib"
     else
 	cmake_lib="$CLI_LIBRARIES"
     fi
@@ -26,7 +26,7 @@ for lib in $FLEUR_LIBDIR $CLI_LIBDIR
 do
     if [ "cmake_lib" ]
     then
-	cmake_lib="-L$lib:$cmake_lib"
+	cmake_lib="-L$lib;$cmake_lib"
     else
 	cmake_lib="-L$lib"
     fi
@@ -45,11 +45,11 @@ then
 fi
 if [ "$CLI_FLAGS" ]
 then
-    cmake_flags="$CMAKE_Fortran_FLAGS cmake_flags"
+    cmake_flags="$CMAKE_Fortran_FLAGS $cmake_flags"
 fi
 for lib in $FLEUR_INCLUDEDIR $CLI_INCLUDEDIR
 do
-    cmake_flags="-I$lib cmake_flags"
+    cmake_flags="-I$lib $cmake_flags"
 done
 echo "set(CMAKE_Fortran_FLAGS \"$cmake_flags\")" >>config.cmake
 

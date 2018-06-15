@@ -12,7 +12,10 @@ then
     #Do make install 
     cd build
     make install
+    cd ..
+else
+    cd CMake-hdf5-${hdf5_version}    
 fi
 #Store the installation location
-FLEUR_LIBDIR="$PWD/HDF5/$hdf_version/lib $FLEUR_LIBDIR"
-FLEUR_INCLUDEDIR="$PWD/HDF5/$hdf_version/include/static $FLEUR_INCLUDEDIR"
+FLEUR_LIBDIR="$PWD/HDF_Group/HDF5/${hdf5_version}/lib $FLEUR_LIBDIR"
+FLEUR_INCLUDEDIR="$PWD/HDF_Group/HDF5/${hdf5_version}/include/static $FLEUR_INCLUDEDIR"
