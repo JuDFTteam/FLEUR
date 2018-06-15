@@ -9,7 +9,7 @@ MODULE m_subvxc
 CONTAINS
 
    SUBROUTINE subvxc(lapw,bk,DIMENSION,input,jsp,vr0,atoms,usdus,hybrid,el,ello,sym,&
-                     cell,sphhar,stars,xcpot,mpi,oneD,hamovlp,vx)
+                     cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
 
 
       USE m_intgr,     ONLY : intgr3
@@ -24,7 +24,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
+      CLASS(t_xcpot),        INTENT(IN)    :: xcpot
       TYPE(t_mpi),           INTENT(IN)    :: mpi
       TYPE(t_dimension),     INTENT(IN)    :: dimension
       TYPE(t_oneD),          INTENT(IN)    :: oneD
@@ -38,7 +38,7 @@ CONTAINS
       TYPE(t_lapw),          INTENT(IN)    :: lapw
       TYPE(t_usdus),         INTENT(INOUT) :: usdus
       TYPE(t_potden),        INTENT(IN)    :: vx
-      TYPE(t_hamovlp),       INTENT(INOUT) :: hamovlp
+      TYPE(t_mat),           INTENT(INOUT) :: hmat
 
       ! Scalar Arguments
       INTEGER, INTENT (IN) :: jsp 
@@ -50,7 +50,7 @@ CONTAINS
       REAL,    INTENT (IN) :: bk(3)
 
       ! Local Scalars
-      INTEGER               ::  ic,indx,m,ig1,ig2
+      INTEGER               ::  ic,indx,m,ig1,ig2,n,nn
       INTEGER               ::  nlharm,nnbas,typsym,lm
       INTEGER               ::  noded,nodeu
       INTEGER               ::  nbasf0
@@ -80,7 +80,7 @@ CONTAINS
       REAL                  ::  bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
-      COMPLEX               ::  vxc(hamovlp%matsize)
+      COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1+1)/2)
       COMPLEX               ::  vrmat(hybrid%maxlmindx,hybrid%maxlmindx)
       COMPLEX               ::  carr(hybrid%maxlmindx,DIMENSION%nvd),carr1(DIMENSION%nvd,DIMENSION%nvd)
       COMPLEX ,ALLOCATABLE  ::  ahlp(:,:,:),bhlp(:,:,:)
@@ -382,7 +382,7 @@ CONTAINS
                                        ic = icentry
                                        DO i = 1, lapw%nv(jsp)
                                           ic = ic + 1
-                                          IF (hamovlp%l_real) THEN
+                                          IF (hmat%l_real) THEN
                                              vxc(ic) = vxc(ic) + invsfct * REAL(rr*rc*bascof(i,lm,iatom) *&
                                                                                 CONJG(bascof_lo(p1,m1,ikvec,ilo,iatom)))
                                           ELSE
@@ -423,7 +423,7 @@ CONTAINS
 
                                           rc = CMPLX(0d0,1d0)**(lp-l1) ! adjusts to a/b/ccof-scaling
 
-                                          IF (hamovlp%l_real) THEN
+                                          IF (hmat%l_real) THEN
                                              vxc(ic) = vxc(ic) + invsfct * REAL(rr * rc * bascof_lo(pp,mp,ikvecp,ilop,iatom) *&
                                                                                 CONJG(bascof_lo(p1,m1,ikvec,ilo,iatom)))
                                           ELSE
@@ -462,7 +462,7 @@ CONTAINS
 
                                        rc = CMPLX(0d0,1d0)**(lp-l1) ! adjusts to a/b/ccof-scaling
 
-                                       IF (hamovlp%l_real) THEN
+                                       IF (hmat%l_real) THEN
                                           vxc(ic) = vxc(ic) + invsfct*REAL(rr * rc * bascof_lo(pp,mp,ikvecp,ilop,iatom) *&
                                                                            CONJG(bascof_lo(p1,m1,ikvec,ilo,iatom)))
                                        ELSE
@@ -487,16 +487,18 @@ CONTAINS
 
       !initialize weighting factor
       a_ex = xcpot%get_exchange_weight()
-    
-      IF (hamovlp%l_real) THEN
-         DO i = 1, hamovlp%matsize
-            hamovlp%a_r(i) = hamovlp%a_r(i) - a_ex*REAL(vxc(i))
+
+      i = 0
+      DO n =1, hmat%matsize1
+         DO nn = 1, n
+            i = i + 1
+            IF (hmat%l_real) THEN
+               hmat%data_r(n,nn) = hmat%data_r(n,nn) - a_ex*REAL(vxc(i))
+            ELSE
+               hmat%data_c(n,nn) = hmat%data_c(n,nn) - a_ex*vxc(i)
+            ENDIF
          END DO
-      ELSE
-         DO i = 1, hamovlp%matsize
-          hamovlp%a_c(i) = hamovlp%a_c(i) - a_ex*vxc(i)
-         END DO
-      END IF
+      END DO
 
       CALL timestop("subvxc")
 

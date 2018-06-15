@@ -80,8 +80,8 @@ MODULE m_add_vnonlocal
 
       CALL read_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
       ! add non-local x-potential to the hamiltonian hmat
-      DO n=1,v_x%matsize1
-         DO nn=1,n           
+      DO n = 1, v_x%matsize1
+         DO nn = 1, n           
             IF (hmat%l_real) THEN
                hmat%data_r(n,nn) = hmat%data_r(n,nn) - a_ex*v_x%data_r(n,nn)
             ELSE
