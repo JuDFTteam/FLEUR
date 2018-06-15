@@ -121,7 +121,7 @@ CONTAINS
 
     CALL timestart("Calculation of non-local HF potential")
     DO jsp = 1,input%jspins
-       CALL HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id,&
+       CALL HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,enpara,eig_id,&
                      hybdat,irank2,iterHF,sym%invs,v%mt(:,0,:,:),eig_irr)
 
        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride

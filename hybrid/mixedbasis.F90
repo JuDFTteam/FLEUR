@@ -175,8 +175,6 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
    ! initialize gridf for radial integration
    CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
 
-   CALL judft_error("TODO,mixedbasis")
-
    ALLOCATE (vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd))
 
    vr0(:,:,:) = v%mt(:,0,:,:)
@@ -353,98 +351,89 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
 
    ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm1
 
-    ! first run to determine dimension of pgptm1
-    ALLOCATE( hybrid%ngptm1(kpts%nkptf) )
-    hybrid%ngptm1 = 0
-    DO igpt = 1,hybrid%gptmd
-       g = hybrid%gptm(:,igpt)
-       DO ikpt = 1,kpts%nkptf
-          kvec = kpts%bkf(:,ikpt)
-          rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
-          IF( rdum .LE. hybrid%gcutm1**2 ) THEN
-             hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
-          END IF
-       END DO
-    END DO
-    hybrid%maxgptm1 = MAXVAL( hybrid%ngptm1 )
+   ! first run to determine dimension of pgptm1
+   ALLOCATE(hybrid%ngptm1(kpts%nkptf))
+   hybrid%ngptm1 = 0
+   DO igpt = 1, hybrid%gptmd
+      g = hybrid%gptm(:,igpt)
+      DO ikpt = 1, kpts%nkptf
+         kvec = kpts%bkf(:,ikpt)
+         rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
+         IF(rdum.LE.hybrid%gcutm1**2) THEN
+            hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
+         END IF
+      END DO
+   END DO
+   hybrid%maxgptm1 = MAXVAL(hybrid%ngptm1)
 
-    ALLOCATE( hybrid%pgptm1(hybrid%maxgptm1,kpts%nkptf) )
-    hybrid%pgptm1 = 0
-    hybrid%ngptm1 = 0
-    !     
-    ! Allocate and initialize arrays needed for G vector ordering
-    !
-    ALLOCATE ( unsrt_pgptm(hybrid%maxgptm1,kpts%nkptf) )
-    ALLOCATE ( length_kG(hybrid%maxgptm1,kpts%nkptf) )
-    length_kG   = 0
-    unsrt_pgptm = 0
-    DO igpt = 1,hybrid%gptmd
-       g = hybrid%gptm(:,igpt)
-       DO ikpt = 1,kpts%nkptf
-          kvec = kpts%bkf(:,ikpt)
-          rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
-          IF( rdum .LE. hybrid%gcutm1**2 ) THEN
-             hybrid%ngptm1(ikpt)                   = hybrid%ngptm1(ikpt) + 1
-             unsrt_pgptm(hybrid%ngptm1(ikpt),ikpt) = igpt
-             length_kG(hybrid%ngptm1(ikpt),ikpt)   = rdum
-          END IF
-       END DO
-    END DO
+   ALLOCATE(hybrid%pgptm1(hybrid%maxgptm1,kpts%nkptf))
+   hybrid%pgptm1 = 0
+   hybrid%ngptm1 = 0
 
-    !
-    ! Sort pointers in array, so that shortest |k+G| comes first
-    !
-    DO ikpt = 1,kpts%nkptf
-       ALLOCATE( ptr(hybrid%ngptm1(ikpt)) )
-       ! Divide and conquer algorithm for arrays > 1000 entries
-       divconq = MAX( 0, INT( 1.443*LOG( 0.001*hybrid%ngptm1(ikpt) ) ) )
-       ! create pointers which correspond to a sorted array
-       CALL rorderpf(ptr, length_kG(1:hybrid%ngptm1(ikpt),ikpt),hybrid%ngptm1(ikpt), divconq )
-       ! rearrange old pointers
-       DO igpt = 1,hybrid%ngptm1(ikpt)
-          hybrid%pgptm1(igpt,ikpt) = unsrt_pgptm(ptr(igpt),ikpt)
-       END DO
-       DEALLOCATE( ptr )
-    END DO
-    DEALLOCATE( unsrt_pgptm )
-    DEALLOCATE( length_kG )
+   ! Allocate and initialize arrays needed for G vector ordering
+   ALLOCATE (unsrt_pgptm(hybrid%maxgptm1,kpts%nkptf))
+   ALLOCATE (length_kG(hybrid%maxgptm1,kpts%nkptf))
+   length_kG   = 0
+   unsrt_pgptm = 0
+   DO igpt = 1, hybrid%gptmd
+      g = hybrid%gptm(:,igpt)
+      DO ikpt = 1, kpts%nkptf
+         kvec = kpts%bkf(:,ikpt)
+         rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
+         IF(rdum.LE.hybrid%gcutm1**2) THEN
+            hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
+            unsrt_pgptm(hybrid%ngptm1(ikpt),ikpt) = igpt
+            length_kG(hybrid%ngptm1(ikpt),ikpt) = rdum
+         END IF
+      END DO
+   END DO
+
+   ! Sort pointers in array, so that shortest |k+G| comes first
+   DO ikpt = 1, kpts%nkptf
+      ALLOCATE(ptr(hybrid%ngptm1(ikpt)))
+      ! Divide and conquer algorithm for arrays > 1000 entries
+      divconq = MAX( 0, INT( 1.443*LOG( 0.001*hybrid%ngptm1(ikpt) ) ) )
+      ! create pointers which correspond to a sorted array
+      CALL rorderpf(ptr,length_kG(1:hybrid%ngptm1(ikpt),ikpt),hybrid%ngptm1(ikpt),divconq)
+      ! rearrange old pointers
+      DO igpt = 1, hybrid%ngptm1(ikpt)
+         hybrid%pgptm1(igpt,ikpt) = unsrt_pgptm(ptr(igpt),ikpt)
+      END DO
+      DEALLOCATE(ptr)
+   END DO
+   DEALLOCATE(unsrt_pgptm)
+   DEALLOCATE(length_kG)
 
     
-    IF ( mpi%irank == 0 ) THEN
-       WRITE(6,'(/A)')       'Mixed basis'
-       WRITE(6,'(A,I5)')     'Number of unique G-vectors: ',hybrid%gptmd
-       WRITE(6,*)
-       WRITE(6,'(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
-       WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm
-       WRITE(6,*)
-       WRITE(6,*)
-       WRITE(6,'(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
-       WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm1
-       WRITE(6,*)
-    END IF
+   IF (mpi%irank == 0) THEN
+      WRITE(6,'(/A)')       'Mixed basis'
+      WRITE(6,'(A,I5)')     'Number of unique G-vectors: ',hybrid%gptmd
+      WRITE(6,*)
+      WRITE(6,'(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
+      WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm
+      WRITE(6,*)
+      WRITE(6,*)
+      WRITE(6,'(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
+      WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm1
+      WRITE(6,*)
+   END IF
 
-    !
-    ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
-    !
+   ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 
-    IF ( mpi%irank == 0 ) THEN
-       WRITE(6,'(A)') 'MT product basis for non-local exchange potential:'
-       WRITE(6,'(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
-    END IF
+   IF (mpi%irank == 0) THEN
+      WRITE(6,'(A)') 'MT product basis for non-local exchange potential:'
+      WRITE(6,'(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
+   END IF
 
-    hybrid%maxlcutm1 = MAXVAL( hybrid%lcutm1 )
+   hybrid%maxlcutm1 = MAXVAL(hybrid%lcutm1)
 
+   ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1,atoms%ntype))
+   ALLOCATE (seleco(hybrid%maxindx,0:atoms%lmaxd),selecu(hybrid%maxindx,0:atoms%lmaxd))
+   ALLOCATE (selecmat(hybrid%maxindx,0:atoms%lmaxd,hybrid%maxindx,0:atoms%lmaxd))
+   hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
 
-    ALLOCATE ( hybrid%nindxm1(0:hybrid%maxlcutm1,atoms%ntype) )
-    ALLOCATE ( seleco(hybrid%maxindx,0:atoms%lmaxd) , selecu(hybrid%maxindx,0:atoms%lmaxd) )
-    ALLOCATE ( selecmat(hybrid%maxindx,0:atoms%lmaxd,hybrid%maxindx,0:atoms%lmaxd) )
-    hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
-
-    !
-    ! determine maximal indices of (radial) mixed-basis functions (->nindxm1) 
-    ! (will be reduced later-on due to overlap)
-    !
-
+   ! determine maximal indices of (radial) mixed-basis functions (->nindxm1) 
+   ! (will be reduced later-on due to overlap)
     hybrid%maxindxp1  = 0
     DO itype = 1,atoms%ntype
        seleco = .FALSE.
