@@ -10,7 +10,8 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-  SUBROUTINE calc_hybrid(hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,oneD,results,sym,xcpot,v,iter,iterHF)
+  SUBROUTINE calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,oneD,&
+                         enpara,results,sym,xcpot,v,iter,iterHF)
 
     USE m_types
     USE m_mixedbasis
@@ -30,6 +31,7 @@ CONTAINS
     TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
     TYPE(t_input),         INTENT(IN)    :: input
     TYPE(t_noco),          INTENT(IN)    :: noco
+    TYPE(t_enpara),        INTENT(IN)    :: enpara
     TYPE(t_results),       INTENT(INOUT) :: results
     TYPE(t_sym),           INTENT(IN)    :: sym  
     TYPE(t_cell),          INTENT(IN)    :: cell
@@ -39,9 +41,10 @@ CONTAINS
 
     INTEGER,               INTENT(IN)    :: iter
     INTEGER,               INTENT(INOUT) :: iterHF
+    INTEGER,               INTENT(IN)    :: eig_id
 
     ! local variables
-    INTEGER           :: eig_id,jsp,nk,nred
+    INTEGER           :: jsp,nk,nred
     TYPE(t_hybdat)    :: hybdat
     type(t_lapw)      :: lapw
     LOGICAL           :: init_vex=.TRUE. !In first call we have to init v_nonlocal
@@ -84,7 +87,7 @@ CONTAINS
        ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
        init_vex=.FALSE.
     END IF
-    
+
     hybrid%l_subvxc = (hybrid%l_subvxc.AND.hybrid%l_addhf)
     IF(.NOT.ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(DIMENSION%neigd2,kpts%nkpt,DIMENSION%jspd))
 
@@ -94,21 +97,17 @@ CONTAINS
 
     !Delete broyd files
     CALL system("rm broyd*")
-    
+
     !check if z-reflection trick can be used
 
     l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
-    
-    CALL timestart("generation of non-local HF potential")
+
     CALL timestart("Preparation for Hybrid functionals")
-    CALL juDFT_WARN ("Hybrid functionals not working in this version")
-      
-    eig_id = open_eig(mpi%mpi_comm,dimension%nbasfcn,dimension%neigd,kpts%nkpt,dimension%jspd,&
-                      noco%l_noco,.FALSE.,sym%invs.AND..NOT.noco%l_noco,noco%l_soc,.FALSE.,mpi%n_size)
-    
+!    CALL juDFT_WARN ("Hybrid functionals not working in this version")
+
     !construct the mixed-basis
     CALL timestart("generation of mixed basis")
-    CALL mixedbasis(atoms,kpts,dimension,input,cell,sym,xcpot,hybrid,eig_id,mpi,v,l_restart)
+    CALL mixedbasis(atoms,kpts,dimension,input,cell,sym,xcpot,hybrid,enpara,mpi,v,l_restart)
     CALL timestop("generation of mixed basis")
 
     CALL open_hybrid_io2(hybrid,DIMENSION,atoms,sym%invs)
@@ -120,7 +119,7 @@ CONTAINS
     CALL hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,irank2,isize2,sym%invs)
     CALL timestop("Preparation for Hybrid functionals")
 
-    CALL timestart("Calculation of non-local potential")
+    CALL timestart("Calculation of non-local HF potential")
     DO jsp = 1,input%jspins
        CALL HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,eig_id,&
                      hybdat,irank2,iterHF,sym%invs,v%mt(:,0,:,:),eig_irr)
@@ -132,8 +131,7 @@ CONTAINS
                       noco,results,iterHF,MAXVAL(hybrid%nobd),xcpot,mpi,irank2(nk),isize2(nk),comm(nk))
        END DO
     END DO
-    CALL timestop("Calculation of non-local potential")
-    CALL timestop("generation of non-local HF potential")
+    CALL timestop("Calculation of non-local HF potential")
     CALL close_eig(eig_id)
   END SUBROUTINE calc_hybrid
 END MODULE m_calc_hybrid
