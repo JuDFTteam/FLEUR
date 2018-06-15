@@ -173,8 +173,6 @@ CONTAINS
 
     scfloop:DO WHILE (l_cont)
 
-       CALL reset_eig(eig_id,noco%l_soc)
-
        iter = iter + 1
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -214,6 +212,9 @@ CONTAINS
              iter = 0
           END IF
        ENDIF
+
+       CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+
        !#endif
 
 !!$             DO pc = 1, wann%nparampts
