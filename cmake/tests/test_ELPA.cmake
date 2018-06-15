@@ -3,19 +3,15 @@ try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/t
 LINK_LIBRARIES ${FLEUR_LIBRARIES})
 
 if (NOT FLEUR_USE_ELPA)
-   set(STORE_FLAGS "${CMAKE_Fortran_FLAGS}")
-   if (DEFINED ENV{ELPA_MODULES})
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I$ENV{ELPA_MODULES}")
-   endif()
-   if (DEFINED ENV{ELPA_LIB})
-      set(TEST_LIBRARIES "-L$ENV{ELPA_LIB};-lelpa_openmp;-lstdc++;${FLEUR_LIBRARIES}")
+   if (DEFINED CLI_ELPA_OPENMP)
+      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lelpa_openmp")
+   else()
+      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lelpa")
    endif()
    try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA.f90
 LINK_LIBRARIES ${TEST_LIBRARIES})
    if (FLEUR_USE_ELPA)
       set(FLEUR_LIBRARIES "${TEST_LIBRARIES}")
-   else()
-      set(CMAKE_Fortran_FLAGS "${STORE_FLAGS}")
    endif()
 endif()
 

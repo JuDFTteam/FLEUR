@@ -2,28 +2,15 @@
 try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
 	    LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
-#now try to find the library using HDF5_ROOT variable
+#now try to find the library by adding the -l stuff to the FLEUR_LIBRARIES
 if (NOT FLEUR_USE_HDF5)
-   if (DEFINED ENV{HDF5_ROOT})
-     find_path(HDF5_INCLUDE hdf5.mod PATHS $ENV{HDF5_ROOT} PATH_SUFFIXES include NO_DEFAULT_PATH)
-     find_path(HDF5_LIB libhdf5_fortran.a PATHS $ENV{HDF5_ROOT} PATH_SUFFIXES lib NO_DEFAULT_PATH)
-     if (HDF5_LIB) 
-        set(TEST_LIBRARIES "-L${HDF5_LIB};-lhdf5_fortran;-lhdf5;${FLEUR_LIBRARIES}")
-     endif()
-     if (HDF5_INCLUDE)
-        set(STORE_FLAGS ${CMAKE_Fortran_FLAGS})
-        set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${HDF5_INCLUDE}")
-     endif()
-	try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
+     set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lhdf5_fortran;-lhdf5")
+     try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
    	    LINK_LIBRARIES ${TEST_LIBRARIES}
             )
-       if (NOT FLEUR_USE_HDF5)
-	       set(CMAKE_Fortran_FLAGS ${STORE_FLAGS})
-       else()
-               set(FLEUR_LIBRARIES "-L${HDF5_LIB};-lhdf5_fortran;-lhdf5;${FLEUR_LIBRARIES}")
-               set(FLEUR_MPI_LIBRARIES "-L${HDF5_LIB};-lhdf5_fortran;-lhdf5;${FLEUR_MPI_LIBRARIES}")
-       endif()       	    
-   endif()
+     if (FLEUR_USE_HDF5)
+          set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+     endif()       	    
 endif()
 
 #now try the find_package feature
@@ -55,8 +42,8 @@ endif()
 
 message("HDF5 Library found:${FLEUR_USE_HDF5}")
 
-if (DEFINED ENV{FLEUR_USE_HDF5})
-   if (ENV{FLEUR_USE_HDF5})
+if (DEFINED CLI_FLEUR_USE_HDF5})
+   if (CLI_FLEUR_USE_HDF5})
        if (NOT FLEUR_USE_HDF5)
            message(FATAL_ERROR "You asked for HDF5 but cmake couldn't find it. Please set HDF5_ROOT and or give additional compiler/linker flags")
        endif()
