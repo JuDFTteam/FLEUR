@@ -150,6 +150,9 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
          END DO
 
          IF (hybrid%nobd(nk)>hybrid%nbands(nk)) THEN
+            WRITE(*,*) 'k-point: ', nk
+            WRITE(*,*) 'number of bands:          ', hybrid%nbands(nk)
+            WRITE(*,*) 'number of occupied bands: ', hybrid%nobd(nk)
             CALL judft_warn("More occupied bands than total no of bands!?")
             hybrid%nbands(nk) = hybrid%nobd(nk)
          END IF
