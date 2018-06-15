@@ -328,11 +328,6 @@ CONTAINS
        ENDIF
     ENDDO
 
-!print*, "matrix bfore diag" 
-!open(unit = 99+myid,file="devel_matr_"//achar(myid+48)) 
-!    write(99+myid,*) hmat%data_c
-!close(unit = 99+myid) 
-
     ! 3. Calculate eigenvalues/eigenvectors of U**-T * A * U**-1
     !    Eigenvectors go to eigvec
 #if defined (CPP_ELPA_201705003)
@@ -396,13 +391,6 @@ CONTAINS
     ENDIF
 #endif
 #endif
-
-!print*, "eigenvalues" 
-!open(unit = 99+myid,file="devel_eigVal_"//achar(myid+48)) 
-!do i = 1, size(eig2)
-!    write(99+myid,*)i, eig2(i)
-!enddo
-!close(unit = 99+myid) 
 
 
     ! 4. Backtransform eigenvectors: Z = U**-1 * eigvec
