@@ -21,7 +21,7 @@ do
 	-mpi) shift; CLI_FLEUR_USE_MPI=$1;;
 	-magma) shift; CLI_FLEUR_USE_MAGMA=$1;;
 	-gpu) shift; CLI_FLEUR_USE_GPU=$1;;
-	-libraries) shift; CLI_LIBRARIES=$1;;
+	-link) shift; CLI_LIBRARIES=$1;;
 	-libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
 	-flags) shift; CLI_FLAGS=$1;;
 	-includedir) shift; CLI_INCLUDEDIR="$CLI_INCLUDEDIR $1";;
