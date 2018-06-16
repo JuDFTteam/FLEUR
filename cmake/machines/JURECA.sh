@@ -15,8 +15,11 @@ then
     FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $ELPA_MODULES_OPENMP"
     #load hdf5 module
     module load HDF5
-    
-    FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
+    FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_DIR/lib"
+    FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_DIR/include"
+ 
+ 
+    FLEUR_LIBRARIES="-lelpa_openmp;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
     
 elif module list 2>&1 |grep -q PGI
 then
