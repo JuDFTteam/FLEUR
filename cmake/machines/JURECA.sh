@@ -1,7 +1,8 @@
+if module list 2>&1 |grep -q -i CMake
+then
 if module list 2>&1 |grep -q -i intel
 then
     echo "Intel toolchain used"
-    module load CMake
     export FC=${FC:=mpif90}
     export CC=${CC:=mpicc}
     #determine XML2 module
@@ -32,5 +33,10 @@ then
 else
     echo "You need to load the modules for the compiler"
     echo "e.g. module load intel-para"
+    exit
+fi
+else
+    echo "You should load the CMake module and the modules for the compiler"
+    echo "e.g. do a 'ml intel-para CMake'"
     exit
 fi
