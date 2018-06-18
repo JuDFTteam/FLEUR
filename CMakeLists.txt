@@ -6,7 +6,7 @@ endif()
 
 set(tmp ${CMAKE_Fortran_FLAGS})
 project(FLEUR LANGUAGES C Fortran)
-set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} ${tmp})
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${tmp}")
 
 include("cmake/CompilerConfig.txt")
 

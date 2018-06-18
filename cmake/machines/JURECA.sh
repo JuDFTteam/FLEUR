@@ -1,6 +1,7 @@
 if module list 2>&1 |grep -q -i intel
 then
     echo "Intel toolchain used"
+    module load CMake
     export FC=${FC:=mpif90}
     export CC=${CC:=mpicc}
     #determine XML2 module
@@ -20,7 +21,7 @@ then
  
  
     FLEUR_LIBRARIES="-lelpa_openmp;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64"
-    
+    ml 
 elif module list 2>&1 |grep -q PGI
 then
     echo "PGI toolchain used"
