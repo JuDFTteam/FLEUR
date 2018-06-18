@@ -346,10 +346,14 @@ CONTAINS
     !Count No of lapw distributed to this PE
     lapw%num_local_cols=0
     DO ispin=1,input%jspins
-       DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
-          lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
-       ENDDO
-    ENDDO
+       IF (PRESENT(mpi)) THEN
+          DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
+             lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
+          END DO
+       ELSE
+          lapw%num_local_cols(ispin) = lapw%nv(ispin)
+       END IF
+    END DO
 
     IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
 
