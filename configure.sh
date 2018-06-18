@@ -66,12 +66,24 @@ then
     then
 	echo "OLD build directory found, saved in build.$$"
 	mv $buildname $buildname.$$
+        mkdir $buildname
     else
 	echo "Overwriting old build"
-	rm -r $buildname
+        cd $buildname
+        for file in *
+        do
+          if [ "$file" == "external" ] 
+          then
+            echo "Keeping 'external' directory"
+          else
+            rm -r $file
+          fi
+        done
+        cd ..
     fi  
+else
+   mkdir $buildname
 fi
-mkdir $buildname
 cd $buildname
 
 #Now check the machine and set some defaults 

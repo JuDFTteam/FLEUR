@@ -13,6 +13,17 @@ if (NOT FLEUR_USE_HDF5)
      endif()       	    
 endif()
 
+#now try to find the library by adding the -l stuff to the FLEUR_LIBRARIES
+if (NOT FLEUR_USE_HDF5)
+     set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5")
+     try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
+   	    LINK_LIBRARIES ${TEST_LIBRARIES}
+            )
+     if (FLEUR_USE_HDF5)
+          set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+     endif()       	    
+endif()
+
 #now try the find_package feature
 if (NOT FLEUR_USE_HDF5)
       find_package(HDF5)

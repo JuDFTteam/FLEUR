@@ -39,7 +39,7 @@ echo "set(FLEUR_LIBRARIES $cmake_lib)" >>config.cmake
 #2. If CLI_FLAGS is given use that
 #3. If FLEUR_INCLUDEDIR/CLI_INCLUDEDIR is given, add -I options for these
 
-if [ "$CMAKE_Fortan_FLAGS" ]
+if [ "$CMAKE_Fortran_FLAGS" ]
 then
     cmake_flags="$CMAKE_Fortran_FLAGS"
 fi
