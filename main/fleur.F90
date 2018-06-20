@@ -243,7 +243,9 @@ CONTAINS
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
           vTemp = vTot
+          CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
+          CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
