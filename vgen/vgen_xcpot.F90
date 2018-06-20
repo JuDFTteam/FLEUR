@@ -159,7 +159,7 @@ CONTAINS
           END IF
 
           veff = vTot
-          IF(xcpot%is_hybrid()) THEN
+          IF(xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
              DO ispin = 1, input%jspins
                 CALL convol(stars,vXC%pw_w(:,ispin),vXC%pw(:,ispin),stars%ufft)
              END DO

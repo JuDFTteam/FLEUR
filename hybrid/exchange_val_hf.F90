@@ -223,14 +223,14 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    IF(ok.ne.0) STOP 'exchange_val_hf: error allocation phase'
 
    if (mat_ex%l_real) THEN
-      ALLOCATE( cprod_vv_c(0,0,0), carr3_vv_c(0,0,0))
+      ALLOCATE( cprod_vv_c(hybrid%maxbasm1,0,0), carr3_vv_c(hybrid%maxbasm1,0,0))
       ALLOCATE( cprod_vv_r(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
       ALLOCATE( carr3_vv_r(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation carr3'
       cprod_vv_r = 0 ; carr3_vv_r = 0 
    ELSE
-      ALLOCATE( cprod_vv_r(0,0,0), carr3_vv_r(0,0,0))
+      ALLOCATE( cprod_vv_r(hybrid%maxbasm1,0,0), carr3_vv_r(hybrid%maxbasm1,0,0))
       ALLOCATE( cprod_vv_c(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
       IF( ok .ne. 0 ) STOP 'exchange_val_hf: error allocation cprod'
       ALLOCATE( carr3_vv_c(hybrid%maxbasm1,psize,hybrid%nbands(nk)),stat=ok )
@@ -241,6 +241,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    exch_vv = 0
 
    DO ikpt = 1,nkpt_EIBZ
+
       ikpt0 = pointer_EIBZ(ikpt)
 
       n  = hybrid%nbasp + hybrid%ngptm(ikpt0)
