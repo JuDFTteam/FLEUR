@@ -4,6 +4,7 @@
 read -r -d '' known_machines << EOM
    IFF         -- cluster @ PGI of FZJ
    JURECA      -- @JSC
+   CLAIX       -- RWTH cluster
 EOM
 
 
