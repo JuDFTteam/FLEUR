@@ -39,7 +39,9 @@ CONTAINS
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
+    USE m_symmetrize_matrix
 
+    
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
@@ -65,59 +67,53 @@ CONTAINS
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
-    !     ..
-    !     .. Scalar Arguments ..
+
+    ! Scalar Arguments
     INTEGER,INTENT(IN)    :: iter
     INTEGER,INTENT(IN)    :: eig_id
-    !     ..
-    !-odim
-    !+odim
-    !     ..
-    !     .. Local Scalars ..
+
+    ! Local Scalars
     INTEGER jsp,nk,nred,ne_all,ne_found
     INTEGER ne,lh0
     INTEGER isp,i,j,err
     LOGICAL l_wu,l_file,l_real,l_zref
-    
-    !     ..
-    !     .. Local Arrays ..
-    INTEGER, PARAMETER :: lmaxb=3
+
+    ! Local Arrays
+    INTEGER              :: ierr(3)
+    INTEGER              :: neigBuffer(kpts%nkpt,input%jspins)
+    INTEGER, PARAMETER   :: lmaxb = 3
     REAL,    ALLOCATABLE :: bkpt(:)
     REAL,    ALLOCATABLE :: eig(:)
-
     COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
-    TYPE(t_tlmplm)  :: td
-    TYPE(t_usdus)   :: ud
-    TYPE(t_lapw)    :: lapw
-    CLASS(t_Mat),ALLOCATABLE    :: zMat
-    CLASS(t_mat),ALLOCATABLE    :: hmat,smat
-    TYPE(T_mat)     :: olap
-    !
-    INTEGER nn,n
-    INTEGER ierr(3)
-    INTEGER :: neigBuffer(kpts%nkpt,input%jspins)
 
-    !     .. variables for HF or hybrid functional calculation ..
-    INTEGER                 ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
+    TYPE(t_tlmplm)            :: td
+    TYPE(t_usdus)             :: ud
+    TYPE(t_lapw)              :: lapw
+    CLASS(t_mat), ALLOCATABLE :: zMat
+    CLASS(t_mat), ALLOCATABLE :: hmat,smat
+
+    ! Variables for HF or hybrid functional calculation
+    INTEGER                   ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
     
     call ud%init(atoms,DIMENSION%jspd)
     ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
     
     l_real=sym%invs.AND..NOT.noco%l_noco
-    !check if z-reflection trick can be used
 
+    ! check if z-reflection trick can be used
     l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco) 
     IF (mpi%n_size > 1) l_zref = .FALSE.
  
 #ifdef CPP_MPI
     CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,v)
 #endif
+
     !IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
     !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
     
-    !---> set up and solve the eigenvalue problem
-    !--->    loop over spins
-    !--->       set up k-point independent t(l'm',lm) matrices
+    ! Set up and solve the eigenvalue problem
+    !   loop over spins
+    !     set up k-point independent t(l'm',lm) matrices
     CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
 
     neigBuffer = 0
@@ -127,56 +123,55 @@ CONTAINS
     DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
 
-          !
-          !--->         set up lapw list
-        
+          ! Set up lapw list        
           CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
           call timestart("Setup of H&S matrices")
           CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
-               stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
+                             stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
           CALL timestop("Setup of H&S matrices")
         
-          IF( hybrid%l_hybrid ) THEN
-             !write overlap matrix b to direct access file olap
+          IF(hybrid%l_hybrid) THEN
+             ! Write overlap matrix smat to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"
-             !call write_olap(smat,nrec)
-             STOP "TODO"
-             PRINT *,"BASIS:",lapw%nv(jsp),atoms%nlotot
-             !if (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension, kpts,jsp,results,xcpot,hamovlp)
-             
-             
-             IF( hybrid%l_subvxc ) THEN
-                !CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
-                 !    sym, atoms%nlotot,kveclo, cell,sphhar, stars, xcpot,mpi,&
-                 !    oneD,  hamovlp,vx)
-             END IF
+             CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk) ! Note: At this moment this only works without MPI parallelization
+             PRINT *,"TODO"
+!             STOP "TODO"
+             PRINT *,"BASIS:", lapw%nv(jsp), atoms%nlotot
+             IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension,kpts,jsp,results,xcpot,hmat)
 
+             IF(hybrid%l_subvxc) THEN
+                CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                            sym,cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
+             END IF
           END IF ! hybrid%l_hybrid
+
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) deallocate(zmat)
+          !Try to symmetrize matrix
+          CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
+          
           CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
-          !
-          !--->         output results
-          !
+
+          ! Output results
           CALL timestart("EV output")
 #if defined(CPP_MPI)
-          !Collect number of all eigenvalues
+          ! Collect number of all eigenvalues
           ne_found=ne_all
           CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
           ne_all=MIN(DIMENSION%neigd,ne_all)
 #else
           ne_found=ne_all
 #endif          
-          IF (.NOT.l_real) THEN
+          IF (.NOT.zmat%l_real) THEN
              zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
-          ENDIF
+          END IF
           CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                          eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
           neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
-          !RMA synchronization
+          ! RMA synchronization
           CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
           CALL timestop("EV output")

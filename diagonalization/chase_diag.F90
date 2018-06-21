@@ -129,10 +129,10 @@ IMPLICIT NONE
           end do
        end do
        if(iter.EQ.1) then
-          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
+          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-6, 'R', 'S' )
        else
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
+          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-6, 'A', 'S' )
        end if
 
        ne = nev
@@ -184,10 +184,10 @@ IMPLICIT NONE
        end do
 
        if(iter.EQ.1) then
-          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'R', 'S' )
+          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-6, 'R', 'S' )
        else
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-10, 'A', 'S' )
+          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-6, 'A', 'S' )
        end if
 
        ne = nev

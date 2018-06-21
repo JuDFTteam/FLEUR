@@ -83,6 +83,7 @@ CONTAINS
     ENDDO
 
     node = nqn - (l+1)
+    IF (node<0) CALL judft_error("Error in setup of energy-parameters",hint="This could e.g. happen if you try to use 1p-states")
     e = 0.0 
     ! determine upper edge
     nodeu = -1 ; start = .TRUE.
@@ -91,9 +92,11 @@ CONTAINS
             atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
        IF  ( ( nodeu > node ) .AND. start ) THEN
           e = e - 1.0
+          IF (e<-1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
           nodeu = -1
        ELSE
           e = e + 0.01
+          IF (e>1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
           start = .FALSE.
        ENDIF
     ENDDO
@@ -106,6 +109,7 @@ CONTAINS
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
                atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
           e = e - 0.01
+          IF (e<-1E10) CALL judft_error("Determination of energy parameters did not converge",hint="Perhaps your potential is broken?")
        ENDDO
        e_lo = e
     ELSE
@@ -196,6 +200,7 @@ CONTAINS
     ENDDO
     ! search for branches
     node = ABS(nqn) - (l+1)
+    IF (node<0) CALL judft_error("Error in setup of energy-parameters",hint="This could e.g. happen if you try to use 1p-states")
     e = 0.0 ! The initial value of e is arbitrary.
     large_e_step = 5.0 ! 5.0 Htr steps for coarse energy searches
 

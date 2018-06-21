@@ -7,4 +7,5 @@ diagonalization/magma.F90
 diagonalization/elpa.F90
 diagonalization/scalapack.F90
 diagonalization/chase_diag.F90
+diagonalization/symmetrize_matrix.f90
 diagonalization/elemental.F90)

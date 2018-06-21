@@ -1,5 +1,5 @@
 #Check if we can compile with GPU
-if ($ENV{FLEUR_USE_GPU})
+if (${CLI_FLEUR_USE_GPU})
    #No check is done
    set(FLEUR_USE_GPU TRUE)
    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ta=tesla:cuda8.0,cc60 -Mcuda:kepler+  -Minfo=accel -acc ")

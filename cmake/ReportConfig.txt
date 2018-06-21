@@ -56,3 +56,7 @@ endif()
 if (NOT (FLEUR_USE_SERIAL OR FLEUR_USE_MPI))
     message(FATAL_ERROR "You should either compile a parallel or serial version (or both)")
 endif()
+
+if (FLEUR_WARN_MESSAGE)
+    message("${BRed}${FLEUR_WARN_MESSAGE}${CReset}")
+endif()

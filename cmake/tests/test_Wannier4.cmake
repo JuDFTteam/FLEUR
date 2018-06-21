@@ -4,8 +4,8 @@ try_compile(FLEUR_USE_WANN4 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/
             )
 
 message("Wannier90-4 1.2 Library found:${FLEUR_USE_WANN4}")
-if (DEFINED ENV{FLEUR_USE_WANNIER})
-   if (ENV{FLEUR_USE_WANNIER})
+if (DEFINED CLI_FLEUR_USE_WANNIER)
+   if (${CLI_FLEUR_USE_WANNIER})
        if (NOT FLEUR_USE_WANN4)
            message(FATAL_ERROR "You asked for Wannier90 but cmake couldn't find it. Please check your Fortran compiler settings")
        endif()
