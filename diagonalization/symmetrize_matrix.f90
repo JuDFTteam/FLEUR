@@ -17,10 +17,15 @@ CONTAINS
     INTEGER,INTENT(in)         :: nk
     CLASS(t_mat),INTENT(inout) :: hmat,smat
 
+    REAL :: max_imag
     !Check if we could exploit a real matrix even without inversion symmetry
     realcomplex:IF (.NOT.noco%l_noco.AND..NOT.hmat%l_real) THEN
        IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
-          IF (ANY(ABS(AIMAG(hmat%data_c))>1e-10)) EXIT realcomplex
+          max_imag=MAXVAL(ABS(AIMAG(hmat%data_c)))
+          IF (max_imag>1e-10) THEN
+                     PRINT *,"Real matrix expected but imaginary part is:",max_imag
+                     RETURN
+          ENDIF
           
           IF (mpi%irank==0) THEN
              PRINT *,"Complex matrix made real"
