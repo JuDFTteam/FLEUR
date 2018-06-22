@@ -422,10 +422,10 @@ CONTAINS
           ELSE
              l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
           END IF
-!!$       IF (hybrid%l_subvxc) THEN
-!!$          results%te_hfex%core    = 0
-!!$          results%te_hfex%valence = 0
-!!$       END IF
+          IF (hybrid%l_subvxc) THEN
+             results%te_hfex%core    = 0
+             results%te_hfex%valence = 0
+          END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
