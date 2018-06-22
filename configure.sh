@@ -72,9 +72,9 @@ then
         cd $buildname
         for file in *
         do
-          if [ "$file" == "external" ] 
+          if [[ "$file" == "external" ]] || [[ "$file" == "Testing" ]] 
           then
-            echo "Keeping 'external' directory"
+            echo "Keeping $file directory"
           else
             rm -r $file
           fi
