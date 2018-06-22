@@ -13,6 +13,18 @@ try_compile(FLEUR_USE_CHASE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/
 #   endif()
 #endif()
 
+if (defined CLI_USE_CHASE)
+   if ( CLI_USE_CHASE )
+      if (NOT FLEUR_USE_CHASE)
+         FLEUR_USE_CHASE=TRUE
+	 message("Test for Chase failed, but you specified to use it anyway...")
+      endif()
+   else
+      if (FLEUR_USE_CHASE)
+      FLEUR_USE_CHASE=FALSE
+      message("Test for Chase succeeded, but you specified not to use it.")
+   endif()
+endif()
 message("ChASE Library found:${FLEUR_USE_CHASE}")
 
 if (FLEUR_USE_CHASE)
