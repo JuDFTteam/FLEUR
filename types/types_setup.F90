@@ -444,6 +444,10 @@ MODULE m_types_setup
      REAL    :: sig_dos
      REAL    :: e_mcd_lo
      REAL    :: e_mcd_up
+     LOGICAL :: unfoldband
+     INTEGER :: s_cell_x
+     INTEGER :: s_cell_y
+     INTEGER :: s_cell_z     
   END TYPE t_banddos
 
   TYPE t_obsolete
