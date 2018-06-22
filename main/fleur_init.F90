@@ -158,6 +158,7 @@
           banddos%l_mcd = .FALSE.
           banddos%e_mcd_lo = -10.0
           banddos%e_mcd_up = 0.0
+          banddos%unfoldband = .FALSE.
 
           IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))

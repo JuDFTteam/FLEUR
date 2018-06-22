@@ -1969,6 +1969,17 @@ SUBROUTINE r_inpXML(&
         banddos%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
      END IF
 
+     ! Read in optional parameter for unfolding bandstructure of supercell
+     xPathA = '/fleurInput/output/unfoldingBand'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
+        banddos%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
+        banddos%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
+        banddos%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))
+     END IF
+
   END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

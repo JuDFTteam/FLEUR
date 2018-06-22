@@ -21,6 +21,7 @@ do
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
+	-chase) shift; CLI_USE_CHASE=$1;;
 	-link) shift; CLI_LIBRARIES=$1;;
 	-libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
 	-flags) shift; CLI_FLAGS=$1;;
