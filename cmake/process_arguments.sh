@@ -16,11 +16,11 @@ do
 	-m) shift;machine=$1;;
 	-cmake) shift;cmake=$1;;
 	-external) shift;external_lib="$external_lib $1";;
-	-hdf5) shift; CLI_FLEUR_USE_HDF5=$1;;
-	-wannier) shift; CLI_FLEUR_USE_WANNIER=$1;;
-	-mpi) shift; CLI_FLEUR_USE_MPI=$1;;
-	-magma) shift; CLI_FLEUR_USE_MAGMA=$1;;
-	-gpu) shift; CLI_FLEUR_USE_GPU=$1;;
+	-hdf5) shift; CLI_USE_HDF5=$1;;
+	-wannier) shift; CLI_USE_WANNIER=$1;;
+	-mpi) shift; CLI_USE_MPI=$1;;
+	-magma) shift; CLI_USE_MAGMA=$1;;
+	-gpu) shift; CLI_USE_GPU=$1;;
 	-link) shift; CLI_LIBRARIES=$1;;
 	-libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
 	-flags) shift; CLI_FLAGS=$1;;
