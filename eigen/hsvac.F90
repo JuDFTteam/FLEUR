@@ -60,7 +60,6 @@ CONTAINS
 
     d2 = SQRT(cell%omtil/cell%area)
 
-
     !--->    set up mapping function from 3d-->2d lapws
 
     DO jspin = 1,input%jspins
@@ -167,16 +166,17 @@ CONTAINS
              ik = map2(i,jspin1)
              DO j = 1,i
                 jk = map2(j,jspin2)
-                hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
-                     + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
+                IF (jspin2>jspin1) THEN
+                   hij = CONJG(CONJG(a(j,jspin2))* (tuuv(jk,ik)*a(i,jspin1) +tudv(jk,ik)*b(i,jspin1))&
+                        + CONJG(b(j,jspin2))* (tddv(jk,ik)*b(i,jspin1) +tduv(jk,ik)*a(i,jspin1)))
+                ELSE
+                   hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
+                        + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
+                ENDIF
                 IF (hmat(1,1)%l_real) THEN
                    hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + REAL(hij)
                 ELSE
-                   IF (s1==s2) THEN
-                      hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + hij
-                   ELSE
-                      hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + conjg(hij)
-                   ENDIF
+                   hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + hij
                 ENDIF
              ENDDO
           ENDDO
