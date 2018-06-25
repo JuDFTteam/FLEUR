@@ -136,7 +136,7 @@
       atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 

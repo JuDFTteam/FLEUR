@@ -12,6 +12,7 @@ contains
     USE m_julia
     USE m_kptgen_hybrid
     USE m_od_kptsgen
+    USE m_unfold_band_kpts
   
     implicit none
     TYPE(t_input),INTENT(IN)   :: input
@@ -22,6 +23,8 @@ contains
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_kpts),INTENT(INOUT)  :: kpts
     LOGICAL,INTENT(IN)          :: l_kpts
+    TYPE(t_kpts)                :: p_kpts
+    TYPE(t_cell)                :: p_cell
 
     TYPE(t_sym) :: sym_hlp
 
@@ -31,7 +34,43 @@ contains
        END IF
     END IF
 
-    IF (.NOT.l_kpts) THEN
+
+    IF (banddos%unfoldband) THEN
+     CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
+     IF (.NOT.l_kpts) THEN
+       IF (.NOT.oneD%odd%d1) THEN
+          IF (input%l_wann) THEN
+             sym_hlp=sym
+             sym_hlp%nop=1
+             sym_hlp%nop2=1
+             CALL kptgen_hybrid(p_kpts,sym_hlp%invs,noco%l_soc,sym_hlp%nop,sym_hlp%mrot,sym_hlp%tau)
+          ELSE IF (.FALSE.) THEN !this was used to generate q-points in jij case
+             sym_hlp=sym
+             sym_hlp%nop=1
+             sym_hlp%nop2=1
+             CALL julia(sym_hlp,p_cell,input,noco,banddos,p_kpts,.FALSE.,.TRUE.)
+          ELSE IF (kpts%l_gamma.and.(banddos%ndir.eq.0)) THEN
+             CALL kptgen_hybrid(p_kpts,sym%invs,noco%l_soc,sym%nop,sym%mrot,sym%tau)
+          ELSE
+             CALL julia(sym,p_cell,input,noco,banddos,p_kpts,.FALSE.,.TRUE.)
+          END IF
+       ELSE
+          CALL juDFT_error('Error: No kpoint set generation for 1D systems yet!', calledby = 'kpoints')
+          CALL od_kptsgen (kpts%nkpt)
+       END IF
+      END IF
+
+     !Rescale weights and kpoints
+
+     p_kpts%wtkpt(:) = p_kpts%wtkpt(:) / sum(p_kpts%wtkpt)
+     p_kpts%bk(:,:) = p_kpts%bk(:,:) / p_kpts%posScale
+     p_kpts%posScale = 1.0
+     IF (p_kpts%nkpt3(3).EQ.0) p_kpts%nkpt3(3) = 1
+
+    CALL find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
+
+    ELSE
+     IF (.NOT.l_kpts) THEN
        IF (.NOT.oneD%odd%d1) THEN
           IF (input%l_wann) THEN
              sym_hlp=sym
@@ -52,7 +91,7 @@ contains
           CALL juDFT_error('Error: No kpoint set generation for 1D systems yet!', calledby = 'kpoints')
           CALL od_kptsgen (kpts%nkpt)
        END IF
-    END IF
+     END IF
 
     !Rescale weights and kpoints
 
@@ -60,6 +99,7 @@ contains
     kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
     kpts%posScale = 1.0
     IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
+  END IF
 
 end subroutine kpoints
 end module m_kpoints
