@@ -83,9 +83,13 @@ MODULE m_add_vnonlocal
       DO n = 1, v_x%matsize1
          DO nn = 1, n           
             IF (hmat%l_real) THEN
-               hmat%data_r(n,nn) = hmat%data_r(n,nn) - a_ex*v_x%data_r(n,nn)
+               hmat%data_r(nn,n) = hmat%data_r(nn,n) - a_ex*v_x%data_r(nn,n)
+               IF ((n.LE.5).AND.(nn.LE.5)) THEN
+                  WRITE(1234,'(2i7,4f15.8)') n, nn, hmat%data_r(n,nn), hmat%data_r(nn,n), v_x%data_r(n,nn), v_x%data_r(nn,n)
+                  WRITE(1236,'(2i7,2f15.8)') n, nn, v_x%data_r(n,nn), v_x%data_r(nn,n)
+               END IF
             ELSE
-               hmat%data_c(n,nn) = hmat%data_c(n,nn) - a_ex*v_x%data_c(n,nn)
+               hmat%data_c(nn,n) = hmat%data_c(nn,n) - a_ex*v_x%data_c(nn,n)
             ENDIF
          END DO
       END DO

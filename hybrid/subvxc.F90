@@ -493,9 +493,12 @@ CONTAINS
          DO nn = 1, n
             i = i + 1
             IF (hmat%l_real) THEN
-               hmat%data_r(n,nn) = hmat%data_r(n,nn) - a_ex*REAL(vxc(i))
+               hmat%data_r(nn,n) = hmat%data_r(nn,n) - a_ex*REAL(vxc(i))
+               IF ((n.LE.5).AND.(nn.LE.5)) THEN
+                  WRITE(1235,'(2i7,3f15.8)') n, nn, hmat%data_r(n,nn), hmat%data_r(nn,n), REAL(vxc(i))
+               END IF
             ELSE
-               hmat%data_c(n,nn) = hmat%data_c(n,nn) - a_ex*vxc(i)
+               hmat%data_c(nn,n) = hmat%data_c(nn,n) - a_ex*vxc(i)
             ENDIF
          END DO
       END DO
