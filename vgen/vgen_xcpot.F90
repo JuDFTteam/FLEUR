@@ -166,6 +166,9 @@ CONTAINS
              veff%pw   = vTot%pw   - xcpot%get_exchange_weight() * vXC%pw
              veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight() * vXC%pw_w
              veff%mt   = vTot%mt   - xcpot%get_exchange_weight() * vXC%mt
+             exc%pw   = exc%pw   - xcpot%get_exchange_weight() * exc%pw
+             exc%pw_w = exc%pw_w - xcpot%get_exchange_weight() * exc%pw_w
+             exc%mt   = exc%mt   - xcpot%get_exchange_weight() * exc%mt
           END IF
 
           results%te_veff = 0.0
