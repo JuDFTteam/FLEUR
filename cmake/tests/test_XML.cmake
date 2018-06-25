@@ -17,6 +17,20 @@ try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/te
        endif()
 endif()       
 
+#Try to simply add -lxml2
+if (NOT FLEUR_USE_XML)
+      set(TEST_LIBRARIES ${FLEUR_LIBRARIES} -lxml2)
+
+try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.f90
+            LINK_LIBRARIES ${TEST_LIBRARIES}
+            )
+       if (FLEUR_USE_XML)
+              set(FLEUR_LIBRARIES -lxml2 ${FLEUR_LIBRARIES})
+              set(FLEUR_MPI_LIBRARIES -lxml2 ${FLEUR_MPI_LIBRARIES})
+       endif()
+endif()
+
+
 message("XML Library found for linking:${FLEUR_USE_XML}")
 
 if (FLEUR_USE_XML)

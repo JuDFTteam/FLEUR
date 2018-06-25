@@ -2,7 +2,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #These contain functions to be used later on...
 . $DIR/cmake/machines.sh
-.  $DIR/external/install_external.sh
+. $DIR/external/install_external.sh
 
 #variables to store arguments
 
