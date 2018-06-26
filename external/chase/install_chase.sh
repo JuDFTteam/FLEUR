@@ -3,12 +3,7 @@
 cd src
 if [ ! -r ChASE ]
 then 
-   if [ -r ChASE.tgz ]
-   then
-     tar zxf ChASE.tgz
-   else
-     #git clone https://github.com/SimLabQuantumMaterials/ChASE.git
-   fi
+     git clone https://github.com/SimLabQuantumMaterials/ChASE.git
 fi
 cd ..
 
