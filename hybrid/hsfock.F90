@@ -222,7 +222,18 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       CALL trafo%multiply(tmp,v_x)
         
       CALL timestop("time for performing T^-1*mat_ex*T^-1*")
-        
+
+      DO i = 1, v_x%matsize1
+         DO j = 1, i
+            IF (v_x%l_real) THEN
+               IF ((i.LE.5).AND.(j.LE.5)) THEN
+                  WRITE(1231,'(2i7,2f15.8)') i, j, v_x%data_r(i,j), v_x%data_r(j,i)
+               END IF
+            ELSE
+            ENDIF
+         END DO
+      END DO
+
       CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,gpt,sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
 
       DO i = 1, v_x%matsize1
