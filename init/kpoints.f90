@@ -25,6 +25,7 @@ contains
     LOGICAL,INTENT(IN)          :: l_kpts
     TYPE(t_kpts)                :: p_kpts
     TYPE(t_cell)                :: p_cell
+    TYPE(t_kpts)                :: tmp_kpts
 
     TYPE(t_sym) :: sym_hlp
 
