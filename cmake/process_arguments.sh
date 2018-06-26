@@ -102,8 +102,7 @@ Special options:
 
 To help the script finding a proper configuration you should provide the name of 
 a specific machine to compile on.
-Currently known machine configurations are:
-  " 
+Currently known machine configurations are: " 
    echo "   $known_machines"
    echo " 
 If you do not specify the machine the AUTO option will be used in which some

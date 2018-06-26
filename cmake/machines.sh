@@ -1,12 +1,18 @@
 #This file contains the defaults for compiling FLEUR on known machines
 
-#please add further definitions here and also add code below!
-read -r -d '' known_machines << EOM
-   IFF         -- cluster @ PGI of FZJ
-   JURECA      -- @JSC
-   CLAIX       -- RWTH cluster
-EOM
-
+cd $DIR/cmake/machines/
+for f in *.sh
+do
+  config=`basename $f .sh`
+  desc=`head -1 $f|cut -d# -f 2`
+  if [ ! "$desc" == "NOSHOW" ]
+  then
+  known_machines="$known_machines
+  $config
+       -- $desc "
+  fi
+done
+cd -
 
 function configure_machine(){
     if [ "$machine" = "AUTO" ] 

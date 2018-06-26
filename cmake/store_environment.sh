@@ -2,6 +2,14 @@
 
 echo "set(compile_user $USER)" >config.cmake
 
+#Some freqeuntly used Environment variables
+if [ -z ${HDF5_ROOT+x} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_ROOT/lib" ; FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_ROOT/include" ; fi
+if [ -z ${HDF5_DIR+x} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_DIR/lib" ; FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_DIR/include" ; fi
+if [ -z ${HDF5_LIB+x} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_LIB" ; fi
+if [ -z ${HDF5_INCLUDE+x} ] ; then FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_INCLUDE" ; fi
+if [ -z ${HDF5_MODULES+x} ] ; then FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_MODULES" ; fi
+
+
 
 #Set options for linker
 #1. if environment variable FLEUR_LIBRARIES is present use it 
@@ -22,7 +30,8 @@ then
     fi
 fi
 #check the FLEUR_LIBDIR variable
-for lib in $FLEUR_LIBDIR $CLI_LIBDIR
+
+for lib in $FLEUR_LIBDIR $CLI_LIBDIR 
 do
     if [ "cmake_lib" ]
     then
