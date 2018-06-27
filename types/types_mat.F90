@@ -58,12 +58,12 @@ MODULE m_types_mat
 
   
    
-   SUBROUTINE t_mat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d)
+   SUBROUTINE t_mat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d,nb_x,nb_y)
      CLASS(t_mat) :: mat
      LOGICAL,INTENT(IN),OPTIONAL:: l_real
      INTEGER,INTENT(IN),OPTIONAL:: matsize1,matsize2
-     INTEGER,INTENT(IN),OPTIONAL:: mpi_subcom !not needed here, only for allowing overloading this in t_mpimat
-     LOGICAL,INTENT(IN),OPTIONAL:: l_2d       !not needed here either
+     INTEGER,INTENT(IN),OPTIONAL:: mpi_subcom,nb_x,nb_y !not needed here, only for allowing overloading this in t_mpimat
+     LOGICAL,INTENT(IN),OPTIONAL:: l_2d                 !not needed here either
 
      CALL mat%alloc(l_real,matsize1,matsize2)
    END SUBROUTINE t_mat_init

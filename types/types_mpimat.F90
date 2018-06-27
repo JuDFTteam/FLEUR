@@ -120,31 +120,34 @@ CONTAINS
   !!  - TRUE: the matrix is a Scalapack BLOCK-CYCLIC distribution
   !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
   !! as used in the parallel matrix setup of FLEUR
-  SUBROUTINE mpimat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d)
+  SUBROUTINE mpimat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d,nb_x,nb_y)
     IMPLICIT NONE
     CLASS(t_mpimat)             :: mat
     INTEGER,INTENT(IN),OPTIONAL :: matsize1,matsize2,mpi_subcom
     LOGICAL,INTENT(IN),OPTIONAL :: l_real,l_2d
+    INTEGER,INTENT(IN),OPTIONAL :: nb_y,nb_x
     
-    INTEGER::nb
-    nb=DEFAULT_BLOCKSIZE
+    INTEGER::nbx,nby
+    nbx=DEFAULT_BLOCKSIZE; nby=DEFAULT_BLOCKSIZE
+    IF (PRESENT(nb_x)) nbx=nb_x
+    IF (PRESENT(nb_y)) nby=nb_y
     IF (.NOT.(PRESENT(matsize1).AND.PRESENT(matsize2).AND.PRESENT(mpi_subcom).AND.PRESENT(l_real).AND.PRESENT(l_2d)))&
          CALL judft_error("Optional arguments must be present in mpimat_init")
     mat%global_size1=matsize1
     mat%global_size2=matsize2
     mat%mpi_com=mpi_subcom
-    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,nb,&
+    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,nbx,nby,&
          mat%blacs_ctext,mat%blacs_desc,&
          mat%matsize1,mat%matsize2,&
          mat%npcol,mat%nprow)
     CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
   END SUBROUTINE mpimat_init
     
-  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nb,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
+  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom
     INTEGER,INTENT(IN) :: m1,m2
-    INTEGER,INTENT(INOUT)::nb
+    INTEGER,INTENT(INOUT)::nbc,nbr
     LOGICAL,INTENT(IN) :: l_2d
     INTEGER,INTENT(OUT):: ictextblacs,sc_desc(:)
     INTEGER,INTENT(OUT):: local_size1,local_size2
@@ -179,7 +182,8 @@ CONTAINS
           ENDIF
        ENDDO distloop
     ELSE
-       nb=1
+       nbc=1
+       nbr=MAX(m1,m2)
        npcol=np
        nprow=1
     ENDIF
@@ -197,9 +201,9 @@ CONTAINS
     !
     !  Now allocate Asca to put the elements of Achi or receivebuffer to
     !
-    myrowssca=(m1-1)/(nb*nprow)*nb+ MIN(MAX(m1-(m1-1)/(nb*nprow)*nb*nprow-nb*myrow,0),nb)
+    myrowssca=(m1-1)/(nbr*nprow)*nbr+ MIN(MAX(m1-(m1-1)/(nbr*nprow)*nbr*nprow-nbr*myrow,0),nbr)
     !     Number of rows the local process gets in ScaLAPACK distribution
-    mycolssca=(m2-1)/(nb*npcol)*nb+ MIN(MAX(m2-(m2-1)/(nb*npcol)*nb*npcol-nb*mycol,0),nb)
+    mycolssca=(m2-1)/(nbc*npcol)*nbc+ MIN(MAX(m2-(m2-1)/(nbc*npcol)*nbc*npcol-nbc*mycol,0),nbc)
 
     !Get BLACS ranks for all MPI ranks
     CALL BLACS_PINFO(iamblacs,npblacs)  ! iamblacs = local process rank (e.g. myid)
@@ -237,7 +241,7 @@ CONTAINS
     ENDIF
 
     !Create the descriptors
-    CALL descinit(sc_desc,m1,m2,nb,nb,0,0,ictextblacs,myrowssca,ierr)
+    CALL descinit(sc_desc,m1,m2,nbr,nbc,0,0,ictextblacs,myrowssca,ierr)
     IF (ierr /=0 ) call judft_error('Creation of BLACS descriptor failed')
     local_size1=myrowssca
     local_size2=mycolssca
