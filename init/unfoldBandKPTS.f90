@@ -91,10 +91,6 @@ m_loop:	DO m1= -banddos%s_cell_x,banddos%s_cell_x
 					list(7,i)=-m1
 					list(8,i)=-m2
 					list(9,i)=-m3
-     				     write(*,'(a,f15.8,f15.8,f15.8,6l,3i)') 'representation found for the following kpoint:',list(1,i),list(2,i),list(3,i),(dot_product(pc_kpoint_c(:),&
-      				       & cell%bmat(:,1)) >= 0),(dot_product(pc_kpoint_c(:), cell%bmat(:,1)) <= dot_product(cell%bmat(:,1), cell%bmat(:,1)) ) &
-				     & , (dot_product(pc_kpoint_c(:), cell%bmat(:,2)) >= 0),(dot_product(pc_kpoint_c(:), cell%bmat(:,2)) <= dot_product(cell%bmat(:,2), cell%bmat(:,2))) &
-				     & ,(dot_product(pc_kpoint_c(:), cell%bmat(:,3)) >= 0),(dot_product(pc_kpoint_c(:), cell%bmat(:,3)) <= dot_product(cell%bmat(:,3), cell%bmat(:,3))),-m1,-m2,-m3
 					representation_found=.true.
 				END IF
        			        IF (representation_found) EXIT m_loop
