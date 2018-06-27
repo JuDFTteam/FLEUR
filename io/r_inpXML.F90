@@ -126,7 +126,7 @@ SUBROUTINE r_inpXML(&
   REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-  INTEGER            :: lcutm,lcutwf,select(4)
+  INTEGER            :: lcutm,lcutwf,hybSelect(4)
 
 
   CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
@@ -1315,14 +1315,13 @@ SUBROUTINE r_inpXML(&
         lcutm =evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutm'))
         lcutwf=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutwf'))
         xPathA=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@select')
-        SELECT(1)=evaluateFirstIntOnly(xPathA)
-        SELECT(2)=evaluateFirstIntOnly(xPathA)
-        SELECT(3)=evaluateFirstIntOnly(xPathA)
-        SELECT(4)=evaluateFirstIntOnly(xPathA)
+        hybSelect(1) = NINT(evaluateFirst(xPathA))
+        hybSelect(2) = NINT(evaluateFirst(xPathA))
+        hybSelect(3) = NINT(evaluateFirst(xPathA))
+        hybSelect(4) = NINT(evaluateFirst(xPathA))
      ENDIF
-        
+
      ! Special switches for species
-     
      ldaspecies=.FALSE.
      socscalespecies=1.0
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
@@ -1534,7 +1533,7 @@ SUBROUTINE r_inpXML(&
            IF (hybrid%l_hybrid) THEN
               hybrid%lcutm1(iType)=lcutm
               hybrid%lcutwf(iType)=lcutwf
-              hybrid%select1(:,iType)=SELECT
+              hybrid%select1(:,iType)=hybSelect
            ENDIF
            ! Explicit xc functional
            SELECT TYPE(xcpot)
