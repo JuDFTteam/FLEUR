@@ -28,4 +28,7 @@ else
 fi
 FLEUR_LIBDIR="$PWD/INSTALL_DIR/lib $FLEUR_LIBDIR"
 FLEUR_INCLUDEDIR="$PWD/INSTALL_DIR/include $FLEUR_INCLUDEDIR"
- 
+if [ -r $PWD/INSTALL_DIR/lib/libelpa_openmp.a ]
+then
+CLI_ELPA_OPENMP=1
+fi 
