@@ -77,7 +77,7 @@ CONTAINS
     INTEGER(HSIZE_T):: dims(7)
     TYPE(t_data_HDF),POINTER::d
     !Set creation and access properties
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
     INCLUDE 'mpif.h'
     IF (readonly) THEN
        access_prp=H5P_DEFAULT_f

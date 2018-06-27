@@ -67,7 +67,7 @@ if (DEFINED CLI_FLEUR_USE_HDF5})
 endif()      
 
 if (FLEUR_USE_HDF5)
-   message("Parallel HDF5 Library found:${FLEUR_USE_HDF5}")
+   message("Parallel HDF5 Library found:${FLEUR_USE_HDF5MPI}")
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_HDF") 
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_HDF")
    if (FLEUR_USE_HDF5MPI)
