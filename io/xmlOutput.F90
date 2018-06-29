@@ -48,6 +48,7 @@ MODULE m_xmlOutput
       USE m_constants
       USE m_utility
       USE m_compile_descr
+!$    use omp_lib
       
       IMPLICIT NONE
 
@@ -56,6 +57,7 @@ MODULE m_xmlOutput
       INTEGER           :: err, isize
 #endif
       INTEGER           :: numFlags
+      INTEGER           :: nOMPThreads
       CHARACTER(LEN=8)  :: date
       CHARACTER(LEN=10) :: time
       CHARACTER(LEN=10) :: zone
@@ -65,6 +67,8 @@ MODULE m_xmlOutput
       CHARACTER(LEN=9)  :: flags(11)
       CHARACTER(LEN=20) :: structureSpecifiers(11)
       CHARACTER(LEN=50) :: gitdesc,githash,gitbranch,compile_date,compile_user,compile_host
+      CHARACTER(LEN=50) :: compile_flags,link_flags
+      CHARACTER(LEN=20) :: attributes(7)
       
       maxNumElements = 10
       ALLOCATE(elementList(maxNumElements))
@@ -82,8 +86,8 @@ MODULE m_xmlOutput
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
-      CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host)
-      CALL writeXMLElement('compilationInfo',(/'date','user','host'/),(/compile_date,compile_user,compile_host/))
+      CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host,compile_flags,link_flags)
+      CALL writeXMLElement('compilationInfo',(/'date','user','host','flag','link'/),(/compile_date,compile_user,compile_host,compile_flags,link_flags/))
       CALL writeXMLElement('gitInfo',(/'version       ','branch        ','lastCommitHash'/),(/gitdesc,gitbranch,githash/))
       CALL getComputerArchitectures(flags, numFlags)
       IF (numFlags.EQ.0) THEN
@@ -103,10 +107,24 @@ MODULE m_xmlOutput
          CALL writeXMLElementNoAttributes('additionalCompilerFlags',flags(1:numFlags))
       END IF
       CALL closeXMLElement('programVersion')
+
+      CALL openXMLElementNoAttributes('parallelSetup')
+      nOMPThreads = -1
+      !$ nOMPThreads=omp_get_max_threads()
+      IF(nOMPThreads.NE.-1) THEN
+         WRITE(attributes(1),'(i0)') nOMPThreads
+         CALL writeXMLElementFormPoly('openMP',(/'ompThreads'/),&
+                                      attributes(:1),reshape((/10,8/),(/1,2/)))
+      END IF
+
 #ifdef CPP_MPI
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
-      CALL writeXMLElementPoly('parallelizationParameters',(/'mpiPEs'/),(/isize/))
+      WRITE(attributes(1),'(i0)') isize
+      CALL writeXMLElementFormPoly('mpi',(/'mpiProcesses'/),&
+                                   attributes(:1),reshape((/13,8/),(/1,2/)))
 #endif
+      CALL closeXMLElement('parallelSetup')
+
       CALL writeXMLElement('startDateAndTime',(/'date','time','zone'/),(/dateString,timeString,zone/))
    END SUBROUTINE startXMLOutput
 
@@ -235,8 +253,8 @@ MODULE m_xmlOutput
       CHARACTER(LEN=200), ALLOCATABLE :: contentLineList(:)
       INTEGER, ALLOCATABLE            :: bigLengths(:,:)
       INTEGER :: i, j, contentLineLength, contentLineListSize
-      CHARACTER(LEN=70)               :: format
-      CHARACTER(LEN=200)              :: outputString
+      CHARACTER(LEN=150)               :: format
+      CHARACTER(LEN=1000)              :: outputString
       INTEGER                         :: contentListSize, overallListSize, numContentLineChars
       INTEGER                         :: lengthsShape(2)
 

@@ -2174,7 +2174,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
-      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals
+      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals, l_amf_Temp
       INTEGER(HID_T)        :: archiveID, groupID, groupBID, generalGroupID
       INTEGER               :: hdfError, fileFormatVersion
       CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
@@ -2370,7 +2370,9 @@ MODULE m_cdnpot_io_hdf
             DO i = 1, n_u
                IF (atoms%lda_u(i)%atomType.NE.ldau_AtomType(i)) l_mmpMatDimEquals = .FALSE.
                IF (atoms%lda_u(i)%l.NE.ldau_l(i)) l_mmpMatDimEquals = .FALSE.
-               IF (atoms%lda_u(i)%l_amf.NE.ldau_l_amf(i)) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
+               l_amf_Temp = .FALSE.
+               IF(ldau_l_amf(i).EQ.1) l_amf_Temp = .TRUE.
+               IF (atoms%lda_u(i)%l_amf.NEQV.l_amf_Temp) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
                IF (ABS(atoms%lda_u(i)%u-ldau_U(i)).GT.1.0e-10) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
                IF (ABS(atoms%lda_u(i)%j-ldau_J(i)).GT.1.0e-10) l_mmpMatDimEquals = .FALSE. ! Am I sure about this? parameter change => dim change?
             END DO

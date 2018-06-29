@@ -5,15 +5,24 @@ Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC
 GaAsMultiUForceXML SiFilmSlicePlotXML)
 
 set(SerialOnlyTests Fe_bct_LO Fe_bct_LOXML Fe_fcc Fe_fccXML TiO2eels TiO2eelsXML)
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
 
 set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
 set(ParTestdirs ${SerialParallelTests})
+set(InpTestdirs ${InpgenTests})
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
     set(Testdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
     set(ParTestdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
 endif()
+
+#The inpgen tests
+#if (${INPGEN})
+foreach(test ${InpTestdirs})
+ add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen")
+endforeach(test)
+#endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
 if (${FLEUR_USE_WANN})

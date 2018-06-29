@@ -169,4 +169,23 @@ sub testresult($){
     }
 }
 
-    
+sub test_grep_error($){
+    my $file=shift;
+    my $error="juDFT-Error";
+    my $warning="juDFT-Warning";
+
+    print LOG "Checking for judft messages in $file:";
+
+    if (system("grep -q \"$error\" $file")==0){
+        my $message = `grep "Error message:" $file`;
+        print LOG "Found a juDFT-ERROR: $message\n";
+        return 1;
+    }elsif (system("grep -q \"$warning\" $file")==0){
+        print LOG "Found a juDFT-WARNING\n";
+        return 0;
+    }else{
+        print LOG "No error and no warning found\n";
+        return 0;
+    }
+
+}    

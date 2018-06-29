@@ -128,9 +128,9 @@ CONTAINS
     !print *,"priv_create_blacsgrid"
     ! determine block size
     !
-    nb = 20
-    IF (m.GT.2048)   nb = 30 !2
-    IF (m.GT.8*2048) nb = 60 !4
+    nb = 64
+    !IF (m.GT.2048)   nb = 30 !2
+    !IF (m.GT.8*2048) nb = 60 !4
 
     ! compute processor grid, as square as possible
     ! If not square with more rows than columns
@@ -200,7 +200,10 @@ CONTAINS
 
     !Create communicators for ELPA
     !print *,"creating ELPA comms"
-#if defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
+#if defined (CPP_ELPA_201705003)
+    mpi_comm_rows = -1
+    mpi_comm_cols = -1
+#elif defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
     ierr=get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)
 #else
     CALL get_elpa_row_col_comms(mpi_subcom, myrowblacs, mycolblacs,mpi_comm_rows, mpi_comm_cols)

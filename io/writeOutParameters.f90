@@ -53,6 +53,10 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    CALL writeXMLElementFormPoly('density',(/'ng3','ng2'/),&
                                 attributes(:2),reshape((/7,6,8,8/),(/2,2/)))
 
+   WRITE(attributes(1),'(i0)') dimension%neigd
+   CALL writeXMLElementFormPoly('bands',(/'numbands'/),&
+                                attributes(:1),reshape((/9,8/),(/1,2/)))
+
    CALL closeXMLElement('numericalParameters')
 
 END SUBROUTINE writeOutParameters

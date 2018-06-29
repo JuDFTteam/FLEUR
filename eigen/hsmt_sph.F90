@@ -85,6 +85,8 @@ CONTAINS
     COMPLEX :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2)
     COMPLEX :: chi11so(2,2),chi21so(2,2),chi22so(2,2),angso(DIMENSION%nvd,2,2)
 
+    REAL :: tmp,tmp1,tmp2,tmp3
+
 
     IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) ALLOCATE ( aahlp(hlpmsize),bbhlp(hlpmsize) )
     !     ..
@@ -168,6 +170,7 @@ CONTAINS
     !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,ij,apw1)&
     !$OMP PRIVATE(cross_k,dplegend,chi,chi11,chi21,chi22,nsp,chj)&
     !$OMP PRIVATE(isigma_x,isigma_y,isigma_z,j1,j2,chi11so,chi21so,chi22so)&
+    !$OMP PRIVATE(tmp1,tmp2,tmp3,tmp)&
     !$OMP PRIVATE(aawa,bbwa,capw1,ii) IF (.not.l_socfirst)
     !$     IF (l_socfirst) WRITE(*,*) "WARNING: first variation SOC does not work with OPENMP in hsmt_sph"
     !$     IF (l_socfirst) WRITE(*,*) "         switching off openmp parallelization"
@@ -253,17 +256,30 @@ CONTAINS
                 DO nn = n0,n1
                    tnn = tpi_const*atoms%taual(:,nn)
                    !--->             set up phase factors
+                   !!$OMP SIMD PRIVATE(tmp1,tmp2,tmp3,tmp) 
                    DO kj = 1,kjmax
-                      rph(kj,1) = rph(kj,1) +&
-                           COS(DOT_PRODUCT(ski-(/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj,tnn))
-
-                      IF (.NOT.sym%invs) THEN
-                         !--->                if the system does not posses inversion symmetry
-                         !--->                the complex part of the exponential is needed.
-                         cph(kj,1) = cph(kj,1) +&
-                              SIN(DOT_PRODUCT((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
-                      ENDIF
+                      !rph(kj,1) = rph(kj,1) +&
+                      !     COS(DOT_PRODUCT(ski-(/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj,tnn))
+                      tmp1 = (ski(1)-lapw%k1(kj,jintsp)+qssbtj(1)) * tnn(1)
+                      tmp2 = (ski(2)-lapw%k2(kj,jintsp)+qssbtj(2)) * tnn(2)
+                      tmp3 = (ski(3)-lapw%k3(kj,jintsp)+qssbtj(3)) * tnn(3)
+                      tmp = cos(tmp1 + tmp2 + tmp3)
+                      rph(kj,1) = rph(kj,1) + tmp
                    END DO
+                   IF (.NOT.sym%invs) THEN
+                      !--->                if the system does not posses inversion symmetry
+                      !--->                the complex part of the exponential is needed.
+                      !!$OMP SIMD PRIVATE(tmp1,tmp2,tmp3,tmp) 
+                      DO kj = 1,kjmax
+                      !   cph(kj,1) = cph(kj,1) +&
+                      !        SIN(DOT_PRODUCT((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
+                      tmp1 = (lapw%k1(kj,jintsp)+qssbtj(1)-ski(1)) * tnn(1)
+                      tmp2 = (lapw%k2(kj,jintsp)+qssbtj(2)-ski(2)) * tnn(2)
+                      tmp3 = (lapw%k3(kj,jintsp)+qssbtj(3)-ski(3)) * tnn(3)
+                      tmp = sin(tmp1 + tmp2 + tmp3)
+                      cph(kj,1) = cph(kj,1) + tmp
+                      END DO
+                   ENDIF
                 END DO
 
                 !--->          update overlap and l-diagonal hamiltonian matrix

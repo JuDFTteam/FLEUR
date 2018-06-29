@@ -134,6 +134,7 @@ CONTAINS
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
+    logical :: mpi_flag, mpi_status
 #endif
     !     .. Local Scalars ..
     TYPE(t_lapw):: lapw
@@ -199,6 +200,7 @@ CONTAINS
     TYPE (t_lo21), ALLOCATABLE :: lo21(:,:)
     TYPE (t_usdus)             :: usdus
     TYPE (t_zMat)              :: zMat
+    INTEGER :: nkpt_extended
 
     zmat%l_real=sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
     !     ..
@@ -349,6 +351,10 @@ CONTAINS
          mpi%irank,mpi%isize,jspin,dimension%jspd,&
          noco%l_noco,&
          ello,evac,epar,bkpt,wk,n_bands,n_size)!keep
+#ifdef CPP_MPI
+    ! Sinchronizes the RMA operations
+    CALL MPI_BARRIER(mpi%mpi_comm,ie) 
+#endif
 
     !+lo
     !---> if local orbitals are used, the eigenvector has a higher
@@ -375,7 +381,7 @@ CONTAINS
     DO n = 1,atoms%ntype
        IF (input%cdinf.AND.mpi%irank==0) WRITE (6,FMT=8001) n
        DO  l = 0,atoms%lmax(n)
-          DO ispin = jsp_start,jsp_end
+          DO ispin =jsp_start,jsp_end
              CALL radfun(&
                   l,n,ispin,epar(l,n,ispin),vr(1,0,n,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus,&
@@ -475,9 +481,18 @@ CONTAINS
     END IF
     ALLOCATE ( we(dimension%neigd) )
     i_rec = 0 ; n_rank = 0
-    DO ikpt = 1,kpts%nkpt
+
+    ! For k-point paralelization: 
+    ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
+    if (l_evp) then
+       nkpt_extended = kpts%nkpt
+    else
+       nkpt_extended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
+    endif
+    DO ikpt = 1,nkpt_extended
        i_rec = i_rec + 1
        IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN
+        IF ( ikpt < kpts%nkpt + 1) THEN
           !-t3e
           we=0.0
           !--->    determine number of occupied bands and set weights (we)
@@ -556,8 +571,9 @@ CONTAINS
                lapw%nmat,lapw%nv,ello,evdu,epar,kveclo,&
                lapw%k1,lapw%k2,lapw%k3,bkpt,wk,nbands,eig,zMat)
 #ifdef CPP_MPI
-          ! Sinchronizes the RMA operations
-          if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
+          ! Synchronizes the RMA operations
+          !if (l_evp) CALL MPI_BARRIER(mpi%mpi_comm,ie)
+          CALL MPI_BARRIER(mpi%mpi_comm,ie)
 #endif
           !IF (l_evp.AND.(isize.GT.1)) THEN
           !  eig(1:noccbd) = eig(n_start:n_end)
@@ -873,6 +889,12 @@ CONTAINS
           ELSE
              DEALLOCATE (zMat%z_c)
           END IF
+        ELSE !(ikpt < nkpt + 1)
+#ifdef CPP_MPI
+          ! Synchronizes the RMA operations
+          CALL MPI_BARRIER(mpi%mpi_comm,ie)
+#endif
+        END IF
        END IF ! --> end "IF ((mod(i_rec-1,mpi%isize).EQ.mpi%irank).OR.l_evp) THEN"
     END DO !---> end of k-point loop
     DEALLOCATE (we,f,g,usdus%us,usdus%dus,usdus%duds,usdus%uds,usdus%ddn)
@@ -1000,7 +1022,7 @@ CONTAINS
           !--->      forces of equ. A8 of Yu et al.
           IF ((input%l_f)) THEN
              CALL timestart("cdnval: force_a8")
-             CALL force_a8(input,atoms,sphhar, ispin, vr,rho,&
+             CALL force_a8(input,atoms,sphhar, ispin, vr(:,:,:,ispin),rho,&
                   f_a12,f_a21,f_b4,f_b8,results%force)
              CALL timestop("cdnval: force_a8")
           END IF

@@ -43,7 +43,7 @@ CONTAINS
     REAL,    INTENT (INOUT) :: sm(nmap)
 
     ! Local Scalars
-    INTEGER         :: i,it,k,nit,npos,iread,nmaph, mit
+    INTEGER         :: i,it,k,nit,iread,nmaph, mit
     REAL            :: bm,dfivi,fmvm,smnorm,vmnorm,alphan
     LOGICAL         :: l_pot, l_exist
     REAL, PARAMETER :: one=1.0, zero=0.0
@@ -109,13 +109,14 @@ CONTAINS
        !     |vi> = w|vi> 
        !     loop to generate um : um = sm1 + alpha*fm1 - \sum <fm1|w|vi> ui
        um(:nmap) = input%alpha * fm1(:nmap) + sm1(:nmap)
+
        iread = MIN(mit-1,input%maxiter+1)
        DO it = 2, iread
           CALL readUVec(input,hybrid,nmap,it-mit,mit,ui)
           CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi)
 
           am(it) = CPP_BLAS_sdot(nmap,vi,1,fm1,1)
-          ! calculate um(:) = -am(it)*ui(:) + um
+          ! calculate um(:) = -am(it)*ui(:) + um(:)
           CALL CPP_BLAS_saxpy(nmap,-am(it),ui,1,um,1)
           WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
        END DO
@@ -134,6 +135,7 @@ CONTAINS
 
           ! generate vm = alpha*sm1  - \sum <ui|w|sm1> vi
           vm(:) = input%alpha * fm1(:)
+
           DO it = 2,iread
              CALL readUVec(input,hybrid,nmap,it-mit,mit,ui)
              CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi)
@@ -155,7 +157,7 @@ CONTAINS
           !      broyden's second method
           !****************************************
 
-          ! multiply fm1 with metric matrix and store in vm:  w |fm1>  
+          ! multiply fm1 with metric matrix and store in vm:  w |fm1>
           CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
                       mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
 
@@ -192,16 +194,13 @@ CONTAINS
 
        ! write um,vm and dfivi on file broyd.?
 
-       npos=mit-1
-       IF (mit.GT.input%maxiter+1) npos = MOD(mit-2,input%maxiter)+1
-
        CALL writeUVec(input,hybrid,nmap,mit,um)
        CALL writeVVec(input,hybrid,nmap,mit,dfivi,vm)
 
        ! update rho(m+1)
        ! calculate <fm|w|vm>
        fmvm = CPP_BLAS_sdot(nmap,vm,1,fm,1)
-       ! calculate sm(:) = (1.0-fmvm)*ui(:) + sm
+       ! calculate sm(:) = (1.0-fmvm)*um(:) + sm
        CALL CPP_BLAS_saxpy(nmap,one-fmvm,um,1,sm,1)
     END IF
 

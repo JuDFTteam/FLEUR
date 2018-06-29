@@ -15,6 +15,11 @@ build-gfortran:
        - build
   script:
     - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make 
+  only:
+    - schedules
+    - triggers
+    - web
+
 test-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
@@ -23,7 +28,10 @@ test-gfortran:
        - build
   script:
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
-
+  only:
+    - schedules
+    - triggers
+    - web
   
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -40,34 +48,37 @@ pages:
       - build/fleur
       - build/fleur_MPI
       - build/inpgen
- 
-
-build-pgi:
-  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
-  stage: build-pgi
-  cache: 
-     paths:
-       - build.debug
-  script:
-    - cd /builds/fleur/fleur; ./configure.sh -d AUTO ; cd build.debug; make 
   only:
     - schedules
     - triggers
-    - web
+    - web 
+
+#build-pgi:
+#  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
+#  stage: build-pgi
+#  cache: 
+#     paths:
+#       - build.debug
+#  script:
+#    - cd /builds/fleur/fleur; ./configure.sh -d AUTO ; cd build.debug; make 
+#  only:
+#    - schedules
+#    - triggers
+#    - web
  
     
-test-pgi:
-  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
-  stage: test-pgi
-  cache:
-     paths:
-       - build.debug
-  script:
-    - cd /builds/fleur/fleur/build.debug;ctest
-  only:
-     - schedules
-     - web
-     - triggers
+#test-pgi:
+#  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
+#  stage: test-pgi
+#  cache:
+#     paths:
+#       - build.debug
+#  script:
+#    - cd /builds/fleur/fleur/build.debug;ctest
+#  only:
+#     - schedules
+#     - web
+#     - triggers
      
 build-intel:
   image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
@@ -78,10 +89,10 @@ build-intel:
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -l intel AUTO ; cd build.intel; make 
-  only:
-    - schedules
-    - triggers
-    - web
+#  only:
+#    - schedules
+#    - triggers
+#    - web
  
     
 test-intel:
@@ -93,7 +104,7 @@ test-intel:
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - cd /builds/fleur/fleur/build.intel;ctest
-  only:
-     - schedules
-     - web
-     - triggers
+#  only:
+#     - schedules
+#     - web
+#     - triggers
