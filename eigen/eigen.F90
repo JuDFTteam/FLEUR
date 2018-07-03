@@ -40,6 +40,8 @@ CONTAINS
     USE m_mpi_bc_potden
 #endif
     USE m_symmetrize_matrix
+    USE m_unfold_band_kpts !used for unfolding bands
+    USE m_types_mpimat
 
     
     IMPLICIT NONE
@@ -91,6 +93,7 @@ CONTAINS
     TYPE(t_lapw)              :: lapw
     CLASS(t_mat), ALLOCATABLE :: zMat
     CLASS(t_mat), ALLOCATABLE :: hmat,smat
+    CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
 
     ! Variables for HF or hybrid functional calculation
     INTEGER                   ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
@@ -163,6 +166,23 @@ CONTAINS
           !Try to symmetrize matrix
           CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
           
+          IF (banddos%unfoldband) THEN
+		select type(smat)
+		type is (t_mat)
+			allocate(t_mat::smat_unfold)
+			select type(smat_unfold)
+		             type is (t_mat)
+			     smat_unfold=smat
+			end select
+		type is (t_mpimat)
+			allocate(t_mpimat::smat_unfold)
+			select type(smat_unfold)
+		             type is (t_mpimat)
+			     smat_unfold=smat
+			end select
+		end select
+          END IF
+
           CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
 
@@ -187,6 +207,12 @@ CONTAINS
           CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
           CALL timestop("EV output")
+
+          IF (banddos%unfoldband) THEN
+               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results)
+	       DEALLOCATE(smat_unfold)
+          END IF
+
        END DO  k_loop
     END DO ! spin loop ends
 

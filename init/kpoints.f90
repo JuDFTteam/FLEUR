@@ -64,10 +64,12 @@ contains
        END IF
 
     !Rescale weights and kpoints
-    kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
-    kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
-    kpts%posScale = 1.0
-    IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
+    IF (.not.banddos%unfoldband) THEN
+    	kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
+    END IF
+   	 kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
+   	 kpts%posScale = 1.0
+    	IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
   END IF
 
 end subroutine kpoints
