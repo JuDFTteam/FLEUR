@@ -23,8 +23,10 @@ using namespace chase::mpi;
 class ChASE_State {
  public:
   template <typename T>
-  static ChaseMpiProperties<T>* constructProperties(std::size_t N, std::size_t nev,
-                                             std::size_t nex, MPI_Comm comm);
+  static ChaseMpiProperties<T>* constructProperties(std::size_t N,
+                                                    std::size_t nev,
+                                                    std::size_t nex,
+                                                    MPI_Comm comm);
   template <typename T>
   static ChaseMpiProperties<T>* getProperties();
 
@@ -37,7 +39,7 @@ ChaseMpiProperties<std::complex<double>>* ChASE_State::complex_double_prec =
     nullptr;
 
 template <>
- ChaseMpiProperties<double>* ChASE_State::constructProperties(std::size_t N,
+ChaseMpiProperties<double>* ChASE_State::constructProperties(std::size_t N,
                                                              std::size_t nev,
                                                              std::size_t nex,
                                                              MPI_Comm comm) {
@@ -88,10 +90,21 @@ void call_chase(T* H, int* N, T* V, Base<T>* ritzv, int* nev, int* nex,
 
 template <typename T>
 void chase_setup(MPI_Fint* fcomm, int* N, int* nev, int* nex, std::size_t* xoff,
-                 std::size_t* yoff, std::size_t* xlen, std::size_t* ylen) {
+                 std::size_t* yoff, std::size_t* xlen, std::size_t* ylen,
+                 std::size_t* dimx, std::size_t* dimy, std::size_t* myx,
+                 std::size_t* myy) {
+  std::size_t xoff_, yoff_, xlen_, ylen_;
   MPI_Comm comm = MPI_Comm_f2c(*fcomm);
   auto props = ChASE_State::constructProperties<T>(*N, *nev, *nex, comm);
   props->get_off(xoff, yoff, xlen, ylen);
+
+  auto dims = props->get_dims();
+  *dimx = dims[0];
+  *dimy = dims[1];
+
+  auto coord = props->get_coord();
+  *myx = coord[0];
+  *myy = coord[1];
 }
 
 template <typename T>
@@ -143,28 +156,39 @@ void dchase_(double* H, int* N, double* V, double* ritzv, int* nev, int* nex,
 }
 
 void zchase_init(MPI_Fint* fcomm, int* N, int* nev, int* nex, int* xoff,
-                 int* yoff, int* xlen, int* ylen) {
-  std::size_t xoff_, yoff_, xlen_, ylen_;
+                 int* yoff, int* xlen, int* ylen, int* dimx, int* dimy,
+                 int* myx, int* myy) {
+  std::size_t xoff_, yoff_, xlen_, ylen_, dimx_, dimy_, myx_, myy_;
 
   chase_setup<std::complex<double>>(fcomm, N, nev, nex, &xoff_, &yoff_, &xlen_,
-                                    &ylen_);
+                                    &ylen_, &dimx_, &dimy_, &myx_, &myy_);
 
   *xoff = static_cast<int>(xoff_);
   *yoff = static_cast<int>(yoff_);
   *xlen = static_cast<int>(xlen_);
-  *ylen = static_cast<int>(xlen_);
+  *ylen = static_cast<int>(ylen_);
+  *dimx = static_cast<int>(dimx_);
+  *dimy = static_cast<int>(dimy_);
+  *myx = static_cast<int>(myx_);
+  *myy = static_cast<int>(myy_);
 }
 
 void dchase_init(MPI_Fint* fcomm, int* N, int* nev, int* nex, int* xoff,
-                 int* yoff, int* xlen, int* ylen) {
-  std::size_t xoff_, yoff_, xlen_, ylen_;
+                 int* yoff, int* xlen, int* ylen, int* dimx, int* dimy,
+                 int* myx, int* myy) {
+  std::size_t xoff_, yoff_, xlen_, ylen_, dimx_, dimy_, myx_, myy_;
 
-  chase_setup<double>(fcomm, N, nev, nex, &xoff_, &yoff_, &xlen_, &ylen_);
+  chase_setup<double>(fcomm, N, nev, nex, &xoff_, &yoff_, &xlen_, &ylen_,
+                      &dimx_, &dimy_, &myx_, &myy_);
 
   *xoff = static_cast<int>(xoff_);
   *yoff = static_cast<int>(yoff_);
   *xlen = static_cast<int>(xlen_);
-  *ylen = static_cast<int>(xlen_);
+  *ylen = static_cast<int>(ylen_);
+  *dimx = static_cast<int>(dimx_);
+  *dimy = static_cast<int>(dimy_);
+  *myx = static_cast<int>(myx_);
+  *myy = static_cast<int>(myy_);
 }
 
 void zchase_solve(std::complex<double>* H, std::complex<double>* V,
