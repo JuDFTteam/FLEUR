@@ -29,6 +29,7 @@ MODULE m_types_kpts
      REAL   ,ALLOCATABLE           :: specialPoints(:,:)
      INTEGER,ALLOCATABLE           :: ntetra(:,:)
      REAL   ,ALLOCATABLE           :: voltet(:)
+     REAL   ,ALLOCATABLE           :: sc_list(:,:) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt))
   ENDTYPE t_kpts
 
  

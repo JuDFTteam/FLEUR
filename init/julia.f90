@@ -154,7 +154,7 @@
 !-------------------- Want to make a Bandstructure ? --------
 !
       IF (banddos%ndir == -4) THEN
-         CALL bandstr1(idsyst,idtype,cell%bmat,kpts,input,l_fillArrays)
+         CALL bandstr1(idsyst,idtype,cell%bmat,kpts,input,l_fillArrays,banddos)
          RETURN
       ENDIF
 !
