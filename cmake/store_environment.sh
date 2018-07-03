@@ -113,5 +113,10 @@ then
     echo "set(CLI_ELPA_OPENMP 1)"  >>config.cmake
 fi
 
+if [ "$CLI_WARN_ONLY" ]
+then
+    echo "set(CLI_WARN_ONLY 1)"  >>config.cmake
+fi
+
 
 

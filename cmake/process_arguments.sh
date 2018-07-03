@@ -29,6 +29,7 @@ do
 	-elpa_openmp) CLI_ELPA_OPENMP=1;;
 	-cmake_opts) shift;CMAKE_OPTIONS=$1;;
 	-make) make_directly=1;;	     
+	-warn_only) CLI_WARN_ONLY=1;;	     
         -d) debug=1;;
 	-*) error="Unkown argument";;
 	*)  break;;	# terminate while loop
