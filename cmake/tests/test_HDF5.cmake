@@ -10,7 +10,7 @@ foreach(ADD_String "-lhdf5_fortran;-lhdf5"
                    "-lhdf5_fortran;-lhdf5;-lz" 
                    "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5;-lz"
 		   "-lhdf5_fortran;-lhdf5;-ldl;-lz" 
-                   "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5;-ldl;-lz"
+                   "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5;-ldl;-lz")
    if (NOT FLEUR_USE_HDF5)
      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lhdf5_fortran;-lhdf5")
      try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
