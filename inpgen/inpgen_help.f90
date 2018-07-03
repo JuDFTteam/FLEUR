@@ -30,6 +30,7 @@ CONTAINS
     WRITE(*,'(a)')"-genEnpara        : write enpara file"
     WRITE(*,'(a)')"-explicit         : write out k-point list, symmetry operations,"
     WRITE(*,'(a)')"                    and optional input to inp.xml"
+    WRITE(*,'(a)')"-electronConfig   : explicitely write the electron configuration into inp.xml"
     WRITE(*,'(a)')"-fast_defaults    : generate more aggressive (and less stable)"
     WRITE(*,'(a)')"                    input parameters for faster calculations"
     WRITE(*,'(a)')""
