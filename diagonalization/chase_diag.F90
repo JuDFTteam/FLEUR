@@ -416,10 +416,8 @@ IMPLICIT NONE
     DO i = 1, ne
        eig(i) = eigenvalues(i)
     END DO
-#endif    
   END SUBROUTINE chase_diag_MPI
 
-#ifdef CPP_MPI
   SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
     USE m_types_mpimat
     IMPLICIT NONE
