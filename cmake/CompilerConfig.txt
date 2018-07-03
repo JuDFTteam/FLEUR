@@ -1,6 +1,7 @@
 set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_DOUBLE")
 set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_DOUBLE")
 
+include("cmake/tests/test_linker.cmake")
 include("cmake/tests/test_doxygen.cmake")
 include("cmake/compilerflags.cmake")
 include("cmake/tests/test_XML.cmake")
