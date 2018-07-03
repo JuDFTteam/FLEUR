@@ -6,7 +6,7 @@ export FC=mpiifort
 export CC=mpiicc
 export CXX=mpiicpc
 
-FLEUR_LIBRARIES="-lxml2;-lscalapack_lp64;-lmkl_blacs_intelmpi_lp64;-mt_mpi"
+FLEUR_LIBRARIES="-lxml2;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-mt_mpi"
 CLI_USE_WANNIER=FALSE
 CLI_USE_CHASE=FALSE
 
