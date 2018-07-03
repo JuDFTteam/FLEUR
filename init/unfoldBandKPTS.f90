@@ -89,7 +89,6 @@ CONTAINS
     REAL    :: eps(3)
     LOGICAL :: representation_found
 
-    OPEN (679,file='bands_sc.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
     eps = 1.0e-10
 
     CALL inv3(cell%bmat,rez_inv_to_internal,rez_inv_det)
@@ -137,7 +136,7 @@ CONTAINS
     write(90,'(9f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
- SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results)
+ SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms)
 	USE m_types
 	USE m_juDFT
 	USE m_inv3
@@ -145,6 +144,8 @@ CONTAINS
         USE m_constants
 	implicit none
 
+        TYPE(t_input),INTENT(IN) :: input
+        TYPE(t_atoms),INTENT(IN)     :: atoms
 	TYPE(t_banddos),INTENT(IN)  :: banddos
 	TYPE(t_results),INTENT(IN)  :: results
 	TYPE(t_cell),INTENT(IN)     :: cell
@@ -155,7 +156,7 @@ CONTAINS
 	TYPE(t_cell)      :: p_cell
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
-	INTEGER :: i,j,k
+	INTEGER :: i,j,k,l
 	REAL, ALLOCATABLE	::w_n(:)
 	REAL	::kpt_dist=0
 
@@ -170,6 +171,10 @@ CONTAINS
               END IF
            END DO
         END DO
+	IF (i_kpt==1) THEN
+		IF (jsp==1) OPEN (679,file='bands_sc.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
+		IF (jsp==2) OPEN (680,file='bands_sc.2',status='unknown')
+	END IF
 
 	IF (i_kpt>1) THEN
 	kpt_dist=kpt_dist+sqrt(dot_product(kpts%sc_list(1:3,i_kpt)-kpts%sc_list(1:3,i_kpt-1),kpts%sc_list(1:3,i_kpt)-kpts%sc_list(1:3,i_kpt-1)))
@@ -183,9 +188,10 @@ CONTAINS
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
 		DO i=1,zMat%matsize2
 			DO j=1,lapw%nv(jsp)
-			  IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+			  l=j
+			  IF ((modulo(lapw%gvec(1,l,jsp),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,l,jsp),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,l,jsp),banddos%s_cell_z)==0)) THEN
 				DO k=1,lapw%nv(jsp)
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
@@ -195,11 +201,16 @@ CONTAINS
 				END DO
 			   END IF
 			END DO
-			write(679,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
+			IF (jsp==1) write(679,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
+			IF (jsp==2) write(680,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
 		END DO
-!	write (1099,'(f15.8)') w_n
+
 	IF (i_kpt==kpts%nkpt) THEN
-	CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
+		IF (jsp==1) CLOSE (679)
+		IF (jsp==input%jspins) THEN
+			IF (jsp==2) CLOSE (680)
+			CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
+		END IF
 	END IF
 !	CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
  END SUBROUTINE
@@ -277,7 +288,10 @@ CONTAINS
       WRITE (27,*) 'size2(x)=0.35*(1-x**(0.01))'
       WRITE (27,*) 'color2(x)=1.15*(x-1)'
       WRITE (27,911) d(nosyp)+0.00001,achar(92)
-      IF (input%jspins == 2) WRITE (27,912) achar(92)
+      IF (input%jspins == 2) THEN
+	WRITE (27,912) achar(92)
+	WRITE (27,916) achar(92)
+      END IF
       WRITE (27,913) achar(92)
       WRITE (27,915)
       CLOSE (27)
@@ -294,7 +308,8 @@ CONTAINS
  909  FORMAT ('           "',a1,'"',f9.5,'  )')
  910  FORMAT ('set ytics -8,2,4')
  911  FORMAT ('plot [0:',f9.5,'] [-9:5] ',a)
- 912  FORMAT ('"bands_sc.2" using 1:($2-6.00):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, "bands_sc.2" using 1:($2-6.00):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette,',a)
+ 912  FORMAT ('"bands_sc.2" using 1:($2-6.00):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
+ 916  FORMAT ('"bands_sc.2" using 1:($2-6.00):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette,',a)
  913  FORMAT ('"bands_sc.1" using 1:($2-6.00):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
  915  FORMAT ('"bands_sc.1" using 1:($2-6.00):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette')
  914  FORMAT ('set label "',a1,'" at ',f9.5,', -9.65 center font "Symbol,20"')

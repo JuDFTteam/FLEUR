@@ -209,7 +209,7 @@ CONTAINS
           CALL timestop("EV output")
 
           IF (banddos%unfoldband) THEN
-               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results)
+               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms)
 	       DEALLOCATE(smat_unfold)
           END IF
 
