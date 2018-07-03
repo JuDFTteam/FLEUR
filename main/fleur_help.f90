@@ -60,6 +60,7 @@ CONTAINS
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"HDF density file relevant options:"
     WRITE(*,'(a)')"-no_cdn_hdf        : disable HDF charge density mode (activated by default if HDF5 is available)"
+    WRITE(*,'(a)')"-last_extra        : generate an additional file cdn_last.hdf that contains only the last density"
     WRITE(*,'(a)')"-sd N              : use starting density N, where N is the index of the density according to -info"
     WRITE(*,'(a)')"-delden N-M        : delete densities N to M"
     WRITE(*,'(a)')"-delden N          : delete density N"

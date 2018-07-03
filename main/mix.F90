@@ -315,6 +315,15 @@ contains
       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         1,results%last_distance,results%ef,.TRUE.,inDen)
 
+#ifdef CPP_HDF
+      IF (judft_was_argument("-last_extra")) THEN
+         CALL system("rm cdn_last.hdf")
+         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                           1,results%last_distance,results%ef,.TRUE.,inDen,'cdn_last')
+
+      END IF
+#endif
+
       inDen%iter = inDen%iter + 1
 
       7900 FORMAT (/,'---->    distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
