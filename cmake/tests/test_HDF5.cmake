@@ -25,24 +25,24 @@ if (NOT FLEUR_USE_HDF5)
 endif()
 
 #now try the find_package feature
-if (NOT FLEUR_USE_HDF5)
-      find_package(HDF5)
-      if (NOT HDF5_LIBRARIES MATCHES "NOTFOUND")
-          set(TEST_LIBRARIES ${HDF5_Fortran_LIBRARIES} ${FLEUR_LIBRARIES})
-	  set(STORE_FLAGS ${CMAKE_Fortran_FLAGS})
-          set(CMAKE_Fortran_FLAGS "-I${HDF5_INCLUDE_LIBRARIES}" ${CMAKE_Fortran_FLAGS})
+#if (NOT FLEUR_USE_HDF5)
+#      find_package(HDF5)
+#      if (NOT HDF5_LIBRARIES MATCHES "NOTFOUND")
+#          set(TEST_LIBRARIES ${HDF5_Fortran_LIBRARIES} ${FLEUR_LIBRARIES})
+#	  set(STORE_FLAGS ${CMAKE_Fortran_FLAGS})
+#         set(CMAKE_Fortran_FLAGS "-I${HDF5_INCLUDE_LIBRARIES}" ${CMAKE_Fortran_FLAGS})
 
-try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
-            LINK_LIBRARIES ${TEST_LIBRARIES}
-            )
-	    if (${FLEUR_USE_HDF5})
-	       set(FLEUR_LIBRARIES ${HDF5_Fortran_LIBRARIES} ${FLEUR_LIBRARIES})
-	       set(FLEUR_MPI_LIBRARIES ${HDF5_Fortran_LIBRARIES} ${FLEUR_MPI_LIBRARIES})
-	    else()
-               set(CMAKE_Fortran_FLAGS ${STORE_FLAGS})
-	    endif()   
-      endif()	
-endif()       
+#try_compile(FLEUR_USE_HDF5 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5.f90
+#            LINK_LIBRARIES ${TEST_LIBRARIES}
+#            )
+#	    if (${FLEUR_USE_HDF5})
+#	       set(FLEUR_LIBRARIES ${HDF5_Fortran_LIBRARIES} ${FLEUR_LIBRARIES})
+#	       set(FLEUR_MPI_LIBRARIES ${HDF5_Fortran_LIBRARIES} ${FLEUR_MPI_LIBRARIES})
+#	    else()
+#               set(CMAKE_Fortran_FLAGS ${STORE_FLAGS})
+#	    endif()   
+#      endif()	
+#endif()       
 
 #check if HDF is parallel
 if ( FLEUR_USE_HDF5)
