@@ -27,6 +27,7 @@ MODULE m_types_mpimat
      INTEGER:: npcol,nprow                      !> the number of columns/rows in the processor grid
    CONTAINS
      PROCEDURE,PASS   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
+     PROCEDURE,PASS   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
      PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
      PROCEDURE,PASS   :: init => mpimat_init     !<overwriten from t_mat, also calls alloc in t_mat
      PROCEDURE,PASS   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
@@ -178,7 +179,7 @@ CONTAINS
   SUBROUTINE mpimat_copy(mat,mat1,n1,n2)
     IMPLICIT NONE
     CLASS(t_mpimat),INTENT(INOUT)::mat
-    CLASS(t_mat),INTENT(INOUT)   ::mat1
+    CLASS(t_mat),INTENT(IN)      ::mat1
     INTEGER,INTENT(IN) ::n1,n2
 #ifdef CPP_SCALAPACK
     SELECT TYPE(mat1)
@@ -193,7 +194,14 @@ CONTAINS
     END SELECT
 #endif    
   END SUBROUTINE mpimat_copy
-  
+
+  SUBROUTINE mpimat_move(mat,mat1)
+    IMPLICIT NONE
+    CLASS(t_mpimat),INTENT(INOUT)::mat
+    CLASS(t_mat),INTENT(INOUT)   ::mat1
+    CALL mat%copy(mat1,1,1)
+  END SUBROUTINE mpimat_move
+
   SUBROUTINE mpimat_free(mat)
     IMPLICIT NONE
     CLASS(t_mpimat),INTENT(INOUT) :: mat
@@ -217,7 +225,7 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL :: matsize1,matsize2,mpi_subcom
     LOGICAL,INTENT(IN),OPTIONAL :: l_real,l_2d
     INTEGER,INTENT(IN),OPTIONAL :: nb_y,nb_x
-    
+#ifdef CPP_SCALAPACK    
     INTEGER::nbx,nby,irank,ierr
     include 'mpif.h'
     nbx=DEFAULT_BLOCKSIZE; nby=DEFAULT_BLOCKSIZE
@@ -238,6 +246,7 @@ CONTAINS
        CALL MPI_COMM_RANK(mpi_subcom,irank,ierr)
        IF (irank>0) mat%blacs_desc(2)=-1
     END IF
+#endif    
   END SUBROUTINE mpimat_init
     
   SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,ictextblacs,sc_desc,local_size1,local_size2,nprow,npcol)

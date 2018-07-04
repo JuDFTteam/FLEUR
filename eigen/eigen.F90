@@ -183,7 +183,7 @@ CONTAINS
 		end select
           END IF
 
-          CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
+          CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           DEALLOCATE(hmat,smat)
 
           ! Output results
