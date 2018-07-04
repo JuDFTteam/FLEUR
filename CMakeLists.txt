@@ -10,7 +10,8 @@ project(FLEUR LANGUAGES C Fortran)
 
 #some variables might be set in the environment
 set(FLEUR_LIBRARIES ${FLEUR_LIBRARIES} $ENV{FLEUR_LIBRARIES})
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_Fortran_FLAGS} $ENV{CMAKE_Fortran_FLAGS}")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} $ENV{FLEUR_Fortran_FLAGS} $ENV{CMAKE_Fortran_FLAGS}")
+message(STATUS "FLEUR_Fortran_FLAGS: ${FLEUR_Fortran_FLAGS}")
 
 if (DEFINED ENV{FLEUR_USE_SERIAL})
 	set(FLEUR_USE_SERIAL ENV{FLEUR_USE_SERIAL})
