@@ -157,8 +157,8 @@ c-odim    modifications due to one-dimensionality, YM
          odd%nq2 = j
          odd%kimax2 = odd%n2d - 1
       ELSE
-         odd%n2d = n2d
-         odd%nq2 = n2d
+         odd%n2d = ng2
+         odd%nq2 = ng2
          odd%nop = nop
       END IF
 c+odim

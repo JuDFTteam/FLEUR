@@ -25,12 +25,10 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
 
-  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
-    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+  SUBROUTINE open_eig(id,nmat,neig,nkpts,jspins,l_create,l_real,l_soc,l_noco,filename)
+    INTEGER, INTENT(IN) :: id,nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: l_noco,l_create,l_real,l_soc
-    LOGICAL,INTENT(IN),OPTIONAL::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
-    INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
     !locals
     INTEGER:: length
     TYPE(t_data_mem),POINTER:: d
@@ -45,7 +43,7 @@ CONTAINS
 
     ENDIF
 
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
 
     !d%eig_int
     ALLOCATE(d%eig_int(jspins*nkpts))
@@ -61,39 +59,22 @@ CONTAINS
        ALLOCATE(d%eig_vecc(nmat*neig,length*nkpts))
     endif
     length=length*nkpts
-    IF (d%l_dos) THEN
-       ALLOCATE(d%qal(0:3,ntype,neig,length))
-       ALLOCATE(d%qvac(neig,2,length))
-       ALLOCATE(d%qis(neig,length))
-       ALLOCATE(d%qvlay(neig,max(layers,1),2,length))
-       ALLOCATE(d%qstars(nstars,neig,max(layers,1),2,length))
-       ALLOCATE(d%ksym(neig,length))
-       ALLOCATE(d%jsym(neig,length))
-       IF (l_mcd) ALLOCATE(d%mcd(3*ntype,ncored,neig,length))
-       IF (l_orb) THEN
-          ALLOCATE(d%qintsl(nsld,neig,length))
-          ALLOCATE(d%qmtsl(nsld,neig,length))
-          ALLOCATE(d%qmtp(neig,nat,length))
-          ALLOCATE(d%orbcomp(neig,23,nat,length))
-       ENDIF
-    ENDIF
     IF (PRESENT(filename)) CALL priv_readfromfile()
   CONTAINS
     SUBROUTINE priv_readfromfile()
       USE m_eig66_da,ONLY:open_eig_IO=>open_eig,read_eig_IO=>read_eig,close_eig_IO=>close_eig
       INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(neig),w_iks(neig),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
-      TYPE(t_zmat):: zmat
+      REAL    :: eig(neig),w_iks(neig)
+      TYPE(t_mat):: zmat
 
       zmat%l_real=l_real
-      zmat%nbasfcn=nmat
-      zmat%nbands=neig
-      ALLOCATE(zmat%z_r(nmat,neig),zmat%z_c(nmat,neig))
+      zmat%matsize1=nmat
+      zmat%matsize2=neig
+      ALLOCATE(zmat%data_r(nmat,neig),zmat%data_c(nmat,neig))
     
       tmp_id=eig66_data_newid(DA_mode)
-      IF (d%l_dos) CPP_error("Can not read DOS-data")
-      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,d%lmax,d%nlo,d%ntype,nlotot,.FALSE.,.FALSE.,l_real,l_soc,.FALSE.,.FALSE.,filename)
+      CALL open_eig_IO(tmp_id,nmat,neig,nkpts,jspins,.FALSE.,l_real,l_soc,filename)
       DO jspin=1,jspins
          DO nk=1,nkpts
             CALL read_eig_IO(tmp_id,nk,jspin,i,eig,w_iks,zmat=zmat)
@@ -127,17 +108,16 @@ CONTAINS
       USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,write_eig_DA=>write_eig,close_eig_DA=>close_eig
       IMPLICIT NONE
 
-      INTEGER:: nlotot,nk,jspin,nv,i,ii,tmp_id
+      INTEGER:: nk,jspin,nv,i,ii,tmp_id
       REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(SIZE(d%eig_eig,1)),w_iks(SIZE(d%eig_eig,1)),ello(d%nlo,d%ntype),el(d%lmax,d%ntype)
+      REAL    :: eig(SIZE(d%eig_eig,1)),w_iks(SIZE(d%eig_eig,1))
       TYPE(t_mat)::zmat
       zmat%l_real=d%l_real
       zmat%matsize1=d%nmat
       zmat%matsize2=SIZE(d%eig_eig,1)
       ALLOCATE(zmat%data_r(d%nmat,SIZE(d%eig_eig,1)),zmat%data_c(d%nmat,SIZE(d%eig_eig,1)))
       tmp_id=eig66_data_newid(DA_mode)
-      IF (d%l_dos) CPP_error("Could not write DOS data")
-      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,d%lmax,d%nlo,d%ntype,d%nlotot,.FALSE.,.FALSE.,d%l_real,d%l_soc,.FALSE.,.FALSE.,filename)
+      CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,.FALSE.,d%l_real,d%l_soc,filename)
       DO jspin=1,d%jspins
          DO nk=1,d%nkpts
             !TODO this code is no longer working
@@ -151,76 +131,13 @@ CONTAINS
     END SUBROUTINE priv_writetofile
   END SUBROUTINE close_eig
 
-  SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(IN)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(IN)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
-    REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-    REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-
-    INTEGER::nrec
-    TYPE(t_data_mem),POINTER:: d
-    CALL priv_find_data(id,d)
-
-    nrec=nk+(jspin-1)*d%nkpts
-
-    d%qal(:,:,:,nrec)=qal
-    d%qvac(:,:,nrec)=qvac
-    d%qis(:,nrec)=qis
-    d%qvlay(:,:,:,nrec)=qvlay
-    d%qstars(:,:,:,:,nrec)=qstars
-    d%ksym(:,nrec)=ksym
-    d%jsym(:,nrec)=jsym
-    IF (d%l_mcd.AND.PRESENT(mcd)) d%mcd(:,:,:,nrec)=mcd
-    IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-       d%qintsl(:,:,nrec)=qintsl
-       d%qmtsl(:,:,nrec)=qmtsl
-       d%qmtp(:,:,nrec)=qmtp
-       d%orbcomp(:,:,:,nrec)=orbcomp
-    ENDIF
-  END SUBROUTINE write_dos
-
-  SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(OUT)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(OUT)           :: ksym(:),jsym(:)
-    REAL,INTENT(OUT),OPTIONAL     :: mcd(:,:,:)
-    REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-
-    INTEGER::nrec
-    TYPE(t_data_mem),POINTER:: d
-    CALL priv_find_data(id,d)
-
-    nrec=nk+(jspin-1)*d%nkpts
-
-    qal=d%qal(:,:,:,nrec)
-    qvac=d%qvac(:,:,nrec)
-    qis=d%qis(:,nrec)
-    qvlay=d%qvlay(:,:,:,nrec)
-    qstars=d%qstars(:,:,:,:,nrec)
-    ksym=d%ksym(:,nrec)
-    jsym=d%jsym(:,nrec)
-    IF (d%l_mcd.AND.PRESENT(mcd)) mcd=d%mcd(:,:,:,nrec)
-    IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-       qintsl=d%qintsl(:,:,nrec)
-       qmtsl=d%qmtsl(:,:,nrec)
-       qmtp=d%qmtp(:,:,nrec)
-       orbcomp=d%orbcomp(:,:,:,nrec)
-    ENDIF
-  END SUBROUTINE read_dos
-
-
   SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    TYPE(t_zMAT),OPTIONAL  :: zmat
+    TYPE(t_mat),OPTIONAL  :: zmat
 
     INTEGER::nrec, arrayStart
     TYPE(t_data_mem),POINTER:: d
@@ -246,7 +163,7 @@ CONTAINS
 
     arrayStart = 1
     IF(PRESENT(n_start)) THEN
-       arrayStart = (n_start-1)*zMat%nbasfcn+1
+       arrayStart = (n_start-1)*zMat%matsize1+1
     END IF
 
     IF (PRESENT(zmat)) THEN
@@ -254,13 +171,13 @@ CONTAINS
        IF (zmat%l_real) THEN
           IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
              IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
-             zmat%z_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_r)-1,nrec),SHAPE(zmat%z_r)))
+             zmat%data_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%data_r)-1,nrec),SHAPE(zmat%data_r)))
           ELSE
-             zmat%z_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%z_r)-1,nrec),SHAPE(zmat%z_r))
+             zmat%data_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%data_r)-1,nrec),SHAPE(zmat%data_r))
           ENDIF
        ELSE !TYPE is (COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby = "eig66_mem")
-          zmat%z_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%z_c)-1,nrec),SHAPE(zmat%z_c))
+          zmat%data_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%data_c)-1,nrec),SHAPE(zmat%data_c))
        END IF
     ENDIF
   END SUBROUTINE read_eig

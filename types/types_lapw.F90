@@ -346,10 +346,14 @@ CONTAINS
     !Count No of lapw distributed to this PE
     lapw%num_local_cols=0
     DO ispin=1,input%jspins
-       DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
-          lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
-       ENDDO
-    ENDDO
+       IF (PRESENT(mpi)) THEN
+          DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
+             lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
+          END DO
+       ELSE
+          lapw%num_local_cols(ispin) = lapw%nv(ispin)
+       END IF
+    END DO
 
     IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
 
@@ -384,6 +388,7 @@ CONTAINS
     DO n=1,atoms%ntype
        DO nn=1,atoms%neq(n)
           na=na+1
+          if (atoms%invsat(na)>1) cycle
           !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
           np=sym%invtab(atoms%ngopr(na))
           CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)

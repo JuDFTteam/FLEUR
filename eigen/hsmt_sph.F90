@@ -84,6 +84,7 @@ CONTAINS
              cph(kj) = cph(kj) +&
                   CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,jintsp)-qssbtj,tnn)),&
                   SIN(DOT_PRODUCT(lapw%gvec(:,kj,jintsp)+qssbtj-ski,tnn)))
+             IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
           END DO
        END DO
 

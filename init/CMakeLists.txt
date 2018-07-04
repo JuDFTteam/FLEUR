@@ -57,4 +57,5 @@ init/postprocessInput.F90
 init/initParallelProcesses.F90
 init/old_inp/fleur_init_old.F90
 init/lapw_dim.F90
+init/unfoldBandKPTS.f90
 )

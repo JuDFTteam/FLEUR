@@ -75,6 +75,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
    ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
 
+   rh = 0.0
+   rhoss = 0.0
 
    IF (mpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms

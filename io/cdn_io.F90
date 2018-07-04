@@ -306,7 +306,7 @@ MODULE m_cdn_io
                      END DO
                   END DO
                   DEALLOCATE(cdomvz)
-                  READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+                  READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
                END IF
             ELSE
                ! (datend < 0)  =>  no off-diagonal magnetisation stored
@@ -634,7 +634,7 @@ MODULE m_cdn_io
                   END DO
                END DO
                WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-               WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,oneD%odi%nq2), iVac=1,vacuum%nvac)
+               WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
                DEALLOCATE(cdomvz)
             END IF
          END IF

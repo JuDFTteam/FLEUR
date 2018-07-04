@@ -126,7 +126,7 @@ SUBROUTINE r_inpXML(&
   REAL               :: weightScale, eParamUp, eParamDown
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-  INTEGER            :: lcutm,lcutwf,select(4)
+  INTEGER            :: lcutm,lcutwf,hybSelect(4)
 
 
   CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
@@ -330,6 +330,7 @@ SUBROUTINE r_inpXML(&
   END SELECT
 
   input%alpha = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
+  input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@preconditioning_param'))
   input%spinf = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
 
   ! Get parameters for core electrons
@@ -1106,6 +1107,7 @@ SUBROUTINE r_inpXML(&
   ! Read in xc functional parameters
 
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
+  namex(1:4) = valueString(1:4)
   l_relcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
 
   relcor = 'non-relativi'
@@ -1133,7 +1135,7 @@ SUBROUTINE r_inpXML(&
   END IF
   hybrid%l_hybrid=xcpot%is_hybrid()
   
-  IF (hybrid%l_hybrid) ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
+  ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
   obsolete%lwb=.FALSE.
   IF (xcpot%is_gga()) THEN
@@ -1146,17 +1148,21 @@ SUBROUTINE r_inpXML(&
   END IF
 
 
-  !!! Hybrid stuff
-  numberNodes = xmlGetNumberOfNodes('/fleurInput/xcFunctional/hybridFunctional')
+  hybrid%gcutm1 = input%rkmax - 0.5
+  hybrid%tolerance1 = 1.0e-4
+  hybrid%ewaldlambda = 3
+  hybrid%lexp = 16
+  hybrid%bands1 = dimension%neigd
+
+  numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
   IF (numberNodes==0) THEN
-     IF (hybrid%l_hybrid) CALL judft_error("Hybrid input missing in inp.xml")
+     IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
   ELSE
-     IF (.NOT.hybrid%l_hybrid) CALL judft_error("Hybrid parameters specified but no hybrid functional used")
-     hybrid%gcutm1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@gcutm'))
-     hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@tolerance'))
-     hybrid%ewaldlambda=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@ewaldlambda'))
-     hybrid%lexp=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@lexp'))
-     hybrid%bands1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/hybridFunctional/@bands'))
+     hybrid%gcutm1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
+     hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
+     hybrid%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
+     hybrid%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
+     hybrid%bands1=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
   ENDIF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1309,14 +1315,13 @@ SUBROUTINE r_inpXML(&
         lcutm =evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutm'))
         lcutwf=evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutwf'))
         xPathA=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@select')
-        SELECT(1)=evaluateFirstIntOnly(xPathA)
-        SELECT(2)=evaluateFirstIntOnly(xPathA)
-        SELECT(3)=evaluateFirstIntOnly(xPathA)
-        SELECT(4)=evaluateFirstIntOnly(xPathA)
+        hybSelect(1) = NINT(evaluateFirst(xPathA))
+        hybSelect(2) = NINT(evaluateFirst(xPathA))
+        hybSelect(3) = NINT(evaluateFirst(xPathA))
+        hybSelect(4) = NINT(evaluateFirst(xPathA))
      ENDIF
-        
+
      ! Special switches for species
-     
      ldaspecies=.FALSE.
      socscalespecies=1.0
      WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
@@ -1522,10 +1527,13 @@ SUBROUTINE r_inpXML(&
               END DO
            END DO
            !Hybrid functional stuff
+           hybrid%lcutm1(iType) = 4
+           hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
+           hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
            IF (hybrid%l_hybrid) THEN
               hybrid%lcutm1(iType)=lcutm
               hybrid%lcutwf(iType)=lcutwf
-              hybrid%select1(:,iType)=SELECT
+              hybrid%select1(:,iType)=hybSelect
            ENDIF
            ! Explicit xc functional
            SELECT TYPE(xcpot)
@@ -1955,11 +1963,20 @@ SUBROUTINE r_inpXML(&
         CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
      END IF
 
-     banddos%e_mcd_lo = 0.0
-     banddos%e_mcd_up = 0.0
      IF (numberNodes.EQ.1) THEN
         banddos%e_mcd_lo = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyLo'))
         banddos%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
+     END IF
+
+     ! Read in optional parameter for unfolding bandstructure of supercell
+     xPathA = '/fleurInput/output/unfoldingBand'
+     numberNodes = xmlGetNumberOfNodes(xPathA)
+
+     IF (numberNodes.EQ.1) THEN
+        banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
+        banddos%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
+        banddos%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
+        banddos%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))
      END IF
 
   END IF

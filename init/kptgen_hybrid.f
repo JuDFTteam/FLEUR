@@ -118,8 +118,10 @@
       pkpt(    :     ,kpts%nkpt3(2)+1,    :     ) = pkpt(:,1,:)
       pkpt(    :     ,    :     ,kpts%nkpt3(3)+1) = pkpt(:,:,1)
       
-      IF(any(pkpt.eq.0)) 
-     &STOP 'kptgen: Definition of pkpt-pointer failed.'
+      IF(any(pkpt.eq.0)) THEN
+         CALL juDFT_error('kptgen: Definition of pkpt-pointer failed.',
+     &                    calledby='kptgen_hybrid')
+      END IF
       iarr = 1
       ldum = .false.
       DO i = 1,nkpt

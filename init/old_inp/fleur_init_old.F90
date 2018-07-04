@@ -172,7 +172,7 @@ CONTAINS
           ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
                oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
        ENDIF
-       oneD%odd%nq2 = oneD%odd%n2d
+       oneD%odd%nq2 = stars%ng2!oneD%odd%n2d
        oneD%odi%nq2 = oneD%odd%nq2
        !-odim
        !+t3e
@@ -224,6 +224,7 @@ CONTAINS
           ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
           ALLOCATE(xmlElectronStates(29,atoms%ntype),xmlPrintCoreStates(29,atoms%ntype))
           ALLOCATE(xmlCoreOccs(1,1,1),atoms%label(atoms%nat))
+          ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
           filename = 'inpConverted.xml'
           xmlElectronStates = noState_const
           xmlPrintCoreStates = .FALSE.
@@ -234,7 +235,17 @@ CONTAINS
              noel(i) = namat_const(atoms%nz(i))
              atomTypeSpecies(i) = i
              speciesRepAtomType(i) = i
+
+             hybrid%lcutm1(iType) = 4
+             hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
+             hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
           END DO
+          hybrid%gcutm1 = input%rkmax - 0.5
+          hybrid%tolerance1 = 1.0e-4
+          hybrid%ewaldlambda = 3
+          hybrid%lexp = 16
+          hybrid%bands1 = max( nint(input%zelec)*10, 60 )
+
           numSpecies = SIZE(speciesRepAtomType)
           ALLOCATE(atoms%speciesName(numSpecies))
           atoms%speciesName = ''

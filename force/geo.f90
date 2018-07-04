@@ -34,14 +34,15 @@ CONTAINS
     !        istepnow . steps to be done in this run
     !
     !    *********************************************************************
+    USE m_types
     USE m_rwinp
     USE m_bfgs
     USE m_bfgs0
-    USE m_types
     USE m_constants
     USE m_rinpXML
     USE m_winpXML
     USE m_init_wannier_defaults
+    USE m_xsf_io
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -101,6 +102,7 @@ CONTAINS
     CHARACTER(LEN=20)             :: filename
     REAL                          :: a1_temp(3),a2_temp(3),a3_temp(3)
     REAL                          :: scale_temp, dtild_temp
+    REAL                          :: forceAllAtoms(3,atoms%nat)
     CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
     input=input_in
     atoms_new=atoms
@@ -135,9 +137,33 @@ CONTAINS
     ENDDO
 
     istep = 1
-    CALL bfgs(atoms%ntype,istep,istep0,forcetot,&
-         &          zat,input%xa,input%thetad,input%epsdisp,input%epsforce,tote,&
-         &          xold,y,h,tau0, lconv)
+    CALL bfgs(atoms%ntype,istep,istep0,forcetot,zat,input%xa,input%thetad,input%epsdisp,&
+              input%epsforce,tote,xold,y,h,tau0,lconv)
+
+    !write out struct_force.xsf file
+    forceAllAtoms = 0.0
+    na = 0
+    DO itype=1,atoms%ntype
+       forcetot(:,itype)=MATMUL(cell%bmat,forcetot(:,itype))/tpi_const ! to inner coordinates
+       DO ieq = 1,atoms%neq(itype)
+          na = na + 1
+          jop = sym%invtab(atoms%ngopr(na))
+          IF (oneD%odi%d1) jop = oneD%ods%ngopr(na)
+          DO i = 1,3
+             DO j = 1,3
+                IF (.NOT.oneD%odi%d1) THEN
+                   forceAllAtoms(i,na) = forceAllAtoms(i,na) + sym%mrot(i,j,jop) * forcetot(j,itype)
+                ELSE
+                   forceAllAtoms(i,na) = forceAllAtoms(i,na) + oneD%ods%mrot(i,j,jop) * forcetot(j,itype)
+                END IF
+             END DO
+          END DO
+          forceAllAtoms(:,na) = MATMUL(cell%amat,forceAllAtoms(:,na)) ! to external coordinates
+       END DO
+    END DO
+    OPEN (55,file="struct_force.xsf",status='replace')
+    CALL xsf_WRITE_atoms(55,atoms,input%film,.false.,cell%amat,forceAllAtoms)
+    CLOSE (55)
 
     IF (lconv) THEN
        WRITE (6,'(a)') "Des woars!"

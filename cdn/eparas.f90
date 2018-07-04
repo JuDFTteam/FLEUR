@@ -24,7 +24,7 @@ MODULE m_eparas
   !
 CONTAINS
   SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
-                    usdus,regCharges,dos,mcd,l_mcd)
+                    usdus,regCharges,dos,l_mcd,mcd)
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),         INTENT(IN)    :: usdus
@@ -33,7 +33,7 @@ CONTAINS
     TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
     TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
     TYPE(t_dos),           INTENT(INOUT) :: dos
-    TYPE(t_mcd),           INTENT(INOUT) :: mcd
+    TYPE(t_mcd), OPTIONAL, INTENT(INOUT) :: mcd
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,jsp     
@@ -60,16 +60,13 @@ CONTAINS
     !
 
     IF ((ikpt.LE.mpi%isize).AND..NOT.l_evp) THEN
-       IF (l_mcd) THEN
-          mcd%mcd(:,:,:) = 0.0
-       ENDIF
        regCharges%ener(:,:,jsp) = 0.0
        regCharges%sqal(:,:,jsp) = 0.0
        regCharges%enerlo(:,:,jsp) = 0.0
        regCharges%sqlo(:,:,jsp) = 0.0
        dos%qal(:,:,:,ikpt,jsp) = 0.0
     END IF
-    !
+
     !--->    l-decomposed density for each occupied state
     !
     !         DO 140 i = (skip_t+1),ne    ! this I need for all states
@@ -101,7 +98,7 @@ CONTAINS
                    DO icore = 1, mcd%ncore(n)
                       DO ipol = 1, 3
                          index = 3*(n-1) + ipol
-                         mcd%mcd(index,icore,i)=mcd%mcd(index,icore,i) + fac*(&
+                         mcd%mcd(index,icore,i,ikpt,jsp)=mcd%mcd(index,icore,i,ikpt,jsp) + fac*(&
                               suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
                               sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
                               sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&

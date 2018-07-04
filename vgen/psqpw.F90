@@ -1,238 +1,216 @@
-MODULE m_psqpw
+module m_psqpw
   !     ***********************************************************
   !     generates the fourier coefficients of pseudo charge density
-  !                                   c.l.fu
-  !         corrected april 1990   m.w.
-  !
-  ! cf. M.Weinert J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
-  !
-  !
-  !     parallelized 04/08 gb
+  !     
+  !     For yukawa_residual = .true. the subroutines calculate the
+  !     pseudo charge density for the generation of the Yukawa 
+  !     potential instead of the Coulomb potential. This is used in 
+  !     the preconditioning of the SCF iteration for metallic systems.
+  !      
+  !     references:
+  !     for both the Coulomb and Yukawa cases:
+  !     F. Tran, P. Blaha: Phys. Rev. B 83, 235118 (2011)
+  !     or see the original paper for the normal Coulomb case only:
+  !     M. Weinert: J. Math. Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
-CONTAINS
-  SUBROUTINE psqpw(mpi,&
-       &                 atoms,sphhar,stars,vacuum,&
-       &                 DIMENSION,cell,input,sym,oneD,&
-       &                 qpw,rho,rht,l_xyav,&
-       &                 psq)
-    !
+
+contains
+
+  subroutine psqpw( mpi, atoms, sphhar, stars, vacuum, dimension, cell, input, sym, oneD, &
+       &     qpw, rho, rht, l_xyav, potdenType, psq )
+
 #include"cpp_double.h"
-    USE m_constants
-    USE m_phasy1
-    USE m_mpmom 
-    USE m_sphbes
-    USE m_qsf
-    USE m_od_phasy
-    USE m_od_cylbes
-    USE m_types
+    use m_constants
+    use m_phasy1
+    use m_mpmom 
+    use m_sphbes
+    use m_qsf
+    use m_od_phasy
+    use m_od_cylbes
+    use m_types
+    use m_DoubleFactorial
+    use m_SphBessel
+    implicit none
 
-    IMPLICIT NONE
-    !     ..
-    !     .. Scalar Arguments ..
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_stars),INTENT(IN)     :: stars
-    TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+    type(t_mpi),        intent(in)  :: mpi
+    type(t_atoms),      intent(in)  :: atoms
+    type(t_sphhar),     intent(in)  :: sphhar
+    type(t_stars),      intent(in)  :: stars
+    type(t_vacuum),     intent(in)  :: vacuum
+    type(t_dimension),  intent(in)  :: dimension
+    type(t_cell),       intent(in)  :: cell
+    type(t_input),      intent(in)  :: input
+    type(t_sym),        intent(in)  :: sym
+    type(t_oneD),       intent(in)  :: oneD
+    logical,            intent(in)  :: l_xyav
+    complex,            intent(in)  :: qpw(stars%ng3) 
+    real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
+    real,               intent(in)  :: rht(vacuum%nmzd,2)
+    integer,            intent(in)  :: potdenType
+    complex,            intent(out) :: psq(stars%ng3)
 
-    LOGICAL, INTENT (IN) :: l_xyav
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: qpw(stars%ng3) 
-    REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
-    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2)
-    COMPLEX, INTENT (OUT):: psq(stars%ng3)
-    !-odim
-    !+odim
-    !     ..
-    !     .. Local Scalars ..
-    COMPLEX psint,sa,sl,sm
-    REAL f,fact,fpo,gz,p,qvac,rmtl,s,fJ,gr,g
-    INTEGER ivac,k,l ,n,n1,nc,ncvn,lm,ll1 ,nd,m,nz
-    !     ..
-    !     .. Local Arrays ..
-    COMPLEX pylm( (atoms%lmaxd+1)**2 ,atoms%ntype )
-    COMPLEX  qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    REAL q2(vacuum%nmzd),pn(0:atoms%lmaxd,atoms%ntype),aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
-    REAL rht1(vacuum%nmz)
+    complex                         :: psint, sa, sl, sm
+    real                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
+    integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz
+    complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
+    complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    real                            :: q2(vacuum%nmzd)
+    real                            :: pn(0:atoms%lmaxd,atoms%ntype)
+    real                            :: aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
+    real                            :: rht1(vacuum%nmz)
+    real, allocatable, dimension(:) :: il, kl
+    real                            :: g0(atoms%ntype)
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-    INTEGER ierr(3)
-    COMPLEX, ALLOCATABLE :: c_b(:)
+    include 'mpif.h'
+    integer                         :: ierr(3)
+    complex, allocatable            :: c_b(:)
 #endif
-    !     ..
 
-
-    !
     ! Calculate multipole moments
-    !
-    CALL mpmom(mpi,&
-         &           atoms,sphhar,stars,&
-         &           sym,cell,oneD,&
-         &           qpw,rho,&
-         &           qlm)
+    call mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
 #ifdef CPP_MPI
-    psq(:) = CMPLX(0.0,0.0)
-    CALL MPI_BCAST(qpw,size(qpw),CPP_MPI_COMPLEX,0,mpi%mpi_comm,ierr)
-    nd = (2*atoms%lmaxd+1)*(atoms%lmaxd+1)*atoms%ntype
-    CALL MPI_BCAST(qlm,nd,CPP_MPI_COMPLEX,0,mpi%MPI_COMM,ierr)
+    psq(:) = cmplx( 0.0, 0.0 )
+    call MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, mpi%mpi_comm, ierr )
+    nd = ( 2 * atoms%lmaxd + 1 ) * ( atoms%lmaxd + 1 ) * atoms%ntype
+    call MPI_BCAST( qlm, nd, CPP_MPI_COMPLEX, 0, mpi%MPI_COMM, ierr )
 #endif
-    !
-    ! pn(l,n) = (2l + 2nc(n) + 3)!! / (2l + 1)!! R^l  ;   ncv(n)=n+l in paper
-    ! 
-    DO n = 1,atoms%ntype
-       rmtl = 1.0
-       DO l = 0,atoms%lmax(n)
-          IF (l.GE.atoms%ncv(n)) THEN
-             pn(l,n) = 0.0
-          ELSE
-             p = 1.
-             DO nc = l,atoms%ncv(n)
-                p = p* (2*nc+3)
-             ENDDO
-             pn(l,n) = p/rmtl
-          END IF
-          rmtl = rmtl*atoms%rmt(n)
-       ENDDO
-    ENDDO
-    !
-    ! G eq 0 term (eq.29) : \tilde \rho_s (0) = \sqrt{4 pi} / \Omega \sum_i \tilde q_{00}^i
-    !
+
+    ! prefactor in (A10) (Coulomb case) or (A11) (Yukawa case)
+    ! nc(n) is the integer p in the paper; ncv(n) is l + p
+    ! Coulomb case: pn(l,n) = (2 * l + 2 * p + 3)!! / ( (2 * l + 1)!! * R ** (ncv(n) + 1) ), 
+    ! Yukawa case: pn(l,n) = lambda ** (l + p + 1) / ( i_{l+p+1}(lambda * R) * (2 * l + 1)!! )
+    ! g0 is the prefactor for the q=0 component in (A13)
+    pn = 0.
+    do n = 1, atoms%ntype
+      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
+        do l = 0, min( atoms%ncv(n) - 1, atoms%lmax(n) )
+          pn(l, n) = DoubleFactorial( atoms%ncv(n) + 1, l ) / ( atoms%rmt(n) ** ( atoms%ncv(n) + 1 ) )
+        end do
+      else
+        allocate( il(0:atoms%ncv(n)+1), kl(0:atoms%ncv(n)+1) )
+        call ModSphBessel( il(0:), kl(0:), input%preconditioning_param * atoms%rmt(n), atoms%ncv(n) + 1 )
+        g0(n) = ( input%preconditioning_param * atoms%rmt(n) ) ** ( atoms%ncv(n) + 1 ) / DoubleFactorial( atoms%ncv(n) + 1 ) / il( atoms%ncv(n) + 1 ) !p=ncv(n)
+        do l = 0, min( atoms%ncv(n) - 1, atoms%lmax(n) )
+          pn(l, n) = input%preconditioning_param ** ( atoms%ncv(n) + 1 ) / il( atoms%ncv(n) + 1 ) / DoubleFactorial( l )
+        end do
+        deallocate( il, kl )
+      end if
+    end do
+
+    ! q=0 term: see (A12) (Coulomb case) or (A13) (Yukawa case)
+    if( mpi%irank == 0 ) then
     s = 0.
-    DO n = 1,atoms%ntype
-       s = s + atoms%neq(n)*REAL(qlm(0,0,n))
-    ENDDO
-    IF (mpi%irank == 0) THEN
-       psq(1) = qpw(1) + (sfp_const/cell%omtil)*s
-    ENDIF
-    !
-    ! G ne 0 term (eq.28) : \tilde \rho_s (K) = 4 pi / \Omega \sum_{lmi} (-i)^l \exp{-iK\xi_i}
-    !                    (2n+3)!!/(2l+1)!! * 1/R_i^l * j_{n+1}(KR_i)/(KR_i)^{n-l+1} Y_{lm} (K)
-    !
-    fpo = 1./cell%omtil
-    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(pylm,sa,n,ncvn,aj,&
-    !$OMP&  sl,l,n1,ll1,sm,m,lm)
-    DO k = mpi%irank+2, stars%ng3, mpi%isize
-       IF (.NOT.oneD%odi%d1) THEN
-          CALL phasy1(&
-               &               atoms,stars,sym,&
-               &               cell,k,&
-               &               pylm)
-       ELSE
-          !-odim
-          CALL od_phasy(&
-               &        atoms%ntype,stars%ng3,atoms%nat,atoms%lmaxd,atoms%ntype,atoms%neq,atoms%lmax,&
-               &        atoms%taual,cell%bmat,stars%kv3,k,oneD%odi,oneD%ods,&
-               &        pylm)
-          !+odim
-       END IF
-       !
-       sa = 0.
-       DO n = 1,atoms%ntype
-          ncvn = atoms%ncv(n)
-          CALL sphbes(ncvn+1,stars%sk3(k)*atoms%rmt(n),aj)
-          sl = 0.
-          DO l = 0,atoms%lmax(n)
-             IF (l.GE.ncvn) GO TO 60
-             n1 = ncvn - l + 1
-             ll1 = l*(l+1) + 1
-             sm = 0.
-             DO m = -l,l
-                lm = ll1 + m 
-                sm = sm + qlm(m,l,n)*CONJG(pylm(lm,n))
-             ENDDO
-60           sl = sl + pn(l,n)/ ((stars%sk3(k)*atoms%rmt(n))**n1)*aj(ncvn+1)*sm
-          ENDDO
-          sa = sa + atoms%neq(n)*sl
-       ENDDO
-       psq(k) = qpw(k) + fpo*sa
-    ENDDO
-    !$OMP END PARALLEL DO
+    do n = 1, atoms%ntype
+      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
+        s = s + atoms%neq(n) * real( qlm(0,0,n) )
+      else
+        s = s + atoms%neq(n) * real( qlm(0,0,n) ) * g0(n)
+      end if
+    end do
+    !if( mpi%irank == 0 ) then
+      psq(1) = qpw(1) + ( sfp_const / cell%omtil ) * s
+    end if
+
+    ! q/=0 term: see (A10) (Coulomb case) or (A11) (Yukawa case)
+    fpo = 1. / cell%omtil
+    !$omp parallel do default( shared ) private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
+    do k = mpi%irank+2, stars%ng3, mpi%isize
+      if ( .not. oneD%odi%d1 ) then
+        call phasy1( atoms, stars, sym, cell, k, pylm )
+      else
+        call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, atoms%neq, &
+             atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm )
+      end if
+      sa = 0.
+      do n = 1, atoms%ntype
+        ncvn = atoms%ncv(n)
+        call sphbes( ncvn + 1 , stars%sk3(k) * atoms%rmt(n), aj )
+        sl = 0.
+        do l = 0, atoms%lmax(n)
+          if ( l >= ncvn ) go to 60
+          n1 = ncvn - l + 1
+          ll1 = l * ( l + 1 ) + 1
+          sm = 0.
+          do m = -l, l
+            lm = ll1 + m 
+            sm = sm + qlm(m,l,n) * conjg( pylm(lm,n) )
+          end do
+60        sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
+        end do
+        sa = sa + atoms%neq(n) * sl
+      end do
+      psq(k) = qpw(k) + fpo * sa
+    end do
+    !$omp end parallel do
 #ifdef CPP_MPI
-    ALLOCATE(c_b(stars%ng3))
-    CALL MPI_REDUCE(psq,c_b,stars%ng3,CPP_MPI_COMPLEX,MPI_SUM,0,mpi%MPI_COMM,ierr)
-    IF (mpi%irank.EQ.0) THEN
-       psq(:stars%ng3)=c_b(:stars%ng3)
-    ENDIF
-    DEALLOCATE (c_b)
+    allocate( c_b(stars%ng3) )
+    call MPI_REDUCE( psq, c_b, stars%ng3, CPP_MPI_COMPLEX, MPI_SUM, 0, mpi%MPI_COMM, ierr )
+    if ( mpi%irank == 0 ) then
+       psq(:stars%ng3) = c_b(:stars%ng3)
+    end if
+    deallocate( c_b )
 #endif
-    IF (mpi%irank == 0) THEN
-       !
-       ! Check: integral of the pseudo charge density within the slab
-       !
-       IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-          psint = psq(1)*stars%nstr(1)*vacuum%dvac
-          DO k = 2,stars%ng3
-             IF (stars%ig2(k).EQ.1) THEN
-                gz = stars%kv3(3,k)*cell%bmat(3,3)
-                f = 2.*SIN(gz*cell%z1)/gz
-                psint = psint + stars%nstr(k)*psq(k)*f
-             END IF
-          ENDDO
-          psint = cell%area*psint
-       ELSEIF (input%film .AND. oneD%odi%d1) THEN
-          !-odim
-          psint = (0.0,0.0)
-          DO k = 2,stars%ng3
-             IF (stars%kv3(3,k).EQ.0) THEN
-                g = (stars%kv3(1,k)*cell%bmat(1,1) + stars%kv3(2,k)*cell%bmat(2,1))**2 +&
-                     &             (stars%kv3(1,k)*cell%bmat(1,2) + stars%kv3(2,k)*cell%bmat(2,2))**2
-                gr = SQRT(g)
-                CALL od_cylbes(1,gr*cell%z1,fJ)
-                f = 2*cell%vol*fJ/(gr*cell%z1)
-                psint = psint + stars%nstr(k)*psq(k)*f
-             END IF
-          ENDDO
-          psint = psint + psq(1)*stars%nstr(1)*cell%vol
-          !+odim
-       ELSEIF (.NOT.input%film) THEN
-          psint = psq(1)*stars%nstr(1)*cell%omtil
-       ENDIF
-       WRITE (6,FMT=8000) psint
-       WRITE (16,FMT=8000) psint
-8000   FORMAT (/,10x,'integral of pseudo charge density inside the slab='&
+
+    if ( mpi%irank == 0 ) then
+      ! Check: integral of the pseudo charge density within the slab
+      if ( input%film .and. .not. oneD%odi%d1 ) then
+        psint = psq(1) * stars%nstr(1) * vacuum%dvac
+        do k = 2, stars%ng3
+          if ( stars%ig2(k) == 1 ) then
+            gz = stars%kv3(3,k) * cell%bmat(3,3)
+            f = 2. * sin( gz * cell%z1 ) / gz
+            psint = psint + stars%nstr(k) * psq(k) * f
+          end if
+        end do
+        psint = cell%area * psint
+      else if ( input%film .and. oneD%odi%d1 ) then
+        psint = (0.0, 0.0)
+        do k = 2, stars%ng3
+          if ( stars%kv3(3,k) == 0 ) then
+            g = ( stars%kv3(1,k) * cell%bmat(1,1) + stars%kv3(2,k) * cell%bmat(2,1) ) ** 2 + &
+              & ( stars%kv3(1,k) * cell%bmat(1,2) + stars%kv3(2,k) * cell%bmat(2,2) ) ** 2
+            gr = sqrt( g )
+            call od_cylbes( 1, gr * cell%z1, fJ )
+            f = 2 * cell%vol * fJ / ( gr * cell%z1 )
+            psint = psint + stars%nstr(k) * psq(k) * f
+          end if
+        end do
+        psint = psint + psq(1) * stars%nstr(1) * cell%vol
+      else if ( .not. input%film ) then
+        psint = psq(1) * stars%nstr(1) * cell%omtil
+      end if
+      write( 6, fmt=8000 ) psint
+      write( 16, fmt=8000 ) psint
+8000  format (/,10x,'integral of pseudo charge density inside the slab='&
             &       ,5x,2f11.6)
-       IF (.NOT.input%film) RETURN
-       !
-       ! Normalized pseudo density
-       !
-       IF (.NOT.oneD%odi%d1) THEN
-          qvac = 0.0
-          DO ivac = 1,vacuum%nvac
-             CALL qsf(vacuum%delz,rht(1,ivac),q2,vacuum%nmz,0)
-             q2(1) = q2(1)*cell%area
-             qvac = qvac + q2(1)*2./REAL(vacuum%nvac)
-          ENDDO
-          qvac = qvac - 2*input%sigma
-       ELSE
-          !-odim
-          qvac = 0.0
-          DO nz = 1,vacuum%nmz
-             rht1(nz) = (cell%z1+(nz-1)*vacuum%delz)*&
-                  &           rht(nz,vacuum%nvac)
-          ENDDO
-          CALL qsf(vacuum%delz,rht1(1),q2,vacuum%nmz,0)
-          qvac = cell%area*q2(1)
-          !+odim
-       END IF
-       !      fact = abs(qvac/psint)
-       !      DO k = 1,nq3
-       !         psq(k) = fact*psq(k)
-       !      ENDDO
-       IF (l_xyav) RETURN
-       fact = (qvac + psint)/(stars%nstr(1)*cell%vol)
-       psq(1) = psq(1) - fact
-       !-gu
-       WRITE (6,FMT=8010) fact*1000
-       WRITE (16,FMT=8010) fact*1000
-8010   FORMAT (/,10x,'                     1000 * normalization const. ='&
+      if ( .not. input%film .or. potdenType == POTDEN_TYPE_POTYUK ) return
+
+      ! Normalized pseudo density
+      if ( .not. oneD%odi%d1 ) then
+        qvac = 0.0
+        do ivac = 1, vacuum%nvac
+          call qsf( vacuum%delz, rht(1,ivac), q2, vacuum%nmz, 0 )
+          q2(1) = q2(1) * cell%area
+          qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
+        end do
+        qvac = qvac - 2 * input%sigma
+      else
+        qvac = 0.0
+        do nz = 1, vacuum%nmz
+          rht1(nz) = ( cell%z1 + ( nz - 1 ) * vacuum%delz ) * rht(nz,vacuum%nvac)
+        end do
+        call qsf( vacuum%delz, rht1(1), q2, vacuum%nmz, 0 )
+        qvac = cell%area * q2(1)
+      end if
+      if ( l_xyav ) return
+      fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
+      psq(1) = psq(1) - fact
+      write( 6, fmt=8010 ) fact * 1000
+      write( 16, fmt=8010 ) fact * 1000
+8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
-       !
-    ENDIF ! mpi%irank == 0 
-  END SUBROUTINE psqpw
-END MODULE m_psqpw
+    end if ! mpi%irank == 0 
+
+  end subroutine psqpw
+
+end module m_psqpw

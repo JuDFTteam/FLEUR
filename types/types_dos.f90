@@ -11,6 +11,8 @@ IMPLICIT NONE
 PRIVATE
 
    TYPE t_dos
+      INTEGER, ALLOCATABLE :: jsym(:,:,:)
+      INTEGER, ALLOCATABLE :: ksym(:,:,:)
       REAL,    ALLOCATABLE :: qis(:,:,:)
       REAL,    ALLOCATABLE :: qal(:,:,:,:,:)
       REAL,    ALLOCATABLE :: qvac(:,:,:,:)
@@ -39,12 +41,16 @@ SUBROUTINE dos_init(thisDOS,input,atoms,dimension,kpts,vacuum)
    TYPE(t_kpts),           INTENT(IN)    :: kpts
    TYPE(t_vacuum),         INTENT(IN)    :: vacuum
 
+   ALLOCATE(thisDOS%jsym(dimension%neigd,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%ksym(dimension%neigd,kpts%nkpt,input%jspins))
    ALLOCATE(thisDOS%qis(dimension%neigd,kpts%nkpt,input%jspins))
    ALLOCATE(thisDOS%qal(0:3,atoms%ntype,dimension%neigd,kpts%nkpt,input%jspins))
    ALLOCATE(thisDOS%qvac(dimension%neigd,2,kpts%nkpt,input%jspins))
    ALLOCATE(thisDOS%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
    ALLOCATE(thisDOS%qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
 
+   thisDOS%jsym = 0
+   thisDOS%ksym = 0
    thisDOS%qis = 0.0
    thisDOS%qal = 0.0
    thisDOS%qvac = 0.0

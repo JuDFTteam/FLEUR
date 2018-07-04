@@ -44,7 +44,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)       :: usdus
     TYPE(t_tlmplm),INTENT(IN)      :: tlmplm
     TYPE(t_lapw),INTENT(INOUT)     :: lapw
-    TYPE(t_zMat),INTENT(INOUT)     :: zMat
+    TYPE(t_mat),INTENT(INOUT)      :: zMat
 
     !     ..
     !     .. Scalar Arguments ..
@@ -90,7 +90,7 @@ CONTAINS
        !                       first have to undo this  complex conjugation for the 
        ! multiplication with a and b matrices.
 
-       zmat%z_c=conjg(zmat%z_c)
+       zmat%data_c=conjg(zmat%data_c)
        ALLOCATE ( h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd) )
        h_c = 0.0 ; s_c=0.0
        ALLOCATE ( help_r(lhelp) )
@@ -98,30 +98,30 @@ CONTAINS
     !
     DO i = 1,ne
        IF (l_real) THEN
-          help_r=MATMUL(hmat%data_r,zmat%z_r(:,i))
+          help_r=MATMUL(hmat%data_r,zmat%data_r(:,i))
        ELSE
-          help_c=MATMUL(hmat%data_c,zmat%z_c(:,i))
+          help_c=MATMUL(hmat%data_c,zmat%data_c(:,i))
        ENDIF
        DO j = i,ne
           IF (l_real) THEN
-             h_r(j,i)=dot_PRODUCT(zmat%z_r(:,j),help_r)
+             h_r(j,i)=dot_PRODUCT(zmat%data_r(:,j),help_r)
           ELSE
-             h_c(j,i)=dot_PRODUCT(zmat%z_c(:,j),help_c)
+             h_c(j,i)=dot_PRODUCT(zmat%data_c(:,j),help_c)
           ENDIF
        END DO
     END DO
 
     DO i = 1,ne
        IF (l_real) THEN
-          help_r=MATMUL(smat%data_r,zmat%z_r(:,i))
+          help_r=MATMUL(smat%data_r,zmat%data_r(:,i))
        ELSE
-          help_c=MATMUL(smat%data_c,zmat%z_c(:,i))
+          help_c=MATMUL(smat%data_c,zmat%data_c(:,i))
        ENDIF
        DO j = i,ne
           IF (l_real) THEN
-             s_r(j,i) = dot_product(zmat%z_r(:,j),help_r)
+             s_r(j,i) = dot_product(zmat%data_r(:,j),help_r)
           ELSE
-             s_c(j,i) =dot_PRODUCT(zmat%z_c(:,j),help_c)
+             s_c(j,i) =dot_PRODUCT(zmat%data_c(:,j),help_c)
           ENDIF
        END DO
     END DO
@@ -130,7 +130,7 @@ CONTAINS
     ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat) ) 
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
-    IF (.NOT.l_real) zMat%z_c = CONJG(zMat%z_c)
+    IF (.NOT.l_real) zMat%data_c = CONJG(zMat%data_c)
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,sym,cell,lapw,ne,&
@@ -176,16 +176,16 @@ CONTAINS
 
     DO i = 1,lapw%nmat
        IF (l_real) THEN
-          help_r(:ne)=zMat%z_r(i,:ne)
+          help_r(:ne)=zMat%data_r(i,:ne)
        ELSE
-          help_c(:ne)=zMat%z_c(i,:ne)
+          help_c(:ne)=zMat%data_c(i,:ne)
        END IF
        DO j = 1,ne
           IF (l_real) THEN
              !--->       for LAPACK call
-             zMat%z_r(i,j) = CPP_BLAS_sdot(ne,help_r,1,h_r(1,j),1)
+             zMat%data_r(i,j) = CPP_BLAS_sdot(ne,help_r,1,h_r(1,j),1)
           ELSE
-             zMat%z_c(i,j) = CPP_BLAS_cdotc(ne,help_c,1,h_c(1,j),1)
+             zMat%data_c(i,j) = CPP_BLAS_cdotc(ne,help_c,1,h_c(1,j),1)
           ENDIF
        END DO
     END DO

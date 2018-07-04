@@ -306,7 +306,7 @@ c---->gwf
       logical :: l_bqpts,l_gwf,l_nochi
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zMat, zzMat, zMat_b, zMat_qb
+      TYPE(t_mat)   :: zMat, zzMat, zMat_b, zMat_qb
       TYPE(t_lapw)  :: lapw, lapw_b, lapw_qb
       TYPE(t_wann)  :: wannTemp
 
@@ -1217,40 +1217,40 @@ c****************************************************************
       !if(l_p0) write(*,*)'ujugaunt=',tt2-tt3
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = DIMENSION%nbasfcn
-      zzMat%nbands = DIMENSION%neigd
+      zzMat%matsize1 = DIMENSION%nbasfcn
+      zzMat%matsize2 = DIMENSION%neigd
       IF(l_real) THEN
-	    IF(.not.ALLOCATED(zzMat%z_r))
-     >    ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+	    IF(.not.ALLOCATED(zzMat%data_r))
+     >    ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
-	    IF(.not.ALLOCATED(zzMat%z_c))
-     >    ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+	    IF(.not.ALLOCATED(zzMat%data_c))
+     >    ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
 
       zMat%l_real = zzMat%l_real
-      zMat%nbasfcn = zzMat%nbasfcn
-      zMat%nbands = zzMat%nbands
+      zMat%matsize1 = zzMat%matsize1
+      zMat%matsize2 = zzMat%matsize2
       IF (zzMat%l_real) THEN
-	    IF(.not.ALLOCATED(zMat%z_r))
-     >    ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat%z_r = 0.0
+	    IF(.not.ALLOCATED(zMat%data_r))
+     >    ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+         zMat%data_r = 0.0
       ELSE
-	    IF(.not.ALLOCATED(zMat%z_c))
-     >    ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat%z_c = CMPLX(0.0,0.0)
+	    IF(.not.ALLOCATED(zMat%data_c))
+     >    ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+         zMat%data_c = CMPLX(0.0,0.0)
       END IF
 
       zMat_b%l_real = zzMat%l_real
-      zMat_b%nbasfcn = zzMat%nbasfcn
-      zMat_b%nbands = zzMat%nbands
+      zMat_b%matsize1 = zzMat%matsize1
+      zMat_b%matsize2 = zzMat%matsize2
       IF (zzMat%l_real) THEN
-	    IF(.not.ALLOCATED(zMat_b%z_r))
-     >    ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
-         zMat_b%z_r = 0.0
+	    IF(.not.ALLOCATED(zMat_b%data_r))
+     >    ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
+         zMat_b%data_r = 0.0
       ELSE
-	    IF(.not.ALLOCATED(zMat_b%z_c))
-     >    ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
-         zMat_b%z_c = CMPLX(0.0,0.0)
+	    IF(.not.ALLOCATED(zMat_b%data_c))
+     >    ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
+         zMat_b%data_c = CMPLX(0.0,0.0)
       END IF
 
       i_rec = 0 ; n_rank = 0
@@ -1318,11 +1318,11 @@ c...we work only within the energy window
            endif
            IF(zzMat%l_real) THEN
               do j = 1, funbas
-                 zMat%z_r(j,nslibd) = zzMat%z_r(j,i)
+                 zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
               end do
            ELSE
               do j = 1, funbas
-                 zMat%z_c(j,nslibd) = zzMat%z_c(j,i)
+                 zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
               end do
            END IF
         endif
@@ -1744,11 +1744,11 @@ c        print*,"something to do"
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b%z_r(j,nslibd_b) = zzMat%z_r(j,i)
+                  zMat_b%data_r(j,nslibd_b) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b%z_c(j,nslibd_b) = zzMat%z_c(j,i)
+                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -2003,14 +2003,14 @@ c*******************************************c
      >                             calledby="wannier")
 
        zMat_qb%l_real = zzMat%l_real
-       zMat_qb%nbasfcn = zzMat%nbasfcn
-       zMat_qb%nbands = zzMat%nbands
+       zMat_qb%matsize1 = zzMat%matsize1
+       zMat_qb%matsize2 = zzMat%matsize2
        IF (zzMat%l_real) THEN
-          ALLOCATE (zMat_qb%z_r(zMat%nbasfcn,zMat%nbands))
-          zMat_qb%z_r = 0.0
+          ALLOCATE (zMat_qb%data_r(zMat%matsize1,zMat%matsize2))
+          zMat_qb%data_r = 0.0
        ELSE
-          ALLOCATE (zMat_qb%z_c(zMat%nbasfcn,zMat%nbands))
-          zMat_qb%z_c = CMPLX(0.0,0.0)
+          ALLOCATE (zMat_qb%data_c(zMat%matsize1,zMat%matsize2))
+          zMat_qb%data_c = CMPLX(0.0,0.0)
        END IF
 
        eig_qb(:) = 0.
@@ -2033,11 +2033,11 @@ c*******************************************c
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_qb%z_r(j,nslibd_qb) = zzMat%z_r(j,i)
+                  zMat_qb%data_r(j,nslibd_qb) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_qb%z_c(j,nslibd_qb) = zzMat%z_c(j,i)
+                  zMat_qb%data_c(j,nslibd_qb) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -2046,10 +2046,10 @@ c*******************************************c
 ! check that eigenvectors and -values are identical if q=q+b
        if(iqpt.eq.qptibz_b .and. jspin.eq.jspin_b) then
           IF(zMat%l_real) THEN
-             if(any(zMat%z_r.ne.zMat_qb%z_r)) 
+             if(any(zMat%data_r.ne.zMat_qb%data_r)) 
      +          write(*,*)'z.ne.z_qb',iqpt,ikpt
           ELSE
-             if(any(zMat%z_c.ne.zMat_qb%z_c)) 
+             if(any(zMat%data_c.ne.zMat_qb%data_c)) 
      +          write(*,*)'z.ne.z_qb',iqpt,ikpt
           END IF
           if(any(eig.ne.eig_qb)) write(*,*)'eig.ne.eiq_qb',iqpt,ikpt

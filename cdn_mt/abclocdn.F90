@@ -33,7 +33,7 @@ CONTAINS
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_lapw),  INTENT(IN) :: lapw
     TYPE(t_cell),  INTENT(IN) :: cell
-    TYPE(t_zMat),  INTENT(IN) :: zMat
+    TYPE(t_mat),   INTENT(IN) :: zMat
     TYPE(t_force), OPTIONAL, INTENT(INOUT) :: force
 
     !     .. Scalar Arguments ..
@@ -70,15 +70,15 @@ CONTAINS
           !+gu_con
           IF (noco%l_noco) THEN
              IF (noco%l_ss) THEN
-                ctmp = term1*CONJG(ylm(ll1+m+1))*ccchi(iintsp)*zMat%z_c(lapw%nv(1)+atoms%nlotot+nbasf,i)
+                ctmp = term1*CONJG(ylm(ll1+m+1))*ccchi(iintsp)*zMat%data_c((iintsp-1)*(lapw%nv(1)+atoms%nlotot)+nbasf,i)
              ELSE
-                ctmp = term1*CONJG(ylm(ll1+m+1))*( ccchi(1)*zMat%z_c(nbasf,i)+ccchi(2)*zMat%z_c(lapw%nv(1)+atoms%nlotot+nbasf,i) )
+                ctmp = term1*CONJG(ylm(ll1+m+1))*( ccchi(1)*zMat%data_c(nbasf,i)+ccchi(2)*zMat%data_c(lapw%nv(1)+atoms%nlotot+nbasf,i) )
              ENDIF
           ELSE
              IF (zMat%l_real) THEN
-                ctmp = zMat%z_r(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
+                ctmp = zMat%data_r(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
              ELSE
-                ctmp = zMat%z_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
+                ctmp = zMat%data_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
              ENDIF
           ENDIF
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)

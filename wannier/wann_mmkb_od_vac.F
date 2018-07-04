@@ -38,7 +38,7 @@ c***************************************************************
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
-      TYPE(t_zmat), INTENT(IN)       :: zMat, zMat_b
+      TYPE(t_mat), INTENT(IN)        :: zMat, zMat_b
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
@@ -203,20 +203,20 @@ c...for the k-point
                IF (zMat%l_real) THEN
                   do n = 1,nslibd
                       acof(l,m,n) = acof(l,m,n) +
-     +                   zMat%z_r(k+addnoco,n)*avac
-c     +                    conjg(zMat%z_r(k,n))*avac
+     +                   zMat%data_r(k+addnoco,n)*avac
+c     +                    conjg(zMat%data_r(k,n))*avac
                       bcof(l,m,n) = bcof(l,m,n) +
-     +                   zMat%z_r(k+addnoco,n)*bvac
-c     +                    conjg(zMat%z_r(k,n))*bvac
+     +                   zMat%data_r(k+addnoco,n)*bvac
+c     +                    conjg(zMat%data_r(k,n))*bvac
                   enddo
                ELSE
                   do n = 1,nslibd
                       acof(l,m,n) = acof(l,m,n) +
-     +                   zMat%z_c(k+addnoco,n)*avac
-c     +                    conjg(zMat%z_c(k,n))*avac
+     +                   zMat%data_c(k+addnoco,n)*avac
+c     +                    conjg(zMat%data_c(k,n))*avac
                       bcof(l,m,n) = bcof(l,m,n) +
-     +                   zMat%z_c(k+addnoco,n)*bvac
-c     +                    conjg(zMat%z_c(k,n))*bvac
+     +                   zMat%data_c(k+addnoco,n)*bvac
+c     +                    conjg(zMat%data_c(k,n))*bvac
                   enddo
                END IF
             enddo      ! -mb:mb
@@ -258,20 +258,20 @@ c...for the b-point
                IF (zMat_b%l_real) THEN
                   do n = 1,nslibd_b
                       acof_b(l,m,n) = acof_b(l,m,n) +
-     +                   zMat_b%z_r(k+addnoco2,n)*avac
-c     +                    conjg(zMat_b%z_r(k,n))*avac
+     +                   zMat_b%data_r(k+addnoco2,n)*avac
+c     +                    conjg(zMat_b%data_r(k,n))*avac
                       bcof_b(l,m,n) = bcof_b(l,m,n) +
-     +                   zMat_b%z_r(k+addnoco2,n)*bvac
-c     +                    conjg(zMat_b%z_r(k,n))*bvac
+     +                   zMat_b%data_r(k+addnoco2,n)*bvac
+c     +                    conjg(zMat_b%data_r(k,n))*bvac
                   enddo
                ELSE
                   do n = 1,nslibd_b
                       acof_b(l,m,n) = acof_b(l,m,n) +
-     +                   zMat_b%z_c(k+addnoco2,n)*avac
-c     +                    conjg(zMat_b%z_c(k,n))*avac
+     +                   zMat_b%data_c(k+addnoco2,n)*avac
+c     +                    conjg(zMat_b%data_c(k,n))*avac
                       bcof_b(l,m,n) = bcof_b(l,m,n) +
-     +                   zMat_b%z_c(k+addnoco2,n)*bvac
-c     +                    conjg(zMat_b%z_c(k,n))*bvac
+     +                   zMat_b%data_c(k+addnoco2,n)*bvac
+c     +                    conjg(zMat_b%data_c(k,n))*bvac
                   enddo
                END IF
             enddo      ! -mb:mb

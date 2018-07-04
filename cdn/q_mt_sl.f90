@@ -134,7 +134,7 @@ CONTAINS
           DO ntyp = 1,atoms%ntype
              qq = qq + qmttot(ntyp,i)*slab%nmtsl(ntyp,nl)
           ENDDO
-          slab%qmtsl(nl,i) = qq
+          slab%qmtsl(nl,i,ikpt,jsp) = qq
        ENDDO
     ENDDO
     !        DO ntyp = 1,ntype

@@ -749,13 +749,13 @@ MODULE m_types
      INTEGER :: n_rank   !< rank in sub_comm
   END TYPE t_mpi
 
-  TYPE t_zMat
-     LOGICAL              :: l_real
-     INTEGER              :: nbasfcn
-     INTEGER              :: nbands
-     REAL,    ALLOCATABLE :: z_r(:,:) ! z_r(nbasfcn,nbands)
-     COMPLEX, ALLOCATABLE :: z_c(:,:) ! z_c(nbasfcn,nbands)
-  END TYPE t_zMat
+!  TYPE t_zMat
+!     LOGICAL              :: l_real
+!     INTEGER              :: nbasfcn
+!     INTEGER              :: nbands
+!     REAL,    ALLOCATABLE :: z_r(:,:) ! z_r(nbasfcn,nbands)
+!     COMPLEX, ALLOCATABLE :: z_c(:,:) ! z_c(nbasfcn,nbands)
+!  END TYPE t_zMat
 
   TYPE t_hamOvlp
      LOGICAL              :: l_real

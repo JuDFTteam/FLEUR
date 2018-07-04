@@ -5,8 +5,8 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
 
 message("MPI Library found:${FLEUR_USE_MPI}")
 
-if (DEFINED ENV{FLEUR_USE_MPI})
-   if (ENV{FLEUR_USE_MPI})
+if (DEFINED CLI_FLEUR_USE_MPI)
+   if (${CLI_FLEUR_USE_MPI})
        if (NOT FLEUR_USE_MPI)
            message(FATAL_ERROR "You asked for MPI but cmake couldn't find it. Please check your Fortran compiler settings")
        endif()

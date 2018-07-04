@@ -70,7 +70,7 @@ c n_bands(i) the number of ev's processed on n_rank=0...i-1
    
       REAL,    INTENT (OUT) :: eig(:) !bkpt(3),eig(neigd)
    
-      TYPE(t_zmat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
 
 ! Local variables ...
       INTEGER :: isp

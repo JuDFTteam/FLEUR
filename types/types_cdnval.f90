@@ -68,8 +68,8 @@ PRIVATE
       REAL,    ALLOCATABLE :: zsl(:,:)
       REAL,    ALLOCATABLE :: volsl(:)
       REAL,    ALLOCATABLE :: volintsl(:)
-      REAL,    ALLOCATABLE :: qintsl(:,:)
-      REAL,    ALLOCATABLE :: qmtsl(:,:)
+      REAL,    ALLOCATABLE :: qintsl(:,:,:,:)
+      REAL,    ALLOCATABLE :: qmtsl(:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => slab_init
@@ -89,7 +89,7 @@ PRIVATE
 
       INTEGER, ALLOCATABLE :: ncore(:)
       REAL,    ALLOCATABLE :: e_mcd(:,:,:)
-      REAL,    ALLOCATABLE :: mcd(:,:,:)
+      REAL,    ALLOCATABLE :: mcd(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: m_mcd(:,:,:,:)
 
       CONTAINS
@@ -111,14 +111,14 @@ PRIVATE
 
    TYPE t_orbcomp
 
-      REAL, ALLOCATABLE    :: comp(:,:,:)
-      REAL, ALLOCATABLE    :: qmtp(:,:)
+      REAL, ALLOCATABLE    :: comp(:,:,:,:,:)
+      REAL, ALLOCATABLE    :: qmtp(:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => orbcomp_init
    END TYPE t_orbcomp
 
-   TYPE t_cdnvalKLoop
+   TYPE t_cdnvalJob
 
       INTEGER              :: ikptIncrement
       INTEGER              :: ikptStart
@@ -128,10 +128,11 @@ PRIVATE
       INTEGER, ALLOCATABLE :: noccbd(:)
       INTEGER, ALLOCATABLE :: nStart(:)
       INTEGER, ALLOCATABLE :: nEnd(:)
+      REAL,    ALLOCATABLE :: weights(:,:)
 
       CONTAINS
-         PROCEDURE,PASS :: init => cdnvalKLoop_init
-   END TYPE t_cdnvalKLoop
+         PROCEDURE,PASS :: init => cdnvalJob_init
+   END TYPE t_cdnvalJob
 
    TYPE t_gVacMap
 
@@ -143,7 +144,7 @@ PRIVATE
    END TYPE t_gVacMap
 
 PUBLIC t_orb, t_denCoeffs, t_slab, t_eigVecCoeffs
-PUBLIC t_mcd, t_moments, t_orbcomp, t_cdnvalKLoop, t_gVacMap
+PUBLIC t_mcd, t_moments, t_orbcomp, t_cdnvalJob, t_gVacMap
 
 CONTAINS
 
@@ -278,9 +279,10 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
 END SUBROUTINE denCoeffs_init
 
-SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
+SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell,input,kpts)
 
    USE m_types_setup
+   USE m_types_kpts
    USE m_slabdim
    USE m_slabgeom
 
@@ -291,18 +293,12 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
    TYPE(t_dimension),  INTENT(IN)    :: dimension
    TYPE(t_atoms),      INTENT(IN)    :: atoms
    TYPE(t_cell),       INTENT(IN)    :: cell
+   TYPE(t_input),      INTENT(IN)    :: input
+   TYPE(t_kpts),       INTENT(IN)    :: kpts
 
    INTEGER :: nsld
 
    nsld=1
-
-   IF (ALLOCATED(thisSlab%nmtsl)) DEALLOCATE(thisSlab%nmtsl)
-   IF (ALLOCATED(thisSlab%nslat)) DEALLOCATE(thisSlab%nslat)
-   IF (ALLOCATED(thisSlab%zsl)) DEALLOCATE(thisSlab%zsl)
-   IF (ALLOCATED(thisSlab%volsl)) DEALLOCATE(thisSlab%volsl)
-   IF (ALLOCATED(thisSlab%volintsl)) DEALLOCATE(thisSlab%volintsl)
-   IF (ALLOCATED(thisSlab%qintsl)) DEALLOCATE(thisSlab%qintsl)
-   IF (ALLOCATED(thisSlab%qmtsl)) DEALLOCATE(thisSlab%qmtsl)
 
    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
       CALL slab_dim(atoms, nsld)
@@ -311,8 +307,8 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
       ALLOCATE (thisSlab%zsl(2,nsld))
       ALLOCATE (thisSlab%volsl(nsld))
       ALLOCATE (thisSlab%volintsl(nsld))
-      ALLOCATE (thisSlab%qintsl(nsld,dimension%neigd))
-      ALLOCATE (thisSlab%qmtsl(nsld,dimension%neigd))
+      ALLOCATE (thisSlab%qintsl(nsld,dimension%neigd,kpts%nkpt,input%jspins))
+      ALLOCATE (thisSlab%qmtsl(nsld,dimension%neigd,kpts%nkpt,input%jspins))
       CALL slabgeom(atoms,cell,nsld,thisSlab%nsl,thisSlab%zsl,thisSlab%nmtsl,&
                     thisSlab%nslat,thisSlab%volsl,thisSlab%volintsl)
    ELSE
@@ -321,8 +317,8 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell)
       ALLOCATE (thisSlab%zsl(1,1))
       ALLOCATE (thisSlab%volsl(1))
       ALLOCATE (thisSlab%volintsl(1))
-      ALLOCATE (thisSlab%qintsl(1,1))
-      ALLOCATE (thisSlab%qmtsl(1,1))
+      ALLOCATE (thisSlab%qintsl(1,1,1,input%jspins))
+      ALLOCATE (thisSlab%qmtsl(1,1,1,input%jspins))
    END IF
    thisSlab%nsld = nsld
 
@@ -362,9 +358,10 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
 
 END SUBROUTINE eigVecCoeffs_init
 
-SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
+SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms,kpts)
 
    USE m_types_setup
+   USE m_types_kpts
 
    IMPLICIT NONE
 
@@ -373,11 +370,7 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_atoms),         INTENT(IN)    :: atoms
-
-   IF (ALLOCATED(thisMCD%ncore)) DEALLOCATE(thisMCD%ncore)
-   IF (ALLOCATED(thisMCD%e_mcd)) DEALLOCATE(thisMCD%e_mcd)
-   IF (ALLOCATED(thisMCD%m_mcd)) DEALLOCATE(thisMCD%m_mcd)
-   IF (ALLOCATED(thisMCD%mcd)) DEALLOCATE(thisMCD%mcd)
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
 
    ALLOCATE (thisMCD%ncore(atoms%ntype))
    ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
@@ -385,11 +378,11 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms)
       thisMCD%emcd_lo = banddos%e_mcd_lo
       thisMCD%emcd_up = banddos%e_mcd_up
       ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd) )
+      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd,kpts%nkpt,input%jspins) )
       IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
    ELSE
       ALLOCATE (thisMCD%m_mcd(1,1,1,1))
-      ALLOCATE (thisMCD%mcd(1,1,1))
+      ALLOCATE (thisMCD%mcd(1,1,1,1,input%jspins))
    ENDIF
 
    thisMCD%ncore = 0
@@ -425,23 +418,26 @@ SUBROUTINE moments_init(thisMoments,input,atoms)
 
 END SUBROUTINE moments_init
 
-SUBROUTINE orbcomp_init(thisOrbcomp,banddos,dimension,atoms)
+SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,dimension,atoms,kpts)
 
    USE m_types_setup
+   USE m_types_kpts
 
    IMPLICIT NONE
 
    CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
+   TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_banddos),       INTENT(IN)    :: banddos
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_kpts),          INTENT(IN)    :: kpts
 
    IF ((banddos%ndir.EQ.-3).AND.banddos%dos) THEN
-      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat))
-      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat))
+      ALLOCATE(thisOrbcomp%comp(dimension%neigd,23,atoms%nat,kpts%nkpt,input%jspins))
+      ALLOCATE(thisOrbcomp%qmtp(dimension%neigd,atoms%nat,kpts%nkpt,input%jspins))
    ELSE
-      ALLOCATE(thisOrbcomp%comp(1,1,1))
-      ALLOCATE(thisOrbcomp%qmtp(1,1))
+      ALLOCATE(thisOrbcomp%comp(1,1,1,1,input%jspins))
+      ALLOCATE(thisOrbcomp%qmtp(1,1,1,input%jspins))
    END IF
 
    thisOrbcomp%comp = 0.0
@@ -449,7 +445,7 @@ SUBROUTINE orbcomp_init(thisOrbcomp,banddos,dimension,atoms)
 
 END SUBROUTINE orbcomp_init
 
-SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
 
    USE m_types_setup
    USE m_types_kpts
@@ -458,7 +454,7 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
 
    IMPLICIT NONE
 
-   CLASS(t_cdnvalKLoop),           INTENT(INOUT) :: thisCdnvalKLoop
+   CLASS(t_cdnvalJob),             INTENT(INOUT) :: thisCdnvalJob
    TYPE(t_mpi),                    INTENT(IN)    :: mpi
    TYPE(t_input),                  INTENT(IN)    :: input
    TYPE(t_kpts),                   INTENT(IN)    :: kpts
@@ -469,54 +465,54 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
 
    INTEGER,                        INTENT(IN)    :: jspin
 
-   INTEGER :: jsp, iBand, ikpt, nslibd, noccbd_l
+   INTEGER :: jsp, iBand, ikpt, nslibd, noccbd_l, noccbd, nStart, nEnd
 
-   thisCdnvalKLoop%l_evp = .FALSE.
+   thisCdnvalJob%l_evp = .FALSE.
    IF (kpts%nkpt < mpi%isize) THEN
-      thisCdnvalKLoop%l_evp = .TRUE.
-      thisCdnvalKLoop%nkptExtended = kpts%nkpt
-      thisCdnvalKLoop%ikptStart = 1
-      thisCdnvalKLoop%ikptIncrement = 1
+      thisCdnvalJob%l_evp = .TRUE.
+      thisCdnvalJob%nkptExtended = kpts%nkpt
+      thisCdnvalJob%ikptStart = 1
+      thisCdnvalJob%ikptIncrement = 1
    ELSE
       ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
-      thisCdnvalKLoop%nkptExtended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
-      thisCdnvalKLoop%ikptStart = mpi%irank + 1
-      thisCdnvalKLoop%ikptIncrement = mpi%isize
+      thisCdnvalJob%nkptExtended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
+      thisCdnvalJob%ikptStart = mpi%irank + 1
+      thisCdnvalJob%ikptIncrement = mpi%isize
    END IF
 
-   IF (ALLOCATED(thisCdnvalKLoop%noccbd)) DEALLOCATE (thisCdnvalKLoop%noccbd)
-   IF (ALLOCATED(thisCdnvalKLoop%nStart)) DEALLOCATE (thisCdnvalKLoop%nStart)
-   IF (ALLOCATED(thisCdnvalKLoop%nEnd)) DEALLOCATE (thisCdnvalKLoop%nEnd)
+   IF (ALLOCATED(thisCdnvalJob%noccbd)) DEALLOCATE (thisCdnvalJob%noccbd)
+   IF (ALLOCATED(thisCdnvalJob%nStart)) DEALLOCATE (thisCdnvalJob%nStart)
+   IF (ALLOCATED(thisCdnvalJob%nEnd)) DEALLOCATE (thisCdnvalJob%nEnd)
 
-   ALLOCATE(thisCdnvalKLoop%noccbd(kpts%nkpt))
-   ALLOCATE(thisCdnvalKLoop%nStart(kpts%nkpt))
-   ALLOCATE(thisCdnvalKLoop%nEnd(kpts%nkpt))
+   ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt))
+   ALLOCATE(thisCdnvalJob%nStart(kpts%nkpt))
+   ALLOCATE(thisCdnvalJob%nEnd(kpts%nkpt))
 
-   thisCdnvalKLoop%noccbd = 0
-   thisCdnvalKLoop%nStart = 1
-   thisCdnvalKLoop%nEnd = -1
+   thisCdnvalJob%noccbd = 0
+   thisCdnvalJob%nStart = 1
+   thisCdnvalJob%nEnd = -1
 
    jsp = MERGE(1,jspin,noco%l_noco)
 
    ! determine bands to be used for each k point, MPI process
-   DO ikpt = thisCdnvalKLoop%ikptStart, kpts%nkpt, thisCdnvalKLoop%ikptIncrement
+   DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
 
       DO iBand = 1,results%neig(ikpt,jsp)
          IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst) THEN
-            thisCdnvalKLoop%noccbd(ikpt) = thisCdnvalKLoop%noccbd(ikpt) + 1
+            thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
          END IF
       END DO
 
-      IF (banddos%dos) thisCdnvalKLoop%noccbd(ikpt) = results%neig(ikpt,jsp)
+      IF (banddos%dos) thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)
 
-      thisCdnvalKLoop%nStart(ikpt) = 1
-      thisCdnvalKLoop%nEnd(ikpt)   = thisCdnvalKLoop%noccbd(ikpt)
+      thisCdnvalJob%nStart(ikpt) = 1
+      thisCdnvalJob%nEnd(ikpt)   = thisCdnvalJob%noccbd(ikpt)
 
       !--->    if slice, only certain bands are taken into account
       IF(PRESENT(sliceplot)) THEN
-         IF (sliceplot%slice.AND.thisCdnvalKLoop%noccbd(ikpt).GT.0) THEN
-            thisCdnvalKLoop%nStart(ikpt) = 1
-            thisCdnvalKLoop%nEnd(ikpt)   = -1
+         IF (sliceplot%slice.AND.thisCdnvalJob%noccbd(ikpt).GT.0) THEN
+            thisCdnvalJob%nStart(ikpt) = 1
+            thisCdnvalJob%nEnd(ikpt)   = -1
             IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
             IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
             nslibd = 0
@@ -531,7 +527,7 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
                   iBand = iBand + 1
                   IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
                END DO
-               thisCdnvalKLoop%nStart(ikpt) = iBand
+               thisCdnvalJob%nStart(ikpt) = iBand
                IF(iBand.LE.results%neig(ikpt,jsp)) THEN
                   DO WHILE (results%eig(iBand,ikpt,jsp).LE.sliceplot%e2s)
                      iBand = iBand + 1
@@ -539,8 +535,8 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
                   END DO
                   iBand = iBand - 1
                END IF
-               thisCdnvalKLoop%nEnd(ikpt) = iBand
-               nslibd = MAX(0,thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1)
+               thisCdnvalJob%nEnd(ikpt) = iBand
+               nslibd = MAX(0,thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1)
                IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:', nslibd
             ELSE IF (sliceplot%kk.EQ.ikpt) THEN
                IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
@@ -548,15 +544,15 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
                   IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
                        sliceplot%nnne,results%eig(sliceplot%nnne,ikpt,jsp)
                   nslibd = 1
-                  thisCdnvalKLoop%nStart(ikpt) = sliceplot%nnne
-                  thisCdnvalKLoop%nEnd(ikpt) = sliceplot%nnne
+                  thisCdnvalJob%nStart(ikpt) = sliceplot%nnne
+                  thisCdnvalJob%nEnd(ikpt) = sliceplot%nnne
                ELSE
                   iBand = 1
                   DO WHILE (results%eig(iBand,ikpt,jsp).LT.sliceplot%e1s)
                      iBand = iBand + 1
                      IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
                   END DO
-                  thisCdnvalKLoop%nStart(ikpt) = iBand
+                  thisCdnvalJob%nStart(ikpt) = iBand
                   IF(iBand.LE.results%neig(ikpt,jsp)) THEN
                      DO WHILE (results%eig(iBand,ikpt,jsp).LE.sliceplot%e2s)
                         iBand = iBand + 1
@@ -564,26 +560,42 @@ SUBROUTINE cdnvalKLoop_init(thisCdnvalKLoop,mpi,input,kpts,banddos,noco,results,
                      END DO
                      iBand = iBand - 1
                   END IF
-                  thisCdnvalKLoop%nEnd(ikpt) = iBand
-                  nslibd = MAX(0,thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1)
+                  thisCdnvalJob%nEnd(ikpt) = iBand
+                  nslibd = MAX(0,thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1)
                   IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
                END IF
             END IF
-            thisCdnvalKLoop%noccbd(ikpt) = nslibd
+            thisCdnvalJob%noccbd(ikpt) = nslibd
          END IF ! sliceplot%slice
       END IF
 
-      IF (thisCdnvalKLoop%l_evp) THEN
-         noccbd_l = CEILING(REAL(thisCdnvalKLoop%noccbd(ikpt)) / mpi%isize)
-         thisCdnvalKLoop%nStart(ikpt) = thisCdnvalKLoop%nStart(ikpt) + mpi%irank*noccbd_l
-         thisCdnvalKLoop%nEnd(ikpt)   = min(thisCdnvalKLoop%nStart(ikpt)+(mpi%irank+1)*noccbd_l-1, thisCdnvalKLoop%noccbd(ikpt))
-         thisCdnvalKLoop%noccbd(ikpt) = thisCdnvalKLoop%nEnd(ikpt) - thisCdnvalKLoop%nStart(ikpt) + 1
-         IF (thisCdnvalKLoop%noccbd(ikpt).LT.1) thisCdnvalKLoop%noccbd(ikpt) = 0
+      IF (thisCdnvalJob%l_evp) THEN
+         noccbd_l = CEILING(REAL(thisCdnvalJob%noccbd(ikpt)) / mpi%isize)
+         thisCdnvalJob%nEnd(ikpt)   = min(thisCdnvalJob%nStart(ikpt)+(mpi%irank+1)*noccbd_l-1, thisCdnvalJob%noccbd(ikpt))
+         thisCdnvalJob%nStart(ikpt) = thisCdnvalJob%nStart(ikpt) + mpi%irank*noccbd_l
+         thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1
+         IF (thisCdnvalJob%noccbd(ikpt).LT.1) thisCdnvalJob%noccbd(ikpt) = 0
       END IF
 
    END DO
 
-END SUBROUTINE cdnvalKLoop_init
+   IF (ALLOCATED(thisCdnvalJob%weights)) DEALLOCATE (thisCdnvalJob%weights)
+   ALLOCATE(thisCdnvalJob%weights(MAXVAL(thisCdnvalJob%noccbd(:)),kpts%nkpt))
+
+   thisCdnvalJob%weights = 0.0
+   DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
+      noccbd = thisCdnvalJob%noccbd(ikpt)
+      nStart = thisCdnvalJob%nStart(ikpt)
+      nEnd = thisCdnvalJob%nEnd(ikpt)
+
+      thisCdnvalJob%weights(1:noccbd,ikpt) = results%w_iks(nStart:nEnd,ikpt,jsp)
+      IF(PRESENT(sliceplot)) THEN
+         IF (sliceplot%slice.AND.input%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)
+      END IF
+      thisCdnvalJob%weights(:noccbd,ikpt) = 2.0 * thisCdnvalJob%weights(:noccbd,ikpt) / input%jspins ! add in spin-doubling factor
+   END DO
+
+END SUBROUTINE cdnvalJob_init
 
 SUBROUTINE gVacMap_init(thisGVacMap,dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 

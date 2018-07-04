@@ -24,20 +24,24 @@ CONTAINS
    TYPE(t_potden),INTENT(INOUT)  :: potden
 
    INTEGER :: n, ierr(3)
-   LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc
+   LOGICAL :: l_nocoAlloc, l_denMatAlloc, l_vaczAlloc, l_pw_wAlloc
 
    CALL MPI_BCAST(potden%iter,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(potden%potdenType,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    l_nocoAlloc = .FALSE.
    l_denMatAlloc = .FALSE.
    l_vaczAlloc = .FALSE.
+   l_pw_wAlloc = .FALSE.
    IF(mpi%irank.EQ.0) THEN
       IF (ALLOCATED(potden%mmpMat)) l_denMatAlloc = .TRUE.
       IF (ALLOCATED(potden%vacz)) l_vaczAlloc = .TRUE.
+      IF (ALLOCATED(potden%pw_w)) l_pw_wAlloc = .TRUE.
    END IF
    CALL MPI_BCAST(l_nocoAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(l_denMatAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(l_vaczAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(l_pw_wAlloc,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    IF((mpi%irank.NE.0).AND.l_denMatAlloc) THEN
       IF(.NOT.ALLOCATED(potden%mmpMat)) THEN
          ALLOCATE(potDen%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
@@ -48,11 +52,16 @@ CONTAINS
    CALL MPI_BCAST(potden%pw,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 
    n = atoms%jmtd * (sphhar%nlhd+1) * atoms%ntype * input%jspins
-   CALL MPI_BCAST(potden%mt,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(potden%mt,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
+   IF (l_pw_wAlloc) THEN
+      n = stars%ng3 * SIZE(potden%pw_w,2)
+      CALL MPI_BCAST(potden%pw_w,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+   END IF
 
    IF (l_vaczAlloc) THEN
       n = vacuum%nmzd * 2 * SIZE(potden%vacz,3)
-      CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
       n = vacuum%nmzxyd * (stars%ng2-1) * 2 * SIZE(potden%vacxy,4)
       CALL MPI_BCAST(potden%vacxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)

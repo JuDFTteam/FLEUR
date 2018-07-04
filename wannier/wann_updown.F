@@ -259,7 +259,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: spinloop1,spinloop2,ilop
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zMat(2),zzMat(2)
+      TYPE(t_mat)   :: zMat(2),zzMat(2)
       TYPE(t_lapw)  :: lapw
 
       IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
@@ -712,14 +712,14 @@ c****************************************************************
          n_end=neigd
 
       zzMat(jspin)%l_real = l_real
-      zzMat(jspin)%nbasfcn = nbasfcn
-      zzMat(jspin)%nbands = neigd
+      zzMat(jspin)%matsize1 = nbasfcn
+      zzMat(jspin)%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
-     +                              zzMat(jspin)%nbands))
+         ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
+     +                                 zzMat(jspin)%matsize2))
       ELSE
-         ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
-     +                              zzMat(jspin)%nbands))
+         ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
+     +                                 zzMat(jspin)%matsize2))
       END IF
 
 !         CALL cdn_read(
@@ -741,18 +741,18 @@ c...we work only within the energy window
 
       DO jspin = 1, wannierspin
          zMat(jspin)%l_real = zzMat(jspin)%l_real
-         zMat(jspin)%nbasfcn = zzMat(jspin)%nbasfcn
-         zMat(jspin)%nbands = zzMat(jspin)%nbands
+         zMat(jspin)%matsize1 = zzMat(jspin)%matsize1
+         zMat(jspin)%matsize2 = zzMat(jspin)%matsize2
          IF (zzMat(jspin)%l_real) THEN
-	       IF(.not.allocated(zmat(jspin)%z_r))
-     +      ALLOCATE (zMat(jspin)%z_r(zMat(jspin)%nbasfcn,
-     +                                zMat(jspin)%nbands))
-            zMat(jspin)%z_r = 0.0
+	       IF(.not.allocated(zmat(jspin)%data_r))
+     +      ALLOCATE (zMat(jspin)%data_r(zMat(jspin)%matsize1,
+     +                                zMat(jspin)%matsize2))
+            zMat(jspin)%data_r = 0.0
          ELSE
-	       IF(.not.allocated(zMat(jspin)%z_c))
-     +      ALLOCATE (zMat(jspin)%z_c(zMat(jspin)%nbasfcn,
-     +                                zMat(jspin)%nbands))
-            zMat(jspin)%z_c = CMPLX(0.0,0.0)
+	       IF(.not.allocated(zMat(jspin)%data_c))
+     +      ALLOCATE (zMat(jspin)%data_c(zMat(jspin)%matsize1,
+     +                                zMat(jspin)%matsize2))
+            zMat(jspin)%data_c = CMPLX(0.0,0.0)
          END IF
       END DO
 
@@ -781,11 +781,11 @@ c...we work only within the energy window
            endif
            IF (zzMat(jspin)%l_real) THEN
               do j = 1,funbas
-                 zMat(jspin)%z_r(j,nslibd) = zzMat(jspin)%z_r(j,i)
+                 zMat(jspin)%data_r(j,nslibd) = zzMat(jspin)%data_r(j,i)
               enddo
            ELSE
               do j = 1,funbas
-                 zMat(jspin)%z_c(j,nslibd) = zzMat(jspin)%z_c(j,i)
+                 zMat(jspin)%data_c(j,nslibd) = zzMat(jspin)%data_c(j,i)
               enddo
            END IF
         endif
@@ -956,11 +956,11 @@ c-->     determine index and phase factor
              do n = 1,nslibd
               do dir=1,3
                IF (zMat%l_real) THEN
-                  zzConjgTemp = cmplx(zMat(1)%z_r(i+addnoco,m) *
-     +                                zMat(2)%z_r(j+addnoco,n), 0.0)
+                  zzConjgTemp = cmplx(zMat(1)%data_r(i+addnoco,m) *
+     +                                zMat(2)%data_r(j+addnoco,n), 0.0)
                ELSE
-                  zzConjgTemp =       zMat(1)%z_c(i+addnoco,m) *
-     +                          CONJG(zMat(2)%z_c(j+addnoco,n))
+                  zzConjgTemp =       zMat(1)%data_c(i+addnoco,m) *
+     +                          CONJG(zMat(2)%data_c(j+addnoco,n))
                END IF
                value=phasust*zzConjgTemp
                nablamat(dir,m,n,ikpt) = nablamat(dir,m,n,ikpt) -

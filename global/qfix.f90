@@ -70,8 +70,8 @@ CONTAINS
        den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
        IF (input%film) THEN
           den%vacz(:vacuum%nmz,:vacuum%nvac,:) = fix*den%vacz(:vacuum%nmz,:vacuum%nvac,:)
-          den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:) = fix*&
-             den%vacxy(:vacuum%nmzxy,:oneD%odi%nq2-1,:vacuum%nvac,:)
+          den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:) = fix*&
+             den%vacxy(:vacuum%nmzxy,:stars%ng2-1,:vacuum%nvac,:)
        END IF
        WRITE (6,FMT=8000) zc,fix
     ELSE

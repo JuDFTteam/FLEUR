@@ -48,7 +48,7 @@ c****************************************
       real,intent(inout)    :: bkpt(3)
       integer,intent(inout) :: k1(:,:),k2(:,:),k3(:,:) !nvd,jspd
 
-      TYPE(t_zmat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       complex,intent(out)   :: nsfactor !phase of non-symmorphic ops
 
@@ -76,7 +76,7 @@ c      print*,testmat
 
       IF(.NOT.zMat%l_real) THEN
          if(oper.lt.0)then
-            zMat%z_c = CONJG(zMat%z_c)
+            zMat%data_c = CONJG(zMat%data_c)
             shiftnonsymm=-1.0*shiftnonsymm
          endif
       END IF
@@ -134,9 +134,9 @@ c      print*,testmat
          phase = tpi*phase
          phase = cos(phase)
          IF(zMat%l_real) THEN
-            zMat%z_r(j+jj,:)  = phase * zMat%z_r(j+jj,:) 
+            zMat%data_r(j+jj,:)  = phase * zMat%data_r(j+jj,:) 
          ELSE
-            zMat%z_c(j+jj,:)  = phase * zMat%z_c(j+jj,:) 
+            zMat%data_c(j+jj,:)  = phase * zMat%data_c(j+jj,:) 
          END IF
         enddo    
         jj=jj+nv(jspin)
@@ -149,9 +149,9 @@ c      print*,testmat
          phase = tpi*phase
          phase = cos(phase)
          IF(zMat%l_real) THEN
-            zMat%z_r(jj+ilo,:)  = phase * zMat%z_r(jj+ilo,:) 
+            zMat%data_r(jj+ilo,:)  = phase * zMat%data_r(jj+ilo,:) 
          ELSE
-            zMat%z_c(jj+ilo,:)  = phase * zMat%z_c(jj+ilo,:) 
+            zMat%data_c(jj+ilo,:)  = phase * zMat%data_c(jj+ilo,:) 
          END IF
         enddo
       enddo  

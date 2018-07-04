@@ -37,18 +37,15 @@ CONTAINS
        ENDDO
     ENDDO     ! js =1,input%jspins
     
-
-    !Copy pw_w into pw if present and rescale with number of stars
-    IF (.NOT.noco%l_noco.AND.ALLOCATED(vtot%pw_w)) THEN
+    ! Rescale pw_w with number of stars
+    IF (.NOT.noco%l_noco) THEN
        DO js=1,SIZE(vtot%pw_w,2)
           DO i=1,stars%ng3
-             vTot%pw(i,js)=vtot%pw_w(i,js)/stars%nstr(i)
-          ENDDO
-       ENDDO
-       DEALLOCATE(vtot%pw_w)
+             vTot%pw_w(i,js)=vtot%pw_w(i,js) / stars%nstr(i)
+          END DO
+       END DO
     ELSEIF(noco%l_noco) THEN
-       CALL vmatgen(stars, atoms,vacuum,sym,input, denRot,vtot)
-       IF (ALLOCATED(vtot%pw_w)) DEALLOCATE(vtot%pw_w)
+       CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
     ENDIF
 
     !Copy first vacuum into second vacuum if this was not calculated before 

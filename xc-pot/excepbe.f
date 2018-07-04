@@ -95,14 +95,7 @@ c.....
 
         ENDIF ! ro > smlc
 
-
-        IF( xcpot%is_pbe0 ) THEN
-          !pbe0: weight exchange energy with factor 0.75
-          xced = (0.75*xedl+cedl+0.75*xedg+cedg)
-        ELSE
-          xced = (xedl+cedl+xedg+cedg)
-        END IF
-
+        xced = (xedl+cedl+xedg+cedg)
 
         exc(i) = xced*2  ! in ry
 
