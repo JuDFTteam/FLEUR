@@ -24,6 +24,7 @@ MODULE m_constants
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTTOT  =    1 ! 0 < POTDEN_TYPE <= 1000 ==> potential
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTCOUL =    2
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTX    =    3
+   INTEGER,          PARAMETER :: POTDEN_TYPE_POTYUK  =    4
    INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001 ! 1000 < POTDEN_TYPE ==> density
 
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&

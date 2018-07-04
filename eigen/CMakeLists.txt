@@ -27,7 +27,6 @@ eigen/setabc1lo.f90
 eigen/setabc1locdn.f90
 eigen/setabc1locdn1.f90
 eigen/slomat.F90
-eigen/tlmplm.F90
 eigen/tlmplm_cholesky.F90
 eigen/tlmplm_store.F90
 eigen/tlo.f90

@@ -8,10 +8,10 @@ MODULE m_mt_setup
 
 CONTAINS
   SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,vTot,mpi,results,DIMENSION,td,ud)
+    USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
     USE m_tlmplm_store
-    USE m_types
     USE m_spnorb
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results

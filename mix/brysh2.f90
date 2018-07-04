@@ -60,14 +60,14 @@ CONTAINS
                 j = j + 1
                 den%vacz(k,iv,js) = s_in(j)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
                    den%vacxy(i,k,iv,js) = CMPLX(s_in(j),0.0)
                 END DO
              END DO
              IF (.NOT.sym%invs2) THEN
-                DO k = 1,oneD%odi%nq2-1
+                DO k = 1,stars%ng2-1
                    DO i = 1,vacuum%nmzxy
                       j = j + 1
                       den%vacxy(i,k,iv,js) = den%vacxy(i,k,iv,js) + CMPLX(0.0,s_in(j))
@@ -94,7 +94,7 @@ CONTAINS
                 j = j + 1
                 den%vacz(k,iv,3) = s_in(j)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
                    den%vacxy(i,k,iv,3) = CMPLX(s_in(j),0.0)
@@ -106,7 +106,7 @@ CONTAINS
                 j = j + 1
                 den%vacz(k,iv,4) = s_in(j)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
                    den%vacxy(i,k,iv,3) = den%vacxy(i,k,iv,3)+ CMPLX(0.0,s_in(j))

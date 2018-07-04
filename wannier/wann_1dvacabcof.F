@@ -26,7 +26,7 @@ c********************************************************
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
-      TYPE(t_zMat),INTENT(IN)        :: zMat
+      TYPE(t_mat),INTENT(IN)         :: zMat
 
       integer,intent(in)::nv2d,n2d,n3d
       integer,intent(in)::nslibd
@@ -138,13 +138,13 @@ c********************************************************
      /                 ((wronk_1)*sqrt(omtil))
                   IF (zMat%l_real) THEN
                      do n = 1,nslibd
-                        ac(l,m,n) = ac(l,m,n) + zMat%z_r(k+addnoco,n)*av
-                        bc(l,m,n) = bc(l,m,n) + zMat%z_r(k+addnoco,n)*bv
+                        ac(l,m,n) = ac(l,m,n) + zMat%data_r(k+addnoco,n)*av
+                        bc(l,m,n) = bc(l,m,n) + zMat%data_r(k+addnoco,n)*bv
                      end do
                   ELSE
                      do n = 1,nslibd
-                        ac(l,m,n) = ac(l,m,n) + zMat%z_c(k+addnoco,n)*av
-                        bc(l,m,n) = bc(l,m,n) + zMat%z_c(k+addnoco,n)*bv
+                        ac(l,m,n) = ac(l,m,n) + zMat%data_c(k+addnoco,n)*av
+                        bc(l,m,n) = bc(l,m,n) + zMat%data_c(k+addnoco,n)*bv
                      end do
                   END IF
                end do      ! -mb:mb

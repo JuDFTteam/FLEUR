@@ -799,10 +799,11 @@
       <xsd:attribute name="itmax" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute default="99" name="maxIterBroyd" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="imix" type="MixingEnum" use="required"/>
-      <xsd:attribute name="alpha" type="xsd:double" use="required"/>
-      <xsd:attribute default="2.0" name="spinf" type="xsd:double" use="optional"/>
-      <xsd:attribute default="0.0" name="minDistance" type="xsd:double" use="optional"/>
-      <xsd:attribute name="maxTimeToStartIter" type="xsd:double" use="optional"/>
+      <xsd:attribute name="alpha" type="xsd:string" use="required"/>
+      <xsd:attribute default="0.0" name="preconditioning_param" type="xsd:string" use="optional"/>
+      <xsd:attribute default="2.0" name="spinf" type="xsd:string" use="optional"/>
+      <xsd:attribute default="0.0" name="minDistance" type="xsd:string" use="optional"/>
+      <xsd:attribute name="maxTimeToStartIter" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="VacDOSType">

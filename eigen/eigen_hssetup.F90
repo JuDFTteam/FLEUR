@@ -17,12 +17,12 @@ CONTAINS
   
   SUBROUTINE eigen_hssetup(isp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
        stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat_final,hmat_final)
+    USE m_types
+    USE m_types_mpimat
     USE m_hs_int
     USE m_hsvac
     USE m_od_hsvac
     USE m_hsmt
-    USE m_types
-    USE m_types_mpimat
     USE m_eigen_redist_matrix
     IMPLICIT NONE
     INTEGER,INTENT(IN)           :: isp
@@ -68,7 +68,7 @@ CONTAINS
     
     CALL timestart("Interstitial part")
     !Generate interstitial part of Hamiltonian
-    CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,v%pw,smat,hmat)
+    CALL hs_int(input,noco,stars,lapw,mpi,cell,isp,v%pw_w,smat,hmat)
     CALL timestop("Interstitial part")
     CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of noco, we need an loop over the local spin of the atoms

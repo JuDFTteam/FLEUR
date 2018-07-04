@@ -22,7 +22,7 @@ c********************************************************
 
       implicit none
 
-      TYPE(t_zMat),INTENT(IN)   :: zMat
+      TYPE(t_mat),INTENT(IN)   :: zMat
 
       logical,intent(in)::l_ss
       integer,intent(in)::nv2d,jspin,addnoco
@@ -157,16 +157,16 @@ c-----> loop over basis functions
                   IF (zMat%l_real) THEN
                      do n = 1,nslibd
                         ac(l,n,jvac) = ac(l,n,jvac) + 
-     +                                 zMat%z_r(k+addnoco,n)*av
+     +                                 zMat%data_r(k+addnoco,n)*av
                         bc(l,n,jvac) = bc(l,n,jvac) + 
-     +                                 zMat%z_r(k+addnoco,n)*bv
+     +                                 zMat%data_r(k+addnoco,n)*bv
                      enddo
                   ELSE
                      do n = 1,nslibd
                         ac(l,n,jvac) = ac(l,n,jvac) + 
-     +                                 zMat%z_c(k+addnoco,n)*av
+     +                                 zMat%data_c(k+addnoco,n)*av
                         bc(l,n,jvac) = bc(l,n,jvac) + 
-     +                                 zMat%z_c(k+addnoco,n)*bv
+     +                                 zMat%data_c(k+addnoco,n)*bv
                      enddo
                   END IF
                enddo

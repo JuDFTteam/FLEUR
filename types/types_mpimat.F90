@@ -7,6 +7,7 @@
 MODULE m_types_mpimat
   USE m_judft
   USE m_types_rcmat
+  IMPLICIT NONE
   PRIVATE
   INTEGER,PARAMETER    :: DEFAULT_BLOCKSIZE=64
   INTEGER, PARAMETER   :: dlen_=9
@@ -29,11 +30,101 @@ MODULE m_types_mpimat
      PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
      PROCEDURE,PASS   :: init => mpimat_init     !<overwriten from t_mat, also calls alloc in t_mat
      PROCEDURE,PASS   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
+
+     PROCEDURE,PASS   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
+     PROCEDURE,PASS   :: print_matrix
+
   END TYPE t_mpimat
   
   PUBLIC t_mpimat
 
 CONTAINS
+
+  SUBROUTINE print_matrix(mat,fileno)
+    CLASS(t_mpimat),INTENT(INOUT) ::mat
+    INTEGER:: fileno
+
+#ifdef CPP_SCALAPACK
+    INCLUDE 'mpif.h'
+    INTEGER,EXTERNAL:: indxl2g
+    CHARACTER(len=10)::filename
+    INTEGER :: irank,isize,i,j,npr,npc,r,c,tmp,err,status(MPI_STATUS_SIZE) 
+
+    CALL MPI_COMM_RANK(mat%mpi_com,irank,err)
+    CALL MPI_COMM_SIZE(mat%mpi_com,isize,err)
+
+    tmp=0
+
+    IF (irank>0) CALL MPI_RECV(tmp,1,MPI_INTEGER,irank-1,0,mat%mpi_com,status,err) !lock
+    WRITE(filename,"(a,i0)") "out.",fileno
+    OPEN(fileno,file=filename,access='append')
+    
+    CALL blacs_gridinfo(mat%blacs_desc(2),npr,npc,r,c)
+    DO i=1,mat%matsize1
+       DO j=1,mat%matsize2
+          IF (mat%l_real) THEN
+             WRITE(fileno,"(5(i0,1x),2(f10.5,1x))") irank,i,j,indxl2g(i,mat%blacs_desc(5),r,0,npr),&
+                  indxl2g(j,mat%blacs_desc(6),c,0,npc),mat%data_r(i,j)
+          ELSE
+             WRITE(fileno,"(5(i0,1x),2(f10.5,1x))") irank,i,j,indxl2g(i,mat%blacs_desc(5),r,0,npr),&
+                  indxl2g(j,mat%blacs_desc(6),c,0,npc),mat%data_c(i,j)
+          END IF
+       ENDDO
+    ENDDO
+    CLOSE(fileno)
+    IF (irank+1<isize) CALL MPI_SEND(tmp,1,MPI_INTEGER,irank+1,0,mat%mpi_com,err)
+    
+#endif    
+  END SUBROUTINE print_matrix
+
+  SUBROUTINE generate_full_matrix(mat)
+    CLASS(t_mpimat),INTENT(INOUT) ::mat
+    
+    INTEGER :: i,n_col,n_row,myid,err,myrow,mycol,np
+    COMPLEX,ALLOCATABLE:: tmp_c(:,:)
+    REAL,ALLOCATABLE   :: tmp_r(:,:)
+#ifdef CPP_SCALAPACK
+    INCLUDE 'mpif.h'
+    INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
+   
+    !CALL mat%print_matrix(432)
+
+    IF (mat%l_real) THEN
+       ALLOCATE(tmp_r(mat%matsize1,mat%matsize2))
+    ELSE
+       ALLOCATE(tmp_c(mat%matsize1,mat%matsize2))
+    END IF
+
+    CALL MPI_COMM_RANK(mat%mpi_com,myid,err)
+    CALL MPI_COMM_SIZE(mat%mpi_com,np,err)
+ 
+    myrow = myid/mat%npcol
+    mycol = myid -(myid/mat%npcol)*mat%npcol  
+
+    IF (mat%l_real) THEN
+       CALL pdtran(mat%global_size1,mat%global_size1,1.d0,mat%data_r,1,1,&
+                          mat%blacs_desc,0.d0,tmp_r,1,1,mat%blacs_desc)
+    ELSE
+       CALL pztranc(mat%global_size1,mat%global_size1,cmplx(1.0,0.0),mat%data_c,1,1,&
+                          mat%blacs_desc,cmplx(0.d0,0.d0),tmp_c,1,1,mat%blacs_desc)
+    ENDIF
+
+
+    DO i=1,mat%matsize2
+       ! Get global column corresponding to i and number of local rows up to
+       ! and including the diagonal, these are unchanged in A
+       n_col = indxl2g(i,     mat%blacs_desc(6), mycol, 0, mat%npcol)
+       n_row = numroc (n_col, mat%blacs_desc(5), myrow, 0, mat%nprow)
+       IF (mat%l_real) THEN
+          mat%data_r(n_row+1:,i) = tmp_r(n_row+1:,i)
+       ELSE
+          mat%data_c(n_row+1:,i) = tmp_c(n_row+1:,i)
+       ENDIF
+    ENDDO
+
+#endif
+  END SUBROUTINE generate_full_matrix
+
 
   SUBROUTINE mpimat_add_transpose(mat,mat1)
     CLASS(t_mpimat),INTENT(INOUT) ::mat
@@ -43,7 +134,22 @@ CONTAINS
 
     SELECT TYPE(mat1)
     TYPE IS (t_mpimat)
-    
+#ifdef CPP_MPI    
+    CALL MPI_COMM_RANK(mat%mpi_com,n_rank,i)
+    CALL MPI_COMM_SIZE(mat%mpi_com,n_size,i)
+#endif
+    !Set lower part of matrix to zero...
+       ii=0
+       DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
+          ii=ii+1
+          IF (mat%l_real) THEN
+             mat%data_r(i+1:,ii)=0.0
+             mat1%data_r(i+1:,ii)=0.0
+          ELSE
+             mat%data_c(i+1:,ii)=0.0
+             mat1%data_c(i+1:,ii)=0.0
+          ENDIF
+       ENDDO
        IF (mat%l_real) THEN
 #ifdef CPP_SCALAPACK          
 
@@ -53,10 +159,7 @@ CONTAINS
 #endif
     END IF
     !Now multiply the diagonal of the matrix by 1/2
-#ifdef CPP_MPI    
-    CALL MPI_COMM_RANK(mat%mpi_com,n_rank,i)
-    CALL MPI_COMM_SIZE(mat%mpi_com,n_size,i)
-#endif
+
     ii=0
     DO i=n_rank+1,MIN(mat%global_size1,mat%global_size2),n_size
        ii=ii+1
@@ -108,31 +211,40 @@ CONTAINS
   !!  - TRUE: the matrix is a Scalapack BLOCK-CYCLIC distribution
   !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
   !! as used in the parallel matrix setup of FLEUR
-  SUBROUTINE mpimat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d)
+  SUBROUTINE mpimat_init(mat,l_real,matsize1,matsize2,mpi_subcom,l_2d,nb_x,nb_y)
     IMPLICIT NONE
     CLASS(t_mpimat)             :: mat
     INTEGER,INTENT(IN),OPTIONAL :: matsize1,matsize2,mpi_subcom
     LOGICAL,INTENT(IN),OPTIONAL :: l_real,l_2d
+    INTEGER,INTENT(IN),OPTIONAL :: nb_y,nb_x
     
-    INTEGER::nb
-    nb=DEFAULT_BLOCKSIZE
+    INTEGER::nbx,nby,irank,ierr
+    include 'mpif.h'
+    nbx=DEFAULT_BLOCKSIZE; nby=DEFAULT_BLOCKSIZE
+    IF (PRESENT(nb_x)) nbx=nb_x
+    IF (PRESENT(nb_y)) nby=nb_y
     IF (.NOT.(PRESENT(matsize1).AND.PRESENT(matsize2).AND.PRESENT(mpi_subcom).AND.PRESENT(l_real).AND.PRESENT(l_2d)))&
          CALL judft_error("Optional arguments must be present in mpimat_init")
     mat%global_size1=matsize1
     mat%global_size2=matsize2
     mat%mpi_com=mpi_subcom
-    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,nb,&
+    CALL priv_create_blacsgrid(mat%mpi_com,l_2d,matsize1,matsize2,nbx,nby,&
          mat%blacs_ctext,mat%blacs_desc,&
          mat%matsize1,mat%matsize2,&
          mat%npcol,mat%nprow)
     CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
+    !check if this matrix is actually distributed over MPI_COMM_SELF
+    IF (mpi_subcom==MPI_COMM_SELF) THEN
+       CALL MPI_COMM_RANK(mpi_subcom,irank,ierr)
+       IF (irank>0) mat%blacs_desc(2)=-1
+    END IF
   END SUBROUTINE mpimat_init
     
-  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nb,ictextblacs,sc_desc,local_size1,local_size2,npcol,nprow)
+  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,ictextblacs,sc_desc,local_size1,local_size2,nprow,npcol)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom
     INTEGER,INTENT(IN) :: m1,m2
-    INTEGER,INTENT(INOUT)::nb
+    INTEGER,INTENT(INOUT)::nbc,nbr
     LOGICAL,INTENT(IN) :: l_2d
     INTEGER,INTENT(OUT):: ictextblacs,sc_desc(:)
     INTEGER,INTENT(OUT):: local_size1,local_size2
@@ -150,7 +262,7 @@ CONTAINS
 
     EXTERNAL descinit, blacs_get
     EXTERNAL blacs_pinfo, blacs_gridinit
-
+ 
     !Determine rank and no of processors
     CALL MPI_COMM_RANK(mpi_subcom,myid,ierr)
     CALL MPI_COMM_SIZE(mpi_subcom,np,ierr)
@@ -167,7 +279,8 @@ CONTAINS
           ENDIF
        ENDDO distloop
     ELSE
-       nb=1
+       nbc=1
+       nbr=MAX(m1,m2)
        npcol=np
        nprow=1
     ENDIF
@@ -185,9 +298,10 @@ CONTAINS
     !
     !  Now allocate Asca to put the elements of Achi or receivebuffer to
     !
-    myrowssca=(m1-1)/(nb*nprow)*nb+ MIN(MAX(m1-(m1-1)/(nb*nprow)*nb*nprow-nb*myrow,0),nb)
+    myrowssca=(m1-1)/(nbr*nprow)*nbr+ MIN(MAX(m1-(m1-1)/(nbr*nprow)*nbr*nprow-nbr*myrow,0),nbr)
     !     Number of rows the local process gets in ScaLAPACK distribution
-    mycolssca=(m2-1)/(nb*npcol)*nb+ MIN(MAX(m2-(m2-1)/(nb*npcol)*nb*npcol-nb*mycol,0),nb)
+    mycolssca=(m2-1)/(nbc*npcol)*nbc+ MIN(MAX(m2-(m2-1)/(nbc*npcol)*nbc*npcol-nbc*mycol,0),nbc)
+  
 
     !Get BLACS ranks for all MPI ranks
     CALL BLACS_PINFO(iamblacs,npblacs)  ! iamblacs = local process rank (e.g. myid)
@@ -225,7 +339,7 @@ CONTAINS
     ENDIF
 
     !Create the descriptors
-    CALL descinit(sc_desc,m1,m2,nb,nb,0,0,ictextblacs,myrowssca,ierr)
+    CALL descinit(sc_desc,m1,m2,nbr,nbc,0,0,ictextblacs,myrowssca,ierr)
     IF (ierr /=0 ) call judft_error('Creation of BLACS descriptor failed')
     local_size1=myrowssca
     local_size2=mycolssca

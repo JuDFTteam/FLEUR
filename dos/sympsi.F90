@@ -31,7 +31,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
-    TYPE(t_zMat),INTENT(IN)        :: zMat
+    TYPE(t_mat),INTENT(IN)         :: zMat
     !
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ne,jspin
@@ -129,16 +129,16 @@ CONTAINS
        norm(i)=0.0
        IF (soc) THEN
           DO k=1,lapw%nv(jspin)*2
-             norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
+             norm(i)=norm(i)+ABS(zMat%data_c(k,i))**2
           ENDDO
        ELSE
           IF (zmat%l_real) THEN
              DO k=1,lapw%nv(jspin)
-                norm(i)=norm(i)+ABS(zMat%z_r(k,i))**2
+                norm(i)=norm(i)+ABS(zMat%data_r(k,i))**2
              ENDDO
           ELSE
              DO k=1,lapw%nv(jspin)
-                norm(i)=norm(i)+ABS(zMat%z_c(k,i))**2
+                norm(i)=norm(i)+ABS(zMat%data_c(k,i))**2
              ENDDO
           ENDIF
        ENDIF
@@ -166,22 +166,22 @@ CONTAINS
              DO n2=1,ndeg
                 IF (zmat%l_real) THEN
                    DO k=1,lapw%nv(jspin)
-                      csum(n1,n2,c)=csum(n1,n2,c)+zMat%z_r(k,deg(n1))*&
-                           zMat%z_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                      csum(n1,n2,c)=csum(n1,n2,c)+zMat%data_r(k,deg(n1))*&
+                           zMat%data_r(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                    END DO
                 ELSE
                    IF (soc) THEN  
                       DO k=1,lapw%nv(jspin)
 
-                         csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(zMat%z_c(k,deg(n1)))*&
-                              (su(1,1,c)*zMat%z_c(gmap(k,c),deg(n2))+ su(1,2,c)*zMat%z_c(gmap(k,c)+lapw%nv(jspin),deg(n2)))+&
-                              CONJG(zMat%z_c(k+lapw%nv(jspin),deg(n1)))* (su(2,1,c)*zMat%z_c(gmap(k,c),deg(n2))+&
-                              su(2,2,c)*zMat%z_c(gmap(k,c)+lapw%nv(jspin),deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
+                         csum(n1,n2,c)=csum(n1,n2,c)+(CONJG(zMat%data_c(k,deg(n1)))*&
+                              (su(1,1,c)*zMat%data_c(gmap(k,c),deg(n2))+ su(1,2,c)*zMat%data_c(gmap(k,c)+lapw%nv(jspin),deg(n2)))+&
+                              CONJG(zMat%data_c(k+lapw%nv(jspin),deg(n1)))* (su(2,1,c)*zMat%data_c(gmap(k,c),deg(n2))+&
+                              su(2,2,c)*zMat%data_c(gmap(k,c)+lapw%nv(jspin),deg(n2))))/ (norm(deg(n1))*norm(deg(n2)))
                       END DO
                    ELSE
                       DO k=1,lapw%nv(jspin)
-                         csum(n1,n2,c)=csum(n1,n2,c)+CONJG(zMat%z_c(k,deg(n1)))*&
-                              zMat%z_c(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
+                         csum(n1,n2,c)=csum(n1,n2,c)+CONJG(zMat%data_c(k,deg(n1)))*&
+                              zMat%data_c(gmap(k,c),deg(n2))/(norm(deg(n1))*norm(deg(n2)))
                       END DO
                    ENDIF
                 ENDIF

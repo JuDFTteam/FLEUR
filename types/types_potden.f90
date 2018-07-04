@@ -35,6 +35,9 @@ MODULE m_types_potden
      GENERIC   :: init=>init_potden_types,init_potden_simple
      PROCEDURE :: copy_both_spin
      PROCEDURE :: sum_both_spin
+     procedure :: SpinsToChargeAndMagnetisation
+     procedure :: ChargeAndMagnetisationToSpins
+     procedure :: Residual
   END TYPE t_potden
 
 CONTAINS
@@ -88,7 +91,71 @@ CONTAINS
        IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2)=this%pw_w(:,1)
     END IF
   END SUBROUTINE copy_both_spin
-  
+
+  subroutine SpinsToChargeAndMagnetisation( den )
+    implicit none
+    class(t_potden), intent(inout)    :: den
+    !type(t_potden),  intent(inout) :: charge_magn
+
+    type(t_potden) :: copy
+
+    copy = den
+
+    den%mt(:,0:,:,  1) = copy%mt(:,0:,:,  1) + copy%mt(:,0:,:,  2)
+    den%mt(:,0:,:,  2) = copy%mt(:,0:,:,  1) - copy%mt(:,0:,:,  2)
+    den%pw(:,       1) = copy%pw(:,       1) + copy%pw(:,       2)
+    den%pw(:,       2) = copy%pw(:,       1) - copy%pw(:,       2)
+    den%vacz(:,:,   1) = copy%vacz(:,:,   1) + copy%vacz(:,:,   2)
+    den%vacz(:,:,   2) = copy%vacz(:,:,   1) - copy%vacz(:,:,   2)
+    den%vacxy(:,:,:,1) = copy%vacxy(:,:,:,1) + copy%vacxy(:,:,:,2)
+    den%vacxy(:,:,:,2) = copy%vacxy(:,:,:,1) - copy%vacxy(:,:,:,2)
+
+  end subroutine
+
+  subroutine ChargeAndMagnetisationToSpins( den )
+    implicit none
+    class(t_potden), intent(inout)    :: den
+    !type(t_potden),  intent(inout) :: spins
+
+    type(t_potden) :: copy
+
+    copy = den
+
+    den%mt(:,0:,:,  1) = ( copy%mt(:,0:,:,  1) + copy%mt(:,0:,:,  2) ) / 2
+    den%mt(:,0:,:,  2) = ( copy%mt(:,0:,:,  1) - copy%mt(:,0:,:,  2) ) / 2
+    den%pw(:,       1) = ( copy%pw(:,       1) + copy%pw(:,       2) ) / 2
+    den%pw(:,       2) = ( copy%pw(:,       1) - copy%pw(:,       2) ) / 2
+    den%vacz(:,:,   1) = ( copy%vacz(:,:,   1) + copy%vacz(:,:,   2) ) / 2
+    den%vacz(:,:,   2) = ( copy%vacz(:,:,   1) - copy%vacz(:,:,   2) ) / 2
+    den%vacxy(:,:,:,1) = ( copy%vacxy(:,:,:,1) + copy%vacxy(:,:,:,2) ) / 2
+    den%vacxy(:,:,:,2) = ( copy%vacxy(:,:,:,1) - copy%vacxy(:,:,:,2) ) / 2
+
+  end subroutine
+
+  subroutine Residual( resDen, outDen, inDen )
+    implicit none
+    class(t_potden), intent(in)    :: outDen
+    class(t_potden), intent(in)    ::  inDen
+    class(t_potden), intent(inout) :: resDen
+
+    resDen%iter       = outDen%iter
+    resDen%potdenType = outDen%potdenType
+    resDen%mt         = outDen%mt - inDen%mt
+    resDen%pw         = outDen%pw - inDen%pw
+    resDen%vacz       = outDen%vacz - inDen%vacz
+    resDen%vacxy      = outDen%vacxy - inDen%vacxy
+    if( allocated( outDen%pw_w ) .and. allocated( inDen%pw_w ) .and. allocated( resDen%pw_w ) ) then
+      resDen%pw_w = outDen%pw_w - inDen%pw_w
+    end if
+    !if( allocated( outDen%theta_pw ) .and. allocated( inDen%theta_pw ) ) resDen%theta_pw = outDen%theta_pw - inDen%theta_pw
+    !if( allocated( outDen%theta_vacz ) .and. allocated( inDen%theta_vacz ) ) resDen%theta_vacz = outDen%theta_vacz - inDen%theta_vacz
+    !if( allocated( outDen%theta_vacxy ) .and. allocated( inDen%theta_vacxy ) ) resDen%theta_vacxy = outDen%theta_vacxy - inDen%theta_vacxy
+    !if( allocated( outDen%phi_pw ) .and. allocated( inDen%phi_pw ) ) resDen%phi_pw = outDen%phi_pw - inDen%phi_pw
+    !if( allocated( outDen%phi_vacz ) .and. allocated( inDen%phi_vacz ) ) resDen%phi_vacz = outDen%phi_vacz - inDen%phi_vacz
+    !if( allocated( outDen%phi_vacxy ) .and. allocated( inDen%phi_vacxy ) ) resDen%phi_vacxy = outDen%phi_vacxy - inDen%phi_vacxy
+
+  end subroutine
+
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,jspins,nocoExtraDim,potden_type)
     USE m_judft
     USE m_types_setup
@@ -153,4 +220,5 @@ CONTAINS
     pd%mmpMat = CMPLX(0.0,0.0)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
+
 END MODULE m_types_potden

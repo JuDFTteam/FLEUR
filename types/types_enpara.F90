@@ -365,6 +365,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN) :: atoms
 
     INTEGER n,l,lo,jspin
+    REAL el0Temp(0:3), ello0Temp(1:atoms%nlod)
 
     OPEN(unit=40,file="enpara",form="formatted",status="replace")
 
@@ -374,15 +375,23 @@ CONTAINS
 8035   FORMAT (5x,'energy parameters          for spin ',i1,' mix=',f10.6)
 8036   FORMAT (t6,'atom',t15,'s',t24,'p',t33,'d',t42,'f')
        DO n = 1,atoms%ntype
-          WRITE (6,FMT=8040)  n, (enpara%el0(l,n,jspin),l=0,3),&
+          el0Temp(0:3) = enpara%el0(0:3,n,jspin)
+          DO l = 0, 3
+             IF (enpara%qn_el(l,n,jspin).NE.0) el0Temp(l) =  REAL(enpara%qn_el(l,n,jspin))
+          END DO
+          WRITE (6,FMT=8040)  n, (el0Temp(l),l=0,3),&
                &                          (enpara%lchange(l,n,jspin),l=0,3),enpara%skiplo(n,jspin)
-          WRITE (40,FMT=8040) n, (enpara%el0(l,n,jspin),l=0,3),&
+          WRITE (40,FMT=8040) n, (el0Temp(l),l=0,3),&
                &                          (enpara%lchange(l,n,jspin),l=0,3),enpara%skiplo(n,jspin)
           !--->    energy parameters for the local orbitals
           IF (atoms%nlo(n).GE.1) THEN
-             WRITE (6,FMT=8039) (enpara%ello0(lo,n,jspin),lo=1,atoms%nlo(n))
+             ello0Temp(1:atoms%nlo(n)) = enpara%ello0(1:atoms%nlo(n),n,jspin)
+             DO lo = 1, atoms%nlo(n)
+                IF (enpara%qn_ello(lo,n,jspin).NE.0) ello0Temp(lo) = enpara%qn_ello(lo,n,jspin)
+             END DO
+             WRITE (6,FMT=8039) (ello0Temp(lo),lo=1,atoms%nlo(n))
              WRITE (6,FMT=8038) (enpara%llochg(lo,n,jspin),lo=1,atoms%nlo(n))
-             WRITE (40,FMT=8039) (enpara%ello0(lo,n,jspin),lo=1,atoms%nlo(n))
+             WRITE (40,FMT=8039) (ello0Temp(lo),lo=1,atoms%nlo(n))
              WRITE (40,FMT=8038) (enpara%llochg(lo,n,jspin),lo=1,atoms%nlo(n))
           END IF
 

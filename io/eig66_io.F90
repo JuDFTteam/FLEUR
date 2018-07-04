@@ -11,26 +11,22 @@ MODULE m_eig66_io
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC open_eig,close_eig
-  PUBLIC read_eig, write_eig
-  PUBLIC read_dos,write_dos
+  PUBLIC open_eig,close_eig,reset_eig
+  PUBLIC read_eig,write_eig
 CONTAINS
 
-  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,&
-                    l_noco,l_create,l_real,l_soc,l_readonly,n_size,mode_in,&
-                    filename,layers,nstars,ncored,nsld,nat,l_dos,l_mcd,l_orb)&
+  FUNCTION open_eig(mpi_comm,nmat,neig,nkpts,jspins,&
+                    l_noco,l_create,l_real,l_soc,l_readonly,n_size,mode_in,filename)&
            RESULT(id)
     USE m_eig66_hdf,ONLY:open_eig_hdf=>open_eig
     USE m_eig66_DA ,ONLY:open_eig_DA=>open_eig
     USE m_eig66_mem,ONLY:open_eig_mem=>open_eig
     USE m_eig66_MPI,ONLY:open_eig_mpi=>open_eig
     IMPLICIT NONE
-    INTEGER,INTENT(IN)          :: nmat,neig,nkpts,jspins,lmax,nlo,ntype,nlotot,mpi_comm
+    INTEGER,INTENT(IN)          :: nmat,neig,nkpts,jspins,mpi_comm
     LOGICAL,INTENT(IN)          :: l_noco,l_readonly,l_create,l_real,l_soc
     INTEGER,INTENT(IN),OPTIONAL :: n_size,mode_in
-    LOGICAL,INTENT(IN),OPTIONAL :: l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
-    INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
     INTEGER:: id,mode
 
     INTEGER:: neig_local,isize,err
@@ -74,13 +70,13 @@ CONTAINS
     CALL timestart("Open file/memory for IO of eig66")
     SELECT CASE (eig66_data_mode(id))
     CASE (DA_mode)
-       CALL open_eig_DA(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,nlotot,l_create,l_real,l_soc,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_DA(id,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,filename)
     CASE (hdf_mode)
-       CALL open_eig_HDF(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_HDF(id,mpi_comm,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,l_readonly,filename)
     CASE (mem_mode)
-       CALL open_eig_MEM(id,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_MEM(id,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,l_noco,filename)
     CASE (mpi_mode)
-       CALL open_eig_MPI(id,mpi_comm,nmat,neig_local,nkpts,jspins,lmax,nlo,ntype,l_create,l_real,l_soc,nlotot,l_noco,n_size,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+       CALL open_eig_MPI(id,mpi_comm,nmat,neig_local,nkpts,jspins,l_create,l_real,l_soc,l_noco,n_size,filename)
     CASE DEFAULT
        CALL juDFT_error("Invalid IO-mode in eig66_io")
     END SELECT
@@ -123,7 +119,7 @@ CONTAINS
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
     INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-    TYPE(t_zMAT),INTENT(INOUT),OPTIONAL  :: zmat
+    TYPE(t_mat),INTENT(INOUT),OPTIONAL  :: zmat
     INTEGER::n
     CALL timestart("IO (read)")
     SELECT CASE (eig66_data_mode(id))
@@ -167,70 +163,16 @@ CONTAINS
     CALL timestop("IO (write)")
   END SUBROUTINE write_eig
 
-  SUBROUTINE write_dos(id,nk,jspin,dos,slab,orbcomp,ksym,jsym,mcd)
-    USE m_eig66_hdf,ONLY:write_dos_hdf=>write_dos
-    USE m_eig66_DA ,ONLY:write_dos_DA=>write_dos
-    USE m_eig66_mem,ONLY:write_dos_MEM=>write_dos
-    USE m_eig66_MPI,ONLY:write_dos_MPI=>write_dos
-    USE m_types
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    TYPE(t_dos), INTENT(IN)      :: dos
-    TYPE(t_orbcomp), INTENT(IN)  :: orbcomp
-    TYPE(t_slab), INTENT(IN)     :: slab
-    INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
-    REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-    CALL timestart("IO (dos-write)")
-    SELECT CASE (eig66_data_mode(id))
-    CASE (da_mode)
-       CALL write_dos_DA(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
-                         dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
-                         ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
-    CASE (hdf_mode)
-       CALL write_dos_HDF(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
-                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
-                          ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
-    CASE (mem_mode)
-       CALL write_dos_Mem(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
-                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
-                          ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
-    CASE (MPI_mode)
-       CALL write_dos_MPI(id,nk,jspin,dos%qal(:,:,:,nk,jspin),dos%qvac(:,:,nk,jspin),&
-                          dos%qis(:,nk,jspin),dos%qvlay(:,:,:,nk,jspin),dos%qstars(:,:,:,:,nk,jspin),&
-                          ksym,jsym,mcd,slab%qintsl,slab%qmtsl,orbcomp%qmtp,orbcomp%comp)
-    CASE (-1)
-       CALL juDFT_error("Could not write DOS to eig-file before opening", calledby = "eig66_io")
-    END SELECT
-    CALL timestop("IO (dos-write)")
-  END SUBROUTINE write_dos
+  SUBROUTINE reset_eig(id,l_soc)
+     USE m_eig66_MPI,ONLY:reset_eig_MPI=>reset_eig
+     INTEGER, INTENT(IN) :: id
+     LOGICAL, INTENT(IN) :: l_soc
 
+     SELECT CASE (eig66_data_mode(id))
+     CASE (MPI_mode)
+        CALL reset_eig_MPI(id,l_soc)
+     END SELECT
 
-  SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    USE m_eig66_hdf,ONLY:read_dos_hdf=>read_dos
-    USE m_eig66_DA ,ONLY:read_dos_DA=>read_dos
-    USE m_eig66_mem,ONLY:read_dos_MEM=>read_dos
-    USE m_eig66_MPI,ONLY:read_dos_MPI=>read_dos
-    IMPLICIT NONE
-    INTEGER, INTENT(IN)          :: id,nk,jspin
-    REAL,INTENT(OUT)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-    COMPLEX,INTENT(OUT)           :: qstars(:,:,:,:)
-    INTEGER,INTENT(OUT)           :: ksym(:),jsym(:)
-    REAL,INTENT(OUT),OPTIONAL     :: mcd(:,:,:)
-    REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-    CALL timestart("IO (dos-read)")
-    SELECT CASE (eig66_data_mode(id))
-    CASE (da_mode)
-       CALL read_dos_DA(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    CASE (hdf_mode)
-       CALL read_dos_HDF(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    CASE (mem_mode)
-       CALL read_dos_Mem(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    CASE (MPI_mode)
-       CALL read_dos_MPI(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-    CASE (-1)
-       CALL juDFT_error("Could not DOS from read eig-file before opening", calledby = "eig66_io")
-    END SELECT
-    CALL timestop("IO (dos-read)")
-  END SUBROUTINE read_dos
+  END SUBROUTINE reset_eig
 
 END MODULE m_eig66_io

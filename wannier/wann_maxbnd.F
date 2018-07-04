@@ -42,15 +42,15 @@ c****************************************************************
       integer          :: n_start,n_end,co
       integer          :: num_bands
 
-      TYPE(t_zmat)     :: zMat
+      TYPE(t_mat)      :: zMat
 
       zMat%l_real = l_real
-      zMat%nbasfcn = nbasfcn
-      zMat%nbands = neigd
+      zMat%matsize1 = nbasfcn
+      zMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
       END IF
 
       n_start=1

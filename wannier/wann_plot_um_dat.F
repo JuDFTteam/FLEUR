@@ -222,7 +222,7 @@ c      real dotirp
       integer :: ngopr1(natd)
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zzMat, zMat
+      TYPE(t_mat)   :: zzMat, zMat
 
       um_format=.false.
       l_byindex=.false.
@@ -526,12 +526,12 @@ c******************************************************************
       allocate (we(neigd),eigg(neigd))
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
+      zzMat%matsize1 = nbasfcn
+      zzMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
       CALL judft_error("TODO:adjust in wann_plot_um_dat")
 !      call wann_read_eig(eig_id, lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
@@ -539,14 +539,14 @@ c******************************************************************
 !     <     nmat,nv, k1,k2,k3,bkpt,wk,nbands,eigg,zzMat, .false.,1)
 
       zMat%l_real = zzMat%l_real
-      zMat%nbasfcn = zzMat%nbasfcn
-      zMat%nbands = zzMat%nbands
+      zMat%matsize1 = zzMat%matsize1
+      zMat%matsize2 = zzMat%matsize2
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat%z_r = 0.0
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+         zMat%data_r = 0.0
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat%z_c = CMPLX(0.0,0.0)
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+         zMat%data_c = CMPLX(0.0,0.0)
       END IF
 
 
@@ -568,11 +568,11 @@ c...we work only within the energy window
         we(nslibd) = we(i)
         IF(zzMat%l_real) THEN
           do j = 1,nv(jspin) + nlotot
-             zMat%z_r(j,nslibd) = zzMat%z_r(j,i)
+             zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
           end do
         ELSE
           do j = 1,nv(jspin) + nlotot
-             zMat%z_c(j,nslibd) = zzMat%z_c(j,i)
+             zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
           end do
         END IF
        endif 

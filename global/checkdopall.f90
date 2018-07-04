@@ -60,7 +60,7 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
    !--->          m.t. boundaries
    nat = 1
    DO n = 1, atoms%ntype
-      CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,atoms%nat))
+      CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,nat))
       CALL checkdop(xp,dimension%nspd,n,nat,0,-1,ispin,&
                     dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
       nat = nat + atoms%neq(n)

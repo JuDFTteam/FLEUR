@@ -10,7 +10,7 @@
       <magnetism jspins="2" l_noco="T" l_J="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
       <nocoParams l_ss="T" l_mperp="F" l_constr="F" l_disp="F" sso_opt="FFF" mix_b=".50000000" thetaJ=".00000000" nsh="0">
-         <qss>.500000000000000 .500000000000000 .000000000000000</qss>
+         <qss>.300000000000000 .100000000000000 .000000000000000</qss>
       </nocoParams>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
       <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>

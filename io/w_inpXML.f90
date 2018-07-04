@@ -166,10 +166,10 @@ SUBROUTINE w_inpXML(&
 
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
    110 FORMAT('      <cutoffs Kmax="',f0.8,'" Gmax="',f0.8,'" GmaxXC="',f0.8,'" numbands="',i0,'"/>')
-   WRITE (fileNum,110) input%rkmax,stars%gmax,xcpot%gmaxxc,input%gw_neigd
+   WRITE (fileNum,110) input%rkmax,stars%gmaxInit,xcpot%gmaxxc,input%gw_neigd
 
-!      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" spinf="2.00"/>
-   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" spinf="',f0.8,'"/>')
+!      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" preconditioning_param="0.0" spinf="2.00"/>
+   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" preconditioning_param="',f3.1,'" spinf="',f0.8,'"/>')
    SELECT CASE (input%imix)
       CASE (1) 
          mixingScheme='straight'
@@ -182,25 +182,29 @@ SUBROUTINE w_inpXML(&
       CASE DEFAULT 
          mixingScheme='errorUnknownMixing'
    END SELECT
-   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%spinf
+   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%preconditioning_param,input%spinf
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
    WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel,input%coretail_lmax
 
 !      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
-   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" l_J="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,.false.,input%swsp,input%lflip
+   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
+   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
    WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%l_spav
 
+   IF (l_explicit.OR.hybrid%l_hybrid) THEN
+      155 FORMAT('      <prodBasis gcutm="',f0.8,'" tolerance="',f0.8,'" ewaldlambda="',i0,'" lexp="',i0,'" bands="',i0,'"/>')
+      WRITE (fileNum,155) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+   END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN
-160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_disp="',l1,&
-           '" mix_b="',f0.8,'" thetaJ="',f0.8,'" nsh="',i0,'">')
-      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, .false., noco%mix_b
+160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,&
+           '" mix_b="',f0.8,'">')
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%mix_b
       162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'
@@ -451,6 +455,13 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
       END IF
 
+      IF(l_explicit.OR.hybrid%l_hybrid) THEN
+         315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
+         line = ''
+         WRITE(line,'(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4,iAtomType)
+         WRITE (fileNum,315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
+      END IF
+
       IF(ANY(xmlElectronStates(:,iAtomType).NE.noState_const)) THEN
          endCoreStates = 1
          startCoreStates = 1
@@ -527,7 +538,7 @@ SUBROUTINE w_inpXML(&
       DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
          l = atoms%llo(ilo,iAtomType)
-         n = INT(enpara%ello0(ilo,iAtomType,1))
+         n = enpara%qn_ello(ilo,iAtomType,1)
          loType = 'SCLO'
          IF(n.LT.0) THEN
             loType = 'HELO'
@@ -625,8 +636,8 @@ SUBROUTINE w_inpXML(&
    END DO
    WRITE (fileNum,'(a)') '   </atomGroups>'
 
-   368 FORMAT('   <output dos="',l1,'" band="',l1,'" vacdos="',l1,'" slice="',l1,'">')
-   WRITE (fileNum,368) banddos%dos,band,banddos%vacdos,sliceplot%slice
+   368 FORMAT('   <output dos="',l1,'" band="',l1,'" vacdos="',l1,'" slice="',l1,'" mcd="',l1,'">')
+   WRITE (fileNum,368) banddos%dos,band,banddos%vacdos,sliceplot%slice,banddos%l_mcd
 
 !      <checks vchk="F" cdinf="F" disp="F"/>
    370 FORMAT('      <checks vchk="',l1,'" cdinf="',l1,'"/>')
@@ -651,6 +662,10 @@ SUBROUTINE w_inpXML(&
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
    420 FORMAT('      <specialOutput eonly="',l1,'" bmt="',l1,'"/>')
    WRITE (fileNum,420) input%eonly,input%l_bmt
+
+!      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
+   430 FORMAT('      <magneticCircularDichroism energyLo="',f0.8,'" energyUp="',f0.8,'"/>')
+   WRITE (fileNum,430) banddos%e_mcd_lo,banddos%e_mcd_up
 
    WRITE (fileNum,'(a)') '   </output>'
    IF(l_outFile) THEN

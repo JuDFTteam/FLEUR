@@ -10,9 +10,9 @@ USE m_juDFT
 
 CONTAINS
 
-SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,dimension,sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,den,regCharges,dos,results,&
-                  moments,mcd,slab)
+SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
+                  vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
+                  moments,coreSpecInput,mcd,slab,orbcomp)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -24,6 +24,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    !     sqal     : l-like charge of each atom type. sum over all k-points and bands
    !************************************************************************************
 
+   USE m_types
    USE m_eig66_io
    USE m_genMTBasis
    USE m_calcDenCoeffs
@@ -46,7 +47,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
-   USE m_types
    USE m_xmlOutput
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
@@ -59,9 +59,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_enpara),        INTENT(IN)    :: enpara
-   TYPE(t_obsolete),      INTENT(IN)    :: obsolete
    TYPE(t_banddos),       INTENT(IN)    :: banddos
-   TYPE(t_sliceplot),     INTENT(IN)    :: sliceplot
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
    TYPE(t_noco),          INTENT(IN)    :: noco
@@ -71,15 +69,16 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE(t_kpts),          INTENT(IN)    :: kpts
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_atoms),         INTENT(IN)    :: atoms
-   TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(IN)    :: vTot
-   TYPE(t_cdnvalKLoop),   INTENT(IN)    :: cdnvalKLoop
+   TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob
    TYPE(t_potden),        INTENT(INOUT) :: den
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
    TYPE(t_dos),           INTENT(INOUT) :: dos
    TYPE(t_moments),       INTENT(INOUT) :: moments
-   TYPE(t_mcd),           INTENT(INOUT) :: mcd
-   TYPE(t_slab),          INTENT(INOUT) :: slab
+   TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
+   TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
+   TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
+   TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -92,10 +91,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_write, l_dosNdir
+   LOGICAL :: l_orbcomprot, l_real, l_write, l_dosNdir, l_corespec
 
    ! Local Arrays
-   INTEGER, ALLOCATABLE :: jsym(:),ksym(:)
    REAL,    ALLOCATABLE :: we(:)
    REAL,    ALLOCATABLE :: eig(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
@@ -107,8 +105,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    TYPE (t_force)            :: force
    TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
    TYPE (t_usdus)            :: usdus
-   TYPE (t_zMat)             :: zMat
-   TYPE (t_orbcomp)          :: orbcomp
+   TYPE (t_mat)              :: zMat
    TYPE (t_gVacMap)          :: gVacMap
 
    CALL timestart("cdnval")
@@ -131,7 +128,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,dimension%jspd))
-   ALLOCATE (jsym(dimension%neigd),ksym(dimension%neigd))
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
@@ -141,17 +137,19 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,.FALSE.)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
-   CALL mcd%init1(banddos,dimension,input,atoms)
-   CALL slab%init(banddos,dimension,atoms,cell)
-   CALL orbcomp%init(banddos,dimension,atoms)
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
+   IF (banddos%l_mcd.AND..NOT.PRESENT(mcd)) CALL juDFT_error("mcd is missing",calledby ="cdnval")
 
    ! calculation of core spectra (EELS) initializations -start-
-   CALL corespec_init(input,atoms,coreSpecInput)
-   IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
-   IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
+   l_coreSpec = .FALSE.
+   IF (PRESENT(coreSpecInput)) THEN
+      CALL corespec_init(input,atoms,coreSpecInput)
+      IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
+      IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
+      l_coreSpec = l_cs
+   END IF
    ! calculation of core spectra (EELS) initializations -end-
 
    IF (mpi%irank==0) THEN
@@ -168,18 +166,18 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       END DO
       IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
-      IF (l_cs) CALL corespec_rme(atoms,input,iType,dimension%nstd,input%jspins,jspin,results%ef,&
-                                  dimension%msh,vTot%mt(:,0,:,:),f,g)
+      IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,dimension%nstd,input%jspins,jspin,results%ef,&
+                                        dimension%msh,vTot%mt(:,0,:,:),f,g)
    END DO
    DEALLOCATE (f,g,flo)
 
    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
-   ALLOCATE (we(MAXVAL(cdnvalKLoop%noccbd(:))))
-   ALLOCATE (eig(MAXVAL(cdnvalKLoop%noccbd(:))))
+   ALLOCATE (we(MAXVAL(cdnvalJob%noccbd(:))))
+   ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
    jsp = MERGE(1,jspin,noco%l_noco)
 
-   DO ikpt = cdnvalKLoop%ikptStart, cdnvalKLoop%nkptExtended, cdnvalKLoop%ikptIncrement
+   DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
 
       IF (ikpt.GT.kpts%nkpt) THEN
 #ifdef CPP_MPI
@@ -190,17 +188,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      noccbd = cdnvalKLoop%noccbd(ikpt)
-      nStart = cdnvalKLoop%nStart(ikpt)
-      nEnd = cdnvalKLoop%nEnd(ikpt)
-
-      we = 0.0
-      we(1:noccbd) = results%w_iks(nStart:nEnd,ikpt,jsp)
-      IF (sliceplot%slice.AND.input%pallst) we(:) = kpts%wtkpt(ikpt)
-      we(:noccbd) = 2.0 * we(:noccbd) / input%jspins ! add in spin-doubling factor
+      noccbd = cdnvalJob%noccbd(ikpt)
+      nStart = cdnvalJob%nStart(ikpt)
+      nEnd = cdnvalJob%nEnd(ikpt)
+      we(1:noccbd) = cdnvalJob%weights(1:noccbd,ikpt)
       eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
 
-      IF (cdnvalKLoop%l_evp) THEN
+      IF (cdnvalJob%l_evp) THEN
          IF (nStart > skip_tt) skip_t = 0
          IF (nEnd <= skip_tt) skip_t = noccbd
          IF ((nStart <= skip_tt).AND.(nEnd > skip_tt)) skip_t = mod(skip_tt,noccbd)
@@ -221,14 +215,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,we,eig,den,dos%qis,results,force%f_b8,zMat)
+                    jspin,lapw,noccbd,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (l_dosNdir) CALL q_int_sl(jspin,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
+         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,&
-                        den,dos%qvac,dos%qvlay,dos%qstars,zMat)
+                        gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac0,eig,den,zMat,dos)
          END IF
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
@@ -245,18 +238,18 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                     skip_t,cdnvalKLoop%l_evp,eigVecCoeffs,usdus,regCharges,dos,mcd,banddos%l_mcd)
+                     skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
-            CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+            IF (PRESENT(slab)) CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
             INQUIRE (file='orbcomprot',exist=l_orbcomprot)
             IF (l_orbcomprot) CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
 
-            CALL orb_comp(ispin,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+            IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
          END IF
 
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
@@ -264,30 +257,28 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) CALL force%addContribsA21A12(input,atoms,dimension,sym,cell,oneD,enpara,&
                                                      usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
-         IF(l_cs) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
-                                    noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
+         IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
+                                          noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
-      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
+      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         IF (banddos%ndir.GT.0) CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,ksym,jsym,zMat)
-
-         CALL write_dos(eig_id,ikpt,jspin,dos,slab,orbcomp,ksym,jsym,mcd%mcd)
+         CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin))
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin),mcd,slab,orbcomp)
    END DO
 #endif
 
    IF (mpi%irank==0) THEN
       CALL cdnmt(dimension%jspd,atoms,sphhar,noco,jsp_start,jsp_end,&
                  enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
-      IF (l_cs) CALL corespec_ddscs(jspin,input%jspins)
+      IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN
             WRITE (6,FMT=8210) ispin
@@ -298,10 +289,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atom
       END DO
       CALL closeXMLElement('mtCharges')
    END IF
-
-#ifdef CPP_MPI
-   CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
-#endif
 
    CALL timestop("cdnval")
 

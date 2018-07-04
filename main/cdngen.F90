@@ -10,7 +10,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                  dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
+                  dimension,kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                   archiveType,outDen)
 
@@ -20,6 +20,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !    core routines for the core contribution
    !*****************************************************
 
+   USE m_types
    USE m_constants
    USE m_prpqfftmap
    USE m_cdnval
@@ -29,7 +30,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdnovlp
    USE m_qfix
    USE m_genNewNocoInp
-   USE m_types
    USE m_xmlOutput
    USE m_magMoms
    USE m_orbMagMoms
@@ -48,7 +48,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_dimension),INTENT(IN)     :: dimension
    TYPE(t_oneD),INTENT(IN)          :: oneD
    TYPE(t_enpara),INTENT(INOUT)     :: enpara
-   TYPE(t_obsolete),INTENT(IN)      :: obsolete
    TYPE(t_banddos),INTENT(IN)       :: banddos
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
@@ -74,7 +73,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_moments)       :: moments
    TYPE(t_mcd)           :: mcd
    TYPE(t_slab)          :: slab
-   TYPE(t_cdnvalKLoop)   :: cdnvalKLoop
+   TYPE(t_orbcomp)       :: orbcomp
+   TYPE(t_cdnvalJob)     :: cdnvalJob
 
 
    !Local Scalars
@@ -84,6 +84,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
+   CALL mcd%init1(banddos,dimension,input,atoms,kpts)
+   CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
+   CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -94,17 +97,17 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL cdnvalKLoop%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
-      CALL cdnval(eig_id,mpi,kpts,jspin,sliceplot,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,obsolete,vTot,oneD,coreSpecInput,cdnvalKLoop,outDen,regCharges,dos,results,moments,mcd,slab)
+      CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+      CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
 
    IF (mpi%irank.EQ.0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
          CALL timestart("cdngen: dos")
-         CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,mcd,results,slab%nsld,oneD)
+         CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
-            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,slab)
+            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
          END IF
          CALL timestop("cdngen: dos")
       END IF

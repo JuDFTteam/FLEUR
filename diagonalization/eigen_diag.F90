@@ -30,6 +30,7 @@ MODULE m_eigen_diag
   INTEGER,PARAMETER:: diag_magma=-6
 #endif
   INTEGER,PARAMETER:: diag_lapack=4
+  INTEGER,PARAMETER:: diag_chase=7
   INTEGER,PARAMETER:: diag_debugout=99
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
@@ -38,21 +39,25 @@ CONTAINS
     parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
   END FUNCTION parallel_solver_available
 
-  SUBROUTINE eigen_diag(hmat,smat,ne,eig,ev)
+  SUBROUTINE eigen_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     USE m_lapack_diag
     USE m_magma
     USE m_elpa
     USE m_scalapack
     USE m_elemental
-    use m_types_mpimat
+    USE m_chase_diag
+    USE m_types_mpimat
     IMPLICIT NONE
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     include 'mpif.h'
 #endif
-    CLASS(t_mat),INTENT(INOUT)             :: smat,hmat
-    CLASS(t_mat),ALLOCATABLE,INTENT(OUT)   :: ev
-    INTEGER,INTENT(INOUT)      :: ne
-    REAL,INTENT(OUT)           :: eig(:)
+    CLASS(t_mat),              INTENT(INOUT) :: smat,hmat
+    CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev
+    INTEGER,                   INTENT(IN)    :: ikpt
+    INTEGER,                   INTENT(IN)    :: jsp
+    INTEGER,                   INTENT(IN)    :: iter
+    INTEGER,                   INTENT(INOUT) :: ne
+    REAL,                      INTENT(OUT)   :: eig(:)
 
     !Locals
     LOGICAL :: parallel
@@ -67,7 +72,7 @@ CONTAINS
     !Select the solver
     SELECT CASE (priv_select_solver(parallel))
     CASE (diag_elpa)
-       !CALL elpa(hmat,smat,ne,eig,ev)
+       CALL elpa_diag(hmat,smat,ne,eig,ev)
     CASE (diag_elemental)
        !CALL ELEMENTAL(hmat,smat,ne,eig,ev)
     CASE (diag_scalapack)
@@ -76,6 +81,12 @@ CONTAINS
        !CALL magma_diag(hmat,smat,ne,eig,ev)
     CASE (diag_lapack)
        CALL lapack_diag(hmat,smat,ne,eig,ev)
+    CASE (diag_chase)
+#ifdef CPP_CHASE
+       CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
+#else
+       CALL juDFT_error('ChASE eigensolver selected but not available', calledby = 'eigen_diag')
+#endif
     CASE (diag_debugout)
        CALL priv_debug_out(smat,hmat)
     END SELECT
@@ -147,6 +158,7 @@ CONTAINS
     IF (juDFT_was_argument("-diag:elemental")) diag_solver=diag_elemental
     IF (juDFT_was_argument("-diag:lapack"))    diag_solver=diag_lapack
     IF (juDFT_was_argument("-diag:magma"))     diag_solver=diag_magma
+    IF (juDFT_was_argument("-diag:chase"))     diag_solver=diag_chase
     IF (juDFT_was_argument("-diag:debugout"))  diag_solver=diag_debugout
     
     !Check if solver is possible

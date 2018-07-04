@@ -58,7 +58,7 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
     DO i=MIN(iintsp,jintsp),MAX(iintsp,jintsp)
-       CALL hsmt_ab(sym,atoms,noco,isp,iintsp,ntyp,na,cell,lapw,fj,gj,ab(:,:),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
+       CALL hsmt_ab(sym,atoms,noco,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
     ENDDO
 
     
@@ -96,6 +96,7 @@ CONTAINS
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
                    in = tlmplm%ind(lmp,lm,ntyp,isp)
+                   IF (lmp==lm) in=(lm* (lm+3))/2
                    IF (in.NE.-9999) THEN
                       IF (in.GE.0) THEN
                          utu = tlmplm%tuu(in,ntyp,isp)
@@ -187,6 +188,7 @@ CONTAINS
                          DO mp = -lp,lp
                             lmp = lp* (lp+1) + mp
                             in = tlmplm%ind(lmp,lm,ntyp,isp)
+                            IF (lmp==lm) in=(lm* (lm+3))/2
                             IF (in.NE.-9999) THEN
                                IF (in.GE.0) THEN
                                   utu = tlmplm%tuu(in,ntyp,isp)
@@ -245,6 +247,7 @@ CONTAINS
                       DO mp = -l,l
                          lmp = l* (l+1) + mp
                          in = tlmplm%ind(lmp,lm,ntyp,isp)
+                         IF (lmp==lm) in=(lm* (lm+3))/2
                          IF (in.NE.-9999) THEN
                             IF (in.GE.0) THEN
                                utu = tlmplm%tuu(in,ntyp,isp)

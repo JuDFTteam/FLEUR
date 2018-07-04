@@ -254,9 +254,7 @@
             carr1 = 0; carr2 = 0; carr3 = 0
 
             ! calculate k1,k2,k3
-            CALL lapw%init(input,noco,&
-     &                kpts,atoms,sym,ikpt,cell,&
-     &                sym%zrfs)
+            CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,sym%zrfs)
 
             ! PW part
             DO igpt = 1,lapw%nv(jsp)

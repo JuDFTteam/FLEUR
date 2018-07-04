@@ -156,8 +156,9 @@
           sliceplot%nnne = 0
 
           banddos%l_mcd = .FALSE.
-          banddos%e_mcd_lo = 0.0
+          banddos%e_mcd_lo = -10.0
           banddos%e_mcd_up = 0.0
+          banddos%unfoldband = .FALSE.
 
           IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))
@@ -250,6 +251,7 @@
           CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%n_u,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+          call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
           CALL ylmnorm_init(atoms%lmaxd)
           !
@@ -522,9 +524,6 @@
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
-
-          !check for broken feature
-          IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
 
         END SUBROUTINE fleur_init
       END MODULE m_fleur_init

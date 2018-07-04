@@ -39,7 +39,7 @@ MODULE m_eig66_hdf
 
 #endif
   PUBLIC open_eig,close_eig
-  PUBLIC read_eig,read_dos,write_dos
+  PUBLIC read_eig
   PUBLIC write_eig!,writesingleeig,writeeigc,writebas
 
 CONTAINS
@@ -57,7 +57,7 @@ CONTAINS
     END SELECT
   END SUBROUTINE priv_find_data
   !----------------------------------------------------------------------
-  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,lmax,nlo,ntype,create,l_real,l_soc,nlotot,readonly,l_dos,l_mcd,l_orb,filename,layers,nstars,ncored,nsld,nat)
+  SUBROUTINE open_eig(id,mpi_comm,nmat,neig,nkpts,jspins,create,l_real,l_soc,readonly,filename)
 
     !*****************************************************************
     !     opens hdf-file for eigenvectors+values
@@ -65,11 +65,9 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER, INTENT(IN) :: id,mpi_comm
-    INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins,nlo,ntype,lmax,nlotot
+    INTEGER, INTENT(IN) :: nmat,neig,nkpts,jspins
     LOGICAL, INTENT(IN) :: create,readonly,l_real,l_soc
-    LOGICAL, INTENT(IN),OPTIONAL ::l_dos,l_mcd,l_orb
     CHARACTER(LEN=*),OPTIONAL :: filename
-    INTEGER,INTENT(IN),OPTIONAL :: layers,nstars,ncored,nsld,nat
 
 #ifdef CPP_HDF
 
@@ -79,7 +77,7 @@ CONTAINS
     INTEGER(HSIZE_T):: dims(7)
     TYPE(t_data_HDF),POINTER::d
     !Set creation and access properties
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
     INCLUDE 'mpif.h'
     IF (readonly) THEN
        access_prp=H5P_DEFAULT_f
@@ -97,7 +95,7 @@ CONTAINS
 #endif 
     CALL priv_find_data(id,d)
     IF (PRESENT(filename)) d%fname=filename
-    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,lmax,nlotot,nlo,ntype,l_real,l_soc,l_dos,l_mcd,l_orb)
+    CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real,l_soc)
     !set access_flags according
     IF (readonly) THEN
        access_mode=H5F_ACC_RDONLY_F
@@ -131,61 +129,6 @@ CONTAINS
        CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "ev", H5T_NATIVE_DOUBLE, spaceid, d%evsetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
-       !stuff for dos etc
-       IF (d%l_dos) THEN
-          dims(:5)=(/4,ntype,neig,nkpts,jspins/)
-          CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qal", H5T_NATIVE_DOUBLE, spaceid, d%qalsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:4)=(/neig,2,nkpts,jspins/)
-          CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qvac", H5T_NATIVE_DOUBLE, spaceid, d%qvacsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:3)=(/neig,nkpts,jspins/)
-          CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qis", H5T_NATIVE_DOUBLE, spaceid, d%qissetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:5)=(/neig,layers,2,nkpts,jspins/)
-          CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qvlay", H5T_NATIVE_DOUBLE, spaceid, d%qvlaysetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:7)=(/2,nstars,neig,layers,2,nkpts,jspins/)
-          CALL h5screate_simple_f(7,dims(:7),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "qstars", H5T_NATIVE_DOUBLE, spaceid, d%qstarssetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:3)=(/neig,nkpts,jspins/)
-          CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "ksym", H5T_NATIVE_DOUBLE, spaceid, d%ksymsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          dims(:3)=(/neig,nkpts,jspins/)
-          CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
-          CALL h5dcreate_f(d%fid, "jsym", H5T_NATIVE_DOUBLE, spaceid, d%jsymsetid, hdferr)
-          CALL h5sclose_f(spaceid,hdferr)
-          IF (d%l_mcd) THEN
-             dims(:5)=(/3*ntype,ncored,neig,nkpts,jspins/)
-             CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "mcd", H5T_NATIVE_DOUBLE, spaceid, d%mcdsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-          ENDIF
-          IF (d%l_orb) THEN
-             dims(:4)=(/nsld,neig,nkpts,jspins/)
-             CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "qintsl", H5T_NATIVE_DOUBLE, spaceid, d%qintslsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-             dims(:4)=(/nsld,neig,nkpts,jspins/)
-             CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "qmtsl", H5T_NATIVE_DOUBLE, spaceid, d%qmtslsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-             dims(:4)=(/neig,nat,nkpts,jspins/)
-             CALL h5screate_simple_f(4,dims(:4),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "qmtp", H5T_NATIVE_DOUBLE, spaceid, d%qmtpsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-             dims(:5)=(/neig,23,nat,nkpts,jspins/)
-             CALL h5screate_simple_f(5,dims(:5),spaceid,hdferr)
-             CALL h5dcreate_f(d%fid, "orbcomp", H5T_NATIVE_DOUBLE, spaceid, d%orbcompsetid, hdferr)
-             CALL h5sclose_f(spaceid,hdferr)
-          ENDIF
-       ENDIF
     ELSE
        CALL h5fopen_f (TRIM(d%fname)//'.hdf', access_Mode, d%fid, hdferr,access_prp)
        !get dataset-ids
@@ -193,24 +136,6 @@ CONTAINS
        CALL h5dopen_f(d%fid, 'w_iks', d%wikssetid, hdferr)
        CALL h5dopen_f(d%fid, 'neig', d%neigsetid, hdferr)
        CALL h5dopen_f(d%fid, 'ev', d%evsetid, hdferr)
-       IF (d%l_dos) THEN
-          CALL h5dopen_f(d%fid, 'qal', d%qalsetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qvac', d%qvacsetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qis', d%qissetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qvlay', d%qvlaysetid, hdferr)
-          CALL h5dopen_f(d%fid, 'qstars', d%qstarssetid, hdferr)
-          CALL h5dopen_f(d%fid, 'ksym', d%ksymsetid, hdferr)
-          CALL h5dopen_f(d%fid, 'jsym', d%jsymsetid, hdferr)
-          IF (d%l_mcd) THEN
-             CALL h5dopen_f(d%fid, 'mcd', d%mcdsetid, hdferr)
-          ENDIF
-          IF (d%l_orb) THEN
-             CALL h5dopen_f(d%fid, 'qintsl', d%qintslsetid, hdferr)
-             CALL h5dopen_f(d%fid, 'qmtsl', d%qmtslsetid, hdferr)
-             CALL h5dopen_f(d%fid, 'qmtp', d%qmtpsetid, hdferr)
-             CALL h5dopen_f(d%fid, 'orbcomp', d%orbcompsetid, hdferr)
-          ENDIF
-       ENDIF
     endif
     IF (.NOT.access_prp==H5P_DEFAULT_f) CALL H5Pclose_f(access_prp&
             &     ,hdferr)
@@ -238,24 +163,6 @@ CONTAINS
        CALL h5dclose_f(d%wikssetid,hdferr)
        CALL h5dclose_f(d%neigsetid,hdferr)
        CALL h5dclose_f(d%evsetid,hdferr)
-       IF (d%l_dos) THEN
-          CALL h5dclose_f(d%qalsetid, hdferr)
-          CALL h5dclose_f(d%qvacsetid, hdferr)
-          CALL h5dclose_f(d%qissetid, hdferr)
-          CALL h5dclose_f(d%qvlaysetid, hdferr)
-          CALL h5dclose_f(d%qstarssetid, hdferr)
-          CALL h5dclose_f(d%ksymsetid, hdferr)
-          CALL h5dclose_f(d%jsymsetid, hdferr)
-          IF (d%l_mcd) THEN
-             CALL h5dclose_f(d%mcdsetid, hdferr)
-          ENDIF
-          IF (d%l_orb) THEN
-             CALL h5dclose_f(d%qintslsetid, hdferr)
-             CALL h5dclose_f(d%qmtslsetid, hdferr)
-             CALL h5dclose_f(d%qmtpsetid, hdferr)
-             CALL h5dclose_f(d%orbcompsetid, hdferr)
-          ENDIF
-       ENDIF
        !close file
        CALL h5fclose_f(d%fid,hdferr)
        !If a filename was given and the name is not the current filename
@@ -294,73 +201,6 @@ CONTAINS
      END SUBROUTINE priv_r_vec
 
 #endif
-     SUBROUTINE read_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-       IMPLICIT NONE
-       INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(OUT)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-       COMPLEX,INTENT(OUT)           :: qstars(:,:,:,:)
-       INTEGER,INTENT(OUT)           :: ksym(:),jsym(:)
-       REAL,INTENT(OUT),OPTIONAL     :: mcd(:,:,:)
-       REAL,INTENT(OUT),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-       TYPE(t_data_HDF),POINTER      :: d
-       REAL,ALLOCATABLE              :: r_tmp5(:,:,:,:,:)
-       CALL priv_find_data(id,d)
-#ifdef CPP_HDF
-       CALL io_read_real3(d%qalsetid,(/1,1,1,nk,jspin/),(/SIZE(qal,1),SIZE(qal,2),SIZE(qal,3),1,1/),qal)
-       CALL io_read_real2(d%qvacsetid,(/1,1,nk,jspin/),(/SIZE(qvac,1),SIZE(qvac,2),1,1/),qvac)
-       CALL io_read_real1(d%qissetid,(/1,nk,jspin/),(/SIZE(qis,1),1,1/),qis)
-       CALL io_read_real3(d%qvlaysetid,(/1,1,1,nk,jspin/),(/SIZE(qvlay,1),SIZE(qvlay,2),SIZE(qvlay,3),1,1/),qvlay)
-       ALLOCATE(r_tmp5(2,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4)))
-       CALL io_read_real5(d%qstarssetid,(/1,1,1,1,1,nk,jspin/),(/2,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4),1,1/),r_tmp5(:,:,:,:,:))
-       qstars=CMPLX(r_tmp5(1,:,:,:,:),r_tmp5(2,:,:,:,:))
-       DEALLOCATE(r_tmp5)
-       CALL io_read_integer1(d%ksymsetid,(/1,nk,jspin/),(/SIZE(ksym,1),1,1/),ksym)
-       CALL io_read_integer1(d%jsymsetid,(/1,nk,jspin/),(/SIZE(jsym,1),1,1/),jsym)
-       IF (d%l_mcd.AND.PRESENT(mcd)) THEN
-          CALL io_read_real3(d%mcdsetid,(/1,1,1,nk,jspin/),(/SIZE(mcd,1),SIZE(mcd,2),SIZE(mcd,3),1,1/),mcd)
-       ENDIF
-       IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-          CALL io_read_real2(d%qintslsetid,(/1,1,nk,jspin/),(/SIZE(qintsl,1),SIZE(qintsl,2),1,1/),qintsl)
-          CALL io_read_real2(d%qmtslsetid,(/1,1,nk,jspin/),(/SIZE(qmtsl,1),SIZE(qmtsl,2),1,1/),qmtsl)
-          CALL io_read_real2(d%qmtpsetid,(/1,1,nk,jspin/),(/SIZE(qmtp,1),SIZE(qmtp,2),1,1/),qmtp)
-          CALL io_read_real3(d%orbcompsetid,(/1,1,1,nk,jspin/),(/SIZE(orbcomp,1),23,SIZE(orbcomp,3),1,1/),orbcomp)
-       ENDIF
-#endif
-     END SUBROUTINE read_dos
-
-
-     SUBROUTINE write_dos(id,nk,jspin,qal,qvac,qis,qvlay,qstars,ksym,jsym,mcd,qintsl,qmtsl,qmtp,orbcomp)
-       IMPLICIT NONE
-       INTEGER, INTENT(IN)          :: id,nk,jspin
-       REAL,INTENT(IN)              :: qal(:,:,:),qvac(:,:),qis(:),qvlay(:,:,:)
-       COMPLEX,INTENT(IN)           :: qstars(:,:,:,:)
-       INTEGER,INTENT(IN)           :: ksym(:),jsym(:)
-       REAL,INTENT(IN),OPTIONAL     :: mcd(:,:,:)
-       REAL,INTENT(IN),OPTIONAL     :: qintsl(:,:),qmtsl(:,:),qmtp(:,:),orbcomp(:,:,:)
-       TYPE(t_data_HDF),POINTER      ::d
-       CALL priv_find_data(id,d)
-#ifdef CPP_HDF
-       CALL io_write_real3(d%qalsetid,(/1,1,1,nk,jspin/),(/SIZE(qal,1),SIZE(qal,2),SIZE(qal,3),1,1/),qal)
-       CALL io_write_real2(d%qvacsetid,(/1,1,nk,jspin/),(/SIZE(qvac,1),SIZE(qvac,2),1,1/),qvac)
-       CALL io_write_real1(d%qissetid,(/1,nk,jspin/),(/SIZE(qis,1),1,1/),qis)
-       CALL io_write_real3(d%qvlaysetid,(/1,1,1,nk,jspin/),(/SIZE(qvlay,1),SIZE(qvlay,2),SIZE(qvlay,3),1,1/),qvlay)
-       CALL io_write_real4(d%qstarssetid,(/1,1,1,1,1,nk,jspin/),(/1,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4),1,1/),REAL(qstars))
-       CALL io_write_real4(d%qstarssetid,(/2,1,1,1,1,nk,jspin/),(/1,SIZE(qstars,1),SIZE(qstars,2),SIZE(qstars,3),SIZE(qstars,4),1,1/),AIMAG(qstars))
-
-       CALL io_write_integer1(d%ksymsetid,(/1,nk,jspin/),(/SIZE(ksym,1),1,1/),ksym)
-       CALL io_write_integer1(d%jsymsetid,(/1,nk,jspin/),(/SIZE(jsym,1),1,1/),jsym)
-       IF (d%l_mcd.AND.PRESENT(mcd)) THEN
-          CALL io_write_real3(d%mcdsetid,(/1,1,1,nk,jspin/),(/SIZE(mcd,1),SIZE(mcd,2),SIZE(mcd,3),1,1/),mcd)
-       ENDIF
-       IF (d%l_orb.AND.PRESENT(qintsl)) THEN
-          CALL io_write_real2(d%qintslsetid,(/1,1,nk,jspin/),(/SIZE(qintsl,1),SIZE(qintsl,2),1,1/),qintsl)
-          CALL io_write_real2(d%qmtslsetid,(/1,1,nk,jspin/),(/SIZE(qmtsl,1),SIZE(qmtsl,2),1,1/),qmtsl)
-          CALL io_write_real2(d%qmtpsetid,(/1,1,nk,jspin/),(/SIZE(qmtp,1),SIZE(qmtp,2),1,1/),qmtp)
-          CALL io_write_real3(d%orbcompsetid,(/1,1,1,nk,jspin/),(/SIZE(orbcomp,1),23,SIZE(orbcomp,3),1,1/),orbcomp)
-       ENDIF
-#endif
-     END SUBROUTINE write_dos
-
 
      SUBROUTINE write_eig(id,nk,jspin,neig,neig_total,eig,w_iks,n_size,n_rank,zmat)
 
@@ -480,7 +320,7 @@ CONTAINS
        INTEGER, INTENT(OUT),OPTIONAL  :: neig
        REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
        INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
-       TYPE(t_zMat),OPTIONAL  :: zmat
+       TYPE(t_mat),OPTIONAL  :: zmat
 
 #ifdef CPP_HDF
        INTEGER:: n1,n,k
@@ -508,9 +348,9 @@ CONTAINS
           IF (.NOT.PRESENT(n_end)) CALL juDFT_error("BUG3 in read_eig")
           IF (PRESENT(zMat)) THEN
              IF (zmat%l_real) THEN
-                CALL priv_r_vec(d,nk,jspin,n_start,n_end,zmat%z_r)
+                CALL priv_r_vec(d,nk,jspin,n_start,n_end,zmat%data_r)
              ELSE
-                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,zmat%z_c)
+                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,zmat%data_c)
              ENDIF
           ENDIF
        ENDIF

@@ -7,12 +7,12 @@
       MODULE m_bandstr1
       use m_juDFT
       USE m_types
+      use m_unfold_band_kpts
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE bandstr1(
-     >                    idsyst,idtype,bmat,kpts,input,l_fillArrays)
-
+     >               idsyst,idtype,bmat,kpts,input,l_fillArrays,banddos)
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(IN) :: input
@@ -21,6 +21,7 @@
       INTEGER, INTENT (IN)  :: idsyst,idtype
       REAL,    INTENT (IN)  :: bmat(3,3)
       LOGICAL, INTENT (IN)  :: l_fillArrays
+      TYPE(t_banddos),INTENT(IN)  :: banddos
 
       REAL, POINTER             :: syp(:,:) 
       CHARACTER(len=1), POINTER :: ssy(:)
@@ -110,9 +111,13 @@
          CLOSE (41)
       END IF
 
-      CALL write_gnu(
+      IF (banddos%unfoldband) THEN
+          CALL write_gnu_sc(
+     >               nosyp,d,ssy,input)  
+      ELSE
+          CALL write_gnu(
      >               nosyp,d,ssy,input)
-
+      END IF
       DEALLOCATE ( rsyp,syp,del,nk,ssy,d,bkTemp )
 
       END SUBROUTINE bandstr1
