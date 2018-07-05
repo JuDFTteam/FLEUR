@@ -49,7 +49,7 @@ CONTAINS
       CALL judft_error("LibXC exchange- and correlation-function indicies need to be set"&
        ,hint='Try this: ' // ACHAR(10) //&
               '<xcFunctional name="libxc" relativisticCorrections="F">' // ACHAR(10) //& 
-              '  <libXC  exchange="1" correlation="1" /> &' // ACHAR(10) //& 
+              '  <libXC  exchange="1" correlation="1" /> ' // ACHAR(10) //& 
               '</xcFunctional> ')
     endif 
 
