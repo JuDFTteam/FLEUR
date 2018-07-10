@@ -82,7 +82,8 @@ CONTAINS
        END IF
        IF (ALLOCATED(grad%laplace)) THEN
           !Lapacian of density
-          fac=MERGE(2,1,jspins==1)
+          !fac=MERGE(2,1,jspins==1)
+          fac=1
           DO js=1,jspins
              DO i=1,nsp
                 grad%laplace(kt+i,js) = (rhdrr(i,js) + 2.e0*rhdr(i,js)/rv1 +&
