@@ -112,12 +112,15 @@ CONTAINS
     ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
     IF (xcpot%is_gga()) THEN
        IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-       CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,grad%vsigma)
+       ALLOCATE(vsigma,mold=grad%vsigma)
+       !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
+       CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,vsigma)
        IF (xcpot%func_id_c>0) THEN
-          ALLOCATE(vsigma,mold=grad%sigma)
-          CALL xc_f03_gga_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,vsigma)
+          CALL xc_f03_gga_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,grad%vsigma)
           grad%vsigma=grad%vsigma+vsigma
           vxc_tmp=vxc_tmp+vx_tmp
+       ELSE     
+         vxc_tmp=vx_tmp
        ENDIF
     ELSE  !LDA potentials
        CALL xc_f03_lda_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
