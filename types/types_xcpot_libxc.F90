@@ -44,7 +44,15 @@ CONTAINS
     xcpot%jspins=jspins
     xcpot%func_id_x=id_x
     xcpot%func_id_c=id_c
- 
+
+    if(xcpot%func_id_x == 0 .or. xcpot%func_id_c == 0) then
+      CALL judft_error("LibXC exchange- and correlation-function indicies need to be set"&
+       ,hint='Try this: ' // ACHAR(10) //&
+              '<xcFunctional name="libxc" relativisticCorrections="F">' // ACHAR(10) //& 
+              '  <libXC  exchange="1" correlation="1" /> ' // ACHAR(10) //& 
+              '</xcFunctional> ')
+    endif 
+
     IF (jspins==1) THEN
        CALL xc_f03_func_init(xcpot%xc_func_x, xcpot%func_id_x, XC_UNPOLARIZED)
        IF (xcpot%func_id_c>0) CALL xc_f03_func_init(xcpot%xc_func_c, xcpot%func_id_c, XC_UNPOLARIZED)
