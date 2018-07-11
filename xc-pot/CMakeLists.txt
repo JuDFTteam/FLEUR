@@ -1,3 +1,7 @@
+set(fleur_F90 ${fleur_F90}
+xc-pot/libxc_postprocess_gga.f90
+)
+
 set(fleur_F77 ${fleur_F77}
 xc-pot/corg91.F
 xc-pot/corl91.f

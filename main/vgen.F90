@@ -20,7 +20,7 @@ CONTAINS
   !!     TE_EXC :   charge density-ex-corr.energy density integral
 
   SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                  obsolete,cell,oneD,sliceplot,mpi,results,noco,den,vTot,vXC,vCoul)
+                  obsolete,cell,oneD,sliceplot,mpi,results,noco,den,vTot,vx,vCoul)
 
     USE m_rotate_int_den_to_local
     USE m_bfield
@@ -32,6 +32,7 @@ CONTAINS
     USE m_mpi_bc_potden
 #endif
     IMPLICIT NONE
+
 
     TYPE(t_results),   INTENT(INOUT)  :: results
     CLASS(t_xcpot),    INTENT(IN)     :: xcpot
@@ -51,25 +52,28 @@ CONTAINS
     TYPE(t_sphhar),    INTENT(IN)     :: sphhar
     TYPE(t_atoms),     INTENT(IN)     :: atoms 
     TYPE(t_potden),    INTENT(INOUT)  :: den
-    TYPE(t_potden),    INTENT(INOUT)  :: vTot,vXC,vCoul
+    TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
 
     TYPE(t_potden)                    :: workden,denRot
 
     if (mpi%irank==0) WRITE (6,FMT=8000)
 8000 FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
+
     CALL vTot%resetPotDen()
     CALL vCoul%resetPotDen()
-    CALL vXC%resetPotDen()
-    ALLOCATE(vXC%pw_w,vTot%pw_w,mold=vTot%pw)
+    CALL vx%resetPotDen()
+    ALLOCATE(vx%pw_w,vTot%pw_w,mold=vTot%pw)
     ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
 
     CALL workDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
 
     !sum up both spins in den into workden
     CALL den%sum_both_spin(workden)
+
    
     CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
+
 
     CALL vCoul%copy_both_spin(vTot)
 
@@ -79,19 +83,21 @@ CONTAINS
        CALL rotate_int_den_to_local(dimension,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
     ENDIF
 
+
     CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                    obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vXC,results)
+                    obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
+
 
     !ToDo, check if this is needed for more potentials as well...
     CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
-    DEALLOCATE(vcoul%pw_w,vXC%pw_w)
+    DEALLOCATE(vcoul%pw_w,vx%pw_w)
 
     CALL bfield(input,noco,atoms,field,vTot)
 
 #ifdef CPP_MPI
     CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
     CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
-    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vXC)
+    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
 
   END SUBROUTINE vgen

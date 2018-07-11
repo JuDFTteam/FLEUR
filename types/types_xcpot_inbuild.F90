@@ -135,7 +135,7 @@ CONTAINS
   END FUNCTION xcpot_get_exchange_weight
 
 !***********************************************************************
-      SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,drdsigma)
+      SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
 !***********************************************************************
 !
    USE m_xcxal, ONLY : vxcxal
@@ -164,8 +164,7 @@ CONTAINS
       REAL, INTENT (OUT) :: vxc(:,:)
 
       ! optional arguments for GGA
-      TYPE(t_gradients),INTENT(IN),OPTIONAL::grad
-      REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:) !This will not be allocated
+      TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
 !c
 !c ---> local scalars
       INTEGER :: ngrid

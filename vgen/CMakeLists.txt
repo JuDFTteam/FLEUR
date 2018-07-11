@@ -2,8 +2,6 @@ set(fleur_F77 ${fleur_F77}
 vgen/dylm3.f
 vgen/fft3dxc.f
 vgen/grdrsvac.f
-vgen/mkgxyz3.f
-vgen/mkgylm.f
 vgen/mkgz.f
 vgen/modcyli.f
 vgen/modcylk.f
@@ -17,8 +15,11 @@ vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
 vgen/b_field.F90
+vgen/mkgylm.f90
+vgen/mkgxyz3.f90
 vgen/convol.f90
 vgen/grdrsis.f90
+vgen/mt_tofrom_grid.F90
 vgen/int_nv.F90
 vgen/lhglptg.f90
 vgen/lhglpts.f90
@@ -32,12 +33,11 @@ vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
 vgen/rotate_int_den_to_local.F90
 vgen/vintcz.f90
-vgen/visxc.f90
-vgen/visxcg.f90
+vgen/vis_xc.F90
+vgen/pw_tofrom_grid.F90
 vgen/vmatgen.f90
 vgen/vmts.F90
-vgen/vmtxc.f90
-vgen/vmtxcg.F90
+vgen/vmt_xc.F90
 vgen/vvac.f90
 vgen/vvacis.f90
 vgen/vvacxc.f90

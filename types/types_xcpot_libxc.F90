@@ -44,7 +44,15 @@ CONTAINS
     xcpot%jspins=jspins
     xcpot%func_id_x=id_x
     xcpot%func_id_c=id_c
- 
+
+    if(xcpot%func_id_x == 0 .or. xcpot%func_id_c == 0) then
+      CALL judft_error("LibXC exchange- and correlation-function indicies need to be set"&
+       ,hint='Try this: ' // ACHAR(10) //&
+              '<xcFunctional name="libxc" relativisticCorrections="F">' // ACHAR(10) //& 
+              '  <libXC  exchange="1" correlation="1" /> ' // ACHAR(10) //& 
+              '</xcFunctional> ')
+    endif 
+
     IF (jspins==1) THEN
        CALL xc_f03_func_init(xcpot%xc_func_x, xcpot%func_id_x, XC_UNPOLARIZED)
        IF (xcpot%func_id_c>0) CALL xc_f03_func_init(xcpot%xc_func_c, xcpot%func_id_c, XC_UNPOLARIZED)
@@ -95,7 +103,7 @@ CONTAINS
   END FUNCTION xcpot_get_exchange_weight
 
   !***********************************************************************
-  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,drdsigma)
+  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
     !***********************************************************************
     IMPLICIT NONE
     CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
@@ -104,23 +112,23 @@ CONTAINS
     REAL, INTENT (OUT)       :: vx (:,:)  !points,spin
     REAL, INTENT (OUT  )     :: vxc(:,:)  !
     ! optional arguments for GGA
-    TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
-    REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:)
+    TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
 #ifdef CPP_LIBXC    
-    REAL,ALLOCATABLE::vxc_tmp(:,:),vx_tmp(:,:),vsigma(:)
+    REAL,ALLOCATABLE::vxc_tmp(:,:),vx_tmp(:,:),vsigma(:,:)
     !libxc uses the spin as a first index, hence we have to transpose....
     ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
     ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
     IF (xcpot%is_gga()) THEN
-       CALL judft_error("libxc GGA not implemented yet")
        IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-       ALLOCATE(drdsigma(SIZE(grad%sigma)))
-       CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,drdsigma)
+       ALLOCATE(vsigma,mold=grad%vsigma)
+       !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
+       CALL xc_f03_gga_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,vsigma)
        IF (xcpot%func_id_c>0) THEN
-          ALLOCATE(vsigma(SIZE(grad%sigma)))
-          CALL xc_f03_gga_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,vsigma)
-          drdsigma=drdsigma+vsigma
+          CALL xc_f03_gga_vxc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,grad%vsigma)
+          grad%vsigma=grad%vsigma+vsigma
           vxc_tmp=vxc_tmp+vx_tmp
+       ELSE     
+         vxc_tmp=vx_tmp
        ENDIF
     ELSE  !LDA potentials
        CALL xc_f03_lda_vxc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
@@ -169,9 +177,14 @@ CONTAINS
 
   SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
     INTEGER, INTENT (IN)         :: jspins,ngrid
-    TYPE(t_gradients),INTENT(OUT):: grad
+    TYPE(t_gradients),INTENT(INOUT):: grad
     !For libxc we only need the sigma array...
+    IF (ALLOCATED(grad%sigma)) DEALLOCATE(grad%sigma,grad%gr,grad%laplace,grad%vsigma)
     ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
+    ALLOCATE(grad%gr(3,ngrid,jspins))
+    ALLOCATE(grad%laplace(ngrid,jspins))
+    ALLOCATE(grad%vsigma,mold=grad%sigma)
+
   END SUBROUTINE xcpot_alloc_gradients
 
 
