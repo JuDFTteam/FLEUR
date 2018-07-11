@@ -81,47 +81,60 @@ CONTAINS
   SUBROUTINE generate_full_matrix(mat)
     CLASS(t_mpimat),INTENT(INOUT) ::mat
     
-    INTEGER :: i,n_col,n_row,myid,err,myrow,mycol,np
+    INTEGER :: i,j,i_glob,j_glob,npcol,nprow,myid,err,myrow,mycol,np
     COMPLEX,ALLOCATABLE:: tmp_c(:,:)
     REAL,ALLOCATABLE   :: tmp_r(:,:)
 #ifdef CPP_SCALAPACK
     INCLUDE 'mpif.h'
     INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
-   
-    !CALL mat%print_matrix(432)
-
-    IF (mat%l_real) THEN
-       ALLOCATE(tmp_r(mat%matsize1,mat%matsize2))
-    ELSE
-       ALLOCATE(tmp_c(mat%matsize1,mat%matsize2))
-    END IF
 
     CALL MPI_COMM_RANK(mat%mpi_com,myid,err)
     CALL MPI_COMM_SIZE(mat%mpi_com,np,err)
  
-    myrow = myid/mat%npcol
-    mycol = myid -(myid/mat%npcol)*mat%npcol  
+    CALL blacs_gridinfo(mat%blacs_desc(2),nprow,npcol,myrow,mycol)
+    !Set lower part of matrix to zero
+ 
+    DO i=1,mat%matsize1
+       DO j=1,mat%matsize2
+          ! Get global column corresponding to i and number of local rows up to
+          ! and including the diagonal, these are unchanged in A
+          i_glob = indxl2g(i,     mat%blacs_desc(5), myrow, 0, nprow)
+          j_glob = indxl2g(j,     mat%blacs_desc(6), mycol, 0, npcol)
+
+          IF (i_glob>j_glob) THEN
+             IF (mat%l_real) THEN
+                mat%data_r(i,j) = 0.0
+             ELSE
+                mat%data_c(i,j) = 0.0
+             ENDIF
+          ENDIF
+          IF (i_glob==j_glob) THEN
+             IF (mat%l_real) THEN
+                mat%data_r(i,j) =  mat%data_r(i,j)/2.0
+             ELSE
+                mat%data_c(i,j) =  mat%data_c(i,j)/2.0
+             ENDIF
+          ENDIF
+       ENDDO
+    ENDDO
 
     IF (mat%l_real) THEN
-       CALL pdtran(mat%global_size1,mat%global_size1,1.d0,mat%data_r,1,1,&
-                          mat%blacs_desc,0.d0,tmp_r,1,1,mat%blacs_desc)
+       ALLOCATE(tmp_r(mat%matsize1,mat%matsize2))
+       tmp_r=mat%data_r
     ELSE
-       CALL pztranc(mat%global_size1,mat%global_size1,cmplx(1.0,0.0),mat%data_c,1,1,&
-                          mat%blacs_desc,cmplx(0.d0,0.d0),tmp_c,1,1,mat%blacs_desc)
-    ENDIF
+       ALLOCATE(tmp_c(mat%matsize1,mat%matsize2))
+       tmp_c=mat%data_c
+    END IF
+    CALL MPI_BARRIER(mat%mpi_com,i)
+ IF (mat%l_real) THEN
+#ifdef CPP_SCALAPACK          
 
+       CALL pdgeadd('t',mat%global_size1,mat%global_size2,1.0,tmp_r,1,1,mat%blacs_desc,1.0,mat%data_r,1,1,mat%blacs_desc)
+    ELSE
+       CALL pzgeadd('c',mat%global_size1,mat%global_size2,CMPLX(1.0,0.0),tmp_c,1,1,mat%blacs_desc,CMPLX(1.0,0.0),mat%data_c,1,1,mat%blacs_desc)
+#endif
+    END IF
 
-    DO i=1,mat%matsize2
-       ! Get global column corresponding to i and number of local rows up to
-       ! and including the diagonal, these are unchanged in A
-       n_col = indxl2g(i,     mat%blacs_desc(6), mycol, 0, mat%npcol)
-       n_row = numroc (n_col, mat%blacs_desc(5), myrow, 0, mat%nprow)
-       IF (mat%l_real) THEN
-          mat%data_r(n_row+1:,i) = tmp_r(n_row+1:,i)
-       ELSE
-          mat%data_c(n_row+1:,i) = tmp_c(n_row+1:,i)
-       ENDIF
-    ENDDO
 
 #endif
   END SUBROUTINE generate_full_matrix
