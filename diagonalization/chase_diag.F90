@@ -140,7 +140,7 @@ IMPLICIT NONE
     END SELECT
   END SUBROUTINE chase_diag
   
-    SUBROUTINE chase_diag_noMPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
+  SUBROUTINE chase_diag_noMPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
 
     USE m_types
     USE m_judft
@@ -213,7 +213,7 @@ IMPLICIT NONE
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
+            eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMatTemp%data_r,zmat%matsize1,info)
@@ -268,7 +268,7 @@ IMPLICIT NONE
        ne = nev
 
        CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
+            eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
        ! --> recover the generalized eigenvectors z by solving z' = l^t * z
        CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,zMatTemp%data_c,zmat%matsize1,info)
@@ -307,7 +307,7 @@ IMPLICIT NONE
     REAL,                      INTENT(OUT)      :: eig(:)
 
     INTEGER            :: i, j, nev, nex, nbands,xoff,yoff,xlen,ylen,ierr,nb_x,nb_y
-    INTEGER            :: info,irank
+    INTEGER            :: info,myid,np
     REAL               :: scale !scaling of eigenvalues from scalapack
 
     CLASS(t_mat),                  ALLOCATABLE  :: zMatTemp
@@ -315,18 +315,20 @@ IMPLICIT NONE
     REAL,                          ALLOCATABLE  :: eigenvalues(:)
     include 'mpif.h'
 
-    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,info)
-  PRINT *,"Chase 1"
- 
+    CALL MPI_COMM_RANK(hmat%mpi_com,myid,info)
+    CALL MPI_COMM_SIZE(hmat%mpi_com,np,info)
+  smat%blacs_desc=hmat%blacs_desc
+
+  call smat%generate_full_matrix()
+  call hmat%generate_full_matrix()
     !Transform to standard problem using SCALAPACK
     IF (hmat%l_real) THEN
        CALL pdpotrf('U',smat%global_size1,smat%data_r,1,1,smat%blacs_desc,info)
-       PRINT *,"pdpotrf",info
        IF (info.NE.0) THEN
           WRITE (*,*) 'Error in pdpotrf: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
-        CALL pdsygst(1,'U',smat%global_size1,hmat%data_r,1,1,smat%blacs_desc,smat%data_r,1,1,smat%blacs_desc,scale,info)
+        CALL pdsygst(1,'U',smat%global_size1,hmat%data_r,1,1,hmat%blacs_desc,smat%data_r,1,1,smat%blacs_desc,scale,info)
         IF (ABS(scale-1)>1E-10) call judft_error("Scale parameter not implemented in chase_diag")
         IF (info.NE.0) THEN
           WRITE (6,*) 'Error in pdsygst: info =',info
@@ -346,27 +348,17 @@ IMPLICIT NONE
        ENDIF
     END IF
 
-    ! H is only set in the upper half, solve_evp_real needs a full matrix
-    ! Set lower half from upper half
-
-    call hmat%generate_full_matrix()
-
-    !call hmat%print_matrix(444)
-    ! Now we are ready to set up chase
-    
-  PRINT *,"Chase 2"
-    nev = min(ne,hmat%global_size1)
+    nev = MIN(ne,hmat%global_size1)
     nex = min(max(nev/4, 45), hmat%global_size1-nev) !dimensioning for workspace
 
     CALL priv_init_chasempimat(hmat,chase_mat,nev,nex)
     
+    CALL chase_mat%generate_full_matrix()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
     ALLOCATE(t_mpimat::zmatTemp)
     CALL zMatTemp%init(hmat%l_real,hmat%global_size1,nev+nex,MPI_COMM_SELF,.TRUE.) !Generate a pseudo-distributed matrix
 
-
-  PRINT *,"Chase 3"
     IF (hmat%l_real) THEN
        IF(iter.EQ.1) THEN
           CALL mpi_chase_r(chase_mat%data_r, zMatTemp%data_r, eigenvalues,  25, 1e-10, 'R', 'S' )
@@ -383,11 +375,9 @@ IMPLICIT NONE
        END IF
     ENDIF
 
-    if (irank==0) PRINT *,eigenvalues
-    stop "DEBUG"
     ne = nev
-    CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
-                      eigenvalues(:(nev+nex)),zmat=zMatTemp)
+    IF (myid==0) CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
+         eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
     CALL hmat%copy(zmatTemp,1,1) !Copy matrix into distributed form
     call zmatTemp%free()
@@ -412,10 +402,12 @@ IMPLICIT NONE
     CALL zmat%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%mpi_com,.FALSE.)
     CALL zmat%copy(hmat,1,1)
 
-    
-    DO i = 1, ne
-       eig(i) = eigenvalues(i)
-    END DO
+    !Distribute eigenvalues over PEs
+    ne=0
+    DO i=myid+1,nev,np
+       ne=ne+1
+       eig(ne)=eigenvalues(i)
+    ENDDO
   END SUBROUTINE chase_diag_MPI
 
   SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
@@ -429,7 +421,7 @@ IMPLICIT NONE
     INTEGER     :: myrow,mycol
     INTEGER     :: npblacs,np,myid
     INTEGER     :: rowlen,collen,rowoff,coloff
-    INTEGER     :: k,i,j
+    INTEGER     :: k,i,j,l
     INTEGER     :: ierr
 
     INTEGER,ALLOCATABLE :: iblacsnums(:),ihelp(:),iusermap(:,:)
@@ -460,11 +452,6 @@ IMPLICIT NONE
     CALL MPI_ALLREDUCE(rowlen,nbr,1,MPI_INTEGER,MPI_MAX,mat%mpi_com,ierr)
     CALL MPI_ALLREDUCE(collen,nbc,1,MPI_INTEGER,MPI_MAX,mat%mpi_com,ierr)
 
-    !Determine scalapack grid
-    !PRINT *,"G1:",myid,myrow,mycol,mat%nprow,mat%npcol
-    !CALL priv_processor_grid(mat%global_size1,rowoff,coloff,nbr,nbc,myrow,mycol,mat%nprow,mat%npcol) 
-    !PRINT *,"G2:",myid,myrow,mycol,mat%nprow,mat%npcol
-    !Now included in init-call to chase above
     
     ALLOCATE(iusermap(mat%nprow,mat%npcol))
     iusermap=-2
@@ -476,6 +463,7 @@ IMPLICIT NONE
     ! Create the Grid
     CALL BLACS_GRIDMAP(mat%blacs_ctext,iusermap,mat%nprow,mat%nprow,mat%npcol)
 
+   
     !Now create the matrix
     mat%matsize1=numroc(mat%global_size1,nbr,myrow,0,mat%nprow)
     mat%matsize2=numroc(mat%global_size1,nbc,mycol,0,mat%npcol)
@@ -498,54 +486,10 @@ IMPLICIT NONE
     !Copy data from hmat
     CALL mat%copy(hmat,1,1)
 
-    !Test if indices match
-    PRINT *,"I",coloff+3,indxl2g(3,mat%blacs_desc(6), mycol, 0, mat%npcol)
-    PRINT *,"I",rowoff+4,indxl2g(4,mat%blacs_desc(5), myrow, 0, mat%nprow)
-    
-    call hmat%print_matrix(445) 
-    CALL mat%print_matrix(444)
-
-    DO i=1,mat%matsize1
-       DO j=1,mat%matsize2
-          PRINT *,"MAT",i+rowoff,j+coloff,mat%data_r(i,j)
-       ENDDO
-    ENDDO
     
     
   END SUBROUTINE priv_init_chasempimat
 
-     
-
-!    SUBROUTINE priv_processor_grid(myid,np,myrow,mycol,nprow,npcol)
-!      IMPLICIT NONE
-!      INTEGER,INTENT(IN) :: myid,np
-!      INTEGER,INTENT(OUT):: myrow,mycol,nprow,npcol
-!      
-!      INTEGER:: j
-      
-!      distloop: DO j=INT(SQRT(REAL(np))),1,-1
-!         IF ( (np/j) * j == np) THEN
-!            nprow = np/j
-!            npcol = j
-!            EXIT distloop
-!         ENDIF
-!      ENDDO distloop
-!      mycol=myid/nprow
-!      myrow=myid-(myid/nprow)*nprow
-!    END SUBROUTINE priv_processor_grid
-
-  SUBROUTINE priv_processor_grid(matsize,rowoff,coloff,nbr,nbc,myrow,mycol,nprow,npcol)
-      IMPLICIT NONE
-      INTEGER,INTENT(IN) :: matsize,rowoff,coloff,nbr,nbc
-      INTEGER,INTENT(OUT):: myrow,mycol,nprow,npcol
-      
-      npcol=(matsize-1)/nbc+1
-      nprow=(matsize-1)/nbr+1
-
-      myrow=rowoff/nbr
-      mycol=coloff/nbc
-
-    END SUBROUTINE priv_processor_grid
 
 #endif
   END MODULE m_chase_diag
