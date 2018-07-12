@@ -72,12 +72,6 @@ CONTAINS
     addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
     addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
     addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
-!    addX = 0
-!    addY = 0
-!    addZ = 0
-
-write(*,*) 'addX',addX,'addY',addY,'addZ',addZ
-    
     mk1 = int(input%rkmax/arltv1)+2
     mk2 = int(input%rkmax/arltv2)+2
     mk3 = int(input%rkmax/arltv3)+2
@@ -94,9 +88,6 @@ write(*,*) 'addX',addX,'addY',addY,'addZ',addZ
        DO  j1 = -mk1-addX,mk1+addX
           DO  j2 = -mk2-addY,mk2+addY
              DO  j3 = -mk3-addZ,mk3+addZ
-!       DO  j1 = -mk1,mk1
-!          DO  j2 = -mk2,mk2
-!             DO  j3 = -mk3,mk3
                 s = lapw%bkpt + (/j1,j2,j3/) + (2*ispin - 3)/2.0*noco%qss
                 r2 = dot_PRODUCT(MATMUL(s,cell%bbmat),s)
                 IF (r2.LE.rk2)  nv = nv + 1
@@ -189,11 +180,7 @@ write(*,*) 'addX',addX,'addY',addY,'addZ',addZ
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
     addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
     addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
-    addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
-!    addX = 0
-!    addY = 0
-!    addZ = 0
-    
+    addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))    
     mk1 = int( input%rkmax/arltv1 )+4
     mk2 = int( input%rkmax/arltv2 )+4
     mk3 = int( input%rkmax/arltv3 )+4
@@ -206,9 +193,6 @@ write(*,*) 'addX',addX,'addY',addY,'addZ',addZ
        DO  j1 = -mk1-addX,mk1+addX
           DO  j2 = -mk2-addY,mk2+addY
              DO  j3 = -mk3-addZ,mk3+addZ
-!       DO  j1 = -mk1,mk1
-!         DO  j2 = -mk2,mk2
-!             DO  j3 = -mk3,mk3
                 s=lapw%bkpt+(/j1,j2,j3/)+(2*ispin - 3)/2.0*noco%qss
                 sq = lapw%bkpt+ (/j1,j2,j3/)
                 r2 = dot_PRODUCT(s,MATMUL(s,cell%bbmat))

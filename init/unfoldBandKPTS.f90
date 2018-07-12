@@ -206,6 +206,7 @@ CONTAINS
 		    END IF
 		END IF	
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
+!	write (*,*)results%ef
 		DO i=1,zMat%matsize2
 		    IF (method_rubel) THEN
 			DO j=1,lapw%nv(jsp)
