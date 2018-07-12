@@ -19,6 +19,7 @@ global/savewigner.f
 )
 set(fleur_F90 ${fleur_F90}
 global/constants.f90
+global/matrix_copy.F90
 global/checkdop.F90
 global/checkdopall.f90
 global/genMTBasis.f90

@@ -3,75 +3,85 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-      MODULE m_mkgxyz3
-c.....------------------------------------------------------------------
-c     by use of cartesian x,y,z components of charge density gradients,
-c     make the quantities
-cc      agrt,agru,agrd,g2rt,g2ru,g2rd,gggrt,gggru,gggrd,gzgr
-cc    used to calculate gradient contribution to xc potential and
-cc    energy.
-c.....------------------------------------------------------------------
-      CONTAINS
-      SUBROUTINE mkgxyz3(
-     >                   ndm,jsdm,ng3,jspins,vl,
-     >                   dvx,dvy,dvz,dvxx,dvyy,dvzz,dvyz,dvzx,dvxy,
-     <                   grad)
-      USE m_types
-      IMPLICIT NONE
-      INTEGER, INTENT (IN) :: ndm,ng3,jsdm,jspins
-      REAL,    INTENT (IN) :: vl(ndm,jsdm)
-      REAL,    INTENT (IN) :: dvx(ndm,jsdm),dvy(ndm,jsdm),dvz(ndm,jsdm)
-      REAL, INTENT (IN) :: dvxx(ndm,jsdm),dvyy(ndm,jsdm),dvzz(ndm,jsdm)
-      REAL, INTENT (IN) :: dvyz(ndm,jsdm),dvzx(ndm,jsdm),dvxy(ndm,jsdm)
+MODULE m_mkgxyz3
+  !.....------------------------------------------------------------------
+  !c     by use of cartesian x,y,z components of charge density gradients,
+  !c     make the quantities
+  !cc      agrt,agru,agrd,g2rt,g2ru,g2rd,gggrt,gggru,gggrd,gzgr
+  !cc    used to calculate gradient contribution to xc potential and
+  !cc    energy.
+  !c.....------------------------------------------------------------------
+CONTAINS
+  SUBROUTINE mkgxyz3(vl,dvx,dvy,dvz,dvxx,dvyy,dvzz,dvyz,dvzx,dvxy,grad)
+    USE m_types
+    IMPLICIT NONE
+    REAL,    INTENT (IN) :: vl(:,:)
+    REAL,    INTENT (IN) :: dvx(:,:),dvy(:,:),dvz(:,:)
+    REAL, INTENT (IN) :: dvxx(:,:),dvyy(:,:),dvzz(:,:)
+    REAL, INTENT (IN) :: dvyz(:,:),dvzx(:,:),dvxy(:,:)
 
-      TYPE(t_gradients),INTENT(INOUT)::grad
+    TYPE(t_gradients),INTENT(INOUT)::grad
 
-      REAL vlt,dvxt,dvyt,dvzt,dvxxt,dvyyt,dvzzt,dvyzt,dvzxt,dvxyt,
-     &     vlu,dvxu,dvyu,dvzu,dvxxu,dvyyu,dvzzu,dvyzu,dvzxu,dvxyu,
-     &     vld,dvxd,dvyd,dvzd,dvxxd,dvyyd,dvzzd,dvyzd,dvzxd,dvxyd,
-     &     dagrxt,dagrxd,dagrxu,dagryt,dagryd,dagryu,dagrzt,dagrzd,
-     +     dagrzu,dzdx,dzdy,dzdz,
-     +     sml
-      INTEGER i
+    REAL vlt,dvxt,dvyt,dvzt,dvxxt,dvyyt,dvzzt,dvyzt,dvzxt,dvxyt,&
+         vlu,dvxu,dvyu,dvzu,dvxxu,dvyyu,dvzzu,dvyzu,dvzxu,dvxyu,&
+         vld,dvxd,dvyd,dvzd,dvxxd,dvyyd,dvzzd,dvyzd,dvzxd,dvxyd,&
+         dagrxt,dagrxd,dagrxu,dagryt,dagryd,dagryu,dagrzt,dagrzd,&
+         dagrzu,dzdx,dzdy,dzdz,sml
+    INTEGER i,js,jspins,nsp
 
-      sml = 1.e-14
+    nsp=SIZE(dvx,1)
+    jspins=SIZE(dvx,2)
+    sml = 1.e-14
 
-      IF(ALLOCATED(grad%sigma)) THEN
-!Use only contracted gradients for libxc
-         if (jspins==1) THEN
-            DO i=1,ng3
-               grad%sigma(1,i)=
-     +             dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
-            ENDDO
-         ELSE
-            DO i=1,ng3
-               grad%sigma(1,i)=
-     +             dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
-               grad%sigma(2,i)=
-     +             dvx(i,1)*dvx(i,2)+dvy(i,1)*dvy(i,2)+dvz(i,1)*dvz(i,2)
-               grad%sigma(3,i)=
-     +             dvx(i,2)*dvx(i,2)+dvy(i,2)*dvy(i,2)+dvz(i,2)*dvz(i,2)
-            ENDDO
-         ENDIF            
-         RETURN
-      ENDIF
+    IF (ALLOCATED(grad%gr)) THEN
+       !      Gradients for libxc
+       DO js=1,jspins
+          DO i=1,nsp
+             grad%gr(:,i,js)=(/dvx(i,js),dvy(i,js),dvz(i,js)/)
+          ENDDO
+       END DO
+       IF(ALLOCATED(grad%sigma)) THEN
+          !Use only contracted gradients for libxc
+          IF (jspins==1) THEN
+             DO i=1,nsp
+                grad%sigma(1,i)= dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
+             ENDDO
+          ELSE
+             DO i=1,nsp
+                grad%sigma(1,i)= dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
+                grad%sigma(2,i)= dvx(i,1)*dvx(i,2)+dvy(i,1)*dvy(i,2)+dvz(i,1)*dvz(i,2)
+                grad%sigma(3,i)= dvx(i,2)*dvx(i,2)+dvy(i,2)*dvy(i,2)+dvz(i,2)*dvz(i,2)
+             ENDDO
+          ENDIF
+       END IF
+       IF(ALLOCATED(grad%laplace)) THEN
+          DO js=1,jspins
+             DO i=1,nsp
+                grad%laplace(i,js)= dvxx(i,js)+dvyy(i,js)+dvzz(i,js)
+             ENDDO
+          ENDDO
+       ENDIF
+       RETURN
+    ENDIF
 
-      DO i = 1,ndm
-          grad%agrt(i) = 0.0
-          grad%agru(i) = 0.0
-          grad%agrd(i) = 0.0
-          grad%gggrt(i) = 0.0
-          grad%gggru(i) = 0.0
-          grad%gggrd(i) = 0.0
-          grad%gzgr(i) = 0.0
-          grad%g2rt(i) = 0.0
-          grad%g2ru(i) = 0.0
-          grad%g2rd(i) = 0.0
-      ENDDO
+    IF (ANY(SHAPE(vl).NE.SHAPE(dvx))) CALL judft_error("Gradients for internal GGA called with inconsistent sizes",hint="This is a bug")
+    
+    DO i = 1,size(grad%agrt)
+       grad%agrt(i) = 0.0
+       grad%agru(i) = 0.0
+       grad%agrd(i) = 0.0
+       grad%gggrt(i) = 0.0
+       grad%gggru(i) = 0.0
+       grad%gggrd(i) = 0.0
+       grad%gzgr(i) = 0.0
+       grad%g2rt(i) = 0.0
+       grad%g2ru(i) = 0.0
+       grad%g2rd(i) = 0.0
+    ENDDO
 
-      IF (jspins.eq.1) THEN
+    IF (jspins.eq.1) THEN
 
-        DO 10 i = 1,ng3
+       DO 10 i = 1,nsp
 
           vlu=max(vl(i,1)/2,sml)
           dvxu=dvx(i,1)/2
@@ -108,7 +118,7 @@ c.....------------------------------------------------------------------
           dvzxt = dvzxu + dvzxd
           dvxyt = dvxyu + dvxyd
 
-c         agr: abs(grad(ro)), t,u,d for total, up and down.
+          !         agr: abs(grad(ro)), t,u,d for total, up and down.
 
           grad%agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
           grad%agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
@@ -130,28 +140,28 @@ c         agr: abs(grad(ro)), t,u,d for total, up and down.
           grad%gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
           grad%gggrd(i) = dvxd*dagrxd + dvyd*dagryd + dvzd*dagrzd
 
-c         dzdx=d(zeta)/dx,..
+          !         dzdx=d(zeta)/dx,..
 
           dzdx = (dvxu-dvxd)/vlt - (vlu-vld)*dvxt/vlt**2
           dzdy = (dvyu-dvyd)/vlt - (vlu-vld)*dvyt/vlt**2
           dzdz = (dvzu-dvzd)/vlt - (vlu-vld)*dvzt/vlt**2
 
-c         gzgr=grad(zeta)*grad(ro).
+          !         gzgr=grad(zeta)*grad(ro).
 
           grad%gzgr(i) = dzdx*dvxt + dzdy*dvyt + dzdz*dvzt
 
-c         g2r: grad(grad(ro))
+          !         g2r: grad(grad(ro))
 
           grad%g2rt(i) = dvxxt + dvyyt + dvzzt
           grad%g2ru(i) = dvxxu + dvyyu + dvzzu
           grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
 
-  10    ENDDO
+10     ENDDO
 
-      ELSE
+    ELSE
 
-        DO 20 i = 1,ng3
+       DO 20 i = 1,nsp
 
           vlu = max(vl(i,1),sml)
           dvxu=dvx(i,1)
@@ -187,7 +197,7 @@ c         g2r: grad(grad(ro))
           dvzxt = dvzxu + dvzxd
           dvxyt = dvxyu + dvxyd
 
-c         agr: abs(grad(ro)), t,u,d for total, up and down.
+          !c         agr: abs(grad(ro)), t,u,d for total, up and down.
 
           grad%agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
           grad%agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
@@ -209,25 +219,25 @@ c         agr: abs(grad(ro)), t,u,d for total, up and down.
           grad%gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
           grad%gggrd(i) = dvxd*dagrxd + dvyd*dagryd + dvzd*dagrzd
 
-c         dzdx=d(zeta)/dx,..
+          !c         dzdx=d(zeta)/dx,..
 
           dzdx = (dvxu-dvxd)/vlt -  (vlu-vld)*dvxt/vlt**2
           dzdy = (dvyu-dvyd)/vlt -  (vlu-vld)*dvyt/vlt**2
           dzdz = (dvzu-dvzd)/vlt -  (vlu-vld)*dvzt/vlt**2
 
-c         gzgr=grad(zeta)*grad(ro).
+          !c         gzgr=grad(zeta)*grad(ro).
 
           grad%gzgr(i) = dzdx*dvxt + dzdy*dvyt + dzdz*dvzt
 
-c         g2r: grad(grad(ro))
+          !c         g2r: grad(grad(ro))
 
           grad%g2rt(i) = dvxxt + dvyyt + dvzzt
           grad%g2ru(i) = dvxxu + dvyyu + dvzzu
           grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
-  20    ENDDO
+20     ENDDO
 
-      ENDIF
-    
-      END SUBROUTINE mkgxyz3
-      END MODULE m_mkgxyz3
+    ENDIF
+
+  END SUBROUTINE mkgxyz3
+END MODULE m_mkgxyz3

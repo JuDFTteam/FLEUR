@@ -26,7 +26,7 @@ CONTAINS
        den,xcpot,input,sym, obsolete,vxc,vx,exc)
 
 #include"cpp_double.h"
-    USE m_lhglptg
+   
     USE m_grdchlh
     USE m_mkgylm
     USE m_gaussp
@@ -236,26 +236,9 @@ CONTAINS
           CALL xcpot%alloc_gradients(nsp,input%jspins,grad)
           CALL mkgylm(input%jspins,atoms%rmsh(jr,n),thet,nsp,DIMENSION%nspd,DIMENSION%jspd,ch,chdr,&
                chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,grad)
-          
-          !
-          !         rhmnm: rho_minimum_muffin-tin..
 
-          rhmnm=10.e+10
-
-          DO js=1,input%jspins
-             DO i=1,nsp
-                ch(i,js) = max(ch(i,js),d_15)
-                rhmnm = min(rhmnm,ch(i,js))
-             ENDDO
-          ENDDO
-
-
-          IF (rhmnm.LT.obsolete%chng) THEN
-             WRITE (6,'(/'' rhmn.lt.obsolete%chng in vmtxc. rhmn,obsolete%chng='',&
-                  &        2d9.2)') rhmnm,obsolete%chng
-             !             CALL juDFT_error("vmtxcg: rhmn.lt.chng",calledby="vmtxcg")
-          ENDIF
-
+          !Set charge to minimum value
+          ch(:,:)=MAX(ch(:,:),d_15)
           !
           !         calculate the ex.-cor. potential
 

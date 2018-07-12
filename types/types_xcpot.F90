@@ -39,6 +39,9 @@ MODULE m_types_xcpot
      REAL,ALLOCATABLE :: gggrd(:),grgru(:),grgrd(:)
      !These are the contracted Gradients used in libxc
      REAL,ALLOCATABLE :: sigma(:,:)
+     REAL,ALLOCATABLE :: vsigma(:,:)
+     REAL,ALLOCATABLE :: gr(:,:,:)
+     REAL,ALLOCATABLE :: laplace(:,:)
   END TYPE t_gradients
 
 CONTAINS
@@ -63,15 +66,14 @@ CONTAINS
     a_ex=-1
   END FUNCTION xcpot_get_exchange_weight
 
-  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad,drdsigma)
+  SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad)
     CLASS(t_xcpot),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins
     !--> charge density
     REAL,INTENT (IN)         :: rh(:,:)
     !---> xc potential
     REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
-    TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
-    REAL,ALLOCATABLE,OPTIONAL,INTENT(OUT)::drdsigma(:)
+    TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
   END SUBROUTINE xcpot_get_vxc
 
   
@@ -87,8 +89,14 @@ CONTAINS
 
   SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
     INTEGER, INTENT (IN)         :: jspins,ngrid
-    TYPE(t_gradients),INTENT(OUT):: grad
+    TYPE(t_gradients),INTENT(INOUT):: grad
 
+    IF (allocated(grad%agrt)) THEN
+       DEALLOCATE(grad%agrt,grad%agru,grad%agrd)
+       DEALLOCATE(grad%g2ru,grad%g2rd,grad%gggrt)
+       DEALLOCATE(grad%gggru,grad%gzgr,grad%g2rt)
+       DEALLOCATE(grad%gggrd,grad%grgru,grad%grgrd)
+    ENDIF
     !For the in-build xc-pots
     ALLOCATE(grad%agrt(ngrid),grad%agru(ngrid),grad%agrd(ngrid))
     ALLOCATE(grad%g2ru(ngrid),grad%g2rd(ngrid),grad%gggrt(ngrid))

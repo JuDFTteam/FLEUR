@@ -23,6 +23,7 @@ MODULE m_types_mat
      PROCEDURE        :: to_packed=>t_mat_to_packed          !> convert to packed-storage matrix
      PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
      PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
+     PROCEDURE        :: move => t_mat_move                  !> move data into another t_mat (overloaded for t_mpimat)
      PROCEDURE        :: init => t_mat_init                  !> initalize the matrix(overloaded for t_mpimat)
      PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
      PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
@@ -219,23 +220,25 @@ MODULE m_types_mat
     end if
   end subroutine t_mat_inverse
 
+  SUBROUTINE t_mat_move(mat,mat1)
+    IMPLICIT NONE
+    CLASS(t_mat),INTENT(INOUT):: mat
+    CLASS(t_mat),INTENT(INOUT):: mat1
+    !Special case, the full matrix is copied. Then use move alloc
+    IF (mat%l_real) THEN
+       CALL move_ALLOC(mat1%data_r,mat%data_r)
+    ELSE
+       CALL move_ALLOC(mat1%data_c,mat%data_c)
+    END IF
+  END SUBROUTINE t_mat_move
+  
   SUBROUTINE t_mat_copy(mat,mat1,n1,n2)
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT):: mat
-    CLASS(t_mat),INTENT(INOUT) :: mat1
+    CLASS(t_mat),INTENT(IN)   :: mat1
     INTEGER,INTENT(IN)        :: n1,n2
 
     INTEGER:: i1,i2
-
-    IF (n1==1.AND.n2==1.AND.mat%matsize1==mat1%matsize1.AND.mat%matsize2==mat1%matsize2) THEN       
-       !Special case, the full matrix is copied. Then use move alloc
-       IF (mat%l_real) THEN
-          CALL move_ALLOC(mat1%data_r,mat%data_r)
-       ELSE
-          CALL move_ALLOC(mat1%data_c,mat%data_c)
-       END IF
-       RETURN
-    END IF
 
     i1=mat%matsize1-n1+1  !space available for first dimension
     i2=mat%matsize2-n1+1

@@ -649,9 +649,9 @@ c           in s and p states equal occupation of up and down states
         IF (atoms%nlo(n) /= 0) THEN                    ! check for local orbitals
           DO i = 1, atoms%nlo(n)
             enpara%ello0(i,n,:) = REAL(lonqn(i,n))
-            IF (lonqn(i,n) == NINT(enpara%el0(atoms%llo(i,n),n,1))) THEN  ! increase qn
-              enpara%el0(atoms%llo(i,n),n,:) = 
-     &           enpara%el0(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
+            IF (lonqn(i,n) == enpara%qn_el(atoms%llo(i,n),n,1)) THEN  ! increase qn
+              enpara%qn_el(atoms%llo(i,n),n,:) = 
+     &           enpara%qn_el(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
             ENDIF
           ENDDO
         ENDIF
