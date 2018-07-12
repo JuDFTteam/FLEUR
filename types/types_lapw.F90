@@ -50,7 +50,7 @@ CONTAINS
     CLASS(t_lapw),INTENT(INOUT)  :: lapw
 
 
-    INTEGER j1,j2,j3,mk1,mk2,mk3,nv
+    INTEGER j1,j2,j3,mk1,mk2,mk3,nv,addX,addY,addZ
     INTEGER ispin,nvh(2)
 
     REAL arltv1,arltv2,arltv3,rkm,rk2,r2,s(3)
@@ -69,9 +69,18 @@ CONTAINS
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-    mk1 = int(input%rkmax/arltv1) + 2
-    mk2 = int(input%rkmax/arltv2) + 2
-    mk3 = int(input%rkmax/arltv3) + 2
+    addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
+    addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
+    addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
+!    addX = 0
+!    addY = 0
+!    addZ = 0
+
+write(*,*) 'addX',addX,'addY',addY,'addZ',addZ
+    
+    mk1 = int(input%rkmax/arltv1)+2
+    mk2 = int(input%rkmax/arltv2)+2
+    mk3 = int(input%rkmax/arltv3)+2
 
     rkm = input%rkmax
     rk2 = rkm*rkm
@@ -82,9 +91,12 @@ CONTAINS
     nvh(2)=0
     DO ispin = 1,MERGE(2,1,noco%l_ss)
        nv = 0
-       DO j1 = -mk1,mk1
-          DO j2 = -mk2,mk2
-             DO j3 = -mk3,mk3
+       DO  j1 = -mk1-addX,mk1+addX
+          DO  j2 = -mk2-addY,mk2+addY
+             DO  j3 = -mk3-addZ,mk3+addZ
+!       DO  j1 = -mk1,mk1
+!          DO  j2 = -mk2,mk2
+!             DO  j3 = -mk3,mk3
                 s = lapw%bkpt + (/j1,j2,j3/) + (2*ispin - 3)/2.0*noco%qss
                 r2 = dot_PRODUCT(MATMUL(s,cell%bbmat),s)
                 IF (r2.LE.rk2)  nv = nv + 1
@@ -142,7 +154,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,r2,rk2,rkm,r2q,gla,eps,t
-    INTEGER i,j,j1,j2,j3,k,l ,mk1,mk2,mk3,n,ispin,gmi,m,nred,n_inner,n_bound,itt(3)
+    INTEGER i,j,j1,j2,j3,k,l ,mk1,mk2,mk3,n,ispin,gmi,m,nred,n_inner,n_bound,itt(3),addX,addY,addZ
     !     ..
     !     .. Local Arrays ..
     REAL                :: s(3),sq(3)
@@ -175,18 +187,28 @@ CONTAINS
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-    mk1 = int( input%rkmax/arltv1 ) + 4
-    mk2 = int( input%rkmax/arltv2 ) + 4
-    mk3 = int( input%rkmax/arltv3 ) + 4
+    addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
+    addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
+    addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
+!    addX = 0
+!    addY = 0
+!    addZ = 0
+    
+    mk1 = int( input%rkmax/arltv1 )+4
+    mk2 = int( input%rkmax/arltv2 )+4
+    mk3 = int( input%rkmax/arltv3 )+4
 
     rk2 = input%rkmax*input%rkmax
     !---> if too many basis functions, reduce rkmax
     spinloop:DO ispin = 1,input%jspins
        !--->    obtain vectors
        n = 0
-       DO  j1 = -mk1,mk1
-          DO  j2 = -mk2,mk2
-             DO  j3 = -mk3,mk3
+       DO  j1 = -mk1-addX,mk1+addX
+          DO  j2 = -mk2-addY,mk2+addY
+             DO  j3 = -mk3-addZ,mk3+addZ
+!       DO  j1 = -mk1,mk1
+!         DO  j2 = -mk2,mk2
+!             DO  j3 = -mk3,mk3
                 s=lapw%bkpt+(/j1,j2,j3/)+(2*ispin - 3)/2.0*noco%qss
                 sq = lapw%bkpt+ (/j1,j2,j3/)
                 r2 = dot_PRODUCT(s,MATMUL(s,cell%bbmat))

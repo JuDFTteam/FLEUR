@@ -156,9 +156,13 @@ CONTAINS
 	TYPE(t_cell)      :: p_cell
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
-	INTEGER :: i,j,k,l
+	INTEGER :: i,j,k,l,n
 	REAL, ALLOCATABLE	::w_n(:)
+	COMPLEX, ALLOCATABLE    ::w_n_c(:)
+	REAL, ALLOCATABLE	::w_n_sum(:)
+	COMPLEX, ALLOCATABLE    ::w_n_c_sum(:)
 	REAL	::kpt_dist=0
+        LOGICAL :: method_rubel=.false.
 
 	CALL build_primitive_cell(banddos,p_cell,cell)
 
@@ -183,10 +187,48 @@ CONTAINS
 !		write(*,*) 'smat dim1', size(smat_unfold%data_r,1), 'dim2', size(smat_unfold%data_r,2),'data',smat_unfold%data_r(2,2)
 !		write(222,'(234f15.8)') zMat%data_r
 !		write(223,'(234f15.8)') smat_unfold%data_r
-		ALLOCATE(w_n(zMat%matsize2))
-                w_n = 0.0
+
+		method_rubel=.true.
+
+		IF (zmat%l_real) THEN	
+			ALLOCATE(w_n(zMat%matsize2))
+		        w_n = 0
+		    IF (method_rubel) THEN
+			ALLOCATE(w_n_sum(zMat%matsize2))
+		        w_n_sum = 0
+		    END IF
+		ELSE
+			ALLOCATE(w_n_c(zMat%matsize2))
+			w_n_c=0	
+		    IF (method_rubel) THEN
+			ALLOCATE(w_n_c_sum(zMat%matsize2))
+			w_n_c_sum=0	
+		    END IF
+		END IF	
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
 		DO i=1,zMat%matsize2
+		    IF (method_rubel) THEN
+			DO j=1,lapw%nv(jsp)
+					IF (zmat%l_real) THEN
+						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
+!						write(*,*) 'zMat is real'
+					ELSE
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+!						write(*,*) 'zMat is complex'
+					END IF
+			  IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+					IF (zmat%l_real) THEN
+						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
+!						write(*,*) 'zMat is real'
+					ELSE
+						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+!						write(*,*) 'zMat is complex'
+					END IF
+			   END IF
+			END DO
+		    ELSE
 			DO j=1,lapw%nv(jsp)
 			  l=j
 			  IF ((modulo(lapw%gvec(1,l,jsp),banddos%s_cell_x)==0).AND.&
@@ -195,14 +237,36 @@ CONTAINS
 				DO k=1,lapw%nv(jsp)
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+!						write(*,*) 'zMat is real'
 					ELSE
-						w_n(i)=w_n(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+!						write(*,*) 'zMat is complex'
 					END IF
 				END DO
 			   END IF
 			END DO
-			IF (jsp==1) write(679,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
-			IF (jsp==2) write(680,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
+		     END IF
+		     IF (method_rubel) THEN
+			IF (zmat%l_real) THEN
+				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
+				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
+				IF ((w_n(i)>1).or.(w_n(i)<0)) write(*,*) 'w_n larger 1 or smaller 0', w_n(i), 'eigenvalue',eig(i)
+			ELSE
+				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
+				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
+				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
+		        END IF
+		     ELSE
+			IF (zmat%l_real) THEN
+				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
+				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n(i)
+				IF ((w_n(i)>1).or.(w_n(i)<0)) write(*,*) 'w_n larger 1 or smaller 0', w_n(i), 'eigenvalue',eig(i)
+			ELSE
+				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n_c(i)
+				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, (eig(i)*hartree_to_ev_const),w_n_c(i)
+				IF ((abs(w_n_c(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c larger 1 or smaller 0', w_n_c(i), 'eigenvalue',eig(i)
+		        END IF
+		     END IF			
 		END DO
 
 	IF (i_kpt==kpts%nkpt) THEN
