@@ -231,10 +231,9 @@ CONTAINS
 			END DO
 		    ELSE
 			DO j=1,lapw%nv(jsp)
-			  l=j
-			  IF ((modulo(lapw%gvec(1,l,jsp),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,l,jsp),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,l,jsp),banddos%s_cell_z)==0)) THEN
+			  IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
 				DO k=1,lapw%nv(jsp)
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
