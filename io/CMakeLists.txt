@@ -20,6 +20,7 @@ io/cdnpot_io_hdf.F90
 io/cdnpot_io_common.F90
 io/cdn_io.F90
 io/pot_io.F90
+io/banddos_io.F90
 io/broyd_io.F90
 io/rw_inp.f90
 io/rw_noco.f90
