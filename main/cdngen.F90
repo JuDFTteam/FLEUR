@@ -36,6 +36,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdncore
    USE m_doswrite
    USE m_Ekwritesl
+   USE m_banddos_io
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -80,6 +81,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !Local Scalars
    REAL                  :: fix, qtot, dummy
    INTEGER               :: jspin, jspmax
+#ifdef CPP_HDF
+   INTEGER(HID_T)        :: banddosFile_id
+#endif
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -103,6 +107,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END DO
 
    IF (mpi%irank.EQ.0) THEN
+#ifdef CPP_HDF
+      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
+      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+      CALL closeBandDOSFile(banddosFile_id)
+#endif
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
          CALL timestart("cdngen: dos")
          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
