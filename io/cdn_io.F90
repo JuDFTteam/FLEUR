@@ -704,9 +704,9 @@ MODULE m_cdn_io
                                   previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
          archiveName = ''
          WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
-         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_OUT_const)
+         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_IN_const)
          IF(l_exist) THEN
-            CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_OUT_const,&
+            CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
                                      iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                                      previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
             eFermiPrev = fermiEnergy
