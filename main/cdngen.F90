@@ -107,12 +107,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END DO
 
    IF (mpi%irank.EQ.0) THEN
-#ifdef CPP_HDF
-      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
-      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
-      CALL closeBandDOSFile(banddosFile_id)
-#endif
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
+#ifdef CPP_HDF
+         CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
+         CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+         CALL closeBandDOSFile(banddosFile_id)
+#endif
          CALL timestart("cdngen: dos")
          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
