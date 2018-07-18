@@ -69,9 +69,6 @@ CONTAINS
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-    addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
-    addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
-    addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
     mk1 = int(input%rkmax/arltv1)+2
     mk2 = int(input%rkmax/arltv2)+2
     mk3 = int(input%rkmax/arltv3)+2
@@ -84,6 +81,9 @@ CONTAINS
     !---> by |G + k +/- qss/2| < rkmax.
     nvh(2)=0
     DO ispin = 1,MERGE(2,1,noco%l_ss)
+       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
+       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
+       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
        nv = 0
        DO  j1 = -mk1-addX,mk1+addX
           DO  j2 = -mk2-addY,mk2+addY
@@ -178,9 +178,6 @@ CONTAINS
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-    addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
-    addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
-    addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))    
     mk1 = int( input%rkmax/arltv1 )+4
     mk2 = int( input%rkmax/arltv2 )+4
     mk3 = int( input%rkmax/arltv3 )+4
@@ -188,6 +185,9 @@ CONTAINS
     rk2 = input%rkmax*input%rkmax
     !---> if too many basis functions, reduce rkmax
     spinloop:DO ispin = 1,input%jspins
+       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
+       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
+       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
        !--->    obtain vectors
        n = 0
        DO  j1 = -mk1-addX,mk1+addX
