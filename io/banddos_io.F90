@@ -84,12 +84,8 @@ MODULE m_banddos_io
       CALL readPrevEFermi(eFermiPrev,l_error)
       IF(l_error) THEN
          ! No previous eFermi available
-         WRITE(1000,*) 'Error in reading eFermiPrev'
          eFermiPrev = 0.0
-      ELSE
-         WRITE(1000,*) 'Reading eFermiPrev successfull'
       END IF
-      FLUSH(1000)
 
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
