@@ -699,20 +699,10 @@ MODULE m_cdn_io
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
-         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
                                   iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                                   previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
-         archiveName = ''
-         WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
-         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_IN_const)
-         IF(l_exist) THEN
-            CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
-                                     iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                                     previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
-            eFermiPrev = fermiEnergy
-         ELSE
-            l_error = .TRUE.
-         END IF
+         eFermiPrev = fermiEnergy
          CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
