@@ -30,6 +30,7 @@ MODULE m_banddos_io
    SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts)
 
       USE m_types
+      USE m_cdn_io
 
       TYPE(t_input), INTENT(IN)  :: input
       TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -40,21 +41,33 @@ MODULE m_banddos_io
 
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
+      INTEGER(HID_T)    :: metaGroupID
+      INTEGER(HID_T)    :: generalGroupID
       INTEGER(HID_T)    :: cellGroupID
       INTEGER(HID_T)    :: atomsGroupID
       INTEGER(HID_T)    :: kptsGroupID
-      INTEGER(HID_T)    :: generalGroupID
 
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
 
+      INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
+      INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
+
       INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
 
+      INTEGER           :: iType, j, iAtom
+
       INTEGER           :: hdfError, dimsInt(7)
+      INTEGER           :: version
+      REAL              :: eFermiPrev
+      LOGICAL           :: l_error
+
+      INTEGER           :: atomicNumbers(atoms%nat)
 
       INTEGER(HSIZE_T)  :: dims(7)
 
+      version = 1
       filename = 'banddos.hdf'
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -64,8 +77,19 @@ MODULE m_banddos_io
 
       CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
+      CALL h5gcreate_f(fileID, '/meta', metaGroupID, hdfError)
+      CALL io_write_attint0(metaGroupID,'version',version)
+      CALL h5gclose_f(metaGroupID, hdfError)
+
+      CALL readPrevEFermi(eFermiPrev,l_error)
+      IF(l_error) THEN
+         ! No previous eFermi available
+         eFermiPrev = 0.0
+      END IF
+
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
+      CALL io_write_attreal0(generalGroupID,'lastFermiEnergy',eFermiPrev)
       CALL h5gclose_f(generalGroupID, hdfError)
 
       CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
@@ -88,8 +112,33 @@ MODULE m_banddos_io
 
       CALL h5gclose_f(cellGroupID, hdfError)
 
+      iAtom = 0
+      DO iType = 1, atoms%ntype
+         DO j = 1, atoms%neq(iType)
+            iAtom = iAtom + 1
+            atomicNumbers(iAtom) = atoms%nz(iType)
+         END DO
+      END DO
+
       CALL h5gcreate_f(fileID, '/atoms', atomsGroupID, hdfError)
-      
+      CALL io_write_attint0(atomsGroupID,'nAtoms',atoms%nat)
+
+      dims(:2)=(/3,atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "positions", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5sclose_f(atomPosSpaceID,hdfError)
+      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%taual)
+      CALL h5dclose_f(atomPosSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atomicNumbers", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atomicNumbers)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
       CALL h5gclose_f(atomsGroupID, hdfError)
 
       CALL h5gcreate_f(fileID, '/kpts', kptsGroupID, hdfError)
@@ -147,6 +196,7 @@ MODULE m_banddos_io
 
       INTEGER(HID_T)    :: eigenvaluesSpaceID, eigenvaluesSetID
       INTEGER(HID_T)    :: numFoundEigsSpaceID, numFoundEigsSetID
+      INTEGER(HID_T)    :: lLikeChargeSpaceID, lLikeChargeSetID
 
       INTEGER           :: hdfError, dimsInt(7)
 
@@ -157,6 +207,7 @@ MODULE m_banddos_io
       CALL h5gcreate_f(fileID, '/eigenvalues', eigenvaluesGroupID, hdfError)
 
       CALL io_write_attint0(eigenvaluesGroupID,'neigd',neigd)
+      CALL io_write_attint0(eigenvaluesGroupID,'maxL',3)
 
       dims(:2)=(/kpts%nkpt,input%jspins/)
       dimsInt=dims
@@ -173,6 +224,14 @@ MODULE m_banddos_io
       CALL h5sclose_f(eigenvaluesSpaceID,hdfError)
       CALL io_write_real3(eigenvaluesSetID,(/1,1,1/),dimsInt(:3),results%eig(:neigd,:,:))
       CALL h5dclose_f(eigenvaluesSetID, hdfError)
+
+      dims(:5)=(/4,atoms%ntype,neigd,kpts%nkpt,input%jspins/)
+      dimsInt = dims
+      CALL h5screate_simple_f(5,dims(:5),lLikeChargeSpaceID,hdfError)
+      CALL h5dcreate_f(eigenvaluesGroupID, "lLikeCharge", H5T_NATIVE_DOUBLE, lLikeChargeSpaceID, lLikeChargeSetID, hdfError)
+      CALL h5sclose_f(lLikeChargeSpaceID,hdfError)
+      CALL io_write_real5(lLikeChargeSetID,(/1,1,1,1,1/),dimsInt(:5),dos%qal(0:3,:,:neigd,:,:))
+      CALL h5dclose_f(lLikeChargeSetID, hdfError)
 
       CALL h5gclose_f(eigenvaluesGroupID, hdfError)
 
