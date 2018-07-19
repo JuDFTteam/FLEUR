@@ -55,4 +55,20 @@ If you modify FLEUR please do so in the develop branch by running
 after cloning the git repository. For larger changes you might want to
 create your own branch.
 
+## Running Fleur on Jureca
 
+### Compiling Fleur on Jureca
+To compile Fleur on Jureca the following modules need to be loaded:
+
+```bash
+module load intel-para CMake HDF5 libxml2/.2.9.7 ELPA/2017.11.001-hybrid
+```
+which is then configured with
+```bash
+./configure.sh JURECA_INTEL
+```
+or
+```bash
+./configure.sh -external libxc JURECA_INTEL 
+```
+if libXC should be supported aswell.
