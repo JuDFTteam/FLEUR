@@ -55,9 +55,7 @@ If you modify FLEUR please do so in the develop branch by running
 after cloning the git repository. For larger changes you might want to
 create your own branch.
 
-## Running Fleur on Jureca
-
-### Compiling Fleur on Jureca
+## Compiling Fleur on Jureca
 To compile Fleur on Jureca the following modules need to be loaded:
 
 ```bash
@@ -72,3 +70,37 @@ or
 ./configure.sh -external libxc JURECA_INTEL 
 ```
 if libXC should be supported aswell.
+
+## Compilling Fleur on Jureca Booster
+
+To compile on the booster you need to first switch to the KNL environment
+
+```bash
+module purge
+ml Architecture/KNL
+module load intel-para CMake HDF5 libxml2/.2.9.7 ELPA/2017.11.001-hybrid
+```
+Then you can compile as discrebed above.
+
+## Running Fleur on Jureca Booster
+
+To run on the Boosters you need to switch the architecture in each job script aswell
+```bash
+#!/bin/bash -x
+#SBATCH --nodes=1
+##SBATCH --ntasks=10
+##SBATCH --ntasks-per-node=10
+#SBATCH --cpus-per-task=68
+#SBATCH --output=mpi-%j.out
+#SBATCH --error=mpi-%j.err
+#SBATCH --time=1:00:00
+#SBATCH --partition=develbooster
+#SBATCH --gres=mem96
+##SBATCH --mail-user=your.name@fz-juelich.de
+##SBATCH --mail-type=END
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+module purge
+ml Architecture/KNL
+module load intel-para CMake HDF5 libxml2/.2.9.7 ELPA/2017.11.001-hybrid
+/work/ias-1/s.rost/fleur_booster/fleur/build/fleur
+```
