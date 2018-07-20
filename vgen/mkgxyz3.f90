@@ -26,12 +26,12 @@ CONTAINS
          vlu,dvxu,dvyu,dvzu,dvxxu,dvyyu,dvzzu,dvyzu,dvzxu,dvxyu,&
          vld,dvxd,dvyd,dvzd,dvxxd,dvyyd,dvzzd,dvyzd,dvzxd,dvxyd,&
          dagrxt,dagrxd,dagrxu,dagryt,dagryd,dagryu,dagrzt,dagrzd,&
-         dagrzu,dzdx,dzdy,dzdz,sml
+         dagrzu,dzdx,dzdy,dzdz
+    REAL, PARAMETER  :: sml = 1.e-14
     INTEGER i,js,jspins,nsp
 
     nsp=SIZE(dvx,1)
     jspins=SIZE(dvx,2)
-    sml = 1.e-14
 
     IF (ALLOCATED(grad%gr)) THEN
        !      Gradients for libxc
