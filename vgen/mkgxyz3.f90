@@ -44,13 +44,13 @@ CONTAINS
           !Use only contracted gradients for libxc
           IF (jspins==1) THEN
              DO i=1,nsp
-                grad%sigma(1,i)= dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
+                grad%sigma(1,i) = dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
              ENDDO
           ELSE
              DO i=1,nsp
-                grad%sigma(1,i)= dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
-                grad%sigma(2,i)= dvx(i,1)*dvx(i,2)+dvy(i,1)*dvy(i,2)+dvz(i,1)*dvz(i,2)
-                grad%sigma(3,i)= dvx(i,2)*dvx(i,2)+dvy(i,2)*dvy(i,2)+dvz(i,2)*dvz(i,2)
+                grad%sigma(1,i) = dvx(i,1)*dvx(i,1) + dvy(i,1)*dvy(i,1) + dvz(i,1)*dvz(i,1)
+                grad%sigma(2,i) = dvx(i,1)*dvx(i,2) + dvy(i,1)*dvy(i,2) + dvz(i,1)*dvz(i,2)
+                grad%sigma(3,i) = dvx(i,2)*dvx(i,2) + dvy(i,2)*dvy(i,2) + dvz(i,2)*dvz(i,2)
              ENDDO
           ENDIF
        END IF
@@ -67,21 +67,21 @@ CONTAINS
     IF (ANY(SHAPE(vl).NE.SHAPE(dvx))) CALL judft_error("Gradients for internal GGA called with inconsistent sizes",hint="This is a bug")
     
     DO i = 1,size(grad%agrt)
-       grad%agrt(i) = 0.0
-       grad%agru(i) = 0.0
-       grad%agrd(i) = 0.0
+       grad%agrt(i)  = 0.0
+       grad%agru(i)  = 0.0
+       grad%agrd(i)  = 0.0
        grad%gggrt(i) = 0.0
        grad%gggru(i) = 0.0
        grad%gggrd(i) = 0.0
-       grad%gzgr(i) = 0.0
-       grad%g2rt(i) = 0.0
-       grad%g2ru(i) = 0.0
-       grad%g2rd(i) = 0.0
+       grad%gzgr(i)  = 0.0
+       grad%g2rt(i)  = 0.0
+       grad%g2ru(i)  = 0.0
+       grad%g2rd(i)  = 0.0
     ENDDO
 
     IF (jspins.eq.1) THEN
 
-       DO 10 i = 1,nsp
+       DO i = 1,nsp
 
           vlu=max(vl(i,1)/2,sml)
           dvxu=dvx(i,1)/2
@@ -157,11 +157,11 @@ CONTAINS
           grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
 
-10     ENDDO
+       ENDDO
 
     ELSE
 
-       DO 20 i = 1,nsp
+       DO i = 1,nsp
 
           vlu = max(vl(i,1),sml)
           dvxu=dvx(i,1)
@@ -235,7 +235,7 @@ CONTAINS
           grad%g2ru(i) = dvxxu + dvyyu + dvzzu
           grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
-20     ENDDO
+       ENDDO
 
     ENDIF
 
