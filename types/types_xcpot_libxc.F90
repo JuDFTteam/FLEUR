@@ -70,7 +70,8 @@ CONTAINS
     END IF
 
 #else
-    CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc",hint="Please recompile FLEUR with libxc support")
+    CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc", &
+                      hint="Please recompile FLEUR with libxc support")
 #endif
   END SUBROUTINE xcpot_init
 
