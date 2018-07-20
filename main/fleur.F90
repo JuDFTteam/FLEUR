@@ -150,7 +150,7 @@ CONTAINS
        CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                         0,-1.0,0.0,.FALSE.,inDen)
+                         0,-1.0,fermiEnergyTemp,.FALSE.,inDen)
     END IF
     ! Initialize and load inDen density (end)
 
