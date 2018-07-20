@@ -44,7 +44,7 @@ CONTAINS
           !Use only contracted gradients for libxc
           IF (jspins==1) THEN
              DO i=1,nsp
-                grad%sigma(1,i) = dvx(i,1)*dvx(i,1)+dvy(i,1)*dvy(i,1)+dvz(i,1)*dvz(i,1)
+                grad%sigma(1,i) = dvx(i,1)*dvx(i,1) + dvy(i,1)*dvy(i,1) + dvz(i,1)*dvz(i,1)
              ENDDO
           ELSE
              DO i=1,nsp
@@ -83,34 +83,34 @@ CONTAINS
 
        DO i = 1,nsp
 
-          vlu=max(vl(i,1)/2,sml)
-          dvxu=dvx(i,1)/2
-          dvyu=dvy(i,1)/2
-          dvzu=dvz(i,1)/2
-          dvxxu=dvxx(i,1)/2
-          dvyyu=dvyy(i,1)/2
-          dvzzu=dvzz(i,1)/2
-          dvyzu=dvyz(i,1)/2
-          dvzxu=dvzx(i,1)/2
-          dvxyu=dvxy(i,1)/2
+          vlu   = max(vl(i,1)/2,sml)
+          dvxu  = dvx(i,1)/2
+          dvyu  = dvy(i,1)/2
+          dvzu  = dvz(i,1)/2
+          dvxxu = dvxx(i,1)/2
+          dvyyu = dvyy(i,1)/2
+          dvzzu = dvzz(i,1)/2
+          dvyzu = dvyz(i,1)/2
+          dvzxu = dvzx(i,1)/2
+          dvxyu = dvxy(i,1)/2
 
-          vld=vlu
-          dvxd=dvxu
-          dvyd=dvyu
-          dvzd=dvzu
-          dvxxd=dvxxu
-          dvyyd=dvyyu
-          dvzzd=dvzzu
-          dvyzd=dvyzu
-          dvzxd=dvzxu
-          dvxyd=dvxyu
+          vld   = vlu
+          dvxd  = dvxu
+          dvyd  = dvyu
+          dvzd  = dvzu
+          dvxxd = dvxxu
+          dvyyd = dvyyu
+          dvzzd = dvzzu
+          dvyzd = dvyzu
+          dvzxd = dvzxu
+          dvxyd = dvxyu
 
 
           vlt = vlu + vld
 
-          dvxt = dvxu + dvxd
-          dvyt = dvyu + dvyd
-          dvzt = dvzu + dvzd
+          dvxt  = dvxu  + dvxd
+          dvyt  = dvyu  + dvyd
+          dvzt  = dvzu  + dvzd
           dvxxt = dvxxu + dvxxd
           dvyyt = dvyyu + dvyyd
           dvzzt = dvzzu + dvzzd
@@ -120,21 +120,21 @@ CONTAINS
 
           !         agr: abs(grad(ro)), t,u,d for total, up and down.
 
-          grad%agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
-          grad%agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
-          grad%agrd(i) = max(sqrt(dvxd**2+dvyd**2+dvzd**2),sml)
+          grad%agrt(i) = max(sqrt(dvxt**2 + dvyt**2 + dvzt**2),sml)
+          grad%agru(i) = max(sqrt(dvxu**2 + dvyu**2 + dvzu**2),sml)
+          grad%agrd(i) = max(sqrt(dvxd**2 + dvyd**2 + dvzd**2),sml)
 
-          dagrxt = (dvxt*dvxxt+dvyt*dvxyt+dvzt*dvzxt)/grad%agrt(i)
-          dagrxu = (dvxu*dvxxu+dvyu*dvxyu+dvzu*dvzxu)/grad%agru(i)
-          dagrxd = (dvxd*dvxxd+dvyd*dvxyd+dvzd*dvzxd)/grad%agrd(i)
+          dagrxt = (dvxt*dvxxt + dvyt*dvxyt + dvzt*dvzxt) / grad%agrt(i)
+          dagrxu = (dvxu*dvxxu + dvyu*dvxyu + dvzu*dvzxu) / grad%agru(i)
+          dagrxd = (dvxd*dvxxd + dvyd*dvxyd + dvzd*dvzxd) / grad%agrd(i)
 
-          dagryt = (dvxt*dvxyt+dvyt*dvyyt+dvzt*dvyzt)/grad%agrt(i)
-          dagryu = (dvxu*dvxyu+dvyu*dvyyu+dvzu*dvyzu)/grad%agru(i)
-          dagryd = (dvxd*dvxyd+dvyd*dvyyd+dvzd*dvyzd)/grad%agrd(i)
+          dagryt = (dvxt*dvxyt + dvyt*dvyyt + dvzt*dvyzt) / grad%agrt(i)
+          dagryu = (dvxu*dvxyu + dvyu*dvyyu + dvzu*dvyzu) / grad%agru(i)
+          dagryd = (dvxd*dvxyd + dvyd*dvyyd + dvzd*dvyzd) / grad%agrd(i)
 
-          dagrzt = (dvxt*dvzxt+dvyt*dvyzt+dvzt*dvzzt)/grad%agrt(i)
-          dagrzu = (dvxu*dvzxu+dvyu*dvyzu+dvzu*dvzzu)/grad%agru(i)
-          dagrzd = (dvxd*dvzxd+dvyd*dvyzd+dvzd*dvzzd)/grad%agrd(i)
+          dagrzt = (dvxt*dvzxt + dvyt*dvyzt + dvzt*dvzzt) / grad%agrt(i)
+          dagrzu = (dvxu*dvzxu + dvyu*dvyzu + dvzu*dvzzu) / grad%agru(i)
+          dagrzd = (dvxd*dvzxd + dvyd*dvyzd + dvzd*dvzzd) / grad%agrd(i)
 
           grad%gggrt(i) = dvxt*dagrxt + dvyt*dagryt + dvzt*dagrzt
           grad%gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
@@ -163,33 +163,33 @@ CONTAINS
 
        DO i = 1,nsp
 
-          vlu = max(vl(i,1),sml)
-          dvxu=dvx(i,1)
-          dvyu=dvy(i,1)
-          dvzu=dvz(i,1)
-          dvxxu=dvxx(i,1)
-          dvyyu=dvyy(i,1)
-          dvzzu=dvzz(i,1)
-          dvyzu=dvyz(i,1)
-          dvzxu=dvzx(i,1)
-          dvxyu=dvxy(i,1)
+          vlu   = max(vl(i,1),sml)
+          dvxu  = dvx(i,1)
+          dvyu  = dvy(i,1)
+          dvzu  = dvz(i,1)
+          dvxxu = dvxx(i,1)
+          dvyyu = dvyy(i,1)
+          dvzzu = dvzz(i,1)
+          dvyzu = dvyz(i,1)
+          dvzxu = dvzx(i,1)
+          dvxyu = dvxy(i,1)
 
-          vld = max(vl(i,jspins),sml)
-          dvxd=dvx(i,jspins)
-          dvyd=dvy(i,jspins)
-          dvzd=dvz(i,jspins)
-          dvxxd=dvxx(i,jspins)
-          dvyyd=dvyy(i,jspins)
-          dvzzd=dvzz(i,jspins)
-          dvyzd=dvyz(i,jspins)
-          dvzxd=dvzx(i,jspins)
-          dvxyd=dvxy(i,jspins)
+          vld   = max(vl(i,jspins),sml)
+          dvxd  = dvx(i,jspins)
+          dvyd  = dvy(i,jspins)
+          dvzd  = dvz(i,jspins)
+          dvxxd = dvxx(i,jspins)
+          dvyyd = dvyy(i,jspins)
+          dvzzd = dvzz(i,jspins)
+          dvyzd = dvyz(i,jspins)
+          dvzxd = dvzx(i,jspins)
+          dvxyd = dvxy(i,jspins)
 
           vlt = vlu + vld
 
-          dvxt = dvxu + dvxd
-          dvyt = dvyu + dvyd
-          dvzt = dvzu + dvzd
+          dvxt  = dvxu  + dvxd
+          dvyt  = dvyu  + dvyd
+          dvzt  = dvzu  + dvzd
           dvxxt = dvxxu + dvxxd
           dvyyt = dvyyu + dvyyd
           dvzzt = dvzzu + dvzzd
@@ -199,21 +199,21 @@ CONTAINS
 
           !c         agr: abs(grad(ro)), t,u,d for total, up and down.
 
-          grad%agrt(i) = max(sqrt(dvxt**2+dvyt**2+dvzt**2),sml)
-          grad%agru(i) = max(sqrt(dvxu**2+dvyu**2+dvzu**2),sml)
-          grad%agrd(i) = max(sqrt(dvxd**2+dvyd**2+dvzd**2),sml)
+          grad%agrt(i) = max(sqrt(dvxt**2 + dvyt**2 + dvzt**2),sml)
+          grad%agru(i) = max(sqrt(dvxu**2 + dvyu**2 + dvzu**2),sml)
+          grad%agrd(i) = max(sqrt(dvxd**2 + dvyd**2 + dvzd**2),sml)
 
-          dagrxt = (dvxt*dvxxt+dvyt*dvxyt+dvzt*dvzxt)/grad%agrt(i)
-          dagrxu = (dvxu*dvxxu+dvyu*dvxyu+dvzu*dvzxu)/grad%agru(i)
-          dagrxd = (dvxd*dvxxd+dvyd*dvxyd+dvzd*dvzxd)/grad%agrd(i)
+          dagrxt = (dvxt*dvxxt + dvyt*dvxyt + dvzt*dvzxt) / grad%agrt(i)
+          dagrxu = (dvxu*dvxxu + dvyu*dvxyu + dvzu*dvzxu) / grad%agru(i)
+          dagrxd = (dvxd*dvxxd + dvyd*dvxyd + dvzd*dvzxd) / grad%agrd(i)
 
-          dagryt = (dvxt*dvxyt+dvyt*dvyyt+dvzt*dvyzt)/grad%agrt(i)
-          dagryu = (dvxu*dvxyu+dvyu*dvyyu+dvzu*dvyzu)/grad%agru(i)
-          dagryd = (dvxd*dvxyd+dvyd*dvyyd+dvzd*dvyzd)/grad%agrd(i)
+          dagryt = (dvxt*dvxyt + dvyt*dvyyt + dvzt*dvyzt) / grad%agrt(i)
+          dagryu = (dvxu*dvxyu + dvyu*dvyyu + dvzu*dvyzu) / grad%agru(i)
+          dagryd = (dvxd*dvxyd + dvyd*dvyyd + dvzd*dvyzd) / grad%agrd(i)
 
-          dagrzt = (dvxt*dvzxt+dvyt*dvyzt+dvzt*dvzzt)/grad%agrt(i)
-          dagrzu = (dvxu*dvzxu+dvyu*dvyzu+dvzu*dvzzu)/grad%agru(i)
-          dagrzd = (dvxd*dvzxd+dvyd*dvyzd+dvzd*dvzzd)/grad%agrd(i)
+          dagrzt = (dvxt*dvzxt + dvyt*dvyzt + dvzt*dvzzt) / grad%agrt(i)
+          dagrzu = (dvxu*dvzxu + dvyu*dvyzu + dvzu*dvzzu) / grad%agru(i)
+          dagrzd = (dvxd*dvzxd + dvyd*dvyzd + dvzd*dvzzd) / grad%agrd(i)
 
           grad%gggrt(i) = dvxt*dagrxt + dvyt*dagryt + dvzt*dagrzt
           grad%gggru(i) = dvxu*dagrxu + dvyu*dagryu + dvzu*dagrzu
