@@ -52,6 +52,7 @@ MODULE m_banddos_io
 
       INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
       INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
+      INTEGER(HID_T)    :: equivAtomsClassSpaceID, equivAtomsClassSetID
 
       INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
@@ -64,6 +65,7 @@ MODULE m_banddos_io
       LOGICAL           :: l_error
 
       INTEGER           :: atomicNumbers(atoms%nat)
+      INTEGER           :: equivAtomsGroup(atoms%nat)
 
       INTEGER(HSIZE_T)  :: dims(7)
 
@@ -117,11 +119,13 @@ MODULE m_banddos_io
          DO j = 1, atoms%neq(iType)
             iAtom = iAtom + 1
             atomicNumbers(iAtom) = atoms%nz(iType)
+            equivAtomsGroup(iAtom) = iType
          END DO
       END DO
 
       CALL h5gcreate_f(fileID, '/atoms', atomsGroupID, hdfError)
       CALL io_write_attint0(atomsGroupID,'nAtoms',atoms%nat)
+      CALL io_write_attint0(atomsGroupID,'nTypes',atoms%ntype)
 
       dims(:2)=(/3,atoms%nat/)
       dimsInt=dims
@@ -138,6 +142,14 @@ MODULE m_banddos_io
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
       CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atomicNumbers)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),equivAtomsClassSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "equivAtomsGroup", H5T_NATIVE_INTEGER, equivAtomsClassSpaceID, equivAtomsClassSetID, hdfError)
+      CALL h5sclose_f(equivAtomsClassSpaceID,hdfError)
+      CALL io_write_integer1(equivAtomsClassSetID,(/1/),dimsInt(:1),equivAtomsGroup)
+      CALL h5dclose_f(equivAtomsClassSetID, hdfError)
 
       CALL h5gclose_f(atomsGroupID, hdfError)
 
