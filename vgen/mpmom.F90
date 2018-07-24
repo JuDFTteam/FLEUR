@@ -115,7 +115,8 @@ contains
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(ns), ns)
       if ( potdenType == POTDEN_TYPE_POTYUK ) then
-        do concurrent (i = 1:imax)
+        !do concurrent (i = 1:imax)
+        do i = 1,imax
           call ModSphBessel( il(:, i), kl(:, i), input%preconditioning_param * atoms%rmsh(i, n), lmax )
         end do
       end if

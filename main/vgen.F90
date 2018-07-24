@@ -63,7 +63,8 @@ CONTAINS
     CALL vTot%resetPotDen()
     CALL vCoul%resetPotDen()
     CALL vx%resetPotDen()
-    ALLOCATE(vx%pw_w,vTot%pw_w,mold=vTot%pw)
+    ALLOCATE(vx%pw_w,mold=vTot%pw)
+    ALLOCATE(vTot%pw_w,mold=vTot%pw)
     ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
 
     CALL workDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)

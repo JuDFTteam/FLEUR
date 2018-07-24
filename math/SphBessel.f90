@@ -112,7 +112,8 @@ contains
     end if
 
     rnm(:) = 1.0
-    PARALLEL_L_LOOP: do concurrent (l = 0: lmax)
+    !PARALLEL_L_LOOP: do concurrent (l = 0: lmax)
+    PARALLEL_L_LOOP: do l = 0,lmax
       if ( abs( z ) >= l + 1.0 ) then
         hl(l) = 0.0
         nl(l) = 0.0
