@@ -30,6 +30,7 @@ MODULE m_banddos_io
    SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts)
 
       USE m_types
+      USE hdf5
       USE m_cdn_io
 
       TYPE(t_input), INTENT(IN)  :: input
@@ -47,6 +48,9 @@ MODULE m_banddos_io
       INTEGER(HID_T)    :: atomsGroupID
       INTEGER(HID_T)    :: kptsGroupID
 
+      INTEGER(HID_T)    :: stringTypeID
+      INTEGER(SIZE_T)   :: stringLength
+
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
 
@@ -56,6 +60,7 @@ MODULE m_banddos_io
 
       INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
+      INTEGER(HID_T)    :: kptSPLabelsSpaceID, kptSPLabelsSetID
 
       INTEGER           :: iType, j, iAtom
 
@@ -173,6 +178,20 @@ MODULE m_banddos_io
       CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),kpts%wtkpt)
       CALL h5dclose_f(kptWeightSetID, hdfError)
 
+      stringLength = LEN(kpts%specialPointNames(:))
+      CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
+      CALL h5tset_size_f(stringTypeID, stringLength, hdfError)
+      CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
+      CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
+      dims(:1)=(/kpts%numSpecialPoints/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),kptSPLabelsSpaceID,hdfError)
+      CALL h5dcreate_f(kptsGroupID, "specialPointLabels", stringTypeID, kptSPLabelsSpaceID, kptSPLabelsSetID, hdfError)
+      CALL h5tclose_f(stringTypeID,hdfError)
+      CALL h5sclose_f(kptSPLabelsSpaceID,hdfError)
+      CALL io_write_string1(kptSPLabelsSetID,dimsInt(:1),LEN(kpts%specialPointNames(:)),kpts%specialPointNames)
+      CALL h5dclose_f(kptSPLabelsSetID, hdfError)
+
       CALL h5gclose_f(kptsGroupID, hdfError)
 
    END SUBROUTINE
@@ -248,6 +267,52 @@ MODULE m_banddos_io
       CALL h5gclose_f(eigenvaluesGroupID, hdfError)
 
    END SUBROUTINE
+
+   SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)
+
+      USE hdf5
+      USE m_hdf_tools4
+
+      IMPLICIT NONE
+
+      INTEGER(HID_T),              INTENT(IN) :: datasetID
+      INTEGER,                     INTENT(IN) :: dims(1)
+      INTEGER,                     INTENT(IN) :: stringLength
+      CHARACTER(LEN=stringLength), INTENT(IN) :: dataArray(:)
+
+      INTEGER          :: hdfError
+      INTEGER(HID_T)   :: dataspaceID, memSpaceID
+      INTEGER(HID_T)   :: stringTypeID
+      INTEGER(HID_t)   :: trans
+      INTEGER(HSIZE_t) :: memOffset(1), fncount(1)
+      INTEGER(HSIZE_t) :: dimsHDF(1)
+      INTEGER(SIZE_T)  :: stringLengthHDF
+
+      stringLengthHDF = stringLength
+      dimsHDF(:) = dims(:)
+      memOffset(:) = 0
+      fnCount(:) = dims(:)
+
+      trans = gettransprop()
+
+      CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
+      CALL h5tset_size_f(stringTypeID, stringLengthHDF, hdfError)
+      CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
+      CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
+
+      CALL h5dget_space_f(datasetID,dataspaceID,hdfError)
+      CALL h5sselect_hyperslab_f(dataspaceID,H5S_SELECT_SET_F,memOffset,fncount,hdfError)
+      CALL h5screate_simple_f(1,dimsHDF,memSpaceID,hdfError)
+      CALL h5dwrite_f(datasetID,stringTypeID,dataArray,dimsHDF,hdfError,memSpaceID,dataspaceID,trans)
+      CALL h5sclose_f(memSpaceID,hdfError)
+      CALL h5sclose_f(dataspaceID,hdfError)
+      CALL cleartransprop(trans)
+
+      CALL h5tclose_f(stringTypeID,hdfError)
+
+      CALL io_check("io_write_string1 !",hdfError)
+
+   END SUBROUTINE io_write_string1
 
 #endif
 
