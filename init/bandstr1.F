@@ -66,6 +66,7 @@
       kpts%nkpt = ntot
 
       ALLOCATE (bkTemp(3,kpts%nkpt))
+      ALLOCATE (kpts%specialPointIndices(kpts%numSpecialPoints))
 !
 ! --> generate k-points mesh 
 !
@@ -75,6 +76,7 @@
          dk(2) = ( syp(2,i) - syp(2,i-1) ) / (nk(i)+1)
          dk(3) = ( syp(3,i) - syp(3,i-1) ) / (nk(i)+1)
          bkTemp(:,n) = syp(:,i-1)
+         kpts%specialPointIndices(i-1) = n
          n = n + 1
          DO j = 1, nk(i)
             bkTemp(:,n) = bkTemp(:,n-1) + dk(:)
@@ -82,6 +84,7 @@
          ENDDO
       ENDDO
       bkTemp(:,n) = syp(:,nosyp)
+      kpts%specialPointIndices(nosyp) = n
       kpts%nkpt = kpts%nkpt
       kpts%posScale = 1.0
 

@@ -61,6 +61,7 @@ MODULE m_banddos_io
       INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
       INTEGER(HID_T)    :: kptSPLabelsSpaceID, kptSPLabelsSetID
+      INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
 
       INTEGER           :: iType, j, iAtom
 
@@ -161,6 +162,7 @@ MODULE m_banddos_io
       CALL h5gcreate_f(fileID, '/kpts', kptsGroupID, hdfError)
 
       CALL io_write_attint0(kptsGroupID,'nkpt',kpts%nkpt)
+      CALL io_write_attint0(kptsGroupID,'nSpecialPoints',kpts%numSpecialPoints)
 
       dims(:2)=(/3,kpts%nkpt/)
       dimsInt=dims
@@ -178,19 +180,29 @@ MODULE m_banddos_io
       CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),kpts%wtkpt)
       CALL h5dclose_f(kptWeightSetID, hdfError)
 
-      stringLength = LEN(kpts%specialPointNames(:))
-      CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
-      CALL h5tset_size_f(stringTypeID, stringLength, hdfError)
-      CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
-      CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
-      dims(:1)=(/kpts%numSpecialPoints/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),kptSPLabelsSpaceID,hdfError)
-      CALL h5dcreate_f(kptsGroupID, "specialPointLabels", stringTypeID, kptSPLabelsSpaceID, kptSPLabelsSetID, hdfError)
-      CALL h5tclose_f(stringTypeID,hdfError)
-      CALL h5sclose_f(kptSPLabelsSpaceID,hdfError)
-      CALL io_write_string1(kptSPLabelsSetID,dimsInt(:1),LEN(kpts%specialPointNames(:)),kpts%specialPointNames)
-      CALL h5dclose_f(kptSPLabelsSetID, hdfError)
+      IF (ALLOCATED(kpts%specialPointIndices)) THEN
+         stringLength = LEN(kpts%specialPointNames(:))
+         CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
+         CALL h5tset_size_f(stringTypeID, stringLength, hdfError)
+         CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
+         CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
+         dims(:1)=(/kpts%numSpecialPoints/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),kptSPLabelsSpaceID,hdfError)
+         CALL h5dcreate_f(kptsGroupID, "specialPointLabels", stringTypeID, kptSPLabelsSpaceID, kptSPLabelsSetID, hdfError)
+         CALL h5tclose_f(stringTypeID,hdfError)
+         CALL h5sclose_f(kptSPLabelsSpaceID,hdfError)
+         CALL io_write_string1(kptSPLabelsSetID,dimsInt(:1),LEN(kpts%specialPointNames(:)),kpts%specialPointNames)
+         CALL h5dclose_f(kptSPLabelsSetID, hdfError)
+
+         dims(:1)=(/kpts%numSpecialPoints/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),kptsSPIndicesSpaceID,hdfError)
+         CALL h5dcreate_f(kptsGroupID, "specialPointIndices", H5T_NATIVE_INTEGER, kptsSPIndicesSpaceID, kptsSPIndicesSetID, hdfError)
+         CALL h5sclose_f(kptsSPIndicesSpaceID,hdfError)
+         CALL io_write_integer1(kptsSPIndicesSetID,(/1/),dimsInt(:1),kpts%specialPointIndices)
+         CALL h5dclose_f(kptsSPIndicesSetID, hdfError)
+      END IF
 
       CALL h5gclose_f(kptsGroupID, hdfError)
 

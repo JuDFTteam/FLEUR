@@ -25,6 +25,7 @@ MODULE m_types_kpts
      INTEGER,ALLOCATABLE   ::  bkp(:)
      INTEGER,ALLOCATABLE   ::  bksym(:)
      INTEGER                       :: numSpecialPoints
+     INTEGER, ALLOCATABLE          :: specialPointIndices(:)
      CHARACTER(LEN=50),ALLOCATABLE :: specialPointNames(:)
      REAL   ,ALLOCATABLE           :: specialPoints(:,:)
      INTEGER,ALLOCATABLE           :: ntetra(:,:)
