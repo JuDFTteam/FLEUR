@@ -32,7 +32,11 @@ CONTAINS
     CALL gaussp(atoms%lmaxd, rx,wt)
     ! generate the lattice harmonics on the angular mesh
     ALLOCATE ( ylh(nsp,0:sphhar%nlhd,sphhar%ntypsd))
-    IF (l_grad) ALLOCATE(ylht,ylhtt,ylhf,ylhff,ylhtf,MOLD=ylh )
+    IF (l_grad) ALLOCATE(ylht,MOLD=ylh )
+    IF (l_grad) ALLOCATE(ylhtt,MOLD=ylh )
+    IF (l_grad) ALLOCATE(ylhf,MOLD=ylh )
+    IF (l_grad) ALLOCATE(ylhff,MOLD=ylh )
+    IF (l_grad) ALLOCATE(ylhtf,MOLD=ylh )
 
     IF (l_grad) THEN
        CALL lhglptg(sphhar,atoms,rx,nsp,xcpot,sym,&

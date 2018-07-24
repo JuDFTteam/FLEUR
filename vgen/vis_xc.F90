@@ -52,7 +52,8 @@ CONTAINS
 
     !Put the charge on the grid, in GGA case also calculate gradients
     CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
-    ALLOCATE(v_xc,v_x,mold=rho)
+    ALLOCATE(v_xc,mold=rho)
+    ALLOCATE(v_x,mold=rho)
 
     CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
 
