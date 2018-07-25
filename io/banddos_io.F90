@@ -240,6 +240,8 @@ MODULE m_banddos_io
       INTEGER(HID_T)    :: eigenvaluesSpaceID, eigenvaluesSetID
       INTEGER(HID_T)    :: numFoundEigsSpaceID, numFoundEigsSetID
       INTEGER(HID_T)    :: lLikeChargeSpaceID, lLikeChargeSetID
+      INTEGER(HID_T)    :: jsymSpaceID, jsymSetID
+      INTEGER(HID_T)    :: ksymSpaceID, ksymSetID
 
       INTEGER           :: hdfError, dimsInt(7)
 
@@ -275,6 +277,22 @@ MODULE m_banddos_io
       CALL h5sclose_f(lLikeChargeSpaceID,hdfError)
       CALL io_write_real5(lLikeChargeSetID,(/1,1,1,1,1/),dimsInt(:5),dos%qal(0:3,:,:neigd,:,:))
       CALL h5dclose_f(lLikeChargeSetID, hdfError)
+
+      dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
+      dimsInt = dims
+      CALL h5screate_simple_f(3,dims(:3),jsymSpaceID,hdfError)
+      CALL h5dcreate_f(eigenvaluesGroupID, "jsym", H5T_NATIVE_INTEGER, jsymSpaceID, jsymSetID, hdfError)
+      CALL h5sclose_f(jsymSpaceID,hdfError)
+      CALL io_write_integer3(jsymSetID,(/1,1,1/),dimsInt(:3),dos%jsym(:neigd,:,:))
+      CALL h5dclose_f(jsymSetID, hdfError)
+
+      dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
+      dimsInt = dims
+      CALL h5screate_simple_f(3,dims(:3),ksymSpaceID,hdfError)
+      CALL h5dcreate_f(eigenvaluesGroupID, "ksym", H5T_NATIVE_INTEGER, ksymSpaceID, ksymSetID, hdfError)
+      CALL h5sclose_f(ksymSpaceID,hdfError)
+      CALL io_write_integer3(ksymSetID,(/1,1,1/),dimsInt(:3),dos%ksym(:neigd,:,:))
+      CALL h5dclose_f(ksymSetID, hdfError)
 
       CALL h5gclose_f(eigenvaluesGroupID, hdfError)
 
