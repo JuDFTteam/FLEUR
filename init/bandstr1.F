@@ -195,7 +195,7 @@
       WRITE (27,913)
       CLOSE (27)
 
- 900  FORMAT ('set terminal postscript enhanced "Times-Roman" 20')
+ 900  FORMAT ('set terminal postscript enhanced color "Times-Roman" 20')
  901  FORMAT ('set xlabel ""')
  902  FORMAT ('set ylabel "E - E_F (eV)"')
  903  FORMAT ('set nokey')
