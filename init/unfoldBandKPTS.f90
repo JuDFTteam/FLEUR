@@ -133,7 +133,7 @@ CONTAINS
     write(92,*) kpts%wtkpt
     ALLOCATE (kpts%sc_list(9,p_kpts%nkpt))
     kpts%sc_list=list
-    write(90,'(9f15.8)') kpts%sc_list
+!    write(90,'(9f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
  SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms)
@@ -157,7 +157,7 @@ CONTAINS
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
 	INTEGER :: i,j,k,l,n
-  INTEGER :: na,n,nn,nk,nki,gi,lo
+  INTEGER :: na,n_i,nn,nk,nki,gi,lo
 	REAL, ALLOCATABLE	::w_n(:)
 	COMPLEX, ALLOCATABLE    ::w_n_c(:)
 	REAL, ALLOCATABLE	::w_n_sum(:)
@@ -232,10 +232,10 @@ CONTAINS
 			END DO
 !------------------LO's------------------------
       na=0
-      DO n=1,atoms%ntype
-        DO nn=1,atoms%neq(n)
+      DO n_i=1,atoms%ntype
+        DO nn=1,atoms%neq(n_i)
           na=na+1
-          DO lo=1,atoms&nlo(n)
+          DO lo=1,atoms%nlo(n_i)
             nk=lapw%nkvec(lo,na)
             DO nki=1,nk
               gi=lapw%kvec(nki,lo,na)
@@ -277,27 +277,27 @@ CONTAINS
 			END DO
 !------------------LO's------------------------
       na=0
-      DO n=1,atoms%ntype
-        DO nn=1,atoms%neq(n)
+      DO n_i=1,atoms%ntype
+        DO nn=1,atoms%neq(n_i)
           na=na+1
-          DO lo=1,atoms&nlo(n)
+          DO lo=1,atoms%nlo(n_i)
             nk=lapw%nkvec(lo,na)
             DO nki=1,nk
               gi=lapw%kvec(nki,lo,na)
               j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
-    			  IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-    			     &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-    			     &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
-    					DO k=1,zMat%matsize1
-      					IF (zmat%l_real) THEN
-      						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-      !						write(*,*) 'zMat is real'
-      					ELSE
-      						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
-      !						write(*,*) 'zMat is complex'
-      					END IF
-  				    END DO
-   			     END IF
+		  IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
+		     &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
+		     &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
+			DO k=1,zMat%matsize1
+				IF (zmat%l_real) THEN
+					w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+	!						write(*,*) 'zMat is real'
+				ELSE
+					w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+	!						write(*,*) 'zMat is complex'
+				END IF
+		    	END DO
+		     END IF
            END DO
          END DO
         END DO
