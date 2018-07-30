@@ -87,9 +87,11 @@ CONTAINS
     REAL    :: pc_kpoint_c(3)    !primitive cell kpoint cartesian
     REAL    :: sc_kpoint_c(3)    !super cell kpoint cartesian
     REAL    :: eps(3)
+    REAL    :: eps_r
     LOGICAL :: representation_found
 
     eps = 1.0e-10
+    eps_r = 0.000000001
 
     CALL inv3(cell%bmat,rez_inv_to_internal,rez_inv_det)
     write(1088,*) p_kpts%specialPoints
@@ -101,6 +103,7 @@ CONTAINS
 	list(1,i)=pc_kpoint_c(1)
 	list(2,i)=pc_kpoint_c(2)
 	list(3,i)=pc_kpoint_c(3)
+!!!!------- finding kpts in primitive rez. unit cell ----- 
 !	representation_found=.false.
 !m_loop:	DO m1= -banddos%s_cell_x,banddos%s_cell_x
 !		DO m2= -banddos%s_cell_y,banddos%s_cell_y
@@ -127,13 +130,32 @@ CONTAINS
  !       IF (.not.representation_found) THEN
   !      write(*,'(a,f15.8,f15.8,f15.8)') 'No representation found for the following kpoint:',list(1,i),list(2,i),list(3,i)
    !     END IF
-	kpts%bk(:,i)=matmul(rez_inv_to_internal,pc_kpoint_c) 
+   !----------------------- method internal coordintes --------------------
+    sc_kpoint_i(:)=matmul(rez_inv_to_internal,pc_kpoint_c)
+    pc_kpoint_i(:)=p_kpts%bk(1:3,i)
+    sc_kpoint_i(:) = sc_kpoint_i(:) + 0.5
+    m1 = FLOOR(sc_kpoint_i(1))
+    m2 = FLOOR(sc_kpoint_i(2))
+    m3 = FLOOR(sc_kpoint_i(3))
+    sc_kpoint_i(1) = sc_kpoint_i(1) - m1
+    sc_kpoint_i(2) = sc_kpoint_i(2) - m2
+    sc_kpoint_i(3) = sc_kpoint_i(3) - m3
+    sc_kpoint_i(:) = sc_kpoint_i(:) - 0.5
+		list(4,i)=sc_kpoint_i(1)
+		list(5,i)=sc_kpoint_i(2)
+ 		list(6,i)=sc_kpoint_i(3)
+    list(7,i)=m1
+    list(8,i)=m2
+    list(9,i)=m3 !this whole block is to move kpoints into first BZ within -0.5 to 0.5
+
+!  	kpts%bk(:,i)=matmul(rez_inv_to_internal,pc_kpoint_c)
+    kpts%bk(:,i)=list(4:6,i)
     END DO
     write(91,'(3f15.8)') kpts%bk
     write(92,*) kpts%wtkpt
     ALLOCATE (kpts%sc_list(9,p_kpts%nkpt))
     kpts%sc_list=list
-!    write(90,'(9f15.8)') kpts%sc_list
+    write(90,'(9f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
  SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms)
@@ -218,9 +240,9 @@ CONTAINS
 						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 !						write(*,*) 'zMat is complex'
 					END IF
-			  IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+			  IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 !						write(*,*) 'zMat is real'
