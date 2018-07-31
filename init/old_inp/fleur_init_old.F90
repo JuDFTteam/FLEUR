@@ -231,10 +231,10 @@ CONTAINS
           DO i = 1, atoms%nat
              WRITE(atoms%label(i),'(i0)') i
           END DO
-          DO i = 1, atoms%ntype
-             noel(i) = namat_const(atoms%nz(i))
-             atomTypeSpecies(i) = i
-             speciesRepAtomType(i) = i
+          DO iType = 1, atoms%ntype
+             noel(iType) = namat_const(atoms%nz(iType))
+             atomTypeSpecies(iType) = iType
+             speciesRepAtomType(iType) = iType
 
              hybrid%lcutm1(iType) = 4
              hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10

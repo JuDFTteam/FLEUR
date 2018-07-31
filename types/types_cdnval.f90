@@ -128,7 +128,7 @@ PRIVATE
       INTEGER, ALLOCATABLE :: noccbd(:)
       INTEGER, ALLOCATABLE :: nStart(:)
       INTEGER, ALLOCATABLE :: nEnd(:)
-      REAL,    ALLOCATABLE :: weights(:,:)
+      REAL,    ALLOCATABLE :: weights(:,:) ! weights(band_idx, kpt_idx)
 
       CONTAINS
          PROCEDURE,PASS :: init => cdnvalJob_init
