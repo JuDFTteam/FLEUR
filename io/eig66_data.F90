@@ -169,17 +169,19 @@ module m_eig66_data
     end function
 
     INTEGER function eig66_data_mode(id)RESULT(mode)
-    INTEGER,INTENT(IN)  :: id
-    TYPE(t_list),POINTER:: listpointer
-    mode=-1
-    listpointer=>linked_list
-    DO WHILE(associated(listpointer))
-      if (id==listpointer%id) THEN
-           mode=listpointer%data%io_mode
-           return
-      ENDIF
-      listpointer=>listpointer%next
-    ENDDO
+        INTEGER,INTENT(IN)  :: id
+        TYPE(t_list),POINTER:: listpointer
+
+        mode=-1
+        listpointer=>linked_list
+
+        DO WHILE(associated(listpointer))
+            if (id==listpointer%id) THEN
+                mode=listpointer%data%io_mode
+                return
+            ENDIF
+            listpointer=>listpointer%next
+        ENDDO
     END FUNCTION
 
 end module m_eig66_data
