@@ -141,9 +141,9 @@ CONTAINS
     sc_kpoint_i(2) = sc_kpoint_i(2) - m2
     sc_kpoint_i(3) = sc_kpoint_i(3) - m3
     sc_kpoint_i(:) = sc_kpoint_i(:) - 0.5
-		list(4,i)=sc_kpoint_i(1)
-		list(5,i)=sc_kpoint_i(2)
- 		list(6,i)=sc_kpoint_i(3)
+    list(4,i)=sc_kpoint_i(1)
+    list(5,i)=sc_kpoint_i(2)
+    list(6,i)=sc_kpoint_i(3)
     list(7,i)=m1
     list(8,i)=m2
     list(9,i)=m3 !this whole block is to move kpoints into first BZ within -0.5 to 0.5
@@ -211,7 +211,7 @@ CONTAINS
 !		write(222,'(234f15.8)') zMat%data_r
 !		write(223,'(234f15.8)') smat_unfold%data_r
 
-		method_rubel=.true.
+		method_rubel=.true.    !this switch is to switch between overlap matrix and rubel method (without overlap matrix)
 
 		IF (zmat%l_real) THEN	
 			ALLOCATE(w_n(zMat%matsize2))
@@ -267,9 +267,9 @@ CONTAINS
     					ELSE
     						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
     					END IF
-    			  IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-    			     &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-    			     &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
+			  IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
     					IF (zmat%l_real) THEN
     						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
     					ELSE
@@ -283,9 +283,9 @@ CONTAINS
 !--------------------------LO's finished----------------
 		    ELSE
 			DO j=1,lapw%nv(jsp)
-			  IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+			  IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
 				DO k=1,zMat%matsize1
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
@@ -307,9 +307,9 @@ CONTAINS
             DO nki=1,nk
               gi=lapw%kvec(nki,lo,na)
               j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
-		  IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-		     &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-		     &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
+			  IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+			     &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+			     &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
 			DO k=1,zMat%matsize1
 				IF (zmat%l_real) THEN
 					w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
