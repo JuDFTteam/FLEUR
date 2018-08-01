@@ -144,7 +144,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       jspmax = input%jspins
       IF (noco%l_mperp) jspmax = 1
       DO jspin = 1,jspmax
-         CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin)
+         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,banddos=banddos)
          CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
       END DO
