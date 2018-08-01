@@ -179,7 +179,7 @@ CONTAINS
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
 	INTEGER :: i,j,k,l,n
-  INTEGER :: na,n_i,nn,nk,nki,gi,lo
+	INTEGER :: na,n_i,nn,nk,nki,gi,lo
 	REAL, ALLOCATABLE	::w_n(:)
 	COMPLEX, ALLOCATABLE    ::w_n_c(:)
 	REAL, ALLOCATABLE	::w_n_sum(:)
@@ -211,144 +211,154 @@ CONTAINS
 !		write(222,'(234f15.8)') zMat%data_r
 !		write(223,'(234f15.8)') smat_unfold%data_r
 
-		method_rubel=.true.    !this switch is to switch between overlap matrix and rubel method (without overlap matrix)
+!	method_rubel=.true.    !this switch is to switch between overlap matrix and rubel method (without overlap matrix)
 
-		IF (zmat%l_real) THEN	
-			ALLOCATE(w_n(zMat%matsize2))
-		        w_n = 0
-		    IF (method_rubel) THEN
-			ALLOCATE(w_n_sum(zMat%matsize2))
-		        w_n_sum = 0
-		    END IF
-		ELSE
-			ALLOCATE(w_n_c(zMat%matsize2))
-			w_n_c=0	
-		    IF (method_rubel) THEN
-			ALLOCATE(w_n_c_sum(zMat%matsize2))
-			w_n_c_sum=0	
-		    END IF
-		END IF	
+	IF (zmat%l_real) THEN	
+		ALLOCATE(w_n(zMat%matsize2))
+	        w_n = 0
+!	    IF (method_rubel) THEN
+		ALLOCATE(w_n_sum(zMat%matsize2))
+	        w_n_sum = 0
+!	    END IF
+	ELSE
+		ALLOCATE(w_n_c(zMat%matsize2))
+		w_n_c=0	
+!	    IF (method_rubel) THEN
+		ALLOCATE(w_n_c_sum(zMat%matsize2))
+		w_n_c_sum=0	
+!	    END IF
+	END IF	
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
 	write (*,*)results%ef
-		DO i=1,zMat%matsize2
-		    IF (method_rubel) THEN
+        write (*,*) i_kpt
+	DO i=1,zMat%matsize2
+		IF (method_rubel) THEN
 			DO j=1,lapw%nv(jsp)
-					IF (zmat%l_real) THEN
-						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
+				IF (zmat%l_real) THEN
+					w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 !						write(*,*) 'zMat is real'
-					ELSE
-						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+				ELSE
+					w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 !						write(*,*) 'zMat is complex'
-					END IF
-			  IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+				END IF
+				IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+				     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+				     &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
-!						write(*,*) 'zMat is real'
+!							write(*,*) 'zMat is real'
 					ELSE
 						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
-!						write(*,*) 'zMat is complex'
+!							write(*,*) 'zMat is complex'
 					END IF
-			   END IF
+			   	END IF
 			END DO
 !------------------LO's------------------------
-      na=0
-      DO n_i=1,atoms%ntype
-        DO nn=1,atoms%neq(n_i)
-          na=na+1
-          DO lo=1,atoms%nlo(n_i)
-            nk=lapw%nkvec(lo,na)
-            DO nki=1,nk
-              gi=lapw%kvec(nki,lo,na)
-              j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
-    					IF (zmat%l_real) THEN
-    						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
-    					ELSE
-    						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
-    					END IF
-			  IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
-    					IF (zmat%l_real) THEN
-    						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
-    					ELSE
-    						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
-    					END IF
-   			     END IF
-           END DO
-         END DO
-        END DO
+			na=0
+			DO n_i=1,atoms%ntype
+				DO nn=1,atoms%neq(n_i)
+					na=na+1
+					DO lo=1,atoms%nlo(n_i)
+						nk=lapw%nkvec(lo,na)
+						DO nki=1,nk
+							gi=lapw%kvec(nki,lo,na)
+							j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
+							IF (zmat%l_real) THEN
+								w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
+							ELSE
+								w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+							END IF
+							IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+							   &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+							   &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+								IF (zmat%l_real) THEN
+									w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
+								ELSE
+									w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+								END IF
+							END IF
+						END DO
+					END DO
+				END DO
 			END DO
 !--------------------------LO's finished----------------
-		    ELSE
+		ELSE
 			DO j=1,lapw%nv(jsp)
-			  IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
 				DO k=1,zMat%matsize1
 					IF (zmat%l_real) THEN
-						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-!						write(*,*) 'zMat is real'
+						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
 					ELSE
-						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
-!						write(*,*) 'zMat is complex'
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
 					END IF
 				END DO
-        END IF
+				IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+				   &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+				   &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+					DO k=1,zMat%matsize1
+						IF (zmat%l_real) THEN
+							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+						ELSE
+							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+						END IF
+					END DO
+				END IF
 			END DO
 !------------------LO's------------------------
-      na=0
-      DO n_i=1,atoms%ntype
-        DO nn=1,atoms%neq(n_i)
-          na=na+1
-          DO lo=1,atoms%nlo(n_i)
-            nk=lapw%nkvec(lo,na)
-            DO nki=1,nk
-              gi=lapw%kvec(nki,lo,na)
-              j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
-			  IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-			     &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-			     &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
-			DO k=1,zMat%matsize1
-				IF (zmat%l_real) THEN
-					w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-	!						write(*,*) 'zMat is real'
-				ELSE
-					w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
-	!						write(*,*) 'zMat is complex'
-				END IF
-		    	END DO
-		     END IF
-           END DO
-         END DO
-        END DO
+      			na=0
+      			DO n_i=1,atoms%ntype
+        			DO nn=1,atoms%neq(n_i)
+          				na=na+1
+          				DO lo=1,atoms%nlo(n_i)
+						nk=lapw%nkvec(lo,na)
+						DO nki=1,nk
+							gi=lapw%kvec(nki,lo,na)
+							j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
+							DO k=1,zMat%matsize1
+								IF (zmat%l_real) THEN
+									w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+								ELSE
+									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+								END IF
+							END DO
+							IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
+							   &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
+							   &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+								DO k=1,zMat%matsize1
+									IF (zmat%l_real) THEN
+										w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+									ELSE
+										w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+									END IF
+		    						END DO
+							END IF
+						END DO
+					END DO
+				END DO
 			END DO
 !--------------------------LO's finished----------------
-		     END IF
-		     IF (method_rubel) THEN
+		END IF
+!		IF (method_rubel) THEN
 			IF (zmat%l_real) THEN
 				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
 				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
-				IF ((w_n(i)>1).or.(w_n(i)<0)) write(*,*) 'w_n larger 1 or smaller 0', w_n(i), 'eigenvalue',eig(i)
+				IF ((w_n(i)/w_n_sum(i)>1).or.(w_n(i)/w_n_sum(i)<0)) write(*,*) 'w_n/sum larger 1 or smaller 0', w_n(i)/w_n_sum(i), 'eigenvalue',eig(i)
 			ELSE
 				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
 		        END IF
-		     ELSE
-			IF (zmat%l_real) THEN
-				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
-				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
-				IF ((w_n(i)>1).or.(w_n(i)<0)) write(*,*) 'w_n larger 1 or smaller 0', w_n(i), 'eigenvalue',eig(i)
-			ELSE
-				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
-				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
-				IF ((abs(w_n_c(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c larger 1 or smaller 0', w_n_c(i), 'eigenvalue',eig(i)
-		        END IF
-		     END IF			
-		END DO
-
+!		ELSE
+!			IF (zmat%l_real) THEN
+!				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
+!				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
+!				IF ((w_n(i)>1).or.(w_n(i)<0)) write(*,*) 'w_n larger 1 or smaller 0', w_n(i), 'eigenvalue',eig(i)
+!			ELSE
+!				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
+!				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
+!				IF ((abs(w_n_c(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c larger 1 or smaller 0', w_n_c(i), 'eigenvalue',eig(i)
+!	        	END IF
+!		END IF			
+	END DO
 	IF (i_kpt==kpts%nkpt) THEN
 		IF (jsp==1) CLOSE (679)
 		IF (jsp==input%jspins) THEN
@@ -356,7 +366,6 @@ CONTAINS
 			CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
 		END IF
 	END IF
-!	CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
  END SUBROUTINE
       	
       SUBROUTINE write_gnu_sc(nosyp,d,ssy,input)
