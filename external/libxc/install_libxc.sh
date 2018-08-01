@@ -2,7 +2,7 @@ libxc_version=4.2.1
 if [ ! -d libxc-${libxc_version} ]
 then
     #Get the file with the code
-    curl --connect-timeout 10 -LO "http://www.tddft.org/programs/octopus/download/libxc/${libxc_version}/libxc-${libxc_version}.tar.gz"
+    curl --speed-time 15 --speed-limit 1000 -LO "http://www.tddft.org/programs/octopus/download/libxc/${libxc_version}/libxc-${libxc_version}.tar.gz"
 
     # tddft.org is always offline. Hence a backup:
     if [ ! -f libxc-${libxc_version}.tar.gz ]; then
