@@ -445,7 +445,7 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,dimension,atoms,kpts)
 
 END SUBROUTINE orbcomp_init
 
-SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
 
    USE m_types_setup
    USE m_types_kpts
@@ -458,10 +458,10 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,banddos,noco,results,jspi
    TYPE(t_mpi),                    INTENT(IN)    :: mpi
    TYPE(t_input),                  INTENT(IN)    :: input
    TYPE(t_kpts),                   INTENT(IN)    :: kpts
-   TYPE(t_banddos),                INTENT(IN)    :: banddos
    TYPE(t_noco),                   INTENT(IN)    :: noco
    TYPE(t_results),                INTENT(IN)    :: results
    TYPE(t_sliceplot),    OPTIONAL, INTENT(IN)    :: sliceplot
+   TYPE(t_banddos), OPTIONAL,      INTENT(IN)    :: banddos
 
    INTEGER,                        INTENT(IN)    :: jspin
 
@@ -503,7 +503,9 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,banddos,noco,results,jspi
          END IF
       END DO
 
-      IF (banddos%dos) thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)
+      IF(PRESENT(banddos)) THEN
+            IF (banddos%dos) thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)
+      END IF 
 
       thisCdnvalJob%nStart(ikpt) = 1
       thisCdnvalJob%nEnd(ikpt)   = thisCdnvalJob%noccbd(ikpt)

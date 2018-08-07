@@ -101,7 +101,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
@@ -138,8 +138,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 
-   CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,moments)
+   CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                stars,cell,sphhar,atoms,vTot,outDen,moments,results)
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 

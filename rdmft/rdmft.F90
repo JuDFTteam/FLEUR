@@ -144,12 +144,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       jspmax = input%jspins
       IF (noco%l_mperp) jspmax = 1
       DO jspin = 1,jspmax
-         CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin)
+         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,banddos=banddos)
          CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
       END DO
-      CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
-                   stars,cell,sphhar,atoms,vTot,overallDen,moments)
+      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
          CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
       END IF
