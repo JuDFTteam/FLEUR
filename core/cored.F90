@@ -38,7 +38,7 @@ CONTAINS
     !     .. Local Scalars ..
     REAL e,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2
     REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight
-    INTEGER i,j,jatom,jm,korb,n,ncmsh,nm,nm1,nst ,l,ierr
+    INTEGER i,j,jatom,korb,n,ncmsh,nm,nm1,nst ,l,ierr
     !     ..
     !     .. Local Arrays ..
     
@@ -54,7 +54,6 @@ CONTAINS
     !
     IF (input%frcor) THEN
        DO  n = 1,atoms%ntype
-          jm = atoms%jri(n)
           rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
           ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )
           ncmsh = MIN( ncmsh, DIMENSION%msh )
