@@ -22,6 +22,9 @@ CONTAINS
 	p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
 	p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y 
 	p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z 
+!	p_cell%amat(i,1)=cell%amat(i,1)/banddos%s_cell_x
+!	p_cell%amat(i,2)=cell%amat(i,2)/banddos%s_cell_y 
+!	p_cell%amat(i,3)=cell%amat(i,3)/banddos%s_cell_z 
     END DO
     CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
     p_cell%bmat=p_cell%bmat*tpi_const
@@ -81,81 +84,95 @@ CONTAINS
     INTEGER :: i,m1,m2,m3
     REAL    :: rez_inv_to_internal(3,3)
     REAL    :: rez_inv_det
-    REAL    :: list(9,p_kpts%nkpt)  !cartesion coordinates for k,K,m
+    REAL    :: list(10,p_kpts%nkpt)  !cartesion coordinates for k,K,m
     REAL    :: pc_kpoint_i(3)    !primitive cell kpoint internal
     REAL    :: sc_kpoint_i(3)    !super cell kpoint internal
     REAL    :: pc_kpoint_c(3)    !primitive cell kpoint cartesian
     REAL    :: sc_kpoint_c(3)    !super cell kpoint cartesian
     REAL    :: eps(3)
-    REAL    :: eps_r
+    REAL    :: eps_r, eps_kpt
     LOGICAL :: representation_found
+    REAL    ::kpt_dist
 
     eps = 1.0e-10
     eps_r = 0.000000001
+    eps_kpt = 0.00000001
 
     CALL inv3(cell%bmat,rez_inv_to_internal,rez_inv_det)
     write(1088,*) p_kpts%specialPoints
     write(333,'(3f15.8)')p_kpts%bk
+    kpt_dist=0
     DO i= 1,size(list,2)
-        pc_kpoint_c(1)=p_kpts%bk(1,i)*p_cell%bmat(1,1)+p_kpts%bk(2,i)*p_cell%bmat(1,2)+p_kpts%bk(3,i)*p_cell%bmat(1,3)
-        pc_kpoint_c(2)=p_kpts%bk(1,i)*p_cell%bmat(2,1)+p_kpts%bk(2,i)*p_cell%bmat(2,2)+p_kpts%bk(3,i)*p_cell%bmat(2,3)
-        pc_kpoint_c(3)=p_kpts%bk(1,i)*p_cell%bmat(3,1)+p_kpts%bk(2,i)*p_cell%bmat(3,2)+p_kpts%bk(3,i)*p_cell%bmat(3,3)
-	list(1,i)=pc_kpoint_c(1)
-	list(2,i)=pc_kpoint_c(2)
-	list(3,i)=pc_kpoint_c(3)
-!!!!------- finding kpts in primitive rez. unit cell ----- 
-!	representation_found=.false.
-!m_loop:	DO m1= -banddos%s_cell_x,banddos%s_cell_x
-!		DO m2= -banddos%s_cell_y,banddos%s_cell_y
-!			DO m3= -banddos%s_cell_z,banddos%s_cell_z
-!				pc_kpoint_c(1)=list(1,i)-m1*cell%bmat(1,1)-m2*cell%bmat(1,2)-m3*cell%bmat(1,3)
-!				pc_kpoint_c(2)=list(2,i)-m1*cell%bmat(2,1)-m2*cell%bmat(2,2)-m3*cell%bmat(2,3)
-!				pc_kpoint_c(3)=list(3,i)-m1*cell%bmat(3,1)-m2*cell%bmat(3,2)-m3*cell%bmat(3,3)
-!!				IF (         (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,1)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,1)) < dot_product(cell%bmat(:,1), cell%bmat(:,1)))) &
-!!				     & .AND. (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,2)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,2)) < dot_product(cell%bmat(:,2), cell%bmat(:,2)))) &
-!!				     & .AND. (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,3)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,3)) < dot_product(cell%bmat(:,3), cell%bmat(:,3))))) THEN
-!				IF (all((matmul(rez_inv_to_internal,pc_kpoint_c)+eps(:))>=0).and.all((matmul(rez_inv_to_internal,pc_kpoint_c)+eps(:))<1)) THEN
-!					list(4,i)=pc_kpoint_c(1)
-!					list(5,i)=pc_kpoint_c(2)
-!					list(6,i)=pc_kpoint_c(3)
-!					list(7,i)=-m1
-!					list(8,i)=-m2
-!					list(9,i)=-m3
-!					representation_found=.true.
-!				END IF
- !      			        IF (representation_found) EXIT m_loop
-!			END DO
-!		END DO
-!	END DO m_loop
- !       IF (.not.representation_found) THEN
-  !      write(*,'(a,f15.8,f15.8,f15.8)') 'No representation found for the following kpoint:',list(1,i),list(2,i),list(3,i)
-   !     END IF
-   !----------------------- method internal coordintes --------------------
-    sc_kpoint_i(:)=matmul(rez_inv_to_internal,pc_kpoint_c)
-    pc_kpoint_i(:)=p_kpts%bk(1:3,i)
-    sc_kpoint_i(:) = sc_kpoint_i(:) + 0.5
-    m1 = FLOOR(sc_kpoint_i(1))
-    m2 = FLOOR(sc_kpoint_i(2))
-    m3 = FLOOR(sc_kpoint_i(3))
-    sc_kpoint_i(1) = sc_kpoint_i(1) - m1
-    sc_kpoint_i(2) = sc_kpoint_i(2) - m2
-    sc_kpoint_i(3) = sc_kpoint_i(3) - m3
-    sc_kpoint_i(:) = sc_kpoint_i(:) - 0.5
-    list(4,i)=sc_kpoint_i(1)
-    list(5,i)=sc_kpoint_i(2)
-    list(6,i)=sc_kpoint_i(3)
-    list(7,i)=m1
-    list(8,i)=m2
-    list(9,i)=m3 !this whole block is to move kpoints into first BZ within -0.5 to 0.5
+	!        pc_kpoint_c(1)=p_kpts%bk(1,i)*p_cell%bmat(1,1)+p_kpts%bk(2,i)*p_cell%bmat(1,2)+p_kpts%bk(3,i)*p_cell%bmat(1,3)
+	!        pc_kpoint_c(2)=p_kpts%bk(1,i)*p_cell%bmat(2,1)+p_kpts%bk(2,i)*p_cell%bmat(2,2)+p_kpts%bk(3,i)*p_cell%bmat(2,3)
+	!        pc_kpoint_c(3)=p_kpts%bk(1,i)*p_cell%bmat(3,1)+p_kpts%bk(2,i)*p_cell%bmat(3,2)+p_kpts%bk(3,i)*p_cell%bmat(3,3)
+		pc_kpoint_c(1)=p_kpts%bk(1,i)*p_cell%bmat(1,1)+p_kpts%bk(2,i)*p_cell%bmat(2,1)+p_kpts%bk(3,i)*p_cell%bmat(3,1)
+		pc_kpoint_c(2)=p_kpts%bk(1,i)*p_cell%bmat(1,2)+p_kpts%bk(2,i)*p_cell%bmat(2,2)+p_kpts%bk(3,i)*p_cell%bmat(3,2)
+		pc_kpoint_c(3)=p_kpts%bk(1,i)*p_cell%bmat(1,3)+p_kpts%bk(2,i)*p_cell%bmat(2,3)+p_kpts%bk(3,i)*p_cell%bmat(3,3)
+		list(1,i)=pc_kpoint_c(1)
+		list(2,i)=pc_kpoint_c(2)
+		list(3,i)=pc_kpoint_c(3)
+	!!!!------- finding kpts in primitive rez. unit cell ----- 
+	!	representation_found=.false.
+	!m_loop:	DO m1= -banddos%s_cell_x,banddos%s_cell_x
+	!		DO m2= -banddos%s_cell_y,banddos%s_cell_y
+	!			DO m3= -banddos%s_cell_z,banddos%s_cell_z
+	!				pc_kpoint_c(1)=list(1,i)-m1*cell%bmat(1,1)-m2*cell%bmat(1,2)-m3*cell%bmat(1,3)
+	!				pc_kpoint_c(2)=list(2,i)-m1*cell%bmat(2,1)-m2*cell%bmat(2,2)-m3*cell%bmat(2,3)
+	!				pc_kpoint_c(3)=list(3,i)-m1*cell%bmat(3,1)-m2*cell%bmat(3,2)-m3*cell%bmat(3,3)
+	!!				IF (         (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,1)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,1)) < dot_product(cell%bmat(:,1), cell%bmat(:,1)))) &
+	!!				     & .AND. (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,2)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,2)) < dot_product(cell%bmat(:,2), cell%bmat(:,2)))) &
+	!!				     & .AND. (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,3)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,3)) < dot_product(cell%bmat(:,3), cell%bmat(:,3))))) THEN
+	!				IF (all((matmul(rez_inv_to_internal,pc_kpoint_c)+eps(:))>=0).and.all((matmul(rez_inv_to_internal,pc_kpoint_c)+eps(:))<1)) THEN
+	!					list(4,i)=pc_kpoint_c(1)
+	!					list(5,i)=pc_kpoint_c(2)
+	!					list(6,i)=pc_kpoint_c(3)
+	!					list(7,i)=-m1
+	!					list(8,i)=-m2
+	!					list(9,i)=-m3
+	!					representation_found=.true.
+	!				END IF
+	 !      			        IF (representation_found) EXIT m_loop
+	!			END DO
+	!		END DO
+	!	END DO m_loop
+	 !       IF (.not.representation_found) THEN
+	  !      write(*,'(a,f15.8,f15.8,f15.8)') 'No representation found for the following kpoint:',list(1,i),list(2,i),list(3,i)
+	   !     END IF
+	   !----------------------- method internal coordintes --------------------
+	    sc_kpoint_i(:)=matmul(pc_kpoint_c,rez_inv_to_internal)
+	    pc_kpoint_i(:)=p_kpts%bk(1:3,i)
+	    !sc_kpoint_i(:) = sc_kpoint_i(:) + 0.5
+	    m1 = FLOOR(sc_kpoint_i(1))
+	    m2 = FLOOR(sc_kpoint_i(2))
+	    m3 = FLOOR(sc_kpoint_i(3))
+	    m1=0
+	    m2=0
+	    m3=0
+	    sc_kpoint_i(1) = sc_kpoint_i(1) - m1 + eps_kpt
+	    sc_kpoint_i(2) = sc_kpoint_i(2) - m2 + eps_kpt
+	    sc_kpoint_i(3) = sc_kpoint_i(3) - m3 + eps_kpt
+	    !sc_kpoint_i(:) = sc_kpoint_i(:) - 0.5
+	    list(4,i)=sc_kpoint_i(1)
+	    list(5,i)=sc_kpoint_i(2)
+	    list(6,i)=sc_kpoint_i(3)
+	    list(7,i)=m1
+	    list(8,i)=m2
+	    list(9,i)=m3 !this whole block is to move kpoints into first BZ within -0.5 to 0.5
 
-!  	kpts%bk(:,i)=matmul(rez_inv_to_internal,pc_kpoint_c)
-    kpts%bk(:,i)=list(4:6,i)
+	!  	kpts%bk(:,i)=matmul(rez_inv_to_internal,pc_kpoint_c)
+	    kpts%bk(:,i)=list(4:6,i)
+	
+	IF (i>1) THEN
+	kpt_dist=kpt_dist+sqrt(dot_product(list(1:3,i)-list(1:3,i-1),list(1:3,i)-list(1:3,i-1)))
+	END IF
+	list(10,i)=kpt_dist
     END DO
     write(91,'(3f15.8)') kpts%bk
     write(92,*) kpts%wtkpt
-    ALLOCATE (kpts%sc_list(9,p_kpts%nkpt))
+    ALLOCATE (kpts%sc_list(10,p_kpts%nkpt))
     kpts%sc_list=list
-    write(90,'(9f15.8)') kpts%sc_list
+    write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
  SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms)
@@ -184,7 +201,6 @@ CONTAINS
 	COMPLEX, ALLOCATABLE    ::w_n_c(:)
 	REAL, ALLOCATABLE	::w_n_sum(:)
 	COMPLEX, ALLOCATABLE    ::w_n_c_sum(:)
-	REAL	::kpt_dist=0
         LOGICAL :: method_rubel=.false.
 
 	CALL build_primitive_cell(banddos,p_cell,cell)
@@ -203,9 +219,6 @@ CONTAINS
 		IF (jsp==2) OPEN (680,file='bands_sc.2',status='unknown')
 	END IF
 
-	IF (i_kpt>1) THEN
-	kpt_dist=kpt_dist+sqrt(dot_product(kpts%sc_list(1:3,i_kpt)-kpts%sc_list(1:3,i_kpt-1),kpts%sc_list(1:3,i_kpt)-kpts%sc_list(1:3,i_kpt-1)))
-	END IF
 !		write(*,*) 'real zmat size dim 1:', size(zMat%data_r,1), 'dim2:', size(zMat%data_r,2)
 !		write(*,*) 'smat dim1', size(smat_unfold%data_r,1), 'dim2', size(smat_unfold%data_r,2),'data',smat_unfold%data_r(2,2)
 !		write(222,'(234f15.8)') zMat%data_r
@@ -339,12 +352,12 @@ CONTAINS
 		END IF
 !		IF (method_rubel) THEN
 			IF (zmat%l_real) THEN
-				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
-				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
+				IF (jsp==1) write(679,'(3f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
+				IF (jsp==2) write(680,'(3f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
 				IF ((w_n(i)/w_n_sum(i)>1).or.(w_n(i)/w_n_sum(i)<0)) write(*,*) 'w_n/sum larger 1 or smaller 0', w_n(i)/w_n_sum(i), 'eigenvalue',eig(i)
 			ELSE
-				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
-				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
+				IF (jsp==1) write(679,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
+				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
 		        END IF
 !		ELSE
