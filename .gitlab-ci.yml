@@ -90,7 +90,7 @@ build-intel:
      paths:
        - build.intel
   script:
-    - set +e && source compilervars.sh intel64 && set -e
+    - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
     - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -l intel AUTO ; cd build.intel; make 
   only:
     - schedules
@@ -105,7 +105,7 @@ test-intel:
      paths:
        - build.intel
   script:
-    - set +e && source compilervars.sh intel64 && set -e
+    - set +e && source compilervars.sh intel64 && set -e; ulimit -s unlimited
     - cd /builds/fleur/fleur/build.intel;ctest
   only:
      - schedules
