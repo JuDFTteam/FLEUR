@@ -114,7 +114,7 @@ CONTAINS
        ELSE
           t2 = vrd(atoms%jri(jatom)) / ( atoms%jri(jatom) - ncmsh )
        ENDIF
-       IF ( atoms%jri(jatom) .LT. ncmsh) THEN
+       IF ( atoms%jri(jatom) < ncmsh) THEN
           DO  i = atoms%jri(jatom) + 1,ncmsh
              rhoss(i) = 0.
              IF (input%l_core_confpot) THEN
@@ -130,31 +130,32 @@ CONTAINS
 
        nst = atoms%ncst(jatom)        ! for lda+U
 
-       IF (input%gw.EQ.1 .OR. input%gw.EQ.3)&
+       IF (input%gw==1 .OR. input%gw==3)&
             &                      WRITE(15) nst,atoms%rmsh(1:atoms%jri(jatom),jatom)
 
        stateEnergies = 0.0
        DO  korb = 1,nst
-          IF (occ(korb).EQ.0) CYCLE
-          fn = nprnc(korb)
-          fj = iabs(kappa(korb)) - .5e0
-          weight = 2*fj + 1.e0
-          IF (bmu > 99.) weight = occ(korb)
-          fl = fj + (.5e0)*isign(1,kappa(korb))
-          e = -2* (z/ (fn+fl))**2
-          CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, e, a,b,ierr)
-          stateEnergies(korb) = e
-          WRITE (6,FMT=8010) fn,fl,fj,e,weight
-          WRITE (16,FMT=8010) fn,fl,fj,e,weight
-          IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
-          IF (input%gw.EQ.1 .OR. input%gw.EQ.3) WRITE (15) NINT(fl),weight,e,&
-               a(1:atoms%jri(jatom)),b(1:atoms%jri(jatom))
+          IF (occ(korb) /= 0.0) THEN
+            fn = nprnc(korb)
+            fj = iabs(kappa(korb)) - .5e0
+            weight = 2*fj + 1.e0
+            IF (bmu > 99.) weight = occ(korb)
+            fl = fj + (.5e0)*isign(1,kappa(korb))
+            e = -2* (z/ (fn+fl))**2
+            CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, e, a,b,ierr)
+            stateEnergies(korb) = e
+            WRITE (6,FMT=8010) fn,fl,fj,e,weight
+            WRITE (16,FMT=8010) fn,fl,fj,e,weight
+            IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
+            IF (input%gw==1 .OR. input%gw==3) WRITE (15) NINT(fl),weight,e,&
+                a(1:atoms%jri(jatom)),b(1:atoms%jri(jatom))
 
-          sume = sume + weight*e/input%jspins
-          DO j = 1,ncmsh
-             rhcs(j) = weight* (a(j)**2+b(j)**2)
-             rhoss(j) = rhoss(j) + rhcs(j)
-          ENDDO
+            sume = sume + weight*e/input%jspins
+            DO j = 1,ncmsh
+              rhcs(j) = weight* (a(j)**2+b(j)**2)
+              rhoss(j) = rhoss(j) + rhcs(j)
+            ENDDO
+          ENDIF
        ENDDO
 
        !     ---->update spherical charge density rho with the core density.
