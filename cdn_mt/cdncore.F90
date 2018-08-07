@@ -128,7 +128,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                          outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
          ELSE IF (mpi%irank.EQ.0) THEN
             DO iType = 1,atoms%ntype
-               outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin)/input%jspins/cell%volint
+               outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin) / (input%jspins * cell%volint)
             END DO
          END IF
       END IF
