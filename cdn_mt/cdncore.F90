@@ -27,21 +27,21 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    IMPLICIT NONE
 
 
-   TYPE(t_mpi),        INTENT(IN)           ::                   mpi
-   TYPE(t_dimension),  INTENT(IN)           ::                   dimension
-   TYPE(t_oneD),       INTENT(IN)           ::                   oneD
-   TYPE(t_input),      INTENT(IN)           ::                   input
-   TYPE(t_vacuum),     INTENT(IN)           ::                   vacuum
-   TYPE(t_noco),       INTENT(IN)           ::                   noco
-   TYPE(t_sym),        INTENT(IN)           ::                   sym
-   TYPE(t_stars),      INTENT(IN)           ::                   stars
-   TYPE(t_cell),       INTENT(IN)           ::                   cell
-   TYPE(t_sphhar),     INTENT(IN)           ::                   sphhar
-   TYPE(t_atoms),      INTENT(IN)           ::                   atoms
-   TYPE(t_potden),     INTENT(IN)           ::                   vTot
-   TYPE(t_potden),     INTENT(INOUT)        ::                   outDen
-   TYPE(t_moments),    INTENT(INOUT)        ::                   moments
-   TYPE(t_results),    INTENT(INOUT)        ::                   results
+   TYPE(t_mpi),        INTENT(IN)           ::  mpi
+   TYPE(t_dimension),  INTENT(IN)           ::  dimension
+   TYPE(t_oneD),       INTENT(IN)           ::  oneD
+   TYPE(t_input),      INTENT(IN)           ::  input
+   TYPE(t_vacuum),     INTENT(IN)           ::  vacuum
+   TYPE(t_noco),       INTENT(IN)           ::  noco
+   TYPE(t_sym),        INTENT(IN)           ::  sym
+   TYPE(t_stars),      INTENT(IN)           ::  stars
+   TYPE(t_cell),       INTENT(IN)           ::  cell
+   TYPE(t_sphhar),     INTENT(IN)           ::  sphhar
+   TYPE(t_atoms),      INTENT(IN)           ::  atoms
+   TYPE(t_potden),     INTENT(IN)           ::  vTot
+   TYPE(t_potden),     INTENT(INOUT)        ::  outDen
+   TYPE(t_moments),    INTENT(INOUT)        ::  moments
+   TYPE(t_results),    INTENT(INOUT)        ::  results
 
    INTEGER                          :: jspin, n, iType
    REAL                             :: seig, rhoint, momint
