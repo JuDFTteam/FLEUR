@@ -149,6 +149,7 @@ CONTAINS
 	    m1=0
 	    m2=0
 	    m3=0
+eps_kpt=0
 	    sc_kpoint_i(1) = sc_kpoint_i(1) - m1 + eps_kpt
 	    sc_kpoint_i(2) = sc_kpoint_i(2) - m2 + eps_kpt
 	    sc_kpoint_i(3) = sc_kpoint_i(3) - m3 + eps_kpt
@@ -352,10 +353,12 @@ CONTAINS
 		END IF
 !		IF (method_rubel) THEN
 			IF (zmat%l_real) THEN
+				IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
 				IF (jsp==1) write(679,'(3f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
 				IF (jsp==2) write(680,'(3f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
 				IF ((w_n(i)/w_n_sum(i)>1).or.(w_n(i)/w_n_sum(i)<0)) write(*,*) 'w_n/sum larger 1 or smaller 0', w_n(i)/w_n_sum(i), 'eigenvalue',eig(i)
 			ELSE
+				IF (real(w_n_c(i))<0) w_n_c(i)=0    ! delete negative entries
 				IF (jsp==1) write(679,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
