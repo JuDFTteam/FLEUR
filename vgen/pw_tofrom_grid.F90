@@ -129,7 +129,7 @@ CONTAINS
           ELSE
              CALL fft3d(mx,my, den_pw(:,3), stars,+1)
           ENDIF
-          DO i=0,SIZE(rho,1)-1 
+          DO i=0,MIN(SIZE(rho,1),size(mx))-1 
              rhotot= 0.5*( rho(i,1) + rho(i,2) )
              magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
              rho(i,1)= rhotot+magmom(i)
