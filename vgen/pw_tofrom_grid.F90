@@ -107,8 +107,12 @@ CONTAINS
         IF (PRESENT(rho)) ALLOCATE(rho(0:ifftd-1,jspins))
      ENDIF
     IF (l_noco)  THEN
-       ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
-       IF (xcpot%is_gga()) ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
+       IF (xcpot%is_gga()) THEN
+          ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
+          ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
+       ELSE
+          ALLOCATE( mx(0:ifftd-1),my(0:ifftd-1),magmom(0:ifftd-1))
+       ENDIF
     END IF
     IF (PRESENT(rho)) THEN
     !Put den_pw on grid and store into rho(:,1:2)
