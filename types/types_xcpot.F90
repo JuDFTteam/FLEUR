@@ -20,7 +20,8 @@ MODULE m_types_xcpot
      REAL :: gmaxxc
    CONTAINS
      PROCEDURE        :: is_gga=>xcpot_is_gga
-     procedure        :: is_MetaGGA=>xcpot_is_MetaGGA
+     PROCEDURE        :: is_MetaGGA=>xcpot_is_MetaGGA
+     PROCEDURE        :: needs_grad=>xcpot_needs_grad
      PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
      PROCEDURE        :: get_vxc=>xcpot_get_vxc
@@ -58,6 +59,14 @@ CONTAINS
     CLASS(t_xcpot),INTENT(IN):: xcpot
     xcpot_is_MetaGGA=.false.
   END FUNCTION xcpot_is_MetaGGA
+
+  LOGICAL FUNCTION xcpot_needs_grad(xcpot)
+    IMPLICIT NONE
+    CLASS(t_xcpot),INTENT(IN):: xcpot
+
+    xcpot_needs_grad= xcpot%is_gga() .or. xcpot%is_MetaGGA()
+  END FUNCTION xcpot_needs_grad
+
 
   LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
     IMPLICIT NONE
