@@ -31,7 +31,7 @@ CONTAINS
     !     ******************************************************************
     USE m_pw_tofrom_grid
     USE m_types
-     USE m_types_xcpot_libxc
+    USE m_types_xcpot_libxc
     USE m_libxc_postprocess_gga
     IMPLICIT NONE
 

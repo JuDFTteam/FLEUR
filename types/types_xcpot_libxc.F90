@@ -22,6 +22,7 @@ MODULE m_types_xcpot_libxc
      INTEGER          :: func_id_c,func_id_x,jspins
    CONTAINS
      PROCEDURE        :: is_gga=>xcpot_is_gga
+     PROCEDURE        :: is_MetaGGA=>xcpot_is_MetaGGA
      PROCEDURE        :: is_hybrid=>xcpot_is_hybrid 
      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
      PROCEDURE        :: get_vxc=>xcpot_get_vxc
@@ -83,6 +84,14 @@ CONTAINS
     xcpot_is_gga=ANY((/XC_FAMILY_GGA, XC_FAMILY_HYB_GGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
 #endif
   END FUNCTION xcpot_is_gga
+
+  LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
+    IMPLICIT NONE
+    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC    
+    xcpot_is_MetaGGA=ANY((/XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
+#endif
+  END FUNCTION xcpot_is_MetaGGA
 
   LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
     IMPLICIT NONE
