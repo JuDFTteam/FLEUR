@@ -69,7 +69,7 @@ CONTAINS
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,e)
     WRITE(PE,"(i4)") irank
 #else
-    PE="****"
+    PE=" ****"
 #endif
     warn = .FALSE.
     IF (PRESENT(warning)) warn = warning
