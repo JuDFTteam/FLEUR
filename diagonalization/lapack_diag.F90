@@ -24,6 +24,7 @@ IMPLICIT NONE
     COMPLEX            :: dumwork(1)
     REAL,external      :: dlamch
 
+    
     ALLOCATE(t_mat::zmat)
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
     abstol=2*dlamch('S')
@@ -33,6 +34,7 @@ IMPLICIT NONE
             0.0,0.0,1,ne,abstol,m,eig,zmat%data_r,SIZE(zmat%data_r,1),dumrwork,-1, iwork, ifail, info)
        lwork=dumrwork(1)
        ALLOCATE(rwork(lwork))
+       IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed (Workspace)",no=info)
        CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),&
             0.0,0.0,1,ne,abstol,m,eig,zmat%data_r,SIZE(zmat%data_r,1),rwork, lwork, iwork, ifail, info)
     ELSE
@@ -42,11 +44,12 @@ IMPLICIT NONE
             0.0,0.0,1,ne,abstol,m,eig,zmat%data_c,SIZE(zmat%data_c,1),dumwork,-1,rwork,iwork,ifail,info)
        lwork=dumwork(1)
        ALLOCATE(work(lwork))
+       IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed (Workspace)",no=info)
        !Perform diagonalization
        CALL zhegvx(1,'V','I','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),&
             0.0,0.0,1,ne,abstol,m,eig,zmat%data_c,SIZE(zmat%data_c,1),work,lwork,rwork,iwork,ifail,info)
     ENDIF
-    IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed")
+    IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)",no=info)
     IF (m.NE.ne) CALL judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
   END SUBROUTINE lapack_diag
 END MODULE m_lapack_diag
