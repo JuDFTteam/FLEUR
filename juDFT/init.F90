@@ -9,14 +9,15 @@
       USE m_judft_time
       USE m_judft_sysinfo
       USE m_judft_stop
-
+      USE m_judft_args
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
       CONTAINS
      
       SUBROUTINE juDFT_init()
-      CALL signal_handler()
+        IF (.NOT.judft_was_argument("-debugtime")) &
+             CALL signal_handler()
       CALL checkstack()
       END SUBROUTINE juDFT_init
 
