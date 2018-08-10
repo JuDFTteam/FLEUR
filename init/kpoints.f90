@@ -53,7 +53,6 @@ contains
              IF (banddos%unfoldband) THEN
                CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
                CALL julia(sym,p_cell,input,noco,banddos,p_kpts,.FALSE.,.TRUE.)
-               kpts=p_kpts
                CALL find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
              ELSE
                CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
