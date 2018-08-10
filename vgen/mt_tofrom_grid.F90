@@ -13,7 +13,7 @@ MODULE m_mt_tofrom_grid
   REAL, ALLOCATABLE :: wt(:),rx(:,:),thet(:)
   PUBLIC :: init_mt_grid,mt_to_grid,mt_from_grid,finish_mt_grid
 CONTAINS
-  SUBROUTINE init_mt_grid(nsp,jspins,atoms,sphhar,xcpot,sym,l_grad)
+  SUBROUTINE init_mt_grid(nsp,jspins,atoms,sphhar,xcpot,sym)
     USE m_gaussp
     USE m_lhglptg
     USE m_lhglpts
@@ -23,7 +23,6 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_sym),INTENT(IN)      :: sym
-    LOGICAL,INTENT(IN)          :: l_grad
     
     ! generate nspd points on a sherical shell with radius 1.0
     ! angular mesh equidistant in phi,
@@ -32,29 +31,30 @@ CONTAINS
     CALL gaussp(atoms%lmaxd, rx,wt)
     ! generate the lattice harmonics on the angular mesh
     ALLOCATE ( ylh(nsp,0:sphhar%nlhd,sphhar%ntypsd))
-    IF (l_grad) ALLOCATE(ylht,MOLD=ylh )
-    IF (l_grad) ALLOCATE(ylhtt,MOLD=ylh )
-    IF (l_grad) ALLOCATE(ylhf,MOLD=ylh )
-    IF (l_grad) ALLOCATE(ylhff,MOLD=ylh )
-    IF (l_grad) ALLOCATE(ylhtf,MOLD=ylh )
-
-    IF (l_grad) THEN
-       CALL lhglptg(sphhar,atoms,rx,nsp,xcpot,sym,&
-            ylh,thet,ylht,ylhtt,ylhf,ylhff,ylhtf)
+    IF (xcpot%needs_grad()) THEN
+      ALLOCATE(ylht,MOLD=ylh )
+      ALLOCATE(ylhtt,MOLD=ylh )
+      ALLOCATE(ylhf,MOLD=ylh )
+      ALLOCATE(ylhff,MOLD=ylh )
+      ALLOCATE(ylhtf,MOLD=ylh )
+      
+      CALL lhglptg(sphhar,atoms,rx,nsp,xcpot,sym,&
+           ylh,thet,ylht,ylhtt,ylhf,ylhff,ylhtf)
     ELSE
        CALL lhglpts( sphhar,atoms, rx,nsp, sym, ylh)
     END IF
   END SUBROUTINE init_mt_grid
   
-  SUBROUTINE mt_to_grid(atoms,sphhar,den_mt,nsp,jspins,n,l_grad,grad,ch)
+  SUBROUTINE mt_to_grid(xcpot,jspins,atoms,sphhar,den_mt,nsp,n,grad,ch)
+!  SUBROUTINE pw_to_grid(xcpot,jspins,l_noco,stars,cell,den_pw,grad,rho)
     USE m_grdchlh
     USE m_mkgylm
     IMPLICIT NONE
+    CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     REAL,INTENT(IN)             :: den_mt(:,0:,:)
     INTEGER,INTENT(IN)          :: n,jspins,nsp
-    LOGICAL,INTENT(IN)          :: l_grad
     REAL,INTENT(OUT),OPTIONAL      :: ch(:,:)
     TYPE(t_gradients),INTENT(INOUT):: grad
     
@@ -68,7 +68,7 @@ CONTAINS
 
     ALLOCATE ( chlh(atoms%jmtd,0:sphhar%nlhd,jspins))
     ALLOCATE ( ch_tmp(nsp,jspins) )
-    IF (l_grad)  THEN
+    IF (xcpot%needs_grad())  THEN
        ALLOCATE(chdr(nsp,jspins),chdt(nsp,jspins),chdf(nsp,jspins),chdrr(nsp,jspins),&
             chdtt(nsp,jspins),chdff(nsp,jspins),chdtf(nsp,jspins),chdrt(nsp,jspins),&
             chdrf(nsp,jspins) )
@@ -87,7 +87,7 @@ CONTAINS
           DO jr = 1,atoms%jri(n)
              chlh(jr,lh,js) = den_mt(jr,lh,js)/(atoms%rmsh(jr,n)*atoms%rmsh(jr,n))
           ENDDO
-          IF (l_grad) CALL grdchlh(1,1,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
+          IF (xcpot%needs_grad()) CALL grdchlh(1,1,atoms%jri(n),atoms%dx(n),atoms%rmsh(1,n),&
                chlh(1,lh,js),ndvgrd, chlhdr(1,lh,js),chlhdrr(1,lh,js))
           
        ENDDO ! js
@@ -105,7 +105,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
-       IF (l_grad) THEN
+       IF (xcpot%needs_grad()) THEN
           chdr(:,:)  = 0.0     ! d(ch)/dr
           chdt(:,:)  = 0.0     ! d(ch)/dtheta
           chdf(:,:)  = 0.0     ! d(ch)/dfai

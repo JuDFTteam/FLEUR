@@ -81,7 +81,7 @@ CONTAINS
     ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
     IF (xcpot%is_gga()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
     
-    CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym,xcpot%is_gga())
+    CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym)
   
 
 #ifdef CPP_MPI
@@ -98,7 +98,7 @@ CONTAINS
 #endif
 
     DO n = n_start,atoms%ntype,n_stride
-       CALL mt_to_grid(atoms,sphhar,den%mt(:,0:,n,:),nsp,input%jspins,n,xcpot%is_gga(),grad,ch)
+       CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
        !
        !         calculate the ex.-cor. potential
        CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc,v_x,grad)

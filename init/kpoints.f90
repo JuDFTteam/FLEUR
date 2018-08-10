@@ -71,6 +71,11 @@ contains
    	 kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
    	 kpts%posScale = 1.0
     	IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
+  ELSE
+             IF (banddos%unfoldband) THEN
+               CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
+               CALL find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
+             END IF
   END IF
 
 end subroutine kpoints
