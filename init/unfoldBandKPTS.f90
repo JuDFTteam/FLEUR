@@ -454,6 +454,7 @@ CONTAINS
       WRITE (27,*) 'color1(x)=0.3+x/2.4'
       WRITE (27,*) 'size2(x)=0.35*(1-x**(0.01))'
       WRITE (27,*) 'color2(x)=1.15*(x-1)'
+      WRITE (27,*) 'e_f=0.000000 #fermi energy is already corrected when using hdf5'
       WRITE (27,911) d(nosyp)+0.00001,achar(92)
       IF (input%jspins == 2) THEN
 	WRITE (27,912) achar(92)
@@ -475,10 +476,10 @@ CONTAINS
  909  FORMAT ('           "',a1,'"',f9.5,'  )')
  910  FORMAT ('set ytics -8,2,4')
  911  FORMAT ('plot [0:',f9.5,'] [-9:5] ',a)
- 912  FORMAT ('"bands_sc.2" using 1:($2-6.00):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
- 916  FORMAT ('"bands_sc.2" using 1:($2-6.00):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette,',a)
- 913  FORMAT ('"bands_sc.1" using 1:($2-6.00):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
- 915  FORMAT ('"bands_sc.1" using 1:($2-6.00):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette')
+ 912  FORMAT ('"bands_sc.2" using 1:($2-e_f):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
+ 916  FORMAT ('"bands_sc.2" using 1:($2-e_f):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette,',a)
+ 913  FORMAT ('"bands_sc.1" using 1:($2-e_f):(size1($3)):(color1($3))  w p pt 7 ps variable lc palette, ',a)
+ 915  FORMAT ('"bands_sc.1" using 1:($2-e_f):(size2($3)):(color2($3)) w p pt 7 ps variable lc palette')
  914  FORMAT ('set label "',a1,'" at ',f9.5,', -9.65 center font "Symbol,20"')
       END SUBROUTINE write_gnu_sc
 END MODULE m_unfold_band_kpts
