@@ -164,6 +164,7 @@ CONTAINS
        lapw%bkpt(:) = kpts%bk(:,nk)
     ENDIF
 
+
     CALL lapw%alloc(cell,input,noco)
 
     ALLOCATE(gvec(3,SIZE(lapw%gvec,2)))
@@ -461,7 +462,7 @@ CONTAINS
     COMPLEX cwork(-2*atoms%llod:2*atoms%llod+1,2*(2*atoms%llod+1),atoms%nlod ,2)
     !     ..
     !     .. Data statements ..
-    REAL, PARAMETER :: eps = 1.0E-30
+    REAL, PARAMETER :: eps = 1.0E-8
     REAL, PARAMETER :: linindq = 1.0e-4
 
     con1=fpi_const/SQRT(cell%omtil)

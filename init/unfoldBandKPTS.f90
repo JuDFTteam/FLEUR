@@ -96,7 +96,6 @@ CONTAINS
 
     eps = 1.0e-10
     eps_r = 0.000000001
-    eps_kpt = 0.00000001
 
     CALL inv3(cell%bmat,rez_inv_to_internal,rez_inv_det)
     write(1088,*) p_kpts%specialPoints
@@ -149,10 +148,9 @@ CONTAINS
 	    m1=0
 	    m2=0
 	    m3=0
-eps_kpt=0
-	    sc_kpoint_i(1) = sc_kpoint_i(1) - m1 + eps_kpt
-	    sc_kpoint_i(2) = sc_kpoint_i(2) - m2 + eps_kpt
-	    sc_kpoint_i(3) = sc_kpoint_i(3) - m3 + eps_kpt
+	    sc_kpoint_i(1) = sc_kpoint_i(1) - m1
+	    sc_kpoint_i(2) = sc_kpoint_i(2) - m2
+	    sc_kpoint_i(3) = sc_kpoint_i(3) - m3 
 	    !sc_kpoint_i(:) = sc_kpoint_i(:) - 0.5
 	    list(4,i)=sc_kpoint_i(1)
 	    list(5,i)=sc_kpoint_i(2)

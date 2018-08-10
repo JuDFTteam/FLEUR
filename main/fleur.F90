@@ -103,7 +103,7 @@ CONTAINS
     INTEGER :: eig_id,archiveType
     INTEGER :: n,iter,iterHF
     LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real
-    REAL    :: fermiEnergyTemp,fix
+    REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr(2)
@@ -145,12 +145,12 @@ CONTAINS
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                        0,fermiEnergyTemp,l_qfix,inDen)
+                        0,results%ef,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                         0,-1.0,fermiEnergyTemp,.FALSE.,inDen)
+                         0,-1.0,results%ef,.FALSE.,inDen)
     END IF
     ! Initialize and load inDen density (end)
 
