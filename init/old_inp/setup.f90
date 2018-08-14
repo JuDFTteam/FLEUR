@@ -178,15 +178,12 @@
           CALL  prp_xcfft(stars,input, cell, xcpot)
           !
         ENDIF ! (mpi%irank == 0)
+          CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
           IF (.NOT.sliceplot%iplot) THEN
-             !
-             CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
-             !
              IF ( mpi%irank == 0 ) THEN
                 CALL convn(DIMENSION,atoms,stars)
-                !
+
                 !--->    set up electric field parameters (if needed) 
-                !
                 ! CALL e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,field)
              ENDIF
           ENDIF

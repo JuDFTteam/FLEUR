@@ -540,8 +540,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
-  IF (.NOT.sliceplot%iplot) THEN
-     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  IF (.NOT.sliceplot%iplot) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
