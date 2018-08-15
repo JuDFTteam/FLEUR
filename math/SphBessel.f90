@@ -61,13 +61,13 @@ module m_SphBessel
 
 
   interface SphBessel
-    module procedure :: SphBesselComplex, SphBesselReal
+    module procedure  SphBesselComplex, SphBesselReal
   end interface
 
   interface ModSphBessel
     ! variant Complex2 takes workspace as an argument.
     ! this is not possible for the subroutine working on reals.
-    module procedure :: ModSphBesselComplex, ModSphBesselReal, ModSphBesselComplex2
+    module procedure  ModSphBesselComplex, ModSphBesselReal, ModSphBesselComplex2
   end interface
 
 
