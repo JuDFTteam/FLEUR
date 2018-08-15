@@ -53,7 +53,7 @@ CONTAINS
 
     !     .. Local Scalars ..
     COMPLEX ctmp,term1
-    INTEGER i,j,l,ll1,lm,nbasf,m
+    INTEGER i,j,l,ll1,lm,nbasf,m,na2,lmp
     !     ..
     !     ..
     term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(ntyp)**2)/2) * phase
@@ -84,6 +84,14 @@ CONTAINS
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
+          IF (atoms%invsat(ntyp)==1.AND.noco%l_soc.AND.sym%invs) THEN
+             ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
+             na2 = sym%invsatnr(na)
+             lmp = ll1 - m
+             acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo)
+             bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo)
+             ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo)
+          ENDIF
           IF (l_force) THEN
              force%acoflo(m,i,lo,na) = force%acoflo(m,i,lo,na) + ctmp*alo1(lo)
              force%bcoflo(m,i,lo,na) = force%bcoflo(m,i,lo,na) + ctmp*blo1(lo)
