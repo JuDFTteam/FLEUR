@@ -84,7 +84,7 @@ CONTAINS
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
-          IF (atoms%invsat(ntyp)==1.AND.noco%l_soc.AND.sym%invs) THEN
+          IF (atoms%invsat(na)==1.AND.noco%l_soc.AND.sym%invs) THEN
              ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
              na2 = sym%invsatnr(na)
              lmp = ll1 - m
