@@ -485,9 +485,11 @@ SUBROUTINE r_inpXML(&
         WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint[',i,']'
         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
         READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
+        kpts%bk(:,i)=kpts%bk(:,i)/kpts%posScale
         kpts%wtkpt(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
         kpts%wtkpt(i) = kpts%wtkpt(i) / weightScale
      END DO
+     kpts%posScale=1.0
   END IF
 
   ! Read in optional SOC parameters if present
