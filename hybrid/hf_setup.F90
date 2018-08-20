@@ -46,6 +46,7 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
  
    ! local scalars
    INTEGER :: ok,nk,nrec1,i,j,ll,l1,l2,ng,itype,n,l,n1,n2,nn
+   INTEGER :: nbasfcn
 
    ! local arrays
 
@@ -85,14 +86,17 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
 #endif
 
          nrec1 = kpts%nkpt*(jsp-1) + nk
-         CALL zMat(nk)%init(l_real,dimension%nbasfcn,dimension%neigd2)
+         CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,sym%zrfs)
+         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+         CALL zMat(nk)%init(l_real,nbasfcn,dimension%neigd2)
          CALL read_eig(eig_id_hf,nk,jsp,zmat=zMat(nk))
          eig_irr(:,nk) = results%eig(:,nk,jsp)
          hybrid%ne_eig(nk) = results%neig(nk,jsp)
       END DO
       !Allocate further space
       DO nk = kpts%nkpt+1, kpts%nkptf
-         CALL zMat(nk)%init(l_real,dimension%nbasfcn,dimension%neigd2)
+         nbasfcn = zMat(kpts%bkp(nk))%matsize1
+         CALL zMat(nk)%init(l_real,nbasfcn,dimension%neigd2)
       END DO
 
       !determine degenerate states at each k-point
