@@ -11,10 +11,10 @@
       PUBLIC  wavefproducts_inv, wavefproducts_inv5
       CONTAINS
 
-      SUBROUTINE wavefproducts_noinv(bandi,bandf,nk,iq,dimension,jsp,&                  !cprod,&
+      SUBROUTINE wavefproducts_noinv(bandi,bandf,nk,iq,dimension,input,jsp,&                  !cprod,&
      &                 cell,atoms,hybrid,hybdat,&
      &                 kpts,mnobd,&
-     &                 lapw,sym,nbasm_mt,nkqpt,cprod)
+     &                 lapw,sym,noco,nbasm_mt,nkqpt,cprod)
 
 
       USE m_constants
@@ -24,10 +24,12 @@
       USE m_io_hybrid
       IMPLICIT NONE
 
+      TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_sym),INTENT(IN)   :: sym
+      TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_kpts),INTENT(IN)   :: kpts
       TYPE(t_atoms),INTENT(IN)   :: atoms
@@ -55,7 +57,7 @@
       INTEGER                 ::  k,ic1,ioffset,ibando
       INTEGER                 ::  q,idum,m
       INTEGER                 ::  nbasm_ir
-      INTEGER                 ::  nbasmmt
+      INTEGER                 ::  nbasmmt, nbasfcn
       INTEGER                 ::  ok
       REAL                    ::  rdum,svol,s2,pi
       REAL                    ::  mtthr= 0
@@ -81,12 +83,10 @@
       COMPLEX                 ::  cmt_nk(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX,ALLOCATABLE     ::  cprod_ir(:,:,:)
       TYPE(t_mat)             :: z_nk,z_kqpt
+      TYPE(t_lapw)            :: lapw_nkqpt
       CALL timestart("wavefproducts_noinv")
-      call z_nk%alloc(.false.,dimension%nbasfcn,dimension%neigd)
-      call z_kqpt%alloc(.false.,dimension%nbasfcn,dimension%neigd)
-      !
+
       ! preparations
-      !
 
       svol = sqrt(cell%omtil)
       s2   = sqrt(2d0)
@@ -130,23 +130,21 @@
       
       cprod = 0
       
-      ! read in z at current k-point nk    
+      CALL lapw_nkqpt%init(input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs)
+      nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_nk%alloc(.false.,nbasfcn,dimension%neigd)
+      nbasfcn = MERGE(lapw_nkqpt%nv(1)+lapw_nkqpt%nv(2)+2*atoms%nlotot,lapw_nkqpt%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_kqpt%alloc(.false.,nbasfcn,dimension%neigd)
 
       call read_z(z_nk,nk)
+      call read_z(z_kqpt,nkqpt)
       
       ! read in cmt coefficients from direct access file cmt
       call read_cmt(cmt_nk,nk)
       
-        
-      !
       ! IR contribution
-      !
           
       CALL timestart("wavefproducts_noinv IR")
-      
-      ! read in z_kqpt
-     
-      call read_z(z_kqpt,nkqpt)
 
       DO igpt = 1,hybrid%ngptm(iq)
         igptp = hybrid%pgptm(igpt,iq)
@@ -294,11 +292,11 @@
 
 
       SUBROUTINE wavefproducts_inv(&
-     &                  bandi,bandf,dimension,jsp,atoms,&
+     &                  bandi,bandf,dimension,input,jsp,atoms,&
      &                  lapw,kpts,&
      &                  nk,iq,hybdat,mnobd,hybrid,&
      &                  parent,cell,&
-     &                  nbasm_mt,sym,&
+     &                  nbasm_mt,sym,noco,&
      &                  nkqpt,cprod)
 
       USE m_util     , ONLY : modulo1
@@ -309,8 +307,10 @@
       IMPLICIT NONE
       TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
+      TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_hybrid),INTENT(IN)   :: hybrid
       TYPE(t_sym),INTENT(IN)   :: sym
+      TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_kpts),INTENT(IN)   :: kpts
       TYPE(t_atoms),INTENT(IN)   :: atoms
@@ -335,7 +335,7 @@
       INTEGER                 ::    i,ikpt,ic,iband,iband1,igpt,igptp, ibando,iatom,iiatom,itype,ieq, ishift,ioffset,iatom1,iatom2
       INTEGER                 ::    l ,p,l1,m1,l2,m2,p1,p2,n,ok
       INTEGER                 ::    lm,lm1,lm2,lm_0,lm_00,lm1_0,lm2_0, lmp1,lmp2,lmp3,lmp4,lp1,lp2
-      INTEGER                 ::    j,ll,m
+      INTEGER                 ::    j,ll,m, nbasfcn
       INTEGER                 :: nbasm_ir
       REAL                    ::    svol,sr2
       REAL                    ::    rdum,rfac,rfac1,rfac2,rdum1, rdum2
@@ -373,11 +373,10 @@
       COMPLEX                 ::    cmthlp(dimension%neigd),cmthlp1(dimension%neigd)
       COMPLEX                 ::    cexp(atoms%nat),cexp_nk(atoms%nat)
       TYPE(t_mat)             :: z_nk,z_kqpt
+      TYPE(t_lapw)            :: lapw_nkqpt
 
       CALL timestart("wavefproducts_inv")
       CALL timestart("wavefproducts_inv IR")
-      call z_nk%alloc(.true.,dimension%nbasfcn,dimension%neigd)
-      call z_kqpt%alloc(.true.,dimension%nbasfcn,dimension%neigd)
       svol  = sqrt(cell%omtil)
       sr2   = sqrt(2d0)
       
@@ -410,14 +409,15 @@
 
       ! read in z at current k-point nk
 
+      CALL lapw_nkqpt%init(input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs)
+      nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_nk%alloc(.true.,nbasfcn,dimension%neigd)
+      nbasfcn = MERGE(lapw_nkqpt%nv(1)+lapw_nkqpt%nv(2)+2*atoms%nlotot,lapw_nkqpt%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_kqpt%alloc(.true.,nbasfcn,dimension%neigd)
      
       call read_z(z_nk,nk)
-      
-     
-
-
-      ! read in z_kqpt
       call read_z(z_kqpt,nkqpt)
+
       DO igpt = 1, hybrid%ngptm(iq)
         igptp = hybrid%pgptm(igpt,iq)
         ghelp = hybrid%gptm(:,igptp)- g_t(:)
@@ -1290,7 +1290,7 @@
       INTEGER                 ::    lm,lm1,lm2,lm_0,lm_00,lm1_0,lm2_0, lmp1,lmp2,lmp3,lmp4,lp1,lp2
       INTEGER                 ::    j,ll,m
       INTEGER                 ::    nbasm_ir,ngpt0
-      INTEGER                 ::    n1,n2
+      INTEGER                 ::    n1,n2, nbasfcn
       REAL                    ::    svol,sr2
       REAL                    ::    rdum,rfac,rfac1,rfac2,rdum1,rdum2
       REAL                    ::    sin1,sin2,cos1,cos2,add1,add2
@@ -1326,9 +1326,6 @@
       
       CALL timestart("wavefproducts_inv5")
       CALL timestart("wavefproducts_inv5 IR")
-      call z_nk%alloc(.true.,dimension%nbasfcn,dimension%neigd)
-      call z_kqpt%alloc(.true.,dimension%nbasfcn,dimension%neigd)
-      
       
       cprod = 0
       svol  = sqrt(cell%omtil)
@@ -1362,6 +1359,10 @@
       !
       CALL lapw_nkqpt%init(input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs)
 
+      nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_nk%alloc(.true.,nbasfcn,dimension%neigd)
+      nbasfcn = MERGE(lapw_nkqpt%nv(1)+lapw_nkqpt%nv(2)+2*atoms%nlotot,lapw_nkqpt%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_kqpt%alloc(.true.,nbasfcn,dimension%neigd)
 
       ! read in z at k-point nk and nkqpt
       CALL read_z(z_nk,nk)
@@ -1463,6 +1464,16 @@
         END DO
         cprod(ic,:,:) = rarr2(:,:)
       END DO
+
+      WRITE(2005,*) 'Point B'
+      DO n2 = 1, 1
+         DO n1 = 1, 2
+            DO ic = 1, 20
+               WRITE(2010,'(3i7,f15.8)') ic, n1, n2, cprod(ic,n1,n2) 
+            END DO
+         END DO
+      END DO
+
       DEALLOCATE(z0,stepfunc,pointer,gpt0)
       CALL timestop("wavefproducts_inv5 IR")
 
@@ -1679,8 +1690,10 @@
                       add2 = rdum2*rfac2 - rdum1*rfac1
                       DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
+            IF ((j.LE.20).AND.(ibando.LE.2).AND.(iband.LE.1)) WRITE(2030,'(3i7,3f15.8)') j, ibando, iband, cprod(j,ibando,iband), hybdat%prodm(i,n,l,itype), add1
                         cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add1!( cos1 + sin2 )
                         j = lm2 + i
+            IF ((j.LE.20).AND.(ibando.LE.2).AND.(iband.LE.1)) WRITE(2030,'(3i7,3f15.8)') j, ibando, iband, cprod(j,ibando,iband), hybdat%prodm(i,n,l,itype), add2
                         cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add2!( cos2 - sin1 )
 
                       END DO  !i -> loop over mixed basis functions
@@ -2306,7 +2319,7 @@
       INTEGER                 ::  igptm,iigptm   
       INTEGER                 ::  q,idum
       INTEGER                 :: nbasm_ir,ngpt0
-      INTEGER                 ::  nbasmmt
+      INTEGER                 ::  nbasmmt, nbasfcn
       INTEGER                 ::  ok,m
       
       REAL                    ::  rdum,svol,s2
@@ -2335,8 +2348,6 @@
       COMPLEX,ALLOCATABLE     ::  stepfunc(:,:,:)
       COMPLEX,ALLOCATABLE     ::  z0(:,:)
 
-      call z_nk%alloc(.false.,dimension%nbasfcn,dimension%neigd)
-      call z_kqpt%alloc(.false.,dimension%nbasfcn,dimension%neigd)
       call timestart("wavefproducts_noinv5")
       call timestart("wavefproducts_noinv5 IR")
       cprod = 0
@@ -2373,6 +2384,10 @@
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
       CALL lapw_nkqpt%init(input,noco,kpts,atoms,sym,nkqpt,cell,sym%zrfs)
+      nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_nk%alloc(.false.,nbasfcn,dimension%neigd)
+      nbasfcn = MERGE(lapw_nkqpt%nv(1)+lapw_nkqpt%nv(2)+2*atoms%nlotot,lapw_nkqpt%nv(1)+atoms%nlotot,noco%l_noco)
+      call z_kqpt%alloc(.false.,nbasfcn,dimension%neigd)
 
       ! read in z at k-point nk and nkqpt
 
