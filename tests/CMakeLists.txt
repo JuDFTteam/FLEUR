@@ -30,6 +30,11 @@ if (${FLEUR_USE_WANN})
     set(ParTestdirs ${ParTestdirs} Cwann CwannXML)
 endif()
 
+#Tests for LibXC
+if (${FLEUR_USE_LIBXC})
+    set(Testdirs ${Testdirs} CuBulkLibXC)
+    set(ParTestdirs ${ParTestdirs} CuBulkLibXC)
+endif()
 #The serial tests
 if (${FLEUR_USE_SERIAL})
    foreach(test ${Testdirs})
