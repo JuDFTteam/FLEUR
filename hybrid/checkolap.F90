@@ -44,7 +44,7 @@
       INTEGER                 ::  j,m
       INTEGER                 ::  l
       INTEGER                 :: lm,lm1
-      INTEGER                 ::  n,nred
+      INTEGER                 ::  n,nred, nbasfcn
 
       REAL                    ::  rdum,rdum1
       REAL                    ::  qnorm
@@ -79,7 +79,9 @@
 
       ALLOCATE(z(nkpti))
       DO ikpt=1,nkpti
-         call z(ikpt)%alloc(sym%invs,dimension%nbasfcn,dimension%neigd)
+         CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,sym%zrfs)
+         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+         call z(ikpt)%alloc(sym%invs,nbasfcn,dimension%neigd)
       ENDDO
       
       IF ( mpi%irank == 0 ) WRITE(6,'(//A)') '### checkolap ###'

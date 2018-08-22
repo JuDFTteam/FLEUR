@@ -42,7 +42,7 @@ MODULE m_add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
    CONTAINS
 
-   SUBROUTINE add_vnonlocal(nk,hybrid,dimension,kpts,jsp,results,xcpot,hmat)
+   SUBROUTINE add_vnonlocal(nk,lapw,atoms,hybrid,dimension,kpts,jsp,results,xcpot,noco,hmat)
 
       USE m_symm_hf,            ONLY: symm_hf
       USE m_util,               ONLY: intgrf,intgrf_init
@@ -61,22 +61,25 @@ MODULE m_add_vnonlocal
       TYPE(t_dimension),     INTENT(IN)    :: dimension
       TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
       TYPE(t_kpts),          INTENT(IN)    :: kpts
+      TYPE(t_lapw),          INTENT(IN)    :: lapw
+      TYPE(t_atoms),         INTENT(IN)    :: atoms
+      TYPE(t_noco),          INTENT(IN)    :: noco
       TYPE(t_mat),           INTENT(INOUT) :: hmat
    
       INTEGER,               INTENT(IN)    :: jsp 
       INTEGER,               INTENT(IN)    :: nk
 
       ! local scalars
-      INTEGER                 :: n,nn,iband
+      INTEGER                 :: n,nn,iband,nbasfcn
       REAL                    :: a_ex
       TYPE(t_mat)             :: olap,tmp,v_x,z
       COMPLEX                 :: exch(dimension%neigd,dimension%neigd)
 
       ! initialize weighting factor for HF exchange part
       a_ex=xcpot%get_exchange_weight()      
-      
-      v_x%l_real=hmat%l_real
-      v_x%matsize1=dimension%nbasfcn
+
+      nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      CALL v_x%init(hmat%l_real,nbasfcn,nbasfcn)
 
       CALL read_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
       ! add non-local x-potential to the hamiltonian hmat
@@ -101,12 +104,12 @@ MODULE m_add_vnonlocal
       END IF
 
       ! read in lower triangle part of overlap matrix from direct acces file olap
-      CALL olap%alloc(hmat%l_real,dimension%nbasfcn)
+      CALL olap%init(hmat%l_real,nbasfcn,nbasfcn)
       CALL read_olap(olap,kpts%nkpt*(jsp-1) + nk)
       IF (.NOT.olap%l_real) olap%data_c=conjg(olap%data_c)
-       
-      CALL z%alloc(olap%l_real,dimension%nbasfcn,dimension%neigd)
-       
+
+      CALL z%init(olap%l_real,nbasfcn,dimension%neigd)
+
       CALL read_z(z,nk) !what about spin?
       WRITE(*,*) 'What about spin (in add_Vnonlocal)?'
        

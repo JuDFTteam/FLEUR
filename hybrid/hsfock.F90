@@ -89,7 +89,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    INTEGER                 ::  ikpt,ikpt0
    INTEGER                 ::  irec
    INTEGER                 ::  irecl_olap,irecl_z,irecl_vx
-   INTEGER                 ::  maxndb
+   INTEGER                 ::  maxndb, nbasfcn
    INTEGER                 ::  nddb
    INTEGER                 ::  nsymop
    INTEGER                 ::  nkpt_EIBZ
@@ -131,7 +131,8 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    END DO
       
    ! read in lower triangle part of overlap matrix from direct acces file olap
-   call olap%alloc(sym%invs,dimension%nbasfcn)
+   nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+   call olap%alloc(sym%invs,nbasfcn)
    call read_olap(olap, kpts%nkpt*(jsp-1) + nk)
    if (.not.olap%l_real) olap%data_c=conjg(olap%data_c)
 
@@ -193,7 +194,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF(dimension%neigd.LT.hybrid%nbands(nk)) STOP 'mhsfock: neigd  < nbands(nk) ; '& 
                                                     'trafo from wavefunctions to APW requires at least nbands(nk) '
 
-      call z%alloc(olap%l_real,dimension%nbasfcn,dimension%neigd)
+      call z%alloc(olap%l_real,nbasfcn,dimension%neigd)
       call read_z(z,nk) !what about spin?
       
       ! calculate trafo
