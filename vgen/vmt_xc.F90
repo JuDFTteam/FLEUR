@@ -61,7 +61,7 @@ CONTAINS
     REAL:: v_x((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
     REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
     REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,1)
-    REAL:: xcl(DIMENSION%nspd,DIMENSION%jspd)
+    REAL,ALLOCATABLE:: xcl(:,:)
     LOGICAL :: lda_atom(atoms%ntype),l_libxc
     !.....------------------------------------------------------------------
     lda_atom=.FALSE.;l_libxc=.FALSE.
@@ -72,6 +72,7 @@ CONTAINS
           IF((.NOT.xcpot%is_name("pw91"))) &
                CALL judft_warn("Using locally LDA only possible with pw91 functional")
           CALL xcpot_tmp%init("l91",.FALSE.,atoms%ntype)
+          ALLOCATE(xcl(SIZE(v_xc,1),SIZE(v_xc,2)))
        ENDIF
     CLASS DEFAULT
        l_libxc=.true. !libxc!!

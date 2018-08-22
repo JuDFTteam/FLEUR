@@ -186,34 +186,34 @@ CONTAINS
       IF (xcpot%is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN    ! local pw91
-            CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, vx,vxc, isprsv,sprsv)
+            CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd(:ngrid),grad%gzgr(:ngrid), vx(:ngrid,:),vxc(:ngrid,:), isprsv,sprsv)
          ELSEIF (xcpot%is_name("pw91")) THEN  ! pw91
             IF (lwbc) THEN
-               CALL vxcwb91(jspins,ngrid,ngrid,rh,grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, vx,vxc, idsprs,isprsv,sprsv)
+               CALL vxcwb91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd(:ngrid),grad%gzgr(:ngrid), vx(:ngrid,:),vxc(:ngrid,:), idsprs,isprsv,sprsv)
             ELSE
 
-               CALL vxcpw91(jspins,ngrid,ngrid,rh,grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, vx,vxc, idsprs,isprsv,sprsv)
+               CALL vxcpw91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd,grad%gzgr, vx(:ngrid,:),vxc(:ngrid,:), idsprs,isprsv,sprsv)
 
             ENDIF
          ELSE  ! pbe or similar
-            CALL vxcepbe(xcpot%DATA,jspins,ngrid,ngrid,rh, grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, vx,vxc)
+            CALL vxcepbe(xcpot%DATA,jspins,ngrid,ngrid,rh(:ngrid,:), grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, vx(:ngrid,:),vxc(:ngrid,:))
          ENDIF
       ELSE  !LDA potentials
          IF (xcpot%is_name("x-a"))  THEN   ! X-alpha method
-            CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh, vx,vxc)
+            CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
          ELSEIF (xcpot%is_name("wign")) THEN    ! Wigner interpolation formula
-            CALL vxcwgn(xcpot%data%krla,jspins, ngrid,ngrid,rh, vx,vxc)
+            CALL vxcwgn(xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
          ELSEIF (xcpot%is_name("mjw").OR.xcpot%is_name("bh")) THEN ! von Barth,Hedin correlation
-            CALL vxcbh(iofile,xcpot%data,jspins, ngrid,ngrid,rh, vx,vxc)
+            CALL vxcbh(iofile,xcpot%data,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
             
          ELSEIF (xcpot%is_name("vwn")) THEN     ! Vosko,Wilk,Nusair correlation
-            CALL vxcvwn(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, vx,vxc)
+            CALL vxcvwn(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
          ELSEIF (xcpot%is_name("pz")) THEN     ! Perdew,Zunger correlation
-            CALL vxcpz(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, vx,vxc)
+            CALL vxcpz(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
          ELSEIF (xcpot%is_name("hf")) THEN
             ! Hartree-Fock  calculation: X-alpha potential is added to generate a rational local potential,
             !                            later it is subtracted again
-            CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh, vx,vxc)
+            CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
             !         vxc=0
          ELSEIF (xcpot%is_name("exx")) THEN
             ! if exact exchange calculation do nothing
@@ -276,15 +276,15 @@ CONTAINS
       IF (xcpot%is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN  ! local pw91
-            CALL excl91(jspins,SIZE(rh,1),ngrid,rh,grad%agrt,grad%agru,grad%agrd,grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, isprsv,sprsv)
+            CALL excl91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt,grad%agru,grad%agrd,grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, isprsv,sprsv)
          ELSEIF (xcpot%is_name("pw91")) THEN     ! pw91
             IF (lwbc) THEN
-               CALL excwb91(SIZE(grad%agrt),ngrid,rh(:,1),rh(:,2),grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, idsprs,isprsv,sprsv)
+               CALL excwb91(ngrid,ngrid,rh(:ngrid,1),rh(:ngrid,2),grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, idsprs,isprsv,sprsv)
             ELSE
-               CALL excpw91(jspins,SIZE(grad%agrt),ngrid,rh,grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, idsprs,isprsv,sprsv)
+               CALL excpw91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt,grad%agru,grad%agrd, grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, idsprs,isprsv,sprsv)
             ENDIF
          ELSE
-            CALL excepbe(xcpot%data,jspins,SIZE(rh,1),ngrid, rh,grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, exc)
+            CALL excepbe(xcpot%data,jspins,ngrid,ngrid, rh(:ngrid,:),grad%agrt,grad%agru,grad%agrd,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd, exc)
          ENDIF
       ELSE !LDA
          IF (xcpot%is_name("x-a"))  THEN   ! X-alpha method
