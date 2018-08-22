@@ -101,10 +101,10 @@ CONTAINS
        CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
        !
        !         calculate the ex.-cor. potential
-       CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc,v_x,grad)
+       CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
        IF (lda_atom(n)) THEN
           ! Use local part of pw91 for this atom
-          CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl,v_x,grad)
+          CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
           !Mix the potentials
           divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
           nt=0
@@ -126,10 +126,10 @@ CONTAINS
           !
           !           calculate the ex.-cor energy density
           !
-          CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:,1),grad)
+          CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
           IF (lda_atom(n)) THEN
              ! Use local part of pw91 for this atom
-             CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:,1),grad)
+             CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),1),grad)
              !Mix the potentials
              nt=0
              DO jr=1,atoms%jri(n)
