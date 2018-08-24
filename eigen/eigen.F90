@@ -152,7 +152,7 @@ CONTAINS
              PRINT *,"TODO"
 !             STOP "TODO"
              PRINT *,"BASIS:", lapw%nv(jsp), atoms%nlotot
-             IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension,kpts,jsp,results,xcpot,hmat)
+             IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,dimension,kpts,jsp,results,xcpot,noco,hmat)
 
              IF(hybrid%l_subvxc) THEN
                 CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&

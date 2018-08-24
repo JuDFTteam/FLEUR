@@ -276,8 +276,8 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 
          IF (mat_ex%l_real) THEN
 #ifdef CPP_IRAPPROX
-            CALL wavefproducts_inv(1,hybdat,dimension,jsp,atoms,lapw,obsolete,kpts,nk,ikpt0,&
-                                   mnobd,hybrid,parent,cell,sym,nkqpt,cprod_vv)
+            CALL wavefproducts_inv(1,hybdat,dimension,input,jsp,atoms,lapw,obsolete,kpts,nk,ikpt0,&
+                                   mnobd,hybrid,parent,cell,sym,noco,nkqpt,cprod_vv)
 #else
             CALL wavefproducts_inv5(1,hybrid%nbands(nk),ibando,ibando+psize-1,dimension,input,jsp,atoms,&
                                     lapw,kpts,nk,ikpt0,hybdat,mnobd,hybrid,parent,cell,hybrid%nbasp,sym,&
@@ -285,8 +285,8 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 #endif
          ELSE
 #ifdef CPP_IRAPPROX
-            CALL wavefproducts_noinv(1,hybdat,nk,ikpt0,dimension,jsp,cell,atoms,hybrid, 
-                                     kpts,mnobd,lapw,sym,nkqpt,cprod_vv)
+            CALL wavefproducts_noinv(1,hybdat,nk,ikpt0,dimension,input,jsp,cell,atoms,hybrid, 
+                                     kpts,mnobd,lapw,sym,noco,nkqpt,cprod_vv)
 #else
             CALL wavefproducts_noinv5(1,hybrid%nbands(nk),ibando,ibando+psize-1,nk,ikpt0,dimension,input,jsp,&!jsp,&
                                       cell,atoms,hybrid,hybdat,kpts,mnobd,lapw,sym,hybrid%nbasp,noco,nkqpt,cprod_vv_c)
@@ -373,6 +373,13 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
          END DO  !n1
       END DO !ibando
    END DO  !ikpt
+
+!   WRITE(7001,'(a,i7)') 'nk: ', nk
+!   DO n1=1,hybrid%nbands(nk)
+!      DO n2=1,n1
+!         WRITE(7001,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
+!     END DO
+!   END DO
 
    ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
 
@@ -486,6 +493,13 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
       IF(any(abs(aimag(exch_vv)).gt.1E-08)) CALL judft_warn('unusally large imaginary part of exch_vv',&
                                                             calledby='exchange_val_hf.F90')
    END IF
+
+!   WRITE(7000,'(a,i7)') 'nk: ', nk
+!   DO n1=1,hybrid%nbands(nk)
+!      DO n2=1,n1
+!         WRITE(7000,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
+!      END DO
+!   END DO
 
    ! write exch_vv in mat_ex
    CALL mat_ex%alloc(matsize1=hybrid%nbands(nk))
