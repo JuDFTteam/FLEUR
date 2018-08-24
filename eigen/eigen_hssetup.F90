@@ -60,8 +60,8 @@ CONTAINS
     ENDIF
     DO i=1,nspins
        DO j=1,nspins
-          CALL smat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot,mpi%sub_comm,.false.)
-          CALL hmat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot,mpi%sub_comm,.false.)
+          CALL smat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(j)+atoms%nlotot,mpi%sub_comm,.false.)
+          CALL hmat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(j)+atoms%nlotot,mpi%sub_comm,.false.)
        ENDDO
     ENDDO
 

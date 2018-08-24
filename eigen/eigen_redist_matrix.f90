@@ -46,8 +46,8 @@ CONTAINS
     CALL mat(2,2)%free()
 
     !Now collect off-diagonal parts
-    CALL mat(2,1)%add_transpose(mat(1,2))
-    CALL mat_final%copy(mat(2,1),1,lapw%nv(1)+atoms%nlotot+1)
+    CALL mat(1,2)%add_transpose(mat(2,1))
+    CALL mat_final%copy(mat(1,2),1,lapw%nv(1)+atoms%nlotot+1)
     CALL mat(1,2)%free()
     CALL mat(2,1)%free()
     

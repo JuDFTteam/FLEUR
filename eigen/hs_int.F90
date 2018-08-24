@@ -42,18 +42,19 @@ CONTAINS
           DO  i = mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
              i0=(i-1)/mpi%n_size+1
              !--->    loop over (k+g)
-             DO  j = 1,i  
-                ii = lapw%gvec(:,i,jspin) - lapw%gvec(:,j,ispin)
+             DO  j = 1,MIN(i,lapw%nv(jspin))  
+                ii = lapw%gvec(:,i,ispin) - lapw%gvec(:,j,jspin)
                 IF (ispin==1.AND.jspin==2) THEN
+                   ii=-1*ii
                    in = stars%ig(ii(1),ii(2),ii(3))
                    IF (in.EQ.0) CYCLE
-                   th = stars%rgphs(ii(1),ii(2),ii(3))*vpw(in,3)           
+                   th = stars%rgphs(ii(1),ii(2),ii(3))*CONJG(vpw(in,3))           
                    ts=0.0
                 ELSEIF(ispin==2.and.jspin==1) THEN
-                   ii = -1*ii
+                !   ii = -1*ii
                    in = stars%ig(ii(1),ii(2),ii(3))
                    IF (in.EQ.0) CYCLE
-                   th = stars%rgphs(ii(1),ii(2),ii(3))*CONJG(vpw(in,3))        
+                   th = stars%rgphs(ii(1),ii(2),ii(3))*vpw(in,3)        
                    ts=0.0
                 ELSE
                    !-->     determine index and phase factor

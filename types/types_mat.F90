@@ -40,15 +40,18 @@ MODULE m_types_mat
    SUBROUTINE t_mat_add_transpose(mat,mat1)
     CLASS(t_mat),INTENT(INOUT)::mat,mat1
     INTEGER::i,j
+    IF ((mat%matsize1.NE.mat1%matsize2).OR. &
+         (mat%matsize2.NE.mat1%matsize1)) &
+         CALL judft_error("Matrix sizes missmatch in add_transpose")
     IF (mat%l_real.AND.mat1%l_real) THEN
-       DO i=1,mat%matsize1
-          DO j=i+1,mat%matsize2
+       DO i=1,mat%matsize2
+          DO j=i+1,mat%matsize1
              mat%data_r(j,i)=mat1%data_r(i,j)
           ENDDO
        ENDDO
     ELSEIF((.NOT.mat%l_real).AND.(.NOT.mat1%l_real)) THEN
-       DO i=1,mat%matsize1
-          DO j=i+1,mat%matsize2
+       DO i=1,mat%matsize2
+          DO j=i+1,mat%matsize1
              mat%data_c(j,i)=CONJG(mat1%data_c(i,j))
           ENDDO
        ENDDO
