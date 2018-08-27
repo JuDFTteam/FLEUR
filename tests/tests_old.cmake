@@ -54,3 +54,4 @@ if (${FLEUR_USE_MPI})
 ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
    endforeach(test)
 endif()
+

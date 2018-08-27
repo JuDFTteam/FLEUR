@@ -29,7 +29,6 @@ include(mix/CMakeLists.txt)
 include(vgen/CMakeLists.txt)
 include(inpgen/CMakeLists.txt)
 include(docs/CMakeLists.txt)
-include(tests/CMakeLists.txt)
 include(mpi/CMakeLists.txt)
 include(hybrid/CMakeLists.txt)
 include(eels/CMakeLists.txt)
@@ -38,6 +37,10 @@ include(wannier/CMakeLists.txt)
 include(wannier/uhu/CMakeLists.txt)
 include(forcetheorem/CMakeLists.txt)
 include(rdmft/CMakeLists.txt)
+
+
+include(tests/tests_old.cmake)
+include(tests/tests_new.cmake)
 
 set(inpgen_F77 ${inpgen_F77} 
 inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f

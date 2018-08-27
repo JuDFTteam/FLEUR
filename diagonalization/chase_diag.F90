@@ -379,21 +379,28 @@ IMPLICIT NONE
     IF (myid==0) CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
          eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
-    CALL hmat%copy(zmatTemp,1,1) !Copy matrix into distributed form
-    call zmatTemp%free()
-    
-    ! --> recover the generalized eigenvectors z by solving z' = l^t * z
+    !Back-Transform
     IF (smat%l_real) THEN
-       CALL pdtrtrs('U','N','N',hmat%global_size1,nev,smat%data_r,1,1,smat%blacs_desc,&
-            hmat%data_r,1,1,smat%blacs_desc,info)
+       CALL PDTRTRI('U','N',smat%global_size1,smat%data_r,1,1,smat%blacs_desc,info)
+       CALL PDGEMM('N','N',smat%global_size1,smat%global_size1,smat%global_size1,1.0,smat%data_r,1,1,smat%blacs_desc,zmatTemp%data_r,1,1,zmattemp%blacs_desc,0.0,hmat%data_r,1,1,hmat%blacs_desc)
     ELSE
-       CALL pztrtrs('U','N','N',hmat%global_size1,nev,smat%data_c,1,1,smat%blacs_desc,&
-            hmat%data_c,1,1,smat%blacs_desc,info)
-    END IF
-    IF (info.NE.0) THEN
-       WRITE (6,*) 'Error in p?trtrs: info =',info
-       CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
+       STOP 'chase no complex'
     ENDIF
+!!$    CALL hmat%copy(zmatTemp,1,1) !Copy matrix into distributed form
+!!$    call zmatTemp%free()
+!!$    
+!!$    ! --> recover the generalized eigenvectors z by solving z' = l^t * z
+!!$    IF (smat%l_real) THEN
+!!$       CALL pdtrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_r,1,1,smat%blacs_desc,&
+!!$            hmat%data_r,1,1,smat%blacs_desc,info)
+!!$    ELSE
+!!$       CALL pztrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_c,1,1,smat%blacs_desc,&
+!!$            hmat%data_c,1,1,smat%blacs_desc,info)
+!!$    END IF
+!!$    IF (info.NE.0) THEN
+!!$       WRITE (6,*) 'Error in p?trtrs: info =',info
+!!$       CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
+!!$    ENDIF
 
     !     Redistribute eigvec from ScaLAPACK distribution to each process
     !     having all eigenvectors corresponding to his eigenvalues as above
