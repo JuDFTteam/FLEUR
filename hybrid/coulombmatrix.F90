@@ -1245,8 +1245,8 @@ CONTAINS
           coulomb_mt1 = 0 ; coulomb_mt2_r   = 0 
           coulomb_mt3_r = 0 ; coulombp_mtir_r = 0
        else
-          coulomb_mt1 = 0 ; coulomb_mt2_r   = 0 
-          coulomb_mt3_r = 0 ; coulombp_mtir_r = 0
+          coulomb_mt1 = 0 ; coulomb_mt2_c   = 0 
+          coulomb_mt3_c = 0 ; coulombp_mtir_c = 0
        endif
        ! unpack coulomb into coulhlp
       
