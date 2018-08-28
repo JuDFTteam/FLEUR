@@ -77,6 +77,7 @@ CONTAINS
 
 
     CALL vCoul%copy_both_spin(vTot)
+    vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
 
     IF (noco%l_noco) THEN
        CALL denRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
