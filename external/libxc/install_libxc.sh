@@ -14,7 +14,7 @@ then
     cd libxc-${libxc_version}
     #Compile&test (This will take a while)
     ./configure --prefix=$PWD/INSTALL_DIR
-    make
+    make -j
     make install
 else
     cd libxc-${libxc_version}
