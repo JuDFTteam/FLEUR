@@ -2,7 +2,13 @@ hdf5_version=1.10.2
 if [ ! -r CMake-hdf5-${hdf5_version} ]
 then
     #Get the file with the code
-    curl -LO "http://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-${hdf5_version}/src/CMake-hdf5-${hdf5_version}.tar.gz"
+    curl -LO "https://github.com/MRedies/hdf5-mirror/raw/master/CMake-hdf5-${hdf5_version}.tar.gz"
+
+    if [ ! -f CMake-hdf5-${hdf5_version}.tar.gz]; then
+        echo "No file found try source"
+        curl -LO "http://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-${hdf5_version}/src/CMake-hdf5-${hdf5_version}.tar.gz"       
+    fi
+    
     tar xzf CMake-hdf5-${hdf5_version}.tar.gz
     cd CMake-hdf5-${hdf5_version}
     #copy options.cmake to adjust settings for compilation
