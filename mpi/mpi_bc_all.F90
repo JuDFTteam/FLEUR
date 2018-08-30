@@ -205,7 +205,6 @@ CONTAINS
     CALL MPI_BCAST(stars%kq1_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kmxq_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%pgfft,dimension%nn3d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%igfft,size(stars%igfft),MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%igfft2,size(stars%igfft2),MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
