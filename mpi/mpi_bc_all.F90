@@ -51,7 +51,7 @@ CONTAINS
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
-       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = 0 ; i(26) = 0!xcpot%igrd
+       i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = stars%kimax ; i(26) = stars%kimax2
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
        i(35)=hybrid%bands1 ; i(36)=1 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
@@ -90,6 +90,7 @@ CONTAINS
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
      atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38)
      input%coretail_lmax=i(2) ; input%kcrel=i(39)
+     stars%kimax=i(25);stars%kimax2=i(26)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     input%minDistance=r(29) ; obsolete%chng=r(30)
@@ -204,6 +205,9 @@ CONTAINS
     CALL MPI_BCAST(stars%kq1_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kmxq_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%pgfft,dimension%nn3d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%igfft,size(stars%igfft),MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%igfft2,size(stars%igfft2),MPI_INTEGER,0,mpi%mpi_comm,ierr)
+
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(field%efield%sig_b,2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%zelec,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
