@@ -175,7 +175,7 @@ CONTAINS
             DO i=1,atoms%jri(itype)
                IF(l.EQ.0) THEN
                   ! vr(i,0)= vrtot(i,0,itype)*sfp/rmsh(i,itype) - vrcou(i,0,itype,jsp)   
-                  vr(i,0)=  vx%mt(i,0,itype,jsp) * sfp_const / atoms%rmsh(i,itype)
+                  vr(i,0)=  vx%mt(i,0,itype,jsp)! * sfp_const / atoms%rmsh(i,itype)
                ELSE ! vxc = vtot - vcoul
                   ! vr(i,l)= vrtot(i,l,itype)-vrcou(i,l,itype,jsp)
                   vr(i,l)=  vx%mt(i,l,itype,jsp)      
@@ -260,7 +260,7 @@ CONTAINS
 
       ! Calculate plane wave contribution
       DO i=1,stars%ng3
-         vpw(i)= vx%pw(i,jsp) 
+         vpw(i)= vx%pw_w(i,jsp)
          ! vpw(i)=vpwtot(i)-vpwcou(i,jsp)      
       END DO
 
