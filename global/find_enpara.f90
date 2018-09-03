@@ -72,6 +72,8 @@ CONTAINS
     ENDDO
     rn = atoms%rmsh(1,n)*( d**(msh-1) )
     ALLOCATE ( f(msh,2),vrd(msh) )
+    f = 0.0
+    vrd = 0.0
     ! extend core potential (linear with slope t1 / a.u.)
     vrd(:atoms%jri(n))=vr(:atoms%jri(n))
     t1=0.125
@@ -189,6 +191,8 @@ CONTAINS
     ENDDO
     rn = atoms%rmsh(1,n)*( d**(msh-1) )
     ALLOCATE ( f(msh,2),vrd(msh) )
+    f = 0.0
+    vrd = 0.0
     ! extend core potential (linear with slope t1 / a.u.)
     vrd(:atoms%jri(n))=vr(:atoms%jri(n))
     t1=0.125
