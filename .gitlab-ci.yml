@@ -2,6 +2,7 @@ stages:
    - build
    - test
    - deploy
+   - coverage
    - build-pgi
    - test-pgi
    - build-intel
@@ -111,3 +112,20 @@ test-intel:
      - schedules
      - web
      - triggers
+
+gfortran-coverage:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: coverage
+  script:
+      - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make
+      - lcov --capture --initial -d CMakeFiles -o baseline.info
+      - ctest
+      - lcov --capture  -d CMakeFiles -o after.info 
+      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - genhtml combined.info --output-directory html_out
+      - mv html_out ../public/coverage_html
+  artifacts:
+    paths:
+      - public 
+  only:
+      - web
