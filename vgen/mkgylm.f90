@@ -56,7 +56,7 @@ CONTAINS
     IF (ALLOCATED(grad%gr)) THEN
        !      Gradients for libxc
        DO js=1,jspins
-          grad%gr(:,kt+i,js)=(/rhdr(i,js),rhdt(i,1),rhdf(i,js)/)
+          grad%gr(:,kt+i,js)=(/rhdr(i,js),rhdt(i,js),rhdf(i,js)/)
        ENDDO
        !contracted gradients for libxc
        IF (ALLOCATED(grad%sigma)) THEN
