@@ -54,7 +54,7 @@ then
 fi
 if [ "$CLI_FLAGS" ]
 then
-    cmake_flags="$CMAKE_Fortran_FLAGS $cmake_flags"
+    cmake_flags="$CLI_FLAGS $cmake_flags"
 fi
 for lib in $FLEUR_INCLUDEDIR $CLI_INCLUDEDIR
 do
