@@ -106,7 +106,6 @@ CONTAINS
     INTEGER:: i
     IF (SIZE(v_xc,2)==1) THEN !Single spin
        DO i=1,SIZE(v_xc,1) !loop over points
-          IF (ALL(ABS(grad%gr(:,i,1))<1E-10)) CYCLE
           v_xc(i,1)=v_xc(i,1)-2*dot_PRODUCT(grad_sigma%gr(:,i,1),grad%gr(:,i,1))-2*vsigma(i,1)*grad%laplace(i,1)
        ENDDO
     ELSE  !two spins
