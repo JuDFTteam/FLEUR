@@ -112,7 +112,7 @@ CONTAINS
        DO i=1,SIZE(v_xc,1) !loop over points
           v_xc(i,1)=v_xc(i,1)-2*dot_PRODUCT(grad_sigma%gr(:,i,1),grad%gr(:,i,1))-2*vsigma(i,1)*grad%laplace(i,1)-&
                dot_PRODUCT(grad_sigma%gr(:,i,2),grad%gr(:,i,2))-vsigma(i,2)*grad%laplace(i,2)
-          v_xc(i,1)=v_xc(i,2)-2*dot_PRODUCT(grad_sigma%gr(:,i,3),grad%gr(:,i,2))-2*vsigma(i,3)*grad%laplace(i,2)-&
+          v_xc(i,2)=v_xc(i,2)-2*dot_PRODUCT(grad_sigma%gr(:,i,3),grad%gr(:,i,2))-2*vsigma(i,3)*grad%laplace(i,2)-&
                dot_PRODUCT(grad_sigma%gr(:,i,2),grad%gr(:,i,1))-vsigma(i,2)*grad%laplace(i,1)
        ENDDO
     END IF
