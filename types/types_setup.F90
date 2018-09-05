@@ -332,8 +332,6 @@ MODULE m_types_setup
      INTEGER :: neigd
      INTEGER :: neigd2
      INTEGER :: ncvd
-     INTEGER :: nn2d
-     INTEGER :: nn3d
      INTEGER :: nstd
      INTEGER :: msh
      INTEGER :: lmd

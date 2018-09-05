@@ -72,8 +72,8 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(sphhar%memd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%jspd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%nstd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%nn3d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(stars%kimax,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(stars%kimax2,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%ncvd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%nvd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%neigd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -158,9 +158,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
       ALLOCATE(stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
       ALLOCATE(stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-      ALLOCATE(stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
+      ALLOCATE(stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
       ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-      ALLOCATE(stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
+      ALLOCATE(stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
       IF(ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
       ALLOCATE(stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
@@ -175,7 +175,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
       IF (xcpot%is_gga()) THEN
-         ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
+         ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                    oneD%pgft1xy(0:oneD%odd%nn2d-1),&
                    oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))

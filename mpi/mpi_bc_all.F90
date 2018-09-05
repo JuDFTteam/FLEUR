@@ -201,10 +201,10 @@ CONTAINS
     CALL MPI_BCAST(vacuum%izlay,vacuum%layerd*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%nstr,stars%ng3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%nstr2,stars%ng2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%igfft,dimension%nn3d*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%igfft,size(stars%igfft),MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kq1_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%kmxq_fft,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(stars%pgfft,dimension%nn3d,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(stars%pgfft,size(stars%pgfft),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(stars%igfft2,size(stars%igfft2),MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

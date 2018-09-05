@@ -65,11 +65,11 @@ CONTAINS
           WRITE (335,'(2i5)') i, stars%nstr(i)
        ENDDO
        WRITE (335,*)
-       WRITE (335,*) 'igfft', dimension%nn3d
+       WRITE (335,*) 'igfft', stars%kimax+1
        WRITE (335,'(3i15)') stars%igfft(:,1)
        WRITE (335,*) 'second part'
        WRITE (335,'(3i15)') stars%igfft(:,2)
-       WRITE (335,*) 'pgfft', dimension%nn3d
+       WRITE (335,*) 'pgfft',  stars%kimax+1
        WRITE (335,'(3f12.6)') stars%pgfft(:)
        WRITE (335,*)
        WRITE (335,*) 'stars%kimax: ', stars%kimax
