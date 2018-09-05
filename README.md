@@ -107,4 +107,5 @@ module load intel-para CMake HDF5 libxml2/.2.9.7 ELPA/2017.11.001-hybrid
 
 ## Developing Fleur
 
-We agreed to use a unified tab-width of 3.
+We agreed to use a unified indentation-width of 3. 
+Hint: [vim](http://vim.wikia.com/wiki/Converting_tabs_to_spaces) [emacs](https://www.gnu.org/software/emacs/manual/html_node/efaq/Changing-the-length-of-a-Tab.html)
