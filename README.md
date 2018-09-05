@@ -104,3 +104,7 @@ ml Architecture/KNL
 module load intel-para CMake HDF5 libxml2/.2.9.7 ELPA/2017.11.001-hybrid
 /work/ias-1/s.rost/fleur_booster/fleur/build/fleur
 ```
+
+## Developing Fleur
+
+We agreed to use a unified tab-width of 3.
