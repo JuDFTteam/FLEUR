@@ -122,7 +122,7 @@ gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: coverage
   cache: 
-     path:
+     paths:
         - build
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make
