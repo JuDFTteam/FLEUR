@@ -27,7 +27,7 @@
       INTEGER irot(3,3)
       INTEGER lv1(3,neig12),lv2(3,neig12),lv3(3,neig12)
 
-      REAL, PARAMETER :: eps=1.0e-7
+      REAL, PARAMETER :: eps=1.0e-9
 
 !---> set up metric for distances
       amet = 0.0
