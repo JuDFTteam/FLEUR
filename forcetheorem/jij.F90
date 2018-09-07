@@ -5,8 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_jij
-  USE m_judft
+
+  USE m_types
   USE m_types_forcetheo
+  USE m_judft
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_jij
      INTEGER :: loopindex,no_loops
      INTEGER,ALLOCATABLE :: q_index(:),iatom(:),jatom(:)

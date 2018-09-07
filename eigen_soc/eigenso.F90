@@ -23,10 +23,10 @@ CONTAINS
   SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
                      obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara,results)
 
+    USE m_types
     USE m_eig66_io, ONLY : read_eig,write_eig
     USE m_spnorb 
     USE m_alineso
-    USE m_types
     USE m_judft
 #ifdef CPP_MPI
     USE m_mpi_bc_pot

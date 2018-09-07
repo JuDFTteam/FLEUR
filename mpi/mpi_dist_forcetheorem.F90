@@ -6,8 +6,10 @@
 
 MODULE m_mpi_dist_forcetheorem
 CONTAINS
+#ifndef CPP_OLDINTEL
   SUBROUTINE mpi_dist_forcetheorem(mpi,forcetheo)
-    USE m_types
+    USE m_types_mpi
+    USE m_types_forcetheo, ONLY: t_forcetheo
     USE m_types_forcetheo_extended
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
@@ -43,4 +45,7 @@ CONTAINS
     END SELECT
 #endif
   END SUBROUTINE mpi_dist_forcetheorem
+#else
+#endif
+
 END MODULE m_mpi_dist_forcetheorem

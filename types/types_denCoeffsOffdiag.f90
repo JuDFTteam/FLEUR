@@ -197,7 +197,7 @@ END SUBROUTINE addRadFunScalarProducts
 SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
    USE m_types_setup
-   USE m_types_cdnval
+   USE m_types_cdnval, ONLY: t_eigVecCoeffs
    USE m_rhomt21     ! calculate (spin) off-diagonal MT-density coeff's
    USE m_rhonmt21    ! -"-                       non-MT-density coeff's
 

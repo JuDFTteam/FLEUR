@@ -117,7 +117,7 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,dimension,sym,cell,oneD,enpar
    USE m_types_setup
    USE m_types_usdus
    USE m_types_enpara
-   USE m_types_cdnval
+   USE m_types_cdnval, ONLY: t_eigVecCoeffs
    USE m_types_misc
    USE m_forcea12
    USE m_forcea21

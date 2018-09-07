@@ -5,9 +5,6 @@ CONTAINS
   SUBROUTINE ssomat(seigvso,theta,phi,eig_id,DIMENSION,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results )
     
-    USE m_eig66_io
-    USE m_spnorb 
-    USE m_abcof 
     USE m_types_mat
     USE m_types_setup
     USE m_types_mpi
@@ -19,6 +16,9 @@ CONTAINS
     USE m_types_usdus
     USE m_types_lapw
     USE m_constants
+    USE m_eig66_io
+    USE m_spnorb 
+    USE m_abcof 
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)         :: mpi
