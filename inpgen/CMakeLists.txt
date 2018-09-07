@@ -2,7 +2,6 @@ set(fleur_F77 ${fleur_F77}
 inpgen/atom_input.f
 inpgen/atom_sym.f
 inpgen/bravais_symm.f
-inpgen/closure.f
 inpgen/crystal.f
 inpgen/element.f
 inpgen/generator.f
@@ -21,4 +20,5 @@ inpgen/write_struct.f
 set(fleur_F90 ${fleur_F90}
 inpgen/set_inp.f90
 inpgen/inpgen_help.f90
+inpgen/closure.f90
 )
