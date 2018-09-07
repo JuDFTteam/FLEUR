@@ -46,6 +46,9 @@ pages:
   script:
     - cd /builds/fleur/fleur/build ; make doc
     - mv docs/html/ ../public/
+  environment:
+    name: Doxygen
+    url: https://fleur.iffgit.fz-juelich.de/fleur
   artifacts:
     paths:
       - public
@@ -127,5 +130,8 @@ gfortran-coverage:
   artifacts:
     paths:
       - public 
+  environment:
+    name: Coverage
+    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   only:
       - web
