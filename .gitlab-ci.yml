@@ -2,11 +2,12 @@ stages:
    - build
    - test
    - coverage
+   - deploy
    - build-pgi
    - test-pgi
    - build-intel
    - test-intel
-   - deploy
+
 
 build-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -120,6 +121,9 @@ test-intel:
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: coverage
+  cache: 
+     path:
+        - build
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make
       - lcov --capture --initial -d CMakeFiles -o baseline.info
