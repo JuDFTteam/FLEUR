@@ -43,6 +43,7 @@ pages:
   cache:
      paths:
        - build
+       - public
   script:
     - cd /builds/fleur/fleur/build ; make doc
     - mv docs/html/ ../public/
