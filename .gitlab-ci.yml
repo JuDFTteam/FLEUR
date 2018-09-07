@@ -127,7 +127,7 @@ gfortran-coverage:
       - lcov --capture  -d CMakeFiles -o after.info 
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out
-      - mv html_out ../public/coverage_html
+      - mkdir ../public;mv html_out ../public/coverage_html
   artifacts:
     paths:
       - public 
