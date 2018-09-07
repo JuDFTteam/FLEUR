@@ -37,6 +37,9 @@ C     ..
 C     .. Intrinsic Functions ..
       INTRINSIC abs,exp,min,sqrt
 C     ..
+      a = 0.0
+      b = 0.0
+      ierr = 0
       nqnt = fn - fl - 0.99e0
       n = msh
       del = 5.e-5

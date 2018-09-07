@@ -282,6 +282,8 @@
              END IF
           END IF
 
+          ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
+          ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
                &           mpi,stars,sphhar,atoms,obsolete,&
@@ -292,8 +294,6 @@
 
           ! Set up pointer for backtransformation from g-vector in positive 
           ! domain of carge density fftibox into stars
-          ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
-          ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
           CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
           atoms%nlotot = 0

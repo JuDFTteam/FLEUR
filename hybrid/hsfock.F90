@@ -133,8 +133,21 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    ! read in lower triangle part of overlap matrix from direct acces file olap
    nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
    call olap%alloc(sym%invs,nbasfcn)
-   call read_olap(olap, kpts%nkpt*(jsp-1) + nk)
-   if (.not.olap%l_real) olap%data_c=conjg(olap%data_c)
+   call read_olap(olap, kpts%nkpt*(jsp-1)+nk)
+   IF (olap%l_real) THEN
+      DO i=1,nbasfcn
+        DO j=1,i
+          olap%data_r(i,j) = olap%data_r(j,i)
+        END DO
+      END DO
+   ELSE
+      DO i=1,nbasfcn
+        DO j=1,i
+          olap%data_c(i,j) = CONJG(olap%data_c(j,i))
+        END DO
+      END DO
+      olap%data_c=conjg(olap%data_c)
+   END IF
 
    IF(hybrid%l_calhf) THEN
       ncstd = sum( (/ ( (hybdat%nindxc(l,itype)*(2*l+1)*atoms%neq(itype),l=0,hybdat%lmaxc(itype)), itype = 1,atoms%ntype) /) )
@@ -194,21 +207,16 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF(dimension%neigd.LT.hybrid%nbands(nk)) STOP 'mhsfock: neigd  < nbands(nk) ; '& 
                                                     'trafo from wavefunctions to APW requires at least nbands(nk) '
 
-      call z%alloc(olap%l_real,nbasfcn,dimension%neigd)
-      call read_z(z,nk) !what about spin?
-      
-      ! calculate trafo
-      ic = lapw%nv(jsp) + atoms%nlotot
-      z%matsize1=ic
-      z%matsize2=hybrid%nbands(nk)
-      olap%matsize1=ic
-      olap%matsize2=ic
-        
+      call z%init(olap%l_real,nbasfcn,dimension%neigd)
+      call read_z(z,kpts%nkpt*(jsp-1)+nk)
+      z%matsize2 = hybrid%nbands(nk) ! reduce "visible matsize" for the following computations
+
       call olap%multiply(z,trafo)
 
-      call invtrafo%alloc(olap%l_real,hybrid%nbands(nk),ic)
+      CALL invtrafo%alloc(olap%l_real,hybrid%nbands(nk),nbasfcn)
       CALL trafo%TRANSPOSE(invtrafo)
-       
+      IF(.NOT.invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
+
       DO i=1,hybrid%nbands(nk)
          DO j=1,i-1
             IF (ex%l_real) THEN
@@ -224,29 +232,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
         
       CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
-      DO i = 1, v_x%matsize1
-         DO j = 1, i
-            IF (v_x%l_real) THEN
-               IF ((i.LE.5).AND.(j.LE.5)) THEN
-                  WRITE(1231,'(2i7,2f15.8)') i, j, v_x%data_r(i,j), v_x%data_r(j,i)
-               END IF
-            ELSE
-            ENDIF
-         END DO
-      END DO
-
       CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,gpt,sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
-
-      DO i = 1, v_x%matsize1
-         DO j = 1, i
-            IF (v_x%l_real) THEN
-               IF ((i.LE.5).AND.(j.LE.5)) THEN
-                  WRITE(1232,'(2i7,2f15.8)') i, j, v_x%data_r(i,j), v_x%data_r(j,i)
-               END IF
-            ELSE
-            ENDIF
-         END DO
-      END DO
 
       CALL write_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
    END IF ! hybrid%l_calhf
