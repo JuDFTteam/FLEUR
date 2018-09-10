@@ -16,10 +16,10 @@ $result+=jt::test_grepexists("$workdir/plot.xsf","3.35012");
 $result+=jt::test_grepexists("$workdir/plot.xsf",".39481");
 $result+=jt::test_grepexists("$workdir/plot.xsf","2.23341");
 # density values
-$result+=jt::test_grepexists("$workdir/plot.xsf","2.080016533"); # line 24
-$result+=jt::test_grepexists("$workdir/plot.xsf","1.275465708"); # line 289
-$result+=jt::test_grepexists("$workdir/plot.xsf","7.987664739"); # line 521
-$result+=jt::test_grepexists("$workdir/plot.xsf","10.2889422");  # line 523
-$result+=jt::test_grepexists("$workdir/plot.xsf","1.367065648"); # line 3018
+$result+=jt::test_grepexists("$workdir/plot.xsf","2.080311663"); # line 24
+$result+=jt::test_grepexists("$workdir/plot.xsf","1.275515247"); # line 289
+$result+=jt::test_grepexists("$workdir/plot.xsf","7.9874788"); # line 521
+$result+=jt::test_grepexists("$workdir/plot.xsf","10.2889353");  # line 523
+$result+=jt::test_grepexists("$workdir/plot.xsf","1.367227396"); # line 3018
 
 jt::stageresult($workdir,$result,"2");
