@@ -42,7 +42,7 @@ C     ..
       ierr = 0
       nqnt = fn - fl - 0.99e0
       n = msh
-      del = 5.e-5
+      del = 5.e-7
       emax = 2
       emin = -z*z/fn**2 - 10.0
       IF ((e.GE.emax) .OR. (e.LE.emin)) e = 0.5e0* (emax+emin)
