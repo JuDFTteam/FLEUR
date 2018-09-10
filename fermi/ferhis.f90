@@ -6,8 +6,8 @@
 
 MODULE m_ferhis
 CONTAINS
-  SUBROUTINE ferhis(input,kpts,mpi,results, index,idxeig,idxkpt,idxjsp,n,&
-       nstef,ws,spindg,weight, e,ne,we, noco,cell)
+  SUBROUTINE ferhis(input,kpts,mpi, index,idxeig,idxkpt,idxjsp,n,&
+       nstef,ws,spindg,weight, e,ne,we, noco,cell,ef,seigv,w_iks,results)
     !***********************************************************************
     !
     !     This subroutine determines the fermi energy and the sum of the
@@ -65,6 +65,8 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER,INTENT(IN)  ::  n ,nstef
     REAL,INTENT(IN)     ::  spindg,ws,weight
+    REAL,INTENT(INOUT)  ::  ef,seigv
+    REAL,INTENT(OUT)    ::  w_iks(:,:,:)
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: idxeig(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
@@ -124,9 +126,9 @@ CONTAINS
        WRITE (6,FMT='(''FERHIS:  Fermi-Energy by histogram:'')')
     END IF
 
-    efermi = results%ef
+    efermi = ef
     IF (nstef.LT.n) THEN
-       gap = e(INDEX(nstef+1)) - results%ef
+       gap = e(INDEX(nstef+1)) - ef
        results%bandgap = gap*hartree_to_ev_const
        IF ( mpi%irank == 0 ) THEN
           attributes = ''
@@ -156,9 +158,9 @@ CONTAINS
           !
           !--->    STATES ABOVE EF AVAILABLE           
           !
-          results%ef = 0.5* (e(INDEX(nstef+1))+results%ef)
-          emax = results%ef + 8.0*tkb
-          emin = results%ef - 8.0*tkb
+          ef = 0.5* (e(INDEX(nstef+1))+ef)
+          emax = ef + 8.0*tkb
+          emin = ef - 8.0*tkb
           w_near_ef = 0.0
           w_below_emin = 0.0
           inkem = 0
@@ -187,11 +189,11 @@ CONTAINS
              !--->            ADJUST FERMI-ENERGY BY NEWTON-METHOD
              !
              nocst = ink - 1
-             CALL ef_newton(n,mpi%irank, inkem,nocst,index,tkb,e, w_near_ef,results%ef,we)
+             CALL ef_newton(n,mpi%irank, inkem,nocst,index,tkb,e, w_near_ef,ef,we)
              !
              IF ( mpi%irank == 0 ) THEN
-                WRITE (16,FMT=8030) results%ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
-                WRITE (6,FMT=8030) results%ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
+                WRITE (16,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
+                WRITE (6,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
              END IF
 
           ELSE
@@ -201,7 +203,7 @@ CONTAINS
              IF ( mpi%irank == 0 ) WRITE (6,FMT=8020)
              nocst = nstef
              we(INDEX(nocst)) = we(INDEX(nocst)) - wfermi
-             results%ef = efermi
+             ef = efermi
              tkb = 0.0
           END IF
        ELSE
@@ -231,11 +233,11 @@ CONTAINS
     !=======>   DETERMINE OCCUPATION NUMBER AND WEIGHT OF EIGENVALUES
     !                     FOR EACH K_POINT
     !
-    results%w_iks(:,:,:) = 0.0
+    w_iks(:,:,:) = 0.0
 
     IF ( mpi%irank == 0 ) WRITE (6,FMT=8080) nocst
     DO i=1,nocst
-       results%w_iks(idxeig(INDEX(i)),idxkpt(INDEX(i)),idxjsp(INDEX(i))) = we(INDEX(i))
+       w_iks(idxeig(INDEX(i)),idxkpt(INDEX(i)),idxjsp(INDEX(i))) = we(INDEX(i))
     ENDDO
     !
     !======>   CHECK SUM OF VALENCE WEIGHTS
@@ -244,7 +246,7 @@ CONTAINS
     wvals = 0.0
     DO  js = 1,nspins
        DO  k = 1,kpts%nkpt
-          wvals = wvals + SUM(results%w_iks(:ne(k,js),k,js))
+          wvals = wvals + SUM(w_iks(:ne(k,js),k,js))
        ENDDO
     ENDDO
 
@@ -268,7 +270,7 @@ CONTAINS
     DO js = 1,nspins
        DO kpt = 1 , kpts%nkpt
           DO nocc=1,ne(kpt,js) 
-             fermikn = results%w_iks(nocc,kpt,js)/kpts%wtkpt(kpt)
+             fermikn = w_iks(nocc,kpt,js)/kpts%wtkpt(kpt)
              IF ( fermikn .GT. 0.0 .AND. fermikn .LT. 1.0 ) &
                   entropy = entropy + kpts%wtkpt(kpt) * ( fermikn * LOG( fermikn) + ( 1.0 - fermikn) * LOG( 1.0 - fermikn) )
           END DO
@@ -285,13 +287,13 @@ CONTAINS
     !
     !
 
-    results%seigv = spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
+    seigv = seigv+spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
     IF (mpi%irank == 0) THEN
        attributes = ''
-       WRITE(attributes(1),'(f20.10)') results%seigv
+       WRITE(attributes(1),'(f20.10)') seigv
        WRITE(attributes(2),'(a)') 'Htr'
        CALL writeXMLElement('sumValenceSingleParticleEnergies',(/'value','units'/),attributes)
-       WRITE (6,FMT=8040) results%seigv
+       WRITE (6,FMT=8040) seigv
     END IF
 
 
