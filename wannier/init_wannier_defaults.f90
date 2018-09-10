@@ -17,7 +17,7 @@ SUBROUTINE initWannierDefaults(wann)
    !!!
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   USE m_types
+   USE m_types_setup
 
    IMPLICIT NONE
 

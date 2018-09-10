@@ -1,12 +1,13 @@
 stages:
    - build
    - test
-   - deploy
    - coverage
+   - deploy
    - build-pgi
    - test-pgi
    - build-intel
    - test-intel
+
 
 build-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -43,9 +44,11 @@ pages:
   cache:
      paths:
        - build
+       - public
   script:
     - cd /builds/fleur/fleur/build ; make doc
     - mv docs/html/ ../public/
+    - mv /builds/fleur/fleur/docs/Docu_main.html ../public/index.html
   environment:
     name: Doxygen
     url: https://fleur.iffgit.fz-juelich.de/fleur
@@ -119,6 +122,9 @@ test-intel:
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: coverage
+  cache: 
+     paths:
+        - build
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make
       - lcov --capture --initial -d CMakeFiles -o baseline.info
@@ -126,7 +132,7 @@ gfortran-coverage:
       - lcov --capture  -d CMakeFiles -o after.info 
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out
-      - mv html_out ../public/coverage_html
+      - mkdir ../public;mv html_out ../public/coverage_html
   artifacts:
     paths:
       - public 
@@ -135,3 +141,4 @@ gfortran-coverage:
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   only:
       - web
+      - schedules

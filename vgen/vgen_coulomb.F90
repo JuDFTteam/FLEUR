@@ -23,6 +23,7 @@ contains
     !----------------------------------------------------------------------------
 
     use m_constants
+    use m_types
     use m_vmts
     use m_intnv
     use m_vvac
@@ -30,7 +31,6 @@ contains
     use m_vvacxy
     use m_vintcz
     use m_checkdopall
-    use m_types
     use m_od_vvac
     use m_od_vvacis
     use m_convol

@@ -10,9 +10,9 @@
              input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
+          USE m_types
           USE m_judft
           USE m_juDFT_init
-          USE m_types
           USE m_init_wannier_defaults
           USE m_rinpXML
           USE m_postprocessInput
@@ -37,7 +37,9 @@
 
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
+#ifndef CPP_OLDINTEL
           USE m_mpi_dist_forcetheorem
+#endif
 #endif
 #ifdef CPP_HDF
           USE m_hdf_tools
@@ -206,7 +208,9 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
+#ifndef CPP_OLDINTEL
              CALL mpi_dist_forcetheorem(mpi,forcetheo)
+#endif
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"

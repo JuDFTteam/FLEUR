@@ -11,7 +11,8 @@ CONTAINS
 SUBROUTINE calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
    USE m_juDFT
-   USE m_types
+   USE m_types_setup
+   USE m_types_cdnval, ONLY: t_eigVecCoeffs,t_denCoeffs
    USE m_rhomt
    USE m_rhonmt
    USE m_rhomtlo

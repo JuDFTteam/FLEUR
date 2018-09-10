@@ -82,6 +82,8 @@ CONTAINS
     CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC    
     xcpot_is_gga=ANY((/XC_FAMILY_GGA, XC_FAMILY_HYB_GGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
+#else
+    xcpot_is_gga=.false.
 #endif
   END FUNCTION xcpot_is_gga
 
@@ -90,6 +92,8 @@ CONTAINS
     CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC    
     xcpot_is_MetaGGA=ANY((/XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
+#else
+    xcpot_is_MetaGGA=.false.
 #endif
   END FUNCTION xcpot_is_MetaGGA
 
@@ -98,6 +102,8 @@ CONTAINS
     CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
     xcpot_is_hybrid=ANY((/XC_FAMILY_HYB_MGGA, XC_FAMILY_HYB_GGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
+#else
+    xcpot_is_hybrid=.false.
 #endif
   END FUNCTION xcpot_is_hybrid
 
@@ -193,7 +199,7 @@ CONTAINS
     ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
     ALLOCATE(grad%gr(3,ngrid,jspins))
     ALLOCATE(grad%laplace(ngrid,jspins))
-    ALLOCATE(grad%vsigma,mold=grad%sigma)
+    ALLOCATE(grad%vsigma(MERGE(1,3,jspins==1),ngrid))
 
   END SUBROUTINE xcpot_alloc_gradients
 

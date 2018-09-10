@@ -11,15 +11,17 @@ CONTAINS
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
        oneD,coreSpecInput,l_opti)
-    USE m_judft
     USE m_types
+    USE m_judft
     USE m_dimens
     USE m_inped
     USE m_setup
     USE m_constants
     USE m_winpXML
 #ifdef CPP_MPI
+#ifndef CPP_OLDINTEL
     USE m_mpi_dist_forcetheorem
+#endif
 #endif
 
     IMPLICIT NONE
@@ -191,8 +193,9 @@ CONTAINS
     CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#ifndef CPP_OLDINTEL
     CALL mpi_dist_forcetheorem(mpi,forcetheo)
-
+#endif
 #endif
     IF (mpi%irank.NE.0) THEN
        CALL xcpot%init(namex,l_krla,atoms%ntype)

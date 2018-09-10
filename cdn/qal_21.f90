@@ -7,8 +7,11 @@ MODULE m_qal21
 CONTAINS
   SUBROUTINE qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 
+    USE m_types_setup
+    USE m_types_dos
+    USE m_types_cdnval, ONLY: t_eigVecCoeffs 
+    USE m_types_denCoeffsOffdiag
     USE m_rotdenmat
-    USE m_types
     IMPLICIT NONE
     TYPE(t_dimension),         INTENT(IN)    :: dimension
     TYPE(t_input),             INTENT(IN)    :: input

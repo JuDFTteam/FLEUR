@@ -19,8 +19,8 @@
      &                   atomTypeSpecies,speciesRepAtomType,numSpecies,&
      &                   a1,a2,a3)
 
-      USE iso_c_binding
       USE m_types
+      USE iso_c_binding
       USE m_chkmt
       USE m_constants
       USE m_atominput
