@@ -311,7 +311,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                   END DO
                   CALL qsf(vacuum%delz,sigm,vacpar(ivac),vacuum%nmz,0)
                   denz1 = den%vacz(1,ivac,ispin)          ! get estimate for potential at vacuum boundary
-                  CALL xcpot%get_vxc(1,denz1,vacpot,vacxpot)
+                  CALL xcpot%get_vxc_start(1,denz1,vacpot,vacxpot)
                   ! seems to be the best choice for 1D not to substract vacpar
                   IF (.NOT.oneD%odi%d1) THEN
                      vacpot = vacpot - fpi_const*vacpar(ivac)
