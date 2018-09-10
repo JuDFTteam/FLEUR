@@ -215,7 +215,7 @@ CONTAINS
     TYPE(t_mat),INTENT(IN)       ::mat1
 
     INTEGER:: blacs_desc(9),irank,ierr,umap(1,1),np
-
+#ifdef CPP_SCALAPACK
     blacs_desc=(/1,-1,mat1%matsize1,mat1%matsize2,mat1%matsize1,mat1%matsize2,0,0,mat1%matsize1/)
 
     CALL MPI_COMM_RANK(mat%mpi_com,irank,ierr)
@@ -227,6 +227,7 @@ CONTAINS
     ELSE
        CALL pzgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_c,1,1,blacs_desc,mat%data_c,1,1,mat%blacs_desc,mat%blacs_ctext)
     END IF
+#endif    
   END SUBROUTINE from_non_dist
     
 
