@@ -55,7 +55,7 @@ CONTAINS
     !REAL,    INTENT (OUT):: w(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL del  ,spindg,ssc ,ws,zc,weight,efermi
+    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv
     INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins
     INTEGER n_help,m_spins,mspin,sslice(2)
     !     ..
@@ -143,14 +143,15 @@ CONTAINS
     !finished reading of eigenvalues
     IF (mpi%irank == 0) CALL closeXMLElement('eigenvalues')
 
-    if (abs(input%fixed_moment)<1E-6) THEN
+    IF (ABS(input%fixed_moment)<1E-6) THEN
        !this is a standard calculation
        m_spins=1
     else
        !total moment is fixed
        m_spins=2
-    end if
+    END IF
 
+    results%seigv = 0.0e0
     do mspin=1,m_spins
        IF (m_spins    == 1) THEN
           sslice = (/1,nspins/)
@@ -162,96 +163,96 @@ CONTAINS
        DO jsp = sslice(1),sslice(2)
           !Generate a list of energies
           DO  k = 1,kpts%nkpt
-          !
-          !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE 
-          !--->          CONECTION TO THE ORIGINAL ARRAYS
-          !
-          DO  j = 1,ne(k,jsp)
-             e(n+j) = eig(j,k,jsp)
-             we(n+j) = kpts%wtkpt(k)
-             idxeig(n+j) = j+n_help
-             idxkpt(n+j) = k
-             idxjsp(n+j) = jsp
+             !
+             !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE 
+             !--->          CONECTION TO THE ORIGINAL ARRAYS
+             !
+             DO  j = 1,ne(k,jsp)
+                e(n+j) = eig(j,k,jsp)
+                we(n+j) = kpts%wtkpt(k)
+                idxeig(n+j) = j+n_help
+                idxkpt(n+j) = k
+                idxjsp(n+j) = jsp
+             END DO
+             !--->          COUNT THE NUMBER OF EIGENVALUES
+             n = n + ne(k,jsp)
           END DO
-          !--->          COUNT THE NUMBER OF EIGENVALUES
-          n = n + ne(k,jsp)
        END DO
-    END DO
 
-    CALL sort(n,e,index)
+       CALL sort(n,e,index)
 
-    !     Check if no deep eigenvalue is found
-    IF (e_min-MINVAL(e(1:n))>1.0) THEN
-       WRITE(6,*) 'WARNING: Too low eigenvalue detected:'
-       WRITE(6,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',&
-            &             e_min
-       CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi" &
-            &     ,hint ="If the lowest eigenvalue is more than 1Htr below "//&
-            &     "the lowest energy parameter, you probably have picked up"//&
-            &     " a ghoststate")
-    END IF
-    !
-    !---> DETERMINE EF BY SUMMING WEIGHTS
-    !
-    weight = input%zelec/spindg
-    results%seigv = 0.0e0
-    IF(m_spins /= 1) weight = weight/2.0  -(mspin-1.5)*input%fixed_moment
-    ws = 0.0e0
-    l = 0
-    DO WHILE ((ws+del).LT.weight)
-       l = l + 1
-       IF (l.GT.n) THEN
-          IF ( mpi%irank == 0 ) THEN
-             WRITE (6,FMT=8010) n,ws,weight
-          END IF
-          CALL juDFT_error("Not enough eavefunctions",calledby="fermie")
-8010      FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
+       !     Check if no deep eigenvalue is found
+       IF (e_min-MINVAL(e(1:n))>1.0) THEN
+          WRITE(6,*) 'WARNING: Too low eigenvalue detected:'
+          WRITE(6,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',&
+               &             e_min
+          CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi" &
+               &     ,hint ="If the lowest eigenvalue is more than 1Htr below "//&
+               &     "the lowest energy parameter, you probably have picked up"//&
+               &     " a ghoststate")
        END IF
-       ws = ws + we(INDEX(l))
-       results%seigv = results%seigv + e(INDEX(l))*we(INDEX(l))*spindg
-       !         WRITE (6,FMT='(2f10.7)') e(index(l)),we(index(l))
-    END DO
-    results%ef = e(INDEX(l))
-    nstef = l
-    zc = input%zelec
-    IF(m_spins /= 1) THEN
-       zc = zc/2.0-(mspin-1.5)*input%fixed_moment
-       idxjsp = 1 !assume single spin in following calculations
-       IF (mspin == 1) THEN
-          WRITE(6,*) "Fixed total moment calculation"
-          WRITE(6,*) "Moment:",input%fixed_moment
-          write(6,*) "First Spin:"
-       ELSE
-          WRITE(6,*) "Second Spin:"
+       !
+       !---> DETERMINE EF BY SUMMING WEIGHTS
+       !
+       weight = input%zelec/spindg
+       seigv=0.0
+       IF(m_spins /= 1) weight = weight/2.0  -(mspin-1.5)*input%fixed_moment
+       ws = 0.0e0
+       l = 0
+       DO WHILE ((ws+del).LT.weight)
+          l = l + 1
+          IF (l.GT.n) THEN
+             IF ( mpi%irank == 0 ) THEN
+                WRITE (6,FMT=8010) n,ws,weight
+             END IF
+             CALL juDFT_error("Not enough eavefunctions",calledby="fermie")
+8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
+          END IF
+          ws = ws + we(INDEX(l))
+          seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
+          !         WRITE (6,FMT='(2f10.7)') e(index(l)),we(index(l))
+       END DO
+       results%ef = e(INDEX(l))
+       nstef = l
+       zc = input%zelec
+       IF(m_spins /= 1) THEN
+          zc = zc/2.0-(mspin-1.5)*input%fixed_moment
+          idxjsp = 1 !assume single spin in following calculations
+          IF (mspin == 1) THEN
+             WRITE(6,*) "Fixed total moment calculation"
+             WRITE(6,*) "Moment:",input%fixed_moment
+             write(6,*) "First Spin:"
+          ELSE
+             WRITE(6,*) "Second Spin:"
+          ENDIF
        ENDIF
-    ENDIF
-       
-    IF ( mpi%irank == 0 ) WRITE (6,FMT=8020) results%ef,nstef,results%seigv,ws,results%seigsc,ssc
 
-    !+po
-    results%ts = 0.0
-    !-po
-    results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
-    results%bandgap = 0.0
-    IF (input%gauss) THEN
-       CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
-    ELSE IF (input%tria) THEN
-       CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),kpts%nkpt,nspins,zc,eig(:,:,sslice(1):sslice(2)),kpts%bk,spindg,&
-            results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
-    ELSE
-       CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp, n,&
-            nstef,ws,spindg,weight,e,ne(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
-    END IF
-    results%seigscv = results%seigsc + results%seigv
+       IF ( mpi%irank == 0 ) WRITE (6,FMT=8020) results%ef,nstef,seigv,ws,results%seigsc,ssc
 
-    IF (mspin == 2) THEN
-       WRITE(6,*) "Different Fermi-energies for both spins:"
-       WRITE(6,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
-            ,input%fixed_moment,"   Difference(EF):",efermi," - ",results%ef,"="&
-            ,efermi-results%ef
-    ENDIF
-    efermi = results%ef
- enddo
+       !+po
+       results%ts = 0.0
+       !-po
+       results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
+       results%bandgap = 0.0
+       IF (input%gauss) THEN
+          CALL fergwt(kpts,input,mpi,ne(:,sslice(1):sslice(2)), eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+       ELSE IF (input%tria) THEN
+          CALL fertri(input,kpts,mpi%irank, ne(:,sslice(1):sslice(2)),kpts%nkpt,nspins,zc,eig(:,:,sslice(1):sslice(2)),kpts%bk,spindg,&
+               results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
+       ELSE
+          CALL ferhis(input,kpts,mpi,index,idxeig,idxkpt,idxjsp, n,&
+               nstef,ws,spindg,weight,e,ne(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
+       END IF
+       results%seigscv = results%seigsc + results%seigv
+
+       IF (mspin == 2) THEN
+          WRITE(6,*) "Different Fermi-energies for both spins:"
+          WRITE(6,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
+               ,input%fixed_moment,"   Difference(EF):",efermi," - ",results%ef,"="&
+               ,efermi-results%ef
+       ENDIF
+       efermi = results%ef
+    enddo
     DEALLOCATE ( idxeig,idxjsp,idxkpt,index,e,eig,we )
 
     attributes = ''
@@ -265,7 +266,7 @@ CONTAINS
           CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
        ENDDO
     ENDDO
-    
+
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
          &       10x,'first approx. to ef    (T=0)  :',f10.6,' htr',&
@@ -276,4 +277,4 @@ CONTAINS
          &       10x,'sum of semicore eigenvalues   :',f10.6,' htr',/,&
          &       10x,'sum of semicore charge        :',f10.6,' e',/)
   END SUBROUTINE fermie
-     END MODULE m_fermie
+END MODULE m_fermie
