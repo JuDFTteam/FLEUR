@@ -25,7 +25,6 @@ MODULE m_types_xcpot
      PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
      PROCEDURE        :: get_vxc=>xcpot_get_vxc
-     PROCEDURE        :: get_vxc_start=>xcpot_get_vxc_start
      PROCEDURE        :: get_exc=>xcpot_get_exc
      PROCEDURE,NOPASS :: alloc_gradients=>xcpot_alloc_gradients
   END TYPE t_xcpot
@@ -93,17 +92,6 @@ CONTAINS
     TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
   END SUBROUTINE xcpot_get_vxc
 
-  SUBROUTINE xcpot_get_vxc_start(xcpot,jspins,rh,vxc,vx,grad)
-    CLASS(t_xcpot),INTENT(IN) :: xcpot
-    INTEGER, INTENT (IN)     :: jspins
-    !--> charge density
-    REAL,INTENT (IN)         :: rh(:,:)
-    !---> xc potential
-    REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
-    TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
-  END SUBROUTINE xcpot_get_vxc_start
-
-  
   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
     CLASS(t_xcpot),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins

@@ -27,7 +27,6 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc=>xcpot_get_vxc
-      PROCEDURE        :: get_vxc_start=>xcpot_get_vxc_start
       PROCEDURE        :: get_exc=>xcpot_get_exc
       PROCEDURE,NOPASS :: alloc_gradients=>xcpot_alloc_gradients
       !Not overloeaded...
@@ -128,23 +127,6 @@ END FUNCTION xcpot_is_LDA
       a_ex=xc_f03_hyb_exx_coef(xcpot%xc_func_x)
 #endif
    END FUNCTION xcpot_get_exchange_weight
-
-   SUBROUTINE xcpot_get_vxc_start(xcpot,jspins,rh, vxc,vx, grad)
-      IMPLICIT NONE
-      CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
-      INTEGER, INTENT (IN)     :: jspins
-      REAL,INTENT (IN)         :: rh(:,:)   !Dimensions here
-      REAL, INTENT (OUT)       :: vx (:,:)  !points,spin
-      REAL, INTENT (OUT  )     :: vxc(:,:)  !
-      ! optional arguments for GGA
-      TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
-
-      IF (xcpot%is_lda()) THEN
-         call xcpot%get_vxc(jspins,rh, vxc,vx, grad)
-      ELSE
-      ENDIF
-
-   END SUBROUTINE xcpot_get_vxc_start
 
    !***********************************************************************
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)

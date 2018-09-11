@@ -47,7 +47,6 @@ MODULE m_types_xcpot_inbuild
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc=>xcpot_get_vxc
-      PROCEDURE        :: get_vxc_start=>xcpot_get_vxc_start
       PROCEDURE        :: get_exc=>xcpot_get_exc
       !not overloaded
       PROCEDURE        :: get_name=>xcpot_get_name
@@ -133,19 +132,6 @@ CONTAINS
       IF (xcpot%is_name("vhse")) a_ex=amix_hse
    END FUNCTION xcpot_get_exchange_weight
 
-
-   SUBROUTINE xcpot_get_vxc_start(xcpot,jspins,rh, vxc,vx, grad)
-      CLASS(t_xcpot_inbuild),INTENT(IN)          :: xcpot
-      INTEGER, INTENT (IN)                       :: jspins
-      REAL,INTENT (IN)                           :: rh(:,:)
-      REAL, INTENT (OUT)                         :: vx (:,:)
-      REAL, INTENT (OUT)                         :: vxc(:,:)
-      TYPE(t_gradients), INTENT(INOUT), OPTIONAL :: grad
-
-
-      ! there is no difference for inbuild case
-      call xcpot%get_vxc(jspins, rh, vxc, vx, grad)
-   END SUBROUTINE xcpot_get_vxc_start
 
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
 !
