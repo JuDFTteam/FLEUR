@@ -1,9 +1,9 @@
 set(fleur_F90 ${fleur_F90}
 xc-pot/libxc_postprocess_gga.f90
-xc-pot/potl0.f90
 )
 
 set(fleur_F77 ${fleur_F77}
+xc-pot/potl0.f
 xc-pot/corg91.F
 xc-pot/corl91.f
 xc-pot/corpbe.f
