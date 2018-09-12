@@ -26,8 +26,8 @@
          <c>6.82000000</c>
       </bulkLattice>
    </cell>
-   <xcFunctional name="libxc" relativisticCorrections="F">
-    <libXC  exchange="101" correlation="130" />
+   <xcFunctional name="LibXC" relativisticCorrections="F">
+    <LibXCName  exchange="gga_x_pbe" correlation="gga_c_pbe" />
    </xcFunctional>
    <atomSpecies>
       <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="7" magMom="2.20000000" flipSpin="T">
