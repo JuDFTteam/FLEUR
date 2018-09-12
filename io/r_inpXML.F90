@@ -36,7 +36,9 @@ SUBROUTINE r_inpXML(&
   USE m_inpeig
   USE m_sort
   USE m_types_xcpot_inbuild
+#ifdef CPP_LIBXC  
   USE xc_f03_lib_m
+#endif  
   IMPLICIT NONE
 
   TYPE(t_input),INTENT(INOUT)   :: input
@@ -1119,11 +1121,14 @@ SUBROUTINE r_inpXML(&
      id_c=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@correlation'))
   ELSEIF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) THEN
     valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@exchange')))))
+#ifdef CPP_LIBXC
     id_x =  xc_f03_functional_get_number(TRIM(valueString))
-
     valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@correlation')))))
     id_c =  xc_f03_functional_get_number(TRIM(valueString))
-  ELSE
+#else
+    CALL judft_error("To use libxc functionals you have to compile with libXC support")
+#endif    
+ ELSE
      id_x=0;id_c=0
   ENDIF
 
