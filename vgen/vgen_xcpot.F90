@@ -158,15 +158,15 @@ CONTAINS
 
           veff = vTot
           IF(xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
-             DO ispin = 1, input%jspins
+            DO ispin = 1, input%jspins
                 CALL convol(stars,vx%pw_w(:,ispin),vx%pw(:,ispin),stars%ufft)
-             END DO
-             veff%pw   = vTot%pw   - xcpot%get_exchange_weight() * vx%pw
-             veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight() * vx%pw_w
-             veff%mt   = vTot%mt   - xcpot%get_exchange_weight() * vx%mt
-             exc%pw   = exc%pw   - xcpot%get_exchange_weight() * exc%pw
-             exc%pw_w = exc%pw_w - xcpot%get_exchange_weight() * exc%pw_w
-             exc%mt   = exc%mt   - xcpot%get_exchange_weight() * exc%mt
+            END DO
+            veff%pw   = vTot%pw   - xcpot%get_exchange_weight() * vx%pw
+            veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight() * vx%pw_w
+            veff%mt   = vTot%mt   - xcpot%get_exchange_weight() * vx%mt
+            exc%pw    = exc%pw    - xcpot%get_exchange_weight() * exc%pw
+            exc%pw_w  = exc%pw_w  - xcpot%get_exchange_weight() * exc%pw_w
+            exc%mt    = exc%mt    - xcpot%get_exchange_weight() * exc%mt
           END IF
 
           results%te_veff = 0.0

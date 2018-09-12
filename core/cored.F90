@@ -1,12 +1,6 @@
 MODULE m_cored
 CONTAINS
-  SUBROUTINE cored(&
-       &                 input,jspin,atoms,&
-       &                 rho,DIMENSION,&
-       &                 sphhar,&
-       &                 vr,&
-       &                 qint,rhc,tec,seig)
-
+  SUBROUTINE cored(input, jspin, atoms, rho, DIMENSION, sphhar, vr, qint, rhc, tec, seig, EnergyDen)
     !     *******************************************************
     !     *****   set up the core densities for compounds.  *****
     !     *****                      d.d.koelling           *****
@@ -29,20 +23,22 @@ CONTAINS
     REAL,    INTENT (OUT) :: seig
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: vr(atoms%jmtd,atoms%ntype)
-    REAL,    INTENT(INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT(INOUT) :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT(INOUT) :: qint(atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT(INOUT) :: tec(atoms%ntype,DIMENSION%jspd)
+    REAL, INTENT(IN)              :: vr(atoms%jmtd,atoms%ntype)
+    REAL, INTENT(INOUT)           :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL, INTENT(INOUT)           :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd)
+    REAL, INTENT(INOUT)           :: qint(atoms%ntype,DIMENSION%jspd)
+    REAL, INTENT(INOUT)           :: tec(atoms%ntype,DIMENSION%jspd)
+    REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL e,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2
-    REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight
+    REAL eig,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2
+    REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight, aux_weight
     INTEGER i,j,jatom,korb,n,ncmsh,nm,nm1,nst ,l,ierr
     !     ..
     !     .. Local Arrays ..
     
     REAL rhcs(DIMENSION%msh),rhoc(DIMENSION%msh),rhoss(DIMENSION%msh),vrd(DIMENSION%msh),f(0:3)
+    REAL rhcs_aux(DIMENSION%msh), rhoss_aux(DIMENSION%msh) !> quantities for energy density calculations
     REAL occ(DIMENSION%nstd),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
     REAL occ_h(DIMENSION%nstd,2)
     INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd)
@@ -99,7 +95,7 @@ CONTAINS
        WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
        WRITE (16,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
        DO  j = 1,atoms%jri(jatom)
-          rhoss(j) = 0.
+          rhoss(j)     = 0.0
           vrd(j) = vr(j,jatom)
        ENDDO
        !
@@ -137,23 +133,35 @@ CONTAINS
           IF (occ(korb) /= 0.0) THEN
             fn = nprnc(korb)
             fj = iabs(kappa(korb)) - .5e0
+
             weight = 2*fj + 1.e0
             IF (bmu > 99.) weight = occ(korb)
+
             fl = fj + (.5e0)*isign(1,kappa(korb))
-            e = -2* (z/ (fn+fl))**2
-            CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, e, a,b,ierr)
-            stateEnergies(korb) = e
-            WRITE (6,FMT=8010) fn,fl,fj,e,weight
-            WRITE (16,FMT=8010) fn,fl,fj,e,weight
+            eig        = -2* (z/ (fn+fl))**2
+
+            CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, eig, a,b,ierr)
+            stateEnergies(korb) = eig
+            WRITE (6,FMT=8010) fn,fl,fj,eig,weight
+            WRITE (16,FMT=8010) fn,fl,fj,eig,weight
             IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
-            IF (input%gw==1 .OR. input%gw==3) WRITE (15) NINT(fl),weight,e,&
+            IF (input%gw==1 .OR. input%gw==3) WRITE (15) NINT(fl),weight,eig,&
                 a(1:atoms%jri(jatom)),b(1:atoms%jri(jatom))
 
-            sume = sume + weight*e/input%jspins
+            sume = sume + weight*eig/input%jspins
             DO j = 1,ncmsh
-              rhcs(j) = weight* (a(j)**2+b(j)**2)
+              rhcs(j)  = weight* (a(j)**2+b(j)**2)
               rhoss(j) = rhoss(j) + rhcs(j)
             ENDDO
+
+            IF(present(EnergyDen)) THEN
+              rhoss_aux = rhoss
+              DO j = 1,ncmsh
+                ! for energy density we want to multiply the weights 
+                ! with the eigenenergies
+                rhoss_aux(j) = rhoss_aux(j) + (rhcs(j) * eig)
+              ENDDO
+            ENDIF
           ENDIF
        ENDDO
 
@@ -164,6 +172,14 @@ CONTAINS
           rhoc(j) = rhoss(j)/input%jspins
           rho(j,0,jatom,jspin) = rho(j,0,jatom,jspin) + rhoc(j)/sfp_const
        ENDDO
+
+       IF(present(EnergyDen)) then
+        DO  j = 1,nm
+            rhoc(j) = rhoss(j)/input%jspins
+            EnergyDen(j,0,jatom,jspin) = EnergyDen(j,0,jatom,jspin) &
+                                       + rhoss_aux(j) /(input%jspins * sfp_const)
+        ENDDO
+      ENDIF
 
        rhc(1:ncmsh,jatom,jspin)   = rhoss(1:ncmsh) / input%jspins
        rhc(ncmsh+1:DIMENSION%msh,jatom,jspin) = 0.0
