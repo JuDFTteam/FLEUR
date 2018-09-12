@@ -43,7 +43,7 @@ CONTAINS
 !
 ! --> calculate the potential.
 !
-      call xcpot%get_vxc(jspins, dens, vxc, vx, grad)
+      CALL xcpot%get_vxc(jspins, dens(:msh,:), vxc, vx, grad)
 
       DEALLOCATE ( drr,ddrr )
    END SUBROUTINE potl0
