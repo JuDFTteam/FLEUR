@@ -147,7 +147,7 @@ contains
   end subroutine mt_moments
 
 
-  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
+  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
     use m_phasy1
@@ -166,7 +166,7 @@ contains
     type(t_stars),    intent(in)   :: stars
     type(t_cell),     intent(in)   :: cell
     type(t_atoms),    intent(in)   :: atoms
-    complex,          intent(in)   :: qpw_in(:)
+    complex,          intent(in)   :: qpw(:)
     integer,          intent(in)   :: potdenType
     complex,          intent(out)  :: qlmp_out(-atoms%lmaxd:,0:,:)
 
@@ -175,7 +175,6 @@ contains
     complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
     real                           :: sk3r, rl2
     real                           :: aj(0:maxval( atoms%lmax ) + 1 )
-    complex                        :: qpw(stars%ng3)
     logical                        :: od
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
@@ -184,7 +183,6 @@ contains
 #endif
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
-    qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
     if ( mpi%irank == 0 ) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
@@ -197,9 +195,6 @@ contains
         end if
       end do
     end if
-#ifdef CPP_MPI
-    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
-#endif
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
     od = oneD%odi%d1
@@ -241,7 +236,7 @@ contains
     end do                      ! k = 2, stars%ng3
 !    !$omp end parallel do
 #ifdef CPP_MPI
-    call MPI_REDUCE( qlmp, qlmp_out, size(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, mpi%mpi_comm, ierr )
+    CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, mpi%mpi_comm, ierr )
 #else
     qlmp_out = qlmp
 #endif

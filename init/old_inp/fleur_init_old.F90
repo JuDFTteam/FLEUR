@@ -11,15 +11,17 @@ CONTAINS
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
        oneD,coreSpecInput,l_opti)
-    USE m_judft
     USE m_types
+    USE m_judft
     USE m_dimens
     USE m_inped
     USE m_setup
     USE m_constants
     USE m_winpXML
 #ifdef CPP_MPI
+#ifndef CPP_OLDINTEL
     USE m_mpi_dist_forcetheorem
+#endif
 #endif
 
     IMPLICIT NONE
@@ -77,8 +79,8 @@ CONTAINS
 
     CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
          obsolete,kpts,oneD,hybrid)
-    DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
-    DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
+    stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
+    stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
     !-odim
     IF (oneD%odd%d1) THEN
        oneD%odd%k3 = stars%mx3
@@ -98,7 +100,7 @@ CONTAINS
     ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-    ALLOCATE ( stars%igfft(0:DIMENSION%nn3d-1,2),stars%igfft2(0:DIMENSION%nn2d-1,2),atoms%nflip(atoms%ntype) )
+    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2),atoms%nflip(atoms%ntype) )
     ALLOCATE ( atoms%ncst(atoms%ntype) )
     ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
@@ -111,7 +113,7 @@ CONTAINS
     ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
     ALLOCATE ( stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
     ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
-    ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
+    ALLOCATE ( stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2) )
     ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
     ALLOCATE ( atoms%bmu(atoms%ntype) )
     ALLOCATE ( atoms%l_geo(atoms%ntype) )
@@ -163,7 +165,7 @@ CONTAINS
             stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
        !
        IF (xcpot%is_gga()) THEN
-          ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
+          ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
           ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                oneD%pgft1xy(0:oneD%odd%nn2d-1),&
                oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
@@ -191,8 +193,9 @@ CONTAINS
     CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#ifndef CPP_OLDINTEL
     CALL mpi_dist_forcetheorem(mpi,forcetheo)
-
+#endif
 #endif
     IF (mpi%irank.NE.0) THEN
        CALL xcpot%init(namex,l_krla,atoms%ntype)

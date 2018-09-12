@@ -219,9 +219,8 @@
            ENDDO
          ENDDO
          IF (xcpot%is_gga()) THEN
-            CALL potl0(&
-                 xcpot,DIMENSION%msh,DIMENSION%jspd,input%jspins,n,&
-                 atoms%dx(ntyp),rad,rhoss, vxc)
+            CALL potl0(xcpot,DIMENSION%msh,DIMENSION%jspd,input%jspins,n,&
+                       atoms%dx(ntyp), rad, rhoss, vxc)
          ELSE
             CALL xcpot%get_vxc(input%jspins,rhoss,vxc,vx)
          ENDIF

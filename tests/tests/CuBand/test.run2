@@ -10,6 +10,6 @@ jt::testrun($executable,$workdir);
 #now test output
 $result=jt::test_fileexists("$workdir/band.1");
 $result=jt::test_fileexists("$workdir/DOS.1");
-$result+=jt::test_grepnumber("$workdir/DOS.1","9.40670","9.40670  (.....)",0.290,0.0001);
+$result+=jt::test_grepnumber("$workdir/DOS.1","9.40646","9.40646  (.....)",0.290,0.0001);
 
 jt::stageresult($workdir,$result,"2");

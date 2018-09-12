@@ -92,7 +92,6 @@ CONTAINS
     TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
   END SUBROUTINE xcpot_get_vxc
 
-  
   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
     CLASS(t_xcpot),INTENT(IN) :: xcpot
     INTEGER, INTENT (IN)     :: jspins

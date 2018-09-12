@@ -9,6 +9,7 @@ jt::testrun("$executable -xmlInput",$workdir);
 $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
 $result+=jt::test_grepnumber("$workdir/out","new fermi energy",": *([^ ]*)",0.4250,0.0001);
 $result+=jt::test_grepnumber("$workdir/out","total energy=","= *([^ ]*)",-3305.007,0.001);
-$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","1: *([^ ]*)",48.993,0.001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","1: *([^ ]*)",48.986892,0.001);
+
 
 jt::stageresult($workdir,$result,"1");

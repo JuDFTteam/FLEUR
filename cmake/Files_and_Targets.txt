@@ -29,7 +29,6 @@ include(mix/CMakeLists.txt)
 include(vgen/CMakeLists.txt)
 include(inpgen/CMakeLists.txt)
 include(docs/CMakeLists.txt)
-include(tests/CMakeLists.txt)
 include(mpi/CMakeLists.txt)
 include(hybrid/CMakeLists.txt)
 include(eels/CMakeLists.txt)
@@ -39,11 +38,15 @@ include(wannier/uhu/CMakeLists.txt)
 include(forcetheorem/CMakeLists.txt)
 include(rdmft/CMakeLists.txt)
 
+
+include(tests/tests_old.cmake)
+#include(tests/tests_new.cmake)
+
 set(inpgen_F77 ${inpgen_F77} 
 inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f
 inpgen/atom_sym.f inpgen/generator.f inpgen/read_record.f inpgen/soc_or_ssdw.f inpgen/symproperties.f
 inpgen/bravais_symm.f  inpgen/set_atom_core.f inpgen/spg_gen.f global/triang.f
-inpgen/closure.f inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
+inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
 io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
 global/sort.f init/kptgen_hybrid.f init/od_kptsgen.f init/bravais.f init/divi.f init/brzone.f
 init/kptmop.f init/kpttet.f init/bandstr1.F init/ordstar.f init/fulstar.f init/kprep.f
@@ -53,7 +56,7 @@ init/tetcon.f init/kvecon.f init/boxdim.f math/ylm4.f global/radsra.f math/intgr
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
 eigen/vec_for_lo.f90 eigen/orthoglo.F90 juDFT/usage_data.F90
-global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90 global/find_enpara.f90
+global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90 global/find_enpara.f90 inpgen/closure.f90
 juDFT/info.F90 juDFT/stop.F90 juDFT/args.F90 juDFT/time.F90 juDFT/init.F90 juDFT/sysinfo.F90 io/w_inpXML.f90 init/julia.f90 global/utility.F90 
 init/compile_descr.F90 init/kpoints.f90 io/xmlOutput.F90 init/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90 cdn/int_21.f90
 cdn/int_21lo.f90 cdn_mt/rhomt21.f90 cdn_mt/rhonmt21.f90 force/force_a21.F90 force/force_a21_lo.f90 force/force_a21_U.f90 force/force_a12.f90

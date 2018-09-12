@@ -447,9 +447,9 @@ END SUBROUTINE orbcomp_init
 
 SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
 
+   USE m_types_mpi
    USE m_types_setup
    USE m_types_kpts
-   USE m_types_mpi
    USE m_types_misc
 
    IMPLICIT NONE

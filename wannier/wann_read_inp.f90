@@ -13,7 +13,7 @@ subroutine wann_read_inp(input,l_p0,wann)
 !     Frank Freimuth
 !********************************************
    use m_judft
-   use m_types
+   use m_types_setup
 
    implicit none
 

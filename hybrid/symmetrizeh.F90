@@ -22,7 +22,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
    TYPE(t_cell),      INTENT(IN)    :: cell
    TYPE(t_atoms),     INTENT(IN)    :: atoms
    TYPE(t_lapw),      INTENT(IN)    :: lapw
-   TYPE(T_mat),       INTENT(INOUT) :: hmat
+   TYPE(t_mat),       INTENT(INOUT) :: hmat
 
    ! scalars
    INTEGER,           INTENT(IN)    :: nsymop, jsp
@@ -64,6 +64,15 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
    COMPLEX,ALLOCATABLE   ::  cfac(:,:),chelp(:,:)
 
    LOGICAL               ::  ldum(lapw%nv(jsp)+atoms%nlotot,lapw%nv(jsp)+atoms%nlotot)
+
+   TYPE(t_mat) :: hmatTemp
+
+   CALL hmatTemp%init(hmat%l_real,hmat%matsize1,hmat%matsize2)
+   IF(hmat%l_real) THEN
+      hmatTemp%data_r = hmat%data_r
+   ELSE
+      hmatTemp%data_c = CONJG(hmat%data_c)
+   END IF
 
    ! calculate rotations in reciprocal space
    DO isym = 1,nsymop
@@ -166,19 +175,19 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
             IF(iop.LE.sym%nop) THEN
                IF((igpt.NE.0).AND.(igpt1.NE.0)) THEN
                   ic = ic + 1
-                  IF (hmat%l_real) THEN
-                     cdum = cdum + CONJG(cfac(i,isym))*hmat%data_r(igpt1,igpt)*cfac(j,isym)
+                  IF (hmatTemp%l_real) THEN
+                     cdum = cdum + CONJG(cfac(i,isym))*hmatTemp%data_r(igpt1,igpt)*cfac(j,isym)
                   ELSE
-                     cdum = cdum + CONJG(cfac(i,isym))*hmat%data_c(igpt1,igpt)*cfac(j,isym)
+                     cdum = cdum + CONJG(cfac(i,isym))*hmatTemp%data_c(igpt1,igpt)*cfac(j,isym)
                   END IF
                END IF
             ELSE
                IF((igpt.NE.0).AND.(igpt1.NE.0)) THEN
                   ic = ic + 1
-                  IF (hmat%l_real) THEN
-                     cdum = cdum + CONJG(CONJG(cfac(i,isym))*hmat%data_r(igpt1,igpt)*cfac(j,isym))
+                  IF (hmatTemp%l_real) THEN
+                     cdum = cdum + CONJG(CONJG(cfac(i,isym))*hmatTemp%data_r(igpt1,igpt)*cfac(j,isym))
                   ELSE
-                     cdum = cdum + CONJG(CONJG(cfac(i,isym))*hmat%data_c(igpt1,igpt)*cfac(j,isym))
+                     cdum = cdum + CONJG(CONJG(cfac(i,isym))*hmatTemp%data_c(igpt1,igpt)*cfac(j,isym))
                   END IF
                END IF
             END IF
@@ -200,6 +209,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
                      hmat%data_r(igpt1,igpt) = CONJG(cdum/(CONJG(cfac(i,isym))*cfac(j,isym)))
                      ldum(igpt,igpt1) = .FALSE.
                   END IF
+                  hmat%data_r(igpt,igpt1) = hmat%data_r(igpt1,igpt)
                ELSE
                   IF (iop.LE.sym%nop) THEN
                      hmat%data_c(igpt1,igpt) = cdum/(CONJG(cfac(i,isym))*cfac(j,isym))
@@ -208,6 +218,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
                      hmat%data_c(igpt1,igpt) = CONJG(cdum/(CONJG(cfac(i,isym))*cfac(j,isym)))
                      ldum(igpt,igpt1)    = .FALSE.
                   END IF
+                  hmat%data_c(igpt,igpt1) = CONJG(hmat%data_c(igpt1,igpt))
                END IF
             END IF
          END DO
@@ -408,10 +419,10 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
                            ic1 = 0
                            DO igpt2 = igpt_lo1, igpt_lo2
                               ic1 = ic1 + 1
-                              IF (hmat%l_real) THEN
-                                 cdum2 = cdum2 + CONJG(c_rot(ic1,igpt,ilo,ratom,isym)) * hmat%data_r(igpt1,lapw%nv(jsp)+igpt2)
+                              IF (hmatTemp%l_real) THEN
+                                 cdum2 = cdum2 + CONJG(c_rot(ic1,igpt,ilo,ratom,isym)) * hmatTemp%data_r(igpt1,lapw%nv(jsp)+igpt2)
                               ELSE
-                                 cdum2 = cdum2 + CONJG(c_rot(ic1,igpt,ilo,ratom,isym)) * hmat%data_c(igpt1,lapw%nv(jsp)+igpt2)
+                                 cdum2 = cdum2 + CONJG(c_rot(ic1,igpt,ilo,ratom,isym)) * hmatTemp%data_c(igpt1,lapw%nv(jsp)+igpt2)
                               END IF
                            END DO
 
@@ -494,13 +505,13 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
                                           ic2 = 0
                                           DO igpt3 = igpt1_lo1, igpt1_lo2
                                              ic2 = ic2 + 1
-                                             IF (hmat%l_real) THEN
+                                             IF (hmatTemp%l_real) THEN
                                                 cdum2 = cdum2 + CONJG(c_rot(ic1,igpt,ilo,ratom,isym)) *&
-                                                                hmat%data_r(lapw%nv(jsp)+igpt3,lapw%nv(jsp)+igpt2) *&
+                                                                hmatTemp%data_r(lapw%nv(jsp)+igpt3,lapw%nv(jsp)+igpt2) *&
                                                                 c_rot(ic2,igpt1,ilo1,ratom1,isym)
                                              ELSE
                                                  cdum2 = cdum2 + CONJG(c_rot(ic1,igpt,ilo,ratom,isym)) *&
-                                                                 hmat%data_c(lapw%nv(jsp)+igpt3,lapw%nv(jsp)+igpt2) *&
+                                                                 hmatTemp%data_c(lapw%nv(jsp)+igpt3,lapw%nv(jsp)+igpt2) *&
                                                                  c_rot(ic2,igpt1,ilo1,ratom1,isym)
                                              END IF
                                           END DO

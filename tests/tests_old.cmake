@@ -32,8 +32,8 @@ endif()
 
 #Tests for LibXC
 if (${FLEUR_USE_LIBXC})
-    set(Testdirs ${Testdirs} CuBulkLibXC)
-    set(ParTestdirs ${ParTestdirs} CuBulkLibXC)
+    set(Testdirs ${Testdirs} CuBulkLibXC Fe_bct_LibXC)
+    set(ParTestdirs ${ParTestdirs} CuBulkLibXC Fe_bct_LibXC)
 endif()
 #The serial tests
 if (${FLEUR_USE_SERIAL})
@@ -54,3 +54,4 @@ if (${FLEUR_USE_MPI})
 ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
    endforeach(test)
 endif()
+

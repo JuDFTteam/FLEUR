@@ -69,7 +69,11 @@ CONTAINS
     ALLOCATE(exc%pw_w(stars%ng3,1));exc%pw_w=0.0
     IF (PRESENT(results)) THEN
        CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.FALSE.,1)
+#ifndef CPP_OLDINTEL
        ALLOCATE(veff%pw_w,mold=veff%pw)
+#else
+       ALLOCATE( veff%pw_w(size(veff%pw,1),size(veff%pw,2)) )
+#endif
     ENDIF
 
     ! exchange correlation potential

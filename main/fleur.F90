@@ -415,7 +415,6 @@ CONTAINS
        l_cont = .TRUE.
        IF (hybrid%l_hybrid) THEN
           IF(hybrid%l_calhf) THEN
-             iterHF = iterHF + 1
              l_cont = l_cont.AND.(iterHF < input%itmax)
              l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
              CALL check_time_for_next_iteration(iterHF,l_cont)

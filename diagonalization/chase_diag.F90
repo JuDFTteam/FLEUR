@@ -298,7 +298,7 @@ IMPLICIT NONE
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
 
-    TYPE(t_mpimat),               INTENT(INOUT) :: hmat,smat
+    TYPE(t_mpimat),            INTENT(INOUT)    :: hmat,smat
     INTEGER,                   INTENT(IN)       :: ikpt
     INTEGER,                   INTENT(IN)       :: jsp
     INTEGER,                   INTENT(IN)       :: iter
@@ -310,7 +310,7 @@ IMPLICIT NONE
     INTEGER            :: info,myid,np
     REAL               :: scale !scaling of eigenvalues from scalapack
 
-    CLASS(t_mat),                  ALLOCATABLE  :: zMatTemp
+    TYPE(t_mat)  :: zMatTemp
     TYPE(t_mpimat)                              :: chase_mat
     REAL,                          ALLOCATABLE  :: eigenvalues(:)
     include 'mpif.h'
@@ -356,9 +356,9 @@ IMPLICIT NONE
     CALL chase_mat%generate_full_matrix()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
-    ALLOCATE(t_mpimat::zmatTemp)
+    !ALLOCATE(t_mpimat::zmatTemp)
     CALL zMatTemp%init(hmat%l_real,hmat%global_size1,nev+nex,MPI_COMM_SELF,.TRUE.) !Generate a pseudo-distributed matrix
-
+    
     IF (hmat%l_real) THEN
        IF(iter.EQ.1) THEN
           CALL mpi_chase_r(chase_mat%data_r, zMatTemp%data_r, eigenvalues,  25, 1e-10, 'R', 'S' )
@@ -374,20 +374,20 @@ IMPLICIT NONE
           CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  25, 1e-10, 'A', 'S' )
        END IF
     ENDIF
-
+    
     ne = nev
     IF (myid==0) CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
          eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
-    CALL hmat%copy(zmatTemp,1,1) !Copy matrix into distributed form
+    CALL hmat%from_non_dist(zmattemp)
     call zmatTemp%free()
     
     ! --> recover the generalized eigenvectors z by solving z' = l^t * z
     IF (smat%l_real) THEN
-       CALL pdtrtrs('U','N','N',hmat%global_size1,nev,smat%data_r,1,1,smat%blacs_desc,&
+       CALL pdtrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_r,1,1,smat%blacs_desc,&
             hmat%data_r,1,1,smat%blacs_desc,info)
     ELSE
-       CALL pztrtrs('U','N','N',hmat%global_size1,nev,smat%data_c,1,1,smat%blacs_desc,&
+       CALL pztrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_c,1,1,smat%blacs_desc,&
             hmat%data_c,1,1,smat%blacs_desc,info)
     END IF
     IF (info.NE.0) THEN

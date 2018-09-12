@@ -6,8 +6,8 @@
 
 !>This module contains the xcpot-type providing an interface to libxc
 MODULE m_types_xcpot_libxc
-#ifdef CPP_LIBXC  
-  USE xc_f03_lib_m
+#ifdef CPP_LIBXC
+   USE xc_f03_lib_m
 #endif
   USE m_types_xcpot
   USE m_judft
@@ -102,22 +102,31 @@ CONTAINS
       ENDIF
     END IF
 #else
-    CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc", &
-                      hint="Please recompile FLEUR with libxc support")
+      CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc", &
+                       hint="Please recompile FLEUR with libxc support")
 #endif
-  END SUBROUTINE xcpot_init
+   END SUBROUTINE xcpot_init
 
-
-  LOGICAL FUNCTION xcpot_is_gga(xcpot)
-    IMPLICIT NONE
-    CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
-#ifdef CPP_LIBXC    
-    TYPE(xc_f03_func_info_t)        :: xc_info
-
-    xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
-    xcpot_is_gga=ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
+   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      xcpot_is_gga=ANY((/XC_FAMILY_GGA, XC_FAMILY_HYB_GGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
+#else
+      xcpot_is_gga=.false.
 #endif
-  END FUNCTION xcpot_is_gga
+   END FUNCTION xcpot_is_gga
+
+   LOGICAL FUNCTION xcpot_is_LDA(xcpot)
+   IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+   xcpot_is_LDA= (XC_FAMILY_LDA==xc_f03_func_info_get_family(xcpot%xc_info_x))
+#else
+   xcpot_is_LDA=.false.
+
+   #endif
+END FUNCTION xcpot_is_LDA
 
   LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
     IMPLICIT NONE
@@ -127,24 +136,28 @@ CONTAINS
 
     xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
     xcpot_is_MetaGGA=ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
+#else
+   xcpot_is_MetaGGA =  .False.
 #endif
-  END FUNCTION xcpot_is_MetaGGA
+   END FUNCTION xcpot_is_MetaGGA
 
-  LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
-    IMPLICIT NONE
-    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+   LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
     TYPE(xc_f03_func_info_t)        :: xc_info
 
     xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
     xcpot_is_hybrid=ANY([XC_FAMILY_HYB_MGGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
+#else
+   xcpot_is_hybrid = .False.
 #endif
-  END FUNCTION xcpot_is_hybrid
+   END FUNCTION xcpot_is_hybrid
 
-  FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
-    USE m_judft
-    IMPLICIT NONE
-    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+   FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
+      USE m_judft
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 
     REAL:: a_ex
 #ifdef CPP_LIBXC    
@@ -223,20 +236,50 @@ CONTAINS
     ENDIF
     
 #endif
-  END SUBROUTINE xcpot_get_exc
+   END SUBROUTINE xcpot_get_vxc
 
-  SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
-    INTEGER, INTENT (IN)         :: jspins,ngrid
-    TYPE(t_gradients),INTENT(INOUT):: grad
-    !For libxc we only need the sigma array...
-    IF (ALLOCATED(grad%sigma)) DEALLOCATE(grad%sigma,grad%gr,grad%laplace,grad%vsigma)
-    ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
-    ALLOCATE(grad%gr(3,ngrid,jspins))
-    ALLOCATE(grad%laplace(ngrid,jspins))
-    ALLOCATE(grad%vsigma,mold=grad%sigma)
+   !***********************************************************************
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
+      !***********************************************************************
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
+      INTEGER, INTENT (IN)     :: jspins
+      REAL,INTENT (IN) :: rh(:,:)  !points,spin
+      REAL, INTENT (OUT) :: exc(:) !points
+      ! optional arguments for GGA
+      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
 
-  END SUBROUTINE xcpot_alloc_gradients
+      REAL  :: excc(SIZE(exc))
+#ifdef CPP_LIBXC
+      IF (xcpot%is_gga()) THEN
+         IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
+         CALL xc_f03_gga_exc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
+         IF (xcpot%func_id_c>0) THEN
+            CALL xc_f03_gga_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
+            exc=exc+excc
+         END IF
+      ELSE  !LDA potentials
+         CALL xc_f03_lda_exc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
+         IF (xcpot%func_id_c>0) THEN
+            CALL xc_f03_lda_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
+            exc=exc+excc
+         END IF
+      ENDIF
 
+#endif
+   END SUBROUTINE xcpot_get_exc
+
+   SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
+      INTEGER, INTENT (IN)         :: jspins,ngrid
+      TYPE(t_gradients),INTENT(INOUT):: grad
+      !For libxc we only need the sigma array...
+      IF (ALLOCATED(grad%sigma)) DEALLOCATE(grad%sigma,grad%gr,grad%laplace,grad%vsigma)
+      ALLOCATE(grad%sigma(MERGE(1,3,jspins==1),ngrid))
+      ALLOCATE(grad%gr(3,ngrid,jspins))
+      ALLOCATE(grad%laplace(ngrid,jspins))
+      ALLOCATE(grad%vsigma(MERGE(1,3,jspins==1),ngrid))
+
+   END SUBROUTINE xcpot_alloc_gradients
 
 #ifdef CPP_LIBXC  
   SUBROUTINE write_xc_info(xc_func, is_E_func)
@@ -292,5 +335,5 @@ CONTAINS
     END DO
   END SUBROUTINE write_xc_info
 #endif
-  
+
 END MODULE m_types_xcpot_libxc

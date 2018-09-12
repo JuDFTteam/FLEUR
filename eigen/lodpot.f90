@@ -14,10 +14,12 @@ CONTAINS
     !
     !*********************************************************************
     USE m_constants, ONLY : c_light
+    USE m_types_setup
+    USE m_types_mpi
+    USE m_types_enpara
+    USE m_xmlOutput
     USE m_radsra
     USE m_differ
-    USE m_types
-    USE m_xmlOutput
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_enpara),INTENT(IN)   :: enpara

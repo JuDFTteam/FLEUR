@@ -175,12 +175,10 @@ CONTAINS
 
     IF ( mpi%irank == 0 ) WRITE(6,'(/A,F6.1," MB")') 'Size of coulomb matrix:',16d0/1048576*SIZE(coulomb)
 
-    !
     !     Generate Symmetry:
     !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
-    !
-#     ifndef CPP_NOCOULSYM
 
+#ifndef CPP_NOCOULSYM
     IF ( mpi%irank == 0 ) WRITE(6,'(/A)',advance='no') 'Setup for symmetry...'
     CALL cpu_TIME(time1)
     ! calculate rotations in reciprocal space
@@ -267,15 +265,13 @@ CONTAINS
     IF ( mpi%irank == 0 ) WRITE(6,'(2X,A,F8.2,A)') '( Timing:', time2-time1, ' )'
 
     ! no symmetry used
-#     else 
-
+#else 
     ALLOCATE ( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt) )
     DO ikpt = 1,kpts%nkpt
        hybrid%pgptm1(:,ikpt)    = (/ (igpt0, igpt0 = 1,hybrid%maxgptm) /)
        hybrid%ngptm1(ikpt)      = hybrid%ngptm(ikpt)
     END DO
-
-#     endif
+#endif
 
     ! Distribute the work as equally as possible over the processes
     ikptmin  = 1
@@ -1245,8 +1241,8 @@ CONTAINS
           coulomb_mt1 = 0 ; coulomb_mt2_r   = 0 
           coulomb_mt3_r = 0 ; coulombp_mtir_r = 0
        else
-          coulomb_mt1 = 0 ; coulomb_mt2_r   = 0 
-          coulomb_mt3_r = 0 ; coulombp_mtir_r = 0
+          coulomb_mt1 = 0 ; coulomb_mt2_c   = 0 
+          coulomb_mt3_c = 0 ; coulombp_mtir_c = 0
        endif
        ! unpack coulomb into coulhlp
       
