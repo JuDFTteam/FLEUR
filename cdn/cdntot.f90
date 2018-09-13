@@ -88,10 +88,7 @@ CONTAINS
          ELSE
             qis = 0.
 
-            CALL pwint_all(&
-               stars,atoms,sym,oneD,&
-               cell,&
-               x)
+            CALL pwint_all(stars,atoms,sym,oneD,cell,x)
             DO j = 1,stars%ng3
                qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
             ENDDO
