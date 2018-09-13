@@ -1,11 +1,11 @@
-      MODULE m_cdntot
+MODULE m_cdntot
 !     ********************************************************
 !     calculate the total charge density in the interstial.,
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
-      CONTAINS
-      SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
-                        den,l_printData,qtot,qistot)
+CONTAINS
+   SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
+                     den,l_printData,qtot,qistot)
 
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -55,19 +55,19 @@
          q = 0.e0
 !     -----mt charge
          CALL timestart("MT")
-         DO 10 n = 1,atoms%ntype
+         DO n = 1,atoms%ntype
             CALL intgr3(den%mt(:,0,n,jspin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
             qmt(n) = w*sfp_const
             q = q + atoms%neq(n)*qmt(n)
-   10    CONTINUE
+         ENDDO
          CALL timestop("MT")
 !     -----vacuum region
          IF (input%film) THEN
-            DO 20 ivac = 1,vacuum%nvac
+            DO ivac = 1,vacuum%nvac
                DO nz = 1,vacuum%nmz
                   IF (oneD%odi%d1) THEN
                      rht1(nz,ivac,jspin) = (cell%z1+(nz-1)*vacuum%delz)*&
-     &                    den%vacz(nz,ivac,jspin)
+                                           den%vacz(nz,ivac,jspin)
                   ELSE
                      rht1(nz,ivac,jspin) =  den%vacz(nz,ivac,jspin)
                   END IF
@@ -79,30 +79,22 @@
                ELSE
                   q = q + cell%area*q2(1)
                END IF
-   20       CONTINUE
+            ENDDO
          END IF
 !     -----is region
          IF (.not.judft_was_Argument("-oldfix")) THEN
             CALL convol(stars,x,den%pw(:,jspin),stars%ufft)
             qis = x(1)*cell%omtil
          ELSE
-          qis = 0.
-!         DO 30 j = 1,nq3
-!            CALL pwint(
-!     >                 k1d,k2d,k3d,n3d,ntypd,natd,nop,invtab,odi,
-!     >                 ntype,neq,volmts,taual,z1,vol,volint,
-!     >                 symor,tau,mrot,rmt,sk3,bmat,ig2,ig,
-!     >                 kv3(1,j),
-!     <                 x)
-!            qis = qis + den%pw(j,jspin)*x*nstr(j)
-!   30    CONTINUE
-         CALL pwint_all(&
-     &                 stars,atoms,sym,oneD,&
-     &                 cell,&
-     &                 x)
-         DO j = 1,stars%ng3
-             qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
-         ENDDO
+            qis = 0.
+
+            CALL pwint_all(&
+               stars,atoms,sym,oneD,&
+               cell,&
+               x)
+            DO j = 1,stars%ng3
+               qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
+            ENDDO
          endif
          qistot = qistot + qis
          q = q + qis
@@ -137,12 +129,12 @@
       IF(l_printData) THEN
          CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
       END IF
- 8000 FORMAT (/,10x,'total charge for spin',i3,'=',f12.6,/,10x,&
-     &       'interst. charge =   ',f12.6,/,&
-     &       (10x,'mt charge=          ',4f12.6,/))
- 8010 FORMAT (10x,'vacuum ',i2,'  charge=  ',f12.6)
- 8020 FORMAT (/,10x,'total charge  =',f12.6)
+8000  FORMAT (/,10x,'total charge for spin',i3,'=',f12.6,/,10x,&
+               'interst. charge =   ',f12.6,/,&
+               (10x,'mt charge=          ',4f12.6,/))
+8010  FORMAT (10x,'vacuum ',i2,'  charge=  ',f12.6)
+8020  FORMAT (/,10x,'total charge  =',f12.6)
 
       CALL timestop("cdntot")
-      END SUBROUTINE cdntot
-      END MODULE m_cdntot
+   END SUBROUTINE cdntot
+END MODULE m_cdntot
