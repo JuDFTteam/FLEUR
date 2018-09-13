@@ -92,7 +92,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
-   IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
+   IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
    !In a non-collinear calcuation where the off-diagonal part of the
    !density matrix in the muffin-tins is calculated, the a- and
@@ -106,7 +106,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
 
-   IF (mpi%irank.EQ.0) THEN
+   IF (mpi%irank == 0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
 #ifdef CPP_HDF
          CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
@@ -115,7 +115,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #endif
          CALL timestart("cdngen: dos")
          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
-         IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
+         IF (banddos%dos.AND.(banddos%ndir == -3)) THEN
             CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
          END IF
          CALL timestop("cdngen: dos")
@@ -123,15 +123,15 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END IF
 
    IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
-   IF (vacuum%nstm.EQ.3) CALL juDFT_end("VACWAVE OK",mpi%irank)
+   IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",mpi%irank)
 
-   IF (mpi%irank.EQ.0) THEN
+   IF (mpi%irank == 0) THEN
       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
    IF (sliceplot%slice) THEN
-      IF (mpi%irank.EQ.0) THEN
+      IF (mpi%irank == 0) THEN
          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
@@ -143,12 +143,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
-   IF (mpi%irank.EQ.0) THEN
+   IF (mpi%irank == 0) THEN
       CALL openXMLElementNoAttributes('allElectronCharges')
       CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
       CALL closeXMLElement('allElectronCharges')
 
-      IF (input%jspins.EQ.2) THEN
+      IF (input%jspins == 2) THEN
          noco_new = noco
 
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
@@ -162,7 +162,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
          IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,moments%clmom)
       END IF
-   END IF ! mpi%irank.EQ.0
+   END IF ! mpi%irank == 0
 
 #ifdef CPP_MPI
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
