@@ -21,15 +21,6 @@ module m_metagga
         procedure multiply_RS
 end interface operator (*)
 contains
-
-    ! subroutine metagga_energy_corr_only()
-    !     implicit none
-
-        
-
-
-    ! end subroutine metagga_energy_corr_only
-
     subroutine calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, den, atoms, enpara, stars,&
                                  vacuum, dimension, sphhar, sym, vTot, oneD, results, kinEnergyDen)
 #ifdef CPP_LIBXC 
