@@ -239,7 +239,7 @@ CONTAINS
 
     IF( input%jspins .EQ. 1 .AND. hybrid%l_hybrid ) THEN
        results%te_hfex%valence = 2*results%te_hfex%valence
-       results%te_hfex%core    = 2*results%te_hfex%core
+       IF(hybrid%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
     END IF
     enpara%epara_min = MINVAL(enpara%el0)
     enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
