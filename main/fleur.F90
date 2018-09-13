@@ -193,6 +193,8 @@ CONTAINS
        ENDIF !mpi%irank.eq.0
        input%total = .TRUE.
 
+       CALL chase_distance(results%last_distance)
+
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
