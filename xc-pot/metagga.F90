@@ -147,8 +147,9 @@ contains
             ! replace brillouin weights with auxillary weights
             call calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
-            call cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, enpara, stars, vacuum, dimension, &
-                        sphhar, sym, vTot, oneD, cdnvalJob, EnergyDen, regCharges, dos, tmp_results, moments)
+            call cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
+                        enpara, stars, vacuum, dimension, sphhar, sym, vTot, oneD, cdnvalJob, &
+                        EnergyDen, regCharges, dos, tmp_results, moments)
         enddo
 
     end subroutine calc_EnergyDen
@@ -204,7 +205,7 @@ contains
         !local vars
         type(t_xcpot_libxc) ::aux_xcpot
         type(t_gradients)   :: tmp_grad
-        integer, parameter  :: id_corr = 5, id_exch = 1
+        integer, parameter  :: id_corr = 9, id_exch = 1
         integer             :: nsp, n
 
 
@@ -228,9 +229,12 @@ contains
         call init_mt_grid(nsp,input%jspins,atoms,sphhar,aux_xcpot,sym)
 
         do n = 1,atoms%ntype
-            call mt_to_grid(aux_xcpot, input%jspins, atoms, sphhar, den%mt(:,0:,n,:),       nsp, n, tmp_grad, den_RS%mt)
-            call mt_to_grid(aux_xcpot, input%jspins, atoms, sphhar, EnergyDen%mt(:,0:,n,:), nsp, n, tmp_grad, EnergyDen_RS%mt)
-            call mt_to_grid(aux_xcpot, input%jspins, atoms, sphhar, vTot%mt(:,0:,n,:),      nsp, n, tmp_grad, vTot_RS%mt)
+            call mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, den%mt(:,0:,n,:), &
+                            nsp,       n,            tmp_grad, den_RS%mt)
+            call mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
+                            nsp,       n,            tmp_grad, EnergyDen_RS%mt)
+            call mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, vTot%mt(:,0:,n,:), &
+                            nsp,       n,            tmp_grad, vTot_RS%mt)
         enddo
 
         call finish_mt_grid()

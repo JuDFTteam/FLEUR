@@ -15,7 +15,7 @@ CONTAINS
 #ifdef CPP_MPI
     LOGICAL           :: l_relcor
     CHARACTER(len=100):: namex
-    INTEGER           :: ierr,n,i(3)
+    INTEGER           :: ierr,n,i(5)
     INCLUDE 'mpif.h'
 
     IF (mpi%isize==1) RETURN !nothing to be done with only one PE
@@ -31,7 +31,7 @@ CONTAINS
        END SELECT
     END IF
     CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF (mpi%irank.NE.0) THEN
+    IF (mpi%irank /= 0) THEN
        IF (ALLOCATED(xcpot)) DEALLOCATE(xcpot)
        !Now we know the types and can allocate on the other PE type dependend
        SELECT CASE(n)
@@ -54,16 +54,18 @@ CONTAINS
        CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(l_relcor,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       IF (mpi%irank.NE.0)  CALL xcpot%init(namex(1:4),l_relcor,n)
+       IF (mpi%irank /= 0)  CALL xcpot%init(namex(1:4),l_relcor,n)
        CALL MPI_BCAST(xcpot%lda_atom,n,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     TYPE IS (t_xcpot_libxc)
        IF (mpi%irank==0) THEN
-          i(1)=xcpot%jspins
-          i(2)=xcpot%func_id_x
-          i(3)=xcpot%func_id_c
+          i(1) = xcpot%jspins
+          i(2) = xcpot%func_vxc_id_x
+          i(3) = xcpot%func_vxc_id_c
+          i(4) = xcpot%func_exc_id_x
+          i(5) = xcpot%func_exc_id_c
        ENDIF
-       CALL MPI_BCAST(i,3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-        IF (mpi%irank.NE.0)  CALL xcpot%init(i(1),i(2),i(3)) 
+       CALL MPI_BCAST(i,size(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
+        IF (mpi%irank /= 0)  CALL xcpot%init(i(1),i(2),i(3),i(4),i(5)) 
     END SELECT
 #endif
   END SUBROUTINE mpi_bc_xcpot

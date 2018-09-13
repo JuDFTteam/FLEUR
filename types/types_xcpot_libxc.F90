@@ -111,7 +111,10 @@ CONTAINS
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      xcpot_is_gga=ANY((/XC_FAMILY_GGA, XC_FAMILY_HYB_GGA/)==xc_f03_func_info_get_family(xcpot%xc_info_x))
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
+      xcpot_is_gga=ANY((/XC_FAMILY_GGA, XC_FAMILY_HYB_GGA/)==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_is_gga=.false.
 #endif
@@ -121,10 +124,12 @@ CONTAINS
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      xcpot_is_LDA= (XC_FAMILY_LDA==xc_f03_func_info_get_family(xcpot%xc_info_x))
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
+      xcpot_is_LDA= (XC_FAMILY_LDA==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_is_LDA=.false.
-
 #endif
    END FUNCTION xcpot_is_LDA
 
@@ -207,40 +212,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 
-   !***********************************************************************
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
-      !***********************************************************************
-      IMPLICIT NONE
-   CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
-      INTEGER, INTENT (IN)     :: jspins
-      REAL,INTENT (IN) :: rh(:,:)  !points,spin
-      REAL, INTENT (OUT) :: exc(:) !points
-      ! optional arguments for GGA      
-      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
-
-      REAL  :: excc(SIZE(exc))
-#ifdef CPP_LIBXC    
-      IF (xcpot%is_gga()) THEN
-         IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-         CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
-         IF (xcpot%func_vxc_id_c>0) THEN
-            CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
-            exc=exc+excc
-         END IF
-      ELSE  !LDA potentials
-         CALL xc_f03_lda_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
-         IF (xcpot%func_vxc_id_c>0) THEN
-            CALL xc_f03_lda_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
-            exc=exc+excc
-         END IF
-      ENDIF
-
-#endif
-   END SUBROUTINE xcpot_get_vxc
-
-   !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
-      !***********************************************************************
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
       INTEGER, INTENT (IN)     :: jspins
@@ -253,15 +225,15 @@ CONTAINS
 #ifdef CPP_LIBXC
       IF (xcpot%is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-         CALL xc_f03_gga_exc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
-         IF (xcpot%func_id_c>0) THEN
-            CALL xc_f03_gga_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
+         CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
+         IF (xcpot%func_exc_id_c>0) THEN
+            CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
             exc=exc+excc
          END IF
       ELSE  !LDA potentials
-         CALL xc_f03_lda_exc(xcpot%xc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
-         IF (xcpot%func_id_c>0) THEN
-            CALL xc_f03_lda_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
+         CALL xc_f03_lda_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
+         IF (xcpot%func_exc_id_c>0) THEN
+            CALL xc_f03_lda_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
             exc=exc+excc
          END IF
       ENDIF
