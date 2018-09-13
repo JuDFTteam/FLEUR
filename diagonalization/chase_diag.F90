@@ -70,13 +70,25 @@ IMPLICIT NONE
 
   PRIVATE 
 
-    INTEGER :: chase_eig_id
-
+  INTEGER         :: chase_eig_id
   PUBLIC init_chase, chase_diag
+#endif
+  REAL            :: scale_distance
+  REAL            :: tol
+  
+  PUBLIC chase_distance
 
-  CONTAINS
+CONTAINS
 
-  SUBROUTINE init_chase(mpi,dimension,atoms,kpts,noco,l_real)
+  SUBROUTINE chase_distance(dist)
+    IMPLICIT NONE
+    REAL,INTENT(in)::dist
+    
+    tol=MAX(1E-8,dist*scale_distance)
+  END SUBROUTINE chase_distance
+
+#ifdef CPP_CHASE
+    SUBROUTINE init_chase(mpi,DIMENSION,atoms,kpts,noco,l_real)
     USE m_types_mpimat
     USE m_types
     USE m_types_mpi
@@ -90,11 +102,18 @@ IMPLICIT NONE
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
     TYPE(t_noco),              INTENT(IN)    :: noco
-
     LOGICAL,                   INTENT(IN)    :: l_real
 
     INTEGER                                  :: nevd, nexd
-
+    CHARACTER(len=1000)::arg
+    
+   
+    scale_distance=1E-3
+    IF (judft_was_argument("-chase_scale")) THEN
+       arg=juDFT_string_for_argument("-chase_scale")
+       READ(arg,*) scale_distance
+    ENDIF
+    
     IF (juDFT_was_argument("-diag:chase")) THEN
        nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
        nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
@@ -204,10 +223,10 @@ IMPLICIT NONE
           end do
        end do
        if(iter.EQ.1) then
-          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-6, 'R', 'S' )
+          CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, scale_distance, 'R', 'S' )
        else
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          call chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1e-6, 'A', 'S' )
+          CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, tol, 'A', 'S' )
        end if
 
        ne = nev
@@ -259,10 +278,10 @@ IMPLICIT NONE
        end do
 
        if(iter.EQ.1) then
-          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-6, 'R', 'S' )
+          CALL chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, scale_distance, 'R', 'S' )
        else
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, 1e-6, 'A', 'S' )
+          call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 25, tol, 'A', 'S' )
        end if
 
        ne = nev
@@ -313,8 +332,11 @@ IMPLICIT NONE
     TYPE(t_mat)  :: zMatTemp
     TYPE(t_mpimat)                              :: chase_mat
     REAL,                          ALLOCATABLE  :: eigenvalues(:)
+
+    REAL :: t1,t2,t3,t4
     include 'mpif.h'
 
+    CALL CPU_TIME(t1)
     CALL MPI_COMM_RANK(hmat%mpi_com,myid,info)
     CALL MPI_COMM_SIZE(hmat%mpi_com,np,info)
   smat%blacs_desc=hmat%blacs_desc
@@ -361,17 +383,25 @@ IMPLICIT NONE
     
     IF (hmat%l_real) THEN
        IF(iter.EQ.1) THEN
-          CALL mpi_chase_r(chase_mat%data_r, zMatTemp%data_r, eigenvalues,  25, 1e-10, 'R', 'S' )
+          CALL CPU_TIME(t2)
+          CALL mpi_chase_r(chase_mat%data_r, zMatTemp%data_r, eigenvalues,  25, 1E-4, 'R', 'S' )
+          CALL CPU_TIME(t3)
        ELSE
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          CALL mpi_chase_r(chase_mat%data_r,  zMatTemp%data_r, eigenvalues, 25, 1e-10, 'A', 'S' )
+          CALL CPU_TIME(t2)
+          CALL mpi_chase_r(chase_mat%data_r,  zMatTemp%data_r, eigenvalues, 25, tol, 'A', 'S' )
+          CALL CPU_TIME(t3)
        END IF
     ELSE
        IF(iter.EQ.1) THEN
-          CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  25, 1e-10, 'R', 'S' )
+          CALL CPU_TIME(t2)
+          CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  25, 1E-4, 'R', 'S' )
+          CALL CPU_TIME(t3)
        ELSE
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  25, 1e-10, 'A', 'S' )
+          CALL CPU_TIME(t2)
+          CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  25, tol, 'A', 'S' )
+          CALL CPU_TIME(t3)
        END IF
     ENDIF
     
@@ -408,6 +438,16 @@ IMPLICIT NONE
        ne=ne+1
        eig(ne)=eigenvalues(i)
     ENDDO
+
+    CALL CPU_TIME(t4)
+
+    IF (myid==0) THEN
+       PRINT *,"Chase Prep:",t2-t1
+       PRINT *,"Chase Call:",t3-t2
+       PRINT *,"Chase Post:",t4-t3
+       PRINT *,"Chase Total:",t4-t1
+    ENDIF
+
   END SUBROUTINE chase_diag_MPI
 
   SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
