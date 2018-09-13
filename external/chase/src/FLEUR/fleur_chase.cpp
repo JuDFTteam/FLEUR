@@ -127,16 +127,18 @@ void chase_solve(T* H, T* V, Base<T>* ritzv, int* deg, double* tol, char* mode,
   auto nev = config.GetNev();
   auto nex = config.GetNex();
 
-  if (!config.UseApprox())
-    for (std::size_t k = 0; k < N * (nev + nex); ++k)
-      V[k] = getRandomT<T>([&]() { return d(gen); });
-
   for (std::size_t k = 0; k < xlen * ylen; ++k) H_[k] = H[k];
 
   config.SetTol(*tol);
   config.SetDeg(*deg);
   config.SetOpt(*opt == 'S');
   config.SetApprox(*mode == 'A');
+
+  if (!config.UseApprox()){
+    std::cerr << "random vectors" << std::endl;
+    for (std::size_t k = 0; k < N * (nev + nex); ++k)
+      V[k] = getRandomT<T>([&]() { return d(gen); });
+  }
 
   chase::Solve(&single);
 }
