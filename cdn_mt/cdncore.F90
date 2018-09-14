@@ -88,12 +88,17 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    IF (mpi%irank==0) THEN
       IF (input%kcrel==0) THEN
          DO jspin = 1,input%jspins
-            CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
+            IF(PRESENT(EnergyDen)) THEN
+               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
+            ELSE
+               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig)
+            ENDIF
+
             rhTemp(:,:,jspin) = rh(:,:,jspin)
             results%seigc = results%seigc + seig
          END DO
       ELSE
-         IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic")
+         IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
          CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vTot%mt(:,0,:,:),qint,rh)
          results%seigc = results%seigc + seig
       END IF

@@ -222,8 +222,8 @@ CONTAINS
 !
 !-----> hartree units
 !
-      vx=hrtr_half*vx
-      vxc=hrtr_half*vxc
+      vx  = hrtr_half*vx
+      vxc = hrtr_half*vxc
 
    END SUBROUTINE xcpot_get_vxc
 

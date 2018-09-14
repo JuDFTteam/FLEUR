@@ -1132,8 +1132,6 @@ SUBROUTINE r_inpXML(&
      id_x=0;id_c=0
   ENDIF
 
-  write (*,*) "id_x = ", id_x, "id_c = ", id_c
-  
   ! Read in xc functional parameters
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
   namex(1:4) = valueString(1:4)
