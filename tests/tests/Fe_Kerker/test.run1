@@ -7,6 +7,6 @@ jt::testrun("$executable",$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it=  3  is completed");
-$result+=jt::test_grepnumber("$workdir/out","distance of charge densities for it","3: *([^ ]*)",9.964,0.001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densities for it","3: *([^ ]*)",9.971,0.001);
 
 jt::stageresult($workdir,$result,"1");

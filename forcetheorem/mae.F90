@@ -5,8 +5,9 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_mae
-  USE m_judft
+  USE m_types
   USE m_types_forcetheo
+  USE m_judft
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_mae
      INTEGER :: directions_done
      REAL,ALLOCATABLE:: theta(:)

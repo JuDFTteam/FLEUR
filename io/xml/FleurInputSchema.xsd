@@ -142,6 +142,7 @@
       <xsd:attribute default="F" name="l_J" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="swsp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="lflip" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0.0" name="fixed_moment" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:simpleType name="SpinNumberType">
@@ -266,7 +267,8 @@
 
    <xsd:complexType name="XCFunctionalType">
      <xsd:sequence>
-         <xsd:element maxOccurs="1" minOccurs="0" name="libXC" type="XCLibXCType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="LibXCID" type="XCLibXCIDType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="LibXCName" type="XCLibXCNameType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="xcParams" type="XCParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ggaPrinting" type="GGAPrintingType"/>
       </xsd:sequence>
@@ -304,12 +306,16 @@
 	 <xsd:enumeration value="vhse"/>
 	 <xsd:enumeration value="lhse"/>
 	 <xsd:enumeration value="hf"/>
-	 <xsd:enumeration value="libxc"/>
+	 <xsd:enumeration value="LibXC"/>
       </xsd:restriction>
    </xsd:simpleType>
-   <xsd:complexType name="XCLibXCType">
+   <xsd:complexType name="XCLibXCIDType">
       <xsd:attribute name="exchange" type="xsd:integer" use="required"/>
       <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
+   </xsd:complexType>
+   <xsd:complexType name="XCLibXCNameType">
+      <xsd:attribute name="exchange" type="xsd:string" use="required"/>
+      <xsd:attribute name="correlation" type="xsd:string" use="required"/>
    </xsd:complexType>
    <xsd:complexType name="XCParamsType">
       <xsd:attribute name="igrd" type="xsd:integer" use="required"/>

@@ -36,7 +36,9 @@ SUBROUTINE r_inpXML(&
   USE m_inpeig
   USE m_sort
   USE m_types_xcpot_inbuild
-!  USE m_types_xcpot_libxc
+#ifdef CPP_LIBXC  
+  USE xc_f03_lib_m
+#endif  
   IMPLICIT NONE
 
   TYPE(t_input),INTENT(INOUT)   :: input
@@ -350,7 +352,9 @@ SUBROUTINE r_inpXML(&
   noco%l_noco = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
   input%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
   input%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
+  input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
+  IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
   dimension%jspd = input%jspins
 
   ! Read in Brillouin zone integration parameters
@@ -1106,8 +1110,31 @@ SUBROUTINE r_inpXML(&
 !!! Start of XC functional section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ! Read in xc functional parameters
+  !Read in libxc parameters if present
+  if(      xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID')   == 1 &
+     .and. xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) then
+    call judft_error("LibXC is given both by Name and ID and is therefore overdetermined", calledby="r_inpXML")
+  endif
 
+  IF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID') == 1) THEN
+     id_x=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@exchange'))
+     id_c=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@correlation'))
+  ELSEIF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) THEN
+    valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@exchange')))))
+#ifdef CPP_LIBXC
+    id_x =  xc_f03_functional_get_number(TRIM(valueString))
+    valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@correlation')))))
+    id_c =  xc_f03_functional_get_number(TRIM(valueString))
+#else
+    CALL judft_error("To use libxc functionals you have to compile with libXC support")
+#endif    
+ ELSE
+     id_x=0;id_c=0
+  ENDIF
+
+  write (*,*) "id_x = ", id_x, "id_c = ", id_c
+  
+  ! Read in xc functional parameters
   valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
   namex(1:4) = valueString(1:4)
   l_relcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
@@ -1117,15 +1144,6 @@ SUBROUTINE r_inpXML(&
      relcor = 'relativistic'
   END IF
 
-  !Read in libxc parameters if present
-  xPathA = '/fleurInput/xcFunctional/libXC'
-  numberNodes = xmlGetNumberOfNodes(xPathA)
-  IF (numberNodes==1) THEN
-     id_x=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/libXC/@exchange'))
-     id_c=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/libXC/@correlation'))
-  ELSE
-     id_x=0;id_c=0
-  ENDIF
   !now initialize the xcpot variable
   CALL setXCParameters(atoms,valueString,l_relcor,input%jspins,id_x,id_c,xcpot)
   
@@ -2049,7 +2067,7 @@ SUBROUTINE setXCParameters(atoms,namex,relcor,jspins,id_x,id_c,xcpot)
    INTEGER,              INTENT(IN)  :: jspins,id_c,id_x
    CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE      :: xcpot
  
-   IF (namex(1:5)=='libxc') THEN
+   IF (namex(1:5)=='LibXC') THEN
       ALLOCATE(t_xcpot_libxc::xcpot)
    ELSE
       ALLOCATE(t_xcpot_inbuild::xcpot)

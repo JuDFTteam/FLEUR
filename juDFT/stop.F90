@@ -126,8 +126,9 @@ CONTAINS
        WRITE(0,"(10(a,/))") (TRIM(text(n)),n=1,linenr)
 
        CALL add_usage_data("Error",message)
+       !$OMP MASTER
        CALL send_usage_data()
-       
+       !$OMP END MASTER
        CALL juDFT_STOP()
     ENDIF
     WRITE(0,*)

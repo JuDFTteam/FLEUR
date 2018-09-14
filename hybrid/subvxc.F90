@@ -12,6 +12,8 @@ CONTAINS
                      cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
 
 
+      USE m_types
+      USE m_judft
       USE m_intgr,     ONLY : intgr3
       USE m_constants
       USE m_gaunt,     ONLY : gaunt1
@@ -20,7 +22,6 @@ CONTAINS
       USE m_radflo
       USE m_radfun
       USE m_abcof3
-      USE m_types
 
       IMPLICIT NONE
 
@@ -85,7 +86,9 @@ CONTAINS
       COMPLEX               ::  carr(hybrid%maxlmindx,DIMENSION%nvd),carr1(DIMENSION%nvd,DIMENSION%nvd)
       COMPLEX ,ALLOCATABLE  ::  ahlp(:,:,:),bhlp(:,:,:)
       COMPLEX, ALLOCATABLE  ::  bascof(:,:,:)
+#ifndef CPP_OLDINTEL
       COMPLEX               ::  bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod, atoms%nat)
+#endif
 
       CALL timestart("subvxc")
       vxc=0
@@ -132,9 +135,9 @@ CONTAINS
       ! Calculate bascof
       ALLOCATE(ahlp(DIMENSION%nvd,0:DIMENSION%lmd,atoms%nat),bhlp(DIMENSION%nvd,0:DIMENSION%lmd,atoms%nat),stat=ok)
       IF(ok.NE.0) STOP 'subvxc: error in allocation of ahlp/bhlp'
-
+#ifndef CPP_OLDINTEL
       CALL abcof3(input,atoms,sym,jsp,cell,bk,lapw,usdus,oneD,ahlp,bhlp,bascof_lo)
-
+#endif
       ALLOCATE(bascof(DIMENSION%nvd,2*(DIMENSION%lmd+1),atoms%nat), stat=ok)
       IF(ok.NE.0) STOP 'subvxc: error in allocation of bascof'
 
@@ -175,7 +178,7 @@ CONTAINS
             DO i=1,atoms%jri(itype)
                IF(l.EQ.0) THEN
                   ! vr(i,0)= vrtot(i,0,itype)*sfp/rmsh(i,itype) - vrcou(i,0,itype,jsp)   
-                  vr(i,0)=  vx%mt(i,0,itype,jsp) * sfp_const / atoms%rmsh(i,itype)
+                  vr(i,0)=  vx%mt(i,0,itype,jsp)! * sfp_const / atoms%rmsh(i,itype)
                ELSE ! vxc = vtot - vcoul
                   ! vr(i,l)= vrtot(i,l,itype)-vrcou(i,l,itype,jsp)
                   vr(i,l)=  vx%mt(i,l,itype,jsp)      
@@ -260,7 +263,7 @@ CONTAINS
 
       ! Calculate plane wave contribution
       DO i=1,stars%ng3
-         vpw(i)= vx%pw(i,jsp) 
+         vpw(i)= vx%pw_w(i,jsp)
          ! vpw(i)=vpwtot(i)-vpwcou(i,jsp)      
       END DO
 
@@ -346,6 +349,9 @@ CONTAINS
                   IF(atoms%invsat(iatom).EQ.1) invsfct = 2
 
                   DO ilo = 1, atoms%nlo(itype)
+#ifdef CPP_OLDINTEL
+                     CALL judft_error ("no LOs & hybrid with old intel compiler!",calledby="subvxc.F90")
+#else
                      l1 = atoms%llo(ilo,itype)
                      DO ikvec = 1, invsfct*(2*l1+1)
                         DO m1 = -l1, l1
@@ -477,6 +483,7 @@ CONTAINS
                         icentry = ic       
                      END DO !ikvec
                      ikvecat = ikvecat + invsfct*(2*l1+1)
+#endif
                   END DO  ! ilo
                   ikvecprevat = ikvecprevat + ikvecat
                   ikvecat = 0

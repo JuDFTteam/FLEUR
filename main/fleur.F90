@@ -193,6 +193,10 @@ CONTAINS
        ENDIF !mpi%irank.eq.0
        input%total = .TRUE.
 
+#ifdef CPP_CHASE
+       CALL chase_distance(results%last_distance)
+#endif
+
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
@@ -255,12 +259,17 @@ CONTAINS
           ! add all contributions to total energy
 #ifdef CPP_MPI
           ! send all result of local total energies to the r
-          IF (mpi%irank==0) THEN
-             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-          ELSE
-             CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-             CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+          IF (hybrid%l_hybrid.AND.hybrid%l_calhf) THEN
+             IF (mpi%irank==0) THEN
+                CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             ELSE
+                CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+             END IF
+             IF (mpi%irank==0) THEN
+                CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             ELSE
+                CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+             END IF
           END IF
 #endif
 
@@ -415,7 +424,6 @@ CONTAINS
        l_cont = .TRUE.
        IF (hybrid%l_hybrid) THEN
           IF(hybrid%l_calhf) THEN
-             iterHF = iterHF + 1
              l_cont = l_cont.AND.(iterHF < input%itmax)
              l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
              CALL check_time_for_next_iteration(iterHF,l_cont)
@@ -423,7 +431,6 @@ CONTAINS
              l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
           END IF
           IF (hybrid%l_subvxc) THEN
-             results%te_hfex%core    = 0
              results%te_hfex%valence = 0
           END IF
        ELSE

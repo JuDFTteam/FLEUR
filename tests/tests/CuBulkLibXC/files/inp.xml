@@ -23,8 +23,8 @@
          <c>6.81</c>
       </bulkLattice>
    </cell>
-   <xcFunctional name="libxc" relativisticCorrections="F">
-    <libXC  exchange="1" correlation="9" />
+   <xcFunctional name="LibXC" relativisticCorrections="F">
+    <LibXCID  exchange="1" correlation="9" />
    </xcFunctional>
    <atomSpecies>
       <species name="Cu-1" element="Cu" atomicNumber="29" coreStates="7" magMom=".00000000" flipSpin="T">

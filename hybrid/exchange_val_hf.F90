@@ -489,7 +489,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    END IF ! xcpot%icorr .ne. icorr_hse
 
 
-   IF (.not.mat_ex%l_real) THEN
+   IF (mat_ex%l_real) THEN
       IF(any(abs(aimag(exch_vv)).gt.1E-08)) CALL judft_warn('unusally large imaginary part of exch_vv',&
                                                             calledby='exchange_val_hf.F90')
    END IF

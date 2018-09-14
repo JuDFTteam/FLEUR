@@ -6,9 +6,11 @@
 
 MODULE m_corespec_eval
 
-  USE m_corespec
-  USE m_types
+  USE m_types_setup
+  USE m_types_usdus
+  USE m_types_cdnval, ONLY: t_eigVecCoeffs
   USE m_constants
+  USE m_corespec
 
   IMPLICIT NONE
 

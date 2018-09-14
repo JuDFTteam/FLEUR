@@ -5,8 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_dmi
-  USE m_judft
+
+  USE m_types
   USE m_types_forcetheo
+  USE m_judft
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_dmi
      INTEGER :: q_done
      REAL,ALLOCATABLE:: qvec(:,:)

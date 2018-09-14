@@ -23,9 +23,9 @@ c     in the basis set of Wannier functions may be constructed.
 c     
 c     Frank Freimuth
 c***********************************************************************
+      USE m_types
       USE m_spnorb 
       USE m_hsoham
-      USE m_types
       implicit none
 
       TYPE(t_mpi),INTENT(IN)      :: mpi

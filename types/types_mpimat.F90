@@ -34,6 +34,7 @@ MODULE m_types_mpimat
 
      PROCEDURE,PASS   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
      PROCEDURE,PASS   :: print_matrix
+     PROCEDURE,PASS   :: from_non_dist
 
   END TYPE t_mpimat
   
@@ -198,7 +199,7 @@ CONTAINS
     SELECT TYPE(mat1)
     TYPE IS(t_mpimat)
        IF (mat%l_real) THEN
-          CALL pdgemr2d(mat1%global_size1,mat1%global_size2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
+          CALL pdgemr2d(Mat1%global_size1,mat1%global_size2,mat1%data_r,1,1,mat1%blacs_desc,mat%data_r,n1,n2,mat%blacs_desc,mat%blacs_ctext)
        ELSE
           CALL pzgemr2d(mat1%global_size1,mat1%global_size2,mat1%data_c,1,1,mat1%blacs_desc,mat%data_c,n1,n2,mat%blacs_desc,mat%blacs_ctext)
        END IF
@@ -207,6 +208,29 @@ CONTAINS
     END SELECT
 #endif    
   END SUBROUTINE mpimat_copy
+
+  SUBROUTINE from_non_dist(mat,mat1)
+    IMPLICIT NONE
+    CLASS(t_mpimat),INTENT(INOUT)::mat
+    TYPE(t_mat),INTENT(IN)       ::mat1
+
+    INTEGER:: blacs_desc(9),irank,ierr,umap(1,1),np
+#ifdef CPP_SCALAPACK
+    blacs_desc=(/1,-1,mat1%matsize1,mat1%matsize2,mat1%matsize1,mat1%matsize2,0,0,mat1%matsize1/)
+
+    CALL MPI_COMM_RANK(mat%mpi_com,irank,ierr)
+    umap(1,1)=0
+    CALL BLACS_GET(mat%blacs_ctext,10,blacs_desc(2))
+    CALL BLACS_GRIDMAP(blacs_desc(2),umap,1,1,1)
+    IF (mat%l_real) THEN
+       CALL pdgemr2d(Mat1%matsize1,mat1%matsize2,mat1%data_r,1,1,blacs_desc,mat%data_r,1,1,mat%blacs_desc,mat%blacs_ctext)
+    ELSE
+       CALL pzgemr2d(mat1%matsize1,mat1%matsize2,mat1%data_c,1,1,blacs_desc,mat%data_c,1,1,mat%blacs_desc,mat%blacs_ctext)
+    END IF
+#endif    
+  END SUBROUTINE from_non_dist
+    
+
 
   SUBROUTINE mpimat_move(mat,mat1)
     IMPLICIT NONE

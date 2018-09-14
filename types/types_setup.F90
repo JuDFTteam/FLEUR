@@ -332,8 +332,6 @@ MODULE m_types_setup
      INTEGER :: neigd
      INTEGER :: neigd2
      INTEGER :: ncvd
-     INTEGER :: nn2d
-     INTEGER :: nn3d
      INTEGER :: nstd
      INTEGER :: msh
      INTEGER :: lmd
@@ -412,6 +410,7 @@ MODULE m_types_setup
      REAL :: elup
      REAL :: rkmax
      REAL :: zelec
+     REAL :: fixed_moment=0.0
      CHARACTER(LEN=8) :: comment(10)
      REAL,POINTER :: sigma !this is the difference in charge due to the electric field it points to the value stored in t_efield
      LOGICAL :: l_core_confpot

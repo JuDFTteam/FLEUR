@@ -6,7 +6,7 @@
 
 module m_corespec
 
-  USE m_types
+  USE m_types_setup, ONLY: t_coreSpecInput
 
   implicit none
 

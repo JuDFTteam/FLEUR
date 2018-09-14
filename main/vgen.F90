@@ -22,12 +22,12 @@ CONTAINS
   SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
                   obsolete,cell,oneD,sliceplot,mpi,results,noco,den,vTot,vx,vCoul)
 
+    USE m_types
     USE m_rotate_int_den_to_local
     USE m_bfield
     USE m_vgen_coulomb
     USE m_vgen_xcpot
     USE m_vgen_finalize
-    USE m_types
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -64,7 +64,11 @@ CONTAINS
     CALL vCoul%resetPotDen()
     CALL vx%resetPotDen()
     ALLOCATE(vx%pw_w,mold=vTot%pw)
+#ifndef CPP_OLDINTEL
     ALLOCATE(vTot%pw_w,mold=vTot%pw)
+#else
+    ALLOCATE( vTot%pw_w(size(vTot%pw,1),size(vTot%pw,2)) )
+#endif
     ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
 
     CALL workDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
@@ -92,7 +96,7 @@ CONTAINS
 
     !ToDo, check if this is needed for more potentials as well...
     CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
-    DEALLOCATE(vcoul%pw_w,vx%pw_w)
+    DEALLOCATE(vcoul%pw_w)
 
     CALL bfield(input,noco,atoms,field,vTot)
 
