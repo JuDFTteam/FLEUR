@@ -37,6 +37,7 @@ include(wannier/CMakeLists.txt)
 include(wannier/uhu/CMakeLists.txt)
 include(forcetheorem/CMakeLists.txt)
 include(rdmft/CMakeLists.txt)
+include(kpoints/CMakeLists.txt)
 
 
 include(tests/tests_old.cmake)
@@ -48,19 +49,19 @@ inpgen/atom_sym.f inpgen/generator.f inpgen/read_record.f inpgen/soc_or_ssdw.f i
 inpgen/bravais_symm.f  inpgen/set_atom_core.f inpgen/spg_gen.f global/triang.f
 inpgen/closure.f inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
 io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
-global/sort.f init/kptgen_hybrid.f init/od_kptsgen.f init/bravais.f init/divi.f init/brzone.f
-init/kptmop.f init/kpttet.f init/bandstr1.F init/ordstar.f init/fulstar.f init/kprep.f
-init/tetcon.f init/kvecon.f init/boxdim.f math/ylm4.f global/radsra.f math/intgr.F global/differ.f math/inwint.f
+global/sort.f kpoints/kptgen_hybrid.f kpoints/od_kptsgen.f kpoints/bravais.f kpoints/divi.f kpoints/brzone.f
+kpoints/kptmop.f kpoints/kpttet.f init/bandstr1.F kpoints/ordstar.f kpoints/fulstar.f kpoints/kprep.f
+kpoints/tetcon.f kpoints/kvecon.f init/boxdim.f math/ylm4.f global/radsra.f math/intgr.F global/differ.f math/inwint.f
  math/outint.f xc-pot/gaunt.f math/grule.f
  )
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
 eigen/vec_for_lo.f90 eigen/orthoglo.F90 juDFT/usage_data.F90
 global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90 global/find_enpara.f90
-juDFT/info.F90 juDFT/stop.F90 juDFT/args.F90 juDFT/time.F90 juDFT/init.F90 juDFT/sysinfo.F90 io/w_inpXML.f90 init/julia.f90 global/utility.F90 
-init/compile_descr.F90 init/kpoints.f90 io/xmlOutput.F90 init/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90 cdn/int_21.f90
+juDFT/info.F90 juDFT/stop.F90 juDFT/args.F90 juDFT/time.F90 juDFT/init.F90 juDFT/sysinfo.F90 io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90 
+init/compile_descr.F90 kpoints/kpoints.f90 io/xmlOutput.F90 kpoints/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90 cdn/int_21.f90
 cdn/int_21lo.f90 cdn_mt/rhomt21.f90 cdn_mt/rhonmt21.f90 force/force_a21.F90 force/force_a21_lo.f90 force/force_a21_U.f90 force/force_a12.f90
-eigen/tlmplm_store.F90 init/unfoldBandKPTS.f90)
+eigen/tlmplm_store.F90 kpoints/unfoldBandKPTS.f90)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 

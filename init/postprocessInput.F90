@@ -15,7 +15,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_juDFT
   USE m_types
   USE m_constants
-  USE m_julia
   USE m_lapwdim
   USE m_ylm
   USE m_convndim
@@ -35,7 +34,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_convn
   USE m_efield
   USE m_od_mapatom
-  USE m_kptgen_hybrid
   USE m_od_kptsgen
   USE m_gen_bz
   USE m_nocoInputCheck

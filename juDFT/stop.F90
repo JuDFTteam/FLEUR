@@ -175,6 +175,7 @@ CONTAINS
           CALL endXMLOutput()
        END IF
     END IF
+    IF (TRIM(message)=="") STOP ! simple stop if no end message is given
     WRITE(0,*)
     WRITE(0,*) "*****************************************"
     WRITE(0,*) "Run finished successfully"
