@@ -51,12 +51,12 @@ CONTAINS
 
       xcpot%func_vxc_id_x = vxc_id_x
       xcpot%func_vxc_id_c = vxc_id_c
-
+      
       xcpot%func_exc_id_x = merge(exc_id_x, vxc_id_x, PRESENT(exc_id_x))
-      xcpot%func_exc_id_x = merge(exc_id_c, vxc_id_c, PRESENT(exc_id_c))
+      xcpot%func_exc_id_c = merge(exc_id_c, vxc_id_c, PRESENT(exc_id_c))
 
       same_functionals =     (xcpot%func_vxc_id_x == xcpot%func_exc_id_x) &
-         .and. (xcpot%func_vxc_id_c == xcpot%func_exc_id_c)
+                       .and. (xcpot%func_vxc_id_c == xcpot%func_exc_id_c)
 
       if(xcpot%func_vxc_id_x == 0 .or. xcpot%func_exc_id_x == 0 ) then
 
