@@ -250,7 +250,7 @@ CONTAINS
       ALLOCATE(grad%vsigma(MERGE(1,3,jspins==1),ngrid))
 
    END SUBROUTINE xcpot_alloc_gradients
-#ifdef CPP_LIBXC  
+
    SUBROUTINE write_xc_info(xc_func, is_E_func)
       IMPLICIT NONE
       TYPE(xc_f03_func_t),INTENT(IN)      :: xc_func
@@ -260,6 +260,7 @@ CONTAINS
       CHARACTER(len=120)                  :: kind, family
       LOGICAL                             :: is_energy_func
 
+#ifdef CPP_LIBXC  
       xc_info = xc_f03_func_get_info(xc_func)
       is_energy_func = merge(is_E_func, .False., PRESENT(is_E_func))
 
@@ -302,7 +303,7 @@ CONTAINS
       DO WHILE(i >= 0)
          WRITE(*, '(a,i1,2a)') '[', i+1, '] ', TRIM(xc_f03_func_reference_get_ref(xc_f03_func_info_get_references(xc_info, i)))
       END DO
-   END SUBROUTINE write_xc_info
 #endif
+   END SUBROUTINE write_xc_info
 
 END MODULE m_types_xcpot_libxc
