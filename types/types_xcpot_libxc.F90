@@ -42,7 +42,7 @@ CONTAINS
    CLASS(t_xcpot_libxc),INTENT(OUT)    :: xcpot
       INTEGER, INTENT(IN)                 :: jspins
       INTEGER, INTENT(IN)                 :: vxc_id_x, vxc_id_c ! potential functional
-      INTEGER, INTENT(IN), OPTIONAL       :: exc_id_x, exc_id_c ! energy functionals
+      INTEGER, INTENT(IN)                 :: exc_id_x, exc_id_c ! energy functionals
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
 
 #ifdef CPP_LIBXC
@@ -52,14 +52,10 @@ CONTAINS
       xcpot%func_vxc_id_x = vxc_id_x
       xcpot%func_vxc_id_c = vxc_id_c
       
-      xcpot%func_exc_id_x = merge(exc_id_x, vxc_id_x, PRESENT(exc_id_x))
-      xcpot%func_exc_id_c = merge(exc_id_c, vxc_id_c, PRESENT(exc_id_c))
-
-      same_functionals =     (xcpot%func_vxc_id_x == xcpot%func_exc_id_x) &
-                       .and. (xcpot%func_vxc_id_c == xcpot%func_exc_id_c)
+      xcpot%func_exc_id_x = exc_id_x
+      xcpot%func_exc_id_c = exc_id_c
 
       if(xcpot%func_vxc_id_x == 0 .or. xcpot%func_exc_id_x == 0 ) then
-
          CALL judft_error("LibXC exchange- and correlation-function indicies need to be set"&
             ,hint='Try this: ' // ACHAR(10) //&
             '<xcFunctional name="libxc" relativisticCorrections="F">' // ACHAR(10) //& 
@@ -93,6 +89,8 @@ CONTAINS
          WRITE(*,*) "No Correlation functional"
       END IF
 
+      same_functionals =     (xcpot%func_vxc_id_x == xcpot%func_exc_id_x) &
+                       .and. (xcpot%func_vxc_id_c == xcpot%func_exc_id_c)
       IF(.not. same_functionals) THEN
          CALL write_xc_info(xcpot%exc_func_x)
          IF (xcpot%func_exc_id_c>0) THEN

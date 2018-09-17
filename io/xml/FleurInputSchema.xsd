@@ -310,12 +310,16 @@
       </xsd:restriction>
    </xsd:simpleType>
    <xsd:complexType name="XCLibXCIDType">
-      <xsd:attribute name="exchange" type="xsd:integer" use="required"/>
-      <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
+      <xsd:attribute name="exchange"         type="xsd:integer" use="required"/>
+      <xsd:attribute name="correlation"      type="xsd:integer" use="required"/>
+      <xsd:attribute name="etot_exchange"    type="xsd:integer" use="optional"/>
+      <xsd:attribute name="etot_correlation" type="xsd:integer" use="optional"/>
    </xsd:complexType>
    <xsd:complexType name="XCLibXCNameType">
-      <xsd:attribute name="exchange" type="xsd:string" use="required"/>
-      <xsd:attribute name="correlation" type="xsd:string" use="required"/>
+      <xsd:attribute name="exchange"         type="xsd:string" use="required"/>
+      <xsd:attribute name="correlation"      type="xsd:string" use="required"/>
+      <xsd:attribute name="etot_exchange"    type="xsd:string" use="optional"/>
+      <xsd:attribute name="etot_correlation" type="xsd:string" use="optional"/>
    </xsd:complexType>
    <xsd:complexType name="XCParamsType">
       <xsd:attribute name="igrd" type="xsd:integer" use="required"/>

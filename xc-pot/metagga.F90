@@ -202,7 +202,7 @@ contains
 
 
         !make some auxillary xcpot, that is not a GGA (we don't need gradients)
-        call aux_xcpot%init(input%jspins, id_exch, id_corr)
+        call aux_xcpot%init(input%jspins, id_exch, id_corr, id_exch, id_corr)
         if(aux_xcpot%is_gga()) call juDFT_error("aux_xcpot must not be GGA", &
                                                 hint="choose id_corr and id_exch correctly")
 
