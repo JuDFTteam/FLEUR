@@ -167,7 +167,7 @@ CONTAINS
       errorStatus = 0
       errorStatus = dropInputSchema()
       IF(errorStatus.NE.0) THEN
-         call judft_error('Error: Cannot print out FleurInputSchema.xsd')
+         call juDFT_error('Error: Cannot print out FleurInputSchema.xsd')
       END IF
 
       schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
@@ -187,7 +187,7 @@ CONTAINS
       versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
       IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
          (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
-         call judft_error('version number of inp.xml file is not compatible with this fleur version')
+         call juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
 
       ! Get number of atoms, atom types, and atom species
@@ -303,7 +303,7 @@ CONTAINS
       IF(numberNodes.EQ.1) THEN
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
-            call judft_error('Feature to calculate all eigenfunctions not yet implemented.')
+            call juDFT_error('Feature to calculate all eigenfunctions not yet implemented.')
          ELSE
             READ(valueString,*) dimension%neigd
          END IF
@@ -326,7 +326,7 @@ CONTAINS
       CASE ('Anderson')
          input%imix = 7
       CASE DEFAULT
-         call judft_error('Error: unknown mixing scheme selected!')
+         call juDFT_error('Error: unknown mixing scheme selected!')
       END SELECT
 
       input%alpha = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
@@ -352,7 +352,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       input%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
       input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
-      IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
+      IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL juDFT_error("Fixed moment only in collinear calculations with two spins")
       dimension%jspd = input%jspins
 
       ! Read in Brillouin zone integration parameters
@@ -372,7 +372,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%gauss = .FALSE.
          input%tria = .TRUE.
       CASE DEFAULT
-         call judft_error('Invalid bzIntegration mode selected!')
+         call juDFT_error('Invalid bzIntegration mode selected!')
       END SELECT
 
       nodeSum = 0
@@ -390,7 +390,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%tkb = boltzmannConst * input%tkb
       END IF
       IF(nodeSum.GE.2) THEN
-         call judft_error('Error: Multiple fermi Smearing parameters provided in input file!')
+         call juDFT_error('Error: Multiple fermi Smearing parameters provided in input file!')
       END IF
 
       xPathA = '/fleurInput/calculationSetup/bzIntegration/@valenceElectrons'
@@ -398,7 +398,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       IF (numberNodes.EQ.1) THEN
          input%zelec = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
       ELSE
-         call judft_error('Error: Optionality of valence electrons in input file not yet implemented!')
+         call juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
       END IF
 
       ! Option kPointDensity
@@ -445,7 +445,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
          numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint')
          IF(numberNodes.EQ.1) THEN
-            call judft_error('Error: Single special k point provided. This does not make sense!')
+            call juDFT_error('Error: Single special k point provided. This does not make sense!')
          END IF
          kpts%numSpecialPoints = numberNodes
          IF(kpts%numSpecialPoints.GE.2) THEN
@@ -528,7 +528,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       noco%b_con(:,:) = 0.0
 
       IF ((noco%l_noco).AND.(numberNodes.EQ.0)) THEN
-         call judft_error('Error: l_noco is true but no noco parameters set in xml input file!')
+         call juDFT_error('Error: l_noco is true but no noco parameters set in xml input file!')
       END IF
 
       IF (numberNodes.EQ.1) THEN
@@ -629,7 +629,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       numberNodes = xmlGetNumberOfNodes(xPathA)
 
       !   IF ((noco%l_ss).AND.(numberNodes.EQ.0)) THEN
-      !      call judft_error('Error: l_ss is true but no q point mesh set in xml input file!')
+      !      call juDFT_error('Error: l_ss is true but no q point mesh set in xml input file!')
       !   END IF
 
       ! Read in optional E-Field parameters
@@ -647,7 +647,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          !input%efield%dirichlet = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
          !l_eV = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
 
-         call judft_error('Error: Reading input for E-Fields not yet implemented completely!')
+         call juDFT_error('Error: Reading input for E-Fields not yet implemented completely!')
          !      ALLOCATE(input%efield%sigEF(3*k1d, 3*k2d, nvac))
          !      input%efield%sigEF = 0.0
          !IF (l_eV) THEN
@@ -2108,6 +2108,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
    END SUBROUTINE setXCParameters
 
    SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
+      USE m_juDFT
 
       IMPLICIT NONE
 
