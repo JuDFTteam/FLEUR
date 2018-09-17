@@ -4,151 +4,151 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-module m_metagga
+MODULE m_metagga
 
-    type t_realspace_potden
-        real, allocatable  :: is(:,:), mt(:,:)
-    end type t_realspace_potden
+    TYPE t_realspace_potden
+        REAL, ALLOCATABLE  :: is(:,:), mt(:,:)
+    END TYPE t_realspace_potden
 
-    public  :: calc_EnergyDen
-    private :: calc_EnergyDen_auxillary_weights, t_realspace_potden, subtract_RS, multiply_RS
+    PUBLIC  :: calc_EnergyDen
+    PRIVATE :: calc_EnergyDen_auxillary_weights, t_realspace_potden, subtract_RS, multiply_RS
 
-    interface operator (-)
-        procedure subtract_RS
-    end interface operator (-)
+    INTERFACE OPERATOR (-)
+        PROCEDURE subtract_RS
+    END INTERFACE OPERATOR (-)
 
-    interface operator (*)
-        procedure multiply_RS
-end interface operator (*)
-contains
-    subroutine calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, den, atoms, enpara, stars,&
-                                 vacuum, dimension, sphhar, sym, vTot, oneD, results, kinEnergyDen)
+    INTERFACE OPERATOR (*)
+        PROCEDURE multiply_RS
+END INTERFACE OPERATOR (*)
+CONTAINS
+    SUBROUTINE calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, den, atoms, enpara, stars,&
+                                 vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, kinEnergyDen)
 #ifdef CPP_LIBXC 
-        use m_types_setup
-        use m_types_potden
-        use m_types_kpts
-        use m_types_mpi
-        use m_types_enpara
-        use m_types_misc
-        use m_types_regionCharges
-        use m_types_dos
-        use m_types_cdnval
-        use m_cdnval
+        USE m_types_setup
+        USE m_types_potden
+        USE m_types_kpts
+        USE m_types_mpi
+        USE m_types_enpara
+        USE m_types_misc
+        USE m_types_regionCharges
+        USE m_types_dos
+        USE m_types_cdnval
+        USE m_cdnval
 
 
-        implicit none
+        IMPLICIT NONE
 
-        integer,                  intent(in)           :: eig_id
-        type(t_mpi),              intent(in)           :: mpi
-        type(t_kpts),             intent(in)           :: kpts
-        type(t_noco),             intent(in)           :: noco
-        type(t_input),            intent(in)           :: input
-        type(t_banddos),          intent(in)           :: banddos
-        type(t_cell),             intent(in)           :: cell
-        type(t_potden),           intent(in)           :: den
-        type(t_atoms),            intent(in)           :: atoms 
-        type(t_enpara),           intent(in)           :: enpara
-        type(t_stars),            intent(in)           :: stars 
-        type(t_vacuum),           intent(in)           :: vacuum 
-        type(t_dimension),        intent(in)           :: dimension
-        type(t_sphhar),           intent(in)           :: sphhar 
-        type(t_sym),              intent(in)           :: sym 
-        type(t_potden),           intent(in)           :: vTot
-        type(t_oneD),             intent(in)           :: oneD
-        type(t_results),          intent(in)           :: results
-        type(t_realspace_potden), intent(inout)        :: kinEnergyDen
+        INTEGER,                  INTENT(in)           :: eig_id
+        TYPE(t_mpi),              INTENT(in)           :: mpi
+        TYPE(t_kpts),             INTENT(in)           :: kpts
+        TYPE(t_noco),             INTENT(in)           :: noco
+        TYPE(t_input),            INTENT(in)           :: input
+        TYPE(t_banddos),          INTENT(in)           :: banddos
+        TYPE(t_cell),             INTENT(in)           :: cell
+        TYPE(t_potden),           INTENT(in)           :: den
+        TYPE(t_atoms),            INTENT(in)           :: atoms 
+        TYPE(t_enpara),           INTENT(in)           :: enpara
+        TYPE(t_stars),            INTENT(in)           :: stars 
+        TYPE(t_vacuum),           INTENT(in)           :: vacuum 
+        TYPE(t_dimension),        INTENT(in)           :: DIMENSION
+        TYPE(t_sphhar),           INTENT(in)           :: sphhar 
+        TYPE(t_sym),              INTENT(in)           :: sym 
+        TYPE(t_potden),           INTENT(in)           :: vTot
+        TYPE(t_oneD),             INTENT(in)           :: oneD
+        TYPE(t_results),          INTENT(in)           :: results
+        TYPE(t_realspace_potden), INTENT(inout)        :: kinEnergyDen
 
         ! local vars
 
-        type(t_potden)                    :: EnergyDen
-        type(t_realspace_potden)          :: den_RS, EnergyDen_RS, vTot_RS
+        TYPE(t_potden)                    :: EnergyDen
+        TYPE(t_realspace_potden)          :: den_RS, EnergyDen_RS, vTot_RS
 
 
-        call calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
-                            vacuum, dimension, sphhar, sym, vTot, oneD, results, EnergyDen)
+        CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
+                            vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
         
-        call transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
+        CALL transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
 
         kinEnergyDen = EnergyDen_RS - vTot_RS * den_RS
 #else
-        use m_juDFT_stop
-        call juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
+        USE m_juDFT_stop
+        CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
-    end subroutine calc_kinEnergyDen
+    END SUBROUTINE calc_kinEnergyDen
 
-    subroutine calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
-                              vacuum, dimension, sphhar, sym, vTot, oneD, results, EnergyDen)
+    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
+                              vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
         ! calculates the energy density
         ! EnergyDen = \sum_i n_i(r) \varepsilon_i
         ! where n_i(r) is the one-particle density
         ! and \varepsilon_i are the eigenenergies
          
         
-        use m_types_setup
-        use m_types_potden
-        use m_types_kpts
-        use m_types_mpi
-        use m_types_enpara
-        use m_types_misc
-        use m_types_regionCharges
-        use m_types_dos
-        use m_types_cdnval
-        use m_cdnval
+        USE m_types_setup
+        USE m_types_potden
+        USE m_types_kpts
+        USE m_types_mpi
+        USE m_types_enpara
+        USE m_types_misc
+        USE m_types_regionCharges
+        USE m_types_dos
+        USE m_types_cdnval
+        USE m_cdnval
 
-        implicit none
+        IMPLICIT NONE
 
-        integer,           intent(in)           :: eig_id
-        type(t_mpi),       intent(in)           :: mpi
-        type(t_kpts),      intent(in)           :: kpts
-        type(t_noco),      intent(in)           :: noco
-        type(t_input),     intent(in)           :: input
-        type(t_banddos),   intent(in)           :: banddos
-        type(t_cell),      intent(in)           :: cell
-        type(t_atoms),     intent(in)           :: atoms 
-        type(t_enpara),    intent(in)           :: enpara
-        type(t_stars),     intent(in)           :: stars 
-        type(t_vacuum),    intent(in)           :: vacuum 
-        type(t_dimension), intent(in)           :: dimension
-        type(t_sphhar),    intent(in)           :: sphhar 
-        type(t_sym),       intent(in)           :: sym 
-        type(t_potden),    intent(in)           :: vTot
-        type(t_oneD),      intent(in)           :: oneD
-        type(t_results),   intent(in)           :: results
-        type(t_potden),    intent(inout)        :: EnergyDen
+        INTEGER,           INTENT(in)           :: eig_id
+        TYPE(t_mpi),       INTENT(in)           :: mpi
+        TYPE(t_kpts),      INTENT(in)           :: kpts
+        TYPE(t_noco),      INTENT(in)           :: noco
+        TYPE(t_input),     INTENT(in)           :: input
+        TYPE(t_banddos),   INTENT(in)           :: banddos
+        TYPE(t_cell),      INTENT(in)           :: cell
+        TYPE(t_atoms),     INTENT(in)           :: atoms 
+        TYPE(t_enpara),    INTENT(in)           :: enpara
+        TYPE(t_stars),     INTENT(in)           :: stars 
+        TYPE(t_vacuum),    INTENT(in)           :: vacuum 
+        TYPE(t_dimension), INTENT(in)           :: DIMENSION
+        TYPE(t_sphhar),    INTENT(in)           :: sphhar 
+        TYPE(t_sym),       INTENT(in)           :: sym 
+        TYPE(t_potden),    INTENT(in)           :: vTot
+        TYPE(t_oneD),      INTENT(in)           :: oneD
+        TYPE(t_results),   INTENT(in)           :: results
+        TYPE(t_potden),    INTENT(inout)        :: EnergyDen
 
 
         ! local
-        integer                         :: jspin
+        INTEGER                         :: jspin
  
-        type(t_regionCharges)           :: regCharges
-        type(t_dos)                     :: dos
-        type(t_moments)                 :: moments
-        type(t_results)                 :: tmp_results
-        type(t_cdnvalJob)               :: cdnvalJob
-        type(t_potden)                  :: aux_den, real_den
+        TYPE(t_regionCharges)           :: regCharges
+        TYPE(t_dos)                     :: dos
+        TYPE(t_moments)                 :: moments
+        TYPE(t_results)                 :: tmp_results
+        TYPE(t_cdnvalJob)               :: cdnvalJob
+        TYPE(t_potden)                  :: aux_den, real_den
 
-        call regCharges%init(input, atoms)
-        call dos%init(input,        atoms, dimension, kpts, vacuum)
-        call moments%init(input,    atoms)
+        CALL regCharges%init(input, atoms)
+        CALL dos%init(input,        atoms, DIMENSION, kpts, vacuum)
+        CALL moments%init(input,    atoms)
         tmp_results = results
 
-        do jspin = 1,input%jspins
-            call cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
+        DO jspin = 1,input%jspins
+            CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
 
             ! replace brillouin weights with auxillary weights
-            call calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
+            CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
-            call cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
-                        enpara, stars, vacuum, dimension, sphhar, sym, vTot, oneD, cdnvalJob, &
+            CALL cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
+                        enpara, stars, vacuum, DIMENSION, sphhar, sym, vTot, oneD, cdnvalJob, &
                         EnergyDen, regCharges, dos, tmp_results, moments)
-        enddo
+        ENDDO
 
-    end subroutine calc_EnergyDen
+    END SUBROUTINE calc_EnergyDen
 
-    subroutine calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, f_ik)
-        use m_types_kpts
-        use m_eig66_io
-        implicit none
+    SUBROUTINE calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, f_ik)
+        USE m_types_kpts
+        USE m_eig66_io
+        IMPLICIT NONE
         ! calculates new (auxillary-)weights as
         ! f_iks = w_iks * E_iks
         !, where  f_iks are the new (auxillary-)weights
@@ -156,101 +156,101 @@ contains
         ! E_iks are the eigen energies
 
 
-        integer,      intent(in)        :: eig_id
-        integer,      intent(in)        :: jspin
-        type(t_kpts), intent(in)        :: kpts
-        real,         intent(inout)     :: f_ik(:,:) ! f_ik(band_idx, kpt_idx)
+        INTEGER,      INTENT(in)        :: eig_id
+        INTEGER,      INTENT(in)        :: jspin
+        TYPE(t_kpts), INTENT(in)        :: kpts
+        REAL,         INTENT(inout)     :: f_ik(:,:) ! f_ik(band_idx, kpt_idx)
 
         ! local vars
-        real                       :: w_i(size(f_ik,dim=1)), e_i(size(f_ik,dim=1))
-        integer                    :: ikpt
+        REAL                       :: w_i(SIZE(f_ik,dim=1)), e_i(SIZE(f_ik,dim=1))
+        INTEGER                    :: ikpt
 
-        do ikpt = 1,kpts%nkpt
-            call read_eig(eig_id,ikpt,jspin, eig=e_i, w_iks=w_i)
+        DO ikpt = 1,kpts%nkpt
+            CALL read_eig(eig_id,ikpt,jspin, eig=e_i, w_iks=w_i)
 
             f_ik(:,ikpt) = e_i * w_i
-        enddo
-    end subroutine calc_EnergyDen_auxillary_weights
+        ENDDO
+    END SUBROUTINE calc_EnergyDen_auxillary_weights
 
-    subroutine transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
-        use m_types_potden
-        use m_types_setup
-        use m_types_xcpot_libxc
-        use m_types_xcpot
-        use m_juDFT_stop
-        use m_pw_tofrom_grid
-        use m_mt_tofrom_grid
+    SUBROUTINE transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
+        USE m_types_potden
+        USE m_types_setup
+        USE m_types_xcpot_libxc
+        USE m_types_xcpot
+        USE m_juDFT_stop
+        USE m_pw_tofrom_grid
+        USE m_mt_tofrom_grid
 
-        implicit none 
+        IMPLICIT NONE 
         
-        type(t_potden),           intent(in)        :: den, EnergyDen, vTot 
-        type(t_input),            intent(in)        :: input
-        type(t_noco),             intent(in)        :: noco
-        type(t_sym),              intent(in)        :: sym
-        type(t_stars),            intent(in)        :: stars
-        type(t_cell),             intent(in)        :: cell
-        type(t_atoms),            intent(in)        :: atoms
-        type(t_sphhar),           intent(in)        :: sphhar
-        type(t_realspace_potden), intent(out)       :: den_RS, EnergyDen_RS, vTot_RS ! could be changed to a real-space type
+        TYPE(t_potden),           INTENT(in)        :: den, EnergyDen, vTot 
+        TYPE(t_input),            INTENT(in)        :: input
+        TYPE(t_noco),             INTENT(in)        :: noco
+        TYPE(t_sym),              INTENT(in)        :: sym
+        TYPE(t_stars),            INTENT(in)        :: stars
+        TYPE(t_cell),             INTENT(in)        :: cell
+        TYPE(t_atoms),            INTENT(in)        :: atoms
+        TYPE(t_sphhar),           INTENT(in)        :: sphhar
+        TYPE(t_realspace_potden), INTENT(out)       :: den_RS, EnergyDen_RS, vTot_RS ! could be changed to a real-space type
 
         !local vars
-        type(t_xcpot_libxc) ::aux_xcpot
-        type(t_gradients)   :: tmp_grad
-        integer, parameter  :: id_corr = 9, id_exch = 1
-        integer             :: nsp, n
+        TYPE(t_xcpot_libxc) ::aux_xcpot
+        TYPE(t_gradients)   :: tmp_grad
+        INTEGER, PARAMETER  :: id_corr = 9, id_exch = 1
+        INTEGER             :: nsp, n
 
 
 
         !make some auxillary xcpot, that is not a GGA (we don't need gradients)
-        call aux_xcpot%init(input%jspins, id_exch, id_corr, id_exch, id_corr)
-        if(aux_xcpot%is_gga()) call juDFT_error("aux_xcpot must not be GGA", &
+        CALL aux_xcpot%init(input%jspins, id_exch, id_corr, id_exch, id_corr)
+        IF(aux_xcpot%is_gga()) CALL juDFT_error("aux_xcpot must not be GGA", &
                                                 hint="choose id_corr and id_exch correctly")
 
         ! interstitial part
-        call init_pw_grid(aux_xcpot,stars,sym,cell)
+        CALL init_pw_grid(aux_xcpot,stars,sym,cell)
 
-        call pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, den%pw,       tmp_grad, den_RS%is)
-        call pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, EnergyDen%pw, tmp_grad, EnergyDen_RS%is)
-        call pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, vTot%pw,      tmp_grad, vTot_RS%is)
+        CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, den%pw,       tmp_grad, den_RS%is)
+        CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, EnergyDen%pw, tmp_grad, EnergyDen_RS%is)
+        CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, vTot%pw,      tmp_grad, vTot_RS%is)
 
-        call finish_pw_grid()
+        CALL finish_pw_grid()
 
         ! muffin tins
         nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-        call init_mt_grid(nsp,input%jspins,atoms,sphhar,aux_xcpot,sym)
+        CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,aux_xcpot,sym)
 
-        do n = 1,atoms%ntype
-            call mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, den%mt(:,0:,n,:), &
+        DO n = 1,atoms%ntype
+            CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, den%mt(:,0:,n,:), &
                             nsp,       n,            tmp_grad, den_RS%mt)
-            call mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
+            CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
                             nsp,       n,            tmp_grad, EnergyDen_RS%mt)
-            call mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, vTot%mt(:,0:,n,:), &
+            CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, vTot%mt(:,0:,n,:), &
                             nsp,       n,            tmp_grad, vTot_RS%mt)
-        enddo
+        ENDDO
 
-        call finish_mt_grid()
-    end subroutine transform_to_grid
+        CALL finish_mt_grid()
+    END SUBROUTINE transform_to_grid
 
-    function subtract_RS(rs1, rs2) result(rs_out)
-        implicit none
+    FUNCTION subtract_RS(rs1, rs2) RESULT(rs_out)
+        IMPLICIT NONE
 
-        type(t_realspace_potden), intent(in)  :: rs1, rs2
-        type(t_realspace_potden)              :: rs_out
+        TYPE(t_realspace_potden), INTENT(in)  :: rs1, rs2
+        TYPE(t_realspace_potden)              :: rs_out
 
-        write (*,*) "MT subtraction not implemented"
+        WRITE (*,*) "MT subtraction not implemented"
 
         rs_out%is = rs1%is - rs2%is 
-    end function subtract_RS 
+    END FUNCTION subtract_RS 
 
-    function multiply_RS(rs1, rs2) result(rs_out)
-        implicit none
+    FUNCTION multiply_RS(rs1, rs2) RESULT(rs_out)
+        IMPLICIT NONE
         
-        type(t_realspace_potden), intent(in)  :: rs1, rs2
-        type(t_realspace_potden)              :: rs_out
+        TYPE(t_realspace_potden), INTENT(in)  :: rs1, rs2
+        TYPE(t_realspace_potden)              :: rs_out
 
-        write (*,*) "MT multiplication not implemented"
+        WRITE (*,*) "MT multiplication not implemented"
 
         rs_out%is = rs1%is * rs2%is 
-    end function multiply_RS
+    END FUNCTION multiply_RS
 
-end module m_metagga
+END MODULE m_metagga
