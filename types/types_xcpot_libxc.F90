@@ -253,14 +253,15 @@ CONTAINS
 
    SUBROUTINE write_xc_info(xc_func, is_E_func)
       IMPLICIT NONE
-      TYPE(xc_f03_func_t),INTENT(IN)      :: xc_func
       LOGICAL,INTENT(IN),OPTIONAL         :: is_E_func
-      TYPE(xc_f03_func_info_t)            :: xc_info
       INTEGER                             :: i
       CHARACTER(len=120)                  :: kind, family
       LOGICAL                             :: is_energy_func
 
 #ifdef CPP_LIBXC  
+      TYPE(xc_f03_func_t),INTENT(IN)      :: xc_func
+      TYPE(xc_f03_func_info_t)            :: xc_info
+
       xc_info = xc_f03_func_get_info(xc_func)
       is_energy_func = merge(is_E_func, .False., PRESENT(is_E_func))
 
