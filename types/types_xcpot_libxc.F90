@@ -12,7 +12,11 @@ MODULE m_types_xcpot_libxc
    USE m_types_xcpot
    USE m_judft
    IMPLICIT NONE
+
+
+#ifdef CPP_LIBXC
    PRIVATE :: write_xc_info
+#endif
 
    TYPE,EXTENDS(t_xcpot):: t_xcpot_libxc 
 #ifdef CPP_LIBXC    
@@ -251,6 +255,7 @@ CONTAINS
 
    END SUBROUTINE xcpot_alloc_gradients
 
+#ifdef CPP_LIBXC  
    SUBROUTINE write_xc_info(xc_func, is_E_func)
       IMPLICIT NONE
       LOGICAL,INTENT(IN),OPTIONAL         :: is_E_func
@@ -258,7 +263,6 @@ CONTAINS
       CHARACTER(len=120)                  :: kind, family
       LOGICAL                             :: is_energy_func
 
-#ifdef CPP_LIBXC  
       TYPE(xc_f03_func_t),INTENT(IN)      :: xc_func
       TYPE(xc_f03_func_info_t)            :: xc_info
 
@@ -304,7 +308,7 @@ CONTAINS
       DO WHILE(i >= 0)
          WRITE(*, '(a,i1,2a)') '[', i+1, '] ', TRIM(xc_f03_func_reference_get_ref(xc_f03_func_info_get_references(xc_info, i)))
       END DO
-#endif
    END SUBROUTINE write_xc_info
+#endif
 
 END MODULE m_types_xcpot_libxc
