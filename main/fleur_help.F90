@@ -72,7 +72,7 @@ MODULE m_fleur_help
   PUBLIC fleur_help
 CONTAINS
   SUBROUTINE check_arguments()
-    USE m_judft
+    USE m_judft_stop
     IMPLICIT NONE
     INTEGER :: i,n
     CHARACTER(len=200):: str
