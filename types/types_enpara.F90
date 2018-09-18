@@ -11,6 +11,7 @@ MODULE m_types_enpara
   TYPE t_enpara
      REAL, ALLOCATABLE    :: el0(:,:,:)
      REAL                 :: evac0(2,2)
+     REAL                 :: evac(2,2)
      REAL, ALLOCATABLE    :: ello0(:,:,:)
      REAL, ALLOCATABLE    :: el1(:,:,:)
      REAL                 :: evac1(2,2)
@@ -136,6 +137,7 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)   :: v
 
 
+    LOGICAL ::  l_enpara
     LOGICAL ::  l_done(0:atoms%lmaxd,atoms%ntype,input%jspins)
     LOGICAL ::  lo_done(atoms%nlod,atoms%ntype,input%jspins)
     REAL    ::  vbar,vz0,rj
@@ -211,10 +213,13 @@ CONTAINS
           END DO types_loop
        ENDIF
        IF (input%film) THEN
-          !
+
+          INQUIRE (file ='enpara',exist= l_enpara)
+          IF(l_enpara) enpara%evac0(:,jsp) = enpara%evac(:,jsp)
+
           !--->    vacuum energy parameters: for floating: relative to potential
           !--->    at vacuum-interstitial interface (better for electric field)
-          !
+
           DO ivac = 1,vacuum%nvac
              vz0 = 0.0
              IF (enpara%floating) THEN
@@ -224,9 +229,9 @@ CONTAINS
                    WRITE (16,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
-             enpara%evac0(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
+             enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
              IF (input%l_inpXML) THEN
-                enpara%evac0(ivac,jsp) = v%vacz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
+                enpara%evac(ivac,jsp) = v%vacz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
              END IF
              IF (mpi%irank.EQ.0) THEN
                 attributes = ''
@@ -234,13 +239,13 @@ CONTAINS
                 WRITE(attributes(2),'(i0)') jsp
                 WRITE(attributes(3),'(f16.10)') v%vacz(1,ivac,jsp)
                 WRITE(attributes(4),'(f16.10)') v%vacz(vacuum%nmz,ivac,jsp)
-                WRITE(attributes(5),'(f16.10)') enpara%evac0(ivac,jsp)
+                WRITE(attributes(5),'(f16.10)') enpara%evac(ivac,jsp)
                 CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
                      attributes(1:5),RESHAPE((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
              END IF
           ENDDO
           IF (vacuum%nvac.EQ.1) THEN
-             enpara%evac0(2,jsp) = enpara%evac0(1,jsp)
+             enpara%evac(2,jsp) = enpara%evac(1,jsp)
           END IF
        END IF
     END DO
@@ -324,6 +329,8 @@ CONTAINS
        END IF
     END DO
 
+    enpara%evac(2,jsp) = enpara%evac0(1,jsp)
+
     CLOSE(40)
     ! input formats
 
@@ -402,8 +409,8 @@ CONTAINS
 8040   FORMAT (' -->',i3,1x,4f9.5,' change: ',4l1,' skiplo: ',i3)
 
        IF (film) THEN
-          WRITE (40,FMT=8050) enpara%evac0(1,jspin),enpara%lchg_v(1,jspin),enpara%evac0(2,jspin)
-          WRITE (6,FMT=8050)  enpara%evac0(1,jspin),enpara%lchg_v(1,jspin),enpara%evac0(2,jspin)
+          WRITE (40,FMT=8050) enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
+          WRITE (6,FMT=8050)  enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
 8050      FORMAT ('  vacuum parameter=',f9.5,' change: ',l1,&
                &           ' second vacuum=',f9.5)
        ENDIF
@@ -507,16 +514,16 @@ CONTAINS
           IF (input%film) THEN
              WRITE(6,*) 'Vacuum:'
              DO n=1,vacuum%nvac
-                WRITE(6,FMT=777) enpara%evac0(n,jsp),enpara%evac1(n,jsp),ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp))
-                maxdist=MAX(maxdist,ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp)))
+                WRITE(6,FMT=777) enpara%evac(n,jsp),enpara%evac1(n,jsp),ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp))
+                maxdist=MAX(maxdist,ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp)))
                 IF (enpara%lchg_v(n,jsp) ) THEN
-                   maxdist2=MAX(maxdist2,ABS(enpara%evac0(n,jsp)-enpara%evac1(n,jsp)))
-                   enpara%evac0(n,jsp) =(1.0-enpara%enmix(jsp))*enpara%evac0(n,jsp)+&
+                   maxdist2=MAX(maxdist2,ABS(enpara%evac(n,jsp)-enpara%evac1(n,jsp)))
+                   enpara%evac(n,jsp) =(1.0-enpara%enmix(jsp))*enpara%evac(n,jsp)+&
                         enpara%enmix(jsp)*enpara%evac1(n,jsp)
                 END IF
              END DO
-             IF (vacuum%nvac==1) enpara%evac0(2,jsp) = enpara%evac0(1,jsp)
-             IF (enpara%floating) enpara%evac0(:,jsp)=enpara%evac0(:,jsp)-vz(:,jsp)
+             IF (vacuum%nvac==1) enpara%evac(2,jsp) = enpara%evac(1,jsp)
+             IF (enpara%floating) enpara%evac(:,jsp)=enpara%evac(:,jsp)-vz(:,jsp)
           ENDIF
           WRITE(6,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
        END DO
@@ -531,7 +538,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif    
     RETURN
 777 FORMAT('Old:',f8.5,' new:',f8.5,' diff:',f8.5)

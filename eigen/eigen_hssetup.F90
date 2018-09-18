@@ -80,7 +80,7 @@ CONTAINS
     !Vacuum contributions
     IF (input%film) THEN
        CALL timestart("Vacuum part")
-       CALL hsvac(vacuum,stars,DIMENSION, atoms,mpi,isp,input,v,enpara%evac0,cell,&
+       CALL hsvac(vacuum,stars,DIMENSION, atoms,mpi,isp,input,v,enpara%evac,cell,&
             lapw,sym, noco,hmat,smat)
        CALL timestop("Vacuum part")
     ENDIF
