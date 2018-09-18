@@ -129,6 +129,7 @@ SUBROUTINE r_inpXML(&
   LOGICAL            :: l_amf(4)
   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
   INTEGER            :: lcutm,lcutwf,hybSelect(4)
+  REAL               :: evac0Temp(2,2)
 
 
   CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
@@ -714,7 +715,7 @@ SUBROUTINE r_inpXML(&
         dtild = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dTilda'))
         vacuum%dvac = cell%z1
         a3(3) = dtild
-        enpara%evac0 = eVac0Default_const
+        evac0Temp = eVac0Default_const
         xPathB = TRIM(ADJUSTL(xPathA))//'/vacuumEnergyParameters'
         numberNodes = xmlGetNumberOfNodes(xPathB)
         IF(numberNodes.GE.1) THEN
@@ -727,11 +728,11 @@ SUBROUTINE r_inpXML(&
               IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@spinDown').GE.1) THEN
                  eParamDown = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@spinDown'))
               END IF
-              enpara%evac0(numVac,1) = eParamUp
-              IF(input%jspins.GT.1) enpara%evac0(numVac,2) = eParamDown
+              evac0Temp(numVac,1) = eParamUp
+              IF(input%jspins.GT.1) evac0Temp(numVac,2) = eParamDown
               IF(i.EQ.1) THEN
-                 enpara%evac0(3-numVac,1) = eParamUp
-                 IF(input%jspins.GT.1) enpara%evac0(3-numVac,2) = eParamDown
+                 evac0Temp(3-numVac,1) = eParamUp
+                 IF(input%jspins.GT.1) evac0Temp(3-numVac,2) = eParamDown
               END IF
            END DO
         END IF
@@ -1314,7 +1315,8 @@ SUBROUTINE r_inpXML(&
   ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
 
   CALL enpara%init(atoms,input%jspins)
-  
+  enpara%evac0(:,:) = evac0Temp(:,:)
+
   DO iSpecies = 1, numSpecies
      ALLOCATE(speciesLLO(speciesNLO(iSpecies)))
      ALLOCATE(speciesLOeParams(speciesNLO(iSpecies)))

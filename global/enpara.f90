@@ -93,7 +93,7 @@
          !use defaults
          enpara%lchange(:,:,jsp)=.false.
          enpara%llochg(:,:,jsp)=.false.
-         enpara%evac0(:,jsp) = eVac0Default_const
+!         enpara%evac0(:,jsp) = eVac0Default_const
          enpara%skiplo(:,jsp) = 0
          enpara%enmix(jsp) = 0.0
          enpara%lchg_v(:,jsp)=.false.

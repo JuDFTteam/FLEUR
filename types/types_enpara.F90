@@ -112,9 +112,10 @@ CONTAINS
                 this%skiplo(n,jsp) = this%skiplo(n,jsp) + (2*atoms%llo(i,n)+1)
              ENDIF
           ENDDO
-          this%evac0=eVac0Default_const
        ENDDO
     ENDDO
+
+    this%evac0=eVac0Default_const
 
   END SUBROUTINE init
 
