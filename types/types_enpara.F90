@@ -230,7 +230,7 @@ CONTAINS
                 ENDIF
              ENDIF
              enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
-             IF (input%l_inpXML) THEN
+             IF (.NOT.l_enpara) THEN
                 enpara%evac(ivac,jsp) = v%vacz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
              END IF
              IF (mpi%irank.EQ.0) THEN
@@ -329,7 +329,7 @@ CONTAINS
        END IF
     END DO
 
-    enpara%evac(2,jsp) = enpara%evac0(1,jsp)
+    enpara%evac(:,:) = enpara%evac0(:,:)
 
     CLOSE(40)
     ! input formats
