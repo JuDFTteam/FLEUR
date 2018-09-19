@@ -62,7 +62,7 @@
       CALL writetimes()
       CALL PRINT_memory_info()
 #ifdef CPP_MPI
-      CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
+      CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
 #endif      
       STOP "Signal"
       intel_signal_handler=0
