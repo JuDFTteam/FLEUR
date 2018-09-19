@@ -195,8 +195,6 @@ CONTAINS
             CALL xc_f03_lda_vxc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
             vxc_tmp=vxc_tmp+vx_tmp
          ENDIF
-      ELSE
-         call juDFT_error("xcpot Type not known")
       ENDIF
       vx=TRANSPOSE(vx_tmp) 
       vxc=TRANSPOSE(vxc_tmp) 

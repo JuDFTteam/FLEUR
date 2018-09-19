@@ -108,12 +108,6 @@ CONTAINS
    LOGICAL FUNCTION xcpot_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
-      xcpot_is_gga=priv_LDA(xcpot%icorr)
-   END FUNCTION xcpot_is_gga
-
-   LOGICAL FUNCTION xcpot_is_gga(xcpot)
-      IMPLICIT NONE
-      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
       xcpot_is_gga=priv_gga(xcpot%icorr)
    END FUNCTION xcpot_is_gga
 
