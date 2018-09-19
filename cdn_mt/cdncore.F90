@@ -53,7 +53,6 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    REAL                             :: tec(atoms%ntype,DIMENSION%jspd)
    REAL                             :: rhTemp(dimension%msh,atoms%ntype,dimension%jspd)
 
-   write (*,*) "cdncore present(EnergyDen)", present(EnergyDen)
 
    results%seigc = 0.0
    IF (mpi%irank==0) THEN

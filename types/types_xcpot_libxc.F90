@@ -102,6 +102,8 @@ CONTAINS
          ELSE
             WRITE(*,*) "No Correlation functional for TotalE"
          ENDIF
+      ELSE
+         write (*,*) "Using same functional for VXC and EXC"
       END IF
 #else
       CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc", &
@@ -121,19 +123,6 @@ CONTAINS
       xcpot_is_gga=.false.
 #endif
    END FUNCTION xcpot_is_gga
-
-   LOGICAL FUNCTION xcpot_is_LDA(xcpot)
-      IMPLICIT NONE
-   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
-#ifdef CPP_LIBXC
-      TYPE(xc_f03_func_info_t)        :: xc_info
-
-      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
-      xcpot_is_LDA= (XC_FAMILY_LDA==xc_f03_func_info_get_family(xc_info))
-#else
-      xcpot_is_LDA=.false.
-#endif
-   END FUNCTION xcpot_is_LDA
 
    LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
       IMPLICIT NONE
@@ -206,6 +195,8 @@ CONTAINS
             CALL xc_f03_lda_vxc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
             vxc_tmp=vxc_tmp+vx_tmp
          ENDIF
+      ELSE
+         call juDFT_error("xcpot Type not known")
       ENDIF
       vx=TRANSPOSE(vx_tmp) 
       vxc=TRANSPOSE(vxc_tmp) 

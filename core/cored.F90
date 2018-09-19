@@ -46,8 +46,6 @@ CONTAINS
     REAL stateEnergies(29)
     !     ..
 
-    write (*,*) "cored present(EnergyDen)", present(EnergyDen)
-
     c = c_light(1.0)
     seig = 0.
     !

@@ -105,6 +105,11 @@ CONTAINS
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
+   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_is_gga=priv_LDA(xcpot%icorr)
+   END FUNCTION xcpot_is_gga
 
    LOGICAL FUNCTION xcpot_is_gga(xcpot)
       IMPLICIT NONE
@@ -131,7 +136,6 @@ CONTAINS
       IF (xcpot%is_name("hse")) a_ex=amix_hse
       IF (xcpot%is_name("vhse")) a_ex=amix_hse
    END FUNCTION xcpot_get_exchange_weight
-
 
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
 !

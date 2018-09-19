@@ -1120,14 +1120,18 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
          IF(xmlGetNumberOfNodes(TRIM(xPathA) // '/@etot_exchange') == 1) THEN
             exc_id_x = evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@etot_exchange'))
+            write (*,*) "read exc_id_x"
          ELSE
             exc_id_x = vxc_id_x
+            write (*,*) "ignore exc_id_x"
          ENDIF
          
          IF(xmlGetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
             exc_id_c = evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exc_correlation'))
+            write (*,*) "read exc_id_c"
          ELSE
             exc_id_c = vxc_id_c
+            write (*,*) "ignore exc_id_c"
          ENDIF
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
@@ -1141,18 +1145,22 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@correlation')))
          vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
          
-         IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@exc_exchange') == 1) THEN
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@exc_exchange')))
+         IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
             exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+            write (*,*) "read exc_id_x"
          ELSE
             exc_id_x = vxc_id_x
+            write (*,*) "ignore exc_id_x"
          ENDIF
          
-         IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@exc_correlation') == 1) THEN
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@exc_correlation')))
+         IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
             exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+            write (*,*) "read exc_id_c"
          ELSE
             exc_id_c = vxc_id_c
+            write (*,*) "ignore exc_id_c"
          ENDIF
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
@@ -2102,7 +2110,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       TYPE IS(t_xcpot_inbuild)
          CALL xcpot%init(namex(1:4),relcor,atoms%ntype)
       TYPE IS(t_xcpot_libxc)
+         write (*,*) "vxc_id_x", vxc_id_x
+         write (*,*) "vxc_id_c", vxc_id_c
+         write (*,*) "exc_id_x", exc_id_x
+         write (*,*) "exc_id_c", exc_id_c
          CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
+
+         write (*,*) "is gga", xcpot%is_gga()
       END SELECT
 
    END SUBROUTINE setXCParameters
