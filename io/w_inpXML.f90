@@ -122,7 +122,7 @@ SUBROUTINE w_inpXML(&
    IF (PRESENT(name_opt)) name=name_opt
 
    l_explicit = l_explicitIn.OR.l_outFile
-   l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
+   l_nocoOpt = noco%l_noco!.OR.juDFT_was_argument("-noco")
 
    symFilename = 'sym.out'
    kptGamma = l_gamma

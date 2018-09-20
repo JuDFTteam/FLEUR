@@ -95,8 +95,8 @@ CONTAINS
     CHARACTER(len=1000)::txt
 
     n_members = MIN(nkpt,mpi%isize)
-    IF (judft_was_argument("-n_size_min")) THEN
-       txt=judft_string_for_argument("-n_size_min")
+    IF (judft_was_argument("-n_min_size")) THEN
+       txt=judft_string_for_argument("-n_min_size")
        READ(txt,*) n_size_min
        WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
        n_members = MIN(n_members , CEILING(REAL(mpi%isize)/n_size_min) ) 

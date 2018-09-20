@@ -128,7 +128,8 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_init()
-        USE m_fleur_help
+      USE m_fleur_help
+      use m_judft
         INTEGER:: i
         INTEGER:: irank=0
 #ifdef CPP_MPI

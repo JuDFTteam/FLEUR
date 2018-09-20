@@ -109,12 +109,12 @@ CONTAINS
     
    
     scale_distance=1E-3
-    IF (judft_was_argument("-chase_scale")) THEN
-       arg=juDFT_string_for_argument("-chase_scale")
-       READ(arg,*) scale_distance
-    ENDIF
+    !IF (judft_was_argument("-chase_tol_scale")) THEN
+    !   arg=juDFT_string_for_argument("-chase_tol_scale")
+    !   READ(arg,*) scale_distance
+    !ENDIF
     
-    IF (juDFT_was_argument("-diag:chase")) THEN
+    IF (TRIM(juDFT_string_for_argument("-diag"))=="chase") THEN
        nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
        nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
        chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,DIMENSION%jspd,&
