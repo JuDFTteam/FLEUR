@@ -89,8 +89,8 @@ c***********************************************************************
       real,allocatable :: uulon(:,:,:) ! nlod,ntypd,jspd
       real,allocatable :: dulon(:,:,:) ! nlod,ntypd,jspd  
 
-      COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:,:)
-      complex,allocatable :: bhelp(:,:,:,:,:)
+      COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:)
+      complex,allocatable :: bhelp(:,:,:,:)
 
       TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
@@ -110,8 +110,8 @@ c***********************************************************************
         ! is equivalent to the def in the noco-routines
       ENDIF
 
-      ALLOCATE ( ahelp(-lmaxd:lmaxd,lmaxd,natd,neigd,jspd) )
-      ALLOCATE ( bhelp(-lmaxd:lmaxd,lmaxd,natd,neigd,jspd) )
+      ALLOCATE ( ahelp(lmaxd*(lmaxd+2),natd,neigd,jspd) )
+      ALLOCATE ( bhelp(lmaxd*(lmaxd+2),natd,neigd,jspd) )
 
       do ispin=1,jspd
        DO ie = 1, neigd
@@ -120,8 +120,8 @@ c***********************************************************************
           ll1 = l*(l+1)
           DO m = -l,l
              lm = ll1 + m
-             ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na,ispin))
-             bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na,ispin))
+             ahelp(lm,na,ie,ispin) = (acof(ie,lm,na,ispin))
+             bhelp(lm,na,ie,ispin) = (bcof(ie,lm,na,ispin))
           ENDDO !m
          ENDDO !l
         ENDDO !na
@@ -150,7 +150,9 @@ c***********************************************************************
       
       rsoc%soangl= conjg(rsoc%soangl)
 
-      CALL hsoham(atoms,noco,input,nsz,chelp, rsoc, ahelp,bhelp, hsomtx)
+      CALL hsoham(atoms,noco,input,nsz,chelp,rsoc,ahelp,bhelp,
+     >            1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
+     <            hsomtx)
  
       end subroutine wann_socmat
       end module m_wann_socmat

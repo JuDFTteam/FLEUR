@@ -12,10 +12,10 @@ CONTAINS
        nsize,nmat, eig_so,zso)
 
 #include"cpp_double.h"
+    USE m_types
     USE m_hsohelp
     USE m_hsoham
     USE m_eig66_io, ONLY : read_eig
-    USE m_types
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)         :: mpi
     TYPE(t_lapw),INTENT(IN)        :: lapw
@@ -44,10 +44,11 @@ CONTAINS
     !     .. Local Scalars ..
     REAL      r2
     INTEGER   i,i1 ,j,jsp,jsp1,k,ne,nn,nn1,nrec,info
-    INTEGER   idim_c,idim_r,jsp2,nbas,j1
+    INTEGER   idim_c,idim_r,jsp2,nbas,j1,ierr
     CHARACTER vectors 
     LOGICAL   l_socvec,l_qsgw,l_open,l_real
     INTEGER   irec,irecl_qsgw
+    INTEGER nat_l, extra, nat_start, nat_stop
     COMPLEX   cdum
     !     ..
     !     .. Local Arrays ..
@@ -55,7 +56,7 @@ CONTAINS
     REAL    :: eig(DIMENSION%neigd,DIMENSION%jspd),s(3)
     REAL,   ALLOCATABLE :: rwork(:)
     COMPLEX,ALLOCATABLE :: cwork(:),chelp(:,:,:,:,:)
-    COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:,:),bhelp(:,:,:,:,:)
+    COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:),bhelp(:,:,:,:)
     COMPLEX,ALLOCATABLE :: zhelp1(:,:),zhelp2(:,:)
     COMPLEX,ALLOCATABLE :: hso(:,:),hsomtx(:,:,:,:)
     COMPLEX,ALLOCATABLE :: sigma_xc_apw(:,:),sigma_xc(:,:)
@@ -104,8 +105,6 @@ CONTAINS
                eig_id,nk,jsp,&
                n_start=1,n_end=ne,&
                zmat=zmat(jsp))
-       write(6,*) "jspin=",jsp,",nk=",nk
-       write(6,"(5f12.4)") eig(:ne,jsp)	       
 
        ! write(*,*) 'process',irank,' reads ',nk
 
@@ -134,11 +133,31 @@ CONTAINS
        ENDIF
     ENDDO
     !
+    ! distribution of (abc)cof over atoms
+    !
+!
+! in case of ev-parallelization, now distribute the atoms:
+!
+      IF (mpi%n_size > 1) THEN
+        nat_l = FLOOR(real(atoms%nat)/mpi%n_size)
+        extra = atoms%nat - nat_l*mpi%n_size
+        nat_start = mpi%n_rank*nat_l + 1 + extra
+        nat_stop  = (mpi%n_rank+1)*nat_l + extra
+        IF (mpi%n_rank < extra) THEN
+          nat_start = nat_start - (extra - mpi%n_rank)
+          nat_stop  = nat_stop - (extra - mpi%n_rank - 1)
+        ENDIF
+      ELSE
+        nat_start = 1
+        nat_stop  = atoms%nat
+      ENDIF
+      nat_l = nat_stop - nat_start + 1
+    !
     ! set up A and B coefficients
     !
-    ALLOCATE ( ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd) )
-    ALLOCATE ( bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd) )
-    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%nat ,DIMENSION%jspd) )
+    ALLOCATE ( ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,DIMENSION%jspd) )
+    ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,DIMENSION%jspd) )
+    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,DIMENSION%jspd) )
     CALL timestart("alineso SOC: -help") 
     CALL hsohelp(&
          &             DIMENSION,atoms,sym,&
@@ -146,17 +165,24 @@ CONTAINS
          &             cell,&
          &             zmat,usdus,&
          &             zso,noco,oneD,&
+         &             mpi%n_rank,mpi%n_size,mpi%SUB_COMM,&
+         &             nat_start,nat_stop,nat_l,&
          &             ahelp,bhelp,chelp)
-    CALL timestop("alineso SOC: -help") 
+    write(*,*) 'process',mpi%irank,' after hsohelp',mpi%n_rank
     !
     ! set up hamilton matrix
     !
-
     CALL timestart("alineso SOC: -ham") 
-    ALLOCATE ( hsomtx(2,2,DIMENSION%neigd,DIMENSION%neigd) )
-    CALL hsoham(atoms,noco,input,nsz,chelp, rsoc,ahelp,bhelp, hsomtx)
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#endif
+    ALLOCATE ( hsomtx(DIMENSION%neigd,DIMENSION%neigd,2,2) )
+    CALL hsoham(atoms,noco,input,nsz,chelp,rsoc,ahelp,bhelp,&
+                nat_start,nat_stop,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,&
+                hsomtx)
     DEALLOCATE ( ahelp,bhelp,chelp )
     CALL timestop("alineso SOC: -ham") 
+    IF (mpi%n_rank==0) THEN
     !
     ! add e.v. on diagonal
     !
@@ -164,10 +190,10 @@ CONTAINS
     !      hsomtx = 0 !!!!!!!!!!!!
     DO jsp = 1,input%jspins
        DO i = 1,nsz(jsp)
-          hsomtx(jsp,jsp,i,i) = hsomtx(jsp,jsp,i,i) +&
+          hsomtx(i,i,jsp,jsp) = hsomtx(i,i,jsp,jsp) +&
                &                           CMPLX(eig(i,jsp),0.)
           IF (input%jspins.EQ.1) THEN
-             hsomtx(2,2,i,i) =  hsomtx(2,2,i,i) +&
+             hsomtx(i,i,2,2) =  hsomtx(i,i,2,2) +&
                   &                           CMPLX(eig(i,jsp),0.)
           ENDIF
        ENDDO
@@ -184,9 +210,10 @@ CONTAINS
           IF (jsp.EQ.2) nn = nsz(1)
           IF (jsp1.EQ.2) nn1 = nsz(1)
           !
+          !write(3333,'(2i3,4e15.8)') jsp,jsp1,hsomtx(jsp,jsp1,8,8),hsomtx(jsp,jsp1,32,109) 
           DO i = 1,nsz(jsp)
              DO j = 1,nsz(jsp1)
-                hso(i+nn,j+nn1) = hsomtx(jsp,jsp1,i,j)
+                hso(i+nn,j+nn1) = hsomtx(i,j,jsp,jsp1)
              ENDDO
           ENDDO
           !
@@ -265,7 +292,6 @@ else
          &                      eig_so,&
          &                      cwork, idim_c, rwork, &
          &                      info)
-
     IF (info.NE.0) WRITE (6,FMT=8000) info
 8000 FORMAT (' AFTER CPP_LAPACK_cheev: info=',i4)
     CALL timestop("alineso SOC: -diag") 
@@ -331,6 +357,7 @@ else
     ENDIF ! (.NOT.input%eonly)
 
     DEALLOCATE ( hso )
+    ENDIF ! (n_rank==0)
     !
     nmat=lapw%nmat
     RETURN
