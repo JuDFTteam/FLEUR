@@ -13,11 +13,12 @@ MODULE m_fleur_arguments
      CHARACTER(len=200)  :: values
   END TYPE t_fleur_param
   
-  INTEGER,PARAMETER:: no_params=5
+  INTEGER,PARAMETER:: no_params=6
 
   TYPE(t_fleur_param) :: fleur_param(no_params)=(/&
        t_fleur_param(0,"-old","Generate input file for old fleur versions",""),&
        t_fleur_param(0,"-explicit","write out k-point list, symmetry operations, and optional input to inp.xml",""),&
+       t_fleur_param(0,"-genEnpara","generate an 'enpara' file",""),&
        t_fleur_param(0,"-electronConfig","explicitely write the electron configuration into inp.xml",""),&
        t_fleur_param(0,"-fast_defaults","generate more aggressive (and less stable) input parameters for faster calculations",""),&
        t_fleur_param(0,"-h","print this help message","")&

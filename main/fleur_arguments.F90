@@ -13,15 +13,11 @@ MODULE m_fleur_arguments
      CHARACTER(len=200)  :: values
   END TYPE t_fleur_param
   
-#ifdef CPP_HDF
   INTEGER,PARAMETER:: no_params=21
-#else
-  INTEGER,PARAMETER:: no_params=17
-#endif
   TYPE(t_fleur_param) :: fleur_param(no_params)=(/&
        !Input options
        t_fleur_param(0,"-toXML","Convert an old 'inp' file into the new XML format",""),&
-       t_fleur_param(1,"-xmlXpath","modify the xml-xpath of the inp.xml file",""),&
+       t_fleur_param(1,"-xmlXPath","modify the xml-xpath of the inp.xml file",""),&
        !Control the job
        t_fleur_param(0,"-check","run in check mode, i.e. stop after init",""),&
        t_fleur_param(0,"-info","Print out information on recommended parallelization and available charge densities",""),&
@@ -57,16 +53,14 @@ MODULE m_fleur_arguments
        t_fleur_param(0,"-debugtime","Write the start/stop of all timers to the console",""),&
        !Output
        t_fleur_param(0,"-no_out","Do not open the 'out' file but write to stdout",""),&
-       t_fleur_param(0,"-gen_enpara","Generate an 'enpara' file for the energy parameters",""),&
+       t_fleur_param(0,"-genEnpara","Generate an 'enpara' file for the energy parameters",""),&
        t_fleur_param(0,"-h","Print this message",""),&
        t_fleur_param(0,"-no_send","Do not send usage data","")&
        !HDF density
-#ifdef CPP_HDF       
        ,t_fleur_param(0,"-no_cdn_hdf","Disable HDF charge density mode (activated by default if HDF5 is available)","")&
        ,t_fleur_param(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")&
        ,t_fleur_param(2,"-sd","use starting density N, where N is the index of the density according to -info","")&
        ,t_fleur_param(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")&
-#endif       
        /)
 
        

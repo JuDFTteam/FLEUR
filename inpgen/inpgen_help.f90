@@ -17,7 +17,7 @@ CONTAINS
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
     PRINT *,"     MaX-Release 2.1          (www.max-centre.eu)"
 
-    IF (.NOT. (juDFT_was_argument("-h").OR.juDFT_was_argument("--help"))) RETURN
+    IF (.NOT. juDFT_was_argument("-h")) RETURN
 
     !now print version info and help on command line arguments:
     CALL get_compile_desc_string(infostring)
