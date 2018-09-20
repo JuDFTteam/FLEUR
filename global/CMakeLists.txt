@@ -15,10 +15,11 @@ global/vacudz.f
 global/vacuz.f
 global/abcrot.f
 global/savewigner.f
+global/differ.f
 )
 set(fleur_F90 ${fleur_F90}
 global/constants.f90
-global/differ.f90
+#global/differ.f90
 global/matrix_copy.F90
 global/checkdop.F90
 global/checkdopall.f90
