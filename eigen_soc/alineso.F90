@@ -159,16 +159,16 @@ CONTAINS
     ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,DIMENSION%jspd) )
     ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,DIMENSION%jspd) )
     CALL timestart("alineso SOC: -help") 
+    write(*,*) nat_start,nat_stop,nat_l
     CALL hsohelp(&
          &             DIMENSION,atoms,sym,&
          &             input,lapw,nsz,&
          &             cell,&
          &             zmat,usdus,&
          &             zso,noco,oneD,&
-         &             mpi%n_rank,mpi%n_size,mpi%SUB_COMM,&
          &             nat_start,nat_stop,nat_l,&
          &             ahelp,bhelp,chelp)
-    write(*,*) 'process',mpi%irank,' after hsohelp',mpi%n_rank
+    CALL timestop("alineso SOC: -help") 
     !
     ! set up hamilton matrix
     !

@@ -17,7 +17,7 @@ MODULE m_hsohelp
   !
 CONTAINS
   SUBROUTINE hsohelp(DIMENSION,atoms,sym,input,lapw,nsz, cell,&
-       zmat,usdus, zso,noco,oneD,n_rank,n_size,SUB_COMM,&
+       zmat,usdus, zso,noco,oneD,&
        nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     !
     USE m_abcof_soc
@@ -40,7 +40,6 @@ CONTAINS
     !     .. Scalar Arguments ..
     !     ..
     INTEGER, INTENT (IN) :: nat_start,nat_stop,nat_l
-    INTEGER, INTENT (IN) :: n_rank,n_size,SUB_COMM
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(DIMENSION%jspd)  
     COMPLEX, INTENT (INOUT) :: zso(:,:,:)!DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)

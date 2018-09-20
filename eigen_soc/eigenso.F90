@@ -124,9 +124,13 @@ CONTAINS
     !IF (mpi%irank.LT.n_plus) i_plus = 0
     !n_end = (mpi%irank+1)+(n_loc+i_plus)*mpi%isize
     !
+#if defined(CPP_MPI)
      n_stride = kpts%nkpt/mpi%n_groups
+#else
+     n_stride = 1
+#endif
      n_end = kpts%nkpt
-    ! write(*,'(4i12)') mpi%irank, mpi%n_groups, n_stride, mpi%n_start
+     write(*,'(4i12)') mpi%irank, mpi%n_groups, n_stride, mpi%n_start
     !
     !--->  start loop k-pts
     !
