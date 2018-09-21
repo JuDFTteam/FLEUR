@@ -130,7 +130,7 @@ CONTAINS
      n_stride = 1
 #endif
      n_end = kpts%nkpt
-     write(*,'(4i12)') mpi%irank, mpi%n_groups, n_stride, mpi%n_start
+    !write(*,'(4i12)') mpi%irank, mpi%n_groups, n_stride, mpi%n_start
     !
     !--->  start loop k-pts
     !

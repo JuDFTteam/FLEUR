@@ -70,7 +70,7 @@ c***********************************************************************
       complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: chelp(-llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
 
-      complex, intent(out):: hsomtx(:,:,:,:) !(2,2,neigd,neigd)
+      complex, allocatable, intent(out):: hsomtx(:,:,:,:) !(neigd,neigd,2,2)
 
       integer :: n,l,nwdd,nw,ispin,ie,na,ll1,m,lm,i,nsz(2)
       real    :: s(3),r2
@@ -110,10 +110,10 @@ c***********************************************************************
         ! is equivalent to the def in the noco-routines
       ENDIF
 
-      ALLOCATE ( ahelp(lmaxd*(lmaxd+2),natd,neigd,jspd) )
-      ALLOCATE ( bhelp(lmaxd*(lmaxd+2),natd,neigd,jspd) )
+      ALLOCATE ( ahelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
+      ALLOCATE ( bhelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
 
-      do ispin=1,jspd
+      do ispin=1,input%jspins
        DO ie = 1, neigd
         DO na = 1, natd
          DO l = 1, lmaxd
@@ -150,8 +150,8 @@ c***********************************************************************
       
       rsoc%soangl= conjg(rsoc%soangl)
 
-      CALL hsoham(atoms,noco,input,nsz,chelp,rsoc,ahelp,bhelp,
-     >            1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
+      CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
+     >            bhelp,1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
      <            hsomtx)
  
       end subroutine wann_socmat
