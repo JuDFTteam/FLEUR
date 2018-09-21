@@ -33,7 +33,7 @@ test-gfortran:
   artifacts:
     when: on_failure
     paths:
-      - build/Testing/fails
+      - build/Testing/failed
       - build/Testing/test.oldlogs
 #  only:
 #    - schedules
@@ -100,7 +100,7 @@ build-intel:
        - build.intel
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -l intel AUTO ; cd build.intel; make 
+    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel AUTO ; cd build.intel; make 
   only:
     - schedules
     - triggers
@@ -119,7 +119,7 @@ test-intel:
   artifacts:
     when: on_failure
     paths:
-      - build/Testing/fails
+      - build/Testing/failed
       - build/Testing/test.oldlogs
   only:
      - schedules
