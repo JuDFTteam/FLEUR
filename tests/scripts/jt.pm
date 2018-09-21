@@ -164,6 +164,12 @@ sub testresult($){
 
     }else{
 	system("touch $workdir/test.failed");
+        system("echo 'TEST FAILED:OUT' >> ../failed");
+	system("cat out >> ../failed");
+        system("echo 'TEST FAILED:stdout' >> ../failed");
+	system("cat ../Temporary/LastTest.log >> ../failed");
+        system("echo 'TEST FAILED:testreport' >> ../failed");
+	system("cat ../test.log >> ../failed");
 	print  "Test failed\n";
 	die "Test failed";
     }
