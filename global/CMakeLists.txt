@@ -31,4 +31,5 @@ global/qfix.f90
 global/radflo.F90
 global/utility.F90
 global/find_enpara.f90
+global/nvtx.F90
 )
