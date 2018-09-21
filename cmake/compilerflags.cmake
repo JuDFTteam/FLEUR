@@ -23,7 +23,7 @@ elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics  -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics  -Mcuda:cuda9.0,cc70 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    #set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -fast -O3")
-   set(CMAKE_Fortran_FLAGS_RELEASE "-O1 ")
+   set(CMAKE_Fortran_FLAGS_RELEASE "-O1 ") # to prevent cmake from putting -fast which auses problems with PGI18.4
    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -Mchkptr -Ktrap=fp")
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "XL")
    message("IBM/BG Fortran detected")
