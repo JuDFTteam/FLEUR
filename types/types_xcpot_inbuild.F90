@@ -183,13 +183,19 @@ CONTAINS
       IF (xcpot%is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN    ! local pw91
-            CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd(:ngrid),grad%gzgr(:ngrid), vx(:ngrid,:),vxc(:ngrid,:), isprsv,sprsv)
+            CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),&
+                 grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd(:ngrid),&
+                 grad%gzgr(:ngrid), vx(:ngrid,:),vxc(:ngrid,:), isprsv,sprsv)
          ELSEIF (xcpot%is_name("pw91")) THEN  ! pw91
             IF (lwbc) THEN
-               CALL vxcwb91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd(:ngrid),grad%gzgr(:ngrid), vx(:ngrid,:),vxc(:ngrid,:), idsprs,isprsv,sprsv)
+               CALL vxcwb91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid),&
+                 grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),&
+                 grad%gggrd(:ngrid),grad%gzgr(:ngrid), vx(:ngrid,:),vxc(:ngrid,:), idsprs,isprsv,sprsv)
             ELSE
 
-               CALL vxcpw91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),grad%gggrd,grad%gzgr, vx(:ngrid,:),vxc(:ngrid,:), idsprs,isprsv,sprsv)
+               CALL vxcpw91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid),&
+                 grad%g2rt(:ngrid),grad%g2ru(:ngrid),grad%g2rd(:ngrid),grad%gggrt(:ngrid),grad%gggru(:ngrid),&
+                 grad%gggrd,grad%gzgr, vx(:ngrid,:),vxc(:ngrid,:), idsprs,isprsv,sprsv)
 
             ENDIF
          ELSE  ! pbe or similar
