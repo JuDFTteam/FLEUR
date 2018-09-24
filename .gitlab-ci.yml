@@ -29,7 +29,7 @@ test-gfortran:
      paths:
        - build
   script:
-    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=1;cd /builds/fleur/fleur/build;ctest
+    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
   artifacts:
     when: on_failure
     paths:
