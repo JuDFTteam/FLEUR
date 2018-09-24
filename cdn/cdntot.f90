@@ -82,7 +82,7 @@ CONTAINS
             ENDDO
          END IF
 !     -----is region
-         IF (.not.judft_was_Argument("-oldfix")) THEN
+         IF (.FALSE.) THEN !Change this for old way of determination of int-charge
             CALL convol(stars,x,den%pw(:,jspin),stars%ufft)
             qis = x(1)*cell%omtil
          ELSE

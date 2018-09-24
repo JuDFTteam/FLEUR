@@ -61,6 +61,9 @@
       WRITE(*,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
       CALL PRINT_memory_info()
+#ifdef CPP_MPI
+      CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
+#endif      
       STOP "Signal"
       intel_signal_handler=0
       END FUNCTION intel_signal_handler

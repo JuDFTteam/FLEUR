@@ -40,6 +40,14 @@ CONTAINS
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
+#if defined (_CUDA)
+  !   cublas: required to use generic BLAS interface
+  !   cudafor: required to use CUDA runtime API routines (e.g.
+  !   cudaDeviceSynchronize)
+    USE cublas
+    USE cudafor
+    USE nvtx
+#endif
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_sym),INTENT(IN)      :: sym
@@ -61,8 +69,23 @@ CONTAINS
     INTEGER:: nn,na,ab_size,l,ll,m
     COMPLEX,ALLOCATABLE:: ab(:,:),ab1(:,:),ab2(:,:)
     real :: rchi
+#ifdef _CUDA
+    COMPLEX,ALLOCATABLE,DEVICE :: c_dev(:,:), ab1_dev(:,:), ab_dev(:,:)
+    COMPLEX,ALLOCATABLE,DEVICE :: h_loc_dev(:,:)
+    integer :: i, j, istat
+    call nvtxStartRange("hsmt_nonsph",1)    
+    print*, "running CUDA version"
+#endif
 
     ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+#ifdef _CUDA
+    ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
+    ALLOCATE(ab1_dev(size(ab1,1),size(ab1,2)))
+    ALLOCATE(ab_dev(size(ab,1),size(ab,2)))
+    h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp)) !WORKAROUND, var_dev=CONJG(var_dev) does not work (pgi18.4)
+    !note that basically all matrices in the GPU version are conjugates of their
+    !cpu counterparts
+#endif
 
     IF (iintsp.NE.jintsp) ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 
@@ -73,18 +96,39 @@ CONTAINS
        ENDIF
        hmat%data_c=0.0
     ENDIF
+#ifdef _CUDA
+    ALLOCATE(c_dev(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
+    c_dev = hmat%data_c
+#endif
     
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
           rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
           
+!#ifdef _CUDA
+          !CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab_dev,ab_size,.TRUE.)
+          !   istat = cudaDeviceSynchronize() 
+!#else
           CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+!#endif
           !Calculate Hamiltonian
+#ifdef _CUDA
+          ab_dev = CONJG(ab)
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
+#else
           CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+#endif
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           IF (iintsp==jintsp) THEN
+#ifdef _CUDA
+    call nvtxStartRange("zherk",3)    
+             CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1_dev,SIZE(ab1_dev,1),1.0,c_dev,SIZE(c_dev,1))
+             istat = cudaDeviceSynchronize() 
+    call nvtxEndRange()    
+#else
              CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,CONJG(ab1),SIZE(ab1,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
+#endif
           ELSE  !here the l_ss off-diagonal part starts
              !Second set of ab is needed
              CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
@@ -94,12 +138,18 @@ CONTAINS
           ENDIF
        ENDIF
     END DO
+#ifdef _CUDA
+    hmat%data_c = c_dev
+#endif
     
     IF (hmat%l_real) THEN
        hmat%data_r=hmat%data_r+REAL(hmat%data_c)
     ENDIF
-    
-  END SUBROUTINE priv_noMPI
+
+#ifdef _CUDA
+    call nvtxEndRange
+#endif
+ END SUBROUTINE priv_noMPI
 
 
   SUBROUTINE priv_MPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
@@ -160,7 +210,7 @@ CONTAINS
              CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
              CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
              !Multiply for Hamiltonian
-             CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,conjg(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(jintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
+             CALL zgemm("N","t",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,conjg(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(jintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
           ENDIF
        ENDIF
     END DO

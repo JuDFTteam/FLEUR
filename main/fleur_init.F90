@@ -101,11 +101,9 @@
           INQUIRE(file='inp',exist=l_found)
           IF (input%l_inpXML) THEN
              !xml found, we will use it, check if we also have a inp-file
-             IF (l_found.AND..NOT.(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml"))) &
-                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files or specify -xml to use inp.xml")
+             IF (l_found) &
+                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files")
           ELSE
-             IF(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml")) &
-                  CALL judft_error("inp.xml not found",calledby="fleur_init",hint="You gave the -xml option but provided no inp.xml file")
              IF (.NOT.l_found) CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide either an 'inp' or an 'inp.xml' file in the working directory")
           END IF
 

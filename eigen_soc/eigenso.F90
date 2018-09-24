@@ -56,7 +56,8 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER i,j,nk,jspin,n ,l
-    INTEGER n_loc,n_plus,i_plus,n_end,nsz,nmat
+    ! INTEGER n_loc,n_plus,i_plus,
+    INTEGER n_end,nsz,nmat,n_stride
     LOGICAL l_socvec   !,l_all
     INTEGER wannierspin
     TYPE(t_usdus):: usdus
@@ -117,15 +118,24 @@ CONTAINS
     !
     !--->    loop over k-points: each can be a separate task
     !
-    n_loc = INT(kpts%nkpt/mpi%isize)
-    n_plus = kpts%nkpt - mpi%isize*n_loc
-    i_plus = -1
-    IF (mpi%irank.LT.n_plus) i_plus = 0
-    n_end = (mpi%irank+1)+(n_loc+i_plus)*mpi%isize
+    !n_loc = INT(kpts%nkpt/mpi%isize)
+    !n_plus = kpts%nkpt - mpi%isize*n_loc
+    !i_plus = -1
+    !IF (mpi%irank.LT.n_plus) i_plus = 0
+    !n_end = (mpi%irank+1)+(n_loc+i_plus)*mpi%isize
+    !
+#if defined(CPP_MPI)
+     n_stride = kpts%nkpt/mpi%n_groups
+#else
+     n_stride = 1
+#endif
+     n_end = kpts%nkpt
+    !write(*,'(4i12)') mpi%irank, mpi%n_groups, n_stride, mpi%n_start
     !
     !--->  start loop k-pts
     !
-    DO  nk = mpi%irank+1,n_end,mpi%isize
+    ! DO  nk = mpi%irank+1,n_end,mpi%isize
+     DO nk = mpi%n_start,n_end,n_stride
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
        ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
@@ -141,20 +151,21 @@ CONTAINS
             ' the',i4,' SOC eigenvalues are:')
 8020   FORMAT (5x,5f12.6)
 
-       IF (input%eonly) THEN
-          CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
-
-       ELSE          
-          CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
-          DO jspin = 1,wannierspin
-             CALL timestart("eigenso: write_eig")  
-             zmat%data_c=zso(:,:nsz,jspin)
-             CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
-
-             CALL timestop("eigenso: write_eig")  
-          ENDDO
-       ENDIF ! (input%eonly) ELSE
-       deallocate(zso)
+       IF (mpi%n_rank==0) THEN
+          IF (input%eonly) THEN
+             CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
+          ELSE          
+             CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
+             DO jspin = 1,wannierspin
+                CALL timestart("eigenso: write_eig")  
+                zmat%data_c=zso(:,:nsz,jspin)
+                CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
+   
+                CALL timestop("eigenso: write_eig")  
+             ENDDO
+          ENDIF ! (input%eonly) ELSE
+       ENDIF ! n_rank == 0
+       DEALLOCATE (zso)
     ENDDO ! DO nk 
 
     ! Sorry for the following strange workaround to fill the results%neig and results%eig arrays.

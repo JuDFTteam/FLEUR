@@ -268,7 +268,7 @@ MODULE m_pot_io
       INTEGER, INTENT(OUT) :: mode
 
       mode = POT_DIRECT_MODE
-      IF (juDFT_was_argument("-stream_cdn")) mode=POT_STREAM_MODE
+      !IF (juDFT_was_argument("-stream_cdn")) mode=POT_STREAM_MODE
       IF (.NOT.juDFT_was_argument("-no_cdn_hdf")) THEN !juDFT_was_argument("-hdf_cdn")) THEN
 #ifdef CPP_HDF
          mode=POT_HDF5_MODE

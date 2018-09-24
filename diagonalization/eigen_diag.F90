@@ -65,7 +65,7 @@ CONTAINS
     LOGICAL :: parallel
     !For check-mode
     TYPE(t_mat) :: s_store,h_store
-
+    
          
     SELECT TYPE(smat)
     CLASS IS (t_mpimat)
@@ -75,7 +75,7 @@ CONTAINS
     END SELECT
 
     !Create a copy of the matrix if in test mode
-    IF (judft_was_argument("-diag:test")) THEN
+    IF (TRIM(judft_string_for_argument("-diag"))=="test") THEN
        SELECT TYPE(hmat)
         CLASS IS (t_mpimat)
           CALL s_store%init(hmat%l_real,hmat%global_size1,hmat%global_size2)
@@ -112,7 +112,7 @@ CONTAINS
     END SELECT
 
     !Create test the solution
-    IF (judft_was_argument("-diag:test")) THEN
+    IF (TRIM(judft_string_for_argument("-diag"))=="test") THEN
        CALL priv_test_solution(mpi,ne,s_store,h_store,eig,ev)
        CALL judft_error("Diagonalization tested")
     END IF
@@ -223,13 +223,13 @@ CONTAINS
     ENDIF
 
     !check if a special solver was requested
-    IF (juDFT_was_argument("-diag:elpa"))      diag_solver=diag_elpa
-    IF (juDFT_was_argument("-diag:scalapack")) diag_solver=diag_scalapack
-    IF (juDFT_was_argument("-diag:elemental")) diag_solver=diag_elemental
-    IF (juDFT_was_argument("-diag:lapack"))    diag_solver=diag_lapack
-    IF (juDFT_was_argument("-diag:magma"))     diag_solver=diag_magma
-    IF (juDFT_was_argument("-diag:chase"))     diag_solver=diag_chase
-    IF (juDFT_was_argument("-diag:debugout"))  diag_solver=diag_debugout
+    IF (TRIM(juDFT_string_for_argument("-diag"))=="elpa")      diag_solver=diag_elpa
+    IF (trim(juDFT_string_for_argument("-diag"))=="scalapack") diag_solver=diag_scalapack
+    IF (trim(juDFT_string_for_argument("-diag"))=="elemental") diag_solver=diag_elemental
+    IF (trim(juDFT_string_for_argument("-diag"))=="lapack")    diag_solver=diag_lapack
+    IF (trim(juDFT_string_for_argument("-diag"))=="magma")     diag_solver=diag_magma
+    IF (trim(juDFT_string_for_argument("-diag"))=="chase")     diag_solver=diag_chase
+    IF (trim(juDFT_string_for_argument("-diag"))=="debugout")  diag_solver=diag_debugout
     
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)

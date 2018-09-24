@@ -3,7 +3,7 @@
 jt::copyfile("files/inp.xml",$workdir);
 jt::copyfile("files/enpara",$workdir);
 
-jt::testrun("$executable -xmlInput",$workdir);
+jt::testrun("$executable ",$workdir);
 
 #now test output
 $result=jt::test_fileexists("$workdir/DOS.1");

@@ -16,9 +16,15 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
    message("PGI Fortran detected")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics  -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
-   set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -fast -O3")
-   set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -Mchkptr")
+   #CPU   
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -Mr8 -Mr8intrinsics")
+   #GPU
+   #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics -Mcuda=cuda9.0,cc60 -Mcudalib=cublas")
+   #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics  -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
+   #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp -Mr8 -Mr8intrinsics  -Mcuda:cuda9.0,cc70 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
+   #set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -fast -O3")
+   set(CMAKE_Fortran_FLAGS_RELEASE "-O1 ") # to prevent cmake from putting -fast which auses problems with PGI18.4
+   set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -Mchkptr -Ktrap=fp")
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "XL")
    message("IBM/BG Fortran detected")
    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qsmp=omp -qnosave -qarch=qp -qtune=qp -qrealsize=8 -qfixed -qsuppress=1520-022 -qessl") 

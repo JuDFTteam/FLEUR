@@ -1384,9 +1384,9 @@ MODULE m_cdn_io
       INTEGER, INTENT(OUT) :: mode
 
       mode = CDN_DIRECT_MODE
-      IF (juDFT_was_argument("-stream_cdn")) THEN
-         mode=CDN_STREAM_MODE
-      END IF
+      !IF (juDFT_was_argument("-stream_cdn")) THEN
+      !   mode=CDN_STREAM_MODE
+      !END IF
       IF (.NOT.juDFT_was_argument("-no_cdn_hdf")) THEN !juDFT_was_argument("-hdf_cdn")) THEN
 #ifdef CPP_HDF
          mode=CDN_HDF5_MODE
