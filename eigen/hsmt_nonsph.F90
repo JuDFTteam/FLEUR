@@ -72,6 +72,7 @@ CONTAINS
 #ifdef _CUDA
     COMPLEX,ALLOCATABLE,DEVICE :: c_dev(:,:), ab1_dev(:,:), ab_dev(:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: h_loc_dev(:,:)
+    !REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     integer :: i, j, istat
     call nvtxStartRange("hsmt_nonsph",1)    
     print*, "running CUDA version"
@@ -83,6 +84,10 @@ CONTAINS
     ALLOCATE(ab1_dev(size(ab1,1),size(ab1,2)))
     ALLOCATE(ab_dev(size(ab,1),size(ab,2)))
     h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp)) !WORKAROUND, var_dev=CONJG(var_dev) does not work (pgi18.4)
+    !ALLOCATE(fj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
+    !ALLOCATE(gj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
+    !fj_dev(1:,1:,1:)= fj(1:,0:,1:)
+    !gj_dev(1:,1:,1:)= gj(1:,0:,1:)
     !note that basically all matrices in the GPU version are conjugates of their
     !cpu counterparts
 #endif
@@ -106,15 +111,15 @@ CONTAINS
        IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
           rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
           
-!#ifdef _CUDA
-          !CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab_dev,ab_size,.TRUE.)
+#ifdef _CUDA
+          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab_dev,ab_size,.TRUE.)
           !   istat = cudaDeviceSynchronize() 
-!#else
+#else
           CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
-!#endif
+#endif
           !Calculate Hamiltonian
 #ifdef _CUDA
-          ab_dev = CONJG(ab)
+          !ab_dev = CONJG(ab)
           CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
 #else
           CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
