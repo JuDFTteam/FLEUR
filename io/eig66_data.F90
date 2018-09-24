@@ -30,9 +30,9 @@ module m_eig66_data
        INTEGER,ALLOCATABLE :: pe_basis(:,:),slot_basis(:,:)
        INTEGER,ALLOCATABLE :: pe_ev(:,:,:),slot_ev(:,:,:)
        INTEGER             :: irank
-       INTEGER,POINTER     :: neig_data(:)
-       REAL,POINTER        :: eig_data(:),zr_data(:), w_iks_data(:)
-       COMPLEX,POINTER     :: zc_data(:)
+       INTEGER,POINTER :: neig_data(:)
+       REAL,POINTER    :: eig_data(:),zr_data(:), w_iks_data(:)
+       COMPLEX,POINTER :: zc_data(:)
     END TYPE
     TYPE,EXTENDS(t_data):: t_data_hdf
 #ifdef CPP_HDF
@@ -82,7 +82,7 @@ module m_eig66_data
     INTEGER,INTENT(IN),OPTIONAL :: io_mode
     CLASS(t_data),pointer::d
 
-    TYPE(t_list),POINTER:: listpointer,lastinlist
+    TYPE(t_list),POINTER,ASYNCHRONOUS:: listpointer,lastinlist
     lastinlist=>null()
 
     listpointer=>linked_list
