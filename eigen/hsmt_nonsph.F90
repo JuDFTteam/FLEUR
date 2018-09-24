@@ -77,7 +77,7 @@ CONTAINS
     print*, "running CUDA version"
 #endif
 
-    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 #ifdef _CUDA
     ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
     ALLOCATE(ab1_dev(size(ab1,1),size(ab1,2)))
@@ -87,7 +87,7 @@ CONTAINS
     !cpu counterparts
 #endif
 
-    IF (iintsp.NE.jintsp) ALLOCATE(ab2(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    IF (iintsp.NE.jintsp) ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 
     IF (hmat%l_real) THEN
        IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
@@ -107,17 +107,17 @@ CONTAINS
           rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
           
 !#ifdef _CUDA
-          !CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab_dev,ab_size,.TRUE.)
+          !CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab_dev,ab_size,.TRUE.)
           !   istat = cudaDeviceSynchronize() 
 !#else
-          CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
 !#endif
           !Calculate Hamiltonian
 #ifdef _CUDA
           ab_dev = CONJG(ab)
-          CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
 #else
-          CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
 #endif
           !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           IF (iintsp==jintsp) THEN
@@ -131,10 +131,10 @@ CONTAINS
 #endif
           ELSE  !here the l_ss off-diagonal part starts
              !Second set of ab is needed
-             CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
-             CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab2,1))
+             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+             CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab2,1))
              !Multiply for Hamiltonian
-             CALL zgemm("N","T",lapw%nv(jintsp),lapw%nv(iintsp),ab_size,chi,conjg(ab2),SIZE(ab2,1),ab1,SIZE(ab1,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+             CALL zgemm("N","T",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,chi,conjg(ab2),SIZE(ab2,1),ab1,SIZE(ab1,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
           ENDIF
        ENDIF
     END DO
@@ -180,7 +180,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE:: ab(:,:),ab1(:,:),ab_select(:,:)
     real :: rchi
 
-    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab1(lapw%nv(iintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab_select(lapw%num_local_cols(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2))
+    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab1(lapw%nv(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab_select(lapw%num_local_cols(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2))
 
     !IF (iintsp.NE.jintsp) ALLOCATE(ab_select1(lapw%num_local_cols(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2))
 
@@ -197,20 +197,20 @@ CONTAINS
        IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
           rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
           
-          CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
           !Calculate Hamiltonian
         
-          CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
           !Cut out of ab1 only the needed elements here
-          ab_select=ab1(mpi%n_rank+1:lapw%nv(iintsp):mpi%n_size,:)
+          ab_select=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
           IF (iintsp==jintsp) THEN
              CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(iintsp),ab_size,CMPLX(rchi,0.0),CONJG(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
           ELSE
              !Second set of ab is needed
-             CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
              CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
              !Multiply for Hamiltonian
-             CALL zgemm("N","t",lapw%nv(iintsp),lapw%num_local_cols(iintsp),ab_size,chi,conjg(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
+             CALL zgemm("N","t",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,conjg(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(jintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
           ENDIF
        ENDIF
     END DO
