@@ -114,12 +114,12 @@ CONTAINS
                 ENDIF
                 !--->        loop over lapws
 #ifndef CPP_OLDINTEL
-                !$OMP PARALLEL DO &
-                !$OMP& DEFAULT(none)&
-                !$OMP& PRIVATE(k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
-                !$OMP& inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm)&
-                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,l_force,&
-                !$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,force,nat_start,nat_stop)
+                !!$OMP PARALLEL DO &
+                !!$OMP& DEFAULT(none)&
+                !!$OMP& PRIVATE(k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
+                !!$OMP& inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm)&
+                !!$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,l_force,&
+                !!$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,force,nat_start,nat_stop)
 #endif
                 DO k = 1,nvmax
                    IF (zmat%l_real) THEN
@@ -217,7 +217,7 @@ CONTAINS
                    END DO
                 ENDDO ! loop over LAPWs (k)
 #ifndef CPP_OLDINTEL
-                !$OMP END PARALLEL DO
+                !!$OMP END PARALLEL DO
 #endif
                 IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)

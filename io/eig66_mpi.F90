@@ -2,6 +2,7 @@ MODULE m_eig66_mpi
 #include "juDFT_env.h"
   USE m_eig66_data
   USE m_types
+  USE m_judft
 #ifdef CPP_MPI
   use mpi
 #endif
@@ -12,7 +13,7 @@ CONTAINS
 
   SUBROUTINE priv_find_data(id,d)
     INTEGER,INTENT(IN)::id
-    TYPE(t_data_mpi),POINTER:: d
+    TYPE(t_data_mpi),POINTER,ASYNCHRONOUS:: d
 
     CLASS(t_data),POINTER   ::dp
     CALL eig66_find_data(dp,id)
@@ -35,24 +36,15 @@ CONTAINS
 #ifdef CPP_MPI
     INTEGER:: isize,e,slot_size,local_slots
     INTEGER,PARAMETER::mcored=27 !there should not be more that 27 core states
-    TYPE(t_data_MPI),POINTER :: d
+    TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
 
     CALL priv_find_data(id,d)
     CALL eig66_data_storedefault(d,jspins,nkpts,nmat,neig,l_real.and..not.l_soc,l_soc)
 
     IF (PRESENT(n_size_opt)) d%n_size=n_size_opt
     IF (ALLOCATED(d%pe_ev)) THEN
-       IF (create) THEN
-          d%neig_data=0
-          d%eig_data=1E99
-          d%w_iks_data=1E99
-          if (d%l_real.and..not.l_soc) THEN
-             d%zr_data=0.0
-          else
-             d%zc_data=0.0
-          endif
-       ENDIF
-       IF (PRESENT(filename)) CALL priv_readfromfile()
+       IF (create) CALL reset_eig(id,l_soc)
+       IF (PRESENT(filename)) CALL judft_error("Storing of data not implemented for MPI case",calledby="eig66_mpi.F")
        RETURN !everything already done!
     ENDIF
 
@@ -81,21 +73,21 @@ CONTAINS
     local_slots=COUNT(d%pe_ev==d%irank)
     slot_size=nmat
 
-    if (l_real.and..not.l_soc) THEN
+    IF (l_real.AND..NOT.l_soc) THEN
        CALL priv_create_memory(slot_size,local_slots,d%zr_handle,real_data_ptr=d%zr_data)
     else
        CALL priv_create_memory(slot_size,local_slots,d%zc_handle,cmplx_data_ptr=d%zc_data)
-    endif
-    IF (PRESENT(filename).AND..NOT.create) CALL priv_readfromfile()
+    ENDIF
+    IF (PRESENT(filename).AND..NOT.create) CALL judft_error("Storing of data not implemented for MPI case",calledby="eig66_mpi.F")
     CALL MPI_BARRIER(MPI_COMM,e)
     CALL timestop("create data spaces in ei66_mpi")
   CONTAINS
     SUBROUTINE priv_create_memory(slot_size,local_slots,handle,int_data_ptr,real_data_ptr,cmplx_data_ptr)
       IMPLICIT NONE
       INTEGER,INTENT(IN)           :: slot_size,local_slots
-      INTEGER,POINTER,OPTIONAL  :: int_data_ptr(:)
-      REAL   ,POINTER,OPTIONAL  :: real_data_ptr(:)
-      COMPLEX,POINTER,OPTIONAL  :: cmplx_data_ptr(:)
+      INTEGER,POINTER,OPTIONAL,ASYNCHRONOUS  :: int_data_ptr(:)
+      REAL   ,POINTER,OPTIONAL,ASYNCHRONOUS  :: real_data_ptr(:)
+      COMPLEX,POINTER,OPTIONAL,ASYNCHRONOUS  :: cmplx_data_ptr(:)
       INTEGER,INTENT(OUT)          :: handle
 #ifdef CPP_MPI
       TYPE(c_ptr)::ptr
@@ -119,91 +111,50 @@ CONTAINS
       if (length.ne.1) call judft_error("Bug in eig66_mpi:create_memory") 
       length=MAX(1,slot_size*local_slots)
  
+#ifdef CPP_MPI_ALLOC      
       length=length*type_size
-
       CALL MPI_ALLOC_MEM(length,MPI_INFO_NULL,ptr,e)
       IF (e.NE.0) CPP_error("Could not allocated MPI-Data in eig66_mpi")
-	
-      IF (present(real_data_ptr)) THEN	
-      	CALL C_F_POINTER(ptr,real_data_ptr,(/length/type_size/))
+#endif	
+      IF (PRESENT(real_data_ptr)) THEN
+#ifdef CPP_MPI_ALLOC         
+         CALL C_F_POINTER(ptr,real_data_ptr,(/length/type_size/))
+#else
+         ALLOCATE(real_data_ptr(length))
+#endif         
       	CALL MPI_WIN_CREATE(real_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
-      ELSEIF(present(int_data_ptr)) THEN
-      	CALL C_F_POINTER(ptr,int_data_ptr,(/length/type_size/))
+    ELSEIF(PRESENT(int_data_ptr)) THEN
+#ifdef CPP_MPI_ALLOC
+       CALL C_F_POINTER(ptr,int_data_ptr,(/length/type_size/))
+#else
+       ALLOCATE(int_data_ptr(length))
+#endif         
       	CALL MPI_WIN_CREATE(int_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
-      ELSE
-      	CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
-      	CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
-      ENDIF
+    ELSE
+#ifdef CPP_MPI_ALLOC       
+       CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
+#else
+       ALLOCATE(cmplx_data_ptr(length))
+#endif   
+       CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+    ENDIF
 #endif
     END SUBROUTINE priv_create_memory
 
 
-    SUBROUTINE priv_readfromfile()
-      USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,read_eig_DA=>read_eig,close_eig_da=>close_eig
-      INTEGER:: jspin,nk,i,ii,iii,nv,tmp_id
-      REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(neig),w_iks(neig)
-      TYPE(t_zmat)::zmat
-      zmat%l_real=d%l_real
-      zmat%nbasfcn=nmat
-      zmat%nbands=neig
-      allocate(zmat%z_r(nmat,neig),zmat%z_c(nmat,neig))
-      !only do this with PE=0
-      IF (d%irank==0) THEN
-         tmp_id=eig66_data_newid(DA_mode)
-         CALL open_eig_DA(tmp_id,nmat,neig,nkpts,jspins,.FALSE.,d%l_real,l_soc,filename)
-         DO jspin=1,jspins
-            DO nk=1,nkpts
-               !CALL read_eig_DA(tmp_id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-               STOP "code no longer works"
-                 ! CALL write_eig(id,nk,jspin,ii,ii,nv,nmat,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
-              ENDDO
-         ENDDO
-         CALL close_eig_DA(tmp_id)
-      ENDIF
-    END SUBROUTINE priv_readfromfile
 #endif
   END SUBROUTINE open_eig
   SUBROUTINE close_eig(id,delete,filename)
     INTEGER,INTENT(IN)         :: id
     LOGICAL,INTENT(IN),OPTIONAL:: delete
     CHARACTER(LEN=*),INTENT(IN),OPTIONAL::filename
-    TYPE(t_data_MPI),POINTER :: d
+    TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
     CALL priv_find_data(id,d)
 
     IF (PRESENT(delete)) THEN
        IF (delete) WRITE(*,*) "No deallocation of memory implemented in eig66_mpi"
     ENDIF
-    IF (PRESENT(filename)) CALL priv_writetofile()
-  CONTAINS
-    SUBROUTINE priv_writetofile()
-      USE m_eig66_DA,ONLY:open_eig_DA=>open_eig,write_eig_DA=>write_eig,close_eig_DA=>close_eig
-      IMPLICIT NONE
-
-      INTEGER:: nk,jspin,nv,i,ii,tmp_id
-      REAL   :: wk,bk3(3),evac(2)
-      REAL    :: eig(d%neig),w_iks(d%neig)
-      TYPE(t_zmat)::zmat
-      zmat%l_real=d%l_real
-      zmat%nbasfcn=d%nmat
-      zmat%nbands=d%neig
-      allocate(zmat%z_r(d%nmat,d%neig),zmat%z_c(d%nmat,d%neig))
-
-      IF (d%irank==0) THEN
-         tmp_id=eig66_data_newid(DA_mode)
-         CALL open_eig_DA(tmp_id,d%nmat,d%neig,d%nkpts,d%jspins,.FALSE.,d%l_real,d%l_soc,filename)
-         DO jspin=1,d%jspins
-            DO nk=1,d%nkpts
-               !CALL read_eig(id,nk,jspin,nv,i,bk3,wk,ii,eig,w_iks,el,ello,evac,zmat=zmat)
-               stop "CODE no longer working"
-               !CALL write_eig_DA(tmp_id,nk,jspin,ii,ii,nv,i,bk3,wk,eig,w_iks,el,ello,evac,nlotot,zmat=zmat)
-            ENDDO
-         ENDDO
-         CALL close_eig_DA(tmp_id)
-      ENDIF
-      CALL eig66_remove_data(id)
-    END SUBROUTINE priv_writetofile
-
+    IF (PRESENT(filename)) CALL judft_error("Storing of data not implemented for MPI case",calledby="eig66_mpi.F")
   END SUBROUTINE close_eig
 
   SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
@@ -221,7 +172,7 @@ CONTAINS
     INTEGER,ALLOCATABLE       :: tmp_int(:)
     REAL,ALLOCATABLE          :: tmp_real(:)
     COMPLEX,ALLOCATABLE       :: tmp_cmplx(:)
-    TYPE(t_data_MPI),POINTER :: d
+    TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
     CALL priv_find_data(id,d)
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
@@ -308,7 +259,7 @@ CONTAINS
     REAL,ALLOCATABLE          :: tmp_real(:)
     COMPLEX,ALLOCATABLE       :: tmp_cmplx(:)
     LOGICAL                   :: acc
-    TYPE(t_data_MPI),POINTER :: d
+    TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
 
     CALL priv_find_data(id,d)
 
@@ -394,7 +345,7 @@ CONTAINS
     INTEGER, INTENT(IN)        :: id
     LOGICAL, INTENT(IN)        :: l_soc
 #ifdef CPP_MPI
-    TYPE(t_data_MPI),POINTER :: d
+    TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
     CALL priv_find_data(id,d)
 
     d%neig_data=0
@@ -408,84 +359,11 @@ CONTAINS
 #endif
   END SUBROUTINE reset_eig
 
-#ifdef CPP_MPI
-  SUBROUTINE priv_put_data(pe,slot,DATA,handle)
-    IMPLICIT NONE
-    INTEGER,INTENT(IN)  :: pe,slot
-    CLASS(*),INTENT(IN) :: DATA(:)
-    INTEGER,INTENT(IN)  :: handle
-
-    INTEGER             :: len,e
-    INTEGER,ALLOCATABLE :: int_tmp(:)
-    REAL,ALLOCATABLE    :: real_tmp(:)
-    COMPLEX,ALLOCATABLE:: cmplx_tmp(:)
-    INCLUDE 'mpif.h'
-    len=SIZE(DATA)
-    SELECT TYPE(DATA)
-    TYPE IS (INTEGER)
-       ALLOCATE(int_tmp(len))
-       int_tmp=DATA
-       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,handle,e)
-       CALL MPI_PUT(int_tmp,len,MPI_INTEGER,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_INTEGER,handle,e)
-       CALL MPI_WIN_UNLOCK(pe,handle,e)
-    TYPE is (REAL)
-       ALLOCATE(real_tmp(len))
-       real_tmp=DATA
-       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,handle,e)
-       CALL MPI_PUT(real_tmp,len,MPI_DOUBLE_PRECISION,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_PRECISION,handle,e)
-       CALL MPI_WIN_UNLOCK(pe,handle,e)
-    TYPE is (COMPLEX)
-       ALLOCATE(cmplx_tmp(len))
-       cmplx_tmp=DATA
-       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,handle,e)
-       CALL MPI_PUT(cmplx_tmp,len,MPI_DOUBLE_COMPLEX,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_COMPLEX,handle,e)
-       CALL MPI_WIN_UNLOCK(pe,handle,e)
-    END SELECT
-  END SUBROUTINE priv_put_data
-
-  SUBROUTINE priv_get_data(pe,slot,len,handle,idata,rdata,cdata)
-    IMPLICIT NONE
-    INTEGER,INTENT(IN)  :: pe,slot,len
-    INTEGER,INTENT(OUT),optional :: iDATA(len)
-    REAL,INTENT(OUT),optional    :: rDATA(len)
-    COMPLEX,INTENT(OUT),optional :: cDATA(len)
-    INTEGER,INTENT(IN)  :: handle
-
-    INTEGER             :: e
-    INTEGER,ALLOCATABLE :: int_tmp(:)
-    REAL,ALLOCATABLE    :: real_tmp(:)
-    COMPLEX,ALLOCATABLE:: cmplx_tmp(:)
-    INCLUDE 'mpif.h'
-
-    IF (present(idata)) THEN
-       ALLOCATE(int_tmp(len))
-       CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,handle,e)
-       CALL MPI_GET(int_tmp,len,MPI_INTEGER,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_INTEGER,handle,e)
-       CALL MPI_WIN_UNLOCK(pe,handle,e)
-       iDATA=int_tmp
-    ELSE IF (PRESENT(rdata)) THEN
-       ALLOCATE(real_tmp(len))
-       CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,handle,e)
-       CALL MPI_GET(real_tmp,len,MPI_DOUBLE_PRECISION,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_PRECISION,handle,e)
-       CALL MPI_WIN_UNLOCK(pe,handle,e)
-       rDATA=real_tmp
-    ELSE IF (PRESENT(cdata)) THEN
-       ALLOCATE(cmplx_tmp(len))
-       CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,handle,e)
-       CALL MPI_GET(cmplx_tmp,len,MPI_DOUBLE_COMPLEX,pe,int(slot,MPI_ADDRESS_KIND),len,MPI_DOUBLE_COMPLEX,handle,e)
-       CALL MPI_WIN_UNLOCK(pe,handle,e)
-       cDATA=cmplx_tmp
-    ELSE
-       call judft_error("BUG in priv_get_data")
-    ENDIF
-
-  END SUBROUTINE priv_get_data
-#endif
 
 #ifdef CPP_MPI
   SUBROUTINE create_maps(d,isize,nkpts,jspins,neig,n_size)
     IMPLICIT NONE
-    TYPE(t_data_MPI),INTENT(INOUT):: d
+    TYPE(t_data_MPI),INTENT(INOUT),ASYNCHRONOUS:: d
     INTEGER,INTENT(IN):: isize,nkpts,jspins,neig,n_size
 
     INTEGER:: nk,j,n1,n2,n,pe,n_members
