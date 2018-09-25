@@ -13,7 +13,6 @@ CONTAINS
     USE m_setabc1lo
     USE m_sphbes
     USE m_dsphbs
-    USE m_abclocdn_soc
     USE m_ylm
     USE m_types
     USE m_juDFT
