@@ -19,34 +19,6 @@ CONTAINS
 
 #ifdef _CUDA
 
-  !private
-  !ATTRIBUTE(globali) &
-  SUBROUTINE  build_ab(iintsp,n,lmax,ab_size,ylm,c_ph,fj,gj,ab)
-    integer,       intent(in)  :: iintsp,n,lmax,ab_size
-    complex,       intent(in)  :: ylm(:,:), c_ph(:,:)
-    real,   device,intent(in)  :: fj(:,:,:),gj(:,:,:)
-    complex,device,intent(out) :: ab(:,:)
-    integer :: k,l, ll1, m
-    complex :: term, term2
-
-   ! k = (blockidx%x-1)*blockdim%x + threadidx%x 
-
-   ! if (k<n) then
-    DO k = 1,n
-       DO l = 0,lmax
-          ll1 = l* (l+1)
-          DO m = -l,l               
-             term = c_ph(k,iintsp)*ylm(k,ll1+m+1)
-             term2 = fj(k,l+1,iintsp)*term
-             ab(k,ll1+m+1)         = CONJG(term2) !fj(k,l+1,iintsp)*term
-             term2 = gj(k,l+1,iintsp)*term
-             ab(k,ll1+m+1+ab_size) = CONJG(term2) !gj(k,l+1,iintsp)*term
-          END DO
-       END DO
-    ENDDO !k-loop
-
-  END SUBROUTINE  build_ab
-
   SUBROUTINE hsmt_ab_gpu(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix
     USE m_constants, ONLY : fpi_const,tpi_const
@@ -66,23 +38,29 @@ CONTAINS
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
     !     .. Array Arguments ..
-    REAL,INTENT(IN)       :: fj(:,:,:),gj(:,:,:)
+    REAL, INTENT(IN)       :: fj(:,:,:),gj(:,:,:)
     COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
     
     INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
-    complex:: term,term2
-    real   :: th,v(3),bmrot(3,3),vmult(3)
-    COMPLEX,allocatable :: ylm(:,:)
-    complex,allocatable:: c_ph(:,:)
-    real,allocatable   :: gkrot(:,:)
+    REAL   :: th,v(3),bmrot(3,3),vmult(3)
+    COMPLEX,ALLOCATABLE :: ylm(:,:)
+    COMPLEX,ALLOCATABLE :: c_ph(:,:)
+    REAL,   ALLOCATABLE :: gkrot(:,:)
     LOGICAL :: l_apw
+    COMPLEX:: term
+
     REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
-   
+    COMPLEX,ALLOCATABLE,DEVICE :: c_ph_dev(:,:)
+    COMPLEX,ALLOCATABLE,DEVICE :: ylm_dev(:,:)
+  
+ 
     ALLOCATE(fj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
     ALLOCATE(gj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
+    ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
+    ALLOCATE(ylm_dev(lapw%nv(1),(atoms%lmaxd+1)**2))
     fj_dev(:,:,:)= fj(:,:,:)
     gj_dev(:,:,:)= gj(:,:,:)
 
@@ -99,7 +77,8 @@ CONTAINS
     np = sym%invtab(atoms%ngopr(na))
     !--->          set up phase factors
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
-    
+    c_ph_dev=c_ph   
+ 
     IF (np==1) THEN
        gkrot(:, 1:lapw%nv(iintsp)) = lapw%gk(:, 1:lapw%nv(iintsp),iintsp)
     ELSE
@@ -118,9 +97,19 @@ CONTAINS
        vmult(:) =  gkrot(:,k)
        CALL ylm4(lmax,vmult,ylm(k,:))
     ENDDO
+    ylm_dev=ylm
 
     !-->  synthesize the complex conjugates of a and b
-    CALL build_ab(iintsp,lapw%nv(1),lmax,ab_size,ylm,c_ph,fj_dev,gj_dev,ab)
+    !$cuf kernel do <<<*,256>>>
+    DO k = 1,lapw%nv(1)
+       DO l = 0,lmax
+          ll1 = l* (l+1)
+          DO m = -l,l               
+             ab(k,ll1+m+1)         = CONJG(fj_dev(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(k,ll1+m+1)) 
+             ab(k,ll1+m+1+ab_size) = CONJG(gj_dev(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(k,ll1+m+1)) 
+          END DO
+       END DO
+    ENDDO !k-loop
  
 
     IF (PRESENT(abclo)) THEN
@@ -176,11 +165,11 @@ CONTAINS
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
     
     INTEGER:: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct
-    complex:: term
-    real   :: th,v(3),bmrot(3,3),vmult(3)
+    COMPLEX:: term
+    REAL   :: th,v(3),bmrot(3,3),vmult(3)
     COMPLEX :: ylm((atoms%lmaxd+1)**2)
-    complex,allocatable:: c_ph(:,:)
-    real,allocatable   :: gkrot(:,:)
+    COMPLEX,ALLOCATABLE:: c_ph(:,:)
+    REAL,ALLOCATABLE   :: gkrot(:,:)
     LOGICAL :: l_apw
    
     ALLOCATE(c_ph(lapw%nv(1),MERGE(2,1,noco%l_ss)))
