@@ -6,9 +6,7 @@
         INTEGER,           SAVE  :: lmaxd = -1  ! initial value
         public ylm4,ylmnorm_init
       CONTAINS 
-      SUBROUTINE ylm4(
-     >                lmax,v,
-     <                ylm)
+      SUBROUTINE ylm4(lmax,v,ylm)
 !************************************************************
 !     generate the spherical harmonics for the vector v
 !     using a stable upward recursion in l.  (see notes
@@ -121,8 +119,8 @@
       lmaxd = lmax
 
       fpi = 4.0*pimach()
-!$    if (omp_in_parallel()) call juDFT_error(
-!$   +      "ylmnorm should not called in parallel",calledby="ylm4.f")
+!$    if (omp_in_parallel()) call juDFT_error(  &
+!$          "ylmnorm should not called in parallel",calledby="ylm4.f")
       DO l=0,lmax
          lm0 = l*(l+1) + 1
          cd=1.0

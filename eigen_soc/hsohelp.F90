@@ -51,8 +51,6 @@ CONTAINS
     !+odim
     !     ..
     !     .. Locals ..
-    TYPE(t_atoms)   :: atoms_local
-    TYPE(t_noco)    :: noco_local
     TYPE(t_mat)     :: zMat_local
     INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(DIMENSION%jspd),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
@@ -60,12 +58,7 @@ CONTAINS
     !
     ! turn off the non-collinear part of abcof
     !
-    noco_local=noco
-    noco_local%l_ss   = .FALSE.
     lmd = atoms%lmaxd*(atoms%lmaxd+2)
-    noco_local%qss(:) = 0.0
-    atoms_local=atoms
-    atoms_local%ngopr(:) = 1 ! use unrotated coeffs...
     !
     ! some praparations to match array sizes
     !
@@ -89,8 +82,8 @@ CONTAINS
           zMat_local%matsize2 = DIMENSION%neigd
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,DIMENSION%neigd))
           zMat_local%data_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
-          CALL abcof_soc(input,atoms_local,sym,cell,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,oneD,nat_start,nat_stop,nat_l,&
+          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
+               usdus, noco,ispin,oneD,nat_start,nat_stop,nat_l,&
                acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%data_c)
           !
@@ -109,15 +102,14 @@ CONTAINS
                 ENDDO
              ENDDO
           ENDDO
-          chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
        ELSE
           zMat_local%l_real = zmat(1)%l_real
           zMat_local%matsize1 = zmat(1)%matsize1
           zMat_local%matsize2 = DIMENSION%neigd
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,DIMENSION%neigd))
           zMat_local%data_c(:,:) = zmat(ispin)%data_c(:,:)
-          CALL abcof_soc(input,atoms_local,sym,cell,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,oneD,nat_start,nat_stop,nat_l,&
+          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
+               usdus,noco,ispin,oneD,nat_start,nat_stop,nat_l,&
                acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%data_c)
           !

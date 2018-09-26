@@ -1,7 +1,6 @@
 set(fleur_F77 ${fleur_F77}
 )
 set(fleur_F90 ${fleur_F90}
-eigen_soc/abclocdn_soc.F90
 eigen_soc/abcof_soc.F90
 eigen_soc/alineso.F90
 eigen_soc/anglso.f90
