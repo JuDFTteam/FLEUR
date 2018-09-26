@@ -15,6 +15,12 @@ MODULE m_types_xcpot_inbuild
                                 'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &
                                 'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', &
                                 'pbe0','hse ','vhse','lhse','exx ','hf  ']
+   
+   LOGICAL,PARAMETER:: priv_LDA(20)=[&
+                       .FALSE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
+                       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
+                       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.]
+
 
    LOGICAL,PARAMETER:: priv_gga(20)=[&
                        .TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
