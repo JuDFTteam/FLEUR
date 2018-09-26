@@ -27,7 +27,8 @@ MODULE m_types_xcpot_libxc
       INTEGER          :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
       INTEGER          :: jspins
    CONTAINS
-      PROCEDURE        :: is_gga              => xcpot_is_gga
+      PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
+      PROCEDURE        :: exc_is_gga          => xcpot_exc_is_gga
       PROCEDURE        :: is_MetaGGA          => xcpot_is_MetaGGA
       PROCEDURE        :: is_hybrid           => xcpot_is_hybrid 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
@@ -111,19 +112,33 @@ CONTAINS
 #endif
    END SUBROUTINE xcpot_init
 
-   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+   LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)        :: xc_info
 
-      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
-      xcpot_is_gga =       ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info)) &
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_vxc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info)) &
                      .or. xcpot%is_MetaGGA()
 #else
-      xcpot_is_gga=.false.
+      xcpot_vxc_is_gga=.false.
 #endif
-   END FUNCTION xcpot_is_gga
+   END FUNCTION xcpot_vxc_is_gga
+
+   LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info)) &
+                     .or. xcpot%is_MetaGGA()
+#else
+      xcpot_exc_is_gga=.false.
+#endif
+   END FUNCTION xcpot_exc_is_gga
 
    LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
       IMPLICIT NONE
@@ -178,7 +193,7 @@ CONTAINS
       !libxc uses the spin as a first index, hence we have to transpose....
       ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
       ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%vxc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          ALLOCATE(vsigma,mold=grad%vsigma)
          !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
@@ -215,7 +230,7 @@ CONTAINS
 
       REAL  :: excc(SIZE(exc))
 #ifdef CPP_LIBXC
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
          IF (xcpot%func_exc_id_c>0) THEN

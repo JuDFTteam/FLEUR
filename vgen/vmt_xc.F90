@@ -80,7 +80,7 @@ CONTAINS
    
     nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
     ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
-    IF (xcpot%is_gga()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
+    IF (xcpot%vxc_is_gga()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
     
     CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym)
   
@@ -117,7 +117,7 @@ CONTAINS
        ENDIF
 
        !Add postprocessing for libxc
-       IF (l_libxc.AND.xcpot%is_gga()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
+       IF (l_libxc.AND.xcpot%vxc_is_gga()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
 
        
        CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))

@@ -43,7 +43,8 @@ MODULE m_types_xcpot_inbuild
 
    CONTAINS
       !overloading t_xcpot:
-      PROCEDURE        :: is_gga=>xcpot_is_gga
+      PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
+      PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc=>xcpot_get_vxc
@@ -105,11 +106,18 @@ CONTAINS
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
-   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+
+   LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
-      xcpot_is_gga=priv_gga(xcpot%icorr)
-   END FUNCTION xcpot_is_gga
+      xcpot_vxc_is_gga=priv_gga(xcpot%icorr)
+   END FUNCTION xcpot_vxc_is_gga
+
+   LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_exc_is_gga = xcpot%vxc_is_gga()
+   END FUNCTION xcpot_exc_is_gga
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
       IMPLICIT NONE
@@ -178,7 +186,7 @@ CONTAINS
       vxc(:,:) = 0.0
       ngrid=SIZE(rh,1)
 
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%vxc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN    ! local pw91
             CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),&
@@ -275,7 +283,7 @@ CONTAINS
 !c
       exc(:) = 0.0
       ngrid=SIZE(rh,1)
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN  ! local pw91
             CALL excl91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt,grad%agru,grad%agrd,grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, isprsv,sprsv)

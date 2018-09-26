@@ -203,7 +203,7 @@ CONTAINS
 
         !make some auxillary xcpot, that is not a GGA (we don't need gradients)
         CALL aux_xcpot%init(input%jspins, id_exch, id_corr, id_exch, id_corr)
-        IF(aux_xcpot%is_gga()) CALL juDFT_error("aux_xcpot must not be GGA", &
+        IF(aux_xcpot%vxc_is_gga()) CALL juDFT_error("aux_xcpot must not be GGA", &
                                                 hint="choose id_corr and id_exch correctly")
 
         ! interstitial part

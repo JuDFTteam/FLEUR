@@ -1195,12 +1195,12 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
       obsolete%lwb=.FALSE.
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%vxc_is_gga()) THEN
          obsolete%ndvgrd=6
          obsolete%chng=-0.1e-11
       END IF
 
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%vxc_is_gga()) THEN
          obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
       END IF
 

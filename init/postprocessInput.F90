@@ -317,7 +317,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
      ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
      l_test = .TRUE. ! only checking, dont use new parameters
-     l_gga=xcpot%is_gga()
+     l_gga=xcpot%vxc_is_gga()
      CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
                 kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
      DEALLOCATE (jri1,lmax1,rmt1,dx1)
@@ -479,7 +479,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ENDIF
 
      ! Missing xc functionals initializations
-     IF (xcpot%is_gga()) THEN
+     IF (xcpot%vxc_is_gga()) THEN
         ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
         ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                   oneD%pgft1xy(0:oneD%odd%nn2d-1),&

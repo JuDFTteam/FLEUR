@@ -19,8 +19,9 @@ MODULE m_types_xcpot
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
    CONTAINS
-      PROCEDURE        :: is_gga=>xcpot_is_gga
-      PROCEDURE        :: is_MetaGGA=>xcpot_is_MetaGGA
+      PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
+      PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
+      PROCEDURE        :: exc_is_MetaGGA=>xcpot_exc_is_MetaGGA
       PROCEDURE        :: needs_grad=>xcpot_needs_grad
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
@@ -47,23 +48,29 @@ MODULE m_types_xcpot
    END TYPE t_gradients
 
 CONTAINS
-   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+   LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_is_gga=.false.
-   END FUNCTION xcpot_is_gga
+      xcpot_vxc_is_gga=.false.
+   END FUNCTION xcpot_vxc_is_gga
 
-   LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
+   LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_is_MetaGGA=.false.
-   END FUNCTION xcpot_is_MetaGGA
+      xcpot_exc_is_gga=.false.
+   END FUNCTION xcpot_exc_is_gga
+
+   LOGICAL FUNCTION xcpot_exc_is_MetaGGA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_exc_is_MetaGGA=.false.
+   END FUNCTION xcpot_exc_is_MetaGGA
 
    LOGICAL FUNCTION xcpot_needs_grad(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
 
-      xcpot_needs_grad= xcpot%is_gga() .or. xcpot%is_MetaGGA()
+      xcpot_needs_grad= xcpot%vxc_is_gga()
    END FUNCTION xcpot_needs_grad
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)

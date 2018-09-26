@@ -58,7 +58,7 @@ CONTAINS
                &                       rx(1,k),rx(2,k),rx(3,k),&
                &                       thet(k),phi)
 
-          IF (xcpot%is_gga()) THEN
+          IF (xcpot%vxc_is_gga()) THEN
              CALL dylm3(&
                   &                     atoms%lmaxd,atoms%lmaxd,rx(:,k),ylm,&
                   &                     dylmt1,dylmt2,dylmf1,dylmf2,dylmtf)
@@ -80,7 +80,7 @@ CONTAINS
 
              ylh(k,lh,nd) = s
 
-             IF (xcpot%is_gga()) THEN
+             IF (xcpot%vxc_is_gga()) THEN
 
                 DO mem = 1,sphhar%nmem(lh,nd)
                    lm = ll1 + sphhar%mlh(mem,lh,nd)
