@@ -29,7 +29,7 @@ MODULE m_types_xcpot_libxc
    CONTAINS
       PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
       PROCEDURE        :: exc_is_gga          => xcpot_exc_is_gga
-      PROCEDURE        :: is_MetaGGA          => xcpot_is_MetaGGA
+      PROCEDURE        :: exc_is_MetaGGA      => xcpot_exc_is_MetaGGA
       PROCEDURE        :: is_hybrid           => xcpot_is_hybrid 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
@@ -119,8 +119,7 @@ CONTAINS
       TYPE(xc_f03_func_info_t)        :: xc_info
 
       xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
-      xcpot_vxc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info)) &
-                     .or. xcpot%is_MetaGGA()
+      xcpot_vxc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_vxc_is_gga=.false.
 #endif
@@ -133,25 +132,24 @@ CONTAINS
       TYPE(xc_f03_func_info_t)        :: xc_info
 
       xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
-      xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info)) &
-                     .or. xcpot%is_MetaGGA()
+      xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_exc_is_gga=.false.
 #endif
    END FUNCTION xcpot_exc_is_gga
 
-   LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
+   LOGICAL FUNCTION xcpot_exc_is_MetaGGA(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC    
       TYPE(xc_f03_func_info_t)        :: xc_info
 
       xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
-      xcpot_is_MetaGGA=ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
+      xcpot_exc_is_MetaGGA=ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
 #else
-      xcpot_is_MetaGGA =  .False.
+      xcpot_exc_is_MetaGGA =  .False.
 #endif
-   END FUNCTION xcpot_is_MetaGGA
+   END FUNCTION xcpot_exc_is_MetaGGA
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
       IMPLICIT NONE
