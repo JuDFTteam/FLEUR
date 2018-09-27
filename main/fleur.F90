@@ -95,7 +95,7 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
-    TYPE(t_potden)                  :: inDen, outDen
+    TYPE(t_potden)                  :: inDen, outDen, kinEnergyDen
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -343,10 +343,9 @@ CONTAINS
 
           ! charge density generation
           CALL timestart("generation of new charge density (total)")
-          CALL outDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-          outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,xcpot,archiveType,outDen,kinEnergyDen)
+          outDen%iter = inDen%iter
 
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                                   sphhar,sym,field,vTot,oneD,noco,results)

@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                  archiveType,outDen)
+                  xcpot, archiveType,outDen, kinEnergyDen)
 
    !*****************************************************
    !    Charge density generator
@@ -62,7 +62,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
-   TYPE(t_potden),INTENT(INOUT)     :: outDen
+   CLASS(t_xcpot),INTENT(IN)        :: xcpot
+   TYPE(t_potden),INTENT(INOUT)     :: outDen, kinEnergyDen
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -91,6 +92,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
+   CALL outDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -104,6 +106,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
+
+      !IF(xcpot%is_MetaGGA()) THEN
+         !CALL bla
+      !ENDIF
    END DO
 
    IF (mpi%irank == 0) THEN

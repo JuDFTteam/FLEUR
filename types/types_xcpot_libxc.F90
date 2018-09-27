@@ -89,10 +89,10 @@ CONTAINS
       END IF
 
       !check if any potental is a MetaGGA
-      IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%func_vxc_x))) THEN
+      IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_x))) THEN
          call juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
-      ELSEIF(xcpot%func_vxc_id>0) THEN
-         IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%func_vxc_c))) THEN
+      ELSEIF(xcpot%func_vxc_id_c>0) THEN
+         IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_c))) THEN
             call juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
          ENDIF
       ENDIF
