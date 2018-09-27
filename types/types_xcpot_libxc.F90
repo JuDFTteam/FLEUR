@@ -221,7 +221,7 @@ CONTAINS
       !libxc uses the spin as a first index, hence we have to transpose....
       ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
       ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
-      IF (xcpot%vxc_is_gga()) THEN
+      IF (xcpot%needs_grad()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          ALLOCATE(vsigma,mold=grad%vsigma)
          !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
@@ -265,12 +265,17 @@ CONTAINS
             CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
             exc=exc+excc
          END IF
-      ELSE  !LDA potentials
+      ELSEIF(xcpot%exc_is_LDA()) THEN  !LDA potentials
          CALL xc_f03_lda_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
          IF (xcpot%func_exc_id_c>0) THEN
             CALL xc_f03_lda_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
             exc=exc+excc
          END IF
+      ELSEIF(xcpot%exc_is_MetaGGA()) THEN
+         !call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, transpose(grad%laplace)
+         write (*,*) "have to implement that"
+      ELSE
+         call juDFT_error("exc is part of a known Family", calledby="xcpot_get_exc@libxc")
       ENDIF
 
 #endif

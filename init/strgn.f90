@@ -63,7 +63,7 @@ CONTAINS
     !
     !WRITE (*,*) ' stars are always ordered '
 
-    l_xcExtended = xcpot%vxc_is_gga()
+    l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
     CALL readStars(stars,l_xcExtended,.TRUE.,l_error)
     IF(.NOT.l_error) THEN
@@ -383,7 +383,7 @@ CONTAINS
                 stars%igfft2(kidx2,2) = kfft
                 stars%pgfft2(kidx2)   = phas(n)
                 !+guta
-                IF (xcpot%vxc_is_gga()) THEN
+                IF (xcpot%needs_grad()) THEN
                    !!                   pgft2x: exp(i*(gfx,gfy,gfz)*tau)*gfx.
                    !!                        y                             y.
                    !!                   pgft2xx: exp(i*(gfx,gfy,gfz)*tau)*gfx*gfx.
@@ -610,7 +610,7 @@ CONTAINS
     !
     WRITE (*,*) ' stars are always ordered '
 
-    l_xcExtended = xcpot%vxc_is_gga()
+    l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
     CALL readStars(stars,l_xcExtended,.FALSE.,l_error)
     IF(.NOT.l_error) THEN
@@ -856,7 +856,7 @@ CONTAINS
          judft_error("BUG 1 in strgen") 
     stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0
-    IF (xcpot%vxc_is_gga()) THEN
+    IF (xcpot%needs_grad()) THEN
        stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0 
     ENDIF
 

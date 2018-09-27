@@ -86,7 +86,7 @@ CONTAINS
           ifftd2 = 9*stars%mx1*stars%mx2
           IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
 
-          IF (.NOT.xcpot%vxc_is_gga()) THEN  ! LDA
+          IF (.NOT.xcpot%needs_grad()) THEN  ! LDA
 
              IF (.NOT.oneD%odi%d1) THEN
                 CALL vvacxc(ifftd2,stars,vacuum,xcpot,input,noco,Den,vTot,exc)
@@ -114,7 +114,7 @@ CONTAINS
        CALL timestart("Vxc in interstitial")
 
        
-       IF ( (.NOT. obsolete%lwb) .OR. ( .not.xcpot%vxc_is_gga() ) ) THEN
+       IF ( (.NOT. obsolete%lwb) .OR. ( .not.xcpot%needs_grad() ) ) THEN
           ! no White-Bird-trick
           CALL vis_xc(stars,sym,cell,den,xcpot,input,noco,vTot,vx,exc)
 

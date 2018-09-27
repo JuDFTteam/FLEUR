@@ -218,7 +218,7 @@
              rhoss(i,ispin) = rhoss(i,ispin) / (fpi_const*rad(i)**2)
            ENDDO
          ENDDO
-         IF (xcpot%vxc_is_gga()) THEN
+         IF (xcpot%needs_grad()) THEN
             CALL potl0(xcpot,DIMENSION%msh,DIMENSION%jspd,input%jspins,n,&
                        atoms%dx(ntyp), rad, rhoss, vxc)
          ELSE

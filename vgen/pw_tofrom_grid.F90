@@ -35,7 +35,7 @@ CONTAINS
       
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-    IF (xcpot%vxc_is_gga()) THEN
+    IF (xcpot%needs_grad()) THEN
        ALLOCATE ( igxc_fft(0:ifftxc3d-1),gxc_fft(0:ifftxc3d-1,3) )
        CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
     ENDIF
@@ -99,7 +99,7 @@ CONTAINS
     
     ! Allocate arrays
     ALLOCATE( bf3(0:ifftd-1))
-    IF (xcpot%vxc_is_gga()) THEN
+    IF (xcpot%needs_grad()) THEN
        IF (PRESENT(rho)) ALLOCATE(rho(0:ifftxc3d-1,jspins))
        ALLOCATE( ph_wrk(0:ifftxc3d-1),rhd1(0:ifftxc3d-1,jspins,3))
         ALLOCATE( rhd2(0:ifftxc3d-1,jspins,6) )
@@ -107,7 +107,7 @@ CONTAINS
         IF (PRESENT(rho)) ALLOCATE(rho(0:ifftd-1,jspins))
      ENDIF
     IF (l_noco)  THEN
-       IF (xcpot%vxc_is_gga()) THEN
+       IF (xcpot%needs_grad()) THEN
           ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
           ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
        ELSE
@@ -117,7 +117,7 @@ CONTAINS
     IF (PRESENT(rho)) THEN
     !Put den_pw on grid and store into rho(:,1:2)
        DO js=1,jspins
-          IF (xcpot%vxc_is_gga()) THEN
+          IF (xcpot%needs_grad()) THEN
              CALL fft3dxc(rho(0:,js),bf3, den_pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
                   stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
           ELSE
@@ -127,7 +127,7 @@ CONTAINS
 
        IF (l_noco) THEN  
           !  Get mx,my on real space grid and recalculate rho and magmom
-          IF (xcpot%vxc_is_gga()) THEN
+          IF (xcpot%needs_grad()) THEN
              CALL fft3dxc(mx,my, den_pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
                   stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
           ELSE
@@ -141,7 +141,7 @@ CONTAINS
           END DO
        ENDIF
     ENDIF
-    IF (xcpot%vxc_is_gga()) THEN  
+    IF (xcpot%needs_grad()) THEN  
 
     ! In collinear calculations all derivatives are calculated in g-spce,
     ! in non-collinear calculations the derivatives of |m| are calculated in real space. 
@@ -258,19 +258,19 @@ CONTAINS
     ALLOCATE ( vcon(0:ifftd-1) )
     DO js = 1,SIZE(v_in,2)
        bf3=0.0
-       IF (xcpot%vxc_is_gga()) THEN
+       IF (xcpot%needs_grad()) THEN
           CALL fft3dxc(v_in(0:,js),bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
                stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        ELSE
           vcon(0:)=v_in(0:,js)
           CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
        ENDIF
-       DO k = 1,MERGE(stars%nxc3_fft,stars%ng3,xcpot%vxc_is_gga())
+       DO k = 1,MERGE(stars%nxc3_fft,stars%ng3,xcpot%needs_grad())
           v_out_pw(k,js) = v_out_pw(k,js) + fg3(k)
        ENDDO
 
        IF (l_pw_w) THEN
-          IF (xcpot%vxc_is_gga()) THEN
+          IF (xcpot%needs_grad()) THEN
              !----> Perform fft transform: v_xc(star) --> vxc(r) 
              !     !Use large fft mesh for convolution
              fg3(stars%nxc3_fft+1:)=0.0

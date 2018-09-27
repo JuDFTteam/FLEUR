@@ -57,7 +57,7 @@ CONTAINS
 
     CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
 
-    IF (xcpot%vxc_is_gga()) THEN
+    IF (xcpot%needs_grad()) THEN
        SELECT TYPE(xcpot)
        TYPE IS (t_xcpot_libxc)
           CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)

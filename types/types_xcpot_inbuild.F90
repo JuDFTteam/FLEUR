@@ -210,7 +210,7 @@ CONTAINS
       vxc(:,:) = 0.0
       ngrid=SIZE(rh,1)
 
-      IF (xcpot%vxc_is_gga()) THEN
+      IF (xcpot%needs_grad()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN    ! local pw91
             CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),&
