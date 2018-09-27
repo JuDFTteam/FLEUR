@@ -49,6 +49,8 @@ MODULE m_types_xcpot_inbuild
 
    CONTAINS
       !overloading t_xcpot:
+      PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
+      PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA
       PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
       PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
@@ -112,6 +114,22 @@ CONTAINS
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
+  
+   !! LDA
+
+   LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vxc_is_LDA=priv_gga(xcpot%icorr)
+   END FUNCTION xcpot_vxc_is_LDA
+
+   LOGICAL FUNCTION xcpot_exc_is_LDA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_exc_is_LDA = xcpot%vxc_is_LDA()
+   END FUNCTION xcpot_exc_is_LDA
+
+   !! GGA
 
    LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE

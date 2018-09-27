@@ -27,6 +27,8 @@ MODULE m_types_xcpot_libxc
       INTEGER          :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
       INTEGER          :: jspins
    CONTAINS
+      PROCEDURE        :: vxc_is_LDA          => xcpot_vxc_is_LDA
+      PROCEDURE        :: exc_is_LDA          => xcpot_exc_is_LDA
       PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
       PROCEDURE        :: exc_is_gga          => xcpot_exc_is_gga
       PROCEDURE        :: exc_is_MetaGGA      => xcpot_exc_is_MetaGGA
@@ -112,6 +114,34 @@ CONTAINS
 #endif
    END SUBROUTINE xcpot_init
 
+   ! LDA
+   LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_vxc_is_LDA =  XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
+#else
+      xcpot_vxc_is_LDA = .false.
+#endif
+   END FUNCTION xcpot_vxc_is_LDA
+
+   LOGICAL FUNCTION xcpot_exc_is_LDA(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_exc_is_LDA = XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
+#else
+      xcpot_exc_is_LDA = .false.
+#endif
+   END FUNCTION xcpot_exc_is_LDA
+
+   ! GGA
    LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot

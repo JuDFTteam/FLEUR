@@ -19,6 +19,8 @@ MODULE m_types_xcpot
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
    CONTAINS
+      PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
+      PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA
       PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
       PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
       PROCEDURE        :: exc_is_MetaGGA=>xcpot_exc_is_MetaGGA
@@ -48,6 +50,20 @@ MODULE m_types_xcpot
    END TYPE t_gradients
 
 CONTAINS
+   ! LDA
+   LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_vxc_is_LDA=.false.
+   END FUNCTION xcpot_vxc_is_LDA
+
+   LOGICAL FUNCTION xcpot_exc_is_LDA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_exc_is_LDA=.false.
+   END FUNCTION xcpot_exc_is_LDA
+
+   ! GGA
    LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
