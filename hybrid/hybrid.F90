@@ -68,18 +68,21 @@ CONTAINS
     !If this is the first iteration loop we can not calculate a new non-local potential
     hybrid%l_calhf = (results%last_distance.GE.0.0).AND.(results%last_distance.LT.input%minDistance)
     IF(.NOT.hybrid%l_calhf) THEN
-       IF (hybrid%l_addhf) INQUIRE(file="cdnc",exist=hybrid%l_addhf)
        hybrid%l_subvxc = hybrid%l_subvxc.AND.hybrid%l_addhf
        RETURN
     ENDIF
+
+    results%te_hfex%core = 0
 
     !Check if we are converged well enough to calculate a new potential
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
     CALL judft_error("Hybrid functionals do not work in parallel version yet")
     CALL MPI_BCAST(results%last_distance .... 
 #endif
-    
+
+    CALL open_hybrid_io1b(DIMENSION,sym%invs)
     hybrid%l_addhf = .TRUE.
+
     !In first iteration allocate some memory
     IF (init_vex) THEN
        ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf))

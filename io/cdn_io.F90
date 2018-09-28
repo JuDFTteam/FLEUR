@@ -406,7 +406,7 @@ MODULE m_cdn_io
       INTEGER           :: jspinsTemp
       INTEGER           :: date, time, dateTemp, timeTemp
       REAL              :: fermiEnergyTemp, distanceTemp
-      LOGICAL           :: l_qfixTemp
+      LOGICAL           :: l_qfixTemp, l_CheckBroyd
       CHARACTER(LEN=30) :: archiveName
       CHARACTER(LEN=8)  :: dateString
       CHARACTER(LEN=10) :: timeString
@@ -419,6 +419,9 @@ MODULE m_cdn_io
       READ(dateString,'(i8)') date
       READ(timeString,'(i6)') time
 
+      l_CheckBroyd = .TRUE.
+      IF(PRESENT(inFilename)) l_CheckBroyd = .FALSE.
+
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -426,7 +429,7 @@ MODULE m_cdn_io
 
          CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, sphhar, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                                       currentStepfunctionIndex,l_storeIndices)
+                                       currentStepfunctionIndex,l_storeIndices,l_CheckBroyd)
 
          previousDensityIndex = readDensityIndex
          writeDensityIndex = readDensityIndex
@@ -696,20 +699,10 @@ MODULE m_cdn_io
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          WRITE(archiveName,'(a,i0)') '/cdn-', readDensityIndex
-         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_UNDEFINED_const,&
+         CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_IN_const,&
                                   iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                                   previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
-         archiveName = ''
-         WRITE(archiveName,'(a,i0)') '/cdn-', previousDensityIndex
-         l_exist = isDensityEntryPresentHDF(fileID,archiveName,DENSITY_TYPE_NOCO_OUT_const)
-         IF(l_exist) THEN
-            CALL peekDensityEntryHDF(fileID, archiveName, DENSITY_TYPE_NOCO_OUT_const,&
-                                     iter, starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                                     previousDensityIndex, jspins, date, time, distance, fermiEnergy, l_qfix)
-            eFermiPrev = fermiEnergy
-         ELSE
-            l_error = .TRUE.
-         END IF
+         eFermiPrev = fermiEnergy
          CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
@@ -884,7 +877,7 @@ MODULE m_cdn_io
          END IF
 
          IF (l_writeStructure) THEN
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex,.TRUE.)
             CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                     currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
          END IF
@@ -928,7 +921,7 @@ MODULE m_cdn_io
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStarsIndex = currentStarsIndex + 1
-         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
 
          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
@@ -1105,7 +1098,7 @@ MODULE m_cdn_io
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
          currentStepfunctionIndex = currentStepfunctionIndex + 1
-         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars)
+         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
@@ -1391,9 +1384,9 @@ MODULE m_cdn_io
       INTEGER, INTENT(OUT) :: mode
 
       mode = CDN_DIRECT_MODE
-      IF (juDFT_was_argument("-stream_cdn")) THEN
-         mode=CDN_STREAM_MODE
-      END IF
+      !IF (juDFT_was_argument("-stream_cdn")) THEN
+      !   mode=CDN_STREAM_MODE
+      !END IF
       IF (.NOT.juDFT_was_argument("-no_cdn_hdf")) THEN !juDFT_was_argument("-hdf_cdn")) THEN
 #ifdef CPP_HDF
          mode=CDN_HDF5_MODE

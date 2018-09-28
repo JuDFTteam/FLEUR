@@ -46,10 +46,10 @@ CONTAINS
        mode=MEM_mode
 #endif
        !check if default was given on command-line
-       IF (juDFT_was_argument("-mpi")) mode=MPI_mode
-       IF (juDFT_was_argument("-mem")) mode=MEM_mode
-       IF (juDFT_was_argument("-da")) mode=DA_mode
-       IF (juDFT_was_argument("-hdf")) mode=HDF_mode
+       IF (TRIM(juDFT_string_for_argument("-eig"))=="mpi") mode=MPI_mode
+       IF (TRIM(juDFT_string_for_argument("-eig"))=="mem") mode=MEM_mode
+       IF (TRIM(juDFT_string_for_argument("-eig"))=="da") mode=DA_mode
+       IF (TRIM(juDFT_string_for_argument("-eig"))=="hdf") mode=HDF_mode
     ENDIF
     !Check if mode is available
 #ifndef CPP_MPI

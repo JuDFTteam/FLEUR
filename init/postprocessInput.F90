@@ -15,7 +15,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_juDFT
   USE m_types
   USE m_constants
-  USE m_julia
   USE m_lapwdim
   USE m_ylm
   USE m_convndim
@@ -35,7 +34,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_convn
   USE m_efield
   USE m_od_mapatom
-  USE m_kptgen_hybrid
   USE m_od_kptsgen
   USE m_gen_bz
   USE m_nocoInputCheck
@@ -382,8 +380,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         oneD%odd%nop = sym%nop
      END IF
 
-     dimension%nn2d = (2*stars%mx1+1)*(2*stars%mx2+1)
-     dimension%nn3d = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
+     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
+     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
      IF (oneD%odd%d1) THEN
         oneD%odd%k3 = stars%mx3
         oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
@@ -398,9 +396,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
      ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
      ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-     ALLOCATE (stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
+     ALLOCATE (stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
      ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-     ALLOCATE (stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
+     ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
      ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
      stars%sk2(:) = 0.0
@@ -482,7 +480,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Missing xc functionals initializations
      IF (xcpot%is_gga()) THEN
-        ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
+        ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
         ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                   oneD%pgft1xy(0:oneD%odd%nn2d-1),&
                   oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
@@ -540,8 +538,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
-  IF (.NOT.sliceplot%iplot) THEN
-     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  IF (.NOT.sliceplot%iplot) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)

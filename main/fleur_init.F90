@@ -10,9 +10,9 @@
              input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
+          USE m_types
           USE m_judft
           USE m_juDFT_init
-          USE m_types
           USE m_init_wannier_defaults
           USE m_rinpXML
           USE m_postprocessInput
@@ -37,7 +37,9 @@
 
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
+#ifndef CPP_OLDINTEL
           USE m_mpi_dist_forcetheorem
+#endif
 #endif
 #ifdef CPP_HDF
           USE m_hdf_tools
@@ -99,11 +101,9 @@
           INQUIRE(file='inp',exist=l_found)
           IF (input%l_inpXML) THEN
              !xml found, we will use it, check if we also have a inp-file
-             IF (l_found.AND..NOT.(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml"))) &
-                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files or specify -xml to use inp.xml")
+             IF (l_found) &
+                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files")
           ELSE
-             IF(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml")) &
-                  CALL judft_error("inp.xml not found",calledby="fleur_init",hint="You gave the -xml option but provided no inp.xml file")
              IF (.NOT.l_found) CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide either an 'inp' or an 'inp.xml' file in the working directory")
           END IF
 
@@ -158,6 +158,7 @@
           banddos%l_mcd = .FALSE.
           banddos%e_mcd_lo = -10.0
           banddos%e_mcd_up = 0.0
+          banddos%unfoldband = .FALSE.
 
           IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))
@@ -205,7 +206,9 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
+#ifndef CPP_OLDINTEL
              CALL mpi_dist_forcetheorem(mpi,forcetheo)
+#endif
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
@@ -277,6 +280,8 @@
              END IF
           END IF
 
+          ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
+          ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
 #ifdef CPP_MPI
           CALL mpi_bc_all(&
                &           mpi,stars,sphhar,atoms,obsolete,&
@@ -287,8 +292,6 @@
 
           ! Set up pointer for backtransformation from g-vector in positive 
           ! domain of carge density fftibox into stars
-          ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
-          ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
           CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
           atoms%nlotot = 0

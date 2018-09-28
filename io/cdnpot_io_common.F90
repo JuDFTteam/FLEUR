@@ -125,7 +125,7 @@ MODULE m_cdnpot_io_common
 #ifdef CPP_HDF
    SUBROUTINE checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, latharms, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                                       currentStepfunctionIndex,l_storeIndices)
+                                       currentStepfunctionIndex,l_storeIndices,l_CheckBroyd)
 
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -139,6 +139,7 @@ MODULE m_cdnpot_io_common
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(INOUT)     :: currentStarsIndex,currentLatharmsIndex
       INTEGER, INTENT(INOUT)     :: currentStructureIndex,currentStepfunctionIndex
+      LOGICAL, INTENT(IN)        :: l_CheckBroyd
       LOGICAL, INTENT(OUT)       :: l_storeIndices
 
       TYPE(t_stars)        :: starsTemp
@@ -159,7 +160,7 @@ MODULE m_cdnpot_io_common
       IF(currentStructureIndex.EQ.0) THEN
          currentStructureIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
+         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex,l_CheckBroyd)
       ELSE
          CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
          CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
@@ -168,13 +169,13 @@ MODULE m_cdnpot_io_common
             currentStructureIndex = currentStructureIndex + 1
             l_storeIndices = .TRUE.
             l_writeAll = .TRUE.
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex)
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex,l_CheckBroyd)
          END IF
       END IF
       IF (currentStarsIndex.EQ.0) THEN
          currentStarsIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,l_CheckBroyd)
       ELSE
          CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
          l_same = structureIndexTemp.EQ.currentStructureIndex
@@ -185,13 +186,13 @@ MODULE m_cdnpot_io_common
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentStarsIndex = currentStarsIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars)
+            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,l_CheckBroyd)
          END IF
       END IF
       IF (currentLatharmsIndex.EQ.0) THEN
          currentLatharmsIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeLatharmsHDF(fileID, currentLatharmsIndex, currentStructureIndex, latharms)
+         CALL writeLatharmsHDF(fileID, currentLatharmsIndex, currentStructureIndex, latharms,l_checkBroyd)
       ELSE
          CALL peekLatharmsHDF(fileID, currentLatharmsIndex, structureIndexTemp)
          l_same = structureIndexTemp.EQ.currentStructureIndex
@@ -202,14 +203,14 @@ MODULE m_cdnpot_io_common
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentLatharmsIndex = currentLatharmsIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, currentStructureIndex, latharms)
+            CALL writeLatharmsHDF(fileID, currentLatharmsIndex, currentStructureIndex, latharms,l_CheckBroyd)
          END IF
       END IF
       IF(currentStepfunctionIndex.EQ.0) THEN
          currentStepfunctionIndex = 1
          l_storeIndices = .TRUE.
          CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
-                                   currentStructureIndex, stars)
+                                   currentStructureIndex, stars,l_CheckBroyd)
       ELSE
          CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp, structureIndexTemp)
          l_same = (starsIndexTemp.EQ.currentStarsIndex).AND.(structureIndexTemp.EQ.currentStructureIndex)
@@ -221,7 +222,7 @@ MODULE m_cdnpot_io_common
             currentStepfunctionIndex = currentStepfunctionIndex + 1
             l_storeIndices = .TRUE.
             CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
-                                      currentStructureIndex, stars)
+                                      currentStructureIndex, stars,l_CheckBroyd)
          END IF
       END IF
 

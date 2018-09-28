@@ -1,11 +1,13 @@
 stages:
    - build
    - test
+   - coverage
    - deploy
    - build-pgi
    - test-pgi
    - build-intel
    - test-intel
+
 
 build-gfortran:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -27,9 +29,11 @@ test-gfortran:
      paths:
        - build
   script:
-    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";cd /builds/fleur/fleur/build;ctest
+    - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=4;cd /builds/fleur/fleur/build;ctest
   artifacts:
+    when: on_failure
     paths:
+      - build/Testing/failed
       - build/Testing/test.oldlogs
 #  only:
 #    - schedules
@@ -42,9 +46,14 @@ pages:
   cache:
      paths:
        - build
+       - public
   script:
     - cd /builds/fleur/fleur/build ; make doc
     - mv docs/html/ ../public/
+    - mv /builds/fleur/fleur/docs/Docu_main.html ../public/index.html
+  environment:
+    name: Doxygen
+    url: https://fleur.iffgit.fz-juelich.de/fleur
   artifacts:
     paths:
       - public
@@ -90,8 +99,8 @@ build-intel:
      paths:
        - build.intel
   script:
-    - set +e && source compilervars.sh intel64 && set -e
-    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -l intel AUTO ; cd build.intel; make 
+    - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
+    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel AUTO ; cd build.intel; make 
   only:
     - schedules
     - triggers
@@ -105,9 +114,38 @@ test-intel:
      paths:
        - build.intel
   script:
-    - set +e && source compilervars.sh intel64 && set -e
+    - set +e && source compilervars.sh intel64 && set -e; ulimit -s unlimited
     - cd /builds/fleur/fleur/build.intel;ctest
+  artifacts:
+    when: on_failure
+    paths:
+      - build/Testing/failed
+      - build/Testing/test.oldlogs
   only:
      - schedules
      - web
      - triggers
+
+gfortran-coverage:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: coverage
+  cache: 
+     paths:
+        - build
+  script:
+      - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make
+      - lcov --capture --initial -d CMakeFiles -o baseline.info
+      - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";ctest
+      - lcov --capture  -d CMakeFiles -o after.info 
+      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - genhtml combined.info --output-directory html_out
+      - mkdir ../public;mv html_out ../public/coverage_html
+  artifacts:
+    paths:
+      - public 
+  environment:
+    name: Coverage
+    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+  only:
+      - web
+      - schedules

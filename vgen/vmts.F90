@@ -80,10 +80,8 @@ contains
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
 
     vtl(:,:) = cmplx( 0.0, 0.0 )
-#ifdef CPP_MPI
-    call MPI_BCAST( vpw, size(vpw), CPP_MPI_COMPLEX, 0, mpi, ierr )
-#endif
 
+    
     ! q=0 component
     if ( mpi%irank == 0 ) then
       vtl(0,1:atoms%ntype) = sfp_const * vpw(1)
@@ -153,7 +151,8 @@ contains
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
       if ( potdenType == POTDEN_TYPE_POTYUK ) then
-        do concurrent (i = 1:imax)
+        !do concurrent (i = 1:imax)
+        do i = 1,imax
           call ModSphBessel( il(0:,i), kl(0:,i), input%preconditioning_param * atoms%rmsh(i,n), lmax )
         end do
       end if
@@ -189,7 +188,6 @@ contains
         vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
       end do
     end if
-
     end if
 
   end subroutine vmts

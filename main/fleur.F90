@@ -103,7 +103,7 @@ CONTAINS
     INTEGER :: eig_id,archiveType
     INTEGER :: n,iter,iterHF
     LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real
-    REAL    :: fermiEnergyTemp,fix
+    REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr(2)
@@ -145,12 +145,12 @@ CONTAINS
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     IF(mpi%irank.EQ.0) THEN
        CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                        0,fermiEnergyTemp,l_qfix,inDen)
+                        0,results%ef,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-                         0,-1.0,0.0,.FALSE.,inDen)
+                         0,-1.0,results%ef,.FALSE.,inDen)
     END IF
     ! Initialize and load inDen density (end)
 
@@ -192,6 +192,10 @@ CONTAINS
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
        input%total = .TRUE.
+
+#ifdef CPP_CHASE
+       CALL chase_distance(results%last_distance)
+#endif
 
 #ifdef CPP_MPI
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
@@ -243,7 +247,9 @@ CONTAINS
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
           vTemp = vTot
+          CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
+          CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
@@ -253,12 +259,17 @@ CONTAINS
           ! add all contributions to total energy
 #ifdef CPP_MPI
           ! send all result of local total energies to the r
-          IF (mpi%irank==0) THEN
-             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-             CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
-          ELSE
-             CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
-             CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+          IF (hybrid%l_hybrid.AND.hybrid%l_calhf) THEN
+             IF (mpi%irank==0) THEN
+                CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             ELSE
+                CALL MPI_Reduce(results%te_hfex%core,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+             END IF
+             IF (mpi%irank==0) THEN
+                CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%valence,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
+             ELSE
+                CALL MPI_Reduce(results%te_hfex%valence,MPI_IN_PLACE,1,MPI_REAL8,MPI_SUM,0, mpi%mpi_comm,ierr(1))
+             END IF
           END IF
 #endif
 
@@ -343,10 +354,11 @@ CONTAINS
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
 
 #ifdef CPP_MPI
+          CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(enpara%evac0,SIZE(enpara%evac0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-          
+
           IF (noco%l_noco) THEN
              DO n= 1,atoms%ntype
                 IF (noco%l_relax(n)) THEN
@@ -413,17 +425,15 @@ CONTAINS
        l_cont = .TRUE.
        IF (hybrid%l_hybrid) THEN
           IF(hybrid%l_calhf) THEN
-             iterHF = iterHF + 1
              l_cont = l_cont.AND.(iterHF < input%itmax)
              l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
              CALL check_time_for_next_iteration(iterHF,l_cont)
           ELSE
              l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
           END IF
-!!$       IF (hybrid%l_subvxc) THEN
-!!$          results%te_hfex%core    = 0
-!!$          results%te_hfex%valence = 0
-!!$       END IF
+          IF (hybrid%l_subvxc) THEN
+             results%te_hfex%valence = 0
+          END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)

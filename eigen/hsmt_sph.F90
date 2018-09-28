@@ -63,15 +63,15 @@ CONTAINS
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
     plegend=0.0
     plegend(:,0)=1.0
-    qssbti=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
-    qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
+    qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
+    qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
     !$OMP  DO SCHEDULE(DYNAMIC,1)
-    DO  ki =  mpi%n_rank+1, lapw%nv(iintsp), mpi%n_size
+    DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
        kii=(ki-1)/mpi%n_size+1
-       ski = lapw%gvec(:,ki,iintsp) + qssbti
+       ski = lapw%gvec(:,ki,jintsp) + qssbti
        !--->       legendre polynomials
        DO kj = 1,ki
-          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,jintsp),lapw%gk(:,ki,iintsp))
+          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,iintsp),lapw%gk(:,ki,jintsp))
        END DO
        DO l = 1,atoms%lmax(n) - 1
           plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
@@ -82,16 +82,16 @@ CONTAINS
           tnn = tpi_const*atoms%taual(:,nn)
           DO kj = 1,ki
              cph(kj) = cph(kj) +&
-                  CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,jintsp)-qssbtj,tnn)),&
-                  SIN(DOT_PRODUCT(lapw%gvec(:,kj,jintsp)+qssbtj-ski,tnn)))
-             IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
+                  CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,iintsp)-qssbtj,tnn)),&
+                  SIN(DOT_PRODUCT(lapw%gvec(:,kj,iintsp)+qssbtj-ski,tnn)))
+            ! IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
           END DO
        END DO
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        DO  l = 0,atoms%lmax(n)
-          fjkiln = fj(ki,l,iintsp)
-          gjkiln = gj(ki,l,iintsp)
+          fjkiln = fj(ki,l,jintsp)
+          gjkiln = gj(ki,l,jintsp)
           !
           IF (input%l_useapw) THEN
              w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + &
@@ -108,11 +108,11 @@ CONTAINS
           IF (smat%l_real) THEN
              DO kj = 1,ki
                 fct  = plegend(kj,l)*fl2p1(l)*&
-                     ( fjkiln*fj(kj,l,jintsp) + gjkiln*gj(kj,l,jintsp)*ddnln )
+                     ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
                 smat%data_r(kj,kii)=smat%data_r(kj,kii)+REAL(cph(kj))*fct
                 hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + REAL(cph(kj)) * &
                      ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
-                     ( fjkiln*gj(kj,l,jintsp) + gjkiln*fj(kj,l,jintsp) ) )
+                     ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
                 !+APW
                 IF (input%l_useapw) THEN
                    apw1 = REAL(cph(kj)) * plegend(kj,l)  * &
@@ -122,13 +122,13 @@ CONTAINS
                 !-APW
              ENDDO
           ELSE
-             DO kj = 1,ki
+             DO kj = 1,MIN(ki,lapw%nv(iintsp))
                 fct  = chi*plegend(kj,l)*fl2p1(l)*&
-                     ( fjkiln*fj(kj,l,jintsp) + gjkiln*gj(kj,l,jintsp)*ddnln )
+                     ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
 
                 smat%data_c(kj,kii)=smat%data_c(kj,kii) + cph(kj)*fct
                 hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + cph(kj) * ( fct*elall &
-                     + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,jintsp) + gjkiln*fj(kj,l,jintsp) ) )
+                     + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
 
                 IF (input%l_useapw) THEN
                    capw1 = cph(kj)*plegend(kj,l)&

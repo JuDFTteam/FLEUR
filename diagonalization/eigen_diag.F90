@@ -39,7 +39,7 @@ CONTAINS
     parallel_solver_available=any((/diag_elpa,diag_elemental,diag_scalapack/)>0)
   END FUNCTION parallel_solver_available
 
-  SUBROUTINE eigen_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
+  SUBROUTINE eigen_diag(mpi,hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     USE m_lapack_diag
     USE m_magma
     USE m_elpa
@@ -47,10 +47,12 @@ CONTAINS
     USE m_elemental
     USE m_chase_diag
     USE m_types_mpimat
+    USE m_matrix_copy
     IMPLICIT NONE
 #ifdef CPP_MPI
     include 'mpif.h'
 #endif
+    TYPE(t_mpi),               INTENT(IN)    :: mpi
     CLASS(t_mat),              INTENT(INOUT) :: smat,hmat
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev
     INTEGER,                   INTENT(IN)    :: ikpt
@@ -59,15 +61,33 @@ CONTAINS
     INTEGER,                   INTENT(INOUT) :: ne
     REAL,                      INTENT(OUT)   :: eig(:)
 
-    !Locals
+    !Locals  
     LOGICAL :: parallel
+    !For check-mode
+    TYPE(t_mat) :: s_store,h_store
+    
+         
     SELECT TYPE(smat)
     CLASS IS (t_mpimat)
        parallel=.TRUE.
     CLASS default
        parallel=.FALSE.
     END SELECT
-    
+
+    !Create a copy of the matrix if in test mode
+    IF (TRIM(judft_string_for_argument("-diag"))=="test") THEN
+       SELECT TYPE(hmat)
+        CLASS IS (t_mpimat)
+          CALL s_store%init(hmat%l_real,hmat%global_size1,hmat%global_size2)
+          CALL h_store%init(hmat%l_real,hmat%global_size1,hmat%global_size2)
+       CLASS default
+          CALL s_store%init(hmat%l_real,hmat%matsize1,hmat%matsize2)
+          CALL h_store%init(hmat%l_real,hmat%matsize1,hmat%matsize2)
+       END SELECT
+       CALL matrix_copy(smat,s_store)
+       CALL matrix_copy(hmat,h_store)
+    END IF
+       
     CALL timestart("Diagonalization")
     !Select the solver
     SELECT CASE (priv_select_solver(parallel))
@@ -90,11 +110,61 @@ CONTAINS
     CASE (diag_debugout)
        CALL priv_debug_out(smat,hmat)
     END SELECT
+
+    !Create test the solution
+    IF (TRIM(judft_string_for_argument("-diag"))=="test") THEN
+       CALL priv_test_solution(mpi,ne,s_store,h_store,eig,ev)
+       CALL judft_error("Diagonalization tested")
+    END IF
     CALL timestop("Diagonalization")
     !
   END SUBROUTINE eigen_diag
 
 
+  SUBROUTINE priv_test_solution(mpi,ne,s_store,h_store,eig1,ev)
+    USE m_types
+    USE m_lapack_diag
+    USE m_matrix_copy
+    IMPLICIT NONE
+    TYPE(t_mpi),INTENT(in):: mpi
+    INTEGER,INTENT(INOUT) :: ne
+    TYPE(t_mat)           :: s_store,h_store
+    REAL,INTENT(in)       :: eig1(:)
+    CLASS(t_mat)          :: ev
+
+    
+    REAL,ALLOCATABLE::eig2(:)
+    TYPE(t_mat)     ::ev1
+    CLASS(t_mat),ALLOCATABLE    ::ev2
+    INTEGER         :: i,irank
+    
+
+    ALLOCATE(eig2(ne))
+    CALL ev1%init(s_store%l_real,s_store%matsize1,s_store%matsize2)
+    CALL matrix_copy(ev,ev1)
+    
+    IF (mpi%irank==0) THEN
+       CALL lapack_diag(h_store,s_store,ne,eig2,ev2)
+
+       OPEN(99,file="diag.compare")
+       WRITE(99,*) "Eigenvalues"
+       DO i=1,ne
+          WRITE(99,*) i,eig1(i),eig2(i)
+       ENDDO
+       WRITE(99,*) "Eigenvectors"
+       DO i=1,ne
+          IF (ev1%l_real) THEN
+             WRITE(99,"(i0,20(1x,f10.5))") i,ev1%data_r(1:10,i)
+             WRITE(99,"(i0,20(1x,f10.5))") i,ev2%data_r(1:10,i)
+          ELSE
+             WRITE(99,"(i0,20(1x,f10.5))") i,ev1%data_c(1:10,i)
+             WRITE(99,"(i0,20(1x,f10.5))") i,ev2%data_c(1:10,i)
+          END IF
+       ENDDO
+       CLOSE(99)
+    END IF
+  END SUBROUTINE priv_test_solution
+  
   SUBROUTINE priv_debug_out(smat,hmat)
     USE m_types
     use m_judft
@@ -153,13 +223,13 @@ CONTAINS
     ENDIF
 
     !check if a special solver was requested
-    IF (juDFT_was_argument("-diag:elpa"))      diag_solver=diag_elpa
-    IF (juDFT_was_argument("-diag:scalapack")) diag_solver=diag_scalapack
-    IF (juDFT_was_argument("-diag:elemental")) diag_solver=diag_elemental
-    IF (juDFT_was_argument("-diag:lapack"))    diag_solver=diag_lapack
-    IF (juDFT_was_argument("-diag:magma"))     diag_solver=diag_magma
-    IF (juDFT_was_argument("-diag:chase"))     diag_solver=diag_chase
-    IF (juDFT_was_argument("-diag:debugout"))  diag_solver=diag_debugout
+    IF (TRIM(juDFT_string_for_argument("-diag"))=="elpa")      diag_solver=diag_elpa
+    IF (trim(juDFT_string_for_argument("-diag"))=="scalapack") diag_solver=diag_scalapack
+    IF (trim(juDFT_string_for_argument("-diag"))=="elemental") diag_solver=diag_elemental
+    IF (trim(juDFT_string_for_argument("-diag"))=="lapack")    diag_solver=diag_lapack
+    IF (trim(juDFT_string_for_argument("-diag"))=="magma")     diag_solver=diag_magma
+    IF (trim(juDFT_string_for_argument("-diag"))=="chase")     diag_solver=diag_chase
+    IF (trim(juDFT_string_for_argument("-diag"))=="debugout")  diag_solver=diag_debugout
     
     !Check if solver is possible
     if (diag_solver<0) call priv_solver_error(diag_solver,parallel)

@@ -228,11 +228,12 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePOTHeaderData
 
-   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars)
+   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, l_checkBroyd)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER,        INTENT(IN) :: starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN) :: stars
+      LOGICAL,        INTENT(IN) :: l_CheckBroyd
 
       INTEGER(HID_T)            :: groupID
       INTEGER                   :: hdfError, ft2_gf_dim, dimsInt(7)
@@ -267,7 +268,7 @@ MODULE m_cdnpot_io_hdf
 
       INQUIRE(FILE='broyd',EXIST=l_exist)
       IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
-      IF (l_exist) CALL juDFT_warn('Stars change but broyden files detected!')
+      IF (l_exist.AND.l_CheckBroyd) CALL juDFT_warn('Stars change but broyden files detected!')
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
@@ -631,11 +632,12 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekStarsHDF
 
-   SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, structureIndex, stars)
+   SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, structureIndex, stars, l_CheckBroyd)
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex, starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN)    :: stars
+      LOGICAL,        INTENT(IN)    :: l_CheckBroyd
 
       INTEGER                   :: ifftd
 
@@ -658,7 +660,7 @@ MODULE m_cdnpot_io_hdf
 
       INQUIRE(FILE='broyd',EXIST=l_exist)
       IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
-      IF (l_exist) CALL juDFT_warn('Stepfunction change but broyden files detected!')
+      IF (l_exist.AND.l_CheckBroyd) CALL juDFT_warn('Stepfunction change but broyden files detected!')
 
       ifftd = size(stars%ufft)
 
@@ -776,11 +778,12 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekStepfunctionHDF
 
-   SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, structureIndex, latharms)
+   SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, structureIndex, latharms, l_CheckBroyd)
 
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex, structureIndex
       TYPE(t_sphhar), INTENT(IN)  :: latharms
+      LOGICAL,        INTENT(IN)  :: l_CheckBroyd
 
       INTEGER                   :: hdfError
       INTEGER(HID_T)            :: groupID
@@ -804,7 +807,7 @@ MODULE m_cdnpot_io_hdf
 
       INQUIRE(FILE='broyd',EXIST=l_exist)
       IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
-      IF (l_exist) CALL juDFT_warn('Lattice harmonics change but broyden files detected!')
+      IF (l_exist.AND.l_CheckBroyd) CALL juDFT_warn('Lattice harmonics change but broyden files detected!')
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
@@ -949,7 +952,7 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekLatharmsHDF
 
-   SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex)
+   SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex, l_CheckBroyd)
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: structureIndex
@@ -959,6 +962,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_oneD),INTENT(IN)    :: oneD
       TYPE(t_sym),INTENT(IN)     :: sym
+      LOGICAL, INTENT(IN)        :: l_CheckBroyd
 
       INTEGER(HID_T)            :: groupID
       INTEGER                   :: hdfError, i
@@ -1012,7 +1016,7 @@ MODULE m_cdnpot_io_hdf
 
       INQUIRE(FILE='broyd',EXIST=l_exist)
       IF (.NOT.l_exist) INQUIRE(FILE='broyd.7',EXIST=l_exist)
-      IF (l_exist) CALL juDFT_warn('Structure / parameter change but broyden files detected!')
+      IF (l_exist.AND.l_CheckBroyd) CALL juDFT_warn('Structure / parameter change but broyden files detected!')
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 

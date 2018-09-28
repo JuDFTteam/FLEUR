@@ -40,6 +40,8 @@ CONTAINS
     USE m_mpi_bc_potden
 #endif
     USE m_symmetrize_matrix
+    USE m_unfold_band_kpts !used for unfolding bands
+    USE m_types_mpimat
 
     
     IMPLICIT NONE
@@ -91,9 +93,11 @@ CONTAINS
     TYPE(t_lapw)              :: lapw
     CLASS(t_mat), ALLOCATABLE :: zMat
     CLASS(t_mat), ALLOCATABLE :: hmat,smat
+    CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
 
     ! Variables for HF or hybrid functional calculation
-    INTEGER                   ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
+    INTEGER                   :: comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt), dealloc_stat
+    character(len=300)        :: errmsg
     
     call ud%init(atoms,DIMENSION%jspd)
     ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
@@ -129,15 +133,27 @@ CONTAINS
           CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
                              stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
           CALL timestop("Setup of H&S matrices")
-        
+
           IF(hybrid%l_hybrid) THEN
+
+      DO i = 1, hmat%matsize1
+         DO j = 1, i
+            IF (hmat%l_real) THEN
+               IF ((i.LE.5).AND.(j.LE.5)) THEN
+                  WRITE(1233,'(2i7,2f15.8)') i, j, hmat%data_r(i,j), hmat%data_r(j,i)
+               END IF
+            ELSE
+            ENDIF
+         END DO
+      END DO
+
              ! Write overlap matrix smat to direct access file olap
              print *,"Wrong overlap matrix used, fix this later"
              CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk) ! Note: At this moment this only works without MPI parallelization
              PRINT *,"TODO"
 !             STOP "TODO"
              PRINT *,"BASIS:", lapw%nv(jsp), atoms%nlotot
-             IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,hybrid,dimension,kpts,jsp,results,xcpot,hmat)
+             IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,dimension,kpts,jsp,results,xcpot,noco,hmat)
 
              IF(hybrid%l_subvxc) THEN
                 CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
@@ -147,12 +163,36 @@ CONTAINS
 
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
-          if (allocated(zmat)) deallocate(zmat)
+          if (allocated(zmat)) then
+             deallocate(zmat, stat=dealloc_stat, errmsg=errmsg)
+             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for zmat",&
+                                                hint=errmsg, calledby="eigen.F90")
+          endif
+
           !Try to symmetrize matrix
           CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
           
-          CALL eigen_diag(hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
-          DEALLOCATE(hmat,smat)
+          IF (banddos%unfoldband) THEN
+		select type(smat)
+		type is (t_mat)
+			allocate(t_mat::smat_unfold)
+			select type(smat_unfold)
+		             type is (t_mat)
+			     smat_unfold=smat
+			end select
+		type is (t_mpimat)
+			allocate(t_mpimat::smat_unfold)
+			select type(smat_unfold)
+		             type is (t_mpimat)
+			     smat_unfold=smat
+			end select
+		end select
+          END IF
+
+          CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
+          DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
+          if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
+                                             hint=errmsg, calledby="eigen.F90")
 
           ! Output results
           CALL timestart("EV output")
@@ -175,6 +215,14 @@ CONTAINS
           CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
           CALL timestop("EV output")
+
+          IF (banddos%unfoldband) THEN
+               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms)
+	       DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
+          if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
+                                             hint=errmsg, calledby="eigen.F90")
+          END IF
+
        END DO  k_loop
     END DO ! spin loop ends
 
@@ -201,7 +249,7 @@ CONTAINS
 
     IF( input%jspins .EQ. 1 .AND. hybrid%l_hybrid ) THEN
        results%te_hfex%valence = 2*results%te_hfex%valence
-       results%te_hfex%core    = 2*results%te_hfex%core
+       IF(hybrid%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
     END IF
     enpara%epara_min = MINVAL(enpara%el0)
     enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)

@@ -57,9 +57,9 @@
  8040 FORMAT (' -->',i3,1x,4f9.5,' change: ',4l1,' skiplo: ',i3)
 
       IF (film) THEN
-         WRITE (40,FMT=8050) enpara%evac0(1,jspin),enpara%lchg_v(1,jspin),enpara%evac0(2,jspin)
-         WRITE (6,FMT=8050)  enpara%evac0(1,jspin),enpara%lchg_v(1,jspin),enpara%evac0(2,jspin)
-         WRITE (id,FMT=8050) enpara%evac0(1,jspin),enpara%lchg_v(1,jspin),enpara%evac0(2,jspin)
+         WRITE (40,FMT=8050) enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
+         WRITE (6,FMT=8050)  enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
+         WRITE (id,FMT=8050) enpara%evac(1,jspin),enpara%lchg_v(1,jspin),enpara%evac(2,jspin)
  8050    FORMAT ('  vacuum parameter=',f9.5,' change: ',l1,&
      &           ' second vacuum=',f9.5)
       ENDIF
@@ -93,7 +93,7 @@
          !use defaults
          enpara%lchange(:,:,jsp)=.false.
          enpara%llochg(:,:,jsp)=.false.
-         enpara%evac0(:,jsp) = eVac0Default_const
+!         enpara%evac0(:,jsp) = eVac0Default_const
          enpara%skiplo(:,jsp) = 0
          enpara%enmix(jsp) = 0.0
          enpara%lchg_v(:,jsp)=.false.

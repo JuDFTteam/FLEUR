@@ -10,7 +10,7 @@ MODULE m_vgen_xcpot
 CONTAINS
 
   SUBROUTINE vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vXC,results)
+                        obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
 
     !     ***********************************************************
     !     FLAPW potential generator                           *
@@ -25,17 +25,16 @@ CONTAINS
     USE m_types
     USE m_constants
     USE m_intnv
-    USE m_vmtxcg
-    USE m_vmtxc
+    USE m_vmt_xc
     USE m_vvacxc
     USE m_vvacxcg
-    USE m_visxc
-    USE m_visxcg
+    USE m_vis_xc
     USE m_checkdopall
     USE m_cdn_io
     USE m_convol
 
     IMPLICIT NONE
+
 
     CLASS(t_xcpot),    INTENT(IN)              :: xcpot
     TYPE(t_hybrid),    INTENT(IN)              :: hybrid
@@ -53,7 +52,7 @@ CONTAINS
     TYPE(t_sphhar),    INTENT(IN)              :: sphhar
     TYPE(t_atoms),     INTENT(IN)              :: atoms 
     TYPE(t_potden),    INTENT(IN)              :: den,denRot
-    TYPE(t_potden),    INTENT(INOUT)           :: vTot,vXC
+    TYPE(t_potden),    INTENT(INOUT)           :: vTot,vx
     TYPE(t_results),   INTENT(INOUT), OPTIONAL :: results
 
     ! Local type instances
@@ -65,11 +64,16 @@ CONTAINS
     integer:: ierr
 #endif
 
+
     CALL exc%init_potden_types(stars,atoms,sphhar,vacuum,1,.false.,1) !one spin only
-    ALLOCATE(exc%pw_w(stars%ng3,1))
+    ALLOCATE(exc%pw_w(stars%ng3,1));exc%pw_w=0.0
     IF (PRESENT(results)) THEN
        CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.FALSE.,1)
+#ifndef CPP_OLDINTEL
        ALLOCATE(veff%pw_w,mold=veff%pw)
+#else
+       ALLOCATE( veff%pw_w(size(veff%pw,1),size(veff%pw,2)) )
+#endif
     ENDIF
 
     ! exchange correlation potential
@@ -109,17 +113,11 @@ CONTAINS
        ! interstitial region
        CALL timestart("Vxc in interstitial")
 
-       ifftd = 27*stars%mx1*stars%mx2*stars%mx3
-
-       IF ((.NOT.obsolete%lwb).OR.(.NOT.xcpot%is_gga())) THEN
+       
+       IF ( (.NOT. obsolete%lwb) .OR. ( .not.xcpot%is_gga() ) ) THEN
           ! no White-Bird-trick
-          ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+          CALL vis_xc(stars,sym,cell,den,xcpot,input,noco,vTot,vx,exc)
 
-          IF (.NOT.xcpot%is_gga()) THEN  ! LDA
-             CALL visxc(ifftd,stars,noco,xcpot,input,den,vTot,vXC,exc)
-          ELSE ! GGA
-             CALL visxcg(ifftd,stars,sym,ifftxc3d,cell,den,xcpot,input,obsolete,noco,vTot,vXC,exc)
-          END IF
        ELSE
           ! White-Bird-trick
           WRITE(6,'(a)') "W+B trick cancelled out. visxcwb uses at present common block cpgft3.",&
@@ -130,16 +128,20 @@ CONTAINS
        CALL timestop("Vxc in interstitial")
     END IF !irank==0
 
-    ! muffin tin spheres region
-    IF (mpi%irank == 0) CALL timestart ("Vxc in MT")
-#ifdef CPP_MPI
-    CALL MPI_BCAST(den%mt,atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*dimension%jspd,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-#endif
-    IF (xcpot%is_gga()) THEN
-       CALL vmtxcg(dimension,mpi,sphhar,atoms,den,xcpot,input,sym,obsolete,vTot,vXC,exc)
-    ELSE
-       CALL vmtxc(DIMENSION,sphhar,atoms,den,xcpot,input,sym,vTot,exc,vXC)
-    ENDIF
+
+    !
+    !     ------------------------------------------
+    !     ----> muffin tin spheres region
+
+    IF (mpi%irank == 0) THEN
+       CALL timestart ("Vxc in MT")
+    END IF
+
+    CALL vmt_xc(DIMENSION,mpi,sphhar,atoms, den,xcpot,input,sym,&
+         obsolete, vTot,vx,exc)
+    
+
+    !
 
     ! add MT EXX potential to vr
     IF (mpi%irank == 0) THEN
@@ -159,13 +161,16 @@ CONTAINS
           END IF
 
           veff = vTot
-          IF(xcpot%is_hybrid()) THEN
+          IF(xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
              DO ispin = 1, input%jspins
-                CALL convol(stars,vXC%pw_w(:,ispin),vXC%pw(:,ispin),stars%ufft)
+                CALL convol(stars,vx%pw_w(:,ispin),vx%pw(:,ispin),stars%ufft)
              END DO
-             veff%pw   = vTot%pw   - xcpot%get_exchange_weight() * vXC%pw
-             veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight() * vXC%pw_w
-             veff%mt   = vTot%mt   - xcpot%get_exchange_weight() * vXC%mt
+             veff%pw   = vTot%pw   - xcpot%get_exchange_weight() * vx%pw
+             veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight() * vx%pw_w
+             veff%mt   = vTot%mt   - xcpot%get_exchange_weight() * vx%mt
+             exc%pw   = exc%pw   - xcpot%get_exchange_weight() * exc%pw
+             exc%pw_w = exc%pw_w - xcpot%get_exchange_weight() * exc%pw_w
+             exc%mt   = exc%mt   - xcpot%get_exchange_weight() * exc%mt
           END IF
 
           results%te_veff = 0.0

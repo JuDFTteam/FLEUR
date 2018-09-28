@@ -82,6 +82,7 @@
 !   arltv(i)    : length of reciprical lattice vector along
 !                 direction (i)
 !
+      IF (.NOT.xcpot%is_gga()) xcpot%gmaxxc=stars%gmax
       WRITE (6,'('' gmaxxc should be: 2*kmax <= gmaxxc <= gmax '')')
       IF ( abs( xcpot%gmaxxc - stars%gmax ) .le. 10.0**(-6) ) THEN
         WRITE (6,'('' concerning memory, you may want to choose'',&

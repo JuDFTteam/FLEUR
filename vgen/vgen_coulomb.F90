@@ -23,6 +23,7 @@ contains
     !----------------------------------------------------------------------------
 
     use m_constants
+    use m_types
     use m_vmts
     use m_intnv
     use m_vvac
@@ -30,7 +31,6 @@ contains
     use m_vvacxy
     use m_vintcz
     use m_checkdopall
-    use m_types
     use m_od_vvac
     use m_od_vvacis
     use m_convol
@@ -177,7 +177,9 @@ contains
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
-    call MPI_BCAST( den%mt, atoms%jmtd * ( 1 + sphhar%nlhd ) * atoms%ntype * dimension%jspd, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
+    CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but needed anyway????
+    call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
+    CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
     call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), &
                den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )

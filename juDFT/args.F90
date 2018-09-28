@@ -17,12 +17,20 @@ MODULE m_juDFT_args
 PUBLIC
 CONTAINS
   FUNCTION juDFT_was_argument(arg) RESULT(OK)
+    USE m_fleur_arguments
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)::arg
     LOGICAL ok
 
     INTEGER:: i
     CHARACTER(LEN=30)::str
+
+    !check if argument is allowed
+    IF (argument_type(arg)<0) THEN
+       PRINT *,"Argument query invalid:",arg
+       PRINT *,"Add specification for fleur_arguments"
+       STOP "BUG in FLEUR, invalid argument query"
+    END IF
     ok=.FALSE.
     DO i=1,COMMAND_ARGUMENT_COUNT()
        CALL GET_COMMAND_ARGUMENT(i,str)

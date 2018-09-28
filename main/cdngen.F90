@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_cdngen
 
-USE m_juDFT
 
 CONTAINS
 
@@ -22,6 +21,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    USE m_types
    USE m_constants
+   USE m_juDFT
    USE m_prpqfftmap
    USE m_cdnval
    USE m_cdn_io
@@ -36,6 +36,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdncore
    USE m_doswrite
    USE m_Ekwritesl
+   USE m_banddos_io
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -80,6 +81,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !Local Scalars
    REAL                  :: fix, qtot, dummy
    INTEGER               :: jspin, jspmax
+#ifdef CPP_HDF
+   INTEGER(HID_T)        :: banddosFile_id
+#endif
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -97,13 +101,18 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin,sliceplot)
+      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
 
    IF (mpi%irank.EQ.0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
+#ifdef CPP_HDF
+         CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
+         CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+         CALL closeBandDOSFile(banddosFile_id)
+#endif
          CALL timestart("cdngen: dos")
          CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
          IF (banddos%dos.AND.(banddos%ndir.EQ.-3)) THEN
@@ -129,8 +138,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 
-   CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,moments)
+   CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                stars,cell,sphhar,atoms,vTot,outDen,moments,results)
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 

@@ -2,6 +2,14 @@
 
 echo "set(compile_user $USER)" >config.cmake
 
+#Some freqeuntly used Environment variables
+if [ -n "$HDF5_ROOT" ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_ROOT/lib" ; FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_ROOT/include" ; fi
+if [ -n "$HDF5_DIR"} ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_DIR/lib" ; FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_DIR/include" ; fi
+if [ -n "$HDF5_LIB" ] ; then FLEUR_LIBDIR="$FLEUR_LIBDIR $HDF5_LIB" ; fi
+if [ -n "$HDF5_INCLUDE" ] ; then FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_INCLUDE" ; fi
+if [ -n "$HDF5_MODULES" ] ; then FLEUR_INCLUDEDIR="$FLEUR_INCLUDEDIR $HDF5_MODULES" ; fi
+
+
 
 #Set options for linker
 #1. if environment variable FLEUR_LIBRARIES is present use it 
@@ -22,7 +30,8 @@ then
     fi
 fi
 #check the FLEUR_LIBDIR variable
-for lib in $FLEUR_LIBDIR $CLI_LIBDIR
+
+for lib in $FLEUR_LIBDIR $CLI_LIBDIR 
 do
     if [ "cmake_lib" ]
     then
@@ -39,13 +48,13 @@ echo "set(FLEUR_LIBRARIES $cmake_lib)" >>config.cmake
 #2. If CLI_FLAGS is given use that
 #3. If FLEUR_INCLUDEDIR/CLI_INCLUDEDIR is given, add -I options for these
 
-if [ "$CMAKE_Fortan_FLAGS" ]
+if [ "$CMAKE_Fortran_FLAGS" ]
 then
     cmake_flags="$CMAKE_Fortran_FLAGS"
 fi
 if [ "$CLI_FLAGS" ]
 then
-    cmake_flags="$CMAKE_Fortran_FLAGS $cmake_flags"
+    cmake_flags="$CLI_FLAGS $cmake_flags"
 fi
 for lib in $FLEUR_INCLUDEDIR $CLI_INCLUDEDIR
 do
@@ -77,6 +86,11 @@ then
     echo "set(CLI_FLEUR_USE_WANNIER $CLI_USE_WANNIER)"  >>config.cmake
 fi
 
+if [ "$CLI_USE_CHASE" ]
+then
+    echo "set(CLI_FLEUR_USE_CHASE $CLI_USE_CHASE)"  >>config.cmake
+fi
+
 if [ "$CLI_USE_MAGMA" ]
 then
     echo "set(CLI_FLEUR_USE_MAGMA $CLI_USE_MAGMA)"  >>config.cmake
@@ -97,6 +111,11 @@ fi
 if [ "$CLI_ELPA_OPENMP" ]
 then
     echo "set(CLI_ELPA_OPENMP 1)"  >>config.cmake
+fi
+
+if [ "$CLI_WARN_ONLY" ]
+then
+    echo "set(CLI_WARN_ONLY 1)"  >>config.cmake
 fi
 
 

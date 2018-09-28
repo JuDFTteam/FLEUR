@@ -17,11 +17,16 @@ MODULE m_hsohelp
   !
 CONTAINS
   SUBROUTINE hsohelp(DIMENSION,atoms,sym,input,lapw,nsz, cell,&
-       zmat,usdus, zso,noco,oneD, ahelp,bhelp,chelp)
+       zmat,usdus, zso,noco,oneD,&
+       nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     !
-    USE m_abcof
+    USE m_abcof_soc
     USE m_types
     IMPLICIT NONE
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+    INTEGER ierr(3)
+#endif
     TYPE(t_dimension),INTENT(IN)   :: DIMENSION
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
@@ -34,19 +39,18 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     !     ..
+    INTEGER, INTENT (IN) :: nat_start,nat_stop,nat_l
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nsz(DIMENSION%jspd)  
     COMPLEX, INTENT (INOUT) :: zso(:,:,:)!DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: ahelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: bhelp(-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,atoms%nat,DIMENSION%neigd,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,atoms%nat, DIMENSION%jspd)
+    COMPLEX, INTENT (OUT):: ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins)
+    COMPLEX, INTENT (OUT):: bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins)
+    COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,input%jspins)
     TYPE(t_mat),INTENT(IN)      :: zmat(:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
     !-odim
     !+odim
     !     ..
     !     .. Locals ..
-    TYPE(t_atoms)   :: atoms_local
-    TYPE(t_noco)    :: noco_local
     TYPE(t_mat)     :: zMat_local
     INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(DIMENSION%jspd),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
@@ -54,12 +58,7 @@ CONTAINS
     !
     ! turn off the non-collinear part of abcof
     !
-    noco_local=noco
-    noco_local%l_ss   = .FALSE.
     lmd = atoms%lmaxd*(atoms%lmaxd+2)
-    noco_local%qss(:) = 0.0
-    atoms_local=atoms
-    atoms_local%ngopr(:) = 1 ! use unrotated coeffs...
     !
     ! some praparations to match array sizes
     !
@@ -74,7 +73,7 @@ CONTAINS
 
     chelp(:,:,:,:,input%jspins) = CMPLX(0.0,0.0)
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:lmd,atoms%nat),bcof(DIMENSION%neigd,0:lmd,atoms%nat) )
+    ALLOCATE ( acof(DIMENSION%neigd,0:lmd,nat_l),bcof(DIMENSION%neigd,0:lmd,nat_l) )
     DO ispin = 1, input%jspins
        IF (zmat(1)%l_real.AND.noco%l_soc) THEN
           zso(:,1:DIMENSION%neigd,ispin) = CMPLX(zmat(ispin)%data_r(:,1:DIMENSION%neigd),0.0)
@@ -83,46 +82,47 @@ CONTAINS
           zMat_local%matsize2 = DIMENSION%neigd
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,DIMENSION%neigd))
           zMat_local%data_c(:,:) = zso(:,1:DIMENSION%neigd,ispin)
-          CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
+               usdus, noco,ispin,oneD,nat_start,nat_stop,nat_l,&
+               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%data_c)
           !
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
           !
           DO ie = 1, DIMENSION%neigd
-             DO na = 1, atoms%nat
+             DO na = 1, nat_l
                 DO l = 1, atoms%lmaxd
                    ll1 = l*(l+1)
                    DO m = -l,l
                       lm = ll1 + m
-                      ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na))
-                      bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na))
+                      ahelp(lm,na,ie,ispin) = (acof(ie,lm,na))
+                      bhelp(lm,na,ie,ispin) = (bcof(ie,lm,na))
                    ENDDO
                 ENDDO
              ENDDO
           ENDDO
-          chelp(:,:,:,:,ispin) = (chelp(:,:,:,:,ispin))
        ELSE
           zMat_local%l_real = zmat(1)%l_real
           zMat_local%matsize1 = zmat(1)%matsize1
           zMat_local%matsize2 = DIMENSION%neigd
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,DIMENSION%neigd))
           zMat_local%data_c(:,:) = zmat(ispin)%data_c(:,:)
-          CALL abcof(input,atoms_local,sym,cell,lapw,nsz(ispin),&
-               usdus, noco_local,ispin,oneD, acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
+               usdus,noco,ispin,oneD,nat_start,nat_stop,nat_l,&
+               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%data_c)
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham
           !
           DO ie = 1, DIMENSION%neigd
-             DO na = 1, atoms%nat
+             DO na = 1, nat_l
                 DO l = 1, atoms%lmaxd
                    ll1 = l*(l+1)
                    DO m = -l,l
                       lm = ll1 + m
-                      ahelp(m,l,na,ie,ispin) = (acof(ie,lm,na))
-                      bhelp(m,l,na,ie,ispin) = (bcof(ie,lm,na))
+                      ahelp(lm,na,ie,ispin) = (acof(ie,lm,na))
+                      bhelp(lm,na,ie,ispin) = (bcof(ie,lm,na))
                    ENDDO
                 ENDDO
              ENDDO

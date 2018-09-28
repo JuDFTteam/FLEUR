@@ -50,7 +50,7 @@ CONTAINS
     CLASS(t_lapw),INTENT(INOUT)  :: lapw
 
 
-    INTEGER j1,j2,j3,mk1,mk2,mk3,nv
+    INTEGER j1,j2,j3,mk1,mk2,mk3,nv,addX,addY,addZ
     INTEGER ispin,nvh(2)
 
     REAL arltv1,arltv2,arltv3,rkm,rk2,r2,s(3)
@@ -69,9 +69,9 @@ CONTAINS
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-    mk1 = int(input%rkmax/arltv1) + 2
-    mk2 = int(input%rkmax/arltv2) + 2
-    mk3 = int(input%rkmax/arltv3) + 2
+    mk1 = int(input%rkmax/arltv1)+2
+    mk2 = int(input%rkmax/arltv2)+2
+    mk3 = int(input%rkmax/arltv3)+2
 
     rkm = input%rkmax
     rk2 = rkm*rkm
@@ -81,10 +81,13 @@ CONTAINS
     !---> by |G + k +/- qss/2| < rkmax.
     nvh(2)=0
     DO ispin = 1,MERGE(2,1,noco%l_ss)
+       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
+       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
+       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
        nv = 0
-       DO j1 = -mk1,mk1
-          DO j2 = -mk2,mk2
-             DO j3 = -mk3,mk3
+       DO  j1 = -mk1-addX,mk1+addX
+          DO  j2 = -mk2-addY,mk2+addY
+             DO  j3 = -mk3-addZ,mk3+addZ
                 s = lapw%bkpt + (/j1,j2,j3/) + (2*ispin - 3)/2.0*noco%qss
                 r2 = dot_PRODUCT(MATMUL(s,cell%bbmat),s)
                 IF (r2.LE.rk2)  nv = nv + 1
@@ -142,7 +145,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,r2,rk2,rkm,r2q,gla,eps,t
-    INTEGER i,j,j1,j2,j3,k,l ,mk1,mk2,mk3,n,ispin,gmi,m,nred,n_inner,n_bound,itt(3)
+    INTEGER i,j,j1,j2,j3,k,l ,mk1,mk2,mk3,n,ispin,gmi,m,nred,n_inner,n_bound,itt(3),addX,addY,addZ
     !     ..
     !     .. Local Arrays ..
     REAL                :: s(3),sq(3)
@@ -161,6 +164,7 @@ CONTAINS
        lapw%bkpt(:) = kpts%bk(:,nk)
     ENDIF
 
+
     CALL lapw%alloc(cell,input,noco)
 
     ALLOCATE(gvec(3,SIZE(lapw%gvec,2)))
@@ -175,18 +179,21 @@ CONTAINS
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
     !     (add 1+1 due to integer rounding, strange k_vector in BZ)
-    mk1 = int( input%rkmax/arltv1 ) + 4
-    mk2 = int( input%rkmax/arltv2 ) + 4
-    mk3 = int( input%rkmax/arltv3 ) + 4
+    mk1 = int( input%rkmax/arltv1 )+4
+    mk2 = int( input%rkmax/arltv2 )+4
+    mk3 = int( input%rkmax/arltv3 )+4
 
     rk2 = input%rkmax*input%rkmax
     !---> if too many basis functions, reduce rkmax
     spinloop:DO ispin = 1,input%jspins
+       addX = abs(NINT((lapw%bkpt(1)+ (2*ispin - 3)/2.0*noco%qss(1))/arltv1))
+       addY = abs(NINT((lapw%bkpt(2)+ (2*ispin - 3)/2.0*noco%qss(2))/arltv2))
+       addZ = abs(NINT((lapw%bkpt(3)+ (2*ispin - 3)/2.0*noco%qss(3))/arltv3))
        !--->    obtain vectors
        n = 0
-       DO  j1 = -mk1,mk1
-          DO  j2 = -mk2,mk2
-             DO  j3 = -mk3,mk3
+       DO  j1 = -mk1-addX,mk1+addX
+          DO  j2 = -mk2-addY,mk2+addY
+             DO  j3 = -mk3-addZ,mk3+addZ
                 s=lapw%bkpt+(/j1,j2,j3/)+(2*ispin - 3)/2.0*noco%qss
                 sq = lapw%bkpt+ (/j1,j2,j3/)
                 r2 = dot_PRODUCT(s,MATMUL(s,cell%bbmat))
@@ -346,10 +353,14 @@ CONTAINS
     !Count No of lapw distributed to this PE
     lapw%num_local_cols=0
     DO ispin=1,input%jspins
-       DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
-          lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
-       ENDDO
-    ENDDO
+       IF (PRESENT(mpi)) THEN
+          DO k=mpi%n_rank+1,lapw%nv(ispin),mpi%n_size
+             lapw%num_local_cols(ispin)=lapw%num_local_cols(ispin)+1
+          END DO
+       ELSE
+          lapw%num_local_cols(ispin) = lapw%nv(ispin)
+       END IF
+    END DO
 
     IF (ANY(atoms%nlo>0)) CALL priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
 
@@ -451,7 +462,7 @@ CONTAINS
     COMPLEX cwork(-2*atoms%llod:2*atoms%llod+1,2*(2*atoms%llod+1),atoms%nlod ,2)
     !     ..
     !     .. Data statements ..
-    REAL, PARAMETER :: eps = 1.0E-30
+    REAL, PARAMETER :: eps = 1.0E-8
     REAL, PARAMETER :: linindq = 1.0e-4
 
     con1=fpi_const/SQRT(cell%omtil)
@@ -511,7 +522,7 @@ CONTAINS
                             cwork(m,nkvec(lo,iintsp),lo,iintsp) = term1*ylm(lm)
                          END DO
                          CALL orthoglo(&
-                              sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                              sym%invs.and..not.noco%l_noco,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
                             lapw%kvec(nkvec(lo,iintsp),lo,na) = k
                          ELSE
@@ -534,7 +545,7 @@ CONTAINS
                                cwork(mind,nkvec(lo,iintsp),lo,iintsp) = ((-1)** (l+m))*CONJG(term1*ylm(lmp))
                             END DO
                             CALL orthoglo(&
-                                 sym%invs,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                                 sym%invs.and..not.noco%l_noco,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
                                lapw%kvec(nkvec(lo,iintsp),lo,na) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '

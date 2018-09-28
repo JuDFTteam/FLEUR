@@ -4,7 +4,7 @@
 #3. starts the install_XXX.sh script in buildname/external to do the work ....
 
 function compile_external(){
-   
+    echo "Installing $library"  
     if [ ! -r external ]
     then
 	mkdir external
@@ -19,4 +19,5 @@ function compile_external(){
     . install_${library}.sh
 
     cd $here
+    echo "$library done"
 }

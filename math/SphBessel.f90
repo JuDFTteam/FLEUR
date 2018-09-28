@@ -61,13 +61,13 @@ module m_SphBessel
 
 
   interface SphBessel
-    module procedure :: SphBesselComplex, SphBesselReal
+    module procedure  SphBesselComplex, SphBesselReal
   end interface
 
   interface ModSphBessel
     ! variant Complex2 takes workspace as an argument.
     ! this is not possible for the subroutine working on reals.
-    module procedure :: ModSphBesselComplex, ModSphBesselReal, ModSphBesselComplex2
+    module procedure  ModSphBesselComplex, ModSphBesselReal, ModSphBesselComplex2
   end interface
 
 
@@ -112,7 +112,8 @@ contains
     end if
 
     rnm(:) = 1.0
-    PARALLEL_L_LOOP: do concurrent (l = 0: lmax)
+    !PARALLEL_L_LOOP: do concurrent (l = 0: lmax)
+    PARALLEL_L_LOOP: do l = 0,lmax
       if ( abs( z ) >= l + 1.0 ) then
         hl(l) = 0.0
         nl(l) = 0.0

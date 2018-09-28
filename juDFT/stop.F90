@@ -69,7 +69,7 @@ CONTAINS
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,e)
     WRITE(PE,"(i4)") irank
 #else
-    PE="****"
+    PE=" ****"
 #endif
     warn = .FALSE.
     IF (PRESENT(warning)) warn = warning
@@ -126,8 +126,9 @@ CONTAINS
        WRITE(0,"(10(a,/))") (TRIM(text(n)),n=1,linenr)
 
        CALL add_usage_data("Error",message)
+       !$OMP MASTER
        CALL send_usage_data()
-       
+       !$OMP END MASTER
        CALL juDFT_STOP()
     ENDIF
     WRITE(0,*)
@@ -175,6 +176,7 @@ CONTAINS
           CALL endXMLOutput()
        END IF
     END IF
+    IF (TRIM(message)=="") STOP ! simple stop if no end message is given
     WRITE(0,*)
     WRITE(0,*) "*****************************************"
     WRITE(0,*) "Run finished successfully"

@@ -283,7 +283,7 @@ CONTAINS
 
          ! write cmt at irreducible k-points in direct-access file cmt
          CALL write_cmt(cmt,ikpt0)
-         CALL zhlp%alloc(zmat(1)%l_real,zmat(1)%matsize1,zmat(1)%matsize2)
+         CALL zhlp%alloc(zmat(ikpt0)%l_real,zmat(ikpt0)%matsize1,zmat(ikpt0)%matsize2)
         
          IF (zhlp%l_real) THEN
             zhlp%data_r = zmat(ikpt0)%data_r
@@ -294,7 +294,7 @@ CONTAINS
 
          ! generate wavefunctions coefficients at all k-points from
          ! irreducible k-points
-        
+
          DO ikpt = 1, kpts%nkptf
             IF ((kpts%bkp(ikpt).EQ.ikpt0).AND.(ikpt0.NE.ikpt)) THEN
                iop = kpts%bksym(ikpt)

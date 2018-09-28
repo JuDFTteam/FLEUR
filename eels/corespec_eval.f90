@@ -6,9 +6,11 @@
 
 MODULE m_corespec_eval
 
-  USE m_corespec
-  USE m_types
+  USE m_types_setup
+  USE m_types_usdus
+  USE m_types_cdnval, ONLY: t_eigVecCoeffs
   USE m_constants
+  USE m_corespec
 
   IMPLICIT NONE
 
@@ -414,13 +416,13 @@ MODULE m_corespec_eval
 !!$            do m2 = -l2,l2
 !!$              lm2 = l2*(l2+1)+m2
           csv%dosb(1,1,lm1,lm1,iband) = dble(eigVecCoeffs%acof(iband,lm1,iatom,ispin)*&
-               &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))*we(1)
+               &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))!*we(1)
           csv%dosb(1,2,lm1,lm1,iband) = dble(eigVecCoeffs%acof(iband,lm1,iatom,ispin)*&
                &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))
           csv%dosb(2,1,lm1,lm1,iband) = dble(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)*&
                &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))
           csv%dosb(2,2,lm1,lm1,iband) = dble(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)*&
-               &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))*we(1)*usdus%ddn(l1,csi%atomType,ispin)
+               &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))!*we(1)*usdus%ddn(l1,csi%atomType,ispin)
 !!!!! this has to be checked: is >> ddn << factor necessary !!!!!
 !!$        enddo
 !!$        enddo

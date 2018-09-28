@@ -77,7 +77,7 @@ CONTAINS
     INTEGER(HSIZE_T):: dims(7)
     TYPE(t_data_HDF),POINTER::d
     !Set creation and access properties
-#ifdef CPP_MPI
+#ifdef CPP_HDFMPI
     INCLUDE 'mpif.h'
     IF (readonly) THEN
        access_prp=H5P_DEFAULT_f
@@ -115,9 +115,13 @@ CONTAINS
        CALL h5dcreate_f(d%fid, "neig", H5T_NATIVE_INTEGER, spaceid, d%neigsetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !     ew
+       dims(:3)=(/neig,nkpts,jspins/)
+       CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "energy", H5T_NATIVE_DOUBLE, spaceid, d%energysetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !     w_iks
+       dims(:3)=(/neig,nkpts,jspins/)
+       CALL h5screate_simple_f(3,dims(:3),spaceid,hdferr)
        CALL h5dcreate_f(d%fid, "w_iks", H5T_NATIVE_DOUBLE, spaceid, d%wikssetid, hdferr)
        CALL h5sclose_f(spaceid,hdferr)
        !     ev

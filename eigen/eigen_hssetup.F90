@@ -60,8 +60,8 @@ CONTAINS
     ENDIF
     DO i=1,nspins
        DO j=1,nspins
-          CALL smat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot,mpi%sub_comm,.false.)
-          CALL hmat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(i)+atoms%nlotot,mpi%sub_comm,.false.)
+          CALL smat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(j)+atoms%nlotot,mpi%sub_comm,.false.)
+          CALL hmat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(j)+atoms%nlotot,mpi%sub_comm,.false.)
        ENDDO
     ENDDO
 
@@ -80,7 +80,7 @@ CONTAINS
     !Vacuum contributions
     IF (input%film) THEN
        CALL timestart("Vacuum part")
-       CALL hsvac(vacuum,stars,DIMENSION, atoms,mpi,isp,input,v,enpara%evac0,cell,&
+       CALL hsvac(vacuum,stars,DIMENSION, atoms,mpi,isp,input,v,enpara%evac,cell,&
             lapw,sym, noco,hmat,smat)
        CALL timestop("Vacuum part")
     ENDIF

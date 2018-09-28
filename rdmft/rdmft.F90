@@ -14,6 +14,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    USE m_types
    USE m_juDFT
    USE m_constants
+#ifndef CPP_OLDINTEL
    USE m_cdnval
    USE m_cdn_io
    USE m_cdncore
@@ -23,6 +24,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    USE m_intnv
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
+#endif
 #endif
 
    IMPLICIT NONE
@@ -47,6 +49,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    INTEGER,               INTENT(IN)    :: eig_id
 
+#ifndef CPP_OLDINTEL
    TYPE(t_cdnvalJob)                    :: cdnvalJob
    TYPE(t_potden)                       :: singleStateDen, overallDen, overallVCoul
    TYPE(t_regionCharges)                :: regCharges
@@ -59,9 +62,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
 
    REAL, ALLOCATABLE                    :: overallVCoulSSDen(:,:,:)
    REAL, ALLOCATABLE                    :: vTotSSDen(:,:,:)
+#endif
 
    CALL juDFT_error('rdmft not yet implemented!', calledby = 'rdmft')
 
+#ifndef CPP_OLDINTEL
    ! General initializations
    ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
    ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
@@ -144,12 +149,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       jspmax = input%jspins
       IF (noco%l_mperp) jspmax = 1
       DO jspin = 1,jspmax
-         CALL cdnvalJob%init(mpi,input,kpts,banddos,noco,results,jspin)
+         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,banddos=banddos)
          CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
       END DO
-      CALL cdncore(results,mpi,dimension,oneD,input,vacuum,noco,sym,&
-                   stars,cell,sphhar,atoms,vTot,overallDen,moments)
+      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
          CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
       END IF
@@ -201,7 +206,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    ! Calculate final overall density
 
    ! Calculate total energy
-
+#endif
 END SUBROUTINE rdmft
 
 END MODULE m_rdmft

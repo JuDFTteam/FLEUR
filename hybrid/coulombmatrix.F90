@@ -38,6 +38,8 @@ CONTAINS
 
   SUBROUTINE coulombmatrix(mpi,atoms,kpts,cell, sym, hybrid, xcpot,l_restart)
 
+    USE m_types
+    USE m_juDFT
     USE m_constants    , ONLY : pi_const
     USE m_olap         , ONLY : olap_pw,gptnorm
     USE m_trafo        , ONLY : symmetrize,bramat_trafo
@@ -45,7 +47,7 @@ CONTAINS
     USE m_hsefunctional, ONLY : change_coulombmatrix
     USE m_wrapper
     USE m_io_hybrid
-    USE m_types
+
 
     IMPLICIT NONE
 
@@ -62,7 +64,6 @@ CONTAINS
 
 
     ! - local scalars -
-    INTEGER                    :: maxfac
     INTEGER                    :: inviop
     INTEGER                    :: nqnrm,iqnrm,iqnrm1,iqnrm2, iqnrmstart,iqnrmstep
     INTEGER                    :: itype,l ,ix,iy,iy0,i,j,lm,l1,l2,m1, m2,ineq,idum,ikpt,ikpt0,ikpt1
@@ -70,9 +71,10 @@ CONTAINS
     INTEGER                    :: ic,ic1,ic2,ic3,ic4,ic5,ic6,ic7,ic8
     INTEGER                    :: igpt,igpt1,igpt2,igptp,igptp1,igptp2
     INTEGER                    :: isym,isym1,isym2,igpt0
-    INTEGER                    :: maxlcut,ok
+    INTEGER                    :: ok
     INTEGER                    :: m
     INTEGER                    :: ikptmin,ikptmax,nkminmax
+    INTEGER                    :: maxfac
 
     LOGICAL                    :: lsym
 
@@ -82,7 +84,6 @@ CONTAINS
     REAL                       :: time1,time2
 
     COMPLEX                    :: cdum,cdum1,cexp,csum
-    COMPLEX    , PARAMETER     :: img = (0d0,1d0)
 
     ! - local arrays -
     INTEGER                    :: g(3)
@@ -103,12 +104,14 @@ CONTAINS
     REAL                       :: sphbes(atoms%jmtd,0:hybrid%maxlcutm1)
     REAL                       :: sphbesmoment1(atoms%jmtd,0:hybrid%maxlcutm1)
     REAL                       :: rarr(0:hybrid%lexp+1),rarr1(0:hybrid%maxlcutm1)
-    REAL       , ALLOCATABLE   :: fac(:),sfac(:),facfac(:)
     REAL       , ALLOCATABLE   :: gmat(:,:),qnrm(:)
     REAL       , ALLOCATABLE   :: sphbesmoment(:,:,:)
     REAL       , ALLOCATABLE   :: sphbes0(:,:,:)   
     REAL       , ALLOCATABLE   :: olap(:,:,:,:),integral(:,:,:,:)
     REAL       , ALLOCATABLE   :: gridf(:,:)
+    REAL                       :: facA(0:MAX(2*atoms%lmaxd+hybrid%maxlcutm1+1,4*MAX(hybrid%maxlcutm1,hybrid%lexp)+1))
+    REAL                       :: facB(0:MAX(2*atoms%lmaxd+hybrid%maxlcutm1+1,4*MAX(hybrid%maxlcutm1,hybrid%lexp)+1))
+    REAL                       :: facC(-1:MAX(2*atoms%lmaxd+hybrid%maxlcutm1+1,4*MAX(hybrid%maxlcutm1,hybrid%lexp)+1))
 
     COMPLEX                    :: cexp1(atoms%ntype),csumf(9)
     COMPLEX                    :: structconst((2*hybrid%lexp+1)**2 ,atoms%nat,atoms%nat, kpts%nkpt)             ! nw = 1
@@ -133,30 +136,24 @@ CONTAINS
     LOGICAL                    :: l_found,l_warn,l_warned, l_plot = .FALSE.!.true.!.false.
     TYPE(t_mat)                :: olapm,coulhlp
 
-
-
-  
-    CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
-
-  
-    nbasm1    = hybrid%nbasp  + hybrid%ngptm(:)
+    CALL timestart("Coulomb matrix setup")
 
     svol     = SQRT(cell%vol)
     fcoulfac = 4*pi_const/cell%vol
-    maxlcut  = MAXVAL( atoms%lmax ) 
-    maxfac   = MAX(2*maxlcut+hybrid%maxlcutm1+1,4*MAX(hybrid%maxlcutm1,hybrid%lexp)+1)
+    maxfac   = MAX(2*atoms%lmaxd+hybrid%maxlcutm1+1,4*MAX(hybrid%maxlcutm1,hybrid%lexp)+1)
 
-    ALLOCATE ( fac( 0:maxfac),sfac( 0:maxfac),facfac(-1:maxfac) )
-    fac(0)       = 1                    !
-    sfac(0)      = 1                    ! Define:
-    facfac(-1:0) = 1                    ! fac(i)    = i!
-    DO i=1,maxfac                       ! sfac(i)   = sqrt(i!)
-       fac(i)    = fac(i-1)*i            ! facfac(i) = (2i+1)!!
-       sfac(i)   = sfac(i-1)*SQRT(i*1d0) !
-       facfac(i) = facfac(i-1)*(2*i+1)   !
+    facA(0)       = 1                    !
+    facB(0)      = 1                    ! Define:
+    facC(-1:0) = 1                    ! facA(i)    = i!
+    DO i=1,maxfac                       ! facB(i)   = sqrt(i!)
+       facA(i)    = facA(i-1)*i            ! facC(i) = (2i+1)!!
+       facB(i)   = facB(i-1)*SQRT(i*1d0) !
+       facC(i) = facC(i-1)*(2*i+1)   !
     END DO
 
+    CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
 
+    nbasm1    = hybrid%nbasp  + hybrid%ngptm(:)
 
     !     Calculate the structure constant
     CALL structureconstant(structconst,cell,hybrid, atoms,kpts, mpi)
@@ -178,12 +175,10 @@ CONTAINS
 
     IF ( mpi%irank == 0 ) WRITE(6,'(/A,F6.1," MB")') 'Size of coulomb matrix:',16d0/1048576*SIZE(coulomb)
 
-    !
     !     Generate Symmetry:
     !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
-    !
-#     ifndef CPP_NOCOULSYM
 
+#ifndef CPP_NOCOULSYM
     IF ( mpi%irank == 0 ) WRITE(6,'(/A)',advance='no') 'Setup for symmetry...'
     CALL cpu_TIME(time1)
     ! calculate rotations in reciprocal space
@@ -270,15 +265,13 @@ CONTAINS
     IF ( mpi%irank == 0 ) WRITE(6,'(2X,A,F8.2,A)') '( Timing:', time2-time1, ' )'
 
     ! no symmetry used
-#     else 
-
+#else 
     ALLOCATE ( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt) )
     DO ikpt = 1,kpts%nkpt
        hybrid%pgptm1(:,ikpt)    = (/ (igpt0, igpt0 = 1,hybrid%maxgptm) /)
        hybrid%ngptm1(ikpt)      = hybrid%ngptm(ikpt)
     END DO
-
-#     endif
+#endif
 
     ! Distribute the work as equally as possible over the processes
     ikptmin  = 1
@@ -304,8 +297,8 @@ CONTAINS
              DO m2=-l2,l2
                 lm2 = lm2 + 1
                 IF(lm2.GT.lm1) EXIT lp1 ! Don't cross the diagonal!
-                gmat(lm1,lm2) = sfac(l1+l2+m2-m1)*sfac(l1+l2+m1-m2)/&
-                     ( sfac(l1+m1)*sfac(l1-m1)*sfac(l2+m2)*sfac(l2-m2) ) /&
+                gmat(lm1,lm2) = facB(l1+l2+m2-m1)*facB(l1+l2+m1-m2)/&
+                     ( facB(l1+m1)*facB(l1-m1)*facB(l2+m2)*facB(l2-m2) ) /&
                      SQRT(1d0*(2*l1+1)*(2*l2+1)*(2*(l1+l2)+1))*(4*pi_const)**1.5d0
                 gmat(lm2,lm1) = gmat(lm1,lm2)
              END DO
@@ -502,7 +495,7 @@ CONTAINS
                                         lm              = l**2 + l + m1 - m2 + 1
                                         idum            = ix*(ix-1)/2+iy
                                         coulmat(iy,ix)  = coulomb(idum,kpts%nkpt)&
-                                             + EXP(img* 2*pi_const * dot_PRODUCT(kpts%bk(:,ikpt),&
+                                             + EXP(CMPLX(0.0,1.0)* 2*pi_const * dot_PRODUCT(kpts%bk(:,ikpt),&
                                              atoms%taual(:,ic2)-atoms%taual(:,ic1))) *rdum * structconst(lm,ic1,ic2,ikpt)
 
                                         coulmat(ix,iy)  = CONJG(coulmat(iy,ix))
@@ -593,7 +586,7 @@ CONTAINS
                       DO itype1=1,atoms%ntype
                          DO ineq1=1,atoms%neq(itype1)
                             ic1  = ic1 + 1
-                            cexp = 4*pi_const * EXP( img * 2*pi_const&
+                            cexp = 4*pi_const * EXP( CMPLX(0.0,1.0) * 2*pi_const&
                                  * ( dot_PRODUCT( kpts%bk(:,ikpt)+hybrid%gptm(:,igptp),atoms%taual(:,ic1) )&
                                  - dot_PRODUCT( kpts%bk(:,ikpt),atoms%taual(:,ic)  ) ) )
 
@@ -601,7 +594,7 @@ CONTAINS
                             DO l1=0,hybrid%lexp
                                l2   = l + l1 ! for structconst
                                idum = 1
-                               cdum = sphbesmoment(l1,itype1,iqnrm) * img**(l1) * cexp
+                               cdum = sphbesmoment(l1,itype1,iqnrm) * CMPLX(0.0,1.0)**(l1) * cexp
                                DO m1=-l1,l1
                                   lm1  = lm1 + 1
                                   m2   = M - m1              ! for structconst
@@ -613,10 +606,10 @@ CONTAINS
 
                             ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
                             IF(ikpt.EQ.1.AND.l.LE.2) THEN
-                               cexp      = EXP(img*2*pi_const * dot_PRODUCT(hybrid%gptm(:,igptp),atoms%taual(:,ic1)))&
+                               cexp      = EXP(CMPLX(0.0,1.0)*2*pi_const * dot_PRODUCT(hybrid%gptm(:,igptp),atoms%taual(:,ic1)))&
                                     * gmat(lm,1) * 4*pi_const/cell%vol
                                csumf(lm) = csumf(lm) - cexp * SQRT(4*pi_const) *&
-                                    img**l * sphbesmoment(0,itype1,iqnrm) / facfac(l-1)
+                                    CMPLX(0.0,1.0)**l * sphbesmoment(0,itype1,iqnrm) / facC(l-1)
                                IF(l.EQ.0) THEN
                                   IF(igpt.NE.1) THEN
                                      csum = csum - cexp * ( sphbesmoment(0,itype1,iqnrm)*atoms%rmt(itype1)**2 -&
@@ -625,7 +618,7 @@ CONTAINS
                                      csum = csum - cexp * atoms%rmt(itype1)**5/30
                                   END IF
                                ELSE IF(l.EQ.1) THEN
-                                  csum = csum + cexp * img * SQRT(4*pi_const)&
+                                  csum = csum + cexp * CMPLX(0.0,1.0) * SQRT(4*pi_const)&
                                        * sphbesmoment(1,itype1,iqnrm) * y(lm) / 3
                                END IF
                             END IF
@@ -635,12 +628,12 @@ CONTAINS
 
                       ! add contribution of (2a) to csumf
                       IF(ikpt.EQ.1.AND.igpt.EQ.1.AND.l.LE.2) THEN
-                         csumf(lm)=csumf(lm) + (4*pi_const)**2 * img**l / facfac(l)
+                         csumf(lm)=csumf(lm) + (4*pi_const)**2 * CMPLX(0.0,1.0)**l / facC(l)
                       END IF
 
                       ! finally define coulomb
                       idum = ix*(ix-1)/2
-                      cdum = (4*pi_const)**2 * img**(l) * y(lm) * EXP(img * 2*pi_const&
+                      cdum = (4*pi_const)**2 * CMPLX(0.0,1.0)**(l) * y(lm) * EXP(CMPLX(0.0,1.0) * 2*pi_const&
                            * dot_PRODUCT(hybrid%gptm(:,igptp),atoms%taual(:,ic)))
                       DO n=1,hybrid%nindxm1(l,itype)
                          iy = iy + 1
@@ -720,7 +713,7 @@ CONTAINS
                 DO ineq=1,atoms%neq(itype)
                    ic                = ic + 1
                    smat(igpt1,igpt2) = smat(igpt1,igpt2)&
-                        + rdum * EXP( img * 2*pi_const * dot_PRODUCT(atoms%taual(:,ic),g) )
+                        + rdum * EXP( CMPLX(0.0,1.0) * 2*pi_const * dot_PRODUCT(atoms%taual(:,ic),g) )
                 END DO
              END DO
           END IF
@@ -782,11 +775,11 @@ CONTAINS
           DO l=0,hybrid%lexp
              DO M=-l,l
                 lm              = lm + 1
-                carr2a(lm,igpt) = 4*pi_const * img**(l) * y(lm)
+                carr2a(lm,igpt) = 4*pi_const * CMPLX(0.0,1.0)**(l) * y(lm)
              END DO
           END DO
           DO ic = 1,atoms%nat
-             carr2b(ic,igpt) = EXP ( -img * 2*pi_const * &
+             carr2b(ic,igpt) = EXP ( -CMPLX(0.0,1.0) * 2*pi_const * &
                   dot_PRODUCT(kpts%bk(:,ikpt)+hybrid%gptm(:,igptp),atoms%taual(:,ic)) )
           END DO
        END DO
@@ -891,7 +884,7 @@ CONTAINS
                 DO itype2 = 1,atoms%ntype
                    DO ineq2 = 1,atoms%neq(itype2)
                       ic2  = ic2 + 1
-                      cdum = EXP ( img * 2*pi_const *&
+                      cdum = EXP ( CMPLX(0.0,1.0) * 2*pi_const *&
                            ( - dot_PRODUCT(hybrid%gptm(:,igptp1),atoms%taual(:,ic1))&
                            + dot_PRODUCT(hybrid%gptm(:,igptp2),atoms%taual(:,ic2)) ) )
                       coulomb(idum,1) = coulomb(idum,1) + rdum * cdum * (&
@@ -926,7 +919,7 @@ CONTAINS
              DO itype2 = 1,atoms%ntype
                 DO ineq2 = 1,atoms%neq(itype2)
                    ic2  = ic2 + 1
-                   cdum = EXP ( img * 2*pi_const * dot_PRODUCT(hybrid%gptm(:,igptp2),atoms%taual(:,ic2)) )
+                   cdum = EXP ( CMPLX(0.0,1.0) * 2*pi_const * dot_PRODUCT(hybrid%gptm(:,igptp2),atoms%taual(:,ic2)) )
                    coulomb(idum,1) = coulomb(idum,1)&
                         + rdum * cdum * atoms%rmt(itype1)**3 * (&
                         + sphbesmoment(0,itype2,iqnrm2) / 30 * atoms%rmt(itype1)**2&
@@ -996,7 +989,7 @@ CONTAINS
                 DO ineq=1,atoms%neq(itype)
                    ic           = ic + 1
                    cexp1(itype) = cexp1(itype) +&
-                        EXP(img * 2*pi_const * dot_PRODUCT(&
+                        EXP(CMPLX(0.0,1.0) * 2*pi_const * dot_PRODUCT(&
                         (hybrid%gptm(:,igptp2)-hybrid%gptm(:,igptp1)),atoms%taual(:,ic)) )
                 ENDDO
              ENDDO
@@ -1034,7 +1027,7 @@ CONTAINS
     !
     !     Symmetry-equivalent G vectors
     !
-#     ifndef CPP_NOCOULSYM
+#ifndef CPP_NOCOULSYM
 
     IF ( mpi%irank == 0 ) WRITE(6,'(A)',advance='no') 'Symm.-equiv. matrix elements...'
     CALL cpu_TIME(time1)
@@ -1105,7 +1098,7 @@ CONTAINS
     END IF
 
     ! no symmetry used
-#     else
+#else
 
     ALLOCATE( nsym_gpt(hybrid%gptmd,kpts%nkpt),sym_gpt(1,hybrid%gptmd,kpts%nkpt) )
     nsym_gpt = 1
@@ -1113,7 +1106,7 @@ CONTAINS
        sym_gpt(1,:,ikpt) = (/ (igpt0, igpt0=1,hybrid%gptmd) /)
     END DO
 
-#     endif
+#endif
 
 1   DEALLOCATE (qnrm,pqnrm)
    
@@ -1132,7 +1125,7 @@ CONTAINS
             coulomb)
 #endif
     ELSE
-       IF ( ikptmin == 1 ) CALL subtract_sphaverage()
+       IF ( ikptmin == 1 ) CALL subtract_sphaverage(sym,cell,atoms,kpts,hybrid,nbasm1,gridf,coulomb)
     END IF
 
     ! transform Coulomb matrix to the biorthogonal set
@@ -1221,24 +1214,24 @@ CONTAINS
     if (sym%invs) THEN
        ALLOCATE( coulomb_mt2_r(hybrid%maxindxm1-1,-hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat,1) )
        ALLOCATE( coulomb_mt3_r(hybrid%maxindxm1-1,atoms%nat,atoms%nat,1) )
-#     ifdef CPP_IRCOULOMBAPPROX
+#ifdef CPP_IRCOULOMBAPPROX
        ALLOCATE( coulomb_mtir_r(ic,ic+hybrid%maxgptm,1) )
        coulomb_mtir_r=0
        ALLOCATE( coulombp_mtir_r(0,0) )
-#     else
+#else
        ALLOCATE( coulomb_mtir_r(ic+hybrid%maxgptm,ic+hybrid%maxgptm,1) )
        ALLOCATE( coulombp_mtir_r(idum,1) )
-#     endif
+#endif
     else
         ALLOCATE( coulomb_mt2_c(hybrid%maxindxm1-1,-hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1+1,atoms%nat,1) )
        ALLOCATE( coulomb_mt3_c(hybrid%maxindxm1-1,atoms%nat,atoms%nat,1) )
-#     ifdef CPP_IRCOULOMBAPPROX
+#ifdef CPP_IRCOULOMBAPPROX
        ALLOCATE( coulomb_mtir_c(ic,ic+hybrid%maxgptm,1) )
        ALLOCATE( coulombp_mtir_c(0,0) )
-#     else
+#else
        ALLOCATE( coulomb_mtir_c(ic+hybrid%maxgptm,ic+hybrid%maxgptm,1) )
        ALLOCATE( coulombp_mtir_c(idum,1) )
-#    endif
+#endif
     endif
     DO ikpt = ikptmin,ikptmax
        ikpt0 = 1
@@ -1248,8 +1241,8 @@ CONTAINS
           coulomb_mt1 = 0 ; coulomb_mt2_r   = 0 
           coulomb_mt3_r = 0 ; coulombp_mtir_r = 0
        else
-          coulomb_mt1 = 0 ; coulomb_mt2_r   = 0 
-          coulomb_mt3_r = 0 ; coulombp_mtir_r = 0
+          coulomb_mt1 = 0 ; coulomb_mt2_c   = 0 
+          coulomb_mt3_c = 0 ; coulombp_mtir_c = 0
        endif
        ! unpack coulomb into coulhlp
       
@@ -1468,7 +1461,7 @@ CONTAINS
        !
        ! add ir part to the matrix coulomb_mtir
        !
-#       ifndef CPP_IRCOULOMBAPPROX
+#ifndef CPP_IRCOULOMBAPPROX
        if (sym%invs) THEN
           coulomb_mtir_r(ic+1:ic+hybrid%ngptm(ikpt),ic+1:ic+hybrid%ngptm(ikpt),ikpt1)&
                = coulhlp%data_r(hybrid%nbasp+1:nbasm1(ikpt),hybrid%nbasp+1:nbasm1(ikpt))
@@ -1480,12 +1473,12 @@ CONTAINS
           ic2 = indx1+hybrid%ngptm(ikpt)
           coulombp_mtir_c(:ic2*(ic2+1)/2,ikpt0) = packmat(coulomb_mtir_c(:ic2,:ic2,ikpt1))
        end if
-#       endif
+#endif
 
        if (sym%invs) THEN
-#         ifdef CPP_IRCOULOMBAPPROX
+#ifdef CPP_IRCOULOMBAPPROX
        call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulomb_mtir_r(:,1))
-#         else
+#else
        CALL write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulombp_mtir_r(:,1))
 !!$       print *,"DEBUG"
 !!$       DO n1=1,SIZE(coulomb_mt1,1)
@@ -1497,14 +1490,14 @@ CONTAINS
 !!$             ENDDO
 !!$          ENDDO
 !!$       ENDDO
-#         endif
+#endif
     else
-#         ifdef CPP_IRCOULOMBAPPROX
+#ifdef CPP_IRCOULOMBAPPROX
        call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulomb_mtir_c(:,1))
-#         else
+#else
        call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulombp_mtir_c(:,1))
 
-#         endif
+#endif
     endif
 
     END DO ! ikpt
@@ -1530,118 +1523,130 @@ CONTAINS
        CALL cpu_TIME(time2) 
        WRITE(6,'(2X,A,F8.2,A)') '( Timing:',time2-time1,' )'
     END IF
-     
-  CONTAINS
 
-    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
-    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
-    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-    SUBROUTINE subtract_sphaverage()
-
-      USE m_wrapper
-      USE m_trafo
-      USE m_util
-      IMPLICIT NONE
-
-      ! - local scalars -
-      INTEGER               :: l ,i,j,n,nn,itype,ieq
-
-      ! - local arrays -
-      TYPE (t_mat) :: olap
-      !COMPLEX , ALLOCATABLE :: constfunc(:)  !can also be real in inversion case
-      COMPLEX      :: coeff(nbasm1(1)),cderiv(nbasm1(1),-1:1), claplace(nbasm1(1))
-
-      CALL olap%alloc(sym%invs,hybrid%ngptm(1),hybrid%ngptm(1),0.)
-
-      n  = nbasm1(1)
-      nn = n*(n+1)/2
-      CALL olap_pw ( olap,hybrid%gptm(:,hybrid%pgptm(:hybrid%ngptm(1),1)),hybrid%ngptm(1),atoms,cell )
-
-      ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
-      coeff    = 0
-      cderiv   = 0
-      claplace = 0
-      j        = 0
-      DO itype = 1,atoms%ntype
-         DO ieq = 1,atoms%neq(itype)
-            DO l = 0,hybrid%lcutm1(itype)
-               DO M = -l,l
-                  DO i = 1,hybrid%nindxm1(l,itype)
-                     j = j + 1
-                     IF(l.EQ.0) THEN
-                        coeff(j)    =  SQRT(4*pi_const)&
-                             * intgrf( atoms%rmsh(:,itype)* hybrid%basm1(:,i,0,itype),&
-                             atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)&
-                             / SQRT(cell%vol)
-
-                        claplace(j) = -SQRT(4*pi_const)&
-                             * intgrf(atoms%rmsh(:,itype)**3*hybrid%basm1(:,i,0,itype),&
-                             atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)&
-                             / SQRT(cell%vol)
-
-                     ELSE IF(l.EQ.1) THEN
-                        cderiv(j,M) = -SQRT(4*pi_const/3)*img&
-                             * intgrf(atoms%rmsh(:,itype)**2*hybrid%basm1(:,i,1,itype),&
-                             atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)&
-                             / SQRT(cell%vol)
-                     END IF
-                  END DO
-               END DO
-            END DO
-         END DO
-      END DO
-      IF (olap%l_real) THEN
-         coeff(hybrid%nbasp+1:n) = olap%data_r(1,1:n-hybrid%nbasp)
-      else
-         coeff(hybrid%nbasp+1:n) = olap%data_c(1,1:n-hybrid%nbasp)
-      END IF
-      IF (sym%invs) THEN
-         CALL symmetrize(coeff,       1,nbasm1(1),2,.FALSE.,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-         CALL symmetrize(claplace,    1,nbasm1(1),2,.FALSE.,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-         CALL symmetrize(cderiv(:,-1),1,nbasm1(1),2,.FALSE.,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-         CALL symmetrize(cderiv(:, 0),1,nbasm1(1),2,.FALSE.,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-         CALL symmetrize(cderiv(:, 1),1,nbasm1(1),2,.FALSE.,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-      ENDIF
-      ! Subtract head contributions from coulomb(:nn,1) to obtain the body
-      l = 0
-      DO j = 1,n
-         DO i = 1,j
-            l            = l + 1
-            coulomb(l,1) = coulomb(l,1) - 4*pi_const/3&
-                 * ( dot_PRODUCT(cderiv(i,:),cderiv(j,:))&
-                 + ( CONJG(coeff(i)) * claplace(j)&
-                 + CONJG(claplace(i)) * coeff(j) ) / 2 )
-         END DO
-      END DO
-      coeff(hybrid%nbasp+1)  = 1d0
-      coeff(hybrid%nbasp+2:) = 0d0
-      IF (sym%invs) THEN
-
-         CALL desymmetrize(coeff,1,nbasm1(1),2,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-         CALL   symmetrize(coeff,nbasm1(1),1,1,.FALSE.,&
-              atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
-              hybrid%nindxm1,sym)
-      ENDIF
-      ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
-      ! due to inaccuracies in the overlap matrix (which can make it singular).
-      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybrid%nbasp))**2) + dotprod ( coeff(hybrid%nbasp+1:), MATMUL(olap,coeff(hybrid%nbasp+1:)) ) ) )
-
-    END SUBROUTINE subtract_sphaverage
-
+    CALL timestop("Coulomb matrix setup")
 
   END SUBROUTINE coulombmatrix
+
+  !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
+  !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
+  !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
+  SUBROUTINE subtract_sphaverage(sym,cell,atoms,kpts,hybrid,nbasm1,gridf,coulomb)
+
+    USE m_types
+    USE m_constants
+    USE m_wrapper
+    USE m_trafo
+    USE m_util
+    USE m_olap
+    IMPLICIT NONE
+
+    TYPE(t_sym),    INTENT(IN)    :: sym
+    TYPE(t_cell),   INTENT(IN)    :: cell
+    TYPE(t_atoms),  INTENT(IN)    :: atoms
+    TYPE(t_kpts),   INTENT(IN)    :: kpts
+    TYPE(t_hybrid), INTENT(IN)    :: hybrid
+
+    INTEGER,        INTENT(IN)    :: nbasm1(kpts%nkptf)
+    REAL,           INTENT(IN)    :: gridf(:,:)
+    COMPLEX,        INTENT(INOUT) :: coulomb(hybrid%maxbasm1*(hybrid%maxbasm1+1)/2,kpts%nkpt)
+
+    ! - local scalars -
+    INTEGER               :: l ,i,j,n,nn,itype,ieq,M
+
+    ! - local arrays -
+    TYPE (t_mat) :: olap
+    !COMPLEX , ALLOCATABLE :: constfunc(:)  !can also be real in inversion case
+    COMPLEX      :: coeff(nbasm1(1)),cderiv(nbasm1(1),-1:1), claplace(nbasm1(1))
+
+    CALL olap%alloc(sym%invs,hybrid%ngptm(1),hybrid%ngptm(1),0.)
+
+    n  = nbasm1(1)
+    nn = n*(n+1)/2
+    CALL olap_pw ( olap,hybrid%gptm(:,hybrid%pgptm(:hybrid%ngptm(1),1)),hybrid%ngptm(1),atoms,cell )
+
+    ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
+    coeff    = 0
+    cderiv   = 0
+    claplace = 0
+    j        = 0
+    DO itype = 1,atoms%ntype
+       DO ieq = 1,atoms%neq(itype)
+          DO l = 0,hybrid%lcutm1(itype)
+             DO M = -l,l
+                DO i = 1,hybrid%nindxm1(l,itype)
+                   j = j + 1
+                   IF(l.EQ.0) THEN
+                      coeff(j)    =  SQRT(4*pi_const)&
+                           * intgrf( atoms%rmsh(:,itype)* hybrid%basm1(:,i,0,itype),&
+                           atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)&
+                           / SQRT(cell%vol)
+
+                      claplace(j) = -SQRT(4*pi_const)&
+                           * intgrf(atoms%rmsh(:,itype)**3*hybrid%basm1(:,i,0,itype),&
+                           atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)&
+                           / SQRT(cell%vol)
+
+                   ELSE IF(l.EQ.1) THEN
+                      cderiv(j,M) = -SQRT(4*pi_const/3)*CMPLX(0.0,1.0)&
+                           * intgrf(atoms%rmsh(:,itype)**2*hybrid%basm1(:,i,1,itype),&
+                           atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)&
+                           / SQRT(cell%vol)
+                   END IF
+                END DO
+             END DO
+          END DO
+       END DO
+    END DO
+    IF (olap%l_real) THEN
+       coeff(hybrid%nbasp+1:n) = olap%data_r(1,1:n-hybrid%nbasp)
+    else
+       coeff(hybrid%nbasp+1:n) = olap%data_c(1,1:n-hybrid%nbasp)
+    END IF
+    IF (sym%invs) THEN
+       CALL symmetrize(coeff,       1,nbasm1(1),2,.FALSE.,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+       CALL symmetrize(claplace,    1,nbasm1(1),2,.FALSE.,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+       CALL symmetrize(cderiv(:,-1),1,nbasm1(1),2,.FALSE.,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+       CALL symmetrize(cderiv(:, 0),1,nbasm1(1),2,.FALSE.,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+       CALL symmetrize(cderiv(:, 1),1,nbasm1(1),2,.FALSE.,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+    ENDIF
+    ! Subtract head contributions from coulomb(:nn,1) to obtain the body
+    l = 0
+    DO j = 1,n
+       DO i = 1,j
+          l            = l + 1
+          coulomb(l,1) = coulomb(l,1) - 4*pi_const/3&
+               * ( dot_PRODUCT(cderiv(i,:),cderiv(j,:))&
+               + ( CONJG(coeff(i)) * claplace(j)&
+               + CONJG(claplace(i)) * coeff(j) ) / 2 )
+       END DO
+    END DO
+    coeff(hybrid%nbasp+1)  = 1d0
+    coeff(hybrid%nbasp+2:) = 0d0
+    IF (sym%invs) THEN
+
+       CALL desymmetrize(coeff,1,nbasm1(1),2,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+       CALL   symmetrize(coeff,nbasm1(1),1,1,.FALSE.,&
+            atoms,hybrid%lcutm1,hybrid%maxlcutm1,&
+            hybrid%nindxm1,sym)
+    ENDIF
+    ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
+    ! due to inaccuracies in the overlap matrix (which can make it singular).
+    !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybrid%nbasp))**2) + dotprod ( coeff(hybrid%nbasp+1:), MATMUL(olap,coeff(hybrid%nbasp+1:)) ) ) )
+
+  END SUBROUTINE subtract_sphaverage
 
   !     -----------------------------------------------------------------------------------------------
 
@@ -1697,7 +1702,6 @@ CONTAINS
     REAL                      ::  scale
 
     COMPLEX                   ::  cdum,cexp
-    COMPLEX , PARAMETER       ::  img = (0d0,1d0)
 
     LOGICAL,    SAVE          ::  first = .TRUE.
     ! - local arrays -
@@ -1855,7 +1859,7 @@ CONTAINS
              y = CONJG(y)
              DO ikpt = 1,kpts%nkpt
                 rdum = kpts%bk(1,ikpt)*ptsh(1,i) + kpts%bk(2,ikpt)*ptsh(2,i) + kpts%bk(3,ikpt)*ptsh(3,i)
-                cexp = EXP(img*2*pi_const*rdum)
+                cexp = EXP(CMPLX(0.0,1.0)*2*pi_const*rdum)
                 lm   = 0
                 DO l = 0,maxl
                    IF(ishell.LE.conv(l)) THEN
@@ -1940,12 +1944,12 @@ CONTAINS
                 y(lm+1:lm+2*l+1) = 0
                 lm               = lm + 2*l + 1
              END IF
-             cdum = cdum * img
+             cdum = cdum * CMPLX(0.0,1.0)
           END DO
           DO ic2 = 1,atoms%nat
              DO ic1 = 1,atoms%nat
                 IF(ic2.NE.1.AND.ic1.EQ.ic2) CYCLE
-                cexp = EXP(img*2*pi_const* dot_PRODUCT(ki,atoms%taual(:,ic1)-atoms%taual(:,ic2)))
+                cexp = EXP(CMPLX(0.0,1.0)*2*pi_const* dot_PRODUCT(ki,atoms%taual(:,ic1)-atoms%taual(:,ic2)))
                 DO lm = 1,(maxl+1)**2
                    structconst(lm,ic1,ic2,ikpt) = structconst(lm,ic1,ic2,ikpt) + cexp * y(lm)
                 END DO
@@ -1986,7 +1990,7 @@ CONTAINS
        DO ic1=1,MAX(1,ic2-1)
           a = a + ABS( structconst(1,ic1,ic2,ikpt) -&
                ( structconst(1,ic1,ic2,1) + SQRT(4*pi_const)/cell%vol/rdum**2 *&
-               EXP(-img*2*pi_const*dot_PRODUCT(&
+               EXP(-CMPLX(0.0,1.0)*2*pi_const*dot_PRODUCT(&
                kpts%bk(:,ikpt),atoms%taual(:,ic2)-atoms%taual(:,ic1)))))**2
        END DO
     END DO

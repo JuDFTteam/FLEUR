@@ -2,7 +2,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #These contain functions to be used later on...
 . $DIR/cmake/machines.sh
-.  $DIR/external/install_external.sh
+. $DIR/external/install_external.sh
 
 #variables to store arguments
 
@@ -66,12 +66,24 @@ then
     then
 	echo "OLD build directory found, saved in build.$$"
 	mv $buildname $buildname.$$
+        mkdir $buildname
     else
 	echo "Overwriting old build"
-	rm -r $buildname
+        cd $buildname
+        for file in *
+        do
+          if [[ "$file" == "external" ]] || [[ "$file" == "Testing" ]] 
+          then
+            echo "Keeping $file directory"
+          else
+            rm -r $file
+          fi
+        done
+        cd ..
     fi  
+else
+   mkdir $buildname
 fi
-mkdir $buildname
 cd $buildname
 
 #Now check the machine and set some defaults 
