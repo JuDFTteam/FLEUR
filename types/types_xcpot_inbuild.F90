@@ -265,7 +265,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh, exc,grad)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
 !***********************************************************************
       USE m_xcxal, ONLY : excxal
       USE m_xcwgn, ONLY : excwgn
@@ -286,6 +286,7 @@ CONTAINS
 !c---> charge density
 !c
       REAL,INTENT (IN) :: rh(:,:)
+      
 !c
 !c---> xc energy density
 !c

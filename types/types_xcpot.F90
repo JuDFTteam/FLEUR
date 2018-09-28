@@ -14,10 +14,15 @@
 MODULE m_types_xcpot
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: t_xcpot,t_gradients
+   PUBLIC :: t_xcpot,t_gradients,t_RS_potden
+   
+   TYPE t_RS_potden
+      REAL, ALLOCATABLE  :: is(:,:), mt(:,:)
+   END TYPE t_RS_potden
 
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
+      TYPE(t_RS_potden)        :: kinEnergyDen
    CONTAINS
       PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
       PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA
@@ -48,7 +53,7 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: gr(:,:,:)
       REAL,ALLOCATABLE :: laplace(:,:)
    END TYPE t_gradients
-
+   
 CONTAINS
    ! LDA
    LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
@@ -104,6 +109,8 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad)
+      IMPLICIT NONE
+
       CLASS(t_xcpot),INTENT(IN) :: xcpot
       INTEGER, INTENT (IN)     :: jspins
       !--> charge density
@@ -114,16 +121,22 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
+      USE m_types_misc
+      IMPLICIT NONE
+
       CLASS(t_xcpot),INTENT(IN) :: xcpot
       INTEGER, INTENT (IN)     :: jspins
       !--> charge density
       REAL,INTENT (IN)         :: rh(:,:)
+      !--> kinetic energy density
       !---> xc energy density
       REAL, INTENT (OUT)       :: exc (:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
    END SUBROUTINE xcpot_get_exc
 
    SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
+      IMPLICIT NONE
+
       INTEGER, INTENT (IN)         :: jspins,ngrid
       TYPE(t_gradients),INTENT(INOUT):: grad
 

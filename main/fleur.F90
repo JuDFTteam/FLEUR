@@ -64,6 +64,7 @@ CONTAINS
     USE m_gen_map
     USE m_dwigner
     USE m_ylm
+    USE m_metagga
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -95,7 +96,7 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
-    TYPE(t_potden)                  :: inDen, outDen, kinEnergyDen
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -234,7 +235,7 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                 obsolete,cell,oneD,sliceplot,mpi,results,noco,inDen,vTot,vx,vCoul)
+                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
 #ifdef CPP_MPI
@@ -343,8 +344,10 @@ CONTAINS
 
           ! charge density generation
           CALL timestart("generation of new charge density (total)")
-          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,xcpot,archiveType,outDen,kinEnergyDen)
+          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
+                      DIMENSION,kpts,atoms,sphhar,stars,sym,&
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
+                      archiveType,xcpot,outDen,EnergyDen)
           outDen%iter = inDen%iter
 
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&

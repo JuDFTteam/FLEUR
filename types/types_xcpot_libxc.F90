@@ -11,6 +11,7 @@ MODULE m_types_xcpot_libxc
 #endif
    USE m_types_xcpot
    USE m_judft
+   use m_types_misc
    IMPLICIT NONE
 
 
@@ -23,9 +24,11 @@ MODULE m_types_xcpot_libxc
       TYPE(xc_f03_func_t)      :: vxc_func_x, vxc_func_c
       TYPE(xc_f03_func_t)      :: exc_func_x, exc_func_c
 #endif
-      INTEGER          :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
-      INTEGER          :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
-      INTEGER          :: jspins
+      INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
+      INTEGER                  :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
+      INTEGER                  :: jspins
+
+
    CONTAINS
       PROCEDURE        :: vxc_is_LDA          => xcpot_vxc_is_LDA
       PROCEDURE        :: exc_is_LDA          => xcpot_exc_is_LDA
@@ -256,14 +259,15 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen)
       IMPLICIT NONE
-   CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
-      INTEGER, INTENT (IN)     :: jspins
-      REAL,INTENT (IN) :: rh(:,:)  !points,spin
-      REAL, INTENT (OUT) :: exc(:) !points
+   CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
+      INTEGER, INTENT (IN)           :: jspins
+      REAL,INTENT (IN)               :: rh(:,:)  !points,spin
+      REAL, INTENT (OUT)             :: exc(:) !points
       ! optional arguments for GGA
       TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+      REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen(:,:)
 
       REAL  :: excc(SIZE(exc))
 #ifdef CPP_LIBXC
@@ -281,8 +285,17 @@ CONTAINS
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
-         !call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, transpose(grad%laplace)
-         write (*,*) "have to implement that"
+         IF(PRESENT(kinEnergyDen)) THEN ! patch till vacuum can do LibXC
+            call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
+                                 transpose(grad%laplace), transpose(kinEnergyDen), exc)
+            IF (xcpot%func_exc_id_c>0) THEN
+               CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
+                                    transpose(grad%laplace), transpose(kinEnergyDen), excc)
+               exc=exc+excc
+            END IF
+         ELSE
+            call juDFT_error("MetaGGAs need kinetic energy density", hint="maybe you used vacuum with LibXC")
+         ENDIF
       ELSE
          call juDFT_error("exc is part of a known Family", calledby="xcpot_get_exc@libxc")
       ENDIF

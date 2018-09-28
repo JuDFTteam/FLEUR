@@ -3,15 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
 MODULE m_metagga
-
-    TYPE t_realspace_potden
-        REAL, ALLOCATABLE  :: is(:,:), mt(:,:)
-    END TYPE t_realspace_potden
-
-    PUBLIC  :: calc_EnergyDen
-    PRIVATE :: calc_EnergyDen_auxillary_weights, t_realspace_potden, subtract_RS, multiply_RS
+    PUBLIC  :: calc_EnergyDen, t_RS_potden
+    PRIVATE :: calc_EnergyDen_auxillary_weights, subtract_RS, multiply_RS
 
     INTERFACE OPERATOR (-)
         PROCEDURE subtract_RS
@@ -33,35 +27,36 @@ CONTAINS
         USE m_types_regionCharges
         USE m_types_dos
         USE m_types_cdnval
+        USE m_types_xcpot
         USE m_cdnval
 
 
         IMPLICIT NONE
 
-        INTEGER,                  INTENT(in)           :: eig_id
-        TYPE(t_mpi),              INTENT(in)           :: mpi
-        TYPE(t_kpts),             INTENT(in)           :: kpts
-        TYPE(t_noco),             INTENT(in)           :: noco
-        TYPE(t_input),            INTENT(in)           :: input
-        TYPE(t_banddos),          INTENT(in)           :: banddos
-        TYPE(t_cell),             INTENT(in)           :: cell
-        TYPE(t_potden),           INTENT(in)           :: den
-        TYPE(t_atoms),            INTENT(in)           :: atoms 
-        TYPE(t_enpara),           INTENT(in)           :: enpara
-        TYPE(t_stars),            INTENT(in)           :: stars 
-        TYPE(t_vacuum),           INTENT(in)           :: vacuum 
-        TYPE(t_dimension),        INTENT(in)           :: DIMENSION
-        TYPE(t_sphhar),           INTENT(in)           :: sphhar 
-        TYPE(t_sym),              INTENT(in)           :: sym 
-        TYPE(t_potden),           INTENT(in)           :: vTot
-        TYPE(t_oneD),             INTENT(in)           :: oneD
-        TYPE(t_results),          INTENT(in)           :: results
-        TYPE(t_realspace_potden), INTENT(inout)        :: kinEnergyDen
+        INTEGER,           INTENT(in)           :: eig_id
+        TYPE(t_mpi),       INTENT(in)           :: mpi
+        TYPE(t_kpts),      INTENT(in)           :: kpts
+        TYPE(t_noco),      INTENT(in)           :: noco
+        TYPE(t_input),     INTENT(in)           :: input
+        TYPE(t_banddos),   INTENT(in)           :: banddos
+        TYPE(t_cell),      INTENT(in)           :: cell
+        TYPE(t_potden),    INTENT(in)           :: den
+        TYPE(t_atoms),     INTENT(in)           :: atoms 
+        TYPE(t_enpara),    INTENT(in)           :: enpara
+        TYPE(t_stars),     INTENT(in)           :: stars 
+        TYPE(t_vacuum),    INTENT(in)           :: vacuum 
+        TYPE(t_dimension), INTENT(in)           :: DIMENSION
+        TYPE(t_sphhar),    INTENT(in)           :: sphhar 
+        TYPE(t_sym),       INTENT(in)           :: sym 
+        TYPE(t_potden),    INTENT(in)           :: vTot
+        TYPE(t_oneD),      INTENT(in)           :: oneD
+        TYPE(t_results),   INTENT(in)           :: results
+        TYPE(t_RS_potden), INTENT(inout)        :: kinEnergyDen
 
         ! local vars
 
         TYPE(t_potden)                    :: EnergyDen
-        TYPE(t_realspace_potden)          :: den_RS, EnergyDen_RS, vTot_RS
+        TYPE(t_RS_potden)          :: den_RS, EnergyDen_RS, vTot_RS
 
 
         CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
@@ -183,15 +178,15 @@ CONTAINS
 
         IMPLICIT NONE 
         
-        TYPE(t_potden),           INTENT(in)        :: den, EnergyDen, vTot 
-        TYPE(t_input),            INTENT(in)        :: input
-        TYPE(t_noco),             INTENT(in)        :: noco
-        TYPE(t_sym),              INTENT(in)        :: sym
-        TYPE(t_stars),            INTENT(in)        :: stars
-        TYPE(t_cell),             INTENT(in)        :: cell
-        TYPE(t_atoms),            INTENT(in)        :: atoms
-        TYPE(t_sphhar),           INTENT(in)        :: sphhar
-        TYPE(t_realspace_potden), INTENT(out)       :: den_RS, EnergyDen_RS, vTot_RS ! could be changed to a real-space type
+        TYPE(t_potden),    INTENT(in)        :: den, EnergyDen, vTot 
+        TYPE(t_input),     INTENT(in)        :: input
+        TYPE(t_noco),      INTENT(in)        :: noco
+        TYPE(t_sym),       INTENT(in)        :: sym
+        TYPE(t_stars),     INTENT(in)        :: stars
+        TYPE(t_cell),      INTENT(in)        :: cell
+        TYPE(t_atoms),     INTENT(in)        :: atoms
+        TYPE(t_sphhar),    INTENT(in)        :: sphhar
+        TYPE(t_RS_potden), INTENT(out)       :: den_RS, EnergyDen_RS, vTot_RS ! could be changed to a real-space type
 
         !local vars
         TYPE(t_xcpot_libxc) ::aux_xcpot
@@ -232,25 +227,25 @@ CONTAINS
     END SUBROUTINE transform_to_grid
 
     FUNCTION subtract_RS(rs1, rs2) RESULT(rs_out)
+       USE m_types_xcpot
         IMPLICIT NONE
 
-        TYPE(t_realspace_potden), INTENT(in)  :: rs1, rs2
-        TYPE(t_realspace_potden)              :: rs_out
-
-        WRITE (*,*) "MT subtraction not implemented"
+        TYPE(t_RS_potden), INTENT(in)  :: rs1, rs2
+        TYPE(t_RS_potden)              :: rs_out
 
         rs_out%is = rs1%is - rs2%is 
+        rs_out%mt = rs1%mt - rs2%mt
     END FUNCTION subtract_RS 
 
     FUNCTION multiply_RS(rs1, rs2) RESULT(rs_out)
+       USE m_types_xcpot
         IMPLICIT NONE
         
-        TYPE(t_realspace_potden), INTENT(in)  :: rs1, rs2
-        TYPE(t_realspace_potden)              :: rs_out
+        TYPE(t_RS_potden), INTENT(in)  :: rs1, rs2
+        TYPE(t_RS_potden)              :: rs_out
 
-        WRITE (*,*) "MT multiplication not implemented"
-
-        rs_out%is = rs1%is * rs2%is 
+        rs_out%is = rs1%is * rs2%is
+        rs_out%mt = rs1%mt * rs2%mt
     END FUNCTION multiply_RS
 
 END MODULE m_metagga

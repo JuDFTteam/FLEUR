@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                  xcpot, archiveType,outDen, kinEnergyDen)
+                  archiveType, xcpot,outDen,EnergyDen)
 
    !*****************************************************
    !    Charge density generator
@@ -37,6 +37,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_doswrite
    USE m_Ekwritesl
    USE m_banddos_io
+   USE m_metagga
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -62,8 +63,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
-   CLASS(t_xcpot),INTENT(IN)        :: xcpot
-   TYPE(t_potden),INTENT(INOUT)     :: outDen, kinEnergyDen
+   CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
+   TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -92,7 +93,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
-   CALL outDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+
+   CALL outDen%init(stars,    atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_DEN)
+   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_kinEnergyDen)
 
    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -106,11 +109,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
-
-      !IF(xcpot%is_MetaGGA()) THEN
-         !CALL bla
-      !ENDIF
    END DO
+
+   ! calculate kinetic energy density for MetaGGAs
+   if(xcpot%exc_is_metagga()) then
+      CALL calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, outDen, atoms, enpara, stars,&
+                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, xcpot%kinEnergyDen)
+   endif
 
    IF (mpi%irank == 0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
