@@ -190,6 +190,7 @@ CONTAINS
           END IF
 
           CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
+          CALL smat%free()
           DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
           if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                              hint=errmsg, calledby="eigen.F90")
