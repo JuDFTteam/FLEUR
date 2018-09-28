@@ -5,8 +5,8 @@
 !--------------------------------------------------------------------------------
 MODULE m_totale
 CONTAINS
-  SUBROUTINE totale(atoms,sphhar,stars,vacuum,dimension, &
-       sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,den,results)
+  SUBROUTINE totale(atoms,sphhar,stars,vacuum,dimension,sym,input,noco, &
+       cell,oneD, xcpot,hybrid,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy 
@@ -50,7 +50,6 @@ CONTAINS
     USE m_xmlOutput
     IMPLICIT NONE
 
-    TYPE(t_results),INTENT(INOUT)   :: results
     CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_oneD),INTENT(IN)         :: oneD
     TYPE(t_hybrid),INTENT(IN)       :: hybrid
@@ -65,6 +64,7 @@ CONTAINS
     TYPE(t_dimension),INTENT(IN)    :: dimension
     TYPE(t_potden),INTENT(IN)       :: vTot,vCoul
     TYPE(t_potden),INTENT(IN)       :: den
+    TYPE(t_results),INTENT(INOUT)   :: results
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,INTENT (IN) :: it      
