@@ -82,8 +82,8 @@ module m_vvacxy
             fib(imz)      = aimag( rhtxy(imz,irec2-1,ivac) ) * e_p
             z = z + vacuum%delz
           end do imz_loop1
-          call intgz1( fra, vacuum%delz, ncsh - 1, alpha(1,ivac,1), tail=.false. )
-          call intgz1( fia, vacuum%delz, ncsh - 1, alpha(1,ivac,2), tail=.false. )
+          call intgz1( fra, vacuum%delz, ncsh - 1, alpha(1,ivac,1), .false. )
+          call intgz1( fia, vacuum%delz, ncsh - 1, alpha(1,ivac,2), .false. )
           call qsf( vacuum%delz, frb, beta(1,ivac,1), ncsh - 1, 1 )
           call qsf( vacuum%delz, fib, beta(1,ivac,2), ncsh - 1, 1 )
         end do ivac_loop1
@@ -163,8 +163,8 @@ module m_vvacxy
             frb(ncsh)    = frb(ncsh)    - real(  field%efield%rhoef(irec2-1,ivac) ) * e_p
             fib(ncsh)    = fib(ncsh)    - aimag( field%efield%rhoef(irec2-1,ivac) ) * e_p
           end if
-          call intgz1( fra, vacuum%delz, vacuum%nmzxy, alpha(1,ivac,1), tail=.true. )
-          call intgz1( fia, vacuum%delz, vacuum%nmzxy, alpha(1,ivac,2), tail=.true. )
+          call intgz1( fra, vacuum%delz, vacuum%nmzxy, alpha(1,ivac,1), .true. )
+          call intgz1( fia, vacuum%delz, vacuum%nmzxy, alpha(1,ivac,2), .true. )
           call qsf( vacuum%delz, frb, beta(1,ivac,1), vacuum%nmzxy, 1 )
           call qsf( vacuum%delz, fib, beta(1,ivac,2), vacuum%nmzxy, 1 )
         end do ivac_loop3
