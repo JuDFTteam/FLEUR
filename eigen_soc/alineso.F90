@@ -155,9 +155,9 @@ CONTAINS
     !
     ! set up A and B coefficients
     !
-    ALLOCATE ( ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,DIMENSION%jspd) )
-    ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,DIMENSION%jspd) )
-    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,DIMENSION%jspd) )
+    ALLOCATE ( ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins) )
+    ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins) )
+    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,input%jspins) )
     CALL timestart("alineso SOC: -help") 
     write(*,*) nat_start,nat_stop,nat_l
     CALL hsohelp(&
@@ -177,9 +177,10 @@ CONTAINS
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
     ALLOCATE ( hsomtx(DIMENSION%neigd,DIMENSION%neigd,2,2) )
-    CALL hsoham(atoms,noco,input,nsz,chelp,rsoc,ahelp,bhelp,&
+    CALL hsoham(atoms,noco,input,nsz,dimension%neigd,chelp,rsoc,ahelp,bhelp,&
                 nat_start,nat_stop,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,&
                 hsomtx)
+    write(*,*) 'after hsoham'
     DEALLOCATE ( ahelp,bhelp,chelp )
     CALL timestop("alineso SOC: -ham") 
     IF (mpi%n_rank==0) THEN

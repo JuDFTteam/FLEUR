@@ -167,7 +167,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real    :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(jspd,2))
 !!! the Mmn matrices
       complex, allocatable :: surfcurr(:,:,:,:)
-      complex, allocatable :: hsomtx(:,:,:,:,:)
+      complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
@@ -493,6 +493,7 @@ c##################################################################
 
       if(wann%l_socmat)then
          allocate ( hsomtx(2,2,nbnd,nbnd,fullnkpts) )
+         allocate ( hsomtx_l(nbnd,nbnd,2,2) )
       endif
 
       write (*,*) 'nwfs=',nwfs
@@ -868,7 +869,16 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       jri,lmax,dx,rmsh,epar,ello,nlo,llo,
      >       l_dulo,ulo_der,vTot%mt,
      >       acof,bcof,ccof,
-     <       hsomtx(:,:,:,:,ikpt))
+     <       hsomtx_l)
+        do i1 = 1,2
+         do i2 = 1,2
+          do i = 1,nbnd
+           do j = 1,nbnd
+             hsomtx(i1,i2,i,j,ikpt) = hsomtx_l(i,j,i1,i2)
+           enddo
+          enddo
+         enddo
+        enddo
       endif
 
 #ifdef CPP_TOPO

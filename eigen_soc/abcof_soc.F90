@@ -2,7 +2,7 @@ MODULE m_abcof_soc
 CONTAINS
   SUBROUTINE abcof_soc(input,atoms,sym, cell,lapw,ne,usdus,&
                    noco,jspin,oneD,nat_start,nat_stop,nat_l,&
-                   acof,bcof,ccof,zMat,eig,force)
+                   acof,bcof,ccof,zMat)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
@@ -13,7 +13,6 @@ CONTAINS
     USE m_setabc1lo
     USE m_sphbes
     USE m_dsphbs
-    USE m_abclocdn_soc
     USE m_ylm
     USE m_types
     USE m_juDFT
@@ -27,7 +26,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_mat),INTENT(IN)    :: zMat
-    TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ne,nat_start,nat_stop,nat_l
@@ -37,25 +35,22 @@ CONTAINS
     COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,nat_l)
     COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,nat_l)
     COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,nat_l)
-    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(dimension%neigd)
     !     ..
     !     .. Local Scalars ..
-    COMPLEX cexp,phase,c_0,c_1,c_2
+    COMPLEX cexp,phase,c_0,c_1,c_2,ctmp,term1
     REAL const,df,r1,s,tmk,wronk
-    REAL s2h, s2h_e(ne)
-    INTEGER i,j,k,l,ll1,lm,n,nap,natom,nn,iatom,jatom,lmp,m,nkvec
-    INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,natom_l
-    LOGICAL l_force
+    INTEGER i,j,k,l,ll1,lm,n,natom,nn,iatom,jatom,lmp,m,nkvec,nbasf
+    INTEGER inv_f,ie,ilo,iintsp,nintsp,nvmax,lo,natom_l,na2
     !     ..
     !     .. Local Arrays ..
     INTEGER nbasf0(atoms%nlod,atoms%nat)
-    REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
+    REAL dfj(0:atoms%lmaxd),fj(0:atoms%lmaxd),fg(3),fgp(3),fk(3),fkp(3)
     REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
     COMPLEX ylm( (atoms%lmaxd+1)**2 )
-    COMPLEX ccchi(2,2)
     LOGICAL apw(0:atoms%lmaxd,atoms%ntype)
     REAL,    ALLOCATABLE :: work_r(:)
     COMPLEX, ALLOCATABLE :: work_c(:)
+ !$ COMPLEX, ALLOCATABLE :: acof_l(:,:),bcof_l(:,:),ccof_l(:,:,:)
 
     CALL timestart("abcof")
 
@@ -113,12 +108,16 @@ CONTAINS
                 ENDIF
                 !--->        loop over lapws
 #ifndef CPP_OLDINTEL
-                !$OMP PARALLEL DO &
+                !$OMP PARALLEL &
                 !$OMP& DEFAULT(none)&
-                !$OMP& PRIVATE(k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
-                !$OMP& inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm)&
-                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,eig,l_force,&
-                !$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,force,nat_start,nat_stop)
+                !$OMP& PRIVATE(k,i,work_r,work_c,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,na2,nbasf,&
+                !$OMP& j,fkp,fgp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm,term1,ctmp,acof_l,bcof_l,ccof_l)&
+                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,&
+                !$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,nat_start,nat_stop)
+                !$   ALLOCATE(acof_l(size(acof,1),0:size(acof,2)-1),bcof_l(size(bcof,1),0:size(bcof,2)-1))
+                !$   ALLOCATE(ccof_l(-atoms%llod:atoms%llod,size(ccof,2),size(ccof,3)))
+                !$   acof_l=0 ; bcof_l=0 ; ccof_l=0 
+                !$OMP DO
 #endif
                 DO k = 1,nvmax
                    IF (zmat%l_real) THEN
@@ -146,31 +145,10 @@ CONTAINS
                          fj(l) = const* (df*usdus%uds(l,n,jspin)-fj(l)*usdus%duds(l,n,jspin))/wronk
                       ENDIF
                    ENDDO ! loop over l
-                   tmk = tpi_const* (fk(1)*atoms%taual(1,jatom)+&
-                                     fk(2)*atoms%taual(2,jatom)+&
-                                     fk(3)*atoms%taual(3,jatom))
+                   tmk = tpi_const* DOT_PRODUCT(fk(:),atoms%taual(:,jatom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(jatom)
-                   ELSE
-                      nap = atoms%ngopr(jatom)
-                      inap = sym%invtab(nap)
-                   END IF
-                   DO j = 1,3
-                      fkr(j) = 0.0
-                      fgr(j) = 0.0
-                      DO i = 1,3
-                         IF (oneD%odi%d1) THEN
-                            fkr(j) = fkr(j) + fk(i)*oneD%ods%mrot(i,j,inap)
-                            fgr(j) = fgr(j) + fg(i)*oneD%ods%mrot(i,j,inap)
-                         ELSE
-                            fkr(j) = fkr(j) + fk(i)*sym%mrot(i,j,inap)
-                            fgr(j) = fgr(j) + fg(i)*sym%mrot(i,j,inap)
-                         END IF
-                      END DO
-                   END DO
-                   fkp = MATMUL(fkr,cell%bmat)
-                   fgp = MATMUL(fgr,cell%bmat)
+                   fkp = MATMUL(fk(:),cell%bmat) ! fkr
+                   fgp = MATMUL(fg(:),cell%bmat) ! fgr
                    !     ----> generate spherical harmonics
                    CALL ylm4(atoms%lmax(n),fkp,ylm)
                    !     ----> loop over l
@@ -188,35 +166,97 @@ CONTAINS
                            c_1 =  conjg(c_1) * inv_f
                            c_2 =  conjg(c_2) * inv_f
                            IF (zmat%l_real) THEN
+                              !$ IF (.false.) THEN
                               acof(:ne,lmp,natom_l) = acof(:ne,lmp,natom_l) +  c_1 * work_r(:ne)
                               bcof(:ne,lmp,natom_l) = bcof(:ne,lmp,natom_l) +  c_2 * work_r(:ne)
+                              !$ ENDIF
+                              !$ acof_l(:ne,lmp) = acof_l(:ne,lmp) +  c_1 * work_r(:ne)
+                              !$ bcof_l(:ne,lmp) = bcof_l(:ne,lmp) +  c_2 * work_r(:ne)
                            ELSE
+                              !$ IF (.false.) THEN
                               acof(:ne,lmp,natom_l) = acof(:ne,lmp,natom_l) +  c_1 * work_c(:ne)
                               bcof(:ne,lmp,natom_l) = bcof(:ne,lmp,natom_l) +  c_2 * work_c(:ne)
+                              !$ ENDIF
+                              !$ acof_l(:ne,lmp) = acof_l(:ne,lmp) +  c_1 * work_c(:ne)
+                              !$ bcof_l(:ne,lmp) = bcof_l(:ne,lmp) +  c_2 * work_c(:ne)
                            END IF
                          ELSE
-                            !     ----> loop over bands
-                            IF (zmat%l_real) THEN
-                               acof(:ne,lm,natom_l) = acof(:ne,lm,natom_l) +  c_1 * work_r(:ne)
-                               bcof(:ne,lm,natom_l) = bcof(:ne,lm,natom_l) +  c_2 * work_r(:ne)
-                            ELSE
-                               acof(:ne,lm,natom_l) = acof(:ne,lm,natom_l) +  c_1 * work_c(:ne)
-                               bcof(:ne,lm,natom_l) = bcof(:ne,lm,natom_l) +  c_2 * work_c(:ne)
-                            END IF
+                           !     ----> loop over bands
+                           IF (zmat%l_real) THEN
+                              !$ IF (.false.) THEN
+                              acof(:ne,lm,natom_l) = acof(:ne,lm,natom_l) +  c_1 * work_r(:ne)
+                              bcof(:ne,lm,natom_l) = bcof(:ne,lm,natom_l) +  c_2 * work_r(:ne)
+                              !$ ENDIF
+                              !$ acof_l(:ne,lm) = acof_l(:ne,lm) +  c_1 * work_r(:ne)
+                              !$ bcof_l(:ne,lm) = bcof_l(:ne,lm) +  c_2 * work_r(:ne)
+                           ELSE
+                              !$ IF (.false.) THEN
+                              acof(:ne,lm,natom_l) = acof(:ne,lm,natom_l) +  c_1 * work_c(:ne)
+                              bcof(:ne,lm,natom_l) = bcof(:ne,lm,natom_l) +  c_2 * work_c(:ne)
+                              !$ ENDIF
+                              !$ acof_l(:ne,lm) = acof_l(:ne,lm) +  c_1 * work_c(:ne)
+                              !$ bcof_l(:ne,lm) = bcof_l(:ne,lm) +  c_2 * work_c(:ne)
+                           END IF
                          ENDIF
                       ENDDO ! loop over m
                    ENDDO ! loop over l
                    DO lo=1,atoms%nlo(n)
                       DO nkvec=1,lapw%nkvec(lo,jatom) 
                          IF (k==lapw%kvec(nkvec,lo,jatom)) THEN !check if this k-vector has LO attached
-                            CALL abclocdn_soc(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,&
-                                          n,natom,natom_l,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force)
+                            term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(n)**2)/2) * phase
+                            IF ((atoms%invsat(natom)==0).OR.(atoms%invsat(natom)==1)) THEN
+                               na2=natom
+                            ELSE
+                               na2 = sym%invsatnr(natom)
+                            ENDIF
+                            nbasf=lapw%nv(iintsp)+lapw%index_lo(lo,na2)+nkvec
+                            l = atoms%llo(lo,n)
+                            ll1 = l* (l+1)
+                            DO i = 1,ne
+                               DO m = -l,l
+                                  lm = ll1 + m
+                                  !+gu_con
+                                  IF ((atoms%invsat(natom)==0).OR.(atoms%invsat(natom)==1)) THEN
+                                     IF (zMat%l_real) THEN
+                                        ctmp = zMat%data_r(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
+                                     ELSE
+                                        ctmp = zMat%data_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
+                                     ENDIF
+                                     !$ IF (.false.) THEN
+                                     acof(i,lm,natom_l) = acof(i,lm,natom_l) + ctmp*alo1(lo)
+                                     bcof(i,lm,natom_l) = bcof(i,lm,natom_l) + ctmp*blo1(lo)
+                                     ccof(m,i,lo,natom_l) = ccof(m,i,lo,natom_l) + ctmp*clo1(lo)
+                                     !$ ENDIF
+                                     !$ acof_l(i,lm)   = acof_l(i,lm)   +  ctmp*alo1(lo)
+                                     !$ bcof_l(i,lm)   = bcof_l(i,lm)   +  ctmp*blo1(lo)
+                                     !$ ccof_l(m,i,lo) = ccof_l(m,i,lo) +  ctmp*clo1(lo)
+                                  ELSE
+                                     ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
+                                     lmp = ll1 - m
+                                     !$ IF (.false.) THEN
+                                     acof(i,lmp,natom_l) = acof(i,lmp,natom_l) +ctmp*alo1(lo)
+                                     bcof(i,lmp,natom_l) = bcof(i,lmp,natom_l) +ctmp*blo1(lo)
+                                     ccof(-m,i,lo,natom_l) = ccof(-m,i,lo,natom_l) +ctmp*clo1(lo)
+                                     !$ ENDIF
+                                     !$ acof_l(i,lmp)   = acof_l(i,lmp)   +  ctmp*alo1(lo)
+                                     !$ bcof_l(i,lmp)   = bcof_l(i,lmp)   +  ctmp*blo1(lo)
+                                     !$ ccof_l(-m,i,lo) = ccof_l(-m,i,lo) +  ctmp*clo1(lo)
+                                  ENDIF
+                               END DO
+                            END DO
                          ENDIF
                       ENDDO
                    END DO
                 ENDDO ! loop over LAPWs (k)
 #ifndef CPP_OLDINTEL
-                !$OMP END PARALLEL DO
+                !$OMP END DO
+                !$OMP CRITICAL
+                !$ acof(:,:,natom_l)   = acof(:,:,natom_l)   + acof_l(:,:)
+                !$ bcof(:,:,natom_l)   = bcof(:,:,natom_l)   + bcof_l(:,:)
+                !$ ccof(:,:,:,natom_l) = ccof(:,:,:,natom_l) + ccof_l(:,:,:)
+                !$OMP END CRITICAL
+                !$ DEALLOCATE (acof_l,bcof_l,ccof_l)
+                !$OMP END PARALLEL
 #endif
                 IF (zmat%l_real) THEN
                    DEALLOCATE(work_r)

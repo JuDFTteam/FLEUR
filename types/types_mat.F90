@@ -24,7 +24,9 @@ MODULE m_types_mat
      PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
      PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
      PROCEDURE        :: move => t_mat_move                  !> move data into another t_mat (overloaded for t_mpimat)
-     PROCEDURE        :: init => t_mat_init                  !> initalize the matrix(overloaded for t_mpimat)
+     PROCEDURE        :: init_details => t_mat_init
+     PROCEDURE        :: init_template => t_mat_init_template              !> initalize the matrix(overloaded for t_mpimat)
+     GENERIC          :: init => init_details,init_template
      PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
      PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
    END type t_mat
@@ -71,7 +73,28 @@ MODULE m_types_mat
 
      CALL mat%alloc(l_real,matsize1,matsize2)
    END SUBROUTINE t_mat_init
-
+   SUBROUTINE t_mat_init_template(mat,templ)
+     IMPLICIT NONE
+     CLASS(t_mat),INTENT(INOUT) :: mat
+     CLASS(t_mat),INTENT(IN)    :: templ
+     SELECT TYPE(templ)
+     TYPE is(t_mat)
+        mat%l_real=templ%l_real
+        mat%matsize1=templ%matsize1
+        mat%matsize2=templ%matsize2
+        IF (mat%l_real) THEN
+           ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2))
+           ALLOCATE(mat%data_c(1,1))
+           mat%data_r=0.0
+        ELSE
+           ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2))
+           ALLOCATE(mat%data_r(1,1))
+           mat%data_c=0.0
+        END IF
+     CLASS default
+        CALL judft_error("Mixed initialization in t_mat not possible(BUG)")
+     END SELECT
+   END SUBROUTINE t_mat_init_template
      
   SUBROUTINE t_mat_alloc(mat,l_real,matsize1,matsize2,init)
     CLASS(t_mat) :: mat

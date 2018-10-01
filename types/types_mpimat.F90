@@ -29,9 +29,9 @@ MODULE m_types_mpimat
      PROCEDURE,PASS   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
      PROCEDURE,PASS   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
      PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
-     PROCEDURE,PASS   :: init => mpimat_init     !<overwriten from t_mat, also calls alloc in t_mat
+     PROCEDURE,PASS   :: init_details => mpimat_init
+     PROCEDURE,PASS   :: init_template =>mpimat_init_template     !<overwriten from t_mat, also calls alloc in t_mat
      PROCEDURE,PASS   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
-
      PROCEDURE,PASS   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
      PROCEDURE,PASS   :: print_matrix
      PROCEDURE,PASS   :: from_non_dist
@@ -285,6 +285,34 @@ CONTAINS
     END IF
 #endif    
   END SUBROUTINE mpimat_init
+
+  SUBROUTINE mpimat_init_template(mat,templ)
+    IMPLICIT NONE
+    CLASS(t_mpimat),INTENT(INOUT)  :: mat
+    CLASS(t_mat),INTENT(IN)        :: templ
+
+    SELECT TYPE(templ)
+    TYPE IS (t_mpimat)
+       mat%l_real=templ%l_real
+       mat%matsize1=templ%matsize1
+       mat%matsize2=templ%matsize2
+       mat%global_size1=templ%global_size1
+       mat%global_size2=templ%global_size2
+       mat%mpi_com=templ%mpi_com
+       mat%blacs_desc=templ%blacs_desc
+       mat%blacs_ctext=templ%blacs_ctext
+       mat%npcol=templ%npcol
+       mat%nprow=templ%nprow
+       IF (mat%l_real) THEN
+          ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2))
+       ELSE
+          ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2))
+       END IF
+       CLASS default
+          CALL judft_error("Mixed initialization in t_mpimat not possible(BUG)")
+    END SELECT
+  END SUBROUTINE mpimat_init_template
+
     
   SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,ictextblacs,sc_desc,local_size1,local_size2,nprow,npcol)
     IMPLICIT NONE

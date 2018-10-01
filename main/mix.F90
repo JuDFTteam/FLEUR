@@ -169,68 +169,7 @@ contains
       call metric( cell, atoms, vacuum, sphhar, input, noco, stars, sym, oneD, &
                    mmap, nmaph, mapmt, mapvac2, fsm, fmMet, l_pot )
 
-    end if MPI0_a
-
-    ! KERKER PRECONDITIONER
-    if( input%preconditioning_param /= 0 ) then
-      call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1001 )
-      call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 4 )
-      MPI0_b: if( mpi%irank == 0 ) then 
-        call resDen%Residual( outDen, inDen )
-        if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation()
-      end if MPI0_b
-#ifdef CPP_MPI
-      call mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
-#endif
-      call vgen_coulomb( 1, mpi, dimension, oneD, input, field, vacuum, sym, stars, cell, &
-                         sphhar, atoms, resDen, vYukawa )
-    end if
-    MPI0_c: if( mpi%irank == 0 ) then
-      if( input%preconditioning_param /= 0 ) then
-        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
-        do n = 1, atoms%ntype
-          do lh = 0, sphhar%nlhd
-            resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
-                    - input%preconditioning_param ** 2 / fpi_const &
-                    * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
-          end do
-        end do
-        if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
-        call brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
-                     intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
-      end if
-    ! end of preconditioner
-
-
-    !mixing of the densities
-      IF (input%imix.EQ.0) THEN
-         CALL stmix(atoms,input,noco, nmap,nmaph,fsm, sm)
-      ELSE
-         CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-                      hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
-
-!        Replace the broyden call above by the commented metric and broyden2 calls
-!        below to switch on the continuous restart of the Broyden method.
-         ! Apply metric w to sm and store in smMet:  w |sm>
-!         CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-!                     mmap,nmaph,mapmt,mapvac2,sm,smMet,l_pot)
-!  
-!         CALL broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-!                       hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm,fmMet,smMet)
-      END IF
-
-      !initiatlize mixed density and extract it with brysh2 call
-      inDen%mmpMat = CMPLX(0.0,0.0)
-
-      CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,oneD,inDen) 
-
-      !calculate the distance of charge densities...
-
-      !induce metric in fsm use sm as an output array: |sm> = w |fsm>
-!      CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
-!                  mmap,nmaph,mapmt,mapvac2,fsm, sm)
-
-      !calculate the charge density distance for each spin
+      !calculate the distance of charge densities for each spin
       IF(hybrid%l_calhf) THEN
          CALL openXMLElement('densityConvergence',(/'units  ','comment'/),(/'me/bohr^3','HF       '/))
       ELSE
@@ -283,8 +222,70 @@ contains
          !(e.g. when calculating non-magnetic systems with jspins=2).
       END IF
       results%last_distance=maxval(1000*SQRT(ABS(dist/cell%vol)))
-      DEALLOCATE (sm,fsm,smMet,fmMet)
+      DEALLOCATE (smMet,fmMet)
       CALL closeXMLElement('densityConvergence')
+
+    end if MPI0_a
+
+    ! KERKER PRECONDITIONER
+    if( input%preconditioning_param /= 0 ) then
+      call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1001 )
+      call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 4 )
+      MPI0_b: if( mpi%irank == 0 ) then 
+        call resDen%Residual( outDen, inDen )
+        if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation()
+      end if MPI0_b
+#ifdef CPP_MPI
+      call mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
+#endif
+!      if ( .not. input%film ) then
+        call vgen_coulomb( 1, mpi, dimension, oneD, input, field, vacuum, sym, stars, cell, &
+                           sphhar, atoms, resDen, vYukawa )
+!      else 
+!        vYukawa%iter = resDen%iter
+!        call VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, dimension, oneD, resDen, ispin, &
+!                          vYukawa )
+!      end if
+    end if
+    MPI0_c: if( mpi%irank == 0 ) then
+      if( input%preconditioning_param /= 0 ) then
+        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
+        do n = 1, atoms%ntype
+          do lh = 0, sphhar%nlhd
+            resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
+                    - input%preconditioning_param ** 2 / fpi_const &
+                    * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
+          end do
+        end do
+        if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
+        call brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
+                     intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
+      end if
+    ! end of preconditioner
+
+
+    !mixing of the densities
+      IF (input%imix.EQ.0) THEN
+         CALL stmix(atoms,input,noco, nmap,nmaph,fsm, sm)
+      ELSE
+         CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
+                      hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
+
+!        Replace the broyden call above by the commented metric and broyden2 calls
+!        below to switch on the continuous restart of the Broyden method.
+         ! Apply metric w to sm and store in smMet:  w |sm>
+!         CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+!                     mmap,nmaph,mapmt,mapvac2,sm,smMet,l_pot)
+!  
+!         CALL broyden2(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
+!                       hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm,fmMet,smMet)
+      END IF
+
+      !initiatlize mixed density and extract it with brysh2 call
+      inDen%mmpMat = CMPLX(0.0,0.0)
+
+      CALL brysh2(input,stars,atoms,sphhar,noco,vacuum,sym,sm,oneD,inDen) 
+      DEALLOCATE (sm,fsm)
 
       !fix charge of the new density
       CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false., fix)

@@ -51,12 +51,12 @@ inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
 io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
 global/sort.f kpoints/kptgen_hybrid.f kpoints/od_kptsgen.f kpoints/bravais.f kpoints/divi.f kpoints/brzone.f
 kpoints/kptmop.f kpoints/kpttet.f init/bandstr1.F kpoints/ordstar.f kpoints/fulstar.f kpoints/kprep.f
-kpoints/tetcon.f kpoints/kvecon.f init/boxdim.f math/ylm4.f global/radsra.f math/intgr.F global/differ.f math/inwint.f
+kpoints/tetcon.f kpoints/kvecon.f init/boxdim.f global/radsra.f math/intgr.F global/differ.f math/inwint.f
  math/outint.f xc-pot/gaunt.f math/grule.f
  )
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
-eigen/vec_for_lo.f90 eigen/orthoglo.F90 juDFT/usage_data.F90
+eigen/vec_for_lo.f90 eigen/orthoglo.F90 juDFT/usage_data.F90 math/ylm4.f90
 global/enpara.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90 juDFT/juDFT.F90 global/find_enpara.f90
 inpgen/closure.f90 inpgen/inpgen_arguments.F90
 juDFT/info.F90 juDFT/stop.F90 juDFT/args.F90 juDFT/time.F90 juDFT/init.F90 juDFT/sysinfo.F90 io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90 

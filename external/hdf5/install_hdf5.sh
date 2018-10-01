@@ -4,7 +4,7 @@ then
     #Get the file with the code
     curl -LO "https://github.com/MRedies/hdf5-mirror/raw/master/CMake-hdf5-${hdf5_version}.tar.gz"
 
-    if [ ! -f CMake-hdf5-${hdf5_version}.tar.gz]; then
+    if [ ! -f CMake-hdf5-${hdf5_version}.tar.gz ]; then
         echo "No file found try source"
         curl -LO "http://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-${hdf5_version}/src/CMake-hdf5-${hdf5_version}.tar.gz"       
     fi

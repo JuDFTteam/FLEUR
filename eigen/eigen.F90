@@ -96,7 +96,8 @@ CONTAINS
     CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
 
     ! Variables for HF or hybrid functional calculation
-    INTEGER                   ::  comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
+    INTEGER                   :: comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt), dealloc_stat
+    character(len=300)        :: errmsg
     
     call ud%init(atoms,DIMENSION%jspd)
     ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
@@ -162,7 +163,12 @@ CONTAINS
 
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
-          if (allocated(zmat)) deallocate(zmat)
+          if (allocated(zmat)) then
+             deallocate(zmat, stat=dealloc_stat, errmsg=errmsg)
+             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for zmat",&
+                                                hint=errmsg, calledby="eigen.F90")
+          endif
+
           !Try to symmetrize matrix
           CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
           
@@ -184,7 +190,10 @@ CONTAINS
           END IF
 
           CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
-          DEALLOCATE(hmat,smat)
+          CALL smat%free()
+          DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
+          if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
+                                             hint=errmsg, calledby="eigen.F90")
 
           ! Output results
           CALL timestart("EV output")
@@ -210,7 +219,9 @@ CONTAINS
 
           IF (banddos%unfoldband) THEN
                CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms)
-	       DEALLOCATE(smat_unfold)
+	       DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
+          if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
+                                             hint=errmsg, calledby="eigen.F90")
           END IF
 
        END DO  k_loop
