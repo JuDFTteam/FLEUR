@@ -38,11 +38,10 @@ C     .. Local Scalars ..
       INTEGER :: itype,ineq,iatom,iop,ilo,i,l,m,lm,lmp,ifac
       integer :: n,nn,jatom,ie,ll1
       real    :: tpi,arg
-      complex :: ci,fac
+      complex :: fac
 C     ..
 
       tpi=2.0*pimach()
-      ci=cmplx(0.0,1.0)
 
       iatom=0
       DO itype=1,ntype

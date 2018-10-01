@@ -7,7 +7,7 @@ CONTAINS
   SUBROUTINE force_a8(input,atoms,sphhar,jsp,vr,rho,force,results)
     !
     USE m_intgr, ONLY : intgr3
-    USE m_constants,ONLY: pi_const,sfp_const
+    USE m_constants, ONLY: pi_const, sfp_const, ImagUnit
     USE m_gaunt, ONLY :gaunt1
     USE m_differentiate,ONLY: difcub
     USE m_types
@@ -41,7 +41,6 @@ CONTAINS
     !     ..
     !     .. Data statements ..
     COMPLEX,PARAMETER:: czero=CMPLX(0.000,0.000)
-    COMPLEX,PARAMETER:: ci = CMPLX(0.0,1.0)
 
     ! Kronecker delta for arguments >=0 AND <0
     krondel(i,j) = MIN(ABS(i)+1,ABS(j)+1)/MAX(ABS(i)+1,ABS(j)+1)* (1+SIGN(1,i)*SIGN(1,j))/2
@@ -96,7 +95,7 @@ CONTAINS
                            &                       sphhar%clnu(mem1,lh1,nd)*sphhar%clnu(mem2,lh2,nd)*&
                            &                       (gaunt1(1,l1,l2,-1,m1,m2,atoms%lmaxd)-&
                            &                       gaunt1(1,l1,l2,1,m1,m2,atoms%lmaxd))
-                      gv(2) = gv(2) - ci*SQRT(2.e0*pi_const/3.e0)*&
+                      gv(2) = gv(2) - ImagUnit*SQRT(2.e0*pi_const/3.e0)*&
                            &                       sphhar%clnu(mem1,lh1,nd)*sphhar%clnu(mem2,lh2,nd)*&
                            &                       (gaunt1(1,l1,l2,-1,m1,m2,atoms%lmaxd)+&
                            &                       gaunt1(1,l1,l2,1,m1,m2,atoms%lmaxd))
@@ -217,7 +216,7 @@ CONTAINS
                            &                     krondel(-m1,m2)
                       !
                       gv(1) = gv(1) + aaa + bbb - ccc - ddd
-                      gv(2) = gv(2) - ci* (aaa+bbb+ccc+ddd)
+                      gv(2) = gv(2) - ImagUnit* (aaa+bbb+ccc+ddd)
                       gv(3) = gv(3) + eee - fff
                       !
                       !  end of summation m1,m2

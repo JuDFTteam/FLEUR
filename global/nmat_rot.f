@@ -18,6 +18,7 @@
      >                    alpha,beta,gamma,l_in,n_u,jspins,lty,
      X                    n_mmp)
 
+      use m_constants
       USE m_inv3
 
       IMPLICIT NONE
@@ -33,7 +34,7 @@
       REAL fac_l_m,fac_l_mp,fac_lmpx,fac_lmx,fac_x,fac_xmpm
       REAL co_bh,si_bh,zaehler,nenner,cp,sp
       REAL sina,sinb,sinc,cosa,cosb,cosc,determ,dt
-      COMPLEX ci,phase_g,phase_a,bas,d(-l_in:l_in,-l_in:l_in)
+      COMPLEX phase_g,phase_a,bas,d(-l_in:l_in,-l_in:l_in)
       COMPLEX d_wig(-l_in:l_in,-l_in:l_in,l_in,n_u)
       COMPLEX n_tmp(-l_in:l_in,-l_in:l_in)
       COMPLEX nr_tmp(-l_in:l_in,-l_in:l_in)
@@ -43,7 +44,6 @@
 
       INTRINSIC sqrt,max,min
 
-      ci = cmplx(0.0,1.0)
       
       DO n = 1, n_u
 
@@ -55,13 +55,13 @@
 
         DO m = -l,l
           fac_l_m = fac(l+m) * fac(l-m)
-          phase_g = exp( - ci * gamma(n) * m )
+          phase_g = exp( - ImagUnit * gamma(n) * m )
 
           DO mp = -l,l
             fac_l_mp = fac(l+mp) * fac(l-mp)
 
             zaehler = sqrt( real(fac_l_m * fac_l_mp) )
-            phase_a = exp( - ci * alpha(n) * mp ) 
+            phase_a = exp( - ImagUnit * alpha(n) * mp ) 
             x_lo = max(0, m-mp)
             x_up = min(l-mp, l+m)
 

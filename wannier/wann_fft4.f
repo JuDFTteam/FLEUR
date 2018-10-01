@@ -86,7 +86,6 @@ c      real                :: kpoints(3,nkpts)
       character(len=6)    :: filename
       integer             :: jp,mp,kk,ii,jj,dir,rvecind
       integer             :: spin1,spin2
-      complex,parameter   :: ci=(0.0,1.0)
 
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/

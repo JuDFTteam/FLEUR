@@ -229,7 +229,6 @@ c      real, allocatable :: ei(:)
       real(4) time_lapw_plot,time_ujugaunt,time_abcof
       integer :: n_start,n_end,mlotot,mlolotot,err
       integer :: mlot_d,mlolot_d,ilo,dir,length
-      complex :: ci
       character(len=2) :: spin012(0:2)
       data spin012/'  ', '.1', '.2'/
       character(len=6) :: filename
@@ -341,7 +340,6 @@ c-----initializations
       ngopr1(:)=1
       zero_taual = 0.0
 
-      ci=cmplx(0.0,1.0)
       cmplx_1 = cmplx(1.0,0.0)
 
       call cpu_time(time_total)

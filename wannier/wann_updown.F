@@ -227,7 +227,6 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       real(4) time_lapw_plot,time_ujugaunt,time_abcof
       integer :: n_start,n_end,mlotot,mlolotot,err
       integer :: mlot_d,mlolot_d,ilo,dir,l1,l2,ii,jj
-      complex :: ci
       character(len=2)    :: spin012(0:2)
       data spin012/'  ', '.1', '.2'/
       character(len=6)    :: filename
@@ -275,8 +274,6 @@ c-----initializations
       time_symm=0.0
       time_film=0.0
       ngopr1(:)=1
-
-      ci=cmplx(0.0,1.0)
 
       call cpu_time(time_total)
 

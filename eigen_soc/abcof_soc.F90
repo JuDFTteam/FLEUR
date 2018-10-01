@@ -40,7 +40,7 @@ CONTAINS
     REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(dimension%neigd)
     !     ..
     !     .. Local Scalars ..
-    COMPLEX cexp,phase,c_0,c_1,c_2,ci
+    COMPLEX cexp,phase,c_0,c_1,c_2
     REAL const,df,r1,s,tmk,wronk
     REAL s2h, s2h_e(ne)
     INTEGER i,j,k,l,ll1,lm,n,nap,natom,nn,iatom,jatom,lmp,m,nkvec
@@ -64,7 +64,6 @@ CONTAINS
        IF (noco%l_noco) CALL judft_error("BUG in abcof, l_noco but real?")
     ENDIF
 
-    ci = CMPLX(0.0,1.0)
     const = 2 * tpi_const/SQRT(cell%omtil)
 
     acof(:,:,:)   = CMPLX(0.0,0.0)
@@ -118,7 +117,7 @@ CONTAINS
                 !$OMP& DEFAULT(none)&
                 !$OMP& PRIVATE(k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
                 !$OMP& inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm)&
-                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,l_force,&
+                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,eig,l_force,&
                 !$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,force,nat_start,nat_stop)
 #endif
                 DO k = 1,nvmax
