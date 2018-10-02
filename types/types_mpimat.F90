@@ -305,8 +305,10 @@ CONTAINS
        mat%nprow=templ%nprow
        IF (mat%l_real) THEN
           ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2))
+          ALLOCATE(mat%data_c(0,0))
        ELSE
           ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2))
+          ALLOCATE(mat%data_r(0,0))
        END IF
        CLASS default
           CALL judft_error("Mixed initialization in t_mpimat not possible(BUG)")

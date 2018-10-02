@@ -76,12 +76,12 @@ CONTAINS
     
     abstol=2.0*CPP_LAPACK_slamch('S') ! PDLAMCH gave an error on ZAMpano
 
-    CALL ev_dist%init(hmat%l_real,hmat%global_size1,hmat%global_size2,hmat%mpi_com,.TRUE.)
+    CALL ev_dist%init(hmat)
 
     !smat%blacs_desc(2)    = hmat%blacs_desc(2)
     !ev_dist%blacs_desc(2) = hmat%blacs_desc(2)
-    smat%blacs_desc=hmat%blacs_desc
-    ev_dist%blacs_desc=hmat%blacs_desc
+    !smat%blacs_desc=hmat%blacs_desc
+    !ev_dist%blacs_desc=hmat%blacs_desc
     
     
     nb=hmat%blacs_desc(5)! Blocking factor
