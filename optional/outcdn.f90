@@ -47,9 +47,7 @@
 !     .. Local Arrays ..
       COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2)
       REAL rcc(3),x(3)
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC abs,real,sqrt
+
 
       ivac=iv
      
