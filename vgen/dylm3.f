@@ -33,9 +33,6 @@ C     .. Local Scalars ..
       COMPLEX em1f,em2f,ep1f,ep2f
       REAL cph,rxy,small,sph,x,xy,y
 C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC cmplx,conjg,sqrt
-C     ..
 C     .. Data Statements ..
       DATA small/1.0e-12/
 c.....------------------------------------------------------------------
