@@ -16,6 +16,7 @@ c*****************************************************************
      <         xdnout)
 
       USE m_ylm
+      use m_constants
 
       implicit none
       integer,intent(in)::jmtd,lmaxd,nlod,llod,lmd,lmaxn,nlo
@@ -32,9 +33,8 @@ c*****************************************************************
 
       real sx
       integer i,j,jr,l,m,lm
-      complex ylm((lmaxd+1)**2),xd1,xd2,ci,s
+      complex ylm((lmaxd+1)**2),xd1,xd2,s
 
-      ci=cmplx(0.,1.)
       sx = 0.0
       DO 50 i = 1,3
          sx = sx + x(i)*x(i)
@@ -52,7 +52,7 @@ c*****************************************************************
       DO l = 0,lmaxn
        DO 110 m = -l,l
         lm = l*(l+1)+m
-        s = ylm(lm+1)*(ci)**l
+        s = ylm(lm+1)*(ImagUnit)**l
         xd1 = xd1 + (acof(lm)*cmplx(ff(jr,l),0.)+
      +               bcof(lm)*cmplx(gg(jr,l),0.))*s/
      /               (rmsh(jr)) 
@@ -70,7 +70,7 @@ c..contributions from the local orbitals
         DO 111 m = -llo(l),llo(l)
          lm = llo(l)*(llo(l)+1)+m
 
-         s = ylm(lm+1)*(ci)**l
+         s = ylm(lm+1)*(ImagUnit)**l
          xd1 = xd1 + ccof(m,l)*flo(jr,l)*s/
      /               (rmsh(jr))         
  

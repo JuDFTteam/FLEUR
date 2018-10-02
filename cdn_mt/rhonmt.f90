@@ -7,6 +7,7 @@ CONTAINS
     !     *************************************************************
     USE m_gaunt,ONLY:gaunt1
     USE m_types
+    use m_constants
     IMPLICIT NONE
     TYPE(t_sym),          INTENT(IN)    :: sym
     TYPE(t_sphhar),       INTENT(IN)    :: sphhar
@@ -20,15 +21,11 @@ CONTAINS
 
     !     ..
     !     .. Local Scalars ..
-    COMPLEX cconst,cil,cmv,ci
+    COMPLEX cconst,cil,cmv
     REAL coef
     INTEGER  :: jmem,l,lcond,lh,llp,llpmax,lm,lmp,lp,lphi,lplow,lplow0,lv
     INTEGER  :: mp,mv,na,natom,nb,nn,ns,nt,m
-    !     ..
-    !     ..
 
-    ci = cmplx(0.0,1.0)
-    !
     !Initialize private variables in gaunt module before parallel region
     !$      coef = gaunt1(0,0,0,0,0,0,atoms%lmaxd)
 
@@ -56,7 +53,7 @@ CONTAINS
                    lplow = lplow + mod(lcond,2)
                    IF (lplow.GT.lphi) CYCLE m_loop
                    DO  lp = lplow,lphi,2
-                      cil = ci** (l-lp)
+                      cil = ImagUnit** (l-lp)
                       lmp = lp* (lp+1) + mp
                       IF (lmp.GT.lm) CYCLE m_loop
                       llp = (l* (l+1))/2 + lp

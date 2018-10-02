@@ -1,5 +1,11 @@
       MODULE m_qsf
+
+!      interface qsf
+!        module procedure qsfReal, qsfComplex
+!      end interface
+
       CONTAINS
+      
       SUBROUTINE qsf(h,y,z,ndim,isave)
 c     ..................................................................
 c     subroutine qsf
@@ -154,4 +160,21 @@ c     ndim is equal to 3
       z(3) = val
   230 RETURN
       END SUBROUTINE qsf
+
+      subroutine qsfComplex( h, y, z, ndim, isave )
+
+        implicit none
+
+        REAL h
+        INTEGER isave,ndim
+        COMPLEX y(ndim),z(*)
+
+        real zr(ndim), zi(ndim)
+
+        call qsf( h,  real(y), zr, ndim, isave )
+        call qsf( h, aimag(y), zi, ndim, isave )
+        z(1:ndim) = cmplx( zr(1:ndim), zi(1:ndim) )
+
+      end subroutine qsfComplex
+
       END MODULE m_qsf

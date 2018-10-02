@@ -20,7 +20,7 @@ c     files WF1.chk (and WF1_um.dat) produced
 c     by wannier90.
 c     FF, January 2009
 c*************************************************
-      use m_constants, only:pimach
+      use m_constants, only:pimach, ImagUnit
       use m_wann_read_umatrix
 
       implicit none
@@ -86,7 +86,6 @@ c*************************************************
       character(len=3)    :: spin12(2)
       character(len=6)    :: filename
       integer             :: jp,mp,kk
-      complex,parameter   :: ci=(0.0,1.0)
       integer             :: dir,rvecind
       integer             :: spin1,spin2
       complex,allocatable :: amn(:,:,:)
@@ -259,7 +258,7 @@ c****************************************************
      &             conjg(amn(j,i,nkp))
            enddo !j
           enddo !i
-          paulimat(2,:,:,nkp)= -ci*paulimat(1,:,:,nkp)
+          paulimat(2,:,:,nkp)= -ImagUnit*paulimat(1,:,:,nkp)
           paulimat(1,:,:,nkp)=paulimat(1,:,:,nkp)+
      &       transpose(conjg( paulimat(1,:,:,nkp) ))
           paulimat(2,:,:,nkp)=paulimat(2,:,:,nkp)+
@@ -277,7 +276,7 @@ c****************************************************
              paulimat(1,j,i+num_bands*(jspins-1),nkp)=cmplx(a,-b)
            enddo !j
           enddo !i
-          paulimat(2,:,:,nkp)= -ci*paulimat(1,:,:,nkp)
+          paulimat(2,:,:,nkp)= -ImagUnit*paulimat(1,:,:,nkp)
           paulimat(1,:,:,nkp)=paulimat(1,:,:,nkp)+
      &        transpose(conjg( paulimat(1,:,:,nkp) ))
           paulimat(2,:,:,nkp)=paulimat(2,:,:,nkp)+

@@ -116,7 +116,7 @@
           REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
-          COMPLEX czero,carg,VALUE,slope,ci,c_ph
+          COMPLEX czero,carg,VALUE,slope,c_ph
           REAL    dif,dxx,g,gz,dtildh,&
                &        rkappa,sign,signz,tol_14,z,zero,zvac,&
                &        g2,phi,gamma,qq
@@ -161,7 +161,6 @@
           !                Tests have shown that (1) is more accurate.
           !           
           !
-          ci = CMPLX(0.0,1.0)
 
           ALLOCATE (qpwc(stars%ng3))
           !
@@ -276,7 +275,7 @@
                       DO k = 2,stars%ng3
                          IF ((stars%kv3(1,k).EQ.0).AND.(stars%kv3(2,k).EQ.0)) THEN
                             g = stars%kv3(3,k) * cell%bmat(3,3) * (3. - 2.*ivac)
-                            carg = carg -qpwc(k)*(EXP(ci*g*dtildh)-EXP(ci*g*cell%z1))/g
+                            carg = carg -qpwc(k)*(EXP(ImagUnit*g*dtildh)-EXP(ImagUnit*g*cell%z1))/g
                          ENDIF
                       ENDDO
                       rho_out(ivac) = qpwc(1) * ( dtildh-cell%z1 ) - AIMAG(carg)
@@ -308,7 +307,7 @@
                             gz = kz*cell%bmat(3,3)
                             DO 240 nrz = 1,nz
                                signz = 3. - 2.*nrz
-                               carg = ci*sign*signz*gz
+                               carg = ImagUnit*sign*signz*gz
                                VALUE = VALUE + c_ph*qpwc(ig3)* EXP(carg*cell%z1)
                                slope = slope + c_ph*carg*qpwc(ig3)* EXP(carg*cell%z1)
 240                         ENDDO
@@ -391,9 +390,9 @@
                          phi = stars%phi2(irec2)
                          CALL cylbes(oneD%odi%M,g2*cell%z1,fJ)
                          CALL dcylbs(oneD%odi%M,g2*cell%z1,fJ,dfJ)
-                         VALUE = VALUE + (ci**m)*qpwc(irec3)*&
+                         VALUE = VALUE + (ImagUnit**m)*qpwc(irec3)*&
                               &                 EXP(CMPLX(0.,-m*phi))*fJ(m)
-                         slope = slope + (ci**m)*g2*qpwc(irec3)*&
+                         slope = slope + (ImagUnit**m)*g2*qpwc(irec3)*&
                               &                 EXP(CMPLX(0.,-m*phi))*dfJ(m)
                       END IF
                    END DO

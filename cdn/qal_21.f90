@@ -12,6 +12,7 @@ CONTAINS
     USE m_types_cdnval, ONLY: t_eigVecCoeffs 
     USE m_types_denCoeffsOffdiag
     USE m_rotdenmat
+    use m_constants
     IMPLICIT NONE
     TYPE(t_dimension),         INTENT(IN)    :: dimension
     TYPE(t_input),             INTENT(IN)    :: input
@@ -29,7 +30,6 @@ CONTAINS
     INTEGER nt1,nt2,lm,n,ll1,ipol,icore,index,m
     REAL fac
     COMPLEX sumaa,sumbb,sumab,sumba
-    COMPLEX, PARAMETER :: ci = (0.0,1.0)
 
     !     .. Local Arrays ..
     COMPLEX qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
@@ -145,10 +145,10 @@ CONTAINS
     ! rotate into global frame
     !
     TYPE_loop : DO n = 1,atoms%ntype 
-       chi(1,1) =  EXP(-ci*noco%alph(n)/2)*COS(noco%beta(n)/2)
-       chi(1,2) = -EXP(-ci*noco%alph(n)/2)*SIN(noco%beta(n)/2)
-       chi(2,1) =  EXP( ci*noco%alph(n)/2)*SIN(noco%beta(n)/2)
-       chi(2,2) =  EXP( ci*noco%alph(n)/2)*COS(noco%beta(n)/2)
+       chi(1,1) =  EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
+       chi(1,2) = -EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+       chi(2,1) =  EXP( ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+       chi(2,2) =  EXP( ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
        state : DO i = 1, noccbd
           lls : DO l = 0,3
              CALL rot_den_mat(noco%alph(n),noco%beta(n),&

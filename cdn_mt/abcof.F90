@@ -8,7 +8,7 @@ CONTAINS
     !     ************************************************************
 #include "cpp_double.h"
 
-    USE m_constants, ONLY : tpi_const
+    USE m_constants, ONLY : tpi_const, ImagUnit
     USE m_setabc1lo
     USE m_sphbes
     USE m_dsphbs
@@ -39,7 +39,7 @@ CONTAINS
     REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(dimension%neigd)
     !     ..
     !     .. Local Scalars ..
-    COMPLEX cexp,phase,c_0,c_1,c_2,ci
+    COMPLEX cexp,phase,c_0,c_1,c_2
     REAL const,df,r1,s,tmk,wronk,qss(3)
     REAL s2h, s2h_e(ne)
     INTEGER i,j,k,l,ll1,lm ,n,nap,natom,nn,iatom,jatom,lmp,m,nkvec
@@ -63,7 +63,6 @@ CONTAINS
        IF (noco%l_noco) CALL judft_error("BUG in abcof, l_noco but real?")
     ENDIF
 
-    ci = CMPLX(0.0,1.0)
     const = 2 * tpi_const/SQRT(cell%omtil)
 
     acof(:,:,:)   = CMPLX(0.0,0.0)
@@ -116,7 +115,7 @@ CONTAINS
        !$OMP& DEFAULT(none)&
        !$OMP& PRIVATE(n,nn,natom,k,i,work_r,work_c,ccchi,kspin,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,&
        !$OMP& alo1,blo1,clo1,inap,nap,j,fgr,fgp,s2h,s2h_e,fkr,fkp,ylm,ll1,m,c_0,c_1,c_2,jatom,lmp,inv_f,lm)&
-       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,ci,iintsp,eig,l_force,&
+       !$OMP& SHARED(noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,eig,l_force,&
        !$OMP& jspin,qss,apw,const,nbasf0,enough,acof,bcof,ccof,force)
        DO n = 1,atoms%ntype
           CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
@@ -146,10 +145,10 @@ CONTAINS
 
                    IF (noco%l_noco) THEN
                       !--->            generate the complex conjgates of the spinors (chi)
-                      ccchi(1,1) = CONJG( EXP(-ci*noco%alph(n)/2)*COS(noco%beta(n)/2))
-                      ccchi(1,2) = CONJG(-EXP(-ci*noco%alph(n)/2)*SIN(noco%beta(n)/2))
-                      ccchi(2,1) = CONJG( EXP( ci*noco%alph(n)/2)*SIN(noco%beta(n)/2))
-                      ccchi(2,2) = CONJG( EXP( ci*noco%alph(n)/2)*COS(noco%beta(n)/2))
+                      ccchi(1,1) = CONJG( EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2))
+                      ccchi(1,2) = CONJG(-EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2))
+                      ccchi(2,1) = CONJG( EXP( ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2))
+                      ccchi(2,2) = CONJG( EXP( ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2))
                       IF (noco%l_ss) THEN
                          !--->              the coefficients of the spin-down basis functions are
                          !--->              stored in the second half of the eigenvector
@@ -320,7 +319,7 @@ CONTAINS
              iatom = iatom + 1
              IF (atoms%invsat(iatom).EQ.1) THEN
                 jatom = sym%invsatnr(iatom)
-                cexp = EXP(tpi_const*ci*DOT_PRODUCT(atoms%taual(:,jatom)&
+                cexp = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jatom)&
                      &             + atoms%taual(:,iatom),lapw%bkpt))
                 DO ilo = 1,atoms%nlo(n)
                    l = atoms%llo(ilo,n)

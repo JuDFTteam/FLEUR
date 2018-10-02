@@ -12,6 +12,7 @@ CONTAINS
   !common subroutine
   SUBROUTINE hsmt_spinor(isp,n,noco,chi_mat)
     USE m_types
+    use m_constants
     IMPLICIT NONE
 
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -19,15 +20,14 @@ CONTAINS
     COMPLEX,INTENT(OUT)          :: chi_mat(2,2)
    
     INTEGER           :: isp1,isp2
-    COMPLEX,PARAMETER :: ci=CMPLX(0.0,1.0)
     COMPLEX           :: chi(2,2)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(-ci*noco%alph(n)/2)*cos(noco%beta(n)/2)
-    chi(1,2) = -exp(-ci*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,1) =  exp(ci*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,2) =  exp(ci*noco%alph(n)/2)*cos(noco%beta(n)/2)
+    chi(1,1) =  exp(-ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
+    chi(1,2) = -exp(-ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
+    chi(2,1) =  exp(ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
+    chi(2,2) =  exp(ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
     !--->       and determine the prefactors for the Hamitonian- and
     !--->       overlapp-matrix elements
     chi_mat(1,1) = chi(1,isp)*CONJG(chi(1,isp))
@@ -41,6 +41,7 @@ CONTAINS
 
   SUBROUTINE hsmt_spinor_soc(n,ki,noco,lapw,chi_so,angso)
     USE m_types
+    use m_constants
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_lapw),INTENT(IN)      :: lapw
@@ -53,7 +54,6 @@ CONTAINS
     COMPLEX  :: isigma(2,2,3)
     COMPLEX  :: chi(2,2)
     COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2)
-    COMPLEX,PARAMETER :: ci=CMPLX(0.0,1.0)
     
     !     isigma= -i * sigma, where sigma is Pauli matrix
     isigma=CMPLX(0.0,0.0)
@@ -66,10 +66,10 @@ CONTAINS
     
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(-ci*noco%alph(n)/2)*cos(noco%beta(n)/2)
-    chi(1,2) = -exp(-ci*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,1) =  exp(ci*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,2) =  EXP(ci*noco%alph(n)/2)*COS(noco%beta(n)/2)
+    chi(1,1) =  exp(-ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
+    chi(1,2) = -exp(-ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
+    chi(2,1) =  exp(ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
+    chi(2,2) =  EXP(ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
 
     isigma_x=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,1),chi))
     isigma_y=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,2),chi))

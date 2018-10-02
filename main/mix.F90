@@ -36,6 +36,7 @@ contains
     use m_xmlOutput
     use m_umix
     use m_vgen_coulomb
+    use m_VYukawaFilm
 #ifdef CPP_MPI
     use m_mpi_bc_potden
 #endif
@@ -238,14 +239,14 @@ contains
 #ifdef CPP_MPI
       call mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
 #endif
-!      if ( .not. input%film ) then
+      if ( .not. input%film ) then
         call vgen_coulomb( 1, mpi, dimension, oneD, input, field, vacuum, sym, stars, cell, &
                            sphhar, atoms, resDen, vYukawa )
-!      else 
-!        vYukawa%iter = resDen%iter
-!        call VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, dimension, oneD, resDen, ispin, &
-!                          vYukawa )
-!      end if
+      else
+        vYukawa%iter = resDen%iter
+        call VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, dimension, oneD, resDen, &
+                         vYukawa )
+      end if
     end if
     MPI0_c: if( mpi%irank == 0 ) then
       if( input%preconditioning_param /= 0 ) then

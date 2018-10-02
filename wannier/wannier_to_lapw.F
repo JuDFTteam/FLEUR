@@ -197,7 +197,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       CHARACTER(len=10):: vandername
       NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename 
       integer cell1,cell2,cell3,pw1,pw2,pw3
-      complex ci
       complex,allocatable::wannint(:,:,:,:)
       complex,allocatable::wannz(:,:),wannz2(:,:)
       real denom
@@ -205,7 +204,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       TYPE(t_mat)   :: zzMat, zMat
       TYPE(t_usdus) :: usdus
 
-      ci=cmplx(0.,1.)
 c specify number of unit-cells that are calculated
       cell1=3
       cell2=3
@@ -562,7 +560,8 @@ c***************************************************************
       do i1=-cell1,cell1
        do i2=-cell2,cell2
         do i3=-cell3,cell3
-         factor=exp(ci*tpi_const*(i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
+         factor=exp(ImagUnit*tpi_const*
+     *          (i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
          do i=1,num_wann
           do n=1,noccbd
             wann_acof(i,0:lmd,1:natd,i1,i2,i3)=
@@ -614,21 +613,21 @@ c***************************************************************
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
-     /              (ci*denom*2)
+     /              (ImagUnit*denom*2)
           endif   
           denom=-pw2+unigrid(2)*(k2(j,jspin)+bkpt(2))  
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
-     /              (ci*denom*2)
+     /              (ImagUnit*denom*2)
           endif   
           denom=-pw3+unigrid(3)*(k3(j,jspin)+bkpt(3))  
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
-     /              (ci*denom*2)
+     /              (ImagUnit*denom*2)
           endif   
              wannint(pw1,pw2,pw3,:)=wannint(pw1,pw2,pw3,:)+
      +                wannz2(j,:)

@@ -40,7 +40,6 @@ CONTAINS
     COMPLEX a12,cil1,cil2
     REAL,PARAMETER:: zero=0.0
     COMPLEX,PARAMETER:: czero=CMPLX(0.0,0.0)
-    COMPLEX,PARAMETER:: ci=CMPLX(0.0,1.0)
     INTEGER i,ie,irinv,is,isinv,it,j,l,l1,l2,lm1,lm2 ,m1,m2,n,natom,natrun,ilo,m
     !     ..
     !     .. Local Arrays ..
@@ -101,11 +100,11 @@ CONTAINS
              ENDDO
              !
              DO l1 = 0,atoms%lmax(n)
-                cil1 = ci**l1
+                cil1 = ImagUnit**l1
                 DO m1 = -l1,l1
                    lm1 = l1* (l1+1) + m1
                    DO l2 = 0,atoms%lmax(n)
-                      cil2 = ci**l2
+                      cil2 = ImagUnit**l2
                       DO m2 = -l2,l2
                          lm2 = l2* (l2+1) + m2
                          !
@@ -133,7 +132,7 @@ CONTAINS
                          gv(1) = gv(1) + (aaa(1)+bbb(1)-ccc(1)-ddd(1)+&
                               aaa(2)+bbb(2)-ccc(2)-ddd(2))*0.5* atoms%rmt(n)**2*a12
                          !
-                         gv(2) = gv(2) + ci* (aaa(1)+bbb(1)+ccc(1)+&
+                         gv(2) = gv(2) + ImagUnit* (aaa(1)+bbb(1)+ccc(1)+&
                               ddd(1)-aaa(2)-bbb(2)-ccc(2)-ddd(2))*0.5* atoms%rmt(n)**2*a12
                          !
                          gv(3) = gv(3) + (eee(1)+eee(2)-fff(1)-fff(2))* 0.5*atoms%rmt(n)**2*a12

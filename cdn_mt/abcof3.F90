@@ -33,7 +33,7 @@ CONTAINS
     COMPLEX, INTENT (OUT):: b(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
     COMPLEX, INTENT (OUT):: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat)
     !     .. Local Scalars ..
-    COMPLEX phase,c_0,c_1,c_2,ci
+    COMPLEX phase,c_0,c_1,c_2
     REAL const,df,r1,s,tmk,wronk
     INTEGER i,j,k,l,ll1,lm ,n,nap,natom,nn,iatom,jatom,lmp,mp
     INTEGER inv_f,ilo,nvmax,lo,n_ldau,inap,iintsp

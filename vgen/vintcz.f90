@@ -29,9 +29,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
     COMPLEX, INTENT (IN) :: alphm(stars%ng2,2)
     REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)  
-    !     ..
-    !     .. Local Scalars ..
-    COMPLEX, PARAMETER :: ci = (0.0,1.0)
+
     COMPLEX argr,sumrr,vcons1,test,c_ph
     REAL bj0,dh,fit,g,g3,q,qdh,signz,vcons2,zf
     REAL e_m,e_p,cos_q,sin_q
@@ -89,9 +87,9 @@ CONTAINS
                 q = signz*q
                 qdh = q*dh
                 bj0 = SIN(qdh)/qdh
-                argr = ci*q*z
-                sumrr = sumrr + (EXP(argr)-EXP(ci*qdh))/ (q*q) +&
-                     &                 ci*COS(qdh)* (dh-z)/q + bj0* (z*z-dh*dh)/2.
+                argr = ImagUnit*q*z
+                sumrr = sumrr + (EXP(argr)-EXP(ImagUnit*qdh))/ (q*q) +&
+                     &                 ImagUnit*COS(qdh)* (dh-z)/q + bj0* (z*z-dh*dh)/2.
              ENDDO
              vintcz = vintcz + fpi_const*psq(ig3n)*sumrr
           ENDIF
@@ -127,15 +125,15 @@ CONTAINS
                 loop_vacua: DO nrz = 1,nz
                    signz = 3. - 2.*nrz
                    q = signz*q
-                   e_m = e_m - EXP(-ci*q*dh)*(g*COSH(g*(-field%efield%zsigma))&
-                        &                                  +ci*q*SINH(g*(-field%efield%zsigma)))
-                   e_p = e_p + EXP(ci*q*dh)*(-g*COSH(g*(-field%efield%zsigma))&
-                        &                                  +ci*q*SINH(g*(-field%efield%zsigma)))
-                   sumrr = EXP(ci*q*z)
+                   e_m = e_m - EXP(-ImagUnit*q*dh)*(g*COSH(g*(-field%efield%zsigma))&
+                        &                                  +ImagUnit*q*SINH(g*(-field%efield%zsigma)))
+                   e_p = e_p + EXP(ImagUnit*q*dh)*(-g*COSH(g*(-field%efield%zsigma))&
+                        &                                  +ImagUnit*q*SINH(g*(-field%efield%zsigma)))
+                   sumrr = EXP(ImagUnit*q*z)
                    e_m = e_m + sumrr*(g*COSH(g*(z+dh+field%efield%zsigma))&
-                        &                              -ci*q*SINH(g*(z+dh+field%efield%zsigma)))
+                        &                              -ImagUnit*q*SINH(g*(z+dh+field%efield%zsigma)))
                    e_p = e_p + sumrr*(g*COSH(g*(z-dh-field%efield%zsigma))&
-                        &                              -ci*q*SINH(g*(z-dh-field%efield%zsigma)))
+                        &                              -ImagUnit*q*SINH(g*(z-dh-field%efield%zsigma)))
                 END DO loop_vacua
                 vintcz = vintcz&
                      &             + vcons1*(e_m*SINH(g*(field%efield%zsigma+dh-z))&
@@ -152,8 +150,8 @@ CONTAINS
                    cos_q = COS(q*dh)
                    sin_q = SIN(q*dh)
                    sumrr = sumrr + CMPLX(COS(q*z),SIN(q*z)) + vcons2 *&
-                        &                      ( (g + ci*q) * e_p * (cos_q + ci*sin_q) +&
-                        &                        (g - ci*q) * e_m * (cos_q - ci*sin_q) )
+                        &                      ( (g + ImagUnit*q) * e_p * (cos_q + ImagUnit*sin_q) +&
+                        &                        (g - ImagUnit*q) * e_m * (cos_q - ImagUnit*sin_q) )
                 END DO vacua
                 vintcz = vintcz + vcons1*sumrr
              END IF ! Neumann (vs. Dirichlet)
