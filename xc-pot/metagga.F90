@@ -7,6 +7,11 @@ MODULE m_metagga
     PUBLIC  :: calc_EnergyDen
     PRIVATE :: calc_EnergyDen_auxillary_weights, subtract_RS, multiply_RS
 
+
+    type t_RS_potden
+       REAL, ALLOCATABLE :: is(:,:), mt(:,:)
+    end type t_RS_potden
+
     INTERFACE OPERATOR (-)
         PROCEDURE subtract_RS
     END INTERFACE OPERATOR (-)
@@ -15,55 +20,13 @@ MODULE m_metagga
         PROCEDURE multiply_RS
 END INTERFACE OPERATOR (*)
 CONTAINS
-    SUBROUTINE calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, den, atoms, enpara, stars,&
-                                 vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, kinEnergyDen)
+    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_rs)
 #ifdef CPP_LIBXC 
-        USE m_types_setup
-        USE m_types_potden
-        USE m_types_kpts
-        USE m_types_mpi
-        USE m_types_enpara
-        USE m_types_misc
-        USE m_types_regionCharges
-        USE m_types_dos
-        USE m_types_cdnval
-        USE m_types_xcpot
-        USE m_cdnval
-
-
         IMPLICIT NONE
+        REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
+        REAL, INTENT(inout), allocatable :: kinEnergyDen_rs(:,:)
 
-        INTEGER,           INTENT(in)           :: eig_id
-        TYPE(t_mpi),       INTENT(in)           :: mpi
-        TYPE(t_kpts),      INTENT(in)           :: kpts
-        TYPE(t_noco),      INTENT(in)           :: noco
-        TYPE(t_input),     INTENT(in)           :: input
-        TYPE(t_banddos),   INTENT(in)           :: banddos
-        TYPE(t_cell),      INTENT(in)           :: cell
-        TYPE(t_potden),    INTENT(in)           :: den
-        TYPE(t_atoms),     INTENT(in)           :: atoms 
-        TYPE(t_enpara),    INTENT(in)           :: enpara
-        TYPE(t_stars),     INTENT(in)           :: stars 
-        TYPE(t_vacuum),    INTENT(in)           :: vacuum 
-        TYPE(t_dimension), INTENT(in)           :: DIMENSION
-        TYPE(t_sphhar),    INTENT(in)           :: sphhar 
-        TYPE(t_sym),       INTENT(in)           :: sym 
-        TYPE(t_potden),    INTENT(in)           :: vTot
-        TYPE(t_oneD),      INTENT(in)           :: oneD
-        TYPE(t_results),   INTENT(in)           :: results
-        REAL,              INTENT(inout)        :: kinEnergyDen(:,:)
-
-        ! local vars
-
-        TYPE(t_potden)          :: EnergyDen
-        REAL                    :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
-
-
-        CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
-                            vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
-        
-        !CALL transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
-
+        !implicit allocation
         kinEnergyDen = EnergyDen_RS - vTot_RS * den_RS
 #else
         USE m_juDFT_stop

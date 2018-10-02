@@ -294,7 +294,8 @@ CONTAINS
                exc=exc+excc
             END IF
          ELSE
-            call juDFT_error("MetaGGAs need kinetic energy density", hint="maybe you used vacuum with LibXC")
+            call juDFT_error("MetaGGAs needs the kinetic energy density",&
+                             hint="maybe you used vacuum with LibXC")
          ENDIF
       ELSE
          call juDFT_error("exc is part of a known Family", calledby="xcpot_get_exc@libxc")
