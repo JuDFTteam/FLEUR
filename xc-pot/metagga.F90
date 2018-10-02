@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_metagga
-    PUBLIC  :: calc_EnergyDen, t_RS_potden
+    PUBLIC  :: calc_EnergyDen
     PRIVATE :: calc_EnergyDen_auxillary_weights, subtract_RS, multiply_RS
 
     INTERFACE OPERATOR (-)
@@ -51,18 +51,18 @@ CONTAINS
         TYPE(t_potden),    INTENT(in)           :: vTot
         TYPE(t_oneD),      INTENT(in)           :: oneD
         TYPE(t_results),   INTENT(in)           :: results
-        TYPE(t_RS_potden), INTENT(inout)        :: kinEnergyDen
+        REAL,              INTENT(inout)        :: kinEnergyDen(:,:)
 
         ! local vars
 
-        TYPE(t_potden)                    :: EnergyDen
-        TYPE(t_RS_potden)          :: den_RS, EnergyDen_RS, vTot_RS
+        TYPE(t_potden)          :: EnergyDen
+        REAL                    :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
 
 
         CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
         
-        CALL transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
+        !CALL transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
 
         kinEnergyDen = EnergyDen_RS - vTot_RS * den_RS
 #else
@@ -167,64 +167,64 @@ CONTAINS
         ENDDO
     END SUBROUTINE calc_EnergyDen_auxillary_weights
 
-    SUBROUTINE transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
-        USE m_types_potden
-        USE m_types_setup
-        USE m_types_xcpot_libxc
-        USE m_types_xcpot
-        USE m_juDFT_stop
-        USE m_pw_tofrom_grid
-        USE m_mt_tofrom_grid
+    !SUBROUTINE transform_to_grid(input, noco, sym, stars, cell, den, atoms, sphhar, EnergyDen, vTot, den_RS, EnergyDen_RS, vTot_RS)
+        !USE m_types_potden
+        !USE m_types_setup
+        !USE m_types_xcpot_libxc
+        !USE m_types_xcpot
+        !USE m_juDFT_stop
+        !USE m_pw_tofrom_grid
+        !USE m_mt_tofrom_grid
 
-        IMPLICIT NONE 
+        !IMPLICIT NONE 
         
-        TYPE(t_potden),    INTENT(in)        :: den, EnergyDen, vTot 
-        TYPE(t_input),     INTENT(in)        :: input
-        TYPE(t_noco),      INTENT(in)        :: noco
-        TYPE(t_sym),       INTENT(in)        :: sym
-        TYPE(t_stars),     INTENT(in)        :: stars
-        TYPE(t_cell),      INTENT(in)        :: cell
-        TYPE(t_atoms),     INTENT(in)        :: atoms
-        TYPE(t_sphhar),    INTENT(in)        :: sphhar
-        TYPE(t_RS_potden), INTENT(out)       :: den_RS, EnergyDen_RS, vTot_RS ! could be changed to a real-space type
+        !TYPE(t_potden),    INTENT(in)        :: den, EnergyDen, vTot 
+        !TYPE(t_input),     INTENT(in)        :: input
+        !TYPE(t_noco),      INTENT(in)        :: noco
+        !TYPE(t_sym),       INTENT(in)        :: sym
+        !TYPE(t_stars),     INTENT(in)        :: stars
+        !TYPE(t_cell),      INTENT(in)        :: cell
+        !TYPE(t_atoms),     INTENT(in)        :: atoms
+        !TYPE(t_sphhar),    INTENT(in)        :: sphhar
+        !REAL(:,:), INTENT(out)               :: den_RS, EnergyDen_RS, vTot_RS ! could be changed to a real-space type
 
-        !local vars
-        TYPE(t_xcpot_libxc) ::aux_xcpot
-        TYPE(t_gradients)   :: tmp_grad
-        INTEGER, PARAMETER  :: id_corr = 9, id_exch = 1
-        INTEGER             :: nsp, n
+        !!local vars
+        !TYPE(t_xcpot_libxc) ::aux_xcpot
+        !TYPE(t_gradients)   :: tmp_grad
+        !INTEGER, PARAMETER  :: id_corr = 9, id_exch = 1
+        !INTEGER             :: nsp, n
 
 
 
-        !make some auxillary xcpot, that is not a GGA (we don't need gradients)
-        CALL aux_xcpot%init(input%jspins, id_exch, id_corr, id_exch, id_corr)
-        IF(aux_xcpot%vxc_is_gga()) CALL juDFT_error("aux_xcpot must not be GGA", &
-                                                hint="choose id_corr and id_exch correctly")
+        !!make some auxillary xcpot, that is not a GGA (we don't need gradients)
+        !CALL aux_xcpot%init(input%jspins, id_exch, id_corr, id_exch, id_corr)
+        !IF(aux_xcpot%vxc_is_gga()) CALL juDFT_error("aux_xcpot must not be GGA", &
+                                                !hint="choose id_corr and id_exch correctly")
 
-        ! interstitial part
-        CALL init_pw_grid(aux_xcpot,stars,sym,cell)
+        !! interstitial part
+        !CALL init_pw_grid(aux_xcpot,stars,sym,cell)
 
-        CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, den%pw,       tmp_grad, den_RS%is)
-        CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, EnergyDen%pw, tmp_grad, EnergyDen_RS%is)
-        CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, vTot%pw,      tmp_grad, vTot_RS%is)
+        !CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, den%pw,       tmp_grad, den_RS%is)
+        !CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, EnergyDen%pw, tmp_grad, EnergyDen_RS%is)
+        !CALL pw_to_grid(aux_xcpot, input%jspins, noco%l_noco, stars, cell, vTot%pw,      tmp_grad, vTot_RS%is)
 
-        CALL finish_pw_grid()
+        !CALL finish_pw_grid()
 
-        ! muffin tins
-        nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-        CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,aux_xcpot,sym)
+        !! muffin tins
+        !nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+        !CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,aux_xcpot,sym)
 
-        DO n = 1,atoms%ntype
-            CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, den%mt(:,0:,n,:), &
-                            nsp,       n,            tmp_grad, den_RS%mt)
-            CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
-                            nsp,       n,            tmp_grad, EnergyDen_RS%mt)
-            CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, vTot%mt(:,0:,n,:), &
-                            nsp,       n,            tmp_grad, vTot_RS%mt)
-        ENDDO
+        !DO n = 1,atoms%ntype
+            !CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, den%mt(:,0:,n,:), &
+                            !nsp,       n,            tmp_grad, den_RS%mt)
+            !CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
+                            !nsp,       n,            tmp_grad, EnergyDen_RS%mt)
+            !CALL mt_to_grid(aux_xcpot, input%jspins, atoms,    sphhar, vTot%mt(:,0:,n,:), &
+                            !nsp,       n,            tmp_grad, vTot_RS%mt)
+        !ENDDO
 
-        CALL finish_mt_grid()
-    END SUBROUTINE transform_to_grid
+        !CALL finish_mt_grid()
+    !END SUBROUTINE transform_to_grid
 
     FUNCTION subtract_RS(rs1, rs2) RESULT(rs_out)
        USE m_types_xcpot

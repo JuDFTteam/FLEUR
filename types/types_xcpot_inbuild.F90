@@ -265,7 +265,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen)
 !***********************************************************************
       USE m_xcxal, ONLY : excxal
       USE m_xcwgn, ONLY : excwgn
@@ -277,23 +277,14 @@ CONTAINS
       USE m_excpw91
       USE m_excepbe
       IMPLICIT NONE
-!c
-!c---> running mode parameters
-!c
-      CLASS(t_xcpot_inbuild),INTENT(IN) :: xcpot
-      INTEGER, INTENT (IN)     :: jspins
-!c
-!c---> charge density
-!c
-      REAL,INTENT (IN) :: rh(:,:)
       
-!c
-!c---> xc energy density
-!c
-      REAL, INTENT (OUT) :: exc(:)
+      CLASS(t_xcpot_inbuild),INTENT(IN)     :: xcpot
+      INTEGER, INTENT (IN)                  :: jspins
+      REAL,INTENT (IN)                      :: rh(:,:)
+      REAL, INTENT (OUT)                    :: exc(:)
+      TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen(:,:)
 
-      ! optional arguments for GGA
-      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
 !c
 !c ---> local scalars
       INTEGER :: ngrid

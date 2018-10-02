@@ -95,7 +95,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_DEN)
-   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_kinEnergyDen)
+   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_EnergyDen)
 
    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -114,7 +114,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
       CALL calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, outDen, atoms, enpara, stars,&
-                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, xcpot%kinEnergyDen)
+                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
    endif
 
    IF (mpi%irank == 0) THEN

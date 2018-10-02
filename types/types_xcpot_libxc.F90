@@ -259,7 +259,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
       INTEGER, INTENT (IN)           :: jspins
