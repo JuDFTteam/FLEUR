@@ -117,8 +117,8 @@ CONTAINS
                     banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
-    IF((input%preconditioning_param /= 0).AND.input%film) THEN
-       CALL juDFT_error('Currently no preconditioner for films', calledby = 'fleur')
+    IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
+      CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
 
     IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&

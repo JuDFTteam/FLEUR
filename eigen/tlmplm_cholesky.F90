@@ -11,6 +11,7 @@ MODULE m_tlmplm_cholesky
     SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
          jspin,jsp,mpi,v,input,td,ud)
 
+      use m_constants
       USE m_intgr, ONLY : intgr3
       USE m_genMTBasis
       USE m_tlo
@@ -35,7 +36,6 @@ MODULE m_tlmplm_cholesky
       !     ..
       !     .. Local Scalars ..
       COMPLEX cil
-      COMPLEX,PARAMETER::ci=cmplx(0.,1.)
       REAL temp
       INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
       INTEGER lp1,lpl ,mem,mems,mp,mu,n,nh,na,m,nsym,s,i_u
@@ -177,7 +177,7 @@ MODULE m_tlmplm_cholesky
                          IF (lm.GT.lmp) CYCLE
                          lpl = lp1 + l
                          lmplm = lmpl + lm
-                         cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,nsym))*&
+                         cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,nsym))*&
                               gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
                          td%tuu(lmplm,n,jsp) = td%tuu(lmplm,n,jsp) + cil*uvu(lpl,lh)
                          td%tdd(lmplm,n,jsp) = td%tdd(lmplm,n,jsp) + cil*dvd(lpl,lh)

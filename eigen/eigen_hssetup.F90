@@ -61,7 +61,7 @@ CONTAINS
     DO i=1,nspins
        DO j=1,nspins
           CALL smat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(j)+atoms%nlotot,mpi%sub_comm,.false.)
-          CALL hmat(i,j)%init(l_real,lapw%nv(i)+atoms%nlotot,lapw%nv(j)+atoms%nlotot,mpi%sub_comm,.false.)
+          CALL hmat(i,j)%init(smat(i,j))
        ENDDO
     ENDDO
 
@@ -94,7 +94,7 @@ CONTAINS
     ! In collinear case only a copy is done
     ! In the parallel case also a redistribution happens
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
-    CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final)
+    CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final,smat_final)
     
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup

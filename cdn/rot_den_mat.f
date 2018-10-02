@@ -17,6 +17,7 @@ c matrix. --> U*rho*U^dagger
 c Philipp Kurz 2000-02-03
 c***********************************************************************
 
+      use m_constants
       IMPLICIT NONE
 
 C     .. Scalar Arguments ..
@@ -28,20 +29,18 @@ C     ..
 C     .. Local Scalars ..
       INTEGER ispin
       REAL eps
-      COMPLEX ci
 C     ..
 C     .. Local Arrays ..
       COMPLEX u2(2,2),rho(2,2),rhoh(2,2)
 C     ..
       
       eps = 1.0e-10
-      ci = cmplx(0.0,1.0)
 
 c---> set up the unitary 2x2 spin rotation matrix U^(2)
-      u2(1,1) =  exp(-ci*alph/2)*cos(beta/2)
-      u2(1,2) = -exp(-ci*alph/2)*sin(beta/2)
-      u2(2,1) =  exp( ci*alph/2)*sin(beta/2)
-      u2(2,2) =  exp( ci*alph/2)*cos(beta/2)
+      u2(1,1) =  exp(-ImagUnit*alph/2)*cos(beta/2)
+      u2(1,2) = -exp(-ImagUnit*alph/2)*sin(beta/2)
+      u2(2,1) =  exp( ImagUnit*alph/2)*sin(beta/2)
+      u2(2,2) =  exp( ImagUnit*alph/2)*cos(beta/2)
       
       rho(1,1) = cmplx(rho11,0.0)
       rho(2,2) = cmplx(rho22,0.0)

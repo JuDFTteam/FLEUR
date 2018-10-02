@@ -58,7 +58,7 @@ c     Inclusion of Noco&&soc; tidied up version
 c     Frank Freimuth
 c*********************************************************************
       use m_intgr, only : intgr3
-      use m_constants,only:pimach
+      use m_constants, only: pimach, ImagUnit
       use m_dwigner
       use m_wann_tlmw
       use m_wann_rad_twf
@@ -97,7 +97,7 @@ c...local
       complex          :: tlmwf(0:3,-3:3,nwfsd),tlmwft(0:3,-3:3,nwfsd)
       logical          :: l_oldproj,l_amn2,l_file
       complex          :: d_wgn(-3:3,-3:3,1:3),wign(-3:3,-3:3,3,nwfsd)
-      complex          :: ci,factor
+      complex          :: factor
       real             :: arg
       real             :: mrott(3,3),bmatt(3,3),imx(3,3)
       character(len=2) :: spin12(0:2)
@@ -109,7 +109,6 @@ c...local
          inquire(file='pro2.1',exist=l_amn2_in)
       endif
       pi=pimach()
-      ci=(0.0,1.0)
 c..generates an array giving the atom type for each atom
       ntp(:) = 0
       iatom = 0
@@ -305,7 +304,7 @@ c..constructing the radial part, therefore, we do it anyway
                   lm = l*(l+1) + m
                   amn(ne,nwf) = amn(ne,nwf) +
      +               tlmwft(l,m,nwf)*conjg(( acof(ne,lm,nat)*vl + 
-     +                        bcof(ne,lm,nat)*vld )*(ci)**l)*factor
+     +               bcof(ne,lm,nat)*vld )*(ImagUnit)**l)*factor
      
                enddo
             enddo
@@ -327,8 +326,8 @@ c..local orbitals
                   call intgr3(vlpr,rmsh(1,ntyp),dx(ntyp),jri(ntyp),vlo)
                   do m = -l,l
                      amn(ne,nwf) = amn(ne,nwf) +
-     +          tlmwft(l,m,nwf)*conjg((ccof(m,ne,lo,nat)*vlo)*(ci)**l)*
-     *               factor
+     +          tlmwft(l,m,nwf)*conjg((ccof(m,ne,lo,nat)*vlo)*
+     *          (ImagUnit)**l)*factor
                   enddo
                enddo
             endif 

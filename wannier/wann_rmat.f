@@ -19,7 +19,7 @@ c     between wannier functions.
 c
 c     FF, 2009
 c***********************************************************
-      use m_constants, only:pimach
+      use m_constants, only:pimach, ImagUnit
       use m_wann_read_umatrix
 
       implicit none
@@ -88,7 +88,6 @@ c***********************************************************
       character(len=6)    :: filename
       integer             :: jp,mp,kk
       integer             :: rvecind,rvecind_0
-      complex,parameter   :: ci=(0.0,1.0)
       real                :: realvec(3)
       complex,allocatable :: mmnk(:,:,:,:)
       logical             :: l_worksout,l_she
@@ -270,12 +269,12 @@ c****************************************************************
             do j=1,num_wann
              if(j.eq.i)then
               do kk=1,3
-               posop2(kk,j,i,ikpt)=posop2(kk,j,i,ikpt)+ci*
+               posop2(kk,j,i,ikpt)=posop2(kk,j,i,ikpt)+ImagUnit*
      &             wb(nn)*kdiff(kk)*(m_matrix(j,i,nn,ikpt)-1.0)  
               enddo !kk
              else
               do kk=1,3
-               posop2(kk,j,i,ikpt)=posop2(kk,j,i,ikpt)+ci*
+               posop2(kk,j,i,ikpt)=posop2(kk,j,i,ikpt)+ImagUnit*
      &             wb(nn)*kdiff(kk)*m_matrix(j,i,nn,ikpt)  
               enddo !kk
              endif

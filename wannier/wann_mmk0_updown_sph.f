@@ -23,6 +23,7 @@ c     Overlaps of the spin-down parts of the Bloch functions
 c     with the spin-up parts.
 c                           Frank Freimuth
 c************************************************************
+      use m_constants
       implicit none
       logical, intent (in)  :: l_noco
       integer, intent (in)  :: llod,nlod,natd,ntypd,lmaxd,lmd
@@ -56,9 +57,8 @@ c************************************************************
       complex, allocatable :: qlo(:,:,:,:,:)
       complex, allocatable :: qaclo(:,:,:,:),qbclo(:,:,:,:)
       complex, allocatable :: qcloa(:,:,:,:),qclob(:,:,:,:)
-      COMPLEX           :: ccchi(2,2),ci
+      COMPLEX           :: ccchi(2,2)
 
-      ci = cmplx(0.0,1.0)
       allocate (qlo(noccbd,noccbd,nlod,nlod,ntypd), 
      +          qaclo(noccbd,noccbd,nlod,ntypd),
      +          qbclo(noccbd,noccbd,nlod,ntypd),
@@ -70,11 +70,11 @@ c---> performs summations of the overlaps of the wavefunctions
        do j = 1,noccbd
          nt1 = 1
          do n = 1,ntype
-            if(l_noco)then
-               ccchi(1,1) = conjg( exp( ci*alph(n)/2)*cos(beta(n)/2))
-               ccchi(1,2) = conjg(-exp( ci*alph(n)/2)*sin(beta(n)/2))
-               ccchi(2,1) = conjg( exp(-ci*alph(n)/2)*sin(beta(n)/2))
-               ccchi(2,2) = conjg( exp(-ci*alph(n)/2)*cos(beta(n)/2))
+          if(l_noco)then
+            ccchi(1,1) = conjg( exp( ImagUnit*alph(n)/2)*cos(beta(n)/2))
+            ccchi(1,2) = conjg(-exp( ImagUnit*alph(n)/2)*sin(beta(n)/2))
+            ccchi(2,1) = conjg( exp(-ImagUnit*alph(n)/2)*sin(beta(n)/2))
+            ccchi(2,2) = conjg( exp(-ImagUnit*alph(n)/2)*cos(beta(n)/2))
             endif
             nt2 = nt1 + neq(n) - 1
             do l = 0,lmax(n)

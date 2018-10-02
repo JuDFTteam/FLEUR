@@ -18,6 +18,7 @@ CONTAINS
   SUBROUTINE rhonmtlo(atoms,sphhar,ne,we,eigVecCoeffs,denCoeffs,ispin)
     USE m_gaunt,ONLY:gaunt1
     USE m_types
+    use m_constants
 
     IMPLICIT NONE
 
@@ -31,12 +32,10 @@ CONTAINS
     REAL,    INTENT (IN) :: we(:)!(nobd)
 
     !     .. Local Scalars ..
-    COMPLEX ci,cmv,fact,cf1
+    COMPLEX cmv,fact,cf1
     INTEGER i,jmem,l,lh,lmp,lo,lop,lp,lpmax,lpmax0,lpmin,lpmin0,m,lpp ,mp,mpp,na,neqat0,nn,ntyp
     !     ..
     !     ..
-
-    ci = CMPLX(0.0,1.0)
 
     !---> for optimal performance consider only
     !---> those combinations of l,l',l'',m,m',m'' that satisfy the three
@@ -77,7 +76,7 @@ CONTAINS
                    !--->                loop over l'
                    DO lp = lpmin,lpmax,2
                       lmp = lp* (lp+1) + mp
-                      fact = cmv* (ci** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
+                      fact = cmv* (ImagUnit** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
                       na = neqat0
                       DO nn = 1,atoms%neq(ntyp)
                          na = na + 1
@@ -99,7 +98,7 @@ CONTAINS
                    !--->                loop over l'
                    DO lp = lpmin,lpmax,2
                       lmp = lp* (lp+1) + mp
-                      fact = cmv* (ci** (lp-l))*gaunt1(lp,l,lpp,mp,m,mpp,atoms%lmaxd)
+                      fact = cmv* (ImagUnit** (lp-l))*gaunt1(lp,l,lpp,mp,m,mpp,atoms%lmaxd)
                       na = neqat0
                       DO nn = 1,atoms%neq(ntyp)
                          na = na + 1
@@ -120,7 +119,7 @@ CONTAINS
                       !--->                   add terms containing gaunt1(l,lp,lpp,m,mp,mpp)
                       mp = m - mpp
                       IF ((ABS(l-lpp).LE.lp) .AND.(lp.LE. (l+lpp)) .AND.(MOD(l+lp+lpp,2).EQ.0) .AND.(ABS(mp).LE.lp)) THEN
-                         fact = cmv* (ci** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
+                         fact = cmv* (ImagUnit** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
                          na = neqat0
                          DO nn = 1,atoms%neq(ntyp)
                             na = na + 1

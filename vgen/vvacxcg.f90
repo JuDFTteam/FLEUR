@@ -17,6 +17,7 @@ CONTAINS
     !     density through the driver subroutine excallg.f
     !     ** r.pentcheva 08.05.96
     !-----------------------------------------------------------------------
+    use m_constants
     USE m_grdrsvac
     USE m_grdchlh
     USE m_mkgz
@@ -46,7 +47,6 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip
     REAL    :: rhti,zro,fgz,rhmnv,d_15,bmat1(3,3),rd
-    COMPLEX :: ci 
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: af2(:,:),bf2(:)
@@ -79,7 +79,6 @@ CONTAINS
 
     d_15     = 1.e-15
     zro      = 0.0
-    ci       = cmplx(0.,1.)
     nt       = ifftd2
     if(oneD%odi%d1)then
        bmat1(:,:) = 0.
@@ -244,7 +243,7 @@ CONTAINS
              DO js = 1,input%jspins
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=ci*den%vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=ImagUnit*den%vacxy(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
@@ -282,7 +281,7 @@ CONTAINS
 
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=ci*rxydz(ip,iq,js)
+                   cqpw(iq)=ImagUnit*rxydz(ip,iq,js)
                 ENDDO
 
                 rhti = 0.0

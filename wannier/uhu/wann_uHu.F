@@ -232,7 +232,6 @@ c     ..local scalars..
       real    :: efermi,htr2ev
       real    :: theta_i, thetab_i, phi_i, phib_i
       complex :: nsfactor,nsfactor_b,nsfactor_b2
-      complex :: ci
 
       TYPE(t_usdus) :: usdus
       TYPE(t_zmat)  :: zMat, zzMat, zMat_b, zMat_b2
@@ -242,7 +241,6 @@ c     ..local scalars..
 c     ..initializations..
       call cpu_time(t00)
 
-      ci = cmplx(0.,1.)
       t_init = 0.
       t_myTlmplm = 0.
       t_eig = 0.

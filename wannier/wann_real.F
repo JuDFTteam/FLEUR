@@ -63,15 +63,14 @@ C     .. Local Scalars ..
       REAL delta,sx,xx1,xx2,rrr,phi,const,arg,tpi,arg1
       INTEGER i,j,jp3,jr,k,l,nd,nopa,ivac,lm,m,gzi,kk
       INTEGER kk1,kk2,kk3
-      COMPLEX ci,const2,s,xd1,xd2,const3
+      COMPLEX const2,s,xd1,xd2,const3
 C     ..
 C     .. Local Arrays ..
       COMPLEX sf2(n2d),sf3(n3d),ylm((lmaxd+1)**2)
       REAL rcc(3),x(3),rcc2(3)
       REAL bqpt(3)
 
-C     ..
-      ci = cmplx(0.,1.)
+
       tpi   = 2 * pimach()
       const = 1./(sqrt(omtil))
 
@@ -189,7 +188,7 @@ c               write (6,*) 'gg(l,300)=',gg(1,300,2,l)
 c        endif
        DO 110 m = -l,l
         lm = l*(l+1)+m
-        s = ylm(lm+1)*(ci)**l
+        s = ylm(lm+1)*(ImagUnit)**l
 c       if (p(1).eq.0. .and. p(2).eq.0. .and. p(3).eq.0)then
 c              write (6,*) 'acof=',acof(lm,1)
 c              write (6,*) 'bcof=',bcof(lm,1)
@@ -210,7 +209,7 @@ c..contributions from the local orbitals
        DO l = 1,nlo(n)
         DO 111 m = -llo(l,n),llo(l,n)
          lm = llo(l,n)*(llo(l,n)+1)+m
-         s = ylm(lm+1)*(ci)**llo(l,n) 
+         s = ylm(lm+1)*(ImagUnit)**llo(l,n) 
          xd1 = xd1 + ccof(m,l,na)*flo(n,jr,1,l)*s/
      /               (rmsh(jr,n))         
          IF (jr.EQ.1) GO TO 111

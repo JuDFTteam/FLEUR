@@ -77,7 +77,7 @@ C     .. Array Arguments ..
 C     ..
 C     .. Local Scalars ..
       REAL gc1,gc2,c,e,r0
-      COMPLEX cil,ci
+      COMPLEX cil
       INTEGER i,l,l2,lh,lm,lmp,lp,lo,lop
       INTEGER lp1,lpl,m,mp,mu
       INTEGER ljj1,ljj2,mjj1,mjj2
@@ -102,7 +102,6 @@ C     .. Local Arrays ..
       INTEGER ierr(3)
 #endif
 
-      ci = cmplx(0.0,1.0)
       c = c_light(1.0)
       sp1 = ispjsp(jspin)
       sp2 = ispjsp(jspin_b)
@@ -344,7 +343,7 @@ c*********************************************************c
      >                     m, mjj2, mtil2, lmaxd)
 
              ! set up prefactor
-             cil =   ( ci ** (lp - l + ljj1 + ljj2) )
+             cil =   ( ImagUnit ** (lp - l + ljj1 + ljj2) )
      +              *( (-1.0) ** ljj1 )
      +              * gc1 * gc2
      +              * conjg( yl1(lmjj1 + 1) )
@@ -410,7 +409,7 @@ c*********************************************************c
      >                     m, mjj2, mtil2, lmaxd)
 
              ! set up prefactor
-             cil =   ( ci ** (lp - l + ljj1 + ljj2) )
+             cil =   ( ImagUnit ** (lp - l + ljj1 + ljj2) )
      +              *( (-1.0) ** ljj1 )
      +              * gc1 * gc2
      +              * conjg( yl1(lmjj1 + 1) )
@@ -479,7 +478,7 @@ c*********************************************************c
      >                     mp, mjj2, mtil2, lmaxd)
 
              ! set up prefactor
-             cil =   ( ci ** (l - lp + ljj1 + ljj2) )
+             cil =   ( ImagUnit ** (l - lp + ljj1 + ljj2) )
      +              *( (-1.0) ** ljj1 )
      +              * gc1 * gc2
      +              * conjg( yl1(lmjj1 + 1) )

@@ -16,6 +16,7 @@ MODULE m_constants
    REAL,             PARAMETER :: tpi_const=2.*3.1415926535897932
    REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
    REAL,             PARAMETER :: sfp_const=sqrt(4.*3.1415926535897932)
+   complex,          parameter :: ImagUnit=(0.0,1.0)
    REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
    REAL,             PARAMETER :: eVac0Default_const = -0.25
    CHARACTER(len=9), PARAMETER :: version_const = 'fleur 27'

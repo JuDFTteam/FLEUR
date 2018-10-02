@@ -7,7 +7,6 @@ MODULE m_pw_tofrom_grid
   USE m_types
   PRIVATE
   REAL,PARAMETER:: d_15=1.e-15
-  COMPLEX,PARAMETER:: ci=CMPLX(0.,1.)
 
   INTEGER :: ifftd,ifftxc3d,ifftxc3
   !----->  fft  information  for xc potential + energy
@@ -77,6 +76,7 @@ CONTAINS
     USE m_fft3dxc
     USE m_fft3d
     USE m_types
+    use m_constants
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN)     :: xcpot
     INTEGER,INTENT(IN)            :: jspins
@@ -152,7 +152,7 @@ CONTAINS
 
        ALLOCATE(cqpw(stars%ng3,jspins))
 
-       cqpw(:,:)= ci*den_pw(:,:jspins)
+       cqpw(:,:)= ImagUnit*den_pw(:,:jspins)
    
        DO idm=1,3
           DO ig = 0 , stars%kmxxc_fft - 1

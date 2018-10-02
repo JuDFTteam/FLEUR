@@ -44,7 +44,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
       REAL :: vec1(3),vec2(3),vec3(3),zero(3)
       REAL :: pt(3),point(3),rcc2(3)
       REAL :: s,arg,pi,u_r,u_i
-      COMPLEX :: ci,phasfac
+      COMPLEX :: phasfac
       COMPLEX :: U(2,2)
       COMPLEX :: wf_local(2),wf_global,xdnout
       CHARACTER(len=30) :: filename
@@ -55,7 +55,6 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
       intrinsic real,aimag,conjg,exp,cmplx
 
       pi = pimach()
-      ci = cmplx(0.0,1.0)
       nkqpts = nkpts*nqpts
 
       INQUIRE(file ="plot_inp",exist=twodim)
@@ -183,10 +182,10 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
                     count_mt=count_mt+1
                     ! we are inside the MT with alph(nt),beta(nt)
                     ! set up transformation local -> global
-                    U(1,1) =  exp(-ci*alph(nt)/2.)*cos(beta(nt)/2.) 
-                    U(1,2) = -exp(-ci*alph(nt)/2.)*sin(beta(nt)/2.)
-                    U(2,1) =  exp( ci*alph(nt)/2.)*sin(beta(nt)/2.)
-                    U(2,2) =  exp( ci*alph(nt)/2.)*cos(beta(nt)/2.)
+                   U(1,1) =  exp(-ImagUnit*alph(nt)/2.)*cos(beta(nt)/2.) 
+                   U(1,2) = -exp(-ImagUnit*alph(nt)/2.)*sin(beta(nt)/2.)
+                   U(2,1) =  exp( ImagUnit*alph(nt)/2.)*sin(beta(nt)/2.)
+                   U(2,2) =  exp( ImagUnit*alph(nt)/2.)*cos(beta(nt)/2.)
                     
                     ! transform wfs to global frame
                     DO iintsp=1,2
