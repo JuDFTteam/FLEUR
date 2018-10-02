@@ -260,15 +260,17 @@ CONTAINS
     INTEGER :: ierr
     IF (ALLOCATED(mat%data_r)) DEALLOCATE(mat%data_r)
     IF (ALLOCATED(mat%data_c)) DEALLOCATE(mat%data_c)
-    IF (mat%blacsdata%no_use>1) THEN
-       mat%blacsdata%no_use=mat%blacsdata%no_use-1
-       mat%blacsdata=>null()
-    ELSE
+    IF (ASSOCIATED(mat%blacsdata)) THEN
+       IF (mat%blacsdata%no_use>1) THEN
+          mat%blacsdata%no_use=mat%blacsdata%no_use-1
+          mat%blacsdata=>null()
+       ELSE
 #ifdef CPP_SCALAPACK    
-       CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2),ierr)
-       DEALLOCATE(mat%blacsdata)
+          CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2),ierr)
+          DEALLOCATE(mat%blacsdata)
 #endif
-    END IF
+       END IF
+    ENDIF
   END SUBROUTINE mpimat_free
 
   !>Initialization of the distributed matrix.
