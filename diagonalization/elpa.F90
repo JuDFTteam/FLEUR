@@ -74,11 +74,11 @@ CONTAINS
     SELECT TYPE(smat)
     TYPE IS (t_mpimat)
 
-    CALL MPI_BARRIER(hmat%mpi_com,err)    
-    CALL MPI_COMM_RANK(hmat%mpi_com,myid,err)
-    CALL MPI_COMM_SIZE(hmat%mpi_com,np,err)
-    myrow = myid/hmat%npcol
-    mycol = myid -(myid/hmat%npcol)*hmat%npcol  
+    CALL MPI_BARRIER(hmat%blacsdata%mpi_com,err)    
+    CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,err)
+    CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,err)
+    myrow = myid/hmat%blacsdata%npcol
+    mycol = myid -(myid/hmat%blacsdata%npcol)*hmat%blacsdata%npcol  
 
 
     !Create communicators for ELPA
@@ -86,9 +86,9 @@ CONTAINS
     mpi_comm_rows = -1
     mpi_comm_cols = -1
 #elif defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
-    err=get_elpa_row_col_comms(hmat%mpi_com, myrow, mycol,mpi_comm_rows, mpi_comm_cols)
+    err=get_elpa_row_col_comms(hmat%blacsdata%mpi_com, myrow, mycol,mpi_comm_rows, mpi_comm_cols)
 #else
-    CALL get_elpa_row_col_comms(hmat%mpi_com, myrow, mycol,mpi_comm_rows, mpi_comm_cols)
+    CALL get_elpa_row_col_comms(hmat%blacsdata%mpi_com, myrow, mycol,mpi_comm_rows, mpi_comm_cols)
 #endif
     !print *,"creating ELPA comms  --  done"
 
@@ -97,7 +97,7 @@ CONTAINS
     ALLOCATE ( eig2(hmat%global_size1), stat=err ) ! The eigenvalue array for ScaLAPACK
     IF (err.NE.0) CALL juDFT_error('Failed to allocated "eig2"', calledby ='elpa')
 
-    CALL ev_dist%init(hmat%l_real,hmat%global_size1,hmat%global_size2,hmat%mpi_com,.TRUE.)! Eigenvectors for ScaLAPACK
+    CALL ev_dist%init(hmat)! Eigenvectors for ScaLAPACK
     IF (err.NE.0) CALL juDFT_error('Failed to allocated "ev_dist"',calledby ='elpa')
 
     IF (hmat%l_real) THEN
@@ -107,12 +107,10 @@ CONTAINS
     ENDIF
     IF (err.NE.0) CALL juDFT_error('Failed to allocated "tmp2"', calledby ='elpa')
 
-    smat%blacs_desc=hmat%blacs_desc
-    ev_dist%blacs_desc=hmat%blacs_desc
     
     
-    nb=hmat%blacs_desc(5)! Blocking factor
-    IF (nb.NE.hmat%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
+    nb=hmat%blacsdata%blacs_desc(5)! Blocking factor
+    IF (nb.NE.hmat%blacsdata%%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
 
 #ifdef CPP_ELPA_201705003    
     CALL elpa_obj%set("na", hmat%global_size1, err)
@@ -120,7 +118,7 @@ CONTAINS
     CALL elpa_obj%set("local_nrows", hmat%matsize1, err)
     CALL elpa_obj%set("local_ncols", hmat%matsize2, err)
     CALL elpa_obj%set("nblk", nb, err)
-    CALL elpa_obj%set("mpi_comm_parent", hmat%mpi_com, err)
+    CALL elpa_obj%set("mpi_comm_parent", hmat%blacsdata%%mpi_com, err)
     CALL elpa_obj%set("process_row", myrow, err)
     CALL elpa_obj%set("process_col", mycol, err)
 #ifdef CPP_ELPA2
@@ -202,10 +200,10 @@ CONTAINS
 
     IF (hmat%l_real) THEN
        CALL pdtran(hmat%global_size1,hmat%global_size1,1.d0,hmat%data_r,1,1,&
-                         hmat%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacs_desc)
+                         hmat%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%%blacs_desc)
     ELSE
        CALL pztranc(hmat%global_size1,hmat%global_size2,cmplx(1.d0,0.d0),hmat%data_c,1,1,&
-                         hmat%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacs_desc)
+                         hmat%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%%blacs_desc)
     ENDIF
 
     
@@ -261,10 +259,10 @@ CONTAINS
     ! 2b. tmp2 = eigvec**T
     IF (hmat%l_real) THEN
        CALL pdtran(ev_dist%global_size1,ev_dist%global_size1,1.d0,ev_dist%data_r,1,1,&
-                          ev_dist%blacs_desc,0.d0,tmp2_r,1,1,ev_dist%blacs_desc)
+                          ev_dist%blacsdata%blacs_desc,0.d0,tmp2_r,1,1,ev_dist%blacsdata%blacs_desc)
     ELSE
        CALL pztranc(ev_dist%global_size1,ev_dist%global_size1,cmplx(1.0,0.0),ev_dist%data_c,1,1,&
-                          ev_dist%blacs_desc,cmplx(0.d0,0.d0),tmp2_c,1,1,ev_dist%blacs_desc)
+                          ev_dist%blacsdata%blacs_desc,cmplx(0.d0,0.d0),tmp2_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
     ! 2c. A =  U**-T * tmp2 ( = U**-T * Aorig * U**-1 )
@@ -309,18 +307,18 @@ CONTAINS
 
     IF (hmat%l_real) THEN
        CALL pdtran(hmat%global_size1,hmat%global_size1,1.d0,hmat%data_r,1,1,&
-                          hmat%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacs_desc)
+                          hmat%blacsdata%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
     ELSE
        CALL pztranc(hmat%global_size1,hmat%global_size1,cmplx(1.0,0.0),hmat%data_c,1,1,&
-                          hmat%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacs_desc)
+                          hmat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
 
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in A
-       n_col = indxl2g(i,     nb, mycol, 0, hmat%npcol)
-       n_row = numroc (n_col, nb, myrow, 0, hmat%nprow)
+       n_col = indxl2g(i,     nb, mycol, 0, hmat%blacsdata%npcol)
+       n_row = numroc (n_col, nb, myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
           hmat%data_r(n_row+1:hmat%matsize1,i) = ev_dist%data_r(n_row+1:ev_dist%matsize1,i)
        ELSE
@@ -340,10 +338,10 @@ CONTAINS
 #ifdef CPP_ELPA2
     IF (hmat%l_real) THEN
        ok=solve_evp_real_2stage(hmat%global_size1,num2,hmat%data_r,hmat%matsize1,&
-             eig2,ev_dist%data_r,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%mpi_com)
+             eig2,ev_dist%data_r,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%blacsdata%mpi_com)
     ELSE
        ok=solve_evp_complex_2stage(hmat%global_size1,num2,hmat%data_c,hmat%matsize1,&
-             eig2,ev_dist%data_c,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%mpi_com)
+             eig2,ev_dist%data_c,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%blacsdata%mpi_com)
     ENDIF
 #else
     IF (hmat%l_real) THEN
@@ -358,10 +356,10 @@ CONTAINS
 #ifdef CPP_ELPA2
     IF (hmat%l_real) THEN
        err=solve_evp_real_2stage(hmat%global_size1,num2,hmat%data_r,hmat%matsize1,&
-             eig2,ev_dist%data_r,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%mpi_com)
+             eig2,ev_dist%data_r,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%blacsdata%mpi_com)
     ELSE
        err=solve_evp_complex_2stage(hmat%global_size1,num2,hmat%data_c,hmat%matsize1,&
-             eig2,ev_dist%data_c,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%mpi_com)
+             eig2,ev_dist%data_c,ev_dist%matsize1, nb,ev_dist%matsize2, mpi_comm_rows, mpi_comm_cols,hmat%blacsdata%mpi_com)
     ENDIF
 #else
     IF (hmat%l_real) THEN
@@ -376,10 +374,10 @@ CONTAINS
 #ifdef CPP_ELPA2
     IF (hmat%l_real) THEN
        CALL solve_evp_real_2stage(hmat%global_size1,num2,hmat%data_r,hmat%matsize1,&
-             eig2,ev_dist%data_r,ev_dist%matsize1, nb, mpi_comm_rows, mpi_comm_cols,hmat%mpi_com)
+             eig2,ev_dist%data_r,ev_dist%matsize1, nb, mpi_comm_rows, mpi_comm_cols,hmat%blacsdata%mpi_com)
     ELSE
        CALL solve_evp_complex_2stage(hmat%global_size1,num2,hmat%data_c,hmat%matsize1,&
-             eig2,ev_dist%data_c,ev_dist%matsize1, nb, mpi_comm_rows, mpi_comm_cols,hmat%mpi_com)
+             eig2,ev_dist%data_c,ev_dist%matsize1, nb, mpi_comm_rows, mpi_comm_cols,hmat%blacsdata%mpi_com)
     ENDIF
 #else
     IF (hmat%l_real) THEN
@@ -398,10 +396,10 @@ CONTAINS
     ! mult_ah_b_complex needs the transpose of U**-1, thus tmp2 = (U**-1)**T
     IF (hmat%l_real) THEN
        CALL pdtran(smat%global_size1,smat%global_size1,1.d0,smat%data_r,1,1,&
-                         smat%blacs_desc,0.d0,tmp2_r,1,1,smat%blacs_desc)
+                         smat%blacsdata%blacs_desc,0.d0,tmp2_r,1,1,smat%blacsdata%blacs_desc)
     ELSE
        CALL pztranc(smat%global_size1,smat%global_size1,cmplx(1.d0,0.d0),smat%data_c,1,1,&
-                         smat%blacs_desc,cmplx(0.d0,0.d0),tmp2_c,1,1,smat%blacs_desc)
+                         smat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),tmp2_c,1,1,smat%blacsdata%blacs_desc)
     ENDIF
 
 #if defined (CPP_ELPA_201705003)
@@ -471,7 +469,7 @@ CONTAINS
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
     ALLOCATE(t_mpimat::ev)
-    CALL ev%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%mpi_com,.FALSE.)
+    CALL ev%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%blacsdata%mpi_com,.FALSE.)
     CALL ev%copy(hmat,1,1)
     CLASS DEFAULT
       call judft_error("Wrong type (1) in scalapack")
