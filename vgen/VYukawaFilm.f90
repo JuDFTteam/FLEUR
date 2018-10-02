@@ -101,8 +101,6 @@ module m_VYukawaFilm
     real                        :: ga(vacuum%nmzd), gb(vacuum%nmzd)
     real                        :: delta(vacuum%nmzd,2), epsilon(vacuum%nmzd,2), zeta(vacuum%nmzd)
 
-    intrinsic aimag, cmplx, conjg, exp, real, mod
-
 
     ! definitions / initialisations:
     do iz = 1, vacuum%nmz
@@ -238,8 +236,6 @@ module m_VYukawaFilm
     real                        :: VIzReal(3*stars%mx3,stars%ng2), VIzImag(3*stars%mx3,stars%ng2), exp_m(3*stars%mx3,stars%ng2), exp_p(3*stars%mx3,stars%ng2)
     real                        :: z(3*stars%mx3)
     real                        :: g_damped(stars%ng2), vcons2(stars%ng2)
-
-    intrinsic abs, cmplx, conjg, cos, exp, sin, sqrt
 
 
     ! definitions / initialisations
