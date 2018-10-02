@@ -325,13 +325,8 @@ CONTAINS
        mat%global_size2=templ%global_size2
        mat%blacsdata=>templ%blacsdata
        mat%blacsdata%no_use=mat%blacsdata%no_use+1
-       IF (mat%l_real) THEN
-          ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2))
-          ALLOCATE(mat%data_c(0,0))
-       ELSE
-          ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2))
-          ALLOCATE(mat%data_r(0,0))
-       END IF
+       CALL mat%alloc()
+      
        CLASS default
           CALL judft_error("Mixed initialization in t_mpimat not possible(BUG)")
     END SELECT
