@@ -69,8 +69,8 @@ CONTAINS
     ALLOCATE(eig2(hmat%global_size1))
 
 
-    CALL MPI_COMM_RANK(hmat%mpi_com,myid,ierr)
-    CALL MPI_COMM_SIZE(hmat%mpi_com,np,ierr)
+    CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,ierr)
+    CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,ierr)
 
     num=ne !no of states solved for
     
@@ -84,15 +84,15 @@ CONTAINS
     !ev_dist%blacs_desc=hmat%blacs_desc
     
     
-    nb=hmat%blacs_desc(5)! Blocking factor
-    IF (nb.NE.hmat%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
+    nb=hmat%blacsdata%blacs_desc(5)! Blocking factor
+    IF (nb.NE.hmat%blacsdata%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
   
     !
     nn=MAX(MAX(hmat%global_size1,nb),2)
-    np0=numroc(nn,nb,0,0,hmat%nprow)
-    mq0=numroc(MAX(MAX(ne,nb),2),nb,0,0,hmat%npcol)
+    np0=numroc(nn,nb,0,0,hmat%blacsdata%nprow)
+    mq0=numroc(MAX(MAX(ne,nb),2),nb,0,0,hmat%blacsdata%npcol)
     IF (hmat%l_real) THEN
-       lwork2=5*hmat%global_size1+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(ne,hmat%nprow*hmat%npcol)*nn
+       lwork2=5*hmat%global_size1+MAX(5*nn,np0*mq0+2*nb*nb)+ iceil(ne,hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn
        ALLOCATE ( work2_r(lwork2+10*hmat%global_size1), stat=err ) ! Allocate more in case of clusters
     ELSE
        lwork2=hmat%global_size1+MAX(nb*(np0+1),3)
@@ -103,7 +103,7 @@ CONTAINS
        CALL juDFT_error('Failed to allocated "work2"', calledby ='chani')
     ENDIF
     
-    liwork=6*MAX(MAX(hmat%global_size1,hmat%nprow*hmat%npcol+1),4)
+    liwork=6*MAX(MAX(hmat%global_size1,hmat%blacsdata%nprow*hmat%blacsdata%npcol+1),4)
     ALLOCATE ( iwork(liwork), stat=err )
     IF (err.NE.0) THEN
        WRITE (*,*) 'iwork  :',err,liwork
@@ -114,14 +114,14 @@ CONTAINS
        WRITE (*,*) 'ifail  :',err,hmat%global_size1
        CALL juDFT_error('Failed to allocated "ifail"', calledby ='chani')
     ENDIF
-    ALLOCATE ( iclustr(2*hmat%nprow*hmat%npcol), stat=err )
+    ALLOCATE ( iclustr(2*hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err )
     IF (err.NE.0) THEN
-       WRITE (*,*) 'iclustr:',err,2*hmat%nprow*hmat%npcol
+       WRITE (*,*) 'iclustr:',err,2*hmat%blacsdata%nprow*hmat%blacsdata%npcol
        CALL juDFT_error('Failed to allocated "iclustr"', calledby ='chani')
     ENDIF
-    ALLOCATE ( gap(hmat%nprow*hmat%npcol), stat=err )
+    ALLOCATE ( gap(hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err )
     IF (err.NE.0) THEN
-       WRITE (*,*) 'gap    :',err,hmat%nprow*hmat%npcol
+       WRITE (*,*) 'gap    :',err,hmat%blacsdata%nprow*hmat%blacsdata%npcol
        CALL juDFT_error('Failed to allocated "gap"', calledby ='chani')
     ENDIF
     !
@@ -130,9 +130,9 @@ CONTAINS
     IF (hmat%l_real) THEN
        uplo='U'
        CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,&
-            hmat%blacs_desc,smat%data_r,1,1,smat%blacs_desc,&
+            hmat%blacsdata%blacs_desc,smat%data_r,1,1,smat%blacsdata%blacs_desc,&
             0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
-            ev_dist%blacs_desc,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
+            ev_dist%blacsdata%blacs_desc,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
        IF ( work2_r(1).GT.lwork2) THEN
           lwork2 = work2_r(1)
           DEALLOCATE (work2_r)
@@ -143,7 +143,7 @@ CONTAINS
           ENDIF
        ENDIF
     ELSE
-       lrwork=4*hmat%global_size1+MAX(5*nn,np0*mq0)+ iceil(ne,hmat%nprow*hmat%npcol)*nn
+       lrwork=4*hmat%global_size1+MAX(5*nn,np0*mq0)+ iceil(ne,hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn
        ! Allocate more in case of clusters
        ALLOCATE(rwork(lrwork+10*hmat%global_size1), stat=ierr)
        IF (err /= 0) THEN
@@ -152,9 +152,9 @@ CONTAINS
        ENDIF
        
        CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,&
-            hmat%blacs_desc,smat%data_c,1,1, smat%blacs_desc,&
+            hmat%blacsdata%blacs_desc,smat%data_c,1,1, smat%blacsdata%blacs_desc,&
             0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
-            ev_dist%blacs_desc,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
+            ev_dist%blacsdata%blacs_desc,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
             gap,ierr)
        IF (ABS(work2_c(1)).GT.lwork2) THEN
           lwork2=work2_c(1)
@@ -190,14 +190,14 @@ CONTAINS
     !
     CALL timestart("SCALAPACK call")
     if (hmat%l_real) THEN
-       CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacs_desc,smat%data_r,1,1, smat%blacs_desc,&
+       CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacsdata%blacs_desc,smat%data_r,1,1, smat%blacsdata%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
-            ev_dist%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
+            ev_dist%blacsdata%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
             gap,ierr)
     else
-       CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,hmat%blacs_desc,smat%data_c,1,1, smat%blacs_desc,&
+       CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,hmat%blacsdata%blacs_desc,smat%data_c,1,1, smat%blacsdata%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
-            ev_dist%blacs_desc,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
+            ev_dist%blacsdata%blacs_desc,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
             ifail,iclustr,gap,ierr)
        DEALLOCATE(rwork)
     endif
@@ -255,7 +255,7 @@ CONTAINS
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
     ALLOCATE(t_mpimat::ev)
-    CALL ev%init(ev_dist%l_real,ev_dist%global_size1,ev_dist%global_size1,ev_dist%mpi_com,.FALSE.)
+    CALL ev%init(ev_dist%l_real,ev_dist%global_size1,ev_dist%global_size1,ev_dist%blacsdata%mpi_com,.FALSE.)
     CALL ev%copy(ev_dist,1,1)
     CLASS DEFAULT
       call judft_error("Wrong type (1) in scalapack")

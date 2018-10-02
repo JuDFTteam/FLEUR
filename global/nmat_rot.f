@@ -42,7 +42,7 @@
 
       REAL dmat(3,3),dmati(3,3)
 
-      INTRINSIC sqrt,max,min
+      
 
       
       DO n = 1, n_u
