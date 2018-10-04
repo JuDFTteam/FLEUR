@@ -1,4 +1,4 @@
-hdf5_version=1.10.2
+hdf5_version=1.10.3
 if [ ! -r CMake-hdf5-${hdf5_version} ]
 then
     #Get the file with the code
