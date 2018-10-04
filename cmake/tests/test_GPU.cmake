@@ -1,8 +1,14 @@
 #Check if we can compile with GPU
-if (${CLI_FLEUR_USE_GPU})
+if (CLI_FLEUR_USE_GPU)
    #No check is done
    set(FLEUR_USE_GPU TRUE)
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ta=tesla:cuda8.0,cc60 -Mcuda:kepler+  -Minfo=accel -acc ")
+   message("GPU:${CLI_FLEUR_USE_GPU}")
+   if (${CLI_FLEUR_USE_GPU} MATCHES "cuda8")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ta=tesla:cuda8.0,cc60 -Mcuda:kepler+ -Minfo=accel -Mcudalib=cublas -acc ")
+      message("Using cuda8")
+   elseif(${CLI_FLEUR_USE_GPU} MATCHES "cuda9")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ta=tesla:cuda9.0,cc60  -Mcudalib=cublas -lnvToolsExt ")
+   endif()
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_GPU")
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU")
 else()
