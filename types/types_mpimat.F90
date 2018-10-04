@@ -342,7 +342,7 @@ CONTAINS
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER     :: myrowssca,mycolssca
-    INTEGER     :: iamblacs,npblacs,np,myid
+    INTEGER     :: iamblacs,npblacs,np,myid,mycol,myrow
     INTEGER     :: nprow2,npcol2
     INTEGER     :: k,i,j,ictextblacs
     INTEGER     :: ierr
