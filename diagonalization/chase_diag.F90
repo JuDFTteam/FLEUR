@@ -337,32 +337,32 @@ CONTAINS
     include 'mpif.h'
 
     CALL CPU_TIME(t1)
-    CALL MPI_COMM_RANK(hmat%mpi_com,myid,info)
-    CALL MPI_COMM_SIZE(hmat%mpi_com,np,info)
-  smat%blacs_desc=hmat%blacs_desc
+    CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,info)
+    CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,info)
+    smat%blacsdata%blacs_desc=hmat%blacsdata%blacs_desc
 
-  call smat%generate_full_matrix()
-  call hmat%generate_full_matrix()
+    call smat%generate_full_matrix()
+    call hmat%generate_full_matrix()
     !Transform to standard problem using SCALAPACK
     IF (hmat%l_real) THEN
-       CALL pdpotrf('U',smat%global_size1,smat%data_r,1,1,smat%blacs_desc,info)
+       CALL pdpotrf('U',smat%global_size1,smat%data_r,1,1,smat%blacsdata%blacs_desc,info)
        IF (info.NE.0) THEN
           WRITE (*,*) 'Error in pdpotrf: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
-        CALL pdsygst(1,'U',smat%global_size1,hmat%data_r,1,1,hmat%blacs_desc,smat%data_r,1,1,smat%blacs_desc,scale,info)
+        CALL pdsygst(1,'U',smat%global_size1,hmat%data_r,1,1,hmat%blacsdata%blacs_desc,smat%data_r,1,1,smat%blacsdata%blacs_desc,scale,info)
         IF (ABS(scale-1)>1E-10) call judft_error("Scale parameter not implemented in chase_diag")
         IF (info.NE.0) THEN
           WRITE (6,*) 'Error in pdsygst: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
     ELSE
-       CALL pzpotrf('U',smat%global_size1,smat%data_c,1,1,smat%blacs_desc,info)
+       CALL pzpotrf('U',smat%global_size1,smat%data_c,1,1,smat%blacsdata%blacs_desc,info)
        IF (info.NE.0) THEN
           WRITE (*,*) 'Error in pzpotrf: info =',info
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
-        CALL pzhegst(1,'U',smat%global_size1,hmat%data_c,1,1,smat%blacs_desc,smat%data_c,1,1,smat%blacs_desc,scale,info)
+        CALL pzhegst(1,'U',smat%global_size1,hmat%data_c,1,1,smat%blacsdata%blacs_desc,smat%data_c,1,1,smat%blacsdata%blacs_desc,scale,info)
         IF (ABS(scale-1)>1E-10) call judft_error("Scale parameter not implemented in chase_diag")
         IF (info.NE.0) THEN
           WRITE (6,*) 'Error in pzhegst: info =',info
@@ -414,11 +414,11 @@ CONTAINS
     
     ! --> recover the generalized eigenvectors z by solving z' = l^t * z
     IF (smat%l_real) THEN
-       CALL pdtrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_r,1,1,smat%blacs_desc,&
-            hmat%data_r,1,1,smat%blacs_desc,info)
+       CALL pdtrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_r,1,1,smat%blacsdata%blacs_desc,&
+            hmat%data_r,1,1,smat%blacsdata%blacs_desc,info)
     ELSE
-       CALL pztrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_c,1,1,smat%blacs_desc,&
-            hmat%data_c,1,1,smat%blacs_desc,info)
+       CALL pztrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_c,1,1,smat%blacsdata%blacs_desc,&
+            hmat%data_c,1,1,smat%blacsdata%blacs_desc,info)
     END IF
     IF (info.NE.0) THEN
        WRITE (6,*) 'Error in p?trtrs: info =',info
@@ -429,7 +429,7 @@ CONTAINS
     !     having all eigenvectors corresponding to his eigenvalues as above
     !
     ALLOCATE(t_mpimat::zmat)
-    CALL zmat%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%mpi_com,.FALSE.)
+    CALL zmat%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%blacsdata%mpi_com,.FALSE.)
     CALL zmat%copy(hmat,1,1)
 
     !Distribute eigenvalues over PEs
@@ -470,43 +470,43 @@ CONTAINS
     EXTERNAL blacs_pinfo, blacs_gridinit
     INTEGER,EXTERNAL::numroc,indxl2g
 
-    mat%mpi_com=hmat%mpi_com
+    mat%blacsdata%mpi_com=hmat%blacsdata%mpi_com
     mat%global_size1=hmat%global_size1
     mat%global_size2=hmat%global_size1
     mat%l_real=hmat%l_real
    
     !Determine rank and no of processors
-    CALL MPI_COMM_RANK(hmat%mpi_com,myid,ierr)
-    CALL MPI_COMM_SIZE(hmat%mpi_com,np,ierr)
+    CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,ierr)
+    CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,ierr)
 
     !Init ChASE
     IF (mat%l_real) THEN
-       CALL mpi_dchase_init(hmat%mpi_com,mat%global_size1, nev, nex, rowoff,coloff,rowlen,collen,&
-            mat%nprow,mat%npcol,myrow,mycol)
+       CALL mpi_dchase_init(hmat%blacsdata%mpi_com,mat%global_size1, nev, nex, rowoff,coloff,rowlen,collen,&
+            mat%blacsdata%nprow,mat%blacsdata%npcol,myrow,mycol)
     ELSE
-       CALL mpi_zchase_init(hmat%mpi_com,mat%global_size1, nev, nex, rowoff,coloff,rowlen,collen,&
-            mat%nprow,mat%npcol,myrow,mycol)
+       CALL mpi_zchase_init(hmat%blacsdata%mpi_com,mat%global_size1, nev, nex, rowoff,coloff,rowlen,collen,&
+            mat%blacsdata%nprow,mat%blacsdata%npcol,myrow,mycol)
     ENDIF
 
     !Determine block-sizes
-    CALL MPI_ALLREDUCE(rowlen,nbr,1,MPI_INTEGER,MPI_MAX,mat%mpi_com,ierr)
-    CALL MPI_ALLREDUCE(collen,nbc,1,MPI_INTEGER,MPI_MAX,mat%mpi_com,ierr)
+    CALL MPI_ALLREDUCE(rowlen,nbr,1,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
+    CALL MPI_ALLREDUCE(collen,nbc,1,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
 
     
-    ALLOCATE(iusermap(mat%nprow,mat%npcol))
+    ALLOCATE(iusermap(mat%blacsdata%nprow,mat%blacsdata%npcol))
     iusermap=-2
     !Get BLACS ranks for all MPI ranks
     CALL BLACS_PINFO(iusermap(myrow+1,mycol+1),npblacs)  ! iamblacs = local process rank (e.g. myid)
-    CALL MPI_ALLREDUCE(MPI_IN_PLACE, iusermap, np,MPI_INTEGER,MPI_MAX,mat%mpi_com,ierr)
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE, iusermap, np,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
     !Get the Blacs default context
-    CALL BLACS_GET(0,0,mat%blacs_ctext)
+    CALL BLACS_GET(0,0,mat%blacsdata%blacs_desc(2))
     ! Create the Grid
-    CALL BLACS_GRIDMAP(mat%blacs_ctext,iusermap,mat%nprow,mat%nprow,mat%npcol)
+    CALL BLACS_GRIDMAP(mat%blacsdata%blacs_desc(2),iusermap,mat%blacsdata%nprow,mat%blacsdata%nprow,mat%blacsdata%npcol)
 
    
     !Now create the matrix
-    mat%matsize1=numroc(mat%global_size1,nbr,myrow,0,mat%nprow)
-    mat%matsize2=numroc(mat%global_size1,nbc,mycol,0,mat%npcol)
+    mat%matsize1=numroc(mat%global_size1,nbr,myrow,0,mat%blacsdata%nprow)
+    mat%matsize2=numroc(mat%global_size1,nbc,mycol,0,mat%blacsdata%npcol)
     IF (mat%l_real) THEN
        ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2))
     ELSE
@@ -520,7 +520,7 @@ CONTAINS
     ENDIF
 
     !Create blacs descriptor for chase matrix
-    CALL descinit(mat%blacs_desc,mat%global_size1,mat%global_size2,nbr,nbc,0,0,mat%blacs_ctext,mat%matsize1,ierr)
+    CALL descinit(mat%blacsdata%blacs_desc,mat%global_size1,mat%global_size2,nbr,nbc,0,0,mat%blacsdata%blacs_desc(2),mat%matsize1,ierr)
     IF (ierr /=0 ) CALL judft_error('Creation of BLACS descriptor failed')
 
     !Copy data from hmat
