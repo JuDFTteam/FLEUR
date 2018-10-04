@@ -27,7 +27,7 @@ CONTAINS
         REAL, INTENT(inout), allocatable :: kinEnergyDen_rs(:,:)
 
         !implicit allocation
-        kinEnergyDen = EnergyDen_RS - vTot_RS * den_RS
+        kinEnergyDen_rs = EnergyDen_RS - vTot_RS * den_RS
 #else
         USE m_juDFT_stop
         CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")

@@ -113,7 +113,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
-      CALL calc_kinEnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, outDen, atoms, enpara, stars,&
+      CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
                              vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
    endif
 
