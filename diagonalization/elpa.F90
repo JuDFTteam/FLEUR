@@ -110,7 +110,7 @@ CONTAINS
     
     
     nb=hmat%blacsdata%blacs_desc(5)! Blocking factor
-    IF (nb.NE.hmat%blacsdata%%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
+    IF (nb.NE.hmat%blacsdata%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
 
 #ifdef CPP_ELPA_201705003    
     CALL elpa_obj%set("na", hmat%global_size1, err)
@@ -118,7 +118,7 @@ CONTAINS
     CALL elpa_obj%set("local_nrows", hmat%matsize1, err)
     CALL elpa_obj%set("local_ncols", hmat%matsize2, err)
     CALL elpa_obj%set("nblk", nb, err)
-    CALL elpa_obj%set("mpi_comm_parent", hmat%blacsdata%%mpi_com, err)
+    CALL elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
     CALL elpa_obj%set("process_row", myrow, err)
     CALL elpa_obj%set("process_col", mycol, err)
 #ifdef CPP_ELPA2
@@ -188,8 +188,8 @@ CONTAINS
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in H
-       n_col = indxl2g(i,     nb, mycol, 0, hmat%npcol)
-       n_row = numroc (n_col, nb, myrow, 0, hmat%nprow)
+       n_col = indxl2g(i,     nb, mycol, 0, hmat%blacsdata%npcol)
+       n_row = numroc (n_col, nb, myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
           hmat%data_r(n_row+1:hmat%matsize1,i) = 0.d0 
        ELSE
@@ -200,18 +200,18 @@ CONTAINS
 
     IF (hmat%l_real) THEN
        CALL pdtran(hmat%global_size1,hmat%global_size1,1.d0,hmat%data_r,1,1,&
-                         hmat%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%%blacs_desc)
+                         hmat%blacsdata%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
     ELSE
        CALL pztranc(hmat%global_size1,hmat%global_size2,cmplx(1.d0,0.d0),hmat%data_c,1,1,&
-                         hmat%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%%blacs_desc)
+                         hmat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
     
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in H
-       n_col = indxl2g(i,     nb, mycol, 0, hmat%npcol)
-       n_row = numroc (n_col, nb, myrow, 0, hmat%nprow)
+       n_col = indxl2g(i,     nb, mycol, 0, hmat%blacsdata%npcol)
+       n_row = numroc (n_col, nb, myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
           hmat%data_r(n_row+1:hmat%matsize1,i) = ev_dist%data_r(n_row+1:ev_dist%matsize1,i)
        ELSE
