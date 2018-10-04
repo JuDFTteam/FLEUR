@@ -8,3 +8,4 @@ build.*
 *.mod
 *.x
 *.swp
+tags
