@@ -87,7 +87,7 @@ CONTAINS
       ENDIF
 
       CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
+                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
       CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)

@@ -122,6 +122,7 @@ CONTAINS
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen)
       USE m_types_misc
+      USE m_judft
       USE, INTRINSIC :: IEEE_ARITHMETIC
       IMPLICIT NONE
 

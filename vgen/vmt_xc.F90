@@ -23,13 +23,14 @@ MODULE m_vmt_xc
 
 CONTAINS
    SUBROUTINE vmt_xc(DIMENSION,mpi,sphhar,atoms,&
-                     den,xcpot,input,sym, obsolete,vxc,vx,exc)
+                     den,xcpot,input,sym, obsolete,EnergyDen,vTot,vx,exc)
 
 #include"cpp_double.h"
       use m_libxc_postprocess_gga
       USE m_mt_tofrom_grid
       USE m_types_xcpot_inbuild
       USE m_types
+      USE m_metagga
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -40,16 +41,16 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)         :: sym
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
-      TYPE(t_potden),INTENT(IN)      :: den
-      TYPE(t_potden),INTENT(INOUT)   :: vxc,vx,exc
+      TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
+      TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc
 #ifdef CPP_MPI
       include "mpif.h"
 #endif
       !     ..
       !     .. Local Scalars ..
-      TYPE(t_gradients)     :: grad
+      TYPE(t_gradients)     :: grad, tmp_grad
       TYPE(t_xcpot_inbuild) :: xcpot_tmp
-      REAL, ALLOCATABLE     :: ch(:,:)
+      REAL, ALLOCATABLE     :: ch(:,:), ED_rs(:,:), vTot_rs(:,:), kinED_rs(:,:)
       INTEGER               :: n,nsp,nt,jr
       REAL                  :: divi
 
@@ -88,7 +89,7 @@ CONTAINS
       n_start=mpi%irank+1
       n_stride=mpi%isize
       IF (mpi%irank>0) THEN
-         vxc%mt=0.0
+         vTot%mt=0.0
          vx%mt=0.0
          exc%mt=0.0
       ENDIF
@@ -118,14 +119,27 @@ CONTAINS
          !Add postprocessing for libxc
          IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
 
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
          CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
+
+         ! use updated vTot for exc calculation
+         IF(ALLOCATED(EnergyDen%mt) .AND. xcpot%exc_is_MetaGGA()) THEN
+            CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,EnergyDen%mt(:,0:,n,:),nsp,n,tmp_grad,ED_rs)
+            CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,vTot%mt(:,0:,n,:),nsp,n,tmp_grad,vTot_rs)
+            CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs)
+         ENDIF
 
          IF (ALLOCATED(exc%mt)) THEN
             !
             !           calculate the ex.-cor energy density
             !
-            CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
+            IF(ALLOCATED(EnergyDen%mt) .AND. xcpot%exc_is_MetaGGA()) THEN
+               CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs)
+            ELSE
+               CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
+            ENDIF
+
+
             IF (lda_atom(n)) THEN
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),1),grad)
@@ -144,7 +158,7 @@ CONTAINS
       CALL finish_mt_grid()
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,mpi%mpi_comm,ierr)
 #endif
       !

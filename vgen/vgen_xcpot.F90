@@ -10,7 +10,7 @@ MODULE m_vgen_xcpot
 CONTAINS
 
   SUBROUTINE vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                        obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
+                        obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
     !     ***********************************************************
     !     FLAPW potential generator                           *
@@ -51,7 +51,7 @@ CONTAINS
     TYPE(t_cell),      INTENT(IN)              :: cell
     TYPE(t_sphhar),    INTENT(IN)              :: sphhar
     TYPE(t_atoms),     INTENT(IN)              :: atoms 
-    TYPE(t_potden),    INTENT(IN)              :: den,denRot
+    TYPE(t_potden),    INTENT(IN)              :: den,denRot,EnergyDen
     TYPE(t_potden),    INTENT(INOUT)           :: vTot,vx
     TYPE(t_results),   INTENT(INOUT), OPTIONAL :: results
 
@@ -116,7 +116,7 @@ CONTAINS
        
        IF ( (.NOT. obsolete%lwb) .OR. ( .not.xcpot%needs_grad() ) ) THEN
           ! no White-Bird-trick
-          CALL vis_xc(stars,sym,cell,den,xcpot,input,noco,vTot,vx,exc)
+          CALL vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,vTot,vx,exc)
 
        ELSE
           ! White-Bird-trick
@@ -138,7 +138,7 @@ CONTAINS
     END IF
 
     CALL vmt_xc(DIMENSION,mpi,sphhar,atoms, den,xcpot,input,sym,&
-         obsolete, vTot,vx,exc)
+         obsolete,EnergyDen, vTot,vx,exc)
     
 
     !
