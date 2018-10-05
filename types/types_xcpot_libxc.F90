@@ -285,6 +285,7 @@ CONTAINS
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
+         write (*,*) "Doing MetaGGA"
          IF(PRESENT(kinEnergyDen)) THEN ! patch till vacuum can do LibXC
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
                                  transpose(grad%laplace), transpose(kinEnergyDen), exc)
