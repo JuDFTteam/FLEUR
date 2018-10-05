@@ -163,7 +163,8 @@ contains
         if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
           vCoul%pw(1:stars%ng3,ispin) = fpi_const * psq(1:stars%ng3) &
             / ( stars%sk3(1:stars%ng3) ** 2 + input%preconditioning_param ** 2 )
-          if( abs( real( psq(1) ) ) * cell%omtil < 0.01 ) vCoul%pw(1,ispin) = 0.0
+          ! if( abs( real( psq(1) ) ) * cell%omtil < 0.01 ) vCoul%pw(1,ispin) = 0.0
+          ! there is a better option now using qfix in mix
         else
           vCoul%pw(1,ispin) = cmplx(0.0,0.0)
           vCoul%pw(2:stars%ng3,ispin) = fpi_const * psq(2:stars%ng3) / stars%sk3(2:stars%ng3) ** 2

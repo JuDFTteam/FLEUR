@@ -37,7 +37,8 @@ MODULE m_types_potden
      PROCEDURE :: sum_both_spin
      procedure :: SpinsToChargeAndMagnetisation
      procedure :: ChargeAndMagnetisationToSpins
-     procedure :: Residual
+     procedure :: addPotDen
+     procedure :: subPotDen
   END TYPE t_potden
 
 CONTAINS
@@ -132,28 +133,40 @@ CONTAINS
 
   end subroutine
 
-  subroutine Residual( resDen, outDen, inDen )
+  subroutine addPotDen( PotDen3, PotDen1, PotDen2 )
     implicit none
-    class(t_potden), intent(in)    :: outDen
-    class(t_potden), intent(in)    ::  inDen
-    class(t_potden), intent(inout) :: resDen
+    class(t_potden), intent(in)    :: PotDen1
+    class(t_potden), intent(in)    :: PotDen2
+    class(t_potden), intent(inout) :: PotDen3
 
-    resDen%iter       = outDen%iter
-    resDen%potdenType = outDen%potdenType
-    resDen%mt         = outDen%mt - inDen%mt
-    resDen%pw         = outDen%pw - inDen%pw
-    resDen%vacz       = outDen%vacz - inDen%vacz
-    resDen%vacxy      = outDen%vacxy - inDen%vacxy
-    if( allocated( outDen%pw_w ) .and. allocated( inDen%pw_w ) .and. allocated( resDen%pw_w ) ) then
-      resDen%pw_w = outDen%pw_w - inDen%pw_w
+    PotDen3%iter       = PotDen1%iter
+    PotDen3%potdenType = PotDen1%potdenType
+    PotDen3%mt         = PotDen1%mt + PotDen2%mt
+    PotDen3%pw         = PotDen1%pw + PotDen2%pw
+    PotDen3%vacz       = PotDen1%vacz + PotDen2%vacz
+    PotDen3%vacxy      = PotDen1%vacxy + PotDen2%vacxy
+    if( allocated( PotDen1%pw_w ) .and. allocated( PotDen2%pw_w ) .and. allocated( PotDen3%pw_w ) ) then
+      PotDen3%pw_w = PotDen1%pw_w + PotDen2%pw_w
     end if
-    !if( allocated( outDen%theta_pw ) .and. allocated( inDen%theta_pw ) ) resDen%theta_pw = outDen%theta_pw - inDen%theta_pw
-    !if( allocated( outDen%theta_vacz ) .and. allocated( inDen%theta_vacz ) ) resDen%theta_vacz = outDen%theta_vacz - inDen%theta_vacz
-    !if( allocated( outDen%theta_vacxy ) .and. allocated( inDen%theta_vacxy ) ) resDen%theta_vacxy = outDen%theta_vacxy - inDen%theta_vacxy
-    !if( allocated( outDen%phi_pw ) .and. allocated( inDen%phi_pw ) ) resDen%phi_pw = outDen%phi_pw - inDen%phi_pw
-    !if( allocated( outDen%phi_vacz ) .and. allocated( inDen%phi_vacz ) ) resDen%phi_vacz = outDen%phi_vacz - inDen%phi_vacz
-    !if( allocated( outDen%phi_vacxy ) .and. allocated( inDen%phi_vacxy ) ) resDen%phi_vacxy = outDen%phi_vacxy - inDen%phi_vacxy
+  
+  end subroutine
 
+  subroutine subPotDen( PotDen3, PotDen1, PotDen2 )
+    implicit none
+    class(t_potden), intent(in)    :: PotDen1
+    class(t_potden), intent(in)    :: PotDen2
+    class(t_potden), intent(inout) :: PotDen3
+ 
+    PotDen3%iter       = PotDen1%iter
+    PotDen3%potdenType = PotDen1%potdenType
+    PotDen3%mt         = PotDen1%mt - PotDen2%mt
+    PotDen3%pw         = PotDen1%pw - PotDen2%pw
+    PotDen3%vacz       = PotDen1%vacz - PotDen2%vacz
+    PotDen3%vacxy      = PotDen1%vacxy - PotDen2%vacxy
+    if( allocated( PotDen1%pw_w ) .and. allocated( PotDen2%pw_w ) .and. allocated( PotDen3%pw_w ) ) then
+      PotDen3%pw_w = PotDen1%pw_w - PotDen2%pw_w
+    end if
+ 
   end subroutine
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,jspins,nocoExtraDim,potden_type)
