@@ -81,7 +81,10 @@ CONTAINS
 
       nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
       ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
-      IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
+      IF (xcpot%needs_grad()) THEN
+         CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
+         CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,tmp_grad)
+      ENDIF
 
       CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym)
 
