@@ -233,7 +233,7 @@ contains
       call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1001 )
       call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 4 )
       MPI0_b: if( mpi%irank == 0 ) then 
-        call resDen%Residual( outDen, inDen )
+        call resDen%subPotDen( outDen, inDen )
         if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation()
       end if MPI0_b
 #ifdef CPP_MPI
@@ -259,6 +259,10 @@ contains
           end do
         end do
         if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
+        ! fix the preconditioned density
+        call outDen%addPotDen( resDen, inDen )
+        call qfix( stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .false., .true., fix )
+        call resDen%subPotDen( outDen, inDen )
         call brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
                      intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
       end if
