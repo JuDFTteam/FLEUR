@@ -49,7 +49,7 @@
           rg=matmul(kr(:,j),cell%bmat)
           CALL ylm4(&
      &              atoms%lmaxd,rg,&
-     &              ylm(1,j) )!keep
+     &              ylm(:,j) )!keep
       ENDDO
       ylm = conjg( ylm )
 
