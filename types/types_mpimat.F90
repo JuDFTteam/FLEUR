@@ -28,6 +28,7 @@ MODULE m_types_mpimat
      !> 7,8: row/colum of grid for first row/colum of matrix
      !> 9: leading dimension of local matrix
      INTEGER:: npcol,nprow                     !> the number of columns/rows in the processor grid
+     INTEGER:: mycol,myrow
   END TYPE t_blacsdata
   
   
@@ -91,7 +92,7 @@ CONTAINS
   SUBROUTINE generate_full_matrix(mat)
     CLASS(t_mpimat),INTENT(INOUT) ::mat
     
-    INTEGER :: i,j,i_glob,j_glob,npcol,nprow,myid,err,myrow,mycol,np
+    INTEGER :: i,j,i_glob,j_glob,myid,err,np
     COMPLEX,ALLOCATABLE:: tmp_c(:,:)
     REAL,ALLOCATABLE   :: tmp_r(:,:)
 #ifdef CPP_SCALAPACK
@@ -100,16 +101,14 @@ CONTAINS
 
     CALL MPI_COMM_RANK(mat%blacsdata%mpi_com,myid,err)
     CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com,np,err)
- 
-    CALL blacs_gridinfo(mat%blacsdata%blacs_desc(2),nprow,npcol,myrow,mycol)
     !Set lower part of matrix to zero
  
     DO i=1,mat%matsize1
        DO j=1,mat%matsize2
           ! Get global column corresponding to i and number of local rows up to
           ! and including the diagonal, these are unchanged in A
-          i_glob = indxl2g(i,     mat%blacsdata%blacs_desc(5), myrow, 0, nprow)
-          j_glob = indxl2g(j,     mat%blacsdata%blacs_desc(6), mycol, 0, npcol)
+          i_glob = indxl2g(i,     mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, 0, mat%blacsdata%nprow)
+          j_glob = indxl2g(j,     mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, 0, mat%blacsdata%npcol)
 
           IF (i_glob>j_glob) THEN
              IF (mat%l_real) THEN
@@ -299,9 +298,7 @@ CONTAINS
     mat%blacsdata%no_use=1
     mat%blacsdata%mpi_com=mpi_subcom
     CALL priv_create_blacsgrid(mat%blacsdata%mpi_com,l_2d,matsize1,matsize2,nbx,nby,&
-         mat%blacsdata%blacs_desc,&
-         mat%matsize1,mat%matsize2,&
-         mat%blacsdata%npcol,mat%blacsdata%nprow)
+         mat%blacsdata,mat%matsize1,mat%matsize2)
     CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
     !check if this matrix is actually distributed over MPI_COMM_SELF
     IF (mpi_subcom==MPI_COMM_SELF) THEN
@@ -333,21 +330,20 @@ CONTAINS
   END SUBROUTINE mpimat_init_template
 
     
-  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,sc_desc,local_size1,local_size2,nprow,npcol)
+  SUBROUTINE priv_create_blacsgrid(mpi_subcom,l_2d,m1,m2,nbc,nbr,blacsdata,local_size1,local_size2)
     IMPLICIT NONE
     INTEGER,INTENT(IN) :: mpi_subcom
     INTEGER,INTENT(IN) :: m1,m2
     INTEGER,INTENT(INOUT)::nbc,nbr
     LOGICAL,INTENT(IN) :: l_2d
-    INTEGER,INTENT(OUT):: sc_desc(:)
+    type(t_blacsdata),INTENT(OUT)::blacsdata
     INTEGER,INTENT(OUT):: local_size1,local_size2
-    INTEGER,INTENT(OUT):: npcol,nprow
    
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER     :: myrowssca,mycolssca,myrow,mycol
-    INTEGER     :: iamblacs,npblacs,np,myid
-    INTEGER     :: nprow2,npcol2,myrowblacs,mycolblacs
+    INTEGER     :: myrowssca,mycolssca
+    INTEGER     :: iamblacs,npblacs,np,myid,mycol,myrow
+    INTEGER     :: nprow2,npcol2
     INTEGER     :: k,i,j,ictextblacs
     INTEGER     :: ierr
 
@@ -366,34 +362,34 @@ CONTAINS
     IF (l_2d) THEN
        distloop: DO j=INT(SQRT(REAL(np))),1,-1
           IF ( (np/j) * j == np) THEN
-             npcol = np/j
-             nprow = j
+             blacsdata%npcol = np/j
+             blacsdata%nprow = j
              EXIT distloop
           ENDIF
        ENDDO distloop
     ELSE
        nbc=1
        nbr=MAX(m1,m2)
-       npcol=np
-       nprow=1
+       blacsdata%npcol=np
+       blacsdata%nprow=1
     ENDIF
-    ALLOCATE(iblacsnums(np),ihelp(np),iusermap(nprow,npcol))
+    ALLOCATE(iblacsnums(np),ihelp(np),iusermap(blacsdata%nprow,blacsdata%npcol))
 
-    !   An nprow*npcol processor grid will be created
+    !   An blacsdata%nprow*blacsdata%npcol processor grid will be created
     !   Row and column index myrow, mycol of this processor in the grid
     !   and distribution of A and B in ScaLAPACK
     !   The local processor will get myrowssca rows and mycolssca columns
     !   of A and B
     !
 
-    myrow = myid/npcol  ! my row number in the BLACS nprow*npcol grid
-    mycol = myid -(myid/npcol)*npcol  ! my column number in the BLACS nprow*npcol grid
+    myrow = myid/blacsdata%npcol  ! my row number in the BLACS blacsdata%nprow*blacsdata%npcol grid
+    mycol = myid -(myid/blacsdata%npcol)*blacsdata%npcol  ! my column number in the BLACS blacsdata%nprow*blacsdata%npcol grid
     !
     !  Now allocate Asca to put the elements of Achi or receivebuffer to
     !
-    myrowssca=(m1-1)/(nbr*nprow)*nbr+ MIN(MAX(m1-(m1-1)/(nbr*nprow)*nbr*nprow-nbr*myrow,0),nbr)
+    myrowssca=(m1-1)/(nbr*blacsdata%nprow)*nbr+ MIN(MAX(m1-(m1-1)/(nbr*blacsdata%nprow)*nbr*blacsdata%nprow-nbr*myrow,0),nbr)
     !     Number of rows the local process gets in ScaLAPACK distribution
-    mycolssca=(m2-1)/(nbc*npcol)*nbc+ MIN(MAX(m2-(m2-1)/(nbc*npcol)*nbc*npcol-nbc*mycol,0),nbc)
+    mycolssca=(m2-1)/(nbc*blacsdata%npcol)*nbc+ MIN(MAX(m2-(m2-1)/(nbc*blacsdata%npcol)*nbc*blacsdata%npcol-nbc*mycol,0),nbc)
   
 
     !Get BLACS ranks for all MPI ranks
@@ -407,8 +403,8 @@ CONTAINS
 
     !     iblacsnums(i) is the BLACS-process number of MPI-process i-1
     k = 1
-    DO i = 1, nprow
-       DO j = 1, npcol
+    DO i = 1, blacsdata%nprow
+       DO j = 1, blacsdata%npcol
           iusermap(i,j) = iblacsnums(k)
           k = k + 1
        ENDDO
@@ -416,23 +412,23 @@ CONTAINS
     !Get the Blacs default context
     CALL BLACS_GET(0,0,ictextblacs)
     ! Create the Grid
-    CALL BLACS_GRIDMAP(ictextblacs,iusermap,nprow,nprow,npcol)
+    CALL BLACS_GRIDMAP(ictextblacs,iusermap,size(iusermap,1),blacsdata%nprow,blacsdata%npcol)
     !     Now control, whether the BLACS grid is the one we wanted
-    CALL BLACS_GRIDINFO(ictextblacs, nprow2,npcol2,myrowblacs,mycolblacs)
-    IF (nprow2 /= nprow) THEN
+    CALL BLACS_GRIDINFO(ictextblacs, nprow2,npcol2,blacsdata%myrow,blacsdata%mycol)
+    IF (nprow2 /= blacsdata%nprow) THEN
        WRITE(6,*) 'Wrong number of rows in BLACS grid'
-       WRITE(6,*) 'nprow=',nprow,' nprow2=',nprow2
+       WRITE(6,*) 'nprow=',blacsdata%nprow,' nprow2=',nprow2
        call judft_error('Wrong number of rows in BLACS grid')
     ENDIF
-    IF (npcol2 /= npcol) THEN
+    IF (npcol2 /= blacsdata%npcol) THEN
        WRITE(6,*) 'Wrong number of columns in BLACS grid'
-       WRITE(6,*) 'npcol=',npcol,' npcol2=',npcol2
+       WRITE(6,*) 'npcol=',blacsdata%npcol,' npcol2=',npcol2
        call judft_error('Wrong number of columns in BLACS grid')
 
     ENDIF
 
     !Create the descriptors
-    CALL descinit(sc_desc,m1,m2,nbr,nbc,0,0,ictextblacs,myrowssca,ierr)
+    CALL descinit(blacsdata%blacs_desc,m1,m2,nbr,nbc,0,0,ictextblacs,myrowssca,ierr)
     IF (ierr /=0 ) call judft_error('Creation of BLACS descriptor failed')
     local_size1=myrowssca
     local_size2=mycolssca

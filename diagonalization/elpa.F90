@@ -47,7 +47,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     !...  Local variables
     !
-    INTEGER           :: num,num2,myrow,mycol
+    INTEGER           :: num,num2
     INTEGER           :: nb, myid, np
     INTEGER           :: n_col, n_row
     LOGICAL           :: ok
@@ -77,18 +77,16 @@ CONTAINS
     CALL MPI_BARRIER(hmat%blacsdata%mpi_com,err)    
     CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,err)
     CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,err)
-    myrow = myid/hmat%blacsdata%npcol
-    mycol = myid -(myid/hmat%blacsdata%npcol)*hmat%blacsdata%npcol  
-
+   
 
     !Create communicators for ELPA
 #if defined (CPP_ELPA_201705003)
     mpi_comm_rows = -1
     mpi_comm_cols = -1
 #elif defined (CPP_ELPA_201605004) || defined (CPP_ELPA_201605003)||defined(CPP_ELPA_NEW)
-    err=get_elpa_row_col_comms(hmat%blacsdata%mpi_com, myrow, mycol,mpi_comm_rows, mpi_comm_cols)
+    err=get_elpa_row_col_comms(hmat%blacsdata%mpi_com, hmat%blacsdata%myrow, hmat%blacsdata%mycol,mpi_comm_rows, mpi_comm_cols)
 #else
-    CALL get_elpa_row_col_comms(hmat%blacsdata%mpi_com, myrow, mycol,mpi_comm_rows, mpi_comm_cols)
+    CALL get_elpa_row_col_comms(hmat%blacsdata%mpi_com, hmat%blacsdata%myrow, hmat%blacsdata%mycol,mpi_comm_rows, mpi_comm_cols)
 #endif
     !print *,"creating ELPA comms  --  done"
 
@@ -119,8 +117,8 @@ CONTAINS
     CALL elpa_obj%set("local_ncols", hmat%matsize2, err)
     CALL elpa_obj%set("nblk", nb, err)
     CALL elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
-    CALL elpa_obj%set("process_row", myrow, err)
-    CALL elpa_obj%set("process_col", mycol, err)
+    CALL elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
+    CALL elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
 #ifdef CPP_ELPA2
     CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #else
@@ -188,8 +186,8 @@ CONTAINS
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in H
-       n_col = indxl2g(i,     nb, mycol, 0, hmat%blacsdata%npcol)
-       n_row = numroc (n_col, nb, myrow, 0, hmat%blacsdata%nprow)
+       n_col = indxl2g(i,     nb, hmat%blacsdata%mycol, 0, hmat%blacsdata%npcol)
+       n_row = numroc (n_col, nb, hmat%blacsdata%myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
           hmat%data_r(n_row+1:hmat%matsize1,i) = 0.d0 
        ELSE
@@ -210,8 +208,8 @@ CONTAINS
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in H
-       n_col = indxl2g(i,     nb, mycol, 0, hmat%blacsdata%npcol)
-       n_row = numroc (n_col, nb, myrow, 0, hmat%blacsdata%nprow)
+       n_col = indxl2g(i,     nb, hmat%blacsdata%mycol, 0, hmat%blacsdata%npcol)
+       n_row = numroc (n_col, nb, hmat%blacsdata%myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
           hmat%data_r(n_row+1:hmat%matsize1,i) = ev_dist%data_r(n_row+1:ev_dist%matsize1,i)
        ELSE
@@ -317,8 +315,8 @@ CONTAINS
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in A
-       n_col = indxl2g(i,     nb, mycol, 0, hmat%blacsdata%npcol)
-       n_row = numroc (n_col, nb, myrow, 0, hmat%blacsdata%nprow)
+       n_col = indxl2g(i,     nb, hmat%blacsdata%mycol, 0, hmat%blacsdata%npcol)
+       n_row = numroc (n_col, nb, hmat%blacsdata%myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
           hmat%data_r(n_row+1:hmat%matsize1,i) = ev_dist%data_r(n_row+1:ev_dist%matsize1,i)
        ELSE

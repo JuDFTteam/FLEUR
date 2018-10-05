@@ -25,6 +25,8 @@ CONTAINS
     USE m_types
     USE m_ylm
     USE m_apws
+    USE cudafor
+    USE nvtx
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -38,7 +40,7 @@ CONTAINS
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
     !     .. Array Arguments ..
-    REAL, INTENT(IN)       :: fj(:,:,:),gj(:,:,:)
+    REAL, DEVICE, INTENT(IN)       :: fj(:,:,:),gj(:,:,:)
     COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
     !Optional arguments if abc coef for LOs are needed
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
@@ -49,29 +51,28 @@ CONTAINS
     COMPLEX,ALLOCATABLE :: ylm(:,:)
     COMPLEX,ALLOCATABLE :: c_ph(:,:)
     REAL,   ALLOCATABLE :: gkrot(:,:)
-    LOGICAL :: l_apw
     COMPLEX:: term
 
     REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: c_ph_dev(:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: ylm_dev(:,:)
-  
- 
-    ALLOCATE(fj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
-    ALLOCATE(gj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
-    ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
-    ALLOCATE(ylm_dev(lapw%nv(1),(atoms%lmaxd+1)**2))
-    fj_dev(:,:,:)= fj(:,:,:)
-    gj_dev(:,:,:)= gj(:,:,:)
+    REAL,   ALLOCATABLE,DEVICE :: gkrot_dev(:,:)
+    INTEGER :: istat
 
-    ALLOCATE(ylm(lapw%nv(1),(atoms%lmaxd+1)**2))
+ 
+    call nvtxStartRange("hsmt_ab",2)    
+    lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
+
+    ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
+    ALLOCATE(ylm_dev((lmax+1)**2,lapw%nv(1)))
+    ALLOCATE(gkrot_dev(3,lapw%nv(1)))
+
+    ALLOCATE(ylm((lmax+1)**2,lapw%nv(1)))
     ALLOCATE(c_ph(lapw%nv(1),MERGE(2,1,noco%l_ss)))
     ALLOCATE(gkrot(3,lapw%nv(1)))
 
-    lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
     
     ab_size=lmax*(lmax+2)+1
-    l_apw=ALL(gj==0.0)
     ab=0.0
     
     np = sym%invtab(atoms%ngopr(na))
@@ -92,50 +93,64 @@ CONTAINS
        END DO
     END IF
 
-    !-->    generate spherical harmonics
-    DO k = 1,lapw%nv(1)
-       vmult(:) =  gkrot(:,k)
-       CALL ylm4(lmax,vmult,ylm(k,:))
-    ENDDO
-    ylm_dev=ylm
+    gkrot_dev = gkrot 
+
 
     !-->  synthesize the complex conjugates of a and b
+
+    !!$cuf kernel do <<<*,256>>>
+    !DO k = 1,lapw%nv(1)
+    !   !-->    generate spherical harmonics
+    !   CALL ylm4_dev(lmax,gkrot_dev(:,k),ylm_dev(:,k))
+    !ENDDO 
+
+    DO k = 1,lapw%nv(1)
+       call ylm4(lmax,gkrot(:,k),ylm(:,k))
+    ENDDO
+    ylm_dev = ylm
+
+    call nvtxStartRange("hsmt_cuf",5)    
     !$cuf kernel do <<<*,256>>>
     DO k = 1,lapw%nv(1)
+       !-->    generate spherical harmonics
+       !CALL ylm4_dev(lmax,gkrot_dev(:,k),ylm_dev(:,k))
        DO l = 0,lmax
           ll1 = l* (l+1)
           DO m = -l,l               
-             ab(k,ll1+m+1)         = CONJG(fj_dev(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(k,ll1+m+1)) 
-             ab(k,ll1+m+1+ab_size) = CONJG(gj_dev(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(k,ll1+m+1)) 
+             ab(k,ll1+m+1)         = CONJG(fj(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(ll1+m+1,k)) 
+             ab(k,ll1+m+1+ab_size) = CONJG(gj(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(ll1+m+1,k)) 
           END DO
        END DO
     ENDDO !k-loop
- 
+    istat = cudaDeviceSynchronize() 
+    call nvtxEndRange
 
     IF (PRESENT(abclo)) THEN
-       DO k = 1,lapw%nv(1)
-          !determine also the abc coeffs for LOs
-          invsfct=MERGE(1,2,atoms%invsat(na).EQ.0)
-          term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
-          DO lo = 1,atoms%nlo(n)
-             l = atoms%llo(lo,n)
-             DO nkvec=1,invsfct*(2*l+1)
-                IF (lapw%kvec(nkvec,lo,na)==k) THEN !This k-vector is used in LO
-                   ll1 = l*(l+1) + 1
-                   DO m = -l,l
-                      lm = ll1 + m
-                      abclo(1,m,nkvec,lo) = term*ylm(k,lm)*alo1(lo)
-                      abclo(2,m,nkvec,lo) = term*ylm(k,lm)*blo1(lo)
-                      abclo(3,m,nkvec,lo) = term*ylm(k,lm)*clo1(lo)
-                   END DO
-                END IF
-             ENDDO
-          ENDDO
-       ENDDO
+       print*, "Ooooops, TODO in hsmt_ab"
+       !DO k = 1,lapw%nv(1)
+       !   !determine also the abc coeffs for LOs
+       !   invsfct=MERGE(1,2,atoms%invsat(na).EQ.0)
+       !   term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
+       !   DO lo = 1,atoms%nlo(n)
+       !      l = atoms%llo(lo,n)
+       !      DO nkvec=1,invsfct*(2*l+1)
+       !         IF (lapw%kvec(nkvec,lo,na)==k) THEN !This k-vector is used in LO
+       !            ll1 = l*(l+1) + 1
+       !            DO m = -l,l
+       !               lm = ll1 + m
+       !               abclo(1,m,nkvec,lo) = term*ylm(k,lm)*alo1(lo)
+       !               abclo(2,m,nkvec,lo) = term*ylm(k,lm)*blo1(lo)
+       !               abclo(3,m,nkvec,lo) = term*ylm(k,lm)*clo1(lo)
+       !            END DO
+       !         END IF
+       !      ENDDO
+       !   ENDDO
+       !ENDDO
     ENDIF
        
-    IF (.NOT.l_apw) ab_size=ab_size*2
+    ab_size=ab_size*2
     
+    call nvtxEndRange
   END SUBROUTINE hsmt_ab_gpu
 #endif
 
