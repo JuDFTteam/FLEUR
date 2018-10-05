@@ -77,7 +77,6 @@ CONTAINS
     call nvtxStartRange("hsmt_nonsph",1)    
 #endif
 
-    print *, "nonsph start"
     ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 #ifdef _CUDA
     ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
