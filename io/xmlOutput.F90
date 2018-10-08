@@ -158,7 +158,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
       CLASS(*),         INTENT(IN)           :: attributeValues(:)
       INTEGER,          INTENT(IN)           :: lengths(:,:)
-      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(1:)
 
       CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
       CHARACTER(LEN= 30), ALLOCATABLE :: charContentList(:)
@@ -195,12 +195,12 @@ MODULE m_xmlOutput
          DO i = 1, SIZE(contentList)
             SELECT TYPE(contentList)
                TYPE IS(INTEGER)
+#ifndef __PGI
                   WRITE(charContentList(i),'(i0)') contentList(i)
                TYPE IS(REAL)
                   WRITE(charContentList(i),'(f19.10)') contentList(i)
                TYPE IS(LOGICAL)
                   WRITE(charContentList(i),'(l1)') contentList(i)
-#ifndef __PGI
                TYPE IS(CHARACTER(LEN=*))
                   WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
                CLASS DEFAULT

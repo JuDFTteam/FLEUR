@@ -101,6 +101,10 @@ CONTAINS
     DO jsp = 1,input%jspins
        CALL read_eig(&
             eig_id,nk,jsp, neig=ne,eig=eig(:,jsp))
+       IF (judft_was_argument("-debugtime")) THEN
+          WRITE(6,*) "Non-SOC ev for nk,jsp:",nk,jsp
+          WRITE(6,"(6(f10.6,1x))") eig(:ne,jsp)
+       ENDIF
        CALL read_eig(&
                eig_id,nk,jsp,&
                n_start=1,n_end=ne,&

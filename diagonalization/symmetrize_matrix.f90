@@ -19,32 +19,34 @@ CONTAINS
 
     REAL :: max_imag
     !Check if we could exploit a real matrix even without inversion symmetry
-    realcomplex:IF (.NOT.noco%l_noco.AND..NOT.hmat%l_real) THEN
-       IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
-          max_imag=MAXVAL(ABS(AIMAG(hmat%data_c)))
-          IF (max_imag>1e-10) THEN
-                     PRINT *,"Real matrix expected but imaginary part is:",max_imag
-                     RETURN
-          ENDIF
-          
-          IF (mpi%irank==0) THEN
-             PRINT *,"Complex matrix made real"
-             WRITE(6,*) "Complex matrix made real"
-          END IF
+    SELECT TYPE(hmat)
+    TYPE IS(t_mat)
+       realcomplex:IF (.NOT.noco%l_noco.AND..NOT.hmat%l_real) THEN
+          IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
+             max_imag=MAXVAL(ABS(AIMAG(hmat%data_c)))
+             IF (max_imag>1e-10) THEN
+                PRINT *,"Real matrix expected but imaginary part is:",max_imag
+                RETURN
+             ENDIF
              
-          !We are using Gamma point, so matrix should be real
-          IF (ALLOCATED(smat%data_r)) DEALLOCATE(smat%data_r)
-          ALLOCATE(smat%data_r(SIZE(smat%data_c,1),SIZE(smat%data_c,2)))
-          smat%data_r=smat%data_c;smat%l_real=.TRUE.
-          DEALLOCATE(smat%data_c)
-
-          IF (ALLOCATED(hmat%data_r)) DEALLOCATE(hmat%data_r)
-          ALLOCATE(hmat%data_r(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
-          hmat%data_r=hmat%data_c;hmat%l_real=.TRUE.
-          DEALLOCATE(hmat%data_c)
-
-       ENDIF
-    ENDIF realcomplex
-
+             IF (mpi%irank==0) THEN
+                PRINT *,"Complex matrix made real"
+                WRITE(6,*) "Complex matrix made real"
+             END IF
+             
+             !We are using Gamma point, so matrix should be real
+             IF (ALLOCATED(smat%data_r)) DEALLOCATE(smat%data_r)
+             ALLOCATE(smat%data_r(SIZE(smat%data_c,1),SIZE(smat%data_c,2)))
+             smat%data_r=smat%data_c;smat%l_real=.TRUE.
+             DEALLOCATE(smat%data_c)
+             
+             IF (ALLOCATED(hmat%data_r)) DEALLOCATE(hmat%data_r)
+             ALLOCATE(hmat%data_r(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
+             hmat%data_r=hmat%data_c;hmat%l_real=.TRUE.
+             DEALLOCATE(hmat%data_c)
+             
+          ENDIF
+       ENDIF realcomplex
+    END SELECT
   END SUBROUTINE symmetrize_matrix
 END MODULE m_symmetrize_matrix

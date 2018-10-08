@@ -14,7 +14,7 @@ set(InpTestdirs ${InpgenTests})
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
     set(Testdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
-    set(ParTestdirs ${Testdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
+    set(ParTestdirs ${ParTestdirs} Bi2Te3 Bi2Te3XML NiO_ldauXML)
 endif()
 
 #The inpgen tests
