@@ -64,12 +64,8 @@ MODULE m_fleur_arguments
        ,t_fleur_param(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")&
        ,t_fleur_param(2,"-sd","use starting density N, where N is the index of the density according to -info","")&
        ,t_fleur_param(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")&
-#ifdef CPP_GPU
-       !GPU paramter
+       !GPU parameter
        ,t_fleur_param(0,"-gpu","Use GPU for computing","")&
-#else
-       ,t_fleur_param(0,"","","")&
-#endif       
        /)
 
        

@@ -54,7 +54,7 @@ CONTAINS
     !Matrices for Hamiltonian and Overlapp
     !In noco case we need 4-matrices for each spin channel
     nspins=MERGE(2,1,noco%l_noco)
-    IF (mpi%n_size==1) THEN
+    IF (mpi%n_size==1) THEN       
        IF (judft_was_argument("-gpu")) THEN
           ALLOCATE(t_gpumat::smat(nspins,nspins),hmat(nspins,nspins))
        ELSE
