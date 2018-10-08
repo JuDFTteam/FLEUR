@@ -3,9 +3,9 @@ try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/t
 LINK_LIBRARIES ${FLEUR_LIBRARIES})
 if (NOT FLEUR_USE_ELPA)
    if (DEFINED CLI_ELPA_OPENMP)
-      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lelpa_openmp")
+      set(TEST_LIBRARIES "-lelpa_openmp;${FLEUR_LIBRARIES}")
    else()
-      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lelpa")
+      set(TEST_LIBRARIES "-lelpa;${FLEUR_LIBRARIES}")
    endif()
    try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA.f90
 LINK_LIBRARIES ${TEST_LIBRARIES})
