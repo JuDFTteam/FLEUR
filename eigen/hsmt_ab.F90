@@ -9,7 +9,7 @@ MODULE m_hsmt_ab
 
   INTERFACE hsmt_ab
     module procedure hsmt_ab_cpu
-#ifdef _CUDA
+#ifdef CPP_GPU
     module procedure hsmt_ab_gpu
 #endif
   END INTERFACE
@@ -17,7 +17,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-#ifdef _CUDA
+#ifdef CPP_GPU
 
   SUBROUTINE hsmt_ab_gpu(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix
