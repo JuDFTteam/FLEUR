@@ -71,12 +71,12 @@ IMPLICIT NONE
   PRIVATE 
 
   INTEGER         :: chase_eig_id
-  PUBLIC init_chase, chase_diag
+  PUBLIC init_chase
 #endif
   REAL            :: scale_distance
   REAL            :: tol
   
-  PUBLIC chase_distance
+  PUBLIC chase_distance,chase_diag
 
 CONTAINS
 
