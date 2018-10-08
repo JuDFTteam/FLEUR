@@ -17,3 +17,8 @@ else()
   diagonalization/elpa.F90
 )
 endif()
+if (FLEUR_USE_GPU)
+set(fleur_F90 ${fleur_F90}
+  diagonalization/cusolver_diag.F90
+)
+endif()

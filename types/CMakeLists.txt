@@ -50,3 +50,8 @@ types/types_dos.f90
 types/types_denCoeffsOffdiag.f90
 types/types_force.f90
 )
+if (FLEUR_USE_GPU)
+ set(fleur_F90 ${fleur_F90}
+ types/types_gpumat.F90
+ )
+endif()	

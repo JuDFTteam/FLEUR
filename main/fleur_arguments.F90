@@ -13,7 +13,7 @@ MODULE m_fleur_arguments
      CHARACTER(len=200)  :: values
   END TYPE t_fleur_param
   
-  INTEGER,PARAMETER:: no_params=21
+  INTEGER,PARAMETER:: no_params=22
   TYPE(t_fleur_param) :: fleur_param(no_params)=(/&
        !Input options
        t_fleur_param(0,"-toXML","Convert an old 'inp' file into the new XML format",""),&
@@ -38,6 +38,9 @@ MODULE m_fleur_arguments
 #ifdef CPP_MAGMA
        //",magma"&
 #endif
+#ifdef CPP_GPU
+       //",cusolver"&
+#endif
        ),&
        t_fleur_param(1,"-eig","Method for storing the eigenvectors","mem,da"&
 #ifdef CPP_MPI
@@ -61,6 +64,12 @@ MODULE m_fleur_arguments
        ,t_fleur_param(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")&
        ,t_fleur_param(2,"-sd","use starting density N, where N is the index of the density according to -info","")&
        ,t_fleur_param(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")&
+#ifdef CPP_GPU
+       !GPU paramter
+       ,t_fleur_param(0,"-gpu","Use GPU for computing","")&
+#else
+       ,t_fleur_param(0,"","","")&
+#endif       
        /)
 
        

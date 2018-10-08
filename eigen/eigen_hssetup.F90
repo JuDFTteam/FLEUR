@@ -54,7 +54,11 @@ CONTAINS
     !In noco case we need 4-matrices for each spin channel
     nspins=MERGE(2,1,noco%l_noco)
     IF (mpi%n_size==1) THEN
-       ALLOCATE(t_mat::smat(nspins,nspins),hmat(nspins,nspins))
+       IF (judft_was_argument("-gpu")) THEN
+          ALLOCATE(t_gpumat::smat(nspins,nspins),hmat(nspins,nspins))
+       ELSE
+          ALLOCATE(t_mat::smat(nspins,nspins),hmat(nspins,nspins))
+       ENDIF
     ELSE
        ALLOCATE(t_mpimat::smat(nspins,nspins),hmat(nspins,nspins))
     ENDIF
@@ -85,14 +89,10 @@ CONTAINS
        CALL timestop("Vacuum part")
     ENDIF
     !Now copy the data into final matrix
-    IF (mpi%n_size==1) THEN
-       ALLOCATE(t_mat::smat_final,hmat_final)
-    ELSE
-       ALLOCATE(t_mpimat::smat_final,hmat_final)
-    ENDIF
     ! Collect the four noco parts into a single matrix
     ! In collinear case only a copy is done
     ! In the parallel case also a redistribution happens
+    ALLOCATE(smat_final,hmat_final,source=smat(1,1))
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
     CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final,smat_final)
     
