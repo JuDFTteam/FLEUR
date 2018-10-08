@@ -7,6 +7,7 @@ MODULE m_types_gpumat
   !!
   !! Several select type constructs are only needed to make the PGI compiler happy...
   TYPE,EXTENDS(t_mat) :: t_gpumat
+#ifdef CPP_GPU     
    CONTAINS
      PROCEDURE        :: alloc =>t_gpumat_alloc
      PROCEDURE        :: multiply=>t_gpumat_multiply            !> do a matrix-matrix multiply
@@ -19,10 +20,11 @@ MODULE m_types_gpumat
      PROCEDURE        :: move => t_gpumat_move                  !> move data into another t_mat 
      PROCEDURE        :: add_transpose => t_gpumat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal 
      PROCEDURE        :: init_from                              !> Initialize from an existing matrix
+#endif
   END TYPE t_gpumat
 
 CONTAINS
-
+#ifdef CPP_GPU
   SUBROUTINE t_gpumat_alloc(mat,l_real,matsize1,matsize2,init)
     CLASS(t_gpumat) :: mat
     LOGICAL,INTENT(IN),OPTIONAL:: l_real
@@ -294,4 +296,5 @@ CONTAINS
        ENDIF
     END SELECT
   END SUBROUTINE t_gpumat_clear
+#endif  
 END MODULE m_types_gpumat

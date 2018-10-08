@@ -39,6 +39,7 @@ MODULE m_cusolver_diag
 CONTAINS
   SUBROUTINE cusolver_diag(hmat,smat,ne,eig,zmat)
     !Simple driver to solve Generalized Eigenvalue Problem using CuSolverDN
+    USE m_types
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT) :: hmat,smat
     INTEGER,INTENT(INOUT)      :: ne
@@ -49,27 +50,14 @@ CONTAINS
     INTEGER,PARAMETER:: max_sweeps=15
     REAL             :: tol=1E-7
     
-    TYPE(t_gpumat)::smat_gpu,hmat_gpu
     
     ALLOCATE(t_mat::zmat)
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
-    SELECT TYPE(hmat)
-    TYPE IS (t_mat)
-       CALL hmat_gpu%init_from(hmat)
-       CALL smat_gpu%init_from(smat)
-       IF (hmat%l_real) THEN
-          CALL cusolver_real(hmat_gpu%gpu_r,smat_gpu%gpu_r,smat%matsize1,ne,tol,max_sweeps,eig,z%data_r)
-       ELSE
-          CALL cusolver_complex(hmat_gpu%gpu_c,smat_gpu%gpu_c,smat%matsize1,ne,tol,max_sweeps,eig,z%data_c)
-       END IF
-    TYPE IS (t_gpumat)
-       IF (hmat%l_real) THEN
-          CALL cusolver_real(hmat%gpu_r,smat%gpu_r,smat%matsize1,ne,tol,max_sweeps,eig,z%data_r)
-       ELSE
-          CALL cusolver_complex(hmat%gpu_c,smat%gpu_c,smat%matsize1,ne,tol,max_sweeps,eig,z%data_c)
-       END IF
-       
-    END SELECT
+    IF (hmat%l_real) THEN
+       CALL cusolver_real(hmat%data_r,smat%data_r,smat%matsize1,ne,tol,max_sweeps,eig,zmat%data_r)
+    ELSE
+       CALL cusolver_complex(hmat%data_c,smat%data_c,smat%matsize1,ne,tol,max_sweeps,eig,zmat%data_c)
+    END IF
 #endif
        
   END SUBROUTINE cusolver_diag
