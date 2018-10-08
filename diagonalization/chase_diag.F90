@@ -121,7 +121,8 @@ CONTAINS
                              noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
     END IF
   END SUBROUTINE init_chase
-
+#endif
+  
    SUBROUTINE chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
      USE m_types_mpimat
     USE m_types
@@ -139,7 +140,7 @@ CONTAINS
     INTEGER,                   INTENT(INOUT) :: ne
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: zmat
     REAL,                      INTENT(OUT)   :: eig(:)
-
+#ifdef CPP_CHASE
     !Choose serial or parallel solver
     SELECT TYPE(hmat)
     CLASS is (t_mpimat)
@@ -157,8 +158,9 @@ CONTAINS
           CALL judft_error("Inconsistent matrix setup")
        END SELECT
     END SELECT
+#endif    
   END SUBROUTINE chase_diag
-  
+#ifdef CPP_CHASE  
   SUBROUTINE chase_diag_noMPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
 
     USE m_types
