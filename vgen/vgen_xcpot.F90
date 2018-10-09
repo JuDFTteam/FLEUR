@@ -181,7 +181,7 @@ CONTAINS
           END DO
 
           WRITE (6,FMT=8060) results%te_veff
-8060      FORMAT (/,10x,'total density-effective potential integral :', t40,f20.10)
+8060      FORMAT (/,10x,'total density-effective potential integral :', t40,ES20.10)
 
           ! CALCULATE THE INTEGRAL OF n*exc
 
@@ -195,7 +195,7 @@ CONTAINS
           CALL int_nv(1,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,exc,workDen,results%te_exc)
           WRITE (6,FMT=8080) results%te_exc
 
-8080      FORMAT (/,10x,'total charge density-energy density integral :', t40,f20.10)
+8080      FORMAT (/,10x,'total charge density-energy density integral :', t40,ES20.10)
        END IF
     END IF ! mpi%irank == 0
 

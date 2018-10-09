@@ -45,7 +45,7 @@ CONTAINS
 
     WRITE (6,FMT=8020) tis
     WRITE (16,FMT=8020) tis
-8020 FORMAT (/,10x,'interstitial :',t40,f20.10)
+8020 FORMAT (/,10x,'interstitial :',t40,ES20.10)
 
     RESULT = RESULT + tis
     !
@@ -65,7 +65,7 @@ CONTAINS
     ENDDO
     WRITE (6,FMT=8030) tmt
     WRITE (16,FMT=8030) tmt
-8030 FORMAT (/,10x,'muffin tin spheres :',t40,f20.10)
+8030 FORMAT (/,10x,'muffin tin spheres :',t40,ES20.10)
     RESULT = RESULT + tmt
     !
     ! *********** VACUUM REGION**************
@@ -99,7 +99,7 @@ CONTAINS
        ENDDO
        WRITE (6,FMT=8040) tvact
        WRITE (16,FMT=8040) tvact
-8040   FORMAT (/,10x,'vacuum :',t40,f20.10)
+8040   FORMAT (/,10x,'vacuum :',t40,ES20.10)
        RESULT = RESULT + tvact
     ELSEIF (oneD%odi%d1) THEN
        !-odim
@@ -127,7 +127,7 @@ CONTAINS
        tvact = tvact + cell%area*tvac
        WRITE (6,FMT=8041) tvact
        WRITE (16,FMT=8041) tvact
-8041   FORMAT (/,10x,'vacuum :',t40,f20.10)
+8041   FORMAT (/,10x,'vacuum :',t40,ES20.10)
        RESULT = RESULT + tvact
        !+odim
     END IF

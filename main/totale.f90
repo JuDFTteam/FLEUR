@@ -114,7 +114,7 @@ CONTAINS
     results%tote = results%tote + results%te_exc
     WRITE (6,FMT=8040) results%te_exc
     WRITE (16,FMT=8040) results%te_exc
-8040 FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,f20.10)
+8040 FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,ES20.10)
     !
     !      ---> Fock exchange contribution 
     !
