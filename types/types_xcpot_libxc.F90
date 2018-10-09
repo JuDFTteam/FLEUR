@@ -260,8 +260,6 @@ CONTAINS
 
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen)
-      USE IFCORE
-
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
       INTEGER, INTENT (IN)           :: jspins
