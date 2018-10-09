@@ -56,7 +56,7 @@ void cusolver_complex(cuDoubleComplex *H,cuDoubleComplex *S,int n,int ne,double 
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of tolerance is machine zero */
-  status = cusolverDnXsyevjSetTolerance(&svj_params,tol);
+  status = cusolverDnXsyevjSetTolerance(&syevj_params,tol);
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of max. sweeps is 100 */
@@ -163,7 +163,7 @@ void cusolver_real(double *H,double *S,int n,int ne,double tol,int max_sweeps,do
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of tolerance is machine zero */
-  status = cusolverDnXsyevjSetTolerance(&svj_params,tol);
+  status = cusolverDnXsyevjSetTolerance(&syevj_params,tol);
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of max. sweeps is 100 */

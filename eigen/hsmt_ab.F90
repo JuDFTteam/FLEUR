@@ -26,7 +26,7 @@ CONTAINS
     USE m_ylm
     USE m_apws
     USE cudafor
-    USE nvtx
+!    USE nvtx
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -60,7 +60,7 @@ CONTAINS
     INTEGER :: istat
 
  
-    call nvtxStartRange("hsmt_ab",2)    
+   ! call nvtxStartRange("hsmt_ab",2)    
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
 
     ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
@@ -109,7 +109,7 @@ CONTAINS
     ENDDO
     ylm_dev = ylm
 
-    call nvtxStartRange("hsmt_cuf",5)    
+    !call nvtxStartRange("hsmt_cuf",5)    
     !$cuf kernel do <<<*,256>>>
     DO k = 1,lapw%nv(1)
        !-->    generate spherical harmonics
@@ -123,7 +123,7 @@ CONTAINS
        END DO
     ENDDO !k-loop
     istat = cudaDeviceSynchronize() 
-    call nvtxEndRange
+    !call nvtxEndRange
 
     IF (PRESENT(abclo)) THEN
        print*, "Ooooops, TODO in hsmt_ab"
@@ -150,7 +150,7 @@ CONTAINS
        
     ab_size=ab_size*2
     
-    call nvtxEndRange
+    !call nvtxEndRange
   END SUBROUTINE hsmt_ab_gpu
 #endif
 

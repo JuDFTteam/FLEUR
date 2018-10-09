@@ -2,7 +2,7 @@ include_directories(include)
 
 set(c_filesInpgen io/xml/inputSchema.h io/xml/dropInputSchema.c)
 set(c_filesFleur io/xml/inputSchema.h io/xml/dropInputSchema.c io/xml/xmlInterfaceWrapper.c)
-if(FLEUR_USE_GPU)
+if(FLEUR_USE_CUSOLVER)
   set(c_filesFleur ${c_filesFleur} diagonalization/cusolver.c)
 endif()
 

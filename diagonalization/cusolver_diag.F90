@@ -11,7 +11,7 @@ MODULE m_cusolver_diag
 #endif  
   IMPLICIT NONE
   PRIVATE
-#ifdef CPP_GPU
+#ifdef CPP_CUSOLVER
   INTERFACE
      SUBROUTINE cusolver_real(H,S,n,ne,tol,max_sweeps,eig,z) BIND(C,name="cusolver_real") 
       USE iso_c_binding
@@ -46,7 +46,7 @@ CONTAINS
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
     REAL,INTENT(OUT)           :: eig(:)
 
-#ifdef CPP_GPU
+#ifdef CPP_CUSOLVER
     INTEGER,PARAMETER:: max_sweeps=15
     REAL             :: tol=1E-7
     
