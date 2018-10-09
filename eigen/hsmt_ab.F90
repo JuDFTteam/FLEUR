@@ -19,8 +19,44 @@ CONTAINS
 
 #ifdef _CUDA
 
+  ATTRIBUTES(global) SUBROUTINE synth_ab(grid,block,n,lmax,iintsp,ab_size,gkrot_dev,fj,gj,c_ph,ab)
+    USE m_ylm
+    INTEGER, VALUE, INTENT(IN) :: grid, block, n, lmax, iintsp,ab_size
+    REAL,   DEVICE, INTENT(IN) :: gkrot_dev(:,:),fj(:,:,:),gj(:,:,:)
+    COMPLEX,DEVICE, INTENT(IN) :: c_ph(:,:)
+    COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
+    COMPLEX,ALLOCATABLE :: ylm(:)
+    INTEGER :: k,l,ll1,m
+    INTEGER :: loop_start, loop_end, i, loop_size
+
+    ALLOCATE(ylm((lmax+1)**2))
+
+    k = (blockidx%x-1)*blockdim%x + threadidx%x
+
+    loop_size = max(n/(grid*block),1)
+    if (loop_size * grid*block < n) loop_size = loop_size + 1
+    loop_start = (k-1) * loop_size + 1
+    loop_end = loop_start + loop_size - 1
+    if (loop_end > n ) loop_end = n
+
+    DO i = loop_start,loop_end
+       !-->    generate spherical harmonics
+       CALL ylm4_dev(lmax,gkrot_dev(:,i),ylm(:))
+       DO l = 0,lmax
+          ll1 = l* (l+1)
+          DO m = -l,l               
+             ab(i,ll1+m+1)         = CONJG(fj(i,l+1,iintsp)*c_ph(i,iintsp)*ylm(ll1+m+1)) 
+             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1,iintsp)*c_ph(i,iintsp)*ylm(ll1+m+1)) 
+          END DO
+       END DO
+    ENDDO 
+
+    DEALLOCATE(ylm)
+  END SUBROUTINE synth_ab
+
+
   SUBROUTINE hsmt_ab_gpu(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
-!Calculate overlap matrix
+!Calculate overlap matrix, GPU version
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
@@ -53,18 +89,13 @@ CONTAINS
     REAL,   ALLOCATABLE :: gkrot(:,:)
     COMPLEX:: term
 
-    REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: c_ph_dev(:,:)
-    COMPLEX,ALLOCATABLE,DEVICE :: ylm_dev(:,:)
     REAL,   ALLOCATABLE,DEVICE :: gkrot_dev(:,:)
-    INTEGER :: istat
-
+    INTEGER :: istat, grid, block
  
-   ! call nvtxStartRange("hsmt_ab",2)    
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
 
     ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
-    ALLOCATE(ylm_dev((lmax+1)**2,lapw%nv(1)))
     ALLOCATE(gkrot_dev(3,lapw%nv(1)))
 
     ALLOCATE(ylm((lmax+1)**2,lapw%nv(1)))
@@ -97,31 +128,14 @@ CONTAINS
 
 
     !-->  synthesize the complex conjugates of a and b
+    !call nvtxStartRange("hsmt_synthAB",5)    
+    istat = cudaDeviceSynchronize() 
 
-    !!$cuf kernel do <<<*,256>>>
-    !DO k = 1,lapw%nv(1)
-    !   !-->    generate spherical harmonics
-    !   CALL ylm4_dev(lmax,gkrot_dev(:,k),ylm_dev(:,k))
-    !ENDDO 
+    ! pretty ugly solution
+    block = 256
+    grid = lapw%nv(1)/(block*4) + 1
+    CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,iintsp,ab_size,gkrot_dev,fj,gj,c_ph_dev,ab)
 
-    DO k = 1,lapw%nv(1)
-       call ylm4(lmax,gkrot(:,k),ylm(:,k))
-    ENDDO
-    ylm_dev = ylm
-
-    !call nvtxStartRange("hsmt_cuf",5)    
-    !$cuf kernel do <<<*,256>>>
-    DO k = 1,lapw%nv(1)
-       !-->    generate spherical harmonics
-       !CALL ylm4_dev(lmax,gkrot_dev(:,k),ylm_dev(:,k))
-       DO l = 0,lmax
-          ll1 = l* (l+1)
-          DO m = -l,l               
-             ab(k,ll1+m+1)         = CONJG(fj(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(ll1+m+1,k)) 
-             ab(k,ll1+m+1+ab_size) = CONJG(gj(k,l+1,iintsp)*c_ph_dev(k,iintsp)*ylm_dev(ll1+m+1,k)) 
-          END DO
-       END DO
-    ENDDO !k-loop
     istat = cudaDeviceSynchronize() 
     !call nvtxEndRange
 
@@ -150,12 +164,14 @@ CONTAINS
        
     ab_size=ab_size*2
     
-    !call nvtxEndRange
+    DEALLOCATE(c_ph_dev)
+    DEALLOCATE(gkrot_dev)
+
   END SUBROUTINE hsmt_ab_gpu
 #endif
 
   SUBROUTINE hsmt_ab_cpu(sym,atoms,noco,ispin,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
-!Calculate overlap matrix
+!Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm

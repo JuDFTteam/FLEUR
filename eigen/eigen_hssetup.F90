@@ -93,8 +93,8 @@ CONTAINS
     ! Collect the four noco parts into a single matrix
     ! In collinear case only a copy is done
     ! In the parallel case also a redistribution happens
-    ALLOCATE(smat_final,source=smat(1,1))
-    ALLOCATE(hmat_final,source=smat(1,1))
+    ALLOCATE(smat_final,mold=smat(1,1))
+    ALLOCATE(hmat_final,mold=smat(1,1))
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
     CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final,smat_final)
     
