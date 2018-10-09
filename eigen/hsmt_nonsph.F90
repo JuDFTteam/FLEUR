@@ -27,7 +27,7 @@ CONTAINS
     CLASS(t_mat),INTENT(INOUT)     ::hmat
     CALL timestart("non-spherical setup")
     IF (mpi%n_size==1) THEN
-#ifdef (_CUDA)
+#if defined (_CUDA)
        CALL priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
 #else
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
@@ -38,7 +38,7 @@ CONTAINS
     CALL timestop("non-spherical setup")
   END SUBROUTINE hsmt_nonsph
 
-#ifdef (_CUDA)
+#if defined (_CUDA)
   SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
 !Calculate overlap matrix
     USE m_hsmt_ab
