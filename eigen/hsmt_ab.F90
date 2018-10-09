@@ -23,7 +23,7 @@ CONTAINS
     USE m_ylm
     INTEGER, VALUE, INTENT(IN) :: grid, block, n, lmax, iintsp,ab_size
     REAL,   DEVICE, INTENT(IN) :: gkrot_dev(:,:),fj(:,:,:),gj(:,:,:)
-    COMPLEX,DEVICE, INTENT(IN) :: c_ph(:,:)
+    COMPLEX,DEVICE, INTENT(IN) :: c_ph(:)
     COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
     COMPLEX,ALLOCATABLE :: ylm(:)
     INTEGER :: k,l,ll1,m
@@ -45,8 +45,8 @@ CONTAINS
        DO l = 0,lmax
           ll1 = l* (l+1)
           DO m = -l,l               
-             ab(i,ll1+m+1)         = CONJG(fj(i,l+1,iintsp)*c_ph(i,iintsp)*ylm(ll1+m+1)) 
-             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1,iintsp)*c_ph(i,iintsp)*ylm(ll1+m+1)) 
+             ab(i,ll1+m+1)         = CONJG(fj(i,l+1,iintsp)*c_ph(i)*ylm(ll1+m+1)) 
+             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1,iintsp)*c_ph(i)*ylm(ll1+m+1)) 
           END DO
        END DO
     ENDDO 
@@ -134,7 +134,7 @@ CONTAINS
     ! pretty ugly solution
     block = 256
     grid = lapw%nv(1)/(block*4) + 1
-    CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,iintsp,ab_size,gkrot_dev,fj,gj,c_ph_dev,ab)
+    CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,iintsp,ab_size,gkrot_dev,fj,gj,c_ph_dev(:,iintsp),ab)
 
     istat = cudaDeviceSynchronize() 
     !call nvtxEndRange
