@@ -507,7 +507,7 @@ MODULE m_corespec_eval
         orpref(1:nor) = (4.d0*pi_const)**2
         if(.not.allocated(ylm)) allocate(ylm(0:lax*(lax+2),nor))
         do ior = 1,nor
-          CALL ylm4(lax,orvec,ylm(0,ior))
+          CALL ylm4(lax,orvec,ylm(:,ior))
           do la1 = lan,lax ; do mu1 = -la1,la1
             lamu = la1*(la1+1)+mu1
             write(98,'(3i5,2f12.8)') la1,mu1,lamu,ylm(lamu,ior)

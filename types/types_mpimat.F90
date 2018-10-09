@@ -339,7 +339,7 @@ CONTAINS
     type(t_blacsdata),INTENT(OUT)::blacsdata
     INTEGER,INTENT(OUT):: local_size1,local_size2
    
-#ifdef CPP_MPI
+#ifdef CPP_SCALAPACK
     INCLUDE 'mpif.h'
     INTEGER     :: myrowssca,mycolssca
     INTEGER     :: iamblacs,npblacs,np,myid,mycol,myrow

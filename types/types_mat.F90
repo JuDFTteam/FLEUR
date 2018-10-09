@@ -12,8 +12,13 @@ MODULE m_types_mat
      LOGICAL :: l_real                     !>Store either real or complex data
      INTEGER :: matsize1=-1                !> matsize1=size(data_?,1),i.e. no of rows
      INTEGER :: matsize2=-1                !> matsize2=size(data_?,2),i.e. no of columns
+#ifdef CPP_GPU     
+     REAL,MANAGED,ALLOCATABLE    :: data_r(:,:)
+     COMPLEX,MANAGED,ALLOCATABLE :: data_c(:,:)
+#else
      REAL,ALLOCATABLE    :: data_r(:,:)
      COMPLEX,ALLOCATABLE :: data_c(:,:)
+#endif     
    CONTAINS
      PROCEDURE        :: alloc => t_mat_alloc                !> allocate the data-arrays
      PROCEDURE        :: multiply=>t_mat_multiply            !> do a matrix-matrix multiply

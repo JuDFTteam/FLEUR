@@ -24,6 +24,7 @@ types/types_regionCharges.f90
 types/types_dos.f90
 types/types_denCoeffsOffdiag.f90
 types/types_force.f90
+types/types_gpumat.F90
 )
 
 set(inpgen_F90 ${inpgen_F90}

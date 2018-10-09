@@ -42,6 +42,9 @@ CONTAINS
     CALL print_argument("-h")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control FLEUR job:"
+#ifdef CPP_GPU
+    CALL print_argument("-gpu")
+#endif
     CALL print_argument("-check")
     CALL print_argument("-info")
     CALL print_argument("-wtime")
@@ -63,7 +66,8 @@ CONTAINS
     CALL print_argument("-last_extra")
     CALL print_argument("-sd")
     CALL print_argument("-delden")
-#endif  
+#endif
+    
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details."
 

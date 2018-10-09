@@ -29,8 +29,18 @@ MODULE m_eigen_diag
 #else
   INTEGER,PARAMETER:: diag_magma=-6
 #endif
-  INTEGER,PARAMETER:: diag_lapack=4
+#ifdef CPP_CHASE
   INTEGER,PARAMETER:: diag_chase=7
+#else
+  INTEGER,PARAMETER:: diag_chase=-7
+#endif
+#ifdef CPP_GPU
+  INTEGER,PARAMETER:: diag_cusolver=8
+#else
+  INTEGER,PARAMETER:: diag_cusolver=-8
+#endif
+  
+  INTEGER,PARAMETER:: diag_lapack=4
   INTEGER,PARAMETER:: diag_debugout=99
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
@@ -47,7 +57,9 @@ CONTAINS
     USE m_elemental
     USE m_chase_diag
     USE m_types_mpimat
+    USE m_types_gpumat
     USE m_matrix_copy
+    USE m_cusolver_diag
     IMPLICIT NONE
 #ifdef CPP_MPI
     include 'mpif.h'
@@ -99,14 +111,12 @@ CONTAINS
        CALL scalapack(hmat,smat,ne,eig,ev)
     CASE (diag_magma)
        !CALL magma_diag(hmat,smat,ne,eig,ev)
+    CASE (diag_cusolver)
+       CALL cusolver_diag(hmat,smat,ne,eig,ev)
     CASE (diag_lapack)
        CALL lapack_diag(hmat,smat,ne,eig,ev)
     CASE (diag_chase)
-#ifdef CPP_CHASE
        CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
-#else
-       CALL juDFT_error('ChASE eigensolver selected but not available', calledby = 'eigen_diag')
-#endif
     CASE (diag_debugout)
        CALL priv_debug_out(smat,hmat)
     END SELECT
@@ -215,11 +225,7 @@ CONTAINS
        diag_solver=diag_scalapack
 #endif
     ELSE
-#ifdef CPP_MAGMA
-       diag_solver=diag_magma
-#else
        diag_solver=diag_lapack
-#endif
     ENDIF
 
     !check if a special solver was requested
@@ -229,49 +235,17 @@ CONTAINS
     IF (trim(juDFT_string_for_argument("-diag"))=="lapack")    diag_solver=diag_lapack
     IF (trim(juDFT_string_for_argument("-diag"))=="magma")     diag_solver=diag_magma
     IF (trim(juDFT_string_for_argument("-diag"))=="chase")     diag_solver=diag_chase
+    IF (trim(juDFT_string_for_argument("-diag"))=="cusolver")  diag_solver=diag_cusolver
     IF (trim(juDFT_string_for_argument("-diag"))=="debugout")  diag_solver=diag_debugout
     
     !Check if solver is possible
-    if (diag_solver<0) call priv_solver_error(diag_solver,parallel)
-    IF (ANY((/diag_lapack,diag_magma/)==diag_solver).AND.parallel) CALL priv_solver_error(diag_solver,parallel)
-    if (any((/diag_elpa,diag_elemental,diag_scalapack/)==diag_solver).and..not.parallel) call priv_solver_error(diag_solver,parallel)
+    IF (diag_solver<0)  CALL juDFT_error("You selected a solver for the eigenvalue problem that is not available",hint="You most probably did not provide the appropriate libraries for compilation/linking")
+    IF (ANY((/diag_lapack,diag_magma,diag_cusolver/)==diag_solver).AND.parallel) CALL judft_error("You selected an eigensolver that does not support distributed memory parallism",hint="Try scalapack,elpa or another supported solver for parallel matrices")
+    IF (ANY((/diag_elpa,diag_elemental,diag_scalapack/)==diag_solver).AND..NOT.parallel) CALL judft_error("You selected an eigensolver for matrices that are memory distributed",hint="Try lapack, cusolver or another supported solver for non-distributed matrices")
 
   END FUNCTION priv_select_solver
 
 
-  SUBROUTINE priv_solver_error(diag_solver,parallel)
-    IMPLICIT NONE
-    INTEGER,INTENT(IN):: diag_solver
-    LOGICAL,INTENT(IN)::parallel
-    SELECT CASE(diag_solver)
-    CASE (diag_elpa)
-       IF (parallel) THEN
-          CALL juDFT_error("You did not compile with the ELPA solver and hence can not use it")
-       ELSE
-          CALL juDFT_error("The ELPA solver can not be used in serial")
-       ENDIF
-    CASE (diag_elemental)
-       IF (parallel) THEN
-          CALL juDFT_error("You did not compile with the ELEMENTAL solver and hence can not use it")
-       ELSE
-          CALL juDFT_error("The ELEMENTAL solver can not be used in serial")
-       ENDIF
-    CASE (diag_scalapack)
-       IF (parallel) THEN
-          CALL juDFT_error("You did not compile with the SCALAPACK solver and hence can not use it")
-       ELSE
-          CALL juDFT_error("The SCALAPACK solver can not be used in serial")
-       ENDIF
-    CASE (diag_lapack)
-       IF (parallel) THEN
-          CALL juDFT_error("The LAPACK solver can not be used in parallel")
-       ENDIF
-    CASE (diag_magma)
-       CALL juDFT_error("You have not compiled with MAGMA support")
-    CASE DEFAULT
-       CALL judft_error("You have selected an unkown eigensolver")
-    END SELECT
-  END SUBROUTINE priv_solver_error
-
+ 
 
 END MODULE m_eigen_diag
