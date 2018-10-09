@@ -173,7 +173,7 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)        :: xc_info
 
-      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
       xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_exc_is_gga=.false.
@@ -260,6 +260,8 @@ CONTAINS
 
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen)
+      USE IFCORE
+
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
       INTEGER, INTENT (IN)           :: jspins
@@ -269,10 +271,12 @@ CONTAINS
       TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen(:,:)
 
+      TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
 #ifdef CPP_LIBXC
+
       IF (xcpot%exc_is_gga()) THEN
-         IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
+         IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
          IF (xcpot%func_exc_id_c>0) THEN
             CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
@@ -285,8 +289,7 @@ CONTAINS
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
-         write (*,*) "Doing MetaGGA"
-         IF(PRESENT(kinEnergyDen)) THEN ! patch till vacuum can do LibXC
+         IF(PRESENT(kinEnergyDen)) THEN 
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
                                  transpose(grad%laplace), transpose(kinEnergyDen), exc)
             IF (xcpot%func_exc_id_c>0) THEN
@@ -294,10 +297,16 @@ CONTAINS
                                     transpose(grad%laplace), transpose(kinEnergyDen), excc)
                exc=exc+excc
             END IF
-         ELSE
-            call juDFT_error("MetaGGAs needs the kinetic energy density",&
-                             hint="maybe you used vacuum with LibXC")
+            
+         ELSE ! first iteration is GGA
+            IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a MetaGGA potential without providing derivatives")
+            CALL xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
+            IF (xcpot%func_exc_id_c>0) THEN
+               CALL xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
+               exc=exc+excc
+            END IF
          ENDIF
+
       ELSE
          call juDFT_error("exc is part of a known Family", calledby="xcpot_get_exc@libxc")
       ENDIF

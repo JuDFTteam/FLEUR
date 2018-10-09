@@ -63,8 +63,9 @@ CONTAINS
       REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
       REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,1)
       REAL,ALLOCATABLE:: xcl(:,:)
-      LOGICAL :: lda_atom(atoms%ntype),l_libxc
+      LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
       !.....------------------------------------------------------------------
+      perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%exc_is_MetaGGA()
       lda_atom=.FALSE.; l_libxc=.FALSE.
       SELECT TYPE(xcpot)
       TYPE IS(t_xcpot_inbuild)
@@ -81,9 +82,13 @@ CONTAINS
 
       nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
       ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
-      IF (xcpot%needs_grad()) THEN
-         CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
-         CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,tmp_grad)
+      IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
+
+      IF (perform_MetaGGA) THEN
+         IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,tmp_grad)
+         ALLOCATE(ED_rs, mold=ch)
+         ALLOCATE(vTot_rs, mold=ch)
+         ALLOCATE(kinED_RS, mold=ch)
       ENDIF
 
       CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym)
@@ -126,9 +131,10 @@ CONTAINS
          CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
          ! use updated vTot for exc calculation
-         IF(ALLOCATED(EnergyDen%mt) .AND. xcpot%exc_is_MetaGGA()) THEN
+         IF(perform_MetaGGA) THEN
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,EnergyDen%mt(:,0:,n,:),nsp,n,tmp_grad,ED_rs)
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,vTot%mt(:,0:,n,:),nsp,n,tmp_grad,vTot_rs)
+
             CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs)
          ENDIF
 
@@ -136,7 +142,8 @@ CONTAINS
             !
             !           calculate the ex.-cor energy density
             !
-            IF(ALLOCATED(EnergyDen%mt) .AND. xcpot%exc_is_MetaGGA()) THEN
+            
+            IF(perform_MetaGGA) THEN
                CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs)
             ELSE
                CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
