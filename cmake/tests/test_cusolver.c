@@ -227,3 +227,6 @@ void cusolver_real(double *H,double *S,int n,int ne,double tol,int max_sweeps,do
 
   return ;
 }
+
+void main(){
+};

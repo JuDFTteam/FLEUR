@@ -9,7 +9,7 @@ MODULE m_hsmt_ab
 
   INTERFACE hsmt_ab
     module procedure hsmt_ab_cpu
-#ifdef _CUDA
+#ifdef CPP_GPU
     module procedure hsmt_ab_gpu
 #endif
   END INTERFACE
@@ -17,13 +17,13 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-#ifdef _CUDA
+#ifdef CPP_GPU
 
-  ATTRIBUTES(global) SUBROUTINE synth_ab(grid,block,n,lmax,iintsp,ab_size,gkrot_dev,fj,gj,c_ph,ab)
+  ATTRIBUTES(global) SUBROUTINE synth_ab(grid,block,n,lmax,ab_size,gkrot_dev,fj,gj,c_ph,ab)
     USE m_ylm
-    INTEGER, VALUE, INTENT(IN) :: grid, block, n, lmax, iintsp,ab_size
-    REAL,   DEVICE, INTENT(IN) :: gkrot_dev(:,:),fj(:,:,:),gj(:,:,:)
-    COMPLEX,DEVICE, INTENT(IN) :: c_ph(:,:)
+    INTEGER, VALUE, INTENT(IN) :: grid, block, n, lmax, ab_size
+    REAL,   DEVICE, INTENT(IN) :: gkrot_dev(:,:),fj(:,:),gj(:,:)
+    COMPLEX,DEVICE, INTENT(IN) :: c_ph(:)
     COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
     COMPLEX,ALLOCATABLE :: ylm(:)
     INTEGER :: k,l,ll1,m
@@ -45,8 +45,8 @@ CONTAINS
        DO l = 0,lmax
           ll1 = l* (l+1)
           DO m = -l,l               
-             ab(i,ll1+m+1)         = CONJG(fj(i,l+1,iintsp)*c_ph(i,iintsp)*ylm(ll1+m+1)) 
-             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1,iintsp)*c_ph(i,iintsp)*ylm(ll1+m+1)) 
+             ab(i,ll1+m+1)         = CONJG(fj(i,l+1)*c_ph(i)*ylm(ll1+m+1)) 
+             ab(i,ll1+m+1+ab_size) = CONJG(gj(i,l+1)*c_ph(i)*ylm(ll1+m+1)) 
           END DO
        END DO
     ENDDO 
@@ -62,7 +62,7 @@ CONTAINS
     USE m_ylm
     USE m_apws
     USE cudafor
-    USE nvtx
+!    USE nvtx
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -91,9 +91,9 @@ CONTAINS
 
     COMPLEX,ALLOCATABLE,DEVICE :: c_ph_dev(:,:)
     REAL,   ALLOCATABLE,DEVICE :: gkrot_dev(:,:)
-    INTEGER :: istat, grid, block
+    INTEGER :: grid, block
+    !INTEGER :: istat
  
-    !call nvtxStartRange("hsmt_ab",2)    
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
 
     ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
@@ -130,14 +130,15 @@ CONTAINS
 
     !-->  synthesize the complex conjugates of a and b
     !call nvtxStartRange("hsmt_synthAB",5)    
-    istat = cudaDeviceSynchronize() 
+    !istat = cudaDeviceSynchronize() 
 
     ! pretty ugly solution
     block = 256
     grid = lapw%nv(1)/(block*4) + 1
-    CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,iintsp,ab_size,gkrot_dev,fj,gj,c_ph_dev,ab)
+    CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,ab_size,gkrot_dev,&
+                                  fj(:,:,iintsp),gj(:,:,iintsp),c_ph_dev(:,iintsp),ab)
 
-    istat = cudaDeviceSynchronize() 
+    !istat = cudaDeviceSynchronize() 
     !call nvtxEndRange
 
     IF (PRESENT(abclo)) THEN

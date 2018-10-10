@@ -34,7 +34,7 @@ MODULE m_eigen_diag
 #else
   INTEGER,PARAMETER:: diag_chase=-7
 #endif
-#ifdef CPP_GPU
+#ifdef CPP_CUSOLVER
   INTEGER,PARAMETER:: diag_cusolver=8
 #else
   INTEGER,PARAMETER:: diag_cusolver=-8
