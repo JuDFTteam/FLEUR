@@ -34,7 +34,6 @@ CONTAINS
 #if defined CPP_GPU
     REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: h_loc_dev(:,:)
-    COMPLEX,ALLOCATABLE,DEVICE :: c_dev(:,:)
 #endif
     CALL timestart("non-spherical setup")
     IF (mpi%n_size==1) THEN
@@ -46,22 +45,7 @@ CONTAINS
     ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
     h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp)) 
 
-    IF (hmat%l_real) THEN
-       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
-          DEALLOCATE(hmat%data_c)
-          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
-       ENDIF
-       hmat%data_c=0.0
-    ENDIF
-    ALLOCATE(c_dev(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
-    c_dev = hmat%data_c
-
-       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,c_dev)
-    hmat%data_c = c_dev
-    
-    IF (hmat%l_real) THEN
-       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
-    ENDIF
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,hmat)
 #else
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
 #endif
@@ -72,7 +56,7 @@ CONTAINS
   END SUBROUTINE hsmt_nonsph
 
 #if defined CPP_GPU
-  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,c_dev)
+  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,hmat)
 !Calculate overlap matrix, GPU version
 !note that basically all matrices in the GPU version are conjugates of their cpu counterparts
     USE m_hsmt_ab
@@ -101,18 +85,28 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,   INTENT(IN),   DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
-    COMPLEX,INTENT(INOUT),DEVICE :: c_dev(:,:)
-
+    CLASS(t_mat),INTENT(INOUT)     ::hmat
     
     INTEGER:: nn,na,ab_size,l,ll,m
     real :: rchi
     COMPLEX,ALLOCATABLE,DEVICE :: ab1_dev(:,:), ab_dev(:,:), ab2_dev(:,:)
+    COMPLEX,ALLOCATABLE,DEVICE :: c_dev(:,:)
     integer :: i, j, istat
     call nvtxStartRange("hsmt_nonsph",1)    
 
     ALLOCATE(ab1_dev(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     ALLOCATE(ab_dev(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     IF (iintsp.NE.jintsp) ALLOCATE(ab2_dev(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+
+    IF (hmat%l_real) THEN
+       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
+          DEALLOCATE(hmat%data_c)
+          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
+       ENDIF
+       hmat%data_c=0.0
+    ENDIF
+    ALLOCATE(c_dev(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
+    c_dev = hmat%data_c
 
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
@@ -149,6 +143,11 @@ CONTAINS
        ENDIF
     END DO
 
+    hmat%data_c = c_dev
+    
+    IF (hmat%l_real) THEN
+       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
+    ENDIF
     call nvtxEndRange
  END SUBROUTINE priv_noMPI_gpu
 #endif
