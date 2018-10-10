@@ -43,7 +43,11 @@ CONTAINS
     INTEGER, INTENT (IN) :: ispin  
     
     !locals
+#ifdef CPP_GPU
+    REAL, ALLOCATABLE,MANAGED    :: fj(:,:,:,:),gj(:,:,:,:)
+#else
     REAL, ALLOCATABLE    :: fj(:,:,:,:),gj(:,:,:,:)
+#endif
 
     INTEGER :: iintsp,jintsp,n
     COMPLEX :: chi(2,2),chi_one

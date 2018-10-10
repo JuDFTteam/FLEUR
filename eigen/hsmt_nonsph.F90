@@ -29,23 +29,22 @@ CONTAINS
     INTEGER, INTENT (IN)          :: n,isp,iintsp,jintsp
     COMPLEX,INTENT(IN)            :: chi
     !     .. Array Arguments ..
+#if defined CPP_GPU
+    REAL,MANAGED,INTENT(IN)    :: fj(:,:,:),gj(:,:,:)
+#else
     REAL,INTENT(IN)            :: fj(:,0:,:),gj(:,0:,:)
+#endif
     CLASS(t_mat),INTENT(INOUT)     ::hmat
 #if defined CPP_GPU
-    REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: h_loc_dev(:,:)
 #endif
     CALL timestart("non-spherical setup")
     IF (mpi%n_size==1) THEN
 #if defined CPP_GPU
-    ALLOCATE(fj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
-    ALLOCATE(gj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
-    fj_dev(1:,1:,1:)= fj(1:,0:,1:)
-    gj_dev(1:,1:,1:)= gj(1:,0:,1:)
     ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
     h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp)) 
 
-       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,hmat)
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj,gj,hmat)
 #else
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
 #endif
@@ -115,7 +114,6 @@ CONTAINS
           !Calculate Hamiltonian
           CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),&
                      h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
-          !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           IF (iintsp==jintsp) THEN
              call nvtxStartRange("zherk",3)
              CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1_dev,SIZE(ab1_dev,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
