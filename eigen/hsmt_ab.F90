@@ -9,7 +9,7 @@ MODULE m_hsmt_ab
 
   INTERFACE hsmt_ab
     module procedure hsmt_ab_cpu
-#ifdef _CUDA
+#ifdef CPP_GPU
     module procedure hsmt_ab_gpu
 #endif
   END INTERFACE
@@ -17,7 +17,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-#ifdef _CUDA
+#ifdef CPP_GPU
 
   ATTRIBUTES(global) SUBROUTINE synth_ab(grid,block,n,lmax,ab_size,gkrot_dev,fj,gj,c_ph,ab)
     USE m_ylm

@@ -5,12 +5,12 @@
         REAL, ALLOCATABLE, SAVE  :: ynorm(:)
         INTEGER,           SAVE  :: lmaxd = -1  ! initial value
         PUBLIC ylm4,ylmnorm_init
-#ifdef _CUDA
+#ifdef CPP_GPU 
         PUBLIC ylm4_dev
 #endif
       CONTAINS 
 
-#ifdef _CUDA
+#ifdef CPP_GPU
       ATTRIBUTES(device) SUBROUTINE ylm4_dev(lmax,v,ylm)
 !************************************************************
 !     generate the spherical harmonics for the vector v
@@ -24,6 +24,9 @@
 !     the normalization is an internal subroutine and hence
 !     can only be called from here. also, no need to dimension
 !     arrays for ynorm, done dynamically.          mw 1999
+!
+!     GPU version added
+!             U.Alekseeva      Oktober 2018
 !************************************************************
 !      USE m_juDFT
       INTEGER, VALUE, INTENT (IN) :: lmax
