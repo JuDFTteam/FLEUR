@@ -1,7 +1,9 @@
 MODULE m_types_gpumat
   USE m_judft
   USE m_types_mat
+#ifdef CPP_GPU    
   USE cudafor
+#endif  
   IMPLICIT NONE
 
   !<Some routines are overwritten for GPU handling
