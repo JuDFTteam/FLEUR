@@ -12,7 +12,7 @@ MODULE m_magma
   !     using the MAGMA library for multiple GPUs
   !**********************************************************
 CONTAINS
-  SUBROUTINE magma_diag(nsize,eig,ne,a_r,b_r,z_r,a_c,b_c,z_c)
+  SUBROUTINE magma_diag(hmat,smat,ne,eig,zmat)
 #ifdef CPP_MAGMA
     use magma
 #endif    
@@ -20,84 +20,56 @@ CONTAINS
     IMPLICIT NONE
 
     ! ... Arguments ...
-
-    INTEGER, INTENT (IN) :: nsize
+    TYPE(t_mat),INTENT(INOUT)  :: hmat,smat
+    INTEGER,INTENT(INOUT)      :: ne
+    CLASS(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
+    REAL,INTENT(OUT)           :: eig(:)
   
-    REAL,    INTENT(OUT) :: eig(:)
-    INTEGER, INTENT(INOUT) :: ne
-
-    REAL, OPTIONAL,ALLOCATABLE, INTENT (INOUT) :: a_r(:),b_r(:)
-    REAL, OPTIONAL,ALLOCATABLE, INTENT (INOUT) :: z_r(:,:)
-    COMPLEX, OPTIONAL,ALLOCATABLE, INTENT (INOUT) :: a_c(:),b_c(:)
-    COMPLEX, OPTIONAL,ALLOCATABLE, INTENT (INOUT) :: z_c(:,:)
-
 #ifdef CPP_MAGMA
 
     ! ... Local Variables ..
-    INTEGER iind,ind1,ind2,info,lwork,liwork,lrwork,err,i,mout(1)
-    REAL eigTemp(nsize)
-    LOGICAL:: initialized=.false.
+    INTEGER :: lwork,liwork,lrwork,err,mout(1)
+    REAL    :: eigTemp(hmat%matsize1)
+    LOGICAL :: initialized=.false.
 
     REAL,    ALLOCATABLE :: rwork(:)
     INTEGER, ALLOCATABLE :: iwork(:)
-
-    REAL, ALLOCATABLE :: largea_r(:,:),largeb_r(:,:)
-    COMPLEX, ALLOCATABLE :: largea_c(:,:),largeb_c(:,:)
-    COMPLEX,ALLOCATABLE :: work(:)
+    COMPLEX, ALLOCATABLE :: work(:)
     
-    LOGICAL :: l_real
-    l_real=present(a_r)
 
-    print *,"MAGMA start"
     IF (.NOT.initialized) THEN
-       initialized=.true.
-       call magmaf_init()
-       print *,"MAGMA init"
+       initialized=.TRUE.
+       CALL magmaf_init()
     ENDIF
 
-    !**********************************
-    !expand from packed to full storage
-    !**********************************
-    !hamiltonian
-    if (l_real) THEN
-       call packed_to_full(nsize,a_r,largea_r)
-       call packed_to_full(nsize,b_r,largeb_r)
-       !deallocate(a_r,b_r)
+    IF (hmat%l_real) THEN
+       CALL juDFT_error("REAL diagonalization not implemented in magma.F90")
     ELSE
-       call packed_to_full(nsize,a_c,largea_c)
-       call packed_to_full(nsize,b_c,largeb_c)
-       !deallocate(a_c,b_c)
-    Endif
-
-    if (l_real) call juDFT_error("REAL diagonalization not implemented in magma.F90")
-
-    !Query the workspace size 
-    allocate(work(1),rwork(1),iwork(1))
-    print *,"Magma workspace query"
-    call flush()
-    call magmaf_zhegvdx(1,'v','i','l',nsize,largea_c,nsize,largeb_c,nsize,&
-         0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,err)
-    lwork=work(1)
-    lrwork=rwork(1)
-    liwork=iwork(1)
-    print*,"MAGMA:",lwork,lrwork,liwork
-    deallocate(work,rwork,iwork)
-    allocate(work(lwork),rwork(lrwork),iwork(liwork))
-    if (err/=0) call juDFT_error("Failed to allocate workspaces",calledby="magma.F90")
-    !Now the diagonalization
-    print *,"Magma diagonalization"
-    print *,nsize,shape(largea_c),shape(eigTemp),ne
-    call magmaf_zhegvdx(1,'v','i','l',nsize,largea_c,nsize,largeb_c,nsize,&
-         0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,err)
-    print*,"MAGMA info:",err
-    if (err/=0) call juDFT_error("Magma failed to diagonalize Hamiltonian")
-    print *,"MAGMA mout:",mout
-
+       !Query the workspace size 
+       ALLOCATE(work(1),rwork(1),iwork(1))
+       CALL magmaf_zhegvdx(1,'v','i','l',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),&
+            0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,err)
+       IF (err/=0) CALL juDFT_error("Failed to query workspaces",calledby="magma.F90")
+       lwork=work(1)
+       lrwork=rwork(1)
+       liwork=iwork(1)
+       DEALLOCATE(work,rwork,iwork)
+       ALLOCATE(work(lwork),rwork(lrwork),iwork(liwork))
+       !Now the diagonalization
+       CALL magmaf_zhegvdx(1,'v','i','l',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),&
+            0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,err)
+       IF (err/=0) CALL juDFT_error("Magma failed to diagonalize Hamiltonian")
+    ENDIF
+    ALLOCATE(t_mat::zmat)
+    CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
     DO i = 1, ne
        eig(i) = eigTemp(i)
-       z_c(:nsize,i)=largea_c(:nsize,i)
+       IF (hmat%l_real) THEN
+          zmat%data_r(:,i)=hmat%data_r(:nsize,i)
+       ELSE
+          zmat%data_c(:,i)=hmat%data_c(:nsize,i)
+       ENDIF
     END DO
-    !call judft_error("Eigenvectors are not calculated in MAGMA")
 #endif
   END SUBROUTINE magma_diag
 END MODULE m_magma
