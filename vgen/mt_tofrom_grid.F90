@@ -46,7 +46,6 @@ CONTAINS
   END SUBROUTINE init_mt_grid
   
   SUBROUTINE mt_to_grid(xcpot,jspins,atoms,sphhar,den_mt,nsp,n,grad,ch)
-!  SUBROUTINE pw_to_grid(xcpot,jspins,l_noco,stars,cell,den_pw,grad,rho)
     USE m_grdchlh
     USE m_mkgylm
     IMPLICIT NONE
@@ -141,7 +140,10 @@ CONTAINS
                ch_tmp,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,grad,kt)
        ENDIF
        !Set charge to minimum value
-       IF (PRESENT(ch)) ch(kt+1:kt+nsp,:)=MAX(ch_tmp(:nsp,:),d_15)
+       IF (PRESENT(ch)) THEN
+          WHERE(ABS(ch_tmp) < d_15) ch_tmp = d_15
+          ch(kt+1:kt+nsp,:) = ch_tmp(:nsp,:)
+       ENDIF
        kt=kt+nsp
     END DO
     
