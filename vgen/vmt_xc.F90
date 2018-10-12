@@ -136,8 +136,8 @@ CONTAINS
 
             ! multiply potentials with r^2, because mt_to_grid is made for densities,
             ! which are stored with a factor r^2
-            DO jr=1,atmos%jri(n)
-               vTot%mt(jr,0:,n,:) = vTot(jr,0:,n,:)*atoms%rmsh(jr,n)**2
+            DO jr=1,atoms%jri(n)
+               vTot%mt(jr,0:,n,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
             ENDDO
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,vTot%mt(:,0:,n,:),nsp,n,tmp_grad,vTot_rs)
 
