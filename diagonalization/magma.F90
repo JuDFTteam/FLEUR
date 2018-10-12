@@ -16,7 +16,7 @@ CONTAINS
 #ifdef CPP_MAGMA
     use magma
 #endif    
-#include"cpp_double.h"
+    use m_types
     IMPLICIT NONE
 
     ! ... Arguments ...
