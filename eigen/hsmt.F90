@@ -71,7 +71,7 @@ CONTAINS
           IF (.NOT.noco%l_noco) THEN
              !This is for collinear calculations: the (1,1) element of the matrices is all
              !that is needed and allocated
-             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,&
+             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,1,1,chi_one,lapw,enpara%el0,&
                            td%e_shift(n,ispin),usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat(1,1),hmat(1,1))
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
                               fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(1,1))
@@ -83,7 +83,7 @@ CONTAINS
              !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
              !global spin-matrices.
              CALL hmat_tmp%clear();CALL smat_tmp%clear()
-             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),&
+             CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),&
                            usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat_tmp,hmat_tmp)
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
                               fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat_tmp)
@@ -103,7 +103,7 @@ CONTAINS
              CALL hsmt_spinor(ispin,n,noco,chi)
              DO iintsp=1,2
                 DO jintsp=1,2
-                   CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,cell,iintsp,jintsp,chi(iintsp,jintsp),&
+                   CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,iintsp,jintsp,chi(iintsp,jintsp),&
                                  lapw,enpara%el0,td%e_shift(n,ispin),usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
                                  smat(iintsp,jintsp),hmat(iintsp,jintsp))
                    CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,&

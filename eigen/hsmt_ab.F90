@@ -62,7 +62,7 @@ CONTAINS
     USE m_ylm
     USE m_apws
     USE cudafor
-!    USE nvtx
+    USE nvtx
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -92,8 +92,9 @@ CONTAINS
     COMPLEX,ALLOCATABLE,DEVICE :: c_ph_dev(:,:)
     REAL,   ALLOCATABLE,DEVICE :: gkrot_dev(:,:)
     INTEGER :: grid, block
-    !INTEGER :: istat
+    INTEGER :: istat
  
+    call nvtxStartRange("hsmt_ab",3)    
     lmax=MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
 
     ALLOCATE(c_ph_dev(lapw%nv(1),MERGE(2,1,noco%l_ss)))
@@ -129,17 +130,12 @@ CONTAINS
 
 
     !-->  synthesize the complex conjugates of a and b
-    !call nvtxStartRange("hsmt_synthAB",5)    
-    !istat = cudaDeviceSynchronize() 
-
     ! pretty ugly solution
     block = 256
     grid = lapw%nv(1)/(block*4) + 1
     CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,ab_size,gkrot_dev,&
                                   fj(:,:,iintsp),gj(:,:,iintsp),c_ph_dev(:,iintsp),ab)
 
-    !istat = cudaDeviceSynchronize() 
-    !call nvtxEndRange
 
     IF (PRESENT(abclo)) THEN
        print*, "Ooooops, TODO in hsmt_ab"
@@ -169,6 +165,8 @@ CONTAINS
     DEALLOCATE(c_ph_dev)
     DEALLOCATE(gkrot_dev)
 
+    istat = cudaDeviceSynchronize() 
+    call nvtxEndRange
   END SUBROUTINE hsmt_ab_gpu
 #endif
 

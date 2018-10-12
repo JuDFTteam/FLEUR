@@ -7,15 +7,331 @@
 MODULE m_hsmt_sph
   USE m_juDFT
   IMPLICIT NONE
+
+  INTERFACE hsmt_sph
+    module procedure hsmt_sph_cpu
+#ifdef CPP_GPU
+    module procedure hsmt_sph_gpu
+  END INTERFACE
+
+  INTERFACE HsmtSphGpuKernel_noApw
+    module procedure HsmtSphGpuKernel_noApw_cmplx, HsmtSphGpuKernel_noApw_real
+#endif
+  END INTERFACE
+
 CONTAINS
-  SUBROUTINE hsmt_sph(n,atoms,mpi,isp,input,noco,cell,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+
+#ifdef CPP_GPU
+  SUBROUTINE HsmtSphGpuKernel_noApw_cmplx(iintsp,jintsp,nv,lmaxd,lmax,ki_start,ki_end,ki_step,nn_start,nn_end,&
+                       lnonsph,chi,qssbti,qssbtj,gvec,gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,taual,ddn,el,e_shift,smat_data,hmat_data)
+     INTEGER,INTENT(IN) :: iintsp,jintsp,nv(2),lmaxd,lmax,ki_start,ki_end,ki_step,nn_start,nn_end,lnonsph
+     COMPLEX, INTENT(IN)  :: chi
+     REAL,INTENT(IN)    :: qssbti(3),qssbtj(3)
+     INTEGER,INTENT(IN) :: gvec(:,:,:) 
+     REAL,INTENT(IN)    :: gk(:,:,:)
+     REAL,INTENT(IN)    :: fleg1(0:lmaxd),fleg2(0:lmaxd),fl2p1(0:lmaxd)     
+     REAL,INTENT(IN)    :: fl2p1bt(0:lmaxd)
+     REAL,MANAGED,INTENT(IN)    :: fj(:,0:,:),gj(:,0:,:)
+     REAL,INTENT(IN)    :: taual(:,:)  
+     REAL,INTENT(IN)    :: ddn(0:lmaxd) 
+     REAL,INTENT(IN)    :: el(0:lmaxd)
+     REAL,INTENT(IN)    :: e_shift
+     COMPLEX,INTENT(INOUT) :: smat_data(:,:),hmat_data(:,:)
+
+     REAL,   PARAMETER :: tpi_const=2.*3.1415926535897932
+     REAL, ALLOCATABLE :: plegend(:,:)
+     COMPLEX, ALLOCATABLE :: cph(:)
+     REAL tnn(3), elall,fct,fjkiln,gjkiln,ddnln,ski(3)
+     INTEGER kii,ki,kj,l,nn
+
+     ALLOCATE(cph(MAXVAL(nv)))
+     ALLOCATE(plegend(MAXVAL(nv),0:lmaxd))
+     plegend=0.0
+     plegend(:,0)=1.0
+
+     DO  ki =  ki_start,ki_end,ki_step 
+       kii=(ki-1)/ki_step+1
+       ski = gvec(:,ki,jintsp) + qssbti
+       !--->       legendre polynomials
+       DO kj = 1,ki
+          plegend(kj,1) = DOT_PRODUCT(gk(:,kj,iintsp),gk(:,ki,jintsp))
+       END DO
+       DO l = 1,lmax - 1
+          plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
+       END DO
+       !--->             set up phase factors
+       cph = 0.0
+       DO nn = nn_start,nn_end
+          tnn = tpi_const*taual(:,nn)
+          DO kj = 1,ki
+             cph(kj) = cph(kj) +&
+                  CMPLX(COS(DOT_PRODUCT(ski-gvec(:,kj,iintsp)-qssbtj,tnn)),&
+                  SIN(DOT_PRODUCT(gvec(:,kj,iintsp)+qssbtj-ski,tnn)))
+            ! IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
+          END DO
+       END DO
+
+       !--->          update overlap and l-diagonal hamiltonian matrix
+       DO  l = 0,lmax
+          fjkiln = fj(ki,l,jintsp)
+          gjkiln = gj(ki,l,jintsp)
+          ddnln =  ddn(l)
+          elall = el(l)
+          IF (l<=lnonsph) elall=elall-e_shift!(isp)
+          DO kj = 1,MIN(ki,nv(iintsp))
+              fct  = chi*plegend(kj,l)*fl2p1(l)*&
+                    ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
+
+              smat_data(kj,kii)=smat_data(kj,kii) + cph(kj)*fct
+              hmat_data(kj,kii)=hmat_data(kj,kii) + cph(kj) * ( fct*elall &
+                     + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
+          END DO
+       !--->          end loop over l
+       ENDDO
+     !--->    end loop over ki
+     ENDDO
+     DEALLOCATE(plegend)
+     DEALLOCATE(cph)
+  END SUBROUTINE HsmtSphGpuKernel_noApw_cmplx
+
+  SUBROUTINE HsmtSphGpuKernel_noApw_real(iintsp,jintsp,nv,lmaxd,lmax,ki_start,ki_end,ki_step,nn_start,nn_end,&
+                       lnonsph,chi,qssbti,qssbtj,gvec,gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,taual,ddn,el,e_shift,smat_data,hmat_data)
+     INTEGER,INTENT(IN) :: iintsp,jintsp,nv(2),lmaxd,lmax,ki_start,ki_end,ki_step,nn_start,nn_end,lnonsph
+     COMPLEX, INTENT(IN)  :: chi
+     REAL,INTENT(IN)    :: qssbti(3),qssbtj(3)
+     INTEGER,INTENT(IN) :: gvec(:,:,:) 
+     REAL,INTENT(IN)    :: gk(:,:,:)
+     REAL,INTENT(IN)    :: fleg1(0:lmaxd),fleg2(0:lmaxd),fl2p1(0:lmaxd)     
+     REAL,INTENT(IN)    :: fl2p1bt(0:lmaxd)
+     REAL,MANAGED,INTENT(IN)    :: fj(:,0:,:),gj(:,0:,:)
+     REAL,INTENT(IN)    :: taual(:,:)  
+     REAL,INTENT(IN)    :: ddn(0:lmaxd) 
+     REAL,INTENT(IN)    :: el(0:lmaxd)
+     REAL,INTENT(IN)    :: e_shift
+     REAL,INTENT(INOUT) :: smat_data(:,:),hmat_data(:,:)
+
+     REAL,   PARAMETER :: tpi_const=2.*3.1415926535897932
+     REAL, ALLOCATABLE :: plegend(:,:)
+     COMPLEX, ALLOCATABLE :: cph(:)
+     REAL tnn(3), elall,fct,fjkiln,gjkiln,ddnln,ski(3)
+     INTEGER kii,ki,kj,l,nn
+
+     ALLOCATE(cph(MAXVAL(nv)))
+     ALLOCATE(plegend(MAXVAL(nv),0:lmaxd))
+     plegend=0.0
+     plegend(:,0)=1.0
+
+     DO  ki =  ki_start,ki_end,ki_step 
+       kii=(ki-1)/ki_step+1
+       ski = gvec(:,ki,jintsp) + qssbti
+       !--->       legendre polynomials
+       DO kj = 1,ki
+          plegend(kj,1) = DOT_PRODUCT(gk(:,kj,iintsp),gk(:,ki,jintsp))
+       END DO
+       DO l = 1,lmax - 1
+          plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
+       END DO
+       !--->             set up phase factors
+       cph = 0.0
+       DO nn = nn_start,nn_end
+          tnn = tpi_const*taual(:,nn)
+          DO kj = 1,ki
+             cph(kj) = cph(kj) +&
+                  CMPLX(COS(DOT_PRODUCT(ski-gvec(:,kj,iintsp)-qssbtj,tnn)),&
+                  SIN(DOT_PRODUCT(gvec(:,kj,iintsp)+qssbtj-ski,tnn)))
+            ! IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
+          END DO
+       END DO
+
+       !--->          update overlap and l-diagonal hamiltonian matrix
+       DO  l = 0,lmax
+          fjkiln = fj(ki,l,jintsp)
+          gjkiln = gj(ki,l,jintsp)
+          ddnln =  ddn(l)
+          elall = el(l)
+          IF (l<=lnonsph) elall=elall-e_shift!(isp)
+          DO kj = 1,ki
+              fct  = plegend(kj,l)*fl2p1(l)*&
+                     ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
+              smat_data(kj,kii)=smat_data(kj,kii)+REAL(cph(kj))*fct
+              hmat_data(kj,kii)=hmat_data(kj,kii) + REAL(cph(kj)) * &
+                     ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
+                     ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
+          ENDDO
+       !--->          end loop over l
+       ENDDO
+     !--->    end loop over ki
+     ENDDO
+     DEALLOCATE(plegend)
+     DEALLOCATE(cph)
+  END SUBROUTINE HsmtSphGpuKernel_noApw_real
+
+  SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_types
+    USE nvtx
+    IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_usdus),INTENT(IN)      :: usdus
+    CLASS(t_mat),INTENT(INOUT)     :: smat,hmat
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+    COMPLEX, INTENT(IN)  :: chi
+    !     ..
+    !     .. Array Arguments ..
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    REAL,    INTENT (IN) :: e_shift!(atoms%ntype,input%jspins)
+#if defined CPP_GPU
+    REAL,MANAGED,INTENT(IN)    :: fj(:,0:,:),gj(:,0:,:)
+#else
+    REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
+#endif
+    !     ..
+    !     .. Local Scalars ..
+    REAL tnn(3), elall,fct,fjkiln,gjkiln,ddnln,ski(3)
+    REAL apw_lo1,apw_lo2,apw1,w1
+
+    COMPLEX capw1
+    INTEGER kii,ki,kj,l,nn
+
+    !     ..
+    !     .. Local Arrays ..
+    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
+    REAL fl2p1bt(0:atoms%lmaxd)
+    REAL qssbti(3),qssbtj(3)
+    REAL, ALLOCATABLE :: plegend(:,:)
+    COMPLEX, ALLOCATABLE :: cph(:)
+    LOGICAL apw(0:atoms%lmaxd)
+
+    call nvtxStartRange("hsmt_sph",2)    
+    CALL timestart("spherical setup")
+
+    DO l = 0,atoms%lmaxd
+       fleg1(l) = REAL(l+l+1)/REAL(l+1)
+       fleg2(l) = REAL(l)/REAL(l+1)
+       fl2p1(l) = REAL(l+l+1)/fpi_const
+       fl2p1bt(l) = fl2p1(l)*0.5
+    END DO
+    !!$OMP PARALLEL DEFAULT(SHARED)&
+    !!$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
+    !!$OMP PRIVATE(cph,nn,tnn,fjkiln,gjkiln)&
+    !!$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,apw1)&
+    !!$OMP PRIVATE(capw1) 
+    qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
+    qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
+
+    !!$OMP  DO SCHEDULE(DYNAMIC,1)
+    IF (input%l_useapw) THEN
+     ALLOCATE(cph(MAXVAL(lapw%nv)))
+     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
+     plegend=0.0
+     plegend(:,0)=1.0
+     DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
+       kii=(ki-1)/mpi%n_size+1
+       ski = lapw%gvec(:,ki,jintsp) + qssbti
+       !--->       legendre polynomials
+       DO kj = 1,ki
+          plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,iintsp),lapw%gk(:,ki,jintsp))
+       END DO
+       DO l = 1,atoms%lmax(n) - 1
+          plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
+       END DO
+       !--->             set up phase factors
+       cph = 0.0
+       DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+          tnn = tpi_const*atoms%taual(:,nn)
+          DO kj = 1,ki
+             cph(kj) = cph(kj) +&
+                  CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,iintsp)-qssbtj,tnn)),&
+                  SIN(DOT_PRODUCT(lapw%gvec(:,kj,iintsp)+qssbtj-ski,tnn)))
+            ! IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
+          END DO
+       END DO
+
+       !--->          update overlap and l-diagonal hamiltonian matrix
+       DO  l = 0,atoms%lmax(n)
+          fjkiln = fj(ki,l,jintsp)
+          gjkiln = gj(ki,l,jintsp)
+          !+APW
+          w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + &
+                  usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
+          apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 +&
+                  fjkiln * usdus%us(l,n,isp) * usdus%dus(l,n,isp) )
+          apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 +&
+                  gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+          !-APW
+          ddnln =  usdus%ddn(l,n,isp)
+          elall = el(l,n,isp)
+          IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
+          IF (smat%l_real) THEN
+             DO kj = 1,ki
+                fct  = plegend(kj,l)*fl2p1(l)*&
+                     ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
+                smat%data_r(kj,kii)=smat%data_r(kj,kii)+REAL(cph(kj))*fct
+                hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + REAL(cph(kj)) * &
+                     ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
+                     ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
+                !+APW
+                apw1 = REAL(cph(kj)) * plegend(kj,l)  * &
+                        ( apw_lo1 * fj(kj,l,iintsp) + apw_lo2 * gj(kj,l,iintsp) )
+                hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + apw1
+                !-APW
+             ENDDO
+          ELSE
+             DO kj = 1,MIN(ki,lapw%nv(iintsp))
+                fct  = chi*plegend(kj,l)*fl2p1(l)*&
+                     ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
+
+                smat%data_c(kj,kii)=smat%data_c(kj,kii) + cph(kj)*fct
+                hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + cph(kj) * ( fct*elall &
+                     + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
+                !+APW
+                   capw1 = cph(kj)*plegend(kj,l)&
+                        * ( apw_lo1 * fj(kj,l,iintsp) + apw_lo2 * gj(kj,l,iintsp) )
+                   hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + capw1
+                !-APW
+             END DO
+
+          ENDIF
+          !--->          end loop over l
+       ENDDO
+       !--->    end loop over ki
+     ENDDO
+     !--->       end loop over atom types (ntype)
+     DEALLOCATE(plegend)
+     DEALLOCATE(cph)
+    ELSE
+       IF (smat%l_real) THEN
+          CALL HsmtSphGpuKernel_noApw(iintsp,jintsp,lapw%nv,atoms%lmaxd,atoms%lmax(n),mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size,&
+                    SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n)),atoms%lnonsph(n),chi,qssbti,qssbtj,lapw%gvec,&
+                   lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,atoms%taual,usdus%ddn(:,n,isp),el(:,n,isp),e_shift,smat%data_r,hmat%data_r)
+       ELSE
+          CALL HsmtSphGpuKernel_noApw(iintsp,jintsp,lapw%nv,atoms%lmaxd,atoms%lmax(n),mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size,&
+                    SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n)),atoms%lnonsph(n),chi,qssbti,qssbtj,lapw%gvec,&
+                   lapw%gk,fleg1,fleg2,fl2p1,fl2p1bt,fj,gj,atoms%taual,usdus%ddn(:,n,isp),el(:,n,isp),e_shift,smat%data_c,hmat%data_c)
+       ENDIF
+    ENDIF
+    !!$OMP END DO
+    !!$OMP END PARALLEL
+    CALL timestop("spherical setup")
+
+    call nvtxEndRange
+    RETURN
+  END SUBROUTINE hsmt_sph_gpu
+#endif
+
+  SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_noco),INTENT(IN)       :: noco
-    TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
@@ -138,17 +454,16 @@ CONTAINS
              END DO
 
           ENDIF
-          !--->          end loop over l
+       !--->          end loop over l
        ENDDO
-       !--->    end loop over ki
+    !--->    end loop over ki
     ENDDO
     !$OMP END DO
-    !--->       end loop over atom types (ntype)
     DEALLOCATE(plegend)
     DEALLOCATE(cph)
     !$OMP END PARALLEL
     CALL timestop("spherical setup")
 
     RETURN
-  END SUBROUTINE hsmt_sph
+  END SUBROUTINE hsmt_sph_cpu
 END MODULE m_hsmt_sph
