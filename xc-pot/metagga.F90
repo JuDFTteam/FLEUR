@@ -20,14 +20,14 @@ MODULE m_metagga
         PROCEDURE multiply_RS
 END INTERFACE OPERATOR (*)
 CONTAINS
-    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_rs)
+    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
 #ifdef CPP_LIBXC 
         IMPLICIT NONE
         REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
-        REAL, INTENT(inout), allocatable :: kinEnergyDen_rs(:,:)
+        REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
 
         !implicit allocation
-        kinEnergyDen_rs = EnergyDen_RS - vTot_RS * den_RS
+        kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 #else
         USE m_juDFT_stop
         CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
