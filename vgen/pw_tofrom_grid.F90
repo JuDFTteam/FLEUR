@@ -233,7 +233,9 @@ CONTAINS
        END IF
        
     ENDIF
-    IF (PRESENT(rho)) rho(:,:)=MAX(rho(:,:),d_15)
+    IF (PRESENT(rho)) THEN
+       WHERE(ABS(rho) < d_15) rho = d_15
+    ENDIF
    
   END SUBROUTINE pw_to_grid
 
