@@ -1145,10 +1145,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
             exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
-            write (*,*) "read exc_id_x"
          ELSE
             exc_id_x = vxc_id_x
-            write (*,*) "ignore exc_id_x"
          ENDIF
          
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
