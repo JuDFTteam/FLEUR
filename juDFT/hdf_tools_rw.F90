@@ -127,7 +127,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s/=SIZE(DATA)) CALL hdf_err('Missmatch of sizes') 
+      IF (s/=SIZE(DATA)) CALL hdf_err('mismatch of sizes') 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -179,7 +179,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err('Missmatch of sizes') 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err('mismatch of sizes') 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -229,7 +229,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -278,7 +278,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -328,7 +328,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -379,7 +379,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -433,7 +433,7 @@
       DO n = 1, SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.1) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.1) CALL hdf_err("mismatch of sizes") 
 !do I/O                                                                 
       CALL h5dget_space_f(                                              &
      &                    did,fspace,hdferr)                            
@@ -490,7 +490,7 @@
       DO n = 1, SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("Mismatch of sizes")
                                                                         
 !do I/O                                                                 
       CALL h5dget_space_f(                                              &
@@ -547,7 +547,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -594,7 +594,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -639,8 +639,8 @@
       s=1 
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
-      ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      ENDDO
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -689,7 +689,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -737,7 +737,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -840,7 +840,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -889,7 +889,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -938,7 +938,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -986,7 +986,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1037,7 +1037,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1087,7 +1087,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1142,7 +1142,7 @@
       DO n = 1, SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.1) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.1) CALL hdf_err("mismatch of sizes") 
                                                                         
 !do I/O                                                                 
       CALL h5dget_space_f(                                              &
@@ -1202,7 +1202,7 @@
       DO n = 1, SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
                                                                         
 !do I/O                                                                 
       CALL h5dget_space_f(                                              &
@@ -1258,7 +1258,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1305,7 +1305,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1350,7 +1350,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1397,7 +1397,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
@@ -1444,7 +1444,7 @@
       DO n=1,SIZE(ncount)
          IF (ncount(n)>0) s=s*ncount(n)
       ENDDO 
-      IF (s.NE.SIZE(DATA)) CALL hdf_err("Missmatch of sizes") 
+      IF (s.NE.SIZE(DATA)) CALL hdf_err("mismatch of sizes") 
       !DO IO                                                            
       CALL h5dget_space_f(did,fspace,hdferr) 
       CALL h5sselect_hyperslab_f(fspace,H5S_SELECT_SET_F,foffset,fncount &
