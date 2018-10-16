@@ -50,6 +50,7 @@ CONTAINS
       !     .. Local Scalars ..
       TYPE(t_gradients)     :: grad, tmp_grad
       TYPE(t_xcpot_inbuild) :: xcpot_tmp
+      TYPE(t_potden)        :: vTot_tmp
       REAL, ALLOCATABLE     :: ch(:,:), ED_rs(:,:), vTot_rs(:,:), kinED_rs(:,:)
       INTEGER               :: n,nsp,nt,jr
       REAL                  :: divi
@@ -118,8 +119,11 @@ CONTAINS
             divi = 1.0 / (atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(1,n))
             nt=0
             DO jr=1,atoms%jri(n)
-               v_xc(nt+1:nt+nsp,:) = ( xcl(nt+1:nt+nsp,:) * ( atoms%rmsh(atoms%jri(n),n) - atoms%rmsh(jr,n) ) +&
-                                      v_xc(nt+1:nt+nsp,:) * ( atoms%rmsh(jr,n) - atoms%rmsh(1,n) ) ) * divi
+               v_xc(nt+1:nt+nsp,:) = ( xcl(nt+1:nt+nsp,:) * ( atoms%rmsh(atoms%jri(n),n) &
+                                       - atoms%rmsh(jr,n) ) &
+                                       + v_xc(nt+1:nt+nsp,:) * ( atoms%rmsh(jr,n) &
+                                       - atoms%rmsh(1,n) ) &
+                                      ) * divi
                nt=nt+nsp
             ENDDO
          ENDIF
@@ -132,14 +136,17 @@ CONTAINS
 
          ! use updated vTot for exc calculation
          IF(perform_MetaGGA) THEN
-            CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,EnergyDen%mt(:,0:,n,:),nsp,n,tmp_grad,ED_rs)
+            CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
+                            nsp,   n,            tmp_grad, ED_rs)
 
             ! multiply potentials with r^2, because mt_to_grid is made for densities,
             ! which are stored with a factor r^2
+            vTot_tmp = vTot
             DO jr=1,atoms%jri(n)
-               vTot%mt(jr,0:,n,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
+               vTot_tmp%mt(jr,0:,n,:) = vTot_tmp%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
             ENDDO
-            CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,vTot%mt(:,0:,n,:),nsp,n,tmp_grad,vTot_rs)
+            CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
+                            nsp,   n,            tmp_grad, vTot_rs)
 
             CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs)
          ENDIF

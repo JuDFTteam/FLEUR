@@ -70,8 +70,10 @@ CONTAINS
 
       ! use updated vTot for exc calculation
       IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
-         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, EnergyDen%pw, tmp_grad, ED_rs)
-         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, vTot%pw,      tmp_grad, vTot_rs)
+         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                         cell,  EnergyDen%pw, tmp_grad,    ED_rs)
+         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                         cell,  vTot%pw,      tmp_grad,    vTot_rs)
          CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs)
       ENDIF
 
