@@ -17,7 +17,7 @@ CONTAINS
 
     DO iintsp=1,2
        DO jintsp=1,2
-          mat(jintsp,iintsp)%data_c(:,:)=chi(jintsp,iintsp)*mat_tmp%data_c(:,:)+mat(jintsp,iintsp)%data_c(:,:)
+          mat(jintsp,iintsp)%data_c(:,:)=chi(iintsp,jintsp)*mat_tmp%data_c(:,:)+mat(jintsp,iintsp)%data_c(:,:)
        ENDDO
     ENDDO
   END SUBROUTINE hsmt_distspins
