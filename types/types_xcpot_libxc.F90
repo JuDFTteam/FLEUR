@@ -290,6 +290,7 @@ CONTAINS
          IF(PRESENT(kinEnergyDen)) THEN 
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
                                  transpose(grad%laplace), transpose(kinEnergyDen), exc)
+
             IF (xcpot%func_exc_id_c>0) THEN
                CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
                                     transpose(grad%laplace), transpose(kinEnergyDen), excc)
