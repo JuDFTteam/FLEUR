@@ -1,6 +1,9 @@
 MODULE m_types_gpumat
   USE m_judft
   USE m_types_mat
+#ifdef CPP_GPU    
+  USE cudafor
+#endif  
   IMPLICIT NONE
 
   !<Some routines are overwritten for GPU handling
@@ -102,6 +105,7 @@ CONTAINS
              CALL judft_error("Inconsistency between data types in m_mat")
           END IF
        END SELECT
+       i=cudaDeviceSynchronize()
     END SELECT
   END SUBROUTINE t_gpumat_add_transpose
 
@@ -159,6 +163,8 @@ CONTAINS
              ENDDO
           ENDIF
        END SELECT
+
+       i=cudaDeviceSynchronize()
     END IF
   end SUBROUTINE t_gpumat_transpose
 
@@ -250,6 +256,7 @@ CONTAINS
                 ENDDO
              ENDDO
           END IF
+          i=cudaDeviceSynchronize()
           CLASS default
           no_gpu=.TRUE.
        END SELECT
@@ -294,6 +301,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDIF
+       n=cudaDeviceSynchronize()
     END SELECT
   END SUBROUTINE t_gpumat_clear
 #endif  

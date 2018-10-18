@@ -29,39 +29,22 @@ CONTAINS
     INTEGER, INTENT (IN)          :: n,isp,iintsp,jintsp
     COMPLEX,INTENT(IN)            :: chi
     !     .. Array Arguments ..
-    REAL,INTENT(IN)               :: fj(:,0:,:),gj(:,0:,:)
+#if defined CPP_GPU
+    REAL,MANAGED,INTENT(IN)    :: fj(:,:,:),gj(:,:,:)
+#else
+    REAL,INTENT(IN)            :: fj(:,0:,:),gj(:,0:,:)
+#endif
     CLASS(t_mat),INTENT(INOUT)     ::hmat
 #if defined CPP_GPU
-    REAL,   ALLOCATABLE,DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
     COMPLEX,ALLOCATABLE,DEVICE :: h_loc_dev(:,:)
-    COMPLEX,ALLOCATABLE,DEVICE :: c_dev(:,:)
 #endif
     CALL timestart("non-spherical setup")
     IF (mpi%n_size==1) THEN
 #if defined CPP_GPU
-    ALLOCATE(fj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
-    ALLOCATE(gj_dev(MAXVAL(lapw%nv),atoms%lmaxd+1,MERGE(2,1,noco%l_noco)))
-    fj_dev(1:,1:,1:)= fj(1:,0:,1:)
-    gj_dev(1:,1:,1:)= gj(1:,0:,1:)
     ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
     h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp)) 
 
-    IF (hmat%l_real) THEN
-       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
-          DEALLOCATE(hmat%data_c)
-          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
-       ENDIF
-       hmat%data_c=0.0
-    ENDIF
-    ALLOCATE(c_dev(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
-    c_dev = hmat%data_c
-
-       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,c_dev)
-    hmat%data_c = c_dev
-    
-    IF (hmat%l_real) THEN
-       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
-    ENDIF
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj,gj,hmat)
 #else
        CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
 #endif
@@ -72,7 +55,7 @@ CONTAINS
   END SUBROUTINE hsmt_nonsph
 
 #if defined CPP_GPU
-  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,c_dev)
+  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,hmat)
 !Calculate overlap matrix, GPU version
 !note that basically all matrices in the GPU version are conjugates of their cpu counterparts
     USE m_hsmt_ab
@@ -101,8 +84,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,   INTENT(IN),   DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
-    COMPLEX,INTENT(INOUT),DEVICE :: c_dev(:,:)
-
+    CLASS(t_mat),INTENT(INOUT)     ::hmat
     
     INTEGER:: nn,na,ab_size,l,ll,m
     real :: rchi
@@ -114,6 +96,14 @@ CONTAINS
     ALLOCATE(ab_dev(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
     IF (iintsp.NE.jintsp) ALLOCATE(ab2_dev(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
 
+    IF (hmat%l_real) THEN
+       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
+          DEALLOCATE(hmat%data_c)
+          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
+       ENDIF
+       hmat%data_c=0.0
+    ENDIF
+
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
@@ -124,10 +114,9 @@ CONTAINS
           !Calculate Hamiltonian
           CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),&
                      h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
-          !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
           IF (iintsp==jintsp) THEN
              call nvtxStartRange("zherk",3)
-             CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1_dev,SIZE(ab1_dev,1),1.0,c_dev,SIZE(c_dev,1))
+             CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1_dev,SIZE(ab1_dev,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
              istat = cudaDeviceSynchronize() 
              call nvtxEndRange()    
           ELSE  !here the l_ss off-diagonal part starts
@@ -144,11 +133,14 @@ CONTAINS
                enddo
              enddo
              CALL zgemm("N","T",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,chi,ab2_dev,SIZE(ab2_dev,1),&
-                        ab1_dev,SIZE(ab1_dev,1),CMPLX(1.0,0.0),c_dev,SIZE(c_dev,1))
+                        ab1_dev,SIZE(ab1_dev,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
           ENDIF
        ENDIF
     END DO
 
+    IF (hmat%l_real) THEN
+       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
+    ENDIF
     call nvtxEndRange
  END SUBROUTINE priv_noMPI_gpu
 #endif

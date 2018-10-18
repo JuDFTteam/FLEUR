@@ -1733,7 +1733,7 @@ MODULE m_cdnpot_io_hdf
 
                   dimsInt(:4)=(/2,nmzxy,od_nq2-1,nvac/)
                   CALL h5dopen_f(groupID, 'cdomvxy', cdomvxySetID, hdfError)
-                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:,3))
+                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:nvac,3))
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
             END IF
@@ -1818,7 +1818,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5screate_simple_f(4,dims(:4),cdomvxySpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "cdomvxy", H5T_NATIVE_DOUBLE, cdomvxySpaceID, cdomvxySetID, hdfError)
                   CALL h5sclose_f(cdomvxySpaceID,hdfError)
-                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:,3))
+                  CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:nvac,3))
                   CALL h5dclose_f(cdomvxySetID, hdfError)
                END IF
             END IF
@@ -1922,7 +1922,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(4,dims(:4),cdomvxySpaceID,hdfError)
                CALL h5dcreate_f(groupID, "cdomvxy", H5T_NATIVE_DOUBLE, cdomvxySpaceID, cdomvxySetID, hdfError)
                CALL h5sclose_f(cdomvxySpaceID,hdfError)
-               CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:,3))
+               CALL io_write_complex3(cdomvxySetID,(/-1,1,1,1/),dimsInt(:4),den%vacxy(:,:,:nvac,3))
                CALL h5dclose_f(cdomvxySetID, hdfError)
             END IF
          END IF
