@@ -238,27 +238,8 @@ CONTAINS
 
 #ifdef CPP_MPI
     IF (banddos%unfoldband) THEN
-       write(1230+mpi%irank,*) SHAPE(results%unfolding_weights)
-       write(1230+mpi%irank,*) SHAPE(unfoldingBuffer)
-       DO jsp_m = 1, SIZE(unfoldingBuffer,3)
-		DO i_kpt_m = 1, SIZE(unfoldingBuffer,2)
-			DO i_m = 1, SIZE(unfoldingBuffer,1)
-             write(1230+mpi%irank,'(2f15.8)') unfoldingBuffer(i_m, i_kpt_m,jsp_m)
-			END DO
-		END DO
-	END DO
-        write(*,*) SHAPE(results%unfolding_weights)
-!       FLUSH(1230+mpi%irank)
        results%unfolding_weights = CMPLX(0.0,0.0)
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,mpi%mpi_comm,ierr)
-	       write(1240+mpi%irank,*) SHAPE(results%unfolding_weights)       
-	DO jsp_m = 1, SIZE(results%unfolding_weights,3)
-		DO i_kpt_m = 1, SIZE(results%unfolding_weights,2)
-			DO i_m = 1, SIZE(results%unfolding_weights,1)
-             write(1240+mpi%irank,'(2f15.8)') results%unfolding_weights(i_m, i_kpt_m,jsp_m)
-			END DO
-		END DO
-	END DO
     END IF
     CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%sub_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)

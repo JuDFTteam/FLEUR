@@ -47,26 +47,26 @@ CONTAINS
     CALL build_primitive_cell(banddos,p_cell,cell)
 
     p_kpts=kpts
-    write(1088,*) 'banddos%unfoldband: ', banddos%unfoldband
-    write(1088,*) 'brav. matrix: '
-    write(1088,'(f15.8,f15.8,f15.8)') cell%amat(1,1), cell%amat(1,2), cell%amat(1,3)
-    write(1088,'(f15.8,f15.8,f15.8)') cell%amat(2,1), cell%amat(2,2), cell%amat(2,3)
-    write(1088,'(f15.8,f15.8,f15.8)') cell%amat(3,1), cell%amat(3,2), cell%amat(3,3)
-    write(1088,*) 'brav. rez. matrix: '
-    write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(1,1), cell%bmat(1,2), cell%bmat(1,3)
-    write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(2,1), cell%bmat(2,2), cell%bmat(2,3)
-    write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(3,1), cell%bmat(3,2), cell%bmat(3,3)
-    write(1088,*) ' primitive brav. matrix: '
-    write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(1,1), p_cell%amat(1,2), p_cell%amat(1,3)
-    write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(2,1), p_cell%amat(2,2), p_cell%amat(2,3)
-    write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(3,1), p_cell%amat(3,2), p_cell%amat(3,3)
-    write(1088,*) 'primitive brav. rez. matrix: '
-    write(89,'(3f15.8)') p_cell%bmat
-    write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(1,1), p_cell%bmat(1,2), p_cell%bmat(1,3)
-    write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(2,1), p_cell%bmat(2,2), p_cell%bmat(2,3)
-    write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(3,1), p_cell%bmat(3,2), p_cell%bmat(3,3)
-    write(1088,'(a,i7,a,i7)') 'kpts%nkpt',kpts%nkpt,'   p_kpts%nkpt',p_kpts%nkpt
-    write(1088,*) kpts%specialPoints
+    !write(1088,*) 'banddos%unfoldband: ', banddos%unfoldband
+    !write(1088,*) 'brav. matrix: '
+    !write(1088,'(f15.8,f15.8,f15.8)') cell%amat(1,1), cell%amat(1,2), cell%amat(1,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') cell%amat(2,1), cell%amat(2,2), cell%amat(2,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') cell%amat(3,1), cell%amat(3,2), cell%amat(3,3)
+    !write(1088,*) 'brav. rez. matrix: '
+    !write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(1,1), cell%bmat(1,2), cell%bmat(1,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(2,1), cell%bmat(2,2), cell%bmat(2,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(3,1), cell%bmat(3,2), cell%bmat(3,3)
+    !write(1088,*) ' primitive brav. matrix: '
+    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(1,1), p_cell%amat(1,2), p_cell%amat(1,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(2,1), p_cell%amat(2,2), p_cell%amat(2,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(3,1), p_cell%amat(3,2), p_cell%amat(3,3)
+    !write(1088,*) 'primitive brav. rez. matrix: '
+    !write(89,'(3f15.8)') p_cell%bmat
+    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(1,1), p_cell%bmat(1,2), p_cell%bmat(1,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(2,1), p_cell%bmat(2,2), p_cell%bmat(2,3)
+    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(3,1), p_cell%bmat(3,2), p_cell%bmat(3,3)
+    !write(1088,'(a,i7,a,i7)') 'kpts%nkpt',kpts%nkpt,'   p_kpts%nkpt',p_kpts%nkpt
+    !write(1088,*) kpts%specialPoints
   END SUBROUTINE unfold_band_kpts
   
   SUBROUTINE find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
@@ -98,8 +98,8 @@ CONTAINS
     eps_r = 0.000000001
 
     CALL inv3(cell%bmat,rez_inv_to_internal,rez_inv_det)
-    write(1088,*) p_kpts%specialPoints
-    write(333,'(3f15.8)')p_kpts%bk
+    !write(1088,*) p_kpts%specialPoints
+    !write(333,'(3f15.8)')p_kpts%bk
     kpt_dist=0
     DO i= 1,size(list,2)
 	!        pc_kpoint_c(1)=p_kpts%bk(1,i)*p_cell%bmat(1,1)+p_kpts%bk(2,i)*p_cell%bmat(1,2)+p_kpts%bk(3,i)*p_cell%bmat(1,3)
@@ -170,11 +170,11 @@ CONTAINS
 	END IF
 	list(10,i)=kpt_dist
     END DO
-    write(91,'(3f15.8)') kpts%bk
-    write(92,*) kpts%wtkpt
+    !write(91,'(3f15.8)') kpts%bk
+    !write(92,*) kpts%wtkpt
     ALLOCATE (kpts%sc_list(13,p_kpts%nkpt))
     kpts%sc_list=list
-    write(90,'(10f15.8)') kpts%sc_list
+    !write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
  SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
@@ -220,9 +220,12 @@ CONTAINS
               END IF
            END DO
         END DO
-	IF (i_kpt==1) THEN
-		IF (jsp==1) OPEN (679,file='bands_sc_old.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
-		IF (jsp==2) OPEN (680,file='bands_sc_old.2',status='unknown')
+!   	write_to_file=.true.
+	IF (write_to_file) THEN
+		IF (i_kpt==1) THEN
+			IF (jsp==1) OPEN (679,file='bands_sc_old.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
+			IF (jsp==2) OPEN (680,file='bands_sc_old.2',status='unknown')
+		END IF
 	END IF
 
 !		write(*,*) 'real zmat size dim 1:', size(zMat%data_r,1), 'dim2:', size(zMat%data_r,2)
@@ -343,7 +346,7 @@ CONTAINS
 !					END DO
 				END IF
 			END DO
-			write(1250+mpi%irank,'(4f15.8)') w_n_c(i),w_n_c_sum(i)
+!			write(1250+mpi%irank,'(4f15.8)') w_n_c(i),w_n_c_sum(i)
 !------------------LO's------------------------
       			na=0
       			DO n_i=1,atoms%ntype
@@ -383,7 +386,6 @@ CONTAINS
 !--------------------------LO's finished----------------
 		END IF
 !		IF (method_rubel) THEN
-   		write_to_file=.true.
 		IF (write_to_file) THEN
 			IF (zmat%l_real) THEN
 				IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
@@ -419,9 +421,9 @@ CONTAINS
 !		END IF			
 	END DO
 	IF (i_kpt==kpts%nkpt) THEN
-		IF (jsp==1) CLOSE (679)
+		IF (write_to_file .AND. jsp==1) CLOSE (679)
 		IF (jsp==input%jspins) THEN
-			IF (jsp==2) CLOSE (680)
+			IF (write_to_file .AND. jsp==2) CLOSE (680)
 			!kpts%bk(:,:)=kpts%sc_list(11:13,:)
 			write(*,*) 'Unfolded Bandstructure calculated succesfully, calledby=calculate_plot_w_n'
 			!CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
@@ -442,7 +444,7 @@ SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
 	INTEGER :: i,i_kpt,jsp
 
 	OPEN (679,file='bands_sc.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
-	OPEN (680,file='bands_sc.2',status='unknown')
+	IF (SIZE(results%unfolding_weights,3)==2) OPEN (680,file='bands_sc.2',status='unknown')
         DO jsp=1,SIZE(results%unfolding_weights,3)
 		DO i_kpt=1,SIZE(results%unfolding_weights,2)
 			DO i=1,results%neig(i_kpt,jsp)
@@ -452,7 +454,7 @@ SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
 		END DO
 	END DO
 	CLOSE (679)
-	CLOSE (680)
+	IF (SIZE(results%unfolding_weights,3)==2) CLOSE (680)
 	write(*,*) 'Unfolded Bandstructure written succesfully - use band_sc.gnu to plot, calledby=write_band_sc',eFermiPrev
 END SUBROUTINE
       	
