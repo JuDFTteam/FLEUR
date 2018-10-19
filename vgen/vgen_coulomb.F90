@@ -67,7 +67,6 @@ contains
     integer:: ierr
 #endif
  
-
     
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
@@ -135,6 +134,8 @@ contains
           !                bf1(i_sm) = bf1(i_sm) + z * deltb
           !              ENDDO
           !            ENDIF
+
+
           !        --> 1-d fourier transform and store the coefficients in vTot%pw( ,1)
           call cfft( af1, bf1, ivfft, ivfft, ivfft, -1 )
           !            delta = ivfft * delta * 2 / fpi ! * amat(3,3)**2 * ani

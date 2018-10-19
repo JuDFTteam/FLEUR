@@ -152,6 +152,7 @@ contains
 #endif
 
     if ( mpi%irank == 0 ) then
+      if ( potdenType == POTDEN_TYPE_POTYUK ) return
       ! Check: integral of the pseudo charge density within the slab
       if ( input%film .and. .not. oneD%odi%d1 ) then
         psint = psq(1) * stars%nstr(1) * vacuum%dvac

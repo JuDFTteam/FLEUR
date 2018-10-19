@@ -75,6 +75,7 @@ contains
     type(t_potden)                   :: resDen, vYukawa
     integer                          :: ierr(2)
 
+
     !External functions
     real :: CPP_BLAS_sdot
     external :: CPP_BLAS_sdot
@@ -230,7 +231,7 @@ contains
 
     ! KERKER PRECONDITIONER
     if( input%preconditioning_param /= 0 ) then
-      call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 1001 )
+      call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_DEN )
       call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 4 )
       MPI0_b: if( mpi%irank == 0 ) then 
         call resDen%subPotDen( outDen, inDen )
@@ -258,6 +259,8 @@ contains
                     * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
           end do
         end do
+        resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
+        resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
         if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
         ! fix the preconditioned density
         call outDen%addPotDen( resDen, inDen )
