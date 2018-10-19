@@ -1152,10 +1152,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
             exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
-            write (*,*) "read exc_id_c"
          ELSE
             exc_id_c = vxc_id_c
-            write (*,*) "ignore exc_id_c"
          ENDIF
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")

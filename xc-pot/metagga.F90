@@ -33,8 +33,7 @@ CONTAINS
         if(any(kinEnergyDen_RS < eps)) then
            write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
            kinEnergyDen_RS = max(kinEnergyDen_RS, eps)
-           write (6,*) "         afterwards = ", minval(kinEnergyDen_RS)
-        endif
+        endif 
 
 #else
         USE m_juDFT_stop
