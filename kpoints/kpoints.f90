@@ -52,6 +52,7 @@ contains
           ELSE
              IF (banddos%unfoldband) THEN
                CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
+ 	       CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
                CALL julia(sym,p_cell,input,noco,banddos,p_kpts,.FALSE.,.TRUE.)
                CALL find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
              ELSE

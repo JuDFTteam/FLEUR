@@ -21,6 +21,7 @@ CONTAINS
   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx)
 
+#include"cpp_double.h"
     USE m_constants, ONLY : pi_const,sfp_const
     USE m_types
     USE m_apws
@@ -60,7 +61,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)       :: sym  
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_kpts),INTENT(IN)      :: kpts
+    TYPE(t_kpts),INTENT(INOUT)   :: kpts
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: inden,vx
@@ -69,6 +70,8 @@ CONTAINS
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
+
+!    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
     ! Scalar Arguments
     INTEGER,INTENT(IN)    :: iter
@@ -83,10 +86,15 @@ CONTAINS
     ! Local Arrays
     INTEGER              :: ierr(3)
     INTEGER              :: neigBuffer(kpts%nkpt,input%jspins)
+
+    COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),kpts%nkpt,input%jspins) ! needed for unfolding bandstructure mpi case
+
     INTEGER, PARAMETER   :: lmaxb = 3
     REAL,    ALLOCATABLE :: bkpt(:)
     REAL,    ALLOCATABLE :: eig(:)
     COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
+
+	INTEGER                   :: jsp_m, i_kpt_m, i_m
 
     TYPE(t_tlmplm)            :: td
     TYPE(t_usdus)             :: ud
@@ -123,6 +131,7 @@ CONTAINS
     neigBuffer = 0
     results%neig = 0
     results%eig = 1.0e300
+    unfoldingBuffer = CMPLX(0.0,0.0)
 
     DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
        k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
@@ -137,14 +146,14 @@ CONTAINS
           IF(hybrid%l_hybrid) THEN
 
       DO i = 1, hmat%matsize1
-         DO j = 1, i
-            IF (hmat%l_real) THEN
-               IF ((i.LE.5).AND.(j.LE.5)) THEN
-                  WRITE(1233,'(2i7,2f15.8)') i, j, hmat%data_r(i,j), hmat%data_r(j,i)
-               END IF
-            ELSE
-            ENDIF
-         END DO
+	 DO j = 1, i
+	    IF (hmat%l_real) THEN
+	       IF ((i.LE.5).AND.(j.LE.5)) THEN
+		  WRITE(1233,'(2i7,2f15.8)') i, j, hmat%data_r(i,j), hmat%data_r(j,i)
+	       END IF
+	    ELSE
+	    ENDIF
+	 END DO
       END DO
 
              ! Write overlap matrix smat to direct access file olap
@@ -218,7 +227,7 @@ CONTAINS
           CALL timestop("EV output")
 
           IF (banddos%unfoldband) THEN
-               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms)
+               CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
 	       DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
           if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
                                              hint=errmsg, calledby="eigen.F90")
@@ -228,10 +237,34 @@ CONTAINS
     END DO ! spin loop ends
 
 #ifdef CPP_MPI
+    IF (banddos%unfoldband) THEN
+       write(1230+mpi%irank,*) SHAPE(results%unfolding_weights)
+       write(1230+mpi%irank,*) SHAPE(unfoldingBuffer)
+       DO jsp_m = 1, SIZE(unfoldingBuffer,3)
+		DO i_kpt_m = 1, SIZE(unfoldingBuffer,2)
+			DO i_m = 1, SIZE(unfoldingBuffer,1)
+             write(1230+mpi%irank,'(2f15.8)') unfoldingBuffer(i_m, i_kpt_m,jsp_m)
+			END DO
+		END DO
+	END DO
+        write(*,*) SHAPE(results%unfolding_weights)
+!       FLUSH(1230+mpi%irank)
+       results%unfolding_weights = CMPLX(0.0,0.0)
+       CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,mpi%mpi_comm,ierr)
+	       write(1240+mpi%irank,*) SHAPE(results%unfolding_weights)       
+	DO jsp_m = 1, SIZE(results%unfolding_weights,3)
+		DO i_kpt_m = 1, SIZE(results%unfolding_weights,2)
+			DO i_m = 1, SIZE(results%unfolding_weights,1)
+             write(1240+mpi%irank,'(2f15.8)') results%unfolding_weights(i_m, i_kpt_m,jsp_m)
+			END DO
+		END DO
+	END DO
+    END IF
     CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%sub_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
     results%neig(:,:) = neigBuffer(:,:)
+    results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
 #endif
 
     ! Sorry for the following strange workaround to fill the results%eig array.

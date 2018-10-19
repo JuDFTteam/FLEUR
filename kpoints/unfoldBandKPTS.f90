@@ -84,7 +84,7 @@ CONTAINS
     INTEGER :: i,m1,m2,m3
     REAL    :: rez_inv_to_internal(3,3)
     REAL    :: rez_inv_det
-    REAL    :: list(10,p_kpts%nkpt)  !cartesion coordinates for k,K,m
+    REAL    :: list(13,p_kpts%nkpt)  !cartesion coordinates for k,K,m
     REAL    :: pc_kpoint_i(3)    !primitive cell kpoint internal
     REAL    :: sc_kpoint_i(3)    !super cell kpoint internal
     REAL    :: pc_kpoint_c(3)    !primitive cell kpoint cartesian
@@ -160,6 +160,9 @@ CONTAINS
 	    list(9,i)=m3 !this whole block is to move kpoints into first BZ within -0.5 to 0.5
 
 	!  	kpts%bk(:,i)=matmul(rez_inv_to_internal,pc_kpoint_c)
+	    !-------------saving old kpts----------
+	    list(11:13,i)=kpts%bk(:,i)
+  	    !------finished---------
 	    kpts%bk(:,i)=list(4:6,i)
 	
 	IF (i>1) THEN
@@ -169,12 +172,12 @@ CONTAINS
     END DO
     write(91,'(3f15.8)') kpts%bk
     write(92,*) kpts%wtkpt
-    ALLOCATE (kpts%sc_list(10,p_kpts%nkpt))
+    ALLOCATE (kpts%sc_list(13,p_kpts%nkpt))
     kpts%sc_list=list
     write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 
- SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms)
+ SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
 	USE m_types
 	USE m_juDFT
 	USE m_inv3
@@ -185,15 +188,17 @@ CONTAINS
         TYPE(t_input),INTENT(IN) :: input
         TYPE(t_atoms),INTENT(IN)     :: atoms
 	TYPE(t_banddos),INTENT(IN)  :: banddos
-	TYPE(t_results),INTENT(IN)  :: results
+	TYPE(t_results),INTENT(INOUT)  :: results
 	TYPE(t_cell),INTENT(IN)     :: cell
-	TYPE(t_kpts),INTENT(IN)     :: kpts
+	TYPE(t_kpts),INTENT(INOUT)     :: kpts
 	CLASS(t_mat),INTENT(INOUT)  :: smat_unfold
 	CLASS(t_mat),INTENT(IN)     :: zMat
 	TYPE(t_lapw),INTENT(IN)     :: lapw
+        TYPE(t_mpi),INTENT(IN)       :: mpi
 	TYPE(t_cell)      :: p_cell
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
+        COMPLEX, INTENT(INOUT)         :: unfoldingBuffer(:,:,:)
 	INTEGER :: i,j,k,l,n
 	INTEGER :: na,n_i,nn,nk,nki,gi,lo
 	REAL, ALLOCATABLE	::w_n(:)
@@ -201,6 +206,8 @@ CONTAINS
 	REAL, ALLOCATABLE	::w_n_sum(:)
 	COMPLEX, ALLOCATABLE    ::w_n_c_sum(:)
         LOGICAL :: method_rubel=.false.
+        LOGICAL :: write_to_file=.false.
+        CLASS(t_mat), ALLOCATABLE :: zMat_s
 
 	CALL build_primitive_cell(banddos,p_cell,cell)
 
@@ -214,8 +221,8 @@ CONTAINS
            END DO
         END DO
 	IF (i_kpt==1) THEN
-		IF (jsp==1) OPEN (679,file='bands_sc.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
-		IF (jsp==2) OPEN (680,file='bands_sc.2',status='unknown')
+		IF (jsp==1) OPEN (679,file='bands_sc_old.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
+		IF (jsp==2) OPEN (680,file='bands_sc_old.2',status='unknown')
 	END IF
 
 !		write(*,*) 'real zmat size dim 1:', size(zMat%data_r,1), 'dim2:', size(zMat%data_r,2)
@@ -239,7 +246,23 @@ CONTAINS
 		ALLOCATE(w_n_c_sum(zMat%matsize2))
 		w_n_c_sum=0	
 !	    END IF
-	END IF	
+	END IF
+!---------create zmat_s--- smat*zmat---------------------
+	select type(zMat)
+		type is (t_mat)
+		allocate(t_mat::zMat_s)
+		select type(zMat_s)
+             		type is (t_mat)
+	     		zMat_s=zMat
+		end select
+		type is (t_mpimat)
+		allocate(t_mpimat::zMat_s)
+		select type(zMat_s)
+             		type is (t_mpimat)
+	     		zMat_s=zMat
+		end select
+	end select
+!---------------------------------------------------------
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
 	write (*,*)results%ef
         write (*,*) i_kpt
@@ -295,26 +318,32 @@ CONTAINS
 			END DO
 !--------------------------LO's finished----------------
 		ELSE
+			call smat_unfold%multiply(zMat,zMat_s)
 			DO j=1,lapw%nv(jsp)
-				DO k=1,zMat%matsize1
+!				DO k=1,zMat%matsize1
 					IF (zmat%l_real) THEN
-						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+!						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
 					ELSE
-						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+!						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 					END IF
-				END DO
+!				END DO
 				IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
 				   &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
 				   &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
-					DO k=1,zMat%matsize1
+!					DO k=1,zMat%matsize1
 						IF (zmat%l_real) THEN
-							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+!							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
 						ELSE
-							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+!							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 						END IF
-					END DO
+!					END DO
 				END IF
 			END DO
+			write(1250+mpi%irank,'(4f15.8)') w_n_c(i),w_n_c_sum(i)
 !------------------LO's------------------------
       			na=0
       			DO n_i=1,atoms%ntype
@@ -325,23 +354,27 @@ CONTAINS
 						DO nki=1,nk
 							gi=lapw%kvec(nki,lo,na)
 							j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
-							DO k=1,zMat%matsize1
+				!			DO k=1,zMat%matsize1
 								IF (zmat%l_real) THEN
-									w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+				!						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+									w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
 								ELSE
-									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+				!						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 								END IF
-							END DO
+				!			END DO
 							IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
 							   &(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
 							   &(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
-								DO k=1,zMat%matsize1
+			!					DO k=1,zMat%matsize1
 									IF (zmat%l_real) THEN
-										w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+			!							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+										w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
 									ELSE
-										w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+			!							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+										w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 									END IF
-		    						END DO
+		    	!					END DO
 							END IF
 						END DO
 					END DO
@@ -350,6 +383,8 @@ CONTAINS
 !--------------------------LO's finished----------------
 		END IF
 !		IF (method_rubel) THEN
+   		write_to_file=.true.
+		IF (write_to_file) THEN
 			IF (zmat%l_real) THEN
 				IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
 				IF (jsp==1) write(679,'(3f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)/w_n_sum(i)
@@ -361,6 +396,16 @@ CONTAINS
 				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
 		        END IF
+                END IF
+		IF (zmat%l_real) THEN
+			IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
+			unfoldingBuffer(i,i_kpt,jsp)=w_n(i)/w_n_sum(i)
+			IF ((w_n(i)/w_n_sum(i)>1).or.(w_n(i)/w_n_sum(i)<0)) write(*,*) 'w_n/sum larger 1 or smaller 0', w_n(i)/w_n_sum(i), 'eigenvalue',eig(i)
+		ELSE
+			IF (real(w_n_c(i))<0) w_n_c(i)=0    ! delete negative entries
+			unfoldingBuffer(i,i_kpt,jsp)=w_n_c(i)/w_n_c_sum(i)
+			IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
+	        END IF
 !		ELSE
 !			IF (zmat%l_real) THEN
 !				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
@@ -377,10 +422,39 @@ CONTAINS
 		IF (jsp==1) CLOSE (679)
 		IF (jsp==input%jspins) THEN
 			IF (jsp==2) CLOSE (680)
-			CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
+			!kpts%bk(:,:)=kpts%sc_list(11:13,:)
+			write(*,*) 'Unfolded Bandstructure calculated succesfully, calledby=calculate_plot_w_n'
+			!CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
+
 		END IF
 	END IF
  END SUBROUTINE
+
+	
+SUBROUTINE write_band_sc(kpts,results,eFermiPrev)
+     USE m_types
+     USE m_juDFT
+     USE m_constants
+     IMPLICIT NONE
+	TYPE(t_results),INTENT(IN)  :: results
+	TYPE(t_kpts),INTENT(IN)     :: kpts
+        REAL, INTENT(IN) :: eFermiPrev
+	INTEGER :: i,i_kpt,jsp
+
+	OPEN (679,file='bands_sc.1',status='unknown') !This is kind of my birthday 6 july 1992 (S.R.)
+	OPEN (680,file='bands_sc.2',status='unknown')
+        DO jsp=1,SIZE(results%unfolding_weights,3)
+		DO i_kpt=1,SIZE(results%unfolding_weights,2)
+			DO i=1,results%neig(i_kpt,jsp)
+				IF (jsp==1) write(679,'(4f15.8)') kpts%sc_list(10,i_kpt), ((results%eig(i,i_kpt,1)-eFermiPrev)*hartree_to_ev_const),results%unfolding_weights(i,i_kpt,1)
+				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((results%eig(i,i_kpt,2)-eFermiPrev)*hartree_to_ev_const),results%unfolding_weights(i,i_kpt,2)
+			END DO
+		END DO
+	END DO
+	CLOSE (679)
+	CLOSE (680)
+	write(*,*) 'Unfolded Bandstructure written succesfully - use band_sc.gnu to plot, calledby=write_band_sc',eFermiPrev
+END SUBROUTINE
       	
       SUBROUTINE write_gnu_sc(nosyp,d,ssy,input)
       	USE m_types
