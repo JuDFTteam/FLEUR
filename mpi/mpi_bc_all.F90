@@ -38,7 +38,7 @@ CONTAINS
     INTEGER n
     REAL rdum
     !     .. Local Arrays ..
-    INTEGER i(39),ierr(3)
+    INTEGER i(42),ierr(3)
     REAL    r(34)
     LOGICAL l(45)
     !     ..
@@ -57,7 +57,7 @@ CONTAINS
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
        i(35)=hybrid%bands1 ; i(36)=1 ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
-       i(39)=input%kcrel
+       i(39)=input%kcrel;i(40)=banddos%s_cell_x;i(41)=banddos%s_cell_y;i(42)=banddos%s_cell_z
 
        r(1)=cell%omtil ; r(2)=cell%area ; r(3)=vacuum%delz ; r(4)=cell%z1 ; r(5)=input%alpha
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta; r(9)=noco%phi; r(10)=vacuum%tworkf 
@@ -76,7 +76,7 @@ CONTAINS
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
        l(29)=oneD%odd%d1 ; l(32)=input%ctail ; l(33)=banddos%l_orb
-       l(34)=banddos%l_mcd 
+       l(34)=banddos%l_mcd ; l(35)=banddos%unfoldband
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
        l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
@@ -90,7 +90,7 @@ CONTAINS
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
-     atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38)
+     atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42)
      input%coretail_lmax=i(2) ; input%kcrel=i(39)
      stars%kimax=i(25);stars%kimax2=i(26)
     !
@@ -118,6 +118,7 @@ CONTAINS
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     field%efield%l_segmented = l(38) ; sym%symor=l(39); field%efield%dirichlet = l(40)
     field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
+    banddos%unfoldband=l(35)
     !
     ! -> Broadcast the arrays:
     IF (field%efield%l_segmented) THEN
@@ -265,6 +266,13 @@ CONTAINS
        CALL MPI_BCAST(kpts%specialPoints,3*kpts%numSpecialPoints,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     END IF
  
+    IF(banddos%unfoldband) THEN
+       IF(mpi%irank.NE.0) THEN
+          ALLOCATE(kpts%sc_list(13,kpts%nkpt))
+       END IF
+       CALL MPI_BCAST(kpts%sc_list,13*kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    END IF
+
     RETURN
 #endif
   END SUBROUTINE mpi_bc_all

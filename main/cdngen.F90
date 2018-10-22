@@ -38,6 +38,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_metagga
+   USE m_unfold_band_kpts
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -81,11 +82,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
 
    !Local Scalars
-   REAL                  :: fix, qtot, dummy
+   REAL                  :: fix, qtot, dummy,eFermiPrev
    INTEGER               :: jspin, jspmax
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
+   LOGICAL               :: l_error
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -119,6 +121,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF (mpi%irank == 0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
+         IF (banddos%unfoldband) THEN
+            eFermiPrev = 0.0
+            CALL readPrevEFermi(eFermiPrev,l_error)
+            CALL write_band_sc(kpts,results,eFermiPrev)
+         END IF
 #ifdef CPP_HDF
          CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
          CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)

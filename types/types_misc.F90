@@ -58,6 +58,7 @@ MODULE m_types_misc
       REAL                 :: tote
       REAL                 :: last_distance
       REAL                 :: bandgap
+      COMPLEX, ALLOCATABLE    :: unfolding_weights(:,:,:) !weights for unfolding a supercell bandstructure
       TYPE(t_energy_hf)    ::  te_hfex
       REAL                 ::  te_hfex_loc(2)
       REAL, ALLOCATABLE    :: w_iks(:,:,:)
@@ -156,6 +157,7 @@ CONTAINS
       ALLOCATE (thisResults%w_iks(neigd2,kpts%nkpt,input%jspins))
       ALLOCATE (thisResults%neig(kpts%nkpt,input%jspins))
       ALLOCATE (thisResults%eig(neigd2,kpts%nkpt,input%jspins))
+      ALLOCATE (thisResults%unfolding_weights(neigd2,kpts%nkpt,input%jspins))
 
       thisResults%force = 0.0
       thisResults%force_old = 0.0

@@ -55,9 +55,8 @@ module m_SphBessel
   ! modernised and extended by        M. Hinzen (2016)
   !-------------------------------------------------------------------------
 
+  use m_constants, only: ImagUnit
   implicit none
-
-  complex,  parameter  :: CI = (0.0, 1.0)
 
 
   interface SphBessel
@@ -105,7 +104,7 @@ contains
         end do EXPANSION
         jl(l) =  jl(l) * zj
         nl(l) = -nl(l) * zn
-        hl(l) =  jl(l) + nl(l) * CI
+        hl(l) =  jl(l) + nl(l) * ImagUnit
         zj = zj * z / ( rl + 3.0 )
         zn = zn / z * ( rl + 1.0 )
       end do SERIAL_L_LOOP
@@ -120,12 +119,12 @@ contains
         SERIAL_M_LOOP: do m = 0, l
           hl(l) = hl(l) + (-1) ** m * rnm(l)
           nl(l) = nl(l) + rnm(l)
-          rnm(l) = rnm(l) / ( m + 1.0 ) * ( l * ( l + 1 ) - m * ( m + 1 ) ) / ( CI * ( z + z ) )
+          rnm(l) = rnm(l) / ( m + 1.0 ) * ( l * ( l + 1 ) - m * ( m + 1 ) ) / ( ImagUnit * ( z + z ) )
         end do SERIAL_M_LOOP
-        hl(l) = hl(l) * (-CI) ** l * exp(  CI * z ) / (  CI * z )
-        nl(l) = nl(l) *   CI  ** l * exp( -CI * z ) / ( -CI * z )
+        hl(l) = hl(l) * (-ImagUnit) ** l * exp(  ImagUnit * z ) / (  ImagUnit * z )
+        nl(l) = nl(l) *   ImagUnit  ** l * exp( -ImagUnit * z ) / ( -ImagUnit * z )
         jl(l) = ( hl(l) + nl(l) ) / 2.0
-        nl(l) = ( hl(l) - jl(l) ) * (-CI)
+        nl(l) = ( hl(l) - jl(l) ) * (-ImagUnit)
       end if
     end do PARALLEL_L_LOOP
 
@@ -165,11 +164,11 @@ contains
     integer                                 :: l 
 
 
-    call SphBesselComplex( il, nl, kl, CI * z, lmax )
+    call SphBesselComplex( il, nl, kl, ImagUnit * z, lmax )
 
     do l = 0, lmax
-      il(l) = (-CI) ** l * il(l)
-      kl(l) = - CI  ** l * kl(l)
+      il(l) = (-ImagUnit) ** l * il(l)
+      kl(l) = - ImagUnit  ** l * kl(l)
     end do     
 
   end subroutine ModSphBesselComplex
@@ -185,11 +184,11 @@ contains
     integer                                 :: l 
 
 
-    call SphBesselComplex( il, nl, kl, CI * z, lmax )
+    call SphBesselComplex( il, nl, kl, ImagUnit * z, lmax )
 
     do l = 0, lmax
-      il(l) = (-CI) ** l * il(l)
-      kl(l) = - CI  ** l * kl(l)
+      il(l) = (-ImagUnit) ** l * il(l)
+      kl(l) = - ImagUnit  ** l * kl(l)
     end do     
 
   end subroutine ModSphBesselComplex2
@@ -207,12 +206,12 @@ contains
     complex                                 :: z
 
 
-    z = CI * x
+    z = ImagUnit * x
     call SphBesselComplex( jl, nl, hl, z, lmax )
 
     do l = 0, lmax
-      il(l) = (-CI) ** l * jl(l)
-      kl(l) = - CI  ** l * hl(l)
+      il(l) = (-ImagUnit) ** l * jl(l)
+      kl(l) = - ImagUnit  ** l * hl(l)
     end do     
 
   end subroutine ModSphBesselReal
