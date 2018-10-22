@@ -24,7 +24,7 @@ CONTAINS
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
-      REAL, PARAMETER                  :: eps = 1e-15, factor = 0.1
+      REAL, PARAMETER                  :: eps = 1e-15, factor = 1.0
 
       !implicit allocation
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
