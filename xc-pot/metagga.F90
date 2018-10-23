@@ -24,7 +24,7 @@ CONTAINS
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
-      REAL, PARAMETER                  :: eps = 1e-15, factor = 1.0
+      REAL, PARAMETER                  :: eps = 1e-15
 
       !implicit allocation
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
@@ -33,9 +33,7 @@ CONTAINS
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
          kinEnergyDen_RS = max(kinEnergyDen_RS, eps)
       endif
-
-      write (*,*) "global factor = ", factor
-      kinEnergyDen_RS = kinEnergyDen_RS * factor
+   
 #else
       USE m_juDFT_stop
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
