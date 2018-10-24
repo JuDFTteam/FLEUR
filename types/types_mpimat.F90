@@ -39,6 +39,7 @@ MODULE m_types_mpimat
      PROCEDURE,PASS   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
      PROCEDURE,PASS   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
      PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
+     PROCEDURE,PASS   :: multiply =>mpimat_multiply  !<overwriten from t_mat, takes care of blacs-grids
      PROCEDURE,PASS   :: init_details => mpimat_init
      PROCEDURE,PASS   :: init_template =>mpimat_init_template     !<overwriten from t_mat, also calls alloc in t_mat
      PROCEDURE,PASS   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
@@ -51,6 +52,47 @@ MODULE m_types_mpimat
   PUBLIC t_mpimat
 
 CONTAINS
+
+  SUBROUTINE mpimat_multiply(mat1,mat2,res)
+    CLASS(t_mpimat),INTENT(INOUT)     :: mat1
+    CLASS(t_mat),INTENT(IN)           :: mat2
+    CLASS(t_mat),INTENT(OUT),OPTIONAL :: res
+
+#ifdef CPP_SCALAPACK
+    TYPE(t_mpimat)::m,r
+    IF (.NOT.PRESENT(res)) CALL judft_error("BUG: in mpicase the multiply requires the optional result argument")
+    SELECT TYPE(mat2)
+    TYPE IS (t_mpimat)
+       SELECT TYPE(res)
+       TYPE is (t_mpimat)
+          CALL m%init(mat1,mat2%global_size1,mat2%global_size2)
+          CALL m%copy(mat2,1,1)
+          CALL r%init(mat1,res%global_size1,res%global_size2)
+          IF (mat1%l_real) THEN
+             CALL pdgemm('N','N',mat1%global_size1, m%global_size2,mat1%global_size2, 1.0, &
+                  mat1%data_r, 1,1,mat1%blacsdata%blacs_desc, &
+                  m%data_r, 1,1,m%blacsdata%blacs_desc,0.0, &
+                  r%data_r, 1,1,r%blacsdata%blacs_desc )
+          ELSE
+             CALL pzgemm('N','N',mat1%global_size1, m%global_size2,mat1%global_size2, CMPLX(1.0,0.0), &
+                  mat1%data_c, 1,1,mat1%blacsdata%blacs_desc, &
+                  m%data_c, 1,1,m%blacsdata%blacs_desc,CMPLX(0.0,0.0), &
+                  r%data_c, 1,1,r%blacsdata%blacs_desc )
+          ENDIF
+          CALL res%copy(r,1,1)
+          CALL r%free()
+          CALL m%free()
+       CLASS default
+          CALL judft_error("BUG in mpimat%multiply")
+       END SELECT
+    CLASS default
+       CALL judft_error("BUG in mpimat%multiply")
+    END SELECT
+#endif    
+  END SUBROUTINE mpimat_multiply
+          
+
+    
 
   SUBROUTINE print_matrix(mat,fileno)
     CLASS(t_mpimat),INTENT(INOUT) ::mat
@@ -308,20 +350,36 @@ CONTAINS
 #endif    
   END SUBROUTINE mpimat_init
 
-  SUBROUTINE mpimat_init_template(mat,templ)
+  SUBROUTINE mpimat_init_template(mat,templ,global_size1,global_size2)
     IMPLICIT NONE
     CLASS(t_mpimat),INTENT(INOUT)  :: mat
     CLASS(t_mat),INTENT(IN)        :: templ
+    INTEGER,INTENT(IN),OPTIONAL    :: global_size1,global_size2
 
+    INTEGER::numroc
+    EXTERNAL::numroc
+    
     SELECT TYPE(templ)
     TYPE IS (t_mpimat)
        mat%l_real=templ%l_real
-       mat%matsize1=templ%matsize1
-       mat%matsize2=templ%matsize2
-       mat%global_size1=templ%global_size1
-       mat%global_size2=templ%global_size2
-       mat%blacsdata=>templ%blacsdata
-       mat%blacsdata%no_use=mat%blacsdata%no_use+1
+       IF (PRESENT(global_size1).AND.PRESENT(global_size2)) THEN
+          ALLOCATE(mat%blacsdata)
+          mat%blacsdata=templ%blacsdata
+          templ%blacsdata%no_use=1
+          mat%blacsdata%blacs_desc(3)=global_size1
+          mat%blacsdata%blacs_desc(4)=global_size2
+          mat%global_size1=global_size1
+          mat%global_size2=global_size2
+          mat%matsize1=NUMROC( global_size1,mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow )
+          mat%matsize1=NUMROC( global_size2,mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol )
+       ELSE
+          mat%matsize1=templ%matsize1
+          mat%matsize2=templ%matsize2
+          mat%global_size1=templ%global_size1
+          mat%global_size2=templ%global_size2
+          mat%blacsdata=>templ%blacsdata
+          mat%blacsdata%no_use=mat%blacsdata%no_use+1
+       ENDIF
        CALL mat%alloc()
       
        CLASS default
