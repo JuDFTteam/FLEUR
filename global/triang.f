@@ -27,7 +27,8 @@ c     locals
       LOGICAL :: new
 c     constants
       REAL , PARAMETER :: zero = 0.0 , big = 1.e8 , tol = 1.e-5
-c
+
+      ntria = 0
       IF ( nkpt.LT.3 ) RETURN
 c
 c l_f_t=.true. means that we call from fertri and on output gives 'film'

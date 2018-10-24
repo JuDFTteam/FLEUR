@@ -6,25 +6,21 @@ MODULE m_orbmom
   !     ***************************************************************
 
 CONTAINS
-  SUBROUTINE orbmom(atoms,ne,we,acof,bcof, ccof, orb,orbl,orblo)
+  SUBROUTINE orbmom(atoms,ne,we,ispin,eigVecCoeffs,orb)
 
     !USE m_types, ONLY : t_orb,t_orbl,t_orblo
     USE m_types
     IMPLICIT NONE
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_atoms),        INTENT(IN) :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne
+    INTEGER, INTENT (IN) :: ne, ispin
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    TYPE (t_orb),  INTENT (INOUT) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%ntype)
-    TYPE (t_orbl), INTENT (INOUT) :: orbl(atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
-    TYPE (t_orblo),INTENT (INOUT) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod,atoms%ntype)
-    !     ..
+    TYPE (t_orb), INTENT (INOUT) :: orb
+
     !     .. Local Scalars ..
     INTEGER i,l,lm ,n,na,natom,ilo,ilop,m
     COMPLEX,PARAMETER:: czero= CMPLX(0.0,0.0)
@@ -41,23 +37,29 @@ CONTAINS
                 !     -----> sum over occupied bands
                 DO  i = 1,ne
                    ! coeff. for lz ->
-                   orb(l,m,n)%uu = orb(l,m,n)%uu + we(i)*acof(i,lm,natom)* CONJG(acof(i,lm,natom))
-                   orb(l,m,n)%dd = orb(l,m,n)%dd + we(i)*bcof(i,lm,natom)* CONJG(bcof(i,lm,natom))
+                   orb%uu(l,m,n,ispin) = orb%uu(l,m,n,ispin) + we(i)*eigVecCoeffs%acof(i,lm,natom,ispin)*&
+                                                               CONJG(eigVecCoeffs%acof(i,lm,natom,ispin))
+                   orb%dd(l,m,n,ispin) = orb%dd(l,m,n,ispin) + we(i)*eigVecCoeffs%bcof(i,lm,natom,ispin)*&
+                                                               CONJG(eigVecCoeffs%bcof(i,lm,natom,ispin))
                    ! coeff. for l+ <M'|l+|M> with respect to M ->
                    IF (m.NE.l) THEN
-                      orb(l,m,n)%uup = orb(l,m,n)%uup + we(i)*acof(i,lm,natom)* CONJG(acof(i,lm+1,natom))
-                      orb(l,m,n)%ddp = orb(l,m,n)%ddp + we(i)*bcof(i,lm,natom)* CONJG(bcof(i,lm+1,natom))
+                      orb%uup(l,m,n,ispin) = orb%uup(l,m,n,ispin) + we(i)*eigVecCoeffs%acof(i,lm,natom,ispin)*&
+                                                                    CONJG(eigVecCoeffs%acof(i,lm+1,natom,ispin))
+                      orb%ddp(l,m,n,ispin) = orb%ddp(l,m,n,ispin) + we(i)*eigVecCoeffs%bcof(i,lm,natom,ispin)*&
+                                                                    CONJG(eigVecCoeffs%bcof(i,lm+1,natom,ispin))
                    ELSE
-                      orb(l,m,n)%uup = czero
-                      orb(l,m,n)%ddp = czero
+                      orb%uup(l,m,n,ispin) = czero
+                      orb%ddp(l,m,n,ispin) = czero
                    ENDIF
                    ! coeff. for l- <M'|l-|M> with respect to M ->
                    IF (m.NE.-l) THEN
-                      orb(l,m,n)%uum = orb(l,m,n)%uum + we(i)*acof(i,lm,natom)* CONJG(acof(i,lm-1,natom))
-                      orb(l,m,n)%ddm = orb(l,m,n)%ddm + we(i)*bcof(i,lm,natom)* CONJG(bcof(i,lm-1,natom))
+                      orb%uum(l,m,n,ispin) = orb%uum(l,m,n,ispin) + we(i)*eigVecCoeffs%acof(i,lm,natom,ispin)*&
+                                                                    CONJG(eigVecCoeffs%acof(i,lm-1,natom,ispin))
+                      orb%ddm(l,m,n,ispin) = orb%ddm(l,m,n,ispin) + we(i)*eigVecCoeffs%bcof(i,lm,natom,ispin)*&
+                                                                    CONJG(eigVecCoeffs%bcof(i,lm-1,natom,ispin))
                    ELSE
-                      orb(l,m,n)%uum = czero
-                      orb(l,m,n)%ddm = czero
+                      orb%uum(l,m,n,ispin) = czero
+                      orb%ddm(l,m,n,ispin) = czero
                    ENDIF
                 ENDDO
              ENDDO
@@ -70,33 +72,33 @@ CONTAINS
              DO m = -l, l
                 lm = l* (l+1) + m
                 DO i = 1,ne
-                   orbl(ilo,m,n)%uulo = orbl(ilo,m,n)%uulo + we(i) * (&
-                        acof(i,lm,natom)* CONJG(ccof(m,i,ilo,natom)) +&
-                        ccof(m,i,ilo,natom)* CONJG(acof(i,lm,natom)) )
-                   orbl(ilo,m,n)%dulo = orbl(ilo,m,n)%dulo + we(i) * (&
-                        bcof(i,lm,natom)* CONJG(ccof(m,i,ilo,natom)) +&
-                        ccof(m,i,ilo,natom)* CONJG(bcof(i,lm,natom)) )
+                   orb%uulo(ilo,m,n,ispin) = orb%uulo(ilo,m,n,ispin) + we(i) * (&
+                        eigVecCoeffs%acof(i,lm,natom,ispin)* CONJG(eigVecCoeffs%ccof(m,i,ilo,natom,ispin)) +&
+                        eigVecCoeffs%ccof(m,i,ilo,natom,ispin)* CONJG(eigVecCoeffs%acof(i,lm,natom,ispin)) )
+                   orb%dulo(ilo,m,n,ispin) = orb%dulo(ilo,m,n,ispin) + we(i) * (&
+                        eigVecCoeffs%bcof(i,lm,natom,ispin)* CONJG(eigVecCoeffs%ccof(m,i,ilo,natom,ispin)) +&
+                        eigVecCoeffs%ccof(m,i,ilo,natom,ispin)* CONJG(eigVecCoeffs%bcof(i,lm,natom,ispin)) )
                    IF (m.NE.l) THEN
-                      orbl(ilo,m,n)%uulop = orbl(ilo,m,n)%uulop + we(i) *(&
-                           acof(i,lm,natom)* CONJG(ccof(m+1,i,ilo,natom))+&
-                           ccof(m,i,ilo,natom)* CONJG(acof(i,lm+1,natom)))
-                      orbl(ilo,m,n)%dulop = orbl(ilo,m,n)%dulop + we(i) *(&
-                           bcof(i,lm,natom)* CONJG(ccof(m+1,i,ilo,natom))+&
-                           ccof(m,i,ilo,natom)* CONJG(bcof(i,lm+1,natom)))
+                      orb%uulop(ilo,m,n,ispin) = orb%uulop(ilo,m,n,ispin) + we(i) *(&
+                           eigVecCoeffs%acof(i,lm,natom,ispin)* CONJG(eigVecCoeffs%ccof(m+1,i,ilo,natom,ispin))+&
+                           eigVecCoeffs%ccof(m,i,ilo,natom,ispin)* CONJG(eigVecCoeffs%acof(i,lm+1,natom,ispin)))
+                      orb%dulop(ilo,m,n,ispin) = orb%dulop(ilo,m,n,ispin) + we(i) *(&
+                           eigVecCoeffs%bcof(i,lm,natom,ispin)* CONJG(eigVecCoeffs%ccof(m+1,i,ilo,natom,ispin))+&
+                           eigVecCoeffs%ccof(m,i,ilo,natom,ispin)* CONJG(eigVecCoeffs%bcof(i,lm+1,natom,ispin)))
                    ELSE
-                      orbl(ilo,m,n)%uulop = czero
-                      orbl(ilo,m,n)%dulop = czero
+                      orb%uulop(ilo,m,n,ispin) = czero
+                      orb%dulop(ilo,m,n,ispin) = czero
                    ENDIF
                    IF (m.NE.-l) THEN
-                      orbl(ilo,m,n)%uulom = orbl(ilo,m,n)%uulom + we(i) *(&
-                           acof(i,lm,natom)* CONJG(ccof(m-1,i,ilo,natom))+&
-                           ccof(m,i,ilo,natom)* CONJG(acof(i,lm-1,natom)))
-                      orbl(ilo,m,n)%dulom = orbl(ilo,m,n)%dulom + we(i) *(&
-                           bcof(i,lm,natom)* CONJG(ccof(m-1,i,ilo,natom))+&
-                           ccof(m,i,ilo,natom)* CONJG(bcof(i,lm-1,natom)))
+                      orb%uulom(ilo,m,n,ispin) = orb%uulom(ilo,m,n,ispin) + we(i) *(&
+                           eigVecCoeffs%acof(i,lm,natom,ispin)* CONJG(eigVecCoeffs%ccof(m-1,i,ilo,natom,ispin))+&
+                           eigVecCoeffs%ccof(m,i,ilo,natom,ispin)* CONJG(eigVecCoeffs%acof(i,lm-1,natom,ispin)))
+                      orb%dulom(ilo,m,n,ispin) = orb%dulom(ilo,m,n,ispin) + we(i) *(&
+                           eigVecCoeffs%bcof(i,lm,natom,ispin)* CONJG(eigVecCoeffs%ccof(m-1,i,ilo,natom,ispin))+&
+                           eigVecCoeffs%ccof(m,i,ilo,natom,ispin)* CONJG(eigVecCoeffs%bcof(i,lm-1,natom,ispin)))
                    ELSE
-                      orbl(ilo,m,n)%uulom = czero
-                      orbl(ilo,m,n)%dulom = czero
+                      orb%uulom(ilo,m,n,ispin) = czero
+                      orb%dulom(ilo,m,n,ispin) = czero
                    ENDIF
                 ENDDO  ! sum over eigenstates (i)
              ENDDO    ! loop over m
@@ -107,19 +109,19 @@ CONTAINS
                 IF (atoms%llo(ilop,n).EQ.l) THEN
                    DO m = -l, l
                       DO i = 1,ne
-                         orblo(ilo,ilop,m,n)%z = orblo(ilo,ilop,m,n)%z +&
-                              we(i) *   ccof(m,i,ilo, natom) * CONJG( ccof(m,i,ilop,natom) ) 
+                         orb%z(ilo,ilop,m,n,ispin) = orb%z(ilo,ilop,m,n,ispin) +&
+                              we(i) *   eigVecCoeffs%ccof(m,i,ilo,natom,ispin) * CONJG( eigVecCoeffs%ccof(m,i,ilop,natom,ispin) ) 
                          IF (m.NE.l) THEN
-                            orblo(ilo,ilop,m,n)%p = orblo(ilo,ilop,m,n)%p +&
-                                 we(i) *  ccof(m,  i,ilo, natom) * CONJG( ccof(m+1,i,ilop,natom) ) 
+                            orb%p(ilo,ilop,m,n,ispin) = orb%p(ilo,ilop,m,n,ispin) +&
+                                 we(i) *  eigVecCoeffs%ccof(m,i,ilo,natom,ispin) * CONJG( eigVecCoeffs%ccof(m+1,i,ilop,natom,ispin) ) 
                          ELSE
-                            orblo(ilo,ilop,m,n)%p = czero
+                            orb%p(ilo,ilop,m,n,ispin) = czero
                          ENDIF
                          IF (m.NE.-l) THEN
-                            orblo(ilo,ilop,m,n)%m = orblo(ilo,ilop,m,n)%m +&
-                                 we(i) *  ccof(m,  i,ilo, natom) * CONJG( ccof(m-1,i,ilop,natom) )  
+                            orb%m(ilo,ilop,m,n,ispin) = orb%m(ilo,ilop,m,n,ispin) +&
+                                 we(i) *  eigVecCoeffs%ccof(m,i,ilo,natom,ispin) * CONJG( eigVecCoeffs%ccof(m-1,i,ilop,natom,ispin) )  
                          ELSE
-                            orblo(ilo,ilop,m,n)%m = czero
+                            orb%m(ilo,ilop,m,n,ispin) = czero
                          ENDIF
                       ENDDO  ! sum over eigenstates (i)
                    ENDDO    ! loop over m

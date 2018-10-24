@@ -1,3 +1,4 @@
+
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -9,7 +10,7 @@
       CONTAINS
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt)
 
 !*********************************************************************
@@ -34,11 +35,10 @@
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-      TYPE(t_Jij),INTENT(INOUT)      :: Jij
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
       TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
-      TYPE(t_xcpot),INTENT(INOUT)    :: xcpot
+      TYPE(t_xcpot_inbuild),INTENT(INOUT)    :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
       REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3)
@@ -142,9 +142,9 @@
  7000 FORMAT (10a8)
 !
       READ (UNIT=5,FMT=7020,END=99,ERR=99)&
-     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco,jij%l_J
+     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
       WRITE (6,9020)&
-     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco,jij%l_J
+     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  7020 FORMAT (a3,1x,a4,6x,l1,6x,l1,7x,l1,8x,i1,8x,l1,5x,l1)
 !
       IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
@@ -459,29 +459,26 @@
       ENDIF                               !
       input%gw = 0
       READ (UNIT=5,FMT=7220,END=99,ERR=7215)&
-     &                                       input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
- 7215 IF(input%strho) input%gw=0
+           &                                       input%vchk,input%cdinf,ldum,input%gw,input%gw_neigd
+      if (ldum) call judft_error("pot8 not longer supported")
+7215  IF(input%strho) input%gw=0
+      if (ldum) call judft_error("pot8 not longer supported")
       IF(input%gw.eq.2 .OR. l_hyb) THEN
          IF(ldum)  CALL juDFT_error&
      &        ("Remove fl7para before run with gw = 2!",calledby&
      &        ="rw_inp")
          IF(input%gw_neigd==0)  CALL juDFT_error("No numbands-value given."&
      &        ,calledby ="rw_inp")
-         IF(.not.obsolete%pot8)  CALL juDFT_error("pot8 must be set if gw = 2!"&
-     &        ,calledby ="rw_inp")
       ELSE
         INQUIRE(file='QGpsi',exist=ldum)
         IF(ldum)           CALL juDFT_error&
      &       ("QGpsi exists but gw /= 2 in inp.",calledby ="rw_inp")
       ENDIF
-      IF(input%gw.eq.3) THEN
-        IF(.not.obsolete%pot8) CALL juDFT_error("pot8 must be set if gw = 3!"&
-     &        ,calledby ="rw_inp")
-      END IF
-
+  
       BACKSPACE(5)                                         ! Make sure that input%vchk,input%cdinf,obsolete%pot8 are all given.
-      READ (UNIT=5,FMT=7220,END=99,ERR=99) input%vchk,input%cdinf,obsolete%pot8 !
-      WRITE (6,9120) input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
+      READ (UNIT=5,FMT=7220,END=99,ERR=99) input%vchk,input%cdinf,ldum
+      if (ldum) call judft_error("pot8 not longer supported")
+      WRITE (6,9120) input%vchk,input%cdinf,.false.,input%gw,input%gw_neigd
  7220 FORMAT (5x,l1,1x,6x,l1,1x,5x,l1,1x,3x,i1,1x,9x,i4)
 !
       DO i=1,100 ; line(i:i)=' ' ; ENDDO
@@ -540,50 +537,24 @@
       ENDIF
       IF ( line(30:34)=='spav=' ) THEN
         BACKSPACE(5)
-        READ(5,fmt='(34x,l1)',END=99,ERR=99) noco%soc_opt(atoms%ntype+2)
+        READ(5,fmt='(34x,l1)',END=99,ERR=99) noco%l_spav
       ELSE
-        noco%soc_opt(atoms%ntype+2)= .false.
+        noco%l_spav= .false.
       ENDIF
-      IF ( line(37:40)=='off=' ) THEN
-        BACKSPACE(5)
-        chform= '(40x,l1,1x,'//chntype//'a1)'
-        READ(5,fmt=chform,END=99,ERR=99)&
-     &   noco%soc_opt(atoms%ntype+1),(helpchar(i),i=1,atoms%ntype)
-        DO i= 1,atoms%ntype
-          noco%soc_opt(i)= (helpchar(i)=='1')
-        ENDDO
-      ELSE
-        DO i= 1,atoms%ntype+1
-          noco%soc_opt(i)= .false.
-        ENDDO
-      ENDIF
-      IF (noco%soc_opt(atoms%ntype+1)) THEN
-        DO i= 1,atoms%ntype
-          IF (noco%soc_opt(i)) THEN
-            helpchar(i)= '1'
-          ELSE
-            helpchar(i)= '0'
-          ENDIF
-        ENDDO
-        chform= '(2f10.6,a7,l1,a6,l1,a5,l1,a1,'//chntype//'a1)'
-        WRITE(6,fmt=chform)&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1),',',(helpchar(i),i=1,atoms%ntype)
-      ELSE
-        WRITE(6,fmt='(2f10.6,a7,l1,a6,l1,a5,l1)')&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1)
-      ENDIF
-!
-      obsolete%l_u2f=.false.
-      obsolete%l_f2u=.false.
+!!$      IF ( line(37:40)=='off=' ) THEN
+!!$        BACKSPACE(5)
+!!$        chform= '(40x,l1,1x,'//chntype//'a1)'
+!!$        CALL judft_error("soc_opt no longer supported")
+!!$      ENDIF
+    
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
-     &                 input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u
+     &                 input%frcor,sliceplot%slice,input%ctail
       input%coretail_lmax=99
+      input%kcrel=0
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
-      WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u,input%l_bmt
+      WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail
  8050 FORMAT (6x,l1,7x,l1,7x,l1,6x,l1,7x,i1,5x,l1,5x,l1)
       
       ! check if itmax consists of 2 or 3 digits
@@ -592,17 +563,17 @@
 
       IF( check .eq. ',' ) THEN
         READ (UNIT=5,FMT=8060,END=99,ERR=99) &
-     &                 input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
-        WRITE (6,9180)  input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+     & input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+        WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8060   FORMAT (6x,i2,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       ELSE
         READ (UNIT=5,FMT=8061,END=99,ERR=99) &
-     &                 input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
-        WRITE (6,9180)  input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+     & input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+        WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8061   FORMAT (6x,i3,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       END IF
       
-      
+      input%preconditioning_param = 0.0 
 
       chform = '(5x,l1,'//chntype//'f6.2)'
 !      chform = '(5x,l1,23f6.2)'
@@ -754,7 +725,7 @@
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name
  9010 FORMAT (10a8)
-      WRITE(5,9020) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco,jij%l_J
+      WRITE(5,9020) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1,&
      &       ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
 !
@@ -901,7 +872,7 @@
       IF ((xcpot%gmaxxc.LE.0).OR.(xcpot%gmaxxc.GT.stars%gmax)) xcpot%gmaxxc=stars%gmax
       WRITE (5,9110) stars%gmax,xcpot%gmaxxc
  9110 FORMAT (2f10.6)
-      WRITE (5,9120) input%vchk,input%cdinf,obsolete%pot8,input%gw,input%gw_neigd
+      WRITE (5,9120) input%vchk,input%cdinf,.false.,input%gw,input%gw_neigd
  9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
      &        ',numbands=',i4)
       WRITE (5,9130) 0,.false.,input%l_f,input%eonly
@@ -926,26 +897,8 @@
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
       WRITE (5,9160) input%gauss,input%delgau,input%tria
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
-      IF (noco%soc_opt(atoms%ntype+1)) THEN
-        DO i= 1,atoms%ntype
-          IF (noco%soc_opt(i)) THEN
-            helpchar(i)= '1'
-          ELSE
-            helpchar(i)= '0'
-          ENDIF
-        ENDDO
-        chform= '(2f10.6,a7,l1,a6,l1,a5,l1,a1,'//chntype//'a1)'
-        WRITE(5,fmt=chform)&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1),',',(helpchar(i),i=1,atoms%ntype)
-      ELSE
-        WRITE(5,fmt='(2f10.6,a7,l1,a6,l1,a5,l1)')&
-     &   noco%theta,noco%phi,',l_soc=',noco%l_soc,',spav=',noco%soc_opt(atoms%ntype+2),&
-     &   ',off=',noco%soc_opt(atoms%ntype+1)
-      ENDIF
-      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail,obsolete%disp,input%kcrel,obsolete%l_u2f,obsolete%l_f2u,input%l_bmt
- 9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1,',disp=',&
-     &        l1,',kcrel=',i1,',u2f=',l1,',f2u=',l1,',bmt=',l1)
+      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail
+ 9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1)
       WRITE (5,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  9180 FORMAT ('itmax=',i3,',maxiter=',i3,',imix=',i2,',alpha=',&
      &        f6.2,',spinf=',f6.2)

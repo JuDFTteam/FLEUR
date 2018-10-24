@@ -26,6 +26,7 @@ MODULE m_tlo
           USE m_intgr, ONLY : intgr3  
           USE m_gaunt, ONLY: gaunt1
           USE m_types
+          use m_constants
           IMPLICIT NONE
           TYPE(t_input),INTENT(IN)    :: input
           TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -45,7 +46,7 @@ MODULE m_tlo
           REAL,    INTENT (IN) :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
-          COMPLEX ci,cil
+          COMPLEX cil
           INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
           !     ..
           !     .. Local Arrays ..
@@ -53,7 +54,6 @@ MODULE m_tlo
           REAL uvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd),dvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd)
           !     ..
 
-          ci = CMPLX(0.0,1.0)
           DO lo = 1,atoms%nlo(ntyp)
              l = atoms%llo(lo,ntyp)
              DO lp = 0,atoms%lmax(ntyp)
@@ -133,7 +133,7 @@ MODULE m_tlo
                       !--->             loop over l'
                       DO lp = lpmin,lpmax,2
                          lmp = lp* (lp+1) + mp
-                         cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
+                         cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
                          tlmplm%tuulo(lmp,m,lo+mlo,jsp) = &
                               tlmplm%tuulo(lmp,m,lo+mlo,jsp) + cil*uvulo(lo,lp,lh)
                          tlmplm%tdulo(lmp,m,lo+mlo,jsp) = &
@@ -161,7 +161,7 @@ MODULE m_tlo
                          loplo = ((lop-1)*lop)/2 + lo
                          IF ((ABS(l-lpp).LE.lp) .AND. (lp.LE. (l+lpp)) .AND.&
                               (MOD(l+lp+lpp,2).EQ.0) .AND. (ABS(m).LE.l)) THEN
-                            cil = ((ci** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
+                            cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,atoms%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
                             tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) + cil*ulovulo(loplo,lh)
                          END IF
                       END DO

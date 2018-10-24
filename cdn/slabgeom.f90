@@ -32,7 +32,7 @@ CONTAINS
     !                               the nsl-layer 
     !-----------------------------------------------------------------------
     !
-    USE m_types
+    USE m_types_setup
     IMPLICIT NONE
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)   :: atoms

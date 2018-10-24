@@ -73,7 +73,7 @@ c**************************************************
      >                    nop,mrot,bmat,lmax,
      <                    d_wgn)
 
-      USE m_constants, ONLY : pimach
+      USE m_constants, ONLY : pimach, ImagUnit
       USE m_inv3
 
       IMPLICIT NONE
@@ -91,7 +91,7 @@ c**************************************************
      +                        fac_x,fac_xmpm
       REAL                 :: pi,co_bh,si_bh,zaehler,nenner,cp,sp
       REAL                 :: sina,sinb,sinc,cosa,cosb,cosc,determ,dt
-      COMPLEX              :: ci,phase_g,phase_a,bas,
+      COMPLEX              :: phase_g,phase_a,bas,
      +                        d(-lmax:lmax,-lmax:lmax)
 
       REAL                 :: alpha(nop),beta(nop),gamma(nop)
@@ -100,7 +100,6 @@ c**************************************************
       INTRINSIC sqrt,max,min
 
 
-      ci = cmplx(0.0,1.0)
       pi = pimach()
 c
 c determine the eulerian angles of all the rotations
@@ -213,13 +212,13 @@ c
 
           DO m = -l,l
             fac_l_m = fac(l+m) * fac(l-m)
-            phase_g = exp( - ci * gamma(ns) * m ) 
+            phase_g = exp( - ImagUnit * gamma(ns) * m ) 
 
             DO mp = -l,l
               fac_l_mp = fac(l+mp) * fac(l-mp)
 
               zaehler = sqrt( real(fac_l_m * fac_l_mp) )
-              phase_a = exp( - ci * alpha(ns) * mp ) 
+              phase_a = exp( - ImagUnit * alpha(ns) * mp ) 
               x_lo = max(0, m-mp)
               x_up = min(l-mp, l+m)
 

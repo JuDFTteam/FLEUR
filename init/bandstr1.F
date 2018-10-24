@@ -7,12 +7,12 @@
       MODULE m_bandstr1
       use m_juDFT
       USE m_types
+      use m_unfold_band_kpts
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
       CONTAINS
       SUBROUTINE bandstr1(
-     >                    idsyst,idtype,bmat,kpts,input,l_fillArrays)
-
+     >               idsyst,idtype,bmat,kpts,input,l_fillArrays,banddos)
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(IN) :: input
@@ -21,6 +21,7 @@
       INTEGER, INTENT (IN)  :: idsyst,idtype
       REAL,    INTENT (IN)  :: bmat(3,3)
       LOGICAL, INTENT (IN)  :: l_fillArrays
+      TYPE(t_banddos),INTENT(IN)  :: banddos
 
       REAL, POINTER             :: syp(:,:) 
       CHARACTER(len=1), POINTER :: ssy(:)
@@ -65,6 +66,7 @@
       kpts%nkpt = ntot
 
       ALLOCATE (bkTemp(3,kpts%nkpt))
+      ALLOCATE (kpts%specialPointIndices(kpts%numSpecialPoints))
 !
 ! --> generate k-points mesh 
 !
@@ -74,6 +76,7 @@
          dk(2) = ( syp(2,i) - syp(2,i-1) ) / (nk(i)+1)
          dk(3) = ( syp(3,i) - syp(3,i-1) ) / (nk(i)+1)
          bkTemp(:,n) = syp(:,i-1)
+         kpts%specialPointIndices(i-1) = n
          n = n + 1
          DO j = 1, nk(i)
             bkTemp(:,n) = bkTemp(:,n-1) + dk(:)
@@ -81,6 +84,7 @@
          ENDDO
       ENDDO
       bkTemp(:,n) = syp(:,nosyp)
+      kpts%specialPointIndices(nosyp) = n
       kpts%nkpt = kpts%nkpt
       kpts%posScale = 1.0
 
@@ -110,9 +114,13 @@
          CLOSE (41)
       END IF
 
-      CALL write_gnu(
+      IF (banddos%unfoldband) THEN
+          CALL write_gnu_sc(
+     >               nosyp,d,ssy,input)  
+      ELSE
+          CALL write_gnu(
      >               nosyp,d,ssy,input)
-
+      END IF
       DEALLOCATE ( rsyp,syp,del,nk,ssy,d,bkTemp )
 
       END SUBROUTINE bandstr1
@@ -187,7 +195,7 @@
       WRITE (27,913)
       CLOSE (27)
 
- 900  FORMAT ('set terminal postscript enhanced "Times-Roman" 20')
+ 900  FORMAT ('set terminal postscript enhanced color "Times-Roman" 20')
  901  FORMAT ('set xlabel ""')
  902  FORMAT ('set ylabel "E - E_F (eV)"')
  903  FORMAT ('set nokey')

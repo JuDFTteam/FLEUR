@@ -8,24 +8,19 @@ CONTAINS
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,nobd,nsld, ikpt,ne,ccof, skip_t,noccbd,acof,bcof,usdus, &
-       nmtsl,nsl, qmtslk)
-    USE m_types
+  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+    USE m_types_setup
+    USE m_types_usdus
+    USE m_types_cdnval, ONLY: t_eigVecCoeffs, t_slab
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)   :: usdus
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
+    TYPE(t_slab), INTENT(INOUT)     :: slab
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd,jsp      
     INTEGER, INTENT (IN) :: ne,ikpt ,skip_t,noccbd
-    INTEGER, INTENT (IN) :: nsl,nsld
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    INTEGER, INTENT (IN)  :: nmtsl(atoms%ntype,atoms%nat)
-    REAL,    INTENT (OUT) :: qmtslk(:,:)!(nsl,dimension%neigd)
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lo ,natom,nn,ntyp,nt1,nt2,m
@@ -41,9 +36,9 @@ CONTAINS
     INTRINSIC conjg,cmplx
 
 
-    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntype),qmt(atoms%ntype,SIZE(qmtslk,2)) )
+    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntype),qmt(atoms%ntype,SIZE(slab%qmtsl,2)) )
     ALLOCATE ( qaclo(nobd,atoms%nlod,atoms%ntype),qbclo(nobd,atoms%nlod,atoms%ntype) )
-    ALLOCATE ( qmttot(atoms%ntype,SIZE(qmtslk,2)),qmtlo(atoms%ntype,SIZE(qmtslk,2)) )
+    ALLOCATE ( qmttot(atoms%ntype,SIZE(slab%qmtsl,2)),qmtlo(atoms%ntype,SIZE(slab%qmtsl,2)) )
     !
     !--->    l-decomposed density for each valence state
     !
@@ -61,8 +56,8 @@ CONTAINS
              DO m = -l,l
                 lm = ll1 + m
                 DO natom = nt1,nt2
-                   suma = suma + acof(i,lm,natom)*CONJG(acof(i,lm,natom))
-                   sumb = sumb + bcof(i,lm,natom)*CONJG(bcof(i,lm,natom))
+                   suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                   sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                 ENDDO
              enddo
              ss = suma + sumb*usdus%ddn(l,n,jsp)
@@ -92,13 +87,13 @@ CONTAINS
                 DO m = -l,l
                    lm = ll1 + m
                    qlo(i,lo,ntyp) = qlo(i,lo,ntyp) +&
-                        ccof(m,i,lo,natom)*CONJG(ccof(m,i,lo,natom))
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +&
-                        bcof(i,lm,natom)*CONJG(ccof(m,i,lo,natom)) +&
-                        ccof(m,i,lo,natom)*CONJG(bcof(i,lm,natom))
+                        eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +&
-                        acof(i,lm,natom)*CONJG(ccof(m,i,lo,natom)) +&
-                        ccof(m,i,lo,natom)*CONJG(acof(i,lm,natom))
+                        eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
                 ENDDO
              ENDDO
           ENDDO
@@ -136,12 +131,12 @@ CONTAINS
     ENDDO
     !
     DO i = 1,ne
-       DO nl = 1,nsl
+       DO nl = 1,slab%nsl
           qq = 0.0
           DO ntyp = 1,atoms%ntype
-             qq = qq + qmttot(ntyp,i)*nmtsl(ntyp,nl)
+             qq = qq + qmttot(ntyp,i)*slab%nmtsl(ntyp,nl)
           ENDDO
-          qmtslk(nl,i) = qq
+          slab%qmtsl(nl,i,ikpt,jsp) = qq
        ENDDO
     ENDDO
     !        DO ntyp = 1,ntype

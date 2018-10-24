@@ -1,8 +1,8 @@
 set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_DOUBLE")
 set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_DOUBLE")
 
+include("cmake/tests/test_linker.cmake")
 include("cmake/tests/test_doxygen.cmake")
-
 include("cmake/compilerflags.cmake")
 include("cmake/tests/test_XML.cmake")
 include("cmake/tests/test_LAPACK.cmake")
@@ -14,9 +14,11 @@ include("cmake/tests/test_Wannier4.cmake")
 include("cmake/tests/test_Wannier5.cmake")
 include("cmake/tests/test_MAGMA.cmake")
 include("cmake/tests/test_GPU.cmake")
+include("cmake/tests/test_LibXC.cmake")
 if (FLEUR_USE_MPI)
 include("cmake/tests/test_SCALAPACK.cmake")
 include("cmake/tests/test_ELPA.cmake")
+include("cmake/tests/test_ChASE.cmake")
 endif()
 
 include("cmake/compileenv.txt")

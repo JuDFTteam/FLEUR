@@ -16,7 +16,7 @@
 !                each atom(-type). 
 !**********************************************************************
       CONTAINS
-      SUBROUTINE inpnoco(atoms,input,vacuum,jij,noco)
+      SUBROUTINE inpnoco(atoms,input,vacuum,noco)
 
       USE m_constants, ONLY : tpi_const
       USE m_rwnoco
@@ -26,7 +26,6 @@
       TYPE(t_atoms),INTENT(INOUT) ::atoms
       TYPE(t_input),INTENT(INOUT) ::input
       TYPE(t_vacuum),INTENT(IN)   ::vacuum
-      TYPE(t_Jij),INTENT(INOUT)   ::Jij
       TYPE(t_noco),INTENT(INOUT)  ::noco
 
 !     ..
@@ -42,11 +41,11 @@
       WRITE (6,*)'moment vector phi and theta respectively.'
       WRITE (6,*)
 
-      CALL rw_noco_read(atoms,jij,noco,input)
+      CALL rw_noco_read(atoms,noco,input)
 
-      CALL nocoInputCheck(atoms,input,vacuum,jij,noco)
+      CALL nocoInputCheck(atoms,input,vacuum,noco)
          
-      IF (.not.jij%l_j.and.noco%l_ss) THEN
+      IF (noco%l_ss) THEN
 !
 !--->    the angle beta is relative to the spiral in a spin-spiral
 !--->    calculation, i.e. if beta = 0 for all atoms in the unit cell

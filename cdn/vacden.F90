@@ -5,24 +5,18 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(&
-       vacuum,DIMENSION,stars,oneD,&
-       kpts,input,cell,atoms,noco,banddos,&
-       gvac1,gvac2,&
-       we,ikpt,jspin,vz,vz0,&
-       ne,bkpt,lapw,&
-       evac,eig,rhtxy,rht,qvac,qvlay,&
-       stcoeff,cdomvz,cdomvxy,zMat)
+  SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
+                    gVacMap,we,ikpt,jspin,vz,ne,lapw,evac,eig,den,zMat,dos)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
-    !     ****** change vacden(......,stcoeff) for starcoefficients, shz. Jan.99
+    !     ****** change vacden(......,dos%qstars) for starcoefficients, shz. Jan.99
     !     ****** changed for fleur dw
     !     In non-collinear calculations the density becomes a hermitian 2x2
     !     matrix. This subroutine generates this density matrix in the 
     !     vacuum region. The diagonal elements of this matrix (n_11 & n_22)
-    !     are store in rht and rhtxy, while the real and imaginary part
-    !     of the off-diagonal element are store in cdomvz and cdomvxy. 
+    !     are store in den%vacz and den%vacxy, while the real and imaginary part
+    !     of the off-diagonal element are stored in den%vacz(:,:,3:4) and den%vacxy(:,:,:,3). 
     !
     !     Philipp Kurz 99/07
     !***********************************************************************
@@ -33,13 +27,13 @@ CONTAINS
     !     vz       : non-warping part of the vacuum potential (matrix)
     !                collinear    : 2. index = ivac (# of vaccum)
     !                non-collinear: 2. index = ipot (comp. of pot. matr.)
-    !     rht      : non-warping part of the vacuum density matrix,
+    !     den%vacz : non-warping part of the vacuum density matrix,
     !                diagonal elements n_11 and n_22
-    !     rhtxy    : warping part of the vacuum density matrix,
+    !     den%vacxy: warping part of the vacuum density matrix,
     !                diagonal elements n_11 and n_22
-    !     cdomvz   : non-warping part of the vacuum density matrix,
-    !                off-diagonal elements n_21
-    !     cdomvxy  : warping part of the vacuum density matrix,
+    !     den%vacz(:,:,3:4): non-warping part of the vacuum density matrix,
+    !                off-diagonal elements n_21 (real part in (:,:,3), imaginary part in (:,:,4))
+    !     den%vacxy(:,:,:,3): warping part of the vacuum density matrix,
     !                off-diagonal elements n_21
     !***********************************************************************
     !
@@ -61,10 +55,14 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_atoms),INTENT(IN)      :: atoms
-    TYPE(t_zMat),INTENT(IN)       :: zMat
+    TYPE(t_mat),INTENT(IN)        :: zMat
+    TYPE(t_gVacMap),INTENT(IN)    :: gVacMap
+    TYPE(t_potden),INTENT(INOUT)  :: den
+    TYPE(t_dos),   INTENT(INOUT)  :: dos
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin      
     INTEGER, INTENT (IN) :: ne    
@@ -72,20 +70,11 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: bkpt(3)  
-    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
-    COMPLEX, INTENT (INOUT):: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
-    REAL,    INTENT (INOUT):: rht(vacuum%nmzd,2,DIMENSION%jspd)
-    REAL,    INTENT (OUT)  :: qvlay(DIMENSION%neigd,vacuum%layerd,2,kpts%nkpt,DIMENSION%jspd)
-    REAL qvac(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd),we(DIMENSION%neigd),vz(vacuum%nmzd,2),vz0(2)
-    COMPLEX, INTENT (INOUT):: cdomvz(vacuum%nmzd,2)
-    COMPLEX, INTENT (INOUT):: cdomvxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    !
+    REAL,    INTENT(IN)     :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
+    REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
-    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    INTEGER, INTENT (IN) :: gvac1(DIMENSION%nv2d),gvac2(DIMENSION%nv2d)
-    COMPLEX, INTENT (OUT):: stcoeff(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
-    !
+    REAL,    INTENT (IN)    :: eig(DIMENSION%neigd)
     !     local STM variables
     INTEGER nv2(DIMENSION%jspd)
     INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd),map2(DIMENSION%nvd,DIMENSION%jspd)
@@ -93,7 +82,7 @@ CONTAINS
     INTEGER mapg2k(DIMENSION%nv2d)
     !     .. Local Scalars ..
     COMPLEX aa,ab,av,ba,bb,bv,t1,aae,bbe,abe,bae,aaee,bbee,abee,baee,&
-         &     factorx,factory,c_1,aa_1,ab_1,ba_1,bb_1,ic,av_1,bv_1,d 
+         &     factorx,factory,c_1,aa_1,ab_1,ba_1,bb_1,ic,av_1,bv_1,d,tempCmplx
 
     REAL arg,const,ddui,dduj,dduei,dduej,eps,ev,evacp,phs,phsp,qout,&
          &     scale,sign,uei,uej,ui,uj,wronk,zks,RESULT(1),ui2,uei2,&
@@ -105,7 +94,7 @@ CONTAINS
          &        ind1,ind1p,irec2,irec3,m
     !
     !     .. Local Arrays ..
-    REAL qssbti(3,2),qssbtii
+    REAL qssbti(3,2),qssbtii,vz0(2)
     REAL bess(-oneD%odi%mb:oneD%odi%mb),dbss(-oneD%odi%mb:oneD%odi%mb)
     COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:)
     REAL,    ALLOCATABLE :: dt(:),dte(:),du(:),ddu(:,:),due(:)
@@ -134,7 +123,7 @@ CONTAINS
     !                 to calculate derivatives 
     !    tworkf: Workfunction of Tip (in hartree units) is needed for d_z^2-Orbital)
     !    starcoeff: =T: star coefficients are calculated at values of izlay for 0th (=q) to nstars-1. star 
-    !                (stcoeff(1..nstars-1))
+    !                (dos%qstars(1..nstars-1))
     !    nstars: number of star functions to be used (0th star is given by value of q=charge integrated in 2D) 
     !
     !    further possibility: (readin of locx, locy has to be implemented in flapw7.f or they have to be set explicitly)
@@ -146,7 +135,9 @@ CONTAINS
     !                 \vec{a}_1,2 are the 2D lattice vectors           
     !  
     !     **************************************************************************************************
-    ! 
+
+    CALL timestart("vacden")
+
     ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),bc(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),dt(DIMENSION%nv2d),&
          &           dte(DIMENSION%nv2d),du(vacuum%nmzd),ddu(vacuum%nmzd,DIMENSION%nv2d),due(vacuum%nmzd),&
          &           ddue(vacuum%nmzd,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
@@ -169,12 +160,11 @@ CONTAINS
     END IF ! oneD%odi%d1
     !
 
+    vz0(:) = vz(vacuum%nmz,:)
     eps=0.01
     ic = CMPLX(0.,1.)
     !    ------------------
     !     WRITE (16,'(a,i2)') 'nstars=',nstars
-
-    stcoeff(:,:,:,:) = CMPLX(0.0,0.0)
 
     !     -----> set up mapping arrays
     IF (noco%l_ss) THEN
@@ -204,16 +194,16 @@ CONTAINS
           n2 = 0
           k_loop2:DO  k = 1,lapw%nv(ispin)
              DO  j = 1,n2
-                IF ( lapw%k1(k,ispin).EQ.kvac1(j,ispin) .AND.&
-                     lapw%k2(k,ispin).EQ.kvac2(j,ispin) ) THEN
+                IF ( lapw%gvec(1,k,ispin).EQ.kvac1(j,ispin) .AND.&
+                     lapw%gvec(2,k,ispin).EQ.kvac2(j,ispin) ) THEN
                    map2(k,ispin) = j
                    CYCLE k_loop2
                 END IF
              ENDDO
              n2 = n2 + 1
              IF (n2>DIMENSION%nv2d)  CALL juDFT_error("vacden0","vacden")
-             kvac1(n2,ispin) = lapw%k1(k,ispin)
-             kvac2(n2,ispin) = lapw%k2(k,ispin)
+             kvac1(n2,ispin) = lapw%gvec(1,k,ispin)
+             kvac2(n2,ispin) = lapw%gvec(2,k,ispin)
              map2(k,ispin) = n2
           ENDDO k_loop2
           nv2(ispin) = n2
@@ -246,22 +236,13 @@ CONTAINS
        DO j=1, n2max
           mapg2k(j)=j
           DO i=1, nv2(jspin)
-             IF ( kvac1(i,jspin).EQ.gvac1(j) .AND.&
-                  &              kvac2(i,jspin).EQ.gvac2(j) ) &
-                  &              mapg2k(j)=i
+             IF (kvac1(i,jspin).EQ.gVacMap%gvac1d(j).AND.kvac2(i,jspin).EQ.gVacMap%gvac2d(j)) mapg2k(j)=i
           END DO
        END DO
     END IF
     !
     !-dw
-    IF (noco%l_noco) THEN
-       OPEN (25,FILE='potmat',FORM='unformatted',&
-            &         STATUS='old')
-       !--->    skip the four components of the interstitial potential matrix
-       DO ipot = 1,3
-          READ (25)
-       ENDDO
-    ENDIF
+   
 
     wronk = 2.0
     const = 1.0 / ( SQRT(cell%omtil)*wronk )
@@ -275,15 +256,7 @@ CONTAINS
        ac(:,:,:) = CMPLX(0.0,0.0)
        bc(:,:,:) = CMPLX(0.0,0.0)
        sign = 3. - 2.*ivac
-       IF (noco%l_noco) THEN
-          !--->       read the non-warping potential matrix, it is needed to 
-          !--->       calculate the vacuum basis functions
-          READ (25)((vz(imz,ipot),imz=1,vacuum%nmzd),ipot=1,2)
-          !--->       skip the warping potential matrix
-          DO ipot = 1,3
-             READ (25)
-          ENDDO
-       ENDIF
+      
        IF (noco%l_noco) THEN
           !--->    In a non-collinear calculation vacden is only called once.
           !--->    Thus, the vaccum wavefunctions and the A- and B-coeff. (ac bc)
@@ -302,7 +275,7 @@ CONTAINS
                      cell,vacuum,DIMENSION,stars,&
                      oneD,qssbti(3,ispin),&
                      oneD%odi%n2d,&
-                     wronk,evacp,bkpt,oneD%odi%M,oneD%odi%mb,&
+                     wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
                      vz(1,ispin),kvac3(1,ispin),nv2(ispin),&
                      t_1(1,-oneD%odi%mb),dt_1(1,-oneD%odi%mb),u_1(1,1,-oneD%odi%mb,ispin),&
                      te_1(1,-oneD%odi%mb),dte_1(1,-oneD%odi%mb),&
@@ -311,7 +284,7 @@ CONTAINS
                 DO k = 1,lapw%nv(ispin)
                    kspin = (lapw%nv(1)+atoms%nlotot)*(ispin-1) + k
                    l = map1(k,ispin) 
-                   irec3 = stars%ig(lapw%k1(k,ispin),lapw%k2(k,ispin),lapw%k3(k,ispin))
+                   irec3 = stars%ig(lapw%gvec(1,k,ispin),lapw%gvec(2,k,ispin),lapw%gvec(3,k,ispin))
                    IF (irec3.NE.0) THEN
                       irec2 = stars%ig2(irec3)
                       zks = stars%sk2(irec2)*cell%z1
@@ -330,11 +303,11 @@ CONTAINS
                               t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                               ((wronk_1)*SQRT(cell%omtil))
                          IF (zmat%l_real) THEN
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_r(kspin,:ne)*bv_1
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%data_r(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%data_r(kspin,:ne)*bv_1
                          ELSE
-                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*av_1
-                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%z_c(kspin,:ne)*bv_1
+                            ac_1(l,m,:ne,ispin) = ac_1(l,m,:ne,ispin) + zMat%data_c(kspin,:ne)*av_1
+                            bc_1(l,m,:ne,ispin) = bc_1(l,m,:ne,ispin) + zMat%data_c(kspin,:ne)*bv_1
                          END IF
                       END DO      ! -mb:mb
                    END IF
@@ -343,8 +316,8 @@ CONTAINS
                 vz0(ispin) = vz(vacuum%nmz,ispin)
                 evacp = evac(ivac,ispin)
                 DO ik = 1,nv2(ispin)
-                   v(1) = bkpt(1) + kvac1(ik,ispin) + qssbti(1,ispin)
-                   v(2) = bkpt(2) + kvac2(ik,ispin) + qssbti(2,ispin)
+                   v(1) = lapw%bkpt(1) + kvac1(ik,ispin) + qssbti(1,ispin)
+                   v(2) = lapw%bkpt(2) + kvac2(ik,ispin) + qssbti(2,ispin)
                    v(3) = 0.
                    ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
                    CALL vacuz(ev,vz(1,ispin),vz0(ispin),vacuum%nmz,vacuum%delz,t(ik),&
@@ -373,11 +346,11 @@ CONTAINS
                    bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                    !     -----> loop over basis functions
                    IF (zmat%l_real) THEN
-                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_r(kspin,:ne)*av
-                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_r(kspin,:ne)*bv
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_r(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%data_r(kspin,:ne)*bv
                    ELSE
-                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%z_c(kspin,:ne)*av
-                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%z_c(kspin,:ne)*bv
+                      ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_c(kspin,:ne)*av
+                      bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%data_c(kspin,:ne)*bv
                    ENDIF
                 ENDDO
                 !--->       end of spin loop
@@ -404,7 +377,7 @@ CONTAINS
                   &           cell,vacuum,DIMENSION,stars,&
                   &           oneD,qssbtii,&
                   &           oneD%odi%n2d,&
-                  &           wronk,evacp,bkpt,oneD%odi%M,oneD%odi%mb,&
+                  &           wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
                   &           vz(1,ivac),kvac3(1,jspin),nv2(jspin),&
                   &           t_1(1,-oneD%odi%mb),dt_1(1,-oneD%odi%mb),u_1(1,1,-oneD%odi%mb,jspin),&
                   &           te_1(1,-oneD%odi%mb),dte_1(1,-oneD%odi%mb),&
@@ -412,7 +385,7 @@ CONTAINS
                   &           ue_1(1,1,-oneD%odi%mb,jspin))
              DO k = 1,lapw%nv(jspin)
                 l = map1(k,jspin)
-                irec3 = stars%ig(lapw%k1(k,jspin),lapw%k2(k,jspin),lapw%k3(k,jspin))
+                irec3 = stars%ig(lapw%gvec(1,k,jspin),lapw%gvec(2,k,jspin),lapw%gvec(3,k,jspin))
                 IF (irec3.NE.0) THEN
                    irec2 = stars%ig2(irec3)
                    zks = stars%sk2(irec2)*cell%z1
@@ -430,11 +403,11 @@ CONTAINS
                            t_1(l,m)*stars%sk2(irec2)*dbss(m),0.0)/&
                            ((wronk_1)*SQRT(cell%omtil))
                       IF (zmat%l_real) THEN
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_r(k,:ne)*bv_1
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%data_r(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%data_r(k,:ne)*bv_1
                       ELSE
-                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*av_1
-                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%z_c(k,:ne)*bv_1
+                         ac_1(l,m,:ne,jspin) = ac_1(l,m,:ne,jspin) + zMat%data_c(k,:ne)*av_1
+                         bc_1(l,m,:ne,jspin) = bc_1(l,m,:ne,jspin) + zMat%data_c(k,:ne)*bv_1
                       ENDIF
                    END DO      ! -mb:mb
                 END IF
@@ -442,8 +415,8 @@ CONTAINS
           ELSE     !oneD%odi%d1
              evacp = evac(ivac,jspin)
              DO ik = 1,nv2(jspin)
-                v(1) = bkpt(1) + kvac1(ik,jspin)
-                v(2) = bkpt(2) + kvac2(ik,jspin)
+                v(1) = lapw%bkpt(1) + kvac1(ik,jspin)
+                v(2) = lapw%bkpt(2) + kvac2(ik,jspin)
                 v(3) = 0.
                 ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
                 CALL vacuz(ev,vz(1,ivac),vz0(ivac),vacuum%nmz,vacuum%delz,t(ik),dt(ik),u(1,ik,jspin))
@@ -468,11 +441,11 @@ CONTAINS
                 bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
                 !     -----> loop over basis functions
                 IF (zmat%l_real) THEN
-                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_r(k,:ne)*av
-                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_r(k,:ne)*bv
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_r(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_r(k,:ne)*bv
                 ELSE
-                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%z_c(k,:ne)*av
-                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%z_c(k,:ne)*bv
+                   ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_c(k,:ne)*av
+                   bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_c(k,:ne)*bv
                 ENDIF
              ENDDO
           END IF ! D1
@@ -519,7 +492,7 @@ CONTAINS
           DO n = 1, ne
              IF (ABS(eig(n)-vacuum%tworkf).LE.emax) i=i+1
           END DO
-          WRITE (87,FMT=990) bkpt(1), bkpt(2), i, n2max
+          WRITE (87,FMT=990) lapw%bkpt(1),lapw%bkpt(2), i, n2max
           DO n = 1, ne
              IF (ABS(eig(n)-vacuum%tworkf).LE.emax) THEN
                 WRITE (87,FMT=1000) eig(n)
@@ -557,10 +530,8 @@ CONTAINS
                 bb = bb + we(n)*CONJG(bc(l,n,jspin))*bc(l,n,jspin)
                 ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                 ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
-                qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+&
-                     &                 tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                qvac(n,ivac,ikpt,jspin) = qvac(n,ivac,ikpt,jspin) + &
-                     &                                                      qout*cell%area
+                qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
+                dos%qvac(n,ivac,ikpt,jspin) = dos%qvac(n,ivac,ikpt,jspin) + qout*cell%area
              END DO
              aae=-aa*vacuum%tworkf*2/3
              bbe=-bb*vacuum%tworkf*2/3
@@ -575,7 +546,7 @@ CONTAINS
                 uei = ue(jz,l,jspin)
                 ddui = ddu(jz,l) 
                 dduei = ddue(jz,l)
-                rht(jz,ivac,jspin) = rht(jz,ivac,jspin) +&
+                den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +&
                      REAL(aaee*ui*ui+bbee*uei*uei+&
                      (abee+baee)*ui*uei+aa*ddui*ddui+&
                      bb*dduei*dduei+(ab+ba)*ddui*dduei+&
@@ -608,12 +579,12 @@ CONTAINS
                             qout = REAL(CONJG(ac_1(l,m,n,ispin))*ac_1(l,m,n,ispin) +&
                                  tei_1(l,m,ispin)*CONJG(bc_1(l,m,n,ispin))*&
                                  bc_1(l,m,n,ispin))
-                            qvac(n,ivac,ikpt,ispin) = qvac(n,ivac,ikpt,ispin)+qout*cell%area
+                            dos%qvac(n,ivac,ikpt,ispin) = dos%qvac(n,ivac,ikpt,ispin)+qout*cell%area
                          END DO
                          DO  jz = 1,vacuum%nmz
                             ui = u_1(jz,l,m,ispin)
                             uei = ue_1(jz,l,m,ispin)
-                            rht(jz,ivac,ispin) = rht(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                            den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                          END DO
                       END DO
                    END DO
@@ -629,12 +600,12 @@ CONTAINS
                          ab=ab + we(n)*CONJG(ac(l,n,ispin))*bc(l,n,ispin)
                          ba=ba + we(n)*CONJG(bc(l,n,ispin))*ac(l,n,ispin)
                          qout = REAL(CONJG(ac(l,n,ispin))*ac(l,n,ispin)+tei(l,ispin)*CONJG(bc(l,n,ispin))*bc(l,n,ispin))
-                         qvac(n,ivac,ikpt,ispin) = qvac(n,ivac,ikpt,ispin) + qout*cell%area
+                         dos%qvac(n,ivac,ikpt,ispin) = dos%qvac(n,ivac,ikpt,ispin) + qout*cell%area
                       END DO
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
                          uei = ue(jz,l,ispin)
-                         rht(jz,ivac,ispin) = rht(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                       ENDDO
                    ENDDO
                 END IF ! one-dimensional
@@ -654,12 +625,12 @@ CONTAINS
                          ba = ba + we(n)*CONJG(bc_1(l,m,n,jspin))*ac_1(l,m,n,jspin)
                          qout = REAL(CONJG(ac_1(l,m,n,jspin))*ac_1(l,m,n,jspin)+&
                               tei_1(l,m,jspin)*CONJG(bc_1(l,m,n,jspin))*bc_1(l,m,n,jspin))
-                         qvac(n,ivac,ikpt,jspin) = qvac(n,ivac,ikpt,jspin)+qout*cell%area
+                         dos%qvac(n,ivac,ikpt,jspin) = dos%qvac(n,ivac,ikpt,jspin)+qout*cell%area
                       END DO
                       DO  jz = 1,vacuum%nmz
                          ui = u_1(jz,l,m,jspin)
                          uei = ue_1(jz,l,m,jspin)
-                         rht(jz,ivac,jspin) = rht(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                       END DO
                    END DO
                 END DO
@@ -675,12 +646,12 @@ CONTAINS
                       ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                       ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                       qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                      qvac(n,ivac,ikpt,jspin) = qvac(n,ivac,ikpt,jspin) + qout*cell%area
+                      dos%qvac(n,ivac,ikpt,jspin) = dos%qvac(n,ivac,ikpt,jspin) + qout*cell%area
                    END DO
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)
                       uei = ue(jz,l,jspin)
-                      rht(jz,ivac,jspin) = rht(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                      den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                    ENDDO
                 END DO
              END IF ! D1
@@ -725,8 +696,7 @@ CONTAINS
                             ll = ll+1
                          END DO
                          CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                         qvlay(n,jj,ivac,ikpt,jspin) =&
-                              &                           qvlay(n,jj,ivac,ikpt,jspin) + RESULT(1)
+                         dos%qvlay(n,jj,ivac,ikpt,jspin) = dos%qvlay(n,jj,ivac,ikpt,jspin) + RESULT(1)
                       ELSE
                          ui = u(vacuum%izlay(jj,1),l,jspin)       
                          uei = ue(vacuum%izlay(jj,1),l,jspin)
@@ -737,7 +707,7 @@ CONTAINS
                               bb*dduei*dduei+(ab+ba)*ddui*dduei+&
                               2*aae*ui*ddui+2*bbe*uei*dduei+&
                               (abe+bae)*(ui*dduei+uei*ddui))
-                         qvlay(n,jj,ivac,ikpt,jspin) = qvlay(n,jj,ivac,ikpt,jspin) +yy (1)
+                         dos%qvlay(n,jj,ivac,ikpt,jspin) = dos%qvlay(n,jj,ivac,ikpt,jspin) +yy (1)
                       END IF
                    END DO
                 END DO
@@ -777,11 +747,11 @@ CONTAINS
                                   ll = ll+1
                                END DO
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                               qvlay(n,jj,ivac,ikpt,ispin) = qvlay(n,jj,ivac,ikpt,ispin) + RESULT(1)
+                               dos%qvlay(n,jj,ivac,ikpt,ispin) = dos%qvlay(n,jj,ivac,ikpt,ispin) + RESULT(1)
                             ELSE
                                ui = u(vacuum%izlay(jj,1),l,ispin)       
                                uei = ue(vacuum%izlay(jj,1),l,ispin)
-                               qvlay(n,jj,ivac,ikpt,ispin) =qvlay(n,jj,ivac,ikpt,ispin) + REAL(&
+                               dos%qvlay(n,jj,ivac,ikpt,ispin) = dos%qvlay(n,jj,ivac,ikpt,ispin) + REAL(&
                                     aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
 
                             END IF
@@ -837,13 +807,13 @@ CONTAINS
                                   ll = ll+1
                                END DO
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                               qvlay(n,jj,ivac,ikpt,jspin) = qvlay(n,jj,ivac,ikpt,jspin) + RESULT(1)
+                               dos%qvlay(n,jj,ivac,ikpt,jspin) = dos%qvlay(n,jj,ivac,ikpt,jspin) + RESULT(1)
                             ELSE
                                ui = u(vacuum%izlay(jj,1),l,jspin)       
                                uei = ue(vacuum%izlay(jj,1),l,jspin)
                                uj = u(vacuum%izlay(jj,1),l1,jspin)
                                uej = ue(vacuum%izlay(jj,1),l1,jspin)
-                               qvlay(n,jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                               dos%qvlay(n,jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
                             END IF
                          END DO
                       END DO
@@ -907,8 +877,8 @@ CONTAINS
                         + abe*(ui*dduej+uj*dduei)+bae*(ddui*uej+dduj*uei)&
                         + aa*ddui*dduj+bb*dduei*dduej+ba*ddui*dduej&
                         + ab*dduei*dduj  
-                   rhtxy(jz,ind2-1,ivac,jspin) = rhtxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
-                   rhtxy(jz,ind2p-1,ivac,jspin)=rhtxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                   den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
+                   den%vacxy(jz,ind2p-1,ivac,jspin)= den%vacxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                 ENDDO
              ENDDO
           END DO
@@ -952,10 +922,10 @@ CONTAINS
                                      uej = ue_1(jz,l1,m1,ispin)
                                      t1 = aa*ui*uj + bb*uei*uej + ba*ui*uej + ab*uei*uj
                                      IF (ind1.NE.0) THEN
-                                        rhtxy(jz,ind1-1,ivac,ispin) = rhtxy(jz,ind1-1,ivac,ispin) + t1/ oneD%odi%nst2(ind1)
+                                        den%vacxy(jz,ind1-1,ivac,ispin) = den%vacxy(jz,ind1-1,ivac,ispin) + t1/ oneD%odi%nst2(ind1)
                                      END IF
                                      IF (ind1p.NE.0) THEN
-                                        rhtxy(jz,ind1p-1,ivac,ispin) = rhtxy(jz,ind1p-1,ivac,ispin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
+                                        den%vacxy(jz,ind1p-1,ivac,ispin) = den%vacxy(jz,ind1p-1,ivac,ispin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
                                      END IF
 
                                   END DO xys1
@@ -995,8 +965,8 @@ CONTAINS
                             uei = ue(jz,l,ispin)
                             uej = ue(jz,l1,ispin)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            rhtxy(jz,ind2-1,ivac,ispin) = rhtxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
-                            rhtxy(jz,ind2p-1,ivac,ispin) = rhtxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                            den%vacxy(jz,ind2-1,ivac,ispin) = den%vacxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
+                            den%vacxy(jz,ind2p-1,ivac,ispin) = den%vacxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                          ENDDO
                       ENDDO
                    ENDDO
@@ -1030,7 +1000,9 @@ CONTAINS
                                      uj = u_1(jz,l1,m1,2)
                                      uei = ue_1(jz,l,m,1)
                                      uej = ue_1(jz,l1,m1,2)
-                                     cdomvz(jz,ivac) = cdomvz(jz,ivac) + aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                                     tempCmplx = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                                     den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
+                                     den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) + AIMAG(tempCmplx)
                                   END DO xys3
                                ELSE ! the warped part (ind1 > 1)
                                   aa = CMPLX(0.,0.)
@@ -1049,7 +1021,7 @@ CONTAINS
                                      uei = ue_1(jz,l,m,1)
                                      uej = ue_1(jz,l1,m1,2)
                                      t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                                     cdomvxy(jz,ind1-1,ivac) = cdomvxy(jz,ind1-1,ivac) + t1/oneD%odi%nst2(ind1)
+                                     den%vacxy(jz,ind1-1,ivac,3) = den%vacxy(jz,ind1-1,ivac,3) + t1/oneD%odi%nst2(ind1)
                                   END DO xys2
                                END IF  ! the non-warped (ind1 = 1)
                             END IF   ! ind1.ne.0
@@ -1087,7 +1059,9 @@ CONTAINS
                             ui2 = u(jz,l1,2)
                             uei = ue(jz,l,1)
                             uei2 = ue(jz,l1,2)
-                            cdomvz(jz,ivac) = cdomvz(jz,ivac) + aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
+                            tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
+                            den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
+                            den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) + AIMAG(tempCmplx)
                          ENDDO
                       ELSE
                          !--->                warping part
@@ -1107,7 +1081,7 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uej = ue(jz,l1,2)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            cdomvxy(jz,ind2-1,ivac) = cdomvxy(jz, ind2-1,ivac) + t1*phs/stars%nstr2(ind2)
+                            den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + t1*phs/stars%nstr2(ind2)
                          ENDDO
                       ENDIF
                    ENDDO
@@ -1145,10 +1119,10 @@ CONTAINS
                                   uej = ue_1(jz,l1,m1,jspin)
                                   t1 = aa*ui*uj + bb*uei*uej + ba*ui*uej + ab*uei*uj
                                   IF (ind1.NE.0) THEN
-                                     rhtxy(jz,ind1-1,ivac,jspin) = rhtxy(jz,ind1-1,ivac,jspin) + t1/ oneD%odi%nst2(ind1)
+                                     den%vacxy(jz,ind1-1,ivac,jspin) = den%vacxy(jz,ind1-1,ivac,jspin) + t1/ oneD%odi%nst2(ind1)
                                   END IF
                                   IF (ind1p.NE.0) THEN
-                                     rhtxy(jz,ind1p-1,ivac,jspin) = rhtxy(jz,ind1p-1,ivac,jspin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
+                                     den%vacxy(jz,ind1p-1,ivac,jspin) = den%vacxy(jz,ind1p-1,ivac,jspin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
                                   END IF
 
                                END DO xys
@@ -1190,8 +1164,8 @@ CONTAINS
                          uei = ue(jz,l,jspin)
                          uej = ue(jz,l1,jspin)
                          t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                         rhtxy(jz,ind2-1,ivac,jspin) = rhtxy(jz,ind2-1, ivac,jspin) + t1*phs/stars%nstr2(ind2)
-                         rhtxy(jz,ind2p-1,ivac,jspin) = rhtxy(jz,ind2p-1, ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                         den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1, ivac,jspin) + t1*phs/stars%nstr2(ind2)
+                         den%vacxy(jz,ind2p-1,ivac,jspin) = den%vacxy(jz,ind2p-1, ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                       ENDDO
                    ENDDO
                 END DO
@@ -1201,7 +1175,7 @@ CONTAINS
        !=============================================================
        !
        !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue 
-       !           to stcoeff(ne,layer,ivac) if starcoeff=T (the star coefficient values are written to vacdos)
+       !           to dos%qstars(ne,layer,ivac,ikpt) if starcoeff=T (the star coefficient values are written to vacdos)
        !
        IF (vacuum%starcoeff .AND. banddos%vacdos) THEN
           DO  n=1,ne
@@ -1232,9 +1206,9 @@ CONTAINS
                          uej = ue(vacuum%izlay(jj,1),l1,jspin)
                          t1 = aa*ui*uj + bb*uei*uej +ba*ui*uej + ab*uei*uj
                          IF (ind2.GE.2.AND.ind2.LE.vacuum%nstars) &
-                              stcoeff(ind2-1,n,jj,ivac) = stcoeff(ind2-1,n,jj,ivac)+ t1*phs/stars%nstr2(ind2)
+                              dos%qstars(ind2-1,n,jj,ivac,ikpt,jspin) = dos%qstars(ind2-1,n,jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
                          IF (ind2p.GE.2.AND.ind2p.LE.vacuum%nstars) &
-                              stcoeff(ind2p-1,n,jj,ivac) = stcoeff(ind2p-1,n,jj,ivac) +CONJG(t1)*phs/stars%nstr2(ind2p)
+                              dos%qstars(ind2p-1,n,jj,ivac,ikpt,jspin) = dos%qstars(ind2p-1,n,jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
                       END DO
                    END IF
                 ENDDO
@@ -1242,13 +1216,23 @@ CONTAINS
           ENDDO
        END IF
     ENDDO
-    IF (noco%l_noco) CLOSE (25)
     DEALLOCATE (ac,bc,dt,dte,du,ddu,due,ddue,t,te,tei,u,ue,v,yy )
 
     IF (oneD%odi%d1) THEN
        DEALLOCATE (ac_1,bc_1,dt_1,dte_1,du_1,ddu_1,due_1,ddue_1)
        DEALLOCATE (t_1,te_1,tei_1,u_1,ue_1)
     END IF ! oneD%odi%d1
+
+    IF(vacuum%nvac.EQ.1) THEN
+       den%vacz(:,2,:) = den%vacz(:,1,:)
+       IF (sym%invs) THEN
+          den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+       ELSE
+          den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+       END IF
+    END IF
+
+    CALL timestop("vacden")
 
   END SUBROUTINE vacden
 END MODULE m_vacden

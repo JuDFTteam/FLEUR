@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
 
     !     ..
     !     ..
@@ -37,7 +37,7 @@ CONTAINS
     REAL gmi,gla,eps 
     REAL gfx,gfy,pon,pon2
     INTEGER j,k,k1,k2,k3,m0,mxx1,mxx2,n
-    INTEGER ned1,nint,kdone,i
+    INTEGER ned1,nint,kdone,i,i_sym,n_sym
     LOGICAL NEW,l_cdn1,l_xcExtended, l_error
     INTEGER kfx,kfy,kfz,kidx,nfftx,nffty,nfftz,kfft
     INTEGER nfftxy,norm,n1,kidx2,k2i
@@ -70,6 +70,12 @@ CONTAINS
        GOTO 270
     END IF
  
+    IF (input%film.AND.sym%invs.AND.(.not.sym%zrfs).AND.(.not.sym%symor)) THEN
+      n_sym = 2 ! needs reordering of 2d-stars
+    ELSE
+      n_sym = 1 ! as before...
+    ENDIF
+
     mxx1 = 0
     mxx2 = 0
     stars%ng2 = 0
@@ -80,45 +86,53 @@ CONTAINS
        kv(1) = k1
        k2_loop:DO  k2 = stars%mx2,-stars%mx2,-1
           kv(2) = k2
-          DO j = 1,2
-             g(j) = kv(1)*cell%bmat(1,j) + kv(2)*cell%bmat(2,j)
-          ENDDO
-          s = SQRT(g(1)**2+g(2)**2)
-          !--->   determine the angle of the G_{||} needed in odim calculations
-          !+odim YM cute little 'angle' is written by me to determine the phi2
-          phi = angle(g(1),g(2))
-          !-odim
-          !
-          !--->   check if generated vector belongs to a star already
-          !--->   stars should be within the g_max-sphere !   (Oct.97) sbluegel
-          !
-          IF (s.LT.stars%gmax) THEN      
-             CALL spgrot(&
-                  &                     sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-                  &                     kv,&
-                  &                     kr)
-             DO n = 1,sym%nop2
-                IF (mxx1.LT.kr(1,n)) mxx1 = kr(1,n)
-                IF (mxx2.LT.kr(2,n)) mxx2 = kr(2,n)
-             ENDDO
-             DO k = 1,stars%ng2 
-                DO n = 1,sym%nop2
-                   IF (kr(1,n).EQ.stars%kv2(1,k) .AND.&
-                        &                   kr(2,n).EQ.stars%kv2(2,k)) CYCLE k2_loop
-                ENDDO
-             ENDDO
-             !--->    new representative found
-             stars%ng2 = stars%ng2 + 1
-             IF (stars%ng2.GT.stars%ng2) THEN
-                WRITE (6,8070) stars%ng2,stars%ng2
-                CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
-             ENDIF
-             DO j = 1,2
-                stars%kv2(j,stars%ng2) = kv(j)
-             ENDDO
-             stars%sk2(stars%ng2) = s
-             stars%phi2(stars%ng2) = phi
-          ENDIF
+
+          DO i_sym = 1, n_sym
+            IF (i_sym == 2) THEN
+               kv(1) = - kv(1) ; kv(2) = - kv(2)
+            ENDIF
+
+            DO j = 1,2
+               g(j) = kv(1)*cell%bmat(1,j) + kv(2)*cell%bmat(2,j)
+            ENDDO
+            s = SQRT(g(1)**2+g(2)**2)
+            !--->   determine the angle of the G_{||} needed in odim calculations
+            !+odim YM cute little 'angle' is written by me to determine the phi2
+            phi = angle(g(1),g(2))
+            !-odim
+            !
+            !--->   check if generated vector belongs to a star already
+            !--->   stars should be within the g_max-sphere !   (Oct.97) sbluegel
+            !
+            IF (s.LT.stars%gmax) THEN      
+               CALL spgrot(&
+                    &                     sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
+                    &                     kv,&
+                    &                     kr)
+               DO n = 1,sym%nop2
+                  IF (mxx1.LT.kr(1,n)) mxx1 = kr(1,n)
+                  IF (mxx2.LT.kr(2,n)) mxx2 = kr(2,n)
+               ENDDO
+               DO k = 1,stars%ng2 
+                  DO n = 1,sym%nop2
+                     IF (kr(1,n).EQ.stars%kv2(1,k) .AND.&
+                          &                   kr(2,n).EQ.stars%kv2(2,k)) CYCLE k2_loop
+                  ENDDO
+               ENDDO
+               !--->    new representative found
+               stars%ng2 = stars%ng2 + 1
+               IF (stars%ng2.GT.stars%ng2) THEN
+                  WRITE (6,8070) stars%ng2,stars%ng2
+                  CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
+               ENDIF
+               DO j = 1,2
+                  stars%kv2(j,stars%ng2) = kv(j)
+               ENDDO
+               stars%sk2(stars%ng2) = s
+               stars%phi2(stars%ng2) = phi
+            ENDIF
+            ENDDO ! i_sym
+
        ENDDO k2_loop
     ENDDO
 8070 FORMAT ('nq2 = ',i5,' > n2d =',i5)
@@ -564,7 +578,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,s

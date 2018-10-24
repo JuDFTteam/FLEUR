@@ -6,9 +6,11 @@
 
 MODULE m_corespec_eval
 
-  USE m_corespec
-  USE m_types
+  USE m_types_setup
+  USE m_types_usdus
+  USE m_types_cdnval, ONLY: t_eigVecCoeffs
   USE m_constants
+  USE m_corespec
 
   IMPLICIT NONE
 
@@ -362,14 +364,13 @@ MODULE m_corespec_eval
 !-------------------------------------------------------------------------------
 !
   subroutine corespec_dos(atoms,usdus,ispin,lmd,nkpt,ikpt,&
-                          neigd,noccbd,efermi,sig_dos,&
-                          eig,we,acof,bcof,&
-                          ccof)
+                          neigd,noccbd,efermi,sig_dos,eig,we,eigVecCoeffs)
 
     IMPLICIT NONE
 
-    TYPE (t_atoms), INTENT(IN)   :: atoms
-    TYPE (t_usdus), INTENT(IN)   :: usdus
+    TYPE (t_atoms), INTENT(IN)      :: atoms
+    TYPE (t_usdus), INTENT(IN)      :: usdus
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
 
 !     .. Scalar Arguments ..
     integer, intent(in) :: ispin,lmd,nkpt,ikpt
@@ -377,9 +378,6 @@ MODULE m_corespec_eval
     real, intent(in) :: efermi,sig_dos
 !     .. Array Arguments ..
     real, intent (in) :: eig(neigd),we(noccbd)
-    complex, intent (in) :: acof(noccbd,0:lmd,atoms%nat)
-    complex, intent (in) :: bcof(noccbd,0:lmd,atoms%nat)
-    complex, intent (in) :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat)
 
 ! local variables
     integer :: lx,lmx,nen,nex
@@ -417,14 +415,14 @@ MODULE m_corespec_eval
 !!$          do l2 = 0,lx
 !!$            do m2 = -l2,l2
 !!$              lm2 = l2*(l2+1)+m2
-          csv%dosb(1,1,lm1,lm1,iband) = dble(acof(iband,lm1,iatom)*&
-               &conjg(acof(iband,lm1,iatom)))*we(1)
-          csv%dosb(1,2,lm1,lm1,iband) = dble(acof(iband,lm1,iatom)*&
-               &conjg(bcof(iband,lm1,iatom)))
-          csv%dosb(2,1,lm1,lm1,iband) = dble(bcof(iband,lm1,iatom)*&
-               &conjg(acof(iband,lm1,iatom)))
-          csv%dosb(2,2,lm1,lm1,iband) = dble(bcof(iband,lm1,iatom)*&
-               &conjg(bcof(iband,lm1,iatom)))*we(1)*usdus%ddn(l1,csi%atomType,ispin)
+          csv%dosb(1,1,lm1,lm1,iband) = dble(eigVecCoeffs%acof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))!*we(1)
+          csv%dosb(1,2,lm1,lm1,iband) = dble(eigVecCoeffs%acof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))
+          csv%dosb(2,1,lm1,lm1,iband) = dble(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%acof(iband,lm1,iatom,ispin)))
+          csv%dosb(2,2,lm1,lm1,iband) = dble(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%bcof(iband,lm1,iatom,ispin)))!*we(1)*usdus%ddn(l1,csi%atomType,ispin)
 !!!!! this has to be checked: is >> ddn << factor necessary !!!!!
 !!$        enddo
 !!$        enddo
@@ -509,7 +507,7 @@ MODULE m_corespec_eval
         orpref(1:nor) = (4.d0*pi_const)**2
         if(.not.allocated(ylm)) allocate(ylm(0:lax*(lax+2),nor))
         do ior = 1,nor
-          CALL ylm4(lax,orvec,ylm(0,ior))
+          CALL ylm4(lax,orvec,ylm(:,ior))
           do la1 = lan,lax ; do mu1 = -la1,la1
             lamu = la1*(la1+1)+mu1
             write(98,'(3i5,2f12.8)') la1,mu1,lamu,ylm(lamu,ior)

@@ -5,7 +5,7 @@ IMPLICIT NONE
 CONTAINS
 
 SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                              oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                              oneD,hybrid,cell,banddos,sliceplot,xcpot,&
                               noco,dimension,enpara,sphhar)
 
    USE m_types
@@ -21,17 +21,18 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    TYPE(t_kpts),      INTENT(IN) :: kpts
    TYPE(t_oneD),      INTENT(IN) :: oneD
    TYPE(t_hybrid),    INTENT(IN) :: hybrid
-   TYPE(t_Jij),       INTENT(IN) :: jij
    TYPE(t_cell),      INTENT(IN) :: cell
    TYPE(t_banddos),   INTENT(IN) :: banddos
    TYPE(t_sliceplot), INTENT(IN) :: sliceplot
-   TYPE(t_xcpot),     INTENT(IN) :: xcpot
+   CLASS(t_xcpot),    INTENT(IN) :: xcpot
    TYPE(t_noco),      INTENT(IN) :: noco
    TYPE(t_dimension), INTENT(IN) :: dimension
    TYPE(t_enpara),    INTENT(IN) :: enpara
    TYPE(t_sphhar),    INTENT(IN) :: sphhar
 
-   CHARACTER(LEN=20) :: attributes(7)
+   INTEGER            :: i
+   REAL               :: sumWeight
+   CHARACTER(LEN=20)  :: attributes(7)
 
    CALL openXMLElementNoAttributes('numericalParameters')
 
@@ -56,6 +57,21 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    WRITE(attributes(1),'(i0)') dimension%neigd
    CALL writeXMLElementFormPoly('bands',(/'numbands'/),&
                                 attributes(:1),reshape((/9,8/),(/1,2/)))
+
+   sumWeight = SUM(kpts%wtkpt(:kpts%nkpt))
+   WRITE(attributes(1),'(f0.8)') kpts%posScale
+   WRITE(attributes(2),'(f0.8)') sumWeight
+   WRITE(attributes(3),'(i0)') kpts%nkpt
+   CALL openXMLElementFormPoly('kPointList',(/'posScale   ', 'weightScale', 'count      '/),&
+                               attributes(:3),reshape((/8,11,5,10,10,5/),(/3,2/)))
+   DO i = 1, kpts%nkpt
+      WRITE(attributes(1),'(f12.6)') kpts%wtkpt(i)
+      WRITE(attributes(2),'(f12.6)') kpts%bk(1,i)
+      WRITE(attributes(3),'(f12.6)') kpts%bk(2,i)
+      WRITE(attributes(4),'(f12.6)') kpts%bk(3,i)
+      CALL writeXMLElementForm('kPoint', (/'weight'/), attributes(:1),reshape((/6,12/),(/1,2/)),attributes(2:4))
+   END DO
+   CALL closeXMLElement('kPointList')
 
    CALL closeXMLElement('numericalParameters')
 

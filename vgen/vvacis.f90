@@ -1,4 +1,4 @@
-MODULE m_vvacis
+module m_vvacis
   !     **********************************************************
   !     g.ne.0 coefficients of vacuum coulomb potential          *
   !     due to the interstitial charge density inside slab       *
@@ -6,138 +6,121 @@ MODULE m_vvacis
   !     **********************************************************
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
-CONTAINS
-  SUBROUTINE vvacis(&
-       &                  stars,vacuum,&
-       &                  sym,cell,&
-       &                  psq, input,&
-       &                  vxy)
+  contains
 
-    USE m_constants
-    USE m_types
-    IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_vacuum),INTENT(IN)  :: vacuum
-    TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_stars),INTENT(IN)   :: stars
-    TYPE(t_cell),INTENT(IN)    :: cell
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: psq(stars%ng3)
-    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-    !     ..
-    !     .. Local Scalars ..
-    COMPLEX arg,ci
-    REAL dh,g,qz,sign,signz,vcons,z,e_m
-    REAL arg_r,arg_i
-    INTEGER i2d,ig3n,imz,imzxy,ivac,k1,k2,kz,m0,nrec2,nrz,nz
-    !     ..
-    !     .. Local Arrays ..
-    COMPLEX sumr(2)
-    !     ..
-    !     .. Intrinsic Functions ..
-    INTRINSIC exp
-    !     ..
-    ci = CMPLX(0.0,1.0)
+  subroutine vvacis( stars, vacuum, sym, cell, psq, input, field, vxy )
 
-    vxy(:,:,:,1) = CMPLX(0.,0.)
+    use m_constants
+    use m_types
+    implicit none
+
+    type(t_input),  intent(in)  :: input
+    type(t_field),  intent(in)  :: field
+    type(t_vacuum), intent(in)  :: vacuum
+    type(t_sym),    intent(in)  :: sym
+    type(t_stars),  intent(in)  :: stars
+    type(t_cell),   intent(in)  :: cell
+    complex,        intent(in)  :: psq(stars%ng3)
+    complex,        intent(out) :: vxy(vacuum%nmzxyd,stars%ng2-1,2)
+
+    complex                     :: arg, c_ph, sumr(2)
+    real                        :: dh, g, qz, sign, signz, vcons, z, e_m, arg_r, arg_i
+    integer                     :: i2d, ig3n, imz, imzxy, ivac, k1, k2, kz, m0, nrec2, nrz, nz
+    intrinsic exp
+
+    vxy(:,:,:) = cmplx( 0., 0. )
     dh = cell%z1
     m0 = -stars%mx3
-    IF (sym%zrfs) m0 = 0
-    DO  nrec2 = 2,stars%ng2
-       k1 = stars%kv2(1,nrec2)
-       k2 = stars%kv2(2,nrec2)
-       g = stars%sk2(nrec2)
-       IF (input%efield%dirichlet) THEN
-          vcons = 2.0*tpi_const/(g*SINH(g*2.0*(input%efield%zsigma+dh)))
-          arg_r = g*(dh+input%efield%zsigma+dh)
-       ELSE ! Neumann
-          vcons = tpi_const/g
-          arg_r = exp_save( - 2*dh*g )
-       END IF
-       DO ivac = 1,vacuum%nvac
-          sumr(ivac) = (0.0,0.0)
-          sign = 3. - 2.*ivac
-          DO kz = m0,stars%mx3
-             ig3n = stars%ig(k1,k2,kz)
-             !     ----> use only stars within the g_max sphere (oct.97 shz)
-             IF (ig3n.NE.0) THEN
-                nz = 1
-                IF (sym%zrfs) nz = stars%nstr(ig3n)/stars%nstr2(nrec2)
-                qz = kz*cell%bmat(3,3)
-                !     ---> sum over gz-stars
-                DO  nrz = 1,nz
-                   signz = 3. - 2.*nrz
-                   IF (input%efield%dirichlet) THEN
-                      ! prefactor
-                      arg = EXP(-ci*signz*qz*dh)&
-                           &                      /(2*(g**2 + qz**2)) * psq(ig3n)
-                      IF (ivac == 1) THEN
-                         sumr(ivac) = sumr(ivac) + EXP(-arg_r)*arg*(&
-                              &                     (- EXP(2*g*(input%efield%zsigma+dh))&
-                              &                      + EXP(2*(ci*signz*qz*dh+arg_r)))&
-                              &                     *(g-ci*signz*qz)&
-                              &                    +(- EXP(2*g*dh)&
-                              &                      + EXP(2*ci*signz*qz*dh))&
-                              &                     *(g+ci*signz*qz) )
-                      ELSE
-                         sumr(ivac) = sumr(ivac) + arg*(&
-                              &                     EXP(arg_r)*(g+ci*signz*qz)&
-                              &                     +(g-ci*signz*qz)*EXP(-arg_r)&
-                              &                     +2*EXP(2*(ci*signz*qz*dh))&
-                              &                      *(-g*COSH(g*(-input%efield%zsigma))&
-                              &                        +ci*signz*qz*SINH(g*(-input%efield%zsigma))) )
-                      END IF
-                   ELSE
-                      arg = g + sign*ci*signz*qz
-                      arg_i = sign*signz*qz*dh
-                      sumr(ivac) = sumr(ivac) + psq(ig3n)*(&
-                           &                     COS(arg_i)*( 1 - arg_r ) +&
-                           &                  ci*SIN(arg_i)*( 1 + arg_r ) ) / arg
-                   END IF
-                ENDDO  ! nrz 
-             ENDIF
-          ENDDO       ! kz 
-          z = 0 ! moved cell%z1 into above equations gb`06
-          DO imz = 1,vacuum%nmzxy
-             IF (input%efield%dirichlet) THEN
-                e_m = SINH(g*(input%efield%zsigma-z))
-             ELSE ! NEUMANN
-                e_m = exp_save( -g*z  )
-             END IF
-             vxy(imz,nrec2-1,ivac,1) = vxy(imz,nrec2-1,ivac,1) +&
-                  &                                   vcons*sumr(ivac)*e_m
-             z = z + vacuum%delz
-          ENDDO  ! imz 
-       ENDDO     ! ivac
-    ENDDO        ! nrec2
+    if ( sym%zrfs ) m0 = 0
+    do  nrec2 = 2, stars%ng2
+      k1 = stars%kv2(1,nrec2)
+      k2 = stars%kv2(2,nrec2)
+      g = stars%sk2(nrec2)
+      if ( field%efield%dirichlet ) then
+        vcons = 2.0 * tpi_const / ( g * sinh( g * 2.0 * ( field%efield%zsigma + dh ) ) )
+        arg_r = g * ( dh + field%efield%zsigma + dh )
+      else ! neumann
+        vcons = tpi_const / g
+        arg_r = exp_save( - 2 * dh * g )
+      end if
+      do ivac = 1, vacuum%nvac
+        sumr(ivac) = ( 0.0, 0.0 )
+        sign = 3. - 2. * ivac
+        do kz = m0, stars%mx3
+          ig3n = stars%ig(k1,k2,kz)
+          ! use only stars within the g_max sphere
+          if ( ig3n /= 0 ) then
+            c_ph = stars%rgphs(k1,k2,kz)
+            nz = 1
+            if (sym%zrfs) nz = stars%nstr(ig3n) / stars%nstr2(nrec2)
+            qz = kz * cell%bmat(3,3)
+            ! sum over gz-stars
+            do  nrz = 1, nz
+              signz = 3. - 2. * nrz
+              if ( field%efield%dirichlet ) then
+                ! prefactor
+                arg = exp( - ImagUnit * signz * qz * dh ) / ( 2 * ( g ** 2 + qz ** 2 ) ) * psq(ig3n)
+                if ( ivac == 1 ) then
+                  sumr(ivac) = sumr(ivac) + c_ph * exp( - arg_r ) * arg * ( &                           ! c_ph not tested in this case
+                      ( - exp( 2 * g * ( field%efield%zsigma + dh ) ) + exp( 2 * ( ImagUnit * signz * qz * dh + arg_r ) ) ) * ( g - ImagUnit * signz * qz ) &
+                    + ( - exp( 2 * g * dh ) + exp( 2 * ImagUnit * signz * qz * dh ) )                                       * ( g + ImagUnit * signz * qz ) )
+                else
+                  sumr(ivac) = sumr(ivac) + c_ph * arg * ( &
+                    exp(   arg_r ) * ( g + ImagUnit * signz * qz ) &
+                    + exp( - arg_r ) * ( g - ImagUnit * signz * qz ) &
+                    + 2 * exp( 2 * ImagUnit * signz * qz * dh ) &
+                    * ( - g * cosh( g * ( - field%efield%zsigma ) ) &
+                      + ImagUnit * signz * qz * sinh( - g * field%efield%zsigma ) ) )
+                end if
+              else
+                arg = g + sign * ImagUnit * signz * qz
+                arg_i = sign * signz * qz * dh
+                sumr(ivac) = sumr(ivac) + c_ph * psq(ig3n) * ( cos( arg_i ) * ( 1 - arg_r ) + ImagUnit * sin( arg_i ) * ( 1 + arg_r ) ) / arg
+              end if
+            enddo
+          endif
+        enddo
+        z = 0 ! moved cell%z1 into above equations
+        do imz = 1, vacuum%nmzxy
+          if ( field%efield%dirichlet ) then
+            e_m = sinh( g * ( field%efield%zsigma - z ) )
+          else ! neumann
+            e_m = exp_save( - g * z )
+          end if
+          vxy(imz,nrec2-1,ivac) = vxy(imz,nrec2-1,ivac) + vcons * sumr(ivac) * e_m
+          z = z + vacuum%delz
+        enddo
+      enddo
+    enddo
 
-  END SUBROUTINE vvacis
-  !------------------------------------------------------------------
-  PURE REAL FUNCTION exp_save(x)
-    ! replace exp by a function that does not under/overflow dw09
-    IMPLICIT NONE
-    REAL   ,INTENT(IN)     :: x
-    REAL, PARAMETER ::    maxexp = LOG(2.0)*MAXEXPONENT(2.0)
-    REAL, PARAMETER ::    minexp = LOG(2.0)*MINEXPONENT(2.0)
+  end subroutine vvacis
 
-    IF ( ABS(x)>minexp .AND. ABS(x)<maxexp ) THEN
-       exp_SAVE = EXP(x)
-    ELSE
-       IF ( x > 0 ) THEN
-          IF ( x > minexp ) THEN
-             exp_save = EXP(maxexp)
-          ELSE
-             exp_save = EXP(minexp)
-          ENDIF
-       ELSE
-          IF ( -x > minexp ) THEN
-             exp_save = EXP(-maxexp)
-          ELSE
-             exp_save = EXP(-minexp)
-          ENDIF
-       ENDIF
-    ENDIF
-  END FUNCTION exp_save
 
-END MODULE m_vvacis
+  pure real function exp_save(x)
+    ! replace exp by a function that does not under/overflow
+
+    implicit none
+    real, intent(in) :: x
+    real, parameter  :: maxexp = log( 2.0 ) * maxexponent( 2.0 )
+    real, parameter  :: minexp = log( 2.0 ) * minexponent( 2.0 )
+
+    if ( abs(x) > minexp .and. abs(x) < maxexp ) then
+      exp_save = exp( x )
+    else
+      if ( x > 0 ) then
+        if ( x > minexp ) then
+          exp_save = exp( maxexp )
+        else
+          exp_save = exp( minexp )
+        endif
+      else
+        if ( -x > minexp ) then
+          exp_save = exp( -maxexp )
+        else
+          exp_save = exp( -minexp )
+        endif
+      endif
+    endif
+  end function exp_save
+
+end module m_vvacis

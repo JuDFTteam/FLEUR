@@ -63,11 +63,11 @@ CONTAINS
     INTEGER, INTENT (IN) :: nstr2_1(n2d_1)
     INTEGER, INTENT (IN) :: kv2_1(2,n2d_1) 
     COMPLEX, INTENT (INOUT) :: psq(stars%ng3)
-    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,DIMENSION%jspd) 
-    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
-    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxyd,n2d_1-1,2,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,n2d_1-1,2,DIMENSION%jspd)
-    COMPLEX, INTENT (OUT):: vpw(stars%ng3,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2) 
+    REAL,    INTENT (IN) :: rht(vacuum%nmzd,2)
+    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxyd,n2d_1-1,2)
+    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,n2d_1-1,2)
+    COMPLEX, INTENT (OUT):: vpw(stars%ng3)
 
     !     local
     INTEGER :: m
@@ -174,19 +174,19 @@ CONTAINS
 
     !----> vpw in the '1st aproximation' (V - tilde)
 
-    vpw(1,1) = CMPLX(0.,0.)
+    vpw(1) = CMPLX(0.,0.)
 
     DO irec3 = 2,stars%ng3
 
        g = stars%sk3(irec3)
 
-       vpw(irec3,1) = fpi_const*psq(irec3)/(g*g)
+       vpw(irec3) = fpi_const*psq(irec3)/(g*g)
 
     ENDDO
 
     DO irc1 = 2,nq2_1
        DO i = 1,vacuum%nmzxy
-          vxy(i,irc1-1,1,1) = CMPLX(0.,0.)
+          vxy(i,irc1-1,1) = CMPLX(0.,0.)
        END DO
     END DO
 
@@ -219,7 +219,7 @@ CONTAINS
           irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),k3)
           IF (irec3.NE.0) THEN
              val(irc1) = val(irc1) +&
-                  &              (ic**m)*vpw(irec3,1)*EXP(-ic*&
+                  &              (ic**m)*vpw(irec3)*EXP(-ic*&
                   &              m*phi)*fJJ(iabs(m),irec2)*&
                   &              stars%nstr2(irec2)*mult
           END IF
@@ -268,7 +268,7 @@ CONTAINS
                 irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),gzi)
                 IF (irec3.NE.0) THEN
                    val_m(gzi,m) = val_m(gzi,m) +&
-                        &                    (ic**m)*vpw(irec3,1)*EXP(-ic*&
+                        &                    (ic**m)*vpw(irec3)*EXP(-ic*&
                         &                    m*phi)*fJJ(iabs(m),irec2)*&
                         &                    stars%nstr2(irec2)*mult
                 END IF
@@ -290,12 +290,12 @@ CONTAINS
              im = zf
              q = zf - im
              vis(ix,iy,1) = 0.5*(q-1.)*&
-                  &              (q-2.)*vz(im,1,1) -&
-                  &              q*(q-2.)*vz(im+1,1,1) +&
-                  &              0.5*q*(q-1.)*vz(im+2,1,1)
+                  &              (q-2.)*vz(im,1) -&
+                  &              q*(q-2.)*vz(im+1,1) +&
+                  &              0.5*q*(q-1.)*vz(im+2,1)
           ELSE
              vis(ix,iy,1) = &
-                  &              vz(1,1,1) - val(1) + tpi_const*&
+                  &              vz(1,1) - val(1) + tpi_const*&
                   &              psq(1)*(cell%z1*cell%z1 - r*r)/2.
           END IF
           DO irc1 = 2,nq2_1
@@ -398,7 +398,7 @@ CONTAINS
                       !----- this form of the density is just more easy to use
 
                       DO imz = 1,vacuum%nmzxy
-                         rxy(imz) = rhtxy(imz,irec1(l)-1,1,1)
+                         rxy(imz) = rhtxy(imz,irec1(l)-1,1)
                       END DO
 
                       !----- vacuum potential caused by the vacuum density
@@ -435,7 +435,7 @@ CONTAINS
 
                       pint(:vacuum%nmzxy) =  fact(:vacuum%nmzxy)*aa 
 
-                      vxy(:vacuum%nmzxy,irec1(l)-1,1,1) = pvac(:vacuum%nmzxy) + pint(:vacuum%nmzxy)
+                      vxy(:vacuum%nmzxy,irec1(l)-1,1) = pvac(:vacuum%nmzxy) + pint(:vacuum%nmzxy)
 
                       !----- array val further is a boundary values of the
                       !----- potential V- \tilde \tilde which is created to compensate 
@@ -444,7 +444,7 @@ CONTAINS
                       !----- density, V - \tilde and V - \tilde\tilde are then added in
                       !----- order to obtain the real interstitial potential           
 
-                      val_help = vxy(1,irec1(l)-1,1,1) - val(irec1(l))
+                      val_help = vxy(1,irec1(l)-1,1) - val(irec1(l))
 
                       !----- potential \tilde\tilde{V} is a solution of the Laplase equation
                       !----- in the interstitial with the boundary conditions val_0 and val_z
@@ -471,7 +471,7 @@ CONTAINS
                       !------------------------------------------------------------->
 
                       DO  imz = 1,vacuum%nmzxy
-                         rxy(imz) = rhtxy(imz,irec1(l)-1,1,1)
+                         rxy(imz) = rhtxy(imz,irec1(l)-1,1)
                       END DO
 
                       !----- vacuum potential caused by the vacuum density        
@@ -510,10 +510,10 @@ CONTAINS
 
                       DO imz = 1,vacuum%nmzxy
                          pint(imz) = fpi_const*a*KK(imz) 
-                         vxy(imz,irec1(l)-1,1,1) =  pint(imz) + pvac(imz)  
+                         vxy(imz,irec1(l)-1,1) =  pint(imz) + pvac(imz)  
                       END DO
 
-                      val_help = vxy(1,irec1(l)-1,1,1) - val(irec1(l))
+                      val_help = vxy(1,irec1(l)-1,1) - val(irec1(l))
 
                       CALL visp5_z(&
                            &        vacuum%nmzxyd,vacuum%nmzxyd,vacuum%delz,m,ivfft1,ivfft2,IIIR,&
@@ -571,10 +571,10 @@ CONTAINS
           irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),k3)
           IF (irec3.NE.0) THEN
              IF (irec2.EQ.1) THEN
-                fxy0 = REAL(vpw(irec3,1))
-                rhti = AIMAG(vpw(irec3,1))
+                fxy0 = REAL(vpw(irec3))
+                rhti = AIMAG(vpw(irec3))
              ELSE
-                fxy(irec2-1) = vpw(irec3,1)
+                fxy(irec2-1) = vpw(irec3)
              END IF
           END IF
        END DO
@@ -668,15 +668,15 @@ CONTAINS
     END DO                    ! gz -> Vpw(.,.,gz)
 
     DO irec3 = 1,stars%ng3
-       vpw(irec3,1) = vpw_help(irec3)
+       vpw(irec3) = vpw_help(irec3)
        !$$$         vpw(irec3,1) = vpw(irec3,1) + vpw_help(irec3)
     END DO
 
 
     DO irc1 = 2,nq2_1
        DO imz = 1,vacuum%nmzxy
-          IF (ABS(vxy(imz,irc1-1,1,1)).LE.tol_21)&
-               &          vxy(imz,irc1-1,1,1) = CMPLX(0.,0.)
+          IF (ABS(vxy(imz,irc1-1,1)).LE.tol_21)&
+               &          vxy(imz,irc1-1,1) = CMPLX(0.,0.)
        END DO
     END DO
 

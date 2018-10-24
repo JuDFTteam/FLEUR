@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! This subroutine generates the mixed basis set used to evaluate the  !
 ! exchange term in HF/hybrid functional calculations or EXX           !
@@ -27,474 +33,407 @@
 !                                                                     !
 !                                               M.Betzinger (09/07)   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 MODULE m_mixedbasis
-  use m_judft
+
 CONTAINS
 
-  SUBROUTINE mixedbasis( atoms,kpts,DIMENSION,input, &
-       cell,sym,xcpot,hybrid, eig_id, mpi,v,l_restart)
+SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mpi,v,l_restart)
 
-    USE m_radfun,   ONLY : radfun
-    USE m_radflo,   ONLY : radflo
-    USE m_loddop,   ONLY : loddop
-    USE m_util,     ONLY : intgrf_init,intgrf,rorderpf
-    USE m_read_core
-    USE m_wrapper
-    USE m_eig66_io
-    USE m_types
-    IMPLICIT NONE
+   USE m_judft
+   USE m_radfun,   ONLY : radfun
+   USE m_radflo,   ONLY : radflo
+   USE m_loddop,   ONLY : loddop
+   USE m_util,     ONLY : intgrf_init,intgrf,rorderpf
+   USE m_read_core
+   USE m_wrapper
+   USE m_eig66_io
+   USE m_types
 
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
-    TYPE(t_mpi),INTENT(IN)       :: mpi
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
-    TYPE(t_hybrid),INTENT(INOUT) :: hybrid
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_kpts),INTENT(IN)      :: kpts
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_potden),INTENT(IN)    :: v
+   IMPLICIT NONE
 
-    ! - scalars -
-    INTEGER,INTENT(IN)              :: eig_id
-    LOGICAL,INTENT(INOUT)           :: l_restart
+   TYPE(t_xcpot_inbuild),  INTENT(IN)    :: xcpot
+   TYPE(t_mpi),            INTENT(IN)    :: mpi
+   TYPE(t_dimension),      INTENT(IN)    :: dimension
+   TYPE(t_hybrid),         INTENT(INOUT) :: hybrid
+   TYPE(t_enpara),         INTENT(IN)    :: enpara
+   TYPE(t_input),          INTENT(IN)    :: input
+   TYPE(t_sym),            INTENT(IN)    :: sym
+   TYPE(t_cell),           INTENT(IN)    :: cell
+   TYPE(t_kpts),           INTENT(IN)    :: kpts
+   TYPE(t_atoms),          INTENT(IN)    :: atoms
+   TYPE(t_potden),         INTENT(IN)    :: v
 
+   LOGICAL,                INTENT(INOUT) :: l_restart
 
+   ! local type variables
+   TYPE(t_usdus)                   ::  usdus
 
-    ! - local scalars -
-    INTEGER                         ::  ilo
-    INTEGER                         ::  ikpt
-    INTEGER                         ::  ispin,itype,l1,l2,l,n,igpt,n1,n2,nn,i,j,ic ,ng      
-    INTEGER                         ::  jsp
-    INTEGER                         ::  nodem,noded
-    INTEGER                         ::  m,nk,ok
-    INTEGER                         ::  x,y,z
-    INTEGER                         ::  maxindxc,lmaxcd
-    INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-    REAL                            ::  gcutm
-    REAL                            ::  wronk
-    REAL                            ::  rdum,rdum1,rdum2
+   ! local scalars
+   INTEGER                         ::  ilo,ikpt,ispin,itype,l1,l2,l,n,igpt,n1,n2,nn,i,j,ic,ng
+   INTEGER                         ::  jsp,nodem,noded,m,nk,ok,x,y,z,maxindxc,lmaxcd
+   INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
+   REAL                            ::  gcutm,wronk,rdum,rdum1,rdum2
 
-    LOGICAL                         ::  ldum,ldum1
-    LOGICAL                         ::  exx
+   LOGICAL                         ::  ldum,ldum1
 
+   ! - local arrays -
+   INTEGER                         ::  g(3)
+   INTEGER                         ::  lmaxc(atoms%ntype)
+   INTEGER,ALLOCATABLE             ::  nindxc(:,:)
+   INTEGER,ALLOCATABLE             ::  ihelp(:) 
+   INTEGER,ALLOCATABLE             ::  ptr(:)           ! pointer for array sorting
+   INTEGER,ALLOCATABLE             ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
 
-    ! - local arrays -
-    INTEGER                         ::  g(3)
-    INTEGER                         ::  lmaxc(atoms%ntype)
-    INTEGER,ALLOCATABLE             ::  nindxc(:,:)
-    INTEGER,ALLOCATABLE             ::  ihelp(:) 
-    INTEGER,ALLOCATABLE             ::  ptr(:)           ! pointer for array sorting
-    INTEGER,ALLOCATABLE             ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
+   REAL                            ::  kvec(3)
+   REAL                            ::  flo(atoms%jmtd,2,atoms%nlod)
+   REAL                            ::  uuilon(atoms%nlod,atoms%ntype), duilon(atoms%nlod,atoms%ntype)
+   REAL                            ::  ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
+   REAL                            ::  potatom(atoms%jmtd,atoms%ntype)
+   REAL                            ::  bashlp(atoms%jmtd)
 
-    REAL                            ::  kvec(3)
-    REAL                            ::  flo(atoms%jmtd,2,atoms%nlod)
-    TYPE(t_usdus)                   ::  usdus
-    REAL                            ::  uuilon(atoms%nlod,atoms%ntype), duilon(atoms%nlod,atoms%ntype)
-    REAL                            ::  ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
-    REAL                            ::  potatom(atoms%jmtd,atoms%ntype)
-    REAL                            ::  el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
-    REAL                            ::  ello(atoms%nlod,atoms%ntype,DIMENSION%jspd)
-    REAL                            ::  bashlp(atoms%jmtd)
-
-    REAL   ,ALLOCATABLE             ::  f(:,:,:),df(:,:,:)
-    REAL   ,ALLOCATABLE             ::  olap(:,:),work(:),eig(:), eigv(:,:)      
-    REAL   ,ALLOCATABLE             ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
-    REAL   ,ALLOCATABLE             ::  basmhlp(:,:,:,:)
-    REAL   ,ALLOCATABLE             ::  gridf(:,:),vr0(:,:,:)
-    REAL   ,ALLOCATABLE             ::  core1(:,:,:,:,:), core2(:,:,:,:,:)
-    REAL   ,ALLOCATABLE             ::  eig_c(:,:,:,:)
-    REAL   ,ALLOCATABLE             ::  length_kg(:,:) ! length of the vectors k + G
-
+   REAL, ALLOCATABLE               ::  f(:,:,:),df(:,:,:)
+   REAL, ALLOCATABLE               ::  olap(:,:),work(:),eig(:), eigv(:,:)      
+   REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+   REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
+   REAL, ALLOCATABLE               ::  gridf(:,:),vr0(:,:,:)
+   REAL, ALLOCATABLE               ::  core1(:,:,:,:,:), core2(:,:,:,:,:)
+   REAL, ALLOCATABLE               ::  eig_c(:,:,:,:)
+   REAL, ALLOCATABLE               ::  length_kg(:,:) ! length of the vectors k + G
  
-    LOGICAL,ALLOCATABLE             ::  selecmat(:,:,:,:)
-    LOGICAL,ALLOCATABLE             ::  seleco(:,:),selecu(:,:)
+   LOGICAL, ALLOCATABLE            ::  selecmat(:,:,:,:)
+   LOGICAL, ALLOCATABLE            ::  seleco(:,:),selecu(:,:)
 
-    CHARACTER, PARAMETER            :: lchar(0:38) =&
-         &      (/'s','p','d','f','g','h','i','j','k','l','m','n','o',&
-         &        'x','x','x','x','x','x','x','x','x','x','x','x','x',&
-         &        'x','x','x','x','x','x','x','x','x','x','x','x','x' /)
+   CHARACTER, PARAMETER            :: lchar(0:38) = (/'s','p','d','f','g','h','i','j','k','l','m','n','o',&
+                                                      'x','x','x','x','x','x','x','x','x','x','x','x','x',&
+                                                      'x','x','x','x','x','x','x','x','x','x','x','x','x' /)
     
-    CHARACTER(len=2)                ::  nchar
-    CHARACTER(len=2)                ::  noel(atoms%ntype)
-    CHARACTER(len=10)               ::  fname(atoms%ntype)
-    ! writing to a file
-    INTEGER, PARAMETER              ::  iounit = 125
-    CHARACTER(10), PARAMETER        ::  ioname = 'mixbas'
-    LOGICAL                         ::  l_found
+   CHARACTER(len=2)                ::  nchar
+   CHARACTER(len=2)                ::  noel(atoms%ntype)
+   CHARACTER(len=10)               ::  fname(atoms%ntype)
+   ! writing to a file
+   INTEGER, PARAMETER              ::  iounit = 125
+   CHARACTER(10), PARAMETER        ::  ioname = 'mixbas'
+   LOGICAL                         ::  l_found
 
-    IF ( mpi%irank == 0 ) WRITE(6,'(//A,I2,A)') '### subroutine: mixedbasis ###'
+   IF (mpi%irank == 0) WRITE(6,'(//A,I2,A)') '### subroutine: mixedbasis ###'
 
-
-    exx = xcpot%is_name("exx")
-    if (exx) call judft_error("EXX is not implemented in this version",calledby='mixedbasis.F90')
+   IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version",calledby='mixedbasis')
     
-    ! Deallocate arrays which might have been allocated in a previous run of this subroutine
-    IF(ALLOCATED(hybrid%ngptm))    DEALLOCATE(hybrid%ngptm)
-    IF(ALLOCATED(hybrid%ngptm1))   DEALLOCATE(hybrid%ngptm1)
-    IF(ALLOCATED(hybrid%nindxm1))  DEALLOCATE(hybrid%nindxm1)
-    IF(ALLOCATED(hybrid%pgptm))    DEALLOCATE(hybrid%pgptm)
-    IF(ALLOCATED(hybrid%pgptm1))   DEALLOCATE(hybrid%pgptm1)
-    IF(ALLOCATED(hybrid%gptm))     DEALLOCATE(hybrid%gptm)
-    IF(ALLOCATED(hybrid%basm1) )   DEALLOCATE(hybrid%basm1)
+   ! Deallocate arrays which might have been allocated in a previous run of this subroutine
+   IF(ALLOCATED(hybrid%ngptm))    DEALLOCATE(hybrid%ngptm)
+   IF(ALLOCATED(hybrid%ngptm1))   DEALLOCATE(hybrid%ngptm1)
+   IF(ALLOCATED(hybrid%nindxm1))  DEALLOCATE(hybrid%nindxm1)
+   IF(ALLOCATED(hybrid%pgptm))    DEALLOCATE(hybrid%pgptm)
+   IF(ALLOCATED(hybrid%pgptm1))   DEALLOCATE(hybrid%pgptm1)
+   IF(ALLOCATED(hybrid%gptm))     DEALLOCATE(hybrid%gptm)
+   IF(ALLOCATED(hybrid%basm1))    DEALLOCATE(hybrid%basm1)
    
-    call usdus%init(atoms,dimension%jspd)
+   CALL usdus%init(atoms,dimension%jspd)
 
-    ! If restart is specified read file if it already exists
-    ! create it otherwise
-    IF ( l_restart ) THEN
+   ! If restart is specified read file if it already exists. If not create it.
+   IF (l_restart) THEN
 
-       ! Test if file exists
-       INQUIRE(FILE=ioname,EXIST=l_found)
+      ! Test if file exists
+      INQUIRE(FILE=ioname,EXIST=l_found)
 
-       IF ( l_found .and..false.) THEN !reading not working yet
+      IF (l_found.AND..FALSE.) THEN !reading not working yet
+         ! Open file
+         OPEN(UNIT=iounit,FILE=ioname,FORM='unformatted',STATUS='old')
 
-          ! Open file
-          OPEN(UNIT=iounit,FILE=ioname,FORM='unformatted',STATUS='old')
+         ! Read array sizes
+         !READ(iounit) kpts%nkptf,hybrid%gptmd
+         READ(iounit) hybrid%maxgptm,hybrid%maxindx
+         ! Allocate necessary array size and read arrays
+         ALLOCATE (hybrid%ngptm(kpts%nkptf),hybrid%gptm(3,hybrid%gptmd))
+         ALLOCATE (hybrid%pgptm(hybrid%maxgptm,kpts%nkptf))
+         READ(iounit) hybrid%ngptm,hybrid%gptm,hybrid%pgptm,hybrid%nindx
 
-          ! Read array sizes
-          !READ(iounit) kpts%nkptf,hybrid%gptmd
-          READ(iounit) hybrid%maxgptm,hybrid%maxindx
-          ! Allocate necessary array size and read arrays
-          ALLOCATE ( hybrid%ngptm(kpts%nkptf),hybrid%gptm(3,hybrid%gptmd),hybrid%pgptm(hybrid%maxgptm,kpts%nkptf) )
-          READ(iounit) hybrid%ngptm,hybrid%gptm,hybrid%pgptm,hybrid%nindx
-
-          ! Read array sizes
-          READ(iounit) hybrid%maxgptm1,hybrid%maxlcutm1,hybrid%maxindxm1,hybrid%maxindxp1
-          ! Allocate necessary array size and read arrays
-          ALLOCATE ( hybrid%ngptm1(kpts%nkptf),hybrid%pgptm1(hybrid%maxgptm1,kpts%nkptf),&
-               &               hybrid%nindxm1(0:hybrid%maxlcutm1,atoms%ntype) )
-          ALLOCATE ( hybrid%basm1(atoms%jmtd,hybrid%maxindxm1,0:hybrid%maxlcutm1,atoms%ntype) )
-          READ(iounit) hybrid%ngptm1,hybrid%pgptm1,hybrid%nindxm1
-          READ(iounit) hybrid%basm1
-
+         ! Read array sizes
+         READ(iounit) hybrid%maxgptm1,hybrid%maxlcutm1,hybrid%maxindxm1,hybrid%maxindxp1
+         ! Allocate necessary array size and read arrays
+         ALLOCATE (hybrid%ngptm1(kpts%nkptf),hybrid%pgptm1(hybrid%maxgptm1,kpts%nkptf))
+         ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1,atoms%ntype))
+         ALLOCATE (hybrid%basm1(atoms%jmtd,hybrid%maxindxm1,0:hybrid%maxlcutm1,atoms%ntype))
+         READ(iounit) hybrid%ngptm1,hybrid%pgptm1,hybrid%nindxm1
+         READ(iounit) hybrid%basm1
        
-          CLOSE(iounit)
+         CLOSE(iounit)
 
-          RETURN
-       END IF
-    END IF
+         RETURN
+      END IF
+   END IF
 
-    hybrid%maxindx = 0
-    DO itype = 1,atoms%ntype
-       DO l = 0,atoms%lmax(itype)
-          hybrid%maxindx = MAX(hybrid%maxindx,2+COUNT( atoms%llo(:atoms%nlo(itype),itype) .EQ. l))
-       END DO
-    END DO
-    !       maxindx   = maxval( nlo   ) + 2
+   hybrid%maxindx = 0
+   DO itype = 1, atoms%ntype
+      DO l = 0, atoms%lmax(itype)
+         hybrid%maxindx = MAX(hybrid%maxindx,2+COUNT(atoms%llo(:atoms%nlo(itype),itype).EQ.l))
+      END DO
+   END DO
+   ! maxindx = maxval(nlo) + 2
 
+   ! initialize gridf for radial integration
+   CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
 
+   ALLOCATE (vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd))
 
-    ! initialize gridf for radial integration
-    CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
-
-    !
-    ! read in energy parameters from file eig
-    ! to avoid meaningless energy parameters which occur in the case
-    ! that the energy parameter is set to the atomic prinicipal 
-    ! quantum number
-    ! (el0 and ello0 are just the values in the enpara file)
-    ! 
-
-
-    DO jsp=1,DIMENSION%jspd
-       CALL read_eig(eig_id,1,jsp,el=el(:,:,jsp),ello=ello(:,:,jsp))
-    ENDDO
-
-    ALLOCATE ( vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )
-
-    vr0(:,:,:) = v%mt(:,0,:,:) 
+   vr0(:,:,:) = v%mt(:,0,:,:)
    
-    ! calculate radial basisfunctions u and u' with
-    ! the spherical part of the potential vr0 and store them in
-    ! bas1 = large component ,bas2 = small component
+   ! calculate radial basisfunctions u and u' with
+   ! the spherical part of the potential vr0 and store them in
+   ! bas1 = large component ,bas2 = small component
 
-    ALLOCATE( f(atoms%jmtd,2,0:atoms%lmaxd), df(atoms%jmtd,2,0:atoms%lmaxd) )
-    ALLOCATE( bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-    ALLOCATE( bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
+   ALLOCATE(f(atoms%jmtd,2,0:atoms%lmaxd), df(atoms%jmtd,2,0:atoms%lmaxd))
+   ALLOCATE(bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
+   ALLOCATE(bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
 
-    DO itype=1,atoms%ntype
-       ng = atoms%jri(itype)
-       DO ispin=1,DIMENSION%jspd
-          DO l=0,atoms%lmax(itype)
-             CALL radfun(l,itype,ispin,el(l,itype,ispin),vr0(:,itype,ispin),atoms,f(:,:,l),df(:,:,l),&
-                  &                  usdus,nodem,noded,wronk)
-          END DO
-          bas1(1:ng,1,0:atoms%lmaxd,itype,ispin) =  f(1:ng,1,0:atoms%lmaxd)
-          bas2(1:ng,1,0:atoms%lmaxd,itype,ispin) =  f(1:ng,2,0:atoms%lmaxd)
-          bas1(1:ng,2,0:atoms%lmaxd,itype,ispin) = df(1:ng,1,0:atoms%lmaxd)
-          bas2(1:ng,2,0:atoms%lmaxd,itype,ispin) = df(1:ng,2,0:atoms%lmaxd)
+   DO itype = 1, atoms%ntype
+      ng = atoms%jri(itype)
+      DO ispin = 1, DIMENSION%jspd
+         DO l = 0, atoms%lmax(itype)
+            CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr0(:,itype,ispin),atoms,&
+                        f(:,:,l),df(:,:,l),usdus,nodem,noded,wronk)
+         END DO
+         bas1(1:ng,1,0:atoms%lmaxd,itype,ispin) =  f(1:ng,1,0:atoms%lmaxd)
+         bas2(1:ng,1,0:atoms%lmaxd,itype,ispin) =  f(1:ng,2,0:atoms%lmaxd)
+         bas1(1:ng,2,0:atoms%lmaxd,itype,ispin) = df(1:ng,1,0:atoms%lmaxd)
+         bas2(1:ng,2,0:atoms%lmaxd,itype,ispin) = df(1:ng,2,0:atoms%lmaxd)
 
-          hybrid%nindx(:,itype) = 2
-          ! generate radial functions for local orbitals
-          IF (atoms%nlo(itype).GE.1) THEN
-             CALL radflo( atoms,itype,ispin,&
-                  &                   ello(1,1,ispin),vr0(:,itype,ispin),&
-                  &                   f,df,mpi,&
-                  &                   usdus,&
-                  &                   uuilon,duilon,ulouilopn,flo)
+         hybrid%nindx(:,itype) = 2
+         ! generate radial functions for local orbitals
+         IF (atoms%nlo(itype).GE.1) THEN
+            CALL radflo(atoms,itype,ispin,enpara%ello0(1,1,ispin),vr0(:,itype,ispin),&
+                        f,df,mpi,usdus,uuilon,duilon,ulouilopn,flo)
 
-             DO ilo=1,atoms%nlo(itype)
-                hybrid%nindx(atoms%llo(ilo,itype),itype) =&
-                     &          hybrid%nindx(atoms%llo(ilo,itype),itype) + 1
-                bas1(1:ng,hybrid%nindx(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),&
-                     &                                    itype,ispin) = flo(1:ng,1,ilo)
-                bas2(1:ng,hybrid%nindx(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),&
-                     &                                    itype,ispin) = flo(1:ng,2,ilo)
-             END DO
+            DO ilo = 1, atoms%nlo(itype)
+               hybrid%nindx(atoms%llo(ilo,itype),itype) = hybrid%nindx(atoms%llo(ilo,itype),itype) + 1
+               bas1(1:ng,hybrid%nindx(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype,ispin) = flo(1:ng,1,ilo)
+               bas2(1:ng,hybrid%nindx(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype,ispin) = flo(1:ng,2,ilo)
+            END DO
+         END IF
+      END DO
+   END DO
 
-          END IF
+   DEALLOCATE(f,df)
 
-       END DO
-    END DO
+   ! the radial functions are normalized
+   DO ispin = 1, DIMENSION%jspd
+      DO itype = 1, atoms%ntype
+         DO l = 0, atoms%lmax(itype)
+            DO i = 1, hybrid%nindx(l,itype)
+               rdum = intgrf(bas1(:,i,l,itype,ispin)**2+bas2(:,i,l,itype,ispin)**2,&
+                             atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+               bas1(:atoms%jri(itype),i,l,itype,ispin) = bas1(:atoms%jri(itype),i,l,itype,ispin) / SQRT(rdum)
+               bas2(:atoms%jri(itype),i,l,itype,ispin) = bas2(:atoms%jri(itype),i,l,itype,ispin) / SQRT(rdum)
+            END DO
+         END DO
+      END DO
+   END DO
 
-    DEALLOCATE(f,df)
+   ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
-    ! the radial functions are normalized
-    DO ispin=1,DIMENSION%jspd
-       DO itype=1,atoms%ntype
-          DO l=0,atoms%lmax(itype)
-             DO i=1,hybrid%nindx(l,itype)
-                rdum = intgrf(bas1(:,i,l,itype,ispin)**2&
-                     &                     +bas2(:,i,l,itype,ispin)**2,&
-                     &                      atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
+   ! construct G-vectors with cutoff smaller than gcutm
+   gcutm = hybrid%gcutm1
+   ALLOCATE (hybrid%ngptm(kpts%nkptf))
 
-                bas1(:atoms%jri(itype),i,l,itype,ispin)&
-                     &         = bas1(:atoms%jri(itype),i,l,itype,ispin)/SQRT(rdum)
-                bas2(:atoms%jri(itype),i,l,itype,ispin)&
-                     &         = bas2(:atoms%jri(itype),i,l,itype,ispin)/SQRT(rdum)
-             END DO
-          END DO
-       END DO
-    END DO
+   hybrid%ngptm = 0
+   i =  0
+   n = -1
 
-  
-    !
-    ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
-    !
+   rdum1 = MAXVAL((/ (SQRT(SUM(MATMUL(kpts%bkf(:,ikpt),cell%bmat)**2)),ikpt=1,kpts%nkptf) /))
 
+   ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
-    !
-    ! construct G-vectors with cutoff smaller than gcutm
-    !
-    gcutm = hybrid%gcutm1
-    ALLOCATE ( hybrid%ngptm(kpts%nkptf) )
+   DO
+      n = n + 1
+      ldum = .FALSE.
+      DO x = -n, n
+         n1 = n - ABS(x)
+         DO y = -n1, n1
+            n2 = n1 - ABS(y)
+            DO z = -n2, n2,MAX(2*n2,1)
+               g = (/x,y,z/) 
+               rdum = SQRT(SUM(MATMUL(g,cell%bmat)**2))-rdum1
+               IF(rdum.GT.gcutm) CYCLE
+               ldum1 = .FALSE.
+               DO ikpt = 1, kpts%nkptf
+                  kvec = kpts%bkf(:,ikpt)
+                  rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
 
-    hybrid%ngptm = 0
-    i     = 0
-    n     =-1
+                  IF(rdum.LE.gcutm**2) THEN
+                     IF(.NOT.ldum1) THEN
+                        i = i + 1
+                        ldum1 = .TRUE.
+                     END IF
 
-    rdum1 = MAXVAL( (/ (SQRT(SUM(MATMUL(kpts%bkf(:,ikpt),cell%bmat)**2)),ikpt=1,kpts%nkptf ) /) )
+                     hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
+                     ldum = .TRUE.
+                  END IF
+               END DO
+            END DO
+         END DO
+      END DO
+      IF(.NOT.ldum) EXIT
+   END DO
 
-    ! a first run for the determination of the dimensions of the fields
-    ! gptm,pgptm
+   hybrid%gptmd = i
+   hybrid%maxgptm = MAXVAL(hybrid%ngptm)
 
-    DO
-       n    = n + 1
-       ldum = .FALSE.
-       DO x = -n,n
-          n1 = n-ABS(x)
-          DO y = -n1,n1
-             n2 = n1-ABS(y)
-             DO z = -n2,n2,MAX(2*n2,1)
-                g     = (/x,y,z/) 
-                rdum  = SQRT(SUM(MATMUL(g,cell%bmat)**2))-rdum1
-                IF(rdum.GT. gcutm) CYCLE
-                ldum1 = .FALSE.
-                DO ikpt = 1,kpts%nkptf
-                   kvec = kpts%bkf(:,ikpt)
-                   rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
+   ALLOCATE (hybrid%gptm(3,hybrid%gptmd))
+   ALLOCATE (hybrid%pgptm(hybrid%maxgptm,kpts%nkptf))
 
-                   IF(rdum.LE.gcutm**2) THEN
-                      IF(.NOT.ldum1) THEN
-                         i                     = i + 1
-                         ldum1                 = .TRUE.
-                      END IF
+   hybrid%gptm = 0
+   hybrid%pgptm = 0
+   hybrid%ngptm = 0
 
-                      hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
-                      ldum        = .TRUE.
-                   END IF
-                END DO
-             END DO
-          END DO
-       END DO
-       IF(.NOT.ldum) EXIT
-    END DO
+   i =  0
+   n = -1
 
-    hybrid%gptmd   = i
-    hybrid%maxgptm = MAXVAL(hybrid%ngptm)
+   ! Allocate and initialize arrays needed for G vector ordering
+   ALLOCATE (unsrt_pgptm(hybrid%maxgptm,kpts%nkptf))
+   ALLOCATE (length_kG(hybrid%maxgptm,kpts%nkptf))
+   length_kG = 0
+   unsrt_pgptm = 0
 
-    ALLOCATE ( hybrid%gptm(3,hybrid%gptmd) )
-    ALLOCATE ( hybrid%pgptm(hybrid%maxgptm,kpts%nkptf) )
+   DO
+      n = n + 1
+      ldum = .FALSE.
+      DO x = -n, n
+         n1 = n - ABS(x)
+         DO y = -n1, n1
+            n2 = n1 - ABS(y)
+            DO z = -n2, n2,MAX(2*n2,1)
+               g = (/x,y,z/) 
+               rdum  = SQRT(SUM(MATMUL(g,cell%bmat)**2))-rdum1
+               IF(rdum.GT.gcutm) CYCLE
+               ldum1 = .FALSE.
+               DO ikpt = 1, kpts%nkptf
+                  kvec = kpts%bkf(:,ikpt)
+                  rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
 
-    hybrid%gptm  = 0
-    hybrid%pgptm = 0
-    hybrid%ngptm = 0
+                  IF(rdum.LE.(gcutm)**2) THEN
+                     IF(.NOT.ldum1) THEN
+                        i = i + 1
+                        hybrid%gptm(:,i) = g
+                        ldum1 = .TRUE.
+                     END IF
 
-    i     = 0
-    n     =-1
+                     hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
+                     ldum = .TRUE.
 
-    !     
-    ! Allocate and initialize arrays needed for G vector ordering
-    !
-    ALLOCATE ( unsrt_pgptm(hybrid%maxgptm,kpts%nkptf) )
-    ALLOCATE ( length_kG(hybrid%maxgptm,kpts%nkptf) )
-    length_kG   = 0
-    unsrt_pgptm = 0
+                     ! Position of the vector is saved as pointer
+                     unsrt_pgptm(hybrid%ngptm(ikpt),ikpt) = i
+                     ! Save length of vector k + G for array sorting
+                     length_kG(hybrid%ngptm(ikpt),ikpt) = rdum
+                  END IF
+               END DO
+            END DO
+         END DO
+      END DO
+      IF(.NOT.ldum) EXIT
+   END DO
 
-    DO
-       n    = n + 1
-       ldum = .FALSE.
-       DO x = -n,n
-          n1 = n-ABS(x)
-          DO y = -n1,n1
-             n2 = n1-ABS(y)
-             DO z = -n2,n2,MAX(2*n2,1)
-                g     = (/x,y,z/) 
-                rdum  = SQRT(SUM(MATMUL(g,cell%bmat)**2))-rdum1
-                IF(rdum.GT. gcutm) CYCLE
-                ldum1 = .FALSE.
-                DO ikpt = 1,kpts%nkptf
-                   kvec = kpts%bkf(:,ikpt)
-                   rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
+   ! Sort pointers in array, so that shortest |k+G| comes first
+   DO ikpt = 1,kpts%nkptf
+      ALLOCATE(ptr(hybrid%ngptm(ikpt)))
+      ! Divide and conquer algorithm for arrays > 1000 entries
+      divconq = MAX( 0, INT( 1.443*LOG( 0.001*hybrid%ngptm(ikpt) ) ) )
+      ! create pointers which correspond to a sorted array
+      CALL rorderpf(ptr, length_kG(1:hybrid%ngptm(ikpt),ikpt),hybrid%ngptm(ikpt), divconq )
+      ! rearrange old pointers
+      DO igpt = 1,hybrid%ngptm(ikpt)
+         hybrid%pgptm(igpt,ikpt) = unsrt_pgptm(ptr(igpt),ikpt)
+      END DO
+      DEALLOCATE(ptr)
+   END DO
+   DEALLOCATE(unsrt_pgptm)
+   DEALLOCATE(length_kG)
 
-                   IF(rdum.LE.(gcutm)**2) THEN
-                      IF(.NOT.ldum1) THEN
-                         i          = i + 1
-                         hybrid%gptm(:,i)  = g
-                         ldum1      = .TRUE.
-                      END IF
+   ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm1
 
-                      hybrid%ngptm(ikpt)              = hybrid%ngptm(ikpt) + 1
-                      ldum                     = .TRUE.
+   ! first run to determine dimension of pgptm1
+   ALLOCATE(hybrid%ngptm1(kpts%nkptf))
+   hybrid%ngptm1 = 0
+   DO igpt = 1, hybrid%gptmd
+      g = hybrid%gptm(:,igpt)
+      DO ikpt = 1, kpts%nkptf
+         kvec = kpts%bkf(:,ikpt)
+         rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
+         IF(rdum.LE.hybrid%gcutm1**2) THEN
+            hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
+         END IF
+      END DO
+   END DO
+   hybrid%maxgptm1 = MAXVAL(hybrid%ngptm1)
 
-                      ! Position of the vector is saved as pointer
-                      unsrt_pgptm(hybrid%ngptm(ikpt),ikpt) = i
-                      ! Save length of vector k + G for array sorting
-                      length_kG(hybrid%ngptm(ikpt),ikpt)   = rdum
-                   END IF
-                END DO
-             END DO
-          END DO
-       END DO
-       IF(.NOT.ldum) EXIT
-    END DO
+   ALLOCATE(hybrid%pgptm1(hybrid%maxgptm1,kpts%nkptf))
+   hybrid%pgptm1 = 0
+   hybrid%ngptm1 = 0
 
-    !
-    ! Sort pointers in array, so that shortest |k+G| comes first
-    !
-    DO ikpt = 1,kpts%nkptf
-       ALLOCATE( ptr(hybrid%ngptm(ikpt)) )
-       ! Divide and conquer algorithm for arrays > 1000 entries
-       divconq = MAX( 0, INT( 1.443*LOG( 0.001*hybrid%ngptm(ikpt) ) ) )
-       ! create pointers which correspond to a sorted array
-       CALL rorderpf(ptr, length_kG(1:hybrid%ngptm(ikpt),ikpt),hybrid%ngptm(ikpt), divconq )
-       ! rearrange old pointers
-       DO igpt = 1,hybrid%ngptm(ikpt)
-          hybrid%pgptm(igpt,ikpt) = unsrt_pgptm(ptr(igpt),ikpt)
-       END DO
-       DEALLOCATE( ptr )
-    END DO
-    DEALLOCATE( unsrt_pgptm )
-    DEALLOCATE( length_kG )
+   ! Allocate and initialize arrays needed for G vector ordering
+   ALLOCATE (unsrt_pgptm(hybrid%maxgptm1,kpts%nkptf))
+   ALLOCATE (length_kG(hybrid%maxgptm1,kpts%nkptf))
+   length_kG   = 0
+   unsrt_pgptm = 0
+   DO igpt = 1, hybrid%gptmd
+      g = hybrid%gptm(:,igpt)
+      DO ikpt = 1, kpts%nkptf
+         kvec = kpts%bkf(:,ikpt)
+         rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
+         IF(rdum.LE.hybrid%gcutm1**2) THEN
+            hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
+            unsrt_pgptm(hybrid%ngptm1(ikpt),ikpt) = igpt
+            length_kG(hybrid%ngptm1(ikpt),ikpt) = rdum
+         END IF
+      END DO
+   END DO
 
-    !
-    ! construct IR mixed basis set for the representation of the non local exchange elements
-    ! with cutoff gcutm1
-    !
-
-    ! first run to determine dimension of pgptm1
-    ALLOCATE( hybrid%ngptm1(kpts%nkptf) )
-    hybrid%ngptm1 = 0
-    DO igpt = 1,hybrid%gptmd
-       g = hybrid%gptm(:,igpt)
-       DO ikpt = 1,kpts%nkptf
-          kvec = kpts%bkf(:,ikpt)
-          rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
-          IF( rdum .LE. hybrid%gcutm1**2 ) THEN
-             hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
-          END IF
-       END DO
-    END DO
-    hybrid%maxgptm1 = MAXVAL( hybrid%ngptm1 )
-
-    ALLOCATE( hybrid%pgptm1(hybrid%maxgptm1,kpts%nkptf) )
-    hybrid%pgptm1 = 0
-    hybrid%ngptm1 = 0
-    !     
-    ! Allocate and initialize arrays needed for G vector ordering
-    !
-    ALLOCATE ( unsrt_pgptm(hybrid%maxgptm1,kpts%nkptf) )
-    ALLOCATE ( length_kG(hybrid%maxgptm1,kpts%nkptf) )
-    length_kG   = 0
-    unsrt_pgptm = 0
-    DO igpt = 1,hybrid%gptmd
-       g = hybrid%gptm(:,igpt)
-       DO ikpt = 1,kpts%nkptf
-          kvec = kpts%bkf(:,ikpt)
-          rdum = SUM(MATMUL(kvec+g,cell%bmat)**2)
-          IF( rdum .LE. hybrid%gcutm1**2 ) THEN
-             hybrid%ngptm1(ikpt)                   = hybrid%ngptm1(ikpt) + 1
-             unsrt_pgptm(hybrid%ngptm1(ikpt),ikpt) = igpt
-             length_kG(hybrid%ngptm1(ikpt),ikpt)   = rdum
-          END IF
-       END DO
-    END DO
-
-    !
-    ! Sort pointers in array, so that shortest |k+G| comes first
-    !
-    DO ikpt = 1,kpts%nkptf
-       ALLOCATE( ptr(hybrid%ngptm1(ikpt)) )
-       ! Divide and conquer algorithm for arrays > 1000 entries
-       divconq = MAX( 0, INT( 1.443*LOG( 0.001*hybrid%ngptm1(ikpt) ) ) )
-       ! create pointers which correspond to a sorted array
-       CALL rorderpf(ptr, length_kG(1:hybrid%ngptm1(ikpt),ikpt),hybrid%ngptm1(ikpt), divconq )
-       ! rearrange old pointers
-       DO igpt = 1,hybrid%ngptm1(ikpt)
-          hybrid%pgptm1(igpt,ikpt) = unsrt_pgptm(ptr(igpt),ikpt)
-       END DO
-       DEALLOCATE( ptr )
-    END DO
-    DEALLOCATE( unsrt_pgptm )
-    DEALLOCATE( length_kG )
+   ! Sort pointers in array, so that shortest |k+G| comes first
+   DO ikpt = 1, kpts%nkptf
+      ALLOCATE(ptr(hybrid%ngptm1(ikpt)))
+      ! Divide and conquer algorithm for arrays > 1000 entries
+      divconq = MAX( 0, INT( 1.443*LOG( 0.001*hybrid%ngptm1(ikpt) ) ) )
+      ! create pointers which correspond to a sorted array
+      CALL rorderpf(ptr,length_kG(1:hybrid%ngptm1(ikpt),ikpt),hybrid%ngptm1(ikpt),divconq)
+      ! rearrange old pointers
+      DO igpt = 1, hybrid%ngptm1(ikpt)
+         hybrid%pgptm1(igpt,ikpt) = unsrt_pgptm(ptr(igpt),ikpt)
+      END DO
+      DEALLOCATE(ptr)
+   END DO
+   DEALLOCATE(unsrt_pgptm)
+   DEALLOCATE(length_kG)
 
     
-    IF ( mpi%irank == 0 ) THEN
-       WRITE(6,'(/A)')       'Mixed basis'
-       WRITE(6,'(A,I5)')     'Number of unique G-vectors: ',hybrid%gptmd
-       WRITE(6,*)
-       WRITE(6,'(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
-       WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm
-       WRITE(6,*)
-       WRITE(6,*)
-       WRITE(6,'(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
-       WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm1
-       WRITE(6,*)
-    END IF
+   IF (mpi%irank == 0) THEN
+      WRITE(6,'(/A)')       'Mixed basis'
+      WRITE(6,'(A,I5)')     'Number of unique G-vectors: ',hybrid%gptmd
+      WRITE(6,*)
+      WRITE(6,'(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
+      WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm
+      WRITE(6,*)
+      WRITE(6,*)
+      WRITE(6,'(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
+      WRITE(6,'(5x,A,I5)')  'Maximal number of G-vectors:',hybrid%maxgptm1
+      WRITE(6,*)
+   END IF
 
-    !
-    ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
-    !
+   ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 
-    IF ( mpi%irank == 0 ) THEN
-       WRITE(6,'(A)') 'MT product basis for non-local exchange potential:'
-       WRITE(6,'(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
-    END IF
+   IF (mpi%irank == 0) THEN
+      WRITE(6,'(A)') 'MT product basis for non-local exchange potential:'
+      WRITE(6,'(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
+   END IF
 
-    hybrid%maxlcutm1 = MAXVAL( hybrid%lcutm1 )
+   hybrid%maxlcutm1 = MAXVAL(hybrid%lcutm1)
 
+   ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1,atoms%ntype))
+   ALLOCATE (seleco(hybrid%maxindx,0:atoms%lmaxd),selecu(hybrid%maxindx,0:atoms%lmaxd))
+   ALLOCATE (selecmat(hybrid%maxindx,0:atoms%lmaxd,hybrid%maxindx,0:atoms%lmaxd))
+   hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
 
-    ALLOCATE ( hybrid%nindxm1(0:hybrid%maxlcutm1,atoms%ntype) )
-    ALLOCATE ( seleco(hybrid%maxindx,0:atoms%lmaxd) , selecu(hybrid%maxindx,0:atoms%lmaxd) )
-    ALLOCATE ( selecmat(hybrid%maxindx,0:atoms%lmaxd,hybrid%maxindx,0:atoms%lmaxd) )
-    hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
-
-    !
-    ! determine maximal indices of (radial) mixed-basis functions (->nindxm1) 
-    ! (will be reduced later-on due to overlap)
-    !
-
+   ! determine maximal indices of (radial) mixed-basis functions (->nindxm1) 
+   ! (will be reduced later-on due to overlap)
     hybrid%maxindxp1  = 0
     DO itype = 1,atoms%ntype
        seleco = .FALSE.

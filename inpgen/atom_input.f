@@ -28,12 +28,11 @@
       USE m_readrecord
       USE m_setatomcore, ONLY : setatom_bystr, setcore_bystr
       USE m_constants
-      USE m_enpara,      ONLY : w_enpara,default_enpara
-
+    
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(INOUT)    :: input
-      TYPE(t_enpara),INTENT(INOUT)   :: enpara
+      TYPE(t_enpara),INTENT(OUT)     :: enpara
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
 ! ... Arguments ...
@@ -373,18 +372,9 @@
 
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
-      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%evac0(2,input%jspins))
-      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%lchg_v(2,input%jspins))
-      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
-      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%enmix(input%jspins))
-
-      enpara%el0 = -9999.9
-      enpara%ello0 = -9999.9
-      enpara%evac0 = eVac0Default_const
+      lmaxdTemp = atoms%lmaxd
+      atoms%lmaxd = 3
+      call enpara%init(atoms,input%jspins)
       DO n = 1, atoms%ntype
 
         CALL setcore_bystr(
@@ -659,22 +649,19 @@ c           in s and p states equal occupation of up and down states
         IF (atoms%nlo(n) /= 0) THEN                    ! check for local orbitals
           DO i = 1, atoms%nlo(n)
             enpara%ello0(i,n,:) = REAL(lonqn(i,n))
-            IF (lonqn(i,n) == NINT(enpara%el0(atoms%llo(i,n),n,1))) THEN  ! increase qn
-              enpara%el0(atoms%llo(i,n),n,:) = 
-     &           enpara%el0(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
+            IF (lonqn(i,n) == enpara%qn_el(atoms%llo(i,n),n,1)) THEN  ! increase qn
+              enpara%qn_el(atoms%llo(i,n),n,:) = 
+     &           enpara%qn_el(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
             ENDIF
           ENDDO
         ENDIF
         enpara%skiplo(n,:) = 0
         DO i = 1, atoms%nlo(n)
+          enpara%qn_ello(i,n,:) = enpara%qn_el(atoms%llo(i,n),n,:) - 1
           enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
         ENDDO
 
       ENDDO
-
-      DO j = 1, input%jspins
-         CALL default_enpara(j,atoms,enpara)
-      END DO
 
       DO n = 1, atoms%ntype
 ! correct valence charge
@@ -683,8 +670,8 @@ c           in s and p states equal occupation of up and down states
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
-            ELSE IF (enpara%ello0(i,n,1).GE.
-     &               enpara%el0(atoms%llo(i,n),n,1)) THEN
+            ELSE IF (enpara%qn_ello(i,n,1).GE.
+     &               enpara%qn_el(atoms%llo(i,n),n,1)) THEN
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
@@ -700,18 +687,9 @@ c           in s and p states equal occupation of up and down states
       enpara%enmix = 1.0
       enpara%lchg_v = .TRUE.
       IF(juDFT_was_argument("-genEnpara")) THEN
-         lmaxdTemp = atoms%lmaxd
-         atoms%lmaxd = 3
-         OPEN (40,file='enpara',form='formatted',status='unknown') ! write out an enpara-file
-         DO j = 1, input%jspins
-            OPEN (42)
-            CALL w_enpara(atoms,j,input%film,enpara,42)
-            CLOSE (42,status='delete')
-         ENDDO
-         CLOSE (40)
-         atoms%lmaxd = lmaxdTemp
+         CALL enpara%write(atoms,input%jspins,input%film)
       END IF
-
+      atoms%lmaxd = lmaxdTemp
       RETURN
 
 !===> error handling
@@ -950,14 +928,14 @@ c           in s and p states equal occupation of up and down states
 
 !Defaults
       ncst1 =(/0,0,                                            0,        ! Va,H,He
-     + 01, 01,                                  1, 1, 1, 1, 1, 1,        ! Li - Ne
-     + 304,304,                                  4, 4, 4, 4, 4, 4,       ! Na - Ar
-     + 307,307,307,307,307,307,307,307,207,207, 7,409,409,409,409,409,
+     + 01, 01,                                         1, 1, 1, 1, 1, 1,        ! Li - Ne
+     + 304,304,                                        4, 4, 4, 4, 4, 4,       ! Na - Ar
+     + 307,307,307,307,307,307,307,307,207,207, 7,  7,409,409,409,409,
      +                                                          409, 9,  ! K - Kr
-     + 312,312,312,312,312,312,312,212,212,212,312,414,414,414,414,414,
+     + 312,312,312,312,312,312,312,212,212,212,312,212,414,414,414,414,
      +                                                         414,414,  ! Rb - Xe
      + 317,317,217,217,217,217,217,217,217,217,217,17, 17,17,17,17,17,    ! Cs - Lu
-     +    1119,1119,319,319,219,219,219,219,619,421,421,421,421,421,421,  ! Hf - Rn
+     +    1119,1119,319,319,219,219,219,219,219,421,421,421,421,421,421,  ! Hf - Rn
      + 324,324,224,224,224,24,24,24,24,24,24,24, 24,24,24,24,24/)   ! Fr - Lw
 
       if (judft_was_argument("-fast_defaults")) 

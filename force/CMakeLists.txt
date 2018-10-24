@@ -19,5 +19,4 @@ force/force_sf.F90
 force/force_w.f90
 force/geo.f90
 force/stern.f90
-force/to_pulay.F90
 )

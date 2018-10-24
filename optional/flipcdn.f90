@@ -49,7 +49,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
    IF(noco%l_noco) THEN
       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
    ELSE

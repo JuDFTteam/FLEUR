@@ -9,14 +9,15 @@
       USE m_judft_time
       USE m_judft_sysinfo
       USE m_judft_stop
-
+      USE m_judft_args
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
       CONTAINS
      
       SUBROUTINE juDFT_init()
-      CALL signal_handler()
+        IF (.NOT.judft_was_argument("-debugtime")) &
+             CALL signal_handler()
       CALL checkstack()
       END SUBROUTINE juDFT_init
 
@@ -60,6 +61,9 @@
       WRITE(*,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
       CALL PRINT_memory_info()
+#ifdef CPP_MPI
+      CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
+#endif      
       STOP "Signal"
       intel_signal_handler=0
       END FUNCTION intel_signal_handler

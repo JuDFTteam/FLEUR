@@ -12,6 +12,7 @@ c.....------------------------------------------------------------------
      >                 lmaxd,lmax,v,ylm,
      <                 dylmt1,dylmt2,dylmf1,dylmf2,dylmtf)
 c
+      use m_constants
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..
@@ -29,11 +30,8 @@ C     ..
 C     .. Local Scalars ..
       INTEGER lm1,lm,lm2,lm1m,lmm1m,lmm,lmm1,lmm2
       INTEGER l,m,ll1,llm
-      COMPLEX ci,em1f,em2f,ep1f,ep2f
+      COMPLEX em1f,em2f,ep1f,ep2f
       REAL cph,rxy,small,sph,x,xy,y
-C     ..
-C     .. Intrinsic Functions ..
-      INTRINSIC cmplx,conjg,sqrt
 C     ..
 C     .. Data Statements ..
       DATA small/1.0e-12/
@@ -44,7 +42,6 @@ c     ..
          CALL juDFT_error("lmax.GT.lmaxd",calledby="dylm3")
       ENDIF
 
-      ci=cmplx(0.0,1.0)
 c--->    calculate sin and cos of phi
       x = v(1)
       y = v(2)
@@ -105,9 +102,9 @@ c
 
          DO m=-l,l
             llm = ll1 + m + 1
-            dylmf1(llm) = ci * m *    ylm(llm)
+            dylmf1(llm) = ImagUnit * m *    ylm(llm)
             dylmf2(llm) = -m * m *    ylm(llm)
-            dylmtf(llm) = ci * m * dylmt1(llm)
+            dylmtf(llm) = ImagUnit * m * dylmt1(llm)
          ENDDO
 
    21 ENDDO

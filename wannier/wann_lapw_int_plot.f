@@ -25,7 +25,7 @@ c***************************************************************
       complex,intent(out)::xdnout
 
       real xiiu(3),tpi,arg
-      complex ci,factor1,factor2,factor3
+      complex factor1,factor2,factor3
       complex factor1p,factor2p,factor3p,factor
       integer pw1,pw2,pw3
 

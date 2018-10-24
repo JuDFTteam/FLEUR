@@ -71,7 +71,7 @@ CONTAINS
     CALL psqpw(mpi,&
          atoms_tmp,sphhar,stars,vacuum,&
          DIMENSION,cell,input,sym,oneD,&
-         qpw,rho,(/0.,0./),.TRUE.,psq)
+         qpw,rho,(/0.,0./),.TRUE.,2,psq)
 
     !put pseudo charge on real-space grid
     !use v_pot for imaginary part

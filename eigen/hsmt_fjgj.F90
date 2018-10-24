@@ -4,88 +4,85 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_fjgj
-  use m_juDFT
-  implicit none
+  USE m_juDFT
+  IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_fjgj(input,atoms,isp,noco,l_socfirst,cell,nintsp, lapw,usdus,fj,gj)
-!Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
-!radial functions at the MT boundary as contained in usdus
+  SUBROUTINE hsmt_fjgj(input,atoms,cell,lapw,noco,usdus,n,ispin,fj,gj)
+    !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
+    !radial functions at the MT boundary as contained in usdus
     USE m_constants, ONLY : fpi_const
     USE m_sphbes
     USE m_dsphbs
     USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(IN)     :: lapw!lpaw%nv_tot is updated
+    TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_usdus),INTENT(IN)    :: usdus
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: isp 
-    INTEGER, INTENT (IN) :: nintsp
-    LOGICAL,INTENT(IN)   :: l_socfirst
-
+    INTEGER, INTENT (IN) :: ispin,n
+  
     REAL,INTENT(OUT)     :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     ..
     !     .. Local Scalars ..
-    REAL con1,ff,gg,gs,ws
+    REAL con1,ff,gg,gs
 
-    INTEGER k,l,lo,n,iintsp
+    INTEGER k,l,lo,intspin,jspin
+    LOGICAL l_socfirst
     !     .. Local Arrays ..
+    REAL ws(input%jspins)
     REAL gb(0:atoms%lmaxd), fb(0:atoms%lmaxd)
     LOGICAL apw(0:atoms%lmaxd)
     !     ..
-    con1 = fpi_const/sqrt(cell%omtil)
-    DO iintsp = 1,nintsp
-       !$OMP parallel do DEFAULT(SHARED)&
-       !$OMP PRIVATE(n,l,apw,lo,k,gs,fb,gb,ws,ff,gg)
-       DO n = 1,atoms%ntype
+    l_socfirst = noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)
+    con1 = fpi_const/SQRT(cell%omtil)
+    DO l = 0,atoms%lmax(n)
+       apw(l)=ANY(atoms%l_dulo(:atoms%nlo(n),n))
+       IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l) = .FALSE.
+    ENDDO
+    DO lo = 1,atoms%nlo(n)
+       IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .TRUE.
+    ENDDO
+    DO intspin=1,MERGE(2,1,noco%l_noco)
+       !$OMP PARALLEL DO DEFAULT(NONE) &
+       !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg,jspin)&
+       !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
+       !$OMP SHARED(fj,gj,intspin,n,ispin,apw)
+       DO k = 1,lapw%nv(intspin)
+          gs = lapw%rk(k,intspin)*atoms%rmt(n)
+          CALL sphbes(atoms%lmax(n),gs, fb)
+          CALL dsphbs(atoms%lmax(n),gs,fb, gb)
+!          !$OMP SIMD PRIVATE(ws,ff,gg)
           DO l = 0,atoms%lmax(n)
-             apw(l)=any(atoms%l_dulo(:atoms%nlo(n),n))
-             IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l) = .false.
-
-          ENDDO
-          DO lo = 1,atoms%nlo(n)
-             IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .true.
-          ENDDO
-
-          DO k = 1,lapw%nv(iintsp)
-             gs = lapw%rk(k,iintsp)*atoms%rmt(n)
-             CALL sphbes(atoms%lmax(n),gs, fb)
-             CALL dsphbs(atoms%lmax(n),gs,fb, gb)
-             DO l = 0,atoms%lmax(n)
-                !---> set up wronskians for the matching conditions for each ntype
-                ws = con1/(usdus%uds(l,n,isp)*usdus%dus(l,n,isp)&
-                     - usdus%us(l,n,isp)*usdus%duds(l,n,isp))
-                ff = fb(l)
-                gg = lapw%rk(k,iintsp)*gb(l)
-                IF ( apw(l) ) THEN
-                   fj(k,l,n,iintsp) = 1.0*con1 * ff / usdus%us(l,n,isp)
-                   gj(k,l,n,iintsp) = 0.0d0
+             !---> set up wronskians for the matching conditions for each ntype
+             DO jspin = 1, input%jspins
+                ws(jspin) = con1/(usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin)&
+                            - usdus%us(l,n,jspin)*usdus%duds(l,n,jspin))
+             END DO
+             ff = fb(l)
+             gg = lapw%rk(k,intspin)*gb(l)
+             IF ( apw(l) ) THEN
+                fj(k,l,ispin,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
+                gj(k,l,ispin,intspin) = 0.0d0
+             ELSE
+                IF (noco%l_constr.or.l_socfirst) THEN
+                   DO jspin = 1, input%jspins
+                      fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
+                      gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
+                   END DO
                 ELSE
-                   IF (noco%l_constr.or.l_socfirst) THEN
-                      !--->                 in a constrained calculation fj and gj are needed
-                      !--->                 both local spin directions (isp) at the same time
-                      fj(k,l,n,isp) = ws * ( usdus%uds(l,n,isp)*gg - usdus%duds(l,n,isp)*ff )
-                      gj(k,l,n,isp) = ws * ( usdus%dus(l,n,isp)*ff - usdus%us(l,n,isp)*gg )
-                   ELSE
-                      !--->                 in a spin-spiral calculation fj and gj are needed
-                      !--->                 both interstitial spin directions at the same time
-                      !--->                 In all other cases iintsp runs from 1 to 1.
-                      fj(k,l,n,iintsp) = ws * ( usdus%uds(l,n,isp)*gg - usdus%duds(l,n,isp)*ff )
-                      gj(k,l,n,iintsp) = ws * ( usdus%dus(l,n,isp)*ff - usdus%us(l,n,isp)*gg )
-                   ENDIF
+                   fj(k,l,ispin,intspin) = ws(ispin) * ( usdus%uds(l,n,ispin)*gg - usdus%duds(l,n,ispin)*ff )
+                   gj(k,l,ispin,intspin) = ws(ispin) * ( usdus%dus(l,n,ispin)*ff - usdus%us(l,n,ispin)*gg )
                 ENDIF
-             ENDDO
-          ENDDO ! k = 1, lapw%nv
-       ENDDO    ! n = 1,atoms%ntype
-       !$OMP end parallel do
-
-    ENDDO       ! iintsp = 1,nintsp
-  
-
+             ENDIF
+          ENDDO
+!          !$OMP END SIMD
+       ENDDO ! k = 1, lapw%nv
+       !$OMP END PARALLEL DO
+    ENDDO
     RETURN
   END SUBROUTINE hsmt_fjgj
 END MODULE m_hsmt_fjgj

@@ -194,10 +194,10 @@
             IF(ANY(ABS(tau(:,inversionOp)).GT.eps7)) THEN
                WRITE(*,*) 'Found inversion center at finite position.'
                WRITE(*,*) 'Shifting crystal by:'
-               WRITE(*,'(3f15.10)') 0.5*tau(:,inversionOp)
+               WRITE(*,'(3f15.10)') -0.5*tau(:,inversionOp)            ! changed to minus
                WRITE(*,*) ''
                DO k = 1, ABS(natin)
-                  atompos(:,k) = atompos(:,k) + 0.5*tau(:,inversionOp)
+                  atompos(:,k) = atompos(:,k) - 0.5*tau(:,inversionOp) ! GB`18
                END DO
                DEALLOCATE(neq,ntyrep,zatom,mrot,tau)
                CALL spg_gen(

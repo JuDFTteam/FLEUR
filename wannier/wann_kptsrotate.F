@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_kptsrotate
+      use m_judft
 c****************************************
 c     Rotate the wave function.
 c     Frank Freimuth
@@ -15,7 +16,7 @@ c****************************************
      >               ntypd,nlo,llo,invsat,
      >               l_noco,l_soc,
      >               ntype,neq,nlotot,
-     >               kveclo,jspin_in,
+     >               jspin_in,
      >               oper,nop,mrot,nvd,
      >               nv,shiftkpt,
      >               tau,
@@ -37,7 +38,6 @@ c****************************************
       integer,intent(in)    :: ntype
       integer,intent(in)    :: neq(ntype)
       integer,intent(in)    :: nlotot
-      integer,intent(in)    :: kveclo(nlotot)
       integer,intent(in)    :: jspin_in
       integer,intent(in)    :: oper
       integer,intent(in)    :: nop
@@ -48,7 +48,7 @@ c****************************************
       real,intent(inout)    :: bkpt(3)
       integer,intent(inout) :: k1(:,:),k2(:,:),k3(:,:) !nvd,jspd
 
-      TYPE(t_zmat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       complex,intent(out)   :: nsfactor !phase of non-symmorphic ops
 
@@ -76,7 +76,7 @@ c      print*,testmat
 
       IF(.NOT.zMat%l_real) THEN
          if(oper.lt.0)then
-            zMat%z_c = CONJG(zMat%z_c)
+            zMat%data_c = CONJG(zMat%data_c)
             shiftnonsymm=-1.0*shiftnonsymm
          endif
       END IF
@@ -134,23 +134,24 @@ c      print*,testmat
          phase = tpi*phase
          phase = cos(phase)
          IF(zMat%l_real) THEN
-            zMat%z_r(j+jj,:)  = phase * zMat%z_r(j+jj,:) 
+            zMat%data_r(j+jj,:)  = phase * zMat%data_r(j+jj,:) 
          ELSE
-            zMat%z_c(j+jj,:)  = phase * zMat%z_c(j+jj,:) 
+            zMat%data_c(j+jj,:)  = phase * zMat%data_c(j+jj,:) 
          END IF
         enddo    
         jj=jj+nv(jspin)
         do ilo=1,nlotot
-         j=kveclo(ilo)
+           call judft_error("BUG in wann_kptsrotate:LOs missing")
+         !j=kveclo(ilo)
          phase = k1(j,jspin) * shiftnonsymm(1)
      +         + k2(j,jspin) * shiftnonsymm(2)
      +         + k3(j,jspin) * shiftnonsymm(3)
          phase = tpi*phase
          phase = cos(phase)
          IF(zMat%l_real) THEN
-            zMat%z_r(jj+ilo,:)  = phase * zMat%z_r(jj+ilo,:) 
+            zMat%data_r(jj+ilo,:)  = phase * zMat%data_r(jj+ilo,:) 
          ELSE
-            zMat%z_c(jj+ilo,:)  = phase * zMat%z_c(jj+ilo,:) 
+            zMat%data_c(jj+ilo,:)  = phase * zMat%data_c(jj+ilo,:) 
          END IF
         enddo
       enddo  

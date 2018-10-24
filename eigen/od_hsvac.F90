@@ -9,7 +9,7 @@ MODULE m_od_hsvac
 CONTAINS
   SUBROUTINE od_hsvac(&
        vacuum,stars,DIMENSION, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
-       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,jij,nv2,l_real,hamOvlp)
+       bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,nv2,l_real,hamOvlp)
 
     !     subroutine for calculating the hamiltonian and overlap matrices in
     !     the vacuum in the case of 1-dimensional calculations
@@ -25,7 +25,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
-    TYPE(t_jij),INTENT(IN)        :: jij
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -70,14 +69,11 @@ CONTAINS
     REAL, ALLOCATABLE :: ddnv(:,:,:),dudz(:,:,:)
     REAL, ALLOCATABLE :: duz(:,:,:)
     REAL, ALLOCATABLE :: udz(:,:,:),uz(:,:,:)
-    ! l_J auxiliary potential array
-    COMPLEX, ALLOCATABLE :: vxy1(:,:,:)
     !     ..
     ic  = CMPLX(0.,1.)
     d2 = SQRT(cell%omtil/cell%area)
 
-    IF (jij%l_J) ALLOCATE (vxy1(vacuum%nmzxyd,n2d_1-1,2))
-
+ 
     ALLOCATE (&
          ai(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),bi(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),&
          nvp(DIMENSION%nv2d,DIMENSION%jspd),ind(stars%ng2,DIMENSION%nv2d,DIMENSION%jspd),&
@@ -133,35 +129,13 @@ CONTAINS
        !--->         load the non-warping part of the potential
        READ (25)((vz(imz,ivac,ipot),imz=1,vacuum%nmzd),ipot=1,4)
        npot = 3
-       !--->         for J-coeff. we average the up-up and down-down parts
-       !--->         and off-diagonal elements of the potential matrix to zero
-       IF (jij%l_J) THEN
-          vz(:,ivac,1) = (vz(:,ivac,1) + vz(:,ivac,2))/2.
-          vz(:,ivac,2) =  vz(:,ivac,1)
-          vz(:,ivac,3) = 0.0
-          vz(:,ivac,4) = 0.0
-       END IF
     ENDIF
 
     DO ipot = 1,npot
 
        IF (noco%l_noco) THEN
-          IF (.NOT.jij%l_J) THEN
-             READ (25)((vxy(imz,k,ivac), imz=1,vacuum%nmzxy),k=1,n2d_1-1)
-          END IF
+          READ (25)((vxy(imz,k,ivac), imz=1,vacuum%nmzxy),k=1,n2d_1-1)
           !--->  l_J we want to average the diagonal elements of the pot. matrix
-          IF (jij%l_J .AND. ipot.EQ.1) THEN
-             READ (25)((vxy(imz,k,ivac), imz=1,vacuum%nmzxy),k=1,n2d_1-1)
-             READ (25)((vxy1(imz,k,ivac), imz=1,vacuum%nmzxy),k=1,n2d_1-1)
-             vxy(:,:,ivac) = (vxy(:,:,ivac)+vxy1(:,:,ivac))/2.
-          END IF
-
-          IF (jij%l_J .AND. ipot.EQ.3) THEN
-             READ (25)((vxy(imz,k,ivac), imz=1,vacuum%nmzxy),k=1,n2d_1-1)
-          END IF
-
-          IF (jij%l_J .AND. ipot.EQ.3) vxy(:,:,ivac)=CMPLX(0.,0.)
-
        ENDIF ! loco
 
        !     get the wavefunctions and set up the tuuv, etc matrices
@@ -353,8 +327,6 @@ CONTAINS
        END DO
 
     ENDDO !ipot
-
-    IF (jij%l_J) DEALLOCATE (vxy1)
 
     DEALLOCATE (ai,bi,nvp,ind,kvac3,map1, tddv,tduv,tudv,tuuv,a,b,bess,dbss,bess1, ddnv,dudz,duz,udz,uz )
 

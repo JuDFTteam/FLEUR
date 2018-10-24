@@ -36,7 +36,7 @@ c-odim
 c+odim
 C     ..
 C     .. Local Scalars ..
-      COMPLEX sf,ci
+      COMPLEX sf
       REAL x
       INTEGER j,l,m,n,na,lm
 C     ..
@@ -51,11 +51,10 @@ C     .. Intrinsic Functions ..
       INTRINSIC cmplx,conjg,cos,sin
 C     ..
 
-      ci = cmplx(0.0,1.0)
       ciall(0) = fpi_const/ods%nop
 
       DO 10 l = 1,lmaxd
-         ciall(l) = ciall(0)*ci**l
+         ciall(l) = ciall(0)*ImagUnit**l
    10 CONTINUE
       na = 1
       DO 70 n = 1,ntype

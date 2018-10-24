@@ -221,7 +221,7 @@
          DO n = 1,atoms%ntype
             nat2 = nat1 + atoms%neq(n) - 1
             DO na = nat1,nat2 - 1
-               IF (atoms%invsat(na).EQ.0) THEN
+               IF (atoms%invsat(na).EQ.0.AND..NOT.noco%l_noco) THEN
                   naloop:DO na2 = na + 1,nat2
                      DO i = 1,3
                         sum_taual(i) = atoms%taual(i,na) + atoms%taual(i,na2)

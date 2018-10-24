@@ -8,7 +8,7 @@ MODULE m_nocoInputCheck
 
    CONTAINS
 
-   SUBROUTINE nocoInputCheck(atoms,input,vacuum,jij,noco)
+   SUBROUTINE nocoInputCheck(atoms,input,vacuum,noco)
 
       USE m_juDFT
       USE m_types
@@ -18,7 +18,6 @@ MODULE m_nocoInputCheck
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_input),  INTENT(IN)    :: input
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
-      TYPE(t_Jij),    INTENT(IN)    :: Jij
       TYPE(t_noco),   INTENT(IN)    :: noco
 
       INTEGER itype

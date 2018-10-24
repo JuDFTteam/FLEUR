@@ -15,32 +15,27 @@ MODULE m_rhonmtlo
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE rhonmtlo(atoms,sphhar, ne,we,acof,bcof,ccof, acnmt,bcnmt,ccnmt)
+  SUBROUTINE rhonmtlo(atoms,sphhar,ne,we,eigVecCoeffs,denCoeffs,ispin)
     USE m_gaunt,ONLY:gaunt1
     USE m_types
+    use m_constants
+
     IMPLICIT NONE
-    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne   
-    !     ..
-    !     .. Array Arguments ..
+
+    TYPE(t_sphhar),       INTENT(IN)    :: sphhar
+    TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
+
+    INTEGER, INTENT (IN) :: ne, ispin
+
     REAL,    INTENT (IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    INTENT (INOUT) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (INOUT) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (INOUT) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype)
-    !     ..
+
     !     .. Local Scalars ..
-    COMPLEX ci,cmv,fact,cf1
+    COMPLEX cmv,fact,cf1
     INTEGER i,jmem,l,lh,lmp,lo,lop,lp,lpmax,lpmax0,lpmin,lpmin0,m,lpp ,mp,mpp,na,neqat0,nn,ntyp
     !     ..
     !     ..
-
-    ci = CMPLX(0.0,1.0)
 
     !---> for optimal performance consider only
     !---> those combinations of l,l',l'',m,m',m'' that satisfy the three
@@ -81,14 +76,16 @@ CONTAINS
                    !--->                loop over l'
                    DO lp = lpmin,lpmax,2
                       lmp = lp* (lp+1) + mp
-                      fact = cmv* (ci** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
+                      fact = cmv* (ImagUnit** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
                       na = neqat0
                       DO nn = 1,atoms%neq(ntyp)
                          na = na + 1
                          DO i = 1,ne
-                            cf1 = fact *  ccof(m,i,lo,na)
-                            acnmt(lp,lo,lh,ntyp) =acnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * CONJG(acof(i,lmp,na)) )
-                            bcnmt(lp,lo,lh,ntyp) =bcnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * CONJG(bcof(i,lmp,na)) )
+                            cf1 = fact *  eigVecCoeffs%ccof(m,i,lo,na,ispin)
+                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%acof(i,lmp,na,ispin)) )
+                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%bcof(i,lmp,na,ispin)) )
                          END DO
                       END DO
                    END DO
@@ -101,14 +98,16 @@ CONTAINS
                    !--->                loop over l'
                    DO lp = lpmin,lpmax,2
                       lmp = lp* (lp+1) + mp
-                      fact = cmv* (ci** (lp-l))*gaunt1(lp,l,lpp,mp,m,mpp,atoms%lmaxd)
+                      fact = cmv* (ImagUnit** (lp-l))*gaunt1(lp,l,lpp,mp,m,mpp,atoms%lmaxd)
                       na = neqat0
                       DO nn = 1,atoms%neq(ntyp)
                          na = na + 1
                          DO i = 1,ne
-                            cf1 = fact * CONJG(ccof(m,i,lo,na))
-                            acnmt(lp,lo,lh,ntyp) = acnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * acof(i,lmp,na) )
-                            bcnmt(lp,lo,lh,ntyp) = bcnmt(lp,lo,lh,ntyp) + we(i) * REAL(cf1 * bcof(i,lmp,na) )
+                            cf1 = fact * CONJG(eigVecCoeffs%ccof(m,i,lo,na,ispin))
+                            denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * eigVecCoeffs%acof(i,lmp,na,ispin) )
+                            denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
+                                                                   we(i) * REAL(cf1 * eigVecCoeffs%bcof(i,lmp,na,ispin) )
                          END DO
                       END DO
                    END DO
@@ -120,13 +119,14 @@ CONTAINS
                       !--->                   add terms containing gaunt1(l,lp,lpp,m,mp,mpp)
                       mp = m - mpp
                       IF ((ABS(l-lpp).LE.lp) .AND.(lp.LE. (l+lpp)) .AND.(MOD(l+lp+lpp,2).EQ.0) .AND.(ABS(mp).LE.lp)) THEN
-                         fact = cmv* (ci** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
+                         fact = cmv* (ImagUnit** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
                          na = neqat0
                          DO nn = 1,atoms%neq(ntyp)
                             na = na + 1
                             DO i = 1,ne
-                               ccnmt(lop,lo,lh,ntyp) =&
-                                    ccnmt(lop,lo,lh,ntyp) + we(i) * REAL(fact * CONJG(ccof(mp,i,lop,na))*ccof(m ,i,lo ,na))
+                               denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) =&
+                                  denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) +&
+                                  we(i) * REAL(fact * CONJG(eigVecCoeffs%ccof(mp,i,lop,na,ispin))*eigVecCoeffs%ccof(m,i,lo,na,ispin))
                             END DO
                          END DO
                       END IF

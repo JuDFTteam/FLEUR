@@ -35,7 +35,7 @@ c***************************************************************
 
       implicit none
 
-      TYPE(t_zmat), INTENT(IN) :: zMat
+      TYPE(t_mat), INTENT(IN) :: zMat
 
       TYPE(t_dimension),INTENT(IN)   :: DIMENSION
       TYPE(t_oneD),INTENT(IN)        :: oneD
@@ -159,20 +159,20 @@ c     ..intrinsic functions..
                IF(zMat%l_real) THEN
                   do n = 1,nslibd
                       acof(l,m,n) = acof(l,m,n) +
-     +                   zMat%z_r(k+addnoco,n)*avac
-c     +                    conjg(zMat%z_r(k,n))*avac
+     +                   zMat%data_r(k+addnoco,n)*avac
+c     +                    conjg(zMat%data_r(k,n))*avac
                       bcof(l,m,n) = bcof(l,m,n) +
-     +                   zMat%z_r(k+addnoco,n)*bvac
-c     +                    conjg(zMat%z_r(k,n))*bvac
+     +                   zMat%data_r(k+addnoco,n)*bvac
+c     +                    conjg(zMat%data_r(k,n))*bvac
                   enddo
                ELSE
                   do n = 1,nslibd
                       acof(l,m,n) = acof(l,m,n) +
-     +                   zMat%z_c(k+addnoco,n)*avac
-c     +                    conjg(zMat%z_c(k,n))*avac
+     +                   zMat%data_c(k+addnoco,n)*avac
+c     +                    conjg(zMat%data_c(k,n))*avac
                       bcof(l,m,n) = bcof(l,m,n) +
-     +                   zMat%z_c(k+addnoco,n)*bvac
-c     +                    conjg(zMat%z_c(k,n))*bvac
+     +                   zMat%data_c(k+addnoco,n)*bvac
+c     +                    conjg(zMat%data_c(k,n))*bvac
                   enddo
                END IF
             enddo      ! -mb:mb

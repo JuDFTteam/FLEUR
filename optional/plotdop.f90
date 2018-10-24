@@ -134,7 +134,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Read in charge/potential
    DO i = 1, numInFiles
-      CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,oneD,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_DEN)
+      CALL den(i)%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_DEN)
       IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
@@ -142,10 +142,8 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
       ELSE
-         OPEN(20,file = cdnFilenames(i),form='unformatted',status='old')
-         CALL loddop(stars,vacuum,atoms,sphhar,input,sym,20,&
-                     den(i)%iter,den(i)%mt,den(i)%pw,den(i)%vacz,den(i)%vacxy)
-         CLOSE(20)
+         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i),TRIM(ADJUSTL(cdnFilenames(i))))
       END IF
 
       ! Subtract core charge if input%score is set

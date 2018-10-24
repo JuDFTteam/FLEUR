@@ -68,7 +68,7 @@ CONTAINS
                 j = j + 1
                 sout(j) = den%vacz(k,iv,js)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    mapvac = mapvac + 1
                    j = j + 1
@@ -76,7 +76,7 @@ CONTAINS
                 END DO
              END DO
              IF (.NOT.sym%invs2) THEN
-                DO k = 1,oneD%odi%nq2-1
+                DO k = 1,stars%ng2-1
                    DO i = 1,vacuum%nmzxy
                       mapvac = mapvac + 1
                       j = j + 1
@@ -94,24 +94,24 @@ CONTAINS
        !--->    off-diagonal part of the density matrix
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = REAL(den%cdom(i))
+          sout(j) = REAL(den%pw(i,3))
        END DO
        DO i = 1,stars%ng3
           j = j + 1
-          sout(j) = AIMAG(den%cdom(i))
+          sout(j) = AIMAG(den%pw(i,3))
        END DO
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 mapvac2 = mapvac2 + 1
                 j = j + 1
-                sout(j) = REAL(den%cdomvz(k,iv))
+                sout(j) = den%vacz(k,iv,3)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    mapvac2 = mapvac2 + 1
                    j = j + 1
-                   sout(j) =  REAL(den%cdomvxy(i,k,iv))
+                   sout(j) =  REAL(den%vacxy(i,k,iv,3))
                 END DO
              END DO
           END DO
@@ -119,17 +119,17 @@ CONTAINS
              DO k = 1,vacuum%nmz
                 mapvac2 = mapvac2 + 1
                 j = j + 1
-                sout(j) = AIMAG(den%cdomvz(k,iv))
+                sout(j) = den%vacz(k,iv,4)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    mapvac2 = mapvac2 + 1
                    j = j + 1
-                   sout(j) =  AIMAG(den%cdomvxy(i,k,iv))
+                   sout(j) =  AIMAG(den%vacxy(i,k,iv,3))
                 END DO
              END DO
           END DO
-          nvaccoeff2 = 2*vacuum%nmzxy*(oneD%odi%nq2-1)*vacuum%nvac + 2*vacuum%nmz*vacuum%nvac
+          nvaccoeff2 = 2*vacuum%nmzxy*(stars%ng2-1)*vacuum%nvac + 2*vacuum%nmz*vacuum%nvac
           IF (mapvac2 .NE. nvaccoeff2) THEN
              WRITE (6,*)'The number of vaccum coefficients off the'
              WRITE (6,*)'off-diagonal part of the density matrix is'
@@ -157,7 +157,7 @@ CONTAINS
     ENDIF
 
     IF (input%film) THEN
-       nvaccoeff = vacfac*vacuum%nmzxy*(oneD%odi%nq2-1)*vacuum%nvac + vacuum%nmz*vacuum%nvac
+       nvaccoeff = vacfac*vacuum%nmzxy*(stars%ng2-1)*vacuum%nvac + vacuum%nmz*vacuum%nvac
        IF (mapvac .NE. nvaccoeff) THEN
           WRITE(6,*)'The number of vaccum coefficients is'
           WRITE(6,*)'inconsitent:'

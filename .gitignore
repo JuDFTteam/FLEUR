@@ -1,9 +1,11 @@
 init/compileinfo.h
+io/xml/inputSchema.h
 *~
-#*
+\#*
 build
 build.*
 *.o
 *.mod
 *.x
 *.swp
+tags

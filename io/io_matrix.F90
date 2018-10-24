@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_io_matrix
   USE m_types
   IMPLICIT NONE
@@ -81,7 +87,13 @@ CONTAINS
     l_real=mat%l_real
     READ(id,rec=rec,iostat=err) matsize1,matsize2
     if (matsize1<1) call judft_error("Data not found in file")
-    IF (mat%matsize1.NE.matsize1.OR.mat%matsize2.NE.matsize2) CALL mat%alloc(l_real,matsize1,matsize2)
+    IF (mat%matsize1.NE.matsize1.OR.mat%matsize2.NE.matsize2) THEN
+       WRITE(*,*) 'mat%matsize1 = ', mat%matsize1
+       WRITE(*,*) 'mat%matsize2 = ', mat%matsize2
+       WRITE(*,*) 'stored matsize1 = ', matsize1
+       WRITE(*,*) 'stored matsize2 = ', matsize2
+       CALL juDFT_error("matrix size wrong", calledby="read_matrix_DA")
+    END IF
     IF (mat%l_real) THEN
        READ(id,rec=rec,iostat=err) matsize1,matsize2,mat%data_r
     ELSE

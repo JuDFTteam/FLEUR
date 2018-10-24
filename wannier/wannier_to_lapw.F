@@ -115,7 +115,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real eig(neigd),cp_time(9)
       logical l_p0,l_bkpts,l_proj,l_amn,l_mmn,l_eig,wann,wann_plott
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
+      integer, allocatable :: nv(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       real,    allocatable :: we(:)
 
@@ -197,15 +197,13 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       CHARACTER(len=10):: vandername
       NAMELIST /plot/twodim,cartesian,vec1,vec2,vec3,grid,zero,filename 
       integer cell1,cell2,cell3,pw1,pw2,pw3
-      complex ci
       complex,allocatable::wannint(:,:,:,:)
       complex,allocatable::wannz(:,:),wannz2(:,:)
       real denom
 
-      TYPE(t_zmat)  :: zzMat, zMat
+      TYPE(t_mat)   :: zzMat, zMat
       TYPE(t_usdus) :: usdus
 
-      ci=cmplx(0.,1.)
 c specify number of unit-cells that are calculated
       cell1=3
       cell2=3
@@ -248,7 +246,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
 
-      allocate ( kveclo(nlotot),nv(jspd) )
+      allocate ( nv(jspd) )
       allocate ( k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd) )
@@ -450,12 +448,12 @@ c******************************************************************
       allocate (we(neigd),eigg(neigd))
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
+      zzMat%matsize1 = nbasfcn
+      zzMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
 
       call wann_read_eig(
@@ -463,20 +461,20 @@ c******************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
+     <              nmat,nv,ello,evdu,epar,
      <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat,
      >              .false.,1)
 
 
       zMat%l_real = zzMat%l_real
-      zMat%nbasfcn = zzMat%nbasfcn
-      zMat%nbands = zzMat%nbands
+      zMat%matsize1 = zzMat%matsize1
+      zMat%matsize2 = zzMat%matsize2
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat%z_r = 0.0
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+         zMat%data_r = 0.0
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat%z_c = CMPLX(0.0,0.0)
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+         zMat%data_c = CMPLX(0.0,0.0)
       END IF
 
       nslibd = 0
@@ -497,11 +495,11 @@ c...we work only within the energy window
         we(nslibd) = we(i)
         IF(zzMat%l_real) THEN
           do j = 1,nv(jspin) + nlotot
-             zMat%z_r(j,nslibd) = zzMat%z_r(j,i)
+             zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
           end do
         ELSE
           do j = 1,nv(jspin) + nlotot
-             zMat%z_c(j,nslibd) = zzMat%z_c(j,i)
+             zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
           end do
         END IF
        endif 
@@ -547,8 +545,8 @@ c******************************************************************
 c...generation of the A,B,C coefficients in the spheres 
 c...for the lapws and local orbitals, summed by the basis functions 
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     +           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
+      CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
+     +           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
       call abcrot(
      >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
@@ -562,7 +560,8 @@ c***************************************************************
       do i1=-cell1,cell1
        do i2=-cell2,cell2
         do i3=-cell3,cell3
-         factor=exp(ci*tpi_const*(i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
+         factor=exp(ImagUnit*tpi_const*
+     *          (i1*bkpt(1)+i2*bkpt(2)+i3*bkpt(3)))  
          do i=1,num_wann
           do n=1,noccbd
             wann_acof(i,0:lmd,1:natd,i1,i2,i3)=
@@ -591,12 +590,12 @@ c***************************************************************
        do m=1,num_wann
         IF(zMat%l_real) THEN
           do j=1, nv(jspin)
-            wannz(j,m)=wannz(j,m)+zMat%z_r(j,n)*
+            wannz(j,m)=wannz(j,m)+zMat%data_r(j,n)*
      +                            u_matrix(n,m,ikpt)/sqrt(omtil)
           enddo  
         ELSE
           do j=1, nv(jspin)
-            wannz(j,m)=wannz(j,m)+zMat%z_c(j,n)*
+            wannz(j,m)=wannz(j,m)+zMat%data_c(j,n)*
      +                            u_matrix(n,m,ikpt)/sqrt(omtil)
           enddo  
         END IF
@@ -614,21 +613,21 @@ c***************************************************************
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
-     /              (ci*denom*2)
+     /              (ImagUnit*denom*2)
           endif   
           denom=-pw2+unigrid(2)*(k2(j,jspin)+bkpt(2))  
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
-     /              (ci*denom*2)
+     /              (ImagUnit*denom*2)
           endif   
           denom=-pw3+unigrid(3)*(k3(j,jspin)+bkpt(3))  
           if(abs(denom).gt.1e-5)then
              denom=denom*tpi_const/2
              factor=cmplx(cos(denom),sin(denom))
              wannz2(j,:)=wannz2(j,:)*(factor-conjg(factor))/
-     /              (ci*denom*2)
+     /              (ImagUnit*denom*2)
           endif   
              wannint(pw1,pw2,pw3,:)=wannint(pw1,pw2,pw3,:)+
      +                wannz2(j,:)
@@ -704,7 +703,7 @@ c****************************************************************
 110   continue ! end of cycle by spins
 
 
-      deallocate ( vr,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,nv,k1,k2,k3 )
       deallocate ( ff,gg)
  
 #ifdef CPP_MPI

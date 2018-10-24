@@ -16,10 +16,9 @@
 !*********************************************************************
       USE m_gkptwgt
       USE m_constants
-      USE m_enpara,    ONLY : r_enpara,default_enpara
       USE m_types
-      use m_juDFT
-
+      USE m_juDFT
+     
       IMPLICIT NONE
 !     ..
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -42,46 +41,11 @@
 !---> the energy parameters for l.ge.3 have the same value
 !---> read from file 40='enpara'  shz Jan.96
 !
-      l_enpara = .FALSE.
-      INQUIRE (file ='enpara',exist= l_enpara)
-      IF (l_enpara) THEN
-         OPEN (40,file ='enpara',form='formatted',status='old')
-           DO jsp = 1,input%jspins
-            CALL r_enpara(&
-     &                    atoms,input,jsp,enpara)
-           ENDDO !dimension%jspd
-         CLOSE (40)
-      ELSE IF (.NOT.input%l_inpXML) THEN
-         WRITE(6,*) "No enpara file found, using default values"
-         enpara%el0(:,:,1)=0.0
-         enpara%el0(0,:,1)=-999999.0
-         enpara%lchange = .FALSE.
-         enpara%llochg = .FALSE.
-         enpara%lchg_v = .FALSE.
-         DO n = 1, atoms%ntype
-            l_clf = .FALSE.  
-            WRITE(fname,"('corelevels.',i2.2)") NINT(atoms%zatom(n))
-            INQUIRE (file=fname, exist=l_clf)
-            IF(l_clf) THEN
-               WRITE(6,*) "corelevels file found: ", fname
-               WRITE(6,*) "This is incompatible to a missing enpara file."
-               WRITE(6,*) "Please generate an adequate enpara file by starting"
-               WRITE(6,*) "inpgen with the -genEnpara command line switch or"
-               WRITE(6,*) "use the XML input by starting FLEUR with -xmlInput or -xml."
-               CALL juDFT_error('corelevels file is incompatible with missing enpara file',calledby='inpeig')
-            END IF
 
-            enpara%skiplo(n,:) = 0
-            DO i = 1, atoms%nlo(n)
-               enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
-            END DO
-         END DO
-         CALL default_enpara(1,atoms,enpara)
-         IF (input%jspins>1) THEN
-           enpara%el0(:,:,2)=enpara%el0(:,:,1)
-           enpara%ello0(:,:,2)=enpara%ello0(:,:,1)
-         ENDIF
-         IF (input%film) enpara%evac0 = eVac0Default_const
+      IF (.NOT.input%l_inpXML) THEN
+      !read enpara file if present!
+         CALL enpara%init(atoms,input%jspins)
+         CALL enpara%READ(atoms,input%jspins,input%film,.false.)        
       END IF
 !
 !---> read k-points from file 41='kpts'

@@ -84,7 +84,7 @@ C     .. Local Scalars ..
       REAL gs,rk1,rk2,socscreen_fac
       REAL gc1,gc2,c,e,r0
       REAL t0,t1,t11,t22,t33,t44,t55,t66
-      COMPLEX cil,ci,cci,cciljj1,ciljj2,fac1,fac2,fac3,dump1,dump2
+      COMPLEX cil,cci,cciljj1,ciljj2,fac1,fac2,fac3,dump1,dump2
       INTEGER i,l,l2,lh,lm,lmp,lp
       INTEGER lp1,lpl,m,mp,mu,n,nh,noded,nodeu,nrec,na,ne
       INTEGER ljj1,ljj2,mjj1,mjj2
@@ -115,7 +115,6 @@ C     .. Local Arrays ..
 #endif
 
       t11 = 0.; t22 = 0.; t33 = 0.; t44 = 0.; t55 = 0.; t66 = 0.
-      ci  = cmplx(0.0, 1.0)
       cci = cmplx(0.0,-1.0)
       c = c_light(1.0)
       sp1 = ispjsp(jspin)
@@ -351,11 +350,11 @@ c*********************************************************c
 
              gc1 = gaunt1(ltil1, ljj1, lp, 
      >                    mtil1, mjj1, mp, lmaxd)
-             fac2 = fac1 * gc1 * (ci**lp)
+             fac2 = fac1 * gc1 * (ImagUnit**lp)
 
         DO ljj2=0,lwn
          lljj2 = ljj2 * (ljj2 + 1)
-         ciljj2 = ci**ljj2
+         ciljj2 = ImagUnit**ljj2
          lmini2 = abs(ltil1-ljj2)
          lmaxi2 = ltil1+ljj2
          lmx2 = min(lmaxi2,lwn)

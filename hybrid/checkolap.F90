@@ -10,7 +10,6 @@
      &                  cell,lapw,jsp)
       USE m_util     , ONLY: intgrf,intgrf_init,chr,sphbessel,harmonicsr
       USE m_constants
-      USE m_apws
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
@@ -45,7 +44,7 @@
       INTEGER                 ::  j,m
       INTEGER                 ::  l
       INTEGER                 :: lm,lm1
-      INTEGER                 ::  n,nred
+      INTEGER                 ::  n,nred, nbasfcn
 
       REAL                    ::  rdum,rdum1
       REAL                    ::  qnorm
@@ -55,7 +54,6 @@
 
       ! -local arrays -
       INTEGER                 ::  iarr(2),gpt(3)
-      INTEGER                 ::  matind(dimension%nbasfcn,2)  
       INTEGER , ALLOCATABLE   ::  olapcv_loc(:,:,:,:,:)
 
       REAL                    ::  sphbes(0:atoms%lmaxd)
@@ -81,7 +79,9 @@
 
       ALLOCATE(z(nkpti))
       DO ikpt=1,nkpti
-         call z(ikpt)%alloc(sym%invs,dimension%nbasfcn,dimension%neigd)
+         CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,sym%zrfs)
+         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+         call z(ikpt)%alloc(sym%invs,nbasfcn,dimension%neigd)
       ENDDO
       
       IF ( mpi%irank == 0 ) WRITE(6,'(//A)') '### checkolap ###'
@@ -256,10 +256,7 @@
             carr1 = 0; carr2 = 0; carr3 = 0
 
             ! calculate k1,k2,k3
-            CALL apws(dimension,input,noco,&
-     &                kpts,ikpt,cell,&
-     &                sym%zrfs,1,jsp,bkpt,lapw,&
-     &                matind,nred)
+            CALL lapw%init(input,noco,kpts,atoms,sym,ikpt,cell,sym%zrfs)
 
             ! PW part
             DO igpt = 1,lapw%nv(jsp)

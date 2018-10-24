@@ -61,9 +61,9 @@ CONTAINS
     USE m_cdnsp
     USE m_flipcdn
     USE m_cdn_io
-    USE m_f2u
-    USE m_u2f
     USE m_types
+    USE m_pldngen
+   
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
@@ -80,7 +80,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_xcpot),INTENT(IN)    :: xcpot
+    CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
     !     .. Local Scalars ..
@@ -94,8 +94,16 @@ CONTAINS
     !     ..
     it = 1
 
+    IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
+       IF (noco%l_noco) THEN
+          CALL pldngen(sym,stars,atoms,sphhar,vacuum,&
+               cell,input,noco,oneD,sliceplot)
+       ENDIF
+    ENDIF
+
+       
     IF (mpi%irank == 0) THEN
-10     IF (sliceplot%plpot) input%score = .FALSE.
+       IF (sliceplot%plpot) input%score = .FALSE.
        IF (sliceplot%iplot) THEN
           CALL timestart("Plotting")
           IF (input%strho) CALL juDFT_error("strho = T and iplot=T",calledby = "optional")
@@ -108,7 +116,7 @@ CONTAINS
     !     --->generate starting charge density
     !
     strho=input%strho
-    IF (.NOT.(strho.OR.obsolete%l_f2u.OR.obsolete%l_u2f.OR.sliceplot%iplot)) THEN
+    IF (.NOT.(strho.OR.sliceplot%iplot)) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -152,26 +160,19 @@ CONTAINS
           CALL timestop('optional: flip magnetic moments')
        END IF
 
-       IF (obsolete%l_u2f) THEN
-
-          CALL timestart('optional: conversion to formatted')
-          CALL u2f(stars,input,atoms,sphhar,vacuum,cell,sym,noco%l_noco)
-          !
-          CALL timestop('optional: conversion to formatted')
-       ENDIF
-
-       IF (obsolete%l_f2u) THEN
-
-          CALL timestart('optional: conversion to unformatted')
-          CALL f2u(stars,input,atoms,sphhar,vacuum,cell,sym,noco%l_noco)
-          !
-          CALL timestop('optional: conversion to unformatted')
-       ENDIF
-
+ 
+ 
        IF (input%l_bmt) THEN
           CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF
 
     ENDIF ! mpi%irank == 0
+
+    IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
+    IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
+    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
+    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
+    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
+    
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

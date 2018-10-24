@@ -16,16 +16,17 @@ MODULE m_constants
    REAL,             PARAMETER :: tpi_const=2.*3.1415926535897932
    REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
    REAL,             PARAMETER :: sfp_const=sqrt(4.*3.1415926535897932)
+   complex,          parameter :: ImagUnit=(0.0,1.0)
    REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
    REAL,             PARAMETER :: eVac0Default_const = -0.25
    CHARACTER(len=9), PARAMETER :: version_const = 'fleur 27'
 
-   INTEGER,          PARAMETER :: POTDEN_TYPE_OTHER   =    0
-   INTEGER,          PARAMETER :: POTDEN_TYPE_POTTOT  =    1
+   INTEGER,          PARAMETER :: POTDEN_TYPE_OTHER   =    0 ! POTDEN_TYPE <= 0 ==> undefined
+   INTEGER,          PARAMETER :: POTDEN_TYPE_POTTOT  =    1 ! 0 < POTDEN_TYPE <= 1000 ==> potential
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTCOUL =    2
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTX    =    3
-   INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001
-
+   INTEGER,          PARAMETER :: POTDEN_TYPE_POTYUK  =    4
+   INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001 ! 1000 < POTDEN_TYPE ==> density
 
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
         'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&

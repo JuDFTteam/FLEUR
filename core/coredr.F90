@@ -10,7 +10,6 @@ CONTAINS
     USE m_spratm
     USE m_ccdnup
     USE m_cdn_io
-
     USE m_types
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN) :: DIMENSION

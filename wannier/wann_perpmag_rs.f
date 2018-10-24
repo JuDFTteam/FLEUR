@@ -21,7 +21,7 @@ c     by wannier90.
 c
 c     Frank Freimuth
 c*************************************************
-      use m_constants, only:pimach
+      use m_constants, only:pimach, ImagUnit
       use m_wann_read_umatrix
 
       implicit none
@@ -87,7 +87,6 @@ c*************************************************
       character(len=3)    :: spin12(2)
       character(len=6)    :: filename
       integer             :: jp,mp,kk
-      complex,parameter   :: ci=(0.0,1.0)
       integer             :: hopmin_x,hopmin_y,hopmin_z
       integer             :: hopmax_x,hopmax_y,hopmax_z
       integer             :: rvecind
@@ -231,7 +230,7 @@ c****************************************************
       endif
 
       do nkp=1,num_kpts
-          paulimat(2,:,:,nkp)=ci*paulimat(1,:,:,nkp)
+          paulimat(2,:,:,nkp)=ImagUnit*paulimat(1,:,:,nkp)
           paulimat(1,:,:,nkp)=paulimat(1,:,:,nkp)+
      &        transpose(conjg( paulimat(1,:,:,nkp) ))
           paulimat(2,:,:,nkp)=paulimat(2,:,:,nkp)+

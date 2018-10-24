@@ -24,14 +24,15 @@ CONTAINS
        WRITE(*,*) "--------------------------------------------------------"
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
-       !$ write(*,*) "Number of OMP-threads:",omp
-#else
-       if (omp==-1) THEN
-          write(*,*) "No OpenMP version of FLEUR."
-       else
-          write(*,*) "Number of OMP-threads:",omp
-       endif
+       CALL add_usage_data("MPI-PE",mpi%isize)     
 #endif
+       IF (omp==-1) THEN
+          write(*,*) "No OpenMP version of FLEUR."
+          CALL add_usage_data("OMP",0)
+       ELSE
+          WRITE(*,*) "Number of OMP-threads:",omp
+          CALL add_usage_data("OMP",omp)
+       ENDIF
     endif
     IF (mpi%isize==1) THEN
        !give some info on available parallelisation
@@ -94,8 +95,8 @@ CONTAINS
     CHARACTER(len=1000)::txt
 
     n_members = MIN(nkpt,mpi%isize)
-    IF (judft_was_argument("-n_size_min")) THEN
-       txt=judft_string_for_argument("-n_size_min")
+    IF (judft_was_argument("-n_min_size")) THEN
+       txt=judft_string_for_argument("-n_min_size")
        READ(txt,*) n_size_min
        WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
        n_members = MIN(n_members , CEILING(REAL(mpi%isize)/n_size_min) ) 
