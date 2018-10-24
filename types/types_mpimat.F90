@@ -365,7 +365,7 @@ CONTAINS
        IF (PRESENT(global_size1).AND.PRESENT(global_size2)) THEN
           ALLOCATE(mat%blacsdata)
           mat%blacsdata=templ%blacsdata
-          templ%blacsdata%no_use=1
+          mat%blacsdata%no_use=1
           mat%blacsdata%blacs_desc(3)=global_size1
           mat%blacsdata%blacs_desc(4)=global_size2
           mat%global_size1=global_size1
