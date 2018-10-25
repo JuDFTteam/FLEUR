@@ -160,6 +160,8 @@
           banddos%e_mcd_up = 0.0
           banddos%unfoldband = .FALSE.
 
+          noco%l_mtNocoPot = .FALSE.
+
           IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
