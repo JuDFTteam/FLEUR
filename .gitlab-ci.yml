@@ -22,7 +22,7 @@ build-gfortran-hdf5:
 #    - triggers
 #    - web
 
-test-gfortran:
+test-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
   cache:
