@@ -9,7 +9,7 @@ stages:
    - test-intel
 
 
-build-gfortran:
+build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
   cache: 
