@@ -125,3 +125,5 @@ CONTAINS
          f_ik(:,ikpt) = e_i * w_i
       ENDDO
    END SUBROUTINE calc_EnergyDen_auxillary_weights
+   
+END MODULE m_metagga
