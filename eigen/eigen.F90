@@ -241,7 +241,7 @@ CONTAINS
        results%unfolding_weights = CMPLX(0.0,0.0)
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,mpi%mpi_comm,ierr)
     END IF
-    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%sub_comm,ierr)
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
     results%neig(:,:) = neigBuffer(:,:)
