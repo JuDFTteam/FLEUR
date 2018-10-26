@@ -49,8 +49,6 @@ CONTAINS
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:), kinED_rs(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:)
 
-      REAL, PARAMETER   :: fac = 1.5
-
       CALL init_pw_grid(xcpot,stars,sym,cell)
 
       !Put the charge on the grid, in GGA case also calculate gradients
@@ -76,7 +74,7 @@ CONTAINS
                          cell,  EnergyDen%pw, tmp_grad,    ED_rs)
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot%pw,      tmp_grad,    vTot_rs)
-         CALL calc_kinEnergyDen(fac * ED_rs, vTot_rs, rho, kinED_rs)
+         CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs)
       ENDIF
 
       !calculate the ex.-cor energy density
