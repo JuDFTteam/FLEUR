@@ -173,6 +173,7 @@ CONTAINS
           l_wu=.FALSE.
           ne_all=DIMENSION%neigd
           if (allocated(zmat)) then
+             CALL zmat%free()
              deallocate(zmat, stat=dealloc_stat, errmsg=errmsg)
              if(dealloc_stat /= 0) call juDFT_error("deallocate failed for zmat",&
                                                 hint=errmsg, calledby="eigen.F90")
@@ -200,6 +201,7 @@ CONTAINS
 
           CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
           CALL smat%free()
+          CALL hmat%free()
           DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
           if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                              hint=errmsg, calledby="eigen.F90")
@@ -228,6 +230,7 @@ CONTAINS
 
           IF (banddos%unfoldband) THEN
                CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
+         CALL smat_unfold%free()
 	       DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
           if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
                                              hint=errmsg, calledby="eigen.F90")
