@@ -196,7 +196,7 @@ CONTAINS
 
     INTEGER:: n,k_only,pe_k_only(nkpt)
     
-
+#ifdef CPP_MPI
     !Create a list of PE that will lead to k-point parallelization only
     k_only=0
     DO n=1,nkpt
@@ -209,6 +209,7 @@ CONTAINS
     WRITE(*,*) pe_k_only(:k_only)
     !check if eigenvalue parallelization is possible
     IF (parallel_solver_available()) WRITE(*,*) "Additional eigenvalue parallelization possible"
+#endif
   END SUBROUTINE priv_dist_info
 
 
