@@ -467,12 +467,12 @@ CONTAINS
           k = k + 1
        ENDDO
     ENDDO
-#ifdef CPP_BLACSDEFAULT    
+!#ifdef CPP_BLACSDEFAULT    
     !Get the Blacs default context
     CALL BLACS_GET(0,0,ictextblacs)
-#else
-    ictextblacs=mpi_subcom
-#endif    
+!#else
+!    ictextblacs=mpi_subcom
+!#endif    
     ! Create the Grid
     CALL BLACS_GRIDMAP(ictextblacs,iusermap,size(iusermap,1),blacsdata%nprow,blacsdata%npcol)
     !     Now control, whether the BLACS grid is the one we wanted
