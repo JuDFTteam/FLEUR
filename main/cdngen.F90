@@ -116,7 +116,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             CALL write_band_sc(kpts,results,eFermiPrev)
          END IF
 #ifdef CPP_HDF
-         CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts)
+         CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
          CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
          CALL closeBandDOSFile(banddosFile_id)
 #endif
