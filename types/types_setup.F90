@@ -344,6 +344,7 @@ MODULE m_types_setup
      LOGICAL:: l_ss
      LOGICAL:: l_mperp
      LOGICAL:: l_constr
+     LOGICAL:: l_mtNocoPot
      REAL:: qss(3)
      REAL:: mix_b
      LOGICAL, ALLOCATABLE :: l_relax(:)

@@ -78,10 +78,15 @@ MODULE m_types_mat
 
      CALL mat%alloc(l_real,matsize1,matsize2)
    END SUBROUTINE t_mat_init
-   SUBROUTINE t_mat_init_template(mat,templ)
+   SUBROUTINE t_mat_init_template(mat,templ,global_size1,global_size2)
      IMPLICIT NONE
      CLASS(t_mat),INTENT(INOUT) :: mat
      CLASS(t_mat),INTENT(IN)    :: templ
+     INTEGER,INTENT(IN),OPTIONAL:: global_size1,global_size2
+
+     IF (PRESENT(global_size1).AND.PRESENT(global_size2)) THEN
+        IF ((global_size1.NE.templ%matsize1).OR.(global_size2.NE.templ%matsize2)) CALL judft_error("BUG:Invalid change of size in init by template")
+     END IF
      mat%l_real=templ%l_real
      mat%matsize1=templ%matsize1
      mat%matsize2=templ%matsize2
@@ -129,9 +134,9 @@ MODULE m_types_mat
   END SUBROUTINE t_mat_alloc
 
   SUBROUTINE t_mat_multiply(mat1,mat2,res)
-    CLASS(t_mat),INTENT(INOUT)       ::mat1
-    TYPE(t_mat),INTENT(IN)           ::mat2
-    TYPE(t_mat),INTENT(OUT),OPTIONAL ::res
+    CLASS(t_mat),INTENT(INOUT)        ::mat1
+    CLASS(t_mat),INTENT(IN)           ::mat2
+    CLASS(t_mat),INTENT(OUT),OPTIONAL ::res
 
     if (mat1%matsize2.ne.mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions",hint="This is a BUG in FLEUR, please report")
     

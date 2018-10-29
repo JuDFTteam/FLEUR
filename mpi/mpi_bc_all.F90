@@ -76,7 +76,7 @@ CONTAINS
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
        l(29)=oneD%odd%d1 ; l(32)=input%ctail ; l(33)=banddos%l_orb
-       l(34)=banddos%l_mcd ; l(35)=banddos%unfoldband
+       l(34)=banddos%l_mcd ; l(35)=banddos%unfoldband ; l(36)=noco%l_mtNocoPot
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
        l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
@@ -119,6 +119,7 @@ CONTAINS
     field%efield%l_segmented = l(38) ; sym%symor=l(39); field%efield%dirichlet = l(40)
     field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
     banddos%unfoldband=l(35)
+    noco%l_mtNocoPot=l(36)
     !
     ! -> Broadcast the arrays:
     IF (field%efield%l_segmented) THEN
