@@ -171,12 +171,6 @@ CONTAINS
 
             l_wu=.FALSE.
             ne_all=DIMENSION%neigd
-            if (allocated(zmat)) then
-               CALL zmat%free()
-               deallocate(zmat, stat=dealloc_stat, errmsg=errmsg)
-               if(dealloc_stat /= 0) call juDFT_error("deallocate failed for zmat",&
-                                                      hint=errmsg, calledby="eigen.F90")
-            endif
 
             !Try to symmetrize matrix
             CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)
@@ -199,6 +193,7 @@ CONTAINS
             END IF
 
             CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
+            
             CALL smat%free()
             CALL hmat%free()
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
@@ -215,11 +210,11 @@ CONTAINS
 #else
             ne_found=ne_all
 #endif
-            IF (.NOT.zmat%l_real) THEN
+            IF (.NOT.zMat%l_real) THEN
                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
             END IF
             CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                           eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zmat=zMat)
+                           eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
             ! RMA synchronization
@@ -235,6 +230,8 @@ CONTAINS
                                                       hint=errmsg, calledby="eigen.F90")
             END IF
 
+            call zMat%free()
+            deallocate(zMat)
          END DO  k_loop
       END DO ! spin loop ends
 

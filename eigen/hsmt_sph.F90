@@ -352,11 +352,11 @@ CONTAINS
     REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
     !     ..
     !     .. Local Scalars ..
-    REAL tnn(3), elall,fct,fct2,fjkiln,gjkiln,ddnln,ski(3)
+    REAL tnn(3), elall,fct,fjkiln,gjkiln,ddnln,ski(3)
     REAL apw_lo1,apw_lo2,apw1,w1
 
     COMPLEX capw1
-    INTEGER kii,ki,kj,l,nn,kj_end
+    INTEGER kii,ki,kj,l,nn
 
     !     ..
     !     .. Local Arrays ..
@@ -364,7 +364,6 @@ CONTAINS
     REAL fl2p1bt(0:atoms%lmaxd)
     REAL qssbti(3),qssbtj(3)
     REAL, ALLOCATABLE :: plegend(:,:)
-    REAL, ALLOCATABLE :: VecHelpS(:),VecHelpH(:)
     COMPLEX, ALLOCATABLE :: cph(:)
     LOGICAL apw(0:atoms%lmaxd)
 
@@ -377,13 +376,12 @@ CONTAINS
        fl2p1bt(l) = fl2p1(l)*0.5
     END DO
     !$OMP PARALLEL DEFAULT(SHARED)&
-    !$OMP PRIVATE(kii,ki,ski,kj,plegend,l,kj_end)&
+    !$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
     !$OMP PRIVATE(cph,nn,tnn,fjkiln,gjkiln)&
     !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,apw1)&
-    !$OMP PRIVATE(capw1,VecHelpS,VecHelpH) 
+    !$OMP PRIVATE(capw1) 
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
-    ALLOCATE(VecHelpS(MAXVAL(lapw%nv)),VecHelpH(MAXVAL(lapw%nv)))
     plegend=0.0
     plegend(:,0)=1.0
     qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
@@ -412,9 +410,6 @@ CONTAINS
        END DO
 
        !--->          update overlap and l-diagonal hamiltonian matrix
-       kj_end = MIN(ki,lapw%nv(iintsp)) 
-       VecHelpS = 0.d0
-       VecHelpH = 0.d0
        DO  l = 0,atoms%lmax(n)
           fjkiln = fj(ki,l,jintsp)
           gjkiln = gj(ki,l,jintsp)
@@ -435,10 +430,10 @@ CONTAINS
              DO kj = 1,ki
                 fct  = plegend(kj,l)*fl2p1(l)*&
                      ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
-                fct2 = plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) )
-
                 smat%data_r(kj,kii)=smat%data_r(kj,kii)+REAL(cph(kj))*fct
-                hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + REAL(cph(kj)) * ( fct * elall + fct2)
+                hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + REAL(cph(kj)) * &
+                     ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
+                     ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
                 !+APW
                 IF (input%l_useapw) THEN
                    apw1 = REAL(cph(kj)) * plegend(kj,l)  * &
@@ -448,13 +443,13 @@ CONTAINS
                 !-APW
              ENDDO
           ELSE
-             DO kj = 1,kj_end
-                fct  = plegend(kj,l)*fl2p1(l)*&
+             DO kj = 1,MIN(ki,lapw%nv(iintsp))
+                fct  = chi*plegend(kj,l)*fl2p1(l)*&
                      ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
-                fct2 = plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) )
- 
-                VecHelpS(kj) = VecHelpS(kj) + fct
-                VecHelpH(kj) = VecHelpH(kj) + fct*elall + fct2 
+
+                smat%data_c(kj,kii)=smat%data_c(kj,kii) + cph(kj)*fct
+                hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + cph(kj) * ( fct*elall &
+                     + chi*plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) ) )
 
                 IF (input%l_useapw) THEN
                    capw1 = cph(kj)*plegend(kj,l)&
@@ -466,10 +461,6 @@ CONTAINS
           ENDIF
        !--->          end loop over l
        ENDDO
-       IF (.not.smat%l_real) THEN
-           smat%data_c(:kj_end,kii)=smat%data_c(:kj_end,kii) + chi*cph(:kj_end) * VecHelpS(:kj_end)
-           hmat%data_c(:kj_end,kii)=hmat%data_c(:kj_end,kii) + chi*cph(:kj_end) * VecHelpH(:kj_end)
-       ENDIF
     !--->    end loop over ki
     ENDDO
     !$OMP END DO

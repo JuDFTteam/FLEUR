@@ -46,7 +46,7 @@ MODULE m_types_mpimat
      PROCEDURE,PASS   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
      PROCEDURE,PASS   :: print_matrix
      PROCEDURE,PASS   :: from_non_dist
-     FINAL :: finalize
+     FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
   END TYPE t_mpimat
   
   PUBLIC t_mpimat
@@ -294,6 +294,44 @@ CONTAINS
     TYPE(t_mpimat),INTENT(INOUT) :: mat
     CALL mpimat_free(mat)
   END SUBROUTINE finalize
+
+  SUBROUTINE finalize_1d(mat)
+    IMPLICIT NONE
+    
+    TYPE(t_mpimat),INTENT(INOUT) :: mat(:)
+    INTEGER                      :: i
+    DO i = 1,size(mat)
+       CALL mpimat_free(mat(i))
+    ENDDO
+  END SUBROUTINE finalize_1d
+
+  SUBROUTINE finalize_2d(mat)
+    IMPLICIT NONE
+    
+    TYPE(t_mpimat),INTENT(INOUT) :: mat(:,:)
+    INTEGER                      :: i,j
+
+    DO i = 1,size(mat, dim=1)
+       DO j = 1,size(mat, dim=2)
+          CALL mpimat_free(mat(i,j))
+      ENDDO
+    ENDDO
+  END SUBROUTINE finalize_2d
+  
+  SUBROUTINE finalize_3d(mat)
+    IMPLICIT NONE
+    
+    TYPE(t_mpimat),INTENT(INOUT) :: mat(:,:,:)
+    INTEGER                      :: i,j,k
+
+    DO i = 1,size(mat, dim=1)
+       DO j = 1,size(mat, dim=2)
+         DO k = 1,size(mat, dim=3)
+             CALL mpimat_free(mat(i,j,k))
+         ENDDO
+      ENDDO
+    ENDDO
+  END SUBROUTINE finalize_3d
 
   SUBROUTINE mpimat_free(mat)
     IMPLICIT NONE

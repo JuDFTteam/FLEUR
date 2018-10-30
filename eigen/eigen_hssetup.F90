@@ -98,13 +98,6 @@ CONTAINS
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
     CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final,smat_final)
 
-    DO i=1,nspins
-       DO j=1,nspins
-          call smat(i,j)%free()
-          call hmat(i,j)%free()
-       ENDDO
-    ENDDO
-    
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup
        
