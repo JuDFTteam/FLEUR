@@ -704,7 +704,7 @@ CONTAINS
        IF(idens.LE.2) THEN
           !--->       add to spin-up or -down density (collinear & non-collinear)
           ispin = jspin
-          IF (noco%l_noco) judft_error("no noco 8")
+          IF (noco%l_noco) call judft_error("no noco 8")
           DO istr = 1 , stars%ng3_fft
              den%pw(istr,ispin) = den%pw(istr,ispin) + cwk(istr)
           ENDDO
