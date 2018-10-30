@@ -97,7 +97,7 @@ CONTAINS
     ALLOCATE(hmat_final,mold=smat(1,1))
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
     CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final,smat_final)
-    
+
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup
        

@@ -27,16 +27,17 @@ MODULE m_banddos_io
 
    CONTAINS
 
-   SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts)
+   SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, banddos)
 
       USE m_types
       USE hdf5
       USE m_cdn_io
 
-      TYPE(t_input), INTENT(IN)  :: input
-      TYPE(t_atoms), INTENT(IN)  :: atoms
-      TYPE(t_cell),  INTENT(IN)  :: cell
-      TYPE(t_kpts),  INTENT(IN)  :: kpts
+      TYPE(t_input),   INTENT(IN)  :: input
+      TYPE(t_atoms),   INTENT(IN)  :: atoms
+      TYPE(t_cell),    INTENT(IN)  :: cell
+      TYPE(t_kpts),    INTENT(IN)  :: kpts
+      TYPE(t_banddos), INTENT(IN)  :: banddos
 
       INTEGER(HID_T),       INTENT(OUT) :: fileID
 
@@ -67,6 +68,7 @@ MODULE m_banddos_io
 
       INTEGER           :: hdfError, dimsInt(7)
       INTEGER           :: version
+      INTEGER           :: fakeLogical
       REAL              :: eFermiPrev
       LOGICAL           :: l_error
 
@@ -98,6 +100,9 @@ MODULE m_banddos_io
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'lastFermiEnergy',eFermiPrev)
+      fakeLogical = 0
+      IF (banddos%unfoldband) fakeLogical = 1
+      CALL io_write_attint0(generalGroupID,'bandUnfolding',fakeLogical)
       CALL h5gclose_f(generalGroupID, hdfError)
 
       CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
@@ -236,12 +241,14 @@ MODULE m_banddos_io
       INTEGER(HID_T),  INTENT(IN) :: fileID
 
       INTEGER(HID_T)    :: eigenvaluesGroupID
+      INTEGER(HID_T)    :: bandUnfoldingGroupID
 
       INTEGER(HID_T)    :: eigenvaluesSpaceID, eigenvaluesSetID
       INTEGER(HID_T)    :: numFoundEigsSpaceID, numFoundEigsSetID
       INTEGER(HID_T)    :: lLikeChargeSpaceID, lLikeChargeSetID
       INTEGER(HID_T)    :: jsymSpaceID, jsymSetID
       INTEGER(HID_T)    :: ksymSpaceID, ksymSetID
+      INTEGER(HID_T)    :: bUWeightsSpaceID, bUWeightsSetID
 
       INTEGER           :: hdfError, dimsInt(7)
 
@@ -295,6 +302,20 @@ MODULE m_banddos_io
       CALL h5dclose_f(ksymSetID, hdfError)
 
       CALL h5gclose_f(eigenvaluesGroupID, hdfError)
+
+      IF (banddos%unfoldband) THEN
+         CALL h5gcreate_f(fileID, '/bandUnfolding', bandUnfoldingGroupID, hdfError)
+
+         dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
+         dimsInt = dims
+         CALL h5screate_simple_f(3,dims(:3),bUWeightsSpaceID,hdfError)
+         CALL h5dcreate_f(bandUnfoldingGroupID, "weights", H5T_NATIVE_DOUBLE, bUWeightsSpaceID, buWeightsSetID, hdfError)
+         CALL h5sclose_f(bUWeightsSpaceID,hdfError)
+         CALL io_write_real3(bUWeightsSetID,(/1,1,1/),dimsInt(:3), REAL(results%unfolding_weights(:neigd,:,:)))
+         CALL h5dclose_f(bUWeightsSetID, hdfError)
+
+         CALL h5gclose_f(bandUnfoldingGroupID, hdfError)
+      END IF
 
    END SUBROUTINE
 
