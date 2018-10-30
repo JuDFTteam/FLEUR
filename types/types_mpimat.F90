@@ -370,8 +370,10 @@ CONTAINS
           mat%blacsdata%blacs_desc(4)=global_size2
           mat%global_size1=global_size1
           mat%global_size2=global_size2
+#ifdef CPP_SCALAPACK    
           mat%matsize1=NUMROC( global_size1,mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow )
           mat%matsize1=NUMROC( global_size2,mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol )
+#endif    
        ELSE
           mat%matsize1=templ%matsize1
           mat%matsize2=templ%matsize2
