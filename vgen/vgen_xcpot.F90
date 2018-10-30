@@ -58,7 +58,7 @@ CONTAINS
     ! Local type instances
     TYPE(t_potden) :: workDen,exc,veff
     ! Local Scalars
-    INTEGER ifftd,ifftd2,ifftxc3d,ispin
+    INTEGER ifftd,ifftd2,ispin
 #ifdef CPP_MPI
     include 'mpif.h'
     integer:: ierr

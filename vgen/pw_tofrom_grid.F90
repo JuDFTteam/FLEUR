@@ -8,7 +8,7 @@ MODULE m_pw_tofrom_grid
   PRIVATE
   REAL,PARAMETER:: d_15=1.e-15
 
-  INTEGER :: ifftd,ifftxc3d,ifftxc3
+  INTEGER :: ifftd,ifftxc3
   !----->  fft  information  for xc potential + energy
   INTEGER, ALLOCATABLE :: igxc_fft(:)
   REAL,    ALLOCATABLE :: gxc_fft(:,:) !gxc_fft(ig,idm)
@@ -33,12 +33,10 @@ CONTAINS
     !
       
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
-    ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+    ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     IF (xcpot%needs_grad()) THEN
        CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
     ENDIF
-    ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-    write(6,*) "thingiaminvestigating", ifftxc3d == ifftxc3
        
   END SUBROUTINE init_pw_grid
   
@@ -63,7 +61,6 @@ CONTAINS
     !     kmxxc_fft: number of g-vectors forming the nxc3_fft stars in the
     !               charge density or xc-density sphere
     !     kimax : number of g-vectors forming the ng3 stars in the gmax-sphe
-    !     ifftxc3d: elements (g-vectors) in the charge density  fft-box
     !     igfft : pointer from the g-sphere (stored as stars) to fft-grid
     !             and     from fft-grid to g-sphere (stored as stars)
     !     pgfft : contains the phases of the g-vectors of sph.
@@ -100,9 +97,9 @@ CONTAINS
     ! Allocate arrays
     ALLOCATE( bf3(0:ifftd-1))
     IF (xcpot%needs_grad()) THEN
-       IF (PRESENT(rho)) ALLOCATE(rho(0:ifftxc3d-1,jspins))
-       ALLOCATE( ph_wrk(0:ifftxc3d-1),rhd1(0:ifftxc3d-1,jspins,3))
-        ALLOCATE( rhd2(0:ifftxc3d-1,jspins,6) )
+       IF (PRESENT(rho)) ALLOCATE(rho(0:ifftxc3-1,jspins))
+       ALLOCATE( ph_wrk(0:ifftxc3-1),rhd1(0:ifftxc3-1,jspins,3))
+       ALLOCATE( rhd2(0:ifftxc3-1,jspins,6) )
      ELSE
         IF (PRESENT(rho)) ALLOCATE(rho(0:ifftd-1,jspins))
      ENDIF
@@ -217,7 +214,7 @@ CONTAINS
              ENDDO !jdm
           ENDDO   !idm 
        END IF
-       CALL xcpot%alloc_gradients(ifftxc3d,jspins,grad)
+       CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
  
        !
        !     calculate the quantities such as abs(grad(rho)),.. used in

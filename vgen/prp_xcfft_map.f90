@@ -39,7 +39,7 @@ CONTAINS
     !---> local variables
     !
     LOGICAL NEW
-    INTEGER istr,iop,iopm1,il,im,in,kidx,iv1d,ifftq1,ifftq2, ifftxc3d
+    INTEGER istr,iop,iopm1,il,im,in,kidx,iv1d,ifftq1,ifftq2, ifftxc3
     INTEGER nop_local,norm,kr(3,sym%nop)
 
     !------->          abbreviations
@@ -61,11 +61,11 @@ CONTAINS
     !
 
     ! allocate output arrays
-    ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+    ifftxc3 = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     IF(ALLOCATED(igxc_fft)) DEALLOCATE(igxc_fft)
     IF(ALLOCATED(gxc_fft))  DEALLOCATE(gxc_fft)
-    ALLOCATE(igxc_fft(0:ifftxc3d-1))
-    ALLOCATE(gxc_fft(0:ifftxc3d-1,3))
+    ALLOCATE(igxc_fft(0:ifftxc3-1))
+    ALLOCATE(gxc_fft(0:ifftxc3-1,3))
 
 
     kidx    = 0
