@@ -35,10 +35,10 @@ CONTAINS
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3d = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
     IF (xcpot%needs_grad()) THEN
-       ALLOCATE ( igxc_fft(0:ifftxc3d-1),gxc_fft(0:ifftxc3d-1,3) )
        CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
     ENDIF
-    ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+    ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+    write(6,*) "thingiaminvestigating", ifftxc3d == ifftxc3
        
   END SUBROUTINE init_pw_grid
   
