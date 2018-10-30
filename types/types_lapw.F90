@@ -8,17 +8,26 @@ MODULE m_types_lapw
   USE m_judft
   PRIVATE
   TYPE t_lapw
-     INTEGER :: nv(2),num_local_cols(2)
+     INTEGER :: nv(2)
+     INTEGER :: num_local_cols(2)
      INTEGER :: nv_tot
      INTEGER :: nmat
      INTEGER :: nlotot
      INTEGER,ALLOCATABLE:: k1(:,:)
      INTEGER,ALLOCATABLE:: k2(:,:)
      INTEGER,ALLOCATABLE:: k3(:,:)
+#ifdef CPP_GPU
+     INTEGER,ALLOCATABLE,MANAGED:: gvec(:,:,:) !replaces k1,k2,k3
+#else
      INTEGER,ALLOCATABLE:: gvec(:,:,:) !replaces k1,k2,k3
+#endif
      INTEGER,ALLOCATABLE:: kp(:,:)
      REAL,ALLOCATABLE::rk(:,:)
+#ifdef CPP_GPU
+     REAL,ALLOCATABLE,MANAGED::gk(:,:,:)
+#else
      REAL,ALLOCATABLE::gk(:,:,:)
+#endif
      REAL,ALLOCATABLE::vk(:,:,:)
      INTEGER,ALLOCATABLE::matind(:,:)
      INTEGER,ALLOCATABLE::index_lo(:,:)
