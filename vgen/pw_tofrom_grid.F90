@@ -11,7 +11,7 @@ MODULE m_pw_tofrom_grid
   INTEGER :: ifftd,ifftxc3d,ifftxc3
   !----->  fft  information  for xc potential + energy
   INTEGER, ALLOCATABLE :: igxc_fft(:)
-  REAL,    ALLOCATABLE :: gxc_fft(:,:)
+  REAL,    ALLOCATABLE :: gxc_fft(:,:) !gxc_fft(ig,idm)
   
   PUBLIC :: init_pw_grid,pw_to_grid,pw_from_grid,finish_pw_grid
 CONTAINS
