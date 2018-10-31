@@ -66,8 +66,8 @@ MODULE m_xmlOutput
       CHARACTER(LEN=6)  :: precisionString
       CHARACTER(LEN=9)  :: flags(11)
       CHARACTER(LEN=20) :: structureSpecifiers(11)
-      CHARACTER(LEN=50) :: gitdesc,githash,gitbranch,compile_date,compile_user,compile_host
-      CHARACTER(LEN=50) :: compile_flags,link_flags
+      CHARACTER(:), ALLOCATABLE :: gitdesc,githash,gitbranch,compile_date,compile_user,compile_host
+      CHARACTER(:), ALLOCATABLE :: compile_flags,link_flags
       CHARACTER(LEN=20) :: attributes(7)
       
       maxNumElements = 10

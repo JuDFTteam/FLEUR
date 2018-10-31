@@ -12,7 +12,7 @@ CONTAINS
     USE m_juDFT
     USE m_fleur_arguments
     IMPLICIT NONE
-    CHARACTER(LEN=500):: infostring
+    CHARACTER(:), ALLOCATABLE:: infostring
 
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
     PRINT *,"     MaX-Release 2.1          (www.max-centre.eu)"
@@ -21,7 +21,7 @@ CONTAINS
 
     !now print version info and help on command line arguments:
     CALL get_compile_desc_string(infostring)
-    WRITE(*,'(a500)') infostring
+    WRITE(*,'(a)') infostring
     WRITE(*,'(a)')
     WRITE(*,'(a)')"------------------------------------------------------"
     WRITE(*,'(a)')"inpgen usage info:"
