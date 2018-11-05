@@ -372,6 +372,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 
       l_p0 = .false.
       if (irank.eq.0) l_p0 = .true.
+      allocate ( flo(ntypd,jmtd,2,nlod) )
 #ifdef CPP_NEVER
       call cdn_read0(
      >               lmaxd,ntypd,nlod,neigd,wannierspin,
@@ -379,7 +380,6 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
      >               l_noco,nrec,66,
      <               ello,evac,epar,bkpt,wk,n_bands,nrec1,n_size)
 
-      allocate ( flo(ntypd,jmtd,2,nlod) )
 
       na = 1
       do 40 n = 1,ntype

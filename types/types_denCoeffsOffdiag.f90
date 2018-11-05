@@ -208,8 +208,8 @@ SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,w
    TYPE(t_sphhar),            INTENT(IN)    :: sphhar
    TYPE(t_sym),               INTENT(IN)    :: sym
    TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
-   REAL,                      INTENT(IN)    :: we(noccbd)
    INTEGER,                   INTENT(IN)    :: noccbd
+   REAL,                      INTENT(IN)    :: we(noccbd)
 
    CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,thisDenCoeffsOffdiag%uu21,thisDenCoeffsOffdiag%ud21,&
                 thisDenCoeffsOffdiag%du21,thisDenCoeffsOffdiag%dd21,thisDenCoeffsOffdiag%uulo21,&

@@ -138,7 +138,7 @@ c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
 
       character(len=12) :: fending
       integer :: i,nkpts,ikpt,nkqpts,iqpt
-      real(4) :: delta3,time_lapw_expand,delta2,time_lapw_plot
+      real    :: delta3,time_lapw_expand,delta2,time_lapw_plot
       logical :: l_need_fft,l_file
       integer :: hopmin_z,hopmax_z
       integer :: hopmin_y,hopmax_y

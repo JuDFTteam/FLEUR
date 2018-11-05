@@ -223,10 +223,10 @@ c      real, allocatable :: ei(:)
       complex,allocatable::ulojug(:,:,:,:,:)
       complex,allocatable::ulojdg(:,:,:,:,:)
       complex,allocatable::ulojulog(:,:,:,:,:,:)
-      real(4) delta,delta1,time_interstitial,time_mmn
-      real(4) time_total,delta2,delta3
-      real(4) time_lapw_expand,time_rw,time_symm,time_film
-      real(4) time_lapw_plot,time_ujugaunt,time_abcof
+      real delta,delta1,time_interstitial,time_mmn
+      real time_total,delta2,delta3
+      real time_lapw_expand,time_rw,time_symm,time_film
+      real time_lapw_plot,time_ujugaunt,time_abcof
       integer :: n_start,n_end,mlotot,mlolotot,err
       integer :: mlot_d,mlolot_d,ilo,dir,length
       character(len=2) :: spin012(0:2)

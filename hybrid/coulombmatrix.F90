@@ -613,7 +613,7 @@ CONTAINS
                                IF(l.EQ.0) THEN
                                   IF(igpt.NE.1) THEN
                                      csum = csum - cexp * ( sphbesmoment(0,itype1,iqnrm)*atoms%rmt(itype1)**2 -&
-                                          sphbesmoment(2,itype1,iqnrm)*2d0/3 ) / 10
+                                          sphbesmoment(2,itype1,iqnrm)*2.0/3 ) / 10
                                   ELSE
                                      csum = csum - cexp * atoms%rmt(itype1)**5/30
                                   END IF
