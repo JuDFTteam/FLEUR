@@ -381,7 +381,6 @@ CONTAINS
   CONTAINS
 
   SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
-    USE m_vecforlo
     USE m_types_setup
 
     IMPLICIT NONE
