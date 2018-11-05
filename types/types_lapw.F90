@@ -16,18 +16,10 @@ MODULE m_types_lapw
      INTEGER,ALLOCATABLE:: k1(:,:)
      INTEGER,ALLOCATABLE:: k2(:,:)
      INTEGER,ALLOCATABLE:: k3(:,:)
-#ifdef CPP_GPU
-     INTEGER,ALLOCATABLE,MANAGED:: gvec(:,:,:) !replaces k1,k2,k3
-#else
-     INTEGER,ALLOCATABLE:: gvec(:,:,:) !replaces k1,k2,k3
-#endif
+     INTEGER,ALLOCATABLE CPP_MANAGED:: gvec(:,:,:) !replaces k1,k2,k3
      INTEGER,ALLOCATABLE:: kp(:,:)
      REAL,ALLOCATABLE::rk(:,:)
-#ifdef CPP_GPU
-     REAL,ALLOCATABLE,MANAGED::gk(:,:,:)
-#else
-     REAL,ALLOCATABLE::gk(:,:,:)
-#endif
+     REAL,ALLOCATABLE CPP_MANAGED::gk(:,:,:)
      REAL,ALLOCATABLE::vk(:,:,:)
      INTEGER,ALLOCATABLE::matind(:,:)
      INTEGER,ALLOCATABLE::index_lo(:,:)

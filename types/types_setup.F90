@@ -138,11 +138,7 @@ MODULE m_types_setup
      !Calaculate forces for this atom?
      LOGICAL,ALLOCATABLE :: l_geo(:)
      !MT-Radius (ntype)
-#ifdef CPP_GPU
-     REAL,ALLOCATABLE,MANAGED::rmt(:)
-#else
-     REAL,ALLOCATABLE::rmt(:)
-#endif
+     REAL,ALLOCATABLE CPP_MANAGED::rmt(:)
      !log increment(ntype)
      REAL,ALLOCATABLE::dx(:)
      !vol of MT(ntype)
@@ -156,11 +152,7 @@ MODULE m_types_setup
      !pos of atom (absol) (3,nat)
      REAL,ALLOCATABLE::pos(:,:)
      !pos of atom (relat)(3,nat)
-#ifdef CPP_GPU
-     REAL,ALLOCATABLE,MANAGED::taual(:,:)  
-#else
-     REAL,ALLOCATABLE::taual(:,:)  
-#endif
+     REAL,ALLOCATABLE CPP_MANAGED::taual(:,:)  
      !labels
      CHARACTER(LEN=20), ALLOCATABLE :: label(:)
      CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
