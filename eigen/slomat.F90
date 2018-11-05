@@ -24,7 +24,6 @@ CONTAINS
     !***********************************************************************
     USE m_constants,ONLY: fpi_const
     USE m_types
-    USE m_apws
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms

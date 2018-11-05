@@ -24,7 +24,6 @@ CONTAINS
 #include"cpp_double.h"
       USE m_constants, ONLY : pi_const,sfp_const
       USE m_types
-      USE m_apws
       USE m_eigen_hssetup
       USE m_pot_io
       USE m_eigen_diag
