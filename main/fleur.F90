@@ -69,6 +69,7 @@ CONTAINS
 #endif
     USE m_eig66_io
     USE m_chase_diag
+    USE m_writeBasis
     IMPLICIT NONE
 
     INTEGER, INTENT(IN)             :: mpi_comm
@@ -398,7 +399,11 @@ CONTAINS
        END DO forcetheoloop
 
        CALL forcetheo%postprocess()
-       
+
+       IF ((input%gw.GT.0).AND.(mpi%irank.EQ.0)) THEN
+          CALL writeBasis()
+       END IF
+
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
 
