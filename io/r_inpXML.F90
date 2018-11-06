@@ -354,7 +354,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
   IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
-      dimension%jspd = input%jspins
 
       ! Read in Brillouin zone integration parameters
 

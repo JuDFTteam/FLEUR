@@ -7,7 +7,7 @@
 MODULE m_od_vvacis
 CONTAINS
   SUBROUTINE od_vvacis(&
-       &     n2d_1,DIMENSION,vacuum,nq2_1,&
+       &     n2d_1,input,vacuum,nq2_1,&
        &     kv2_1,cell,MM,stars,&
        &     nstr2_1,&
        &     oneD,&
@@ -46,7 +46,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    TYPE(t_input),INTENT(IN)   :: INPUT
 
     TYPE(t_oneD),INTENT(IN)   :: oneD
 
@@ -456,7 +456,7 @@ CONTAINS
                       CALL visp5_0(&
                            &        vacuum%nmzxyd,vacuum%nmzxy,vacuum%delz,m,ivfft1,ivfft2,l,&
                            &        rxy,ani1,ani2,cell%z1,cell%amat,&
-                           &        pvac,pint,tpi_const,DIMENSION%jspd,val_help,&
+                           &        pvac,pint,tpi_const,input%jspins,val_help,&
                            &        vis_help)
 
                       DO ix = 0,ivfft1 - 1

@@ -90,7 +90,7 @@ contains
         !---> generation of the vacuum warped potential components and
         !---> interstitial pw potential
         !---> vvacxy_5.F is a symmetrized potential generator
-        call od_vvacis( oneD%odi%n2d, dimension, vacuum, oneD%odi%nq2, &
+        call od_vvacis( oneD%odi%n2d, input, vacuum, oneD%odi%nq2, &
              oneD%odi%kv, cell, oneD%odi%M, stars, oneD%odi%nst2, &
              oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
              vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )

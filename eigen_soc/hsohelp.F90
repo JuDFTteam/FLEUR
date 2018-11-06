@@ -41,18 +41,18 @@ CONTAINS
     !     ..
     INTEGER, INTENT (IN) :: nat_start,nat_stop,nat_l
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nsz(DIMENSION%jspd)  
-    COMPLEX, INTENT (INOUT) :: zso(:,:,:)!DIMENSION%nbasfcn,2*DIMENSION%neigd,DIMENSION%jspd)
+    INTEGER, INTENT (IN) :: nsz(input%jspins)  
+    COMPLEX, INTENT (INOUT) :: zso(:,:,:)!DIMENSION%nbasfcn,2*DIMENSION%neigd,input%jspins)
     COMPLEX, INTENT (OUT):: ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins)
     COMPLEX, INTENT (OUT):: bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins)
     COMPLEX, INTENT (OUT):: chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,input%jspins)
-    TYPE(t_mat),INTENT(IN)      :: zmat(:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,DIMENSION%jspd)
+    TYPE(t_mat),INTENT(IN)      :: zmat(:) ! (DIMENSION%nbasfcn,DIMENSION%neigd,input%jspins)
     !-odim
     !+odim
     !     ..
     !     .. Locals ..
     TYPE(t_mat)     :: zMat_local
-    INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(DIMENSION%jspd),m,lmd
+    INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(input%jspins),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:)
     !
@@ -62,14 +62,14 @@ CONTAINS
     !
     ! some praparations to match array sizes
     !
-    nv1(1) = lapw%nv(1) ; nv1(DIMENSION%jspd) = lapw%nv(1)
-    ALLOCATE (g1(DIMENSION%nvd,DIMENSION%jspd))
-    ALLOCATE (g2(DIMENSION%nvd,DIMENSION%jspd))
-    ALLOCATE (g3(DIMENSION%nvd,DIMENSION%jspd))
+    nv1(1) = lapw%nv(1) ; nv1(input%jspins) = lapw%nv(1)
+    ALLOCATE (g1(DIMENSION%nvd,input%jspins))
+    ALLOCATE (g2(DIMENSION%nvd,input%jspins))
+    ALLOCATE (g3(DIMENSION%nvd,input%jspins))
     g1 = 0 ; g2 = 0 ; g3 = 0
-    g1(:SIZE(lapw%k1,1),1) = lapw%k1(:SIZE(lapw%k1,1),1) ; g1(:SIZE(lapw%k1,1),DIMENSION%jspd) = lapw%k1(:SIZE(lapw%k1,1),1)
-    g2(:SIZE(lapw%k1,1),1) = lapw%k2(:SIZE(lapw%k1,1),1) ; g2(:SIZE(lapw%k1,1),DIMENSION%jspd) = lapw%k2(:SIZE(lapw%k1,1),1)
-    g3(:SIZE(lapw%k1,1),1) = lapw%k3(:SIZE(lapw%k1,1),1) ; g3(:SIZE(lapw%k1,1),DIMENSION%jspd) = lapw%k3(:SIZE(lapw%k1,1),1)
+    g1(:SIZE(lapw%k1,1),1) = lapw%k1(:SIZE(lapw%k1,1),1) ; g1(:SIZE(lapw%k1,1),input%jspins) = lapw%k1(:SIZE(lapw%k1,1),1)
+    g2(:SIZE(lapw%k1,1),1) = lapw%k2(:SIZE(lapw%k1,1),1) ; g2(:SIZE(lapw%k1,1),input%jspins) = lapw%k2(:SIZE(lapw%k1,1),1)
+    g3(:SIZE(lapw%k1,1),1) = lapw%k3(:SIZE(lapw%k1,1),1) ; g3(:SIZE(lapw%k1,1),input%jspins) = lapw%k3(:SIZE(lapw%k1,1),1)
 
     chelp(:,:,:,:,input%jspins) = CMPLX(0.0,0.0)
 

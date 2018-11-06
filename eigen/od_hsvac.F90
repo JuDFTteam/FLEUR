@@ -40,9 +40,9 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,n2d_1-1,2)
-    INTEGER, INTENT (OUT):: nv2(DIMENSION%jspd)
+    INTEGER, INTENT (OUT):: nv2(input%jspins)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
-    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: evac(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3)
 
     LOGICAL, INTENT(IN)  :: l_real
@@ -76,17 +76,17 @@ CONTAINS
  
     ALLOCATE (&
          ai(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),bi(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),&
-         nvp(DIMENSION%nv2d,DIMENSION%jspd),ind(stars%ng2,DIMENSION%nv2d,DIMENSION%jspd),&
-         kvac3(DIMENSION%nv2d,DIMENSION%jspd),map1(DIMENSION%nvd,DIMENSION%jspd),&
+         nvp(DIMENSION%nv2d,input%jspins),ind(stars%ng2,DIMENSION%nv2d,input%jspins),&
+         kvac3(DIMENSION%nv2d,input%jspins),map1(DIMENSION%nvd,input%jspins),&
          tddv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
          tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
          tudv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
          tuuv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
-         a(-vM:vM,DIMENSION%nvd,DIMENSION%jspd),b(-vM:vM,DIMENSION%nvd,DIMENSION%jspd),&
+         a(-vM:vM,DIMENSION%nvd,input%jspins),b(-vM:vM,DIMENSION%nvd,input%jspins),&
          bess(-vM:vM),dbss(-vM:vM),bess1(-vM:vM),&
-         ddnv(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),dudz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),&
-         duz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),&
-         udz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd),uz(-vM:vM,DIMENSION%nv2d,DIMENSION%jspd) )
+         ddnv(-vM:vM,DIMENSION%nv2d,input%jspins),dudz(-vM:vM,DIMENSION%nv2d,input%jspins),&
+         duz(-vM:vM,DIMENSION%nv2d,input%jspins),&
+         udz(-vM:vM,DIMENSION%nv2d,input%jspins),uz(-vM:vM,DIMENSION%nv2d,input%jspins) )
 
     !--->     set up mapping function from 3d-->1d lapws
     !--->            creating arrays ind and nvp

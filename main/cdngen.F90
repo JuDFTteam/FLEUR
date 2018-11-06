@@ -167,7 +167,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
 
-         IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,moments%clmom)
+         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,moments%clmom)
       END IF
    END IF ! mpi%irank.EQ.0
 

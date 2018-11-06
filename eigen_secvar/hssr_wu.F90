@@ -8,7 +8,7 @@ MODULE m_hssrwu
   !                r. wu  1992
   !*********************************************************************
 CONTAINS
-  SUBROUTINE hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
+  SUBROUTINE hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
        tlmplm,acof,bcof,ccof, h_r,s_r,h_c,s_c)
     !
     USE m_types
@@ -20,12 +20,13 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)       :: usdus
     TYPE(t_tlmplm),INTENT(IN)      :: tlmplm
     TYPE(t_lapw),INTENT(IN)        :: lapw
+    TYPE(t_input),INTENT(IN)       :: input
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp,ne     
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
     COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
     COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat)

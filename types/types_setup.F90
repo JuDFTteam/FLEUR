@@ -325,7 +325,6 @@ MODULE m_types_setup
 
 
   TYPE t_dimension
-     INTEGER :: jspd
      INTEGER :: nspd
      INTEGER :: nvd
      INTEGER :: nv2d

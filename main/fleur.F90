@@ -156,15 +156,15 @@ CONTAINS
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
-    CALL vTot%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
-    CALL vCoul%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTCOUL)
-    CALL vx%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,.FALSE.,POTDEN_TYPE_POTCOUL)
-    CALL vTemp%init(stars,atoms,sphhar,vacuum,DIMENSION%jspd,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vTot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_POTTOT)
+    CALL vCoul%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_POTCOUL)
+    CALL vx%init(stars,atoms,sphhar,vacuum,input%jspins,.FALSE.,POTDEN_TYPE_POTCOUL)
+    CALL vTemp%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
-    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd,&
+    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
                     noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
 
 #ifdef CPP_CHASE

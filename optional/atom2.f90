@@ -29,8 +29,8 @@
       TYPE(t_input),INTENT(IN)      :: input
       INTEGER,INTENT (IN)  :: jrc ,ntyp    
       REAL,   INTENT (IN)  :: rnot1  ,qdel
-      REAL,   INTENT (OUT) :: rhoss(:,:) !(mshd,dimension%jspd),
-      REAL,   INTENT (OUT) :: eig(dimension%nstd,dimension%jspd),vbar(dimension%jspd)
+      REAL,   INTENT (OUT) :: rhoss(:,:) !(mshd,input%jspins),
+      REAL,   INTENT (OUT) :: eig(dimension%nstd,input%jspins),vbar(input%jspins)
       INTEGER,INTENT (OUT) :: nst,lnum(dimension%nstd)
 !     ..
 !     .. Local Scalars ..
@@ -40,10 +40,10 @@
       LOGICAL conv,lastit,l_start
 !     ..
 !     .. Local Arrays ..
-      REAL a(jrc),b(jrc),dens(jrc),occ(dimension%nstd,dimension%jspd)
-      REAL rad(jrc),rev(dimension%nstd,dimension%jspd),ahelp(jrc),ain(jrc),&
+      REAL a(jrc),b(jrc),dens(jrc),occ(dimension%nstd,input%jspins)
+      REAL rad(jrc),rev(dimension%nstd,input%jspins),ahelp(jrc),ain(jrc),&
      &     rh(jrc),vr(jrc),f(0:3),&
-     &     vr1(jrc,dimension%jspd),vr2(jrc,dimension%jspd),vx(dimension%msh,dimension%jspd),vxc(dimension%msh,dimension%jspd)
+     &     vr1(jrc,input%jspins),vr2(jrc,input%jspins),vx(dimension%msh,input%jspins),vxc(dimension%msh,input%jspins)
       INTEGER kappa(dimension%nstd),nprnc(dimension%nstd)
 !     ..
 !     ..
@@ -219,7 +219,7 @@
            ENDDO
          ENDDO
          IF (xcpot%is_gga()) THEN
-            CALL potl0(xcpot,DIMENSION%msh,DIMENSION%jspd,input%jspins,n,&
+            CALL potl0(xcpot,DIMENSION%msh,input%jspins,input%jspins,n,&
                        atoms%dx(ntyp), rad, rhoss, vxc)
          ELSE
             CALL xcpot%get_vxc(input%jspins,rhoss,vxc,vx)
