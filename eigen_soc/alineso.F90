@@ -53,7 +53,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER :: nsz(2)
-    REAL    :: eig(DIMENSION%neigd,DIMENSION%jspd),s(3)
+    REAL    :: eig(DIMENSION%neigd,input%jspins),s(3)
     REAL,   ALLOCATABLE :: rwork(:)
     COMPLEX,ALLOCATABLE :: cwork(:),chelp(:,:,:,:,:)
     COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:),bhelp(:,:,:,:)
@@ -61,7 +61,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE :: hso(:,:),hsomtx(:,:,:,:)
     COMPLEX,ALLOCATABLE :: sigma_xc_apw(:,:),sigma_xc(:,:)
    
-    TYPE(t_mat)::zmat(dimension%jspd)
+    TYPE(t_mat)::zmat(input%jspins)
     !     ..
     !     .. External Subroutines ..
     EXTERNAL CPP_LAPACK_cheev
@@ -76,7 +76,7 @@ CONTAINS
 
     l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
     zmat%l_real=l_real
-    zMat(1:dimension%jspd)%matsize1=lapw%nv(1:dimension%jspd)+atoms%nlotot
+    zMat(1:input%jspins)%matsize1=lapw%nv(1:input%jspins)+atoms%nlotot
     zmat%matsize2=dimension%neigd
    
     INQUIRE (4649,opened=l_socvec)
@@ -232,7 +232,7 @@ CONTAINS
     IF( l_qsgw ) THEN
        nbas = lapw%nv(1) + atoms%nlotot
        WRITE(*,'(A,I3,A,I5,A)') 'Read fleur.qsgw  (',nk,',',nbas,')'
-       IF( DIMENSION%jspd .EQ. 2 ) STOP 'alineso: GW+noco not implemented.'
+       IF( input%jspins .EQ. 2 ) STOP 'alineso: GW+noco not implemented.'
        ALLOCATE ( sigma_xc(2*nsz(1),2*nsz(1)) )        
        ALLOCATE ( sigma_xc_apw(nbas,nbas) )
        INQUIRE(667,opened=l_open)

@@ -164,17 +164,17 @@ CONTAINS
     CALL MPI_BCAST(atoms%rmt,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%volmts,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%dx,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%evac,2*dimension%jspd*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%evac0,2*dimension%jspd*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac,2*input%jspins*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac0,2*input%jspins*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%amat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%bmat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%bbmat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%taual,3*atoms%nat,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%pos,3*atoms%nat,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%tau,3*sym%nop,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    n = (atoms%lmaxd+1)*atoms%ntype*dimension%jspd*1
+    n = (atoms%lmaxd+1)*atoms%ntype*input%jspins*1
     CALL MPI_BCAST(enpara%el0,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    n = atoms%nlod*atoms%ntype*dimension%jspd
+    n = atoms%nlod*atoms%ntype*input%jspins
     CALL MPI_BCAST(enpara%ello0,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%qn_el,SIZE(enpara%qn_el),MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%qn_ello,SIZE(enpara%qn_ello),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -209,7 +209,7 @@ CONTAINS
     n = (atoms%llod+1)*atoms%ntype
     CALL MPI_BCAST(atoms%lo1l,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%nlol,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    n = dimension%jspd*atoms%ntype
+    n = input%jspins*atoms%ntype
     CALL MPI_BCAST(enpara%skiplo,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%alphInit,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

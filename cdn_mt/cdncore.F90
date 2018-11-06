@@ -47,10 +47,10 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    REAL                             :: seig, rhoint, momint
    LOGICAL, PARAMETER               :: l_st=.FALSE.
 
-   REAL                             :: rh(dimension%msh,atoms%ntype,dimension%jspd)
-   REAL                             :: qint(atoms%ntype,dimension%jspd)
-   REAL                             :: tec(atoms%ntype,DIMENSION%jspd)
-   REAL                             :: rhTemp(dimension%msh,atoms%ntype,dimension%jspd)
+   REAL                             :: rh(dimension%msh,atoms%ntype,input%jspins)
+   REAL                             :: qint(atoms%ntype,input%jspins)
+   REAL                             :: tec(atoms%ntype,input%jspins)
+   REAL                             :: rhTemp(dimension%msh,atoms%ntype,input%jspins)
 
    results%seigc = 0.0
    IF (mpi%irank.EQ.0) THEN

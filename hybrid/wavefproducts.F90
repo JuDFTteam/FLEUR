@@ -68,7 +68,7 @@
 !      - local arrays -
       INTEGER                 ::  iarr(lapw%nv(jsp))
       INTEGER                 ::  g(3),ghelp(3),lmstart(0:atoms%lmaxd,atoms%ntype)
-      INTEGER                 ::  gpthlp(3,dimension%nvd),nvhlp(dimension%jspd)
+      INTEGER                 ::  gpthlp(3,dimension%nvd),nvhlp(input%jspins)
       INTEGER                 ::  gpt_nk(3,lapw%nv(jsp))
       INTEGER                 ::  g_t(3)
       INTEGER                 ::  gsum(3)

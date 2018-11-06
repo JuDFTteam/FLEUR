@@ -119,7 +119,7 @@ c
                we(index(idim)) = ff(idim)
             END DO
 
- 8000       FORMAT (15x,'ef_newton failed after      :',i3,'iterations.',/,
+ 8000     FORMAT (15x,'ef_newton failed after      :',i3,'iterations.',/,
      +           15x,'The error in the weight is  : ',e12.5,/,
      +           15x,'The error in ef is          : ',e12.5,' htr',/)
  8010       FORMAT (15x,'Number of iterations needed  : ',i3,/,

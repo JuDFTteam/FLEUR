@@ -11,7 +11,7 @@ CONTAINS
     USE m_types
     COMPLEX,INTENT(in)        :: chi(2,2)
     TYPE(t_mat),INTENT(IN)    :: mat_tmp
-    CLASS(t_mat),INTENT(INOUT):: mat(2,2)
+    CLASS(t_mat),INTENT(INOUT):: mat(:,:)
 
     INTEGER:: iintsp,jintsp
 

@@ -22,12 +22,12 @@ c*************************************************c
       REAL difcub
       EXTERNAL difcub
       
+      INTEGER, INTENT(IN) :: jri,jmtd,lmaxd
       REAL, INTENT(OUT) :: integral
       REAL, INTENT(IN) :: vr(jmtd),rmsh(jmtd),dx,e
       REAL, INTENT(IN) :: uj1(jmtd,2)      ! u(b1)*j
       REAL, INTENT(IN) :: uj2(jmtd,2)      ! u(b2)*j
       REAL, INTENT(IN) :: duj2(jmtd,2)     ! d/dr (u(b2)j)
-      INTEGER, INTENT(IN) :: jri,jmtd,lmaxd
       INTEGER, INTENT(IN) :: lzb         ! l of zentrifugal barrier
 
       REAL, ALLOCATABLE :: x(:)

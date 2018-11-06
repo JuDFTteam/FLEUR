@@ -6,7 +6,7 @@ implicit none
 contains
 
   
-real(kind=8) function DoubleFactorial( n_upper, n_lower )
+real function DoubleFactorial( n_upper, n_lower )
 ! calculates ( 2 * n_upper + 1 ) !! / ( 2 * n_lower + 1 ) !! or just ( 2 * n_upper + 1 ) !!, if n_lower is not present
 
   integer           :: n_upper

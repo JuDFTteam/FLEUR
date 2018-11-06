@@ -8,11 +8,11 @@
 
       IMPLICIT NONE
       
+      INTEGER, INTENT(IN) :: jri,jmtd,lmaxd
       REAL, INTENT(IN) :: rmsh(jmtd),dx
       REAL, INTENT(IN) :: ub(jmtd,2)       ! u(b2)
       REAL, INTENT(IN) :: j2(0:lmaxd,jmtd) ! j_l(b2*r)
       REAL, INTENT(IN) :: b                ! b2
-      INTEGER, INTENT(IN) :: jri,jmtd,lmaxd
       INTEGER, INTENT(IN) :: l           ! l of sph. Bessel j2
 
       REAL, INTENT(OUT) :: dub(jmtd,2)

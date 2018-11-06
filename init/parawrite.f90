@@ -1,6 +1,6 @@
       SUBROUTINE parawrite(&
      &                     sym,stars,atoms,sphhar,dimension,vacuum,obsolete,&
-     &                     kpts,oneD)
+     &                     kpts,oneD,input)
 
       USE m_types
       IMPLICIT NONE
@@ -13,6 +13,7 @@
       TYPE(t_obsolete),INTENT(IN)  :: obsolete
       TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_oneD),INTENT(IN)      :: oneD
+      TYPE(t_input),INTENT(IN)     :: input
    
      
 
@@ -52,7 +53,7 @@
  8130 FORMAT (6x,'parameter (lmaxd=',i2,')')
 
       WRITE (6,'(6x,''Number of spins and vacua'')')
-      WRITE (6,8140) dimension%jspd,vacuum%nvacd
+      WRITE (6,8140) input%jspins,vacuum%nvacd
 
  8140 FORMAT (6x,'parameter (jspd=',i1,',nvacd=',i1,')')
 

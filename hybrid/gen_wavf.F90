@@ -76,7 +76,7 @@ CONTAINS
       
       COMPLEX,ALLOCATABLE     :: cmt(:,:,:),cmthlp(:,:,:)
 
-      REAL                    :: vr(atoms%jmtd,atoms%ntype,dimension%jspd)
+      REAL                    :: vr(atoms%jmtd,atoms%ntype,input%jspins)
       REAL,ALLOCATABLE        :: f(:,:,:),df(:,:,:)
 
       REAL                    :: flo(atoms%jmtd,2,atoms%nlod)
@@ -92,7 +92,7 @@ CONTAINS
       TYPE(t_lapw)  :: lapw(kpts%nkptf)
       TYPE(t_usdus) :: usdus
 
-      CALL usdus%init(atoms,dimension%jspd)
+      CALL usdus%init(atoms,input%jspins)
       CALL zhlp%alloc(zmat(1)%l_real,zmat(1)%matsize1,zmat(1)%matsize2)
 
       

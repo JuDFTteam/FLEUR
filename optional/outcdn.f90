@@ -34,10 +34,10 @@
 !+odim
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,dimension%jspd)
-      COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
-      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-      REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
+      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,input%jspins)
+      COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
+      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+      REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,input%jspins)
       REAL,    INTENT (INOUT) :: p(3)
 !     ..
 !     .. Local Scalars ..

@@ -89,9 +89,9 @@
 
       WRITE(6,*)
       WRITE(6,*) 'DBG: symor,zorth,oldfleur :', symor,zorth,oldfleur
-      WRITE(6,'(x,a13,48i5)') 'DBG: optype :', optype(1:nops)
+      WRITE(6,'(1x,a13,48i5)') 'DBG: optype :', optype(1:nops)
       WRITE(6,*) 'DBG: invsym,invs,zrfs,invs2 :', invsym,invs,zrfs,invs2
-      WRITE(6,'(x,a45,3i5)') 
+      WRITE(6,'(1x,a45,3i5)') 
      &           'DBG: (before reorder) invsop,zrfsop,invs2op :', 
      &                                  invsop,zrfsop,invs2op
 

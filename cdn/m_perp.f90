@@ -29,7 +29,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: itype, iRepAtom
     !     ..
     !     .. Array Arguments ..
-    REAL, INTENT    (IN) :: chmom(:,:)!(atoms%ntype,dimension%jspd)
+    REAL, INTENT    (IN) :: chmom(:,:)!(atoms%ntype,input%jspins)
     REAL, INTENT    (IN) :: vr0(:,:,:)!(atoms%jmtd,atoms%ntype,jspd)
     COMPLEX, INTENT (IN) :: qa21(atoms%ntype)
     !     ..

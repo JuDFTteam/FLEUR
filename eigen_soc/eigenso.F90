@@ -84,11 +84,11 @@ CONTAINS
     ! now the definition of rotation matrices
     ! is equivalent to the def in the noco-routines
 
-    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd), usdus%dus(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
-         usdus%uds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),usdus%duds(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
-         usdus%ddn(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd),&
-         usdus%ulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulos(atoms%nlod,atoms%ntype,DIMENSION%jspd),&
-         usdus%uulon(atoms%nlod,atoms%ntype,DIMENSION%jspd),usdus%dulon(atoms%nlod,atoms%ntype,DIMENSION%jspd))
+    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,input%jspins), usdus%dus(0:atoms%lmaxd,atoms%ntype,input%jspins),&
+         usdus%uds(0:atoms%lmaxd,atoms%ntype,input%jspins),usdus%duds(0:atoms%lmaxd,atoms%ntype,input%jspins),&
+         usdus%ddn(0:atoms%lmaxd,atoms%ntype,input%jspins),&
+         usdus%ulos(atoms%nlod,atoms%ntype,input%jspins),usdus%dulos(atoms%nlod,atoms%ntype,input%jspins),&
+         usdus%uulon(atoms%nlod,atoms%ntype,input%jspins),usdus%dulon(atoms%nlod,atoms%ntype,input%jspins))
    
     IF (input%l_wann.OR.l_socvec) THEN
        wannierspin = 2

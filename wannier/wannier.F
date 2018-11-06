@@ -223,10 +223,10 @@ c      real, allocatable :: ei(:)
       complex,allocatable::ulojug(:,:,:,:,:)
       complex,allocatable::ulojdg(:,:,:,:,:)
       complex,allocatable::ulojulog(:,:,:,:,:,:)
-      real(4) delta,delta1,time_interstitial,time_mmn
-      real(4) time_total,delta2,delta3
-      real(4) time_lapw_expand,time_rw,time_symm,time_film
-      real(4) time_lapw_plot,time_ujugaunt,time_abcof
+      real delta,delta1,time_interstitial,time_mmn
+      real time_total,delta2,delta3
+      real time_lapw_expand,time_rw,time_symm,time_film
+      real time_lapw_plot,time_ujugaunt,time_abcof
       integer :: n_start,n_end,mlotot,mlolotot,err
       integer :: mlot_d,mlolot_d,ilo,dir,length
       character(len=2) :: spin012(0:2)
@@ -399,7 +399,7 @@ c-----input file for orbital decomposition
      >      enpara,eig_idList(1),l_real,
      >      mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,
      >      atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,
-     >      DIMENSION%nvd,DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,
+     >      DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,
      >      atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,
      >      atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,
      >      atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,
@@ -439,7 +439,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
-     >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
+     >      input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
      >      atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,
      >      atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,
      >      atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,
@@ -482,7 +482,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,
      >      l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,
      >      atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,
-     >      DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
+     >      input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
      >      atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,
      >      atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,
      >      atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,
@@ -697,7 +697,7 @@ cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
       allocate ( vz(vacuum%nmzd,2,4) )
-      allocate ( vr(atoms%jmtd,atoms%ntype,DIMENSION%jspd) )
+      allocate ( vr(atoms%jmtd,atoms%ntype,input%jspins) )
       allocate ( vso(atoms%jmtd,atoms%nat,2) )
 
       vz = 0.0
@@ -756,7 +756,7 @@ c--->       load the non-warping part of the potential
       endif   
     
 cccccccccccccccc   end of the potential part  ccccccccccc
-      wannierspin=DIMENSION%jspd
+      wannierspin=input%jspins
       if(noco%l_soc) wannierspin=2
      
       allocate ( kveclo(nlotot),nv(wannierspin) )
@@ -945,7 +945,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        nrec5=0
        if(.not.noco%l_noco) nrec5 = (jspin5-1)*nkpts
 
-       call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,DIMENSION%jspd, !wannierspin instead of DIMENSION%jspd?
+       call cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,input%jspins, !wannierspin instead of DIMENSION%jspd?
      >                noco%l_noco,
      <                n_bands,n_size)
 
@@ -1279,7 +1279,7 @@ c****************************************************************
 
       CALL cdn_read(
      >              eig_id,
-     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     >              DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      >              kptibz,jspin,DIMENSION%nbasfcn,
      >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
      <              nbands,eigg,zzMat)
@@ -1710,7 +1710,7 @@ c        print*,"something to do"
 
       CALL cdn_read(
      >              eig_id,
-     >              DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     >              DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      >              kptibz_b,jspin,DIMENSION%nbasfcn,
      >              noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
      <              nbands_b,eigg,zzMat)
@@ -1985,7 +1985,7 @@ c*******************************************c
 
        CALL cdn_read(
      >               innerEig_idList(iqpt_b),
-     >               DIMENSION%nvd,DIMENSION%jspd,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd? !kptibz_b2?
+     >               DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd? !kptibz_b2?
      >               kptibz,jspin_b,DIMENSION%nbasfcn,
      >               noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,
      >               n_end,
@@ -2834,7 +2834,7 @@ c************************************************c
      >         atoms%neq,atoms%zatom,cell%omtil,noco%l_soc,noco%l_noco,
      >         DIMENSION%neigd,fullnkpts,oneD%odi,l_proj,atoms%l_dulo,
      >         noco%l_ss,atoms%lmaxd,atoms%ntype,sym%nop,DIMENSION%nvd,
-     >         DIMENSION%jspd,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
+     >         input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,
      >         atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,
      >         sym%mrot,atoms%ngopr,atoms%lmax,atoms%invsat,
      >         sym%invsatnr,nkpt,atoms%taual,atoms%rmt,cell%bbmat,

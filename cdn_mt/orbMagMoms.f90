@@ -8,18 +8,18 @@ MODULE m_orbMagMoms
 
 CONTAINS
 
-SUBROUTINE orbMagMoms(dimension,atoms,noco,clmom)
+SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
 
    USE m_types
    USE m_xmlOutput
 
    IMPLICIT NONE
 
-   TYPE(t_dimension), INTENT(IN) :: dimension
+   TYPE(t_input), INTENT(IN) :: input
    TYPE(t_atoms), INTENT(IN)     :: atoms
    TYPE(t_noco), INTENT(IN)      :: noco
 
-   REAL, INTENT(INOUT)           :: clmom(3,atoms%ntype,dimension%jspd)
+   REAL, INTENT(INOUT)           :: clmom(3,atoms%ntype,input%jspins)
 
    INTEGER                       :: iType, j
    REAL                          :: thetai, phii, slmom, slxmom, slymom

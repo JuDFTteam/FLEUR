@@ -127,7 +127,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
-   ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,dimension%jspd))
+   ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
@@ -227,7 +227,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       ! valence density in the atomic spheres
-      CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
+      CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
@@ -276,7 +276,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #endif
 
    IF (mpi%irank==0) THEN
-      CALL cdnmt(dimension%jspd,atoms,sphhar,noco,jsp_start,jsp_end,&
+      CALL cdnmt(input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
                  enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
