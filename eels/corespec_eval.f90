@@ -611,7 +611,7 @@ MODULE m_corespec_eval
                     
                     ila1la2 = cimu**(la1-la2)
                     
-                    if(abs(real(td(1))).gt.0.d0.or.abs(real(td(2))).gt.0.d0.or.abs(imag(td(2))).gt.0.d0) then
+                    if(abs(real(td(1))).gt.0.d0.or.abs(real(td(2))).gt.0.d0.or.abs(aimag(td(2))).gt.0.d0) then
                     write(39,'(2f4.0,i2,6i4,a,6i4,a,6f7.3,a,4f10.6)') ila1la2,la1-la2,l1,-m1,la1,mu1,li,mi,'  ',l2,-m2,la2,mu2,li,mi,'  ',ga(0,1),ga(0,2),ga(1,1),ga(1,2),ga(2,1),ga(2,2),'  ',1000000*td
                     endif
 

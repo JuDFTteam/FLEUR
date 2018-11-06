@@ -138,7 +138,7 @@ MODULE m_types_setup
      !Calaculate forces for this atom?
      LOGICAL,ALLOCATABLE :: l_geo(:)
      !MT-Radius (ntype)
-     REAL,ALLOCATABLE::rmt(:)
+     REAL,ALLOCATABLE CPP_MANAGED::rmt(:)
      !log increment(ntype)
      REAL,ALLOCATABLE::dx(:)
      !vol of MT(ntype)
@@ -152,7 +152,7 @@ MODULE m_types_setup
      !pos of atom (absol) (3,nat)
      REAL,ALLOCATABLE::pos(:,:)
      !pos of atom (relat)(3,nat)
-     REAL,ALLOCATABLE::taual(:,:)  
+     REAL,ALLOCATABLE CPP_MANAGED::taual(:,:)  
      !labels
      CHARACTER(LEN=20), ALLOCATABLE :: label(:)
      CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
@@ -344,6 +344,7 @@ MODULE m_types_setup
      LOGICAL:: l_ss
      LOGICAL:: l_mperp
      LOGICAL:: l_constr
+     LOGICAL:: l_mtNocoPot
      REAL:: qss(3)
      REAL:: mix_b
      LOGICAL, ALLOCATABLE :: l_relax(:)

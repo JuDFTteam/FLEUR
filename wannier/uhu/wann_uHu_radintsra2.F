@@ -13,6 +13,7 @@
 
       IMPLICIT NONE
       
+      INTEGER, INTENT(IN) :: jmtd
       REAL, INTENT(IN) :: p(jmtd,2)
       REAL, INTENT(IN) :: q(jmtd,2)
       REAL, INTENT(IN) :: vr(jmtd)
@@ -20,7 +21,6 @@
       REAL, INTENT(IN) :: rmsh(jmtd)
       REAL, INTENT(IN) :: dx
       INTEGER, INTENT(IN) :: jri
-      INTEGER, INTENT(IN) :: jmtd
       INTEGER, INTENT(IN) :: l
       REAL, INTENT(OUT) :: integral
 

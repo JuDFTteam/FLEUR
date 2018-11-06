@@ -46,7 +46,7 @@ MODULE m_types_mpimat
      PROCEDURE,PASS   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
      PROCEDURE,PASS   :: print_matrix
      PROCEDURE,PASS   :: from_non_dist
-     FINAL :: finalize
+     FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
   END TYPE t_mpimat
   
   PUBLIC t_mpimat
@@ -295,6 +295,44 @@ CONTAINS
     CALL mpimat_free(mat)
   END SUBROUTINE finalize
 
+  SUBROUTINE finalize_1d(mat)
+    IMPLICIT NONE
+    
+    TYPE(t_mpimat),INTENT(INOUT) :: mat(:)
+    INTEGER                      :: i
+    DO i = 1,size(mat)
+       CALL mpimat_free(mat(i))
+    ENDDO
+  END SUBROUTINE finalize_1d
+
+  SUBROUTINE finalize_2d(mat)
+    IMPLICIT NONE
+    
+    TYPE(t_mpimat),INTENT(INOUT) :: mat(:,:)
+    INTEGER                      :: i,j
+
+    DO i = 1,size(mat, dim=1)
+       DO j = 1,size(mat, dim=2)
+          CALL mpimat_free(mat(i,j))
+      ENDDO
+    ENDDO
+  END SUBROUTINE finalize_2d
+  
+  SUBROUTINE finalize_3d(mat)
+    IMPLICIT NONE
+    
+    TYPE(t_mpimat),INTENT(INOUT) :: mat(:,:,:)
+    INTEGER                      :: i,j,k
+
+    DO i = 1,size(mat, dim=1)
+       DO j = 1,size(mat, dim=2)
+         DO k = 1,size(mat, dim=3)
+             CALL mpimat_free(mat(i,j,k))
+         ENDDO
+      ENDDO
+    ENDDO
+  END SUBROUTINE finalize_3d
+
   SUBROUTINE mpimat_free(mat)
     IMPLICIT NONE
     CLASS(t_mpimat),INTENT(INOUT) :: mat
@@ -370,8 +408,10 @@ CONTAINS
           mat%blacsdata%blacs_desc(4)=global_size2
           mat%global_size1=global_size1
           mat%global_size2=global_size2
+#ifdef CPP_SCALAPACK    
           mat%matsize1=NUMROC( global_size1,mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow )
           mat%matsize1=NUMROC( global_size2,mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol )
+#endif    
        ELSE
           mat%matsize1=templ%matsize1
           mat%matsize2=templ%matsize2
@@ -467,8 +507,12 @@ CONTAINS
           k = k + 1
        ENDDO
     ENDDO
+!#ifdef CPP_BLACSDEFAULT    
     !Get the Blacs default context
     CALL BLACS_GET(0,0,ictextblacs)
+!#else
+!    ictextblacs=mpi_subcom
+!#endif    
     ! Create the Grid
     CALL BLACS_GRIDMAP(ictextblacs,iusermap,size(iusermap,1),blacsdata%nprow,blacsdata%npcol)
     !     Now control, whether the BLACS grid is the one we wanted

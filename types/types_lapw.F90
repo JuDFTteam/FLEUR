@@ -8,17 +8,18 @@ MODULE m_types_lapw
   USE m_judft
   PRIVATE
   TYPE t_lapw
-     INTEGER :: nv(2),num_local_cols(2)
+     INTEGER :: nv(2)
+     INTEGER :: num_local_cols(2)
      INTEGER :: nv_tot
      INTEGER :: nmat
      INTEGER :: nlotot
      INTEGER,ALLOCATABLE:: k1(:,:)
      INTEGER,ALLOCATABLE:: k2(:,:)
      INTEGER,ALLOCATABLE:: k3(:,:)
-     INTEGER,ALLOCATABLE:: gvec(:,:,:) !replaces k1,k2,k3
+     INTEGER,ALLOCATABLE CPP_MANAGED:: gvec(:,:,:) !replaces k1,k2,k3
      INTEGER,ALLOCATABLE:: kp(:,:)
      REAL,ALLOCATABLE::rk(:,:)
-     REAL,ALLOCATABLE::gk(:,:,:)
+     REAL,ALLOCATABLE CPP_MANAGED::gk(:,:,:)
      REAL,ALLOCATABLE::vk(:,:,:)
      INTEGER,ALLOCATABLE::matind(:,:)
      INTEGER,ALLOCATABLE::index_lo(:,:)
@@ -372,7 +373,6 @@ CONTAINS
   CONTAINS
 
   SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
-    USE m_vecforlo
     USE m_types_setup
 
     IMPLICIT NONE

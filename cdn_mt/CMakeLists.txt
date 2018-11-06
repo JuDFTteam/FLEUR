@@ -21,6 +21,8 @@ cdn_mt/rhonmt.f90
 cdn_mt/rhonmt21.f90
 cdn_mt/rhonmtlo.f90
 cdn_mt/rhosphnlo.f90
+cdn_mt/setabc1locdn.f90
+cdn_mt/setabc1locdn1.f90
 cdn_mt/calcDenCoeffs.f90
 )
 

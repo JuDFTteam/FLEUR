@@ -135,7 +135,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    INTEGER              :: kcorner(3,8) = reshape((/ 0,0,0, 1,0,0, 0,1,0, 0,0,1, 1,1,0, 1,0,1, 0,1,1, 1,1,1 /), (/3,8/) )
    COMPLEX              :: exchcorrect(kpts%nkptf)
    COMPLEX              :: dcprod(hybrid%nbands(nk),hybrid%nbands(nk),3) 
-   COMPLEX(8)           :: exch_vv(hybrid%nbands(nk),hybrid%nbands(nk))
+   COMPLEX              :: exch_vv(hybrid%nbands(nk),hybrid%nbands(nk))
    COMPLEX              :: hessian(3,3)
    COMPLEX              :: proj_ibsc(3,mnobd,hybrid%nbands(nk))
    COMPLEX              :: olap_ibsc(3,3,mnobd,mnobd)
@@ -147,7 +147,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 
 
 #if defined(CPP_MPI)&&defined(CPP_NEVER)
-   COMPLEX(8)           :: buf_vv(hybrid%nbands(nk),nbands(nk))
+   COMPLEX             :: buf_vv(hybrid%nbands(nk),nbands(nk))
 #endif
 
 #if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )

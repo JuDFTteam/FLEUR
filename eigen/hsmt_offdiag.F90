@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
-    CLASS(t_mat),INTENT(INOUT)    :: hmat(2,2)
+    CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: n,isp

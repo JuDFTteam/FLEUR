@@ -60,7 +60,6 @@ CONTAINS
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
-    USE m_apws
     USE cudafor
     USE nvtx
     IMPLICIT NONE
@@ -175,7 +174,6 @@ CONTAINS
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_ylm
-    USE m_apws
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_cell),INTENT(IN)     :: cell

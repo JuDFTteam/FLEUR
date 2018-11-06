@@ -26,9 +26,9 @@ SUBROUTINE calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs
    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
+   INTEGER,              INTENT(IN)    :: noccbd
    REAL,                 INTENT(IN)    :: we(noccbd)
 
-   INTEGER,              INTENT(IN)    :: noccbd
    INTEGER,              INTENT(IN)    :: ispin
 
    !--->          set up coefficients for the spherical and

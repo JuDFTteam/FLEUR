@@ -209,17 +209,20 @@ CONTAINS
         LOGICAL :: write_to_file=.false.
         CLASS(t_mat), ALLOCATABLE :: zMat_s
 
-	CALL build_primitive_cell(banddos,p_cell,cell)
+!	method_rubel=.true.    !this switch is to switch between overlap matrix and rubel method (without overlap matrix)
 
-        DO j = 1, lapw%nv(jsp)
-           DO i = 1, j-1
-              IF(smat_unfold%l_real) THEN
-                 smat_unfold%data_r(j,i) = smat_unfold%data_r(i,j)
-              ELSE
-                 smat_unfold%data_c(j,i) = CONJG(smat_unfold%data_c(i,j))
-              END IF
-           END DO
-        END DO
+	CALL build_primitive_cell(banddos,p_cell,cell)
+	IF (.not. method_rubel) THEN
+		DO j = 1, lapw%nv(jsp)
+		  DO i = 1, j-1
+	      		IF(smat_unfold%l_real) THEN
+				smat_unfold%data_r(j,i) = smat_unfold%data_r(i,j)
+	      		ELSE
+				smat_unfold%data_c(j,i) = CONJG(smat_unfold%data_c(i,j))
+	      		END IF
+		   END DO
+		END DO
+	END IF
 !   	write_to_file=.true.
 	IF (write_to_file) THEN
 		IF (i_kpt==1) THEN
@@ -233,7 +236,6 @@ CONTAINS
 !		write(222,'(234f15.8)') zMat%data_r
 !		write(223,'(234f15.8)') smat_unfold%data_r
 
-!	method_rubel=.true.    !this switch is to switch between overlap matrix and rubel method (without overlap matrix)
 
 	IF (zmat%l_real) THEN	
 		ALLOCATE(w_n(zMat%matsize2))
