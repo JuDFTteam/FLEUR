@@ -401,7 +401,7 @@ CONTAINS
        CALL forcetheo%postprocess()
 
        IF ((input%gw.GT.0).AND.(mpi%irank.EQ.0)) THEN
-          CALL writeBasis()
+          CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
        END IF
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)

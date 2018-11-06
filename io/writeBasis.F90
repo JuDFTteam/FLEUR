@@ -8,14 +8,317 @@ MODULE m_writeBasis
 
 CONTAINS
 
-SUBROUTINE writeBasis()
+SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
 
    USE m_types
    USE m_juDFT
+   USE hdf5
+   USE m_hdf_tools
+    USE m_genmtbasis
+!   USE m_cdn_io
 
    IMPLICIT NONE
+!   TYPE(t_results),INTENT(IN):: results
+      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      TYPE(t_enpara),INTENT(IN)    :: enpara
+!      TYPE(t_banddos),INTENT(IN)   :: banddos
+!      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+!      TYPE(t_stars),INTENT(IN)     :: stars
+
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_kpts),INTENT(IN)      :: kpts
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden), INTENT(IN)   :: vTot
+      TYPE(t_mpi), INTENT(IN)      :: mpi
+
+      TYPE (t_usdus)               :: usdus
+      TYPE(t_lapw)                 :: lapw
+
+      INTEGER(HID_T)    :: fileID
+
+      LOGICAL           :: l_exist
+      CHARACTER(LEN=30) :: filename
+      CHARACTER(LEN=30) :: kpt_name
+      CHARACTER(LEN=30) :: jsp_name
+      CHARACTER(LEN=30) :: itype_name
+!      CHARACTER(LEN=30) :: l_name
+      INTEGER(HID_T)    :: metaGroupID
+      INTEGER(HID_T)    :: generalGroupID
+      INTEGER(HID_T)    :: cellGroupID
+      INTEGER(HID_T)    :: atomsGroupID
+      INTEGER(HID_T)    :: kptsGroupID
+      INTEGER(HID_T)    :: kptGroupID
+      INTEGER(HID_T)    :: jspGroupID
+      INTEGER(HID_T)    :: itypeGroupID,  itypeSpaceID, itypeSetID
+!      INTEGER(HID_T)    :: lGroupID
+
+!      INTEGER(HID_T)    :: stringTypeID
+!      INTEGER(SIZE_T)   :: stringLength
+
+      INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
+      INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
+
+      INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
+      INTEGER(HID_T)    :: gvecSpaceID, gvecSetID
+      INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
+      INTEGER(HID_T)    :: equivAtomsClassSpaceID, equivAtomsClassSetID
+
+      INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
+      INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
+ !     INTEGER(HID_T)    :: kptSPLabelsSpaceID, kptSPLabelsSetID
+ !     INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
+
+      INTEGER           :: j, iAtom
+!      INTEGER           :: noded, nodeu
+
+      INTEGER           :: hdfError, dimsInt(7)
+      INTEGER           :: version
+!      INTEGER           :: fakeLogical
+!      REAL              :: eFermiPrev
+ !     LOGICAL           :: l_error
+
+      INTEGER           :: atomicNumbers(atoms%nat)
+      INTEGER           :: equivAtomsGroup(atoms%nat)
+
+      INTEGER(HSIZE_T)  :: dims(7)
+
+!      REAL              :: wronk
+
+
+      REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
+      REAL,    ALLOCATABLE :: flo(:,:,:)
+
+      LOGICAL l_zref,l_real
+      INTEGER jsp,nk,l,itype
+
+    IF (noco%l_mperp) THEN
+       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins),g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins) )
+    ELSE
+       ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,1:input%jspins) )
+       ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,1:input%jspins) )
+    ENDIF
+    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod))
+
 
 #ifdef CPP_HDF
+
+	l_real=sym%invs.AND..NOT.noco%l_noco
+	! check if z-reflection trick can be used
+	l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
+!	IF (mpi%n_size > 1) l_zref = .FALSE.
+      version = 1
+      filename = 'basis.hdf'
+
+      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+      IF(l_exist) THEN
+         CALL system('rm '//TRIM(ADJUSTL(filename)))       
+      END IF
+
+      CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
+
+      CALL h5gcreate_f(fileID, '/meta', metaGroupID, hdfError)
+      CALL io_write_attint0(metaGroupID,'version',version)
+      CALL h5gclose_f(metaGroupID, hdfError)
+
+      CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
+      CALL io_write_attint0(generalGroupID,'spins',input%jspins)
+      CALL h5gclose_f(generalGroupID, hdfError)
+
+      CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
+
+      dims(:2)=(/3,3/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
+      CALL h5dcreate_f(cellGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
+      CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
+      CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
+      CALL h5dclose_f(bravaisMatrixSetID, hdfError)
+
+      dims(:2)=(/3,3/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),reciprocalCellSpaceID,hdfError)
+      CALL h5dcreate_f(cellGroupID, "reciprocalCell", H5T_NATIVE_DOUBLE, reciprocalCellSpaceID, reciprocalCellSetID, hdfError)
+      CALL h5sclose_f(reciprocalCellSpaceID,hdfError)
+      CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),cell%bmat)
+      CALL h5dclose_f(reciprocalCellSetID, hdfError)
+
+      CALL h5gclose_f(cellGroupID, hdfError)
+ iAtom = 0
+      DO iType = 1, atoms%ntype
+         DO j = 1, atoms%neq(iType)
+            iAtom = iAtom + 1
+            atomicNumbers(iAtom) = atoms%nz(iType)
+            equivAtomsGroup(iAtom) = iType
+         END DO
+      END DO
+
+      CALL h5gcreate_f(fileID, '/atoms', atomsGroupID, hdfError)
+      CALL io_write_attint0(atomsGroupID,'nAtoms',atoms%nat)
+      CALL io_write_attint0(atomsGroupID,'nTypes',atoms%ntype)
+      CALL io_write_attint0(atomsGroupID,'nlod',atoms%nlod)
+      CALL io_write_attint0(atomsGroupID,'llod',atoms%llod)
+      CALL io_write_attint0(atomsGroupID,'nlotot',atoms%nlotot)
+      CALL io_write_attint0(atomsGroupID,'lmaxd',atoms%lmaxd)
+      CALL io_write_attint0(atomsGroupID,'jmtd',atoms%jmtd)
+
+      dims(:1)=(/atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atoms_jri", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%jri)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:1)=(/atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atoms_lmax", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%lmax)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:1)=(/atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atoms_nlo", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%nlo)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:2)=(/atoms%nlod,atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atoms_llo", H5T_NATIVE_INTEGER, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5sclose_f(atomPosSpaceID,hdfError)
+      CALL io_write_integer2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%llo)
+      CALL h5dclose_f(atomPosSetID, hdfError)
+
+      dims(:2)=(/atoms%jmtd,atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "rmsh", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5sclose_f(atomPosSpaceID,hdfError)
+      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%rmsh)
+      CALL h5dclose_f(atomPosSetID, hdfError)
+
+
+
+      dims(:2)=(/3,atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "positions", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5sclose_f(atomPosSpaceID,hdfError)
+      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%taual)
+      CALL h5dclose_f(atomPosSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atomicNumbers", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atomicNumbers)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),equivAtomsClassSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "equivAtomsGroup", H5T_NATIVE_INTEGER, equivAtomsClassSpaceID, equivAtomsClassSetID, hdfError)
+      CALL h5sclose_f(equivAtomsClassSpaceID,hdfError)
+      CALL io_write_integer1(equivAtomsClassSetID,(/1/),dimsInt(:1),equivAtomsGroup)
+      CALL h5dclose_f(equivAtomsClassSetID, hdfError)
+
+      CALL h5gclose_f(atomsGroupID, hdfError)
+
+      CALL h5gcreate_f(fileID, '/kpts', kptsGroupID, hdfError)
+
+      CALL io_write_attint0(kptsGroupID,'nkpt',kpts%nkpt)
+
+      dims(:2)=(/3,kpts%nkpt/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
+      CALL h5dcreate_f(kptsGroupID, "coordinates", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
+      CALL h5sclose_f(kptCoordSpaceID,hdfError)
+      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),kpts%bk)
+      CALL h5dclose_f(kptCoordSetID, hdfError)
+
+      dims(:1)=(/kpts%nkpt/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),kptWeightSpaceID,hdfError)
+      CALL h5dcreate_f(kptsGroupID, "weights", H5T_NATIVE_DOUBLE, kptWeightSpaceID, kptWeightSetID, hdfError)
+      CALL h5sclose_f(kptWeightSpaceID,hdfError)
+      CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),kpts%wtkpt)
+      CALL h5dclose_f(kptWeightSetID, hdfError)
+
+      CALL h5gclose_f(kptsGroupID, hdfError)
+
+   CALL usdus%init(atoms,input%jspins)
+
+   DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+       write(jsp_name , '(a,i0)') '/jsp_',jsp
+       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
+!      DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
+       DO nk = 1,kpts%nkpt
+            CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
+            write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
+	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
+!--------------------enter output gvec etc here--------------------
+!lapw%gvec(3,nv,input%jspins)
+            CALL io_write_attint0(kptGroupID,'nv',lapw%nv(jsp))
+
+	      dims(:2)=(/3,lapw%nv(jsp)/)
+	      dimsInt=dims
+	      CALL h5screate_simple_f(2,dims(:2),gvecSpaceID,hdfError)
+	      CALL h5dcreate_f(kptGroupID, "gvec", H5T_NATIVE_INTEGER, gvecSpaceID, gvecSetID, hdfError)
+	      CALL h5sclose_f(gvecSpaceID,hdfError)
+	      CALL io_write_integer2(gvecSetID,(/1,1/),dimsInt(:2),lapw%gvec(:,:lapw%nv(jsp),jsp))
+	      CALL h5dclose_f(gvecSetID, hdfError)
+!index_lo(:,:)
+			
+	    CALL h5gclose_f(kptGroupID, hdfError)
+            
+       END DO
+
+
+       DO itype = 1,atoms%ntype
+		write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
+		CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
+
+                CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,.FALSE.,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo)
+		dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
+		dimsInt = dims
+		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "radfun_u", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),f(:,:,0:,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "radfun_d", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),g(:,:,0:,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		dims(:3)=(/atoms%jmtd,2,atoms%nlod/)
+		dimsInt = dims
+		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "radfun_ulo", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),flo(:,:,:))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+!			write(kpt_name , '(3a,i0)') TRIM(ADJUSTL(jsp_name)),TRIM(ADJUSTL(itype_name)),'/l_',l
+!			CALL h5gcreate_f(fileID, TRIM(ADJUSTL(l_name)), lGroupID, hdfError)
+!			CALL h5gclose_f(lGroupID, hdfError)
+		CALL h5gclose_f(itypeGroupID, hdfError)
+	END DO
+
+       CALL h5gclose_f(jspGroupID, hdfError)
+   END DO
+
+
 
 #else
    CALL juDFT_error("writeBasis called without HDF5! ",calledby="writeBasis")
