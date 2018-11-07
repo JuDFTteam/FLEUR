@@ -12,8 +12,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
 
    USE m_types
    USE m_juDFT
+#ifdef CPP_HDF   
    USE hdf5
    USE m_hdf_tools
+#endif   
     USE m_genmtbasis
 !   USE m_cdn_io
 
