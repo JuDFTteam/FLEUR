@@ -36,15 +36,17 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
 
       TYPE (t_usdus)               :: usdus
       TYPE(t_lapw)                 :: lapw
-
-      INTEGER(HID_T)    :: fileID
-
+#ifdef CPP_HDF   
+      
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
       CHARACTER(LEN=30) :: kpt_name
       CHARACTER(LEN=30) :: jsp_name
       CHARACTER(LEN=30) :: itype_name
 !      CHARACTER(LEN=30) :: l_name
+
+   
+      INTEGER(HID_T)    :: fileID
       INTEGER(HID_T)    :: metaGroupID
       INTEGER(HID_T)    :: generalGroupID
       INTEGER(HID_T)    :: cellGroupID
@@ -70,6 +72,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
  !     INTEGER(HID_T)    :: kptSPLabelsSpaceID, kptSPLabelsSetID
  !     INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
+      INTEGER(HSIZE_T)  :: dims(7)
 
       INTEGER           :: j, iAtom
 !      INTEGER           :: noded, nodeu
@@ -83,7 +86,6 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
       INTEGER           :: atomicNumbers(atoms%nat)
       INTEGER           :: equivAtomsGroup(atoms%nat)
 
-      INTEGER(HSIZE_T)  :: dims(7)
 
 !      REAL              :: wronk
 
@@ -103,7 +105,6 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION)
     ALLOCATE (flo(atoms%jmtd,2,atoms%nlod))
 
 
-#ifdef CPP_HDF
 
 	l_real=sym%invs.AND..NOT.noco%l_noco
 	! check if z-reflection trick can be used
