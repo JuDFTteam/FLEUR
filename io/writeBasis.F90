@@ -47,8 +47,6 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       TYPE (t_force)               :: force
       TYPE(t_mat)                  :: zMat
 
-      INTEGER(HID_T)    :: fileID
-
 #ifdef CPP_HDF   
       
       LOGICAL           :: l_exist
