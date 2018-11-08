@@ -11,14 +11,14 @@ if (CLI_FLEUR_USE_GPU)
    elseif(${CLI_FLEUR_USE_GPU} MATCHES "cuda9.1")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=cuda9.1,cc60 -Mcuda=rdc -Mcudalib=cublas")
    elseif(${CLI_FLEUR_USE_GPU} MATCHES "nvtx")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=cuda9.0,cc60 -Mcuda=rdc -Mcudalib=cublas -lnvToolsExt ")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=cuda9.1,cc60 -Mcuda=rdc -Mcudalib=cublas -lnvToolsExt ")
    elseif(${CLI_FLEUR_USE_GPU} MATCHES "emu")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=emu -Mcudalib=cublas -Minfo=accel ")
    endif()
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_GPU" "CPP_MANAGED=,MANAGED")
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU" "CPP_MANAGED=,MANAGED")
 #Now check for cusolverDN library
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Mcuda")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Mcuda -ta=tesla,cuda9.1 ")
    try_compile(FLEUR_USE_CUSOLVER ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_cusolver.c
 	    LINK_LIBRARIES "-lcusolver"
             )
