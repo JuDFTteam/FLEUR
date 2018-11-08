@@ -56,19 +56,21 @@ void cusolver_complex(cuDoubleComplex *H,cuDoubleComplex *S,int n,int ne,double 
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of tolerance is machine zero */
-  status = cusolverDnXsyevjSetTolerance(&syevj_params,tol);
+  status = cusolverDnXsyevjSetTolerance(syevj_params,tol);
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of max. sweeps is 100 */
-  status = cusolverDnXsyevjSetMaxSweeps(&syevj_params,max_sweeps);
+  status = cusolverDnXsyevjSetMaxSweeps(syevj_params,max_sweeps);
   assert(CUSOLVER_STATUS_SUCCESS == status);
 
+  printf("Allocate data \n");
   /* step 3: copy A to device */
   cudaStat2 = cudaMalloc ((void**)&d_W, sizeof(cuDoubleComplex) * n);
   cudaStat3 = cudaMalloc ((void**)&d_info, sizeof(int));
   assert(cudaSuccess == cudaStat2);
   assert(cudaSuccess == cudaStat3);
-  
+
+  printf("query working space \n");
   /* step 4: query working space of sygvj */
   status = cusolverDnZhegvj_bufferSize(cusolverH,itype,jobz,uplo,n,H,n,S,n,d_W,&lwork,syevj_params);
   assert(CUSOLVER_STATUS_SUCCESS == status);
@@ -76,6 +78,7 @@ void cusolver_complex(cuDoubleComplex *H,cuDoubleComplex *S,int n,int ne,double 
   cudaStat1 = cudaMalloc((void**)&d_work, sizeof(cuDoubleComplex)*lwork);
   assert(cudaSuccess == cudaStat1);
   
+  printf("compute eigen-pair \n");
   /* step 5: compute eigen-pair   */
   status = cusolverDnZhegvj(cusolverH,itype,jobz,uplo,n,H,n,S,n,d_W,d_work,lwork,d_info,syevj_params);
   cudaStat1 = cudaDeviceSynchronize();
@@ -163,26 +166,26 @@ void cusolver_real(double *H,double *S,int n,int ne,double tol,int max_sweeps,do
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of tolerance is machine zero */
-  status = cusolverDnXsyevjSetTolerance(&syevj_params,tol);
+  status = cusolverDnXsyevjSetTolerance(syevj_params,tol);
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   /* default value of max. sweeps is 100 */
-  status = cusolverDnXsyevjSetMaxSweeps(&syevj_params,max_sweeps);
+  status = cusolverDnXsyevjSetMaxSweeps(syevj_params,max_sweeps);
   assert(CUSOLVER_STATUS_SUCCESS == status);
-
+  printf("Allocate data \n");
   /* step 3: copy A to device */
   cudaStat2 = cudaMalloc ((void**)&d_W, sizeof(double) * n);
   cudaStat3 = cudaMalloc ((void**)&d_info, sizeof(int));
   assert(cudaSuccess == cudaStat2);
   assert(cudaSuccess == cudaStat3);
-  
+  printf("query working space \n");
   /* step 4: query working space of sygvj */
   status = cusolverDnDsygvj_bufferSize(cusolverH,itype,jobz,uplo,n,H,n,S,n,d_W,&lwork,syevj_params);
   assert(CUSOLVER_STATUS_SUCCESS == status);
   
   cudaStat1 = cudaMalloc((void**)&d_work, sizeof(double)*lwork);
   assert(cudaSuccess == cudaStat1);
-  
+  printf("compute eigen-pair \n");
   /* step 5: compute eigen-pair   */
   status = cusolverDnDsygvj(cusolverH,itype,jobz,uplo,n,H,n,S,n,d_W,d_work,lwork,d_info,syevj_params);
   cudaStat1 = cudaDeviceSynchronize();
@@ -219,9 +222,9 @@ void cusolver_real(double *H,double *S,int n,int ne,double tol,int max_sweeps,do
   if (d_info ) cudaFree(d_info);
   if (d_work ) cudaFree(d_work);
 
-  if (cusolverH   ) cusolverDnDestroy(cusolverH);   
-  if (stream      ) cudaStreamDestroy(stream);
   if (syevj_params) cusolverDnDestroySyevjInfo(syevj_params);
+  if (stream      ) cudaStreamDestroy(stream);
+  if (cusolverH   ) cusolverDnDestroy(cusolverH);   
 
   //  cudaDeviceReset();
 

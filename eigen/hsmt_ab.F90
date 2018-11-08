@@ -19,22 +19,19 @@ CONTAINS
 
 #ifdef CPP_GPU
 
-  ATTRIBUTES(global) SUBROUTINE synth_ab(grid,block,n,lmax,ab_size,gkrot_dev,fj,gj,c_ph,ab)
+  ATTRIBUTES(global) SUBROUTINE synth_ab(loop_size,n,lmax,ab_size,gkrot_dev,fj,gj,c_ph,ab)
     USE m_ylm
-    INTEGER, VALUE, INTENT(IN) :: grid, block, n, lmax, ab_size
+    INTEGER, VALUE, INTENT(IN) :: loop_size, n, lmax, ab_size
     REAL,   DEVICE, INTENT(IN) :: gkrot_dev(:,:),fj(:,:),gj(:,:)
     COMPLEX,DEVICE, INTENT(IN) :: c_ph(:)
     COMPLEX,DEVICE, INTENT (OUT) :: ab(:,:)
     COMPLEX,ALLOCATABLE :: ylm(:)
-    INTEGER :: k,l,ll1,m
-    INTEGER :: loop_start, loop_end, i, loop_size
+    INTEGER :: k,l,ll1,m,i
+    INTEGER :: loop_start, loop_end
 
     ALLOCATE(ylm((lmax+1)**2))
 
     k = (blockidx%x-1)*blockdim%x + threadidx%x
-
-    loop_size = max(n/(grid*block),1)
-    if (loop_size * grid*block < n) loop_size = loop_size + 1
     loop_start = (k-1) * loop_size + 1
     loop_end = loop_start + loop_size - 1
     if (loop_end > n ) loop_end = n
@@ -90,7 +87,7 @@ CONTAINS
 
     COMPLEX,ALLOCATABLE,DEVICE :: c_ph_dev(:,:)
     REAL,   ALLOCATABLE,DEVICE :: gkrot_dev(:,:)
-    INTEGER :: grid, block
+    INTEGER :: grid, block, loop_size
     INTEGER :: istat
  
     call nvtxStartRange("hsmt_ab",3)    
@@ -129,12 +126,12 @@ CONTAINS
 
 
     !-->  synthesize the complex conjugates of a and b
-    ! pretty ugly solution
-    block = 256
-    grid = lapw%nv(1)/(block*4) + 1
-    CALL synth_ab<<<grid,block>>>(grid,block,lapw%nv(1),lmax,ab_size,gkrot_dev,&
+    grid = 30    ! number of blocks in the grid
+    block = 32   ! number of threads in a block
+    loop_size = max(lapw%nv(1)/(grid*block),1)   !number of iterations performed by each thread
+    if (loop_size * grid*block < lapw%nv(1)) loop_size = loop_size + 1
+    CALL synth_ab<<<grid,block>>>(loop_size,lapw%nv(1),lmax,ab_size,gkrot_dev,&
                                   fj(:,:,iintsp),gj(:,:,iintsp),c_ph_dev(:,iintsp),ab)
-
 
     IF (PRESENT(abclo)) THEN
        print*, "Ooooops, TODO in hsmt_ab"

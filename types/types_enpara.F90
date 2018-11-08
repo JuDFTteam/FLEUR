@@ -9,7 +9,7 @@ MODULE m_types_enpara
   IMPLICIT NONE
   PRIVATE
   TYPE t_enpara
-     REAL, ALLOCATABLE    :: el0(:,:,:)
+     REAL, ALLOCATABLE CPP_MANAGED   :: el0(:,:,:)
      REAL                 :: evac0(2,2)
      REAL                 :: evac(2,2)
      REAL, ALLOCATABLE    :: ello0(:,:,:)
