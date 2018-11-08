@@ -150,7 +150,7 @@
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
-      input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
+      nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
@@ -426,7 +426,6 @@
 
       IF (l_hyb) THEN
          ! Changes for hybrid functionals
-         input%isec1 = 999
          namex = 'pbe0'
          input%ctail = .false. ; atoms%l_geo = .false.! ; input%frcor = .true.
          input%itmax = 15 ; input%maxiter = 25!; input%imix  = 17

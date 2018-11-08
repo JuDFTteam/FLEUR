@@ -97,9 +97,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
            IF (input%secvar) THEN
               CALL juDFT_error("LO + sevcar not implemented",calledby ="postprocessInput")
            END IF
-           IF (input%isec1<input%itmax) THEN
-              CALL juDFT_error("LO + Wu not implemented",calledby ="postprocessInput")
-           END IF
            IF (atoms%nlo(iType).GT.atoms%nlod) THEN
               WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
               CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
@@ -165,7 +162,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      IF (atoms%n_u.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
-        IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 

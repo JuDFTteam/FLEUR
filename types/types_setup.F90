@@ -378,7 +378,6 @@ MODULE m_types_setup
      REAL    :: thetad !< Debey temperature for first step of geometry optimzer
      REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
      REAL    :: epsforce !< minimal force. If all forces <epsforce stop
-     INTEGER :: isec1
      REAL    :: delgau
      REAL    :: alpha
      REAL    :: preconditioning_param

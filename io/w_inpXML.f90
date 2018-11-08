@@ -215,9 +215,9 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,170) oneD%odd%d1,oneD%odd%M,oneD%odd%mb,oneD%odd%m_cyl,oneD%odd%chi,oneD%odd%rot,oneD%odd%invs,oneD%odd%zrfs
    END IF
 
-!      <expertModes gw="0"  eig66="F" lpr="0" isec1="99" secvar="F" />
-   180 FORMAT('      <expertModes gw="',i0,'" isec1="',i0,'" secvar="',l1,'"/>')
-   WRITE (fileNum,180) input%gw,input%isec1,input%secvar
+!      <expertModes gw="0"  eig66="F" lpr="0" secvar="F" />
+   180 FORMAT('      <expertModes gw="',i0,'" secvar="',l1,'"/>')
+   WRITE (fileNum,180) input%gw,input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
    190 FORMAT('      <geometryOptimization l_f="',l1,'" xa="',f0.8,'" thetad="',f0.8,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
