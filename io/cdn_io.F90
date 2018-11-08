@@ -175,6 +175,15 @@ MODULE m_cdn_io
 
       CALL getIOMode(mode)
 
+#ifndef CPP_HDF
+      filename = 'cdn.hdf'
+      IF(PRESENT(inFilename)) filename = TRIM(ADJUSTL(inFilename))//'.hdf'
+      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+      IF (l_exist) THEN
+         CALL juDFT_warn('Fleur not compiled for HDF5, but '//TRIM(ADJUSTL(filename))//' present',calledby='readDensity')
+      END IF
+#endif
+
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
 
