@@ -32,7 +32,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_kpts),INTENT(IN)      :: kpts
-      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_atoms),INTENT(INOUT)     :: atoms
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden), INTENT(IN)   :: vTot
@@ -87,7 +87,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
  !     INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
       INTEGER(HSIZE_T)  :: dims(7)
 
-      INTEGER           :: j, iAtom
+      INTEGER           :: j, iAtom, i
 !      INTEGER           :: noded, nodeu
 
       INTEGER           :: hdfError, dimsInt(7)
@@ -97,7 +97,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 !      REAL              :: eFermiPrev
  !     LOGICAL           :: l_error
 
-      INTEGER           :: atomicNumbers(atoms%nat)
+      INTEGER           :: atomicNumbers(atoms%nat),ngopr_temp(atoms%nat)
       INTEGER           :: equivAtomsGroup(atoms%nat)
 
 
@@ -107,9 +107,14 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
       REAL,    ALLOCATABLE :: flo(:,:,:)
 
+      real,    allocatable :: cof(:,:,:,:)
+      integer(HSIZE_T)              :: Hdim1(4)
+      INTEGER		  :: lmn, na,lm,n,nn, m
+      complex, parameter   :: img=(0.,1.)
+
       LOGICAL l_zref,l_real
       INTEGER jsp,nk,l,itype
-      INTEGER numbands, nbasfcn
+      INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
     CALL force%init1(input,atoms)
 
@@ -338,7 +343,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
    END DO
    CALL h5fclose_f(fileID, hdfError)
       version = 1
-      filename = 'abcof.hdf'
+      filename = 'eig_gw.hdf'
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
       IF(l_exist) THEN
@@ -360,85 +365,163 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
             write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
 	    !write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
-!--------------------abcoff output here-------------------
-            CALL read_eig(eig_id,nk,jsp,zmat=zMat)
+!--------------------abcoff, zmat, eig output here-------------------
 !,results%neig(nk,jsp),results%eig(:,nk,jsp)
             numbands=results%neig(nk,jsp)
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
             CALL zMat%init(l_real,nbasfcn,numbands)
+            CALL read_eig(eig_id,nk,jsp,zmat=zMat)
 	    CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jsp,numbands)
             IF (input%l_f) CALL force%init2(numbands,input,atoms)
-!set ngopr
+            DO i=1,atoms%nat
+	    	ngopr_temp(i)=atoms%ngopr(i)
+                atoms%ngopr(i)=1
+            END DO
 		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,jsp,oneD,&
 		    eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),&
-		    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp),zMat,results%eig(:,nk,jsp),force)
-
-!unset ngopr in atoms
-                !CALL read_eig(eig_id,nk,jsp,eig=results%eig(:,nk,jsp),zmat=zMat)
-		dims(:1)=(/results%neig(nk,jsp)/)
+		    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp),zMat,results%eig(:,nk,jsp),force) 
+            DO i=1,atoms%nat
+	     	atoms%ngopr(i)=ngopr_temp(i)
+            END DO
+!-------------------------for spex output: nbasfcn=numbas(because lo info not needed) and numbands setting to numbands without highest (degenerat) state-------- 
+                nbasfcn=lapw%nv(jsp)
+		ndbands=numbands-1
+		DO i=(numbands-1),1,-1
+		    IF (abs(results%eig(i+1,nk,jsp)-results%eig(i,nk,jsp)).LT.0.000001) THEN
+		        ndbands=ndbands-1
+		    ELSE
+			EXIT
+		    END IF
+		END DO
+write(*,*)numbands,ndbands
+		numbands=ndbands
+!------------------------setting variables numbands and nbasfcn end -------------------
+		!CALL read_eig(eig_id,nk,jsp,eig=results%eig(:,nk,jsp),zmat=zMat)
+		dims(:1)=(/numbands/)
 		dimsInt=dims
 		CALL h5screate_simple_f(1,dims(:1),eigSpaceID,hdfError)
 		CALL h5dcreate_f(kptGroupID, "eig", H5T_NATIVE_DOUBLE, eigSpaceID, eigSetID, hdfError)
 		CALL h5sclose_f(eigSpaceID,hdfError)
-		CALL io_write_real1(eigSetID,(/1/),dimsInt(:1),results%eig(:,nk,jsp))
+		CALL io_write_real1(eigSetID,(/1/),dimsInt(:1),results%eig(:numbands,nk,jsp))
 		CALL h5dclose_f(eigSetID, hdfError)
                 
 		IF (zMat%l_real) THEN
-		      dims(:2)=(/SIZE(zMat%data_r,1),SIZE(zMat%data_r,2)/)
+		      dims(:2)=(/nbasfcn,numbands/)
 		      dimsInt=dims
 		      CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
 		      CALL h5dcreate_f(kptGroupID, "zMat", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
 		      CALL h5sclose_f(kptCoordSpaceID,hdfError)
-		      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),zMat%data_r(:,:))
+		      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),zMat%data_r(:nbasfcn,:numbands))
 		      CALL h5dclose_f(kptCoordSetID, hdfError)
 		ELSE
-                      AllOCATE(output3(2,SIZE(zMat%data_c,1),SIZE(zMat%data_c,2)))
+                      AllOCATE(output3(2,nbasfcn,numbands))
+!			SIZE(zMat%data_c,1),SIZE(zMat%data_c,2)
 		      output3(1,:,:)=REAL(zMat%data_c(:,:))
 		      output3(2,:,:)=AIMAG(zMat%data_c(:,:))
-		      dims(:3)=(/2,SIZE(zMat%data_c,1),SIZE(zMat%data_c,2)/)
+		      dims(:3)=(/2,nbasfcn,numbands/)
 		      dimsInt=dims
 		      CALL h5screate_simple_f(3,dims(:3),zmatSpaceID,hdfError)
 		      CALL h5dcreate_f(kptGroupID, "zMat", H5T_NATIVE_DOUBLE, zmatSpaceID, zmatSetID, hdfError)
 		      CALL h5sclose_f(zmatSpaceID,hdfError)
-		      CALL io_write_real3(zmatSetID,(/1,1,1/),dimsInt(:3),output3)
+		      CALL io_write_real3(zmatSetID,(/1,1,1/),dimsInt(:3),output3(:2,:nbasfcn,:numbands))
 		      CALL h5dclose_f(zmatSetID, hdfError)
 		      DEAllOCATE(output3)
 		END IF
-		AllOCATE(output(2,numbands,dimension%lmd+1,atoms%nat))
-		output(1,:,:,:)=REAL(eigVecCoeffs%acof(:,0:,:,jsp))
-		output(2,:,:,:)=AIMAG(eigVecCoeffs%acof(:,0:,:,jsp))
-		dims(:4)=(/2,numbands,dimension%lmd+1,atoms%nat/)
+		!AllOCATE(output(2,numbands,dimension%lmd+1,atoms%nat))
+		!output(1,:,:,:)=REAL(eigVecCoeffs%acof(:,0:,:,jsp))
+		!output(2,:,:,:)=AIMAG(eigVecCoeffs%acof(:,0:,:,jsp))
+		!dims(:4)=(/2,numbands,dimension%lmd+1,atoms%nat/)
+		!dimsInt = dims
+                !CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
+		!CALL h5dcreate_f(kptGroupID, "acof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		!CALL h5sclose_f(itypeSpaceID,hdfError)
+		!CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), output)
+		!CALL h5dclose_f(itypeSetID, hdfError)
+		!DEAllOCATE(output)
+
+		!AllOCATE(output(2,numbands,dimension%lmd+1,atoms%nat))
+		!output(1,:,:,:)=REAL(eigVecCoeffs%bcof(:,0:,:,jsp))
+		!output(2,:,:,:)=AIMAG(eigVecCoeffs%bcof(:,0:,:,jsp))
+		!dims(:4)=(/2,numbands,dimension%lmd+1,atoms%nat/)
+		!dimsInt = dims
+                !CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
+		!CALL h5dcreate_f(kptGroupID, "bcof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		!CALL h5sclose_f(itypeSpaceID,hdfError)
+		!CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), output)
+		!CALL h5dclose_f(itypeSetID, hdfError)
+		!DEAllOCATE(output)
+
+		!AllOCATE(output5(2,atoms%llod*2+1,numbands,atoms%nlod,atoms%nat))
+		!output5(1,:,:,:,:)=REAL(eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
+		!output5(2,:,:,:,:)=AIMAG(eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
+		!dims(:5)=(/2,atoms%llod*2+1,numbands,atoms%nlod,atoms%nat/)
+		!dimsInt = dims
+                !CALL h5screate_simple_f(5,dims(:5),itypeSpaceID,hdfError)
+		!CALL h5dcreate_f(kptGroupID, "ccof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		!CALL h5sclose_f(itypeSpaceID,hdfError)
+		!CALL io_write_real5(itypeSetID,(/1,1,1,1,1/),dimsInt(:5), output5)
+		!CALL h5dclose_f(itypeSetID, hdfError)
+		!DEAllOCATE(output5)
+
+!-------------------------output spex format-------------------
+	      ! get dimensions for MT cof
+	      lmn = 0
+	      na  = 0
+	      do n = 1,atoms%ntype
+		do nn = 1,atoms%neq(n)
+		  na = na + 1
+		  lm = 0
+		  do l = 0,atoms%lmax(n)
+		    lm = lm + 2*(2*l+1)
+		  enddo
+		  do i = 1,atoms%nlo(n)
+		    lm = lm + 2*atoms%llo(i,n)+1
+		  enddo
+		  lmn = max(lmn,lm)
+		enddo
+	      enddo
+	      Hdim1 = (/ 2,lmn,na,numbands /)
+
+		allocate ( cof(Hdim1(1),Hdim1(2),Hdim1(3),Hdim1(4)) )
+		      cof = 0
+		      na  = 0
+		      do n = 1,atoms%ntype
+			do nn = 1,atoms%neq(n)
+			  na = na + 1
+			  lm  = 0
+			  lmn = 0
+			  do l = 0,atoms%lmax(n)
+			    do m = -l,l              
+			      cof(1,lmn+1,na,:) = real ( eigVecCoeffs%acof(:numbands,lm,na,jsp) * img**l )
+			      cof(1,lmn+2,na,:) = real ( eigVecCoeffs%bcof(:numbands,lm,na,jsp) * img**l )
+			      cof(2,lmn+1,na,:) = aimag ( eigVecCoeffs%acof(:numbands,lm,na,jsp) * img**l )
+			      cof(2,lmn+2,na,:) = aimag ( eigVecCoeffs%bcof(:numbands,lm,na,jsp) * img**l )
+			      lm  = lm  + 1
+			      lmn = lmn + 2
+			      do i = 1,atoms%nlo(n)
+				if(atoms%llo(i,n).eq.l) then
+				  lmn = lmn + 1
+				  cof(1,lmn,na,:) = real( eigVecCoeffs%ccof(m,:numbands,i,na,jsp) * img**l )
+				  cof(2,lmn,na,:) = aimag( eigVecCoeffs%ccof(m,:numbands,i,na,jsp) * img**l )
+				endif
+			      enddo
+			    enddo
+			  enddo
+			enddo
+			if(lmn.gt.size(cof,2)) then
+			  write(*,*) lmn,size(cof,2)
+			endif
+		      enddo
+
+		dims(:4)=Hdim1
 		dimsInt = dims
                 CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(kptGroupID, "acof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5dcreate_f(kptGroupID, "mt", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), output)
+		CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), cof)
 		CALL h5dclose_f(itypeSetID, hdfError)
-		DEAllOCATE(output)
-
-		AllOCATE(output(2,numbands,dimension%lmd+1,atoms%nat))
-		output(1,:,:,:)=REAL(eigVecCoeffs%bcof(:,0:,:,jsp))
-		output(2,:,:,:)=AIMAG(eigVecCoeffs%bcof(:,0:,:,jsp))
-		dims(:4)=(/2,numbands,dimension%lmd+1,atoms%nat/)
-		dimsInt = dims
-                CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(kptGroupID, "bcof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), output)
-		CALL h5dclose_f(itypeSetID, hdfError)
-		DEAllOCATE(output)
-
-		AllOCATE(output5(2,atoms%llod*2+1,numbands,atoms%nlod,atoms%nat))
-		output5(1,:,:,:,:)=REAL(eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
-		output5(2,:,:,:,:)=AIMAG(eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
-		dims(:5)=(/2,atoms%llod*2+1,numbands,atoms%nlod,atoms%nat/)
-		dimsInt = dims
-                CALL h5screate_simple_f(5,dims(:5),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(kptGroupID, "ccof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real5(itypeSetID,(/1,1,1,1,1/),dimsInt(:5), output5)
-		CALL h5dclose_f(itypeSetID, hdfError)
-		DEAllOCATE(output5)
+		      deallocate ( cof )
+!-------------------------end output spex format-----------------
 
 		CALL h5gclose_f(kptGroupID, hdfError)
             
