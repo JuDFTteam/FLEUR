@@ -477,7 +477,6 @@
           DO n=1,atoms%ntype
              IF (atoms%nlo(n).GE.1) THEN
                 IF (input%secvar)          CALL juDFT_error ("LO + sevcar not implemented",calledby ="inped")
-                IF (input%isec1<input%itmax)  CALL juDFT_error("LO + Wu not implemented" ,calledby ="inped")
                 IF (atoms%nlo(n).GT.atoms%nlod) THEN
                    WRITE (6,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod
                    CALL juDFT_error("nlo(n)>nlod",calledby ="inped")
@@ -512,7 +511,6 @@
           END DO
           IF (atoms%n_u.GT.0) THEN
              IF (input%secvar)          CALL juDFT_error ("LDA+U and sevcar not implemented",calledby ="inped")
-             IF (input%isec1<input%itmax)  CALL juDFT_error("LDA+U and Wu not implemented",calledby ="inped")
              IF (noco%l_mperp)         CALL juDFT_error ("LDA+U and l_mperp not implemented",calledby ="inped")
           ENDIF
           !
