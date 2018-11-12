@@ -376,8 +376,10 @@ CONTAINS
        fl2p1(l) = REAL(l+l+1)/fpi_const
        fl2p1bt(l) = fl2p1(l)*0.5
     END DO
-    !$OMP PARALLEL DEFAULT(SHARED)&
-    !$OMP PRIVATE(kii,ki,ski,kj,plegend,l,kj_end)&
+    !$OMP PARALLEL DEFAULT(NONE)&
+    !$OMP SHARED(lapw,atoms,noco,mpi,input,usdus,smat,hmat)&
+    !$OMP SHARED(jintsp,iintsp,n,fleg1,fleg2,fj,gj,isp,fl2p1,el,e_shift,fl2p1bt,chi)&
+    !$OMP PRIVATE(kii,ki,ski,kj,plegend,l,kj_end,qssbti,qssbtj,fct2)&
     !$OMP PRIVATE(cph,nn,tnn,fjkiln,gjkiln)&
     !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,apw1)&
     !$OMP PRIVATE(capw1,VecHelpS,VecHelpH) 

@@ -91,7 +91,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_write, l_dosNdir, l_corespec
+   LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: we(:)
@@ -159,10 +159,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-   l_write = input%cdinf.AND.mpi%irank==0
    DO iType = 1, atoms%ntype
       DO ispin = jsp_start, jsp_end
-         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,l_write,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
+         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
       END DO
       IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)

@@ -24,6 +24,7 @@ eigen/rad_ovlp.f90
 eigen/setabc1lo.f90
 eigen/slomat.F90
 eigen/tlmplm_cholesky.F90
+eigen/tlmplm.F90
 eigen/tlmplm_store.F90
 eigen/tlo.f90
 eigen/vacfun.f90

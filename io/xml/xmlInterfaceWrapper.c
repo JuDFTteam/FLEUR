@@ -17,6 +17,8 @@
 #include <libxml/xmlschemas.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
+#include <libxml/xinclude.h>
+
 
 static xmlDocPtr xmlDocument;
 static xmlDocPtr schemaDoc;
@@ -78,7 +80,8 @@ int parseXMLSchema(const char* schemaFilename)
 
 int parseXMLDocument(const char* docFilename)
 {
-   xmlDocument = xmlReadFile(docFilename, NULL, 0);
+  xmlDocument = xmlReadFile(docFilename, NULL,0);
+   xmlXIncludeProcess(xmlDocument) ;
    if (xmlDocument == NULL) 
    {
       fprintf(stderr, "Failed to parse xml file %s\n", docFilename);
