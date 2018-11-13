@@ -269,7 +269,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
       CALL h5dcreate_f(atomsGroupID, "ztype", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
-      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%zatom)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%nz)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
 
       dims(:1)=(/atoms%nat/)
