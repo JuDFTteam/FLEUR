@@ -68,7 +68,6 @@ MODULE m_banddos_io
 
       INTEGER           :: hdfError, dimsInt(7)
       INTEGER           :: version
-      INTEGER           :: fakeLogical
       REAL              :: eFermiPrev
       LOGICAL           :: l_error
 
@@ -100,9 +99,7 @@ MODULE m_banddos_io
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'lastFermiEnergy',eFermiPrev)
-      fakeLogical = 0
-      IF (banddos%unfoldband) fakeLogical = 1
-      CALL io_write_attint0(generalGroupID,'bandUnfolding',fakeLogical)
+      CALL io_write_attlog0(generalGroupID,'bandUnfolding',banddos%unfoldband)
       CALL h5gclose_f(generalGroupID, hdfError)
 
       CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
