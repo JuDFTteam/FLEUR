@@ -148,15 +148,19 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       CALL h5gclose_f(metaGroupID, hdfError)
 
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
-      CALL io_write_attint0(generalGroupID,'spins',input%jspins)
-      CALL h5gclose_f(generalGroupID, hdfError)
+      CALL io_write_attint0(generalGroupID,'jspins',input%jspins)
+      CALL io_write_attlog0(generalGroupID,'invs',sym%invs)
+      CALL io_write_attlog0(generalGroupID,'l_soc',noco%l_soc)
+      CALL io_write_attlog0(generalGroupID,'l_real',l_real)
+      CALL io_write_attreal0(generalGroupID,'rkmax',input%rkmax)
+      CALL h5gclose_f(generalGroupID, hdfError)      
 
       CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
 
       dims(:2)=(/3,3/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
-      CALL h5dcreate_f(cellGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
+      CALL h5dcreate_f(cellGroupID, "amat", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
       CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
       CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
       CALL h5dclose_f(bravaisMatrixSetID, hdfError)
@@ -164,10 +168,16 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       dims(:2)=(/3,3/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),reciprocalCellSpaceID,hdfError)
-      CALL h5dcreate_f(cellGroupID, "reciprocalCell", H5T_NATIVE_DOUBLE, reciprocalCellSpaceID, reciprocalCellSetID, hdfError)
+      CALL h5dcreate_f(cellGroupID, "bmat", H5T_NATIVE_DOUBLE, reciprocalCellSpaceID, reciprocalCellSetID, hdfError)
       CALL h5sclose_f(reciprocalCellSpaceID,hdfError)
       CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),cell%bmat)
       CALL h5dclose_f(reciprocalCellSetID, hdfError)
+      
+      CALL io_write_attreal0(cellGroupID,'scaleCell',input%scaleCell)
+      CALL io_write_attreal0(cellGroupID,'scaleA1',input%scaleA1)
+      CALL io_write_attreal0(cellGroupID,'scaleA2',input%scaleA2)
+      CALL io_write_attreal0(cellGroupID,'scaleC',input%scaleC)
+
 
       CALL h5gclose_f(cellGroupID, hdfError)
       iAtom = 0
@@ -191,7 +201,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       dims(:1)=(/atoms%ntype/)
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
-      CALL h5dcreate_f(atomsGroupID, "atoms_jri", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5dcreate_f(atomsGroupID, "jri", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
       CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%jri)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
@@ -199,15 +209,23 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       dims(:1)=(/atoms%ntype/)
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
-      CALL h5dcreate_f(atomsGroupID, "atoms_lmax", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5dcreate_f(atomsGroupID, "lmax", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
       CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%lmax)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+      
+      dims(:1)=(/atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "neq", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%neq)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
 
       dims(:1)=(/atoms%ntype/)
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
-      CALL h5dcreate_f(atomsGroupID, "atoms_nlo", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5dcreate_f(atomsGroupID, "nlo", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
       CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%nlo)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
@@ -215,7 +233,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       dims(:2)=(/atoms%nlod,atoms%ntype/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
-      CALL h5dcreate_f(atomsGroupID, "atoms_llo", H5T_NATIVE_INTEGER, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5dcreate_f(atomsGroupID, "llo", H5T_NATIVE_INTEGER, atomPosSpaceID, atomPosSetID, hdfError)
       CALL h5sclose_f(atomPosSpaceID,hdfError)
       CALL io_write_integer2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%llo)
       CALL h5dclose_f(atomPosSetID, hdfError)
@@ -233,7 +251,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       dims(:2)=(/3,atoms%nat/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
-      CALL h5dcreate_f(atomsGroupID, "positions", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5dcreate_f(atomsGroupID, "ratoms", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
       CALL h5sclose_f(atomPosSpaceID,hdfError)
       CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%taual)
       CALL h5dclose_f(atomPosSetID, hdfError)
@@ -241,7 +259,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       dims(:1)=(/atoms%nat/)
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
-      CALL h5dcreate_f(atomsGroupID, "atomicNumbers", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5dcreate_f(atomsGroupID, "zatoms", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
       CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atomicNumbers)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
@@ -320,7 +338,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 		CALL h5dclose_f(itypeSetID, hdfError)
 
 		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "radfun_d", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5dcreate_f(itypeGroupID, "radfun_udot", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
 		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),g(:,:,0:,jsp))
 		CALL h5dclose_f(itypeSetID, hdfError)
@@ -332,6 +350,63 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 		CALL h5sclose_f(itypeSpaceID,hdfError)
 		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),flo(:,:,:))
 		CALL h5dclose_f(itypeSetID, hdfError)
+
+		dims(:1)=(/atoms%lmaxd+1/)
+		dimsInt = dims
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "us", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%us(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "dus", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%dus(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "uds", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%uds(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "duds", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%duds(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		dims(:1)=(/atoms%nlod/)
+		dimsInt = dims
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "dulos", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%dulos(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "ulos", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%ulos(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		dims(:1)=(/atoms%lmaxd+1/)
+		dimsInt = dims
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "el0", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),enpara%el0(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
+		dims(:1)=(/atoms%nlod/)
+		dimsInt = dims
+		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+		CALL h5dcreate_f(itypeGroupID, "ello0", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5sclose_f(itypeSpaceID,hdfError)
+		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),enpara%ello0(:,itype,jsp))
+		CALL h5dclose_f(itypeSetID, hdfError)
+
 
 !			write(kpt_name , '(3a,i0)') TRIM(ADJUSTL(jsp_name)),TRIM(ADJUSTL(itype_name)),'/l_',l
 !			CALL h5gcreate_f(fileID, TRIM(ADJUSTL(l_name)), lGroupID, hdfError)
@@ -383,7 +458,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
             DO i=1,atoms%nat
 	     	atoms%ngopr(i)=ngopr_temp(i)
             END DO
-!-------------------------for spex output: nbasfcn=numbas(because lo info not needed) and numbands setting to numbands without highest (degenerat) state-------- 
+!-------------------------for spex output: nbasfcn=nv(because lo info not needed) and numbands setting to numbands without highest (degenerat) state-------- 
                 nbasfcn=lapw%nv(jsp)
 		ndbands=numbands-1
 		DO i=(numbands-1),1,-1
@@ -409,7 +484,7 @@ write(*,*)numbands,ndbands
 		      dims(:2)=(/nbasfcn,numbands/)
 		      dimsInt=dims
 		      CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
-		      CALL h5dcreate_f(kptGroupID, "zMat", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
+		      CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
 		      CALL h5sclose_f(kptCoordSpaceID,hdfError)
 		      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),zMat%data_r(:nbasfcn,:numbands))
 		      CALL h5dclose_f(kptCoordSetID, hdfError)
@@ -421,7 +496,7 @@ write(*,*)numbands,ndbands
 		      dims(:3)=(/2,nbasfcn,numbands/)
 		      dimsInt=dims
 		      CALL h5screate_simple_f(3,dims(:3),zmatSpaceID,hdfError)
-		      CALL h5dcreate_f(kptGroupID, "zMat", H5T_NATIVE_DOUBLE, zmatSpaceID, zmatSetID, hdfError)
+		      CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, zmatSpaceID, zmatSetID, hdfError)
 		      CALL h5sclose_f(zmatSpaceID,hdfError)
 		      CALL io_write_real3(zmatSetID,(/1,1,1/),dimsInt(:3),output3(:2,:nbasfcn,:numbands))
 		      CALL h5dclose_f(zmatSetID, hdfError)
