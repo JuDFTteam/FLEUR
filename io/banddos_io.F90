@@ -246,6 +246,7 @@ MODULE m_banddos_io
       INTEGER(HID_T)    :: jsymSpaceID, jsymSetID
       INTEGER(HID_T)    :: ksymSpaceID, ksymSetID
       INTEGER(HID_T)    :: bUWeightsSpaceID, bUWeightsSetID
+      INTEGER(HID_T)    :: supercellSpaceID, supercellSetID
 
       INTEGER           :: hdfError, dimsInt(7)
 
@@ -302,6 +303,14 @@ MODULE m_banddos_io
 
       IF (banddos%unfoldband) THEN
          CALL h5gcreate_f(fileID, '/bandUnfolding', bandUnfoldingGroupID, hdfError)
+
+         dims(:1)=(/3/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),supercellSpaceID,hdfError)
+         CALL h5dcreate_f(bandUnfoldingGroupID, "supercell", H5T_NATIVE_INTEGER, supercellSpaceID, supercellSetID, hdfError)
+         CALL h5sclose_f(supercellSpaceID,hdfError)
+         CALL io_write_integer1(supercellSetID,(/1/),dimsInt(:1),(/banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z/))
+         CALL h5dclose_f(supercellSetID, hdfError)
 
          dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
          dimsInt = dims
