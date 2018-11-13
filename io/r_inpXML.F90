@@ -1124,7 +1124,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          id_x=0; id_c=0
       ENDIF
 
-      write (*,*) "id_x = ", id_x, "id_c = ", id_c
+      !write (*,*) "id_x = ", id_x, "id_c = ", id_c
 
       ! Read in xc functional parameters
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))

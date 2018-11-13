@@ -48,7 +48,7 @@ CONTAINS
 
 
     CALL genMTBasis(atoms,enpara,v,mpi,n,jspin,ud,f,g,flo)
-
+    na=SUM(atoms%neq(:n-1))+1
     nsym = atoms%ntypsy(na)
     nh = sphhar%nlh(nsym)
     !
