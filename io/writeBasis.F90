@@ -51,7 +51,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
-      CHARACTER(LEN=30) :: kpt_name
+      CHARACTER(LEN=50) :: kpt_name
       CHARACTER(LEN=30) :: jsp_name
       CHARACTER(LEN=30) :: itype_name
 !      CHARACTER(LEN=30) :: l_name
@@ -264,6 +264,14 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atomicNumbers)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
 
+      dims(:1)=(/atoms%ntype/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "ztype", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atoms%zatom)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
       dims(:1)=(/atoms%nat/)
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),equivAtomsClassSpaceID,hdfError)
@@ -304,8 +312,8 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 !      DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
        DO nk = 1,kpts%nkpt
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
-            write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
-            !write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
+            !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
+            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
 	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------enter output gvec etc here--------------------
 !lapw%gvec(3,nv,input%jspins)
@@ -332,13 +340,13 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 		dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
 		dimsInt = dims
 		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "radfun_u", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5dcreate_f(itypeGroupID, "f", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
 		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),f(:,:,0:,jsp))
 		CALL h5dclose_f(itypeSetID, hdfError)
 
 		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "radfun_udot", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5dcreate_f(itypeGroupID, "g", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
 		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),g(:,:,0:,jsp))
 		CALL h5dclose_f(itypeSetID, hdfError)
@@ -346,7 +354,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 		dims(:3)=(/atoms%jmtd,2,atoms%nlod/)
 		dimsInt = dims
 		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "radfun_ulo", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+		CALL h5dcreate_f(itypeGroupID, "flo", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
 		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),flo(:,:,:))
 		CALL h5dclose_f(itypeSetID, hdfError)
