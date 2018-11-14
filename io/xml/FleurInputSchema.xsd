@@ -523,6 +523,7 @@
             <xsd:element name="kPointList" type="KPointListType"/>
             <xsd:element name="kPointDensity" type="KPointDensityType"/>
          </xsd:choice>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointSet" type="AltKPointSetType"/>
       </xsd:sequence>
       <xsd:attribute name="valenceElectrons" type="xsd:string" use="optional"/>
       <xsd:attribute default="hist" name="mode" type="BZIntegrationModeEnum" use="optional"/>
@@ -598,7 +599,20 @@
       <xsd:attribute name="maxEnergy" type="xsd:string" use="required"/>
       <xsd:attribute name="sigma" type="xsd:string" use="required"/>
    </xsd:complexType>
-   
+
+   <xsd:complexType name="AltKPointSetType">
+      <xsd:sequence>
+         <xsd:choice>
+            <xsd:element name="kPointMesh" type="KPointMeshType"/>
+            <xsd:element name="kPointCount" type="KPointCountType"/>
+            <xsd:element name="kPointList" type="KPointListType"/>
+            <xsd:element name="kPointDensity" type="KPointDensityType"/>
+            <xsd:element name="kPointListFile" type="KPointListFileType"/>
+         </xsd:choice>
+      </xsd:sequence>
+      <xsd:attribute name="purpose" type="KPointSetPurposeEnum" use="required"/>
+   </xsd:complexType>
+
    <xsd:complexType name="KPointMeshType">
       <xsd:attribute name="nx" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="ny" type="xsd:positiveInteger" use="required"/>
@@ -628,6 +642,10 @@
       <xsd:attribute name="denY" type="xsd:double" use="required"/>
       <xsd:attribute name="denZ" type="xsd:double" use="required"/>
       <xsd:attribute name="gamma" type="FleurBool" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="KPointListFileType">
+      <xsd:attribute name="filename" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="SpecialPointType">
@@ -898,6 +916,13 @@
          <xsd:enumeration value="(6d3/2)"/>
          <xsd:enumeration value="(6d5/2)"/>
          <xsd:enumeration value="(7s1/2)"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="KPointSetPurposeEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="bands"/>
+         <xsd:enumeration value="GW"/>
       </xsd:restriction>
    </xsd:simpleType>
 
