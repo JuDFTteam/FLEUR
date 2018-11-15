@@ -44,8 +44,8 @@
           LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
-          REAL rhoc(atoms%jmtd,atoms%ntype,dimension%jspd)
-          REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
+          REAL rhoc(atoms%jmtd,atoms%ntype,input%jspins)
+          REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
           CHARACTER(len=140), ALLOCATABLE :: clines(:)
           CHARACTER(len=140)              :: lineread
           !      ..

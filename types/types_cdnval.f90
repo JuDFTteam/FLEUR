@@ -325,7 +325,7 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell,input,kpts)
 END SUBROUTINE slab_init
 
 
-SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
+SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,DIMENSION,atoms,noco,jspin,noccbd)
 
    USE m_types_setup
 
@@ -335,6 +335,7 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
    TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_noco),          INTENT(IN)    :: noco
+   TYPE(t_input),         INTENT(IN)    :: input
 
    INTEGER,               INTENT(IN)    :: jspin, noccbd
 
@@ -343,9 +344,9 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,dimension,atoms,noco,jspin,noccbd)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
    IF (noco%l_mperp) THEN
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,dimension%jspd))
-      ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,dimension%jspd))
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
    ELSE
       ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))

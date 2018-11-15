@@ -35,7 +35,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: jsp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: evac(2,input%jspins)
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,c_1
@@ -46,16 +46,16 @@ CONTAINS
     INTEGER i_start,nc,nc_0
     !     ..
     !     .. Local Arrays ..
-    INTEGER:: nv2(DIMENSION%jspd)
-    INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd)
-    INTEGER map2(DIMENSION%nvd,DIMENSION%jspd)
+    INTEGER:: nv2(input%jspins)
+    INTEGER kvac1(DIMENSION%nv2d,input%jspins),kvac2(DIMENSION%nv2d,input%jspins)
+    INTEGER map2(DIMENSION%nvd,input%jspins)
     COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX vxy_help(stars%ng2-1)
-    COMPLEX a(DIMENSION%nvd,DIMENSION%jspd),b(DIMENSION%nvd,DIMENSION%jspd)
-    REAL ddnv(DIMENSION%nv2d,DIMENSION%jspd),dudz(DIMENSION%nv2d,DIMENSION%jspd)
-    REAL duz(DIMENSION%nv2d,DIMENSION%jspd), udz(DIMENSION%nv2d,DIMENSION%jspd)
-    REAL uz(DIMENSION%nv2d,DIMENSION%jspd)
+    COMPLEX a(DIMENSION%nvd,input%jspins),b(DIMENSION%nvd,input%jspins)
+    REAL ddnv(DIMENSION%nv2d,input%jspins),dudz(DIMENSION%nv2d,input%jspins)
+    REAL duz(DIMENSION%nv2d,input%jspins), udz(DIMENSION%nv2d,input%jspins)
+    REAL uz(DIMENSION%nv2d,input%jspins)
     !     ..
 
     d2 = SQRT(cell%omtil/cell%area)

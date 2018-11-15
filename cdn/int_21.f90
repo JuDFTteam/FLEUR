@@ -20,8 +20,8 @@ CONTAINS
 
     INTEGER, INTENT (IN) :: l,ityp
 
-    REAL,    INTENT (IN) :: f(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,dimension%jspd)
-    REAL,    INTENT (IN) :: g(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,dimension%jspd)
+    REAL,    INTENT (IN) :: f(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
+    REAL,    INTENT (IN) :: g(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
     REAL,    INTENT (INOUT) :: uu21n(0:atoms%lmaxd,atoms%ntype),ud21n(0:atoms%lmaxd,atoms%ntype)
     REAL,    INTENT (INOUT) :: du21n(0:atoms%lmaxd,atoms%ntype),dd21n(0:atoms%lmaxd,atoms%ntype)
 

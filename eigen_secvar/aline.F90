@@ -53,7 +53,7 @@ CONTAINS
     INTEGER, INTENT (OUT):: ne
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT) :: eig(DIMENSION%neigd)
     TYPE(t_mat),INTENT(IN):: hmat,smat
 
@@ -140,10 +140,10 @@ CONTAINS
     !
     CALL timestart("aline: hssr_wu")
     IF (l_real) THEN
-       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
+       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
             tlmplm, acof,bcof,ccof, h_r,s_r)
     ELSE
-       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,&
+       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
             tlmplm, acof,bcof,ccof, h_c=h_c,s_c=s_c)
     ENDIF
 

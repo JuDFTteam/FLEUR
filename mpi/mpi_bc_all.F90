@@ -49,7 +49,7 @@ CONTAINS
     call priv_mpi_bc_stars(mpi,stars)
     
     IF (mpi%irank.EQ.0) THEN
-       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype  ; i(5)=1 ; i(6)=input%isec1
+       i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype  ; i(5)=1
        i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
@@ -90,7 +90,7 @@ CONTAINS
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
-     atoms%ntype=i(3) ;  input%isec1=i(6) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42)
+     atoms%ntype=i(3) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42)
      input%coretail_lmax=i(2) ; input%kcrel=i(39)
      stars%kimax=i(25);stars%kimax2=i(26)
     !
@@ -164,17 +164,17 @@ CONTAINS
     CALL MPI_BCAST(atoms%rmt,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%volmts,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%dx,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%evac,2*dimension%jspd*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%evac0,2*dimension%jspd*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac,2*input%jspins*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac0,2*input%jspins*1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%amat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%bmat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(cell%bbmat,9,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%taual,3*atoms%nat,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%pos,3*atoms%nat,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%tau,3*sym%nop,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    n = (atoms%lmaxd+1)*atoms%ntype*dimension%jspd*1
+    n = (atoms%lmaxd+1)*atoms%ntype*input%jspins*1
     CALL MPI_BCAST(enpara%el0,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    n = atoms%nlod*atoms%ntype*dimension%jspd
+    n = atoms%nlod*atoms%ntype*input%jspins
     CALL MPI_BCAST(enpara%ello0,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%qn_el,SIZE(enpara%qn_el),MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(enpara%qn_ello,SIZE(enpara%qn_ello),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -209,7 +209,7 @@ CONTAINS
     n = (atoms%llod+1)*atoms%ntype
     CALL MPI_BCAST(atoms%lo1l,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%nlol,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    n = dimension%jspd*atoms%ntype
+    n = input%jspins*atoms%ntype
     CALL MPI_BCAST(enpara%skiplo,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%alphInit,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

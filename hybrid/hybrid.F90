@@ -92,7 +92,7 @@ CONTAINS
     END IF
 
     hybrid%l_subvxc = (hybrid%l_subvxc.AND.hybrid%l_addhf)
-    IF(.NOT.ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(DIMENSION%neigd2,kpts%nkpt,DIMENSION%jspd))
+    IF(.NOT.ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(DIMENSION%neigd2,kpts%nkpt,input%jspins))
 
     IF (.NOT.hybrid%l_calhf) RETURN !use existing non-local potential
 

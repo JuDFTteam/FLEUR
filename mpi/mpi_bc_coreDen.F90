@@ -18,17 +18,17 @@ CONTAINS
    TYPE(t_input),INTENT(IN)     :: input
    TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
-   REAL, INTENT(INOUT) :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-   REAL, INTENT(INOUT) :: tecs(atoms%ntype,DIMENSION%jspd)
-   REAL, INTENT(INOUT) :: qints(atoms%ntype,DIMENSION%jspd)
+   REAL, INTENT(INOUT) :: rhcs(atoms%jmtd,atoms%ntype,input%jspins)
+   REAL, INTENT(INOUT) :: tecs(atoms%ntype,input%jspins)
+   REAL, INTENT(INOUT) :: qints(atoms%ntype,input%jspins)
 
    INTEGER :: n, ierr(3)
 
-    n = atoms%jmtd * atoms%ntype * DIMENSION%jspd
+    n = atoms%jmtd * atoms%ntype * input%jspins
     CALL MPI_BCAST(rhcs,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
-    n = atoms%ntype * DIMENSION%jspd
+    n = atoms%ntype * input%jspins
     CALL MPI_BCAST(tecs,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
-    n = atoms%ntype * DIMENSION%jspd
+    n = atoms%ntype * input%jspins
     CALL MPI_BCAST(qints,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)
 
    END SUBROUTINE mpi_bc_coreden

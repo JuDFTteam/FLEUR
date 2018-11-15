@@ -105,7 +105,7 @@ CONTAINS
       INTEGER                   :: comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
 
-      call ud%init(atoms,DIMENSION%jspd)
+      call ud%init(atoms,input%jspins)
       ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
 
       l_real=sym%invs.AND..NOT.noco%l_noco

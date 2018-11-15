@@ -73,7 +73,7 @@
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest
       LOGICAL l_hyb,l_sym,ldum
-      INTEGER :: ierr
+      INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
       CHARACTER :: helpchar(atoms%ntype)
@@ -125,13 +125,13 @@
       BACKSPACE 5
       IF( check .eq. ',' ) THEN
         READ (UNIT=5,FMT=8000,END=99,ERR=99) &
-     &                input%strho,input%film,banddos%dos,input%isec1,banddos%ndir,input%secvar
-        WRITE (6,9000) input%strho,input%film,banddos%dos,input%isec1,banddos%ndir,input%secvar
+     &                input%strho,input%film,banddos%dos,intDummy,banddos%ndir,input%secvar
+        WRITE (6,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
  8000 FORMAT (6x,l1,6x,l1,5x,l1,7x,i2,6x,i2,8x,l1)
       ELSE
         READ (UNIT=5,FMT=8001,END=99,ERR=99) &
-     &                input%strho,input%film,banddos%dos,input%isec1,banddos%ndir,input%secvar
-        WRITE (6,9000) input%strho,input%film,banddos%dos,input%isec1,banddos%ndir,input%secvar
+     &                input%strho,input%film,banddos%dos,intDummy,banddos%ndir,input%secvar
+        WRITE (6,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
  8001 FORMAT (6x,l1,6x,l1,5x,l1,7x,i3,6x,i2,8x,l1)
       END IF
 
@@ -720,7 +720,7 @@
       IF (namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &  .OR. namex.EQ.'vhse' )&
      &  l_hyb = .true.
-      WRITE (5,9000) input%strho,input%film,banddos%dos,input%isec1,banddos%ndir,input%secvar
+      WRITE (5,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
  9000 FORMAT ('strho=',l1,',film=',l1,',dos=',l1,',isec1=',i3,&
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name

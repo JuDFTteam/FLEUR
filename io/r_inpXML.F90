@@ -354,7 +354,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
   IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
-      dimension%jspd = input%jspins
 
       ! Read in Brillouin zone integration parameters
 
@@ -581,12 +580,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       numberNodes = xmlGetNumberOfNodes(xPathA)
 
       input%gw = 0
-      input%isec1 = 999999
       input%secvar = .FALSE.
 
       IF (numberNodes.EQ.1) THEN
          input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
-         input%isec1 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isec1'))
          input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
       END IF
 
@@ -1127,7 +1124,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          id_x=0; id_c=0
       ENDIF
 
-      write (*,*) "id_x = ", id_x, "id_c = ", id_c
+      !write (*,*) "id_x = ", id_x, "id_c = ", id_c
 
       ! Read in xc functional parameters
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))

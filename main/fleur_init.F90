@@ -221,7 +221,7 @@
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
   
-          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,DIMENSION%jspd,.FALSE.)
+          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,input%jspins,.FALSE.)
                    !-odim
           oneD%odd%nq2 = oneD%odd%n2d
           oneD%odd%kimax2 = oneD%odd%nq2 - 1

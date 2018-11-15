@@ -58,7 +58,7 @@ CONTAINS
     ! Local type instances
     TYPE(t_potden) :: workDen,exc,veff
     ! Local Scalars
-    INTEGER ifftd,ifftd2,ifftxc3d,ispin
+    INTEGER ifftd,ifftd2,ifftxc3d,ispin,i
 #ifdef CPP_MPI
     include 'mpif.h'
     integer:: ierr
@@ -172,6 +172,13 @@ CONTAINS
              exc%pw_w = exc%pw_w - xcpot%get_exchange_weight() * exc%pw_w
              exc%mt   = exc%mt   - xcpot%get_exchange_weight() * exc%mt
           END IF
+
+          DO ispin = 1, input%jspins
+             DO i = 1, stars%ng3
+                vx%pw(i,ispin) = vx%pw(i,ispin) / stars%nstr(i)
+                vx%pw_w(i,ispin) = vx%pw_w(i,ispin) / stars%nstr(i)
+             END DO
+          END DO
 
           results%te_veff = 0.0
           DO ispin = 1, input%jspins
