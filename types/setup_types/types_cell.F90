@@ -28,7 +28,7 @@ MODULE m_types_cell
      PROCEDURE,PASS :: broadcast=>broadcast_cell
      PROCEDURE,PASS :: write=>WRITE_cell
      PROCEDURE,PASS :: read=>READ_cell
-     PROCEDURE,PASS :: read_xml
+     PROCEDURE,PASS :: read_xml=>read_xml_cell
   END TYPE t_cell
 
 CONTAINS
@@ -135,12 +135,13 @@ CONTAINS
  
 
 
-  SUBROUTINE read_xml(tt)
+  SUBROUTINE read_xml_cell(tt)
     USE m_xmlIntWrapFort
     USE m_constants
     USE m_calculator
+    USE m_invs3
     IMPLICIT NONE
-    CLASS(t_cell),INTENT(INOUT):: tt
+    CLASS(t_cell),INTENT(OUT):: tt
 
 
     LOGICAL::film
@@ -163,7 +164,7 @@ CONTAINS
     latnam = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@latnam')))
 
     IF (film) THEN
-       tt%z1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@dVac'))
+       tt%z1 = latticeScale*evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@dVac'))
        a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@dTilda'))
     END IF
     !read a1,a2,c if present
@@ -251,7 +252,7 @@ CONTAINS
     !Volumes
     tt%omtil = ABS(tt%omtil)
     IF (film) THEN
-       tt%vol = (tt%omtil/tt%amat(3,3))*dvac
+       tt%vol = (tt%omtil/tt%amat(3,3))*tt%z1
        tt%area = tt%omtil/tt%amat(3,3)
     ELSE
        tt%vol = tt%omtil
@@ -266,7 +267,7 @@ CONTAINS
     END IF
     tt%volint=-1 !could not be determined here
     
-  END SUBROUTINE read_xml
+  END SUBROUTINE read_xml_cell
   
   
 END MODULE m_types_cell

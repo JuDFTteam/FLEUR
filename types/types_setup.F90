@@ -160,6 +160,7 @@ MODULE m_types_setup
      CHARACTER(len=4), ALLOCATABLE :: namex(:)
      INTEGER,          ALLOCATABLE :: icorr(:)
      INTEGER,          ALLOCATABLE :: igrd(:)
+
      INTEGER,          ALLOCATABLE :: krla(:)
      LOGICAL,          ALLOCATABLE :: relcor(:)
      !lda_u information(ntype)
@@ -168,27 +169,27 @@ MODULE m_types_setup
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
   END TYPE t_atoms
 
-  TYPE t_cell
-     !name of 2D-lattice type
-     CHARACTER*3::latnam
-     !vol of dtilde box
-     REAL::omtil
-     !2D area
-     REAL::area
-     !bravais matrix
-     REAL::amat(3,3)
-     !rez. bravais matrx
-     REAL::bmat(3,3)
-     !square of bbmat
-     REAL::bbmat(3,3)
-     !d-value
-     REAL::z1
-     !volume of cell
-     REAL::vol
-     !volume of interstitial
-     REAL::volint
-     REAL:: c
-  END TYPE t_cell
+!!$  TYPE t_cell
+!!$     !name of 2D-lattice type
+!!$     CHARACTER*3::latnam
+!!$     !vol of dtilde box
+!!$     REAL::omtil
+!!$     !2D area
+!!$     REAL::area
+!!$     !bravais matrix
+!!$     REAL::amat(3,3)
+!!$     !rez. bravais matrx
+!!$     REAL::bmat(3,3)
+!!$     !square of bbmat
+!!$     REAL::bbmat(3,3)
+!!$     !d-value
+!!$     REAL::z1
+!!$     !volume of cell
+!!$     REAL::vol
+!!$     !volume of interstitial
+!!$     REAL::volint
+!!$     REAL:: c
+!!$  END TYPE t_cell
 !The stars
   TYPE t_stars
      !max-length of star
@@ -338,25 +339,25 @@ MODULE m_types_setup
      INTEGER :: nbasfcn
   END TYPE t_dimension
 
-  TYPE t_noco
-     LOGICAL:: l_noco
-     LOGICAL:: l_ss
-     LOGICAL:: l_mperp
-     LOGICAL:: l_constr
-     LOGICAL:: l_mtNocoPot
-     REAL:: qss(3)
-     REAL:: mix_b
-     LOGICAL, ALLOCATABLE :: l_relax(:)
-     REAL, ALLOCATABLE :: alphInit(:)
-     REAL, ALLOCATABLE :: alph(:)
-     REAL, ALLOCATABLE :: beta(:)
-     REAL, ALLOCATABLE :: b_con(:,:)
-     LOGICAL           :: l_soc
-     LOGICAL           :: l_spav
-     REAL              :: theta
-     REAL              :: phi
-     REAL,ALLOCATABLE  :: socscale(:)
-  END TYPE t_noco
+!!$  TYPE t_noco
+!!$     LOGICAL:: l_noco
+!!$     LOGICAL:: l_ss
+!!$     LOGICAL:: l_mperp
+!!$     LOGICAL:: l_constr
+!!$     LOGICAL:: l_mtNocoPot
+!!$     REAL:: qss(3)
+!!$     REAL:: mix_b
+!!$     LOGICAL, ALLOCATABLE :: l_relax(:)
+!!$     REAL, ALLOCATABLE :: alphInit(:)
+!!$     REAL, ALLOCATABLE :: alph(:)
+!!$     REAL, ALLOCATABLE :: beta(:)
+!!$     REAL, ALLOCATABLE :: b_con(:,:)
+!!$     LOGICAL           :: l_soc
+!!$     LOGICAL           :: l_spav
+!!$     REAL              :: theta
+!!$     REAL              :: phi
+!!$     REAL,ALLOCATABLE  :: socscale(:)
+!!$  END TYPE t_noco
 
   TYPE t_input
      LOGICAL :: strho
