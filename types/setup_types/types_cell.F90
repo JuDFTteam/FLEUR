@@ -6,6 +6,7 @@
 MODULE m_types_cell
   USE m_judft
   USE m_types_fleur_setup
+  use m_json_tools
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_cell
      !vol of dtilde box
@@ -73,24 +74,19 @@ CONTAINS
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
     WRITE(unit,*,IOSTAT=iostat) '"cell":{'
-    WRITE(unit,'(a,f0.10)',IOSTAT=iostat) ' "omtil":',tt%omtil,','
-    WRITE(unit,'(a,f0.10)',IOSTAT=iostat) ' "area":',tt%area,','
-    WRITE(unit,'(a,f0.10)',IOSTAT=iostat) ' "z1":',tt%z1,','  
-    WRITE(unit,'(a,f0.10)',IOSTAT=iostat) ' "vol":',tt%vol,','
-    WRITE(unit,'(a,f0.10)',IOSTAT=iostat) ' "volint":',tt%volint,','  
+
+
+    call json_print(unit,"omtil",tt%omtil)
+    CALL JSON_PRINT(unit,"area",tt%area)
+    CALL JSON_PRINT(unit,"z1",tt%z1) 
+    CALL JSON_PRINT(unit, "vol",tt%vol)
+    CALL JSON_PRINT(unit, "volint",tt%volint)  
   
-    WRITE(unit,*,IOSTAT=iostat) ' "amat": ['
-    WRITE(unit,100,IOSTAT=iostat) tt%amat
-
-    WRITE(unit,*,IOSTAT=iostat) ' "bmat": ['
-    WRITE(unit,100,IOSTAT=iostat) tt%bmat
-
-    WRITE(unit,*,IOSTAT=iostat) ' "bbmat": ['
-    WRITE(unit,100,IOSTAT=iostat) tt%bbmat
-
-100 FORMAT(f0.10,',',f0.10,',',f0.10,',',/,f0.10,',',f0.10,',',f0.10,',',/,f0.10,',',f0.10,',',f0.10,']')
+    CALL JSON_PRINT(unit,"amat",reshape(tt%amat,9))
+    CALL JSON_PRINT(unit,"bmat",reshape(tt%bmat,9))
+    CALL JSON_PRINT(unit,"bbmat",reshape(tt%bbmat,9))
     
-    WRITE(unit,100,IOSTAT=iostat) '}'
+    WRITE(unit,*,IOSTAT=iostat) '}'
     
   END SUBROUTINE write_cell
   SUBROUTINE read_cell(tt, unit, iotype, v_list, iostat, iomsg)
@@ -103,32 +99,23 @@ CONTAINS
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
     CHARACTER(len=40)::string
-    
-    READ(unit,*,IOSTAT=iostat) string
-    IF (INDEX("cell",string)==0) THEN
-       iostat=1
-       RETURN
-    ENDIF
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)   tt%omtil
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)   tt%area
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)   tt%z1
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)   tt%vol
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)   tt%volint
-    
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%amat(:,1)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%amat(:,2)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%amat(:,3)
+    real:: rtemp(9)
+    CALL json_open_class("cell",unit,iostat)
+    IF (iostat.NE.0)   RETURN
 
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%bmat(:,1)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%bmat(:,2)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%bmat(:,3)
-
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%bbmat(:,1)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%bbmat(:,2)
-    READ(unit,'(11x,f0.15)',IOSTAT=iostat) tt%bbmat(:,3)
+    call json_read(unit,"omtil",tt%omtil)
+    call json_read(unit,"area",tt%area)
+    call json_read(unit,"z1",tt%z1)
+    call json_read(unit,"vol",tt%volint)
+    call json_read(unit,"volint",tt%volint)
+    call json_read(unit,"amat",rtemp)
+    tt%amat=reshape(rtemp,(/3,3/))
+    call json_read(unit,"bmat",rtemp)
+    tt%bmat=reshape(rtemp,(/3,3/))
+    call json_read(unit,"bbmat",rtemp)
+    tt%bbmat=reshape(rtemp,(/3,3/))
+    
+    call json_close_class(unit)
     
   END SUBROUTINE read_cell
 

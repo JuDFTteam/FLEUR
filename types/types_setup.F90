@@ -501,39 +501,39 @@ MODULE m_types_setup
   END TYPE t_sphhar
 
   !symmetry information
-  TYPE t_sym
-     INTEGER :: symSpecType
-     !Symophic group
-     LOGICAL ::symor
-     INTEGER ::nsymt
-     INTEGER :: nsym
-     COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
-     !2D-inv-sym
-     LOGICAL ::invs2
-     !Inversion-sym
-     LOGICAL ::invs
-     !Z-refls. sym
-     LOGICAL ::zrfs
-     !No of sym ops
-     INTEGER ::nop
-     !No of 2D-sym ops
-     INTEGER ::nop2
-     !Rot-matrices (3,3,nop)
-     INTEGER,ALLOCATABLE::mrot(:,:,:)
-     !inverse operation (nop)
-     INTEGER,ALLOCATABLE::invtab(:)
-     !translation vectors (3,nop)
-     REAL,ALLOCATABLE::tau(:,:)
-     !Name of lattice type
-     CHARACTER*3   :: latnam
-     !Name of sym
-     CHARACTER*4   :: namgrp
-     INTEGER, ALLOCATABLE :: multab(:,:)
-     INTEGER, ALLOCATABLE :: invsatnr(:)
-     INTEGER, ALLOCATABLE :: invarop(:,:)
-     INTEGER, ALLOCATABLE :: invarind(:)
-
-  END TYPE t_sym
+!!$  TYPE t_sym
+!!$     INTEGER :: symSpecType
+!!$     !Symophic group
+!!$     LOGICAL ::symor
+!!$     INTEGER ::nsymt
+!!$     INTEGER :: nsym
+!!$     COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
+!!$     !2D-inv-sym
+!!$     LOGICAL ::invs2
+!!$     !Inversion-sym
+!!$     LOGICAL ::invs
+!!$     !Z-refls. sym
+!!$     LOGICAL ::zrfs
+!!$     !No of sym ops
+!!$     INTEGER ::nop
+!!$     !No of 2D-sym ops
+!!$     INTEGER ::nop2
+!!$     !Rot-matrices (3,3,nop)
+!!$     INTEGER,ALLOCATABLE::mrot(:,:,:)
+!!$     !inverse operation (nop)
+!!$     INTEGER,ALLOCATABLE::invtab(:)
+!!$     !translation vectors (3,nop)
+!!$     REAL,ALLOCATABLE::tau(:,:)
+!!$     !Name of lattice type
+!!$     CHARACTER*3   :: latnam
+!!$     !Name of sym
+!!$     CHARACTER*4   :: namgrp
+!!$     INTEGER, ALLOCATABLE :: multab(:,:)
+!!$     INTEGER, ALLOCATABLE :: invsatnr(:)
+!!$     INTEGER, ALLOCATABLE :: invarop(:,:)
+!!$     INTEGER, ALLOCATABLE :: invarind(:)
+!!$
+!!$  END TYPE t_sym
 
  ! type for the input to the calculation of the core spectrum (EELS)
   TYPE t_coreSpecInput

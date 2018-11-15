@@ -3,39 +3,47 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_types_noco
+MODULE m_types_sym
   USE m_judft
   USE m_types_fleur_setup
   IMPLICIT NONE
-  TYPE,EXTENDS(t_fleursetup):: t_noco
-     LOGICAL:: l_noco
-     LOGICAL:: l_ss
-     LOGICAL:: l_mperp
-     LOGICAL:: l_constr
-     LOGICAL:: l_mtNocoPot
-     REAL:: qss(3)
-     REAL:: mix_b
-     LOGICAL, ALLOCATABLE :: l_relax(:)
-     REAL, ALLOCATABLE :: alphInit(:)
-     REAL, ALLOCATABLE :: alph(:)
-     REAL, ALLOCATABLE :: beta(:)
-     REAL, ALLOCATABLE :: b_con(:,:)
-     LOGICAL           :: l_soc
-     LOGICAL           :: l_spav
-     REAL              :: theta
-     REAL              :: phi
-     REAL,ALLOCATABLE  :: socscale(:)
+  TYPE,EXTENDS(t_fleursetup):: t_sym
+     !Symophic group
+     LOGICAL ::symor
+     INTEGER ::nsymt
+     INTEGER :: nsym
+     COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
+     !2D-inv-sym
+     LOGICAL ::invs2
+     !Inversion-sym
+     LOGICAL ::invs
+     !Z-refls. sym
+     LOGICAL ::zrfs
+     !No of sym ops
+     INTEGER ::nop
+     !No of 2D-sym ops
+     INTEGER ::nop2
+     !Rot-matrices (3,3,nop)
+     INTEGER,ALLOCATABLE::mrot(:,:,:)
+     !inverse operation (nop)
+     INTEGER,ALLOCATABLE::invtab(:)
+     !translation vectors (3,nop)
+     REAL,ALLOCATABLE::tau(:,:)
+     INTEGER, ALLOCATABLE :: multab(:,:)
+     INTEGER, ALLOCATABLE :: invsatnr(:)
+     INTEGER, ALLOCATABLE :: invarop(:,:)
+     INTEGER, ALLOCATABLE :: invarind(:)
    CONTAINS
-     PROCEDURE,PASS :: broadcast=>broadcast_noco
-     PROCEDURE,PASS :: write=>WRITE_noco
-     PROCEDURE,PASS :: read=>READ_noco
-     PROCEDURE,PASS :: read_xml=>read_xml_noco
-  END TYPE t_noco
+     PROCEDURE,PASS :: broadcast=>broadcast_sym
+     PROCEDURE,PASS :: write=>WRITE_sym
+     PROCEDURE,PASS :: read=>READ_sym
+     PROCEDURE,PASS :: read_xml=>read_xml_sym
+  END TYPE t_sym
 
 CONTAINS
-  SUBROUTINE broadcast_noco(tt,mpi_comm,origin)
+  SUBROUTINE broadcast_sym(tt,mpi_comm,origin)
     IMPLICIT NONE
-    CLASS(t_noco),INTENT(INOUT):: tt
+    CLASS(t_sym),INTENT(INOUT):: tt
     INTEGER,INTENT(IN)               :: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL      :: origin
     
