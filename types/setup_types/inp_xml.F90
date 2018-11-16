@@ -6,12 +6,14 @@
 
 
 MODULE m_inp_xml
+  USE m_xmlIntWrapFort
   USE m_judft
 CONTAINS
   CHARACTER (len=200) FUNCTION inp_xml_speciesxpath_for_group(n)
     IMPLICIT NONE
-    INTEGER,INTENT(in)::n
-
+    INTEGER,INTENT(in):: n
+    
+    INTEGER           :: i
     CHARACTER(len=200)::xpath,species
     !First determine name of species from group
     WRITE(xPath,*) '/fleurInput/atomGroups/atomGroup[',n,']/@species'
@@ -19,7 +21,7 @@ CONTAINS
 
     DO i=1,xmlGetNumberOfNodes('/fleurInput/atomSpecies/species')
        WRITE(xPath,*) '/fleurInput/atomSpecies/species[',i,']'
-       IF (TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))==TRIM(species)) THEN
+       IF (TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@name')))==TRIM(species)) THEN
           inp_xml_speciesxpath_for_group=xpath
           RETURN
        END IF

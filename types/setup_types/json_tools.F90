@@ -5,6 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_json_tools
+  IMPLICIT NONE
+  PRIVATE
   interface json_print
      module procedure json_rprint,json_iprint,json_lprint
      module procedure json_print_rarray,json_print_iarray,json_print_larray
@@ -14,7 +16,7 @@ MODULE m_json_tools
      module procedure json_rread,json_iread,json_lread
      module procedure json_read_rarray,json_read_iarray,json_read_larray
   end interface json_read
-
+  PUBLIC:: json_read, json_write,json_open_class,json_close_class
 
 CONTAINS
   SUBROUTINE json_open_class(name,unit,iostat)
@@ -24,7 +26,7 @@ CONTAINS
 
     CHARACTER(len=200)::line
 
-    READ(unit,*,iostat) line
+    READ(unit,*,iostat=iostat) line
 
     IF (iostat==0.AND.(INDEX(line,name)==0)) iostat=1
     RETURN
@@ -36,6 +38,7 @@ CONTAINS
     REAL,INTENT(in)     :: val
     LOGICAL,OPTIONAL,INTENT(in)::last
 
+    character :: endchar
     endchar=","
     IF (PRESENT(last)) THEN
        IF (last) endchar=" "
@@ -51,6 +54,7 @@ CONTAINS
     LOGICAL,INTENT(in)     :: val
     LOGICAL,OPTIONAL,INTENT(in)::last
 
+    character :: endchar
     endchar=","
     IF (PRESENT(last)) THEN
        IF (last) endchar=" "
@@ -63,6 +67,7 @@ CONTAINS
     INTEGER,INTENT(in)     :: val
     LOGICAL,OPTIONAL,INTENT(in)::last
 
+    character :: endchar
     endchar=","
     IF (PRESENT(last)) THEN
        IF (last) endchar=" "
@@ -76,12 +81,13 @@ CONTAINS
     REAL,INTENT(in)     :: val(:)
     LOGICAL,OPTIONAL,INTENT(in)::last
 
+    character :: endchar
     endchar=","
     IF (PRESENT(last)) THEN
        IF (last) endchar=" "
     END IF
     WRITE(unit,'(a)') '"'//TRIM(name)//'": ['
-    WRITE(unit,"5(f0.15,','))") val
+    WRITE(unit,"(5(f0.15,','))") val
     WRITE(unit,'(a)') ' ]'//endchar
     
   END SUBROUTINE json_print_rarray
@@ -92,12 +98,13 @@ CONTAINS
     logical,INTENT(in)     :: val(:)
     LOGICAL,OPTIONAL,INTENT(in)::last
 
+    character :: endchar
     endchar=","
     IF (PRESENT(last)) THEN
        IF (last) endchar=" "
     END IF
     WRITE(unit,'(a)') '"'//TRIM(name)//'": ['
-    WRITE(unit,"5(l1,','))") val
+    WRITE(unit,"(5(l1,','))") val
     WRITE(unit,'(a)') ' ]'//endchar
     
   END SUBROUTINE json_print_larray
@@ -108,12 +115,13 @@ CONTAINS
     INTEGER,INTENT(in)     :: val(:)
     LOGICAL,OPTIONAL,INTENT(in)::last
 
+    character :: endchar
     endchar=","
     IF (PRESENT(last)) THEN
        IF (last) endchar=" "
     END IF
     WRITE(unit,'(a)') '"'//TRIM(name)//'": ['
-    WRITE(unit,"5(i0,','))") val
+    WRITE(unit,"(5(i0,','))") val
     WRITE(unit,'(a)') ' ]'//endchar    
   END SUBROUTINE json_print_iarray
 

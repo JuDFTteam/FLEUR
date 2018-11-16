@@ -12,7 +12,6 @@ MODULE m_types_sym
      LOGICAL ::symor
      INTEGER ::nsymt
      INTEGER :: nsym
-     COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
      !2D-inv-sym
      LOGICAL ::invs2
      !Inversion-sym
@@ -33,11 +32,13 @@ MODULE m_types_sym
      INTEGER, ALLOCATABLE :: invsatnr(:)
      INTEGER, ALLOCATABLE :: invarop(:,:)
      INTEGER, ALLOCATABLE :: invarind(:)
+     COMPLEX,ALLOCATABLE  :: d_wgn(:,:,:,:)
    CONTAINS
      PROCEDURE,PASS :: broadcast=>broadcast_sym
      PROCEDURE,PASS :: write=>WRITE_sym
      PROCEDURE,PASS :: read=>READ_sym
      PROCEDURE,PASS :: read_xml=>read_xml_sym
+     PROCEDURE,PASS :: init=>init_sym
   END TYPE t_sym
 
 CONTAINS
@@ -59,43 +60,49 @@ CONTAINS
        pe=0
     ENDIF
 
-    CALL MPI_BCAST(tt%l_noco,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_ss,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_mperp,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_constr,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_mtNocoPot,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_l_soc,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_l_spav,1,MPI_LOGICAL,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%qss,3,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%mix_b,1,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%theta,1,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%phi,1,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%l_symor,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%invs2,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%invs,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%zrfs,1,MPI_LOGICAL,pe,mpi_comm,ierr)
 
-    IF (irank==pe) THEN
-       ntype=SIZE(tt%l_relax)
-       CALL MPI_BCAST(ntype,1,MPI_INTEGER,pe,mpi_comm,ierr)
-    ELSE
-       CALL MPI_BCAST(ntype,1,MPI_INTEGER,pe,mpi_comm,ierr)
-       IF (ALLOCATED(tt%l_relax)) &
-            DEALLOCATE(tt%l_relax,tt%b_con,tt%alphInit,tt%alph,tt%beta,tt%socscale)
-       ALLOCATE(tt%l_relax(ntype),tt%b_con(2,ntype))
-       ALLOCATE(tt%alphInit(ntype),tt%alph(ntype),tt%beta(ntype))
-       ALLOCATE(tt%socscale(ntype))
+    CALL MPI_BCAST(tt%nsymt,1,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%nsym,1,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%nop,1,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%nop2,1,MPI_INTEGER,pe,mpi_comm,ierr)
+    
+    !Arrays
+    IF (irank.NE.pe.AND.ALLOCATED(tt%mrot)) THEN
+       DEALLOCATE(tt%mrot,tt%invtab,tt%tau,tt%multab,tt%d_wgn)
     ENDIF
-    CALL MPI_BCAST(tt%alphinit,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%alph,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%beta,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%b_con,2*ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%socscale,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_relax,ntype,MPI_LOGICAL,pe,mpi_comm,ierr)
-  
+    
+    CALL MPI_BCAST(tt%mrot,9*tt%nop,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%invtab,tt%nop,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%tau,3*tt%nop,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%multab,tt%nop**2,MPI_INTEGER,pe,mpi_comm,ierr)
+
+    CALL MPI_BCAST(tt%d_wgn,147*tt%nop,MPI_DOUBLE_COMPLEX,pe,mpi_comm,ierr)
+
+    !Atom dependent stuff
+    IF (irank==pe) THEN
+       nat=SIZE(tt%invsatnr)
+       CALL MPI_BCAST(nat,1,MPI_INTEGER,pe,mpi_comm,ierr)
+    ELSE
+       CALL MPI_BCAST(nat,1,MPI_INTEGER,pe,mpi_comm,ierr)
+       IF (ALLOCATED(tt%invarop)) DEALLOCATE(tt%invarop),tt%invarind,tt%invsatnr)
+       ALLOCATE(tt%invarop(nat,tt%nop),tt%invarind(nat))
+       ALLOCATE(tt%invsatnr(nat))
+    ENDIF
+    CALL MPI_BCAST(tt%invarop,nat*tt%nop,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%invarind,nat,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%invsatnr,nat,MPI_INTEGER,pe,mpi_comm,ierr)
+    
 #endif
       
-  END SUBROUTINE broadcast_noco
+  END SUBROUTINE broadcast_sym
 
-  SUBROUTINE write_noco(tt, unit, iotype, v_list, iostat, iomsg)
+  SUBROUTINE write_sym(tt, unit, iotype, v_list, iostat, iomsg)
     IMPLICIT NONE
-    CLASS(t_noco),INTENT(IN):: tt
+    CLASS(t_sym),INTENT(IN):: tt
     INTEGER, INTENT(IN)             :: unit
     CHARACTER(*), INTENT(IN)        :: iotype
     INTEGER, INTENT(IN)             :: v_list(:)
@@ -104,35 +111,41 @@ CONTAINS
 
     INTEGER:: ntype
 
-    WRITE(unit,*,IOSTAT=iostat) '"noco":{'
-    CALL json_print(unit,"l_noco",tt%l_noco)
-    CALL json_print(unit,"l_ss",tt%l_noco)
-    CALL json_print(unit,"l_mperp",tt%l_noco)
-    CALL json_print(unit,"l_constr",tt%l_noco)
-    CALL json_print(unit,"l_mtnocopot",tt%l_noco)
-    CALL json_print(unit,"l_soc",tt%l_noco)
-    CALL json_print(unit,"l_spav",tt%l_noco)
-    CALL json_print(unit,"mix_b",tt%l_noco)
-    CALL json_print(unit,"theta",tt%l_noco)
-    CALL json_print(unit,"phi",tt%l_noco)
-    CALL json_print(unit,"ntype",size(tt%l_relax))
+    WRITE(unit,*,IOSTAT=iostat) '"sym":{'
+    CALL json_print(unit,"l_symor",tt%l_symor)
+    CALL json_print(unit,"invs",tt%invs)
+    CALL json_print(unit,"invs2",tt%invs2)
+    CALL json_print(unit,"zrfs",tt%zrfs)
+    CALL json_print(unit,"nsymt",tt%nsymt)
+    CALL json_print(unit,"nsym",tt%nsym)
+    CALL json_print(unit,"nop",tt%nop)
+    CALL json_print(unit,"nop2",tt%nop2)
+
     
-    CALL json_print(unit,"qss",tt%qss,',')
- 
-    CALL json_print(unit,"l_relax",tt%l_relax)
-    CALL json_print(unit,"alphInit",tt%alphInit)
-    CALL json_print(unit,"alph",tt%alph)
-    CALL json_print(unit,"beta",tt%beta)
-    CALL json_print(unit,"b_const",RESHAPE(tt%b_const,(/SIZE(tt%b_const)/))
-    CALL json_print(unit,"socscale",tt%socscale,.TRUE.)
+    CALL json_print(unit,"mrot",RESHAPE(tt%mrot,(/SIZE(tt%mrot)/)))
+    CALL json_print(unit,"multab",RESHAPE(tt%multab,(/SIZE(tt%multab)/)))
+    CALL json_print(unit,"invtab",RESHAPE(tt%invtab,(/SIZE(tt%invtab)/)))
+    CALL json_print(unit,"tau",RESHAPE(tt%tau,(/SIZE(tt%tau)/)))
+  
+    ALLOCATE(d_wgn(2,SIZE(tt%d_wgn))
+    d_wgn(1,:)=REAL(tt%d_wgn)
+    d_wgn(2,:)=AIMAG(tt%d_wgn)
+    CALL json_print(unit,"d_wgn",RESHAPE(d_wgn,(/SHAPE(d_wgn)/))
+
+    
+    CALL json_print(unit,"nat",SIZE(tt%invsatnr))
+    CALL json_print(unit,"invarop",RESHAPE(tt%invarop,(/SIZE(tt%invarop)/)))
+    CALL json_print(unit,"invarind",tt%invarind)
+    CALL json_print(unit,"invsatnr",tt%invsatnr,.true.)
+
      
     WRITE(unit,*,IOSTAT=iostat) '}'
     
-  END SUBROUTINE write_noco
-  SUBROUTINE read_noco(tt, unit, iotype, v_list, iostat, iomsg)
+  END SUBROUTINE write_sym
+  SUBROUTINE read_sym(tt, unit, iotype, v_list, iostat, iomsg)
     use m_json_tools
     IMPLICIT NONE
-    CLASS(t_noco),INTENT(INOUT):: tt
+    CLASS(t_sym),INTENT(INOUT):: tt
     INTEGER, INTENT(IN)             :: unit
     CHARACTER(*), INTENT(IN)        :: iotype
     INTEGER, INTENT(IN)             :: v_list(:)
@@ -141,136 +154,181 @@ CONTAINS
 
     INTEGER :: ntype
     real,allocatable::rtemp(:)
-    CALL json_open_class("noco",unit,iostat)
+    CALL json_open_class("sym",unit,iostat)
     IF (iostat.NE.0)   RETURN
-    
-    call json_read(unit,"l_noco",tt%l_noco)
-    call json_read(unit,"l_ss",tt%l_ss)
-    call json_read(unit,"l_mperp",tt%l_mperp)
-    call json_read(unit,"l_constr",tt%l_constr)
-    call json_read(unit,"l_mtnocopot",tt%l_mtnocopot)
-    call json_read(unit,"l_soc",tt%l_soc)
-    call json_read(unit,"l_spav",tt%l_spav)
-    
-    call json_read(unit,"mix_b",tt%mix_b)
-    call json_read(unit,"theta",tt%theta)
-    call json_read(unit,"phi",tt%phi)
-    
-    call json_read(unit,"ntype",ntype)
 
-    call json_read(unit,"qss",tt%qss)
 
-    IF (ALLOCATED(tt%l_relax)) DEALLOCATE(tt%l_relax,tt%b_con,tt%alphInit,tt%alph,tt%beta,tt%socscale)
-    ALLOCATE(tt%l_relax(ntype),tt%b_con(2,ntype))
-    ALLOCATE(tt%alphInit(ntype),tt%alph(ntype),tt%beta(ntype))
-    ALLOCATE(tt%socscale(ntype))
+    CALL json_read(unit,"l_symor",tt%l_symor)
+    CALL json_read(unit,"invs",tt%invs)
+    CALL json_read(unit,"invs2",tt%invs2)
+    CALL json_read(unit,"zrfs",tt%zrfs)
+    CALL json_read(unit,"nsymt",tt%nsymt)
+    CALL json_read(unit,"nsym",tt%nsym)
+    CALL json_read(unit,"nop",tt%nop)
+    CALL json_read(unit,"nop2",tt%nop2)
 
-    call json_read(unit,"l_relax",tt%l_relax)
-    call json_read(unit,"alphInit",tt%l_alphInit)
-    call json_read(unit,"alph",tt%l_alph)
-    call json_read(unit,"beta",tt%l_beta)
-    allocate(rtemp(2*ntype))
-    call json_read_rarray(unit,"b_const",rtemp)
-    tt%l_b_const=RESHAPE(rtemp,(/2,ntype/))
-    call json_read(unit,"socscale",tt%l_socscale)
+    IF (ALLOCATED(tt%mrot)) DEALLOCATE(tt%mrot,tt%invtab,tt%tau,tt%multab)
+    ALLOCATE(it(9*tt%nop))
+    CALL json_read(unit,"mrot",it)
+    ALLOCATE(tt%mrot(3,3,tt%nop))
+    tt%mrot=RESHAPE(it,SHAPE(tt%mrot))
+    DEALLOCATE(it)
+
+    ALLOCATE(it(tt%nop**2))
+    CALL json_read(unit,"multab",it)
+    ALLOCATE(tt%multab(3,3,tt%nop))
+    tt%multab=RESHAPE(it,SHAPE(tt%multab))
+    DEALLOCATE(it)
+
+    ALLOCATE (tt%invtab(tt%nop))
+    CALL json_read(unit,"invtab",tt%invtab)
+
+    ALLOCATE(rt(3*tt%nop))
+    ALLOCATE(tt%tau(3,tt%nop))
+    CALL json_read(unit,"tau",rt)
+    tt%tau=RESHAPE(rt,SHAPE(tt%tau))
+    DEALLOCATE(rt)
+
+    IF (ALLOCATED(tt%d_wgn)) DEALLOCATE(tt%d_wgn)
+    ALLOCATE(rt(2*147*tt%nop))
+    CALL json_read(unit,"d_wgn",rt)
+    ALLOCATE(tt%d_wgn(-3:3,-3:3,3,tt%nop))
+    tt%d_wgn=CMPLX(RESHAPE(rt(::2),,SHAPE(tt%d_wgn)),RESHAPE(rt(2::2),,SHAPE(tt%d_wgn)))
+    DEALLOCATE(rt)
+
+    CALL json_read(unit,"nat",nat)
+    IF (ALLOCATED(tt%invarop)) DEALLOCATE(tt%invarop,tt%invarind,tt%invsatnr)
+    ALLOCATE(tt%invarind(nat))
+    ALLOCATE(tt%invsatnr(nat))
+
+    ALLOCATE(it(nat*tt%nop))
+    ALLOCATE(tt%invarop(nat,tt%nop))
+    CALL json_read(unit,"invarop",it)
+    tt%invarop=RESHAPE(it,SHAPE(tt%invarop))
+    DEALLOCATE(it)
+
+    CALL json_read(unit,"invarind",tt%invarind)
+    CALL json_read(unit,"invsatnr",tt%invsatnr)
+    
 
     CALL json_close_class(unit)
     
-  END SUBROUTINE read_noco
+  END SUBROUTINE read_sym
 
  
-  SUBROUTINE read_xml_noco(tt)
+  SUBROUTINE read_xml_sym(tt)
     USE m_xmlIntWrapFort
     USE m_constants
     USE m_calculator
     USE m_inp_xml
+    USE m_symdata , ONLY : nammap, ord2, l_c2
     IMPLICIT NONE
-    CLASS(t_noco),INTENT(OUT):: tt
+    CLASS(t_sym),INTENT(OUT):: tt
 
 
     LOGICAL::film
-    CHARACTER(len=200):: xpath,valueString
-    INTEGER           :: ntype,numberNodes,n
+    CHARACTER(len=200):: xpath,valueString,xpathB
+    CHARACTER(len=4)  :: namgrp
+    CHARACTER(len=3)  :: latnam
+    INTEGER           :: ntype,numberNodes,n,i,n2spg
+    INTEGER:: j,nop48
+    INTEGER,ALLOCATABLE::invOps(:),multtab(:,:),optype(:)
 
-
-    ntype=xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-    IF (ALLOCATED(tt%l_relax)) DEALLOCATE(tt%l_relax,tt%b_con,tt%alphInit,tt%alph,tt%beta,tt%socscale)
-    ALLOCATE(tt%l_relax(ntype),tt%b_con(2,ntype))
-    ALLOCATE(tt%alphInit(ntype),tt%alph(ntype),tt%beta(ntype))
-    ALLOCATE(tt%socscale(ntype))
-
-    tt%l_noco = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
-
-    xPath = '/fleurInput/calculationSetup/soc'
-    numberNodes = xmlGetNumberOfNodes(xPath)
-    tt%l_soc = .FALSE.
-    tt%theta = 0.0
-    tt%phi = 0.0
-
-    IF (numberNodes.EQ.1) THEN
-       tt%theta=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta'))
-       tt%phi=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi'))
-       tt%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
-       tt%l_spav = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
-    END IF
-    !read species depended stuff
-    IF (tt%l_soc) THEN
-       DO n=1,ntype
-          xpath=inp_xml_speciesxpath_for_group(n)
-          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/special')==1) THEN
-             tt%socscale(n)=evaluateFirstOnly(TRIM(ADJUSTL(xpath))//'/special/@socscale'))))
-          ELSE
-             tt%socscale(n)=1.0
-          ENDIF
-       END DO
-    ENDIF
-    ! Read in optional noco parameters if present
-
-    xPath = '/fleurInput/calculationSetup/nocoParams'
-    numberNodes = xmlGetNumberOfNodes(xPath)
-    
-    tt%l_ss = .FALSE.
-    tt%l_mperp = .FALSE.
-    tt%l_constr = .FALSE.
-    tt%mix_b = 0.0
-    tt%qss = 0.0
-    
-    tt%l_relax(:) = .FALSE.
-    tt%alphInit(:) = 0.0
-    tt%alph(:) = 0.0
-    tt%beta(:) = 0.0
-    tt%b_con(:,:) = 0.0
-
-    IF ((tt%l_noco).AND.(numberNodes.NE.1)) THEN
-       STOP 'Error: l_noco is true but no noco parameters set in xml input file!'
-    END IF
-    
-    IF (tt%l_noco) THEN
-       tt%l_ss = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
-       tt%l_mperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
-       tt%l_constr = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
-       tt%l_mtNocoPot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
+    !Two different modes to specify symmetry in inp.xml
+    !Either we give the sym-group (only in film case)
+    !Or we list all operations (see case below)
+    IF (xmlGetNumberOfNodes('/fleurInput/cell/symmetry')==1) THEN
+       valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/cell/symmetry/@spgrp')))
+       READ(valueString,*) namgrp
+       tt%invs = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/cell/symmetry/@invs'))
+       tt%zrfs = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/cell/symmetry/@zrfs'))
+       tt%invs2 = tt%invs.AND.tt%zrfs
+       !Now determine the latnam from cell
+       IF (xmlGetNumberOfNodes('/fleurInput/cell/bulkLattice')==1) THEN
+          latnam=TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/cell/bulkLattice/@latnam')))
+       ELSE
+          latnam=TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/cell/filmLattice/@latnam')))
+       END IF
        
-       tt%mix_b = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
-       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
-       READ(valueString,*) tt%qss(1), tt%qss(2), tt%qss(3)
-    END IF
-    !Now the group dependent stuff
-    IF (tt%l_noco) THEN
-       DO n=1,ntype
-          xpath=inp_xml_xpath_for_group(n)
-          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//"/nocoParams")==1) THEN
-             tt%l_relax(n) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@l_relax'))
-            tt%alphInit(n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@alpha'))
-            tt%alph(n) = tt%alphInit(iType)
-            tt%beta(n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@beta'))
-            tt%b_con(1,n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@b_cons_x'))
-            tt%b_con(2,n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@b_cons_y'))
-         END IF
-      END DO
-   END IF
+       DO  n2spg=1, SIZE(nammap)
+          IF (namgrp.EQ.nammap(i)) EXIT
+       END DO
+       IF (n2spg >size(nammap) ) THEN
+          WRITE (*,*) 'Spacegroup ',namgrp,' not known! Choose one of:'
+          WRITE (*,'(20(a4,1x))') (nammap(i),i=1,20)
+          CALL juDFT_error("Could not determine spacegroup!", calledby = "r_inpXML")
+       END IF
+       IF ((n2spg.GE.13).AND.(n2spg.LE.17)) THEN
+          IF (.NOT.((latnam.EQ.'hx3').OR.(latnam.EQ.'hex'))) THEN
+             CALL juDFT_error("Use only hex or hx3 with p3, p3m1, p31m, p6 or p6m!", calledby ="r_inpXML")
+          END IF
+       END IF
+       tt%nop = ord2(n2spg)
+       IF (tt%invs) THEN
+          tt%nop = 2*tt%nop
+          IF (tt%zrfs.AND.(.NOT.l_c2(n2spg))) tt%nop = 2*tt%nop
+       ELSE
+          IF (tt%zrfs) tt%nop = 2*tt%nop
+       END IF
+       IF (ALLOCATED(tt%mrot)) DEALLOCATE(tt%mrot)
+       ALLOCATE(tt%mrot(3,3,tt%nop))
+       IF (ALLOCATED(tt%tau)) DEALLOCATE(tt%tau)
+       ALLOCATE(tt%tau(3,tt%nop))
+       CALL spg2set(tt%nop,tt%zrfs,tt%invs,namgrp,latnam,&
+            tt%mrot,tt%tau,tt%nop2,tt%symor)
+    ELSEIF(xmlGetNumberOfNodes('/fleurInput/cell/symmetryOperations')==1) THEN
+       xpath='/fleurInput/cell/symmetryOperations'
+       tt%nop = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/symOp')
+       IF (ALLOCATED(tt%mrot)) DEALLOCATE(tt%mrot)
+       ALLOCATE(tt%mrot(3,3,tt%nop))
+       IF (ALLOCATED(tt%tau)) DEALLOCATE(tt%tau)
+       ALLOCATE(tt%tau(3,tt%nop))
+       tt%symor = .TRUE.
+       DO i = 1, tt%nop
+            WRITE(xPathB,*) TRIM(ADJUSTL(xPath))//'/symOp[',i,']/row-1'
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
+            READ(valueString,*) tt%mrot(1,1,i), tt%mrot(1,2,i), tt%mrot(1,3,i), tt%tau(1,i)
+
+            WRITE(xPathB,*) TRIM(ADJUSTL(xPath))//'/symOp[',i,']/row-2'
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
+            READ(valueString,*) tt%mrot(2,1,i), tt%mrot(2,2,i), tt%mrot(2,3,i), tt%tau(2,i)
+
+            WRITE(xPathB,*) TRIM(ADJUSTL(xPath))//'/symOp[',i,']/row-3'
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
+            READ(valueString,*) tt%mrot(3,1,i), tt%mrot(3,2,i), tt%mrot(3,3,i), tt%tau(3,i)
+
+            IF ((tt%tau(1,i)**2 + tt%tau(2,i)**2 + tt%tau(3,i)**2).GT.1.e-8) THEN
+               tt%symor = .FALSE.
+            END IF
+         END DO
+         DO i=-3,3
+            DO j=1,5
+               WHERE(ABS(tt%tau-(1.*i)/j)<1E-5) tt%tau=(1.*i)/j
+            ENDDO
+         ENDDO
+         nop48 = 48
+         ALLOCATE (invOps(tt%nop),multtab(tt%nop,tt%nop),optype(nop48))
+         CALL check_close(tt%nop,tt%mrot,tt%tau,&
+              &                      multtab,invOps,optype)
+
+         CALL symproperties(nop48,optype,input%film,tt%nop,multtab,cell%amat,&
+              &                        tt%symor,tt%mrot,tt%tau,&
+              &                        invSym,tt%invs,tt%zrfs,tt%invs2,tt%nop,tt%nop2)
+         IF (.not.input%film) tt%nop2=tt%nop
+         IF (input%film.AND.ANY(ABS(tt%tau(:,:tt%nop))>1E-5)) &
+              CALL juDFT_error("nonsymmorphic symmetries not yet implemented for films!",calledby ="r_inpXML")
+         tt%invs2 = tt%invs.AND.tt%zrfs
+      ELSE
+         CALL judft_error("No valid specification of symmetry in inp.xml")
+      END IF
       
- END SUBROUTINE read_xml_noco
+  END SUBROUTINE read_xml_sym
   
+  SUBROUTINE init_sym(sym)
+    IMPLICIT NONE
+    CLASS(t_sym),INTENT(INOUT):: sym
+    !TODO
+  END SUBROUTINE init_sym
+
   
-END MODULE m_types_cell
+END MODULE m_types_sym

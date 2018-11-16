@@ -82,9 +82,9 @@ CONTAINS
     CALL JSON_PRINT(unit, "vol",tt%vol)
     CALL JSON_PRINT(unit, "volint",tt%volint)  
   
-    CALL JSON_PRINT(unit,"amat",reshape(tt%amat,9))
-    CALL JSON_PRINT(unit,"bmat",reshape(tt%bmat,9))
-    CALL JSON_PRINT(unit,"bbmat",reshape(tt%bbmat,9))
+    CALL JSON_PRINT(unit,"amat",RESHAPE(tt%amat,(/9/)))
+    CALL JSON_PRINT(unit,"bmat",reshape(tt%bmat,(/9/)))
+    CALL JSON_PRINT(unit,"bbmat",reshape(tt%bbmat,(/9/)))
     
     WRITE(unit,*,IOSTAT=iostat) '}'
     
