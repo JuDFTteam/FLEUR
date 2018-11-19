@@ -26,7 +26,7 @@ CONTAINS
     REAL,    INTENT (IN) :: sig1dh,vz1dh  ,z
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
+    COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxy,stars%ng2-1,2)
     COMPLEX, INTENT (IN) :: alphm(stars%ng2,2)
     REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmz,2,jspins)  
 

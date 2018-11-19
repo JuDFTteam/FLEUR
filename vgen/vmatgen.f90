@@ -111,14 +111,14 @@ CONTAINS
     !Now the vacuum part starts
 
  
-    ALLOCATE(vvacxy(ifft2,vacuum%nmzxyd,2,4))
+    ALLOCATE(vvacxy(ifft2,vacuum%nmzxy,2,4))
 
     
        !--->    fouriertransform the spin up and down potential
        !--->    in the vacuum, vz & vxy, to real space (vvacxy)
        DO jspin = 1,input%jspins
           DO ivac = 1,vacuum%nvac
-             DO imz = 1,vacuum%nmzxyd
+             DO imz = 1,vacuum%nmzxy
                 vziw = 0.0
                 !IF (oneD%odi%d1) THEN
                 IF (.FALSE.) THEN
@@ -131,7 +131,7 @@ CONTAINS
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
                    CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
-                        vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,1,ivac,jspin), vacuum%nmzxyd,1)
+                        vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,1,ivac,jspin), vacuum%nmzxy,1)
                 ENDIF
              ENDDO
           ENDDO
@@ -140,7 +140,7 @@ CONTAINS
        !--->    calculate the four components of the matrix potential on
        !--->    real space mesh
        DO ivac = 1,vacuum%nvac
-          DO imz = 1,vacuum%nmzxyd
+          DO imz = 1,vacuum%nmzxy
              DO imeshpt = 1,ifft2
                 vup   = vvacxy(imeshpt,imz,ivac,1)
                 vdown = vvacxy(imeshpt,imz,ivac,2)
@@ -154,7 +154,7 @@ CONTAINS
                 vvacxy(imeshpt,imz,ivac,4) = beff*SIN(theta)*SIN(phi)
              ENDDO
           ENDDO
-          DO imz = vacuum%nmzxyd+1,vacuum%nmz
+          DO imz = vacuum%nmzxy+1,vacuum%nmz
              vup   = vTot%vacz(imz,ivac,1)
              vdown = vTot%vacz(imz,ivac,2)
              theta = den%theta_vacz(imz,ivac)
@@ -171,7 +171,7 @@ CONTAINS
        !--->    Fouriertransform the matrix potential back to reciprocal space
        DO ipot = 1,2
           DO ivac = 1,vacuum%nvac
-             DO imz = 1,vacuum%nmzxyd
+             DO imz = 1,vacuum%nmzxy
                 fftwork=0.0
                 !IF (oneD%odi%d1) THEN
                 IF (.FALSE.) THEN
@@ -184,14 +184,14 @@ CONTAINS
                    !     &                  %igf,odl%pgf,odi%nst2)
                 ELSE
                    CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                        vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,1,ivac,ipot), vacuum%nmzxyd,-1)
+                        vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,1,ivac,ipot), vacuum%nmzxy,-1)
                 END IF
              ENDDO
           ENDDO
        ENDDO
 
        DO ivac = 1,vacuum%nvac
-          DO imz = 1,vacuum%nmzxyd
+          DO imz = 1,vacuum%nmzxy
              fftwork=0.0
              !IF (oneD%odi%d1) THEN
              IF (.FALSE.) THEN
@@ -204,7 +204,7 @@ CONTAINS
                 !   &               %igf,odl%pgf,odi%nst2)
              ELSE
                 CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                     vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,1,ivac,3), vacuum%nmzxyd,-1)
+                     vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,1,ivac,3), vacuum%nmzxy,-1)
              END IF
           ENDDO
        ENDDO

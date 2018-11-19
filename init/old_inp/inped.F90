@@ -155,8 +155,8 @@
           vacuum%delz = 25.0/vacuum%nmz
           IF (oneD%odd%d1) vacuum%delz = 20.0/vacuum%nmz
           IF (vacuum%nmz>vacuum%nmz)  CALL juDFT_error("nmzd",calledby ="inped")
-          vacuum%nmzxy = vacuum%nmzxyd
-          IF (vacuum%nmzxy>vacuum%nmzxyd)  CALL juDFT_error("nmzxyd",calledby ="inped")
+          vacuum%nmzxy = vacuum%nmzxy
+          IF (vacuum%nmzxy>vacuum%nmzxy)  CALL juDFT_error("nmzxyd",calledby ="inped")
           a1(:) = input%scaleCell*a1(:)
           a2(:) = input%scaleCell*a2(:)
           a3(:) = input%scaleCell*a3(:)

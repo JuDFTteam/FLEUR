@@ -91,10 +91,10 @@ module m_VYukawaFilm
     type(t_sym),    intent(in)  :: sym
     type(t_input),  intent(in)  :: input
     complex,        intent(in)  :: psq(stars%ng3)
-    complex,        intent(in)  :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2)
+    complex,        intent(in)  :: rhtxy(vacuum%nmzxy,stars%ng2-1,2)
     real,           intent(in)  :: rht(vacuum%nmz,2) 
 
-    complex,        intent(out) :: VVxy(vacuum%nmzxyd,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
+    complex,        intent(out) :: VVxy(vacuum%nmzxy,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
     real,           intent(out) :: VVz(vacuum%nmz,2)                ! this is the qxy  = 0 part of the vacuum potential
     complex,        intent(out) :: alphm(stars%ng2,2)                ! these are the integrals in upper and lower vacuum, now including the first star---integral for star ig2 is in alphm(ig2,ivac) 
 
@@ -106,8 +106,8 @@ module m_VYukawaFilm
     real                        :: expDhg(stars%ng2), expDg(stars%ng2)
     real                        :: z(vacuum%nmz)
     integer                     :: iz, irec2, irec3, ivac, iqz
-    complex                     :: fa(vacuum%nmzxyd,2:stars%ng2), fb(vacuum%nmzxyd,2:stars%ng2)
-    complex                     :: alpha(vacuum%nmzxyd,2:stars%ng2,2), beta(vacuum%nmzxyd,2:stars%ng2,2), gamma(vacuum%nmzxyd,2:stars%ng2)
+    complex                     :: fa(vacuum%nmzxy,2:stars%ng2), fb(vacuum%nmzxy,2:stars%ng2)
+    complex                     :: alpha(vacuum%nmzxy,2:stars%ng2,2), beta(vacuum%nmzxy,2:stars%ng2,2), gamma(vacuum%nmzxy,2:stars%ng2)
     real                        :: ga(vacuum%nmz), gb(vacuum%nmz)
     real                        :: delta(vacuum%nmz,2), epsilon(vacuum%nmz,2), zeta(vacuum%nmz)
 
@@ -235,7 +235,7 @@ module m_VYukawaFilm
     type(t_sym),    intent(in)  :: sym
     type(t_input),  intent(in)  :: input
     complex,        intent(in)  :: psq(stars%ng3)
-    complex,        intent(in)  :: VVxy(vacuum%nmzxyd,2:stars%ng2,2)
+    complex,        intent(in)  :: VVxy(vacuum%nmzxy,2:stars%ng2,2)
     real,           intent(in)  :: VVz(vacuum%nmz,2)
     complex,        intent(in)  :: alphm(stars%ng2,2)
 

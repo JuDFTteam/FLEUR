@@ -69,7 +69,7 @@ CONTAINS
 
     ! reduce vacxy
     if( allocated( potden%vacxy ) ) then
-      n = vacuum%nmzxyd * ( stars%ng2 - 1 ) * 2 * size( potden%vacxy, 4 )
+      n = vacuum%nmzxy * ( stars%ng2 - 1 ) * 2 * size( potden%vacxy, 4 )
       allocate( r_b(n) )
       call MPI_REDUCE( potden%vacxy, r_b, n, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, mpi%mpi_comm, ierr )
       if( mpi%irank == 0 ) call CPP_BLAS_ccopy( n, r_b, 1, potden%vacxy, 1 )

@@ -21,7 +21,7 @@ module m_vvacis
     type(t_stars),  intent(in)  :: stars
     type(t_cell),   intent(in)  :: cell
     complex,        intent(in)  :: psq(stars%ng3)
-    complex,        intent(out) :: vxy(vacuum%nmzxyd,stars%ng2-1,2)
+    complex,        intent(out) :: vxy(vacuum%nmzxy,stars%ng2-1,2)
 
     complex                     :: arg, c_ph, sumr(2)
     real                        :: dh, g, qz, sign, signz, vcons, z, e_m, arg_r, arg_i

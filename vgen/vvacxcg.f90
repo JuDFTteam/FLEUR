@@ -91,7 +91,7 @@ CONTAINS
     WRITE (6,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE(6,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
-    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,input%jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,input%jspins) )
+    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,input%jspins),rxydzz(vacuum%nmzxy,stars%ng2-1,input%jspins) )
     ALLOCATE ( rhtdz(vacuum%nmz,input%jspins),rhtdzz(vacuum%nmz,input%jspins) )
 
     DO ivac=1,vacuum%nvac 
@@ -224,7 +224,7 @@ CONTAINS
 
              DO js=1,input%jspins
                 CALL fft2d(stars, af2(0,js),bf2, den%vacz(ip,ivac,js),0.,&
-                     den%vacxy(ip,1,ivac,js), vacuum%nmzxyd,+1)
+                     den%vacxy(ip,1,ivac,js), vacuum%nmzxy,+1)
              END DO
 
           ELSE
@@ -261,7 +261,7 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                        stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,1,js), vacuum%nmzxyd,+1) 
+                        stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,1,js), vacuum%nmzxy,+1) 
 
                 DO iq=1,stars%ng2-1
                    cqpw(iq)=-den%vacxy(ip,iq,ivac,js)
@@ -277,7 +277,7 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(        &         ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
-                       stars, rhdzz(0,js),bf2, rhtdzz(ip,js),rhti,rxydzz(ip,1,js), vacuum%nmzxyd,+1)
+                       stars, rhdzz(0,js),bf2, rhtdzz(ip,js),rhti,rxydzz(ip,1,js), vacuum%nmzxy,+1)
 
 
                 DO iq=1,stars%ng2-1
@@ -427,7 +427,7 @@ CONTAINS
              !           ----> 2-d back fft to g space
              !
              bf2=0.0
-             CALL fft2d(stars, e_xc,bf2, exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1), vacuum%nmzxyd,-1)
+             CALL fft2d(stars, e_xc,bf2, exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1), vacuum%nmzxy,-1)
 
           ENDIF
 

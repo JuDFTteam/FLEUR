@@ -533,7 +533,7 @@ MODULE m_cdn_io
 
          IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(den%iter.GE.1)) THEN
             inputTemp%jspins = input%jspins
-            vacuumTemp%nmzxyd = vacuum%nmzxyd
+            vacuumTemp%nmzxyd = vacuum%nmzxy
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
             vacuumTemp%nmzd = vacuum%nmz
@@ -563,7 +563,7 @@ MODULE m_cdn_io
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
-            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
+            ALLOCATE (fzxyTemp(vacuum%nmzxy,stars%ng2-1,2,input%jspins))
             ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
             ALLOCATE (fzTemp(vacuum%nmz,2,input%jspins))
 
@@ -596,7 +596,7 @@ MODULE m_cdn_io
             ! Generate data in temp arrays and variables to be able to perform loddop call.
             ! loddop is called to move the file position to the output density position.
             inputTemp%jspins = input%jspins
-            vacuumTemp%nmzxyd = vacuum%nmzxyd
+            vacuumTemp%nmzxyd = vacuum%nmzxy
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
             vacuumTemp%nmzd = vacuum%nmz
@@ -620,7 +620,7 @@ MODULE m_cdn_io
             starsTemp%ng2 = stars%ng2
             symTemp%invs2 = sym%invs2
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
-            ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
+            ALLOCATE (fzxyTemp(vacuum%nmzxy,stars%ng2-1,2,input%jspins))
             ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
             ALLOCATE (fzTemp(vacuum%nmz,2,input%jspins))
 

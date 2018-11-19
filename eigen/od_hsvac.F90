@@ -39,7 +39,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: m_cyl
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,n2d_1-1,2)
+    COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxy,n2d_1-1,2)
     INTEGER, INTENT (OUT):: nv2(input%jspins)
     REAL,    INTENT (INOUT) :: vz(vacuum%nmz,2,4)
     REAL,    INTENT (IN) :: evac(2,input%jspins)

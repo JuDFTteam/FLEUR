@@ -1082,7 +1082,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       !some settings for film calculations
       vacuum%nmz = 250
-      vacuum%nmzxyd = 100
+      vacuum%nmzxy = 100
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
@@ -1091,8 +1091,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       vacuum%delz = 25.0/vacuum%nmz
       IF (oneD%odd%d1) vacuum%delz = 20.0 / vacuum%nmz
       IF (vacuum%nmz.GT.vacuum%nmz) CALL juDFT_error("nmzd",calledby ="inped")
-      vacuum%nmzxy = vacuum%nmzxyd
-      IF (vacuum%nmzxy.GT.vacuum%nmzxyd) CALL juDFT_error("nmzxyd",calledby ="inped")
+      vacuum%nmzxy = vacuum%nmzxy
+      IF (vacuum%nmzxy.GT.vacuum%nmzxy) CALL juDFT_error("nmzxyd",calledby ="inped")
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of cell section

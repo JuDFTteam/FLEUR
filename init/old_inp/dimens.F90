@@ -91,7 +91,7 @@ CONTAINS
 #endif
     dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
     vacuum%nmz = 250
-    vacuum%nmzxyd = 100
+    vacuum%nmzxy = 100
 
 
   END SUBROUTINE dimens

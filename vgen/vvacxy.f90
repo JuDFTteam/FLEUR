@@ -25,16 +25,16 @@ module m_vvacxy
     type(t_sym),    intent(in)     :: sym
     type(t_stars),  intent(in)     :: stars
     type(t_cell),   intent(in)     :: cell
-    complex,        intent(in)     :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2)
-    complex,        intent(inout)  :: vxy(vacuum%nmzxyd,stars%ng2-1,2)
+    complex,        intent(in)     :: rhtxy(vacuum%nmzxy,stars%ng2-1,2)
+    complex,        intent(inout)  :: vxy(vacuum%nmzxy,stars%ng2-1,2)
     complex,        intent(out)    :: alphm(stars%ng2,2)
 
     complex                        :: alph0, alph2, alph1, alphaz, betaz, test
     real                           :: g, vcons, z, e_m, e_p
     integer                        :: imz, ip, irec2, ivac, ncsh
     logical                        :: tail
-    real                           :: fra(vacuum%nmzxyd), frb(vacuum%nmzxyd), fia(vacuum%nmzxyd), fib(vacuum%nmzxyd)
-    real                           :: alpha(vacuum%nmzxyd,2,2), beta(vacuum%nmzxyd,2,2)
+    real                           :: fra(vacuum%nmzxy), frb(vacuum%nmzxy), fia(vacuum%nmzxy), fib(vacuum%nmzxy)
+    real                           :: alpha(vacuum%nmzxy,2,2), beta(vacuum%nmzxy,2,2)
     real, allocatable              :: sig_top(:), sig_bot(:)
     intrinsic aimag, cmplx, conjg, exp, real
 
@@ -43,12 +43,12 @@ module m_vvacxy
       ! if nmzxy < ncsh, the inhomogenous field cannot be represented.
       ! if nmzxy > ncsh, the boundary condition is wrong - and the
       ! potential is very wavy - try it yourself, if you don't believe.
-      if ( vacuum%nmzxyd < ncsh ) then
-        write (6,*) 'error vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '< ncsh(zsigma) = ', ncsh
-        call judft_error( "error: vacuum%nmzxyd < ncsh", calledby="vvacxy" )
-      else if ( vacuum%nmzxyd > ncsh ) then
-        write (6,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
-        write (0,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
+      if ( vacuum%nmzxy < ncsh ) then
+        write (6,*) 'error vvacxy.f: vacuum%nmzxy =', vacuum%nmzxy, '< ncsh(zsigma) = ', ncsh
+        call judft_error( "error: vacuum%nmzxy < ncsh", calledby="vvacxy" )
+      else if ( vacuum%nmzxy > ncsh ) then
+        write (6,*) 'warning vvacxy.f: vacuum%nmzxy =', vacuum%nmzxy, '> ncsh(zsigma) = ', ncsh
+        write (0,*) 'warning vvacxy.f: vacuum%nmzxy =', vacuum%nmzxy, '> ncsh(zsigma) = ', ncsh
         call judft_warn( "nmzxyd > ncsh", calledby="vvacxy" )
       end if
     end if

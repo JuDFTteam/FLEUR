@@ -85,7 +85,7 @@ CONTAINS
     ENDIF
     ALLOCATE(den%phi_pw(ifft3),den%theta_pw(ifft3))
     ALLOCATE(den%phi_vacz(vacuum%nmz,2),den%theta_vacz(vacuum%nmz,2))
-    ALLOCATE(den%phi_vacxy(ifft2,vacuum%nmzxyd,2),den%theta_vacxy(ifft2,vacuum%nmzxyd,2))
+    ALLOCATE(den%phi_vacxy(ifft2,vacuum%nmzxy,2),den%theta_vacxy(ifft2,vacuum%nmzxy,2))
 
      
     ALLOCATE (ris(ifft3,4),fftwork(ifft3))
@@ -162,13 +162,13 @@ CONTAINS
      !Now the vacuum part starts
 
    
-    ALLOCATE(rvacxy(ifft2,vacuum%nmzxyd,2,4))
+    ALLOCATE(rvacxy(ifft2,vacuum%nmzxy,2,4))
     ALLOCATE (rz(vacuum%nmz,2,2))
     !---> fouriertransform the diagonal part of the density matrix
     !---> in the vacuum, rz & rxy, to real space (rvacxy)
     DO iden = 1,2
        DO ivac = 1,vacuum%nvac
-          DO imz = 1,vacuum%nmzxyd
+          DO imz = 1,vacuum%nmzxy
              rziw = 0.0
              IF (oneD%odi%d1) THEN
                 CALL judft_error("oneD not implemented",calledby="rhodirgen")
@@ -179,14 +179,14 @@ CONTAINS
              ELSE
                 CALL fft2d(stars,rvacxy(:,imz,ivac,iden),fftwork,&
                      den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,1,ivac,iden),&
-                     vacuum%nmzxyd,1)
+                     vacuum%nmzxy,1)
              ENDIF
           ENDDO
        ENDDO
     ENDDO
     !--->    fouriertransform the off-diagonal part of the density matrix
     DO ivac = 1,vacuum%nvac
-       DO imz = 1,vacuum%nmzxyd
+       DO imz = 1,vacuum%nmzxy
           rziw = 0.0
           vz_r = den%vacz(imz,ivac,3)
           vz_i = den%vacz(imz,ivac,4)
@@ -199,7 +199,7 @@ CONTAINS
              !     &               %igf,odl%pgf,odi%nst2)
           ELSE
              CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
-                  vz_r,vz_i,den%vacxy(imz,1,ivac,3),vacuum%nmzxyd,1)
+                  vz_r,vz_i,den%vacxy(imz,1,ivac,3),vacuum%nmzxy,1)
           ENDIF
        ENDDO
     ENDDO
@@ -207,7 +207,7 @@ CONTAINS
     !--->    calculate the four components of the matrix potential on
     !--->    real space mesh
     DO ivac = 1,vacuum%nvac
-       DO imz = 1,vacuum%nmzxyd
+       DO imz = 1,vacuum%nmzxy
           DO imesh = 1,ifft2
              rho_11  = rvacxy(imesh,imz,ivac,1)
              rho_22  = rvacxy(imesh,imz,ivac,2)
@@ -253,7 +253,7 @@ CONTAINS
              den%phi_vacxy(imesh,imz,ivac) = phi
           ENDDO
        ENDDO
-       DO imz = vacuum%nmzxyd+1,vacuum%nmz
+       DO imz = vacuum%nmzxy+1,vacuum%nmz
           rho_11  = den%vacz(imz,ivac,1)
           rho_22  = den%vacz(imz,ivac,2)
           rho_21r = den%vacz(imz,ivac,3)
@@ -301,7 +301,7 @@ CONTAINS
     !--->    Fouriertransform the matrix potential back to reciprocal space
     DO jspin = 1,input%jspins
        DO ivac = 1,vacuum%nvac
-          DO imz = 1,vacuum%nmzxyd
+          DO imz = 1,vacuum%nmzxy
              fftwork=0.0
              IF (oneD%odi%d1) THEN
                 call judft_error("oneD not implemented",calledby="rhodirgen")
@@ -313,7 +313,7 @@ CONTAINS
              ELSE
                 CALL fft2d(stars,rvacxy(:,imz,ivac,jspin),fftwork,&
                      den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,1,ivac,jspin),&
-                     vacuum%nmzxyd,-1)
+                     vacuum%nmzxy,-1)
              END IF
           ENDDO
        ENDDO

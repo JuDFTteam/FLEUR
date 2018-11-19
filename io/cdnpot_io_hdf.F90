@@ -1037,7 +1037,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'nmz',vacuum%nmz)
       CALL io_write_attint0(groupID,'nmzd',vacuum%nmz)
       CALL io_write_attint0(groupID,'nmzxy',vacuum%nmzxy)
-      CALL io_write_attint0(groupID,'nmzxyd',vacuum%nmzxyd)
+      CALL io_write_attint0(groupID,'nmzxyd',vacuum%nmzxy)
       CALL io_write_attint0(groupID,'layerd',vacuum%layerd)
       CALL io_write_attint0(groupID,'layers',vacuum%layers)
       CALL io_write_attint0(groupID,'nvac',vacuum%nvac)
@@ -1339,7 +1339,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'nmz',vacuum%nmz)
       CALL io_read_attint0(groupID,'nmzd',vacuum%nmz)
       CALL io_read_attint0(groupID,'nmzxy',vacuum%nmzxy)
-      CALL io_read_attint0(groupID,'nmzxyd',vacuum%nmzxyd)
+      CALL io_read_attint0(groupID,'nmzxyd',vacuum%nmzxy)
       CALL io_read_attint0(groupID,'layerd',vacuum%layerd)
       CALL io_read_attint0(groupID,'layers',vacuum%layers)
       CALL io_read_attint0(groupID,'nvac',vacuum%nvac)
@@ -2371,7 +2371,7 @@ MODULE m_cdnpot_io_hdf
       jmtdOut = MIN(jmtd,atoms%jmtd)
       ntypeOut = MIN(ntype,atoms%ntype)
       nmzdOut = MIN(nmzd,vacuum%nmz)
-      nmzxydOut = MIN(nmzxyd,vacuum%nmzxyd)
+      nmzxydOut = MIN(nmzxyd,vacuum%nmzxy)
       nlhdOut = MIN(nlhd,latharms%nlhd)
       ng3Out = MIN(ng3,stars%ng3)
       ng2Out = MIN(ng2,stars%ng2)
@@ -2385,7 +2385,7 @@ MODULE m_cdnpot_io_hdf
       IF(atoms%jmtd.NE.jmtd) l_DimChange = .TRUE.
       IF(atoms%ntype.NE.ntype) l_DimChange = .TRUE.
       IF(vacuum%nmz.NE.nmzd) l_DimChange = .TRUE.
-      IF(vacuum%nmzxyd.NE.nmzxyd) l_DimChange = .TRUE.
+      IF(vacuum%nmzxy.NE.nmzxyd) l_DimChange = .TRUE.
       IF(latharms%nlhd.NE.nlhd) l_DimChange = .TRUE.
       IF(stars%ng3.NE.ng3) l_DimChange = .TRUE.
       IF(stars%ng2.NE.ng2) l_DimChange = .TRUE.

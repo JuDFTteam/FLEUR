@@ -38,7 +38,7 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nv2(input%jspins)
     INTEGER, INTENT (IN) :: kvac3(DIMENSION%nv2d,input%jspins)
-    COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxyd,n2d_1-1)
+    COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxy,n2d_1-1)
     COMPLEX, INTENT (OUT):: tddv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: tudv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)

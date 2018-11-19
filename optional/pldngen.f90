@@ -96,10 +96,10 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
    ifft2 = 9*stars%mx1*stars%mx2
 
-   ALLOCATE (qpw(stars%ng3,4),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4),&
-             cdom(stars%ng3),cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxyd,stars%ng2-1,2),&
+   ALLOCATE (qpw(stars%ng3,4),rhtxy(vacuum%nmzxy,stars%ng2-1,2,4),&
+             cdom(stars%ng3),cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxy,stars%ng2-1,2),&
              ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
-             rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4),&
+             rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxy,2,4),&
              rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmz,2,4) )
 
    !---> initialize arrays for the density matrix
@@ -247,28 +247,28 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    IF (input%film) THEN
       DO iden = 1,2
          DO ivac = 1,vacuum%nvac
-            DO imz = 1,vacuum%nmzxyd
+            DO imz = 1,vacuum%nmzxy
                rziw = 0.0
                CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,rht(imz,ivac,iden),&
-                          rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxyd,1)
+                          rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxy,1)
             END DO
          END DO
       END DO
       !--->    fouriertransform the off-diagonal part of the density matrix
       DO ivac = 1,vacuum%nvac
-         DO imz = 1,vacuum%nmzxyd
+         DO imz = 1,vacuum%nmzxy
             rziw = 0.0
             vz_r = REAL(cdomvz(imz,ivac))
             vz_i = AIMAG(cdomvz(imz,ivac))
             CALL fft2d(stars,rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
-                       vz_r,vz_i,cdomvxy(imz,1,ivac),vacuum%nmzxyd,1)
+                       vz_r,vz_i,cdomvxy(imz,1,ivac),vacuum%nmzxy,1)
          END DO
       END DO
 
       !--->    calculate the four components of the matrix potential on
       !--->    real space mesh
       DO ivac = 1,vacuum%nvac
-         DO imz = 1,vacuum%nmzxyd
+         DO imz = 1,vacuum%nmzxy
             DO imesh = 0,ifft2-1
                rho_11  = rvacxy(imesh,imz,ivac,1)
                rho_22  = rvacxy(imesh,imz,ivac,2)
@@ -285,7 +285,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
                rvacxy(imesh,imz,ivac,4) = mz
             END DO
          END DO
-         DO imz = vacuum%nmzxyd+1,vacuum%nmz
+         DO imz = vacuum%nmzxy+1,vacuum%nmz
             rho_11  = rht(imz,ivac,1)
             rho_22  = rht(imz,ivac,2)
             rho_21r = REAL(cdomvz(imz,ivac))
@@ -304,10 +304,10 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
       !--->    Fouriertransform the matrix potential back to reciprocal space
       DO iden = 1,4
          DO ivac = 1,vacuum%nvac
-            DO imz = 1,vacuum%nmzxyd
+            DO imz = 1,vacuum%nmzxy
                fftwork=zero
                CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,rht(imz,ivac,iden),&
-                          rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxyd,-1)
+                          rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxy,-1)
             END DO
          END DO
       END DO

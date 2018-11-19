@@ -67,7 +67,7 @@ CONTAINS
 
     ! -> Collect den%vacxy(:,:,:,jspin)
     IF (input%film) THEN
-       n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
+       n = vacuum%nmzxy*(oneD%odi%n2d-1)*2
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, den%vacxy(:,:,:,jspin), 1)
@@ -376,7 +376,7 @@ CONTAINS
        !
        IF (input%film) THEN
 
-          n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
+          n = vacuum%nmzxy*(oneD%odi%n2d-1)*2
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(den%vacxy(:,:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN

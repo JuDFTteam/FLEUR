@@ -55,7 +55,7 @@ MODULE m_pot_io
 
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmz,2,input%jspins)
 
       ! local variables
@@ -175,7 +175,7 @@ MODULE m_pot_io
       INTEGER, INTENT (IN)      :: archiveType
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
       REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmz,2,input%jspins)
 
       ! local variables
@@ -192,7 +192,7 @@ MODULE m_pot_io
       CHARACTER(LEN=30) :: archiveName
 
       REAL              :: fzTemp(vacuum%nmz,2,input%jspins)
-      COMPLEX           :: fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      COMPLEX           :: fzxyTemp(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
 
       CALL getMode(mode)
 

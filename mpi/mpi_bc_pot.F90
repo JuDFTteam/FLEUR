@@ -23,7 +23,7 @@ CONTAINS
    INTEGER, INTENT (INOUT) :: iter
 
    COMPLEX, INTENT (INOUT) :: fpw(stars%ng3,input%jspins)
-   COMPLEX, INTENT (INOUT) :: fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+   COMPLEX, INTENT (INOUT) :: fzxy(vacuum%nmzxy,stars%ng2-1,2,input%jspins)
    REAL,    INTENT (INOUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
    REAL,    INTENT (INOUT) :: fz(vacuum%nmz,2,input%jspins)
 
@@ -33,7 +33,7 @@ CONTAINS
 
     n = stars%ng3 * input%jspins
     CALL MPI_BCAST(fpw,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-    n = vacuum%nmzxyd * (stars%ng2-1) * 2 * input%jspins
+    n = vacuum%nmzxy * (stars%ng2-1) * 2 * input%jspins
     CALL MPI_BCAST(fzxy,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     n = atoms%jmtd * (sphhar%nlhd+1) * atoms%ntype * input%jspins
     CALL MPI_BCAST(fr,n,MPI_DOUBLE,0,mpi%mpi_comm,ierr)

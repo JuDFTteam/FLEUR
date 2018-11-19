@@ -65,8 +65,8 @@ CONTAINS
     COMPLEX, INTENT (INOUT) :: psq(stars%ng3)
     REAL,    INTENT (IN) :: vz(vacuum%nmz,2) 
     REAL,    INTENT (IN) :: rht(vacuum%nmz,2)
-    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxyd,n2d_1-1,2)
-    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxyd,n2d_1-1,2)
+    COMPLEX, INTENT (IN) :: rhtxy(vacuum%nmzxy,n2d_1-1,2)
+    COMPLEX, INTENT (OUT):: vxy(vacuum%nmzxy,n2d_1-1,2)
     COMPLEX, INTENT (OUT):: vpw(stars%ng3)
 
     !     local
@@ -153,14 +153,14 @@ CONTAINS
 
     !--------- preparations ---------->
 
-    ALLOCATE ( KK(vacuum%nmzxyd),II(vacuum%nmzxyd),III(9*stars%mx1*stars%mx2),&
+    ALLOCATE ( KK(vacuum%nmzxy),II(vacuum%nmzxy),III(9*stars%mx1*stars%mx2),&
          &     IIII(9*stars%mx1*stars%mx3,1:stars%mx3,0:MM),&
          &     rmap(0:3*stars%mx1-1,0:3*stars%mx2-1),rr(1:9*stars%mx1*stars%mx2),&
-         &     fact(vacuum%nmzxyd),val(n2d_1),fJJ(0:MM+1,stars%ng2),&
-         &     val_m(-stars%mx3:stars%mx3,-MM:MM),rxy(vacuum%nmzxyd),iJJ(0:MM+1,1:stars%mx3),&
+         &     fact(vacuum%nmzxy),val(n2d_1),fJJ(0:MM+1,stars%ng2),&
+         &     val_m(-stars%mx3:stars%mx3,-MM:MM),rxy(vacuum%nmzxy),iJJ(0:MM+1,1:stars%mx3),&
          &     vis(0:3*stars%mx1-1,0:3*stars%mx2-1,n2d_1),&
-         &     vis_tot(0:3*stars%mx1-1,0:3*stars%mx2-1),pvac(vacuum%nmzxyd),&
-         &     pint(vacuum%nmzxyd),vis_help(0:3*stars%mx1-1,0:3*stars%mx2-1),&
+         &     vis_tot(0:3*stars%mx1-1,0:3*stars%mx2-1),pvac(vacuum%nmzxy),&
+         &     pint(vacuum%nmzxy),vis_help(0:3*stars%mx1-1,0:3*stars%mx2-1),&
          &     af2(0:9*stars%mx1*stars%mx2-1),bf2(0:9*stars%mx1*stars%mx2-1),vpw_help(stars%ng3) )
 
     ivfft2d = 9*stars%mx1*stars%mx2
@@ -404,7 +404,7 @@ CONTAINS
                       !----- vacuum potential caused by the vacuum density
 
                       CALL vacp5_0(&
-                           &        vacuum%nmzxyd,vacuum%nmzxy,cell%z1,tpi_const,rxy,m,vacuum%delz,&
+                           &        vacuum%nmzxy,vacuum%nmzxy,cell%z1,tpi_const,rxy,m,vacuum%delz,&
                            &        pvac,fact)
 
                       !----- vacuum potential caused by the interstitial density
@@ -454,7 +454,7 @@ CONTAINS
                       !----- the vacuum potential
 
                       CALL visp5_0(&
-                           &        vacuum%nmzxyd,vacuum%nmzxy,vacuum%delz,m,ivfft1,ivfft2,l,&
+                           &        vacuum%nmzxy,vacuum%nmzxy,vacuum%delz,m,ivfft1,ivfft2,l,&
                            &        rxy,ani1,ani2,cell%z1,cell%amat,&
                            &        pvac,pint,tpi_const,input%jspins,val_help,&
                            &        vis_help)
@@ -477,7 +477,7 @@ CONTAINS
                       !----- vacuum potential caused by the vacuum density        
 
                       CALL vacp5_z(&
-                           &        vacuum%nmzxyd,vacuum%nmzxyd,cell%z1,vacuum%delz,fpi_const,II,KK,rxy,m,&
+                           &        vacuum%nmzxy,vacuum%nmzxy,cell%z1,vacuum%delz,fpi_const,II,KK,rxy,m,&
                            &        pvac)
 
                       !----- vacuum potential caused by the intst. density
@@ -516,7 +516,7 @@ CONTAINS
                       val_help = vxy(1,irec1(l)-1,1) - val(irec1(l))
 
                       CALL visp5_z(&
-                           &        vacuum%nmzxyd,vacuum%nmzxyd,vacuum%delz,m,ivfft1,ivfft2,IIIR,&
+                           &        vacuum%nmzxy,vacuum%nmzxy,vacuum%delz,m,ivfft1,ivfft2,IIIR,&
                            &        rxy,ani1,ani2,cell%z1,cell%amat,pvac,pint,tpi_const,l,&
                            &        fpi_const,val_help,III,m1,gz,rmap,rr,&
                            &        vis_help)
