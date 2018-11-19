@@ -92,7 +92,7 @@ CONTAINS
     WRITE(6,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
     ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,input%jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,input%jspins) )
-    ALLOCATE ( rhtdz(vacuum%nmzd,input%jspins),rhtdzz(vacuum%nmzd,input%jspins) )
+    ALLOCATE ( rhtdz(vacuum%nmz,input%jspins),rhtdzz(vacuum%nmz,input%jspins) )
 
     DO ivac=1,vacuum%nvac 
 
@@ -454,7 +454,7 @@ CONTAINS
           nmz0= 1
        END IF
 
-       ALLOCATE ( rhtz(vacuum%nmzd,input%jspins) )
+       ALLOCATE ( rhtz(vacuum%nmz,input%jspins) )
 
        DO ip=nmz0,vacuum%nmz 
           IF (.not. noco%l_noco) THEN
@@ -510,9 +510,9 @@ CONTAINS
 
        !       calculate vxc for z now beyond warping region
        DEALLOCATE ( af2)
-       ALLOCATE ( rhtxc(vacuum%nmzd,input%jspins) )
-       ALLOCATE ( vxcz(vacuum%nmzd,input%jspins) )
-       ALLOCATE ( vxz(vacuum%nmzd,input%jspins) )
+       ALLOCATE ( rhtxc(vacuum%nmz,input%jspins) )
+       ALLOCATE ( vxcz(vacuum%nmz,input%jspins) )
+       ALLOCATE ( vxz(vacuum%nmz,input%jspins) )
 
        DO js=1,input%jspins
           !DO i=0,ifftd2-1

@@ -33,7 +33,7 @@ CONTAINS
     !     ..
     !     .. Array  Arguments ..
     REAL,    INTENT (IN) :: evac(2)
-    REAL,    INTENT (IN) :: vz(:,:)!(vacuum%nmzd,2)
+    REAL,    INTENT (IN) :: vz(:,:)!(vacuum%nmz,2)
     INTEGER, INTENT (OUT) :: gvac1d(:),gvac2d(:) !(dimension%nv2d)
     !     ..
     !     .. Local Scalars

@@ -407,7 +407,7 @@ c-----input file for orbital decomposition
      >      noco%beta,noco%qss,                    ! TODO: adapt if needed
      >      stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,
      >      stars%ng3,
-     >      vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,sphhar%nlhd,stars%ng3,
+     >      vacuum%nmzxyd,vacuum%nmz,atoms%jmtd,sphhar%nlhd,stars%ng3,
      >      vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,
      >      atoms%jri,sphhar%ntypsd,atoms%ntypsy,input%jspins,nkpt,
      >      atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,
@@ -446,7 +446,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
      >      noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,
      >      mpi%irank,
-     >      mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,
+     >      mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmz,atoms%jmtd,
      >      sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,
      >      input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,atoms%ntypsy,
      >      input%jspins,nkpt,atoms%dx,stars%ng2,atoms%rmsh,
@@ -489,7 +489,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
      >      noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,
      >      mpi%irank,
-     >      mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,
+     >      mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmz,atoms%jmtd,
      >      sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,
      >      input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,atoms%ntypsy,
      >      input%jspins,nkpt,atoms%dx,stars%ng2,atoms%rmsh,
@@ -696,7 +696,7 @@ c*********************************************************
 cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
-      allocate ( vz(vacuum%nmzd,2,4) )
+      allocate ( vz(vacuum%nmz,2,4) )
       allocate ( vr(atoms%jmtd,atoms%ntype,input%jspins) )
       allocate ( vso(atoms%jmtd,atoms%nat,2) )
 
@@ -739,7 +739,7 @@ c--->       surfaces of the film
             ENDIF
 c--->       load the non-warping part of the potential
             READ (npotmatfile)
-     +         ((vz(imz,ivac,ipot),imz=1,vacuum%nmzd),ipot=1,4)
+     +         ((vz(imz,ivac,ipot),imz=1,vacuum%nmz),ipot=1,4)
 
             if(.not.oneD%odi%d1)then
             DO ipot = 1,3
@@ -1426,7 +1426,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       if(wann%l_surfcurr)then
 c         call wann_surfcurr_int(
 c     >        DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,vacuum%nmzxyd,stars%ng2,sphhar%ntypsd,
-c     >        atoms%ntype,atoms%lmaxd,atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,stars%ng3,vacuum%nvac,
+c     >        atoms%ntype,atoms%lmaxd,atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmz,atoms%neq,stars%ng3,vacuum%nvac,
 c     >        vacuum%nmz,vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,sym%symor,
 c     >        sym%invs,sym%invs2,cell%z1,vacuum%delz,atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
 c     >        atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,sliceplot%kk,
@@ -1440,7 +1440,7 @@ c     >        surfcurr(:,:,:,ikpt))
      >            DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,
      >            vacuum%nmzxyd,
      >            stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,
-     >            atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,
+     >            atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmz,
      >            atoms%neq,stars%ng3,vacuum%nvac,vacuum%nmz,
      >            vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,
      >            input%film,sliceplot%slice,sym%symor,
@@ -1490,7 +1490,7 @@ c     >        surfcurr(:,:,:,ikpt))
      &       nablamat(:,:,:,ikpt))
          if(input%film.and..not.oneD%odi%d1)then
             call wann_nabla_vac(
-     >          cell%z1,vacuum%nmzd,DIMENSION%nv2d,
+     >          cell%z1,vacuum%nmz,DIMENSION%nv2d,
      >          stars%mx1,stars%mx2,stars%mx3,
      >          stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,
      >   stars%ig2,cell%area,cell%bmat,cell%bbmat,enpara%evac0(:,jspin),
@@ -1616,7 +1616,7 @@ c---> vacuum contribution to mmn0-matrix
 
             call wann_mmk0_vac(
      >           noco%l_noco,nlotot,qpt_i,
-     >           cell%z1,vacuum%nmzd,DIMENSION%nv2d,
+     >           cell%z1,vacuum%nmz,DIMENSION%nv2d,
      >           stars%mx1,stars%mx2,stars%mx3,
      >           stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,
      >           stars%ig2,cell%area,cell%bmat,
@@ -1629,7 +1629,7 @@ c---> vacuum contribution to mmn0-matrix
              call wann_mmk0_od_vac(
      >           DIMENSION, oneD, vacuum, stars, cell,
      >           noco%l_noco,nlotot,
-     >           cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           cell%z1,vacuum%nmzxyd,vacuum%nmz,DIMENSION%nv2d,
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,
      >    oneD%odi%n2d,cell%bbmat,enpara%evac0(1,jspin),bkpt,oneD%odi%M,
@@ -1885,7 +1885,7 @@ c...vacuum contributions
 
            call wann_mmkb_vac(
      >              cmplx_1,noco%l_noco,nlotot,qpt_i,
-     >              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,
+     >              nbnd,cell%z1,vacuum%nmz,DIMENSION%nv2d,
      >              stars%mx1,stars%mx2,stars%mx3,
      >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
      >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
@@ -1904,7 +1904,7 @@ c...vacuum contributions
            call wann_mmkb_od_vac(
      >           DIMENSION,oneD,vacuum,stars,cell,
      >           cmplx_1,noco%l_noco,nlotot,
-     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmz,DIMENSION%nv2d,
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,
      >           vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,
@@ -2256,7 +2256,7 @@ c*******************************************c
         if (input%film .and. .not.oneD%odi%d1) then
            if(wann%l_sgwf) call wann_mmkb_vac(                  
      >              vacchi,noco%l_noco,nlotot,sign_q*2.*bkpt,
-     >              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,
+     >              nbnd,cell%z1,vacuum%nmz,DIMENSION%nv2d,
      >              stars%mx1,stars%mx2,stars%mx3,
      >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
      >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
@@ -2273,7 +2273,7 @@ c*******************************************c
      =              mmnk_q(:,:,iqpt_b,ikpt))
            if(wann%l_socgwf) call wann_mmkb_vac(                    
      >              vacchi,noco%l_noco,nlotot,qpt_i,
-     >              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,
+     >              nbnd,cell%z1,vacuum%nmz,DIMENSION%nv2d,
      >              stars%mx1,stars%mx2,stars%mx3,
      >              stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,
      >              vacuum%delz,stars%ig2,cell%area,cell%bmat,
@@ -2298,7 +2298,7 @@ c*******************************************c
            if(wann%l_sgwf) call wann_mmkb_od_vac(
      >           DIMENSION,oneD,vacuum,stars,cell,
      >           vacchi,noco%l_noco,nlotot,          
-     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmz,DIMENSION%nv2d,
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,
      >           vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,
@@ -2317,7 +2317,7 @@ c*******************************************c
            if(wann%l_socgwf) call wann_mmkb_od_vac(   
      >           DIMENSION,oneD,vacuum,stars,cell,               
      >           vacchi,noco%l_noco,nlotot,          
-     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,
+     >           nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmz,DIMENSION%nv2d,
      >           stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,
      >           stars%ig,vacuum%nmzxy,
      >           vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,
@@ -2379,7 +2379,7 @@ c$$$  3     continue !goto jump no longer needed?
      >        DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,
      >        vacuum%nmzxyd,
      >        stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,
-     >        atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,
+     >        atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmz,atoms%neq,
      >        stars%ng3,vacuum%nvac,vacuum%nmz,vacuum%nmzxy,stars%ng2,
      >        sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,
      >        sym%symor,sym%invs,sym%invs2,cell%z1,vacuum%delz,
@@ -2406,7 +2406,7 @@ c$$$  3     continue !goto jump no longer needed?
      >        DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,
      >        vacuum%nmzxyd,
      >        stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,
-     >        atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,
+     >        atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmz,atoms%neq,
      >        stars%ng3,vacuum%nvac,vacuum%nmz,vacuum%nmzxy,stars%ng2,
      >        sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,
      >        sym%symor,sym%invs,sym%invs2,cell%z1,vacuum%delz,
@@ -2840,7 +2840,7 @@ c************************************************c
      >         sym%invsatnr,nkpt,atoms%taual,atoms%rmt,cell%bbmat,
      >         noco%alph,noco%beta,noco%qss,stars%sk2,stars%phi2,
      >         oneD%ods,
-     >         mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,
+     >         mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmz,
      >         atoms%jmtd,sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,
      >         sym%invs2,sphhar%nlh,atoms%jri,atoms%ntypsy,
      >         sphhar%ntypsd,nkpt,atoms%dx,atoms%rmsh,

@@ -74,7 +74,7 @@ CONTAINS
        DEALLOCATE (c_b)
 
        ! -> Collect den%vacz(:,:,jspin)
-       n = vacuum%nmzd*2
+       n = vacuum%nmz*2
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(den%vacz(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, den%vacz(:,:,jspin), 1)
@@ -384,7 +384,7 @@ CONTAINS
           ENDIF
           DEALLOCATE (c_b)
           !
-          n = vacuum%nmzd*2*2
+          n = vacuum%nmz*2*2
           ALLOCATE(r_b(n))
           CALL MPI_REDUCE(den%vacz(:,:,3:4),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN

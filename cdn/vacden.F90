@@ -72,7 +72,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT(IN)     :: evac(2,input%jspins)
     REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
-    REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
+    REAL                    :: vz(vacuum%nmz,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
     REAL,    INTENT (IN)    :: eig(DIMENSION%neigd)
     !     local STM variables
@@ -139,24 +139,24 @@ CONTAINS
     CALL timestart("vacden")
 
     ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,input%jspins),bc(DIMENSION%nv2d,DIMENSION%neigd,input%jspins),dt(DIMENSION%nv2d),&
-         &           dte(DIMENSION%nv2d),du(vacuum%nmzd),ddu(vacuum%nmzd,DIMENSION%nv2d),due(vacuum%nmzd),&
-         &           ddue(vacuum%nmzd,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
-         &           tei(DIMENSION%nv2d,input%jspins),u(vacuum%nmzd,DIMENSION%nv2d,input%jspins),ue(vacuum%nmzd,DIMENSION%nv2d,input%jspins),&
-         &           v(3),yy(vacuum%nmzd))
+         &           dte(DIMENSION%nv2d),du(vacuum%nmz),ddu(vacuum%nmz,DIMENSION%nv2d),due(vacuum%nmz),&
+         &           ddue(vacuum%nmz,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
+         &           tei(DIMENSION%nv2d,input%jspins),u(vacuum%nmz,DIMENSION%nv2d,input%jspins),ue(vacuum%nmz,DIMENSION%nv2d,input%jspins),&
+         &           v(3),yy(vacuum%nmz))
     IF (oneD%odi%d1) THEN
        ALLOCATE (      ac_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,input%jspins),&
             &                  bc_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,input%jspins),&
             &                  dt_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                 dte_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                  du_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
-            &            ddu_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                 due_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
-            &           ddue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
+            &                  du_1(vacuum%nmz,-oneD%odi%mb:oneD%odi%mb),&
+            &            ddu_1(vacuum%nmz,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
+            &                 due_1(vacuum%nmz,-oneD%odi%mb:oneD%odi%mb),&
+            &           ddue_1(vacuum%nmz,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                   t_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                  te_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                 tei_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
-            &              u_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
-            &             ue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins) )
+            &              u_1(vacuum%nmz,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
+            &             ue_1(vacuum%nmz,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins) )
     END IF ! oneD%odi%d1
     !
 

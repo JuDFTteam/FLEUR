@@ -9,7 +9,7 @@
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_stars),INTENT(IN)   :: stars
       TYPE(t_cell),INTENT(IN)   :: cell
-      REAL,    INTENT(IN) :: rht(vacuum%nmzd,2)
+      REAL,    INTENT(IN) :: rht(vacuum%nmz,2)
       COMPLEX, INTENT(IN) :: psq(stars%ng3)
 
       INTEGER  ivfft,i,j,k

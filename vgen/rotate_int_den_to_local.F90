@@ -84,7 +84,7 @@ CONTAINS
        DEALLOCATE(den%theta_pw,den%theta_vacz,den%theta_vacxy)
     ENDIF
     ALLOCATE(den%phi_pw(ifft3),den%theta_pw(ifft3))
-    ALLOCATE(den%phi_vacz(vacuum%nmzd,2),den%theta_vacz(vacuum%nmzd,2))
+    ALLOCATE(den%phi_vacz(vacuum%nmz,2),den%theta_vacz(vacuum%nmz,2))
     ALLOCATE(den%phi_vacxy(ifft2,vacuum%nmzxyd,2),den%theta_vacxy(ifft2,vacuum%nmzxyd,2))
 
      
@@ -163,7 +163,7 @@ CONTAINS
 
    
     ALLOCATE(rvacxy(ifft2,vacuum%nmzxyd,2,4))
-    ALLOCATE (rz(vacuum%nmzd,2,2))
+    ALLOCATE (rz(vacuum%nmz,2,2))
     !---> fouriertransform the diagonal part of the density matrix
     !---> in the vacuum, rz & rxy, to real space (rvacxy)
     DO iden = 1,2
@@ -253,7 +253,7 @@ CONTAINS
              den%phi_vacxy(imesh,imz,ivac) = phi
           ENDDO
        ENDDO
-       DO imz = vacuum%nmzxyd+1,vacuum%nmzd
+       DO imz = vacuum%nmzxyd+1,vacuum%nmz
           rho_11  = den%vacz(imz,ivac,1)
           rho_22  = den%vacz(imz,ivac,2)
           rho_21r = den%vacz(imz,ivac,3)

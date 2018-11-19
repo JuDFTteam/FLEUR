@@ -60,7 +60,7 @@ CONTAINS
    END IF
 
    IF (l_vaczAlloc) THEN
-      n = vacuum%nmzd * 2 * SIZE(potden%vacz,3)
+      n = vacuum%nmz * 2 * SIZE(potden%vacz,3)
       CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
       n = vacuum%nmzxyd * (stars%ng2-1) * 2 * SIZE(potden%vacxy,4)

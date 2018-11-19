@@ -151,10 +151,10 @@
           IF (sym%zrfs .OR. sym%invs) vacuum%nvac = 1
           IF (oneD%odd%d1) vacuum%nvac = 1
           cell%z1 = vacuum%dvac/2
-          vacuum%nmz = vacuum%nmzd
+          vacuum%nmz = vacuum%nmz
           vacuum%delz = 25.0/vacuum%nmz
           IF (oneD%odd%d1) vacuum%delz = 20.0/vacuum%nmz
-          IF (vacuum%nmz>vacuum%nmzd)  CALL juDFT_error("nmzd",calledby ="inped")
+          IF (vacuum%nmz>vacuum%nmz)  CALL juDFT_error("nmzd",calledby ="inped")
           vacuum%nmzxy = vacuum%nmzxyd
           IF (vacuum%nmzxy>vacuum%nmzxyd)  CALL juDFT_error("nmzxyd",calledby ="inped")
           a1(:) = input%scaleCell*a1(:)

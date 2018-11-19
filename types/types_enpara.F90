@@ -435,7 +435,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
 
     REAL,    INTENT(IN) :: vr(:,:,:)
-    REAL,    INTENT(IN) :: vz(vacuum%nmzd,2)
+    REAL,    INTENT(IN) :: vz(vacuum%nmz,2)
 
     INTEGER ityp,j,l,lo,jsp,n
     REAL    vbar,maxdist,maxdist2

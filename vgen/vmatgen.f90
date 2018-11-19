@@ -154,7 +154,7 @@ CONTAINS
                 vvacxy(imeshpt,imz,ivac,4) = beff*SIN(theta)*SIN(phi)
              ENDDO
           ENDDO
-          DO imz = vacuum%nmzxyd+1,vacuum%nmzd
+          DO imz = vacuum%nmzxyd+1,vacuum%nmz
              vup   = vTot%vacz(imz,ivac,1)
              vdown = vTot%vacz(imz,ivac,2)
              theta = den%theta_vacz(imz,ivac)

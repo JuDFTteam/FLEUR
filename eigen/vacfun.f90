@@ -37,7 +37,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxyd,stars%ng2-1)
     COMPLEX, INTENT (OUT):: tddv(dimension%nv2d,dimension%nv2d),tduv(dimension%nv2d,dimension%nv2d)
     COMPLEX, INTENT (OUT):: tudv(dimension%nv2d,dimension%nv2d),tuuv(dimension%nv2d,dimension%nv2d)
-    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4) ,evac(2,input%jspins)
+    REAL,    INTENT (IN) :: vz(vacuum%nmz,2,4) ,evac(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3) 
     REAL,    INTENT (OUT):: udz(dimension%nv2d,input%jspins),uz(dimension%nv2d,input%jspins)
     REAL,    INTENT (OUT):: dudz(dimension%nv2d,input%jspins),duz(dimension%nv2d,input%jspins)
@@ -50,8 +50,8 @@ CONTAINS
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
-    REAL u(vacuum%nmzd,dimension%nv2d,input%jspins),ud(vacuum%nmzd,dimension%nv2d,input%jspins)
-    REAL v(3),x(vacuum%nmzd), qssbti(2,2)
+    REAL u(vacuum%nmz,dimension%nv2d,input%jspins),ud(vacuum%nmz,dimension%nv2d,input%jspins)
+    REAL v(3),x(vacuum%nmz), qssbti(2,2)
     !     ..
     tail = .true.
     np1 = vacuum%nmzxy + 1
@@ -69,7 +69,7 @@ CONTAINS
           v(2) = bkpt(2) + kvac2(ik,jspin) + qssbti(2,jspin)
           v(3) = 0.0
           ev = evac(ivac,jspin) - 0.5*dot_product(v,matmul(v,cell%bbmat))
-          vzero = vz(vacuum%nmzd,ivac,jspin)
+          vzero = vz(vacuum%nmz,ivac,jspin)
           CALL vacuz(ev,vz(1,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
                uz(ik,jspin),duz(ik,jspin),u(1,ik,jspin))
           CALL vacudz(ev,vz(1,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&

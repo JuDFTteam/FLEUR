@@ -41,7 +41,7 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: vxy(vacuum%nmzxyd,n2d_1-1,2)
     INTEGER, INTENT (OUT):: nv2(input%jspins)
-    REAL,    INTENT (INOUT) :: vz(vacuum%nmzd,2,4)
+    REAL,    INTENT (INOUT) :: vz(vacuum%nmz,2,4)
     REAL,    INTENT (IN) :: evac(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3)
 
@@ -127,7 +127,7 @@ CONTAINS
 
     IF (noco%l_noco) THEN
        !--->         load the non-warping part of the potential
-       READ (25)((vz(imz,ivac,ipot),imz=1,vacuum%nmzd),ipot=1,4)
+       READ (25)((vz(imz,ivac,ipot),imz=1,vacuum%nmz),ipot=1,4)
        npot = 3
     ENDIF
 

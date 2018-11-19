@@ -28,7 +28,7 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
     COMPLEX, INTENT (IN) :: alphm(stars%ng2,2)
-    REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)  
+    REAL,    INTENT (IN) :: vz(:,:) !(vacuum%nmz,2,jspins)  
 
     COMPLEX argr,sumrr,vcons1,test,c_ph
     REAL bj0,dh,fit,g,g3,q,qdh,signz,vcons2,zf

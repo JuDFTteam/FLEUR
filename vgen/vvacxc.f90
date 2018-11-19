@@ -45,8 +45,8 @@ CONTAINS
     REAL    :: v_xc(0:ifftd2-1,input%jspins),e_xc(0:ifftd2-1)
     REAL    :: v_x (0:ifftd2-1,input%jspins)
     !     beyond warping region
-    REAL    :: vxcz(vacuum%nmzd,input%jspins)
-    REAL    :: vxz (vacuum%nmzd,input%jspins)
+    REAL    :: vxcz(vacuum%nmz,input%jspins)
+    REAL    :: vxz (vacuum%nmz,input%jspins)
 
     IF (noco%l_noco) THEN
        ALLOCATE (mx(0:ifftd2-1),my(0:ifftd2-1)) 

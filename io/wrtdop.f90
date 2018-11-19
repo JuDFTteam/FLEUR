@@ -26,7 +26,7 @@
           !     ..
           !     .. Array Arguments ..
           COMPLEX, INTENT (IN):: fpw(stars%ng3,input%jspins),fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-          REAL,    INTENT (IN):: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),fz(vacuum%nmzd,2,input%jspins)
+          REAL,    INTENT (IN):: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),fz(vacuum%nmz,2,input%jspins)
           CHARACTER(len=8):: dop,iop,name(10)
           !     .. Local Scalars ..
           INTEGER i,ivac,izn,jsp,k,lh,n,na

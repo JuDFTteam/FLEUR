@@ -33,7 +33,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmzd,2,4)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),vz(vacuum%nmz,2,4)
     REAL :: el(0:atoms%lmaxd,atoms%ntype,input%jspins) 
     REAL :: evac(2,input%jspins),ello(atoms%nlod,atoms%ntype,input%jspins)
 

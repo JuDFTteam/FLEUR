@@ -88,7 +88,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%layerd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%nmzxyd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(vacuum%nmzd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(vacuum%nmz,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%k3,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%M,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%mb,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)

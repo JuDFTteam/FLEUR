@@ -32,7 +32,7 @@ CONTAINS
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
-    REAL dpj(atoms%jmtd),dpz(vacuum%nmzd)
+    REAL dpj(atoms%jmtd),dpz(vacuum%nmz)
     !     ..
     !     ..
     !     -----> CALCULATE DENSITY-POTENTIAL INTEGRALS

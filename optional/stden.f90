@@ -72,7 +72,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
    ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,input%jspins),rh1(DIMENSION%msh,atoms%ntype,input%jspins) )
-   ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
+   ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmz) )
    ALLOCATE ( rhoss(DIMENSION%msh,input%jspins) )
 
    rh = 0.0

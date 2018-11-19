@@ -45,7 +45,7 @@ contains
     logical,            intent(in)  :: l_xyav
     complex,            intent(in)  :: qpw(stars%ng3) 
     real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
-    real,               intent(in)  :: rht(vacuum%nmzd,2)
+    real,               intent(in)  :: rht(vacuum%nmz,2)
     integer,            intent(in)  :: potdenType
     complex,            intent(out) :: psq(stars%ng3)
 
@@ -54,7 +54,7 @@ contains
     integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz
     complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    real                            :: q2(vacuum%nmzd)
+    real                            :: q2(vacuum%nmz)
     real                            :: pn(0:atoms%lmaxd,atoms%ntype)
     real                            :: aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
     real                            :: rht1(vacuum%nmz)

@@ -183,7 +183,7 @@ CONTAINS
 
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
                             atoms%n_u,jspins,nocoExtraDim,potden_type,&
-                            vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+                            vacuum%nmz,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
   SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,jspins,nocoExtraDim,potden_type,nmzd,nmzxyd,n2d)

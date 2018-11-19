@@ -536,7 +536,7 @@ MODULE m_cdn_io
             vacuumTemp%nmzxyd = vacuum%nmzxyd
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
-            vacuumTemp%nmzd = vacuum%nmzd
+            vacuumTemp%nmzd = vacuum%nmz
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
@@ -565,7 +565,7 @@ MODULE m_cdn_io
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
             ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
             ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
-            ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
+            ALLOCATE (fzTemp(vacuum%nmz,2,input%jspins))
 
             !--->    generate name of file to hold the results of this iteration
             d1 = MOD(den%iter,10)
@@ -599,7 +599,7 @@ MODULE m_cdn_io
             vacuumTemp%nmzxyd = vacuum%nmzxyd
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
-            vacuumTemp%nmzd = vacuum%nmzd
+            vacuumTemp%nmzd = vacuum%nmz
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
@@ -622,7 +622,7 @@ MODULE m_cdn_io
             ALLOCATE (fpwTemp(stars%ng3,input%jspins))
             ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
             ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
-            ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
+            ALLOCATE (fzTemp(vacuum%nmz,2,input%jspins))
 
             CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
                         iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)

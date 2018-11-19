@@ -90,7 +90,7 @@ CONTAINS
     !      ENDIF
 #endif
     dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-    vacuum%nmzd = 250
+    vacuum%nmz = 250
     vacuum%nmzxyd = 100
 
 

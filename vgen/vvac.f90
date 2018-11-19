@@ -22,14 +22,14 @@ module m_vvac
     type(t_input),  intent(in)    :: input
     type(t_field),  intent(inout) :: field ! efield is modified here
 
-    real,           intent(in)    :: rht(vacuum%nmzd,2) 
+    real,           intent(in)    :: rht(vacuum%nmz,2) 
     complex,        intent(in)    :: psq(stars%ng3)
-    real,           intent(out)   :: vz(vacuum%nmzd,2)
+    real,           intent(out)   :: vz(vacuum%nmz,2)
 
     complex                       :: sumq, vcons
     real                          :: bj0, bj1, dh, qzh, sigmaa(2)
     integer                       :: ig3, imz, ivac, ncsh
-    real                          :: f(vacuum%nmzd), sig(vacuum%nmzd), vtemp(vacuum%nmzd)
+    real                          :: f(vacuum%nmz), sig(vacuum%nmz), vtemp(vacuum%nmz)
     intrinsic cos, sin
 
 

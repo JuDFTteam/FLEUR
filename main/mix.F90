@@ -103,14 +103,14 @@ contains
       if ( sym%invs2 ) vacfac = 1.0
 
       mmaph = intfac * stars%ng3 + atoms%ntype * ( sphhar%nlhd + 1 ) * atoms%jmtd + &
-              vacfac * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
+              vacfac * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmz * vacuum%nvac
       mmap  = mmaph * input%jspins
       !in a non-collinear calculations extra space is needed for the
       !off-diag. part of the density matrix. these coeff. are generally
       !complex independ of invs and invs2.
       if ( noco%l_noco ) then
          mmap = mmap + 2 * stars%ng3 + 2 * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + &
-                2 * vacuum%nmzd * vacuum%nvac
+                2 * vacuum%nmz * vacuum%nvac
       end if
 
       ! LDA+U (start)

@@ -97,10 +97,10 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    ifft2 = 9*stars%mx1*stars%mx2
 
    ALLOCATE (qpw(stars%ng3,4),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4),&
-             cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,stars%ng2-1,2),&
+             cdom(stars%ng3),cdomvz(vacuum%nmz,2),cdomvxy(vacuum%nmzxyd,stars%ng2-1,2),&
              ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
              rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4),&
-             rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmzd,2,4) )
+             rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmz,2,4) )
 
    !---> initialize arrays for the density matrix
    rho(:,:,:,:) = zero ; qpw(:,:) = czero ; cdom(:) = czero
@@ -285,7 +285,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
                rvacxy(imesh,imz,ivac,4) = mz
             END DO
          END DO
-         DO imz = vacuum%nmzxyd+1,vacuum%nmzd
+         DO imz = vacuum%nmzxyd+1,vacuum%nmz
             rho_11  = rht(imz,ivac,1)
             rho_22  = rht(imz,ivac,2)
             rho_21r = REAL(cdomvz(imz,ivac))

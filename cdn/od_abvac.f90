@@ -38,13 +38,13 @@ CONTAINS
 
     INTEGER, INTENT (in) :: kvac3(DIMENSION%nv2d)
     REAL,    INTENT (in) :: bkpt(3),qssbti 
-    REAL,    INTENT (in) :: vz(vacuum%nmzd) 
+    REAL,    INTENT (in) :: vz(vacuum%nmz) 
     REAL,    INTENT (out):: udz(DIMENSION%nv2d,-vM:vM)
     REAL,    INTENT (out):: uz(DIMENSION%nv2d,-vM:vM)
     REAL,    INTENT (out):: dudz(DIMENSION%nv2d,-vM:vM)
     REAL,    INTENT (out):: duz(DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: u(vacuum%nmzd,DIMENSION%nv2d,-vM:vM)
-    REAL,    INTENT (out):: ud(vacuum%nmzd,DIMENSION%nv2d,-vM:vM)
+    REAL,    INTENT (out):: u(vacuum%nmz,DIMENSION%nv2d,-vM:vM)
+    REAL,    INTENT (out):: ud(vacuum%nmz,DIMENSION%nv2d,-vM:vM)
     REAL,    INTENT (out):: ddnv(DIMENSION%nv2d,-vM:vM)
     !     ..local scalars..
     REAL ev,scale,xv,yv,vzero,v1
@@ -53,9 +53,9 @@ CONTAINS
     !     .. local arrays..
     REAL wdz(DIMENSION%nv2d,-vM:vM),wz(DIMENSION%nv2d,-vM:vM)
     REAL dwdz(DIMENSION%nv2d,-vM:vM),dwz(DIMENSION%nv2d,-vM:vM)
-    REAL v(3),x(vacuum%nmzd)
-    REAL  vr0(vacuum%nmzd)
-    REAL w(vacuum%nmzd,DIMENSION%nv2d,-vM:vM),wd(vacuum%nmzd,DIMENSION%nv2d,-vM:vM)
+    REAL v(3),x(vacuum%nmz)
+    REAL  vr0(vacuum%nmz)
+    REAL w(vacuum%nmz,DIMENSION%nv2d,-vM:vM),wd(vacuum%nmz,DIMENSION%nv2d,-vM:vM)
 
     !     wronksian for the schrodinger equation given by an identity
 

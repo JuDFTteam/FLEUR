@@ -48,7 +48,7 @@ CONTAINS
     l_pot = .FALSE.
     IF (PRESENT(lpot)) l_pot = lpot ! for potential mixing
 
-    ALLOCATE (g(mmap),wght(vacuum%nmzd),ag3(stars%ng3),fg3(stars%ng3))
+    ALLOCATE (g(mmap),wght(vacuum%nmz),ag3(stars%ng3),fg3(stars%ng3))
     g = 0.0
 
     imap = 2 * stars%ng3 ! complex values without invs

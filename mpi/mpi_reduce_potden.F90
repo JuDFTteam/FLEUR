@@ -60,7 +60,7 @@ CONTAINS
 
     ! reduce vacz
     if( allocated( potden%vacz ) ) then
-      n = vacuum%nmzd * 2 * size( potden%vacz, 3 )
+      n = vacuum%nmz * 2 * size( potden%vacz, 3 )
       allocate( r_b(n) )
       call MPI_REDUCE( potden%vacz, r_b, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, mpi%mpi_comm, ierr )
       if( mpi%irank == 0 ) call CPP_BLAS_scopy( n, r_b, 1, potden%vacz, 1 )

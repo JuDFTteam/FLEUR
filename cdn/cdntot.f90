@@ -35,7 +35,7 @@ CONTAINS
       INTEGER i,ivac,j,jspin,n,nz
 !     ..
 !     .. Local Arrays ..
-      REAL qmt(atoms%ntype),qvac(2),q2(vacuum%nmz),rht1(vacuum%nmzd,2,input%jspins)
+      REAL qmt(atoms%ntype),qvac(2),q2(vacuum%nmz),rht1(vacuum%nmz,2,input%jspins)
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
 !     ..

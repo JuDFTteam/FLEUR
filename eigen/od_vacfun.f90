@@ -43,7 +43,7 @@ CONTAINS
     COMPLEX, INTENT (OUT):: tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: tudv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX, INTENT (OUT):: tuuv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d)
-    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4) ,evac(2,input%jspins)
+    REAL,    INTENT (IN) :: vz(vacuum%nmz,2,4) ,evac(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3) 
     REAL,    INTENT (OUT):: udz(-vM:vM,DIMENSION%nv2d,input%jspins),uz(-vM:vM,DIMENSION%nv2d,input%jspins)
     REAL,    INTENT (OUT):: dudz(-vM:vM,DIMENSION%nv2d,input%jspins)
@@ -59,10 +59,10 @@ CONTAINS
     !     .. Local Arrays ..
     REAL wdz(-vM:vM,DIMENSION%nv2d,input%jspins),wz(-vM:vM,DIMENSION%nv2d,input%jspins)
     REAL dwdz(-vM:vM,DIMENSION%nv2d,input%jspins),dwz(-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL u(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins),ud(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins)
-    REAL v(3),x(vacuum%nmzd)
-    REAL vr0(vacuum%nmzd,2,4)
-    REAL w(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins),wd(vacuum%nmzd,-vM:vM,DIMENSION%nv2d,input%jspins)
+    REAL u(vacuum%nmz,-vM:vM,DIMENSION%nv2d,input%jspins),ud(vacuum%nmz,-vM:vM,DIMENSION%nv2d,input%jspins)
+    REAL v(3),x(vacuum%nmz)
+    REAL vr0(vacuum%nmz,2,4)
+    REAL w(vacuum%nmz,-vM:vM,DIMENSION%nv2d,input%jspins),wd(vacuum%nmz,-vM:vM,DIMENSION%nv2d,input%jspins)
     REAL qssbti(2)
     !     ..
 
@@ -92,12 +92,12 @@ CONTAINS
              v(3) = bkpt(3) + kvac3(ik,jspin) + qssbti(jspin)
              ev = evac(ivac,jspin) - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
              !     constructing of the 'pseudopotential'
-             DO  i=1,vacuum%nmzd
+             DO  i=1,vacuum%nmz
                 v1 = 1./(8.*((cell%z1+(i-1)*vacuum%delz)**2))&
                      -(m*m)/(2.*((cell%z1+(i-1)*vacuum%delz)**2))
                 vr0(i,ivac,jspin) = vz(i,ivac,jspin)-v1
              ENDDO
-             vzero = vr0(vacuum%nmzd,ivac,jspin)
+             vzero = vr0(vacuum%nmz,ivac,jspin)
              !     obtaining solutions with the 'pseudopotential'
 
              CALL vacuz(ev,vr0(:,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&

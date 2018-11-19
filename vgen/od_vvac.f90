@@ -29,15 +29,15 @@ CONTAINS
 
 
     COMPLEX, INTENT (IN) :: psq(stars%ng3)
-    REAL,    INTENT (IN) :: rht(:,:) !(vacuum%nmzd,2)
-    REAL,    INTENT (OUT) :: vz(:,:) !(vacuum%nmzd,2)
+    REAL,    INTENT (IN) :: rht(:,:) !(vacuum%nmz,2)
+    REAL,    INTENT (OUT) :: vz(:,:) !(vacuum%nmz,2)
 
     COMPLEX  rhobar
     INTEGER  k1,k2,irec3,irec2,i,j,ivac,imz,imz1
-    REAL     g2 ,a(vacuum%nmzd)
+    REAL     g2 ,a(vacuum%nmz)
     REAL     fJ,z,zp,phi
-    REAL     rht1(vacuum%nmzd)
-    REAL     f2(vacuum%nmzd),f22(vacuum%nmzd)
+    REAL     rht1(vacuum%nmz)
+    REAL     f2(vacuum%nmz),f22(vacuum%nmz)
 
     INTRINSIC cmplx
 
