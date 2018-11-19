@@ -83,7 +83,7 @@
       ENDIF
       ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
      &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
-     &          qlay(dimension%neigd,vacuum%layerd,2))
+     &          qlay(dimension%neigd,vacuum%layers,2))
       IF (l_mcd) THEN 
          ALLOCATE(mcd_local(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
       ELSE

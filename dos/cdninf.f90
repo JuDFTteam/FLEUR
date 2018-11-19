@@ -47,10 +47,10 @@ CONTAINS
     INTEGER,INTENT(IN):: ikpt,jspin ,nbands 
     !
     !     STM Arguments
-    COMPLEX, INTENT (IN) ::qstars(:,:,:,:) !(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
+    COMPLEX, INTENT (IN) ::qstars(:,:,:,:) !(vacuum%nstars,DIMENSION%neigd,vacuum%layers,2)
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: qvlay(:,:,:) !DIMENSION%neigd,vacuum%layerd,2)
+    REAL,    INTENT (IN) :: qvlay(:,:,:) !DIMENSION%neigd,vacuum%layers,2)
     REAL,    INTENT (IN) :: qis(:,:,:)!(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd) 
     REAL,    INTENT (IN) :: qvac(:,:,:,:) !(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
     REAL,    INTENT (IN) :: bkpt(3)

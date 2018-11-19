@@ -195,7 +195,7 @@ CONTAINS
     CALL MPI_BCAST(sym%invarind,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%invtab,sym%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%invsatnr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(vacuum%izlay,vacuum%layerd*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(vacuum%izlay,vacuum%layers*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
  
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(field%efield%sig_b,2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)

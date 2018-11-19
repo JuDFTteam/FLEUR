@@ -91,7 +91,7 @@
 !
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
-      CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
+      CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layers,&
                         input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
@@ -100,7 +100,7 @@
      & atoms%lmax(atoms%ntype),atoms%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
      & atoms%rmt(atoms%ntype),atoms%zatom(atoms%ntype),atoms%jri(atoms%ntype),atoms%dx(atoms%ntype), &
      & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),&
-     & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%ncst(atoms%ntype),atoms%lnonsph(atoms%ntype),&
+     & noel(atoms%ntype),vacuum%izlay(vacuum%layers,2),atoms%ncst(atoms%ntype),atoms%lnonsph(atoms%ntype),&
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
      & atoms%l_geo(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
@@ -349,7 +349,7 @@
 ! now proceed as usual
 !
       CALL inpeig_dim(input,obsolete,cell,noco,oneD,kpts,dimension,stars)
-      vacuum%layerd = max(vacuum%layerd,1)
+      vacuum%layers = max(vacuum%layers,1)
       dimension%nstd = max(dimension%nstd,30)
       atoms%ntype = atoms%ntype
       IF (noco%l_noco) dimension%neigd = 2*dimension%neigd

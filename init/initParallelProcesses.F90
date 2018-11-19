@@ -86,7 +86,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%ntet,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(vacuum%layerd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(vacuum%layers,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%nmzxy,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%nmz,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%k3,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -151,7 +151,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
       ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
 
-      ALLOCATE(vacuum%izlay(vacuum%layerd,2))
+      ALLOCATE(vacuum%izlay(vacuum%layers,2))
 
       ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
       ALLOCATE(stars%ig2(stars%ng3))

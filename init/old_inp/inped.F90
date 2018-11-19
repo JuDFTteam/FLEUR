@@ -464,7 +464,7 @@
 
           WRITE (6,'(a7,l1)') 'swsp = ',input%swsp
           WRITE (6,'(15f6.2)') (atoms%bmu(i),i=1,atoms%ntype)
-          IF (vacuum%layers>vacuum%layerd)  CALL juDFT_error("too many layers",calledby ="inped")
+          IF (vacuum%layers>vacuum%layers)  CALL juDFT_error("too many layers",calledby ="inped")
           IF (sliceplot%slice) THEN
              input%cdinf = .FALSE.
              WRITE (6,FMT=8390) sliceplot%kk,sliceplot%e1s,sliceplot%e2s

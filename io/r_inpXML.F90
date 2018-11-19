@@ -1845,8 +1845,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             vacuum%nstm = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
             vacuum%tworkf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
          END IF
-         vacuum%layerd = vacuum%layers
-         ALLOCATE(vacuum%izlay(vacuum%layerd,2))
+         vacuum%layers = vacuum%layers
+         ALLOCATE(vacuum%izlay(vacuum%layers,2))
 
          ! Read in optional chargeDensitySlicing parameters
 
