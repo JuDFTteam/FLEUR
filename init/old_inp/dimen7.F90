@@ -125,8 +125,8 @@
          CALL inpnoco(atoms,input,vacuum,noco)
       ENDIF
 
-      vacuum%nvacd = 2
-      IF (sym%zrfs .OR. sym%invs .OR. oneD%odd%d1) vacuum%nvacd = 1
+      vacuum%nvac = 2
+      IF (sym%zrfs .OR. sym%invs .OR. oneD%odd%d1) vacuum%nvac = 1
       atoms%llod  = 0
       atoms%lmaxd = 0
       atoms%jmtd  = 0

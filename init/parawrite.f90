@@ -53,7 +53,7 @@
  8130 FORMAT (6x,'parameter (lmaxd=',i2,')')
 
       WRITE (6,'(6x,''Number of spins and vacua'')')
-      WRITE (6,8140) input%jspins,vacuum%nvacd
+      WRITE (6,8140) input%jspins,vacuum%nvac
 
  8140 FORMAT (6x,'parameter (jspd=',i1,',nvacd=',i1,')')
 
