@@ -30,7 +30,7 @@ CONTAINS
     !
     OPEN (741,file='fleur2tddft.dat',&
          &         form='unformatted',status='unknown')
-    WRITE (741)  sphhar%memd,atoms%lmaxd,dimension%nspd,sphhar%nlhd,atoms%ntype,sym%nsymt
+    WRITE (741)  sphhar%memd,atoms%lmaxd,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1),sphhar%nlhd,atoms%ntype,sym%nsymt
     WRITE (741) input%jspins,stars%ng3,stars%ng2,vacuum%nmzxy,vacuum%nmz,atoms%jmtd,&
          &          input%jspins,stars%ng3,stars%ng2,vacuum%nvac,atoms%ntype,sphhar%ntypsd,atoms%nat,&
          &          sym%invs,sym%invs2,input%film

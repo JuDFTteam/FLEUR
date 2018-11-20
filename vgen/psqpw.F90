@@ -56,7 +56,7 @@ contains
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     real                            :: q2(vacuum%nmz)
     real                            :: pn(0:atoms%lmaxd,atoms%ntype)
-    real                            :: aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
+    real                            :: aj(0:atoms%lmaxd+ncvd_dim+1)
     real                            :: rht1(vacuum%nmz)
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)

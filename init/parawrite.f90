@@ -82,7 +82,7 @@
  8200 FORMAT(6x,'parameter (msh=',i4,',nstd=',i2,')')
 
       WRITE (6,'(6x,''Max. l-value for pseudocharge exp.'')')
-      WRITE (6,8210) dimension%ncvd
+      WRITE (6,8210) 25             
 
  8210 FORMAT (6x,'parameter (ncvd=',i3,')')
 

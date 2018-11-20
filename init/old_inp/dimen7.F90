@@ -55,7 +55,7 @@
 !
 !-------------------------------------------------------------------
 ! ..  Local Scalars ..
-      REAL   :: thetad,xa,epsdisp,epsforce ,rmtmax,arltv1,arltv2,arltv3   
+      REAL   :: thetad,xa,epsdisp,epsforce ,arltv1,arltv2,arltv3   
       REAL   :: s,r,d ,idsprs
       INTEGER :: ok,ilo,n,nstate,i,j,na,n1,n2,jrc,nopd,symfh
       INTEGER :: nmopq(3)
@@ -130,12 +130,10 @@
       atoms%llod  = 0
       atoms%lmaxd = 0
       atoms%jmtd  = 0
-      rmtmax      = 0.0
       dimension%neigd = 0
       dimension%nstd  = maxval(atoms%ncst)
       atoms%lmaxd = maxval(atoms%lmax)
       atoms%jmtd  = maxval(atoms%jri)
-      rmtmax      = maxval(atoms%rmt)
       DO n = 1,atoms%ntype
         DO ilo = 1,atoms%nlo(n)
 !+apw
@@ -167,8 +165,6 @@
       IF (noco%l_soc .and. noco%l_ss) dimension%neigd=(3*dimension%neigd)/2  
        ! not as accurate, but saves much time
 
-      rmtmax = rmtmax*stars%gmax
-      CALL convn_dim(rmtmax,dimension%ncvd)
 !
 ! determine core mesh
 !
