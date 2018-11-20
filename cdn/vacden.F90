@@ -683,7 +683,7 @@ CONTAINS
                       !
                       !     ----> either integrated LDOS(z1,z2) or LDOS(z1)
                       !     
-                      IF (input%integ) THEN
+                      IF (vacuum%integ) THEN
                          ll = 1
                          DO ii = vacuum%izlay(jj,1),vacuum%izlay(jj,2)
                             ui = u(ii,l,jspin)
@@ -738,7 +738,7 @@ CONTAINS
                             !     
                             !     ---> either integrated (z1,z2) or slice (z1)
                             !     
-                            IF (input%integ) THEN
+                            IF (vacuum%integ) THEN
                                ll = 1
                                DO ii = vacuum%izlay(jj,1),vacuum%izlay(jj,2)
                                   ui = u(ii,l,ispin)
@@ -796,7 +796,7 @@ CONTAINS
                             !     
                             !     ---> either integrated (z1,z2) or slice (z1)
                             !     
-                            IF (input%integ) THEN
+                            IF (vacuum%integ) THEN
                                ll = 1
                                DO ii = vacuum%izlay(jj,1), vacuum%izlay(jj,2)
                                   ui = u(ii,l,jspin)

@@ -27,6 +27,8 @@ MODULE m_constants
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTX    =    3
    INTEGER,          PARAMETER :: POTDEN_TYPE_POTYUK  =    4
    INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001 ! 1000 < POTDEN_TYPE ==> density
+   REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
+
 
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
         'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&

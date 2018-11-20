@@ -25,6 +25,8 @@ MODULE m_types_cell
      REAL::vol
      !volume of interstitial
      REAL::volint
+     !name of lattice
+     CHARACTER(len=3)::latnam !Attention, not broadcasted!!
    CONTAINS
      PROCEDURE,PASS :: broadcast=>broadcast_cell
      PROCEDURE,PASS :: write=>WRITE_cell
@@ -85,7 +87,7 @@ CONTAINS
     CALL JSON_PRINT(unit,"amat",RESHAPE(tt%amat,(/9/)))
     CALL JSON_PRINT(unit,"bmat",reshape(tt%bmat,(/9/)))
     CALL JSON_PRINT(unit,"bbmat",reshape(tt%bbmat,(/9/)))
-    
+     WRITE(unit,*) ' "latnam":'//tt%latnam
     WRITE(unit,*,IOSTAT=iostat) '}'
     
   END SUBROUTINE write_cell
@@ -99,7 +101,7 @@ CONTAINS
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
     CHARACTER(len=40)::string
-    real:: rtemp(9)
+    REAL,allocatable:: rtemp(:)
     CALL json_open_class("cell",unit,iostat)
     IF (iostat.NE.0)   RETURN
 
@@ -114,8 +116,9 @@ CONTAINS
     tt%bmat=reshape(rtemp,(/3,3/))
     call json_read(unit,"bbmat",rtemp)
     tt%bbmat=reshape(rtemp,(/3,3/))
+    READ(unit,"(11x,a)") tt%latnam
     
-    call json_close_class(unit)
+    CALL json_close_class(unit,iostat)
     
   END SUBROUTINE read_cell
 
@@ -126,14 +129,13 @@ CONTAINS
     USE m_xmlIntWrapFort
     USE m_constants
     USE m_calculator
-    USE m_invs3
+    USE m_inv3
     IMPLICIT NONE
     CLASS(t_cell),INTENT(OUT):: tt
 
 
     LOGICAL::film
     CHARACTER(len=200):: xpath,valueString
-    CHARACTER(len=3)  :: latnam
     REAL              :: atemp, a1(3),a2(3),a3(3),latticeScale
 
     a1=0.0;a2=0.0;a3=0.0
@@ -148,7 +150,7 @@ CONTAINS
        xPath = '/fleurInput/cell/bulkLattice'
     END IF
     latticeScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@scale'))
-    latnam = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@latnam')))
+    tt%latnam = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@latnam')))
 
     IF (film) THEN
        tt%z1 = latticeScale*evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@dVac'))
@@ -170,7 +172,7 @@ CONTAINS
     
     
     !Determine bravais matrix
-    IF (latnam=='any') THEN
+    IF (tt%latnam=='any') THEN
        valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/bravaisMatrix/row-1')))
        a1(1) = evaluateFirst(valueString)
        a1(2) = evaluateFirst(valueString)
@@ -185,42 +187,42 @@ CONTAINS
           a3(2) = evaluateFirst(valueString)
           a3(3) = evaluateFirst(valueString)
        ENDIF
-    ELSEIF(latnam=='squ') THEN
+    ELSEIF(tt%latnam=='squ') THEN
        a2(2) = a1(1)
-    ELSE IF (latnam.EQ.'c-b') THEN
+    ELSE IF (tt%latnam.EQ.'c-b') THEN
        aTemp = a1(1)
        a1(1) = aTemp*0.5*SQRT(2.0)
        a1(2) = -aTemp*0.5
        a2(1) = aTemp*0.5*SQRT(2.0)
        a2(2) = aTemp*0.5
-    ELSE IF (latnam.EQ.'hex') THEN
+    ELSE IF (tt%latnam.EQ.'hex') THEN
        aTemp = 0.5*a1(1)
        a1(1) = aTemp*SQRT(3.0)
        a1(2) = -aTemp
        a2(1) = a1(1)
        a2(2) = aTemp
-    ELSE IF (latnam.EQ.'hx3') THEN
+    ELSE IF (tt%latnam.EQ.'hx3') THEN
        aTemp = 0.5*a1(1)
        a1(1) = aTemp
        a1(2) = -aTemp*SQRT(3.0)
        a2(1) = a1(1)
        a2(2) = -a1(2)
-    ELSE IF (latnam.EQ.'fcc') THEN
+    ELSE IF (tt%latnam.EQ.'fcc') THEN
        aTemp = a1(1)
        a1(1) =       0.0 ; a1(2) = 0.5*aTemp ; a1(3) = 0.5*aTemp
        a2(1) = 0.5*aTemp ; a2(2) =       0.0 ; a2(3) = 0.5*aTemp
        a3(1) = 0.5*aTemp ; a3(2) = 0.5*aTemp ; a3(3) =       0.0
-    ELSE IF (latnam.EQ.'bcc') THEN
+    ELSE IF (tt%latnam.EQ.'bcc') THEN
        aTemp = a1(1)
        a1(1) =-0.5*aTemp ; a1(2) = 0.5*aTemp ; a1(3) = 0.5*aTemp
        a2(1) = 0.5*aTemp ; a2(2) =-0.5*aTemp ; a2(3) = 0.5*aTemp
        a3(1) = 0.5*aTemp ; a3(2) = 0.5*aTemp ; a3(3) =-0.5*aTemp
-    ELSE IF ((latnam.EQ.'c-r').OR.(latnam.EQ.'p-r')) THEN
-       IF (latnam.EQ.'c-r') THEN
+    ELSE IF ((tt%latnam.EQ.'c-r').OR.(tt%latnam.EQ.'p-r')) THEN
+       IF (tt%latnam.EQ.'c-r') THEN
           a1(2) = -a2(2)
           a2(1) =  a1(1)
        END IF
-    ELSEIF (latnam.EQ.'obl') THEN
+    ELSEIF (tt%latnam.EQ.'obl') THEN
        valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xpath))//'/row-1')))
        a1(1) = evaluateFirst(valueString)
        a1(2) = evaluateFirst(valueString)
@@ -245,7 +247,7 @@ CONTAINS
        tt%vol = tt%omtil
        tt%area = tt%amat(1,1)*tt%amat(2,2)-tt%amat(1,2)*tt%amat(2,1)
        IF (tt%area.LT.1.0e-7) THEN
-          IF (latnam.EQ.'any') THEN
+          IF (tt%latnam.EQ.'any') THEN
              tt%area = 1.
           ELSE
              CALL juDFT_error("area = 0",calledby ="r_inpXML")

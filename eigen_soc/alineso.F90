@@ -287,11 +287,11 @@ else
 
     ALLOCATE ( cwork(idim_c),rwork(idim_r) )
 
-    IF (input%eonly) THEN
-       vectors= 'N'
-    ELSE
+    !IF (input%eonly) THEN
+    !   vectors= 'N'
+    !ELSE
        vectors= 'V'
-    ENDIF
+    !ENDIF
     CALL CPP_LAPACK_cheev(vectors,'U',nsize,&
          &                      hso,2*DIMENSION%neigd,&
          &                      eig_so,&
@@ -303,10 +303,10 @@ else
 
     DEALLOCATE ( cwork,rwork )
 
-    IF (input%eonly) THEN
-       IF(l_socvec)  CALL juDFT_error&
-            &        ("EONLY set. Vectors not calculated.",calledby ="alineso")
-    ELSE
+    !IF (input%eonly) THEN
+    !   IF(l_socvec)  CALL juDFT_error&
+    !        &        ("EONLY set. Vectors not calculated.",calledby ="alineso")
+    !ELSE
        ALLOCATE ( zhelp2(DIMENSION%neigd,2*DIMENSION%neigd) )
        !
        ! proj. back to G - space: old eigenvector 'z' to new one 'Z'
@@ -359,7 +359,7 @@ else
        ENDIF
 
        DEALLOCATE ( zhelp2 )
-    ENDIF ! (.NOT.input%eonly)
+    !ENDIF ! (.NOT.input%eonly)
 
     DEALLOCATE ( hso )
     ENDIF ! (n_rank==0)

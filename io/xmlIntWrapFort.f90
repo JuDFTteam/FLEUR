@@ -46,7 +46,6 @@ END SUBROUTINE init_from_command_line
 SUBROUTINE xmlInitInterface()
 
    USE iso_c_binding
-   USE m_types
 
    IMPLICIT NONE
 
@@ -70,7 +69,6 @@ END SUBROUTINE xmlInitInterface
 SUBROUTINE xmlParseSchema(schemaFilename)
 
    USE iso_c_binding
-   USE m_types
 
    IMPLICIT NONE
 
@@ -97,8 +95,7 @@ END SUBROUTINE xmlParseSchema
 SUBROUTINE xmlParseDoc(docFilename)
 
    USE iso_c_binding
-   USE m_types
-
+  
    IMPLICIT NONE
 
    CHARACTER(LEN=200,KIND=c_char), INTENT(IN) :: docFilename
@@ -124,7 +121,6 @@ END SUBROUTINE xmlParseDoc
 SUBROUTINE xmlValidateDoc()
 
    USE iso_c_binding
-   USE m_types
 
    IMPLICIT NONE
 
@@ -148,8 +144,7 @@ END SUBROUTINE xmlValidateDoc
 SUBROUTINE xmlInitXPath()
 
    USE iso_c_binding
-   USE m_types
-
+ 
    IMPLICIT NONE
 
    INTEGER :: errorStatus
@@ -172,7 +167,6 @@ END SUBROUTINE xmlInitXPath
 FUNCTION xmlGetNumberOfNodes(xPath)
 
    USE iso_c_binding
-   USE m_types
 
    IMPLICIT NONE
 
@@ -194,8 +188,7 @@ END FUNCTION xmlGetNumberOfNodes
 FUNCTION xmlGetAttributeValue(xPath)
 
    USE iso_c_binding
-   USE m_types
-
+ 
    IMPLICIT NONE
 
    CHARACTER(LEN=255) :: xmlGetAttributeValue
@@ -242,8 +235,7 @@ END FUNCTION xmlGetAttributeValue
 SUBROUTINE xmlSetAttributeValue(xPath,VALUE)
 
    USE iso_c_binding
-   USE m_types
-
+ 
    IMPLICIT NONE
   
    CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
@@ -273,8 +265,7 @@ SUBROUTINE xmlSetAttributeValue(xPath,VALUE)
 SUBROUTINE xmlFreeResources()
 
    USE iso_c_binding
-   USE m_types
-
+ 
    IMPLICIT NONE
 
    INTEGER :: errorStatus

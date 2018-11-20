@@ -41,9 +41,8 @@ CONTAINS
     
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER :: pe,ierr,ntype,irank
+    INTEGER :: pe,ierr
 
-    CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
     
     IF (PRESENT(origin)) THEN
        pe=origin
@@ -63,23 +62,12 @@ CONTAINS
     CALL MPI_BCAST(tt%theta,1,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
     CALL MPI_BCAST(tt%phi,1,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
 
-    IF (irank==pe) THEN
-       ntype=SIZE(tt%l_relax)
-       CALL MPI_BCAST(ntype,1,MPI_INTEGER,pe,mpi_comm,ierr)
-    ELSE
-       CALL MPI_BCAST(ntype,1,MPI_INTEGER,pe,mpi_comm,ierr)
-       IF (ALLOCATED(tt%l_relax)) &
-            DEALLOCATE(tt%l_relax,tt%b_con,tt%alphInit,tt%alph,tt%beta,tt%socscale)
-       ALLOCATE(tt%l_relax(ntype),tt%b_con(2,ntype))
-       ALLOCATE(tt%alphInit(ntype),tt%alph(ntype),tt%beta(ntype))
-       ALLOCATE(tt%socscale(ntype))
-    ENDIF
-    CALL MPI_BCAST(tt%alphinit,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%alph,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%beta,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%b_con,2*ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%socscale,ntype,MPI_DOUBLE_PRECSION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%l_relax,ntype,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BC(tt%alphinit,pe,mpi_comm)
+    CALL MPI_BC(tt%alph,,pe,mpi_comm)
+    CALL MPI_BC(tt%beta,pe,mpi_comm)
+    CALL MPI_BC(tt%b_con,pe,mpi_comm)
+    CALL MPI_BC(tt%socscale,pe,mpi_comm)
+    CALL MPI_BC(tt%l_relax,pe,mpi_comm)
   
 #endif
       
@@ -107,15 +95,14 @@ CONTAINS
     CALL json_print(unit,"mix_b",tt%l_noco)
     CALL json_print(unit,"theta",tt%l_noco)
     CALL json_print(unit,"phi",tt%l_noco)
-    CALL json_print(unit,"ntype",size(tt%l_relax))
-    
+   
     CALL json_print(unit,"qss",tt%qss,',')
  
     CALL json_print(unit,"l_relax",tt%l_relax)
     CALL json_print(unit,"alphInit",tt%alphInit)
     CALL json_print(unit,"alph",tt%alph)
     CALL json_print(unit,"beta",tt%beta)
-    CALL json_print(unit,"b_const",RESHAPE(tt%b_const,(/SIZE(tt%b_const)/))
+    CALL json_print(unit,"b_const",tt%b_con)
     CALL json_print(unit,"socscale",tt%socscale,.TRUE.)
      
     WRITE(unit,*,IOSTAT=iostat) '}'
@@ -132,14 +119,14 @@ CONTAINS
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
     INTEGER :: ntype
-    real,allocatable::rtemp(:)
+    REAL,ALLOCATABLE::rt(:)
     CALL json_open_class("noco",unit,iostat)
     IF (iostat.NE.0)   RETURN
     
     call json_read(unit,"l_noco",tt%l_noco)
     call json_read(unit,"l_ss",tt%l_ss)
     call json_read(unit,"l_mperp",tt%l_mperp)
-    call json_read(unit,"l_constr",tt%l_constr)
+    CALL json_read(unit,"l_constr",tt%l_constr)
     call json_read(unit,"l_mtnocopot",tt%l_mtnocopot)
     call json_read(unit,"l_soc",tt%l_soc)
     call json_read(unit,"l_spav",tt%l_spav)
@@ -148,25 +135,17 @@ CONTAINS
     call json_read(unit,"theta",tt%theta)
     call json_read(unit,"phi",tt%phi)
     
-    call json_read(unit,"ntype",ntype)
-
-    call json_read(unit,"qss",tt%qss)
-
-    IF (ALLOCATED(tt%l_relax)) DEALLOCATE(tt%l_relax,tt%b_con,tt%alphInit,tt%alph,tt%beta,tt%socscale)
-    ALLOCATE(tt%l_relax(ntype),tt%b_con(2,ntype))
-    ALLOCATE(tt%alphInit(ntype),tt%alph(ntype),tt%beta(ntype))
-    ALLOCATE(tt%socscale(ntype))
-
+ 
+    call json_read(unit,"qss",rt)
+    tt%qss=rt
     call json_read(unit,"l_relax",tt%l_relax)
-    call json_read(unit,"alphInit",tt%l_alphInit)
-    call json_read(unit,"alph",tt%l_alph)
-    call json_read(unit,"beta",tt%l_beta)
-    allocate(rtemp(2*ntype))
-    call json_read_rarray(unit,"b_const",rtemp)
-    tt%l_b_const=RESHAPE(rtemp,(/2,ntype/))
-    call json_read(unit,"socscale",tt%l_socscale)
+    call json_read(unit,"alphInit",tt%alphInit)
+    call json_read(unit,"alph",tt%alph)
+    call json_read(unit,"beta",tt%beta)
+    call json_read_rarray(unit,"b_const",tt%b_con)
+    call json_read(unit,"socscale",tt%socscale)
 
-    CALL json_close_class(unit)
+    CALL json_close_class(unit,iostat)
     
   END SUBROUTINE read_noco
 
@@ -200,17 +179,17 @@ CONTAINS
     tt%phi = 0.0
 
     IF (numberNodes.EQ.1) THEN
-       tt%theta=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@theta'))
-       tt%phi=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@phi'))
-       tt%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_soc'))
-       tt%l_spav = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spav'))
+       tt%theta=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@theta'))
+       tt%phi=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@phi'))
+       tt%l_soc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_soc'))
+       tt%l_spav = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@spav'))
     END IF
     !read species depended stuff
     IF (tt%l_soc) THEN
        DO n=1,ntype
           xpath=inp_xml_speciesxpath_for_group(n)
           IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/special')==1) THEN
-             tt%socscale(n)=evaluateFirstOnly(TRIM(ADJUSTL(xpath))//'/special/@socscale'))))
+             tt%socscale(n)=evaluateFirstOnly(TRIM(ADJUSTL(xpath))//'/special/@socscale')
           ELSE
              tt%socscale(n)=1.0
           ENDIF
@@ -238,23 +217,23 @@ CONTAINS
     END IF
     
     IF (tt%l_noco) THEN
-       tt%l_ss = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
-       tt%l_mperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
-       tt%l_constr = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
-       tt%l_mtNocoPot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
+       tt%l_ss = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_ss'))
+       tt%l_mperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_mperp'))
+       tt%l_constr = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_constr'))
+       tt%l_mtNocoPot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_mtNocoPot'))
        
-       tt%mix_b = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
-       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
+       tt%mix_b = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/@mix_b'))
+       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/qss')))
        READ(valueString,*) tt%qss(1), tt%qss(2), tt%qss(3)
     END IF
     !Now the group dependent stuff
     IF (tt%l_noco) THEN
        DO n=1,ntype
           xpath=inp_xml_xpath_for_group(n)
-          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathB))//"/nocoParams")==1) THEN
+          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPath))//"/nocoParams")==1) THEN
              tt%l_relax(n) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@l_relax'))
             tt%alphInit(n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@alpha'))
-            tt%alph(n) = tt%alphInit(iType)
+            tt%alph(n) = tt%alphInit(n)
             tt%beta(n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@beta'))
             tt%b_con(1,n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@b_cons_x'))
             tt%b_con(2,n) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/nocoParams/@b_cons_y'))
@@ -265,4 +244,4 @@ CONTAINS
  END SUBROUTINE read_xml_noco
   
   
-END MODULE m_types_cell
+END MODULE m_types_noco

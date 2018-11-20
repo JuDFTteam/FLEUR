@@ -10,7 +10,7 @@ MODULE m_types_vacuum
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_vacuum
      INTEGER ::nmz
-      INTEGER ::nmzxy
+     INTEGER ::nmzxy
      INTEGER :: layers
      INTEGER :: nvac
      REAL :: delz
@@ -21,6 +21,7 @@ MODULE m_types_vacuum
      REAL :: locx(2)
      REAL :: locy(2)
      LOGICAL ::starcoeff
+     LOGICAL :: integ
      INTEGER, ALLOCATABLE :: izlay(:,:)
    CONTAINS
      PROCEDURE,PASS :: broadcast=>broadcast_vacuum
@@ -31,6 +32,9 @@ MODULE m_types_vacuum
 
 CONTAINS
   SUBROUTINE broadcast_vacuum(tt,mpi_comm,origin)
+#ifdef CPP_MPI    
+    USE m_mpi_bc_tool
+#endif    
     IMPLICIT NONE
     CLASS(t_vacuum),INTENT(INOUT):: tt
     INTEGER,INTENT(IN)               :: mpi_comm
@@ -38,8 +42,7 @@ CONTAINS
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER :: pe,ierr,irank,n(2)
-    CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+    INTEGER :: pe,ierr
     IF (PRESENT(origin)) THEN
        pe=origin
     ELSE
@@ -60,16 +63,9 @@ CONTAINS
     CALL MPI_BCAST(tt%locy,2,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
 
     CALL MPI_BCAST(tt%starcoeff,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%integ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
 
-    IF (irank==pe) THEN
-       n=SHAPE(tt%izlay)
-       CALL MPI_BCAST(n,2,MPI_INTEGER,pe,mpi_comm,ierr)
-    ELSE
-       CALL MPI_BCAST(n,2,MPI_INTEGER,pe,mpi_comm,ierr)
-       IF (ALLOCATED(tt%izlay)) DEALLOCATE(tt%izlay)
-       ALLOCATE(tt%izlay(n(1),n(2)))
-    ENDIF
-    CALL MPI_BCAST(tt%izlay,SIZE(tt%izlay),MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BC(tt%izlay,pe,mpi_comm)
 #endif
       
   END SUBROUTINE broadcast_vacuum
@@ -98,8 +94,8 @@ CONTAINS
     CALL JSON_PRINT(unit, "locx",tt%locx)  
     CALL JSON_PRINT(unit, "locy",tt%locy)  
     CALL JSON_PRINT(unit, "starcoeff",tt%starcoeff)
-    CALL JSON_PRINT(unit, "izlay_shape",SHAPE(tt%izlay))
-    CALL JSON_PRINT(unit,"izlay",RESHAPE(tt%izlay,(/SIZE(tt%izlay)/)))
+    CALL JSON_PRINT(unit, "integ",tt%integ)
+    CALL JSON_PRINT(unit,"izlay",tt%izlay)
     
     WRITE(unit,*,IOSTAT=iostat) '}'
     
@@ -113,8 +109,8 @@ CONTAINS
     INTEGER, INTENT(OUT)            :: iostat
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
-    CHARACTER(len=40)::string
-    INTEGER,ALLOCATABLE:: itemp(:),n(2)
+
+    REAL,ALLOCATABLE::r(:)
     CALL json_open_class("vacuum",unit,iostat)
     IF (iostat.NE.0)   RETURN
 
@@ -126,31 +122,27 @@ CONTAINS
     CALL JSON_READ(unit, "dvac",tt%dvac)  
     CALL JSON_READ(unit, "nstars",tt%nstars)  
     CALL JSON_READ(unit, "nstm",tt%nstm)  
-    CALL JSON_READ(unit, "tworkf",tt%tworkf)  
-    CALL JSON_READ(unit, "locx",tt%locx)  
-    CALL JSON_READ(unit, "locy",tt%locy)  
+    CALL JSON_READ(unit, "tworkf",tt%tworkf)
+    CALL JSON_READ(unit, "locx",r)
+    tt%locx=r
+    CALL JSON_READ(unit, "locy",r)
+    tt%locy=r
     CALL JSON_READ(unit, "starcoeff",tt%starcoeff)
-    CALL JSON_READ(unit, "izlay_shape",n)
+    CALL JSON_read(unit, "integ",tt%integ)
+    CALL JSON_READ(unit,"izlay",tt%izlay)
 
-    IF (ALLOCATED(tt%izlay)) DEALLOCATE(tt%izlay)
-    ALLOCATE(tt%izlay(n(1),n(2)),itemp(n(1)*n(2)))
-    CALL JSON_READ(unit,"izlay",itemp)
-    tt%izlay=RESHAPE(itemp,n)
-
-    CALL json_close_class(unit)
+    CALL json_close_class(unit,iostat)
     
   END SUBROUTINE read_vacuum
 
  
 
 
-  SUBROUTINE read_xml_vacuum(vacuum)
+  SUBROUTINE read_xml_vacuum(tt)
     USE m_xmlIntWrapFort
-    USE m_constants
     USE m_calculator
-    USE m_invs3
     IMPLICIT NONE
-    CLASS(t_vacuum),INTENT(OUT):: vacuum
+    CLASS(t_vacuum),INTENT(OUT):: tt
 
 
     LOGICAL::film,vacdos
@@ -158,20 +150,21 @@ CONTAINS
 
 
     film=(xmlGetNumberOfNodes('/fleurInput/vacuum/filmLattice')==1)
-    vacuum%nvac = 2
+    tt%nvac = 2
 
-    vacuum%nmz = 250
-    vacuum%delz = 25.0/vacuum%nmz
-    vacuum%nmzxy = 100
+    tt%nmz = 250
+    tt%delz = 25.0/tt%nmz
+    tt%nmzxy = 100
 
     !DOS stuff for vacuum
-    vacuum%layers = 1
-    vacuum%starcoeff = .FALSE.
-    vacuum%nstars = 0
-    vacuum%locx = 0.0
-    vacuum%locy = 0.0
-    vacuum%nstm = 0
-    vacuum%tworkf = 0.0
+    tt%layers = 1
+    tt%starcoeff = .FALSE.
+    tt%integ = .FALSE.
+    tt%nstars = 0
+    tt%locx = 0.0
+    tt%locy = 0.0
+    tt%nstm = 0
+    tt%tworkf = 0.0
     !Check if vacdos=t
     vacdos=.FALSE.
     IF (xmlGetNumberOfNodes('/fleurInput/output')==1) &
@@ -179,30 +172,31 @@ CONTAINS
     
     xPathA = '/fleurInput/output/vacuumDOS'
     IF (film.AND.vacdos.AND.xmlGetNumberOfNodes(xPathA).EQ.1) THEN
-       vacuum%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
-       vacuum%starcoeff = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
-       vacuum%nstars = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
-       vacuum%locx(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx1'))
-       vacuum%locx(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx2'))
-       vacuum%locy(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy1'))
-       vacuum%locy(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy2'))
-       vacuum%nstm = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
-       vacuum%tworkf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
+       tt%layers = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
+       tt%integ = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
+       tt%starcoeff = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
+       tt%nstars = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
+       tt%locx(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx1'))
+       tt%locx(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx2'))
+       tt%locy(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy1'))
+       tt%locy(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy2'))
+       tt%nstm = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
+       tt%tworkf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
     END IF
 
-    IF (vacuum%layers>1) THEN
-       ALLOCATE(vacuum%izlay(vacuum%layers,2))
+    IF (tt%layers>1) THEN
+       ALLOCATE(tt%izlay(tt%layers,2))
        CALL judft_error("Layer mode not supported in types_vacuum")
     ELSE
-       ALLOCATE(vacuum%izlay(1,1))
-       vacuum%izlay=1.0
+       ALLOCATE(tt%izlay(1,1))
+       tt%izlay=1.0
     END IF
     
   END SUBROUTINE read_xml_vacuum
 
 
   SUBROUTINE init_vacuum(vacuum,sym)
-    USE types_sym
+    USE m_types_sym
     IMPLICIT NONE
     CLASS(t_vacuum),INTENT(OUT):: vacuum
     TYPE(t_sym),INTENT(IN)     :: sym

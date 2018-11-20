@@ -499,7 +499,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
    DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
 
       DO iBand = 1,results%neig(ikpt,jsp)
-         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst) THEN
+         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.sliceplot%pallst) THEN
             thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
          END IF
       END DO
@@ -593,7 +593,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
 
       thisCdnvalJob%weights(1:noccbd,ikpt) = results%w_iks(nStart:nEnd,ikpt,jsp)
       IF(PRESENT(sliceplot)) THEN
-         IF (sliceplot%slice.AND.input%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)
+         IF (sliceplot%slice.AND.sliceplot%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)
       END IF
       thisCdnvalJob%weights(:noccbd,ikpt) = 2.0 * thisCdnvalJob%weights(:noccbd,ikpt) / input%jspins ! add in spin-doubling factor
    END DO

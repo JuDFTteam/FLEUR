@@ -482,10 +482,7 @@ END SUBROUTINE
       WRITE (27,901)
       WRITE (27,902)
       WRITE (27,903)
-      WRITE(tempTitle,'(10a)') input%comment
-      IF(TRIM(ADJUSTL(tempTitle)).EQ.'') THEN
-         tempTitle = "Fleur Bandstructure"
-      END IF
+      tempTitle = "Fleur Bandstructure"
       WRITE (27,904) TRIM(ADJUSTL(tempTitle))
       DO n = 1, nosyp
         WRITE (27,905) d(n),d(n)

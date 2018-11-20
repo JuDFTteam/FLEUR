@@ -43,6 +43,9 @@ MODULE m_types_sym
 
 CONTAINS
   SUBROUTINE broadcast_sym(tt,mpi_comm,origin)
+#ifdef CPP_MPI
+    USE m_mpi_bc_tool
+#endif    
     IMPLICIT NONE
     CLASS(t_sym),INTENT(INOUT):: tt
     INTEGER,INTENT(IN)               :: mpi_comm
@@ -70,31 +73,17 @@ CONTAINS
     CALL MPI_BCAST(tt%nop,1,MPI_INTEGER,pe,mpi_comm,ierr)
     CALL MPI_BCAST(tt%nop2,1,MPI_INTEGER,pe,mpi_comm,ierr)
     
-    !Arrays
-    IF (irank.NE.pe.AND.ALLOCATED(tt%mrot)) THEN
-       DEALLOCATE(tt%mrot,tt%invtab,tt%tau,tt%multab,tt%d_wgn)
-    ENDIF
     
-    CALL MPI_BCAST(tt%mrot,9*tt%nop,MPI_INTEGER,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%invtab,tt%nop,MPI_INTEGER,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%tau,3*tt%nop,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%multab,tt%nop**2,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BC(tt%mrot,pe,mpi_comm)
+    CALL MPI_BC(tt%invtab,pe,mpi_comm)
+    CALL MPI_BC(tt%tau,pe,mpi_comm)
+    CALL MPI_BC(tt%multab,pe,mpi_comm)
 
-    CALL MPI_BCAST(tt%d_wgn,147*tt%nop,MPI_DOUBLE_COMPLEX,pe,mpi_comm,ierr)
+    CALL MPI_BC(tt%d_wgn,pe,mpi_comm)
 
-    !Atom dependent stuff
-    IF (irank==pe) THEN
-       nat=SIZE(tt%invsatnr)
-       CALL MPI_BCAST(nat,1,MPI_INTEGER,pe,mpi_comm,ierr)
-    ELSE
-       CALL MPI_BCAST(nat,1,MPI_INTEGER,pe,mpi_comm,ierr)
-       IF (ALLOCATED(tt%invarop)) DEALLOCATE(tt%invarop),tt%invarind,tt%invsatnr)
-       ALLOCATE(tt%invarop(nat,tt%nop),tt%invarind(nat))
-       ALLOCATE(tt%invsatnr(nat))
-    ENDIF
-    CALL MPI_BCAST(tt%invarop,nat*tt%nop,MPI_INTEGER,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%invarind,nat,MPI_INTEGER,pe,mpi_comm,ierr)
-    CALL MPI_BCAST(tt%invsatnr,nat,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BC(tt%invarop,pe,mpi_comm)
+    CALL MPI_BC(tt%invarind,pe,mpi_comm)
+    CALL MPI_BC(tt%invsatnr,pe,mpi_comm)
     
 #endif
       
@@ -110,9 +99,10 @@ CONTAINS
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
     INTEGER:: ntype
+    REAL,ALLOCATABLE::d_wgn(:,:)
 
     WRITE(unit,*,IOSTAT=iostat) '"sym":{'
-    CALL json_print(unit,"l_symor",tt%l_symor)
+    CALL json_print(unit,"symor",tt%symor)
     CALL json_print(unit,"invs",tt%invs)
     CALL json_print(unit,"invs2",tt%invs2)
     CALL json_print(unit,"zrfs",tt%zrfs)
@@ -122,19 +112,18 @@ CONTAINS
     CALL json_print(unit,"nop2",tt%nop2)
 
     
-    CALL json_print(unit,"mrot",RESHAPE(tt%mrot,(/SIZE(tt%mrot)/)))
-    CALL json_print(unit,"multab",RESHAPE(tt%multab,(/SIZE(tt%multab)/)))
-    CALL json_print(unit,"invtab",RESHAPE(tt%invtab,(/SIZE(tt%invtab)/)))
-    CALL json_print(unit,"tau",RESHAPE(tt%tau,(/SIZE(tt%tau)/)))
+    CALL json_print(unit,"mrot",tt%mrot)
+    CALL json_print(unit,"multab",tt%multab)
+    CALL json_print(unit,"invtab",tt%invtab)
+    CALL json_print(unit,"tau",tt%tau)
   
-    ALLOCATE(d_wgn(2,SIZE(tt%d_wgn))
-    d_wgn(1,:)=REAL(tt%d_wgn)
-    d_wgn(2,:)=AIMAG(tt%d_wgn)
-    CALL json_print(unit,"d_wgn",RESHAPE(d_wgn,(/SHAPE(d_wgn)/))
+    ALLOCATE(d_wgn(2,SIZE(tt%d_wgn)))
+    d_wgn(1,:)=RESHAPE(REAL(tt%d_wgn),(/SIZE(tt%d_wgn)/))
+    d_wgn(2,:)=RESHAPE(aimag(tt%d_wgn),(/SIZE(tt%d_wgn)/))
+    CALL json_print(unit,"d_wgn",d_wgn)
 
     
-    CALL json_print(unit,"nat",SIZE(tt%invsatnr))
-    CALL json_print(unit,"invarop",RESHAPE(tt%invarop,(/SIZE(tt%invarop)/)))
+    CALL json_print(unit,"invarop",tt%invarop)
     CALL json_print(unit,"invarind",tt%invarind)
     CALL json_print(unit,"invsatnr",tt%invsatnr,.true.)
 
@@ -153,12 +142,12 @@ CONTAINS
     CHARACTER(*), INTENT(INOUT)     :: iomsg
 
     INTEGER :: ntype
-    real,allocatable::rtemp(:)
+    REAL,ALLOCATABLE::rt(:,:)
     CALL json_open_class("sym",unit,iostat)
     IF (iostat.NE.0)   RETURN
 
 
-    CALL json_read(unit,"l_symor",tt%l_symor)
+    CALL json_read(unit,"symor",tt%symor)
     CALL json_read(unit,"invs",tt%invs)
     CALL json_read(unit,"invs2",tt%invs2)
     CALL json_read(unit,"zrfs",tt%zrfs)
@@ -167,51 +156,22 @@ CONTAINS
     CALL json_read(unit,"nop",tt%nop)
     CALL json_read(unit,"nop2",tt%nop2)
 
-    IF (ALLOCATED(tt%mrot)) DEALLOCATE(tt%mrot,tt%invtab,tt%tau,tt%multab)
-    ALLOCATE(it(9*tt%nop))
-    CALL json_read(unit,"mrot",it)
-    ALLOCATE(tt%mrot(3,3,tt%nop))
-    tt%mrot=RESHAPE(it,SHAPE(tt%mrot))
-    DEALLOCATE(it)
-
-    ALLOCATE(it(tt%nop**2))
-    CALL json_read(unit,"multab",it)
-    ALLOCATE(tt%multab(3,3,tt%nop))
-    tt%multab=RESHAPE(it,SHAPE(tt%multab))
-    DEALLOCATE(it)
-
-    ALLOCATE (tt%invtab(tt%nop))
+    CALL json_read(unit,"mrot",tt%mrot)
+    CALL json_read(unit,"multab",tt%multab)
     CALL json_read(unit,"invtab",tt%invtab)
-
-    ALLOCATE(rt(3*tt%nop))
-    ALLOCATE(tt%tau(3,tt%nop))
-    CALL json_read(unit,"tau",rt)
-    tt%tau=RESHAPE(rt,SHAPE(tt%tau))
-    DEALLOCATE(rt)
+    CALL json_read(unit,"tau",tt%tau)
 
     IF (ALLOCATED(tt%d_wgn)) DEALLOCATE(tt%d_wgn)
-    ALLOCATE(rt(2*147*tt%nop))
     CALL json_read(unit,"d_wgn",rt)
     ALLOCATE(tt%d_wgn(-3:3,-3:3,3,tt%nop))
-    tt%d_wgn=CMPLX(RESHAPE(rt(::2),,SHAPE(tt%d_wgn)),RESHAPE(rt(2::2),,SHAPE(tt%d_wgn)))
-    DEALLOCATE(rt)
-
-    CALL json_read(unit,"nat",nat)
-    IF (ALLOCATED(tt%invarop)) DEALLOCATE(tt%invarop,tt%invarind,tt%invsatnr)
-    ALLOCATE(tt%invarind(nat))
-    ALLOCATE(tt%invsatnr(nat))
-
-    ALLOCATE(it(nat*tt%nop))
-    ALLOCATE(tt%invarop(nat,tt%nop))
-    CALL json_read(unit,"invarop",it)
-    tt%invarop=RESHAPE(it,SHAPE(tt%invarop))
-    DEALLOCATE(it)
-
+    tt%d_wgn=CMPLX(RESHAPE(rt(1,:),SHAPE(tt%d_wgn)),RESHAPE(rt(2,:),SHAPE(tt%d_wgn)))
+    
+    CALL json_read(unit,"invarop",tt%invarop)
     CALL json_read(unit,"invarind",tt%invarind)
     CALL json_read(unit,"invsatnr",tt%invsatnr)
     
 
-    CALL json_close_class(unit)
+    CALL json_close_class(unit,iostat)
     
   END SUBROUTINE read_sym
 
@@ -226,7 +186,7 @@ CONTAINS
     CLASS(t_sym),INTENT(OUT):: tt
 
 
-    LOGICAL::film
+    LOGICAL::film,invsym
     CHARACTER(len=200):: xpath,valueString,xpathB
     CHARACTER(len=4)  :: namgrp
     CHARACTER(len=3)  :: latnam
@@ -246,8 +206,10 @@ CONTAINS
        !Now determine the latnam from cell
        IF (xmlGetNumberOfNodes('/fleurInput/cell/bulkLattice')==1) THEN
           latnam=TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/cell/bulkLattice/@latnam')))
+          film=.FALSE.
        ELSE
           latnam=TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/cell/filmLattice/@latnam')))
+          film=.TRUE.
        END IF
        
        DO  n2spg=1, SIZE(nammap)
@@ -306,27 +268,37 @@ CONTAINS
                WHERE(ABS(tt%tau-(1.*i)/j)<1E-5) tt%tau=(1.*i)/j
             ENDDO
          ENDDO
-         nop48 = 48
-         ALLOCATE (invOps(tt%nop),multtab(tt%nop,tt%nop),optype(nop48))
-         CALL check_close(tt%nop,tt%mrot,tt%tau,&
-              &                      multtab,invOps,optype)
-
-         CALL symproperties(nop48,optype,input%film,tt%nop,multtab,cell%amat,&
-              &                        tt%symor,tt%mrot,tt%tau,&
-              &                        invSym,tt%invs,tt%zrfs,tt%invs2,tt%nop,tt%nop2)
-         IF (.not.input%film) tt%nop2=tt%nop
-         IF (input%film.AND.ANY(ABS(tt%tau(:,:tt%nop))>1E-5)) &
-              CALL juDFT_error("nonsymmorphic symmetries not yet implemented for films!",calledby ="r_inpXML")
-         tt%invs2 = tt%invs.AND.tt%zrfs
+        
       ELSE
          CALL judft_error("No valid specification of symmetry in inp.xml")
       END IF
       
   END SUBROUTINE read_xml_sym
   
-  SUBROUTINE init_sym(sym)
+  SUBROUTINE init_sym(sym,cell,input)
+    USE m_types_cell
+    USE m_types_input
     IMPLICIT NONE
     CLASS(t_sym),INTENT(INOUT):: sym
+    TYPE(t_cell),INTENT(IN)   :: cell
+    TYPE(t_input),INTENT(IN)  :: input
+
+    LOGICAL :: invSym
+    INTEGER :: nop48
+    INTEGER,ALLOCATABLE::invOps(:),multtab(:,:),optype(:)
+    
+    nop48 = 48
+    ALLOCATE (invOps(sym%nop),multtab(sym%nop,sym%nop),optype(nop48))
+    CALL check_close(sym%nop,sym%mrot,sym%tau,&
+         &                      multtab,invOps,optype)
+    
+    CALL symproperties(nop48,optype,input%film,sym%nop,multtab,cell%amat,&
+         &                        sym%symor,sym%mrot,sym%tau,&
+         &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
+    IF (.NOT.input%film) sym%nop2=sym%nop
+    IF (input%film.AND.ANY(ABS(sym%tau(:,:sym%nop))>1E-5)) &
+         CALL juDFT_error("nonsymmorphic symmetries not yet implemented for films!",calledby ="r_inpXML")
+    sym%invs2 = sym%invs.AND.sym%zrfs
     !TODO
   END SUBROUTINE init_sym
 

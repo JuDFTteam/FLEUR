@@ -152,9 +152,9 @@ CONTAINS
 8020   FORMAT (5x,5f12.6)
 
        IF (mpi%n_rank==0) THEN
-          IF (input%eonly) THEN
-             CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
-          ELSE          
+          !IF (input%eonly) THEN
+          !   CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
+          !ELSE          
              CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
              DO jspin = 1,wannierspin
                 CALL timestart("eigenso: write_eig")  
@@ -163,7 +163,7 @@ CONTAINS
    
                 CALL timestop("eigenso: write_eig")  
              ENDDO
-          ENDIF ! (input%eonly) ELSE
+          !ENDIF ! (input%eonly) ELSE
        ENDIF ! n_rank == 0
        DEALLOCATE (zso)
     ENDDO ! DO nk 

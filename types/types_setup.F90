@@ -8,8 +8,11 @@ MODULE m_types_setup
   !*************************************************************
   !     This module contains definitions for all kind of types
   !*************************************************************
-
-
+  USE m_types_cell
+  USE m_types_noco
+  USE m_types_sym
+  use m_types_input
+  use m_types_vacuum
 
   ! types for 1D calculations
   TYPE od_dim
@@ -169,27 +172,27 @@ MODULE m_types_setup
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
   END TYPE t_atoms
 
-  TYPE t_cell
-     !name of 2D-lattice type
-     CHARACTER*3::latnam
-     !vol of dtilde box
-     REAL::omtil
-     !2D area
-     REAL::area
-     !bravais matrix
-     REAL::amat(3,3)
-     !rez. bravais matrx
-     REAL::bmat(3,3)
-     !square of bbmat
-     REAL::bbmat(3,3)
-     !d-value
-     REAL::z1
-     !volume of cell
-     REAL::vol
-     !volume of interstitial
-     REAL::volint
-     REAL:: c
-  END TYPE t_cell
+!!$  TYPE t_cell
+!!$     !name of 2D-lattice type
+!!$     CHARACTER*3::latnam
+!!$     !vol of dtilde box
+!!$     REAL::omtil
+!!$     !2D area
+!!$     REAL::area
+!!$     !bravais matrix
+!!$     REAL::amat(3,3)
+!!$     !rez. bravais matrx
+!!$     REAL::bmat(3,3)
+!!$     !square of bbmat
+!!$     REAL::bbmat(3,3)
+!!$     !d-value
+!!$     REAL::z1
+!!$     !volume of cell
+!!$     REAL::vol
+!!$     !volume of interstitial
+!!$     REAL::volint
+!!$     REAL:: c
+!!$  END TYPE t_cell
 !The stars
   TYPE t_stars
      !max-length of star
@@ -339,91 +342,92 @@ MODULE m_types_setup
      INTEGER :: nbasfcn
   END TYPE t_dimension
 
-  TYPE t_noco
-     LOGICAL:: l_noco
-     LOGICAL:: l_ss
-     LOGICAL:: l_mperp
-     LOGICAL:: l_constr
-     LOGICAL:: l_mtNocoPot
-     REAL:: qss(3)
-     REAL:: mix_b
-     LOGICAL, ALLOCATABLE :: l_relax(:)
-     REAL, ALLOCATABLE :: alphInit(:)
-     REAL, ALLOCATABLE :: alph(:)
-     REAL, ALLOCATABLE :: beta(:)
-     REAL, ALLOCATABLE :: b_con(:,:)
-     LOGICAL           :: l_soc
-     LOGICAL           :: l_spav
-     REAL              :: theta
-     REAL              :: phi
-     REAL,ALLOCATABLE  :: socscale(:)
-  END TYPE t_noco
+!!$  TYPE t_noco
+!!$     LOGICAL:: l_noco
+!!$     LOGICAL:: l_ss
+!!$     LOGICAL:: l_mperp
+!!$     LOGICAL:: l_constr
+!!$     LOGICAL:: l_mtNocoPot
+!!$     REAL:: qss(3)
+!!$     REAL:: mix_b
+!!$     LOGICAL, ALLOCATABLE :: l_relax(:)
+!!$     REAL, ALLOCATABLE :: alphInit(:)
+!!$     REAL, ALLOCATABLE :: alph(:)
+!!$     REAL, ALLOCATABLE :: beta(:)
+!!$     REAL, ALLOCATABLE :: b_con(:,:)
+!!$     LOGICAL           :: l_soc
+!!$     LOGICAL           :: l_spav
+!!$     REAL              :: theta
+!!$     REAL              :: phi
+!!$     REAL,ALLOCATABLE  :: socscale(:)
+!!$  END TYPE t_noco
 
-  TYPE t_input
-     LOGICAL :: strho
-     LOGICAL :: cdinf
-     LOGICAL :: vchk
-     LOGICAL :: l_f
-     LOGICAL :: eonly
-     LOGICAL :: film
-     LOGICAL :: ctail
-     INTEGER :: coretail_lmax
-     INTEGER :: itmax
-     REAL    :: minDistance
-     INTEGER :: maxiter
-     INTEGER :: imix
-     INTEGER :: gw
-     INTEGER :: gw_neigd
-     INTEGER :: qfix
-     REAL    :: xa !< mixing parameter for geometry optimzer
-     REAL    :: thetad !< Debey temperature for first step of geometry optimzer
-     REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
-     REAL    :: epsforce !< minimal force. If all forces <epsforce stop
-     REAL    :: delgau
-     REAL    :: alpha
-     REAL    :: preconditioning_param
-     REAL    :: spinf
-     REAL    :: tkb
-     LOGICAL :: gauss
-     LOGICAL :: l_bmt
-     !INTEGER:: scale
-     INTEGER:: jspins
-     INTEGER:: kcrel
-     LOGICAL:: frcor
-     LOGICAL:: lflip
-     LOGICAL:: score
-     LOGICAL:: swsp
-     LOGICAL:: tria
-     LOGICAL:: integ
-     LOGICAL:: pallst
-     LOGICAL:: l_coreSpec
-     LOGICAL:: l_wann
-     LOGICAL:: secvar
-     LOGICAL:: evonly
-     LOGICAL:: total
-     LOGICAL:: l_inpXML
-     REAL :: scaleCell
-     REAL :: scaleA1
-     REAL :: scaleA2
-     REAL :: scaleC
-     REAL :: ellow
-     REAL :: elup
-     REAL :: rkmax
-     REAL :: zelec
-     REAL :: fixed_moment=0.0
-     CHARACTER(LEN=8) :: comment(10)
-     REAL,POINTER :: sigma !this is the difference in charge due to the electric field it points to the value stored in t_efield
-     LOGICAL :: l_core_confpot
-     LOGICAL :: l_useapw  
-     LOGICAL :: ldauLinMix
-     REAL    :: ldauMixParam
-     REAL    :: ldauSpinf
-  END TYPE t_input
+!!$  TYPE t_input
+!!$     LOGICAL :: strho
+!!$     LOGICAL :: cdinf
+!!$     LOGICAL :: vchk
+!!$     LOGICAL :: l_f
+!!$     LOGICAL :: eonly
+!!$     LOGICAL :: film
+!!$     LOGICAL :: ctail
+!!$     INTEGER :: coretail_lmax
+!!$     INTEGER :: itmax
+!!$     REAL    :: minDistance
+!!$     INTEGER :: maxiter
+!!$     INTEGER :: imix
+!!$     INTEGER :: gw
+!!$     INTEGER :: gw_neigd
+!!$     INTEGER :: qfix
+!!$     REAL    :: xa !< mixing parameter for geometry optimzer
+!!$     REAL    :: thetad !< Debey temperature for first step of geometry optimzer
+!!$     REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
+!!$     REAL    :: epsforce !< minimal force. If all forces <epsforce stop
+!!$     REAL    :: delgau
+!!$     REAL    :: alpha
+!!$     REAL    :: preconditioning_param
+!!$     REAL    :: spinf
+!!$     REAL    :: tkb
+!!$     LOGICAL :: gauss
+!!$     LOGICAL :: l_bmt
+!!$     !INTEGER:: scale
+!!$     INTEGER:: jspins
+!!$     INTEGER:: kcrel
+!!$     LOGICAL:: frcor
+!!$     LOGICAL:: lflip
+!!$     LOGICAL:: score
+!!$     LOGICAL:: swsp
+!!$     LOGICAL:: tria
+!!$     LOGICAL:: integ
+!!$     LOGICAL:: pallst
+!!$     LOGICAL:: l_coreSpec
+!!$     LOGICAL:: l_wann
+!!$     LOGICAL:: secvar
+!!$     LOGICAL:: evonly
+!!$     LOGICAL:: total
+!!$     LOGICAL:: l_inpXML
+!!$     REAL :: scaleCell
+!!$     REAL :: scaleA1
+!!$     REAL :: scaleA2
+!!$     REAL :: scaleC
+!!$     REAL :: ellow
+!!$     REAL :: elup
+!!$     REAL :: rkmax
+!!$     REAL :: zelec
+!!$     REAL :: fixed_moment=0.0
+!!$     CHARACTER(LEN=8) :: comment(10)
+!!$     REAL,POINTER :: sigma !this is the difference in charge due to the electric field it points to the value stored in t_efield
+!!$     LOGICAL :: l_core_confpot
+!!$     LOGICAL :: l_useapw  
+!!$     LOGICAL :: ldauLinMix
+!!$     REAL    :: ldauMixParam
+!!$     REAL    :: ldauSpinf
+!!$  END TYPE t_input
 
   TYPE t_sliceplot
      LOGICAL :: iplot
      LOGICAL :: slice
      LOGICAL :: plpot
+     LOGICAL :: pallst
      INTEGER :: kk
      INTEGER :: nnne
      REAL    :: e1s
@@ -456,27 +460,27 @@ MODULE m_types_setup
      LOGICAL :: lwb   !remove
   END TYPE t_obsolete
 
-
-  TYPE t_vacuum
-     !Stuff for the vacuum
-     INTEGER ::nmz
-     INTEGER ::nmzd
-     INTEGER ::nmzxy
-     INTEGER ::nmzxyd
-     INTEGER :: layerd
-     INTEGER :: layers
-     INTEGER :: nvac
-     INTEGER :: nvacd
-     REAL :: delz
-     REAL :: dvac
-     INTEGER::nstars
-     INTEGER:: nstm
-     REAL :: tworkf
-     REAL :: locx(2)
-     REAL :: locy(2)
-     LOGICAL ::starcoeff
-     INTEGER, ALLOCATABLE :: izlay(:,:)
-  END TYPE t_vacuum
+!!$
+!!$  TYPE t_vacuum
+!!$     !Stuff for the vacuum
+!!$     INTEGER ::nmz
+!!$     INTEGER ::nmzd
+!!$     INTEGER ::nmzxy
+!!$     INTEGER ::nmzxyd
+!!$     INTEGER :: layerd
+!!$     INTEGER :: layers
+!!$     INTEGER :: nvac
+!!$     INTEGER :: nvacd
+!!$     REAL :: delz
+!!$     REAL :: dvac
+!!$     INTEGER::nstars
+!!$     INTEGER:: nstm
+!!$     REAL :: tworkf
+!!$     REAL :: locx(2)
+!!$     REAL :: locy(2)
+!!$     LOGICAL ::starcoeff
+!!$     INTEGER, ALLOCATABLE :: izlay(:,:)
+!!$  END TYPE t_vacuum
 
 
   !Data for the spherical harmonics
@@ -501,39 +505,39 @@ MODULE m_types_setup
   END TYPE t_sphhar
 
   !symmetry information
-  TYPE t_sym
-     INTEGER :: symSpecType
-     !Symophic group
-     LOGICAL ::symor
-     INTEGER ::nsymt
-     INTEGER :: nsym
-     COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
-     !2D-inv-sym
-     LOGICAL ::invs2
-     !Inversion-sym
-     LOGICAL ::invs
-     !Z-refls. sym
-     LOGICAL ::zrfs
-     !No of sym ops
-     INTEGER ::nop
-     !No of 2D-sym ops
-     INTEGER ::nop2
-     !Rot-matrices (3,3,nop)
-     INTEGER,ALLOCATABLE::mrot(:,:,:)
-     !inverse operation (nop)
-     INTEGER,ALLOCATABLE::invtab(:)
-     !translation vectors (3,nop)
-     REAL,ALLOCATABLE::tau(:,:)
-     !Name of lattice type
-     CHARACTER*3   :: latnam
-     !Name of sym
-     CHARACTER*4   :: namgrp
-     INTEGER, ALLOCATABLE :: multab(:,:)
-     INTEGER, ALLOCATABLE :: invsatnr(:)
-     INTEGER, ALLOCATABLE :: invarop(:,:)
-     INTEGER, ALLOCATABLE :: invarind(:)
-
-  END TYPE t_sym
+!!$  TYPE t_sym
+!!$     INTEGER :: symSpecType
+!!$     !Symophic group
+!!$     LOGICAL ::symor
+!!$     INTEGER ::nsymt
+!!$     INTEGER :: nsym
+!!$     COMPLEX,ALLOCATABLE:: d_wgn(:,:,:,:)
+!!$     !2D-inv-sym
+!!$     LOGICAL ::invs2
+!!$     !Inversion-sym
+!!$     LOGICAL ::invs
+!!$     !Z-refls. sym
+!!$     LOGICAL ::zrfs
+!!$     !No of sym ops
+!!$     INTEGER ::nop
+!!$     !No of 2D-sym ops
+!!$     INTEGER ::nop2
+!!$     !Rot-matrices (3,3,nop)
+!!$     INTEGER,ALLOCATABLE::mrot(:,:,:)
+!!$     !inverse operation (nop)
+!!$     INTEGER,ALLOCATABLE::invtab(:)
+!!$     !translation vectors (3,nop)
+!!$     REAL,ALLOCATABLE::tau(:,:)
+!!$     !Name of lattice type
+!!$     CHARACTER*3   :: latnam
+!!$     !Name of sym
+!!$     CHARACTER*4   :: namgrp
+!!$     INTEGER, ALLOCATABLE :: multab(:,:)
+!!$     INTEGER, ALLOCATABLE :: invsatnr(:)
+!!$     INTEGER, ALLOCATABLE :: invarop(:,:)
+!!$     INTEGER, ALLOCATABLE :: invarind(:)
+!!$
+!!$  END TYPE t_sym
 
  ! type for the input to the calculation of the core spectrum (EELS)
   TYPE t_coreSpecInput

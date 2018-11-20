@@ -533,10 +533,8 @@ MODULE m_cdn_io
 
          IF ((relCdnIndex.EQ.1).AND.(archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).AND.(den%iter.GE.1)) THEN
             inputTemp%jspins = input%jspins
-            vacuumTemp%nmzxyd = vacuum%nmzxy
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
-            vacuumTemp%nmzd = vacuum%nmz
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
@@ -596,10 +594,8 @@ MODULE m_cdn_io
             ! Generate data in temp arrays and variables to be able to perform loddop call.
             ! loddop is called to move the file position to the output density position.
             inputTemp%jspins = input%jspins
-            vacuumTemp%nmzxyd = vacuum%nmzxy
             atomsTemp%jmtd = atoms%jmtd
             sphharTemp%nlhd = sphhar%nlhd
-            vacuumTemp%nmzd = vacuum%nmz
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)

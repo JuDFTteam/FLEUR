@@ -62,12 +62,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    END IF
 
    IF (input%kcrel.EQ.0) THEN
-      ! Generate input file ecore for subsequent GW calculation
-      ! 11.2.2004 Arno Schindlmayr
-      IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) THEN
-         OPEN (15,file='ecore',status='unknown', action='write',form='unformatted')
-      END IF
-
+ 
       rh = 0.0
       tec = 0.0
       qint = 0.0
@@ -138,7 +133,6 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
       IF (mpi%irank.EQ.0) THEN
          CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
       END IF
-      IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) CLOSE(15)
    END IF
 
 END SUBROUTINE cdncore

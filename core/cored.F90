@@ -129,9 +129,7 @@ CONTAINS
 
        nst = atoms%ncst(jatom)        ! for lda+U
 
-       IF (input%gw==1 .OR. input%gw==3)&
-            &                      WRITE(15) nst,atoms%rmsh(1:atoms%jri(jatom),jatom)
-
+       
        stateEnergies = 0.0
        DO  korb = 1,nst
           IF (occ(korb) /= 0.0) THEN
@@ -146,9 +144,7 @@ CONTAINS
             WRITE (6,FMT=8010) fn,fl,fj,e,weight
             WRITE (16,FMT=8010) fn,fl,fj,e,weight
             IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
-            IF (input%gw==1 .OR. input%gw==3) WRITE (15) NINT(fl),weight,e,&
-                a(1:atoms%jri(jatom)),b(1:atoms%jri(jatom))
-
+   
             sume = sume + weight*e/input%jspins
             DO j = 1,ncmsh
               rhcs(j) = weight* (a(j)**2+b(j)**2)

@@ -173,7 +173,7 @@ MODULE m_tlo
           !---> terms have to be made hermitian. if second variation is switched
           !---> on, the t-matrices contain only the contributions from the
           !---> non-spherical hamiltonian.
-          IF (.NOT.input%secvar) THEN
+          !IF (.NOT.input%secvar) THEN
              DO lo = 1,atoms%nlo(ntyp)
                 l = atoms%llo(lo,ntyp)
                 DO m = -l,l
@@ -205,7 +205,7 @@ MODULE m_tlo
                    END DO
                 END DO
              END DO
-          END IF
+          !END IF
 
         END SUBROUTINE tlo
       END MODULE m_tlo
