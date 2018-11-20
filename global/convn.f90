@@ -1,8 +1,7 @@
       MODULE m_convn
       use m_juDFT
       CONTAINS
-      SUBROUTINE convn(&
-     &                 dimension,atoms,stars)
+      SUBROUTINE convn(atoms,stars)
 !
 !     ***********************************************************
 !     determines the optimum values for the convergence parameter
@@ -15,7 +14,6 @@
       USE m_types
       IMPLICIT NONE
 !     ..
-      TYPE(t_dimension),INTENT(IN) :: dimension
       TYPE(t_atoms),INTENT(INOUT)  :: atoms
       TYPE(t_stars),INTENT(IN)     :: stars
 !     .. Local Scalars ..
@@ -64,11 +62,11 @@
          WRITE (6,FMT=8020) n,nc,l
          WRITE (16,FMT=8020) n,nc,l
    40 CONTINUE
-      l = dimension%ncvd - 1
-      WRITE (6,FMT=8030) dimension%ncvd,l
-      WRITE (16,FMT=8030) dimension%ncvd,l
+      l = ncvd_dim - 1
+      WRITE (6,FMT=8030) ncvd_dim,l
+      WRITE (16,FMT=8030) ncvd_dim,l
       DO 50 n = 1,atoms%ntype
-         atoms%ncv(n) = min0(atoms%ncv(n),dimension%ncvd)
+         atoms%ncv(n) = min0(atoms%ncv(n),ncvd_dim)
    50 CONTINUE
       RETURN
    60 WRITE (6,FMT=8040) n,sck

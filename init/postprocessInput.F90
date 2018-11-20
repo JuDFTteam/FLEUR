@@ -67,7 +67,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
   INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
   INTEGER              :: ios, ntst, ierr
-  REAL                 :: sumWeight, rmtmax, zp, radius, dr
+  REAL                 :: sumWeight, zp, radius, dr
   REAL                 :: kmax1, dtild1, dvac1
   REAL                 :: bk(3)
   LOGICAL              :: l_vca, l_test,l_gga
@@ -261,10 +261,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      cell%volint = cell%vol
      atoms%jmtd = maxval(atoms%jri(:))
      CALL ylmnorm_init(atoms%lmaxd)
-     dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-     rmtmax = maxval(atoms%rmt(:))
-     rmtmax = rmtmax*stars%gmax
-     CALL convn_dim(rmtmax,dimension%ncvd)
      dimension%msh = 0
      ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
      ALLOCATE(atoms%volmts(atoms%ntype))
@@ -537,7 +533,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
   IF (.NOT.sliceplot%iplot) THEN   
      IF (mpi%irank.EQ.0) THEN
-        CALL convn(DIMENSION,atoms,stars)
+        CALL convn(atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
      END IF !(mpi%irank.EQ.0)
   END IF

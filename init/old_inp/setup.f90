@@ -181,7 +181,7 @@
           CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
           IF (.NOT.sliceplot%iplot) THEN
              IF ( mpi%irank == 0 ) THEN
-                CALL convn(DIMENSION,atoms,stars)
+                CALL convn(atoms,stars)
 
                 !--->    set up electric field parameters (if needed) 
                 ! CALL e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,field)

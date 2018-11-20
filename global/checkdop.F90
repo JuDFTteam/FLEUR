@@ -37,7 +37,7 @@
           !-odim
           !+odim
           !     .. Array Arguments ..
-          REAL,    INTENT (IN) :: p(3,DIMENSION%nspd)
+          REAL,    INTENT (IN) :: p(:,:) !(3,nspd_dim)
           !     ..
           !     .. Local Scalars ..
           REAL av,dms,rms,s,ir2,help,phi
@@ -47,7 +47,7 @@
           !     ..
           !     .. Local Arrays ..
           COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
-          REAL rcc(3),v1(DIMENSION%nspd),v2(DIMENSION%nspd),x(3),ri(3)
+          REAL rcc(3),v1(size(p,2))),v2(size(p,2)),x(3),ri(3)
 
           l_cdn = .FALSE. ! By default we assume that the input is a potential.
           IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
