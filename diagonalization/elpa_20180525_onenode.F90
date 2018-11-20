@@ -26,7 +26,9 @@ CONTAINS
     !USE m_types_mpimat
     USE m_types_mat
     USE m_types
+#ifdef CPP_ELPA_ONENODE
     USE elpa
+#endif
     IMPLICIT NONE
 
     CLASS(t_mat),INTENT(INOUT)    :: hmat,smat
@@ -34,6 +36,7 @@ CONTAINS
     REAL,INTENT(out)              :: eig(:)
     INTEGER,INTENT(INOUT)         :: ne
     
+#ifdef CPP_ELPA_ONENODE
     !...  Local variables
     !
     INTEGER           :: num!, np,myid
@@ -123,6 +126,8 @@ CONTAINS
 ! CLASS DEFAULT
 !    CALL judft_error("Wrong type (2) in scalapack")
 ! END SELECT
+
+#endif
  
 END SUBROUTINE elpa_diag_onenode
 END MODULE m_elpa_onenode

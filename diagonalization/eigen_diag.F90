@@ -41,8 +41,11 @@ MODULE m_eigen_diag
 #endif
   
   INTEGER,PARAMETER:: diag_lapack=4
+#ifdef CPP_ELPA_ONENODE
   INTEGER,PARAMETER:: diag_elpa_1node=14
- 
+#else
+  INTEGER,PARAMETER:: diag_elpa_1node=-14
+#endif 
   INTEGER,PARAMETER:: diag_debugout=99
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
