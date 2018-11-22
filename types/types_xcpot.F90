@@ -12,11 +12,12 @@
 !! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
 !! for additional implementations.
 MODULE m_types_xcpot
+  USE m_types_fleur_setup
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: t_xcpot,t_gradients
 
-   TYPE,ABSTRACT :: t_xcpot
+   TYPE,EXTENDS(t_fleursetup),ABSTRACT :: t_xcpot
       REAL :: gmaxxc
    CONTAINS
       PROCEDURE        :: is_gga=>xcpot_is_gga

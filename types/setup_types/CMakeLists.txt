@@ -7,6 +7,11 @@ types/setup_types/types_sym.F90
 types/setup_types/json_tools.F90
 types/setup_types/types_vacuum.F90
 types/setup_types/types_input.F90
+types/setup_types/types_atoms.F90
+types/setup_types/types_stars.F90
+types/setup_types/types_oneD.F90
+types/setup_types/types_sphhar.F90
+types/setup_types/econfig.F90
 
 )
 

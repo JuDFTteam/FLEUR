@@ -7,6 +7,7 @@ MODULE m_types_xcpot_inbuild
    !This module contains the xcpot-type used for the in-build xc-implementations
    USE m_types_xcpot_data
    USE m_types_xcpot
+
    USE m_judft
    IMPLICIT NONE
    PRIVATE
@@ -48,13 +49,155 @@ MODULE m_types_xcpot_inbuild
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc=>xcpot_get_vxc
       PROCEDURE        :: get_exc=>xcpot_get_exc
+      !Overloading t_fleursetup
+      PROCEDURE,PASS :: broadcast=>broadcast_xcpot
+      PROCEDURE,PASS :: WRITE=>WRITE_xcpot
+      PROCEDURE,PASS :: READ=>READ_xcpot
+      PROCEDURE,PASS :: read_xml=>read_xml_xcpot
       !not overloaded
       PROCEDURE        :: get_name=>xcpot_get_name
       PROCEDURE        :: is_name=>xcpot_is_name
       PROCEDURE        :: init=>xcpot_init
    END TYPE t_xcpot_inbuild
    PUBLIC t_xcpot_inbuild
-CONTAINS
+ CONTAINS
+   SUBROUTINE broadcast_xcpot(tt,mpi_comm,origin)
+#ifdef CPP_MPI
+     USE m_bc_tool
+#endif
+     IMPLICIT NONE
+     CLASS(t_xcpot_inbuild),INTENT(INOUT):: tt
+    INTEGER,INTENT(IN)               :: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL      :: origin 
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+    INTEGER :: pe,ierr
+    
+    IF (PRESENT(origin)) THEN
+       pe=origin
+    ELSE
+       pe=0
+    ENDIF
+
+    
+   CALL MPI_BCAST(tt%icorr,1,MPI_INTEGER,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%krla,1,MPI_INTEGER,pe,mpi_comm,ierr)
+   CALL mpi_bc(tt%lda_atom,pe,mpi_comm)
+   CALL MPI_BCAST(tt%DATA%is_rpbe ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%is_wc,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%is_hse ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%is_pbes ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%is_pbe0 ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%is_bh ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%is_mjw ,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+   
+
+   CALL MPI_BCAST(tt%DATA%uk,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%um,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%DATA%exchange_weight,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+#endif
+ END SUBROUTINE broadcast_xcpot
+
+ SUBROUTINE write_xcpot(tt, unit, iotype, v_list, iostat, iomsg)
+   IMPLICIT NONE
+   CLASS(t_xcpot_inbuild),INTENT(IN):: tt
+  INTEGER, INTENT(IN)             :: unit
+    CHARACTER(*), INTENT(IN)        :: iotype
+    INTEGER, INTENT(IN)             :: v_list(:)
+    INTEGER, INTENT(OUT)            :: iostat
+    CHARACTER(*), INTENT(INOUT)     :: iomsg
+
+    WRITE(unit,*,IOSTAT=iostat) '"xcpot_inbuild":{'
+
+    CALL json_print(unit,"icorr",tt%icorr)
+    CALL json_print(unit,"DATA%krla",tt%DATA%krla)
+    CALL json_print(unit,"lda_atom",tt%lda_atom)
+    CALL json_print(unit,"DATA%is_rpbe ",tt%DATA%is_rpbe )
+    CALL json_print(unit,"DATA%is_wc",tt%DATA%is_wc)
+    CALL json_print(unit,"DATA%is_hse ",tt%DATA%is_hse )
+    CALL json_print(unit,"DATA%is_pbes ",tt%DATA%is_pbes )
+    CALL json_print(unit,"DATA%is_pbe0 ",tt%DATA%is_pbe0 )
+    CALL json_print(unit,"DATA%is_bh ",tt%DATA%is_bh )
+    CALL json_print(unit,"DATA%is_mjw ",tt%DATA%is_mjw )
+    
+    
+    CALL json_print(unit,"DATA%uk",tt%DATA%uk)
+    CALL json_print(unit,"DATA%um",tt%DATA%um)
+    CALL json_print(unit,"DATA%exchange_weight",tt%DATA%exchange_weight)
+    
+    
+    WRITE(unit,*,IOSTAT=iostat) '}'
+    
+  END SUBROUTINE write_xcpot
+
+  SUBROUTINE read_xcpot(tt, unit, iotype, v_list, iostat, iomsg)
+    IMPLICIT NONE
+    CLASS(t_xcpot_inbuild),INTENT(INOUT):: tt
+    INTEGER, INTENT(IN)             :: unit
+    CHARACTER(*), INTENT(IN)        :: iotype
+    INTEGER, INTENT(IN)             :: v_list(:)
+    INTEGER, INTENT(OUT)            :: iostat
+    CHARACTER(*), INTENT(INOUT)     :: iomsg
+
+    CALL json_open_class("xcpot_inbuild",unit,iostat)
+    IF (iostat.NE.0)   RETURN
+
+    CALL json_read(unit,"icorr",tt%icorr)
+    CALL json_read(unit,"DATA%krla",tt%DATA%krla)
+    CALL json_read(unit,"lda_atom",tt%lda_atom)
+    CALL json_read(unit,"DATA%is_rpbe ",tt%DATA%is_rpbe )
+    CALL json_read(unit,"DATA%is_wc",tt%DATA%is_wc)
+    CALL json_read(unit,"DATA%is_hse ",tt%DATA%is_hse )
+    CALL json_read(unit,"DATA%is_pbes ",tt%DATA%is_pbes )
+    CALL json_read(unit,"DATA%is_pbe0 ",tt%DATA%is_pbe0 )
+    CALL json_read(unit,"DATA%is_bh ",tt%DATA%is_bh )
+    CALL json_read(unit,"DATA%is_mjw ",tt%DATA%is_mjw )
+    
+    
+    CALL json_read(unit,"DATA%uk",tt%DATA%uk)
+    CALL json_read(unit,"DATA%um",tt%DATA%um)
+    CALL json_read(unit,"DATA%exchange_weight",tt%DATA%exchange_weight)
+    
+    CALL json_close_class(unit,iostat)
+    
+  END SUBROUTINE read_xcpot
+
+  SUBROUTINE read_xml_xcpot(tt)
+    USE m_xmlIntWrapFort
+    USE m_calculator
+    USE m_inp_xml
+    IMPLICIT NONE
+    CLASS(t_xcpot_inbuild),INTENT(OUT):: tt
+
+
+    CHARACTER(len=10):: namex
+    LOGICAL          :: relcor
+    CHARACTER(len=30):: xpath
+    INTEGER          :: ntype,i
+    IF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID')   == 0 &
+         .AND. xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 0) THEN
+       IF (xmlGetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC')==1) THEN
+          tt%gmaxxc= evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
+       ELSE
+          tt%gmaxxc=  evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
+       ENDIF
+       relcor = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
+       namex=TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
+       ntype=xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
+       CALL tt%init(namex,relcor,ntype)
+       DO i=1,ntype
+          xpath=inp_xml_speciesxpath_for_group(i)
+          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xpath))//'/special')==1) THEN
+             tt%lda_atom(i)=evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath))//'/special/@lda'))))
+          ELSE
+             tt%lda_atom(i)=.FALSE.
+          ENDIF
+       END DO
+       
+    ENDIF
+  END SUBROUTINE read_xml_xcpot
+
+    
    CHARACTER(len=4) FUNCTION xcpot_get_name(xcpot)
       USE m_judft
       IMPLICIT NONE

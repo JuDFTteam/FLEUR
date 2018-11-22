@@ -29,12 +29,113 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: get_vxc=>xcpot_get_vxc
       PROCEDURE        :: get_exc=>xcpot_get_exc
       PROCEDURE,NOPASS :: alloc_gradients=>xcpot_alloc_gradients
+      !Overloading t_fleursetup
+      PROCEDURE,PASS :: broadcast=>broadcast_xcpot
+      PROCEDURE,PASS :: WRITE=>WRITE_xcpot
+      PROCEDURE,PASS :: READ=>READ_xcpot
+      PROCEDURE,PASS :: read_xml=>read_xml_xcpot
       !Not overloeaded...
       PROCEDURE        :: init=>xcpot_init
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
 CONTAINS
+SUBROUTINE broadcast_xcpot(tt,mpi_comm,origin)
+#ifdef CPP_MPI
+     USE m_bc_tool
+#endif
+     IMPLICIT NONE
+     CLASS(t_xcpot_libxc),INTENT(INOUT):: tt
+    INTEGER,INTENT(IN)               :: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL      :: origin 
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+    INTEGER :: pe,ierr
+    
+    IF (PRESENT(origin)) THEN
+       pe=origin
+    ELSE
+       pe=0
+    ENDIF
 
+    
+   CALL MPI_BCAST(tt%func_id_c,1,MPI_INTEGER,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%func_id_x,1,MPI_INTEGER,pe,mpi_comm,ierr)
+   CALL MPI_BCAST(tt%jspins,1,MPI_INTEGER,pe,mpi_comm,ierr)
+#endif
+ END SUBROUTINE broadcast_xcpot
+
+ SUBROUTINE write_xcpot(tt, unit, iotype, v_list, iostat, iomsg)
+   IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: tt
+  INTEGER, INTENT(IN)             :: unit
+    CHARACTER(*), INTENT(IN)        :: iotype
+    INTEGER, INTENT(IN)             :: v_list(:)
+    INTEGER, INTENT(OUT)            :: iostat
+    CHARACTER(*), INTENT(INOUT)     :: iomsg
+
+    WRITE(unit,*,IOSTAT=iostat) '"xcpot_libxc":{'
+
+    CALL json_print(unit,"func_id_c",tt%func_id_x)
+    CALL json_print(unit,"func_id_x",tt%func_id_c)
+    CALL json_print(unit,"jspins",tt%jspins)
+    
+    WRITE(unit,*,IOSTAT=iostat) '}'
+    
+  END SUBROUTINE write_xcpot
+
+  SUBROUTINE read_xcpot(tt, unit, iotype, v_list, iostat, iomsg)
+    IMPLICIT NONE
+    CLASS(t_xcpot_libxc),INTENT(INOUT):: tt
+    INTEGER, INTENT(IN)             :: unit
+    CHARACTER(*), INTENT(IN)        :: iotype
+    INTEGER, INTENT(IN)             :: v_list(:)
+    INTEGER, INTENT(OUT)            :: iostat
+    CHARACTER(*), INTENT(INOUT)     :: iomsg
+
+    CALL json_open_class("xcpot_libxc",unit,iostat)
+    IF (iostat.NE.0)   RETURN
+
+    CALL json_read(unit,"func_id_c",tt%func_id_x)
+    CALL json_read(unit,"func_id_x",tt%func_id_c)
+    CALL json_read(unit,"jspins",tt%jspins)
+    
+    
+    CALL json_close_class(unit,iostat)
+    
+  END SUBROUTINE read_xcpot
+
+  SUBROUTINE read_xml_xcpot(tt)
+    USE m_xmlIntWrapFort
+    USE m_calculator
+    USE m_inp_xml
+    IMPLICIT NONE
+    CLASS(t_xcpot_libxc),INTENT(OUT):: tt
+
+    CHARACTER(len=100)::valueString
+    INTEGER          :: id_x,id_c,jspins
+    IF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID')   == 1 &
+         .AND. xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) &
+         CALL judft_error("LibXC is given both by Name and ID and is therefore overdetermined")
+    IF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID') == 1) THEN
+       id_x=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@exchange'))
+       id_c=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@correlation'))
+    ELSEIF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) THEN
+       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@exchange')))))
+#ifdef CPP_LIBXC
+       id_x =  xc_f03_functional_get_number(TRIM(valueString))
+       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@correlation')))))
+       id_c =  xc_f03_functional_get_number(TRIM(valueString))
+#else
+       CALL judft_error("To use libxc functionals you have to compile with libXC support")
+#endif
+    ELSE
+       id_x=0
+       id_c=0
+    ENDIF
+    jspins=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
+    CALL tt%init(jspins,id_x,id_c)
+         
+  END SUBROUTINE read_xml_xcpot
    SUBROUTINE xcpot_init(xcpot,jspins,id_x,id_c)
       USE m_judft
       IMPLICIT NONE

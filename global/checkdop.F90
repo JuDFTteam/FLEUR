@@ -47,7 +47,7 @@
           !     ..
           !     .. Local Arrays ..
           COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
-          REAL rcc(3),v1(size(p,2))),v2(size(p,2)),x(3),ri(3)
+          REAL rcc(3),v1(size(p,2)),v2(size(p,2)),x(3),ri(3)
 
           l_cdn = .FALSE. ! By default we assume that the input is a potential.
           IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
@@ -94,8 +94,8 @@
              DO  j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
                    CALL starf2(&
-                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1,j),sym%invtab,&
-                        &           sf2)!keep
+                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(:,j),sym%invtab,&
+                        &           sf2)
                    v2(j) = potden%vacz(1,ivac,jsp)
                    DO  k = 2,stars%ng2
                       v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)

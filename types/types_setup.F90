@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
+
 MODULE m_types_setup
   !*************************************************************
   !     This module contains definitions for all kind of types
@@ -12,165 +13,114 @@ MODULE m_types_setup
   USE m_types_noco
   USE m_types_sym
   use m_types_input
-  use m_types_vacuum
+  USE m_types_vacuum
+  use m_types_atoms
+  USE m_types_stars
+  use m_types_sphhar
 
-  ! types for 1D calculations
-  TYPE od_dim
-     LOGICAL :: d1
-     INTEGER :: mb,M,k3,m_cyl
-     INTEGER :: chi,rot
-     LOGICAL :: invs,zrfs
-     INTEGER :: n2d,nq2,nn2d
-     INTEGER :: kimax2
-     INTEGER :: nop,nat
-  END TYPE od_dim
+  !Not converted to fleur_setup type yet
+  use m_types_oneD
 
-  TYPE od_inp
-     LOGICAL :: d1
-     INTEGER :: mb,M,k3,m_cyl
-     INTEGER :: chi,rot
-     LOGICAL :: invs,zrfs
-     INTEGER :: n2d,nq2,nn2d
-     INTEGER :: kimax2
-     INTEGER, POINTER :: ig(:,:)  !(-k3:k3,-M:M)
-     INTEGER, POINTER :: kv(:,:)        !(2,n2d)
-     INTEGER, POINTER :: nst2(:)        !(n2d)
-  END TYPE od_inp
-
-  TYPE od_sym
-     INTEGER :: nop,nat
-     INTEGER, POINTER :: ngopr(:)     !(nat)
-     REAL   , POINTER :: mrot(:,:,:)  !(3,3,nop)
-     REAL   , POINTER :: tau(:,:)     !(3,nop)
-     INTEGER, POINTER :: invtab(:)    !(nop)
-     INTEGER, POINTER :: multab(:,:)  !(nop,nop)
-  END TYPE od_sym
-
-  TYPE od_lda
-     INTEGER :: nn2d
-     INTEGER, POINTER :: igf(:,:)  !(0:nn2d-1,2)
-     REAL   , POINTER :: pgf(:)    !(0:nn2d-1)
-  END TYPE od_lda
-
-  TYPE od_gga
-     INTEGER          :: nn2d
-     REAL, POINTER    :: pgfx(:)  ! (0:nn2d-1)
-     REAL, POINTER    :: pgfy(:)
-     REAL, POINTER    :: pgfxx(:)
-     REAL, POINTER    :: pgfyy(:)
-     REAL, POINTER    :: pgfxy(:)
-  END TYPE od_gga
-
-
-  !
-  ! Type for LDA+U:
-  !
-  TYPE t_utype
-     SEQUENCE
-     REAL u,j         ! the actual U and J parameters
-     INTEGER l        ! the l quantum number to which this U parameter belongs
-     INTEGER atomType ! The atom type to which this U parameter belongs
-     LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
-  END TYPE t_utype
+ 
 
   !
   ! Type for the electric field
   !
  
 
-
-  TYPE t_atoms
-     !<no of types
-     INTEGER :: ntype
-     !<total-no of atoms
-     INTEGER :: nat
-     !<dimensions of LO's
-     INTEGER ::nlod
-     INTEGER ::llod
-     INTEGER ::nlotot
-     !lmaxd=maxval(lmax)
-     INTEGER:: lmaxd
-     ! no of lda+us
-     INTEGER ::n_u
-     ! dimensions
-     INTEGER :: jmtd
-     !No of element
-     INTEGER,ALLOCATABLE ::nz(:)
-     !atoms per type
-     INTEGER,ALLOCATABLE::neq(:)
-     !radial grid points
-     INTEGER,ALLOCATABLE::jri(:)
-     !core states
-     INTEGER,ALLOCATABLE::ncst(:)
-     !How many states are explicitely provided?
-     INTEGER,ALLOCATABLE::numStatesProvided(:)
-     !core state occupations
-     REAL,ALLOCATABLE::coreStateOccs(:,:,:)
-     !core state nprnc
-     INTEGER,ALLOCATABLE::coreStateNprnc(:,:)
-     !core state kappa
-     INTEGER,ALLOCATABLE::coreStateKappa(:,:)
-     !lmax
-     INTEGER,ALLOCATABLE::lmax(:)
-     !lmax non-spherical
-     INTEGER,ALLOCATABLE::lnonsph(:)
-     !expansion of pseudo-charge
-     INTEGER,ALLOCATABLE::ncv(:)
-     !no of LO
-     INTEGER,ALLOCATABLE::nlo(:)
-     !l of LO (nlo,ntype)
-     INTEGER,ALLOCATABLE::llo(:,:)
-     !lmax for lapw (ntype)
-     INTEGER,ALLOCATABLE::lapw_l(:)
-     !first LO with a given l (max(nlo
-     INTEGER,ALLOCATABLE::lo1l(:,:)
-     !??
-     INTEGER,ALLOCATABLE::ulo_der(:,:)
-     !no of LOs per l (max(nlo1),ntype
-     INTEGER,ALLOCATABLE::nlol(:,:)
-     !true if LO is formed by \dot u (
-     LOGICAL,ALLOCATABLE::l_dulo(:,:)
-     !no of op that maps atom into
-     INTEGER,ALLOCATABLE::ngopr(:)
-     !symetry of atom (nat)
-     INTEGER,ALLOCATABLE::ntypsy(:)
-     !no of sphhar for atom type(ntype
-     INTEGER,ALLOCATABLE ::nlhtyp(:)
-     !atom mapped to by inversion (nat
-     INTEGER,ALLOCATABLE ::invsat(:)
-     !Calaculate forces for this atom?
-     LOGICAL,ALLOCATABLE :: l_geo(:)
-     !MT-Radius (ntype)
-     REAL,ALLOCATABLE CPP_MANAGED::rmt(:)
-     !log increment(ntype)
-     REAL,ALLOCATABLE::dx(:)
-     !vol of MT(ntype)
-     REAL,ALLOCATABLE::volmts(:)
-     !radial grid points(max(jri),ntyp
-     REAL,ALLOCATABLE::rmsh(:,:)
-     !charge of nucleus(ntype)
-     REAL,ALLOCATABLE::zatom(:)
-     !initial mag moment(ntype)
-     REAL,ALLOCATABLE::bmu(:)
-     !pos of atom (absol) (3,nat)
-     REAL,ALLOCATABLE::pos(:,:)
-     !pos of atom (relat)(3,nat)
-     REAL,ALLOCATABLE CPP_MANAGED::taual(:,:)  
-     !labels
-     CHARACTER(LEN=20), ALLOCATABLE :: label(:)
-     CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
-     !name and other data of explicitely provided xc functional
-     CHARACTER(len=4), ALLOCATABLE :: namex(:)
-     INTEGER,          ALLOCATABLE :: icorr(:)
-     INTEGER,          ALLOCATABLE :: igrd(:)
-
-     INTEGER,          ALLOCATABLE :: krla(:)
-     LOGICAL,          ALLOCATABLE :: relcor(:)
-     !lda_u information(ntype)
-     TYPE(t_utype),ALLOCATABLE::lda_u(:)
-     INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
-     INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
-  END TYPE t_atoms
+!!$
+!!$  TYPE t_atoms
+!!$     !<no of types
+!!$     INTEGER :: ntype
+!!$     !<total-no of atoms
+!!$     INTEGER :: nat
+!!$     !<dimensions of LO's
+!!$     INTEGER ::nlod
+!!$     INTEGER ::llod
+!!$     INTEGER ::nlotot
+!!$     !lmaxd=maxval(lmax)
+!!$     INTEGER:: lmaxd
+!!$     ! no of lda+us
+!!$     INTEGER ::n_u
+!!$     ! dimensions
+!!$     INTEGER :: jmtd
+!!$     !No of element
+!!$     INTEGER,ALLOCATABLE ::nz(:)
+!!$     !atoms per type
+!!$     INTEGER,ALLOCATABLE::neq(:)
+!!$     !radial grid points
+!!$     INTEGER,ALLOCATABLE::jri(:)
+!!$     !core states
+!!$     INTEGER,ALLOCATABLE::ncst(:)
+!!$     !How many states are explicitely provided?
+!!$     INTEGER,ALLOCATABLE::numStatesProvided(:)
+!!$     !core state occupations
+!!$     REAL,ALLOCATABLE::coreStateOccs(:,:,:)
+!!$     !core state nprnc
+!!$     INTEGER,ALLOCATABLE::coreStateNprnc(:,:)
+!!$     !core state kappa
+!!$     INTEGER,ALLOCATABLE::coreStateKappa(:,:)
+!!$     !lmax
+!!$     INTEGER,ALLOCATABLE::lmax(:)
+!!$     !lmax non-spherical
+!!$     INTEGER,ALLOCATABLE::lnonsph(:)
+!!$     !expansion of pseudo-charge
+!!$     INTEGER,ALLOCATABLE::ncv(:)
+!!$     !no of LO
+!!$     INTEGER,ALLOCATABLE::nlo(:)
+!!$     !l of LO (nlo,ntype)
+!!$     INTEGER,ALLOCATABLE::llo(:,:)
+!!$     !lmax for lapw (ntype)
+!!$     INTEGER,ALLOCATABLE::lapw_l(:)
+!!$     !first LO with a given l (max(nlo
+!!$     INTEGER,ALLOCATABLE::lo1l(:,:)
+!!$     !??
+!!$     INTEGER,ALLOCATABLE::ulo_der(:,:)
+!!$     !no of LOs per l (max(nlo1),ntype
+!!$     INTEGER,ALLOCATABLE::nlol(:,:)
+!!$     !true if LO is formed by \dot u (
+!!$     LOGICAL,ALLOCATABLE::l_dulo(:,:)
+!!$     !no of op that maps atom into
+!!$     INTEGER,ALLOCATABLE::ngopr(:)
+!!$     !symetry of atom (nat)
+!!$     INTEGER,ALLOCATABLE::ntypsy(:)
+!!$     !no of sphhar for atom type(ntype
+!!$     INTEGER,ALLOCATABLE ::nlhtyp(:)
+!!$     !atom mapped to by inversion (nat
+!!$     INTEGER,ALLOCATABLE ::invsat(:)
+!!$     !Calaculate forces for this atom?
+!!$     LOGICAL,ALLOCATABLE :: l_geo(:)
+!!$     !MT-Radius (ntype)
+!!$     REAL,ALLOCATABLE CPP_MANAGED::rmt(:)
+!!$     !log increment(ntype)
+!!$     REAL,ALLOCATABLE::dx(:)
+!!$     !vol of MT(ntype)
+!!$     REAL,ALLOCATABLE::volmts(:)
+!!$     !radial grid points(max(jri),ntyp
+!!$     REAL,ALLOCATABLE::rmsh(:,:)
+!!$     !charge of nucleus(ntype)
+!!$     REAL,ALLOCATABLE::zatom(:)
+!!$     !initial mag moment(ntype)
+!!$     REAL,ALLOCATABLE::bmu(:)
+!!$     !pos of atom (absol) (3,nat)
+!!$     REAL,ALLOCATABLE::pos(:,:)
+!!$     !pos of atom (relat)(3,nat)
+!!$     REAL,ALLOCATABLE CPP_MANAGED::taual(:,:)  
+!!$     !labels
+!!$     CHARACTER(LEN=20), ALLOCATABLE :: label(:)
+!!$     CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
+!!$     !name and other data of explicitely provided xc functional
+!!$     CHARACTER(len=4), ALLOCATABLE :: namex(:)
+!!$     INTEGER,          ALLOCATABLE :: icorr(:)
+!!$     INTEGER,          ALLOCATABLE :: igrd(:)
+!!$
+!!$     INTEGER,          ALLOCATABLE :: krla(:)
+!!$     LOGICAL,          ALLOCATABLE :: relcor(:)
+!!$     !lda_u information(ntype)
+!!$     TYPE(t_utype),ALLOCATABLE::lda_u(:)
+!!$     INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
+!!$     INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+!!$  END TYPE t_atoms
 
 !!$  TYPE t_cell
 !!$     !name of 2D-lattice type
@@ -193,100 +143,79 @@ MODULE m_types_setup
 !!$     REAL::volint
 !!$     REAL:: c
 !!$  END TYPE t_cell
-!The stars
-  TYPE t_stars
-     !max-length of star
-     REAL :: gmax
-     REAL :: gmaxInit
-     !no of 3d-stars
-     INTEGER :: ng3
-     !no of 2d-stars
-     INTEGER :: ng2
-     !dim of box
-     INTEGER ::mx1
-     INTEGER ::mx2
-     INTEGER ::mx3
-     !No of elements in FFT
-     INTEGER ::kimax
-     !No of elements in 2D-FFT
-     INTEGER ::kimax2
+!!$!The stars
+!!$  TYPE t_stars
+!!$     !max-length of star
+!!$     REAL :: gmax
+!!$     REAL :: gmaxInit
+!!$     !no of 3d-stars
+!!$     INTEGER :: ng3
+!!$     !no of 2d-stars
+!!$     INTEGER :: ng2
+!!$     !dim of box
+!!$     INTEGER ::mx1
+!!$     INTEGER ::mx2
+!!$     INTEGER ::mx3
+!!$     !No of elements in FFT
+!!$     INTEGER ::kimax
+!!$     !No of elements in 2D-FFT
+!!$     INTEGER ::kimax2
+!!$
+!!$     !Box for FFT in pwden
+!!$     INTEGER :: kq1_fft
+!!$     INTEGER :: kq2_fft
+!!$     INTEGER :: kq3_fft
+!!$     INTEGER :: kmxq_fft !no of g-vectors in sphere
+!!$     INTEGER, ALLOCATABLE :: igq_fft(:)
+!!$     INTEGER, ALLOCATABLE :: igq2_fft(:)
+!!$
+!!$     !fft box for xc-pot
+!!$     INTEGER :: kxc1_fft
+!!$     INTEGER :: kxc2_fft
+!!$     INTEGER :: kxc3_fft
+!!$
+!!$     INTEGER :: ng3_fft
+!!$     INTEGER :: kmxxc_fft !<number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
+!!$
+!!$     INTEGER :: nxc3_fft !< number of stars in the  charge density  fft-box
+!!$
+!!$     !rep. g-vector of star
+!!$     INTEGER,ALLOCATABLE ::kv3(:,:)
+!!$     !length of star
+!!$     REAL,ALLOCATABLE    ::sk3(:)
+!!$     !mapping of g-vectors to stars
+!!$     INTEGER,ALLOCATABLE ::ig(:,:,:)
+!!$     !No of g-vectors in star
+!!$     INTEGER,ALLOCATABLE ::nstr(:)
+!!$     !rep. g-vector of 2D-star
+!!$     INTEGER,ALLOCATABLE ::kv2(:,:)
+!!$     !length of 2D-star
+!!$     REAL,ALLOCATABLE    ::sk2(:)
+!!$     !No of g-vecs in 2D-star
+!!$     INTEGER,ALLOCATABLE ::nstr2(:)
+!!$     !mapping of
+!!$     INTEGER,ALLOCATABLE ::ig2(:)
+!!$     !
+!!$     REAL,ALLOCATABLE:: phi2(:) !<(n2d)
+!!$     !phase phactor of g-vector
+!!$     COMPLEX,ALLOCATABLE    ::rgphs(:,:,:)
+!!$     !mapping of stars to FFT-box
+!!$     INTEGER, ALLOCATABLE :: igfft(:,:)
+!!$     !same for 2D
+!!$     INTEGER, ALLOCATABLE :: igfft2(:,:)
+!!$     !phasefactors for mapping
+!!$     COMPLEX,ALLOCATABLE  :: pgfft(:)
+!!$     !same of 2D
+!!$     COMPLEX,ALLOCATABLE  :: pgfft2(:)
+!!$     !
+!!$     REAL,ALLOCATABLE     :: ft2_gfx(:),ft2_gfy(:)
+!!$     COMPLEX, ALLOCATABLE :: ustep(:)
+!!$     REAL, ALLOCATABLE    :: ufft(:)
+!!$  END TYPE t_stars
 
-     !Box for FFT in pwden
-     INTEGER :: kq1_fft
-     INTEGER :: kq2_fft
-     INTEGER :: kq3_fft
-     INTEGER :: kmxq_fft !no of g-vectors in sphere
-     INTEGER, ALLOCATABLE :: igq_fft(:)
-     INTEGER, ALLOCATABLE :: igq2_fft(:)
-
-     !fft box for xc-pot
-     INTEGER :: kxc1_fft
-     INTEGER :: kxc2_fft
-     INTEGER :: kxc3_fft
-
-     INTEGER :: ng3_fft
-     INTEGER :: kmxxc_fft !<number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
-
-     INTEGER :: nxc3_fft !< number of stars in the  charge density  fft-box
-
-     !rep. g-vector of star
-     INTEGER,ALLOCATABLE ::kv3(:,:)
-     !length of star
-     REAL,ALLOCATABLE    ::sk3(:)
-     !mapping of g-vectors to stars
-     INTEGER,ALLOCATABLE ::ig(:,:,:)
-     !No of g-vectors in star
-     INTEGER,ALLOCATABLE ::nstr(:)
-     !rep. g-vector of 2D-star
-     INTEGER,ALLOCATABLE ::kv2(:,:)
-     !length of 2D-star
-     REAL,ALLOCATABLE    ::sk2(:)
-     !No of g-vecs in 2D-star
-     INTEGER,ALLOCATABLE ::nstr2(:)
-     !mapping of
-     INTEGER,ALLOCATABLE ::ig2(:)
-     !
-     REAL,ALLOCATABLE:: phi2(:) !<(n2d)
-     !phase phactor of g-vector
-     COMPLEX,ALLOCATABLE    ::rgphs(:,:,:)
-     !mapping of stars to FFT-box
-     INTEGER, ALLOCATABLE :: igfft(:,:)
-     !same for 2D
-     INTEGER, ALLOCATABLE :: igfft2(:,:)
-     !phasefactors for mapping
-     COMPLEX,ALLOCATABLE  :: pgfft(:)
-     !same of 2D
-     COMPLEX,ALLOCATABLE  :: pgfft2(:)
-     !
-     REAL,ALLOCATABLE     :: ft2_gfx(:),ft2_gfy(:)
-     COMPLEX, ALLOCATABLE :: ustep(:)
-     REAL, ALLOCATABLE    :: ufft(:)
-  END TYPE t_stars
 
 
 
-  TYPE t_oneD
-     TYPE (od_dim) :: odd
-     TYPE (od_inp) :: odi
-     TYPE (od_sym) :: ods
-     TYPE (od_lda) :: odl
-     TYPE (od_gga) :: odg
-     INTEGER,  POINTER :: ig1(:,:)
-     INTEGER,  POINTER :: kv1(:,:)
-     INTEGER,  POINTER :: nstr1(:)
-     INTEGER,  POINTER :: ngopr1(:)
-     REAL,     POINTER :: mrot1(:,:,:)
-     REAL,     POINTER :: tau1(:,:)
-     INTEGER,  POINTER :: invtab1(:)
-     INTEGER,  POINTER :: multab1(:,:)
-     INTEGER,  POINTER :: igfft1(:,:)
-     REAL,     POINTER :: pgfft1(:)
-     REAL,     POINTER :: pgft1x(:)
-     REAL,     POINTER :: pgft1y(:)
-     REAL,     POINTER :: pgft1xx(:)
-     REAL,     POINTER :: pgft1yy(:)
-     REAL,     POINTER :: pgft1xy(:)
-  END TYPE t_oneD
 
   TYPE t_hybrid
      LOGICAL               ::  l_hybrid=.false.
@@ -483,26 +412,7 @@ MODULE m_types_setup
 !!$  END TYPE t_vacuum
 
 
-  !Data for the spherical harmonics
-  TYPE t_sphhar
-     !No of symmetry types (must
-     !equal maxval(atoms%ntypsy)
-     INTEGER ::ntypsd
-     !Max no of members of sphhar
-     INTEGER ::memd
-     !max of nlh
-     INTEGER ::nlhd
-     !No of sphhar (ntypsd)
-     INTEGER,ALLOCATABLE ::nlh(:)
-     !l's of sphhar (0:nlhd,ntypsd)
-     INTEGER,ALLOCATABLE ::llh(:,:)
-     !No of members in sphhar (0:nlh
-     INTEGER,ALLOCATABLE ::nmem(:,:)
-     !lm's of of members (max(nmem),
-     INTEGER,ALLOCATABLE ::mlh(:,:,:)
-     !phasefactors (max(nmem),0:nlhd
-     COMPLEX,ALLOCATABLE ::clnu(:,:,:)
-  END TYPE t_sphhar
+ 
 
   !symmetry information
 !!$  TYPE t_sym

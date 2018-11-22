@@ -211,19 +211,43 @@ CONTAINS
     IMPLICIT NONE
     CLASS(t_stars),INTENT(OUT):: tt
 
-    Stars%gmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
-    stars%gmaxinit=stars%gmax
+    tt%gmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
+    tt%gmaxinit=tt%gmax
 
   END SUBROUTINE read_xml_stars
 
-  SUBROUTINE init_stars(stars,..)
+  SUBROUTINE init_stars(stars,cell,input,noco,sym,xcpot,atoms,vacuum,oneD,mpi,sphhar)
+    USE m_types_cell
+    USE m_types_input
+    USE m_types_noco
+    USE m_types_sym
+    USE m_types_xcpot
+    USE m_types_oneD
+    USE m_types_atoms
+    USE m_types_vacuum
+    USE m_types_mpi
+    use m_types_sphhar
+    
     IMPLICIT NONE
     CLASS(t_stars),INTENT(INOUT):: stars
-
+    TYPE(t_cell),INTENT(IN)  :: cell
+    TYPE(t_input),INTENT(IN) :: input
+    TYPE(t_noco),INTENT(IN)  :: noco
+    TYPE(t_sym),INTENT(IN)   :: sym
+    CLASS(t_xcpot),INTENT(IN) :: xcpot
+    TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_vacuum),INTENT(IN)  :: vacuum
+    TYPE(t_oneD),INTENT(IN)  :: oneD
+    TYPE(t_mpi),INTENT(IN)  :: mpi
+    TYPE(t_sphhar),INTENT(IN)::sphhar
+    
+    
+     
     CALL lapw_fft_dim(cell,input,noco,stars)
     ! Dimensioning of stars
 
-    IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+    !IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+    IF (input%film) THEN
        CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
             sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
             stars%ng3,stars%ng2,oneD%odd)
@@ -260,11 +284,12 @@ CONTAINS
     END IF
 
     ! Generate stars
-    IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+    !IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+    IF (input%film) THEN
        CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
-       IF (oneD%odd%d1) THEN
-          CALL od_strgn1(xcpot,cell,sym,oneD)
-       END IF
+       !IF (oneD%odd%d1) THEN
+       !   CALL od_strgn1(xcpot,cell,sym,oneD)
+       !END IF
     ELSE
        CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
     END IF

@@ -63,7 +63,7 @@ MODULE m_constants
    CHARACTER(4),DIMENSION(6),PARAMETER :: nobleGasConfigList_const=(/'[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]'/)
 
    INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
-   `!some dimensions with default values
+   !some dimensions with default values
     integer,parameter:: ncvd_dim=25
 
 

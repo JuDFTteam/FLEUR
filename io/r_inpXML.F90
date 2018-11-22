@@ -224,14 +224,14 @@ CONTAINS
       ALLOCATE(atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%numStatesProvided(atoms%ntype))
-      ALLOCATE(atoms%namex(atoms%ntype))
-      ALLOCATE(atoms%icorr(atoms%ntype))
-      ALLOCATE(atoms%igrd(atoms%ntype))
-      ALLOCATE(atoms%krla(atoms%ntype))
-      ALLOCATE(atoms%relcor(atoms%ntype))
+      !ALLOCATE(atoms%namex(atoms%ntype))
+      !ALLOCATE(atoms%icorr(atoms%ntype))
+      !ALLOCATE(atoms%igrd(atoms%ntype))
+      !ALLOCATE(atoms%krla(atoms%ntype))
+      !ALLOCATE(atoms%relcor(atoms%ntype))
 
-      atoms%namex = ''
-      atoms%icorr = -99
+      !atoms%namex = ''
+      !atoms%icorr = -99
 
       ALLOCATE(atoms%ncv(atoms%ntype)) ! For what is this?
       ALLOCATE(atoms%ngopr(atoms%nat)) ! For what is this?
