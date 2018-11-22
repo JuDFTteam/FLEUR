@@ -17,6 +17,8 @@ MODULE m_types_setup
   use m_types_atoms
   USE m_types_stars
   use m_types_sphhar
+  use m_types_sliceplot
+  use m_types_banddos
 
   !Not converted to fleur_setup type yet
   use m_types_oneD
@@ -352,36 +354,7 @@ MODULE m_types_setup
 !!$     REAL    :: ldauSpinf
 !!$  END TYPE t_input
 
-  TYPE t_sliceplot
-     LOGICAL :: iplot
-     LOGICAL :: slice
-     LOGICAL :: plpot
-     LOGICAL :: pallst
-     INTEGER :: kk
-     INTEGER :: nnne
-     REAL    :: e1s
-     REAL    :: e2s
-  END TYPE t_sliceplot
-
-  TYPE t_banddos
-     LOGICAL :: dos
-     LOGICAL :: band
-     LOGICAL :: l_mcd
-     LOGICAL :: l_orb
-     LOGICAL :: vacdos
-     INTEGER :: ndir
-     INTEGER :: orbCompAtom
-     REAL    :: e1_dos
-     REAL    :: e2_dos
-     REAL    :: sig_dos
-     REAL    :: e_mcd_lo
-     REAL    :: e_mcd_up
-     LOGICAL :: unfoldband
-     INTEGER :: s_cell_x
-     INTEGER :: s_cell_y
-     INTEGER :: s_cell_z     
-  END TYPE t_banddos
-
+ 
   TYPE t_obsolete
      INTEGER:: lepr !floating energy parameters...
      INTEGER:: ndvgrd !remove
