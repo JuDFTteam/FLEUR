@@ -41,6 +41,11 @@ MODULE m_eigen_diag
 #endif
   
   INTEGER,PARAMETER:: diag_lapack=4
+#ifdef CPP_ELPA_ONENODE
+  INTEGER,PARAMETER:: diag_elpa_1node=14
+#else
+  INTEGER,PARAMETER:: diag_elpa_1node=-14
+#endif 
   INTEGER,PARAMETER:: diag_debugout=99
   PUBLIC eigen_diag,parallel_solver_available
 CONTAINS
@@ -53,6 +58,7 @@ CONTAINS
     USE m_lapack_diag
     USE m_magma
     USE m_elpa
+    USE m_elpa_onenode
     USE m_scalapack
     USE m_elemental
     USE m_chase_diag
@@ -105,6 +111,8 @@ CONTAINS
     SELECT CASE (priv_select_solver(parallel))
     CASE (diag_elpa)
        CALL elpa_diag(hmat,smat,ne,eig,ev)
+    CASE (diag_elpa_1node)
+       CALL elpa_diag_onenode(hmat,smat,ne,eig,ev)
     CASE (diag_elemental)
        !CALL ELEMENTAL(hmat,smat,ne,eig,ev)
     CASE (diag_scalapack)
@@ -229,19 +237,21 @@ CONTAINS
     ENDIF
 
     !check if a special solver was requested
-    IF (TRIM(juDFT_string_for_argument("-diag"))=="elpa")      diag_solver=diag_elpa
-    IF (trim(juDFT_string_for_argument("-diag"))=="scalapack") diag_solver=diag_scalapack
-    IF (trim(juDFT_string_for_argument("-diag"))=="elemental") diag_solver=diag_elemental
-    IF (trim(juDFT_string_for_argument("-diag"))=="lapack")    diag_solver=diag_lapack
-    IF (trim(juDFT_string_for_argument("-diag"))=="magma")     diag_solver=diag_magma
-    IF (trim(juDFT_string_for_argument("-diag"))=="chase")     diag_solver=diag_chase
-    IF (trim(juDFT_string_for_argument("-diag"))=="cusolver")  diag_solver=diag_cusolver
-    IF (trim(juDFT_string_for_argument("-diag"))=="debugout")  diag_solver=diag_debugout
+    IF (TRIM(juDFT_string_for_argument("-diag"))=="elpa")       diag_solver=diag_elpa
+    IF (TRIM(juDFT_string_for_argument("-diag"))=="elpa_1node") diag_solver=diag_elpa_1node
+    IF (trim(juDFT_string_for_argument("-diag"))=="scalapack")  diag_solver=diag_scalapack
+    IF (trim(juDFT_string_for_argument("-diag"))=="elemental")  diag_solver=diag_elemental
+    IF (trim(juDFT_string_for_argument("-diag"))=="lapack")     diag_solver=diag_lapack
+    IF (trim(juDFT_string_for_argument("-diag"))=="magma")      diag_solver=diag_magma
+    IF (trim(juDFT_string_for_argument("-diag"))=="chase")      diag_solver=diag_chase
+    IF (trim(juDFT_string_for_argument("-diag"))=="cusolver")   diag_solver=diag_cusolver
+    IF (trim(juDFT_string_for_argument("-diag"))=="debugout")   diag_solver=diag_debugout
     
     !Check if solver is possible
     IF (diag_solver<0)  CALL juDFT_error("You selected a solver for the eigenvalue problem that is not available",hint="You most probably did not provide the appropriate libraries for compilation/linking")
     IF (ANY((/diag_lapack,diag_magma,diag_cusolver/)==diag_solver).AND.parallel) CALL judft_error("You selected an eigensolver that does not support distributed memory parallism",hint="Try scalapack,elpa or another supported solver for parallel matrices")
     IF (ANY((/diag_elpa,diag_elemental,diag_scalapack/)==diag_solver).AND..NOT.parallel) CALL judft_error("You selected an eigensolver for matrices that are memory distributed",hint="Try lapack, cusolver or another supported solver for non-distributed matrices")
+
 
   END FUNCTION priv_select_solver
 
