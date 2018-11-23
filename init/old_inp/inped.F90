@@ -26,7 +26,7 @@
 !     *******************************************************
 !
       CONTAINS
-        SUBROUTINE inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
+        SUBROUTINE inped(job,atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
                          stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
           USE m_rwinp
@@ -43,6 +43,7 @@
           TYPE(t_obsolete),  INTENT(INOUT) :: obsolete
           TYPE(t_vacuum),    INTENT(INOUT) :: vacuum
           TYPE(t_input),     INTENT(INOUT) :: input
+          TYPE(t_job),INTENT(INOUT)        :: job
           TYPE(t_banddos),   INTENT(INOUT) :: banddos
           TYPE(t_xcpot_inbuild),     INTENT(INOUT) :: xcpot
           TYPE(t_sym),       INTENT(INOUT) :: sym
@@ -64,6 +65,7 @@
           INTEGER i,iz,j,n,n1,na,ntst,nn,ios
           LOGICAL l_gga,l_test,l_vca
           CHARACTER(len=2)  :: str_up,str_do
+          CHARACTER(len=4)  :: namgrp
 
           !     ..
           !     .. Local Arrays ..
@@ -84,7 +86,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
+               cell,sym,xcpot,noco,oneD,hybrid,kpts,job, noel,namex,relcor,a1,a2,a3,namgrp)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -113,8 +115,8 @@
 
 8010      FORMAT (/,/,4x,10a8,/,/)
           !--->    the menu for namgrp can be found in subroutine spgset
-          WRITE (6,FMT=8030) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
-          WRITE (16,FMT=8030) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
+          WRITE (6,FMT=8030) cell%latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
+          WRITE (16,FMT=8030) cell%latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
 8030      FORMAT (' lattice=',a3,/,' name of space group=',a4,/,' inversion symmetry=   ',l1&
                ,/,' z-reflection symmetry=',l1,/,' vacuum-inversion symm=',l1,/,' jspins=',i1)
 
@@ -132,9 +134,8 @@
              CALL juDFT_error("latnam",calledby ="inped")
           ENDIF
           dtild=a3(3)
-          IF (input%scaleCell.EQ.0.0) input%scaleCell = 1.0
-          vacuum%dvac = input%scaleCell*vacuum%dvac
-          dtild = input%scaleCell*dtild
+          vacuum%dvac = vacuum%dvac
+          dtild = dtild
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
              IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
@@ -157,12 +158,9 @@
           IF (vacuum%nmz>vacuum%nmz)  CALL juDFT_error("nmzd",calledby ="inped")
           vacuum%nmzxy = vacuum%nmzxy
           IF (vacuum%nmzxy>vacuum%nmzxy)  CALL juDFT_error("nmzxyd",calledby ="inped")
-          a1(:) = input%scaleCell*a1(:)
-          a2(:) = input%scaleCell*a2(:)
-          a3(:) = input%scaleCell*a3(:)
-          WRITE (6,FMT=8050) input%scaleCell
-          WRITE (16,FMT=8050) input%scaleCell
-8050      FORMAT (' unit cell scaled by    ',f10.6)
+          a1(:) = a1(:)
+          a2(:) = a2(:)
+          a3(:) = a3(:)
           WRITE (6,FMT=8060) cell%z1
           WRITE (16,FMT=8060) cell%z1
 8060      FORMAT (' the vacuum begins at z=',f10.6)
@@ -342,7 +340,7 @@
                 !
                 !--->   for films, the z-coordinates are given in absolute values:
                 !
-                IF (input%film) atoms%taual(3,na) = input%scaleCell*atoms%taual(3,na)/a3(3)
+                IF (input%film) atoms%taual(3,na) = atoms%taual(3,na)/a3(3)
                 !
                 ! Transform intern coordinates to cartesian:
                 !
@@ -399,8 +397,8 @@
           !--->    parameters given on absolute (floating) scale
           WRITE (16,FMT=*) 'nwd=',1,'lepr=',obsolete%lepr
           IF (ALL(obsolete%lepr .NE. (/0,1/))) CALL judft_error("Wrong choice of lepr",calledby="inped")
-          WRITE (6,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
-          WRITE (16,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
+          WRITE (6,FMT=8320) input%l_f,job%eonly,1,llr(obsolete%lepr)
+          WRITE (16,FMT=8320) input%l_f,job%eonly,1,llr(obsolete%lepr)
           WRITE (6,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
           WRITE (16,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
 8320      FORMAT (1x,/,/,/,' input of parameters for eigenvalues:',/,t5,&
@@ -444,12 +442,12 @@
           WRITE (6,FMT=8240) input%zelec,input%tkb
 8230      FORMAT (/,10x,'gauss-integration is used  =',3x,l1,/,10x, 'gaussian half width        =',f10.5)
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)
-          WRITE (6,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
+          WRITE (6,FMT=*) 'itmax=',job%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
           WRITE (6,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
-          WRITE (16,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
+          WRITE (16,FMT=*) 'itmax=',job%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
           WRITE (16,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
 
-          IF ((.NOT.sym%invs).AND.input%secvar) THEN
+          IF ((.NOT.sym%invs).AND.job%secvar) THEN
              WRITE(6,*)'The second variation is not implemented in the'
              WRITE(6,*)'complex version of the program.'
              CALL juDFT_error ("second variation not implemented in complex version" ,calledby ="inped")
@@ -462,7 +460,7 @@
              input%kcrel = 0
           ENDIF
 
-          WRITE (6,'(a7,l1)') 'swsp = ',input%swsp
+          WRITE (6,'(a7,l1)') 'swsp = ',job%swsp
           WRITE (6,'(15f6.2)') (atoms%bmu(i),i=1,atoms%ntype)
           IF (vacuum%layers>vacuum%layers)  CALL juDFT_error("too many layers",calledby ="inped")
           IF (sliceplot%slice) THEN
@@ -476,7 +474,7 @@
           !
           DO n=1,atoms%ntype
              IF (atoms%nlo(n).GE.1) THEN
-                IF (input%secvar)          CALL juDFT_error ("LO + sevcar not implemented",calledby ="inped")
+                IF (job%secvar)          CALL juDFT_error ("LO + sevcar not implemented",calledby ="inped")
                 IF (atoms%nlo(n).GT.atoms%nlod) THEN
                    WRITE (6,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod
                    CALL juDFT_error("nlo(n)>nlod",calledby ="inped")
@@ -510,7 +508,7 @@
              END IF
           END DO
           IF (atoms%n_u.GT.0) THEN
-             IF (input%secvar)          CALL juDFT_error ("LDA+U and sevcar not implemented",calledby ="inped")
+             IF (job%secvar)          CALL juDFT_error ("LDA+U and sevcar not implemented",calledby ="inped")
              IF (noco%l_mperp)         CALL juDFT_error ("LDA+U and l_mperp not implemented",calledby ="inped")
           ENDIF
           !

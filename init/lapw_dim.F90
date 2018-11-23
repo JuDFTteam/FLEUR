@@ -13,7 +13,12 @@ CONTAINS
     !  Generalization of the old apws_dim routine
     !*********************************************************************
     USE m_boxdim
-    USE m_types
+    USE m_types_kpts
+    USE m_types_cell
+    USE m_types_input
+    USE m_types_noco
+    USE m_types_oneD
+    USE m_types_dimension
     USE m_types_forcetheo_extended
     IMPLICIT NONE
     TYPE(t_kpts),INTENT(IN)      :: kpts

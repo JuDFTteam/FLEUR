@@ -10,8 +10,8 @@
       CONTAINS
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt)
+     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,job,&
+     &                  noel,namex,relcor,a1,a2,a3,namgrp,dtild_opt,name_opt)
 
 !*********************************************************************
 !* This subroutine reads or writes an inp - file on unit iofile      *
@@ -20,6 +20,7 @@
 !*********************************************************************
       USE m_calculator
       USE m_types
+      use m_types_job
   
       IMPLICIT NONE
 ! ..
@@ -33,6 +34,7 @@
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
+      TYPE(t_job),INTENT(INOUT)     :: job
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
@@ -45,12 +47,13 @@
       CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
+      CHARACTER(len=4),INTENT(OUT) :: namgrp
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
       CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
 
 
-      CHARACTER(len=8) :: name(10)
+      CHARACTER(len=8) :: name
 
 !+lda+u
       REAL    u,j
@@ -71,7 +74,7 @@
       REAL     ::scpos  ,zc,dtild   
       INTEGER  ::nw,idsprs
       INTEGER ieq,i,k,na,n,ilo
-      REAL s3,ah,a,hs2,rest
+      REAL s3,ah,a,hs2,rest,scaleCell
       LOGICAL l_hyb,l_sym,ldum
       INTEGER :: ierr, intDummy
 ! ..
@@ -87,7 +90,7 @@
       CHARACTER (len=1)     ::  check
 
       IF (PRESENT(dtild_opt)) dtild=dtild_opt
-      IF (PRESENT(name_opt)) name=name_opt
+      !IF (PRESENT(name_opt)) name=name_opt
 
 !     Initialize variables
       l_hyb = .false.
@@ -125,26 +128,27 @@
       BACKSPACE 5
       IF( check .eq. ',' ) THEN
         READ (UNIT=5,FMT=8000,END=99,ERR=99) &
-     &                input%strho,input%film,banddos%dos,intDummy,banddos%ndir,input%secvar
-        WRITE (6,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
- 8000 FORMAT (6x,l1,6x,l1,5x,l1,7x,i2,6x,i2,8x,l1)
+     &                ldum,input%film,banddos%dos,intDummy,banddos%ndir
+        WRITE (6,9000) .false.,input%film,banddos%dos,99,banddos%ndir,.false.
+9000    FORMAT ('strho=',l1,',film=',l1,',dos=',l1,',isec1=',i2,',ndir=',i2,',secvar=',l1)
+  8000 FORMAT (6x,l1,6x,l1,5x,l1,7x,i2,6x,i2,8x,l1)
       ELSE
         READ (UNIT=5,FMT=8001,END=99,ERR=99) &
-     &                input%strho,input%film,banddos%dos,intDummy,banddos%ndir,input%secvar
-        WRITE (6,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
+     &                ldum,input%film,banddos%dos,intDummy,banddos%ndir
+        WRITE (6,9000) ldum,input%film,banddos%dos,99,banddos%ndir,.false.
  8001 FORMAT (6x,l1,6x,l1,5x,l1,7x,i3,6x,i2,8x,l1)
       END IF
 
 !
       READ (UNIT=5,FMT=7000,END=99,ERR=99) name
-      input%comment = name
-      WRITE (6,9010) name
+      !input%comment = name
+      WRITE (6,*) name
  7000 FORMAT (10a8)
 !
       READ (UNIT=5,FMT=7020,END=99,ERR=99)&
-     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
-      WRITE (6,9020)&
-     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     cell%latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+      WRITE (6,*)&
+     &     cell%latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  7020 FORMAT (a3,1x,a4,6x,l1,6x,l1,7x,l1,8x,i1,8x,l1,5x,l1)
 !
       IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
@@ -248,11 +252,11 @@
          a2(2) = -a1(2)
       END IF
 
-      input%scaleA1 = 1.0
-      input%scaleA2 = 1.0
-      input%scaleC  = 1.0
+      !input%scaleA1 = 1.0
+      !input%scaleA2 = 1.0
+      !input%scaleC  = 1.0
 
-      IF (sym%namgrp.EQ.'any ') THEN
+      IF (namgrp.EQ.'any ') THEN
         INQUIRE (file='sym.out',exist=l_sym)
         IF (.not.l_sym)&
      &       CALL juDFT_error(&
@@ -261,7 +265,7 @@
       ENDIF
       IF (cell%latnam.EQ.'any') THEN
 !        CALL juDFT_error("please specify lattice type (squ,p-r,c-r,hex,hx3,obl)",calledby="rw_inp")
-        READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
+        READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),vacuum%dvac
         IF (ierr /= 0) THEN
            BACKSPACE(5)
            READ (UNIT = 5,FMT ="(a)",END = 99,ERR = 99) line
@@ -269,19 +273,19 @@
            a3(2)           = evaluatefirst(line)
            a3(3)           = evaluatefirst(line)
            vacuum%dvac     = evaluatefirst(line)
-           input%scaleCell = evaluatefirst(line)
+           scaleCell = evaluatefirst(line)
         ENDIF
-        WRITE (6,9031) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
+        WRITE (6,9031) a3(1),a3(2),a3(3),vacuum%dvac,1.0
       ELSE
-         READ (UNIT = 5,FMT =*,iostat= ierr) vacuum%dvac,dtild,input%scaleCell
+         READ (UNIT = 5,FMT =*,iostat= ierr) vacuum%dvac,dtild,scaleCell
          IF (ierr /= 0) THEN
             BACKSPACE(5)
             READ (UNIT = 5,FMT ="(a)",END = 99,ERR = 99) line
             vacuum%dvac     = evaluatefirst(line)
             dtild           = evaluatefirst(line)
-            input%scaleCell = evaluatefirst(line)
+            scaleCell = evaluatefirst(line)
         ENDIF
-        WRITE (6,9030) vacuum%dvac,dtild,input%scaleCell
+        WRITE (6,9030) vacuum%dvac,dtild,scaleCell
         a3(3) = dtild
       ENDIF
 !
@@ -452,39 +456,27 @@
  7210 FORMAT (2f10.6)
 !
       INQUIRE(file='fl7para',exist=ldum)  ! fl7para must not exist for input%gw=2
-      IF (input%gw.eq.-1.and.ldum) THEN         ! in the first run of rw_inp
-        ldum = .true.                     ! (then, input%gw=-1 at this point).
-      ELSE                                !
-        ldum = .false.                    !
-      ENDIF                               !
-      input%gw = 0
+      !IF (input%gw.eq.-1.and.ldum) THEN         ! in the first run of rw_inp
+      !  ldum = .true.                     ! (then, input%gw=-1 at this point).
+      !ELSE                                !
+      !  ldum = .false.                    !
+      !ENDIF                               !
+      !input%gw = 0
       READ (UNIT=5,FMT=7220,END=99,ERR=7215)&
-           &                                       input%vchk,input%cdinf,ldum,input%gw,input%gw_neigd
+           &                                       input%vchk,input%cdinf,ldum
       if (ldum) call judft_error("pot8 not longer supported")
-7215  IF(input%strho) input%gw=0
-      if (ldum) call judft_error("pot8 not longer supported")
-      IF(input%gw.eq.2 .OR. l_hyb) THEN
-         IF(ldum)  CALL juDFT_error&
-     &        ("Remove fl7para before run with gw = 2!",calledby&
-     &        ="rw_inp")
-         IF(input%gw_neigd==0)  CALL juDFT_error("No numbands-value given."&
-     &        ,calledby ="rw_inp")
-      ELSE
-        INQUIRE(file='QGpsi',exist=ldum)
-        IF(ldum)           CALL juDFT_error&
-     &       ("QGpsi exists but gw /= 2 in inp.",calledby ="rw_inp")
-      ENDIF
+7215  IF (ldum) CALL judft_error("pot8 not longer supported")
   
       BACKSPACE(5)                                         ! Make sure that input%vchk,input%cdinf,obsolete%pot8 are all given.
       READ (UNIT=5,FMT=7220,END=99,ERR=99) input%vchk,input%cdinf,ldum
       if (ldum) call judft_error("pot8 not longer supported")
-      WRITE (6,9120) input%vchk,input%cdinf,.false.,input%gw,input%gw_neigd
+      WRITE (6,9120) input%vchk,input%cdinf,.false.
  7220 FORMAT (5x,l1,1x,6x,l1,1x,5x,l1,1x,3x,i1,1x,9x,i4)
 !
       DO i=1,100 ; line(i:i)=' ' ; ENDDO
       READ (UNIT=5,FMT=6000,END=99,ERR=99)&
-     &                idum,ldum,input%l_f,input%eonly
-      WRITE (6,9130) 0,.false.,input%l_f,input%eonly
+     &                idum,ldum,input%l_f
+      WRITE (6,9130) 0,.false.,input%l_f,.false.
  6000 FORMAT (4x,i1,8x,l1,5x,l1,7x,l1,7x,l1)
 !
 !+roa
@@ -553,7 +545,7 @@
       input%kcrel=0
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
-      input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
+      !input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
       WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail
  8050 FORMAT (6x,l1,7x,l1,7x,l1,6x,l1,7x,i1,5x,l1,5x,l1)
       
@@ -563,13 +555,13 @@
 
       IF( check .eq. ',' ) THEN
         READ (UNIT=5,FMT=8060,END=99,ERR=99) &
-     & input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
-        WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+     & job%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+        WRITE (6,9180) job%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8060   FORMAT (6x,i2,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       ELSE
         READ (UNIT=5,FMT=8061,END=99,ERR=99) &
-     & input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
-        WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+     & job%itmax,input%maxiter,input%imix,input%alpha,input%spinf
+        WRITE (6,9180) job%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8061   FORMAT (6x,i3,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       END IF
       
@@ -578,29 +570,29 @@
       chform = '(5x,l1,'//chntype//'f6.2)'
 !      chform = '(5x,l1,23f6.2)'
       READ (UNIT=5,FMT=chform,END=99,ERR=99)&
-     &                                   input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
+     &                                   job%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '(6x,l1,'//chntype//'i3 )'
 !      chform = '(6x,l1,23i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99)&
-     &                                   input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+     &                                   job%lflip, (atoms%nflip(i),i=1,atoms%ntype)
 !-
       chform = '("swsp=",l1,'//chntype//'f6.2)'
 !      chform = '("swsp=",l1,23f6.2)'
-      WRITE (6,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
+      WRITE (6,FMT=chform) job%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
 !      chform = '("lflip=",l1,23i3 )'
-      WRITE (6,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (6,FMT=chform) job%lflip, (atoms%nflip(i),i=1,atoms%ntype)
 !-roa
 !+stm
       READ (UNIT=5,FMT=8075,END=99,ERR=99)&
-     &      banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
+     &      banddos%vacdos,vacuum%layers,vacuum%integ,vacuum%starcoeff,vacuum%nstars,&
      &      vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
-      WRITE (6,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
+      WRITE (6,9210) banddos%vacdos,vacuum%layers,vacuum%integ,vacuum%starcoeff,vacuum%nstars,&
      &      vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
  8075 FORMAT (7x,l1,8x,i2,7x,l1,6x,l1,8x,i2,4(4x,f5.2),6x,i1,8x,f10.6)
 !-stm
       IF (banddos%vacdos) THEN
-        IF (input%integ) THEN
+        IF (vacuum%integ) THEN
           READ (UNIT=5,FMT=8076,END=99,ERR=99)&
      &                    ((vacuum%izlay(i,k),k=1,2),i=1,vacuum%layers)
           WRITE (6,9220) ((vacuum%izlay(i,k),k=1,2),i=1,vacuum%layers)
@@ -617,19 +609,19 @@
       END IF
 !
       band = .false.
-      READ (UNIT=5,FMT=8050,END=992,ERR=992) sliceplot%iplot,input%score,sliceplot%plpot,band
-      WRITE (6,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
+      READ (UNIT=5,FMT=8050,END=992,ERR=992) sliceplot%iplot,job%score,sliceplot%plpot,band
+      WRITE (6,9240) sliceplot%iplot,job%score,sliceplot%plpot,band
       IF (band) THEN
         banddos%dos=.true. ; banddos%ndir = -4
       ENDIF
       GOTO 993
  992  BACKSPACE(5)
-      READ (UNIT=5,FMT=8050,END=99,ERR=99) sliceplot%iplot,input%score,sliceplot%plpot
-      WRITE (6,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
+      READ (UNIT=5,FMT=8050,END=99,ERR=99) sliceplot%iplot,job%score,sliceplot%plpot
+      WRITE (6,9240) sliceplot%iplot,job%score,sliceplot%plpot,band
 !
  993  READ (UNIT=5,FMT='(i3,2f10.6,6x,i3,8x,l1)',END=99,ERR=99)&
-     &                sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
-      WRITE (6,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
+     &                sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,sliceplot%pallst
+      WRITE (6,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,sliceplot%pallst
 !
       READ (UNIT=5,FMT=8090,END=99,ERR=99)&
      &                input%xa,input%thetad,input%epsdisp,input%epsforce
@@ -709,242 +701,39 @@
 !---------------------------------------------------------------------
       ELSEIF ((ch_rw.eq.'W').OR.(ch_rw.eq.'w'))  THEN
 !---------------------------------------------------------------------
+         PRINT *,"Writing of old inp-file no longer supported"
+      ENDIF
+ 9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1, ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
+9091  FORMAT (i2,',force =',l1,',nlo=',i2,',llo=',60i3)
 
-      IF (ch_rw.eq.'W') THEN
-      OPEN (5,file='inp_new',form='formatted',status='unknown')
-      REWIND (5)
-      ELSE
-      OPEN(5,file='inp',form='formatted',status='unknown')
-      ENDIF
-
-      IF (namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
-     &  .OR. namex.EQ.'vhse' )&
-     &  l_hyb = .true.
-      WRITE (5,9000) input%strho,input%film,banddos%dos,99,banddos%ndir,input%secvar
- 9000 FORMAT ('strho=',l1,',film=',l1,',dos=',l1,',isec1=',i3,&
-     &        ',ndir=',i2,',secvar=',l1)
-      WRITE (5,9010) name
- 9010 FORMAT (10a8)
-      WRITE(5,9020) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
- 9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1,&
-     &       ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
-!
-      IF (cell%latnam.EQ.'c-b') THEN
-         a1(1) = sqrt(2.)* a1(1)
-      END IF
-      IF (cell%latnam.EQ.'hex') THEN
-         s3 = sqrt(3.)
-         a1(1) = 2*a1(1)/sqrt(3.)
-      END IF
-      IF (cell%latnam.EQ.'hx3') THEN
-         a1(1) = 2*a1(1)
-      END IF
-!
-      IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
-     &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3')) THEN
-          WRITE (5,9030) a1(1)
-      ELSEIF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-          WRITE (5,9030) a1(1),a2(2)
-      ELSEIF (cell%latnam.EQ.'obl') THEN
-          WRITE (5,9030) a1(1),a1(2)
-          WRITE (5,9030) a2(1),a2(2)
-      ELSEIF (cell%latnam.EQ.'any') THEN
-          WRITE (5,9030) a1(1),a1(2),a1(3)
-          WRITE (5,9030) a2(1),a2(2),a2(3)
-      ELSE
-          WRITE (6,*) 'rw_inp: cell%latnam ',cell%latnam,' unknown'
-           CALL juDFT_error("Invalid lattice name",calledby="rw_inp")
-      ENDIF
-!
-      IF (cell%latnam.EQ.'any') THEN
-        WRITE (5,9031)  a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
-        dtild = a3(3)
-      ELSE
-        WRITE (5,9030) vacuum%dvac,dtild,input%scaleCell
-        a3(3) = input%scaleCell * dtild
-      ENDIF
  9030 FORMAT (3f15.8)
  9031 FORMAT (5f15.8)
-      IF (namex.EQ.'vhse') THEN
-        WRITE (5,9041) namex,relcor,0.25,0.11
-      ELSE
-        WRITE (5,9040) namex,relcor
-      ENDIF
  9040 FORMAT (a4,3x,a12)
- 9041 FORMAT (a4,3x,a12,2f6.3)
-      IF ((namex.EQ.'pw91').OR.(namex.EQ.'l91').OR.&
-     &    (namex.eq.'pbe').OR.(namex.eq.'rpbe').OR.&
-   &    (namex.EQ.'Rpbe').OR.(namex.eq.'wc') ) THEN
-        WRITE (5,FMT=9121) idum,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
- 9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1,&
-     &           ',chng=',d10.3)
-      ENDIF
-      IF( namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
-     &    .OR. namex.EQ.'vhse' ) THEN
-        WRITE (5,9999) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
-        l_hyb = .true.
-      END IF
-
-
-!-odim
-      IF (oneD%odd%d1) THEN
-        WRITE (5,8182) oneD%odd%d1,oneD%odd%M,oneD%odd%mb,&
-     &                      oneD%odd%m_cyl,oneD%odd%chi,oneD%odd%rot,oneD%odd%invs,oneD%odd%zrfs
- 8182   FORMAT ('&odim d1=',l1,',MM=',i3,',vM=',i3,&
-     &          ',m_cyl=',i3,',chi=',i3,',rot=',i3,&
-     &          ',invs1=',l1,',zrfs1=',l1,'/')
-      ELSE
-        WRITE (5,*) '   '
-      END IF
-!+odim
-      WRITE (5,9050) atoms%ntype
+ 9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1, ',chng=',d10.3)
+     
+ 8182   FORMAT ('&odim d1=',l1,',MM=',i3,',vM=',i3, ',m_cyl=',i3,',chi=',i3,',rot=',i3, ',invs1=',l1,',zrfs1=',l1,'/')
  9050 FORMAT (i3)
-      na = 0
-      WRITE (5,9060)
  9060 FORMAT ('**********************************')
-      i_u = 1
-      DO n=1,atoms%ntype
-         WRITE (5,9070) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),&
-     &                       atoms%rmt(n),atoms%dx(n)
  9070    FORMAT (a3,i3,3i5,2f10.6)
-!+lda_u
-         IF (i_u.LE.atoms%n_u) THEN
-            DO WHILE (atoms%lda_u(i_u)%atomType.LT.n)
-               i_u = i_u + 1
-               IF (i_u.GE.atoms%n_u) EXIT
-            END DO
-            IF (atoms%lda_u(i_u)%atomType.EQ.n) THEN
-               WRITE (5,8180) atoms%lda_u(i_u)%l,atoms%lda_u(i_u)%u,atoms%lda_u(i_u)%j,atoms%lda_u(i_u)%l_amf
- 8180          FORMAT ('&ldaU l=',i1,',u=',f4.2,',j=',f4.2,',l_amf=',l1,'/')
-            ELSE
-               WRITE (5,*) '   '
-            ENDIF
-         ELSE
-            WRITE (5,*) '   '
-         END IF
-!-lda_u
-        IF ( l_hyb ) THEN
-          WRITE (5,9090) atoms%neq(n),atoms%l_geo(n),hybrid%lcutm1(n),hybrid%select1(1,n),&
-     &          hybrid%select1(2,n),hybrid%select1(3,n),hybrid%select1(4,n),atoms%nlo(n),&
-     &          (atoms%llo(ilo,n),ilo=1,atoms%nlo(n))
- 9090     FORMAT ( i2,',force =',l1,',lcutm=',i2,',select=',&
-     &        i2,',',i2,';',i2,',',i2,',nlo=',i2,',llo=',60i3 )
-        ELSE
-          WRITE (5,9091) atoms%neq(n),atoms%l_geo(n),atoms%nlo(n),&
-     &          (atoms%llo(ilo,n),ilo=1,atoms%nlo(n))
- 9091     FORMAT (i2,',force =',l1,',nlo=',i2,',llo=',60i3)
-        END IF
-         DO ieq=1,atoms%neq(n)
-            na = na + 1
-
-            scpos = 1.0
-            DO i = 2,9
-               rest = ABS(i*atoms%taual(1,na) - NINT(i*atoms%taual(1,na)) )&
-                    + ABS(i*atoms%taual(2,na) - NINT(i*atoms%taual(2,na)) )
-               IF (rest.LT.(i*0.000001)) EXIT
-            ENDDO
-            IF (i.LT.10) scpos = real(i)  ! common factor found (x,y)
-            IF (.NOT.input%film) THEN           ! now check z-coordinate
-              DO i = 2,9
-                rest = ABS(i*atoms%taual(3,na) - NINT(i*atoms%taual(3,na)) )
-                IF (rest.LT.(i*scpos*0.000001)) THEN
-                  scpos = i*scpos
-                  EXIT
-                ENDIF
-              ENDDO
-            ENDIF
-            DO i = 1,2
-               atoms%taual(i,na) = atoms%taual(i,na)*scpos
-            ENDDO
-            IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
-            IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/input%scaleCell
-!+odim in 1D case all the coordinates are given in cartesian YM
-            IF (oneD%odd%d1) THEN
-               atoms%taual(1,na) = atoms%taual(1,na)*a1(1)
-               atoms%taual(2,na) = atoms%taual(2,na)*a2(2)
-            END IF
-!-odim
-            WRITE (5,9100) (atoms%taual(i,na),i=1,3),scpos
+8180 FORMAT ('&ldaU l=',i1,',u=',f4.2,',j=',f4.2,',l_amf=',l1,'/')
+9090 FORMAT (i2,',force =',l1,',nlo=',i2,',llo=',60i3)
  9100       FORMAT (4f10.6)
-         ENDDO
-         WRITE (5,9060)
-      ENDDO
-      IF ((xcpot%gmaxxc.LE.0).OR.(xcpot%gmaxxc.GT.stars%gmax)) xcpot%gmaxxc=stars%gmax
-      WRITE (5,9110) stars%gmax,xcpot%gmaxxc
  9110 FORMAT (2f10.6)
-      WRITE (5,9120) input%vchk,input%cdinf,.false.,input%gw,input%gw_neigd
- 9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
-     &        ',numbands=',i4)
-      WRITE (5,9130) 0,.false.,input%l_f,input%eonly
- 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1)
-      IF ( l_hyb ) THEN
-        WRITE (chntype,'(i3)') 2*atoms%ntype
-        chform = '('//chntype//'i3 )'
-        WRITE (5,FMT=chform) &
-     &        (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
-      ELSE
-         WRITE (chntype,'(i3)') atoms%ntype
-         chform = '('//chntype//'i3 )'
-         WRITE (5,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)
-      END IF
+ 9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1, ',gw_neigd=',i4)
+ 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1, ',eig66=',l1,',soc66=',l1)
  9140 FORMAT (25i3)
-      WRITE (5,9140) 1,obsolete%lepr
-
-      WRITE (5,'(a)') 'ellow, elup, valence electrons:'
-      
-      WRITE (5,9150) input%ellow,input%elup,input%zelec
-9150  FORMAT (4f10.5)
-      WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'
-      WRITE (5,9160) input%gauss,input%delgau,input%tria
+ 9150    FORMAT (4f10.5)
  9160 FORMAT ('gauss=',l1,f10.5,'tria=',l1)
-      WRITE (5,9170) input%frcor,sliceplot%slice,input%ctail
- 9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1)
-      WRITE (5,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
- 9180 FORMAT ('itmax=',i3,',maxiter=',i3,',imix=',i2,',alpha=',&
-     &        f6.2,',spinf=',f6.2)
-!+roa
-      WRITE (chntype,'(i3)') atoms%ntype
-      chform = '("swsp=",l1,'//chntype//'f6.2)'
-      WRITE (5,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
-      chform = '("lflip=",l1,'//chntype//'i3 )'
-      WRITE (5,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
-!-roa
-!+stm
-      WRITE (5,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
-     &      vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
- 9210 FORMAT ('vacdos=',l1,',layers=',i2,',integ=',l1,',star=',l1,&
-     & ',nstars=',i2,4(4x,f5.2),',nstm=',i1,',tworkf=',f10.6)
-!-stm
-      IF (banddos%vacdos) THEN
-        IF (input%integ) THEN
-          WRITE (5,9220) ((vacuum%izlay(i,k),k=1,2),i=1,vacuum%layers)
+ 9170 FORMAT ('frcor=',l1,',slice=',l1,',ctail=',l1,',disp=', l1,',kcrel=',i1,',u2f=',l1,',f2u=',l1,',bmt=',l1)
+ 9180 FORMAT ('itmax=',i2,',maxiter=',i3,',imix=',i2,',alpha=',f6.4,',spinf=',f6.2)
+ 9181 FORMAT ('itmax=',i2,',maxiter=',i3,',imix=',i2,',alpha=',f6.2,',spinf=',f6.2)
+ 9210 FORMAT ('vacdos=',l1,',layers=',i2,',integ=',l1,',star=',l1,',nstars=',i2,4(4x,f5.2),',nstm=',i1,',tworkf=',f10.6)
  9220     FORMAT (10(2(i3,1x),1x))
-        ELSE
-          WRITE (5,9230) (vacuum%izlay(i,1),i=1,vacuum%layers)
  9230     FORMAT (20(i3,1x))
-        END IF
-      ELSE
-        WRITE (5,*)
-      END IF
-      band = .false.
-      WRITE (5,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
+      
  9240 FORMAT ('iplot=',l1,',score=',l1,',plpot=',l1,',band=',l1)
-      WRITE (5,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
  9250 FORMAT (i3,2f10.6,',nnne=',i3,',pallst=',l1)
-      WRITE (5,9260) input%xa,input%thetad,input%epsdisp,input%epsforce
- 9260 FORMAT ('xa=',f10.5,',thetad=',f10.5,',epsdisp=',f10.5,&
-     &        ',epsforce=',f10.5)
-!+/-gb
-      chform = '("relax ",'//chntype//'(3i1,1x))'
-      WRITE (5,FMT=chform) ((atoms%relax(i,k),i=1,3),k=1,atoms%ntype)
-      WRITE (5,'(a,f10.5,a,f10.5,a,f10.5)')&
-     &     'emin_dos=',banddos%e2_dos,',emax_dos=',banddos%e1_dos,',sig_dos=',banddos%sig_dos
-
-      IF (ch_rw.eq.'W') CLOSE (5)
-      ELSE
-        WRITE (6,*) 'specify either W to write or R to read!'
-      ENDIF
-
+ 9260 FORMAT ('xa=',f10.5,',thetad=',f10.5,',epsdisp=',f10.5,',epsforce=',f10.5)
       RETURN
 
       !Error handling only here

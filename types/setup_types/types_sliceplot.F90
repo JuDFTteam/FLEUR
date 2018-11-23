@@ -6,6 +6,8 @@
 MODULE m_types_sliceplot
   USE m_judft
   USE m_types_fleur_setup
+  USE m_json_tools
+
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_sliceplot
      LOGICAL :: iplot
@@ -123,27 +125,27 @@ CONTAINS
     IMPLICIT NONE
     CLASS(t_sliceplot),INTENT(OUT):: tt
 
-    sliceplot%slice = .FALSE.
-    sliceplot%iplot = .FALSE.
-    sliceplot%plpot = .FALSE.
+    tt%slice = .FALSE.
+    tt%iplot = .FALSE.
+    tt%plpot = .FALSE.
     IF(xmlGetNumberOfNodes('/fleurInput/output/')==1)&
-         sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/@slice'))
+         tt%slice = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/@slice'))
     IF(xmlGetNumberOfNodes('/fleurInput/output/plotting')==1) THEN
-       sliceplot%iplot = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/plotting/@iplot'))
-       sliceplot%plplot = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/plotting/@plplot'))
+       tt%iplot = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/plotting/@iplot'))
+       tt%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/plotting/@plplot'))
     END IF
 
 
-    IF ((sliceplot%slice).AND.(xmlGetNumberOfNodes('/fleurInput/output/chargeDensitySlicing').EQ.0)) THEN
+    IF ((tt%slice).AND.(xmlGetNumberOfNodes('/fleurInput/output/chargeDensitySlicing').EQ.0)) THEN
        CALL juDFT_error("slice is true but chargeDensitySlicing parameters are not set!", calledby = "r_inpXML")
     END IF
 
     IF (xmlGetNumberOfNodes('/fleurInput/output/chargeDensitySlicing').EQ.1) THEN
-       sliceplot%kk = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@numkpt'))
-       sliceplot%e1s = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@minEigenval'))
-       sliceplot%e2s = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@maxEigenval'))
-       sliceplot%nnne = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@nnne'))
-       sliceplot%pallst = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@pallst'))
+       tt%kk = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@numkpt'))
+       tt%e1s = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@minEigenval'))
+       tt%e2s = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@maxEigenval'))
+       tt%nnne = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@nnne'))
+       tt%pallst = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/chargeDensitySlicing/@pallst'))
     END IF
 
 

@@ -79,6 +79,7 @@
       TYPE(t_kpts)::kpts
       TYPE(t_enpara)::enpara
       TYPE(t_forcetheo)::forcetheo
+      TYPE(t_job)::job
 
     !-odim
 !+odim
@@ -135,19 +136,19 @@
       atoms%pos(:,:) = matmul( cell%amat , atoms%taual(:,:) )
       atoms%ulo_der = 0
       ch_rw = 'w'
-      sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
+      !sym%namgrp= 'any ' 
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; job%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
-      input%l_bmt= .false. ; input%eonly  = .false.
+      job%l_bmt= .false. ; job%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
-      sliceplot%slice= .false. ;  input%swsp  = .false.
-      input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
-      input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
-      input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
+      sliceplot%slice= .false. ;  job%swsp  = .false.
+      job%lflip= .false. ; banddos%vacdos= .false. ; vacuum%integ = .false.
+      sliceplot%iplot= .false. ; job%score = .false. ; sliceplot%plpot = .false.
+      sliceplot%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
+      job%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
-      input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
+      job%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
+      input%preconditioning_param = 0.0 ; job%minDistance = 1.0e-5
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       nu = 5 ; vacuum%layers = 1 ; iofile = 6
@@ -157,8 +158,7 @@
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
-      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
-      input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
+      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ;  scpos = 1.0
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
@@ -192,10 +192,7 @@
       ENDDO
 
       input%delgau = input%tkb ; atoms%ntype = atoms%ntype ; atoms%nat = atoms%nat
-      DO i = 1, 10
-        j = (i-1) * 8 + 1
-        input%comment(i) = title(j:j+7)
-      ENDDO 
+     
       IF (noco%l_noco) input%jspins = 2
        
       a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
@@ -312,14 +309,11 @@
       IF (l_hyb) THEN
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
-         input%gw_neigd = bands
          l_gamma = .true.
          IF(juDFT_was_argument("-old")) THEN
             CALL juDFT_error('No hybrid functionals input for old input file implemented', calledby='set_inp')
          END IF
-         input%minDistance = 1.0e-5
-      ELSE
-        input%gw_neigd = 0
+         job%minDistance = 1.0e-5
       END IF
 !HF
 
@@ -357,8 +351,7 @@
       ENDIF
 
       nu = 8 
-      input%gw = 0
-
+     
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
           cell%area = cell%omtil / vacuum%dvac
@@ -381,12 +374,7 @@
       END IF
       l_kpts = .FALSE.
 
-      IF(TRIM(ADJUSTL(sym%namgrp)).EQ.'any') THEN
-         sym%symSpecType = 1
-      ELSE
-         sym%symSpecType = 2
-      END IF
-
+      
       ! set vacuum%nvac
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
@@ -424,16 +412,7 @@
          kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
       END IF
 
-      IF (l_hyb) THEN
-         ! Changes for hybrid functionals
-         namex = 'pbe0'
-         input%ctail = .false. ; atoms%l_geo = .false.! ; input%frcor = .true.
-         input%itmax = 15 ; input%maxiter = 25!; input%imix  = 17
-         IF (ANY(kpts%nkpt3(:).EQ.0)) kpts%nkpt3(:) = 4
-         div(:) = kpts%nkpt3(:)
-         kpts%specificationType = 2
-      END IF
-
+  
       IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
@@ -455,7 +434,6 @@
          END IF
 
          IF(l_explicit) THEN
-            sym%symSpecType = 3
             !set latnam to any
             cell%latnam = 'any'
 
@@ -473,7 +451,7 @@
 
          CALL w_inpXML(&
      &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-     &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
+     &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,job,div,l_gamma,&
      &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
@@ -521,9 +499,10 @@
                              calledby = 'set_inp')
          END IF
 
-         CALL rw_inp(ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                     cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-                     noel,namex,relcor,a1,a2,a3,dtild,input%comment)
+         call judft_error("No writing of old inp files anymore")
+         !CALL rw_inp(ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+         !            cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+         !            noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
          iofile = 6
          OPEN (iofile,file='inp',form='formatted',status='old',position='append')

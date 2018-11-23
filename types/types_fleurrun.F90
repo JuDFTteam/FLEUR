@@ -4,10 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_types_fleurrun
+MODULE m_types_job
   IMPLICIT NONE
-  TYPE t_run
+  TYPE t_job
      INTEGER:: itmax
+     LOGICAL:: l_opti
+     LOGICAL:: strho
      REAL   :: minDistance
      !optional stuff
      LOGICAL :: swsp
@@ -19,39 +21,41 @@ MODULE m_types_fleurrun
      LOGICAL :: eonly
      LOGICAL :: skip_pot
      LOGICAL :: skip_eigen
+     LOGICAL :: l_gw
    CONTAINS
-     PROCEDURE,PASS :: read_xml=>read_xml_run
-  END TYPE t_run
+     PROCEDURE,PASS :: read_xml=>read_xml_job
+  END TYPE t_job
 
 CONTAINS
-  SUBROUTINE read_xml_run(run)
+  SUBROUTINE read_xml_job(job)
     USE m_xmlIntWrapFort
     USE m_calculator
-    CLASS(t_run),INTENT(INOUT)::run
+    CLASS(t_job),INTENT(INOUT)::job
     
-    run%itmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
-    run%minDistance = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
-    run%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
-    run%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
-    run%skip_pot=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@skip_pot'))
-    run%skip_eigen=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@skip_eigen'))
+    job%itmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
+    job%minDistance = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
+    job%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
+    job%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
+    job%skip_pot=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@skip_pot'))
+    job%skip_eigen=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@skip_eigen'))
+    job%l_gw=evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@gw_io'))
 
-    run%score = .FALSE.
-    run%secvar = .FALSE.
-    run%l_bmt=.FALSE.
+    job%score = .FALSE.
+    job%secvar = .FALSE.
+    job%l_bmt=.FALSE.
     IF (xmlGetNumberOfNodes('/fleurInput/output').EQ.1) THEN
        IF (xmlGetNumberOfNodes('/fleurInput/output/plotting')==1) &
-            run%score = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/plotting/@score'))
+            job%score = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/plotting/@score'))
        IF (xmlGetNumberOfNodes('/fleurInput/output/specialOutput').EQ.1) THEN
-          run%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/specialOutput/@bmt'))
-          run%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/specialOutput//@eonly'))
+          job%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/specialOutput/@bmt'))
+          job%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/specialOutput//@eonly'))
        ENDIF
     END IF
     IF (xmlGetNumberOfNodes('/fleurInput/calculationSetup/expertModes')==1)&
-         run%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/expertModes/@secvar'))
+         job%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/expertModes/@secvar'))
 
-  END SUBROUTINE read_xml_run
-END MODULE m_types_fleurrun
+  END SUBROUTINE read_xml_job
+END MODULE m_types_job
 
   
 

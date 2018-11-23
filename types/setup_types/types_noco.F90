@@ -6,6 +6,7 @@
 MODULE m_types_noco
   USE m_judft
   USE m_types_fleur_setup
+  USE m_json_tools
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_noco
      LOGICAL:: l_noco
@@ -96,7 +97,7 @@ CONTAINS
     CALL json_print(unit,"theta",tt%l_noco)
     CALL json_print(unit,"phi",tt%l_noco)
    
-    CALL json_print(unit,"qss",tt%qss,',')
+    CALL json_print(unit,"qss",tt%qss)
  
     CALL json_print(unit,"l_relax",tt%l_relax)
     CALL json_print(unit,"alphInit",tt%alphInit)
@@ -142,7 +143,7 @@ CONTAINS
     call json_read(unit,"alphInit",tt%alphInit)
     call json_read(unit,"alph",tt%alph)
     call json_read(unit,"beta",tt%beta)
-    call json_read_rarray(unit,"b_const",tt%b_con)
+    call json_read(unit,"b_const",tt%b_con)
     call json_read(unit,"socscale",tt%socscale)
 
     CALL json_close_class(unit,iostat)

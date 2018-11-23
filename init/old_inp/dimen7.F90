@@ -50,7 +50,7 @@
       TYPE(t_sliceplot) :: sliceplot
       TYPE(t_banddos)   :: banddos
       TYPE(t_xcpot_inbuild)     :: xcpot
-
+      TYPE(t_job):: job
 !
 !
 !-------------------------------------------------------------------
@@ -70,6 +70,7 @@
       REAL    :: q(3)
 
       CHARACTER(len=3), ALLOCATABLE :: noel(:)
+      CHARACTER(len=4) :: namgrp
       LOGICAL, ALLOCATABLE :: error(:) 
      
       INTEGER ntp1,ii
@@ -92,7 +93,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layers,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,nmopq)
+                        job%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
@@ -114,8 +115,8 @@
 !
       CALL rw_inp('r',&
      &            atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3)
+     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,job,&
+     &                  noel,namex,relcor,a1,a2,a3,namgrp)
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp
@@ -182,9 +183,9 @@
 !
 ! ---> now, set the lattice harmonics, determine nlhd
 !
-      cell%amat(:,1) = a1(:)*input%scaleCell
-      cell%amat(:,2) = a2(:)*input%scaleCell
-      cell%amat(:,3) = a3(:)*input%scaleCell
+      cell%amat(:,1) = a1(:)
+      cell%amat(:,2) = a2(:)
+      cell%amat(:,3) = a3(:)
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       IF (input%film) cell%omtil = cell%omtil/cell%amat(3,3)*vacuum%dvac
 !-odim
@@ -202,12 +203,12 @@
         atoms%zatom(n) = real( atoms%nz(n) )
       ENDDO
       ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
-      IF (sym%namgrp.EQ.'any ') THEN
+      IF (namgrp.EQ.'any ') THEN
          nopd = sym%nop ; rw = 'R'
          symfh = 94 ; symfn = 'sym.out'
          CALL rw_symfile(rw,symfh,symfn,nopd,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
       ELSE
-         CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
+         CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,cell%latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
       ENDIF
       sphhar%ntypsd = 0
       IF (.NOT.oneD%odd%d1) THEN
@@ -253,10 +254,10 @@
           WRITE(*,fmt='(A)') 'Symmetry incompatible with SOC spin-quantization axis ,'  
           WRITE(*,fmt='(A)') 'do not perform self-consistent calculations !'    
           WRITE(*,fmt='(1x)')
-          IF ( input%eonly .or. (noco%l_soc.and.noco%l_ss) .or. input%gw.ne.0 ) THEN  ! .or. .
+          IF ( job%eonly .or. (noco%l_soc.and.noco%l_ss)  ) THEN  ! .or. .
             CONTINUE 
           ELSE 
-            IF (input%itmax>1) THEN
+            IF (job%itmax>1) THEN
                CALL juDFT_error("symmetry & SOC",calledby ="dimen7")
             ENDIF 
           ENDIF 
@@ -272,7 +273,7 @@
 !
 ! Dimensioning of the stars
 !
-      IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
+      IF (input%film) THEN
          CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                     sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
                     stars%ng3,stars%ng2,oneD%odd)
@@ -306,29 +307,9 @@
        ELSE
         CALL od_kptsgen (kpts%nkpt)
        ENDIF
-      ELSE
-        IF(input%gw.eq.2) THEN
-          INQUIRE(file='QGpsi',exist=l_kpts) ! Use QGpsi if it exists ot
-          IF(l_kpts) THEN
-            WRITE(6,*) 'QGpsi exists and will be used to generate kpts-file'
-            OPEN (15,file='QGpsi',form='unformatted',status='old',action='read')
-            OPEN (41,file='kpts',form='formatted',status='unknown')
-            REWIND(41)
-            READ (15) kpts%nkpt
-            WRITE (41,'(i5,f20.10)') kpts%nkpt,1.0
-            DO n = 1, kpts%nkpt
-              READ (15) q
-              WRITE (41,'(4f10.5)') MATMUL(TRANSPOSE(cell%amat),q)/input%scaleCell,1.0
-              READ (15)
-            ENDDO
-            CLOSE (15)
-            CLOSE (41)
-          ENDIF
-        ENDIF
       ENDIF
       
-      dimension%neigd = max(dimension%neigd,input%gw_neigd)
-
+    
 !
 ! Using the k-point generator also for creation of q-points for the
 ! J-constants calculation:

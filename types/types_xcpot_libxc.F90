@@ -10,6 +10,7 @@ MODULE m_types_xcpot_libxc
    USE xc_f03_lib_m
 #endif
    USE m_types_xcpot
+   USE m_json_tools
    USE m_judft
    IMPLICIT NONE
    PRIVATE

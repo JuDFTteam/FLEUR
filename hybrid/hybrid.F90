@@ -10,7 +10,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-  SUBROUTINE calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,cell,oneD,&
+  SUBROUTINE calc_hybrid(eig_id,hybrid,kpts,atoms,input,job,DIMENSION,mpi,noco,cell,oneD,&
                          enpara,results,sym,xcpot,v,iter,iterHF)
 
     USE m_types
@@ -30,6 +30,7 @@ CONTAINS
     TYPE(t_oneD),          INTENT(IN)    :: oneD
     TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
     TYPE(t_input),         INTENT(IN)    :: input
+    TYPE(t_job),           INTENT(IN)    :: job
     TYPE(t_noco),          INTENT(IN)    :: noco
     TYPE(t_enpara),        INTENT(IN)    :: enpara
     TYPE(t_results),       INTENT(INOUT) :: results
@@ -66,7 +67,7 @@ CONTAINS
     !Check if new non-local potential shall be generated
     hybrid%l_subvxc = hybrid%l_hybrid.AND.(.NOT.xcpot%is_name("exx"))
     !If this is the first iteration loop we can not calculate a new non-local potential
-    hybrid%l_calhf = (results%last_distance.GE.0.0).AND.(results%last_distance.LT.input%minDistance)
+    hybrid%l_calhf = (results%last_distance.GE.0.0).AND.(results%last_distance.LT.job%minDistance)
     IF(.NOT.hybrid%l_calhf) THEN
        hybrid%l_subvxc = hybrid%l_subvxc.AND.hybrid%l_addhf
        RETURN

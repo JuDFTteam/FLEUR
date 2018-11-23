@@ -6,6 +6,7 @@
 MODULE m_types_sym
   USE m_judft
   USE m_types_fleur_setup
+  USE m_json_tools
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_sym
      !Symophic group
@@ -182,6 +183,7 @@ CONTAINS
     USE m_calculator
     USE m_inp_xml
     USE m_symdata , ONLY : nammap, ord2, l_c2
+    USE m_spg2set
     IMPLICIT NONE
     CLASS(t_sym),INTENT(OUT):: tt
 
@@ -278,6 +280,8 @@ CONTAINS
   SUBROUTINE init_sym(sym,cell,input)
     USE m_types_cell
     USE m_types_input
+    USE m_closure
+    USE m_symproperties
     IMPLICIT NONE
     CLASS(t_sym),INTENT(INOUT):: sym
     TYPE(t_cell),INTENT(IN)   :: cell

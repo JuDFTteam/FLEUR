@@ -16,7 +16,15 @@ CONTAINS
     !
     USE m_spgrot
     USE m_angle
-    USE m_types
+    USE m_types_stars
+    USE m_types_sym
+    USE m_types_atoms
+    USE m_types_vacuum
+    USE m_types_sphhar
+    USE m_types_input
+    USE m_types_cell
+    USE m_types_xcpot
+      
     USE m_boxdim
     USE m_sort
     USE m_cdn_io
@@ -568,7 +576,14 @@ CONTAINS
     USE m_sort
     USE m_spgrot
     USE m_constants
-    USE m_types
+    USE m_types_stars
+    USE m_types_sym
+    USE m_types_atoms
+    USE m_types_vacuum
+    USE m_types_sphhar
+    USE m_types_input
+    USE m_types_cell
+    USE m_types_xcpot
     USE m_cdn_io
     IMPLICIT NONE
     TYPE(t_stars),INTENT(INOUT)  :: stars

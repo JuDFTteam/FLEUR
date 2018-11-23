@@ -17,7 +17,16 @@
           USE m_cfft
           USE m_constants
           USE m_od_cylbes
-          USE m_types
+          USE m_types_sym
+          USE m_types_stars
+          USE m_types_atoms
+          USE m_types_oneD
+          USE m_types_input
+          USE m_types_cell
+          USE m_types_vacuum
+          USE m_types_mpi
+      
+      
           IMPLICIT NONE
           !     ..
           TYPE(t_sym),INTENT(IN)        :: sym

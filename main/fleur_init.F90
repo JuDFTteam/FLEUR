@@ -6,7 +6,7 @@
       MODULE m_fleur_init
       IMPLICIT NONE
       CONTAINS
-        SUBROUTINE fleur_init(mpi,&
+        SUBROUTINE fleur_init(mpi,job,&
              input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
@@ -47,6 +47,7 @@
           IMPLICIT NONE
           !     Types, these variables contain a lot of data!
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
+          TYPE(t_job)      ,INTENT(OUT):: job
           TYPE(t_input)    ,INTENT(OUT):: input
           TYPE(t_field),    INTENT(OUT) :: field
           TYPE(t_dimension),INTENT(OUT):: DIMENSION
@@ -113,8 +114,6 @@
 #endif
           CALL field%init(input)
 
-          input%gw                = -1
-          input%gw_neigd          =  0
           !-t3e
           IF (mpi%irank.EQ.0) THEN
              CALL startXMLOutput()
@@ -136,16 +135,12 @@
           input%l_wann = .FALSE.
           CALL initWannierDefaults(wann)
 
-          input%minDistance = 0.0
+          job%minDistance = 0.0
           input%ldauLinMix = .FALSE.
           input%ldauMixParam = 0.05
           input%ldauSpinf = 1.0
-          input%pallst = .FALSE.
-          input%scaleCell = 1.0
-          input%scaleA1 = 1.0
-          input%scaleA2 = 1.0
-          input%scaleC = 1.0
-
+          sliceplot%pallst = .FALSE.
+          
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
 
@@ -176,14 +171,14 @@
                 a2 = 0.0
                 a3 = 0.0
                 CALL r_inpXML(&
-                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
+                     job,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
-             CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
+             CALL postprocessInput(mpi,job,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
 
@@ -192,7 +187,7 @@
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
                               atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-                              cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
+                              cell,sym,xcpot,noco,oneD,hybrid,kpts,job,kpts%nkpt3,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
@@ -214,7 +209,7 @@
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
-             CALL fleur_init_old(mpi,&
+             CALL fleur_init_old(mpi,job,&
                   input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
                   sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
                   oneD,coreSpecInput,l_opti)
@@ -518,7 +513,7 @@
           CALL add_usage_data("SpinSpiral",noco%l_ss)
           CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
           CALL add_usage_data("LOs",atoms%nlotot)
-          CALL add_usage_data("Iterations",input%itmax)
+          CALL add_usage_data("Iterations",job%itmax)
           
           CALL results%init(dimension,input,atoms,kpts,noco)
 

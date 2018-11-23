@@ -6,7 +6,7 @@
 MODULE m_optional
   USE m_juDFT
 CONTAINS
-  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,DIMENSION,&
+  SUBROUTINE OPTIONAL(mpi,job, atoms,sphhar,vacuum,DIMENSION,&
        stars,input,sym, cell, sliceplot,obsolete, xcpot, noco, oneD)
     !
     !----------------------------------------
@@ -69,6 +69,7 @@ CONTAINS
     !     .. Scalar Arguments ..
 
     TYPE(t_mpi),INTENT(IN)      :: mpi
+     TYPE(t_job),INTENT(INOUT)  :: job
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_dimension),INTENT(IN):: DIMENSION
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
@@ -103,11 +104,11 @@ CONTAINS
 
        
     IF (mpi%irank == 0) THEN
-       IF (sliceplot%plpot) input%score = .FALSE.
+       IF (sliceplot%plpot) job%score = .FALSE.
        IF (sliceplot%iplot) THEN
           CALL timestart("Plotting")
-          IF (input%strho) CALL juDFT_error("strho = T and iplot=T",calledby = "optional")
-          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+          IF (job%strho) CALL juDFT_error("strho = T and iplot=T",calledby = "optional")
+          CALL plotdop(job,oneD,DIMENSION,stars,vacuum,sphhar,atoms,&
                        input,sym,cell,sliceplot,noco)
           CALL timestop("Plotting")
        END IF
@@ -115,7 +116,7 @@ CONTAINS
     !
     !     --->generate starting charge density
     !
-    strho=input%strho
+    strho=job%strho
     IF (.NOT.(strho.OR.sliceplot%iplot)) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        IF (noco%l_noco) THEN
@@ -129,30 +130,27 @@ CONTAINS
 #endif
     ENDIF
     IF (strho) THEN
-       strho=input%total 
-       input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
        CALL stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                   input,cell,xcpot,obsolete,noco,oneD)
        !
-       input%total=strho
        CALL timestop("generation of start-density")
     END IF
     IF (mpi%irank == 0) THEN
        !
        !     --->generate spin polarized charge density
        !
-       IF (input%swsp) THEN
+       IF (job%swsp) THEN
           CALL timestart("optional: spin polarized density")
-          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dimension)
+          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,DIMENSION)
           !
           CALL timestop("optional: spin polarized density")
        END IF
        !
        !     --->flip magnetic moments
        !
-       IF (input%lflip) THEN
+       IF (job%lflip) THEN
 
           CALL timestart('optional: flip magnetic moments')
           CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
@@ -162,17 +160,17 @@ CONTAINS
 
  
  
-       IF (input%l_bmt) THEN
+       IF (job%l_bmt) THEN
           CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF
 
     ENDIF ! mpi%irank == 0
 
     IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
-    IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
-    IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
-    IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
-    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
+    IF (job%strho)          CALL juDFT_end("starting density generated",mpi%irank)
+    IF (job%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
+    IF (job%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
+    IF (job%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
     
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

@@ -9,6 +9,7 @@ MODULE m_types_setup
   !*************************************************************
   !     This module contains definitions for all kind of types
   !*************************************************************
+  USE m_types_dimension
   USE m_types_cell
   USE m_types_noco
   USE m_types_sym
@@ -62,21 +63,6 @@ MODULE m_types_setup
      INTEGER,ALLOCATABLE   ::  ne_eig(:),nbands(:),nobd(:)                   !alloc in eigen_HF_init
      REAL   ,ALLOCATABLE   ::  div_vv(:,:,:)
   END TYPE t_hybrid
-
-
-  TYPE t_dimension
-     INTEGER :: nspd
-     INTEGER :: nvd
-     INTEGER :: nv2d
-     INTEGER :: neigd
-     INTEGER :: neigd2
-     INTEGER :: ncvd
-     INTEGER :: nstd
-     INTEGER :: msh
-     INTEGER :: lmd
-     INTEGER :: lmplmd
-     INTEGER :: nbasfcn
-  END TYPE t_dimension
 
 
  

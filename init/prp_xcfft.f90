@@ -26,7 +26,10 @@
 !*********************************************************************
 !
       USE m_ifft, ONLY : ifft235
-      USE m_types
+      USE m_types_stars
+      USE m_types_input
+      USE m_types_cell
+      USE m_types_xcpot
       USE m_boxdim
       IMPLICIT NONE
       TYPE(t_stars),INTENT(INOUT)   :: stars

@@ -6,6 +6,7 @@
 MODULE m_types_input
   USE m_judft
   USE m_types_fleur_setup
+  USE m_json_tools
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_input
      LOGICAL :: cdinf
@@ -38,6 +39,7 @@ MODULE m_types_input
      REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
      REAL    :: epsforce !< minimal force. If all forces <epsforce stop
      !Fermi
+     INTEGER :: neig
      REAL    :: delgau
      REAL    :: alpha
      REAL    :: tkb
@@ -109,6 +111,15 @@ CONTAINS
     CALL MPI_BCAST(tt%thetad,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
     CALL MPI_BCAST(tt%epsdisp,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
     CALL MPI_BCAST(tt%epsforce,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+    !Fermi
+    
+    CALL MPI_BCAST(tt%neig,1,MPI_INTEGER,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%delgau,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%alpha,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%tkb,1,MPI_DOUBLE_PRECISION,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%gauss,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%tria,1,MPI_LOGICAL,pe,mpi_comm,ierr)
+    CALL MPI_BCAST(tt%fixed_moment,1,MPI_REAL,pe,mpi_comm,ierr)
     !core
     CALL MPI_BCAST(tt%kcrel,1,MPI_LOGICAL,pe,mpi_comm,ierr)
     CALL MPI_BCAST(tt%frcor,1,MPI_LOGICAL,pe,mpi_comm,ierr)
@@ -158,6 +169,7 @@ CONTAINS
     CALL json_print(unit,"epsdisp ",tt%epsdisp )
     CALL json_print(unit,"epsforce",tt%epsforce)
     !Fermi
+    CALL json_print(unit,"neig",tt%neig)
     CALL json_print(unit,"delgau",tt%delgau)
     CALL json_print(unit,"alpha",tt%alpha)
     CALL json_print(unit,"tkb",tt%tkb)
@@ -216,6 +228,7 @@ CONTAINS
     CALL json_read(unit,"epsdisp ",tt%epsdisp )
     CALL json_read(unit,"epsforce",tt%epsforce)
     !Fermi
+    CALL json_read(unit,"neig",tt%neig)
     CALL json_read(unit,"delgau",tt%delgau)
     CALL json_read(unit,"alpha",tt%alpha)
     CALL json_read(unit,"tkb",tt%tkb)
@@ -255,6 +268,18 @@ CONTAINS
     ! Read general cutoff parameters
     tt%rkmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
     tt%maxiter = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
+    xPath = '/fleurInput/calculationSetup/cutoffs/@numbands'
+    numberNodes = xmlGetNumberOfNodes(xPathA)
+    tt%neig = 0
+    IF(numberNodes.EQ.1) THEN
+       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPath)))))
+       IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
+          tt%neig=-1
+          call judft_error('Feature to calculate all eigenfunctions not yet implemented.')
+       ELSE
+          READ(valueString,*) tt%neig
+       END IF
+    END IF
     valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
     SELECT CASE (valueString)
     CASE ('straight')

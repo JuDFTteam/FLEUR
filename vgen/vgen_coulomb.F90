@@ -202,7 +202,6 @@ contains
       end if CHECK_CONTINUITY
 
       CALCULATE_DENSITY_POTENTIAL_INTEGRAL: if ( present( results ) ) then
-        if ( input%total ) then
           call timestart( "den-pot integrals" )
           !     CALCULATE THE INTEGRAL OF n*Vcoulomb
           write( 6, fmt=8020 )
@@ -220,7 +219,6 @@ contains
 8030      format (/,10x,'total density-coulomb potential integral :', t40,f20.10)
 
           call timestop( "den-pot integrals" )
-        end if
       end if CALCULATE_DENSITY_POTENTIAL_INTEGRAL
     end if !irank==0
 

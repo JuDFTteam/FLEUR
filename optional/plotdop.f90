@@ -26,7 +26,7 @@ use m_types
 
 CONTAINS
 
-SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+SUBROUTINE plotdop(job,oneD,DIMENSION,stars,vacuum,sphhar,atoms,&
                    input,sym,cell,sliceplot,noco,cdnfname)
 
    USE m_outcdn
@@ -36,7 +36,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    USE m_constants
 
    IMPLICIT NONE
-
+   TYPE(t_job),                 INTENT(IN)    :: job
    TYPE(t_oneD),                INTENT(IN)    :: oneD
    TYPE(t_dimension),           INTENT(IN)    :: dimension
    TYPE(t_stars),               INTENT(IN)    :: stars
@@ -147,7 +147,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       END IF
 
       ! Subtract core charge if input%score is set
-      IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
+      IF ((.NOT.noco%l_noco).AND.(job%score)) THEN
          OPEN (17,file='cdnc',form='unformatted',status='old')
          REWIND 17
          DO jspin = 1, input%jspins
@@ -163,7 +163,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
             den(i)%pw(1,jspin) = den(i)%pw(1,jspin) - qint/cell%volint
          END DO
          CLOSE (17)
-      ELSE IF (input%score) THEN
+      ELSE IF (job%score) THEN
          CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plotdop')
       END IF
    END DO

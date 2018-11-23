@@ -28,7 +28,11 @@
 !
       USE m_ifft, ONLY : ifft235
       USE m_boxdim
-      USE m_types
+      USE m_types_stars
+      USE m_types_cell
+      USE m_types_noco
+      USE m_types_input
+      
       IMPLICIT NONE
 !
 !---> Arguments
@@ -36,7 +40,7 @@
       TYPE(t_stars),INTENT(INOUT)  :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_input),INTENT(INOUT)  :: input  !<rkmax might be modified
+      TYPE(t_input),INTENT(IN)     :: input  !<rkmax might be modified
 !
 !
 !---> local variables
@@ -133,22 +137,24 @@
 !     choose this, even 2**P < mq . Therefore:
 !     factor 0.5 added by S.B. 21.Aug.97 
 !
-      rknew = min( real( stars%kq1_fft )*arltv1, real( stars%kq2_fft )*arltv2, &
-     &             real( stars%kq3_fft )*arltv3)
-      rknew = 0.5 * rknew / gmaxp
-      IF (rknew.LT.input%rkmax) THEN
-         WRITE (6,'('' rkmax and true gmax recalculated '')')
-         WRITE (6,2100) input%rkmax, rknew, rknew*rknew
-         WRITE (6,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
-         WRITE (16,'('' rkmax and true gmax recalculated '')')
-         WRITE (16,2100) input%rkmax, rknew, rknew*rknew
-         WRITE (16,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
-         input%rkmax = rknew
-      ENDIF
+
+!!$      rknew = MIN( REAL( stars%kq1_fft )*arltv1, REAL( stars%kq2_fft )*arltv2, &
+!!$     &             real( stars%kq3_fft )*arltv3)
+!!$      rknew = 0.5 * rknew / gmaxp
+!!$      IF (rknew.LT.input%rkmax) THEN
+!!$         WRITE (6,'('' rkmax and true gmax recalculated '')')
+!!$         WRITE (6,2100) input%rkmax, rknew, rknew*rknew
+!!$         WRITE (6,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
+!!$         WRITE (16,'('' rkmax and true gmax recalculated '')')
+!!$         WRITE (16,2100) input%rkmax, rknew, rknew*rknew
+!!$         WRITE (16,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
+!!$         input%rkmax = rknew
+!!$      ENDIF
+     
 !
 !-----> gmax => gmaxp*rkmax 
 !       (otherwise too few elements in arrays defined in strng1)
-!
+
       IF (2*input%rkmax.GT.stars%gmax) THEN
          WRITE (6,'('' gmax must be at least 2*rkmax'')')
          WRITE (6,'('' increase gmax , or reduce rkmax'')')

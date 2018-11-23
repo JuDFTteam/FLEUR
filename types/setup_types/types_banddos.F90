@@ -6,6 +6,7 @@
 MODULE m_types_banddos
   USE m_judft
   USE m_types_fleur_setup
+  USE m_json_tools
   IMPLICIT NONE
   TYPE,EXTENDS(t_fleursetup):: t_banddos
         LOGICAL :: dos
@@ -159,8 +160,8 @@ call json_read(unit,"s_cell_z",tt%s_cell_z)
     CHARACTER(LEN=255) :: xPathA, xPathB
     INTEGER            :: n,i,na,numberNodes
 
-    banddos%l_orb = .FALSE.
-    banddos%orbCompAtom = 0
+    tt%l_orb = .FALSE.
+    tt%orbCompAtom = 0
     na=0
     DO n=1,xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
        xpathA=inp_xml_xpath_for_group(n)
@@ -171,11 +172,11 @@ call json_read(unit,"s_cell_z",tt%s_cell_z)
           na = na + 1
           WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'[',i,']'
           IF(evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))) THEN
-             IF(banddos%l_orb) THEN
+             IF(tt%l_orb) THEN
                 CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
              END IF
-             banddos%l_orb = .TRUE.
-             banddos%orbCompAtom = na
+             tt%l_orb = .TRUE.
+             tt%orbCompAtom = na
           END IF
        end do
     end DO
@@ -183,33 +184,33 @@ call json_read(unit,"s_cell_z",tt%s_cell_z)
 !!! Start of output section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    banddos%dos = .FALSE.
-    banddos%band = .FALSE.
-    banddos%vacdos = .FALSE.
+    tt%dos = .FALSE.
+    tt%band = .FALSE.
+    tt%vacdos = .FALSE.
     xPathA = '/fleurInput/output'
     numberNodes = xmlGetNumberOfNodes(xPathA)
 
     IF (numberNodes.EQ.1) THEN
 
        ! Read in general output switches
-       banddos%dos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dos'))
-       banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
-       banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
-       banddos%l_mcd = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mcd'))
+       tt%dos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dos'))
+       tt%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
+       tt%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
+       tt%l_mcd = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mcd'))
        ! Read in optional densityOfStates output parameters
 
        xPathA = '/fleurInput/output/densityOfStates'
        numberNodes = xmlGetNumberOfNodes(xPathA)
 
-       IF ((banddos%dos).AND.(numberNodes.EQ.0)) THEN
+       IF ((tt%dos).AND.(numberNodes.EQ.0)) THEN
           CALL juDFT_error("dos is true but densityOfStates parameters are not set!", calledby = "r_inpXML")
        END IF
 
        IF (numberNodes.EQ.1) THEN
-          banddos%ndir = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ndir'))
-          banddos%e2_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEnergy'))
-          banddos%e1_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEnergy'))
-          banddos%sig_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+          tt%ndir = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ndir'))
+          tt%e2_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEnergy'))
+          tt%e1_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEnergy'))
+          tt%sig_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
        END IF
 
        ! Read in optional vacuumDOS parameters
@@ -217,26 +218,26 @@ call json_read(unit,"s_cell_z",tt%s_cell_z)
        xPathA = '/fleurInput/output/vacuumDOS'
        numberNodes = xmlGetNumberOfNodes(xPathA)
 
-       IF ((banddos%vacdos).AND.(numberNodes.EQ.0)) THEN
+       IF ((tt%vacdos).AND.(numberNodes.EQ.0)) THEN
           CALL juDFT_error("vacdos is true but vacDOS parameters are not set!", calledby = "r_inpXML")
        END IF
 
-       IF (banddos%band) THEN
-          banddos%dos=.TRUE.
-          banddos%ndir = -4
+       IF (tt%band) THEN
+          tt%dos=.TRUE.
+          tt%ndir = -4
           WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
        ENDIF
        ! Read in optional magnetic circular dichroism parameters
        xPathA = '/fleurInput/output/magneticCircularDichroism'
        numberNodes = xmlGetNumberOfNodes(xPathA)
 
-       IF ((banddos%l_mcd).AND.(numberNodes.EQ.0)) THEN
+       IF ((tt%l_mcd).AND.(numberNodes.EQ.0)) THEN
           CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
        END IF
 
        IF (numberNodes.EQ.1) THEN
-          banddos%e_mcd_lo = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyLo'))
-          banddos%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
+          tt%e_mcd_lo = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyLo'))
+          tt%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
        END IF
 
        ! Read in optional parameter for unfolding bandstructure of supercell
@@ -244,15 +245,15 @@ call json_read(unit,"s_cell_z",tt%s_cell_z)
        numberNodes = xmlGetNumberOfNodes(xPathA)
 
        IF (numberNodes.EQ.1) THEN
-          banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
-          banddos%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
-          banddos%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
-          banddos%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))
+          tt%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
+          tt%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
+          tt%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
+          tt%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))
        END IF
-
-     END SUBROUTINE read_xml_banddos
+    ENDIF
+  END SUBROUTINE read_xml_banddos
   
-  SUBROUTINE init_banddos(banddos,cell,input)
+  SUBROUTINE init_banddos(banddos)
     IMPLICIT NONE
     CLASS(t_banddos),INTENT(INOUT):: banddos
     !TODO

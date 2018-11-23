@@ -18,13 +18,13 @@ MODULE m_winpXML
 CONTAINS
 SUBROUTINE w_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
+&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,job,div,l_gamma,&
 &                   noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
 &                   l_explicitIn,numSpecies,enpara)
 
-   USE m_types
+  USE m_types
    USE m_juDFT
    USE m_constants
    USE m_xmlOutput
@@ -40,6 +40,7 @@ SUBROUTINE w_inpXML(&
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
    TYPE(t_obsolete),INTENT(IN) :: obsolete
    TYPE(t_kpts),INTENT(IN)     :: kpts
+   TYPE(t_job),INTENT(IN)      :: job
    TYPE(t_oneD),INTENT(IN)     :: oneD
    TYPE(t_hybrid),INTENT(IN)   :: hybrid
    TYPE(t_cell),INTENT(IN)     :: cell
@@ -166,7 +167,7 @@ SUBROUTINE w_inpXML(&
 
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
    110 FORMAT('      <cutoffs Kmax="',f0.8,'" Gmax="',f0.8,'" GmaxXC="',f0.8,'" numbands="',i0,'"/>')
-   WRITE (fileNum,110) input%rkmax,stars%gmaxInit,xcpot%gmaxxc,input%gw_neigd
+   WRITE (fileNum,110) input%rkmax,stars%gmaxInit,xcpot%gmaxxc,input%neig
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" preconditioning_param="0.0" spinf="2.00"/>
    120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" preconditioning_param="',f3.1,'" spinf="',f0.8,'"/>')
@@ -182,7 +183,7 @@ SUBROUTINE w_inpXML(&
       CASE DEFAULT 
          mixingScheme='errorUnknownMixing'
    END SELECT
-   WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%preconditioning_param,input%spinf
+   WRITE (fileNum,120) job%itmax,job%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%preconditioning_param,input%spinf
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
@@ -190,7 +191,7 @@ SUBROUTINE w_inpXML(&
 
 !      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
    140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip
+   WRITE (fileNum,140) input%jspins,noco%l_noco,job%swsp,job%lflip
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
@@ -216,8 +217,8 @@ SUBROUTINE w_inpXML(&
    END IF
 
 !      <expertModes gw="0"  eig66="F" lpr="0" secvar="F" />
-   180 FORMAT('      <expertModes gw="',i0,'" secvar="',l1,'"/>')
-   WRITE (fileNum,180) input%gw,input%secvar
+   180 FORMAT('      <expertModes  secvar="',l1,'"/>')
+   WRITE (fileNum,180) job%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
    190 FORMAT('      <geometryOptimization l_f="',l1,'" xa="',f0.8,'" thetad="',f0.8,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
@@ -288,28 +289,19 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,'(a)') '   </calculationSetup>'
    WRITE (fileNum,'(a)') '   <cell>'
 
-   IF(sym%symSpecType.EQ.3) THEN
-      WRITE(fileNum,'(a)') '      <symmetryOperations>'
-      DO i = 1, sym%nop
+   WRITE(fileNum,'(a)') '      <symmetryOperations>'
+   DO i = 1, sym%nop
       WRITE(fileNum,'(a)') '         <symOp>'
-      224 FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
+224   FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
       WRITE(fileNum,224) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
-      225 FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
+225   FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
       WRITE(fileNum,225) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
-      226 FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
+226   FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
       WRITE(fileNum,226) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
       WRITE(fileNum,'(a)') '         </symOp>'
-      END DO
-      WRITE(fileNum,'(a)') '      </symmetryOperations>'
-   ELSE IF(sym%symSpecType.EQ.1) THEN
-      228 FORMAT('      <symmetryFile filename="',a,'"/>')
-      WRITE(fileNum,228) TRIM(ADJUSTL(symFilename))
-   ELSE !(sym%symSpecType.EQ.2)
-!      <symmetry spgrp="any" invs="T" zrfs="F"/>
-      230 FORMAT('      <symmetry spgrp="',a,'" invs="',l1,'" zrfs="',l1,'"/>')
-      WRITE (fileNum,230) TRIM(ADJUSTL(sym%namgrp)),sym%invs,sym%zrfs
-
-   END IF
+   END DO
+   WRITE(fileNum,'(a)') '      </symmetryOperations>'
+   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Note: Different options for the cell definition!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -330,7 +322,7 @@ SUBROUTINE w_inpXML(&
 !      <xsd:attribute name="dTilda" type="xsd:double" use="required"/>
 !      <filmLattice ...>
       241 FORMAT('      <filmLattice scale="',f0.8,'" latnam="',a,'" dVac="',f0.8,'" dTilda="',f0.8,'">')
-      WRITE(fileNum,241) input%scaleCell, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
+      WRITE(fileNum,241) 1.0, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
       IF (cell%latnam.EQ.'any') THEN
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
          255 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
@@ -345,11 +337,11 @@ SUBROUTINE w_inpXML(&
      &       (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
      &       (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
             256 FORMAT('         <a1 scale="',f0.10,'">',f0.10,'</a1>')
-            WRITE (fileNum,256) input%scaleA1, a1Temp(1) / input%scaleA1
+            WRITE (fileNum,256) 1.0, a1Temp(1) 
          END IF
          IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
             266 FORMAT('         <a2 scale="',f0.10,'">',f0.10,'</a2>')
-            WRITE (fileNum,266) input%scaleA2, a2Temp(2) / input%scaleA2
+            WRITE (fileNum,266) 1.0, a2Temp(2) 
          END IF
 
          IF (cell%latnam.EQ.'obl') THEN
@@ -369,7 +361,7 @@ SUBROUTINE w_inpXML(&
    ELSE
 
       242 FORMAT('      <bulkLattice scale="',f0.10,'" latnam="',a,'">')
-      WRITE (fileNum,242) input%scaleCell, TRIM(ADJUSTL(cell%latnam))
+      WRITE (fileNum,242) 1.0, TRIM(ADJUSTL(cell%latnam))
 
       IF (cell%latnam.EQ.'any') THEN
 
@@ -393,15 +385,15 @@ SUBROUTINE w_inpXML(&
      &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
      &    (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
          252 FORMAT('         <a1 scale="',f0.10,'">',f0.10,'</a1>')
-         WRITE (fileNum,252) input%scaleA1, a1Temp(1) / input%scaleA1
+         WRITE (fileNum,252) 1.0, a1Temp(1) 
 
          IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
             262 FORMAT('         <a2 scale="',f0.10,'">',f0.10,'</a2>')
-            WRITE (fileNum,262) input%scaleA2, a2Temp(2) / input%scaleA2
+            WRITE (fileNum,262) 1.0, a2Temp(2) 
          END IF
 
          272 FORMAT('         <c scale="',f0.10,'">',f0.10,'</c>')
-         WRITE (fileNum,272) input%scaleC, a3Temp(3) / input%scaleC
+         WRITE (fileNum,272) 1.0, a3Temp(3) 
       END IF
 
       IF (cell%latnam.EQ.'obl') THEN
@@ -412,7 +404,7 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,264) a2Temp(1), a2Temp(2)
 
          274 FORMAT('         <c scale="',f0.10,'">',f0.10,'</c>')
-         WRITE (fileNum,274) input%scaleC, a3Temp(3) / input%scaleC
+         WRITE (fileNum,274) 1.0, a3Temp(3) 
       END IF
 
       WRITE (fileNum,'(a)') '      </bulkLattice>'
@@ -581,7 +573,7 @@ SUBROUTINE w_inpXML(&
          END DO
          IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos(3)
          IF (input%film) THEN
-            tempTaual(3,na) = dtild*tempTaual(3,na)/input%scaleCell
+            tempTaual(3,na) = dtild*tempTaual(3,na)
          END IF
 !+odim in 1D case all the coordinates are given in cartesian YM
          IF (oneD%odd%d1) THEN
@@ -649,19 +641,19 @@ SUBROUTINE w_inpXML(&
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
    390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.5,'" locy1="',f0.5,'" locx2="',f0.5,'" locy2="',f0.5,'" nstm="',i0,'" tworkf="',f0.5,'"/>')
-   WRITE (fileNum,390) vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
+   WRITE (fileNum,390) vacuum%layers,vacuum%integ,vacuum%starcoeff,vacuum%nstars,vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
 
 !      <plotting iplot="F" score="F" plplot="F"/>
    400 FORMAT('      <plotting iplot="',l1,'" score="',l1,'" plplot="',l1,'"/>')
-   WRITE (fileNum,400) sliceplot%iplot,input%score,sliceplot%plpot
+   WRITE (fileNum,400) sliceplot%iplot,job%score,sliceplot%plpot
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
    410 FORMAT('      <chargeDensitySlicing numkpt="',i0,'" minEigenval="',f0.8,'" maxEigenval="',f0.8,'" nnne="',i0,'" pallst="',l1,'"/>')
-   WRITE (fileNum,410) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
+   WRITE (fileNum,410) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,sliceplot%pallst
 
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
    420 FORMAT('      <specialOutput eonly="',l1,'" bmt="',l1,'"/>')
-   WRITE (fileNum,420) input%eonly,input%l_bmt
+   WRITE (fileNum,420) job%eonly,job%l_bmt
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
    430 FORMAT('      <magneticCircularDichroism energyLo="',f0.8,'" energyUp="',f0.8,'"/>')

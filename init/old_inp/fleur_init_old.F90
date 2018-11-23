@@ -7,7 +7,7 @@ MODULE m_fleur_init_old
   IMPLICIT NONE
 CONTAINS
   !> Collection of code for old-style inp-file treatment
-  SUBROUTINE fleur_init_old(mpi,&
+  SUBROUTINE fleur_init_old(mpi,job,&
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
        oneD,coreSpecInput,l_opti)
@@ -32,6 +32,7 @@ CONTAINS
     TYPE(t_atoms)    ,INTENT(OUT)  :: atoms
     TYPE(t_sphhar)   ,INTENT(OUT)  :: sphhar
     TYPE(t_cell)     ,INTENT(OUT)  :: cell
+    TYPE(t_job),INTENT(OUT)        :: job
     TYPE(t_stars)    ,INTENT(OUT)  :: stars
     TYPE(t_sym)      ,INTENT(OUT)  :: sym
     TYPE(t_noco)     ,INTENT(OUT)  :: noco
@@ -160,7 +161,7 @@ CONTAINS
     !+t3e
     IF (mpi%irank.EQ.0) THEN
        !-t3e
-       CALL inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
+       CALL inped(job,atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
             cell,sliceplot,noco,&
             stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
        !
@@ -180,9 +181,9 @@ CONTAINS
        !+t3e
        INQUIRE(file="cdn1",exist=l_opti)
        IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-       l_opti=.NOT.l_opti
-       IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-            &    (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
+       job%l_opti=.NOT.l_opti
+       IF ((sliceplot%iplot).OR.(job%swsp).OR.&
+            &    (job%lflip).OR.(job%l_bmt)) job%l_opti = .TRUE.
        !
 
        namex=xcpot%get_name()
@@ -257,14 +258,13 @@ CONTAINS
              WRITE(tempNumberString,'(i0)') i
              atoms%speciesName(i) = TRIM(ADJUSTL(noel(speciesRepAtomType(i)))) // '-' // TRIM(ADJUSTL(tempNumberString))
           END DO
-          a1(:) = a1(:) / input%scaleCell
-          a2(:) = a2(:) / input%scaleCell
-          a3(:) = a3(:) / input%scaleCell
+          a1(:) = a1(:) 
+          a2(:) = a2(:) 
+          a3(:) = a3(:)
           kpts%specificationType = 3
-          sym%symSpecType = 3
           CALL w_inpXML(&
                atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
+               cell,sym,xcpot,noco,oneD,hybrid,kpts,job,kpts%nkpt3,kpts%l_gamma,&
                noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&

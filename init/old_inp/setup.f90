@@ -79,12 +79,8 @@
           INTEGER    :: ntp1,ii,i,j,n1,n2,na,np1,n
           INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
           !
-        IF ( mpi%irank == 0 ) THEN
-          IF (sym%namgrp.EQ.'any ') THEN
+          IF ( mpi%irank == 0 ) THEN
              CALL rw_symfile('R',94,'sym.out',sym%nop,cell%bmat, sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
-          ELSE
-             CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
-          ENDIF
           IF (input%film.AND..NOT.sym%symor) CALL juDFT_warn("Films&Symor",hint&
                &     ="Films should be symmorphic",calledby ='setup')
           CALL ylmnorm_init(atoms%lmaxd)
@@ -146,7 +142,7 @@
           CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
 
           !+odim
-          IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+          IF (input%film) THEN
              CALL strgn1(stars,sym,atoms, vacuum,sphhar, input,cell,xcpot)
              !-odim
              IF (oneD%odd%d1) THEN
@@ -165,11 +161,6 @@
           !
           CALL  prp_qfft(stars, cell,noco, input)
 
-          IF (input%gw.GE.1) CALL write_gw(&
-               atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
-               atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-               atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-               atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
           !
           !-----> prepare dimensions for xc fft-box in visxc(g).f
           !

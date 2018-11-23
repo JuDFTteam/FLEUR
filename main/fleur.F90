@@ -73,7 +73,7 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER, INTENT(IN)             :: mpi_comm
-
+    TYPE(t_job)                     :: job
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
     TYPE(t_dimension)               :: DIMENSION
@@ -113,15 +113,12 @@ CONTAINS
     mpi%mpi_comm = mpi_comm
 
     CALL timestart("Initialization")
-    CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
+    CALL fleur_init(mpi,job,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
                     banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
-    IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
-      CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
-    END IF
-
-    IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
+  
+    IF (l_opti) CALL OPTIONAL(mpi,job,atoms,sphhar,vacuum,DIMENSION,&
                               stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
 
     !+Wannier (start)
@@ -131,12 +128,12 @@ CONTAINS
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
-    IF (wann%l_gwf) input%itmax = 1
+    IF (wann%l_gwf) job%itmax = 1
     !-Wannier (end)
 
     iter     = 0
     iterHF   = 0
-    l_cont = (iter < input%itmax)
+    l_cont = (iter < job%itmax)
     
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
@@ -178,12 +175,6 @@ CONTAINS
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
-!!$       !+t3e
-!!$       IF (input%alpha.LT.10.0) THEN
-!!$
-!!$          IF (iter.GT.1) THEN
-!!$             input%alpha = input%alpha - NINT(input%alpha)
-!!$          END IF
 
        CALL resetIterationDependentTimers()
        CALL timestart("Iteration")
@@ -192,8 +183,7 @@ CONTAINS
           WRITE (16,FMT=8100) iter
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
-       input%total = .TRUE.
-
+    
 #ifdef CPP_CHASE
        CALL chase_distance(results%last_distance)
 #endif
@@ -209,7 +199,7 @@ CONTAINS
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
+             CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,job,DIMENSION,mpi,noco,&
                               cell,oneD,enpara,results,sym,xcpot,vTot,iter,iterHF)
           END SELECT
           IF(hybrid%l_calhf) THEN
@@ -243,7 +233,7 @@ CONTAINS
 #endif
 
        CALL forcetheo%start()
-       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
+       forcetheoloop:DO WHILE(forcetheo%next_job(iter==job%itmax,noco))
 
           CALL timestart("generation of hamiltonian and diagonalization (total)")
           CALL timestart("eigen")
@@ -400,7 +390,7 @@ CONTAINS
 
        CALL forcetheo%postprocess()
 
-       IF ((input%gw.GT.0).AND.(mpi%irank.EQ.0)) THEN
+       IF ((job%l_gw).AND.(mpi%irank.EQ.0)) THEN
           CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,results,eig_id,oneD)
        END IF
 
@@ -430,8 +420,8 @@ CONTAINS
        l_cont = .TRUE.
        IF (hybrid%l_hybrid) THEN
           IF(hybrid%l_calhf) THEN
-             l_cont = l_cont.AND.(iterHF < input%itmax)
-             l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
+             l_cont = l_cont.AND.(iterHF < job%itmax)
+             l_cont = l_cont.AND.(job%mindistance<=results%last_distance)
              CALL check_time_for_next_iteration(iterHF,l_cont)
           ELSE
              l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
@@ -440,8 +430,8 @@ CONTAINS
              results%te_hfex%valence = 0
           END IF
        ELSE
-          l_cont = l_cont.AND.(iter < input%itmax)
-          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+          l_cont = l_cont.AND.(iter < job%itmax)
+          l_cont = l_cont.AND.((job%mindistance<=results%last_distance).OR.input%l_f)
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 

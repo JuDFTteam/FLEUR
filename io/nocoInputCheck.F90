@@ -23,12 +23,6 @@ MODULE m_nocoInputCheck
       INTEGER itype
       LOGICAL l_relax_any
 
-!---> make sure second variation is switched off
-      IF (input%secvar) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the second variation!!'
-         CALL juDFT_error("Second variation cannot be used!!!" ,calledby="nocoInputCheck")
-      END IF
 
 !---> make sure histogram method is used
       IF (input%gauss) THEN
@@ -66,13 +60,6 @@ MODULE m_nocoInputCheck
          WRITE (6,*) 'This non-collinear version of the flapw program'
          WRITE (6,*) 'cannot be used with the coretail option!! '
          CALL juDFT_error("Coretail option cannot be used!!!",calledby="nocoInputCheck")
-      END IF
-
-!---> make sure score is false
-      IF (input%score) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the score option!! '
-         CALL juDFT_error("score must be false!!!",calledby ="nocoInputCheck")
       END IF
 
 !---> make sure that moments are not relaxed and constrained

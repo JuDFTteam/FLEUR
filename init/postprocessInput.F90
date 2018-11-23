@@ -8,7 +8,7 @@ MODULE m_postprocessInput
 
 CONTAINS
 
-SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
+SUBROUTINE postprocessInput(mpi,job,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
      noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
 
@@ -43,6 +43,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
   CLASS(t_forcetheo),ALLOCATABLE,INTENT(IN)   :: forcetheo
   TYPE(t_input),    INTENT(INOUT) :: input
+  TYPE(t_job  ),    INTENT(INOUT) :: job
   TYPE(t_sym),      INTENT(INOUT) :: sym
   TYPE(t_stars),    INTENT(INOUT) :: stars 
   TYPE(t_atoms),    INTENT(INOUT) :: atoms
@@ -94,7 +95,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      IF (ANY(atoms%lapw_l(:).NE.-1)) input%l_useapw = .TRUE.
      DO iType = 1, atoms%ntype
         IF (atoms%nlo(iType).GE.1) THEN
-           IF (input%secvar) THEN
+           IF (job%secvar) THEN
               CALL juDFT_error("LO + sevcar not implemented",calledby ="postprocessInput")
            END IF
            IF (atoms%nlo(iType).GT.atoms%nlod) THEN
@@ -161,7 +162,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      END DO
 
      IF (atoms%n_u.GT.0) THEN
-        IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
+        IF (job%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
@@ -358,7 +359,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Dimensioning of stars
 
-     IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
+     IF (input%film) THEN
         CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                         sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
                         stars%ng3,stars%ng2,oneD%odd)
@@ -490,7 +491,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Generate stars
 
-     IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+     IF (input%film) THEN
         CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
         IF (oneD%odd%d1) THEN
            CALL od_strgn1(xcpot,cell,sym,oneD)
@@ -501,13 +502,13 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Other small stuff
 
-     input%strho = .FALSE.
+     job%strho = .FALSE.
 
      INQUIRE(file="cdn1",exist=l_opti)
      if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-     l_opti=.not.l_opti
-     IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-         (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
+     job%l_opti=.not.l_opti
+     IF ((sliceplot%iplot).OR.(job%swsp).OR.&
+         (job%lflip).OR.(job%l_bmt)) l_opti = .TRUE.
 
      IF (.NOT.l_opti) THEN
         !      The following call to inpeig should not be required.
@@ -516,12 +517,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      CALL prp_qfft(stars,cell,noco,input)
 
-     IF (input%gw.GE.1) THEN
-        CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
-                      atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-                      atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-                      atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
-     END IF
+    
 
      CALL prp_xcfft(stars,input,cell,xcpot)
  

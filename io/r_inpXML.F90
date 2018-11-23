@@ -14,7 +14,7 @@ MODULE m_rinpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE r_inpXML(&
-      run,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
+      job,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
       xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
@@ -23,7 +23,6 @@ CONTAINS
       USE iso_c_binding
       USE m_juDFT
       USE m_types
-      USE m_types_fleurrun
       USE m_types_forcetheo_extended
       USE m_symdata , ONLY : nammap, ord2, l_c2
       USE m_rwsymfile
@@ -41,7 +40,7 @@ CONTAINS
       USE xc_f03_lib_m
 #endif
       IMPLICIT NONE
-      TYPE(t_run),INTENT(OUT)  :: run
+      TYPE(t_job),INTENT(OUT)  :: job
       TYPE(t_input),INTENT(INOUT)   :: input
       TYPE(t_sym),INTENT(INOUT)     :: sym
       TYPE(t_stars),INTENT(INOUT)   :: stars
@@ -308,8 +307,8 @@ CONTAINS
 
       ! Read SCF loop parametrization
 
-      run%itmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
-      run%minDistance = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
+      job%itmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
+      job%minDistance = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
       input%maxiter = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
 
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
@@ -345,8 +344,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       input%jspins = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
       noco%l_noco = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
-      run%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
-      run%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
+      job%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
+      job%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
       input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
   IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
@@ -575,11 +574,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       xPathA = '/fleurInput/calculationSetup/expertModes'
       numberNodes = xmlGetNumberOfNodes(xPathA)
 
-      run%secvar = .FALSE.
+      job%secvar = .FALSE.
 
       IF (numberNodes.EQ.1) THEN
          !input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
-         run%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
+         job%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
       END IF
 
       ! Read in optional geometry optimization parameters
@@ -1743,11 +1742,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       input%cdinf = .FALSE.
 
       sliceplot%iplot = .FALSE.
-      run%score = .FALSE.
+      job%score = .FALSE.
       sliceplot%plpot = .FALSE.
 
-      run%eonly = .FALSE.
-      run%l_bmt = .FALSE.
+      job%eonly = .FALSE.
+      job%l_bmt = .FALSE.
 
       xPathA = '/fleurInput/output'
       numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -1781,7 +1780,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
          IF (numberNodes.EQ.1) THEN
             sliceplot%iplot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-            run%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
+            job%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
             sliceplot%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
          END IF
 
@@ -1791,8 +1790,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
          IF (numberNodes.EQ.1) THEN
-            run%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
-            run%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
+            job%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
+            job%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
          END IF
 
          ! Read in optional densityOfStates output parameters

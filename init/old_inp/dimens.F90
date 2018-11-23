@@ -37,7 +37,7 @@ CONTAINS
 
     LOGICAL l_kpts,l_qpts,l_inpexist,ldum
     INTEGER n1,n2,n3,n4,n5,n6,n7,n8(3),n9,n10(3),i,j
-    INTEGER i_vec(33)
+    INTEGER i_vec(33),itmax
 
 
 #ifdef CPP_MPI
@@ -57,7 +57,7 @@ CONTAINS
        IF (l_kpts) WRITE (6,*) ' No fl7para-file found, '
        WRITE (6,*) ' invoking dimen7... '
        !call first_glance to generate k-points
-       CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
+       CALL first_glance(n1,n2,n3,n5,n6,itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 
        CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,&
                    oneD,hybrid,cell)
@@ -66,7 +66,7 @@ CONTAINS
 #ifdef CPP_MPI
     i_vec = (/sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft&
          &     ,atoms%ntype,atoms%nat,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,input%jspins,vacuum%nvac,dimension%nvd,dimension%nv2d&
-         &     ,1,kpts%nkpt,dimension%nstd,dimension%neigd,dimension%msh,25,vacuum%layers,atoms%nlod,atoms%llod,input%itmax/)
+         &     ,1,kpts%nkpt,dimension%nstd,dimension%neigd,dimension%msh,25,vacuum%layers,atoms%nlod,atoms%llod,itmax/)
     CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
     sym%nop=i_vec(1);stars%mx1=i_vec(2);stars%mx2=i_vec(3);stars%mx3=i_vec(4);stars%ng3=i_vec(5)
     stars%ng2 = i_vec(6);stars%kq1_fft=i_vec(7);stars%kq2_fft=i_vec(8);stars%kq3_fft=i_vec(9)
@@ -76,7 +76,7 @@ CONTAINS
     vacuum%nvac=i_vec(21);dimension%nvd=i_vec(22);dimension%nv2d=i_vec(23)
     kpts%nkpt = i_vec(25); dimension%nstd=i_vec(26);dimension%neigd=i_vec(27);dimension%msh=i_vec(28)
     vacuum%layers=i_vec(30);atoms%nlod=i_vec(31);atoms%llod=i_vec(32)
-    input%itmax=i_vec(33)
+    itmax=i_vec(33)
     CALL MPI_BCAST(oneD%odd%d1,1,MPI_LOGICAL,0,mpi%Mpi_comm,ierr)
     !      IF (odd%d1) THEN
     i_vec(:7) = (/oneD%odd%mb,oneD%odd%M,oneD%odd%m_cyl,oneD%odd%chi,oneD%odd%rot,oneD%odd%nop&

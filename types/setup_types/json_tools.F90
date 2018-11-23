@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_json_tools
+  USE m_judft
   IMPLICIT NONE
   PRIVATE
   interface json_print
