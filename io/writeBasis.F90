@@ -8,7 +8,7 @@ MODULE m_writeBasis
 
 CONTAINS
 
-SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,results,eig_id,oneD,sphhar,stars,vacuum)
+SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,results,eig_id,oneD,sphhar,stars,vacuum)
 
    USE m_types
    USE m_juDFT
@@ -38,6 +38,8 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_potden), INTENT(IN)    :: vTot
+      TYPE(t_potden), INTENT(IN)    :: vCoul
+      TYPE(t_potden), INTENT(IN)    :: vx
       TYPE(t_mpi), INTENT(IN)       :: mpi
       TYPE(t_results), INTENT(INOUT):: results
       INTEGER, INTENT(IN)           :: eig_id
@@ -609,9 +611,9 @@ write(*,*)numbands,ndbands
    CALL h5fclose_f(fileID, hdfError)  
 !-------------------------write potential--------------------
 
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,1,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,2,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,3,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw,vCoul%vacz,vCoul%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw,vx%vacz,vx%vacxy)
 
 
 
