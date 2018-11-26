@@ -128,6 +128,14 @@ CONTAINS
     tt%slice = .FALSE.
     tt%iplot = .FALSE.
     tt%plpot = .FALSE.
+    
+    tt%iplot=.FALSE.
+    tt%kk = 0
+    tt%e1s = 0.0
+    tt%e2s = 0.0
+    tt%nnne = 0
+    tt%pallst = .FALSE.
+    
     IF(xmlGetNumberOfNodes('/fleurInput/output/')==1)&
          tt%slice = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/output/@slice'))
     IF(xmlGetNumberOfNodes('/fleurInput/output/plotting')==1) THEN

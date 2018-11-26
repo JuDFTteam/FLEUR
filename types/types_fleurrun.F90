@@ -31,7 +31,9 @@ CONTAINS
     USE m_xmlIntWrapFort
     USE m_calculator
     CLASS(t_job),INTENT(INOUT)::job
-    
+
+    job%minDistance = 0.0
+ 
     job%itmax = evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
     job%minDistance = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
     job%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))

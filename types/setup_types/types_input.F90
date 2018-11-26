@@ -370,6 +370,9 @@ CONTAINS
        END IF
     END IF
 
+    tt%ldauLinMix = .FALSE.
+    tt%ldauMixParam = 0.05
+    tt%ldauSpinf = 1.0
     xPathA = '/fleurInput/calculationSetup/ldaU'
     numberNodes = xmlGetNumberOfNodes(xPathA)
     IF (numberNodes.EQ.1) THEN

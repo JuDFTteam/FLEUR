@@ -160,6 +160,11 @@ call json_read(unit,"s_cell_z",tt%s_cell_z)
     CHARACTER(LEN=255) :: xPathA, xPathB
     INTEGER            :: n,i,na,numberNodes
 
+    tt%l_mcd = .FALSE.
+    tt%e_mcd_lo = -10.0
+    tt%e_mcd_up = 0.0
+    tt%unfoldband = .FALSE.
+    
     tt%l_orb = .FALSE.
     tt%orbCompAtom = 0
     na=0

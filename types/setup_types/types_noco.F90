@@ -164,7 +164,7 @@ CONTAINS
     CHARACTER(len=200):: xpath,valueString
     INTEGER           :: ntype,numberNodes,n
 
-
+    tt%l_mtNocoPot = .FALSE.
     ntype=xmlGetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
     IF (ALLOCATED(tt%l_relax)) DEALLOCATE(tt%l_relax,tt%b_con,tt%alphInit,tt%alph,tt%beta,tt%socscale)
     ALLOCATE(tt%l_relax(ntype),tt%b_con(2,ntype))
