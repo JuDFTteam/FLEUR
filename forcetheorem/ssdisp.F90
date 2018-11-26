@@ -38,11 +38,25 @@ CONTAINS
     this%evsum=0
   END SUBROUTINE ssdisp_init
 
-  SUBROUTINE ssdisp_start(this)
+  SUBROUTINE ssdisp_start(this,potden)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)          :: potden
     this%q_done=0
-    CALL this%t_forcetheo%start() !call routine of basis type
+    CALL this%t_forcetheo%start(potden) !call routine of basis type
+
+    IF (SIZE(potden%pw,2)<2) RETURN
+    !Average out magnetic part of potential/charge in INT+Vacuum
+    potden%pw(:,1)=(potden%pw(:,1)+potden%pw(:,2))/2.0
+    potden%pw(:,2)=potden%pw(:,1)
+    IF (SIZE(potden%pw,2)==3) potden%pw(:,3)=0.0
+    
+    potden%vacz(:,:,1)=(potden%vacz(:,:,1)+potden%vacz(:,:,2))/2.0
+    potden%vacxy(:,:,:,1)=(potden%vacxy(:,:,:,1)+potden%vacxy(:,:,:,2))/2.0
+    potden%vacz(:,:,2)=potden%vacz(:,:,1)
+    potden%vacxy(:,:,:,2)=potden%vacxy(:,:,:,1)
+    
   END SUBROUTINE  ssdisp_start
 
   LOGICAL FUNCTION ssdisp_next_job(this,lastiter,noco)

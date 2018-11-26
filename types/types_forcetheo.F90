@@ -31,9 +31,11 @@ MODULE m_types_forcetheo
   END TYPE t_forcetheo
 
 CONTAINS
-  SUBROUTINE forcetheo_start(this)
+  SUBROUTINE forcetheo_start(this,potden)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)   :: potden
     this%firstloop=.TRUE.
   END SUBROUTINE forcetheo_start
 

@@ -39,11 +39,13 @@ CONTAINS
   END SUBROUTINE mae_init
     
 
-  SUBROUTINE mae_start(this)
+  SUBROUTINE mae_start(this,potden)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)       :: potden
     this%directions_done=0
-    CALL this%t_forcetheo%start() !call routine of basis type
+    CALL this%t_forcetheo%start(potden) !call routine of basis type
   END SUBROUTINE  mae_start
 
 
