@@ -163,9 +163,9 @@ CONTAINS
           !--->    hamiltonian update
           DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
              i0=(i-1)/mpi%n_size+1 !local column index
-             ik = map2(i,jspin1)
-             DO j = 1,i
-                jk = map2(j,jspin2)
+             ik = map2(i,jspin2)
+             DO j = 1,MIN(i,lapw%nv(jspin1))
+                jk = map2(j,jspin1)
                 IF (jspin2>jspin1) THEN
                    hij = CONJG(CONJG(a(j,jspin2))* (tuuv(jk,ik)*a(i,jspin1) +tudv(jk,ik)*b(i,jspin1))&
                         + CONJG(b(j,jspin2))* (tddv(jk,ik)*b(i,jspin1) +tduv(jk,ik)*a(i,jspin1)))
