@@ -8,7 +8,7 @@ MODULE m_writeBasis
 
 CONTAINS
 
-SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,results,eig_id,oneD,sphhar,stars,vacuum)
+SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,results,eig_id,oneD,sphhar,stars,vacuum)
 
    USE m_types
    USE m_juDFT
@@ -16,38 +16,40 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
    USE hdf5
    USE m_hdf_tools
 #endif   
-    USE m_genmtbasis
+   USE m_genmtbasis
    USE m_pot_io
    USE m_abcof
    USE m_eig66_io, ONLY : read_eig
 
    IMPLICIT NONE
-!   TYPE(t_results),INTENT(IN):: results
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
-      TYPE(t_enpara),INTENT(IN)    :: enpara
-!      TYPE(t_banddos),INTENT(IN)   :: banddos
+!     TYPE(t_results),INTENT(IN)    :: results
+      TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+      TYPE(t_enpara),INTENT(IN)     :: enpara
+!     TYPE(t_banddos),INTENT(IN)    :: banddos
 
-      TYPE(t_sphhar),INTENT(IN)    :: sphhar
-      TYPE(t_stars),INTENT(IN)     :: stars
-      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_sphhar),INTENT(IN)     :: sphhar
+      TYPE(t_stars),INTENT(IN)      :: stars
+      TYPE(t_vacuum),INTENT(IN)     :: vacuum
 
-      TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_kpts),INTENT(IN)      :: kpts
-      TYPE(t_atoms),INTENT(INOUT)     :: atoms
-      TYPE(t_sym),INTENT(IN)       :: sym
-      TYPE(t_cell),INTENT(IN)      :: cell
-      TYPE(t_potden), INTENT(IN)   :: vTot
-      TYPE(t_mpi), INTENT(IN)      :: mpi
-      TYPE(t_results), INTENT(INOUT)  :: results
-      INTEGER, INTENT(IN)          :: eig_id
-      TYPE(t_oneD), INTENT(IN)     :: oneD
+      TYPE(t_input),INTENT(IN)      :: input
+      TYPE(t_noco),INTENT(IN)       :: noco
+      TYPE(t_kpts),INTENT(IN)       :: kpts
+      TYPE(t_atoms),INTENT(INOUT)   :: atoms
+      TYPE(t_sym),INTENT(IN)        :: sym
+      TYPE(t_cell),INTENT(IN)       :: cell
+      TYPE(t_potden), INTENT(IN)    :: vTot
+      TYPE(t_potden), INTENT(IN)    :: vCoul
+      TYPE(t_potden), INTENT(IN)    :: vx
+      TYPE(t_mpi), INTENT(IN)       :: mpi
+      TYPE(t_results), INTENT(INOUT):: results
+      INTEGER, INTENT(IN)           :: eig_id
+      TYPE(t_oneD), INTENT(IN)      :: oneD
 
-      TYPE (t_usdus)               :: usdus
-      TYPE(t_lapw)                 :: lapw
-      TYPE (t_eigVecCoeffs)        :: eigVecCoeffs
-      TYPE (t_force)               :: force
-      TYPE(t_mat)                  :: zMat
+      TYPE (t_usdus)                :: usdus
+      TYPE(t_lapw)                  :: lapw
+      TYPE (t_eigVecCoeffs)         :: eigVecCoeffs
+      TYPE (t_force)                :: force
+      TYPE(t_mat)                   :: zMat
 
 #ifdef CPP_HDF   
       
@@ -56,7 +58,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       CHARACTER(LEN=50) :: kpt_name
       CHARACTER(LEN=30) :: jsp_name
       CHARACTER(LEN=30) :: itype_name
-!      CHARACTER(LEN=30) :: l_name
+!     CHARACTER(LEN=30) :: l_name
 
    
       INTEGER(HID_T)    :: fileID
@@ -68,10 +70,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       INTEGER(HID_T)    :: kptGroupID
       INTEGER(HID_T)    :: jspGroupID
       INTEGER(HID_T)    :: itypeGroupID,  itypeSpaceID, itypeSetID
-!      INTEGER(HID_T)    :: lGroupID
+!     INTEGER(HID_T)    :: lGroupID
 
-!      INTEGER(HID_T)    :: stringTypeID
-!      INTEGER(SIZE_T)   :: stringLength
+!     INTEGER(HID_T)    :: stringTypeID
+!     INTEGER(SIZE_T)   :: stringLength
 
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
@@ -85,41 +87,38 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 
       INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
- !     INTEGER(HID_T)    :: kptSPLabelsSpaceID, kptSPLabelsSetID
- !     INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
+!     INTEGER(HID_T)    :: kptSPLabelsSpaceID, kptSPLabelsSetID
+!     INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
       INTEGER(HSIZE_T)  :: dims(7)
 
       INTEGER           :: j, iAtom, i
-!      INTEGER           :: noded, nodeu
+!     INTEGER           :: noded, nodeu
 
       INTEGER           :: hdfError, dimsInt(7)
       INTEGER           :: version
-      REAL, ALLOCATABLE  :: output(:,:,:,:),output5(:,:,:,:,:),output3(:,:,:)
-!      INTEGER           :: fakeLogical
-!      REAL              :: eFermiPrev
- !     LOGICAL           :: l_error
+      REAL, ALLOCATABLE :: output(:,:,:,:),output5(:,:,:,:,:),output3(:,:,:)
+!     INTEGER           :: fakeLogical
+!     REAL              :: eFermiPrev
+!     LOGICAL           :: l_error
 
       INTEGER           :: atomicNumbers(atoms%nat),ngopr_temp(atoms%nat)
       INTEGER           :: equivAtomsGroup(atoms%nat)
 
 
-!      REAL              :: wronk
 
+      REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
+      REAL, ALLOCATABLE :: flo(:,:,:)
 
-      REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
-      REAL,    ALLOCATABLE :: flo(:,:,:)
-
-      real,    allocatable :: cof(:,:,:,:)
-      integer(HSIZE_T)              :: Hdim1(4)
-      INTEGER		  :: lmn, na,lm,n,nn, m
-      complex, parameter   :: img=(0.,1.)
+      real, allocatable :: cof(:,:,:,:)
+      integer(HSIZE_T)  :: Hdim1(4)
+      INTEGER           :: lmn, na,lm,n,nn, m
+      complex,parameter :: img=(0.,1.)
 
       LOGICAL l_zref,l_real
       INTEGER jsp,nk,l,itype
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
     CALL force%init1(input,atoms)
-
 
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins),g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins) )
@@ -131,10 +130,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 
 
 
-	l_real=sym%invs.AND..NOT.noco%l_noco
-	! check if z-reflection trick can be used
-	l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
-!	IF (mpi%n_size > 1) l_zref = .FALSE.
+      l_real=sym%invs.AND..NOT.noco%l_noco
+!     check if z-reflection trick can be used
+      l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
+!     IF (mpi%n_size > 1) l_zref = .FALSE.
       version = 1
       filename = 'basis.hdf'
 
@@ -248,8 +247,6 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
       CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%rmsh)
       CALL h5dclose_f(atomPosSetID, hdfError)
 
-
-
       dims(:2)=(/3,atoms%nat/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
@@ -306,134 +303,131 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,mpi,DIMENSION,r
 
       CALL h5gclose_f(kptsGroupID, hdfError)
 
-   CALL usdus%init(atoms,input%jspins)
+      CALL usdus%init(atoms,input%jspins)
 
-   DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
-       write(jsp_name , '(a,i0)') '/jsp_',jsp
-       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
-!      DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
-       DO nk = 1,kpts%nkpt
+      DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+         write(jsp_name , '(a,i0)') '/jsp_',jsp
+         CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
+!        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
+         DO nk = 1,kpts%nkpt
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
             write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
 	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------enter output gvec etc here--------------------
-!lapw%gvec(3,nv,input%jspins)
             CALL io_write_attint0(kptGroupID,'nv',lapw%nv(jsp))
 
-	      dims(:2)=(/3,lapw%nv(jsp)/)
-	      dimsInt=dims
-	      CALL h5screate_simple_f(2,dims(:2),gvecSpaceID,hdfError)
-	      CALL h5dcreate_f(kptGroupID, "gvec", H5T_NATIVE_INTEGER, gvecSpaceID, gvecSetID, hdfError)
-	      CALL h5sclose_f(gvecSpaceID,hdfError)
-	      CALL io_write_integer2(gvecSetID,(/1,1/),dimsInt(:2),lapw%gvec(:,:lapw%nv(jsp),jsp))
-	      CALL h5dclose_f(gvecSetID, hdfError)
-!index_lo(:,:)	
-	      CALL h5gclose_f(kptGroupID, hdfError)
-            
-       END DO
+	    dims(:2)=(/3,lapw%nv(jsp)/)
+	    dimsInt=dims
+	    CALL h5screate_simple_f(2,dims(:2),gvecSpaceID,hdfError)
+	    CALL h5dcreate_f(kptGroupID, "gvec", H5T_NATIVE_INTEGER, gvecSpaceID, gvecSetID, hdfError)
+	    CALL h5sclose_f(gvecSpaceID,hdfError)
+ 	    CALL io_write_integer2(gvecSetID,(/1,1/),dimsInt(:2),lapw%gvec(:,:lapw%nv(jsp),jsp))
+	    CALL h5dclose_f(gvecSetID, hdfError)	
+	      
+            CALL h5gclose_f(kptGroupID, hdfError)   
+         END DO
+
+         DO itype = 1,atoms%ntype
+	    write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
+	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
+
+            CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo)
+	    dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
+	    dimsInt = dims
+	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "f", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),f(:,:,0:,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "g", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),g(:,:,0:,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    dims(:3)=(/atoms%jmtd,2,atoms%nlod/)
+	    dimsInt = dims
+	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "flo", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),flo(:,:,:))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    dims(:1)=(/atoms%lmaxd+1/)
+	    dimsInt = dims
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "us", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%us(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "dus", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%dus(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "uds", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%uds(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "duds", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%duds(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    dims(:1)=(/atoms%nlod/)
+	    dimsInt = dims
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "dulos", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%dulos(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "ulos", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%ulos(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    dims(:1)=(/atoms%lmaxd+1/)
+	    dimsInt = dims
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "el0", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),enpara%el0(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
+
+	    dims(:1)=(/atoms%nlod/)
+	    dimsInt = dims
+	    CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
+	    CALL h5dcreate_f(itypeGroupID, "ello0", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
+	    CALL h5sclose_f(itypeSpaceID,hdfError)
+	    CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),enpara%ello0(:,itype,jsp))
+	    CALL h5dclose_f(itypeSetID, hdfError)
 
 
-       DO itype = 1,atoms%ntype
-		write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
-		CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
-
-                CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo)
-		dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
-		dimsInt = dims
-		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "f", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),f(:,:,0:,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "g", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),g(:,:,0:,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		dims(:3)=(/atoms%jmtd,2,atoms%nlod/)
-		dimsInt = dims
-		CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "flo", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real3(itypeSetID,(/1,1,1/),dimsInt(:3),flo(:,:,:))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		dims(:1)=(/atoms%lmaxd+1/)
-		dimsInt = dims
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "us", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%us(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "dus", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%dus(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "uds", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%uds(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "duds", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%duds(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		dims(:1)=(/atoms%nlod/)
-		dimsInt = dims
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "dulos", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%dulos(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "ulos", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),usdus%ulos(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		dims(:1)=(/atoms%lmaxd+1/)
-		dimsInt = dims
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "el0", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),enpara%el0(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-		dims(:1)=(/atoms%nlod/)
-		dimsInt = dims
-		CALL h5screate_simple_f(1,dims(:1),itypeSpaceID,hdfError)
-		CALL h5dcreate_f(itypeGroupID, "ello0", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
-		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real1(itypeSetID,(/1/),dimsInt(:1),enpara%ello0(:,itype,jsp))
-		CALL h5dclose_f(itypeSetID, hdfError)
-
-
-!			write(kpt_name , '(3a,i0)') TRIM(ADJUSTL(jsp_name)),TRIM(ADJUSTL(itype_name)),'/l_',l
-!			CALL h5gcreate_f(fileID, TRIM(ADJUSTL(l_name)), lGroupID, hdfError)
-!			CALL h5gclose_f(lGroupID, hdfError)
-		CALL h5gclose_f(itypeGroupID, hdfError)
+!           write(kpt_name , '(3a,i0)') TRIM(ADJUSTL(jsp_name)),TRIM(ADJUSTL(itype_name)),'/l_',l
+!	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(l_name)), lGroupID, hdfError)
+!	    CALL h5gclose_f(lGroupID, hdfError)
+	    CALL h5gclose_f(itypeGroupID, hdfError)
 	END DO
 
        CALL h5gclose_f(jspGroupID, hdfError)
-   END DO
-   CALL h5fclose_f(fileID, hdfError)
-      version = 1
-      filename = 'eig_gw.hdf'
+    END DO
+    CALL h5fclose_f(fileID, hdfError)
+    version = 1
+    filename = 'eig_gw.hdf'
 
-      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
-      IF(l_exist) THEN
-         CALL system('rm '//TRIM(ADJUSTL(filename)))       
-      END IF
+    INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+    IF(l_exist) THEN
+       CALL system('rm '//TRIM(ADJUSTL(filename)))       
+    END IF
 
       CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
@@ -487,17 +481,17 @@ write(*,*)numbands,ndbands
 		CALL h5screate_simple_f(1,dims(:1),eigSpaceID,hdfError)
 		CALL h5dcreate_f(kptGroupID, "eig", H5T_NATIVE_DOUBLE, eigSpaceID, eigSetID, hdfError)
 		CALL h5sclose_f(eigSpaceID,hdfError)
-		CALL io_write_real1(eigSetID,(/1/),dimsInt(:1),results%eig(:numbands,nk,jsp))
+                CALL io_write_real1(eigSetID,(/1/),dimsInt(:1),results%eig(:numbands,nk,jsp))
 		CALL h5dclose_f(eigSetID, hdfError)
    
-    CALL io_write_attint0(kptGroupID,'numbands',numbands)            
+                CALL io_write_attint0(kptGroupID,'numbands',numbands)            
 		IF (zMat%l_real) THEN
 		      dims(:2)=(/nbasfcn,numbands/)
 		      dimsInt=dims
 		      CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
 		      CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
 		      CALL h5sclose_f(kptCoordSpaceID,hdfError)
-		      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),zMat%data_r(:nbasfcn,:numbands))
+            CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),zMat%data_r(:nbasfcn,:numbands))
 		      CALL h5dclose_f(kptCoordSetID, hdfError)
 		ELSE
                       AllOCATE(output3(2,nbasfcn,numbands))
@@ -601,10 +595,10 @@ write(*,*)numbands,ndbands
 
 		dims(:4)=Hdim1
 		dimsInt = dims
-                CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
+    CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
 		CALL h5dcreate_f(kptGroupID, "mt", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
-		CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), cof)
+     		CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), cof)
 		CALL h5dclose_f(itypeSetID, hdfError)
 		      deallocate ( cof )
 !-------------------------end output spex format-----------------
@@ -617,9 +611,9 @@ write(*,*)numbands,ndbands
    CALL h5fclose_f(fileID, hdfError)  
 !-------------------------write potential--------------------
 
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,1,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,2,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,3,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw,vCoul%vacz,vCoul%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw,vx%vacz,vx%vacxy)
 
 
 
