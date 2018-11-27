@@ -50,12 +50,17 @@ CONTAINS
     !Average out magnetic part of potential/charge in INT+Vacuum
     potden%pw(:,1)=(potden%pw(:,1)+potden%pw(:,2))/2.0
     potden%pw(:,2)=potden%pw(:,1)
-    IF (SIZE(potden%pw,2)==3) potden%pw(:,3)=0.0
     
     potden%vacz(:,:,1)=(potden%vacz(:,:,1)+potden%vacz(:,:,2))/2.0
     potden%vacxy(:,:,:,1)=(potden%vacxy(:,:,:,1)+potden%vacxy(:,:,:,2))/2.0
     potden%vacz(:,:,2)=potden%vacz(:,:,1)
     potden%vacxy(:,:,:,2)=potden%vacxy(:,:,:,1)
+    !Off diagonal part
+    IF (SIZE(potden%pw,2)==3) THEN
+       potden%pw(:,3)=0.0
+       potden%vacz(:,:,3:)=0.0
+       potden%vacxy(:,:,:,3)=0.0
+    END IF
     
   END SUBROUTINE  ssdisp_start
 
