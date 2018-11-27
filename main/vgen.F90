@@ -81,12 +81,6 @@ CONTAINS
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
 
-      DO ispin = 1, input%jspins
-         DO i = 1, stars%ng3
-            vcoul%pw(i,ispin) = vcoul%pw(i,ispin) / stars%nstr(i)
-            vcoul%pw_w(i,ispin) = vcoul%pw_w(i,ispin) / stars%nstr(i)  !this normalization is needed for gw
-         END DO
-      END DO
 
       IF (noco%l_noco) THEN
          CALL denRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
