@@ -55,8 +55,6 @@ CONTAINS
 
       TYPE(t_potden)                    :: workden,denRot
 
-      INTEGER :: ispin, i
-
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
@@ -81,7 +79,6 @@ CONTAINS
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
 
-
       IF (noco%l_noco) THEN
          CALL denRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
          denRot=den
@@ -92,7 +89,7 @@ CONTAINS
                       obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
+      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,vCoul,denRot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)
