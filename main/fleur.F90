@@ -242,7 +242,7 @@ CONTAINS
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
 
-       CALL forcetheo%start(vtot)
+       CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
 
           CALL timestart("generation of hamiltonian and diagonalization (total)")

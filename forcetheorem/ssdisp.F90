@@ -38,13 +38,14 @@ CONTAINS
     this%evsum=0
   END SUBROUTINE ssdisp_init
 
-  SUBROUTINE ssdisp_start(this,potden)
+  SUBROUTINE ssdisp_start(this,potden,l_io)
     USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)          :: potden
+    LOGICAL,INTENT(IN)                     :: l_io
     this%q_done=0
-    CALL this%t_forcetheo%start(potden) !call routine of basis type
+    CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
 
     IF (SIZE(potden%pw,2)<2) RETURN
     !Average out magnetic part of potential/charge in INT+Vacuum
@@ -83,6 +84,7 @@ CONTAINS
     
     !Now modify the noco-file
     noco%qss=this%qvec(:,this%q_done)
+    IF (.NOT.this%l_io) RETURN
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
     CALL openXMLElementPoly('Forcetheorem_Loop_SSDISP',(/'Q-vec:'/),(/this%q_done/))
   END FUNCTION ssdisp_next_job
@@ -97,15 +99,17 @@ CONTAINS
     CHARACTER(LEN=12):: attributes(4)
     IF (this%q_done==0) RETURN
     !Now output the results
-    CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
-    CALL openXMLElementPoly('Forcetheorem_SSDISP',(/'qvectors'/),(/SIZE(this%evsum)/))
-    DO q=1,SIZE(this%evsum)
-       WRITE(attributes(1),'(i5)') q
-       WRITE(attributes(2),'(f12.7)') this%evsum(q) 
-       CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(1:2),&
-            RESHAPE((/1,6,5,12/),(/2,2/)))
-    ENDDO
-    CALL closeXMLElement('Forcetheorem_SSDISP')
+    IF (this%l_io) THEN
+       CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
+       CALL openXMLElementPoly('Forcetheorem_SSDISP',(/'qvectors'/),(/SIZE(this%evsum)/))
+       DO q=1,SIZE(this%evsum)
+          WRITE(attributes(1),'(i5)') q
+          WRITE(attributes(2),'(f12.7)') this%evsum(q) 
+          CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(1:2),&
+               RESHAPE((/1,6,5,12/),(/2,2/)))
+       ENDDO
+       CALL closeXMLElement('Forcetheorem_SSDISP')
+    ENDIF
     CALL judft_end("Forcetheorem:SpinSpiralDispersion")
   END SUBROUTINE ssdisp_postprocess
 
