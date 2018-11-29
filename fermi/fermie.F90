@@ -179,7 +179,7 @@ CONTAINS
           END DO
        END DO
 
-       CALL sort(n,e,index)
+       CALL sort(index,e)
 
        !     Check if no deep eigenvalue is found
        IF (e_min-MINVAL(e(1:n))>1.0) THEN

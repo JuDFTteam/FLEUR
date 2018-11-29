@@ -1481,7 +1481,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          DO iLLO = 1, speciesNLO(iSpecies)
             speciesLLOReal(iLLO) = speciesLLO(iLLO)
          END DO
-         CALL sort(speciesNLO(iSpecies),speciesLLOReal,loOrderList)
+         CALL sort(loOrderList(:speciesNLO(iSpecies)),speciesLLOReal(:speciesNLO(iSpecies)))
          DEALLOCATE(speciesLLOReal)
 
          ! apply species parameters to atom groups

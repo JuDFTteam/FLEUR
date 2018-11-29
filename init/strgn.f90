@@ -148,8 +148,10 @@ CONTAINS
     ENDIF
 
     !--->    sort for increasing length sk2
-
-    CALL sort(stars%ng2,stars%sk2,index)
+    DO  k = 1,stars%ng2
+       gsk3(k) = (stars%mx1+stars%kv2(1,k)) + (stars%mx2+stars%kv2(2,k))*(2*stars%mx1+1)
+    ENDDO
+    CALL sort(INDEX(:stars%ng2),stars%sk2(:stars%ng2),gsk3(:stars%ng2))
     DO k = 1,stars%ng2
        kv3rev(k,1) = stars%kv2(1,INDEX(k))
        kv3rev(k,2) = stars%kv2(2,INDEX(k))
@@ -163,33 +165,6 @@ CONTAINS
        stars%phi2(k) = phi3(k)
     ENDDO
 
-    !--roa   ....
-    !......sort stars of equal length 2D .....
-    i=1
-    gla=0.
-    gsk3(1)=0.0
-    eps=1.e-10
-    DO  k = 2,stars%ng2
-       IF (stars%sk2(k)-gla.GE.eps) i=i+1
-       gla=stars%sk2(k)
-       gmi = (stars%mx1+stars%kv2(1,k)) + (stars%mx2+stars%kv2(2,k))*(2*stars%mx1+1)
-       gsk3(k) = i * ((2*stars%mx1+1)*(2*stars%mx2+1)+9)+gmi
-    ENDDO
-    CALL sort(stars%ng2,gsk3,index2)
-    DO  k = 1,stars%ng2
-       kv3rev(k,1) = stars%kv2(1,index2(k))
-       kv3rev(k,2) = stars%kv2(2,index2(k))
-       gsk3(k) = stars%sk2(index2(k))
-       phi3(k) = stars%phi2(index2(k))
-    ENDDO
-    DO  k = 1,stars%ng2
-       stars%kv2(1,k) = kv3rev(k,1)
-       stars%kv2(2,k) = kv3rev(k,2)
-       stars%sk2(k) = gsk3(k)
-       stars%phi2(k) = phi3(k)
-       !         if (index2(k).ne.k) write(*,*) ' ic2: ',k,index2(k)
-    ENDDO
-    !--roa   ....
 
     WRITE (6,'(/'' nq2='',i4/'' k,kv2(1,2), sk2, phi2''&
          &     /(3i4,f10.5,f10.5))')&
@@ -252,8 +227,13 @@ CONTAINS
     ENDDO
 
     !--->    sort for increasing length sk3
-
-    CALL sort(stars%ng3,stars%sk3,index)
+    ! secondary key for equal length stars
+    DO  k = 1,stars%ng3
+       gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
+            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
+            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
+    ENDDO
+    CALL sort(index,stars%sk3,gsk3)
 
     ALLOCATE (ig2p(stars%ng3))
 
@@ -271,41 +251,7 @@ CONTAINS
        stars%sk3(k) = gsk3(k)
        stars%ig2(k) = ig2p(k)
     ENDDO
-    !
-    !--roa   ....
-    !......sort stars of equal length 3D .....
-    i=1
-    gla=0.
-    gsk3(1)=0.
-    eps=1.e-10
-    DO  k = 2,stars%ng3
-       IF (stars%sk3(k)-gla.GE.eps) i=i+1
-       gla = stars%sk3(k)
-       gmi = (stars%mx1+stars%kv3(1,k)) +&
-            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
-            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
-       gsk3(k) = i * (9.+(2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)) + gmi
-    ENDDO
-    CALL sort(stars%ng3,gsk3,index3)
-    DO  k = 1,stars%ng3
-       kv3rev(k,1) = stars%kv3(1,index3(k))
-       kv3rev(k,2) = stars%kv3(2,index3(k))
-       kv3rev(k,3) = stars%kv3(3,index3(k))
-       gsk3(k) = stars%sk3(index3(k))
-       ig2p(k) = stars%ig2(index3(k))
-    ENDDO
-    DO  k = 1,stars%ng3
-       stars%kv3(1,k) = kv3rev(k,1)
-       stars%kv3(2,k) = kv3rev(k,2)
-       stars%kv3(3,k) = kv3rev(k,3)
-       stars%sk3(k) = gsk3(k)
-       stars%ig2(k) = ig2p(k)
-       !           if (index3(k).ne.k) write(*,*) ' ic: ',k,index3(k)
-    ENDDO
-
-    DEALLOCATE (ig2p)
-
-    !--roa   ....
+  
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
@@ -682,8 +628,13 @@ CONTAINS
     ENDIF
 
     !--->    sort for increasing length sk3
-    !
-    CALL sort(stars%ng3,stars%sk3,index)
+    ! secondary key for equal length stars
+    DO  k = 1,stars%ng3
+       gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
+            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
+            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
+    ENDDO
+    CALL sort(index,stars%sk3,gsk3)
     DO k = 1,stars%ng3
        kv3rev(k,1) = stars%kv3(1,INDEX(k))
        kv3rev(k,2) = stars%kv3(2,INDEX(k))
@@ -696,36 +647,6 @@ CONTAINS
        stars%kv3(3,k) = kv3rev(k,3)
        stars%sk3(k) = gsk3(k)
     ENDDO
-    !
-    !--roa   ....
-    !......sort stars of equal length 3D .....
-    i=1
-    gla=0.
-    gsk3(1)=0.
-    eps=1.e-10
-    DO  k = 2,stars%ng3
-       IF (stars%sk3(k)-gla.GE.eps) i=i+1
-       gla = stars%sk3(k)
-       gmi = (stars%mx1+stars%kv3(1,k)) +&
-            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
-            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
-       gsk3(k) = i * (9.+(2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)) + gmi
-    ENDDO
-    CALL sort(stars%ng3,gsk3,index3)
-    DO  k = 1,stars%ng3
-       kv3rev(k,1) = stars%kv3(1,index3(k))
-       kv3rev(k,2) = stars%kv3(2,index3(k))
-       kv3rev(k,3) = stars%kv3(3,index3(k))
-       gsk3(k) = stars%sk3(index3(k))
-    ENDDO
-    DO  k = 1,stars%ng3
-       stars%kv3(1,k) = kv3rev(k,1)
-       stars%kv3(2,k) = kv3rev(k,2)
-       stars%kv3(3,k) = kv3rev(k,3)
-       stars%sk3(k) = gsk3(k)
-       !           if (index3(k).ne.k) write(*,*) ' ic: ',k,index3(k)
-    ENDDO
-    !--roa   ....
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
