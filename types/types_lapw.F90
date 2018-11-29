@@ -216,12 +216,9 @@ CONTAINS
                (mk3+gvec(3,k))*(2*mk1+1)*(2*mk2+1)
        ENDDO
        CALL sort(index3(:lapw%nv(ispin)),rkq,rkqq)
-       PRINT *,"L:",SIZE(index3),lapw%nv(ispin)
-       PRINT *,"L:",MINVAL(index3),MAXVAL(index3),SUM(index3)
        DO n=1,lapw%nv(ispin)
           lapw%gvec(:,n,ispin) = gvec(:,index3(n))
           lapw%rk(n,ispin)     = rk(index3(n))
-          PRINT *,"RK:",n,lapw%rk(n,ispin)
        ENDDO
        !--->    determine pairs of K-vectors, where K_z = K'_-z to use 
        !--->    z-reflection
