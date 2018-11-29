@@ -324,6 +324,7 @@
                          IF (rkappa.GT.zero) rkappa=MAX(rkappa,tol_14)
                          ! gb works also around
                          zvac   = - LOG( tol_14/cabs(VALUE) ) / rkappa
+                         zvac   = MIN (2.*vacuum%nmz,abs(zvac)) ! avoid int-overflow in next line
                          nzvac  = INT( zvac/vacuum%delz ) + 1
                          !               IF ( rkappa.GT.zero .AND. real(value).GT.zero ) THEN
                          IF ( rkappa.GT.zero ) THEN
