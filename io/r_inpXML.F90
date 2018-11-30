@@ -306,7 +306,7 @@ CONTAINS
       IF(numberNodes.EQ.1) THEN
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
-            STOP 'Feature to calculate all eigenfunctions not yet implemented.'
+            dimension%neigd = -1
          ELSE
             READ(valueString,*) dimension%neigd
          END IF
@@ -1988,8 +1988,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             END IF
             wann%l_byindex = .TRUE.
             IF(input%l_wann) THEN
-               IF (dimension%neigd.LT.MAX(wann%band_max(1),wann%band_max(2))) THEN
-                  dimension%neigd = MAX(wann%band_max(1),wann%band_max(2))
+               IF (dimension%neigd.NE.-1) THEN
+                  IF (dimension%neigd.LT.MAX(wann%band_max(1),wann%band_max(2))) THEN
+                     dimension%neigd = MAX(wann%band_max(1),wann%band_max(2))
+                  END IF
                END IF
             END IF
          END IF
