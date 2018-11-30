@@ -434,7 +434,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          STOP 'Error: Optionality of valence electrons in input file not yet implemented!'
       END IF
 
-      IF (l_AltKPointSet.EQ..FALSE.) THEN
+      IF (l_AltKPointSet.EQV..FALSE.) THEN
          WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration'
       END IF
 
