@@ -53,6 +53,8 @@ CONTAINS
     REAL u(vacuum%nmzd,dimension%nv2d,input%jspins),ud(vacuum%nmzd,dimension%nv2d,input%jspins)
     REAL v(3),x(vacuum%nmzd), qssbti(2,2)
     !     ..
+    tuuv=0.0;tudv=0.0;tddv=0.0;tduv=0.0
+    udz=0.0;duz=0.0;ddnv=0.0;udz=0.;uz=0.
     tail = .true.
     np1 = vacuum%nmzxy + 1
     !--->    wronksian for the schrodinger equation given by an identity

@@ -267,7 +267,7 @@ MODULE m_types_mat
     INTEGER:: i1,i2
 
     i1=mat%matsize1-n1+1  !space available for first dimension
-    i2=mat%matsize2-n1+1
+    i2=mat%matsize2-n2+1
     i1=MIN(i1,mat1%matsize1)
     i2=MIN(i2,mat1%matsize2)
     IF (mat%l_real) THEN
