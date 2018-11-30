@@ -138,8 +138,8 @@ CONTAINS
       CHARACTER(LEN=50)  :: versionString
       CHARACTER(LEN=150) :: kPointsPrefix
 
-      INTEGER            :: numAltKPointSets
-      LOGICAL            :: ldaSpecies, l_AltKPointSet
+      INTEGER            :: altKPointSetIndex,  altKPointSetIndices(2)
+      LOGICAL            :: ldaSpecies
       REAL               :: socscaleSpecies
 
       INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
@@ -370,22 +370,39 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
       END IF
 
-      l_AltKPointSet = .FALSE.
-      IF(input%gw.EQ.2) THEN
-         xPathA = '/fleurInput/calculationSetup/bzIntegration/altKPointSet'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.NE.0) THEN
-            numAltKPointSets = numberNodes
-            DO i = 1, numAltKPointSets
-               WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',i,']/@purpose'
-               valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-               IF(TRIM(ADJUSTL(valueString)).EQ.'GW') THEN
-                  l_AltKPointSet = .TRUE.
-                  WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',i,']'
-                  EXIT
-               END IF
-            END DO
-         END IF
+      ! Check for alternative k point sets for the chosen FLEUR mode
+
+      xPathA = '/fleurInput/output'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      banddos%band = .FALSE.
+      IF (numberNodes.EQ.1) THEN
+         banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
+      END IF
+
+      altKPointSetIndices(:) = -1
+      xPathA = '/fleurInput/calculationSetup/bzIntegration/altKPointSet'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF(numberNodes.NE.0) THEN
+         DO i = 1, numberNodes
+            WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',i,']/@purpose'
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            IF((altKPointSetIndices(2).EQ.-1).AND.(TRIM(ADJUSTL(valueString)).EQ.'GW')) THEN
+               altKPointSetIndices(2) = i
+            ELSE IF((altKPointSetIndices(1).EQ.-1).AND.(TRIM(ADJUSTL(valueString)).EQ.'bands')) THEN
+               altKPointSetIndices(1) = i
+            END IF
+         END DO
+      END IF
+
+      altKPointSetIndex = -1
+      IF(banddos%band) THEN
+         altKPointSetIndex = altKPointSetIndices(1)
+      ELSE IF (input%gw.EQ.2) THEN
+         altKPointSetIndex = altKPointSetIndices(2)
+      END IF
+
+      IF (altKPointSetIndex.NE.-1) THEN
+         WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',altKPointSetIndex,']'
       END IF
 
       ! Read in Brillouin zone integration parameters
@@ -434,7 +451,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          STOP 'Error: Optionality of valence electrons in input file not yet implemented!'
       END IF
 
-      IF (.NOT.l_AltKPointSet) THEN
+      IF (altKPointSetIndex.EQ.-1) THEN
          WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration'
       END IF
 
