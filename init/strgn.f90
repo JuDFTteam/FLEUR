@@ -233,7 +233,7 @@ CONTAINS
             &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
             &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
     ENDDO
-    CALL sort(index,stars%sk3,gsk3)
+    CALL sort(index(:stars%ng3),stars%sk3,gsk3)
 
     ALLOCATE (ig2p(stars%ng3))
 
@@ -634,7 +634,7 @@ CONTAINS
             &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
             &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
     ENDDO
-    CALL sort(index,stars%sk3,gsk3)
+    CALL sort(index(:stars%ng3),stars%sk3,gsk3)
     DO k = 1,stars%ng3
        kv3rev(k,1) = stars%kv3(1,INDEX(k))
        kv3rev(k,2) = stars%kv3(2,INDEX(k))
