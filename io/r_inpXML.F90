@@ -434,7 +434,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          STOP 'Error: Optionality of valence electrons in input file not yet implemented!'
       END IF
 
-      IF (l_AltKPointSet.EQV..FALSE.) THEN
+      IF (.NOT.l_AltKPointSet) THEN
          WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration'
       END IF
 
@@ -544,6 +544,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          kpts%bk = 0.0
          kpts%wtkpt = 0.0
          kpts%l_gamma = .FALSE.
+         l_kpts = .TRUE.
          kpts%specificationType = 3
          kpts%posScale=1.0
          CALL inpeig(atoms,cell,input,.FALSE.,kpts,kptsFilename=TRIM(ADJUSTL(valueString)))
