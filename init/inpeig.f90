@@ -1,7 +1,7 @@
       MODULE m_inpeig
       CONTAINS
       SUBROUTINE inpeig(&
-     &                  atoms,cell,input,l_is_oneD,kpts,enpara)
+     &                  atoms,cell,input,l_is_oneD,kpts,enpara,kptsFilename)
 !*********************************************************************
 !     inputs the necessary quantities for the eigenvalue part (energy
 !     parameters, k-points, wavefunction cutoffs, etc.).
@@ -26,14 +26,15 @@
       TYPE(t_input),INTENT(IN)     :: input
       LOGICAL,INTENT(IN)           :: l_is_oneD
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
-      TYPE(t_enpara),INTENT(INOUT) :: enpara
+      TYPE(t_enpara),OPTIONAL,INTENT(INOUT) :: enpara
+      CHARACTER(LEN=*),OPTIONAL,INTENT(IN) :: kptsFilename
 
 !     ..
 !     .. Local Scalars ..
       REAL      :: wt,scale
       INTEGER   :: i,j,nk,jsp,n
       LOGICAL   :: xyu,l_enpara,l_clf
-      CHARACTER(len=13) :: fname
+      CHARACTER(LEN=255) :: fname
 !     ..
 !
      
@@ -42,15 +43,24 @@
 !---> read from file 40='enpara'  shz Jan.96
 !
 
-      IF (.NOT.input%l_inpXML) THEN
-      !read enpara file if present!
-         CALL enpara%init(atoms,input%jspins)
-         CALL enpara%READ(atoms,input%jspins,input%film,.false.)        
+      IF(PRESENT(enpara)) THEN
+         IF (.NOT.input%l_inpXML) THEN
+            !read enpara file if present!
+            CALL enpara%init(atoms,input%jspins)
+            CALL enpara%READ(atoms,input%jspins,input%film,.false.)        
+         END IF
       END IF
 !
 !---> read k-points from file 41='kpts'
 !
-      OPEN (41,file='kpts',form='formatted',status='old')
+
+      IF(PRESENT(kptsFilename)) THEN
+         fname = TRIM(ADJUSTL(kptsFilename))
+      ELSE
+         fname = 'kpts'
+      END IF
+
+      OPEN (41,file=TRIM(ADJUSTL(fname)),form='formatted',status='old')
 !
 !---> k-mesh: given in units of the reciprocal lattice basis vectors
 !---> scale is a factor to make input easier (default=1.0). k-pt

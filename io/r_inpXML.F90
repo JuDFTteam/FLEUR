@@ -136,7 +136,9 @@ CONTAINS
       CHARACTER(LEN=255) :: xPathA, xPathB, xPathC, xPathD, xPathE
       CHARACTER(LEN=11)  :: latticeType
       CHARACTER(LEN=50)  :: versionString
+      CHARACTER(LEN=150) :: kPointsPrefix
 
+      INTEGER            :: altKPointSetIndex,  altKPointSetIndices(2)
       LOGICAL            :: ldaSpecies
       REAL               :: socscaleSpecies
 
@@ -304,7 +306,7 @@ CONTAINS
       IF(numberNodes.EQ.1) THEN
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
-            STOP 'Feature to calculate all eigenfunctions not yet implemented.'
+            dimension%neigd = -1
          ELSE
             READ(valueString,*) dimension%neigd
          END IF
@@ -355,6 +357,54 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
   IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
 
+      ! Read in optional expert modes switches
+
+      xPathA = '/fleurInput/calculationSetup/expertModes'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+
+      input%gw = 0
+      input%secvar = .FALSE.
+
+      IF (numberNodes.EQ.1) THEN
+         input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
+         input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
+      END IF
+
+      ! Check for alternative k point sets for the chosen FLEUR mode
+
+      xPathA = '/fleurInput/output'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      banddos%band = .FALSE.
+      IF (numberNodes.EQ.1) THEN
+         banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
+      END IF
+
+      altKPointSetIndices(:) = -1
+      xPathA = '/fleurInput/calculationSetup/bzIntegration/altKPointSet'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF(numberNodes.NE.0) THEN
+         DO i = 1, numberNodes
+            WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',i,']/@purpose'
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            IF((altKPointSetIndices(2).EQ.-1).AND.(TRIM(ADJUSTL(valueString)).EQ.'GW')) THEN
+               altKPointSetIndices(2) = i
+            ELSE IF((altKPointSetIndices(1).EQ.-1).AND.(TRIM(ADJUSTL(valueString)).EQ.'bands')) THEN
+               altKPointSetIndices(1) = i
+            END IF
+         END DO
+      END IF
+
+      altKPointSetIndex = -1
+      IF(banddos%band) THEN
+         altKPointSetIndex = altKPointSetIndices(1)
+      ELSE IF (input%gw.EQ.2) THEN
+         altKPointSetIndex = altKPointSetIndices(2)
+      END IF
+
+      IF (altKPointSetIndex.NE.-1) THEN
+         WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',altKPointSetIndex,']'
+      END IF
+
       ! Read in Brillouin zone integration parameters
 
       kpts%nkpt3 = 0
@@ -401,9 +451,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          STOP 'Error: Optionality of valence electrons in input file not yet implemented!'
       END IF
 
+      IF (altKPointSetIndex.EQ.-1) THEN
+         WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration'
+      END IF
+
       ! Option kPointDensity
       kpts%kPointDensity(:) = 0.0
-      xPathA = '/fleurInput/calculationSetup/bzIntegration/kPointDensity'
+      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointDensity'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
          l_kpts = .FALSE.
@@ -415,7 +469,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       END IF
 
       ! Option kPointMesh
-      xPathA = '/fleurInput/calculationSetup/bzIntegration/kPointMesh'
+      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointMesh'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
          l_kpts = .FALSE.
@@ -428,7 +482,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       END IF
 
       ! Option kPointCount
-      xPathA = '/fleurInput/calculationSetup/bzIntegration/kPointCount'
+      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointCount'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
          l_kpts = .FALSE.
@@ -443,7 +497,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          kpts%wtkpt = 0.0
          kpts%posScale = 1.0
 
-         numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint')
+         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(kPointsPrefix))//'/kPointCount/specialPoint')
          IF(numberNodes.EQ.1) THEN
             STOP 'Error: Single special k point provided. This does not make sense!'
          END IF
@@ -453,7 +507,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
             ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
             DO i = 1, kpts%numSpecialPoints
-               WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointCount/specialPoint[',i,']'
+               WRITE(xPathA,*) TRIM(ADJUSTL(kPointsPrefix))//'/kPointCount/specialPoint[',i,']'
                valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
                kpts%specialPoints(1,i) = evaluatefirst(valueString)
                kpts%specialPoints(2,i) = evaluatefirst(valueString)
@@ -468,10 +522,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       END IF
 
       ! Option kPointList
-      numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList')
+      numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList')
       IF (numberNodes.EQ.1) THEN
          l_kpts = .TRUE.
-         numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint')
+         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/kPoint')
          kpts%nkpt = numberNodes
          kpts%l_gamma = .FALSE.
          ALLOCATE(kpts%bk(3,kpts%nkpt))
@@ -480,11 +534,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          kpts%wtkpt = 0.0
          kpts%specificationType = 3
 
-         kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@posScale'))
-         weightScale = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/kPointList/@weightScale'))
+         kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/@posScale'))
+         weightScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/@weightScale'))
 
          DO i = 1, kpts%nkpt
-            WRITE(xPathA,*) '/fleurInput/calculationSetup/bzIntegration/kPointList/kPoint[',i,']'
+            WRITE(xPathA,*) TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/kPoint[',i,']'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
             READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
             kpts%bk(:,i)=kpts%bk(:,i)/kpts%posScale
@@ -492,6 +546,25 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             kpts%wtkpt(i) = kpts%wtkpt(i) / weightScale
          END DO
          kpts%posScale=1.0
+      END IF
+
+      ! Option kPointListFile
+      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointListFile'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
+         OPEN (41,file=TRIM(ADJUSTL(valueString)),form='formatted',status='old')
+            READ (41,*) kpts%nkpt
+         CLOSE (41)
+         ALLOCATE(kpts%bk(3,kpts%nkpt))
+         ALLOCATE(kpts%wtkpt(kpts%nkpt))
+         kpts%bk = 0.0
+         kpts%wtkpt = 0.0
+         kpts%l_gamma = .FALSE.
+         l_kpts = .TRUE.
+         kpts%specificationType = 3
+         kpts%posScale=1.0
+         CALL inpeig(atoms,cell,input,.FALSE.,kpts,kptsFilename=TRIM(ADJUSTL(valueString)))
       END IF
 
       ! Read in optional SOC parameters if present
@@ -572,19 +645,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          oneD%odd%rot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@rot'))
          oneD%odd%invs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@invs1'))
          oneD%odd%zrfs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zrfs1'))
-      END IF
-
-      ! Read in optional expert modes switches
-
-      xPathA = '/fleurInput/calculationSetup/expertModes'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-
-      input%gw = 0
-      input%secvar = .FALSE.
-
-      IF (numberNodes.EQ.1) THEN
-         input%gw = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
-         input%secvar = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
       END IF
 
       ! Read in optional geometry optimization parameters
@@ -1945,8 +2005,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             END IF
             wann%l_byindex = .TRUE.
             IF(input%l_wann) THEN
-               IF (dimension%neigd.LT.MAX(wann%band_max(1),wann%band_max(2))) THEN
-                  dimension%neigd = MAX(wann%band_max(1),wann%band_max(2))
+               IF (dimension%neigd.NE.-1) THEN
+                  IF (dimension%neigd.LT.MAX(wann%band_max(1),wann%band_max(2))) THEN
+                     dimension%neigd = MAX(wann%band_max(1),wann%band_max(2))
+                  END IF
                END IF
             END IF
          END IF
