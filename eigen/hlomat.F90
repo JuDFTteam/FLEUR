@@ -70,15 +70,15 @@ CONTAINS
 
 
     !$OMP MASTER
-    IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
+    IF ((atoms%invsat(na) == 0) .OR. (atoms%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
        !--->    at once. where it is made use of the fact, that the sum of
        !--->    these contributions is twice the real part of the contribution
        !--->    of each atom. note, that in this case there are twice as many
        !--->    (2*(2*l+1)) k-vectors (compare abccoflo and comments there).
-       IF (atoms%invsat(na).EQ.0) invsfct = 1
-       IF (atoms%invsat(na).EQ.1) invsfct = 2
+       IF (atoms%invsat(na) == 0) invsfct = 1
+       IF (atoms%invsat(na) == 1) invsfct = 2
        !
     
        DO lo = 1,atoms%nlo(ntyp)
@@ -127,7 +127,7 @@ CONTAINS
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
                locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-                IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
+                IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
                    locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                    !-t3e
                    IF (hmat%l_real) THEN
@@ -174,7 +174,7 @@ CONTAINS
           !--->       local orbitals at the same atom and with itself
           DO nkvec = 1,invsfct* (2*l+1)
              locol = lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
+             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
                 !--->          calculate the hamiltonian matrix elements with other
