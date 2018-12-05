@@ -36,5 +36,36 @@ MODULE m_types_kpts
      REAL   ,ALLOCATABLE           :: sc_list(:,:) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
   ENDTYPE t_kpts
 
- 
+
+  SUBROUTINE read_xml_kpts()
+
+      kpts%ntet = 1
+      kpts%numSpecialPoints = 1
+      ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
+    END SUBROUTINE read_xml_kpts
+
+  SUBROUTINE init_kpts()
+
+
+     IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
+          WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
+          CALL gen_bz(kpts,sym)
+          kpts%nkpt = kpts%nkptf
+          DEALLOCATE(kpts%bk,kpts%wtkpt)
+          ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
+          kpts%bk(:,:) = kpts%bkf(:,:)
+          IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
+             IF(kpts%l_gamma) THEN
+                kpts%wtkpt = 1.0 / (kpts%nkptf-1)
+                DO i = 1, kpts%nkptf
+                   IF(ALL(kpts%bk(:,i).EQ.0.0)) kpts%wtkpt(i) = 0.0
+                END DO
+             ELSE
+                CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="fleur_init")
+             END IF
+          ELSE
+             kpts%wtkpt = 1.0 / kpts%nkptf
+          END IF
+       END IF
+     END SUBROUTINE init_kpts
 END MODULE m_types_kpts
