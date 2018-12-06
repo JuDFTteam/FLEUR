@@ -28,6 +28,7 @@ CONTAINS
       USE m_vgen_coulomb
       USE m_vgen_xcpot
       USE m_vgen_finalize
+      USE m_rotate_mt_den_tofrom_local
 #ifdef CPP_MPI
       USE m_mpi_bc_potden
 #endif
@@ -82,14 +83,15 @@ CONTAINS
       IF (noco%l_noco) THEN
          CALL denRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
          denRot=den
-         CALL rotate_int_den_to_local(dimension,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
+         CALL rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
+         IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,denrot)         
       ENDIF
 
       CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
                       obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,vCoul,denRot)
+      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)

@@ -100,7 +100,7 @@ CONTAINS
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
              !Add off-diagonal contributions to Hamiltonian if needed
              IF (ispin==1.AND.noco%l_mtNocoPot) THEN
-                CALL hsmt_mtNocoPot_offdiag()
+                CALL hsmt_mtNocoPot_offdiag(n,mpi,sym,atoms,noco,cell,lapw,td,fj,gj,hmat_tmp,hmat)
              ENDIF
              IF (ispin==1.and.noco%l_soc) &
                   CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj(:,0:,:,iintsp),gj(:,0:,:,iintsp),hmat)

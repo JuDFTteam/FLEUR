@@ -14,6 +14,7 @@ vgen/visp5_0.f
 vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
+vgen/rotate_mt_den_tofrom_local.f90
 vgen/b_field.F90
 vgen/mkgylm.f90
 vgen/mkgxyz3.f90

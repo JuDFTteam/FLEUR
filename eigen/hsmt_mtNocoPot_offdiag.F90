@@ -7,7 +7,7 @@ MODULE m_hsmt_mtNocoPot_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_mtNocoPot_offdiag(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat_tmp,hmat)
+  SUBROUTINE hsmt_mtNocoPot_offdiag(n,mpi,sym,atoms,noco,cell,lapw,td,fj,gj,hmat_tmp,hmat)
     !Calculate the contribution from the local-spin-offdiagonal potential
     !The following idea is used:
     !Calculate the matrix by using non-spherical algorithm. This is done only once, since
@@ -27,9 +27,10 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_tlmplm),INTENT(IN)     :: td
+    REAL,INTENT(IN)               :: fj(:,0:,:,:),gj(:,0:,:,:)
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n
-    COMPLEX                       :: chi_one
+    COMPLEX                       :: chi_one,chi(2,2)
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:),hmat_tmp
 
     chi_one=1.0
@@ -42,8 +43,9 @@ CONTAINS
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
     CALL hmat_tmp%TRANSPOSE()
+    hmat_tmp%data_c=CONJG(hmat_tmp%data_c)
     CALL hsmt_spinor(4,n,noco,chi) !spinor for off-diagonal part
-    CALL hsmt_distspins(chi,CONJG(hmat_tmp),hmat)
+    CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
 
     CALL hmat_tmp%clear()
@@ -56,7 +58,8 @@ CONTAINS
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
 
     CALL hmat_tmp%TRANSPOSE()
+    hmat_tmp%data_c=CONJG(hmat_tmp%data_c)
     CALL hsmt_spinor(4,n,noco,chi) 
-    CALL hsmt_distspins(chi,CONJG(hmat_tmp),hmat)
+    CALL hsmt_distspins(chi,hmat_tmp,hmat)
   END SUBROUTINE hsmt_mtNocoPot_offdiag
 END MODULE m_hsmt_mtNocoPot_offdiag

@@ -20,6 +20,8 @@ MODULE m_types_potden
      REAL,ALLOCATABLE  :: phi_vacz(:,:)
      REAL,ALLOCATABLE  :: theta_vacxy(:,:,:)
      REAL,ALLOCATABLE  :: phi_vacxy(:,:,:)
+     REAL,ALLOCATABLE  :: theta_mt(:,:)
+     REAL,ALLOCATABLE  :: phi_mt(:,:)
      
 
      ! For density matrix and associated potential matrix
