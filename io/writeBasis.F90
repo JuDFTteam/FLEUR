@@ -19,6 +19,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
    USE m_genmtbasis
    USE m_pot_io
    USE m_abcof
+   USE m_abcrot
    USE m_eig66_io, ONLY : read_eig
 
    IMPLICIT NONE
@@ -117,6 +118,8 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
       LOGICAL l_zref,l_real
       INTEGER jsp,nk,l,itype
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
+
+    !WRITE(5000,*) 'writeBasis entry'
 
     CALL force%init1(input,atoms)
 
@@ -452,16 +455,20 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             CALL read_eig(eig_id,nk,jsp,zmat=zMat)
 	    CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jsp,numbands)
             IF (input%l_f) CALL force%init2(numbands,input,atoms)
-            DO i=1,atoms%nat
-	    	ngopr_temp(i)=atoms%ngopr(i)
-                atoms%ngopr(i)=1
-            END DO
+!            DO i=1,atoms%nat
+!	    	ngopr_temp(i)=atoms%ngopr(i)
+!               atoms%ngopr(i)=1
+!            END DO
 		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,jsp,oneD,&
 		    eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),&
 		    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp),zMat,results%eig(:,nk,jsp),force) 
-            DO i=1,atoms%nat
-	     	atoms%ngopr(i)=ngopr_temp(i)
-            END DO
+!            DO i=1,atoms%nat
+!	     	atoms%ngopr(i)=ngopr_temp(i)
+!            END DO
+		CALL abcrot(atoms%ntype,atoms%nat,dimension%neigd,atoms%lmaxd,dimension%lmd,atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
+		            numbands,atoms%lmax,atoms%nlo,atoms%llo,sym%nop,atoms%ngopr,sym%mrot,atoms%invsat,sym%invsatnr,cell%bmat,&
+		           oneD%odi,oneD%ods,&
+		           eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
 !-------------------------for spex output: nbasfcn=nv(because lo info not needed) and numbands setting to numbands without highest (degenerat) state-------- 
                 nbasfcn=lapw%nv(jsp)
 		ndbands=numbands-1
@@ -595,12 +602,12 @@ write(*,*)numbands,ndbands
 
 		dims(:4)=Hdim1
 		dimsInt = dims
-    CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
+                CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
 		CALL h5dcreate_f(kptGroupID, "mt", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
 		CALL h5sclose_f(itypeSpaceID,hdfError)
      		CALL io_write_real4(itypeSetID,(/1,1,1,1/),dimsInt(:4), cof)
 		CALL h5dclose_f(itypeSetID, hdfError)
-		      deallocate ( cof )
+		deallocate ( cof )
 !-------------------------end output spex format-----------------
 
 		CALL h5gclose_f(kptGroupID, hdfError)
@@ -611,9 +618,17 @@ write(*,*)numbands,ndbands
    CALL h5fclose_f(fileID, hdfError)  
 !-------------------------write potential--------------------
 
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw,vCoul%vacz,vCoul%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw,vx%vacz,vx%vacxy)
+   WRITE(6000,*) ALLOCATED(vCoul%pw)
+   WRITE(6000,*) ALLOCATED(vCoul%pw_w)
+   FLUSH(6000)
+   DO i = 1, stars%ng3
+      WRITE(6000,'(i7,4f15.8)') i, REAL(vCoul%pw(i,1)), REAL(vCoul%pw_w(i,1))
+      WRITE(6001,'(i7,4f15.8)') i, REAL(vTot%pw(i,1)), REAL(vTot%pw_w(i,1))
+   END DO
+
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw_w,vTot%vacz,vTot%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw_w,vCoul%vacz,vCoul%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw_w,vx%vacz,vx%vacxy)
 
 
 

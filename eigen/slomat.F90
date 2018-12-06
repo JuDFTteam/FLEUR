@@ -58,15 +58,15 @@ CONTAINS
        CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
     ENDDO
 
-    IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
+    IF ((atoms%invsat(na) == 0) .OR. (atoms%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
        !--->    at once. where it is made use of the fact, that the sum of
        !--->    these contributions is twice the real part of the contribution
        !--->    of each atom. note, that in this case there are twice as many
        !--->    (2*(2*l+1)) k-vectors (compare abccoflo and comments there).
-       IF (atoms%invsat(na).EQ.0) invsfct = 1
-       IF (atoms%invsat(na).EQ.1) invsfct = 2
+       IF (atoms%invsat(na) == 0) invsfct = 1
+       IF (atoms%invsat(na) == 1) invsfct = 2
    
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
@@ -82,7 +82,7 @@ CONTAINS
           DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
              !+t3e
              locol = lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
+             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
                 k = lapw%kvec(nkvec,lo,na)
@@ -107,7 +107,7 @@ CONTAINS
                 !--->          orbitals at the same atom, if they have the same l
                 DO lop = 1, (lo-1)
                    lp = atoms%llo(lop,ntyp)
-                   IF (l.EQ.lp) THEN
+                   IF (l == lp) THEN
                       fact3 = con**2 * fl2p1 * (&
                            alo1(lop)*(alo1(lo) + &
                            clo1(lo)*ud%uulon(lo,ntyp,isp))+&

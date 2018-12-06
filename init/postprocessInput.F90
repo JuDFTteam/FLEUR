@@ -235,7 +235,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
-     IF (dimension%neigd.LT.minNeigd) THEN
+     IF ((dimension%neigd.NE.-1).AND.(dimension%neigd.LT.minNeigd)) THEN
         IF (dimension%neigd>0) THEN
            WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
            WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
@@ -250,8 +250,18 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
 
      CALL lapw_fft_dim(cell,input,noco,stars)
-     
-        
+
+     atoms%nlotot = 0
+     DO n = 1, atoms%ntype
+        DO l = 1,atoms%nlo(n)
+           atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+        END DO
+     END DO
+
+     IF(dimension%neigd.EQ.-1) THEN
+        dimension%neigd = dimension%nvd + atoms%nlotot
+     END IF
+
      obsolete%lepr = 0
 
      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd

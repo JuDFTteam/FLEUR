@@ -32,6 +32,7 @@ CONTAINS
     CALL print_argument("-explicit")
     CALL print_argument("-electronConfig")
     CALL print_argument("-fast_defaults")
+    CALL print_argument("-kpts_gw")
     CALL print_argument("-h")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"

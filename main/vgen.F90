@@ -89,8 +89,8 @@ CONTAINS
                       obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
-      DEALLOCATE(vcoul%pw_w)
+      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,vCoul,denRot)
+      !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)
 

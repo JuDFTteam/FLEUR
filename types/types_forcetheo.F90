@@ -23,6 +23,7 @@
 MODULE m_types_forcetheo
   TYPE :: t_forcetheo
      LOGICAL,PRIVATE :: firstloop
+     LOGICAL :: l_IO
    CONTAINS
      PROCEDURE :: start   =>forcetheo_start
      PROCEDURE :: next_job=>forcetheo_next_job 
@@ -31,12 +32,14 @@ MODULE m_types_forcetheo
   END TYPE t_forcetheo
 
 CONTAINS
-  SUBROUTINE forcetheo_start(this,potden)
+  SUBROUTINE forcetheo_start(this,potden,l_io)
     USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)   :: potden
+    LOGICAL,INTENT(IN)              :: l_io
     this%firstloop=.TRUE.
+    this%l_io=l_io
   END SUBROUTINE forcetheo_start
 
   LOGICAL FUNCTION forcetheo_next_job(this,lastiter,noco)

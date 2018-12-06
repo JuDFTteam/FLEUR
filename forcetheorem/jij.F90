@@ -93,13 +93,14 @@ CONTAINS
 
   
 
-  SUBROUTINE jij_start(this,potden)
+  SUBROUTINE jij_start(this,potden,l_io)
     USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)       :: potden
+    LOGICAL,INTENT(IN)                  :: l_io
     this%loopindex=0
-    CALL this%t_forcetheo%start(potden) !call routine of basis type
+    CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  jij_start
 
   LOGICAL FUNCTION jij_next_job(this,lastiter,noco)
@@ -145,7 +146,7 @@ CONTAINS
        noco%alph(n) = noco%alph(n) + tpi_const*dot_PRODUCT(noco%qss,this%taual_types(:,n))
     ENDDO
     
-
+    IF (.NOT.this%l_io) RETURN
     IF (this%loopindex.NE.1) CALL closeXMLElement('Forcetheorem_Loop_JIJ')
     CALL openXMLElementPoly('Forcetheorem_Loop_JIJ',(/'Loop index:'/),(/this%loopindex/))
   END FUNCTION jij_next_job
@@ -160,6 +161,8 @@ CONTAINS
     CHARACTER(LEN=18):: attributes(6)
 
     IF (this%loopindex==0) RETURN
+    
+    IF (.NOT.this%l_io) RETURN
   
     !Now output the results
     call closeXMLElement('Forcetheorem_Loop_JIJ')

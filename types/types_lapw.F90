@@ -150,7 +150,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL                :: s(3),sq(3)
-    REAL,ALLOCATABLE    :: rk(:),rkq(:)
+    REAL,ALLOCATABLE    :: rk(:),rkq(:),rkqq(:)
     INTEGER,ALLOCATABLE :: gvec(:,:),index3(:)
 
 
@@ -169,7 +169,7 @@ CONTAINS
     CALL lapw%alloc(cell,input,noco)
 
     ALLOCATE(gvec(3,SIZE(lapw%gvec,2)))
-    ALLOCATE(rk(SIZE(lapw%gvec,2)),rkq(SIZE(lapw%gvec,2)))
+    ALLOCATE(rk(SIZE(lapw%gvec,2)),rkq(SIZE(lapw%gvec,2)),rkqq(SIZE(lapw%gvec,2)))
     ALLOCATE(index3(SIZE(lapw%gvec,2)))
 
 
@@ -210,45 +210,16 @@ CONTAINS
        ENDDO
        lapw%nv(ispin) = n
 
-       !Sort according to k+g
-!       CALL sort(lapw%nv(ispin),rkq,index3)
-!       DO n=1,lapw%nv(ispin)
-!          lapw%gvec(:,n,ispin) = gvec(:,index3(n))
-!          lapw%rk(n,ispin)     = rk(index3(n))
-!       ENDDO
-       !
-       !--->    sort by shell-metzner
-       !
-       ! (for spin-spirals & LO's we have to sort according to the k+G's (rkq), not
-       !  the k+G+q's (rk). Otherwise we might couple an LO to k+G1+q and k+G2-q !)
-       !                 gb01
-       lapw%gvec(:,:,ispin)=gvec
-       lapw%rk(:,ispin)=rk
-       m = lapw%nv(ispin)
-80     m = m/2
-       IF (m.LE.0) GO TO 130
-       k = n - m
-       j = 1
-90     i = j
-100    l = i + m
-       IF (rkq(i).GT.rkq(l)) GO TO 120
-110    j = j + 1
-       IF (j.GT.k) GO TO 80
-       GO TO 90
-120    t = rkq(i)
-       rkq(i) = rkq(l)
-       rkq(l) = t
-       t = lapw%rk(i,ispin)
-       lapw%rk(i,ispin) = lapw%rk(l,ispin)
-       lapw%rk(l,ispin) = t
-       itt = lapw%gvec(:,i,ispin)
-       lapw%gvec(:,i,ispin) = lapw%gvec(:,l,ispin)
-       lapw%gvec(:,l,ispin) = itt
-       i = i - m
-       IF (i.LT.1) GO TO 110
-       GO TO 100
-130    CONTINUE
-       !+gu
+       !Sort according to k+g, first construct secondary sort key
+       DO  k = 1,lapw%nv(ispin)
+          rkqq(k) = (mk1+gvec(1,k)) + (mk2+gvec(2,k))*(2*mk1+1) +&
+               (mk3+gvec(3,k))*(2*mk1+1)*(2*mk2+1)
+       ENDDO
+       CALL sort(index3(:lapw%nv(ispin)),rkq,rkqq)
+       DO n=1,lapw%nv(ispin)
+          lapw%gvec(:,n,ispin) = gvec(:,index3(n))
+          lapw%rk(n,ispin)     = rk(index3(n))
+       ENDDO
        !--->    determine pairs of K-vectors, where K_z = K'_-z to use 
        !--->    z-reflection
        IF (l_zref) THEN
@@ -266,74 +237,53 @@ CONTAINS
           nred=n
           IF (PRESENT(mpi)) THEN
              IF (mpi%n_size.GT.1) THEN
-             !
-             !--->     order K's in sequence K_1,...K_n | K_0,... | K_-1,....K_-n
-             !
-             n_inner = lapw%nv(ispin) - nred
-             IF (MOD(nred,mpi%n_size).EQ.0) THEN
-                n_bound = nred
-             ELSE
-                n_bound = (1+INT( nred/mpi%n_size ))*mpi%n_size
-             ENDIF
-             IF (lapw%nv(ispin) - nred + n_bound.GT.SIZE(lapw%gvec,2)) THEN
-                CALL juDFT_error("BUG:z-ref & ev || : dimension too small!" ,calledby ="types_lapw")
-             ENDIF
-
-             i = 1
-             j = 1
-             DO n = 1, nred 
-                IF (lapw%matind(n,1).EQ.lapw%matind(n,2)) THEN
-                   index3(lapw%matind(n,1)) = n_inner + i
-                   i = i + 1
+                !
+                !--->     order K's in sequence K_1,...K_n | K_0,... | K_-1,....K_-n
+                !
+                n_inner = lapw%nv(ispin) - nred
+                IF (MOD(nred,mpi%n_size).EQ.0) THEN
+                   n_bound = nred
                 ELSE
-                   index3(lapw%matind(n,1)) = j
-                   index3(lapw%matind(n,2)) = j + n_bound
-                   j = j + 1
+                   n_bound = (1+INT( nred/mpi%n_size ))*mpi%n_size
                 ENDIF
-             ENDDO
-             !--->          resort the rk,k1,k2,k3 and lapw%matind arrays:
-             DO n = 1, lapw%nv(ispin)
-                rk(n)  = lapw%rk(n,ispin)
-                gvec(:,n) = lapw%gvec(:,n,ispin)
-             ENDDO
-             DO n = lapw%nv(ispin), 1, -1
-                lapw%rk(index3(n),ispin) = rk(n)
-                lapw%gvec(:,index3(n),ispin) = gvec(:,n)
-             ENDDO
-             DO n = nred + 1, n_bound
-                lapw%rk(n,ispin) = lapw%rk(lapw%nv(ispin),ispin)
-                lapw%gvec(:,n,ispin) = lapw%gvec(:,lapw%nv(ispin),ispin)
-             ENDDO
-             lapw%nv(ispin) = lapw%nv(ispin) - nred + n_bound
+                IF (lapw%nv(ispin) - nred + n_bound.GT.SIZE(lapw%gvec,2)) THEN
+                   CALL juDFT_error("BUG:z-ref & ev || : dimension too small!" ,calledby ="types_lapw")
+                ENDIF
+
+                i = 1
+                j = 1
+                DO n = 1, nred 
+                   IF (lapw%matind(n,1).EQ.lapw%matind(n,2)) THEN
+                      index3(lapw%matind(n,1)) = n_inner + i
+                      i = i + 1
+                   ELSE
+                      index3(lapw%matind(n,1)) = j
+                      index3(lapw%matind(n,2)) = j + n_bound
+                      j = j + 1
+                   ENDIF
+                ENDDO
+                !--->          resort the rk,k1,k2,k3 and lapw%matind arrays:
+                DO n = 1, lapw%nv(ispin)
+                   rk(n)  = lapw%rk(n,ispin)
+                   gvec(:,n) = lapw%gvec(:,n,ispin)
+                ENDDO
+                DO n = lapw%nv(ispin), 1, -1
+                   lapw%rk(index3(n),ispin) = rk(n)
+                   lapw%gvec(:,index3(n),ispin) = gvec(:,n)
+                ENDDO
+                DO n = nred + 1, n_bound
+                   lapw%rk(n,ispin) = lapw%rk(lapw%nv(ispin),ispin)
+                   lapw%gvec(:,n,ispin) = lapw%gvec(:,lapw%nv(ispin),ispin)
+                ENDDO
+                lapw%nv(ispin) = lapw%nv(ispin) - nred + n_bound
+             ENDIF
           ENDIF
        ENDIF
-       ENDIF
-
-       IF (noco%l_ss) THEN  ! sort additionally like in strgn1... gb
-          i = 1
-          gla = 0.
-          rk(1) = 0.0
-          eps=1.e-10
-          DO  k = 1,lapw%nv(ispin)
-             IF (rkq(k)-gla.GE.eps) i=i+1
-             gla = rkq(k)
-             gmi = (mk1+lapw%gvec(1,k,ispin)) + (mk2+lapw%gvec(2,k,ispin))*(2*mk1+1) +&
-                  (mk3+lapw%gvec(3,k,ispin))*(2*mk1+1)*(2*mk2+1)
-             rk(k) = i * (9.+(2*mk1+1)*(2*mk2+1)*(2*mk3+1)) + gmi
-          ENDDO
-          CALL sort(lapw%nv(ispin),rk,index3)
-          DO  k = 1,lapw%nv(ispin)
-             gvec(:,k) = lapw%gvec(:,index3(k),ispin)
-             rk(k) =  lapw%rk(index3(k),ispin)
-          ENDDO
-          lapw%gvec(:,:lapw%nv(ispin),ispin) = gvec(:,:lapw%nv(ispin))
-          lapw%rk(:lapw%nv(ispin),ispin) = rk(:lapw%nv(ispin))
-       ENDIF
-       !-gu
        DO k=1,lapw%nv(ispin)
           lapw%vk(:,k,ispin)=lapw%bkpt+lapw%gvec(:,k,ispin)+(ispin-1.5)*noco%qss
           lapw%gk(:,k,ispin)=MATMUL(TRANSPOSE(cell%bmat),lapw%vk(:,k,ispin))/MAX (lapw%rk(k,ispin),1.0e-30)
        ENDDO
+
 
        IF (.NOT.noco%l_ss.AND.input%jspins==2) THEN
           !Second spin is the same
@@ -372,41 +322,41 @@ CONTAINS
 
   CONTAINS
 
-  SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
-    USE m_types_setup
+    SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
+      USE m_types_setup
 
-    IMPLICIT NONE
-    TYPE(t_lapw),INTENT(INOUT):: lapw
-    TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_sym),INTENT(IN)    :: sym
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_noco),INTENT(IN)   :: noco
+      IMPLICIT NONE
+      TYPE(t_lapw),INTENT(INOUT):: lapw
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_noco),INTENT(IN)   :: noco
 
 
-    INTEGER:: n,na,nn,np,lo,nkvec_sv,nkvec(atoms%nlod,2),iindex
-    IF (.NOT.ALLOCATED(lapw%kvec)) THEN
-       ALLOCATE(lapw%kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat))
-       ALLOCATE(lapw%nkvec(atoms%nlod,atoms%nat))
-       ALLOCATE(lapw%index_lo(atoms%nlod,atoms%nat))
-    ENDIF
-    iindex=0
-    na=0
-    nkvec_sv=0
-    DO n=1,atoms%ntype
-       DO nn=1,atoms%neq(n)
-          na=na+1
-          if (atoms%invsat(na)>1) cycle
-          !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
-          np=sym%invtab(atoms%ngopr(na))
-          CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
-          DO lo = 1,atoms%nlo(n)
-             lapw%index_lo(lo,na)=iindex
-             iindex=iindex+lapw%nkvec(lo,na)
-          ENDDO
-       ENDDO
-    ENDDO
-  END SUBROUTINE priv_lo_basis_setup
-    
+      INTEGER:: n,na,nn,np,lo,nkvec_sv,nkvec(atoms%nlod,2),iindex
+      IF (.NOT.ALLOCATED(lapw%kvec)) THEN
+         ALLOCATE(lapw%kvec(2*(2*atoms%llod+1),atoms%nlod,atoms%nat))
+         ALLOCATE(lapw%nkvec(atoms%nlod,atoms%nat))
+         ALLOCATE(lapw%index_lo(atoms%nlod,atoms%nat))
+      ENDIF
+      iindex=0
+      na=0
+      nkvec_sv=0
+      DO n=1,atoms%ntype
+         DO nn=1,atoms%neq(n)
+            na=na+1
+            if (atoms%invsat(na)>1) cycle
+            !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
+            np=sym%invtab(atoms%ngopr(na))
+            CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
+            DO lo = 1,atoms%nlo(n)
+               lapw%index_lo(lo,na)=iindex
+               iindex=iindex+lapw%nkvec(lo,na)
+            ENDDO
+         ENDDO
+      ENDDO
+    END SUBROUTINE priv_lo_basis_setup
+
   END SUBROUTINE lapw_init
 
 
