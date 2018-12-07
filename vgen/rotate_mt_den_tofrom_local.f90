@@ -99,7 +99,7 @@ CONTAINS
     REAL,ALLOCATABLE :: ch(:,:)
     
     nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-    ALLOCATE(ch(nsp,4),den%theta_mt(nsp,atoms%ntype),den%phi_mt(nsp,atoms%ntype))
+    ALLOCATE(ch(nsp,4))
     
     CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
