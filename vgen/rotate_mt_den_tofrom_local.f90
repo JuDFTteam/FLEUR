@@ -26,9 +26,11 @@ CONTAINS
     REAL    :: rhotot,rho_up,rho_down,theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
     REAL    :: eps=1E-10
-    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd
     ALLOCATE(ch(nsp,4),den%theta_mt(nsp,atoms%ntype),den%phi_mt(nsp,atoms%ntype))
-    
+    nsp=nsp/atoms%jmtd
+    CALL xcpot%init("vwn",.FALSE.,1)
+
     CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
        CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
@@ -75,7 +77,7 @@ CONTAINS
           ch(imesh,1) = rho_up
           ch(imesh,2) = rho_down
           den%theta_mt(imesh,n) = theta
-          den%theta_mt(imesh,n) = phi
+          den%phi_mt(imesh,n) = phi
        ENDDO
        CALL mt_from_grid(atoms,sphhar,nsp,n,2,ch,den%mt(:,0:,n,:))
     END DO
@@ -98,12 +100,14 @@ CONTAINS
     REAL    :: theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
     
-    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd
     ALLOCATE(ch(nsp,4))
-    
+    nsp=nsp/atoms%jmtd
+    CALL xcpot%init("vwn",.FALSE.,1)
+
     CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,2,atoms,sphhar,vtot%mt(:,0:,n,:),nsp,n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),nsp,n,grad,ch)
        DO imesh = 1,nsp
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
