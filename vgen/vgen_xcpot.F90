@@ -65,10 +65,10 @@ CONTAINS
 #endif
 
 
-    CALL exc%init_potden_types(stars,atoms,sphhar,vacuum,1,.false.,1) !one spin only
+    CALL exc%init(stars,atoms,sphhar,vacuum,noco,1,1) !one spin only
     ALLOCATE(exc%pw_w(stars%ng3,1));exc%pw_w=0.0
     IF (PRESENT(results)) THEN
-       CALL veff%init(stars,atoms,sphhar,vacuum,input%jspins,.FALSE.,1)
+       CALL veff%init(stars,atoms,sphhar,vacuum,noco,input%jspins,1)
 #ifndef CPP_OLDINTEL
        ALLOCATE(veff%pw_w,mold=veff%pw)
 #else
