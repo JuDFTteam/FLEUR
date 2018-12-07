@@ -70,7 +70,7 @@ CONTAINS
 #endif
       ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
 
-      CALL workDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
+      CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,noco%l_noco,0)
 
       !sum up both spins in den into workden
       CALL den%sum_both_spin(workden)
@@ -81,7 +81,7 @@ CONTAINS
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
 
       IF (noco%l_noco) THEN
-         CALL denRot%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,0)
+         CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,noco%l_noco,0)
          denRot=den
          CALL rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
          IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,denrot)         

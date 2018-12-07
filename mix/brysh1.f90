@@ -100,6 +100,7 @@ CONTAINS
           j = j + 1
           sout(j) = AIMAG(den%pw(i,3))
        END DO
+        
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
@@ -138,6 +139,21 @@ CONTAINS
 8000         FORMAT ('mapvac2= ',i12,'nvaccoeff2= ',i12)
              CALL juDFT_error("brysh1:# of vacuum coeff. inconsistent" ,calledby ="brysh1")
           ENDIF
+       END IF
+       !MT part
+       IF (noco%l_mtnocopot) THEN
+          na = 1
+          DO n = 1,atoms%ntype
+             DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+                DO i = 1,atoms%jri(n)
+                   j = j + 1
+                   sout(j) = den%mt(i,l,n,3)
+                   j = j + 1
+                   sout(j) = den%mt(i,l,n,4)
+                END DO
+             END DO
+             na = na + atoms%neq(n)
+          END DO
        END IF
     ENDIF ! noco
 

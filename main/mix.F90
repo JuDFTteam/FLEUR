@@ -110,7 +110,8 @@ contains
       !complex independ of invs and invs2.
       if ( noco%l_noco ) then
          mmap = mmap + 2 * stars%ng3 + 2 * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + &
-                2 * vacuum%nmzd * vacuum%nvac
+              2 * vacuum%nmzd * vacuum%nvac
+         IF (noco%l_mtnocopot) mmap= mmap+ 2*atoms%ntype * ( sphhar%nlhd + 1 ) * atoms%jmtd 
       end if
 
       ! LDA+U (start)
@@ -231,8 +232,8 @@ contains
 
     ! KERKER PRECONDITIONER
     if( input%preconditioning_param /= 0 ) then
-      call resDen%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_DEN )
-      call vYukawa%init( stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, 4 )
+      CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
+      CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
       MPI0_b: if( mpi%irank == 0 ) then 
         call resDen%subPotDen( outDen, inDen )
         if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation()
