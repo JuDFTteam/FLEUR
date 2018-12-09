@@ -48,7 +48,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
                   results,it,mnobd,xcpot,mpi,irank2,isize2,comm)
 
    USE m_types
-   USE m_symm_hf       ,ONLY: symm_hf
+   USE m_symm_hf
    USE m_util          ,ONLY: intgrf,intgrf_init
    USE m_exchange_valence_hf
    USE m_exchange_core
@@ -100,9 +100,10 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    ! local arrays
    INTEGER                 ::  degenerat(hybrid%ne_eig(nk))
    INTEGER                 ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
+   INTEGER                 ::  rrot(3,3,sym%nsym)
+   INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
    INTEGER,ALLOCATABLE     ::  parent(:),symop(:)
-   INTEGER,ALLOCATABLE     ::  psym(:)
    INTEGER,ALLOCATABLE     ::  pointer_EIBZ(:)
    INTEGER,ALLOCATABLE     ::  n_q(:)
 
@@ -114,7 +115,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    COMPLEX,ALLOCATABLE     ::  rep_c(:,:,:,:,:)
       
    CALL timestart("total time hsfock")
-   CALL timestart("symm_hf")
     
    ! preparations
 
@@ -153,10 +153,16 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation parent/symop'
       parent = 0 ; symop = 0
 
-      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
-                   nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
+      CALL timestart("symm_hf")
+      CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
 
+      ALLOCATE(rep_c(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,nsymop,atoms%nat), stat=ok)
+      IF(ok.NE.0) STOP 'hsfock: failure allocation rep_c'
+
+      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
       CALL timestop("symm_hf")
+
       ! remove weights(wtkpt) in w_iks
       DO ikpt=1,kpts%nkptf
          DO iband=1,dimension%neigd
@@ -168,12 +174,10 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       ! calculate contribution from valence electrons to the
       ! HF exchange
       CALL timestart("valence exchange calculation")
-
       ex%l_real=sym%invs
       CALL exchange_valence_hf(nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
                                mpi,irank2,isize2,comm,ex)
-
       DEALLOCATE (rep_c)
       CALL timestop("valence exchange calculation")
 
