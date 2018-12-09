@@ -153,7 +153,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation parent/symop'
       parent = 0 ; symop = 0
 
-      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,lapw%gvec(:,:,jsp),mpi,irank2,&
+      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
                    nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
 
       CALL timestop("symm_hf")
@@ -259,7 +259,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
          END DO
       END DO
 
-      CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,lapw%gvec(:,:,jsp),sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
+      CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
 
       WRITE(1232,'(a,i7)') 'kpoint: ', nk
       DO i = 1, v_x%matsize1

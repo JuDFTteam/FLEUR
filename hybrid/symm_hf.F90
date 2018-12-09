@@ -15,16 +15,9 @@
 
       CONTAINS
 
-      SUBROUTINE symm_hf(kpts,nk,sym,&
-     &                   dimension,hybdat,eig_irr,&
-     &                   atoms,hybrid,cell,&
-     &                   lapw,jsp,&
-     &                   gpt,&
-     &                   mpi,irank2,&
-     &                   nsymop,psym,nkpt_EIBZ,n_q,parent,&
-     &                   symop,degenerat,pointer_EIBZ,maxndb,nddb,&
-     &                   nsest,indx_sest,rep_c ) 
-
+      SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
+                         lapw,jsp,mpi,irank2,nsymop,psym,nkpt_EIBZ,n_q,parent,&
+                         symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
 
       USE m_constants
       USE m_util   ,ONLY: modulo1,intgrf,intgrf_init
@@ -54,7 +47,6 @@
       INTEGER,INTENT(OUT)             :: maxndb,nddb
 
 !     - arrays -
-      INTEGER,INTENT(IN)              :: gpt(3,lapw%nv(jsp))
       INTEGER,INTENT(OUT)             :: parent(kpts%nkptf)
       INTEGER,INTENT(OUT)             :: symop(kpts%nkptf)
       INTEGER,INTENT(INOUT)           :: degenerat(hybrid%ne_eig(nk))
@@ -299,29 +291,20 @@
          call read_z(z,nk)
 
         ALLOCATE(rep_d(maxndb,nddb,nsymop),stat=ok )
-        IF( ok .ne. 0) STOP 'symm: failure allocation rep_v'
-
+        IF(ok.NE.0) STOP 'symm: failure allocation rep_v'
 
         call olappw%alloc(z%l_real,lapw%nv(jsp),lapw%nv(jsp))
         ALLOCATE( olapmt(hybrid%maxindx,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype),stat=ok)
-        IF( ok .ne. 0) STOP 'symm: failure allocation olapmt'
+        IF(ok.NE.0) STOP 'symm: failure allocation olapmt'
 
         olapmt = 0
-        CALL wfolap_init (olappw,olapmt,gpt,&
-     &                   atoms,hybrid,&
-     &                    cell,&
-     &                    hybdat%bas1,hybdat%bas2)
+        CALL wfolap_init(olappw,olapmt,lapw%gvec(:,:,jsp),atoms,hybrid,cell,hybdat%bas1,hybdat%bas2)
 
-
-
-
-        ALLOCATE( cmthlp(hybrid%maxlmindx,atoms%nat,maxndb), cpwhlp(lapw%nv(jsp),maxndb),&
-     &            stat= ok )
-        IF( ok .ne. 0 ) STOP 'symm: failure allocation cmthlp/cpwhlp' 
+        ALLOCATE(cmthlp(hybrid%maxlmindx,atoms%nat,maxndb), cpwhlp(lapw%nv(jsp),maxndb),stat= ok )
+        IF(ok.NE.0) STOP 'symm: failure allocation cmthlp/cpwhlp' 
 
         DO isym=1,nsymop 
           iop= psym(isym) 
-
 
           ic = 0
           DO i=1,hybrid%nbands(nk)
@@ -330,14 +313,9 @@
               ic     = ic + 1
               cmthlp = 0
               cpwhlp = 0
-              CALL waveftrafo_symm( &
-     &                      cmthlp(:,:,:ndb),cpwhlp(:,:ndb),cmt,z%l_real,z%data_r,z%data_c,&
-     &                      i,ndb,nk,iop,atoms,&
-     &                      hybrid,kpts,&
-     &                      sym,&
-     &                      jsp,dimension,&
-     &                      cell,gpt,lapw )
 
+              CALL waveftrafo_symm(cmthlp(:,:,:ndb),cpwhlp(:,:ndb),cmt,z%l_real,z%data_r,z%data_c,&
+                                   i,ndb,nk,iop,atoms,hybrid,kpts,sym,jsp,dimension,cell,lapw)
             
               DO iband = 1,ndb
                 carr1 = cmt(iband+i-1,:,:)
