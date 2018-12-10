@@ -72,7 +72,7 @@ END SUBROUTINE symm_hf_init
 
 SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
                    lapw,jsp,mpi,irank2,rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,&
-                   pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
+                   pointer_EIBZ,nsest,indx_sest)
 
       USE m_constants
       USE m_types
@@ -99,7 +99,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       INTEGER,INTENT(IN)              :: irank2
       INTEGER,INTENT(OUT)             :: nkpt_EIBZ
       INTEGER,INTENT(IN)              :: nsymop
-      INTEGER,INTENT(OUT)             :: maxndb,nddb
 
 !     - arrays -
       INTEGER,INTENT(IN)              :: rrot(3,3,sym%nsym)
@@ -122,6 +121,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       INTEGER                         :: n1,n2,nn
       INTEGER                         :: ndb,ndb1,ndb2
       INTEGER                         :: nrkpt
+      INTEGER                         :: maxndb, nddb
 
       REAL                            :: tolerance,pi
 

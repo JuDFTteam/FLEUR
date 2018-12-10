@@ -89,8 +89,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    INTEGER                 ::  ikpt,ikpt0
    INTEGER                 ::  irec
    INTEGER                 ::  irecl_olap,irecl_z,irecl_vx
-   INTEGER                 ::  maxndb, nbasfcn
-   INTEGER                 ::  nddb
+   INTEGER                 ::  nbasfcn
    INTEGER                 ::  nsymop
    INTEGER                 ::  nkpt_EIBZ
    INTEGER                 ::  ncstd
@@ -155,7 +154,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
 
       CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
-                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
       CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks
