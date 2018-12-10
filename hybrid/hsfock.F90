@@ -98,7 +98,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    REAL                    ::  a_ex
 
    ! local arrays
-   INTEGER                 ::  degenerat(hybrid%ne_eig(nk))
    INTEGER                 ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
    INTEGER                 ::  rrot(3,3,sym%nsym)
    INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
@@ -156,7 +155,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
 
       CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
-                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
       CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks

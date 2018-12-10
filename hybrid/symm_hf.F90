@@ -72,7 +72,7 @@ END SUBROUTINE symm_hf_init
 
 SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
                    lapw,jsp,mpi,irank2,rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,&
-                   symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
+                   symop,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
 
       USE m_constants
       USE m_types
@@ -106,7 +106,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       INTEGER,INTENT(IN)              :: psym(sym%nsym)
       INTEGER,INTENT(OUT)             :: parent(kpts%nkptf)
       INTEGER,INTENT(OUT)             :: symop(kpts%nkptf)
-      INTEGER,INTENT(INOUT)           :: degenerat(hybrid%ne_eig(nk))
       INTEGER,INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))  
       INTEGER,ALLOCATABLE,INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER,ALLOCATABLE,INTENT(OUT) :: n_q(:)      
@@ -133,6 +132,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
 !     - local arrays -
       INTEGER                         :: neqvkpt(kpts%nkptf)
       INTEGER                         :: list(kpts%nkptf)
+      INTEGER                         :: degenerat(hybrid%ne_eig(nk))
       INTEGER,ALLOCATABLE             :: help(:)
       
       REAL                            :: rotkpt(3),g(3)
@@ -257,7 +257,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       degenerat = 1
       IF ( irank2 == 0 ) THEN
         WRITE(6,'(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
-     END IF
+      END IF
 
       DO i=1,hybrid%nbands(nk)
         DO j=i+1,hybrid%nbands(nk)
