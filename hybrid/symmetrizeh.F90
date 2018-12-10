@@ -10,7 +10,7 @@ MODULE m_symmetrizeh
 
 CONTAINS
 
-SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,psym,hmat)
+SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,hmat)
 
    USE m_constants
    USE m_types
@@ -28,7 +28,6 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
    INTEGER,           INTENT(IN)    :: nsymop, jsp
 
    ! arrays
-   INTEGER,           INTENT(IN)    :: gpt(:,:)!(3,lapw%nv)
    INTEGER,           INTENT(IN)    :: kveclo(atoms%nlotot)
    INTEGER,           INTENT(IN)    :: psym(nsymop)
    REAL,              INTENT(IN)    :: bk(3)
@@ -135,23 +134,23 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
 
       DO igpt = 1, lapw%nv(jsp)
          !rotate G vector corresponding to isym
-         gpthlp = MATMUL(rrot(:,:,isym),gpt(:,igpt)) + g
+         gpthlp = MATMUL(rrot(:,:,isym),lapw%gvec(:,igpt,jsp)) + g
          ! determine number of gpthlp
          nrgpt = 0
          DO i = 1, lapw%nv(jsp)
-            IF(MAXVAL( ABS( gpthlp - gpt(:,i) ) ) .LE. 1E-06) THEN
+            IF(MAXVAL( ABS( gpthlp - lapw%gvec(:,i,jsp) ) ) .LE. 1E-06) THEN
                nrgpt = i
                EXIT
             END IF
          END DO
          IF(nrgpt.EQ.0) THEN
             PRINT *,igpt
-            PRINT *,gpt(:,igpt)
+            PRINT *,lapw%gvec(:,igpt,jsp)
             PRINT *,gpthlp
             PRINT *,g
             PRINT *,bk
             DO i=1,lapw%nv(jsp)
-               WRITE(6,*) i,gpt(:,i)
+               WRITE(6,*) i,lapw%gvec(:,i,jsp)
             ENDDO
             STOP 'symmetrizeh_new: rotated G point not found'
          END IF
@@ -244,7 +243,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,gpt,sym,kveclo,cell,nsymop,ps
                      ilotot = ilotot + 1
                      l_lo(ilotot) = l
                      itype_lo(ilotot) = itype
-                     gpt_lo(:,ilotot) = gpt(:,kveclo(ilotot))
+                     gpt_lo(:,ilotot) = lapw%gvec(:,kveclo(ilotot),jsp)
                   END DO
                END DO
             END IF

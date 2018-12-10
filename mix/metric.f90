@@ -34,7 +34,7 @@ CONTAINS
     REAL,    INTENT (OUT)         :: sout(mmap)
 
     ! Local Scalars
-    INTEGER              :: imap,ivac,iz,j,js,k2,l,n,iv2c,iv2,na,ioff
+    INTEGER              :: imap,ivac,iz,j,js,k2,l,n,iv2c,iv2,na,ioff,i
     REAL                 :: dvol,dxn,dxn2,dxn4,volnstr2
     LOGICAL              :: l_pot
 
@@ -196,6 +196,24 @@ CONTAINS
                 sout(2*nmaph + 2*stars%ng3 + mapvac2/2*(js-1) + imap) = &
                    g(ioff + imap) * s_in(2*nmaph + 2*stars%ng3 + mapvac2/2*(js-1) + imap)
              END DO
+          END DO
+       END IF
+       !mt offdiagonal part
+       imap=2*nmaph + 2*stars%ng3 + mapvac2/2*(js-1) + imap-1
+       ioff=MERGE(stars%ng3,2*stars%ng2,sym%invs)+1
+       j=0
+       IF (noco%l_mtnocopot) THEN
+          na = 1
+          DO n = 1,atoms%ntype
+             DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+                DO i = 1,atoms%jri(n)
+                   j = j + 1
+                   sout(imap+j) = g(ioff+(j-1)/2)*s_in(imap+j)
+                   j = j + 1
+                   sout(imap+j) = g(ioff+(j-1)/2)*s_in(imap+j)
+                END DO
+             END DO
+             na = na + atoms%neq(n)
           END DO
        END IF
     END IF

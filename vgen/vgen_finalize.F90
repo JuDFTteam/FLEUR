@@ -6,7 +6,7 @@
 MODULE m_vgen_finalize
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,vCoul,denRot)
+  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -17,6 +17,7 @@ CONTAINS
     USE m_constants
     USE m_vmatgen
     USE m_types
+    USE m_rotate_mt_den_tofrom_local
     IMPLICIT NONE
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
@@ -24,6 +25,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)        :: stars
     TYPE(t_atoms),INTENT(IN)        :: atoms 
     TYPE(t_input),INTENT(IN)        :: input
+    TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
     !     ..
     !     .. Local Scalars ..
@@ -46,6 +48,7 @@ CONTAINS
        END DO
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
+       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
 
     ! Rescale vCoul%pw_w with number of stars

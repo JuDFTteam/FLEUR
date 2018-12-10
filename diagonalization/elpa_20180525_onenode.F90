@@ -45,6 +45,7 @@ CONTAINS
     INTEGER           :: kernel
     CLASS(elpa_t),pointer :: elpa_obj
 
+    print*, "ELPA 20180525 started"
     err = elpa_init(20180525)
     elpa_obj => elpa_allocate()
        
@@ -60,6 +61,9 @@ CONTAINS
     CALL elpa_obj%set("local_ncols", hmat%matsize2, err)
     CALL elpa_obj%set("nblk",hmat%matsize1, err)
     CALL elpa_obj%set("blacs_context", -1, err)
+#ifdef CPP_GPU
+    CALL elpa_obj%set("gpu",1,err)
+#endif
     err = elpa_obj%setup()
 
     CALL hmat%add_transpose(hmat)       

@@ -1,6 +1,7 @@
 set(fleur_F77 ${fleur_F77}
 )
 set(fleur_F90 ${fleur_F90}
+eigen/hsmt_mtNocoPot_offdiag.F90
 eigen/eigen.F90
 eigen/hlomat.F90
 eigen/hs_int.F90
